@@ -17,4 +17,6 @@ CASE_SENSE_NAMES      = NO
 
 PREDEFINED = \
   "GIT_EXTERN(x)=x" \
+  "GIT_BEGIN_DECL=" \
+  "GIT_END_DECL=" \
   DOXYGEN=
