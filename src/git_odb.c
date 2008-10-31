@@ -35,7 +35,7 @@
 
 #include "git_odb.h"
 
-git_result git_odb_sread(git_sobj *out, git_odb *db, git_oid *id)
+git_result git_odb_sread(git_sobj *out, git_odb *db, const git_oid *id)
 {
 	if (!git_odb__sread_packed(out, db, id))
 		return GIT_SUCCESS;

@@ -106,7 +106,7 @@ typedef struct {
  * @return GIT_SUCCESS if the object was read;
  *         GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(git_result) git_odb_sread(git_sobj *out, git_odb *db, git_oid *id);
+GIT_EXTERN(git_result) git_odb_sread(git_sobj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read a small object from the database using only pack files.
@@ -116,7 +116,7 @@ GIT_EXTERN(git_result) git_odb_sread(git_sobj *out, git_odb *db, git_oid *id);
  * @return GIT_SUCCESS if the object was read;
  *         GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(git_result) git_odb__sread_packed(git_sobj *out, git_odb *db, git_oid *id);
+GIT_EXTERN(git_result) git_odb__sread_packed(git_sobj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read a small object from the database using only loose object files.
@@ -126,7 +126,7 @@ GIT_EXTERN(git_result) git_odb__sread_packed(git_sobj *out, git_odb *db, git_oid
  * @return GIT_SUCCESS if the object was read;
  *         GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(git_result) git_odb__sread_loose(git_sobj *out, git_odb *db, git_oid *id);
+GIT_EXTERN(git_result) git_odb__sread_loose(git_sobj *out, git_odb *db, const git_oid *id);
 
 /** @} */
 GIT_END_DECL
