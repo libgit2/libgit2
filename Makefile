@@ -5,15 +5,8 @@ DOXYGEN = doxygen
 CFLAGS = -g -O2
 BASIC_CFLAGS = -Isrc
 
-OBJS = \
-	src/git_odb.o \
-	src/git_oid.o \
-#end OBJS
-
-HDRS = \
-	src/git_oid.h \
-	src/git_common.h \
-#end HDRS
+OBJS = $(patsubst %.c,%.o,$(wildcard src/*.c))
+HDRS = $(wildcard src/*.h)
 
 
 all:: libgit2.a
