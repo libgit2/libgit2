@@ -3,7 +3,9 @@ all::
 DOXYGEN = doxygen
 
 CFLAGS = -g -O2
-BASIC_CFLAGS = -Isrc
+
+BASIC_CFLAGS := -Isrc
+BASIC_CFLAGS += -DGIT__PRIVATE
 
 OBJS = $(patsubst %.c,%.o,$(wildcard src/*.c))
 HDRS = $(wildcard src/*.h)

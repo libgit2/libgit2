@@ -33,54 +33,39 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef INCLUDE_git_common_h__
-#define INCLUDE_git_common_h__
+#include "git_revwalk.h"
+#include <stdlib.h>
+#include <string.h>
 
-#ifdef __cplusplus
-# define GIT_BEGIN_DECL  extern "C" {
-# define GIT_END_DECL    }
-#else
-  /** Start declarations in C mode */
-# define GIT_BEGIN_DECL  /* empty */
-  /** End declarations in C mode */
-# define GIT_END_DECL    /* empty */
-#endif
+struct git_revp_attr_t {
+	size_t app_size;
+	git_result_t (*app_init)(git_commit_t *, void *);
+};
 
-/**
- * @file git_common.h
- * @brief Git common platform definitions
- * @defgroup git_common Git common platform definitions
- * @ingroup Git
- * @{
- */
-GIT_BEGIN_DECL
+struct git_revp_t {
+	git_odb_t *db;
+	git_revp_attr_t attr;
+};
 
-/** Declare a public function exported for application use. */
-#define GIT_EXTERN(type) type
 
-/** Generic result code for any API call. */
-typedef int git_result_t;
+git_revp_t *git_revp_alloc(
+	git_odb_t *db,
+	const git_revp_attr_t *attr)
+{
+	git_revp_t *walk = malloc(sizeof(*walk));
+	if (!walk)
+		return NULL;
 
-/** Operation completed successfully. */
-#define GIT_SUCCESS 0
+	walk->db = db;
+	if (attr)
+		memcpy(&walk->attr, attr, sizeof(walk->attr));
+	else
+		memset(&walk->attr, 0, sizeof(walk->attr));
 
-/**
- * Operation failed, with unspecified reason.
- * This value also serves as the base error code; all other
- * error codes are subtracted from it such that all errors
- * are < 0, in typical POSIX C tradition.
- */
-#define GIT_ERROR -1
+	return walk;
+}
 
-/** Input was not a properly formatted Git object id. */
-#define GIT_ENOTOID (GIT_ERROR - 1)
-
-/** Input does not exist in the scope searched. */
-#define GIT_ENOTFOUND (GIT_ERROR - 2)
-
-/** A revision traversal pool. */
-typedef struct git_revp_t git_revp_t;
-
-/** @} */
-GIT_END_DECL
-#endif
+void git_revp_free(git_revp_t *walk)
+{
+	free(walk);
+}

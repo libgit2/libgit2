@@ -33,53 +33,59 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef INCLUDE_git_common_h__
-#define INCLUDE_git_common_h__
+#ifndef INCLUDE_git_commit_h__
+#define INCLUDE_git_commit_h__
 
-#ifdef __cplusplus
-# define GIT_BEGIN_DECL  extern "C" {
-# define GIT_END_DECL    }
-#else
-  /** Start declarations in C mode */
-# define GIT_BEGIN_DECL  /* empty */
-  /** End declarations in C mode */
-# define GIT_END_DECL    /* empty */
-#endif
+#include "git_common.h"
+#include "git_oid.h"
+#include <time.h>
 
 /**
- * @file git_common.h
- * @brief Git common platform definitions
- * @defgroup git_common Git common platform definitions
+ * @file git_commit.h
+ * @brief Git commit parsing, formatting routines
+ * @defgroup git_commit Git commit parsing, formatting routines
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
 
-/** Declare a public function exported for application use. */
-#define GIT_EXTERN(type) type
-
-/** Generic result code for any API call. */
-typedef int git_result_t;
-
-/** Operation completed successfully. */
-#define GIT_SUCCESS 0
+/** Parsed representation of a commit object. */
+typedef struct git_commit_t git_commit_t;
+#ifdef GIT__PRIVATE
+struct git_commit_t {
+	git_oid_t id;
+	time_t commit_time;
+	unsigned parsed:1,
+	         flags:26;
+};
+#endif
 
 /**
- * Operation failed, with unspecified reason.
- * This value also serves as the base error code; all other
- * error codes are subtracted from it such that all errors
- * are < 0, in typical POSIX C tradition.
+ * Parse (or lookup) a commit from a revision pool.
+ * @param pool the pool to use when parsing/caching the commit.
+ * @param id identity of the commit to locate.  If the object is
+ *        an annotated tag it will be peeled back to the commit.
+ * @return the commit; NULL if the commit does not exist in the
+ *         pool's git_odb_t, or if the commit is present but is
+ *         too malformed to be parsed successfully.
  */
-#define GIT_ERROR -1
+GIT_EXTERN(git_commit_t*) git_commit_parse(git_revp_t *pool, const git_oid_t *id);
 
-/** Input was not a properly formatted Git object id. */
-#define GIT_ENOTOID (GIT_ERROR - 1)
+/**
+ * Get the id of a commit.
+ * @param commit a previously parsed commit.
+ * @return object identity for the commit.
+ */
+GIT_EXTERN(const git_oid_t*) git_commit_id(git_commit_t *commit);
 
-/** Input does not exist in the scope searched. */
-#define GIT_ENOTFOUND (GIT_ERROR - 2)
-
-/** A revision traversal pool. */
-typedef struct git_revp_t git_revp_t;
+/**
+ * Get the application data address.
+ * @param commit a previously parsed commit.
+ * @return address of the application's data buffer.
+ *         Applications should cast to something like
+ *         'struct mydata*' in order to access fields.
+ */
+GIT_EXTERN(void*) git_commit_appdata(git_commit_t *commit);
 
 /** @} */
 GIT_END_DECL
