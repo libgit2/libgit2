@@ -140,6 +140,17 @@ GIT_EXTERN(git_result) git_odb__read_packed(git_sobj *out, git_odb *db, const gi
  */
 GIT_EXTERN(git_result) git_odb__read_loose(git_sobj *out, git_odb *db, const git_oid *id);
 
+/**
+ * Release all memory used by the sobj structure.
+ *
+ * As a result of this call, obj->data will be set to NULL.
+ *
+ * If obj->data is already NULL, nothing happens.
+ *
+ * @param obj object descriptor to free.
+ */
+GIT_EXTERN(void) git_sobj_close(git_sobj *obj);
+
 /** @} */
 GIT_END_DECL
 #endif
