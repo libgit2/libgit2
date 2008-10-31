@@ -56,7 +56,11 @@
 GIT_BEGIN_DECL
 
 /** Declare a public function exported for application use. */
-#define GIT_EXTERN(type) type
+#ifdef __GNUC__
+# define GIT_EXTERN(type) __attribute__((visibility("default"))) type
+#else
+# define GIT_EXTERN(type) type
+#endif
 
 /** Generic result code for any API call. */
 typedef int git_result_t;
