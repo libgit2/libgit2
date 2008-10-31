@@ -50,16 +50,7 @@
 GIT_BEGIN_DECL
 
 /** An open object database handle. */
-typedef struct git_odb {
-	/** Path to the "objects" directory. */
-	const char *path;
-
-	/** Alternate databases to search. */
-	struct git_odb **alternates;
-
-	/** Number of alternates available. */
-	unsigned n_alternates;
-} git_odb;
+typedef struct git_odb git_odb;
 
 /**
  * Open an object database for read/write access.
