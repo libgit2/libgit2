@@ -22,7 +22,7 @@ apidocs:
 .c.o:
 	$(CC) $(BASIC_CFLAGS) $(CFLAGS) -c $< -o $@
 
-src/%.o: src/%.c $(HDRS)
+$(OBJS): $(HDRS)
 libgit2.a: $(OBJS)
 	rm -f libgit2.a
 	$(AR) cr libgit2.a $(OBJS)
