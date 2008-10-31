@@ -50,6 +50,12 @@ error.  This permits common POSIX result testing:
 ----
 
 
+Documentation Fomatting
+-----------------------
+
+All comments should conform to Doxygen "javadoc" style conventions
+for formatting the public API documentation.
+
 
 Public Header Format
 --------------------
