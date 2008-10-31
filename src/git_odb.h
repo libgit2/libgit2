@@ -43,7 +43,7 @@
 /**
  * @file git_odb.h
  * @brief Git object database routines
- * @defgroup git_odb_t Git object database routines
+ * @defgroup git_odb Git object database routines
  * @ingroup Git
  * @{
  */
