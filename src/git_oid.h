@@ -52,7 +52,7 @@ typedef struct
 {
 	/** raw binary formatted id */
 	unsigned char id[20];
-} git_oid;
+} git_oid_t;
 
 /**
  * Parse a hex formatted object id into a git_oid.
@@ -62,14 +62,14 @@ typedef struct
  *        needed for an oid encoded in hex (40 bytes).
  * @return GIT_SUCCESS if valid; GIT_ENOTOID on failure.
  */
-GIT_EXTERN(git_result) git_oid_mkstr(git_oid *out, const char *str);
+GIT_EXTERN(git_result_t) git_oid_mkstr(git_oid_t *out, const char *str);
 
 /**
  * Copy an already raw oid into a git_oid structure.
  * @param out oid structure the result is written into.
  * @param raw the raw input bytes to be copied.
  */
-GIT_EXTERN(void) git_oid_mkraw(git_oid *out, const unsigned char *raw);
+GIT_EXTERN(void) git_oid_mkraw(git_oid_t *out, const unsigned char *raw);
 
 /** @} */
 GIT_END_DECL
