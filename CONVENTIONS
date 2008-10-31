@@ -1,0 +1,81 @@
+libgit2 conventions
+===================
+
+Namespace Prefixes
+------------------
+
+All types and functions start with 'git_'.
+
+All #define macros start with 'GIT_'.
+
+
+Type Definitions
+----------------
+
+All types end in '_t'; for example git_oid_t or git_odb_t.
+
+
+Public Exported Function Definitions
+------------------------------------
+
+All exported functions must be declared as:
+
+----
+	GIT_EXTERN(result_type) git_modulename_functionname(arg_list);
+----
+
+
+Semi-Private Exported Functions
+-------------------------------
+
+Functions whose modulename is followed by two underscores,
+for example 'git_odb__read_packed', are semi-private functions.
+They are primarily intended for use within the library itself,
+and may disappear or change their signature in a future release.
+
+
+Calling Conventions
+-------------------
+
+Functions should prefer to return a 'git_result_t' to indicate
+success/failure and supply any output through the first argument
+(or first few arguments if multiple outputs are supplied).
+
+git_result_t status codes are 0 for GIT_SUCCESS and < 0 for an
+error.  This permits common POSIX result testing:
+
+----
+	if (git_odb_open(&odb, path))
+		abort("odb open failed");
+----
+
+
+
+Public Header Format
+--------------------
+
+All public headers defining types, functions or macros must use
+the following form, where ${filename} is the name of the file,
+after replacing non-identifier characters with '_'.
+
+----
+	#ifndef INCLUDE_${filename}_h__
+	#define INCLUDE_${filename}_h__
+
+	#include "git_common.h"
+
+	/**
+	 * @file ${filename}.h
+	 * @brief Git some description
+	 * @defgroup ${filename} some description routines
+	 * @ingroup Git
+	 * @{
+	 */
+	GIT_BEGIN_DECL
+
+	... definitions ...
+
+	/** @} */
+	GIT_END_DECL
+	#endif
+----

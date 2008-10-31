@@ -24,6 +24,7 @@ clean:
 
 apidocs:
 	$(DOXYGEN) api.doxygen
+	cp CONVENTIONS apidocs/
 
 .c.o:
 	$(CC) $(BASIC_CFLAGS) $(CFLAGS) -c $< -o $@
