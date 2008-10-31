@@ -100,31 +100,43 @@ typedef struct {
 
 /**
  * Read a small object from the database.
+ *
+ * If GIT_ENOTFOUND then out->data is set to NULL.
+ *
  * @param out object descriptor to populate upon reading.
  * @param db database to search for the object in.
  * @param id identity of the object to read.
- * @return GIT_SUCCESS if the object was read;
- *         GIT_ENOTFOUND if the object is not in the database.
+ * @return
+ * - GIT_SUCCESS if the object was read;
+ * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(git_result) git_odb_read(git_sobj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read a small object from the database using only pack files.
+ *
+ * If GIT_ENOTFOUND then out->data is set to NULL.
+ *
  * @param out object descriptor to populate upon reading.
  * @param db database to search for the object in.
  * @param id identity of the object to read.
- * @return GIT_SUCCESS if the object was read;
- *         GIT_ENOTFOUND if the object is not in the database.
+ * @return
+ * - GIT_SUCCESS if the object was read.
+ * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(git_result) git_odb__read_packed(git_sobj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read a small object from the database using only loose object files.
+ *
+ * If GIT_ENOTFOUND then out->data is set to NULL.
+ *
  * @param out object descriptor to populate upon reading.
  * @param db database to search for the object in.
  * @param id identity of the object to read.
- * @return GIT_SUCCESS if the object was read;
- *         GIT_ENOTFOUND if the object is not in the database.
+ * @return
+ * - GIT_SUCCESS if the object was read.
+ * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(git_result) git_odb__read_loose(git_sobj *out, git_odb *db, const git_oid *id);
 
