@@ -57,6 +57,18 @@ This permits common POSIX result testing:
 		abort("odb open failed");
 ----
 
+Functions returning a pointer may return NULL instead of an int
+if there is only one type of failure (ENOMEM).
+
+Functions returning a pointer may also return NULL if the common
+case needed by the application is strictly success/failure and a
+(possibly slower) function exists that the caller can use to get
+more detailed information.  Parsing common data structures from
+on-disk formats is a good example of this pattern; in general a
+"corrupt" entity can be treated as though it does not exist but
+a more sophisticated "fsck" support function can report how the
+entity is malformed.
+
 
 Documentation Fomatting
 -----------------------
