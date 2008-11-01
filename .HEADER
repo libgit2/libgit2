@@ -22,25 +22,3 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-
-#include "git/revwalk.h"
-#include <stdlib.h>
-
-struct git_revp {
-	git_odb *db;
-};
-
-git_revp *git_revp_alloc(git_odb *db)
-{
-	git_revp *walk = malloc(sizeof(*walk));
-	if (!walk)
-		return NULL;
-
-	walk->db = db;
-	return walk;
-}
-
-void git_revp_free(git_revp *walk)
-{
-	free(walk);
-}
