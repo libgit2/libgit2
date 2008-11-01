@@ -35,33 +35,18 @@
 
 #include "git_revwalk.h"
 #include <stdlib.h>
-#include <string.h>
-
-struct git_revp_attr {
-	size_t app_size;
-	int (*app_init)(git_commit *, void *);
-};
 
 struct git_revp {
 	git_odb *db;
-	git_revp_attr attr;
 };
 
-
-git_revp *git_revp_alloc(
-	git_odb *db,
-	const git_revp_attr *attr)
+git_revp *git_revp_alloc(git_odb *db)
 {
 	git_revp *walk = malloc(sizeof(*walk));
 	if (!walk)
 		return NULL;
 
 	walk->db = db;
-	if (attr)
-		memcpy(&walk->attr, attr, sizeof(walk->attr));
-	else
-		memset(&walk->attr, 0, sizeof(walk->attr));
-
 	return walk;
 }
 

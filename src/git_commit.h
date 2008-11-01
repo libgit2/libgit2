@@ -78,15 +78,6 @@ GIT_EXTERN(git_commit*) git_commit_parse(git_revp *pool, const git_oid *id);
  */
 GIT_EXTERN(const git_oid*) git_commit_id(git_commit *commit);
 
-/**
- * Get the application data address.
- * @param commit a previously parsed commit.
- * @return address of the application's data buffer.
- *         Applications should cast to something like
- *         'struct mydata*' in order to access fields.
- */
-GIT_EXTERN(void*) git_commit_appdata(git_commit *commit);
-
 /** @} */
 GIT_END_DECL
 #endif

@@ -49,55 +49,6 @@
  */
 GIT_BEGIN_DECL
 
-/** Configuration of a revision pool. */
-typedef struct git_revp_attr git_revp_attr;
-
-/**
- * Allocate an empty pool configuration.
- *
- * The resulting configuration is identical to passing NULL
- * to git_revp_alloc().
- *
- * @return a new configuration block.
- *         NULL if there is insufficient memory.
- */
-GIT_EXTERN(git_revp_attr*) git_revp_attr_alloc(void);
-
-/**
- * Setup the application's per-commit data allocation.
- *
- * If size is non-zero the requested number of bytes is allocated
- * alongside every git_commit used by the revision pool, allowing
- * constant-time access to per-commit application data.
- *
- * If init is not NULL the function is invoked with the commit and
- * the application data pointer, allowing the function to populate
- * the application's data space the first time the commit is parsed
- * into the pool.  Space available within the application data is
- * not initialized.  Subsequent resets do not invoke this method.
- *
- * If init is NULL and size is non-zero the application data space
- * is cleared during the first parse.
- *
- * @param attr the pool configuration to adjust.
- * @param size number of bytes required by the application on
- *        each rev_commit instance within the pool.
- * @param init optional callback function to initialize the
- *        application data space.  If NULL the application
- *        space will be zeroed.  If supplied the application
- *        space may contain random garbage.
- */
-GIT_EXTERN(void) git_revp_attr_appdata(
-	git_revp_attr *attr,
-	size_t size,
-	int (*init)(git_commit *, void *));
-
-/**
- * Free a pool configuration.
- * @param attr the configuration to free.  No-op if NULL.
- */
-GIT_EXTERN(void) git_revp_attr_free(git_revp_attr *attr);
-
 /**
  * Allocate a new revision traversal pool.
  *
@@ -107,13 +58,9 @@ GIT_EXTERN(void) git_revp_attr_free(git_revp_attr *attr);
  * passed configuration after the function completes.
  *
  * @param db the database objects are read from.
- * @param attr configuration for the pool.
- *        NULL to use a default configuration.
  * @return the new traversal handle; NULL if memory is exhausted.
  */
-GIT_EXTERN(git_revp*) git_revp_alloc(
-	git_odb *db,
-	const git_revp_attr *attr);
+GIT_EXTERN(git_revp*) git_revp_alloc(git_odb *db);
 
 /**
  * Reset the traversal machinary for reuse.
