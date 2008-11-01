@@ -46,7 +46,7 @@ struct git_odb_t {
 	unsigned n_alternates;
 };
 
-git_result_t git_odb_read(
+int git_odb_read(
 	git_sobj_t *out,
 	git_odb_t *db,
 	const git_oid_t *id)

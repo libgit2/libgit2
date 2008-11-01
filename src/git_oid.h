@@ -62,7 +62,7 @@ typedef struct
  *        needed for an oid encoded in hex (40 bytes).
  * @return GIT_SUCCESS if valid; GIT_ENOTOID on failure.
  */
-GIT_EXTERN(git_result_t) git_oid_mkstr(git_oid_t *out, const char *str);
+GIT_EXTERN(int) git_oid_mkstr(git_oid_t *out, const char *str);
 
 /**
  * Copy an already raw oid into a git_oid structure.

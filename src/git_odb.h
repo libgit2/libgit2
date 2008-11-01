@@ -60,7 +60,7 @@ typedef struct git_odb_t git_odb_t;
  * @return GIT_SUCCESS if the database opened; otherwise an error
  *         code describing why the open was not possible.
  */
-GIT_EXTERN(git_result_t) git_odb_open(git_odb_t **out, const char *objects_dir);
+GIT_EXTERN(int) git_odb_open(git_odb_t **out, const char *objects_dir);
 
 /**
  * Close an open object database.
@@ -101,7 +101,7 @@ typedef struct {
  * - GIT_SUCCESS if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(git_result_t) git_odb_read(git_sobj_t *out, git_odb_t *db, const git_oid_t *id);
+GIT_EXTERN(int) git_odb_read(git_sobj_t *out, git_odb_t *db, const git_oid_t *id);
 
 /**
  * Read a small object from the database using only pack files.
@@ -115,7 +115,7 @@ GIT_EXTERN(git_result_t) git_odb_read(git_sobj_t *out, git_odb_t *db, const git_
  * - GIT_SUCCESS if the object was read.
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(git_result_t) git_odb__read_packed(git_sobj_t *out, git_odb_t *db, const git_oid_t *id);
+GIT_EXTERN(int) git_odb__read_packed(git_sobj_t *out, git_odb_t *db, const git_oid_t *id);
 
 /**
  * Read a small object from the database using only loose object files.
@@ -129,7 +129,7 @@ GIT_EXTERN(git_result_t) git_odb__read_packed(git_sobj_t *out, git_odb_t *db, co
  * - GIT_SUCCESS if the object was read.
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(git_result_t) git_odb__read_loose(git_sobj_t *out, git_odb_t *db, const git_oid_t *id);
+GIT_EXTERN(int) git_odb__read_loose(git_sobj_t *out, git_odb_t *db, const git_oid_t *id);
 
 /**
  * Release all memory used by the sobj structure.

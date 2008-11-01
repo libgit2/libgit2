@@ -90,7 +90,7 @@ GIT_EXTERN(git_revp_attr_t*) git_revp_attr_alloc(void);
 GIT_EXTERN(void) git_revp_attr_appdata(
 	git_revp_attr_t *attr,
 	size_t size,
-	git_result_t (*init)(git_commit_t *, void *));
+	int (*init)(git_commit_t *, void *));
 
 /**
  * Free a pool configuration.

@@ -37,12 +37,12 @@ and may disappear or change their signature in a future release.
 Calling Conventions
 -------------------
 
-Functions should prefer to return a 'git_result_t' to indicate
-success/failure and supply any output through the first argument
-(or first few arguments if multiple outputs are supplied).
+Functions should prefer to return a 'int' to indicate success or
+failure and supply any output through the first argument (or first
+few arguments if multiple outputs are supplied).
 
-git_result_t status codes are 0 for GIT_SUCCESS and < 0 for an
-error.  This permits common POSIX result testing:
+int status codes are 0 for GIT_SUCCESS and < 0 for an error.
+This permits common POSIX result testing:
 
 ----
 	if (git_odb_open(&odb, path))

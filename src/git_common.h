@@ -62,9 +62,6 @@ GIT_BEGIN_DECL
 # define GIT_EXTERN(type) type
 #endif
 
-/** Generic result code for any API call. */
-typedef int git_result_t;
-
 /** Operation completed successfully. */
 #define GIT_SUCCESS 0
 

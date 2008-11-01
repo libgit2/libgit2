@@ -39,7 +39,7 @@
 
 struct git_revp_attr_t {
 	size_t app_size;
-	git_result_t (*app_init)(git_commit_t *, void *);
+	int (*app_init)(git_commit_t *, void *);
 };
 
 struct git_revp_t {
