@@ -50,7 +50,7 @@
 GIT_BEGIN_DECL
 
 /** Configuration of a revision pool. */
-typedef struct git_revp_attr_t git_revp_attr_t;
+typedef struct git_revp_attr git_revp_attr;
 
 /**
  * Allocate an empty pool configuration.
@@ -61,13 +61,13 @@ typedef struct git_revp_attr_t git_revp_attr_t;
  * @return a new configuration block.
  *         NULL if there is insufficient memory.
  */
-GIT_EXTERN(git_revp_attr_t*) git_revp_attr_alloc(void);
+GIT_EXTERN(git_revp_attr*) git_revp_attr_alloc(void);
 
 /**
  * Setup the application's per-commit data allocation.
  *
  * If size is non-zero the requested number of bytes is allocated
- * alongside every git_commit_t used by the revision pool, allowing
+ * alongside every git_commit used by the revision pool, allowing
  * constant-time access to per-commit application data.
  *
  * If init is not NULL the function is invoked with the commit and
@@ -81,22 +81,22 @@ GIT_EXTERN(git_revp_attr_t*) git_revp_attr_alloc(void);
  *
  * @param attr the pool configuration to adjust.
  * @param size number of bytes required by the application on
- *        each rev_commit_t instance within the pool.
+ *        each rev_commit instance within the pool.
  * @param init optional callback function to initialize the
  *        application data space.  If NULL the application
  *        space will be zeroed.  If supplied the application
  *        space may contain random garbage.
  */
 GIT_EXTERN(void) git_revp_attr_appdata(
-	git_revp_attr_t *attr,
+	git_revp_attr *attr,
 	size_t size,
-	int (*init)(git_commit_t *, void *));
+	int (*init)(git_commit *, void *));
 
 /**
  * Free a pool configuration.
  * @param attr the configuration to free.  No-op if NULL.
  */
-GIT_EXTERN(void) git_revp_attr_free(git_revp_attr_t *attr);
+GIT_EXTERN(void) git_revp_attr_free(git_revp_attr *attr);
 
 /**
  * Allocate a new revision traversal pool.
@@ -111,42 +111,42 @@ GIT_EXTERN(void) git_revp_attr_free(git_revp_attr_t *attr);
  *        NULL to use a default configuration.
  * @return the new traversal handle; NULL if memory is exhausted.
  */
-GIT_EXTERN(git_revp_t*) git_revp_alloc(
-	git_odb_t *db,
-	const git_revp_attr_t *attr);
+GIT_EXTERN(git_revp*) git_revp_alloc(
+	git_odb *db,
+	const git_revp_attr *attr);
 
 /**
  * Reset the traversal machinary for reuse.
  * @param pool traversal handle to reset.
  */
-GIT_EXTERN(void) git_revp_reset(git_revp_t *pool);
+GIT_EXTERN(void) git_revp_reset(git_revp *pool);
 
 /**
  * Mark an object to start traversal from.
  * @param pool the pool being used for the traversal.
  * @param commit the commit the commit to start from.
  */
-GIT_EXTERN(void) git_revp_pushc(git_revp_t *pool, git_commit_t *commit);
+GIT_EXTERN(void) git_revp_pushc(git_revp *pool, git_commit *commit);
 
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
  * @param pool the pool being used for the traversal.
  * @param commit the commit the commit to start from.
  */
-GIT_EXTERN(void) git_revp_hidec(git_revp_t *pool, git_commit_t *commit);
+GIT_EXTERN(void) git_revp_hidec(git_revp *pool, git_commit *commit);
 
 /**
  * Get the next commit from the revision traversal.
  * @param pool the pool to pop the commit from.
  * @return next commit; NULL if there is no more output.
  */
-GIT_EXTERN(git_commit_t*) git_revp_nextc(git_revp_t *pool);
+GIT_EXTERN(git_commit*) git_revp_nextc(git_revp *pool);
 
 /**
  * Free a revwalk previously allocated.
  * @param pool traversal handle to close.  If NULL nothing occurs.
  */
-GIT_EXTERN(void) git_revp_free(git_revp_t *pool);
+GIT_EXTERN(void) git_revp_free(git_revp *pool);
 
 /** @} */
 GIT_END_DECL

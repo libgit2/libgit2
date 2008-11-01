@@ -35,21 +35,21 @@
 
 #include "git_odb.h"
 
-struct git_odb_t {
+struct git_odb {
 	/** Path to the "objects" directory. */
 	const char *path;
 
 	/** Alternate databases to search. */
-	git_odb_t **alternates;
+	git_odb **alternates;
 
 	/** Number of alternates available. */
 	unsigned n_alternates;
 };
 
 int git_odb_read(
-	git_sobj_t *out,
-	git_odb_t *db,
-	const git_oid_t *id)
+	git_sobj *out,
+	git_odb *db,
+	const git_oid *id)
 {
 	if (!git_odb__read_packed(out, db, id))
 		return GIT_SUCCESS;

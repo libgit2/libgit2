@@ -80,7 +80,7 @@ GIT_BEGIN_DECL
 #define GIT_ENOTFOUND (GIT_ERROR - 2)
 
 /** A revision traversal pool. */
-typedef struct git_revp_t git_revp_t;
+typedef struct git_revp git_revp;
 
 /** @} */
 GIT_END_DECL

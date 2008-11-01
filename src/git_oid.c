@@ -55,7 +55,7 @@ static signed char from_hex[] = {
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* f0 */
 };
 
-int git_oid_mkstr(git_oid_t *out, const char *str)
+int git_oid_mkstr(git_oid *out, const char *str)
 {
 	int p;
 	for (p = 0; p < sizeof(out->id); p++, str += 2) {
@@ -67,7 +67,7 @@ int git_oid_mkstr(git_oid_t *out, const char *str)
 	return GIT_SUCCESS;
 }
 
-void git_oid_mkraw(git_oid_t *out, const unsigned char *raw)
+void git_oid_mkraw(git_oid *out, const unsigned char *raw)
 {
 	memcpy(out->id, raw, sizeof(out->id));
 }

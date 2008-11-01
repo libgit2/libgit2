@@ -35,7 +35,7 @@
 
 #include "git_commit.h"
 
-const git_oid_t *git_commit_id(git_commit_t *c)
+const git_oid *git_commit_id(git_commit *c)
 {
 	return &c->id;
 }

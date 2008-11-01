@@ -37,22 +37,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct git_revp_attr_t {
+struct git_revp_attr {
 	size_t app_size;
-	int (*app_init)(git_commit_t *, void *);
+	int (*app_init)(git_commit *, void *);
 };
 
-struct git_revp_t {
-	git_odb_t *db;
-	git_revp_attr_t attr;
+struct git_revp {
+	git_odb *db;
+	git_revp_attr attr;
 };
 
 
-git_revp_t *git_revp_alloc(
-	git_odb_t *db,
-	const git_revp_attr_t *attr)
+git_revp *git_revp_alloc(
+	git_odb *db,
+	const git_revp_attr *attr)
 {
-	git_revp_t *walk = malloc(sizeof(*walk));
+	git_revp *walk = malloc(sizeof(*walk));
 	if (!walk)
 		return NULL;
 
@@ -65,7 +65,7 @@ git_revp_t *git_revp_alloc(
 	return walk;
 }
 
-void git_revp_free(git_revp_t *walk)
+void git_revp_free(git_revp *walk)
 {
 	free(walk);
 }

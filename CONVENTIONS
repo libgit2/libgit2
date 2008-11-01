@@ -12,7 +12,15 @@ All #define macros start with 'GIT_'.
 Type Definitions
 ----------------
 
-All types end in '_t'; for example git_oid_t or git_odb_t.
+Most types should be opaque, e.g.:
+
+----
+	typedef struct git_odb git_odb;
+----
+
+with allocation functions returning an "instance" created within
+the library, and not within the application.  This allows the type
+to grow (or shrink) in size without rebuilding client code.
 
 
 Public Exported Function Definitions
