@@ -28,7 +28,6 @@
 
 #include "git/common.h"
 #include "git/oid.h"
-#include <time.h>
 
 /**
  * @file git/commit.h

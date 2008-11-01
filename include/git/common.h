@@ -36,6 +36,13 @@
 # define GIT_END_DECL    /* empty */
 #endif
 
+/** Declare a public function exported for application use. */
+#ifdef __GNUC__
+# define GIT_EXTERN(type) __attribute__((visibility("default"))) type
+#else
+# define GIT_EXTERN(type) type
+#endif
+
 /**
  * @file git/common.h
  * @brief Git common platform definitions
@@ -43,14 +50,6 @@
  * @ingroup Git
  * @{
  */
-GIT_BEGIN_DECL
-
-/** Declare a public function exported for application use. */
-#ifdef __GNUC__
-# define GIT_EXTERN(type) __attribute__((visibility("default"))) type
-#else
-# define GIT_EXTERN(type) type
-#endif
 
 /** Operation completed successfully. */
 #define GIT_SUCCESS 0
@@ -68,6 +67,10 @@ GIT_BEGIN_DECL
 
 /** Input does not exist in the scope searched. */
 #define GIT_ENOTFOUND (GIT_ERROR - 2)
+
+#include "git/config.h"
+
+GIT_BEGIN_DECL
 
 /** A revision traversal pool. */
 typedef struct git_revp git_revp;

@@ -1,3 +1,4 @@
 /apidocs
+/include/git/config.h
 *.o
 *.a

@@ -28,7 +28,6 @@
 
 #include "git/common.h"
 #include "git/oid.h"
-#include <unistd.h>
 
 /**
  * @file git/odb.h
