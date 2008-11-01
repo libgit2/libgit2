@@ -36,12 +36,12 @@
 #ifndef INCLUDE_git_revwalk_h__
 #define INCLUDE_git_revwalk_h__
 
-#include "git_common.h"
-#include "git_odb.h"
-#include "git_commit.h"
+#include "git/common.h"
+#include "git/odb.h"
+#include "git/commit.h"
 
 /**
- * @file git_revwalk.h
+ * @file git/revwalk.h
  * @brief Git revision traversal routines
  * @defgroup git_revwalk Git revision traversal routines
  * @ingroup Git

@@ -33,54 +33,43 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef INCLUDE_git_common_h__
-#define INCLUDE_git_common_h__
+#ifndef INCLUDE_git_oid_h__
+#define INCLUDE_git_oid_h__
 
-#ifdef __cplusplus
-# define GIT_BEGIN_DECL  extern "C" {
-# define GIT_END_DECL    }
-#else
-  /** Start declarations in C mode */
-# define GIT_BEGIN_DECL  /* empty */
-  /** End declarations in C mode */
-# define GIT_END_DECL    /* empty */
-#endif
+#include "git/common.h"
 
 /**
- * @file git_common.h
- * @brief Git common platform definitions
- * @defgroup git_common Git common platform definitions
+ * @file git/oid.h
+ * @brief Git object id routines
+ * @defgroup git_oid Git object id routines
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
 
-/** Declare a public function exported for application use. */
-#ifdef __GNUC__
-# define GIT_EXTERN(type) __attribute__((visibility("default"))) type
-#else
-# define GIT_EXTERN(type) type
-#endif
-
-/** Operation completed successfully. */
-#define GIT_SUCCESS 0
+/** Unique identity of any object (commit, tree, blob, tag). */
+typedef struct
+{
+	/** raw binary formatted id */
+	unsigned char id[20];
+} git_oid;
 
 /**
- * Operation failed, with unspecified reason.
- * This value also serves as the base error code; all other
- * error codes are subtracted from it such that all errors
- * are < 0, in typical POSIX C tradition.
+ * Parse a hex formatted object id into a git_oid.
+ * @param out oid structure the result is written into.
+ * @param str input hex string; must be pointing at the start of
+ *        the hex sequence and have at least the number of bytes
+ *        needed for an oid encoded in hex (40 bytes).
+ * @return GIT_SUCCESS if valid; GIT_ENOTOID on failure.
  */
-#define GIT_ERROR -1
+GIT_EXTERN(int) git_oid_mkstr(git_oid *out, const char *str);
 
-/** Input was not a properly formatted Git object id. */
-#define GIT_ENOTOID (GIT_ERROR - 1)
-
-/** Input does not exist in the scope searched. */
-#define GIT_ENOTFOUND (GIT_ERROR - 2)
-
-/** A revision traversal pool. */
-typedef struct git_revp git_revp;
+/**
+ * Copy an already raw oid into a git_oid structure.
+ * @param out oid structure the result is written into.
+ * @param raw the raw input bytes to be copied.
+ */
+GIT_EXTERN(void) git_oid_mkraw(git_oid *out, const unsigned char *raw);
 
 /** @} */
 GIT_END_DECL

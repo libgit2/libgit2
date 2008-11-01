@@ -33,51 +33,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef INCLUDE_git_commit_h__
-#define INCLUDE_git_commit_h__
+#include "git/commit.h"
 
-#include "git_common.h"
-#include "git_oid.h"
-#include <time.h>
-
-/**
- * @file git_commit.h
- * @brief Git commit parsing, formatting routines
- * @defgroup git_commit Git commit parsing, formatting routines
- * @ingroup Git
- * @{
- */
-GIT_BEGIN_DECL
-
-/** Parsed representation of a commit object. */
-typedef struct git_commit git_commit;
-#ifdef GIT__PRIVATE
-struct git_commit {
-	git_oid id;
-	time_t commit_time;
-	unsigned parsed:1,
-	         flags:26;
-};
-#endif
-
-/**
- * Parse (or lookup) a commit from a revision pool.
- * @param pool the pool to use when parsing/caching the commit.
- * @param id identity of the commit to locate.  If the object is
- *        an annotated tag it will be peeled back to the commit.
- * @return the commit; NULL if the commit does not exist in the
- *         pool's git_odb, or if the commit is present but is
- *         too malformed to be parsed successfully.
- */
-GIT_EXTERN(git_commit*) git_commit_parse(git_revp *pool, const git_oid *id);
-
-/**
- * Get the id of a commit.
- * @param commit a previously parsed commit.
- * @return object identity for the commit.
- */
-GIT_EXTERN(const git_oid*) git_commit_id(git_commit *commit);
-
-/** @} */
-GIT_END_DECL
-#endif
+const git_oid *git_commit_id(git_commit *c)
+{
+	return &c->id;
+}

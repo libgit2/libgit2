@@ -36,12 +36,12 @@
 #ifndef INCLUDE_git_odb_h__
 #define INCLUDE_git_odb_h__
 
-#include "git_common.h"
-#include "git_oid.h"
+#include "git/common.h"
+#include "git/oid.h"
 #include <unistd.h>
 
 /**
- * @file git_odb.h
+ * @file git/odb.h
  * @brief Git object database routines
  * @defgroup git_odb Git object database routines
  * @ingroup Git

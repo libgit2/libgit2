@@ -33,7 +33,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "git_oid.h"
+#include "git/oid.h"
 #include <string.h>
 
 static signed char from_hex[] = {

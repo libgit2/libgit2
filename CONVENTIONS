@@ -85,15 +85,15 @@ the following form, where ${filename} is the name of the file,
 after replacing non-identifier characters with '_'.
 
 ----
-	#ifndef INCLUDE_${filename}_h__
-	#define INCLUDE_${filename}_h__
+	#ifndef INCLUDE_git_${filename}_h__
+	#define INCLUDE_git_${filename}_h__
 
-	#include "git_common.h"
+	#include "git/common.h"
 
 	/**
-	 * @file ${filename}.h
+	 * @file git/${filename}.h
 	 * @brief Git some description
-	 * @defgroup ${filename} some description routines
+	 * @defgroup git_${filename} some description routines
 	 * @ingroup Git
 	 * @{
 	 */

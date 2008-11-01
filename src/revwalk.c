@@ -33,9 +33,24 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "git_commit.h"
+#include "git/revwalk.h"
+#include <stdlib.h>
 
-const git_oid *git_commit_id(git_commit *c)
+struct git_revp {
+	git_odb *db;
+};
+
+git_revp *git_revp_alloc(git_odb *db)
 {
-	return &c->id;
+	git_revp *walk = malloc(sizeof(*walk));
+	if (!walk)
+		return NULL;
+
+	walk->db = db;
+	return walk;
+}
+
+void git_revp_free(git_revp *walk)
+{
+	free(walk);
 }

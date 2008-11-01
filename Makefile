@@ -4,12 +4,12 @@ DOXYGEN = doxygen
 
 CFLAGS = -g -O2
 
-BASIC_CFLAGS := -Isrc
+BASIC_CFLAGS := -Iinclude
 BASIC_CFLAGS += -DGIT__PRIVATE
 BASIC_CFLAGS += -fvisibility=hidden
 
 OBJS = $(patsubst %.c,%.o,$(wildcard src/*.c))
-HDRS = $(wildcard src/*.h)
+HDRS = $(wildcard include/git/*.h)
 
 
 all:: libgit2.a
