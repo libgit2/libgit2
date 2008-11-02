@@ -2,3 +2,4 @@
 /include/git/config.h
 *.o
 *.a
+*.exe

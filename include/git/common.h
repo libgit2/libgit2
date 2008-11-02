@@ -43,6 +43,20 @@
 # define GIT_EXTERN(type) type
 #endif
 
+/** Declare a function never returns to the caller. */
+#ifdef __GNUC__
+# define GIT_NORETURN __attribute__((__noreturn__))
+#else
+# define GIT_NORETURN /* empty */
+#endif
+
+/** Declare a function's takes printf style arguments. */
+#ifdef __GNUC__
+# define GIT_FORMAT_PRINTF(a,b) __attribute__((format (printf, a, b)))
+#else
+# define GIT_FORMAT_PRINTF(a,b) /* empty */
+#endif
+
 /**
  * @file git/common.h
  * @brief Git common platform definitions
