@@ -26,22 +26,51 @@
 #include <errno.h>
 #include "git/common.h"
 
-ssize_t git_fread(git_file fd, void *buf, size_t cnt)
+int git_fopen(git_file *out, const char *path, int flags)
 {
-	for (;;) {
-		ssize_t r = read(fd, buf, cnt);
-		if (r < 0 && (errno == EINTR || errno == EAGAIN))
-			continue;
-		return r;
-	}
+	int r = open(path, flags);
+	if (r < 0)
+		return -1;
+	*out = r;
+	return GIT_SUCCESS;
 }
 
-ssize_t git_fwrite(git_file fd, void *buf, size_t cnt)
+int git_fread(git_file fd, void *buf, size_t cnt)
 {
-	for (;;) {
-		ssize_t r = write(fd, buf, cnt);
-		if (r < 0 && (errno == EINTR || errno == EAGAIN))
-			continue;
-		return r;
+	char *b = buf;
+	while (cnt) {
+		ssize_t r = read(fd, b, cnt);
+		if (r < 0) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			return -1;
+		}
+		if (!r) {
+			errno = EPIPE;
+			return -1;
+		}
+		cnt -= r;
+		b += r;
 	}
+	return GIT_SUCCESS;
+}
+
+int git_fwrite(git_file fd, void *buf, size_t cnt)
+{
+	char *b = buf;
+	while (cnt) {
+		ssize_t r = write(fd, b, cnt);
+		if (r < 0) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			return -1;
+		}
+		if (!r) {
+			errno = EPIPE;
+			return -1;
+		}
+		cnt -= r;
+		b += r;
+	}
+	return GIT_SUCCESS;
 }

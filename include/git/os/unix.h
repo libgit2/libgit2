@@ -54,58 +54,55 @@ typedef int git_file;
  * - O_WRONLY: Open the file for writing.
  * - O_RDWR: Open the file for both reading and writing.
  *
+ * @param out descriptor storage to populate on success.
  * @param path path name of the file to open.
  * @param flags bitmask of access requested to the file.
- * @return the opened file descriptor; <0 if the open failed.
+ * @return
+ * - On success, GIT_SUCCESS.
+ * - On error, <0.
  */
-static inline git_file git_fopen(const char *path, int flags)
-{
-	return open(path, flags);
-}
-
-/**
- * Close an open file descriptor.
- * @param fd descriptor to close.
- * @return 0 on success; <0 if the descriptor close failed.
- */
-static inline int git_fclose(git_file fd)
-{
-	return close(fd);
-}
+GIT_EXTERN(int) git_fopen(git_file *out, const char *path, int flags);
 
 /**
  * Read from an open file descriptor at the current position.
  *
- * Less than the number of requested bytes may be read.  The
- * read is automatically restarted if it fails due to a signal
- * being delivered to the calling thread.
+ * Exactly the requested number of bytes is read.  If the stream
+ * ends early, an error is indicated, and the exact number of bytes
+ * transferred is unspecified.
  *
  * @param fd open descriptor.
  * @param buf buffer to store the read data into.
  * @param cnt number of bytes to transfer.
  * @return
- *  - On success, actual number of bytes read.
- *  - On EOF, 0.
- *  - On failure, <0.
+ * - On success, GIT_SUCCESS.
+ * - On error, <0.
  */
-GIT_EXTERN(ssize_t) git_fread(git_file fd, void *buf, size_t cnt);
+GIT_EXTERN(int) git_fread(git_file fd, void *buf, size_t cnt);
 
 /**
  * Write to an open file descriptor at the current position.
  *
- * Less than the number of requested bytes may be written.  The
- * write is automatically restarted if it fails due to a signal
- * being delivered to the calling thread.
+ * Exactly the requested number of bytes is written.  If the stream
+ * ends early, an error is indicated, and the exact number of bytes
+ * transferred is unspecified.
  *
  * @param fd open descriptor.
  * @param buf buffer to write data from.
  * @param cnt number of bytes to transfer.
  * @return
- *  - On success, actual number of bytes written.
- *  - On EOF, 0.
- *  - On failure, <0.
+ * - On success, GIT_SUCCESS.
+ * - On error, <0.
  */
-GIT_EXTERN(ssize_t) git_fwrite(git_file fd, void *buf, size_t cnt);
+GIT_EXTERN(int) git_fwrite(git_file fd, void *buf, size_t cnt);
+
+/**
+ * Close an open file descriptor.
+ * @param fd descriptor to close.
+ * @return
+ * - On success, GIT_SUCCESS.
+ * - On error, <0.
+ */
+#define git_fclose(fd) close(fd)
 
 /** @} */
 GIT_END_DECL
