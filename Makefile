@@ -28,7 +28,7 @@ all:: $(GIT_LIB)
 clean:
 	rm -f $(GIT_LIB)
 	rm -f src/*.o
-	rm -f tests/*.o tests/*.exe
+	rm -f tests/*.o tests/*.exe tests/*.toc
 	rm -f include/git/config.h
 	rm -rf apidocs
 
@@ -50,22 +50,36 @@ $(GIT_LIB): $(OBJS)
 	rm -f $(LIB)
 	$(AR) cr $(GIT_LIB) $(OBJS)
 
-T_HDR    = tests/test_lib.h
-T_LIB    = tests/test_lib.o
-T_MAIN_C  = tests/test_main.c
-T_MAIN_O = tests/test_main.o
+T_HDR         = tests/test_lib.h
+T_LIB         = tests/test_lib.o
+T_MAIN_C      = tests/test_main.c
 
-$(T_LIB): tests/test_lib.h $(HDRS)
-$(TEST_EXE): $(T_LIB) $(T_HDR) $(T_MAIN_C) $(HDRS) $(GIT_LIB)
+$(T_LIB):    $(T_HDR) $(HDRS)
+$(TEST_OBJ): $(T_HDR) $(HDRS)
 
-tests/%.exe: tests/%.o
-	grep BEGIN_TEST $(patsubst %.o,%.c,$<) >tests/test_contents
-	$(CC) $(CFLAGS) -Iinclude -c $(T_MAIN_C) -o $(T_MAIN_O)
-	$(CC) -o $@ $(T_MAIN_O) $< $(T_LIB) -L. -lgit2
-	rm -f $(T_MAIN_O) tests/test_contents
+$(patsubst %.exe,%.toc,$(TEST_EXE)): tests/%.toc: tests/%.c
+	grep BEGIN_TEST $< >$@+
+	mv $@+ $@
 
-$(TEST_RUN): $(TEST_EXE)
-	$<
+$(TEST_OBJ): tests/%.o: tests/%.c
+	$(CC) -Iinclude $(CFLAGS) -c $< -o $@
+
+$(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(HDRS)
+$(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(T_MAIN_C)
+$(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: tests/%.toc
+	$(CC) -Iinclude -I. '-DTEST_TOC="$<"' \
+		-c $(T_MAIN_C) \
+		-o $@
+
+$(TEST_EXE): tests/%.exe: $(T_LIB) $(GIT_LIB)
+$(TEST_EXE): tests/%.exe: tests/%.o tests/%_main.o
+	$(CC) -o $@ \
+		$(patsubst %.exe,%_main.o,$@) \
+		$(patsubst %.exe,%.o,$@) \
+		$(T_LIB) -L. -lgit2
+
+$(TEST_RUN): tests/%.run: tests/%.exe
+	@$<
 
 .PHONY: all
 .PHONY: clean

@@ -27,13 +27,13 @@
 
 #undef BEGIN_TEST
 #define BEGIN_TEST(name) extern void testfunc__##name(void);
-#include "test_contents"
+#include TEST_TOC
 
 int main(int argc, char **argv)
 {
 #undef BEGIN_TEST
 #define BEGIN_TEST(name) testfunc__##name();
-#include "test_contents"
+#include TEST_TOC
 
 	return 0;
 }
