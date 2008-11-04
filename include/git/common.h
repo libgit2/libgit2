@@ -38,9 +38,11 @@
 
 /** Declare a public function exported for application use. */
 #ifdef __GNUC__
-# define GIT_EXTERN(type) __attribute__((visibility("default"))) type
+# define GIT_EXTERN(type) extern \
+                          __attribute__((visibility("default"))) \
+                          type
 #else
-# define GIT_EXTERN(type) type
+# define GIT_EXTERN(type) extern type
 #endif
 
 /** Declare a function's takes printf style arguments. */
