@@ -57,8 +57,3 @@ int git_oid_mkstr(git_oid *out, const char *str)
 	}
 	return GIT_SUCCESS;
 }
-
-void git_oid_mkraw(git_oid *out, const unsigned char *raw)
-{
-	memcpy(out->id, raw, sizeof(out->id));
-}

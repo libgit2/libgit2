@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <time.h>
+#include <string.h>
 
 /**
  * @file git/os/unix.h

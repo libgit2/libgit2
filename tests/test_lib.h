@@ -90,3 +90,11 @@ extern void test_die(const char *fmt, ...)
  */
 #define must_fail(expr) \
 	if (!(expr)) test_die("line %d: %s", __LINE__, #expr)
+
+/**
+ * Evaluate an expression which must produce a true result.
+ *
+ * @param expr the expression to evaluate, and test the result of.
+ */
+#define must_be_true(expr) \
+	if (!(expr)) test_die("line %d: %s", __LINE__, #expr)

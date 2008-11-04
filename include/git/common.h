@@ -45,6 +45,9 @@
 # define GIT_EXTERN(type) extern type
 #endif
 
+/** Declare a function as always inlined. */
+# define GIT_INLINE(type) static inline type
+
 /** Declare a function's takes printf style arguments. */
 #ifdef __GNUC__
 # define GIT_FORMAT_PRINTF(a,b) __attribute__((format (printf, a, b)))
