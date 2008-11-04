@@ -26,6 +26,13 @@
 #include <stdio.h>
 #include <git/common.h>
 
+/** Declare a function never returns to the caller. */
+#ifdef __GNUC__
+# define NORETURN __attribute__((__noreturn__))
+#else
+# define NORETURN /* noreturn */
+#endif
+
 /**
  * Declares a new test block starting, with the specified name.
  * @param name C symbol to assign to this test's function.
@@ -55,7 +62,7 @@ extern void test_end(void);
  * @param fmt printf style format string.
  */
 extern void test_die(const char *fmt, ...)
-	GIT_NORETURN
+	NORETURN
 	GIT_FORMAT_PRINTF(1, 2);
 
 /**
