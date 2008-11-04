@@ -27,21 +27,71 @@
 
 struct git_odb {
 	/** Path to the "objects" directory. */
-	const char *path;
+	char *path;
 
 	/** Alternate databases to search. */
 	git_odb **alternates;
-
-	/** Number of alternates available. */
-	unsigned n_alternates;
 };
+
+static int open_alternates(git_odb *db)
+{
+	unsigned n = 0;
+
+	db->alternates = malloc(sizeof(*db->alternates) * (n + 1));
+	if (!db->alternates)
+		return GIT_ERROR;
+
+	db->alternates[n] = NULL;
+	return GIT_SUCCESS;
+}
+
+int git_odb_open(git_odb **out, const char *objects_dir)
+{
+	git_odb *db = malloc(sizeof(*db));
+	if (!db)
+		return GIT_ERROR;
+
+	db->path = strdup(objects_dir);
+	if (!db->path) {
+		free(db);
+		return GIT_ERROR;
+	}
+
+	db->alternates = NULL;
+
+	*out = db;
+	return GIT_SUCCESS;
+}
+
+void git_odb_close(git_odb *db)
+{
+	if (!db)
+		return;
+
+	if (db->alternates) {
+		git_odb **alt;
+		for (alt = db->alternates; *alt; alt++)
+			git_odb_close(*alt);
+		free(db->alternates);
+	}
+
+	free(db->path);
+	free(db);
+}
 
 int git_odb_read(
 	git_sobj *out,
 	git_odb *db,
 	const git_oid *id)
 {
+attempt:
 	if (!git_odb__read_packed(out, db, id))
 		return GIT_SUCCESS;
-	return git_odb__read_loose(out, db, id);
+	if (!git_odb__read_loose(out, db, id))
+		return GIT_SUCCESS;
+	if (!db->alternates && !open_alternates(db))
+		goto attempt;
+
+	out->data = NULL;
+	return GIT_ENOTFOUND;
 }

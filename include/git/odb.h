@@ -54,9 +54,8 @@ GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
 /**
  * Close an open object database.
  * @param db database pointer to close.  If NULL no action is taken.
- *           The pointer is set to NULL when the close is completed.
  */
-GIT_EXTERN(void) git_odb_close(git_odb **db);
+GIT_EXTERN(void) git_odb_close(git_odb *db);
 
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
@@ -129,7 +128,11 @@ GIT_EXTERN(int) git_odb__read_loose(git_sobj *out, git_odb *db, const git_oid *i
  *
  * @param obj object descriptor to free.
  */
-GIT_EXTERN(void) git_sobj_close(git_sobj *obj);
+GIT_INLINE(void) git_sobj_close(git_sobj *obj)
+{
+	free(obj->data);
+	obj->data = NULL;
+}
 
 /** @} */
 GIT_END_DECL
