@@ -23,7 +23,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include <errno.h>
 #include "git/common.h"
 
 int git_fopen(git_file *out, const char *path, int flags)
@@ -73,4 +72,12 @@ int git_fwrite(git_file fd, void *buf, size_t cnt)
 		b += r;
 	}
 	return GIT_SUCCESS;
+}
+
+off_t git_fsize(git_file fd)
+{
+	struct stat sb;
+	if (fstat(fd, &sb))
+		return -1;
+	return sb.st_size;
 }

@@ -26,11 +26,16 @@
 #ifndef INCLUDE_git_os_abstraction_h__
 #define INCLUDE_git_os_abstraction_h__
 
+/** Force 64 bit off_t size on POSIX. */
+#define _FILE_OFFSET_BITS 64
+
+#include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <time.h>
+#include <stdlib.h>
 #include <string.h>
 
 /**
@@ -94,6 +99,15 @@ GIT_EXTERN(int) git_fread(git_file fd, void *buf, size_t cnt);
  * - On error, <0.
  */
 GIT_EXTERN(int) git_fwrite(git_file fd, void *buf, size_t cnt);
+
+/**
+ * Get the current size of an open file.
+ * @param fd open descriptor.
+ * @return
+ * - On success, >= 0, indicating the file size in bytes.
+ * - On error, <0.
+ */
+GIT_EXTERN(off_t) git_fsize(git_file fd);
 
 /**
  * Close an open file descriptor.
