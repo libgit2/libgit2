@@ -49,7 +49,8 @@ int git_oid_mkstr(git_oid *out, const char *str)
 {
 	int p;
 	for (p = 0; p < sizeof(out->id); p++, str += 2) {
-		int v = (from_hex[str[0]] << 4) | from_hex[str[1]];
+		int v = (from_hex[(unsigned char)str[0]] << 4)
+		       | from_hex[(unsigned char)str[1]];
 		if (v < 0)
 			return GIT_ENOTOID;
 		out->id[p] = (unsigned char)v;

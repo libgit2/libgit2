@@ -2,7 +2,7 @@ all::
 
 DOXYGEN = doxygen
 
-CFLAGS = -g -O2
+CFLAGS = -g -O2 -Wall
 OS     = unix
 
 BASIC_CFLAGS := -Iinclude
