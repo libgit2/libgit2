@@ -29,11 +29,36 @@
 #define BEGIN_TEST(name) extern void testfunc__##name(void);
 #include TEST_TOC
 
+struct test_def {
+	const char *name;
+	void (*fun)(void);
+};
+struct test_def all_tests[] = {
+#   undef BEGIN_TEST
+#   define BEGIN_TEST(name) {#name, testfunc__##name},
+#   include TEST_TOC
+	{NULL, NULL}
+};
+
 int main(int argc, char **argv)
 {
-#undef BEGIN_TEST
-#define BEGIN_TEST(name) testfunc__##name();
-#include TEST_TOC
+	struct test_def *t;
 
-	return 0;
+	if (argc == 1) {
+		for (t = all_tests; t->name; t++)
+			t->fun();
+		return 0;
+	} else if (argc == 2) {
+		for (t = all_tests; t->name; t++) {
+			if (!strcmp(t->name, argv[1])) {
+				t->fun();
+				return 0;
+			}
+		}
+		fprintf(stderr, "error: No test '%s' in %s\n", argv[1], argv[0]);
+		return 1;
+	} else {
+		fprintf(stderr, "usage: %s [test_name]\n", argv[0]);
+		return 1;
+	}
 }
