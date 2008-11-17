@@ -26,8 +26,8 @@
 #ifndef INCLUDE_git_commit_h__
 #define INCLUDE_git_commit_h__
 
-#include "git/common.h"
-#include "git/oid.h"
+#include "common.h"
+#include "oid.h"
 
 /**
  * @file git/commit.h

@@ -26,9 +26,9 @@
 #ifndef INCLUDE_git_revwalk_h__
 #define INCLUDE_git_revwalk_h__
 
-#include "git/common.h"
-#include "git/odb.h"
-#include "git/commit.h"
+#include "common.h"
+#include "odb.h"
+#include "commit.h"
 
 /**
  * @file git/revwalk.h

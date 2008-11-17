@@ -26,7 +26,7 @@
 #ifndef INCLUDE_git_oid_h__
 #define INCLUDE_git_oid_h__
 
-#include "git/common.h"
+#include "common.h"
 
 /**
  * @file git/oid.h

@@ -26,7 +26,7 @@
 #ifndef INCLUDE_git_zlib_h__
 #define INCLUDE_git_zlib_h__
 
-#include "git/common.h"
+#include "common.h"
 #include <zlib.h>
 
 /**
