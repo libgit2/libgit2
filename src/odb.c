@@ -80,7 +80,7 @@ void git_odb_close(git_odb *db)
 }
 
 int git_odb_read(
-	git_sobj *out,
+	git_obj *out,
 	git_odb *db,
 	const git_oid *id)
 {

@@ -75,7 +75,7 @@ typedef struct {
 	void *data;          /**< Raw, decompressed object data. */
 	size_t len;          /**< Total number of bytes in data. */
 	git_otype type;      /**< Type of this object. */
-} git_sobj;
+} git_obj;
 
 /**
  * Read a small object from the database.
@@ -89,7 +89,7 @@ typedef struct {
  * - GIT_SUCCESS if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb_read(git_sobj *out, git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb_read(git_obj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read a small object from the database using only pack files.
@@ -103,7 +103,7 @@ GIT_EXTERN(int) git_odb_read(git_sobj *out, git_odb *db, const git_oid *id);
  * - GIT_SUCCESS if the object was read.
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb__read_packed(git_sobj *out, git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read a small object from the database using only loose object files.
@@ -117,7 +117,7 @@ GIT_EXTERN(int) git_odb__read_packed(git_sobj *out, git_odb *db, const git_oid *
  * - GIT_SUCCESS if the object was read.
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb__read_loose(git_sobj *out, git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id);
 
 /**
  * Release all memory used by the sobj structure.
@@ -128,7 +128,7 @@ GIT_EXTERN(int) git_odb__read_loose(git_sobj *out, git_odb *db, const git_oid *i
  *
  * @param obj object descriptor to free.
  */
-GIT_INLINE(void) git_sobj_close(git_sobj *obj)
+GIT_INLINE(void) git_obj_close(git_obj *obj)
 {
 	free(obj->data);
 	obj->data = NULL;
