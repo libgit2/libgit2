@@ -5,16 +5,18 @@ DOXYGEN = doxygen
 CFLAGS = -g -O2 -Wall
 OS     = unix
 
-BASIC_CFLAGS := -Iinclude
+BASIC_CFLAGS := -Isrc
 BASIC_CFLAGS += -DGIT__PRIVATE
 BASIC_CFLAGS += -fvisibility=hidden
 
 OBJS = $(patsubst %.c,%.o,$(wildcard src/*.c))
-HDRS = $(wildcard include/git/*.h)
+HDRS = $(wildcard src/*.h)
+PUBLIC_HEADERS = $(wildcard src/git/*.h)
+HDRS += $(PUBLIC_HEADERS)
 
 OBJS += src/os/$(OS).o
-HDRS += include/git/config.h
-HDRS += include/git/os/$(OS).h
+HDRS += src/git/config.h
+HDRS += src/git/os/$(OS).h
 
 GIT_LIB = libgit2.a
 
@@ -29,7 +31,7 @@ clean:
 	rm -f $(GIT_LIB)
 	rm -f src/*.o
 	rm -f tests/*.o tests/*.exe tests/*.toc
-	rm -f include/git/config.h
+	rm -f src/git/config.h
 	rm -rf apidocs
 
 apidocs:
@@ -41,7 +43,7 @@ test: $(TEST_RUN)
 .c.o:
 	$(CC) $(BASIC_CFLAGS) $(CFLAGS) -c $< -o $@
 
-include/git/config.h: include/git/config.h.in
+src/git/config.h: src/git/config.h.in
 	sed 's/@@OS@@/$(OS)/g' $< >$@+
 	mv $@+ $@
 
@@ -62,12 +64,12 @@ $(patsubst %.exe,%.toc,$(TEST_EXE)): tests/%.toc: tests/%.c
 	mv $@+ $@
 
 $(TEST_OBJ): tests/%.o: tests/%.c
-	$(CC) -Iinclude $(CFLAGS) -c $< -o $@
+	$(CC) -Isrc $(CFLAGS) -c $< -o $@
 
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(HDRS)
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(T_MAIN_C)
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: tests/%.toc
-	$(CC) -Iinclude -I. '-DTEST_TOC="$<"' \
+	$(CC) -Isrc -I. '-DTEST_TOC="$<"' \
 		-c $(T_MAIN_C) \
 		-o $@
 

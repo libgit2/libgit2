@@ -1,5 +1,5 @@
 /apidocs
-/include/git/config.h
+/src/git/config.h
 *.o
 *.a
 *.exe

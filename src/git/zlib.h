@@ -46,7 +46,7 @@ GIT_BEGIN_DECL
  * deflateBound() implementation itself.
  *
  * @param stream the stream pointer.
- * @param s total length of the source data (in bytes). 
+ * @param s total length of the source data (in bytes).
  * @return maximum length of the compressed data.
  */
 GIT_INLINE(size_t) deflateBound(z_streamp stream, size_t s)
