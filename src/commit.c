@@ -23,7 +23,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include "git/commit.h"
+#include "commit.h"
 
 const git_oid *git_commit_id(git_commit *c)
 {

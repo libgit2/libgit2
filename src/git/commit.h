@@ -40,14 +40,6 @@ GIT_BEGIN_DECL
 
 /** Parsed representation of a commit object. */
 typedef struct git_commit git_commit;
-#ifdef GIT__PRIVATE
-struct git_commit {
-	git_oid id;
-	time_t commit_time;
-	unsigned parsed:1,
-	         flags:26;
-};
-#endif
 
 /**
  * Parse (or lookup) a commit from a revision pool.
