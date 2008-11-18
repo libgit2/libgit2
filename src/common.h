@@ -3,6 +3,7 @@
 
 #include "cc-compat.h"
 #include "util.h"
+#include "errors.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>

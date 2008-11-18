@@ -22,4 +22,11 @@
 # define GIT_TLS /* nothing: tls vars are thread-global */
 #endif
 
+/* sparse doesn't grok thread-local variables */
+#ifdef SPARSE_IS_RUNNING
+# undef GIT_HAS_TLS
+# undef GIT_TLS
+# define GIT_TLS
+#endif
+
 #endif /* INCLUDE_git_thread_utils_h__ */

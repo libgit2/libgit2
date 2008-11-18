@@ -41,7 +41,7 @@ apidocs:
 test: $(TEST_RUN)
 
 sparse:
-	@for i in $(SRC_C); do sparse $$i $(SPARSE_FLAGS) $(BASIC_CFLAGS) $(CFLAGS); done
+	@for i in $(SRC_C); do sparse $$i -DSPARSE_IS_RUNNING $(SPARSE_FLAGS) $(BASIC_CFLAGS) $(CFLAGS); done
 
 install-headers: $(PUBLIC_HEADERS)
 	@mkdir -p /tmp/gitinc/git
