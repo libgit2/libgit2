@@ -26,13 +26,13 @@
 #include "git/revwalk.h"
 #include <stdlib.h>
 
-struct git_revp {
+struct git_revpool {
 	git_odb *db;
 };
 
-git_revp *git_revp_alloc(git_odb *db)
+git_revpool *git_revpool_alloc(git_odb *db)
 {
-	git_revp *walk = malloc(sizeof(*walk));
+	git_revpool *walk = malloc(sizeof(*walk));
 	if (!walk)
 		return NULL;
 
@@ -40,7 +40,7 @@ git_revp *git_revp_alloc(git_odb *db)
 	return walk;
 }
 
-void git_revp_free(git_revp *walk)
+void git_revpool_free(git_revpool *walk)
 {
 	free(walk);
 }

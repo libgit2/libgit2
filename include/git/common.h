@@ -85,7 +85,7 @@
 GIT_BEGIN_DECL
 
 /** A revision traversal pool. */
-typedef struct git_revp git_revp;
+typedef struct git_revpool git_revpool;
 
 /** @} */
 GIT_END_DECL
