@@ -40,6 +40,10 @@ apidocs:
 
 test: $(TEST_RUN)
 
+install-headers: $(PUBLIC_HEADERS)
+	@mkdir -p /tmp/gitinc/git
+	@for i in $^; do cat COPYING $$i > /tmp/gitinc/$${i##src/}; done
+
 .c.o:
 	$(CC) $(BASIC_CFLAGS) $(CFLAGS) -c $< -o $@
 
@@ -87,3 +91,4 @@ $(TEST_RUN): tests/%.run: tests/%.exe
 .PHONY: clean
 .PHONY: test $(TEST_RUN)
 .PHONY: apidocs
+.PHONY: install-headers
