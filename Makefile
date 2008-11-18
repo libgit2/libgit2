@@ -8,7 +8,8 @@ OS     = unix
 BASIC_CFLAGS := -Isrc
 BASIC_CFLAGS += -fvisibility=hidden
 
-OBJS = $(patsubst %.c,%.o,$(wildcard src/*.c))
+SRC_C = $(wildcard src/*.c)
+OBJS = $(patsubst %.c,%.o,$(SRC_C))
 HDRS = $(wildcard src/*.h)
 PUBLIC_HEADERS = $(wildcard src/git/*.h)
 HDRS += $(PUBLIC_HEADERS)
@@ -38,6 +39,9 @@ apidocs:
 	cp CONVENTIONS apidocs/
 
 test: $(TEST_RUN)
+
+sparse:
+	@for i in $(SRC_C); do sparse $$i $(SPARSE_FLAGS) $(BASIC_CFLAGS) $(CFLAGS); done
 
 install-headers: $(PUBLIC_HEADERS)
 	@mkdir -p /tmp/gitinc/git
@@ -91,3 +95,4 @@ $(TEST_RUN): tests/%.run: tests/%.exe
 .PHONY: test $(TEST_RUN)
 .PHONY: apidocs
 .PHONY: install-headers
+.PHONY: sparse
