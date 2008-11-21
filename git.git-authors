@@ -46,6 +46,7 @@ ok	Johannes Sixt <j6t@kdbg.org>
 ok	Junio C Hamano <gitster@pobox.com>
 ok	Linus Torvalds <torvalds@linux-foundation.org>
 ok	Lukas Sandström <lukass@etek.chalmers.se>
+ok	Matthieu Moy <Matthieu.Moy@imag.fr>
 ok	Nicolas Pitre <nico@cam.org>
 ok	Paolo Bonzini <bonzini@gnu.org>
 ok	Paul Kocher <paul@cryptography.com>
@@ -53,4 +54,5 @@ ok	Peter Hagervall <hager@cs.umu.se>
 ok	Pierre Habouzit <madcoder@debian.org>
 ok	Pieter de Bie <pdebie@ai.rug.nl>
 ok	Shawn O. Pearce <spearce@spearce.org>
+ok	Steffen Prohaska <prohaska@zib.de>
 ok	Sven Verdoolaege <skimo@kotnet.org>
