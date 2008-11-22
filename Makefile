@@ -7,6 +7,7 @@ OS     = unix
 
 BASIC_CFLAGS := -Isrc
 BASIC_CFLAGS += -fvisibility=hidden
+ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
 
 SRC_C = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRC_C))
@@ -42,14 +43,14 @@ apidocs:
 test: $(TEST_RUN)
 
 sparse: $(CONFIG_H)
-	@for i in $(SRC_C); do sparse $$i -DSPARSE_IS_RUNNING $(SPARSE_FLAGS) $(BASIC_CFLAGS) $(CFLAGS); done
+	sparse -DSPARSE_IS_RUNNING $(ALL_CFLAGS) $(SPARSE_FLAGS) $(SRC_C)
 
 install-headers: $(PUBLIC_HEADERS)
 	@mkdir -p /tmp/gitinc/git
 	@for i in $^; do cat .HEADER $$i > /tmp/gitinc/$${i##src/}; done
 
 .c.o:
-	$(CC) $(BASIC_CFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(ALL_CFLAGS) -c $< -o $@
 
 $(CONFIG_H): $(CONFIG_H).in
 	sed 's/@@OS@@/$(OS)/g' $< >$@+
@@ -72,7 +73,7 @@ $(patsubst %.exe,%.toc,$(TEST_EXE)): tests/%.toc: tests/%.c
 	mv $@+ $@
 
 $(TEST_OBJ): tests/%.o: tests/%.c
-	$(CC) -Isrc $(CFLAGS) -c $< -o $@
+	$(CC) $(ALL_CFLAGS) -c $< -o $@
 
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(HDRS)
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(T_MAIN_C)
