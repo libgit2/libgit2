@@ -2,6 +2,7 @@
 #define INCLUDE_common_h__
 
 #include "cc-compat.h"
+#include "util.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
