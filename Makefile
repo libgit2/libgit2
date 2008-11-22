@@ -41,7 +41,7 @@ test: $(TEST_RUN)
 
 install-headers: $(PUBLIC_HEADERS)
 	@mkdir -p /tmp/gitinc/git
-	@for i in $^; do cat COPYING $$i > /tmp/gitinc/$${i##src/}; done
+	@for i in $^; do cat .HEADER $$i > /tmp/gitinc/$${i##src/}; done
 
 .c.o:
 	$(CC) $(BASIC_CFLAGS) $(CFLAGS) -c $< -o $@
