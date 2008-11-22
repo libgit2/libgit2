@@ -13,6 +13,7 @@ OBJS = $(patsubst %.c,%.o,$(SRC_C))
 HDRS = $(wildcard src/*.h)
 PUBLIC_HEADERS = $(wildcard src/git/*.h)
 HDRS += $(PUBLIC_HEADERS)
+CONFIG_H = src/git/config.h
 
 OBJS += src/os/$(OS).o
 HDRS += src/git/config.h
@@ -50,7 +51,7 @@ install-headers: $(PUBLIC_HEADERS)
 .c.o:
 	$(CC) $(BASIC_CFLAGS) $(CFLAGS) -c $< -o $@
 
-src/git/config.h: src/git/config.h.in
+$(CONFIG_H): $(CONFIG_H).in
 	sed 's/@@OS@@/$(OS)/g' $< >$@+
 	mv $@+ $@
 
