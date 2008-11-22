@@ -23,14 +23,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include "git/revwalk.h"
-#include <stdlib.h>
+#include "revwalk.h"
 
-struct git_revpool {
-	git_odb *db;
-};
-
-git_revpool *git_revpool_alloc(git_odb *db)
+git_revpool *gitrp_alloc(git_odb *db)
 {
 	git_revpool *walk = malloc(sizeof(*walk));
 	if (!walk)
@@ -40,7 +35,7 @@ git_revpool *git_revpool_alloc(git_odb *db)
 	return walk;
 }
 
-void git_revpool_free(git_revpool *walk)
+void gitrp_free(git_revpool *walk)
 {
 	free(walk);
 }
