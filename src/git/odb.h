@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "oid.h"
+#include <stdlib.h>
 
 /**
  * @file git/odb.h

@@ -2,6 +2,7 @@
 #define INCLUDE_git_oid_h__
 
 #include "common.h"
+#include <string.h>
 
 /**
  * @file git/oid.h

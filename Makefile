@@ -14,11 +14,6 @@ OBJS = $(patsubst %.c,%.o,$(SRC_C))
 HDRS = $(wildcard src/*.h)
 PUBLIC_HEADERS = $(wildcard src/git/*.h)
 HDRS += $(PUBLIC_HEADERS)
-CONFIG_H = src/git/config.h
-
-OBJS += src/os/$(OS).o
-HDRS += src/git/config.h
-HDRS += src/git/os/$(OS).h
 
 GIT_LIB = libgit2.a
 
@@ -42,7 +37,7 @@ apidocs:
 
 test: $(TEST_RUN)
 
-sparse: $(CONFIG_H)
+sparse:
 	sparse -DSPARSE_IS_RUNNING $(ALL_CFLAGS) $(SPARSE_FLAGS) $(SRC_C)
 
 install-headers: $(PUBLIC_HEADERS)
@@ -51,10 +46,6 @@ install-headers: $(PUBLIC_HEADERS)
 
 .c.o:
 	$(CC) $(ALL_CFLAGS) -c $< -o $@
-
-$(CONFIG_H): $(CONFIG_H).in
-	sed 's/@@OS@@/$(OS)/g' $< >$@+
-	mv $@+ $@
 
 $(OBJS): $(HDRS)
 $(GIT_LIB): $(OBJS)

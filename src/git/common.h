@@ -55,8 +55,6 @@
 /** Input does not exist in the scope searched. */
 #define GIT_ENOTFOUND (GIT_ERROR - 2)
 
-#include "git/config.h"
-
 GIT_BEGIN_DECL
 
 /** A revision traversal pool. */

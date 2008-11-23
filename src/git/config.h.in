@@ -1,6 +1,0 @@
-#ifndef INCLUDE_git_config_h__
-#define INCLUDE_git_config_h__
-
-#include "git/os/@@OS@@.h"
-
-#endif
