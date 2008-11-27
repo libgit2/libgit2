@@ -1,6 +1,6 @@
 PROJECT_NAME = libgit2
 
-INPUT            = include
+INPUT            = src/git
 QUIET            = YES
 RECURSIVE        = YES
 FILE_PATTERNS    = *.h
