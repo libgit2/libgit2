@@ -17,7 +17,9 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 #include "errors.h"
+#include "git/fileops.h"
 
 typedef int git_file;
 typedef struct stat gitfo_statbuf;

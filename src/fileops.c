@@ -134,3 +134,65 @@ int gitfo_close_cached(gitfo_cache *ioc)
 
 	return gitfo_close(fd);
 }
+
+/**
+ * Walk a directory and run 'fn' for each encountered entry
+ * (except '.' and '..').
+ */
+int git_foreach_dirent(const char *wd, int (*fn)(void *, const char *), void *arg)
+{
+	char path[PATH_MAX];
+	size_t wd_len;
+	DIR *dir;
+	struct dirent *de;
+
+	if (!wd)
+		return GIT_ERROR;
+
+	wd_len = strlen(wd);
+	if (!wd_len || sizeof(path) < wd_len + 2)
+		return GIT_ERROR;
+
+	strcpy(path, wd);
+	while (path[wd_len - 1] == '/')
+		wd_len--;
+	path[wd_len++] = '/';
+	path[wd_len] = '\0';
+
+	dir = opendir(wd);
+	if (!dir)
+		return GIT_ERROR;
+
+	while ((de = readdir(dir))) {
+		size_t de_len;
+		int result;
+
+		/* always skip '.' and '..' */
+		if (de->d_name[0] == '.') {
+			if (de->d_name[1] == '\0')
+				continue;
+			if (de->d_name[1] == '.' && de->d_name[2] == '\0')
+				continue;
+		}
+
+		de_len = strlen(de->d_name);
+		if (sizeof(path) < wd_len + de_len + 1) {
+			closedir(dir);
+			return GIT_ERROR;
+		}
+
+		strcpy(path + wd_len, de->d_name);
+		result = fn(arg, path);
+		if (result < 0) {
+			closedir(dir);
+			return result;
+		}
+		if (result > 0) {
+			closedir(dir);
+			return result;
+		}
+	}
+
+	closedir(dir);
+	return GIT_SUCCESS;
+}
