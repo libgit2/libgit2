@@ -23,7 +23,7 @@
 #endif
 
 /* sparse doesn't grok thread-local variables */
-#ifdef SPARSE_IS_RUNNING
+#if defined(__CHECKER__)
 # undef GIT_HAS_TLS
 # undef GIT_TLS
 # define GIT_TLS

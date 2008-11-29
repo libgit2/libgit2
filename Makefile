@@ -38,7 +38,7 @@ apidocs:
 test: $(TEST_RUN)
 
 sparse:
-	cgcc -no-compile -DSPARSE_IS_RUNNING $(ALL_CFLAGS) $(SPARSE_FLAGS) $(SRC_C)
+	cgcc -no-compile $(ALL_CFLAGS) $(SPARSE_FLAGS) $(SRC_C)
 
 install-headers: $(PUBLIC_HEADERS)
 	@mkdir -p /tmp/gitinc/git
