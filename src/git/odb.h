@@ -46,7 +46,7 @@ typedef enum {
 	GIT_OBJ_REF_DELTA = 7,  /**< A delta, base is given by object id. */
 } git_otype;
 
-/** A small object read from the database. */
+/** An object read from the database. */
 typedef struct {
 	void *data;          /**< Raw, decompressed object data. */
 	size_t len;          /**< Total number of bytes in data. */
@@ -54,7 +54,7 @@ typedef struct {
 } git_obj;
 
 /**
- * Read a small object from the database.
+ * Read an object from the database.
  *
  * If GIT_ENOTFOUND then out->data is set to NULL.
  *
@@ -68,7 +68,7 @@ typedef struct {
 GIT_EXTERN(int) git_odb_read(git_obj *out, git_odb *db, const git_oid *id);
 
 /**
- * Read a small object from the database using only pack files.
+ * Read an object from the database using only pack files.
  *
  * If GIT_ENOTFOUND then out->data is set to NULL.
  *
@@ -82,7 +82,7 @@ GIT_EXTERN(int) git_odb_read(git_obj *out, git_odb *db, const git_oid *id);
 GIT_EXTERN(int) git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id);
 
 /**
- * Read a small object from the database using only loose object files.
+ * Read an object from the database using only loose object files.
  *
  * If GIT_ENOTFOUND then out->data is set to NULL.
  *
@@ -96,7 +96,7 @@ GIT_EXTERN(int) git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *i
 GIT_EXTERN(int) git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id);
 
 /**
- * Release all memory used by the sobj structure.
+ * Release all memory used by the obj structure.
  *
  * As a result of this call, obj->data will be set to NULL.
  *
