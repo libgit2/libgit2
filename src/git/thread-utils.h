@@ -22,8 +22,8 @@
 # define GIT_TLS /* nothing: tls vars are thread-global */
 #endif
 
-/* sparse doesn't grok thread-local variables */
-#if defined(__CHECKER__)
+/* sparse and cygwin don't grok thread-local variables */
+#if defined(__CHECKER__) || defined(__CYGWIN__)
 # undef GIT_HAS_TLS
 # undef GIT_TLS
 # define GIT_TLS
