@@ -21,6 +21,7 @@
 
 typedef int git_file;
 typedef struct stat gitfo_statbuf;
+typedef struct gitfo_cache gitfo_cache;
 
 #define gitfo_open(path, flags) open(path, flags)
 #define gitfo_close(fd) close(fd)
@@ -33,5 +34,10 @@ extern off_t gitfo_size(git_file fd);
 #define gitfo_fstat(fd, buf) fstat(fd, buf)
 #define gitfo_stat(path, buf) stat(path, buf)
 #define gitfo_fsync(fd) fsync(fd)
+
+extern gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size);
+extern int gitfo_write_cached(gitfo_cache *ioc, void *buf, size_t len);
+extern int gitfo_flush_cached(gitfo_cache *ioc);
+extern int gitfo_close_cached(gitfo_cache *ioc);
 
 #endif /* INCLUDE_fileops_h__ */
