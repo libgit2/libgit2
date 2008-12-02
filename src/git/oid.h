@@ -13,11 +13,17 @@
  */
 GIT_BEGIN_DECL
 
+/** Size (in bytes) of a raw/binary oid */
+#define GIT_OID_RAWSZ 20
+
+/** Size (in bytes) of a hex formatted oid */
+#define GIT_OID_HEXSZ (GIT_OID_RAWSZ * 2)
+
 /** Unique identity of any object (commit, tree, blob, tag). */
 typedef struct
 {
 	/** raw binary formatted id */
-	unsigned char id[20];
+	unsigned char id[GIT_OID_RAWSZ];
 } git_oid;
 
 /**
@@ -39,6 +45,40 @@ GIT_INLINE(void) git_oid_mkraw(git_oid *out, const unsigned char *raw)
 {
 	memcpy(out->id, raw, sizeof(out->id));
 }
+
+/**
+ * Format a git_oid into a hex string.
+ * @param str output hex string; must be pointing at the start of
+ *        the hex sequence and have at least the number of bytes
+ *        needed for an oid encoded in hex (40 bytes).  Only the
+ *        oid digits are written; a '\0' terminator must be added
+ *        by the caller if it is required.
+ * @param oid oid structure to format.
+ */
+GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
+
+/**
+ * Format a git_oid into a loose-object path string.
+ * <p>
+ * The resulting string is "aa/...", where "aa" is the first two
+ * hex digitis of the oid and "..." is the remaining 38 digits.
+ *
+ * @param str output hex string; must be pointing at the start of
+ *        the hex sequence and have at least the number of bytes
+ *        needed for an oid encoded in hex (41 bytes).  Only the
+ *        oid digits are written; a '\0' terminator must be added
+ *        by the caller if it is required.
+ * @param oid oid structure to format.
+ */
+GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
+
+/**
+ * Format a gid_oid into a newly allocated c-string.
+ * @param oid theoid structure to format
+ * @return the c-string; NULL if memory is exhausted.  Caller must
+ *         deallocate the string with free().
+ */
+GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
 
 /**
  * Copy an oid from one structure to another.

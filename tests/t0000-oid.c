@@ -1,6 +1,14 @@
 #include "test_lib.h"
 #include <git/oid.h>
 
+BEGIN_TEST(oid_szs)
+	git_oid out;
+	must_be_true(20 == GIT_OID_RAWSZ);
+	must_be_true(40 == GIT_OID_HEXSZ);
+	must_be_true(sizeof(out) == GIT_OID_RAWSZ);
+	must_be_true(sizeof(out.id) == GIT_OID_RAWSZ);
+END_TEST
+
 BEGIN_TEST(empty_string)
 	git_oid out;
 	must_fail(git_oid_mkstr(&out, ""));
@@ -150,3 +158,51 @@ BEGIN_TEST(cmp_oid_gt)
 	git_oid_mkraw(&b, b_in);
 	must_be_true(git_oid_cmp(&a, &b) > 0);
 END_TEST
+
+BEGIN_TEST(cmp_oid_fmt)
+	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
+	git_oid in;
+	char out[GIT_OID_HEXSZ + 1];
+
+	must_pass(git_oid_mkstr(&in, exp));
+
+	/* Format doesn't touch the last byte */
+	out[GIT_OID_HEXSZ] = 'Z';
+	git_oid_fmt(out, &in);
+	must_be_true(out[GIT_OID_HEXSZ] == 'Z');
+
+	/* Format produced the right result */
+	out[GIT_OID_HEXSZ] = '\0';
+	must_pass(strcmp(exp, out));
+END_TEST
+
+BEGIN_TEST(cmp_oid_allocfmt)
+	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
+	git_oid in;
+	char *out;
+
+	must_pass(git_oid_mkstr(&in, exp));
+
+	out = git_oid_allocfmt(&in);
+	must_be_true(out);
+	must_pass(strcmp(exp, out));
+END_TEST
+
+BEGIN_TEST(cmp_oid_pathfmt)
+	const char *exp1 = "16a0123456789abcdef4b775213c23a8bd74f5e0";
+	const char *exp2 = "16/a0123456789abcdef4b775213c23a8bd74f5e0";
+	git_oid in;
+	char out[GIT_OID_HEXSZ + 2];
+
+	must_pass(git_oid_mkstr(&in, exp1));
+
+	/* Format doesn't touch the last byte */
+	out[GIT_OID_HEXSZ + 1] = 'Z';
+	git_oid_pathfmt(out, &in);
+	must_be_true(out[GIT_OID_HEXSZ + 1] == 'Z');
+
+	/* Format produced the right result */
+	out[GIT_OID_HEXSZ + 1] = '\0';
+	must_pass(strcmp(exp2, out));
+END_TEST
+

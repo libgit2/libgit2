@@ -44,6 +44,7 @@ static signed char from_hex[] = {
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* e0 */
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* f0 */
 };
+static char to_hex[] = "0123456789abcdef";
 
 int git_oid_mkstr(git_oid *out, const char *str)
 {
@@ -56,4 +57,39 @@ int git_oid_mkstr(git_oid *out, const char *str)
 		out->id[p] = (unsigned char)v;
 	}
 	return GIT_SUCCESS;
+}
+
+static inline char *fmt_one(char *str, unsigned int val)
+{
+	*str++ = to_hex[val >> 4];
+	*str++ = to_hex[val & 0xf];
+	return str;
+}
+
+void git_oid_fmt(char *str, const git_oid *oid)
+{
+	int i;
+
+	for (i = 0; i < sizeof(oid->id); i++)
+		str = fmt_one(str, oid->id[i]);
+}
+
+void git_oid_pathfmt(char *str, const git_oid *oid)
+{
+	int i;
+
+	str = fmt_one(str, oid->id[0]);
+	*str++ = '/';
+	for (i = 1; i < sizeof(oid->id); i++)
+		str = fmt_one(str, oid->id[i]);
+}
+
+char *git_oid_allocfmt(const git_oid *oid)
+{
+	char *str = malloc(GIT_OID_HEXSZ + 1);
+	if (!str)
+		return NULL;
+	git_oid_fmt(str, oid);
+	str[GIT_OID_HEXSZ] = '\0';
+	return str;
 }
