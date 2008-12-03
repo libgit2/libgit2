@@ -1,3 +1,4 @@
+#include "common.h"
 #include "fileops.h"
 
 int gitfo_read(git_file fd, void *buf, size_t cnt)
@@ -141,7 +142,7 @@ int gitfo_close_cached(gitfo_cache *ioc)
  */
 int git_foreach_dirent(const char *wd, int (*fn)(void *, const char *), void *arg)
 {
-	char path[PATH_MAX];
+	char path[GIT_PATH_MAX];
 	size_t wd_len;
 	DIR *dir;
 	struct dirent *de;
