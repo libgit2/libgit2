@@ -23,6 +23,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "common.h"
 #include "git/oid.h"
 #include <string.h>
 
