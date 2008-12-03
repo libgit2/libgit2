@@ -4,7 +4,7 @@
 /**
  * @file git/fileops.h
  * @brief Git platform agnostic filesystem operations
- * @defgroup Git gitfiles
+ * @defgroup git_fileops Git filesystem operations
  * @ingroup Git
  * @{
  */
@@ -12,7 +12,7 @@
 #include "common.h"
 GIT_BEGIN_DECL
 /**
- * For each directory entry (except . and ..), run the function
+ * For each directory entry (except "." and ".."), run the function
  * "fn", passing it "arg" as its first argument and the path to
  * the entry as the second argument.
  * @param dir The directory to walk

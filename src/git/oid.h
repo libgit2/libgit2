@@ -51,7 +51,7 @@ GIT_INLINE(void) git_oid_mkraw(git_oid *out, const unsigned char *raw)
  * @param str output hex string; must be pointing at the start of
  *        the hex sequence and have at least the number of bytes
  *        needed for an oid encoded in hex (40 bytes).  Only the
- *        oid digits are written; a '\0' terminator must be added
+ *        oid digits are written; a '\\0' terminator must be added
  *        by the caller if it is required.
  * @param oid oid structure to format.
  */
@@ -66,7 +66,7 @@ GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
  * @param str output hex string; must be pointing at the start of
  *        the hex sequence and have at least the number of bytes
  *        needed for an oid encoded in hex (41 bytes).  Only the
- *        oid digits are written; a '\0' terminator must be added
+ *        oid digits are written; a '\\0' terminator must be added
  *        by the caller if it is required.
  * @param oid oid structure to format.
  */
