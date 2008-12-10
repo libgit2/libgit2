@@ -110,6 +110,34 @@ GIT_INLINE(void) git_obj_close(git_obj *obj)
 	obj->data = NULL;
 }
 
+/**
+ * Convert an object type to it's string representation.
+ *
+ * The result is a pointer to a string in static memory and
+ * should not be free()'ed.
+ *
+ * @param type object type to convert.
+ * @return the corresponding string representation.
+ */
+GIT_EXTERN(const char *) git_obj_type_to_string(git_otype type);
+
+/**
+ * Convert a string object type representation to it's git_otype.
+ *
+ * @param str the string to convert.
+ * @return the corresponding git_otype.
+ */
+GIT_EXTERN(git_otype) git_obj_string_to_type(const char *str);
+
+/**
+ * Determine if the given git_otype is a valid loose object type.
+ *
+ * @param type object type to test.
+ * @return true if the type represents a valid loose object type,
+ * false otherwise.
+ */
+GIT_EXTERN(int) git_obj__loose_object_type(git_otype type);
+
 /** @} */
 GIT_END_DECL
 #endif

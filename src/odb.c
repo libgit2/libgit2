@@ -24,6 +24,7 @@
  */
 
 #include "git/odb.h"
+#include "util.h"
 
 struct git_odb {
 	/** Path to the "objects" directory. */
@@ -32,6 +33,48 @@ struct git_odb {
 	/** Alternate databases to search. */
 	git_odb **alternates;
 };
+
+static struct {
+	const char *str;   /* type name string */
+	int        loose;  /* valid loose object type flag */
+} obj_type_table [] = {
+	{ "",          0 },  /* 0 = GIT_OBJ__EXT1     */
+	{ "commit",    1 },  /* 1 = GIT_OBJ_COMMIT    */
+	{ "tree",      1 },  /* 2 = GIT_OBJ_TREE      */
+	{ "blob",      1 },  /* 3 = GIT_OBJ_BLOB      */
+	{ "tag",       1 },  /* 4 = GIT_OBJ_TAG       */
+	{ "",          0 },  /* 5 = GIT_OBJ__EXT2     */
+	{ "OFS_DELTA", 0 },  /* 6 = GIT_OBJ_OFS_DELTA */
+	{ "REF_DELTA", 0 }   /* 7 = GIT_OBJ_REF_DELTA */
+};
+
+const char *git_obj_type_to_string(git_otype type)
+{
+	if (type < 0 || type >= ARRAY_SIZE(obj_type_table))
+		return "";
+	return obj_type_table[type].str;
+}
+
+git_otype git_obj_string_to_type(const char *str)
+{
+	int i;
+
+	if (!str || !*str)
+		return GIT_OBJ_BAD;
+
+	for (i = 0; i < ARRAY_SIZE(obj_type_table); i++)
+		if (!strcmp(str, obj_type_table[i].str))
+			return (git_otype) i;
+
+	return GIT_OBJ_BAD;
+}
+
+int git_obj__loose_object_type(git_otype type)
+{
+	if (type < 0 || type >= ARRAY_SIZE(obj_type_table))
+		return 0;
+	return obj_type_table[type].loose;
+}
 
 static int open_alternates(git_odb *db)
 {
@@ -95,3 +138,14 @@ attempt:
 	out->data = NULL;
 	return GIT_ENOTFOUND;
 }
+
+int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
+{
+	return GIT_SUCCESS;
+}
+
+int git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id)
+{
+	return GIT_SUCCESS;
+}
+
