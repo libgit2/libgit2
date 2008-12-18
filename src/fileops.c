@@ -49,6 +49,43 @@ off_t gitfo_size(git_file fd)
 	return sb.st_size;
 }
 
+int gitfo_read_file(gitfo_buf *obj, const char *path)
+{
+	git_file fd;
+	off_t len;
+	void *buff;
+
+	assert(obj && path && *path);
+
+	if ((fd = gitfo_open(path, O_RDONLY)) < 0)
+		return GIT_ERROR;  /* TODO: error handling */
+
+	if (((len = gitfo_size(fd)) < 0) || ((buff = malloc(len)) == NULL)) {
+		gitfo_close(fd);
+		return GIT_ERROR;  /* TODO: error handling */
+	}
+
+	if (gitfo_read(fd, buff, len) < 0) {
+		gitfo_close(fd);
+		free(buff);
+		return GIT_ERROR;  /* TODO: error handling */
+	}
+
+	gitfo_close(fd);
+
+	obj->data = buff;
+	obj->len  = len;
+
+	return GIT_SUCCESS;
+}
+
+void gitfo_free_buf(gitfo_buf *obj)
+{
+	assert(obj);
+	free(obj->data);
+	obj->data = NULL;
+}
+
 /* cached diskio */
 struct gitfo_cache {
 	git_file fd;
