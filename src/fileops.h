@@ -34,6 +34,7 @@ typedef struct {  /* file io buffer  */
 
 
 #define gitfo_open(path, flags) open(path, flags)
+#define gitfo_creat(path, mode) creat(path, mode)
 #define gitfo_close(fd) close(fd)
 
 extern int gitfo_read(git_file fd, void *buf, size_t cnt);

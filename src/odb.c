@@ -24,7 +24,9 @@
  */
 
 #include "git/odb.h"
-#include "util.h"
+#include "git/zlib.h"
+#include "common.h"
+#include "fileops.h"
 
 struct git_odb {
 	/** Path to the "objects" directory. */
@@ -33,6 +35,11 @@ struct git_odb {
 	/** Alternate databases to search. */
 	git_odb **alternates;
 };
+
+typedef struct {  /* object header data */
+	git_otype type;  /* object type */
+	size_t    size;  /* object size */
+} obj_hdr;
 
 static struct {
 	const char *str;   /* type name string */
@@ -74,6 +81,291 @@ int git_obj__loose_object_type(git_otype type)
 	if (type < 0 || type >= ARRAY_SIZE(obj_type_table))
 		return 0;
 	return obj_type_table[type].loose;
+}
+
+static int object_file_name(char *name, size_t n, char *dir, const git_oid *id)
+{
+	size_t len = strlen(dir);
+
+	/* check length: 43 = 40 hex sha1 chars + 2 * '/' + '\0' */
+	if (len+43 > n)
+		return len+43;
+
+	/* the object dir: eg $GIT_DIR/objects */
+	strcpy(name, dir);
+	if (name[len-1] != '/')
+		name[len++] = '/';
+
+	/* loose object filename: aa/aaa... (41 bytes) */
+	git_oid_pathfmt(&name[len], id);
+	name[len+41] = '\0';
+
+	return 0;
+}
+
+static int is_zlib_compressed_data(unsigned char *data)
+{
+	unsigned int w;
+
+	w = ((unsigned int)(data[0]) << 8) + data[1];
+	return data[0] == 0x78 && !(w %31);
+}
+
+static size_t get_binary_object_header(obj_hdr *hdr, gitfo_buf *obj)
+{
+	unsigned char c;
+	unsigned char *data = obj->data;
+	size_t shift, size, used = 0;
+
+	if (obj->len == 0)
+		return 0;
+
+	c = data[used++];
+	hdr->type = (c >> 4) & 7;
+
+	size = c & 15;
+	shift = 4;
+	while (c & 0x80) {
+		if (obj->len <= used)
+			return 0;
+		if (sizeof(size_t) * 8 <= shift)
+			return 0;
+		c = data[used++];
+		size += (c & 0x7f) << shift;
+		shift += 7;
+	}
+	hdr->size = size;
+
+	return used;
+}
+
+static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
+{
+	char c, typename[10];
+	size_t size, used = 0;
+
+	/*
+	 * type name string followed by space.
+	 */
+	while ((c = data[used]) != ' ') {
+		typename[used++] = c;
+		if (used >= sizeof(typename))
+			return 0;
+	}
+	typename[used] = 0;
+	if (used == 0)
+		return 0;
+	hdr->type = git_obj_string_to_type(typename);
+	used++;  /* consume the space */
+
+	/*
+	 * length follows immediately in decimal (without
+	 * leading zeros).
+	 */
+	size = data[used++] - '0';
+	if (size > 9)
+		return 0;
+	if (size) {
+		while ((c = data[used]) != '\0') {
+			size_t d = c - '0';
+			if (d > 9)
+				break;
+			used++;
+			size = size * 10 + d;
+		}
+	}
+	hdr->size = size;
+
+	/*
+	 * the length must be followed by a zero byte
+	 */
+	if (data[used++] != '\0')
+		return 0;
+
+	return used;
+}
+
+static void init_stream(z_stream *s, void *out, size_t len)
+{
+	memset(s, 0, sizeof(*s));
+	s->next_out  = out;
+	s->avail_out = len;
+}
+
+static void set_stream_input(z_stream *s, void *in, size_t len)
+{
+	s->next_in  = in;
+	s->avail_in = len;
+}
+
+static void set_stream_output(z_stream *s, void *out, size_t len)
+{
+	s->next_out  = out;
+	s->avail_out = len;
+}
+
+static int start_inflate(z_stream *s, gitfo_buf *obj, void *out, size_t len)
+{
+	init_stream(s, out, len);
+	set_stream_input(s, obj->data, obj->len);
+	inflateInit(s);
+	return inflate(s, 0);
+}
+
+static int finish_inflate(z_stream *s)
+{
+	int status = Z_OK;
+
+	while (status == Z_OK)
+		status = inflate(s, Z_FINISH);
+
+	inflateEnd(s);
+
+	if ((status != Z_STREAM_END) || (s->avail_in != 0))
+		return GIT_ERROR;
+
+	return GIT_SUCCESS;
+}
+
+static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
+{
+	unsigned char *buf, *head = hb;
+	size_t tail;
+
+	/*
+	 * allocate a buffer to hold the inflated data and copy the
+	 * initial sequence of inflated data from the tail of the
+	 * head buffer, if any.
+	 */
+	if ((buf = malloc(hdr->size + 1)) == NULL)
+		return NULL;
+	tail = s->total_out - used;
+	if (used > 0 && tail > 0) {
+		if (tail > hdr->size)
+			tail = hdr->size;
+		memcpy(buf, head + used, tail);
+	}
+	used = tail;
+
+	/*
+	 * inflate the remainder of the object data, if any
+	 */
+	if (hdr->size >= used) {
+		set_stream_output(s, buf + used, hdr->size - used);
+		if (finish_inflate(s)) {
+			free(buf);
+			return NULL;
+		}
+	}
+
+	return buf;
+}
+
+static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
+{
+	z_stream zs;
+	int status = Z_OK;
+
+	init_stream(&zs, out, outlen);
+	set_stream_input(&zs, in, inlen);
+
+	inflateInit(&zs);
+
+	while (status == Z_OK)
+		status = inflate(&zs, Z_FINISH);
+
+	inflateEnd(&zs);
+
+	if ((status != Z_STREAM_END) || (zs.total_out != outlen))
+		return GIT_ERROR;
+
+	if (zs.avail_in != 0)
+		return GIT_ERROR;
+
+	return GIT_SUCCESS;
+}
+
+/*
+ * At one point, there was a loose object format that was intended to
+ * mimic the format used in pack-files. This was to allow easy copying
+ * of loose object data into packs. This format is no longer used, but
+ * we must still read it.
+ */
+static int inflate_packlike_loose_disk_obj(git_obj *out, gitfo_buf *obj)
+{
+	unsigned char *in, *buf;
+	obj_hdr hdr;
+	size_t len, used;
+
+	/*
+	 * read the object header, which is an (uncompressed)
+	 * binary encoding of the object type and size.
+	 */
+	if ((used = get_binary_object_header(&hdr, obj)) == 0)
+		return GIT_ERROR;
+
+	if (!git_obj__loose_object_type(hdr.type))
+		return GIT_ERROR;
+
+	/*
+	 * allocate a buffer and inflate the data into it
+	 */
+	buf = malloc(hdr.size+1);
+	in  = ((unsigned char *)obj->data) + used;
+	len = obj->len - used;
+	if (inflate_buffer(in, len, buf, hdr.size)) {
+		free(buf);
+		return GIT_ERROR;
+	}
+	buf[hdr.size] = '\0';
+
+	out->data = buf;
+	out->len  = hdr.size;
+	out->type = hdr.type;
+
+	return GIT_SUCCESS;
+}
+
+static int inflate_disk_obj(git_obj *out, gitfo_buf *obj)
+{
+	unsigned char head[64], *buf;
+	z_stream zs;
+	int z_status;
+	obj_hdr hdr;
+	size_t used;
+
+	/*
+	 * check for a pack-like loose object
+	 */
+	if (!is_zlib_compressed_data(obj->data))
+		return inflate_packlike_loose_disk_obj(out, obj);
+
+	/*
+	 * inflate the initial part of the io buffer in order
+	 * to parse the object header (type and size).
+	 */
+	if ((z_status = start_inflate(&zs, obj, head, sizeof(head))) < Z_OK)
+		return GIT_ERROR;
+
+	if ((used = get_object_header(&hdr, head)) == 0)
+		return GIT_ERROR;
+
+	if (!git_obj__loose_object_type(hdr.type))
+		return GIT_ERROR;
+
+	/*
+	 * allocate a buffer and inflate the object data into it
+	 * (including the initial sequence in the head buffer).
+	 */
+	if ((buf = inflate_tail(&zs, head, used, &hdr)) == NULL)
+		return GIT_ERROR;
+	buf[hdr.size] = '\0';
+
+	out->data = buf;
+	out->len  = hdr.size;
+	out->type = hdr.type;
+
+	return GIT_SUCCESS;
 }
 
 static int open_alternates(git_odb *db)
@@ -141,6 +433,28 @@ attempt:
 
 int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 {
+	char file[GIT_PATH_MAX];
+	gitfo_buf obj = GITFO_BUF_INIT;
+
+	assert(out && db && id);
+
+	out->data = NULL;
+	out->len  = 0;
+	out->type = GIT_OBJ_BAD;
+
+	if (object_file_name(file, sizeof(file), db->path, id))
+		return GIT_ENOTFOUND;  /* TODO: error handling */
+
+	if (gitfo_read_file(&obj, file))
+		return GIT_ENOTFOUND;  /* TODO: error handling */
+
+	if (inflate_disk_obj(out, &obj)) {
+		gitfo_free_buf(&obj);
+		return GIT_ENOTFOUND;  /* TODO: error handling */
+	}
+
+	gitfo_free_buf(&obj);
+
 	return GIT_SUCCESS;
 }
 

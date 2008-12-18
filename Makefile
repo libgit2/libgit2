@@ -78,7 +78,7 @@ $(TEST_EXE): tests/%.exe: tests/%.o tests/%_main.o
 	$(CC) -o $@ \
 		$(patsubst %.exe,%_main.o,$@) \
 		$(patsubst %.exe,%.o,$@) \
-		$(T_LIB) -L. -lgit2
+		$(T_LIB) -L. -lgit2 -lz
 
 $(TEST_RUN): tests/%.run: tests/%.exe
 	@t=trash-$(<F) && \
