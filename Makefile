@@ -29,7 +29,6 @@ clean:
 	rm -f src/*.o
 	rm -f tests/*.o tests/*.exe tests/*.toc
 	rm -rf trash-*.exe
-	rm -f src/git/config.h
 	rm -rf apidocs
 
 apidocs:
