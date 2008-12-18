@@ -28,6 +28,7 @@ clean:
 	rm -f $(GIT_LIB)
 	rm -f src/*.o
 	rm -f tests/*.o tests/*.exe tests/*.toc
+	rm -rf trash-*.exe
 	rm -f src/git/config.h
 	rm -rf apidocs
 
@@ -81,7 +82,12 @@ $(TEST_EXE): tests/%.exe: tests/%.o tests/%_main.o
 		$(T_LIB) -L. -lgit2
 
 $(TEST_RUN): tests/%.run: tests/%.exe
-	@$<
+	@t=trash-$(<F) && \
+	 mkdir $$t && \
+	 if (cd $$t && ../$<); \
+	  then rm -rf $$t; \
+	  else rmdir $$t; exit 1; \
+	 fi
 
 .PHONY: all
 .PHONY: clean
