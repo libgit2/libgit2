@@ -60,7 +60,7 @@ int git_oid_mkstr(git_oid *out, const char *str)
 	return GIT_SUCCESS;
 }
 
-static inline char *fmt_one(char *str, unsigned int val)
+GIT_INLINE(char) *fmt_one(char *str, unsigned int val)
 {
 	*str++ = to_hex[val >> 4];
 	*str++ = to_hex[val & 0xf];

@@ -113,7 +113,7 @@ gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size)
 	return ioc;
 }
 
-static inline void gitfo_add_to_cache(gitfo_cache *ioc, void *buf, size_t len)
+GIT_INLINE(void) gitfo_add_to_cache(gitfo_cache *ioc, void *buf, size_t len)
 {
 	memcpy(ioc->cache + ioc->pos, buf, len);
 	ioc->pos += len;

@@ -4,13 +4,13 @@
 #include <stdlib.h>
 
 /* convenience functions */
-static inline int git_int_error(int code)
+GIT_INLINE(int) git_int_error(int code)
 {
 	git_errno = code;
 	return code;
 }
 
-static inline void *git_ptr_error(int code)
+GIT_INLINE(void) *git_ptr_error(int code)
 {
 	git_errno = code;
 	return NULL;
