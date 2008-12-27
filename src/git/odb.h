@@ -138,6 +138,20 @@ GIT_EXTERN(git_otype) git_obj_string_to_type(const char *str);
  */
 GIT_EXTERN(int) git_obj__loose_object_type(git_otype type);
 
+/**
+ * Determine the object-ID (sha1 hash) of the given git_obj.
+ *
+ * The input obj must be a valid loose object type and the data
+ * pointer must not be NULL, unless the len field is also zero.
+ *
+ * @param id the resulting object-ID.
+ * @param obj the object whose hash is to be determined.
+ * @return
+ * - GIT_SUCCESS if the object-ID was correctly determined.
+ * - GIT_ERROR if the given object is malformed.
+ */
+GIT_EXTERN(int) git_obj_hash(git_oid *id, git_obj *obj);
+
 /** @} */
 GIT_END_DECL
 #endif

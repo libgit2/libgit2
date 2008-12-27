@@ -27,6 +27,8 @@
 #include "git/zlib.h"
 #include "common.h"
 #include "fileops.h"
+#include "hash.h"
+#include <stdio.h>
 
 struct git_odb {
 	/** Path to the "objects" directory. */
@@ -81,6 +83,46 @@ int git_obj__loose_object_type(git_otype type)
 	if (type < 0 || type >= ARRAY_SIZE(obj_type_table))
 		return 0;
 	return obj_type_table[type].loose;
+}
+
+static int format_object_header(char *hdr, size_t n, git_obj *obj)
+{
+	const char *type_str = git_obj_type_to_string(obj->type);
+	int len = snprintf(hdr, n, "%s %u", type_str, obj->len);
+
+	assert(len > 0);  /* otherwise snprintf() is broken */
+	assert(len < n);  /* otherwise the caller is broken! */
+
+	if (len < 0 || len >= n)
+		return GIT_ERROR;
+	return len+1;
+}
+
+int git_obj_hash(git_oid *id, git_obj *obj)
+{
+	git_buf_vec vec[2];
+	char hdr[64];
+	int  hdrlen;
+
+	assert(id && obj);
+
+	if (!git_obj__loose_object_type(obj->type))
+		return GIT_ERROR;
+
+	if (!obj->data && obj->len != 0)
+		return GIT_ERROR;
+
+	if ((hdrlen = format_object_header(hdr, sizeof(hdr), obj)) < 0)
+		return GIT_ERROR;
+
+	vec[0].data = hdr;
+	vec[0].len  = hdrlen;
+	vec[1].data = obj->data;
+	vec[1].len  = obj->len;
+
+	git_hash_vec(id, vec, 2);
+
+	return GIT_SUCCESS;
 }
 
 static int object_file_name(char *name, size_t n, char *dir, const git_oid *id)
