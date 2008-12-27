@@ -53,14 +53,14 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 {
 	git_file fd;
 	off_t len;
-	void *buff;
+	unsigned char *buff;
 
 	assert(obj && path && *path);
 
 	if ((fd = gitfo_open(path, O_RDONLY)) < 0)
 		return GIT_ERROR;  /* TODO: error handling */
 
-	if (((len = gitfo_size(fd)) < 0) || ((buff = malloc(len)) == NULL)) {
+	if (((len = gitfo_size(fd)) < 0) || ((buff = malloc(len+1)) == NULL)) {
 		gitfo_close(fd);
 		return GIT_ERROR;  /* TODO: error handling */
 	}
@@ -70,6 +70,7 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 		free(buff);
 		return GIT_ERROR;  /* TODO: error handling */
 	}
+	buff[len] = '\0';
 
 	gitfo_close(fd);
 
