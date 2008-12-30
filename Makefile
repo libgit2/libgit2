@@ -2,6 +2,8 @@ all::
 
 DOXYGEN = doxygen
 
+prefix=/usr/local
+
 CFLAGS = -g -O2 -Wall
 OS     = unix
 
@@ -43,6 +45,21 @@ sparse:
 install-headers: $(PUBLIC_HEADERS)
 	@mkdir -p /tmp/gitinc/git
 	@for i in $^; do cat .HEADER $$i > /tmp/gitinc/$${i##src/}; done
+
+install: $(GIT_LIB) $(PUBLIC_HEADERS)
+	@mkdir -p $(prefix)/include/git
+	@for i in $(PUBLIC_HEADERS); do \
+		cat .HEADER $$i > $(prefix)/include/$${i##src/}; \
+	done
+	@mkdir -p $(prefix)/lib
+	@cp -f $(GIT_LIB) $(prefix)/lib/libgit2.a
+
+uninstall:
+	@rm -f $(prefix)/lib/libgit2.a
+	@for i in $(PUBLIC_HEADERS); do \
+		rm -f $(prefix)/include/$${i##src/}; \
+	done
+	@rmdir $(prefix)/include/git
 
 .c.o:
 	$(CC) $(ALL_CFLAGS) -c $< -o $@
@@ -93,4 +110,5 @@ $(TEST_RUN): tests/%.run: tests/%.exe
 .PHONY: test $(TEST_RUN)
 .PHONY: apidocs
 .PHONY: install-headers
+.PHONY: install uninstall
 .PHONY: sparse
