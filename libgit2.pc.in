@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libgit2
+Description: The git library, take 2
+Version: 0.0.1
+Requires: 
+Libs: -L${libdir} -lgit2
+Cflags: -I${includedir}

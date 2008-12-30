@@ -1,5 +1,6 @@
 /apidocs
 /trash-*.exe
+/libgit2.pc
 *.o
 *.a
 *.exe

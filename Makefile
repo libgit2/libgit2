@@ -46,16 +46,19 @@ install-headers: $(PUBLIC_HEADERS)
 	@mkdir -p /tmp/gitinc/git
 	@for i in $^; do cat .HEADER $$i > /tmp/gitinc/$${i##src/}; done
 
-install: $(GIT_LIB) $(PUBLIC_HEADERS)
+install: $(GIT_LIB) $(PUBLIC_HEADERS) libgit2.pc
 	@mkdir -p $(prefix)/include/git
 	@for i in $(PUBLIC_HEADERS); do \
 		cat .HEADER $$i > $(prefix)/include/$${i##src/}; \
 	done
 	@mkdir -p $(prefix)/lib
 	@cp -f $(GIT_LIB) $(prefix)/lib/libgit2.a
+	@mkdir -p $(prefix)/lib/pkgconfig
+	@cp -f libgit2.pc $(prefix)/lib/pkgconfig/libgit2.pc
 
 uninstall:
 	@rm -f $(prefix)/lib/libgit2.a
+	@rm -f $(prefix)/lib/pkgconfig/libgit2.pc
 	@for i in $(PUBLIC_HEADERS); do \
 		rm -f $(prefix)/include/$${i##src/}; \
 	done
@@ -104,6 +107,9 @@ $(TEST_RUN): tests/%.run: tests/%.exe
 	  then rm -rf $$t; \
 	  else rmdir $$t; exit 1; \
 	 fi
+
+libgit2.pc: libgit2.pc.in
+	sed 's#@prefix@#$(prefix)#' $< > $@
 
 .PHONY: all
 .PHONY: clean
