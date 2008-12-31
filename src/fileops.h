@@ -24,7 +24,6 @@
 #define GITFO_BUF_INIT {NULL, 0}
 
 typedef int git_file;
-typedef struct stat gitfo_statbuf;
 typedef struct gitfo_cache gitfo_cache;
 
 typedef struct {  /* file io buffer  */
@@ -33,18 +32,13 @@ typedef struct {  /* file io buffer  */
 } gitfo_buf;
 
 
-#define gitfo_open(path, flags) open(path, flags)
-#define gitfo_creat(path, mode) creat(path, mode)
+extern int gitfo_open(const char *path, int flags);
+extern int gitfo_creat(const char *path, int mode);
 #define gitfo_close(fd) close(fd)
 
 extern int gitfo_read(git_file fd, void *buf, size_t cnt);
 extern int gitfo_write(git_file fd, void *buf, size_t cnt);
-
 extern off_t gitfo_size(git_file fd);
-#define gitfo_lstat(path, buf) lstat(path, buf)
-#define gitfo_fstat(fd, buf) fstat(fd, buf)
-#define gitfo_stat(path, buf) stat(path, buf)
-#define gitfo_fsync(fd) fsync(fd)
 
 extern int gitfo_read_file(gitfo_buf *obj, const char *path);
 extern void gitfo_free_buf(gitfo_buf *obj);

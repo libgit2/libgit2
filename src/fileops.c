@@ -1,6 +1,18 @@
 #include "common.h"
 #include "fileops.h"
 
+int gitfo_open(const char *path, int flags)
+{
+	int fd = open(path, flags);
+	return fd >= 0 ? fd : git_os_error();
+}
+
+int gitfo_creat(const char *path, int mode)
+{
+	int fd = creat(path, mode);
+	return fd >= 0 ? fd : git_os_error();
+}
+
 int gitfo_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
@@ -9,11 +21,11 @@ int gitfo_read(git_file fd, void *buf, size_t cnt)
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return -1;
+			return git_os_error();
 		}
 		if (!r) {
 			errno = EPIPE;
-			return -1;
+			return git_os_error();
 		}
 		cnt -= r;
 		b += r;
@@ -29,11 +41,11 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return -1;
+			return git_os_error();
 		}
 		if (!r) {
 			errno = EPIPE;
-			return -1;
+			return git_os_error();
 		}
 		cnt -= r;
 		b += r;
@@ -43,9 +55,9 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 
 off_t gitfo_size(git_file fd)
 {
-	gitfo_statbuf sb;
+	struct stat sb;
 	if (fstat(fd, &sb))
-		return -1;
+		return git_os_error();
 	return sb.st_size;
 }
 
@@ -166,7 +178,7 @@ int gitfo_close_cached(gitfo_cache *ioc)
 	git_file fd;
 
 	if (gitfo_flush_cached(ioc) < 0)
-		return -1;
+		return GIT_ERROR;
 
 	fd = ioc->fd;
 	free(ioc->cache);
@@ -201,7 +213,7 @@ int git_foreach_dirent(const char *wd, int (*fn)(void *, const char *), void *ar
 
 	dir = opendir(wd);
 	if (!dir)
-		return GIT_ERROR;
+		return git_os_error();
 
 	while ((de = readdir(dir))) {
 		size_t de_len;

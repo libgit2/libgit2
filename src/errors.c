@@ -41,6 +41,9 @@ static struct {
 const char *git_strerror(int num)
 {
 	int i;
+
+	if (num == GIT_EOSERR)
+		return strerror(errno);
 	for (i = 0; i < ARRAY_SIZE(error_codes); i++)
 		if (num == error_codes[i].num)
 			return error_codes[i].str;

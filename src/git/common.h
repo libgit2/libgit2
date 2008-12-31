@@ -58,6 +58,9 @@
 /** Not enough space available. */
 #define GIT_ENOMEM (GIT_ERROR - 3)
 
+/** Consult the OS error information. */
+#define GIT_EOSERR (GIT_ERROR - 4)
+
 GIT_BEGIN_DECL
 
 /** A revision traversal pool. */

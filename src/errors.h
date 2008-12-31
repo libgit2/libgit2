@@ -11,6 +11,11 @@ GIT_INLINE(int) git_int_error(int code)
 	return code;
 }
 
+GIT_INLINE(int) git_os_error(void)
+{
+	return git_int_error(GIT_EOSERR);
+}
+
 GIT_INLINE(void) *git_ptr_error(int code)
 {
 	git_errno = code;
