@@ -26,6 +26,9 @@ extern char *git__strdup(const char *);
 # define strdup(a)          GIT__FORBID_MALLOC
 #endif
 
+extern int git__prefixcmp(const char *str, const char *prefix);
+extern int git__suffixcmp(const char *str, const char *suffix);
+
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold
  * at least 'nr' entries; the number of entries currently allocated
