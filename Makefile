@@ -1,15 +1,28 @@
 all::
 
+# Define NO_VISIBILITY if your compiler does not support symbol
+# visibility in general (and the -fvisibility switch in particular).
+
 DOXYGEN = doxygen
 RANLIB  = ranlib
 
 prefix=/usr/local
 
+uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo no')
+
 CFLAGS = -g -O2 -Wall
 OS     = unix
 
+# Platform specific tweaks
+
+ifneq (,$(findstring CYGWIN,$(uname_S)))
+	NO_VISIBILITY=YesPlease
+endif
+
 BASIC_CFLAGS := -Isrc
+ifndef NO_VISIBILITY
 BASIC_CFLAGS += -fvisibility=hidden
+endif
 ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
 
 SRC_C = $(wildcard src/*.c)
