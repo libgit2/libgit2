@@ -3,6 +3,17 @@
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
+extern void *git__malloc(size_t);
+extern void *git__calloc(size_t, size_t);
+extern char *git__strdup(const char *);
+
+#ifndef GIT__NO_HIDE_MALLOC
+# define GIT__FORBID_MALLOC do_not_use_malloc_directly
+# define malloc(a)          GIT__FORBID_MALLOC
+# define calloc(a,b)        GIT__FORBID_MALLOC
+# define strdup(a)          GIT__FORBID_MALLOC
+#endif
+
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold
  * at least 'nr' entries; the number of entries currently allocated

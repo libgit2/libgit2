@@ -1,3 +1,4 @@
+#include "common.h"
 #include "thread-utils.h"
 
 #ifdef _WIN32

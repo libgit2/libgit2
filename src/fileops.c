@@ -58,17 +58,18 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 	assert(obj && path && *path);
 
 	if ((fd = gitfo_open(path, O_RDONLY)) < 0)
-		return GIT_ERROR;  /* TODO: error handling */
+		return GIT_ERROR;
 
-	if (((len = gitfo_size(fd)) < 0) || ((buff = malloc(len+1)) == NULL)) {
+	if (((len = gitfo_size(fd)) < 0) 
+		|| ((buff = git__malloc(len + 1)) == NULL)) {
 		gitfo_close(fd);
-		return GIT_ERROR;  /* TODO: error handling */
+		return GIT_ERROR;
 	}
 
 	if (gitfo_read(fd, buff, len) < 0) {
 		gitfo_close(fd);
 		free(buff);
-		return GIT_ERROR;  /* TODO: error handling */
+		return GIT_ERROR;
 	}
 	buff[len] = '\0';
 
@@ -98,13 +99,13 @@ gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size)
 {
 	gitfo_cache *ioc;
 
-	ioc = malloc(sizeof(*ioc));
+	ioc = git__malloc(sizeof(*ioc));
 	if (!ioc)
 		return NULL;
 
 	ioc->pos = 0;
 	ioc->cache_size = cache_size;
-	ioc->cache = malloc(cache_size);
+	ioc->cache = git__malloc(cache_size);
 	if (!ioc->cache) {
 		free(ioc);
 		return NULL;

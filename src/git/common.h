@@ -55,6 +55,9 @@
 /** Input does not exist in the scope searched. */
 #define GIT_ENOTFOUND (GIT_ERROR - 2)
 
+/** Not enough space available. */
+#define GIT_ENOMEM (GIT_ERROR - 3)
+
 GIT_BEGIN_DECL
 
 /** A revision traversal pool. */

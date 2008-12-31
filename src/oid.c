@@ -87,7 +87,7 @@ void git_oid_pathfmt(char *str, const git_oid *oid)
 
 char *git_oid_allocfmt(const git_oid *oid)
 {
-	char *str = malloc(GIT_OID_HEXSZ + 1);
+	char *str = git__malloc(GIT_OID_HEXSZ + 1);
 	if (!str)
 		return NULL;
 	git_oid_fmt(str, oid);

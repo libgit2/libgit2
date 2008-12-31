@@ -19,7 +19,9 @@ int *git__errno_storage(void)
 {
 	int *e = pthread_getspecific(errno_key);
 	if (!e) {
+#undef calloc
 		e = calloc(1, sizeof(*e));
+#define calloc(a,b) GIT__FORBID_MALLOC
 		pthread_setspecific(errno_key, e);
 	}
 	return e;
@@ -33,6 +35,7 @@ static struct {
 } error_codes[] = {
 	{ GIT_ENOTOID, "Not a git oid" },
 	{ GIT_ENOTFOUND, "Object does not exist in the scope searched" },
+	{ GIT_ENOMEM, "Not enough space" },
 };
 
 const char *git_strerror(int num)

@@ -33,7 +33,7 @@ struct git_hash_ctx {
 
 git_hash_ctx *git_hash_new_ctx(void)
 {
-	git_hash_ctx *ctx = malloc(sizeof(*ctx));
+	git_hash_ctx *ctx = git__malloc(sizeof(*ctx));
 
 	if (!ctx)
 		return NULL;

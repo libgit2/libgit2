@@ -279,7 +279,7 @@ static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
 	 * initial sequence of inflated data from the tail of the
 	 * head buffer, if any.
 	 */
-	if ((buf = malloc(hdr->size + 1)) == NULL)
+	if ((buf = git__malloc(hdr->size + 1)) == NULL)
 		return NULL;
 	tail = s->total_out - used;
 	if (used > 0 && tail > 0) {
@@ -352,7 +352,10 @@ static int inflate_packlike_loose_disk_obj(git_obj *out, gitfo_buf *obj)
 	/*
 	 * allocate a buffer and inflate the data into it
 	 */
-	buf = malloc(hdr.size+1);
+	buf = git__malloc(hdr.size + 1);
+	if (!buf)
+		return GIT_ERROR;
+
 	in  = ((unsigned char *)obj->data) + used;
 	len = obj->len - used;
 	if (inflate_buffer(in, len, buf, hdr.size)) {
@@ -414,7 +417,7 @@ static int open_alternates(git_odb *db)
 {
 	unsigned n = 0;
 
-	db->alternates = malloc(sizeof(*db->alternates) * (n + 1));
+	db->alternates = git__malloc(sizeof(*db->alternates) * (n + 1));
 	if (!db->alternates)
 		return GIT_ERROR;
 
@@ -424,11 +427,11 @@ static int open_alternates(git_odb *db)
 
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
-	git_odb *db = malloc(sizeof(*db));
+	git_odb *db = git__malloc(sizeof(*db));
 	if (!db)
 		return GIT_ERROR;
 
-	db->objects_dir = strdup(objects_dir);
+	db->objects_dir = git__strdup(objects_dir);
 	if (!db->objects_dir) {
 		free(db);
 		return GIT_ERROR;

@@ -23,11 +23,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "common.h"
 #include "revwalk.h"
 
 git_revpool *gitrp_alloc(git_odb *db)
 {
-	git_revpool *walk = malloc(sizeof(*walk));
+	git_revpool *walk = git__malloc(sizeof(*walk));
 	if (!walk)
 		return NULL;
 

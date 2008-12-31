@@ -2,7 +2,6 @@
 #define INCLUDE_common_h__
 
 #include "cc-compat.h"
-#include "util.h"
 #include "errors.h"
 
 #ifdef GIT_HAS_PTHREAD
@@ -19,6 +18,7 @@
 # define PRIuPTR "lu"
 #endif
 
+#include "util.h"
 #include "git/common.h"
 
 #define GIT_PATH_MAX 4096
