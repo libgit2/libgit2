@@ -31,6 +31,8 @@
 #include <stdio.h>
 
 struct git_odb {
+	git_lck lock;
+
 	/** Path to the "objects" directory. */
 	char *objects_dir;
 
@@ -417,12 +419,21 @@ static int open_alternates(git_odb *db)
 {
 	unsigned n = 0;
 
+	gitlck_lock(&db->lock);
+	if (db->alternates) {
+		gitlck_unlock(&db->lock);
+		return 1;
+	}
+
 	db->alternates = git__malloc(sizeof(*db->alternates) * (n + 1));
-	if (!db->alternates)
-		return GIT_ERROR;
+	if (!db->alternates) {
+		gitlck_unlock(&db->lock);
+		return -1;
+	}
 
 	db->alternates[n] = NULL;
-	return GIT_SUCCESS;
+	gitlck_unlock(&db->lock);
+	return 0;
 }
 
 int git_odb_open(git_odb **out, const char *objects_dir)
@@ -438,6 +449,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	}
 
 	db->alternates = NULL;
+	gitlck_init(&db->lock);
 
 	*out = db;
 	return GIT_SUCCESS;
@@ -448,6 +460,8 @@ void git_odb_close(git_odb *db)
 	if (!db)
 		return;
 
+	gitlck_lock(&db->lock);
+
 	if (db->alternates) {
 		git_odb **alt;
 		for (alt = db->alternates; *alt; alt++)
@@ -456,6 +470,9 @@ void git_odb_close(git_odb *db)
 	}
 
 	free(db->objects_dir);
+
+	gitlck_unlock(&db->lock);
+	gitlck_free(&db->lock);
 	free(db);
 }
 
@@ -469,7 +486,7 @@ attempt:
 		return GIT_SUCCESS;
 	if (!git_odb__read_loose(out, db, id))
 		return GIT_SUCCESS;
-	if (!db->alternates && !open_alternates(db))
+	if (!open_alternates(db))
 		goto attempt;
 
 	out->data = NULL;
