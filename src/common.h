@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -19,6 +20,7 @@
 
 #include "cc-compat.h"
 #include "util.h"
+#include "thread-utils.h"
 #include "errors.h"
 
 #define GIT_PATH_MAX 4096
