@@ -32,7 +32,7 @@
 
 struct git_odb {
 	/** Path to the "objects" directory. */
-	char *path;
+	char *objects_dir;
 
 	/** Alternate databases to search. */
 	git_odb **alternates;
@@ -428,8 +428,8 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	if (!db)
 		return GIT_ERROR;
 
-	db->path = strdup(objects_dir);
-	if (!db->path) {
+	db->objects_dir = strdup(objects_dir);
+	if (!db->objects_dir) {
 		free(db);
 		return GIT_ERROR;
 	}
@@ -452,7 +452,7 @@ void git_odb_close(git_odb *db)
 		free(db->alternates);
 	}
 
-	free(db->path);
+	free(db->objects_dir);
 	free(db);
 }
 
@@ -484,7 +484,7 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 	out->len  = 0;
 	out->type = GIT_OBJ_BAD;
 
-	if (object_file_name(file, sizeof(file), db->path, id))
+	if (object_file_name(file, sizeof(file), db->objects_dir, id))
 		return GIT_ENOTFOUND;  /* TODO: error handling */
 
 	if (gitfo_read_file(&obj, file))
