@@ -9,6 +9,7 @@
 /** Force 64 bit off_t size on POSIX. */
 #define _FILE_OFFSET_BITS 64
 
+#include "common.h"
 #include <errno.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -18,8 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
-#include "errors.h"
-#include "git/fileops.h"
 
 #define GITFO_BUF_INIT {NULL, 0}
 
@@ -42,6 +41,23 @@ extern off_t gitfo_size(git_file fd);
 
 extern int gitfo_read_file(gitfo_buf *obj, const char *path);
 extern void gitfo_free_buf(gitfo_buf *obj);
+
+/**
+ * Walk each directory entry, except '.' and '..', calling fn(state).
+ *
+ * @param pathbuf buffer the function reads the initial directory
+ * 		path from, and updates with each successive entry's name.
+ * @param pathmax maximum allocation of pathbuf.
+ * @param fn function to invoke with each entry.  The first arg is
+ *		the input state and the second arg is pathbuf.  The function
+ *		may modify the pathbuf, but only by appending new text.
+ * @param state to pass to fn as the first arg.
+ */
+extern int gitfo_dirent(
+	char *pathbuf,
+	size_t pathmax,
+	int (*fn)(void *, char *),
+	void *state);
 
 extern gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size);
 extern int gitfo_write_cached(gitfo_cache *ioc, void *buf, size_t len);

@@ -187,31 +187,25 @@ int gitfo_close_cached(gitfo_cache *ioc)
 	return gitfo_close(fd);
 }
 
-/**
- * Walk a directory and run 'fn' for each encountered entry
- * (except '.' and '..').
- */
-int git_foreach_dirent(const char *wd, int (*fn)(void *, const char *), void *arg)
+int gitfo_dirent(
+	char *path,
+	size_t path_sz,
+	int (*fn)(void *, char *),
+	void *arg)
 {
-	char path[GIT_PATH_MAX];
-	size_t wd_len;
+	size_t wd_len = strlen(path);
 	DIR *dir;
 	struct dirent *de;
 
-	if (!wd)
+	if (!wd_len || path_sz < wd_len + 2)
 		return GIT_ERROR;
 
-	wd_len = strlen(wd);
-	if (!wd_len || sizeof(path) < wd_len + 2)
-		return GIT_ERROR;
-
-	strcpy(path, wd);
 	while (path[wd_len - 1] == '/')
 		wd_len--;
 	path[wd_len++] = '/';
 	path[wd_len] = '\0';
 
-	dir = opendir(wd);
+	dir = opendir(path);
 	if (!dir)
 		return git_os_error();
 
@@ -228,7 +222,7 @@ int git_foreach_dirent(const char *wd, int (*fn)(void *, const char *), void *ar
 		}
 
 		de_len = strlen(de->d_name);
-		if (sizeof(path) < wd_len + de_len + 1) {
+		if (path_sz < wd_len + de_len + 1) {
 			closedir(dir);
 			return GIT_ERROR;
 		}
