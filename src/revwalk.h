@@ -3,7 +3,6 @@
 
 #include "git/common.h"
 #include "git/revwalk.h"
-#include <stdlib.h>
 
 struct git_revpool {
 	git_odb *db;
