@@ -13,7 +13,14 @@
 GIT_BEGIN_DECL
 
 /** The git errno. */
+#if defined(GIT_TLS)
 GIT_EXTERN(int) GIT_TLS git_errno;
+
+#elif defined(GIT_HAS_PTHREAD)
+# define git_errno (*git__errno_storage())
+GIT_EXTERN(int *) git__errno_storage(void);
+
+#endif
 
 /**
  * strerror() for the Git library

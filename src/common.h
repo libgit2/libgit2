@@ -5,6 +5,9 @@
 #include "util.h"
 #include "errors.h"
 
+#ifdef GIT_HAS_PTHREAD
+# include <pthread.h>
+#endif
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>

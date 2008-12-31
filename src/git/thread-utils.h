@@ -9,8 +9,15 @@
 
 #define GIT_HAS_TLS 1
 
-#if defined(__GNUC__) || defined(__SUNPRO_C) || defined(__SUNPRO_CC) || \
-	defined(__xlc__) || defined(__xlC__)
+#if defined(__APPLE__) && defined(__MACH__)
+# undef GIT_TLS
+# define GIT_HAS_PTHREAD
+
+#elif defined(__GNUC__) || \
+      defined(__SUNPRO_C) || \
+      defined(__SUNPRO_CC) || \
+      defined(__xlc__) || \
+      defined(__xlC__)
 # define GIT_TLS __thread
 
 #elif defined(__INTEL_COMPILER)
@@ -20,7 +27,9 @@
 #  define GIT_TLS __thread
 # endif
 
-#elif defined(_WIN32) || defined(_WIN32_CE) || defined(__BORLANDC__)
+#elif defined(_WIN32) || \
+      defined(_WIN32_CE) || \
+      defined(__BORLANDC__)
 # define GIT_TLS __declspec(thread)
 
 #else

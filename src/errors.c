@@ -1,8 +1,31 @@
 #include "common.h"
 #include "thread-utils.h" /* for GIT_TLS */
 
+#if defined(GIT_TLS)
 /* compile-time constant initialization required */
 GIT_TLS int git_errno = 0;
+
+#elif defined(GIT_HAS_PTHREAD)
+
+static pthread_key_t errno_key;
+
+static void init_errno(void) __attribute__((constructor));
+static void init_errno(void)
+{
+	pthread_key_create(&errno_key, free);
+}
+
+int *git__errno_storage(void)
+{
+	int *e = pthread_getspecific(errno_key);
+	if (!e) {
+		e = calloc(1, sizeof(*e));
+		pthread_setspecific(errno_key, e);
+	}
+	return e;
+}
+
+#endif
 
 static struct {
 	int num;
