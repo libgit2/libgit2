@@ -9,8 +9,20 @@ extern char *git__strdup(const char *);
 
 #ifndef GIT__NO_HIDE_MALLOC
 # define GIT__FORBID_MALLOC do_not_use_malloc_directly
+
+# ifdef malloc
+#  undef malloc
+# endif
 # define malloc(a)          GIT__FORBID_MALLOC
+
+# ifdef calloc
+#  undef calloc
+# endif
 # define calloc(a,b)        GIT__FORBID_MALLOC
+
+# ifdef strdup
+#  undef strdup
+# endif
 # define strdup(a)          GIT__FORBID_MALLOC
 #endif
 
