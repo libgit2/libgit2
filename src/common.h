@@ -1,8 +1,7 @@
 #ifndef INCLUDE_common_h__
 #define INCLUDE_common_h__
 
-#include "cc-compat.h"
-#include "errors.h"
+#include "git/thread-utils.h"
 
 #ifdef GIT_HAS_PTHREAD
 # include <pthread.h>
@@ -18,8 +17,9 @@
 # define PRIuPTR "lu"
 #endif
 
+#include "cc-compat.h"
 #include "util.h"
-#include "git/common.h"
+#include "errors.h"
 
 #define GIT_PATH_MAX 4096
 

@@ -23,9 +23,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "common.h"
 #include "git/odb.h"
 #include "git/zlib.h"
-#include "common.h"
 #include "fileops.h"
 #include "hash.h"
 #include <stdio.h>

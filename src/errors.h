@@ -2,7 +2,6 @@
 #define INCLUDE_errors_h__
 
 #include "git/errors.h"
-#include <stdlib.h>
 
 /* convenience functions */
 GIT_INLINE(int) git_int_error(int code)
