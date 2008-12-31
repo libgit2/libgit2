@@ -1,6 +1,8 @@
 #ifndef INCLUDE_git_fileops_h__
 #define INCLUDE_git_fileops_h__
 
+#include "common.h"
+
 /**
  * @file git/fileops.h
  * @brief Git platform agnostic filesystem operations
@@ -8,9 +10,8 @@
  * @ingroup Git
  * @{
  */
-
-#include "common.h"
 GIT_BEGIN_DECL
+
 /**
  * For each directory entry (except "." and ".."), run the function
  * "fn", passing it "arg" as its first argument and the path to
