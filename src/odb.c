@@ -502,6 +502,6 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 
 int git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id)
 {
-	return GIT_SUCCESS;
+	return GIT_ENOTFOUND;
 }
 
