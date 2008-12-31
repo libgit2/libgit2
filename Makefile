@@ -1,6 +1,7 @@
 all::
 
 DOXYGEN = doxygen
+RANLIB  = ranlib
 
 prefix=/usr/local
 
@@ -71,6 +72,7 @@ $(OBJS): $(HDRS)
 $(GIT_LIB): $(OBJS)
 	rm -f $(LIB)
 	$(AR) cr $(GIT_LIB) $(OBJS)
+	$(RANLIB) $(GIT_LIB)
 
 T_HDR         = tests/test_lib.h
 T_LIB         = tests/test_lib.o
