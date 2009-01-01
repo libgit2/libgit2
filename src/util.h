@@ -26,6 +26,8 @@ extern char *git__strdup(const char *);
 # define strdup(a)          GIT__FORBID_MALLOC
 #endif
 
+extern int git__fmt(char *, size_t, const char *, ...)
+	GIT_FORMAT_PRINTF(3, 4);
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 

@@ -19,6 +19,7 @@
 #endif
 
 #include "cc-compat.h"
+#include "git/common.h"
 #include "util.h"
 #include "thread-utils.h"
 #include "errors.h"
