@@ -53,6 +53,12 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 	return GIT_SUCCESS;
 }
 
+int gitfo_exists(const char *path)
+{
+	struct stat sb;
+	return stat(path, &sb);
+}
+
 off_t gitfo_size(git_file fd)
 {
 	struct stat sb;
