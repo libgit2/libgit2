@@ -30,14 +30,26 @@
 #include "hash.h"
 #include <stdio.h>
 
+#define GIT_PACK_NAME_MAX (5 + 40 + 1)
+typedef struct {
+	git_refcnt ref;
+
+	char pack_name[GIT_PACK_NAME_MAX];
+} git_pack;
+
 struct git_odb {
 	git_lck lock;
 
 	/** Path to the "objects" directory. */
 	char *objects_dir;
 
+	/** Known pack files from ${objects_dir}/packs. */
+	git_pack **packs;
+	size_t n_packs;
+
 	/** Alternate databases to search. */
 	git_odb **alternates;
+	size_t n_alternates;
 };
 
 typedef struct {  /* object header data */
@@ -432,13 +444,111 @@ static int open_alternates(git_odb *db)
 	}
 
 	db->alternates[n] = NULL;
+	db->n_alternates = n;
 	gitlck_unlock(&db->lock);
 	return 0;
 }
 
+static void free_pack(git_pack *p)
+{
+	gitrc_free(&p->ref);
+	free(p);
+}
+
+static git_pack *alloc_pack(const char *pack_name)
+{
+	git_pack *p = git__calloc(1, sizeof(*p));
+	if (!p)
+		return NULL;
+
+	gitrc_init(&p->ref);
+	strcpy(p->pack_name, pack_name);
+	gitrc_inc(&p->ref);
+	return p;
+}
+
+struct scanned_pack {
+	struct scanned_pack *next;
+	git_pack *pack;
+};
+
+static int scan_one_pack(void *state, char *name)
+{
+	struct scanned_pack **ret = state, *r;
+	char *s = strrchr(name, '/'), *d;
+
+	if (git__prefixcmp(s + 1, "pack-")
+	 || git__suffixcmp(s, ".pack")
+	 || strlen(s + 1) != GIT_PACK_NAME_MAX + 4)
+		return 0;
+
+	d = strrchr(s + 1, '.');
+	strcpy(d + 1, "idx");    /* "pack-abc.pack" -> "pack-abc.idx" */
+	if (gitfo_exists(name))
+		return 0;
+
+	if (!(r = git__malloc(sizeof(*r))))
+		return GIT_ERROR;
+
+	*d = '\0';               /* "pack-abc.pack" -_> "pack-abc" */
+	if (!(r->pack = alloc_pack(s + 1))) {
+		free(r);
+		return GIT_ERROR;
+	}
+
+	r->next = *ret;
+	*ret = r;
+	return 0;
+}
+
+static int scan_packs(git_odb *db)
+{
+	char pb[GIT_PATH_MAX];
+	struct scanned_pack *state = NULL, *c;
+	size_t cnt;
+
+	if (git__fmt(pb, sizeof(pb), "%s/pack", db->objects_dir) < 0)
+		return GIT_ERROR;
+	gitfo_dirent(pb, sizeof(pb), scan_one_pack, &state);
+	gitlck_lock(&db->lock);
+
+	if (!db->packs) {
+		for (cnt = 0, c = state; c; c = c->next)
+			cnt++;
+
+		db->packs = git__malloc(sizeof(*db->packs) * (cnt + 1));
+		if (!db->packs)
+			goto unlock_fail;
+		for (cnt = 0, c = state; c; ) {
+			struct scanned_pack *n = c->next;
+			db->packs[cnt++] = c->pack;
+			free(c);
+			c = n;
+		}
+		db->packs[cnt] = NULL;
+		db->n_packs = cnt;
+	} else {
+		/* TODO - merge new entries into the existing array */
+		goto unlock_fail;
+	}
+
+	gitlck_unlock(&db->lock);
+	return 0;
+
+unlock_fail:
+	gitlck_unlock(&db->lock);
+	while (state) {
+		struct scanned_pack *n = state->next;
+		free_pack(state->pack);
+		free(state);
+		state = n;
+	}
+	return GIT_ERROR;
+}
+
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
-	git_odb *db = git__malloc(sizeof(*db));
+	git_odb *db = git__calloc(1, sizeof(*db));
 	if (!db)
 		return GIT_ERROR;
 
@@ -448,8 +558,11 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 		return GIT_ERROR;
 	}
 
-	db->alternates = NULL;
 	gitlck_init(&db->lock);
+	if (scan_packs(db)) {
+		git_odb_close(db);
+		return GIT_ERROR;
+	}
 
 	*out = db;
 	return GIT_SUCCESS;
@@ -461,6 +574,14 @@ void git_odb_close(git_odb *db)
 		return;
 
 	gitlck_lock(&db->lock);
+
+	if (db->packs) {
+		git_pack **p;
+		for (p = db->packs; *p; p++)
+			if (gitrc_dec(&(*p)->ref))
+				free_pack(*p);
+		free(db->packs);
+	}
 
 	if (db->alternates) {
 		git_odb **alt;
