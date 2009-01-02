@@ -14,10 +14,6 @@
 #include <unistd.h>
 #include <string.h>
 
-#ifndef PRIuPTR
-# define PRIuPTR "lu"
-#endif
-
 #include "cc-compat.h"
 #include "git/common.h"
 #include "util.h"
