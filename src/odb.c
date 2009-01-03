@@ -46,6 +46,8 @@ struct git_pack {
 	/** The .idx file, mapped into memory. */
 	git_file idx_fd;
 	gitfo_map idx_map;
+	uint32_t *im_fanout;
+	unsigned char *im_oid;
 	uint32_t *im_crc;
 	uint32_t *im_offset32;
 	uint32_t *im_offset64;
@@ -520,11 +522,10 @@ static int pack_openidx_map(git_pack *p)
 
 static int idxv1_search(off_t *out, git_pack *p, const git_oid *id)
 {
-	unsigned char *data = p->idx_map.data;
-	size_t lo = id->id[0] ? decode32(data + ((id->id[0]-1) << 2)) : 0;
-	size_t hi = decode32(data + (id->id[0] << 2));
+	unsigned char *data = p->im_oid;
+	size_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
+	size_t hi = p->im_fanout[id->id[0]];
 
-	data += 1024;
 	do {
 		size_t mid = (lo + hi) >> 1;
 		size_t pos = 24 * mid;
@@ -542,30 +543,42 @@ static int idxv1_search(off_t *out, git_pack *p, const git_oid *id)
 
 static int pack_openidx_v1(git_pack *p)
 {
-	uint32_t *fanout = p->idx_map.data;
+	uint32_t *src_fanout = p->idx_map.data;
+	uint32_t *im_fanout;
 	size_t expsz;
 	int j;
 
-	for (j = 1; j < 256; j++) {
-		if (decode32(&fanout[j]) < decode32(&fanout[j - 1]))
-			return GIT_ERROR;
-	}
-	p->obj_cnt = decode32(&fanout[255]);
-	expsz = 4 * 256 + 24 * p->obj_cnt + 2 * 20;
-	if (expsz != p->idx_map.len)
+	if (!(im_fanout = git__malloc(sizeof(*im_fanout) * 256)))
 		return GIT_ERROR;
 
+	im_fanout[0] = decode32(&src_fanout[0]);
+	for (j = 1; j < 256; j++) {
+		im_fanout[j] = decode32(&src_fanout[j]);
+		if (im_fanout[j] < im_fanout[j - 1]) {
+			free(im_fanout);
+			return GIT_ERROR;
+		}
+	}
+	p->obj_cnt = im_fanout[255];
+
+	expsz = 4 * 256 + 24 * p->obj_cnt + 2 * 20;
+	if (expsz != p->idx_map.len) {
+		free(im_fanout);
+		return GIT_ERROR;
+	}
+
 	p->idx_search = idxv1_search;
+	p->im_fanout = im_fanout;
+	p->im_oid = (unsigned char*)(src_fanout + 256);
 	return GIT_SUCCESS;
 }
 
 static int idxv2_search(off_t *out, git_pack *p, const git_oid *id)
 {
-	unsigned char *data = ((unsigned char*)p->idx_map.data) + 8;
-	size_t lo = id->id[0] ? decode32(data + ((id->id[0]-1) << 2)) : 0;
-	size_t hi = decode32(data + (id->id[0] << 2));
+	unsigned char *data = p->im_oid;
+	size_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
+	size_t hi = p->im_fanout[id->id[0]];
 
-	data += 1024;
 	do {
 		size_t mid = (lo + hi) >> 1;
 		size_t pos = 20 * mid;
@@ -587,17 +600,28 @@ static int idxv2_search(off_t *out, git_pack *p, const git_oid *id)
 
 static int pack_openidx_v2(git_pack *p)
 {
-	void *data = ((unsigned char*)p->idx_map.data) + 8;
-	uint32_t *fanout = data;
+	unsigned char *data = p->idx_map.data;
+	uint32_t *src_fanout = (uint32_t*)(data + 8);
+	uint32_t *im_fanout;
 	int j;
 
+	if (!(im_fanout = git__malloc(sizeof(*im_fanout) * 256)))
+		return GIT_ERROR;
+
+	im_fanout[0] = decode32(&src_fanout[0]);
 	for (j = 1; j < 256; j++) {
-		if (decode32(&fanout[j]) < decode32(&fanout[j - 1]))
+		im_fanout[j] = decode32(&src_fanout[j]);
+		if (im_fanout[j] < im_fanout[j - 1]) {
+			free(im_fanout);
 			return GIT_ERROR;
+		}
 	}
-	p->obj_cnt = decode32(&fanout[255]);
+	p->obj_cnt = im_fanout[255];
+
 	p->idx_search = idxv2_search;
-	p->im_crc = (uint32_t*)(data + 1024 + (20 * p->obj_cnt));
+	p->im_fanout = im_fanout;
+	p->im_oid = (unsigned char*)(src_fanout + 256);
+	p->im_crc = (uint32_t*)(p->im_oid + 20 * p->obj_cnt);
 	p->im_offset32 = p->im_crc + p->obj_cnt;
 	p->im_offset64 = p->im_offset32 + p->obj_cnt;
 	return GIT_SUCCESS;
@@ -661,6 +685,7 @@ static void pack_dec(git_pack *p)
 		if (p->idx_search) {
 			gitfo_free_map(&p->idx_map);
 			gitfo_close(p->idx_fd);
+			free(p->im_fanout);
 		}
 
 		gitlck_free(&p->lock);
