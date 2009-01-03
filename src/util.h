@@ -31,6 +31,13 @@ extern int git__fmt(char *, size_t, const char *, ...)
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
+/** @return true if p fits into the range of a size_t */
+GIT_INLINE(int) git__is_sizet(off_t p)
+{
+	size_t r = (size_t)p;
+	return p == r;
+}
+
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold
  * at least 'nr' entries; the number of entries currently allocated
