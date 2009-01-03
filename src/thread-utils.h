@@ -9,7 +9,7 @@ typedef pthread_mutex_t git_lck;
 # define gitlck_unlock(a) pthread_mutex_unlock(a)
 # define gitlck_free(a)   pthread_mutex_destroy(a)
 
-# if defined(__GLIBC__)
+# if defined(GIT_HAS_ASM_ATOMIC)
 #  include <asm/atomic.h>
 typedef atomic_t git_refcnt;
 #  define gitrc_init(a)   atomic_set(a, 0)
