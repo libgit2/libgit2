@@ -30,6 +30,10 @@ typedef struct {  /* file io buffer  */
 	size_t len;  /* data length  */
 } gitfo_buf;
 
+typedef struct {  /* memory mapped buffer */
+	void *data;   /* data bytes */
+	size_t len;   /* data length */
+} gitfo_map;
 
 extern int gitfo_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
@@ -42,6 +46,33 @@ extern off_t gitfo_size(git_file fd);
 
 extern int gitfo_read_file(gitfo_buf *obj, const char *path);
 extern void gitfo_free_buf(gitfo_buf *obj);
+
+/**
+ * Read-only map all or part of a file into memory.
+ * When possible this function should favor a virtual memory
+ * style mapping over some form of malloc()+read(), as the
+ * data access will be random and is not likely to touch the
+ * majority of the region requested.
+ *
+ * @param out buffer to populate with the mapping information.
+ * @param fd open descriptor to configure the mapping from.
+ * @param begin first byte to map, this should be page aligned.
+ * @param end number of bytes to map.
+ * @return
+ * - GIT_SUCCESS on success;
+ * - GIT_EOSERR on an unspecified OS related error.
+ */
+extern int gitfo_map_ro(
+	gitfo_map *out,
+	git_file fd,
+	off_t begin,
+	size_t len);
+
+/**
+ * Release the memory associated with a previous memory mapping.
+ * @param map the mapping description previously configured.
+ */
+extern void gitfo_free_map(gitfo_map *map);
 
 /**
  * Walk each directory entry, except '.' and '..', calling fn(state).
