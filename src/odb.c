@@ -32,10 +32,17 @@
 
 #define GIT_PACK_NAME_MAX (5 + 40 + 1)
 typedef struct {
-	git_refcnt ref;
+	git_lck lock;
 
+	unsigned int refcnt;
 	char pack_name[GIT_PACK_NAME_MAX];
 } git_pack;
+
+typedef struct {
+	size_t n_packs;
+	unsigned int refcnt;
+	git_pack *packs[FLEX_ARRAY];
+} git_packlist;
 
 struct git_odb {
 	git_lck lock;
@@ -44,8 +51,7 @@ struct git_odb {
 	char *objects_dir;
 
 	/** Known pack files from ${objects_dir}/packs. */
-	git_pack **packs;
-	size_t n_packs;
+	git_packlist *packlist;
 
 	/** Alternate databases to search. */
 	git_odb **alternates;
@@ -449,10 +455,34 @@ static int open_alternates(git_odb *db)
 	return 0;
 }
 
-static void free_pack(git_pack *p)
+static void pack_dec(git_pack *p)
 {
-	gitrc_free(&p->ref);
-	free(p);
+	int need_free;
+
+	gitlck_lock(&p->lock);
+	need_free = !--p->refcnt;
+	gitlck_unlock(&p->lock);
+
+	if (need_free) {
+		gitlck_free(&p->lock);
+		free(p);
+	}
+}
+
+static void packlist_dec(git_odb *db, git_packlist *pl)
+{
+	int need_free;
+
+	gitlck_lock(&db->lock);
+	need_free = !--pl->refcnt;
+	gitlck_unlock(&db->lock);
+
+	if (need_free) {
+		size_t j;
+		for (j = 0; j < pl->n_packs; j++)
+			pack_dec(pl->packs[j]);
+		free(pl);
+	}
 }
 
 static git_pack *alloc_pack(const char *pack_name)
@@ -461,9 +491,9 @@ static git_pack *alloc_pack(const char *pack_name)
 	if (!p)
 		return NULL;
 
-	gitrc_init(&p->ref);
+	gitlck_init(&p->lock);
 	strcpy(p->pack_name, pack_name);
-	gitrc_inc(&p->ref);
+	p->refcnt = 1;
 	return p;
 }
 
@@ -501,49 +531,57 @@ static int scan_one_pack(void *state, char *name)
 	return 0;
 }
 
-static int scan_packs(git_odb *db)
+static git_packlist* scan_packs(git_odb *db)
 {
 	char pb[GIT_PATH_MAX];
 	struct scanned_pack *state = NULL, *c;
 	size_t cnt;
+	git_packlist *new_list;
 
 	if (git__fmt(pb, sizeof(pb), "%s/pack", db->objects_dir) < 0)
-		return GIT_ERROR;
+		return NULL;
 	gitfo_dirent(pb, sizeof(pb), scan_one_pack, &state);
-	gitlck_lock(&db->lock);
 
-	if (!db->packs) {
-		for (cnt = 0, c = state; c; c = c->next)
-			cnt++;
+	/* TODO - merge old entries into the new array */
+	for (cnt = 0, c = state; c; c = c->next)
+		cnt++;
+	new_list = git__malloc(sizeof(*new_list)
+		+ (sizeof(new_list->packs[0]) * cnt));
+	if (!new_list)
+		goto fail;
 
-		db->packs = git__malloc(sizeof(*db->packs) * (cnt + 1));
-		if (!db->packs)
-			goto unlock_fail;
-		for (cnt = 0, c = state; c; ) {
-			struct scanned_pack *n = c->next;
-			db->packs[cnt++] = c->pack;
-			free(c);
-			c = n;
-		}
-		db->packs[cnt] = NULL;
-		db->n_packs = cnt;
-	} else {
-		/* TODO - merge new entries into the existing array */
-		goto unlock_fail;
+	for (cnt = 0, c = state; c; ) {
+		struct scanned_pack *n = c->next;
+		new_list->packs[cnt++] = c->pack;
+		free(c);
+		c = n;
 	}
+	new_list->n_packs = cnt;
+	new_list->refcnt = 2;
+	db->packlist = new_list;
+	return new_list;
 
-	gitlck_unlock(&db->lock);
-	return 0;
-
-unlock_fail:
-	gitlck_unlock(&db->lock);
+fail:
 	while (state) {
 		struct scanned_pack *n = state->next;
-		free_pack(state->pack);
+		pack_dec(state->pack);
 		free(state);
 		state = n;
 	}
-	return GIT_ERROR;
+	return NULL;
+}
+
+static git_packlist *packlist_get(git_odb *db)
+{
+	git_packlist *pl;
+
+	gitlck_lock(&db->lock);
+	if ((pl = db->packlist))
+		pl->refcnt++;
+	else
+		pl = scan_packs(db);
+	gitlck_unlock(&db->lock);
+	return pl;
 }
 
 int git_odb_open(git_odb **out, const char *objects_dir)
@@ -559,10 +597,6 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	}
 
 	gitlck_init(&db->lock);
-	if (scan_packs(db)) {
-		git_odb_close(db);
-		return GIT_ERROR;
-	}
 
 	*out = db;
 	return GIT_SUCCESS;
@@ -570,18 +604,15 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 
 void git_odb_close(git_odb *db)
 {
+	git_packlist *pl;
+
 	if (!db)
 		return;
 
 	gitlck_lock(&db->lock);
 
-	if (db->packs) {
-		git_pack **p;
-		for (p = db->packs; *p; p++)
-			if (gitrc_dec(&(*p)->ref))
-				free_pack(*p);
-		free(db->packs);
-	}
+	pl = db->packlist;
+	db->packlist = NULL;
 
 	if (db->alternates) {
 		git_odb **alt;
@@ -593,6 +624,8 @@ void git_odb_close(git_odb *db)
 	free(db->objects_dir);
 
 	gitlck_unlock(&db->lock);
+	if (pl)
+		packlist_dec(db, pl);
 	gitlck_free(&db->lock);
 	free(db);
 }
@@ -641,8 +674,27 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 	return GIT_SUCCESS;
 }
 
+static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
+{
+	return GIT_ENOTFOUND;
+}
+
 int git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id)
 {
+	git_packlist *pl = packlist_get(db);
+	size_t j;
+
+	if (!pl)
+		return GIT_ENOTFOUND;
+
+	for (j = 0; j < pl->n_packs; j++) {
+		if (!read_packed(out, pl->packs[j], id)) {
+			packlist_dec(db, pl);
+			return GIT_SUCCESS;
+		}
+	}
+
+	packlist_dec(db, pl);
 	return GIT_ENOTFOUND;
 }
 
