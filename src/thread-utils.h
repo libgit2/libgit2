@@ -57,7 +57,7 @@ GIT_INLINE(int) gitrc_dec(git_refcnt *p)
 	gitlck_lock(&p->lock);
 	c = --p->counter;
 	gitlck_unlock(&p->lock);
-	return !!c;
+	return !c;
 }
 
 /** Free any resources associated with the counter. */
