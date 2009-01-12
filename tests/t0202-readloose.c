@@ -1,13 +1,20 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include "test_lib.h"
 #include <git/odb.h>
 #include "fileops.h"
+
+/*
+ * read loose objects from the object directory. The objects are
+ * written using the "in-pack" object encoding, using an zlib
+ * compression level of Z_BEST_SPEED (1). See also
+ * t0201-readloose.c.
+ *
+ * Note that the tree and tag objects are not actually stored in
+ * the "in-pack" format. This is due to a bug in git v1.5.2, since
+ * git-write-tree and git-mktag did not call git_default_config()
+ * and, therefore, did not honor the "core.legacyheaders" config
+ * variable.
+ */
 
 static char *odb_dir = "test-objects";
 
@@ -543,7 +550,7 @@ static int write_object_data(char *file, void *data, size_t len)
 
 static int write_object_files(object_data *d)
 {
-    if (mkdir(odb_dir, 0755) < 0) {
+    if (gitfo_mkdir(odb_dir, 0755) < 0) {
         if (errno == EEXIST) {
             fprintf(stderr, "odb directory \"%s\" already exists!\n", odb_dir);
             return -1;
@@ -552,7 +559,7 @@ static int write_object_files(object_data *d)
         return -1;
     }
 
-    if ((mkdir(d->dir, 0755) < 0) && (errno != EEXIST)) {
+    if ((gitfo_mkdir(d->dir, 0755) < 0) && (errno != EEXIST)) {
         fprintf(stderr, "can't make object directory \"%s\"\n", d->dir);
         return -1;
     }
@@ -566,16 +573,16 @@ static int write_object_files(object_data *d)
 
 static int remove_object_files(object_data *d)
 {
-    if (unlink(d->file) < 0) {
+    if (gitfo_unlink(d->file) < 0) {
         fprintf(stderr, "can't delete object file \"%s\"\n", d->file);
         return -1;
     }
-    if ((rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
+    if ((gitfo_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
         fprintf(stderr, "can't remove object directory \"%s\"\n", d->dir);
         return -1;
     }
 
-    if (rmdir(odb_dir) < 0) {
+    if (gitfo_rmdir(odb_dir) < 0) {
         fprintf(stderr, "can't remove odb directory \"%s\"\n", odb_dir);
         return -1;
     }
