@@ -31,6 +31,9 @@ extern int git__fmt(char *, size_t, const char *, ...)
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
+extern int git__dirname(char *dir, size_t n, char *path);
+extern int git__basename(char *base, size_t n, char *path);
+
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(off_t p)
 {

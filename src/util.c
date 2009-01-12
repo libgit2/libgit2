@@ -59,3 +59,65 @@ int git__suffixcmp(const char *str, const char *suffix)
 		return -1;
 	return strcmp(str + (a - b), suffix);
 }
+
+int git__dirname(char *dir, size_t n, char *path)
+{
+	char *s;
+	int  len;
+
+	assert(dir && n > 1);
+
+	if (!path || !*path || !(s = strrchr(path, '/'))) {
+		strcpy(dir, ".");
+		return 1;
+	}
+
+	if (s == path) { /* "/[aaa]" */
+		strcpy(dir, "/");
+		return 1;
+	}
+
+	if ((len = s - path) >= n)
+		return GIT_ERROR;
+
+	memcpy(dir, path, len);
+	dir[len] = '\0';
+
+	return len;
+}
+
+int git__basename(char *base, size_t n, char *path)
+{
+	char *s;
+	int  len;
+
+	assert(base && n > 1);
+
+	if (!path || !*path) {
+		strcpy(base, ".");
+		return 1;
+	}
+	len = strlen(path);
+
+	if (!(s = strrchr(path, '/'))) {
+		if (len >= n)
+			return GIT_ERROR;
+		strcpy(base, path);
+		return len;
+	}
+
+	if (s == path && len == 1) { /* "/" */
+		strcpy(base, "/");
+		return 1;
+	}
+
+	len -= s - path;
+	if (len >= n)
+		return GIT_ERROR;
+
+	memcpy(base, s+1, len);
+	base[len] = '\0';
+
+	return len;
+}
+
