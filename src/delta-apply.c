@@ -1,5 +1,6 @@
 #include "common.h"
 #include "git/odb.h"
+#include "delta-apply.h"
 
 /*
  * This file was heavily cribbed from BinaryDelta.java in JGit, which
