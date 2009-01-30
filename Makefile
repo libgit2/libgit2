@@ -4,6 +4,7 @@ all::
 # visibility in general (and the -fvisibility switch in particular).
 
 DOXYGEN = doxygen
+INSTALL = install
 RANLIB  = ranlib
 
 prefix=/usr/local
@@ -59,18 +60,18 @@ sparse:
 	cgcc -no-compile $(ALL_CFLAGS) $(SPARSE_FLAGS) $(SRC_C)
 
 install-headers: $(PUBLIC_HEADERS)
-	@mkdir -p /tmp/gitinc/git
+	@$(INSTALL) -d /tmp/gitinc/git
 	@for i in $^; do cat .HEADER $$i > /tmp/gitinc/$${i##src/}; done
 
 install: $(GIT_LIB) $(PUBLIC_HEADERS) libgit2.pc
-	@mkdir -p $(DESTDIR)/$(prefix)/include/git
+	@$(INSTALL) -d $(DESTDIR)/$(prefix)/include/git
 	@for i in $(PUBLIC_HEADERS); do \
 		cat .HEADER $$i > $(DESTDIR)/$(prefix)/include/$${i##src/}; \
 	done
-	@mkdir -p $(DESTDIR)/$(libdir)
-	@cp -f $(GIT_LIB) $(DESTDIR)/$(libdir)/libgit2.a
-	@mkdir -p $(DESTDIR)/$(libdir)/pkgconfig
-	@cp -f libgit2.pc $(DESTDIR)/$(libdir)/pkgconfig/libgit2.pc
+	@$(INSTALL) -d $(DESTDIR)/$(libdir)
+	@$(INSTALL) $(GIT_LIB) $(DESTDIR)/$(libdir)/libgit2.a
+	@$(INSTALL) -d $(DESTDIR)/$(libdir)/pkgconfig
+	@$(INSTALL) libgit2.pc $(DESTDIR)/$(libdir)/pkgconfig/libgit2.pc
 
 uninstall:
 	@rm -f $(DESTDIR)/$(libdir)/libgit2.a
