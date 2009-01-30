@@ -43,6 +43,7 @@ all:: $(GIT_LIB)
 
 clean:
 	rm -f $(GIT_LIB)
+	rm -f libgit2.pc
 	rm -f src/*.o
 	rm -f tests/*.o tests/*.exe tests/*.toc
 	rm -rf trash-*.exe
