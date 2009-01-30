@@ -61,22 +61,22 @@ install-headers: $(PUBLIC_HEADERS)
 	@for i in $^; do cat .HEADER $$i > /tmp/gitinc/$${i##src/}; done
 
 install: $(GIT_LIB) $(PUBLIC_HEADERS) libgit2.pc
-	@mkdir -p $(prefix)/include/git
+	@mkdir -p $(DESTDIR)/$(prefix)/include/git
 	@for i in $(PUBLIC_HEADERS); do \
-		cat .HEADER $$i > $(prefix)/include/$${i##src/}; \
+		cat .HEADER $$i > $(DESTDIR)/$(prefix)/include/$${i##src/}; \
 	done
-	@mkdir -p $(prefix)/lib
-	@cp -f $(GIT_LIB) $(prefix)/lib/libgit2.a
-	@mkdir -p $(prefix)/lib/pkgconfig
-	@cp -f libgit2.pc $(prefix)/lib/pkgconfig/libgit2.pc
+	@mkdir -p $(DESTDIR)/$(prefix)/lib
+	@cp -f $(GIT_LIB) $(DESTDIR)/$(prefix)/lib/libgit2.a
+	@mkdir -p $(DESTDIR)/$(prefix)/lib/pkgconfig
+	@cp -f libgit2.pc $(DESTDIR)/$(prefix)/lib/pkgconfig/libgit2.pc
 
 uninstall:
-	@rm -f $(prefix)/lib/libgit2.a
-	@rm -f $(prefix)/lib/pkgconfig/libgit2.pc
+	@rm -f $(DESTDIR)/$(prefix)/lib/libgit2.a
+	@rm -f $(DESTDIR)/$(prefix)/lib/pkgconfig/libgit2.pc
 	@for i in $(PUBLIC_HEADERS); do \
-		rm -f $(prefix)/include/$${i##src/}; \
+		rm -f $(DESTDIR)/$(prefix)/include/$${i##src/}; \
 	done
-	@rmdir $(prefix)/include/git
+	@rmdir $(DESTDIR)/$(prefix)/include/git
 
 .c.o:
 	$(CC) $(ALL_CFLAGS) -c $< -o $@
