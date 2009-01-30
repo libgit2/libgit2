@@ -7,6 +7,7 @@ DOXYGEN = doxygen
 RANLIB  = ranlib
 
 prefix=/usr/local
+libdir=$(prefix)/lib
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo no')
 
@@ -65,14 +66,14 @@ install: $(GIT_LIB) $(PUBLIC_HEADERS) libgit2.pc
 	@for i in $(PUBLIC_HEADERS); do \
 		cat .HEADER $$i > $(DESTDIR)/$(prefix)/include/$${i##src/}; \
 	done
-	@mkdir -p $(DESTDIR)/$(prefix)/lib
-	@cp -f $(GIT_LIB) $(DESTDIR)/$(prefix)/lib/libgit2.a
-	@mkdir -p $(DESTDIR)/$(prefix)/lib/pkgconfig
-	@cp -f libgit2.pc $(DESTDIR)/$(prefix)/lib/pkgconfig/libgit2.pc
+	@mkdir -p $(DESTDIR)/$(libdir)
+	@cp -f $(GIT_LIB) $(DESTDIR)/$(libdir)/libgit2.a
+	@mkdir -p $(DESTDIR)/$(libdir)/pkgconfig
+	@cp -f libgit2.pc $(DESTDIR)/$(libdir)/pkgconfig/libgit2.pc
 
 uninstall:
-	@rm -f $(DESTDIR)/$(prefix)/lib/libgit2.a
-	@rm -f $(DESTDIR)/$(prefix)/lib/pkgconfig/libgit2.pc
+	@rm -f $(DESTDIR)/$(libdir)/libgit2.a
+	@rm -f $(DESTDIR)/$(libdir)/pkgconfig/libgit2.pc
 	@for i in $(PUBLIC_HEADERS); do \
 		rm -f $(DESTDIR)/$(prefix)/include/$${i##src/}; \
 	done
@@ -124,7 +125,7 @@ $(TEST_RUN): tests/%.run: tests/%.exe
 	 fi
 
 libgit2.pc: libgit2.pc.in
-	sed 's#@prefix@#$(prefix)#' $< > $@
+	sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' $< > $@
 
 .PHONY: all
 .PHONY: clean
