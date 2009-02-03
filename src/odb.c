@@ -310,9 +310,14 @@ static void set_stream_output(z_stream *s, void *out, size_t len)
 
 static int start_inflate(z_stream *s, gitfo_buf *obj, void *out, size_t len)
 {
+	int status;
+
 	init_stream(s, out, len);
 	set_stream_input(s, obj->data, obj->len);
-	inflateInit(s);
+
+	if ((status = inflateInit(s)) < Z_OK)
+		return status;
+
 	return inflate(s, 0);
 }
 
@@ -377,7 +382,8 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	init_stream(&zs, out, outlen);
 	set_stream_input(&zs, in, inlen);
 
-	inflateInit(&zs);
+	if (inflateInit(&zs) < Z_OK)
+		return GIT_ERROR;
 
 	while (status == Z_OK)
 		status = inflate(&zs, Z_FINISH);
