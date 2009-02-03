@@ -390,10 +390,10 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 
 	inflateEnd(&zs);
 
-	if ((status != Z_STREAM_END) || (zs.total_out != outlen))
+	if ((status != Z_STREAM_END) || (zs.avail_in != 0))
 		return GIT_ERROR;
 
-	if (zs.avail_in != 0)
+	if (zs.total_out != outlen)
 		return GIT_ERROR;
 
 	return GIT_SUCCESS;
