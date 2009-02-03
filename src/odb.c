@@ -341,8 +341,10 @@ static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
 	 * initial sequence of inflated data from the tail of the
 	 * head buffer, if any.
 	 */
-	if ((buf = git__malloc(hdr->size + 1)) == NULL)
+	if ((buf = git__malloc(hdr->size + 1)) == NULL) {
+		inflateEnd(s);
 		return NULL;
+	}
 	tail = s->total_out - used;
 	if (used > 0 && tail > 0) {
 		if (tail > hdr->size)
@@ -354,7 +356,9 @@ static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
 	/*
 	 * inflate the remainder of the object data, if any
 	 */
-	if (hdr->size >= used) {
+	if (hdr->size < used)
+		inflateEnd(s);
+	else {
 		set_stream_output(s, buf + used, hdr->size - used);
 		if (finish_inflate(s)) {
 			free(buf);
