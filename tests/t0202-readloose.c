@@ -6,7 +6,7 @@
 /*
  * read loose objects from the object directory. The objects are
  * written using the "in-pack" object encoding, using an zlib
- * compression level of Z_BEST_SPEED (1). See also
+ * compression level of Z_DEFAULT_COMPRESSION (6). See also
  * t0201-readloose.c.
  *
  * Note that the tree and tag objects are not actually stored in
