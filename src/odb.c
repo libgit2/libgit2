@@ -819,6 +819,66 @@ static git_packlist *packlist_get(git_odb *db)
 	return pl;
 }
 
+static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid *id)
+{
+	git_packlist *pl = packlist_get(db);
+	size_t j;
+
+	if (!pl)
+		return GIT_ENOTFOUND;
+
+	for (j = 0; j < pl->n_packs; j++) {
+
+		git_pack *pack = pl->packs[j];
+		off_t pos;
+		int res;
+
+		if (pack_openidx(pack))
+			continue;
+		res = pack->idx_search(&pos, pack, id);
+		pack_decidx(pack);
+
+		if (!res) {
+			packlist_dec(db,pl);
+			if (p)
+				*p = pack;
+			if (offset)
+				*offset = pos;
+			return GIT_SUCCESS;
+		}
+
+	}
+
+	packlist_dec(db,pl);
+	return GIT_ENOTFOUND;
+}
+
+static int exists_packed(git_odb *db, const git_oid *id)
+{
+	return !search_packs(NULL, NULL, db, id);
+}
+
+static int exists_loose(git_odb *db, const git_oid *id)
+{
+	char file[GIT_PATH_MAX];
+
+	if (object_file_name(file, sizeof(file), db->objects_dir, id) < 0)
+		return 0;
+
+	if (gitfo_exists(file) < 0)
+		return 0;
+
+	return 1;
+}
+
+int git_odb_exists(git_odb *db, const git_oid *id)
+{
+	/* TODO: extend to search alternate db's */
+	if (exists_packed(db, id))
+		return 1;
+	return exists_loose(db, id);
+}
+
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
 	git_odb *db = git__calloc(1, sizeof(*db));

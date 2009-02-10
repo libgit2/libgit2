@@ -152,6 +152,17 @@ GIT_EXTERN(int) git_obj__loose_object_type(git_otype type);
  */
 GIT_EXTERN(int) git_obj_hash(git_oid *id, git_obj *obj);
 
+/**
+ * Determine if the given object can be found in the object database.
+ *
+ * @param db database to be searched for the given object.
+ * @param id the object to search for.
+ * @return
+ * - true, if the object was found
+ * - false, otherwise
+ */
+GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
+
 /** @} */
 GIT_END_DECL
 #endif
