@@ -125,7 +125,7 @@ void gitfo_free_map(gitfo_map *out)
 struct gitfo_cache {
 	git_file fd;
 	unsigned int cache_size, pos;
-	void *cache;
+	unsigned char *cache;
 };
 
 gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size)
@@ -165,8 +165,10 @@ int gitfo_flush_cached(gitfo_cache *ioc)
 	return result;
 }
 
-int gitfo_write_cached(gitfo_cache *ioc, void *buf, size_t len)
+int gitfo_write_cached(gitfo_cache *ioc, void *buff, size_t len)
 {
+	unsigned char *buf = buff;
+
 	for (;;) {
 		size_t space_left = ioc->cache_size - ioc->pos;
 		/* cache if it's small */
