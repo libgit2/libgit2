@@ -232,7 +232,7 @@ int gitfo_dirent(
 	if (!dir)
 		return git_os_error();
 
-	while ((de = readdir(dir))) {
+	while ((de = readdir(dir)) != NULL) {
 		size_t de_len;
 		int result;
 

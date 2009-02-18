@@ -67,7 +67,7 @@ int git__dirname(char *dir, size_t n, char *path)
 
 	assert(dir && n > 1);
 
-	if (!path || !*path || !(s = strrchr(path, '/'))) {
+	if (!path || !*path || (s = strrchr(path, '/')) == NULL) {
 		strcpy(dir, ".");
 		return 1;
 	}
@@ -99,7 +99,7 @@ int git__basename(char *base, size_t n, char *path)
 	}
 	len = strlen(path);
 
-	if (!(s = strrchr(path, '/'))) {
+	if ((s = strrchr(path, '/')) == NULL) {
 		if (len >= n)
 			return GIT_ERROR;
 		strcpy(base, path);

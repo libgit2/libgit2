@@ -558,7 +558,7 @@ static int pack_openidx_v1(git_pack *p)
 	size_t expsz;
 	int j;
 
-	if (!(im_fanout = git__malloc(sizeof(*im_fanout) * 256)))
+	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
 		return GIT_ERROR;
 
 	im_fanout[0] = decode32(&src_fanout[0]);
@@ -615,7 +615,7 @@ static int pack_openidx_v2(git_pack *p)
 	uint32_t *im_fanout;
 	int j;
 
-	if (!(im_fanout = git__malloc(sizeof(*im_fanout) * 256)))
+	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
 		return GIT_ERROR;
 
 	im_fanout[0] = decode32(&src_fanout[0]);
@@ -751,11 +751,11 @@ static int scan_one_pack(void *state, char *name)
 	if (gitfo_exists(name))
 		return 0;
 
-	if (!(r = git__malloc(sizeof(*r))))
+	if ((r = git__malloc(sizeof(*r))) == NULL)
 		return GIT_ERROR;
 
 	*d = '\0';               /* "pack-abc.pack" -_> "pack-abc" */
-	if (!(r->pack = alloc_pack(s + 1))) {
+	if ((r->pack = alloc_pack(s + 1)) == NULL) {
 		free(r);
 		return GIT_ERROR;
 	}
@@ -811,7 +811,7 @@ static git_packlist *packlist_get(git_odb *db)
 	git_packlist *pl;
 
 	gitlck_lock(&db->lock);
-	if ((pl = db->packlist))
+	if ((pl = db->packlist) != NULL)
 		pl->refcnt++;
 	else
 		pl = scan_packs(db);

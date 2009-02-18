@@ -47,7 +47,7 @@ int git__delta_apply(
 		return GIT_ERROR;
 
 	res_sz = hdr_sz(&delta, delta_end);
-	if (!(res_dp = git__malloc(res_sz + 1)))
+	if ((res_dp = git__malloc(res_sz + 1)) == NULL)
 		return GIT_ERROR;
 	res_dp[res_sz] = '\0';
 	out->data = res_dp;
