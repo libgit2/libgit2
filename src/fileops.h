@@ -10,14 +10,9 @@
 #define _FILE_OFFSET_BITS 64
 
 #include "common.h"
-#include <errno.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <time.h>
-#include <stdlib.h>
-#include <string.h>
 #include <dirent.h>
 
 #define GITFO_BUF_INIT {NULL, 0}

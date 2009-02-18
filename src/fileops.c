@@ -1,6 +1,5 @@
 #include "common.h"
 #include "fileops.h"
-#include <sys/mman.h>
 
 int gitfo_open(const char *path, int flags)
 {

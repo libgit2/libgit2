@@ -1,6 +1,10 @@
 #ifndef INCLUDE_common_h__
 #define INCLUDE_common_h__
 
+#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__MINGW32__)
+#define GIT_WIN32 1
+#endif
+
 #include "git/thread-utils.h"
 
 #ifdef GIT_HAS_PTHREAD
@@ -11,8 +15,25 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <stdio.h>
 #include <string.h>
+
+#include <sys/types.h>
+
+#ifdef GIT_WIN32
+
+# include <io.h>
+# include <winsock2.h>
+
+typedef int ssize_t;
+
+#else
+
+# include <unistd.h>
+# include <sys/mman.h>
+# include <arpa/inet.h>
+
+#endif
 
 #include "cc-compat.h"
 #include "git/common.h"

@@ -28,8 +28,6 @@
 #include "git/zlib.h"
 #include "fileops.h"
 #include "hash.h"
-#include <arpa/inet.h>
-#include <stdio.h>
 #include "odb.h"
 
 #define GIT_PACK_NAME_MAX (5 + 40 + 1)
