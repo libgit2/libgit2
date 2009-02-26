@@ -2,6 +2,11 @@ all::
 
 # Define NO_VISIBILITY if your compiler does not support symbol
 # visibility in general (and the -fvisibility switch in particular).
+#
+# Define NO_OPENSSL if you do not have OpenSSL, or if you simply want
+# to use the bundled (Mozilla) SHA1 routines. (The bundled SHA1
+# routines are reported to be faster than OpenSSL on some platforms)
+#
 
 DOXYGEN = doxygen
 INSTALL = install
@@ -13,19 +18,18 @@ libdir=$(prefix)/lib
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo no')
 
 CFLAGS = -g -O2 -Wall
+LIBS   = -L. -lgit2 -lz
 OS     = unix
+
+EXTRA_LIBS =
+EXTRA_SRC =
+EXTRA_OBJ =
 
 # Platform specific tweaks
 
 ifneq (,$(findstring CYGWIN,$(uname_S)))
 	NO_VISIBILITY=YesPlease
 endif
-
-BASIC_CFLAGS := -Isrc
-ifndef NO_VISIBILITY
-BASIC_CFLAGS += -fvisibility=hidden
-endif
-ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
 
 SRC_C = $(wildcard src/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRC_C))
@@ -40,12 +44,32 @@ TEST_OBJ = $(patsubst %.c,%.o,\
 TEST_EXE = $(patsubst %.o,%.exe,$(TEST_OBJ))
 TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
 
+ifndef NO_OPENSSL
+	SHA1_HEADER = <openssl/sha.h>
+	EXTRA_LIBS += -lcrypto
+else
+	SHA1_HEADER = "sha1/sha1.h"
+	EXTRA_SRC += src/sha1/sha1.c
+	EXTRA_OBJ += src/sha1/sha1.o
+endif
+
+BASIC_CFLAGS := -Isrc -DSHA1_HEADER='$(SHA1_HEADER)'
+ifndef NO_VISIBILITY
+BASIC_CFLAGS += -fvisibility=hidden
+endif
+
+ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
+SRC_C += $(EXTRA_SRC)
+OBJ += $(EXTRA_OBJ)
+LIBS += $(EXTRA_LIBS)
+
 all:: $(GIT_LIB)
 
 clean:
 	rm -f $(GIT_LIB)
 	rm -f libgit2.pc
 	rm -f src/*.o
+	rm -f src/sha1/*.o
 	rm -f tests/*.o tests/*.exe tests/*.toc
 	rm -rf trash-*.exe
 	rm -rf apidocs
@@ -86,7 +110,7 @@ uninstall:
 
 $(OBJS): $(HDRS)
 $(GIT_LIB): $(OBJS)
-	rm -f $(LIB)
+	rm -f $(GIT_LIB)
 	$(AR) cr $(GIT_LIB) $(OBJS)
 	$(RANLIB) $(GIT_LIB)
 
@@ -116,7 +140,7 @@ $(TEST_EXE): tests/%.exe: tests/%.o tests/%_main.o
 	$(CC) -o $@ \
 		$(patsubst %.exe,%_main.o,$@) \
 		$(patsubst %.exe,%.o,$@) \
-		$(T_LIB) -L. -lgit2 -lz -lcrypto
+		$(T_LIB) $(LIBS)
 
 $(TEST_RUN): tests/%.run: tests/%.exe
 	@t=trash-$(<F) && \

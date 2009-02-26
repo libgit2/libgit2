@@ -25,7 +25,7 @@
 
 #include "common.h"
 #include "hash.h"
-#include <openssl/sha.h>
+#include SHA1_HEADER
 
 struct git_hash_ctx {
 	SHA_CTX c;
