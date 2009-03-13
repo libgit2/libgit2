@@ -1,5 +1,6 @@
 
 #include "test_lib.h"
+#include "test_helpers.h"
 #include <git/odb.h>
 #include "fileops.h"
 
@@ -17,17 +18,6 @@
  */
 
 static char *odb_dir = "test-objects";
-
-typedef struct object_data {
-    unsigned char *bytes;  /* (compressed) bytes stored in object store */
-    size_t        blen;    /* length of data in object store            */
-    char          *id;     /* object id (sha1)                          */
-    char          *type;   /* object type                               */
-    char          *dir;    /* object store (fan-out) directory name     */
-    char          *file;   /* object store filename                     */
-    unsigned char *data;   /* (uncompressed) object data                */
-    size_t        dlen;    /* length of (uncompressed) object data      */
-} object_data;
 
 /* commit == 3d7f8a6af076c8c3f20071a8935cdbe8228594d1 */
 static unsigned char commit_bytes[] = {
@@ -535,78 +525,12 @@ static object_data some = {
     sizeof(some_data),
 };
 
-static int write_object_data(char *file, void *data, size_t len)
-{
-    git_file fd;
-    int ret;
-
-    if ((fd = gitfo_creat(file, 0664)) < 0)
-        return -1;
-    ret = gitfo_write(fd, data, len);
-    gitfo_close(fd);
-
-    return ret;
-}
-
-static int write_object_files(object_data *d)
-{
-    if (gitfo_mkdir(odb_dir, 0755) < 0) {
-        if (errno == EEXIST) {
-            fprintf(stderr, "odb directory \"%s\" already exists!\n", odb_dir);
-            return -1;
-        }
-        fprintf(stderr, "can't make odb directory \"%s\"\n", odb_dir);
-        return -1;
-    }
-
-    if ((gitfo_mkdir(d->dir, 0755) < 0) && (errno != EEXIST)) {
-        fprintf(stderr, "can't make object directory \"%s\"\n", d->dir);
-        return -1;
-    }
-    if (write_object_data(d->file, d->bytes, d->blen) < 0) {
-        fprintf(stderr, "can't write object file \"%s\"\n", d->file);
-        return -1;
-    }
-
-    return 0;
-}
-
-static int remove_object_files(object_data *d)
-{
-    if (gitfo_unlink(d->file) < 0) {
-        fprintf(stderr, "can't delete object file \"%s\"\n", d->file);
-        return -1;
-    }
-    if ((gitfo_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
-        fprintf(stderr, "can't remove object directory \"%s\"\n", d->dir);
-        return -1;
-    }
-
-    if (gitfo_rmdir(odb_dir) < 0) {
-        fprintf(stderr, "can't remove odb directory \"%s\"\n", odb_dir);
-        return -1;
-    }
-
-    return 0;
-}
-
-static int cmp_objects(git_obj *o, object_data *d)
-{
-    if (o->type != git_obj_string_to_type(d->type))
-        return -1;
-    if (o->len != d->dlen)
-        return -1;
-    if ((o->len > 0) && (memcmp(o->data, d->data, o->len) != 0))
-        return -1;
-    return 0;
-}
-
 BEGIN_TEST(read_loose_commit)
     git_odb *db;
     git_oid id;
     git_obj obj;
 
-    must_pass(write_object_files(&commit));
+    must_pass(write_object_files(odb_dir, &commit));
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, commit.id));
 
@@ -615,7 +539,7 @@ BEGIN_TEST(read_loose_commit)
 
     git_obj_close(&obj);
     git_odb_close(db);
-    must_pass(remove_object_files(&commit));
+    must_pass(remove_object_files(odb_dir, &commit));
 END_TEST
 
 BEGIN_TEST(read_loose_tree)
@@ -623,7 +547,7 @@ BEGIN_TEST(read_loose_tree)
     git_oid id;
     git_obj obj;
 
-    must_pass(write_object_files(&tree));
+    must_pass(write_object_files(odb_dir, &tree));
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, tree.id));
 
@@ -632,7 +556,7 @@ BEGIN_TEST(read_loose_tree)
 
     git_obj_close(&obj);
     git_odb_close(db);
-    must_pass(remove_object_files(&tree));
+    must_pass(remove_object_files(odb_dir, &tree));
 END_TEST
 
 BEGIN_TEST(read_loose_tag)
@@ -640,7 +564,7 @@ BEGIN_TEST(read_loose_tag)
     git_oid id;
     git_obj obj;
 
-    must_pass(write_object_files(&tag));
+    must_pass(write_object_files(odb_dir, &tag));
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, tag.id));
 
@@ -649,7 +573,7 @@ BEGIN_TEST(read_loose_tag)
 
     git_obj_close(&obj);
     git_odb_close(db);
-    must_pass(remove_object_files(&tag));
+    must_pass(remove_object_files(odb_dir, &tag));
 END_TEST
 
 BEGIN_TEST(read_loose_zero)
@@ -657,7 +581,7 @@ BEGIN_TEST(read_loose_zero)
     git_oid id;
     git_obj obj;
 
-    must_pass(write_object_files(&zero));
+    must_pass(write_object_files(odb_dir, &zero));
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, zero.id));
 
@@ -666,7 +590,7 @@ BEGIN_TEST(read_loose_zero)
 
     git_obj_close(&obj);
     git_odb_close(db);
-    must_pass(remove_object_files(&zero));
+    must_pass(remove_object_files(odb_dir, &zero));
 END_TEST
 
 BEGIN_TEST(read_loose_one)
@@ -674,7 +598,7 @@ BEGIN_TEST(read_loose_one)
     git_oid id;
     git_obj obj;
 
-    must_pass(write_object_files(&one));
+    must_pass(write_object_files(odb_dir, &one));
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, one.id));
 
@@ -683,7 +607,7 @@ BEGIN_TEST(read_loose_one)
 
     git_obj_close(&obj);
     git_odb_close(db);
-    must_pass(remove_object_files(&one));
+    must_pass(remove_object_files(odb_dir, &one));
 END_TEST
 
 BEGIN_TEST(read_loose_two)
@@ -691,7 +615,7 @@ BEGIN_TEST(read_loose_two)
     git_oid id;
     git_obj obj;
 
-    must_pass(write_object_files(&two));
+    must_pass(write_object_files(odb_dir, &two));
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, two.id));
 
@@ -700,7 +624,7 @@ BEGIN_TEST(read_loose_two)
 
     git_obj_close(&obj);
     git_odb_close(db);
-    must_pass(remove_object_files(&two));
+    must_pass(remove_object_files(odb_dir, &two));
 END_TEST
 
 BEGIN_TEST(read_loose_some)
@@ -708,7 +632,7 @@ BEGIN_TEST(read_loose_some)
     git_oid id;
     git_obj obj;
 
-    must_pass(write_object_files(&some));
+    must_pass(write_object_files(odb_dir, &some));
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, some.id));
 
@@ -717,6 +641,6 @@ BEGIN_TEST(read_loose_some)
 
     git_obj_close(&obj);
     git_odb_close(db);
-    must_pass(remove_object_files(&some));
+    must_pass(remove_object_files(odb_dir, &some));
 END_TEST
 

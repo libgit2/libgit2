@@ -114,8 +114,8 @@ $(GIT_LIB): $(OBJS)
 	$(AR) cr $(GIT_LIB) $(OBJS)
 	$(RANLIB) $(GIT_LIB)
 
-T_HDR         = tests/test_lib.h
-T_LIB         = tests/test_lib.o
+T_HDR         = tests/test_lib.h tests/test_helpers.h
+T_LIB         = tests/test_lib.o tests/test_helpers.o
 T_MAIN_C      = tests/test_main.c
 
 $(T_LIB):    $(T_HDR) $(HDRS)
