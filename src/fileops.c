@@ -3,13 +3,13 @@
 
 int gitfo_open(const char *path, int flags)
 {
-	int fd = open(path, flags);
+	int fd = open(path, flags | O_BINARY);
 	return fd >= 0 ? fd : git_os_error();
 }
 
 int gitfo_creat(const char *path, int mode)
 {
-	int fd = creat(path, mode);
+	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
 	return fd >= 0 ? fd : git_os_error();
 }
 

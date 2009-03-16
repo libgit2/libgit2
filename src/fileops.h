@@ -15,6 +15,10 @@
 #include <time.h>
 #include <dirent.h>
 
+#if !defined(O_BINARY)
+#define O_BINARY 0
+#endif
+
 #define GITFO_BUF_INIT {NULL, 0}
 
 typedef int git_file;
