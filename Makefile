@@ -11,6 +11,7 @@ all::
 DOXYGEN = doxygen
 INSTALL = install
 RANLIB  = ranlib
+AR      = ar cr
 
 prefix=/usr/local
 libdir=$(prefix)/lib
@@ -20,6 +21,8 @@ uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo no')
 CFLAGS = -g -O2 -Wall
 LIBS   = -L. -lgit2 -lz
 OS     = unix
+
+CRYPTO_LIB = -lcrypto
 
 EXTRA_LIBS =
 EXTRA_SRC =
@@ -32,6 +35,8 @@ ifneq (,$(findstring CYGWIN,$(uname_S)))
 endif
 
 SRC_C = $(wildcard src/*.c)
+OS_SRC = $(wildcard src/$(OS)/*.c)
+SRC_C += $(OS_SRC)
 OBJS = $(patsubst %.c,%.o,$(SRC_C))
 HDRS = $(wildcard src/*.h)
 PUBLIC_HEADERS = $(wildcard src/git/*.h)
@@ -46,7 +51,7 @@ TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
 
 ifndef NO_OPENSSL
 	SHA1_HEADER = <openssl/sha.h>
-	EXTRA_LIBS += -lcrypto
+	EXTRA_LIBS += $(CRYPTO_LIB)
 else
 	SHA1_HEADER = "sha1/sha1.h"
 	EXTRA_SRC += src/sha1/sha1.c
@@ -68,8 +73,7 @@ all:: $(GIT_LIB)
 clean:
 	rm -f $(GIT_LIB)
 	rm -f libgit2.pc
-	rm -f src/*.o
-	rm -f src/sha1/*.o
+	rm -f src/*.o src/sha1/*.o src/unix/*.o
 	rm -f tests/*.o tests/*.exe tests/*.toc
 	rm -rf trash-*.exe
 	rm -rf apidocs
@@ -111,7 +115,7 @@ uninstall:
 $(OBJS): $(HDRS)
 $(GIT_LIB): $(OBJS)
 	rm -f $(GIT_LIB)
-	$(AR) cr $(GIT_LIB) $(OBJS)
+	$(AR) $(GIT_LIB) $(OBJS)
 	$(RANLIB) $(GIT_LIB)
 
 T_HDR         = tests/test_lib.h tests/test_helpers.h

@@ -10,6 +10,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include "common.h"
+#include "map.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
@@ -28,11 +29,6 @@ typedef struct {  /* file io buffer  */
 	void *data;  /* data bytes   */
 	size_t len;  /* data length  */
 } gitfo_buf;
-
-typedef struct {  /* memory mapped buffer */
-	void *data;   /* data bytes */
-	size_t len;   /* data length */
-} gitfo_map;
 
 extern int gitfo_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
@@ -66,7 +62,7 @@ extern void gitfo_free_buf(gitfo_buf *obj);
  * - GIT_EOSERR on an unspecified OS related error.
  */
 extern int gitfo_map_ro(
-	gitfo_map *out,
+	git_map *out,
 	git_file fd,
 	off_t begin,
 	size_t len);
@@ -75,7 +71,7 @@ extern int gitfo_map_ro(
  * Release the memory associated with a previous memory mapping.
  * @param map the mapping description previously configured.
  */
-extern void gitfo_free_map(gitfo_map *map);
+extern void gitfo_free_map(git_map *map);
 
 /**
  * Walk each directory entry, except '.' and '..', calling fn(state).

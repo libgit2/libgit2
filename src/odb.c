@@ -43,7 +43,7 @@ struct git_pack {
 
 	/** The .idx file, mapped into memory. */
 	git_file idx_fd;
-	gitfo_map idx_map;
+	git_map idx_map;
 	uint32_t *im_fanout;
 	unsigned char *im_oid;
 	uint32_t *im_crc;

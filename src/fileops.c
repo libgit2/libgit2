@@ -106,18 +106,16 @@ void gitfo_free_buf(gitfo_buf *obj)
 	obj->data = NULL;
 }
 
-int gitfo_map_ro(gitfo_map *out, git_file fd, off_t begin, size_t len)
+int gitfo_map_ro(git_map *out, git_file fd, off_t begin, size_t len)
 {
-	out->data = mmap(NULL, len, PROT_READ, MAP_SHARED, fd, begin);
-	if (out->data == (void*)-1)
+	if (git__mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin) < 0)
 		return git_os_error();
-	out->len = len;
 	return GIT_SUCCESS;
 }
 
-void gitfo_free_map(gitfo_map *out)
+void gitfo_free_map(git_map *out)
 {
-	munmap(out->data, out->len);
+	git__munmap(out);
 }
 
 /* cached diskio */

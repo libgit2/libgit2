@@ -23,14 +23,15 @@
 #ifdef GIT_WIN32
 
 # include <io.h>
-# include <winsock2.h>
+# include <windows.h>
+
+#define snprintf _snprintf
 
 typedef int ssize_t;
 
 #else
 
 # include <unistd.h>
-# include <sys/mman.h>
 # include <arpa/inet.h>
 
 #endif
