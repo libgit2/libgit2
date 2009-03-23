@@ -23,6 +23,7 @@
 #ifdef GIT_WIN32
 
 # include <io.h>
+# include <direct.h>
 # include <windows.h>
 
 #define snprintf _snprintf

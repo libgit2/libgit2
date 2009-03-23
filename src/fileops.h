@@ -43,8 +43,13 @@ extern int gitfo_read_file(gitfo_buf *obj, const char *path);
 extern void gitfo_free_buf(gitfo_buf *obj);
 
 #define gitfo_unlink(p) unlink(p)
-#define gitfo_mkdir(p,m) mkdir(p, m)
 #define gitfo_rmdir(p) rmdir(p)
+
+#ifdef GIT_WIN32
+#define gitfo_mkdir(p,m) mkdir(p)
+#else
+#define gitfo_mkdir(p,m) mkdir(p, m)
+#endif
 
 /**
  * Read-only map all or part of a file into memory.
