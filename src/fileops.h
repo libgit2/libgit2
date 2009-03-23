@@ -44,6 +44,7 @@ extern void gitfo_free_buf(gitfo_buf *obj);
 
 #define gitfo_unlink(p) unlink(p)
 #define gitfo_rmdir(p) rmdir(p)
+#define gitfo_chdir(p) chdir(p)
 
 #ifdef GIT_WIN32
 #define gitfo_mkdir(p,m) mkdir(p)
