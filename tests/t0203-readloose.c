@@ -8,7 +8,7 @@
  * read loose objects from the object directory. The objects are
  * written using the "in-pack" object encoding, using an zlib
  * compression level of Z_DEFAULT_COMPRESSION (6). See also
- * t0201-readloose.c.
+ * t0202-readloose.c.
  *
  * Note that the tree and tag objects are not actually stored in
  * the "in-pack" format. This is due to a bug in git v1.5.2, since

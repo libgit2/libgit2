@@ -8,7 +8,7 @@
  * read loose objects from the object directory. The objects are
  * written using the current object encoding, using an zlib
  * compression level of Z_BEST_SPEED (1). See also
- * t0202-readloose.c.
+ * t0203-readloose.c.
  */
 
 static char *odb_dir = "test-objects";
