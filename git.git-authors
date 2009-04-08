@@ -38,7 +38,7 @@
 # (Paul Kocher is the author of the mozilla-sha1 implementation
 #  but has otherwise not contributed to git.)
 #
-ok	Simpkins <adam@adamsimpkins.net> (http transport)
+ok	Adam Simpkins <adam@adamsimpkins.net> (http transport)
 ok	Andreas Ericsson <ae@op5.se>
 ok	Boyd Lynn Gerber <gerberb@zenez.com>
 ok	Brian Gernhardt <benji@silverinsanity.com>
