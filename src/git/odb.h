@@ -96,6 +96,18 @@ GIT_EXTERN(int) git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *i
 GIT_EXTERN(int) git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id);
 
 /**
+ * Write an object to the database.
+ *
+ * @param id identity of the object written.
+ * @param db database to which the object should be written.
+ * @param obj object descriptor for the object to write.
+ * @return
+ * - GIT_SUCCESS if the object was written;
+ * - GIT_ERROR otherwise.
+ */
+GIT_EXTERN(int) git_odb_write(git_oid *id, git_odb *db, git_obj *obj);
+
+/**
  * Release all memory used by the obj structure.
  *
  * As a result of this call, obj->data will be set to NULL.

@@ -85,6 +85,11 @@ struct git_odb {
 	/** Alternate databases to search. */
 	git_odb **alternates;
 	size_t n_alternates;
+
+	/** loose object zlib compression level. */
+	int object_zlib_level;
+	/** loose object file fsync flag. */
+	int fsync_object_files;
 };
 
 typedef struct {  /* object header data */
@@ -158,13 +163,12 @@ static int format_object_header(char *hdr, size_t n, git_obj *obj)
 	return len+1;
 }
 
-int git_obj_hash(git_oid *id, git_obj *obj)
+static int hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_obj *obj)
 {
 	git_buf_vec vec[2];
-	char hdr[64];
 	int  hdrlen;
 
-	assert(id && obj);
+	assert(id && hdr && len && obj);
 
 	if (!git_obj__loose_object_type(obj->type))
 		return GIT_ERROR;
@@ -172,8 +176,10 @@ int git_obj_hash(git_oid *id, git_obj *obj)
 	if (!obj->data && obj->len != 0)
 		return GIT_ERROR;
 
-	if ((hdrlen = format_object_header(hdr, sizeof(hdr), obj)) < 0)
+	if ((hdrlen = format_object_header(hdr, n, obj)) < 0)
 		return GIT_ERROR;
+
+	*len = hdrlen;
 
 	vec[0].data = hdr;
 	vec[0].len  = hdrlen;
@@ -183,6 +189,16 @@ int git_obj_hash(git_oid *id, git_obj *obj)
 	git_hash_vec(id, vec, 2);
 
 	return GIT_SUCCESS;
+}
+
+int git_obj_hash(git_oid *id, git_obj *obj)
+{
+	char hdr[64];
+	int  hdrlen;
+
+	assert(id && obj);
+
+	return hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj);
 }
 
 static size_t object_file_name(char *name, size_t n, char *dir, const git_oid *id)
@@ -479,6 +495,125 @@ static int inflate_disk_obj(git_obj *out, gitfo_buf *obj)
 	out->data = buf;
 	out->len  = hdr.size;
 	out->type = hdr.type;
+
+	return GIT_SUCCESS;
+}
+
+static int make_temp_file(git_file *fd, char *tmp, size_t n, char *file)
+{
+	char *template = "/tmp_obj_XXXXXX";
+	size_t tmplen = strlen(template);
+	size_t dirlen;
+
+	if ((dirlen = git__dirname(tmp, n, file)) < 0)
+		return GIT_ERROR;
+
+	if ((dirlen + tmplen) >= n)
+		return GIT_ERROR;
+
+	strcpy(tmp + dirlen, (dirlen) ? template : template + 1);
+
+	*fd = gitfo_mkstemp(tmp);
+	if (*fd < 0 && dirlen) {
+		/* create directory if it doesn't exist */
+		tmp[dirlen] = '\0';
+		if ((gitfo_exists(tmp) < 0) && gitfo_mkdir(tmp, 0755))
+			return GIT_ERROR;
+		/* try again */
+		strcpy(tmp + dirlen, template);
+		*fd = gitfo_mkstemp(tmp);
+	}
+	if (*fd < 0)
+		return GIT_ERROR;
+
+	return GIT_SUCCESS;
+}
+
+static int deflate_buf(z_stream *s, void *in, size_t len, int flush)
+{
+	int status = Z_OK;
+
+	set_stream_input(s, in, len);
+	while (status == Z_OK) {
+		status = deflate(s, flush);
+		if (s->avail_in == 0)
+			break;
+	}
+	return status;
+}
+
+static int deflate_obj(gitfo_buf *buf, char *hdr, int hdrlen, git_obj *obj, int level)
+{
+	z_stream zs;
+	int status;
+	size_t size;
+
+	assert(buf && !buf->data && hdr && obj);
+	assert(level == Z_DEFAULT_COMPRESSION || (level >= 0 && level <= 9));
+
+	buf->data = NULL;
+	buf->len  = 0;
+	init_stream(&zs, NULL, 0);
+
+	if (deflateInit(&zs, level) < Z_OK)
+		return GIT_ERROR;
+
+	size = deflateBound(&zs, hdrlen + obj->len);
+
+	if ((buf->data = git__malloc(size)) == NULL) {
+		deflateEnd(&zs);
+		return GIT_ERROR;
+	}
+
+	set_stream_output(&zs, buf->data, size);
+
+	/* compress the header */
+	status = deflate_buf(&zs, hdr, hdrlen, Z_NO_FLUSH);
+
+	/* if header compressed OK, compress the object */
+	if (status == Z_OK)
+		status = deflate_buf(&zs, obj->data, obj->len, Z_FINISH);
+
+	if (status != Z_STREAM_END) {
+		deflateEnd(&zs);
+		free(buf->data);
+		buf->data = NULL;
+		return GIT_ERROR;
+	}
+
+	buf->len = zs.total_out;
+	deflateEnd(&zs);
+
+	return GIT_SUCCESS;
+}
+
+static int write_obj(gitfo_buf *buf, git_oid *id, git_odb *db)
+{
+	char file[GIT_PATH_MAX];
+	char temp[GIT_PATH_MAX];
+	git_file fd;
+
+	if (object_file_name(file, sizeof(file), db->objects_dir, id))
+		return GIT_ERROR;
+
+	if (make_temp_file(&fd, temp, sizeof(temp), file) < 0)
+		return GIT_ERROR;
+
+	if (gitfo_write(fd, buf->data, buf->len) < 0) {
+		gitfo_close(fd);
+		gitfo_unlink(temp);
+		return GIT_ERROR;
+	}
+
+	if (db->fsync_object_files)
+		gitfo_fsync(fd);
+	gitfo_close(fd);
+	gitfo_chmod(temp, 0444);
+
+	if (gitfo_move_file(temp, file) < 0) {
+		gitfo_unlink(temp);
+		return GIT_ERROR;
+	}
 
 	return GIT_SUCCESS;
 }
@@ -891,6 +1026,9 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 
 	gitlck_init(&db->lock);
 
+	db->object_zlib_level = Z_BEST_SPEED;
+	db->fsync_object_files = 0;
+
 	*out = db;
 	return GIT_SUCCESS;
 }
@@ -1002,5 +1140,32 @@ int git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id)
 
 	packlist_dec(db, pl);
 	return GIT_ENOTFOUND;
+}
+
+int git_odb_write(git_oid *id, git_odb *db, git_obj *obj)
+{
+	char hdr[64];
+	int  hdrlen;
+	gitfo_buf buf = GITFO_BUF_INIT;
+
+	assert(id && db && obj);
+
+	if (hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj) < 0)
+		return GIT_ERROR;
+
+	if (git_odb_exists(db, id))
+		return GIT_SUCCESS;
+
+	if (deflate_obj(&buf, hdr, hdrlen, obj, db->object_zlib_level) < 0)
+		return GIT_ERROR;
+
+	if (write_obj(&buf, id, db) < 0) {
+		gitfo_free_buf(&buf);
+		return GIT_ERROR;
+	}
+
+	gitfo_free_buf(&buf);
+
+	return GIT_SUCCESS;
 }
 

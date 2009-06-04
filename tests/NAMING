@@ -18,3 +18,5 @@ Categories
       addressable store.
 
 02__: Basic object read access.
+
+03__: Basic object writing.
