@@ -69,7 +69,7 @@ GIT_INLINE(int) gitrc_dec(git_refcnt *p)
 # error GIT_THREADS but no git_lck implementation
 
 #else
-typedef struct {} git_lck;
+typedef struct { int dummy; } git_lck;
 # define GIT_MUTEX_INIT   {}
 # define gitlck_init(a)   (void)0
 # define gitlck_lock(a)   (void)0
