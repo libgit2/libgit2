@@ -185,7 +185,7 @@ int git_obj_hash(git_oid *id, git_obj *obj)
 	return GIT_SUCCESS;
 }
 
-static int object_file_name(char *name, size_t n, char *dir, const git_oid *id)
+static size_t object_file_name(char *name, size_t n, char *dir, const git_oid *id)
 {
 	size_t len = strlen(dir);
 
@@ -860,7 +860,7 @@ static int exists_loose(git_odb *db, const git_oid *id)
 {
 	char file[GIT_PATH_MAX];
 
-	if (object_file_name(file, sizeof(file), db->objects_dir, id) < 0)
+	if (object_file_name(file, sizeof(file), db->objects_dir, id))
 		return 0;
 
 	if (gitfo_exists(file) < 0)
