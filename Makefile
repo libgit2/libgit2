@@ -135,7 +135,7 @@ $(TEST_OBJ): tests/%.o: tests/%.c
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(HDRS)
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(T_MAIN_C)
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: tests/%.toc
-	$(CC) -Isrc -I. '-DTEST_TOC="$<"' \
+	$(CC) $(CFLAGS) -Isrc -I. '-DTEST_TOC="$<"' \
 		-c $(T_MAIN_C) \
 		-o $@
 

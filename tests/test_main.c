@@ -24,6 +24,7 @@
  */
 
 #include "test_lib.h"
+#include <string.h>
 
 #undef BEGIN_TEST
 #define BEGIN_TEST(name) extern void testfunc__##name(void);
