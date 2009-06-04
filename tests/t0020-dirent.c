@@ -105,6 +105,7 @@ static int one_entry(void *state, char *path)
 		}
 	}
 	test_die("unexpected path \"%s\"", path);
+	return -1;
 }
 
 
@@ -188,6 +189,7 @@ static walk_data empty = {
 static int dont_call_me(void *state, char *path)
 {
 	test_die("dont_call_me: unexpected callback!");
+	return -1;
 }
 
 BEGIN_TEST(empty)
