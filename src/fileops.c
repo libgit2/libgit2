@@ -105,6 +105,19 @@ void gitfo_free_buf(gitfo_buf *obj)
 	obj->data = NULL;
 }
 
+int gitfo_move_file(char *from, char *to)
+{
+	if (!link(from, to)) {
+		gitfo_unlink(from);
+		return GIT_SUCCESS;
+	}
+
+	if (!rename(from, to))
+		return GIT_SUCCESS;
+
+	return git_os_error();
+}
+
 int gitfo_map_ro(git_map *out, git_file fd, off_t begin, size_t len)
 {
 	if (git__mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin) < 0)

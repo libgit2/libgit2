@@ -69,6 +69,7 @@ extern off_t gitfo_size(git_file fd);
 
 extern int gitfo_read_file(gitfo_buf *obj, const char *path);
 extern void gitfo_free_buf(gitfo_buf *obj);
+extern int gitfo_move_file(char *from, char *to);
 
 #define gitfo_unlink(p) unlink(p)
 #define gitfo_rmdir(p) rmdir(p)
