@@ -133,7 +133,7 @@ void gitfo_free_map(git_map *out)
 /* cached diskio */
 struct gitfo_cache {
 	git_file fd;
-	unsigned int cache_size, pos;
+	size_t cache_size, pos;
 	unsigned char *cache;
 };
 
