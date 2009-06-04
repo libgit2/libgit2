@@ -55,8 +55,7 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 
 int gitfo_exists(const char *path)
 {
-	struct stat sb;
-	return stat(path, &sb);
+	return access(path, F_OK);
 }
 
 off_t gitfo_size(git_file fd)
