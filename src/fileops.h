@@ -16,6 +16,34 @@
 #include <fcntl.h>
 #include <time.h>
 
+#ifdef GIT_WIN32
+static inline int link(const char *old, const char *new)
+{
+	errno = ENOSYS;
+	return -1;
+}
+
+static inline int fsync(int fd)
+{
+	return 0;
+}
+
+static inline int git__mkdir(const char *path, int mode)
+{
+	return mkdir(path);
+}
+
+extern int git__unlink(const char *path);
+extern int git__mkstemp(char *template);
+
+# ifndef GIT__WIN32_NO_HIDE_FILEOPS
+#  define unlink(p) git__unlink(p)
+#  define mkstemp(t) git__mkstemp(t)
+#  define mkdir(p,m) git__mkdir(p,m)
+# endif
+#endif  /* GIT_WIN32 */
+
+
 #if !defined(O_BINARY)
 #define O_BINARY 0
 #endif
@@ -45,12 +73,11 @@ extern void gitfo_free_buf(gitfo_buf *obj);
 #define gitfo_unlink(p) unlink(p)
 #define gitfo_rmdir(p) rmdir(p)
 #define gitfo_chdir(p) chdir(p)
-
-#ifdef GIT_WIN32
-#define gitfo_mkdir(p,m) mkdir(p)
-#else
 #define gitfo_mkdir(p,m) mkdir(p, m)
-#endif
+
+#define gitfo_mkstemp(t) mkstemp(t)
+#define gitfo_fsync(fd) fsync(fd)
+#define gitfo_chmod(p,m) chmod(p, m)
 
 /**
  * Read-only map all or part of a file into memory.
