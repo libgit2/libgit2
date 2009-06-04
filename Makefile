@@ -19,12 +19,8 @@ libdir=$(prefix)/lib
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo no')
 
 CFLAGS = -g -O2 -Wall
-LIBS   = -L. -lgit2 -lz
 OS     = unix
 
-CRYPTO_LIB = -lcrypto
-
-EXTRA_LIBS =
 EXTRA_SRC =
 EXTRA_OBJ =
 
@@ -51,7 +47,6 @@ TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
 
 ifndef NO_OPENSSL
 	SHA1_HEADER = <openssl/sha.h>
-	EXTRA_LIBS += $(CRYPTO_LIB)
 else
 	SHA1_HEADER = "sha1/sha1.h"
 	EXTRA_SRC += src/sha1/sha1.c
@@ -66,7 +61,6 @@ endif
 ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
 SRC_C += $(EXTRA_SRC)
 OBJ += $(EXTRA_OBJ)
-LIBS += $(EXTRA_LIBS)
 
 all:: $(GIT_LIB)
 
@@ -74,15 +68,19 @@ clean:
 	rm -f $(GIT_LIB)
 	rm -f libgit2.pc
 	rm -f src/*.o src/sha1/*.o src/unix/*.o
-	rm -f tests/*.o tests/*.exe tests/*.toc
-	rm -rf trash-*.exe
 	rm -rf apidocs
+	rm -f *~ src/*~ src/git/*~ src/sha1/*~ src/unix/*~ src/win32/*~
+	@$(MAKE) -C tests -s --no-print-directory clean
+
+test-clean:
+	@$(MAKE) -C tests -s --no-print-directory clean
 
 apidocs:
 	$(DOXYGEN) api.doxygen
 	cp CONVENTIONS apidocs/
 
-test: $(TEST_RUN)
+test: $(GIT_LIB)
+	@$(MAKE) -C tests --no-print-directory test
 
 sparse:
 	cgcc -no-compile $(ALL_CFLAGS) $(SPARSE_FLAGS) $(SRC_C)
@@ -118,48 +116,16 @@ $(GIT_LIB): $(OBJS)
 	$(AR) $(GIT_LIB) $(OBJS)
 	$(RANLIB) $(GIT_LIB)
 
-T_HDR         = tests/test_lib.h tests/test_helpers.h
-T_LIB         = tests/test_lib.o tests/test_helpers.o
-T_MAIN_C      = tests/test_main.c
-
-$(T_LIB):    $(T_HDR) $(HDRS)
-$(TEST_OBJ): $(T_HDR) $(HDRS)
-
-$(patsubst %.exe,%.toc,$(TEST_EXE)): tests/%.toc: tests/%.c
-	grep BEGIN_TEST $< >$@+
-	mv $@+ $@
-
-$(TEST_OBJ): tests/%.o: tests/%.c
-	$(CC) $(ALL_CFLAGS) -c $< -o $@
-
-$(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(HDRS)
-$(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: $(T_MAIN_C)
-$(patsubst %.exe,%_main.o,$(TEST_EXE)): tests/%_main.o: tests/%.toc
-	$(CC) $(CFLAGS) -Isrc -I. '-DTEST_TOC="$<"' \
-		-c $(T_MAIN_C) \
-		-o $@
-
-$(TEST_EXE): tests/%.exe: $(T_LIB) $(GIT_LIB)
-$(TEST_EXE): tests/%.exe: tests/%.o tests/%_main.o
-	$(CC) -o $@ \
-		$(patsubst %.exe,%_main.o,$@) \
-		$(patsubst %.exe,%.o,$@) \
-		$(T_LIB) $(LIBS)
-
-$(TEST_RUN): tests/%.run: tests/%.exe
-	@t=trash-$(<F) && \
-	 mkdir $$t && \
-	 if (cd $$t && ../$<); \
-	  then rm -rf $$t; \
-	  else rmdir $$t; exit 1; \
-	 fi
+$(TEST_OBJ) $(TEST_EXE) $(TEST_RUN):
+	@$(MAKE) -C tests --no-print-directory \
+		OS=$(OS) NO_OPENSSL=$(NO_OPENSSL) $(@F)
 
 libgit2.pc: libgit2.pc.in
 	sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' $< > $@
 
 .PHONY: all
 .PHONY: clean
-.PHONY: test $(TEST_RUN)
+.PHONY: test $(TEST_RUN) $(TEST_EXE) $(TEST_OBJ)
 .PHONY: apidocs
 .PHONY: install-headers
 .PHONY: install uninstall
