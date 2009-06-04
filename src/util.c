@@ -63,7 +63,7 @@ int git__suffixcmp(const char *str, const char *suffix)
 int git__dirname(char *dir, size_t n, char *path)
 {
 	char *s;
-	int  len;
+	size_t len;
 
 	assert(dir && n > 1);
 
@@ -89,7 +89,7 @@ int git__dirname(char *dir, size_t n, char *path)
 int git__basename(char *base, size_t n, char *path)
 {
 	char *s;
-	int  len;
+	size_t len;
 
 	assert(base && n > 1);
 

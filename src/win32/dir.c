@@ -2,7 +2,7 @@
 
 static int init_filter(char *filter, size_t n, const char *dir)
 {
-	int len = strlen(dir);
+	size_t len = strlen(dir);
 
 	if (len+3 >= n)
 		return 0;
