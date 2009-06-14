@@ -30,4 +30,28 @@
 # define GIT_TYPEOF(x)
 #endif
 
+/*
+ * Does our compiler/platform support the C99 <inttypes.h> and
+ * <stdint.h> header files. (C99 requires that <inttypes.h>
+ * includes <stdint.h>).
+ */
+#if !defined(_MSC_VER)
+# define GIT_HAVE_INTTYPES_H 1
+#endif
+
+/* Define the printf format specifer to use for size_t output */
+#if !defined(_MSC_VER)
+# define PRIuZ "zu"
+#else
+# define PRIuZ "Iu"
+#endif
+
+/* Micosoft Visual C/C++ */
+#if defined(_MSC_VER)
+/* no direct support for C99 inline function specifier */
+# define inline __inline
+/* disable "deprecated function" warnings */
+# pragma warning ( disable : 4996 )
+#endif
+
 #endif /* INCLUDE_compat_h__ */

@@ -153,7 +153,7 @@ int git_obj__loose_object_type(git_otype type)
 static int format_object_header(char *hdr, size_t n, git_obj *obj)
 {
 	const char *type_str = git_obj_type_to_string(obj->type);
-	int len = snprintf(hdr, n, "%s %zu", type_str, obj->len);
+	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj->len);
 
 	assert(len > 0);  /* otherwise snprintf() is broken */
 	assert(len < n);  /* otherwise the caller is broken! */

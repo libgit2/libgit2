@@ -21,7 +21,11 @@
 #endif
 
 /** Declare a function as always inlined. */
+#if defined(_MSC_VER)
+# define GIT_INLINE(type) static __inline type
+#else
 # define GIT_INLINE(type) static inline type
+#endif
 
 /** Declare a function's takes printf style arguments. */
 #ifdef __GNUC__
