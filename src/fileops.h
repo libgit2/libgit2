@@ -23,11 +23,6 @@ static inline int link(const char *old, const char *new)
 	return -1;
 }
 
-static inline int fsync(int fd)
-{
-	return 0;
-}
-
 static inline int git__mkdir(const char *path, int mode)
 {
 	return mkdir(path);
@@ -35,11 +30,13 @@ static inline int git__mkdir(const char *path, int mode)
 
 extern int git__unlink(const char *path);
 extern int git__mkstemp(char *template);
+extern int git__fsync(int fd);
 
 # ifndef GIT__WIN32_NO_HIDE_FILEOPS
 #  define unlink(p) git__unlink(p)
 #  define mkstemp(t) git__mkstemp(t)
 #  define mkdir(p,m) git__mkdir(p,m)
+#  define fsync(fd) git__fsync(fd)
 # endif
 #endif  /* GIT_WIN32 */
 
