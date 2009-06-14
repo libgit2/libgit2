@@ -70,7 +70,7 @@ typedef struct git_pack git_pack;
 typedef struct {
 	size_t n_packs;
 	unsigned int refcnt;
-	git_pack *packs[FLEX_ARRAY];
+	git_pack *packs[GIT_FLEX_ARRAY];
 } git_packlist;
 
 struct git_odb {

@@ -7,14 +7,14 @@
 /*
  * See if our compiler is known to support flexible array members.
  */
-#ifndef FLEX_ARRAY
+#ifndef GIT_FLEX_ARRAY
 # if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
-#  define FLEX_ARRAY /* empty */
+#  define GIT_FLEX_ARRAY /* empty */
 # elif defined(__GNUC__)
 #  if (__GNUC__ >= 3)
-#   define FLEX_ARRAY /* empty */
+#   define GIT_FLEX_ARRAY /* empty */
 #  else
-#   define FLEX_ARRAY 0 /* older GNU extension */
+#   define GIT_FLEX_ARRAY 0 /* older GNU extension */
 #  endif
 # endif
 
@@ -25,9 +25,9 @@
 #endif
 
 #ifdef __GNUC__
-# define TYPEOF(x) (__typeof__(x))
+# define GIT_TYPEOF(x) (__typeof__(x))
 #else
-# define TYPEOF(x)
+# define GIT_TYPEOF(x)
 #endif
 
 #endif /* INCLUDE_compat_h__ */
