@@ -17,13 +17,13 @@
 #include <time.h>
 
 #ifdef GIT_WIN32
-static inline int link(const char *old, const char *new)
+GIT_INLINE(int) link(const char *old, const char *new)
 {
 	errno = ENOSYS;
 	return -1;
 }
 
-static inline int git__mkdir(const char *path, int mode)
+GIT_INLINE(int) git__mkdir(const char *path, int mode)
 {
 	return mkdir(path);
 }

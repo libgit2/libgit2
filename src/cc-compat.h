@@ -46,12 +46,4 @@
 # define PRIuZ "Iu"
 #endif
 
-/* Micosoft Visual C/C++ */
-#if defined(_MSC_VER)
-/* no direct support for C99 inline function specifier */
-# define inline __inline
-/* disable "deprecated function" warnings */
-# pragma warning ( disable : 4996 )
-#endif
-
 #endif /* INCLUDE_compat_h__ */
