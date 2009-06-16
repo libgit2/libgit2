@@ -29,6 +29,8 @@
 /** Declare a function never returns to the caller. */
 #ifdef __GNUC__
 # define NORETURN __attribute__((__noreturn__))
+#elif defined(_MSC_VER)
+# define NORETURN __declspec(noreturn)
 #else
 # define NORETURN /* noreturn */
 #endif
@@ -61,8 +63,7 @@ extern void test_end(void);
  *
  * @param fmt printf style format string.
  */
-extern void test_die(const char *fmt, ...)
-	NORETURN
+extern void NORETURN test_die(const char *fmt, ...)
 	GIT_FORMAT_PRINTF(1, 2);
 
 /**
