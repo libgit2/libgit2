@@ -46,4 +46,10 @@
 # define PRIuZ "Iu"
 #endif
 
+/* Micosoft Visual C/C++ */
+#if defined(_MSC_VER)
+/* disable "deprecated function" warnings */
+# pragma warning ( disable : 4996 )
+#endif
+
 #endif /* INCLUDE_compat_h__ */
