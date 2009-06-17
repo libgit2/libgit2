@@ -31,12 +31,15 @@
 
 # define snprintf _snprintf
 
-# if (defined(_MSC_VER) && defined(_WIN64)) || \
-     (defined(__DMC__) && defined(_M_AMD64))
-  typedef long long ssize_t;
-# else
-  typedef int ssize_t;
+# if defined(__DMC__)
+#  if defined(_M_AMD64)
+#   define SSIZE_T long long
+#  else
+#   define SSIZE_T int
+#  endif
 # endif
+
+typedef SSIZE_T ssize_t;
 
 # if defined(_MSC_VER)
 /* access() mode parameter #defines   */
