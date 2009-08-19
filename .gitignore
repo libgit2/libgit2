@@ -4,3 +4,6 @@
 *.o
 *.a
 *.exe
+*.gcda
+*.gcno
+*.gcov

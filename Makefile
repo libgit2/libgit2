@@ -72,6 +72,7 @@ clean:
 	rm -rf apidocs
 	rm -f *~ src/*~ src/git/*~ src/sha1/*~ src/unix/*~ src/win32/*~
 	@$(MAKE) -C tests -s --no-print-directory clean
+	@$(MAKE) -s --no-print-directory cov-clean
 
 test-clean:
 	@$(MAKE) -C tests -s --no-print-directory clean
@@ -134,3 +135,41 @@ libgit2.pc: libgit2.pc.in
 .PHONY: install-headers
 .PHONY: install uninstall
 .PHONY: sparse
+
+### Test suite coverage testing
+#
+.PHONY: coverage cov-clean cov-build cov-report
+
+COV_GCDA = $(patsubst %.c,%.gcda,$(SRC_C))
+COV_GCNO = $(patsubst %.c,%.gcno,$(SRC_C))
+
+coverage:
+	@$(MAKE) -s --no-print-directory clean
+	@$(MAKE) --no-print-directory cov-build
+	@$(MAKE) --no-print-directory cov-report
+
+cov-clean:
+	rm -f $(COV_GCDA) $(COV_GCNO) *.gcov untested
+
+COV_CFLAGS = $(CFLAGS) -O0 -ftest-coverage -fprofile-arcs
+
+cov-build:
+	$(MAKE) CFLAGS="$(COV_CFLAGS)" all
+	$(MAKE) TEST_COVERAGE=1 NO_OPENSSL=$(NO_OPENSSL) test
+
+cov-report:
+	@echo "--- untested files:" | tee untested
+	@{ for f in $(SRC_C); do \
+		gcda=$$(dirname $$f)"/"$$(basename $$f .c)".gcda"; \
+		if test -f $$gcda; then \
+			gcov -b -p -o $$(dirname $$f) $$f >/dev/null; \
+		else \
+			echo $$f | tee -a untested; \
+		fi; \
+	   done; }
+	@rm -f *.h.gcov
+	@echo "--- untested functions:" | tee -a untested
+	@grep '^function .* called 0' *.c.gcov \
+	| sed -e 's/\([^:]*\)\.gcov:function \([^ ]*\) called.*/\1: \2/' \
+	| sed -e 's|#|/|g' | tee -a untested
+

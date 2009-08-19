@@ -25,6 +25,10 @@ TEST_EXE = $(patsubst %.o,%.exe,$(TEST_OBJ))
 TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
 TEST_VAL = $(patsubst %.exe,%.val,$(TEST_EXE))
 
+ifdef TEST_COVERAGE
+	EXTRA_LIBS += -O0 -lgcov
+endif
+
 ifndef NO_OPENSSL
 	EXTRA_LIBS += $(CRYPTO_LIB)
 endif
@@ -32,7 +36,7 @@ endif
 BASIC_CFLAGS := -I../src
 
 ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
-LIBS += $(EXTRA_LIBS)
+ALL_LIBS = $(LIBS) $(EXTRA_LIBS)
 
 all:: $(TEST_RUN)
 
@@ -74,7 +78,7 @@ $(TEST_EXE): %.exe: %.o %_main.o
 	$(LD) -o $@ \
 		$(patsubst %.exe,%_main.o,$@) \
 		$(patsubst %.exe,%.o,$@) \
-		$(T_LIB) $(LIBS)
+		$(T_LIB) $(ALL_LIBS)
 
 $(TEST_RUN): %.run: %.exe
 	@t=trash-$(<F) && \
