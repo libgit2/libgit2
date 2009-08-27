@@ -9,6 +9,8 @@ CFLAGS = -g -O2 -Wall
 LIBS   = -L.. -lgit2 -lz
 OS     = unix
 
+VFLAGS = -q --error-exitcode=1 --leak-check=yes --suppressions=../tests.supp
+
 CRYPTO_LIB = -lcrypto
 
 EXTRA_LIBS =
@@ -21,6 +23,7 @@ TEST_OBJ = $(patsubst %.c,%.o,\
            $(wildcard t[0-9][0-9][0-9][0-9]-*.c))
 TEST_EXE = $(patsubst %.o,%.exe,$(TEST_OBJ))
 TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
+TEST_VAL = $(patsubst %.exe,%.val,$(TEST_EXE))
 
 ifndef NO_OPENSSL
 	EXTRA_LIBS += $(CRYPTO_LIB)
@@ -39,6 +42,8 @@ clean:
 	rm -f *~
 
 test: $(TEST_RUN)
+
+valgrind: $(TEST_VAL)
 
 .c.o:
 	$(CC) $(ALL_CFLAGS) -c $< -o $@
@@ -79,6 +84,15 @@ $(TEST_RUN): %.run: %.exe
 	  else rmdir $$t; exit 1; \
 	 fi
 
+$(TEST_VAL): %.val: %.exe
+	@t=trash-$(<F) && \
+	 mkdir $$t && \
+	 if (cd $$t && valgrind $(VFLAGS) ../$<); \
+	  then rm -rf $$t; \
+	  else rmdir $$t; exit 1; \
+	 fi
+
 .PHONY: all
 .PHONY: clean
 .PHONY: test $(TEST_RUN)
+.PHONY: $(TEST_VAL)

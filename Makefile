@@ -44,6 +44,7 @@ TEST_OBJ = $(patsubst %.c,%.o,\
            $(wildcard tests/t[0-9][0-9][0-9][0-9]-*.c))
 TEST_EXE = $(patsubst %.o,%.exe,$(TEST_OBJ))
 TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
+TEST_VAL = $(patsubst %.exe,%.val,$(TEST_EXE))
 
 ifndef NO_OPENSSL
 	SHA1_HEADER = <openssl/sha.h>
@@ -82,6 +83,9 @@ apidocs:
 test: $(GIT_LIB)
 	@$(MAKE) -C tests --no-print-directory test
 
+valgrind: $(GIT_LIB)
+	@$(MAKE) -C tests --no-print-directory valgrind
+
 sparse:
 	cgcc -no-compile $(ALL_CFLAGS) $(SPARSE_FLAGS) $(SRC_C)
 
@@ -116,7 +120,7 @@ $(GIT_LIB): $(OBJS)
 	$(AR) $(GIT_LIB) $(OBJS)
 	$(RANLIB) $(GIT_LIB)
 
-$(TEST_OBJ) $(TEST_EXE) $(TEST_RUN):
+$(TEST_OBJ) $(TEST_EXE) $(TEST_RUN) $(TEST_VAL):
 	@$(MAKE) -C tests --no-print-directory \
 		OS=$(OS) NO_OPENSSL=$(NO_OPENSSL) $(@F)
 
@@ -125,7 +129,7 @@ libgit2.pc: libgit2.pc.in
 
 .PHONY: all
 .PHONY: clean
-.PHONY: test $(TEST_RUN) $(TEST_EXE) $(TEST_OBJ)
+.PHONY: test $(TEST_VAL) $(TEST_RUN) $(TEST_EXE) $(TEST_OBJ)
 .PHONY: apidocs
 .PHONY: install-headers
 .PHONY: install uninstall
