@@ -1,5 +1,6 @@
 #include "test_lib.h"
 #include <git/oid.h>
+#include <stdlib.h>
 
 BEGIN_TEST(oid_szs)
 	git_oid out;
@@ -186,6 +187,7 @@ BEGIN_TEST(cmp_oid_allocfmt)
 	out = git_oid_allocfmt(&in);
 	must_be_true(out);
 	must_pass(strcmp(exp, out));
+	free(out);
 END_TEST
 
 BEGIN_TEST(cmp_oid_pathfmt)
