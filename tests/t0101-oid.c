@@ -208,3 +208,47 @@ BEGIN_TEST(cmp_oid_pathfmt)
 	must_pass(strcmp(exp2, out));
 END_TEST
 
+BEGIN_TEST(oid_to_string)
+	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
+	git_oid in;
+	char out[GIT_OID_HEXSZ + 1];
+	char *str;
+	int i;
+
+	must_pass(git_oid_mkstr(&in, exp));
+
+	/* NULL buffer pointer, returns static empty string */
+	str = git_oid_to_string(NULL, sizeof(out), &in);
+	must_be_true(str && *str == '\0' && str != out);
+
+	/* zero buffer size, returns static empty string */
+	str = git_oid_to_string(out, 0, &in);
+	must_be_true(str && *str == '\0' && str != out);
+
+	/* NULL oid pointer, returns static empty string */
+	str = git_oid_to_string(out, sizeof(out), NULL);
+	must_be_true(str && *str == '\0' && str != out);
+
+	/* n == 1, returns out as an empty string */
+	str = git_oid_to_string(out, 1, &in);
+	must_be_true(str && *str == '\0' && str == out);
+
+	for (i = 1; i < GIT_OID_HEXSZ; i++) {
+		out[i+1] = 'Z';
+		str = git_oid_to_string(out, i+1, &in);
+		/* returns out containing c-string */
+		must_be_true(str && str == out);
+		/* must be '\0' terminated */
+		must_be_true(*(str+i) == '\0');
+		/* must not touch bytes past end of string */
+		must_be_true(*(str+(i+1)) == 'Z');
+		/* i == n-1 charaters of string */
+		must_pass(strncmp(exp, out, i));
+	}
+
+	/* returns out as hex formatted c-string */
+	str = git_oid_to_string(out, sizeof(out), &in);
+	must_be_true(str && str == out && *(str+GIT_OID_HEXSZ) == '\0');
+	must_pass(strcmp(exp, out));
+END_TEST
+

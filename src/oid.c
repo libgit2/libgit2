@@ -94,3 +94,23 @@ char *git_oid_allocfmt(const git_oid *oid)
 	str[GIT_OID_HEXSZ] = '\0';
 	return str;
 }
+
+char *git_oid_to_string(char *out, size_t n, const git_oid *oid)
+{
+	char str[GIT_OID_HEXSZ];
+
+	if (!out || n == 0 || !oid)
+		return "";
+
+	n--;  /* allow room for terminating NUL */
+
+	if (n > 0) {
+		git_oid_fmt(str, oid);
+		memcpy(out, str, n > GIT_OID_HEXSZ ? GIT_OID_HEXSZ : n);
+	}
+
+	out[n] = '\0';
+
+	return out;
+}
+

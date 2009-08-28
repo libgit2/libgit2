@@ -74,11 +74,28 @@ GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
 
 /**
  * Format a gid_oid into a newly allocated c-string.
- * @param oid theoid structure to format
+ * @param oid the oid structure to format
  * @return the c-string; NULL if memory is exhausted.  Caller must
  *         deallocate the string with free().
  */
 GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
+
+/**
+ * Format a git_oid into a buffer as a hex format c-string.
+ * <p>
+ * If the buffer is smaller than GIT_OID_HEXSZ+1, then the resulting
+ * oid c-string will be truncated to n-1 characters. If there are
+ * any input parameter errors (out == NULL, n == 0, oid == NULL),
+ * then a pointer to an empty string is returned, so that the return
+ * value can always be printed.
+ *
+ * @param out the buffer into which the oid string is output.
+ * @param n the size of the out buffer.
+ * @param oid the oid structure to format.
+ * @return the out buffer pointer, assuming no input parameter
+ *         errors, otherwise a pointer to an empty string.
+ */
+GIT_EXTERN(char *) git_oid_to_string(char *out, size_t n, const git_oid *oid);
 
 /**
  * Copy an oid from one structure to another.
