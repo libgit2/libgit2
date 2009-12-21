@@ -40,10 +40,10 @@
 #endif
 
 /* Define the printf format specifer to use for size_t output */
-#if !defined(_MSC_VER)
-# define PRIuZ "zu"
-#else
+#if defined(_MSC_VER) || defined(__MINGW32__)
 # define PRIuZ "Iu"
+#else
+# define PRIuZ "zu"
 #endif
 
 /* Micosoft Visual C/C++ */

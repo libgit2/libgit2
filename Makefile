@@ -30,6 +30,12 @@ ifneq (,$(findstring CYGWIN,$(uname_S)))
 	NO_VISIBILITY=YesPlease
 endif
 
+ifneq (,$(findstring MINGW,$(uname_S)))
+	OS=win32
+	NO_VISIBILITY=YesPlease
+	SPARSE_FLAGS=-Wno-one-bit-signed-bitfield
+endif
+
 SRC_C = $(wildcard src/*.c)
 OS_SRC = $(wildcard src/$(OS)/*.c)
 SRC_C += $(OS_SRC)
@@ -68,7 +74,7 @@ all:: $(GIT_LIB)
 clean:
 	rm -f $(GIT_LIB)
 	rm -f libgit2.pc
-	rm -f src/*.o src/sha1/*.o src/unix/*.o
+	rm -f src/*.o src/sha1/*.o src/unix/*.o src/win32/*.o
 	rm -rf apidocs
 	rm -f *~ src/*~ src/git/*~ src/sha1/*~ src/unix/*~ src/win32/*~
 	@$(MAKE) -C tests -s --no-print-directory clean

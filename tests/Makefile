@@ -15,6 +15,13 @@ CRYPTO_LIB = -lcrypto
 
 EXTRA_LIBS =
 
+# Platform specific tweaks
+
+ifneq (,$(findstring MINGW,$(uname_S)))
+	OS=win32
+	EXTRA_LIBS += -lwsock32 -lpthread
+endif
+
 HDRS = $(wildcard ../src/*.h)
 PUBLIC_HEADERS = $(wildcard ../src/git/*.h)
 HDRS += $(PUBLIC_HEADERS)

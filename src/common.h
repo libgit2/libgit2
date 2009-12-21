@@ -4,7 +4,7 @@
 /** Force 64 bit off_t size on POSIX. */
 #define _FILE_OFFSET_BITS 64
 
-#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__MINGW32__)
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #define GIT_WIN32 1
 #endif
 
