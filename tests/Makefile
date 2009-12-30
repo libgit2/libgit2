@@ -22,6 +22,8 @@ ifneq (,$(findstring MINGW,$(uname_S)))
 	EXTRA_LIBS += -lwsock32 -lpthread
 endif
 
+GIT_LIB = ../libgit2.a
+
 HDRS = $(wildcard ../src/*.h)
 PUBLIC_HEADERS = $(wildcard ../src/git/*.h)
 HDRS += $(PUBLIC_HEADERS)
@@ -81,6 +83,7 @@ $(patsubst %.exe,%_main.o,$(TEST_EXE)): %_main.o: %.toc
 		-o $@
 
 $(TEST_EXE): %.exe: $(T_LIB)
+$(TEST_EXE): %.exe: $(GIT_LIB)
 $(TEST_EXE): %.exe: %.o %_main.o
 	$(LD) -o $@ \
 		$(patsubst %.exe,%_main.o,$@) \

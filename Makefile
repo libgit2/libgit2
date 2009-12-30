@@ -127,7 +127,7 @@ $(GIT_LIB): $(OBJS)
 	$(AR) $(GIT_LIB) $(OBJS)
 	$(RANLIB) $(GIT_LIB)
 
-$(TEST_OBJ) $(TEST_EXE) $(TEST_RUN) $(TEST_VAL):
+$(TEST_OBJ) $(TEST_EXE) $(TEST_RUN) $(TEST_VAL): $(GIT_LIB)
 	@$(MAKE) -C tests --no-print-directory \
 		OS=$(OS) NO_OPENSSL=$(NO_OPENSSL) $(@F)
 
