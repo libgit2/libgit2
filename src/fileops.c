@@ -151,6 +151,7 @@ gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size)
 	if (!ioc)
 		return NULL;
 
+	ioc->fd = fd;
 	ioc->pos = 0;
 	ioc->cache_size = cache_size;
 	ioc->cache = git__malloc(cache_size);
