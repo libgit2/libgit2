@@ -40,7 +40,7 @@ static struct {
 
 const char *git_strerror(int num)
 {
-	int i;
+	size_t i;
 
 	if (num == GIT_EOSERR)
 		return strerror(errno);

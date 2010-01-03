@@ -35,7 +35,7 @@ int git__fmt(char *buf, size_t buf_sz, const char *fmt, ...)
 	va_start(va, fmt);
 	r = vsnprintf(buf, buf_sz, fmt, va);
 	va_end(va);
-	if (r < 0 || r >= buf_sz)
+	if (r < 0 || ((size_t) r) >= buf_sz)
 		return GIT_ERROR;
 	return r;
 }

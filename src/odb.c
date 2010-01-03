@@ -124,14 +124,14 @@ GIT_INLINE(uint64_t) decode64(void *b)
 
 const char *git_obj_type_to_string(git_otype type)
 {
-	if (type < 0 || type >= ARRAY_SIZE(obj_type_table))
+	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(obj_type_table))
 		return "";
 	return obj_type_table[type].str;
 }
 
 git_otype git_obj_string_to_type(const char *str)
 {
-	int i;
+	size_t i;
 
 	if (!str || !*str)
 		return GIT_OBJ_BAD;
@@ -145,7 +145,7 @@ git_otype git_obj_string_to_type(const char *str)
 
 int git_obj__loose_object_type(git_otype type)
 {
-	if (type < 0 || type >= ARRAY_SIZE(obj_type_table))
+	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(obj_type_table))
 		return 0;
 	return obj_type_table[type].loose;
 }
@@ -155,10 +155,10 @@ static int format_object_header(char *hdr, size_t n, git_obj *obj)
 	const char *type_str = git_obj_type_to_string(obj->type);
 	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj->len);
 
-	assert(len > 0);  /* otherwise snprintf() is broken */
-	assert(len < n);  /* otherwise the caller is broken! */
+	assert(len > 0);             /* otherwise snprintf() is broken  */
+	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
 
-	if (len < 0 || len >= n)
+	if (len < 0 || ((size_t) len) >= n)
 		return GIT_ERROR;
 	return len+1;
 }

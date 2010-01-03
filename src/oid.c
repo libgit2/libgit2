@@ -49,7 +49,7 @@ static char to_hex[] = "0123456789abcdef";
 
 int git_oid_mkstr(git_oid *out, const char *str)
 {
-	int p;
+	size_t p;
 	for (p = 0; p < sizeof(out->id); p++, str += 2) {
 		int v = (from_hex[(unsigned char)str[0]] << 4)
 		       | from_hex[(unsigned char)str[1]];
@@ -69,7 +69,7 @@ GIT_INLINE(char) *fmt_one(char *str, unsigned int val)
 
 void git_oid_fmt(char *str, const git_oid *oid)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < sizeof(oid->id); i++)
 		str = fmt_one(str, oid->id[i]);
@@ -77,7 +77,7 @@ void git_oid_fmt(char *str, const git_oid *oid)
 
 void git_oid_pathfmt(char *str, const git_oid *oid)
 {
-	int i;
+	size_t i;
 
 	str = fmt_one(str, oid->id[0]);
 	*str++ = '/';
