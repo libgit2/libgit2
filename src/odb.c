@@ -503,7 +503,7 @@ static int make_temp_file(git_file *fd, char *tmp, size_t n, char *file)
 {
 	char *template = "/tmp_obj_XXXXXX";
 	size_t tmplen = strlen(template);
-	size_t dirlen;
+	int dirlen;
 
 	if ((dirlen = git__dirname(tmp, n, file)) < 0)
 		return GIT_ERROR;
