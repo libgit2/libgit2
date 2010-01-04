@@ -840,6 +840,8 @@ static void packlist_dec(git_odb *db, git_packlist *pl)
 {
 	int need_free;
 
+	assert(db && pl);
+
 	gitlck_lock(&db->lock);
 	need_free = !--pl->refcnt;
 	gitlck_unlock(&db->lock);

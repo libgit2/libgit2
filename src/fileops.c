@@ -209,7 +209,6 @@ int gitfo_write_cached(gitfo_cache *ioc, void *buff, size_t len)
 		if (len > ioc->cache_size)
 			return gitfo_write(ioc->fd, buf, len);
 	}
-	return GIT_SUCCESS;
 }
 
 int gitfo_close_cached(gitfo_cache *ioc)

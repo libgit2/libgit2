@@ -9,7 +9,8 @@
  * Nicolas Pitre <nico@cam.org>.
  */
 
-static size_t hdr_sz(
+static int hdr_sz(
+	size_t *size,
 	const unsigned char **delta,
 	const unsigned char *end)
 {
@@ -25,7 +26,8 @@ static size_t hdr_sz(
 		shift += 7;
 	} while (c & 0x80);
 	*delta = d;
-	return r;
+	*size = r;
+	return 0;
 }
 
 int git__delta_apply(
@@ -36,17 +38,19 @@ int git__delta_apply(
 	size_t delta_len)
 {
 	const unsigned char *delta_end = delta + delta_len;
-	size_t res_sz;
+	size_t base_sz, res_sz;
 	unsigned char *res_dp;
 
 	/* Check that the base size matches the data we were given;
 	 * if not we would underflow while accessing data from the
 	 * base object, resulting in data corruption or segfault.
 	 */
-	if (base_len != hdr_sz(&delta, delta_end))
+	if ((hdr_sz(&base_sz, &delta, delta_end) < 0) || (base_sz != base_len))
 		return GIT_ERROR;
 
-	res_sz = hdr_sz(&delta, delta_end);
+	if (hdr_sz(&res_sz, &delta, delta_end) < 0)
+		return GIT_ERROR;
+
 	if ((res_dp = git__malloc(res_sz + 1)) == NULL)
 		return GIT_ERROR;
 	res_dp[res_sz] = '\0';

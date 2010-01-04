@@ -19,7 +19,7 @@ BEGIN_TEST(invalid_string_moo)
 	must_fail(git_oid_mkstr(&out, "moo"));
 END_TEST
 
-static int from_hex(unsigned char i)
+static int from_hex(unsigned int i)
 {
 	if (i >= '0' && i <= '9')
 		return i - '0';
@@ -38,14 +38,14 @@ BEGIN_TEST(invalid_string_all_chars)
 		0xb7, 0x75, 0x21, 0x3c, 0x23,
 		0xa8, 0xbd, 0x74, 0xf5, 0xe0,
 	};
-	char in[41] = "16a67770b7d8d72317c4b775213c23a8bd74f5e0\0";
+	char in[41] = "16a67770b7d8d72317c4b775213c23a8bd74f5e0";
 	unsigned int i;
 
 	for (i = 0; i < 256; i++) {
 		in[38] = (char)i;
 
 		if (from_hex(i) >= 0) {
-			exp[19] = (from_hex(i) << 4);
+			exp[19] = (unsigned char)(from_hex(i) << 4);
 			if (git_oid_mkstr(&out, in))
 				test_die("line %d: must accept '%s'", __LINE__, in);
 			if (memcmp(out.id, exp, sizeof(out.id)))
