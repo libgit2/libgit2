@@ -69,7 +69,8 @@ off_t gitfo_size(git_file fd)
 int gitfo_read_file(gitfo_buf *obj, const char *path)
 {
 	git_file fd;
-	off_t len;
+	size_t len;
+	off_t size;
 	unsigned char *buff;
 
 	assert(obj && path && *path);
@@ -77,8 +78,13 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 	if ((fd = gitfo_open(path, O_RDONLY)) < 0)
 		return GIT_ERROR;
 
-	if (((len = gitfo_size(fd)) < 0) 
-		|| ((buff = git__malloc(len + 1)) == NULL)) {
+	if (((size = gitfo_size(fd)) < 0) || !git__is_sizet(size+1)) {
+		gitfo_close(fd);
+		return GIT_ERROR;
+	}
+	len = (size_t) size;
+
+	if ((buff = git__malloc(len + 1)) == NULL) {
 		gitfo_close(fd);
 		return GIT_ERROR;
 	}

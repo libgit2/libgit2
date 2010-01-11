@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #ifdef GIT_WIN32
 
@@ -50,6 +51,23 @@ typedef SSIZE_T ssize_t;
 #  define W_OK 2  /* write mode check */
 #  define R_OK 4  /* read  mode check */
 # endif
+
+#if defined(__MINGW32__)
+
+# define off_t off64_t
+# define lseek _lseeki64
+# define stat _stati64
+# define fstat _fstati64
+
+#elif defined(_MSC_VER)
+
+typedef __int64 off64_t;
+# define off_t off64_t
+# define lseek _lseeki64
+# define stat _stat64
+# define fstat _fstat64
+
+#endif
 
 #else
 
