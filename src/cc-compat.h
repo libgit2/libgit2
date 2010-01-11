@@ -30,6 +30,16 @@
 # define GIT_TYPEOF(x)
 #endif
 
+#ifdef __cplusplus
+# define GIT_UNUSED(x)
+#else
+# ifdef __GNUC__
+#  define GIT_UNUSED(x) x __attribute__ ((__unused__))
+# else
+#  define GIT_UNUSED(x) x
+# endif
+#endif
+
 /*
  * Does our compiler/platform support the C99 <inttypes.h> and
  * <stdint.h> header files. (C99 requires that <inttypes.h>

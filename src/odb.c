@@ -1110,6 +1110,8 @@ static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
 	off_t pos;
 	int res;
 
+	assert(out && p && id);
+
 	if (pack_openidx(p))
 		return GIT_ERROR;
 	res = p->idx_search(&pos, p, id);
@@ -1127,6 +1129,12 @@ int git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id)
 {
 	git_packlist *pl = packlist_get(db);
 	size_t j;
+
+	assert(out && db && id);
+
+	out->data = NULL;
+	out->len  = 0;
+	out->type = GIT_OBJ_BAD;
 
 	if (!pl)
 		return GIT_ENOTFOUND;

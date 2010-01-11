@@ -184,7 +184,7 @@ static walk_data empty = {
 	empty_names
 };
 
-static int dont_call_me(void *state, char *path)
+static int dont_call_me(void *GIT_UNUSED(state), char *GIT_UNUSED(path))
 {
 	test_die("dont_call_me: unexpected callback!");
 }
