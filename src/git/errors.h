@@ -2,7 +2,6 @@
 #define INCLUDE_git_errors_h__
 
 #include "common.h"
-#include "thread-utils.h"
 
 /**
  * @file git/errors.h
@@ -14,7 +13,7 @@ GIT_BEGIN_DECL
 
 /** The git errno. */
 #if defined(GIT_TLS)
-GIT_EXTERN(int) GIT_TLS git_errno;
+GIT_EXTERN_TLS(int) git_errno;
 
 #elif defined(GIT_HAS_PTHREAD)
 # define git_errno (*git__errno_storage())
