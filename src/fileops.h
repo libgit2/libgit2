@@ -15,12 +15,15 @@
 #ifdef GIT_WIN32
 GIT_INLINE(int) link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
+	GIT_UNUSED_ARG(old)
+	GIT_UNUSED_ARG(new)
 	errno = ENOSYS;
 	return -1;
 }
 
 GIT_INLINE(int) git__mkdir(const char *path, int GIT_UNUSED(mode))
 {
+	GIT_UNUSED_ARG(mode)
 	return mkdir(path);
 }
 

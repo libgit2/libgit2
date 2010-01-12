@@ -40,6 +40,12 @@
 # endif
 #endif
 
+#if defined(_MSC_VER)
+#define GIT_UNUSED_ARG(x) ((void)(x)); /* note trailing ; */
+#else
+#define GIT_UNUSED_ARG(x)
+#endif
+
 /*
  * Does our compiler/platform support the C99 <inttypes.h> and
  * <stdint.h> header files. (C99 requires that <inttypes.h>
