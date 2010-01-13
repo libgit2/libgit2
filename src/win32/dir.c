@@ -1,3 +1,4 @@
+#define GIT__WIN32_NO_WRAP_DIR
 #include "dir.h"
 
 static int init_filter(char *filter, size_t n, const char *dir)
@@ -15,10 +16,10 @@ static int init_filter(char *filter, size_t n, const char *dir)
 	return 1;
 }
 
-DIR *opendir(const char *dir)
+git__DIR *git__opendir(const char *dir)
 {
 	char filter[4096];
-	DIR *new;
+	git__DIR *new;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
 		return NULL;
@@ -45,7 +46,7 @@ DIR *opendir(const char *dir)
 	return new;
 }
 
-struct dirent *readdir(DIR *d)
+struct git__dirent *git__readdir(git__DIR *d)
 {
 	if (!d || d->h == INVALID_HANDLE_VALUE)
 		return NULL;
@@ -66,7 +67,7 @@ struct dirent *readdir(DIR *d)
 	return &d->entry;
 }
 
-void rewinddir(DIR *d)
+void git__rewinddir(git__DIR *d)
 {
 	char filter[4096];
 
@@ -83,7 +84,7 @@ void rewinddir(DIR *d)
 	}
 }
 
-int closedir(DIR *d)
+int git__closedir(git__DIR *d)
 {
 	if (d) {
 		if (d->h != INVALID_HANDLE_VALUE)

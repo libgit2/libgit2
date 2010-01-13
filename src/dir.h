@@ -9,7 +9,7 @@
 
 #ifdef GIT_WIN32
 
-struct dirent {
+struct git__dirent {
 	int  d_ino;
 	char d_name[261];
 };
@@ -17,15 +17,24 @@ struct dirent {
 typedef struct {
 	HANDLE h;
 	WIN32_FIND_DATA f;
-	struct dirent entry;
+	struct git__dirent entry;
 	char *dir;
 	int first;
-} DIR;
+} git__DIR;
 
-extern DIR *opendir(const char *);
-extern struct dirent *readdir(DIR *);
-extern void rewinddir(DIR *);
-extern int closedir(DIR *);
+extern git__DIR *git__opendir(const char *);
+extern struct git__dirent *git__readdir(git__DIR *);
+extern void git__rewinddir(git__DIR *);
+extern int git__closedir(git__DIR *);
+
+# ifndef GIT__WIN32_NO_WRAP_DIR
+#  define dirent git__dirent
+#  define DIR git__DIR
+#  define opendir   git__opendir
+#  define readdir   git__readdir
+#  define rewinddir git__rewinddir
+#  define closedir  git__closedir
+# endif
 
 #endif
 
