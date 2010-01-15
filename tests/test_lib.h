@@ -23,8 +23,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include <stdio.h>
+#include "common.h"
 #include <git/common.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
 
 /** Declare a function never returns to the caller. */
 #ifdef __GNUC__

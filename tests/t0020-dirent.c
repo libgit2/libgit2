@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include "test_lib.h"
 #include "fileops.h"
 

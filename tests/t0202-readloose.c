@@ -2,7 +2,6 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 #include <git/odb.h>
-#include "fileops.h"
 
 /*
  * read loose objects from the object directory. The objects are

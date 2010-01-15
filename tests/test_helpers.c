@@ -23,6 +23,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "common.h"
 #include "test_helpers.h"
 #include "fileops.h"
 

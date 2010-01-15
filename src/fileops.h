@@ -6,9 +6,6 @@
 #ifndef INCLUDE_fileops_h__
 #define INCLUDE_fileops_h__
 
-/** Force 64 bit off_t size on POSIX. */
-#define _FILE_OFFSET_BITS 64
-
 #include "common.h"
 #include "map.h"
 #include "dir.h"

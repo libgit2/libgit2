@@ -23,10 +23,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
+#define GIT__NO_HIDE_MALLOC
 #include "test_lib.h"
 
 struct test_info

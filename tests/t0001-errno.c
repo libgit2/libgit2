@@ -1,6 +1,5 @@
 #include "test_lib.h"
 #include "errors.h"
-#include <string.h>
 
 BEGIN_TEST(errno_zero_on_init)
 	must_be_true(git_errno == 0);
