@@ -18,13 +18,32 @@ libdir=$(prefix)/lib
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo no')
 
+ifdef MSVC
+	# avoid the MinGW and Cygwin configuration sections
+	uname_S := Windows
+endif
+
 CFLAGS = -g -O2 -Wall
 OS     = unix
 
 EXTRA_SRC =
 EXTRA_OBJ =
 
+AR_OUT=
+CC_OUT=-o # add a space
+
 # Platform specific tweaks
+
+ifeq ($(uname_S),Windows)
+	OS=win32
+	RANLIB = echo
+	CC = cl -nologo
+	AR = lib -nologo
+	CFLAGS = -TC -W3 -RTC1 -Zi -DWIN32 -D_DEBUG -D_LIB
+	AR_OUT=-out:
+	CC_OUT=-Fo
+	NO_VISIBILITY=YesPlease
+endif
 
 ifneq (,$(findstring CYGWIN,$(uname_S)))
 	NO_VISIBILITY=YesPlease
@@ -74,6 +93,7 @@ all:: $(GIT_LIB)
 clean:
 	rm -f $(GIT_LIB)
 	rm -f libgit2.pc
+	rm -f *.pdb
 	rm -f src/*.o src/sha1/*.o src/unix/*.o src/win32/*.o
 	rm -rf apidocs
 	rm -f *~ src/*~ src/git/*~ src/sha1/*~ src/unix/*~ src/win32/*~
@@ -119,12 +139,12 @@ uninstall:
 	@rmdir $(DESTDIR)/$(prefix)/include/git
 
 .c.o:
-	$(CC) $(ALL_CFLAGS) -c $< -o $@
+	$(CC) $(ALL_CFLAGS) -c $< $(CC_OUT)$@
 
 $(OBJS): $(HDRS)
 $(GIT_LIB): $(OBJS)
 	rm -f $(GIT_LIB)
-	$(AR) $(GIT_LIB) $(OBJS)
+	$(AR) $(AR_OUT)$(GIT_LIB) $(OBJS)
 	$(RANLIB) $(GIT_LIB)
 
 $(TEST_OBJ) $(TEST_EXE) $(TEST_RUN) $(TEST_VAL): $(GIT_LIB)

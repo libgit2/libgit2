@@ -5,6 +5,11 @@ LD = $(CC)
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo no')
 
+ifdef MSVC
+	# avoid the MinGW and Cygwin configuration sections
+	uname_S := Windows
+endif
+
 CFLAGS = -g -O2 -Wall
 LIBS   = -L.. -lgit2 -lz
 OS     = unix
@@ -15,7 +20,21 @@ CRYPTO_LIB = -lcrypto
 
 EXTRA_LIBS =
 
+LD_OUT=-o # add a space
+CC_OUT=-o # add a space
+
 # Platform specific tweaks
+
+ifeq ($(uname_S),Windows)
+	CC = cl -nologo
+	LD = link -nologo
+	CFLAGS = -TC -W3 -RTC1 -Zi -DWIN32 -D_DEBUG -D_LIB
+	LD_OUT=-out:
+	CC_OUT=-Fo
+
+	LIBS = ..\\libgit2.a libz.lib wsock32.lib
+	CRYPTO_LIB = libeay32.lib
+endif
 
 ifneq (,$(findstring MINGW,$(uname_S)))
 	OS=win32
@@ -50,7 +69,7 @@ ALL_LIBS = $(LIBS) $(EXTRA_LIBS)
 all:: $(TEST_RUN)
 
 clean:
-	rm -f *.o *.exe *.toc
+	rm -f *.o *.exe *.toc *.pdb
 	rm -rf trash-*.exe
 	rm -f *~
 
@@ -59,7 +78,7 @@ test: $(TEST_RUN)
 valgrind: $(TEST_VAL)
 
 .c.o:
-	$(CC) $(ALL_CFLAGS) -c $< -o $@
+	$(CC) $(ALL_CFLAGS) -c $< $(CC_OUT)$@
 
 T_HDR         = test_lib.h test_helpers.h
 T_LIB         = test_lib.o test_helpers.o
@@ -73,19 +92,19 @@ $(patsubst %.exe,%.toc,$(TEST_EXE)): %.toc: %.c
 	mv $@+ $@
 
 $(TEST_OBJ): %.o: %.c
-	$(CC) $(ALL_CFLAGS) -c $< -o $@
+	$(CC) $(ALL_CFLAGS) -c $< $(CC_OUT)$@
 
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): %_main.o: $(HDRS)
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): %_main.o: $(T_MAIN_C)
 $(patsubst %.exe,%_main.o,$(TEST_EXE)): %_main.o: %.toc
 	$(CC) $(ALL_CFLAGS) '-DTEST_TOC="$<"' \
 		-c $(T_MAIN_C) \
-		-o $@
+		$(CC_OUT)$@
 
 $(TEST_EXE): %.exe: $(T_LIB)
 $(TEST_EXE): %.exe: $(GIT_LIB)
 $(TEST_EXE): %.exe: %.o %_main.o
-	$(LD) -o $@ \
+	$(LD) $(LD_OUT)$@ \
 		$(patsubst %.exe,%_main.o,$@) \
 		$(patsubst %.exe,%.o,$@) \
 		$(T_LIB) $(ALL_LIBS)
