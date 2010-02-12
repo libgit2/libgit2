@@ -100,7 +100,7 @@ typedef struct {  /* object header data */
 static struct {
 	const char *str;   /* type name string */
 	int        loose;  /* valid loose object type flag */
-} obj_type_table [] = {
+} obj_type_table[] = {
 	{ "",          0 },  /* 0 = GIT_OBJ__EXT1     */
 	{ "commit",    1 },  /* 1 = GIT_OBJ_COMMIT    */
 	{ "tree",      1 },  /* 2 = GIT_OBJ_TREE      */
@@ -113,7 +113,7 @@ static struct {
 
 GIT_INLINE(uint32_t) decode32(void *b)
 {
-	return ntohl(*((uint32_t*)b));
+	return ntohl(*((uint32_t *)b));
 }
 
 GIT_INLINE(uint64_t) decode64(void *b)
@@ -226,7 +226,7 @@ static int is_zlib_compressed_data(unsigned char *data)
 	unsigned int w;
 
 	w = ((unsigned int)(data[0]) << 8) + data[1];
-	return data[0] == 0x78 && !(w %31);
+	return data[0] == 0x78 && !(w % 31);
 }
 
 static size_t get_binary_object_header(obj_hdr *hdr, gitfo_buf *obj)
@@ -712,7 +712,7 @@ static int pack_openidx_v1(git_pack *p)
 
 	p->idx_search = idxv1_search;
 	p->im_fanout = im_fanout;
-	p->im_oid = (unsigned char*)(src_fanout + 256);
+	p->im_oid = (unsigned char *)(src_fanout + 256);
 	return GIT_SUCCESS;
 }
 
@@ -744,7 +744,7 @@ static int idxv2_search(off_t *out, git_pack *p, const git_oid *id)
 static int pack_openidx_v2(git_pack *p)
 {
 	unsigned char *data = p->idx_map.data;
-	uint32_t *src_fanout = (uint32_t*)(data + 8);
+	uint32_t *src_fanout = (uint32_t *)(data + 8);
 	uint32_t *im_fanout;
 	int j;
 
@@ -763,8 +763,8 @@ static int pack_openidx_v2(git_pack *p)
 
 	p->idx_search = idxv2_search;
 	p->im_fanout = im_fanout;
-	p->im_oid = (unsigned char*)(src_fanout + 256);
-	p->im_crc = (uint32_t*)(p->im_oid + 20 * p->obj_cnt);
+	p->im_oid = (unsigned char *)(src_fanout + 256);
+	p->im_crc = (uint32_t *)(p->im_oid + 20 * p->obj_cnt);
 	p->im_offset32 = p->im_crc + p->obj_cnt;
 	p->im_offset64 = p->im_offset32 + p->obj_cnt;
 	return GIT_SUCCESS;
@@ -900,7 +900,7 @@ static int scan_one_pack(void *state, char *name)
 	return 0;
 }
 
-static git_packlist* scan_packs(git_odb *db)
+static git_packlist *scan_packs(git_odb *db)
 {
 	char pb[GIT_PATH_MAX];
 	struct scanned_pack *state = NULL, *c;
@@ -974,7 +974,7 @@ static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid 
 		pack_decidx(pack);
 
 		if (!res) {
-			packlist_dec(db,pl);
+			packlist_dec(db, pl);
 			if (p)
 				*p = pack;
 			if (offset)
@@ -984,7 +984,7 @@ static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid 
 
 	}
 
-	packlist_dec(db,pl);
+	packlist_dec(db, pl);
 	return GIT_ENOTFOUND;
 }
 

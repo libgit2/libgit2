@@ -9,7 +9,7 @@ struct git_commit {
 	git_oid id;
 	time_t commit_time;
 	unsigned parsed:1,
-	         flags:26;
+		 flags:26;
 };
 
 #endif

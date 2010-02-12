@@ -351,55 +351,54 @@ static git_obj some_obj = {
 
 static int make_odb_dir(void)
 {
-    if (gitfo_mkdir(odb_dir, 0755) < 0) {
-        if (errno == EEXIST) {
-            fprintf(stderr, "odb directory \"%s\" already exists!\n", odb_dir);
-            return -1;
-        }
-        fprintf(stderr, "can't make odb directory \"%s\"\n", odb_dir);
-        return -1;
-    }
-
-    return 0;
+	if (gitfo_mkdir(odb_dir, 0755) < 0) {
+		int err = errno;
+		fprintf(stderr, "can't make directory \"%s\"", odb_dir);
+		if (err == EEXIST)
+			fprintf(stderr, " (already exists)");
+		fprintf(stderr, "\n");
+		return -1;
+	}
+	return 0;
 }
 
 static int remove_object_files(object_data *d)
 {
-    if (gitfo_unlink(d->file) < 0) {
-        fprintf(stderr, "can't delete object file \"%s\"\n", d->file);
-        return -1;
-    }
-    if ((gitfo_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
-        fprintf(stderr, "can't remove object directory \"%s\"\n", d->dir);
-        return -1;
-    }
+	if (gitfo_unlink(d->file) < 0) {
+		fprintf(stderr, "can't delete object file \"%s\"\n", d->file);
+		return -1;
+	}
+	if ((gitfo_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
+		fprintf(stderr, "can't remove directory \"%s\"\n", d->dir);
+		return -1;
+	}
 
-    if (gitfo_rmdir(odb_dir) < 0) {
-        fprintf(stderr, "can't remove odb directory \"%s\"\n", odb_dir);
-        return -1;
-    }
+	if (gitfo_rmdir(odb_dir) < 0) {
+		fprintf(stderr, "can't remove directory \"%s\"\n", odb_dir);
+		return -1;
+	}
 
-    return 0;
+	return 0;
 }
 
 static int check_object_files(object_data *d)
 {
-    if (gitfo_exists(d->dir) < 0)
-	    return -1;
-    if (gitfo_exists(d->file) < 0)
-	    return -1;
-    return 0;
+	if (gitfo_exists(d->dir) < 0)
+		return -1;
+	if (gitfo_exists(d->file) < 0)
+		return -1;
+	return 0;
 }
 
 static int cmp_objects(git_obj *o1, git_obj *o2)
 {
-    if (o1->type != o2->type)
-        return -1;
-    if (o1->len != o2->len)
-        return -1;
-    if ((o1->len > 0) && (memcmp(o1->data, o2->data, o1->len) != 0))
-        return -1;
-    return 0;
+	if (o1->type != o2->type)
+		return -1;
+	if (o1->len != o2->len)
+		return -1;
+	if ((o1->len > 0) && (memcmp(o1->data, o2->data, o1->len) != 0))
+		return -1;
+	return 0;
 }
 
 BEGIN_TEST(write_commit)

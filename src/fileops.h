@@ -34,7 +34,7 @@ extern int git__fsync(int fd);
 # ifndef GIT__WIN32_NO_HIDE_FILEOPS
 #  define unlink(p) git__unlink(p)
 #  define mkstemp(t) git__mkstemp(t)
-#  define mkdir(p,m) git__mkdir(p,m)
+#  define mkdir(p,m) git__mkdir(p, m)
 #  define fsync(fd) git__fsync(fd)
 # endif
 #endif  /* GIT_WIN32 */

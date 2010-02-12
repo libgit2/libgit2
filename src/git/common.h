@@ -16,8 +16,8 @@
 /** Declare a public function exported for application use. */
 #ifdef __GNUC__
 # define GIT_EXTERN(type) extern \
-                          __attribute__((visibility("default"))) \
-                          type
+			  __attribute__((visibility("default"))) \
+			  type
 #else
 # define GIT_EXTERN(type) extern type
 #endif
@@ -25,9 +25,9 @@
 /** Declare a public TLS symbol exported for application use. */
 #ifdef __GNUC__
 # define GIT_EXTERN_TLS(type) extern \
-                              __attribute__((visibility("default"))) \
-                              GIT_TLS \
-                              type
+			      __attribute__((visibility("default"))) \
+			      GIT_TLS \
+			      type
 #else
 # define GIT_EXTERN_TLS(type) extern GIT_TLS type
 #endif

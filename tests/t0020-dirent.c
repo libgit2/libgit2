@@ -123,9 +123,9 @@ BEGIN_TEST(dot)
 	must_pass(setup(&dot));
 
 	must_pass(gitfo_dirent(path_buffer,
-	                       sizeof(path_buffer),
-	                       one_entry,
-	                       &dot));
+			       sizeof(path_buffer),
+			       one_entry,
+			       &dot));
 
 	must_pass(check_counts(&dot));
 
@@ -148,9 +148,9 @@ BEGIN_TEST(sub)
 	must_pass(setup(&sub));
 
 	must_pass(gitfo_dirent(path_buffer,
-	                       sizeof(path_buffer),
-	                       one_entry,
-	                       &sub));
+			       sizeof(path_buffer),
+			       one_entry,
+			       &sub));
 
 	must_pass(check_counts(&sub));
 
@@ -167,9 +167,9 @@ BEGIN_TEST(sub_slash)
 	must_pass(setup(&sub_slash));
 
 	must_pass(gitfo_dirent(path_buffer,
-	                       sizeof(path_buffer),
-	                       one_entry,
-	                       &sub_slash));
+			       sizeof(path_buffer),
+			       one_entry,
+			       &sub_slash));
 
 	must_pass(check_counts(&sub_slash));
 
@@ -196,17 +196,17 @@ BEGIN_TEST(empty)
 	must_pass(setup(&empty));
 
 	must_pass(gitfo_dirent(path_buffer,
-	                       sizeof(path_buffer),
-	                       one_entry,
-	                       &empty));
+			       sizeof(path_buffer),
+			       one_entry,
+			       &empty));
 
 	must_pass(check_counts(&empty));
 
 	/* make sure callback not called */
 	must_pass(gitfo_dirent(path_buffer,
-	                       sizeof(path_buffer),
-	                       dont_call_me,
-	                       &empty));
+			       sizeof(path_buffer),
+			       dont_call_me,
+			       &empty));
 
 	must_pass(knockdown(&empty));
 END_TEST
@@ -229,9 +229,9 @@ BEGIN_TEST(odd)
 	must_pass(setup(&odd));
 
 	must_pass(gitfo_dirent(path_buffer,
-	                       sizeof(path_buffer),
-	                       one_entry,
-	                       &odd));
+			       sizeof(path_buffer),
+			       one_entry,
+			       &odd));
 
 	must_pass(check_counts(&odd));
 

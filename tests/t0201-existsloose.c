@@ -37,8 +37,8 @@ BEGIN_TEST(exists_loose_one)
     must_be_true(git_odb_exists(db, &id));
 
 	/* Test for a non-existant object */
-    must_pass(git_oid_mkstr(&id2,"8b137891791fe96927ad78e64b0aad7bded08baa"));
-	must_be_true(0 == git_odb_exists(db, &id2));
+    must_pass(git_oid_mkstr(&id2, "8b137891791fe96927ad78e64b0aad7bded08baa"));
+    must_be_true(0 == git_odb_exists(db, &id2));
 
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &one));

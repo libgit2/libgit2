@@ -25,7 +25,7 @@ GIT_BEGIN_DECL
  * @param db the database objects are read from.
  * @return the new traversal handle; NULL if memory is exhausted.
  */
-GIT_EXTERN(git_revpool*) gitrp_alloc(git_odb *db);
+GIT_EXTERN(git_revpool *) gitrp_alloc(git_odb *db);
 
 /**
  * Reset the traversal machinary for reuse.
@@ -52,7 +52,7 @@ GIT_EXTERN(void) gitrp_hide(git_revpool *pool, git_commit *commit);
  * @param pool the pool to pop the commit from.
  * @return next commit; NULL if there is no more output.
  */
-GIT_EXTERN(git_commit*) gitrp_next(git_revpool *pool);
+GIT_EXTERN(git_commit *) gitrp_next(git_revpool *pool);
 
 /**
  * Free a revwalk previously allocated.

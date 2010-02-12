@@ -25,14 +25,14 @@ typedef struct git_commit git_commit;
  *         pool's git_odb, or if the commit is present but is
  *         too malformed to be parsed successfully.
  */
-GIT_EXTERN(git_commit*) git_commit_parse(git_revpool *pool, const git_oid *id);
+GIT_EXTERN(git_commit *) git_commit_parse(git_revpool *pool, const git_oid *id);
 
 /**
  * Get the id of a commit.
  * @param commit a previously parsed commit.
  * @return object identity for the commit.
  */
-GIT_EXTERN(const git_oid*) git_commit_id(git_commit *commit);
+GIT_EXTERN(const git_oid *) git_commit_id(git_commit *commit);
 
 /** @} */
 GIT_END_DECL

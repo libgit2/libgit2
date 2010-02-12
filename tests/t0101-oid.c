@@ -50,7 +50,7 @@ BEGIN_TEST(invalid_string_all_chars)
 				test_die("line %d: must accept '%s'", __LINE__, in);
 			if (memcmp(out.id, exp, sizeof(out.id)))
 				test_die("line %d: bad parse of '%s', %x != %x",
-				         __LINE__, in, exp[19], out.id[19]);
+					 __LINE__, in, exp[19], out.id[19]);
 		} else if (!git_oid_mkstr(&out, in))
 			test_die("line %d: must not accept '%s'", __LINE__, in);
 	}
