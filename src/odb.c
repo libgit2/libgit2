@@ -746,6 +746,7 @@ static int pack_openidx_v2(git_pack *p)
 	unsigned char *data = p->idx_map.data;
 	uint32_t *src_fanout = (uint32_t *)(data + 8);
 	uint32_t *im_fanout;
+	size_t sz;
 	int j;
 
 	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
@@ -760,6 +761,13 @@ static int pack_openidx_v2(git_pack *p)
 		}
 	}
 	p->obj_cnt = im_fanout[255];
+
+	/* minimum size of .idx file (with empty 64-bit offsets table): */
+	sz = 4 + 4 + 256 * 4 + p->obj_cnt * (20 + 4 + 4) + 2 * 20;
+	if (p->idx_map.len < sz) {
+		free(im_fanout);
+		return GIT_ERROR;
+	}
 
 	p->idx_search = idxv2_search;
 	p->im_fanout = im_fanout;
