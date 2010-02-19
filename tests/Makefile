@@ -41,6 +41,8 @@ ifneq (,$(findstring MINGW,$(uname_S)))
 	EXTRA_LIBS += -lwsock32 -lpthread
 endif
 
+-include ../config.mak
+
 GIT_LIB = ../libgit2.a
 
 HDRS = $(wildcard ../src/*.h)

@@ -55,6 +55,8 @@ ifneq (,$(findstring MINGW,$(uname_S)))
 	SPARSE_FLAGS=-Wno-one-bit-signed-bitfield
 endif
 
+-include config.mak
+
 SRC_C = $(wildcard src/*.c)
 OS_SRC = $(wildcard src/$(OS)/*.c)
 SRC_C += $(OS_SRC)
