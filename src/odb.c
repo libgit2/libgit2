@@ -746,8 +746,8 @@ static int pack_openidx_v2(git_pack *p)
 	unsigned char *data = p->idx_map.data;
 	uint32_t *src_fanout = (uint32_t *)(data + 8);
 	uint32_t *im_fanout;
-	size_t sz;
-	int j;
+	size_t sz, o64_sz, o64_len;
+	uint32_t j;
 
 	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
 		return GIT_ERROR;
@@ -775,6 +775,21 @@ static int pack_openidx_v2(git_pack *p)
 	p->im_crc = (uint32_t *)(p->im_oid + 20 * p->obj_cnt);
 	p->im_offset32 = p->im_crc + p->obj_cnt;
 	p->im_offset64 = p->im_offset32 + p->obj_cnt;
+
+	/* check 64-bit offset table index values are within bounds */
+	o64_sz = p->idx_map.len - sz;
+	o64_len = o64_sz / 8;
+	for (j = 0; j < p->obj_cnt; j++) {
+		uint32_t o32 = decode32(p->im_offset32 + j);
+		if (o32 & 0x80000000) {
+			uint32_t o64_idx = (o32 & ~0x80000000);
+			if (o64_idx >= o64_len) {
+				free(im_fanout);
+				return GIT_ERROR;
+			}
+		}
+	}
+
 	return GIT_SUCCESS;
 }
 
