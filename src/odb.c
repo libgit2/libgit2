@@ -37,7 +37,7 @@ struct git_pack {
 
 	/** Functions to access idx_map. */
 	int (*idx_search)(
-		off_t *,
+		uint32_t *,
 		struct git_pack *,
 		const git_oid *);
 
@@ -663,20 +663,20 @@ static int pack_openidx_map(git_pack *p)
 	return GIT_SUCCESS;
 }
 
-static int idxv1_search(off_t *out, git_pack *p, const git_oid *id)
+static int idxv1_search(uint32_t *out, git_pack *p, const git_oid *id)
 {
 	unsigned char *data = p->im_oid;
-	size_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
-	size_t hi = p->im_fanout[id->id[0]];
+	uint32_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
+	uint32_t hi = p->im_fanout[id->id[0]];
 
 	do {
-		size_t mid = (lo + hi) >> 1;
-		size_t pos = 24 * mid;
+		uint32_t mid = (lo + hi) >> 1;
+		uint32_t pos = 24 * mid;
 		int cmp = memcmp(id->id, data + pos + 4, 20);
 		if (cmp < 0)
 			hi = mid;
 		else if (!cmp) {
-			*out = decode32(data + pos);
+			*out = mid;
 			return GIT_SUCCESS;
 		} else
 			lo = mid + 1;
@@ -716,24 +716,20 @@ static int pack_openidx_v1(git_pack *p)
 	return GIT_SUCCESS;
 }
 
-static int idxv2_search(off_t *out, git_pack *p, const git_oid *id)
+static int idxv2_search(uint32_t *out, git_pack *p, const git_oid *id)
 {
 	unsigned char *data = p->im_oid;
-	size_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
-	size_t hi = p->im_fanout[id->id[0]];
+	uint32_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
+	uint32_t hi = p->im_fanout[id->id[0]];
 
 	do {
-		size_t mid = (lo + hi) >> 1;
-		size_t pos = 20 * mid;
+		uint32_t mid = (lo + hi) >> 1;
+		uint32_t pos = 20 * mid;
 		int cmp = memcmp(id->id, data + pos, 20);
 		if (cmp < 0)
 			hi = mid;
 		else if (!cmp) {
-			uint32_t o32 = decode32(p->im_offset32 + mid);
-			if (o32 & 0x80000000)
-				*out = decode64(p->im_offset64 + 2*(o32 & ~0x80000000));
-			else
-				*out = o32;
+			*out = mid;
 			return GIT_SUCCESS;
 		} else
 			lo = mid + 1;
@@ -977,7 +973,7 @@ static git_packlist *packlist_get(git_odb *db)
 	return pl;
 }
 
-static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid *id)
+static int search_packs(git_pack **p, uint32_t *n, git_odb *db, const git_oid *id)
 {
 	git_packlist *pl = packlist_get(db);
 	size_t j;
@@ -988,7 +984,7 @@ static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid 
 	for (j = 0; j < pl->n_packs; j++) {
 
 		git_pack *pack = pl->packs[j];
-		off_t pos;
+		uint32_t pos;
 		int res;
 
 		if (pack_openidx(pack))
@@ -1000,8 +996,8 @@ static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid 
 			packlist_dec(db, pl);
 			if (p)
 				*p = pack;
-			if (offset)
-				*offset = pos;
+			if (n)
+				*n = pos;
 			return GIT_SUCCESS;
 		}
 
@@ -1132,18 +1128,18 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 
 static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
 {
-	off_t pos;
+	uint32_t n;
 	int res;
 
 	assert(out && p && id);
 
 	if (pack_openidx(p))
 		return GIT_ERROR;
-	res = p->idx_search(&pos, p, id);
+	res = p->idx_search(&n, p, id);
 	pack_decidx(p);
 
 	if (!res) {
-		/* TODO unpack object at pos */
+		/* TODO unpack object */
 		res = GIT_ERROR;
 	}
 
