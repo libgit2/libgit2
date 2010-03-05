@@ -61,11 +61,15 @@ extern int gitfo_creat(const char *path, int mode);
 
 extern int gitfo_read(git_file fd, void *buf, size_t cnt);
 extern int gitfo_write(git_file fd, void *buf, size_t cnt);
+#define gitfo_lseek(f,n,w) lseek(f, n, w)
 extern off_t gitfo_size(git_file fd);
 
 extern int gitfo_read_file(gitfo_buf *obj, const char *path);
 extern void gitfo_free_buf(gitfo_buf *obj);
 extern int gitfo_move_file(char *from, char *to);
+
+#define gitfo_stat(p,b) stat(p, b)
+#define gitfo_fstat(f,b) fstat(f, b)
 
 #define gitfo_unlink(p) unlink(p)
 #define gitfo_rmdir(p) rmdir(p)

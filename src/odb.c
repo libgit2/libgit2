@@ -1016,7 +1016,7 @@ static int pack_stat(git_pack *p)
 			p->pack_name) < 0)
 		return GIT_ERROR;
 
-	if (stat(pb, &sb) || !S_ISREG(sb.st_mode))
+	if (gitfo_stat(pb, &sb) || !S_ISREG(sb.st_mode))
 		return GIT_ERROR;
 
 	if (sb.st_size < (3 * 4 + GIT_OID_RAWSZ))

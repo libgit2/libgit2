@@ -61,7 +61,7 @@ int gitfo_exists(const char *path)
 off_t gitfo_size(git_file fd)
 {
 	struct stat sb;
-	if (fstat(fd, &sb))
+	if (gitfo_fstat(fd, &sb))
 		return git_os_error();
 	return sb.st_size;
 }
