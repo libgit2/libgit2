@@ -1098,6 +1098,8 @@ static void pack_dec(git_pack *p)
 			gitfo_free_map(&p->idx_map);
 			gitfo_close(p->idx_fd);
 			free(p->im_fanout);
+			free(p->im_off_idx);
+			free(p->im_off_next);
 		}
 
 		gitlck_free(&p->lock);
