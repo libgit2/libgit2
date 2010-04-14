@@ -141,6 +141,9 @@ uninstall:
 .c.o:
 	$(CC) $(ALL_CFLAGS) -c $< $(CC_OUT)$@
 
+.S.o:
+	$(CC) $(ALL_CFLAGS) -c $< $(CC_OUT)$@
+
 $(OBJS): $(HDRS)
 $(GIT_LIB): $(OBJS)
 	rm -f $(GIT_LIB)
