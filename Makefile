@@ -3,10 +3,6 @@ all::
 # Define NO_VISIBILITY if your compiler does not support symbol
 # visibility in general (and the -fvisibility switch in particular).
 #
-# Define NO_OPENSSL if you do not have OpenSSL, or if you simply want
-# to use the bundled (Mozilla) SHA1 routines. (The bundled SHA1
-# routines are reported to be faster than OpenSSL on some platforms)
-#
 
 DOXYGEN = doxygen
 INSTALL = install
@@ -28,6 +24,7 @@ OS     = unix
 
 EXTRA_SRC =
 EXTRA_OBJ =
+EXTRA_CFLAGS =
 
 AR_OUT=
 CC_OUT=-o # add a space
@@ -58,7 +55,7 @@ endif
 SRC_C = $(wildcard src/*.c)
 OS_SRC = $(wildcard src/$(OS)/*.c)
 SRC_C += $(OS_SRC)
-OBJS = $(patsubst %.c,%.o,$(SRC_C))
+OBJS = $(patsubst %.c,%.o,$(SRC_C)) $(EXTRA_OBJ)
 HDRS = $(wildcard src/*.h)
 PUBLIC_HEADERS = $(wildcard src/git/*.h)
 HDRS += $(PUBLIC_HEADERS)
@@ -71,22 +68,21 @@ TEST_EXE = $(patsubst %.o,%.exe,$(TEST_OBJ))
 TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
 TEST_VAL = $(patsubst %.exe,%.val,$(TEST_EXE))
 
-ifndef NO_OPENSSL
-	SHA1_HEADER = <openssl/sha.h>
+ifdef PPC_SHA1
+	EXTRA_SRC += src/ppc/sha1.c src/ppc/sha1ppc.S
+	EXTRA_OBJ += src/ppc/sha1.o src/ppc/sha1ppc.o
+	EXTRA_CFLAGS += -DPPC_SHA1
 else
-	SHA1_HEADER = "sha1/sha1.h"
-	EXTRA_SRC += src/sha1/sha1.c
-	EXTRA_OBJ += src/sha1/sha1.o
+	EXTRA_SRC += src/block-sha1/sha1.c
+	EXTRA_OBJ += src/block-sha1/sha1.o
 endif
 
-BASIC_CFLAGS := -Isrc -DSHA1_HEADER='$(SHA1_HEADER)'
+BASIC_CFLAGS := -Isrc
 ifndef NO_VISIBILITY
 BASIC_CFLAGS += -fvisibility=hidden
 endif
 
-ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
-SRC_C += $(EXTRA_SRC)
-OBJ += $(EXTRA_OBJ)
+ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS) $(EXTRA_CFLAGS)
 
 all:: $(GIT_LIB)
 

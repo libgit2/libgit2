@@ -80,6 +80,7 @@ typedef __int64 off64_t;
 #include "util.h"
 #include "thread-utils.h"
 #include "errors.h"
+#include "bswap.h"
 
 #define GIT_PATH_MAX 4096
 
