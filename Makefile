@@ -94,7 +94,7 @@ clean:
 	rm -f $(GIT_LIB)
 	rm -f libgit2.pc
 	rm -f *.pdb
-	rm -f src/*.o src/sha1/*.o src/unix/*.o src/win32/*.o
+	rm -f src/*.o src/*/*.o
 	rm -rf apidocs
 	rm -f *~ src/*~ src/git/*~ src/sha1/*~ src/unix/*~ src/win32/*~
 	@$(MAKE) -C tests -s --no-print-directory clean
