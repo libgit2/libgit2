@@ -58,6 +58,6 @@ GIT_INLINE(int) git__is_sizet(off_t p)
 				alloc = alloc_nr(alloc); \
 			x = xrealloc((x), alloc * sizeof(*(x))); \
 		} \
-	} while(0)
+	} while (0)
 
 #endif /* INCLUDE_util_h__ */

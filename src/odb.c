@@ -31,15 +31,31 @@
 #include "odb.h"
 
 #define GIT_PACK_NAME_MAX (5 + 40 + 1)
+
+typedef struct {
+	uint32_t      n;
+	unsigned char *oid;
+	off_t         offset;
+	off_t         size;
+} index_entry;
+
 struct git_pack {
 	git_odb *db;
 	git_lck lock;
 
 	/** Functions to access idx_map. */
 	int (*idx_search)(
-		off_t *,
+		uint32_t *,
 		struct git_pack *,
 		const git_oid *);
+	int (*idx_search_offset)(
+		uint32_t *,
+		struct git_pack *,
+		off_t);
+	int (*idx_get)(
+		index_entry *,
+		struct git_pack *,
+		uint32_t n);
 
 	/** The .idx file, mapped into memory. */
 	git_file idx_fd;
@@ -49,9 +65,17 @@ struct git_pack {
 	uint32_t *im_crc;
 	uint32_t *im_offset32;
 	uint32_t *im_offset64;
+	uint32_t *im_off_idx;
+	uint32_t *im_off_next;
 
 	/** Number of objects in this pack. */
 	uint32_t obj_cnt;
+
+	/** The size of the .pack file. */
+	off_t pack_size;
+
+	/** The mtime of the .pack file. */
+	time_t pack_mtime;
 
 	/** Number of git_packlist we appear in. */
 	unsigned int refcnt;
@@ -100,7 +124,7 @@ typedef struct {  /* object header data */
 static struct {
 	const char *str;   /* type name string */
 	int        loose;  /* valid loose object type flag */
-} obj_type_table [] = {
+} obj_type_table[] = {
 	{ "",          0 },  /* 0 = GIT_OBJ__EXT1     */
 	{ "commit",    1 },  /* 1 = GIT_OBJ_COMMIT    */
 	{ "tree",      1 },  /* 2 = GIT_OBJ_TREE      */
@@ -113,7 +137,7 @@ static struct {
 
 GIT_INLINE(uint32_t) decode32(void *b)
 {
-	return ntohl(*((uint32_t*)b));
+	return ntohl(*((uint32_t *)b));
 }
 
 GIT_INLINE(uint64_t) decode64(void *b)
@@ -226,7 +250,7 @@ static int is_zlib_compressed_data(unsigned char *data)
 	unsigned int w;
 
 	w = ((unsigned int)(data[0]) << 8) + data[1];
-	return data[0] == 0x78 && !(w %31);
+	return data[0] == 0x78 && !(w % 31);
 }
 
 static size_t get_binary_object_header(obj_hdr *hdr, gitfo_buf *obj)
@@ -663,20 +687,65 @@ static int pack_openidx_map(git_pack *p)
 	return GIT_SUCCESS;
 }
 
-static int idxv1_search(off_t *out, git_pack *p, const git_oid *id)
+typedef struct {
+	off_t offset;
+	uint32_t n;
+} offset_idx_info;
+
+static int cmp_offset_idx_info(const void *lhs, const void *rhs)
+{
+	const offset_idx_info *a = lhs;
+	const offset_idx_info *b = rhs;
+	return (a->offset < b->offset) ? -1 : (a->offset > b->offset) ? 1 : 0;
+}
+
+static int make_offset_index(git_pack *p, offset_idx_info *data)
+{
+	off_t min_off = 3 * 4, max_off = p->pack_size - GIT_OID_RAWSZ;
+	uint32_t *idx, *next;
+	uint32_t j;
+
+	qsort(data, p->obj_cnt, sizeof(*data), cmp_offset_idx_info);
+
+	if (data[0].offset < min_off || data[p->obj_cnt].offset > max_off)
+		return GIT_ERROR;
+
+	if ((idx = git__malloc(sizeof(*idx) * (p->obj_cnt+1))) == NULL)
+		return GIT_ERROR;
+	if ((next = git__malloc(sizeof(*next) * p->obj_cnt)) == NULL) {
+		free(idx);
+		return GIT_ERROR;
+	}
+
+	for (j = 0; j < p->obj_cnt+1; j++)
+		idx[j] = data[j].n;
+
+	for (j = 0; j < p->obj_cnt; j++) {
+		assert(idx[j]   < p->obj_cnt);
+		assert(idx[j+1] < p->obj_cnt+1);
+
+		next[idx[j]] = idx[j+1];
+	}
+
+	p->im_off_idx = idx;
+	p->im_off_next = next;
+	return GIT_SUCCESS;
+}
+
+static int idxv1_search(uint32_t *out, git_pack *p, const git_oid *id)
 {
 	unsigned char *data = p->im_oid;
-	size_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
-	size_t hi = p->im_fanout[id->id[0]];
+	uint32_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
+	uint32_t hi = p->im_fanout[id->id[0]];
 
 	do {
-		size_t mid = (lo + hi) >> 1;
-		size_t pos = 24 * mid;
+		uint32_t mid = (lo + hi) >> 1;
+		uint32_t pos = 24 * mid;
 		int cmp = memcmp(id->id, data + pos + 4, 20);
 		if (cmp < 0)
 			hi = mid;
 		else if (!cmp) {
-			*out = decode32(data + pos);
+			*out = mid;
 			return GIT_SUCCESS;
 		} else
 			lo = mid + 1;
@@ -684,12 +753,58 @@ static int idxv1_search(off_t *out, git_pack *p, const git_oid *id)
 	return GIT_ENOTFOUND;
 }
 
+static int idxv1_search_offset(uint32_t *out, git_pack *p, off_t offset)
+{
+	if (offset > 0 && offset < (p->pack_size - GIT_OID_RAWSZ)) {
+		uint32_t lo = 0, hi = p->obj_cnt+1;
+		unsigned char *data = p->im_oid;
+		uint32_t *idx = p->im_off_idx;
+		do {
+			uint32_t mid = (lo + hi) >> 1;
+			uint32_t n = idx[mid];
+			uint32_t pos = n * (GIT_OID_RAWSZ + 4);
+			off_t here = decode32(data + pos);
+			if (offset < here)
+				hi = mid;
+			else if (offset == here) {
+				*out = n;
+				return GIT_SUCCESS;
+			} else
+				lo = mid + 1;
+		} while (lo < hi);
+	}
+	return GIT_ENOTFOUND;
+}
+
+static int idxv1_get(index_entry *e, git_pack *p, uint32_t n)
+{
+	unsigned char *data = p->im_oid;
+	uint32_t *next = p->im_off_next;
+
+	if (n < p->obj_cnt) {
+		uint32_t pos = n * (GIT_OID_RAWSZ + 4);
+		off_t next_off = p->pack_size - GIT_OID_RAWSZ;
+		e->n = n;
+		e->oid = data + pos + 4;
+		e->offset = decode32(data + pos);
+		if (next[n] < p->obj_cnt) {
+			pos = next[n] * (GIT_OID_RAWSZ + 4);
+			next_off = decode32(data + pos);
+		}
+		e->size = next_off - e->offset;
+		return GIT_SUCCESS;
+	}
+	return GIT_ENOTFOUND;
+}
+
 static int pack_openidx_v1(git_pack *p)
 {
 	uint32_t *src_fanout = p->idx_map.data;
 	uint32_t *im_fanout;
+	offset_idx_info *info;
 	size_t expsz;
-	int j;
+	uint32_t j;
+
 
 	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
 		return GIT_ERROR;
@@ -711,29 +826,48 @@ static int pack_openidx_v1(git_pack *p)
 	}
 
 	p->idx_search = idxv1_search;
+	p->idx_search_offset = idxv1_search_offset;
+	p->idx_get = idxv1_get;
 	p->im_fanout = im_fanout;
-	p->im_oid = (unsigned char*)(src_fanout + 256);
+	p->im_oid = (unsigned char *)(src_fanout + 256);
+
+	if ((info = git__malloc(sizeof(*info) * (p->obj_cnt+1))) == NULL) {
+		free(im_fanout);
+		return GIT_ERROR;
+	}
+
+	for (j = 0; j < p->obj_cnt; j++) {
+		uint32_t pos = j * (GIT_OID_RAWSZ + 4);
+		info[j].offset = decode32(p->im_oid + pos);
+		info[j].n = j;
+	}
+	info[p->obj_cnt].offset = p->pack_size - GIT_OID_RAWSZ;
+	info[p->obj_cnt].n = p->obj_cnt;
+
+	if (make_offset_index(p, info)) {
+		free(im_fanout);
+		free(info);
+		return GIT_ERROR;
+	}
+	free(info);
+
 	return GIT_SUCCESS;
 }
 
-static int idxv2_search(off_t *out, git_pack *p, const git_oid *id)
+static int idxv2_search(uint32_t *out, git_pack *p, const git_oid *id)
 {
 	unsigned char *data = p->im_oid;
-	size_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
-	size_t hi = p->im_fanout[id->id[0]];
+	uint32_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
+	uint32_t hi = p->im_fanout[id->id[0]];
 
 	do {
-		size_t mid = (lo + hi) >> 1;
-		size_t pos = 20 * mid;
+		uint32_t mid = (lo + hi) >> 1;
+		uint32_t pos = 20 * mid;
 		int cmp = memcmp(id->id, data + pos, 20);
 		if (cmp < 0)
 			hi = mid;
 		else if (!cmp) {
-			uint32_t o32 = decode32(p->im_offset32 + mid);
-			if (o32 & 0x80000000)
-				*out = decode64(p->im_offset64 + 2*(o32 & ~0x80000000));
-			else
-				*out = o32;
+			*out = mid;
 			return GIT_SUCCESS;
 		} else
 			lo = mid + 1;
@@ -741,12 +875,71 @@ static int idxv2_search(off_t *out, git_pack *p, const git_oid *id)
 	return GIT_ENOTFOUND;
 }
 
+static int idxv2_search_offset(uint32_t *out, git_pack *p, off_t offset)
+{
+	if (offset > 0 && offset < (p->pack_size - GIT_OID_RAWSZ)) {
+		uint32_t lo = 0, hi = p->obj_cnt+1;
+		uint32_t *idx = p->im_off_idx;
+		do {
+			uint32_t mid = (lo + hi) >> 1;
+			uint32_t n = idx[mid];
+			uint32_t o32 = decode32(p->im_offset32 + n);
+			off_t here = o32;
+
+			if (o32 & 0x80000000) {
+				uint32_t o64_idx = (o32 & ~0x80000000);
+				here = decode64(p->im_offset64 + 2*o64_idx);
+			}
+
+			if (offset < here)
+				hi = mid;
+			else if (offset == here) {
+				*out = n;
+				return GIT_SUCCESS;
+			} else
+				lo = mid + 1;
+		} while (lo < hi);
+	}
+	return GIT_ENOTFOUND;
+}
+
+static int idxv2_get(index_entry *e, git_pack *p, uint32_t n)
+{
+	unsigned char *data = p->im_oid;
+	uint32_t *next = p->im_off_next;
+
+	if (n < p->obj_cnt) {
+		uint32_t o32 = decode32(p->im_offset32 + n);
+		off_t next_off = p->pack_size - GIT_OID_RAWSZ;
+		e->n = n;
+		e->oid = data + n * GIT_OID_RAWSZ;
+		e->offset = o32;
+		if (o32 & 0x80000000) {
+			uint32_t o64_idx = (o32 & ~0x80000000);
+			e->offset = decode64(p->im_offset64 + 2*o64_idx);
+		}
+		if (next[n] < p->obj_cnt) {
+			o32 = decode32(p->im_offset32 + next[n]);
+			next_off = o32;
+			if (o32 & 0x80000000) {
+				uint32_t o64_idx = (o32 & ~0x80000000);
+				next_off = decode64(p->im_offset64 + 2*o64_idx);
+			}
+		}
+		e->size = next_off - e->offset;
+		return GIT_SUCCESS;
+	}
+	return GIT_ENOTFOUND;
+}
+
 static int pack_openidx_v2(git_pack *p)
 {
 	unsigned char *data = p->idx_map.data;
-	uint32_t *src_fanout = (uint32_t*)(data + 8);
+	uint32_t *src_fanout = (uint32_t *)(data + 8);
 	uint32_t *im_fanout;
-	int j;
+	offset_idx_info *info;
+	size_t sz, o64_sz, o64_len;
+	uint32_t j;
 
 	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
 		return GIT_ERROR;
@@ -761,52 +954,128 @@ static int pack_openidx_v2(git_pack *p)
 	}
 	p->obj_cnt = im_fanout[255];
 
+	/* minimum size of .idx file (with empty 64-bit offsets table): */
+	sz = 4 + 4 + 256 * 4 + p->obj_cnt * (20 + 4 + 4) + 2 * 20;
+	if (p->idx_map.len < sz) {
+		free(im_fanout);
+		return GIT_ERROR;
+	}
+
 	p->idx_search = idxv2_search;
+	p->idx_search_offset = idxv2_search_offset;
+	p->idx_get = idxv2_get;
 	p->im_fanout = im_fanout;
-	p->im_oid = (unsigned char*)(src_fanout + 256);
-	p->im_crc = (uint32_t*)(p->im_oid + 20 * p->obj_cnt);
+	p->im_oid = (unsigned char *)(src_fanout + 256);
+	p->im_crc = (uint32_t *)(p->im_oid + 20 * p->obj_cnt);
 	p->im_offset32 = p->im_crc + p->obj_cnt;
 	p->im_offset64 = p->im_offset32 + p->obj_cnt;
+
+	if ((info = git__malloc(sizeof(*info) * (p->obj_cnt+1))) == NULL) {
+		free(im_fanout);
+		return GIT_ERROR;
+	}
+
+	/* check 64-bit offset table index values are within bounds */
+	o64_sz = p->idx_map.len - sz;
+	o64_len = o64_sz / 8;
+	for (j = 0; j < p->obj_cnt; j++) {
+		uint32_t o32 = decode32(p->im_offset32 + j);
+		off_t offset = o32;
+		if (o32 & 0x80000000) {
+			uint32_t o64_idx = (o32 & ~0x80000000);
+			if (o64_idx >= o64_len) {
+				free(im_fanout);
+				free(info);
+				return GIT_ERROR;
+			}
+			offset = decode64(p->im_offset64 + 2*o64_idx);
+		}
+		info[j].offset = offset;
+		info[j].n = j;
+	}
+	info[p->obj_cnt].offset = p->pack_size - GIT_OID_RAWSZ;
+	info[p->obj_cnt].n = p->obj_cnt;
+
+	if (make_offset_index(p, info)) {
+		free(im_fanout);
+		free(info);
+		return GIT_ERROR;
+	}
+	free(info);
+
+	return GIT_SUCCESS;
+}
+
+static int pack_stat(git_pack *p)
+{
+	char pb[GIT_PATH_MAX];
+	struct stat sb;
+
+	if (git__fmt(pb, sizeof(pb), "%s/pack/%s.pack",
+			p->db->objects_dir,
+			p->pack_name) < 0)
+		return GIT_ERROR;
+
+	if (stat(pb, &sb) || !S_ISREG(sb.st_mode))
+		return GIT_ERROR;
+
+	if (sb.st_size < (3 * 4 + GIT_OID_RAWSZ))
+		return GIT_ERROR;
+
+	p->pack_size = sb.st_size;
+	p->pack_mtime = sb.st_mtime;
+
 	return GIT_SUCCESS;
 }
 
 static int pack_openidx(git_pack *p)
 {
 	gitlck_lock(&p->lock);
-	if (p->invalid)
-		goto unlock_fail;
+
+	if (p->invalid) {
+		gitlck_unlock(&p->lock);
+		return GIT_ERROR;
+	}
+
 	if (++p->idxcnt == 1 && !p->idx_search) {
+		int status, version;
 		uint32_t *data;
 
-		if (pack_openidx_map(p))
-			goto invalid_fail;
+		if (pack_stat(p) || pack_openidx_map(p)) {
+			p->invalid = 1;
+			p->idxcnt--;
+			gitlck_unlock(&p->lock);
+			return GIT_ERROR;
+		}
 		data = p->idx_map.data;
+		status = GIT_SUCCESS;
+		version = 1;
 
-		if (decode32(&data[0]) == PACK_TOC) {
-			switch (decode32(&data[1])) {
-			case 2:
-				if (pack_openidx_v2(p))
-					goto unmap_fail;
-				break;
-			default:
-				goto unmap_fail;
-			}
-		} else if (pack_openidx_v1(p))
-			goto unmap_fail;
+		if (decode32(&data[0]) == PACK_TOC)
+			version = decode32(&data[1]);
+
+		switch (version) {
+		case 1:
+			status = pack_openidx_v1(p);
+			break;
+		case 2:
+			status = pack_openidx_v2(p);
+			break;
+		default:
+			status = GIT_ERROR;
+		}
+
+		if (status != GIT_SUCCESS) {
+			gitfo_free_map(&p->idx_map);
+			p->invalid = 1;
+			p->idxcnt--;
+			gitlck_unlock(&p->lock);
+			return status;
+		}
 	}
+
 	gitlck_unlock(&p->lock);
 	return GIT_SUCCESS;
-
-unmap_fail:
-	gitfo_free_map(&p->idx_map);
-
-invalid_fail:
-	p->invalid = 1;
-	p->idxcnt--;
-
-unlock_fail:
-	gitlck_unlock(&p->lock);
-	return GIT_ERROR;
 }
 
 static void pack_decidx(git_pack *p)
@@ -900,7 +1169,7 @@ static int scan_one_pack(void *state, char *name)
 	return 0;
 }
 
-static git_packlist* scan_packs(git_odb *db)
+static git_packlist *scan_packs(git_odb *db)
 {
 	char pb[GIT_PATH_MAX];
 	struct scanned_pack *state = NULL, *c;
@@ -954,7 +1223,7 @@ static git_packlist *packlist_get(git_odb *db)
 	return pl;
 }
 
-static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid *id)
+static int search_packs(git_pack **p, uint32_t *n, git_odb *db, const git_oid *id)
 {
 	git_packlist *pl = packlist_get(db);
 	size_t j;
@@ -965,7 +1234,7 @@ static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid 
 	for (j = 0; j < pl->n_packs; j++) {
 
 		git_pack *pack = pl->packs[j];
-		off_t pos;
+		uint32_t pos;
 		int res;
 
 		if (pack_openidx(pack))
@@ -974,17 +1243,17 @@ static int search_packs(git_pack **p, off_t *offset, git_odb *db, const git_oid 
 		pack_decidx(pack);
 
 		if (!res) {
-			packlist_dec(db,pl);
+			packlist_dec(db, pl);
 			if (p)
 				*p = pack;
-			if (offset)
-				*offset = pos;
+			if (n)
+				*n = pos;
 			return GIT_SUCCESS;
 		}
 
 	}
 
-	packlist_dec(db,pl);
+	packlist_dec(db, pl);
 	return GIT_ENOTFOUND;
 }
 
@@ -1109,18 +1378,18 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 
 static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
 {
-	off_t pos;
+	uint32_t n;
 	int res;
 
 	assert(out && p && id);
 
 	if (pack_openidx(p))
 		return GIT_ERROR;
-	res = p->idx_search(&pos, p, id);
+	res = p->idx_search(&n, p, id);
 	pack_decidx(p);
 
 	if (!res) {
-		/* TODO unpack object at pos */
+		/* TODO unpack object */
 		res = GIT_ERROR;
 	}
 

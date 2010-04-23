@@ -45,7 +45,7 @@
  * @param name C symbol to assign to this test's function.
  */
 #define BEGIN_TEST(name) \
-	void testfunc__##name (void) \
+	void testfunc__##name(void) \
 	{ \
 		test_begin(#name, __FILE__, __LINE__); \
 	{

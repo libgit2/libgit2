@@ -1,6 +1,7 @@
 /apidocs
 /trash-*.exe
 /libgit2.pc
+/config.mak
 *.o
 *.a
 *.exe

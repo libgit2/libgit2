@@ -3,19 +3,19 @@
 #include <git/odb.h>
 
 BEGIN_TEST(type_to_string)
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_BAD),""));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ__EXT1),""));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_COMMIT),"commit"));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_TREE),"tree"));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_BLOB),"blob"));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_TAG),"tag"));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ__EXT2),""));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_OFS_DELTA),"OFS_DELTA"));
-	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_REF_DELTA),"REF_DELTA"));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_BAD), ""));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ__EXT1), ""));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_COMMIT), "commit"));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_TREE), "tree"));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_BLOB), "blob"));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_TAG), "tag"));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ__EXT2), ""));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_OFS_DELTA), "OFS_DELTA"));
+	must_be_true(!strcmp(git_obj_type_to_string(GIT_OBJ_REF_DELTA), "REF_DELTA"));
 
-	must_be_true(!strcmp(git_obj_type_to_string(-2),""));
-	must_be_true(!strcmp(git_obj_type_to_string(8),""));
-	must_be_true(!strcmp(git_obj_type_to_string(1234),""));
+	must_be_true(!strcmp(git_obj_type_to_string(-2), ""));
+	must_be_true(!strcmp(git_obj_type_to_string(8), ""));
+	must_be_true(!strcmp(git_obj_type_to_string(1234), ""));
 END_TEST
 
 BEGIN_TEST(string_to_type)
