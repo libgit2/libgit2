@@ -11,7 +11,7 @@
  * Default version that the compiler ought to optimize properly with
  * constant values.
  */
-static inline uint32_t default_swab32(uint32_t val)
+GIT_INLINE(uint32_t) default_swab32(uint32_t val)
 {
 	return (((val & 0xff000000) >> 24) |
 		((val & 0x00ff0000) >>  8) |
