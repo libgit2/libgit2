@@ -32,13 +32,13 @@ ifeq ($(uname_S),Windows)
 	LD_OUT=-out:
 	CC_OUT=-Fo
 
-	LIBS = ..\\libgit2.a libz.lib wsock32.lib
+	LIBS = ..\\libgit2.a libz.lib
 	CRYPTO_LIB = libeay32.lib
 endif
 
 ifneq (,$(findstring MINGW,$(uname_S)))
 	OS=win32
-	EXTRA_LIBS += -lwsock32 -lpthread
+	EXTRA_LIBS += -lpthread
 endif
 
 -include ../config.mak
