@@ -56,7 +56,7 @@ endif
 
 SRC_C = $(wildcard src/*.c)
 OS_SRC = $(wildcard src/$(OS)/*.c)
-SRC_C += $(OS_SRC)
+SRC_C += $(OS_SRC) $(EXTRA_SRC)
 OBJS = $(patsubst %.c,%.o,$(SRC_C)) $(EXTRA_OBJ)
 HDRS = $(wildcard src/*.h)
 PUBLIC_HEADERS = $(wildcard src/git/*.h)
@@ -71,12 +71,11 @@ TEST_RUN = $(patsubst %.exe,%.run,$(TEST_EXE))
 TEST_VAL = $(patsubst %.exe,%.val,$(TEST_EXE))
 
 ifdef PPC_SHA1
-	EXTRA_SRC += src/ppc/sha1.c src/ppc/sha1ppc.S
-	EXTRA_OBJ += src/ppc/sha1.o src/ppc/sha1ppc.o
+	EXTRA_SRC += src/ppc/sha1.c
+	EXTRA_OBJ += src/ppc/sha1ppc.o
 	EXTRA_CFLAGS += -DPPC_SHA1
 else
 	EXTRA_SRC += src/block-sha1/sha1.c
-	EXTRA_OBJ += src/block-sha1/sha1.o
 endif
 
 BASIC_CFLAGS := -Isrc
