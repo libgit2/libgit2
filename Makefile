@@ -93,7 +93,7 @@ clean:
 	rm -f *.pdb
 	rm -f src/*.o src/*/*.o
 	rm -rf apidocs
-	rm -f *~ src/*~ src/git/*~ src/sha1/*~ src/unix/*~ src/win32/*~
+	rm -f *~ src/*~ src/*/*~
 	@$(MAKE) -C tests -s --no-print-directory clean
 	@$(MAKE) -s --no-print-directory cov-clean
 
