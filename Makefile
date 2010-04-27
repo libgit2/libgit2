@@ -149,7 +149,7 @@ $(GIT_LIB): $(OBJS)
 
 $(TEST_OBJ) $(TEST_EXE) $(TEST_RUN) $(TEST_VAL): $(GIT_LIB)
 	@$(MAKE) -C tests --no-print-directory \
-		OS=$(OS) NO_OPENSSL=$(NO_OPENSSL) $(@F)
+		OS=$(OS) $(@F)
 
 libgit2.pc: libgit2.pc.in
 	sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' $< > $@
@@ -181,7 +181,7 @@ COV_CFLAGS = $(CFLAGS) -O0 -ftest-coverage -fprofile-arcs
 
 cov-build:
 	$(MAKE) CFLAGS="$(COV_CFLAGS)" all
-	$(MAKE) TEST_COVERAGE=1 NO_OPENSSL=$(NO_OPENSSL) test
+	$(MAKE) TEST_COVERAGE=1 test
 
 cov-report:
 	@echo "--- untested files:" | tee untested
