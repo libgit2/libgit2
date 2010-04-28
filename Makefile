@@ -3,6 +3,12 @@ all::
 # Define NO_VISIBILITY if your compiler does not support symbol
 # visibility in general (and the -fvisibility switch in particular).
 #
+# Define OPENSSL_SHA1 if you want use the SHA1 routines from the
+# OpenSSL crypto library, rather than the built-in C versions.
+#
+# Define PPC_SHA1 if you want to use the bundled SHA1 routines that
+# are optimized for PowerPC, rather than the built-in C versions.
+#
 
 DOXYGEN = doxygen
 INSTALL = install
@@ -75,7 +81,11 @@ ifdef PPC_SHA1
 	EXTRA_OBJ += src/ppc/sha1ppc.o
 	EXTRA_CFLAGS += -DPPC_SHA1
 else
+ifdef OPENSSL_SHA1
+	EXTRA_CFLAGS += -DOPENSSL_SHA1
+else
 	EXTRA_SRC += src/block-sha1/sha1.c
+endif
 endif
 
 BASIC_CFLAGS := -Isrc

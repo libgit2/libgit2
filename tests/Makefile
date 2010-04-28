@@ -59,6 +59,10 @@ ifdef TEST_COVERAGE
 	EXTRA_LIBS += -O0 -lgcov
 endif
 
+ifdef OPENSSL_SHA1
+	EXTRA_LIBS += $(CRYPTO_LIB)
+endif
+
 BASIC_CFLAGS := -I../src
 
 ALL_CFLAGS = $(CFLAGS) $(BASIC_CFLAGS)
