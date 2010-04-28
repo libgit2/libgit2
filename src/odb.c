@@ -71,6 +71,9 @@ struct git_pack {
 	/** Number of objects in this pack. */
 	uint32_t obj_cnt;
 
+	/** File descriptor for the .pack file. */
+	git_file pack_fd;
+
 	/** The size of the .pack file. */
 	off_t pack_size;
 
@@ -120,6 +123,12 @@ typedef struct {  /* object header data */
 	git_otype type;  /* object type */
 	size_t    size;  /* object size */
 } obj_hdr;
+
+typedef struct {  /* '.pack' file header */
+	uint32_t sig;  /* PACK_SIG       */
+	uint32_t ver;  /* pack version   */
+	uint32_t cnt;  /* object count   */
+} pack_hdr;
 
 static struct {
 	const char *str;   /* type name string */
@@ -1085,6 +1094,91 @@ static void pack_decidx(git_pack *p)
 	gitlck_unlock(&p->lock);
 }
 
+static int read_pack_hdr(pack_hdr *out, git_file fd)
+{
+	pack_hdr hdr;
+
+	if (gitfo_read(fd, &hdr, sizeof(hdr)))
+		return GIT_ERROR;
+
+	out->sig = decode32(&hdr.sig);
+	out->ver = decode32(&hdr.ver);
+	out->cnt = decode32(&hdr.cnt);
+
+	return GIT_SUCCESS;
+}
+
+static int check_pack_hdr(git_pack *p)
+{
+	pack_hdr hdr;
+
+	if (read_pack_hdr(&hdr, p->pack_fd))
+		return GIT_ERROR;
+
+	if (hdr.sig != PACK_SIG
+		|| (hdr.ver != 2 && hdr.ver != 3)
+		|| hdr.cnt != p->obj_cnt)
+		return GIT_ERROR;
+
+	return GIT_SUCCESS;
+}
+
+static int check_pack_sha1(git_pack *p)
+{
+	unsigned char *data = p->idx_map.data;
+	off_t pack_sha1_off = p->pack_size - GIT_OID_RAWSZ;
+	size_t idx_pack_sha1_off = p->idx_map.len - 2 * GIT_OID_RAWSZ;
+	git_oid pack_id, idx_pack_id;
+
+	if (gitfo_lseek(p->pack_fd, pack_sha1_off, SEEK_SET) == -1)
+		return GIT_ERROR;
+
+	if (gitfo_read(p->pack_fd, pack_id.id, sizeof(pack_id.id)))
+		return GIT_ERROR;
+
+	git_oid_mkraw(&idx_pack_id, data + idx_pack_sha1_off);
+
+	if (git_oid_cmp(&pack_id, &idx_pack_id))
+		return GIT_ERROR;
+
+	return GIT_SUCCESS;
+}
+
+static int open_pack(git_pack *p)
+{
+	char pb[GIT_PATH_MAX];
+	struct stat sb;
+
+	if (p->pack_fd != -1)
+		return GIT_SUCCESS;
+
+	if (git__fmt(pb, sizeof(pb), "%s/pack/%s.pack",
+			p->db->objects_dir,
+			p->pack_name) < 0)
+		return GIT_ERROR;
+
+	if (pack_openidx(p))
+		return GIT_ERROR;
+
+	if ((p->pack_fd = gitfo_open(pb, O_RDONLY)) < 0) {
+		p->pack_fd = -1;
+		pack_decidx(p);
+		return GIT_ERROR;
+	}
+
+	if (gitfo_fstat(p->pack_fd, &sb)
+		|| !S_ISREG(sb.st_mode) || p->pack_size != sb.st_size
+		|| check_pack_hdr(p) || check_pack_sha1(p)) {
+		gitfo_close(p->pack_fd);
+		p->pack_fd = -1;
+		pack_decidx(p);
+		return GIT_ERROR;
+	}
+
+	pack_decidx(p);
+	return GIT_SUCCESS;
+}
+
 static void pack_dec(git_pack *p)
 {
 	int need_free;
@@ -1100,6 +1194,8 @@ static void pack_dec(git_pack *p)
 			free(p->im_fanout);
 			free(p->im_off_idx);
 			free(p->im_off_next);
+			if (p->pack_fd != -1)
+				gitfo_close(p->pack_fd);
 		}
 
 		gitlck_free(&p->lock);
@@ -1134,6 +1230,7 @@ static git_pack *alloc_pack(const char *pack_name)
 	gitlck_init(&p->lock);
 	strcpy(p->pack_name, pack_name);
 	p->refcnt = 1;
+	p->pack_fd = -1;
 	return p;
 }
 
@@ -1378,9 +1475,22 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 	return GIT_SUCCESS;
 }
 
+static int unpack_object(git_obj *out, git_pack *p, index_entry *e)
+{
+	assert(out && p && e);
+
+	if (open_pack(p))
+		return GIT_ERROR;
+
+	/* TODO - actually unpack the data! */
+
+	return GIT_SUCCESS;
+}
+
 static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
 {
 	uint32_t n;
+	index_entry e;
 	int res;
 
 	assert(out && p && id);
@@ -1388,11 +1498,13 @@ static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
 	if (pack_openidx(p))
 		return GIT_ERROR;
 	res = p->idx_search(&n, p, id);
+	if (!res)
+		res = p->idx_get(&e, p, n);
 	pack_decidx(p);
 
 	if (!res) {
 		/* TODO unpack object */
-		res = GIT_ERROR;
+		res = unpack_object(out, p, &e);
 	}
 
 	return res;

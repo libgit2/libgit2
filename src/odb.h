@@ -16,4 +16,7 @@
  */
 #define PACK_TOC 0xff744f63 /* -1tOc */
 
+/** First 4 bytes of a pack-*.pack file header. */
+#define PACK_SIG 0x5041434b /* PACK */
+
 #endif
