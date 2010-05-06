@@ -36,14 +36,14 @@ GIT_EXTERN(void) gitrp_reset(git_revpool *pool);
 /**
  * Mark an object to start traversal from.
  * @param pool the pool being used for the traversal.
- * @param commit the commit the commit to start from.
+ * @param commit the commit to start from.
  */
 GIT_EXTERN(void) gitrp_push(git_revpool *pool, git_commit *commit);
 
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
  * @param pool the pool being used for the traversal.
- * @param commit the commit the commit to start from.
+ * @param commit the commit that will be ignored during the traversal
  */
 GIT_EXTERN(void) gitrp_hide(git_revpool *pool, git_commit *commit);
 
