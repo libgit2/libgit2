@@ -101,7 +101,7 @@ clean:
 	rm -f $(GIT_LIB)
 	rm -f libgit2.pc
 	rm -f *.pdb
-	rm -f src/*.o src/*/*.o
+	rm -f src/*.[oi] src/*/*.[oi]
 	rm -rf apidocs
 	rm -f *~ src/*~ src/*/*~
 	@$(MAKE) -C tests -s --no-print-directory clean
@@ -151,6 +151,9 @@ uninstall:
 .S.o:
 	$(CC) $(ALL_CFLAGS) -c $< $(CC_OUT)$@
 
+%.i: %.c FORCE
+	$(CC) $(ALL_CFLAGS) -E $< >$*.i
+
 $(OBJS): $(HDRS)
 $(GIT_LIB): $(OBJS)
 	rm -f $(GIT_LIB)
@@ -171,6 +174,7 @@ libgit2.pc: libgit2.pc.in
 .PHONY: install-headers
 .PHONY: install uninstall
 .PHONY: sparse
+.PHONY: FORCE
 
 ### Test suite coverage testing
 #
