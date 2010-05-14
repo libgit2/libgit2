@@ -17,7 +17,7 @@ GIT_BEGIN_DECL
 typedef struct git_commit git_commit;
 
 /**
- * Parse (or lookup) a commit from a revision pool.
+ * Lookup a commit from a revision pool, and parse it if needed.
  * @param pool the pool to use when parsing/caching the commit.
  * @param id identity of the commit to locate.  If the object is
  *        an annotated tag it will be peeled back to the commit.
@@ -25,7 +25,7 @@ typedef struct git_commit git_commit;
  *         pool's git_odb, or if the commit is present but is
  *         too malformed to be parsed successfully.
  */
-GIT_EXTERN(git_commit *) git_commit_parse(git_revpool *pool, const git_oid *id);
+GIT_EXTERN(git_commit *) git_commit_lookup(git_revpool *pool, const git_oid *id);
 
 /**
  * Get the id of a commit.
