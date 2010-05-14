@@ -10,11 +10,11 @@
 #define GIT_COMMIT_DELAY    (1 << 2)
 
 struct git_commit {
-	git_oid id;
-	time_t commit_time;
+    git_oid id;
+    time_t commit_time;
     git_revpool *pool;
-	unsigned parsed:1,
-		 flags:26;
+    unsigned parsed:1,
+             flags:26;
 };
 
 int git_commit__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_end, const char *header);

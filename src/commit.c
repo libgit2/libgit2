@@ -71,21 +71,21 @@ error_cleanup:
 
 int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer_end)
 {
-	if (memcmp(buffer, "author ", 7) != 0)
-		return -1;
+    if (memcmp(buffer, "author ", 7) != 0)
+        return -1;
 
     buffer = memchr(buffer, '\n', buffer_end - buffer);
     if (buffer == 0 || buffer >= buffer_end)
         return -1;
 
-	if (memcmp(buffer, "committer ", 10) != 0)
-		return -1;
+    if (memcmp(buffer, "committer ", 10) != 0)
+        return -1;
 
     buffer = memchr(buffer, '\n', buffer_end - buffer);
     if (buffer == 0 || buffer >= buffer_end)
         return -1;
 
-	*commit_time = strtol(buffer, &buffer, 10);
+    *commit_time = strtol(buffer, &buffer, 10);
 
     return (buffer < buffer_end) ? 0 : -1;
 }
@@ -116,8 +116,8 @@ int git_commit__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_en
 
 int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 {
-	char *buffer = (char *)data;
-	const char *buffer_end = (char *)data + len;
+    char *buffer = (char *)data;
+    const char *buffer_end = (char *)data + len;
 
     git_oid oid;
 
@@ -146,5 +146,6 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 
     commit->parsed = 1;
 
-	return 0;
+    return 0;
 }
+
