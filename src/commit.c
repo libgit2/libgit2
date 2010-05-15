@@ -40,6 +40,9 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
     git_obj commit_obj;
     git_commit *commit = NULL;
 
+    if (pool == NULL || pool->db == NULL)
+        return NULL;
+
     /*
      * TODO: check if the commit is already cached in the
      * revpool instead of loading it from the odb

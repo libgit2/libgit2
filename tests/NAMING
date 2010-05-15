@@ -20,3 +20,5 @@ Categories
 02__: Basic object read access.
 
 03__: Basic object writing.
+
+04__: Parsing and loading commit data
