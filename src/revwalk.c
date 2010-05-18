@@ -24,6 +24,7 @@
  */
 
 #include "common.h"
+#include "commit.h"
 #include "revwalk.h"
 
 git_revpool *gitrp_alloc(git_odb *db)
@@ -32,6 +33,8 @@ git_revpool *gitrp_alloc(git_odb *db)
 	if (!walk)
 		return NULL;
 
+    memset(walk, 0x0, sizeof(git_revpool));
+
 	walk->db = db;
 	return walk;
 }
@@ -39,4 +42,55 @@ git_revpool *gitrp_alloc(git_odb *db)
 void gitrp_free(git_revpool *walk)
 {
 	free(walk);
+}
+
+void gitrp_push(git_revpool *pool, git_commit *commit)
+{
+    if ((commit->flags & GIT_COMMIT_SEEN) != 0)
+        return;
+
+    /* FIXME:
+     * Unparsed commit objects? Where do these come from?
+     * Do we need to handle them?
+     */
+    if (!commit->parsed)
+        return;
+
+    commit->flags |= GIT_COMMIT_SEEN;
+
+    git_commit_list_insert(&pool->commits, commit);
+}
+
+void gitrp_prepare_walk(git_revpool *pool)
+{
+    // TODO: sort commit list based on walk ordering
+
+    pool->iterator = pool->commits;
+    pool->walking = 1;
+}
+
+git_commit *gitrp_next(git_revpool *pool)
+{
+    git_commit *next;
+
+    if (!pool->walking)
+        gitrp_prepare_walk(pool);
+
+    // Iteration finished
+    if (pool->iterator == NULL)
+    {
+        gitrp_reset(pool);
+        return NULL;
+    }
+
+    next = pool->iterator->commit;
+    pool->iterator = pool->iterator->next;
+
+    return next;
+}
+
+void gitrp_reset(git_revpool *pool)
+{
+    pool->iterator = NULL;
+    pool->walking = 0;
 }

@@ -35,6 +35,22 @@ const git_oid *git_commit_id(git_commit *c)
 	return &c->id;
 }
 
+void git_commit_mark_uninteresting(git_commit *commit)
+{
+	git_commit_list *parents = commit->parents;
+
+    commit->flags |= GIT_COMMIT_HIDE;
+
+    /*
+     * FIXME: mark recursively the parents' parents?
+     * They are most likely not parsed yet...
+     */
+	while (parents) {
+        parents->commit->flags |= GIT_COMMIT_HIDE;
+		parents = parents->next;
+	}
+}
+
 git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 {
     git_obj commit_obj;
@@ -141,7 +157,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
         if ((parent = git_commit_lookup(commit->pool, &oid)) == NULL)
             return -1;
 
-        // TODO: push the new commit into the revpool
+        git_commit_list_insert(&commit->parents, parent);
     }
 
     if (git_commit__parse_time(&commit->commit_time, buffer, buffer_end) < 0)
@@ -152,3 +168,30 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
     return 0;
 }
 
+void git_commit_list_insert(git_commit_list **list, git_commit *commit)
+{
+    if (*list == NULL)
+    {
+        *list = git__malloc(sizeof(git_commit_list));
+
+        if (*list == NULL)
+            return;
+
+        (*list)->commit = commit;
+        (*list)->next = NULL;
+    }
+    else
+    {
+        git_commit_list *new_list = NULL;
+
+        new_list = git__malloc(sizeof(git_commit_list));
+
+        if (new_list == NULL)
+            return;
+
+        new_list->commit = commit;
+        new_list->next = *list;
+
+        *list = new_list;
+    }
+}

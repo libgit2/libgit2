@@ -6,6 +6,11 @@
 
 struct git_revpool {
 	git_odb *db;
+    git_commit_list *iterator;
+    git_commit_list *commits;
+
+    unsigned walking:1,
+             topological_sort:1;
 };
 
 #endif /* INCLUDE_revwalk_h__ */
