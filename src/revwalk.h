@@ -8,6 +8,7 @@ struct git_revpool {
 	git_odb *db;
     git_commit_list *iterator;
     git_commit_list *commits;
+    git_commit_list *roots;
 
     unsigned walking:1,
              topological_sort:1;

@@ -51,41 +51,71 @@ void git_commit_mark_uninteresting(git_commit *commit)
 	}
 }
 
-git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
+git_commit *git_commit_parse(git_revpool *pool, const git_oid *id)
 {
-    git_obj commit_obj;
     git_commit *commit = NULL;
 
-    if (pool == NULL || pool->db == NULL)
+    if ((commit = git_commit_lookup(pool, id)) == NULL)
         return NULL;
 
-    /*
-     * TODO: check if the commit is already cached in the
-     * revpool instead of loading it from the odb
-     */
-
-    if (git_odb_read(&commit_obj, pool->db, id) < 0)
-        return NULL;
-
-    if (commit_obj.type != GIT_OBJ_COMMIT)
-        goto error_cleanup;
-
-    commit = git__malloc(sizeof(git_commit));
-    memset(commit, 0x0, sizeof(git_commit));
-
-    git_oid_cpy(&commit->id, id);
-    commit->pool = pool;
-
-    if (git_commit__parse_buffer(commit, commit_obj.data, commit_obj.len) < 0)
+    if (git_commit_parse_existing(commit) < 0)
         goto error_cleanup;
 
     return commit;
 
 error_cleanup:
-    git_obj_close(&commit_obj);
     free(commit);
-
     return NULL;
+}
+
+int git_commit_parse_existing(git_commit *commit)
+{
+    git_obj commit_obj;
+
+    if (commit->parsed)
+        return 0;
+
+    if (commit->pool == NULL || commit->pool->db == NULL)
+        return -1;
+
+    if (git_odb_read(&commit_obj, commit->pool->db, &commit->id) < 0)
+        return -1;
+
+    if (commit_obj.type != GIT_OBJ_COMMIT)
+        goto error_cleanup;
+
+    if (git_commit__parse_buffer(commit, commit_obj.data, commit_obj.len) < 0)
+        goto error_cleanup;
+
+    git_obj_close(&commit_obj);
+
+    return 0;
+
+error_cleanup:
+    git_obj_close(&commit_obj);
+    return -1;
+}
+
+git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
+{
+    git_commit *commit = NULL;
+
+    if (pool == NULL || pool->db == NULL)
+        return NULL;
+
+    commit = git__malloc(sizeof(git_commit));
+
+    if (commit == NULL)
+        return NULL;
+
+    memset(commit, 0x0, sizeof(git_commit));
+
+    git_oid_cpy(&commit->id, id);
+    commit->pool = pool;
+
+    git_commit_list_insert(&pool->commits, commit);
+
+    return commit;
 }
 
 int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer_end)
@@ -111,8 +141,8 @@ int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer
 
 int git_commit__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_end, const char *header)
 {
-    size_t sha_len = GIT_OID_HEXSZ;
-    size_t header_len = strlen(header);
+    const size_t sha_len = GIT_OID_HEXSZ;
+    const size_t header_len = strlen(header);
 
     char *buffer = *buffer_out;
 

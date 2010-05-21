@@ -30,6 +30,8 @@ int git_commit__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_en
 int git_commit__parse_buffer(git_commit *commit, void *data, size_t len);
 int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer_end);
 
+int git_commit_parse_existing(git_commit *commit);
+
 void git_commit_list_insert(git_commit_list **list, git_commit *commit);
 
 #endif

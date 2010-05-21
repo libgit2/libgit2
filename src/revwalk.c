@@ -41,31 +41,42 @@ git_revpool *gitrp_alloc(git_odb *db)
 
 void gitrp_free(git_revpool *walk)
 {
+    git_commit_list *list;
+
+    list = walk->commits;
+    while (list)
+    {
+        free(list->commit);
+        list = list->next;
+    }
+
 	free(walk);
 }
 
 void gitrp_push(git_revpool *pool, git_commit *commit)
 {
+    if (commit->pool != pool)
+        return;
+
     if ((commit->flags & GIT_COMMIT_SEEN) != 0)
         return;
 
-    /* FIXME:
-     * Unparsed commit objects? Where do these come from?
-     * Do we need to handle them?
-     */
     if (!commit->parsed)
-        return;
+    {
+        if (git_commit_parse_existing(commit) < 0)
+            return;
+    }
 
     commit->flags |= GIT_COMMIT_SEEN;
 
-    git_commit_list_insert(&pool->commits, commit);
+    git_commit_list_insert(&pool->roots, commit);
 }
 
 void gitrp_prepare_walk(git_revpool *pool)
 {
     // TODO: sort commit list based on walk ordering
 
-    pool->iterator = pool->commits;
+    pool->iterator = pool->roots;
     pool->walking = 1;
 }
 
