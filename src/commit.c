@@ -35,16 +35,15 @@ const git_oid *git_commit_id(git_commit *c)
 	return &c->id;
 }
 
-void git_commit_mark_uninteresting(git_commit *commit)
+void git_commit__mark_uninteresting(git_commit *commit)
 {
+    if (commit == NULL)
+        return;
+
 	git_commit_list *parents = commit->parents;
 
     commit->flags |= GIT_COMMIT_HIDE;
 
-    /*
-     * FIXME: mark recursively the parents' parents?
-     * They are most likely not parsed yet...
-     */
 	while (parents) {
         parents->commit->flags |= GIT_COMMIT_HIDE;
 		parents = parents->next;
@@ -112,8 +111,6 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 
     git_oid_cpy(&commit->id, id);
     commit->pool = pool;
-
-    git_commit_list_insert(&pool->commits, commit);
 
     return commit;
 }
@@ -186,6 +183,10 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 
         if ((parent = git_commit_lookup(commit->pool, &oid)) == NULL)
             return -1;
+
+        // Inherit uninteresting flag
+        if (commit->flags & GIT_COMMIT_HIDE)
+            parent->flags |= GIT_COMMIT_HIDE;
 
         git_commit_list_insert(&commit->parents, parent);
     }

@@ -44,6 +44,14 @@ GIT_EXTERN(git_commit *) git_commit_parse(git_revpool *pool, const git_oid *id);
  */
 GIT_EXTERN(const git_oid *) git_commit_id(git_commit *commit);
 
+
+/**
+ * Mark a commit and all its parents as uninteresting.
+ * @param commit The commit to mark
+ */
+GIT_EXTERN(void) git_commit_mark_uninteresting(git_commit *commit);
+
+
 /** @} */
 GIT_END_DECL
 #endif
