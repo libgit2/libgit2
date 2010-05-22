@@ -48,7 +48,7 @@ void gitrp_free(git_revpool *walk)
 
 void gitrp_push(git_revpool *pool, git_commit *commit)
 {
-    if (commit->pool != pool)
+    if (commit->object.pool != pool)
         return;
 
     if (commit->seen)

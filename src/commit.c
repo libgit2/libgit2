@@ -32,7 +32,7 @@
 
 const git_oid *git_commit_id(git_commit *c)
 {
-	return &c->id;
+	return &c->object.id;
 }
 
 void git_commit__mark_uninteresting(git_commit *commit)
@@ -75,10 +75,7 @@ int git_commit_parse_existing(git_commit *commit)
     if (commit->parsed)
         return 0;
 
-    if (commit->pool == NULL || commit->pool->db == NULL)
-        return -1;
-
-    if (git_odb_read(&commit_obj, commit->pool->db, &commit->id) < 0)
+    if (git_odb_read(&commit_obj, commit->object.pool->db, &commit->object.id) < 0)
         return -1;
 
     if (commit_obj.type != GIT_OBJ_COMMIT)
@@ -110,8 +107,9 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 
     memset(commit, 0x0, sizeof(git_commit));
 
-    git_oid_cpy(&commit->id, id);
-    commit->pool = pool;
+    // Initialize parent object
+    git_oid_cpy(&commit->object.id, id);
+    commit->object.pool = pool;
 
     return commit;
 }
@@ -182,7 +180,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
     while (git_commit__parse_oid(&oid, &buffer, buffer_end, "parent ") == 0) {
         git_commit *parent;
 
-        if ((parent = git_commit_lookup(commit->pool, &oid)) == NULL)
+        if ((parent = git_commit_lookup(commit->object.pool, &oid)) == NULL)
             return -1;
 
         // Inherit uninteresting flag
