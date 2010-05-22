@@ -40,12 +40,13 @@ void git_commit__mark_uninteresting(git_commit *commit)
     if (commit == NULL)
         return;
 
-	git_commit_list *parents = commit->parents;
+	git_commit_node *parents = commit->parents.head;
 
-    commit->flags |= GIT_COMMIT_HIDE;
+    commit->uninteresting = 1;
 
-	while (parents) {
-        parents->commit->flags |= GIT_COMMIT_HIDE;
+	while (parents)
+    {
+        parents->commit->uninteresting = 1;
 		parents = parents->next;
 	}
 }
@@ -185,10 +186,10 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
             return -1;
 
         // Inherit uninteresting flag
-        if (commit->flags & GIT_COMMIT_HIDE)
-            parent->flags |= GIT_COMMIT_HIDE;
+        if (commit->uninteresting)
+            parent->uninteresting = 1;
 
-        git_commit_list_insert(&commit->parents, parent);
+        git_commit_list_append(&commit->parents, parent);
     }
 
     if (git_commit__parse_time(&commit->commit_time, buffer, buffer_end) < 0)
@@ -199,30 +200,90 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
     return 0;
 }
 
-void git_commit_list_insert(git_commit_list **list, git_commit *commit)
+void git_commit_list_append(git_commit_list *list, git_commit *commit)
 {
-    if (*list == NULL)
+    git_commit_node *node = NULL;
+
+    node = git__malloc(sizeof(git_commit_list));
+
+    if (node == NULL)
+        return;
+
+    node->commit = commit;
+    node->next = NULL;
+    node->prev = list->tail;
+
+    if (list->tail == NULL)
     {
-        *list = git__malloc(sizeof(git_commit_list));
-
-        if (*list == NULL)
-            return;
-
-        (*list)->commit = commit;
-        (*list)->next = NULL;
+        list->head = list->tail = node;
     }
     else
     {
-        git_commit_list *new_list = NULL;
-
-        new_list = git__malloc(sizeof(git_commit_list));
-
-        if (new_list == NULL)
-            return;
-
-        new_list->commit = commit;
-        new_list->next = *list;
-
-        *list = new_list;
+        list->tail->next = node;
+        list->tail = node;
     }
+
+    list->size++;
 }
+
+git_commit *git_commit_list_pop_back(git_commit_list *list)
+{
+    git_commit_node *node;
+    git_commit *commit;
+
+    if (list->tail == NULL)
+        return NULL;
+
+    node = list->tail;
+    list->tail = list->tail->prev;
+    if (list->tail == NULL)
+        list->head = NULL;
+
+    commit = node->commit;
+    free(node);
+
+    list->size--;
+
+    return commit;
+}
+
+git_commit *git_commit_list_pop_front(git_commit_list *list)
+{
+    git_commit_node *node;
+    git_commit *commit;
+
+    if (list->head == NULL)
+        return NULL;
+
+    node = list->head;
+    list->head = list->head->next;
+    if (list->head == NULL)
+        list->tail = NULL;
+
+    commit = node->commit;
+    free(node);
+
+    list->size--;
+
+    return commit;
+}
+
+void git_commit_list_clear(git_commit_list *list, int free_commits)
+{
+    git_commit_node *node, *next_node;
+
+    node = list->head;
+    while (node)
+    {
+        if (free_commits)
+            free(node->commit);
+
+        next_node = node->next;
+        free(node);
+        node = next_node;
+    }
+
+    list->head = list->tail = NULL;
+    list->size = 0;
+}
+

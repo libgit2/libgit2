@@ -41,17 +41,8 @@ git_revpool *gitrp_alloc(git_odb *db)
 
 void gitrp_free(git_revpool *walk)
 {
-    git_commit_list *list;
-
-    list = walk->roots;
-    while (list)
-    {
-        free(list->commit);
-        free(list);
-
-        list = list->next;
-    }
-
+    git_commit_list_clear(&(walk->iterator), 0);
+    git_commit_list_clear(&(walk->roots), 1);
 	free(walk);
 }
 
@@ -60,7 +51,7 @@ void gitrp_push(git_revpool *pool, git_commit *commit)
     if (commit->pool != pool)
         return;
 
-    if ((commit->flags & GIT_COMMIT_SEEN) != 0)
+    if (commit->seen)
         return;
 
     if (!commit->parsed)
@@ -72,30 +63,30 @@ void gitrp_push(git_revpool *pool, git_commit *commit)
     // Sanity check: make sure that if the commit
     // has been manually marked as uninteresting,
     // all the parent commits are too.
-    if ((commit->flags & GIT_COMMIT_HIDE) != 0)
+    if (commit->uninteresting)
         git_commit__mark_uninteresting(commit);
 
-    commit->flags |= GIT_COMMIT_SEEN;
+    commit->seen = 1;
 
-    git_commit_list_insert(&pool->roots, commit);
-    git_commit_list_insert(&pool->iterator, commit);
+    git_commit_list_append(&pool->roots, commit);
+    git_commit_list_append(&pool->iterator, commit);
 }
 
 void gitrp_hide(git_revpool *pool, git_commit *commit)
 {
-    git_commit_mark_uninteresting(commit);
+    git_commit__mark_uninteresting(commit);
     gitrp_push(pool, commit);
 }
 
 void gitrp_prepare_walk(git_revpool *pool)
 {
-    git_commit_list *list;
+    git_commit_node *roots;
 
-    list = pool->roots;
-    while (list)
+    roots = pool->roots.head;
+    while (roots)
     {
-        git_commit_list_insert(&pool->iterator, list->commit);
-        list = list->next;
+        git_commit_list_append(&pool->iterator, roots->commit);
+        roots = roots->next;
     }
 
     pool->walking = 1;
@@ -108,30 +99,26 @@ git_commit *gitrp_next(git_revpool *pool)
     if (!pool->walking)
         gitrp_prepare_walk(pool);
 
-    while (pool->iterator != NULL)
+    while ((next = git_commit_list_pop_front(&pool->iterator)) != NULL)
     {
-        git_commit_list *list;
+        git_commit_node *parents;
 
-        next = pool->iterator->commit;
-        free(pool->iterator);
-        pool->iterator = pool->iterator->next;
-
-        list = next->parents;
-        while (list)
+        parents = next->parents.head;
+        while (parents)
         {
-            git_commit *parent = list->commit;
-            list = list->next;
+            git_commit *parent = parents->commit;
+            parents = parents->next;
 
-            if ((parent->flags & GIT_COMMIT_SEEN) != 0)
+            if (parent->seen)
                 continue;
 
             if (parent->parsed == 0)
                 git_commit_parse_existing(parent);
 
-            git_commit_list_insert(&pool->iterator, list->commit);
+            git_commit_list_append(&pool->iterator, parent);
         }
 
-        if ((next->flags & GIT_COMMIT_HIDE) != 0)
+        if (next->uninteresting == 0)
             return next;
     }
 
@@ -142,6 +129,7 @@ git_commit *gitrp_next(git_revpool *pool)
 
 void gitrp_reset(git_revpool *pool)
 {
-    pool->iterator = NULL;
+    git_commit_list_clear(&pool->iterator, 0);
     pool->walking = 0;
 }
+

@@ -5,24 +5,33 @@
 
 #include <time.h>
 
-#define GIT_COMMIT_SEEN     (1 << 0)
-#define GIT_COMMIT_HIDE     (1 << 1)
-#define GIT_COMMIT_DELAY    (1 << 2)
+struct git_commit_node {
+    struct git_commit *commit;
+
+    struct git_commit_node *next;
+    struct git_commit_node *prev;
+};
 
 struct git_commit_list {
-    struct git_commit *commit;
-    struct git_commit_list *next;
+    struct git_commit_node *head;
+    struct git_commit_node *tail;
+    size_t size;
 };
 
 typedef struct git_commit_list git_commit_list;
+typedef struct git_commit_node git_commit_node;
 
 struct git_commit {
     git_oid id;
     time_t commit_time;
     git_revpool *pool;
-    git_commit_list *parents;
+    git_commit_list parents;
 
+    unsigned short in_degree;
     unsigned parsed:1,
+             seen:1,
+             uninteresting:1,
+             topo_delay:1,
              flags:26;
 };
 
@@ -33,6 +42,9 @@ void git_commit__mark_uninteresting(git_commit *commit);
 
 int git_commit_parse_existing(git_commit *commit);
 
-void git_commit_list_insert(git_commit_list **list, git_commit *commit);
+void git_commit_list_clear(git_commit_list *list, int free_commits);
+void git_commit_list_append(git_commit_list *list, git_commit *commit);
+git_commit *git_commit_list_pop_back(git_commit_list *list);
+git_commit *git_commit_list_pop_front(git_commit_list *list);
 
 #endif
