@@ -97,7 +97,7 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 {
     git_commit *commit = NULL;
 
-    if (pool == NULL || pool->db == NULL)
+    if (pool == NULL)
         return NULL;
 
     commit = (git_commit *)git_revpool_table_lookup(pool->commits, id);
@@ -126,14 +126,14 @@ int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer
         return -1;
 
     buffer = memchr(buffer, '\n', buffer_end - buffer);
-    if (buffer == 0 || buffer >= buffer_end)
+    if (buffer == 0 || ++buffer >= buffer_end)
         return -1;
 
     if (memcmp(buffer, "committer ", 10) != 0)
         return -1;
 
     buffer = memchr(buffer, '\n', buffer_end - buffer);
-    if (buffer == 0 || buffer >= buffer_end)
+    if (buffer == 0 || ++buffer >= buffer_end)
         return -1;
 
     *commit_time = strtol(buffer, &buffer, 10);
@@ -291,3 +291,57 @@ void git_commit_list_clear(git_commit_list *list, int free_commits)
     list->size = 0;
 }
 
+void git_commit_list_sort(git_commit_list *list)
+{
+    git_commit_node *p, *q, *e, *tail;
+    int in_size, p_size, q_size, merge_count, i;
+
+    if (list->head == NULL)
+        return;
+
+    in_size = 1;
+
+    do
+    {
+        p = list->head;
+        tail = NULL;
+        merge_count = 0;
+
+        while (p != NULL)
+        {
+            merge_count++;
+            q = p;
+            p_size = 0;
+            q_size = in_size;
+
+            for (i = 0; i < in_size && q; ++i, q = q->next)
+                p_size++;
+
+            while (p_size > 0 || (q_size > 0 && q))
+            {
+                if (p_size == 0)
+                    e = q, q = q->next, q_size--;
+
+                else if (q_size == 0 || q == NULL ||
+                    p->commit->commit_time <= q->commit->commit_time)
+                    e = p, p = p->next, p_size--;
+
+                else
+                    e = q, q = q->next, q_size--;
+
+                if (tail != NULL)
+                    tail->next = e;
+                else
+                    list->head = e;
+
+                tail = e;
+            }
+
+            p = q;
+        }
+
+        tail->next = NULL;
+        in_size *= 2;
+
+    } while (merge_count > 1);
+}
