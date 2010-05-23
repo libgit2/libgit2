@@ -47,4 +47,8 @@ void git_revpool_table_resize(git_revpool_table *table);
 void git_revpool_table_free(git_revpool_table *table);
 
 
+git_revpool_object *git_revpool_tableit_next(git_revpool_tableit *it);
+void git_revpool_tableit_init(git_revpool_table *table, git_revpool_tableit *it);
+
+
 #endif

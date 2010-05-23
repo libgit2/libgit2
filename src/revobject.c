@@ -177,5 +177,48 @@ void git_revpool_table_resize(git_revpool_table *table)
 
 void git_revpool_table_free(git_revpool_table *table)
 {
+    int index;
 
+    for (index = 0; index <= table->size_mask; ++index)
+    {
+        git_revpool_node *node, *next_node;
+
+        node = table->nodes[index];
+        while (node != NULL)
+        {
+            next_node = node->next;
+            free(node);
+            node = next_node;
+        }
+    }
+
+    free(table);
+}
+
+void git_revpool_tableit_init(git_revpool_table *table, git_revpool_tableit *it)
+{
+    memset(it, 0x0, sizeof(git_revpool_tableit));
+
+    it->nodes = table->nodes;
+    it->current_node = NULL;
+    it->current_pos = 0;
+    it->size = table->size_mask + 1;
+}
+
+git_revpool_object *git_revpool_tableit_next(git_revpool_tableit *it)
+{
+    git_revpool_node *next = NULL;
+
+    while (it->current_node == NULL)
+    {
+        if (it->current_pos >= it->size)
+            return NULL;
+
+        it->current_node = it->nodes[it->current_pos++];
+    }
+
+    next = it->current_node;
+    it->current_node = it->current_node->next;
+
+    return next->object;
 }
