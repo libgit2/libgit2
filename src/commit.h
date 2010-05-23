@@ -43,10 +43,16 @@ void git_commit__mark_uninteresting(git_commit *commit);
 
 int git_commit_parse_existing(git_commit *commit);
 
-void git_commit_list_clear(git_commit_list *list, int free_commits);
-void git_commit_list_append(git_commit_list *list, git_commit *commit);
+
+void git_commit_list_push_back(git_commit_list *list, git_commit *commit);
+void git_commit_list_push_front(git_commit_list *list, git_commit *commit);
+
 git_commit *git_commit_list_pop_back(git_commit_list *list);
 git_commit *git_commit_list_pop_front(git_commit_list *list);
-void git_commit_list_sort(git_commit_list *list);
+
+void git_commit_list_clear(git_commit_list *list, int free_commits);
+
+void git_commit_list_timesort(git_commit_list *list);
+void git_commit_list_toposort(git_commit_list *list);
 
 #endif

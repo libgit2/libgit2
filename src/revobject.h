@@ -26,10 +26,19 @@ struct git_revpool_table
     unsigned int max_count;
 };
 
+struct git_revpool_tableit
+{
+    struct git_revpool_node **nodes;
+    struct git_revpool_node *current_node;
+    unsigned int current_pos;
+    unsigned int size;
+};
+
 
 typedef struct git_revpool_node git_revpool_node;
 typedef struct git_revpool_object git_revpool_object;
 typedef struct git_revpool_table git_revpool_table;
+typedef struct git_revpool_tableit git_revpool_tableit;
 
 git_revpool_table *git_revpool_table_create(unsigned int min_size);
 int git_revpool_table_insert(git_revpool_table *table, git_revpool_object *object);

@@ -193,7 +193,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
         if (commit->uninteresting)
             parent->uninteresting = 1;
 
-        git_commit_list_append(&commit->parents, parent);
+        git_commit_list_push_back(&commit->parents, parent);
     }
 
     if (git_commit__parse_time(&commit->commit_time, buffer, buffer_end) < 0)
@@ -204,7 +204,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
     return 0;
 }
 
-void git_commit_list_append(git_commit_list *list, git_commit *commit)
+void git_commit_list_push_back(git_commit_list *list, git_commit *commit)
 {
     git_commit_node *node = NULL;
 
@@ -229,6 +229,33 @@ void git_commit_list_append(git_commit_list *list, git_commit *commit)
 
     list->size++;
 }
+
+void git_commit_list_push_front(git_commit_list *list, git_commit *commit)
+{
+    git_commit_node *node = NULL;
+
+    node = git__malloc(sizeof(git_commit_list));
+
+    if (node == NULL)
+        return;
+
+    node->commit = commit;
+    node->next = list->head;
+    node->prev = NULL;
+
+    if (list->head == NULL)
+    {
+        list->head = list->tail = node;
+    }
+    else
+    {
+        list->head->next = node;
+        list->head = node;
+    }
+
+    list->size++;
+}
+
 
 git_commit *git_commit_list_pop_back(git_commit_list *list)
 {
@@ -291,7 +318,7 @@ void git_commit_list_clear(git_commit_list *list, int free_commits)
     list->size = 0;
 }
 
-void git_commit_list_sort(git_commit_list *list)
+void git_commit_list_timesort(git_commit_list *list)
 {
     git_commit_node *p, *q, *e;
     int in_size, p_size, q_size, merge_count, i;
@@ -344,4 +371,39 @@ void git_commit_list_sort(git_commit_list *list)
         in_size *= 2;
 
     } while (merge_count > 1);
+}
+
+void git_commit_list_toposort(git_commit_list *list)
+{
+    git_commit *commit;
+    git_commit_list topo;
+    memset(&topo, 0x0, sizeof(git_commit_list));
+
+    while ((commit = git_commit_list_pop_front(list)) != NULL)
+    {
+        git_commit_node *p;
+
+        if (commit->in_degree > 0)
+        {
+            commit->topo_delay = 1;
+            continue;
+        }
+
+        for (p = commit->parents.head; p != NULL; p = p->next)
+        {
+            p->commit->in_degree--;
+
+            if (p->commit->in_degree == 0 && p->commit->topo_delay)
+            {
+                p->commit->topo_delay = 0;
+                git_commit_list_push_front(list, p->commit);
+            }
+        }
+
+        git_commit_list_push_back(&topo, commit);
+    }
+
+    list->head = topo.head;
+    list->tail = topo.tail;
+    list->size = topo.size;
 }

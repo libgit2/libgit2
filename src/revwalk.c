@@ -73,7 +73,7 @@ void gitrp_push(git_revpool *pool, git_commit *commit)
     if (commit->uninteresting)
         git_commit__mark_uninteresting(commit);
 
-    git_commit_list_append(&pool->roots, commit);
+    git_commit_list_push_back(&pool->roots, commit);
 }
 
 void gitrp_hide(git_revpool *pool, git_commit *commit)
@@ -95,9 +95,12 @@ void gitrp__enroot(git_revpool *pool, git_commit *commit)
     commit->seen = 1;
 
     for (parents = commit->parents.head; parents != NULL; parents = parents->next)
+    {
+        parents->commit->in_degree++;
         gitrp__enroot(pool, parents->commit);
+    }
 
-    git_commit_list_append(&pool->iterator, commit);
+    git_commit_list_push_back(&pool->iterator, commit);
 }
 
 void gitrp_prepare_walk(git_revpool *pool)
@@ -107,7 +110,11 @@ void gitrp_prepare_walk(git_revpool *pool)
     for (it = pool->roots.head; it != NULL; it = it->next)
         gitrp__enroot(pool, it->commit);
 
-    // TODO: topo sort, time sort
+    if (pool->sorting & GIT_REVPOOL_SORT_TIME)
+        git_commit_list_timesort(&pool->iterator);
+
+    if (pool->sorting & GIT_REVPOOL_SORT_TOPO)
+        git_commit_list_toposort(&pool->iterator);
 
     if (pool->sorting & GIT_REVPOOL_SORT_REVERSE)
         pool->next_commit = &git_commit_list_pop_back;

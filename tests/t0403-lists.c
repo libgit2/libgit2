@@ -4,7 +4,7 @@
 #include <git/odb.h>
 #include <git/commit.h>
 
-BEGIN_TEST(list_sort_test)
+BEGIN_TEST(list_timesort_test)
 
     git_commit_list list;
     git_commit_node *n;
@@ -32,10 +32,10 @@ BEGIN_TEST(list_sort_test)
             git_commit *c = git__malloc(sizeof(git_commit));
             c->commit_time = (time_t)rand();
 
-            git_commit_list_append(&list, c);
+            git_commit_list_push_back(&list, c);
         }
 
-        git_commit_list_sort(&list);
+        git_commit_list_timesort(&list);
         TEST_SORTED();
         git_commit_list_clear(&list, 1);
     }
@@ -46,15 +46,15 @@ BEGIN_TEST(list_sort_test)
         git_commit *c = git__malloc(sizeof(git_commit));
         c->commit_time = 0;
 
-        git_commit_list_append(&list, c);
+        git_commit_list_push_back(&list, c);
     }
 
-    git_commit_list_sort(&list);
+    git_commit_list_timesort(&list);
     TEST_SORTED();
     git_commit_list_clear(&list, 1);
 
     // Try to sort empty list
-    git_commit_list_sort(&list);
+    git_commit_list_timesort(&list);
     TEST_SORTED();
 
 END_TEST
