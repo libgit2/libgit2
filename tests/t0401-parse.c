@@ -3,6 +3,7 @@
 #include "commit.h"
 #include <git/odb.h>
 #include <git/commit.h>
+#include <git/revwalk.h>
 
 static char *test_commits_broken[] = {
 
@@ -136,10 +137,12 @@ BEGIN_TEST(parse_buffer_test)
     const int working_commit_count = sizeof(test_commits_working) / sizeof(*test_commits_working);
     int i;
 
+    git_revpool *pool = gitrp_alloc(NULL);
+
     for (i = 0; i < broken_commit_count; ++i) {
         git_commit commit;
-        commit.parsed = 0;
-        commit.pool = NULL;
+        memset(&commit, 0x0, sizeof(git_commit));
+        commit.object.pool = pool;
 
         must_fail(git_commit__parse_buffer(
                     &commit,
@@ -150,8 +153,8 @@ BEGIN_TEST(parse_buffer_test)
 
     for (i = 0; i < working_commit_count; ++i) {
         git_commit commit;
-        commit.parsed = 0;
-        commit.pool = NULL;
+        memset(&commit, 0x0, sizeof(git_commit));
+        commit.object.pool = pool;
 
         must_pass(git_commit__parse_buffer(
                     &commit,
@@ -159,5 +162,7 @@ BEGIN_TEST(parse_buffer_test)
                     strlen(test_commits_working[i]))
                 );
     }
+
+    gitrp_free(pool);
 
 END_TEST
