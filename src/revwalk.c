@@ -73,8 +73,6 @@ void gitrp_push(git_revpool *pool, git_commit *commit)
     if (commit->uninteresting)
         git_commit__mark_uninteresting(commit);
 
-    commit->seen = 1;
-
     git_commit_list_append(&pool->roots, commit);
 }
 
@@ -84,38 +82,30 @@ void gitrp_hide(git_revpool *pool, git_commit *commit)
     gitrp_push(pool, commit);
 }
 
+void gitrp__enroot(git_revpool *pool, git_commit *commit)
+{
+    git_commit_node *parents;
+
+    if (commit->seen)
+        return;
+
+    if (commit->parsed == 0)
+        git_commit_parse_existing(commit);
+
+    commit->seen = 1;
+
+    for (parents = commit->parents.head; parents != NULL; parents = parents->next)
+        gitrp__enroot(pool, parents->commit);
+
+    git_commit_list_append(&pool->iterator, commit);
+}
+
 void gitrp_prepare_walk(git_revpool *pool)
 {
     git_commit_node *it;
 
     for (it = pool->roots.head; it != NULL; it = it->next)
-    {
-        git_commit_list_append(&pool->iterator, it->commit);
-    }
-
-    for (it = pool->iterator.head; it != NULL; it = it->next)
-    {
-        git_commit *commit;
-        git_commit_node *parents;
-
-        commit = it->commit;
-        parents = commit->parents.head;
-
-        while (parents)
-        {
-            git_commit *parent = parents->commit;
-            parents = parents->next;
-
-            if (parent->seen)
-                continue;
-
-            if (parent->parsed == 0)
-                git_commit_parse_existing(parent);
-
-            parent->seen = 1;
-            git_commit_list_append(&pool->iterator, parent);
-        }
-    }
+        gitrp__enroot(pool, it->commit);
 
     // TODO: topo sort, time sort
 

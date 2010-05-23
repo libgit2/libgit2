@@ -19,10 +19,11 @@ struct git_revpool_node
 
 struct git_revpool_table
 {
+    struct git_revpool_node **nodes;
+
     unsigned int size_mask;
     unsigned int count;
     unsigned int max_count;
-    struct git_revpool_node **nodes;
 };
 
 

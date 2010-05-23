@@ -57,6 +57,7 @@ unsigned int git_revpool_table__hash(const git_oid *id)
 git_revpool_table *git_revpool_table_create(unsigned int min_size)
 {
     git_revpool_table *table;
+    int i;
 
     table = git__malloc(sizeof(table));
 
@@ -83,7 +84,8 @@ git_revpool_table *git_revpool_table_create(unsigned int min_size)
         return NULL;
     }
 
-    memset(table->nodes, 0x0, (min_size + 1) * sizeof(git_revpool_node *));
+    for (i = 0; i <= min_size; ++i)
+        table->nodes[i] = NULL;
 
     return table;
 }
@@ -92,6 +94,9 @@ int git_revpool_table_insert(git_revpool_table *table, git_revpool_object *objec
 {
     git_revpool_node *node;
     unsigned int index, hash;
+
+    if (table == NULL)
+        return -1;
 
     if (table->count + 1 > table->max_count)
         git_revpool_table_resize(table);
@@ -117,6 +122,9 @@ git_revpool_object *git_revpool_table_lookup(git_revpool_table *table, const git
 {
     git_revpool_node *node;
     unsigned int index, hash;
+
+    if (table == NULL)
+        return NULL;
 
     hash = git_revpool_table__hash(id);
     index = (hash & table->size_mask);
