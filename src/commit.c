@@ -293,7 +293,7 @@ void git_commit_list_clear(git_commit_list *list, int free_commits)
 
 void git_commit_list_sort(git_commit_list *list)
 {
-    git_commit_node *p, *q, *e, *tail;
+    git_commit_node *p, *q, *e;
     int in_size, p_size, q_size, merge_count, i;
 
     if (list->head == NULL)
@@ -304,7 +304,7 @@ void git_commit_list_sort(git_commit_list *list)
     do
     {
         p = list->head;
-        tail = NULL;
+        list->tail = NULL;
         merge_count = 0;
 
         while (p != NULL)
@@ -329,18 +329,18 @@ void git_commit_list_sort(git_commit_list *list)
                 else
                     e = q, q = q->next, q_size--;
 
-                if (tail != NULL)
-                    tail->next = e;
+                if (list->tail != NULL)
+                    list->tail->next = e;
                 else
                     list->head = e;
 
-                tail = e;
+                list->tail = e;
             }
 
             p = q;
         }
 
-        tail->next = NULL;
+        list->tail->next = NULL;
         in_size *= 2;
 
     } while (merge_count > 1);
