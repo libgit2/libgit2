@@ -34,6 +34,7 @@ git_revpool_table *git_revpool_table_create(unsigned int min_size);
 int git_revpool_table_insert(git_revpool_table *table, git_revpool_object *object);
 git_revpool_object *git_revpool_table_lookup(git_revpool_table *table, const git_oid *id);
 void git_revpool_table_resize(git_revpool_table *table);
+void git_revpool_table_free(git_revpool_table *table);
 
 
 #endif

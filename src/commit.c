@@ -100,6 +100,10 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
     if (pool == NULL || pool->db == NULL)
         return NULL;
 
+    commit = (git_commit *)git_revpool_table_lookup(pool->commits, id);
+    if (commit != NULL)
+        return commit;
+
     commit = git__malloc(sizeof(git_commit));
 
     if (commit == NULL)
@@ -110,6 +114,8 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
     // Initialize parent object
     git_oid_cpy(&commit->object.id, id);
     commit->object.pool = pool;
+
+    git_revpool_table_insert(pool->commits, (git_revpool_object *)commit);
 
     return commit;
 }

@@ -33,7 +33,7 @@ unsigned int git_revpool_table__hash(const git_oid *id)
 	const unsigned int m = 0x5bd1e995;
 	const int r = 24;
 
-	unsigned int h = 0xA8A3D5 ^ (unsigned int)id;
+	unsigned int h = 0xA8A3D5;
     int i;
 
     for (i = 0; i < GIT_OID_RAWSZ / 4; ++i)
@@ -164,4 +164,10 @@ void git_revpool_table_resize(git_revpool_table *table)
     table->nodes = new_nodes;
     table->size_mask = (new_size - 1);
     table->max_count = new_size * max_load_factor;
+}
+
+
+void git_revpool_table_free(git_revpool_table *table)
+{
+
 }
