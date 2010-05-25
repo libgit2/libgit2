@@ -12,10 +12,10 @@ BEGIN_TEST(list_timesort_test)
     time_t previous_time;
 
 #define TEST_SORTED() \
-    previous_time = 0;\
+    previous_time = INT_MAX;\
     for (n = list.head; n != NULL; n = n->next)\
     {\
-        must_be_true(n->commit->commit_time >= previous_time);\
+        must_be_true(n->commit->commit_time <= previous_time);\
         previous_time = n->commit->commit_time;\
     }
 

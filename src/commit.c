@@ -350,7 +350,7 @@ void git_commit_list_timesort(git_commit_list *list)
                     e = q, q = q->next, q_size--;
 
                 else if (q_size == 0 || q == NULL ||
-                    p->commit->commit_time <= q->commit->commit_time)
+                    p->commit->commit_time >= q->commit->commit_time)
                     e = p, p = p->next, p_size--;
 
                 else
