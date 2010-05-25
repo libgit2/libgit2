@@ -15,6 +15,35 @@
 GIT_BEGIN_DECL
 
 /**
+ * Sort the revpool contents in no particular ordering;
+ * this sorting is arbritary, implementation-specific
+ * and subject to change at any time.
+ * This is the default sorting for new revision pools.
+ */
+#define GIT_RPSORT_NONE         (0)
+
+/**
+ * Sort the revpool contents in topological order
+ * (parents before children); this sorting mode
+ * can be combined with time sorting.
+ */
+#define GIT_RPSORT_TOPOLOGICAL  (1 << 0)
+
+/**
+ * Sort the revpool contents by commit time;
+ * this sorting mode can be combined with
+ * topological sorting.
+ */
+#define GIT_RPSORT_TIME         (1 << 1)
+
+/**
+ * Iterate through the revpool contents in reverse
+ * order; this sorting mode can be combined with
+ * any of the above.
+ */
+#define GIT_RPSORT_REVERSE      (1 << 2)
+
+/**
  * Allocate a new revision traversal pool.
  *
  * The configuration is copied during allocation.  Changes
@@ -53,6 +82,13 @@ GIT_EXTERN(void) gitrp_hide(git_revpool *pool, git_commit *commit);
  * @return next commit; NULL if there is no more output.
  */
 GIT_EXTERN(git_commit *) gitrp_next(git_revpool *pool);
+
+/**
+ * Change the sorting mode when iterating through the
+ * revision pool's contents.
+ * @param sort_mode combination of GIT_RPSORT_XXX flags
+ */
+GIT_EXTERN(void) gitrp_sorting(git_revpool *pool, unsigned int sort_mode);
 
 /**
  * Free a revwalk previously allocated.

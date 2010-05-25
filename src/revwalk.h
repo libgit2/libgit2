@@ -4,11 +4,6 @@
 #include "git/common.h"
 #include "git/revwalk.h"
 
-#define GIT_REVPOOL_SORT_NONE (0)
-#define GIT_REVPOOL_SORT_TOPO (1 << 0)
-#define GIT_REVPOOL_SORT_TIME (1 << 1)
-#define GIT_REVPOOL_SORT_REVERSE (1 << 2)
-
 struct git_revpool {
 	git_odb *db;
 
@@ -21,5 +16,8 @@ struct git_revpool {
     unsigned walking:1;
     unsigned char sorting;
 };
+
+void gitrp__prepare_walk(git_revpool *pool);
+void gitrp__enroot(git_revpool *pool, git_commit *commit);
 
 #endif /* INCLUDE_revwalk_h__ */

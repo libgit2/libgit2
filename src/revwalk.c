@@ -53,9 +53,18 @@ void gitrp_free(git_revpool *walk)
 	free(walk);
 }
 
+void gitrp_sorting(git_revpool *pool, unsigned int sort_mode)
+{
+    if (pool->walking)
+        return;
+
+    pool->sorting = sort_mode;
+    gitrp_reset(pool);
+}
+
 void gitrp_push(git_revpool *pool, git_commit *commit)
 {
-    if (commit->object.pool != pool)
+    if (commit->object.pool != pool || pool->walking)
         return;
 
     if (commit->seen)
@@ -78,6 +87,9 @@ void gitrp_push(git_revpool *pool, git_commit *commit)
 
 void gitrp_hide(git_revpool *pool, git_commit *commit)
 {
+    if (pool->walking)
+        return;
+
     git_commit__mark_uninteresting(commit);
     gitrp_push(pool, commit);
 }
@@ -103,20 +115,20 @@ void gitrp__enroot(git_revpool *pool, git_commit *commit)
     git_commit_list_push_back(&pool->iterator, commit);
 }
 
-void gitrp_prepare_walk(git_revpool *pool)
+void gitrp__prepare_walk(git_revpool *pool)
 {
     git_commit_node *it;
 
     for (it = pool->roots.head; it != NULL; it = it->next)
         gitrp__enroot(pool, it->commit);
 
-    if (pool->sorting & GIT_REVPOOL_SORT_TIME)
+    if (pool->sorting & GIT_RPSORT_TIME)
         git_commit_list_timesort(&pool->iterator);
 
-    if (pool->sorting & GIT_REVPOOL_SORT_TOPO)
+    if (pool->sorting & GIT_RPSORT_TOPOLOGICAL)
         git_commit_list_toposort(&pool->iterator);
 
-    if (pool->sorting & GIT_REVPOOL_SORT_REVERSE)
+    if (pool->sorting & GIT_RPSORT_REVERSE)
         pool->next_commit = &git_commit_list_pop_back;
     else
         pool->next_commit = &git_commit_list_pop_front;
@@ -129,7 +141,7 @@ git_commit *gitrp_next(git_revpool *pool)
     git_commit *next;
 
     if (!pool->walking)
-        gitrp_prepare_walk(pool);
+        gitrp__prepare_walk(pool);
 
     while ((next = pool->next_commit(&pool->iterator)) != NULL)
     {
