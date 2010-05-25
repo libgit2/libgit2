@@ -132,11 +132,18 @@ int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer
     if (memcmp(buffer, "committer ", 10) != 0)
         return -1;
 
-    buffer = memchr(buffer, '\n', buffer_end - buffer);
+    buffer = memchr(buffer, '>', buffer_end - buffer);
     if (buffer == 0 || ++buffer >= buffer_end)
         return -1;
 
     *commit_time = strtol(buffer, &buffer, 10);
+
+    if (*commit_time == 0)
+        return -1;
+
+    buffer = memchr(buffer, '\n', buffer_end - buffer);
+    if (buffer == 0 || ++buffer >= buffer_end)
+        return -1;
 
     return (buffer < buffer_end) ? 0 : -1;
 }

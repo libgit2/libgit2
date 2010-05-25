@@ -64,10 +64,10 @@ void gitrp_sorting(git_revpool *pool, unsigned int sort_mode)
 
 void gitrp_push(git_revpool *pool, git_commit *commit)
 {
-    if (commit->object.pool != pool || pool->walking)
+    if (commit == NULL || commit->seen)
         return;
 
-    if (commit->seen)
+    if (commit->object.pool != pool || pool->walking)
         return;
 
     if (!commit->parsed)
