@@ -30,6 +30,12 @@
 #include "revwalk.h"
 #include "git/odb.h"
 
+#define COMMIT_PRINT(commit) {\
+    char oid[41]; oid[40] = 0;\
+    git_oid_fmt(oid, &commit->object.id);\
+    printf("Oid: %s | In degree: %d | Time: %u\n", oid, commit->in_degree, commit->commit_time);\
+}
+
 const git_oid *git_commit_id(git_commit *c)
 {
 	return &c->object.id;
@@ -256,7 +262,7 @@ void git_commit_list_push_front(git_commit_list *list, git_commit *commit)
     }
     else
     {
-        list->head->next = node;
+        list->head->prev = node;
         list->head = node;
     }
 
@@ -386,7 +392,7 @@ void git_commit_list_toposort(git_commit_list *list)
     git_commit_list topo;
     memset(&topo, 0x0, sizeof(git_commit_list));
 
-    while ((commit = git_commit_list_pop_front(list)) != NULL)
+    while ((commit = git_commit_list_pop_back(list)) != NULL)
     {
         git_commit_node *p;
 
@@ -403,11 +409,11 @@ void git_commit_list_toposort(git_commit_list *list)
             if (p->commit->in_degree == 0 && p->commit->topo_delay)
             {
                 p->commit->topo_delay = 0;
-                git_commit_list_push_front(list, p->commit);
+                git_commit_list_push_back(list, p->commit);
             }
         }
 
-        git_commit_list_push_back(&topo, commit);
+        git_commit_list_push_front(&topo, commit);
     }
 
     list->head = topo.head;
