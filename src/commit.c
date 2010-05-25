@@ -374,6 +374,7 @@ void git_commit_list_timesort(git_commit_list *list)
                 else
                     list->head = e;
 
+                e->prev = list->tail;
                 list->tail = e;
             }
 
@@ -413,7 +414,7 @@ void git_commit_list_toposort(git_commit_list *list)
             }
         }
 
-        git_commit_list_push_front(&topo, commit);
+        git_commit_list_push_back(&topo, commit);
     }
 
     list->head = topo.head;
