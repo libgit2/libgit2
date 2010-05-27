@@ -35,9 +35,9 @@ git_revpool *gitrp_alloc(git_odb *db)
 	if (!walk)
 		return NULL;
 
-    memset(walk, 0x0, sizeof(git_revpool));
+	memset(walk, 0x0, sizeof(git_revpool));
 
-    walk->commits = git_revpool_table_create(default_table_size);
+	walk->commits = git_revpool_table_create(default_table_size);
 
 	walk->db = db;
 	return walk;
@@ -45,130 +45,126 @@ git_revpool *gitrp_alloc(git_odb *db)
 
 void gitrp_free(git_revpool *walk)
 {
-    git_commit_list_clear(&(walk->iterator), 0);
-    git_commit_list_clear(&(walk->roots), 0);
+	git_commit_list_clear(&(walk->iterator), 0);
+	git_commit_list_clear(&(walk->roots), 0);
 
-    git_revpool_table_free(walk->commits);
+	git_revpool_table_free(walk->commits);
 
 	free(walk);
 }
 
 void gitrp_sorting(git_revpool *pool, unsigned int sort_mode)
 {
-    if (pool->walking)
-        return;
+	if (pool->walking)
+		return;
 
-    pool->sorting = sort_mode;
-    gitrp_reset(pool);
+	pool->sorting = sort_mode;
+	gitrp_reset(pool);
 }
 
 void gitrp_push(git_revpool *pool, git_commit *commit)
 {
-    if (commit == NULL || commit->seen)
-        return;
+	if (commit == NULL || commit->seen)
+		return;
 
-    if (commit->object.pool != pool || pool->walking)
-        return;
+	if (commit->object.pool != pool || pool->walking)
+		return;
 
-    if (!commit->parsed)
-    {
-        if (git_commit_parse_existing(commit) < 0)
-            return;
-    }
+	if (!commit->parsed) {
+		if (git_commit_parse_existing(commit) < 0)
+			return;
+	}
 
-    // Sanity check: make sure that if the commit
-    // has been manually marked as uninteresting,
-    // all the parent commits are too.
-    if (commit->uninteresting)
-        git_commit__mark_uninteresting(commit);
+	// Sanity check: make sure that if the commit
+	// has been manually marked as uninteresting,
+	// all the parent commits are too.
+	if (commit->uninteresting)
+		git_commit__mark_uninteresting(commit);
 
-    git_commit_list_push_back(&pool->roots, commit);
+	git_commit_list_push_back(&pool->roots, commit);
 }
 
 void gitrp_hide(git_revpool *pool, git_commit *commit)
 {
-    if (pool->walking)
-        return;
+	if (pool->walking)
+		return;
 
-    git_commit__mark_uninteresting(commit);
-    gitrp_push(pool, commit);
+	git_commit__mark_uninteresting(commit);
+	gitrp_push(pool, commit);
 }
 
 void gitrp__enroot(git_revpool *pool, git_commit *commit)
 {
-    git_commit_node *parents;
+	git_commit_node *parents;
 
-    if (commit->seen)
-        return;
+	if (commit->seen)
+		return;
 
-    if (commit->parsed == 0)
-        git_commit_parse_existing(commit);
+	if (commit->parsed == 0)
+		git_commit_parse_existing(commit);
 
-    commit->seen = 1;
+	commit->seen = 1;
 
-    for (parents = commit->parents.head; parents != NULL; parents = parents->next)
-    {
-        parents->commit->in_degree++;
-        gitrp__enroot(pool, parents->commit);
-    }
+	for (parents = commit->parents.head; parents != NULL; parents = parents->next) {
+		parents->commit->in_degree++;
+		gitrp__enroot(pool, parents->commit);
+	}
 
-    git_commit_list_push_back(&pool->iterator, commit);
+	git_commit_list_push_back(&pool->iterator, commit);
 }
 
 void gitrp__prepare_walk(git_revpool *pool)
 {
-    git_commit_node *it;
+	git_commit_node *it;
 
-    for (it = pool->roots.head; it != NULL; it = it->next)
-        gitrp__enroot(pool, it->commit);
+	for (it = pool->roots.head; it != NULL; it = it->next)
+		gitrp__enroot(pool, it->commit);
 
-    if (pool->sorting & GIT_RPSORT_TIME)
-        git_commit_list_timesort(&pool->iterator);
+	if (pool->sorting & GIT_RPSORT_TIME)
+		git_commit_list_timesort(&pool->iterator);
 
-    if (pool->sorting & GIT_RPSORT_TOPOLOGICAL)
-        git_commit_list_toposort(&pool->iterator);
+	if (pool->sorting & GIT_RPSORT_TOPOLOGICAL)
+		git_commit_list_toposort(&pool->iterator);
 
-    if (pool->sorting & GIT_RPSORT_REVERSE)
-        pool->next_commit = &git_commit_list_pop_back;
-    else
-        pool->next_commit = &git_commit_list_pop_front;
+	if (pool->sorting & GIT_RPSORT_REVERSE)
+		pool->next_commit = &git_commit_list_pop_back;
+	else
+		pool->next_commit = &git_commit_list_pop_front;
 
-    pool->walking = 1;
+	pool->walking = 1;
 }
 
 git_commit *gitrp_next(git_revpool *pool)
 {
-    git_commit *next;
+	git_commit *next;
 
-    if (!pool->walking)
-        gitrp__prepare_walk(pool);
+	if (!pool->walking)
+		gitrp__prepare_walk(pool);
 
-    while ((next = pool->next_commit(&pool->iterator)) != NULL)
-    {
-        if (!next->uninteresting)
-            return next;
-    }
+	while ((next = pool->next_commit(&pool->iterator)) != NULL) {
+		if (!next->uninteresting)
+			return next;
+	}
 
-    // No commits left to iterate
-    gitrp_reset(pool);
-    return NULL;
+	// No commits left to iterate
+	gitrp_reset(pool);
+	return NULL;
 }
 
 void gitrp_reset(git_revpool *pool)
 {
-    git_commit *commit;
-    git_revpool_tableit it;
+	git_commit *commit;
+	git_revpool_tableit it;
 
-    git_revpool_tableit_init(pool->commits, &it);
+	git_revpool_tableit_init(pool->commits, &it);
 
-    while ((commit = (git_commit *)git_revpool_tableit_next(&it)) != NULL)
-    {
-        commit->seen = 0;
-        commit->topo_delay = 0;
-        commit->in_degree = 0;
-    }
+	while ((commit = (git_commit *)git_revpool_tableit_next(&it)) != NULL) {
+		commit->seen = 0;
+		commit->topo_delay = 0;
+		commit->in_degree = 0;
+	}
 
-    git_commit_list_clear(&pool->iterator, 0);
-    pool->walking = 0;
+	git_commit_list_clear(&pool->iterator, 0);
+	pool->walking = 0;
 }
 

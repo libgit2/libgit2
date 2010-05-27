@@ -4,34 +4,30 @@
 #include "git/common.h"
 #include "git/oid.h"
 
-struct git_revpool_object
-{
-    git_oid id;
-    git_revpool *pool;
+struct git_revpool_object {
+	git_oid id;
+	git_revpool *pool;
 };
 
-struct git_revpool_node
-{
-    struct git_revpool_object *object;
-    unsigned int hash;
-    struct git_revpool_node *next;
+struct git_revpool_node {
+	struct git_revpool_object *object;
+	unsigned int hash;
+	struct git_revpool_node *next;
 };
 
-struct git_revpool_table
-{
-    struct git_revpool_node **nodes;
+struct git_revpool_table {
+	struct git_revpool_node **nodes;
 
-    unsigned int size_mask;
-    unsigned int count;
-    unsigned int max_count;
+	unsigned int size_mask;
+	unsigned int count;
+	unsigned int max_count;
 };
 
-struct git_revpool_tableit
-{
-    struct git_revpool_node **nodes;
-    struct git_revpool_node *current_node;
-    unsigned int current_pos;
-    unsigned int size;
+struct git_revpool_tableit {
+	struct git_revpool_node **nodes;
+	struct git_revpool_node *current_node;
+	unsigned int current_pos;
+	unsigned int size;
 };
 
 
@@ -49,6 +45,5 @@ void git_revpool_table_free(git_revpool_table *table);
 
 git_revpool_object *git_revpool_tableit_next(git_revpool_tableit *it);
 void git_revpool_tableit_init(git_revpool_table *table, git_revpool_tableit *it);
-
 
 #endif
