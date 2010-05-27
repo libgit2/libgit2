@@ -67,14 +67,14 @@ GIT_EXTERN(void) gitrp_reset(git_revpool *pool);
  * @param pool the pool being used for the traversal.
  * @param commit the commit to start from.
  */
-GIT_EXTERN(void) gitrp_push(git_revpool *pool, git_commit *commit);
+GIT_EXTERN(int) gitrp_push(git_revpool *pool, git_commit *commit);
 
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
  * @param pool the pool being used for the traversal.
  * @param commit the commit that will be ignored during the traversal
  */
-GIT_EXTERN(void) gitrp_hide(git_revpool *pool, git_commit *commit);
+GIT_EXTERN(int) gitrp_hide(git_revpool *pool, git_commit *commit);
 
 /**
  * Get the next commit from the revision traversal.

@@ -18,6 +18,6 @@ struct git_revpool {
 };
 
 void gitrp__prepare_walk(git_revpool *pool);
-void gitrp__enroot(git_revpool *pool, git_commit *commit);
+int gitrp__enroot(git_revpool *pool, git_commit *commit);
 
 #endif /* INCLUDE_revwalk_h__ */

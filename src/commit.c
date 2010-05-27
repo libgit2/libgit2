@@ -81,7 +81,7 @@ int git_commit_parse_existing(git_commit *commit)
 		return 0;
 
 	if (git_odb_read(&commit_obj, commit->object.pool->db, &commit->object.id) < 0)
-		return -1;
+		return GIT_ENOTFOUND;
 
 	if (commit_obj.type != GIT_OBJ_COMMIT)
 		goto error_cleanup;
@@ -128,27 +128,27 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer_end)
 {
 	if (memcmp(buffer, "author ", 7) != 0)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	buffer = memchr(buffer, '\n', buffer_end - buffer);
 	if (buffer == 0 || ++buffer >= buffer_end)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	if (memcmp(buffer, "committer ", 10) != 0)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	buffer = memchr(buffer, '>', buffer_end - buffer);
 	if (buffer == 0 || ++buffer >= buffer_end)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	*commit_time = strtol(buffer, &buffer, 10);
 
 	if (*commit_time == 0)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	buffer = memchr(buffer, '\n', buffer_end - buffer);
 	if (buffer == 0 || ++buffer >= buffer_end)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	return (buffer < buffer_end) ? 0 : -1;
 }
@@ -161,16 +161,16 @@ int git_commit__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_en
 	char *buffer = *buffer_out;
 
 	if (buffer + (header_len + sha_len + 1) > buffer_end)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	if (memcmp(buffer, header, header_len) != 0)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	if (buffer[header_len + sha_len] != '\n')
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	if (git_oid_mkstr(oid, buffer + header_len) < 0)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	*buffer_out = buffer + (header_len + sha_len + 1);
 
@@ -188,7 +188,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 		return 0;
 
 	if (git_commit__parse_oid(&oid, &buffer, buffer_end, "tree ") < 0)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	/*
 	 * TODO: load tree into commit object
@@ -199,7 +199,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 		git_commit *parent;
 
 		if ((parent = git_commit_lookup(commit->object.pool, &oid)) == NULL)
-			return -1;
+			return GIT_ENOTFOUND;
 
 		// Inherit uninteresting flag
 		if (commit->uninteresting)
@@ -209,21 +209,21 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 	}
 
 	if (git_commit__parse_time(&commit->commit_time, buffer, buffer_end) < 0)
-		return -1;
+		return GIT_EOBJCORRUPTED;
 
 	commit->parsed = 1;
 
 	return 0;
 }
 
-void git_commit_list_push_back(git_commit_list *list, git_commit *commit)
+int git_commit_list_push_back(git_commit_list *list, git_commit *commit)
 {
 	git_commit_node *node = NULL;
 
 	node = git__malloc(sizeof(git_commit_list));
 
 	if (node == NULL)
-		return;
+		return GIT_ENOMEM;
 
 	node->commit = commit;
 	node->next = NULL;
@@ -237,16 +237,17 @@ void git_commit_list_push_back(git_commit_list *list, git_commit *commit)
 	}
 
 	list->size++;
+	return 0;
 }
 
-void git_commit_list_push_front(git_commit_list *list, git_commit *commit)
+int git_commit_list_push_front(git_commit_list *list, git_commit *commit)
 {
 	git_commit_node *node = NULL;
 
 	node = git__malloc(sizeof(git_commit_list));
 
 	if (node == NULL)
-		return;
+		return GIT_ENOMEM;
 
 	node->commit = commit;
 	node->next = list->head;
@@ -260,6 +261,7 @@ void git_commit_list_push_front(git_commit_list *list, git_commit *commit)
 	}
 
 	list->size++;
+	return 0;
 }
 
 

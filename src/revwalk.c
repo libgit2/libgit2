@@ -62,17 +62,17 @@ void gitrp_sorting(git_revpool *pool, unsigned int sort_mode)
 	gitrp_reset(pool);
 }
 
-void gitrp_push(git_revpool *pool, git_commit *commit)
+int gitrp_push(git_revpool *pool, git_commit *commit)
 {
 	if (commit == NULL || commit->seen)
-		return;
+		return GIT_ENOTFOUND;
 
 	if (commit->object.pool != pool || pool->walking)
-		return;
+		return GIT_ERROR;
 
 	if (!commit->parsed) {
 		if (git_commit_parse_existing(commit) < 0)
-			return;
+			return GIT_EOBJCORRUPTED;
 	}
 
 	// Sanity check: make sure that if the commit
@@ -81,36 +81,48 @@ void gitrp_push(git_revpool *pool, git_commit *commit)
 	if (commit->uninteresting)
 		git_commit__mark_uninteresting(commit);
 
-	git_commit_list_push_back(&pool->roots, commit);
+	if (git_commit_list_push_back(&pool->roots, commit) < 0)
+		return GIT_ENOMEM;
+
+	return 0;
 }
 
-void gitrp_hide(git_revpool *pool, git_commit *commit)
+int gitrp_hide(git_revpool *pool, git_commit *commit)
 {
 	if (pool->walking)
-		return;
+		return GIT_ERROR;
 
 	git_commit__mark_uninteresting(commit);
-	gitrp_push(pool, commit);
+	return gitrp_push(pool, commit);
 }
 
-void gitrp__enroot(git_revpool *pool, git_commit *commit)
+int gitrp__enroot(git_revpool *pool, git_commit *commit)
 {
+	int error;
 	git_commit_node *parents;
 
 	if (commit->seen)
-		return;
+		return 0;
 
-	if (commit->parsed == 0)
-		git_commit_parse_existing(commit);
+	if (commit->parsed == 0) {
+		if (git_commit_parse_existing(commit))
+			return GIT_EOBJCORRUPTED;
+	}
 
 	commit->seen = 1;
 
 	for (parents = commit->parents.head; parents != NULL; parents = parents->next) {
 		parents->commit->in_degree++;
-		gitrp__enroot(pool, parents->commit);
+
+		error = gitrp__enroot(pool, parents->commit);
+		if (error < 0)
+			return error;
 	}
 
-	git_commit_list_push_back(&pool->iterator, commit);
+	if (git_commit_list_push_back(&pool->iterator, commit))
+		return GIT_ENOMEM;
+
+	return 0;
 }
 
 void gitrp__prepare_walk(git_revpool *pool)

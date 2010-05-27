@@ -77,6 +77,12 @@
 /** Consult the OS error information. */
 #define GIT_EOSERR (GIT_ERROR - 4)
 
+/** The specified object is of invalid type */
+#define GIT_EOBJTYPE (GIT_ERROR - 5)
+
+/** The specified object has its data corrupted */
+#define GIT_EOBJCORRUPTED (GIT_ERROR - 6)
+
 GIT_BEGIN_DECL
 
 /** A revision traversal pool. */
