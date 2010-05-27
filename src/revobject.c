@@ -30,27 +30,7 @@ const float max_load_factor = 0.65;
 
 unsigned int git_revpool_table__hash(const git_oid *id)
 {
-	const unsigned int m = 0x5bd1e995;
-	const int r = 24;
-
-	unsigned int h = 0xA8A3D5;
-	int i;
-
-	for (i = 0; i < GIT_OID_RAWSZ / 4; ++i) {
-		unsigned int k = ((unsigned int *)id->id)[i];
-
-		k *= m;
-		k ^= k >> r;
-		k *= m;
-		h *= m;
-		h ^= k;
-	}
-
-	h ^= h >> 13;
-	h *= m;
-	h ^= h >> 15;
-
-	return h;
+	return *((unsigned int *)id->id);
 }
 
 git_revpool_table *git_revpool_table_create(unsigned int min_size)
