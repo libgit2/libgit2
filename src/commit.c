@@ -75,27 +75,27 @@ error_cleanup:
 
 int git_commit_parse_existing(git_commit *commit)
 {
+	int error = 0;
 	git_obj commit_obj;
 
 	if (commit->parsed)
 		return 0;
 
-	if (git_odb_read(&commit_obj, commit->object.pool->db, &commit->object.id) < 0)
-		return GIT_ENOTFOUND;
+	error = git_odb_read(&commit_obj, commit->object.pool->db, &commit->object.id);
+	if (error < 0)
+		return error;
 
 	if (commit_obj.type != GIT_OBJ_COMMIT)
-		goto error_cleanup;
+	{
+		error = GIT_EOBJTYPE;
+		goto cleanup;
+	}
 
-	if (git_commit__parse_buffer(commit, commit_obj.data, commit_obj.len) < 0)
-		goto error_cleanup;
+	error = git_commit__parse_buffer(commit, commit_obj.data, commit_obj.len);
 
+cleanup:
 	git_obj_close(&commit_obj);
-
-	return 0;
-
-error_cleanup:
-	git_obj_close(&commit_obj);
-	return -1;
+	return error;
 }
 
 git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
@@ -205,7 +205,8 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 		if (commit->uninteresting)
 			parent->uninteresting = 1;
 
-		git_commit_list_push_back(&commit->parents, parent);
+		if (git_commit_list_push_back(&commit->parents, parent))
+			return GIT_ENOMEM;
 	}
 
 	if (git_commit__parse_time(&commit->commit_time, buffer, buffer_end) < 0)

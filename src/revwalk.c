@@ -71,8 +71,9 @@ int gitrp_push(git_revpool *pool, git_commit *commit)
 		return GIT_ERROR;
 
 	if (!commit->parsed) {
-		if (git_commit_parse_existing(commit) < 0)
-			return GIT_EOBJCORRUPTED;
+		int error = git_commit_parse_existing(commit);
+		if (error < 0)
+			return error;
 	}
 
 	// Sanity check: make sure that if the commit
@@ -105,8 +106,9 @@ int gitrp__enroot(git_revpool *pool, git_commit *commit)
 		return 0;
 
 	if (commit->parsed == 0) {
-		if (git_commit_parse_existing(commit))
-			return GIT_EOBJCORRUPTED;
+		error = git_commit_parse_existing(commit);
+		if (error < 0)
+			return error;
 	}
 
 	commit->seen = 1;

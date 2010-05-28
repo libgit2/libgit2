@@ -74,14 +74,14 @@ int git_revpool_table_insert(git_revpool_table *table, git_revpool_object *objec
 	unsigned int index, hash;
 
 	if (table == NULL)
-		return -1;
+		return GIT_ERROR;
 
 	if (table->count + 1 > table->max_count)
 		git_revpool_table_resize(table);
 
 	node = git__malloc(sizeof(git_revpool_node));
 	if (node == NULL)
-		return -1;
+		return GIT_ENOMEM;
 
 	hash = git_revpool_table__hash(&object->id);
 	index = (hash & table->size_mask);
