@@ -30,7 +30,9 @@ static const double max_load_factor = 0.65;
 
 static unsigned int git_revpool_table__hash(const git_oid *id)
 {
-	return *((unsigned int *)id->id);
+	unsigned int r;
+	memcpy(&r, id->id, sizeof(r));
+	return r;
 }
 
 git_revpool_table *git_revpool_table_create(unsigned int min_size)
