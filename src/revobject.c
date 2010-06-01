@@ -26,7 +26,7 @@
 #include "common.h"
 #include "revobject.h"
 
-const float max_load_factor = 0.65;
+const double max_load_factor = 0.65;
 
 unsigned int git_revpool_table__hash(const git_oid *id)
 {
@@ -53,7 +53,7 @@ git_revpool_table *git_revpool_table_create(unsigned int min_size)
 
 	table->size_mask = min_size;
 	table->count = 0;
-	table->max_count = (min_size + 1) * max_load_factor;
+	table->max_count = (unsigned int)((min_size + 1) * max_load_factor);
 
 	table->nodes = git__malloc((min_size + 1) * sizeof(git_revpool_node *));
 
@@ -146,7 +146,7 @@ void git_revpool_table_resize(git_revpool_table *table)
 	free(table->nodes);
 	table->nodes = new_nodes;
 	table->size_mask = (new_size - 1);
-	table->max_count = new_size * max_load_factor;
+	table->max_count = (unsigned int)(new_size * max_load_factor);
 }
 
 
