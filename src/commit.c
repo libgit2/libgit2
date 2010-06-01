@@ -43,10 +43,12 @@ const git_oid *git_commit_id(git_commit *c)
 
 void git_commit__mark_uninteresting(git_commit *commit)
 {
+	git_commit_node *parents;
+
 	if (commit == NULL)
 		return;
 
-	git_commit_node *parents = commit->parents.head;
+	parents = commit->parents.head;
 
 	commit->uninteresting = 1;
 
