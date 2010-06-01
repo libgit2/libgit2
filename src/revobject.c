@@ -26,9 +26,9 @@
 #include "common.h"
 #include "revobject.h"
 
-const double max_load_factor = 0.65;
+static const double max_load_factor = 0.65;
 
-unsigned int git_revpool_table__hash(const git_oid *id)
+static unsigned int git_revpool_table__hash(const git_oid *id)
 {
 	return *((unsigned int *)id->id);
 }
