@@ -115,7 +115,7 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 
 	memset(commit, 0x0, sizeof(git_commit));
 
-	// Initialize parent object
+	/* Initialize parent object */
 	git_oid_cpy(&commit->object.id, id);
 	commit->object.pool = pool;
 
@@ -200,7 +200,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 		if ((parent = git_commit_lookup(commit->object.pool, &oid)) == NULL)
 			return GIT_ENOTFOUND;
 
-		// Inherit uninteresting flag
+		/* Inherit uninteresting flag */
 		if (commit->uninteresting)
 			parent->uninteresting = 1;
 

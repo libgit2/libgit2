@@ -7,13 +7,13 @@
 
 static char *test_commits_broken[] = {
 
-    // empty commit
+    /* empty commit */
 "",
 
-    // random garbage
+    /* random garbage */
 "asd97sa9du902e9a0jdsuusad09as9du098709aweu8987sd\n",
 
-    // broken endlines 1
+    /* broken endlines 1 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\r\n\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\r\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\r\n\
@@ -21,7 +21,7 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\r\n\
 \r\n\
 a test commit with broken endlines\r\n",
 
-    // broken endlines 2
+    /* broken endlines 2 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\
@@ -29,7 +29,7 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\
 \
 another test commit with broken endlines",
 
-    // starting endlines
+    /* starting endlines */
 "\ntree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
@@ -37,24 +37,26 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 a test commit with a starting endline\n",
 
-    // corrupted commit 1
+    /* corrupted commit 1 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent 05452d6349abcd67aa396df",
 
-    // corrupted commit 2
+    /* corrupted commit 2 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent ",
 
-    // corrupted commit 3
+    /* corrupted commit 3 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent ",
 
-    // corrupted commit 4
+    /* corrupted commit 4 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 par",
 
-    // FIXME: duplicated parents?
-    // It this supposed to pass?
+    /*
+     * FIXME: duplicated parents?
+     * It this supposed to pass?
+     */
 /*
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n\
@@ -68,20 +70,20 @@ duplicated parent",
 
 
 static char *test_commits_working[] = {
-    // simple commit with no message
+    /* simple commit with no message */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n",
 
-    // simple commit, no parent
+    /* simple commit, no parent */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 a simple commit which works\n",
 
-    // simple commit, 1 parents
+    /* simple commit, 1 parents */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\

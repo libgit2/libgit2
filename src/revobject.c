@@ -45,7 +45,7 @@ git_revpool_table *git_revpool_table_create(unsigned int min_size)
 	if (table == NULL)
 		return NULL;
 
-	// round up size to closest power of 2
+	/* round up size to closest power of 2 */
 	min_size--;
 	min_size |= min_size >> 1;
 	min_size |= min_size >> 2;

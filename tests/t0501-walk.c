@@ -21,12 +21,12 @@ static const char *odb_dir = "../t0501-objects";
 static const char *commit_head = "a4a7dce85cf63874e984719f4fdd239f5145052f";
 
 static const char *commit_ids[] = {
-    "a4a7dce85cf63874e984719f4fdd239f5145052f", // 0
-    "9fd738e8f7967c078dceed8190330fc8648ee56a", // 1
-    "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", // 2
-    "c47800c7266a2be04c571c04d5a6614691ea99bd", // 3
-    "8496071c1b46c854b31185ea97743be6a8774479", // 4
-    "5b5b025afb0b4c913b4c338a42934a3863bf3644", // 5
+    "a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
+    "9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
+    "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", /* 2 */
+    "c47800c7266a2be04c571c04d5a6614691ea99bd", /* 3 */
+    "8496071c1b46c854b31185ea97743be6a8774479", /* 4 */
+    "5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
 };
 
 static const int commit_sorting_topo[] = {0, 1, 2, 3, 5, 4};

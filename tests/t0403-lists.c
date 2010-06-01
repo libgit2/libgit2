@@ -24,7 +24,7 @@ BEGIN_TEST(list_timesort_test)
     for (t = 0; t < 20; ++t) {
         const int test_size = rand() % 500 + 500;
 
-        // Purely random sorting test
+        /* Purely random sorting test */
         for (i = 0; i < test_size; ++i) {
             git_commit *c = git__malloc(sizeof(git_commit));
             c->commit_time = (time_t)rand();
@@ -37,7 +37,7 @@ BEGIN_TEST(list_timesort_test)
         git_commit_list_clear(&list, 1);
     }
 
-    // Try to sort list with all dates equal.
+    /* Try to sort list with all dates equal. */
     for (i = 0; i < 200; ++i) {
         git_commit *c = git__malloc(sizeof(git_commit));
         c->commit_time = 0;
@@ -49,7 +49,7 @@ BEGIN_TEST(list_timesort_test)
     TEST_SORTED();
     git_commit_list_clear(&list, 1);
 
-    // Try to sort empty list
+    /* Try to sort empty list */
     git_commit_list_timesort(&list);
     TEST_SORTED();
 

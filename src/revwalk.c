@@ -76,9 +76,11 @@ int gitrp_push(git_revpool *pool, git_commit *commit)
 			return error;
 	}
 
-	// Sanity check: make sure that if the commit
-	// has been manually marked as uninteresting,
-	// all the parent commits are too.
+	/*
+	 * Sanity check: make sure that if the commit
+	 * has been manually marked as uninteresting,
+	 * all the parent commits are too.
+	 */
 	if (commit->uninteresting)
 		git_commit__mark_uninteresting(commit);
 
@@ -160,7 +162,7 @@ git_commit *gitrp_next(git_revpool *pool)
 			return next;
 	}
 
-	// No commits left to iterate
+	/* No commits left to iterate */
 	gitrp_reset(pool);
 	return NULL;
 }
