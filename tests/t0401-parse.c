@@ -94,7 +94,7 @@ BEGIN_TEST(parse_oid_test)
 
     git_oid oid;
 
-#define TEST_OID_PASS(string, header){ \
+#define TEST_OID_PASS(string, header) { \
     char *ptr = string;\
     char *ptr_original = ptr;\
     size_t len = strlen(ptr);\
@@ -102,7 +102,7 @@ BEGIN_TEST(parse_oid_test)
     must_be_true(ptr == ptr_original + len);\
 }
 
-#define TEST_OID_FAIL(string, header){ \
+#define TEST_OID_FAIL(string, header) { \
     char *ptr = string;\
     size_t len = strlen(ptr);\
     must_fail(git_commit__parse_oid(&oid, &ptr, ptr + len, header));\

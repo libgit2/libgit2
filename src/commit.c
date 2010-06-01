@@ -85,8 +85,7 @@ int git_commit_parse_existing(git_commit *commit)
 	if (error < 0)
 		return error;
 
-	if (commit_obj.type != GIT_OBJ_COMMIT)
-	{
+	if (commit_obj.type != GIT_OBJ_COMMIT) {
 		error = GIT_EOBJTYPE;
 		goto cleanup;
 	}
