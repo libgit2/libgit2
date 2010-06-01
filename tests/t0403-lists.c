@@ -20,7 +20,7 @@ BEGIN_TEST(list_timesort_test)
     }
 
     memset(&list, 0x0, sizeof(git_commit_list));
-    srand(time(NULL));
+    srand((unsigned int)time(NULL));
 
     for (t = 0; t < 20; ++t)
     {
