@@ -36,7 +36,7 @@ unsigned int git_revpool_table__hash(const git_oid *id)
 git_revpool_table *git_revpool_table_create(unsigned int min_size)
 {
 	git_revpool_table *table;
-	int i;
+	unsigned int i;
 
 	table = git__malloc(sizeof(*table));
 
@@ -152,7 +152,7 @@ void git_revpool_table_resize(git_revpool_table *table)
 
 void git_revpool_table_free(git_revpool_table *table)
 {
-	int index;
+	unsigned int index;
 
 	for (index = 0; index <= table->size_mask; ++index) {
 		git_revpool_node *node, *next_node;
