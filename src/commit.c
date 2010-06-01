@@ -23,8 +23,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include <time.h>
-
 #include "common.h"
 #include "commit.h"
 #include "revwalk.h"
