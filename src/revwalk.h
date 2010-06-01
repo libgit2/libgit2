@@ -14,7 +14,7 @@ struct git_revpool {
 	git_revpool_table *commits;
 
 	unsigned walking:1;
-	unsigned char sorting;
+	unsigned int sorting;
 };
 
 void gitrp__prepare_walk(git_revpool *pool);
