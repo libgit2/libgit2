@@ -38,7 +38,7 @@ git_revpool_table *git_revpool_table_create(unsigned int min_size)
 	git_revpool_table *table;
 	int i;
 
-	table = git__malloc(sizeof(table));
+	table = git__malloc(sizeof(*table));
 
 	if (table == NULL)
 		return NULL;
