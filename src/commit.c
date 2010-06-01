@@ -133,14 +133,14 @@ int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer
 		return GIT_EOBJCORRUPTED;
 
 	buffer = memchr(buffer, '\n', buffer_end - buffer);
-	if (buffer == 0 || ++buffer >= buffer_end)
+	if (!buffer || ++buffer >= buffer_end)
 		return GIT_EOBJCORRUPTED;
 
 	if (memcmp(buffer, "committer ", 10) != 0)
 		return GIT_EOBJCORRUPTED;
 
 	buffer = memchr(buffer, '>', buffer_end - buffer);
-	if (buffer == 0 || ++buffer >= buffer_end)
+	if (!buffer || ++buffer >= buffer_end)
 		return GIT_EOBJCORRUPTED;
 
 	*commit_time = strtol(buffer, &buffer, 10);
@@ -149,7 +149,7 @@ int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer
 		return GIT_EOBJCORRUPTED;
 
 	buffer = memchr(buffer, '\n', buffer_end - buffer);
-	if (buffer == 0 || ++buffer >= buffer_end)
+	if (!buffer || ++buffer >= buffer_end)
 		return GIT_EOBJCORRUPTED;
 
 	return (buffer < buffer_end) ? 0 : -1;
