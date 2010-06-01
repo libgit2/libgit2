@@ -86,6 +86,7 @@ GIT_EXTERN(git_commit *) gitrp_next(git_revpool *pool);
 /**
  * Change the sorting mode when iterating through the
  * revision pool's contents.
+ * @param pool the pool being used for the traversal.
  * @param sort_mode combination of GIT_RPSORT_XXX flags
  */
 GIT_EXTERN(void) gitrp_sorting(git_revpool *pool, unsigned int sort_mode);
