@@ -167,6 +167,7 @@ void git_revpool_table_free(git_revpool_table *table)
 		}
 	}
 
+	free(table->nodes);
 	free(table);
 }
 
