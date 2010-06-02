@@ -106,7 +106,9 @@ char *git_oid_to_string(char *out, size_t n, const git_oid *oid)
 
 	if (n > 0) {
 		git_oid_fmt(str, oid);
-		memcpy(out, str, n > GIT_OID_HEXSZ ? GIT_OID_HEXSZ : n);
+		if (n > GIT_OID_HEXSZ)
+			n = GIT_OID_HEXSZ;
+		memcpy(out, str, n);
 	}
 
 	out[n] = '\0';

@@ -251,3 +251,28 @@ BEGIN_TEST(oid_to_string)
 	must_pass(strcmp(exp, out));
 END_TEST
 
+BEGIN_TEST(oid_to_string_big)
+	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
+	git_oid in;
+	char big[GIT_OID_HEXSZ + 1 + 3]; /* note + 4 => big buffer */
+	char *str;
+
+	must_pass(git_oid_mkstr(&in, exp));
+
+	/* place some tail material */
+	big[GIT_OID_HEXSZ+0] = 'W'; /* should be '\0' afterwards */
+	big[GIT_OID_HEXSZ+1] = 'X'; /* should remain untouched   */
+	big[GIT_OID_HEXSZ+2] = 'Y'; /* ditto */
+	big[GIT_OID_HEXSZ+3] = 'Z'; /* ditto */
+
+	/* returns big as hex formatted c-string */
+	str = git_oid_to_string(big, sizeof(big), &in);
+	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ) == '\0');
+	must_pass(strcmp(exp, big));
+
+	/* check tail material is untouched */
+	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ+1) == 'X');
+	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ+2) == 'Y');
+	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ+3) == 'Z');
+END_TEST
+
