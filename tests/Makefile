@@ -28,7 +28,7 @@ CC_OUT=-o # add a space
 ifeq ($(uname_S),Windows)
 	CC = cl -nologo
 	LD = link -nologo
-	CFLAGS = -TC -W3 -RTC1 -Zi -DWIN32 -D_DEBUG -D_LIB
+	CFLAGS = -TC -W4 -RTC1 -Zi -DWIN32 -D_DEBUG -D_LIB
 	LD_OUT=-out:
 	CC_OUT=-Fo
 

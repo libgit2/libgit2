@@ -66,6 +66,8 @@
 #if defined(_MSC_VER)
 /* disable "deprecated function" warnings */
 # pragma warning ( disable : 4996 )
+/* disable "conditional expression is constant" level 4 warnings */
+# pragma warning ( disable : 4127 )
 #endif
 
 #endif /* INCLUDE_compat_h__ */

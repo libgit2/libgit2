@@ -42,7 +42,7 @@ ifeq ($(uname_S),Windows)
 	RANLIB = echo
 	CC = cl -nologo
 	AR = lib -nologo
-	CFLAGS = -TC -W3 -RTC1 -Zi -DWIN32 -D_DEBUG -D_LIB
+	CFLAGS = -TC -W4 -RTC1 -Zi -DWIN32 -D_DEBUG -D_LIB
 	AR_OUT=-out:
 	CC_OUT=-Fo
 	NO_VISIBILITY=YesPlease
