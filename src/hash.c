@@ -25,7 +25,14 @@
 
 #include "common.h"
 #include "hash.h"
-#include "sha1.h"
+
+#if defined(PPC_SHA1)
+# include "ppc/sha1.h"
+#elif defined(OPENSSL_SHA1)
+# include <openssl/sha.h>
+#else
+# include "block-sha1/sha1.h"
+#endif
 
 struct git_hash_ctx {
 	SHA_CTX c;
