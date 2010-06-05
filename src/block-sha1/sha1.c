@@ -221,7 +221,7 @@ static void blk_SHA1_Block(blk_SHA_CTX *ctx, const unsigned int *data)
 	ctx->H[4] += E;
 }
 
-void blk_SHA1_Init(blk_SHA_CTX *ctx)
+void git__blk_SHA1_Init(blk_SHA_CTX *ctx)
 {
 	ctx->size = 0;
 
@@ -233,7 +233,7 @@ void blk_SHA1_Init(blk_SHA_CTX *ctx)
 	ctx->H[4] = 0xc3d2e1f0;
 }
 
-void blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, unsigned long len)
+void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, unsigned long len)
 {
 	unsigned int lenW = ctx->size & 63;
 
@@ -261,7 +261,7 @@ void blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, unsigned long len)
 		memcpy(ctx->W, data, len);
 }
 
-void blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx)
+void git__blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx)
 {
 	static const unsigned char pad[64] = { 0x80 };
 	unsigned int padlen[2];
@@ -272,8 +272,8 @@ void blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx)
 	padlen[1] = htonl((uint32_t)(ctx->size << 3));
 
 	i = ctx->size & 63;
-	blk_SHA1_Update(ctx, pad, 1+ (63 & (55 - i)));
-	blk_SHA1_Update(ctx, padlen, 8);
+	git__blk_SHA1_Update(ctx, pad, 1+ (63 & (55 - i)));
+	git__blk_SHA1_Update(ctx, padlen, 8);
 
 	/* Output hash */
 	for (i = 0; i < 5; i++)
