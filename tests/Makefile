@@ -10,7 +10,7 @@ ifdef MSVC
 	uname_S := Windows
 endif
 
-CFLAGS = -g -O2 -Wall
+CFLAGS = -g -O2 -Wall -Wextra
 LIBS   = -L.. -lgit2 -lz
 OS     = unix
 
