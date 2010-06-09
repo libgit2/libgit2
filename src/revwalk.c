@@ -54,6 +54,7 @@ void gitrp_free(git_revpool *walk)
 	git_revpool_tableit_init(walk->commits, &it);
 
 	while ((commit = (git_commit *)git_revpool_tableit_next(&it)) != NULL) {
+		git_commit_list_clear(&commit->parents, 0);
 		free(commit);
 	}
 

@@ -18,6 +18,9 @@ typedef struct git_commit git_commit;
 
 /**
  * Locate a reference to a commit without loading it.
+ * The generated commit object is owned by the revision
+ * pool and shall not be freed by the user.
+ *
  * @param pool the pool to use when locating the commit.
  * @param id identity of the commit to locate.  If the object is
  *        an annotated tag it will be peeled back to the commit.
@@ -28,6 +31,9 @@ GIT_EXTERN(git_commit *) git_commit_lookup(git_revpool *pool, const git_oid *id)
 /**
  * Locate a reference to a commit, and try to load and parse it it from
  * the commit cache or the object database.
+ * The generated commit object is owned by the revision
+ * pool and shall not be freed by the user.
+ *
  * @param pool the pool to use when parsing/caching the commit.
  * @param id identity of the commit to locate.  If the object is
  *        an annotated tag it will be peeled back to the commit.

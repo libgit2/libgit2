@@ -151,6 +151,8 @@ BEGIN_TEST(parse_buffer_test)
                     test_commits_broken[i],
                     strlen(test_commits_broken[i]))
                 );
+
+		git_commit_list_clear(&commit.parents, 0);
     }
 
     for (i = 0; i < working_commit_count; ++i) {
@@ -163,6 +165,8 @@ BEGIN_TEST(parse_buffer_test)
                     test_commits_working[i],
                     strlen(test_commits_working[i]))
                 );
+
+		git_commit_list_clear(&commit.parents, 0);
     }
 
     gitrp_free(pool);

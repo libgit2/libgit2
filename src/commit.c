@@ -204,7 +204,7 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 		if (commit->uninteresting)
 			parent->uninteresting = 1;
 
-		if (git_commit_list_push_back(&commit->parents, parent))
+		if (git_commit_list_push_back(&commit->parents, parent) < 0)
 			return GIT_ENOMEM;
 	}
 
