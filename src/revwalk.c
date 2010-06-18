@@ -60,6 +60,9 @@ void gitrp_free(git_revpool *walk)
 			git_commit__free((git_commit *)obj);
 			break;
 
+		case GIT_OBJ_TREE:
+			git_tree__free((git_tree *)obj);
+			break;
 
 		default:
 			free(obj);

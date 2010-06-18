@@ -2,6 +2,7 @@
 #define INCLUDE_commit_h__
 
 #include "git/commit.h"
+#include "tree.h"
 #include "revobject.h"
 
 #include <time.h>
@@ -22,11 +23,14 @@ struct git_commit_list {
 typedef struct git_commit_list git_commit_list;
 typedef struct git_commit_node git_commit_node;
 
+
 struct git_commit {
 	git_revpool_object object;
 
 	time_t commit_time;
 	git_commit_list parents;
+
+	git_tree *tree;
 
 	unsigned short in_degree;
 	unsigned parsed:1,

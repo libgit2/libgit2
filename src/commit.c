@@ -196,8 +196,9 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 	if (git_commit__parse_oid(&oid, &buffer, buffer_end, "tree ") < 0)
 		return GIT_EOBJCORRUPTED;
 
+	commit->tree = git_tree_lookup(commit->object.pool, &oid);
+
 	/*
-	 * TODO: load tree into commit object
 	 * TODO: commit grafts!
 	 */
 
