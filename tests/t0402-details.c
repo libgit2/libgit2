@@ -8,25 +8,25 @@
 
 static const char *odb_dir = "../t0501-objects";
 static const char *commit_ids[] = {
-    "a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
-    "9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
-    "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", /* 2 */
-    "c47800c7266a2be04c571c04d5a6614691ea99bd", /* 3 */
-    "8496071c1b46c854b31185ea97743be6a8774479", /* 4 */
-    "5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
+	"a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
+	"9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
+	"4a202b346bb0fb0db7eff3cffeb3c70babbd2045", /* 2 */
+	"c47800c7266a2be04c571c04d5a6614691ea99bd", /* 3 */
+	"8496071c1b46c854b31185ea97743be6a8774479", /* 4 */
+	"5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
 };
 
 BEGIN_TEST(query_details_test)
 	const size_t commit_count = sizeof(commit_ids) / sizeof(const char *);
 
 	unsigned int i;
-    git_odb *db;
-    git_revpool *pool;
+	git_odb *db;
+	git_revpool *pool;
 
-    must_pass(git_odb_open(&db, odb_dir));
+	must_pass(git_odb_open(&db, odb_dir));
 
-    pool = gitrp_alloc(db);
-    must_be_true(pool != NULL);
+	pool = gitrp_alloc(db);
+	must_be_true(pool != NULL);
 
 	for (i = 0; i < commit_count; ++i) {
 		git_oid id;
@@ -56,6 +56,6 @@ BEGIN_TEST(query_details_test)
 		must_be_true(commit_time > 0);
 	}
 
-    gitrp_free(pool);
-    git_odb_close(db);
+	gitrp_free(pool);
+	git_odb_close(db);
 END_TEST
