@@ -92,8 +92,9 @@ int gitrp_push(git_revpool *pool, git_commit *commit)
 	if (commit->object.pool != pool || pool->walking)
 		return GIT_ERROR;
 
-	if (!commit->parsed) {
-		int error = git_commit_parse_existing(commit);
+	if (!commit->basic_parse) {
+		int error = git_commit__parse_basic(commit);
+
 		if (error < 0)
 			return error;
 	}
@@ -129,8 +130,8 @@ int gitrp__enroot(git_revpool *pool, git_commit *commit)
 	if (commit->seen)
 		return 0;
 
-	if (commit->parsed == 0) {
-		error = git_commit_parse_existing(commit);
+	if (!commit->basic_parse) {
+		error = git_commit__parse_basic(commit);
 		if (error < 0)
 			return error;
 	}

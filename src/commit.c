@@ -29,14 +29,22 @@
 #include "git/odb.h"
 
 #define COMMIT_PRINT(commit) {\
-    char oid[41]; oid[40] = 0;\
-    git_oid_fmt(oid, &commit->object.id);\
-    printf("Oid: %s | In degree: %d | Time: %u\n", oid, commit->in_degree, commit->commit_time);\
+	char oid[41]; oid[40] = 0;\
+	git_oid_fmt(oid, &commit->object.id);\
+	printf("Oid: %s | In degree: %d | Time: %u\n", oid, commit->in_degree, commit->commit_time);\
 }
 
 void git_commit__free(git_commit *commit)
 {
 	git_commit_list_clear(&commit->parents, 0);
+
+	if (commit->odb_open)
+		git_obj_close(&commit->odb_object);
+
+	free(commit->author);
+	free(commit->committer);
+	free(commit->message);
+	free(commit->message_short);
 	free(commit);
 }
 
@@ -69,7 +77,7 @@ git_commit *git_commit_parse(git_revpool *pool, const git_oid *id)
 	if ((commit = git_commit_lookup(pool, id)) == NULL)
 		return NULL;
 
-	if (git_commit_parse_existing(commit) < 0)
+	if (git_commit__parse_basic(commit) < 0)
 		goto error_cleanup;
 
 	return commit;
@@ -79,28 +87,49 @@ error_cleanup:
 	return NULL;
 }
 
-int git_commit_parse_existing(git_commit *commit)
+int git_commit__parse(git_commit *commit, unsigned int parse_flags, int close_db_object)
 {
 	int error = 0;
-	git_obj commit_obj;
 
-	if (commit->parsed)
+	if (!commit->odb_open) {
+		error = git_odb_read(&commit->odb_object, commit->object.pool->db, &commit->object.id);
+		if (error < 0)
+			return error;
+
+		if (commit->odb_object.type != GIT_OBJ_COMMIT) {
+			git_obj_close(&commit->odb_object);
+			return GIT_EOBJTYPE;
+		}
+
+		commit->odb_open = 1;
+	}
+
+	error = git_commit__parse_buffer(commit,
+			commit->odb_object.data, commit->odb_object.len, parse_flags);
+
+	if (close_db_object) {
+		git_obj_close(&commit->odb_object);
+		commit->odb_open = 0;
+	}
+
+	return error;
+}
+
+int git_commit__parse_basic(git_commit *commit)
+{
+	int error;
+
+	if (commit->basic_parse)
 		return 0;
 
-	error = git_odb_read(&commit_obj, commit->object.pool->db, &commit->object.id);
+	error = git_commit__parse(commit,
+			(GIT_COMMIT_TREE | GIT_COMMIT_PARENTS | GIT_COMMIT_TIME), 1);
+
 	if (error < 0)
 		return error;
 
-	if (commit_obj.type != GIT_OBJ_COMMIT) {
-		error = GIT_EOBJTYPE;
-		goto cleanup;
-	}
-
-	error = git_commit__parse_buffer(commit, commit_obj.data, commit_obj.len);
-
-cleanup:
-	git_obj_close(&commit_obj);
-	return error;
+	commit->basic_parse = 1;
+	return 0;
 }
 
 git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
@@ -131,35 +160,67 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 	return commit;
 }
 
-int git_commit__parse_time(time_t *commit_time, char *buffer, const char *buffer_end)
+int git_commit__parse_person(git_commit_person *person, char **buffer_out,
+		const char *buffer_end, const char *header)
 {
-	if (memcmp(buffer, "author ", 7) != 0)
+	const size_t header_len = strlen(header);
+
+	int i;
+	char *buffer = *buffer_out;
+	char *line_end, *name, *email;
+
+	line_end = memchr(buffer, '\n', buffer_end - buffer);
+	if (!line_end)
 		return GIT_EOBJCORRUPTED;
 
-	buffer = memchr(buffer, '\n', buffer_end - buffer);
-	if (!buffer || ++buffer >= buffer_end)
+	if (buffer + (header_len + 1) > line_end)
 		return GIT_EOBJCORRUPTED;
 
-	if (memcmp(buffer, "committer ", 10) != 0)
+	if (memcmp(buffer, header, header_len) != 0)
 		return GIT_EOBJCORRUPTED;
 
-	buffer = memchr(buffer, '>', buffer_end - buffer);
-	if (!buffer || ++buffer >= buffer_end)
+	buffer += header_len;
+
+
+	/* Parse name field */
+	for (i = 0, name = person->name;
+		 i < 64 && buffer < line_end && *buffer != '<';
+		 ++i)
+		*name++ = *buffer++;
+
+	*(name - 1) = 0;
+
+	while (buffer < line_end && *buffer != '<')
+		buffer++;
+
+	if (++buffer >= line_end)
 		return GIT_EOBJCORRUPTED;
 
-	*commit_time = strtol(buffer, &buffer, 10);
+	/* Parse email field */
+	for (i = 0, email = person->email;
+		 i < 64 && buffer < line_end && *buffer != '>';
+		 ++i)
+		*email++ = *buffer++;
 
-	if (*commit_time == 0)
+	*email = 0;
+
+	while (buffer < line_end && *buffer != '>')
+		buffer++;
+
+	if (++buffer >= line_end)
 		return GIT_EOBJCORRUPTED;
 
-	buffer = memchr(buffer, '\n', buffer_end - buffer);
-	if (!buffer || ++buffer >= buffer_end)
+	person->time = strtol(buffer, &buffer, 10);
+
+	if (person->time == 0)
 		return GIT_EOBJCORRUPTED;
 
-	return (buffer < buffer_end) ? 0 : -1;
+	*buffer_out = (line_end + 1);
+	return 0;
 }
 
-int git_commit__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_end, const char *header)
+int git_commit__parse_oid(git_oid *oid, char **buffer_out,
+		const char *buffer_end, const char *header)
 {
 	const size_t sha_len = GIT_OID_HEXSZ;
 	const size_t header_len = strlen(header);
@@ -183,27 +244,32 @@ int git_commit__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_en
 	return 0;
 }
 
-int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
+int git_commit__parse_buffer(git_commit *commit, void *data, size_t len, unsigned int parse_flags)
 {
 	char *buffer = (char *)data;
 	const char *buffer_end = (char *)data + len;
 
 	git_oid oid;
-
-	if (commit->parsed)
-		return 0;
+	git_commit_person person;
 
 	if (git_commit__parse_oid(&oid, &buffer, buffer_end, "tree ") < 0)
 		return GIT_EOBJCORRUPTED;
 
-	commit->tree = git_tree_lookup(commit->object.pool, &oid);
+	if (parse_flags & GIT_COMMIT_TREE)
+		commit->tree = git_tree_lookup(commit->object.pool, &oid);
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
+	if (parse_flags & GIT_COMMIT_PARENTS)
+		git_commit_list_clear(&commit->parents, 0);
+
 	while (git_commit__parse_oid(&oid, &buffer, buffer_end, "parent ") == 0) {
 		git_commit *parent;
+
+		if ((parse_flags & GIT_COMMIT_PARENTS) == 0)
+			continue;
 
 		if ((parent = git_commit_lookup(commit->object.pool, &oid)) == NULL)
 			return GIT_ENOTFOUND;
@@ -216,13 +282,116 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len)
 			return GIT_ENOMEM;
 	}
 
-	if (git_commit__parse_time(&commit->commit_time, buffer, buffer_end) < 0)
+	if (git_commit__parse_person(&person, &buffer, buffer_end, "author ") < 0)
 		return GIT_EOBJCORRUPTED;
 
-	commit->parsed = 1;
+	if (parse_flags & GIT_COMMIT_AUTHOR) {
+		if (commit->author)
+			free(commit->author);
+
+		commit->author = git__malloc(sizeof(git_commit_person));
+		memcpy(commit->author, &person, sizeof(git_commit_person));
+	}
+
+	if (git_commit__parse_person(&person, &buffer, buffer_end, "committer ") < 0)
+		return GIT_EOBJCORRUPTED;
+
+	if (parse_flags & GIT_COMMIT_TIME)
+		commit->commit_time = person.time;
+
+	if (parse_flags & GIT_COMMIT_COMMITTER) {
+		if (commit->committer)
+			free(commit->committer);
+
+		commit->committer = git__malloc(sizeof(git_commit_person));
+		memcpy(commit->committer, &person, sizeof(git_commit_person));
+	}
+
+	/* parse commit message */
+	while (buffer <= buffer_end && *buffer == '\n')
+		buffer++;
+
+	if (buffer < buffer_end)
+	{
+		if (parse_flags & GIT_COMMIT_MESSAGE) {
+			size_t message_len = buffer_end - buffer;
+
+			commit->message = git__malloc(message_len + 1);
+			memcpy(commit->message, buffer, message_len);
+			commit->message[message_len] = 0;
+		}
+
+		if (parse_flags & GIT_COMMIT_MESSAGE_SHORT) {
+			char *line_end;
+			size_t message_len;
+
+			line_end = memchr(buffer, '\n', buffer_end - buffer);
+			message_len = line_end - buffer;
+
+			commit->message_short = git__malloc(message_len + 1);
+			memcpy(commit->message_short, buffer, message_len);
+			commit->message_short[message_len] = 0;
+		}
+	}
 
 	return 0;
 }
+
+const git_tree *git_commit_tree(git_commit *commit)
+{
+	if (commit->tree)
+		return commit->tree;
+
+	git_commit__parse(commit, GIT_COMMIT_TREE, 0);
+	return commit->tree;
+}
+
+const git_commit_person *git_commit_author(git_commit *commit)
+{
+	if (commit->author)
+		return commit->author;
+
+	git_commit__parse(commit, GIT_COMMIT_AUTHOR, 0);
+	return commit->author;
+}
+
+const git_commit_person *git_commit_committer(git_commit *commit)
+{
+	if (commit->committer)
+		return commit->committer;
+
+	git_commit__parse(commit, GIT_COMMIT_COMMITTER, 0);
+	return commit->committer;
+}
+
+time_t git_commit_time(git_commit *commit)
+{
+	if (commit->commit_time)
+		return commit->commit_time;
+
+	git_commit__parse(commit, GIT_COMMIT_TIME, 0);
+	return commit->commit_time;
+}
+
+const char *git_commit_message(git_commit *commit)
+{
+	if (commit->message)
+		return commit->message;
+
+	git_commit__parse(commit, GIT_COMMIT_MESSAGE, 0);
+	return commit->message;
+}
+
+const char *git_commit_message_short(git_commit *commit)
+{
+	if (commit->message_short)
+		return commit->message_short;
+
+	git_commit__parse(commit, GIT_COMMIT_MESSAGE_SHORT, 0);
+	return commit->message_short;
+}
+
+
 
 int git_commit_list_push_back(git_commit_list *list, git_commit *commit)
 {
