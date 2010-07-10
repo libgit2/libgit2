@@ -45,8 +45,17 @@ git_revpool *gitrp_alloc(git_odb *db)
 
 void gitrp_free(git_revpool *walk)
 {
+	git_commit *commit;
+	git_revpool_tableit it;
+
 	git_commit_list_clear(&(walk->iterator), 0);
 	git_commit_list_clear(&(walk->roots), 0);
+
+	git_revpool_tableit_init(walk->commits, &it);
+
+	while ((commit = (git_commit *)git_revpool_tableit_next(&it)) != NULL) {
+		free(commit);
+	}
 
 	git_revpool_table_free(walk->commits);
 
