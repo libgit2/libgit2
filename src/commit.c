@@ -34,6 +34,12 @@
     printf("Oid: %s | In degree: %d | Time: %u\n", oid, commit->in_degree, commit->commit_time);\
 }
 
+void git_commit__free(git_commit *commit)
+{
+	git_commit_list_clear(&commit->parents, 0);
+	free(commit);
+}
+
 const git_oid *git_commit_id(git_commit *c)
 {
 	return &c->object.id;
@@ -104,7 +110,7 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 	if (pool == NULL)
 		return NULL;
 
-	commit = (git_commit *)git_revpool_table_lookup(pool->commits, id);
+	commit = (git_commit *)git_revpool_table_lookup(pool->objects, id);
 	if (commit != NULL)
 		return commit;
 
@@ -118,8 +124,9 @@ git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
 	/* Initialize parent object */
 	git_oid_cpy(&commit->object.id, id);
 	commit->object.pool = pool;
+	commit->object.type = GIT_OBJ_COMMIT;
 
-	git_revpool_table_insert(pool->commits, (git_revpool_object *)commit);
+	git_revpool_table_insert(pool->objects, (git_revpool_object *)commit);
 
 	return commit;
 }

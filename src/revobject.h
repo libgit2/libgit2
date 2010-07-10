@@ -3,10 +3,12 @@
 
 #include "git/common.h"
 #include "git/oid.h"
+#include "git/odb.h"
 
 struct git_revpool_object {
 	git_oid id;
 	git_revpool *pool;
+	git_otype type;
 };
 
 struct git_revpool_node {
@@ -44,6 +46,7 @@ void git_revpool_table_free(git_revpool_table *table);
 
 
 git_revpool_object *git_revpool_tableit_next(git_revpool_tableit *it);
+git_revpool_object *git_revpool_tableit_nextfilter(git_revpool_tableit *it, git_otype type);
 void git_revpool_tableit_init(git_revpool_table *table, git_revpool_tableit *it);
 
 #endif

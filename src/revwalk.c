@@ -37,7 +37,7 @@ git_revpool *gitrp_alloc(git_odb *db)
 
 	memset(walk, 0x0, sizeof(git_revpool));
 
-	walk->commits = git_revpool_table_create(default_table_size);
+	walk->objects = git_revpool_table_create(default_table_size);
 
 	walk->db = db;
 	return walk;
@@ -45,20 +45,29 @@ git_revpool *gitrp_alloc(git_odb *db)
 
 void gitrp_free(git_revpool *walk)
 {
-	git_commit *commit;
+	git_revpool_object *obj;
 	git_revpool_tableit it;
 
 	git_commit_list_clear(&(walk->iterator), 0);
 	git_commit_list_clear(&(walk->roots), 0);
 
-	git_revpool_tableit_init(walk->commits, &it);
+	git_revpool_tableit_init(walk->objects, &it);
 
-	while ((commit = (git_commit *)git_revpool_tableit_next(&it)) != NULL) {
-		git_commit_list_clear(&commit->parents, 0);
-		free(commit);
+	while ((obj = git_revpool_tableit_next(&it)) != NULL) {
+		switch (obj->type) {
+
+		case GIT_OBJ_COMMIT:
+			git_commit__free((git_commit *)obj);
+			break;
+
+
+		default:
+			free(obj);
+			break;
+		}
 	}
 
-	git_revpool_table_free(walk->commits);
+	git_revpool_table_free(walk->objects);
 
 	free(walk);
 }
@@ -182,9 +191,12 @@ void gitrp_reset(git_revpool *pool)
 	git_commit *commit;
 	git_revpool_tableit it;
 
-	git_revpool_tableit_init(pool->commits, &it);
+	git_revpool_tableit_init(pool->objects, &it);
 
-	while ((commit = (git_commit *)git_revpool_tableit_next(&it)) != NULL) {
+	while ((commit =
+			(git_commit *)git_revpool_tableit_nextfilter(
+				&it, GIT_OBJ_COMMIT)) != NULL) {
+
 		commit->seen = 0;
 		commit->topo_delay = 0;
 		commit->in_degree = 0;

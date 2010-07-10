@@ -197,3 +197,14 @@ git_revpool_object *git_revpool_tableit_next(git_revpool_tableit *it)
 
 	return next->object;
 }
+
+git_revpool_object *git_revpool_tableit_nextfilter(git_revpool_tableit *it, git_otype type)
+{
+	git_revpool_object *obj;
+
+	do {
+		obj = git_revpool_tableit_next(it);
+	} while (obj != NULL && obj->type != type);
+
+	return obj;
+}

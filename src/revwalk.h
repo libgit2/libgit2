@@ -4,6 +4,8 @@
 #include "git/common.h"
 #include "git/revwalk.h"
 
+#include "commit.h"
+
 struct git_revpool {
 	git_odb *db;
 
@@ -11,7 +13,7 @@ struct git_revpool {
 	git_commit *(*next_commit)(git_commit_list *);
 
 	git_commit_list roots;
-	git_revpool_table *commits;
+	git_revpool_table *objects;
 
 	unsigned walking:1;
 	unsigned int sorting;
