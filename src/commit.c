@@ -83,6 +83,7 @@ git_commit *git_commit_parse(git_revpool *pool, const git_oid *id)
 	return commit;
 
 error_cleanup:
+	/* FIXME: do not free; the commit is owned by the revpool */
 	free(commit);
 	return NULL;
 }

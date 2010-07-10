@@ -65,3 +65,77 @@ git_tree *git_tree_lookup(git_revpool *pool, const git_oid *id)
 
 	return tree;
 }
+
+
+git_tree *git_tree_parse(git_revpool *pool, const git_oid *id)
+{
+	git_tree *tree = NULL;
+
+	if ((tree = git_tree_lookup(pool, id)) == NULL)
+		return NULL;
+
+	if (git_tree__parse(tree) < 0)
+		goto error_cleanup;
+
+	return tree;
+
+error_cleanup:
+	/* FIXME: do not free; the tree is owned by the revpool */
+	free(tree);
+	return NULL;
+}
+
+int git_tree__parse(git_tree *tree)
+{
+	static const char tree_header[] = {'t', 'r', 'e', 'e', ' '};
+
+	int error = 0;
+	git_obj odb_object;
+	char *buffer, *buffer_end;
+
+	error = git_odb_read(&odb_object, tree->object.pool->db, &tree->object.id);
+	if (error < 0)
+		return error;
+
+	buffer = odb_object.data;
+	buffer_end = odb_object.data + odb_object.len;
+
+	if (memcmp(buffer, tree_header, 5) != 0)
+		return GIT_EOBJCORRUPTED;
+
+	buffer += 5;
+
+	tree->byte_size = strtol(buffer, &buffer, 10);
+
+	if (*buffer++ != 0)
+		return GIT_EOBJCORRUPTED;
+
+	while (buffer < buffer_end) {
+		git_tree_entry *entry;
+
+		entry = git__malloc(sizeof(git_tree_entry));
+		entry->next = tree->entries;
+
+		entry->attr = strtol(buffer, &buffer, 10);
+
+		if (*buffer++ != ' ') {
+			error = GIT_EOBJCORRUPTED;
+			break;
+		}
+
+		entry->filename = git__strdup(buffer);
+
+		if (entry->filename == NULL) {
+			error = GIT_EOBJCORRUPTED;
+			break;
+		}
+		buffer += strlen(entry->filename);
+
+		git_oid_mkraw(&entry->oid, (const unsigned char *)buffer);
+		buffer += GIT_OID_RAWSZ;
+
+		tree->entries = entry;
+	}
+
+	return error;
+}
