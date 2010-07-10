@@ -38,7 +38,7 @@ extern int git__basename(char *base, size_t n, char *path);
 GIT_INLINE(int) git__is_sizet(off_t p)
 {
 	size_t r = (size_t)p;
-	return p == r;
+	return p == (off_t)r;
 }
 
 /*
