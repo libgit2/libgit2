@@ -6,7 +6,7 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
-static const char *odb_dir = "../t0501-objects";
+static const char *odb_dir = "../resources/sample-odb";
 static const char *commit_ids[] = {
 	"a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
 	"9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */

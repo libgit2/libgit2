@@ -6,7 +6,7 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
-static const char *odb_dir = "../t0501-objects";
+static const char *odb_dir = "../resources/sample-odb";
 /*
 	$ git log --oneline --graph --decorate
 	*   a4a7dce (HEAD, br2) Merge branch 'master' into br2
