@@ -29,6 +29,7 @@
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
+#include "delta-apply.h"
 
 #define GIT_PACK_NAME_MAX (5 + 40 + 1)
 
@@ -73,6 +74,9 @@ struct git_pack {
 
 	/** File descriptor for the .pack file. */
 	git_file pack_fd;
+
+	/** Memory map of the pack's contents */
+	git_map pack_map;
 
 	/** The size of the .pack file. */
 	off_t pack_size;
@@ -437,7 +441,7 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 
 	inflateEnd(&zs);
 
-	if ((status != Z_STREAM_END) || (zs.avail_in != 0))
+	if ((status != Z_STREAM_END) /*|| (zs.avail_in != 0) */)
 		return GIT_ERROR;
 
 	if (zs.total_out != outlen)
@@ -1160,23 +1164,26 @@ static int open_pack(git_pack *p)
 	if (pack_openidx(p))
 		return GIT_ERROR;
 
-	if ((p->pack_fd = gitfo_open(pb, O_RDONLY)) < 0) {
-		p->pack_fd = -1;
-		pack_decidx(p);
-		return GIT_ERROR;
-	}
+	if ((p->pack_fd = gitfo_open(pb, O_RDONLY)) < 0)
+		goto error_cleanup;
 
 	if (gitfo_fstat(p->pack_fd, &sb)
 		|| !S_ISREG(sb.st_mode) || p->pack_size != sb.st_size
-		|| check_pack_hdr(p) || check_pack_sha1(p)) {
-		gitfo_close(p->pack_fd);
-		p->pack_fd = -1;
-		pack_decidx(p);
-		return GIT_ERROR;
-	}
+		|| check_pack_hdr(p) || check_pack_sha1(p))
+		goto error_cleanup;
+
+	if (!git__is_sizet(p->pack_size) ||
+		gitfo_map_ro(&p->pack_map, p->pack_fd, 0, (size_t)p->pack_size) < 0)
+		goto error_cleanup;
 
 	pack_decidx(p);
 	return GIT_SUCCESS;
+
+error_cleanup:
+	gitfo_close(p->pack_fd);
+	p->pack_fd = -1;
+	pack_decidx(p);
+	return GIT_ERROR;
 }
 
 static void pack_dec(git_pack *p)
@@ -1194,8 +1201,10 @@ static void pack_dec(git_pack *p)
 			free(p->im_fanout);
 			free(p->im_off_idx);
 			free(p->im_off_next);
-			if (p->pack_fd != -1)
+			if (p->pack_fd != -1) {
 				gitfo_close(p->pack_fd);
+				gitfo_free_map(&p->pack_map);
+			}
 		}
 
 		gitlck_free(&p->lock);
@@ -1475,14 +1484,141 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 	return GIT_SUCCESS;
 }
 
+static int unpack_object(git_obj *out, git_pack *p, index_entry *e);
+
+static int unpack_object_delta(git_obj *out, git_pack *p, 
+		index_entry *base_entry, 
+		uint8_t *delta_buffer, 
+		size_t delta_deflated_size,
+		size_t delta_inflated_size)
+{
+	int res = 0;
+	uint8_t *delta = NULL;
+	git_obj base_obj;
+
+	base_obj.data = NULL;
+	base_obj.type = GIT_OBJ_BAD;
+	base_obj.len = 0;
+
+	if ((res = unpack_object(&base_obj, p, base_entry)) < 0)
+		goto cleanup;
+
+	delta = git__malloc(delta_inflated_size + 1);
+
+	if ((res = inflate_buffer(delta_buffer, delta_deflated_size, 
+			delta, delta_inflated_size)) < 0)
+		goto cleanup;
+
+	res = git__delta_apply(out, base_obj.data, base_obj.len, delta, delta_inflated_size);
+
+	out->type = base_obj.type;
+
+cleanup:
+	free(delta);
+	git_obj_close(&base_obj);
+	return res;
+}
+
 static int unpack_object(git_obj *out, git_pack *p, index_entry *e)
 {
-	assert(out && p && e);
+	git_otype object_type;
+	size_t inflated_size, deflated_size, shift;
+	uint8_t *buffer, byte;
+
+	assert(out && p && e && git__is_sizet(e->size));
 
 	if (open_pack(p))
 		return GIT_ERROR;
 
-	/* TODO - actually unpack the data! */
+	buffer = (uint8_t *)p->pack_map.data + e->offset;
+	deflated_size = (size_t)e->size;
+
+	if (deflated_size == 0)
+		deflated_size = p->pack_size - e->offset;
+
+	byte = *buffer++ & 0xFF;
+	deflated_size--;
+	object_type = (byte >> 4) & 0x7;
+	inflated_size = byte & 0xF;
+	shift = 4;
+
+	while (byte & 0x80) {
+		byte = *buffer++ & 0xFF;
+		deflated_size--;
+		inflated_size += (byte & 0x7F) << shift;
+		shift += 7;
+	}
+
+	switch (object_type) {
+		case GIT_OBJ_COMMIT:
+		case GIT_OBJ_TREE:
+		case GIT_OBJ_BLOB:
+		case GIT_OBJ_TAG: {
+
+			/* Handle a normal zlib stream */
+			out->len = inflated_size;
+			out->type = object_type;
+			out->data = git__malloc(inflated_size + 1);
+
+			if (inflate_buffer(buffer, deflated_size, out->data, out->len) < 0) {
+				free(out->data);
+				out->data = NULL;
+				return GIT_ERROR;
+			}
+
+			return GIT_SUCCESS;
+		}
+
+		case GIT_OBJ_OFS_DELTA: {
+
+			off_t delta_offset;
+			index_entry entry;
+
+			byte = *buffer++ & 0xFF;
+			delta_offset = byte & 0x7F;
+
+			while (byte & 0x80) {
+				delta_offset += 1;
+				byte = *buffer++ & 0xFF;
+				delta_offset <<= 7;
+				delta_offset += (byte & 0x7F);
+			}
+
+			entry.n = 0; 
+			entry.oid = NULL;
+			entry.offset = e->offset - delta_offset; 
+			entry.size = 0;
+
+			if (unpack_object_delta(out, p, &entry, 
+					buffer, deflated_size, inflated_size) < 0)
+				return GIT_ERROR;
+			
+			return GIT_SUCCESS;
+		}
+
+		case GIT_OBJ_REF_DELTA: {
+
+			git_oid base_id;
+			uint32_t n;
+			index_entry entry;
+			int res = GIT_ERROR;
+
+			git_oid_mkraw(&base_id, buffer);
+
+			if (!p->idx_search(&n, p, &base_id) &&
+				!p->idx_get(&entry, p, n)) {
+
+				/* FIXME: deflated_size - 20 ? */
+				res = unpack_object_delta(out, p, &entry, 
+					buffer + GIT_OID_RAWSZ, deflated_size, inflated_size);
+			}
+
+			return res;
+		}
+
+		default:
+			return GIT_EOBJCORRUPTED;
+	}
 
 	return GIT_SUCCESS;
 }
@@ -1497,15 +1633,15 @@ static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
 
 	if (pack_openidx(p))
 		return GIT_ERROR;
+
 	res = p->idx_search(&n, p, id);
 	if (!res)
 		res = p->idx_get(&e, p, n);
-	pack_decidx(p);
 
-	if (!res) {
-		/* TODO unpack object */
+	if (!res)
 		res = unpack_object(out, p, &e);
-	}
+
+	pack_decidx(p);
 
 	return res;
 }
