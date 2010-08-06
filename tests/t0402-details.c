@@ -32,7 +32,7 @@ BEGIN_TEST(query_details_test)
 		git_oid id;
 		git_commit *commit;
 
-		const git_commit_person *author, *committer;
+		const git_person *author, *committer;
 		const char *message, *message_short;
 		time_t commit_time;
 

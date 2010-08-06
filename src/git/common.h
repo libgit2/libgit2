@@ -88,6 +88,13 @@ GIT_BEGIN_DECL
 /** A revision traversal pool. */
 typedef struct git_revpool git_revpool;
 
+/** Parsed representation of a person */
+typedef struct git_person {
+	char name[64]; /**< Full name */
+	char email[64]; /**< Email address */
+	time_t time; /**< Time when this person commited the change */
+} git_person;
+
 /** @} */
 GIT_END_DECL
 #endif

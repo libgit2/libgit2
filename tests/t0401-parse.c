@@ -87,14 +87,14 @@ BEGIN_TEST(parse_oid_test)
 	char *ptr = string;\
 	char *ptr_original = ptr;\
 	size_t len = strlen(ptr);\
-	must_pass(git_commit__parse_oid(&oid, &ptr, ptr + len, header));\
+	must_pass(git__parse_oid(&oid, &ptr, ptr + len, header));\
 	must_be_true(ptr == ptr_original + len);\
 }
 
 #define TEST_OID_FAIL(string, header) { \
 	char *ptr = string;\
 	size_t len = strlen(ptr);\
-	must_fail(git_commit__parse_oid(&oid, &ptr, ptr + len, header));\
+	must_fail(git__parse_oid(&oid, &ptr, ptr + len, header));\
 }
 
 	TEST_OID_PASS("parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "parent ");
@@ -126,8 +126,8 @@ BEGIN_TEST(parse_person_test)
 #define TEST_PERSON_PASS(_string, _header, _name, _email, _time) { \
 	char *ptr = _string; \
 	size_t len = strlen(_string);\
-	git_commit_person person; \
-	must_pass(git_commit__parse_person(&person, &ptr, ptr + len, _header));\
+	git_person person; \
+	must_pass(git__parse_person(&person, &ptr, ptr + len, _header));\
 	must_be_true(strncmp(_name, person.name, 63) == 0);\
 	must_be_true(strncmp(_email, person.email, 63) == 0);\
 	must_be_true(_time == person.time);\
@@ -136,8 +136,8 @@ BEGIN_TEST(parse_person_test)
 #define TEST_PERSON_FAIL(_string, _header) { \
 	char *ptr = _string; \
 	size_t len = strlen(_string);\
-	git_commit_person person; \
-	must_fail(git_commit__parse_person(&person, &ptr, ptr + len, _header));\
+	git_person person; \
+	must_fail(git__parse_person(&person, &ptr, ptr + len, _header));\
 }
 
 	TEST_PERSON_PASS(
