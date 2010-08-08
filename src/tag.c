@@ -28,7 +28,7 @@
 #include "tag.h"
 #include "revwalk.h"
 #include "git/odb.h"
-
+#include "git/repository.h"
 
 void git_tag__free(git_tag *tag)
 {
@@ -43,7 +43,7 @@ const git_oid *git_tag_id(git_tag *t)
 	return &t->object.id;
 }
 
-const git_revpool_object *git_tag_target(git_tag *t)
+const git_repository_object *git_tag_target(git_tag *t)
 {
 	if (t->target)
 		return t->target;
@@ -183,7 +183,7 @@ int git_tag__parse(git_tag *tag)
 	int error = 0;
 	git_obj odb_object;
 
-	error = git_odb_read(&odb_object, tag->object.pool->db, &tag->object.id);
+	error = git_odb_read(&odb_object, tag->object.repo->db, &tag->object.id);
 	if (error < 0)
 		return error;
 
@@ -199,30 +199,7 @@ cleanup:
 	return error;
 }
 
-git_tag *git_tag_lookup(git_revpool *pool, const git_oid *id)
+git_tag *git_tag_lookup(git_repository *repo, const git_oid *id)
 {
-	git_tag *tag = NULL;
-
-	if (pool == NULL)
-		return NULL;
-
-	tag = (git_tag *)git_revpool_table_lookup(pool->objects, id);
-	if (tag != NULL)
-		return tag;
-
-	tag = git__malloc(sizeof(git_tag));
-
-	if (tag == NULL)
-		return NULL;
-
-	memset(tag, 0x0, sizeof(git_tag));
-
-	/* Initialize parent object */
-	git_oid_cpy(&tag->object.id, id);
-	tag->object.pool = pool;
-	tag->object.type = GIT_OBJ_TAG;
-
-	git_revpool_table_insert(pool->objects, (git_revpool_object *)tag);
-
-	return tag;
+	return (git_tag *)git_repository_lookup(repo, id, GIT_OBJ_TAG);
 }

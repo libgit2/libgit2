@@ -2,12 +2,12 @@
 #define INCLUDE_tag_h__
 
 #include "git/tag.h"
-#include "revobject.h"
+#include "repository.h"
 
 struct git_tag {
-	git_revpool_object object;
+	git_repository_object object;
 
-	git_revpool_object *target;
+	git_repository_object *target;
 	git_otype type;
 	char *tag_name;
 	git_person *tagger;

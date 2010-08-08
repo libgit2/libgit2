@@ -72,7 +72,7 @@ a simple commit which works\n",
 
 /* simple commit, 1 parents */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
-parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n\
+parent a4a7dce85cf63874e984719f4fdd239f5145052f\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
@@ -216,17 +216,23 @@ BEGIN_TEST(parse_buffer_test)
 	const int broken_commit_count = sizeof(test_commits_broken) / sizeof(*test_commits_broken);
 	const int working_commit_count = sizeof(test_commits_working) / sizeof(*test_commits_working);
 
-	const unsigned int default_flags = 0xFF; /* parse everything */
+	const unsigned int default_flags = 
+		GIT_COMMIT_AUTHOR | 
+		GIT_COMMIT_COMMITTER | 
+		GIT_COMMIT_TIME |
+		GIT_COMMIT_MESSAGE |
+		GIT_COMMIT_MESSAGE_SHORT; /* parse everything */
 
 	int i;
+	git_repository *repo = git_repository_alloc(NULL);
 
-	git_revpool *pool = gitrp_alloc(NULL);
+	must_be_true(repo != NULL);
 
 	for (i = 0; i < broken_commit_count; ++i) {
 		git_commit *commit;
 		commit = git__malloc(sizeof(git_commit));
 		memset(commit, 0x0, sizeof(git_commit));
-		commit->object.pool = pool;
+		commit->object.repo = repo;
 
 		must_fail(git_commit__parse_buffer(
 					commit,
@@ -242,7 +248,7 @@ BEGIN_TEST(parse_buffer_test)
 		git_commit *commit;
 		commit = git__malloc(sizeof(git_commit));
 		memset(commit, 0x0, sizeof(git_commit));
-		commit->object.pool = pool;
+		commit->object.repo = repo;
 
 		must_pass(git_commit__parse_buffer(
 					commit,
@@ -254,6 +260,6 @@ BEGIN_TEST(parse_buffer_test)
 		git_commit__free(commit);
 	}
 
-	gitrp_free(pool);
+	git_repository_free(repo);
 
 END_TEST

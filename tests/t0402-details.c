@@ -21,12 +21,12 @@ BEGIN_TEST(query_details_test)
 
 	unsigned int i;
 	git_odb *db;
-	git_revpool *pool;
+	git_repository *repo;
 
 	must_pass(git_odb_open(&db, odb_dir));
 
-	pool = gitrp_alloc(db);
-	must_be_true(pool != NULL);
+	repo = git_repository_alloc(db);
+	must_be_true(repo != NULL);
 
 	for (i = 0; i < commit_count; ++i) {
 		git_oid id;
@@ -38,7 +38,7 @@ BEGIN_TEST(query_details_test)
 
 		git_oid_mkstr(&id, commit_ids[i]);
 
-		commit = git_commit_parse(pool, &id);
+		commit = git_commit_lookup(repo, &id);
 		must_be_true(commit != NULL);
 
 		message = git_commit_message(commit);
@@ -56,6 +56,6 @@ BEGIN_TEST(query_details_test)
 		must_be_true(commit_time > 0);
 	}
 
-	gitrp_free(pool);
+	git_repository_free(repo);
 	git_odb_close(db);
 END_TEST

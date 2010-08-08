@@ -3,25 +3,9 @@
 
 #include "git/commit.h"
 #include "tree.h"
-#include "revobject.h"
+#include "repository.h"
 
 #include <time.h>
-
-struct git_commit_node {
-	struct git_commit *commit;
-
-	struct git_commit_node *next;
-	struct git_commit_node *prev;
-};
-
-struct git_commit_list {
-	struct git_commit_node *head;
-	struct git_commit_node *tail;
-	size_t size;
-};
-
-typedef struct git_commit_list git_commit_list;
-typedef struct git_commit_node git_commit_node;
 
 #define GIT_COMMIT_TREE		(1 << 1)
 #define GIT_COMMIT_PARENTS	(1 << 2)
@@ -32,12 +16,17 @@ typedef struct git_commit_node git_commit_node;
 #define GIT_COMMIT_MESSAGE_SHORT (1 << 7)
 #define GIT_COMMIT_FOOTERS	(1 << 8)
 
+typedef struct git_commit_parents {
+	git_commit *commit;
+	struct git_commit_parents *next;
+} git_commit_parents;
+
 struct git_commit {
-	git_revpool_object object;
+	git_repository_object object;
 	git_obj odb_object;
 
 	time_t commit_time;
-	git_commit_list parents;
+	git_commit_parents *parents;
 
 	git_tree *tree;
 	git_person *author;
@@ -46,13 +35,8 @@ struct git_commit {
 	char *message;
 	char *message_short;
 
-	unsigned short in_degree;
 	unsigned basic_parse:1,
-			 odb_open:1,
-			 seen:1,
-			 uninteresting:1,
-			 topo_delay:1,
-			 flags:25;
+			 odb_open:1;
 };
 
 void git_commit__free(git_commit *c);
@@ -64,15 +48,5 @@ void git_commit__mark_uninteresting(git_commit *commit);
 int git__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_end, const char *header);
 int git__parse_person(git_person *person, char **buffer_out, const char *buffer_end, const char *header);
 
-int git_commit_list_push_back(git_commit_list *list, git_commit *commit);
-int git_commit_list_push_front(git_commit_list *list, git_commit *commit);
-
-git_commit *git_commit_list_pop_back(git_commit_list *list);
-git_commit *git_commit_list_pop_front(git_commit_list *list);
-
-void git_commit_list_clear(git_commit_list *list, int free_commits);
-
-void git_commit_list_timesort(git_commit_list *list);
-void git_commit_list_toposort(git_commit_list *list);
 
 #endif

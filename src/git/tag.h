@@ -4,6 +4,7 @@
 #include "common.h"
 #include "oid.h"
 #include "tree.h"
+#include "repository.h"
 
 /**
  * @file git/tag.h
@@ -18,29 +19,15 @@ GIT_BEGIN_DECL
 typedef struct git_tag git_tag;
 
 /**
- * Locate a reference to a tag without loading it.
+ * Lookup a tag object from the repository.
  * The generated tag object is owned by the revision
- * pool and shall not be freed by the user.
+ * repo and shall not be freed by the user.
  *
- * @param pool the pool to use when locating the tag.
+ * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
  * @return the tag; NULL if the tag could not be created
  */
-GIT_EXTERN(git_tag *) git_tag_lookup(git_revpool *pool, const git_oid *id);
-
-/**
- * Locate a reference to a tag, and try to load and parse it it from
- * the object cache or the object database.
- * The generated tag object is owned by the revision
- * pool and shall not be freed by the user.
- *
- * @param pool the pool to use when parsing/caching the tag.
- * @param id identity of the tag to locate.  
- * @return the tag; NULL if the tag does not exist in the
- *         pool's git_odb, or if the tag is present but is
- *         too malformed to be parsed successfully.
- */
-GIT_EXTERN(git_tag *) git_tag_parse(git_revpool *pool, const git_oid *id);
+GIT_EXTERN(git_tag *) git_tag_lookup(git_repository *repo, const git_oid *id);
 
 /**
  * Get the id of a tag.

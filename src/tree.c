@@ -27,6 +27,7 @@
 #include "commit.h"
 #include "revwalk.h"
 #include "tree.h"
+#include "git/repository.h"
 
 void git_tree__free(git_tree *tree)
 {
@@ -38,51 +39,9 @@ const git_oid *git_tree_id(git_tree *tree)
 	return &tree->object.id;
 }
 
-git_tree *git_tree_lookup(git_revpool *pool, const git_oid *id)
+git_tree *git_tree_lookup(git_repository *repo, const git_oid *id)
 {
-	git_tree *tree = NULL;
-
-	if (pool == NULL)
-		return NULL;
-
-	tree = (git_tree *)git_revpool_table_lookup(pool->objects, id);
-	if (tree != NULL)
-		return tree;
-
-	tree = git__malloc(sizeof(git_tree));
-
-	if (tree == NULL)
-		return NULL;
-
-	memset(tree, 0x0, sizeof(git_tree));
-
-	/* Initialize parent object */
-	git_oid_cpy(&tree->object.id, id);
-	tree->object.pool = pool;
-	tree->object.type = GIT_OBJ_TREE;
-
-	git_revpool_table_insert(pool->objects, (git_revpool_object *)tree);
-
-	return tree;
-}
-
-
-git_tree *git_tree_parse(git_revpool *pool, const git_oid *id)
-{
-	git_tree *tree = NULL;
-
-	if ((tree = git_tree_lookup(pool, id)) == NULL)
-		return NULL;
-
-	if (git_tree__parse(tree) < 0)
-		goto error_cleanup;
-
-	return tree;
-
-error_cleanup:
-	/* FIXME: do not free; the tree is owned by the revpool */
-	free(tree);
-	return NULL;
+	return (git_tree *)git_repository_lookup(repo, id, GIT_OBJ_TREE);
 }
 
 int git_tree__parse(git_tree *tree)
@@ -93,7 +52,7 @@ int git_tree__parse(git_tree *tree)
 	git_obj odb_object;
 	char *buffer, *buffer_end;
 
-	error = git_odb_read(&odb_object, tree->object.pool->db, &tree->object.id);
+	error = git_odb_read(&odb_object, tree->object.repo->db, &tree->object.id);
 	if (error < 0)
 		return error;
 

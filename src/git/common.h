@@ -85,8 +85,14 @@
 
 GIT_BEGIN_DECL
 
-/** A revision traversal pool. */
-typedef struct git_revpool git_revpool;
+/** 
+ * Representation of an existing git repository,
+ * including all its object contents 
+ */
+typedef struct git_repository git_repository;
+
+/* Representation of a generic object in a repository */
+typedef struct git_repository_object git_repository_object;
 
 /** Parsed representation of a person */
 typedef struct git_person {

@@ -27,6 +27,7 @@
 #include "commit.h"
 #include "revwalk.h"
 #include "git/odb.h"
+#include "git/repository.h"
 
 #define COMMIT_PRINT(commit) {\
 	char oid[41]; oid[40] = 0;\
@@ -34,9 +35,23 @@
 	printf("Oid: %s | In degree: %d | Time: %u\n", oid, commit->in_degree, commit->commit_time);\
 }
 
+static void clear_parents(git_commit *commit)
+{
+	git_commit_parents *node, *next_node;
+
+	node = commit->parents;
+	while (node) {
+		next_node = node->next;
+		free(node);
+		node = next_node;
+	}
+
+	commit->parents = NULL;
+}
+
 void git_commit__free(git_commit *commit)
 {
-	git_commit_list_clear(&commit->parents, 0);
+	clear_parents(commit);
 
 	if (commit->odb_open)
 		git_obj_close(&commit->odb_object);
@@ -53,47 +68,12 @@ const git_oid *git_commit_id(git_commit *c)
 	return &c->object.id;
 }
 
-void git_commit__mark_uninteresting(git_commit *commit)
-{
-	git_commit_node *parents;
-
-	if (commit == NULL)
-		return;
-
-	parents = commit->parents.head;
-
-	commit->uninteresting = 1;
-
-	while (parents) {
-		parents->commit->uninteresting = 1;
-		parents = parents->next;
-	}
-}
-
-git_commit *git_commit_parse(git_revpool *pool, const git_oid *id)
-{
-	git_commit *commit = NULL;
-
-	if ((commit = git_commit_lookup(pool, id)) == NULL)
-		return NULL;
-
-	if (git_commit__parse_basic(commit) < 0)
-		goto error_cleanup;
-
-	return commit;
-
-error_cleanup:
-	/* FIXME: do not free; the commit is owned by the revpool */
-	free(commit);
-	return NULL;
-}
-
 int git_commit__parse(git_commit *commit, unsigned int parse_flags, int close_db_object)
 {
 	int error = 0;
 
 	if (!commit->odb_open) {
-		error = git_odb_read(&commit->odb_object, commit->object.pool->db, &commit->object.id);
+		error = git_odb_read(&commit->odb_object, commit->object.repo->db, &commit->object.id);
 		if (error < 0)
 			return error;
 
@@ -133,32 +113,9 @@ int git_commit__parse_basic(git_commit *commit)
 	return 0;
 }
 
-git_commit *git_commit_lookup(git_revpool *pool, const git_oid *id)
+git_commit *git_commit_lookup(git_repository *repo, const git_oid *id)
 {
-	git_commit *commit = NULL;
-
-	if (pool == NULL)
-		return NULL;
-
-	commit = (git_commit *)git_revpool_table_lookup(pool->objects, id);
-	if (commit != NULL)
-		return commit;
-
-	commit = git__malloc(sizeof(git_commit));
-
-	if (commit == NULL)
-		return NULL;
-
-	memset(commit, 0x0, sizeof(git_commit));
-
-	/* Initialize parent object */
-	git_oid_cpy(&commit->object.id, id);
-	commit->object.pool = pool;
-	commit->object.type = GIT_OBJ_COMMIT;
-
-	git_revpool_table_insert(pool->objects, (git_revpool_object *)commit);
-
-	return commit;
+	return (git_commit *)git_repository_lookup(repo, id, GIT_OBJ_COMMIT);
 }
 
 int git__parse_person(git_person *person, char **buffer_out,
@@ -257,30 +214,31 @@ int git_commit__parse_buffer(git_commit *commit, void *data, size_t len, unsigne
 		return GIT_EOBJCORRUPTED;
 
 	if (parse_flags & GIT_COMMIT_TREE)
-		commit->tree = git_tree_lookup(commit->object.pool, &oid);
+		commit->tree = git_tree_lookup(commit->object.repo, &oid);
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
 	if (parse_flags & GIT_COMMIT_PARENTS)
-		git_commit_list_clear(&commit->parents, 0);
+		clear_parents(commit);
 
 	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == 0) {
 		git_commit *parent;
+		git_commit_parents *node;
 
 		if ((parse_flags & GIT_COMMIT_PARENTS) == 0)
 			continue;
 
-		if ((parent = git_commit_lookup(commit->object.pool, &oid)) == NULL)
+		if ((parent = git_commit_lookup(commit->object.repo, &oid)) == NULL)
 			return GIT_ENOTFOUND;
 
-		/* Inherit uninteresting flag */
-		if (commit->uninteresting)
-			parent->uninteresting = 1;
-
-		if (git_commit_list_push_back(&commit->parents, parent) < 0)
+		if ((node = git__malloc(sizeof(git_commit_parents))) == NULL)
 			return GIT_ENOMEM;
+
+		node->commit = parent;
+		node->next = commit->parents;
+		commit->parents = node;
 	}
 
 	if (git__parse_person(&person, &buffer, buffer_end, "author ") < 0)
@@ -391,200 +349,3 @@ const char *git_commit_message_short(git_commit *commit)
 	git_commit__parse(commit, GIT_COMMIT_MESSAGE_SHORT, 0);
 	return commit->message_short;
 }
-
-
-
-int git_commit_list_push_back(git_commit_list *list, git_commit *commit)
-{
-	git_commit_node *node = NULL;
-
-	node = git__malloc(sizeof(git_commit_list));
-
-	if (node == NULL)
-		return GIT_ENOMEM;
-
-	node->commit = commit;
-	node->next = NULL;
-	node->prev = list->tail;
-
-	if (list->tail == NULL) {
-		list->head = list->tail = node;
-	} else {
-		list->tail->next = node;
-		list->tail = node;
-	}
-
-	list->size++;
-	return 0;
-}
-
-int git_commit_list_push_front(git_commit_list *list, git_commit *commit)
-{
-	git_commit_node *node = NULL;
-
-	node = git__malloc(sizeof(git_commit_list));
-
-	if (node == NULL)
-		return GIT_ENOMEM;
-
-	node->commit = commit;
-	node->next = list->head;
-	node->prev = NULL;
-
-	if (list->head == NULL) {
-		list->head = list->tail = node;
-	} else {
-		list->head->prev = node;
-		list->head = node;
-	}
-
-	list->size++;
-	return 0;
-}
-
-
-git_commit *git_commit_list_pop_back(git_commit_list *list)
-{
-	git_commit_node *node;
-	git_commit *commit;
-
-	if (list->tail == NULL)
-		return NULL;
-
-	node = list->tail;
-	list->tail = list->tail->prev;
-	if (list->tail == NULL)
-		list->head = NULL;
-
-	commit = node->commit;
-	free(node);
-
-	list->size--;
-
-	return commit;
-}
-
-git_commit *git_commit_list_pop_front(git_commit_list *list)
-{
-	git_commit_node *node;
-	git_commit *commit;
-
-	if (list->head == NULL)
-		return NULL;
-
-	node = list->head;
-	list->head = list->head->next;
-	if (list->head == NULL)
-		list->tail = NULL;
-
-	commit = node->commit;
-	free(node);
-
-	list->size--;
-
-	return commit;
-}
-
-void git_commit_list_clear(git_commit_list *list, int free_commits)
-{
-	git_commit_node *node, *next_node;
-
-	node = list->head;
-	while (node) {
-		if (free_commits)
-			free(node->commit);
-
-		next_node = node->next;
-		free(node);
-		node = next_node;
-	}
-
-	list->head = list->tail = NULL;
-	list->size = 0;
-}
-
-void git_commit_list_timesort(git_commit_list *list)
-{
-	git_commit_node *p, *q, *e;
-	int in_size, p_size, q_size, merge_count, i;
-
-	if (list->head == NULL)
-		return;
-
-	in_size = 1;
-
-	do {
-		p = list->head;
-		list->tail = NULL;
-		merge_count = 0;
-
-		while (p != NULL) {
-			merge_count++;
-			q = p;
-			p_size = 0;
-			q_size = in_size;
-
-			for (i = 0; i < in_size && q; ++i, q = q->next)
-				p_size++;
-
-			while (p_size > 0 || (q_size > 0 && q)) {
-
-				if (p_size == 0)
-					e = q, q = q->next, q_size--;
-
-				else if (q_size == 0 || q == NULL ||
-						p->commit->commit_time >= q->commit->commit_time)
-					e = p, p = p->next, p_size--;
-
-				else
-					e = q, q = q->next, q_size--;
-
-				if (list->tail != NULL)
-					list->tail->next = e;
-				else
-					list->head = e;
-
-				e->prev = list->tail;
-				list->tail = e;
-			}
-
-			p = q;
-		}
-
-		list->tail->next = NULL;
-		in_size *= 2;
-
-	} while (merge_count > 1);
-}
-
-void git_commit_list_toposort(git_commit_list *list)
-{
-	git_commit *commit;
-	git_commit_list topo;
-	memset(&topo, 0x0, sizeof(git_commit_list));
-
-	while ((commit = git_commit_list_pop_back(list)) != NULL) {
-		git_commit_node *p;
-
-		if (commit->in_degree > 0) {
-			commit->topo_delay = 1;
-			continue;
-		}
-
-		for (p = commit->parents.head; p != NULL; p = p->next) {
-			p->commit->in_degree--;
-
-			if (p->commit->in_degree == 0 && p->commit->topo_delay) {
-				p->commit->topo_delay = 0;
-				git_commit_list_push_back(list, p->commit);
-			}
-		}
-
-		git_commit_list_push_back(&topo, commit);
-	}
-
-	list->head = topo.head;
-	list->tail = topo.tail;
-	list->size = topo.size;
-}
-

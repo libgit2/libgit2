@@ -2,7 +2,7 @@
 #define INCLUDE_tree_h__
 
 #include <git/tree.h>
-#include "revobject.h"
+#include "repository.h"
 
 struct git_tree_entry {
 
@@ -16,7 +16,7 @@ struct git_tree_entry {
 typedef struct git_tree_entry git_tree_entry;
 
 struct git_tree {
-	git_revpool_object object;
+	git_repository_object object;
 
 	size_t byte_size;
 	git_tree_entry *entries;

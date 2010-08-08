@@ -26,187 +26,417 @@
 #include "common.h"
 #include "commit.h"
 #include "revwalk.h"
+#include "hashtable.h"
 
-static const int default_table_size = 32;
-
-git_revpool *gitrp_alloc(git_odb *db)
+uint32_t git_revwalk_commit_hash(const void *key)
 {
-	git_revpool *walk = git__malloc(sizeof(*walk));
-	if (!walk)
+	uint32_t r;
+	git_commit *commit;
+
+	commit = (git_commit *)key;
+	memcpy(&r, commit->object.id.id, sizeof(r));
+	return r;
+}
+
+int git_revwalk_commit_haskey(void *object, const void *key)
+{
+	git_revwalk_commit *walk_commit;
+	git_commit *commit_object;
+
+	walk_commit = (git_revwalk_commit *)object;
+	commit_object = (git_commit *)key;
+
+	return (walk_commit->commit_object == commit_object);
+}
+
+
+git_revwalk *git_revwalk_alloc(git_repository *repo)
+{
+	git_revwalk *walk;
+
+	walk = git__malloc(sizeof(git_revwalk));
+	if (walk == NULL)
 		return NULL;
 
-	memset(walk, 0x0, sizeof(git_revpool));
+	memset(walk, 0x0, sizeof(git_revwalk));
 
-	walk->objects = git_revpool_table_create(default_table_size);
+	walk->commits = git_hashtable_alloc(64,
+			git_revwalk_commit_hash,
+			git_revwalk_commit_haskey);
 
-	walk->db = db;
+	if (walk->commits == NULL) {
+		free(walk);
+		return NULL;
+	}
+
+	walk->repo = repo;
 	return walk;
 }
 
-void gitrp_free(git_revpool *walk)
+void git_revwalk_free(git_revwalk *walk)
 {
-	git_revpool_object *obj;
-	git_revpool_tableit it;
-
-	git_commit_list_clear(&(walk->iterator), 0);
-	git_commit_list_clear(&(walk->roots), 0);
-
-	git_revpool_tableit_init(walk->objects, &it);
-
-	while ((obj = git_revpool_tableit_next(&it)) != NULL) {
-		switch (obj->type) {
-
-		case GIT_OBJ_COMMIT:
-			git_commit__free((git_commit *)obj);
-			break;
-
-		case GIT_OBJ_TREE:
-			git_tree__free((git_tree *)obj);
-			break;
-
-		default:
-			free(obj);
-			break;
-		}
-	}
-
-	git_revpool_table_free(walk->objects);
-
+	git_revwalk_reset(walk);
+	git_hashtable_free(walk->commits);
 	free(walk);
 }
 
-void gitrp_sorting(git_revpool *pool, unsigned int sort_mode)
+void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 {
-	if (pool->walking)
+	if (walk->walking)
 		return;
 
-	pool->sorting = sort_mode;
-	gitrp_reset(pool);
+	walk->sorting = sort_mode;
+	git_revwalk_reset(walk);
 }
 
-int gitrp_push(git_revpool *pool, git_commit *commit)
+static git_revwalk_commit *commit_to_walkcommit(git_revwalk *walk, git_commit *commit_object)
 {
-	if (commit == NULL || commit->seen)
-		return GIT_ENOTFOUND;
+	git_revwalk_commit *commit;
 
-	if (commit->object.pool != pool || pool->walking)
-		return GIT_ERROR;
+	commit = (git_revwalk_commit *)git_hashtable_lookup(walk->commits, commit_object);
 
-	if (!commit->basic_parse) {
-		int error = git_commit__parse_basic(commit);
+	if (commit != NULL)
+		return commit;
 
-		if (error < 0)
-			return error;
+	if (!commit_object->basic_parse) {
+		if (git_commit__parse_basic(commit_object) < 0)
+			return NULL;
 	}
 
-	/*
-	 * Sanity check: make sure that if the commit
-	 * has been manually marked as uninteresting,
-	 * all the parent commits are too.
-	 */
-	if (commit->uninteresting)
-		git_commit__mark_uninteresting(commit);
+	commit = git__malloc(sizeof(git_revwalk_commit));
+	if (commit == NULL)
+		return NULL;
 
-	if (git_commit_list_push_back(&pool->roots, commit) < 0)
-		return GIT_ENOMEM;
+	memset(commit, 0x0, sizeof(git_revwalk_commit));
 
-	return 0;
+	commit->commit_object = commit_object;
+
+	git_hashtable_insert(walk->commits, commit_object, commit);
+
+	return commit;
 }
 
-int gitrp_hide(git_revpool *pool, git_commit *commit)
+static git_revwalk_commit *insert_commit(git_revwalk *walk, git_commit *commit_object)
 {
-	if (pool->walking)
-		return GIT_ERROR;
+	git_revwalk_commit *commit;
+	git_commit_parents *parents;
 
-	git_commit__mark_uninteresting(commit);
-	return gitrp_push(pool, commit);
-}
+	assert(walk && commit_object);
 
-int gitrp__enroot(git_revpool *pool, git_commit *commit)
-{
-	int error;
-	git_commit_node *parents;
+	if (commit_object->object.repo != walk->repo || walk->walking)
+		return NULL;
+
+	commit = commit_to_walkcommit(walk, commit_object);
+	if (commit == NULL)
+		return NULL;
 
 	if (commit->seen)
-		return 0;
-
-	if (!commit->basic_parse) {
-		error = git_commit__parse_basic(commit);
-		if (error < 0)
-			return error;
-	}
+		return commit;
 
 	commit->seen = 1;
 
-	for (parents = commit->parents.head; parents != NULL; parents = parents->next) {
-		parents->commit->in_degree++;
+	assert(commit->commit_object->basic_parse);
 
-		error = gitrp__enroot(pool, parents->commit);
-		if (error < 0)
-			return error;
+	for (parents = commit->commit_object->parents; parents != NULL; parents = parents->next) {
+		git_revwalk_commit *parent;
+
+		if ((parent = commit_to_walkcommit(walk, parents->commit)) == NULL)
+			return NULL;
+
+		parent = insert_commit(walk, parents->commit);
+		if (parent == NULL)
+			return NULL;
+
+		parent->in_degree++;
+
+		git_revwalk_list_push_back(&commit->parents, parent);
 	}
 
-	if (git_commit_list_push_back(&pool->iterator, commit))
-		return GIT_ENOMEM;
+	if (git_revwalk_list_push_back(&walk->iterator, commit))
+		return NULL;
 
-	return 0;
+	return commit;
 }
 
-void gitrp__prepare_walk(git_revpool *pool)
+int git_revwalk_push(git_revwalk *walk, git_commit *commit)
 {
-	git_commit_node *it;
+	return insert_commit(walk, commit) ? GIT_SUCCESS : GIT_ERROR;
+}
 
-	for (it = pool->roots.head; it != NULL; it = it->next)
-		gitrp__enroot(pool, it->commit);
+static void mark_uninteresting(git_revwalk_commit *commit)
+{
+	git_revwalk_listnode *parent;
 
-	if (pool->sorting & GIT_RPSORT_TIME)
-		git_commit_list_timesort(&pool->iterator);
+	if (commit == NULL)
+		return;
 
-	if (pool->sorting & GIT_RPSORT_TOPOLOGICAL)
-		git_commit_list_toposort(&pool->iterator);
+	commit->uninteresting = 1;
+	parent = commit->parents.head;
 
-	if (pool->sorting & GIT_RPSORT_REVERSE)
-		pool->next_commit = &git_commit_list_pop_back;
+	while (parent) {
+		mark_uninteresting(parent->walk_commit);
+		parent = parent->next;
+	}
+}
+
+int git_revwalk_hide(git_revwalk *walk, git_commit *commit)
+{
+	git_revwalk_commit *hide;
+	
+	hide = insert_commit(walk, commit);
+	if (hide == NULL)
+		return GIT_ERROR;
+
+	mark_uninteresting(hide);
+	return GIT_SUCCESS;
+}
+
+
+static void prepare_walk(git_revwalk *walk)
+{
+	if (walk->sorting & GIT_SORT_TIME)
+		git_revwalk_list_timesort(&walk->iterator);
+
+	if (walk->sorting & GIT_SORT_TOPOLOGICAL)
+		git_revwalk_list_toposort(&walk->iterator);
+
+	if (walk->sorting & GIT_SORT_REVERSE)
+		walk->next = &git_revwalk_list_pop_back;
 	else
-		pool->next_commit = &git_commit_list_pop_front;
+		walk->next = &git_revwalk_list_pop_front;
 
-	pool->walking = 1;
+	walk->walking = 1;
 }
 
-git_commit *gitrp_next(git_revpool *pool)
+git_commit *git_revwalk_next(git_revwalk *walk)
 {
-	git_commit *next;
+	git_revwalk_commit *next;
 
-	if (!pool->walking)
-		gitrp__prepare_walk(pool);
+	if (!walk->walking)
+		prepare_walk(walk);
 
-	while ((next = pool->next_commit(&pool->iterator)) != NULL) {
+	while ((next = walk->next(&walk->iterator)) != NULL) {
 		if (!next->uninteresting)
-			return next;
+			return next->commit_object;
 	}
 
 	/* No commits left to iterate */
-	gitrp_reset(pool);
+	git_revwalk_reset(walk);
 	return NULL;
 }
 
-void gitrp_reset(git_revpool *pool)
+void git_revwalk_reset(git_revwalk *walk)
 {
-	git_commit *commit;
-	git_revpool_tableit it;
+	git_hashtable_iterator it;
+	git_revwalk_commit *commit;
 
-	git_revpool_tableit_init(pool->objects, &it);
+	git_hashtable_iterator_init(walk->commits, &it);
 
-	while ((commit =
-			(git_commit *)git_revpool_tableit_nextfilter(
-				&it, GIT_OBJ_COMMIT)) != NULL) {
-
-		commit->seen = 0;
-		commit->topo_delay = 0;
-		commit->in_degree = 0;
+	while ((commit = (git_revwalk_commit *)
+				git_hashtable_iterator_next(&it)) != NULL) {
+		git_revwalk_list_clear(&commit->parents);
+		free(commit);
 	}
 
-	git_commit_list_clear(&pool->iterator, 0);
-	pool->walking = 0;
+	git_hashtable_clear(walk->commits);
+	git_revwalk_list_clear(&walk->iterator);
+	walk->walking = 0;
+}
+
+
+
+
+
+
+int git_revwalk_list_push_back(git_revwalk_list *list, git_revwalk_commit *commit)
+{
+	git_revwalk_listnode *node = NULL;
+
+	node = git__malloc(sizeof(git_revwalk_listnode));
+
+	if (node == NULL)
+		return GIT_ENOMEM;
+
+	node->walk_commit = commit;
+	node->next = NULL;
+	node->prev = list->tail;
+
+	if (list->tail == NULL) {
+		list->head = list->tail = node;
+	} else {
+		list->tail->next = node;
+		list->tail = node;
+	}
+
+	list->size++;
+	return 0;
+}
+
+int git_revwalk_list_push_front(git_revwalk_list *list, git_revwalk_commit *commit)
+{
+	git_revwalk_listnode *node = NULL;
+
+	node = git__malloc(sizeof(git_revwalk_listnode));
+
+	if (node == NULL)
+		return GIT_ENOMEM;
+
+	node->walk_commit = commit;
+	node->next = list->head;
+	node->prev = NULL;
+
+	if (list->head == NULL) {
+		list->head = list->tail = node;
+	} else {
+		list->head->prev = node;
+		list->head = node;
+	}
+
+	list->size++;
+	return 0;
+}
+
+
+git_revwalk_commit *git_revwalk_list_pop_back(git_revwalk_list *list)
+{
+	git_revwalk_listnode *node;
+	git_revwalk_commit *commit;
+
+	if (list->tail == NULL)
+		return NULL;
+
+	node = list->tail;
+	list->tail = list->tail->prev;
+	if (list->tail == NULL)
+		list->head = NULL;
+
+	commit = node->walk_commit;
+	free(node);
+
+	list->size--;
+
+	return commit;
+}
+
+git_revwalk_commit *git_revwalk_list_pop_front(git_revwalk_list *list)
+{
+	git_revwalk_listnode *node;
+	git_revwalk_commit *commit;
+
+	if (list->head == NULL)
+		return NULL;
+
+	node = list->head;
+	list->head = list->head->next;
+	if (list->head == NULL)
+		list->tail = NULL;
+
+	commit = node->walk_commit;
+	free(node);
+
+	list->size--;
+
+	return commit;
+}
+
+void git_revwalk_list_clear(git_revwalk_list *list)
+{
+	git_revwalk_listnode *node, *next_node;
+
+	node = list->head;
+	while (node) {
+		next_node = node->next;
+		free(node);
+		node = next_node;
+	}
+
+	list->head = list->tail = NULL;
+	list->size = 0;
+}
+
+void git_revwalk_list_timesort(git_revwalk_list *list)
+{
+	git_revwalk_listnode *p, *q, *e;
+	int in_size, p_size, q_size, merge_count, i;
+
+	if (list->head == NULL)
+		return;
+
+	in_size = 1;
+
+	do {
+		p = list->head;
+		list->tail = NULL;
+		merge_count = 0;
+
+		while (p != NULL) {
+			merge_count++;
+			q = p;
+			p_size = 0;
+			q_size = in_size;
+
+			for (i = 0; i < in_size && q; ++i, q = q->next)
+				p_size++;
+
+			while (p_size > 0 || (q_size > 0 && q)) {
+
+				if (p_size == 0)
+					e = q, q = q->next, q_size--;
+
+				else if (q_size == 0 || q == NULL ||
+						p->walk_commit->commit_object->commit_time >= 
+						q->walk_commit->commit_object->commit_time)
+					e = p, p = p->next, p_size--;
+
+				else
+					e = q, q = q->next, q_size--;
+
+				if (list->tail != NULL)
+					list->tail->next = e;
+				else
+					list->head = e;
+
+				e->prev = list->tail;
+				list->tail = e;
+			}
+
+			p = q;
+		}
+
+		list->tail->next = NULL;
+		in_size *= 2;
+
+	} while (merge_count > 1);
+}
+
+void git_revwalk_list_toposort(git_revwalk_list *list)
+{
+	git_revwalk_commit *commit;
+	git_revwalk_list topo;
+	memset(&topo, 0x0, sizeof(git_revwalk_list));
+
+	while ((commit = git_revwalk_list_pop_back(list)) != NULL) {
+		git_revwalk_listnode *p;
+
+		if (commit->in_degree > 0) {
+			commit->topo_delay = 1;
+			continue;
+		}
+
+		for (p = commit->parents.head; p != NULL; p = p->next) {
+			p->walk_commit->in_degree--;
+
+			if (p->walk_commit->in_degree == 0 && p->walk_commit->topo_delay) {
+				p->walk_commit->topo_delay = 0;
+				git_revwalk_list_push_back(list, p->walk_commit);
+			}
+		}
+
+		git_revwalk_list_push_back(&topo, commit);
+	}
+
+	list->head = topo.head;
+	list->tail = topo.tail;
+	list->size = topo.size;
 }
 

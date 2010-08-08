@@ -35,6 +35,7 @@ GIT_EXTERN(void) git_odb_close(git_odb *db);
 
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
+	GIT_OBJ_ANY = -2,		/**< Object can be any of the following */
 	GIT_OBJ_BAD = -1,       /**< Object is invalid. */
 	GIT_OBJ__EXT1 = 0,      /**< Reserved for future use. */
 	GIT_OBJ_COMMIT = 1,     /**< A commit object. */
