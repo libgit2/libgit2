@@ -84,8 +84,10 @@ void git_repository_free(git_repository *repo)
 
 	while ((object = (git_repository_object *)
 				git_hashtable_iterator_next(&it)) != NULL) {
+
+		git_obj_close(&object->dbo);
 	
-		switch (object->type) {
+		switch (object->dbo.type) {
 		case GIT_OBJ_COMMIT:
 			git_commit__free((git_commit *)object);
 			break;
@@ -109,8 +111,39 @@ void git_repository_free(git_repository *repo)
 	free(repo);
 }
 
+int git_repository__open_dbo(git_repository_object *object)
+{
+	int error;
+
+	if (object->dbo_open)
+		return GIT_SUCCESS;
+
+	error = git_odb_read(&object->dbo, object->repo->db, &object->id);
+	if (error < 0)
+		return error;
+
+	object->dbo_open = 1;
+	return GIT_SUCCESS;
+}
+
+void git_repository__close_dbo(git_repository_object *object)
+{
+	if (!object->dbo_open) {
+		git_obj_close(&object->dbo);
+		object->dbo_open = 0;
+	}
+}
+
 git_repository_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_otype type)
 {
+	static const size_t object_sizes[] = {
+		0,
+		sizeof(git_commit),
+		sizeof(git_tree),
+		sizeof(git_repository_object), /* TODO: sizeof(git_blob) */ 
+		sizeof(git_tag)
+	};
+
 	git_repository_object *object = NULL;
 	git_obj obj_file;
 
@@ -120,24 +153,61 @@ git_repository_object *git_repository_lookup(git_repository *repo, const git_oid
 	if (object != NULL)
 		return object;
 
-	if (git_odb_read(&obj_file, repo->db, id) < 0 ||
-		(type != GIT_OBJ_ANY && type != obj_file.type))
+	if (git_odb_read(&obj_file, repo->db, id) < 0)
 		return NULL;
 
-	object = git__malloc(sizeof(git_commit));
+	if (type != GIT_OBJ_ANY && type != obj_file.type)
+		return NULL;
+
+	type = obj_file.type;
+
+	object = git__malloc(object_sizes[type]);
 
 	if (object == NULL)
 		return NULL;
 
-	memset(object, 0x0, sizeof(git_commit));
+	memset(object, 0x0, object_sizes[type]);
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->id, id);
 	object->repo = repo;
-	object->type = obj_file.type;
+	object->dbo_open = 1;
+	memcpy(&object->dbo, &obj_file, sizeof(git_obj));
+
+	switch (type) {
+
+	case GIT_OBJ_COMMIT:
+		if (git_commit__parse_basic((git_commit *)object) < 0) {
+			free(object);
+			return NULL;
+		}
+
+		break;
+
+	case GIT_OBJ_TREE:
+		if (git_tree__parse((git_tree *)object) < 0) {
+			free(object);
+			return NULL;
+		}
+
+		break;
+
+	case GIT_OBJ_TAG:
+		if (git_tag__parse((git_tag *)object) < 0) {
+			free(object);
+			return NULL;
+		}
+
+		break;
+
+	default:
+		/* blobs get no parsing */
+		break;
+	}
+
+	git_obj_close(&object->dbo);
+	object->dbo_open = 0;
 
 	git_hashtable_insert(repo->objects, &object->id, object);
-	git_obj_close(&obj_file);
-
 	return object;
 }

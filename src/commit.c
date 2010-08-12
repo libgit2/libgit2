@@ -53,9 +53,6 @@ void git_commit__free(git_commit *commit)
 {
 	clear_parents(commit);
 
-	if (commit->odb_open)
-		git_obj_close(&commit->odb_object);
-
 	free(commit->author);
 	free(commit->committer);
 	free(commit->message);
@@ -72,26 +69,14 @@ int git_commit__parse(git_commit *commit, unsigned int parse_flags, int close_db
 {
 	int error = 0;
 
-	if (!commit->odb_open) {
-		error = git_odb_read(&commit->odb_object, commit->object.repo->db, &commit->object.id);
-		if (error < 0)
-			return error;
-
-		if (commit->odb_object.type != GIT_OBJ_COMMIT) {
-			git_obj_close(&commit->odb_object);
-			return GIT_EOBJTYPE;
-		}
-
-		commit->odb_open = 1;
-	}
+	if ((error = git_repository__open_dbo((git_repository_object *)commit)) < 0)
+		return error;
 
 	error = git_commit__parse_buffer(commit,
-			commit->odb_object.data, commit->odb_object.len, parse_flags);
+			commit->object.dbo.data, commit->object.dbo.len, parse_flags);
 
-	if (close_db_object) {
-		git_obj_close(&commit->odb_object);
-		commit->odb_open = 0;
-	}
+	if (close_db_object)
+		git_repository__close_dbo((git_repository_object *)commit);
 
 	return error;
 }

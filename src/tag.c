@@ -45,47 +45,26 @@ const git_oid *git_tag_id(git_tag *t)
 
 const git_repository_object *git_tag_target(git_tag *t)
 {
-	if (t->target)
-		return t->target;
-
-	git_tag__parse(t);
 	return t->target;
 }
 
 git_otype git_tag_type(git_tag *t)
 {
-	if (t->type)
-		return t->type;
-
-	git_tag__parse(t);
 	return t->type;
 }
 
-
 const char *git_tag_name(git_tag *t)
 {
-	if (t->tag_name)
-		return t->tag_name;
-
-	git_tag__parse(t);
 	return t->tag_name;
 }
 
 const git_person *git_tag_tagger(git_tag *t)
 {
-	if (t->tagger)
-		return t->tagger;
-
-	git_tag__parse(t);
 	return t->tagger;
 }
 
 const char *git_tag_message(git_tag *t)
 {
-	if (t->message)
-		return t->message;
-
-	git_tag__parse(t);
 	return t->message;
 }
 
@@ -181,21 +160,14 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 int git_tag__parse(git_tag *tag)
 {
 	int error = 0;
-	git_obj odb_object;
 
-	error = git_odb_read(&odb_object, tag->object.repo->db, &tag->object.id);
+	error = git_repository__open_dbo((git_repository_object *)tag);
 	if (error < 0)
 		return error;
 
-	if (odb_object.type != GIT_OBJ_TAG) {
-		error = GIT_EOBJTYPE;
-		goto cleanup;
-	}
+	error = parse_tag_buffer(tag, tag->object.dbo.data, tag->object.dbo.data + tag->object.dbo.len);
 
-	error = parse_tag_buffer(tag, odb_object.data, odb_object.data + odb_object.len);
-
-cleanup:
-	git_obj_close(&odb_object);
+	git_repository__close_dbo((git_repository_object *)tag);
 	return error;
 }
 

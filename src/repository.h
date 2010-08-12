@@ -11,7 +11,8 @@
 struct git_repository_object {
 	git_oid id;
 	git_repository *repo;
-	git_otype type;
+	git_obj dbo;
+	int dbo_open;
 };
 
 struct git_repository {
@@ -19,7 +20,8 @@ struct git_repository {
 	git_hashtable *objects;
 };
 
-int git_repository__insert(git_repository *repo, git_repository_object *obj);
-git_repository_object *git_repository__lookup(git_repository *repo, const git_oid *id);
+
+int git_repository__open_dbo(git_repository_object *object);
+void git_repository__close_dbo(git_repository_object *object);
 
 #endif

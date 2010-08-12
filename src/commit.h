@@ -23,7 +23,6 @@ typedef struct git_commit_parents {
 
 struct git_commit {
 	git_repository_object object;
-	git_obj odb_object;
 
 	time_t commit_time;
 	git_commit_parents *parents;

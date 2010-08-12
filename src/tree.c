@@ -80,19 +80,15 @@ int entry_cmp(const void *key, const void *array_member)
 
 const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
 {
-	if (tree->entries == NULL)
-		git_tree__parse(tree);
-
 	return bsearch(filename, tree->entries, tree->entry_count, sizeof(git_tree_entry), entry_cmp);
 }
 
 const git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
 {
 	if (tree->entries == NULL)
-		git_tree__parse(tree);
+		return NULL;
 
-	return (tree->entries && idx >= 0 && idx < (int)tree->entry_count) ? 
-		&tree->entries[idx] : NULL;
+	return (idx >= 0 && idx < (int)tree->entry_count) ? &tree->entries[idx] : NULL;
 }
 
 size_t git_tree_entrycount(git_tree *tree)
@@ -105,22 +101,21 @@ int git_tree__parse(git_tree *tree)
 	static const size_t avg_entry_size = 40;
 
 	int error = 0;
-	git_obj odb_object;
 	char *buffer, *buffer_end;
 	size_t entries_size;
 
 	if (tree->entries != NULL)
 		return GIT_SUCCESS;
 
-	error = git_odb_read(&odb_object, tree->object.repo->db, &tree->object.id);
+	error = git_repository__open_dbo((git_repository_object *)tree);
 	if (error < 0)
 		return error;
 
-	buffer = odb_object.data;
-	buffer_end = odb_object.data + odb_object.len;
+	buffer = tree->object.dbo.data;
+	buffer_end = buffer + tree->object.dbo.len;
 
 	tree->entry_count = 0;
-	entries_size = (odb_object.len / avg_entry_size) + 1;
+	entries_size = (tree->object.dbo.len / avg_entry_size) + 1;
 	tree->entries = git__malloc(entries_size * sizeof(git_tree_entry));
 
 	while (buffer < buffer_end) {
@@ -160,6 +155,6 @@ int git_tree__parse(git_tree *tree)
 		buffer += GIT_OID_RAWSZ;
 	}
 
-	git_obj_close(&odb_object);
+	git_repository__close_dbo((git_repository_object *)tree);
 	return error;
 }
