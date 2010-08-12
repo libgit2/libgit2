@@ -42,6 +42,7 @@ git_hashtable *git_hashtable_alloc(unsigned int min_size,
 		git_hash_keyeq_ptr key_eq);
 int git_hashtable_insert(git_hashtable *h, const void *key, void *value);
 void *git_hashtable_lookup(git_hashtable *h, const void *key);
+int git_hashtable_remove(git_hashtable *table, const void *key);
 void git_hashtable_free(git_hashtable *h);
 void git_hashtable_clear(git_hashtable *h);
 

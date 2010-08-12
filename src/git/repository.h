@@ -49,6 +49,21 @@ GIT_EXTERN(git_repository *) git_repository_alloc(git_odb *odb);
  */
 GIT_EXTERN(git_repository_object *) git_repository_lookup(git_repository *repo, const git_oid *id, git_otype type);
 
+
+/**
+ * Free a reference to one of the objects in the repostory.
+ *
+ * Repository objects are managed automatically by the library,
+ * but this method can be used to force freeing one of the
+ * objects.
+ *
+ * Careful: freeing objects in the middle of a repository
+ * traversal will most likely cause errors.
+ *
+ * @param object the object to free
+ */
+GIT_EXTERN(void) git_repository_object_free(git_repository_object *object);
+
 /**
  * Free a previously allocated repository
  * @param repo repository handle to close. If NULL nothing occurs.

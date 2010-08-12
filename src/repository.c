@@ -83,28 +83,8 @@ void git_repository_free(git_repository *repo)
 	git_hashtable_iterator_init(repo->objects, &it);
 
 	while ((object = (git_repository_object *)
-				git_hashtable_iterator_next(&it)) != NULL) {
-
-		git_obj_close(&object->dbo);
-	
-		switch (object->dbo.type) {
-		case GIT_OBJ_COMMIT:
-			git_commit__free((git_commit *)object);
-			break;
-
-		case GIT_OBJ_TREE:
-			git_tree__free((git_tree *)object);
-			break;
-
-		case GIT_OBJ_TAG:
-			git_tag__free((git_tag *)object);
-			break;
-
-		default:
-			free(object);
-			break;
-		}
-	}
+				git_hashtable_iterator_next(&it)) != NULL)
+		git_repository_object_free(object);
 
 	git_hashtable_free(repo->objects);
 	/* TODO: free odb */
@@ -131,6 +111,30 @@ void git_repository__close_dbo(git_repository_object *object)
 	if (!object->dbo_open) {
 		git_obj_close(&object->dbo);
 		object->dbo_open = 0;
+	}
+}
+
+void git_repository_object_free(git_repository_object *object)
+{
+	git_hashtable_remove(object->repo->objects, &object->id);
+	git_obj_close(&object->dbo);
+
+	switch (object->dbo.type) {
+	case GIT_OBJ_COMMIT:
+		git_commit__free((git_commit *)object);
+		break;
+
+	case GIT_OBJ_TREE:
+		git_tree__free((git_tree *)object);
+		break;
+
+	case GIT_OBJ_TAG:
+		git_tag__free((git_tag *)object);
+		break;
+
+	default:
+		free(object);
+		break;
 	}
 }
 
