@@ -5,22 +5,18 @@
 #include "repository.h"
 
 struct git_tree_entry {
-
-	unsigned int attr;
+	uint32_t attr;
 	char *filename;
 	git_oid oid;
 
-	struct git_tree_entry *next;
+	git_tree *owner;
 };
-
-typedef struct git_tree_entry git_tree_entry;
 
 struct git_tree {
 	git_repository_object object;
 
-	size_t byte_size;
 	git_tree_entry *entries;
-	unsigned int entry_count;
+	size_t entry_count;
 };
 
 void git_tree__free(git_tree *tree);

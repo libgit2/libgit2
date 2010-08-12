@@ -31,6 +31,12 @@
 
 void git_tree__free(git_tree *tree)
 {
+	size_t i;
+
+	for (i = 0; i < tree->entry_count; ++i)
+		free(tree->entries[i].filename);
+
+	free(tree->entries);
 	free(tree);
 }
 
@@ -44,13 +50,67 @@ git_tree *git_tree_lookup(git_repository *repo, const git_oid *id)
 	return (git_tree *)git_repository_lookup(repo, id, GIT_OBJ_TREE);
 }
 
+uint32_t git_tree_entry_attributes(const git_tree_entry *entry)
+{
+	return entry->attr;
+}
+
+const char *git_tree_entry_name(const git_tree_entry *entry)
+{
+	return entry->filename;
+}
+
+const git_oid *git_tree_entry_id(const git_tree_entry *entry)
+{
+	return &entry->oid;
+}
+
+git_repository_object *git_tree_entry_2object(const git_tree_entry *entry)
+{
+	return git_repository_lookup(entry->owner->object.repo, &entry->oid, GIT_OBJ_ANY);
+}
+
+int entry_cmp(const void *key, const void *array_member)
+{
+	const char *filename = (const char *)key;
+	const git_tree_entry *entry = (const git_tree_entry *)array_member;
+
+	return strcmp(filename, entry->filename);
+}
+
+const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
+{
+	if (tree->entries == NULL)
+		git_tree__parse(tree);
+
+	return bsearch(filename, tree->entries, tree->entry_count, sizeof(git_tree_entry), entry_cmp);
+}
+
+const git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
+{
+	if (tree->entries == NULL)
+		git_tree__parse(tree);
+
+	return (tree->entries && idx >= 0 && idx < (int)tree->entry_count) ? 
+		&tree->entries[idx] : NULL;
+}
+
+size_t git_tree_entrycount(git_tree *tree)
+{
+	return tree->entry_count;
+}
+
 int git_tree__parse(git_tree *tree)
 {
-	static const char tree_header[] = {'t', 'r', 'e', 'e', ' '};
+	static const size_t avg_entry_size = 40;
 
 	int error = 0;
 	git_obj odb_object;
 	char *buffer, *buffer_end;
+	size_t entries_size;
+
+	if (tree->entries != NULL)
+		return GIT_SUCCESS;
 
 	error = git_odb_read(&odb_object, tree->object.repo->db, &tree->object.id);
 	if (error < 0)
@@ -59,23 +119,29 @@ int git_tree__parse(git_tree *tree)
 	buffer = odb_object.data;
 	buffer_end = odb_object.data + odb_object.len;
 
-	if (memcmp(buffer, tree_header, 5) != 0)
-		return GIT_EOBJCORRUPTED;
-
-	buffer += 5;
-
-	tree->byte_size = strtol(buffer, &buffer, 10);
-
-	if (*buffer++ != 0)
-		return GIT_EOBJCORRUPTED;
+	tree->entry_count = 0;
+	entries_size = (odb_object.len / avg_entry_size) + 1;
+	tree->entries = git__malloc(entries_size * sizeof(git_tree_entry));
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
 
-		entry = git__malloc(sizeof(git_tree_entry));
-		entry->next = tree->entries;
+		if (tree->entry_count >= entries_size) {
+			git_tree_entry *new_entries;
 
-		entry->attr = strtol(buffer, &buffer, 10);
+			entries_size = entries_size * 2;
+
+			new_entries = git__malloc(entries_size * sizeof(git_tree_entry));
+			memcpy(new_entries, tree->entries, tree->entry_count * sizeof(git_tree_entry));
+
+			free(tree->entries);
+			tree->entries = new_entries;
+		}
+
+		entry = &tree->entries[tree->entry_count++];
+		entry->owner = tree;
+
+		entry->attr = strtol(buffer, &buffer, 8);
 
 		if (*buffer++ != ' ') {
 			error = GIT_EOBJCORRUPTED;
@@ -86,15 +152,14 @@ int git_tree__parse(git_tree *tree)
 
 		if (entry->filename == NULL) {
 			error = GIT_EOBJCORRUPTED;
-			break;
 		}
-		buffer += strlen(entry->filename);
+
+		buffer += strlen(entry->filename) + 1;
 
 		git_oid_mkraw(&entry->oid, (const unsigned char *)buffer);
 		buffer += GIT_OID_RAWSZ;
-
-		tree->entries = entry;
 	}
 
+	git_obj_close(&odb_object);
 	return error;
 }
