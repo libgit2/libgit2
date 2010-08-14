@@ -50,7 +50,7 @@ git_tree *git_tree_lookup(git_repository *repo, const git_oid *id)
 	return (git_tree *)git_repository_lookup(repo, id, GIT_OBJ_TREE);
 }
 
-uint32_t git_tree_entry_attributes(const git_tree_entry *entry)
+unsigned int git_tree_entry_attributes(const git_tree_entry *entry)
 {
 	return entry->attr;
 }

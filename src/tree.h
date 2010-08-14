@@ -5,7 +5,7 @@
 #include "repository.h"
 
 struct git_tree_entry {
-	uint32_t attr;
+	unsigned int attr;
 	char *filename;
 	git_oid oid;
 

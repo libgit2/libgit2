@@ -68,7 +68,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, int id
  * @param entry a tree entry
  * @return attributes as an integer
  */
-GIT_EXTERN(uint32_t) git_tree_entry_attributes(const git_tree_entry *entry);
+GIT_EXTERN(unsigned int) git_tree_entry_attributes(const git_tree_entry *entry);
 
 /**
  * Get the filename of a tree entry
