@@ -138,6 +138,24 @@ void git_repository_object_free(git_repository_object *object)
 	}
 }
 
+git_odb *git_repository_database(git_repository *repo)
+{
+	assert(repo);
+	return repo->db;
+}
+
+const git_oid *git_repository_object_id(git_repository_object *obj)
+{
+	assert(obj);
+	return &obj->id;
+}
+
+git_otype git_repository_object_type(git_repository_object *obj)
+{
+	assert(obj);
+	return obj->dbo.type;
+}
+
 git_repository_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_otype type)
 {
 	static const size_t object_sizes[] = {

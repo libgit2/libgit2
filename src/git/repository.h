@@ -49,6 +49,29 @@ GIT_EXTERN(git_repository *) git_repository_alloc(git_odb *odb);
  */
 GIT_EXTERN(git_repository_object *) git_repository_lookup(git_repository *repo, const git_oid *id, git_otype type);
 
+/**
+ * Get the object database behind a Git repository
+ *
+ * @param repo a repository object
+ * @return a pointer to the object db
+ */
+GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
+
+/**
+ * Get the id (SHA1) of a repository object
+ *
+ * @param obj the repository object
+ * @return the SHA1 id
+ */
+const git_oid *git_repository_object_id(git_repository_object *obj);
+
+/**
+ * Get the object type of an object
+ *
+ * @param obj the repository object
+ * @return the object's type
+ */
+git_otype git_repository_object_type(git_repository_object *obj);
 
 /**
  * Free a reference to one of the objects in the repostory.
