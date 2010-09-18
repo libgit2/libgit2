@@ -91,9 +91,83 @@ void git_repository_free(git_repository *repo)
 	free(repo);
 }
 
-int git_repository__open_dbo(git_repository_object *object)
+void git_repository__dbo_prepare_write(git_repository_object *object)
+{
+	size_t base_size = 512;
+
+	if (object->writeback.write_ptr != NULL || object->dbo_open)
+		git_repository__dbo_close(object);
+
+	/* TODO: proper size calculation */
+	object->dbo.data = git__malloc(base_size);
+	object->dbo.len = 0;
+
+	object->writeback.write_ptr = object->dbo.data;
+	object->writeback.ptr_size = base_size;
+	object->writeback.written_bytes = 0;
+
+	object->dbo_open = 1;
+	object->out_of_sync = 1;
+}
+
+int git_repository__dbo_write(git_repository_object *object, const void *bytes, size_t len)
+{
+	assert(object);
+
+	if (!object->dbo_open || object->writeback.write_ptr == NULL)
+		return GIT_ERROR;
+
+	/* TODO: resize buffer on overflow */
+	if (object->writeback.written_bytes + len >= object->writeback.ptr_size)
+		return GIT_ENOMEM;
+
+	memcpy(object->writeback.write_ptr, bytes, len);
+	object->writeback.write_ptr += len;
+	object->writeback.written_bytes += len;
+
+	return GIT_SUCCESS;
+}
+
+int git_repository__dbo_writeback(git_repository_object *object)
 {
 	int error;
+	git_oid new_id;
+
+	assert(object);
+
+	if (!object->dbo_open)
+		return GIT_ERROR;
+
+	if (!object->out_of_sync)
+		return GIT_SUCCESS;
+	
+	object->dbo.len = object->writeback.written_bytes;
+
+	git_obj_hash(&new_id, &object->dbo);
+
+	if ((error = git_odb_write(&new_id, object->repo->db, &object->dbo)) < 0)
+		return error;
+
+	git_hashtable_remove(object->repo->objects, &object->id);
+	git_oid_cpy(&object->id, &new_id);
+	git_hashtable_insert(object->repo->objects, &object->id, object);
+
+	object->writeback.write_ptr = NULL;
+	object->writeback.ptr_size = 0;
+	object->writeback.written_bytes = 0;
+
+	git_repository__dbo_close(object);
+	return GIT_SUCCESS;
+}
+
+int git_repository__dbo_open(git_repository_object *object)
+{
+	int error;
+
+	assert(object);
+
+	if (object->dbo_open && object->out_of_sync)
+		git_repository__dbo_close(object);
 
 	if (object->dbo_open)
 		return GIT_SUCCESS;
@@ -103,19 +177,25 @@ int git_repository__open_dbo(git_repository_object *object)
 		return error;
 
 	object->dbo_open = 1;
+	object->out_of_sync = 0;
 	return GIT_SUCCESS;
 }
 
-void git_repository__close_dbo(git_repository_object *object)
+void git_repository__dbo_close(git_repository_object *object)
 {
+	assert(object);
+
 	if (!object->dbo_open) {
 		git_obj_close(&object->dbo);
 		object->dbo_open = 0;
+		object->out_of_sync = 0;
 	}
 }
 
 void git_repository_object_free(git_repository_object *object)
 {
+	assert(object);
+
 	git_hashtable_remove(object->repo->objects, &object->id);
 	git_obj_close(&object->dbo);
 

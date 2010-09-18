@@ -107,7 +107,7 @@ int git_tree__parse(git_tree *tree)
 	if (tree->entries != NULL)
 		return GIT_SUCCESS;
 
-	error = git_repository__open_dbo((git_repository_object *)tree);
+	error = git_repository__dbo_open((git_repository_object *)tree);
 	if (error < 0)
 		return error;
 
@@ -155,6 +155,6 @@ int git_tree__parse(git_tree *tree)
 		buffer += GIT_OID_RAWSZ;
 	}
 
-	git_repository__close_dbo((git_repository_object *)tree);
+	git_repository__dbo_close((git_repository_object *)tree);
 	return error;
 }

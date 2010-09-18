@@ -69,14 +69,14 @@ int git_commit__parse(git_commit *commit, unsigned int parse_flags, int close_db
 {
 	int error = 0;
 
-	if ((error = git_repository__open_dbo((git_repository_object *)commit)) < 0)
+	if ((error = git_repository__dbo_open((git_repository_object *)commit)) < 0)
 		return error;
 
 	error = git_commit__parse_buffer(commit,
 			commit->object.dbo.data, commit->object.dbo.len, parse_flags);
 
 	if (close_db_object)
-		git_repository__close_dbo((git_repository_object *)commit);
+		git_repository__dbo_close((git_repository_object *)commit);
 
 	return error;
 }

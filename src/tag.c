@@ -161,13 +161,13 @@ int git_tag__parse(git_tag *tag)
 {
 	int error = 0;
 
-	error = git_repository__open_dbo((git_repository_object *)tag);
+	error = git_repository__dbo_open((git_repository_object *)tag);
 	if (error < 0)
 		return error;
 
 	error = parse_tag_buffer(tag, tag->object.dbo.data, tag->object.dbo.data + tag->object.dbo.len);
 
-	git_repository__close_dbo((git_repository_object *)tag);
+	git_repository__dbo_close((git_repository_object *)tag);
 	return error;
 }
 
