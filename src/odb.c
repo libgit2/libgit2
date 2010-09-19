@@ -1446,6 +1446,9 @@ int git_odb_read(
 	const git_oid *id)
 {
 attempt:
+
+	assert(out && db);
+
 	if (!git_odb__read_packed(out, db, id))
 		return GIT_SUCCESS;
 	if (!git_odb__read_loose(out, db, id))

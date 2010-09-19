@@ -5,6 +5,8 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
+static const char *odb_dir = "../resources/pack-odb";
+
 static char *test_commits_broken[] = {
 
 /* empty commit */
@@ -58,21 +60,20 @@ par",
 
 static char *test_commits_working[] = {
 /* simple commit with no message */
-"tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
+"tree 1810dff58d8a660512d4832e740f692884338ccd\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n",
 
 /* simple commit, no parent */
-"tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
+"tree 1810dff58d8a660512d4832e740f692884338ccd\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 a simple commit which works\n",
 
 /* simple commit, 1 parents */
-"tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
-parent a4a7dce85cf63874e984719f4fdd239f5145052f\n\
+"tree 1810dff58d8a660512d4832e740f692884338ccd\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
@@ -216,16 +217,13 @@ BEGIN_TEST(parse_buffer_test)
 	const int broken_commit_count = sizeof(test_commits_broken) / sizeof(*test_commits_broken);
 	const int working_commit_count = sizeof(test_commits_working) / sizeof(*test_commits_working);
 
-	const unsigned int default_flags = 
-		GIT_COMMIT_AUTHOR | 
-		GIT_COMMIT_COMMITTER | 
-		GIT_COMMIT_TIME |
-		GIT_COMMIT_MESSAGE |
-		GIT_COMMIT_MESSAGE_SHORT; /* parse everything */
-
 	int i;
-	git_repository *repo = git_repository_alloc(NULL);
+	git_repository *repo;
+	git_odb *db;
 
+	must_pass(git_odb_open(&db, odb_dir));
+
+	repo = git_repository_alloc(db);
 	must_be_true(repo != NULL);
 
 	for (i = 0; i < broken_commit_count; ++i) {
@@ -238,7 +236,7 @@ BEGIN_TEST(parse_buffer_test)
 					commit,
 					test_commits_broken[i],
 					strlen(test_commits_broken[i]),
-					default_flags)
+					0x1)
 				);
 
 		git_commit__free(commit);
@@ -254,7 +252,7 @@ BEGIN_TEST(parse_buffer_test)
 					commit,
 					test_commits_working[i],
 					strlen(test_commits_working[i]),
-					default_flags)
+					0x1)
 				);
 
 		git_commit__free(commit);

@@ -79,6 +79,41 @@ GIT_EXTERN(const git_person *) git_commit_author(git_commit *commit);
  */
 GIT_EXTERN(const git_tree *) git_commit_tree(git_commit *commit);
 
+/*
+ * Add a new parent commit to an existing commit
+ * @param commit the commit object
+ * @param new_parent the new commit which will be a parent
+ */
+GIT_EXTERN(void) git_commit_add_parent(git_commit *commit, git_commit *new_parent);
+
+/*
+ * Set the message of a commit
+ * @param commit the commit object
+ * @param message the new message
+ */
+GIT_EXTERN(void) git_commit_set_message(git_commit *commit, const char *message);
+
+/*
+ * Set the committer of a commit
+ * @param commit the commit object
+ * @param committer the new committer
+ */
+GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const git_person *committer);
+
+/*
+ * Set the author of a commit
+ * @param commit the commit object
+ * @param author the new author
+ */
+GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const git_person *author);
+
+/*
+ * Set the tree which is pointed to by a commit
+ * @param commit the commit object
+ * @param tree the new tree
+ */
+GIT_EXTERN(void) git_commit_set_tree(git_commit *commit, git_tree *tree);
+
 /** @} */
 GIT_END_DECL
 #endif

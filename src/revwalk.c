@@ -98,11 +98,6 @@ static git_revwalk_commit *commit_to_walkcommit(git_revwalk *walk, git_commit *c
 	if (commit != NULL)
 		return commit;
 
-	if (!commit_object->basic_parse) {
-		if (git_commit__parse_basic(commit_object) < 0)
-			return NULL;
-	}
-
 	commit = git__malloc(sizeof(git_revwalk_commit));
 	if (commit == NULL)
 		return NULL;
@@ -134,8 +129,6 @@ static git_revwalk_commit *insert_commit(git_revwalk *walk, git_commit *commit_o
 		return commit;
 
 	commit->seen = 1;
-
-	assert(commit->commit_object->basic_parse);
 
 	for (parents = commit->commit_object->parents; parents != NULL; parents = parents->next) {
 		git_revwalk_commit *parent;

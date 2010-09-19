@@ -19,6 +19,7 @@ struct git_object {
 	git_oid id;
 	git_repository *repo;
 	git_odb_source source;
+	int in_memory:1, modified:1;
 };
 
 struct git_repository {

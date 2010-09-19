@@ -205,6 +205,8 @@ int git_object__source_writeback(git_object *object)
 	object->source.write_ptr = NULL;
 	object->source.written_bytes = 0;
 
+	object->modified = 0;
+
 	git_object__source_close(object);
 	return GIT_SUCCESS;
 }
@@ -239,6 +241,38 @@ void git_object__source_close(git_object *object)
 		object->source.open = 0;
 		object->source.out_of_sync = 0;
 	}
+}
+
+int git_object_write(git_object *object)
+{
+	int error;
+	git_odb_source *source;
+
+	assert(object);
+
+	if (object->modified == 0)
+		return GIT_SUCCESS;
+
+	git_object__source_prepare_write(object);
+	source = &object->source;
+
+	switch (source->raw.type) {
+	case GIT_OBJ_COMMIT:
+		error = git_commit__writeback((git_commit *)object, source);
+		break;
+
+	case GIT_OBJ_TREE:
+	case GIT_OBJ_TAG:
+	default:
+		error = GIT_ERROR;
+	}
+
+	if (error < 0) {
+		git_object__source_close(object);
+		return error;
+	}
+	
+	return git_object__source_writeback(object);
 }
 
 void git_object_free(git_object *object)
@@ -328,7 +362,7 @@ git_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_o
 	switch (type) {
 
 	case GIT_OBJ_COMMIT:
-		if (git_commit__parse_basic((git_commit *)object) < 0) {
+		if (git_commit__parse((git_commit *)object) < 0) {
 			free(object);
 			return NULL;
 		}
