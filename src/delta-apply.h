@@ -16,7 +16,7 @@
  * - GIT_ERROR if the delta is corrupt or doesn't match the base.
  */
 extern int git__delta_apply(
-	git_obj *out,
+	git_rawobj *out,
 	const unsigned char *base,
 	size_t base_len,
 	const unsigned char *delta,

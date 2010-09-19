@@ -13,7 +13,7 @@ struct git_tree_entry {
 };
 
 struct git_tree {
-	git_repository_object object;
+	git_object object;
 
 	git_tree_entry *entries;
 	size_t entry_count;

@@ -5,9 +5,9 @@
 #include "repository.h"
 
 struct git_tag {
-	git_repository_object object;
+	git_object object;
 
-	git_repository_object *target;
+	git_object *target;
 	git_otype type;
 	char *tag_name;
 	git_person *tagger;

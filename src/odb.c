@@ -187,7 +187,7 @@ int git_obj__loose_object_type(git_otype type)
 	return obj_type_table[type].loose;
 }
 
-static int format_object_header(char *hdr, size_t n, git_obj *obj)
+static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 {
 	const char *type_str = git_obj_type_to_string(obj->type);
 	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj->len);
@@ -200,7 +200,7 @@ static int format_object_header(char *hdr, size_t n, git_obj *obj)
 	return len+1;
 }
 
-static int hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_obj *obj)
+static int hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj)
 {
 	git_buf_vec vec[2];
 	int  hdrlen;
@@ -228,7 +228,7 @@ static int hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_obj *obj)
 	return GIT_SUCCESS;
 }
 
-int git_obj_hash(git_oid *id, git_obj *obj)
+int git_obj_hash(git_oid *id, git_rawobj *obj)
 {
 	char hdr[64];
 	int  hdrlen;
@@ -456,7 +456,7 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
  * of loose object data into packs. This format is no longer used, but
  * we must still read it.
  */
-static int inflate_packlike_loose_disk_obj(git_obj *out, gitfo_buf *obj)
+static int inflate_packlike_loose_disk_obj(git_rawobj *out, gitfo_buf *obj)
 {
 	unsigned char *in, *buf;
 	obj_hdr hdr;
@@ -494,7 +494,7 @@ static int inflate_packlike_loose_disk_obj(git_obj *out, gitfo_buf *obj)
 	return GIT_SUCCESS;
 }
 
-static int inflate_disk_obj(git_obj *out, gitfo_buf *obj)
+static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
 {
 	unsigned char head[64], *buf;
 	z_stream zs;
@@ -579,7 +579,7 @@ static int deflate_buf(z_stream *s, void *in, size_t len, int flush)
 	return status;
 }
 
-static int deflate_obj(gitfo_buf *buf, char *hdr, int hdrlen, git_obj *obj, int level)
+static int deflate_obj(gitfo_buf *buf, char *hdr, int hdrlen, git_rawobj *obj, int level)
 {
 	z_stream zs;
 	int status;
@@ -1441,7 +1441,7 @@ void git_odb_close(git_odb *db)
 }
 
 int git_odb_read(
-	git_obj *out,
+	git_rawobj *out,
 	git_odb *db,
 	const git_oid *id)
 {
@@ -1457,7 +1457,7 @@ attempt:
 	return GIT_ENOTFOUND;
 }
 
-int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
+int git_odb__read_loose(git_rawobj *out, git_odb *db, const git_oid *id)
 {
 	char file[GIT_PATH_MAX];
 	gitfo_buf obj = GITFO_BUF_INIT;
@@ -1484,9 +1484,9 @@ int git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id)
 	return GIT_SUCCESS;
 }
 
-static int unpack_object(git_obj *out, git_pack *p, index_entry *e);
+static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e);
 
-static int unpack_object_delta(git_obj *out, git_pack *p, 
+static int unpack_object_delta(git_rawobj *out, git_pack *p, 
 		index_entry *base_entry, 
 		uint8_t *delta_buffer, 
 		size_t delta_deflated_size,
@@ -1494,7 +1494,7 @@ static int unpack_object_delta(git_obj *out, git_pack *p,
 {
 	int res = 0;
 	uint8_t *delta = NULL;
-	git_obj base_obj;
+	git_rawobj base_obj;
 
 	base_obj.data = NULL;
 	base_obj.type = GIT_OBJ_BAD;
@@ -1519,7 +1519,7 @@ cleanup:
 	return res;
 }
 
-static int unpack_object(git_obj *out, git_pack *p, index_entry *e)
+static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e)
 {
 	git_otype object_type;
 	size_t inflated_size, deflated_size, shift;
@@ -1623,7 +1623,7 @@ static int unpack_object(git_obj *out, git_pack *p, index_entry *e)
 	return GIT_SUCCESS;
 }
 
-static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
+static int read_packed(git_rawobj *out, git_pack *p, const git_oid *id)
 {
 	uint32_t n;
 	index_entry e;
@@ -1646,7 +1646,7 @@ static int read_packed(git_obj *out, git_pack *p, const git_oid *id)
 	return res;
 }
 
-int git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id)
+int git_odb__read_packed(git_rawobj *out, git_odb *db, const git_oid *id)
 {
 	git_packlist *pl = packlist_get(db);
 	size_t j;
@@ -1671,7 +1671,7 @@ int git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id)
 	return GIT_ENOTFOUND;
 }
 
-int git_odb_write(git_oid *id, git_odb *db, git_obj *obj)
+int git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj)
 {
 	char hdr[64];
 	int  hdrlen;

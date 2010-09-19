@@ -43,7 +43,7 @@ const git_oid *git_tag_id(git_tag *t)
 	return &t->object.id;
 }
 
-const git_repository_object *git_tag_target(git_tag *t)
+const git_object *git_tag_target(git_tag *t)
 {
 	return t->target;
 }
@@ -161,13 +161,13 @@ int git_tag__parse(git_tag *tag)
 {
 	int error = 0;
 
-	error = git_repository__dbo_open((git_repository_object *)tag);
+	error = git_object__source_open((git_object *)tag);
 	if (error < 0)
 		return error;
 
-	error = parse_tag_buffer(tag, tag->object.dbo.data, tag->object.dbo.data + tag->object.dbo.len);
+	error = parse_tag_buffer(tag, tag->object.source.raw.data, tag->object.source.raw.data + tag->object.source.raw.len);
 
-	git_repository__dbo_close((git_repository_object *)tag);
+	git_object__source_close((git_object *)tag);
 	return error;
 }
 

@@ -85,11 +85,11 @@ GIT_EXTERN(const char *) git_tree_entry_name(const git_tree_entry *entry);
 GIT_EXTERN(const git_oid *) git_tree_entry_id(const git_tree_entry *entry);
 
 /**
- * Convert a tree entry to the git_repository_object it points too.
+ * Convert a tree entry to the git_object it points too.
  * @param entry a tree entry
  * @return a reference to the pointed object in the repository
  */
-GIT_EXTERN(git_repository_object *) git_tree_entry_2object(const git_tree_entry *entry);
+GIT_EXTERN(git_object *) git_tree_entry_2object(const git_tree_entry *entry);
 
 /** @} */
 GIT_END_DECL

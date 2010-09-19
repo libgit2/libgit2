@@ -65,7 +65,7 @@ const git_oid *git_tree_entry_id(const git_tree_entry *entry)
 	return &entry->oid;
 }
 
-git_repository_object *git_tree_entry_2object(const git_tree_entry *entry)
+git_object *git_tree_entry_2object(const git_tree_entry *entry)
 {
 	return git_repository_lookup(entry->owner->object.repo, &entry->oid, GIT_OBJ_ANY);
 }
@@ -107,15 +107,15 @@ int git_tree__parse(git_tree *tree)
 	if (tree->entries != NULL)
 		return GIT_SUCCESS;
 
-	error = git_repository__dbo_open((git_repository_object *)tree);
+	error = git_object__source_open((git_object *)tree);
 	if (error < 0)
 		return error;
 
-	buffer = tree->object.dbo.data;
-	buffer_end = buffer + tree->object.dbo.len;
+	buffer = tree->object.source.raw.data;
+	buffer_end = buffer + tree->object.source.raw.len;
 
 	tree->entry_count = 0;
-	entries_size = (tree->object.dbo.len / avg_entry_size) + 1;
+	entries_size = (tree->object.source.raw.len / avg_entry_size) + 1;
 	tree->entries = git__malloc(entries_size * sizeof(git_tree_entry));
 
 	while (buffer < buffer_end) {
@@ -155,6 +155,6 @@ int git_tree__parse(git_tree *tree)
 		buffer += GIT_OID_RAWSZ;
 	}
 
-	git_repository__dbo_close((git_repository_object *)tree);
+	git_object__source_close((git_object *)tree);
 	return error;
 }

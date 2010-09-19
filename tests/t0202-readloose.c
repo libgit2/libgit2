@@ -526,7 +526,7 @@ static object_data some = {
 BEGIN_TEST(read_loose_commit)
     git_odb *db;
     git_oid id;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(write_object_files(odb_dir, &commit));
     must_pass(git_odb_open(&db, odb_dir));
@@ -543,7 +543,7 @@ END_TEST
 BEGIN_TEST(read_loose_tree)
     git_odb *db;
     git_oid id;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(write_object_files(odb_dir, &tree));
     must_pass(git_odb_open(&db, odb_dir));
@@ -560,7 +560,7 @@ END_TEST
 BEGIN_TEST(read_loose_tag)
     git_odb *db;
     git_oid id;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(write_object_files(odb_dir, &tag));
     must_pass(git_odb_open(&db, odb_dir));
@@ -577,7 +577,7 @@ END_TEST
 BEGIN_TEST(read_loose_zero)
     git_odb *db;
     git_oid id;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(write_object_files(odb_dir, &zero));
     must_pass(git_odb_open(&db, odb_dir));
@@ -594,7 +594,7 @@ END_TEST
 BEGIN_TEST(read_loose_one)
     git_odb *db;
     git_oid id;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(write_object_files(odb_dir, &one));
     must_pass(git_odb_open(&db, odb_dir));
@@ -611,7 +611,7 @@ END_TEST
 BEGIN_TEST(read_loose_two)
     git_odb *db;
     git_oid id;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(write_object_files(odb_dir, &two));
     must_pass(git_odb_open(&db, odb_dir));
@@ -628,7 +628,7 @@ END_TEST
 BEGIN_TEST(read_loose_some)
     git_odb *db;
     git_oid id;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(write_object_files(odb_dir, &some));
     must_pass(git_odb_open(&db, odb_dir));

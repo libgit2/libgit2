@@ -8,18 +8,17 @@
 
 #include "hashtable.h"
 
-struct git_repository_object {
+typedef struct {
+	git_rawobj raw;
+	void *write_ptr;
+	size_t written_bytes;
+	int open:1, out_of_sync:1;
+} git_odb_source;
+
+struct git_object {
 	git_oid id;
 	git_repository *repo;
-	git_obj dbo;
-
-	struct {
-		void *write_ptr;
-		size_t ptr_size;
-		size_t written_bytes;
-	} writeback;
-
-	int dbo_open:1, out_of_sync:1;
+	git_odb_source source;
 };
 
 struct git_repository {
@@ -28,10 +27,10 @@ struct git_repository {
 };
 
 
-int git_repository__dbo_open(git_repository_object *object);
-void git_repository__dbo_close(git_repository_object *object);
-void git_repository__dbo_prepare_write(git_repository_object *object);
-int git_repository__dbo_write(git_repository_object *object, const void *bytes, size_t len);
-int git_repository__dbo_writeback(git_repository_object *object);
+int git_object__source_open(git_object *object);
+void git_object__source_close(git_object *object);
+void git_object__source_prepare_write(git_object *object);
+int git_object__source_write(git_object *object, const void *bytes, size_t len);
+int git_object__source_writeback(git_object *object);
 
 #endif

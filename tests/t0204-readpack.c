@@ -141,7 +141,7 @@ BEGIN_TEST(readpacked_test)
 
 	for (i = 0; i < ARRAY_SIZE(packed_objects); ++i) {
 		git_oid id;
-		git_obj obj;
+		git_rawobj obj;
 
 		must_pass(git_oid_mkstr(&id, packed_objects[i]));
 		must_be_true(git_odb_exists(db, &id) == 1);

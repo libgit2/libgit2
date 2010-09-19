@@ -52,7 +52,7 @@ typedef struct {
 	void *data;          /**< Raw, decompressed object data. */
 	size_t len;          /**< Total number of bytes in data. */
 	git_otype type;      /**< Type of this object. */
-} git_obj;
+} git_rawobj;
 
 /**
  * Read an object from the database.
@@ -66,7 +66,7 @@ typedef struct {
  * - GIT_SUCCESS if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb_read(git_obj *out, git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb_read(git_rawobj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read an object from the database using only pack files.
@@ -80,7 +80,7 @@ GIT_EXTERN(int) git_odb_read(git_obj *out, git_odb *db, const git_oid *id);
  * - GIT_SUCCESS if the object was read.
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb__read_packed(git_rawobj *out, git_odb *db, const git_oid *id);
 
 /**
  * Read an object from the database using only loose object files.
@@ -94,7 +94,7 @@ GIT_EXTERN(int) git_odb__read_packed(git_obj *out, git_odb *db, const git_oid *i
  * - GIT_SUCCESS if the object was read.
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb__read_loose(git_rawobj *out, git_odb *db, const git_oid *id);
 
 /**
  * Write an object to the database.
@@ -106,7 +106,7 @@ GIT_EXTERN(int) git_odb__read_loose(git_obj *out, git_odb *db, const git_oid *id
  * - GIT_SUCCESS if the object was written;
  * - GIT_ERROR otherwise.
  */
-GIT_EXTERN(int) git_odb_write(git_oid *id, git_odb *db, git_obj *obj);
+GIT_EXTERN(int) git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj);
 
 /**
  * Release all memory used by the obj structure.
@@ -117,7 +117,7 @@ GIT_EXTERN(int) git_odb_write(git_oid *id, git_odb *db, git_obj *obj);
  *
  * @param obj object descriptor to free.
  */
-GIT_INLINE(void) git_obj_close(git_obj *obj)
+GIT_INLINE(void) git_obj_close(git_rawobj *obj)
 {
 	free(obj->data);
 	obj->data = NULL;
@@ -152,7 +152,7 @@ GIT_EXTERN(git_otype) git_obj_string_to_type(const char *str);
 GIT_EXTERN(int) git_obj__loose_object_type(git_otype type);
 
 /**
- * Determine the object-ID (sha1 hash) of the given git_obj.
+ * Determine the object-ID (sha1 hash) of the given git_rawobj.
  *
  * The input obj must be a valid loose object type and the data
  * pointer must not be NULL, unless the len field is also zero.
@@ -163,7 +163,7 @@ GIT_EXTERN(int) git_obj__loose_object_type(git_otype type);
  * - GIT_SUCCESS if the object-ID was correctly determined.
  * - GIT_ERROR if the given object is malformed.
  */
-GIT_EXTERN(int) git_obj_hash(git_oid *id, git_obj *obj);
+GIT_EXTERN(int) git_obj_hash(git_oid *id, git_rawobj *obj);
 
 /**
  * Determine if the given object can be found in the object database.

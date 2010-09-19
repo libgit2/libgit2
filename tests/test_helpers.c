@@ -82,7 +82,7 @@ int remove_object_files(const char *odb_dir, object_data *d)
 	return 0;
 }
 
-int cmp_objects(git_obj *o, object_data *d)
+int cmp_objects(git_rawobj *o, object_data *d)
 {
 	if (o->type != git_obj_string_to_type(d->type))
 		return -1;

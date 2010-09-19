@@ -65,7 +65,7 @@ static unsigned char commit_data[] = {
     0x3e, 0x0a,
 };
 
-static git_obj commit_obj = {
+static git_rawobj commit_obj = {
 	commit_data,
 	sizeof(commit_data),
 	GIT_OBJ_COMMIT
@@ -96,7 +96,7 @@ static unsigned char tree_data[] = {
     0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91,
 };
 
-static git_obj tree_obj = {
+static git_rawobj tree_obj = {
 	tree_data,
 	sizeof(tree_data),
 	GIT_OBJ_TREE
@@ -133,7 +133,7 @@ static unsigned char tag_data[] = {
     0x2e, 0x30, 0x2e, 0x31, 0x0a,
 };
 
-static git_obj tag_obj = {
+static git_rawobj tag_obj = {
 	tag_data,
 	sizeof(tag_data),
 	GIT_OBJ_TAG
@@ -149,7 +149,7 @@ static unsigned char zero_data[] = {
     0x00  /* dummy data */
 };
 
-static git_obj zero_obj = {
+static git_rawobj zero_obj = {
 	zero_data,
 	0,
 	GIT_OBJ_BLOB
@@ -165,7 +165,7 @@ static unsigned char one_data[] = {
     0x0a,
 };
 
-static git_obj one_obj = {
+static git_rawobj one_obj = {
 	one_data,
 	sizeof(one_data),
 	GIT_OBJ_BLOB
@@ -181,7 +181,7 @@ static unsigned char two_data[] = {
     0x61, 0x0a,
 };
 
-static git_obj two_obj = {
+static git_rawobj two_obj = {
 	two_data,
 	sizeof(two_data),
 	GIT_OBJ_BLOB
@@ -343,7 +343,7 @@ static unsigned char some_data[] = {
     0x0a,
 };
 
-static git_obj some_obj = {
+static git_rawobj some_obj = {
 	some_data,
 	sizeof(some_data),
 	GIT_OBJ_BLOB
@@ -390,7 +390,7 @@ static int check_object_files(object_data *d)
 	return 0;
 }
 
-static int cmp_objects(git_obj *o1, git_obj *o2)
+static int cmp_objects(git_rawobj *o1, git_rawobj *o2)
 {
 	if (o1->type != o2->type)
 		return -1;
@@ -404,7 +404,7 @@ static int cmp_objects(git_obj *o1, git_obj *o2)
 BEGIN_TEST(write_commit)
     git_odb *db;
     git_oid id1, id2;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
@@ -425,7 +425,7 @@ END_TEST
 BEGIN_TEST(write_tree)
     git_odb *db;
     git_oid id1, id2;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
@@ -446,7 +446,7 @@ END_TEST
 BEGIN_TEST(write_tag)
     git_odb *db;
     git_oid id1, id2;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
@@ -467,7 +467,7 @@ END_TEST
 BEGIN_TEST(write_zero)
     git_odb *db;
     git_oid id1, id2;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
@@ -488,7 +488,7 @@ END_TEST
 BEGIN_TEST(write_one)
     git_odb *db;
     git_oid id1, id2;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
@@ -509,7 +509,7 @@ END_TEST
 BEGIN_TEST(write_two)
     git_odb *db;
     git_oid id1, id2;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
@@ -530,7 +530,7 @@ END_TEST
 BEGIN_TEST(write_some)
     git_odb *db;
     git_oid id1, id2;
-    git_obj obj;
+    git_rawobj obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));

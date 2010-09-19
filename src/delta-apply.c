@@ -31,7 +31,7 @@ static int hdr_sz(
 }
 
 int git__delta_apply(
-	git_obj *out,
+	git_rawobj *out,
 	const unsigned char *base,
 	size_t base_len,
 	const unsigned char *delta,
