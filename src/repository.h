@@ -30,7 +30,9 @@ struct git_repository {
 int git_object__source_open(git_object *object);
 void git_object__source_close(git_object *object);
 void git_object__source_prepare_write(git_object *object);
-int git_object__source_write(git_object *object, const void *bytes, size_t len);
 int git_object__source_writeback(git_object *object);
+
+int git__source_printf(git_odb_source *source, const char *format, ...);
+int git__source_write(git_odb_source *source, const void *bytes, size_t len);
 
 #endif

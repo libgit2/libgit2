@@ -22,6 +22,7 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#include <stdarg.h>
 
 #include "common.h"
 #include "repository.h"
@@ -91,9 +92,77 @@ void git_repository_free(git_repository *repo)
 	free(repo);
 }
 
+static int source_resize(git_odb_source *src)
+{
+	size_t write_offset, new_size;
+	void *new_data;
+
+	write_offset = src->write_ptr - src->raw.data;
+
+	new_size = src->raw.len * 2;
+	if ((new_data = git__malloc(new_size)) == NULL)
+		return GIT_ENOMEM;
+
+	memcpy(new_data, src->raw.data, src->written_bytes);
+	free(src->raw.data);
+
+	src->raw.data = new_data;
+	src->raw.len = new_size;
+	src->write_ptr = new_data + write_offset;
+
+	return GIT_SUCCESS;
+}
+
+int git__source_printf(git_odb_source *source, const char *format, ...)
+{
+	va_list arglist;
+	int len, did_resize = 0;
+
+	if (!source->open || source->write_ptr == NULL)
+		return GIT_ERROR;
+
+	va_start(arglist, format);
+
+	len = vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
+
+	while (source->written_bytes + len >= source->raw.len) {
+		if (source_resize(source) < 0)
+			return GIT_ENOMEM;
+
+		did_resize = 1;
+	}
+
+	if (did_resize)
+		vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
+
+	source->write_ptr += len;
+	source->written_bytes += len;
+
+	return GIT_SUCCESS;
+}
+
+int git__source_write(git_odb_source *source, const void *bytes, size_t len)
+{
+	assert(source);
+
+	if (!source->open || source->write_ptr == NULL)
+		return GIT_ERROR;
+
+	while (source->written_bytes + len >= source->raw.len) {
+		if (source_resize(source) < 0)
+			return GIT_ENOMEM;
+	}
+
+	memcpy(source->write_ptr, bytes, len);
+	source->write_ptr += len;
+	source->written_bytes += len;
+
+	return GIT_SUCCESS;
+}
+
 void git_object__source_prepare_write(git_object *object)
 {
-	size_t base_size = 512;
+	const size_t base_size = 4096; /* 4Kb base size */
 
 	if (object->source.write_ptr != NULL || object->source.open)
 		git_object__source_close(object);
@@ -107,24 +176,6 @@ void git_object__source_prepare_write(git_object *object)
 
 	object->source.open = 1;
 	object->source.out_of_sync = 1;
-}
-
-int git_object__source_write(git_object *object, const void *bytes, size_t len)
-{
-	assert(object);
-
-	if (!object->source.open || object->source.write_ptr == NULL)
-		return GIT_ERROR;
-
-	/* TODO: resize buffer on overflow */
-	if (object->source.written_bytes + len >= object->source.raw.len)
-		return GIT_ENOMEM;
-
-	memcpy(object->source.write_ptr, bytes, len);
-	object->source.write_ptr += len;
-	object->source.written_bytes += len;
-
-	return GIT_SUCCESS;
 }
 
 int git_object__source_writeback(git_object *object)
