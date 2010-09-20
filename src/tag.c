@@ -38,9 +38,14 @@ void git_tag__free(git_tag *tag)
 	free(tag);
 }
 
-const git_oid *git_tag_id(git_tag *t)
+git_tag *git_tag_new(git_repository *repo)
 {
-	return &t->object.id;
+	return (git_tag *)git_object_new(repo, GIT_OBJ_TAG);
+}
+
+const git_oid *git_tag_id(git_tag *c)
+{
+	return git_object_id((git_object *)c);
 }
 
 const git_object *git_tag_target(git_tag *t)

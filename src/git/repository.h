@@ -57,8 +57,52 @@ GIT_EXTERN(git_object *) git_repository_lookup(git_repository *repo, const git_o
  */
 GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
 
+/*
+ * Create a new in-memory repository object with
+ * the given type.
+ *
+ * The object's attributes can be filled in using the
+ * correspondign setter methods.
+ *
+ * The object will be written back to given git_repository
+ * when the git_object_write() function is called; objects
+ * cannot be written to disk until all their main
+ * attributes have been properly filled.
+ *
+ * Objects are instantiated with no SHA1 id; their id
+ * will be automatically generated when writing to the
+ * repository.
+ *
+ * @parem repo Repository where the object belongs
+ * @param type Type of the object to be created
+ * @return the new object
+ */
+GIT_EXTERN(git_object *) git_object_new(git_repository *repo, git_otype type);
+
+/*
+ * Write back an object to disk.
+ *
+ * The object will be written to its corresponding
+ * repository.
+ *
+ * If the object has no changes since it was first
+ * read from the repository, no actions will take place.
+ *
+ * If the object has been modified since it was read from
+ * the repository, or it has been created from scratch
+ * in memory, it will be written to the repository and
+ * its SHA1 ID will be updated accordingly.
+ *
+ * @param object Git object to write back
+ * @return 0 on success; otherwise an error code
+ */
+int git_object_write(git_object *object);
+
 /**
  * Get the id (SHA1) of a repository object
+ *
+ * In-memory objects created by git_object_new() do not
+ * have a SHA1 ID until they are written on a repository.
  *
  * @param obj the repository object
  * @return the SHA1 id

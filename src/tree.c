@@ -40,9 +40,14 @@ void git_tree__free(git_tree *tree)
 	free(tree);
 }
 
-const git_oid *git_tree_id(git_tree *tree)
+git_tree *git_tree_new(git_repository *repo)
 {
-	return &tree->object.id;
+	return (git_tree *)git_object_new(repo, GIT_OBJ_TREE);
+}
+
+const git_oid *git_tree_id(git_tree *c)
+{
+	return git_object_id((git_object *)c);
 }
 
 git_tree *git_tree_lookup(git_repository *repo, const git_oid *id)

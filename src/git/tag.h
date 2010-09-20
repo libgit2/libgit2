@@ -29,6 +29,18 @@ typedef struct git_tag git_tag;
  */
 GIT_EXTERN(git_tag *) git_tag_lookup(git_repository *repo, const git_oid *id);
 
+/*
+ * Create a new in-memory git_tag.
+ *
+ * The tag object must be manually filled using
+ * setter methods before it can be written to its
+ * repository.
+ *
+ * @param repo The repository where the object will reside
+ * @return the object if creation was posible; NULL otherwise
+ */
+GIT_EXTERN(git_tag *) git_tag_new(git_repository *repo);
+
 /**
  * Get the id of a tag.
  * @param tag a previously loaded tag.

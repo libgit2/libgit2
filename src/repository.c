@@ -32,6 +32,15 @@
 static const int default_table_size = 32;
 static const double max_load_factor = 0.65;
 
+static const size_t object_sizes[] = {
+	0,
+	sizeof(git_commit),
+	sizeof(git_tree),
+	sizeof(git_object), /* TODO: sizeof(git_blob) */ 
+	sizeof(git_tag)
+};
+
+
 uint32_t git_object_hash(const void *key)
 {
 	uint32_t r;
@@ -160,7 +169,7 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len)
 	return GIT_SUCCESS;
 }
 
-void git_object__source_prepare_write(git_object *object)
+static void prepare_write(git_object *object)
 {
 	const size_t base_size = 4096; /* 4Kb base size */
 
@@ -175,10 +184,9 @@ void git_object__source_prepare_write(git_object *object)
 	object->source.written_bytes = 0;
 
 	object->source.open = 1;
-	object->source.out_of_sync = 1;
 }
 
-int git_object__source_writeback(git_object *object)
+static int write_back(git_object *object)
 {
 	int error;
 	git_oid new_id;
@@ -188,8 +196,7 @@ int git_object__source_writeback(git_object *object)
 	if (!object->source.open)
 		return GIT_ERROR;
 
-	if (!object->source.out_of_sync)
-		return GIT_SUCCESS;
+	assert(object->modified);
 	
 	object->source.raw.len = object->source.written_bytes;
 
@@ -198,7 +205,9 @@ int git_object__source_writeback(git_object *object)
 	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < 0)
 		return error;
 
-	git_hashtable_remove(object->repo->objects, &object->id);
+	if (!object->in_memory)
+		git_hashtable_remove(object->repo->objects, &object->id);
+
 	git_oid_cpy(&object->id, &new_id);
 	git_hashtable_insert(object->repo->objects, &object->id, object);
 
@@ -206,6 +215,7 @@ int git_object__source_writeback(git_object *object)
 	object->source.written_bytes = 0;
 
 	object->modified = 0;
+	object->in_memory = 0;
 
 	git_object__source_close(object);
 	return GIT_SUCCESS;
@@ -215,9 +225,9 @@ int git_object__source_open(git_object *object)
 {
 	int error;
 
-	assert(object);
+	assert(object && !object->in_memory);
 
-	if (object->source.open && object->source.out_of_sync)
+	if (object->source.open)
 		git_object__source_close(object);
 
 	if (object->source.open)
@@ -228,7 +238,6 @@ int git_object__source_open(git_object *object)
 		return error;
 
 	object->source.open = 1;
-	object->source.out_of_sync = 0;
 	return GIT_SUCCESS;
 }
 
@@ -239,7 +248,6 @@ void git_object__source_close(git_object *object)
 	if (!object->source.open) {
 		git_obj_close(&object->source.raw);
 		object->source.open = 0;
-		object->source.out_of_sync = 0;
 	}
 }
 
@@ -253,7 +261,7 @@ int git_object_write(git_object *object)
 	if (object->modified == 0)
 		return GIT_SUCCESS;
 
-	git_object__source_prepare_write(object);
+	prepare_write(object);
 	source = &object->source;
 
 	switch (source->raw.type) {
@@ -265,14 +273,15 @@ int git_object_write(git_object *object)
 	case GIT_OBJ_TAG:
 	default:
 		error = GIT_ERROR;
+		break;
 	}
 
 	if (error < 0) {
 		git_object__source_close(object);
 		return error;
 	}
-	
-	return git_object__source_writeback(object);
+
+	return write_back(object);
 }
 
 void git_object_free(git_object *object)
@@ -310,6 +319,10 @@ git_odb *git_repository_database(git_repository *repo)
 const git_oid *git_object_id(git_object *obj)
 {
 	assert(obj);
+
+	if (obj->in_memory)
+		return NULL;
+
 	return &obj->id;
 }
 
@@ -319,16 +332,38 @@ git_otype git_object_type(git_object *obj)
 	return obj->source.raw.type;
 }
 
+git_object *git_object_new(git_repository *repo, git_otype type)
+{
+	git_object *object = NULL;
+
+	switch (type) {
+	case GIT_OBJ_COMMIT:
+	case GIT_OBJ_TAG:
+	case GIT_OBJ_TREE:
+	case GIT_OBJ_BLOB:
+		break;
+
+	default:
+		return NULL;
+	}
+
+	object = git__malloc(object_sizes[type]);
+
+	if (object == NULL)
+		return NULL;
+
+	memset(object, 0x0, object_sizes[type]);
+	object->repo = repo;
+	object->in_memory = 1;
+	object->modified = 1;
+
+	object->source.raw.type = type;
+
+	return object;
+}
+
 git_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_otype type)
 {
-	static const size_t object_sizes[] = {
-		0,
-		sizeof(git_commit),
-		sizeof(git_tree),
-		sizeof(git_object), /* TODO: sizeof(git_blob) */ 
-		sizeof(git_tag)
-	};
-
 	git_object *object = NULL;
 	git_rawobj obj_file;
 

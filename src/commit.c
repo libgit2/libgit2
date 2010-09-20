@@ -63,9 +63,14 @@ void git_commit__free(git_commit *commit)
 	free(commit);
 }
 
+git_commit *git_commit_new(git_repository *repo)
+{
+	return (git_commit *)git_object_new(repo, GIT_OBJ_COMMIT);
+}
+
 const git_oid *git_commit_id(git_commit *c)
 {
-	return &c->object.id;
+	return git_object_id((git_object *)c);
 }
 
 int git_commit__parse(git_commit *commit)

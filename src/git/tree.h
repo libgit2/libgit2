@@ -32,6 +32,18 @@ typedef struct git_tree git_tree;
  */
 GIT_EXTERN(git_tree *) git_tree_lookup(git_repository *repo, const git_oid *id);
 
+/*
+ * Create a new in-memory git_tree.
+ *
+ * The tree object must be manually filled using
+ * setter methods before it can be written to its
+ * repository.
+ *
+ * @param repo The repository where the object will reside
+ * @return the object if creation was posible; NULL otherwise
+ */
+GIT_EXTERN(git_tree *) git_tree_new(git_repository *repo);
+
 /**
  * Get the id of a tree.
  * @param tree a previously loaded tree.

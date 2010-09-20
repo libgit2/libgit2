@@ -12,7 +12,7 @@ typedef struct {
 	git_rawobj raw;
 	void *write_ptr;
 	size_t written_bytes;
-	int open:1, out_of_sync:1;
+	int open:1;
 } git_odb_source;
 
 struct git_object {
@@ -30,8 +30,6 @@ struct git_repository {
 
 int git_object__source_open(git_object *object);
 void git_object__source_close(git_object *object);
-void git_object__source_prepare_write(git_object *object);
-int git_object__source_writeback(git_object *object);
 
 int git__source_printf(git_odb_source *source, const char *format, ...);
 int git__source_write(git_odb_source *source, const void *bytes, size_t len);
