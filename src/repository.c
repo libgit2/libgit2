@@ -270,6 +270,9 @@ int git_object_write(git_object *object)
 		break;
 
 	case GIT_OBJ_TREE:
+		error = git_tree__writeback((git_tree *)object, source);
+		break;
+
 	case GIT_OBJ_TAG:
 	default:
 		error = GIT_ERROR;

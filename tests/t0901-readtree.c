@@ -14,7 +14,7 @@ BEGIN_TEST(tree_read_test)
 	git_oid id;
 	git_repository *repo;
 	git_tree *tree;
-	const git_tree_entry *entry;
+	git_tree_entry *entry;
 
 	must_pass(git_odb_open(&db, odb_dir));
 
@@ -34,6 +34,7 @@ BEGIN_TEST(tree_read_test)
 	must_be_true(entry != NULL);
 
 	must_be_true(strcmp(git_tree_entry_name(entry), "README") == 0);
+
 
 	must_be_true(git_tree_entry_2object(entry) != NULL);
 
