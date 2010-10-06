@@ -274,6 +274,9 @@ int git_object_write(git_object *object)
 		break;
 
 	case GIT_OBJ_TAG:
+		error = git_tag__writeback((git_tag *)object, source);
+		break;
+
 	default:
 		error = GIT_ERROR;
 		break;

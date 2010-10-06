@@ -53,9 +53,26 @@ const git_object *git_tag_target(git_tag *t)
 	return t->target;
 }
 
+void git_tag_set_target(git_tag *tag, git_object *target)
+{
+	assert(tag && target);
+
+	tag->object.modified = 1;
+	tag->target = target;
+	tag->type = git_object_type(target);
+}
+
 git_otype git_tag_type(git_tag *t)
 {
 	return t->type;
+}
+
+void git_tag_set_type(git_tag *tag, git_otype type)
+{
+	assert(tag);
+
+	tag->object.modified = 1;
+	tag->type = type;
 }
 
 const char *git_tag_name(git_tag *t)
@@ -63,14 +80,50 @@ const char *git_tag_name(git_tag *t)
 	return t->tag_name;
 }
 
+void git_tag_set_name(git_tag *tag, const char *name)
+{
+	assert(tag && name);
+
+	/* TODO: sanity check? no newlines in message */
+	tag->object.modified = 1;
+
+	if (tag->tag_name)
+		free(tag->tag_name);
+
+	tag->tag_name = git__strdup(name);
+}
+
 const git_person *git_tag_tagger(git_tag *t)
 {
 	return t->tagger;
 }
 
+void git_tag_set_tagger(git_tag *tag, const git_person *tagger)
+{
+	assert(tag && tagger);
+
+	tag->object.modified = 1;
+	if (tag->tagger == NULL)
+		tag->tagger = git__malloc(sizeof(git_person));
+
+	memcpy(tag->tagger, tagger, sizeof(git_person));
+}
+
 const char *git_tag_message(git_tag *t)
 {
 	return t->message;
+}
+
+void git_tag_set_message(git_tag *tag, const char *message)
+{
+	assert(tag && message);
+
+	tag->object.modified = 1;
+
+	if (tag->message)
+		free(tag->message);
+
+	tag->message = git__strdup(message);
 }
 
 static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
@@ -115,10 +168,8 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	tag->target = 
 		git_repository_lookup(tag->object.repo, &target_oid, tag->type);
 
-	/* FIXME: is the tag file really corrupted if the tagged object
-	 * cannot be found on the database? */
-	/* if (tag->target == NULL)
-		return GIT_EOBJCORRUPTED; */
+	if (tag->target == NULL)
+		return GIT_EOBJCORRUPTED;
 
 	if (buffer + 4 >= buffer_end)
 		return GIT_EOBJCORRUPTED;
@@ -150,7 +201,7 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	if (git__parse_person(tag->tagger, &buffer, buffer_end, "tagger ") != 0)
 		return GIT_EOBJCORRUPTED;
 
-	text_len = buffer_end - buffer;
+	text_len = buffer_end - ++buffer;
 
 	if (tag->message != NULL)
 		free(tag->message);
@@ -161,6 +212,23 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 
 	return 0;
 }
+
+int git_tag__writeback(git_tag *tag, git_odb_source *src)
+{
+	if (tag->target == NULL || tag->tag_name == NULL || tag->tagger == NULL)
+		return GIT_ERROR;
+
+	git__write_oid(src, "object", git_object_id(tag->target));
+	git__source_printf(src, "type %s\n", git_obj_type_to_string(tag->type));
+	git__source_printf(src, "tag %s\n", tag->tag_name);
+	git__write_person(src, "tagger", tag->tagger);
+
+	if (tag->message != NULL)
+		git__source_printf(src, "\n%s", tag->message);
+
+	return GIT_SUCCESS;
+}
+
 
 int git_tag__parse(git_tag *tag)
 {

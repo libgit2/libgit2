@@ -83,6 +83,34 @@ GIT_EXTERN(const git_person *) git_tag_tagger(git_tag *t);
  */
 GIT_EXTERN(const char *) git_tag_message(git_tag *t);
 
+/**
+ * Set the target of a tag (i.e. the object that the tag points to)
+ * @param tag The tag to modify
+ * @param target the new tagged target
+ */
+GIT_EXTERN(void) git_tag_set_target(git_tag *tag, git_object *target);
+
+/**
+ * Set the name of a tag 
+ * @param tag The tag to modify
+ * @param name the new name for the tag 
+ */
+GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
+
+/**
+ * Set the tagger of a tag 
+ * @param tag The tag to modify
+ * @param tagger the new tagger for the tag 
+ */
+GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const git_person *tagger);
+
+/**
+ * Set the message of a tag 
+ * @param tag The tag to modify
+ * @param message the new tagger for the tag 
+ */
+GIT_EXTERN(void) git_tag_set_message(git_tag *tag, const char *message);
+
 /** @} */
 GIT_END_DECL
 #endif

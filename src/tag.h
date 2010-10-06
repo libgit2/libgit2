@@ -16,5 +16,6 @@ struct git_tag {
 
 void git_tag__free(git_tag *tag);
 int git_tag__parse(git_tag *tag);
+int git_tag__writeback(git_tag *tag, git_odb_source *src);
 
 #endif
