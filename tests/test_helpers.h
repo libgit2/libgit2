@@ -49,5 +49,7 @@ extern int remove_object_files(const char *odb_dir, object_data *d);
 
 extern int cmp_objects(git_rawobj *o, object_data *d);
 
+extern int remove_loose_object(const char *odb_dir, git_object *object);
+
 #endif
 /* INCLUDE_test_helpers_h__ */

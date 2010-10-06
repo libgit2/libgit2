@@ -26,6 +26,8 @@
 #include "common.h"
 #include "test_helpers.h"
 #include "fileops.h"
+#include "git/oid.h"
+#include "git/repository.h"
 
 int write_object_data(char *file, void *data, size_t len)
 {
@@ -80,6 +82,40 @@ int remove_object_files(const char *odb_dir, object_data *d)
 	}
 
 	return 0;
+}
+
+int remove_loose_object(const char *odb_dir, git_object *object)
+{
+	char *ptr, *full_path, *top_folder;
+	int path_length;
+
+	assert(odb_dir && object);
+
+	path_length = strlen(odb_dir);
+	ptr = full_path = git__malloc(path_length + GIT_OID_HEXSZ + 3);
+
+	strcpy(ptr, odb_dir);
+	ptr = top_folder = ptr + path_length;
+	*ptr++ = '/';
+	git_oid_pathfmt(ptr, git_object_id(object));
+	ptr += GIT_OID_HEXSZ + 1;
+	*ptr = 0;
+
+	if (gitfo_unlink(full_path) < 0) {
+		fprintf(stderr, "can't delete object file \"%s\"\n", full_path);
+		return -1;
+	}
+
+	*top_folder = 0;
+
+	if ((gitfo_rmdir(full_path) < 0) && (errno != ENOTEMPTY)) {
+		fprintf(stderr, "can't remove object directory \"%s\"\n", full_path);
+		return -1;
+	}
+
+	free(full_path);
+
+	return GIT_SUCCESS;
 }
 
 int cmp_objects(git_rawobj *o, object_data *d)
