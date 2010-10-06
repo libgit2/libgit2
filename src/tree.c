@@ -124,26 +124,36 @@ unsigned int git_tree_entry_attributes(git_tree_entry *entry)
 
 const char *git_tree_entry_name(git_tree_entry *entry)
 {
+	assert(entry);
 	return entry->filename;
 }
 
 const git_oid *git_tree_entry_id(git_tree_entry *entry)
 {
+	assert(entry);
 	return &entry->oid;
 }
 
 git_object *git_tree_entry_2object(git_tree_entry *entry)
 {
+	assert(entry);
 	return git_repository_lookup(entry->owner->object.repo, &entry->oid, GIT_OBJ_ANY);
 }
 
 git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
 {
-	return *(git_tree_entry **)bsearch(filename, tree->entries, tree->entry_count, sizeof(git_tree_entry *), entry_cmp);
+	git_tree_entry **found;
+
+	assert(tree && filename);
+
+	found = bsearch(filename, tree->entries, tree->entry_count, sizeof(git_tree_entry *), entry_cmp);
+	return found ? *found : NULL;
 }
 
 git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
 {
+	assert(tree);
+
 	if (tree->entries == NULL)
 		return NULL;
 
@@ -152,12 +162,15 @@ git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
 
 size_t git_tree_entrycount(git_tree *tree)
 {
+	assert(tree);
 	return tree->entry_count;
 }
 
 void git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes)
 {
 	git_tree_entry *entry;
+
+	assert(tree && id && filename);
 
 	if (tree->entry_count >= tree->array_size)
 		resize_tree_array(tree);
@@ -182,6 +195,8 @@ int git_tree_remove_entry_byindex(git_tree *tree, int idx)
 {
 	git_tree_entry *remove_ptr;
 
+	assert(tree);
+
 	if (idx < 0 || idx >= (int)tree->entry_count)
 		return GIT_ENOTFOUND;
 
@@ -200,6 +215,8 @@ int git_tree_remove_entry_byname(git_tree *tree, const char *filename)
 	git_tree_entry **entry_ptr;
 	int idx;
 
+	assert(tree && filename);
+
 	entry_ptr = bsearch(filename, tree->entries, tree->entry_count, sizeof(git_tree_entry *), entry_cmp);
 	if (entry_ptr == NULL)
 		return GIT_ENOTFOUND;
@@ -211,6 +228,8 @@ int git_tree_remove_entry_byname(git_tree *tree, const char *filename)
 int git_tree__writeback(git_tree *tree, git_odb_source *src)
 {
 	size_t i;
+
+	assert(tree && src);
 
 	if (tree->entries == NULL)
 		return GIT_ERROR;
