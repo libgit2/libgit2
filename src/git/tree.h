@@ -113,8 +113,9 @@ GIT_EXTERN(git_object *) git_tree_entry_2object(git_tree_entry *entry);
  * @iparam id OID for the tree entry
  * @param filename Filename for the tree entry
  * @param attributes UNIX file attributes for the entry
+ * @return 0 on success; otherwise error code
  */
-GIT_EXTERN(void) git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes);
+GIT_EXTERN(int) git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes);
 
 /**
  * Remove an entry by its index.

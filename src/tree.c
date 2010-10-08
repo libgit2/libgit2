@@ -29,17 +29,24 @@
 #include "tree.h"
 #include "git/repository.h"
 
-static void resize_tree_array(git_tree *tree)
+static int resize_tree_array(git_tree *tree)
 {
 	git_tree_entry **new_entries;
 
-	tree->array_size = tree->array_size * 2;
+	tree->array_size *= 2; 
+	if (tree->array_size == 0)
+		tree->array_size = 8;
 
 	new_entries = git__malloc(tree->array_size * sizeof(git_tree_entry *));
+	if (new_entries == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(new_entries, tree->entries, tree->entry_count * sizeof(git_tree_entry *));
 
 	free(tree->entries);
 	tree->entries = new_entries;
+
+	return GIT_SUCCESS;
 }
 
 int entry_cmp(const void *key, const void *array_member)
@@ -166,17 +173,18 @@ size_t git_tree_entrycount(git_tree *tree)
 	return tree->entry_count;
 }
 
-void git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes)
+int git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes)
 {
 	git_tree_entry *entry;
 
 	assert(tree && id && filename);
 
 	if (tree->entry_count >= tree->array_size)
-		resize_tree_array(tree);
+		if (resize_tree_array(tree) < 0)
+			return GIT_ENOMEM;
 
 	if ((entry = git__malloc(sizeof(git_tree_entry))) == NULL)
-		return;
+		return GIT_ENOMEM;
 
 	memset(entry, 0x0, sizeof(git_tree_entry));
 
@@ -189,6 +197,7 @@ void git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename,
 	entry_resort(tree);
 
 	tree->object.modified = 1;
+	return GIT_SUCCESS;
 }
 
 int git_tree_remove_entry_byindex(git_tree *tree, int idx)
@@ -277,11 +286,15 @@ int git_tree__parse(git_tree *tree)
 	tree->array_size = (tree->object.source.raw.len / avg_entry_size) + 1;
 	tree->entries = git__malloc(tree->array_size * sizeof(git_tree_entry *));
 
+	if (tree->entries == NULL)
+		return GIT_ENOMEM;
+
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
 
 		if (tree->entry_count >= tree->array_size)
-			resize_tree_array(tree);
+			if (resize_tree_array(tree) < 0)
+				return GIT_ENOMEM;
 
 		entry = git__malloc(sizeof(git_tree_entry));
 		if (entry == NULL) {
