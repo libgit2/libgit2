@@ -20,7 +20,7 @@ void randomize_entries(git_index *index)
 	unsigned int i, j;
 	git_index_entry tmp;
 
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 
 	for (i = 0; i < index->entry_count; ++i) {
 		j = rand() % index->entry_count;
