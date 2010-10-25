@@ -1,0 +1,10 @@
+/apidocs
+/trash-*.exe
+/libgit2.pc
+/config.mak
+*.o
+*.a
+*.exe
+*.gcda
+*.gcno
+*.gcov
