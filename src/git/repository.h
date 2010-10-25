@@ -21,14 +21,14 @@ GIT_BEGIN_DECL
  * of its object database
  *
  * @param odb an existing object database to back the repo
- * @return the new repository handle; NULL on error 
+ * @return the new repository handle; NULL on error
  */
 GIT_EXTERN(git_repository *) git_repository_alloc(git_odb *odb);
 
 
 /**
  * Lookup a reference to one of the objects in the repostory.
- * 
+ *
  * The generated reference is owned by the repository and
  * should not be freed by the user.
  * The generated reference should be cast back to the

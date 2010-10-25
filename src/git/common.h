@@ -85,9 +85,9 @@
 
 GIT_BEGIN_DECL
 
-/** 
+/**
  * Representation of an existing git repository,
- * including all its object contents 
+ * including all its object contents
  */
 typedef struct git_repository git_repository;
 

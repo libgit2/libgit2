@@ -146,7 +146,7 @@ GIT_EXTERN(int) git_tree_remove_entry_byname(git_tree *tree, const char *filenam
 /**
  * Change the SHA1 id of a tree entry.
  *
- * This will mark the tree that contains the entry as modified; 
+ * This will mark the tree that contains the entry as modified;
  * the modified entry will be written back to disk on the next git_object_write()
  *
  * @param entry Entry object which will be modified
@@ -157,7 +157,7 @@ GIT_EXTERN(void) git_tree_entry_set_id(git_tree_entry *entry, const git_oid *oid
 /**
  * Change the filename of a tree entry.
  *
- * This will mark the tree that contains the entry as modified; 
+ * This will mark the tree that contains the entry as modified;
  * the modified entry will be written back to disk on the next git_object_write()
  *
  * @param entry Entry object which will be modified
@@ -168,7 +168,7 @@ GIT_EXTERN(void) git_tree_entry_set_name(git_tree_entry *entry, const char *name
 /**
  * Change the attributes of a tree entry.
  *
- * This will mark the tree that contains the entry as modified; 
+ * This will mark the tree that contains the entry as modified;
  * the modified entry will be written back to disk on the next git_object_write()
  *
  * @param entry Entry object which will be modified
