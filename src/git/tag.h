@@ -37,7 +37,7 @@ GIT_EXTERN(git_tag *) git_tag_lookup(git_repository *repo, const git_oid *id);
  * repository.
  *
  * @param repo The repository where the object will reside
- * @return the object if creation was posible; NULL otherwise
+ * @return the object if creation was possible; NULL otherwise
  */
 GIT_EXTERN(git_tag *) git_tag_new(git_repository *repo);
 

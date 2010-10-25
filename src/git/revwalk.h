@@ -16,7 +16,7 @@ GIT_BEGIN_DECL
 
 /**
  * Sort the repository contents in no particular ordering;
- * this sorting is arbritary, implementation-specific
+ * this sorting is arbitrary, implementation-specific
  * and subject to change at any time.
  * This is the default sorting for new walkers.
  */
@@ -54,7 +54,7 @@ typedef struct git_revwalk git_revwalk;
 GIT_EXTERN(git_revwalk *) git_revwalk_alloc(git_repository *repo);
 
 /**
- * Reset the walking machinary for reuse.
+ * Reset the walking machinery for reuse.
  * @param walker handle to reset.
  */
 GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);

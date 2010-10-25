@@ -62,7 +62,7 @@ GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
  * the given type.
  *
  * The object's attributes can be filled in using the
- * correspondign setter methods.
+ * corresponding setter methods.
  *
  * The object will be written back to given git_repository
  * when the git_object_write() function is called; objects
@@ -118,7 +118,7 @@ const git_oid *git_object_id(git_object *obj);
 git_otype git_object_type(git_object *obj);
 
 /**
- * Free a reference to one of the objects in the repostory.
+ * Free a reference to one of the objects in the repository.
  *
  * Repository objects are managed automatically by the library,
  * but this method can be used to force freeing one of the

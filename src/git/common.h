@@ -98,7 +98,7 @@ typedef struct git_object git_object;
 typedef struct git_person {
 	char name[64]; /**< Full name */
 	char email[64]; /**< Email address */
-	time_t time; /**< Time when this person commited the change */
+	time_t time; /**< Time when this person committed the change */
 } git_person;
 
 /** @} */
