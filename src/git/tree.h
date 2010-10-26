@@ -32,7 +32,7 @@ typedef struct git_tree git_tree;
  */
 GIT_EXTERN(git_tree *) git_tree_lookup(git_repository *repo, const git_oid *id);
 
-/*
+/**
  * Create a new in-memory git_tree.
  *
  * The tree object must be manually filled using

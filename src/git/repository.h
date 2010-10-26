@@ -57,7 +57,7 @@ GIT_EXTERN(git_object *) git_repository_lookup(git_repository *repo, const git_o
  */
 GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
 
-/*
+/**
  * Create a new in-memory repository object with
  * the given type.
  *
@@ -79,7 +79,7 @@ GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
  */
 GIT_EXTERN(git_object *) git_object_new(git_repository *repo, git_otype type);
 
-/*
+/**
  * Write back an object to disk.
  *
  * The object will be written to its corresponding

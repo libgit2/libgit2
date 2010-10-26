@@ -29,7 +29,7 @@ typedef struct git_tag git_tag;
  */
 GIT_EXTERN(git_tag *) git_tag_lookup(git_repository *repo, const git_oid *id);
 
-/*
+/**
  * Create a new in-memory git_tag.
  *
  * The tag object must be manually filled using
