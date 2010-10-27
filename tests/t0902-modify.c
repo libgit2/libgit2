@@ -38,6 +38,8 @@ BEGIN_TEST(tree_in_memory_add_test)
 	must_pass(git_object_write((git_object *)tree));
 	must_pass(remove_loose_object(odb_dir, (git_object *)tree));
 
+	git_object_free((git_object *)tree);
+
 	git_repository_free(repo);
 	git_odb_close(db);
 END_TEST
@@ -91,6 +93,8 @@ BEGIN_TEST(tree_add_entry_test)
 */
 
 	must_pass(remove_loose_object(odb_dir, (git_object *)tree));
+	
+	git_object_free((git_object *)tree);
 
 	git_repository_free(repo);
 	git_odb_close(db);

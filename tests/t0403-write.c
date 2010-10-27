@@ -17,6 +17,9 @@ static const char *commit_ids[] = {
 };
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 
+#define COMMITTER_NAME "Vicent Marti"
+#define COMMITTER_EMAIL "vicent@github.com"
+
 BEGIN_TEST(writenew_test)
 	git_odb *db;
 	git_repository *repo;
@@ -24,9 +27,6 @@ BEGIN_TEST(writenew_test)
 	git_tree *tree;
 	git_oid id;
 	/* char hex_oid[41]; */
-
-	git_person author = {"Vicent Marti", "vicent@github.com", 123456789};
-	git_person committer = {"Vicent Marti", "vicent@github.com", 987654321};
 
 	must_pass(git_odb_open(&db, odb_dir));
 
@@ -45,8 +45,8 @@ BEGIN_TEST(writenew_test)
 	git_commit_add_parent(commit, parent);
 
 	/* Set other attributes */
-	git_commit_set_committer(commit, &committer);
-	git_commit_set_author(commit, &author);
+	git_commit_set_committer(commit, COMMITTER_NAME, COMMITTER_EMAIL, 123456789);
+	git_commit_set_author(commit, COMMITTER_NAME, COMMITTER_EMAIL, 987654321);
 	git_commit_set_message(commit, 
 			"This commit has been created in memory\n\
 This is a commit created in memory and it will be written back to disk\n");
@@ -72,6 +72,9 @@ This is a commit created in memory and it will be written back to disk\n");
 */
 
 	must_pass(remove_loose_object(odb_dir, (git_object *)commit));
+
+	//git_person_free(&author);
+	//git_person_free(&committer);
 
 	git_repository_free(repo);
 	git_odb_close(db);

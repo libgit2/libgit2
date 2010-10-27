@@ -2,6 +2,7 @@
 #define INCLUDE_git_common_h__
 
 #include "thread-utils.h"
+#include <time.h>
 
 #ifdef __cplusplus
 # define GIT_BEGIN_DECL  extern "C" {
@@ -94,12 +95,13 @@ typedef struct git_repository git_repository;
 /** Representation of a generic object in a repository */
 typedef struct git_object git_object;
 
+
 /** Parsed representation of a person */
-typedef struct git_person {
-	char name[64]; /**< Full name */
-	char email[64]; /**< Email address */
-	time_t time; /**< Time when this person committed the change */
-} git_person;
+typedef struct git_person git_person;
+
+const char *git_person_name(git_person *person);
+const char *git_person_email(git_person *person);
+time_t git_person_time(git_person *person);
 
 /** @} */
 GIT_END_DECL

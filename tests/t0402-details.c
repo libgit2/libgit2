@@ -1,6 +1,7 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 #include "commit.h"
+#include "person.h"
 
 #include <git/odb.h>
 #include <git/commit.h>
@@ -28,6 +29,7 @@ BEGIN_TEST(query_details_test)
 	repo = git_repository_alloc(db);
 	must_be_true(repo != NULL);
 
+	
 	for (i = 0; i < commit_count; ++i) {
 		git_oid id;
 		git_commit *commit;

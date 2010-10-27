@@ -100,9 +100,11 @@ GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
 /**
  * Set the tagger of a tag
  * @param tag The tag to modify
- * @param tagger the new tagger for the tag
+ * @param name the name of the new tagger
+ * @param email the email of the new tagger
+ * @param time the time when the tag was created
  */
-GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const git_person *tagger);
+GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time);
 
 /**
  * Set the message of a tag

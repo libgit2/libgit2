@@ -32,6 +32,8 @@
 static const int default_table_size = 32;
 static const double max_load_factor = 0.65;
 
+static const int OBJECT_BASE_SIZE = 4096;
+
 static const size_t object_sizes[] = {
 	0,
 	sizeof(git_commit),
@@ -171,14 +173,12 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len)
 
 static void prepare_write(git_object *object)
 {
-	const size_t base_size = 4096; /* 4Kb base size */
-
 	if (object->source.write_ptr != NULL || object->source.open)
 		git_object__source_close(object);
 
 	/* TODO: proper size calculation */
-	object->source.raw.data = git__malloc(base_size);
-	object->source.raw.len = base_size;
+	object->source.raw.data = git__malloc(OBJECT_BASE_SIZE);
+	object->source.raw.len = OBJECT_BASE_SIZE;
 
 	object->source.write_ptr = object->source.raw.data;
 	object->source.written_bytes = 0;
@@ -193,11 +193,9 @@ static int write_back(git_object *object)
 
 	assert(object);
 
-	if (!object->source.open)
-		return GIT_ERROR;
-
+	assert(object->source.open);
 	assert(object->modified);
-	
+
 	object->source.raw.len = object->source.written_bytes;
 
 	git_obj_hash(&new_id, &object->source.raw);
@@ -230,9 +228,6 @@ int git_object__source_open(git_object *object)
 	if (object->source.open)
 		git_object__source_close(object);
 
-	if (object->source.open)
-		return GIT_SUCCESS;
-
 	error = git_odb_read(&object->source.raw, object->repo->db, &object->id);
 	if (error < 0)
 		return error;
@@ -245,7 +240,7 @@ void git_object__source_close(git_object *object)
 {
 	assert(object);
 
-	if (!object->source.open) {
+	if (object->source.open) {
 		git_obj_close(&object->source.raw);
 		object->source.open = 0;
 	}
@@ -294,8 +289,8 @@ void git_object_free(git_object *object)
 {
 	assert(object);
 
+	git_object__source_close(object);
 	git_hashtable_remove(object->repo->objects, &object->id);
-	git_obj_close(&object->source.raw);
 
 	switch (object->source.raw.type) {
 	case GIT_OBJ_COMMIT:
@@ -372,6 +367,7 @@ git_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_o
 {
 	git_object *object = NULL;
 	git_rawobj obj_file;
+	int error = 0;
 
 	assert(repo);
 
@@ -397,43 +393,35 @@ git_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_o
 	/* Initialize parent object */
 	git_oid_cpy(&object->id, id);
 	object->repo = repo;
-	object->source.open = 1;
 	memcpy(&object->source.raw, &obj_file, sizeof(git_rawobj));
+	object->source.open = 1;
 
 	switch (type) {
 
 	case GIT_OBJ_COMMIT:
-		if (git_commit__parse((git_commit *)object) < 0) {
-			free(object);
-			return NULL;
-		}
-
+		error = git_commit__parse((git_commit *)object);
 		break;
 
 	case GIT_OBJ_TREE:
-		if (git_tree__parse((git_tree *)object) < 0) {
-			free(object);
-			return NULL;
-		}
-
+		error = git_tree__parse((git_tree *)object);
 		break;
 
 	case GIT_OBJ_TAG:
-		if (git_tag__parse((git_tag *)object) < 0) {
-			free(object);
-			return NULL;
-		}
-
+		error = git_tag__parse((git_tag *)object);
 		break;
 
+	case GIT_OBJ_BLOB:
 	default:
 		/* blobs get no parsing */
 		break;
 	}
 
-	git_obj_close(&object->source.raw);
-	object->source.open = 0;
+	if (error < 0) {
+		git_object_free(object);
+		return NULL;
+	}
 
+	git_object__source_close(object);
 	git_hashtable_insert(repo->objects, &object->id, object);
 	return object;
 }

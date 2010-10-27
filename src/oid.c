@@ -25,6 +25,7 @@
 
 #include "common.h"
 #include "git/oid.h"
+#include "repository.h"
 #include <string.h>
 
 static signed char from_hex[] = {
@@ -116,3 +117,37 @@ char *git_oid_to_string(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
+int git__parse_oid(git_oid *oid, char **buffer_out,
+		const char *buffer_end, const char *header)
+{
+	const size_t sha_len = GIT_OID_HEXSZ;
+	const size_t header_len = strlen(header);
+
+	char *buffer = *buffer_out;
+
+	if (buffer + (header_len + sha_len + 1) > buffer_end)
+		return GIT_EOBJCORRUPTED;
+
+	if (memcmp(buffer, header, header_len) != 0)
+		return GIT_EOBJCORRUPTED;
+
+	if (buffer[header_len + sha_len] != '\n')
+		return GIT_EOBJCORRUPTED;
+
+	if (git_oid_mkstr(oid, buffer + header_len) < 0)
+		return GIT_EOBJCORRUPTED;
+
+	*buffer_out = buffer + (header_len + sha_len + 1);
+
+	return 0;
+}
+
+int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid)
+{
+	char hex_oid[41];
+
+	git_oid_fmt(hex_oid, oid);
+	hex_oid[40] = 0;
+
+	return git__source_printf(src, "%s %s\n", header, hex_oid);
+}

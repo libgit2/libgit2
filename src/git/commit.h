@@ -108,16 +108,20 @@ GIT_EXTERN(void) git_commit_set_message(git_commit *commit, const char *message)
 /**
  * Set the committer of a commit
  * @param commit the commit object
- * @param committer the new committer
+ * @param name name of the new committer
+ * @param email email of the new committer
+ * @param time time when the committer committed the commit
  */
-GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const git_person *committer);
+GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const char *name, const char *email, time_t time);
 
 /**
  * Set the author of a commit
  * @param commit the commit object
- * @param author the new author
+ * @param name name of the new author
+ * @param email email of the new author
+ * @param time time when the author created the commit
  */
-GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const git_person *author);
+GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const char *name, const char *email, time_t time);
 
 /**
  * Set the tree which is pointed to by a commit

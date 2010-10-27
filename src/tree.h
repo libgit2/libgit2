@@ -4,11 +4,9 @@
 #include <git/tree.h>
 #include "repository.h"
 
-#define GIT_TREE_MAX_FILENAME 255
-
 struct git_tree_entry {
 	unsigned int attr;
-	char filename[GIT_TREE_MAX_FILENAME];
+	char *filename;
 	git_oid oid;
 
 	git_tree *owner;

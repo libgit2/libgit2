@@ -26,15 +26,16 @@
 #include "common.h"
 #include "commit.h"
 #include "tag.h"
+#include "person.h"
 #include "revwalk.h"
 #include "git/odb.h"
 #include "git/repository.h"
 
 void git_tag__free(git_tag *tag)
 {
+	git_person__free(tag->tagger);
 	free(tag->message);
 	free(tag->tag_name);
-	free(tag->tagger);
 	free(tag);
 }
 
@@ -50,6 +51,7 @@ const git_oid *git_tag_id(git_tag *c)
 
 const git_object *git_tag_target(git_tag *t)
 {
+	assert(t);
 	return t->target;
 }
 
@@ -64,6 +66,7 @@ void git_tag_set_target(git_tag *tag, git_object *target)
 
 git_otype git_tag_type(git_tag *t)
 {
+	assert(t);
 	return t->type;
 }
 
@@ -77,6 +80,7 @@ void git_tag_set_type(git_tag *tag, git_otype type)
 
 const char *git_tag_name(git_tag *t)
 {
+	assert(t);
 	return t->tag_name;
 }
 
@@ -98,19 +102,18 @@ const git_person *git_tag_tagger(git_tag *t)
 	return t->tagger;
 }
 
-void git_tag_set_tagger(git_tag *tag, const git_person *tagger)
+void git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time)
 {
-	assert(tag && tagger);
-
+	assert(tag && name && email);
 	tag->object.modified = 1;
-	if (tag->tagger == NULL)
-		tag->tagger = git__malloc(sizeof(git_person));
 
-	memcpy(tag->tagger, tagger, sizeof(git_person));
+	git_person__free(tag->tagger);
+	tag->tagger = git_person__new(name, email, time);
 }
 
 const char *git_tag_message(git_tag *t)
 {
+	assert(t);
 	return t->message;
 }
 
@@ -194,11 +197,11 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	buffer = search + 1;
 
 	if (tag->tagger != NULL)
-		free(tag->tagger);
+		git_person__free(tag->tagger);
 
 	tag->tagger = git__malloc(sizeof(git_person));
 
-	if (git__parse_person(tag->tagger, &buffer, buffer_end, "tagger ") != 0)
+	if (git_person__parse(tag->tagger, &buffer, buffer_end, "tagger ") != 0)
 		return GIT_EOBJCORRUPTED;
 
 	text_len = buffer_end - ++buffer;
@@ -221,7 +224,7 @@ int git_tag__writeback(git_tag *tag, git_odb_source *src)
 	git__write_oid(src, "object", git_object_id(tag->target));
 	git__source_printf(src, "type %s\n", git_obj_type_to_string(tag->type));
 	git__source_printf(src, "tag %s\n", tag->tag_name);
-	git__write_person(src, "tagger", tag->tagger);
+	git_person__write(src, "tagger", tag->tagger);
 
 	if (tag->message != NULL)
 		git__source_printf(src, "\n%s", tag->message);
@@ -232,16 +235,8 @@ int git_tag__writeback(git_tag *tag, git_odb_source *src)
 
 int git_tag__parse(git_tag *tag)
 {
-	int error = 0;
-
-	error = git_object__source_open((git_object *)tag);
-	if (error < 0)
-		return error;
-
-	error = parse_tag_buffer(tag, tag->object.source.raw.data, tag->object.source.raw.data + tag->object.source.raw.len);
-
-	git_object__source_close((git_object *)tag);
-	return error;
+	assert(tag && tag->object.source.open);
+	return parse_tag_buffer(tag, tag->object.source.raw.data, tag->object.source.raw.data + tag->object.source.raw.len);
 }
 
 git_tag *git_tag_lookup(git_repository *repo, const git_oid *id)

@@ -1,6 +1,7 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 #include "commit.h"
+#include "person.h"
 #include <git/odb.h>
 #include <git/commit.h>
 #include <git/revwalk.h>
@@ -127,18 +128,20 @@ BEGIN_TEST(parse_person_test)
 #define TEST_PERSON_PASS(_string, _header, _name, _email, _time) { \
 	char *ptr = _string; \
 	size_t len = strlen(_string);\
-	git_person person; \
-	must_pass(git__parse_person(&person, &ptr, ptr + len, _header));\
-	must_be_true(strncmp(_name, person.name, 63) == 0);\
-	must_be_true(strncmp(_email, person.email, 63) == 0);\
+	git_person person = {NULL, NULL, 0}; \
+	must_pass(git_person__parse(&person, &ptr, ptr + len, _header));\
+	must_be_true(strcmp(_name, person.name) == 0);\
+	must_be_true(strcmp(_email, person.email) == 0);\
 	must_be_true(_time == person.time);\
+	free(person.name); free(person.email);\
 }
 
 #define TEST_PERSON_FAIL(_string, _header) { \
 	char *ptr = _string; \
 	size_t len = strlen(_string);\
-	git_person person; \
-	must_fail(git__parse_person(&person, &ptr, ptr + len, _header));\
+	git_person person = {NULL, NULL, 0}; \
+	must_fail(git_person__parse(&person, &ptr, ptr + len, _header));\
+	free(person.name); free(person.email);\
 }
 
 	TEST_PERSON_PASS(
@@ -213,6 +216,9 @@ BEGIN_TEST(parse_person_test)
 
 END_TEST
 
+/* External declaration for testing the buffer parsing method */
+int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int parse_flags);
+
 BEGIN_TEST(parse_buffer_test)
 	const int broken_commit_count = sizeof(test_commits_broken) / sizeof(*test_commits_broken);
 	const int working_commit_count = sizeof(test_commits_working) / sizeof(*test_commits_working);
@@ -232,7 +238,7 @@ BEGIN_TEST(parse_buffer_test)
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
 
-		must_fail(git_commit__parse_buffer(
+		must_fail(commit_parse_buffer(
 					commit,
 					test_commits_broken[i],
 					strlen(test_commits_broken[i]),
@@ -248,7 +254,7 @@ BEGIN_TEST(parse_buffer_test)
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
 
-		must_pass(git_commit__parse_buffer(
+		must_pass(commit_parse_buffer(
 					commit,
 					test_commits_working[i],
 					strlen(test_commits_working[i]),
@@ -259,5 +265,6 @@ BEGIN_TEST(parse_buffer_test)
 	}
 
 	git_repository_free(repo);
+	git_odb_close(db);
 
 END_TEST

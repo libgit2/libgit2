@@ -70,17 +70,26 @@ static void entry_resort(git_tree *tree)
 	qsort(tree->entries, tree->entry_count, sizeof(git_tree_entry *), entry_sort_cmp);
 }
 
+static void free_tree_entries(git_tree *tree)
+{
+	size_t i;
+
+	if (tree == NULL)
+		return;
+
+	for (i = 0; i < tree->entry_count; ++i) {
+		free(tree->entries[i]->filename);
+		free(tree->entries[i]);
+	}
+
+	free(tree->entries);
+}
 
 
 
 void git_tree__free(git_tree *tree)
 {
-	size_t i;
-
-	for (i = 0; i < tree->entry_count; ++i)
-		free(tree->entries[i]);
-
-	free(tree->entries);
+	free_tree_entries(tree);
 	free(tree);
 }
 
@@ -111,7 +120,8 @@ void git_tree_entry_set_name(git_tree_entry *entry, const char *name)
 {
 	assert(entry && entry->owner);
 
-	strncpy(entry->filename, name, GIT_TREE_MAX_FILENAME);
+	free(entry->filename);
+	entry->filename = git__strdup(name);
 	entry_resort(entry->owner);
 	entry->owner->object.modified = 1;
 }
@@ -188,7 +198,7 @@ int git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, 
 
 	memset(entry, 0x0, sizeof(git_tree_entry));
 
-	strncpy(entry->filename, filename, GIT_TREE_MAX_FILENAME);
+	entry->filename = git__strdup(filename);
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
 	entry->owner = tree;
@@ -212,6 +222,7 @@ int git_tree_remove_entry_byindex(git_tree *tree, int idx)
 	remove_ptr = tree->entries[idx];
 	tree->entries[idx] = tree->entries[--tree->entry_count];
 
+	free(remove_ptr->filename);
 	free(remove_ptr);
 	entry_resort(tree);
 
@@ -237,6 +248,7 @@ int git_tree_remove_entry_byname(git_tree *tree, const char *filename)
 int git_tree__writeback(git_tree *tree, git_odb_source *src)
 {
 	size_t i;
+	char filemode[8];
 
 	assert(tree && src);
 
@@ -249,38 +261,23 @@ int git_tree__writeback(git_tree *tree, git_odb_source *src)
 		git_tree_entry *entry;
 		entry = tree->entries[i];
 	
-		git__source_printf(src, "%06o %s\0", entry->attr, entry->filename);
+		sprintf(filemode, "%06o ", entry->attr);
+
+		git__source_write(src, filemode, strlen(filemode));
+		git__source_write(src, entry->filename, strlen(entry->filename) + 1);
 		git__source_write(src, entry->oid.id, GIT_OID_RAWSZ);
-	}
+	} 
 
 	return GIT_SUCCESS;
 }
 
 
-int git_tree__parse(git_tree *tree)
+static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 {
 	static const size_t avg_entry_size = 40;
-
 	int error = 0;
-	char *buffer, *buffer_end;
 
-	assert(!tree->object.in_memory);
-
-	if (tree->entries != NULL) {
-		size_t i;
-
-		for (i = 0; i < tree->entry_count; ++i)
-			free(tree->entries[i]);
-
-		free(tree->entries);
-	}
-
-	error = git_object__source_open((git_object *)tree);
-	if (error < 0)
-		return error;
-
-	buffer = tree->object.source.raw.data;
-	buffer_end = buffer + tree->object.source.raw.len;
+	free_tree_entries(tree);
 
 	tree->entry_count = 0;
 	tree->array_size = (tree->object.source.raw.len / avg_entry_size) + 1;
@@ -312,7 +309,12 @@ int git_tree__parse(git_tree *tree)
 			break;
 		}
 
-		strncpy(entry->filename, buffer, GIT_TREE_MAX_FILENAME);
+		if (memchr(buffer, 0, buffer_end - buffer) == NULL) {
+			error = GIT_EOBJCORRUPTED;
+			break;
+		}
+
+		entry->filename = git__strdup(buffer);
 
 		while (buffer < buffer_end && *buffer != 0)
 			buffer++;
@@ -323,6 +325,19 @@ int git_tree__parse(git_tree *tree)
 		buffer += GIT_OID_RAWSZ;
 	}
 
-	git_object__source_close((git_object *)tree);
 	return error;
 }
+
+int git_tree__parse(git_tree *tree)
+{
+	char *buffer, *buffer_end;
+
+	assert(tree && tree->object.source.open);
+	assert(!tree->object.in_memory);
+
+	buffer = tree->object.source.raw.data;
+	buffer_end = buffer + tree->object.source.raw.len;
+
+	return tree_parse_buffer(tree, buffer, buffer_end);
+}
+
