@@ -80,6 +80,12 @@ void git_revwalk_free(git_revwalk *walk)
 	free(walk);
 }
 
+git_repository *git_revwalk_repository(git_revwalk *walk)
+{
+	assert(walk);
+	return walk->repo;
+}
+
 void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 {
 	if (walk->walking)

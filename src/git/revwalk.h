@@ -97,6 +97,15 @@ GIT_EXTERN(void) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
  */
 GIT_EXTERN(void) git_revwalk_free(git_revwalk *walk);
 
+/**
+ * Return the repository on which this walker
+ * is operating.
+ *
+ * @param walk the revision walker
+ * @return the repository being walked
+ */
+GIT_EXTERN(git_repository *) git_revwalk_repository(git_revwalk *walk);
+
 /** @} */
 GIT_END_DECL
 #endif

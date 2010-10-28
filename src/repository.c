@@ -333,6 +333,12 @@ git_otype git_object_type(git_object *obj)
 	return obj->source.raw.type;
 }
 
+git_repository *git_object_owner(git_object *obj)
+{
+	assert(obj);
+	return obj->repo;
+}
+
 git_object *git_object_new(git_repository *repo, git_otype type)
 {
 	git_object *object = NULL;

@@ -96,7 +96,7 @@ GIT_EXTERN(git_object *) git_object_new(git_repository *repo, git_otype type);
  * @param object Git object to write back
  * @return 0 on success; otherwise an error code
  */
-int git_object_write(git_object *object);
+GIT_EXTERN(int) git_object_write(git_object *object);
 
 /**
  * Get the id (SHA1) of a repository object
@@ -107,7 +107,7 @@ int git_object_write(git_object *object);
  * @param obj the repository object
  * @return the SHA1 id
  */
-const git_oid *git_object_id(git_object *obj);
+GIT_EXTERN(const git_oid *) git_object_id(git_object *obj);
 
 /**
  * Get the object type of an object
@@ -115,7 +115,15 @@ const git_oid *git_object_id(git_object *obj);
  * @param obj the repository object
  * @return the object's type
  */
-git_otype git_object_type(git_object *obj);
+GIT_EXTERN(git_otype) git_object_type(git_object *obj);
+
+/**
+ * Get the repository that owns this object
+ *
+ * @param obj the object
+ * @return the repository who owns this object
+ */
+GIT_EXTERN(git_repository *) git_object_owner(git_object *obj);
 
 /**
  * Free a reference to one of the objects in the repository.
