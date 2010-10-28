@@ -33,12 +33,17 @@
 
 #define GIT_PACK_NAME_MAX (5 + 40 + 1)
 
+#define OBJ_LOCATION_NOTFOUND	GIT_ENOTFOUND
+#define OBJ_LOCATION_INPACK		1
+#define OBJ_LOCATION_LOOSE		2
+
 typedef struct {
 	uint32_t      n;
 	unsigned char *oid;
 	off_t         offset;
 	off_t         size;
 } index_entry;
+
 
 struct git_pack {
 	git_odb *db;
@@ -147,6 +152,21 @@ static struct {
 	{ "OFS_DELTA", 0 },  /* 6 = GIT_OBJ_OFS_DELTA */
 	{ "REF_DELTA", 0 }   /* 7 = GIT_OBJ_REF_DELTA */
 };
+
+typedef union obj_location {
+	char loose_path[GIT_PATH_MAX];
+	struct {
+		git_pack *ptr;
+		uint32_t n;
+	} pack;
+} obj_location;
+
+
+/***********************************************************
+ *
+ * MISCELANEOUS HELPER FUNCTIONS
+ * 
+ ***********************************************************/
 
 GIT_INLINE(uint32_t) decode32(void *b)
 {
@@ -339,6 +359,17 @@ static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
 
 	return used;
 }
+
+
+
+
+
+
+/***********************************************************
+ *
+ * ZLIB RELATED FUNCTIONS
+ * 
+ ***********************************************************/
 
 static void init_stream(z_stream *s, void *out, size_t len)
 {
@@ -624,58 +655,19 @@ static int deflate_obj(gitfo_buf *buf, char *hdr, int hdrlen, git_rawobj *obj, i
 	return GIT_SUCCESS;
 }
 
-static int write_obj(gitfo_buf *buf, git_oid *id, git_odb *db)
-{
-	char file[GIT_PATH_MAX];
-	char temp[GIT_PATH_MAX];
-	git_file fd;
 
-	if (object_file_name(file, sizeof(file), db->objects_dir, id))
-		return GIT_ERROR;
 
-	if (make_temp_file(&fd, temp, sizeof(temp), file) < 0)
-		return GIT_ERROR;
 
-	if (gitfo_write(fd, buf->data, buf->len) < 0) {
-		gitfo_close(fd);
-		gitfo_unlink(temp);
-		return GIT_ERROR;
-	}
 
-	if (db->fsync_object_files)
-		gitfo_fsync(fd);
-	gitfo_close(fd);
-	gitfo_chmod(temp, 0444);
 
-	if (gitfo_move_file(temp, file) < 0) {
-		gitfo_unlink(temp);
-		return GIT_ERROR;
-	}
 
-	return GIT_SUCCESS;
-}
-
-static int open_alternates(git_odb *db)
-{
-	unsigned n = 0;
-
-	gitlck_lock(&db->lock);
-	if (db->alternates) {
-		gitlck_unlock(&db->lock);
-		return 1;
-	}
-
-	db->alternates = git__malloc(sizeof(*db->alternates) * (n + 1));
-	if (!db->alternates) {
-		gitlck_unlock(&db->lock);
-		return -1;
-	}
-
-	db->alternates[n] = NULL;
-	db->n_alternates = n;
-	gitlck_unlock(&db->lock);
-	return 0;
-}
+/***********************************************************
+ *
+ * PACKFILE INDEX FUNCTIONS
+ *
+ * Get index formation for packfile indexes v1 and v2
+ * 
+ ***********************************************************/
 
 static int pack_openidx_map(git_pack *p)
 {
@@ -1018,6 +1010,19 @@ static int pack_openidx_v2(git_pack *p)
 
 	return GIT_SUCCESS;
 }
+
+
+
+
+
+
+/***********************************************************
+ *
+ * PACKFILE FUNCTIONS
+ *
+ * Locate, open and access the contents of a packfile
+ * 
+ ***********************************************************/
 
 static int pack_stat(git_pack *p)
 {
@@ -1365,127 +1370,20 @@ static int search_packs(git_pack **p, uint32_t *n, git_odb *db, const git_oid *i
 	return GIT_ENOTFOUND;
 }
 
-static int exists_packed(git_odb *db, const git_oid *id)
-{
-	return !search_packs(NULL, NULL, db, id);
-}
 
-static int exists_loose(git_odb *db, const git_oid *id)
-{
-	char file[GIT_PATH_MAX];
 
-	if (object_file_name(file, sizeof(file), db->objects_dir, id))
-		return 0;
 
-	if (gitfo_exists(file) < 0)
-		return 0;
 
-	return 1;
-}
 
-int git_odb_exists(git_odb *db, const git_oid *id)
-{
-	/* TODO: extend to search alternate db's */
-	if (exists_packed(db, id))
-		return 1;
-	return exists_loose(db, id);
-}
 
-int git_odb_open(git_odb **out, const char *objects_dir)
-{
-	git_odb *db = git__calloc(1, sizeof(*db));
-	if (!db)
-		return GIT_ERROR;
 
-	db->objects_dir = git__strdup(objects_dir);
-	if (!db->objects_dir) {
-		free(db);
-		return GIT_ERROR;
-	}
-
-	gitlck_init(&db->lock);
-
-	db->object_zlib_level = Z_BEST_SPEED;
-	db->fsync_object_files = 0;
-
-	*out = db;
-	return GIT_SUCCESS;
-}
-
-void git_odb_close(git_odb *db)
-{
-	git_packlist *pl;
-
-	if (!db)
-		return;
-
-	gitlck_lock(&db->lock);
-
-	pl = db->packlist;
-	db->packlist = NULL;
-
-	if (db->alternates) {
-		git_odb **alt;
-		for (alt = db->alternates; *alt; alt++)
-			git_odb_close(*alt);
-		free(db->alternates);
-	}
-
-	free(db->objects_dir);
-
-	gitlck_unlock(&db->lock);
-	if (pl)
-		packlist_dec(db, pl);
-	gitlck_free(&db->lock);
-	free(db);
-}
-
-int git_odb_read(
-	git_rawobj *out,
-	git_odb *db,
-	const git_oid *id)
-{
-attempt:
-
-	assert(out && db);
-
-	if (!git_odb__read_packed(out, db, id))
-		return GIT_SUCCESS;
-	if (!git_odb__read_loose(out, db, id))
-		return GIT_SUCCESS;
-	if (!open_alternates(db))
-		goto attempt;
-
-	out->data = NULL;
-	return GIT_ENOTFOUND;
-}
-
-int git_odb__read_loose(git_rawobj *out, git_odb *db, const git_oid *id)
-{
-	char file[GIT_PATH_MAX];
-	gitfo_buf obj = GITFO_BUF_INIT;
-
-	assert(out && db && id);
-
-	out->data = NULL;
-	out->len  = 0;
-	out->type = GIT_OBJ_BAD;
-
-	if (object_file_name(file, sizeof(file), db->objects_dir, id))
-		return GIT_ENOTFOUND;  /* TODO: error handling */
-
-	if (gitfo_read_file(&obj, file))
-		return GIT_ENOTFOUND;  /* TODO: error handling */
-
-	if (inflate_disk_obj(out, &obj)) {
-		gitfo_free_buf(&obj);
-		return GIT_ENOTFOUND;  /* TODO: error handling */
-	}
-
-	gitfo_free_buf(&obj);
-
-	return GIT_SUCCESS;
-}
+/***********************************************************
+ *
+ * PACKFILE READING FUNCTIONS
+ *
+ * Read the contents of a packfile
+ * 
+ ***********************************************************/
 
 static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e);
 
@@ -1611,7 +1509,6 @@ static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e)
 			if (!p->idx_search(&n, p, &base_id) &&
 				!p->idx_get(&entry, p, n)) {
 
-				/* FIXME: deflated_size - 20 ? */
 				res = unpack_object_delta(out, p, &entry, 
 					buffer + GIT_OID_RAWSZ, deflated_size, inflated_size);
 			}
@@ -1626,52 +1523,374 @@ static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e)
 	return GIT_SUCCESS;
 }
 
-static int read_packed(git_rawobj *out, git_pack *p, const git_oid *id)
+
+
+
+
+/***********************************************************
+ *
+ * ODB OBJECT READING & WRITING
+ *
+ * Backend for the public API; read headers and full objects
+ * from the ODB. Write raw data to the ODB.
+ * 
+ ***********************************************************/
+
+static int open_alternates(git_odb *db)
 {
-	uint32_t n;
+	unsigned n = 0;
+
+	gitlck_lock(&db->lock);
+	if (db->alternates) {
+		gitlck_unlock(&db->lock);
+		return 1;
+	}
+
+	/*
+	 * FIXME: broken, makes no sense.
+	 * n is always 0, the alternates array is always
+	 * empty!
+	 */
+
+	db->alternates = git__malloc(sizeof(*db->alternates) * (n + 1));
+	if (!db->alternates) {
+		gitlck_unlock(&db->lock);
+		return -1;
+	}
+
+	db->alternates[n] = NULL;
+	db->n_alternates = n;
+	gitlck_unlock(&db->lock);
+	return 0;
+}
+
+
+static int locate_object(obj_location *location, git_odb *db, const git_oid *id)
+{
+	memset(location, 0x0, sizeof(obj_location));
+
+	do {
+		if (object_file_name(location->loose_path, GIT_PATH_MAX, db->objects_dir, id) == GIT_SUCCESS &&
+			gitfo_exists(location->loose_path) == 0)
+			return OBJ_LOCATION_LOOSE;
+
+		if (search_packs(&location->pack.ptr, &location->pack.n, db, id) == GIT_SUCCESS)
+			return OBJ_LOCATION_INPACK;
+	
+	} while (open_alternates(db) == GIT_SUCCESS);
+
+	return GIT_ENOTFOUND;
+}
+
+static int read_packed(git_rawobj *out, const obj_location *loc)
+{
 	index_entry e;
 	int res;
 
-	assert(out && p && id);
+	assert(out && loc);
 
-	if (pack_openidx(p))
+	if (pack_openidx(loc->pack.ptr))
 		return GIT_ERROR;
 
-	res = p->idx_search(&n, p, id);
-	if (!res)
-		res = p->idx_get(&e, p, n);
+	res = loc->pack.ptr->idx_get(&e, loc->pack.ptr, loc->pack.n);
 
 	if (!res)
-		res = unpack_object(out, p, &e);
+		res = unpack_object(out, loc->pack.ptr, &e);
 
-	pack_decidx(p);
+	pack_decidx(loc->pack.ptr);
 
 	return res;
 }
 
-int git_odb__read_packed(git_rawobj *out, git_odb *db, const git_oid *id)
+static int read_header_packed(git_rawobj *out, const obj_location *loc)
 {
-	git_packlist *pl = packlist_get(db);
-	size_t j;
+	git_pack *pack;
+	index_entry e;
+	int error = GIT_SUCCESS, shift;
+	uint8_t *buffer, byte;
 
-	assert(out && db && id);
+	assert(out && loc);
+		
+	pack = loc->pack.ptr;
+
+	if (pack_openidx(pack))
+		return GIT_ERROR;
+
+	if (pack->idx_get(&e, pack, loc->pack.n) < 0 ||
+		open_pack(pack) < 0) {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
+	buffer = (uint8_t *)pack->pack_map.data + e.offset;
+
+	byte = *buffer++ & 0xFF;
+	out->type = (byte >> 4) & 0x7;
+	out->len = byte & 0xF;
+	shift = 4;
+
+	while (byte & 0x80) {
+		byte = *buffer++ & 0xFF;
+		out->len += (byte & 0x7F) << shift;
+		shift += 7;
+	}
+
+	/* 
+	 * FIXME: if the object is not packed as a whole,
+	 * we need to do a full load and apply the deltas before
+	 * being able to read the header.
+	 *
+	 * I don't think there are any workarounds for this.'
+	 */
+
+	if (out->type == GIT_OBJ_OFS_DELTA || out->type == GIT_OBJ_REF_DELTA) {
+		error = unpack_object(out, pack, &e);
+		git_obj_close(out);
+	} 
+
+cleanup:
+	pack_decidx(loc->pack.ptr);
+	return error;
+}
+
+static int read_loose(git_rawobj *out, git_odb *db, const obj_location *loc)
+{
+	int error;
+	gitfo_buf obj = GITFO_BUF_INIT;
+
+	assert(out && db && loc);
 
 	out->data = NULL;
 	out->len  = 0;
 	out->type = GIT_OBJ_BAD;
 
-	if (!pl)
+	if (gitfo_read_file(&obj, loc->loose_path) < 0)
 		return GIT_ENOTFOUND;
 
-	for (j = 0; j < pl->n_packs; j++) {
-		if (!read_packed(out, pl->packs[j], id)) {
-			packlist_dec(db, pl);
-			return GIT_SUCCESS;
-		}
+	error = inflate_disk_obj(out, &obj);
+	gitfo_free_buf(&obj);
+
+	return error;
+}
+
+static int read_header_loose(git_rawobj *out, git_odb *db, const obj_location *loc)
+{
+	int error = GIT_SUCCESS, z_return = Z_ERRNO, read_bytes;
+	git_file fd;
+	z_stream zs;
+	obj_hdr header_obj;
+	unsigned char raw_buffer[16], inflated_buffer[64];
+
+	assert(out && db && loc);
+
+	out->data = NULL;
+
+	if ((fd = gitfo_open(loc->loose_path, O_RDONLY)) < 0)
+		return GIT_ENOTFOUND;
+
+	init_stream(&zs, inflated_buffer, sizeof(inflated_buffer));
+
+	if (inflateInit(&zs) < Z_OK) {
+		error = GIT_ERROR;
+		goto cleanup;
 	}
 
-	packlist_dec(db, pl);
-	return GIT_ENOTFOUND;
+	do {
+		if ((read_bytes = read(fd, raw_buffer, sizeof(raw_buffer))) > 0) {
+			set_stream_input(&zs, raw_buffer, read_bytes);
+			z_return = inflate(&zs, 0);
+		}
+	} while (z_return == Z_OK);
+
+	if ((z_return != Z_STREAM_END && z_return != Z_BUF_ERROR)
+		|| get_object_header(&header_obj, inflated_buffer) == 0 
+		|| git_obj__loose_object_type(header_obj.type) == 0) {
+		error = GIT_EOBJCORRUPTED;
+		goto cleanup;
+	}
+
+	out->len  = header_obj.size;
+	out->type = header_obj.type;
+
+cleanup:
+	finish_inflate(&zs);
+	gitfo_close(fd);
+	return error;
+}
+
+static int write_obj(gitfo_buf *buf, git_oid *id, git_odb *db)
+{
+	char file[GIT_PATH_MAX];
+	char temp[GIT_PATH_MAX];
+	git_file fd;
+
+	if (object_file_name(file, sizeof(file), db->objects_dir, id))
+		return GIT_ERROR;
+
+	if (make_temp_file(&fd, temp, sizeof(temp), file) < 0)
+		return GIT_ERROR;
+
+	if (gitfo_write(fd, buf->data, buf->len) < 0) {
+		gitfo_close(fd);
+		gitfo_unlink(temp);
+		return GIT_ERROR;
+	}
+
+	if (db->fsync_object_files)
+		gitfo_fsync(fd);
+	gitfo_close(fd);
+	gitfo_chmod(temp, 0444);
+
+	if (gitfo_move_file(temp, file) < 0) {
+		gitfo_unlink(temp);
+		return GIT_ERROR;
+	}
+
+	return GIT_SUCCESS;
+}
+
+
+
+
+
+
+/***********************************************************
+ *
+ * OBJECT DATABASE PUBLIC API
+ *
+ * Public calls for the ODB functionality
+ * 
+ ***********************************************************/
+
+int git_odb_open(git_odb **out, const char *objects_dir)
+{
+	git_odb *db = git__calloc(1, sizeof(*db));
+	if (!db)
+		return GIT_ERROR;
+
+	db->objects_dir = git__strdup(objects_dir);
+	if (!db->objects_dir) {
+		free(db);
+		return GIT_ERROR;
+	}
+
+	gitlck_init(&db->lock);
+
+	db->object_zlib_level = Z_BEST_SPEED;
+	db->fsync_object_files = 0;
+
+	*out = db;
+	return GIT_SUCCESS;
+}
+
+void git_odb_close(git_odb *db)
+{
+	git_packlist *pl;
+
+	if (!db)
+		return;
+
+	gitlck_lock(&db->lock);
+
+	pl = db->packlist;
+	db->packlist = NULL;
+
+	if (db->alternates) {
+		git_odb **alt;
+		for (alt = db->alternates; *alt; alt++)
+			git_odb_close(*alt);
+		free(db->alternates);
+	}
+
+	free(db->objects_dir);
+
+	gitlck_unlock(&db->lock);
+	if (pl)
+		packlist_dec(db, pl);
+	gitlck_free(&db->lock);
+	free(db);
+}
+
+int git_odb__read_packed(git_rawobj *out, git_odb *db, const git_oid *id)
+{
+	obj_location loc;
+
+	if (locate_object(&loc, db, id) != OBJ_LOCATION_INPACK)
+		return GIT_ENOTFOUND;
+
+	return read_packed(out, &loc);
+}
+
+int git_odb__read_loose(git_rawobj *out, git_odb *db, const git_oid *id)
+{
+	obj_location loc;
+
+	if (locate_object(&loc, db, id) != OBJ_LOCATION_LOOSE)
+		return GIT_ENOTFOUND;
+
+	return read_loose(out, db, &loc);
+}
+
+int git_odb_exists(git_odb *db, const git_oid *id)
+{
+	obj_location loc;
+	assert(db && id);
+	return locate_object(&loc, db, id) == OBJ_LOCATION_NOTFOUND ? 0 : 1;
+}
+
+int git_odb_read_header(git_rawobj *out, git_odb *db, const git_oid *id)
+{
+	obj_location loc;
+	int found, error = 0;
+
+	assert(out && db);
+
+	found = locate_object(&loc, db, id);
+
+	switch (found) {
+	case OBJ_LOCATION_LOOSE: 
+		error = read_header_loose(out, db, &loc);
+		break;
+
+	case OBJ_LOCATION_INPACK:
+		error = read_header_packed(out, &loc);
+		break;
+
+	case OBJ_LOCATION_NOTFOUND:
+		error = GIT_ENOTFOUND;
+		break;
+	}
+
+	return error;
+}
+
+int git_odb_read(
+	git_rawobj *out,
+	git_odb *db,
+	const git_oid *id)
+{
+	obj_location loc;
+	int found, error = 0;
+
+	assert(out && db);
+
+	found = locate_object(&loc, db, id);
+
+	switch (found) {
+	case OBJ_LOCATION_LOOSE:
+		error = read_loose(out, db, &loc);
+		break;
+
+	case OBJ_LOCATION_INPACK:
+		error = read_packed(out, &loc);
+		break;
+
+	case OBJ_LOCATION_NOTFOUND:
+		error = GIT_ENOTFOUND;
+		break;
+	}
+
+	return error;
 }
 
 int git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj)

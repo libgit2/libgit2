@@ -69,6 +69,25 @@ typedef struct {
 GIT_EXTERN(int) git_odb_read(git_rawobj *out, git_odb *db, const git_oid *id);
 
 /**
+ * Read the header of an object from the database, without
+ * reading its full contents.
+ *
+ * Only the 'type' and 'len' fields of the git_rawobj structure
+ * are filled. The 'data' pointer will always be NULL.
+ *
+ * The raw object pointed by 'out' doesn't need to be manually
+ * closed with git_obj_close().
+ *
+ * @param out object descriptor to populate upon reading.
+ * @param db database to search for the object in.
+ * @param id identity of the object to read.
+ * @return
+ * - GIT_SUCCESS if the object was read;
+ * - GIT_ENOTFOUND if the object is not in the database.
+ */
+GIT_EXTERN(int) git_odb_read_header(git_rawobj *out, git_odb *db, const git_oid *id);
+
+/**
  * Read an object from the database using only pack files.
  *
  * If GIT_ENOTFOUND then out->data is set to NULL.
