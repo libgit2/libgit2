@@ -112,6 +112,9 @@ int git_commit__writeback(git_commit *commit, git_odb_source *src)
 	if (commit->message != NULL)
 		git__source_printf(src, "\n%s", commit->message);
 
+	/* Mark the commit as having all attributes */
+	commit->full_parse = 1;
+
 	return GIT_SUCCESS;
 }
 
@@ -238,6 +241,10 @@ int git_commit__parse_full(git_commit *commit)
 		return commit->_name; \
 	}
 
+#define CHECK_FULL_PARSE() \
+	if (!commit->object.in_memory && !commit->full_parse)\
+		git_commit__parse_full(commit); 
+
 GIT_COMMIT_GETTER(git_tree *, tree)
 GIT_COMMIT_GETTER(git_person *, author)
 GIT_COMMIT_GETTER(git_person *, committer)
@@ -259,6 +266,7 @@ void git_commit_set_tree(git_commit *commit, git_tree *tree)
 {
 	assert(commit && tree);
 	commit->object.modified = 1;
+	CHECK_FULL_PARSE();
 	commit->tree = tree;
 }
 
@@ -266,6 +274,7 @@ void git_commit_set_author(git_commit *commit, const char *name, const char *ema
 {
 	assert(commit && name && email);
 	commit->object.modified = 1;
+	CHECK_FULL_PARSE();
 
 	git_person__free(commit->author);
 	commit->author = git_person__new(name, email, time);
@@ -275,6 +284,7 @@ void git_commit_set_committer(git_commit *commit, const char *name, const char *
 {
 	assert(commit && name && email);
 	commit->object.modified = 1;
+	CHECK_FULL_PARSE();
 
 	git_person__free(commit->committer);
 	commit->committer = git_person__new(name, email, time);
@@ -285,6 +295,7 @@ void git_commit_set_message(git_commit *commit, const char *message)
 	const char *short_message;
 
 	commit->object.modified = 1;
+	CHECK_FULL_PARSE();
 
 	if (commit->message)
 		free(commit->message);
@@ -303,6 +314,7 @@ void git_commit_add_parent(git_commit *commit, git_commit *new_parent)
 	git_commit_parents *node;
 
 	commit->object.modified = 1;
+	CHECK_FULL_PARSE();
 
 	if ((node = git__malloc(sizeof(git_commit_parents))) == NULL)
 		return;
