@@ -237,7 +237,8 @@ int git_commit__parse_full(git_commit *commit)
 		assert(commit); \
 		if (commit->_name) \
 			return commit->_name; \
-		git_commit__parse_full(commit); \
+		if (!commit->object.in_memory) \
+			git_commit__parse_full(commit); \
 		return commit->_name; \
 	}
 
@@ -258,7 +259,9 @@ time_t git_commit_time(git_commit *commit)
 	if (commit->commit_time)
 		return commit->commit_time;
 
-	git_commit__parse_full(commit);
+	if (!commit->object.in_memory)
+		git_commit__parse_full(commit);
+
 	return commit->commit_time;
 }
 
