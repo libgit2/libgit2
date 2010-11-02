@@ -2,8 +2,6 @@
 #include "test_helpers.h"
 #include <git/odb.h>
 
-#define ODB_FOLDER "../resources/pack-odb"
-
 static const char *packed_objects[] = {
 	"0266163a49e280c4f5ed1e08facd36a2bd716bcf",
 	"53fc32d17276939fc79ed05badaef2db09990016",

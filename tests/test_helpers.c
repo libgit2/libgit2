@@ -84,18 +84,23 @@ int remove_object_files(const char *odb_dir, object_data *d)
 	return 0;
 }
 
-int remove_loose_object(const char *odb_dir, git_object *object)
+int remove_loose_object(const char *repository_folder, git_object *object)
 {
+	static const char *objects_folder = "objects/";
+
 	char *ptr, *full_path, *top_folder;
-	int path_length;
+	int path_length, objects_length;
 
-	assert(odb_dir && object);
+	assert(repository_folder && object);
 
-	path_length = strlen(odb_dir);
-	ptr = full_path = git__malloc(path_length + GIT_OID_HEXSZ + 3);
+	objects_length = strlen(objects_folder);
+	path_length = strlen(repository_folder);
+	ptr = full_path = git__malloc(path_length + objects_length + GIT_OID_HEXSZ + 3);
 
-	strcpy(ptr, odb_dir);
-	ptr = top_folder = ptr + path_length;
+	strcpy(ptr, repository_folder);
+	strcpy(ptr + path_length, objects_folder);
+
+	ptr = top_folder = ptr + path_length + objects_length;
 	*ptr++ = '/';
 	git_oid_pathfmt(ptr, git_object_id(object));
 	ptr += GIT_OID_HEXSZ + 1;

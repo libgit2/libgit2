@@ -5,7 +5,7 @@
 #include <git/odb.h>
 #include <git/index.h>
 
-#define TEST_INDEX_PATH "../resources/index"
+#define TEST_INDEX_PATH "../resources/testrepo.git/index"
 #define TEST_INDEX2_PATH "../resources/gitgit.index"
 
 #define TEST_INDEX_ENTRY_COUNT 109
@@ -29,7 +29,7 @@ struct test_entry TEST_ENTRIES[] = {
 BEGIN_TEST(index_loadempty_test)
 	git_index *index;
 
-	index = git_index_alloc("in-memory-index");
+	index = git_index_alloc("in-memory-index", NULL);
 	must_be_true(index != NULL);
 	must_be_true(index->on_disk == 0);
 
@@ -46,7 +46,7 @@ BEGIN_TEST(index_load_test)
 	git_index *index;
 	unsigned int i;
 
-	index = git_index_alloc(TEST_INDEX_PATH);
+	index = git_index_alloc(TEST_INDEX_PATH, NULL);
 	must_be_true(index != NULL);
 	must_be_true(index->on_disk);
 
@@ -70,7 +70,7 @@ END_TEST
 BEGIN_TEST(index2_load_test)
 	git_index *index;
 
-	index = git_index_alloc(TEST_INDEX2_PATH);
+	index = git_index_alloc(TEST_INDEX2_PATH, NULL);
 	must_be_true(index != NULL);
 	must_be_true(index->on_disk);
 
@@ -88,7 +88,7 @@ BEGIN_TEST(index_find_test)
 	git_index *index;
 	unsigned int i;
 
-	index = git_index_alloc(TEST_INDEX_PATH);
+	index = git_index_alloc(TEST_INDEX_PATH, NULL);
 	must_be_true(index != NULL);
 	must_pass(git_index_read(index));
 
@@ -104,7 +104,7 @@ BEGIN_TEST(index_findempty_test)
 	git_index *index;
 	unsigned int i;
 
-	index = git_index_alloc("fake-index");
+	index = git_index_alloc("fake-index", NULL);
 	must_be_true(index != NULL);
 
 	for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {

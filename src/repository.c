@@ -28,6 +28,7 @@
 #include "repository.h"
 #include "commit.h"
 #include "tag.h"
+#include "fileops.h"
 
 static const int default_table_size = 32;
 static const double max_load_factor = 0.65;
@@ -43,7 +44,7 @@ static const size_t object_sizes[] = {
 };
 
 
-uint32_t git_object_hash(const void *key)
+uint32_t git__objtable_hash(const void *key)
 {
 	uint32_t r;
 	git_oid *id;
@@ -53,7 +54,7 @@ uint32_t git_object_hash(const void *key)
 	return r;
 }
 
-int git_object_haskey(void *object, const void *key)
+int git__objtable_haskey(void *object, const void *key)
 {
 	git_object *obj;
 	git_oid *oid;
@@ -64,7 +65,62 @@ int git_object_haskey(void *object, const void *key)
 	return (git_oid_cmp(oid, &obj->id) == 0);
 }
 
-git_repository *git_repository_alloc(git_odb *odb)
+static int parse_repository_folders(git_repository *repo, const char *repository_path)
+{
+	char path_aux[GIT_PATH_MAX];
+	int path_len, i;
+
+	if (gitfo_isdir(repository_path) < 0)
+		return GIT_ERROR;
+
+	path_len = strlen(repository_path);
+	strcpy(path_aux, repository_path);
+
+	if (path_aux[path_len - 1] != '/') {
+		path_aux[path_len] = '/';
+		path_aux[path_len + 1] = 0;
+
+		path_len = path_len + 1;
+	}
+
+	repo->path_repository = git__strdup(path_aux);
+
+	/* objects database */
+	strcpy(path_aux + path_len, "objects/");
+	if (gitfo_isdir(path_aux) < 0)
+		return GIT_ERROR;
+	repo->path_odb = git__strdup(path_aux);
+
+	/* index file */
+	strcpy(path_aux + path_len, "index");
+	if (gitfo_exists(path_aux) < 0)
+		return GIT_ERROR;
+	repo->path_index = git__strdup(path_aux);
+
+	/* HEAD file */
+	strcpy(path_aux + path_len, "HEAD");
+	if (gitfo_exists(path_aux) < 0)
+		return GIT_ERROR;
+
+	i = path_len - 2;
+	while (path_aux[i] != '/')
+		i--;
+
+	if (strcmp(path_aux, "/.git/") == 0) {
+		repo->is_bare = 0;
+
+		path_aux[i + 1] = 0;
+		repo->path_workdir = git__strdup(path_aux);
+
+	} else {
+		repo->is_bare = 1;
+		repo->path_workdir = NULL;
+	}
+
+	return GIT_SUCCESS;
+}
+
+git_repository *git_repository__alloc()
 {
 	git_repository *repo = git__malloc(sizeof(git_repository));
 	if (!repo)
@@ -74,15 +130,30 @@ git_repository *git_repository_alloc(git_odb *odb)
 
 	repo->objects = git_hashtable_alloc(
 			default_table_size, 
-			git_object_hash,
-			git_object_haskey);
+			git__objtable_hash,
+			git__objtable_haskey);
 
 	if (repo->objects == NULL) {
 		free(repo);
 		return NULL;
 	}
 
-	repo->db = odb; /* TODO: create ODB manually! */
+	return repo;
+}
+
+git_repository *git_repository_open(const char *path)
+{
+	git_repository *repo;
+
+	repo = git_repository__alloc();
+	if (repo == NULL)
+		return NULL;
+
+	if (parse_repository_folders(repo, path) < 0 ||
+		git_odb_open(&repo->db, repo->path_odb) < 0) {
+		git_repository_free(repo);
+		return NULL;
+	}
 
 	return repo;
 }
@@ -92,6 +163,11 @@ void git_repository_free(git_repository *repo)
 	git_hashtable_iterator it;
 	git_object *object;
 
+	free(repo->path_workdir);
+	free(repo->path_index);
+	free(repo->path_repository);
+	free(repo->path_odb);
+
 	git_hashtable_iterator_init(repo->objects, &it);
 
 	while ((object = (git_object *)
@@ -99,8 +175,19 @@ void git_repository_free(git_repository *repo)
 		git_object_free(object);
 
 	git_hashtable_free(repo->objects);
-	/* TODO: free odb */
+	git_odb_close(repo->db);
+	git_index_free(repo->index);
 	free(repo);
+}
+
+git_index *git_repository_index(git_repository *repo)
+{
+	if (repo->index == NULL) {
+		repo->index = git_index_alloc(repo->path_index, repo->path_workdir);
+		assert(repo->index && repo->index->on_disk);
+	}
+
+	return repo->index;
 }
 
 static int source_resize(git_odb_source *src)

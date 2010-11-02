@@ -7,7 +7,6 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
-static const char *odb_dir = "../resources/sample-odb";
 static const char *commit_ids[] = {
 	"a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
 	"9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
@@ -21,14 +20,10 @@ BEGIN_TEST(query_details_test)
 	const size_t commit_count = sizeof(commit_ids) / sizeof(const char *);
 
 	unsigned int i;
-	git_odb *db;
 	git_repository *repo;
 
-	must_pass(git_odb_open(&db, odb_dir));
-
-	repo = git_repository_alloc(db);
+	repo = git_repository_open(REPOSITORY_FOLDER);
 	must_be_true(repo != NULL);
-
 	
 	for (i = 0; i < commit_count; ++i) {
 		git_oid id;
@@ -59,5 +54,4 @@ BEGIN_TEST(query_details_test)
 	}
 
 	git_repository_free(repo);
-	git_odb_close(db);
 END_TEST

@@ -97,7 +97,7 @@ static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
 static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
 
 
-git_index *git_index_alloc(const char *index_path)
+git_index *git_index_alloc(const char *index_path, const char *work_dir)
 {
 	git_index *index;
 
@@ -116,6 +116,9 @@ git_index *git_index_alloc(const char *index_path)
 		return NULL;
 	}
 
+	if (work_dir != NULL)
+		index->working_path = git__strdup(work_dir);
+
 	/* Check if index file is stored on disk already */
 	if (gitfo_exists(index->index_file_path) == 0)
 		index->on_disk = 1;
@@ -126,6 +129,9 @@ git_index *git_index_alloc(const char *index_path)
 void git_index_clear(git_index *index)
 {
 	unsigned int i;
+
+	assert(index);
+
 	for (i = 0; i < index->entry_count; ++i)
 		free(index->entries[i].path);
 
@@ -139,6 +145,9 @@ void git_index_clear(git_index *index)
 
 void git_index_free(git_index *index)
 {
+	if (index == NULL)
+		return;
+
 	git_index_clear(index);
 	free(index->entries);
 	index->entries = NULL;
@@ -213,6 +222,11 @@ int git_index_write(git_index *index)
 	return 0;
 }
 
+git_index_entry *git_index_get(git_index *index, int n)
+{
+	return (n >= 0 && (unsigned int)n < index->entry_count) ? &index->entries[n] : NULL;
+}
+
 int git_index_add(git_index *index, const char *filename, int stage)
 {
 	git_index_entry entry;
@@ -225,7 +239,7 @@ int git_index_add(git_index *index, const char *filename, int stage)
 	if (path_length < GIT_IDXENTRY_NAMEMASK)
 		entry.flags |= path_length;
 	else
-		entry.flags |= path_length;
+		entry.flags |= GIT_IDXENTRY_NAMEMASK;;
 
 	if (stage < 0 || stage > 3)
 		return GIT_ERROR;

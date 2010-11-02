@@ -5,7 +5,7 @@
 #include <git/odb.h>
 #include <git/index.h>
 
-#define TEST_INDEX_PATH "../resources/index"
+#define TEST_INDEX_PATH "../resources/testrepo.git/index"
 
 int filecmp(const char *filename1, const char *filename2)
 {
@@ -35,7 +35,7 @@ BEGIN_TEST(index_load_test)
 	git_index *index;
 	git_filelock out_file;
 
-	index = git_index_alloc(TEST_INDEX_PATH);
+	index = git_index_alloc(TEST_INDEX_PATH, NULL);
 	must_be_true(index != NULL);
 	must_pass(git_index_read(index));
 	must_be_true(index->on_disk);

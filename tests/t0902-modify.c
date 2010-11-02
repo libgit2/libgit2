@@ -6,22 +6,17 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
-static const char *odb_dir = "../resources/sample-odb";
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 
 BEGIN_TEST(tree_in_memory_add_test)
 	const unsigned int entry_count = 128;
 
-
-	git_odb *db;
 	git_repository *repo;
 	git_tree *tree;
 	unsigned int i;
 	git_oid entry_id;
 
-	must_pass(git_odb_open(&db, odb_dir));
-
-	repo = git_repository_alloc(db);
+	repo = git_repository_open(REPOSITORY_FOLDER);
 	must_be_true(repo != NULL);
 
 	tree = git_tree_new(repo);
@@ -36,16 +31,14 @@ BEGIN_TEST(tree_in_memory_add_test)
 
 	must_be_true(git_tree_entrycount(tree) == entry_count);
 	must_pass(git_object_write((git_object *)tree));
-	must_pass(remove_loose_object(odb_dir, (git_object *)tree));
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tree));
 
 	git_object_free((git_object *)tree);
 
 	git_repository_free(repo);
-	git_odb_close(db);
 END_TEST
 
 BEGIN_TEST(tree_add_entry_test)
-	git_odb *db;
 	git_oid id;
 	git_repository *repo;
 	git_tree *tree;
@@ -53,9 +46,7 @@ BEGIN_TEST(tree_add_entry_test)
 	unsigned int i;
 	/* char hex_oid[41]; */
 
-	must_pass(git_odb_open(&db, odb_dir));
-
-	repo = git_repository_alloc(db);
+	repo = git_repository_open(REPOSITORY_FOLDER);
 	must_be_true(repo != NULL);
 
 	git_oid_mkstr(&id, tree_oid);
@@ -92,10 +83,7 @@ BEGIN_TEST(tree_add_entry_test)
 	printf("TREE New SHA1: %s\n", hex_oid);
 */
 
-	must_pass(remove_loose_object(odb_dir, (git_object *)tree));
-	
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tree));
 	git_object_free((git_object *)tree);
-
 	git_repository_free(repo);
-	git_odb_close(db);
 END_TEST

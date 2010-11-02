@@ -36,7 +36,7 @@ BEGIN_TEST(index_sort_test)
 	git_index *index;
 	unsigned int i;
 
-	index = git_index_alloc(TEST_INDEX_PATH);
+	index = git_index_alloc(TEST_INDEX_PATH, NULL);
 	must_be_true(index != NULL);
 	must_pass(git_index_read(index));
 
@@ -54,7 +54,7 @@ END_TEST
 
 BEGIN_TEST(index_sort_empty_test)
 	git_index *index;
-	index = git_index_alloc("fake-index");
+	index = git_index_alloc("fake-index", NULL);
 	must_be_true(index != NULL);
 
 	git_index__sort(index);

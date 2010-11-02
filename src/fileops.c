@@ -53,6 +53,13 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 	return GIT_SUCCESS;
 }
 
+int gitfo_isdir(const char *path)
+{
+	struct stat st;
+	return (path && gitfo_stat(path, &st) == 0 && S_ISDIR(st.st_mode)) ? 
+		GIT_SUCCESS : GIT_ENOTFOUND;
+}
+
 int gitfo_exists(const char *path)
 {
 	return access(path, F_OK);

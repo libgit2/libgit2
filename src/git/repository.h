@@ -4,6 +4,7 @@
 #include "common.h"
 #include "odb.h"
 #include "commit.h"
+#include "index.h"
 
 /**
  * @file git/repository.h
@@ -15,15 +16,28 @@
 GIT_BEGIN_DECL
 
 /**
- * Allocate a new repository object.
+ * Open a git repository.
  *
- * TODO: specify the repository's path instead
- * of its object database
+ * The 'path' argument must point to an existing git repository
+ * folder, e.g.
  *
- * @param odb an existing object database to back the repo
+ *		/path/to/my_repo/.git/	(normal repository)
+ *							objects/
+ *							index
+ *							HEAD
+ *
+ *		/path/to/bare_repo/		(bare repository)
+ *						objects/
+ *						index
+ *						HEAD
+ *
+ *	The method will automatically detect if 'path' is a normal
+ *	or bare repository or fail is 'path' is neither.
+ *
+ * @param path the path to the repository
  * @return the new repository handle; NULL on error
  */
-GIT_EXTERN(git_repository *) git_repository_alloc(git_odb *odb);
+GIT_EXTERN(git_repository *) git_repository_open(const char *path);
 
 
 /**
@@ -56,6 +70,15 @@ GIT_EXTERN(git_object *) git_repository_lookup(git_repository *repo, const git_o
  * @return a pointer to the object db
  */
 GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
+
+/**
+ * Get the Index file of a Git repository
+ *
+ * @param repo a repository object
+ * @return a pointer to the Index object; 
+ *	NULL if the index cannot be opened
+ */
+GIT_EXTERN(git_index *) git_repository_index(git_repository *rpeo);
 
 /**
  * Create a new in-memory repository object with

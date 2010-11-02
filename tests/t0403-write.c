@@ -6,7 +6,6 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
-static const char *odb_dir = "../resources/sample-odb";
 static const char *commit_ids[] = {
 	"a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
 	"9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
@@ -21,16 +20,13 @@ static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 #define COMMITTER_EMAIL "vicent@github.com"
 
 BEGIN_TEST(writenew_test)
-	git_odb *db;
 	git_repository *repo;
 	git_commit *commit, *parent;
 	git_tree *tree;
 	git_oid id;
 	/* char hex_oid[41]; */
 
-	must_pass(git_odb_open(&db, odb_dir));
-
-	repo = git_repository_alloc(db);
+	repo = git_repository_open(REPOSITORY_FOLDER);
 	must_be_true(repo != NULL);
 
 	/* Create commit in memory */
@@ -71,27 +67,22 @@ This is a commit created in memory and it will be written back to disk\n");
 	printf("Written new commit, SHA1: %s\n", hex_oid);
 */
 
-	must_pass(remove_loose_object(odb_dir, (git_object *)commit));
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
 
 	//git_person_free(&author);
 	//git_person_free(&committer);
 
 	git_repository_free(repo);
-	git_odb_close(db);
-
 END_TEST
 
 BEGIN_TEST(writeback_test)
-	git_odb *db;
 	git_repository *repo;
 	git_oid id;
 	git_commit *commit, *parent;
 	const char *message;
 	/* char hex_oid[41]; */
 
-	must_pass(git_odb_open(&db, odb_dir));
-
-	repo = git_repository_alloc(db);
+	repo = git_repository_open(REPOSITORY_FOLDER);
 	must_be_true(repo != NULL);
 
 	git_oid_mkstr(&id, commit_ids[0]);
@@ -123,8 +114,7 @@ BEGIN_TEST(writeback_test)
 	printf("New SHA1: %s\n", hex_oid);
 */
 
-	must_pass(remove_loose_object(odb_dir, (git_object *)commit));
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
 
 	git_repository_free(repo);
-	git_odb_close(db);
 END_TEST

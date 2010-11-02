@@ -6,7 +6,6 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
-static const char *odb_dir = "../resources/sample-odb";
 /*
 	$ git log --oneline --graph --decorate
 	*   a4a7dce (HEAD, br2) Merge branch 'master' into br2
@@ -91,15 +90,12 @@ static int test_walk(git_revwalk *walk, git_commit *start_from,
 }
 
 BEGIN_TEST(simple_walk_test)
-	git_odb *db;
 	git_oid id;
 	git_repository *repo;
 	git_revwalk *walk;
 	git_commit *head = NULL;
 
-	must_pass(git_odb_open(&db, odb_dir));
-
-	repo = git_repository_alloc(db);
+	repo = git_repository_open(REPOSITORY_FOLDER);
 	must_be_true(repo != NULL);
 
 	walk = git_revwalk_alloc(repo);
@@ -130,5 +126,4 @@ BEGIN_TEST(simple_walk_test)
 
 	git_revwalk_free(walk);
 	git_repository_free(repo);
-	git_odb_close(db);
 END_TEST

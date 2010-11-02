@@ -2,9 +2,6 @@
 #include "test_helpers.h"
 #include <git/odb.h>
 
-#define PACK_ODB_FOLDER "../resources/pack-odb"
-#define LOOSE_ODB_FOLDER "../resources/sample-odb"
-
 static const char *packed_objects[] = {
 	"0266163a49e280c4f5ed1e08facd36a2bd716bcf",
 	"53fc32d17276939fc79ed05badaef2db09990016",
@@ -161,7 +158,7 @@ BEGIN_TEST(readheader_packed_test)
 	unsigned int i;
     git_odb *db;
 
-    must_pass(git_odb_open(&db, PACK_ODB_FOLDER));
+    must_pass(git_odb_open(&db, ODB_FOLDER));
 
 	for (i = 0; i < ARRAY_SIZE(packed_objects); ++i) {
 		git_oid id;
@@ -186,7 +183,7 @@ BEGIN_TEST(readheader_loose_test)
 	unsigned int i;
     git_odb *db;
 
-    must_pass(git_odb_open(&db, LOOSE_ODB_FOLDER));
+    must_pass(git_odb_open(&db, ODB_FOLDER));
 
 	for (i = 0; i < ARRAY_SIZE(loose_objects); ++i) {
 		git_oid id;

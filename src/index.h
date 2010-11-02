@@ -12,31 +12,6 @@
 #define GIT_IDXENTRY_VALID     (0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
 
-typedef struct {
-	uint32_t seconds;
-	uint32_t nanoseconds;
-} git_index_time;
-
-struct git_index_entry {
-	git_index_time ctime;
-	git_index_time mtime;
-
-	uint32_t dev;
-	uint32_t ino;
-	uint32_t mode;
-	uint32_t uid;
-	uint32_t gid;
-	uint32_t file_size;
-
-	git_oid oid;
-
-	uint16_t flags;
-	uint16_t flags_extended;
-
-	char *path;
-};
-
-
 struct git_index_tree {
 	char *name;
 
@@ -53,6 +28,8 @@ typedef struct git_index_tree git_index_tree;
 struct git_index {
 
 	char *index_file_path;
+	char *working_path;
+
 	time_t last_modified;
 
 	git_index_entry *entries;

@@ -6,8 +6,6 @@
 #include <git/commit.h>
 #include <git/revwalk.h>
 
-static const char *odb_dir = "../resources/pack-odb";
-
 static char *test_commits_broken[] = {
 
 /* empty commit */
@@ -225,11 +223,8 @@ BEGIN_TEST(parse_buffer_test)
 
 	int i;
 	git_repository *repo;
-	git_odb *db;
 
-	must_pass(git_odb_open(&db, odb_dir));
-
-	repo = git_repository_alloc(db);
+	repo = git_repository_open(REPOSITORY_FOLDER);
 	must_be_true(repo != NULL);
 
 	for (i = 0; i < broken_commit_count; ++i) {
@@ -265,6 +260,4 @@ BEGIN_TEST(parse_buffer_test)
 	}
 
 	git_repository_free(repo);
-	git_odb_close(db);
-
 END_TEST
