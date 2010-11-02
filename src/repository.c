@@ -91,12 +91,6 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 		return GIT_ERROR;
 	repo->path_odb = git__strdup(path_aux);
 
-	/* index file */
-	strcpy(path_aux + path_len, "index");
-	if (gitfo_exists(path_aux) < 0)
-		return GIT_ERROR;
-	repo->path_index = git__strdup(path_aux);
-
 	/* HEAD file */
 	strcpy(path_aux + path_len, "HEAD");
 	if (gitfo_exists(path_aux) < 0)
@@ -111,6 +105,12 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 
 		path_aux[i + 1] = 0;
 		repo->path_workdir = git__strdup(path_aux);
+
+		/* index file */
+		strcpy(path_aux + path_len, "index");
+		if (gitfo_exists(path_aux) < 0)
+			return GIT_ERROR;
+		repo->path_index = git__strdup(path_aux);
 
 	} else {
 		repo->is_bare = 1;
