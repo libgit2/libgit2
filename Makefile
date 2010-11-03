@@ -30,7 +30,7 @@ OS     = unix
 
 EXTRA_SRC =
 EXTRA_OBJ =
-EXTRA_CFLAGS =
+EXTRA_CFLAGS = -fPIC
 
 AR_OUT=
 CC_OUT=-o # add a space
