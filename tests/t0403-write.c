@@ -61,6 +61,7 @@ BEGIN_TEST(writenew_test)
 	must_be_true(strcmp(committer->name, COMMITTER_NAME) == 0);
 	must_be_true(strcmp(committer->email, COMMITTER_EMAIL) == 0);
 	must_be_true(committer->time == 123456789);
+	must_be_true(git_commit_time(commit) == 123456789);
 
 	must_be_true(strcmp(git_commit_message(commit), COMMIT_MESSAGE) == 0);
 
