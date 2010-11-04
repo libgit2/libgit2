@@ -282,6 +282,7 @@ void git_commit_set_committer(git_commit *commit, const char *name, const char *
 
 	git_person__free(commit->committer);
 	commit->committer = git_person__new(name, email, time);
+	commit->commit_time = time;
 }
 
 void git_commit_set_message(git_commit *commit, const char *message)
@@ -317,5 +318,3 @@ void git_commit_add_parent(git_commit *commit, git_commit *new_parent)
 	node->next = commit->parents;
 	commit->parents = node;
 }
-
-
