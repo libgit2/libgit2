@@ -176,14 +176,15 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		char *line_end;
 		size_t message_len = buffer_end - buffer;
 
-		/* Short message */
+		/* Long message */
 		message_len = buffer_end - buffer;
 		commit->message = git__malloc(message_len + 1);
 		memcpy(commit->message, buffer, message_len);
 		commit->message[message_len] = 0;
 
-		/* Long message */
-		line_end = memchr(buffer, '\n', buffer_end - buffer);
+		/* Short message */
+		if((line_end = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
+			line_end = buffer_end;
 		message_len = line_end - buffer;
 
 		commit->message_short = git__malloc(message_len + 1);
