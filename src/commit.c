@@ -173,7 +173,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		buffer++;
 
 	if (parse_flags & COMMIT_FULL_PARSE && buffer < buffer_end) {
-		char *line_end;
+		const char *line_end;
 		size_t message_len = buffer_end - buffer;
 
 		/* Long message */
