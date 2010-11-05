@@ -9,5 +9,4 @@ BEGIN_TEST(set_ENOTOID)
 	must_be_true(GIT_ENOTOID != 0);
 	git_errno = GIT_ENOTOID;
 	must_be_true(git_errno == GIT_ENOTOID);
-	must_pass(strcmp(git_strerror(git_errno), "Not a git oid"));
 END_TEST
