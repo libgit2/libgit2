@@ -71,8 +71,16 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 a simple commit which works\n",
 
-/* simple commit, 1 parents */
+/* simple commit, no parent, no newline in message */
 "tree 1810dff58d8a660512d4832e740f692884338ccd\n\
+author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
+committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
+\n\
+a simple commit which works",
+
+/* simple commit, 1 parent */
+"tree 1810dff58d8a660512d4832e740f692884338ccd\n\
+parent e90810b8df3e80c413d903f631643c716887138d\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
@@ -210,7 +218,7 @@ BEGIN_TEST(parse_person_test)
 		"author ");
 
 #undef TEST_PERSON_PASS
-#undef TESt_PERSON_FAIL
+#undef TEST_PERSON_FAIL
 
 END_TEST
 
@@ -245,6 +253,16 @@ BEGIN_TEST(parse_buffer_test)
 	for (i = 0; i < working_commit_count; ++i) {
 		git_commit *commit;
 		commit = git__malloc(sizeof(git_commit));
+		memset(commit, 0x0, sizeof(git_commit));
+		commit->object.repo = repo;
+
+		must_pass(commit_parse_buffer(
+					commit,
+					test_commits_working[i],
+					strlen(test_commits_working[i]),
+					0x0)
+				);
+
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
 
