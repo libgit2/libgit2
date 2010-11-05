@@ -23,11 +23,12 @@ typedef struct git_tag git_tag;
  * The generated tag object is owned by the revision
  * repo and shall not be freed by the user.
  *
+ * @param tag pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
- * @return the tag; NULL if the tag could not be created
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_tag *) git_tag_lookup(git_repository *repo, const git_oid *id);
+GIT_EXTERN(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id);
 
 /**
  * Create a new in-memory git_tag.
@@ -36,10 +37,11 @@ GIT_EXTERN(git_tag *) git_tag_lookup(git_repository *repo, const git_oid *id);
  * setter methods before it can be written to its
  * repository.
  *
+ * @param tag pointer to the new tag
  * @param repo The repository where the object will reside
- * @return the object if creation was possible; NULL otherwise
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_tag *) git_tag_new(git_repository *repo);
+GIT_EXTERN(int) git_tag_new(git_tag **tag, git_repository *repo);
 
 /**
  * Get the id of a tag.

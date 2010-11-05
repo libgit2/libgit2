@@ -1590,7 +1590,7 @@ static int read_packed(git_rawobj *out, const obj_location *loc)
 	assert(out && loc);
 
 	if (pack_openidx(loc->pack.ptr))
-		return GIT_ERROR;
+		return GIT_EPACKCORRUPTED;
 
 	res = loc->pack.ptr->idx_get(&e, loc->pack.ptr, loc->pack.n);
 
@@ -1614,7 +1614,7 @@ static int read_header_packed(git_rawobj *out, const obj_location *loc)
 	pack = loc->pack.ptr;
 
 	if (pack_openidx(pack))
-		return GIT_ERROR;
+		return GIT_EPACKCORRUPTED;
 
 	if (pack->idx_get(&e, pack, loc->pack.n) < 0 ||
 		open_pack(pack) < 0) {
@@ -1691,7 +1691,7 @@ static int read_header_loose(git_rawobj *out, git_odb *db, const obj_location *l
 	init_stream(&zs, inflated_buffer, sizeof(inflated_buffer));
 
 	if (inflateInit(&zs) < Z_OK) {
-		error = GIT_ERROR;
+		error = GIT_EZLIB;
 		goto cleanup;
 	}
 
@@ -1725,15 +1725,15 @@ static int write_obj(gitfo_buf *buf, git_oid *id, git_odb *db)
 	git_file fd;
 
 	if (object_file_name(file, sizeof(file), db->objects_dir, id))
-		return GIT_ERROR;
+		return GIT_EOSERR;
 
 	if (make_temp_file(&fd, temp, sizeof(temp), file) < 0)
-		return GIT_ERROR;
+		return GIT_EOSERR;
 
 	if (gitfo_write(fd, buf->data, buf->len) < 0) {
 		gitfo_close(fd);
 		gitfo_unlink(temp);
-		return GIT_ERROR;
+		return GIT_EOSERR;
 	}
 
 	if (db->fsync_object_files)
@@ -1743,7 +1743,7 @@ static int write_obj(gitfo_buf *buf, git_oid *id, git_odb *db)
 
 	if (gitfo_move_file(temp, file) < 0) {
 		gitfo_unlink(temp);
-		return GIT_ERROR;
+		return GIT_EOSERR;
 	}
 
 	return GIT_SUCCESS;
@@ -1766,12 +1766,12 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 {
 	git_odb *db = git__calloc(1, sizeof(*db));
 	if (!db)
-		return GIT_ERROR;
+		return GIT_ENOMEM;
 
 	db->objects_dir = git__strdup(objects_dir);
 	if (!db->objects_dir) {
 		free(db);
-		return GIT_ERROR;
+		return GIT_ENOMEM;
 	}
 
 	gitlck_init(&db->lock);
@@ -1898,21 +1898,22 @@ int git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj)
 	char hdr[64];
 	int  hdrlen;
 	gitfo_buf buf = GITFO_BUF_INIT;
+	int error;
 
 	assert(id && db && obj);
 
-	if (hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj) < 0)
-		return GIT_ERROR;
+	if ((error = hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj)) < 0)
+		return error;
 
 	if (git_odb_exists(db, id))
 		return GIT_SUCCESS;
 
-	if (deflate_obj(&buf, hdr, hdrlen, obj, db->object_zlib_level) < 0)
-		return GIT_ERROR;
+	if ((error = deflate_obj(&buf, hdr, hdrlen, obj, db->object_zlib_level)) < 0)
+		return error;
 
-	if (write_obj(&buf, id, db) < 0) {
+	if ((error = write_obj(&buf, id, db)) < 0) {
 		gitfo_free_buf(&buf);
-		return GIT_ERROR;
+		return error;
 	}
 
 	gitfo_free_buf(&buf);

@@ -14,13 +14,11 @@ BEGIN_TEST(tag_writeback_test)
 	git_tag *tag;
 	/* char hex_oid[41]; */
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_mkstr(&id, tag_id);
 
-	tag = git_tag_lookup(repo, &id);
-	must_be_true(tag != NULL);
+	must_pass(git_tag_lookup(&tag, repo, &id));
 
 	git_tag_set_name(tag, "This is a different tag LOL");
 

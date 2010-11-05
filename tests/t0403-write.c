@@ -26,17 +26,14 @@ BEGIN_TEST(writenew_test)
 	git_oid id;
 	/* char hex_oid[41]; */
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	/* Create commit in memory */
-	commit = git_commit_new(repo);
-	must_be_true(commit != NULL);
+	must_pass(git_commit_new(&commit, repo));
 
 	/* Add new parent */
 	git_oid_mkstr(&id, commit_ids[4]);
-	parent = git_commit_lookup(repo, &id);
-	must_be_true(parent != NULL);
+	must_pass(git_commit_lookup(&parent, repo, &id));
 
 	git_commit_add_parent(commit, parent);
 
@@ -49,8 +46,7 @@ This is a commit created in memory and it will be written back to disk\n");
 	
 	/* add new tree */
 	git_oid_mkstr(&id, tree_oid);
-	tree = git_tree_lookup(repo, &id);
-	must_be_true(tree != NULL);
+	must_pass(git_tree_lookup(&tree, repo, &id));
 
 	git_commit_set_tree(commit, tree);
 
@@ -82,13 +78,11 @@ BEGIN_TEST(writeback_test)
 	const char *message;
 	/* char hex_oid[41]; */
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_mkstr(&id, commit_ids[0]);
 
-	commit = git_commit_lookup(repo, &id);
-	must_be_true(commit != NULL);
+	must_pass(git_commit_lookup(&commit, repo, &id));
 
 	message = git_commit_message(commit);
 
@@ -101,8 +95,7 @@ BEGIN_TEST(writeback_test)
 	git_commit_set_message(commit, "This is a new test message. Cool!\n");
 
 	git_oid_mkstr(&id, commit_ids[4]);
-	parent = git_commit_lookup(repo, &id);
-	must_be_true(parent != NULL);
+	must_pass(git_commit_lookup(&parent, repo, &id));
 
 	git_commit_add_parent(commit, parent);
 

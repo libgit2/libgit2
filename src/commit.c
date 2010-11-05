@@ -67,20 +67,9 @@ void git_commit__free(git_commit *commit)
 	free(commit);
 }
 
-git_commit *git_commit_new(git_repository *repo)
-{
-	return (git_commit *)git_object_new(repo, GIT_OBJ_COMMIT);
-}
-
 const git_oid *git_commit_id(git_commit *c)
 {
 	return git_object_id((git_object *)c);
-}
-
-
-git_commit *git_commit_lookup(git_repository *repo, const git_oid *id)
-{
-	return (git_commit *)git_repository_lookup(repo, id, GIT_OBJ_COMMIT);
 }
 
 int git_commit__writeback(git_commit *commit, git_odb_source *src)
@@ -88,7 +77,7 @@ int git_commit__writeback(git_commit *commit, git_odb_source *src)
 	git_commit_parents *parent;
 
 	if (commit->tree == NULL)
-		return GIT_ERROR;
+		return GIT_EMISSINGOBJDATA;
 
 	git__write_oid(src, "tree", git_tree_id(commit->tree));
 
@@ -100,12 +89,12 @@ int git_commit__writeback(git_commit *commit, git_odb_source *src)
 	}
 
 	if (commit->author == NULL)
-		return GIT_ERROR;
+		return GIT_EMISSINGOBJDATA;
 
 	git_person__write(src, "author", commit->author);
 
 	if (commit->committer == NULL)
-		return GIT_ERROR;
+		return GIT_EMISSINGOBJDATA;
 
 	git_person__write(src, "committer", commit->committer);
 
@@ -124,11 +113,13 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	const char *buffer_end = (char *)data + len;
 
 	git_oid oid;
+	int error;
 
-	if (git__parse_oid(&oid, &buffer, buffer_end, "tree ") < 0)
-		return GIT_EOBJCORRUPTED;
+	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < 0)
+		return error;
 
-	commit->tree = git_tree_lookup(commit->object.repo, &oid);
+	if ((error = git_repository_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < 0)
+		return error;
 
 	/*
 	 * TODO: commit grafts!
@@ -140,8 +131,8 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		git_commit *parent;
 		git_commit_parents *node;
 
-		if ((parent = git_commit_lookup(commit->object.repo, &oid)) == NULL)
-			return GIT_ENOTFOUND;
+		if ((error = git_repository_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < 0)
+			return error;
 
 		if ((node = git__malloc(sizeof(git_commit_parents))) == NULL)
 			return GIT_ENOMEM;
@@ -157,8 +148,8 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 			git_person__free(commit->author);
 
 		commit->author = git__malloc(sizeof(git_person));
-		if (git_person__parse(commit->author, &buffer, buffer_end, "author ") < 0)
-			return GIT_EOBJCORRUPTED;
+		if ((error = git_person__parse(commit->author, &buffer, buffer_end, "author ")) < 0)
+			return error;
 
 	} else {
 		if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
@@ -172,8 +163,8 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		git_person__free(commit->committer);
 
 	commit->committer = git__malloc(sizeof(git_person));
-	if (git_person__parse(commit->committer, &buffer, buffer_end, "committer ") < 0)
-		return GIT_EOBJCORRUPTED;
+	if ((error = git_person__parse(commit->committer, &buffer, buffer_end, "committer ")) < 0)
+		return error;
 
 	commit->commit_time = commit->committer->time;
 
@@ -200,7 +191,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		commit->message_short[message_len] = 0;
 	}
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git_commit__parse(git_commit *commit)
@@ -217,8 +208,8 @@ int git_commit__parse_full(git_commit *commit)
 	if (commit->full_parse)
 		return 0;
 
-	if (git_object__source_open((git_object *)commit) < 0)
-		return GIT_ERROR;
+	if ((error = git_object__source_open((git_object *)commit)) < 0)
+		return error;
 
 	error = commit_parse_buffer(commit,
 			commit->object.source.raw.data, commit->object.source.raw.len, COMMIT_FULL_PARSE);

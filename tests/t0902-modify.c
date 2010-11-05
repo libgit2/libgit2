@@ -16,11 +16,8 @@ BEGIN_TEST(tree_in_memory_add_test)
 	unsigned int i;
 	git_oid entry_id;
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
-
-	tree = git_tree_new(repo);
-	must_be_true(tree != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_tree_new(&tree, repo));
 
 	git_oid_mkstr(&entry_id, tree_oid);
 	for (i = 0; i < entry_count; ++i) {
@@ -46,13 +43,11 @@ BEGIN_TEST(tree_add_entry_test)
 	unsigned int i;
 	/* char hex_oid[41]; */
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_mkstr(&id, tree_oid);
 
-	tree = git_tree_lookup(repo, &id);
-	must_be_true(tree != NULL);
+	must_pass(git_tree_lookup(&tree, repo, &id));
 
 	must_be_true(git_tree_entrycount(tree) == 3);
 

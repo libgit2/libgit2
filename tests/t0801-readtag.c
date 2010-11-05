@@ -16,15 +16,13 @@ BEGIN_TEST(readtag)
 	git_commit *commit;
 	git_oid id1, id2, id_commit;
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_mkstr(&id1, tag1_id);
 	git_oid_mkstr(&id2, tag2_id);
 	git_oid_mkstr(&id_commit, tagged_commit);
 
-	tag1 = git_tag_lookup(repo, &id1);
-	must_be_true(tag1 != NULL);
+	must_pass(git_tag_lookup(&tag1, repo, &id1));
 
 	must_be_true(strcmp(git_tag_name(tag1), "test") == 0);
 	must_be_true(git_tag_type(tag1) == GIT_OBJ_TAG);

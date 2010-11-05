@@ -26,11 +26,12 @@ typedef struct git_tree git_tree;
  * The generated tree object is owned by the revision
  * repo and shall not be freed by the user.
  *
+ * @param tree pointer to the looked up tree
  * @param repo the repo to use when locating the tree.
  * @param id identity of the tree to locate.
- * @return the tree; NULL if the tree could not be created
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_tree *) git_tree_lookup(git_repository *repo, const git_oid *id);
+GIT_EXTERN(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git_oid *id);
 
 /**
  * Create a new in-memory git_tree.
@@ -39,10 +40,11 @@ GIT_EXTERN(git_tree *) git_tree_lookup(git_repository *repo, const git_oid *id);
  * setter methods before it can be written to its
  * repository.
  *
+ * @param tree pointer to the new tree
  * @param repo The repository where the object will reside
- * @return the object if creation was possible; NULL otherwise
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_tree *) git_tree_new(git_repository *repo);
+GIT_EXTERN(int) git_tree_new(git_tree **tree, git_repository *repo);
 
 /**
  * Get the id of a tree.
@@ -98,10 +100,12 @@ GIT_EXTERN(const git_oid *) git_tree_entry_id(git_tree_entry *entry);
 
 /**
  * Convert a tree entry to the git_object it points too.
+ *
+ * @param object pointer to the converted object
  * @param entry a tree entry
  * @return a reference to the pointed object in the repository
  */
-GIT_EXTERN(git_object *) git_tree_entry_2object(git_tree_entry *entry);
+GIT_EXTERN(int) git_tree_entry_2object(git_object **object, git_tree_entry *entry);
 
 /**
  * Add a new entry to a tree.

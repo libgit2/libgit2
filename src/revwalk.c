@@ -28,7 +28,7 @@
 #include "revwalk.h"
 #include "hashtable.h"
 
-uint32_t git_revwalk_commit_hash(const void *key)
+uint32_t git_revwalk__commit_hash(const void *key)
 {
 	uint32_t r;
 	git_commit *commit;
@@ -38,7 +38,7 @@ uint32_t git_revwalk_commit_hash(const void *key)
 	return r;
 }
 
-int git_revwalk_commit_haskey(void *object, const void *key)
+int git_revwalk__commit_haskey(void *object, const void *key)
 {
 	git_revwalk_commit *walk_commit;
 	git_commit *commit_object;
@@ -50,27 +50,29 @@ int git_revwalk_commit_haskey(void *object, const void *key)
 }
 
 
-git_revwalk *git_revwalk_alloc(git_repository *repo)
+int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 {
 	git_revwalk *walk;
 
 	walk = git__malloc(sizeof(git_revwalk));
 	if (walk == NULL)
-		return NULL;
+		return GIT_ENOMEM;
 
 	memset(walk, 0x0, sizeof(git_revwalk));
 
 	walk->commits = git_hashtable_alloc(64,
-			git_revwalk_commit_hash,
-			git_revwalk_commit_haskey);
+			git_revwalk__commit_hash,
+			git_revwalk__commit_haskey);
 
 	if (walk->commits == NULL) {
 		free(walk);
-		return NULL;
+		return GIT_ENOMEM;
 	}
 
 	walk->repo = repo;
-	return walk;
+
+	*revwalk_out = walk;
+	return GIT_SUCCESS;
 }
 
 void git_revwalk_free(git_revwalk *walk)
@@ -86,13 +88,14 @@ git_repository *git_revwalk_repository(git_revwalk *walk)
 	return walk->repo;
 }
 
-void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
+int git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 {
 	if (walk->walking)
-		return;
+		return GIT_EBUSY;
 
 	walk->sorting = sort_mode;
 	git_revwalk_reset(walk);
+	return GIT_SUCCESS;
 }
 
 static git_revwalk_commit *commit_to_walkcommit(git_revwalk *walk, git_commit *commit_object)
@@ -159,15 +162,14 @@ static git_revwalk_commit *insert_commit(git_revwalk *walk, git_commit *commit_o
 
 int git_revwalk_push(git_revwalk *walk, git_commit *commit)
 {
-	return insert_commit(walk, commit) ? GIT_SUCCESS : GIT_ERROR;
+	return insert_commit(walk, commit) ? GIT_SUCCESS : GIT_ENOMEM;
 }
 
 static void mark_uninteresting(git_revwalk_commit *commit)
 {
 	git_revwalk_listnode *parent;
 
-	if (commit == NULL)
-		return;
+	assert(commit);
 
 	commit->uninteresting = 1;
 	parent = commit->parents.head;
@@ -184,7 +186,7 @@ int git_revwalk_hide(git_revwalk *walk, git_commit *commit)
 	
 	hide = insert_commit(walk, commit);
 	if (hide == NULL)
-		return GIT_ERROR;
+		return GIT_ENOMEM;
 
 	mark_uninteresting(hide);
 	return GIT_SUCCESS;

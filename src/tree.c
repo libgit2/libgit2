@@ -93,19 +93,9 @@ void git_tree__free(git_tree *tree)
 	free(tree);
 }
 
-git_tree *git_tree_new(git_repository *repo)
-{
-	return (git_tree *)git_object_new(repo, GIT_OBJ_TREE);
-}
-
 const git_oid *git_tree_id(git_tree *c)
 {
 	return git_object_id((git_object *)c);
-}
-
-git_tree *git_tree_lookup(git_repository *repo, const git_oid *id)
-{
-	return (git_tree *)git_repository_lookup(repo, id, GIT_OBJ_TREE);
 }
 
 void git_tree_entry_set_attributes(git_tree_entry *entry, int attr)
@@ -151,10 +141,10 @@ const git_oid *git_tree_entry_id(git_tree_entry *entry)
 	return &entry->oid;
 }
 
-git_object *git_tree_entry_2object(git_tree_entry *entry)
+int git_tree_entry_2object(git_object **object_out, git_tree_entry *entry)
 {
-	assert(entry);
-	return git_repository_lookup(entry->owner->object.repo, &entry->oid, GIT_OBJ_ANY);
+	assert(entry && object_out);
+	return git_repository_lookup(object_out, entry->owner->object.repo, &entry->oid, GIT_OBJ_ANY);
 }
 
 git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
@@ -253,7 +243,7 @@ int git_tree__writeback(git_tree *tree, git_odb_source *src)
 	assert(tree && src);
 
 	if (tree->entries == NULL)
-		return GIT_ERROR;
+		return GIT_EMISSINGOBJDATA;
 
 	entry_resort(tree);
 

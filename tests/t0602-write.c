@@ -35,8 +35,7 @@ BEGIN_TEST(index_load_test)
 	git_index *index;
 	git_filelock out_file;
 
-	index = git_index_alloc(TEST_INDEX_PATH, NULL);
-	must_be_true(index != NULL);
+	must_pass(git_index_open(&index, TEST_INDEX_PATH, NULL));
 	must_pass(git_index_read(index));
 	must_be_true(index->on_disk);
 

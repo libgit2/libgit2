@@ -48,10 +48,11 @@ typedef struct git_revwalk git_revwalk;
 /**
  * Allocate a new revision walker to iterate through a repo.
  *
+ * @param walker pointer to the new revision walker
  * @param repo the repo to walk through
- * @return the new walker handle; NULL if memory is exhausted.
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_revwalk *) git_revwalk_alloc(git_repository *repo);
+GIT_EXTERN(int) git_revwalk_new(git_revwalk **walker, git_repository *repo);
 
 /**
  * Reset the walking machinery for reuse.
@@ -89,7 +90,7 @@ GIT_EXTERN(git_commit *) git_revwalk_next(git_revwalk *walk);
  * @param walk the walker being used for the traversal.
  * @param sort_mode combination of GIT_RPSORT_XXX flags
  */
-GIT_EXTERN(void) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
+GIT_EXTERN(int) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
 
 /**
  * Free a revwalk previously allocated.

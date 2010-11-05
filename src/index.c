@@ -97,23 +97,22 @@ static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
 static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
 
 
-git_index *git_index_alloc(const char *index_path, const char *work_dir)
+int git_index_open(git_index **index_out, const char *index_path, const char *work_dir)
 {
 	git_index *index;
 
-	if (index_path == NULL)
-		return NULL;
+	assert(index_out && index_path);
 
 	index = git__malloc(sizeof(git_index));
 	if (index == NULL)
-		return NULL;
+		return GIT_ENOMEM;
 
 	memset(index, 0x0, sizeof(git_index));
 
 	index->index_file_path = git__strdup(index_path);
 	if (index->index_file_path == NULL) {
 		free(index);
-		return NULL;
+		return GIT_ENOMEM;
 	}
 
 	if (work_dir != NULL)
@@ -123,7 +122,8 @@ git_index *git_index_alloc(const char *index_path, const char *work_dir)
 	if (gitfo_exists(index->index_file_path) == 0)
 		index->on_disk = 1;
 
-	return index;
+	*index_out = index;
+	return GIT_SUCCESS;
 }
 
 void git_index_clear(git_index *index)
@@ -161,8 +161,7 @@ int git_index_read(git_index *index)
 	struct stat indexst;
 	int error = 0;
 
-	if (index->index_file_path == NULL)
-		return GIT_ERROR;
+	assert(index->index_file_path);
 
 	if (!index->on_disk || gitfo_exists(index->index_file_path) < 0) {
 		git_index_clear(index);
@@ -178,7 +177,7 @@ int git_index_read(git_index *index)
 		gitfo_buf buffer;
 
 		if (gitfo_read_file(&buffer, index->index_file_path) < 0)
-			return GIT_EOSERR;
+			return GIT_ENOTFOUND;
 
 		git_index_clear(index);
 		error = git_index__parse(index, buffer.data, buffer.len);
@@ -201,10 +200,10 @@ int git_index_write(git_index *index)
 		git_index__sort(index);
 
 	if (git_filelock_init(&file, index->index_file_path) < 0)
-		return GIT_EOSERR;
+		return GIT_EFLOCKFAIL;
 
 	if (git_filelock_lock(&file, 0) < 0)
-		return GIT_EOSERR;
+		return GIT_EFLOCKFAIL;
 
 	if (git_index__write(index, &file) < 0) {
 		git_filelock_unlock(&file);
@@ -212,7 +211,7 @@ int git_index_write(git_index *index)
 	}
 
 	if (git_filelock_commit(&file) < 0)
-		return GIT_EOSERR;
+		return GIT_EFLOCKFAIL;
 
 	if (gitfo_stat(index->index_file_path, &indexst) == 0) {
 		index->last_modified = indexst.st_mtime;
@@ -301,7 +300,7 @@ int git_index__append(git_index *index, const git_index_entry *source_entry)
 	memcpy(offset, source_entry, sizeof(git_index_entry));
 	index->sorted = 0;
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git_index__remove_pos(git_index *index, unsigned int position)
@@ -628,11 +627,10 @@ int git_index__write(git_index *index, git_filelock *file)
 	git_hash_ctx *digest;
 	git_oid hash_final;
 
-	if (index == NULL || file == NULL || !file->is_locked)
-		return GIT_ERROR;
+	assert(index && file && file->is_locked);
 
 	if ((digest = git_hash_new_ctx()) == NULL)
-		return GIT_ERROR;
+		return GIT_ENOMEM;
 
 #define WRITE_WORD(_word) {\
 	uint32_t network_word = htonl((_word));\

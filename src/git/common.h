@@ -84,6 +84,28 @@
 /** The specified object has its data corrupted */
 #define GIT_EOBJCORRUPTED (GIT_ERROR - 6)
 
+/** The specified repository is invalid */
+#define GIT_ENOTAREPO (GIT_ERROR - 7)
+
+/** The object type is invalid or doesn't match */
+#define GIT_EINVALIDTYPE (GIT_ERROR - 8)
+
+/** The object cannot be written that because it's missing internal data */
+#define GIT_EMISSINGOBJDATA (GIT_ERROR - 9)
+
+/** The packfile for the ODB is corrupted */
+#define GIT_EPACKCORRUPTED (GIT_ERROR - 10)
+
+/** Failed to adquire or release a file lock */
+#define GIT_EFLOCKFAIL (GIT_ERROR - 11)
+
+/** The Z library failed to inflate/deflate an object's data */
+#define GIT_EZLIB (GIT_ERROR - 12)
+
+/** The queried object is currently busy */
+#define GIT_EBUSY (GIT_ERROR - 13)
+
+
 GIT_BEGIN_DECL
 
 /**

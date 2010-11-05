@@ -71,7 +71,7 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 	int path_len, i;
 
 	if (gitfo_isdir(repository_path) < 0)
-		return GIT_ERROR;
+		return GIT_ENOTAREPO;
 
 	path_len = strlen(repository_path);
 	strcpy(path_aux, repository_path);
@@ -88,13 +88,13 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 	/* objects database */
 	strcpy(path_aux + path_len, "objects/");
 	if (gitfo_isdir(path_aux) < 0)
-		return GIT_ERROR;
+		return GIT_ENOTAREPO;
 	repo->path_odb = git__strdup(path_aux);
 
 	/* HEAD file */
 	strcpy(path_aux + path_len, "HEAD");
 	if (gitfo_exists(path_aux) < 0)
-		return GIT_ERROR;
+		return GIT_ENOTAREPO;
 
 	i = path_len - 2;
 	while (path_aux[i] != '/')
@@ -109,7 +109,7 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 		/* index file */
 		strcpy(path_aux + path_len, "index");
 		if (gitfo_exists(path_aux) < 0)
-			return GIT_ERROR;
+			return GIT_ENOTAREPO;
 		repo->path_index = git__strdup(path_aux);
 
 	} else {
@@ -141,27 +141,39 @@ git_repository *git_repository__alloc()
 	return repo;
 }
 
-git_repository *git_repository_open(const char *path)
+int git_repository_open(git_repository **repo_out, const char *path)
 {
 	git_repository *repo;
+	int error = GIT_SUCCESS;
+
+	assert(repo_out && path);
 
 	repo = git_repository__alloc();
 	if (repo == NULL)
-		return NULL;
+		return GIT_ENOMEM;
 
-	if (parse_repository_folders(repo, path) < 0 ||
-		git_odb_open(&repo->db, repo->path_odb) < 0) {
-		git_repository_free(repo);
-		return NULL;
-	}
+	error = parse_repository_folders(repo, path);
+	if (error < 0)
+		goto cleanup;
 
-	return repo;
+	error = git_odb_open(&repo->db, repo->path_odb);
+	if (error < 0)
+		goto cleanup;
+
+	*repo_out = repo;
+	return GIT_SUCCESS;
+
+cleanup:
+	git_repository_free(repo);
+	return error;
 }
 
 void git_repository_free(git_repository *repo)
 {
 	git_hashtable_iterator it;
 	git_object *object;
+
+	assert(repo);
 
 	free(repo->path_workdir);
 	free(repo->path_index);
@@ -183,7 +195,9 @@ void git_repository_free(git_repository *repo)
 git_index *git_repository_index(git_repository *repo)
 {
 	if (repo->index == NULL) {
-		repo->index = git_index_alloc(repo->path_index, repo->path_workdir);
+		if (git_index_open(&repo->index, repo->path_index, repo->path_workdir) < 0)
+			return NULL;
+
 		assert(repo->index && repo->index->on_disk);
 	}
 
@@ -216,8 +230,7 @@ int git__source_printf(git_odb_source *source, const char *format, ...)
 	va_list arglist;
 	int len, did_resize = 0;
 
-	if (!source->open || source->write_ptr == NULL)
-		return GIT_ERROR;
+	assert(source->open && source->write_ptr);
 
 	va_start(arglist, format);
 
@@ -243,8 +256,7 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len)
 {
 	assert(source);
 
-	if (!source->open || source->write_ptr == NULL)
-		return GIT_ERROR;
+	assert(source->open && source->write_ptr);
 
 	while (source->written_bytes + len >= source->raw.len) {
 		if (source_resize(source) < 0)
@@ -426,9 +438,13 @@ git_repository *git_object_owner(git_object *obj)
 	return obj->repo;
 }
 
-git_object *git_object_new(git_repository *repo, git_otype type)
+int git_repository_newobject(git_object **object_out, git_repository *repo, git_otype type)
 {
 	git_object *object = NULL;
+
+	assert(object_out && repo);
+
+	*object_out = NULL;
 
 	switch (type) {
 	case GIT_OBJ_COMMIT:
@@ -438,13 +454,13 @@ git_object *git_object_new(git_repository *repo, git_otype type)
 		break;
 
 	default:
-		return NULL;
+		return GIT_EINVALIDTYPE;
 	}
 
 	object = git__malloc(object_sizes[type]);
 
 	if (object == NULL)
-		return NULL;
+		return GIT_ENOMEM;
 
 	memset(object, 0x0, object_sizes[type]);
 	object->repo = repo;
@@ -453,33 +469,37 @@ git_object *git_object_new(git_repository *repo, git_otype type)
 
 	object->source.raw.type = type;
 
-	return object;
+	*object_out = object;
+	return GIT_SUCCESS;
 }
 
-git_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_otype type)
+int git_repository_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_otype type)
 {
 	git_object *object = NULL;
 	git_rawobj obj_file;
 	int error = 0;
 
-	assert(repo);
+	assert(repo && object_out && id);
 
 	object = git_hashtable_lookup(repo->objects, id);
-	if (object != NULL)
-		return object;
+	if (object != NULL) {
+		*object_out = object;
+		return GIT_SUCCESS;
+	}
 
-	if (git_odb_read(&obj_file, repo->db, id) < 0)
-		return NULL;
+	error = git_odb_read(&obj_file, repo->db, id);
+	if (error < 0)
+		return error;
 
 	if (type != GIT_OBJ_ANY && type != obj_file.type)
-		return NULL;
+		return GIT_EINVALIDTYPE;
 
 	type = obj_file.type;
 
 	object = git__malloc(object_sizes[type]);
 
 	if (object == NULL)
-		return NULL;
+		return GIT_ENOMEM;
 
 	memset(object, 0x0, object_sizes[type]);
 
@@ -511,10 +531,24 @@ git_object *git_repository_lookup(git_repository *repo, const git_oid *id, git_o
 
 	if (error < 0) {
 		git_object_free(object);
-		return NULL;
+		return error;
 	}
 
 	git_object__source_close(object);
 	git_hashtable_insert(repo->objects, &object->id, object);
-	return object;
+
+	*object_out = object;
+	return GIT_SUCCESS;
 }
+
+#define GIT_NEWOBJECT_TEMPLATE(obj, tp) \
+	int git_##obj##_new(git_##obj **o, git_repository *repo) {\
+		return git_repository_newobject((git_object **)o, repo, GIT_OBJ_##tp); } \
+	int git_##obj##_lookup(git_##obj **o, git_repository *repo, const git_oid *id) { \
+		return git_repository_lookup((git_object **)o, repo, id, GIT_OBJ_##tp); }
+
+GIT_NEWOBJECT_TEMPLATE(commit, COMMIT)
+GIT_NEWOBJECT_TEMPLATE(tag, TAG)
+GIT_NEWOBJECT_TEMPLATE(tree, TREE)
+
+

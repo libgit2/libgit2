@@ -56,11 +56,12 @@ typedef struct git_index_entry {
  * If 'working _dir' is NULL (e.g for bare repositories), the
  * methods working on on-disk files will fail.
  *
+ * @param index the pointer for the new index
  * @param index_path the path to the index file in disk
  * @param working_dir working dir for the git repository
- * @return the index object; NULL if the index could not be created
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_index *) git_index_alloc(const char *index_path, const char *working_dir);
+GIT_EXTERN(int) git_index_open(git_index **index, const char *index_path, const char *working_dir);
 
 /**
  * Clear the contents (all the entries) of an index object.

@@ -13,13 +13,11 @@ BEGIN_TEST(tree_entry_access_test)
 	git_repository *repo;
 	git_tree *tree;
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_mkstr(&id, tree_oid);
 
-	tree = git_tree_lookup(repo, &id);
-	must_be_true(tree != NULL);
+	must_pass(git_tree_lookup(&tree, repo, &id));
 
 	must_be_true(git_tree_entry_byname(tree, "README") != NULL);
 	must_be_true(git_tree_entry_byname(tree, "NOTEXISTS") == NULL);
@@ -37,14 +35,13 @@ BEGIN_TEST(tree_read_test)
 	git_repository *repo;
 	git_tree *tree;
 	git_tree_entry *entry;
+	git_object *obj;
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_mkstr(&id, tree_oid);
 
-	tree = git_tree_lookup(repo, &id);
-	must_be_true(tree != NULL);
+	must_pass(git_tree_lookup(&tree, repo, &id));
 
 	must_be_true(git_tree_entrycount(tree) == 3);
 
@@ -53,7 +50,7 @@ BEGIN_TEST(tree_read_test)
 
 	must_be_true(strcmp(git_tree_entry_name(entry), "README") == 0);
 
-	must_be_true(git_tree_entry_2object(entry) != NULL);
+	must_pass(git_tree_entry_2object(&obj, entry));
 
 	git_repository_free(repo);
 END_TEST

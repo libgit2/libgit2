@@ -22,8 +22,7 @@ BEGIN_TEST(query_details_test)
 	unsigned int i;
 	git_repository *repo;
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	
 	for (i = 0; i < commit_count; ++i) {
 		git_oid id;
@@ -35,8 +34,7 @@ BEGIN_TEST(query_details_test)
 
 		git_oid_mkstr(&id, commit_ids[i]);
 
-		commit = git_commit_lookup(repo, &id);
-		must_be_true(commit != NULL);
+		must_pass(git_commit_lookup(&commit, repo, &id));
 
 		message = git_commit_message(commit);
 		message_short = git_commit_message_short(commit);

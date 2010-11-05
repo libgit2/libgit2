@@ -23,12 +23,13 @@ typedef struct git_commit git_commit;
  * The generated commit object is owned by the revision
  * repo and shall not be freed by the user.
  *
+ * @param commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate.  If the object is
  *        an annotated tag it will be peeled back to the commit.
- * @return the commit; NULL if the commit could not be created
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_commit *) git_commit_lookup(git_repository *repo, const git_oid *id);
+GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
 
 /**
  * Create a new in-memory git_commit.
@@ -37,10 +38,11 @@ GIT_EXTERN(git_commit *) git_commit_lookup(git_repository *repo, const git_oid *
  * setter methods before it can be written to its
  * repository.
  *
+ * @param commit pointer to the new commit
  * @param repo The repository where the object will reside
- * @return the object if creation was possible; NULL otherwise
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_commit *) git_commit_new(git_repository *repo);
+GIT_EXTERN(int) git_commit_new(git_commit ** commit, git_repository *repo);
 
 /**
  * Get the id of a commit.

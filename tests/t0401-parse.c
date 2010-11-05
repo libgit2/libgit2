@@ -224,8 +224,7 @@ BEGIN_TEST(parse_buffer_test)
 	int i;
 	git_repository *repo;
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	for (i = 0; i < broken_commit_count; ++i) {
 		git_commit *commit;

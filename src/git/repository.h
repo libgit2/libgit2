@@ -34,10 +34,11 @@ GIT_BEGIN_DECL
  *	The method will automatically detect if 'path' is a normal
  *	or bare repository or fail is 'path' is neither.
  *
+ * @param repository pointer to the repo which will be opened
  * @param path the path to the repository
  * @return the new repository handle; NULL on error
  */
-GIT_EXTERN(git_repository *) git_repository_open(const char *path);
+GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
 
 
 /**
@@ -45,23 +46,19 @@ GIT_EXTERN(git_repository *) git_repository_open(const char *path);
  *
  * The generated reference is owned by the repository and
  * should not be freed by the user.
- * The generated reference should be cast back to the
- * expected type; e.g.
- *
- *	git_commit *c = (git_commit *)
- *		git_repository_lookup(repo, id, GIT_OBJ_COMMIT);
  *
  * The 'type' parameter must match the type of the object
  * in the odb; the method will fail otherwise.
  * The special value 'GIT_OBJ_ANY' may be passed to let
  * the method guess the object's type.
  *
+ * @param object pointer to the looked-up object
  * @param repo the repository to look up the object
  * @param id the unique identifier for the object
  * @param type the type of the object
  * @return a reference to the object
  */
-GIT_EXTERN(git_object *) git_repository_lookup(git_repository *repo, const git_oid *id, git_otype type);
+GIT_EXTERN(int) git_repository_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
 
 /**
  * Get the object database behind a Git repository
@@ -96,11 +93,12 @@ GIT_EXTERN(git_index *) git_repository_index(git_repository *rpeo);
  * will be automatically generated when writing to the
  * repository.
  *
+ * @param object pointer to the new object
  * @parem repo Repository where the object belongs
  * @param type Type of the object to be created
  * @return the new object
  */
-GIT_EXTERN(git_object *) git_object_new(git_repository *repo, git_otype type);
+GIT_EXTERN(int) git_repository_newobject(git_object **object, git_repository *repo, git_otype type);
 
 /**
  * Write back an object to disk.

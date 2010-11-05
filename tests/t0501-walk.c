@@ -95,17 +95,13 @@ BEGIN_TEST(simple_walk_test)
 	git_revwalk *walk;
 	git_commit *head = NULL;
 
-	repo = git_repository_open(REPOSITORY_FOLDER);
-	must_be_true(repo != NULL);
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	walk = git_revwalk_alloc(repo);
-	must_be_true(walk != NULL);
+	must_pass(git_revwalk_new(&walk, repo));
 
 	git_oid_mkstr(&id, commit_head);
 
-	head = git_commit_lookup(repo, &id);
-	must_be_true(head != NULL);
-
+	must_pass(git_commit_lookup(&head, repo, &id));
 
 	must_pass(test_walk(walk, head,
 				GIT_SORT_TIME,
