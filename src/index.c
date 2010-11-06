@@ -223,10 +223,11 @@ int git_index_write(git_index *index)
 
 git_index_entry *git_index_get(git_index *index, int n)
 {
+	assert(index);
 	return (n >= 0 && (unsigned int)n < index->entry_count) ? &index->entries[n] : NULL;
 }
 
-int git_index_add(git_index *index, const char *filename, int stage)
+int git_index_add_bypath(git_index *index, const char *filename, int stage)
 {
 	git_index_entry entry;
 	size_t path_length;
@@ -247,7 +248,7 @@ int git_index_add(git_index *index, const char *filename, int stage)
 
 	entry.path = git__strdup(filename);
 
-	return git_index__append(index, &entry);
+	return git_index_add(index, &entry);
 }
 
 void git_index__sort(git_index *index)
@@ -274,7 +275,7 @@ void git_index__sort(git_index *index)
 	index->sorted = 1;
 }
 
-int git_index__append(git_index *index, const git_index_entry *source_entry)
+int git_index_add(git_index *index, const git_index_entry *source_entry)
 {
 	git_index_entry *offset;
 
@@ -303,10 +304,15 @@ int git_index__append(git_index *index, const git_index_entry *source_entry)
 	return GIT_SUCCESS;
 }
 
-int git_index__remove_pos(git_index *index, unsigned int position)
+int git_index_remove(git_index *index, int position)
 {
 	git_index_entry *offset;
 	size_t copy_size;
+
+	assert(index);
+
+	if (position < 0 || (unsigned int)position > index->entry_count)
+		return GIT_ENOTFOUND;
 
 	offset = &index->entries[position];
 	index->entry_count--;
@@ -314,7 +320,7 @@ int git_index__remove_pos(git_index *index, unsigned int position)
 
 	memcpy(offset, offset + sizeof(git_index_entry), copy_size);
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git_index_find(git_index *index, const char *path)

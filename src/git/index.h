@@ -108,14 +108,32 @@ GIT_EXTERN(int) git_index_write(git_index *index);
 GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
 
 /**
- * Add a new empty entry to the index.
+ * Add a new empty entry to the index with a given path.
  *
  * @param index an existing index object
  * @param path filename pointed to by the entry
  * @param stage stage for the entry
  * @return 0 on success, otherwise an error code
  */
-GIT_EXTERN(int) git_index_add(git_index *index, const char *path, int stage);
+GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path, int stage);
+
+/**
+ * Remove an entry from the index 
+ *
+ * @param index an existing index object
+ * @param position position of the entry to remove
+ * @return 0 on success, otherwise an error code
+ */
+GIT_EXTERN(int) git_index_remove(git_index *index, int position);
+
+/**
+ * Add a new entry to the index 
+ *
+ * @param index an existing index object
+ * @param source_entry new entry object
+ * @return 0 on success, otherwise an error code
+ */
+GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_entry);
 
 /**
  * Get a pointer to one of the entries in the index
