@@ -221,6 +221,12 @@ int git_index_write(git_index *index)
 	return 0;
 }
 
+unsigned int git_index_entrycount(git_index *index)
+{
+	assert(index);
+	return index->entry_count;
+}
+
 git_index_entry *git_index_get(git_index *index, int n)
 {
 	assert(index);

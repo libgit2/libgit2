@@ -147,6 +147,14 @@ GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_en
  */
 GIT_EXTERN(git_index_entry *) git_index_get(git_index *index, int n);
 
+/**
+ * Get the count of entries currently in the index
+ *
+ * @param index an existing index object
+ * @return integer of count of current entries
+ */
+GIT_EXTERN(unsigned int) git_index_entrycount(git_index *index);
+
 
 /** @} */
 GIT_END_DECL
