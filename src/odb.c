@@ -1835,7 +1835,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 {
 	obj_location loc;
 	assert(db && id);
-	return locate_object(&loc, db, id) == OBJ_LOCATION_NOTFOUND ? 0 : 1;
+	return locate_object(&loc, db, id) != OBJ_LOCATION_NOTFOUND;
 }
 
 int git_odb_read_header(git_rawobj *out, git_odb *db, const git_oid *id)
