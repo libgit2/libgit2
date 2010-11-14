@@ -26,9 +26,8 @@ struct git_index_tree {
 typedef struct git_index_tree git_index_tree;
 
 struct git_index {
-
+	git_repository *repository;
 	char *index_file_path;
-	char *working_path;
 
 	time_t last_modified;
 

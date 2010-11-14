@@ -36,7 +36,7 @@ BEGIN_TEST(index_sort_test)
 	git_index *index;
 	unsigned int i;
 
-	must_pass(git_index_open(&index, TEST_INDEX_PATH, NULL));
+	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
 	must_pass(git_index_read(index));
 
 	randomize_entries(index);
@@ -54,7 +54,7 @@ END_TEST
 BEGIN_TEST(index_sort_empty_test)
 	git_index *index;
 
-	must_pass(git_index_open(&index, "fake-index", NULL));
+	must_pass(git_index_open_bare(&index, "fake-index"));
 
 	git_index__sort(index);
 	must_be_true(index->sorted);

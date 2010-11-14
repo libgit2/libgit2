@@ -47,21 +47,28 @@ typedef struct git_index_entry {
 
 /**
  * Create a new Git index object as a memory representation
- * of the Git index file in 'index_path'.
+ * of the Git index file in 'index_path', without a repository
+ * to back it.
  *
- * The argument 'working_dir' is the root path of the indexed
- * files in the index and is used to calculate the relative path
- * when inserting new entries from existing files on disk.
- *
- * If 'working _dir' is NULL (e.g for bare repositories), the
- * methods working on on-disk files will fail.
+ * Since there is no ODB behind this index, any Index methods
+ * which rely on the ODB (e.g. index_add) will fail with the
+ * GIT_EBAREINDEX error code.
  *
  * @param index the pointer for the new index
  * @param index_path the path to the index file in disk
- * @param working_dir working dir for the git repository
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_index_open(git_index **index, const char *index_path, const char *working_dir);
+GIT_EXTERN(int) git_index_open_bare(git_index **index, const char *index_path);
+
+/**
+ * Open the Index inside the git repository pointed
+ * by 'repo'.
+ *
+ * @param repo the git repo which owns the index
+ * @param index_path the path to the index file in disk
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_index_open_inrepo(git_index **index, git_repository *repo);
 
 /**
  * Clear the contents (all the entries) of an index object.
@@ -108,14 +115,14 @@ GIT_EXTERN(int) git_index_write(git_index *index);
 GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
 
 /**
- * Add a new empty entry to the index with a given path.
+ * Add or update an index entry from a file in disk.
  *
  * @param index an existing index object
- * @param path filename pointed to by the entry
+ * @param path filename to add
  * @param stage stage for the entry
  * @return 0 on success, otherwise an error code
  */
-GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path, int stage);
+GIT_EXTERN(int) git_index_add(git_index *index, const char *path, int stage);
 
 /**
  * Remove an entry from the index 
@@ -127,13 +134,17 @@ GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path, int sta
 GIT_EXTERN(int) git_index_remove(git_index *index, int position);
 
 /**
- * Add a new entry to the index 
+ * Insert an entry into the index.
+ * A full copy (including the 'path' string) of the given
+ * 'source_entry' will be inserted on the index; if the index
+ * already contains an entry for the same path, the entry
+ * will be updated.
  *
  * @param index an existing index object
  * @param source_entry new entry object
  * @return 0 on success, otherwise an error code
  */
-GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_entry);
+GIT_EXTERN(int) git_index_insert(git_index *index, const git_index_entry *source_entry);
 
 /**
  * Get a pointer to one of the entries in the index

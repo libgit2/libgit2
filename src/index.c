@@ -26,9 +26,11 @@
 #include <stddef.h>
 
 #include "common.h"
+#include "repository.h"
 #include "index.h"
 #include "hash.h"
 #include "git/odb.h"
+#include "git/blob.h"
 
 #define entry_padding(type, len) (8 - ((offsetof(type, path) + (len)) & 0x7))
 #define short_entry_padding(len) entry_padding(struct entry_short, len)
@@ -97,7 +99,7 @@ static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
 static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
 
 
-int git_index_open(git_index **index_out, const char *index_path, const char *work_dir)
+static int index_initialize(git_index **index_out, git_repository *owner, const char *index_path)
 {
 	git_index *index;
 
@@ -115,8 +117,7 @@ int git_index_open(git_index **index_out, const char *index_path, const char *wo
 		return GIT_ENOMEM;
 	}
 
-	if (work_dir != NULL)
-		index->working_path = git__strdup(work_dir);
+	index->repository = owner;
 
 	/* Check if index file is stored on disk already */
 	if (gitfo_exists(index->index_file_path) == 0)
@@ -124,6 +125,16 @@ int git_index_open(git_index **index_out, const char *index_path, const char *wo
 
 	*index_out = index;
 	return GIT_SUCCESS;
+}
+
+int git_index_open_bare(git_index **index_out, const char *index_path)
+{
+	return index_initialize(index_out, NULL, index_path);
+}
+
+int git_index_open_inrepo(git_index **index_out, git_repository *repo)
+{
+	return index_initialize(index_out, repo, repo->path_index);
 }
 
 void git_index_clear(git_index *index)
@@ -233,28 +244,49 @@ git_index_entry *git_index_get(git_index *index, int n)
 	return (n >= 0 && (unsigned int)n < index->entry_count) ? &index->entries[n] : NULL;
 }
 
-int git_index_add_bypath(git_index *index, const char *filename, int stage)
+int git_index_add(git_index *index, const char *rel_path, int stage)
 {
 	git_index_entry entry;
-	size_t path_length;
+	char full_path[GIT_PATH_MAX];
+	struct stat st;
+	int error;
 
-	memset(&entry, 0x0, sizeof(git_index_entry));
+	if (index->repository == NULL)
+		return GIT_EBAREINDEX;
 
-	path_length = strlen(filename);
+	strcpy(full_path, index->repository->path_workdir);
+	strcat(full_path, rel_path);
 
-	if (path_length < GIT_IDXENTRY_NAMEMASK)
-		entry.flags |= path_length;
-	else
-		entry.flags |= GIT_IDXENTRY_NAMEMASK;;
+	if (gitfo_exists(full_path) < 0)
+		return GIT_ENOTFOUND;
+
+	if (gitfo_stat(full_path, &st) < 0)
+		return GIT_EOSERR;
 
 	if (stage < 0 || stage > 3)
 		return GIT_ERROR;
 
+	memset(&entry, 0x0, sizeof(git_index_entry));
+
+	entry.ctime.seconds = st.st_ctime;
+	entry.mtime.seconds = st.st_mtime;
+	/* entry.mtime.nanoseconds = st.st_mtimensec; */
+	/* entry.ctime.nanoseconds = st.st_ctimensec; */
+	entry.dev= st.st_rdev;
+	entry.ino = st.st_ino;
+	entry.mode = st.st_mode;
+	entry.uid = st.st_uid;
+	entry.gid = st.st_gid;
+	entry.file_size = st.st_size;
+
+	/* write the blob to disk and get the oid */
+	if ((error = git_blob_writefile(&entry.oid, index->repository, full_path)) < 0)
+		return error;
+
 	entry.flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
+	entry.path = (char *)rel_path; /* do not duplicate; index_insert already does this */
 
-	entry.path = git__strdup(filename);
-
-	return git_index_add(index, &entry);
+	return git_index_insert(index, &entry);
 }
 
 void git_index__sort(git_index *index)
@@ -281,31 +313,66 @@ void git_index__sort(git_index *index)
 	index->sorted = 1;
 }
 
-int git_index_add(git_index *index, const git_index_entry *source_entry)
+int git_index_insert(git_index *index, const git_index_entry *source_entry)
 {
 	git_index_entry *offset;
+	size_t path_length;
+	int position;
 
-	/* Resize the entries array */
-	if (index->entry_count + 1 > index->entries_size) {
-		git_index_entry *new_entries;
-		size_t new_size;
+	assert(index && source_entry);
 
-		new_size = (unsigned int)(index->entries_size * 1.5f);
-		if ((new_entries = git__malloc(new_size * sizeof(git_index_entry))) == NULL)
-			return GIT_ENOMEM;
+	if (source_entry->path == NULL)
+		return GIT_EMISSINGOBJDATA;
 
-		memcpy(new_entries, index->entries, index->entry_count * sizeof(git_index_entry));
-		free(index->entries);
+	position = git_index_find(index, source_entry->path);
 
-		index->entries_size = new_size;
-		index->entries = new_entries;
+	if (position == GIT_ENOTFOUND) {
+
+		/* Resize the entries array */
+		if (index->entry_count + 1 > index->entries_size) {
+			git_index_entry *new_entries;
+			size_t new_size;
+
+			new_size = (unsigned int)(index->entries_size * 1.5f);
+			if ((new_entries = git__malloc(new_size * sizeof(git_index_entry))) == NULL)
+				return GIT_ENOMEM;
+
+			memcpy(new_entries, index->entries, index->entry_count * sizeof(git_index_entry));
+			free(index->entries);
+
+			index->entries_size = new_size;
+			index->entries = new_entries;
+		}
+
+		offset = &index->entries[index->entry_count];
+		index->entry_count++;
+		index->sorted = 0;
+	
+	} else {
+		offset = &index->entries[position];
+		free(offset->path);
 	}
 
-	offset = &index->entries[index->entry_count];
-	index->entry_count++;
-
 	memcpy(offset, source_entry, sizeof(git_index_entry));
-	index->sorted = 0;
+
+	/* duplicate the path string so we own it */
+	offset->path = git__strdup(source_entry->path);
+	if (offset->path == NULL)
+		return GIT_ENOMEM;
+
+	/* make sure that the path length flag is correct */
+	path_length = strlen(offset->path);
+
+	offset->flags &= ~GIT_IDXENTRY_NAMEMASK;
+
+	if (path_length < GIT_IDXENTRY_NAMEMASK)
+		offset->flags |= path_length & GIT_IDXENTRY_NAMEMASK;
+	else
+		offset->flags |= GIT_IDXENTRY_NAMEMASK;;
+
+	/* TODO: force the extended index entry flag? */
+
+	assert(offset->path);
 
 	return GIT_SUCCESS;
 }
@@ -500,6 +567,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 		return 0;
 
 	dest->path = git__strdup(path_ptr);
+	assert(dest->path);
 
 	return entry_size;
 }
@@ -601,6 +669,9 @@ int git_index__parse(git_index *index, const char *buffer, size_t buffer_size)
 
 		seek_forward(entry_size);
 	}
+
+	if (i != index->entry_count)
+		return GIT_EOBJCORRUPTED;
 
 	/* There's still space for some extensions! */
 	while (buffer_size > INDEX_FOOTER_SIZE) {

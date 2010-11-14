@@ -196,7 +196,7 @@ void git_repository_free(git_repository *repo)
 git_index *git_repository_index(git_repository *repo)
 {
 	if (repo->index == NULL) {
-		if (git_index_open(&repo->index, repo->path_index, repo->path_workdir) < 0)
+		if (git_index_open_inrepo(&repo->index, repo) < 0)
 			return NULL;
 
 		assert(repo->index && repo->index->on_disk);
@@ -297,8 +297,6 @@ static int write_back(git_object *object)
 	assert(object->modified);
 
 	object->source.raw.len = object->source.written_bytes;
-
-	git_obj_hash(&new_id, &object->source.raw);
 
 	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < 0)
 		return error;

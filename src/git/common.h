@@ -105,6 +105,9 @@
 /** The queried object is currently busy */
 #define GIT_EBUSY (GIT_ERROR - 13)
 
+/** The index file is not backed up by an existing repository */
+#define GIT_EBAREINDEX (GIT_ERROR -14)
+
 
 GIT_BEGIN_DECL
 

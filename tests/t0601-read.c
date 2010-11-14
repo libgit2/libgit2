@@ -29,7 +29,7 @@ struct test_entry TEST_ENTRIES[] = {
 BEGIN_TEST(index_loadempty_test)
 	git_index *index;
 
-	must_pass(git_index_open(&index, "in-memory-index", NULL));
+	must_pass(git_index_open_bare(&index, "in-memory-index"));
 	must_be_true(index->on_disk == 0);
 
 	must_pass(git_index_read(index));
@@ -45,7 +45,7 @@ BEGIN_TEST(index_load_test)
 	git_index *index;
 	unsigned int i;
 
-	must_pass(git_index_open(&index, TEST_INDEX_PATH, NULL));
+	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
 	must_be_true(index->on_disk);
 
 	must_pass(git_index_read(index));
@@ -68,7 +68,7 @@ END_TEST
 BEGIN_TEST(index2_load_test)
 	git_index *index;
 
-	must_pass(git_index_open(&index, TEST_INDEX2_PATH, NULL));
+	must_pass(git_index_open_bare(&index, TEST_INDEX2_PATH));
 	must_be_true(index->on_disk);
 
 	must_pass(git_index_read(index));
@@ -85,7 +85,7 @@ BEGIN_TEST(index_find_test)
 	git_index *index;
 	unsigned int i;
 
-	must_pass(git_index_open(&index, TEST_INDEX_PATH, NULL));
+	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
 	must_pass(git_index_read(index));
 
 	for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
@@ -100,7 +100,7 @@ BEGIN_TEST(index_findempty_test)
 	git_index *index;
 	unsigned int i;
 
-	must_pass(git_index_open(&index, "fake-index", NULL));
+	must_pass(git_index_open_bare(&index, "fake-index"));
 
 	for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
 		int idx = git_index_find(index, TEST_ENTRIES[i].path);
