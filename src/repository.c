@@ -28,6 +28,7 @@
 #include "repository.h"
 #include "commit.h"
 #include "tag.h"
+#include "blob.h"
 #include "fileops.h"
 
 static const int default_table_size = 32;
@@ -39,7 +40,7 @@ static const size_t object_sizes[] = {
 	0,
 	sizeof(git_commit),
 	sizeof(git_tree),
-	sizeof(git_object), /* TODO: sizeof(git_blob) */ 
+	sizeof(git_blob),
 	sizeof(git_tag)
 };
 
@@ -371,6 +372,10 @@ int git_object_write(git_object *object)
 		error = git_tag__writeback((git_tag *)object, source);
 		break;
 
+	case GIT_OBJ_BLOB:
+		error = git_blob__writeback((git_blob *)object, source);
+		break;
+
 	default:
 		error = GIT_ERROR;
 		break;
@@ -402,6 +407,10 @@ void git_object_free(git_object *object)
 
 	case GIT_OBJ_TAG:
 		git_tag__free((git_tag *)object);
+		break;
+
+	case GIT_OBJ_BLOB:
+		git_blob__free((git_blob *)object);
 		break;
 
 	default:
@@ -524,8 +533,10 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 		break;
 
 	case GIT_OBJ_BLOB:
+		error = git_blob__parse((git_blob *)object);
+		break;
+
 	default:
-		/* blobs get no parsing */
 		break;
 	}
 
@@ -550,5 +561,6 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 GIT_NEWOBJECT_TEMPLATE(commit, COMMIT)
 GIT_NEWOBJECT_TEMPLATE(tag, TAG)
 GIT_NEWOBJECT_TEMPLATE(tree, TREE)
+GIT_NEWOBJECT_TEMPLATE(blob, BLOB)
 
 
