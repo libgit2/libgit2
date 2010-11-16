@@ -252,6 +252,7 @@ BEGIN_TEST(parse_buffer_test)
 
 	for (i = 0; i < working_commit_count; ++i) {
 		git_commit *commit;
+
 		commit = git__malloc(sizeof(git_commit));
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
@@ -263,6 +264,9 @@ BEGIN_TEST(parse_buffer_test)
 					0x0)
 				);
 
+		git_commit__free(commit);
+
+		commit = git__malloc(sizeof(git_commit));
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
 
