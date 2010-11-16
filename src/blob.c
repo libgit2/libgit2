@@ -74,6 +74,7 @@ int git_blob_rawsize(git_blob *blob)
 void git_blob__free(git_blob *blob)
 {
 	gitfo_free_buf(&blob->content);
+	free(blob);
 }
 
 int git_blob__parse(git_blob *blob)
