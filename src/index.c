@@ -134,6 +134,9 @@ int git_index_open_bare(git_index **index_out, const char *index_path)
 
 int git_index_open_inrepo(git_index **index_out, git_repository *repo)
 {
+	if (repo->is_bare)
+		return GIT_EBAREINDEX;
+
 	return index_initialize(index_out, repo, repo->path_index);
 }
 
@@ -183,12 +186,15 @@ int git_index_read(git_index *index)
 	if (gitfo_stat(index->index_file_path, &indexst) < 0)
 		return GIT_EOSERR;
 
+	if (!S_ISREG(indexst.st_mode))
+		return GIT_ENOTFOUND;
+
 	if (indexst.st_mtime != index->last_modified) {
 
 		gitfo_buf buffer;
 
 		if (gitfo_read_file(&buffer, index->index_file_path) < 0)
-			return GIT_ENOTFOUND;
+			return GIT_EOSERR;
 
 		git_index_clear(index);
 		error = git_index__parse(index, buffer.data, buffer.len);
@@ -334,6 +340,9 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 			size_t new_size;
 
 			new_size = (unsigned int)(index->entries_size * 1.5f);
+			if (new_size < 8)
+				new_size = 8;
+
 			if ((new_entries = git__malloc(new_size * sizeof(git_index_entry))) == NULL)
 				return GIT_ENOMEM;
 
@@ -347,7 +356,7 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 		offset = &index->entries[index->entry_count];
 		index->entry_count++;
 		index->sorted = 0;
-	
+
 	} else {
 		offset = &index->entries[position];
 		free(offset->path);
@@ -356,7 +365,7 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 	memcpy(offset, source_entry, sizeof(git_index_entry));
 
 	/* duplicate the path string so we own it */
-	offset->path = git__strdup(source_entry->path);
+	offset->path = git__strdup(offset->path);
 	if (offset->path == NULL)
 		return GIT_ENOMEM;
 
