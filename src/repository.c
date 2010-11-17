@@ -68,8 +68,8 @@ int git__objtable_haskey(void *object, const void *key)
 
 static int parse_repository_folders(git_repository *repo, const char *repository_path)
 {
-	char path_aux[GIT_PATH_MAX];
-	int path_len, i;
+	char path_aux[GIT_PATH_MAX], *last_folder;
+	int path_len;
 
 	if (gitfo_isdir(repository_path) < 0)
 		return GIT_ENOTAREPO;
@@ -97,21 +97,23 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 	if (gitfo_exists(path_aux) < 0)
 		return GIT_ENOTAREPO;
 
-	i = path_len - 2;
-	while (path_aux[i] != '/')
-		i--;
+	path_aux[path_len] = 0;
 
-	if (strcmp(path_aux, "/.git/") == 0) {
+	last_folder = (path_aux + path_len - 2);
+
+	while (*last_folder != '/')
+		last_folder--;
+
+	if (strcmp(last_folder, "/.git/") == 0) {
 		repo->is_bare = 0;
-
-		path_aux[i + 1] = 0;
-		repo->path_workdir = git__strdup(path_aux);
 
 		/* index file */
 		strcpy(path_aux + path_len, "index");
-		if (gitfo_exists(path_aux) < 0)
-			return GIT_ENOTAREPO;
 		repo->path_index = git__strdup(path_aux);
+
+		/* working dir */
+		*(last_folder + 1) = 0;
+		repo->path_workdir = git__strdup(path_aux);
 
 	} else {
 		repo->is_bare = 1;
@@ -199,7 +201,7 @@ git_index *git_repository_index(git_repository *repo)
 		if (git_index_open_inrepo(&repo->index, repo) < 0)
 			return NULL;
 
-		assert(repo->index && repo->index->on_disk);
+		assert(repo->index);
 	}
 
 	return repo->index;
