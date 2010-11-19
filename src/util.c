@@ -22,7 +22,7 @@ void *git__calloc(size_t a, size_t b)
 char *git__strdup(const char *s)
 {
 	char *r = strdup(s);
-	if (!s)
+	if (!r)
 		return git_ptr_error(GIT_ENOMEM);
 	return r;
 }
