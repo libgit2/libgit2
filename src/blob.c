@@ -30,35 +30,20 @@
 #include "common.h"
 #include "blob.h"
 
-int git_blob_rawcontent(git_blob *blob, void *buffer, size_t len)
+const char *git_blob_rawcontent(git_blob *blob)
 {
-	int error;
-
-	assert(blob && buffer);
+	assert(blob);
 	
-	if (blob->content.data != NULL) {
+	if (blob->content.data != NULL)
+		return blob->content.data;
 
-		if (len + 1 < blob->content.len)
-			return GIT_ENOMEM;
-	
-		memcpy(buffer, blob->content.data, blob->content.len);
-		((char *)buffer)[blob->content.len] = 0;
-	
-	} else {
+	if (blob->object.in_memory)
+		return NULL;
 
-		if (len + 1 < blob->object.source.raw.len)
-			return GIT_ENOMEM;
+	if (!blob->object.source.open && git_object__source_open((git_object *)blob) < 0)
+		return NULL;
 
-		if ((error = git_object__source_open((git_object *)blob)) < 0)
-			return error;
-
-		memcpy(buffer, blob->object.source.raw.data, blob->object.source.raw.len);
-		((char *)buffer)[blob->object.source.raw.len] = 0;
-
-		git_object__source_close((git_object *)blob);
-	}
-
-	return GIT_SUCCESS;
+	return blob->object.source.raw.data;
 }
 
 int git_blob_rawsize(git_blob *blob)
@@ -98,6 +83,8 @@ int git_blob_set_rawcontent(git_blob *blob, const void *buffer, size_t len)
 	assert(blob && buffer);
 
 	blob->object.modified = 1;
+
+	git_object__source_close((git_object *)blob);
 
 	if (blob->content.data != NULL)
 		gitfo_free_buf(&blob->content);

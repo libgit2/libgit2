@@ -63,18 +63,17 @@ GIT_EXTERN(int) git_blob_set_rawcontent_fromfile(git_blob *blob, const char *fil
 GIT_EXTERN(int) git_blob_set_rawcontent(git_blob *blob, const void *buffer, size_t len);
 
 /**
- * Read the raw content of a blob.
+ * Get a read-only buffer with the raw content of a blob.
  *
- * A copy of the raw content is stored on the buffer passed
- * to the function. If the buffer is not long enough,
- * the method will fail.
+ * A pointer to the raw content of a blob is returned;
+ * this pointer is owned internally by the object and shall
+ * not be free'd. The pointer may be invalidated at a later
+ * time (e.g. when changing the contents of the blob).
  *
  * @param blob pointer to the blob
- * @param buffer buffer to fill with contents
- * @param len size of the buffer
- * @return 0 on success; error code otherwise
+ * @return the pointer; NULL if the blob has no contents
  */
-GIT_EXTERN(int) git_blob_rawcontent(git_blob *blob, void *buffer, size_t len);
+GIT_EXTERN(const char *) git_blob_rawcontent(git_blob *blob);
 
 /**
  * Get the size in bytes of the contents of a blob
