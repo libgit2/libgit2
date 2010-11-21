@@ -7,8 +7,8 @@ CFLAGS = ["-g", "-O2", "-Wall", "-Wextra"]
 def options(opt):
 	opt.load('compiler_c')
 	opt.add_option('--sha1', action='store', default='builtin',
-		help="Use the builtin SHA1 routines (--sha1=builtin), the\
-PPC optimized version (--sha1=ppc) or the SHA1 functions from OpenSSH (--sha1=openssh)")
+		help="Use the builtin SHA1 routines (builtin), the \
+PPC optimized version (ppc) or the SHA1 functions from OpenSSH (openssh)")
 
 def configure(conf):
 	conf.load('compiler_c')
@@ -19,14 +19,22 @@ def configure(conf):
 	conf.env.sha1 = conf.options.sha1
 
 def build(bld):
-	import sys
 
-	libs = { 'static' : 'cstlib', 'shared' : 'cshlib' }
+	if bld.variant == 'static':
+		build_library(bld, 'cstlib')
 
-	if bld.variant not in libs:
+	elif bld.variant == 'shared':
+		build_library(bld, 'cshlib')
+
+	elif bld.variant == 'tests':
+		build_tests(bld)
+
+	else:
 		from waflib import Options
 		Options.commands = [bld.cmd + '-shared', bld.cmd + '-static'] + Options.commands
-		return
+
+def build_library(bld, lib_str):
+	import sys
 
 	directory = bld.path
 
@@ -64,18 +72,51 @@ def build(bld):
 
 	sources = sources + directory.ant_glob('src/%s/*.c' % os)
 
-	bld(features='c ' + libs[bld.variant],
+	bld(features=['c', lib_str],
 		source=sources,
 		target='git2',
 		includes='src',
 		cflags=flags,
 		defines=defines,
-		inst_to='${LIBDIR}'
+		install_path='${LIBDIR}',
 	)
 
+	if os == 'unix':
+		bld(rule="""sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' < ${SRC} > ${TGT}""",
+			source='libgit2.pc.in',
+			target='libgit2.pc',
+			install_path='${LIBDIR}/pkgconfig',
+		)
+
 	bld.install_files('${PREFIX}/include/git', directory.ant_glob('src/git/*.h'))
-	if os == "unix":
-		bld.install_files('${PREFIX}/lib/pkgconfig', 'libgit2.pc')
+
+def build_tests(bld):
+	import os
+
+	if bld.is_install:
+		return
+
+	directory = bld.path
+	bld.objects(source=['tests/test_helpers.c', 'tests/test_lib.c'], includes=['src', 'tests'], target='test_helper')
+
+	for test_file in directory.ant_glob('tests/t????-*.c'):
+		test_name, _ = os.path.splitext(os.path.basename(test_file.abspath()))
+
+		test_toc_file = directory.make_node('tests/%s.toc' % test_name)
+		if bld.cmd == 'clean-tests':
+			test_toc_file.delete()
+		elif bld.cmd == 'build-tests':
+			test_toc = bld.cmd_and_log(['grep', 'BEGIN_TEST', test_file.abspath()], quiet=True)
+			test_toc_file.write(test_toc)
+
+		bld.program(
+			source=[test_file, 'tests/test_main.c'],
+			target=test_name,
+			includes=['src', 'tests'],
+			defines=['TEST_TOC="%s.toc"' % test_name],
+			stlib=['git2', 'z'],
+			stlibpath=directory.find_node('build/static/').abspath(),
+			use='test_helper')
 
 
 class _test(BuildContext):
@@ -86,35 +127,6 @@ def test(bld):
 	from waflib import Options
 	Options.commands = ['build-static', 'build-tests', 'run-tests'] + Options.commands
 
-class _build_tests(BuildContext):
-	cmd = 'build-tests'
-	fun = 'build_tests'
-	variant = 'tests'
-
-def build_tests(bld):
-	import os
-
-	directory = bld.path
-	bld.objects(source=['tests/test_helpers.c', 'tests/test_lib.c'], includes=['src', 'tests'], target='test_helper')
-
-	for test_file in directory.ant_glob('tests/t????-*.c'):
-		test_name, _ = os.path.splitext(os.path.basename(test_file.abspath()))
-
-		test_toc_file = directory.make_node('tests/%s.toc' % test_name)
-		if bld.cmd == 'clean':
-			test_toc_file.delete()
-		else:
-			test_toc = bld.cmd_and_log(['grep', 'BEGIN_TEST', test_file.abspath()], quiet=True)
-			test_toc_file.write(test_toc)
-
-		bld.program(
-			source=[test_file, 'tests/test_main.c'],
-			target=test_name,
-			includes=['src', 'tests'],
-			defines=['TEST_TOC="%s.toc"' % test_name],
-			stlib=['git2', 'z'],
-			stlibpath=[directory.abspath(), 'build'],
-			use='test_helper')
 
 class _run_tests(Context):
 	cmd = 'run-tests'
@@ -133,10 +145,31 @@ def run_tests(ctx):
 
 	test_folder.delete()
 
-for var in ('static', 'shared'):
-	for ctx in (BuildContext, CleanContext, InstallContext, UninstallContext):
-		name = ctx.__name__.replace('Context', '').lower()
-		class _genclass(ctx):
-			cmd = name + '-' + var
-			variant = var
+
+CONTEXTS = {
+	'build'		: BuildContext,
+	'clean'		: CleanContext,
+	'install'	: InstallContext,
+	'uninstall' : UninstallContext
+}
+
+def build_command(command):
+	ctx, var = command.split('-')
+	class _gen_command(CONTEXTS[ctx]):
+		cmd = command
+		variant = var
+
+build_command('build-static')
+build_command('build-shared')
+build_command('build-tests')
+
+build_command('clean-static')
+build_command('clean-shared')
+build_command('clean-tests')
+
+build_command('install-static')
+build_command('install-shared')
+
+build_command('uninstall-static')
+build_command('uninstall-shared')
 
