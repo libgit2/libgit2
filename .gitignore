@@ -8,3 +8,7 @@
 *.gcda
 *.gcno
 *.gcov
+.lock-wafbuild
+.waf*
+build/
+tests/tmp/
