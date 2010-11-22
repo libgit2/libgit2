@@ -78,6 +78,7 @@ def build_library(bld, lib_str):
 		includes='src',
 		cflags=flags,
 		defines=defines,
+		stlib=['git2', 'z'],
 		install_path='${LIBDIR}',
 	)
 

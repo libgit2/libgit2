@@ -5,6 +5,26 @@ libgit2 is a portable, pure C implementation of the Git core methods provided as
 re-entrant linkable library with a solid API, allowing you to write native
 speed custom Git applications in any language with bindings.
 
+Installing libgit2
+==================================
+
+Libgit2 uses the waf build system.  To build it, first configure the build
+system by running:
+
+  $ ./waf configure
+
+Then build the library:
+
+  $ ./waf build
+
+You can then test the library with:
+
+  $ ./waf test
+
+And finally you can install it with (you may need to sudo):
+
+  $ ./waf install
+
 
 Why Do We Need It
 ==================================
