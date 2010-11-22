@@ -3,32 +3,46 @@ from waflib.Build import BuildContext, CleanContext, \
         InstallContext, UninstallContext
 
 CFLAGS = ["-g", "-O2", "-Wall", "-Wextra"]
+ALL_LIBS = ['z', 'crypto']
 
 def options(opt):
 	opt.load('compiler_c')
 	opt.add_option('--sha1', action='store', default='builtin',
 		help="Use the builtin SHA1 routines (builtin), the \
-PPC optimized version (ppc) or the SHA1 functions from OpenSSH (openssh)")
+PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
 
 def configure(conf):
+	# default configuration for C programs
 	conf.load('compiler_c')
 
-	if conf.options.sha1 not in ['openssh', 'ppc', 'builtin']:
+	# check for Z lib
+	conf.check(features='c cprogram', lib='z', uselib_store='z')
+
+	if conf.options.sha1 not in ['openssl', 'ppc', 'builtin']:
 		ctx.fatal('Invalid SHA1 option')
+
+	# check for libcrypto (openssl) if we are using its SHA1 functions
+	if conf.options.sha1 == 'openssl':
+		conf.check_cfg(package='libcrypto', args=['--cflags', '--libs'], uselib_store='crypto')
 
 	conf.env.sha1 = conf.options.sha1
 
 def build(bld):
 
+	# command '[build|clean|install|uninstall]-static'
 	if bld.variant == 'static':
 		build_library(bld, 'cstlib')
 
+	# command '[build|clean|install|uninstall]-shared'
 	elif bld.variant == 'shared':
 		build_library(bld, 'cshlib')
 
+	# command '[build|clean]-tests'
 	elif bld.variant == 'tests':
 		build_tests(bld)
 
+	# command 'build|clean|install|uninstall': by default, run
+	# the same command for both the static and the shared lib
 	else:
 		from waflib import Options
 		Options.commands = [bld.cmd + '-shared', bld.cmd + '-static'] + Options.commands
@@ -38,12 +52,22 @@ def build_library(bld, lib_str):
 
 	directory = bld.path
 
+	#------------------------------
+	# Default values
+	#------------------------------
+
 	sources = directory.ant_glob('src/*.c')
 	flags = CFLAGS
 	defines = []
 	visibility = True
 	os = 'unix'
 
+
+	#------------------------------
+	# OS-dependant configuration
+	#------------------------------
+
+	# Windows 32 (MSVC) platform configuration
 	if sys.platform == 'win32':
 		# windows configuration
 		flags = flags + ['-TC', '-W4', '-RTC1', '-Zi']
@@ -51,37 +75,61 @@ def build_library(bld, lib_str):
 		visibility = False
 		os = 'win32'
 
+	# Windows 32 Cygwin configuration
+	# (assume a POSIX-compilant system)
 	elif sys.platform == 'cygwin':
 		visibility = False
 
-	elif sys.platform == 'mingw': # TODO
+	# Windows 32 MinGW configuration (TODO)
+	elif sys.platform == 'mingw':
 		pass
 
-	if bld.env.sha1 == "openssh":
+	# Compile platform-dependant code
+	# E.g.	src/unix/*.c
+	#		src/win32/*.c
+	sources = sources + directory.ant_glob('src/%s/*.c' % os)
+
+	# Disable visibility on W32 platform
+	if not visibility:
+		flags.append('-fvisibility=hidden')
+
+
+	#------------------------------
+	# SHA1 Methods Source
+	#------------------------------
+
+	# OpenSSL library
+	if bld.env.sha1 == "openssl":
 		defines.append('OPENSSL_SHA1')
 
+	# builtin PPC methods
 	elif bld.env.sha1 == "ppc":
 		defines.append('PPC_SHA1')
 		sources.append('src/ppc/sha1.c')
 
+	# default builtins
 	else:
 		sources.append('src/block-sha1/sha1.c')
 
-	if not visibility:
-		flags.append('-fvisibility=hidden')
 
-	sources = sources + directory.ant_glob('src/%s/*.c' % os)
+	#------------------------------
+	# Build the main library
+	#------------------------------
 
+	# either as static or shared;
 	bld(features=['c', lib_str],
 		source=sources,
 		target='git2',
 		includes='src',
 		cflags=flags,
 		defines=defines,
-		stlib=['git2', 'z'],
 		install_path='${LIBDIR}',
+		use=ALL_LIBS	# link with all the libs we know (z, openssl);
+						# this is ignored for static builds
+						# and for libraries which have been disabled
 	)
 
+	# On Unix systems, build the Pkg-config entry file
 	if os == 'unix':
 		bld(rule="""sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' < ${SRC} > ${TGT}""",
 			source='libgit2.pc.in',
@@ -89,7 +137,9 @@ def build_library(bld, lib_str):
 			install_path='${LIBDIR}/pkgconfig',
 		)
 
+	# Install headers
 	bld.install_files('${PREFIX}/include/git', directory.ant_glob('src/git/*.h'))
+
 
 def build_tests(bld):
 	import os
@@ -98,26 +148,33 @@ def build_tests(bld):
 		return
 
 	directory = bld.path
+
+	# Common object with the Test library methods
 	bld.objects(source=['tests/test_helpers.c', 'tests/test_lib.c'], includes=['src', 'tests'], target='test_helper')
 
+	# Build all tests in the tests/ folder
 	for test_file in directory.ant_glob('tests/t????-*.c'):
 		test_name, _ = os.path.splitext(os.path.basename(test_file.abspath()))
 
+		# Preprocess table of contents for each test
 		test_toc_file = directory.make_node('tests/%s.toc' % test_name)
-		if bld.cmd == 'clean-tests':
+		if bld.cmd == 'clean-tests': # cleanup; delete the generated TOC file
 			test_toc_file.delete()
-		elif bld.cmd == 'build-tests':
+		elif bld.cmd == 'build-tests': # build; create TOC
 			test_toc = bld.cmd_and_log(['grep', 'BEGIN_TEST', test_file.abspath()], quiet=True)
 			test_toc_file.write(test_toc)
 
+		# Build individual test (don't run)
 		bld.program(
 			source=[test_file, 'tests/test_main.c'],
 			target=test_name,
 			includes=['src', 'tests'],
 			defines=['TEST_TOC="%s.toc"' % test_name],
-			stlib=['git2', 'z'],
+			stlib=['git2'], # link with the git2 static lib we've just compiled'
 			stlibpath=directory.find_node('build/static/').abspath(),
-			use='test_helper')
+			use=['test_helper'] + ALL_LIBS  # link with all the libs we know
+											# libraries which are not enabled won't link
+		)
 
 
 class _test(BuildContext):
