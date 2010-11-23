@@ -1519,8 +1519,6 @@ static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e)
 		default:
 			return GIT_EOBJCORRUPTED;
 	}
-
-	return GIT_SUCCESS;
 }
 
 
