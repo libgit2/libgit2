@@ -1,12 +1,12 @@
 libgit2 - the Git linkable library
-==================================
+======================
 
 libgit2 is a portable, pure C implementation of the Git core methods provided as a
 re-entrant linkable library with a solid API, allowing you to write native
 speed custom Git applications in any language with bindings.
 
 Why Do We Need It
-==================================
+=======================
 
 In the current Git project, though a libgit.a file is produced it is
 not re-entrant (it will call <code>die()</code> on basically any error)
@@ -26,6 +26,7 @@ What It Can Do
 ==================================
 
 libgit2 is already very usable.
+
 * raw <-> hex SHA conversions
 * raw object reading (loose and packed)
 * raw object writing (loose)
@@ -40,32 +41,32 @@ Building libgit2 - Unix systems
 In Unix-like systems, like Linux, *BSD and Mac OS X, libgit2 has
 the following dependencies:
 
-	- Python 2.5-3.1 <http://www.python.org>
-		Used by run the build system; no extra libraries required.
-		Should probably ship installed with your OS.
+* Python 2.5-3.1 <http://www.python.org>
+  Used by run the build system; no extra libraries required.
+  Should probably ship installed with your OS.
 
-	- zlib 1.2+ <http://www.zlib.net/>
+* zlib 1.2+ <http://www.zlib.net/>
 
-	- LibSSL <http://www.openssl.org/>
-		Only needed if you want to re-use OpenSSL's SHA1 routines;
-		libgit2 compiles its own routines by default.
+* LibSSL <http://www.openssl.org/>
+  Only needed if you want to re-use OpenSSL's SHA1 routines;
+  libgit2 compiles its own routines by default.
 
 To build it, first configure the build system by running:
 
-  $ ./waf configure
+    $ ./waf configure
 
 Then build the library, either in its shared (libgit2.so) or static form (libgit2.a)
 
-  $ ./waf build-static
-  $ ./waf build-shared
+    $ ./waf build-static
+    $ ./waf build-shared
 
 You can then test the library with:
 
-  $ ./waf test
+    $ ./waf test
 
 And finally you can install it with (you may need to sudo):
 
-  $ ./waf install
+    $ ./waf install
 
 Building libgit2 - Windows MSVC++
 ==================================
@@ -73,31 +74,31 @@ Building libgit2 - Windows MSVC++
 When building under Windows using the MSVC compiler, libgit2 has
 the following dependencies:
 
-	- Python 2.5-3.1 <http://www.python.org>
-		Used by run the build system; no extra libraries required.
+* Python 2.5-3.1 <http://www.python.org>
+  Used by run the build system; no extra libraries required.
 
-	- zlib 1.2+ (Windows API Version) <http://www.zlib.net/>
-		Make sure you compile the ZLib library using the MSVC solution
-		that ships in its source distribution.
-		Alternatively, you may download precompiled binaries from:
-			http://www.winimage.com/zLibDll/
+* zlib 1.2+ (Windows API Version) <http://www.zlib.net/>
+  Make sure you compile the ZLib library using the MSVC solution
+  that ships in its source distribution.
+  Alternatively, you may download precompiled binaries from:
+     http://www.winimage.com/zLibDll/
 
-	- LibSSL <http://www.openssl.org/>
-		Only needed if you want to re-use OpenSSL's SHA1 routines;
-		libgit2 compiles its own routines by default.
+* LibSSL <http://www.openssl.org/>
+  Only needed if you want to re-use OpenSSL's SHA1 routines;
+  libgit2 compiles its own routines by default.
 
 To build it, first configure the build system by running:
 
-  $ ./waf configure
+    $ ./waf configure
 
 Then build the library, either in its shared (libgit2.dll) or static form (libgit2.lib)
 
-  $ ./waf build-static
-  $ ./waf build-shared
+    $ ./waf build-static
+    $ ./waf build-shared
 
 You can then test the library with:
 
-  $ ./waf test
+    $ ./waf test
 
 Lastly, you can manually install the generated *.lib and *.dll files, depending on
 your preferences.
@@ -108,35 +109,35 @@ Building libgit2 - Windows MinGW
 When building under Windows using the GCC compiler that ships with MinGW,
 libgit2 has the following dependencies:
 
-	- Python 2.5-3.1 <http://www.python.org>
-		Used by run the build system; no extra libraries required.
+* Python 2.5-3.1 <http://www.python.org>
+  Used by run the build system; no extra libraries required.
 
-	- zlib 1.2+ <http://www.zlib.net/>
+* zlib 1.2+ <http://www.zlib.net/>
 
-	- pthreads-w32 <http://sourceware.org/pthreads-win32/>
-		Or an equivalent pthreads implementation for non-POSIX systems
+* pthreads-w32 <http://sourceware.org/pthreads-win32/>
+  Or an equivalent pthreads implementation for non-POSIX systems
 
-	- LibSSL <http://www.openssl.org/>
-		Only needed if you want to re-use OpenSSL's SHA1 routines;
-		libgit2 compiles its own routines by default.
+* LibSSL <http://www.openssl.org/>
+  Only needed if you want to re-use OpenSSL's SHA1 routines;
+  libgit2 compiles its own routines by default.
 
 To build it, first configure the build system and force GCC as the compiler,
 instead of the default MSVC:
 
-  $ ./waf configure --check-c-compiler=gcc
+    $ ./waf configure --check-c-compiler=gcc
 
 Then build the library, either in its shared (libgit2.so) or static form (libgit2.a)
 
-  $ ./waf build-static
-  $ ./waf build-shared
+    $ ./waf build-static
+    $ ./waf build-shared
 
 You can then test the library with:
 
-  $ ./waf test
+    $ ./waf test
 
 And finally you can install it with:
 
-  $ ./waf install
+    $ ./waf install
 
 
 Configuration settings
@@ -162,25 +163,45 @@ Language Bindings
 So you want to use Git from your favorite programming language.  Here are
 the bindings to libgit2 that are currently available:
 
-== Ruby ==
+Ruby
+--------------------
 
-Ribbit is the reference library used to make sure the 
+Rugged is the reference library used to make sure the
 libgit2 API is sane.  This should be mostly up to date.
 
-http://github.com/libgit2/ribbit
+[[https://github.com/libgit2/rugged]]
 
 
-== Erlang ==
+Python
+--------------------
+
+Pygit2 is a Python binding to libgit2.
+
+[[https://github.com/libgit2/pygit2]]
+
+Erlang
+--------------------
 
 Geef is an example of an Erlang NIF binding to libgit2.  A bit out of 
 date, but basically works.  Best as a proof of concept of what you could
 do with Erlang and NIFs with libgit2.
 
-http://github.com/schacon/geef
-
+[[https://github.com/schacon/geef]]
 
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
+
+How Can I Contribute
+==================================
+
+Fork libgit2/libgit2 on GitHub, add your improvement, push it to a branch
+in your fork named for the topic, send a pull request.
+
+You can also file bugs or feature requests under the libgit2 project on
+GitHub, or join us on the mailing list by sending an email to:
+
+libgit2@librelist.com
+
 
 License 
 ==================================
