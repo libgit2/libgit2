@@ -1435,7 +1435,7 @@ static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e)
 	deflated_size = (size_t)e->size;
 
 	if (deflated_size == 0)
-		deflated_size = p->pack_size - e->offset;
+		deflated_size = (size_t)(p->pack_size - e->offset);
 
 	byte = *buffer++ & 0xFF;
 	deflated_size--;

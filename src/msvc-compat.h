@@ -20,6 +20,9 @@ typedef __int64 off64_t;
 # define S_ISREG(m)   (((m) & _S_IFMT) == _S_IFREG)
 # define S_ISFIFO(m)  (((m) & _S_IFMT) == _S_IFIFO)
 
+#if (_MSC_VER >= 1600)
+#	include <stdint.h>
+#else
 /* add some missing <stdint.h> typedef's */
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
@@ -35,6 +38,7 @@ typedef unsigned long long uint64_t;
 
 typedef long long intmax_t;
 typedef unsigned long long uintmax_t;
+#endif
 
 #endif
 
