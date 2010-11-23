@@ -2,8 +2,12 @@ from waflib.Context import Context
 from waflib.Build import BuildContext, CleanContext, \
         InstallContext, UninstallContext
 
-CFLAGS_UNIX = ["-g", "-O2", "-Wall", "-Wextra"]
-CFLAGS_WIN32 = ['/TC', '/W4', '/RTC1', '/Zi', '/nologo']
+CFLAGS_UNIX = ["-O2", "-Wall", "-Wextra"]
+CFLAGS_WIN32 = ['/TC', '/W4', '/RTC1', '/nologo']
+
+CFLAGS_UNIX_DBG = ['-g']
+CFLAGS_WIN32_DBG = ['/Zi', '/DEBUG']
+CFLAGS_WIN32_L_DBG = ['/DEBUG']
 
 ALL_LIBS = ['z', 'crypto', 'pthread']
 
@@ -12,20 +16,24 @@ def options(opt):
 	opt.add_option('--sha1', action='store', default='builtin',
 		help="Use the builtin SHA1 routines (builtin), the \
 PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
+	opt.add_option('--debug', action='store_true', default=False,
+		help='Compile with debug symbols')
 
 def configure(conf):
 	# default configuration for C programs
 	conf.load('compiler_c')
 
+	dbg = conf.options.debug
 	zlib_name = 'z'
 
-	conf.env.CFLAGS = CFLAGS_UNIX
+	conf.env.CFLAGS = CFLAGS_UNIX + CFLAGS_UNIX_DBG if dbg else []
 
 	if conf.env.DEST_OS == 'win32':
 		conf.env.PLATFORM = 'win32'
 
 		if conf.env.CC_NAME == 'msvc':
-			conf.env.CFLAGS = CFLAGS_WIN32
+			conf.env.CFLAGS += CFLAGS_WIN32 + CFLAGS_WIN32_DBG if dbg else []
+			conf.env.LINKFLAGS += CFLAGS_WIN32_L_DBG if dbg else []
 			conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB', 'ZLIB_WINAPI']
 			zlib_name = 'zlibwapi'
 
@@ -36,7 +44,7 @@ def configure(conf):
 		conf.env.PLATFORM = 'unix'
 
 	# check for Z lib
-	conf.check(features='c cprogram', lib=zlib_name, uselib_store='z')
+	conf.check(features='c cprogram', lib=zlib_name, uselib_store='z', install_path=None)
 
 	if conf.options.sha1 not in ['openssl', 'ppc', 'builtin']:
 		ctx.fatal('Invalid SHA1 option')
@@ -141,6 +149,7 @@ def build_tests(bld):
 			target=test_name,
 			includes=['src', 'tests'],
 			defines=['TEST_TOC="%s.toc"' % test_name],
+			install_path=None,
 			stlib=['git2'], # link with the git2 static lib we've just compiled'
 			stlibpath=[directory.find_node('build/static/').abspath(), directory.abspath()],
 			use=['test_helper'] + ALL_LIBS  # link with all the libs we know
