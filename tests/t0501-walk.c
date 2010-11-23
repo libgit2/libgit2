@@ -45,7 +45,7 @@ static const int commit_sorting_time_reverse[][6] = {
 	{4, 5, 2, 1, 3, 0}
 };
 
-static const int commit_count = 6;
+#define commit_count 6
 static const int result_bytes = 24;
 
 

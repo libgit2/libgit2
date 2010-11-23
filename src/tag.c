@@ -229,6 +229,6 @@ int git_tag__writeback(git_tag *tag, git_odb_source *src)
 int git_tag__parse(git_tag *tag)
 {
 	assert(tag && tag->object.source.open);
-	return parse_tag_buffer(tag, tag->object.source.raw.data, tag->object.source.raw.data + tag->object.source.raw.len);
+	return parse_tag_buffer(tag, tag->object.source.raw.data, (char *)tag->object.source.raw.data + tag->object.source.raw.len);
 }
 

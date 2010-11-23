@@ -212,7 +212,7 @@ static int source_resize(git_odb_source *src)
 	size_t write_offset, new_size;
 	void *new_data;
 
-	write_offset = src->write_ptr - src->raw.data;
+	write_offset = (size_t)((char *)src->write_ptr - (char *)src->raw.data);
 
 	new_size = src->raw.len * 2;
 	if ((new_data = git__malloc(new_size)) == NULL)
@@ -223,7 +223,7 @@ static int source_resize(git_odb_source *src)
 
 	src->raw.data = new_data;
 	src->raw.len = new_size;
-	src->write_ptr = new_data + write_offset;
+	src->write_ptr = (char *)new_data + write_offset;
 
 	return GIT_SUCCESS;
 }
@@ -249,7 +249,7 @@ int git__source_printf(git_odb_source *source, const char *format, ...)
 	if (did_resize)
 		vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
 
-	source->write_ptr += len;
+	source->write_ptr = (char *)source->write_ptr + len;
 	source->written_bytes += len;
 
 	return GIT_SUCCESS;
@@ -267,7 +267,7 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len)
 	}
 
 	memcpy(source->write_ptr, bytes, len);
-	source->write_ptr += len;
+	source->write_ptr = (char *)source->write_ptr + len;
 	source->written_bytes += len;
 
 	return GIT_SUCCESS;
