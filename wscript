@@ -71,6 +71,7 @@ def build(bld):
 
 	# command '[build|clean]-tests'
 	elif bld.variant == 'tests':
+		build_library(bld, 'cstlib')
 		build_tests(bld)
 
 	# command 'build|clean|install|uninstall': by default, run
@@ -105,7 +106,7 @@ def build_library(bld, lib_str):
 		target='git2',
 		includes='src',
 		install_path='${LIBDIR}',
-		use=ALL_LIBS #if lib_str == 'cshlib' else []
+		use=ALL_LIBS
 	)
 
 	# On Unix systems, build the Pkg-config entry file
@@ -151,8 +152,8 @@ def build_tests(bld):
 			defines=['TEST_TOC="%s.toc"' % test_name],
 			install_path=None,
 			stlib=['git2'], # link with the git2 static lib we've just compiled'
-			stlibpath=[directory.find_node('build/static/').abspath(), directory.abspath()],
-			use=['test_helper'] + ALL_LIBS  # link with all the libs we know
+			stlibpath=[directory.find_node('build/tests/').abspath(), directory.abspath()],
+			use=['test_helper', 'git2'] + ALL_LIBS  # link with all the libs we know
 											# libraries which are not enabled won't link
 		)
 
@@ -163,7 +164,7 @@ class _test(BuildContext):
 
 def test(bld):
 	from waflib import Options
-	Options.commands = ['build-static', 'build-tests', 'run-tests'] + Options.commands
+	Options.commands = ['build-tests', 'run-tests'] + Options.commands
 
 
 class _run_tests(Context):
@@ -171,14 +172,17 @@ class _run_tests(Context):
 	fun = 'run_tests'
 
 def run_tests(ctx):
-	import shutil
+	import shutil, sys
 
 	failed = False
 	test_folder = ctx.path.make_node('tests/tmp/')
 	test_folder.mkdir()
 	test_glob = 'build/tests/t????-*'
 
-	for test in ctx.path.ant_glob(test_glob, excl='build/tests/*.manifest'):
+	if sys.platform == 'win32':
+		test_glob = 'build/tests/t????-*.exe'
+
+	for test in ctx.path.ant_glob(test_glob):
 		if ctx.exec_command(test.abspath(), cwd=test_folder.abspath()) != 0:
 			failed = True
 			break
