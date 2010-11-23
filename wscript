@@ -26,8 +26,8 @@ def configure(conf):
 
 		if conf.env.CC_NAME == 'msvc':
 			conf.env.CFLAGS = CFLAGS_WIN32
-			conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB']
-			zlib_name = 'zdll'
+			conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB', 'ZLIB_WINAPI']
+			zlib_name = 'zlibwapi'
 
 		elif conf.env.CC_NAME == 'gcc':
 			conf.check(features='c cprogram', lib='pthread', uselib_store='pthread')
