@@ -2,8 +2,10 @@ from waflib.Context import Context
 from waflib.Build import BuildContext, CleanContext, \
         InstallContext, UninstallContext
 
-CFLAGS = ["-g", "-O2", "-Wall", "-Wextra"]
-ALL_LIBS = ['z', 'crypto']
+CFLAGS_UNIX = ["-g", "-O2", "-Wall", "-Wextra"]
+CFLAGS_WIN32 = ['/TC', '/W4', '/RTC1', '/Zi', '/nologo']
+
+ALL_LIBS = ['z', 'crypto', 'pthread']
 
 def options(opt):
 	opt.load('compiler_c')
@@ -15,8 +17,26 @@ def configure(conf):
 	# default configuration for C programs
 	conf.load('compiler_c')
 
+	zlib_name = 'z'
+
+	conf.env.CFLAGS = CFLAGS_UNIX
+
+	if conf.env.DEST_OS == 'win32':
+		conf.env.PLATFORM = 'win32'
+
+		if conf.env.CC_NAME == 'msvc':
+			conf.env.CFLAGS = CFLAGS_WIN32
+			conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB']
+			zlib_name = 'zdll'
+
+		elif conf.env.CC_NAME == 'gcc':
+			conf.check(features='c cprogram', lib='pthread', uselib_store='pthread')
+
+	else:
+		conf.env.PLATFORM = 'unix'
+
 	# check for Z lib
-	conf.check(features='c cprogram', lib='z', uselib_store='z')
+	conf.check(features='c cprogram', lib=zlib_name, uselib_store='z')
 
 	if conf.options.sha1 not in ['openssl', 'ppc', 'builtin']:
 		ctx.fatal('Invalid SHA1 option')
@@ -24,6 +44,10 @@ def configure(conf):
 	# check for libcrypto (openssl) if we are using its SHA1 functions
 	if conf.options.sha1 == 'openssl':
 		conf.check_cfg(package='libcrypto', args=['--cflags', '--libs'], uselib_store='crypto')
+		conf.env.DEFINES += ['OPENSSL_SHA1']
+
+	elif conf.options.sha1 == 'ppc':
+		conf.env.DEFINES += ['PPC_SHA1']
 
 	conf.env.sha1 = conf.options.sha1
 
@@ -48,69 +72,20 @@ def build(bld):
 		Options.commands = [bld.cmd + '-shared', bld.cmd + '-static'] + Options.commands
 
 def build_library(bld, lib_str):
-	import sys
-
 	directory = bld.path
 
-	#------------------------------
-	# Default values
-	#------------------------------
-
 	sources = directory.ant_glob('src/*.c')
-	flags = CFLAGS
-	defines = []
-	visibility = True
-	os = 'unix'
-
-
-	#------------------------------
-	# OS-dependant configuration
-	#------------------------------
-
-	# Windows 32 (MSVC) platform configuration
-	if sys.platform == 'win32':
-		# windows configuration
-		flags = flags + ['-TC', '-W4', '-RTC1', '-Zi']
-		defines = defines = ['WIN32', '_DEBUG', '_LIB']
-		visibility = False
-		os = 'win32'
-
-	# Windows 32 Cygwin configuration
-	# (assume a POSIX-compilant system)
-	elif sys.platform == 'cygwin':
-		visibility = False
-
-	# Windows 32 MinGW configuration (TODO)
-	elif sys.platform == 'mingw':
-		pass
 
 	# Compile platform-dependant code
 	# E.g.	src/unix/*.c
 	#		src/win32/*.c
-	sources = sources + directory.ant_glob('src/%s/*.c' % os)
+	sources = sources + directory.ant_glob('src/%s/*.c' % bld.env.PLATFORM)
 
-	# Disable visibility on W32 platform
-	if not visibility:
-		flags.append('-fvisibility=hidden')
-
-
-	#------------------------------
-	# SHA1 Methods Source
-	#------------------------------
-
-	# OpenSSL library
-	if bld.env.sha1 == "openssl":
-		defines.append('OPENSSL_SHA1')
-
-	# builtin PPC methods
-	elif bld.env.sha1 == "ppc":
-		defines.append('PPC_SHA1')
+	# SHA1 methods source
+	if bld.env.sha1 == "ppc":
 		sources.append('src/ppc/sha1.c')
-
-	# default builtins
 	else:
 		sources.append('src/block-sha1/sha1.c')
-
 
 	#------------------------------
 	# Build the main library
@@ -121,16 +96,12 @@ def build_library(bld, lib_str):
 		source=sources,
 		target='git2',
 		includes='src',
-		cflags=flags,
-		defines=defines,
 		install_path='${LIBDIR}',
-		use=ALL_LIBS	# link with all the libs we know (z, openssl);
-						# this is ignored for static builds
-						# and for libraries which have been disabled
+		use=ALL_LIBS #if lib_str == 'cshlib' else []
 	)
 
 	# On Unix systems, build the Pkg-config entry file
-	if os == 'unix':
+	if bld.env.PLATFORM == 'unix':
 		bld(rule="""sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' < ${SRC} > ${TGT}""",
 			source='libgit2.pc.in',
 			target='libgit2.pc',
@@ -171,7 +142,7 @@ def build_tests(bld):
 			includes=['src', 'tests'],
 			defines=['TEST_TOC="%s.toc"' % test_name],
 			stlib=['git2'], # link with the git2 static lib we've just compiled'
-			stlibpath=directory.find_node('build/static/').abspath(),
+			stlibpath=[directory.find_node('build/static/').abspath(), directory.abspath()],
 			use=['test_helper'] + ALL_LIBS  # link with all the libs we know
 											# libraries which are not enabled won't link
 		)
@@ -191,17 +162,22 @@ class _run_tests(Context):
 	fun = 'run_tests'
 
 def run_tests(ctx):
+	import shutil
+
+	failed = False
 	test_folder = ctx.path.make_node('tests/tmp/')
+	test_folder.mkdir()
+	test_glob = 'build/tests/t????-*'
 
-	for test in ctx.path.ant_glob('build/tests/t????-*'):
-		test_folder.delete()
-		test_folder.mkdir()
-
+	for test in ctx.path.ant_glob(test_glob, excl='build/tests/*.manifest'):
 		if ctx.exec_command(test.abspath(), cwd=test_folder.abspath()) != 0:
-			ctx.fatal('Test run failed')
+			failed = True
 			break
 
-	test_folder.delete()
+	shutil.rmtree(test_folder.abspath())
+
+	if failed:
+		ctx.fatal('Test run failed')
 
 
 CONTEXTS = {
