@@ -56,7 +56,25 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 int gitfo_isdir(const char *path)
 {
 	struct stat st;
-	return (path && gitfo_stat(path, &st) == 0 && S_ISDIR(st.st_mode)) ? 
+	int len, stat_error;
+
+	if (!path)
+		return GIT_ENOTFOUND;
+
+	len = strlen(path);
+
+	/* win32: stat path for folders cannot end in a slash */
+	if (path[len - 1] == '/') {
+		char *path_fixed = NULL;
+		path_fixed = git__strdup(path);
+		path_fixed[len - 1] = 0;
+		stat_error = gitfo_stat(path_fixed, &st);
+		free(path_fixed);
+	} else {
+		stat_error = gitfo_stat(path, &st);
+	}
+
+	return (stat_error == 0 && S_ISDIR(st.st_mode)) ? 
 		GIT_SUCCESS : GIT_ENOTFOUND;
 }
 
