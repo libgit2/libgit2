@@ -5,27 +5,6 @@ libgit2 is a portable, pure C implementation of the Git core methods provided as
 re-entrant linkable library with a solid API, allowing you to write native
 speed custom Git applications in any language with bindings.
 
-Installing libgit2
-==================================
-
-Libgit2 uses the waf build system.  To build it, first configure the build
-system by running:
-
-  $ ./waf configure
-
-Then build the library:
-
-  $ ./waf build
-
-You can then test the library with:
-
-  $ ./waf test
-
-And finally you can install it with (you may need to sudo):
-
-  $ ./waf install
-
-
 Why Do We Need It
 ==================================
 
@@ -55,18 +34,127 @@ libgit2 is already very usable.
 * tree traversal
 * basic index file (staging area) operations
 
-
-Installing libgit2
+Building libgit2 - Unix systems
 ==================================
 
- $ git clone git://github.com/libgit2/libgit2.git
- $ cd libgit2
- $ make
- $ make install
+In Unix-like systems, like Linux, *BSD and Mac OS X, libgit2 has
+the following dependencies:
 
-That should get it installed on Mac, Linux or Windows.
-Once that is done, you should be able to link the library to your program
-with a normal "-lgit2".
+	- Python 2.5-3.1 <http://www.python.org>
+		Used by run the build system; no extra libraries required.
+		Should probably ship installed with your OS.
+
+	- zlib 1.2+ <http://www.zlib.net/>
+
+	- LibSSL <http://www.openssl.org/>
+		Only needed if you want to re-use OpenSSL's SHA1 routines;
+		libgit2 compiles its own routines by default.
+
+To build it, first configure the build system by running:
+
+  $ ./waf configure
+
+Then build the library, either in its shared (libgit2.so) or static form (libgit2.a)
+
+  $ ./waf build-static
+  $ ./waf build-shared
+
+You can then test the library with:
+
+  $ ./waf test
+
+And finally you can install it with (you may need to sudo):
+
+  $ ./waf install
+
+Building libgit2 - Windows MSVC++
+==================================
+
+When building under Windows using the MSVC compiler, libgit2 has
+the following dependencies:
+
+	- Python 2.5-3.1 <http://www.python.org>
+		Used by run the build system; no extra libraries required.
+
+	- zlib 1.2+ (Windows API Version) <http://www.zlib.net/>
+		Make sure you compile the ZLib library using the MSVC solution
+		that ships in its source distribution.
+		Alternatively, you may download precompiled binaries from:
+			http://www.winimage.com/zLibDll/
+
+	- LibSSL <http://www.openssl.org/>
+		Only needed if you want to re-use OpenSSL's SHA1 routines;
+		libgit2 compiles its own routines by default.
+
+To build it, first configure the build system by running:
+
+  $ ./waf configure
+
+Then build the library, either in its shared (libgit2.dll) or static form (libgit2.lib)
+
+  $ ./waf build-static
+  $ ./waf build-shared
+
+You can then test the library with:
+
+  $ ./waf test
+
+Lastly, you can manually install the generated *.lib and *.dll files, depending on
+your preferences.
+
+Building libgit2 - Windows MinGW
+==================================
+
+When building under Windows using the GCC compiler that ships with MinGW,
+libgit2 has the following dependencies:
+
+	- Python 2.5-3.1 <http://www.python.org>
+		Used by run the build system; no extra libraries required.
+
+	- zlib 1.2+ <http://www.zlib.net/>
+
+	- pthreads-w32 <http://sourceware.org/pthreads-win32/>
+		Or an equivalent pthreads implementation for non-POSIX systems
+
+	- LibSSL <http://www.openssl.org/>
+		Only needed if you want to re-use OpenSSL's SHA1 routines;
+		libgit2 compiles its own routines by default.
+
+To build it, first configure the build system and force GCC as the compiler,
+instead of the default MSVC:
+
+  $ ./waf configure --check-c-compiler=gcc
+
+Then build the library, either in its shared (libgit2.so) or static form (libgit2.a)
+
+  $ ./waf build-static
+  $ ./waf build-shared
+
+You can then test the library with:
+
+  $ ./waf test
+
+And finally you can install it with:
+
+  $ ./waf install
+
+
+Configuration settings
+==================================
+
+The waf build system for libgit2 accepts the following flags:
+
+	--debug
+		build the library with debug symbols.
+		Defaults to off.
+
+	--sha1=[builtin|ppc|openssl]
+		use the builtin SHA1 functions, the optimized PPC versions
+		or the SHA1 functions from LibCrypto (OpenSSL).
+		Defaults to 'builtin'.
+
+You can run `./waf --help` to see a full list of install options and
+targets.
 
 Language Bindings
 ==================================
