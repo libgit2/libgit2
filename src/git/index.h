@@ -1,7 +1,6 @@
 #ifndef INCLUDE_git_index_h__
 #define INCLUDE_git_index_h__
 
-#include <stdint.h>
 #include "common.h"
 #include "oid.h"
 
@@ -20,8 +19,8 @@ typedef struct git_index git_index;
 
 /** Time used in a git index entry */
 typedef struct {
-	uint32_t seconds;
-	uint32_t nanoseconds;
+	unsigned int seconds;
+	unsigned int nanoseconds;
 } git_index_time;
 
 /** Memory representation of a file entry in the index. */
@@ -29,17 +28,17 @@ typedef struct git_index_entry {
 	git_index_time ctime;
 	git_index_time mtime;
 
-	uint32_t dev;
-	uint32_t ino;
-	uint32_t mode;
-	uint32_t uid;
-	uint32_t gid;
-	uint32_t file_size;
+	unsigned int dev;
+	unsigned int ino;
+	unsigned int mode;
+	unsigned int uid;
+	unsigned int gid;
+	unsigned int file_size;
 
 	git_oid oid;
 
-	uint16_t flags;
-	uint16_t flags_extended;
+	unsigned short flags;
+	unsigned short flags_extended;
 
 	char *path;
 } git_index_entry;
