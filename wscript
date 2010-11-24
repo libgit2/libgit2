@@ -18,21 +18,32 @@ def options(opt):
 PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
 	opt.add_option('--debug', action='store_true', default=False,
 		help='Compile with debug symbols')
+	opt.add_option('--msvc', action='store', default=None,
+		help='Force a specific MSVC++ version (7.1, 8.0, 9.0, 10.0), if more than one is installed')
+	opt.add_option('--arch', action='store', default='x86',
+		help='Select target architecture (ia64, x64, x86, x86_amd64, x86_ia64)')
 
 def configure(conf):
+
+	# load the MSVC configuration flags
+	if conf.options.msvc:
+		conf.env['MSVC_VERSIONS'] = ['msvc ' + conf.options.msvc]
+
+	conf.env['MSVC_TARGETS'] = [conf.options.arch]
+
 	# default configuration for C programs
 	conf.load('compiler_c')
 
 	dbg = conf.options.debug
 	zlib_name = 'z'
 
-	conf.env.CFLAGS = CFLAGS_UNIX + CFLAGS_UNIX_DBG if dbg else []
+	conf.env.CFLAGS = CFLAGS_UNIX + (CFLAGS_UNIX_DBG if dbg else [])
 
 	if conf.env.DEST_OS == 'win32':
 		conf.env.PLATFORM = 'win32'
 
 		if conf.env.CC_NAME == 'msvc':
-			conf.env.CFLAGS += CFLAGS_WIN32 + CFLAGS_WIN32_DBG if dbg else []
+			conf.env.CFLAGS = CFLAGS_WIN32 + (CFLAGS_WIN32_DBG if dbg else [])
 			conf.env.LINKFLAGS += CFLAGS_WIN32_L_DBG if dbg else []
 			conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB', 'ZLIB_WINAPI']
 			zlib_name = 'zlibwapi'
@@ -96,12 +107,14 @@ def build_library(bld, lib_str):
 	else:
 		sources.append('src/block-sha1/sha1.c')
 
+	features = ['c', lib_str]
+
 	#------------------------------
 	# Build the main library
 	#------------------------------
 
 	# either as static or shared;
-	bld(features=['c', lib_str],
+	bld(features=features,
 		source=sources,
 		target='git2',
 		includes='src',
@@ -120,6 +133,8 @@ def build_library(bld, lib_str):
 	# Install headers
 	bld.install_files('${PREFIX}/include/git', directory.ant_glob('src/git/*.h'))
 
+def grep_test_header(text, test_file):
+	return '\n'.join(l for l in test_file.read().splitlines() if text in l)
 
 def build_tests(bld):
 	import os
@@ -141,8 +156,7 @@ def build_tests(bld):
 		if bld.cmd == 'clean-tests': # cleanup; delete the generated TOC file
 			test_toc_file.delete()
 		elif bld.cmd == 'build-tests': # build; create TOC
-			test_toc = bld.cmd_and_log(['grep', 'BEGIN_TEST', test_file.abspath()], quiet=True)
-			test_toc_file.write(test_toc)
+			test_toc_file.write(grep_test_header('BEGIN_TEST', test_file))
 
 		# Build individual test (don't run)
 		bld.program(
