@@ -38,18 +38,19 @@ libgit2 is already very usable.
 Building libgit2 - Unix systems
 ==================================
 
-In Unix-like systems, like Linux, *BSD and Mac OS X, libgit2 has
+In Unix-like systems, like Linux, xBSD and Mac OS X, libgit2 has
 the following dependencies:
 
 * Python 2.5-3.1 <http://www.python.org>
-  Used by run the build system; no extra libraries required.
-  Should probably ship installed with your OS.
+
+Used to run the build system; no extra libraries required.
+Should probably ship installed with your OS.
 
 * zlib 1.2+ <http://www.zlib.net/>
 
 * LibSSL <http://www.openssl.org/>
-  Only needed if you want to re-use OpenSSL's SHA1 routines;
-  libgit2 compiles its own routines by default.
+
+Only needed if you want to re-use OpenSSL's SHA1 routines; libgit2 compiles its own routines by default.
 
 To build it, first configure the build system by running:
 
@@ -75,17 +76,17 @@ When building under Windows using the MSVC compiler, libgit2 has
 the following dependencies:
 
 * Python 2.5-3.1 <http://www.python.org>
-  Used by run the build system; no extra libraries required.
+
+Used to run the build system; no extra libraries required.
 
 * zlib 1.2+ (Windows API Version) <http://www.zlib.net/>
-  Make sure you compile the ZLib library using the MSVC solution
-  that ships in its source distribution.
-  Alternatively, you may download precompiled binaries from:
-     http://www.winimage.com/zLibDll/
+
+Make sure you compile the ZLib library using the MSVC solution that ships in its source distribution.
+Alternatively, you may download precompiled binaries from: <http://www.winimage.com/zLibDll/>
 
 * LibSSL <http://www.openssl.org/>
-  Only needed if you want to re-use OpenSSL's SHA1 routines;
-  libgit2 compiles its own routines by default.
+
+Only needed if you want to re-use OpenSSL's SHA1 routines; libgit2 compiles its own routines by default.
 
 To build it, first configure the build system by running:
 
@@ -100,26 +101,26 @@ You can then test the library with:
 
     $ ./waf test
 
-Lastly, you can manually install the generated *.lib and *.dll files, depending on
-your preferences.
+Lastly, you can manually install the generated *.lib and *.dll files, depending on your preferences.
 
 Building libgit2 - Windows MinGW
 ==================================
 
-When building under Windows using the GCC compiler that ships with MinGW,
-libgit2 has the following dependencies:
+When building under Windows using the GCC compiler that ships with MinGW, libgit2 has the following dependencies:
 
 * Python 2.5-3.1 <http://www.python.org>
-  Used by run the build system; no extra libraries required.
+
+Used to run the build system; no extra libraries required.
 
 * zlib 1.2+ <http://www.zlib.net/>
 
 * pthreads-w32 <http://sourceware.org/pthreads-win32/>
-  Or an equivalent pthreads implementation for non-POSIX systems
+
+Or an equivalent pthreads implementation for non-POSIX systems
 
 * LibSSL <http://www.openssl.org/>
-  Only needed if you want to re-use OpenSSL's SHA1 routines;
-  libgit2 compiles its own routines by default.
+
+Only needed if you want to re-use OpenSSL's SHA1 routines; libgit2 compiles its own routines by default.
 
 To build it, first configure the build system and force GCC as the compiler,
 instead of the default MSVC:
@@ -154,6 +155,13 @@ The waf build system for libgit2 accepts the following flags:
 		or the SHA1 functions from LibCrypto (OpenSSL).
 		Defaults to 'builtin'.
 
+	--msvc=[7.1|8.0|9.0|10.0]
+		Force a specific version of the MSVC compiler, if more than
+		one version is installed.
+
+	--arch=[ia64|x64|x86|x86_amd64|x86_ia64]
+		Force a specific architecture for compilers that support it.
+
 You can run `./waf --help` to see a full list of install options and
 targets.
 
@@ -169,7 +177,7 @@ Ruby
 Rugged is the reference library used to make sure the
 libgit2 API is sane.  This should be mostly up to date.
 
-[[https://github.com/libgit2/rugged]]
+<https://github.com/libgit2/rugged>
 
 
 Python
@@ -177,7 +185,7 @@ Python
 
 Pygit2 is a Python binding to libgit2.
 
-[[https://github.com/libgit2/pygit2]]
+<https://github.com/libgit2/pygit2>
 
 Erlang
 --------------------
@@ -186,7 +194,7 @@ Geef is an example of an Erlang NIF binding to libgit2.  A bit out of
 date, but basically works.  Best as a proof of concept of what you could
 do with Erlang and NIFs with libgit2.
 
-[[https://github.com/schacon/geef]]
+<https://github.com/schacon/geef>
 
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
