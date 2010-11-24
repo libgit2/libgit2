@@ -19,6 +19,8 @@
 # define GIT_EXTERN(type) extern \
 			  __attribute__((visibility("default"))) \
 			  type
+#elif defined(_MSC_VER)
+# define GIT_EXTERN(type) __declspec(dllexport) type
 #else
 # define GIT_EXTERN(type) extern type
 #endif
