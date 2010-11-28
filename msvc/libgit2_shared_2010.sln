@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgit2_shared", "libgit2_shared.vcxproj", "{628B5A30-A7D1-B216-C57D-F8F9D5BA019C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{628B5A30-A7D1-B216-C57D-F8F9D5BA019C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{628B5A30-A7D1-B216-C57D-F8F9D5BA019C}.Debug|Win32.Build.0 = Debug|Win32
+		{628B5A30-A7D1-B216-C57D-F8F9D5BA019C}.Release|Win32.ActiveCfg = Release|Win32
+		{628B5A30-A7D1-B216-C57D-F8F9D5BA019C}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
