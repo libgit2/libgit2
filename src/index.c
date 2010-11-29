@@ -529,6 +529,8 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 	if (INDEX_FOOTER_SIZE + minimal_entry_size > buffer_size)
 		return 0;
 
+	memset(dest, 0x0, sizeof(git_index_entry));
+
 	source = (const struct entry_short *)(buffer);
 
 	dest->ctime.seconds = ntohl(source->ctime.seconds);
@@ -764,6 +766,10 @@ int git_index__write(git_index *index, git_filelock *file)
 		WRITE_WORD(entry->gid);
 		WRITE_WORD(entry->file_size);
 		WRITE_BYTES(entry->oid.id, GIT_OID_RAWSZ);
+
+		if (entry->flags_extended != 0)
+			entry->flags |= GIT_IDXENTRY_EXTENDED;
+
 		WRITE_SHORT(entry->flags);
 
 		if (entry->flags & GIT_IDXENTRY_EXTENDED) {
