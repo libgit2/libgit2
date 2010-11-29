@@ -6,12 +6,6 @@
 #include "git/odb.h"
 #include "git/index.h"
 
-#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
-#define GIT_IDXENTRY_STAGEMASK (0x3000)
-#define GIT_IDXENTRY_EXTENDED  (0x4000)
-#define GIT_IDXENTRY_VALID     (0x8000)
-#define GIT_IDXENTRY_STAGESHIFT 12
-
 struct git_index_tree {
 	char *name;
 

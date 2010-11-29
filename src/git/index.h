@@ -13,6 +13,12 @@
  */
 GIT_BEGIN_DECL
 
+#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
+#define GIT_IDXENTRY_STAGEMASK (0x3000)
+#define GIT_IDXENTRY_EXTENDED  (0x4000)
+#define GIT_IDXENTRY_VALID     (0x8000)
+#define GIT_IDXENTRY_STAGESHIFT 12
+
 /** Memory representation of an index file. */
 typedef struct git_index git_index;
 
