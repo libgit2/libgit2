@@ -31,7 +31,8 @@ BEGIN_TEST(query_details_test)
 		const git_person *author, *committer;
 		const char *message, *message_short;
 		time_t commit_time;
-		unsigned int parents;
+		unsigned int parents, p;
+		git_commit *parent;
 
 		git_oid_mkstr(&id, commit_ids[i]);
 
@@ -52,6 +53,12 @@ BEGIN_TEST(query_details_test)
 		must_be_true(strchr(message_short, '\n') == NULL);
 		must_be_true(commit_time > 0);
 		must_be_true(0 <= parents && parents <= 2);
+		for (p = 0;p < parents;p++) {
+			parent = git_commit_parent(commit, p);
+			must_be_true(parent != NULL);
+			must_be_true(git_commit_author(parent) != NULL); // is it really a commit?
+		}
+		must_be_true(git_commit_parent(commit, parents) == NULL);
 	}
 
 	git_repository_free(repo);

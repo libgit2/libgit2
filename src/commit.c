@@ -272,6 +272,20 @@ unsigned int git_commit_parentcount(git_commit *commit)
 	return count;
 }
 
+git_commit * git_commit_parent(git_commit *commit, unsigned int n)
+{
+	git_commit_parents *parent;
+
+	assert(commit);
+	CHECK_FULL_PARSE();
+
+	for (parent = commit->parents; parent != NULL && n > 0; parent = parent->next) {
+		n--;
+	}
+
+	return parent ? parent->commit : NULL;
+}
+
 void git_commit_set_tree(git_commit *commit, git_tree *tree)
 {
 	assert(commit && tree);

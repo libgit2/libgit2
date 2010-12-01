@@ -102,6 +102,14 @@ GIT_EXTERN(const git_tree *) git_commit_tree(git_commit *commit);
 GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
 
 /**
+ * Get the specified parent of the commit.
+ * @param commit a previously loaded commit.
+ * @param n the position of the entry
+ * @return a pointer to the commit; NULL if out of bounds
+ */
+GIT_EXTERN(git_commit *) git_commit_parent(git_commit *commit, unsigned int n);
+
+/**
  * Add a new parent commit to an existing commit
  * @param commit the commit object
  * @param new_parent the new commit which will be a parent
