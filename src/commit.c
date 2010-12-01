@@ -257,6 +257,21 @@ time_t git_commit_time(git_commit *commit)
 	return commit->commit_time;
 }
 
+unsigned int git_commit_parentcount(git_commit *commit)
+{
+	git_commit_parents *parent;
+	unsigned int count = 0;
+
+	assert(commit);
+	CHECK_FULL_PARSE();
+
+	for (parent = commit->parents; parent != NULL; parent = parent->next) {
+		count++;
+	}
+
+	return count;
+}
+
 void git_commit_set_tree(git_commit *commit, git_tree *tree)
 {
 	assert(commit && tree);

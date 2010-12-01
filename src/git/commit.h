@@ -94,6 +94,14 @@ GIT_EXTERN(const git_person *) git_commit_author(git_commit *commit);
 GIT_EXTERN(const git_tree *) git_commit_tree(git_commit *commit);
 
 /**
+ * Get the number of parents of this commit
+ *
+ * @param commit a previously loaded commit.
+ * @return integer of count of parents
+ */
+GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
+
+/**
  * Add a new parent commit to an existing commit
  * @param commit the commit object
  * @param new_parent the new commit which will be a parent
