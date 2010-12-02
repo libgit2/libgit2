@@ -29,27 +29,7 @@
 #include "tree.h"
 #include "git/repository.h"
 
-static int resize_tree_array(git_tree *tree)
-{
-	git_tree_entry **new_entries;
-
-	tree->array_size *= 2; 
-	if (tree->array_size == 0)
-		tree->array_size = 8;
-
-	new_entries = git__malloc(tree->array_size * sizeof(git_tree_entry *));
-	if (new_entries == NULL)
-		return GIT_ENOMEM;
-
-	memcpy(new_entries, tree->entries, tree->entry_count * sizeof(git_tree_entry *));
-
-	free(tree->entries);
-	tree->entries = new_entries;
-
-	return GIT_SUCCESS;
-}
-
-int entry_cmp(const void *key, const void *array_member)
+int entry_search_cmp(const void *key, const void *array_member)
 {
 	const char *filename = (const char *)key;
 	const git_tree_entry *entry = *(const git_tree_entry **)(array_member);
@@ -65,24 +45,22 @@ int entry_sort_cmp(const void *a, const void *b)
 	return strcmp(entry_a->filename, entry_b->filename);
 }
 
-static void entry_resort(git_tree *tree)
-{
-	qsort(tree->entries, tree->entry_count, sizeof(git_tree_entry *), entry_sort_cmp);
-}
-
 static void free_tree_entries(git_tree *tree)
 {
-	size_t i;
+	unsigned int i;
 
 	if (tree == NULL)
 		return;
 
-	for (i = 0; i < tree->entry_count; ++i) {
-		free(tree->entries[i]->filename);
-		free(tree->entries[i]);
+	for (i = 0; i < tree->entries.length; ++i) {
+		git_tree_entry *e;
+		e = git_vector_get(&tree->entries, i);
+
+		free(e->filename);
+		free(e);
 	}
 
-	free(tree->entries);
+	git_vector_free(&tree->entries);
 }
 
 
@@ -112,7 +90,7 @@ void git_tree_entry_set_name(git_tree_entry *entry, const char *name)
 
 	free(entry->filename);
 	entry->filename = git__strdup(name);
-	entry_resort(entry->owner);
+	git_vector_sort(&entry->owner->entries);
 	entry->owner->object.modified = 1;
 }
 
@@ -149,28 +127,27 @@ int git_tree_entry_2object(git_object **object_out, git_tree_entry *entry)
 
 git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
 {
-	git_tree_entry **found;
+	int idx;
 
 	assert(tree && filename);
 
-	found = bsearch(filename, tree->entries, tree->entry_count, sizeof(git_tree_entry *), entry_cmp);
-	return found ? *found : NULL;
+	idx = git_vector_search(&tree->entries, filename);
+	if (idx == GIT_ENOTFOUND)
+		return NULL;
+
+	return git_vector_get(&tree->entries, idx);
 }
 
 git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
 {
 	assert(tree);
-
-	if (tree->entries == NULL)
-		return NULL;
-
-	return (idx >= 0 && idx < (int)tree->entry_count) ? tree->entries[idx] : NULL;
+	return git_vector_get(&tree->entries, (unsigned int)idx);
 }
 
 size_t git_tree_entrycount(git_tree *tree)
 {
 	assert(tree);
-	return tree->entry_count;
+	return tree->entries.length;
 }
 
 int git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes)
@@ -178,10 +155,6 @@ int git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, 
 	git_tree_entry *entry;
 
 	assert(tree && id && filename);
-
-	if (tree->entry_count >= tree->array_size)
-		if (resize_tree_array(tree) < 0)
-			return GIT_ENOMEM;
 
 	if ((entry = git__malloc(sizeof(git_tree_entry))) == NULL)
 		return GIT_ENOMEM;
@@ -193,8 +166,10 @@ int git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, 
 	entry->attr = attributes;
 	entry->owner = tree;
 
-	tree->entries[tree->entry_count++] = entry;
-	entry_resort(tree);
+	if (git_vector_insert(&tree->entries, entry) < 0)
+		return GIT_ENOMEM;
+
+	git_vector_sort(&tree->entries);
 
 	tree->object.modified = 1;
 	return GIT_SUCCESS;
@@ -206,32 +181,28 @@ int git_tree_remove_entry_byindex(git_tree *tree, int idx)
 
 	assert(tree);
 
-	if (idx < 0 || idx >= (int)tree->entry_count)
+	remove_ptr = git_vector_get(&tree->entries, (unsigned int)idx);
+	if (remove_ptr == NULL)
 		return GIT_ENOTFOUND;
-
-	remove_ptr = tree->entries[idx];
-	tree->entries[idx] = tree->entries[--tree->entry_count];
 
 	free(remove_ptr->filename);
 	free(remove_ptr);
-	entry_resort(tree);
 
 	tree->object.modified = 1;
-	return GIT_SUCCESS;
+
+	return git_vector_remove(&tree->entries, (unsigned int)idx);
 }
 
 int git_tree_remove_entry_byname(git_tree *tree, const char *filename)
 {
-	git_tree_entry **entry_ptr;
 	int idx;
 
 	assert(tree && filename);
 
-	entry_ptr = bsearch(filename, tree->entries, tree->entry_count, sizeof(git_tree_entry *), entry_cmp);
-	if (entry_ptr == NULL)
+	idx = git_vector_search(&tree->entries, filename);
+	if (idx == GIT_ENOTFOUND)
 		return GIT_ENOTFOUND;
 
-	idx = (int)(entry_ptr - tree->entries);
 	return git_tree_remove_entry_byindex(tree, idx);
 }
 
@@ -242,14 +213,15 @@ int git_tree__writeback(git_tree *tree, git_odb_source *src)
 
 	assert(tree && src);
 
-	if (tree->entries == NULL)
+	if (tree->entries.length == 0)
 		return GIT_EMISSINGOBJDATA;
 
-	entry_resort(tree);
+	git_vector_sort(&tree->entries);
 
-	for (i = 0; i < tree->entry_count; ++i) {
+	for (i = 0; i < tree->entries.length; ++i) {
 		git_tree_entry *entry;
-		entry = tree->entries[i];
+
+		entry = git_vector_get(&tree->entries, i);
 	
 		sprintf(filemode, "%06o ", entry->attr);
 
@@ -265,23 +237,17 @@ int git_tree__writeback(git_tree *tree, git_odb_source *src)
 static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 {
 	static const size_t avg_entry_size = 40;
+	unsigned int expected_size;
 	int error = 0;
 
+	expected_size = (tree->object.source.raw.len / avg_entry_size) + 1;
+
 	free_tree_entries(tree);
-
-	tree->entry_count = 0;
-	tree->array_size = (tree->object.source.raw.len / avg_entry_size) + 1;
-	tree->entries = git__malloc(tree->array_size * sizeof(git_tree_entry *));
-
-	if (tree->entries == NULL)
+	if (git_vector_init(&tree->entries, expected_size, entry_sort_cmp, entry_search_cmp) < 0)
 		return GIT_ENOMEM;
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
-
-		if (tree->entry_count >= tree->array_size)
-			if (resize_tree_array(tree) < 0)
-				return GIT_ENOMEM;
 
 		entry = git__malloc(sizeof(git_tree_entry));
 		if (entry == NULL) {
@@ -289,7 +255,8 @@ static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 			break;
 		}
 
-		tree->entries[tree->entry_count++] = entry;
+		if (git_vector_insert(&tree->entries, entry) < 0)
+			return GIT_ENOMEM;
 
 		entry->owner = tree;
 		entry->attr = strtol(buffer, &buffer, 8);

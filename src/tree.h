@@ -3,6 +3,7 @@
 
 #include <git/tree.h>
 #include "repository.h"
+#include "vector.h"
 
 struct git_tree_entry {
 	unsigned int attr;
@@ -14,10 +15,7 @@ struct git_tree_entry {
 
 struct git_tree {
 	git_object object;
-
-	git_tree_entry **entries;
-	size_t entry_count;
-	size_t array_size;
+	git_vector entries;
 };
 
 void git_tree__free(git_tree *tree);

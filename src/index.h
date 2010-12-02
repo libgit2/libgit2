@@ -3,6 +3,7 @@
 
 #include "fileops.h"
 #include "filelock.h"
+#include "vector.h"
 #include "git/odb.h"
 #include "git/index.h"
 
@@ -24,11 +25,8 @@ struct git_index {
 	char *index_file_path;
 
 	time_t last_modified;
+	git_vector entries;
 
-	git_index_entry *entries;
-	unsigned int entries_size;
-
-	unsigned int entry_count;
 	unsigned int sorted:1,
 				 on_disk:1;
 

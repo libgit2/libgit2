@@ -7,26 +7,32 @@
 
 #define TEST_INDEX_PATH "../t0600-objects/index"
 
+/*
 void print_entries(git_index *index)
 {
 	unsigned int i;
 
-	for (i = 0; i < index->entry_count; ++i)
+	for (i = 0; i < index->entries.length; ++i)
 		printf("%d: %s\n", i, index->entries[i].path);
 }
+*/
 
 void randomize_entries(git_index *index)
 {
 	unsigned int i, j;
-	git_index_entry tmp;
+	git_index_entry *tmp;
+	git_index_entry **entries;
+
+	entries = (git_index_entry **)index->entries.contents;
 
 	srand((unsigned int)time(NULL));
 
-	for (i = 0; i < index->entry_count; ++i) {
-		j = rand() % index->entry_count;
-		memcpy(&tmp, &index->entries[j], sizeof(git_index_entry));
-		memcpy(&index->entries[j], &index->entries[i], sizeof(git_index_entry));
-		memcpy(&index->entries[i], &tmp, sizeof(git_index_entry));
+	for (i = 0; i < index->entries.length; ++i) {
+		j = rand() % index->entries.length;
+
+		tmp = entries[j];
+		entries[j] = entries[i];
+		entries[i] = tmp;
 	}
 
 	index->sorted = 0;
@@ -35,6 +41,9 @@ void randomize_entries(git_index *index)
 BEGIN_TEST(index_sort_test)
 	git_index *index;
 	unsigned int i;
+	git_index_entry **entries;
+
+	entries = (git_index_entry **)index->entries.contents;
 
 	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
 	must_pass(git_index_read(index));
@@ -44,9 +53,8 @@ BEGIN_TEST(index_sort_test)
 	git_index__sort(index);
 	must_be_true(index->sorted);
 
-	for (i = 1; i < index->entry_count; ++i)
-		must_be_true(strcmp(index->entries[i - 1].path,
-					index->entries[i].path) < 0);
+	for (i = 1; i < index->entries.length; ++i)
+		must_be_true(strcmp(entries[i - 1]->path, entries[i]->path) < 0);
 
 	git_index_free(index);
 END_TEST
