@@ -36,9 +36,42 @@ GIT_BEGIN_DECL
  *
  * @param repository pointer to the repo which will be opened
  * @param path the path to the repository
- * @return the new repository handle; NULL on error
+ * @return 0 on sucess; error code otherwise
  */
 GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
+
+
+/**
+ * Open a git repository by manually specifying all its paths
+ *
+ * @param repository pointer to the repo which will be opened
+ *
+ * @param git_dir The full path to the repository folder
+ *		e.g. a '.git' folder for live repos, any folder for bare
+ *		Equivalent to $GIT_DIR. 
+ *		Cannot be NULL.
+ *
+ * @param git_object_directory The full path to the ODB folder.
+ *		the folder where all the loose and packed objects are stored
+ *		Equivalent to $GIT_OBJECT_DIRECTORY.
+ *		If NULL, "$GIT_DIR/objects/" is assumed.
+ *
+ * @param git_index_file The full path to the index (dircache) file
+ *		Equivalent to $GIT_INDEX_FILE.
+ *		If NULL, "$GIT_DIR/index" is assumed.
+ *
+ * @param git_work_tree The full path to the working tree of the repository,
+ *		if the repository is not bare.
+ *		Equivalent to $GIT_WORK_TREE.
+ *		If NULL, the repository is assumed to be bare.
+ *
+ * @return 0 on sucess; error code otherwise
+ */
+GIT_EXTERN(int) git_repository_open2(git_repository **repository,
+		const char *git_dir,
+		const char *git_object_directory,
+		const char *git_index_file,
+		const char *git_work_tree);
 
 
 /**

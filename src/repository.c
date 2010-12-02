@@ -31,6 +31,11 @@
 #include "blob.h"
 #include "fileops.h"
 
+#define GIT_FOLDER "/.git/"
+#define GIT_OBJECTS_FOLDER "objects/"
+#define GIT_INDEX_FILE "index"
+#define GIT_HEAD_FILE "HEAD"
+
 static const int default_table_size = 32;
 static const double max_load_factor = 0.65;
 
@@ -66,7 +71,70 @@ int git__objtable_haskey(void *object, const void *key)
 	return (git_oid_cmp(oid, &obj->id) == 0);
 }
 
-static int parse_repository_folders(git_repository *repo, const char *repository_path)
+
+
+static int assign_repository_folders(git_repository *repo,
+		const char *git_dir,
+		const char *git_object_directory,
+		const char *git_index_file,
+		const char *git_work_tree)
+{
+	char path_aux[GIT_PATH_MAX];
+	size_t path_len;
+
+	assert(repo);
+
+	if (git_dir == NULL || gitfo_isdir(git_dir) < 0)
+		return GIT_ENOTFOUND;
+
+
+	/* store GIT_DIR */
+	path_len = strlen(git_dir);
+	strcpy(path_aux, git_dir);
+
+	if (path_aux[path_len - 1] != '/') {
+		path_aux[path_len] = '/';
+		path_aux[path_len + 1] = 0;
+
+		path_len = path_len + 1;
+	}
+
+	repo->path_repository = git__strdup(path_aux);
+
+	/* store GIT_OBJECT_DIRECTORY */
+	if (git_object_directory == NULL)
+		strcpy(path_aux + path_len, GIT_OBJECTS_FOLDER);
+	else
+		strcpy(path_aux, git_object_directory);
+
+	if (gitfo_isdir(path_aux) < 0)
+		return GIT_ENOTFOUND;
+
+	repo->path_odb = git__strdup(path_aux);
+
+
+	/* store GIT_INDEX_FILE */
+	if (git_index_file == NULL)
+		strcpy(path_aux + path_len, GIT_INDEX_FILE);
+	else
+		strcpy(path_aux, git_index_file); 
+
+	if (gitfo_exists(path_aux) < 0)
+		return GIT_ENOTFOUND;
+
+	repo->path_index = git__strdup(path_aux);
+
+
+	/* store GIT_WORK_TREE */
+	if (git_work_tree == NULL)
+		repo->is_bare = 1;
+	else
+		repo->path_workdir = git__strdup(git_work_tree);
+
+	return GIT_SUCCESS;
+}
+
+static int guess_repository_folders(git_repository *repo, const char *repository_path)
 {
 	char path_aux[GIT_PATH_MAX], *last_folder;
 	int path_len;
@@ -87,13 +155,13 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 	repo->path_repository = git__strdup(path_aux);
 
 	/* objects database */
-	strcpy(path_aux + path_len, "objects/");
+	strcpy(path_aux + path_len, GIT_OBJECTS_FOLDER);
 	if (gitfo_isdir(path_aux) < 0)
 		return GIT_ENOTAREPO;
 	repo->path_odb = git__strdup(path_aux);
 
 	/* HEAD file */
-	strcpy(path_aux + path_len, "HEAD");
+	strcpy(path_aux + path_len, GIT_HEAD_FILE);
 	if (gitfo_exists(path_aux) < 0)
 		return GIT_ENOTAREPO;
 
@@ -104,11 +172,11 @@ static int parse_repository_folders(git_repository *repo, const char *repository
 	while (*last_folder != '/')
 		last_folder--;
 
-	if (strcmp(last_folder, "/.git/") == 0) {
+	if (strcmp(last_folder, GIT_FOLDER) == 0) {
 		repo->is_bare = 0;
 
 		/* index file */
-		strcpy(path_aux + path_len, "index");
+		strcpy(path_aux + path_len, GIT_INDEX_FILE);
 		repo->path_index = git__strdup(path_aux);
 
 		/* working dir */
@@ -144,6 +212,42 @@ git_repository *git_repository__alloc()
 	return repo;
 }
 
+int git_repository_open2(git_repository **repo_out,
+		const char *git_dir,
+		const char *git_object_directory,
+		const char *git_index_file,
+		const char *git_work_tree)
+{
+	git_repository *repo;
+	int error = GIT_SUCCESS;
+
+	assert(repo_out);
+
+	repo = git_repository__alloc();
+	if (repo == NULL)
+		return GIT_ENOMEM;
+
+	error = assign_repository_folders(repo, 
+			git_dir, 
+			git_object_directory,
+			git_index_file,
+			git_work_tree);
+
+	if (error < 0)
+		goto cleanup;
+
+	error = git_odb_open(&repo->db, repo->path_odb);
+	if (error < 0)
+		goto cleanup;
+
+	*repo_out = repo;
+	return GIT_SUCCESS;
+
+cleanup:
+	git_repository_free(repo);
+	return error;
+}
+
 int git_repository_open(git_repository **repo_out, const char *path)
 {
 	git_repository *repo;
@@ -155,7 +259,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	if (repo == NULL)
 		return GIT_ENOMEM;
 
-	error = parse_repository_folders(repo, path);
+	error = guess_repository_folders(repo, path);
 	if (error < 0)
 		goto cleanup;
 
