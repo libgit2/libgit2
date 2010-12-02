@@ -4,19 +4,15 @@
 #include "git/commit.h"
 #include "tree.h"
 #include "repository.h"
+#include "vector.h"
 
 #include <time.h>
-
-typedef struct git_commit_parents {
-	git_commit *commit;
-	struct git_commit_parents *next;
-} git_commit_parents;
 
 struct git_commit {
 	git_object object;
 
 	time_t commit_time;
-	git_commit_parents *parents;
+	git_vector parents;
 
 	git_tree *tree;
 	git_person *author;

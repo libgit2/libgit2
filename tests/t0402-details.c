@@ -52,7 +52,7 @@ BEGIN_TEST(query_details_test)
 		must_be_true(strchr(message, '\n') != NULL);
 		must_be_true(strchr(message_short, '\n') == NULL);
 		must_be_true(commit_time > 0);
-		must_be_true(0 <= parents && parents <= 2);
+		must_be_true(parents <= 2);
 		for (p = 0;p < parents;p++) {
 			parent = git_commit_parent(commit, p);
 			must_be_true(parent != NULL);

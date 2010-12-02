@@ -123,7 +123,7 @@ static git_revwalk_commit *commit_to_walkcommit(git_revwalk *walk, git_commit *c
 static git_revwalk_commit *insert_commit(git_revwalk *walk, git_commit *commit_object)
 {
 	git_revwalk_commit *commit;
-	git_commit_parents *parents;
+	unsigned int i;
 
 	assert(walk && commit_object);
 
@@ -139,13 +139,16 @@ static git_revwalk_commit *insert_commit(git_revwalk *walk, git_commit *commit_o
 
 	commit->seen = 1;
 
-	for (parents = commit->commit_object->parents; parents != NULL; parents = parents->next) {
+	for (i = 0; i < commit->commit_object->parents.length; ++i) {
+		git_commit *parent_object;
 		git_revwalk_commit *parent;
 
-		if ((parent = commit_to_walkcommit(walk, parents->commit)) == NULL)
+		parent_object = git_vector_get(&commit->commit_object->parents, i);
+
+		if ((parent = commit_to_walkcommit(walk, parent_object)) == NULL)
 			return NULL;
 
-		parent = insert_commit(walk, parents->commit);
+		parent = insert_commit(walk, parent_object);
 		if (parent == NULL)
 			return NULL;
 

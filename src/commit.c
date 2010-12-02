@@ -43,16 +43,7 @@
 
 static void clear_parents(git_commit *commit)
 {
-	git_commit_parents *node, *next_node;
-
-	node = commit->parents;
-	while (node) {
-		next_node = node->next;
-		free(node);
-		node = next_node;
-	}
-
-	commit->parents = NULL;
+	git_vector_clear(&commit->parents);
 }
 
 void git_commit__free(git_commit *commit)
@@ -74,18 +65,18 @@ const git_oid *git_commit_id(git_commit *c)
 
 int git_commit__writeback(git_commit *commit, git_odb_source *src)
 {
-	git_commit_parents *parent;
+	unsigned int i;
 
 	if (commit->tree == NULL)
 		return GIT_EMISSINGOBJDATA;
 
 	git__write_oid(src, "tree", git_tree_id(commit->tree));
 
-	parent = commit->parents;
+	for (i = 0; i < commit->parents.length; ++i) {
+		git_commit *parent;
 
-	while (parent != NULL) {
-		git__write_oid(src, "parent", git_commit_id(parent->commit));
-		parent = parent->next;
+		parent = git_vector_get(&commit->parents, i);
+		git__write_oid(src, "parent", git_commit_id(parent));
 	}
 
 	if (commit->author == NULL)
@@ -115,6 +106,14 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	git_oid oid;
 	int error;
 
+	/* first parse; the vector hasn't been initialized yet */
+	if (commit->parents.contents == NULL) {
+		git_vector_init(&commit->parents, 4, NULL, NULL);
+	}
+
+	clear_parents(commit);
+
+
 	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < 0)
 		return error;
 
@@ -125,21 +124,14 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	 * TODO: commit grafts!
 	 */
 
-	clear_parents(commit);
-
 	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == 0) {
 		git_commit *parent;
-		git_commit_parents *node;
 
 		if ((error = git_repository_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < 0)
 			return error;
 
-		if ((node = git__malloc(sizeof(git_commit_parents))) == NULL)
+		if (git_vector_insert(&commit->parents, parent) < 0)
 			return GIT_ENOMEM;
-
-		node->commit = parent;
-		node->next = commit->parents;
-		commit->parents = node;
 	}
 
 
@@ -259,31 +251,14 @@ time_t git_commit_time(git_commit *commit)
 
 unsigned int git_commit_parentcount(git_commit *commit)
 {
-	git_commit_parents *parent;
-	unsigned int count = 0;
-
 	assert(commit);
-	CHECK_FULL_PARSE();
-
-	for (parent = commit->parents; parent != NULL; parent = parent->next) {
-		count++;
-	}
-
-	return count;
+	return commit->parents.length;
 }
 
 git_commit * git_commit_parent(git_commit *commit, unsigned int n)
 {
-	git_commit_parents *parent;
-
 	assert(commit);
-	CHECK_FULL_PARSE();
-
-	for (parent = commit->parents; parent != NULL && n > 0; parent = parent->next) {
-		n--;
-	}
-
-	return parent ? parent->commit : NULL;
+	return git_vector_get(&commit->parents, n);
 }
 
 void git_commit_set_tree(git_commit *commit, git_tree *tree)
@@ -334,17 +309,9 @@ void git_commit_set_message(git_commit *commit, const char *message)
 	/* TODO: extract short message */
 }
 
-void git_commit_add_parent(git_commit *commit, git_commit *new_parent)
+int git_commit_add_parent(git_commit *commit, git_commit *new_parent)
 {
-	git_commit_parents *node;
-
-	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
-
-	if ((node = git__malloc(sizeof(git_commit_parents))) == NULL)
-		return;
-
-	node->commit = new_parent;
-	node->next = commit->parents;
-	commit->parents = node;
+	commit->object.modified = 1;
+	return git_vector_insert(&commit->parents, new_parent);
 }

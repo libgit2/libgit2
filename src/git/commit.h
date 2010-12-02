@@ -113,8 +113,9 @@ GIT_EXTERN(git_commit *) git_commit_parent(git_commit *commit, unsigned int n);
  * Add a new parent commit to an existing commit
  * @param commit the commit object
  * @param new_parent the new commit which will be a parent
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(void) git_commit_add_parent(git_commit *commit, git_commit *new_parent);
+GIT_EXTERN(int) git_commit_add_parent(git_commit *commit, git_commit *new_parent);
 
 /**
  * Set the message of a commit
