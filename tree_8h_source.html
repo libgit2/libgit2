@@ -77,159 +77,163 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00026"></a>00026 <span class="comment"> * The generated tree object is owned by the revision</span>
 <a name="l00027"></a>00027 <span class="comment"> * repo and shall not be freed by the user.</span>
 <a name="l00028"></a>00028 <span class="comment"> *</span>
-<a name="l00029"></a>00029 <span class="comment"> * @param repo the repo to use when locating the tree.</span>
-<a name="l00030"></a>00030 <span class="comment"> * @param id identity of the tree to locate.</span>
-<a name="l00031"></a>00031 <span class="comment"> * @return the tree; NULL if the tree could not be created</span>
-<a name="l00032"></a>00032 <span class="comment"> */</span>
-<a name="l00033"></a>00033 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *) <a class="code" href="group__git__tree.html#gab11c583c3a7f0a0be244d1c45ff681ba" title="Lookup a tree object from the repository.">git_tree_lookup</a>(<a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>);
-<a name="l00034"></a>00034 
-<a name="l00035"></a>00035 <span class="comment">/*</span>
-<a name="l00036"></a>00036 <span class="comment"> * Create a new in-memory git_tree.</span>
-<a name="l00037"></a>00037 <span class="comment"> *</span>
-<a name="l00038"></a>00038 <span class="comment"> * The tree object must be manually filled using</span>
-<a name="l00039"></a>00039 <span class="comment"> * setter methods before it can be written to its</span>
-<a name="l00040"></a>00040 <span class="comment"> * repository.</span>
-<a name="l00041"></a>00041 <span class="comment"> *</span>
-<a name="l00042"></a>00042 <span class="comment"> * @param repo The repository where the object will reside</span>
-<a name="l00043"></a>00043 <span class="comment"> * @return the object if creation was posible; NULL otherwise</span>
-<a name="l00044"></a>00044 <span class="comment"> */</span>
-<a name="l00045"></a>00045 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *) git_tree_new(<a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
-<a name="l00046"></a>00046 <span class="comment"></span>
-<a name="l00047"></a>00047 <span class="comment">/**</span>
-<a name="l00048"></a>00048 <span class="comment"> * Get the id of a tree.</span>
-<a name="l00049"></a>00049 <span class="comment"> * @param tree a previously loaded tree.</span>
-<a name="l00050"></a>00050 <span class="comment"> * @return object identity for the tree.</span>
-<a name="l00051"></a>00051 <span class="comment"> */</span>
-<a name="l00052"></a>00052 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__tree.html#ga9a86861abdde52861651580e6660393c" title="Get the id of a tree.">git_tree_id</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree);
-<a name="l00053"></a>00053 
-<a name="l00054"></a>00054 <span class="comment"></span>
-<a name="l00055"></a>00055 <span class="comment">/**</span>
-<a name="l00056"></a>00056 <span class="comment"> * Get the number of entries listed in a tree</span>
-<a name="l00057"></a>00057 <span class="comment"> * @param tree a previously loaded tree.</span>
-<a name="l00058"></a>00058 <span class="comment"> * @return the number of entries in the tree</span>
-<a name="l00059"></a>00059 <span class="comment"> */</span>
-<a name="l00060"></a>00060 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">size_t</span>) <a class="code" href="group__git__tree.html#gab1e371cbf5ca69677fb175b9a07b5fd9" title="Get the number of entries listed in a tree.">git_tree_entrycount</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree);
-<a name="l00061"></a>00061 <span class="comment"></span>
-<a name="l00062"></a>00062 <span class="comment">/**</span>
-<a name="l00063"></a>00063 <span class="comment"> * Lookup a tree entry by its filename</span>
-<a name="l00064"></a>00064 <span class="comment"> * @param tree a previously loaded tree.</span>
-<a name="l00065"></a>00065 <span class="comment"> * @param filename the filename of the desired entry</span>
-<a name="l00066"></a>00066 <span class="comment"> * @return the tree entry; NULL if not found</span>
-<a name="l00067"></a>00067 <span class="comment"> */</span>
-<a name="l00068"></a>00068 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *) <a class="code" href="group__git__tree.html#ga30a6ed6a2cac4177f6a19a9d6bac48ac" title="Lookup a tree entry by its filename.">git_tree_entry_byname</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, const <span class="keywordtype">char</span> *filename);
-<a name="l00069"></a>00069 <span class="comment"></span>
-<a name="l00070"></a>00070 <span class="comment">/**</span>
-<a name="l00071"></a>00071 <span class="comment"> * Lookup a tree entry by its position in the tree</span>
-<a name="l00072"></a>00072 <span class="comment"> * @param tree a previously loaded tree.</span>
-<a name="l00073"></a>00073 <span class="comment"> * @param idx the position in the entry list</span>
-<a name="l00074"></a>00074 <span class="comment"> * @return the tree entry; NULL if not found</span>
-<a name="l00075"></a>00075 <span class="comment"> */</span>
-<a name="l00076"></a>00076 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *) <a class="code" href="group__git__tree.html#ga11522bbc09424534b985a5be2dd2ce4e" title="Lookup a tree entry by its position in the tree.">git_tree_entry_byindex</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, <span class="keywordtype">int</span> idx);
-<a name="l00077"></a>00077 <span class="comment"></span>
-<a name="l00078"></a>00078 <span class="comment">/**</span>
-<a name="l00079"></a>00079 <span class="comment"> * Get the UNIX file attributes of a tree entry</span>
-<a name="l00080"></a>00080 <span class="comment"> * @param entry a tree entry</span>
-<a name="l00081"></a>00081 <span class="comment"> * @return attributes as an integer</span>
-<a name="l00082"></a>00082 <span class="comment"> */</span>
-<a name="l00083"></a>00083 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#gaf3928522c71c87576bc3e53f69953cb9" title="Get the UNIX file attributes of a tree entry.">git_tree_entry_attributes</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
-<a name="l00084"></a>00084 <span class="comment"></span>
-<a name="l00085"></a>00085 <span class="comment">/**</span>
-<a name="l00086"></a>00086 <span class="comment"> * Get the filename of a tree entry</span>
-<a name="l00087"></a>00087 <span class="comment"> * @param entry a tree entry</span>
-<a name="l00088"></a>00088 <span class="comment"> * @return the name of the file</span>
-<a name="l00089"></a>00089 <span class="comment"> */</span>
-<a name="l00090"></a>00090 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__tree.html#ga0ff9f1ba55153abf0dadc175450bac6c" title="Get the filename of a tree entry.">git_tree_entry_name</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
-<a name="l00091"></a>00091 <span class="comment"></span>
-<a name="l00092"></a>00092 <span class="comment">/**</span>
-<a name="l00093"></a>00093 <span class="comment"> * Get the id of the object pointed by the entry</span>
-<a name="l00094"></a>00094 <span class="comment"> * @param entry a tree entry</span>
-<a name="l00095"></a>00095 <span class="comment"> * @return the oid of the object</span>
-<a name="l00096"></a>00096 <span class="comment"> */</span>
-<a name="l00097"></a>00097 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__tree.html#gac111a33448dee7e2031269a591a1dcfc" title="Get the id of the object pointed by the entry.">git_tree_entry_id</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
-<a name="l00098"></a>00098 <span class="comment"></span>
-<a name="l00099"></a>00099 <span class="comment">/**</span>
-<a name="l00100"></a>00100 <span class="comment"> * Convert a tree entry to the git_object it points too.</span>
-<a name="l00101"></a>00101 <span class="comment"> * @param entry a tree entry</span>
-<a name="l00102"></a>00102 <span class="comment"> * @return a reference to the pointed object in the repository</span>
-<a name="l00103"></a>00103 <span class="comment"> */</span>
-<a name="l00104"></a>00104 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(git_object *) <a class="code" href="group__git__tree.html#gaa5d391aabac6531f36af9167f1f605f6" title="Convert a tree entry to the git_object it points too.">git_tree_entry_2object</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
-<a name="l00105"></a>00105 <span class="comment"></span>
-<a name="l00106"></a>00106 <span class="comment">/**</span>
-<a name="l00107"></a>00107 <span class="comment"> * Add a new entry to a tree.</span>
-<a name="l00108"></a>00108 <span class="comment"> *</span>
-<a name="l00109"></a>00109 <span class="comment"> * This will mark the tree as modified; the new entry will</span>
-<a name="l00110"></a>00110 <span class="comment"> * be written back to disk on the next git_object_write()</span>
-<a name="l00111"></a>00111 <span class="comment"> *</span>
-<a name="l00112"></a>00112 <span class="comment"> * @param tree Tree object to store the entry</span>
-<a name="l00113"></a>00113 <span class="comment"> * @iparam id OID for the tree entry</span>
-<a name="l00114"></a>00114 <span class="comment"> * @param filename Filename for the tree entry</span>
-<a name="l00115"></a>00115 <span class="comment"> * @param attributes UNIX file attributes for the entry</span>
-<a name="l00116"></a>00116 <span class="comment"> * @return 0 on success; otherwise error code</span>
-<a name="l00117"></a>00117 <span class="comment"> */</span>
-<a name="l00118"></a>00118 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#ga8f555e25bd29af7398d30534ef75db69" title="Add a new entry to a tree.">git_tree_add_entry</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>, const <span class="keywordtype">char</span> *filename, <span class="keywordtype">int</span> attributes);
-<a name="l00119"></a>00119 <span class="comment"></span>
-<a name="l00120"></a>00120 <span class="comment">/**</span>
-<a name="l00121"></a>00121 <span class="comment"> * Remove an entry by its index.</span>
-<a name="l00122"></a>00122 <span class="comment"> *</span>
-<a name="l00123"></a>00123 <span class="comment"> * Index must be &gt;= 0 and &lt; than git_tree_entrycount().</span>
-<a name="l00124"></a>00124 <span class="comment"> *</span>
-<a name="l00125"></a>00125 <span class="comment"> * This will mark the tree as modified; the modified entry will</span>
-<a name="l00126"></a>00126 <span class="comment"> * be written back to disk on the next git_object_write()</span>
-<a name="l00127"></a>00127 <span class="comment"> *</span>
-<a name="l00128"></a>00128 <span class="comment"> * @param tree Tree where to remove the entry</span>
-<a name="l00129"></a>00129 <span class="comment"> * @param idx index of the entry</span>
-<a name="l00130"></a>00130 <span class="comment"> * @return 0 on successful removal; GIT_ENOTFOUND if the entry wasn&#39;t found</span>
-<a name="l00131"></a>00131 <span class="comment"> */</span>
-<a name="l00132"></a>00132 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#gab0df4984eda1d0de6c7fd9505270c3ff" title="Remove an entry by its index.">git_tree_remove_entry_byindex</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, <span class="keywordtype">int</span> idx);
-<a name="l00133"></a>00133 <span class="comment"></span>
-<a name="l00134"></a>00134 <span class="comment">/**</span>
-<a name="l00135"></a>00135 <span class="comment"> * Remove an entry by its filename.</span>
-<a name="l00136"></a>00136 <span class="comment"> *</span>
-<a name="l00137"></a>00137 <span class="comment"> * This will mark the tree as modified; the modified entry will</span>
-<a name="l00138"></a>00138 <span class="comment"> * be written back to disk on the next git_object_write()</span>
-<a name="l00139"></a>00139 <span class="comment"> *</span>
-<a name="l00140"></a>00140 <span class="comment"> * @param tree Tree where to remove the entry</span>
-<a name="l00141"></a>00141 <span class="comment"> * @param filename File name of the entry</span>
-<a name="l00142"></a>00142 <span class="comment"> * @return 0 on successful removal; GIT_ENOTFOUND if the entry wasn&#39;t found</span>
-<a name="l00143"></a>00143 <span class="comment"> */</span>
-<a name="l00144"></a>00144 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#ga462e708b423fd7071858a99cfcf732ab" title="Remove an entry by its filename.">git_tree_remove_entry_byname</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, const <span class="keywordtype">char</span> *filename);
-<a name="l00145"></a>00145 <span class="comment"></span>
-<a name="l00146"></a>00146 <span class="comment">/**</span>
-<a name="l00147"></a>00147 <span class="comment"> * Change the SHA1 id of a tree entry.</span>
-<a name="l00148"></a>00148 <span class="comment"> *</span>
-<a name="l00149"></a>00149 <span class="comment"> * This will mark the tree that contains the entry as modified; </span>
-<a name="l00150"></a>00150 <span class="comment"> * the modified entry will be written back to disk on the next git_object_write()</span>
-<a name="l00151"></a>00151 <span class="comment"> *</span>
-<a name="l00152"></a>00152 <span class="comment"> * @param entry Entry object which will be modified</span>
-<a name="l00153"></a>00153 <span class="comment"> * @param oid new SHA1 oid for the entry</span>
-<a name="l00154"></a>00154 <span class="comment"> */</span>
-<a name="l00155"></a>00155 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tree.html#ga26aba87c69ba7b45eb050809744fe45d" title="Change the SHA1 id of a tree entry.">git_tree_entry_set_id</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *oid);
-<a name="l00156"></a>00156 <span class="comment"></span>
-<a name="l00157"></a>00157 <span class="comment">/**</span>
-<a name="l00158"></a>00158 <span class="comment"> * Change the filename of a tree entry.</span>
-<a name="l00159"></a>00159 <span class="comment"> *</span>
-<a name="l00160"></a>00160 <span class="comment"> * This will mark the tree that contains the entry as modified; </span>
-<a name="l00161"></a>00161 <span class="comment"> * the modified entry will be written back to disk on the next git_object_write()</span>
-<a name="l00162"></a>00162 <span class="comment"> *</span>
-<a name="l00163"></a>00163 <span class="comment"> * @param entry Entry object which will be modified</span>
-<a name="l00164"></a>00164 <span class="comment"> * @param oid new filename for the entry</span>
-<a name="l00165"></a>00165 <span class="comment"> */</span>
-<a name="l00166"></a>00166 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tree.html#ga9b7e5af23b468472a301d632842e14f5" title="Change the filename of a tree entry.">git_tree_entry_set_name</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry, const <span class="keywordtype">char</span> *name);
-<a name="l00167"></a>00167 <span class="comment"></span>
-<a name="l00168"></a>00168 <span class="comment">/**</span>
-<a name="l00169"></a>00169 <span class="comment"> * Change the attributes of a tree entry.</span>
-<a name="l00170"></a>00170 <span class="comment"> *</span>
-<a name="l00171"></a>00171 <span class="comment"> * This will mark the tree that contains the entry as modified; </span>
-<a name="l00172"></a>00172 <span class="comment"> * the modified entry will be written back to disk on the next git_object_write()</span>
-<a name="l00173"></a>00173 <span class="comment"> *</span>
-<a name="l00174"></a>00174 <span class="comment"> * @param entry Entry object which will be modified</span>
-<a name="l00175"></a>00175 <span class="comment"> * @param oid new attributes for the entry</span>
-<a name="l00176"></a>00176 <span class="comment"> */</span>
-<a name="l00177"></a>00177 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tree.html#ga19616e0002a2b028cfd30153190b2669" title="Change the attributes of a tree entry.">git_tree_entry_set_attributes</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry, <span class="keywordtype">int</span> attr);
-<a name="l00178"></a>00178 <span class="comment"></span>
-<a name="l00179"></a>00179 <span class="comment">/** @} */</span>
-<a name="l00180"></a>00180 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00181"></a>00181 <span class="preprocessor">#endif</span>
+<a name="l00029"></a>00029 <span class="comment"> * @param tree pointer to the looked up tree</span>
+<a name="l00030"></a>00030 <span class="comment"> * @param repo the repo to use when locating the tree.</span>
+<a name="l00031"></a>00031 <span class="comment"> * @param id identity of the tree to locate.</span>
+<a name="l00032"></a>00032 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00033"></a>00033 <span class="comment"> */</span>
+<a name="l00034"></a>00034 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#gae780bd2c7b4ed9c4399c106524eb883d" title="Lookup a tree object from the repository.">git_tree_lookup</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> **tree, <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>);
+<a name="l00035"></a>00035 <span class="comment"></span>
+<a name="l00036"></a>00036 <span class="comment">/**</span>
+<a name="l00037"></a>00037 <span class="comment"> * Create a new in-memory git_tree.</span>
+<a name="l00038"></a>00038 <span class="comment"> *</span>
+<a name="l00039"></a>00039 <span class="comment"> * The tree object must be manually filled using</span>
+<a name="l00040"></a>00040 <span class="comment"> * setter methods before it can be written to its</span>
+<a name="l00041"></a>00041 <span class="comment"> * repository.</span>
+<a name="l00042"></a>00042 <span class="comment"> *</span>
+<a name="l00043"></a>00043 <span class="comment"> * @param tree pointer to the new tree</span>
+<a name="l00044"></a>00044 <span class="comment"> * @param repo The repository where the object will reside</span>
+<a name="l00045"></a>00045 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00046"></a>00046 <span class="comment"> */</span>
+<a name="l00047"></a>00047 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#ga96680f5fbf852668c41715acb5e2e970" title="Create a new in-memory git_tree.">git_tree_new</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> **tree, <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
+<a name="l00048"></a>00048 <span class="comment"></span>
+<a name="l00049"></a>00049 <span class="comment">/**</span>
+<a name="l00050"></a>00050 <span class="comment"> * Get the id of a tree.</span>
+<a name="l00051"></a>00051 <span class="comment"> * @param tree a previously loaded tree.</span>
+<a name="l00052"></a>00052 <span class="comment"> * @return object identity for the tree.</span>
+<a name="l00053"></a>00053 <span class="comment"> */</span>
+<a name="l00054"></a>00054 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__tree.html#ga9a86861abdde52861651580e6660393c" title="Get the id of a tree.">git_tree_id</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree);
+<a name="l00055"></a>00055 
+<a name="l00056"></a>00056 <span class="comment"></span>
+<a name="l00057"></a>00057 <span class="comment">/**</span>
+<a name="l00058"></a>00058 <span class="comment"> * Get the number of entries listed in a tree</span>
+<a name="l00059"></a>00059 <span class="comment"> * @param tree a previously loaded tree.</span>
+<a name="l00060"></a>00060 <span class="comment"> * @return the number of entries in the tree</span>
+<a name="l00061"></a>00061 <span class="comment"> */</span>
+<a name="l00062"></a>00062 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">size_t</span>) <a class="code" href="group__git__tree.html#gab1e371cbf5ca69677fb175b9a07b5fd9" title="Get the number of entries listed in a tree.">git_tree_entrycount</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree);
+<a name="l00063"></a>00063 <span class="comment"></span>
+<a name="l00064"></a>00064 <span class="comment">/**</span>
+<a name="l00065"></a>00065 <span class="comment"> * Lookup a tree entry by its filename</span>
+<a name="l00066"></a>00066 <span class="comment"> * @param tree a previously loaded tree.</span>
+<a name="l00067"></a>00067 <span class="comment"> * @param filename the filename of the desired entry</span>
+<a name="l00068"></a>00068 <span class="comment"> * @return the tree entry; NULL if not found</span>
+<a name="l00069"></a>00069 <span class="comment"> */</span>
+<a name="l00070"></a>00070 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *) <a class="code" href="group__git__tree.html#ga30a6ed6a2cac4177f6a19a9d6bac48ac" title="Lookup a tree entry by its filename.">git_tree_entry_byname</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, const <span class="keywordtype">char</span> *filename);
+<a name="l00071"></a>00071 <span class="comment"></span>
+<a name="l00072"></a>00072 <span class="comment">/**</span>
+<a name="l00073"></a>00073 <span class="comment"> * Lookup a tree entry by its position in the tree</span>
+<a name="l00074"></a>00074 <span class="comment"> * @param tree a previously loaded tree.</span>
+<a name="l00075"></a>00075 <span class="comment"> * @param idx the position in the entry list</span>
+<a name="l00076"></a>00076 <span class="comment"> * @return the tree entry; NULL if not found</span>
+<a name="l00077"></a>00077 <span class="comment"> */</span>
+<a name="l00078"></a>00078 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *) <a class="code" href="group__git__tree.html#ga11522bbc09424534b985a5be2dd2ce4e" title="Lookup a tree entry by its position in the tree.">git_tree_entry_byindex</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, <span class="keywordtype">int</span> idx);
+<a name="l00079"></a>00079 <span class="comment"></span>
+<a name="l00080"></a>00080 <span class="comment">/**</span>
+<a name="l00081"></a>00081 <span class="comment"> * Get the UNIX file attributes of a tree entry</span>
+<a name="l00082"></a>00082 <span class="comment"> * @param entry a tree entry</span>
+<a name="l00083"></a>00083 <span class="comment"> * @return attributes as an integer</span>
+<a name="l00084"></a>00084 <span class="comment"> */</span>
+<a name="l00085"></a>00085 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#gaf3928522c71c87576bc3e53f69953cb9" title="Get the UNIX file attributes of a tree entry.">git_tree_entry_attributes</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
+<a name="l00086"></a>00086 <span class="comment"></span>
+<a name="l00087"></a>00087 <span class="comment">/**</span>
+<a name="l00088"></a>00088 <span class="comment"> * Get the filename of a tree entry</span>
+<a name="l00089"></a>00089 <span class="comment"> * @param entry a tree entry</span>
+<a name="l00090"></a>00090 <span class="comment"> * @return the name of the file</span>
+<a name="l00091"></a>00091 <span class="comment"> */</span>
+<a name="l00092"></a>00092 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__tree.html#ga0ff9f1ba55153abf0dadc175450bac6c" title="Get the filename of a tree entry.">git_tree_entry_name</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
+<a name="l00093"></a>00093 <span class="comment"></span>
+<a name="l00094"></a>00094 <span class="comment">/**</span>
+<a name="l00095"></a>00095 <span class="comment"> * Get the id of the object pointed by the entry</span>
+<a name="l00096"></a>00096 <span class="comment"> * @param entry a tree entry</span>
+<a name="l00097"></a>00097 <span class="comment"> * @return the oid of the object</span>
+<a name="l00098"></a>00098 <span class="comment"> */</span>
+<a name="l00099"></a>00099 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__tree.html#gac111a33448dee7e2031269a591a1dcfc" title="Get the id of the object pointed by the entry.">git_tree_entry_id</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
+<a name="l00100"></a>00100 <span class="comment"></span>
+<a name="l00101"></a>00101 <span class="comment">/**</span>
+<a name="l00102"></a>00102 <span class="comment"> * Convert a tree entry to the git_object it points too.</span>
+<a name="l00103"></a>00103 <span class="comment"> *</span>
+<a name="l00104"></a>00104 <span class="comment"> * @param object pointer to the converted object</span>
+<a name="l00105"></a>00105 <span class="comment"> * @param entry a tree entry</span>
+<a name="l00106"></a>00106 <span class="comment"> * @return a reference to the pointed object in the repository</span>
+<a name="l00107"></a>00107 <span class="comment"> */</span>
+<a name="l00108"></a>00108 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#gadacd98b726e35f11a4d306e293c7b623" title="Convert a tree entry to the git_object it points too.">git_tree_entry_2object</a>(<a class="code" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e" title="Representation of a generic object in a repository.">git_object</a> **<span class="keywordtype">object</span>, <a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry);
+<a name="l00109"></a>00109 <span class="comment"></span>
+<a name="l00110"></a>00110 <span class="comment">/**</span>
+<a name="l00111"></a>00111 <span class="comment"> * Add a new entry to a tree.</span>
+<a name="l00112"></a>00112 <span class="comment"> *</span>
+<a name="l00113"></a>00113 <span class="comment"> * This will mark the tree as modified; the new entry will</span>
+<a name="l00114"></a>00114 <span class="comment"> * be written back to disk on the next git_object_write()</span>
+<a name="l00115"></a>00115 <span class="comment"> *</span>
+<a name="l00116"></a>00116 <span class="comment"> * @param tree Tree object to store the entry</span>
+<a name="l00117"></a>00117 <span class="comment"> * @iparam id OID for the tree entry</span>
+<a name="l00118"></a>00118 <span class="comment"> * @param filename Filename for the tree entry</span>
+<a name="l00119"></a>00119 <span class="comment"> * @param attributes UNIX file attributes for the entry</span>
+<a name="l00120"></a>00120 <span class="comment"> * @return 0 on success; otherwise error code</span>
+<a name="l00121"></a>00121 <span class="comment"> */</span>
+<a name="l00122"></a>00122 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#ga8f555e25bd29af7398d30534ef75db69" title="Add a new entry to a tree.">git_tree_add_entry</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>, const <span class="keywordtype">char</span> *filename, <span class="keywordtype">int</span> attributes);
+<a name="l00123"></a>00123 <span class="comment"></span>
+<a name="l00124"></a>00124 <span class="comment">/**</span>
+<a name="l00125"></a>00125 <span class="comment"> * Remove an entry by its index.</span>
+<a name="l00126"></a>00126 <span class="comment"> *</span>
+<a name="l00127"></a>00127 <span class="comment"> * Index must be &gt;= 0 and &lt; than git_tree_entrycount().</span>
+<a name="l00128"></a>00128 <span class="comment"> *</span>
+<a name="l00129"></a>00129 <span class="comment"> * This will mark the tree as modified; the modified entry will</span>
+<a name="l00130"></a>00130 <span class="comment"> * be written back to disk on the next git_object_write()</span>
+<a name="l00131"></a>00131 <span class="comment"> *</span>
+<a name="l00132"></a>00132 <span class="comment"> * @param tree Tree where to remove the entry</span>
+<a name="l00133"></a>00133 <span class="comment"> * @param idx index of the entry</span>
+<a name="l00134"></a>00134 <span class="comment"> * @return 0 on successful removal; GIT_ENOTFOUND if the entry wasn&#39;t found</span>
+<a name="l00135"></a>00135 <span class="comment"> */</span>
+<a name="l00136"></a>00136 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#gab0df4984eda1d0de6c7fd9505270c3ff" title="Remove an entry by its index.">git_tree_remove_entry_byindex</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, <span class="keywordtype">int</span> idx);
+<a name="l00137"></a>00137 <span class="comment"></span>
+<a name="l00138"></a>00138 <span class="comment">/**</span>
+<a name="l00139"></a>00139 <span class="comment"> * Remove an entry by its filename.</span>
+<a name="l00140"></a>00140 <span class="comment"> *</span>
+<a name="l00141"></a>00141 <span class="comment"> * This will mark the tree as modified; the modified entry will</span>
+<a name="l00142"></a>00142 <span class="comment"> * be written back to disk on the next git_object_write()</span>
+<a name="l00143"></a>00143 <span class="comment"> *</span>
+<a name="l00144"></a>00144 <span class="comment"> * @param tree Tree where to remove the entry</span>
+<a name="l00145"></a>00145 <span class="comment"> * @param filename File name of the entry</span>
+<a name="l00146"></a>00146 <span class="comment"> * @return 0 on successful removal; GIT_ENOTFOUND if the entry wasn&#39;t found</span>
+<a name="l00147"></a>00147 <span class="comment"> */</span>
+<a name="l00148"></a>00148 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tree.html#ga462e708b423fd7071858a99cfcf732ab" title="Remove an entry by its filename.">git_tree_remove_entry_byname</a>(<a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree, const <span class="keywordtype">char</span> *filename);
+<a name="l00149"></a>00149 <span class="comment"></span>
+<a name="l00150"></a>00150 <span class="comment">/**</span>
+<a name="l00151"></a>00151 <span class="comment"> * Change the SHA1 id of a tree entry.</span>
+<a name="l00152"></a>00152 <span class="comment"> *</span>
+<a name="l00153"></a>00153 <span class="comment"> * This will mark the tree that contains the entry as modified;</span>
+<a name="l00154"></a>00154 <span class="comment"> * the modified entry will be written back to disk on the next git_object_write()</span>
+<a name="l00155"></a>00155 <span class="comment"> *</span>
+<a name="l00156"></a>00156 <span class="comment"> * @param entry Entry object which will be modified</span>
+<a name="l00157"></a>00157 <span class="comment"> * @param oid new SHA1 oid for the entry</span>
+<a name="l00158"></a>00158 <span class="comment"> */</span>
+<a name="l00159"></a>00159 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tree.html#ga26aba87c69ba7b45eb050809744fe45d" title="Change the SHA1 id of a tree entry.">git_tree_entry_set_id</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *oid);
+<a name="l00160"></a>00160 <span class="comment"></span>
+<a name="l00161"></a>00161 <span class="comment">/**</span>
+<a name="l00162"></a>00162 <span class="comment"> * Change the filename of a tree entry.</span>
+<a name="l00163"></a>00163 <span class="comment"> *</span>
+<a name="l00164"></a>00164 <span class="comment"> * This will mark the tree that contains the entry as modified;</span>
+<a name="l00165"></a>00165 <span class="comment"> * the modified entry will be written back to disk on the next git_object_write()</span>
+<a name="l00166"></a>00166 <span class="comment"> *</span>
+<a name="l00167"></a>00167 <span class="comment"> * @param entry Entry object which will be modified</span>
+<a name="l00168"></a>00168 <span class="comment"> * @param oid new filename for the entry</span>
+<a name="l00169"></a>00169 <span class="comment"> */</span>
+<a name="l00170"></a>00170 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tree.html#ga9b7e5af23b468472a301d632842e14f5" title="Change the filename of a tree entry.">git_tree_entry_set_name</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry, const <span class="keywordtype">char</span> *name);
+<a name="l00171"></a>00171 <span class="comment"></span>
+<a name="l00172"></a>00172 <span class="comment">/**</span>
+<a name="l00173"></a>00173 <span class="comment"> * Change the attributes of a tree entry.</span>
+<a name="l00174"></a>00174 <span class="comment"> *</span>
+<a name="l00175"></a>00175 <span class="comment"> * This will mark the tree that contains the entry as modified;</span>
+<a name="l00176"></a>00176 <span class="comment"> * the modified entry will be written back to disk on the next git_object_write()</span>
+<a name="l00177"></a>00177 <span class="comment"> *</span>
+<a name="l00178"></a>00178 <span class="comment"> * @param entry Entry object which will be modified</span>
+<a name="l00179"></a>00179 <span class="comment"> * @param oid new attributes for the entry</span>
+<a name="l00180"></a>00180 <span class="comment"> */</span>
+<a name="l00181"></a>00181 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tree.html#ga19616e0002a2b028cfd30153190b2669" title="Change the attributes of a tree entry.">git_tree_entry_set_attributes</a>(<a class="code" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7" title="Representation of each one of the entries in a tree object.">git_tree_entry</a> *entry, <span class="keywordtype">int</span> attr);
+<a name="l00182"></a>00182 <span class="comment"></span>
+<a name="l00183"></a>00183 <span class="comment">/** @} */</span>
+<a name="l00184"></a>00184 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00185"></a>00185 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -246,7 +250,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Mon Oct 25 2010 20:33:09 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:37 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

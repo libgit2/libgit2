@@ -85,6 +85,8 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Close an open object database.  <a href="#ga27d3ff8e01c7d533849ff5144b1b4841"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__odb.html#ga32ec258a894d4bf42b16b4e925640215">git_odb_read</a> (<a class="el" href="structgit__rawobj.html">git_rawobj</a> *out, <a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *db, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Read an object from the database.  <a href="#ga32ec258a894d4bf42b16b4e925640215"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__odb.html#ga12546db72922d710268ae82166967f83">git_odb_read_header</a> (<a class="el" href="structgit__rawobj.html">git_rawobj</a> *out, <a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *db, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Read the header of an object from the database, without reading its full contents.  <a href="#ga12546db72922d710268ae82166967f83"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__odb.html#ga33f31ee713f7e7cf134ee0d0d66c344b">git_odb__read_packed</a> (<a class="el" href="structgit__rawobj.html">git_rawobj</a> *out, <a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *db, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Read an object from the database using only pack files.  <a href="#ga33f31ee713f7e7cf134ee0d0d66c344b"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__odb.html#ga2fadad53ea85d0187ead9a9088ade138">git_odb__read_loose</a> (<a class="el" href="structgit__rawobj.html">git_rawobj</a> *out, <a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *db, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
@@ -574,6 +576,56 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a class="anchor" id="ga12546db72922d710268ae82166967f83"></a><!-- doxytag: member="odb.h::git_odb_read_header" ref="ga12546db72922d710268ae82166967f83" args="(git_rawobj *out, git_odb *db, const git_oid *id)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_odb_read_header </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structgit__rawobj.html">git_rawobj</a> *&nbsp;</td>
+          <td class="paramname"> <em>out</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *&nbsp;</td>
+          <td class="paramname"> <em>db</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&nbsp;</td>
+          <td class="paramname"> <em>id</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Read the header of an object from the database, without reading its full contents. </p>
+<p>Only the 'type' and 'len' fields of the <a class="el" href="structgit__rawobj.html" title="An object read from the database.">git_rawobj</a> structure are filled. The 'data' pointer will always be NULL.</p>
+<p>The raw object pointed by 'out' doesn't need to be manually closed with <a class="el" href="group__git__odb.html#gaf9825501b4fc5b5fb1f35f77dbe70928" title="Release all memory used by the obj structure.">git_obj_close()</a>.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>out</em>&nbsp;</td><td>object descriptor to populate upon reading. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>db</em>&nbsp;</td><td>database to search for the object in. </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>id</em>&nbsp;</td><td>identity of the object to read. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd><ul>
+<li>GIT_SUCCESS if the object was read;</li>
+<li>GIT_ENOTFOUND if the object is not in the database. </li>
+</ul>
+</dd></dl>
+
+</div>
+</div>
 <a class="anchor" id="ga45b8ea13d8e860256c1a5dedc1d9ffc5"></a><!-- doxytag: member="odb.h::git_odb_write" ref="ga45b8ea13d8e860256c1a5dedc1d9ffc5" args="(git_oid *id, git_odb *db, git_rawobj *obj)" -->
 <div class="memitem">
 <div class="memproto">
@@ -637,7 +689,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Mon Oct 25 2010 20:33:10 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:38 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

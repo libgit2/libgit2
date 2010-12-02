@@ -53,108 +53,137 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00002"></a>00002 <span class="preprocessor"></span><span class="preprocessor">#define INCLUDE_git_common_h__</span>
 <a name="l00003"></a>00003 <span class="preprocessor"></span>
 <a name="l00004"></a>00004 <span class="preprocessor">#include &quot;thread-utils.h&quot;</span>
-<a name="l00005"></a>00005 
-<a name="l00006"></a>00006 <span class="preprocessor">#ifdef __cplusplus</span>
-<a name="l00007"></a>00007 <span class="preprocessor"></span><span class="preprocessor"># define GIT_BEGIN_DECL  extern &quot;C&quot; {</span>
-<a name="l00008"></a>00008 <span class="preprocessor"></span><span class="preprocessor"># define GIT_END_DECL    }</span>
-<a name="l00009"></a>00009 <span class="preprocessor"></span><span class="preprocessor">#else</span>
-<a name="l00010"></a>00010 <span class="preprocessor"></span><span class="comment">  /** Start declarations in C mode */</span>
-<a name="l00011"></a><a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73">00011</a> <span class="preprocessor"># define GIT_BEGIN_DECL  </span><span class="comment">/* empty */</span>
-<a name="l00012"></a>00012 <span class="comment">  /** End declarations in C mode */</span>
-<a name="l00013"></a><a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5">00013</a> <span class="preprocessor"># define GIT_END_DECL    </span><span class="comment">/* empty */</span>
-<a name="l00014"></a>00014 <span class="preprocessor">#endif</span>
-<a name="l00015"></a>00015 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00016"></a>00016 <span class="comment">/** Declare a public function exported for application use. */</span>
-<a name="l00017"></a>00017 <span class="preprocessor">#ifdef __GNUC__</span>
-<a name="l00018"></a>00018 <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN(type) extern \</span>
-<a name="l00019"></a>00019 <span class="preprocessor">                          __attribute__((visibility(&quot;default&quot;))) \</span>
-<a name="l00020"></a>00020 <span class="preprocessor">                          type</span>
-<a name="l00021"></a>00021 <span class="preprocessor"></span><span class="preprocessor">#else</span>
-<a name="l00022"></a><a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94">00022</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN(type) extern type</span>
-<a name="l00023"></a>00023 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
-<a name="l00024"></a>00024 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00025"></a>00025 <span class="comment">/** Declare a public TLS symbol exported for application use. */</span>
-<a name="l00026"></a>00026 <span class="preprocessor">#ifdef __GNUC__</span>
-<a name="l00027"></a>00027 <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN_TLS(type) extern \</span>
-<a name="l00028"></a>00028 <span class="preprocessor">                              __attribute__((visibility(&quot;default&quot;))) \</span>
-<a name="l00029"></a>00029 <span class="preprocessor">                              GIT_TLS \</span>
-<a name="l00030"></a>00030 <span class="preprocessor">                              type</span>
-<a name="l00031"></a>00031 <span class="preprocessor"></span><span class="preprocessor">#else</span>
-<a name="l00032"></a><a class="code" href="common_8h.html#a23d8d7effcb6f2f498e57320284a7efb">00032</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN_TLS(type) extern GIT_TLS type</span>
-<a name="l00033"></a>00033 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
-<a name="l00034"></a>00034 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00035"></a>00035 <span class="comment">/** Declare a function as always inlined. */</span>
-<a name="l00036"></a>00036 <span class="preprocessor">#if defined(_MSC_VER)</span>
-<a name="l00037"></a>00037 <span class="preprocessor"></span><span class="preprocessor"># define GIT_INLINE(type) static __inline type</span>
-<a name="l00038"></a>00038 <span class="preprocessor"></span><span class="preprocessor">#else</span>
-<a name="l00039"></a><a class="code" href="common_8h.html#aa21868b5d5083c56d4e7f8f911ddb0e0">00039</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_INLINE(type) static inline type</span>
-<a name="l00040"></a>00040 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
-<a name="l00041"></a>00041 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00042"></a>00042 <span class="comment">/** Declare a function&#39;s takes printf style arguments. */</span>
-<a name="l00043"></a>00043 <span class="preprocessor">#ifdef __GNUC__</span>
-<a name="l00044"></a>00044 <span class="preprocessor"></span><span class="preprocessor"># define GIT_FORMAT_PRINTF(a,b) __attribute__((format (printf, a, b)))</span>
-<a name="l00045"></a>00045 <span class="preprocessor"></span><span class="preprocessor">#else</span>
-<a name="l00046"></a><a class="code" href="common_8h.html#a4437da8cc799203c3626b62850761309">00046</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_FORMAT_PRINTF(a,b) </span><span class="comment">/* empty */</span>
-<a name="l00047"></a>00047 <span class="preprocessor">#endif</span>
-<a name="l00048"></a>00048 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00049"></a>00049 <span class="comment">/**</span>
-<a name="l00050"></a>00050 <span class="comment"> * @file git/common.h</span>
-<a name="l00051"></a>00051 <span class="comment"> * @brief Git common platform definitions</span>
-<a name="l00052"></a>00052 <span class="comment"> * @defgroup git_common Git common platform definitions</span>
-<a name="l00053"></a>00053 <span class="comment"> * @ingroup Git</span>
-<a name="l00054"></a>00054 <span class="comment"> * @{</span>
-<a name="l00055"></a>00055 <span class="comment"> */</span>
-<a name="l00056"></a>00056 <span class="comment"></span>
-<a name="l00057"></a>00057 <span class="comment">/** Operation completed successfully. */</span>
-<a name="l00058"></a><a class="code" href="group__git__common.html#ga9dc9f0851a412f67166cf42395f9eb02">00058</a> <span class="preprocessor">#define GIT_SUCCESS 0</span>
-<a name="l00059"></a>00059 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00060"></a>00060 <span class="comment">/**</span>
-<a name="l00061"></a>00061 <span class="comment"> * Operation failed, with unspecified reason.</span>
-<a name="l00062"></a>00062 <span class="comment"> * This value also serves as the base error code; all other</span>
-<a name="l00063"></a>00063 <span class="comment"> * error codes are subtracted from it such that all errors</span>
-<a name="l00064"></a>00064 <span class="comment"> * are &lt; 0, in typical POSIX C tradition.</span>
-<a name="l00065"></a>00065 <span class="comment"> */</span>
-<a name="l00066"></a><a class="code" href="group__git__common.html#ga1ec2376ac12e2c9024e5a311c3cc8efa">00066</a> <span class="preprocessor">#define GIT_ERROR -1</span>
-<a name="l00067"></a>00067 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00068"></a>00068 <span class="comment">/** Input was not a properly formatted Git object id. */</span>
-<a name="l00069"></a><a class="code" href="group__git__common.html#ga45d238a4a8e4ca535a50375130d98a44">00069</a> <span class="preprocessor">#define GIT_ENOTOID (GIT_ERROR - 1)</span>
+<a name="l00005"></a>00005 <span class="preprocessor">#include &lt;time.h&gt;</span>
+<a name="l00006"></a>00006 
+<a name="l00007"></a>00007 <span class="preprocessor">#ifdef __cplusplus</span>
+<a name="l00008"></a>00008 <span class="preprocessor"></span><span class="preprocessor"># define GIT_BEGIN_DECL  extern &quot;C&quot; {</span>
+<a name="l00009"></a>00009 <span class="preprocessor"></span><span class="preprocessor"># define GIT_END_DECL    }</span>
+<a name="l00010"></a>00010 <span class="preprocessor"></span><span class="preprocessor">#else</span>
+<a name="l00011"></a>00011 <span class="preprocessor"></span><span class="comment">  /** Start declarations in C mode */</span>
+<a name="l00012"></a><a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73">00012</a> <span class="preprocessor"># define GIT_BEGIN_DECL  </span><span class="comment">/* empty */</span>
+<a name="l00013"></a>00013 <span class="comment">  /** End declarations in C mode */</span>
+<a name="l00014"></a><a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5">00014</a> <span class="preprocessor"># define GIT_END_DECL    </span><span class="comment">/* empty */</span>
+<a name="l00015"></a>00015 <span class="preprocessor">#endif</span>
+<a name="l00016"></a>00016 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00017"></a>00017 <span class="comment">/** Declare a public function exported for application use. */</span>
+<a name="l00018"></a>00018 <span class="preprocessor">#ifdef __GNUC__</span>
+<a name="l00019"></a>00019 <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN(type) extern \</span>
+<a name="l00020"></a>00020 <span class="preprocessor">                          __attribute__((visibility(&quot;default&quot;))) \</span>
+<a name="l00021"></a>00021 <span class="preprocessor">                          type</span>
+<a name="l00022"></a>00022 <span class="preprocessor"></span><span class="preprocessor">#elif defined(_MSC_VER)</span>
+<a name="l00023"></a>00023 <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN(type) __declspec(dllexport) type</span>
+<a name="l00024"></a>00024 <span class="preprocessor"></span><span class="preprocessor">#else</span>
+<a name="l00025"></a><a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94">00025</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN(type) extern type</span>
+<a name="l00026"></a>00026 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
+<a name="l00027"></a>00027 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00028"></a>00028 <span class="comment">/** Declare a public TLS symbol exported for application use. */</span>
+<a name="l00029"></a>00029 <span class="preprocessor">#ifdef __GNUC__</span>
+<a name="l00030"></a>00030 <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN_TLS(type) extern \</span>
+<a name="l00031"></a>00031 <span class="preprocessor">                              __attribute__((visibility(&quot;default&quot;))) \</span>
+<a name="l00032"></a>00032 <span class="preprocessor">                              GIT_TLS \</span>
+<a name="l00033"></a>00033 <span class="preprocessor">                              type</span>
+<a name="l00034"></a>00034 <span class="preprocessor"></span><span class="preprocessor">#else</span>
+<a name="l00035"></a><a class="code" href="common_8h.html#a23d8d7effcb6f2f498e57320284a7efb">00035</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_EXTERN_TLS(type) extern GIT_TLS type</span>
+<a name="l00036"></a>00036 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
+<a name="l00037"></a>00037 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00038"></a>00038 <span class="comment">/** Declare a function as always inlined. */</span>
+<a name="l00039"></a>00039 <span class="preprocessor">#if defined(_MSC_VER)</span>
+<a name="l00040"></a>00040 <span class="preprocessor"></span><span class="preprocessor"># define GIT_INLINE(type) static __inline type</span>
+<a name="l00041"></a>00041 <span class="preprocessor"></span><span class="preprocessor">#else</span>
+<a name="l00042"></a><a class="code" href="common_8h.html#aa21868b5d5083c56d4e7f8f911ddb0e0">00042</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_INLINE(type) static inline type</span>
+<a name="l00043"></a>00043 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
+<a name="l00044"></a>00044 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00045"></a>00045 <span class="comment">/** Declare a function&#39;s takes printf style arguments. */</span>
+<a name="l00046"></a>00046 <span class="preprocessor">#ifdef __GNUC__</span>
+<a name="l00047"></a>00047 <span class="preprocessor"></span><span class="preprocessor"># define GIT_FORMAT_PRINTF(a,b) __attribute__((format (printf, a, b)))</span>
+<a name="l00048"></a>00048 <span class="preprocessor"></span><span class="preprocessor">#else</span>
+<a name="l00049"></a><a class="code" href="common_8h.html#a4437da8cc799203c3626b62850761309">00049</a> <span class="preprocessor"></span><span class="preprocessor"># define GIT_FORMAT_PRINTF(a,b) </span><span class="comment">/* empty */</span>
+<a name="l00050"></a>00050 <span class="preprocessor">#endif</span>
+<a name="l00051"></a>00051 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00052"></a>00052 <span class="comment">/**</span>
+<a name="l00053"></a>00053 <span class="comment"> * @file git/common.h</span>
+<a name="l00054"></a>00054 <span class="comment"> * @brief Git common platform definitions</span>
+<a name="l00055"></a>00055 <span class="comment"> * @defgroup git_common Git common platform definitions</span>
+<a name="l00056"></a>00056 <span class="comment"> * @ingroup Git</span>
+<a name="l00057"></a>00057 <span class="comment"> * @{</span>
+<a name="l00058"></a>00058 <span class="comment"> */</span>
+<a name="l00059"></a>00059 <span class="comment"></span>
+<a name="l00060"></a>00060 <span class="comment">/** Operation completed successfully. */</span>
+<a name="l00061"></a><a class="code" href="group__git__common.html#ga9dc9f0851a412f67166cf42395f9eb02">00061</a> <span class="preprocessor">#define GIT_SUCCESS 0</span>
+<a name="l00062"></a>00062 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00063"></a>00063 <span class="comment">/**</span>
+<a name="l00064"></a>00064 <span class="comment"> * Operation failed, with unspecified reason.</span>
+<a name="l00065"></a>00065 <span class="comment"> * This value also serves as the base error code; all other</span>
+<a name="l00066"></a>00066 <span class="comment"> * error codes are subtracted from it such that all errors</span>
+<a name="l00067"></a>00067 <span class="comment"> * are &lt; 0, in typical POSIX C tradition.</span>
+<a name="l00068"></a>00068 <span class="comment"> */</span>
+<a name="l00069"></a><a class="code" href="group__git__common.html#ga1ec2376ac12e2c9024e5a311c3cc8efa">00069</a> <span class="preprocessor">#define GIT_ERROR -1</span>
 <a name="l00070"></a>00070 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00071"></a>00071 <span class="comment">/** Input does not exist in the scope searched. */</span>
-<a name="l00072"></a><a class="code" href="group__git__common.html#ga21567e8e32d043f24d677c11d8c7b751">00072</a> <span class="preprocessor">#define GIT_ENOTFOUND (GIT_ERROR - 2)</span>
+<a name="l00071"></a>00071 <span class="comment">/** Input was not a properly formatted Git object id. */</span>
+<a name="l00072"></a><a class="code" href="group__git__common.html#ga45d238a4a8e4ca535a50375130d98a44">00072</a> <span class="preprocessor">#define GIT_ENOTOID (GIT_ERROR - 1)</span>
 <a name="l00073"></a>00073 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00074"></a>00074 <span class="comment">/** Not enough space available. */</span>
-<a name="l00075"></a><a class="code" href="group__git__common.html#ga2ea7a71cb290007e5a02919a8a703784">00075</a> <span class="preprocessor">#define GIT_ENOMEM (GIT_ERROR - 3)</span>
+<a name="l00074"></a>00074 <span class="comment">/** Input does not exist in the scope searched. */</span>
+<a name="l00075"></a><a class="code" href="group__git__common.html#ga21567e8e32d043f24d677c11d8c7b751">00075</a> <span class="preprocessor">#define GIT_ENOTFOUND (GIT_ERROR - 2)</span>
 <a name="l00076"></a>00076 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00077"></a>00077 <span class="comment">/** Consult the OS error information. */</span>
-<a name="l00078"></a><a class="code" href="group__git__common.html#ga02ba5af33bc43d3dc956536cb0123a07">00078</a> <span class="preprocessor">#define GIT_EOSERR (GIT_ERROR - 4)</span>
+<a name="l00077"></a>00077 <span class="comment">/** Not enough space available. */</span>
+<a name="l00078"></a><a class="code" href="group__git__common.html#ga2ea7a71cb290007e5a02919a8a703784">00078</a> <span class="preprocessor">#define GIT_ENOMEM (GIT_ERROR - 3)</span>
 <a name="l00079"></a>00079 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00080"></a>00080 <span class="comment">/** The specified object is of invalid type */</span>
-<a name="l00081"></a><a class="code" href="group__git__common.html#ga208145465653ad4e1b57a4ca2a5e6c08">00081</a> <span class="preprocessor">#define GIT_EOBJTYPE (GIT_ERROR - 5)</span>
+<a name="l00080"></a>00080 <span class="comment">/** Consult the OS error information. */</span>
+<a name="l00081"></a><a class="code" href="group__git__common.html#ga02ba5af33bc43d3dc956536cb0123a07">00081</a> <span class="preprocessor">#define GIT_EOSERR (GIT_ERROR - 4)</span>
 <a name="l00082"></a>00082 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00083"></a>00083 <span class="comment">/** The specified object has its data corrupted */</span>
-<a name="l00084"></a><a class="code" href="group__git__common.html#ga0cfd399087cbba0fc1c547cc2099401f">00084</a> <span class="preprocessor">#define GIT_EOBJCORRUPTED (GIT_ERROR - 6)</span>
-<a name="l00085"></a>00085 <span class="preprocessor"></span>
-<a name="l00086"></a>00086 <a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73" title="Start declarations in C mode.">GIT_BEGIN_DECL</a>
-<a name="l00087"></a>00087 <span class="comment"></span>
-<a name="l00088"></a>00088 <span class="comment">/** </span>
-<a name="l00089"></a>00089 <span class="comment"> * Representation of an existing git repository,</span>
-<a name="l00090"></a>00090 <span class="comment"> * including all its object contents </span>
-<a name="l00091"></a>00091 <span class="comment"> */</span>
-<a name="l00092"></a><a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">00092</a> <span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a>;
-<a name="l00093"></a>00093 
-<a name="l00094"></a>00094 <span class="comment">/* Representation of a generic object in a repository */</span>
-<a name="l00095"></a>00095 <span class="keyword">typedef</span> <span class="keyword">struct </span>git_object git_object;
-<a name="l00096"></a>00096 <span class="comment"></span>
-<a name="l00097"></a>00097 <span class="comment">/** Parsed representation of a person */</span>
-<a name="l00098"></a><a class="code" href="structgit__person.html">00098</a> <span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a> {
-<a name="l00099"></a><a class="code" href="structgit__person.html#a58cb4bfa3584207bad5a91eb64668811">00099</a>         <span class="keywordtype">char</span> <a class="code" href="structgit__person.html#a58cb4bfa3584207bad5a91eb64668811" title="Full name.">name</a>[64]; <span class="comment">/**&lt; Full name */</span>
-<a name="l00100"></a><a class="code" href="structgit__person.html#a6b63bdc929bffc0f93efd22ec4fd7422">00100</a>         <span class="keywordtype">char</span> <a class="code" href="structgit__person.html#a6b63bdc929bffc0f93efd22ec4fd7422" title="Email address.">email</a>[64]; <span class="comment">/**&lt; Email address */</span>
-<a name="l00101"></a><a class="code" href="structgit__person.html#aa8b8f1fa21d4fa79d4aeda92e9a6889e">00101</a>         time_t <a class="code" href="structgit__person.html#aa8b8f1fa21d4fa79d4aeda92e9a6889e" title="Time when this person commited the change.">time</a>; <span class="comment">/**&lt; Time when this person commited the change */</span>
-<a name="l00102"></a>00102 } <a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a>;
-<a name="l00103"></a>00103 <span class="comment"></span>
-<a name="l00104"></a>00104 <span class="comment">/** @} */</span>
-<a name="l00105"></a>00105 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00106"></a>00106 <span class="preprocessor">#endif</span>
+<a name="l00083"></a>00083 <span class="comment">/** The specified object is of invalid type */</span>
+<a name="l00084"></a><a class="code" href="group__git__common.html#ga208145465653ad4e1b57a4ca2a5e6c08">00084</a> <span class="preprocessor">#define GIT_EOBJTYPE (GIT_ERROR - 5)</span>
+<a name="l00085"></a>00085 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00086"></a>00086 <span class="comment">/** The specified object has its data corrupted */</span>
+<a name="l00087"></a><a class="code" href="group__git__common.html#ga0cfd399087cbba0fc1c547cc2099401f">00087</a> <span class="preprocessor">#define GIT_EOBJCORRUPTED (GIT_ERROR - 6)</span>
+<a name="l00088"></a>00088 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00089"></a>00089 <span class="comment">/** The specified repository is invalid */</span>
+<a name="l00090"></a><a class="code" href="group__git__common.html#gad3d3afb97041f8c1a246a95d0c5c127d">00090</a> <span class="preprocessor">#define GIT_ENOTAREPO (GIT_ERROR - 7)</span>
+<a name="l00091"></a>00091 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00092"></a>00092 <span class="comment">/** The object type is invalid or doesn&#39;t match */</span>
+<a name="l00093"></a><a class="code" href="group__git__common.html#ga868c3c2340cbb6a6f88e1e93e9f3d1fe">00093</a> <span class="preprocessor">#define GIT_EINVALIDTYPE (GIT_ERROR - 8)</span>
+<a name="l00094"></a>00094 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00095"></a>00095 <span class="comment">/** The object cannot be written that because it&#39;s missing internal data */</span>
+<a name="l00096"></a><a class="code" href="group__git__common.html#gab561410e4825895ad0b0c65bf62a05c9">00096</a> <span class="preprocessor">#define GIT_EMISSINGOBJDATA (GIT_ERROR - 9)</span>
+<a name="l00097"></a>00097 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00098"></a>00098 <span class="comment">/** The packfile for the ODB is corrupted */</span>
+<a name="l00099"></a><a class="code" href="group__git__common.html#ga5566161f9e4b53e741ae4aedd4cfae8e">00099</a> <span class="preprocessor">#define GIT_EPACKCORRUPTED (GIT_ERROR - 10)</span>
+<a name="l00100"></a>00100 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00101"></a>00101 <span class="comment">/** Failed to adquire or release a file lock */</span>
+<a name="l00102"></a><a class="code" href="group__git__common.html#ga3e9f64121a383538ebfab157fe6ab366">00102</a> <span class="preprocessor">#define GIT_EFLOCKFAIL (GIT_ERROR - 11)</span>
+<a name="l00103"></a>00103 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00104"></a>00104 <span class="comment">/** The Z library failed to inflate/deflate an object&#39;s data */</span>
+<a name="l00105"></a><a class="code" href="group__git__common.html#ga12085995d95bdb98eb5b9aa9ee7d8c45">00105</a> <span class="preprocessor">#define GIT_EZLIB (GIT_ERROR - 12)</span>
+<a name="l00106"></a>00106 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00107"></a>00107 <span class="comment">/** The queried object is currently busy */</span>
+<a name="l00108"></a><a class="code" href="group__git__common.html#ga20534813ca1db6bd75497f2c51ee9175">00108</a> <span class="preprocessor">#define GIT_EBUSY (GIT_ERROR - 13)</span>
+<a name="l00109"></a>00109 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00110"></a>00110 <span class="comment">/** The index file is not backed up by an existing repository */</span>
+<a name="l00111"></a><a class="code" href="group__git__common.html#ga5190fef538bbe41970e882f2e1d1e78b">00111</a> <span class="preprocessor">#define GIT_EBAREINDEX (GIT_ERROR -14)</span>
+<a name="l00112"></a>00112 <span class="preprocessor"></span>
+<a name="l00113"></a>00113 
+<a name="l00114"></a>00114 <a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73" title="Start declarations in C mode.">GIT_BEGIN_DECL</a>
+<a name="l00115"></a>00115 <span class="comment"></span>
+<a name="l00116"></a>00116 <span class="comment">/**</span>
+<a name="l00117"></a>00117 <span class="comment"> * Representation of an existing git repository,</span>
+<a name="l00118"></a>00118 <span class="comment"> * including all its object contents</span>
+<a name="l00119"></a>00119 <span class="comment"> */</span>
+<a name="l00120"></a><a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">00120</a> <span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a>;
+<a name="l00121"></a>00121 <span class="comment"></span>
+<a name="l00122"></a>00122 <span class="comment">/** Representation of a generic object in a repository */</span>
+<a name="l00123"></a><a class="code" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">00123</a> <span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e" title="Representation of a generic object in a repository.">git_object</a> <a class="code" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e" title="Representation of a generic object in a repository.">git_object</a>;
+<a name="l00124"></a>00124 
+<a name="l00125"></a>00125 <span class="comment"></span>
+<a name="l00126"></a>00126 <span class="comment">/** Parsed representation of a person */</span>
+<a name="l00127"></a><a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">00127</a> <span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a> <a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a>;
+<a name="l00128"></a>00128 
+<a name="l00129"></a>00129 <span class="keyword">const</span> <span class="keywordtype">char</span> *git_person_name(<a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a> *person);
+<a name="l00130"></a>00130 <span class="keyword">const</span> <span class="keywordtype">char</span> *git_person_email(<a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a> *person);
+<a name="l00131"></a>00131 time_t git_person_time(<a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a> *person);
+<a name="l00132"></a>00132 <span class="comment"></span>
+<a name="l00133"></a>00133 <span class="comment">/** @} */</span>
+<a name="l00134"></a>00134 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00135"></a>00135 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -171,7 +200,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Mon Oct 25 2010 20:33:09 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:36 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

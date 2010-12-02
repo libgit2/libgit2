@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<title>libgit2: Data Fields</title>
+<title>libgit2: git_index_time Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javaScript" src="search/search.js"></script>
@@ -18,8 +18,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul class="tablist">
       <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
-      <li><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
-      <li class="current"><a href="files.html"><span>Files</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
+      <li><a href="files.html"><span>Files</span></a></li>
       <li id="searchli">
         <div id="MSearchBox" class="MSearchBoxInactive">
         <span class="left">
@@ -40,57 +40,39 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   </div>
   <div class="tabs2">
     <ul class="tablist">
-      <li><a href="files.html"><span>File&nbsp;List</span></a></li>
-      <li class="current"><a href="globals.html"><span>Globals</span></a></li>
-    </ul>
-  </div>
-  <div class="tabs2">
-    <ul class="tablist">
-      <li><a href="globals.html"><span>All</span></a></li>
-      <li><a href="globals_func.html"><span>Functions</span></a></li>
-      <li><a href="globals_vars.html"><span>Variables</span></a></li>
-      <li class="current"><a href="globals_type.html"><span>Typedefs</span></a></li>
-      <li><a href="globals_enum.html"><span>Enumerations</span></a></li>
-      <li><a href="globals_eval.html"><span>Enumerator</span></a></li>
-      <li><a href="globals_defs.html"><span>Defines</span></a></li>
+      <li><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
+      <li><a href="classes.html"><span>Data&nbsp;Structure&nbsp;Index</span></a></li>
+      <li><a href="functions.html"><span>Data&nbsp;Fields</span></a></li>
     </ul>
   </div>
 </div>
+<div class="header">
+  <div class="summary">
+<a href="#pub-attribs">Data Fields</a>  </div>
+  <div class="headertitle">
+<h1>git_index_time Struct Reference<br/>
+<small>
+[<a class="el" href="group__git__index.html">Git index parsing and manipulation routines</a>]</small>
+</h1>  </div>
+</div>
 <div class="contents">
-&nbsp;<ul>
-<li>git_blob
-: <a class="el" href="group__git__blob.html#ga05c8479cbe88cffd303398d82b52b3be">blob.h</a>
-</li>
-<li>git_commit
-: <a class="el" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2">commit.h</a>
-</li>
-<li>git_index
-: <a class="el" href="group__git__index.html#ga1cfa84e6a0b318d1fb81f26eadb09e28">index.h</a>
-</li>
-<li>git_index_entry
-: <a class="el" href="group__git__index.html#ga1a8c0754b585ea8787d6313a237a75cf">index.h</a>
-</li>
-<li>git_object
-: <a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">common.h</a>
-</li>
-<li>git_odb
-: <a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">odb.h</a>
-</li>
-<li>git_person
-: <a class="el" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">common.h</a>
-</li>
-<li>git_repository
-: <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">common.h</a>
-</li>
-<li>git_tag
-: <a class="el" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915">tag.h</a>
-</li>
-<li>git_tree
-: <a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">tree.h</a>
-</li>
-<li>git_tree_entry
-: <a class="el" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7">tree.h</a>
-</li>
+<!-- doxytag: class="git_index_time" -->
+<p>Time used in a git index entry.  
+<a href="#_details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="index_8h_source.html">index.h</a>&gt;</code></p>
+<table class="memberdecls">
+<tr><td colspan="2"><h2><a name="pub-attribs"></a>
+Data Fields</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4370e937701825996e1c79485e42f22c"></a><!-- doxytag: member="git_index_time::seconds" ref="a4370e937701825996e1c79485e42f22c" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>seconds</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab735cd8f735661aa9f2dcebc0f2c8ccd"></a><!-- doxytag: member="git_index_time::nanoseconds" ref="ab735cd8f735661aa9f2dcebc0f2c8ccd" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>nanoseconds</b></td></tr>
+</table>
+<hr/><a name="_details"></a><h2>Detailed Description</h2>
+<p>Time used in a git index entry. </p>
+<hr/>The documentation for this struct was generated from the following file:<ul>
+<li><a class="el" href="index_8h_source.html">index.h</a></li>
 </ul>
 </div>
 <!--- window showing the filter options -->

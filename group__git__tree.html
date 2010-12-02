@@ -56,10 +56,10 @@ Typedefs</h2></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Representation of a tree object.  <a href="#ga754b8f9603ecc4f3dff649a924ce5b20"></a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#gab11c583c3a7f0a0be244d1c45ff681ba">git_tree_lookup</a> (<a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Lookup a tree object from the repository.  <a href="#gab11c583c3a7f0a0be244d1c45ff681ba"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gac2fbe20d3a97e41cf2f87e9d4e358e0a"></a><!-- doxytag: member="git_tree::git_tree_new" ref="gac2fbe20d3a97e41cf2f87e9d4e358e0a" args="(git_repository *repo)" -->
-<a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_tree_new</b> (<a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#gae780bd2c7b4ed9c4399c106524eb883d">git_tree_lookup</a> (<a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> **tree, <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Lookup a tree object from the repository.  <a href="#gae780bd2c7b4ed9c4399c106524eb883d"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#ga96680f5fbf852668c41715acb5e2e970">git_tree_new</a> (<a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> **tree, <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Create a new in-memory git_tree.  <a href="#ga96680f5fbf852668c41715acb5e2e970"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__oid.html">git_oid</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#ga9a86861abdde52861651580e6660393c">git_tree_id</a> (<a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the id of a tree.  <a href="#ga9a86861abdde52861651580e6660393c"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">size_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#gab1e371cbf5ca69677fb175b9a07b5fd9">git_tree_entrycount</a> (<a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree)</td></tr>
@@ -74,8 +74,8 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the filename of a tree entry.  <a href="#ga0ff9f1ba55153abf0dadc175450bac6c"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__oid.html">git_oid</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#gac111a33448dee7e2031269a591a1dcfc">git_tree_entry_id</a> (<a class="el" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7">git_tree_entry</a> *entry)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the id of the object pointed by the entry.  <a href="#gac111a33448dee7e2031269a591a1dcfc"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">git_object *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#gaa5d391aabac6531f36af9167f1f605f6">git_tree_entry_2object</a> (<a class="el" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7">git_tree_entry</a> *entry)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convert a tree entry to the git_object it points too.  <a href="#gaa5d391aabac6531f36af9167f1f605f6"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#gadacd98b726e35f11a4d306e293c7b623">git_tree_entry_2object</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7">git_tree_entry</a> *entry)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convert a tree entry to the git_object it points too.  <a href="#gadacd98b726e35f11a4d306e293c7b623"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#ga8f555e25bd29af7398d30534ef75db69">git_tree_add_entry</a> (<a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree, const <a class="el" href="structgit__oid.html">git_oid</a> *id, const char *filename, int attributes)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Add a new entry to a tree.  <a href="#ga8f555e25bd29af7398d30534ef75db69"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tree.html#gab0df4984eda1d0de6c7fd9505270c3ff">git_tree_remove_entry_byindex</a> (<a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree, int idx)</td></tr>
@@ -159,7 +159,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Add a new entry to a tree. </p>
-<p>This will mark the tree as modified; the new entry will be written back to disk on the next git_object_write()</p>
+<p>This will mark the tree as modified; the new entry will be written back to disk on the next <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a></p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>tree</em>&nbsp;</td><td>Tree object to store the entry  id OID for the tree entry </td></tr>
@@ -172,17 +172,26 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="gaa5d391aabac6531f36af9167f1f605f6"></a><!-- doxytag: member="tree.h::git_tree_entry_2object" ref="gaa5d391aabac6531f36af9167f1f605f6" args="(git_tree_entry *entry)" -->
+<a class="anchor" id="gadacd98b726e35f11a4d306e293c7b623"></a><!-- doxytag: member="tree.h::git_tree_entry_2object" ref="gadacd98b726e35f11a4d306e293c7b623" args="(git_object **object, git_tree_entry *entry)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">git_object* git_tree_entry_2object </td>
+          <td class="memname">int git_tree_entry_2object </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7">git_tree_entry</a> *&nbsp;</td>
-          <td class="paramname"> <em>entry</em></td>
-          <td>&nbsp;)&nbsp;</td>
+          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> **&nbsp;</td>
+          <td class="paramname"> <em>object</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype"><a class="el" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7">git_tree_entry</a> *&nbsp;</td>
+          <td class="paramname"> <em>entry</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td></td>
         </tr>
       </table>
 </div>
@@ -191,6 +200,7 @@ Functions</h2></td></tr>
 <p>Convert a tree entry to the git_object it points too. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>object</em>&nbsp;</td><td>pointer to the converted object </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>entry</em>&nbsp;</td><td>a tree entry </td></tr>
   </table>
   </dd>
@@ -380,7 +390,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Change the attributes of a tree entry. </p>
-<p>This will mark the tree that contains the entry as modified; the modified entry will be written back to disk on the next git_object_write()</p>
+<p>This will mark the tree that contains the entry as modified; the modified entry will be written back to disk on the next <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a></p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>entry</em>&nbsp;</td><td>Entry object which will be modified </td></tr>
@@ -417,7 +427,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Change the SHA1 id of a tree entry. </p>
-<p>This will mark the tree that contains the entry as modified; the modified entry will be written back to disk on the next git_object_write()</p>
+<p>This will mark the tree that contains the entry as modified; the modified entry will be written back to disk on the next <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a></p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>entry</em>&nbsp;</td><td>Entry object which will be modified </td></tr>
@@ -454,7 +464,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Change the filename of a tree entry. </p>
-<p>This will mark the tree that contains the entry as modified; the modified entry will be written back to disk on the next git_object_write()</p>
+<p>This will mark the tree that contains the entry as modified; the modified entry will be written back to disk on the next <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a></p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>entry</em>&nbsp;</td><td>Entry object which will be modified </td></tr>
@@ -519,13 +529,19 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="gab11c583c3a7f0a0be244d1c45ff681ba"></a><!-- doxytag: member="tree.h::git_tree_lookup" ref="gab11c583c3a7f0a0be244d1c45ff681ba" args="(git_repository *repo, const git_oid *id)" -->
+<a class="anchor" id="gae780bd2c7b4ed9c4399c106524eb883d"></a><!-- doxytag: member="tree.h::git_tree_lookup" ref="gae780bd2c7b4ed9c4399c106524eb883d" args="(git_tree **tree, git_repository *repo, const git_oid *id)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a>* git_tree_lookup </td>
+          <td class="memname">int git_tree_lookup </td>
           <td>(</td>
+          <td class="paramtype"><a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> **&nbsp;</td>
+          <td class="paramname"> <em>tree</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
           <td class="paramname"> <em>repo</em>, </td>
         </tr>
@@ -548,12 +564,51 @@ Functions</h2></td></tr>
 <p>The generated tree object is owned by the revision repo and shall not be freed by the user.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>tree</em>&nbsp;</td><td>pointer to the looked up tree </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>repo</em>&nbsp;</td><td>the repo to use when locating the tree. </td></tr>
     <tr><td valign="top"></td><td valign="top"><em>id</em>&nbsp;</td><td>identity of the tree to locate. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>the tree; NULL if the tree could not be created </dd></dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga96680f5fbf852668c41715acb5e2e970"></a><!-- doxytag: member="tree.h::git_tree_new" ref="ga96680f5fbf852668c41715acb5e2e970" args="(git_tree **tree, git_repository *repo)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_tree_new </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> **&nbsp;</td>
+          <td class="paramname"> <em>tree</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
+          <td class="paramname"> <em>repo</em></td><td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new in-memory git_tree. </p>
+<p>The tree object must be manually filled using setter methods before it can be written to its repository.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table border="0" cellspacing="2" cellpadding="0">
+    <tr><td valign="top"></td><td valign="top"><em>tree</em>&nbsp;</td><td>pointer to the new tree </td></tr>
+    <tr><td valign="top"></td><td valign="top"><em>repo</em>&nbsp;</td><td>The repository where the object will reside </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
 
 </div>
 </div>
@@ -584,7 +639,7 @@ Functions</h2></td></tr>
 
 <p>Remove an entry by its index. </p>
 <p>Index must be &gt;= 0 and &lt; than <a class="el" href="group__git__tree.html#gab1e371cbf5ca69677fb175b9a07b5fd9" title="Get the number of entries listed in a tree.">git_tree_entrycount()</a>.</p>
-<p>This will mark the tree as modified; the modified entry will be written back to disk on the next git_object_write()</p>
+<p>This will mark the tree as modified; the modified entry will be written back to disk on the next <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a></p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>tree</em>&nbsp;</td><td>Tree where to remove the entry </td></tr>
@@ -622,7 +677,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Remove an entry by its filename. </p>
-<p>This will mark the tree as modified; the modified entry will be written back to disk on the next git_object_write()</p>
+<p>This will mark the tree as modified; the modified entry will be written back to disk on the next <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a></p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
     <tr><td valign="top"></td><td valign="top"><em>tree</em>&nbsp;</td><td>Tree where to remove the entry </td></tr>
@@ -649,7 +704,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Mon Oct 25 2010 20:33:10 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:38 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

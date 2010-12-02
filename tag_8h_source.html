@@ -74,97 +74,101 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00023"></a>00023 <span class="comment"> * The generated tag object is owned by the revision</span>
 <a name="l00024"></a>00024 <span class="comment"> * repo and shall not be freed by the user.</span>
 <a name="l00025"></a>00025 <span class="comment"> *</span>
-<a name="l00026"></a>00026 <span class="comment"> * @param repo the repo to use when locating the tag.</span>
-<a name="l00027"></a>00027 <span class="comment"> * @param id identity of the tag to locate.</span>
-<a name="l00028"></a>00028 <span class="comment"> * @return the tag; NULL if the tag could not be created</span>
-<a name="l00029"></a>00029 <span class="comment"> */</span>
-<a name="l00030"></a>00030 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *) <a class="code" href="group__git__tag.html#ga147e83eb2fd512f05035ab4b12034977" title="Lookup a tag object from the repository.">git_tag_lookup</a>(<a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>);
-<a name="l00031"></a>00031 
-<a name="l00032"></a>00032 <span class="comment">/*</span>
-<a name="l00033"></a>00033 <span class="comment"> * Create a new in-memory git_tag.</span>
-<a name="l00034"></a>00034 <span class="comment"> *</span>
-<a name="l00035"></a>00035 <span class="comment"> * The tag object must be manually filled using</span>
-<a name="l00036"></a>00036 <span class="comment"> * setter methods before it can be written to its</span>
-<a name="l00037"></a>00037 <span class="comment"> * repository.</span>
-<a name="l00038"></a>00038 <span class="comment"> *</span>
-<a name="l00039"></a>00039 <span class="comment"> * @param repo The repository where the object will reside</span>
-<a name="l00040"></a>00040 <span class="comment"> * @return the object if creation was posible; NULL otherwise</span>
-<a name="l00041"></a>00041 <span class="comment"> */</span>
-<a name="l00042"></a>00042 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *) git_tag_new(<a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
-<a name="l00043"></a>00043 <span class="comment"></span>
-<a name="l00044"></a>00044 <span class="comment">/**</span>
-<a name="l00045"></a>00045 <span class="comment"> * Get the id of a tag.</span>
-<a name="l00046"></a>00046 <span class="comment"> * @param tag a previously loaded tag.</span>
-<a name="l00047"></a>00047 <span class="comment"> * @return object identity for the tag.</span>
-<a name="l00048"></a>00048 <span class="comment"> */</span>
-<a name="l00049"></a>00049 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__tag.html#ga5efa1875b68f73ed78cfeceb394ecefd" title="Get the id of a tag.">git_tag_id</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag);
-<a name="l00050"></a>00050 <span class="comment"></span>
-<a name="l00051"></a>00051 <span class="comment">/**</span>
-<a name="l00052"></a>00052 <span class="comment"> * Get the tagged object of a tag</span>
-<a name="l00053"></a>00053 <span class="comment"> * @param tag a previously loaded tag.</span>
-<a name="l00054"></a>00054 <span class="comment"> * @return reference to a repository object</span>
-<a name="l00055"></a>00055 <span class="comment"> */</span>
-<a name="l00056"></a>00056 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const git_object *) <a class="code" href="group__git__tag.html#gae600d6cb0d4b416708ee8565cde2bcaf" title="Get the tagged object of a tag.">git_tag_target</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
-<a name="l00057"></a>00057 <span class="comment"></span>
-<a name="l00058"></a>00058 <span class="comment">/**</span>
-<a name="l00059"></a>00059 <span class="comment"> * Get the type of a tag&#39;s tagged object</span>
-<a name="l00060"></a>00060 <span class="comment"> * @param tag a previously loaded tag.</span>
-<a name="l00061"></a>00061 <span class="comment"> * @return type of the tagged object</span>
-<a name="l00062"></a>00062 <span class="comment"> */</span>
-<a name="l00063"></a>00063 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb" title="Basic type (loose or packed) of any Git object.">git_otype</a>) <a class="code" href="group__git__tag.html#gaa502d76b8f6907cf8d6e0ec14da4adcb" title="Get the type of a tag&amp;#39;s tagged object.">git_tag_type</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
-<a name="l00064"></a>00064 <span class="comment"></span>
-<a name="l00065"></a>00065 <span class="comment">/**</span>
-<a name="l00066"></a>00066 <span class="comment"> * Get the name of a tag</span>
-<a name="l00067"></a>00067 <span class="comment"> * @param tag a previously loaded tag.</span>
-<a name="l00068"></a>00068 <span class="comment"> * @return name of the tag</span>
-<a name="l00069"></a>00069 <span class="comment"> */</span>
-<a name="l00070"></a>00070 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__tag.html#ga3bb69a7b4c2d24e031bb7a2d618f57e7" title="Get the name of a tag.">git_tag_name</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
-<a name="l00071"></a>00071 <span class="comment"></span>
-<a name="l00072"></a>00072 <span class="comment">/**</span>
-<a name="l00073"></a>00073 <span class="comment"> * Get the tagger (author) of a tag</span>
-<a name="l00074"></a>00074 <span class="comment"> * @param tag a previously loaded tag.</span>
-<a name="l00075"></a>00075 <span class="comment"> * @return reference to the tag&#39;s author</span>
-<a name="l00076"></a>00076 <span class="comment"> */</span>
-<a name="l00077"></a>00077 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a> *) <a class="code" href="group__git__tag.html#ga78ee64b186d5e2380791f1f926fc60a4" title="Get the tagger (author) of a tag.">git_tag_tagger</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
-<a name="l00078"></a>00078 <span class="comment"></span>
-<a name="l00079"></a>00079 <span class="comment">/**</span>
-<a name="l00080"></a>00080 <span class="comment"> * Get the message of a tag</span>
-<a name="l00081"></a>00081 <span class="comment"> * @param tag a previously loaded tag.</span>
-<a name="l00082"></a>00082 <span class="comment"> * @return message of the tag</span>
-<a name="l00083"></a>00083 <span class="comment"> */</span>
-<a name="l00084"></a>00084 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__tag.html#ga01c79f7c12667ee6757ccdfa9aff84c6" title="Get the message of a tag.">git_tag_message</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
-<a name="l00085"></a>00085 <span class="comment"></span>
-<a name="l00086"></a>00086 <span class="comment">/**</span>
-<a name="l00087"></a>00087 <span class="comment"> * Set the target of a tag (i.e. the object that the tag points to)</span>
-<a name="l00088"></a>00088 <span class="comment"> * @param tag The tag to modify</span>
-<a name="l00089"></a>00089 <span class="comment"> * @param target the new tagged target</span>
-<a name="l00090"></a>00090 <span class="comment"> */</span>
-<a name="l00091"></a>00091 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#ga0e51471c5db8a5ca010b3fdfe19abe86" title="Set the target of a tag (i.e.">git_tag_set_target</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, git_object *target);
-<a name="l00092"></a>00092 <span class="comment"></span>
-<a name="l00093"></a>00093 <span class="comment">/**</span>
-<a name="l00094"></a>00094 <span class="comment"> * Set the name of a tag </span>
-<a name="l00095"></a>00095 <span class="comment"> * @param tag The tag to modify</span>
-<a name="l00096"></a>00096 <span class="comment"> * @param name the new name for the tag </span>
-<a name="l00097"></a>00097 <span class="comment"> */</span>
-<a name="l00098"></a>00098 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#gaa16ab3a0903851b90abb6c6ae38fcd90" title="Set the name of a tag.">git_tag_set_name</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, const <span class="keywordtype">char</span> *name);
-<a name="l00099"></a>00099 <span class="comment"></span>
-<a name="l00100"></a>00100 <span class="comment">/**</span>
-<a name="l00101"></a>00101 <span class="comment"> * Set the tagger of a tag </span>
-<a name="l00102"></a>00102 <span class="comment"> * @param tag The tag to modify</span>
-<a name="l00103"></a>00103 <span class="comment"> * @param tagger the new tagger for the tag </span>
-<a name="l00104"></a>00104 <span class="comment"> */</span>
-<a name="l00105"></a>00105 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#gaeb70e2b636284fbb1c4a90c7ba5bd4e7" title="Set the tagger of a tag.">git_tag_set_tagger</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, const <a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a> *tagger);
-<a name="l00106"></a>00106 <span class="comment"></span>
-<a name="l00107"></a>00107 <span class="comment">/**</span>
-<a name="l00108"></a>00108 <span class="comment"> * Set the message of a tag </span>
-<a name="l00109"></a>00109 <span class="comment"> * @param tag The tag to modify</span>
-<a name="l00110"></a>00110 <span class="comment"> * @param message the new tagger for the tag </span>
-<a name="l00111"></a>00111 <span class="comment"> */</span>
-<a name="l00112"></a>00112 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#gac7b4e432959a80fa84afce95fbf9854d" title="Set the message of a tag.">git_tag_set_message</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, const <span class="keywordtype">char</span> *message);
-<a name="l00113"></a>00113 <span class="comment"></span>
-<a name="l00114"></a>00114 <span class="comment">/** @} */</span>
-<a name="l00115"></a>00115 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00116"></a>00116 <span class="preprocessor">#endif</span>
+<a name="l00026"></a>00026 <span class="comment"> * @param tag pointer to the looked up tag</span>
+<a name="l00027"></a>00027 <span class="comment"> * @param repo the repo to use when locating the tag.</span>
+<a name="l00028"></a>00028 <span class="comment"> * @param id identity of the tag to locate.</span>
+<a name="l00029"></a>00029 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00030"></a>00030 <span class="comment"> */</span>
+<a name="l00031"></a>00031 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tag.html#gae8dcd68a5c5d0ff57ce289d53a7095ff" title="Lookup a tag object from the repository.">git_tag_lookup</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> **tag, <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>);
+<a name="l00032"></a>00032 <span class="comment"></span>
+<a name="l00033"></a>00033 <span class="comment">/**</span>
+<a name="l00034"></a>00034 <span class="comment"> * Create a new in-memory git_tag.</span>
+<a name="l00035"></a>00035 <span class="comment"> *</span>
+<a name="l00036"></a>00036 <span class="comment"> * The tag object must be manually filled using</span>
+<a name="l00037"></a>00037 <span class="comment"> * setter methods before it can be written to its</span>
+<a name="l00038"></a>00038 <span class="comment"> * repository.</span>
+<a name="l00039"></a>00039 <span class="comment"> *</span>
+<a name="l00040"></a>00040 <span class="comment"> * @param tag pointer to the new tag</span>
+<a name="l00041"></a>00041 <span class="comment"> * @param repo The repository where the object will reside</span>
+<a name="l00042"></a>00042 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00043"></a>00043 <span class="comment"> */</span>
+<a name="l00044"></a>00044 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__tag.html#gad5f8ca951ea18d430335dfdd7f07dab7" title="Create a new in-memory git_tag.">git_tag_new</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> **tag, <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
+<a name="l00045"></a>00045 <span class="comment"></span>
+<a name="l00046"></a>00046 <span class="comment">/**</span>
+<a name="l00047"></a>00047 <span class="comment"> * Get the id of a tag.</span>
+<a name="l00048"></a>00048 <span class="comment"> * @param tag a previously loaded tag.</span>
+<a name="l00049"></a>00049 <span class="comment"> * @return object identity for the tag.</span>
+<a name="l00050"></a>00050 <span class="comment"> */</span>
+<a name="l00051"></a>00051 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__tag.html#ga5efa1875b68f73ed78cfeceb394ecefd" title="Get the id of a tag.">git_tag_id</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag);
+<a name="l00052"></a>00052 <span class="comment"></span>
+<a name="l00053"></a>00053 <span class="comment">/**</span>
+<a name="l00054"></a>00054 <span class="comment"> * Get the tagged object of a tag</span>
+<a name="l00055"></a>00055 <span class="comment"> * @param tag a previously loaded tag.</span>
+<a name="l00056"></a>00056 <span class="comment"> * @return reference to a repository object</span>
+<a name="l00057"></a>00057 <span class="comment"> */</span>
+<a name="l00058"></a>00058 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e" title="Representation of a generic object in a repository.">git_object</a> *) <a class="code" href="group__git__tag.html#gae600d6cb0d4b416708ee8565cde2bcaf" title="Get the tagged object of a tag.">git_tag_target</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
+<a name="l00059"></a>00059 <span class="comment"></span>
+<a name="l00060"></a>00060 <span class="comment">/**</span>
+<a name="l00061"></a>00061 <span class="comment"> * Get the type of a tag&#39;s tagged object</span>
+<a name="l00062"></a>00062 <span class="comment"> * @param tag a previously loaded tag.</span>
+<a name="l00063"></a>00063 <span class="comment"> * @return type of the tagged object</span>
+<a name="l00064"></a>00064 <span class="comment"> */</span>
+<a name="l00065"></a>00065 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb" title="Basic type (loose or packed) of any Git object.">git_otype</a>) <a class="code" href="group__git__tag.html#gaa502d76b8f6907cf8d6e0ec14da4adcb" title="Get the type of a tag&amp;#39;s tagged object.">git_tag_type</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
+<a name="l00066"></a>00066 <span class="comment"></span>
+<a name="l00067"></a>00067 <span class="comment">/**</span>
+<a name="l00068"></a>00068 <span class="comment"> * Get the name of a tag</span>
+<a name="l00069"></a>00069 <span class="comment"> * @param tag a previously loaded tag.</span>
+<a name="l00070"></a>00070 <span class="comment"> * @return name of the tag</span>
+<a name="l00071"></a>00071 <span class="comment"> */</span>
+<a name="l00072"></a>00072 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__tag.html#ga3bb69a7b4c2d24e031bb7a2d618f57e7" title="Get the name of a tag.">git_tag_name</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
+<a name="l00073"></a>00073 <span class="comment"></span>
+<a name="l00074"></a>00074 <span class="comment">/**</span>
+<a name="l00075"></a>00075 <span class="comment"> * Get the tagger (author) of a tag</span>
+<a name="l00076"></a>00076 <span class="comment"> * @param tag a previously loaded tag.</span>
+<a name="l00077"></a>00077 <span class="comment"> * @return reference to the tag&#39;s author</span>
+<a name="l00078"></a>00078 <span class="comment"> */</span>
+<a name="l00079"></a>00079 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a> *) <a class="code" href="group__git__tag.html#ga78ee64b186d5e2380791f1f926fc60a4" title="Get the tagger (author) of a tag.">git_tag_tagger</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
+<a name="l00080"></a>00080 <span class="comment"></span>
+<a name="l00081"></a>00081 <span class="comment">/**</span>
+<a name="l00082"></a>00082 <span class="comment"> * Get the message of a tag</span>
+<a name="l00083"></a>00083 <span class="comment"> * @param tag a previously loaded tag.</span>
+<a name="l00084"></a>00084 <span class="comment"> * @return message of the tag</span>
+<a name="l00085"></a>00085 <span class="comment"> */</span>
+<a name="l00086"></a>00086 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__tag.html#ga01c79f7c12667ee6757ccdfa9aff84c6" title="Get the message of a tag.">git_tag_message</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *t);
+<a name="l00087"></a>00087 <span class="comment"></span>
+<a name="l00088"></a>00088 <span class="comment">/**</span>
+<a name="l00089"></a>00089 <span class="comment"> * Set the target of a tag (i.e. the object that the tag points to)</span>
+<a name="l00090"></a>00090 <span class="comment"> * @param tag The tag to modify</span>
+<a name="l00091"></a>00091 <span class="comment"> * @param target the new tagged target</span>
+<a name="l00092"></a>00092 <span class="comment"> */</span>
+<a name="l00093"></a>00093 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#ga0e51471c5db8a5ca010b3fdfe19abe86" title="Set the target of a tag (i.e.">git_tag_set_target</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, <a class="code" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e" title="Representation of a generic object in a repository.">git_object</a> *target);
+<a name="l00094"></a>00094 <span class="comment"></span>
+<a name="l00095"></a>00095 <span class="comment">/**</span>
+<a name="l00096"></a>00096 <span class="comment"> * Set the name of a tag</span>
+<a name="l00097"></a>00097 <span class="comment"> * @param tag The tag to modify</span>
+<a name="l00098"></a>00098 <span class="comment"> * @param name the new name for the tag</span>
+<a name="l00099"></a>00099 <span class="comment"> */</span>
+<a name="l00100"></a>00100 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#gaa16ab3a0903851b90abb6c6ae38fcd90" title="Set the name of a tag.">git_tag_set_name</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, const <span class="keywordtype">char</span> *name);
+<a name="l00101"></a>00101 <span class="comment"></span>
+<a name="l00102"></a>00102 <span class="comment">/**</span>
+<a name="l00103"></a>00103 <span class="comment"> * Set the tagger of a tag</span>
+<a name="l00104"></a>00104 <span class="comment"> * @param tag The tag to modify</span>
+<a name="l00105"></a>00105 <span class="comment"> * @param name the name of the new tagger</span>
+<a name="l00106"></a>00106 <span class="comment"> * @param email the email of the new tagger</span>
+<a name="l00107"></a>00107 <span class="comment"> * @param time the time when the tag was created</span>
+<a name="l00108"></a>00108 <span class="comment"> */</span>
+<a name="l00109"></a>00109 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#gada3a71376342cacc0a9dcb1e676fba58" title="Set the tagger of a tag.">git_tag_set_tagger</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email, time_t time);
+<a name="l00110"></a>00110 <span class="comment"></span>
+<a name="l00111"></a>00111 <span class="comment">/**</span>
+<a name="l00112"></a>00112 <span class="comment"> * Set the message of a tag</span>
+<a name="l00113"></a>00113 <span class="comment"> * @param tag The tag to modify</span>
+<a name="l00114"></a>00114 <span class="comment"> * @param message the new tagger for the tag</span>
+<a name="l00115"></a>00115 <span class="comment"> */</span>
+<a name="l00116"></a>00116 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__tag.html#gac7b4e432959a80fa84afce95fbf9854d" title="Set the message of a tag.">git_tag_set_message</a>(<a class="code" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915" title="Parsed representation of a tag object.">git_tag</a> *tag, const <span class="keywordtype">char</span> *message);
+<a name="l00117"></a>00117 <span class="comment"></span>
+<a name="l00118"></a>00118 <span class="comment">/** @} */</span>
+<a name="l00119"></a>00119 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00120"></a>00120 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -181,7 +185,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Mon Oct 25 2010 20:33:09 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:37 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

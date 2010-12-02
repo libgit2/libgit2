@@ -41,18 +41,14 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div>
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Data Structures</a> &#124;
 <a href="#define-members">Defines</a> &#124;
-<a href="#typedef-members">Typedefs</a>  </div>
+<a href="#typedef-members">Typedefs</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <h1>Git common platform definitions</h1>  </div>
 </div>
 <div class="contents">
 <table class="memberdecls">
-<tr><td colspan="2"><h2><a name="nested-classes"></a>
-Data Structures</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__person.html">git_person</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Parsed representation of a person.  <a href="structgit__person.html#_details">More...</a><br/></td></tr>
 <tr><td colspan="2"><h2><a name="define-members"></a>
 Defines</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga9dc9f0851a412f67166cf42395f9eb02">GIT_SUCCESS</a>&nbsp;&nbsp;&nbsp;0</td></tr>
@@ -73,16 +69,49 @@ Defines</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga0cfd399087cbba0fc1c547cc2099401f"></a><!-- doxytag: member="git_common::GIT_EOBJCORRUPTED" ref="ga0cfd399087cbba0fc1c547cc2099401f" args="" -->
 #define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga0cfd399087cbba0fc1c547cc2099401f">GIT_EOBJCORRUPTED</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 6)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The specified object has its data corrupted. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gad3d3afb97041f8c1a246a95d0c5c127d"></a><!-- doxytag: member="git_common::GIT_ENOTAREPO" ref="gad3d3afb97041f8c1a246a95d0c5c127d" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#gad3d3afb97041f8c1a246a95d0c5c127d">GIT_ENOTAREPO</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 7)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The specified repository is invalid. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga868c3c2340cbb6a6f88e1e93e9f3d1fe"></a><!-- doxytag: member="git_common::GIT_EINVALIDTYPE" ref="ga868c3c2340cbb6a6f88e1e93e9f3d1fe" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga868c3c2340cbb6a6f88e1e93e9f3d1fe">GIT_EINVALIDTYPE</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 8)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The object type is invalid or doesn't match. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gab561410e4825895ad0b0c65bf62a05c9"></a><!-- doxytag: member="git_common::GIT_EMISSINGOBJDATA" ref="gab561410e4825895ad0b0c65bf62a05c9" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#gab561410e4825895ad0b0c65bf62a05c9">GIT_EMISSINGOBJDATA</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 9)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The object cannot be written that because it's missing internal data. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga5566161f9e4b53e741ae4aedd4cfae8e"></a><!-- doxytag: member="git_common::GIT_EPACKCORRUPTED" ref="ga5566161f9e4b53e741ae4aedd4cfae8e" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga5566161f9e4b53e741ae4aedd4cfae8e">GIT_EPACKCORRUPTED</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 10)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The packfile for the ODB is corrupted. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga3e9f64121a383538ebfab157fe6ab366"></a><!-- doxytag: member="git_common::GIT_EFLOCKFAIL" ref="ga3e9f64121a383538ebfab157fe6ab366" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga3e9f64121a383538ebfab157fe6ab366">GIT_EFLOCKFAIL</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 11)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Failed to adquire or release a file lock. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga12085995d95bdb98eb5b9aa9ee7d8c45"></a><!-- doxytag: member="git_common::GIT_EZLIB" ref="ga12085995d95bdb98eb5b9aa9ee7d8c45" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga12085995d95bdb98eb5b9aa9ee7d8c45">GIT_EZLIB</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 12)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The Z library failed to inflate/deflate an object's data. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga20534813ca1db6bd75497f2c51ee9175"></a><!-- doxytag: member="git_common::GIT_EBUSY" ref="ga20534813ca1db6bd75497f2c51ee9175" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga20534813ca1db6bd75497f2c51ee9175">GIT_EBUSY</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR - 13)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The queried object is currently busy. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga5190fef538bbe41970e882f2e1d1e78b"></a><!-- doxytag: member="git_common::GIT_EBAREINDEX" ref="ga5190fef538bbe41970e882f2e1d1e78b" args="" -->
+#define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga5190fef538bbe41970e882f2e1d1e78b">GIT_EBAREINDEX</a>&nbsp;&nbsp;&nbsp;(GIT_ERROR -14)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">The index file is not backed up by an existing repository. <br/></td></tr>
 <tr><td colspan="2"><h2><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga69f80526f06bad7d1aead7949c2840f5"></a><!-- doxytag: member="git_common::git_repository" ref="ga69f80526f06bad7d1aead7949c2840f5" args="" -->
 typedef struct <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Representation of an existing git repository, including all its object contents. <br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga855e48de855be1ccb0b752295caf374e"></a><!-- doxytag: member="git_common::git_object" ref="ga855e48de855be1ccb0b752295caf374e" args="" -->
-typedef struct git_object&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_object</b></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gaa52816d57d7ef859e3aadc550a8e7a16"></a><!-- doxytag: member="git_common::git_person" ref="gaa52816d57d7ef859e3aadc550a8e7a16" args="" -->
-typedef struct <a class="el" href="structgit__person.html">git_person</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#gaa52816d57d7ef859e3aadc550a8e7a16">git_person</a></td></tr>
+typedef struct <a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Representation of a generic object in a repository. <br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga2dba0d0023be2854459cec2b6d00ef61"></a><!-- doxytag: member="git_common::git_person" ref="ga2dba0d0023be2854459cec2b6d00ef61" args="" -->
+typedef struct <a class="el" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">git_person</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">git_person</a></td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Parsed representation of a person. <br/></td></tr>
+<tr><td colspan="2"><h2><a name="func-members"></a>
+Functions</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga4ba8b401418da63fc6da82e95c01bb7b"></a><!-- doxytag: member="git_common::git_person_name" ref="ga4ba8b401418da63fc6da82e95c01bb7b" args="(git_person *person)" -->
+const char *&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_person_name</b> (<a class="el" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">git_person</a> *person)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga5696dfc63870146e9ccdbdb1c7895db3"></a><!-- doxytag: member="git_common::git_person_email" ref="ga5696dfc63870146e9ccdbdb1c7895db3" args="(git_person *person)" -->
+const char *&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_person_email</b> (<a class="el" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">git_person</a> *person)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gac6847f08f2c2f8b2ef1cbd3cb36492b3"></a><!-- doxytag: member="git_common::git_person_time" ref="gac6847f08f2c2f8b2ef1cbd3cb36492b3" args="(git_person *person)" -->
+time_t&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_person_time</b> (<a class="el" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">git_person</a> *person)</td></tr>
 </table>
 <hr/><h2>Define Documentation</h2>
 <a class="anchor" id="ga2ea7a71cb290007e5a02919a8a703784"></a><!-- doxytag: member="common.h::GIT_ENOMEM" ref="ga2ea7a71cb290007e5a02919a8a703784" args="" -->
@@ -191,7 +220,7 @@ typedef struct <a class="el" href="structgit__person.html">git_person</a>&nbsp;<
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Mon Oct 25 2010 20:33:10 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:38 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

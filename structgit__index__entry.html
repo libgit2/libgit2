@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<title>libgit2: git_rawobj Struct Reference</title>
+<title>libgit2: git_index_entry Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javaScript" src="search/search.js"></script>
@@ -50,77 +50,49 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="summary">
 <a href="#pub-attribs">Data Fields</a>  </div>
   <div class="headertitle">
-<h1>git_rawobj Struct Reference<br/>
+<h1>git_index_entry Struct Reference<br/>
 <small>
-[<a class="el" href="group__git__odb.html">Git object database routines</a>]</small>
+[<a class="el" href="group__git__index.html">Git index parsing and manipulation routines</a>]</small>
 </h1>  </div>
 </div>
 <div class="contents">
-<!-- doxytag: class="git_rawobj" -->
-<p>An object read from the database.  
+<!-- doxytag: class="git_index_entry" -->
+<p>Memory representation of a file entry in the index.  
 <a href="#_details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="odb_8h_source.html">odb.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="index_8h_source.html">index.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="pub-attribs"></a>
 Data Fields</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__rawobj.html#acabf1eb15746a3e2ca1cc08f4fd4ce1a">data</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Raw, decompressed object data.  <a href="#acabf1eb15746a3e2ca1cc08f4fd4ce1a"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">size_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__rawobj.html#a0a33fb9f7be2b8b665c25d9632f8c5b2">len</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Total number of bytes in data.  <a href="#a0a33fb9f7be2b8b665c25d9632f8c5b2"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__rawobj.html#a1d29196945b44f8ffb4ee24fd44d31f7">type</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Type of this object.  <a href="#a1d29196945b44f8ffb4ee24fd44d31f7"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a8898aec870a37d41af82424fae6f419a"></a><!-- doxytag: member="git_index_entry::ctime" ref="a8898aec870a37d41af82424fae6f419a" args="" -->
+<a class="el" href="structgit__index__time.html">git_index_time</a>&nbsp;</td><td class="memItemRight" valign="bottom"><b>ctime</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a70402addd8e4bf1723d3a01a843617d0"></a><!-- doxytag: member="git_index_entry::mtime" ref="a70402addd8e4bf1723d3a01a843617d0" args="" -->
+<a class="el" href="structgit__index__time.html">git_index_time</a>&nbsp;</td><td class="memItemRight" valign="bottom"><b>mtime</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a330989b2f7d6c64937ecc4fea938775e"></a><!-- doxytag: member="git_index_entry::dev" ref="a330989b2f7d6c64937ecc4fea938775e" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>dev</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a3fc98eb3b81e1ece2932bb3eb0f6ae23"></a><!-- doxytag: member="git_index_entry::ino" ref="a3fc98eb3b81e1ece2932bb3eb0f6ae23" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>ino</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a85237456a5cf6f33f360d9fab18eb9be"></a><!-- doxytag: member="git_index_entry::mode" ref="a85237456a5cf6f33f360d9fab18eb9be" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>mode</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a0812f31782a25cf5cf036dcc7b8abcb9"></a><!-- doxytag: member="git_index_entry::uid" ref="a0812f31782a25cf5cf036dcc7b8abcb9" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>uid</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a587ec450acc61217b024b3c827dab76d"></a><!-- doxytag: member="git_index_entry::gid" ref="a587ec450acc61217b024b3c827dab76d" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>gid</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac1e3f42c0b5966d3a1c032908dbb17fb"></a><!-- doxytag: member="git_index_entry::file_size" ref="ac1e3f42c0b5966d3a1c032908dbb17fb" args="" -->
+unsigned int&nbsp;</td><td class="memItemRight" valign="bottom"><b>file_size</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a38639384662cbdcd109949456fcda919"></a><!-- doxytag: member="git_index_entry::oid" ref="a38639384662cbdcd109949456fcda919" args="" -->
+<a class="el" href="structgit__oid.html">git_oid</a>&nbsp;</td><td class="memItemRight" valign="bottom"><b>oid</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac6c6c4a17fab641787c4a5c0bb17362c"></a><!-- doxytag: member="git_index_entry::flags" ref="ac6c6c4a17fab641787c4a5c0bb17362c" args="" -->
+unsigned short&nbsp;</td><td class="memItemRight" valign="bottom"><b>flags</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a1ef125b46223747cf801645acceb9f14"></a><!-- doxytag: member="git_index_entry::flags_extended" ref="a1ef125b46223747cf801645acceb9f14" args="" -->
+unsigned short&nbsp;</td><td class="memItemRight" valign="bottom"><b>flags_extended</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a51574d579f14f68b54e2e3df70e71a63"></a><!-- doxytag: member="git_index_entry::path" ref="a51574d579f14f68b54e2e3df70e71a63" args="" -->
+char *&nbsp;</td><td class="memItemRight" valign="bottom"><b>path</b></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
-<p>An object read from the database. </p>
-<hr/><h2>Field Documentation</h2>
-<a class="anchor" id="acabf1eb15746a3e2ca1cc08f4fd4ce1a"></a><!-- doxytag: member="git_rawobj::data" ref="acabf1eb15746a3e2ca1cc08f4fd4ce1a" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void* <a class="el" href="structgit__rawobj.html#acabf1eb15746a3e2ca1cc08f4fd4ce1a">git_rawobj::data</a></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Raw, decompressed object data. </p>
-
-</div>
-</div>
-<a class="anchor" id="a0a33fb9f7be2b8b665c25d9632f8c5b2"></a><!-- doxytag: member="git_rawobj::len" ref="a0a33fb9f7be2b8b665c25d9632f8c5b2" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">size_t <a class="el" href="structgit__rawobj.html#a0a33fb9f7be2b8b665c25d9632f8c5b2">git_rawobj::len</a></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Total number of bytes in data. </p>
-
-</div>
-</div>
-<a class="anchor" id="a1d29196945b44f8ffb4ee24fd44d31f7"></a><!-- doxytag: member="git_rawobj::type" ref="a1d29196945b44f8ffb4ee24fd44d31f7" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> <a class="el" href="structgit__rawobj.html#a1d29196945b44f8ffb4ee24fd44d31f7">git_rawobj::type</a></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Type of this object. </p>
-
-</div>
-</div>
+<p>Memory representation of a file entry in the index. </p>
 <hr/>The documentation for this struct was generated from the following file:<ul>
-<li><a class="el" href="odb_8h_source.html">odb.h</a></li>
+<li><a class="el" href="index_8h_source.html">index.h</a></li>
 </ul>
 </div>
 <!--- window showing the filter options -->

@@ -74,112 +74,135 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00023"></a>00023 <span class="comment"> * The generated commit object is owned by the revision</span>
 <a name="l00024"></a>00024 <span class="comment"> * repo and shall not be freed by the user.</span>
 <a name="l00025"></a>00025 <span class="comment"> *</span>
-<a name="l00026"></a>00026 <span class="comment"> * @param repo the repo to use when locating the commit.</span>
-<a name="l00027"></a>00027 <span class="comment"> * @param id identity of the commit to locate.  If the object is</span>
-<a name="l00028"></a>00028 <span class="comment"> *        an annotated tag it will be peeled back to the commit.</span>
-<a name="l00029"></a>00029 <span class="comment"> * @return the commit; NULL if the commit could not be created</span>
-<a name="l00030"></a>00030 <span class="comment"> */</span>
-<a name="l00031"></a>00031 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *) <a class="code" href="group__git__commit.html#ga42e34215afc49c48816eafa12408fda7" title="Lookup a commit object from a repository.">git_commit_lookup</a>(<a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>);
-<a name="l00032"></a>00032 
-<a name="l00033"></a>00033 <span class="comment">/*</span>
-<a name="l00034"></a>00034 <span class="comment"> * Create a new in-memory git_commit.</span>
-<a name="l00035"></a>00035 <span class="comment"> *</span>
-<a name="l00036"></a>00036 <span class="comment"> * The commit object must be manually filled using</span>
-<a name="l00037"></a>00037 <span class="comment"> * setter methods before it can be written to its</span>
-<a name="l00038"></a>00038 <span class="comment"> * repository.</span>
-<a name="l00039"></a>00039 <span class="comment"> *</span>
-<a name="l00040"></a>00040 <span class="comment"> * @param repo The repository where the object will reside</span>
-<a name="l00041"></a>00041 <span class="comment"> * @return the object if creation was posible; NULL otherwise</span>
-<a name="l00042"></a>00042 <span class="comment"> */</span>
-<a name="l00043"></a>00043 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *) git_commit_new(<a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
-<a name="l00044"></a>00044 <span class="comment"></span>
-<a name="l00045"></a>00045 <span class="comment">/**</span>
-<a name="l00046"></a>00046 <span class="comment"> * Get the id of a commit.</span>
-<a name="l00047"></a>00047 <span class="comment"> * @param commit a previously loaded commit.</span>
-<a name="l00048"></a>00048 <span class="comment"> * @return object identity for the commit.</span>
-<a name="l00049"></a>00049 <span class="comment"> */</span>
-<a name="l00050"></a>00050 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__commit.html#gaa926d465afd9a625d689d31a30fa5e92" title="Get the id of a commit.">git_commit_id</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00051"></a>00051 <span class="comment"></span>
-<a name="l00052"></a>00052 <span class="comment">/**</span>
-<a name="l00053"></a>00053 <span class="comment"> * Get the short (one line) message of a commit.</span>
-<a name="l00054"></a>00054 <span class="comment"> * @param commit a previously loaded commit.</span>
-<a name="l00055"></a>00055 <span class="comment"> * @return the short message of a commit</span>
-<a name="l00056"></a>00056 <span class="comment"> */</span>
-<a name="l00057"></a>00057 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__commit.html#gac15d05a6ffab7da067d0b27228bc9ad4" title="Get the short (one line) message of a commit.">git_commit_message_short</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00058"></a>00058 <span class="comment"></span>
-<a name="l00059"></a>00059 <span class="comment">/**</span>
-<a name="l00060"></a>00060 <span class="comment"> * Get the full message of a commit.</span>
-<a name="l00061"></a>00061 <span class="comment"> * @param commit a previously loaded commit.</span>
-<a name="l00062"></a>00062 <span class="comment"> * @return the message of a commit</span>
-<a name="l00063"></a>00063 <span class="comment"> */</span>
-<a name="l00064"></a>00064 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__commit.html#gae17931582ac29e852252c507d0cc1281" title="Get the full message of a commit.">git_commit_message</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00065"></a>00065 <span class="comment"></span>
-<a name="l00066"></a>00066 <span class="comment">/**</span>
-<a name="l00067"></a>00067 <span class="comment"> * Get the commit time (i.e. committer time) of a commit.</span>
-<a name="l00068"></a>00068 <span class="comment"> * @param commit a previously loaded commit.</span>
-<a name="l00069"></a>00069 <span class="comment"> * @return the time of a commit</span>
-<a name="l00070"></a>00070 <span class="comment"> */</span>
-<a name="l00071"></a>00071 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(time_t) <a class="code" href="group__git__commit.html#ga1378a3f6ecef5cee281518ef5cc9bd0b" title="Get the commit time (i.e.">git_commit_time</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00072"></a>00072 <span class="comment"></span>
-<a name="l00073"></a>00073 <span class="comment">/**</span>
-<a name="l00074"></a>00074 <span class="comment"> * Get the committer of a commit.</span>
-<a name="l00075"></a>00075 <span class="comment"> * @param commit a previously loaded commit.</span>
-<a name="l00076"></a>00076 <span class="comment"> * @return the committer of a commit</span>
-<a name="l00077"></a>00077 <span class="comment"> */</span>
-<a name="l00078"></a>00078 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a> *) <a class="code" href="group__git__commit.html#ga44eb1c614c2da94437887e63950b4611" title="Get the committer of a commit.">git_commit_committer</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00079"></a>00079 <span class="comment"></span>
-<a name="l00080"></a>00080 <span class="comment">/**</span>
-<a name="l00081"></a>00081 <span class="comment"> * Get the author of a commit.</span>
-<a name="l00082"></a>00082 <span class="comment"> * @param commit a previously loaded commit.</span>
-<a name="l00083"></a>00083 <span class="comment"> * @return the author of a commit</span>
-<a name="l00084"></a>00084 <span class="comment"> */</span>
-<a name="l00085"></a>00085 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a> *) <a class="code" href="group__git__commit.html#ga4fcde396378d03fe0371e7941d627473" title="Get the author of a commit.">git_commit_author</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00086"></a>00086 <span class="comment"></span>
-<a name="l00087"></a>00087 <span class="comment">/**</span>
-<a name="l00088"></a>00088 <span class="comment"> * Get the tree pointed to by a commit.</span>
-<a name="l00089"></a>00089 <span class="comment"> * @param commit a previously loaded commit.</span>
-<a name="l00090"></a>00090 <span class="comment"> * @return the tree of a commit</span>
-<a name="l00091"></a>00091 <span class="comment"> */</span>
-<a name="l00092"></a>00092 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *) <a class="code" href="group__git__commit.html#ga60865b10f3a64f030e383b5781942ee8" title="Get the tree pointed to by a commit.">git_commit_tree</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00093"></a>00093 
-<a name="l00094"></a>00094 <span class="comment">/*</span>
-<a name="l00095"></a>00095 <span class="comment"> * Add a new parent commit to an existing commit</span>
-<a name="l00096"></a>00096 <span class="comment"> * @param commit the commit object</span>
-<a name="l00097"></a>00097 <span class="comment"> * @param new_parent the new commit which will be a parent</span>
-<a name="l00098"></a>00098 <span class="comment"> */</span>
-<a name="l00099"></a>00099 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) git_commit_add_parent(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, <a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *new_parent);
-<a name="l00100"></a>00100 
-<a name="l00101"></a>00101 <span class="comment">/*</span>
-<a name="l00102"></a>00102 <span class="comment"> * Set the message of a commit</span>
-<a name="l00103"></a>00103 <span class="comment"> * @param commit the commit object</span>
-<a name="l00104"></a>00104 <span class="comment"> * @param message the new message</span>
-<a name="l00105"></a>00105 <span class="comment"> */</span>
-<a name="l00106"></a>00106 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) git_commit_set_message(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, const <span class="keywordtype">char</span> *message);
-<a name="l00107"></a>00107 
-<a name="l00108"></a>00108 <span class="comment">/*</span>
-<a name="l00109"></a>00109 <span class="comment"> * Set the committer of a commit</span>
-<a name="l00110"></a>00110 <span class="comment"> * @param commit the commit object</span>
-<a name="l00111"></a>00111 <span class="comment"> * @param committer the new committer</span>
-<a name="l00112"></a>00112 <span class="comment"> */</span>
-<a name="l00113"></a>00113 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) git_commit_set_committer(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, const <a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a> *committer);
-<a name="l00114"></a>00114 
-<a name="l00115"></a>00115 <span class="comment">/*</span>
-<a name="l00116"></a>00116 <span class="comment"> * Set the author of a commit</span>
-<a name="l00117"></a>00117 <span class="comment"> * @param commit the commit object</span>
-<a name="l00118"></a>00118 <span class="comment"> * @param author the new author</span>
-<a name="l00119"></a>00119 <span class="comment"> */</span>
-<a name="l00120"></a>00120 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) git_commit_set_author(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, const <a class="code" href="structgit__person.html" title="Parsed representation of a person.">git_person</a> *author);
-<a name="l00121"></a>00121 
-<a name="l00122"></a>00122 <span class="comment">/*</span>
-<a name="l00123"></a>00123 <span class="comment"> * Set the tree which is pointed to by a commit</span>
-<a name="l00124"></a>00124 <span class="comment"> * @param commit the commit object</span>
-<a name="l00125"></a>00125 <span class="comment"> * @param tree the new tree</span>
-<a name="l00126"></a>00126 <span class="comment"> */</span>
-<a name="l00127"></a>00127 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) git_commit_set_tree(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, <a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree);
-<a name="l00128"></a>00128 <span class="comment"></span>
-<a name="l00129"></a>00129 <span class="comment">/** @} */</span>
-<a name="l00130"></a>00130 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00131"></a>00131 <span class="preprocessor">#endif</span>
+<a name="l00026"></a>00026 <span class="comment"> * @param commit pointer to the looked up commit</span>
+<a name="l00027"></a>00027 <span class="comment"> * @param repo the repo to use when locating the commit.</span>
+<a name="l00028"></a>00028 <span class="comment"> * @param id identity of the commit to locate.  If the object is</span>
+<a name="l00029"></a>00029 <span class="comment"> *        an annotated tag it will be peeled back to the commit.</span>
+<a name="l00030"></a>00030 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00031"></a>00031 <span class="comment"> */</span>
+<a name="l00032"></a>00032 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__commit.html#ga6501b39eacd564915489d105b6fa927d" title="Lookup a commit object from a repository.">git_commit_lookup</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> **commit, <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo, const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *<span class="keywordtype">id</span>);
+<a name="l00033"></a>00033 <span class="comment"></span>
+<a name="l00034"></a>00034 <span class="comment">/**</span>
+<a name="l00035"></a>00035 <span class="comment"> * Create a new in-memory git_commit.</span>
+<a name="l00036"></a>00036 <span class="comment"> *</span>
+<a name="l00037"></a>00037 <span class="comment"> * The commit object must be manually filled using</span>
+<a name="l00038"></a>00038 <span class="comment"> * setter methods before it can be written to its</span>
+<a name="l00039"></a>00039 <span class="comment"> * repository.</span>
+<a name="l00040"></a>00040 <span class="comment"> *</span>
+<a name="l00041"></a>00041 <span class="comment"> * @param commit pointer to the new commit</span>
+<a name="l00042"></a>00042 <span class="comment"> * @param repo The repository where the object will reside</span>
+<a name="l00043"></a>00043 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00044"></a>00044 <span class="comment"> */</span>
+<a name="l00045"></a>00045 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__commit.html#ga3d20e84274804f1687a511ea3954dc83" title="Create a new in-memory git_commit.">git_commit_new</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> ** commit, <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
+<a name="l00046"></a>00046 <span class="comment"></span>
+<a name="l00047"></a>00047 <span class="comment">/**</span>
+<a name="l00048"></a>00048 <span class="comment"> * Get the id of a commit.</span>
+<a name="l00049"></a>00049 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00050"></a>00050 <span class="comment"> * @return object identity for the commit.</span>
+<a name="l00051"></a>00051 <span class="comment"> */</span>
+<a name="l00052"></a>00052 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *) <a class="code" href="group__git__commit.html#gaa926d465afd9a625d689d31a30fa5e92" title="Get the id of a commit.">git_commit_id</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00053"></a>00053 <span class="comment"></span>
+<a name="l00054"></a>00054 <span class="comment">/**</span>
+<a name="l00055"></a>00055 <span class="comment"> * Get the short (one line) message of a commit.</span>
+<a name="l00056"></a>00056 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00057"></a>00057 <span class="comment"> * @return the short message of a commit</span>
+<a name="l00058"></a>00058 <span class="comment"> */</span>
+<a name="l00059"></a>00059 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__commit.html#gac15d05a6ffab7da067d0b27228bc9ad4" title="Get the short (one line) message of a commit.">git_commit_message_short</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00060"></a>00060 <span class="comment"></span>
+<a name="l00061"></a>00061 <span class="comment">/**</span>
+<a name="l00062"></a>00062 <span class="comment"> * Get the full message of a commit.</span>
+<a name="l00063"></a>00063 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00064"></a>00064 <span class="comment"> * @return the message of a commit</span>
+<a name="l00065"></a>00065 <span class="comment"> */</span>
+<a name="l00066"></a>00066 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <span class="keywordtype">char</span> *) <a class="code" href="group__git__commit.html#gae17931582ac29e852252c507d0cc1281" title="Get the full message of a commit.">git_commit_message</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00067"></a>00067 <span class="comment"></span>
+<a name="l00068"></a>00068 <span class="comment">/**</span>
+<a name="l00069"></a>00069 <span class="comment"> * Get the commit time (i.e. committer time) of a commit.</span>
+<a name="l00070"></a>00070 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00071"></a>00071 <span class="comment"> * @return the time of a commit</span>
+<a name="l00072"></a>00072 <span class="comment"> */</span>
+<a name="l00073"></a>00073 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(time_t) <a class="code" href="group__git__commit.html#ga1378a3f6ecef5cee281518ef5cc9bd0b" title="Get the commit time (i.e.">git_commit_time</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00074"></a>00074 <span class="comment"></span>
+<a name="l00075"></a>00075 <span class="comment">/**</span>
+<a name="l00076"></a>00076 <span class="comment"> * Get the committer of a commit.</span>
+<a name="l00077"></a>00077 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00078"></a>00078 <span class="comment"> * @return the committer of a commit</span>
+<a name="l00079"></a>00079 <span class="comment"> */</span>
+<a name="l00080"></a>00080 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a> *) <a class="code" href="group__git__commit.html#ga44eb1c614c2da94437887e63950b4611" title="Get the committer of a commit.">git_commit_committer</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00081"></a>00081 <span class="comment"></span>
+<a name="l00082"></a>00082 <span class="comment">/**</span>
+<a name="l00083"></a>00083 <span class="comment"> * Get the author of a commit.</span>
+<a name="l00084"></a>00084 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00085"></a>00085 <span class="comment"> * @return the author of a commit</span>
+<a name="l00086"></a>00086 <span class="comment"> */</span>
+<a name="l00087"></a>00087 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61" title="Parsed representation of a person.">git_person</a> *) <a class="code" href="group__git__commit.html#ga4fcde396378d03fe0371e7941d627473" title="Get the author of a commit.">git_commit_author</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00088"></a>00088 <span class="comment"></span>
+<a name="l00089"></a>00089 <span class="comment">/**</span>
+<a name="l00090"></a>00090 <span class="comment"> * Get the tree pointed to by a commit.</span>
+<a name="l00091"></a>00091 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00092"></a>00092 <span class="comment"> * @return the tree of a commit</span>
+<a name="l00093"></a>00093 <span class="comment"> */</span>
+<a name="l00094"></a>00094 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(const <a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *) <a class="code" href="group__git__commit.html#ga60865b10f3a64f030e383b5781942ee8" title="Get the tree pointed to by a commit.">git_commit_tree</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00095"></a>00095 <span class="comment"></span>
+<a name="l00096"></a>00096 <span class="comment">/**</span>
+<a name="l00097"></a>00097 <span class="comment"> * Get the number of parents of this commit</span>
+<a name="l00098"></a>00098 <span class="comment"> *</span>
+<a name="l00099"></a>00099 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00100"></a>00100 <span class="comment"> * @return integer of count of parents</span>
+<a name="l00101"></a>00101 <span class="comment"> */</span>
+<a name="l00102"></a>00102 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>) <a class="code" href="group__git__commit.html#ga4a195aff6b2ef3fe4f6dc5f70de18c47" title="Get the number of parents of this commit.">git_commit_parentcount</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00103"></a>00103 <span class="comment"></span>
+<a name="l00104"></a>00104 <span class="comment">/**</span>
+<a name="l00105"></a>00105 <span class="comment"> * Get the specified parent of the commit.</span>
+<a name="l00106"></a>00106 <span class="comment"> * @param commit a previously loaded commit.</span>
+<a name="l00107"></a>00107 <span class="comment"> * @param n the position of the entry</span>
+<a name="l00108"></a>00108 <span class="comment"> * @return a pointer to the commit; NULL if out of bounds</span>
+<a name="l00109"></a>00109 <span class="comment"> */</span>
+<a name="l00110"></a>00110 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *) <a class="code" href="group__git__commit.html#gaf5a8b591fe9a8d8df1870eeb97908a25" title="Get the specified parent of the commit.">git_commit_parent</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> n);
+<a name="l00111"></a>00111 <span class="comment"></span>
+<a name="l00112"></a>00112 <span class="comment">/**</span>
+<a name="l00113"></a>00113 <span class="comment"> * Add a new parent commit to an existing commit</span>
+<a name="l00114"></a>00114 <span class="comment"> * @param commit the commit object</span>
+<a name="l00115"></a>00115 <span class="comment"> * @param new_parent the new commit which will be a parent</span>
+<a name="l00116"></a>00116 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00117"></a>00117 <span class="comment"> */</span>
+<a name="l00118"></a>00118 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__commit.html#ga8e05b2002d15bd2c535c1b2e3f01688b" title="Add a new parent commit to an existing commit.">git_commit_add_parent</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, <a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *new_parent);
+<a name="l00119"></a>00119 <span class="comment"></span>
+<a name="l00120"></a>00120 <span class="comment">/**</span>
+<a name="l00121"></a>00121 <span class="comment"> * Set the message of a commit</span>
+<a name="l00122"></a>00122 <span class="comment"> * @param commit the commit object</span>
+<a name="l00123"></a>00123 <span class="comment"> * @param message the new message</span>
+<a name="l00124"></a>00124 <span class="comment"> */</span>
+<a name="l00125"></a>00125 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__commit.html#ga7177ba22fab1560eda2208870f4aaa3f" title="Set the message of a commit.">git_commit_set_message</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, const <span class="keywordtype">char</span> *message);
+<a name="l00126"></a>00126 <span class="comment"></span>
+<a name="l00127"></a>00127 <span class="comment">/**</span>
+<a name="l00128"></a>00128 <span class="comment"> * Set the committer of a commit</span>
+<a name="l00129"></a>00129 <span class="comment"> * @param commit the commit object</span>
+<a name="l00130"></a>00130 <span class="comment"> * @param name name of the new committer</span>
+<a name="l00131"></a>00131 <span class="comment"> * @param email email of the new committer</span>
+<a name="l00132"></a>00132 <span class="comment"> * @param time time when the committer committed the commit</span>
+<a name="l00133"></a>00133 <span class="comment"> */</span>
+<a name="l00134"></a>00134 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__commit.html#ga10af19027a35c23be6793ca1a1035dd5" title="Set the committer of a commit.">git_commit_set_committer</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email, time_t time);
+<a name="l00135"></a>00135 <span class="comment"></span>
+<a name="l00136"></a>00136 <span class="comment">/**</span>
+<a name="l00137"></a>00137 <span class="comment"> * Set the author of a commit</span>
+<a name="l00138"></a>00138 <span class="comment"> * @param commit the commit object</span>
+<a name="l00139"></a>00139 <span class="comment"> * @param name name of the new author</span>
+<a name="l00140"></a>00140 <span class="comment"> * @param email email of the new author</span>
+<a name="l00141"></a>00141 <span class="comment"> * @param time time when the author created the commit</span>
+<a name="l00142"></a>00142 <span class="comment"> */</span>
+<a name="l00143"></a>00143 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__commit.html#ga7a2ae57d57ff036211a28f5ecf3d283b" title="Set the author of a commit.">git_commit_set_author</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email, time_t time);
+<a name="l00144"></a>00144 <span class="comment"></span>
+<a name="l00145"></a>00145 <span class="comment">/**</span>
+<a name="l00146"></a>00146 <span class="comment"> * Set the tree which is pointed to by a commit</span>
+<a name="l00147"></a>00147 <span class="comment"> * @param commit the commit object</span>
+<a name="l00148"></a>00148 <span class="comment"> * @param tree the new tree</span>
+<a name="l00149"></a>00149 <span class="comment"> */</span>
+<a name="l00150"></a>00150 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__commit.html#gae1842cd66567820c4ba0ff14fdc0c7a7" title="Set the tree which is pointed to by a commit.">git_commit_set_tree</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit, <a class="code" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20" title="Representation of a tree object.">git_tree</a> *tree);
+<a name="l00151"></a>00151 <span class="comment"></span>
+<a name="l00152"></a>00152 <span class="comment">/** @} */</span>
+<a name="l00153"></a>00153 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00154"></a>00154 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -196,7 +219,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Mon Oct 25 2010 20:33:09 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:36 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>
