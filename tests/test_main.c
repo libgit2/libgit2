@@ -32,48 +32,21 @@
  * GCC only
  */
 #ifdef __GNUC__
+#include <stdio.h>
 #include <execinfo.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <ucontext.h>
-#include <unistd.h>
 
-typedef struct _sig_ucontext {
-	unsigned long     uc_flags;
-	struct ucontext   *uc_link;
-	stack_t           uc_stack;
-	struct sigcontext uc_mcontext;
-	sigset_t          uc_sigmask;
-} sig_ucontext_t;
-
-void crash_handler(int sig_num, siginfo_t *info, void *ucontext)
+void crash_handler(int sig)
 {
-	void *array[50];
-	void *caller_address;
-	char **messages;
-	int size, i;
+	void *array[10];
+	size_t size;
 
-	sig_ucontext_t *uc;
+	size = backtrace(array, 10);
 
-	uc = (sig_ucontext_t *)ucontext;
-
-	caller_address = (void *)uc->uc_mcontext.eip;   
-
-	fprintf(stderr, "Signal %d (%s), address: %p from %p\n", 
-			sig_num, strsignal(sig_num), info->si_addr, 
-			(void *)caller_address);
-
-	size = backtrace(array, 50);
-	array[1] = caller_address;
-	messages = backtrace_symbols(array, size);
-
-	for (i = 1; i < size && messages != NULL; ++i)
-		fprintf(stderr, "\t(%d) %s\n", i, messages[i]);
-
-	free(messages);
-	exit(EXIT_FAILURE);
+	fprintf(stderr, "Error (signal %d)\n", sig);
+	backtrace_symbols_fd(array, size, 2);
+	exit(1);
 }
 #endif
 
@@ -99,10 +72,7 @@ int main(int argc, char **argv)
 	struct test_def *t;
 
 #ifdef __GNUC__
-	struct sigaction sigact;
-	sigact.sa_sigaction = crash_handler;
-	sigact.sa_flags = SA_RESTART | SA_SIGINFO;
-	sigaction(SIGSEGV, &sigact, (struct sigaction *)NULL);
+	  signal(SIGSEGV, crash_handler);
 #endif
 
 	if (argc == 1) {
