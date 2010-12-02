@@ -43,8 +43,6 @@ BEGIN_TEST(index_sort_test)
 	unsigned int i;
 	git_index_entry **entries;
 
-	entries = (git_index_entry **)index->entries.contents;
-
 	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
 	must_pass(git_index_read(index));
 
@@ -52,6 +50,8 @@ BEGIN_TEST(index_sort_test)
 
 	git_index__sort(index);
 	must_be_true(index->sorted);
+
+	entries = (git_index_entry **)index->entries.contents;
 
 	for (i = 1; i < index->entries.length; ++i)
 		must_be_true(strcmp(entries[i - 1]->path, entries[i]->path) < 0);
