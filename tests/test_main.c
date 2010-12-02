@@ -26,6 +26,59 @@
 #include "test_lib.h"
 #include <string.h>
 
+
+/* 
+ * print backtrace when a test fails;
+ * GCC only
+ */
+#ifdef __GNUC__
+#include <execinfo.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ucontext.h>
+#include <unistd.h>
+
+typedef struct _sig_ucontext {
+	unsigned long     uc_flags;
+	struct ucontext   *uc_link;
+	stack_t           uc_stack;
+	struct sigcontext uc_mcontext;
+	sigset_t          uc_sigmask;
+} sig_ucontext_t;
+
+void crash_handler(int sig_num, siginfo_t *info, void *ucontext)
+{
+	void *array[50];
+	void *caller_address;
+	char **messages;
+	int size, i;
+
+	sig_ucontext_t *uc;
+
+	uc = (sig_ucontext_t *)ucontext;
+
+	caller_address = (void *)uc->uc_mcontext.eip;   
+
+	fprintf(stderr, "Signal %d (%s), address: %p from %p\n", 
+			sig_num, strsignal(sig_num), info->si_addr, 
+			(void *)caller_address);
+
+	size = backtrace(array, 50);
+	array[1] = caller_address;
+	messages = backtrace_symbols(array, size);
+
+	for (i = 1; i < size && messages != NULL; ++i)
+		fprintf(stderr, "\t(%d) %s\n", i, messages[i]);
+
+	free(messages);
+	exit(EXIT_FAILURE);
+}
+#endif
+
+
+
 #undef BEGIN_TEST
 #define BEGIN_TEST(name) extern void testfunc__##name(void);
 #include TEST_TOC
@@ -44,6 +97,13 @@ struct test_def all_tests[] = {
 int main(int argc, char **argv)
 {
 	struct test_def *t;
+
+#ifdef __GNUC__
+	struct sigaction sigact;
+	sigact.sa_sigaction = crash_handler;
+	sigact.sa_flags = SA_RESTART | SA_SIGINFO;
+	sigaction(SIGSEGV, &sigact, (struct sigaction *)NULL);
+#endif
 
 	if (argc == 1) {
 		for (t = all_tests; t->name; t++)
