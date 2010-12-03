@@ -131,6 +131,7 @@ def build_library(bld, lib_str):
 		)
 
 	# Install headers
+	bld.install_files('${PREFIX}/include', directory.find_node('src/git.h'))
 	bld.install_files('${PREFIX}/include/git', directory.ant_glob('src/git/*.h'))
 
 def grep_test_header(text, test_file):

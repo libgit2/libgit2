@@ -1,7 +1,6 @@
 #ifndef INCLUDE_git_zlib_h__
 #define INCLUDE_git_zlib_h__
 
-#include "common.h"
 #include <zlib.h>
 
 /**

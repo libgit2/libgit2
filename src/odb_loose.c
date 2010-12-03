@@ -25,11 +25,13 @@
 
 #include "common.h"
 #include "git/zlib.h"
+#include "git/object.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
 
+#include "git/odb_backend.h"
 
 typedef struct {  /* object header data */
 	git_otype type;  /* object type */
@@ -148,7 +150,7 @@ static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
 	typename[used] = 0;
 	if (used == 0)
 		return 0;
-	hdr->type = git_otype_fromstring(typename);
+	hdr->type = git_object_string2type(typename);
 	used++;  /* consume the space */
 
 	/*
@@ -357,7 +359,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, gitfo_buf *obj)
 	if ((used = get_binary_object_header(&hdr, obj)) == 0)
 		return GIT_ERROR;
 
-	if (!git_otype_is_loose(hdr.type))
+	if (!git_object_typeisloose(hdr.type))
 		return GIT_ERROR;
 
 	/*
@@ -406,7 +408,7 @@ static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
 	if ((used = get_object_header(&hdr, head)) == 0)
 		return GIT_ERROR;
 
-	if (!git_otype_is_loose(hdr.type))
+	if (!git_object_typeisloose(hdr.type))
 		return GIT_ERROR;
 
 	/*
@@ -489,7 +491,7 @@ static int read_header_loose(git_rawobj *out, const char *loc)
 
 	if ((z_return != Z_STREAM_END && z_return != Z_BUF_ERROR)
 		|| get_object_header(&header_obj, inflated_buffer) == 0
-		|| git_otype_is_loose(header_obj.type) == 0) {
+		|| git_object_typeisloose(header_obj.type) == 0) {
 		error = GIT_EOBJCORRUPTED;
 		goto cleanup;
 	}

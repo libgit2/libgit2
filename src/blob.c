@@ -24,7 +24,7 @@
  */
 
 #include "git/common.h"
-#include "git/odb.h"
+#include "git/object.h"
 #include "git/repository.h"
 
 #include "common.h"

@@ -2,9 +2,8 @@
 #define INCLUDE_git_tag_h__
 
 #include "common.h"
+#include "types.h"
 #include "oid.h"
-#include "tree.h"
-#include "repository.h"
 
 /**
  * @file git/tag.h
@@ -14,9 +13,6 @@
  * @{
  */
 GIT_BEGIN_DECL
-
-/** Parsed representation of a tag object. */
-typedef struct git_tag git_tag;
 
 /**
  * Lookup a tag object from the repository.

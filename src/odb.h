@@ -11,34 +11,6 @@ struct git_odb {
 	git_vector backends;
 };
 
-struct git_odb_backend {
-	git_odb *odb;
-
-	int priority;
-
-	int (* read)(
-			git_rawobj *,
-			struct git_odb_backend *,
-			const git_oid *);
-
-	int (* read_header)(
-			git_rawobj *,
-			struct git_odb_backend *,
-			const git_oid *);
-
-	int (* write)(
-			git_oid *id,
-			struct git_odb_backend *,
-			git_rawobj *obj);
-
-	int (* exists)(
-			struct git_odb_backend *,
-			const git_oid *);
-
-	void (* free)(struct git_odb_backend *);
-
-};
-
 int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj);
 int git_odb__inflate_buffer(void *in, size_t inlen, void *out, size_t outlen);
 

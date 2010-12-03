@@ -2,7 +2,7 @@
 #define INCLUDE_git_index_h__
 
 #include "common.h"
-#include "oid.h"
+#include "types.h"
 
 /**
  * @file git/index.h
@@ -18,10 +18,6 @@ GIT_BEGIN_DECL
 #define GIT_IDXENTRY_EXTENDED  (0x4000)
 #define GIT_IDXENTRY_VALID     (0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
-
-/** Memory representation of an index file. */
-typedef struct git_index git_index;
-
 
 /** Time used in a git index entry */
 typedef struct {

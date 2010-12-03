@@ -2,9 +2,8 @@
 #define INCLUDE_git_commit_h__
 
 #include "common.h"
+#include "types.h"
 #include "oid.h"
-#include "tree.h"
-#include "repository.h"
 
 /**
  * @file git/commit.h
@@ -14,9 +13,6 @@
  * @{
  */
 GIT_BEGIN_DECL
-
-/** Parsed representation of a commit object. */
-typedef struct git_commit git_commit;
 
 /**
  * Lookup a commit object from a repository.

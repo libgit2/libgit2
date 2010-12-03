@@ -2,14 +2,13 @@
 #define INCLUDE_git_repository_h__
 
 #include "common.h"
-#include "odb.h"
-#include "commit.h"
-#include "index.h"
+#include "types.h"
+#include "oid.h"
 
 /**
  * @file git/repository.h
- * @brief Git revision object management routines
- * @defgroup git_repository Git revision object management routines
+ * @brief Git repository management routines
+ * @defgroup git_repository Git repository management routines
  * @ingroup Git
  * @{
  */
@@ -132,66 +131,6 @@ GIT_EXTERN(git_index *) git_repository_index(git_repository *rpeo);
  * @return the new object
  */
 GIT_EXTERN(int) git_repository_newobject(git_object **object, git_repository *repo, git_otype type);
-
-/**
- * Write back an object to disk.
- *
- * The object will be written to its corresponding
- * repository.
- *
- * If the object has no changes since it was first
- * read from the repository, no actions will take place.
- *
- * If the object has been modified since it was read from
- * the repository, or it has been created from scratch
- * in memory, it will be written to the repository and
- * its SHA1 ID will be updated accordingly.
- *
- * @param object Git object to write back
- * @return 0 on success; otherwise an error code
- */
-GIT_EXTERN(int) git_object_write(git_object *object);
-
-/**
- * Get the id (SHA1) of a repository object
- *
- * In-memory objects created by git_object_new() do not
- * have a SHA1 ID until they are written on a repository.
- *
- * @param obj the repository object
- * @return the SHA1 id
- */
-GIT_EXTERN(const git_oid *) git_object_id(git_object *obj);
-
-/**
- * Get the object type of an object
- *
- * @param obj the repository object
- * @return the object's type
- */
-GIT_EXTERN(git_otype) git_object_type(git_object *obj);
-
-/**
- * Get the repository that owns this object
- *
- * @param obj the object
- * @return the repository who owns this object
- */
-GIT_EXTERN(git_repository *) git_object_owner(git_object *obj);
-
-/**
- * Free a reference to one of the objects in the repository.
- *
- * Repository objects are managed automatically by the library,
- * but this method can be used to force freeing one of the
- * objects.
- *
- * Careful: freeing objects in the middle of a repository
- * traversal will most likely cause errors.
- *
- * @param object the object to free
- */
-GIT_EXTERN(void) git_object_free(git_object *object);
 
 /**
  * Free a previously allocated repository

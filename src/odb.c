@@ -25,62 +25,17 @@
 
 #include "common.h"
 #include "git/zlib.h"
+#include "git/object.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
 
-static struct {
-	const char *str;   /* type name string */
-	int        loose;  /* valid loose object type flag */
-} obj_type_table[] = {
-	{ "",          0 },  /* 0 = GIT_OBJ__EXT1     */
-	{ "commit",    1 },  /* 1 = GIT_OBJ_COMMIT    */
-	{ "tree",      1 },  /* 2 = GIT_OBJ_TREE      */
-	{ "blob",      1 },  /* 3 = GIT_OBJ_BLOB      */
-	{ "tag",       1 },  /* 4 = GIT_OBJ_TAG       */
-	{ "",          0 },  /* 5 = GIT_OBJ__EXT2     */
-	{ "OFS_DELTA", 0 },  /* 6 = GIT_OBJ_OFS_DELTA */
-	{ "REF_DELTA", 0 }   /* 7 = GIT_OBJ_REF_DELTA */
-};
-
-/***********************************************************
- *
- * MISCELANEOUS HELPER FUNCTIONS
- * 
- ***********************************************************/
-
-const char *git_otype_tostring(git_otype type)
-{
-	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(obj_type_table))
-		return "";
-	return obj_type_table[type].str;
-}
-
-git_otype git_otype_fromstring(const char *str)
-{
-	size_t i;
-
-	if (!str || !*str)
-		return GIT_OBJ_BAD;
-
-	for (i = 0; i < ARRAY_SIZE(obj_type_table); i++)
-		if (!strcmp(str, obj_type_table[i].str))
-			return (git_otype) i;
-
-	return GIT_OBJ_BAD;
-}
-
-int git_otype_is_loose(git_otype type)
-{
-	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(obj_type_table))
-		return 0;
-	return obj_type_table[type].loose;
-}
+#include "git/odb_backend.h"
 
 static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 {
-	const char *type_str = git_otype_tostring(obj->type);
+	const char *type_str = git_object_type2string(obj->type);
 	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj->len);
 
 	assert(len > 0);             /* otherwise snprintf() is broken  */
@@ -98,7 +53,7 @@ int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *ob
 
 	assert(id && hdr && len && obj);
 
-	if (!git_otype_is_loose(obj->type))
+	if (!git_object_typeisloose(obj->type))
 		return GIT_ERROR;
 
 	if (!obj->data && obj->len != 0)
@@ -117,6 +72,12 @@ int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *ob
 	git_hash_vec(id, vec, 2);
 
 	return GIT_SUCCESS;
+}
+
+void git_rawobj_close(git_rawobj *obj)
+{
+	free(obj->data);
+	obj->data = NULL;
 }
 
 int git_rawobj_hash(git_oid *id, git_rawobj *obj)

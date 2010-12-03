@@ -24,6 +24,8 @@
  */
 #include <stdarg.h>
 
+#include "git/object.h"
+
 #include "common.h"
 #include "repository.h"
 #include "commit.h"
@@ -41,13 +43,27 @@ static const double max_load_factor = 0.65;
 
 static const int OBJECT_BASE_SIZE = 4096;
 
-static const size_t object_sizes[] = {
-	0,
-	sizeof(git_commit),
-	sizeof(git_tree),
-	sizeof(git_blob),
-	sizeof(git_tag)
+static struct {
+	const char	*str;   /* type name string */
+	int			loose;  /* valid loose object type flag */
+	size_t		size;	/* size in bytes of the object structure */
+} git_objects_table[] = {
+	{ "",          0, 0					},  /* 0 = GIT_OBJ__EXT1     */
+	{ "commit",    1, sizeof(git_commit)},  /* 1 = GIT_OBJ_COMMIT    */
+	{ "tree",      1, sizeof(git_tree)	},  /* 2 = GIT_OBJ_TREE      */
+	{ "blob",      1, sizeof(git_blob)	},  /* 3 = GIT_OBJ_BLOB      */
+	{ "tag",       1, sizeof(git_tag)	},  /* 4 = GIT_OBJ_TAG       */
+	{ "",          0, 0					},  /* 5 = GIT_OBJ__EXT2     */
+	{ "OFS_DELTA", 0, 0					},  /* 6 = GIT_OBJ_OFS_DELTA */
+	{ "REF_DELTA", 0, 0					}   /* 7 = GIT_OBJ_REF_DELTA */
 };
+
+/***********************************************************
+ *
+ * MISCELANEOUS HELPER FUNCTIONS
+ *
+ ***********************************************************/
+
 
 
 uint32_t git__objtable_hash(const void *key)
@@ -570,12 +586,12 @@ int git_repository_newobject(git_object **object_out, git_repository *repo, git_
 		return GIT_EINVALIDTYPE;
 	}
 
-	object = git__malloc(object_sizes[type]);
+	object = git__malloc(git_objects_table[type].size);
 
 	if (object == NULL)
 		return GIT_ENOMEM;
 
-	memset(object, 0x0, object_sizes[type]);
+	memset(object, 0x0, git_objects_table[type].size);
 	object->repo = repo;
 	object->in_memory = 1;
 	object->modified = 1;
@@ -609,12 +625,12 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 
 	type = obj_file.type;
 
-	object = git__malloc(object_sizes[type]);
+	object = git__malloc(git_objects_table[type].size);
 
 	if (object == NULL)
 		return GIT_ENOMEM;
 
-	memset(object, 0x0, object_sizes[type]);
+	memset(object, 0x0, git_objects_table[type].size);
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->id, id);
@@ -668,3 +684,32 @@ GIT_NEWOBJECT_TEMPLATE(tree, TREE)
 GIT_NEWOBJECT_TEMPLATE(blob, BLOB)
 
 
+const char *git_object_type2string(git_otype type)
+{
+	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(git_objects_table))
+		return "";
+
+	return git_objects_table[type].str;
+}
+
+git_otype git_object_string2type(const char *str)
+{
+	size_t i;
+
+	if (!str || !*str)
+		return GIT_OBJ_BAD;
+
+	for (i = 0; i < ARRAY_SIZE(git_objects_table); i++)
+		if (!strcmp(str, git_objects_table[i].str))
+			return (git_otype)i;
+
+	return GIT_OBJ_BAD;
+}
+
+int git_object_typeisloose(git_otype type)
+{
+	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(git_objects_table))
+		return 0;
+
+	return git_objects_table[type].loose;
+}

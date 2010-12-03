@@ -2,6 +2,7 @@
 #define INCLUDE_git_blob_h__
 
 #include "common.h"
+#include "types.h"
 #include "oid.h"
 
 /**
@@ -12,9 +13,6 @@
  * @{
  */
 GIT_BEGIN_DECL
-
-/** In-memory representation of a blob object. */
-typedef struct git_blob git_blob;
 
 /**
  * Lookup a blob object from a repository.

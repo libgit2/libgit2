@@ -2,8 +2,7 @@
 #define INCLUDE_git_revwalk_h__
 
 #include "common.h"
-#include "odb.h"
-#include "commit.h"
+#include "types.h"
 
 /**
  * @file git/revwalk.h
@@ -42,8 +41,6 @@ GIT_BEGIN_DECL
  * any of the above.
  */
 #define GIT_SORT_REVERSE      (1 << 2)
-
-typedef struct git_revwalk git_revwalk;
 
 /**
  * Allocate a new revision walker to iterate through a repo.

@@ -25,10 +25,13 @@
 
 #include "common.h"
 #include "git/zlib.h"
+#include "git/repository.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
+
+#include "git/odb_backend.h"
 
 /** First 4 bytes of a pack-*.idx file header.
  *

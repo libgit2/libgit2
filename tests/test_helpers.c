@@ -26,8 +26,6 @@
 #include "common.h"
 #include "test_helpers.h"
 #include "fileops.h"
-#include "git/oid.h"
-#include "git/repository.h"
 
 int write_object_data(char *file, void *data, size_t len)
 {
@@ -125,7 +123,7 @@ int remove_loose_object(const char *repository_folder, git_object *object)
 
 int cmp_objects(git_rawobj *o, object_data *d)
 {
-	if (o->type != git_otype_fromstring(d->type))
+	if (o->type != git_object_string2type(d->type))
 		return -1;
 	if (o->len != d->dlen)
 		return -1;

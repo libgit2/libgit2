@@ -2,8 +2,8 @@
 #define INCLUDE_git_odb_h__
 
 #include "common.h"
+#include "types.h"
 #include "oid.h"
-#include <stdlib.h>
 
 /**
  * @file git/odb.h
@@ -13,12 +13,6 @@
  * @{
  */
 GIT_BEGIN_DECL
-
-/** An open object database handle. */
-typedef struct git_odb git_odb;
-
-/** A custom backend in an ODB */
-typedef struct git_odb_backend git_odb_backend;
 
 /**
  * Create a new object database with no backends.
@@ -68,20 +62,6 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend);
  * @param db database pointer to close.  If NULL no action is taken.
  */
 GIT_EXTERN(void) git_odb_close(git_odb *db);
-
-/** Basic type (loose or packed) of any Git object. */
-typedef enum {
-	GIT_OBJ_ANY = -2,		/**< Object can be any of the following */
-	GIT_OBJ_BAD = -1,       /**< Object is invalid. */
-	GIT_OBJ__EXT1 = 0,      /**< Reserved for future use. */
-	GIT_OBJ_COMMIT = 1,     /**< A commit object. */
-	GIT_OBJ_TREE = 2,       /**< A tree (directory listing) object. */
-	GIT_OBJ_BLOB = 3,       /**< A file revision object. */
-	GIT_OBJ_TAG = 4,        /**< An annotated tag object. */
-	GIT_OBJ__EXT2 = 5,      /**< Reserved for future use. */
-	GIT_OBJ_OFS_DELTA = 6,  /**< A delta, base is given by an offset. */
-	GIT_OBJ_REF_DELTA = 7,  /**< A delta, base is given by object id. */
-} git_otype;
 
 /** An object read from the database. */
 typedef struct {
@@ -173,42 +153,7 @@ GIT_EXTERN(int) git_rawobj_hash(git_oid *id, git_rawobj *obj);
  *
  * @param obj object descriptor to free.
  */
-GIT_INLINE(void) git_rawobj_close(git_rawobj *obj)
-{
-	free(obj->data);
-	obj->data = NULL;
-}
-
-
-
-
-/**
- * Convert an object type to it's string representation.
- *
- * The result is a pointer to a string in static memory and
- * should not be free()'ed.
- *
- * @param type object type to convert.
- * @return the corresponding string representation.
- */
-GIT_EXTERN(const char *) git_otype_tostring(git_otype type);
-
-/**
- * Convert a string object type representation to it's git_otype.
- *
- * @param str the string to convert.
- * @return the corresponding git_otype.
- */
-GIT_EXTERN(git_otype) git_otype_fromstring(const char *str);
-
-/**
- * Determine if the given git_otype is a valid loose object type.
- *
- * @param type object type to test.
- * @return true if the type represents a valid loose object type,
- * false otherwise.
- */
-GIT_EXTERN(int) git_otype_is_loose(git_otype type);
+GIT_EXTERN(void) git_rawobj_close(git_rawobj *obj);
 
 /** @} */
 GIT_END_DECL

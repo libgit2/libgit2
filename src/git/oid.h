@@ -1,9 +1,6 @@
 #ifndef INCLUDE_git_oid_h__
 #define INCLUDE_git_oid_h__
 
-#include "common.h"
-#include <string.h>
-
 /**
  * @file git/oid.h
  * @brief Git object id routines
@@ -40,10 +37,7 @@ GIT_EXTERN(int) git_oid_mkstr(git_oid *out, const char *str);
  * @param out oid structure the result is written into.
  * @param raw the raw input bytes to be copied.
  */
-GIT_INLINE(void) git_oid_mkraw(git_oid *out, const unsigned char *raw)
-{
-	memcpy(out->id, raw, sizeof(out->id));
-}
+GIT_EXTERN(void) git_oid_mkraw(git_oid *out, const unsigned char *raw);
 
 /**
  * Format a git_oid into a hex string.
@@ -101,10 +95,7 @@ GIT_EXTERN(char *) git_oid_to_string(char *out, size_t n, const git_oid *oid);
  * @param out oid structure the result is written into.
  * @param src oid structure to copy from.
  */
-GIT_INLINE(void) git_oid_cpy(git_oid *out, const git_oid *src)
-{
-	memcpy(out->id, src->id, sizeof(out->id));
-}
+GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
 
 /**
  * Compare two oid structures.
@@ -112,10 +103,7 @@ GIT_INLINE(void) git_oid_cpy(git_oid *out, const git_oid *src)
  * @param b second oid structure.
  * @return <0, 0, >0 if a < b, a == b, a > b.
  */
-GIT_INLINE(int) git_oid_cmp(const git_oid *a, const git_oid *b)
-{
-	return memcmp(a->id, b->id, sizeof(a->id));
-}
+GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
 
 /** @} */
 GIT_END_DECL

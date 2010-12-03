@@ -2,8 +2,8 @@
 #define INCLUDE_git_tree_h__
 
 #include "common.h"
+#include "types.h"
 #include "oid.h"
-#include "repository.h"
 
 /**
  * @file git/tree.h
@@ -13,13 +13,6 @@
  * @{
  */
 GIT_BEGIN_DECL
-
-
-/** Representation of each one of the entries in a tree object. */
-typedef struct git_tree_entry git_tree_entry;
-
-/** Representation of a tree object. */
-typedef struct git_tree git_tree;
 
 /**
  * Lookup a tree object from the repository.

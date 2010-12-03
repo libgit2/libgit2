@@ -151,3 +151,18 @@ int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid)
 
 	return git__source_printf(src, "%s %s\n", header, hex_oid);
 }
+
+void git_oid_mkraw(git_oid *out, const unsigned char *raw)
+{
+	memcpy(out->id, raw, sizeof(out->id));
+}
+
+void git_oid_cpy(git_oid *out, const git_oid *src)
+{
+	memcpy(out->id, src->id, sizeof(out->id));
+}
+
+int git_oid_cmp(const git_oid *a, const git_oid *b)
+{
+	return memcmp(a->id, b->id, sizeof(a->id));
+}
