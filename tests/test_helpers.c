@@ -125,7 +125,7 @@ int remove_loose_object(const char *repository_folder, git_object *object)
 
 int cmp_objects(git_rawobj *o, object_data *d)
 {
-	if (o->type != git_obj_string_to_type(d->type))
+	if (o->type != git_otype_fromstring(d->type))
 		return -1;
 	if (o->len != d->dlen)
 		return -1;

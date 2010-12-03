@@ -326,28 +326,28 @@ BEGIN_TEST(hash_junk)
 
     /* invalid types: */
     junk_obj.data = some_data;
-    must_fail(git_obj_hash(&id, &junk_obj));
+    must_fail(git_rawobj_hash(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ__EXT1;
-    must_fail(git_obj_hash(&id, &junk_obj));
+    must_fail(git_rawobj_hash(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ__EXT2;
-    must_fail(git_obj_hash(&id, &junk_obj));
+    must_fail(git_rawobj_hash(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ_OFS_DELTA;
-    must_fail(git_obj_hash(&id, &junk_obj));
+    must_fail(git_rawobj_hash(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ_REF_DELTA;
-    must_fail(git_obj_hash(&id, &junk_obj));
+    must_fail(git_rawobj_hash(&id, &junk_obj));
 
     /* data can be NULL only if len is zero: */
     junk_obj.type = GIT_OBJ_BLOB;
     junk_obj.data = NULL;
-    must_pass(git_obj_hash(&id, &junk_obj));
+    must_pass(git_rawobj_hash(&id, &junk_obj));
     must_be_true(git_oid_cmp(&id, &id_zero) == 0);
 
     junk_obj.len = 1;
-    must_fail(git_obj_hash(&id, &junk_obj));
+    must_fail(git_rawobj_hash(&id, &junk_obj));
 END_TEST
 
 BEGIN_TEST(hash_commit)
@@ -355,7 +355,7 @@ BEGIN_TEST(hash_commit)
 
     must_pass(git_oid_mkstr(&id1, commit_id));
 
-    must_pass(git_obj_hash(&id2, &commit_obj));
+    must_pass(git_rawobj_hash(&id2, &commit_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -365,7 +365,7 @@ BEGIN_TEST(hash_tree)
 
     must_pass(git_oid_mkstr(&id1, tree_id));
 
-    must_pass(git_obj_hash(&id2, &tree_obj));
+    must_pass(git_rawobj_hash(&id2, &tree_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -375,7 +375,7 @@ BEGIN_TEST(hash_tag)
 
     must_pass(git_oid_mkstr(&id1, tag_id));
 
-    must_pass(git_obj_hash(&id2, &tag_obj));
+    must_pass(git_rawobj_hash(&id2, &tag_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -385,7 +385,7 @@ BEGIN_TEST(hash_zero)
 
     must_pass(git_oid_mkstr(&id1, zero_id));
 
-    must_pass(git_obj_hash(&id2, &zero_obj));
+    must_pass(git_rawobj_hash(&id2, &zero_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -395,7 +395,7 @@ BEGIN_TEST(hash_one)
 
     must_pass(git_oid_mkstr(&id1, one_id));
 
-    must_pass(git_obj_hash(&id2, &one_obj));
+    must_pass(git_rawobj_hash(&id2, &one_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -405,7 +405,7 @@ BEGIN_TEST(hash_two)
 
     must_pass(git_oid_mkstr(&id1, two_id));
 
-    must_pass(git_obj_hash(&id2, &two_obj));
+    must_pass(git_rawobj_hash(&id2, &two_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -415,7 +415,7 @@ BEGIN_TEST(hash_some)
 
     must_pass(git_oid_mkstr(&id1, some_id));
 
-    must_pass(git_obj_hash(&id2, &some_obj));
+    must_pass(git_rawobj_hash(&id2, &some_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST

@@ -24,120 +24,11 @@
  */
 
 #include "common.h"
-#include "git/odb.h"
 #include "git/zlib.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
-
-#define GIT_PACK_NAME_MAX (5 + 40 + 1)
-
-#define OBJ_LOCATION_NOTFOUND	GIT_ENOTFOUND
-#define OBJ_LOCATION_INPACK		1
-#define OBJ_LOCATION_LOOSE		2
-
-typedef struct {
-	uint32_t      n;
-	unsigned char *oid;
-	off_t         offset;
-	off_t         size;
-} index_entry;
-
-
-struct git_pack {
-	git_odb *db;
-	git_lck lock;
-
-	/** Functions to access idx_map. */
-	int (*idx_search)(
-		uint32_t *,
-		struct git_pack *,
-		const git_oid *);
-	int (*idx_search_offset)(
-		uint32_t *,
-		struct git_pack *,
-		off_t);
-	int (*idx_get)(
-		index_entry *,
-		struct git_pack *,
-		uint32_t n);
-
-	/** The .idx file, mapped into memory. */
-	git_file idx_fd;
-	git_map idx_map;
-	uint32_t *im_fanout;
-	unsigned char *im_oid;
-	uint32_t *im_crc;
-	uint32_t *im_offset32;
-	uint32_t *im_offset64;
-	uint32_t *im_off_idx;
-	uint32_t *im_off_next;
-
-	/** Number of objects in this pack. */
-	uint32_t obj_cnt;
-
-	/** File descriptor for the .pack file. */
-	git_file pack_fd;
-
-	/** Memory map of the pack's contents */
-	git_map pack_map;
-
-	/** The size of the .pack file. */
-	off_t pack_size;
-
-	/** The mtime of the .pack file. */
-	time_t pack_mtime;
-
-	/** Number of git_packlist we appear in. */
-	unsigned int refcnt;
-
-	/** Number of active users of the idx_map data. */
-	unsigned int idxcnt;
-	unsigned
-		invalid:1 /* the pack is unable to be read by libgit2 */
-		;
-
-	/** Name of the pack file(s), without extension ("pack-abc"). */
-	char pack_name[GIT_PACK_NAME_MAX];
-};
-typedef struct git_pack git_pack;
-
-typedef struct {
-	size_t n_packs;
-	unsigned int refcnt;
-	git_pack *packs[GIT_FLEX_ARRAY];
-} git_packlist;
-
-struct git_odb {
-	git_lck lock;
-
-	/** Path to the "objects" directory. */
-	char *objects_dir;
-
-	/** Known pack files from ${objects_dir}/packs. */
-	git_packlist *packlist;
-
-	/** Alternate databases to search. */
-	git_odb **alternates;
-	size_t n_alternates;
-
-	/** loose object zlib compression level. */
-	int object_zlib_level;
-	/** loose object file fsync flag. */
-	int fsync_object_files;
-};
-
-typedef struct {  /* object header data */
-	git_otype type;  /* object type */
-	size_t    size;  /* object size */
-} obj_hdr;
-
-typedef struct {  /* '.pack' file header */
-	uint32_t sig;  /* PACK_SIG       */
-	uint32_t ver;  /* pack version   */
-	uint32_t cnt;  /* object count   */
-} pack_hdr;
 
 static struct {
 	const char *str;   /* type name string */
@@ -153,40 +44,20 @@ static struct {
 	{ "REF_DELTA", 0 }   /* 7 = GIT_OBJ_REF_DELTA */
 };
 
-typedef union obj_location {
-	char loose_path[GIT_PATH_MAX];
-	struct {
-		git_pack *ptr;
-		uint32_t n;
-	} pack;
-} obj_location;
-
-
 /***********************************************************
  *
  * MISCELANEOUS HELPER FUNCTIONS
  * 
  ***********************************************************/
 
-GIT_INLINE(uint32_t) decode32(void *b)
-{
-	return ntohl(*((uint32_t *)b));
-}
-
-GIT_INLINE(uint64_t) decode64(void *b)
-{
-	uint32_t *p = b;
-	return (((uint64_t)ntohl(p[0])) << 32) | ntohl(p[1]);
-}
-
-const char *git_obj_type_to_string(git_otype type)
+const char *git_otype_tostring(git_otype type)
 {
 	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(obj_type_table))
 		return "";
 	return obj_type_table[type].str;
 }
 
-git_otype git_obj_string_to_type(const char *str)
+git_otype git_otype_fromstring(const char *str)
 {
 	size_t i;
 
@@ -200,7 +71,7 @@ git_otype git_obj_string_to_type(const char *str)
 	return GIT_OBJ_BAD;
 }
 
-int git_obj__loose_object_type(git_otype type)
+int git_otype_is_loose(git_otype type)
 {
 	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(obj_type_table))
 		return 0;
@@ -209,7 +80,7 @@ int git_obj__loose_object_type(git_otype type)
 
 static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 {
-	const char *type_str = git_obj_type_to_string(obj->type);
+	const char *type_str = git_otype_tostring(obj->type);
 	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj->len);
 
 	assert(len > 0);             /* otherwise snprintf() is broken  */
@@ -220,14 +91,14 @@ static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 	return len+1;
 }
 
-static int hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj)
+int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj)
 {
 	git_buf_vec vec[2];
 	int  hdrlen;
 
 	assert(id && hdr && len && obj);
 
-	if (!git_obj__loose_object_type(obj->type))
+	if (!git_otype_is_loose(obj->type))
 		return GIT_ERROR;
 
 	if (!obj->data && obj->len != 0)
@@ -248,221 +119,28 @@ static int hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj)
 	return GIT_SUCCESS;
 }
 
-int git_obj_hash(git_oid *id, git_rawobj *obj)
+int git_rawobj_hash(git_oid *id, git_rawobj *obj)
 {
 	char hdr[64];
 	int  hdrlen;
 
 	assert(id && obj);
 
-	return hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj);
+	return git_odb__hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj);
 }
 
-static size_t object_file_name(char *name, size_t n, char *dir, const git_oid *id)
-{
-	size_t len = strlen(dir);
-
-	/* check length: 43 = 40 hex sha1 chars + 2 * '/' + '\0' */
-	if (len+43 > n)
-		return len+43;
-
-	/* the object dir: eg $GIT_DIR/objects */
-	strcpy(name, dir);
-	if (name[len-1] != '/')
-		name[len++] = '/';
-
-	/* loose object filename: aa/aaa... (41 bytes) */
-	git_oid_pathfmt(&name[len], id);
-	name[len+41] = '\0';
-
-	return 0;
-}
-
-static int is_zlib_compressed_data(unsigned char *data)
-{
-	unsigned int w;
-
-	w = ((unsigned int)(data[0]) << 8) + data[1];
-	return data[0] == 0x78 && !(w % 31);
-}
-
-static size_t get_binary_object_header(obj_hdr *hdr, gitfo_buf *obj)
-{
-	unsigned char c;
-	unsigned char *data = obj->data;
-	size_t shift, size, used = 0;
-
-	if (obj->len == 0)
-		return 0;
-
-	c = data[used++];
-	hdr->type = (c >> 4) & 7;
-
-	size = c & 15;
-	shift = 4;
-	while (c & 0x80) {
-		if (obj->len <= used)
-			return 0;
-		if (sizeof(size_t) * 8 <= shift)
-			return 0;
-		c = data[used++];
-		size += (c & 0x7f) << shift;
-		shift += 7;
-	}
-	hdr->size = size;
-
-	return used;
-}
-
-static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
-{
-	char c, typename[10];
-	size_t size, used = 0;
-
-	/*
-	 * type name string followed by space.
-	 */
-	while ((c = data[used]) != ' ') {
-		typename[used++] = c;
-		if (used >= sizeof(typename))
-			return 0;
-	}
-	typename[used] = 0;
-	if (used == 0)
-		return 0;
-	hdr->type = git_obj_string_to_type(typename);
-	used++;  /* consume the space */
-
-	/*
-	 * length follows immediately in decimal (without
-	 * leading zeros).
-	 */
-	size = data[used++] - '0';
-	if (size > 9)
-		return 0;
-	if (size) {
-		while ((c = data[used]) != '\0') {
-			size_t d = c - '0';
-			if (d > 9)
-				break;
-			used++;
-			size = size * 10 + d;
-		}
-	}
-	hdr->size = size;
-
-	/*
-	 * the length must be followed by a zero byte
-	 */
-	if (data[used++] != '\0')
-		return 0;
-
-	return used;
-}
-
-
-
-
-
-
-/***********************************************************
- *
- * ZLIB RELATED FUNCTIONS
- * 
- ***********************************************************/
-
-static void init_stream(z_stream *s, void *out, size_t len)
-{
-	memset(s, 0, sizeof(*s));
-	s->next_out  = out;
-	s->avail_out = len;
-}
-
-static void set_stream_input(z_stream *s, void *in, size_t len)
-{
-	s->next_in  = in;
-	s->avail_in = len;
-}
-
-static void set_stream_output(z_stream *s, void *out, size_t len)
-{
-	s->next_out  = out;
-	s->avail_out = len;
-}
-
-static int start_inflate(z_stream *s, gitfo_buf *obj, void *out, size_t len)
-{
-	int status;
-
-	init_stream(s, out, len);
-	set_stream_input(s, obj->data, obj->len);
-
-	if ((status = inflateInit(s)) < Z_OK)
-		return status;
-
-	return inflate(s, 0);
-}
-
-static int finish_inflate(z_stream *s)
-{
-	int status = Z_OK;
-
-	while (status == Z_OK)
-		status = inflate(s, Z_FINISH);
-
-	inflateEnd(s);
-
-	if ((status != Z_STREAM_END) || (s->avail_in != 0))
-		return GIT_ERROR;
-
-	return GIT_SUCCESS;
-}
-
-static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
-{
-	unsigned char *buf, *head = hb;
-	size_t tail;
-
-	/*
-	 * allocate a buffer to hold the inflated data and copy the
-	 * initial sequence of inflated data from the tail of the
-	 * head buffer, if any.
-	 */
-	if ((buf = git__malloc(hdr->size + 1)) == NULL) {
-		inflateEnd(s);
-		return NULL;
-	}
-	tail = s->total_out - used;
-	if (used > 0 && tail > 0) {
-		if (tail > hdr->size)
-			tail = hdr->size;
-		memcpy(buf, head + used, tail);
-	}
-	used = tail;
-
-	/*
-	 * inflate the remainder of the object data, if any
-	 */
-	if (hdr->size < used)
-		inflateEnd(s);
-	else {
-		set_stream_output(s, buf + used, hdr->size - used);
-		if (finish_inflate(s)) {
-			free(buf);
-			return NULL;
-		}
-	}
-
-	return buf;
-}
-
-static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
+int git_odb__inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 {
 	z_stream zs;
 	int status = Z_OK;
 
-	init_stream(&zs, out, outlen);
-	set_stream_input(&zs, in, inlen);
+	memset(&zs, 0x0, sizeof(zs));
+
+	zs.next_out  = out;
+	zs.avail_out = outlen;
+
+	zs.next_in  = in;
+	zs.avail_in = inlen;
 
 	if (inflateInit(&zs) < Z_OK)
 		return GIT_ERROR;
@@ -481,1273 +159,6 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	return GIT_SUCCESS;
 }
 
-/*
- * At one point, there was a loose object format that was intended to
- * mimic the format used in pack-files. This was to allow easy copying
- * of loose object data into packs. This format is no longer used, but
- * we must still read it.
- */
-static int inflate_packlike_loose_disk_obj(git_rawobj *out, gitfo_buf *obj)
-{
-	unsigned char *in, *buf;
-	obj_hdr hdr;
-	size_t len, used;
-
-	/*
-	 * read the object header, which is an (uncompressed)
-	 * binary encoding of the object type and size.
-	 */
-	if ((used = get_binary_object_header(&hdr, obj)) == 0)
-		return GIT_ERROR;
-
-	if (!git_obj__loose_object_type(hdr.type))
-		return GIT_ERROR;
-
-	/*
-	 * allocate a buffer and inflate the data into it
-	 */
-	buf = git__malloc(hdr.size + 1);
-	if (!buf)
-		return GIT_ERROR;
-
-	in  = ((unsigned char *)obj->data) + used;
-	len = obj->len - used;
-	if (inflate_buffer(in, len, buf, hdr.size)) {
-		free(buf);
-		return GIT_ERROR;
-	}
-	buf[hdr.size] = '\0';
-
-	out->data = buf;
-	out->len  = hdr.size;
-	out->type = hdr.type;
-
-	return GIT_SUCCESS;
-}
-
-static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
-{
-	unsigned char head[64], *buf;
-	z_stream zs;
-	int z_status;
-	obj_hdr hdr;
-	size_t used;
-
-	/*
-	 * check for a pack-like loose object
-	 */
-	if (!is_zlib_compressed_data(obj->data))
-		return inflate_packlike_loose_disk_obj(out, obj);
-
-	/*
-	 * inflate the initial part of the io buffer in order
-	 * to parse the object header (type and size).
-	 */
-	if ((z_status = start_inflate(&zs, obj, head, sizeof(head))) < Z_OK)
-		return GIT_ERROR;
-
-	if ((used = get_object_header(&hdr, head)) == 0)
-		return GIT_ERROR;
-
-	if (!git_obj__loose_object_type(hdr.type))
-		return GIT_ERROR;
-
-	/*
-	 * allocate a buffer and inflate the object data into it
-	 * (including the initial sequence in the head buffer).
-	 */
-	if ((buf = inflate_tail(&zs, head, used, &hdr)) == NULL)
-		return GIT_ERROR;
-	buf[hdr.size] = '\0';
-
-	out->data = buf;
-	out->len  = hdr.size;
-	out->type = hdr.type;
-
-	return GIT_SUCCESS;
-}
-
-static int make_temp_file(git_file *fd, char *tmp, size_t n, char *file)
-{
-	char *template = "/tmp_obj_XXXXXX";
-	size_t tmplen = strlen(template);
-	int dirlen;
-
-	if ((dirlen = git__dirname(tmp, n, file)) < 0)
-		return GIT_ERROR;
-
-	if ((dirlen + tmplen) >= n)
-		return GIT_ERROR;
-
-	strcpy(tmp + dirlen, (dirlen) ? template : template + 1);
-
-	*fd = gitfo_mkstemp(tmp);
-	if (*fd < 0 && dirlen) {
-		/* create directory if it doesn't exist */
-		tmp[dirlen] = '\0';
-		if ((gitfo_exists(tmp) < 0) && gitfo_mkdir(tmp, 0755))
-			return GIT_ERROR;
-		/* try again */
-		strcpy(tmp + dirlen, template);
-		*fd = gitfo_mkstemp(tmp);
-	}
-	if (*fd < 0)
-		return GIT_ERROR;
-
-	return GIT_SUCCESS;
-}
-
-static int deflate_buf(z_stream *s, void *in, size_t len, int flush)
-{
-	int status = Z_OK;
-
-	set_stream_input(s, in, len);
-	while (status == Z_OK) {
-		status = deflate(s, flush);
-		if (s->avail_in == 0)
-			break;
-	}
-	return status;
-}
-
-static int deflate_obj(gitfo_buf *buf, char *hdr, int hdrlen, git_rawobj *obj, int level)
-{
-	z_stream zs;
-	int status;
-	size_t size;
-
-	assert(buf && !buf->data && hdr && obj);
-	assert(level == Z_DEFAULT_COMPRESSION || (level >= 0 && level <= 9));
-
-	buf->data = NULL;
-	buf->len  = 0;
-	init_stream(&zs, NULL, 0);
-
-	if (deflateInit(&zs, level) < Z_OK)
-		return GIT_ERROR;
-
-	size = deflateBound(&zs, hdrlen + obj->len);
-
-	if ((buf->data = git__malloc(size)) == NULL) {
-		deflateEnd(&zs);
-		return GIT_ERROR;
-	}
-
-	set_stream_output(&zs, buf->data, size);
-
-	/* compress the header */
-	status = deflate_buf(&zs, hdr, hdrlen, Z_NO_FLUSH);
-
-	/* if header compressed OK, compress the object */
-	if (status == Z_OK)
-		status = deflate_buf(&zs, obj->data, obj->len, Z_FINISH);
-
-	if (status != Z_STREAM_END) {
-		deflateEnd(&zs);
-		free(buf->data);
-		buf->data = NULL;
-		return GIT_ERROR;
-	}
-
-	buf->len = zs.total_out;
-	deflateEnd(&zs);
-
-	return GIT_SUCCESS;
-}
-
-
-
-
-
-
-
-/***********************************************************
- *
- * PACKFILE INDEX FUNCTIONS
- *
- * Get index formation for packfile indexes v1 and v2
- * 
- ***********************************************************/
-
-static int pack_openidx_map(git_pack *p)
-{
-	char pb[GIT_PATH_MAX];
-	off_t len;
-
-	if (git__fmt(pb, sizeof(pb), "%s/pack/%s.idx",
-			p->db->objects_dir,
-			p->pack_name) < 0)
-		return GIT_ERROR;
-
-	if ((p->idx_fd = gitfo_open(pb, O_RDONLY)) < 0)
-		return GIT_ERROR;
-
-	if ((len = gitfo_size(p->idx_fd)) < 0
-		|| !git__is_sizet(len)
-		|| gitfo_map_ro(&p->idx_map, p->idx_fd, 0, (size_t)len)) {
-		gitfo_close(p->idx_fd);
-		return GIT_ERROR;
-	}
-
-	return GIT_SUCCESS;
-}
-
-typedef struct {
-	off_t offset;
-	uint32_t n;
-} offset_idx_info;
-
-static int cmp_offset_idx_info(const void *lhs, const void *rhs)
-{
-	const offset_idx_info *a = lhs;
-	const offset_idx_info *b = rhs;
-	return (a->offset < b->offset) ? -1 : (a->offset > b->offset) ? 1 : 0;
-}
-
-static int make_offset_index(git_pack *p, offset_idx_info *data)
-{
-	off_t min_off = 3 * 4, max_off = p->pack_size - GIT_OID_RAWSZ;
-	uint32_t *idx, *next;
-	uint32_t j;
-
-	qsort(data, p->obj_cnt, sizeof(*data), cmp_offset_idx_info);
-
-	if (data[0].offset < min_off || data[p->obj_cnt].offset > max_off)
-		return GIT_ERROR;
-
-	if ((idx = git__malloc(sizeof(*idx) * (p->obj_cnt+1))) == NULL)
-		return GIT_ERROR;
-	if ((next = git__malloc(sizeof(*next) * p->obj_cnt)) == NULL) {
-		free(idx);
-		return GIT_ERROR;
-	}
-
-	for (j = 0; j < p->obj_cnt+1; j++)
-		idx[j] = data[j].n;
-
-	for (j = 0; j < p->obj_cnt; j++) {
-		assert(idx[j]   < p->obj_cnt);
-		assert(idx[j+1] < p->obj_cnt+1);
-
-		next[idx[j]] = idx[j+1];
-	}
-
-	p->im_off_idx = idx;
-	p->im_off_next = next;
-	return GIT_SUCCESS;
-}
-
-static int idxv1_search(uint32_t *out, git_pack *p, const git_oid *id)
-{
-	unsigned char *data = p->im_oid;
-	uint32_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
-	uint32_t hi = p->im_fanout[id->id[0]];
-
-	do {
-		uint32_t mid = (lo + hi) >> 1;
-		uint32_t pos = 24 * mid;
-		int cmp = memcmp(id->id, data + pos + 4, 20);
-		if (cmp < 0)
-			hi = mid;
-		else if (!cmp) {
-			*out = mid;
-			return GIT_SUCCESS;
-		} else
-			lo = mid + 1;
-	} while (lo < hi);
-	return GIT_ENOTFOUND;
-}
-
-static int idxv1_search_offset(uint32_t *out, git_pack *p, off_t offset)
-{
-	if (offset > 0 && offset < (p->pack_size - GIT_OID_RAWSZ)) {
-		uint32_t lo = 0, hi = p->obj_cnt+1;
-		unsigned char *data = p->im_oid;
-		uint32_t *idx = p->im_off_idx;
-		do {
-			uint32_t mid = (lo + hi) >> 1;
-			uint32_t n = idx[mid];
-			uint32_t pos = n * (GIT_OID_RAWSZ + 4);
-			off_t here = decode32(data + pos);
-			if (offset < here)
-				hi = mid;
-			else if (offset == here) {
-				*out = n;
-				return GIT_SUCCESS;
-			} else
-				lo = mid + 1;
-		} while (lo < hi);
-	}
-	return GIT_ENOTFOUND;
-}
-
-static int idxv1_get(index_entry *e, git_pack *p, uint32_t n)
-{
-	unsigned char *data = p->im_oid;
-	uint32_t *next = p->im_off_next;
-
-	if (n < p->obj_cnt) {
-		uint32_t pos = n * (GIT_OID_RAWSZ + 4);
-		off_t next_off = p->pack_size - GIT_OID_RAWSZ;
-		e->n = n;
-		e->oid = data + pos + 4;
-		e->offset = decode32(data + pos);
-		if (next[n] < p->obj_cnt) {
-			pos = next[n] * (GIT_OID_RAWSZ + 4);
-			next_off = decode32(data + pos);
-		}
-		e->size = next_off - e->offset;
-		return GIT_SUCCESS;
-	}
-	return GIT_ENOTFOUND;
-}
-
-static int pack_openidx_v1(git_pack *p)
-{
-	uint32_t *src_fanout = p->idx_map.data;
-	uint32_t *im_fanout;
-	offset_idx_info *info;
-	size_t expsz;
-	uint32_t j;
-
-
-	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
-		return GIT_ERROR;
-
-	im_fanout[0] = decode32(&src_fanout[0]);
-	for (j = 1; j < 256; j++) {
-		im_fanout[j] = decode32(&src_fanout[j]);
-		if (im_fanout[j] < im_fanout[j - 1]) {
-			free(im_fanout);
-			return GIT_ERROR;
-		}
-	}
-	p->obj_cnt = im_fanout[255];
-
-	expsz = 4 * 256 + 24 * p->obj_cnt + 2 * 20;
-	if (expsz != p->idx_map.len) {
-		free(im_fanout);
-		return GIT_ERROR;
-	}
-
-	p->idx_search = idxv1_search;
-	p->idx_search_offset = idxv1_search_offset;
-	p->idx_get = idxv1_get;
-	p->im_fanout = im_fanout;
-	p->im_oid = (unsigned char *)(src_fanout + 256);
-
-	if ((info = git__malloc(sizeof(*info) * (p->obj_cnt+1))) == NULL) {
-		free(im_fanout);
-		return GIT_ERROR;
-	}
-
-	for (j = 0; j < p->obj_cnt; j++) {
-		uint32_t pos = j * (GIT_OID_RAWSZ + 4);
-		info[j].offset = decode32(p->im_oid + pos);
-		info[j].n = j;
-	}
-	info[p->obj_cnt].offset = p->pack_size - GIT_OID_RAWSZ;
-	info[p->obj_cnt].n = p->obj_cnt;
-
-	if (make_offset_index(p, info)) {
-		free(im_fanout);
-		free(info);
-		return GIT_ERROR;
-	}
-	free(info);
-
-	return GIT_SUCCESS;
-}
-
-static int idxv2_search(uint32_t *out, git_pack *p, const git_oid *id)
-{
-	unsigned char *data = p->im_oid;
-	uint32_t lo = id->id[0] ? p->im_fanout[id->id[0] - 1] : 0;
-	uint32_t hi = p->im_fanout[id->id[0]];
-
-	do {
-		uint32_t mid = (lo + hi) >> 1;
-		uint32_t pos = 20 * mid;
-		int cmp = memcmp(id->id, data + pos, 20);
-		if (cmp < 0)
-			hi = mid;
-		else if (!cmp) {
-			*out = mid;
-			return GIT_SUCCESS;
-		} else
-			lo = mid + 1;
-	} while (lo < hi);
-	return GIT_ENOTFOUND;
-}
-
-static int idxv2_search_offset(uint32_t *out, git_pack *p, off_t offset)
-{
-	if (offset > 0 && offset < (p->pack_size - GIT_OID_RAWSZ)) {
-		uint32_t lo = 0, hi = p->obj_cnt+1;
-		uint32_t *idx = p->im_off_idx;
-		do {
-			uint32_t mid = (lo + hi) >> 1;
-			uint32_t n = idx[mid];
-			uint32_t o32 = decode32(p->im_offset32 + n);
-			off_t here = o32;
-
-			if (o32 & 0x80000000) {
-				uint32_t o64_idx = (o32 & ~0x80000000);
-				here = decode64(p->im_offset64 + 2*o64_idx);
-			}
-
-			if (offset < here)
-				hi = mid;
-			else if (offset == here) {
-				*out = n;
-				return GIT_SUCCESS;
-			} else
-				lo = mid + 1;
-		} while (lo < hi);
-	}
-	return GIT_ENOTFOUND;
-}
-
-static int idxv2_get(index_entry *e, git_pack *p, uint32_t n)
-{
-	unsigned char *data = p->im_oid;
-	uint32_t *next = p->im_off_next;
-
-	if (n < p->obj_cnt) {
-		uint32_t o32 = decode32(p->im_offset32 + n);
-		off_t next_off = p->pack_size - GIT_OID_RAWSZ;
-		e->n = n;
-		e->oid = data + n * GIT_OID_RAWSZ;
-		e->offset = o32;
-		if (o32 & 0x80000000) {
-			uint32_t o64_idx = (o32 & ~0x80000000);
-			e->offset = decode64(p->im_offset64 + 2*o64_idx);
-		}
-		if (next[n] < p->obj_cnt) {
-			o32 = decode32(p->im_offset32 + next[n]);
-			next_off = o32;
-			if (o32 & 0x80000000) {
-				uint32_t o64_idx = (o32 & ~0x80000000);
-				next_off = decode64(p->im_offset64 + 2*o64_idx);
-			}
-		}
-		e->size = next_off - e->offset;
-		return GIT_SUCCESS;
-	}
-	return GIT_ENOTFOUND;
-}
-
-static int pack_openidx_v2(git_pack *p)
-{
-	unsigned char *data = p->idx_map.data;
-	uint32_t *src_fanout = (uint32_t *)(data + 8);
-	uint32_t *im_fanout;
-	offset_idx_info *info;
-	size_t sz, o64_sz, o64_len;
-	uint32_t j;
-
-	if ((im_fanout = git__malloc(sizeof(*im_fanout) * 256)) == NULL)
-		return GIT_ERROR;
-
-	im_fanout[0] = decode32(&src_fanout[0]);
-	for (j = 1; j < 256; j++) {
-		im_fanout[j] = decode32(&src_fanout[j]);
-		if (im_fanout[j] < im_fanout[j - 1]) {
-			free(im_fanout);
-			return GIT_ERROR;
-		}
-	}
-	p->obj_cnt = im_fanout[255];
-
-	/* minimum size of .idx file (with empty 64-bit offsets table): */
-	sz = 4 + 4 + 256 * 4 + p->obj_cnt * (20 + 4 + 4) + 2 * 20;
-	if (p->idx_map.len < sz) {
-		free(im_fanout);
-		return GIT_ERROR;
-	}
-
-	p->idx_search = idxv2_search;
-	p->idx_search_offset = idxv2_search_offset;
-	p->idx_get = idxv2_get;
-	p->im_fanout = im_fanout;
-	p->im_oid = (unsigned char *)(src_fanout + 256);
-	p->im_crc = (uint32_t *)(p->im_oid + 20 * p->obj_cnt);
-	p->im_offset32 = p->im_crc + p->obj_cnt;
-	p->im_offset64 = p->im_offset32 + p->obj_cnt;
-
-	if ((info = git__malloc(sizeof(*info) * (p->obj_cnt+1))) == NULL) {
-		free(im_fanout);
-		return GIT_ERROR;
-	}
-
-	/* check 64-bit offset table index values are within bounds */
-	o64_sz = p->idx_map.len - sz;
-	o64_len = o64_sz / 8;
-	for (j = 0; j < p->obj_cnt; j++) {
-		uint32_t o32 = decode32(p->im_offset32 + j);
-		off_t offset = o32;
-		if (o32 & 0x80000000) {
-			uint32_t o64_idx = (o32 & ~0x80000000);
-			if (o64_idx >= o64_len) {
-				free(im_fanout);
-				free(info);
-				return GIT_ERROR;
-			}
-			offset = decode64(p->im_offset64 + 2*o64_idx);
-		}
-		info[j].offset = offset;
-		info[j].n = j;
-	}
-	info[p->obj_cnt].offset = p->pack_size - GIT_OID_RAWSZ;
-	info[p->obj_cnt].n = p->obj_cnt;
-
-	if (make_offset_index(p, info)) {
-		free(im_fanout);
-		free(info);
-		return GIT_ERROR;
-	}
-	free(info);
-
-	return GIT_SUCCESS;
-}
-
-
-
-
-
-
-/***********************************************************
- *
- * PACKFILE FUNCTIONS
- *
- * Locate, open and access the contents of a packfile
- * 
- ***********************************************************/
-
-static int pack_stat(git_pack *p)
-{
-	char pb[GIT_PATH_MAX];
-	struct stat sb;
-
-	if (git__fmt(pb, sizeof(pb), "%s/pack/%s.pack",
-			p->db->objects_dir,
-			p->pack_name) < 0)
-		return GIT_ERROR;
-
-	if (gitfo_stat(pb, &sb) || !S_ISREG(sb.st_mode))
-		return GIT_ERROR;
-
-	if (sb.st_size < (3 * 4 + GIT_OID_RAWSZ))
-		return GIT_ERROR;
-
-	p->pack_size = sb.st_size;
-	p->pack_mtime = sb.st_mtime;
-
-	return GIT_SUCCESS;
-}
-
-static int pack_openidx(git_pack *p)
-{
-	gitlck_lock(&p->lock);
-
-	if (p->invalid) {
-		gitlck_unlock(&p->lock);
-		return GIT_ERROR;
-	}
-
-	if (++p->idxcnt == 1 && !p->idx_search) {
-		int status, version;
-		uint32_t *data;
-
-		if (pack_stat(p) || pack_openidx_map(p)) {
-			p->invalid = 1;
-			p->idxcnt--;
-			gitlck_unlock(&p->lock);
-			return GIT_ERROR;
-		}
-		data = p->idx_map.data;
-		status = GIT_SUCCESS;
-		version = 1;
-
-		if (decode32(&data[0]) == PACK_TOC)
-			version = decode32(&data[1]);
-
-		switch (version) {
-		case 1:
-			status = pack_openidx_v1(p);
-			break;
-		case 2:
-			status = pack_openidx_v2(p);
-			break;
-		default:
-			status = GIT_ERROR;
-		}
-
-		if (status != GIT_SUCCESS) {
-			gitfo_free_map(&p->idx_map);
-			p->invalid = 1;
-			p->idxcnt--;
-			gitlck_unlock(&p->lock);
-			return status;
-		}
-	}
-
-	gitlck_unlock(&p->lock);
-	return GIT_SUCCESS;
-}
-
-static void pack_decidx(git_pack *p)
-{
-	gitlck_lock(&p->lock);
-	p->idxcnt--;
-	gitlck_unlock(&p->lock);
-}
-
-static int read_pack_hdr(pack_hdr *out, git_file fd)
-{
-	pack_hdr hdr;
-
-	if (gitfo_read(fd, &hdr, sizeof(hdr)))
-		return GIT_ERROR;
-
-	out->sig = decode32(&hdr.sig);
-	out->ver = decode32(&hdr.ver);
-	out->cnt = decode32(&hdr.cnt);
-
-	return GIT_SUCCESS;
-}
-
-static int check_pack_hdr(git_pack *p)
-{
-	pack_hdr hdr;
-
-	if (read_pack_hdr(&hdr, p->pack_fd))
-		return GIT_ERROR;
-
-	if (hdr.sig != PACK_SIG
-		|| (hdr.ver != 2 && hdr.ver != 3)
-		|| hdr.cnt != p->obj_cnt)
-		return GIT_ERROR;
-
-	return GIT_SUCCESS;
-}
-
-static int check_pack_sha1(git_pack *p)
-{
-	unsigned char *data = p->idx_map.data;
-	off_t pack_sha1_off = p->pack_size - GIT_OID_RAWSZ;
-	size_t idx_pack_sha1_off = p->idx_map.len - 2 * GIT_OID_RAWSZ;
-	git_oid pack_id, idx_pack_id;
-
-	if (gitfo_lseek(p->pack_fd, pack_sha1_off, SEEK_SET) == -1)
-		return GIT_ERROR;
-
-	if (gitfo_read(p->pack_fd, pack_id.id, sizeof(pack_id.id)))
-		return GIT_ERROR;
-
-	git_oid_mkraw(&idx_pack_id, data + idx_pack_sha1_off);
-
-	if (git_oid_cmp(&pack_id, &idx_pack_id))
-		return GIT_ERROR;
-
-	return GIT_SUCCESS;
-}
-
-static int open_pack(git_pack *p)
-{
-	char pb[GIT_PATH_MAX];
-	struct stat sb;
-
-	if (p->pack_fd != -1)
-		return GIT_SUCCESS;
-
-	if (git__fmt(pb, sizeof(pb), "%s/pack/%s.pack",
-			p->db->objects_dir,
-			p->pack_name) < 0)
-		return GIT_ERROR;
-
-	if (pack_openidx(p))
-		return GIT_ERROR;
-
-	if ((p->pack_fd = gitfo_open(pb, O_RDONLY)) < 0)
-		goto error_cleanup;
-
-	if (gitfo_fstat(p->pack_fd, &sb)
-		|| !S_ISREG(sb.st_mode) || p->pack_size != sb.st_size
-		|| check_pack_hdr(p) || check_pack_sha1(p))
-		goto error_cleanup;
-
-	if (!git__is_sizet(p->pack_size) ||
-		gitfo_map_ro(&p->pack_map, p->pack_fd, 0, (size_t)p->pack_size) < 0)
-		goto error_cleanup;
-
-	pack_decidx(p);
-	return GIT_SUCCESS;
-
-error_cleanup:
-	gitfo_close(p->pack_fd);
-	p->pack_fd = -1;
-	pack_decidx(p);
-	return GIT_ERROR;
-}
-
-static void pack_dec(git_pack *p)
-{
-	int need_free;
-
-	gitlck_lock(&p->lock);
-	need_free = !--p->refcnt;
-	gitlck_unlock(&p->lock);
-
-	if (need_free) {
-		if (p->idx_search) {
-			gitfo_free_map(&p->idx_map);
-			gitfo_close(p->idx_fd);
-			free(p->im_fanout);
-			free(p->im_off_idx);
-			free(p->im_off_next);
-			if (p->pack_fd != -1) {
-				gitfo_close(p->pack_fd);
-				gitfo_free_map(&p->pack_map);
-			}
-		}
-
-		gitlck_free(&p->lock);
-		free(p);
-	}
-}
-
-static void packlist_dec(git_odb *db, git_packlist *pl)
-{
-	int need_free;
-
-	assert(db && pl);
-
-	gitlck_lock(&db->lock);
-	need_free = !--pl->refcnt;
-	gitlck_unlock(&db->lock);
-
-	if (need_free) {
-		size_t j;
-		for (j = 0; j < pl->n_packs; j++)
-			pack_dec(pl->packs[j]);
-		free(pl);
-	}
-}
-
-static git_pack *alloc_pack(const char *pack_name)
-{
-	git_pack *p = git__calloc(1, sizeof(*p));
-	if (!p)
-		return NULL;
-
-	gitlck_init(&p->lock);
-	strcpy(p->pack_name, pack_name);
-	p->refcnt = 1;
-	p->pack_fd = -1;
-	return p;
-}
-
-struct scanned_pack {
-	struct scanned_pack *next;
-	git_pack *pack;
-};
-
-static int scan_one_pack(void *state, char *name)
-{
-	struct scanned_pack **ret = state, *r;
-	char *s = strrchr(name, '/'), *d;
-
-	if (git__prefixcmp(s + 1, "pack-")
-	 || git__suffixcmp(s, ".pack")
-	 || strlen(s + 1) != GIT_PACK_NAME_MAX + 4)
-		return 0;
-
-	d = strrchr(s + 1, '.');
-	strcpy(d + 1, "idx");    /* "pack-abc.pack" -> "pack-abc.idx" */
-	if (gitfo_exists(name))
-		return 0;
-
-	if ((r = git__malloc(sizeof(*r))) == NULL)
-		return GIT_ERROR;
-
-	*d = '\0';               /* "pack-abc.pack" -_> "pack-abc" */
-	if ((r->pack = alloc_pack(s + 1)) == NULL) {
-		free(r);
-		return GIT_ERROR;
-	}
-
-	r->next = *ret;
-	*ret = r;
-	return 0;
-}
-
-static git_packlist *scan_packs(git_odb *db)
-{
-	char pb[GIT_PATH_MAX];
-	struct scanned_pack *state = NULL, *c;
-	size_t cnt;
-	git_packlist *new_list;
-
-	if (git__fmt(pb, sizeof(pb), "%s/pack", db->objects_dir) < 0)
-		return NULL;
-	gitfo_dirent(pb, sizeof(pb), scan_one_pack, &state);
-
-	/* TODO - merge old entries into the new array */
-	for (cnt = 0, c = state; c; c = c->next)
-		cnt++;
-	new_list = git__malloc(sizeof(*new_list)
-		+ (sizeof(new_list->packs[0]) * cnt));
-	if (!new_list)
-		goto fail;
-
-	for (cnt = 0, c = state; c; ) {
-		struct scanned_pack *n = c->next;
-		c->pack->db = db;
-		new_list->packs[cnt++] = c->pack;
-		free(c);
-		c = n;
-	}
-	new_list->n_packs = cnt;
-	new_list->refcnt = 2;
-	db->packlist = new_list;
-	return new_list;
-
-fail:
-	while (state) {
-		struct scanned_pack *n = state->next;
-		pack_dec(state->pack);
-		free(state);
-		state = n;
-	}
-	return NULL;
-}
-
-static git_packlist *packlist_get(git_odb *db)
-{
-	git_packlist *pl;
-
-	gitlck_lock(&db->lock);
-	if ((pl = db->packlist) != NULL)
-		pl->refcnt++;
-	else
-		pl = scan_packs(db);
-	gitlck_unlock(&db->lock);
-	return pl;
-}
-
-static int search_packs(git_pack **p, uint32_t *n, git_odb *db, const git_oid *id)
-{
-	git_packlist *pl = packlist_get(db);
-	size_t j;
-
-	if (!pl)
-		return GIT_ENOTFOUND;
-
-	for (j = 0; j < pl->n_packs; j++) {
-
-		git_pack *pack = pl->packs[j];
-		uint32_t pos;
-		int res;
-
-		if (pack_openidx(pack))
-			continue;
-		res = pack->idx_search(&pos, pack, id);
-		pack_decidx(pack);
-
-		if (!res) {
-			packlist_dec(db, pl);
-			if (p)
-				*p = pack;
-			if (n)
-				*n = pos;
-			return GIT_SUCCESS;
-		}
-
-	}
-
-	packlist_dec(db, pl);
-	return GIT_ENOTFOUND;
-}
-
-
-
-
-
-
-
-
-/***********************************************************
- *
- * PACKFILE READING FUNCTIONS
- *
- * Read the contents of a packfile
- * 
- ***********************************************************/
-
-static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e);
-
-static int unpack_object_delta(git_rawobj *out, git_pack *p, 
-		index_entry *base_entry, 
-		uint8_t *delta_buffer, 
-		size_t delta_deflated_size,
-		size_t delta_inflated_size)
-{
-	int res = 0;
-	uint8_t *delta = NULL;
-	git_rawobj base_obj;
-
-	base_obj.data = NULL;
-	base_obj.type = GIT_OBJ_BAD;
-	base_obj.len = 0;
-
-	if ((res = unpack_object(&base_obj, p, base_entry)) < 0)
-		goto cleanup;
-
-	delta = git__malloc(delta_inflated_size + 1);
-
-	if ((res = inflate_buffer(delta_buffer, delta_deflated_size, 
-			delta, delta_inflated_size)) < 0)
-		goto cleanup;
-
-	res = git__delta_apply(out, base_obj.data, base_obj.len, delta, delta_inflated_size);
-
-	out->type = base_obj.type;
-
-cleanup:
-	free(delta);
-	git_obj_close(&base_obj);
-	return res;
-}
-
-static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e)
-{
-	git_otype object_type;
-	size_t inflated_size, deflated_size, shift;
-	uint8_t *buffer, byte;
-
-	assert(out && p && e && git__is_sizet(e->size));
-
-	if (open_pack(p))
-		return GIT_ERROR;
-
-	buffer = (uint8_t *)p->pack_map.data + e->offset;
-	deflated_size = (size_t)e->size;
-
-	if (deflated_size == 0)
-		deflated_size = (size_t)(p->pack_size - e->offset);
-
-	byte = *buffer++ & 0xFF;
-	deflated_size--;
-	object_type = (byte >> 4) & 0x7;
-	inflated_size = byte & 0xF;
-	shift = 4;
-
-	while (byte & 0x80) {
-		byte = *buffer++ & 0xFF;
-		deflated_size--;
-		inflated_size += (byte & 0x7F) << shift;
-		shift += 7;
-	}
-
-	switch (object_type) {
-		case GIT_OBJ_COMMIT:
-		case GIT_OBJ_TREE:
-		case GIT_OBJ_BLOB:
-		case GIT_OBJ_TAG: {
-
-			/* Handle a normal zlib stream */
-			out->len = inflated_size;
-			out->type = object_type;
-			out->data = git__malloc(inflated_size + 1);
-
-			if (inflate_buffer(buffer, deflated_size, out->data, out->len) < 0) {
-				free(out->data);
-				out->data = NULL;
-				return GIT_ERROR;
-			}
-
-			return GIT_SUCCESS;
-		}
-
-		case GIT_OBJ_OFS_DELTA: {
-
-			off_t delta_offset;
-			index_entry entry;
-
-			byte = *buffer++ & 0xFF;
-			delta_offset = byte & 0x7F;
-
-			while (byte & 0x80) {
-				delta_offset += 1;
-				byte = *buffer++ & 0xFF;
-				delta_offset <<= 7;
-				delta_offset += (byte & 0x7F);
-			}
-
-			entry.n = 0; 
-			entry.oid = NULL;
-			entry.offset = e->offset - delta_offset; 
-			entry.size = 0;
-
-			if (unpack_object_delta(out, p, &entry, 
-					buffer, deflated_size, inflated_size) < 0)
-				return GIT_ERROR;
-			
-			return GIT_SUCCESS;
-		}
-
-		case GIT_OBJ_REF_DELTA: {
-
-			git_oid base_id;
-			uint32_t n;
-			index_entry entry;
-			int res = GIT_ERROR;
-
-			git_oid_mkraw(&base_id, buffer);
-
-			if (!p->idx_search(&n, p, &base_id) &&
-				!p->idx_get(&entry, p, n)) {
-
-				res = unpack_object_delta(out, p, &entry, 
-					buffer + GIT_OID_RAWSZ, deflated_size, inflated_size);
-			}
-
-			return res;
-		}
-
-		default:
-			return GIT_EOBJCORRUPTED;
-	}
-}
-
-
-
-
-
-/***********************************************************
- *
- * ODB OBJECT READING & WRITING
- *
- * Backend for the public API; read headers and full objects
- * from the ODB. Write raw data to the ODB.
- * 
- ***********************************************************/
-
-static int open_alternates(git_odb *db)
-{
-	unsigned n = 0;
-
-	gitlck_lock(&db->lock);
-	if (db->alternates) {
-		gitlck_unlock(&db->lock);
-		return 1;
-	}
-
-	/*
-	 * FIXME: broken, makes no sense.
-	 * n is always 0, the alternates array is always
-	 * empty!
-	 */
-
-	db->alternates = git__malloc(sizeof(*db->alternates) * (n + 1));
-	if (!db->alternates) {
-		gitlck_unlock(&db->lock);
-		return -1;
-	}
-
-	db->alternates[n] = NULL;
-	db->n_alternates = n;
-	gitlck_unlock(&db->lock);
-	return 0;
-}
-
-
-static int locate_object(obj_location *location, git_odb *db, const git_oid *id)
-{
-	memset(location, 0x0, sizeof(obj_location));
-
-	do {
-		if (object_file_name(location->loose_path, GIT_PATH_MAX, db->objects_dir, id) == GIT_SUCCESS &&
-			gitfo_exists(location->loose_path) == 0)
-			return OBJ_LOCATION_LOOSE;
-
-		if (search_packs(&location->pack.ptr, &location->pack.n, db, id) == GIT_SUCCESS)
-			return OBJ_LOCATION_INPACK;
-	
-	} while (open_alternates(db) == GIT_SUCCESS);
-
-	return GIT_ENOTFOUND;
-}
-
-static int read_packed(git_rawobj *out, const obj_location *loc)
-{
-	index_entry e;
-	int res;
-
-	assert(out && loc);
-
-	if (pack_openidx(loc->pack.ptr))
-		return GIT_EPACKCORRUPTED;
-
-	res = loc->pack.ptr->idx_get(&e, loc->pack.ptr, loc->pack.n);
-
-	if (!res)
-		res = unpack_object(out, loc->pack.ptr, &e);
-
-	pack_decidx(loc->pack.ptr);
-
-	return res;
-}
-
-static int read_header_packed(git_rawobj *out, const obj_location *loc)
-{
-	git_pack *pack;
-	index_entry e;
-	int error = GIT_SUCCESS, shift;
-	uint8_t *buffer, byte;
-
-	assert(out && loc);
-		
-	pack = loc->pack.ptr;
-
-	if (pack_openidx(pack))
-		return GIT_EPACKCORRUPTED;
-
-	if (pack->idx_get(&e, pack, loc->pack.n) < 0 ||
-		open_pack(pack) < 0) {
-		error = GIT_ENOTFOUND;
-		goto cleanup;
-	}
-
-	buffer = (uint8_t *)pack->pack_map.data + e.offset;
-
-	byte = *buffer++ & 0xFF;
-	out->type = (byte >> 4) & 0x7;
-	out->len = byte & 0xF;
-	shift = 4;
-
-	while (byte & 0x80) {
-		byte = *buffer++ & 0xFF;
-		out->len += (byte & 0x7F) << shift;
-		shift += 7;
-	}
-
-	/* 
-	 * FIXME: if the object is not packed as a whole,
-	 * we need to do a full load and apply the deltas before
-	 * being able to read the header.
-	 *
-	 * I don't think there are any workarounds for this.'
-	 */
-
-	if (out->type == GIT_OBJ_OFS_DELTA || out->type == GIT_OBJ_REF_DELTA) {
-		error = unpack_object(out, pack, &e);
-		git_obj_close(out);
-	} 
-
-cleanup:
-	pack_decidx(loc->pack.ptr);
-	return error;
-}
-
-static int read_loose(git_rawobj *out, git_odb *db, const obj_location *loc)
-{
-	int error;
-	gitfo_buf obj = GITFO_BUF_INIT;
-
-	assert(out && db && loc);
-
-	out->data = NULL;
-	out->len  = 0;
-	out->type = GIT_OBJ_BAD;
-
-	if (gitfo_read_file(&obj, loc->loose_path) < 0)
-		return GIT_ENOTFOUND;
-
-	error = inflate_disk_obj(out, &obj);
-	gitfo_free_buf(&obj);
-
-	return error;
-}
-
-static int read_header_loose(git_rawobj *out, git_odb *db, const obj_location *loc)
-{
-	int error = GIT_SUCCESS, z_return = Z_ERRNO, read_bytes;
-	git_file fd;
-	z_stream zs;
-	obj_hdr header_obj;
-	unsigned char raw_buffer[16], inflated_buffer[64];
-
-	assert(out && db && loc);
-
-	out->data = NULL;
-
-	if ((fd = gitfo_open(loc->loose_path, O_RDONLY)) < 0)
-		return GIT_ENOTFOUND;
-
-	init_stream(&zs, inflated_buffer, sizeof(inflated_buffer));
-
-	if (inflateInit(&zs) < Z_OK) {
-		error = GIT_EZLIB;
-		goto cleanup;
-	}
-
-	do {
-		if ((read_bytes = read(fd, raw_buffer, sizeof(raw_buffer))) > 0) {
-			set_stream_input(&zs, raw_buffer, read_bytes);
-			z_return = inflate(&zs, 0);
-		}
-	} while (z_return == Z_OK);
-
-	if ((z_return != Z_STREAM_END && z_return != Z_BUF_ERROR)
-		|| get_object_header(&header_obj, inflated_buffer) == 0 
-		|| git_obj__loose_object_type(header_obj.type) == 0) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
-
-	out->len  = header_obj.size;
-	out->type = header_obj.type;
-
-cleanup:
-	finish_inflate(&zs);
-	gitfo_close(fd);
-	return error;
-}
-
-static int write_obj(gitfo_buf *buf, git_oid *id, git_odb *db)
-{
-	char file[GIT_PATH_MAX];
-	char temp[GIT_PATH_MAX];
-	git_file fd;
-
-	if (object_file_name(file, sizeof(file), db->objects_dir, id))
-		return GIT_EOSERR;
-
-	if (make_temp_file(&fd, temp, sizeof(temp), file) < 0)
-		return GIT_EOSERR;
-
-	if (gitfo_write(fd, buf->data, buf->len) < 0) {
-		gitfo_close(fd);
-		gitfo_unlink(temp);
-		return GIT_EOSERR;
-	}
-
-	if (db->fsync_object_files)
-		gitfo_fsync(fd);
-	gitfo_close(fd);
-	gitfo_chmod(temp, 0444);
-
-	if (gitfo_move_file(temp, file) < 0) {
-		gitfo_unlink(temp);
-		return GIT_EOSERR;
-	}
-
-	return GIT_SUCCESS;
-}
-
-
 
 
 
@@ -1757,135 +168,155 @@ static int write_obj(gitfo_buf *buf, git_oid *id, git_odb *db)
  * OBJECT DATABASE PUBLIC API
  *
  * Public calls for the ODB functionality
- * 
+ *
  ***********************************************************/
 
-int git_odb_open(git_odb **out, const char *objects_dir)
+int backend_sort_cmp(const void *a, const void *b)
+{
+	const git_odb_backend *backend_a = *(const git_odb_backend **)(a);
+	const git_odb_backend *backend_b = *(const git_odb_backend **)(b);
+
+	return (backend_b->priority - backend_a->priority);
+}
+
+int git_odb_new(git_odb **out)
 {
 	git_odb *db = git__calloc(1, sizeof(*db));
 	if (!db)
 		return GIT_ENOMEM;
 
-	db->objects_dir = git__strdup(objects_dir);
-	if (!db->objects_dir) {
+	if (git_vector_init(&db->backends, 4, backend_sort_cmp, NULL) < 0) {
 		free(db);
 		return GIT_ENOMEM;
 	}
-
-	gitlck_init(&db->lock);
-
-	db->object_zlib_level = Z_BEST_SPEED;
-	db->fsync_object_files = 0;
 
 	*out = db;
 	return GIT_SUCCESS;
 }
 
-void git_odb_close(git_odb *db)
+int git_odb_add_backend(git_odb *odb, git_odb_backend *backend)
 {
-	git_packlist *pl;
+	assert(odb && backend);
 
-	if (!db)
-		return;
+	if (backend->odb != NULL && backend->odb != odb)
+		return GIT_EBUSY;
 
-	gitlck_lock(&db->lock);
+	backend->odb = odb;
 
-	pl = db->packlist;
-	db->packlist = NULL;
+	if (git_vector_insert(&odb->backends, backend) < 0)
+		return GIT_ENOMEM;
 
-	if (db->alternates) {
-		git_odb **alt;
-		for (alt = db->alternates; *alt; alt++)
-			git_odb_close(*alt);
-		free(db->alternates);
+	git_vector_sort(&odb->backends);
+	return GIT_SUCCESS;
+}
+
+
+int git_odb_open(git_odb **out, const char *objects_dir)
+{
+	git_odb *db;
+	git_odb_backend *loose, *packed;
+	int error;
+
+	if ((error = git_odb_new(&db)) < 0)
+		return error;
+
+	/* add the loose object backend */
+	if (git_odb_backend_loose(&loose, objects_dir) == 0) {
+		error = git_odb_add_backend(db, loose);
+		if (error < 0)
+			goto cleanup;
 	}
 
-	free(db->objects_dir);
+	/* add the packed file backend */
+	if (git_odb_backend_pack(&packed, objects_dir) == 0) {
+		error = git_odb_add_backend(db, packed);
+		if (error < 0)
+			goto cleanup;
+	}
 
-	gitlck_unlock(&db->lock);
-	if (pl)
-		packlist_dec(db, pl);
-	gitlck_free(&db->lock);
+	/* TODO: add altenernates as new backends;
+	 * how elevant is that? very elegant. */
+
+	*out = db;
+	return GIT_SUCCESS;
+
+cleanup:
+	git_odb_close(db);
+	return error;
+}
+
+void git_odb_close(git_odb *db)
+{
+	unsigned int i;
+
+	assert(db);
+
+	for (i = 0; i < db->backends.length; ++i) {
+		git_odb_backend *b = git_vector_get(&db->backends, i);
+
+		if (b->free) b->free(b);
+		else free(b);
+	}
+
+	git_vector_free(&db->backends);
 	free(db);
-}
-
-int git_odb__read_packed(git_rawobj *out, git_odb *db, const git_oid *id)
-{
-	obj_location loc;
-
-	if (locate_object(&loc, db, id) != OBJ_LOCATION_INPACK)
-		return GIT_ENOTFOUND;
-
-	return read_packed(out, &loc);
-}
-
-int git_odb__read_loose(git_rawobj *out, git_odb *db, const git_oid *id)
-{
-	obj_location loc;
-
-	if (locate_object(&loc, db, id) != OBJ_LOCATION_LOOSE)
-		return GIT_ENOTFOUND;
-
-	return read_loose(out, db, &loc);
 }
 
 int git_odb_exists(git_odb *db, const git_oid *id)
 {
-	obj_location loc;
+	unsigned int i;
+	int found = 0;
+
 	assert(db && id);
-	return locate_object(&loc, db, id) != OBJ_LOCATION_NOTFOUND;
+
+	for (i = 0; i < db->backends.length && !found; ++i) {
+		git_odb_backend *b = git_vector_get(&db->backends, i);
+
+		if (b->exists != NULL)
+			found = b->exists(b, id);
+	}
+
+	return found;
 }
 
 int git_odb_read_header(git_rawobj *out, git_odb *db, const git_oid *id)
 {
-	obj_location loc;
-	int found, error = 0;
+	unsigned int i;
+	int error = GIT_ENOTFOUND;
 
-	assert(out && db);
+	assert(out && db && id);
 
-	found = locate_object(&loc, db, id);
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		git_odb_backend *b = git_vector_get(&db->backends, i);
 
-	switch (found) {
-	case OBJ_LOCATION_LOOSE: 
-		error = read_header_loose(out, db, &loc);
-		break;
+		if (b->read_header != NULL)
+			error = b->read_header(out, b, id);
+	}
 
-	case OBJ_LOCATION_INPACK:
-		error = read_header_packed(out, &loc);
-		break;
-
-	case OBJ_LOCATION_NOTFOUND:
-		error = GIT_ENOTFOUND;
-		break;
+	/*
+	 * no backend could read only the header.
+	 * try reading the whole object and freeing the contents
+	 */
+	if (error < 0) {
+		error = git_odb_read(out, db, id);
+		git_rawobj_close(out);
 	}
 
 	return error;
 }
 
-int git_odb_read(
-	git_rawobj *out,
-	git_odb *db,
-	const git_oid *id)
+int git_odb_read(git_rawobj *out, git_odb *db, const git_oid *id)
 {
-	obj_location loc;
-	int found, error = 0;
+	unsigned int i;
+	int error = GIT_ENOTFOUND;
 
-	assert(out && db);
+	assert(out && db && id);
 
-	found = locate_object(&loc, db, id);
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		git_odb_backend *b = git_vector_get(&db->backends, i);
 
-	switch (found) {
-	case OBJ_LOCATION_LOOSE:
-		error = read_loose(out, db, &loc);
-		break;
-
-	case OBJ_LOCATION_INPACK:
-		error = read_packed(out, &loc);
-		break;
-
-	case OBJ_LOCATION_NOTFOUND:
-		error = GIT_ENOTFOUND;
-		break;
+		assert(b->read != NULL);
+		error = b->read(out, b, id);
 	}
 
 	return error;
@@ -1893,29 +324,18 @@ int git_odb_read(
 
 int git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj)
 {
-	char hdr[64];
-	int  hdrlen;
-	gitfo_buf buf = GITFO_BUF_INIT;
-	int error;
+	unsigned int i;
+	int error = GIT_ERROR;
 
-	assert(id && db && obj);
+	assert(obj && db && id);
 
-	if ((error = hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj)) < 0)
-		return error;
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		git_odb_backend *b = git_vector_get(&db->backends, i);
 
-	if (git_odb_exists(db, id))
-		return GIT_SUCCESS;
-
-	if ((error = deflate_obj(&buf, hdr, hdrlen, obj, db->object_zlib_level)) < 0)
-		return error;
-
-	if ((error = write_obj(&buf, id, db)) < 0) {
-		gitfo_free_buf(&buf);
-		return error;
+		if (b->write != NULL)
+			error = b->write(id, b, obj);
 	}
 
-	gitfo_free_buf(&buf);
-
-	return GIT_SUCCESS;
+	return error;
 }
 

@@ -215,7 +215,7 @@ int git_tag__writeback(git_tag *tag, git_odb_source *src)
 		return GIT_EMISSINGOBJDATA;
 
 	git__write_oid(src, "object", git_object_id(tag->target));
-	git__source_printf(src, "type %s\n", git_obj_type_to_string(tag->type));
+	git__source_printf(src, "type %s\n", git_otype_tostring(tag->type));
 	git__source_printf(src, "tag %s\n", tag->tag_name);
 	git_person__write(src, "tagger", tag->tagger);
 

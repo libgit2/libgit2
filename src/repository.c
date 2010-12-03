@@ -445,7 +445,7 @@ void git_object__source_close(git_object *object)
 	assert(object);
 
 	if (object->source.open) {
-		git_obj_close(&object->source.raw);
+		git_rawobj_close(&object->source.raw);
 		object->source.open = 0;
 	}
 }

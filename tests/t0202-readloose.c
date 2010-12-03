@@ -532,10 +532,10 @@ BEGIN_TEST(read_loose_commit)
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, commit.id));
 
-    must_pass(git_odb__read_loose(&obj, db, &id));
+    must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj, &commit));
 
-    git_obj_close(&obj);
+    git_rawobj_close(&obj);
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &commit));
 END_TEST
@@ -549,10 +549,10 @@ BEGIN_TEST(read_loose_tree)
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, tree.id));
 
-    must_pass(git_odb__read_loose(&obj, db, &id));
+    must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj, &tree));
 
-    git_obj_close(&obj);
+    git_rawobj_close(&obj);
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &tree));
 END_TEST
@@ -566,10 +566,10 @@ BEGIN_TEST(read_loose_tag)
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, tag.id));
 
-    must_pass(git_odb__read_loose(&obj, db, &id));
+    must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj, &tag));
 
-    git_obj_close(&obj);
+    git_rawobj_close(&obj);
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &tag));
 END_TEST
@@ -583,10 +583,10 @@ BEGIN_TEST(read_loose_zero)
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, zero.id));
 
-    must_pass(git_odb__read_loose(&obj, db, &id));
+    must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj, &zero));
 
-    git_obj_close(&obj);
+    git_rawobj_close(&obj);
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &zero));
 END_TEST
@@ -600,10 +600,10 @@ BEGIN_TEST(read_loose_one)
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, one.id));
 
-    must_pass(git_odb__read_loose(&obj, db, &id));
+    must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj, &one));
 
-    git_obj_close(&obj);
+    git_rawobj_close(&obj);
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &one));
 END_TEST
@@ -617,10 +617,10 @@ BEGIN_TEST(read_loose_two)
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, two.id));
 
-    must_pass(git_odb__read_loose(&obj, db, &id));
+    must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj, &two));
 
-    git_obj_close(&obj);
+    git_rawobj_close(&obj);
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &two));
 END_TEST
@@ -634,10 +634,10 @@ BEGIN_TEST(read_loose_some)
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id, some.id));
 
-    must_pass(git_odb__read_loose(&obj, db, &id));
+    must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj, &some));
 
-    git_obj_close(&obj);
+    git_rawobj_close(&obj);
     git_odb_close(db);
     must_pass(remove_object_files(odb_dir, &some));
 END_TEST

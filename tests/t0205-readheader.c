@@ -172,7 +172,7 @@ BEGIN_TEST(readheader_packed_test)
 		must_be_true(obj.len == header.len);
 		must_be_true(obj.type == header.type);
 
-		git_obj_close(&obj);
+		git_rawobj_close(&obj);
 	}
 
     git_odb_close(db); 
@@ -199,7 +199,7 @@ BEGIN_TEST(readheader_loose_test)
 		must_be_true(obj.len == header.len);
 		must_be_true(obj.type == header.type);
 
-		git_obj_close(&obj);
+		git_rawobj_close(&obj);
 	}
 
     git_odb_close(db);
