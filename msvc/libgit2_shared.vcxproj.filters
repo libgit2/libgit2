@@ -75,6 +75,9 @@
     <ClCompile Include="..\src\util.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\vector.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\win32\dir.c">
       <Filter>Source Files</Filter>
     </ClCompile>

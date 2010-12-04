@@ -30,6 +30,7 @@
     <ClCompile Include="..\src\thread-utils.c" />
     <ClCompile Include="..\src\tree.c" />
     <ClCompile Include="..\src\util.c" />
+    <ClCompile Include="..\src\vector.c" />
     <ClCompile Include="..\src\win32\dir.c" />
     <ClCompile Include="..\src\win32\fileops.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)\fileops_w32</ObjectFileName>
