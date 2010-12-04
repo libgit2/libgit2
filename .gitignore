@@ -17,5 +17,5 @@ msvc/Debug/
 msvc/Release/
 *.suo
 *.user
-*sdf
+*.sdf
 *.opensdf
