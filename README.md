@@ -35,6 +35,26 @@ libgit2 is already very usable.
 * tree traversal
 * basic index file (staging area) operations
 
+Building libgit2 - Using CMake
+==============================
+
+When building using CMake the following dependencies are required:
+
+* CMake 2.6+ <http://www.cmake.org>
+
+Probably already installed in your system are:
+
+* zlib 1.2+ <http://www.zlib.net/>
+
+* LibSSL <http://www.openssl.org/>
+
+Generate makefile or IDE workspace specific to your system using CMake by pointing the CMakeGui to the CMakeLists.txt file.
+
+Optionally, you can build from commandline on most UNIX systems using:
+	
+	$ ccmake .
+	$ make install
+
 Building libgit2 - Unix systems
 ==================================
 
