@@ -206,7 +206,7 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	memcpy(tag->message, buffer, text_len);
 	tag->message[text_len] = '\0';
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git_tag__writeback(git_tag *tag, git_odb_source *src)

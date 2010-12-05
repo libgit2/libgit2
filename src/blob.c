@@ -40,7 +40,7 @@ const char *git_blob_rawcontent(git_blob *blob)
 	if (blob->object.in_memory)
 		return NULL;
 
-	if (!blob->object.source.open && git_object__source_open((git_object *)blob) < 0)
+	if (!blob->object.source.open && git_object__source_open((git_object *)blob) < GIT_SUCCESS)
 		return NULL;
 
 	return blob->object.source.raw.data;
@@ -119,13 +119,13 @@ int git_blob_writefile(git_oid *written_id, git_repository *repo, const char *pa
 	if (gitfo_exists(path) < 0)
 		return GIT_ENOTFOUND;
 
-	if ((error = git_blob_new(&blob, repo)) < 0)
+	if ((error = git_blob_new(&blob, repo)) < GIT_SUCCESS)
 		return error;
 
-	if ((error = git_blob_set_rawcontent_fromfile(blob, path)) < 0)
+	if ((error = git_blob_set_rawcontent_fromfile(blob, path)) < GIT_SUCCESS)
 		return error;
 
-	if ((error = git_object_write((git_object *)blob)) < 0)
+	if ((error = git_object_write((git_object *)blob)) < GIT_SUCCESS)
 		return error;
 
 	git_oid_cpy(written_id, git_object_id((git_object *)blob));

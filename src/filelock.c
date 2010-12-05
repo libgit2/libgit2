@@ -49,7 +49,7 @@ int git_filelock_init(git_filelock *lock, const char *path)
 		return GIT_ERROR;
 
 	memcpy(lock->path, path, lock->path_length);
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git_filelock_lock(git_filelock *lock, int append)
@@ -85,7 +85,7 @@ int git_filelock_lock(git_filelock *lock, int append)
 		gitfo_close(source);
 	}
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 void git_filelock_unlock(git_filelock *lock)
@@ -116,7 +116,7 @@ int git_filelock_commit(git_filelock *lock)
 
 	error = gitfo_move_file(path_lock, lock->path);
 
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		gitfo_unlink(path_lock);
 
 	lock->is_locked = 0;

@@ -114,23 +114,23 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	clear_parents(commit);
 
 
-	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < 0)
+	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
 		return error;
 
-	if ((error = git_repository_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < 0)
+	if ((error = git_repository_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < GIT_SUCCESS)
 		return error;
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
-	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == 0) {
+	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
 		git_commit *parent;
 
-		if ((error = git_repository_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < 0)
+		if ((error = git_repository_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
 			return error;
 
-		if (git_vector_insert(&commit->parents, parent) < 0)
+		if (git_vector_insert(&commit->parents, parent) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 	}
 
@@ -140,7 +140,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 			git_person__free(commit->author);
 
 		commit->author = git__malloc(sizeof(git_person));
-		if ((error = git_person__parse(commit->author, &buffer, buffer_end, "author ")) < 0)
+		if ((error = git_person__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
 			return error;
 
 	} else {
@@ -155,7 +155,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		git_person__free(commit->committer);
 
 	commit->committer = git__malloc(sizeof(git_person));
-	if ((error = git_person__parse(commit->committer, &buffer, buffer_end, "committer ")) < 0)
+	if ((error = git_person__parse(commit->committer, &buffer, buffer_end, "committer ")) < GIT_SUCCESS)
 		return error;
 
 	commit->commit_time = commit->committer->time;
@@ -199,9 +199,9 @@ int git_commit__parse_full(git_commit *commit)
 	int error;
 
 	if (commit->full_parse)
-		return 0;
+		return GIT_SUCCESS;
 
-	if ((error = git_object__source_open((git_object *)commit)) < 0)
+	if ((error = git_object__source_open((git_object *)commit)) < GIT_SUCCESS)
 		return error;
 
 	error = commit_parse_buffer(commit,

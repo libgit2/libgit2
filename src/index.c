@@ -196,14 +196,14 @@ void git_index_free(git_index *index)
 int git_index_read(git_index *index)
 {
 	struct stat indexst;
-	int error = 0;
+	int error = GIT_SUCCESS;
 
 	assert(index->index_file_path);
 
 	if (!index->on_disk || gitfo_exists(index->index_file_path) < 0) {
 		git_index_clear(index);
 		index->on_disk = 0;
-		return 0;
+		return GIT_SUCCESS;
 	}
 
 	if (gitfo_stat(index->index_file_path, &indexst) < 0)
@@ -216,13 +216,13 @@ int git_index_read(git_index *index)
 
 		gitfo_buf buffer;
 
-		if (gitfo_read_file(&buffer, index->index_file_path) < 0)
+		if (gitfo_read_file(&buffer, index->index_file_path) < GIT_SUCCESS)
 			return GIT_EOSERR;
 
 		git_index_clear(index);
 		error = git_index__parse(index, buffer.data, buffer.len);
 
-		if (error == 0)
+		if (error == GIT_SUCCESS)
 			index->last_modified = indexst.st_mtime;
 
 		gitfo_free_buf(&buffer);
@@ -239,18 +239,18 @@ int git_index_write(git_index *index)
 	if (!index->sorted)
 		git_index__sort(index);
 
-	if (git_filelock_init(&file, index->index_file_path) < 0)
+	if (git_filelock_init(&file, index->index_file_path) < GIT_SUCCESS)
 		return GIT_EFLOCKFAIL;
 
-	if (git_filelock_lock(&file, 0) < 0)
+	if (git_filelock_lock(&file, 0) < GIT_SUCCESS)
 		return GIT_EFLOCKFAIL;
 
-	if (git_index__write(index, &file) < 0) {
+	if (git_index__write(index, &file) < GIT_SUCCESS) {
 		git_filelock_unlock(&file);
 		return GIT_EOSERR;
 	}
 
-	if (git_filelock_commit(&file) < 0)
+	if (git_filelock_commit(&file) < GIT_SUCCESS)
 		return GIT_EFLOCKFAIL;
 
 	if (gitfo_stat(index->index_file_path, &indexst) == 0) {
@@ -258,7 +258,7 @@ int git_index_write(git_index *index)
 		index->on_disk = 1;
 	}
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 unsigned int git_index_entrycount(git_index *index)
@@ -310,7 +310,7 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 	entry.file_size = st.st_size;
 
 	/* write the blob to disk and get the oid */
-	if ((error = git_blob_writefile(&entry.oid, index->repository, full_path)) < 0)
+	if ((error = git_blob_writefile(&entry.oid, index->repository, full_path)) < GIT_SUCCESS)
 		return error;
 
 	entry.flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
@@ -366,7 +366,7 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 	/* if no entry exists, add the entry at the end;
 	 * the index is no longer sorted */
 	if (position == GIT_ENOTFOUND) {
-		if (git_vector_insert(&index->entries, entry) < 0)
+		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
 		index->sorted = 0;
@@ -480,7 +480,7 @@ static int read_tree(git_index *index, const char *buffer, size_t buffer_size)
 	const char *buffer_end = buffer + buffer_size;
 
 	index->tree = read_tree_internal(&buffer, buffer_end, NULL);
-	return (index->tree != NULL && buffer == buffer_end) ? 0 : GIT_EOBJCORRUPTED;
+	return (index->tree != NULL && buffer == buffer_end) ? GIT_SUCCESS : GIT_EOBJCORRUPTED;
 }
 
 static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffer_size)
@@ -561,7 +561,7 @@ static int read_header(struct index_header *dest, const void *buffer)
 		return GIT_EOBJCORRUPTED;
 
 	dest->entry_count = ntohl(source->entry_count);
-	return 0;
+	return GIT_SUCCESS;
 }
 
 static size_t read_extension(git_index *index, const char *buffer, size_t buffer_size)
@@ -585,7 +585,7 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 		/* tree cache */
 		if (memcmp(dest.signature, INDEX_EXT_TREECACHE_SIG, 4) == 0) {
 
-			if (read_tree(index, buffer + 8, dest.extension_size) < 0)
+			if (read_tree(index, buffer + 8, dest.extension_size) < GIT_SUCCESS)
 				return 0;
 		}
 	} else {
@@ -618,7 +618,7 @@ int git_index__parse(git_index *index, const char *buffer, size_t buffer_size)
 	git_hash_buf(&checksum_calculated, (const void *)buffer, buffer_size - INDEX_FOOTER_SIZE);
 
 	/* Parse header */
-	if (read_header(&header, buffer) < 0)
+	if (read_header(&header, buffer) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
 
 	seek_forward(INDEX_HEADER_SIZE);
@@ -640,7 +640,7 @@ int git_index__parse(git_index *index, const char *buffer, size_t buffer_size)
 		if (entry_size == 0)
 			return GIT_EOBJCORRUPTED;
 
-		if (git_vector_insert(&index->entries, entry) < 0)
+		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
 		seek_forward(entry_size);
@@ -673,14 +673,14 @@ int git_index__parse(git_index *index, const char *buffer, size_t buffer_size)
 
 #undef seek_forward
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git_index__write(git_index *index, git_filelock *file)
 {
 	static const char NULL_BYTES[] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-	int error = 0;
+	int error = GIT_SUCCESS;
 	unsigned int i;
 
 	git_hash_ctx *digest;

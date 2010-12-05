@@ -84,7 +84,7 @@ static int assign_repository_folders(git_repository *repo,
 
 	assert(repo);
 
-	if (git_dir == NULL || gitfo_isdir(git_dir) < 0)
+	if (git_dir == NULL || gitfo_isdir(git_dir) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
 
@@ -107,7 +107,7 @@ static int assign_repository_folders(git_repository *repo,
 	else
 		strcpy(path_aux, git_object_directory);
 
-	if (gitfo_isdir(path_aux) < 0)
+	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
 	repo->path_odb = git__strdup(path_aux);
@@ -139,7 +139,7 @@ static int guess_repository_folders(git_repository *repo, const char *repository
 	char path_aux[GIT_PATH_MAX], *last_folder;
 	int path_len;
 
-	if (gitfo_isdir(repository_path) < 0)
+	if (gitfo_isdir(repository_path) < GIT_SUCCESS)
 		return GIT_ENOTAREPO;
 
 	path_len = strlen(repository_path);
@@ -156,7 +156,7 @@ static int guess_repository_folders(git_repository *repo, const char *repository
 
 	/* objects database */
 	strcpy(path_aux + path_len, GIT_OBJECTS_FOLDER);
-	if (gitfo_isdir(path_aux) < 0)
+	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTAREPO;
 	repo->path_odb = git__strdup(path_aux);
 
@@ -233,11 +233,11 @@ int git_repository_open2(git_repository **repo_out,
 			git_index_file,
 			git_work_tree);
 
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	error = git_odb_open(&repo->db, repo->path_odb);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	*repo_out = repo;
@@ -260,11 +260,11 @@ int git_repository_open(git_repository **repo_out, const char *path)
 		return GIT_ENOMEM;
 
 	error = guess_repository_folders(repo, path);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	error = git_odb_open(&repo->db, repo->path_odb);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	*repo_out = repo;
@@ -302,7 +302,7 @@ void git_repository_free(git_repository *repo)
 git_index *git_repository_index(git_repository *repo)
 {
 	if (repo->index == NULL) {
-		if (git_index_open_inrepo(&repo->index, repo) < 0)
+		if (git_index_open_inrepo(&repo->index, repo) < GIT_SUCCESS)
 			return NULL;
 
 		assert(repo->index);
@@ -344,7 +344,7 @@ int git__source_printf(git_odb_source *source, const char *format, ...)
 	len = vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
 
 	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < 0)
+		if (source_resize(source) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
 		did_resize = 1;
@@ -366,7 +366,7 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len)
 	assert(source->open && source->write_ptr);
 
 	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < 0)
+		if (source_resize(source) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 	}
 
@@ -404,7 +404,7 @@ static int write_back(git_object *object)
 
 	object->source.raw.len = object->source.written_bytes;
 
-	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < 0)
+	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < GIT_SUCCESS)
 		return error;
 
 	if (!object->in_memory)
@@ -433,7 +433,7 @@ int git_object__source_open(git_object *object)
 		git_object__source_close(object);
 
 	error = git_odb_read(&object->source.raw, object->repo->db, &object->id);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		return error;
 
 	object->source.open = 1;
@@ -485,7 +485,7 @@ int git_object_write(git_object *object)
 		break;
 	}
 
-	if (error < 0) {
+	if (error < GIT_SUCCESS) {
 		git_object__source_close(object);
 		return error;
 	}
@@ -590,7 +590,7 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 {
 	git_object *object = NULL;
 	git_rawobj obj_file;
-	int error = 0;
+	int error = GIT_SUCCESS;
 
 	assert(repo && object_out && id);
 
@@ -601,7 +601,7 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 	}
 
 	error = git_odb_read(&obj_file, repo->db, id);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		return error;
 
 	if (type != GIT_OBJ_ANY && type != obj_file.type)
@@ -644,7 +644,7 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 		break;
 	}
 
-	if (error < 0) {
+	if (error < GIT_SUCCESS) {
 		git_object_free(object);
 		return error;
 	}

@@ -129,7 +129,7 @@ int git_person__parse(git_person *person, char **buffer_out,
 		return GIT_EOBJCORRUPTED;
 
 	*buffer_out = (line_end + 1);
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git_person__write(git_odb_source *src, const char *header, const git_person *person)

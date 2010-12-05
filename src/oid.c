@@ -134,12 +134,12 @@ int git__parse_oid(git_oid *oid, char **buffer_out,
 	if (buffer[header_len + sha_len] != '\n')
 		return GIT_EOBJCORRUPTED;
 
-	if (git_oid_mkstr(oid, buffer + header_len) < 0)
+	if (git_oid_mkstr(oid, buffer + header_len) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
 
 	*buffer_out = buffer + (header_len + sha_len + 1);
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid)
