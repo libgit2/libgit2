@@ -4,23 +4,30 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-# Sane defaults
+# Find required dependencies
+FIND_PACKAGE(zlib REQUIRED)
+
+# Try finding openssl
+FIND_PACKAGE(OpenSSL)
+IF (OPENSSL_CRYPTO_LIBRARIES)
+    SET(SHA1_TYPE "openssl" CACHE STRING "Which SHA1 implementation to use: builtin, ppc, openssl")
+ELSEIF ()
+    SET(SHA1_TYPE "builtin" CACHE STRING "Which SHA1 implementation to use: builtin, ppc")
+ENDIF ()
+
+# Sane defaults and options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
 IF (NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
 
-# Find dependencies
-FIND_PACKAGE(zlib REQUIRED)
-FIND_PACKAGE(OpenSSL REQUIRED)
 
-INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} src)
+INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR}  src)
 
 # Collect sourcefiles
 FILE(GLOB SRC src/*.c)
-FILE(GLOB SRC_GIT src/git/*.c)
-FILE(GLOB SRC_SHA src/block-sha1/*.c)
+FILE(GLOB SRC_SHA1 src/block-sha1/*.c)
 FILE(GLOB SRC_PLAT src/unix/*.c)
 FILE(GLOB SRC_H src/git/*.h)
 
@@ -30,11 +37,20 @@ IF (WIN32)
     FILE(GLOB SRC_PLAT src/win32/*.c)
 ENDIF ()
 
-# TODO. PPC Detection for optimized sha1.
+# sha1 implementation
+IF (SHA1_TYPE STREQUAL "ppc")
+    ADD_DEFINITIONS(-DPPC_SHA1)
+    FILE(GLOB SRC_SHA1 src/ppc/*.c)
+ELSEIF (SHA1_TYPE STREQUAL "openssl")
+    ADD_DEFINITIONS(-DOPENSSL_SHA1)
+    SET (SRC_SHA1)
+    INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
+    SET (LIB_SHA1 ${OPENSSL_CRYPTO_LIBRARIES})
+ENDIF ()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_GIT} ${SRC_SHA} ${SRC_PLAT})
-TARGET_LINK_LIBRARIES(git2 ${ZLIB_LIBRARY} ${OPENSSL_CRYPTO_LIBRARIES})
+ADD_LIBRARY(git2 ${SRC} ${SRC_PLAT} ${SRC_SHA1})
+TARGET_LINK_LIBRARIES(git2 ${ZLIB_LIBRARY} ${LIB_SHA1})
 
 # Install
 INSTALL(TARGETS git2 
