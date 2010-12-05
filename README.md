@@ -42,18 +42,21 @@ When building using CMake the following dependencies are required:
 
 * CMake 2.6+ <http://www.cmake.org>
 
-Probably already installed in your system are:
+Required dependency:
 
 * zlib 1.2+ <http://www.zlib.net/>
 
+Optional dependency:
+
 * LibSSL <http://www.openssl.org/>
 
-Generate makefile or IDE workspace specific to your system using CMake by pointing the CMakeGui to the CMakeLists.txt file.
-
-Optionally, you can build from commandline on most UNIX systems using:
+On most Unix systems you can build the library using the following commands
 	
-	$ ccmake .
+	$ mkdir build && cd build
+	$ cmake ..
 	$ make install
+
+Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
 Building libgit2 - Unix systems
 ==================================
