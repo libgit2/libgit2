@@ -2,9 +2,9 @@
 #include "test_helpers.h"
 #include "commit.h"
 
-#include <git/odb.h>
-#include <git/commit.h>
-#include <git/tag.h>
+#include <git2/odb.h>
+#include <git2/commit.h>
+#include <git2/tag.h>
 
 static const char *tag1_id = "b25fa35b38051e4ae45d4222e795f9df2e43f1d1";
 static const char *tag2_id = "7b4384978d2493e851f9cca7858815fac9b10980";

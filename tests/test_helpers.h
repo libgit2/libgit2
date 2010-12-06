@@ -27,7 +27,7 @@
 #define INCLUDE_test_helpers_h__
 
 #include "test_lib.h"
-#include <git.h>
+#include <git2.h>
 
 #define ODB_FOLDER "../resources/testrepo.git/objects/"
 #define REPOSITORY_FOLDER "../resources/testrepo.git/"

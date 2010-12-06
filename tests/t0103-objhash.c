@@ -1,6 +1,6 @@
 
 #include "test_lib.h"
-#include <git/odb.h>
+#include <git2/odb.h>
 
 static char *commit_id = "3d7f8a6af076c8c3f20071a8935cdbe8228594d1";
 

@@ -26,24 +26,24 @@
 #ifndef INCLUDE_git_git_h__
 #define INCLUDE_git_git_h__
 
-#include "git/common.h"
-#include "git/errors.h"
-#include "git/zlib.h"
+#include "git2/common.h"
+#include "git2/errors.h"
+#include "git2/zlib.h"
 
-#include "git/types.h"
+#include "git2/types.h"
 
-#include "git/oid.h"
-#include "git/odb.h"
+#include "git2/oid.h"
+#include "git2/odb.h"
 
-#include "git/repository.h"
-#include "git/revwalk.h"
+#include "git2/repository.h"
+#include "git2/revwalk.h"
 
-#include "git/object.h"
-#include "git/blob.h"
-#include "git/commit.h"
-#include "git/tag.h"
-#include "git/tree.h"
+#include "git2/object.h"
+#include "git2/blob.h"
+#include "git2/commit.h"
+#include "git2/tag.h"
+#include "git2/tree.h"
 
-#include "git/index.h"
+#include "git2/index.h"
 
 #endif

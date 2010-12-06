@@ -1,8 +1,8 @@
 #ifndef INCLUDE_revwalk_h__
 #define INCLUDE_revwalk_h__
 
-#include "git/common.h"
-#include "git/revwalk.h"
+#include "git2/common.h"
+#include "git2/revwalk.h"
 
 #include "commit.h"
 #include "repository.h"

@@ -1,7 +1,7 @@
 
 #include "test_lib.h"
-#include <git/odb.h>
-#include <git/object.h>
+#include <git2/odb.h>
+#include <git2/object.h>
 
 BEGIN_TEST(type_to_string)
 	must_be_true(!strcmp(git_object_type2string(GIT_OBJ_BAD), ""));

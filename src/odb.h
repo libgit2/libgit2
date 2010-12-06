@@ -1,8 +1,8 @@
 #ifndef INCLUDE_odb_h__
 #define INCLUDE_odb_h__
 
-#include <git/odb.h>
-#include <git/oid.h>
+#include "git2/odb.h"
+#include "git2/oid.h"
 
 #include "vector.h"
 

@@ -23,9 +23,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include "git/common.h"
-#include "git/object.h"
-#include "git/repository.h"
+#include "git2/common.h"
+#include "git2/object.h"
+#include "git2/repository.h"
 
 #include "common.h"
 #include "commit.h"

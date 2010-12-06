@@ -29,8 +29,8 @@
 #include "repository.h"
 #include "index.h"
 #include "hash.h"
-#include "git/odb.h"
-#include "git/blob.h"
+#include "git2/odb.h"
+#include "git2/blob.h"
 
 #define entry_padding(type, len) (8 - ((offsetof(type, path) + (len)) & 0x7))
 #define short_entry_padding(len) entry_padding(struct entry_short, len)

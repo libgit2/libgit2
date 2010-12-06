@@ -27,8 +27,8 @@
 #include "commit.h"
 #include "revwalk.h"
 #include "tree.h"
-#include "git/repository.h"
-#include "git/object.h"
+#include "git2/repository.h"
+#include "git2/object.h"
 
 int entry_search_cmp(const void *key, const void *array_member)
 {

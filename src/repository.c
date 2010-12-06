@@ -24,7 +24,7 @@
  */
 #include <stdarg.h>
 
-#include "git/object.h"
+#include "git2/object.h"
 
 #include "common.h"
 #include "repository.h"

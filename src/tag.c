@@ -28,8 +28,8 @@
 #include "tag.h"
 #include "person.h"
 #include "revwalk.h"
-#include "git/object.h"
-#include "git/repository.h"
+#include "git2/object.h"
+#include "git2/repository.h"
 
 void git_tag__free(git_tag *tag)
 {

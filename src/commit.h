@@ -1,7 +1,7 @@
 #ifndef INCLUDE_commit_h__
 #define INCLUDE_commit_h__
 
-#include "git/commit.h"
+#include "git2/commit.h"
 #include "tree.h"
 #include "repository.h"
 #include "vector.h"

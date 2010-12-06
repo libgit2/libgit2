@@ -1,9 +1,9 @@
 #ifndef INCLUDE_hashtable_h__
 #define INCLUDE_hashtable_h__
 
-#include "git/common.h"
-#include "git/oid.h"
-#include "git/odb.h"
+#include "git2/common.h"
+#include "git2/oid.h"
+#include "git2/odb.h"
 
 
 typedef uint32_t (*git_hash_ptr)(const void *);

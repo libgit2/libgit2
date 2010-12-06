@@ -8,7 +8,7 @@
 #define GIT_WIN32 1
 #endif
 
-#include "git/thread-utils.h"
+#include "git2/thread-utils.h"
 #include "cc-compat.h"
 
 #ifdef GIT_HAS_PTHREAD
@@ -46,7 +46,7 @@ typedef SSIZE_T ssize_t;
 
 #endif
 
-#include "git/common.h"
+#include "git2/common.h"
 #include "util.h"
 #include "thread-utils.h"
 #include "errors.h"

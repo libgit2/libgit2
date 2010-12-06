@@ -24,14 +24,14 @@
  */
 
 #include "common.h"
-#include "git/zlib.h"
-#include "git/object.h"
+#include "git2/zlib.h"
+#include "git2/object.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
 
-#include "git/odb_backend.h"
+#include "git2/odb_backend.h"
 
 static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 {

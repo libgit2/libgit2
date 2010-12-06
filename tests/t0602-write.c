@@ -2,8 +2,8 @@
 #include "test_helpers.h"
 #include "index.h"
 
-#include <git/odb.h>
-#include <git/index.h>
+#include <git2/odb.h>
+#include <git2/index.h>
 
 #define TEST_INDEX_PATH "../resources/testrepo.git/index"
 

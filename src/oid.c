@@ -24,7 +24,7 @@
  */
 
 #include "common.h"
-#include "git/oid.h"
+#include "git2/oid.h"
 #include "repository.h"
 #include <string.h>
 

@@ -1,5 +1,5 @@
 #include "test_lib.h"
-#include <git/oid.h>
+#include <git2/oid.h>
 
 BEGIN_TEST(oid_szs)
 	git_oid out;

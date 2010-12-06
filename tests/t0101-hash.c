@@ -1,6 +1,6 @@
 #include "test_lib.h"
 #include "hash.h"
-#include <git/oid.h>
+#include <git2/oid.h>
 
 static char *hello_id = "22596363b3de40b06f981fb85d82312e8c0ed511";
 static char *hello_text = "hello world\n";

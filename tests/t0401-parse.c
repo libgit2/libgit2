@@ -2,9 +2,9 @@
 #include "test_helpers.h"
 #include "commit.h"
 #include "person.h"
-#include <git/odb.h>
-#include <git/commit.h>
-#include <git/revwalk.h>
+#include <git2/odb.h>
+#include <git2/commit.h>
+#include <git2/revwalk.h>
 
 static char *test_commits_broken[] = {
 

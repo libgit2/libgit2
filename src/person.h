@@ -1,7 +1,7 @@
 #ifndef INCLUDE_person_h__
 #define INCLUDE_person_h__
 
-#include "git/common.h"
+#include "git2/common.h"
 #include "repository.h"
 #include <time.h>
 

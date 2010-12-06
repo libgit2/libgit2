@@ -26,7 +26,7 @@
 #include "common.h"
 #include "person.h"
 #include "repository.h"
-#include "git/common.h"
+#include "git2/common.h"
 
 void git_person__free(git_person *person)
 {

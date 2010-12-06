@@ -1,5 +1,5 @@
 #include "common.h"
-#include "git/odb.h"
+#include "git2/odb.h"
 #include "delta-apply.h"
 
 /*

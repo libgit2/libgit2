@@ -1,6 +1,6 @@
 
 #include "test_lib.h"
-#include <git/odb.h>
+#include <git2/odb.h>
 #include "fileops.h"
 
 static char *odb_dir = "test-objects";
