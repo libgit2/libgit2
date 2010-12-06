@@ -16,7 +16,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 # Find required dependencies
 FIND_PACKAGE(ZLIB REQUIRED)
-INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR} src)
+INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR} ${PTHREAD_INCLUDE_DIR} src)
 
 # Try finding openssl
 FIND_PACKAGE(OpenSSL)
@@ -26,12 +26,17 @@ ELSEIF ()
     SET(SHA1_TYPE "builtin" CACHE STRING "Which SHA1 implementation to use: builtin, ppc")
 ENDIF ()
 
-# Sane defaults and options
+# Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
 SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
 SET(INSTALL_INC include/git CACHE PATH "Where to install headers to.")
+
+# Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
+OPTION (BACKTRACE "Use GCC backtrace in tests (Not available on Cygwin/MinGW)" OFF)
+
+# Build Release by default
 IF (NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
@@ -43,12 +48,20 @@ FILE(GLOB SRC_PLAT src/unix/*.c)
 FILE(GLOB SRC_H src/git/*.h)
 
 # On Windows use specific platform sources
-IF (WIN32)
-    ADD_DEFINITIONS(WIN32 _DEBUG _LIB ZLIB_WINAPI)
+IF (WIN32 AND NOT CYGWIN)
+    ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_LIB -DZLIB_WINAPI)
     FILE(GLOB SRC_PLAT src/win32/*.c)
+	IF (MINGW)
+		SET(PTHREAD_LIBRARY pthread)
+	ENDIF ()
 ENDIF ()
 
-# sha1 implementation
+# When desired build with backtrace
+IF (BACKTRACE)
+	ADD_DEFINITIONS(-DBACKTRACE)
+ENDIF ()
+
+# Specify sha1 implementation
 IF (SHA1_TYPE STREQUAL "ppc")
     ADD_DEFINITIONS(-DPPC_SHA1)
     FILE(GLOB SRC_SHA1 src/ppc/*.c)
@@ -61,7 +74,7 @@ ENDIF ()
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC} ${SRC_PLAT} ${SRC_SHA1})
-TARGET_LINK_LIBRARIES(git2 ${ZLIB_LIBRARY} ${LIB_SHA1})
+TARGET_LINK_LIBRARIES(git2 ${ZLIB_LIBRARY} ${LIB_SHA1} ${PTHREAD_LIBRARY})
 
 # Install
 INSTALL(TARGETS git2 

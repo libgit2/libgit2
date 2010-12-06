@@ -31,7 +31,7 @@
  * print backtrace when a test fails;
  * GCC only
  */
-#ifdef __GNUC__
+#ifdef BACKTRACE
 #include <stdio.h>
 #include <execinfo.h>
 #include <signal.h>
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 {
 	struct test_def *t;
 
-#ifdef __GNUC__
+#ifdef BACKTRACE
 	  signal(SIGSEGV, crash_handler);
 #endif
 
