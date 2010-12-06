@@ -61,9 +61,14 @@ struct index_extension {
 	uint32_t extension_size;
 };
 
+struct entry_time {
+	uint32_t seconds;
+	uint32_t nanoseconds;
+};
+
 struct entry_short {
-	git_index_time ctime;
-	git_index_time mtime;
+	struct entry_time ctime;
+	struct entry_time mtime;
 	uint32_t dev;
 	uint32_t ino;
 	uint32_t mode;
@@ -76,8 +81,8 @@ struct entry_short {
 };
 
 struct entry_long {
-	git_index_time ctime;
-	git_index_time mtime;
+	struct entry_time ctime;
+	struct entry_time mtime;
 	uint32_t dev;
 	uint32_t ino;
 	uint32_t mode;
@@ -497,10 +502,10 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 
 	source = (const struct entry_short *)(buffer);
 
-	dest->ctime.seconds = ntohl(source->ctime.seconds);
-	dest->ctime.nanoseconds = ntohl(source->ctime.nanoseconds);
-	dest->mtime.seconds = ntohl(source->mtime.seconds);
-	dest->mtime.nanoseconds = ntohl(source->mtime.nanoseconds);
+	dest->ctime.seconds = (time_t)ntohl(source->ctime.seconds);
+	dest->ctime.nanoseconds = (time_t)ntohl(source->ctime.nanoseconds);
+	dest->mtime.seconds = (time_t)ntohl(source->mtime.seconds);
+	dest->mtime.nanoseconds = (time_t)ntohl(source->mtime.nanoseconds);
 	dest->dev = ntohl(source->dev);
 	dest->ino = ntohl(source->ino);
 	dest->mode = ntohl(source->mode);
@@ -692,7 +697,7 @@ int git_index__write(git_index *index, git_filelock *file)
 		return GIT_ENOMEM;
 
 #define WRITE_WORD(_word) {\
-	uint32_t network_word = htonl((_word));\
+	uint32_t network_word = htonl(((uint32_t)(_word)));\
 	git_filelock_write(file, &network_word, 4);\
 	git_hash_update(digest, &network_word, 4);\
 }

@@ -15,7 +15,7 @@ struct test_entry {
 	unsigned int index;
 	char path[128];
 	size_t file_size;
-	uint32_t mtime;
+	time_t mtime;
 };
 
 struct test_entry TEST_ENTRIES[] = {
