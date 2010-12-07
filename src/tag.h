@@ -1,7 +1,7 @@
 #ifndef INCLUDE_tag_h__
 #define INCLUDE_tag_h__
 
-#include "git/tag.h"
+#include "git2/tag.h"
 #include "repository.h"
 
 struct git_tag {

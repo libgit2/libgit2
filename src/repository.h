@@ -1,10 +1,10 @@
 #ifndef INCLUDE_repository_h__
 #define INCLUDE_repository_h__
 
-#include "git/common.h"
-#include "git/oid.h"
-#include "git/odb.h"
-#include "git/repository.h"
+#include "git2/common.h"
+#include "git2/oid.h"
+#include "git2/odb.h"
+#include "git2/repository.h"
 
 #include "hashtable.h"
 #include "index.h"

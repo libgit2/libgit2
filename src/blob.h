@@ -1,7 +1,7 @@
 #ifndef INCLUDE_blob_h__
 #define INCLUDE_blob_h__
 
-#include "git/blob.h"
+#include "git2/blob.h"
 #include "repository.h"
 #include "fileops.h"
 

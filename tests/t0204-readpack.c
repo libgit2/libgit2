@@ -1,6 +1,6 @@
 #include "test_lib.h"
 #include "test_helpers.h"
-#include <git/odb.h>
+#include <git2/odb.h>
 
 static const char *packed_objects[] = {
 	"0266163a49e280c4f5ed1e08facd36a2bd716bcf",
@@ -143,9 +143,9 @@ BEGIN_TEST(readpacked_test)
 
 		must_pass(git_oid_mkstr(&id, packed_objects[i]));
 		must_be_true(git_odb_exists(db, &id) == 1);
-		must_pass(git_odb__read_packed(&obj, db, &id));
+		must_pass(git_odb_read(&obj, db, &id));
 
-		git_obj_close(&obj);
+		git_rawobj_close(&obj);
 	}
 
     git_odb_close(db);

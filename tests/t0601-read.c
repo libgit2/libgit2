@@ -2,8 +2,8 @@
 #include "test_helpers.h"
 #include "index.h"
 
-#include <git/odb.h>
-#include <git/index.h>
+#include <git2/odb.h>
+#include <git2/index.h>
 
 #define TEST_INDEX_PATH "../resources/testrepo.git/index"
 #define TEST_INDEX2_PATH "../resources/gitgit.index"
@@ -15,7 +15,7 @@ struct test_entry {
 	unsigned int index;
 	char path[128];
 	size_t file_size;
-	uint32_t mtime;
+	time_t mtime;
 };
 
 struct test_entry TEST_ENTRIES[] = {

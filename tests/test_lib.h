@@ -24,7 +24,7 @@
  */
 
 #include "common.h"
-#include <git/common.h>
+#include <git2/common.h>
 
 #include <stdio.h>
 #include <stdlib.h>

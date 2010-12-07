@@ -27,7 +27,8 @@
 #include "commit.h"
 #include "revwalk.h"
 #include "tree.h"
-#include "git/repository.h"
+#include "git2/repository.h"
+#include "git2/object.h"
 
 int entry_search_cmp(const void *key, const void *array_member)
 {
@@ -238,12 +239,12 @@ static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 {
 	static const size_t avg_entry_size = 40;
 	unsigned int expected_size;
-	int error = 0;
+	int error = GIT_SUCCESS;
 
 	expected_size = (tree->object.source.raw.len / avg_entry_size) + 1;
 
 	free_tree_entries(tree);
-	if (git_vector_init(&tree->entries, expected_size, entry_sort_cmp, entry_search_cmp) < 0)
+	if (git_vector_init(&tree->entries, expected_size, entry_sort_cmp, entry_search_cmp) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
 	while (buffer < buffer_end) {
@@ -255,7 +256,7 @@ static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 			break;
 		}
 
-		if (git_vector_insert(&tree->entries, entry) < 0)
+		if (git_vector_insert(&tree->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
 		entry->owner = tree;

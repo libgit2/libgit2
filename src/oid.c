@@ -24,7 +24,7 @@
  */
 
 #include "common.h"
-#include "git/oid.h"
+#include "git2/oid.h"
 #include "repository.h"
 #include <string.h>
 
@@ -134,12 +134,12 @@ int git__parse_oid(git_oid *oid, char **buffer_out,
 	if (buffer[header_len + sha_len] != '\n')
 		return GIT_EOBJCORRUPTED;
 
-	if (git_oid_mkstr(oid, buffer + header_len) < 0)
+	if (git_oid_mkstr(oid, buffer + header_len) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
 
 	*buffer_out = buffer + (header_len + sha_len + 1);
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid)
@@ -150,4 +150,19 @@ int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid)
 	hex_oid[40] = 0;
 
 	return git__source_printf(src, "%s %s\n", header, hex_oid);
+}
+
+void git_oid_mkraw(git_oid *out, const unsigned char *raw)
+{
+	memcpy(out->id, raw, sizeof(out->id));
+}
+
+void git_oid_cpy(git_oid *out, const git_oid *src)
+{
+	memcpy(out->id, src->id, sizeof(out->id));
+}
+
+int git_oid_cmp(const git_oid *a, const git_oid *b)
+{
+	return memcmp(a->id, b->id, sizeof(a->id));
 }

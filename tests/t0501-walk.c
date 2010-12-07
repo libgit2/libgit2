@@ -2,9 +2,9 @@
 #include "test_helpers.h"
 #include "commit.h"
 
-#include <git/odb.h>
-#include <git/commit.h>
-#include <git/revwalk.h>
+#include <git2/odb.h>
+#include <git2/commit.h>
+#include <git2/revwalk.h>
 
 /*
 	$ git log --oneline --graph --decorate

@@ -151,7 +151,7 @@ int gitfo_move_file(char *from, char *to)
 
 int gitfo_map_ro(git_map *out, git_file fd, off_t begin, size_t len)
 {
-	if (git__mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin) < 0)
+	if (git__mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin) < GIT_SUCCESS)
 		return git_os_error();
 	return GIT_SUCCESS;
 }
@@ -240,7 +240,7 @@ int gitfo_close_cached(gitfo_cache *ioc)
 {
 	git_file fd;
 
-	if (gitfo_flush_cached(ioc) < 0)
+	if (gitfo_flush_cached(ioc) < GIT_SUCCESS)
 		return GIT_ERROR;
 
 	fd = ioc->fd;
@@ -292,7 +292,7 @@ int gitfo_dirent(
 
 		strcpy(path + wd_len, de->d_name);
 		result = fn(arg, path);
-		if (result < 0) {
+		if (result < GIT_SUCCESS) {
 			closedir(dir);
 			return result;
 		}

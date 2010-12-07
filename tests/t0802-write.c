@@ -2,9 +2,9 @@
 #include "test_helpers.h"
 #include "commit.h"
 
-#include <git/odb.h>
-#include <git/tag.h>
-#include <git/revwalk.h>
+#include <git2/odb.h>
+#include <git2/tag.h>
+#include <git2/revwalk.h>
 
 static const char *tag_id = "b25fa35b38051e4ae45d4222e795f9df2e43f1d1";
 

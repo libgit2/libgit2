@@ -24,6 +24,8 @@
  */
 #include <stdarg.h>
 
+#include "git2/object.h"
+
 #include "common.h"
 #include "repository.h"
 #include "commit.h"
@@ -41,13 +43,27 @@ static const double max_load_factor = 0.65;
 
 static const int OBJECT_BASE_SIZE = 4096;
 
-static const size_t object_sizes[] = {
-	0,
-	sizeof(git_commit),
-	sizeof(git_tree),
-	sizeof(git_blob),
-	sizeof(git_tag)
+static struct {
+	const char	*str;   /* type name string */
+	int			loose;  /* valid loose object type flag */
+	size_t		size;	/* size in bytes of the object structure */
+} git_objects_table[] = {
+	{ "",          0, 0					},  /* 0 = GIT_OBJ__EXT1     */
+	{ "commit",    1, sizeof(git_commit)},  /* 1 = GIT_OBJ_COMMIT    */
+	{ "tree",      1, sizeof(git_tree)	},  /* 2 = GIT_OBJ_TREE      */
+	{ "blob",      1, sizeof(git_blob)	},  /* 3 = GIT_OBJ_BLOB      */
+	{ "tag",       1, sizeof(git_tag)	},  /* 4 = GIT_OBJ_TAG       */
+	{ "",          0, 0					},  /* 5 = GIT_OBJ__EXT2     */
+	{ "OFS_DELTA", 0, 0					},  /* 6 = GIT_OBJ_OFS_DELTA */
+	{ "REF_DELTA", 0, 0					}   /* 7 = GIT_OBJ_REF_DELTA */
 };
+
+/***********************************************************
+ *
+ * MISCELANEOUS HELPER FUNCTIONS
+ *
+ ***********************************************************/
+
 
 
 uint32_t git__objtable_hash(const void *key)
@@ -84,7 +100,7 @@ static int assign_repository_folders(git_repository *repo,
 
 	assert(repo);
 
-	if (git_dir == NULL || gitfo_isdir(git_dir) < 0)
+	if (git_dir == NULL || gitfo_isdir(git_dir) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
 
@@ -107,7 +123,7 @@ static int assign_repository_folders(git_repository *repo,
 	else
 		strcpy(path_aux, git_object_directory);
 
-	if (gitfo_isdir(path_aux) < 0)
+	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
 	repo->path_odb = git__strdup(path_aux);
@@ -139,7 +155,7 @@ static int guess_repository_folders(git_repository *repo, const char *repository
 	char path_aux[GIT_PATH_MAX], *last_folder;
 	int path_len;
 
-	if (gitfo_isdir(repository_path) < 0)
+	if (gitfo_isdir(repository_path) < GIT_SUCCESS)
 		return GIT_ENOTAREPO;
 
 	path_len = strlen(repository_path);
@@ -156,7 +172,7 @@ static int guess_repository_folders(git_repository *repo, const char *repository
 
 	/* objects database */
 	strcpy(path_aux + path_len, GIT_OBJECTS_FOLDER);
-	if (gitfo_isdir(path_aux) < 0)
+	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTAREPO;
 	repo->path_odb = git__strdup(path_aux);
 
@@ -233,11 +249,11 @@ int git_repository_open2(git_repository **repo_out,
 			git_index_file,
 			git_work_tree);
 
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	error = git_odb_open(&repo->db, repo->path_odb);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	*repo_out = repo;
@@ -260,11 +276,11 @@ int git_repository_open(git_repository **repo_out, const char *path)
 		return GIT_ENOMEM;
 
 	error = guess_repository_folders(repo, path);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	error = git_odb_open(&repo->db, repo->path_odb);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	*repo_out = repo;
@@ -302,7 +318,7 @@ void git_repository_free(git_repository *repo)
 git_index *git_repository_index(git_repository *repo)
 {
 	if (repo->index == NULL) {
-		if (git_index_open_inrepo(&repo->index, repo) < 0)
+		if (git_index_open_inrepo(&repo->index, repo) < GIT_SUCCESS)
 			return NULL;
 
 		assert(repo->index);
@@ -344,7 +360,7 @@ int git__source_printf(git_odb_source *source, const char *format, ...)
 	len = vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
 
 	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < 0)
+		if (source_resize(source) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
 		did_resize = 1;
@@ -366,7 +382,7 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len)
 	assert(source->open && source->write_ptr);
 
 	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < 0)
+		if (source_resize(source) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 	}
 
@@ -404,7 +420,7 @@ static int write_back(git_object *object)
 
 	object->source.raw.len = object->source.written_bytes;
 
-	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < 0)
+	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < GIT_SUCCESS)
 		return error;
 
 	if (!object->in_memory)
@@ -433,7 +449,7 @@ int git_object__source_open(git_object *object)
 		git_object__source_close(object);
 
 	error = git_odb_read(&object->source.raw, object->repo->db, &object->id);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		return error;
 
 	object->source.open = 1;
@@ -445,7 +461,7 @@ void git_object__source_close(git_object *object)
 	assert(object);
 
 	if (object->source.open) {
-		git_obj_close(&object->source.raw);
+		git_rawobj_close(&object->source.raw);
 		object->source.open = 0;
 	}
 }
@@ -485,7 +501,7 @@ int git_object_write(git_object *object)
 		break;
 	}
 
-	if (error < 0) {
+	if (error < GIT_SUCCESS) {
 		git_object__source_close(object);
 		return error;
 	}
@@ -570,12 +586,12 @@ int git_repository_newobject(git_object **object_out, git_repository *repo, git_
 		return GIT_EINVALIDTYPE;
 	}
 
-	object = git__malloc(object_sizes[type]);
+	object = git__malloc(git_objects_table[type].size);
 
 	if (object == NULL)
 		return GIT_ENOMEM;
 
-	memset(object, 0x0, object_sizes[type]);
+	memset(object, 0x0, git_objects_table[type].size);
 	object->repo = repo;
 	object->in_memory = 1;
 	object->modified = 1;
@@ -590,7 +606,7 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 {
 	git_object *object = NULL;
 	git_rawobj obj_file;
-	int error = 0;
+	int error = GIT_SUCCESS;
 
 	assert(repo && object_out && id);
 
@@ -601,7 +617,7 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 	}
 
 	error = git_odb_read(&obj_file, repo->db, id);
-	if (error < 0)
+	if (error < GIT_SUCCESS)
 		return error;
 
 	if (type != GIT_OBJ_ANY && type != obj_file.type)
@@ -609,12 +625,12 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 
 	type = obj_file.type;
 
-	object = git__malloc(object_sizes[type]);
+	object = git__malloc(git_objects_table[type].size);
 
 	if (object == NULL)
 		return GIT_ENOMEM;
 
-	memset(object, 0x0, object_sizes[type]);
+	memset(object, 0x0, git_objects_table[type].size);
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->id, id);
@@ -644,7 +660,7 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 		break;
 	}
 
-	if (error < 0) {
+	if (error < GIT_SUCCESS) {
 		git_object_free(object);
 		return error;
 	}
@@ -668,3 +684,32 @@ GIT_NEWOBJECT_TEMPLATE(tree, TREE)
 GIT_NEWOBJECT_TEMPLATE(blob, BLOB)
 
 
+const char *git_object_type2string(git_otype type)
+{
+	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(git_objects_table))
+		return "";
+
+	return git_objects_table[type].str;
+}
+
+git_otype git_object_string2type(const char *str)
+{
+	size_t i;
+
+	if (!str || !*str)
+		return GIT_OBJ_BAD;
+
+	for (i = 0; i < ARRAY_SIZE(git_objects_table); i++)
+		if (!strcmp(str, git_objects_table[i].str))
+			return (git_otype)i;
+
+	return GIT_OBJ_BAD;
+}
+
+int git_object_typeisloose(git_otype type)
+{
+	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(git_objects_table))
+		return 0;
+
+	return git_objects_table[type].loose;
+}

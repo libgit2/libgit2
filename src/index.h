@@ -4,8 +4,8 @@
 #include "fileops.h"
 #include "filelock.h"
 #include "vector.h"
-#include "git/odb.h"
-#include "git/index.h"
+#include "git2/odb.h"
+#include "git2/index.h"
 
 struct git_index_tree {
 	char *name;

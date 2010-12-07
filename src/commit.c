@@ -23,9 +23,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include "git/common.h"
-#include "git/odb.h"
-#include "git/repository.h"
+#include "git2/common.h"
+#include "git2/object.h"
+#include "git2/repository.h"
 
 #include "common.h"
 #include "commit.h"
@@ -114,23 +114,23 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	clear_parents(commit);
 
 
-	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < 0)
+	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
 		return error;
 
-	if ((error = git_repository_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < 0)
+	if ((error = git_repository_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < GIT_SUCCESS)
 		return error;
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
-	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == 0) {
+	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
 		git_commit *parent;
 
-		if ((error = git_repository_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < 0)
+		if ((error = git_repository_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
 			return error;
 
-		if (git_vector_insert(&commit->parents, parent) < 0)
+		if (git_vector_insert(&commit->parents, parent) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 	}
 
@@ -140,7 +140,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 			git_person__free(commit->author);
 
 		commit->author = git__malloc(sizeof(git_person));
-		if ((error = git_person__parse(commit->author, &buffer, buffer_end, "author ")) < 0)
+		if ((error = git_person__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
 			return error;
 
 	} else {
@@ -155,7 +155,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		git_person__free(commit->committer);
 
 	commit->committer = git__malloc(sizeof(git_person));
-	if ((error = git_person__parse(commit->committer, &buffer, buffer_end, "committer ")) < 0)
+	if ((error = git_person__parse(commit->committer, &buffer, buffer_end, "committer ")) < GIT_SUCCESS)
 		return error;
 
 	commit->commit_time = commit->committer->time;
@@ -199,9 +199,9 @@ int git_commit__parse_full(git_commit *commit)
 	int error;
 
 	if (commit->full_parse)
-		return 0;
+		return GIT_SUCCESS;
 
-	if ((error = git_object__source_open((git_object *)commit)) < 0)
+	if ((error = git_object__source_open((git_object *)commit)) < GIT_SUCCESS)
 		return error;
 
 	error = commit_parse_buffer(commit,
@@ -292,7 +292,8 @@ void git_commit_set_committer(git_commit *commit, const char *name, const char *
 
 void git_commit_set_message(git_commit *commit, const char *message)
 {
-	const char *short_message;
+	const char *line_end;
+	size_t message_len;
 
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
@@ -304,9 +305,18 @@ void git_commit_set_message(git_commit *commit, const char *message)
 		free(commit->message_short);
 
 	commit->message = git__strdup(message);
-	commit->message_short = NULL;
 
-	/* TODO: extract short message */
+	/* Short message */
+	if((line_end = strchr(message, '\n')) == NULL) {
+		commit->message_short = git__strdup(message);
+		return;
+	}
+
+	message_len = line_end - message;
+
+	commit->message_short = git__malloc(message_len + 1);
+	memcpy(commit->message_short, message, message_len);
+	commit->message_short[message_len] = 0;
 }
 
 int git_commit_add_parent(git_commit *commit, git_commit *new_parent)

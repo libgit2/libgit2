@@ -1,7 +1,7 @@
 #ifndef INCLUDE_errors_h__
 #define INCLUDE_errors_h__
 
-#include "git/errors.h"
+#include "git2/errors.h"
 
 /* convenience functions */
 GIT_INLINE(int) git_int_error(int code)

@@ -1,7 +1,7 @@
 #ifndef INCLUDE_tree_h__
 #define INCLUDE_tree_h__
 
-#include <git/tree.h>
+#include "git2/tree.h"
 #include "repository.h"
 #include "vector.h"
 
