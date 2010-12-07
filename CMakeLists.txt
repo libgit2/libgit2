@@ -16,7 +16,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 # Find required dependencies
 FIND_PACKAGE(ZLIB REQUIRED)
-INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR} ${PTHREAD_INCLUDE_DIR} src)
+INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR} src)
 
 # Try finding openssl
 FIND_PACKAGE(OpenSSL)
@@ -29,7 +29,7 @@ ENDIF ()
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
 SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
-SET(INSTALL_INC include/git CACHE PATH "Where to install headers to.")
+SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
@@ -82,7 +82,8 @@ INSTALL(TARGETS git2
     LIBRARY DESTINATION ${INSTALL_LIB}
     ARCHIVE DESTINATION ${INSTALL_LIB}
 )
-INSTALL(FILES ${SRC_H} DESTINATION ${INSTALL_INC} )
+INSTALL(DIRECTORY src/git2 DESTINATION ${INSTALL_INC} )
+INSTALL(FILES src/git2.h DESTINATION ${INSTALL_INC} )
 
 # Tests
 IF (BUILD_TESTS)
