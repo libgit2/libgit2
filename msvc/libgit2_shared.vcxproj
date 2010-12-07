@@ -22,6 +22,8 @@
     <ClCompile Include="..\src\hashtable.c" />
     <ClCompile Include="..\src\index.c" />
     <ClCompile Include="..\src\odb.c" />
+    <ClCompile Include="..\src\odb_loose.c" />
+    <ClCompile Include="..\src\odb_pack.c" />
     <ClCompile Include="..\src\oid.c" />
     <ClCompile Include="..\src\person.c" />
     <ClCompile Include="..\src\repository.c" />

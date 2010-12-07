@@ -51,6 +51,12 @@
     <ClCompile Include="..\src\odb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\odb_loose.c">
+     <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\odb_pack.c">
+     <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\oid.c">
       <Filter>Source Files</Filter>
     </ClCompile>
