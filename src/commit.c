@@ -292,7 +292,8 @@ void git_commit_set_committer(git_commit *commit, const char *name, const char *
 
 void git_commit_set_message(git_commit *commit, const char *message)
 {
-	const char *short_message;
+	const char *line_end;
+	size_t message_len;
 
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
@@ -304,9 +305,18 @@ void git_commit_set_message(git_commit *commit, const char *message)
 		free(commit->message_short);
 
 	commit->message = git__strdup(message);
-	commit->message_short = NULL;
 
-	/* TODO: extract short message */
+	/* Short message */
+	if((line_end = strchr(message, '\n')) == NULL) {
+		commit->message_short = git__strdup(message);
+		return;
+	}
+
+	message_len = line_end - message;
+
+	commit->message_short = git__malloc(message_len + 1);
+	memcpy(commit->message_short, message, message_len);
+	commit->message_short[message_len] = 0;
 }
 
 int git_commit_add_parent(git_commit *commit, git_commit *new_parent)
