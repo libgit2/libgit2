@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<title>libgit2: git_rawobj Struct Reference</title>
+<title>libgit2: git_odb_backend Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javaScript" src="search/search.js"></script>
@@ -50,77 +50,39 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="summary">
 <a href="#pub-attribs">Data Fields</a>  </div>
   <div class="headertitle">
-<h1>git_rawobj Struct Reference<br/>
+<h1>git_odb_backend Struct Reference<br/>
 <small>
-[<a class="el" href="group__git__odb.html">Git object database routines</a>]</small>
+[<a class="el" href="group__git__backend.html">Git custom backend API</a>]</small>
 </h1>  </div>
 </div>
 <div class="contents">
-<!-- doxytag: class="git_rawobj" -->
-<p>An object read from the database.  
+<!-- doxytag: class="git_odb_backend" -->
+<p>An instance for a custom backend.  
 <a href="#_details">More...</a></p>
 
-<p><code>#include &lt;<a class="el" href="odb_8h_source.html">odb.h</a>&gt;</code></p>
+<p><code>#include &lt;<a class="el" href="odb__backend_8h_source.html">odb_backend.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="pub-attribs"></a>
 Data Fields</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__rawobj.html#acabf1eb15746a3e2ca1cc08f4fd4ce1a">data</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Raw, decompressed object data.  <a href="#acabf1eb15746a3e2ca1cc08f4fd4ce1a"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">size_t&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__rawobj.html#a0a33fb9f7be2b8b665c25d9632f8c5b2">len</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Total number of bytes in data.  <a href="#a0a33fb9f7be2b8b665c25d9632f8c5b2"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__rawobj.html#a1d29196945b44f8ffb4ee24fd44d31f7">type</a></td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Type of this object.  <a href="#a1d29196945b44f8ffb4ee24fd44d31f7"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a87b9e0db6fbb6ae0c192efcb78e81e70"></a><!-- doxytag: member="git_odb_backend::odb" ref="a87b9e0db6fbb6ae0c192efcb78e81e70" args="" -->
+<a class="el" href="types_8h.html#a787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><b>odb</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gada9bf89eb8500b9b0d316f07589eab65"></a><!-- doxytag: member="git_odb_backend::priority" ref="gada9bf89eb8500b9b0d316f07589eab65" args="" -->
+int&nbsp;</td><td class="memItemRight" valign="bottom"><b>priority</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga88889cfd188994e0c367133c2f5694b6"></a><!-- doxytag: member="git_odb_backend::read" ref="ga88889cfd188994e0c367133c2f5694b6" args=")(git_rawobj *, struct git_odb_backend *, const git_oid *)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>read</b> )(<a class="el" href="structgit__rawobj.html">git_rawobj</a> *, struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, const <a class="el" href="structgit__oid.html">git_oid</a> *)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga9b1b7dc6775386dc6ea466baf69cedf5"></a><!-- doxytag: member="git_odb_backend::read_header" ref="ga9b1b7dc6775386dc6ea466baf69cedf5" args=")(git_rawobj *, struct git_odb_backend *, const git_oid *)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>read_header</b> )(<a class="el" href="structgit__rawobj.html">git_rawobj</a> *, struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, const <a class="el" href="structgit__oid.html">git_oid</a> *)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga9eeaa7e5c23d63aa31e73a340376ebd3"></a><!-- doxytag: member="git_odb_backend::write" ref="ga9eeaa7e5c23d63aa31e73a340376ebd3" args=")(git_oid *id, struct git_odb_backend *, git_rawobj *obj)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>write</b> )(<a class="el" href="structgit__oid.html">git_oid</a> *id, struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, <a class="el" href="structgit__rawobj.html">git_rawobj</a> *obj)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gacb5b7ced8ec6aeb18cda412baeb5384c"></a><!-- doxytag: member="git_odb_backend::exists" ref="gacb5b7ced8ec6aeb18cda412baeb5384c" args=")(struct git_odb_backend *, const git_oid *)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>exists</b> )(struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, const <a class="el" href="structgit__oid.html">git_oid</a> *)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gad5f1fef888da1eab3fb5616e728967bd"></a><!-- doxytag: member="git_odb_backend::free" ref="gad5f1fef888da1eab3fb5616e728967bd" args=")(struct git_odb_backend *)" -->
+void(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>free</b> )(struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *)</td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
-<p>An object read from the database. </p>
-<hr/><h2>Field Documentation</h2>
-<a class="anchor" id="acabf1eb15746a3e2ca1cc08f4fd4ce1a"></a><!-- doxytag: member="git_rawobj::data" ref="acabf1eb15746a3e2ca1cc08f4fd4ce1a" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void* <a class="el" href="structgit__rawobj.html#acabf1eb15746a3e2ca1cc08f4fd4ce1a">git_rawobj::data</a></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Raw, decompressed object data. </p>
-
-</div>
-</div>
-<a class="anchor" id="a0a33fb9f7be2b8b665c25d9632f8c5b2"></a><!-- doxytag: member="git_rawobj::len" ref="a0a33fb9f7be2b8b665c25d9632f8c5b2" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">size_t <a class="el" href="structgit__rawobj.html#a0a33fb9f7be2b8b665c25d9632f8c5b2">git_rawobj::len</a></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Total number of bytes in data. </p>
-
-</div>
-</div>
-<a class="anchor" id="a1d29196945b44f8ffb4ee24fd44d31f7"></a><!-- doxytag: member="git_rawobj::type" ref="a1d29196945b44f8ffb4ee24fd44d31f7" args="" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> <a class="el" href="structgit__rawobj.html#a1d29196945b44f8ffb4ee24fd44d31f7">git_rawobj::type</a></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Type of this object. </p>
-
-</div>
-</div>
+<p>An instance for a custom backend. </p>
 <hr/>The documentation for this struct was generated from the following file:<ul>
-<li><a class="el" href="odb_8h_source.html">odb.h</a></li>
+<li><a class="el" href="odb__backend_8h_source.html">odb_backend.h</a></li>
 </ul>
 </div>
 <!--- window showing the filter options -->

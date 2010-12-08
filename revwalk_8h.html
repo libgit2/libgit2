@@ -48,7 +48,6 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="header">
   <div class="summary">
 <a href="#define-members">Defines</a> &#124;
-<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <h1>revwalk.h File Reference</h1>  </div>
@@ -58,8 +57,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <p>Git revision traversal routines.  
 <a href="#_details">More...</a></p>
 <code>#include &quot;<a class="el" href="common_8h_source.html">common.h</a>&quot;</code><br/>
-<code>#include &quot;<a class="el" href="odb_8h_source.html">odb.h</a>&quot;</code><br/>
-<code>#include &quot;<a class="el" href="commit_8h_source.html">commit.h</a>&quot;</code><br/>
+<code>#include &quot;<a class="el" href="types_8h_source.html">types.h</a>&quot;</code><br/>
 
 <p><a href="revwalk_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -76,27 +74,23 @@ Defines</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga017970e1050eaef68f39f1a45113caf4"></a><!-- doxytag: member="revwalk.h::GIT_SORT_REVERSE" ref="ga017970e1050eaef68f39f1a45113caf4" args="" -->
 #define&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga017970e1050eaef68f39f1a45113caf4">GIT_SORT_REVERSE</a>&nbsp;&nbsp;&nbsp;(1 &lt;&lt; 2)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Iterate through the repository contents in reverse order; this sorting mode can be combined with any of the above. <br/></td></tr>
-<tr><td colspan="2"><h2><a name="typedef-members"></a>
-Typedefs</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gadc160e727f44ae056097687ac9e74491"></a><!-- doxytag: member="revwalk.h::git_revwalk" ref="gadc160e727f44ae056097687ac9e74491" args="" -->
-typedef struct git_revwalk&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_revwalk</b></td></tr>
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gaa37af1e17f70079065277b5f216cbc6f">git_revwalk_new</a> (git_revwalk **walker, <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gaa37af1e17f70079065277b5f216cbc6f">git_revwalk_new</a> (git_revwalk **walker, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Allocate a new revision walker to iterate through a repo.  <a href="group__git__revwalk.html#gaa37af1e17f70079065277b5f216cbc6f"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga9fe98ba31265fce47fbd86de2a6c23fb">git_revwalk_reset</a> (git_revwalk *walker)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Reset the walking machinery for reuse.  <a href="group__git__revwalk.html#ga9fe98ba31265fce47fbd86de2a6c23fb"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga082d81392e6f05bdafbe816766f4bd60">git_revwalk_push</a> (git_revwalk *walk, <a class="el" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga082d81392e6f05bdafbe816766f4bd60">git_revwalk_push</a> (git_revwalk *walk, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Mark a commit to start traversal from.  <a href="group__git__revwalk.html#ga082d81392e6f05bdafbe816766f4bd60"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gadfd57678c43d9c4cfb4d1becea25b3f9">git_revwalk_hide</a> (git_revwalk *walk, <a class="el" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gadfd57678c43d9c4cfb4d1becea25b3f9">git_revwalk_hide</a> (git_revwalk *walk, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Mark a commit (and its ancestors) uninteresting for the output.  <a href="group__git__revwalk.html#gadfd57678c43d9c4cfb4d1becea25b3f9"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga59fd68eaa1b4734e8e6d445ee06cdae6">git_revwalk_next</a> (git_revwalk *walk)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga59fd68eaa1b4734e8e6d445ee06cdae6">git_revwalk_next</a> (git_revwalk *walk)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the next commit from the revision traversal.  <a href="group__git__revwalk.html#ga59fd68eaa1b4734e8e6d445ee06cdae6"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gac787f829d046d92036270d73d8730719">git_revwalk_sorting</a> (git_revwalk *walk, unsigned int sort_mode)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Change the sorting mode when iterating through the repository's contents.  <a href="group__git__revwalk.html#gac787f829d046d92036270d73d8730719"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga86a2eac4a58ce7f6ce309f066424e934">git_revwalk_free</a> (git_revwalk *walk)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Free a revwalk previously allocated.  <a href="group__git__revwalk.html#ga86a2eac4a58ce7f6ce309f066424e934"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gaca9865be6ebd72767f75f6900db7661e">git_revwalk_repository</a> (git_revwalk *walk)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gaca9865be6ebd72767f75f6900db7661e">git_revwalk_repository</a> (git_revwalk *walk)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Return the repository on which this walker is operating.  <a href="group__git__revwalk.html#gaca9865be6ebd72767f75f6900db7661e"></a><br/></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
@@ -116,7 +110,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:37 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Wed Dec 8 2010 10:05:21 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

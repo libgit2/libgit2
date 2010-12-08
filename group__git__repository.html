@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<title>libgit2: Git revision object management routines</title>
+<title>libgit2: Git repository management routines</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javaScript" src="search/search.js"></script>
@@ -43,186 +43,36 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="summary">
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
-<h1>Git revision object management routines</h1>  </div>
+<h1>Git repository management routines</h1>  </div>
 </div>
 <div class="contents">
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga21ff20d0050abb046d7023fc99da1946">git_repository_open</a> (<a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repository, const char *path)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga21ff20d0050abb046d7023fc99da1946">git_repository_open</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repository, const char *path)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Open a git repository.  <a href="#ga21ff20d0050abb046d7023fc99da1946"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gae5cad1b9756c745b1fad665d28a36afb">git_repository_open2</a> (<a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repository, const char *git_dir, const char *git_object_directory, const char *git_index_file, const char *git_work_tree)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gae5cad1b9756c745b1fad665d28a36afb">git_repository_open2</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repository, const char *git_dir, const char *git_object_directory, const char *git_index_file, const char *git_work_tree)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Open a git repository by manually specifying all its paths.  <a href="#gae5cad1b9756c745b1fad665d28a36afb"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga0255cef238c65a943dc31385961fe410">git_repository_lookup</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id, <a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga0255cef238c65a943dc31385961fe410">git_repository_lookup</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Lookup a reference to one of the objects in the repostory.  <a href="#ga0255cef238c65a943dc31385961fe410"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga23ffb8169f5509dcf78a26f35ce65197">git_repository_database</a> (<a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga23ffb8169f5509dcf78a26f35ce65197">git_repository_database</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the object database behind a Git repository.  <a href="#ga23ffb8169f5509dcf78a26f35ce65197"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__index.html#ga1cfa84e6a0b318d1fb81f26eadb09e28">git_index</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga36c7dbdeb583c9eae7c1330649f12631">git_repository_index</a> (<a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *rpeo)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a1cfa84e6a0b318d1fb81f26eadb09e28">git_index</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga36c7dbdeb583c9eae7c1330649f12631">git_repository_index</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *rpeo)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the Index file of a Git repository.  <a href="#ga36c7dbdeb583c9eae7c1330649f12631"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gae340c088caf60883593938759e03f590">git_repository_newobject</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, <a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gae340c088caf60883593938759e03f590">git_repository_newobject</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Create a new in-memory repository object with the given type.  <a href="#gae340c088caf60883593938759e03f590"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e">git_object_write</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *object)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Write back an object to disk.  <a href="#ga69aab28b69c23e6e9ca5f0e8ccd0f74e"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__oid.html">git_oid</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gaa80cd62be84779aa546a7c5f32fdc61b">git_object_id</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the id (SHA1) of a repository object.  <a href="#gaa80cd62be84779aa546a7c5f32fdc61b"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga2ee6649926e620e52ff29284002cbe52">git_object_type</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the object type of an object.  <a href="#ga2ee6649926e620e52ff29284002cbe52"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gadd84e98caab6547483015b1390f79e30">git_object_owner</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the repository that owns this object.  <a href="#gadd84e98caab6547483015b1390f79e30"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga23ee345015910423a6f461031e4457e2">git_object_free</a> (<a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *object)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Free a reference to one of the objects in the repository.  <a href="#ga23ee345015910423a6f461031e4457e2"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a">git_repository_free</a> (<a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a">git_repository_free</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Free a previously allocated repository.  <a href="#gadc2e808b765a06f02d456644e561999a"></a><br/></td></tr>
 </table>
 <hr/><h2>Function Documentation</h2>
-<a class="anchor" id="ga23ee345015910423a6f461031e4457e2"></a><!-- doxytag: member="repository.h::git_object_free" ref="ga23ee345015910423a6f461031e4457e2" args="(git_object *object)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void git_object_free </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *&nbsp;</td>
-          <td class="paramname"> <em>object</em></td>
-          <td>&nbsp;)&nbsp;</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Free a reference to one of the objects in the repository. </p>
-<p>Repository objects are managed automatically by the library, but this method can be used to force freeing one of the objects.</p>
-<p>Careful: freeing objects in the middle of a repository traversal will most likely cause errors.</p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>object</em>&nbsp;</td><td>the object to free </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="gaa80cd62be84779aa546a7c5f32fdc61b"></a><!-- doxytag: member="repository.h::git_object_id" ref="gaa80cd62be84779aa546a7c5f32fdc61b" args="(git_object *obj)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">const <a class="el" href="structgit__oid.html">git_oid</a>* git_object_id </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *&nbsp;</td>
-          <td class="paramname"> <em>obj</em></td>
-          <td>&nbsp;)&nbsp;</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Get the id (SHA1) of a repository object. </p>
-<p>In-memory objects created by git_object_new() do not have a SHA1 ID until they are written on a repository.</p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>obj</em>&nbsp;</td><td>the repository object </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>the SHA1 id </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="gadd84e98caab6547483015b1390f79e30"></a><!-- doxytag: member="repository.h::git_object_owner" ref="gadd84e98caab6547483015b1390f79e30" args="(git_object *obj)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a>* git_object_owner </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *&nbsp;</td>
-          <td class="paramname"> <em>obj</em></td>
-          <td>&nbsp;)&nbsp;</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Get the repository that owns this object. </p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>obj</em>&nbsp;</td><td>the object </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>the repository who owns this object </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ga2ee6649926e620e52ff29284002cbe52"></a><!-- doxytag: member="repository.h::git_object_type" ref="ga2ee6649926e620e52ff29284002cbe52" args="(git_object *obj)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> git_object_type </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *&nbsp;</td>
-          <td class="paramname"> <em>obj</em></td>
-          <td>&nbsp;)&nbsp;</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Get the object type of an object. </p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>obj</em>&nbsp;</td><td>the repository object </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>the object's type </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ga69aab28b69c23e6e9ca5f0e8ccd0f74e"></a><!-- doxytag: member="repository.h::git_object_write" ref="ga69aab28b69c23e6e9ca5f0e8ccd0f74e" args="(git_object *object)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int git_object_write </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> *&nbsp;</td>
-          <td class="paramname"> <em>object</em></td>
-          <td>&nbsp;)&nbsp;</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Write back an object to disk. </p>
-<p>The object will be written to its corresponding repository.</p>
-<p>If the object has no changes since it was first read from the repository, no actions will take place.</p>
-<p>If the object has been modified since it was read from the repository, or it has been created from scratch in memory, it will be written to the repository and its SHA1 ID will be updated accordingly.</p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table border="0" cellspacing="2" cellpadding="0">
-    <tr><td valign="top"></td><td valign="top"><em>object</em>&nbsp;</td><td>Git object to write back </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; otherwise an error code </dd></dl>
-
-</div>
-</div>
 <a class="anchor" id="ga23ffb8169f5509dcf78a26f35ce65197"></a><!-- doxytag: member="repository.h::git_repository_database" ref="ga23ffb8169f5509dcf78a26f35ce65197" args="(git_repository *repo)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">git_odb</a>* git_repository_database </td>
+          <td class="memname"><a class="el" href="types_8h.html#a787d49b60ab769b98c10bc4133b53f8a">git_odb</a>* git_repository_database </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
           <td class="paramname"> <em>repo</em></td>
           <td>&nbsp;)&nbsp;</td>
           <td></td>
@@ -249,7 +99,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void git_repository_free </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
           <td class="paramname"> <em>repo</em></td>
           <td>&nbsp;)&nbsp;</td>
           <td></td>
@@ -273,9 +123,9 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="group__git__index.html#ga1cfa84e6a0b318d1fb81f26eadb09e28">git_index</a>* git_repository_index </td>
+          <td class="memname"><a class="el" href="types_8h.html#a1cfa84e6a0b318d1fb81f26eadb09e28">git_index</a>* git_repository_index </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
           <td class="paramname"> <em>rpeo</em></td>
           <td>&nbsp;)&nbsp;</td>
           <td></td>
@@ -302,13 +152,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">int git_repository_lookup </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> **&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **&nbsp;</td>
           <td class="paramname"> <em>object</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
           <td class="paramname"> <em>repo</em>, </td>
         </tr>
         <tr>
@@ -320,7 +170,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td>
           <td class="paramname"> <em>type</em></td><td>&nbsp;</td>
         </tr>
         <tr>
@@ -355,19 +205,19 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">int git_repository_newobject </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">git_object</a> **&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **&nbsp;</td>
           <td class="paramname"> <em>object</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td>
           <td class="paramname"> <em>repo</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td>
           <td class="paramname"> <em>type</em></td><td>&nbsp;</td>
         </tr>
         <tr>
@@ -381,7 +231,7 @@ Functions</h2></td></tr>
 
 <p>Create a new in-memory repository object with the given type. </p>
 <p>The object's attributes can be filled in using the corresponding setter methods.</p>
-<p>The object will be written back to given git_repository when the <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a> function is called; objects cannot be written to disk until all their main attributes have been properly filled.</p>
+<p>The object will be written back to given git_repository when the <a class="el" href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a> function is called; objects cannot be written to disk until all their main attributes have been properly filled.</p>
 <p>Objects are instantiated with no SHA1 id; their id will be automatically generated when writing to the repository.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table border="0" cellspacing="2" cellpadding="0">
@@ -401,7 +251,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">int git_repository_open </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> **&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **&nbsp;</td>
           <td class="paramname"> <em>repository</em>, </td>
         </tr>
         <tr>
@@ -442,7 +292,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">int git_repository_open2 </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">git_repository</a> **&nbsp;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **&nbsp;</td>
           <td class="paramname"> <em>repository</em>, </td>
         </tr>
         <tr>
@@ -508,7 +358,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:38 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Wed Dec 8 2010 10:05:21 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

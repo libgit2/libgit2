@@ -49,118 +49,139 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <h1>revwalk.h</h1>  </div>
 </div>
 <div class="contents">
-<a href="revwalk_8h.html">Go to the documentation of this file.</a><div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="preprocessor">#ifndef INCLUDE_git_revwalk_h__</span>
-<a name="l00002"></a>00002 <span class="preprocessor"></span><span class="preprocessor">#define INCLUDE_git_revwalk_h__</span>
-<a name="l00003"></a>00003 <span class="preprocessor"></span>
-<a name="l00004"></a>00004 <span class="preprocessor">#include &quot;<a class="code" href="common_8h.html" title="Git common platform definitions.">common.h</a>&quot;</span>
-<a name="l00005"></a>00005 <span class="preprocessor">#include &quot;<a class="code" href="odb_8h.html" title="Git object database routines.">odb.h</a>&quot;</span>
-<a name="l00006"></a>00006 <span class="preprocessor">#include &quot;<a class="code" href="commit_8h.html" title="Git commit parsing, formatting routines.">commit.h</a>&quot;</span>
-<a name="l00007"></a>00007 <span class="comment"></span>
-<a name="l00008"></a>00008 <span class="comment">/**</span>
-<a name="l00009"></a>00009 <span class="comment"> * @file git/revwalk.h</span>
-<a name="l00010"></a>00010 <span class="comment"> * @brief Git revision traversal routines</span>
-<a name="l00011"></a>00011 <span class="comment"> * @defgroup git_revwalk Git revision traversal routines</span>
-<a name="l00012"></a>00012 <span class="comment"> * @ingroup Git</span>
-<a name="l00013"></a>00013 <span class="comment"> * @{</span>
-<a name="l00014"></a>00014 <span class="comment"> */</span>
-<a name="l00015"></a>00015 <a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73" title="Start declarations in C mode.">GIT_BEGIN_DECL</a>
-<a name="l00016"></a>00016 <span class="comment"></span>
-<a name="l00017"></a>00017 <span class="comment">/**</span>
-<a name="l00018"></a>00018 <span class="comment"> * Sort the repository contents in no particular ordering;</span>
-<a name="l00019"></a>00019 <span class="comment"> * this sorting is arbitrary, implementation-specific</span>
-<a name="l00020"></a>00020 <span class="comment"> * and subject to change at any time.</span>
-<a name="l00021"></a>00021 <span class="comment"> * This is the default sorting for new walkers.</span>
-<a name="l00022"></a>00022 <span class="comment"> */</span>
-<a name="l00023"></a><a class="code" href="group__git__revwalk.html#ga4756b03e5d2a4d4cbf72c615155e24ac">00023</a> <span class="preprocessor">#define GIT_SORT_NONE         (0)</span>
-<a name="l00024"></a>00024 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00025"></a>00025 <span class="comment">/**</span>
-<a name="l00026"></a>00026 <span class="comment"> * Sort the repository contents in topological order</span>
-<a name="l00027"></a>00027 <span class="comment"> * (parents before children); this sorting mode</span>
-<a name="l00028"></a>00028 <span class="comment"> * can be combined with time sorting.</span>
-<a name="l00029"></a>00029 <span class="comment"> */</span>
-<a name="l00030"></a><a class="code" href="group__git__revwalk.html#ga71c2ec4370c32814d4382ee1d1feeeed">00030</a> <span class="preprocessor">#define GIT_SORT_TOPOLOGICAL  (1 &lt;&lt; 0)</span>
-<a name="l00031"></a>00031 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00032"></a>00032 <span class="comment">/**</span>
-<a name="l00033"></a>00033 <span class="comment"> * Sort the repository contents by commit time;</span>
-<a name="l00034"></a>00034 <span class="comment"> * this sorting mode can be combined with</span>
-<a name="l00035"></a>00035 <span class="comment"> * topological sorting.</span>
-<a name="l00036"></a>00036 <span class="comment"> */</span>
-<a name="l00037"></a><a class="code" href="group__git__revwalk.html#gaf380bb6da34d0d7ccf1094ee423ef9ca">00037</a> <span class="preprocessor">#define GIT_SORT_TIME         (1 &lt;&lt; 1)</span>
-<a name="l00038"></a>00038 <span class="preprocessor"></span><span class="comment"></span>
-<a name="l00039"></a>00039 <span class="comment">/**</span>
-<a name="l00040"></a>00040 <span class="comment"> * Iterate through the repository contents in reverse</span>
-<a name="l00041"></a>00041 <span class="comment"> * order; this sorting mode can be combined with</span>
-<a name="l00042"></a>00042 <span class="comment"> * any of the above.</span>
-<a name="l00043"></a>00043 <span class="comment"> */</span>
-<a name="l00044"></a><a class="code" href="group__git__revwalk.html#ga017970e1050eaef68f39f1a45113caf4">00044</a> <span class="preprocessor">#define GIT_SORT_REVERSE      (1 &lt;&lt; 2)</span>
-<a name="l00045"></a>00045 <span class="preprocessor"></span>
-<a name="l00046"></a>00046 <span class="keyword">typedef</span> <span class="keyword">struct </span>git_revwalk git_revwalk;
-<a name="l00047"></a>00047 <span class="comment"></span>
+<a href="revwalk_8h.html">Go to the documentation of this file.</a><div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/*</span>
+<a name="l00002"></a>00002 <span class="comment"> * This file is free software; you can redistribute it and/or modify</span>
+<a name="l00003"></a>00003 <span class="comment"> * it under the terms of the GNU General Public License, version 2,</span>
+<a name="l00004"></a>00004 <span class="comment"> * as published by the Free Software Foundation.</span>
+<a name="l00005"></a>00005 <span class="comment"> *</span>
+<a name="l00006"></a>00006 <span class="comment"> * In addition to the permissions in the GNU General Public License,</span>
+<a name="l00007"></a>00007 <span class="comment"> * the authors give you unlimited permission to link the compiled</span>
+<a name="l00008"></a>00008 <span class="comment"> * version of this file into combinations with other programs,</span>
+<a name="l00009"></a>00009 <span class="comment"> * and to distribute those combinations without any restriction</span>
+<a name="l00010"></a>00010 <span class="comment"> * coming from the use of this file.  (The General Public License</span>
+<a name="l00011"></a>00011 <span class="comment"> * restrictions do apply in other respects; for example, they cover</span>
+<a name="l00012"></a>00012 <span class="comment"> * modification of the file, and distribution when not linked into</span>
+<a name="l00013"></a>00013 <span class="comment"> * a combined executable.)</span>
+<a name="l00014"></a>00014 <span class="comment"> *</span>
+<a name="l00015"></a>00015 <span class="comment"> * This file is distributed in the hope that it will be useful, but</span>
+<a name="l00016"></a>00016 <span class="comment"> * WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<a name="l00017"></a>00017 <span class="comment"> * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</span>
+<a name="l00018"></a>00018 <span class="comment"> * General Public License for more details.</span>
+<a name="l00019"></a>00019 <span class="comment"> *</span>
+<a name="l00020"></a>00020 <span class="comment"> * You should have received a copy of the GNU General Public License</span>
+<a name="l00021"></a>00021 <span class="comment"> * along with this program; see the file COPYING.  If not, write to</span>
+<a name="l00022"></a>00022 <span class="comment"> * the Free Software Foundation, 51 Franklin Street, Fifth Floor,</span>
+<a name="l00023"></a>00023 <span class="comment"> * Boston, MA 02110-1301, USA.</span>
+<a name="l00024"></a>00024 <span class="comment"> */</span>
+<a name="l00025"></a>00025 <span class="preprocessor">#ifndef INCLUDE_git_revwalk_h__</span>
+<a name="l00026"></a>00026 <span class="preprocessor"></span><span class="preprocessor">#define INCLUDE_git_revwalk_h__</span>
+<a name="l00027"></a>00027 <span class="preprocessor"></span>
+<a name="l00028"></a>00028 <span class="preprocessor">#include &quot;<a class="code" href="common_8h.html" title="Git common platform definitions.">common.h</a>&quot;</span>
+<a name="l00029"></a>00029 <span class="preprocessor">#include &quot;<a class="code" href="types_8h.html" title="libgit2 base types">types.h</a>&quot;</span>
+<a name="l00030"></a>00030 <span class="comment"></span>
+<a name="l00031"></a>00031 <span class="comment">/**</span>
+<a name="l00032"></a>00032 <span class="comment"> * @file git2/revwalk.h</span>
+<a name="l00033"></a>00033 <span class="comment"> * @brief Git revision traversal routines</span>
+<a name="l00034"></a>00034 <span class="comment"> * @defgroup git_revwalk Git revision traversal routines</span>
+<a name="l00035"></a>00035 <span class="comment"> * @ingroup Git</span>
+<a name="l00036"></a>00036 <span class="comment"> * @{</span>
+<a name="l00037"></a>00037 <span class="comment"> */</span>
+<a name="l00038"></a>00038 <a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73" title="Start declarations in C mode.">GIT_BEGIN_DECL</a>
+<a name="l00039"></a>00039 <span class="comment"></span>
+<a name="l00040"></a>00040 <span class="comment">/**</span>
+<a name="l00041"></a>00041 <span class="comment"> * Sort the repository contents in no particular ordering;</span>
+<a name="l00042"></a>00042 <span class="comment"> * this sorting is arbitrary, implementation-specific</span>
+<a name="l00043"></a>00043 <span class="comment"> * and subject to change at any time.</span>
+<a name="l00044"></a>00044 <span class="comment"> * This is the default sorting for new walkers.</span>
+<a name="l00045"></a>00045 <span class="comment"> */</span>
+<a name="l00046"></a><a class="code" href="group__git__revwalk.html#ga4756b03e5d2a4d4cbf72c615155e24ac">00046</a> <span class="preprocessor">#define GIT_SORT_NONE         (0)</span>
+<a name="l00047"></a>00047 <span class="preprocessor"></span><span class="comment"></span>
 <a name="l00048"></a>00048 <span class="comment">/**</span>
-<a name="l00049"></a>00049 <span class="comment"> * Allocate a new revision walker to iterate through a repo.</span>
-<a name="l00050"></a>00050 <span class="comment"> *</span>
-<a name="l00051"></a>00051 <span class="comment"> * @param walker pointer to the new revision walker</span>
-<a name="l00052"></a>00052 <span class="comment"> * @param repo the repo to walk through</span>
-<a name="l00053"></a>00053 <span class="comment"> * @return 0 on success; error code otherwise</span>
-<a name="l00054"></a>00054 <span class="comment"> */</span>
-<a name="l00055"></a>00055 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#gaa37af1e17f70079065277b5f216cbc6f" title="Allocate a new revision walker to iterate through a repo.">git_revwalk_new</a>(git_revwalk **walker, <a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
-<a name="l00056"></a>00056 <span class="comment"></span>
-<a name="l00057"></a>00057 <span class="comment">/**</span>
-<a name="l00058"></a>00058 <span class="comment"> * Reset the walking machinery for reuse.</span>
-<a name="l00059"></a>00059 <span class="comment"> * @param walker handle to reset.</span>
-<a name="l00060"></a>00060 <span class="comment"> */</span>
-<a name="l00061"></a>00061 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__revwalk.html#ga9fe98ba31265fce47fbd86de2a6c23fb" title="Reset the walking machinery for reuse.">git_revwalk_reset</a>(git_revwalk *walker);
-<a name="l00062"></a>00062 <span class="comment"></span>
-<a name="l00063"></a>00063 <span class="comment">/**</span>
-<a name="l00064"></a>00064 <span class="comment"> * Mark a commit to start traversal from.</span>
-<a name="l00065"></a>00065 <span class="comment"> * The commit object must belong to the repo which is being walked through.</span>
-<a name="l00066"></a>00066 <span class="comment"> *</span>
-<a name="l00067"></a>00067 <span class="comment"> * @param walker the walker being used for the traversal.</span>
-<a name="l00068"></a>00068 <span class="comment"> * @param commit the commit to start from.</span>
-<a name="l00069"></a>00069 <span class="comment"> */</span>
-<a name="l00070"></a>00070 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#ga082d81392e6f05bdafbe816766f4bd60" title="Mark a commit to start traversal from.">git_revwalk_push</a>(git_revwalk *walk, <a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00071"></a>00071 <span class="comment"></span>
-<a name="l00072"></a>00072 <span class="comment">/**</span>
-<a name="l00073"></a>00073 <span class="comment"> * Mark a commit (and its ancestors) uninteresting for the output.</span>
-<a name="l00074"></a>00074 <span class="comment"> * @param walker the walker being used for the traversal.</span>
-<a name="l00075"></a>00075 <span class="comment"> * @param commit the commit that will be ignored during the traversal</span>
-<a name="l00076"></a>00076 <span class="comment"> */</span>
-<a name="l00077"></a>00077 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#gadfd57678c43d9c4cfb4d1becea25b3f9" title="Mark a commit (and its ancestors) uninteresting for the output.">git_revwalk_hide</a>(git_revwalk *walk, <a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
-<a name="l00078"></a>00078 <span class="comment"></span>
-<a name="l00079"></a>00079 <span class="comment">/**</span>
-<a name="l00080"></a>00080 <span class="comment"> * Get the next commit from the revision traversal.</span>
-<a name="l00081"></a>00081 <span class="comment"> * @param walk the walker to pop the commit from.</span>
-<a name="l00082"></a>00082 <span class="comment"> * @return next commit; NULL if there is no more output.</span>
-<a name="l00083"></a>00083 <span class="comment"> */</span>
-<a name="l00084"></a>00084 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *) <a class="code" href="group__git__revwalk.html#ga59fd68eaa1b4734e8e6d445ee06cdae6" title="Get the next commit from the revision traversal.">git_revwalk_next</a>(git_revwalk *walk);
-<a name="l00085"></a>00085 <span class="comment"></span>
-<a name="l00086"></a>00086 <span class="comment">/**</span>
-<a name="l00087"></a>00087 <span class="comment"> * Change the sorting mode when iterating through the</span>
-<a name="l00088"></a>00088 <span class="comment"> * repository&#39;s contents.</span>
-<a name="l00089"></a>00089 <span class="comment"> * Changing the sorting mode resets the walker.</span>
-<a name="l00090"></a>00090 <span class="comment"> * @param walk the walker being used for the traversal.</span>
-<a name="l00091"></a>00091 <span class="comment"> * @param sort_mode combination of GIT_RPSORT_XXX flags</span>
-<a name="l00092"></a>00092 <span class="comment"> */</span>
-<a name="l00093"></a>00093 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#gac787f829d046d92036270d73d8730719" title="Change the sorting mode when iterating through the repository&amp;#39;s contents.">git_revwalk_sorting</a>(git_revwalk *walk, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> sort_mode);
-<a name="l00094"></a>00094 <span class="comment"></span>
-<a name="l00095"></a>00095 <span class="comment">/**</span>
-<a name="l00096"></a>00096 <span class="comment"> * Free a revwalk previously allocated.</span>
-<a name="l00097"></a>00097 <span class="comment"> * @param walk traversal handle to close.  If NULL nothing occurs.</span>
-<a name="l00098"></a>00098 <span class="comment"> */</span>
-<a name="l00099"></a>00099 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__revwalk.html#ga86a2eac4a58ce7f6ce309f066424e934" title="Free a revwalk previously allocated.">git_revwalk_free</a>(git_revwalk *walk);
-<a name="l00100"></a>00100 <span class="comment"></span>
-<a name="l00101"></a>00101 <span class="comment">/**</span>
-<a name="l00102"></a>00102 <span class="comment"> * Return the repository on which this walker</span>
-<a name="l00103"></a>00103 <span class="comment"> * is operating.</span>
-<a name="l00104"></a>00104 <span class="comment"> *</span>
-<a name="l00105"></a>00105 <span class="comment"> * @param walk the revision walker</span>
-<a name="l00106"></a>00106 <span class="comment"> * @return the repository being walked</span>
-<a name="l00107"></a>00107 <span class="comment"> */</span>
-<a name="l00108"></a>00108 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *) <a class="code" href="group__git__revwalk.html#gaca9865be6ebd72767f75f6900db7661e" title="Return the repository on which this walker is operating.">git_revwalk_repository</a>(git_revwalk *walk);
-<a name="l00109"></a>00109 <span class="comment"></span>
-<a name="l00110"></a>00110 <span class="comment">/** @} */</span>
-<a name="l00111"></a>00111 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00112"></a>00112 <span class="preprocessor">#endif</span>
+<a name="l00049"></a>00049 <span class="comment"> * Sort the repository contents in topological order</span>
+<a name="l00050"></a>00050 <span class="comment"> * (parents before children); this sorting mode</span>
+<a name="l00051"></a>00051 <span class="comment"> * can be combined with time sorting.</span>
+<a name="l00052"></a>00052 <span class="comment"> */</span>
+<a name="l00053"></a><a class="code" href="group__git__revwalk.html#ga71c2ec4370c32814d4382ee1d1feeeed">00053</a> <span class="preprocessor">#define GIT_SORT_TOPOLOGICAL  (1 &lt;&lt; 0)</span>
+<a name="l00054"></a>00054 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00055"></a>00055 <span class="comment">/**</span>
+<a name="l00056"></a>00056 <span class="comment"> * Sort the repository contents by commit time;</span>
+<a name="l00057"></a>00057 <span class="comment"> * this sorting mode can be combined with</span>
+<a name="l00058"></a>00058 <span class="comment"> * topological sorting.</span>
+<a name="l00059"></a>00059 <span class="comment"> */</span>
+<a name="l00060"></a><a class="code" href="group__git__revwalk.html#gaf380bb6da34d0d7ccf1094ee423ef9ca">00060</a> <span class="preprocessor">#define GIT_SORT_TIME         (1 &lt;&lt; 1)</span>
+<a name="l00061"></a>00061 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00062"></a>00062 <span class="comment">/**</span>
+<a name="l00063"></a>00063 <span class="comment"> * Iterate through the repository contents in reverse</span>
+<a name="l00064"></a>00064 <span class="comment"> * order; this sorting mode can be combined with</span>
+<a name="l00065"></a>00065 <span class="comment"> * any of the above.</span>
+<a name="l00066"></a>00066 <span class="comment"> */</span>
+<a name="l00067"></a><a class="code" href="group__git__revwalk.html#ga017970e1050eaef68f39f1a45113caf4">00067</a> <span class="preprocessor">#define GIT_SORT_REVERSE      (1 &lt;&lt; 2)</span>
+<a name="l00068"></a>00068 <span class="preprocessor"></span><span class="comment"></span>
+<a name="l00069"></a>00069 <span class="comment">/**</span>
+<a name="l00070"></a>00070 <span class="comment"> * Allocate a new revision walker to iterate through a repo.</span>
+<a name="l00071"></a>00071 <span class="comment"> *</span>
+<a name="l00072"></a>00072 <span class="comment"> * @param walker pointer to the new revision walker</span>
+<a name="l00073"></a>00073 <span class="comment"> * @param repo the repo to walk through</span>
+<a name="l00074"></a>00074 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00075"></a>00075 <span class="comment"> */</span>
+<a name="l00076"></a>00076 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#gaa37af1e17f70079065277b5f216cbc6f" title="Allocate a new revision walker to iterate through a repo.">git_revwalk_new</a>(git_revwalk **walker, <a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
+<a name="l00077"></a>00077 <span class="comment"></span>
+<a name="l00078"></a>00078 <span class="comment">/**</span>
+<a name="l00079"></a>00079 <span class="comment"> * Reset the walking machinery for reuse.</span>
+<a name="l00080"></a>00080 <span class="comment"> * @param walker handle to reset.</span>
+<a name="l00081"></a>00081 <span class="comment"> */</span>
+<a name="l00082"></a>00082 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__revwalk.html#ga9fe98ba31265fce47fbd86de2a6c23fb" title="Reset the walking machinery for reuse.">git_revwalk_reset</a>(git_revwalk *walker);
+<a name="l00083"></a>00083 <span class="comment"></span>
+<a name="l00084"></a>00084 <span class="comment">/**</span>
+<a name="l00085"></a>00085 <span class="comment"> * Mark a commit to start traversal from.</span>
+<a name="l00086"></a>00086 <span class="comment"> * The commit object must belong to the repo which is being walked through.</span>
+<a name="l00087"></a>00087 <span class="comment"> *</span>
+<a name="l00088"></a>00088 <span class="comment"> * @param walker the walker being used for the traversal.</span>
+<a name="l00089"></a>00089 <span class="comment"> * @param commit the commit to start from.</span>
+<a name="l00090"></a>00090 <span class="comment"> */</span>
+<a name="l00091"></a>00091 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#ga082d81392e6f05bdafbe816766f4bd60" title="Mark a commit to start traversal from.">git_revwalk_push</a>(git_revwalk *walk, <a class="code" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00092"></a>00092 <span class="comment"></span>
+<a name="l00093"></a>00093 <span class="comment">/**</span>
+<a name="l00094"></a>00094 <span class="comment"> * Mark a commit (and its ancestors) uninteresting for the output.</span>
+<a name="l00095"></a>00095 <span class="comment"> * @param walker the walker being used for the traversal.</span>
+<a name="l00096"></a>00096 <span class="comment"> * @param commit the commit that will be ignored during the traversal</span>
+<a name="l00097"></a>00097 <span class="comment"> */</span>
+<a name="l00098"></a>00098 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#gadfd57678c43d9c4cfb4d1becea25b3f9" title="Mark a commit (and its ancestors) uninteresting for the output.">git_revwalk_hide</a>(git_revwalk *walk, <a class="code" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *commit);
+<a name="l00099"></a>00099 <span class="comment"></span>
+<a name="l00100"></a>00100 <span class="comment">/**</span>
+<a name="l00101"></a>00101 <span class="comment"> * Get the next commit from the revision traversal.</span>
+<a name="l00102"></a>00102 <span class="comment"> * @param walk the walker to pop the commit from.</span>
+<a name="l00103"></a>00103 <span class="comment"> * @return next commit; NULL if there is no more output.</span>
+<a name="l00104"></a>00104 <span class="comment"> */</span>
+<a name="l00105"></a>00105 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2" title="Parsed representation of a commit object.">git_commit</a> *) <a class="code" href="group__git__revwalk.html#ga59fd68eaa1b4734e8e6d445ee06cdae6" title="Get the next commit from the revision traversal.">git_revwalk_next</a>(git_revwalk *walk);
+<a name="l00106"></a>00106 <span class="comment"></span>
+<a name="l00107"></a>00107 <span class="comment">/**</span>
+<a name="l00108"></a>00108 <span class="comment"> * Change the sorting mode when iterating through the</span>
+<a name="l00109"></a>00109 <span class="comment"> * repository&#39;s contents.</span>
+<a name="l00110"></a>00110 <span class="comment"> * Changing the sorting mode resets the walker.</span>
+<a name="l00111"></a>00111 <span class="comment"> * @param walk the walker being used for the traversal.</span>
+<a name="l00112"></a>00112 <span class="comment"> * @param sort_mode combination of GIT_RPSORT_XXX flags</span>
+<a name="l00113"></a>00113 <span class="comment"> */</span>
+<a name="l00114"></a>00114 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__revwalk.html#gac787f829d046d92036270d73d8730719" title="Change the sorting mode when iterating through the repository&amp;#39;s contents.">git_revwalk_sorting</a>(git_revwalk *walk, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> sort_mode);
+<a name="l00115"></a>00115 <span class="comment"></span>
+<a name="l00116"></a>00116 <span class="comment">/**</span>
+<a name="l00117"></a>00117 <span class="comment"> * Free a revwalk previously allocated.</span>
+<a name="l00118"></a>00118 <span class="comment"> * @param walk traversal handle to close.  If NULL nothing occurs.</span>
+<a name="l00119"></a>00119 <span class="comment"> */</span>
+<a name="l00120"></a>00120 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__revwalk.html#ga86a2eac4a58ce7f6ce309f066424e934" title="Free a revwalk previously allocated.">git_revwalk_free</a>(git_revwalk *walk);
+<a name="l00121"></a>00121 <span class="comment"></span>
+<a name="l00122"></a>00122 <span class="comment">/**</span>
+<a name="l00123"></a>00123 <span class="comment"> * Return the repository on which this walker</span>
+<a name="l00124"></a>00124 <span class="comment"> * is operating.</span>
+<a name="l00125"></a>00125 <span class="comment"> *</span>
+<a name="l00126"></a>00126 <span class="comment"> * @param walk the revision walker</span>
+<a name="l00127"></a>00127 <span class="comment"> * @return the repository being walked</span>
+<a name="l00128"></a>00128 <span class="comment"> */</span>
+<a name="l00129"></a>00129 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *) <a class="code" href="group__git__revwalk.html#gaca9865be6ebd72767f75f6900db7661e" title="Return the repository on which this walker is operating.">git_revwalk_repository</a>(git_revwalk *walk);
+<a name="l00130"></a>00130 <span class="comment"></span>
+<a name="l00131"></a>00131 <span class="comment">/** @} */</span>
+<a name="l00132"></a>00132 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00133"></a>00133 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -177,7 +198,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:37 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Wed Dec 8 2010 10:05:21 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

@@ -48,7 +48,6 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul class="tablist">
       <li class="current"><a href="globals.html"><span>All</span></a></li>
       <li><a href="globals_func.html"><span>Functions</span></a></li>
-      <li><a href="globals_vars.html"><span>Variables</span></a></li>
       <li><a href="globals_type.html"><span>Typedefs</span></a></li>
       <li><a href="globals_enum.html"><span>Enumerations</span></a></li>
       <li><a href="globals_eval.html"><span>Enumerator</span></a></li>
@@ -77,7 +76,7 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 : <a class="el" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73">common.h</a>
 </li>
 <li>git_blob
-: <a class="el" href="group__git__blob.html#ga05c8479cbe88cffd303398d82b52b3be">blob.h</a>
+: <a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">types.h</a>
 </li>
 <li>git_blob_lookup()
 : <a class="el" href="group__git__blob.html#gae52fcb2c021f84cde6aa41c5f5ede0a9">blob.h</a>
@@ -101,7 +100,7 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 : <a class="el" href="group__git__blob.html#ga0522c587ba5532d218f7f8dbc6f19e11">blob.h</a>
 </li>
 <li>git_commit
-: <a class="el" href="group__git__commit.html#gaa95ee762e2f944535e8bd87140cc6fb2">commit.h</a>
+: <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">types.h</a>
 </li>
 <li>git_commit_add_parent()
 : <a class="el" href="group__git__commit.html#ga8e05b2002d15bd2c535c1b2e3f01688b">commit.h</a>
@@ -193,9 +192,6 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 <li>GIT_EPACKCORRUPTED
 : <a class="el" href="group__git__common.html#ga5566161f9e4b53e741ae4aedd4cfae8e">common.h</a>
 </li>
-<li>git_errno
-: <a class="el" href="errors_8h.html#a226179ff214d1a911d29cfccee65c40f">errors.h</a>
-</li>
 <li>GIT_ERROR
 : <a class="el" href="group__git__common.html#ga1ec2376ac12e2c9024e5a311c3cc8efa">common.h</a>
 </li>
@@ -212,7 +208,7 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 : <a class="el" href="common_8h.html#a4437da8cc799203c3626b62850761309">common.h</a>
 </li>
 <li>git_index
-: <a class="el" href="group__git__index.html#ga1cfa84e6a0b318d1fb81f26eadb09e28">index.h</a>
+: <a class="el" href="types_8h.html#a1cfa84e6a0b318d1fb81f26eadb09e28">types.h</a>
 </li>
 <li>git_index_add()
 : <a class="el" href="group__git__index.html#ga78655af5f462f1990ffe8b3476c60117">index.h</a>
@@ -257,82 +253,79 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 : <a class="el" href="common_8h.html#aa21868b5d5083c56d4e7f8f911ddb0e0">common.h</a>
 </li>
 <li>GIT_OBJ__EXT1
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedbadf8f09bc9ef01867a76f4bf99070e005">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedbadf8f09bc9ef01867a76f4bf99070e005">types.h</a>
 </li>
 <li>GIT_OBJ__EXT2
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedbafeee9002bd43c6fb8a5d755b390fb528">odb.h</a>
-</li>
-<li>git_obj__loose_object_type()
-: <a class="el" href="group__git__odb.html#ga88ac2106e2261d44fa11b489c21576d3">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedbafeee9002bd43c6fb8a5d755b390fb528">types.h</a>
 </li>
 <li>GIT_OBJ_ANY
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedba44744aabf9dc3e83f931ad20c8545fbb">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedba44744aabf9dc3e83f931ad20c8545fbb">types.h</a>
 </li>
 <li>GIT_OBJ_BAD
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedbab1ff257b9a627fbf583fe4a15029940b">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedbab1ff257b9a627fbf583fe4a15029940b">types.h</a>
 </li>
 <li>GIT_OBJ_BLOB
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedba3ec3e413d0663c1d8878614cb59e31fe">odb.h</a>
-</li>
-<li>git_obj_close()
-: <a class="el" href="group__git__odb.html#gaf9825501b4fc5b5fb1f35f77dbe70928">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedba3ec3e413d0663c1d8878614cb59e31fe">types.h</a>
 </li>
 <li>GIT_OBJ_COMMIT
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedbadcc302e4d306da4a0f2ea9079e9b7ab9">odb.h</a>
-</li>
-<li>git_obj_hash()
-: <a class="el" href="group__git__odb.html#ga670324fcaba18ffe7f19913a1a0e54d6">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedbadcc302e4d306da4a0f2ea9079e9b7ab9">types.h</a>
 </li>
 <li>GIT_OBJ_OFS_DELTA
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedbae4e1a5a52ac7c0b78f208d98f0360d02">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedbae4e1a5a52ac7c0b78f208d98f0360d02">types.h</a>
 </li>
 <li>GIT_OBJ_REF_DELTA
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedbaa5f89c77c68361d33f714ac8d75caf61">odb.h</a>
-</li>
-<li>git_obj_string_to_type()
-: <a class="el" href="group__git__odb.html#gaefbde005375879109999eb6cf9d1bb27">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedbaa5f89c77c68361d33f714ac8d75caf61">types.h</a>
 </li>
 <li>GIT_OBJ_TAG
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedbadae9757c2b8cc70e30e45c6de90d74e5">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedbadae9757c2b8cc70e30e45c6de90d74e5">types.h</a>
 </li>
 <li>GIT_OBJ_TREE
-: <a class="el" href="group__git__odb.html#gga5c9a2783d4fc110bc6a4f5355d20fedba82758ff3e39d6b2fee506cec199cda3b">odb.h</a>
-</li>
-<li>git_obj_type_to_string()
-: <a class="el" href="group__git__odb.html#ga3b29238cf5b9e654e617e3f4bcca3d2c">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedba82758ff3e39d6b2fee506cec199cda3b">types.h</a>
 </li>
 <li>git_object
-: <a class="el" href="group__git__common.html#ga855e48de855be1ccb0b752295caf374e">common.h</a>
+: <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">types.h</a>
 </li>
 <li>git_object_free()
-: <a class="el" href="group__git__repository.html#ga23ee345015910423a6f461031e4457e2">repository.h</a>
+: <a class="el" href="group__git__object.html#ga23ee345015910423a6f461031e4457e2">object.h</a>
 </li>
 <li>git_object_id()
-: <a class="el" href="group__git__repository.html#gaa80cd62be84779aa546a7c5f32fdc61b">repository.h</a>
+: <a class="el" href="group__git__object.html#gaa80cd62be84779aa546a7c5f32fdc61b">object.h</a>
 </li>
 <li>git_object_owner()
-: <a class="el" href="group__git__repository.html#gadd84e98caab6547483015b1390f79e30">repository.h</a>
+: <a class="el" href="group__git__object.html#gadd84e98caab6547483015b1390f79e30">object.h</a>
+</li>
+<li>git_object_string2type()
+: <a class="el" href="group__git__object.html#ga9e76f41592ef87a0d766b4e855df6f5a">object.h</a>
 </li>
 <li>git_object_type()
-: <a class="el" href="group__git__repository.html#ga2ee6649926e620e52ff29284002cbe52">repository.h</a>
+: <a class="el" href="group__git__object.html#ga2ee6649926e620e52ff29284002cbe52">object.h</a>
+</li>
+<li>git_object_type2string()
+: <a class="el" href="group__git__object.html#ga729c807c315461fe25d56c019bf88922">object.h</a>
+</li>
+<li>git_object_typeisloose()
+: <a class="el" href="group__git__object.html#ga9efec4d33de548a1440809ea43c092c5">object.h</a>
 </li>
 <li>git_object_write()
-: <a class="el" href="group__git__repository.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e">repository.h</a>
+: <a class="el" href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e">object.h</a>
 </li>
 <li>git_odb
-: <a class="el" href="group__git__odb.html#ga787d49b60ab769b98c10bc4133b53f8a">odb.h</a>
+: <a class="el" href="types_8h.html#a787d49b60ab769b98c10bc4133b53f8a">types.h</a>
 </li>
-<li>git_odb__read_loose()
-: <a class="el" href="group__git__odb.html#ga2fadad53ea85d0187ead9a9088ade138">odb.h</a>
+<li>git_odb_add_backend()
+: <a class="el" href="group__git__odb.html#ga485a8747ccb9c17994fe04bced83ef89">odb.h</a>
 </li>
-<li>git_odb__read_packed()
-: <a class="el" href="group__git__odb.html#ga33f31ee713f7e7cf134ee0d0d66c344b">odb.h</a>
+<li>git_odb_backend
+: <a class="el" href="types_8h.html#a01fd136cfcdafb6aaf9c856dd7f1c251">types.h</a>
 </li>
 <li>git_odb_close()
 : <a class="el" href="group__git__odb.html#ga27d3ff8e01c7d533849ff5144b1b4841">odb.h</a>
 </li>
 <li>git_odb_exists()
 : <a class="el" href="group__git__odb.html#gae216becda5d6274da15193b0c34e2dce">odb.h</a>
+</li>
+<li>git_odb_new()
+: <a class="el" href="group__git__odb.html#gad91d934c491d84cd947f5b0f2bf4ff73">odb.h</a>
 </li>
 <li>git_odb_open()
 : <a class="el" href="group__git__odb.html#gaf0934f0ecee120156645d191ad8f37c3">odb.h</a>
@@ -377,13 +370,19 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 : <a class="el" href="group__git__oid.html#ga1b3fa96f827c0467c081911dc651969d">oid.h</a>
 </li>
 <li>git_otype
-: <a class="el" href="group__git__odb.html#ga5c9a2783d4fc110bc6a4f5355d20fedb">odb.h</a>
+: <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">types.h</a>
 </li>
 <li>git_person
 : <a class="el" href="group__git__common.html#ga2dba0d0023be2854459cec2b6d00ef61">common.h</a>
 </li>
+<li>git_rawobj_close()
+: <a class="el" href="group__git__odb.html#ga366ede317dfe69188c9235d5eab18eab">odb.h</a>
+</li>
+<li>git_rawobj_hash()
+: <a class="el" href="group__git__odb.html#ga3b55fe6f1c28fec7ef3106cd1a2eb700">odb.h</a>
+</li>
 <li>git_repository
-: <a class="el" href="group__git__common.html#ga69f80526f06bad7d1aead7949c2840f5">common.h</a>
+: <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">types.h</a>
 </li>
 <li>git_repository_database()
 : <a class="el" href="group__git__repository.html#ga23ffb8169f5509dcf78a26f35ce65197">repository.h</a>
@@ -449,7 +448,7 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 : <a class="el" href="group__git__common.html#ga9dc9f0851a412f67166cf42395f9eb02">common.h</a>
 </li>
 <li>git_tag
-: <a class="el" href="group__git__tag.html#gac5c4eec78898ea6d3dfbc5a7a92d3915">tag.h</a>
+: <a class="el" href="types_8h.html#ac5c4eec78898ea6d3dfbc5a7a92d3915">types.h</a>
 </li>
 <li>git_tag_id()
 : <a class="el" href="group__git__tag.html#ga5efa1875b68f73ed78cfeceb394ecefd">tag.h</a>
@@ -488,13 +487,13 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 : <a class="el" href="group__git__tag.html#gaa502d76b8f6907cf8d6e0ec14da4adcb">tag.h</a>
 </li>
 <li>git_tree
-: <a class="el" href="group__git__tree.html#ga754b8f9603ecc4f3dff649a924ce5b20">tree.h</a>
+: <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">types.h</a>
 </li>
 <li>git_tree_add_entry()
 : <a class="el" href="group__git__tree.html#ga8f555e25bd29af7398d30534ef75db69">tree.h</a>
 </li>
 <li>git_tree_entry
-: <a class="el" href="group__git__tree.html#ga480218c4b7737314c2812f1d916ac3a7">tree.h</a>
+: <a class="el" href="types_8h.html#a480218c4b7737314c2812f1d916ac3a7">types.h</a>
 </li>
 <li>git_tree_entry_2object()
 : <a class="el" href="group__git__tree.html#gadacd98b726e35f11a4d306e293c7b623">tree.h</a>
@@ -557,7 +556,7 @@ Here is a list of all documented functions, variables, defines, enums, and typed
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Thu Dec 2 2010 11:58:39 for libgit2 by&nbsp;
+<hr class="footer"/><address class="footer"><small>Generated on Wed Dec 8 2010 10:05:21 for libgit2 by&nbsp;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.1 </small></address>
 </body>

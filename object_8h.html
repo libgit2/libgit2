@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<title>libgit2: repository.h File Reference</title>
+<title>libgit2: object.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javaScript" src="search/search.js"></script>
@@ -49,37 +49,39 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="summary">
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
-<h1>repository.h File Reference</h1>  </div>
+<h1>object.h File Reference</h1>  </div>
 </div>
 <div class="contents">
 
-<p>Git repository management routines.  
+<p>Git revision object management routines.  
 <a href="#_details">More...</a></p>
 <code>#include &quot;<a class="el" href="common_8h_source.html">common.h</a>&quot;</code><br/>
 <code>#include &quot;<a class="el" href="types_8h_source.html">types.h</a>&quot;</code><br/>
 <code>#include &quot;<a class="el" href="oid_8h_source.html">oid.h</a>&quot;</code><br/>
 
-<p><a href="repository_8h_source.html">Go to the source code of this file.</a></p>
+<p><a href="object_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga21ff20d0050abb046d7023fc99da1946">git_repository_open</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repository, const char *path)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Open a git repository.  <a href="group__git__repository.html#ga21ff20d0050abb046d7023fc99da1946"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gae5cad1b9756c745b1fad665d28a36afb">git_repository_open2</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repository, const char *git_dir, const char *git_object_directory, const char *git_index_file, const char *git_work_tree)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Open a git repository by manually specifying all its paths.  <a href="group__git__repository.html#gae5cad1b9756c745b1fad665d28a36afb"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga0255cef238c65a943dc31385961fe410">git_repository_lookup</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Lookup a reference to one of the objects in the repostory.  <a href="group__git__repository.html#ga0255cef238c65a943dc31385961fe410"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a787d49b60ab769b98c10bc4133b53f8a">git_odb</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga23ffb8169f5509dcf78a26f35ce65197">git_repository_database</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the object database behind a Git repository.  <a href="group__git__repository.html#ga23ffb8169f5509dcf78a26f35ce65197"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a1cfa84e6a0b318d1fb81f26eadb09e28">git_index</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga36c7dbdeb583c9eae7c1330649f12631">git_repository_index</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *rpeo)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the Index file of a Git repository.  <a href="group__git__repository.html#ga36c7dbdeb583c9eae7c1330649f12631"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gae340c088caf60883593938759e03f590">git_repository_newobject</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Create a new in-memory repository object with the given type.  <a href="group__git__repository.html#gae340c088caf60883593938759e03f590"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a">git_repository_free</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
-<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Free a previously allocated repository.  <a href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e">git_object_write</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *object)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Write back an object to disk.  <a href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__oid.html">git_oid</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#gaa80cd62be84779aa546a7c5f32fdc61b">git_object_id</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the id (SHA1) of a repository object.  <a href="group__git__object.html#gaa80cd62be84779aa546a7c5f32fdc61b"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga2ee6649926e620e52ff29284002cbe52">git_object_type</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the object type of an object.  <a href="group__git__object.html#ga2ee6649926e620e52ff29284002cbe52"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#gadd84e98caab6547483015b1390f79e30">git_object_owner</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Get the repository that owns this object.  <a href="group__git__object.html#gadd84e98caab6547483015b1390f79e30"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga23ee345015910423a6f461031e4457e2">git_object_free</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *object)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Free a reference to one of the objects in the repository.  <a href="group__git__object.html#ga23ee345015910423a6f461031e4457e2"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">const char *&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga729c807c315461fe25d56c019bf88922">git_object_type2string</a> (<a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convert an object type to it's string representation.  <a href="group__git__object.html#ga729c807c315461fe25d56c019bf88922"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga9e76f41592ef87a0d766b4e855df6f5a">git_object_string2type</a> (const char *str)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Convert a string object type representation to it's git_otype.  <a href="group__git__object.html#ga9e76f41592ef87a0d766b4e855df6f5a"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga9efec4d33de548a1440809ea43c092c5">git_object_typeisloose</a> (<a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">Determine if the given git_otype is a valid loose object type.  <a href="group__git__object.html#ga9efec4d33de548a1440809ea43c092c5"></a><br/></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
-<p>Git repository management routines. </p>
+<p>Git revision object management routines. </p>
 </div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"

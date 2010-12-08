@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<title>libgit2: Data Structures</title>
+<title>libgit2: Git custom backend API</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javaScript" src="search/search.js"></script>
@@ -18,7 +18,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
     <ul class="tablist">
       <li><a href="index.html"><span>Main&nbsp;Page</span></a></li>
       <li><a href="modules.html"><span>Modules</span></a></li>
-      <li class="current"><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
+      <li><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
       <li id="searchli">
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -38,25 +38,34 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
       </li>
     </ul>
   </div>
-  <div class="tabs2">
-    <ul class="tablist">
-      <li class="current"><a href="annotated.html"><span>Data&nbsp;Structures</span></a></li>
-      <li><a href="classes.html"><span>Data&nbsp;Structure&nbsp;Index</span></a></li>
-      <li><a href="functions.html"><span>Data&nbsp;Fields</span></a></li>
-    </ul>
-  </div>
 </div>
 <div class="header">
+  <div class="summary">
+<a href="#nested-classes">Data Structures</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle">
-<h1>Data Structures</h1>  </div>
+<h1>Git custom backend API</h1>  </div>
 </div>
 <div class="contents">
-Here are the data structures with brief descriptions:<table>
-  <tr><td class="indexkey"><a class="el" href="structgit__index__entry.html">git_index_entry</a></td><td class="indexvalue">Memory representation of a file entry in the index </td></tr>
-  <tr><td class="indexkey"><a class="el" href="structgit__index__time.html">git_index_time</a></td><td class="indexvalue">Time used in a git index entry </td></tr>
-  <tr><td class="indexkey"><a class="el" href="structgit__odb__backend.html">git_odb_backend</a></td><td class="indexvalue">An instance for a custom backend </td></tr>
-  <tr><td class="indexkey"><a class="el" href="structgit__oid.html">git_oid</a></td><td class="indexvalue">Unique identity of any object (commit, tree, blob, tag) </td></tr>
-  <tr><td class="indexkey"><a class="el" href="structgit__rawobj.html">git_rawobj</a></td><td class="indexvalue">An object read from the database </td></tr>
+<table class="memberdecls">
+<tr><td colspan="2"><h2><a name="nested-classes"></a>
+Data Structures</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">struct &nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__odb__backend.html">git_odb_backend</a></td></tr>
+<tr><td class="mdescLeft">&nbsp;</td><td class="mdescRight">An instance for a custom backend.  <a href="structgit__odb__backend.html#_details">More...</a><br/></td></tr>
+<tr><td colspan="2"><h2><a name="var-members"></a>
+Variables</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gada9bf89eb8500b9b0d316f07589eab65"></a><!-- doxytag: member="git_backend::priority" ref="gada9bf89eb8500b9b0d316f07589eab65" args="" -->
+int&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_odb_backend::priority</b></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga88889cfd188994e0c367133c2f5694b6"></a><!-- doxytag: member="git_backend::read" ref="ga88889cfd188994e0c367133c2f5694b6" args=")(git_rawobj *, struct git_odb_backend *, const git_oid *)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_odb_backend::read</b> )(<a class="el" href="structgit__rawobj.html">git_rawobj</a> *, struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, const <a class="el" href="structgit__oid.html">git_oid</a> *)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga9b1b7dc6775386dc6ea466baf69cedf5"></a><!-- doxytag: member="git_backend::read_header" ref="ga9b1b7dc6775386dc6ea466baf69cedf5" args=")(git_rawobj *, struct git_odb_backend *, const git_oid *)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_odb_backend::read_header</b> )(<a class="el" href="structgit__rawobj.html">git_rawobj</a> *, struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, const <a class="el" href="structgit__oid.html">git_oid</a> *)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga9eeaa7e5c23d63aa31e73a340376ebd3"></a><!-- doxytag: member="git_backend::write" ref="ga9eeaa7e5c23d63aa31e73a340376ebd3" args=")(git_oid *id, struct git_odb_backend *, git_rawobj *obj)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_odb_backend::write</b> )(<a class="el" href="structgit__oid.html">git_oid</a> *id, struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, <a class="el" href="structgit__rawobj.html">git_rawobj</a> *obj)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gacb5b7ced8ec6aeb18cda412baeb5384c"></a><!-- doxytag: member="git_backend::exists" ref="gacb5b7ced8ec6aeb18cda412baeb5384c" args=")(struct git_odb_backend *, const git_oid *)" -->
+int(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_odb_backend::exists</b> )(struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *, const <a class="el" href="structgit__oid.html">git_oid</a> *)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gad5f1fef888da1eab3fb5616e728967bd"></a><!-- doxytag: member="git_backend::free" ref="gad5f1fef888da1eab3fb5616e728967bd" args=")(struct git_odb_backend *)" -->
+void(*&nbsp;</td><td class="memItemRight" valign="bottom"><b>git_odb_backend::free</b> )(struct <a class="el" href="structgit__odb__backend.html">git_odb_backend</a> *)</td></tr>
 </table>
 </div>
 <!--- window showing the filter options -->
