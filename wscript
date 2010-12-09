@@ -181,6 +181,19 @@ def test(bld):
 	from waflib import Options
 	Options.commands = ['build-tests', 'run-tests'] + Options.commands
 
+class _build_doc(Context):
+    cmd = 'doxygen'
+    fun = 'build_docs'
+
+def build_docs(ctx):
+    ctx.exec_command("doxygen api.doxygen")
+    ctx.exec_command("git stash")
+    ctx.exec_command("git checkout gh-pages")
+    ctx.exec_command("cp -Rf apidocs/html/* .")
+    ctx.exec_command("git add .")
+    ctx.exec_command("git commit -am 'generated docs'")
+    ctx.exec_command("git push origin gh-pages")
+    ctx.exec_command("git checkout master")
 
 class _run_tests(Context):
 	cmd = 'run-tests'
