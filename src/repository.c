@@ -620,8 +620,10 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 	if (error < GIT_SUCCESS)
 		return error;
 
-	if (type != GIT_OBJ_ANY && type != obj_file.type)
+	if (type != GIT_OBJ_ANY && type != obj_file.type) {
+		git_rawobj_close(&obj_file);
 		return GIT_EINVALIDTYPE;
+	}
 
 	type = obj_file.type;
 
