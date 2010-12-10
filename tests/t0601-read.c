@@ -5,9 +5,6 @@
 #include <git2/odb.h>
 #include <git2/index.h>
 
-#define TEST_INDEX_PATH "../resources/testrepo.git/index"
-#define TEST_INDEX2_PATH "../resources/gitgit.index"
-
 #define TEST_INDEX_ENTRY_COUNT 109
 #define TEST_INDEX2_ENTRY_COUNT 1437
 

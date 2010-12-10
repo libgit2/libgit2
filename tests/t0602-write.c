@@ -5,8 +5,6 @@
 #include <git2/odb.h>
 #include <git2/index.h>
 
-#define TEST_INDEX_PATH "../resources/testrepo.git/index"
-
 int filecmp(const char *filename1, const char *filename2)
 {
 	git_file file1, file2;
