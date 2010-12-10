@@ -5,8 +5,6 @@
 #include <git2/odb.h>
 #include <git2/index.h>
 
-#define TEST_INDEX_PATH "../t0600-objects/index"
-
 /*
 void print_entries(git_index *index)
 {
