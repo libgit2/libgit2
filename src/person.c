@@ -38,7 +38,7 @@ void git_person__free(git_person *person)
 	free(person);
 }
 
-git_person *git_person__new(const char *name, const char *email, time_t time)
+git_person *git_person__new(const char *name, const char *email, time_t time, int offset)
 {
 	git_person *p;
 
@@ -48,6 +48,7 @@ git_person *git_person__new(const char *name, const char *email, time_t time)
 	p->name = git__strdup(name);
 	p->email = git__strdup(email);
 	p->time = time;
+	p->timezone_offset = offset;
 
 	if (p->name == NULL || p->email == NULL)
 		goto cleanup;
@@ -74,6 +75,51 @@ time_t git_person_time(git_person *person)
 	return person->time;
 }
 
+int git_person_timezone_offset(git_person *person)
+{
+	return person->timezone_offset;
+}
+
+int git_person__parse_timezone_offset(const char *buffer, int *offset_out)
+{
+	int offset, dec_offset;
+	int mins, hours;
+
+	const char* offset_start;
+	char* offset_end;
+
+	offset_start = buffer + 1;
+
+	if (offset_start[0] != '-' && offset_start[0] != '+')
+		return GIT_EOBJCORRUPTED;
+
+	dec_offset = strtol(offset_start + 1, &offset_end, 10);
+
+	if (offset_end - offset_start != 5)
+		return GIT_EOBJCORRUPTED;
+
+	hours = dec_offset / 100;
+	mins = dec_offset % 100;
+
+	if (hours > 14)			// see http://www.worldtimezone.com/faq.html 
+		return GIT_EOBJCORRUPTED;
+
+	if (mins > 59) 
+		return GIT_EOBJCORRUPTED;
+
+	offset = (hours * 60) + mins;
+
+	if (offset_start[0] == '-')
+	{
+		offset *= -1;
+	}
+	
+	*offset_out = offset;
+
+	return GIT_SUCCESS;
+}
+
+
 int git_person__parse(git_person *person, char **buffer_out,
 		const char *buffer_end, const char *header)
 {
@@ -82,6 +128,7 @@ int git_person__parse(git_person *person, char **buffer_out,
 	int name_length, email_length;
 	char *buffer = *buffer_out;
 	char *line_end, *name_end, *email_end;
+	int offset = 0;
 
 	memset(person, 0x0, sizeof(git_person));
 
@@ -128,13 +175,30 @@ int git_person__parse(git_person *person, char **buffer_out,
 	if (person->time == 0)
 		return GIT_EOBJCORRUPTED;
 
+	if (git_person__parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
+		return GIT_EOBJCORRUPTED;
+	
+	person->timezone_offset = offset;
+
 	*buffer_out = (line_end + 1);
 	return GIT_SUCCESS;
 }
 
 int git_person__write(git_odb_source *src, const char *header, const git_person *person)
 {
-	return git__source_printf(src, "%s %s <%s> %u\n", header, person->name, person->email, person->time);
+	char *sign;
+	int offset, hours, mins;
+
+	offset = person->timezone_offset;
+	sign = (person->timezone_offset < 0) ? "-" : "+";
+	
+	if (offset < 0)
+		offset = -offset;
+
+	hours = offset / 60;
+	mins = offset % 60;
+
+	return git__source_printf(src, "%s %s <%s> %u %s%02d%02d\n", header, person->name, person->email, person->time, sign, hours, mins);
 }
 
 

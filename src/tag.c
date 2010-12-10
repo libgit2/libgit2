@@ -97,13 +97,13 @@ const git_person *git_tag_tagger(git_tag *t)
 	return t->tagger;
 }
 
-void git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time)
+void git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time, int offset)
 {
 	assert(tag && name && email);
 	tag->object.modified = 1;
 
 	git_person__free(tag->tagger);
-	tag->tagger = git_person__new(name, email, time);
+	tag->tagger = git_person__new(name, email, time, offset);
 }
 
 const char *git_tag_message(git_tag *t)

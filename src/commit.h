@@ -12,6 +12,8 @@ struct git_commit {
 	git_object object;
 
 	time_t commit_time;
+	int commit_timezone_offset;
+
 	git_vector parents;
 
 	git_tree *tree;
