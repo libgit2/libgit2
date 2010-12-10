@@ -1,15 +1,15 @@
 # CMake build script for the libgit2 project
-# Peter Drahos 2010
 #
-# Building:
+# Building (out of source build):
 # > mkdir build && cd build
-# > cmake .. && make -j3
+# > cmake .. [-DSETTINGS=VALUE]
+# > cmake --build .
 # 
 # Testing:
 # > ctest -V
 #
 # Install:
-# > make install
+# > cmake --build . --target install
 
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
@@ -87,6 +87,9 @@ INSTALL(FILES src/git2.h DESTINATION ${INSTALL_INC} )
 
 # Tests
 IF (BUILD_TESTS)
+    SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
+    ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
+    
     ENABLE_TESTING()
     # Find and build all tests
     INCLUDE_DIRECTORIES(tests)

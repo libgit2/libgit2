@@ -29,8 +29,10 @@
 #include "test_lib.h"
 #include <git2.h>
 
-#define ODB_FOLDER "../tests/resources/testrepo.git/objects/"
-#define REPOSITORY_FOLDER "../tests/resources/testrepo.git/"
+#define ODB_FOLDER			(TEST_RESOURCES "/testrepo.git/objects/")
+#define REPOSITORY_FOLDER	(TEST_RESOURCES "/testrepo.git/")
+#define TEST_INDEX_PATH		(TEST_RESOURCES "/testrepo.git/index")
+#define TEST_INDEX2_PATH	(TEST_RESOURCES "/gitgit.index")
 
 typedef struct object_data {
     unsigned char *bytes;  /* (compressed) bytes stored in object store */
