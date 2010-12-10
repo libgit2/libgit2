@@ -50,13 +50,20 @@ Optional dependency:
 
 * LibSSL <http://www.openssl.org/>
 
-On most Unix systems you can build the library using the following commands
+On most systems you can build the library using the following commands
 	
 	$ mkdir build && cd build
 	$ cmake ..
-	$ make install
+	$ cmake --build .
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
+
+To install the library you can specify the install prefix by setting:
+
+	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
+	$ cmake --build . --target install
+	
+For more advanced use or questions about CMake please read <http://www.cmake.org/Wiki/CMake_FAQ>.
 
 Building libgit2 - Unix systems
 ==================================
