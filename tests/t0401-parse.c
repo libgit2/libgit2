@@ -131,7 +131,7 @@ END_TEST
 
 BEGIN_TEST(parse_person_test)
 
-#define TEST_PERSON_PASS(_string, _header, _name, _email, _time) { \
+#define TEST_PERSON_PASS(_string, _header, _name, _email, _time, _offset) { \
 	char *ptr = _string; \
 	size_t len = strlen(_string);\
 	git_person person = {NULL, NULL, 0}; \
@@ -139,6 +139,7 @@ BEGIN_TEST(parse_person_test)
 	must_be_true(strcmp(_name, person.name) == 0);\
 	must_be_true(strcmp(_email, person.email) == 0);\
 	must_be_true(_time == person.time);\
+	must_be_true(_offset == person.timezone_offset);\
 	free(person.name); free(person.email);\
 }
 
@@ -151,25 +152,28 @@ BEGIN_TEST(parse_person_test)
 }
 
 	TEST_PERSON_PASS(
-			"author Vicent Marti <tanoku@gmail.com> 12345 \n",
-			"author ",
-			"Vicent Marti",
-			"tanoku@gmail.com",
-			12345);
+		"author Vicent Marti <tanoku@gmail.com> 12345 \n",
+		"author ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		12345,
+		0);
 
 	TEST_PERSON_PASS(
 		"author Vicent Marti <> 12345 \n",
 		"author ",
 		"Vicent Marti",
 		"",
-		12345);
+		12345,
+		0);
 
 	TEST_PERSON_PASS(
 		"author Vicent Marti <tanoku@gmail.com> 231301 +1020\n",
 		"author ",
 		"Vicent Marti",
 		"tanoku@gmail.com",
-		231301);
+		231301,
+		620);
 
 	TEST_PERSON_PASS(
 		"author Vicent Marti with an outrageously long name \
@@ -178,7 +182,8 @@ BEGIN_TEST(parse_person_test)
 		"Vicent Marti with an outrageously long name \
 		which will probably overflow the buffer",
 		"tanoku@gmail.com",
-		12345);
+		12345,
+		0);
 
 	TEST_PERSON_PASS(
 		"author Vicent Marti <tanokuwithaveryveryverylongemail\
@@ -187,7 +192,8 @@ BEGIN_TEST(parse_person_test)
 		"Vicent Marti",
 		"tanokuwithaveryveryverylongemail\
 		whichwillprobablyvoverflowtheemailbuffer@gmail.com",
-		12345);
+		12345,
+		0);
 
 	TEST_PERSON_FAIL(
 		"author Vicent Marti <tanoku@gmail.com> 12345 \n",
