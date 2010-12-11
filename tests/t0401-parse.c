@@ -195,6 +195,38 @@ BEGIN_TEST(parse_person_test)
 		12345,
 		0);
 
+	TEST_PERSON_PASS(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 +0000 \n",
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		0);
+
+	TEST_PERSON_PASS(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 +0100 \n",
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		60);
+
+	TEST_PERSON_PASS(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 -0100 \n",
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		-60);
+
+	TEST_PERSON_FAIL(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 -1500 \n",
+		"committer ");
+
+	TEST_PERSON_FAIL(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 +0163 \n",
+		"committer ");
+
 	TEST_PERSON_FAIL(
 		"author Vicent Marti <tanoku@gmail.com> 12345 \n",
 		"author  ");
