@@ -165,7 +165,7 @@ BEGIN_TEST(parse_person_test)
 		12345);
 
 	TEST_PERSON_PASS(
-		"author Vicent Marti <tanoku@gmail.com> 231301 +2020\n",
+		"author Vicent Marti <tanoku@gmail.com> 231301 +1020\n",
 		"author ",
 		"Vicent Marti",
 		"tanoku@gmail.com",
