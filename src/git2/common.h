@@ -143,6 +143,7 @@ typedef struct git_person git_person;
 const char *git_person_name(git_person *person);
 const char *git_person_email(git_person *person);
 time_t git_person_time(git_person *person);
+int git_person_timezone_offset(git_person *person);
 
 /** @} */
 GIT_END_DECL

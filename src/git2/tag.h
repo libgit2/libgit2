@@ -125,8 +125,9 @@ GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
  * @param name the name of the new tagger
  * @param email the email of the new tagger
  * @param time the time when the tag was created
+ * @param offset tagger positive or negative timezone offset, in minutes from UTC
  */
-GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time);
+GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time, int offset);
 
 /**
  * Set the message of a tag

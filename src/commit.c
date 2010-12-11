@@ -159,6 +159,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 		return error;
 
 	commit->commit_time = commit->committer->time;
+	commit->commit_timezone_offset = commit->committer->timezone_offset;
 
 	/* parse commit message */
 	while (buffer <= buffer_end && *buffer == '\n')
@@ -249,6 +250,19 @@ time_t git_commit_time(git_commit *commit)
 	return commit->commit_time;
 }
 
+int git_commit_timezone_offset(git_commit *commit)
+{
+	assert(commit);
+
+	if (commit->commit_timezone_offset)
+		return commit->commit_timezone_offset;
+
+	if (!commit->object.in_memory)
+		git_commit__parse_full(commit);
+
+	return commit->commit_timezone_offset;
+}
+
 unsigned int git_commit_parentcount(git_commit *commit)
 {
 	assert(commit);
@@ -269,24 +283,24 @@ void git_commit_set_tree(git_commit *commit, git_tree *tree)
 	commit->tree = tree;
 }
 
-void git_commit_set_author(git_commit *commit, const char *name, const char *email, time_t time)
+void git_commit_set_author(git_commit *commit, const char *name, const char *email, time_t time, int offset)
 {
 	assert(commit && name && email);
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
 
 	git_person__free(commit->author);
-	commit->author = git_person__new(name, email, time);
+	commit->author = git_person__new(name, email, time, offset);
 }
 
-void git_commit_set_committer(git_commit *commit, const char *name, const char *email, time_t time)
+void git_commit_set_committer(git_commit *commit, const char *name, const char *email, time_t time, int offset)
 {
 	assert(commit && name && email);
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
 
 	git_person__free(commit->committer);
-	commit->committer = git_person__new(name, email, time);
+	commit->committer = git_person__new(name, email, time, offset);
 	commit->commit_time = time;
 }
 

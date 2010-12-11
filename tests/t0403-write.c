@@ -42,8 +42,8 @@ BEGIN_TEST(writenew_test)
 	git_commit_add_parent(commit, parent);
 
 	/* Set other attributes */
-	git_commit_set_committer(commit, COMMITTER_NAME, COMMITTER_EMAIL, 123456789);
-	git_commit_set_author(commit, COMMITTER_NAME, COMMITTER_EMAIL, 987654321);
+	git_commit_set_committer(commit, COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
+	git_commit_set_author(commit, COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90);
 	git_commit_set_message(commit, COMMIT_MESSAGE);
 
 	/* Check attributes were set correctly */
@@ -52,13 +52,16 @@ BEGIN_TEST(writenew_test)
 	must_be_true(strcmp(author->name, COMMITTER_NAME) == 0);
 	must_be_true(strcmp(author->email, COMMITTER_EMAIL) == 0);
 	must_be_true(author->time == 987654321);
+	must_be_true(author->time_offset == 90);
 
 	committer = git_commit_committer(commit);
 	must_be_true(committer != NULL);
 	must_be_true(strcmp(committer->name, COMMITTER_NAME) == 0);
 	must_be_true(strcmp(committer->email, COMMITTER_EMAIL) == 0);
 	must_be_true(committer->time == 123456789);
+	must_be_true(committer->time_offset == 60);
 	must_be_true(git_commit_time(commit) == 123456789);
+	must_be_true(git_commit_time_offset(commit) == 60);
 
 	must_be_true(strcmp(git_commit_message(commit), COMMIT_MESSAGE) == 0);
 

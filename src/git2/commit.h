@@ -93,6 +93,13 @@ GIT_EXTERN(const char *) git_commit_message(git_commit *commit);
 GIT_EXTERN(time_t) git_commit_time(git_commit *commit);
 
 /**
+ * Get the commit timezone offset (i.e. committer's preferred timezone) of a commit.
+ * @param commit a previously loaded commit.
+ * @return positive or negative timezone offset, in minutes from UTC
+ */
+GIT_EXTERN(int) git_commit_timezone_offset(git_commit *commit);
+
+/**
  * Get the committer of a commit.
  * @param commit a previously loaded commit.
  * @return the committer of a commit
@@ -150,8 +157,9 @@ GIT_EXTERN(void) git_commit_set_message(git_commit *commit, const char *message)
  * @param name name of the new committer
  * @param email email of the new committer
  * @param time time when the committer committed the commit
+ * @param offset committer positive or negative timezone offset, in minutes from UTC
  */
-GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const char *name, const char *email, time_t time);
+GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const char *name, const char *email, time_t time, int offset);
 
 /**
  * Set the author of a commit
@@ -159,8 +167,9 @@ GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const char *name, 
  * @param name name of the new author
  * @param email email of the new author
  * @param time time when the author created the commit
+ * @param offset author positive or negative timezone offset, in minutes from UTC
  */
-GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const char *name, const char *email, time_t time);
+GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const char *name, const char *email, time_t time, int offset);
 
 /**
  * Set the tree which is pointed to by a commit
