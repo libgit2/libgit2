@@ -90,6 +90,12 @@ int git_person__parse_timezone_offset(const char *buffer, int *offset_out)
 
 	offset_start = buffer + 1;
 
+	if (*offset_start == '\n')
+	{
+		*offset_out = 0;
+		return GIT_SUCCESS;
+	}
+
 	if (offset_start[0] != '-' && offset_start[0] != '+')
 		return GIT_EOBJCORRUPTED;
 
