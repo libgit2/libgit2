@@ -103,7 +103,6 @@ static int assign_repository_folders(git_repository *repo,
 	if (git_dir == NULL || gitfo_isdir(git_dir) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
-
 	/* store GIT_DIR */
 	path_len = strlen(git_dir);
 	strcpy(path_aux, git_dir);
@@ -279,6 +278,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
+
 	error = git_odb_open(&repo->db, repo->path_odb);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
@@ -296,7 +296,8 @@ void git_repository_free(git_repository *repo)
 	git_hashtable_iterator it;
 	git_object *object;
 
-	assert(repo);
+	if (repo == NULL)
+		return;
 
 	free(repo->path_workdir);
 	free(repo->path_index);
@@ -310,8 +311,13 @@ void git_repository_free(git_repository *repo)
 		git_object_free(object);
 
 	git_hashtable_free(repo->objects);
-	git_odb_close(repo->db);
-	git_index_free(repo->index);
+
+	if (repo->db != NULL)
+		git_odb_close(repo->db);
+
+	if (repo->index != NULL)
+		git_index_free(repo->index);
+
 	free(repo);
 }
 
@@ -511,7 +517,8 @@ int git_object_write(git_object *object)
 
 void git_object_free(git_object *object)
 {
-	assert(object);
+	if (object == NULL)
+		return;
 
 	git_object__source_close(object);
 	git_hashtable_remove(object->repo->objects, &object->id);

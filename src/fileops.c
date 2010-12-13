@@ -74,8 +74,13 @@ int gitfo_isdir(const char *path)
 		stat_error = gitfo_stat(path, &st);
 	}
 
-	return (stat_error == 0 && S_ISDIR(st.st_mode)) ? 
-		GIT_SUCCESS : GIT_ENOTFOUND;
+	if (stat_error < GIT_SUCCESS)
+		return GIT_ENOTFOUND;
+
+	if (!S_ISDIR(st.st_mode))
+		return GIT_ENOTFOUND;
+
+	return GIT_SUCCESS;
 }
 
 int gitfo_exists(const char *path)

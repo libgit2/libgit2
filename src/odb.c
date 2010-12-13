@@ -210,7 +210,8 @@ void git_odb_close(git_odb *db)
 {
 	unsigned int i;
 
-	assert(db);
+	if (db == NULL)
+		return;
 
 	for (i = 0; i < db->backends.length; ++i) {
 		git_odb_backend *b = git_vector_get(&db->backends, i);

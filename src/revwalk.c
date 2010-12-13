@@ -77,6 +77,9 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 void git_revwalk_free(git_revwalk *walk)
 {
+	if (walk == NULL)
+		return;
+
 	git_revwalk_reset(walk);
 	git_hashtable_free(walk->commits);
 	free(walk);
@@ -90,6 +93,8 @@ git_repository *git_revwalk_repository(git_revwalk *walk)
 
 int git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 {
+	assert(walk);
+
 	if (walk->walking)
 		return GIT_EBUSY;
 
@@ -165,6 +170,7 @@ static git_revwalk_commit *insert_commit(git_revwalk *walk, git_commit *commit_o
 
 int git_revwalk_push(git_revwalk *walk, git_commit *commit)
 {
+	assert(walk && commit);
 	return insert_commit(walk, commit) ? GIT_SUCCESS : GIT_ENOMEM;
 }
 
@@ -186,6 +192,8 @@ static void mark_uninteresting(git_revwalk_commit *commit)
 int git_revwalk_hide(git_revwalk *walk, git_commit *commit)
 {
 	git_revwalk_commit *hide;
+
+	assert(walk && commit);
 	
 	hide = insert_commit(walk, commit);
 	if (hide == NULL)
@@ -216,6 +224,8 @@ git_commit *git_revwalk_next(git_revwalk *walk)
 {
 	git_revwalk_commit *next;
 
+	assert(walk);
+
 	if (!walk->walking)
 		prepare_walk(walk);
 
@@ -233,6 +243,8 @@ void git_revwalk_reset(git_revwalk *walk)
 {
 	git_hashtable_iterator it;
 	git_revwalk_commit *commit;
+
+	assert(walk);
 
 	git_hashtable_iterator_init(walk->commits, &it);
 
