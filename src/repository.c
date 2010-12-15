@@ -58,6 +58,14 @@ static struct {
 	{ "REF_DELTA", 0, 0					}   /* 7 = GIT_OBJ_REF_DELTA */
 };
 
+typedef struct git_repository_init_results {
+	char *path_repository;
+	char *path_workdir;
+
+	unsigned is_bare:1;
+	unsigned has_been_reinit:1;
+} git_repository_init_results;
+
 /***********************************************************
  *
  * MISCELANEOUS HELPER FUNCTIONS
@@ -721,4 +729,125 @@ int git_object_typeisloose(git_otype type)
 		return 0;
 
 	return git_objects_table[type].loose;
+}
+
+
+void git_repository_init__results_free(git_repository_init_results* init_results)
+{
+	if (init_results == NULL)
+		return;
+
+	if (init_results->path_workdir)
+		free(init_results->path_workdir);
+	if (init_results->path_repository)
+		free(init_results->path_repository);
+
+	free(init_results);
+}
+
+git_repository_init_results *git_repository_init_results__alloc()
+{
+	git_repository_init_results *results = git__malloc(sizeof(git_repository_init_results));
+	if (!results)
+		return NULL;
+
+	memset(results, 0x0, sizeof(git_repository_init_results));
+
+	return results;
+}
+
+int git_repository_init__reinit(git_repository_init_results* results)
+{
+	/* To be implemented */
+
+	results->has_been_reinit = 1;
+	return GIT_SUCCESS;
+}
+
+int git_repository_init__create_structure(git_repository_init_results* results)
+{
+	char temp_path[GIT_PATH_MAX];
+	int path_len;
+
+	char* git_dir = results->path_repository;
+
+	path_len = strlen(git_dir);
+	strcpy(temp_path, git_dir);
+
+	/* Does HEAD file already exist ? */
+	strcpy(temp_path + path_len, GIT_HEAD_FILE);
+	if (!gitfo_exists(temp_path))
+	{
+		return git_repository_init__reinit(results);
+	}
+
+	/* To be implemented */
+
+	return GIT_SUCCESS;
+}
+
+int git_repository_init__assign_folders(git_repository_init_results* results, const char* path)
+{
+	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66; // TODO: How many ?
+	char temp_path[GIT_PATH_MAX];
+	int path_len;
+
+	path_len = strlen(path);
+	strcpy(temp_path, path);
+
+	/* Ensure path has a trailing slash */
+	if (temp_path[path_len - 1] != '/') {
+		temp_path[path_len] = '/';
+		temp_path[path_len + 1] = 0;
+
+		path_len = path_len + 1;
+	}
+
+	assert(path_len < GIT_PATH_MAX - MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH);
+
+	if (results->is_bare)
+	{
+		results->path_workdir = NULL;
+	}
+	else
+	{
+		results->path_workdir = git__strdup(temp_path);
+		strcpy(temp_path + path_len - 1, GIT_FOLDER);
+		path_len = path_len + strlen(GIT_FOLDER) - 1; /* Skip the leading slash from the constant */
+	}
+
+	results->path_repository = git__strdup(temp_path);
+
+	return GIT_SUCCESS;
+}
+
+int git_repository_init(git_repository** repo_out, const char* path, unsigned is_bare)
+{
+	git_repository_init_results* results;
+	int error = GIT_SUCCESS;
+	
+	assert(repo_out && path);
+
+	results = git_repository_init_results__alloc();
+	if (results == NULL)
+		return GIT_ENOMEM;
+	
+	results->is_bare = is_bare;
+
+	error = git_repository_init__assign_folders(results, path);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_repository_init__create_structure(results);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	//TODO: Uncomment when the structure has been properly created
+	//error = git_repository_open(repo_out, results->path_repository);
+	//if (error < GIT_SUCCESS)
+	//	goto cleanup;
+
+cleanup:
+	git_repository_init__results_free(results);
+	return error;
 }

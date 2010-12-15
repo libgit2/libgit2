@@ -162,6 +162,9 @@ GIT_EXTERN(int) git_repository_newobject(git_object **object, git_repository *re
  */
 GIT_EXTERN(void) git_repository_free(git_repository *repo);
 
+//TODO: Add comments.
+GIT_EXTERN(int) git_repository_init(git_repository** repo_out, const char* path, unsigned is_bare);
+
 /** @} */
 GIT_END_DECL
 #endif
