@@ -60,7 +60,6 @@ static struct {
 
 typedef struct git_repository_init_results {
 	char *path_repository;
-	char *path_workdir;
 
 	unsigned is_bare:1;
 	unsigned has_been_reinit:1;
@@ -737,23 +736,16 @@ void git_repository_init__results_free(git_repository_init_results* init_results
 	if (init_results == NULL)
 		return;
 
-	if (init_results->path_workdir)
-		free(init_results->path_workdir);
 	if (init_results->path_repository)
 		free(init_results->path_repository);
-
-	free(init_results);
 }
 
-git_repository_init_results *git_repository_init_results__alloc()
+void git_repository_init__zero_init_results(git_repository_init_results* results)
 {
-	git_repository_init_results *results = git__malloc(sizeof(git_repository_init_results));
 	if (!results)
-		return NULL;
+		return;
 
 	memset(results, 0x0, sizeof(git_repository_init_results));
-
-	return results;
 }
 
 int git_repository_init__reinit(git_repository_init_results* results)
@@ -786,7 +778,7 @@ int git_repository_init__create_structure(git_repository_init_results* results)
 	return GIT_SUCCESS;
 }
 
-int git_repository_init__assign_folders(git_repository_init_results* results, const char* path)
+int git_repository_init__assign_git_directory(git_repository_init_results* results, const char* path)
 {
 	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66; // TODO: How many ?
 	char temp_path[GIT_PATH_MAX];
@@ -805,13 +797,8 @@ int git_repository_init__assign_folders(git_repository_init_results* results, co
 
 	assert(path_len < GIT_PATH_MAX - MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH);
 
-	if (results->is_bare)
+	if (!results->is_bare)
 	{
-		results->path_workdir = NULL;
-	}
-	else
-	{
-		results->path_workdir = git__strdup(temp_path);
 		strcpy(temp_path + path_len - 1, GIT_FOLDER);
 		path_len = path_len + strlen(GIT_FOLDER) - 1; /* Skip the leading slash from the constant */
 	}
@@ -823,22 +810,20 @@ int git_repository_init__assign_folders(git_repository_init_results* results, co
 
 int git_repository_init(git_repository** repo_out, const char* path, unsigned is_bare)
 {
-	git_repository_init_results* results;
+	git_repository_init_results results;
 	int error = GIT_SUCCESS;
 	
 	assert(repo_out && path);
 
-	results = git_repository_init_results__alloc();
-	if (results == NULL)
-		return GIT_ENOMEM;
+	git_repository_init__zero_init_results(&results);
 	
-	results->is_bare = is_bare;
+	results.is_bare = is_bare;
 
-	error = git_repository_init__assign_folders(results, path);
+	error = git_repository_init__assign_git_directory(&results, path);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	error = git_repository_init__create_structure(results);
+	error = git_repository_init__create_structure(&results);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -848,6 +833,6 @@ int git_repository_init(git_repository** repo_out, const char* path, unsigned is
 	//	goto cleanup;
 
 cleanup:
-	git_repository_init__results_free(results);
+	git_repository_init__results_free(&results);
 	return error;
 }
