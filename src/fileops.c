@@ -310,3 +310,8 @@ int gitfo_dirent(
 	closedir(dir);
 	return GIT_SUCCESS;
 }
+
+int gitfo_mkdir_recurs(const char *path, int mode)
+{
+	return gitfo_mkdir(path, mode);
+}
