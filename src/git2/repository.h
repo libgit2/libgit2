@@ -167,7 +167,7 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  *
  * Limits:
  *  - Reinit of an existing directory is not implemented yet. Will blindly return GIT_SUCCESS.
- *  - The parent directory structure of the repository has to already exist. Recursive building of the parent tree structure is not implmented yet.
+ *  - The parent directory structure of the repository has to already exist. Recursive building of the parent tree structure is not implemented yet.
  *  - Config file creation handling is not implemented yet.
  *
  * @param repo_out pointer to the repo which will be created or reinitialized
