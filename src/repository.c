@@ -35,6 +35,7 @@
 
 #define GIT_FOLDER "/.git/"
 #define GIT_OBJECTS_FOLDER "objects/"
+#define GIT_REFS_FOLDER "refs/"
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
 
@@ -742,8 +743,13 @@ int git_repository_init__create_structure(git_repository_init_results* results)
 {
 	char temp_path[GIT_PATH_MAX];
 	int path_len;
+	const int mode = 0755; /* or 0777 ? */
 
 	char* git_dir = results->path_repository;
+
+	//TODO : Ensure the parent tree structure already exists by recursively building it through gitfo_mkdir_recurs().
+	if (gitfo_mkdir_recurs(git_dir, mode))
+		return GIT_ERROR;
 
 	path_len = strlen(git_dir);
 	strcpy(temp_path, git_dir);
@@ -754,6 +760,15 @@ int git_repository_init__create_structure(git_repository_init_results* results)
 	{
 		return git_repository_init__reinit(results);
 	}
+
+	strcpy(temp_path + path_len, GIT_OBJECTS_FOLDER);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
+	strcpy(temp_path + path_len, GIT_REFS_FOLDER);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
 
 	/* To be implemented */
 
