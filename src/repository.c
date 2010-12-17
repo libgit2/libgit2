@@ -730,24 +730,6 @@ int git_object_typeisloose(git_otype type)
 	return git_objects_table[type].loose;
 }
 
-
-void git_repository_init__results_free(git_repository_init_results* init_results)
-{
-	if (init_results == NULL)
-		return;
-
-	if (init_results->path_repository)
-		free(init_results->path_repository);
-}
-
-void git_repository_init__zero_init_results(git_repository_init_results* results)
-{
-	if (!results)
-		return;
-
-	memset(results, 0x0, sizeof(git_repository_init_results));
-}
-
 int git_repository_init__reinit(git_repository_init_results* results)
 {
 	/* To be implemented */
@@ -815,8 +797,6 @@ int git_repository_init(git_repository** repo_out, const char* path, unsigned is
 	
 	assert(repo_out && path);
 
-	git_repository_init__zero_init_results(&results);
-	
 	results.is_bare = is_bare;
 
 	error = git_repository_init__assign_git_directory(&results, path);
@@ -833,6 +813,6 @@ int git_repository_init(git_repository** repo_out, const char* path, unsigned is
 	//	goto cleanup;
 
 cleanup:
-	git_repository_init__results_free(&results);
+	free(results.path_repository);
 	return error;
 }
