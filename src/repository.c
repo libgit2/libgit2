@@ -739,7 +739,24 @@ int git_repository_init__reinit(git_repository_init_results* results)
 	return GIT_SUCCESS;
 }
 
-int git_repository_init__create_structure(git_repository_init_results* results)
+int git_repository_init__create_head(const char* head_path)
+{
+	git_file fd;
+	int error = GIT_SUCCESS;
+	const char* head_content = "ref: refs/heads/master\n";
+	if ((fd = gitfo_creat(head_path, S_IREAD | S_IWRITE)) < 0)
+		return GIT_ERROR;
+
+	error = gitfo_write(fd, (void*)head_content, strlen(head_content));
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+cleanup:
+	gitfo_close(fd);
+	return error;
+}
+
+int git_repository_init__create_structure_or_reinit(git_repository_init_results* results)
 {
 	char temp_path[GIT_PATH_MAX];
 	int path_len;
@@ -756,15 +773,27 @@ int git_repository_init__create_structure(git_repository_init_results* results)
 
 	/* Does HEAD file already exist ? */
 	strcpy(temp_path + path_len, GIT_HEAD_FILE);
+
+	if (!gitfo_exists(temp_path) && gitfo_isdir(temp_path) < GIT_SUCCESS)
+	{
+		/* Something very wrong has happened to this repository :-) */
+		return GIT_ERROR;
+	}
+
 	if (!gitfo_exists(temp_path))
 	{
 		return git_repository_init__reinit(results);
 	}
 
+	if (git_repository_init__create_head(temp_path) < GIT_SUCCESS)
+		return GIT_ERROR;
+
+	/* Creates the '/objects/' directory */
 	strcpy(temp_path + path_len, GIT_OBJECTS_FOLDER);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
+	/* Creates the '/refs/' directory */
 	strcpy(temp_path + path_len, GIT_REFS_FOLDER);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
@@ -818,14 +847,13 @@ int git_repository_init(git_repository** repo_out, const char* path, unsigned is
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	error = git_repository_init__create_structure(&results);
+	error = git_repository_init__create_structure_or_reinit(&results);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	//TODO: Uncomment when the structure has been properly created
-	//error = git_repository_open(repo_out, results->path_repository);
-	//if (error < GIT_SUCCESS)
-	//	goto cleanup;
+	error = git_repository_open(repo_out, results.path_repository);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
 cleanup:
 	free(results.path_repository);
