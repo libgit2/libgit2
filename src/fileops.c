@@ -313,5 +313,12 @@ int gitfo_dirent(
 
 int gitfo_mkdir_recurs(const char *path, int mode)
 {
-	return gitfo_mkdir(path, mode);
+	int error;
+
+	error = gitfo_mkdir(path, mode);
+
+	if (errno == EEXIST)
+		return GIT_SUCCESS;
+
+	return error;
 }
