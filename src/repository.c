@@ -39,6 +39,10 @@
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
 
+#define GIT_SYMREF "ref: "
+#define GIT_REFS_HEADS "refs/heads/"
+#define GIT_BRANCH_MASTER "master"
+
 static const int default_table_size = 32;
 static const double max_load_factor = 0.65;
 
@@ -743,11 +747,15 @@ int git_repository_init__create_head(const char* head_path)
 {
 	git_file fd;
 	int error = GIT_SUCCESS;
-	const char* head_content = "ref: refs/heads/master\n";
+	char head_symlink[50];
+	int len;
+
+	len = sprintf(head_symlink, "%s %s%s\n", GIT_SYMREF, GIT_REFS_HEADS, GIT_BRANCH_MASTER);
+	
 	if ((fd = gitfo_creat(head_path, S_IREAD | S_IWRITE)) < 0)
 		return GIT_ERROR;
 
-	error = gitfo_write(fd, (void*)head_content, strlen(head_content));
+	error = gitfo_write(fd, (void*)head_symlink, strlen(head_symlink));
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
