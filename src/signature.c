@@ -193,7 +193,7 @@ int git_signature__write(git_odb_source *src, const char *header, const git_sign
 	hours = offset / 60;
 	mins = offset % 60;
 
-	return git__source_printf(src, "%s %s <%s> %u %c%02d%02d\n", header, sig->name, sig->email, sig->when.time, sign, hours, mins);
+	return git__source_printf(src, "%s %s <%s> %u %c%02d%02d\n", header, sig->name, sig->email, (unsigned)sig->when.time, sign, hours, mins);
 }
 
 
