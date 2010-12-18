@@ -24,31 +24,37 @@
  */
 
 #include "common.h"
-#include "person.h"
+#include "signature.h"
 #include "repository.h"
 #include "git2/common.h"
 
-void git_person__free(git_person *person)
+void git_signature_free(git_signature *sig)
 {
-	if (person == NULL)
+	if (sig == NULL)
 		return;
 
-	free(person->name);
-	free(person->email);
-	free(person);
+	free(sig->name);
+	free(sig->email);
+	free(sig);
 }
 
-git_person *git_person__new(const char *name, const char *email, time_t time, int offset)
+git_signature *git_signature_new(const char *name, const char *email, time_t time, int offset)
 {
-	git_person *p;
+	git_signature *p = NULL;
 
-	if ((p = git__malloc(sizeof(git_person))) == NULL)
+	if ((p = git__malloc(sizeof(git_signature))) == NULL)
 		goto cleanup;
 
 	p->name = git__strdup(name);
+	if (p->name == NULL)
+		goto cleanup;
+
 	p->email = git__strdup(email);
-	p->time = time;
-	p->timezone_offset = offset;
+	if (p->email == NULL)
+		goto cleanup;
+
+	p->when.time = time;
+	p->when.offset = offset;
 
 	if (p->name == NULL || p->email == NULL)
 		goto cleanup;
@@ -56,31 +62,17 @@ git_person *git_person__new(const char *name, const char *email, time_t time, in
 	return p;
 
 cleanup:
-	git_person__free(p);
+	git_signature_free(p);
 	return NULL;
 }
 
-const char *git_person_name(git_person *person)
+git_signature *git_signature_dup(const git_signature *sig)
 {
-	return person->name;
+	return git_signature_new(sig->name, sig->email, sig->when.time, sig->when.offset);
 }
 
-const char *git_person_email(git_person *person)
-{
-	return person->email;
-}
 
-time_t git_person_time(git_person *person)
-{
-	return person->time;
-}
-
-int git_person_timezone_offset(git_person *person)
-{
-	return person->timezone_offset;
-}
-
-int git_person__parse_timezone_offset(const char *buffer, int *offset_out)
+static int parse_timezone_offset(const char *buffer, int *offset_out)
 {
 	int offset, dec_offset;
 	int mins, hours;
@@ -90,8 +82,7 @@ int git_person__parse_timezone_offset(const char *buffer, int *offset_out)
 
 	offset_start = buffer + 1;
 
-	if (*offset_start == '\n')
-	{
+	if (*offset_start == '\n') {
 		*offset_out = 0;
 		return GIT_SUCCESS;
 	}
@@ -107,18 +98,16 @@ int git_person__parse_timezone_offset(const char *buffer, int *offset_out)
 	hours = dec_offset / 100;
 	mins = dec_offset % 100;
 
-	if (hours > 14)			// see http://www.worldtimezone.com/faq.html 
+	if (hours > 14)	// see http://www.worldtimezone.com/faq.html 
 		return GIT_EOBJCORRUPTED;
 
-	if (mins > 59) 
+	if (mins > 59)
 		return GIT_EOBJCORRUPTED;
 
 	offset = (hours * 60) + mins;
 
 	if (offset_start[0] == '-')
-	{
 		offset *= -1;
-	}
 	
 	*offset_out = offset;
 
@@ -126,7 +115,7 @@ int git_person__parse_timezone_offset(const char *buffer, int *offset_out)
 }
 
 
-int git_person__parse(git_person *person, char **buffer_out,
+int git_signature__parse(git_signature *sig, char **buffer_out,
 		const char *buffer_end, const char *header)
 {
 	const size_t header_len = strlen(header);
@@ -136,7 +125,7 @@ int git_person__parse(git_person *person, char **buffer_out,
 	char *line_end, *name_end, *email_end;
 	int offset = 0;
 
-	memset(person, 0x0, sizeof(git_person));
+	memset(sig, 0x0, sizeof(git_signature));
 
 	line_end = memchr(buffer, '\n', buffer_end - buffer);
 	if (!line_end)
@@ -155,9 +144,9 @@ int git_person__parse(git_person *person, char **buffer_out,
 		return GIT_EOBJCORRUPTED;
 
 	name_length = name_end - buffer - 1;
-	person->name = git__malloc(name_length + 1);
-	memcpy(person->name, buffer, name_length);
-	person->name[name_length] = 0;
+	sig->name = git__malloc(name_length + 1);
+	memcpy(sig->name, buffer, name_length);
+	sig->name[name_length] = 0;
 	buffer = name_end + 1;
 
 	if (buffer >= line_end)
@@ -168,35 +157,35 @@ int git_person__parse(git_person *person, char **buffer_out,
 		return GIT_EOBJCORRUPTED;
 
 	email_length = email_end - buffer;
-	person->email = git__malloc(email_length + 1);
-	memcpy(person->email, buffer, email_length);
-	person->email[email_length] = 0;
+	sig->email = git__malloc(email_length + 1);
+	memcpy(sig->email, buffer, email_length);
+	sig->email[email_length] = 0;
 	buffer = email_end + 1;
 
 	if (buffer >= line_end)
 		return GIT_EOBJCORRUPTED;
 
-	person->time = strtol(buffer, &buffer, 10);
+	sig->when.time = strtol(buffer, &buffer, 10);
 
-	if (person->time == 0)
+	if (sig->when.time == 0)
 		return GIT_EOBJCORRUPTED;
 
-	if (git_person__parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
+	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
 	
-	person->timezone_offset = offset;
+	sig->when.offset = offset;
 
 	*buffer_out = (line_end + 1);
 	return GIT_SUCCESS;
 }
 
-int git_person__write(git_odb_source *src, const char *header, const git_person *person)
+int git_signature__write(git_odb_source *src, const char *header, const git_signature *sig)
 {
-	char *sign;
+	char sign;
 	int offset, hours, mins;
 
-	offset = person->timezone_offset;
-	sign = (person->timezone_offset < 0) ? "-" : "+";
+	offset = sig->when.offset;
+	sign = (sig->when.offset < 0) ? '-' : '+';
 	
 	if (offset < 0)
 		offset = -offset;
@@ -204,7 +193,7 @@ int git_person__write(git_odb_source *src, const char *header, const git_person 
 	hours = offset / 60;
 	mins = offset % 60;
 
-	return git__source_printf(src, "%s %s <%s> %u %s%02d%02d\n", header, person->name, person->email, person->time, sign, hours, mins);
+	return git__source_printf(src, "%s %s <%s> %u %c%02d%02d\n", header, sig->name, sig->email, sig->when.time, sign, hours, mins);
 }
 
 

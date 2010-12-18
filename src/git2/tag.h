@@ -96,7 +96,7 @@ GIT_EXTERN(const char *) git_tag_name(git_tag *t);
  * @param tag a previously loaded tag.
  * @return reference to the tag's author
  */
-GIT_EXTERN(const git_person *) git_tag_tagger(git_tag *t);
+GIT_EXTERN(const git_signature *) git_tag_tagger(git_tag *t);
 
 /**
  * Get the message of a tag
@@ -122,12 +122,9 @@ GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
 /**
  * Set the tagger of a tag
  * @param tag The tag to modify
- * @param name the name of the new tagger
- * @param email the email of the new tagger
- * @param time the time when the tag was created
- * @param offset tagger positive or negative timezone offset, in minutes from UTC
+ * @param tagger_sig signature of the tagging action
  */
-GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time, int offset);
+GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const git_signature *tagger_sig);
 
 /**
  * Set the message of a tag

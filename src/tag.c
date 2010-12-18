@@ -26,14 +26,15 @@
 #include "common.h"
 #include "commit.h"
 #include "tag.h"
-#include "person.h"
+#include "signature.h"
 #include "revwalk.h"
 #include "git2/object.h"
 #include "git2/repository.h"
+#include "git2/signature.h"
 
 void git_tag__free(git_tag *tag)
 {
-	git_person__free(tag->tagger);
+	git_signature_free(tag->tagger);
 	free(tag->message);
 	free(tag->tag_name);
 	free(tag);
@@ -92,18 +93,18 @@ void git_tag_set_name(git_tag *tag, const char *name)
 	tag->tag_name = git__strdup(name);
 }
 
-const git_person *git_tag_tagger(git_tag *t)
+const git_signature *git_tag_tagger(git_tag *t)
 {
 	return t->tagger;
 }
 
-void git_tag_set_tagger(git_tag *tag, const char *name, const char *email, time_t time, int offset)
+void git_tag_set_tagger(git_tag *tag, const git_signature *tagger_sig)
 {
-	assert(tag && name && email);
+	assert(tag && tagger_sig);
 	tag->object.modified = 1;
 
-	git_person__free(tag->tagger);
-	tag->tagger = git_person__new(name, email, time, offset);
+	git_signature_free(tag->tagger);
+	tag->tagger = git_signature_dup(tagger_sig);
 }
 
 const char *git_tag_message(git_tag *t)
@@ -190,11 +191,11 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	buffer = search + 1;
 
 	if (tag->tagger != NULL)
-		git_person__free(tag->tagger);
+		git_signature_free(tag->tagger);
 
-	tag->tagger = git__malloc(sizeof(git_person));
+	tag->tagger = git__malloc(sizeof(git_signature));
 
-	if ((error = git_person__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0)
+	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0)
 		return error;
 
 	text_len = buffer_end - ++buffer;
@@ -217,7 +218,7 @@ int git_tag__writeback(git_tag *tag, git_odb_source *src)
 	git__write_oid(src, "object", git_object_id(tag->target));
 	git__source_printf(src, "type %s\n", git_object_type2string(tag->type));
 	git__source_printf(src, "tag %s\n", tag->tag_name);
-	git_person__write(src, "tagger", tag->tagger);
+	git_signature__write(src, "tagger", tag->tagger);
 
 	if (tag->message != NULL)
 		git__source_printf(src, "\n%s", tag->message);
