@@ -82,7 +82,7 @@ def build(bld):
 
     # command '[build|clean]-tests'
     elif bld.variant == 'tests':
-        build_library(bld, 'cstlib')
+        build_library(bld, 'cshlib')
         build_tests(bld)
 
     # command 'build|clean|install|uninstall': by default, run
@@ -167,8 +167,7 @@ def build_tests(bld):
             includes=['src', 'tests'],
             defines=['TEST_TOC="%s.toc"' % test_name, 'TEST_RESOURCES="%s"' % resources_path],
             install_path=None,
-            stlib=['git2'], # link with the git2 static lib we've just compiled'
-            stlibpath=[directory.find_node('build/tests/').abspath(), directory.abspath()],
+            shlibpath=[directory.find_node('build/tests/').abspath()],
             use=['test_helper', 'git2'] + ALL_LIBS  # link with all the libs we know
                                             # libraries which are not enabled won't link
         )
@@ -201,17 +200,28 @@ class _run_tests(Context):
     fun = 'run_tests'
 
 def run_tests(ctx):
-    import shutil, tempfile, sys
+    import shutil, tempfile, sys, os
 
     failed = False
     test_folder = tempfile.mkdtemp()
+    build_folder = ctx.path.find_node('build/tests/')
     test_glob = 'build/tests/t????-*'
+    environ = os.environ.copy()
+    environ_tail = ""
 
     if sys.platform == 'win32':
         test_glob += '.exe'
+        environ_var, environ_separator = 'PATH', ';'
+    else:
+        environ_var, environ_separator = 'LD_LIBRARY_PATH', ':'
+
+    if environ_var in environ:
+        environ_tail = environ_separator + environ[environ_var]
+
+    environ[environ_var] = build_folder.abspath() + environ_tail
 
     for test in ctx.path.ant_glob(test_glob):
-        if ctx.exec_command(test.abspath(), cwd=test_folder) != 0:
+        if ctx.exec_command(test.abspath(), cwd=test_folder, env=environ) != 0:
             failed = True
             break
 
