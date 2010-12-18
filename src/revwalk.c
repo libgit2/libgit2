@@ -400,8 +400,8 @@ void git_revwalk_list_timesort(git_revwalk_list *list)
 					e = q, q = q->next, q_size--;
 
 				else if (q_size == 0 || q == NULL ||
-						p->walk_commit->commit_object->commit_time >= 
-						q->walk_commit->commit_object->commit_time)
+						p->walk_commit->commit_object->committer->when.time >= 
+						q->walk_commit->commit_object->committer->when.time)
 					e = p, p = p->next, p_size--;
 
 				else

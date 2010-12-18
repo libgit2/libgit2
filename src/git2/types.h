@@ -82,6 +82,19 @@ typedef struct git_tree git_tree;
 /** Memory representation of an index file. */
 typedef struct git_index git_index;
 
+/** Time in a signature */
+typedef struct git_time {
+	time_t time; /** time in seconds from epoch */
+	int offset; /** timezone offset, in minutes */
+} git_time;
+
+/** An action signature (e.g. for committers, taggers, etc) */
+typedef struct git_signature {
+	char *name; /** full name of the author */
+	char *email; /** email of the author */
+	git_time when; /** time when the action happened */
+} git_signature;
+
 /** @} */
 GIT_END_DECL
 

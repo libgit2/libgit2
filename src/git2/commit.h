@@ -93,18 +93,25 @@ GIT_EXTERN(const char *) git_commit_message(git_commit *commit);
 GIT_EXTERN(time_t) git_commit_time(git_commit *commit);
 
 /**
+ * Get the commit timezone offset (i.e. committer's preferred timezone) of a commit.
+ * @param commit a previously loaded commit.
+ * @return positive or negative timezone offset, in minutes from UTC
+ */
+GIT_EXTERN(int) git_commit_timezone_offset(git_commit *commit);
+
+/**
  * Get the committer of a commit.
  * @param commit a previously loaded commit.
  * @return the committer of a commit
  */
-GIT_EXTERN(const git_person *) git_commit_committer(git_commit *commit);
+GIT_EXTERN(const git_signature *) git_commit_committer(git_commit *commit);
 
 /**
  * Get the author of a commit.
  * @param commit a previously loaded commit.
  * @return the author of a commit
  */
-GIT_EXTERN(const git_person *) git_commit_author(git_commit *commit);
+GIT_EXTERN(const git_signature *) git_commit_author(git_commit *commit);
 
 /**
  * Get the tree pointed to by a commit.
@@ -147,20 +154,16 @@ GIT_EXTERN(void) git_commit_set_message(git_commit *commit, const char *message)
 /**
  * Set the committer of a commit
  * @param commit the commit object
- * @param name name of the new committer
- * @param email email of the new committer
- * @param time time when the committer committed the commit
+ * @param author_sig signature of the committer
  */
-GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const char *name, const char *email, time_t time);
+GIT_EXTERN(void) git_commit_set_committer(git_commit *commit, const git_signature *committer_sig);
 
 /**
  * Set the author of a commit
  * @param commit the commit object
- * @param name name of the new author
- * @param email email of the new author
- * @param time time when the author created the commit
+ * @param author_sig signature of the author
  */
-GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const char *name, const char *email, time_t time);
+GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const git_signature *author_sig);
 
 /**
  * Set the tree which is pointed to by a commit

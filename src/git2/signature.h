@@ -22,29 +22,49 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifndef INCLUDE_git_signature_h__
+#define INCLUDE_git_signature_h__
 
-#ifndef INCLUDE_git_git_h__
-#define INCLUDE_git_git_h__
+#include "common.h"
+#include "types.h"
 
-#include "git2/common.h"
-#include "git2/errors.h"
-#include "git2/zlib.h"
+/**
+ * @file git2/signature.h
+ * @brief Git signature creation
+ * @defgroup git_signature Git signature creation
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
 
-#include "git2/types.h"
+/**
+ * Create a new action signature. The signature must be freed
+ * manually or using git_signature_free
+ *
+ * @name name of the person
+ * @email email of the person
+ * @time time when the action happened
+ * @offset timezone offset in minutes for the time
+ * @return the new sig, NULl on out of memory
+ */
+GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *email, time_t time, int offset);
 
-#include "git2/oid.h"
-#include "git2/signature.h"
-#include "git2/odb.h"
+/**
+ * Create a copy of an existing signature.
+ *
+ * All internal strings are also duplicated.
+ * @sig signature to duplicated
+ * @return a copy of sig, NULL on out of memory
+ */
+GIT_EXTERN(git_signature *) git_signature_dup(const git_signature *sig);
 
-#include "git2/repository.h"
-#include "git2/revwalk.h"
+/**
+ * Free an existing signature
+ *
+ * @sig signature to free
+ */
+GIT_EXTERN(void) git_signature_free(git_signature *sig);
 
-#include "git2/object.h"
-#include "git2/blob.h"
-#include "git2/commit.h"
-#include "git2/tag.h"
-#include "git2/tree.h"
-
-#include "git2/index.h"
-
+/** @} */
+GIT_END_DECL
 #endif

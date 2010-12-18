@@ -1,7 +1,7 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 #include "commit.h"
-#include "person.h"
+#include "signature.h"
 
 #include <git2/odb.h>
 #include <git2/commit.h>
@@ -28,7 +28,7 @@ BEGIN_TEST(query_details_test)
 		git_oid id;
 		git_commit *commit;
 
-		const git_person *author, *committer;
+		const git_signature *author, *committer;
 		const char *message, *message_short;
 		time_t commit_time;
 		unsigned int parents, p;

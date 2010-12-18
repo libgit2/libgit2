@@ -10,7 +10,7 @@ struct git_tag {
 	git_object *target;
 	git_otype type;
 	char *tag_name;
-	git_person *tagger;
+	git_signature *tagger;
 	char *message;
 };
 

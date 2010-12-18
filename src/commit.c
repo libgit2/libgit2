@@ -26,11 +26,12 @@
 #include "git2/common.h"
 #include "git2/object.h"
 #include "git2/repository.h"
+#include "git2/signature.h"
 
 #include "common.h"
 #include "commit.h"
 #include "revwalk.h"
-#include "person.h"
+#include "signature.h"
 
 #define COMMIT_BASIC_PARSE 0x0
 #define COMMIT_FULL_PARSE 0x1
@@ -50,8 +51,8 @@ void git_commit__free(git_commit *commit)
 {
 	clear_parents(commit);
 
-	git_person__free(commit->author);
-	git_person__free(commit->committer);
+	git_signature_free(commit->author);
+	git_signature_free(commit->committer);
 
 	free(commit->message);
 	free(commit->message_short);
@@ -82,12 +83,12 @@ int git_commit__writeback(git_commit *commit, git_odb_source *src)
 	if (commit->author == NULL)
 		return GIT_EMISSINGOBJDATA;
 
-	git_person__write(src, "author", commit->author);
+	git_signature__write(src, "author", commit->author);
 
 	if (commit->committer == NULL)
 		return GIT_EMISSINGOBJDATA;
 
-	git_person__write(src, "committer", commit->committer);
+	git_signature__write(src, "committer", commit->committer);
 
 	if (commit->message != NULL)
 		git__source_printf(src, "\n%s", commit->message);
@@ -137,10 +138,10 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 
 	if (parse_flags & COMMIT_FULL_PARSE) {
 		if (commit->author)
-			git_person__free(commit->author);
+			git_signature_free(commit->author);
 
-		commit->author = git__malloc(sizeof(git_person));
-		if ((error = git_person__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
+		commit->author = git__malloc(sizeof(git_signature));
+		if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
 			return error;
 
 	} else {
@@ -152,13 +153,11 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 
 	/* Always parse the committer; we need the commit time */
 	if (commit->committer)
-		git_person__free(commit->committer);
+		git_signature_free(commit->committer);
 
-	commit->committer = git__malloc(sizeof(git_person));
-	if ((error = git_person__parse(commit->committer, &buffer, buffer_end, "committer ")) < GIT_SUCCESS)
+	commit->committer = git__malloc(sizeof(git_signature));
+	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ")) < GIT_SUCCESS)
 		return error;
-
-	commit->commit_time = commit->committer->time;
 
 	/* parse commit message */
 	while (buffer <= buffer_end && *buffer == '\n')
@@ -231,22 +230,21 @@ int git_commit__parse_full(git_commit *commit)
 		git_commit__parse_full(commit); 
 
 GIT_COMMIT_GETTER(git_tree *, tree)
-GIT_COMMIT_GETTER(git_person *, author)
-GIT_COMMIT_GETTER(git_person *, committer)
+GIT_COMMIT_GETTER(git_signature *, author)
+GIT_COMMIT_GETTER(git_signature *, committer)
 GIT_COMMIT_GETTER(char *, message)
 GIT_COMMIT_GETTER(char *, message_short)
 
 time_t git_commit_time(git_commit *commit)
 {
-	assert(commit);
+	assert(commit && commit->committer);
+	return commit->committer->when.time;
+}
 
-	if (commit->commit_time)
-		return commit->commit_time;
-
-	if (!commit->object.in_memory)
-		git_commit__parse_full(commit);
-
-	return commit->commit_time;
+int git_commit_time_offset(git_commit *commit)
+{
+	assert(commit && commit->committer);
+	return commit->committer->when.offset;
 }
 
 unsigned int git_commit_parentcount(git_commit *commit)
@@ -269,25 +267,24 @@ void git_commit_set_tree(git_commit *commit, git_tree *tree)
 	commit->tree = tree;
 }
 
-void git_commit_set_author(git_commit *commit, const char *name, const char *email, time_t time)
+void git_commit_set_author(git_commit *commit, const git_signature *author_sig)
 {
-	assert(commit && name && email);
+	assert(commit && author_sig);
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
 
-	git_person__free(commit->author);
-	commit->author = git_person__new(name, email, time);
+	git_signature_free(commit->author);
+	commit->author = git_signature_dup(author_sig);
 }
 
-void git_commit_set_committer(git_commit *commit, const char *name, const char *email, time_t time)
+void git_commit_set_committer(git_commit *commit, const git_signature *committer_sig)
 {
-	assert(commit && name && email);
+	assert(commit && committer_sig);
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
 
-	git_person__free(commit->committer);
-	commit->committer = git_person__new(name, email, time);
-	commit->commit_time = time;
+	git_signature_free(commit->committer);
+	commit->committer = git_signature_dup(committer_sig);
 }
 
 void git_commit_set_message(git_commit *commit, const char *message)

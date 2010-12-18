@@ -1,7 +1,7 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 #include "commit.h"
-#include "person.h"
+#include "signature.h"
 #include <git2/odb.h>
 #include <git2/commit.h>
 #include <git2/revwalk.h>
@@ -129,96 +129,134 @@ BEGIN_TEST(parse_oid_test)
 
 END_TEST
 
-BEGIN_TEST(parse_person_test)
+BEGIN_TEST(parse_sig_test)
 
-#define TEST_PERSON_PASS(_string, _header, _name, _email, _time) { \
+#define TEST_SIGNATURE_PASS(_string, _header, _name, _email, _time, _offset) { \
 	char *ptr = _string; \
 	size_t len = strlen(_string);\
-	git_person person = {NULL, NULL, 0}; \
-	must_pass(git_person__parse(&person, &ptr, ptr + len, _header));\
+	git_signature person = {NULL, NULL, {0, 0}}; \
+	must_pass(git_signature__parse(&person, &ptr, ptr + len, _header));\
 	must_be_true(strcmp(_name, person.name) == 0);\
 	must_be_true(strcmp(_email, person.email) == 0);\
-	must_be_true(_time == person.time);\
+	must_be_true(_time == person.when.time);\
+	must_be_true(_offset == person.when.offset);\
 	free(person.name); free(person.email);\
 }
 
-#define TEST_PERSON_FAIL(_string, _header) { \
+#define TEST_SIGNATURE_FAIL(_string, _header) { \
 	char *ptr = _string; \
 	size_t len = strlen(_string);\
-	git_person person = {NULL, NULL, 0}; \
-	must_fail(git_person__parse(&person, &ptr, ptr + len, _header));\
+	git_signature person = {NULL, NULL, {0, 0}}; \
+	must_fail(git_signature__parse(&person, &ptr, ptr + len, _header));\
 	free(person.name); free(person.email);\
 }
 
-	TEST_PERSON_PASS(
-			"author Vicent Marti <tanoku@gmail.com> 12345 \n",
-			"author ",
-			"Vicent Marti",
-			"tanoku@gmail.com",
-			12345);
+	TEST_SIGNATURE_PASS(
+		"author Vicent Marti <tanoku@gmail.com> 12345 \n",
+		"author ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		12345,
+		0);
 
-	TEST_PERSON_PASS(
+	TEST_SIGNATURE_PASS(
 		"author Vicent Marti <> 12345 \n",
 		"author ",
 		"Vicent Marti",
 		"",
-		12345);
+		12345,
+		0);
 
-	TEST_PERSON_PASS(
-		"author Vicent Marti <tanoku@gmail.com> 231301 +2020\n",
+	TEST_SIGNATURE_PASS(
+		"author Vicent Marti <tanoku@gmail.com> 231301 +1020\n",
 		"author ",
 		"Vicent Marti",
 		"tanoku@gmail.com",
-		231301);
+		231301,
+		620);
 
-	TEST_PERSON_PASS(
+	TEST_SIGNATURE_PASS(
 		"author Vicent Marti with an outrageously long name \
 		which will probably overflow the buffer <tanoku@gmail.com> 12345 \n",
 		"author ",
 		"Vicent Marti with an outrageously long name \
 		which will probably overflow the buffer",
 		"tanoku@gmail.com",
-		12345);
+		12345,
+		0);
 
-	TEST_PERSON_PASS(
+	TEST_SIGNATURE_PASS(
 		"author Vicent Marti <tanokuwithaveryveryverylongemail\
 		whichwillprobablyvoverflowtheemailbuffer@gmail.com> 12345 \n",
 		"author ",
 		"Vicent Marti",
 		"tanokuwithaveryveryverylongemail\
 		whichwillprobablyvoverflowtheemailbuffer@gmail.com",
-		12345);
+		12345,
+		0);
 
-	TEST_PERSON_FAIL(
+	TEST_SIGNATURE_PASS(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 +0000 \n",
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		0);
+
+	TEST_SIGNATURE_PASS(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 +0100 \n",
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		60);
+
+	TEST_SIGNATURE_PASS(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 -0100 \n",
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		-60);
+
+	TEST_SIGNATURE_FAIL(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 -1500 \n",
+		"committer ");
+
+	TEST_SIGNATURE_FAIL(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 +0163 \n",
+		"committer ");
+
+	TEST_SIGNATURE_FAIL(
 		"author Vicent Marti <tanoku@gmail.com> 12345 \n",
 		"author  ");
 
-	TEST_PERSON_FAIL(
+	TEST_SIGNATURE_FAIL(
 		"author Vicent Marti <tanoku@gmail.com> 12345 \n",
 		"committer ");
 
-	TEST_PERSON_FAIL(
+	TEST_SIGNATURE_FAIL(
 		"author Vicent Marti 12345 \n",
 		"author ");
 
-	TEST_PERSON_FAIL(
+	TEST_SIGNATURE_FAIL(
 		"author Vicent Marti <broken@email 12345 \n",
 		"author ");
 
-	TEST_PERSON_FAIL(
+	TEST_SIGNATURE_FAIL(
 		"author Vicent Marti <tanoku@gmail.com> notime \n",
 		"author ");
 
-	TEST_PERSON_FAIL(
+	TEST_SIGNATURE_FAIL(
 		"author Vicent Marti <tanoku@gmail.com>\n",
 		"author ");
 
-	TEST_PERSON_FAIL(
+	TEST_SIGNATURE_FAIL(
 		"author ",
 		"author ");
 
-#undef TEST_PERSON_PASS
-#undef TEST_PERSON_FAIL
+#undef TEST_SIGNATURE_PASS
+#undef TEST_SIGNATURE_FAIL
 
 END_TEST
 

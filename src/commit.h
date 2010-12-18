@@ -11,12 +11,11 @@
 struct git_commit {
 	git_object object;
 
-	time_t commit_time;
 	git_vector parents;
 
 	git_tree *tree;
-	git_person *author;
-	git_person *committer;
+	git_signature *author;
+	git_signature *committer;
 
 	char *message;
 	char *message_short;
