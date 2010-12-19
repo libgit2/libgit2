@@ -35,8 +35,14 @@
 
 #define GIT_FOLDER "/.git/"
 #define GIT_OBJECTS_FOLDER "objects/"
+#define GIT_REFS_FOLDER "refs/"
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
+
+#define GIT_SYMREF "ref: "
+#define GIT_REFS_HEADS "refs/heads/"
+#define GIT_REFS_TAGS "refs/tags/"
+#define GIT_BRANCH_MASTER "master"
 
 static const int default_table_size = 32;
 static const double max_load_factor = 0.65;
@@ -57,6 +63,13 @@ static struct {
 	{ "OFS_DELTA", 0, 0					},  /* 6 = GIT_OBJ_OFS_DELTA */
 	{ "REF_DELTA", 0, 0					}   /* 7 = GIT_OBJ_REF_DELTA */
 };
+
+typedef struct git_repository_init_results {
+	char *path_repository;
+
+	unsigned is_bare:1;
+	unsigned has_been_reinit:1;
+} git_repository_init_results;
 
 /***********************************************************
  *
@@ -721,4 +734,147 @@ int git_object_typeisloose(git_otype type)
 		return 0;
 
 	return git_objects_table[type].loose;
+}
+
+int git_repository_init__reinit(git_repository_init_results* results)
+{
+	/* To be implemented */
+
+	results->has_been_reinit = 1;
+	return GIT_SUCCESS;
+}
+
+int git_repository_init__create_head(const char* head_path)
+{
+	git_file fd;
+	int error = GIT_SUCCESS;
+	char head_symlink[50];
+	int len;
+
+	len = sprintf(head_symlink, "%s %s%s\n", GIT_SYMREF, GIT_REFS_HEADS, GIT_BRANCH_MASTER);
+	
+	if ((fd = gitfo_creat(head_path, S_IREAD | S_IWRITE)) < 0)
+		return GIT_ERROR;
+
+	error = gitfo_write(fd, (void*)head_symlink, strlen(head_symlink));
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+cleanup:
+	gitfo_close(fd);
+	return error;
+}
+
+int git_repository_init__create_structure_or_reinit(git_repository_init_results* results)
+{
+	char temp_path[GIT_PATH_MAX];
+	int path_len;
+	const int mode = 0755; /* or 0777 ? */
+
+	char* git_dir = results->path_repository;
+
+	//TODO : Ensure the parent tree structure already exists by recursively building it through gitfo_mkdir_recurs().
+	if (gitfo_mkdir_recurs(git_dir, mode))
+		return GIT_ERROR;
+
+	path_len = strlen(git_dir);
+	strcpy(temp_path, git_dir);
+
+	/* Does HEAD file already exist ? */
+	strcpy(temp_path + path_len, GIT_HEAD_FILE);
+
+	if (!gitfo_exists(temp_path) && gitfo_isdir(temp_path) < GIT_SUCCESS)
+	{
+		/* Something very wrong has happened to this repository :-) */
+		return GIT_ERROR;
+	}
+
+	if (!gitfo_exists(temp_path))
+	{
+		return git_repository_init__reinit(results);
+	}
+
+	if (git_repository_init__create_head(temp_path) < GIT_SUCCESS)
+		return GIT_ERROR;
+
+	/* Creates the '/objects/' directory */
+	strcpy(temp_path + path_len, GIT_OBJECTS_FOLDER);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
+	/* Creates the '/refs/' directory */
+	strcpy(temp_path + path_len, GIT_REFS_FOLDER);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
+	/* Creates the '/refs/heads/' directory */
+	strcpy(temp_path + path_len, GIT_REFS_HEADS);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
+	/* Creates the '/refs/tags/' directory */
+	strcpy(temp_path + path_len, GIT_REFS_TAGS);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
+
+	/* To be implemented */
+
+	return GIT_SUCCESS;
+}
+
+int git_repository_init__assign_git_directory(git_repository_init_results* results, const char* path)
+{
+	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66; // TODO: How many ?
+	char temp_path[GIT_PATH_MAX];
+	int path_len;
+
+	path_len = strlen(path);
+	strcpy(temp_path, path);
+
+	/* Ensure path has a trailing slash */
+	if (temp_path[path_len - 1] != '/') {
+		temp_path[path_len] = '/';
+		temp_path[path_len + 1] = 0;
+
+		path_len = path_len + 1;
+	}
+
+	assert(path_len < GIT_PATH_MAX - MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH);
+
+	if (!results->is_bare)
+	{
+		strcpy(temp_path + path_len - 1, GIT_FOLDER);
+		path_len = path_len + strlen(GIT_FOLDER) - 1; /* Skip the leading slash from the constant */
+	}
+
+	results->path_repository = git__strdup(temp_path);
+
+	return GIT_SUCCESS;
+}
+
+int git_repository_init(git_repository** repo_out, const char* path, unsigned is_bare)
+{
+	git_repository_init_results results;
+	int error = GIT_SUCCESS;
+	
+	assert(repo_out && path);
+
+	results.is_bare = is_bare;
+
+	error = git_repository_init__assign_git_directory(&results, path);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_repository_init__create_structure_or_reinit(&results);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_repository_open(repo_out, results.path_repository);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+cleanup:
+	free(results.path_repository);
+	return error;
 }

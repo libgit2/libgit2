@@ -59,7 +59,7 @@ GIT_BEGIN_DECL
  *
  * @param repository pointer to the repo which will be opened
  * @param path the path to the repository
- * @return 0 on sucess; error code otherwise
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
 
@@ -88,7 +88,7 @@ GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *pat
  *		Equivalent to $GIT_WORK_TREE.
  *		If NULL, the repository is assumed to be bare.
  *
- * @return 0 on sucess; error code otherwise
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_repository_open2(git_repository **repository,
 		const char *git_dir,
@@ -161,6 +161,22 @@ GIT_EXTERN(int) git_repository_newobject(git_object **object, git_repository *re
  * @param repo repository handle to close. If NULL nothing occurs.
  */
 GIT_EXTERN(void) git_repository_free(git_repository *repo);
+
+/**
+ * Creates a new Git repository.
+ *
+ * Limits:
+ *  - Reinit of an existing directory is not implemented yet. Will blindly return GIT_SUCCESS.
+ *  - The parent directory structure of the repository has to already exist. Recursive building of the parent tree structure is not implemented yet.
+ *  - Config file creation handling is not implemented yet.
+ *
+ * @param repo_out pointer to the repo which will be created or reinitialized
+ * @param path the path to the repository
+ * @param is_bare if true, a Git repository without a working directory is created at the pointed path. 
+ *		If false, provided path will be considered as the working directory into which the .git directory will be created.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_repository_init(git_repository** repo_out, const char* path, unsigned is_bare);
 
 /** @} */
 GIT_END_DECL
