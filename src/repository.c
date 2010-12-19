@@ -41,6 +41,7 @@
 
 #define GIT_SYMREF "ref: "
 #define GIT_REFS_HEADS "refs/heads/"
+#define GIT_REFS_TAGS "refs/tags/"
 #define GIT_BRANCH_MASTER "master"
 
 static const int default_table_size = 32;
@@ -803,6 +804,16 @@ int git_repository_init__create_structure_or_reinit(git_repository_init_results*
 
 	/* Creates the '/refs/' directory */
 	strcpy(temp_path + path_len, GIT_REFS_FOLDER);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
+	/* Creates the '/refs/heads/' directory */
+	strcpy(temp_path + path_len, GIT_REFS_HEADS);
+	if (gitfo_mkdir(temp_path, mode))
+		return GIT_ERROR;
+
+	/* Creates the '/refs/tags/' directory */
+	strcpy(temp_path + path_len, GIT_REFS_TAGS);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
