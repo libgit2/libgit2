@@ -33,15 +33,16 @@
 #include "blob.h"
 #include "fileops.h"
 
-#define GIT_FOLDER "/.git/"
-#define GIT_OBJECTS_FOLDER "objects/"
-#define GIT_REFS_FOLDER "refs/"
+#define GIT_DIR "/.git/"
+#define GIT_OBJECTS_DIR "objects/"
+#define GIT_REFS_DIR "refs/"
+#define GIT_REFS_HEADS_DIR "refs/heads/"
+#define GIT_REFS_TAGS_DIR "refs/tags/"
+
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
 
 #define GIT_SYMREF "ref: "
-#define GIT_REFS_HEADS "refs/heads/"
-#define GIT_REFS_TAGS "refs/tags/"
 #define GIT_BRANCH_MASTER "master"
 
 static const int default_table_size = 32;
@@ -64,12 +65,11 @@ static struct {
 	{ "REF_DELTA", 0, 0					}   /* 7 = GIT_OBJ_REF_DELTA */
 };
 
-typedef struct git_repository_init_results {
+typedef struct {
 	char *path_repository;
-
-	unsigned is_bare:1;
-	unsigned has_been_reinit:1;
-} git_repository_init_results;
+	unsigned is_bare:1,
+			 has_been_reinit:1;
+} repo_init;
 
 /***********************************************************
  *
@@ -102,7 +102,7 @@ int git__objtable_haskey(void *object, const void *key)
 
 
 
-static int assign_repository_folders(git_repository *repo,
+static int assign_repository_DIRs(git_repository *repo,
 		const char *git_dir,
 		const char *git_object_directory,
 		const char *git_index_file,
@@ -131,7 +131,7 @@ static int assign_repository_folders(git_repository *repo,
 
 	/* store GIT_OBJECT_DIRECTORY */
 	if (git_object_directory == NULL)
-		strcpy(path_aux + path_len, GIT_OBJECTS_FOLDER);
+		strcpy(path_aux + path_len, GIT_OBJECTS_DIR);
 	else
 		strcpy(path_aux, git_object_directory);
 
@@ -162,9 +162,9 @@ static int assign_repository_folders(git_repository *repo,
 	return GIT_SUCCESS;
 }
 
-static int guess_repository_folders(git_repository *repo, const char *repository_path)
+static int guess_repository_DIRs(git_repository *repo, const char *repository_path)
 {
-	char path_aux[GIT_PATH_MAX], *last_folder;
+	char path_aux[GIT_PATH_MAX], *last_DIR;
 	int path_len;
 
 	if (gitfo_isdir(repository_path) < GIT_SUCCESS)
@@ -183,7 +183,7 @@ static int guess_repository_folders(git_repository *repo, const char *repository
 	repo->path_repository = git__strdup(path_aux);
 
 	/* objects database */
-	strcpy(path_aux + path_len, GIT_OBJECTS_FOLDER);
+	strcpy(path_aux + path_len, GIT_OBJECTS_DIR);
 	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTAREPO;
 	repo->path_odb = git__strdup(path_aux);
@@ -195,12 +195,12 @@ static int guess_repository_folders(git_repository *repo, const char *repository
 
 	path_aux[path_len] = 0;
 
-	last_folder = (path_aux + path_len - 2);
+	last_DIR = (path_aux + path_len - 2);
 
-	while (*last_folder != '/')
-		last_folder--;
+	while (*last_DIR != '/')
+		last_DIR--;
 
-	if (strcmp(last_folder, GIT_FOLDER) == 0) {
+	if (strcmp(last_DIR, GIT_DIR) == 0) {
 		repo->is_bare = 0;
 
 		/* index file */
@@ -208,7 +208,7 @@ static int guess_repository_folders(git_repository *repo, const char *repository
 		repo->path_index = git__strdup(path_aux);
 
 		/* working dir */
-		*(last_folder + 1) = 0;
+		*(last_DIR + 1) = 0;
 		repo->path_workdir = git__strdup(path_aux);
 
 	} else {
@@ -255,7 +255,7 @@ int git_repository_open2(git_repository **repo_out,
 	if (repo == NULL)
 		return GIT_ENOMEM;
 
-	error = assign_repository_folders(repo, 
+	error = assign_repository_DIRs(repo, 
 			git_dir, 
 			git_object_directory,
 			git_index_file,
@@ -287,7 +287,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	if (repo == NULL)
 		return GIT_ENOMEM;
 
-	error = guess_repository_folders(repo, path);
+	error = guess_repository_DIRs(repo, path);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -736,44 +736,41 @@ int git_object_typeisloose(git_otype type)
 	return git_objects_table[type].loose;
 }
 
-int git_repository_init__reinit(git_repository_init_results* results)
-{
-	/* To be implemented */
 
+
+int repo_init_reinit(repo_init *results)
+{
+	/* TODO: reinit the repository */
 	results->has_been_reinit = 1;
 	return GIT_SUCCESS;
 }
 
-int git_repository_init__create_head(const char* head_path)
+int repo_init_createhead(const char *head_path)
 {
 	git_file fd;
 	int error = GIT_SUCCESS;
 	char head_symlink[50];
 	int len;
 
-	len = sprintf(head_symlink, "%s %s%s\n", GIT_SYMREF, GIT_REFS_HEADS, GIT_BRANCH_MASTER);
+	len = sprintf(head_symlink, "%s %s%s\n", GIT_SYMREF, GIT_REFS_HEADS_DIR, GIT_BRANCH_MASTER);
 	
-	if ((fd = gitfo_creat(head_path, S_IREAD | S_IWRITE)) < 0)
+	if ((fd = gitfo_creat(head_path, S_IREAD | S_IWRITE)) < GIT_SUCCESS)
 		return GIT_ERROR;
 
 	error = gitfo_write(fd, (void*)head_symlink, strlen(head_symlink));
-	if (error < GIT_SUCCESS)
-		goto cleanup;
 
-cleanup:
 	gitfo_close(fd);
 	return error;
 }
 
-int git_repository_init__create_structure_or_reinit(git_repository_init_results* results)
+int repo_init_structure(repo_init *results)
 {
-	char temp_path[GIT_PATH_MAX];
-	int path_len;
 	const int mode = 0755; /* or 0777 ? */
 
-	char* git_dir = results->path_repository;
+	char temp_path[GIT_PATH_MAX];
+	int path_len;
+	char *git_dir = results->path_repository;
 
-	//TODO : Ensure the parent tree structure already exists by recursively building it through gitfo_mkdir_recurs().
 	if (gitfo_mkdir_recurs(git_dir, mode))
 		return GIT_ERROR;
 
@@ -783,49 +780,41 @@ int git_repository_init__create_structure_or_reinit(git_repository_init_results*
 	/* Does HEAD file already exist ? */
 	strcpy(temp_path + path_len, GIT_HEAD_FILE);
 
-	if (!gitfo_exists(temp_path) && gitfo_isdir(temp_path) < GIT_SUCCESS)
-	{
-		/* Something very wrong has happened to this repository :-) */
-		return GIT_ERROR;
-	}
+	if (gitfo_exists(temp_path) == GIT_SUCCESS)
+		return repo_init_reinit(results);
 
-	if (!gitfo_exists(temp_path))
-	{
-		return git_repository_init__reinit(results);
-	}
-
-	if (git_repository_init__create_head(temp_path) < GIT_SUCCESS)
+	if (repo_init_createhead(temp_path) < GIT_SUCCESS)
 		return GIT_ERROR;
 
 	/* Creates the '/objects/' directory */
-	strcpy(temp_path + path_len, GIT_OBJECTS_FOLDER);
+	strcpy(temp_path + path_len, GIT_OBJECTS_DIR);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
 	/* Creates the '/refs/' directory */
-	strcpy(temp_path + path_len, GIT_REFS_FOLDER);
+	strcpy(temp_path + path_len, GIT_REFS_DIR);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
 	/* Creates the '/refs/heads/' directory */
-	strcpy(temp_path + path_len, GIT_REFS_HEADS);
+	strcpy(temp_path + path_len, GIT_REFS_HEADS_DIR);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
 	/* Creates the '/refs/tags/' directory */
-	strcpy(temp_path + path_len, GIT_REFS_TAGS);
+	strcpy(temp_path + path_len, GIT_REFS_TAGS_DIR);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
-
-	/* To be implemented */
+	/* TODO: what's left? templates? */
 
 	return GIT_SUCCESS;
 }
 
-int git_repository_init__assign_git_directory(git_repository_init_results* results, const char* path)
+int repo_init_find_dir(repo_init *results, const char* path)
 {
-	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66; // TODO: How many ?
+	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66;
+
 	char temp_path[GIT_PATH_MAX];
 	int path_len;
 
@@ -840,39 +829,38 @@ int git_repository_init__assign_git_directory(git_repository_init_results* resul
 		path_len = path_len + 1;
 	}
 
-	assert(path_len < GIT_PATH_MAX - MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH);
-
-	if (!results->is_bare)
-	{
-		strcpy(temp_path + path_len - 1, GIT_FOLDER);
-		path_len = path_len + strlen(GIT_FOLDER) - 1; /* Skip the leading slash from the constant */
+	if (!results->is_bare) {
+		strcpy(temp_path + path_len - 1, GIT_DIR);
+		path_len = path_len + strlen(GIT_DIR) - 1; /* Skip the leading slash from the constant */
 	}
+
+	if (path_len >= GIT_PATH_MAX - MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH)
+		return GIT_ENOTAREPO;
 
 	results->path_repository = git__strdup(temp_path);
 
 	return GIT_SUCCESS;
 }
 
-int git_repository_init(git_repository** repo_out, const char* path, unsigned is_bare)
+int git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare)
 {
-	git_repository_init_results results;
 	int error = GIT_SUCCESS;
+	repo_init results;
 	
 	assert(repo_out && path);
 
+	results.path_repository = NULL;
 	results.is_bare = is_bare;
 
-	error = git_repository_init__assign_git_directory(&results, path);
+	error = repo_init_find_dir(&results, path);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	error = git_repository_init__create_structure_or_reinit(&results);
+	error = repo_init_structure(&results);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	error = git_repository_open(repo_out, results.path_repository);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
 
 cleanup:
 	free(results.path_repository);

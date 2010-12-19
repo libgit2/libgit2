@@ -163,20 +163,21 @@ GIT_EXTERN(int) git_repository_newobject(git_object **object, git_repository *re
 GIT_EXTERN(void) git_repository_free(git_repository *repo);
 
 /**
- * Creates a new Git repository.
+ * Creates a new Git repository in the given folder.
  *
- * Limits:
- *  - Reinit of an existing directory is not implemented yet. Will blindly return GIT_SUCCESS.
- *  - The parent directory structure of the repository has to already exist. Recursive building of the parent tree structure is not implemented yet.
- *  - Config file creation handling is not implemented yet.
+ * TODO:
+ *	- Reinit the repository
+ *	- Create config files
  *
  * @param repo_out pointer to the repo which will be created or reinitialized
  * @param path the path to the repository
- * @param is_bare if true, a Git repository without a working directory is created at the pointed path. 
- *		If false, provided path will be considered as the working directory into which the .git directory will be created.
+ * @param is_bare if true, a Git repository without a working directory is created 
+ *		at the pointed path. If false, provided path will be considered as the working 
+ *		directory into which the .git directory will be created.
+ *
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_repository_init(git_repository** repo_out, const char* path, unsigned is_bare);
+GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
 /** @} */
 GIT_END_DECL

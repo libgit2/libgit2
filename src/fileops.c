@@ -313,13 +313,30 @@ int gitfo_dirent(
 
 int gitfo_mkdir_recurs(const char *path, int mode)
 {
-	//TODO: Implement recursive building of the parent tree structure (This would have to work on both Linux and Windows).
 	int error;
+	char *pp, *sp;
+    char *path_copy = git__strdup(path);
 
-	error = gitfo_mkdir(path, mode);
+	if (path_copy == NULL)
+		return GIT_ENOMEM;
 
-	if (errno == EEXIST)
-		return GIT_SUCCESS;
+    error = GIT_SUCCESS;
+    pp = path_copy;
 
-	return error;
+    while (error == 0 && (sp = strchr(pp, '/')) != 0) {
+        if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
+            *sp = 0;
+            error = gitfo_mkdir(path_copy, mode);
+            *sp = '/';
+        }
+
+        pp = sp + 1;
+    }
+
+    if (*(pp - 1) != '/' && error == GIT_SUCCESS)
+        error = gitfo_mkdir(path, mode);
+
+    free(path_copy);
+    return error;
+
 }
