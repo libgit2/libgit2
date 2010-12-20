@@ -1,5 +1,6 @@
 #include "common.h"
 #include "fileops.h"
+#include <ctype.h>
 
 int gitfo_open(const char *path, int flags)
 {
@@ -322,6 +323,10 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 
     error = GIT_SUCCESS;
     pp = path_copy;
+
+	/* Does the root of the path look like a windows drive ? */
+	if (isalpha(pp[0]) && (pp[1] == ':') && (pp[2] == '/'))
+		pp += 2;
 
     while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != 0) {
         if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
