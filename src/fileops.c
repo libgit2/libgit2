@@ -323,10 +323,15 @@ int gitfo_mkdir_recurs(const char *path, int mode)
     error = GIT_SUCCESS;
     pp = path_copy;
 
-    while (error == 0 && (sp = strchr(pp, '/')) != 0) {
+    while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != 0) {
         if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
             *sp = 0;
             error = gitfo_mkdir(path_copy, mode);
+
+			/* Do not choke while trying to recreate an existing directory */
+			if (errno == EEXIST)
+				error = GIT_SUCCESS;
+
             *sp = '/';
         }
 
