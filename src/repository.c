@@ -35,10 +35,11 @@
 
 #define GIT_DIR "/.git/"
 #define GIT_OBJECTS_DIR "objects/"
-#define GIT_OBJECTS_INFO_DIR "objects/info/"
-#define GIT_OBJECTS_PACK_DIR "objects/pack/"
-#define GIT_REFS_HEADS_DIR "refs/heads/"
-#define GIT_REFS_TAGS_DIR "refs/tags/"
+#define GIT_OBJECTS_INFO_DIR GIT_OBJECTS_DIR "info/"
+#define GIT_OBJECTS_PACK_DIR GIT_OBJECTS_DIR "pack/"
+#define GIT_REFS_DIR "refs/"
+#define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
+#define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
 
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
