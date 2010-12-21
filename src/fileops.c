@@ -312,6 +312,19 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+#ifdef GIT_WIN32
+
+static int is_windows_rooted_path(const char* path)
+{
+	/* Does the root of the path look like a windows drive ? */
+	if (isalpha(path[0]) && (path[1] == ':') && (path[2] == '/'))
+		return GIT_SUCCESS;
+
+	return GIT_ERROR;
+}
+
+#endif
+
 int gitfo_mkdir_recurs(const char *path, int mode)
 {
 	int error;
@@ -324,9 +337,12 @@ int gitfo_mkdir_recurs(const char *path, int mode)
     error = GIT_SUCCESS;
     pp = path_copy;
 
-	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(pp[0]) && (pp[1] == ':') && (pp[2] == '/'))
-		pp += 2;
+#ifdef GIT_WIN32
+
+	if (!is_windows_rooted_path(pp))
+		pp += 2; /* Skip the drive name (eg. C: or D:) */
+
+#endif
 
     while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != 0) {
         if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
