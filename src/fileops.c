@@ -317,7 +317,7 @@ int gitfo_dirent(
 static int is_windows_rooted_path(const char* path)
 {
 	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(path[0]) && (path[1] == ':') && (path[2] == '/'))
+	if (isalpha(path[0]) && (path[1] == ':'))
 		return GIT_SUCCESS;
 
 	return GIT_ERROR;
