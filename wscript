@@ -144,7 +144,7 @@ def build_tests(bld):
         return
 
     directory = bld.path
-    resources_path = directory.find_node('tests/resources/').abspath()
+    resources_path = directory.find_node('tests/resources/').abspath().replace('\\', '/')
 
     # Common object with the Test library methods
     bld.objects(source=['tests/test_helpers.c', 'tests/test_lib.c'], includes=['src', 'tests'], target='test_helper')
