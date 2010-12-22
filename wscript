@@ -209,11 +209,14 @@ class _run_tests(Context):
     fun = 'run_tests'
 
 def run_tests(ctx):
-    import shutil, tempfile
+    import shutil, tempfile, sys
 
     failed = False
     test_folder = tempfile.mkdtemp()
     test_glob = 'build/tests/t????-*'
+
+    if sys.platform == 'win32':
+        test_glob += '.exe'
 
     for test in ctx.path.ant_glob(test_glob):
         if ctx.exec_command(test.abspath(), cwd=test_folder) != 0:
