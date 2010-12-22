@@ -124,7 +124,7 @@ def build_library(bld, lib_str):
 
     # On Unix systems, build the Pkg-config entry file
     if bld.env.PLATFORM == 'unix':
-        bld(rule="""sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' < ${SRC} > ${TGT}""",
+        bld(rule="""sed -e 's#@prefix@#${PREFIX}#' -e 's#@libdir@#${LIBDIR}#' < ${SRC} > ${TGT}""",
             source='libgit2.pc.in',
             target='libgit2.pc',
             install_path='${LIBDIR}/pkgconfig',
