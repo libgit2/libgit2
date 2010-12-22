@@ -3,9 +3,9 @@
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
-extern void *git__malloc(size_t);
-extern void *git__calloc(size_t, size_t);
-extern char *git__strdup(const char *);
+GIT_EXTERN(void *) git__malloc(size_t);
+GIT_EXTERN(void *) git__calloc(size_t, size_t);
+GIT_EXTERN(char *) git__strdup(const char *);
 
 #ifndef GIT__NO_HIDE_MALLOC
 # define GIT__FORBID_MALLOC do_not_use_malloc_directly
@@ -26,15 +26,15 @@ extern char *git__strdup(const char *);
 # define strdup(a)          GIT__FORBID_MALLOC
 #endif
 
-extern int git__fmt(char *, size_t, const char *, ...)
+GIT_EXTERN(int) git__fmt(char *, size_t, const char *, ...)
 	GIT_FORMAT_PRINTF(3, 4);
-extern int git__prefixcmp(const char *str, const char *prefix);
-extern int git__suffixcmp(const char *str, const char *suffix);
+GIT_EXTERN(int) git__prefixcmp(const char *str, const char *prefix);
+GIT_EXTERN(int) git__suffixcmp(const char *str, const char *suffix);
 
-extern int git__dirname(char *dir, size_t n, char *path);
-extern int git__basename(char *base, size_t n, char *path);
+GIT_EXTERN(int) git__dirname(char *dir, size_t n, char *path);
+GIT_EXTERN(int) git__basename(char *base, size_t n, char *path);
 
-extern void git__hexdump(const char *buffer, size_t n);
+GIT_EXTERN(void) git__hexdump(const char *buffer, size_t n);
 
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(off_t p)

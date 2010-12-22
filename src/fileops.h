@@ -27,9 +27,9 @@ GIT_INLINE(int) git__mkdir(const char *path, int GIT_UNUSED(mode))
 	return mkdir(path);
 }
 
-extern int git__unlink(const char *path);
-extern int git__mkstemp(char *template);
-extern int git__fsync(int fd);
+GIT_EXTERN(int) git__unlink(const char *path);
+GIT_EXTERN(int) git__mkstemp(char *template);
+GIT_EXTERN(int) git__fsync(int fd);
 
 # ifndef GIT__WIN32_NO_HIDE_FILEOPS
 #  define unlink(p) git__unlink(p)
@@ -54,21 +54,21 @@ typedef struct {  /* file io buffer  */
 	size_t len;  /* data length  */
 } gitfo_buf;
 
-extern int gitfo_exists(const char *path);
-extern int gitfo_open(const char *path, int flags);
-extern int gitfo_creat(const char *path, int mode);
-extern int gitfo_isdir(const char *path);
-extern int gitfo_mkdir_recurs(const char *path, int mode);
+GIT_EXTERN(int) gitfo_exists(const char *path);
+GIT_EXTERN(int) gitfo_open(const char *path, int flags);
+GIT_EXTERN(int) gitfo_creat(const char *path, int mode);
+GIT_EXTERN(int) gitfo_isdir(const char *path);
+GIT_EXTERN(int) gitfo_mkdir_recurs(const char *path, int mode);
 #define gitfo_close(fd) close(fd)
 
-extern int gitfo_read(git_file fd, void *buf, size_t cnt);
-extern int gitfo_write(git_file fd, void *buf, size_t cnt);
+GIT_EXTERN(int) gitfo_read(git_file fd, void *buf, size_t cnt);
+GIT_EXTERN(int) gitfo_write(git_file fd, void *buf, size_t cnt);
 #define gitfo_lseek(f,n,w) lseek(f, n, w)
-extern off_t gitfo_size(git_file fd);
+GIT_EXTERN(off_t) gitfo_size(git_file fd);
 
-extern int gitfo_read_file(gitfo_buf *obj, const char *path);
-extern void gitfo_free_buf(gitfo_buf *obj);
-extern int gitfo_move_file(char *from, char *to);
+GIT_EXTERN(int) gitfo_read_file(gitfo_buf *obj, const char *path);
+GIT_EXTERN(void) gitfo_free_buf(gitfo_buf *obj);
+GIT_EXTERN(int) gitfo_move_file(char *from, char *to);
 
 #define gitfo_stat(p,b) stat(p, b)
 #define gitfo_fstat(f,b) fstat(f, b)
@@ -97,7 +97,7 @@ extern int gitfo_move_file(char *from, char *to);
  * - GIT_SUCCESS on success;
  * - GIT_EOSERR on an unspecified OS related error.
  */
-extern int gitfo_map_ro(
+GIT_EXTERN(int) gitfo_map_ro(
 	git_map *out,
 	git_file fd,
 	off_t begin,
@@ -107,7 +107,7 @@ extern int gitfo_map_ro(
  * Release the memory associated with a previous memory mapping.
  * @param map the mapping description previously configured.
  */
-extern void gitfo_free_map(git_map *map);
+GIT_EXTERN(void) gitfo_free_map(git_map *map);
 
 /**
  * Walk each directory entry, except '.' and '..', calling fn(state).
@@ -120,15 +120,15 @@ extern void gitfo_free_map(git_map *map);
  *		may modify the pathbuf, but only by appending new text.
  * @param state to pass to fn as the first arg.
  */
-extern int gitfo_dirent(
+GIT_EXTERN(int) gitfo_dirent(
 	char *pathbuf,
 	size_t pathmax,
 	int (*fn)(void *, char *),
 	void *state);
 
-extern gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size);
-extern int gitfo_write_cached(gitfo_cache *ioc, void *buf, size_t len);
-extern int gitfo_flush_cached(gitfo_cache *ioc);
-extern int gitfo_close_cached(gitfo_cache *ioc);
+GIT_EXTERN(gitfo_cache *) gitfo_enable_caching(git_file fd, size_t cache_size);
+GIT_EXTERN(int) gitfo_write_cached(gitfo_cache *ioc, void *buf, size_t len);
+GIT_EXTERN(int) gitfo_flush_cached(gitfo_cache *ioc);
+GIT_EXTERN(int) gitfo_close_cached(gitfo_cache *ioc);
 
 #endif /* INCLUDE_fileops_h__ */
