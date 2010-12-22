@@ -4,13 +4,13 @@
 int gitfo_open(const char *path, int flags)
 {
 	int fd = open(path, flags | O_BINARY);
-	return fd >= 0 ? fd : git_os_error();
+	return fd >= 0 ? fd : GIT_EOSERR;
 }
 
 int gitfo_creat(const char *path, int mode)
 {
 	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
-	return fd >= 0 ? fd : git_os_error();
+	return fd >= 0 ? fd : GIT_EOSERR;
 }
 
 int gitfo_read(git_file fd, void *buf, size_t cnt)
@@ -21,11 +21,11 @@ int gitfo_read(git_file fd, void *buf, size_t cnt)
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return git_os_error();
+			return GIT_EOSERR;
 		}
 		if (!r) {
 			errno = EPIPE;
-			return git_os_error();
+			return GIT_EOSERR;
 		}
 		cnt -= r;
 		b += r;
@@ -41,11 +41,11 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return git_os_error();
+			return GIT_EOSERR;
 		}
 		if (!r) {
 			errno = EPIPE;
-			return git_os_error();
+			return GIT_EOSERR;
 		}
 		cnt -= r;
 		b += r;
@@ -92,7 +92,7 @@ off_t gitfo_size(git_file fd)
 {
 	struct stat sb;
 	if (gitfo_fstat(fd, &sb))
-		return git_os_error();
+		return GIT_EOSERR;
 	return sb.st_size;
 }
 
@@ -151,13 +151,13 @@ int gitfo_move_file(char *from, char *to)
 	if (!rename(from, to))
 		return GIT_SUCCESS;
 
-	return git_os_error();
+	return GIT_EOSERR;
 }
 
 int gitfo_map_ro(git_map *out, git_file fd, off_t begin, size_t len)
 {
 	if (git__mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin) < GIT_SUCCESS)
-		return git_os_error();
+		return GIT_EOSERR;
 	return GIT_SUCCESS;
 }
 
@@ -275,7 +275,7 @@ int gitfo_dirent(
 
 	dir = opendir(path);
 	if (!dir)
-		return git_os_error();
+		return GIT_EOSERR;
 
 	while ((de = readdir(dir)) != NULL) {
 		size_t de_len;

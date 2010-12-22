@@ -3,28 +3,16 @@
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 
-GIT_EXTERN(void *) git__malloc(size_t);
-GIT_EXTERN(void *) git__calloc(size_t, size_t);
-GIT_EXTERN(char *) git__strdup(const char *);
-
-#ifndef GIT__NO_HIDE_MALLOC
-# define GIT__FORBID_MALLOC do_not_use_malloc_directly
-
-# ifdef malloc
-#  undef malloc
-# endif
-# define malloc(a)          GIT__FORBID_MALLOC
-
-# ifdef calloc
-#  undef calloc
-# endif
-# define calloc(a,b)        GIT__FORBID_MALLOC
-
-# ifdef strdup
-#  undef strdup
-# endif
-# define strdup(a)          GIT__FORBID_MALLOC
-#endif
+/* 
+ * Don't wrap malloc/calloc.
+ * Use the default versions in glibc, and make
+ * sure that any methods that allocate memory
+ * return a GIT_ENOMEM error when allocation
+ * fails.
+ */
+#define git__malloc malloc
+#define git__calloc calloc
+#define git__strdup strdup
 
 GIT_EXTERN(int) git__fmt(char *, size_t, const char *, ...)
 	GIT_FORMAT_PRINTF(3, 4);
