@@ -14,15 +14,15 @@
 #define git__calloc calloc
 #define git__strdup strdup
 
-GIT_EXTERN(int) git__fmt(char *, size_t, const char *, ...)
+extern int git__fmt(char *, size_t, const char *, ...)
 	GIT_FORMAT_PRINTF(3, 4);
-GIT_EXTERN(int) git__prefixcmp(const char *str, const char *prefix);
-GIT_EXTERN(int) git__suffixcmp(const char *str, const char *suffix);
+extern int git__prefixcmp(const char *str, const char *prefix);
+extern int git__suffixcmp(const char *str, const char *suffix);
 
-GIT_EXTERN(int) git__dirname(char *dir, size_t n, char *path);
-GIT_EXTERN(int) git__basename(char *base, size_t n, char *path);
+extern int git__dirname(char *dir, size_t n, char *path);
+extern int git__basename(char *base, size_t n, char *path);
 
-GIT_EXTERN(void) git__hexdump(const char *buffer, size_t n);
+extern void git__hexdump(const char *buffer, size_t n);
 
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(off_t p)

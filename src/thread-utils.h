@@ -84,6 +84,6 @@ typedef struct { int counter; } git_refcnt;
 
 #endif
 
-GIT_EXTERN(int) git_online_cpus(void);
+extern int git_online_cpus(void);
 
 #endif /* INCLUDE_thread_utils_h__ */

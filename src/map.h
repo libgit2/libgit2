@@ -25,7 +25,7 @@ typedef struct {  /* memory mapped buffer   */
 #endif
 } git_map;
 
-GIT_EXTERN(int) git__mmap(git_map *out, size_t len, int prot, int flags, int fd, off_t offset);
-GIT_EXTERN(int) git__munmap(git_map *map);
+extern int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, off_t offset);
+extern int git__munmap(git_map *map);
 
 #endif /* INCLUDE_map_h__ */

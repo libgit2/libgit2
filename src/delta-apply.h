@@ -15,7 +15,7 @@
  * - GIT_SUCCESS on a successful delta unpack.
  * - GIT_ERROR if the delta is corrupt or doesn't match the base.
  */
-GIT_EXTERN(int) git__delta_apply(
+extern int git__delta_apply(
 	git_rawobj *out,
 	const unsigned char *base,
 	size_t base_len,
