@@ -55,6 +55,8 @@
 			      __attribute__((visibility("default"))) \
 			      GIT_TLS \
 			      type
+#elif defined(_MSC_VER)
+# define GIT_EXTERN_TLS(type) __declspec(dllexport) GIT_TLS type
 #else
 # define GIT_EXTERN_TLS(type) extern GIT_TLS type
 #endif
