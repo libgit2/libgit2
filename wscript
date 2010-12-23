@@ -74,15 +74,15 @@ def build(bld):
 
     # command '[build|clean|install|uninstall]-static'
     if bld.variant == 'static':
-        build_library(bld, 'cstlib')
+        build_library(bld, 'static')
 
     # command '[build|clean|install|uninstall]-shared'
     elif bld.variant == 'shared':
-        build_library(bld, 'cshlib')
+        build_library(bld, 'shared')
 
     # command '[build|clean]-tests'
     elif bld.variant == 'tests':
-        build_library(bld, 'cshlib')
+        build_library(bld, 'objects')
         build_tests(bld)
 
     # command 'build|clean|install|uninstall': by default, run
@@ -91,9 +91,15 @@ def build(bld):
         from waflib import Options
         Options.commands = [bld.cmd + '-shared', bld.cmd + '-static'] + Options.commands
 
-def build_library(bld, lib_str):
-    directory = bld.path
+def build_library(bld, build_type):
 
+    BUILD = {
+        'shared' : bld.shlib,
+        'static' : bld.stlib,
+        'objects' : bld.objects
+    }
+
+    directory = bld.path
     sources = directory.ant_glob('src/*.c')
 
     # Compile platform-dependant code
@@ -106,15 +112,12 @@ def build_library(bld, lib_str):
         sources.append('src/ppc/sha1.c')
     else:
         sources.append('src/block-sha1/sha1.c')
-
-    features = ['c', lib_str]
-
     #------------------------------
     # Build the main library
     #------------------------------
 
     # either as static or shared;
-    bld(features=features,
+    BUILD[build_type](
         source=sources,
         target='git2',
         includes='src',
@@ -123,8 +126,8 @@ def build_library(bld, lib_str):
     )
 
     # On Unix systems, build the Pkg-config entry file
-    if bld.env.PLATFORM == 'unix':
-        bld(rule="""sed -e 's#@prefix@#$(prefix)#' -e 's#@libdir@#$(libdir)#' < ${SRC} > ${TGT}""",
+    if bld.env.PLATFORM == 'unix' and bld.is_install:
+        bld(rule="""sed -e 's#@prefix@#${PREFIX}#' -e 's#@libdir@#${LIBDIR}#' < ${SRC} > ${TGT}""",
             source='libgit2.pc.in',
             target='libgit2.pc',
             install_path='${LIBDIR}/pkgconfig',
@@ -133,6 +136,13 @@ def build_library(bld, lib_str):
     # Install headers
     bld.install_files('${PREFIX}/include', directory.find_node('src/git2.h'))
     bld.install_files('${PREFIX}/include/git2', directory.ant_glob('src/git2/*.h'))
+
+    # On Unix systems, let them know about installation
+    if bld.env.PLATFORM == 'unix' and bld.cmd in ['install-static', 'install-shared']:
+        bld.add_post_fun(call_ldconfig)
+
+def call_ldconfig(bld):
+    bld.exec_command('/sbin/ldconfig')
 
 def grep_test_header(text, test_file):
     return '\n'.join(l for l in test_file.read().splitlines() if text in l)
@@ -144,7 +154,7 @@ def build_tests(bld):
         return
 
     directory = bld.path
-    resources_path = directory.find_node('tests/resources/').abspath()
+    resources_path = directory.find_node('tests/resources/').abspath().replace('\\', '/')
 
     # Common object with the Test library methods
     bld.objects(source=['tests/test_helpers.c', 'tests/test_lib.c'], includes=['src', 'tests'], target='test_helper')
@@ -167,7 +177,6 @@ def build_tests(bld):
             includes=['src', 'tests'],
             defines=['TEST_TOC="%s.toc"' % test_name, 'TEST_RESOURCES="%s"' % resources_path],
             install_path=None,
-            shlibpath=[directory.find_node('build/tests/').abspath()],
             use=['test_helper', 'git2'] + ALL_LIBS  # link with all the libs we know
                                             # libraries which are not enabled won't link
         )
@@ -200,28 +209,17 @@ class _run_tests(Context):
     fun = 'run_tests'
 
 def run_tests(ctx):
-    import shutil, tempfile, sys, os
+    import shutil, tempfile, sys
 
     failed = False
     test_folder = tempfile.mkdtemp()
-    build_folder = ctx.path.find_node('build/tests/')
     test_glob = 'build/tests/t????-*'
-    environ = os.environ.copy()
-    environ_tail = ""
 
     if sys.platform == 'win32':
         test_glob += '.exe'
-        environ_var, environ_separator = 'PATH', ';'
-    else:
-        environ_var, environ_separator = 'LD_LIBRARY_PATH', ':'
-
-    if environ_var in environ:
-        environ_tail = environ_separator + environ[environ_var]
-
-    environ[environ_var] = build_folder.abspath() + environ_tail
 
     for test in ctx.path.ant_glob(test_glob):
-        if ctx.exec_command(test.abspath(), cwd=test_folder, env=environ) != 0:
+        if ctx.exec_command(test.abspath(), cwd=test_folder) != 0:
             failed = True
             break
 

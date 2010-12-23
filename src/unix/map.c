@@ -40,7 +40,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, off_t offse
 
 	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
 	if (!out->data || out->data == MAP_FAILED)
-		return git_os_error();
+		return GIT_EOSERR;
 	out->len = len;
 
 	return GIT_SUCCESS;
