@@ -314,7 +314,7 @@ int gitfo_dirent(
 
 #ifdef GIT_WIN32
 
-static int is_windows_rooted_path(const char* path)
+static int is_windows_rooted_path(const char *path)
 {
 	/* Does the root of the path look like a windows drive ? */
 	if (isalpha(path[0]) && (path[1] == ':'))
