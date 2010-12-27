@@ -8,6 +8,7 @@
 
 #include "hashtable.h"
 #include "index.h"
+#include "refs.h"
 
 typedef struct {
 	git_rawobj raw;
@@ -27,6 +28,7 @@ struct git_repository {
 	git_odb *db;
 	git_index *index;
 	git_hashtable *objects;
+	git_reference_database *ref_database;
 
 	char *path_repository;
 	char *path_index;

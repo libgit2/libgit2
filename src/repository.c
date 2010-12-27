@@ -33,18 +33,16 @@
 #include "blob.h"
 #include "fileops.h"
 
+#include "refs.h"
+
 #define GIT_DIR "/.git/"
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_OBJECTS_INFO_DIR GIT_OBJECTS_DIR "info/"
 #define GIT_OBJECTS_PACK_DIR GIT_OBJECTS_DIR "pack/"
-#define GIT_REFS_DIR "refs/"
-#define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
-#define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
 
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
 
-#define GIT_SYMREF "ref: "
 #define GIT_BRANCH_MASTER "master"
 
 static const int OBJECT_TABLE_SIZE = 32;
@@ -229,6 +227,13 @@ static git_repository *repository_alloc()
 		return NULL;
 	}
 
+	repo->ref_database = git_reference_database__alloc();
+	if (repo->ref_database == NULL) {
+		git_hashtable_free(repo->objects);
+		free(repo);
+		return NULL;
+	}
+
 	return repo;
 }
 
@@ -358,6 +363,8 @@ void git_repository_free(git_repository *repo)
 		git_object_free(object);
 
 	git_hashtable_free(repo->objects);
+
+	git_reference_database__free(repo->ref_database);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
@@ -579,8 +586,6 @@ static int repo_init_structure(repo_init *results)
 
 static int repo_init_find_dir(repo_init *results, const char* path)
 {
-	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66;
-
 	char temp_path[GIT_PATH_MAX];
 	int path_len;
 	int error = GIT_SUCCESS;
@@ -626,5 +631,17 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 
 cleanup:
 	free(results.path_repository);
+	return error;
+}
+
+int git_repository_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name)
+{
+	int error = GIT_SUCCESS;
+	int nesting_level = 0;
+
+	assert(repo && reference_out && name);
+
+	error = git_reference_lookup(reference_out, repo->ref_database, name, repo->path_repository, &nesting_level);
+
 	return error;
 }
