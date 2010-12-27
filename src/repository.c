@@ -33,6 +33,8 @@
 #include "blob.h"
 #include "fileops.h"
 
+#include "refs.h"
+
 #define GIT_DIR "/.git/"
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_REFS_DIR "refs/"
@@ -864,5 +866,17 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 
 cleanup:
 	free(results.path_repository);
+	return error;
+}
+
+int git_repository_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name)
+{
+	git_reference *reference = NULL;
+	int error = GIT_SUCCESS;
+
+	assert(repo && reference_out && name);
+
+	*reference_out = reference;
+
 	return error;
 }

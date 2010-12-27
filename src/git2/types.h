@@ -95,6 +95,14 @@ typedef struct git_signature {
 	git_time when; /** time when the action happened */
 } git_signature;
 
+/** In-memory representation of a reference. */
+typedef struct git_reference git_reference;
+
+/** Basic type of any Git reference. */
+typedef enum {
+	GIT_REF_ANY = -2,		/** Reference can be any of the following */
+} git_rtype;
+
 /** @} */
 GIT_END_DECL
 

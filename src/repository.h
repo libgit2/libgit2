@@ -23,10 +23,18 @@ struct git_object {
 	int in_memory:1, modified:1;
 };
 
+typedef struct {
+	git_hashtable *references;
+	
+	unsigned is_loaded:1;
+	unsigned is_busy:1;
+} reference_database;
+
 struct git_repository {
 	git_odb *db;
 	git_index *index;
 	git_hashtable *objects;
+	reference_database *ref_database;
 
 	char *path_repository;
 	char *path_index;
