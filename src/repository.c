@@ -239,6 +239,13 @@ git_repository *git_repository__alloc()
 		return NULL;
 	}
 
+	repo->ref_database = reference_database__alloc();
+	if (repo->ref_database == NULL) {
+		git_hashtable_free(repo->objects);
+		free(repo);
+		return NULL;
+	}
+
 	return repo;
 }
 
@@ -326,6 +333,8 @@ void git_repository_free(git_repository *repo)
 		git_object_free(object);
 
 	git_hashtable_free(repo->objects);
+
+	reference_database__free(repo->ref_database);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
@@ -875,6 +884,19 @@ int git_repository_reference_lookup(git_reference **reference_out, git_repositor
 	int error = GIT_SUCCESS;
 
 	assert(repo && reference_out && name);
+
+	if (repo->ref_database->is_busy)
+		return GIT_EBUSY;
+
+	reference = git_hashtable_lookup(repo->ref_database->references, name);
+	if (reference != NULL) {
+		*reference_out = reference;
+		return GIT_SUCCESS;
+	}
+
+	/* To be implemented */
+	return GIT_ENOTFOUND;
+
 
 	*reference_out = reference;
 

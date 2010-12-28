@@ -23,5 +23,85 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "refs.h"
+#include "hash.h"
 
+static const int default_table_size = 32;
+static const double max_load_factor = 0.65;
 
+uint32_t reftable_hash(const void *key)
+{
+	uint32_t r;
+	git_hash_ctx *ctx;
+	git_oid sha1ed_ref_name;
+	const char *ref_name;
+
+	ref_name = (const char *)key;
+
+	ctx = git_hash_new_ctx();
+	if (ctx == NULL)
+		return GIT_ENOMEM;	// TODO: Fixme. This could be a valid hash.
+
+	git_hash_update(ctx, ref_name, strlen(ref_name));
+	git_hash_final(&sha1ed_ref_name, ctx);
+
+	git_hash_free_ctx(ctx);
+
+	memcpy(&r, &sha1ed_ref_name.id, sizeof(r));
+	return r;
+}
+
+int reftable_haskey(void *reference, const void *key)
+{
+	git_reference *ref;
+	char *name;
+
+	ref = (git_reference *)reference;
+	name = (char *)key;
+
+	return (strcmp(name, ref->name) == 0);
+}
+
+reference_database *reference_database__alloc() {
+	reference_database *ref_database = git__malloc(sizeof(reference_database));
+	if (!ref_database)
+		return NULL;
+
+	memset(ref_database, 0x0, sizeof(reference_database));
+
+	ref_database->references = git_hashtable_alloc(
+		default_table_size, 
+		reftable_hash,
+		reftable_haskey);
+
+	if (ref_database->references == NULL) {
+		free(ref_database);
+		return NULL;
+	}
+
+	return ref_database;
+}
+
+void reference__free(git_reference *reference) {
+	assert(reference);
+
+	free(reference->name);
+	free(reference);
+}
+
+void reference_database__free(reference_database *ref_database) {
+	git_hashtable_iterator it;
+	git_reference *reference;
+
+	assert(ref_database);
+
+	git_hashtable_iterator_init(ref_database->references, &it);
+
+	while ((reference = (git_reference *)git_hashtable_iterator_next(&it)) != NULL) {
+		git_hashtable_remove(ref_database->references, &reference->name);
+		reference__free(reference);
+	}
+
+	git_hashtable_free(ref_database->references);
+	free(ref_database);
+}
