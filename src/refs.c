@@ -27,7 +27,6 @@
 #include "hash.h"
 
 static const int default_table_size = 32;
-static const double max_load_factor = 0.65;
 
 uint32_t reftable_hash(const void *key)
 {
