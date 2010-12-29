@@ -21,6 +21,7 @@ static struct {
 	{GIT_EBUSY, "The queried object is currently busy"},
 	{GIT_EBAREINDEX, "The index file is not backed up by an existing repository"},
 	{GIT_EINVALIDREFNAME, "The name of the reference is not valid"},
+	{GIT_EREFCORRUPTED, "The specified reference has its data corrupted"},
 };
 
 const char *git_strerror(int num)

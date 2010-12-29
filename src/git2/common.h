@@ -139,6 +139,9 @@
 /** The name of the reference is not valid */
 #define GIT_EINVALIDREFNAME (GIT_ERROR - 15)
 
+/** The specified reference has its data corrupted */
+#define GIT_EREFCORRUPTED  (GIT_ERROR - 16)
+
 GIT_BEGIN_DECL
 /** @} */
 GIT_END_DECL
