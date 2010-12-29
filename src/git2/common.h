@@ -134,7 +134,10 @@
 #define GIT_EBUSY (GIT_ERROR - 13)
 
 /** The index file is not backed up by an existing repository */
-#define GIT_EBAREINDEX (GIT_ERROR -14)
+#define GIT_EBAREINDEX (GIT_ERROR - 14)
+
+/** The name of the reference is not valid */
+#define GIT_EINVALIDREFNAME (GIT_ERROR - 15)
 
 GIT_BEGIN_DECL
 /** @} */
