@@ -23,6 +23,8 @@ extern int git__dirname(char *dir, size_t n, char *path);
 extern int git__basename(char *base, size_t n, char *path);
 
 extern void git__hexdump(const char *buffer, size_t n);
+extern uint32_t git__hash(const void *key, int len, uint32_t seed);
+
 
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(off_t p)
@@ -30,6 +32,13 @@ GIT_INLINE(int) git__is_sizet(off_t p)
 	size_t r = (size_t)p;
 	return p == (off_t)r;
 }
+
+/* 32-bit cross-platform rotl */
+#ifdef _MSC_VER /* use built-in method in MSVC */
+#	define git__rotl(v, s) (uint32_t)_rotl(v, s)
+#else /* use bitops in GCC; with o2 this gets optimized to a rotl instruction */
+#	define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
+#endif
 
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold
