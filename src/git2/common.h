@@ -142,6 +142,9 @@
 /** The specified reference has its data corrupted */
 #define GIT_EREFCORRUPTED  (GIT_ERROR - 16)
 
+/** The specified symbolic reference is too deeply nested */
+#define GIT_ETOONESTEDSYMREF (GIT_ERROR - 17)
+
 GIT_BEGIN_DECL
 /** @} */
 GIT_END_DECL
