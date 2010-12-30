@@ -28,7 +28,7 @@ struct git_repository {
 	git_odb *db;
 	git_index *index;
 	git_hashtable *objects;
-	reference_database *ref_database;
+	git_reference_database *ref_database;
 
 	char *path_repository;
 	char *path_index;

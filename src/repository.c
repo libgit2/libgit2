@@ -44,7 +44,6 @@
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
 
-#define GIT_SYMREF "ref: "
 #define GIT_BRANCH_MASTER "master"
 
 static const int default_table_size = 32;
@@ -239,7 +238,7 @@ git_repository *git_repository__alloc()
 		return NULL;
 	}
 
-	repo->ref_database = reference_database__alloc();
+	repo->ref_database = git_reference_database__alloc();
 	if (repo->ref_database == NULL) {
 		git_hashtable_free(repo->objects);
 		free(repo);
@@ -334,7 +333,7 @@ void git_repository_free(git_repository *repo)
 
 	git_hashtable_free(repo->objects);
 
-	reference_database__free(repo->ref_database);
+	git_reference_database__free(repo->ref_database);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
@@ -824,8 +823,6 @@ int repo_init_structure(repo_init *results)
 
 int repo_init_find_dir(repo_init *results, const char* path)
 {
-	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66;
-
 	char temp_path[GIT_PATH_MAX];
 	int path_len;
 
@@ -880,25 +877,12 @@ cleanup:
 
 int git_repository_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name)
 {
-	git_reference *reference = NULL;
 	int error = GIT_SUCCESS;
+	int nesting_level = 0;
 
 	assert(repo && reference_out && name);
 
-	if (repo->ref_database->is_busy)
-		return GIT_EBUSY;
-
-	reference = git_hashtable_lookup(repo->ref_database->references, name);
-	if (reference != NULL) {
-		*reference_out = reference;
-		return GIT_SUCCESS;
-	}
-
-	/* To be implemented */
-	return GIT_ENOTFOUND;
-
-
-	*reference_out = reference;
+	error = git_reference_lookup(reference_out, repo->ref_database, name, repo->path_repository, &nesting_level);
 
 	return error;
 }
