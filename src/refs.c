@@ -244,13 +244,60 @@ static int read_loose_reference(gitfo_buf *file_content, const char *name, const
 	return error;
 }
 
-int git_reference_lookup(git_reference **reference_out, git_reference_database *ref_database, const char *name, const char *path_repository, int *nesting_level)
+static int try_to_find_an_existing_loose_reference(git_reference **reference_out, git_reference_database *ref_database, const char *name, const char *path_repository, int *nesting_level)
 {
 	int error = GIT_SUCCESS;
 	gitfo_buf file_content = GITFO_BUF_INIT;
 	git_reference *reference, *target_reference;
 	git_reference_symbolic *peeled_reference;
 	char target_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+
+
+	error = read_loose_reference(&file_content, name, path_repository);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	/* Does this look like a symbolic ref ? */
+	if (!git__prefixcmp((const char *)(file_content.data), GIT_SYMREF)) {
+		error = symbolic_reference_target_name__parse(target_name, name, &file_content);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		error = git_reference_lookup(&target_reference, ref_database, target_name, path_repository, nesting_level);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		error = reference_newobject((git_reference **)&peeled_reference, GIT_REF_SYMBOLIC, name);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		peeled_reference->target = target_reference;
+
+		reference = (git_reference *)peeled_reference;
+
+		goto found;
+	}
+
+	if (object_id_reference__parse(&reference, name, &file_content) < GIT_SUCCESS) {
+		error = GIT_EREFCORRUPTED;
+		goto cleanup;
+	}
+
+found:
+	*reference_out = reference;
+
+cleanup:
+	if (file_content.data)
+		gitfo_free_buf(&file_content);
+
+	return error;
+}
+
+int git_reference_lookup(git_reference **reference_out, git_reference_database *ref_database, const char *name, const char *path_repository, int *nesting_level)
+{
+	int error = GIT_SUCCESS;
+	git_reference *reference;
+
 
 	if (*nesting_level == MAX_NESTING_LEVEL) {
 		return GIT_ETOONESTEDSYMREF;
@@ -280,40 +327,25 @@ int git_reference_lookup(git_reference **reference_out, git_reference_database *
 
 	(*nesting_level)++;
 
-	// TODO : Search in packed-refs
-
-	error = read_loose_reference(&file_content, name, path_repository);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	/* Does this look like a symbolic ref ? */
-	if (!git__prefixcmp((const char *)(file_content.data), GIT_SYMREF)) {
-		error = symbolic_reference_target_name__parse(target_name, name, &file_content);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		error = git_reference_lookup(&target_reference, ref_database, target_name, path_repository, nesting_level);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		error = reference_newobject((git_reference **)&peeled_reference, GIT_REF_SYMBOLIC, name);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		peeled_reference->target = target_reference;
-
-		reference = (git_reference *)peeled_reference;
-
+	/* Does the reference exist as a loose file based reference ? */
+	error = try_to_find_an_existing_loose_reference(&reference, ref_database, name, path_repository, nesting_level);
+	if (error == GIT_SUCCESS) {
 		git_hashtable_insert(ref_database->references, reference->name, reference);
 		goto found;
 	}
 
-	if (object_id_reference__parse(&reference, name, &file_content) < GIT_SUCCESS) {
-		error = GIT_EREFCORRUPTED;
+	if (error != GIT_ENOTFOUND)
 		goto cleanup;
-	}
 
-	git_hashtable_insert(ref_database->references, reference->name, reference);
+	/* Nothing has been found in the loose refs */
+	assert(error == GIT_ENOTFOUND);
+
+	/* Have the dormant references already been parsed ? */
+	if (ref_database->have_packed_refs_been_parsed)
+		return GIT_ENOTFOUND;
+
+	// TODO : Search in packed-refs
+
 
 found:
 	*reference_out = reference;
@@ -323,9 +355,6 @@ cleanup:
 
 	if (*nesting_level == 0)
 		ref_database->is_busy = 0;
-	
-	if (file_content.data)
-		gitfo_free_buf(&file_content);
 
 	return error;
 }

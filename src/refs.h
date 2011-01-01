@@ -31,6 +31,7 @@ typedef struct {
 	git_hashtable *references;
 	
 	unsigned is_fully_loaded:1;
+	unsigned have_packed_refs_been_parsed:1;
 	unsigned is_busy:1;
 } git_reference_database;
 
