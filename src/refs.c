@@ -312,6 +312,25 @@ static int read_packed_refs_content(gitfo_buf *file_content, const char *path_re
 	return error;
 }
 
+static int packed_tag_peeled_reference__parse(git_oid *peeled_oid_out, git_reference *tag_reference, char** buffer_out, const char *buffer_end)
+{
+	int error = GIT_SUCCESS;
+	char* peeled_object_id_end;
+
+	/* Ensure it's not the first entry of the file */
+	if (tag_reference == NULL)
+		return GIT_EPACKEDREFSCORRUPTED;
+
+	// TODO : Make sure reference *IS* a tag by comparing the prefix of its name to GIT_REFS_TAGS_DIR
+
+	/* Is this a valid object id ? */
+	if (git__parse_oid(peeled_oid_out, buffer_out, buffer_end, "^") < GIT_SUCCESS) {
+		error = GIT_EPACKEDREFSCORRUPTED;
+	}
+
+	return error;
+}
+
 static int packed_reference_file__parse(git_reference **reference_out, git_reference_database *ref_database, const char *name, const char *path_repository, int *nesting_level)
 {
 	int error = GIT_SUCCESS;
@@ -320,7 +339,7 @@ static int packed_reference_file__parse(git_reference **reference_out, git_refer
 	const char *buffer_end;
 	char reference_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
 	int refname_len;
-	git_oid oid;
+	git_oid oid, peeled_oid;
 	git_reference *reference = NULL, *found_reference = NULL;
 
 	error = read_packed_refs_content(&file_content, path_repository);
@@ -342,20 +361,11 @@ static int packed_reference_file__parse(git_reference **reference_out, git_refer
 	while (buffer_start < buffer_end) {
 		/* Is it a peeled reference pointed at by a tag ? */
 		if (buffer_start[0] == '^') {
-			/* Let's make sure it's not the first entry of the file */
-			if (reference == NULL) {
-				error = GIT_EPACKEDREFSCORRUPTED;
+			error = packed_tag_peeled_reference__parse(&peeled_oid, reference, &buffer_start, buffer_end);
+			if (error < GIT_SUCCESS)
 				goto cleanup;
-			}
 
-			// TODO : Make sure reference *IS* a tag by comparing the prefix of its name to GIT_REFS_TAGS_DIR
-
-			/* As we do not need the peeled object pointed at by the tag, we just seek the end of the line */
-			while(buffer_start[0] != '\n' && buffer_start < buffer_end)
-				buffer_start++;
-
-			/* Skip the line feed */
-			buffer_start++;
+			/* As we do not _currently_ need the peeled object pointed at by the tag, we just don't use the parsed object id. Maybe later ? */
 
 			/* Reinit the reference to catch potential successive lines starting by '^' */
 			reference = NULL;
