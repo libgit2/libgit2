@@ -23,6 +23,7 @@ static struct {
 	{GIT_EINVALIDREFNAME, "The name of the reference is not valid"},
 	{GIT_EREFCORRUPTED, "The specified reference has its data corrupted"},
 	{GIT_ETOONESTEDSYMREF, "The specified symbolic reference is too deeply nested"},
+	{GIT_EPACKEDREFSCORRUPTED, "The pack-refs file is either corrupted of its format is not currently supported"}
 };
 
 const char *git_strerror(int num)

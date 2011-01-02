@@ -145,6 +145,9 @@
 /** The specified symbolic reference is too deeply nested */
 #define GIT_ETOONESTEDSYMREF (GIT_ERROR - 17)
 
+/** The pack-refs file is either corrupted of its format is not currently supported */
+#define GIT_EPACKEDREFSCORRUPTED (GIT_ERROR - 18)
+
 GIT_BEGIN_DECL
 /** @} */
 GIT_END_DECL
