@@ -315,7 +315,6 @@ static int read_packed_refs_content(gitfo_buf *file_content, const char *path_re
 static int packed_tag_peeled_reference__parse(git_oid *peeled_oid_out, git_reference *tag_reference, char** buffer_out, const char *buffer_end)
 {
 	int error = GIT_SUCCESS;
-	char* peeled_object_id_end;
 
 	/* Ensure it's not the first entry of the file */
 	if (tag_reference == NULL)
@@ -331,14 +330,50 @@ static int packed_tag_peeled_reference__parse(git_oid *peeled_oid_out, git_refer
 	return error;
 }
 
+static int packed_reference__parse(git_oid *oid_out, char *reference_name_out, char** buffer_out, const char *buffer_end)
+{
+	int error = GIT_SUCCESS;
+	char *refname_end;
+	int refname_len;
+
+	/* This should be the beginning of a line containing an object id, a space and its name */
+	if ((*buffer_out + GIT_OID_HEXSZ)[0] != ' ')
+		return GIT_EPACKEDREFSCORRUPTED;
+
+	/* Slight hack to reuse git__parse_oid() which assumes that the id is LF terminated */
+	(*buffer_out + GIT_OID_HEXSZ)[0] = '\n';
+
+	/* Is this a valid object id ? */
+	if (git__parse_oid(oid_out, buffer_out, buffer_end, "") < GIT_SUCCESS)
+		return GIT_EPACKEDREFSCORRUPTED;
+
+	/* We should be at the begining of the name of the reference */
+	if (isspace(*buffer_out[0]))
+		return GIT_EPACKEDREFSCORRUPTED;
+
+	refname_end = *buffer_out;
+
+	/* Seek the end of the target reference name */
+	while(!isspace(refname_end[0]) && refname_end < buffer_end)
+		refname_end++;
+
+	refname_len = refname_end - *buffer_out;
+
+	memcpy(reference_name_out, *buffer_out, refname_len);
+	reference_name_out[refname_len] = 0;
+
+	*buffer_out = refname_end + 1;
+
+	return error;
+}
+
 static int packed_reference_file__parse(git_reference **reference_out, git_reference_database *ref_database, const char *name, const char *path_repository, int *nesting_level)
 {
 	int error = GIT_SUCCESS;
 	gitfo_buf file_content = GITFO_BUF_INIT;
-	char *buffer_start, *refname_end;
+	char *buffer_start;
 	const char *buffer_end;
 	char reference_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
-	int refname_len;
 	git_oid oid, peeled_oid;
 	git_reference *reference = NULL, *found_reference = NULL;
 
@@ -373,37 +408,9 @@ static int packed_reference_file__parse(git_reference **reference_out, git_refer
 			continue;
 		}
 
-		/* This should be the beginning of a line containing an object id, a space and its name */
-		if ((buffer_start + GIT_OID_HEXSZ)[0] != ' ') {
-			error = GIT_EPACKEDREFSCORRUPTED;
+		error = packed_reference__parse(&oid, reference_name, &buffer_start, buffer_end);
+		if (error < GIT_SUCCESS)
 			goto cleanup;
-		}
-
-		/* Slight hack to reuse git__parse_oid() which assumes that the id is LF terminated */
-		(buffer_start + GIT_OID_HEXSZ)[0] = '\n';
-
-		/* Is this a valid object id ? */
-		if (git__parse_oid(&oid, &buffer_start, buffer_end, "") < GIT_SUCCESS) {
-			error = GIT_EPACKEDREFSCORRUPTED;
-			goto cleanup;
-		}
-
-		/* We should be at the begining of the name of the reference */
-		if (isspace(buffer_start[0])) {
-			error = GIT_EPACKEDREFSCORRUPTED;
-			goto cleanup;
-		}
-
-		refname_end = buffer_start;
-
-		/* Seek the end of the target reference name */
-		while(!isspace(refname_end[0]) && refname_end < buffer_end)
-			refname_end++;
-
-		refname_len = refname_end - buffer_start;
-
-		memcpy(reference_name, buffer_start, refname_len);
-		reference_name[refname_len] = 0;
 
 		/* Does a more up-to-date loose reference exist ? */
 		reference = git_hashtable_lookup(ref_database->references, reference_name);
@@ -422,8 +429,6 @@ static int packed_reference_file__parse(git_reference **reference_out, git_refer
 			if (!strcmp(reference_name, name))
 				found_reference = reference;	// TODO : Should we guard against two found references in the same packed-refs file ?
 		}
-
-		buffer_start = refname_end + 1;
 	}
 
 	ref_database->have_packed_refs_been_parsed = 1;
