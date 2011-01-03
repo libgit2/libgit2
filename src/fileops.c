@@ -1,5 +1,6 @@
 #include "common.h"
 #include "fileops.h"
+#include <ctype.h>
 
 int gitfo_open(const char *path, int flags)
 {
@@ -311,6 +312,19 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+#ifdef GIT_WIN32
+
+static int is_windows_rooted_path(const char *path)
+{
+	/* Does the root of the path look like a windows drive ? */
+	if (isalpha(path[0]) && (path[1] == ':'))
+		return GIT_SUCCESS;
+
+	return GIT_ERROR;
+}
+
+#endif
+
 int gitfo_mkdir_recurs(const char *path, int mode)
 {
 	int error;
@@ -320,23 +334,35 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	if (path_copy == NULL)
 		return GIT_ENOMEM;
 
-    error = GIT_SUCCESS;
-    pp = path_copy;
+	error = GIT_SUCCESS;
+	pp = path_copy;
 
-    while (error == 0 && (sp = strchr(pp, '/')) != 0) {
-        if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
-            *sp = 0;
-            error = gitfo_mkdir(path_copy, mode);
-            *sp = '/';
-        }
+#ifdef GIT_WIN32
 
-        pp = sp + 1;
-    }
+	if (!is_windows_rooted_path(pp))
+		pp += 2; /* Skip the drive name (eg. C: or D:) */
 
-    if (*(pp - 1) != '/' && error == GIT_SUCCESS)
-        error = gitfo_mkdir(path, mode);
+#endif
 
-    free(path_copy);
-    return error;
+    while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != 0) {
+		if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
+			*sp = 0;
+			error = gitfo_mkdir(path_copy, mode);
+
+			/* Do not choke while trying to recreate an existing directory */
+			if (errno == EEXIST)
+				error = GIT_SUCCESS;
+
+			*sp = '/';
+		}
+
+		pp = sp + 1;
+	}
+
+	if (*(pp - 1) != '/' && error == GIT_SUCCESS)
+		error = gitfo_mkdir(path, mode);
+
+	free(path_copy);
+	return error;
 
 }

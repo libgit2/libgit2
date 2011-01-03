@@ -35,9 +35,11 @@
 
 #define GIT_DIR "/.git/"
 #define GIT_OBJECTS_DIR "objects/"
+#define GIT_OBJECTS_INFO_DIR GIT_OBJECTS_DIR "info/"
+#define GIT_OBJECTS_PACK_DIR GIT_OBJECTS_DIR "pack/"
 #define GIT_REFS_DIR "refs/"
-#define GIT_REFS_HEADS_DIR "refs/heads/"
-#define GIT_REFS_TAGS_DIR "refs/tags/"
+#define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
+#define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
 
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
@@ -786,19 +788,19 @@ int repo_init_structure(repo_init *results)
 	if (repo_init_createhead(temp_path) < GIT_SUCCESS)
 		return GIT_ERROR;
 
-	/* Creates the '/objects/' directory */
-	strcpy(temp_path + path_len, GIT_OBJECTS_DIR);
-	if (gitfo_mkdir(temp_path, mode))
+	/* Creates the '/objects/info/' directory */
+	strcpy(temp_path + path_len, GIT_OBJECTS_INFO_DIR);
+	if (gitfo_mkdir_recurs(temp_path, mode))
 		return GIT_ERROR;
 
-	/* Creates the '/refs/' directory */
-	strcpy(temp_path + path_len, GIT_REFS_DIR);
+	/* Creates the '/objects/pack/' directory */
+	strcpy(temp_path + path_len, GIT_OBJECTS_PACK_DIR);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
 	/* Creates the '/refs/heads/' directory */
 	strcpy(temp_path + path_len, GIT_REFS_HEADS_DIR);
-	if (gitfo_mkdir(temp_path, mode))
+	if (gitfo_mkdir_recurs(temp_path, mode))
 		return GIT_ERROR;
 
 	/* Creates the '/refs/tags/' directory */
