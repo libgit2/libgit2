@@ -180,7 +180,7 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
 /**
- * Lookup a reference by its name in the repostory.
+ * Lookup a reference by its name in the repository.
  *
  * The generated reference is owned by the repository and
  * should not be freed by the user.
@@ -188,7 +188,7 @@ GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path,
  *
  * @param reference_out pointer to the looked-up reference
  * @param repo the repository to look up the reference
- * @param name the long name for the reference
+ * @param name the long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
  * @return a reference to the reference
  */
 GIT_EXTERN(int) git_repository_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
