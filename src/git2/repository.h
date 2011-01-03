@@ -185,6 +185,8 @@ GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path,
  * The generated reference is owned by the repository and
  * should not be freed by the user.
  *
+ * TODO:
+ *	- Ensure the reference name is valid
  *
  * @param reference_out pointer to the looked-up reference
  * @param repo the repository to look up the reference
