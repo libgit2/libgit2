@@ -317,7 +317,9 @@ static int packed_tag_peeled_reference__parse(git_oid *peeled_oid_out, git_refer
 	if (tag_reference == NULL)
 		return GIT_EPACKEDREFSCORRUPTED;
 
-	// TODO : Make sure reference *IS* a tag by comparing the prefix of its name to GIT_REFS_TAGS_DIR
+	/* Ensure reference is a tag */
+	if (git__prefixcmp(tag_reference->name, GIT_REFS_TAGS_DIR))
+		return GIT_EPACKEDREFSCORRUPTED;
 
 	/* Is this a valid object id ? */
 	if (git__parse_oid(peeled_oid_out, buffer_out, buffer_end, "^") < GIT_SUCCESS) {
