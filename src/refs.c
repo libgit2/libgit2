@@ -110,10 +110,7 @@ void git_reference_database__free(git_reference_database *ref_database)
 	git_hashtable_iterator_init(ref_database->references, &it);
 
 	while ((reference = (git_reference *)git_hashtable_iterator_next(&it)) != NULL) {
-		
-		// TODO: Fixme. GITENOTFOUND ? why ?
-		
-		git_hashtable_remove(ref_database->references, &reference->name);
+		git_hashtable_remove(ref_database->references, reference->name);
 		reference__free(reference);
 	}
 
