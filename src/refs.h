@@ -5,6 +5,10 @@
 #include "git2/oid.h"
 #include "hashtable.h"
 
+#define GIT_REFS_DIR "refs/"
+#define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
+#define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
+
 #define GIT_SYMREF "ref:"
 #define GIT_PACKEDREFS_FILE "packed-refs"
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled \n"

@@ -37,9 +37,6 @@
 
 #define GIT_DIR "/.git/"
 #define GIT_OBJECTS_DIR "objects/"
-#define GIT_REFS_DIR "refs/"
-#define GIT_REFS_HEADS_DIR "refs/heads/"
-#define GIT_REFS_TAGS_DIR "refs/tags/"
 
 #define GIT_INDEX_FILE "index"
 #define GIT_HEAD_FILE "HEAD"
