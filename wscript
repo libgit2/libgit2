@@ -138,11 +138,14 @@ def build_library(bld, build_type):
     bld.install_files('${PREFIX}/include/git2', directory.ant_glob('src/git2/*.h'))
 
     # On Unix systems, let them know about installation
-    if bld.env.PLATFORM == 'unix' and bld.cmd in ['install-static', 'install-shared']:
+    if bld.env.PLATFORM == 'unix' and bld.cmd == 'install-shared':
         bld.add_post_fun(call_ldconfig)
 
 def call_ldconfig(bld):
-    bld.exec_command('/sbin/ldconfig')
+    import distutils.spawn as s
+    ldconf = s.find_executable('ldconfig')
+    if ldconf:
+        bld.exec_command(ldconf)
 
 def grep_test_header(text, test_file):
     return '\n'.join(l for l in test_file.read().splitlines() if text in l)
