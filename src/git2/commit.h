@@ -28,6 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "repository.h"
 
 /**
  * @file git2/commit.h
@@ -49,7 +50,10 @@ GIT_BEGIN_DECL
  *        an annotated tag it will be peeled back to the commit.
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
+GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id)
+{
+	return git_repository_lookup((git_object **)commit, repo, id, GIT_OBJ_COMMIT);
+}
 
 /**
  * Create a new in-memory git_commit.
@@ -62,7 +66,10 @@ GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param repo The repository where the object will reside
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_commit_new(git_commit ** commit, git_repository *repo);
+GIT_INLINE(int) git_commit_new(git_commit **commit, git_repository *repo)
+{
+	return git_repository_newobject((git_object **)commit, repo, GIT_OBJ_COMMIT);
+}
 
 /**
  * Get the id of a commit.

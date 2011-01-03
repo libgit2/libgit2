@@ -28,6 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "repository.h"
 
 /**
  * @file git2/blob.h
@@ -48,7 +49,10 @@ GIT_BEGIN_DECL
  * @param id identity of the blob to locate.
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git_oid *id);
+GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git_oid *id)
+{
+	return git_repository_lookup((git_object **)blob, repo, id, GIT_OBJ_BLOB);
+}
 
 /**
  * Create a new in-memory git_blob.
@@ -61,7 +65,10 @@ GIT_EXTERN(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
  * @param repo The repository where the object will reside
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_blob_new(git_blob **blob, git_repository *repo);
+GIT_INLINE(int) git_blob_new(git_blob **blob, git_repository *repo)
+{
+	return git_repository_newobject((git_object **)blob, repo, GIT_OBJ_BLOB);
+}
 
 /**
  * Fill a blob with the contents inside

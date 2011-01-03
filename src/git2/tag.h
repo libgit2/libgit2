@@ -28,6 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "repository.h"
 
 /**
  * @file git2/tag.h
@@ -48,7 +49,10 @@ GIT_BEGIN_DECL
  * @param id identity of the tag to locate.
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id);
+GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id)
+{
+	return git_repository_lookup((git_object **)tag, repo, id, GIT_OBJ_TAG);
+}
 
 /**
  * Create a new in-memory git_tag.
@@ -61,7 +65,10 @@ GIT_EXTERN(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
  * @param repo The repository where the object will reside
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_tag_new(git_tag **tag, git_repository *repo);
+GIT_INLINE(int) git_tag_new(git_tag **tag, git_repository *repo)
+{
+	return git_repository_newobject((git_object **)tag, repo, GIT_OBJ_TAG);
+}
 
 /**
  * Get the id of a tag.

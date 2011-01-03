@@ -47,41 +47,20 @@
 #define GIT_SYMREF "ref: "
 #define GIT_BRANCH_MASTER "master"
 
-static const int default_table_size = 32;
-static const double max_load_factor = 0.65;
-
-static const int OBJECT_BASE_SIZE = 4096;
-
-static struct {
-	const char	*str;   /* type name string */
-	int			loose;  /* valid loose object type flag */
-	size_t		size;	/* size in bytes of the object structure */
-} git_objects_table[] = {
-	{ "",          0, 0					},  /* 0 = GIT_OBJ__EXT1     */
-	{ "commit",    1, sizeof(git_commit)},  /* 1 = GIT_OBJ_COMMIT    */
-	{ "tree",      1, sizeof(git_tree)	},  /* 2 = GIT_OBJ_TREE      */
-	{ "blob",      1, sizeof(git_blob)	},  /* 3 = GIT_OBJ_BLOB      */
-	{ "tag",       1, sizeof(git_tag)	},  /* 4 = GIT_OBJ_TAG       */
-	{ "",          0, 0					},  /* 5 = GIT_OBJ__EXT2     */
-	{ "OFS_DELTA", 0, 0					},  /* 6 = GIT_OBJ_OFS_DELTA */
-	{ "REF_DELTA", 0, 0					}   /* 7 = GIT_OBJ_REF_DELTA */
-};
+static const int OBJECT_TABLE_SIZE = 32;
 
 typedef struct {
 	char *path_repository;
-	unsigned is_bare:1,
-			 has_been_reinit:1;
+	unsigned is_bare:1, has_been_reinit:1;
 } repo_init;
 
-/***********************************************************
+/*
+ * Hash table methods
  *
- * MISCELANEOUS HELPER FUNCTIONS
- *
- ***********************************************************/
-
-
-
-uint32_t git__objtable_hash(const void *key)
+ * Callbacks for the ODB cache, implemented
+ * as a hash table
+ */
+uint32_t object_table_hash(const void *key)
 {
 	uint32_t r;
 	git_oid *id;
@@ -91,7 +70,7 @@ uint32_t git__objtable_hash(const void *key)
 	return r;
 }
 
-int git__objtable_haskey(void *object, const void *key)
+int object_table_hashkey(void *object, const void *key)
 {
 	git_object *obj;
 	git_oid *oid;
@@ -103,7 +82,11 @@ int git__objtable_haskey(void *object, const void *key)
 }
 
 
-
+/*
+ * Git repository open methods
+ *
+ * Open a repository object from its path
+ */
 static int assign_repository_DIRs(git_repository *repo,
 		const char *git_dir,
 		const char *git_object_directory,
@@ -221,7 +204,7 @@ static int guess_repository_DIRs(git_repository *repo, const char *repository_pa
 	return GIT_SUCCESS;
 }
 
-git_repository *git_repository__alloc()
+static git_repository *repository_alloc()
 {
 	git_repository *repo = git__malloc(sizeof(git_repository));
 	if (!repo)
@@ -230,9 +213,9 @@ git_repository *git_repository__alloc()
 	memset(repo, 0x0, sizeof(git_repository));
 
 	repo->objects = git_hashtable_alloc(
-			default_table_size, 
-			git__objtable_hash,
-			git__objtable_haskey);
+			OBJECT_TABLE_SIZE, 
+			object_table_hash,
+			object_table_hashkey);
 
 	if (repo->objects == NULL) {
 		free(repo);
@@ -253,7 +236,7 @@ int git_repository_open2(git_repository **repo_out,
 
 	assert(repo_out);
 
-	repo = git_repository__alloc();
+	repo = repository_alloc();
 	if (repo == NULL)
 		return GIT_ENOMEM;
 
@@ -285,7 +268,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 
 	assert(repo_out && path);
 
-	repo = git_repository__alloc();
+	repo = repository_alloc();
 	if (repo == NULL)
 		return GIT_ENOMEM;
 
@@ -348,245 +331,10 @@ git_index *git_repository_index(git_repository *repo)
 	return repo->index;
 }
 
-static int source_resize(git_odb_source *src)
-{
-	size_t write_offset, new_size;
-	void *new_data;
-
-	write_offset = (size_t)((char *)src->write_ptr - (char *)src->raw.data);
-
-	new_size = src->raw.len * 2;
-	if ((new_data = git__malloc(new_size)) == NULL)
-		return GIT_ENOMEM;
-
-	memcpy(new_data, src->raw.data, src->written_bytes);
-	free(src->raw.data);
-
-	src->raw.data = new_data;
-	src->raw.len = new_size;
-	src->write_ptr = (char *)new_data + write_offset;
-
-	return GIT_SUCCESS;
-}
-
-int git__source_printf(git_odb_source *source, const char *format, ...)
-{
-	va_list arglist;
-	int len, did_resize = 0;
-
-	assert(source->open && source->write_ptr);
-
-	va_start(arglist, format);
-
-	len = vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
-
-	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < GIT_SUCCESS)
-			return GIT_ENOMEM;
-
-		did_resize = 1;
-	}
-
-	if (did_resize)
-		vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
-
-	source->write_ptr = (char *)source->write_ptr + len;
-	source->written_bytes += len;
-
-	return GIT_SUCCESS;
-}
-
-int git__source_write(git_odb_source *source, const void *bytes, size_t len)
-{
-	assert(source);
-
-	assert(source->open && source->write_ptr);
-
-	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < GIT_SUCCESS)
-			return GIT_ENOMEM;
-	}
-
-	memcpy(source->write_ptr, bytes, len);
-	source->write_ptr = (char *)source->write_ptr + len;
-	source->written_bytes += len;
-
-	return GIT_SUCCESS;
-}
-
-static void prepare_write(git_object *object)
-{
-	if (object->source.write_ptr != NULL || object->source.open)
-		git_object__source_close(object);
-
-	/* TODO: proper size calculation */
-	object->source.raw.data = git__malloc(OBJECT_BASE_SIZE);
-	object->source.raw.len = OBJECT_BASE_SIZE;
-
-	object->source.write_ptr = object->source.raw.data;
-	object->source.written_bytes = 0;
-
-	object->source.open = 1;
-}
-
-static int write_back(git_object *object)
-{
-	int error;
-	git_oid new_id;
-
-	assert(object);
-
-	assert(object->source.open);
-	assert(object->modified);
-
-	object->source.raw.len = object->source.written_bytes;
-
-	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < GIT_SUCCESS)
-		return error;
-
-	if (!object->in_memory)
-		git_hashtable_remove(object->repo->objects, &object->id);
-
-	git_oid_cpy(&object->id, &new_id);
-	git_hashtable_insert(object->repo->objects, &object->id, object);
-
-	object->source.write_ptr = NULL;
-	object->source.written_bytes = 0;
-
-	object->modified = 0;
-	object->in_memory = 0;
-
-	git_object__source_close(object);
-	return GIT_SUCCESS;
-}
-
-int git_object__source_open(git_object *object)
-{
-	int error;
-
-	assert(object && !object->in_memory);
-
-	if (object->source.open)
-		git_object__source_close(object);
-
-	error = git_odb_read(&object->source.raw, object->repo->db, &object->id);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	object->source.open = 1;
-	return GIT_SUCCESS;
-}
-
-void git_object__source_close(git_object *object)
-{
-	assert(object);
-
-	if (object->source.open) {
-		git_rawobj_close(&object->source.raw);
-		object->source.open = 0;
-	}
-}
-
-int git_object_write(git_object *object)
-{
-	int error;
-	git_odb_source *source;
-
-	assert(object);
-
-	if (object->modified == 0)
-		return GIT_SUCCESS;
-
-	prepare_write(object);
-	source = &object->source;
-
-	switch (source->raw.type) {
-	case GIT_OBJ_COMMIT:
-		error = git_commit__writeback((git_commit *)object, source);
-		break;
-
-	case GIT_OBJ_TREE:
-		error = git_tree__writeback((git_tree *)object, source);
-		break;
-
-	case GIT_OBJ_TAG:
-		error = git_tag__writeback((git_tag *)object, source);
-		break;
-
-	case GIT_OBJ_BLOB:
-		error = git_blob__writeback((git_blob *)object, source);
-		break;
-
-	default:
-		error = GIT_ERROR;
-		break;
-	}
-
-	if (error < GIT_SUCCESS) {
-		git_object__source_close(object);
-		return error;
-	}
-
-	return write_back(object);
-}
-
-void git_object_free(git_object *object)
-{
-	if (object == NULL)
-		return;
-
-	git_object__source_close(object);
-	git_hashtable_remove(object->repo->objects, &object->id);
-
-	switch (object->source.raw.type) {
-	case GIT_OBJ_COMMIT:
-		git_commit__free((git_commit *)object);
-		break;
-
-	case GIT_OBJ_TREE:
-		git_tree__free((git_tree *)object);
-		break;
-
-	case GIT_OBJ_TAG:
-		git_tag__free((git_tag *)object);
-		break;
-
-	case GIT_OBJ_BLOB:
-		git_blob__free((git_blob *)object);
-		break;
-
-	default:
-		free(object);
-		break;
-	}
-}
-
 git_odb *git_repository_database(git_repository *repo)
 {
 	assert(repo);
 	return repo->db;
-}
-
-const git_oid *git_object_id(git_object *obj)
-{
-	assert(obj);
-
-	if (obj->in_memory)
-		return NULL;
-
-	return &obj->id;
-}
-
-git_otype git_object_type(git_object *obj)
-{
-	assert(obj);
-	return obj->source.raw.type;
-}
-
-git_repository *git_object_owner(git_object *obj)
-{
-	assert(obj);
-	return obj->repo;
 }
 
 int git_repository_newobject(git_object **object_out, git_repository *repo, git_otype type)
@@ -608,12 +356,12 @@ int git_repository_newobject(git_object **object_out, git_repository *repo, git_
 		return GIT_EINVALIDTYPE;
 	}
 
-	object = git__malloc(git_objects_table[type].size);
+	object = git__malloc(git_object__size(type));
 
 	if (object == NULL)
 		return GIT_ENOMEM;
 
-	memset(object, 0x0, git_objects_table[type].size);
+	memset(object, 0x0, git_object__size(type));
 	object->repo = repo;
 	object->in_memory = 1;
 	object->modified = 1;
@@ -649,12 +397,12 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 
 	type = obj_file.type;
 
-	object = git__malloc(git_objects_table[type].size);
+	object = git__malloc(git_object__size(type));
 
 	if (object == NULL)
 		return GIT_ENOMEM;
 
-	memset(object, 0x0, git_objects_table[type].size);
+	memset(object, 0x0, git_object__size(type));
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->id, id);
@@ -695,50 +443,6 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 	*object_out = object;
 	return GIT_SUCCESS;
 }
-
-#define GIT_NEWOBJECT_TEMPLATE(obj, tp) \
-	int git_##obj##_new(git_##obj **o, git_repository *repo) {\
-		return git_repository_newobject((git_object **)o, repo, GIT_OBJ_##tp); } \
-	int git_##obj##_lookup(git_##obj **o, git_repository *repo, const git_oid *id) { \
-		return git_repository_lookup((git_object **)o, repo, id, GIT_OBJ_##tp); }
-
-GIT_NEWOBJECT_TEMPLATE(commit, COMMIT)
-GIT_NEWOBJECT_TEMPLATE(tag, TAG)
-GIT_NEWOBJECT_TEMPLATE(tree, TREE)
-GIT_NEWOBJECT_TEMPLATE(blob, BLOB)
-
-
-const char *git_object_type2string(git_otype type)
-{
-	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(git_objects_table))
-		return "";
-
-	return git_objects_table[type].str;
-}
-
-git_otype git_object_string2type(const char *str)
-{
-	size_t i;
-
-	if (!str || !*str)
-		return GIT_OBJ_BAD;
-
-	for (i = 0; i < ARRAY_SIZE(git_objects_table); i++)
-		if (!strcmp(str, git_objects_table[i].str))
-			return (git_otype)i;
-
-	return GIT_OBJ_BAD;
-}
-
-int git_object_typeisloose(git_otype type)
-{
-	if (type < 0 || ((size_t) type) >= ARRAY_SIZE(git_objects_table))
-		return 0;
-
-	return git_objects_table[type].loose;
-}
-
-
 
 static int repo_init_reinit(repo_init *results)
 {

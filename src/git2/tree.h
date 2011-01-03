@@ -28,6 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "repository.h"
 
 /**
  * @file git2/tree.h
@@ -48,7 +49,10 @@ GIT_BEGIN_DECL
  * @param id identity of the tree to locate.
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git_oid *id);
+GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git_oid *id)
+{
+	return git_repository_lookup((git_object **)tree, repo, id, GIT_OBJ_TREE);
+}
 
 /**
  * Create a new in-memory git_tree.
@@ -61,7 +65,10 @@ GIT_EXTERN(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
  * @param repo The repository where the object will reside
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_tree_new(git_tree **tree, git_repository *repo);
+GIT_INLINE(int) git_tree_new(git_tree **tree, git_repository *repo)
+{
+	return git_repository_newobject((git_object **)tree, repo, GIT_OBJ_TREE);
+}
 
 /**
  * Get the id of a tree.
