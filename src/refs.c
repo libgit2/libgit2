@@ -447,34 +447,43 @@ cleanup:
 int git_reference_lookup(git_reference **reference_out, git_reference_database *ref_database, const char *name, const char *path_repository, int *nesting_level)
 {
 	int error = GIT_SUCCESS;
-	git_reference *reference;
-
+	git_reference *reference, *packed_reference = NULL;
 
 	if (*nesting_level == MAX_NESTING_LEVEL) {
 		return GIT_ETOONESTEDSYMREF;
 	}
 
-	if ((error = check_refname_validity(name)) < GIT_SUCCESS)
+	error = check_refname_validity(name);
+	if (error < GIT_SUCCESS)
 		return error;
-	
-	/* TODO : Fixme. We should guard against the following scenario
-	loose refs: a
-	packed refs: a(older), c
 
-	ref-lookup(c) : retrieves c and trigger the insertion of a(older) into the hashtable
-	ref-lookup(a) : retrieves the packed a(older) instead of the most up-to date loose ref a
-	*/
-
-	/* Has the ref already been parsed ? */
+	/* Has the ref already been previously parsed ? */
 	reference = git_hashtable_lookup(ref_database->references, name);
-	if (reference != NULL) {
+
+	/* Has a loose reference been found ? */
+	if (reference != NULL && !reference->is_packed) {
 		*reference_out = reference;
 		return GIT_SUCCESS;
 	}
 
 	/* Has every available ref already been parsed ? */
-	if (ref_database->is_fully_loaded)
-		return GIT_ENOTFOUND;
+	if (ref_database->is_fully_loaded) {
+		
+		if (reference == NULL) {
+			return GIT_ENOTFOUND;
+		} else {
+			/* Is is safe to consider the packed reference as the most up-to-date reference */			
+			assert(reference->is_packed);
+			*reference_out = reference;
+			return GIT_SUCCESS;
+		}
+	}
+
+	/* We temporarily store the packed reference until we're sure no more up-to-date loose reference exists.  */
+	if (reference != NULL) {
+		assert(reference->is_packed);
+		packed_reference = reference;
+	}
 
 	if (*nesting_level == 0) {
 		/* Is the database being populated */
@@ -488,6 +497,13 @@ int git_reference_lookup(git_reference **reference_out, git_reference_database *
 
 	/* Does the reference exist as a loose file based reference ? */
 	error = try_to_find_an_existing_loose_reference(&reference, ref_database, name, path_repository, nesting_level);
+
+	/* Have we found a more up-to-date loose reference than the packed reference we stored ? */
+	if (error == GIT_SUCCESS && packed_reference != NULL) {
+		git_hashtable_remove(ref_database->references, packed_reference->name);
+		reference__free(packed_reference);
+	}
+
 	if (error == GIT_SUCCESS) {
 		git_hashtable_insert(ref_database->references, reference->name, reference);
 		goto found;
@@ -498,6 +514,13 @@ int git_reference_lookup(git_reference **reference_out, git_reference_database *
 
 	/* Nothing has been found in the loose refs */
 	assert(error == GIT_ENOTFOUND);
+
+	/* If we've stored a pack reference, now is the time to return it */
+	if (packed_reference != NULL) {
+		reference = packed_reference;
+		error = GIT_SUCCESS;
+		goto found;
+	}
 
 	/* Have the dormant references already been parsed ? */
 	if (ref_database->have_packed_refs_been_parsed)
