@@ -740,14 +740,14 @@ int git_object_typeisloose(git_otype type)
 
 
 
-int repo_init_reinit(repo_init *results)
+static int repo_init_reinit(repo_init *results)
 {
 	/* TODO: reinit the repository */
 	results->has_been_reinit = 1;
 	return GIT_SUCCESS;
 }
 
-int repo_init_createhead(const char *head_path)
+static int repo_init_createhead(const char *head_path)
 {
 	git_file fd;
 	int error = GIT_SUCCESS;
@@ -765,7 +765,7 @@ int repo_init_createhead(const char *head_path)
 	return error;
 }
 
-int repo_init_structure(repo_init *results)
+static int repo_init_structure(repo_init *results)
 {
 	const int mode = 0755; /* or 0777 ? */
 
@@ -813,7 +813,7 @@ int repo_init_structure(repo_init *results)
 	return GIT_SUCCESS;
 }
 
-int repo_init_find_dir(repo_init *results, const char* path)
+static int repo_init_find_dir(repo_init *results, const char* path)
 {
 	const int MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH = 66;
 
