@@ -2,11 +2,18 @@ from waflib.Context import Context
 from waflib.Build import BuildContext, CleanContext, \
         InstallContext, UninstallContext
 
+# Unix flags
 CFLAGS_UNIX = ["-O2", "-Wall", "-Wextra"]
-CFLAGS_WIN32 = ['/TC', '/W4', '/RTC1', '/nologo']
-
 CFLAGS_UNIX_DBG = ['-g']
-CFLAGS_WIN32_DBG = ['/Zi', '/DEBUG']
+
+# Windows MSVC flags
+CFLAGS_WIN32_COMMON = ['/TC', '/W4', '/WX', '/nologo', '/Zi']
+CFLAGS_WIN32_RELEASE = ['/O2', '/MD']
+
+# Note: /RTC* cannot be used with optimization on.
+CFLAGS_WIN32_DBG = ['/Od', '/RTC1', '/RTCc', '/DEBUG', '/MDd']
+CFLAGS_WIN32_L = ['/RELEASE']  # used for /both/ debug and release builds.
+                               # sets the module's checksum in the header.
 CFLAGS_WIN32_L_DBG = ['/DEBUG']
 
 ALL_LIBS = ['z', 'crypto', 'pthread']
@@ -43,8 +50,10 @@ def configure(conf):
         conf.env.PLATFORM = 'win32'
 
         if conf.env.CC_NAME == 'msvc':
-            conf.env.CFLAGS = CFLAGS_WIN32 + (CFLAGS_WIN32_DBG if dbg else [])
-            conf.env.LINKFLAGS += CFLAGS_WIN32_L_DBG if dbg else []
+            conf.env.CFLAGS = CFLAGS_WIN32_COMMON + \
+              (CFLAGS_WIN32_DBG if dbg else CFLAGS_WIN32_RELEASE)
+            conf.env.LINKFLAGS += CFLAGS_WIN32_L + \
+              (CFLAGS_WIN32_L_DBG if dbg else [])
             conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB', 'ZLIB_WINAPI']
             zlib_name = 'zlibwapi'
 
