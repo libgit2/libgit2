@@ -113,6 +113,7 @@ Here are the bindings to libgit2 that are currently available:
 * libgit2sharp (.NET bindings) <https://github.com/nulltoken/libgit2sharp>
 * php-git (PHP bindings) <https://github.com/chobie/php-git>
 * luagit2 (Lua bindings) <https://github.com/Neopallium/luagit2>
+* GitForDelphi (Delphi bindings) <https://github.com/jasonpenny/GitForDelphi>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 
 If you start another language binding to libgit2, please let us know so
