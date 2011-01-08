@@ -50,6 +50,7 @@ static void clear_parents(git_commit *commit)
 void git_commit__free(git_commit *commit)
 {
 	clear_parents(commit);
+	git_vector_free(&commit->parents);
 
 	git_signature_free(commit->author);
 	git_signature_free(commit->committer);
