@@ -111,6 +111,8 @@ Here are the bindings to libgit2 that are currently available:
 * Rugged (Ruby bindings) <https://github.com/libgit2/rugged>
 * pygit2 (Python bindings) <https://github.com/libgit2/pygit2>
 * libgit2sharp (.NET bindings) <https://github.com/nulltoken/libgit2sharp>
+* php-git (PHP bindings) <https://github.com/chobie/php-git>
+* luagit2 (Lua bindings) <https://github.com/Neopallium/luagit2>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 
 If you start another language binding to libgit2, please let us know so
