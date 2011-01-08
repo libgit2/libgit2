@@ -34,7 +34,7 @@ static int resize_vector(git_vector *v)
 {
 	void **new_contents;
 
-	v->_alloc_size = (unsigned int)(v->_alloc_size * resize_factor);
+	v->_alloc_size = ((unsigned int)(v->_alloc_size * resize_factor)) + 1;
 	if (v->_alloc_size == 0)
 		v->_alloc_size = minimum_size;
 
@@ -130,7 +130,7 @@ int git_vector_remove(git_vector *v, unsigned int idx)
 	if (idx >= v->length || v->length == 0)
 		return GIT_ENOTFOUND;
 
-	for (i = idx; i < v->length; ++i)
+	for (i = idx; i < v->length - 1; ++i)
 		v->contents[i] = v->contents[i + 1];
 
 	v->length--;

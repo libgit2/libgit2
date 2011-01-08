@@ -38,7 +38,6 @@ struct git_repository {
 	unsigned is_bare:1;
 };
 
-
 int git_object__source_open(git_object *object);
 void git_object__source_close(git_object *object);
 

@@ -27,7 +27,6 @@
 #include "repository.h"
 #include "commit.h"
 
-static const int default_table_size = 32;
 static const double max_load_factor = 0.65;
 
 static void hashtable_resize(git_hashtable *table)
