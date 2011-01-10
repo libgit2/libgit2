@@ -303,8 +303,12 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 
 	memset(&entry, 0x0, sizeof(git_index_entry));
 
-	entry.ctime.seconds = st.st_ctime;
-	entry.mtime.seconds = st.st_mtime;
+	/* Note: this won't wrap around at 2038 because we're not storing signed
+	 * 32-bit integers, but unsigned ones. We're converting from signed 64-bit
+	 * integers (on platforms that use 64bit time_t) to unsigned 32-bit integers,
+	 * which will represent up to 2^32 - 1 seconds after the epoch */
+	entry.ctime.seconds = (unsigned int)st.st_ctime;
+	entry.mtime.seconds = (unsigned int)st.st_mtime;
 	/* entry.mtime.nanoseconds = st.st_mtimensec; */
 	/* entry.ctime.nanoseconds = st.st_ctimensec; */
 	entry.dev= st.st_rdev;
@@ -312,7 +316,8 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 	entry.mode = st.st_mode;
 	entry.uid = st.st_uid;
 	entry.gid = st.st_gid;
-	entry.file_size = st.st_size;
+	/* Note: the following restricts blobs to 4GB in size */
+	entry.file_size = (unsigned int)st.st_size;
 
 	/* write the blob to disk and get the oid */
 	if ((error = git_blob_writefile(&entry.oid, index->repository, full_path)) < GIT_SUCCESS)
