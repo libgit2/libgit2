@@ -134,7 +134,19 @@
 #define GIT_EBUSY (GIT_ERROR - 13)
 
 /** The index file is not backed up by an existing repository */
-#define GIT_EBAREINDEX (GIT_ERROR -14)
+#define GIT_EBAREINDEX (GIT_ERROR - 14)
+
+/** The name of the reference is not valid */
+#define GIT_EINVALIDREFNAME (GIT_ERROR - 15)
+
+/** The specified reference has its data corrupted */
+#define GIT_EREFCORRUPTED  (GIT_ERROR - 16)
+
+/** The specified symbolic reference is too deeply nested */
+#define GIT_ETOONESTEDSYMREF (GIT_ERROR - 17)
+
+/** The pack-refs file is either corrupted of its format is not currently supported */
+#define GIT_EPACKEDREFSCORRUPTED (GIT_ERROR - 18)
 
 GIT_BEGIN_DECL
 /** @} */
