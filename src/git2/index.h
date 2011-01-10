@@ -45,8 +45,8 @@ GIT_BEGIN_DECL
 
 /** Time used in a git index entry */
 typedef struct {
-	time_t seconds;
-	time_t nanoseconds;
+	unsigned int seconds;
+	unsigned int nanoseconds;
 } git_index_time;
 
 /** Memory representation of a file entry in the index. */
@@ -59,7 +59,7 @@ typedef struct git_index_entry {
 	unsigned int mode;
 	unsigned int uid;
 	unsigned int gid;
-	off_t file_size;
+	unsigned int file_size;
 
 	git_oid oid;
 
