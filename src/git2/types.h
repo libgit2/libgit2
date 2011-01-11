@@ -27,11 +27,48 @@
 
 /**
  * @file git2/types.h
- * @brief libgit2 base types
+ * @brief libgit2 base & compatibility types
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
+
+/**
+ * Cross-platform compatibility types for off_t / time_t
+ *
+ * NOTE: This needs to be in a public header so that both the library
+ * implementation and client applications both agree on the same types.
+ * Otherwise we get undefined behavior.
+ *
+ * Use the "best" types that each platform provides. Currently we truncate
+ * these intermediate representations for compatibility with the git ABI, but
+ * if and when it changes to support 64 bit types, our code will naturally
+ * adapt.
+ * NOTE: These types should match those that are returned by our internal
+ * stat() functions, for all platforms.
+ */
+#if defined(_MSC_VER)
+
+typedef __int64 git_off_t;
+typedef __time64_t git_time_t;
+
+#elif defined(__MINGW32__)
+
+typedef off64_t git_off_t;
+typedef time_t git_time_t;
+
+#else  /* POSIX */
+
+/* 
+ * Note: Can't use off_t since if a client program includes <sys/types.h>
+ * before us (directly or indirectly), they'll get 32 bit off_t in their client
+ * app, even though /we/ define _FILE_OFFSET_BITS=64.
+ */
+typedef long long git_off_t;
+typedef time_t git_time_t;
+
+#endif
+
 
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
@@ -62,6 +99,7 @@ typedef struct git_repository git_repository;
 /** Representation of a generic object in a repository */
 typedef struct git_object git_object;
 
+/** Representation of an in-progress walk through the commits in a repo */
 typedef struct git_revwalk git_revwalk;
 
 /** Parsed representation of a tag object. */

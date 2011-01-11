@@ -27,7 +27,6 @@
 #define INCLUDE_git_git_h__
 
 #include "git2/common.h"
-#include "git2/compat.h"
 #include "git2/errors.h"
 #include "git2/zlib.h"
 
