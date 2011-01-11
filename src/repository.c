@@ -456,9 +456,8 @@ static int repo_init_createhead(const char *head_path)
 	git_file fd;
 	int error = GIT_SUCCESS;
 	char head_symlink[50];
-	int len;
 
-	len = sprintf(head_symlink, "%s %s%s\n", GIT_SYMREF, GIT_REFS_HEADS_DIR, GIT_BRANCH_MASTER);
+	sprintf(head_symlink, "%s %s%s\n", GIT_SYMREF, GIT_REFS_HEADS_DIR, GIT_BRANCH_MASTER);
 	
 	if ((fd = gitfo_creat(head_path, S_IREAD | S_IWRITE)) < GIT_SUCCESS)
 		return GIT_ERROR;
