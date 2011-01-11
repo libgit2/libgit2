@@ -89,7 +89,7 @@ int gitfo_exists(const char *path)
 	return access(path, F_OK);
 }
 
-off_t gitfo_size(git_file fd)
+git_off_t gitfo_size(git_file fd)
 {
 	struct stat sb;
 	if (gitfo_fstat(fd, &sb))
@@ -101,7 +101,7 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 {
 	git_file fd;
 	size_t len;
-	off_t size;
+	git_off_t size;
 	unsigned char *buff;
 
 	assert(obj && path && *path);
@@ -155,7 +155,7 @@ int gitfo_move_file(char *from, char *to)
 	return GIT_EOSERR;
 }
 
-int gitfo_map_ro(git_map *out, git_file fd, off_t begin, size_t len)
+int gitfo_map_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
 {
 	if (git__mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin) < GIT_SUCCESS)
 		return GIT_EOSERR;

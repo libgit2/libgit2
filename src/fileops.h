@@ -64,7 +64,7 @@ extern int gitfo_mkdir_recurs(const char *path, int mode);
 extern int gitfo_read(git_file fd, void *buf, size_t cnt);
 extern int gitfo_write(git_file fd, void *buf, size_t cnt);
 #define gitfo_lseek(f,n,w) lseek(f, n, w)
-extern off_t gitfo_size(git_file fd);
+extern git_off_t gitfo_size(git_file fd);
 
 extern int gitfo_read_file(gitfo_buf *obj, const char *path);
 extern void gitfo_free_buf(gitfo_buf *obj);
@@ -100,7 +100,7 @@ extern int gitfo_move_file(char *from, char *to);
 extern int gitfo_map_ro(
 	git_map *out,
 	git_file fd,
-	off_t begin,
+	git_off_t begin,
 	size_t len);
 
 /**

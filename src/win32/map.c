@@ -16,7 +16,7 @@ static DWORD get_page_size(void)
 	return page_size;
 }
 
-int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, off_t offset)
+int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
 	DWORD page_size = get_page_size();
@@ -24,8 +24,8 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, off_t offse
 	DWORD view_prot = 0;
 	DWORD off_low = 0;
 	DWORD off_hi  = 0;
-	off_t page_start;
-	off_t page_offset;
+	git_off_t page_start;
+	git_off_t page_offset;
 
 	assert((out != NULL) && (len > 0));
 
@@ -77,7 +77,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, off_t offse
 		return GIT_ERROR;
 	}
 
-	assert(sizeof(off_t) == 8);
+	assert(sizeof(git_off_t) == 8);
 	off_low = (DWORD)(page_start);
 	off_hi = (DWORD)(page_start >> 32);
 	out->data = MapViewOfFile(out->fmh, view_prot, off_hi, off_low, len);

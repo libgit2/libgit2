@@ -58,8 +58,8 @@ struct pack_backend;
 typedef struct {
 	uint32_t      n;
 	unsigned char *oid;
-	off_t         offset;
-	off_t         size;
+	git_off_t     offset;
+	git_off_t     size;
 } index_entry;
 
 typedef struct { /* '.pack' file header */
@@ -80,7 +80,7 @@ typedef struct git_pack {
 	int (*idx_search_offset)(
 		uint32_t *,
 		struct git_pack *,
-		off_t);
+		git_off_t);
 	int (*idx_get)(
 		index_entry *,
 		struct git_pack *,
@@ -107,7 +107,7 @@ typedef struct git_pack {
 	git_map pack_map;
 
 	/** The size of the .pack file. */
-	off_t pack_size;
+	git_off_t pack_size;
 
 	/** The mtime of the .pack file. */
 	time_t pack_mtime;
@@ -291,7 +291,7 @@ static int check_pack_hdr(git_pack *p)
 static int check_pack_sha1(git_pack *p)
 {
 	unsigned char *data = p->idx_map.data;
-	off_t pack_sha1_off = p->pack_size - GIT_OID_RAWSZ;
+	git_off_t pack_sha1_off = p->pack_size - GIT_OID_RAWSZ;
 	size_t idx_pack_sha1_off = p->idx_map.len - 2 * GIT_OID_RAWSZ;
 	git_oid pack_id, idx_pack_id;
 
@@ -550,7 +550,7 @@ static int locate_packfile(pack_location *location, pack_backend *backend, const
 static int pack_openidx_map(git_pack *p)
 {
 	char pb[GIT_PATH_MAX];
-	off_t len;
+	git_off_t len;
 
 	if (git__fmt(pb, sizeof(pb), "%s/pack/%s.idx",
 			p->backend->objects_dir,
@@ -571,7 +571,7 @@ static int pack_openidx_map(git_pack *p)
 }
 
 typedef struct {
-	off_t offset;
+	git_off_t offset;
 	uint32_t n;
 } offset_idx_info;
 
@@ -584,7 +584,7 @@ static int cmp_offset_idx_info(const void *lhs, const void *rhs)
 
 static int make_offset_index(git_pack *p, offset_idx_info *data)
 {
-	off_t min_off = 3 * 4, max_off = p->pack_size - GIT_OID_RAWSZ;
+	git_off_t min_off = 3 * 4, max_off = p->pack_size - GIT_OID_RAWSZ;
 	uint32_t *idx, *next;
 	uint32_t j;
 
@@ -636,7 +636,7 @@ static int idxv1_search(uint32_t *out, git_pack *p, const git_oid *id)
 	return GIT_ENOTFOUND;
 }
 
-static int idxv1_search_offset(uint32_t *out, git_pack *p, off_t offset)
+static int idxv1_search_offset(uint32_t *out, git_pack *p, git_off_t offset)
 {
 	if (offset > 0 && offset < (p->pack_size - GIT_OID_RAWSZ)) {
 		uint32_t lo = 0, hi = p->obj_cnt+1;
@@ -646,7 +646,7 @@ static int idxv1_search_offset(uint32_t *out, git_pack *p, off_t offset)
 			uint32_t mid = (lo + hi) >> 1;
 			uint32_t n = idx[mid];
 			uint32_t pos = n * (GIT_OID_RAWSZ + 4);
-			off_t here = decode32(data + pos);
+			git_off_t here = decode32(data + pos);
 			if (offset < here)
 				hi = mid;
 			else if (offset == here) {
@@ -666,7 +666,7 @@ static int idxv1_get(index_entry *e, git_pack *p, uint32_t n)
 
 	if (n < p->obj_cnt) {
 		uint32_t pos = n * (GIT_OID_RAWSZ + 4);
-		off_t next_off = p->pack_size - GIT_OID_RAWSZ;
+		git_off_t next_off = p->pack_size - GIT_OID_RAWSZ;
 		e->n = n;
 		e->oid = data + pos + 4;
 		e->offset = decode32(data + pos);
@@ -758,7 +758,7 @@ static int idxv2_search(uint32_t *out, git_pack *p, const git_oid *id)
 	return GIT_ENOTFOUND;
 }
 
-static int idxv2_search_offset(uint32_t *out, git_pack *p, off_t offset)
+static int idxv2_search_offset(uint32_t *out, git_pack *p, git_off_t offset)
 {
 	if (offset > 0 && offset < (p->pack_size - GIT_OID_RAWSZ)) {
 		uint32_t lo = 0, hi = p->obj_cnt+1;
@@ -767,7 +767,7 @@ static int idxv2_search_offset(uint32_t *out, git_pack *p, off_t offset)
 			uint32_t mid = (lo + hi) >> 1;
 			uint32_t n = idx[mid];
 			uint32_t o32 = decode32(p->im_offset32 + n);
-			off_t here = o32;
+			git_off_t here = o32;
 
 			if (o32 & 0x80000000) {
 				uint32_t o64_idx = (o32 & ~0x80000000);
@@ -793,7 +793,7 @@ static int idxv2_get(index_entry *e, git_pack *p, uint32_t n)
 
 	if (n < p->obj_cnt) {
 		uint32_t o32 = decode32(p->im_offset32 + n);
-		off_t next_off = p->pack_size - GIT_OID_RAWSZ;
+		git_off_t next_off = p->pack_size - GIT_OID_RAWSZ;
 		e->n = n;
 		e->oid = data + n * GIT_OID_RAWSZ;
 		e->offset = o32;
@@ -863,7 +863,7 @@ static int pack_openidx_v2(git_pack *p)
 	o64_len = o64_sz / 8;
 	for (j = 0; j < p->obj_cnt; j++) {
 		uint32_t o32 = decode32(p->im_offset32 + j);
-		off_t offset = o32;
+		git_off_t offset = o32;
 		if (o32 & 0x80000000) {
 			uint32_t o64_idx = (o32 & ~0x80000000);
 			if (o64_idx >= o64_len) {
@@ -992,7 +992,7 @@ static int unpack_object(git_rawobj *out, git_pack *p, index_entry *e)
 
 		case GIT_OBJ_OFS_DELTA: {
 
-			off_t delta_offset;
+			git_off_t delta_offset;
 			index_entry entry;
 
 			byte = *buffer++ & 0xFF;

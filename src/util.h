@@ -27,10 +27,10 @@ extern uint32_t git__hash(const void *key, int len, uint32_t seed);
 
 
 /** @return true if p fits into the range of a size_t */
-GIT_INLINE(int) git__is_sizet(off_t p)
+GIT_INLINE(int) git__is_sizet(git_off_t p)
 {
 	size_t r = (size_t)p;
-	return p == (off_t)r;
+	return p == (git_off_t)r;
 }
 
 /* 32-bit cross-platform rotl */

@@ -4,7 +4,7 @@
 #include <errno.h>
 
 
-int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, off_t offset)
+int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	int mprot = 0;
 	int mflag = 0;

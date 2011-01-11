@@ -8,9 +8,6 @@
 # define W_OK 2  /* write mode check */
 # define R_OK 4  /* read  mode check */
 
-/* use a 64-bit file offset type */
-typedef __int64 off64_t;
-# define off_t off64_t
 # define lseek _lseeki64
 # define stat _stat64
 # define fstat _fstat64

@@ -47,6 +47,7 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #include "git2/common.h"
+#include "git2/compat.h"
 #include "util.h"
 #include "thread-utils.h"
 #include "bswap.h"
