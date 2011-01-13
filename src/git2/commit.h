@@ -104,7 +104,7 @@ GIT_EXTERN(time_t) git_commit_time(git_commit *commit);
  * @param commit a previously loaded commit.
  * @return positive or negative timezone offset, in minutes from UTC
  */
-GIT_EXTERN(int) git_commit_timezone_offset(git_commit *commit);
+GIT_EXTERN(int) git_commit_time_offset(git_commit *commit);
 
 /**
  * Get the committer of a commit.
