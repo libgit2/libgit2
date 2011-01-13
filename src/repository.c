@@ -225,6 +225,49 @@ static git_repository *repository_alloc()
 	return repo;
 }
 
+static int init_odb(git_repository *repo)
+{
+	return git_odb_open(&repo->db, repo->path_odb);
+}
+
+int git_repository_open3(git_repository **repo_out,
+		const char *git_dir,
+		git_odb *object_database,
+		const char *git_index_file,
+		const char *git_work_tree)
+{
+	git_repository *repo;
+	int error = GIT_SUCCESS;
+
+	assert(repo_out);
+
+	if (object_database == NULL)
+		return GIT_ERROR;
+
+	repo = repository_alloc();
+	if (repo == NULL)
+		return GIT_ENOMEM;
+
+	error = assign_repository_DIRs(repo, 
+			git_dir, 
+			NULL,
+			git_index_file,
+			git_work_tree);
+
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	repo->db = object_database;
+
+	*repo_out = repo;
+	return GIT_SUCCESS;
+
+cleanup:
+	git_repository_free(repo);
+	return error;
+}
+
+
 int git_repository_open2(git_repository **repo_out,
 		const char *git_dir,
 		const char *git_object_directory,
@@ -249,7 +292,7 @@ int git_repository_open2(git_repository **repo_out,
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	error = git_odb_open(&repo->db, repo->path_odb);
+	error = init_odb(repo);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -276,8 +319,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-
-	error = git_odb_open(&repo->db, repo->path_odb);
+	error = init_odb(repo);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 

@@ -98,6 +98,42 @@ GIT_EXTERN(int) git_repository_open2(git_repository **repository,
 
 
 /**
+ * Open a git repository by manually specifying its paths and
+ * the object database it will use.
+ *
+ * @param repository pointer to the repo which will be opened
+ *
+ * @param git_dir The full path to the repository folder
+ *		e.g. a '.git' folder for live repos, any folder for bare
+ *		Equivalent to $GIT_DIR. 
+ *		Cannot be NULL.
+ *
+ * @param object_database A pointer to a git_odb created & initialized
+ *		by the user (e.g. with custom backends). This object database
+ *		will be owned by the repository and will be automatically free'd.
+ *		It should not be manually free'd by the user, or this
+ *		git_repository object will become invalid.
+ *
+ * @param git_index_file The full path to the index (dircache) file
+ *		Equivalent to $GIT_INDEX_FILE.
+ *		If NULL, "$GIT_DIR/index" is assumed.
+ *
+ * @param git_work_tree The full path to the working tree of the repository,
+ *		if the repository is not bare.
+ *		Equivalent to $GIT_WORK_TREE.
+ *		If NULL, the repository is assumed to be bare.
+ *
+ * @return 0 on success; error code otherwise
+ */
+
+GIT_EXTERN(int) git_repository_open3(git_repository **repository,
+		const char *git_dir,
+		git_odb *object_database,
+		const char *git_index_file,
+		const char *git_work_tree);
+
+
+/**
  * Lookup a reference to one of the objects in the repostory.
  *
  * The generated reference is owned by the repository and

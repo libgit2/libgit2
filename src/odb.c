@@ -277,8 +277,8 @@ int git_odb_read(git_rawobj *out, git_odb *db, const git_oid *id)
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		git_odb_backend *b = git_vector_get(&db->backends, i);
 
-		assert(b->read != NULL);
-		error = b->read(out, b, id);
+		if (b->read != NULL)
+			error = b->read(out, b, id);
 	}
 
 	return error;
