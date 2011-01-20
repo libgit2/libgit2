@@ -11,7 +11,7 @@
 struct test_entry {
 	unsigned int index;
 	char path[128];
-	size_t file_size;
+	git_off_t file_size;
 	time_t mtime;
 };
 
