@@ -413,8 +413,12 @@ int git_prettify_dir_path(char *buffer_out, const char *path)
 			current++;
 
 			/* Handle the double-dot upward directory navigation */
-			if (*current == '.') {
+			if (*current == '.' && current < buffer_end) {
 				current++;
+
+				/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
+				if (*current == '.')
+					return GIT_ERROR;
 
 				*buffer_out ='\0';
 				len = retrieve_previous_path_component_start(buffer_out_start);
@@ -424,7 +428,7 @@ int git_prettify_dir_path(char *buffer_out, const char *path)
 				buffer_out = (char *)buffer_out_start + len;
 			}
 
-			if (*current == '/')
+			if (*current == '/' && current < buffer_end)
 				current++;
 
 			continue;

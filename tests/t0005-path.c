@@ -47,6 +47,12 @@ BEGIN_TEST(path_prettifying)
 	must_pass(ensure_normalized("d1/s1///s2/..//../s3/", "d1/s3/"));
 	must_pass(ensure_normalized("d1/s1//../s2/../../d2", "d2/"));
 	must_pass(ensure_normalized("dir/sub/../", "dir/"));
+	must_fail(ensure_normalized("....", NULL));
+	must_fail(ensure_normalized("...", NULL));
+	must_fail(ensure_normalized("./...", NULL));
+	must_fail(ensure_normalized("d1/...", NULL));
+	must_fail(ensure_normalized("d1/.../", NULL));
+	must_fail(ensure_normalized("d1/.../d2", NULL));
 	
 	must_pass(ensure_normalized("/", "/"));
 	must_pass(ensure_normalized("//", "/"));
@@ -70,4 +76,10 @@ BEGIN_TEST(path_prettifying)
 	must_pass(ensure_normalized("/dir/s1/../s2/", "/dir/s2/"));
 	must_pass(ensure_normalized("/d1/s1///s2/..//../s3/", "/d1/s3/"));
 	must_pass(ensure_normalized("/d1/s1//../s2/../../d2", "/d2/"));
+	must_fail(ensure_normalized("/....", NULL));
+	must_fail(ensure_normalized("/...", NULL));
+	must_fail(ensure_normalized("/./...", NULL));
+	must_fail(ensure_normalized("/d1/...", NULL));
+	must_fail(ensure_normalized("/d1/.../", NULL));
+	must_fail(ensure_normalized("/d1/.../d2", NULL));
 END_TEST
