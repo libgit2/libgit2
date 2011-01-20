@@ -47,6 +47,8 @@ GIT_BEGIN_DECL
  * NOTE: These types should match those that are returned by our internal
  * stat() functions, for all platforms.
  */
+#include <sys/types.h>
+
 #if defined(_MSC_VER)
 
 typedef __int64 git_off_t;
