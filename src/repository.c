@@ -379,31 +379,48 @@ git_odb *git_repository_database(git_repository *repo)
 	return repo->db;
 }
 
-int git_repository_newobject(git_object **object_out, git_repository *repo, git_otype type)
+static int create_object(git_object **object_out, git_otype type)
 {
 	git_object *object = NULL;
 
-	assert(object_out && repo);
+	assert(object_out);
 
 	*object_out = NULL;
 
 	switch (type) {
 	case GIT_OBJ_COMMIT:
 	case GIT_OBJ_TAG:
-	case GIT_OBJ_TREE:
 	case GIT_OBJ_BLOB:
+		object = git__malloc(git_object__size(type));
+		if (object == NULL)
+			return GIT_ENOMEM;
+		memset(object, 0x0, git_object__size(type));
+		break;
+		
+	case GIT_OBJ_TREE:
+		object = (git_object *)git_tree__new();
+		if (object == NULL)
+			return GIT_ENOMEM;
 		break;
 
 	default:
 		return GIT_EINVALIDTYPE;
 	}
 
-	object = git__malloc(git_object__size(type));
+	*object_out = object;
+	return GIT_SUCCESS;
+}
 
-	if (object == NULL)
-		return GIT_ENOMEM;
+int git_repository_newobject(git_object **object_out, git_repository *repo, git_otype type)
+{
+	git_object *object = NULL;
+	int error;
 
-	memset(object, 0x0, git_object__size(type));
+	assert(object_out && repo);
+
+	if ((error = create_object(&object, type)) < GIT_SUCCESS)
+		return error;
+
 	object->repo = repo;
 	object->in_memory = 1;
 	object->modified = 1;
@@ -439,12 +456,8 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 
 	type = obj_file.type;
 
-	object = git__malloc(git_object__size(type));
-
-	if (object == NULL)
-		return GIT_ENOMEM;
-
-	memset(object, 0x0, git_object__size(type));
+	if ((error = create_object(&object, type)) < GIT_SUCCESS)
+		return error;
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->id, id);
@@ -453,7 +466,6 @@ int git_repository_lookup(git_object **object_out, git_repository *repo, const g
 	object->source.open = 1;
 
 	switch (type) {
-
 	case GIT_OBJ_COMMIT:
 		error = git_commit__parse((git_commit *)object);
 		break;

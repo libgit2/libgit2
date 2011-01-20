@@ -30,6 +30,8 @@
 #include "git2/repository.h"
 #include "git2/object.h"
 
+#define DEFAULT_TREE_SIZE 16
+
 int entry_search_cmp(const void *key, const void *array_member)
 {
 	const char *filename = (const char *)key;
@@ -46,7 +48,7 @@ int entry_sort_cmp(const void *a, const void *b)
 	return strcmp(entry_a->filename, entry_b->filename);
 }
 
-static void free_tree_entries(git_tree *tree)
+static void clear_entries(git_tree *tree)
 {
 	unsigned int i;
 
@@ -61,14 +63,35 @@ static void free_tree_entries(git_tree *tree)
 		free(e);
 	}
 
-	git_vector_free(&tree->entries);
+	git_vector_clear(&tree->entries);
 }
 
 
+git_tree *git_tree__new(void)
+{
+	git_tree *tree;
+
+	tree = git__malloc(sizeof(struct git_tree));
+	if (tree == NULL)
+		return NULL;
+
+	memset(tree, 0x0, sizeof(struct git_tree));
+
+	if (git_vector_init(&tree->entries, 
+				DEFAULT_TREE_SIZE,
+				entry_sort_cmp,
+				entry_search_cmp) < GIT_SUCCESS) {
+		free(tree);
+		return NULL;
+	}
+
+	return tree;
+}
 
 void git_tree__free(git_tree *tree)
 {
-	free_tree_entries(tree);
+	clear_entries(tree);
+	git_vector_free(&tree->entries);
 	free(tree);
 }
 
@@ -243,9 +266,7 @@ static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 
 	expected_size = (tree->object.source.raw.len / avg_entry_size) + 1;
 
-	free_tree_entries(tree);
-	if (git_vector_init(&tree->entries, expected_size, entry_sort_cmp, entry_search_cmp) < GIT_SUCCESS)
-		return GIT_ENOMEM;
+	clear_entries(tree);
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
