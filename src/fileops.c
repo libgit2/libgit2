@@ -364,5 +364,81 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 
 	free(path_copy);
 	return error;
+}
 
+static int retrieve_previous_path_component_start(const char *path)
+{
+	int offset, len, start = 0;
+	
+	len = strlen(path);
+	offset = len - 1;
+
+	/* Skip leading slash */
+	if (path[start] == '/')
+		start++;
+
+	/* Skip trailing slash */
+	if (path[offset] == '/')
+		offset--;
+
+	if (offset < 0)
+		return GIT_ERROR;
+
+	while (offset > start && path[offset-1] != '/') {
+		offset--;
+	}
+
+	return offset;
+}
+
+int git_prettify_dir_path(char *buffer_out, const char *path)
+{
+	int len = 0;
+	char *current;
+	const char *buffer_out_start, *buffer_end;
+
+	buffer_out_start = buffer_out;
+	current = (char *)path;
+	buffer_end = path + strlen(path);
+
+	while (current < buffer_end) {
+		/* Prevent multiple slashes from being added to the output */
+		if (*current == '/' && len > 0 && buffer_out_start[len - 1] == '/') {
+			current++;
+			continue;
+		}
+		
+		/* Skip current directory */
+		if (*current == '.') {
+			current++;
+
+			/* Handle the double-dot upward directory navigation */
+			if (*current == '.') {
+				current++;
+
+				*buffer_out ='\0';
+				len = retrieve_previous_path_component_start(buffer_out_start);
+				if (len < GIT_SUCCESS)
+					return GIT_ERROR;
+
+				buffer_out = (char *)buffer_out_start + len;
+			}
+
+			if (*current == '/')
+				current++;
+
+			continue;
+		}
+
+		*buffer_out++ = *current++;
+		len++;
+	}
+
+	/* Add a trailing slash if required */
+	if (len > 0 && buffer_out_start[len-1] != '/')
+		*buffer_out++ = '/';
+
+	*buffer_out = '\0';
+
+	return GIT_SUCCESS;
 }
