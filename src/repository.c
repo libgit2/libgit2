@@ -151,19 +151,16 @@ static int guess_repository_DIRs(git_repository *repo, const char *repository_pa
 {
 	char path_aux[GIT_PATH_MAX], *last_DIR;
 	int path_len;
+	int error = GIT_SUCCESS;
 
-	if (gitfo_isdir(repository_path) < GIT_SUCCESS)
+	error = git_prettify_dir_path(path_aux, repository_path);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTAREPO;
 
-	path_len = strlen(repository_path);
-	strcpy(path_aux, repository_path);
-
-	if (path_aux[path_len - 1] != '/') {
-		path_aux[path_len] = '/';
-		path_aux[path_len + 1] = 0;
-
-		path_len = path_len + 1;
-	}
+	path_len = strlen(path_aux);
 
 	repo->path_repository = git__strdup(path_aux);
 
@@ -576,17 +573,13 @@ static int repo_init_find_dir(repo_init *results, const char* path)
 
 	char temp_path[GIT_PATH_MAX];
 	int path_len;
+	int error = GIT_SUCCESS;
 
-	path_len = strlen(path);
-	strcpy(temp_path, path);
+	error = git_prettify_dir_path(temp_path, path);
+	if (error < GIT_SUCCESS)
+		return error;
 
-	/* Ensure path has a trailing slash */
-	if (temp_path[path_len - 1] != '/') {
-		temp_path[path_len] = '/';
-		temp_path[path_len + 1] = 0;
-
-		path_len = path_len + 1;
-	}
+	path_len = strlen(temp_path);
 
 	if (!results->is_bare) {
 		strcpy(temp_path + path_len - 1, GIT_DIR);
