@@ -394,8 +394,9 @@ static int retrieve_previous_path_component_start(const char *path)
 int git_prettify_dir_path(char *buffer_out, const char *path)
 {
 	int len = 0;
-	char *current;
+	char *current, *end;
 	const char *buffer_out_start, *buffer_end;
+	int only_dots;
 
 	buffer_out_start = buffer_out;
 	current = (char *)path;
@@ -408,39 +409,51 @@ int git_prettify_dir_path(char *buffer_out, const char *path)
 			continue;
 		}
 		
+		end = current;
+		only_dots = 1;
+
+		/* Seek end of path segment */
+		while (end < buffer_end && *end !='/')
+		{
+			only_dots &= (*end == '.');
+			end++;
+		}
+
 		/* Skip current directory */
-		if (*current == '.') {
-			current++;
-
-			/* Handle the double-dot upward directory navigation */
-			if (current < buffer_end && *current == '.') {
-				current++;
-
-				/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
-				if (*current == '.')
-					return GIT_ERROR;
-
-				*buffer_out ='\0';
-				len = retrieve_previous_path_component_start(buffer_out_start);
-				if (len < GIT_SUCCESS)
-					return GIT_ERROR;
-
-				buffer_out = (char *)buffer_out_start + len;
-			}
-
-			if (current < buffer_end && *current == '/')
-				current++;
-
+		if (only_dots && end == current + 1)
+		{
+			current += 2;
 			continue;
 		}
 
-		*buffer_out++ = *current++;
+		/* Handle the double-dot upward directory navigation */
+		if (only_dots && end == current + 2)
+		{
+			*buffer_out ='\0';
+			len = retrieve_previous_path_component_start(buffer_out_start);
+			if (len < GIT_SUCCESS)
+				return GIT_ERROR;
+
+			buffer_out = (char *)buffer_out_start + len;
+			
+			current += 3;
+			continue;
+		}
+
+		/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
+		if (only_dots && end > current)
+			return GIT_ERROR;
+
+		/* Copy to output the path segment */
+		while (current < end)
+		{
+			*buffer_out++ = *current++;
+			len++;
+		}
+
+		*buffer_out++ = '/';
 		len++;
 	}
-
-	/* Add a trailing slash if required */
-	if (len > 0 && buffer_out_start[len-1] != '/')
-		*buffer_out++ = '/';
 
 	*buffer_out = '\0';
 
