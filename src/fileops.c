@@ -393,10 +393,9 @@ static int retrieve_previous_path_component_start(const char *path)
 
 int git_prettify_dir_path(char *buffer_out, const char *path)
 {
-	int len = 0;
-	char *current, *end;
+	int len = 0, segment_len, only_dots;
+	char *current;
 	const char *buffer_out_start, *buffer_end;
-	int only_dots;
 
 	buffer_out_start = buffer_out;
 	current = (char *)path;
@@ -409,47 +408,45 @@ int git_prettify_dir_path(char *buffer_out, const char *path)
 			continue;
 		}
 		
-		end = current;
 		only_dots = 1;
+		segment_len = 0;
 
-		/* Seek end of path segment */
-		while (end < buffer_end && *end !='/')
+		/* Copy path segment to the output */
+		while (current < buffer_end && *current !='/')
 		{
-			only_dots &= (*end == '.');
-			end++;
+			only_dots &= (*current == '.');
+			*buffer_out++ = *current++;
+			segment_len++;
+			len++;
 		}
 
 		/* Skip current directory */
-		if (only_dots && end == current + 1)
+		if (only_dots && segment_len == 1)
 		{
-			current += 2;
+			current++;
+			buffer_out -= segment_len;
+			len -= segment_len;
 			continue;
 		}
 
 		/* Handle the double-dot upward directory navigation */
-		if (only_dots && end == current + 2)
+		if (only_dots && segment_len == 2)
 		{
+			current++;
+			buffer_out -= segment_len;
+
 			*buffer_out ='\0';
 			len = retrieve_previous_path_component_start(buffer_out_start);
 			if (len < GIT_SUCCESS)
 				return GIT_ERROR;
 
 			buffer_out = (char *)buffer_out_start + len;
-			
-			current += 3;
 			continue;
 		}
 
 		/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
-		if (only_dots && end > current)
+		if (only_dots &&segment_len > 0)
 			return GIT_ERROR;
-
-		/* Copy to output the path segment */
-		while (current < end)
-		{
-			*buffer_out++ = *current++;
-			len++;
-		}
 
 		*buffer_out++ = '/';
 		len++;
