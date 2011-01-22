@@ -20,6 +20,10 @@ static int ensure_normalized(const char *input_path, const char *expected_path)
 }
 
 BEGIN_TEST(path_prettifying)
+	must_pass(ensure_normalized("./testrepo.git", "testrepo.git/"));
+	must_pass(ensure_normalized("./.git", ".git/"));
+	must_pass(ensure_normalized("./git.", "git./"));
+	must_pass(ensure_normalized("git./", "git./"));
 	must_pass(ensure_normalized("", ""));
 	must_pass(ensure_normalized(".", ""));
 	must_pass(ensure_normalized("./", ""));
@@ -53,7 +57,11 @@ BEGIN_TEST(path_prettifying)
 	must_fail(ensure_normalized("d1/...", NULL));
 	must_fail(ensure_normalized("d1/.../", NULL));
 	must_fail(ensure_normalized("d1/.../d2", NULL));
-	
+
+	must_pass(ensure_normalized("/./testrepo.git", "/testrepo.git/"));
+	must_pass(ensure_normalized("/./.git", "/.git/"));
+	must_pass(ensure_normalized("/./git.", "/git./"));
+	must_pass(ensure_normalized("/git./", "/git./"));
 	must_pass(ensure_normalized("/", "/"));
 	must_pass(ensure_normalized("//", "/"));
 	must_pass(ensure_normalized("///", "/"));
