@@ -155,4 +155,26 @@ extern int gitfo_close_cached(gitfo_cache *ioc);
  */
 GIT_EXTERN(int) git_prettify_dir_path(char *buffer_out, const char *path);
 
+/**
+ * Clean up a provided absolute or relative file path.
+ * 
+ * This prettification relies on basic operations such as coalescing 
+ * multiple forward slashes into a single slash, removing '.' and 
+ * './' current directory segments, and removing parent directory 
+ * whenever '..' is encountered.
+ *
+ * For instance, this will turn "d1/s1///s2/..//../s3" into "d1/s3".
+ *
+ * This only performs a string based analysis of the path.
+ * No checks are done to make sure the path actually makes sense from 
+ * the file system perspective.
+ *
+ * @param buffer_out buffer to populate with the normalized path.
+ * @param path file path to clean up.
+ * @return
+ * - GIT_SUCCESS on success;
+ * - GIT_ERROR when the input path is invalid or escapes the current directory.
+ */
+GIT_EXTERN(int) git_prettify_file_path(char *buffer_out, const char *path);
+
 #endif /* INCLUDE_fileops_h__ */
