@@ -456,3 +456,30 @@ int git_prettify_dir_path(char *buffer_out, const char *path)
 
 	return GIT_SUCCESS;
 }
+
+int git_prettify_file_path(char *buffer_out, const char *path)
+{
+	int error, path_len, i;
+	const char* pattern = "/..";
+
+	path_len = strlen(path);
+
+	/* Let's make sure the filename doesn't end with "/", "/." or "/.." */
+	for (i = 1; path_len > i && i < 4; i++) {
+		if (!strncmp(path + path_len - i, pattern, i))
+			return GIT_ERROR;
+	}
+
+	error =  git_prettify_dir_path(buffer_out, path);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	path_len = strlen(buffer_out);
+	if (path_len < 2)
+		return GIT_ERROR;
+
+	/* Remove the trailing slash */
+	buffer_out[path_len - 1] = '\0';
+
+	return GIT_SUCCESS;
+}
