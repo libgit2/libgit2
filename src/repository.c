@@ -94,31 +94,34 @@ static int assign_repository_DIRs(git_repository *repo,
 		const char *git_work_tree)
 {
 	char path_aux[GIT_PATH_MAX];
-	size_t path_len;
+	size_t git_dir_path_len;
+	int error = GIT_SUCCESS;
 
 	assert(repo);
 
-	if (git_dir == NULL || gitfo_isdir(git_dir) < GIT_SUCCESS)
+	if (git_dir == NULL)
 		return GIT_ENOTFOUND;
 
+	error = git_prettify_dir_path(path_aux, git_dir);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
+		return GIT_ENOTFOUND;
+	
+	git_dir_path_len = strlen(path_aux);
+
 	/* store GIT_DIR */
-	path_len = strlen(git_dir);
-	strcpy(path_aux, git_dir);
-
-	if (path_aux[path_len - 1] != '/') {
-		path_aux[path_len] = '/';
-		path_aux[path_len + 1] = 0;
-
-		path_len = path_len + 1;
-	}
-
 	repo->path_repository = git__strdup(path_aux);
 
 	/* store GIT_OBJECT_DIRECTORY */
 	if (git_object_directory == NULL)
-		strcpy(path_aux + path_len, GIT_OBJECTS_DIR);
-	else
-		strcpy(path_aux, git_object_directory);
+		strcpy(repo->path_repository + git_dir_path_len, GIT_OBJECTS_DIR);
+	else {
+		error = git_prettify_dir_path(path_aux, git_object_directory);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
 
 	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
@@ -128,9 +131,12 @@ static int assign_repository_DIRs(git_repository *repo,
 
 	/* store GIT_INDEX_FILE */
 	if (git_index_file == NULL)
-		strcpy(path_aux + path_len, GIT_INDEX_FILE);
-	else
-		strcpy(path_aux, git_index_file); 
+		strcpy(repo->path_repository + git_dir_path_len, GIT_INDEX_FILE);
+	else {
+		error = git_prettify_file_path(path_aux, git_index_file);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
 
 	if (gitfo_exists(path_aux) < 0)
 		return GIT_ENOTFOUND;
@@ -141,9 +147,13 @@ static int assign_repository_DIRs(git_repository *repo,
 	/* store GIT_WORK_TREE */
 	if (git_work_tree == NULL)
 		repo->is_bare = 1;
-	else
-		repo->path_workdir = git__strdup(git_work_tree);
-
+	else {
+		error = git_prettify_dir_path(path_aux, git_work_tree);
+		if (error < GIT_SUCCESS)
+			return error;
+		repo->path_workdir = git__strdup(path_aux);
+	}
+	
 	return GIT_SUCCESS;
 }
 
