@@ -23,12 +23,12 @@ static int ensure_normalized(const char *input_path, const char *expected_path, 
 
 static int ensure_dir_path_normalized(const char *input_path, const char *expected_path)
 {
-	return ensure_normalized(input_path, expected_path, git_prettify_dir_path);
+	return ensure_normalized(input_path, expected_path, gitfo_prettify_dir_path);
 }
 
 static int ensure_file_path_normalized(const char *input_path, const char *expected_path)
 {
-	return ensure_normalized(input_path, expected_path, git_prettify_file_path);
+	return ensure_normalized(input_path, expected_path, gitfo_prettify_file_path);
 }
 
 BEGIN_TEST(file_path_prettifying)

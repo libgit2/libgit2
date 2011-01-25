@@ -391,7 +391,7 @@ static int retrieve_previous_path_component_start(const char *path)
 	return offset;
 }
 
-int git_prettify_dir_path(char *buffer_out, const char *path)
+int gitfo_prettify_dir_path(char *buffer_out, const char *path)
 {
 	int len = 0, segment_len, only_dots;
 	char *current;
@@ -457,7 +457,7 @@ int git_prettify_dir_path(char *buffer_out, const char *path)
 	return GIT_SUCCESS;
 }
 
-int git_prettify_file_path(char *buffer_out, const char *path)
+int gitfo_prettify_file_path(char *buffer_out, const char *path)
 {
 	int error, path_len, i;
 	const char* pattern = "/..";
@@ -470,7 +470,7 @@ int git_prettify_file_path(char *buffer_out, const char *path)
 			return GIT_ERROR;
 	}
 
-	error =  git_prettify_dir_path(buffer_out, path);
+	error =  gitfo_prettify_dir_path(buffer_out, path);
 	if (error < GIT_SUCCESS)
 		return error;
 
