@@ -438,7 +438,7 @@ int gitfo_prettify_dir_path(char *buffer_out, const char *path)
 			*buffer_out ='\0';
 			len = retrieve_previous_path_component_start(buffer_out_start);
 			if (len < GIT_SUCCESS)
-				return GIT_ERROR;
+				return GIT_EINVALIDPATH;
 
 			buffer_out = (char *)buffer_out_start + len;
 			continue;
@@ -446,7 +446,7 @@ int gitfo_prettify_dir_path(char *buffer_out, const char *path)
 
 		/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
 		if (only_dots &&segment_len > 0)
-			return GIT_ERROR;
+			return GIT_EINVALIDPATH;
 
 		*buffer_out++ = '/';
 		len++;
@@ -467,7 +467,7 @@ int gitfo_prettify_file_path(char *buffer_out, const char *path)
 	/* Let's make sure the filename doesn't end with "/", "/." or "/.." */
 	for (i = 1; path_len > i && i < 4; i++) {
 		if (!strncmp(path + path_len - i, pattern, i))
-			return GIT_ERROR;
+			return GIT_EINVALIDPATH;
 	}
 
 	error =  gitfo_prettify_dir_path(buffer_out, path);
@@ -476,7 +476,7 @@ int gitfo_prettify_file_path(char *buffer_out, const char *path)
 
 	path_len = strlen(buffer_out);
 	if (path_len < 2)
-		return GIT_ERROR;
+		return GIT_EINVALIDPATH;
 
 	/* Remove the trailing slash */
 	buffer_out[path_len - 1] = '\0';

@@ -19,6 +19,7 @@ static struct {
 	{GIT_EFLOCKFAIL, "Failed to adquire or release a file lock"},
 	{GIT_EZLIB, "The Z library failed to inflate/deflate an object's data"},
 	{GIT_EBUSY, "The queried object is currently busy"},
+	{GIT_EINVALIDPATH, "The path is invalid"},
 };
 
 const char *git_strerror(int num)

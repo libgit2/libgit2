@@ -136,6 +136,9 @@
 /** The index file is not backed up by an existing repository */
 #define GIT_EBAREINDEX (GIT_ERROR -14)
 
+/** The path is invalid */
+#define GIT_EINVALIDPATH (GIT_ERROR - 19)
+
 GIT_BEGIN_DECL
 /** @} */
 GIT_END_DECL
