@@ -149,6 +149,36 @@ GIT_EXTERN(int) git_tree_entry_2object(git_object **object, git_tree_entry *entr
 GIT_EXTERN(int) git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes);
 
 /**
+ * Add a new entry to a tree, returning that new entry.
+ * The only difference with this call is that it does not sort
+ * tree afterwards, this requirement is left to the caller.
+ *
+ * This will mark the tree as modified; the new entry will
+ * be written back to disk on the next git_object_write()
+ *
+ * @param entry Entry object which will be created
+ * @param tree Tree object to store the entry
+ * @iparam id OID for the tree entry
+ * @param filename Filename for the tree entry
+ * @param attributes UNIX file attributes for the entry
+ * @return 0 on success; otherwise error code
+ */
+GIT_EXTERN(int) git_tree_add_entry_unsorted(git_tree_entry **entry, git_tree *tree, const git_oid *id, const char *filename, int attributes);
+
+/**
+ * Sort the entries in a tree created using git_tree_add_entry2.
+ *
+ * This does not mark the tree as modified.  It is intended to be used
+ * after several invocations of git_tree_add_entry2.
+ * git_tree_add_entry, on the other hand, sorts after each entry is
+ * added.
+ *
+ * @param tree Tree object whose entries are to be sorted
+ * @return 0 on success; otherwise error code
+ */
+GIT_EXTERN(int) git_tree_sort_entries(git_tree *tree);
+
+/**
  * Remove an entry by its index.
  *
  * Index must be >= 0 and < than git_tree_entrycount().

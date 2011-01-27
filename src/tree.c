@@ -174,12 +174,11 @@ size_t git_tree_entrycount(git_tree *tree)
 	return tree->entries.length;
 }
 
-int git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes)
+int git_tree_add_entry_unsorted(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes)
 {
-	git_tree_entry *entry;
-
 	assert(tree && id && filename);
 
+	git_tree_entry *entry;
 	if ((entry = git__malloc(sizeof(git_tree_entry))) == NULL)
 		return GIT_ENOMEM;
 
@@ -193,13 +192,27 @@ int git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid
 	if (git_vector_insert(&tree->entries, entry) < 0)
 		return GIT_ENOMEM;
 
-	git_vector_sort(&tree->entries);
-
 	if (entry_out != NULL)
 		*entry_out = entry;
 
 	tree->object.modified = 1;
 	return GIT_SUCCESS;
+}
+
+int git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes)
+{
+        int result = git_tree_add_entry_unsorted(entry_out, tree, id, filename, attributes);
+        if (result == GIT_SUCCESS) {
+          git_vector_sort(&tree->entries);
+          return GIT_SUCCESS;
+        }
+        return result;
+}
+
+int git_tree_sort_entries(git_tree *tree)
+{
+        git_vector_sort(&tree->entries);
+        return GIT_SUCCESS;
 }
 
 int git_tree_remove_entry_byindex(git_tree *tree, int idx)
