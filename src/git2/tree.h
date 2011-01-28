@@ -205,6 +205,16 @@ GIT_EXTERN(int) git_tree_remove_entry_byindex(git_tree *tree, int idx);
 GIT_EXTERN(int) git_tree_remove_entry_byname(git_tree *tree, const char *filename);
 
 /**
+ * Clear all the entries in a tree.
+ *
+ * This will mark the tree as modified; the modified entry will
+ * be written back to disk on the next git_object_write().
+ *
+ * @param tree Tree object whose entries are to be sorted
+ */
+GIT_EXTERN(void) git_tree_clear_entries(git_tree *tree);
+
+/**
  * Change the SHA1 id of a tree entry.
  *
  * This will mark the tree that contains the entry as modified;

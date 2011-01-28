@@ -48,7 +48,7 @@ int entry_sort_cmp(const void *a, const void *b)
 	return strcmp(entry_a->filename, entry_b->filename);
 }
 
-static void clear_entries(git_tree *tree)
+void git_tree_clear_entries(git_tree *tree)
 {
 	unsigned int i;
 
@@ -64,6 +64,8 @@ static void clear_entries(git_tree *tree)
 	}
 
 	git_vector_clear(&tree->entries);
+
+	tree->object.modified = 1;
 }
 
 
@@ -90,7 +92,7 @@ git_tree *git_tree__new(void)
 
 void git_tree__free(git_tree *tree)
 {
-	clear_entries(tree);
+	git_tree_clear_entries(tree);
 	git_vector_free(&tree->entries);
 	free(tree);
 }
@@ -282,7 +284,7 @@ static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 
 	expected_size = (tree->object.source.raw.len / avg_entry_size) + 1;
 
-	clear_entries(tree);
+	git_tree_clear_entries(tree);
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
