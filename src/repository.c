@@ -220,8 +220,7 @@ static git_repository *repository_alloc()
 		return NULL;
 	}
 
-	repo->ref_database = git_reference_database__alloc();
-	if (repo->ref_database == NULL) {
+	if (git_repository__refcache_init(&repo->references) < GIT_SUCCESS) {
 		git_hashtable_free(repo->objects);
 		free(repo);
 		return NULL;
@@ -315,7 +314,7 @@ void git_repository_free(git_repository *repo)
 
 	git_hashtable_free(repo->objects);
 
-	git_reference_database__free(repo->ref_database);
+	git_repository__refcache_free(&repo->references);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
@@ -575,17 +574,5 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 
 cleanup:
 	free(results.path_repository);
-	return error;
-}
-
-int git_repository_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name)
-{
-	int error = GIT_SUCCESS;
-	int nesting_level = 0;
-
-	assert(repo && reference_out && name);
-
-	error = git_reference_lookup(reference_out, repo->ref_database, name, repo->path_repository, &nesting_level);
-
 	return error;
 }

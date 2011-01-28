@@ -9,7 +9,7 @@
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
 #define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
 
-#define GIT_SYMREF "ref:"
+#define GIT_SYMREF "ref: "
 #define GIT_PACKEDREFS_FILE "packed-refs"
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled \n"
 #define MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH 100
@@ -18,31 +18,21 @@ struct git_reference {
 	git_rtype type;
 	char *name;
 
-	unsigned is_packed:1;
-};
+	unsigned packed:1;
 
-struct git_reference_object_id {
-	git_reference base;
-
-	git_oid id;
-};
-
-struct git_reference_symbolic {
-	git_reference base;
-
-	git_reference *target;
+	union {
+		char *ref;
+		git_oid oid;
+	} target;
 };
 
 typedef struct {
-	git_hashtable *references;
-	
-	unsigned is_fully_loaded:1;
-	unsigned have_packed_refs_been_parsed:1;
-	unsigned is_busy:1;
-} git_reference_database;
+	git_hashtable *cache;
+	unsigned pack_loaded:1;
+} git_refcache;
 
-git_reference_database *git_reference_database__alloc();
-void git_reference_database__free(git_reference_database *ref_database);
-int git_reference_lookup(git_reference **reference_out, git_reference_database *ref_database, const char *name, const char *path_repository, int *nesting_level);
+
+void git_repository__refcache_free(git_refcache *refs);
+int git_repository__refcache_init(git_refcache *refs);
 
 #endif
