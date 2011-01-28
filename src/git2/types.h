@@ -138,17 +138,11 @@ typedef struct git_signature {
 /** In-memory representation of a reference. */
 typedef struct git_reference git_reference;
 
-/** In-memory representation of a reference to an object id. */
-typedef struct git_reference_object_id git_reference_object_id;
-
-/** In-memory representation of a reference which points at another reference. The target reference is embedded. */
-typedef struct git_reference_symbolic git_reference_symbolic;
-
 /** Basic type of any Git reference. */
 typedef enum {
-	GIT_REF_ANY = -2,		/** Reference can be any of the following */
-	GIT_REF_OBJECT_ID = 0,	/** A reference which points at an object id */
-	GIT_REF_SYMBOLIC = 1,	/** A reference which points at another reference */
+	GIT_REF_INVALID = -1, /** Invalid reference */
+	GIT_REF_OID = 1, /** A reference which points at an object id */
+	GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
 } git_rtype;
 
 /** @} */

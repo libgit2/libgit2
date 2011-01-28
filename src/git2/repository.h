@@ -229,7 +229,7 @@ GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path,
  * @param name the long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
  * @return a reference to the reference
  */
-GIT_EXTERN(int) git_repository_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
+GIT_EXTERN(int) git_repository_lookup_ref(git_reference **reference_out, git_repository *repo, const char *name);
 	
 /** @} */
 GIT_END_DECL
