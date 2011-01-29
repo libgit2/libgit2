@@ -174,7 +174,7 @@ size_t git_tree_entrycount(git_tree *tree)
 	return tree->entries.length;
 }
 
-int git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes)
+int git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes)
 {
 	git_tree_entry *entry;
 
@@ -194,6 +194,9 @@ int git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, 
 		return GIT_ENOMEM;
 
 	git_vector_sort(&tree->entries);
+
+	if (entry_out != NULL)
+		*entry_out = entry;
 
 	tree->object.modified = 1;
 	return GIT_SUCCESS;

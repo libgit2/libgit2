@@ -22,8 +22,11 @@ BEGIN_TEST(tree_in_memory_add_test)
 	git_oid_mkstr(&entry_id, tree_oid);
 	for (i = 0; i < entry_count; ++i) {
 		char filename[32];
+		git_tree_entry *ent = NULL;
+
 		sprintf(filename, "file%d.txt", i);
-		must_pass(git_tree_add_entry(tree, &entry_id, filename, 040000));
+		must_pass(git_tree_add_entry(&ent, tree, &entry_id, filename, 040000));
+		must_be_true(ent != NULL);
 	}
 
 	must_be_true(git_tree_entrycount(tree) == entry_count);
@@ -51,8 +54,10 @@ BEGIN_TEST(tree_add_entry_test)
 
 	must_be_true(git_tree_entrycount(tree) == 3);
 
-	git_tree_add_entry(tree, &id, "zzz_test_entry.dat", 0);
-	git_tree_add_entry(tree, &id, "01_test_entry.txt", 0);
+	/* check there is NP if we don't want the
+	 * created entry back */
+	git_tree_add_entry(NULL, tree, &id, "zzz_test_entry.dat", 0);
+	git_tree_add_entry(NULL, tree, &id, "01_test_entry.txt", 0);
 
 	must_be_true(git_tree_entrycount(tree) == 5);
 

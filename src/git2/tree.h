@@ -132,18 +132,21 @@ GIT_EXTERN(const git_oid *) git_tree_entry_id(git_tree_entry *entry);
 GIT_EXTERN(int) git_tree_entry_2object(git_object **object, git_tree_entry *entry);
 
 /**
- * Add a new entry to a tree.
+ * Add a new entry to a tree and return the new entry.
  *
  * This will mark the tree as modified; the new entry will
  * be written back to disk on the next git_object_write()
  *
+ * @param entry_out Pointer to the entry that just got
+ *	created. May be NULL if you are not interested on
+ *	getting the new entry
  * @param tree Tree object to store the entry
  * @iparam id OID for the tree entry
  * @param filename Filename for the tree entry
  * @param attributes UNIX file attributes for the entry
  * @return 0 on success; otherwise error code
  */
-GIT_EXTERN(int) git_tree_add_entry(git_tree *tree, const git_oid *id, const char *filename, int attributes);
+GIT_EXTERN(int) git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes);
 
 /**
  * Remove an entry by its index.
