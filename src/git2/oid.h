@@ -25,6 +25,9 @@
 #ifndef INCLUDE_git_oid_h__
 #define INCLUDE_git_oid_h__
 
+#include "common.h"
+#include "types.h"
+
 /**
  * @file git2/oid.h
  * @brief Git object id routines
