@@ -95,7 +95,7 @@ int git_reference_new(git_reference **ref_out, git_repository *repo)
 
 static int parse_sym_ref(git_reference *ref, gitfo_buf *file_content)
 {
-	const int header_len = strlen(GIT_SYMREF);
+	const unsigned int header_len = strlen(GIT_SYMREF);
 	const char *refname_start;
 	char *eol;
 
@@ -318,10 +318,6 @@ static int parse_packed_line(
 		goto cleanup;
 	}
 
-	/* windows line feeds */
-	if (refname_end[-1] == '\r')
-		refname_end--;
-
 	refname_len = refname_end - refname_begin;
 
 	ref->name = git__malloc(refname_len + 1);
@@ -332,6 +328,9 @@ static int parse_packed_line(
 
 	memcpy(ref->name, refname_begin, refname_len);
 	ref->name[refname_len] = 0;
+
+	if (ref->name[refname_len - 1] == '\r')
+		ref->name[refname_len - 1] = 0;
 
 	ref->type = GIT_REF_OID;
 	ref->packed = 1;
@@ -367,6 +366,14 @@ static int parse_packed_refs(git_refcache *ref_cache, git_repository *repo)
 
 	/* Let's skip the header */
 	buffer_start += strlen(GIT_PACKEDREFS_HEADER);
+
+	if (*buffer_start == '\r')
+		buffer_start++;
+
+	if (*buffer_start != '\n')
+		return GIT_EPACKEDREFSCORRUPTED;
+
+	buffer_start++;
 
 	while (buffer_start < buffer_end) {
 

@@ -11,7 +11,7 @@
 
 #define GIT_SYMREF "ref: "
 #define GIT_PACKEDREFS_FILE "packed-refs"
-#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled \n"
+#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled "
 #define MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH 100
 
 struct git_reference {
