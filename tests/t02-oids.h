@@ -1,6 +1,3 @@
-#include "test_lib.h"
-#include "test_helpers.h"
-#include <git2/odb.h>
 
 static const char *packed_objects[] = {
 	"0266163a49e280c4f5ed1e08facd36a2bd716bcf",
@@ -131,22 +128,25 @@ static const char *packed_objects[] = {
 	"b1bb1d888f0c5e19278536d49fa77db035fac7ae"
 };
 
-BEGIN_TEST(readpacked_test)
-	unsigned int i;
-    git_odb *db;
+static const char *loose_objects[] = {
+	"45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
+	"a8233120f6ad708f843d861ce2b7228ec4e3dec6",
+	"fd093bff70906175335656e6ce6ae05783708765",
+	"c47800c7266a2be04c571c04d5a6614691ea99bd",
+	"a71586c1dfe8a71c6cbf6c129f404c5642ff31bd",
+	"8496071c1b46c854b31185ea97743be6a8774479",
+	"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+	"814889a078c031f61ed08ab5fa863aea9314344d",
+	"5b5b025afb0b4c913b4c338a42934a3863bf3644",
+	"1385f264afb75a56a5bec74243be9b367ba4ca08",
+	"f60079018b664e4e79329a7ef9559c8d9e0378d1",
+	"be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
+	"75057dd4114e74cca1d750d0aee1647c903cb60a",
+	"fa49b077972391ad58037050f2a75f74e3671e92",
+	"9fd738e8f7967c078dceed8190330fc8648ee56a",
+	"1810dff58d8a660512d4832e740f692884338ccd",
+	"181037049a54a1eb5fab404658a3a250b44335d7",
+	"a4a7dce85cf63874e984719f4fdd239f5145052f",
+	"4a202b346bb0fb0db7eff3cffeb3c70babbd2045"
+};
 
-    must_pass(git_odb_open(&db, ODB_FOLDER));
-
-	for (i = 0; i < ARRAY_SIZE(packed_objects); ++i) {
-		git_oid id;
-		git_rawobj obj;
-
-		must_pass(git_oid_mkstr(&id, packed_objects[i]));
-		must_be_true(git_odb_exists(db, &id) == 1);
-		must_pass(git_odb_read(&obj, db, &id));
-
-		git_rawobj_close(&obj);
-	}
-
-    git_odb_close(db);
-END_TEST

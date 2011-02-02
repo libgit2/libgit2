@@ -1,106 +1,44 @@
-/*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
- *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
- */
+#ifndef __LIBGIT2_TEST_H__
+#define __LIBGIT2_TEST_H__
 
-#include "common.h"
-#include <git2/common.h>
-
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <string.h>
 
-/** Declare a function never returns to the caller. */
-#ifdef __GNUC__
-# define NORETURN __attribute__((__noreturn__))
-#elif defined(_MSC_VER)
-# define NORETURN __declspec(noreturn)
-#else
-# define NORETURN /* noreturn */
+#include "common.h"
+#include <git2.h>
+
+#define ADD_TEST(SUITE, MODULE, TEST) \
+	git_testsuite_add(SUITE, git_test_new(#TEST " (" MODULE ")", &_gittest__##TEST))
+
+#define BEGIN_TEST(MODULE, TEST) \
+	void _gittest__##TEST(git_test *_gittest) \
+	{ \
+		assert(_gittest);\
+		{\
+
+#define END_TEST }}
+
+typedef struct git_test git_test;
+typedef struct git_testsuite git_testsuite;
+typedef void (*git_testfunc)(git_test *);
+
+void git_test__fail(git_test *tc, const char *file, int line, const char *message);
+void git_test__assert(git_test *tc, const char *file, int line, const char *message, int condition);
+
+#define must_pass(expr) git_test__assert(_gittest, __FILE__, __LINE__, "Method failed, " #expr, (expr) == 0)
+#define must_fail(expr) git_test__assert(_gittest, __FILE__, __LINE__, "Expected method to fail, " #expr, (expr) < 0)
+#define must_be_true(expr) git_test__assert(_gittest, __FILE__, __LINE__, "Expected " #expr, !!(expr))
+
+git_testsuite *git_testsuite_new(const char *name);
+git_test *git_test_new(const char *name, git_testfunc function);
+
+void git_testsuite_free(git_testsuite *ts);
+
+void git_testsuite_add(git_testsuite *ts, git_test *tc);
+void git_testsuite_addsuite(git_testsuite* ts, git_testsuite *ts2);
+void git_testsuite_run(git_testsuite *ts);
+
 #endif
 
-/**
- * Declares a new test block starting, with the specified name.
- * @param name C symbol to assign to this test's function.
- */
-#define BEGIN_TEST(name) \
-	void testfunc__##name(void) \
-	{ \
-		test_begin(#name, __FILE__, __LINE__); \
-	{
-
-/** Denote the end of a test. */
-#define END_TEST \
-	} \
-		test_end(); \
-	}
-
-/* These are internal functions for BEGIN_TEST, END_TEST. */
-extern void test_begin(const char *, const char *, int);
-extern void test_end(void);
-
-/**
- * Abort the current test suite.
- *
- * This function terminates the current test suite
- * and does not return to the caller.
- *
- * @param fmt printf style format string.
- */
-extern void NORETURN test_die(const char *fmt, ...)
-	GIT_FORMAT_PRINTF(1, 2);
-
-/**
- * Evaluate a library function which must return success.
- *
- * The definition of "success" is the classical 0 return value.
- * This macro makes the test suite fail if the expression evaluates
- * to a non-zero result.  It is suitable for testing most API
- * functions in the library.
- *
- * @param expr the expression to evaluate, and test the result of.
- */
-#define must_pass(expr) \
-	if (expr) test_die("line %d: %s", __LINE__, #expr)
-
-/**
- * Evaluate a library function which must return an error.
- *
- * The definition of "failure" is the classical non-0 return value.
- * This macro makes the test suite fail if the expression evaluates
- * to 0 (aka success).  It is suitable for testing most API
- * functions in the library.
- *
- * @param expr the expression to evaluate, and test the result of.
- */
-#define must_fail(expr) \
-	if (!(expr)) test_die("line %d: %s", __LINE__, #expr)
-
-/**
- * Evaluate an expression which must produce a true result.
- *
- * @param expr the expression to evaluate, and test the result of.
- */
-#define must_be_true(expr) \
-	if (!(expr)) test_die("line %d: %s", __LINE__, #expr)

@@ -1,9 +1,7 @@
 
-#include "test_lib.h"
-#include <git2/odb.h>
-
-static char *commit_id = "3d7f8a6af076c8c3f20071a8935cdbe8228594d1";
-
+/*
+ * Raw data
+ */
 static unsigned char commit_data[] = {
     0x74, 0x72, 0x65, 0x65, 0x20, 0x64, 0x66, 0x66,
     0x32, 0x64, 0x61, 0x39, 0x30, 0x62, 0x32, 0x35,
@@ -52,13 +50,6 @@ static unsigned char commit_data[] = {
     0x3e, 0x0a,
 };
 
-static git_rawobj commit_obj = {
-	commit_data,
-	sizeof(commit_data),
-	GIT_OBJ_COMMIT
-};
-
-static char *tree_id = "dff2da90b254e1beb889d1f1f1288be1803782df";
 
 static unsigned char tree_data[] = {
     0x31, 0x30, 0x30, 0x36, 0x34, 0x34, 0x20, 0x6f,
@@ -78,14 +69,6 @@ static unsigned char tree_data[] = {
     0xd6, 0x43, 0x4b, 0x8b, 0x29, 0xae, 0x77, 0x5a,
     0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91,
 };
-
-static git_rawobj tree_obj = {
-	tree_data,
-	sizeof(tree_data),
-	GIT_OBJ_TREE
-};
-
-static char *tag_id = "09d373e1dfdc16b129ceec6dd649739911541e05";
 
 static unsigned char tag_data[] = {
     0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x20, 0x33,
@@ -112,49 +95,17 @@ static unsigned char tag_data[] = {
     0x2e, 0x30, 0x2e, 0x31, 0x0a,
 };
 
-static git_rawobj tag_obj = {
-	tag_data,
-	sizeof(tag_data),
-	GIT_OBJ_TAG
-};
-
-static char *zero_id = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
-
 static unsigned char zero_data[] = {
     0x00  /* dummy data */
 };
-
-static git_rawobj zero_obj = {
-	zero_data,
-	0,
-	GIT_OBJ_BLOB
-};
-
-static char *one_id = "8b137891791fe96927ad78e64b0aad7bded08bdc";
 
 static unsigned char one_data[] = {
     0x0a,
 };
 
-static git_rawobj one_obj = {
-	one_data,
-	sizeof(one_data),
-	GIT_OBJ_BLOB
-};
-
-static char *two_id = "78981922613b2afb6025042ff6bd878ac1994e85";
-
 static unsigned char two_data[] = {
     0x61, 0x0a,
 };
-
-static git_rawobj two_obj = {
-	two_data,
-	sizeof(two_data),
-	GIT_OBJ_BLOB
-};
-
-static char *some_id = "fd8430bc864cfcd5f10e5590f8a447e01b942bfe";
 
 static unsigned char some_data[] = {
     0x2f, 0x2a, 0x0a, 0x20, 0x2a, 0x20, 0x54, 0x68,
@@ -306,6 +257,56 @@ static unsigned char some_data[] = {
     0x0a,
 };
 
+/*
+ * Sha1 IDS
+ */
+static char *commit_id = "3d7f8a6af076c8c3f20071a8935cdbe8228594d1";
+static char *tree_id = "dff2da90b254e1beb889d1f1f1288be1803782df";
+static char *tag_id = "09d373e1dfdc16b129ceec6dd649739911541e05";
+static char *zero_id = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
+static char *one_id = "8b137891791fe96927ad78e64b0aad7bded08bdc";
+static char *two_id = "78981922613b2afb6025042ff6bd878ac1994e85";
+static char *some_id = "fd8430bc864cfcd5f10e5590f8a447e01b942bfe";
+
+/*
+ * In memory objects
+ */
+static git_rawobj tree_obj = {
+	tree_data,
+	sizeof(tree_data),
+	GIT_OBJ_TREE
+};
+
+static git_rawobj tag_obj = {
+	tag_data,
+	sizeof(tag_data),
+	GIT_OBJ_TAG
+};
+
+static git_rawobj zero_obj = {
+	zero_data,
+	0,
+	GIT_OBJ_BLOB
+};
+
+static git_rawobj one_obj = {
+	one_data,
+	sizeof(one_data),
+	GIT_OBJ_BLOB
+};
+
+static git_rawobj two_obj = {
+	two_data,
+	sizeof(two_data),
+	GIT_OBJ_BLOB
+};
+
+static git_rawobj commit_obj = {
+	commit_data,
+	sizeof(commit_data),
+	GIT_OBJ_COMMIT
+};
+
 static git_rawobj some_obj = {
 	some_data,
 	sizeof(some_data),
@@ -317,107 +318,5 @@ static git_rawobj junk_obj = {
 	0,
 	GIT_OBJ_BAD
 };
-
-
-BEGIN_TEST(hash_junk)
-    git_oid id, id_zero;
-
-    must_pass(git_oid_mkstr(&id_zero, zero_id));
-
-    /* invalid types: */
-    junk_obj.data = some_data;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
-
-    junk_obj.type = GIT_OBJ__EXT1;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
-
-    junk_obj.type = GIT_OBJ__EXT2;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
-
-    junk_obj.type = GIT_OBJ_OFS_DELTA;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
-
-    junk_obj.type = GIT_OBJ_REF_DELTA;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
-
-    /* data can be NULL only if len is zero: */
-    junk_obj.type = GIT_OBJ_BLOB;
-    junk_obj.data = NULL;
-    must_pass(git_rawobj_hash(&id, &junk_obj));
-    must_be_true(git_oid_cmp(&id, &id_zero) == 0);
-
-    junk_obj.len = 1;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
-END_TEST
-
-BEGIN_TEST(hash_commit)
-    git_oid id1, id2;
-
-    must_pass(git_oid_mkstr(&id1, commit_id));
-
-    must_pass(git_rawobj_hash(&id2, &commit_obj));
-
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
-END_TEST
-
-BEGIN_TEST(hash_tree)
-    git_oid id1, id2;
-
-    must_pass(git_oid_mkstr(&id1, tree_id));
-
-    must_pass(git_rawobj_hash(&id2, &tree_obj));
-
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
-END_TEST
-
-BEGIN_TEST(hash_tag)
-    git_oid id1, id2;
-
-    must_pass(git_oid_mkstr(&id1, tag_id));
-
-    must_pass(git_rawobj_hash(&id2, &tag_obj));
-
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
-END_TEST
-
-BEGIN_TEST(hash_zero)
-    git_oid id1, id2;
-
-    must_pass(git_oid_mkstr(&id1, zero_id));
-
-    must_pass(git_rawobj_hash(&id2, &zero_obj));
-
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
-END_TEST
-
-BEGIN_TEST(hash_one)
-    git_oid id1, id2;
-
-    must_pass(git_oid_mkstr(&id1, one_id));
-
-    must_pass(git_rawobj_hash(&id2, &one_obj));
-
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
-END_TEST
-
-BEGIN_TEST(hash_two)
-    git_oid id1, id2;
-
-    must_pass(git_oid_mkstr(&id1, two_id));
-
-    must_pass(git_rawobj_hash(&id2, &two_obj));
-
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
-END_TEST
-
-BEGIN_TEST(hash_some)
-    git_oid id1, id2;
-
-    must_pass(git_oid_mkstr(&id1, some_id));
-
-    must_pass(git_rawobj_hash(&id2, &some_obj));
-
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
-END_TEST
 
 

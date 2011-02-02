@@ -23,73 +23,82 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include "test_lib.h"
 #include <string.h>
+#include <git2.h>
 
+#include "test_lib.h"
+#include "test_helpers.h"
 
-/* 
- * print backtrace when a test fails;
- * GCC only
- */
-#ifdef BACKTRACE
-#include <stdio.h>
-#include <execinfo.h>
-#include <signal.h>
-#include <stdlib.h>
+extern git_testsuite *libgit2_suite_core(void);
+extern git_testsuite *libgit2_suite_rawobjects(void);
+extern git_testsuite *libgit2_suite_objread(void);
+extern git_testsuite *libgit2_suite_objwrite(void);
+extern git_testsuite *libgit2_suite_commit(void);
+extern git_testsuite *libgit2_suite_revwalk(void);
+extern git_testsuite *libgit2_suite_index(void);
+extern git_testsuite *libgit2_suite_hashtable(void);
+extern git_testsuite *libgit2_suite_tag(void);
+extern git_testsuite *libgit2_suite_tree(void);
+extern git_testsuite *libgit2_suite_refs(void);
 
-void crash_handler(int sig)
-{
-	void *array[10];
-	size_t size;
+typedef git_testsuite *(*libgit2_suite)(void);
 
-	size = backtrace(array, 10);
-
-	fprintf(stderr, "Error (signal %d)\n", sig);
-	backtrace_symbols_fd(array, size, 2);
-	exit(1);
-}
-#endif
-
-
-
-#undef BEGIN_TEST
-#define BEGIN_TEST(name) extern void testfunc__##name(void);
-#include TEST_TOC
-
-struct test_def {
-	const char *name;
-	void (*fun)(void);
-};
-struct test_def all_tests[] = {
-#   undef BEGIN_TEST
-#   define BEGIN_TEST(name) {#name, testfunc__##name},
-#   include TEST_TOC
-	{NULL, NULL}
+static libgit2_suite suite_methods[]= {
+	libgit2_suite_core,
+	libgit2_suite_rawobjects,
+	libgit2_suite_objread,
+	libgit2_suite_objwrite,
+	libgit2_suite_commit,
+	libgit2_suite_revwalk,
+	libgit2_suite_index,
+	libgit2_suite_hashtable,
+	libgit2_suite_tag,
+	libgit2_suite_tree,
+	libgit2_suite_refs
 };
 
-int main(int argc, char **argv)
+#define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
+
+
+git_testsuite **libgit2_get_suites()
 {
-	struct test_def *t;
+	git_testsuite **suites;
+	unsigned int i;
 
-#ifdef BACKTRACE
-	  signal(SIGSEGV, crash_handler);
-#endif
+	suites = git__malloc(GIT_SUITE_COUNT * sizeof(void *));
+	if (suites == NULL)
+		return NULL;
 
-	if (argc == 1) {
-		for (t = all_tests; t->name; t++)
-			t->fun();
-		return 0;
-	} else if (argc == 2) {
-		for (t = all_tests; t->name; t++) {
-			if (!strcmp(t->name, argv[1])) {
-				t->fun();
-				return 0;
-			}
-		}
-		fprintf(stderr, "error: No test '%s' in %s\n", argv[1], argv[0]);
-		return 1;
-	} else {
-		fprintf(stderr, "usage: %s [test_name]\n", argv[0]);
-		return 1;
-	}
+	for (i = 0; i < GIT_SUITE_COUNT; ++i)
+		suites[i] = suite_methods[i]();
+
+	return suites;
 }
+
+void libgit2_free_suites(git_testsuite **suites)
+{
+	unsigned int i;
+
+	for (i = 0; i < GIT_SUITE_COUNT; ++i)
+		git_testsuite_free(suites[i]);
+
+	free(suites);
+}
+
+int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
+{
+	unsigned int i;
+	git_testsuite **suites;
+
+	GIT_UNUSED_ARG(argc);
+	GIT_UNUSED_ARG(argv);
+
+	suites = libgit2_get_suites();
+
+	for (i = 0; i < GIT_SUITE_COUNT; ++i)
+		git_testsuite_run(suites[i]);
+
+	libgit2_free_suites(suites);
+	return 0;
+}
+

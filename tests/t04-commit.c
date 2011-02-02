@@ -1,10 +1,32 @@
+/*
+ * This file is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2,
+ * as published by the Free Software Foundation.
+ *
+ * In addition to the permissions in the GNU General Public License,
+ * the authors give you unlimited permission to link the compiled
+ * version of this file into combinations with other programs,
+ * and to distribute those combinations without any restriction
+ * coming from the use of this file.  (The General Public License
+ * restrictions do apply in other respects; for example, they cover
+ * modification of the file, and distribution when not linked into
+ * a combined executable.)
+ *
+ * This file is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
+ */
 #include "test_lib.h"
 #include "test_helpers.h"
+
 #include "commit.h"
 #include "signature.h"
-#include <git2/odb.h>
-#include <git2/commit.h>
-#include <git2/revwalk.h>
 
 static char *test_commits_broken[] = {
 
@@ -87,7 +109,7 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 a simple commit which works\n",
 };
 
-BEGIN_TEST(parse_oid_test)
+BEGIN_TEST("parse", parse_oid_test)
 
 	git_oid oid;
 
@@ -129,7 +151,7 @@ BEGIN_TEST(parse_oid_test)
 
 END_TEST
 
-BEGIN_TEST(parse_sig_test)
+BEGIN_TEST("parse", parse_sig_test)
 
 #define TEST_SIGNATURE_PASS(_string, _header, _name, _email, _time, _offset) { \
 	char *ptr = _string; \
@@ -263,7 +285,7 @@ END_TEST
 /* External declaration for testing the buffer parsing method */
 int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int parse_flags);
 
-BEGIN_TEST(parse_buffer_test)
+BEGIN_TEST("parse", parse_buffer_test)
 	const int broken_commit_count = sizeof(test_commits_broken) / sizeof(*test_commits_broken);
 	const int working_commit_count = sizeof(test_commits_working) / sizeof(*test_commits_working);
 
@@ -320,3 +342,178 @@ BEGIN_TEST(parse_buffer_test)
 
 	git_repository_free(repo);
 END_TEST
+
+static const char *commit_ids[] = {
+	"a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
+	"9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
+	"4a202b346bb0fb0db7eff3cffeb3c70babbd2045", /* 2 */
+	"c47800c7266a2be04c571c04d5a6614691ea99bd", /* 3 */
+	"8496071c1b46c854b31185ea97743be6a8774479", /* 4 */
+	"5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
+};
+
+BEGIN_TEST("details", query_details_test)
+	const size_t commit_count = sizeof(commit_ids) / sizeof(const char *);
+
+	unsigned int i;
+	git_repository *repo;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	
+	for (i = 0; i < commit_count; ++i) {
+		git_oid id;
+		git_commit *commit;
+
+		const git_signature *author, *committer;
+		const char *message, *message_short;
+		time_t commit_time;
+		unsigned int parents, p;
+		git_commit *parent;
+
+		git_oid_mkstr(&id, commit_ids[i]);
+
+		must_pass(git_commit_lookup(&commit, repo, &id));
+
+		message = git_commit_message(commit);
+		message_short = git_commit_message_short(commit);
+		author = git_commit_author(commit);
+		committer = git_commit_committer(commit);
+		commit_time = git_commit_time(commit);
+		parents = git_commit_parentcount(commit);
+
+		must_be_true(strcmp(author->name, "Scott Chacon") == 0);
+		must_be_true(strcmp(author->email, "schacon@gmail.com") == 0);
+		must_be_true(strcmp(committer->name, "Scott Chacon") == 0);
+		must_be_true(strcmp(committer->email, "schacon@gmail.com") == 0);
+		must_be_true(strchr(message, '\n') != NULL);
+		must_be_true(strchr(message_short, '\n') == NULL);
+		must_be_true(commit_time > 0);
+		must_be_true(parents <= 2);
+		for (p = 0;p < parents;p++) {
+			parent = git_commit_parent(commit, p);
+			must_be_true(parent != NULL);
+			must_be_true(git_commit_author(parent) != NULL); // is it really a commit?
+		}
+		must_be_true(git_commit_parent(commit, parents) == NULL);
+	}
+
+	git_repository_free(repo);
+END_TEST
+
+#define COMMITTER_NAME "Vicent Marti"
+#define COMMITTER_EMAIL "vicent@github.com"
+#define COMMIT_MESSAGE "This commit has been created in memory\n\
+This is a commit created in memory and it will be written back to disk\n"
+
+static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
+
+BEGIN_TEST("write", writenew_test)
+	git_repository *repo;
+	git_commit *commit, *parent;
+	git_tree *tree;
+	git_oid id;
+	const git_signature *author, *committer;
+	/* char hex_oid[41]; */
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	/* Create commit in memory */
+	must_pass(git_commit_new(&commit, repo));
+
+	/* Add new parent */
+	git_oid_mkstr(&id, commit_ids[4]);
+	must_pass(git_commit_lookup(&parent, repo, &id));
+
+	git_commit_add_parent(commit, parent);
+
+	/* Set other attributes */
+	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
+	must_be_true(committer != NULL);
+
+	author = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90);
+	must_be_true(author != NULL);
+
+	git_commit_set_committer(commit, committer);
+	git_commit_set_author(commit, author);
+	git_commit_set_message(commit, COMMIT_MESSAGE);
+
+	git_signature_free((git_signature *)committer);
+	git_signature_free((git_signature *)author);
+
+	/* Check attributes were set correctly */
+	author = git_commit_author(commit);
+	must_be_true(author != NULL);
+	must_be_true(strcmp(author->name, COMMITTER_NAME) == 0);
+	must_be_true(strcmp(author->email, COMMITTER_EMAIL) == 0);
+	must_be_true(author->when.time == 987654321);
+	must_be_true(author->when.offset == 90);
+
+	committer = git_commit_committer(commit);
+	must_be_true(committer != NULL);
+	must_be_true(strcmp(committer->name, COMMITTER_NAME) == 0);
+	must_be_true(strcmp(committer->email, COMMITTER_EMAIL) == 0);
+	must_be_true(committer->when.time == 123456789);
+	must_be_true(committer->when.offset == 60);
+
+	must_be_true(strcmp(git_commit_message(commit), COMMIT_MESSAGE) == 0);
+
+	/* add new tree */
+	git_oid_mkstr(&id, tree_oid);
+	must_pass(git_tree_lookup(&tree, repo, &id));
+
+	git_commit_set_tree(commit, tree);
+
+	/* Test it has no OID */
+	must_be_true(git_commit_id(commit) == NULL);
+
+	/* Write to disk */
+	must_pass(git_object_write((git_object *)commit));
+
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
+
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST("write", writeback_test)
+	git_repository *repo;
+	git_oid id;
+	git_commit *commit, *parent;
+	const char *message;
+	/* char hex_oid[41]; */
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_mkstr(&id, commit_ids[0]);
+
+	must_pass(git_commit_lookup(&commit, repo, &id));
+
+	message = git_commit_message(commit);
+
+	git_commit_set_message(commit, "This is a new test message. Cool!\n");
+
+	git_oid_mkstr(&id, commit_ids[4]);
+	must_pass(git_commit_lookup(&parent, repo, &id));
+
+	git_commit_add_parent(commit, parent);
+
+	must_pass(git_object_write((git_object *)commit));
+
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
+
+	git_repository_free(repo);
+END_TEST
+
+
+git_testsuite *libgit2_suite_commit(void)
+{
+	git_testsuite *suite = git_testsuite_new("Commit");
+
+	ADD_TEST(suite, "parse", parse_oid_test);
+	ADD_TEST(suite, "parse", parse_sig_test);
+	ADD_TEST(suite, "parse", parse_buffer_test);
+	ADD_TEST(suite, "details", query_details_test);
+	ADD_TEST(suite, "write", writenew_test);
+	ADD_TEST(suite, "write", writeback_test);
+
+	return suite;
+}

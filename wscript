@@ -90,9 +90,9 @@ def build(bld):
         build_library(bld, 'shared')
 
     # command '[build|clean]-tests'
-    elif bld.variant == 'tests':
+    elif bld.variant == 'test':
         build_library(bld, 'objects')
-        build_tests(bld)
+        build_test(bld)
 
     # command 'build|clean|install|uninstall': by default, run
     # the same command for both the static and the shared lib
@@ -156,43 +156,20 @@ def call_ldconfig(bld):
     if ldconf:
         bld.exec_command(ldconf)
 
-def grep_test_header(text, test_file):
-    return '\n'.join(l for l in test_file.read().splitlines() if text in l)
-
-def build_tests(bld):
-    import os
-
-    if bld.is_install:
-        return
-
+def build_test(bld):
     directory = bld.path
     resources_path = directory.find_node('tests/resources/').abspath().replace('\\', '/')
 
-    # Common object with the Test library methods
-    bld.objects(source=['tests/test_helpers.c', 'tests/test_lib.c'], includes=['src', 'tests'], target='test_helper')
+    sources = ['tests/test_lib.c', 'tests/test_helpers.c', 'tests/test_main.c']
+    sources = sources + directory.ant_glob('tests/t??-*.c')
 
-    # Build all tests in the tests/ folder
-    for test_file in directory.ant_glob('tests/t????-*.c'):
-        test_name, _ = os.path.splitext(os.path.basename(test_file.abspath()))
-
-        # Preprocess table of contents for each test
-        test_toc_file = directory.make_node('tests/%s.toc' % test_name)
-        if bld.cmd == 'clean-tests': # cleanup; delete the generated TOC file
-            test_toc_file.delete()
-        elif bld.cmd == 'build-tests': # build; create TOC
-            test_toc_file.write(grep_test_header('BEGIN_TEST', test_file))
-
-        # Build individual test (don't run)
-        bld.program(
-            source=[test_file, 'tests/test_main.c'],
-            target=test_name,
-            includes=['src', 'tests'],
-            defines=['TEST_TOC="%s.toc"' % test_name, 'TEST_RESOURCES="%s"' % resources_path],
-            install_path=None,
-            use=['test_helper', 'git2'] + ALL_LIBS  # link with all the libs we know
-                                            # libraries which are not enabled won't link
-        )
-
+    bld.program(
+        source=sources,
+        target='libgit2_test',
+        includes=['src', 'tests'],
+        defines=['TEST_RESOURCES="%s"' % resources_path],
+        use=['git2'] + ALL_LIBS
+    )
 
 class _test(BuildContext):
     cmd = 'test'
@@ -200,7 +177,7 @@ class _test(BuildContext):
 
 def test(bld):
     from waflib import Options
-    Options.commands = ['build-tests', 'run-tests'] + Options.commands
+    Options.commands = ['build-test', 'run-test'] + Options.commands
 
 class _build_doc(Context):
     cmd = 'doxygen'
@@ -216,24 +193,24 @@ def build_docs(ctx):
     ctx.exec_command("git push origin gh-pages")
     ctx.exec_command("git checkout master")
 
-class _run_tests(Context):
-    cmd = 'run-tests'
-    fun = 'run_tests'
+class _run_test(Context):
+    cmd = 'run-test'
+    fun = 'run_test'
 
-def run_tests(ctx):
+def run_test(ctx):
     import shutil, tempfile, sys
 
     failed = False
-    test_folder = tempfile.mkdtemp()
-    test_glob = 'build/tests/t????-*'
 
+    test_path = 'build/test/libgit2_test'
     if sys.platform == 'win32':
-        test_glob += '.exe'
+        test_path += '.exe'
 
-    for test in ctx.path.ant_glob(test_glob):
-        if ctx.exec_command(test.abspath(), cwd=test_folder) != 0:
-            failed = True
-            break
+    test_folder = tempfile.mkdtemp()
+    test = ctx.path.find_node(test_path)
+
+    if not test or ctx.exec_command(test.abspath(), cwd=test_folder) != 0:
+        failed = True
 
     shutil.rmtree(test_folder)
 
@@ -256,11 +233,11 @@ def build_command(command):
 
 build_command('build-static')
 build_command('build-shared')
-build_command('build-tests')
+build_command('build-test')
 
 build_command('clean-static')
 build_command('clean-shared')
-build_command('clean-tests')
+build_command('clean-test')
 
 build_command('install-static')
 build_command('install-shared')
