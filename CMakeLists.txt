@@ -34,7 +34,6 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
-OPTION (BACKTRACE "Use GCC backtrace in tests (Not available on Cygwin/MinGW)" OFF)
 
 # Build Release by default
 IF (NOT CMAKE_BUILD_TYPE)
@@ -54,11 +53,6 @@ IF (WIN32 AND NOT CYGWIN)
 	IF (MINGW)
 		SET(PTHREAD_LIBRARY pthread)
 	ENDIF ()
-ENDIF ()
-
-# When desired build with backtrace
-IF (BACKTRACE)
-	ADD_DEFINITIONS(-DBACKTRACE)
 ENDIF ()
 
 # Specify sha1 implementation
@@ -91,26 +85,12 @@ IF (BUILD_TESTS)
     ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
     
     ENABLE_TESTING()
-    # Find and build all tests
     INCLUDE_DIRECTORIES(tests)
-    FILE (GLOB TESTS tests/t????-*.c)
 
-    FOREACH (TEST_SRC ${TESTS})
-        # Match the source to get test name
-        STRING(REGEX MATCH "(t....-.*).c$" TEST_NAME ${TEST_SRC})
-        SET(TEST_NAME ${CMAKE_MATCH_1}) # This is the actual matched variable, got to love CMake macro language
+	FILE(GLOB SRC_TEST tests/t??-*.c)
 
-        # Generate TOC by finding BEGIN_TEST entries in test source.
-        FILE(READ ${TEST_SRC} TEST_CODE)
-        STRING(REGEX MATCHALL "BEGIN_TEST\\([^\\)]*\\)\n" TEST_TOC ${TEST_CODE})
-        FILE(WRITE tests/${TEST_NAME}.toc ${TEST_TOC}) # If desired this might be moved to the build dir
-        
-        # Compile
-        ADD_EXECUTABLE(${TEST_NAME} tests/test_main.c tests/test_lib.c tests/test_helpers.c ${TEST_SRC})
-        TARGET_LINK_LIBRARIES(${TEST_NAME} git2)
-        SET_TARGET_PROPERTIES(${TEST_NAME} PROPERTIES COMPILE_DEFINITIONS TEST_TOC=\"${TEST_NAME}.toc\")
-        
-        # Add CTest
-        ADD_TEST(${TEST_NAME} ${TEST_NAME})
-    ENDFOREACH ()
+	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_TEST})
+	TARGET_LINK_LIBRARIES(libgit2_test ${ZLIB_LIBRARY} ${LIB_SHA1} ${PTHREAD_LIBRARY})
+
+	ADD_TEST(libgit2_test libgit2_test)
 ENDIF ()
