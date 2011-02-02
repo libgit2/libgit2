@@ -117,8 +117,12 @@ static int parse_sym_ref(git_reference *ref, gitfo_buf *file_content)
 
 	/* remove newline at the end of file */
 	eol = strchr(ref->target.ref, '\n');
-	if (eol != NULL)
-		*eol = '\0';
+	if (eol == NULL)
+		return GIT_EREFCORRUPTED;
+
+	*eol = '\0';
+	if (eol[-1] == '\r')
+		eol[-1] = '\0';
 
 	ref->type = GIT_REF_SYMBOLIC;
 
@@ -132,13 +136,17 @@ static int parse_oid_ref(git_reference *ref, gitfo_buf *file_content)
 	buffer = (char *)file_content->data;
 
 	/* File format: 40 chars (OID) + newline */
-	if (file_content->len != GIT_OID_HEXSZ + 1)
+	if (file_content->len < GIT_OID_HEXSZ + 1)
 		return GIT_EREFCORRUPTED;
 
 	if (git_oid_mkstr(&ref->target.oid, buffer) < GIT_SUCCESS)
 		return GIT_EREFCORRUPTED;
 
-	if (buffer[GIT_OID_HEXSZ] != '\n')
+	buffer = buffer + GIT_OID_HEXSZ;
+	if (*buffer == '\r')
+		buffer++;
+
+	if (*buffer != '\n')
 		return GIT_EREFCORRUPTED;
 
 	ref->type = GIT_REF_OID;
@@ -201,6 +209,10 @@ static int lookup_loose_ref(
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
+	error = git_hashtable_insert(repo->references.cache, ref->name, ref);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
 	*ref_out = ref;
 	return GIT_SUCCESS;
 
@@ -252,7 +264,14 @@ static int parse_packed_line_peel(
 	if (git_oid_mkstr(&oid, buffer) < GIT_SUCCESS)
 		return GIT_EPACKEDREFSCORRUPTED;
 
-	*buffer_out = buffer + GIT_OID_HEXSZ + 1;
+	buffer = buffer + GIT_OID_HEXSZ;
+	if (*buffer == '\r')
+		buffer++;
+
+	if (*buffer != '\n')
+		return GIT_EPACKEDREFSCORRUPTED;
+
+	*buffer_out = buffer + 1;
 
 	/* 
 	 * TODO: do we need the packed line?
@@ -298,6 +317,10 @@ static int parse_packed_line(
 		error = GIT_EPACKEDREFSCORRUPTED;
 		goto cleanup;
 	}
+
+	/* windows line feeds */
+	if (refname_end[-1] == '\r')
+		refname_end--;
 
 	refname_len = refname_end - refname_begin;
 
