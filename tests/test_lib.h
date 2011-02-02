@@ -10,7 +10,7 @@
 #include <git2.h>
 
 #define ADD_TEST(SUITE, MODULE, TEST) \
-	git_testsuite_add(SUITE, git_test_new(#TEST " (" MODULE ")", &_gittest__##TEST))
+	git_testsuite_add(SUITE, git_test_new(MODULE "::" #TEST, &_gittest__##TEST))
 
 #define BEGIN_TEST(MODULE, TEST) \
 	void _gittest__##TEST(git_test *_gittest) \
@@ -38,7 +38,7 @@ void git_testsuite_free(git_testsuite *ts);
 
 void git_testsuite_add(git_testsuite *ts, git_test *tc);
 void git_testsuite_addsuite(git_testsuite* ts, git_testsuite *ts2);
-void git_testsuite_run(git_testsuite *ts);
+int git_testsuite_run(git_testsuite *ts);
 
 #endif
 

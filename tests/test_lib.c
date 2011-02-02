@@ -157,7 +157,7 @@ static void print_details(git_testsuite *ts)
 	}
 }
 
-void git_testsuite_run(git_testsuite *ts)
+int git_testsuite_run(git_testsuite *ts)
 {
 	int i;
 
@@ -175,5 +175,7 @@ void git_testsuite_run(git_testsuite *ts)
 	}
 	printf("\n  ");
 	print_details(ts);
+
+	return ts->fail_count;
 }
 

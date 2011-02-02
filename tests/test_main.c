@@ -87,18 +87,20 @@ void libgit2_free_suites(git_testsuite **suites)
 
 int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
 {
-	unsigned int i;
+	unsigned int i, failures;
 	git_testsuite **suites;
 
 	GIT_UNUSED_ARG(argc);
 	GIT_UNUSED_ARG(argv);
 
 	suites = libgit2_get_suites();
+	failures = 0;
 
 	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		git_testsuite_run(suites[i]);
+		failures += git_testsuite_run(suites[i]);
 
 	libgit2_free_suites(suites);
-	return 0;
+
+	return failures ? -1 : 0;
 }
 
