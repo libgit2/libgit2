@@ -208,9 +208,10 @@ size_t git_tree_entrycount(git_tree *tree)
 
 int git_tree_add_entry_unsorted(git_tree_entry **entry_out, git_tree *tree, const git_oid *id, const char *filename, int attributes)
 {
+	git_tree_entry *entry;
+
 	assert(tree && id && filename);
 
-	git_tree_entry *entry;
 	if ((entry = git__malloc(sizeof(git_tree_entry))) == NULL)
 		return GIT_ENOMEM;
 
