@@ -40,6 +40,7 @@ extern git_testsuite *libgit2_suite_hashtable(void);
 extern git_testsuite *libgit2_suite_tag(void);
 extern git_testsuite *libgit2_suite_tree(void);
 extern git_testsuite *libgit2_suite_refs(void);
+extern git_testsuite *libgit2_suite_sqlite(void);
 
 typedef git_testsuite *(*libgit2_suite)(void);
 
@@ -54,7 +55,8 @@ static libgit2_suite suite_methods[]= {
 	libgit2_suite_hashtable,
 	libgit2_suite_tag,
 	libgit2_suite_tree,
-	libgit2_suite_refs
+	libgit2_suite_refs,
+	libgit2_suite_sqlite,
 };
 
 #define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))

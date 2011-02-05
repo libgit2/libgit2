@@ -16,7 +16,7 @@ CFLAGS_WIN32_L = ['/RELEASE']  # used for /both/ debug and release builds.
                                # sets the module's checksum in the header.
 CFLAGS_WIN32_L_DBG = ['/DEBUG']
 
-ALL_LIBS = ['z', 'crypto', 'pthread']
+ALL_LIBS = ['z', 'crypto', 'pthread', 'sqlite3']
 
 def options(opt):
     opt.load('compiler_c')
@@ -58,13 +58,17 @@ def configure(conf):
             zlib_name = 'zlibwapi'
 
         elif conf.env.CC_NAME == 'gcc':
-            conf.check(features='c cprogram', lib='pthread', uselib_store='pthread')
+            conf.check_cc(lib='pthread', uselib_store='pthread')
 
     else:
         conf.env.PLATFORM = 'unix'
 
     # check for Z lib
-    conf.check(features='c cprogram', lib=zlib_name, uselib_store='z', install_path=None)
+    conf.check_cc(lib=zlib_name, uselib_store='z', install_path=None)
+
+    # check for sqlite3
+    if conf.check_cc(lib='sqlite3', uselib_store='sqlite3', install_path=None, mandatory=False):
+        conf.env.DEFINES += ['GIT2_SQLITE_BACKEND']
 
     if conf.options.sha1 not in ['openssl', 'ppc', 'builtin']:
         ctx.fatal('Invalid SHA1 option')
@@ -115,6 +119,7 @@ def build_library(bld, build_type):
     # E.g.  src/unix/*.c
     #       src/win32/*.c
     sources = sources + directory.ant_glob('src/%s/*.c' % bld.env.PLATFORM)
+    sources = sources + directory.ant_glob('src/backends/*.c')
 
     # SHA1 methods source
     if bld.env.sha1 == "ppc":
