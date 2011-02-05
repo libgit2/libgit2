@@ -36,65 +36,193 @@ int git__suffixcmp(const char *str, const char *suffix)
 	return strcmp(str + (a - b), suffix);
 }
 
-int git__dirname(char *dir, size_t n, char *path)
+/*
+ * Based on the Android implementation, BSD licensed.
+ * Check http://android.git.kernel.org/
+ */
+int git__basename_r(char *buffer, size_t bufflen, const char *path)
 {
-	char *s;
-	size_t len;
+	const char *endp, *startp;
+	int len, result;
 
-	assert(dir && n > 1);
-
-	if (!path || !*path || (s = strrchr(path, '/')) == NULL) {
-		strcpy(dir, ".");
-		return 1;
+	/* Empty or NULL string gets treated as "." */
+	if (path == NULL || *path == '\0') {
+		startp  = ".";
+		len     = 1;
+		goto Exit;
 	}
 
-	if (s == path) { /* "/[aaa]" */
-		strcpy(dir, "/");
-		return 1;
+	/* Strip trailing slashes */
+	endp = path + strlen(path) - 1;
+	while (endp > path && *endp == '/')
+		endp--;
+
+	/* All slashes becomes "/" */
+	if (endp == path && *endp == '/') {
+		startp = "/";
+		len    = 1;
+		goto Exit;
 	}
 
-	if ((len = s - path) >= n)
-		return GIT_ERROR;
+	/* Find the start of the base */
+	startp = endp;
+	while (startp > path && *(startp - 1) != '/')
+		startp--;
 
-	memcpy(dir, path, len);
-	dir[len] = '\0';
+	len = endp - startp +1;
 
-	return len;
+Exit:
+	result = len;
+	if (buffer == NULL) {
+		return result;
+	}
+	if (len > (int)bufflen-1) {
+		len    = (int)bufflen-1;
+		result = GIT_ENOMEM;
+	}
+
+	if (len >= 0) {
+		memcpy(buffer, startp, len);
+		buffer[len] = 0;
+	}
+	return result;
 }
 
-int git__basename(char *base, size_t n, char *path)
+/*
+ * Based on the Android implementation, BSD licensed.
+ * Check http://android.git.kernel.org/
+ */
+int git__dirname_r(char *buffer, size_t bufflen, const char *path)
 {
-	char *s;
-	size_t len;
+    const char *endp;
+    int result, len;
 
-	assert(base && n > 1);
+    /* Empty or NULL string gets treated as "." */
+    if (path == NULL || *path == '\0') {
+        path = ".";
+        len  = 1;
+        goto Exit;
+    }
 
-	if (!path || !*path) {
-		strcpy(base, ".");
-		return 1;
+    /* Strip trailing slashes */
+    endp = path + strlen(path) - 1;
+    while (endp > path && *endp == '/')
+        endp--;
+
+    /* Find the start of the dir */
+    while (endp > path && *endp != '/')
+        endp--;
+
+    /* Either the dir is "/" or there are no slashes */
+    if (endp == path) {
+        path = (*endp == '/') ? "/" : ".";
+        len  = 1;
+        goto Exit;
+    }
+
+    do {
+        endp--;
+    } while (endp > path && *endp == '/');
+
+    len = endp - path +1;
+
+Exit:
+    result = len;
+    if (len+1 > GIT_PATH_MAX) {
+        return GIT_ENOMEM;
+    }
+    if (buffer == NULL)
+        return result;
+
+    if (len > (int)bufflen-1) {
+        len    = (int)bufflen-1;
+        result = GIT_ENOMEM;
+    }
+
+    if (len >= 0) {
+        memcpy(buffer, path, len);
+        buffer[len] = 0;
+    }
+    return result;
+}
+
+
+char *git__dirname(const char *path)
+{
+    char *dname = NULL;
+    int len;
+
+	len = (path ? strlen(path) : 0) + 2;
+	dname = (char *)git__malloc(len);
+	if (dname == NULL)
+		return NULL;
+
+    if (git__dirname_r(dname, len, path) < GIT_SUCCESS) {
+		free(dname);
+		return NULL;
 	}
+
+    return dname;
+}
+
+char *git__basename(const char *path)
+{
+    char *bname = NULL;
+    int len;
+
+	len = (path ? strlen(path) : 0) + 2;
+	bname = (char *)git__malloc(len);
+	if (bname == NULL)
+		return NULL;
+
+    if (git__basename_r(bname, len, path) < GIT_SUCCESS) {
+		free(bname);
+		return NULL;
+	}
+
+    return bname;
+}
+
+
+const char *git__topdir(const char *path)
+{
+	size_t len;
+	int i;
+
+	assert(path);
 	len = strlen(path);
 
-	if ((s = strrchr(path, '/')) == NULL) {
-		if (len >= n)
-			return GIT_ERROR;
-		strcpy(base, path);
-		return len;
-	}
+	if (!len || path[len - 1] != '/')
+		return NULL;
 
-	if (s == path && len == 1) { /* "/" */
-		strcpy(base, "/");
-		return 1;
-	}
+	for (i = len - 2; i >= 0; --i)
+		if (path[i] == '/')
+			break;
 
-	len -= s - path;
-	if (len >= n)
-		return GIT_ERROR;
+	return &path[i + 1];
+}
 
-	memcpy(base, s+1, len);
-	base[len] = '\0';
+static char *strtok_raw(char *output, char *src, char *delimit, int keep)
+{
+	while (*src && strchr(delimit, *src) == NULL)
+		*output++ = *src++;
 
-	return len;
+	*output = 0;
+
+	if (keep)
+		return src;
+	else
+		return *src ? src+1 : src;
+}
+
+char *git__strtok(char *output, char *src, char *delimit)
+{
+	return strtok_raw(output, src, delimit, 0);
+}
+
+char *git__strtok_keep(char *output, char *src, char *delimit)
+{
+	return strtok_raw(output, src, delimit, 1);
 }
 
 void git__hexdump(const char *buffer, size_t len)

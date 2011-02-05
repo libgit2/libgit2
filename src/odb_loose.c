@@ -59,7 +59,7 @@ static int make_temp_file(git_file *fd, char *tmp, size_t n, char *file)
 	size_t tmplen = strlen(template);
 	int dirlen;
 
-	if ((dirlen = git__dirname(tmp, n, file)) < 0)
+	if ((dirlen = git__dirname_r(tmp, n, file)) < 0)
 		return GIT_ERROR;
 
 	if ((dirlen + tmplen) >= n)

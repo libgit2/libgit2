@@ -19,8 +19,44 @@ extern int git__fmt(char *, size_t, const char *, ...)
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
-extern int git__dirname(char *dir, size_t n, char *path);
-extern int git__basename(char *base, size_t n, char *path);
+/*
+ * The dirname() function shall take a pointer to a character string
+ * that contains a pathname, and return a pointer to a string that is a
+ * pathname of the parent directory of that file. Trailing '/' characters
+ * in the path are not counted as part of the path.
+ *
+ * If path does not contain a '/', then dirname() shall return a pointer to
+ * the string ".". If path is a null pointer or points to an empty string,
+ * dirname() shall return a pointer to the string "." .
+ *
+ * The `git__dirname` implementation is thread safe. The returned 
+ * string must be manually free'd.
+ *
+ * The `git__dirname_r` implementation expects a string allocated
+ * by the user with big enough size.
+ */
+extern char *git__dirname(const char *path);
+extern int git__dirname_r(char *buffer, size_t bufflen, const char *path);
+
+/*
+ * This function returns the basename of the file, which is the last
+ * part of its full name given by fname, with the drive letter and
+ * leading directories stripped off. For example, the basename of
+ * c:/foo/bar/file.ext is file.ext, and the basename of a:foo is foo.
+ *
+ * Trailing slashes and backslashes are significant: the basename of
+ * c:/foo/bar/ is an empty string after the rightmost slash.
+ *
+ * The `git__basename` implementation is thread safe. The returned 
+ * string must be manually free'd.
+ *
+ * The `git__basename_r` implementation expects a string allocated
+ * by the user with big enough size.
+ */
+extern char *git__basename(const char *path);
+extern int git__basename_r(char *buffer, size_t bufflen, const char *path);
+
+extern const char *git__topdir(const char *path);
 
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
@@ -39,6 +75,21 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 #else /* use bitops in GCC; with o2 this gets optimized to a rotl instruction */
 #	define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
 #endif
+
+enum git_splitpath_flags
+{
+   GIT_SPL_PATH = 1,
+   GIT_SPL_FILE = 2,
+   GIT_SPL_EXT  = 4,
+   GIT_SPL_PATH_FILE = GIT_SPL_PATH + GIT_SPL_FILE,
+   GIT_SPL_FILE_EXT  = GIT_SPL_FILE + GIT_SPL_EXT,
+   GIT_SPL_EXT_NO_PERIOD = 8,
+};
+
+
+extern char *git__splitpath(char *path, int flag);
+extern char *git__strtok(char *output, char *src, char *delimit);
+extern char *git__strtok_keep(char *output, char *src, char *delimit);
 
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold

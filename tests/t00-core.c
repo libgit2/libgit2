@@ -61,61 +61,76 @@ BEGIN_TEST("strutil", suffix_comparison)
 END_TEST
 
 BEGIN_TEST("strutil", dirname)
-	char dir[64];
+	char dir[64], *dir2;
 
-	must_be_true(!(git__dirname(dir, sizeof(dir), NULL) < 0));
-	must_be_true(!strcmp(dir, "."));
+#define DIRNAME_TEST(A, B) { \
+	must_be_true(git__dirname_r(dir, sizeof(dir), A) >= 0); \
+	must_be_true(strcmp(dir, B) == 0);				\
+	must_be_true((dir2 = git__dirname(A)) != NULL);	\
+	must_be_true(strcmp(dir2, B) == 0);				\
+	free(dir2);										\
+}
 
-	must_be_true(!(git__dirname(dir, sizeof(dir), "") < 0));
-	must_be_true(!strcmp(dir, "."));
+	DIRNAME_TEST(NULL, ".");
+	DIRNAME_TEST("", ".");
+	DIRNAME_TEST("a", ".");
+	DIRNAME_TEST("/", "/");
+	DIRNAME_TEST("/usr", "/");
+	DIRNAME_TEST("/usr/", "/");
+	DIRNAME_TEST("/usr/lib", "/usr");
+	DIRNAME_TEST("usr/lib", "usr");
+	DIRNAME_TEST(".git/", ".");
 
-	must_be_true(!(git__dirname(dir, sizeof(dir), "a") < 0));
-	must_be_true(!strcmp(dir, "."));
+#undef DIRNAME_TEST
 
-	must_be_true(!(git__dirname(dir, sizeof(dir), "/") < 0));
-	must_be_true(!strcmp(dir, "/"));
-
-	must_be_true(!(git__dirname(dir, sizeof(dir), "/usr") < 0));
-	must_be_true(!strcmp(dir, "/"));
-
-	/* TODO: should this be "/" instead (ie strip trailing / first) */
-	must_be_true(!(git__dirname(dir, sizeof(dir), "/usr/") < 0));
-	must_be_true(!strcmp(dir, "/usr"));
-
-	must_be_true(!(git__dirname(dir, sizeof(dir), "/usr/lib") < 0));
-	must_be_true(!strcmp(dir, "/usr"));
-
-	must_be_true(!(git__dirname(dir, sizeof(dir), "usr/lib") < 0));
-	must_be_true(!strcmp(dir, "usr"));
 END_TEST
 
 BEGIN_TEST("strutil", basename)
-	char base[64];
+	char base[64], *base2;
 
-	must_be_true(!(git__basename(base, sizeof(base), NULL) < 0));
-	must_be_true(!strcmp(base, "."));
+#define BASENAME_TEST(A, B) { \
+	must_be_true(git__basename_r(base, sizeof(base), A) >= 0); \
+	must_be_true(strcmp(base, B) == 0);					\
+	must_be_true((base2 = git__basename(A)) != NULL);	\
+	must_be_true(strcmp(base2, B) == 0);				\
+	free(base2);										\
+}
 
-	must_be_true(!(git__basename(base, sizeof(base), "") < 0));
-	must_be_true(!strcmp(base, "."));
+	BASENAME_TEST(NULL, ".");
+	BASENAME_TEST("", ".");
+	BASENAME_TEST("a", "a");
+	BASENAME_TEST("/", "/");
+	BASENAME_TEST("/usr", "usr");
+	BASENAME_TEST("/usr/", "usr");
+	BASENAME_TEST("/usr/lib", "lib");
+	BASENAME_TEST("usr/lib", "lib");
 
-	must_be_true(!(git__basename(base, sizeof(base), "a") < 0));
-	must_be_true(!strcmp(base, "a"));
+#undef BASENAME_TEST
 
-	must_be_true(!(git__basename(base, sizeof(base), "/") < 0));
-	must_be_true(!strcmp(base, "/"));
+END_TEST
 
-	must_be_true(!(git__basename(base, sizeof(base), "/usr") < 0));
-	must_be_true(!strcmp(base, "usr"));
+BEGIN_TEST("strutil", topdir)
+	const char *dir;
 
-	/* TODO: should this be "usr" instead (ie strip trailing / first) */
-	must_be_true(!(git__basename(base, sizeof(base), "/usr/") < 0));
-	must_be_true(!strcmp(base, ""));
+#define TOPDIR_TEST(A, B) { \
+	must_be_true((dir = git__topdir(A)) != NULL);	\
+	must_be_true(strcmp(dir, B) == 0);				\
+}
 
-	must_be_true(!(git__basename(base, sizeof(base), "/usr/lib") < 0));
-	must_be_true(!strcmp(base, "lib"));
+	TOPDIR_TEST(".git/", ".git/");
+	TOPDIR_TEST("/.git/", ".git/");
+	TOPDIR_TEST("usr/local/.git/", ".git/");
+	TOPDIR_TEST("./.git/", ".git/");
+	TOPDIR_TEST("/usr/.git/", ".git/");
+	TOPDIR_TEST("/", "/");
+	TOPDIR_TEST("a/", "a/");
 
-	must_be_true(!(git__basename(base, sizeof(base), "usr/lib") < 0));
-	must_be_true(!strcmp(base, "lib"));
+	must_be_true(git__topdir("/usr/.git") == NULL);
+	must_be_true(git__topdir(".") == NULL);
+	must_be_true(git__topdir("") == NULL);
+	must_be_true(git__topdir("a") == NULL);
+
+#undef TOPDIR_TEST
 END_TEST
 
 /* Initial size of 1 will cause writing past array bounds prior to fix */
@@ -579,6 +594,7 @@ git_testsuite *libgit2_suite_core(void)
 	ADD_TEST(suite, "strutil", suffix_comparison);
 	ADD_TEST(suite, "strutil", dirname);
 	ADD_TEST(suite, "strutil", basename);
+	ADD_TEST(suite, "strutil", topdir);
 
 	ADD_TEST(suite, "vector", initial_size_one);
 	ADD_TEST(suite, "vector", remove);

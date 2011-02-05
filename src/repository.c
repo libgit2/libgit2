@@ -157,7 +157,9 @@ static int assign_repository_DIRs(git_repository *repo,
 
 static int guess_repository_DIRs(git_repository *repo, const char *repository_path)
 {
-	char path_aux[GIT_PATH_MAX], *last_DIR;
+	char path_aux[GIT_PATH_MAX];
+	const char *topdir;
+
 	int path_len;
 	int error = GIT_SUCCESS;
 
@@ -185,12 +187,10 @@ static int guess_repository_DIRs(git_repository *repo, const char *repository_pa
 
 	path_aux[path_len] = 0;
 
-	last_DIR = (path_aux + path_len - 2);
+	if ((topdir = git__topdir(path_aux)) == NULL)
+		return GIT_EINVALIDPATH;
 
-	while (*last_DIR != '/')
-		last_DIR--;
-
-	if (strcmp(last_DIR, GIT_DIR) == 0) {
+	if (strcmp(topdir, GIT_DIR) == 0) {
 		repo->is_bare = 0;
 
 		/* index file */
@@ -198,8 +198,9 @@ static int guess_repository_DIRs(git_repository *repo, const char *repository_pa
 		repo->path_index = git__strdup(path_aux);
 
 		/* working dir */
-		*(last_DIR + 1) = 0;
-		repo->path_workdir = git__strdup(path_aux);
+		repo->path_workdir = git__dirname(path_aux);
+		if (repo->path_workdir == NULL)
+			return GIT_EINVALIDPATH;
 
 	} else {
 		repo->is_bare = 1;
