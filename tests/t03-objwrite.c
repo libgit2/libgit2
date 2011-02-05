@@ -23,9 +23,10 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "test_lib.h"
-#include "t03-data.h"
-
 #include "fileops.h"
+
+static char *odb_dir = "test-objects";
+#include "t03-data.h"
 
 static int make_odb_dir(void)
 {

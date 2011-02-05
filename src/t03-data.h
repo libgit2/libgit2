@@ -1,6 +1,4 @@
 
-static char *odb_dir = "test-objects";
-
 typedef struct object_data {
     char *id;     /* object id (sha1)                          */
     char *dir;    /* object store (fan-out) directory name     */

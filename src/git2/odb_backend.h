@@ -66,6 +66,13 @@ struct git_odb_backend {
 	void (* free)(struct git_odb_backend *);
 };
 
+GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
+GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir);
+
+#ifdef GIT2_SQLITE_BACKEND
+GIT_EXTERN(int) git_odb_backend_sqlite(git_odb_backend **backend_out, const char *sqlite_db);
+#endif
+
 GIT_END_DECL
 
 #endif
