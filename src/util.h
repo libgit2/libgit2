@@ -58,6 +58,14 @@ extern int git__basename_r(char *buffer, size_t bufflen, const char *path);
 
 extern const char *git__topdir(const char *path);
 
+/**
+ * Join two paths together. Takes care of properly fixing the
+ * middle slashes and everything
+ *
+ * Returns a newly allocated string; must be free'd manually.
+ */
+extern char *git__joinpath(const char *path_a, const char *path_b);
+
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
 
