@@ -91,8 +91,10 @@ int git_commit__writeback(git_commit *commit, git_odb_source *src)
 
 	git_signature__write(src, "committer", commit->committer);
 
-	if (commit->message != NULL)
-		git__source_printf(src, "\n%s", commit->message);
+	if (commit->message != NULL) {
+		git__source_write(src, "\n", 1);
+		git__source_write(src, commit->message, strlen(commit->message));
+        }
 
 	/* Mark the commit as having all attributes */
 	commit->full_parse = 1;

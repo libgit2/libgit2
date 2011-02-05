@@ -97,7 +97,7 @@ static int source_resize(git_odb_source *src)
 int git__source_printf(git_odb_source *source, const char *format, ...)
 {
 	va_list arglist;
-	int len, did_resize = 0;
+	int len;
 
 	assert(source->open && source->write_ptr);
 
@@ -109,11 +109,8 @@ int git__source_printf(git_odb_source *source, const char *format, ...)
 		if (source_resize(source) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-		did_resize = 1;
+		len = vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
 	}
-
-	if (did_resize)
-		vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
 
 	source->write_ptr = (char *)source->write_ptr + len;
 	source->written_bytes += len;
