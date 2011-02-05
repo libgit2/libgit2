@@ -163,11 +163,14 @@ GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
 /**
  * Get the Index file of a Git repository
  *
+ * This is a cheap operation; the index is only opened on the first call,
+ * and subsequent calls only retrieve the previous pointer.
+ *
+ * @param index Pointer where to store the index
  * @param repo a repository object
- * @return a pointer to the Index object; 
- *	NULL if the index cannot be opened
+ * @return 0 on success; error code if the index could not be opened
  */
-GIT_EXTERN(git_index *) git_repository_index(git_repository *rpeo);
+GIT_EXTERN(int) git_repository_index(git_index **index, git_repository *repo);
 
 /**
  * Create a new in-memory repository object with

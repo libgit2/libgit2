@@ -374,16 +374,22 @@ void git_repository_free(git_repository *repo)
 	free(repo);
 }
 
-git_index *git_repository_index(git_repository *repo)
+int git_repository_index(git_index **index_out, git_repository *repo)
 {
-	if (repo->index == NULL) {
-		if (git_index_open_inrepo(&repo->index, repo) < GIT_SUCCESS)
-			return NULL;
+	int error;
 
-		assert(repo->index);
+	assert(index_out && repo);
+
+	if (repo->index == NULL) {
+		error = git_index_open_inrepo(&repo->index, repo);
+		if (error < GIT_SUCCESS)
+			return error;
+
+		assert(repo->index != NULL);
 	}
 
-	return repo->index;
+	*index_out = repo->index;
+	return GIT_SUCCESS;
 }
 
 git_odb *git_repository_database(git_repository *repo)

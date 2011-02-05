@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "git2/oid.h"
+#include "git2/refs.h"
 #include "hashtable.h"
 
 #define GIT_REFS_DIR "refs/"

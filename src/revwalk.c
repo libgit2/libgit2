@@ -220,23 +220,27 @@ static void prepare_walk(git_revwalk *walk)
 	walk->walking = 1;
 }
 
-git_commit *git_revwalk_next(git_revwalk *walk)
+int git_revwalk_next(git_commit **commit, git_revwalk *walk)
 {
 	git_revwalk_commit *next;
 
-	assert(walk);
+	assert(walk && commit);
 
 	if (!walk->walking)
 		prepare_walk(walk);
 
+	*commit = NULL;
+
 	while ((next = walk->next(&walk->iterator)) != NULL) {
-		if (!next->uninteresting)
-			return next->commit_object;
+		if (!next->uninteresting) {
+			*commit = next->commit_object;
+			return GIT_SUCCESS;
+		}
 	}
 
 	/* No commits left to iterate */
 	git_revwalk_reset(walk);
-	return NULL;
+	return GIT_EREVWALKOVER;
 }
 
 void git_revwalk_reset(git_revwalk *walk)

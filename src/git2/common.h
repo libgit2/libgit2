@@ -151,6 +151,9 @@
 /** The path is invalid */
 #define GIT_EINVALIDPATH (GIT_ERROR - 19)
 
+/** The revision walker is empty; there are no more commits left to iterate */
+#define GIT_EREVWALKOVER (GIT_ERROR - 20)
+
 GIT_BEGIN_DECL
 /** @} */
 GIT_END_DECL

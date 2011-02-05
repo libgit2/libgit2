@@ -99,7 +99,7 @@ static int test_walk(git_revwalk *walk, git_commit *start_from,
 		result_array[i] = -1;
 
 	i = 0;
-	while ((commit = git_revwalk_next(walk)) != NULL)
+	while (git_revwalk_next(&commit, walk) == GIT_SUCCESS)
 		result_array[i++] = get_commit_index(commit);
 
 	for (i = 0; i < results_count; ++i) 

@@ -99,10 +99,13 @@ GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, git_commit *commit);
 
 /**
  * Get the next commit from the revision traversal.
+ *
+ * @param commit Pointer where to store the next commit
  * @param walk the walker to pop the commit from.
- * @return next commit; NULL if there is no more output.
+ * @return GIT_SUCCESS if the next commit was found;
+ *	GIT_EREVWALKOVER if there are no commits left to iterate
  */
-GIT_EXTERN(git_commit *) git_revwalk_next(git_revwalk *walk);
+GIT_EXTERN(int) git_revwalk_next(git_commit **commit, git_revwalk *walk);
 
 /**
  * Change the sorting mode when iterating through the
