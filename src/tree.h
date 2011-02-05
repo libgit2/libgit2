@@ -16,6 +16,7 @@ struct git_tree_entry {
 struct git_tree {
 	git_object object;
 	git_vector entries;
+	unsigned sorted:1;
 };
 
 void git_tree__free(git_tree *tree);
