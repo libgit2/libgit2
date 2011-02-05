@@ -207,6 +207,8 @@ char *git__joinpath(const char *path_a, const char *path_b)
 	int len_a, len_b;
 	char *path_new;
 
+	assert(path_a && path_b);
+
 	len_a = strlen(path_a);
 	len_b = strlen(path_b);
 
@@ -216,7 +218,7 @@ char *git__joinpath(const char *path_a, const char *path_b)
 
 	strcpy(path_new, path_a);
 
-	if (path_new[len_a - 1] != '/')
+	if (len_a > 0 && len_b > 0 && path_new[len_a - 1] != '/')
 		path_new[len_a++] = '/';
 
 	if (path_b[0] == '/')

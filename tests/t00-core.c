@@ -342,6 +342,34 @@ BEGIN_TEST("path", dir_path_prettifying)
 	must_fail(ensure_dir_path_normalized("/d1/.../d2", NULL));
 END_TEST
 
+static int ensure_joinpath(const char *path_a, const char *path_b, const char *expected_path)
+{
+	int error = GIT_SUCCESS;
+	char* joined_path;
+
+	joined_path = git__joinpath(path_a, path_b);
+	if (joined_path == NULL)
+		return GIT_ERROR;
+
+	if (strcmp(joined_path, expected_path))
+		error = GIT_ERROR;
+
+	return error;
+}
+
+BEGIN_TEST("path", joinpath)
+	must_pass(ensure_joinpath("", "", ""));
+	must_pass(ensure_joinpath("", "a", "a"));
+	must_pass(ensure_joinpath("a", "", "a"));
+	must_pass(ensure_joinpath("a", "b", "a/b"));
+	must_pass(ensure_joinpath("/", "a", "/a"));
+	must_pass(ensure_joinpath("/", "", "/"));
+	must_pass(ensure_joinpath("/a", "/b", "/a/b"));
+	must_pass(ensure_joinpath("/a", "/b/", "/a/b/"));
+	must_pass(ensure_joinpath("/a/", "b/", "/a/b/"));
+	must_pass(ensure_joinpath("/a/", "/b/", "/a/b/"));
+END_TEST
+
 typedef struct name_data {
 	int  count;  /* return count */
 	char *name;  /* filename     */
@@ -601,6 +629,7 @@ git_testsuite *libgit2_suite_core(void)
 
 	ADD_TEST(suite, "path", file_path_prettifying);
 	ADD_TEST(suite, "path", dir_path_prettifying);
+	ADD_TEST(suite, "path", joinpath);
 
 	ADD_TEST(suite, "dirent", dot);
 	ADD_TEST(suite, "dirent", sub);
