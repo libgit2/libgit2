@@ -354,6 +354,8 @@ static int ensure_joinpath(const char *path_a, const char *path_b, const char *e
 	if (strcmp(joined_path, expected_path))
 		error = GIT_ERROR;
 
+	free(joined_path);
+
 	return error;
 }
 
