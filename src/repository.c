@@ -35,7 +35,7 @@
 
 #include "refs.h"
 
-#define GIT_DIR "/.git/"
+#define GIT_DIR ".git/"
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_OBJECTS_INFO_DIR GIT_OBJECTS_DIR "info/"
 #define GIT_OBJECTS_PACK_DIR GIT_OBJECTS_DIR "pack/"
