@@ -26,6 +26,17 @@ ELSEIF ()
     SET(SHA1_TYPE "builtin" CACHE STRING "Which SHA1 implementation to use: builtin, ppc")
 ENDIF ()
 
+# Try to find SQLite3 to compile the SQLite backend
+IF (NOT WIN32)
+	INCLUDE(FindPkgConfig)
+	pkg_check_modules(SQLITE3 sqlite3)
+ENDIF ()
+
+IF (SQLITE3_LIBRARIES AND SQLITE3_INCLUDE_DIRS)
+	ADD_DEFINITIONS(-DGIT2_SQLITE_BACKEND)
+	INCLUDE_DIRECTORIES(${SQLITE3_INCLUDE_DIRS})
+ENDIF ()
+
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
 SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
@@ -41,7 +52,7 @@ IF (NOT CMAKE_BUILD_TYPE)
 ENDIF ()
 
 # Collect sourcefiles
-FILE(GLOB SRC src/*.c)
+FILE(GLOB SRC src/*.c src/backends/*.c)
 FILE(GLOB SRC_SHA1 src/block-sha1/*.c)
 FILE(GLOB SRC_PLAT src/unix/*.c)
 FILE(GLOB SRC_H src/git/*.h)
@@ -68,7 +79,7 @@ ENDIF ()
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC} ${SRC_PLAT} ${SRC_SHA1})
-TARGET_LINK_LIBRARIES(git2 ${ZLIB_LIBRARY} ${LIB_SHA1} ${PTHREAD_LIBRARY})
+TARGET_LINK_LIBRARIES(git2 ${ZLIB_LIBRARY} ${LIB_SHA1} ${PTHREAD_LIBRARY} ${SQLITE3_LIBRARIES})
 
 # Install
 INSTALL(TARGETS git2 
@@ -90,7 +101,7 @@ IF (BUILD_TESTS)
 	FILE(GLOB SRC_TEST tests/t??-*.c)
 
 	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_TEST})
-	TARGET_LINK_LIBRARIES(libgit2_test ${ZLIB_LIBRARY} ${LIB_SHA1} ${PTHREAD_LIBRARY})
+	TARGET_LINK_LIBRARIES(libgit2_test ${ZLIB_LIBRARY} ${LIB_SHA1} ${PTHREAD_LIBRARY} ${SQLITE3_LIBRARIES})
 
 	ADD_TEST(libgit2_test libgit2_test)
 ENDIF ()
