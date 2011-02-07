@@ -146,6 +146,8 @@ BEGIN_TEST("write", index_write_test)
 	must_pass(git_filelock_commit(&out_file));
 
 	git_index_free(index);
+	
+	gitfo_unlink("index_rewrite");
 END_TEST
 
 
