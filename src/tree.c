@@ -50,10 +50,10 @@ static int cache_name_compare(const char *name1, int len1, int isdir1,
 	if (cmp)
 		return cmp;
 	if (len1 < len2)
-		return ((isdir1 == isdir2) ? -1 :
+		return ((!isdir1 && !isdir2) ? -1 :
                         (isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
 	if (len1 > len2)
-		return ((isdir1 == isdir2) ? 1 :
+		return ((!isdir1 && !isdir2) ? 1 :
                         (isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
 	return 0;
 }
