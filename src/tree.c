@@ -304,7 +304,7 @@ int git_tree__writeback(git_tree *tree, git_odb_source *src)
 
 		entry = git_vector_get(&tree->entries, i);
 	
-		sprintf(filemode, "%06o ", entry->attr);
+		sprintf(filemode, "%o ", entry->attr);
 
 		git__source_write(src, filemode, strlen(filemode));
 		git__source_write(src, entry->filename, strlen(entry->filename) + 1);
