@@ -111,6 +111,8 @@ static int assign_repository_DIRs(git_repository *repo,
 
 	/* store GIT_DIR */
 	repo->path_repository = git__strdup(path_aux);
+	if (repo->path_repository == NULL)
+		return GIT_ENOMEM;
 
 	/* store GIT_OBJECT_DIRECTORY */
 	if (git_object_directory == NULL)
@@ -125,7 +127,8 @@ static int assign_repository_DIRs(git_repository *repo,
 		return GIT_ENOTFOUND;
 
 	repo->path_odb = git__strdup(path_aux);
-
+	if (repo->path_odb == NULL)
+		return GIT_ENOMEM;
 
 	/* store GIT_INDEX_FILE */
 	if (git_index_file == NULL)
@@ -140,7 +143,8 @@ static int assign_repository_DIRs(git_repository *repo,
 		return GIT_ENOTFOUND;
 
 	repo->path_index = git__strdup(path_aux);
-
+	if (repo->path_index == NULL)
+		return GIT_ENOMEM;
 
 	/* store GIT_WORK_TREE */
 	if (git_work_tree == NULL)
@@ -150,6 +154,8 @@ static int assign_repository_DIRs(git_repository *repo,
 		if (error < GIT_SUCCESS)
 			return error;
 		repo->path_workdir = git__strdup(path_aux);
+		if (repo->path_workdir == NULL)
+			return GIT_ENOMEM;
 	}
 	
 	return GIT_SUCCESS;
@@ -173,12 +179,16 @@ static int guess_repository_DIRs(git_repository *repo, const char *repository_pa
 	path_len = strlen(path_aux);
 
 	repo->path_repository = git__strdup(path_aux);
+	if (repo->path_repository == NULL)
+		return GIT_ENOMEM;
 
 	/* objects database */
 	strcpy(path_aux + path_len, GIT_OBJECTS_DIR);
 	if (gitfo_isdir(path_aux) < GIT_SUCCESS)
 		return GIT_ENOTAREPO;
 	repo->path_odb = git__strdup(path_aux);
+	if (repo->path_odb == NULL)
+		return GIT_ENOMEM;
 
 	/* HEAD file */
 	strcpy(path_aux + path_len, GIT_HEAD_FILE);
@@ -191,16 +201,30 @@ static int guess_repository_DIRs(git_repository *repo, const char *repository_pa
 		return GIT_EINVALIDPATH;
 
 	if (strcmp(topdir, GIT_DIR) == 0) {
+		int workdir_len;
+
 		repo->is_bare = 0;
 
 		/* index file */
 		strcpy(path_aux + path_len, GIT_INDEX_FILE);
 		repo->path_index = git__strdup(path_aux);
+		if (repo->path_index == NULL)
+			return GIT_ENOMEM;
 
 		/* working dir */
-		repo->path_workdir = git__dirname(path_aux);
-		if (repo->path_workdir == NULL)
+		path_aux[path_len] = 0;
+		workdir_len = git__dirname_r(path_aux, GIT_PATH_MAX, path_aux);
+		if (workdir_len < 0)
 			return GIT_EINVALIDPATH;
+
+		if (path_aux[workdir_len - 1] != '/') {
+			path_aux[workdir_len] = '/';
+			path_aux[workdir_len + 1] = '\0';
+		}
+
+		repo->path_workdir = git__strdup(path_aux);
+		if (repo->path_workdir == NULL)
+			return GIT_ENOMEM;
 
 	} else {
 		repo->is_bare = 1;
@@ -611,6 +635,8 @@ static int repo_init_find_dir(repo_init *results, const char* path)
 		return GIT_ENOTAREPO;
 
 	results->path_repository = git__strdup(temp_path);
+	if (results->path_repository == NULL)
+		return GIT_ENOMEM;
 
 	return GIT_SUCCESS;
 }
