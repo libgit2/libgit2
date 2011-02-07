@@ -104,6 +104,19 @@ def build(bld):
         from waflib import Options
         Options.commands = [bld.cmd + '-shared', bld.cmd + '-static'] + Options.commands
 
+def get_libgit2_version(git2_h):
+    import re
+    line = None
+
+    with open(git2_h) as f:
+        line = re.search(r'^#define LIBGIT2_VERSION "(\d\.\d\.\d)"$', f.read(), re.MULTILINE)
+
+    if line is None:
+        raise "Failed to detect libgit2 version"
+
+    return line.group(1)
+
+
 def build_library(bld, build_type):
 
     BUILD = {
@@ -114,6 +127,9 @@ def build_library(bld, build_type):
 
     directory = bld.path
     sources = directory.ant_glob('src/*.c')
+
+    # Find the version of the library, from our header file
+    version = get_libgit2_version(directory.find_node("src/git2.h").abspath())
 
     # Compile platform-dependant code
     # E.g.  src/unix/*.c
@@ -136,12 +152,13 @@ def build_library(bld, build_type):
         target='git2',
         includes='src',
         install_path='${LIBDIR}',
-        use=ALL_LIBS
+        use=ALL_LIBS,
+        vnum=version,
     )
 
     # On Unix systems, build the Pkg-config entry file
     if bld.env.PLATFORM == 'unix' and bld.is_install:
-        bld(rule="""sed -e 's#@prefix@#${PREFIX}#' -e 's#@libdir@#${LIBDIR}#' < ${SRC} > ${TGT}""",
+        bld(rule="""sed -e 's#@prefix@#${PREFIX}#' -e 's#@libdir@#${LIBDIR}#' -e 's#@version@#%s#' < ${SRC} > ${TGT}""" % version,
             source='libgit2.pc.in',
             target='libgit2.pc',
             install_path='${LIBDIR}/pkgconfig',
