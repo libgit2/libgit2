@@ -25,7 +25,7 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 
-#include "refs.h"
+#include "repository.h"
 
 static const char *loose_tag_ref_name = "refs/tags/test";
 static const char *non_existing_tag_ref_name = "refs/tags/i-do-not-exist";
@@ -188,6 +188,101 @@ BEGIN_TEST("readpackedref", packed_exists_but_more_recent_loose_reference_is_ret
 	git_repository_free(repo);
 END_TEST
 
+BEGIN_TEST("createref", create_new_symbolic_ref)
+	git_reference *new_reference, *looked_up_ref, *resolved_ref;
+	git_repository *repo;
+	git_oid id;
+	char *ref_path;
+
+	const char *new_head_tracker = "another-head-tracker";
+
+	git_oid_mkstr(&id, current_master_tip);
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	/* Retrieve the physical path to the symbolic ref for further cleaning */
+	ref_path = git__joinpath(repo->path_repository, new_head_tracker);
+	must_be_true(ref_path != NULL);
+
+	/* Create and write the new symbolic reference */
+	must_pass(git_reference_new(&new_reference, repo));
+	git_reference_set_target(new_reference, current_head_target);
+	git_reference_set_name(new_reference, new_head_tracker);
+	must_pass(git_reference_write(new_reference));
+
+	/* Ensure the reference can be looked-up... */
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head_tracker));
+	must_be_true(looked_up_ref->type == GIT_REF_SYMBOLIC);
+	must_be_true(looked_up_ref->packed == 0);
+	must_be_true(strcmp(looked_up_ref->name, new_head_tracker) == 0);
+
+	/* ...peeled.. */
+	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
+	must_be_true(resolved_ref->type == GIT_REF_OID);
+
+	/* ...and that it points to the current master tip */
+	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
+
+	git_repository_free(repo);
+
+	/* Similar test with a fresh new repository */
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head_tracker));
+	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
+	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
+
+	git_repository_free(repo);
+
+	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
+	free(ref_path);
+END_TEST
+
+BEGIN_TEST("createref", create_new_object_id_ref)
+	git_reference *new_reference, *looked_up_ref;
+	git_repository *repo;
+	git_oid id;
+	char *ref_path;
+
+	const char *new_head = "refs/heads/new-head";
+
+	git_oid_mkstr(&id, current_master_tip);
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	/* Retrieve the physical path to the symbolic ref for further cleaning */
+	ref_path = git__joinpath(repo->path_repository, new_head);
+	must_be_true(ref_path != NULL);
+
+	/* Create and write the new object id reference */
+	must_pass(git_reference_new(&new_reference, repo));
+	git_reference_set_oid(new_reference, &id);
+	git_reference_set_name(new_reference, new_head);
+	must_pass(git_reference_write(new_reference));
+
+	/* Ensure the reference can be looked-up... */
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head));
+	must_be_true(looked_up_ref->type == GIT_REF_OID);
+	must_be_true(looked_up_ref->packed == 0);
+	must_be_true(strcmp(looked_up_ref->name, new_head) == 0);
+
+	/* ...and that it points to the current master tip */
+	must_be_true(git_oid_cmp(&id, git_reference_oid(looked_up_ref)) == 0);
+
+	git_repository_free(repo);
+
+	/* Similar test with a fresh new repository */
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head));
+	must_be_true(git_oid_cmp(&id, git_reference_oid(looked_up_ref)) == 0);
+
+	git_repository_free(repo);
+
+	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
+	free(ref_path);
+END_TEST
+
 git_testsuite *libgit2_suite_refs(void)
 {
 	git_testsuite *suite = git_testsuite_new("References");
@@ -200,6 +295,8 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "readsymref", looking_up_master_then_head);
 	ADD_TEST(suite, "readpackedref", packed_reference_looking_up);
 	ADD_TEST(suite, "readpackedref", packed_exists_but_more_recent_loose_reference_is_retrieved);
+	ADD_TEST(suite, "createref", create_new_symbolic_ref);
+	ADD_TEST(suite, "createref", create_new_object_id_ref);
 
 	return suite;
 }
