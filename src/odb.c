@@ -33,6 +33,8 @@
 
 #include "git2/odb_backend.h"
 
+#define GIT_ALTERNATES_FILE "info/alternates"
+
 static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 {
 	const char *type_str = git_object_type2string(obj->type);
@@ -171,32 +173,77 @@ int git_odb_add_backend(git_odb *odb, git_odb_backend *backend)
 	return GIT_SUCCESS;
 }
 
+static int add_default_backends(git_odb *db, const char *objects_dir)
+{
+	git_odb_backend *loose, *packed;
+	int error;
+
+	/* add the loose object backend */
+	error = git_odb_backend_loose(&loose, objects_dir);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = git_odb_add_backend(db, loose);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* add the packed file backend */
+	error = git_odb_backend_pack(&packed, objects_dir);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = git_odb_add_backend(db, packed);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	return GIT_SUCCESS;
+}
+
+static int load_alternates(git_odb *odb, const char *objects_dir)
+{
+	char alternates_path[GIT_PATH_MAX];
+	char alternate[GIT_PATH_MAX];
+	char *buffer;
+
+	gitfo_buf alternates_buf = GITFO_BUF_INIT;
+	int error;
+
+	git__joinpath(alternates_path, objects_dir, GIT_ALTERNATES_FILE);
+
+	if (gitfo_exists(alternates_path) < GIT_SUCCESS)
+		return GIT_SUCCESS;
+
+	if (gitfo_read_file(&alternates_buf, alternates_path) < GIT_SUCCESS)
+		return GIT_EOSERR;
+
+	buffer = (char *)alternates_buf.data;
+	error = GIT_SUCCESS;
+
+	/* add each alternate as a new backend; one alternate per line */
+	while ((error == GIT_SUCCESS) && (buffer = git__strtok(alternate, buffer, "\r\n")) != NULL)
+		error = add_default_backends(odb, alternate);
+
+	gitfo_free_buf(&alternates_buf);
+	return error;
+}
 
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
 	git_odb *db;
-	git_odb_backend *loose, *packed;
 	int error;
+
+	assert(out && objects_dir);
+
+	*out = NULL;
 
 	if ((error = git_odb_new(&db)) < 0)
 		return error;
 
-	/* add the loose object backend */
-	if (git_odb_backend_loose(&loose, objects_dir) == 0) {
-		error = git_odb_add_backend(db, loose);
-		if (error < 0)
-			goto cleanup;
-	}
+	if ((error = add_default_backends(db, objects_dir)) < GIT_SUCCESS)
+		goto cleanup;
 
-	/* add the packed file backend */
-	if (git_odb_backend_pack(&packed, objects_dir) == 0) {
-		error = git_odb_add_backend(db, packed);
-		if (error < 0)
-			goto cleanup;
-	}
-
-	/* TODO: add altenernates as new backends;
-	 * how elevant is that? very elegant. */
+	if ((error = load_alternates(db, objects_dir)) < GIT_SUCCESS)
+		goto cleanup;
 
 	*out = db;
 	return GIT_SUCCESS;
