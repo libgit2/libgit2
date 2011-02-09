@@ -1203,8 +1203,6 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.free = &pack_backend__free;
 
-	backend->parent.priority = 1;
-
 	*backend_out = (git_odb_backend *)backend;
 	return GIT_SUCCESS;
 }

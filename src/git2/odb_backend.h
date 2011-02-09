@@ -42,8 +42,6 @@ GIT_BEGIN_DECL
 struct git_odb_backend {
 	git_odb *odb;
 
-	int priority;
-
 	int (* read)(
 			git_rawobj *,
 			struct git_odb_backend *,

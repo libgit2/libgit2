@@ -264,8 +264,6 @@ int git_odb_backend_sqlite(git_odb_backend **backend_out, const char *sqlite_db)
 	backend->parent.exists = &sqlite_backend__exists;
 	backend->parent.free = &sqlite_backend__free;
 
-	backend->parent.priority = 0; 
-
 	*backend_out = (git_odb_backend *)backend;
 	return GIT_SUCCESS;
 

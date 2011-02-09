@@ -79,7 +79,24 @@ GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
  * @paramm backend pointer to a git_odb_backend instance
  * @return 0 on sucess; error code otherwise
  */
-GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend);
+GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
+
+/**
+ * Add a custom backend to an existing Object DB; this
+ * backend will work as an alternate.
+ *
+ * Alternate backends are always checked for objects *after*
+ * all the main backends have been exhausted.
+ *
+ * Writing is disabled on alternate backends.
+ *
+ * Read <odb_backends.h> for more information.
+ *
+ * @param odb database to add the backend to
+ * @paramm backend pointer to a git_odb_backend instance
+ * @return 0 on sucess; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
 
 /**
  * Close an open object database.

@@ -653,8 +653,6 @@ int git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir
 	backend->parent.exists = &loose_backend__exists;
 	backend->parent.free = &loose_backend__free;
 
-	backend->parent.priority = 2; /* higher than packfiles */
-
 	*backend_out = (git_odb_backend *)backend;
 	return GIT_SUCCESS;
 }
