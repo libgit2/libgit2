@@ -344,25 +344,15 @@ END_TEST
 
 static int ensure_joinpath(const char *path_a, const char *path_b, const char *expected_path)
 {
-	int error = GIT_SUCCESS;
-	char* joined_path;
-
-	joined_path = git__joinpath(path_a, path_b);
-	if (joined_path == NULL)
-		return GIT_ERROR;
-
-	if (strcmp(joined_path, expected_path))
-		error = GIT_ERROR;
-
-	free(joined_path);
-
-	return error;
+	char joined_path[GIT_PATH_MAX];
+	git__joinpath(joined_path, path_a, path_b);
+	return strcmp(joined_path, expected_path) == 0 ? GIT_SUCCESS : GIT_ERROR;
 }
 
 BEGIN_TEST("path", joinpath)
-	must_pass(ensure_joinpath("", "", ""));
-	must_pass(ensure_joinpath("", "a", "a"));
-	must_pass(ensure_joinpath("a", "", "a"));
+	must_pass(ensure_joinpath("", "", "/"));
+	must_pass(ensure_joinpath("", "a", "/a"));
+	must_pass(ensure_joinpath("a", "", "a/"));
 	must_pass(ensure_joinpath("a", "b", "a/b"));
 	must_pass(ensure_joinpath("/", "a", "/a"));
 	must_pass(ensure_joinpath("/", "", "/"));

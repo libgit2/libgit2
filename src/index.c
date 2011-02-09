@@ -289,8 +289,7 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 	if (index->repository == NULL)
 		return GIT_EBAREINDEX;
 
-	strcpy(full_path, index->repository->path_workdir);
-	strcat(full_path, rel_path);
+	git__joinpath(full_path, index->repository->path_workdir, rel_path);
 
 	if (gitfo_exists(full_path) < 0)
 		return GIT_ENOTFOUND;

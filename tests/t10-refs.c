@@ -192,7 +192,7 @@ BEGIN_TEST("createref", create_new_symbolic_ref)
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_repository *repo;
 	git_oid id;
-	char *ref_path;
+	char ref_path[GIT_PATH_MAX];
 
 	const char *new_head_tracker = "another-head-tracker";
 
@@ -201,8 +201,7 @@ BEGIN_TEST("createref", create_new_symbolic_ref)
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	/* Retrieve the physical path to the symbolic ref for further cleaning */
-	ref_path = git__joinpath(repo->path_repository, new_head_tracker);
-	must_be_true(ref_path != NULL);
+	git__joinpath(ref_path, repo->path_repository, new_head_tracker);
 
 	/* Create and write the new symbolic reference */
 	must_pass(git_reference_new(&new_reference, repo));
@@ -235,14 +234,13 @@ BEGIN_TEST("createref", create_new_symbolic_ref)
 	git_repository_free(repo);
 
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
-	free(ref_path);
 END_TEST
 
 BEGIN_TEST("createref", create_new_object_id_ref)
 	git_reference *new_reference, *looked_up_ref;
 	git_repository *repo;
 	git_oid id;
-	char *ref_path;
+	char ref_path[GIT_PATH_MAX];
 
 	const char *new_head = "refs/heads/new-head";
 
@@ -251,8 +249,7 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	/* Retrieve the physical path to the symbolic ref for further cleaning */
-	ref_path = git__joinpath(repo->path_repository, new_head);
-	must_be_true(ref_path != NULL);
+	git__joinpath(ref_path, repo->path_repository, new_head);
 
 	/* Create and write the new object id reference */
 	must_pass(git_reference_new(&new_reference, repo));
@@ -280,7 +277,6 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	git_repository_free(repo);
 
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
-	free(ref_path);
 END_TEST
 
 git_testsuite *libgit2_suite_refs(void)

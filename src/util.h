@@ -62,9 +62,15 @@ extern const char *git__topdir(const char *path);
  * Join two paths together. Takes care of properly fixing the
  * middle slashes and everything
  *
- * Returns a newly allocated string; must be free'd manually.
+ * The paths are joined together into buffer_out; this is expected
+ * to be an user allocated buffer of `GIT_PATH_MAX` size 
  */
-extern char *git__joinpath(const char *path_a, const char *path_b);
+extern void git__joinpath_n(char *buffer_out, int npath, ...);
+
+GIT_INLINE(void) git__joinpath(char *buffer_out, const char *path_a, const char *path_b)
+{
+	git__joinpath_n(buffer_out, 2, path_a, path_b);
+}
 
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
@@ -84,18 +90,6 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 #	define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
 #endif
 
-enum git_splitpath_flags
-{
-   GIT_SPL_PATH = 1,
-   GIT_SPL_FILE = 2,
-   GIT_SPL_EXT  = 4,
-   GIT_SPL_PATH_FILE = GIT_SPL_PATH + GIT_SPL_FILE,
-   GIT_SPL_FILE_EXT  = GIT_SPL_FILE + GIT_SPL_EXT,
-   GIT_SPL_EXT_NO_PERIOD = 8,
-};
-
-
-extern char *git__splitpath(char *path, int flag);
 extern char *git__strtok(char *output, char *src, char *delimit);
 extern char *git__strtok_keep(char *output, char *src, char *delimit);
 

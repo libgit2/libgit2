@@ -159,8 +159,7 @@ static int read_loose_ref(gitfo_buf *file_content, const char *name, const char 
 	char ref_path[GIT_PATH_MAX];
 
 	/* Determine the full path of the ref */
-	strcpy(ref_path, repo_path);
-	strcat(ref_path, name);
+	git__joinpath(ref_path, repo_path, name);
 
 	/* Does it even exist ? */
 	if (gitfo_exists(ref_path) < GIT_SUCCESS)
@@ -228,8 +227,7 @@ static int read_packed_refs(gitfo_buf *packfile, const char *repo_path)
 	char ref_path[GIT_PATH_MAX];
 
 	/* Determine the full path of the file */
-	strcpy(ref_path, repo_path);
-	strcat(ref_path, GIT_PACKEDREFS_FILE);
+	git__joinpath(ref_path, repo_path, GIT_PACKEDREFS_FILE);
 
 	/* Does it even exist ? */
 	if (gitfo_exists(ref_path) < GIT_SUCCESS)
@@ -528,8 +526,7 @@ int git_reference_write(git_reference *ref)
 	if ((error = check_refname(ref->name)) < GIT_SUCCESS)
 		return error;
 
-	strcpy(ref_path, ref->owner->path_repository);
-	strcat(ref_path, ref->name);
+	git__joinpath(ref_path, ref->owner->path_repository, ref->name);
 
 	if ((error = git_filelock_init(&lock, ref_path)) < GIT_SUCCESS)
 		goto error_cleanup;

@@ -202,30 +202,30 @@ const char *git__topdir(const char *path)
 	return &path[i + 1];
 }
 
-char *git__joinpath(const char *path_a, const char *path_b)
+void git__joinpath_n(char *buffer_out, int count, ...)
 {
-	int len_a, len_b;
-	char *path_new;
+	va_list ap;
+	int i;
 
-	assert(path_a && path_b);
+	va_start(ap, count);
+	for (i = 0; i < count; ++i) {
+		const char *path;
+		int len;
 
-	len_a = strlen(path_a);
-	len_b = strlen(path_b);
+		path = va_arg(ap, const char *);
+		if (i > 0 && *path == '/')
+			path++;
 
-	path_new = git__malloc(len_a + len_b + 2);
-	if (path_new == NULL)
-		return NULL;
+		len = strlen(path);
+		memcpy(buffer_out, path, len);
+		buffer_out = buffer_out + len;
 
-	strcpy(path_new, path_a);
+		if (i < count - 1 && buffer_out[-1] != '/')
+			*buffer_out++ = '/';
+	}
+	va_end(ap);
 
-	if (len_a > 0 && len_b > 0 && path_new[len_a - 1] != '/')
-		path_new[len_a++] = '/';
-
-	if (path_b[0] == '/')
-		path_b++;
-
-	strcpy(path_new + len_a, path_b);
-	return path_new;
+	*buffer_out = '\0';
 }
 
 static char *strtok_raw(char *output, char *src, char *delimit, int keep)
