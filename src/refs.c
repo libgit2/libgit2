@@ -571,12 +571,13 @@ error_cleanup:
 int git_repository_lookup_ref(git_reference **ref_out, git_repository *repo, const char *name)
 {
 	int error;
+	char normalized_name[GIT_PATH_MAX];
 
 	assert(ref_out && repo && name);
 
 	*ref_out = NULL;
 
-	error = check_refname(name);
+	error = git_reference__normalize_name(normalized_name, name, GIT_REF_ANY);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -584,7 +585,7 @@ int git_repository_lookup_ref(git_reference **ref_out, git_repository *repo, con
 	 * First, check if the reference is on the local cache;
 	 * references on the cache are assured to be up-to-date
 	 */
-	*ref_out = git_hashtable_lookup(repo->references.cache, name);
+	*ref_out = git_hashtable_lookup(repo->references.cache, normalized_name);
 	if (*ref_out != NULL)
 		return GIT_SUCCESS;
 
@@ -593,7 +594,7 @@ int git_repository_lookup_ref(git_reference **ref_out, git_repository *repo, con
 	 * If the file exists, we parse it and store it on the
 	 * cache.
 	 */
-	error = lookup_loose_ref(ref_out, repo, name);
+	error = lookup_loose_ref(ref_out, repo, normalized_name);
 
 	if (error == GIT_SUCCESS)
 		return GIT_SUCCESS;
@@ -618,7 +619,7 @@ int git_repository_lookup_ref(git_reference **ref_out, git_repository *repo, con
 			return error;
 
 		/* check the cache again -- hopefully the reference will be there */
-		*ref_out = git_hashtable_lookup(repo->references.cache, name);
+		*ref_out = git_hashtable_lookup(repo->references.cache, normalized_name);
 		if (*ref_out != NULL)
 			return GIT_SUCCESS;
 	}
@@ -653,4 +654,99 @@ void git_repository__refcache_free(git_refcache *refs)
 	git_hashtable_free(refs->cache);
 }
 
+static int check_valid_ref_char(char ch)
+{
+	if (ch <= ' ')
+		return GIT_ERROR;
+
+	switch (ch) {
+	case '~':
+	case '^':
+	case ':':
+	case '\\':
+	case '?':
+	case '[':
+		return GIT_ERROR;
+		break;
+
+	default:
+		return GIT_SUCCESS;
+	}
+}
+
+int git_reference__normalize_name(char *buffer_out, const char *name, git_rtype type)
+{
+	int error = GIT_SUCCESS;
+	const char *name_end, *buffer_out_start;
+	char *current;
+	int contains_a_slash = 0;
+
+	assert(name && buffer_out);
+
+	buffer_out_start = buffer_out;
+	current = (char *)name;
+	name_end = name + strlen(name);
+
+	if (type == GIT_REF_INVALID)
+		return GIT_EINVALIDTYPE;
+
+	/* A refname can not be empty */
+	if (name_end == name)
+		return GIT_EINVALIDREFNAME;
+
+	/* A refname can not end with a dot or a slash */
+	if (*(name_end - 1) == '.' || *(name_end - 1) == '/')
+		return GIT_EINVALIDREFNAME;
+
+	while (current < name_end) {
+		if (check_valid_ref_char(*current))
+				return GIT_EINVALIDREFNAME;
+
+		if (buffer_out > buffer_out_start) {
+			char prev = *(buffer_out - 1);
+
+			/* A refname can not start with a dot nor contain a double dot */
+			if (*current == '.' && ((prev == '.') || (prev == '/')))
+				return GIT_EINVALIDREFNAME;
+
+			/* '@{' is forbidden within a refname */
+			if (*current == '{' && prev == '@')
+				return GIT_EINVALIDREFNAME;
+
+			/* Prevent multiple slashes from being added to the output */
+			if (*current == '/' && prev == '/') {
+				current++;
+				continue;
+			}
+		}
+
+		if (*current == '/') {
+			/* Slashes are not authorized in symbolic reference name */
+			if (type == GIT_REF_SYMBOLIC) {
+				return GIT_EINVALIDREFNAME;
+			}
+
+			contains_a_slash = 1;
+		}
+
+		*buffer_out++ = *current++;
+	}
+
+	/* Object id refname have to contain at least one slash */
+	if (type == GIT_REF_OID && !contains_a_slash)
+				return GIT_EINVALIDREFNAME;
+
+	/* A refname can not end with ".lock" */
+	if (!git__suffixcmp(name, GIT_FILELOCK_EXTENSION))
+				return GIT_EINVALIDREFNAME;
+
+	*buffer_out = '\0';
+
+	/* For object id references, name has to start with refs/(heads|tags|remotes) */
+	if (type == GIT_REF_OID && !(!git__prefixcmp(buffer_out_start, GIT_REFS_HEADS_DIR) ||
+			!git__prefixcmp(buffer_out_start, GIT_REFS_TAGS_DIR) || !git__prefixcmp(buffer_out_start, GIT_REFS_REMOTES_DIR)))
+		return GIT_EINVALIDREFNAME;
+
+	return error;
+}
 

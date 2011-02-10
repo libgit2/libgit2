@@ -9,6 +9,7 @@
 #define GIT_REFS_DIR "refs/"
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
 #define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
+#define GIT_REFS_REMOTES_DIR GIT_REFS_DIR "remotes/"
 
 #define GIT_SYMREF "ref: "
 #define GIT_PACKEDREFS_FILE "packed-refs"
@@ -37,5 +38,6 @@ typedef struct {
 
 void git_repository__refcache_free(git_refcache *refs);
 int git_repository__refcache_init(git_refcache *refs);
+int git_reference__normalize_name(char *buffer_out, const char *name, git_rtype type);
 
 #endif

@@ -279,6 +279,63 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
+static int ensure_refname_normalized(git_rtype ref_type, const char *input_refname, const char *expected_refname)
+{
+	int error = GIT_SUCCESS;
+	char buffer_out[GIT_PATH_MAX];
+
+	error = git_reference__normalize_name(buffer_out, input_refname, ref_type);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (expected_refname == NULL)
+		return error;
+
+	if (strcmp(buffer_out, expected_refname))
+		error = GIT_ERROR;
+
+	return error;
+}
+
+BEGIN_TEST("normalizeref", normalize_unknown_ref_type)
+	must_fail(ensure_refname_normalized(GIT_REF_INVALID, "a", NULL));
+END_TEST
+
+BEGIN_TEST("normalizeref", normalize_object_id_ref)
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "a", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a/", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a.", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a.lock", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/dummy/a", NULL));
+	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/tags/a", "refs/tags/a"));
+	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a/b", "refs/heads/a/b"));
+	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a./b", "refs/heads/a./b"));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/foo?bar", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads\foo", NULL));
+	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/heads/v@ation", "refs/heads/v@ation"));
+	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs///heads///a", "refs/heads/a"));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/.a/b", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/foo/../bar", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/foo..bar", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/./foo", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/v@{ation", NULL));
+END_TEST
+
+BEGIN_TEST("normalizeref", normalize_symbolic_ref)
+	must_pass(ensure_refname_normalized(GIT_REF_SYMBOLIC, "a", "a"));
+	must_fail(ensure_refname_normalized(GIT_REF_SYMBOLIC, "", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_SYMBOLIC, "a/b", NULL));
+	must_fail(ensure_refname_normalized(GIT_REF_SYMBOLIC, "heads\foo", NULL));
+END_TEST
+
+
+BEGIN_TEST("normalizeref", normalize_any_ref) /* Slash related rules do not apply, neither do 'refs' prefix related rules */
+	must_pass(ensure_refname_normalized(GIT_REF_ANY, "a", "a"));
+	must_pass(ensure_refname_normalized(GIT_REF_ANY, "a/b", "a/b"));
+	must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs///heads///a", "refs/heads/a"));
+END_TEST
+
 git_testsuite *libgit2_suite_refs(void)
 {
 	git_testsuite *suite = git_testsuite_new("References");
@@ -293,6 +350,10 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "readpackedref", packed_exists_but_more_recent_loose_reference_is_retrieved);
 	ADD_TEST(suite, "createref", create_new_symbolic_ref);
 	ADD_TEST(suite, "createref", create_new_object_id_ref);
+	ADD_TEST(suite, "normalizeref", normalize_unknown_ref_type);
+	ADD_TEST(suite, "normalizeref", normalize_object_id_ref);
+	ADD_TEST(suite, "normalizeref", normalize_symbolic_ref);
+	ADD_TEST(suite, "normalizeref", normalize_any_ref);
 
 	return suite;
 }
