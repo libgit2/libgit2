@@ -26,7 +26,8 @@ static struct {
 	{GIT_ETOONESTEDSYMREF, "The specified symbolic reference is too deeply nested"},
 	{GIT_EPACKEDREFSCORRUPTED, "The pack-refs file is either corrupted of its format is not currently supported"},
 	{GIT_EINVALIDPATH, "The path is invalid" },
-	{GIT_EREVWALKOVER, "The revision walker is empty; there are no more commits left to iterate"}
+	{GIT_EREVWALKOVER, "The revision walker is empty; there are no more commits left to iterate"},
+	{GIT_EINVALIDREFSTATE, "The state of the reference is not valid"}
 };
 
 const char *git_strerror(int num)

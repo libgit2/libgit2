@@ -154,6 +154,9 @@
 /** The revision walker is empty; there are no more commits left to iterate */
 #define GIT_EREVWALKOVER (GIT_ERROR - 20)
 
+/** The state of the reference is not valid */
+#define GIT_EINVALIDREFSTATE (GIT_ERROR - 21)
+
 GIT_BEGIN_DECL
 /** @} */
 GIT_END_DECL
