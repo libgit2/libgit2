@@ -233,6 +233,29 @@ BEGIN_TEST("createref", create_new_symbolic_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
+BEGIN_TEST("createref", create_deep_symbolic_ref)
+	git_reference *new_reference, *looked_up_ref, *resolved_ref;
+	git_repository *repo;
+	git_oid id;
+	char ref_path[GIT_PATH_MAX];
+
+	const char *new_head_tracker = "deep/rooted/tracker";
+
+	git_oid_mkstr(&id, current_master_tip);
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git__joinpath(ref_path, repo->path_repository, new_head_tracker);
+	must_pass(git_reference_create_symbolic(&new_reference, repo, new_head_tracker, current_head_target));
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head_tracker));
+	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
+	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
+
+	git_repository_free(repo);
+
+	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
+END_TEST
+
 BEGIN_TEST("createref", create_new_object_id_ref)
 	git_reference *new_reference, *looked_up_ref;
 	git_repository *repo;
@@ -468,6 +491,7 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "readpackedref", packed_reference_looking_up);
 	ADD_TEST(suite, "readpackedref", packed_exists_but_more_recent_loose_reference_is_retrieved);
 	ADD_TEST(suite, "createref", create_new_symbolic_ref);
+	ADD_TEST(suite, "createref", create_deep_symbolic_ref);
 	ADD_TEST(suite, "createref", create_new_object_id_ref);
 	ADD_TEST(suite, "normalizeref", normalize_unknown_ref_type);
 	ADD_TEST(suite, "normalizeref", normalize_object_id_ref);
