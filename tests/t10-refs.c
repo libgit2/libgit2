@@ -204,10 +204,7 @@ BEGIN_TEST("createref", create_new_symbolic_ref)
 	git__joinpath(ref_path, repo->path_repository, new_head_tracker);
 
 	/* Create and write the new symbolic reference */
-	must_pass(git_reference_new(&new_reference, repo));
-	git_reference_set_target(new_reference, current_head_target);
-	git_reference_set_name(new_reference, new_head_tracker);
-	must_pass(git_reference_write(new_reference));
+	must_pass(git_reference_create_symbolic(&new_reference, repo, new_head_tracker, current_head_target));
 
 	/* Ensure the reference can be looked-up... */
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head_tracker));
@@ -252,10 +249,7 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	git__joinpath(ref_path, repo->path_repository, new_head);
 
 	/* Create and write the new object id reference */
-	must_pass(git_reference_new(&new_reference, repo));
-	git_reference_set_oid(new_reference, &id);
-	git_reference_set_name(new_reference, new_head);
-	must_pass(git_reference_write(new_reference));
+	must_pass(git_reference_create_oid(&new_reference, repo, new_head, &id));
 
 	/* Ensure the reference can be looked-up... */
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head));

@@ -39,18 +39,32 @@
 GIT_BEGIN_DECL
 
 /**
- * Create a new reference.
+ * Create a new symbolic reference.
  *
- * The reference will be empty and exclusively
- * in-memory until it is filled with the setter
- * methods and written back to disk using
- * `git_reference_write`.
+ * The reference will be created in the repository and written
+ * to the disk.
  *
  * @param ref_out Pointer to the newly created reference
- * @param repo Repository where that reference exists
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param target The target of the reference
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_reference_new(git_reference **ref_out, git_repository *repo);
+GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
+
+/**
+ * Create a new object id reference.
+ *
+ * The reference will be created in the repository and written
+ * to the disk.
+ *
+ * @param ref_out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param id The object id pointed to by the reference.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
 
 /**
  * Get the OID pointed to by a reference.
@@ -130,18 +144,6 @@ GIT_EXTERN(int) git_reference_write(git_reference *ref);
 GIT_EXTERN(git_repository *) git_reference_owner(git_reference *ref);
 
 /**
- * Set the name of a reference.
- *
- * This marks the reference as modified; changes
- * won't take effect until it is manually written back
- * to disk.
- *
- * @param ref The reference
- * @param name The new name for the reference
- */
-GIT_EXTERN(void) git_reference_set_name(git_reference *ref, const char *name);
-
-/**
  * Set the target reference of a reference.
  *
  * This converts the reference into a symbolic
@@ -153,8 +155,9 @@ GIT_EXTERN(void) git_reference_set_name(git_reference *ref, const char *name);
  *
  * @param ref The reference
  * @param target The new target for the reference
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(void) git_reference_set_target(git_reference *ref, const char *target);
+GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const char *target);
 
 /**
  * Set the OID target of a reference.
@@ -168,8 +171,9 @@ GIT_EXTERN(void) git_reference_set_target(git_reference *ref, const char *target
  *
  * @param ref The reference
  * @param target The new target OID for the reference
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(void) git_reference_set_oid(git_reference *ref, const git_oid *id);
+GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
 
 /** @} */
 GIT_END_DECL
