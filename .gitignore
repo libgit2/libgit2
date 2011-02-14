@@ -19,3 +19,4 @@ msvc/Release/
 *.user
 *.sdf
 *.opensdf
+.DS_Store
