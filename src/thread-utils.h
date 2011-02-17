@@ -34,9 +34,9 @@
 #		define gitrc_free(a)	(void)0
 #	elif defined(GIT_WIN32)
 		typedef long git_refcnt;
-#		define gitrc_init(a, v)	*a = v
-#		define gitrc_inc(a)		InterlockedIncrement(a)
-#		define gitrc_dec(a)		!InterlockedDecrement(a)
+#		define gitrc_init(a, v)	(*a = v)
+#		define gitrc_inc(a)		(InterlockedIncrement(a))
+#		define gitrc_dec(a)		(!InterlockedDecrement(a))
 #		define gitrc_free(a)	(void)0
 #	else
 		typedef struct { git_lck lock; int counter; } git_refcnt;
@@ -98,7 +98,7 @@
 #	define gitlck_free(a)   (void)0
 
 	typedef struct { int counter; } git_refcnt;
-#	define gitrc_init(a)   ((a)->counter = 0)
+#	define gitrc_init(a,v) ((a)->counter = v)
 #	define gitrc_inc(a)    ((a)->counter++)
 #	define gitrc_dec(a)    (--(a)->counter == 0)
 #	define gitrc_free(a)   (void)0
