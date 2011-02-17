@@ -30,7 +30,7 @@
 BEGIN_TEST("refcnt", init_inc2_dec2_free)
 	git_refcnt p;
 
-	gitrc_init(&p);
+	gitrc_init(&p, 0);
 	gitrc_inc(&p);
 	gitrc_inc(&p);
 	must_be_true(!gitrc_dec(&p));

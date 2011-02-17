@@ -33,12 +33,4 @@ struct git_index {
 	git_index_tree *tree;
 };
 
-int git_index__write(git_index *index, git_filelock *file);
-void git_index__sort(git_index *index);
-int git_index__parse(git_index *index, const char *buffer, size_t buffer_size);
-int git_index__remove_pos(git_index *index, unsigned int position);
-int git_index__append(git_index *index, const git_index_entry *entry);
-
-void git_index_tree__free(git_index_tree *tree);
-
 #endif
