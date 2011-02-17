@@ -701,8 +701,8 @@ static void *create_disk_entry(size_t *disk_size, git_index_entry *entry)
 	if (ondisk == NULL)
 		return NULL;
 
-	ondisk->ctime.seconds = htonl(entry->ctime.seconds);
-	ondisk->mtime.seconds = htonl(entry->mtime.seconds);
+	ondisk->ctime.seconds = htonl((unsigned long)entry->ctime.seconds);
+	ondisk->mtime.seconds = htonl((unsigned long)entry->mtime.seconds);
 	ondisk->ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
 	ondisk->mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
 	ondisk->dev  = htonl(entry->dev);
@@ -710,7 +710,7 @@ static void *create_disk_entry(size_t *disk_size, git_index_entry *entry)
 	ondisk->mode = htonl(entry->mode);
 	ondisk->uid  = htonl(entry->uid);
 	ondisk->gid  = htonl(entry->gid);
-	ondisk->file_size = htonl(entry->file_size);
+	ondisk->file_size = htonl((unsigned long)entry->file_size);
 
 	git_oid_cpy(&ondisk->oid, &entry->oid);
 
