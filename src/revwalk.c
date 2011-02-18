@@ -329,6 +329,8 @@ git_revwalk_commit *git_revwalk_list_pop_back(git_revwalk_list *list)
 	list->tail = list->tail->prev;
 	if (list->tail == NULL)
 		list->head = NULL;
+	else
+		list->tail->next = NULL;
 
 	commit = node->walk_commit;
 	free(node);
@@ -350,6 +352,8 @@ git_revwalk_commit *git_revwalk_list_pop_front(git_revwalk_list *list)
 	list->head = list->head->next;
 	if (list->head == NULL)
 		list->tail = NULL;
+	else
+		list->head->prev = NULL;
 
 	commit = node->walk_commit;
 	free(node);
