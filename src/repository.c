@@ -581,7 +581,7 @@ static int repo_init_structure(repo_init *results)
 	strcpy(temp_path, git_dir);
 
 	/* Does HEAD file already exist ? */
-	strcpy(temp_path + path_len, GIT_HEAD_FILE);
+	git__joinpath(temp_path, git_dir, GIT_HEAD_FILE);
 
 	if (gitfo_exists(temp_path) == GIT_SUCCESS)
 		return repo_init_reinit(results);
@@ -590,22 +590,22 @@ static int repo_init_structure(repo_init *results)
 		return GIT_ERROR;
 
 	/* Creates the '/objects/info/' directory */
-	strcpy(temp_path + path_len, GIT_OBJECTS_INFO_DIR);
-	if (gitfo_mkdir_recurs(temp_path, mode))
+	git__joinpath(temp_path, git_dir, GIT_OBJECTS_INFO_DIR);
+	if (gitfo_mkdir_recurs(temp_path, mode) < GIT_SUCCESS)
 		return GIT_ERROR;
 
 	/* Creates the '/objects/pack/' directory */
-	strcpy(temp_path + path_len, GIT_OBJECTS_PACK_DIR);
+	git__joinpath(temp_path, git_dir, GIT_OBJECTS_PACK_DIR);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
 	/* Creates the '/refs/heads/' directory */
-	strcpy(temp_path + path_len, GIT_REFS_HEADS_DIR);
+	git__joinpath(temp_path, git_dir, GIT_REFS_HEADS_DIR);
 	if (gitfo_mkdir_recurs(temp_path, mode))
 		return GIT_ERROR;
 
 	/* Creates the '/refs/tags/' directory */
-	strcpy(temp_path + path_len, GIT_REFS_TAGS_DIR);
+	git__joinpath(temp_path, git_dir, GIT_REFS_TAGS_DIR);
 	if (gitfo_mkdir(temp_path, mode))
 		return GIT_ERROR;
 
@@ -617,22 +617,20 @@ static int repo_init_structure(repo_init *results)
 static int repo_init_find_dir(repo_init *results, const char* path)
 {
 	char temp_path[GIT_PATH_MAX];
-	int path_len;
 	int error = GIT_SUCCESS;
 
 	error = gitfo_prettify_dir_path(temp_path, path);
 	if (error < GIT_SUCCESS)
 		return error;
 
-	path_len = strlen(temp_path);
+/*
+	if (gitfo_isdir(temp_path) < GIT_SUCCESS)
+		return GIT_ENOTAREPO;
+*/
 
 	if (!results->is_bare) {
-		strcpy(temp_path + path_len - 1, GIT_DIR);
-		path_len = path_len + strlen(GIT_DIR) - 1; /* Skip the leading slash from the constant */
+		git__joinpath(temp_path, temp_path, GIT_DIR);
 	}
-
-	if (path_len >= GIT_PATH_MAX - MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH)
-		return GIT_ENOTAREPO;
 
 	results->path_repository = git__strdup(temp_path);
 	if (results->path_repository == NULL)
