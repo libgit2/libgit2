@@ -730,9 +730,9 @@ static void *create_disk_entry(size_t *disk_size, git_index_entry *entry)
 	return ondisk;
 }
 
-#ifdef GIT_THREADS
+#if defined(GIT_THREADS) && defined(GIT_INDEX_THREADED)
 
-#define THREAD_QUEUE_SIZE 8
+#define THREAD_QUEUE_SIZE 64
 
 typedef struct {
 	void *data;
@@ -745,7 +745,7 @@ typedef struct {
 	void (*process_entry)(void *extra_data, index_thread_entry *entry);
 
 	index_thread_entry *buffer[THREAD_QUEUE_SIZE];
-	int count, pos;
+	int count, read_pos, write_pos;
 
 	git_lck mutex;
 	git_cnd entry_available, space_available;
@@ -757,7 +757,7 @@ void index_thread_enqueue(index_thread_queue *queue, index_thread_entry *entry)
 	if (queue->count == THREAD_QUEUE_SIZE)
 		gitcnd_wait(&queue->space_available, &queue->mutex);
 
-	queue->buffer[queue->pos++ % THREAD_QUEUE_SIZE] = entry;
+	queue->buffer[queue->write_pos++ % THREAD_QUEUE_SIZE] = entry;
 	queue->count++;
 
 	gitcnd_signal(&queue->entry_available);
@@ -785,11 +785,14 @@ void *index_thread(void *attr)
 		if (queue->count == 0)
 			gitcnd_wait(&queue->entry_available, &queue->mutex);
 
-		entry = queue->buffer[(queue->pos - 1) % THREAD_QUEUE_SIZE];
+		entry = queue->buffer[queue->read_pos++ % THREAD_QUEUE_SIZE];
 		queue->count--;
 
 		gitcnd_signal(&queue->space_available);
 		gitlck_unlock(&queue->mutex);
+
+		if (entry == NULL)
+			break;
 
 		queue->process_entry(queue->extra_data, entry);
 
@@ -827,14 +830,16 @@ static int write_entries(git_index *index, git_filelock *file, git_hash_ctx *dig
 		write_queue->process_entry = thread_write_entry;
 
 		write_queue->count = 0;
-		write_queue->pos = 0;
+		write_queue->read_pos = 0;
+		write_queue->write_pos = 0;
+
 		gitlck_init(&write_queue->mutex);
 		gitcnd_init(&write_queue->space_available, NULL);
 		gitcnd_init(&write_queue->entry_available, NULL);
 
 		if (git_thread_create(&write_thread, NULL, index_thread, (void *)write_queue) < 0) {
 			error = GIT_EOSERR;
-			goto cleanup;
+			goto thread_error;
 		}
 	}
 
@@ -850,14 +855,16 @@ static int write_entries(git_index *index, git_filelock *file, git_hash_ctx *dig
 		hash_queue->process_entry = thread_hash_entry;
 
 		hash_queue->count = 0;
-		hash_queue->pos = 0;
+		hash_queue->read_pos = 0;
+		hash_queue->write_pos = 0;
+
 		gitlck_init(&hash_queue->mutex);
 		gitcnd_init(&hash_queue->space_available, NULL);
 		gitcnd_init(&hash_queue->entry_available, NULL);
 
 		if (git_thread_create(&hash_thread, NULL, index_thread, (void *)hash_queue) < 0) {
 			error = GIT_EOSERR;
-			goto cleanup;
+			goto thread_error;
 		}
 	}
 
@@ -875,13 +882,13 @@ static int write_entries(git_index *index, git_filelock *file, git_hash_ctx *dig
 		thread_entry = git__malloc(sizeof(index_thread_entry));
 		if (thread_entry == NULL) {
 			error = GIT_ENOMEM;
-			goto cleanup;
+			goto thread_error;
 		}
 
 		thread_entry->data = create_disk_entry(&thread_entry->size, entry);
 		if (thread_entry->data == NULL) {
 			error = GIT_ENOMEM;
-			goto cleanup;
+			goto thread_error;
 		}
 
 		/* queue in both queues */
@@ -891,7 +898,22 @@ static int write_entries(git_index *index, git_filelock *file, git_hash_ctx *dig
 		index_thread_enqueue(hash_queue, thread_entry);
 	}
 
-cleanup:
+	/* kill the two threads by queuing a NULL item */
+	{
+		index_thread_enqueue(write_queue, NULL);
+		index_thread_enqueue(hash_queue, NULL);
+	}
+
+	/* wait for them to terminate */
+	git_thread_join(write_thread, NULL);
+	git_thread_join(hash_thread, NULL);
+
+	free(write_queue);
+	free(hash_queue);
+
+	return GIT_SUCCESS;
+
+thread_error:
 	git_thread_kill(write_thread);
 	git_thread_kill(hash_thread);
 
