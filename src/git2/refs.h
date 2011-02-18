@@ -44,6 +44,9 @@ GIT_BEGIN_DECL
  * The reference will be created in the repository and written
  * to the disk.
  *
+ * This reference is owned by the repository and shall not
+ * be free'd by the user.
+ *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
@@ -57,6 +60,9 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  *
  * The reference will be created in the repository and written
  * to the disk.
+ *
+ * This reference is owned by the repository and shall not
+ * be free'd by the user.
  *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
@@ -120,22 +126,6 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
 GIT_EXTERN(int) git_reference_resolve(git_reference **resolved_ref, git_reference *ref);
 
 /**
- * Write a reference back to disk.
- *
- * The reference must have a valid name and a valid target
- * (either direct or symbolic).
- *
- * If the reference has been loaded from disk and no changes
- * have been made, no action will take place.
- *
- * The writing to disk is atomic.
- *
- * @param ref The reference
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_reference_write(git_reference *ref);
-
-/**
  * Get the repository where a reference resides
  *
  * @param ref The reference
@@ -144,14 +134,13 @@ GIT_EXTERN(int) git_reference_write(git_reference *ref);
 GIT_EXTERN(git_repository *) git_reference_owner(git_reference *ref);
 
 /**
- * Set the target reference of a reference.
+ * Set the symbolic target of a reference.
  *
- * This converts the reference into a symbolic
- * reference.
+ * The reference must be a symbolic reference, otherwise
+ * this method will fail.
  *
- * This marks the reference as modified; changes
- * won't take effect until it is manually written back
- * to disk.
+ * The reference will be automatically updated in
+ * memory and on disk.
  *
  * @param ref The reference
  * @param target The new target for the reference
@@ -162,18 +151,41 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const char *target)
 /**
  * Set the OID target of a reference.
  *
- * This converts the reference into a direct
- * reference.
+ * The reference must be a direct reference, otherwise
+ * this method will fail.
  *
- * This marks the reference as modified; changes
- * won't take effect until it is manually written back
- * to disk.
+ * The reference will be automatically updated in
+ * memory and on disk.
  *
  * @param ref The reference
  * @param target The new target OID for the reference
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
+
+/**
+ * Rename an existing reference
+ *
+ * This method works for both direct and symbolic references.
+ * The new name will be checked for validity and may be
+ * modified into a normalized form.
+ *
+ * The refernece will be immediately renamed in-memory
+ * and on disk.
+ *
+ */
+GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name);
+
+/**
+ * Delete an existing reference
+ *
+ * This method works for both direct and symbolic references.
+ *
+ * The reference will be immediately removed on disk and from
+ * memory. The given reference pointer will no longer be valid.
+ *
+ */
+GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 
 /** @} */
 GIT_END_DECL

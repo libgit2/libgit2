@@ -21,8 +21,7 @@ struct git_reference {
 	git_rtype type;
 	char *name;
 
-	unsigned packed:1,
-			 modified:1;
+	unsigned packed:1;
 
 	union {
 		char *ref;
