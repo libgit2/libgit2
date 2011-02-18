@@ -38,8 +38,8 @@ BEGIN_TEST("readtag", loose_tag_reference_looking_up)
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	must_pass(git_repository_lookup_ref(&reference, repo, loose_tag_ref_name));
-	must_be_true(reference->type == GIT_REF_OID);
-	must_be_true(reference->packed == 0);
+	must_be_true(reference->type & GIT_REF_OID);
+	must_be_true((reference->type & GIT_REF_PACKED) == 0);
 	must_be_true(strcmp(reference->name, loose_tag_ref_name) == 0);
 
 	must_pass(git_repository_lookup(&object, repo, git_reference_oid(reference), GIT_OBJ_ANY));
@@ -73,8 +73,8 @@ BEGIN_TEST("readsymref", symbolic_reference_looking_up)
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	must_pass(git_repository_lookup_ref(&reference, repo, head_ref_name));
-	must_be_true(reference->type == GIT_REF_SYMBOLIC);
-	must_be_true(reference->packed == 0);
+	must_be_true(reference->type & GIT_REF_SYMBOLIC);
+	must_be_true((reference->type & GIT_REF_PACKED) == 0);
 	must_be_true(strcmp(reference->name, head_ref_name) == 0);
 
 	must_pass(git_reference_resolve(&resolved_ref, reference));
@@ -99,8 +99,8 @@ BEGIN_TEST("readsymref", nested_symbolic_reference_looking_up)
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	must_pass(git_repository_lookup_ref(&reference, repo, head_tracker_sym_ref_name));
-	must_be_true(reference->type == GIT_REF_SYMBOLIC);
-	must_be_true(reference->packed == 0);
+	must_be_true(reference->type & GIT_REF_SYMBOLIC);
+	must_be_true((reference->type & GIT_REF_PACKED) == 0);
 	must_be_true(strcmp(reference->name, head_tracker_sym_ref_name) == 0);
 
 	must_pass(git_reference_resolve(&resolved_ref, reference));
@@ -163,8 +163,8 @@ BEGIN_TEST("readpackedref", packed_reference_looking_up)
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	must_pass(git_repository_lookup_ref(&reference, repo, packed_head_name));
-	must_be_true(reference->type == GIT_REF_OID);
-	must_be_true(reference->packed == 1);
+	must_be_true(reference->type & GIT_REF_OID);
+	must_be_true((reference->type & GIT_REF_PACKED) != 0);
 	must_be_true(strcmp(reference->name, packed_head_name) == 0);
 
 	must_pass(git_repository_lookup(&object, repo, git_reference_oid(reference), GIT_OBJ_ANY));
@@ -181,8 +181,8 @@ BEGIN_TEST("readpackedref", packed_exists_but_more_recent_loose_reference_is_ret
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_lookup_ref(&reference, repo, packed_head_name));
 	must_pass(git_repository_lookup_ref(&reference, repo, packed_test_head_name));
-	must_be_true(reference->type == GIT_REF_OID);
-	must_be_true(reference->packed == 0);
+	must_be_true(reference->type & GIT_REF_OID);
+	must_be_true((reference->type & GIT_REF_PACKED) == 0);
 	must_be_true(strcmp(reference->name, packed_test_head_name) == 0);
 
 	git_repository_free(repo);
@@ -208,8 +208,8 @@ BEGIN_TEST("createref", create_new_symbolic_ref)
 
 	/* Ensure the reference can be looked-up... */
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head_tracker));
-	must_be_true(looked_up_ref->type == GIT_REF_SYMBOLIC);
-	must_be_true(looked_up_ref->packed == 0);
+	must_be_true(looked_up_ref->type & GIT_REF_SYMBOLIC);
+	must_be_true((looked_up_ref->type & GIT_REF_PACKED) == 0);
 	must_be_true(strcmp(looked_up_ref->name, new_head_tracker) == 0);
 
 	/* ...peeled.. */
@@ -276,8 +276,8 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 
 	/* Ensure the reference can be looked-up... */
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, new_head));
-	must_be_true(looked_up_ref->type == GIT_REF_OID);
-	must_be_true(looked_up_ref->packed == 0);
+	must_be_true(looked_up_ref->type & GIT_REF_OID);
+	must_be_true((looked_up_ref->type & GIT_REF_PACKED) == 0);
 	must_be_true(strcmp(looked_up_ref->name, new_head) == 0);
 
 	/* ...and that it points to the current master tip */
@@ -296,12 +296,16 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
-static int ensure_refname_normalized(git_rtype ref_type, const char *input_refname, const char *expected_refname)
+static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
 {
 	int error = GIT_SUCCESS;
 	char buffer_out[GIT_PATH_MAX];
 
-	error = git_reference__normalize_name(buffer_out, input_refname, ref_type);
+	if (is_oid_ref)
+		error = git_reference__normalize_name_oid(buffer_out, input_refname);
+	else
+		error = git_reference__normalize_name(buffer_out, input_refname);
+
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -314,73 +318,69 @@ static int ensure_refname_normalized(git_rtype ref_type, const char *input_refna
 	return error;
 }
 
-BEGIN_TEST("normalizeref", normalize_unknown_ref_type)
-	must_fail(ensure_refname_normalized(GIT_REF_INVALID, "a", NULL));
-END_TEST
-
 BEGIN_TEST("normalizeref", normalize_object_id_ref)
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "a", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a/", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a.", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a.lock", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/dummy/a", NULL));
-	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/tags/a", "refs/tags/a"));
-	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a/b", "refs/heads/a/b"));
-	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/heads/a./b", "refs/heads/a./b"));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/foo?bar", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads\foo", NULL));
-	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs/heads/v@ation", "refs/heads/v@ation"));
-	must_pass(ensure_refname_normalized(GIT_REF_OID, "refs///heads///a", "refs/heads/a"));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/.a/b", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/foo/../bar", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/foo..bar", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/./foo", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_OID, "refs/heads/v@{ation", NULL));
+	must_fail(ensure_refname_normalized(1, "a", NULL));
+	must_fail(ensure_refname_normalized(1, "", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads/a/", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads/a.", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads/a.lock", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/dummy/a", NULL));
+	must_pass(ensure_refname_normalized(1, "refs/tags/a", "refs/tags/a"));
+	must_pass(ensure_refname_normalized(1, "refs/heads/a/b", "refs/heads/a/b"));
+	must_pass(ensure_refname_normalized(1, "refs/heads/a./b", "refs/heads/a./b"));
+	must_fail(ensure_refname_normalized(1, "refs/heads/foo?bar", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads\foo", NULL));
+	must_pass(ensure_refname_normalized(1, "refs/heads/v@ation", "refs/heads/v@ation"));
+	must_pass(ensure_refname_normalized(1, "refs///heads///a", "refs/heads/a"));
+	must_fail(ensure_refname_normalized(1, "refs/heads/.a/b", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads/foo/../bar", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads/foo..bar", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads/./foo", NULL));
+	must_fail(ensure_refname_normalized(1, "refs/heads/v@{ation", NULL));
 END_TEST
 
 BEGIN_TEST("normalizeref", normalize_symbolic_ref)
-	must_pass(ensure_refname_normalized(GIT_REF_SYMBOLIC, "a", "a"));
-	must_pass(ensure_refname_normalized(GIT_REF_SYMBOLIC, "a/b", "a/b"));
-	must_fail(ensure_refname_normalized(GIT_REF_SYMBOLIC, "", NULL));
-	must_fail(ensure_refname_normalized(GIT_REF_SYMBOLIC, "heads\foo", NULL));
+	must_pass(ensure_refname_normalized(0, "a", "a"));
+	must_pass(ensure_refname_normalized(0, "a/b", "a/b"));
+	must_fail(ensure_refname_normalized(0, "", NULL));
+	must_fail(ensure_refname_normalized(0, "heads\foo", NULL));
 END_TEST
 
 
 BEGIN_TEST("normalizeref", normalize_any_ref) /* Slash related rules do not apply, neither do 'refs' prefix related rules */
-	must_pass(ensure_refname_normalized(GIT_REF_ANY, "a", "a"));
-	must_pass(ensure_refname_normalized(GIT_REF_ANY, "a/b", "a/b"));
-	must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs///heads///a", "refs/heads/a"));
+	must_pass(ensure_refname_normalized(0, "a", "a"));
+	must_pass(ensure_refname_normalized(0, "a/b", "a/b"));
+	must_pass(ensure_refname_normalized(0, "refs///heads///a", "refs/heads/a"));
 END_TEST
 
 /* Ported from JGit, BSD licence. See https://github.com/spearce/JGit/commit/e4bf8f6957bbb29362575d641d1e77a02d906739 */
 BEGIN_TEST("normalizeref", jgit_tests)
 
 		/* EmptyString */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "/", NULL));
+			must_fail(ensure_refname_normalized(0, "", NULL));
+			must_fail(ensure_refname_normalized(0, "/", NULL));
 
 		/* MustHaveTwoComponents */
-			must_fail(ensure_refname_normalized(GIT_REF_OID, "master", NULL));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "heads/master", "heads/master"));
+			must_fail(ensure_refname_normalized(1, "master", NULL));
+			must_pass(ensure_refname_normalized(0, "heads/master", "heads/master"));
 
 		/* ValidHead */
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master", "refs/heads/master"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/pu", "refs/heads/pu"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/z", "refs/heads/z"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/FoO", "refs/heads/FoO"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/master", "refs/heads/master"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/pu", "refs/heads/pu"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/z", "refs/heads/z"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/FoO", "refs/heads/FoO"));
 
 		/* ValidTag */
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/tags/v1.0", "refs/tags/v1.0"));
+			must_pass(ensure_refname_normalized(0, "refs/tags/v1.0", "refs/tags/v1.0"));
 
 		/* NoLockSuffix */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master.lock", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master.lock", NULL));
 
 		/* NoDirectorySuffix */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master/", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master/", NULL));
 
 		/* NoSpace */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/i haz space", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/i haz space", NULL));
 
 		/* NoAsciiControlCharacters */
 			{
@@ -391,81 +391,81 @@ BEGIN_TEST("normalizeref", jgit_tests)
 					strncpy(buffer + 15, (const char *)&c, 1);
 					strncpy(buffer + 16, "er", 2);
 					buffer[18 - 1] = '\0';
-					must_fail(ensure_refname_normalized(GIT_REF_ANY, buffer, NULL));
+					must_fail(ensure_refname_normalized(0, buffer, NULL));
 				}
 			}
 
 		/* NoBareDot */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/.", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/..", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/./master", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/../master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/.", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/..", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/./master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/../master", NULL));
 
 		/* NoLeadingOrTrailingDot */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, ".", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/.bar", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/..bar", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/bar.", NULL));
+			must_fail(ensure_refname_normalized(0, ".", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/.bar", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/..bar", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/bar.", NULL));
 
 		/* ContainsDot */
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/m.a.s.t.e.r", "refs/heads/m.a.s.t.e.r"));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master..pu", NULL));
+			must_pass(ensure_refname_normalized(0, "refs/heads/m.a.s.t.e.r", "refs/heads/m.a.s.t.e.r"));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master..pu", NULL));
 
 		/* NoMagicRefCharacters */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master^", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/^master", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "^refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master^", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/^master", NULL));
+			must_fail(ensure_refname_normalized(0, "^refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master~", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/~master", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "~refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master~", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/~master", NULL));
+			must_fail(ensure_refname_normalized(0, "~refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master:", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/:master", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, ":refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master:", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/:master", NULL));
+			must_fail(ensure_refname_normalized(0, ":refs/heads/master", NULL));
 
 		/* ShellGlob */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master?", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/?master", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "?refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master?", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/?master", NULL));
+			must_fail(ensure_refname_normalized(0, "?refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master[", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/[master", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "[refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master[", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/[master", NULL));
+			must_fail(ensure_refname_normalized(0, "[refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master*", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/*master", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "*refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master*", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/*master", NULL));
+			must_fail(ensure_refname_normalized(0, "*refs/heads/master", NULL));
 
 		/* ValidSpecialCharacters */
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/!", "refs/heads/!"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/\"", "refs/heads/\""));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/#", "refs/heads/#"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/$", "refs/heads/$"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/%", "refs/heads/%"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/&", "refs/heads/&"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/'", "refs/heads/'"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/(", "refs/heads/("));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/)", "refs/heads/)"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/+", "refs/heads/+"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/,", "refs/heads/,"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/-", "refs/heads/-"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/;", "refs/heads/;"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/<", "refs/heads/<"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/=", "refs/heads/="));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/>", "refs/heads/>"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/@", "refs/heads/@"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/]", "refs/heads/]"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/_", "refs/heads/_"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/`", "refs/heads/`"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/{", "refs/heads/{"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/|", "refs/heads/|"));
-			must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/}", "refs/heads/}"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/!", "refs/heads/!"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/\"", "refs/heads/\""));
+			must_pass(ensure_refname_normalized(0, "refs/heads/#", "refs/heads/#"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/$", "refs/heads/$"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/%", "refs/heads/%"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/&", "refs/heads/&"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/'", "refs/heads/'"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/(", "refs/heads/("));
+			must_pass(ensure_refname_normalized(0, "refs/heads/)", "refs/heads/)"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/+", "refs/heads/+"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/,", "refs/heads/,"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/-", "refs/heads/-"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/;", "refs/heads/;"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/<", "refs/heads/<"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/=", "refs/heads/="));
+			must_pass(ensure_refname_normalized(0, "refs/heads/>", "refs/heads/>"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/@", "refs/heads/@"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/]", "refs/heads/]"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/_", "refs/heads/_"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/`", "refs/heads/`"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/{", "refs/heads/{"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/|", "refs/heads/|"));
+			must_pass(ensure_refname_normalized(0, "refs/heads/}", "refs/heads/}"));
 
 			// This is valid on UNIX, but not on Windows
 			// hence we make in invalid due to non-portability
 			//
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/\\", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/\\", NULL));
 
 		/* UnicodeNames */
 			/*
@@ -474,8 +474,8 @@ BEGIN_TEST("normalizeref", jgit_tests)
 			 */
 
 		/* RefLogQueryIsValidRef */
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master@{1}", NULL));
-			must_fail(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/master@{1.hour.ago}", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master@{1}", NULL));
+			must_fail(ensure_refname_normalized(0, "refs/heads/master@{1.hour.ago}", NULL));
 END_TEST
 
 git_testsuite *libgit2_suite_refs(void)
@@ -493,7 +493,6 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "createref", create_new_symbolic_ref);
 	ADD_TEST(suite, "createref", create_deep_symbolic_ref);
 	ADD_TEST(suite, "createref", create_new_object_id_ref);
-	ADD_TEST(suite, "normalizeref", normalize_unknown_ref_type);
 	ADD_TEST(suite, "normalizeref", normalize_object_id_ref);
 	ADD_TEST(suite, "normalizeref", normalize_symbolic_ref);
 	ADD_TEST(suite, "normalizeref", normalize_any_ref);

@@ -18,25 +18,22 @@
 
 struct git_reference {
 	git_repository *owner;
-	git_rtype type;
 	char *name;
-
-	unsigned packed:1;
-
-	union {
-		char *ref;
-		git_oid oid;
-	} target;
+	unsigned int type;
 };
 
 typedef struct {
-	git_hashtable *cache;
+	git_hashtable *packed_refs;
+	git_hashtable *loose_refs;
+
 	unsigned pack_loaded:1;
 } git_refcache;
 
 
 void git_repository__refcache_free(git_refcache *refs);
 int git_repository__refcache_init(git_refcache *refs);
-int git_reference__normalize_name(char *buffer_out, const char *name, git_rtype type);
+
+int git_reference__normalize_name(char *buffer_out, const char *name);
+int git_reference__normalize_name_oid(char *buffer_out, const char *name);
 
 #endif

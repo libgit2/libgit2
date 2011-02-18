@@ -35,17 +35,12 @@ static int resize_vector(git_vector *v)
 	void **new_contents;
 
 	v->_alloc_size = ((unsigned int)(v->_alloc_size * resize_factor)) + 1;
-	if (v->_alloc_size == 0)
+	if (v->_alloc_size < minimum_size)
 		v->_alloc_size = minimum_size;
 
-	new_contents = git__malloc(v->_alloc_size * sizeof(void *));
-	if (new_contents == NULL)
+	v->contents = realloc(v->contents, v->_alloc_size * sizeof(void *));
+	if (v->contents == NULL)
 		return GIT_ENOMEM;
-
-	memcpy(new_contents, v->contents, v->length * sizeof(void *));
-
-	free(v->contents);
-	v->contents = new_contents;
 
 	return GIT_SUCCESS;
 }
@@ -91,12 +86,6 @@ int git_vector_insert(git_vector *v, void *element)
 	v->contents[v->length++] = element;
 
 	return GIT_SUCCESS;
-}
-
-void *git_vector_get(git_vector *v, unsigned int position)
-{
-	assert(v);
-	return (position < v->length) ? v->contents[position] : NULL;
 }
 
 void git_vector_sort(git_vector *v)

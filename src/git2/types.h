@@ -140,10 +140,11 @@ typedef struct git_reference git_reference;
 
 /** Basic type of any Git reference. */
 typedef enum {
-	GIT_REF_ANY = -2, /** Reference can be an object id reference or a symbolic reference */
-	GIT_REF_INVALID = -1, /** Invalid reference */
+	GIT_REF_INVALID = 0, /** Invalid reference */
 	GIT_REF_OID = 1, /** A reference which points at an object id */
 	GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
+	GIT_REF_PACKED = 4,
+	GIT_REF_HAS_PEEL = 8,
 } git_rtype;
 
 /** @} */

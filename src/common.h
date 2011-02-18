@@ -53,6 +53,5 @@ typedef SSIZE_T ssize_t;
 #include "bswap.h"
 
 #define GIT_PATH_MAX 4096
-#define GIT_FILELOCK_EXTENSION ".lock\0"
 
 #endif /* INCLUDE_common_h__ */

@@ -24,7 +24,10 @@ void git_vector_clear(git_vector *v);
 int git_vector_search(git_vector *v, const void *key);
 void git_vector_sort(git_vector *v);
 
-void *git_vector_get(git_vector *v, unsigned int position);
+GIT_INLINE(void *) git_vector_get(git_vector *v, unsigned int position)
+{
+	return (position < v->length) ? v->contents[position] : NULL;
+}
 
 int git_vector_insert(git_vector *v, void *element);
 int git_vector_remove(git_vector *v, unsigned int idx);

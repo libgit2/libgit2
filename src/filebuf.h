@@ -12,6 +12,9 @@
 #define GIT_FILEBUF_APPEND 0x2
 #define GIT_FILEBUF_FORCE 0x4
 
+#define GIT_FILELOCK_EXTENSION ".lock\0"
+#define GIT_FILELOCK_EXTLENGTH 6
+
 struct git_filebuf {
 	char *path_original;
 	char *path_lock;
