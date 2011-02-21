@@ -102,7 +102,7 @@ static git_index_tree *read_tree_internal(const char **, const char *, git_index
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
 static void sort_index(git_index *index);
-static int write_index(git_index *index, git_filelock *file);
+static int write_index(git_index *index, git_filebuf *file);
 
 int index_srch(const void *key, const void *array_member)
 {
@@ -255,25 +255,22 @@ int git_index_read(git_index *index)
 
 int git_index_write(git_index *index)
 {
-	git_filelock file;
+	git_filebuf file;
 	struct stat indexst;
 	int error;
 
 	if (!index->sorted)
 		sort_index(index);
 
-	if ((error = git_filelock_init(&file, index->index_file_path)) < GIT_SUCCESS)
-		return error;
-
-	if ((error = git_filelock_lock(&file, 0)) < GIT_SUCCESS)
+	if ((error = git_filebuf_open(&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < GIT_SUCCESS)
 		return error;
 
 	if ((error = write_index(index, &file)) < GIT_SUCCESS) {
-		git_filelock_unlock(&file);
+		git_filebuf_cleanup(&file);
 		return error;
 	}
 
-	if ((error = git_filelock_commit(&file)) < GIT_SUCCESS)
+	if ((error = git_filebuf_commit(&file)) < GIT_SUCCESS)
 		return error;
 
 	if (gitfo_stat(index->index_file_path, &indexst) == 0) {
@@ -684,22 +681,23 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	return GIT_SUCCESS;
 }
 
-static void *create_disk_entry(size_t *disk_size, git_index_entry *entry)
+static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 {
 	struct entry_short *ondisk;
-	size_t path_len;
+	size_t path_len, disk_size;
 	char *path;
 
 	path_len = strlen(entry->path);
 
 	if (entry->flags & GIT_IDXENTRY_EXTENDED)
-		*disk_size = long_entry_size(path_len);
+		disk_size = long_entry_size(path_len);
 	else
-		*disk_size = short_entry_size(path_len);
+		disk_size = short_entry_size(path_len);
 
-	ondisk = git__calloc(1, *disk_size);
-	if (ondisk == NULL)
-		return NULL;
+	if (git_filebuf_reserve(file, (void **)&ondisk, disk_size) < GIT_SUCCESS)
+		return GIT_ENOMEM;
+
+	memset(ondisk, 0x0, disk_size);
 
 	ondisk->ctime.seconds = htonl((unsigned long)entry->ctime.seconds);
 	ondisk->mtime.seconds = htonl((unsigned long)entry->mtime.seconds);
@@ -727,265 +725,51 @@ static void *create_disk_entry(size_t *disk_size, git_index_entry *entry)
 
 	memcpy(path, entry->path, path_len);
 
-	return ondisk;
-}
-
-#if defined(GIT_THREADS) && defined(GIT_INDEX_THREADED)
-
-#define THREAD_QUEUE_SIZE 64
-
-typedef struct {
-	void *data;
-	size_t size;
-	git_refcnt refcount;
-} index_thread_entry;
-
-typedef struct {
-	void *extra_data;
-	void (*process_entry)(void *extra_data, index_thread_entry *entry);
-
-	index_thread_entry *buffer[THREAD_QUEUE_SIZE];
-	int count, read_pos, write_pos;
-
-	git_lck mutex;
-	git_cnd entry_available, space_available;
-} index_thread_queue;
-
-void index_thread_enqueue(index_thread_queue *queue, index_thread_entry *entry)
-{
-	gitlck_lock(&queue->mutex);
-	if (queue->count == THREAD_QUEUE_SIZE)
-		gitcnd_wait(&queue->space_available, &queue->mutex);
-
-	queue->buffer[queue->write_pos++ % THREAD_QUEUE_SIZE] = entry;
-	queue->count++;
-
-	gitcnd_signal(&queue->entry_available);
-	gitlck_unlock(&queue->mutex);
-}
-
-void thread_hash_entry(void *digest, index_thread_entry *entry)
-{
-	git_hash_update((git_hash_ctx *)digest, entry->data, entry->size);
-}
-
-void thread_write_entry(void *file, index_thread_entry *entry)
-{
-	git_filelock_write((git_filelock *)file, entry->data, entry->size);
-}
-
-void *index_thread(void *attr)
-{
-	index_thread_queue *queue = (index_thread_queue *)attr;
-
-	for (;;) {
-		index_thread_entry *entry;
-
-		gitlck_lock(&queue->mutex);
-		if (queue->count == 0)
-			gitcnd_wait(&queue->entry_available, &queue->mutex);
-
-		entry = queue->buffer[queue->read_pos++ % THREAD_QUEUE_SIZE];
-		queue->count--;
-
-		gitcnd_signal(&queue->space_available);
-		gitlck_unlock(&queue->mutex);
-
-		if (entry == NULL)
-			break;
-
-		queue->process_entry(queue->extra_data, entry);
-
-		if (gitrc_dec(&entry->refcount)) {
-			gitrc_free(&entry->refcount);
-			free(entry->data);
-			free(entry);
-		}
-	}
-
-	git_thread_exit(NULL);
-}
-
-static int write_entries(git_index *index, git_filelock *file, git_hash_ctx *digest)
-{
-	git_thread write_thread, hash_thread;
-	index_thread_queue *write_queue, *hash_queue;
-	int error = GIT_SUCCESS;
-	unsigned int i;
-
-	write_queue = git__malloc(sizeof(index_thread_queue));
-	hash_queue = git__malloc(sizeof(index_thread_queue));
-
-	if (write_queue == NULL || hash_queue == NULL)
-		return GIT_ENOMEM;
-
-	/*
-	 * Init the writer thread.
-	 * This thread takes care of all the blocking I/O: reads
-	 * the produced index entries and writes them back to disk
-	 * via the filelock API.
-	 */
-	{
-		write_queue->extra_data = (void *)file;
-		write_queue->process_entry = thread_write_entry;
-
-		write_queue->count = 0;
-		write_queue->read_pos = 0;
-		write_queue->write_pos = 0;
-
-		gitlck_init(&write_queue->mutex);
-		gitcnd_init(&write_queue->space_available, NULL);
-		gitcnd_init(&write_queue->entry_available, NULL);
-
-		if (git_thread_create(&write_thread, NULL, index_thread, (void *)write_queue) < 0) {
-			error = GIT_EOSERR;
-			goto thread_error;
-		}
-	}
-
-	/*
-	 * Init the hasher thread.
-	 * This thread takes care of doing an incremental
-	 * SHA1 hash on all the written data; the final value
-	 * of this hash must be appended at the end of the
-	 * written index file.
-	 */
-	{
-		hash_queue->extra_data = (void *)digest;
-		hash_queue->process_entry = thread_hash_entry;
-
-		hash_queue->count = 0;
-		hash_queue->read_pos = 0;
-		hash_queue->write_pos = 0;
-
-		gitlck_init(&hash_queue->mutex);
-		gitcnd_init(&hash_queue->space_available, NULL);
-		gitcnd_init(&hash_queue->entry_available, NULL);
-
-		if (git_thread_create(&hash_thread, NULL, index_thread, (void *)hash_queue) < 0) {
-			error = GIT_EOSERR;
-			goto thread_error;
-		}
-	}
-
-	/*
-	 * Do the processing.
-	 * This is the main thread. Takes care of preparing all
-	 * the entries that will be written to disk
-	 */
-	for (i = 0; i < index->entries.length; ++i) {
-		git_index_entry *entry;
-		index_thread_entry *thread_entry;
-
-		entry = git_vector_get(&index->entries, i);
-
-		thread_entry = git__malloc(sizeof(index_thread_entry));
-		if (thread_entry == NULL) {
-			error = GIT_ENOMEM;
-			goto thread_error;
-		}
-
-		thread_entry->data = create_disk_entry(&thread_entry->size, entry);
-		if (thread_entry->data == NULL) {
-			error = GIT_ENOMEM;
-			goto thread_error;
-		}
-
-		/* queue in both queues */
-		gitrc_init(&thread_entry->refcount, 2);
-
-		index_thread_enqueue(write_queue, thread_entry);
-		index_thread_enqueue(hash_queue, thread_entry);
-	}
-
-	/* kill the two threads by queuing a NULL item */
-	{
-		index_thread_enqueue(write_queue, NULL);
-		index_thread_enqueue(hash_queue, NULL);
-	}
-
-	/* wait for them to terminate */
-	git_thread_join(write_thread, NULL);
-	git_thread_join(hash_thread, NULL);
-
-	free(write_queue);
-	free(hash_queue);
-
 	return GIT_SUCCESS;
-
-thread_error:
-	git_thread_kill(write_thread);
-	git_thread_kill(hash_thread);
-
-	free(write_queue);
-	free(hash_queue);
-
-	return error;
 }
 
-#else
-
-static int write_entries(git_index *index, git_filelock *file, git_hash_ctx *digest)
+static int write_entries(git_index *index, git_filebuf *file)
 {
 	unsigned int i;
 
 	for (i = 0; i < index->entries.length; ++i) {
 		git_index_entry *entry;
-		void *disk_entry;
-		size_t disk_size;
-
 		entry = git_vector_get(&index->entries, i);
-		disk_entry = create_disk_entry(&disk_size, entry);
-
-		if (disk_entry == NULL)
+		if (write_disk_entry(file, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
-
-		if (git_filelock_write(file, disk_entry, disk_size) < GIT_SUCCESS)
-			return GIT_EOSERR;
-
-		git_hash_update(digest, disk_entry, disk_size);
-
-		free(disk_entry);
 	}
 
 	return GIT_SUCCESS;
 }
 
-#endif
-
-static int write_index(git_index *index, git_filelock *file)
+static int write_index(git_index *index, git_filebuf *file)
 {
 	int error = GIT_SUCCESS;
-
-	git_hash_ctx *digest;
 	git_oid hash_final;
 
 	struct index_header header;
 
 	int is_extended = 1;
 
-	assert(index && file && file->is_locked);
-
-	if ((digest = git_hash_new_ctx()) == NULL)
-		return GIT_ENOMEM;
+	assert(index && file);
 
 	header.signature = htonl(INDEX_HEADER_SIG);
 	header.version = htonl(is_extended ? INDEX_VERSION_NUMBER : INDEX_VERSION_NUMBER_EXT);
 	header.entry_count = htonl(index->entries.length);
 
-	git_filelock_write(file, &header, sizeof(struct index_header));
-	git_hash_update(digest, &header, sizeof(struct index_header));
+	git_filebuf_write(file, &header, sizeof(struct index_header));
 
-	error = write_entries(index, file, digest);
+	error = write_entries(index, file);
 	if (error < GIT_SUCCESS)
-		goto cleanup;
+		return error;
 
 	/* TODO: write extensions (tree cache) */
 
-	git_hash_final(&hash_final, digest);
-	git_filelock_write(file, hash_final.id, GIT_OID_RAWSZ);
+	/* get out the hash for all the contents we've appended to the file */
+	git_filebuf_hash(&hash_final, file);
 
-cleanup:
-	git_hash_free_ctx(digest);
+	/* write it at the end of the file */
+	git_filebuf_write(file, hash_final.id, GIT_OID_RAWSZ);
+
 	return error;
 }

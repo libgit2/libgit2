@@ -2,7 +2,7 @@
 #define INCLUDE_index_h__
 
 #include "fileops.h"
-#include "filelock.h"
+#include "filebuf.h"
 #include "vector.h"
 #include "git2/odb.h"
 #include "git2/index.h"

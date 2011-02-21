@@ -511,7 +511,7 @@ int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
 
 int git_reference_write(git_reference *ref)
 {
-	git_filelock lock;
+	git_filebuf file;
 	char ref_path[GIT_PATH_MAX];
 	int error, contents_size;
 	char *ref_contents = NULL;
@@ -528,10 +528,7 @@ int git_reference_write(git_reference *ref)
 
 	git__joinpath(ref_path, ref->owner->path_repository, ref->name);
 
-	if ((error = git_filelock_init(&lock, ref_path)) < GIT_SUCCESS)
-		goto error_cleanup;
-
-	if ((error = git_filelock_lock(&lock, 0)) < GIT_SUCCESS)
+	if ((error = git_filebuf_open(&file, ref_path, 0)) < GIT_SUCCESS)
 		goto error_cleanup;
 
 	if (ref->type == GIT_REF_OID) {
@@ -560,20 +557,21 @@ int git_reference_write(git_reference *ref)
 		ref_contents[contents_size - 1] = '\n';
 	}
 
-	if ((error = git_filelock_write(&lock, ref_contents, contents_size)) < GIT_SUCCESS)
+	if ((error = git_filebuf_write(&file, ref_contents, contents_size)) < GIT_SUCCESS)
 		goto error_cleanup;
-
-	if ((error = git_filelock_commit(&lock)) < GIT_SUCCESS)
-		goto error_cleanup;
-
-	ref->modified = 0;
 
 	free(ref_contents);
-	return GIT_SUCCESS;
+
+	error = git_filebuf_commit(&file);
+
+	if (error == GIT_SUCCESS)
+		ref->modified = 0;
+
+	return error;
 
 error_cleanup:
 	free(ref_contents);
-	git_filelock_unlock(&lock);
+	git_filebuf_cleanup(&file);
 	return error;
 }
 
