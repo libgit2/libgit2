@@ -29,6 +29,8 @@ PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
         help='Force a specific MSVC++ version (7.1, 8.0, 9.0, 10.0), if more than one is installed')
     opt.add_option('--arch', action='store', default='x86',
         help='Select target architecture (ia64, x64, x86, x86_amd64, x86_ia64)')
+    opt.add_option('--without-sqlite', action='store_false', default=True,
+        dest='use_sqlite', help='Disable sqlite support')
 
 def configure(conf):
 
@@ -67,7 +69,8 @@ def configure(conf):
     conf.check_cc(lib=zlib_name, uselib_store='z', install_path=None)
 
     # check for sqlite3
-    if conf.check_cc(lib='sqlite3', uselib_store='sqlite3', install_path=None, mandatory=False):
+    if conf.options.use_sqlite and conf.check_cc(
+        lib='sqlite3', uselib_store='sqlite3', install_path=None, mandatory=False):
         conf.env.DEFINES += ['GIT2_SQLITE_BACKEND']
 
     if conf.options.sha1 not in ['openssl', 'ppc', 'builtin']:

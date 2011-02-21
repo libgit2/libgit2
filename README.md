@@ -78,6 +78,9 @@ The waf build system for libgit2 accepts the following flags:
 	--arch=[ia64|x64|x86|x86_amd64|x86_ia64]
 		Force a specific architecture for compilers that support it.
 
+	--without-sqlite
+		Disable sqlite support.
+
 You can run `./waf --help` to see a full list of install options and
 targets.
 
