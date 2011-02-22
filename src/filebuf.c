@@ -22,6 +22,7 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#include <stdarg.h>
 
 #include "common.h"
 #include "filebuf.h"
@@ -257,5 +258,29 @@ int git_filebuf_reserve(git_filebuf *file, void **buffer, size_t len)
 	file->buf_pos += len;
 
 	return GIT_SUCCESS;
+}
+
+int git_filebuf_printf(git_filebuf *file, const char *format, ...)
+{
+	va_list arglist;
+	size_t space_left = file->buf_size - file->buf_pos;
+	int len, error;
+
+	va_start(arglist, format);
+
+	len = vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
+
+	if (len < 0 || (size_t)len >= space_left) {
+		if ((error = flush_buffer(file)) < GIT_SUCCESS)
+			return error;
+
+		len = vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
+		if (len < 0 || (size_t)len > file->buf_size)
+			return GIT_ENOMEM;
+	}
+
+	file->buf_pos += len;
+	return GIT_SUCCESS;
+
 }
 
