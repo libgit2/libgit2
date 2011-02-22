@@ -33,6 +33,7 @@
 #define REPOSITORY_FOLDER	(TEST_RESOURCES "/testrepo.git/")
 #define TEST_INDEX_PATH		(TEST_RESOURCES "/testrepo.git/index")
 #define TEST_INDEX2_PATH	(TEST_RESOURCES "/gitgit.index")
+#define TEST_INDEXBIG_PATH	(TEST_RESOURCES "/big.index")
 
 typedef struct object_data {
     unsigned char *bytes;  /* (compressed) bytes stored in object store */
@@ -54,6 +55,9 @@ extern int remove_object_files(const char *odb_dir, object_data *d);
 extern int cmp_objects(git_rawobj *o, object_data *d);
 
 extern int remove_loose_object(const char *odb_dir, git_object *object);
+
+extern int cmp_files(const char *a, const char *b);
+extern int copy_file(const char *source, const char *dest);
 
 #endif
 /* INCLUDE_test_helpers_h__ */

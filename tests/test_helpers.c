@@ -131,3 +131,47 @@ int cmp_objects(git_rawobj *o, object_data *d)
 		return -1;
 	return 0;
 }
+
+int copy_file(const char *src, const char *dst)
+{
+	gitfo_buf source_buf;
+	git_file dst_fd;
+	int error = GIT_ERROR;
+
+	if (gitfo_read_file(&source_buf, src) < GIT_SUCCESS)
+		return GIT_ENOTFOUND;
+
+	dst_fd = gitfo_creat(dst, 0644);
+	if (dst_fd < 0)
+		goto cleanup;
+
+	error = gitfo_write(dst_fd, source_buf.data, source_buf.len);
+
+cleanup:
+	gitfo_free_buf(&source_buf);
+	gitfo_close(dst_fd);
+
+	return error;
+}
+
+int cmp_files(const char *a, const char *b)
+{
+	gitfo_buf buf_a, buf_b;
+	int error = GIT_ERROR;
+
+	if (gitfo_read_file(&buf_a, a) < GIT_SUCCESS)
+		return GIT_ERROR;
+
+	if (gitfo_read_file(&buf_b, b) < GIT_SUCCESS) {
+		gitfo_free_buf(&buf_a);
+		return GIT_ERROR;
+	}
+
+	if (buf_a.len == buf_b.len && !memcmp(buf_a.data, buf_b.data, buf_a.len))
+		error = GIT_SUCCESS;
+
+	gitfo_free_buf(&buf_a);
+	gitfo_free_buf(&buf_b);
+
+	return error;
+}

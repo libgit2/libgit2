@@ -134,77 +134,31 @@ END_TEST
 
 BEGIN_TEST("write", index_write_test)
 	git_index *index;
-	git_filelock out_file;
 
-	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
+	must_pass(copy_file(TEST_INDEXBIG_PATH, "index_rewrite"));
+
+	must_pass(git_index_open_bare(&index, "index_rewrite"));
 	must_pass(git_index_read(index));
 	must_be_true(index->on_disk);
 
-	/*
-	 * TODO:
-	 * Don't write the index like this; make sure the filelocks
-	 * are manually set
-	 */
-/*
-	must_pass(git_filelock_init(&out_file, "index_rewrite"));
-	must_pass(git_filelock_lock(&out_file, 0));
-	must_pass(git_index__write(index, &out_file));
-	must_pass(git_filelock_commit(&out_file));
-*/
+	must_pass(git_index_write(index));
+	must_pass(cmp_files(TEST_INDEXBIG_PATH, "index_rewrite"));
 
 	git_index_free(index);
 	
 	gitfo_unlink("index_rewrite");
 END_TEST
 
-
-static void randomize_entries(git_index *index)
-{
-	unsigned int i, j;
-	git_index_entry *tmp;
-	git_index_entry **entries;
-
-	entries = (git_index_entry **)index->entries.contents;
-
-	srand((unsigned int)time(NULL));
-
-	for (i = 0; i < index->entries.length; ++i) {
-		j = rand() % index->entries.length;
-
-		tmp = entries[j];
-		entries[j] = entries[i];
-		entries[i] = tmp;
-	}
-
-	index->sorted = 0;
-}
-
 BEGIN_TEST("sort", index_sort_test)
-	git_index *index;
-	unsigned int i;
-	git_index_entry **entries;
-
-	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
-	must_pass(git_index_read(index));
-
-	randomize_entries(index);
-
 	/*
 	 * TODO: This no longer applies:
 	 * index sorting in Git uses some specific changes to the way
 	 * directories are sorted.
+	 *
+	 * We need to specificially check for this by creating a new
+	 * index, adding entries in random order and then
+	 * checking for consistency
 	 */
-/*
-	git_index__sort(index);
-	must_be_true(index->sorted);
-
-	entries = (git_index_entry **)index->entries.contents;
-
-	for (i = 1; i < index->entries.length; ++i)
-		must_be_true(strcmp(entries[i - 1]->path, entries[i]->path) < 0);
-*/
-
-	git_index_free(index);
 END_TEST
 
 
