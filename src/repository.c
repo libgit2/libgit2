@@ -58,27 +58,15 @@ typedef struct {
  * Callbacks for the ODB cache, implemented
  * as a hash table
  */
-uint32_t object_table_hash(const void *key)
+uint32_t object_table_hash(const void *key, int hash_id)
 {
 	uint32_t r;
 	git_oid *id;
 
 	id = (git_oid *)key;
-	memcpy(&r, id->id, sizeof(r));
+	memcpy(&r, id->id + (hash_id * sizeof(uint32_t)), sizeof(r));
 	return r;
 }
-
-int object_table_hashkey(void *object, const void *key)
-{
-	git_object *obj;
-	git_oid *oid;
-
-	obj = (git_object *)object;
-	oid = (git_oid *)key;
-
-	return (git_oid_cmp(oid, &obj->id) == 0);
-}
-
 
 /*
  * Git repository open methods
@@ -245,9 +233,9 @@ static git_repository *repository_alloc()
 	repo->objects = git_hashtable_alloc(
 			OBJECT_TABLE_SIZE, 
 			object_table_hash,
-			object_table_hashkey);
+			(git_hash_keyeq_ptr)git_oid_cmp);
 
-	if (repo->objects == NULL) {
+	if (repo->objects == NULL) { 
 		free(repo);
 		return NULL;
 	}
@@ -369,8 +357,8 @@ cleanup:
 
 void git_repository_free(git_repository *repo)
 {
-	git_hashtable_iterator it;
 	git_object *object;
+	const git_oid *oid;
 
 	if (repo == NULL)
 		return;
@@ -380,11 +368,9 @@ void git_repository_free(git_repository *repo)
 	free(repo->path_repository);
 	free(repo->path_odb);
 
-	git_hashtable_iterator_init(repo->objects, &it);
-
-	while ((object = (git_object *)
-				git_hashtable_iterator_next(&it)) != NULL)
+	GIT_HASHTABLE_FOREACH(repo->objects, oid, object, {
 		git_object_free(object);
+	});
 
 	git_hashtable_free(repo->objects);
 

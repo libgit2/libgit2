@@ -28,27 +28,20 @@
 #include "repository.h"
 #include "fileops.h"
 
-#define HASH_SEED 2147483647
 #define MAX_NESTING_LEVEL 5
 
 static const int default_table_size = 32;
 
-static uint32_t reftable_hash(const void *key)
+static uint32_t reftable_hash(const void *key, int hash_id)
 {
-	return git__hash(key, strlen((const char *)key), HASH_SEED);
+	static uint32_t hash_seeds[GIT_HASHTABLE_HASHES] = {
+		2147483647,
+		0x5d20bb23,
+		0x7daaab3c 
+	};
+
+	return git__hash(key, strlen((const char *)key), hash_seeds[hash_id]);
 }
-
-static int reftable_haskey(void *reference, const void *key)
-{
-	git_reference *ref;
-	char *name;
-
-	ref = (git_reference *)reference;
-	name = (char *)key;
-
-	return strcmp(name, ref->name) == 0;
-}
-
 
 static int check_refname(const char *name) 
 {
@@ -641,24 +634,21 @@ int git_repository__refcache_init(git_refcache *refs)
 	refs->cache = git_hashtable_alloc(
 		default_table_size, 
 		reftable_hash,
-		reftable_haskey);
+		(git_hash_keyeq_ptr)strcmp);
 
 	return refs->cache ? GIT_SUCCESS : GIT_ENOMEM; 
 }
 
 void git_repository__refcache_free(git_refcache *refs)
 {
-	git_hashtable_iterator it;
+	const char *ref_name;
 	git_reference *reference;
 
 	assert(refs);
 
-	git_hashtable_iterator_init(refs->cache, &it);
-
-	while ((reference = (git_reference *)git_hashtable_iterator_next(&it)) != NULL) {
-		git_hashtable_remove(refs->cache, reference->name);
-		reference_free(reference);
-	}
+	GIT_HASHTABLE_FOREACH(refs->cache, ref_name, reference,
+		reference_free(reference)
+	);
 
 	git_hashtable_free(refs->cache);
 }

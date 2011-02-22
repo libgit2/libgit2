@@ -34,32 +34,26 @@ typedef struct _aux_object {
 	int visited;
 } table_item;
 
-uint32_t hash_func(const void *key)
+uint32_t hash_func(const void *key, int hash_id)
 {
 	uint32_t r;
 	git_oid *id;
 
 	id = (git_oid *)key;
-	memcpy(&r, id->id, sizeof(r));
+	memcpy(&r, id->id + (hash_id * sizeof(uint32_t)), sizeof(r));
 	return r;
 }
 
-int hash_haskey(void *item, const void *key)
+int hash_cmpkey(const void *a, const void *b)
 {
-	table_item *obj;
-	git_oid *oid;
-
-	obj = (table_item *)item;
-	oid = (git_oid *)key;
-
-	return (git_oid_cmp(oid, &obj->id) == 0);
+	return git_oid_cmp(a, b);
 }
 
 BEGIN_TEST("table", table_create)
 
 	git_hashtable *table = NULL;
 
-	table = git_hashtable_alloc(55, hash_func, hash_haskey);
+	table = git_hashtable_alloc(55, hash_func, hash_cmpkey);
 	must_be_true(table != NULL);
 	must_be_true(table->size_mask + 1 == 64);
 
@@ -75,7 +69,7 @@ BEGIN_TEST("table", table_populate)
 	table_item *objects;
 	git_hashtable *table = NULL;
 
-	table = git_hashtable_alloc(objects_n * 2, hash_func, hash_haskey);
+	table = git_hashtable_alloc(objects_n * 2, hash_func, hash_cmpkey);
 	must_be_true(table != NULL);
 
 	objects = git__malloc(objects_n * sizeof(table_item));
@@ -123,7 +117,7 @@ BEGIN_TEST("table", table_resize)
 	table_item *objects;
 	git_hashtable *table = NULL;
 
-	table = git_hashtable_alloc(objects_n, hash_func, hash_haskey);
+	table = git_hashtable_alloc(objects_n, hash_func, hash_cmpkey);
 	must_be_true(table != NULL);
 
 	objects = git__malloc(objects_n * sizeof(table_item));
@@ -161,11 +155,11 @@ BEGIN_TEST("tableit", table_iterator)
 	const int objects_n = 32;
 	int i;
 	table_item *objects, *ob;
+	const void *_unused;
 
 	git_hashtable *table = NULL;
-	git_hashtable_iterator iterator;
 
-	table = git_hashtable_alloc(objects_n * 2, hash_func, hash_haskey);
+	table = git_hashtable_alloc(objects_n * 2, hash_func, hash_cmpkey);
 	must_be_true(table != NULL);
 
 	objects = git__malloc(objects_n * sizeof(table_item));
@@ -177,11 +171,9 @@ BEGIN_TEST("tableit", table_iterator)
 		must_pass(git_hashtable_insert(table, &(objects[i].id), &(objects[i])));
 	}
 
-	git_hashtable_iterator_init(table, &iterator);
-
-	/* iterate through all nodes, mark as visited */
-	while ((ob = (table_item *)git_hashtable_iterator_next(&iterator)) != NULL)
+	GIT_HASHTABLE_FOREACH(table, _unused, ob,
 		ob->visited = 1;
+	);
 
 	/* make sure all nodes have been visited */
 	for (i = 0; i < objects_n; ++i)
@@ -189,7 +181,6 @@ BEGIN_TEST("tableit", table_iterator)
 
 	git_hashtable_free(table);
 	free(objects);
-
 END_TEST
 
 
