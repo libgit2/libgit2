@@ -27,6 +27,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "oid.h"
 
 /**
  * @file git2/index.h
