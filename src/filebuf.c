@@ -72,10 +72,11 @@ static int lock_file(git_filebuf *file, int flags)
 
 void git_filebuf_cleanup(git_filebuf *file)
 {
-	if (file->fd >= 0) {
+	if (file->fd >= 0)
 		gitfo_close(file->fd);
+
+	if (gitfo_exists(file->path_lock) == GIT_SUCCESS)
 		gitfo_unlink(file->path_lock);
-	}
 
 	if (file->digest)
 		git_hash_free_ctx(file->digest);
@@ -192,6 +193,8 @@ int git_filebuf_commit(git_filebuf *file)
 		goto cleanup;
 
 	gitfo_close(file->fd);
+	file->fd = -1;
+
 	error = gitfo_move_file(file->path_lock, file->path_original);
 
 cleanup:
