@@ -144,10 +144,22 @@ void gitfo_free_buf(gitfo_buf *obj)
 
 int gitfo_move_file(char *from, char *to)
 {
+#ifdef GIT_WIN32
+	/*
+	 * Win32 POSIX compilance my ass. If the destination
+	 * file exists, the `rename` call fails. This is as
+	 * close as it gets with the Win32 API.
+	 */
+	if (gitfo_exists(to) == GIT_SUCCESS)
+		return ReplaceFile(to, from, NULL, 0, NULL, NULL) ?
+			GIT_SUCCESS : GIT_EOSERR;
+#else
+	/* Don't even try this on Win32 */
 	if (!link(from, to)) {
 		gitfo_unlink(from);
 		return GIT_SUCCESS;
 	}
+#endif
 
 	if (!rename(from, to))
 		return GIT_SUCCESS;
