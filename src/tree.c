@@ -31,6 +31,8 @@
 #include "git2/object.h"
 
 #define DEFAULT_TREE_SIZE 16
+#define MAX_FILEMODE 0777777
+#define MAX_FILEMODE_BYTES 6
 
 int entry_search_cmp(const void *key, const void *array_member)
 {
@@ -38,6 +40,10 @@ int entry_search_cmp(const void *key, const void *array_member)
 	const git_tree_entry *entry = *(const git_tree_entry **)(array_member);
 
 	return strcmp(filename, entry->filename);
+}
+
+static int valid_attributes(const int attributes) {
+	return attributes >= 0 && attributes <= MAX_FILEMODE; 
 }
 
 int entry_sort_cmp(const void *a, const void *b)
@@ -101,12 +107,17 @@ const git_oid *git_tree_id(git_tree *c)
 	return git_object_id((git_object *)c);
 }
 
-void git_tree_entry_set_attributes(git_tree_entry *entry, int attr)
+int git_tree_entry_set_attributes(git_tree_entry *entry, int attr)
 {
 	assert(entry && entry->owner);
+	
+	if (!valid_attributes(attr)) {
+		return GIT_ERROR;
+	}
 
 	entry->attr = attr;
 	entry->owner->object.modified = 1;
+	return GIT_SUCCESS;
 }
 
 void git_tree_entry_set_name(git_tree_entry *entry, const char *name)
@@ -190,6 +201,9 @@ int git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid
 	git_tree_entry *entry;
 
 	assert(tree && id && filename);
+	if (!valid_attributes(attributes)) {
+	  return GIT_ERROR;
+	}
 
 	if ((entry = git__malloc(sizeof(git_tree_entry))) == NULL)
 		return GIT_ENOMEM;
@@ -249,7 +263,7 @@ int git_tree_remove_entry_byname(git_tree *tree, const char *filename)
 int git_tree__writeback(git_tree *tree, git_odb_source *src)
 {
 	size_t i;
-	char filemode[8];
+	char filemode[MAX_FILEMODE_BYTES + 1 + 1];
 
 	assert(tree && src);
 
@@ -263,8 +277,8 @@ int git_tree__writeback(git_tree *tree, git_odb_source *src)
 
 		entry = git_vector_get(&tree->entries, i);
 	
-		sprintf(filemode, "%o ", entry->attr);
-
+		snprintf(filemode, sizeof(filemode), "%o ", entry->attr);
+		  
 		git__source_write(src, filemode, strlen(filemode));
 		git__source_write(src, entry->filename, strlen(entry->filename) + 1);
 		git__source_write(src, entry->oid.id, GIT_OID_RAWSZ);
