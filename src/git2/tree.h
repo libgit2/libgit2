@@ -215,7 +215,7 @@ GIT_EXTERN(void) git_tree_entry_set_name(git_tree_entry *entry, const char *name
  * @param entry Entry object which will be modified
  * @param oid new attributes for the entry
  */
-GIT_EXTERN(void) git_tree_entry_set_attributes(git_tree_entry *entry, int attr);
+GIT_EXTERN(int) git_tree_entry_set_attributes(git_tree_entry *entry, int attr);
 
 /** @} */
 GIT_END_DECL
