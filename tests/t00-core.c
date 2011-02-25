@@ -78,7 +78,11 @@ BEGIN_TEST("strutil", dirname)
 	DIRNAME_TEST("/usr", "/");
 	DIRNAME_TEST("/usr/", "/");
 	DIRNAME_TEST("/usr/lib", "/usr");
+	DIRNAME_TEST("/usr/lib/", "/usr");
+	DIRNAME_TEST("/usr/lib//", "/usr");
 	DIRNAME_TEST("usr/lib", "usr");
+	DIRNAME_TEST("usr/lib/", "usr");
+	DIRNAME_TEST("usr/lib//", "usr");
 	DIRNAME_TEST(".git/", ".");
 
 #undef DIRNAME_TEST
@@ -103,6 +107,7 @@ BEGIN_TEST("strutil", basename)
 	BASENAME_TEST("/usr", "usr");
 	BASENAME_TEST("/usr/", "usr");
 	BASENAME_TEST("/usr/lib", "lib");
+	BASENAME_TEST("/usr/lib//", "lib");
 	BASENAME_TEST("usr/lib", "lib");
 
 #undef BASENAME_TEST
