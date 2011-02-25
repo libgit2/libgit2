@@ -175,3 +175,29 @@ int cmp_files(const char *a, const char *b)
 
 	return error;
 }
+
+static int remove_filesystem_element_recurs(void *GIT_UNUSED(nil), char *path)
+{
+	char temp_path[GIT_PATH_MAX];
+	int error = GIT_SUCCESS;
+
+	GIT_UNUSED_ARG(nil);
+
+	error = gitfo_isdir(path);
+	if (error == GIT_SUCCESS)
+	{
+		strcpy(temp_path, path);
+		error = gitfo_dirent(temp_path, sizeof(temp_path), remove_filesystem_element_recurs, NULL);
+		if (error < GIT_SUCCESS)
+			return error;
+
+		return rmdir(path);
+	}
+
+	return gitfo_unlink(path);
+}
+
+int rmdir_recurs(char *directory_path)
+{
+	return remove_filesystem_element_recurs(NULL, directory_path);
+}
