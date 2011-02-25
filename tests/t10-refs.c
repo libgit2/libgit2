@@ -342,15 +342,9 @@ END_TEST
 BEGIN_TEST("normalizeref", normalize_symbolic_ref)
 	must_pass(ensure_refname_normalized(0, "a", "a"));
 	must_pass(ensure_refname_normalized(0, "a/b", "a/b"));
+	must_pass(ensure_refname_normalized(0, "refs///heads///a", "refs/heads/a"));
 	must_fail(ensure_refname_normalized(0, "", NULL));
 	must_fail(ensure_refname_normalized(0, "heads\foo", NULL));
-END_TEST
-
-
-BEGIN_TEST("normalizeref", normalize_any_ref) /* Slash related rules do not apply, neither do 'refs' prefix related rules */
-	must_pass(ensure_refname_normalized(0, "a", "a"));
-	must_pass(ensure_refname_normalized(0, "a/b", "a/b"));
-	must_pass(ensure_refname_normalized(0, "refs///heads///a", "refs/heads/a"));
 END_TEST
 
 /* Ported from JGit, BSD licence. See https://github.com/spearce/JGit/commit/e4bf8f6957bbb29362575d641d1e77a02d906739 */
@@ -495,7 +489,6 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "createref", create_new_object_id_ref);
 	ADD_TEST(suite, "normalizeref", normalize_object_id_ref);
 	ADD_TEST(suite, "normalizeref", normalize_symbolic_ref);
-	ADD_TEST(suite, "normalizeref", normalize_any_ref);
 	ADD_TEST(suite, "normalizeref", jgit_tests);
 
 	return suite;
