@@ -318,63 +318,67 @@ static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, 
 	return error;
 }
 
+#define OID_REF 1
+#define SYM_REF 0
+
 BEGIN_TEST("normalizeref", normalize_object_id_ref)
-	must_fail(ensure_refname_normalized(1, "a", NULL));
-	must_fail(ensure_refname_normalized(1, "", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads/a/", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads/a.", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads/a.lock", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/dummy/a", NULL));
-	must_pass(ensure_refname_normalized(1, "refs/tags/a", "refs/tags/a"));
-	must_pass(ensure_refname_normalized(1, "refs/heads/a/b", "refs/heads/a/b"));
-	must_pass(ensure_refname_normalized(1, "refs/heads/a./b", "refs/heads/a./b"));
-	must_fail(ensure_refname_normalized(1, "refs/heads/foo?bar", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads\foo", NULL));
-	must_pass(ensure_refname_normalized(1, "refs/heads/v@ation", "refs/heads/v@ation"));
-	must_pass(ensure_refname_normalized(1, "refs///heads///a", "refs/heads/a"));
-	must_fail(ensure_refname_normalized(1, "refs/heads/.a/b", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads/foo/../bar", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads/foo..bar", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads/./foo", NULL));
-	must_fail(ensure_refname_normalized(1, "refs/heads/v@{ation", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "a", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a/", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a.", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a.lock", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/dummy/a", NULL));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/tags/a", "refs/tags/a"));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/heads/a/b", "refs/heads/a/b"));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/heads/a./b", "refs/heads/a./b"));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/foo?bar", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads\foo", NULL));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/heads/v@ation", "refs/heads/v@ation"));
+	must_pass(ensure_refname_normalized(OID_REF, "refs///heads///a", "refs/heads/a"));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/.a/b", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/foo/../bar", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/foo..bar", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/./foo", NULL));
+	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/v@{ation", NULL));
 END_TEST
 
 BEGIN_TEST("normalizeref", normalize_symbolic_ref)
-	must_pass(ensure_refname_normalized(0, "a", "a"));
-	must_pass(ensure_refname_normalized(0, "a/b", "a/b"));
-	must_pass(ensure_refname_normalized(0, "refs///heads///a", "refs/heads/a"));
-	must_fail(ensure_refname_normalized(0, "", NULL));
-	must_fail(ensure_refname_normalized(0, "heads\foo", NULL));
+	must_pass(ensure_refname_normalized(SYM_REF, "a", "a"));
+	must_pass(ensure_refname_normalized(SYM_REF, "a/b", "a/b"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs///heads///a", "refs/heads/a"));
+	must_fail(ensure_refname_normalized(SYM_REF, "", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "heads\foo", NULL));
 END_TEST
 
 /* Ported from JGit, BSD licence. See https://github.com/spearce/JGit/commit/e4bf8f6957bbb29362575d641d1e77a02d906739 */
 BEGIN_TEST("normalizeref", jgit_tests)
 
 		/* EmptyString */
-			must_fail(ensure_refname_normalized(0, "", NULL));
-			must_fail(ensure_refname_normalized(0, "/", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "/", NULL));
 
 		/* MustHaveTwoComponents */
-			must_fail(ensure_refname_normalized(1, "master", NULL));
-			must_pass(ensure_refname_normalized(0, "heads/master", "heads/master"));
+			must_fail(ensure_refname_normalized(OID_REF, "master", NULL));
+			must_pass(ensure_refname_normalized(SYM_REF, "heads/master", "heads/master"));
 
 		/* ValidHead */
-			must_pass(ensure_refname_normalized(0, "refs/heads/master", "refs/heads/master"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/pu", "refs/heads/pu"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/z", "refs/heads/z"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/FoO", "refs/heads/FoO"));
+
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/master", "refs/heads/master"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/pu", "refs/heads/pu"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/z", "refs/heads/z"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/FoO", "refs/heads/FoO"));
 
 		/* ValidTag */
-			must_pass(ensure_refname_normalized(0, "refs/tags/v1.0", "refs/tags/v1.0"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/tags/v1.0", "refs/tags/v1.0"));
 
 		/* NoLockSuffix */
-			must_fail(ensure_refname_normalized(0, "refs/heads/master.lock", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master.lock", NULL));
 
 		/* NoDirectorySuffix */
-			must_fail(ensure_refname_normalized(0, "refs/heads/master/", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master/", NULL));
 
 		/* NoSpace */
-			must_fail(ensure_refname_normalized(0, "refs/heads/i haz space", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/i haz space", NULL));
 
 		/* NoAsciiControlCharacters */
 			{
@@ -385,91 +389,91 @@ BEGIN_TEST("normalizeref", jgit_tests)
 					strncpy(buffer + 15, (const char *)&c, 1);
 					strncpy(buffer + 16, "er", 2);
 					buffer[18 - 1] = '\0';
-					must_fail(ensure_refname_normalized(0, buffer, NULL));
+					must_fail(ensure_refname_normalized(SYM_REF, buffer, NULL));
 				}
 			}
 
 		/* NoBareDot */
-			must_fail(ensure_refname_normalized(0, "refs/heads/.", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/..", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/./master", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/../master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/.", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/..", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/./master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/../master", NULL));
 
 		/* NoLeadingOrTrailingDot */
-			must_fail(ensure_refname_normalized(0, ".", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/.bar", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/..bar", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/bar.", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, ".", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/.bar", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/..bar", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/bar.", NULL));
 
 		/* ContainsDot */
-			must_pass(ensure_refname_normalized(0, "refs/heads/m.a.s.t.e.r", "refs/heads/m.a.s.t.e.r"));
-			must_fail(ensure_refname_normalized(0, "refs/heads/master..pu", NULL));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/m.a.s.t.e.r", "refs/heads/m.a.s.t.e.r"));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master..pu", NULL));
 
 		/* NoMagicRefCharacters */
-			must_fail(ensure_refname_normalized(0, "refs/heads/master^", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/^master", NULL));
-			must_fail(ensure_refname_normalized(0, "^refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master^", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/^master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "^refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(0, "refs/heads/master~", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/~master", NULL));
-			must_fail(ensure_refname_normalized(0, "~refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master~", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/~master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "~refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(0, "refs/heads/master:", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/:master", NULL));
-			must_fail(ensure_refname_normalized(0, ":refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master:", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/:master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, ":refs/heads/master", NULL));
 
 		/* ShellGlob */
-			must_fail(ensure_refname_normalized(0, "refs/heads/master?", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/?master", NULL));
-			must_fail(ensure_refname_normalized(0, "?refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master?", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/?master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "?refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(0, "refs/heads/master[", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/[master", NULL));
-			must_fail(ensure_refname_normalized(0, "[refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master[", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/[master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "[refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(0, "refs/heads/master*", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/*master", NULL));
-			must_fail(ensure_refname_normalized(0, "*refs/heads/master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master*", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/*master", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "*refs/heads/master", NULL));
 
 		/* ValidSpecialCharacters */
-			must_pass(ensure_refname_normalized(0, "refs/heads/!", "refs/heads/!"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/\"", "refs/heads/\""));
-			must_pass(ensure_refname_normalized(0, "refs/heads/#", "refs/heads/#"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/$", "refs/heads/$"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/%", "refs/heads/%"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/&", "refs/heads/&"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/'", "refs/heads/'"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/(", "refs/heads/("));
-			must_pass(ensure_refname_normalized(0, "refs/heads/)", "refs/heads/)"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/+", "refs/heads/+"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/,", "refs/heads/,"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/-", "refs/heads/-"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/;", "refs/heads/;"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/<", "refs/heads/<"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/=", "refs/heads/="));
-			must_pass(ensure_refname_normalized(0, "refs/heads/>", "refs/heads/>"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/@", "refs/heads/@"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/]", "refs/heads/]"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/_", "refs/heads/_"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/`", "refs/heads/`"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/{", "refs/heads/{"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/|", "refs/heads/|"));
-			must_pass(ensure_refname_normalized(0, "refs/heads/}", "refs/heads/}"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/!", "refs/heads/!"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/\"", "refs/heads/\""));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/#", "refs/heads/#"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/$", "refs/heads/$"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/%", "refs/heads/%"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/&", "refs/heads/&"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/'", "refs/heads/'"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/(", "refs/heads/("));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/)", "refs/heads/)"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/+", "refs/heads/+"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/,", "refs/heads/,"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/-", "refs/heads/-"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/;", "refs/heads/;"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/<", "refs/heads/<"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/=", "refs/heads/="));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/>", "refs/heads/>"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/@", "refs/heads/@"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/]", "refs/heads/]"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/_", "refs/heads/_"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/`", "refs/heads/`"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/{", "refs/heads/{"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/|", "refs/heads/|"));
+			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/}", "refs/heads/}"));
 
 			// This is valid on UNIX, but not on Windows
 			// hence we make in invalid due to non-portability
 			//
-			must_fail(ensure_refname_normalized(0, "refs/heads/\\", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/\\", NULL));
 
 		/* UnicodeNames */
 			/*
 			 * Currently this fails.
-			 * must_pass(ensure_refname_normalized(GIT_REF_ANY, "refs/heads/\u00e5ngstr\u00f6m", "refs/heads/\u00e5ngstr\u00f6m"));
+			 * must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/\u00e5ngstr\u00f6m", "refs/heads/\u00e5ngstr\u00f6m"));
 			 */
 
 		/* RefLogQueryIsValidRef */
-			must_fail(ensure_refname_normalized(0, "refs/heads/master@{1}", NULL));
-			must_fail(ensure_refname_normalized(0, "refs/heads/master@{1.hour.ago}", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1}", NULL));
+			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1.hour.ago}", NULL));
 END_TEST
 
 git_testsuite *libgit2_suite_refs(void)
