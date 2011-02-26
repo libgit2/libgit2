@@ -27,6 +27,7 @@
 
 #include "odb.h"
 #include "git2/odb_backend.h"
+#include "repository.h"
 
 typedef struct {
 	git_odb_backend base;
@@ -89,12 +90,58 @@ BEGIN_TEST("odb", backend_alternates_sorting)
 	git_odb_close(odb);
 END_TEST
 
+#define WORK_TREE_WITHOUT_TRAILING_SLASH TEST_RESOURCES "/temp_working"
+#define WORK_TREE_WITH_TRAILING_SLASH WORK_TREE_WITHOUT_TRAILING_SLASH "/"
+
+#define STANDARD_REPOSITORY 0
+#define BARE_REPOSITORY 1
+
+static void ensure_repository_init(git_test *_gittest, char *working_directory, int repository_kind, char *expected_path_index, char *expected_path_repository, char *expected_working_directory)
+{
+	char path_odb[GIT_PATH_MAX];
+	git_repository *repo;
+
+	must_be_true(gitfo_isdir(working_directory));
+
+	git__joinpath(path_odb, expected_path_repository, GIT_OBJECTS_DIR);
+
+	must_pass(git_repository_init(&repo, working_directory, repository_kind));
+	must_be_true((repo->path_workdir == NULL && expected_working_directory == NULL) || !strcmp(repo->path_workdir, expected_working_directory));
+	must_be_true(!strcmp(repo->path_odb, path_odb));
+	must_be_true(!strcmp(repo->path_repository, expected_path_repository));
+	must_be_true((repo->path_index == NULL && expected_path_index == NULL) || !strcmp(repo->path_index, expected_path_index));
+
+	git_repository_free(repo);
+	must_pass(rmdir_recurs(working_directory));
+}
+
+BEGIN_TEST("repo_initialization", init_standard_repo)
+	char path_index[GIT_PATH_MAX], path_repository[GIT_PATH_MAX];
+
+	git__joinpath(path_repository, WORK_TREE_WITH_TRAILING_SLASH, GIT_DIR);
+	git__joinpath(path_index, path_repository, GIT_INDEX_FILE);
+
+	ensure_repository_init(_gittest, WORK_TREE_WITH_TRAILING_SLASH, STANDARD_REPOSITORY, path_index, path_repository, WORK_TREE_WITH_TRAILING_SLASH);
+	ensure_repository_init(_gittest, WORK_TREE_WITHOUT_TRAILING_SLASH, STANDARD_REPOSITORY, path_index, path_repository, WORK_TREE_WITH_TRAILING_SLASH);
+END_TEST
+
+BEGIN_TEST("repo_initialization", init_bare_repo)
+	char path_repository[GIT_PATH_MAX];
+
+	git__joinpath(path_repository, WORK_TREE_WITH_TRAILING_SLASH, "");
+
+	ensure_repository_init(_gittest, WORK_TREE_WITH_TRAILING_SLASH, BARE_REPOSITORY, NULL, path_repository, NULL);
+	ensure_repository_init(_gittest, WORK_TREE_WITHOUT_TRAILING_SLASH, BARE_REPOSITORY, NULL, path_repository, NULL);
+END_TEST
+
 git_testsuite *libgit2_suite_repository(void)
 {
 	git_testsuite *suite = git_testsuite_new("Repository");
 
 	ADD_TEST(suite, "odb", backend_sorting);
 	ADD_TEST(suite, "odb", backend_alternates_sorting);
+	ADD_TEST(suite, "repo_initialization", init_standard_repo);
+	ADD_TEST(suite, "repo_initialization", init_bare_repo);
 
 	return suite;
 }
