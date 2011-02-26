@@ -16,6 +16,9 @@
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled "
 #define MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH 100
 
+#define GIT_HEAD_FILE "HEAD"
+#define GIT_REFS_HEADS_MASTER_FILE GIT_REFS_HEADS_DIR "master"
+
 struct git_reference {
 	git_repository *owner;
 	char *name;

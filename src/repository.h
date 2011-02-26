@@ -10,6 +10,11 @@
 #include "index.h"
 #include "refs.h"
 
+#define DOT_GIT ".git"
+#define GIT_DIR DOT_GIT "/"
+#define GIT_OBJECTS_DIR "objects/"
+#define GIT_INDEX_FILE "index"
+
 typedef struct {
 	git_rawobj raw;
 	void *write_ptr;
