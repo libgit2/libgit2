@@ -283,7 +283,7 @@ void git_object_free(git_object *object)
 	}
 }
 
-const git_oid *git_object_id(git_object *obj)
+const git_oid *git_object_id(const git_object *obj)
 {
 	assert(obj);
 
@@ -293,13 +293,13 @@ const git_oid *git_object_id(git_object *obj)
 	return &obj->id;
 }
 
-git_otype git_object_type(git_object *obj)
+git_otype git_object_type(const git_object *obj)
 {
 	assert(obj);
 	return obj->source.raw.type;
 }
 
-git_repository *git_object_owner(git_object *obj)
+git_repository *git_object_owner(const git_object *obj)
 {
 	assert(obj);
 	return obj->repo;
