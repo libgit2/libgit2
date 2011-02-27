@@ -23,10 +23,8 @@ struct git_reference {
 };
 
 typedef struct {
-	git_hashtable *packed_refs;
-	git_hashtable *loose_refs;
-
-	unsigned pack_loaded:1;
+	git_hashtable *packfile;
+	git_hashtable *loose_cache;
 } git_refcache;
 
 

@@ -296,6 +296,13 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
+BEGIN_TEST("packrefs", create_packfile)
+	git_repository *repo;
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_reference_packall(repo));
+	git_repository_free(repo);
+END_TEST
+
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
 {
 	int error = GIT_SUCCESS;
@@ -494,6 +501,7 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "normalizeref", normalize_object_id_ref);
 	ADD_TEST(suite, "normalizeref", normalize_symbolic_ref);
 	ADD_TEST(suite, "normalizeref", jgit_tests);
+	//ADD_TEST(suite, "packrefs", create_packfile);
 
 	return suite;
 }

@@ -187,6 +187,24 @@ GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name);
  */
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 
+/**
+ * Pack all the loose references in the repository
+ *
+ * This method will load into the cache all the loose
+ * references on the repository and update the 
+ * `packed-refs` file with them.
+ *
+ * Once the `packed-refs` file has been written properly,
+ * the loose references will be removed from disk.
+ *
+ * WARNING: calling this method may invalidate any existing
+ * references previously loaded on the cache.
+ *
+ * @param repo Repository where the loose refs will be packed
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_packall(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
