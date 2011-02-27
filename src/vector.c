@@ -28,12 +28,10 @@
 #include "vector.h"
 
 static const double resize_factor = 1.75;
-static const int minimum_size = 8;
+static const size_t minimum_size = 8;
 
 static int resize_vector(git_vector *v)
 {
-	void **new_contents;
-
 	v->_alloc_size = ((unsigned int)(v->_alloc_size * resize_factor)) + 1;
 	if (v->_alloc_size < minimum_size)
 		v->_alloc_size = minimum_size;
