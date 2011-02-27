@@ -493,3 +493,22 @@ int gitfo_prettify_file_path(char *buffer_out, const char *path)
 
 	return GIT_SUCCESS;
 }
+
+int gitfo_cmp_path(const char *name1, int len1, int isdir1,
+		const char *name2, int len2, int isdir2)
+{
+	int len = len1 < len2 ? len1 : len2;
+	int cmp;
+
+	cmp = memcmp(name1, name2, len);
+	if (cmp)
+		return cmp;
+	if (len1 < len2)
+		return ((!isdir1 && !isdir2) ? -1 :
+                        (isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
+	if (len1 > len2)
+		return ((!isdir1 && !isdir2) ? 1 :
+                        (isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
+	return 0;
+}
+

@@ -40,30 +40,12 @@ int entry_search_cmp(const void *key, const void *array_member)
 	return strcmp(filename, entry->filename);
 }
 
-static int cache_name_compare(const char *name1, int len1, int isdir1,
-                              const char *name2, int len2, int isdir2)
-{
-	int len = len1 < len2 ? len1 : len2;
-	int cmp;
-
-	cmp = memcmp(name1, name2, len);
-	if (cmp)
-		return cmp;
-	if (len1 < len2)
-		return ((!isdir1 && !isdir2) ? -1 :
-                        (isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
-	if (len1 > len2)
-		return ((!isdir1 && !isdir2) ? 1 :
-                        (isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
-	return 0;
-}
-
 int entry_sort_cmp(const void *a, const void *b)
 {
 	const git_tree_entry *entry_a = *(const git_tree_entry **)(a);
 	const git_tree_entry *entry_b = *(const git_tree_entry **)(b);
 
-	return cache_name_compare(entry_a->filename, strlen(entry_a->filename),
+	return gitfo_cmp_path(entry_a->filename, strlen(entry_a->filename),
                                   entry_a->attr & 040000,
                                   entry_b->filename, strlen(entry_b->filename),
                                   entry_b->attr & 040000);
