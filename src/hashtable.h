@@ -34,11 +34,19 @@ typedef struct git_hashtable git_hashtable;
 git_hashtable *git_hashtable_alloc(size_t min_size, 
 		git_hash_ptr hash,
 		git_hash_keyeq_ptr key_eq);
-int git_hashtable_insert(git_hashtable *h, const void *key, void *value);
 void *git_hashtable_lookup(git_hashtable *h, const void *key);
 int git_hashtable_remove(git_hashtable *table, const void *key);
 void git_hashtable_free(git_hashtable *h);
 void git_hashtable_clear(git_hashtable *h);
+int git_hashtable_merge(git_hashtable *self, git_hashtable *other);
+
+int git_hashtable_insert2(git_hashtable *h, const void *key, void *value, void **old_value);
+
+GIT_INLINE(int) git_hashtable_insert(git_hashtable *h, const void *key, void *value)
+{
+	void *_unused;
+	return git_hashtable_insert2(h, key, value, &_unused);
+}
 
 #define git_hashtable_node_at(nodes, pos) ((git_hashtable_node *)(&nodes[pos]))
 
@@ -55,6 +63,10 @@ void git_hashtable_clear(git_hashtable *h);
 			code;\
 		}\
 	}\
+}
+
+#define GIT_HASHTABLE_FOREACH_DELETE() {\
+	_node->key = NULL; _node->value = NULL; _self->key_count--;\
 }
 
 
