@@ -166,7 +166,7 @@ int git_index_open_inrepo(git_index **index_out, git_repository *repo)
 
 void git_index_free(git_index *index)
 {
-	if (index == NULL)
+	if (index == NULL || index->repository != NULL)
 		return;
 
 	git_index_clear(index);
