@@ -178,19 +178,19 @@ int cmp_files(const char *a, const char *b)
 
 static int remove_filesystem_element_recurs(void *GIT_UNUSED(nil), char *path)
 {
-	char temp_path[GIT_PATH_MAX];
 	int error = GIT_SUCCESS;
 
 	GIT_UNUSED_ARG(nil);
 
 	error = gitfo_isdir(path);
-	if (error == GIT_SUCCESS)
-	{
-		strcpy(temp_path, path);
-		error = gitfo_dirent(temp_path, sizeof(temp_path), remove_filesystem_element_recurs, NULL);
+	if (error == GIT_SUCCESS) {
+		size_t root_size = strlen(path);
+
+		error = gitfo_dirent(path, GIT_PATH_MAX, remove_filesystem_element_recurs, NULL);
 		if (error < GIT_SUCCESS)
 			return error;
 
+		path[root_size] = 0;
 		return rmdir(path);
 	}
 
@@ -199,5 +199,50 @@ static int remove_filesystem_element_recurs(void *GIT_UNUSED(nil), char *path)
 
 int rmdir_recurs(char *directory_path)
 {
-	return remove_filesystem_element_recurs(NULL, directory_path);
+	char buffer[GIT_PATH_MAX];
+	strcpy(buffer, directory_path);
+	return remove_filesystem_element_recurs(NULL, buffer);
+}
+
+typedef struct {
+	size_t src_len, dst_len;
+	char *dst;
+} copydir_data;
+
+static int copy_filesystem_element_recurs(void *_data, char *source)
+{
+	const int mode = 0755; /* or 0777 ? */
+	copydir_data *data = (copydir_data *)_data;
+
+	data->dst[data->dst_len] = 0;
+	git__joinpath(data->dst, data->dst, source + data->src_len);
+
+	if (gitfo_isdir(source) == GIT_SUCCESS) {
+		if (gitfo_mkdir(data->dst, mode) < GIT_SUCCESS)
+			return GIT_EOSERR;
+
+		return gitfo_dirent(source, GIT_PATH_MAX, copy_filesystem_element_recurs, _data);
+	}
+
+	return copy_file(source, data->dst);
+}
+
+int copydir_recurs(char *source_directory_path, char *destination_directory_path)
+{
+	char source_buffer[GIT_PATH_MAX];
+	char dest_buffer[GIT_PATH_MAX];
+	copydir_data data;
+
+	/* Source has to exist, Destination hast to _not_ exist */
+	if (gitfo_isdir(source_directory_path)  || !gitfo_isdir(destination_directory_path))
+		return GIT_EINVALIDPATH;
+
+	git__joinpath(source_buffer, source_directory_path, "");
+	data.src_len = strlen(source_buffer);
+
+	git__joinpath(dest_buffer, destination_directory_path, "");
+	data.dst = dest_buffer;
+	data.dst_len = strlen(dest_buffer);
+
+	return copy_filesystem_element_recurs(&data, source_buffer);
 }

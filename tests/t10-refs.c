@@ -297,9 +297,17 @@ END_TEST
 
 BEGIN_TEST("packrefs", create_packfile)
 	git_repository *repo;
-	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	char temp_repo_path[GIT_PATH_MAX];
+
+	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
+
+	git__joinpath(temp_repo_path, TEMP_DIR, TEST_REPOSITORY_NAME);
+	must_pass(git_repository_open(&repo, temp_repo_path));
 	must_pass(git_reference_packall(repo));
+
 	git_repository_free(repo);
+	must_pass(rmdir_recurs(TEMP_DIR));
+
 END_TEST
 
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)

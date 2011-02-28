@@ -63,6 +63,7 @@ extern int remove_loose_object(const char *odb_dir, git_object *object);
 extern int cmp_files(const char *a, const char *b);
 extern int copy_file(const char *source, const char *dest);
 extern int rmdir_recurs(char *directory_path);
+extern int copydir_recurs(char *source_directory_path, char *destination_directory_path);
 
 #endif
 /* INCLUDE_test_helpers_h__ */
