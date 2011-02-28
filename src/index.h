@@ -27,9 +27,7 @@ struct git_index {
 	time_t last_modified;
 	git_vector entries;
 
-	unsigned int sorted:1,
-				 on_disk:1;
-
+	unsigned int on_disk:1;
 	git_index_tree *tree;
 };
 

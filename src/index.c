@@ -141,10 +141,7 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 
 	index->repository = owner;
 
-	git_vector_init(&index->entries, 32, index_cmp, index_srch);
-
-	/* the index is empty; the index is sorted */
-	index->sorted = 1;
+	git_vector_init(&index->entries, 32, index_cmp);
 
 	/* Check if index file is stored on disk already */
 	if (gitfo_exists(index->index_file_path) == 0)
@@ -209,7 +206,6 @@ void git_index_clear(git_index *index)
 
 	git_vector_clear(&index->entries);
 	index->last_modified = 0;
-	index->sorted = 1;
 
 	free_tree(index->tree);
 	index->tree = NULL;
@@ -259,8 +255,7 @@ int git_index_write(git_index *index)
 	struct stat indexst;
 	int error;
 
-	if (!index->sorted)
-		sort_index(index);
+	sort_index(index);
 
 	if ((error = git_filebuf_open(&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < GIT_SUCCESS)
 		return error;
@@ -340,10 +335,7 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 
 void sort_index(git_index *index)
 {
-	if (index->sorted == 0) {
-		git_vector_sort(&index->entries);
-		index->sorted = 1;
-	}
+	git_vector_sort(&index->entries);
 }
 
 int git_index_insert(git_index *index, const git_index_entry *source_entry)
@@ -388,8 +380,6 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-		index->sorted = 0;
-
 	/* if a previous entry exists, replace it */
 	} else {
 		git_index_entry **entry_array = (git_index_entry **)index->entries.contents;
@@ -413,7 +403,7 @@ int git_index_remove(git_index *index, int position)
 int git_index_find(git_index *index, const char *path)
 {
 	sort_index(index);
-	return git_vector_search(&index->entries, path);
+	return git_vector_bsearch2(&index->entries, index_srch, path);
 }
 
 static git_index_tree *read_tree_internal(
@@ -678,6 +668,9 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 #undef seek_forward
 
+	/* force sorting in the vector: the entries are
+	 * assured to be sorted on the index */
+	index->entries.sorted = 1;
 	return GIT_SUCCESS;
 }
 

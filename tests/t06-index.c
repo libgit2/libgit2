@@ -55,7 +55,7 @@ BEGIN_TEST(read0, "load an empty index")
 
 	must_be_true(index->on_disk == 0);
 	must_be_true(git_index_entrycount(index) == 0);
-	must_be_true(index->sorted);
+	must_be_true(index->entries.sorted);
 
 	git_index_free(index);
 END_TEST
@@ -72,7 +72,7 @@ BEGIN_TEST(read1, "load a standard index (default test index)")
 
 	must_be_true(index->on_disk);
 	must_be_true(git_index_entrycount(index) == TEST_INDEX_ENTRY_COUNT);
-	must_be_true(index->sorted);
+	must_be_true(index->entries.sorted);
 
 	entries = (git_index_entry **)index->entries.contents;
 
@@ -97,7 +97,7 @@ BEGIN_TEST(read2, "load a standard index (git.git index)")
 
 	must_be_true(index->on_disk);
 	must_be_true(git_index_entrycount(index) == TEST_INDEX2_ENTRY_COUNT);
-	must_be_true(index->sorted);
+	must_be_true(index->entries.sorted);
 	must_be_true(index->tree != NULL);
 
 	git_index_free(index);
@@ -168,7 +168,7 @@ BEGIN_TEST(sort1, "sort the entires in an empty index")
 	must_pass(git_index_open_bare(&index, "fake-index"));
 
 	/* FIXME: this test is slightly dumb */
-	must_be_true(index->sorted);
+	must_be_true(index->entries.sorted);
 
 	git_index_free(index);
 END_TEST

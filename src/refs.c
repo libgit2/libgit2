@@ -751,7 +751,7 @@ static int packed_write(git_repository *repo)
 	assert(repo && repo->references.packfile);
 
 	total_refs = repo->references.packfile->key_count;
-	if ((error = git_vector_init(&packing_list, total_refs, packed_sort, NULL)) < GIT_SUCCESS)
+	if ((error = git_vector_init(&packing_list, total_refs, packed_sort)) < GIT_SUCCESS)
 		return error;
 
 	/* Load all the packfile into a vector */

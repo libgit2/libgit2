@@ -50,7 +50,7 @@ void git_vector_free(git_vector *v)
 	free(v->contents);
 }
 
-int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp, git_vector_srch srch)
+int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp)
 {
 	assert(v);
 
@@ -61,9 +61,9 @@ int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp
 
 	v->_alloc_size = initial_size;
 	v->_cmp = cmp;
-	v->_srch = srch;
 	
 	v->length = 0;
+	v->sorted = 1;
 
 	v->contents = git__malloc(v->_alloc_size * sizeof(void *));
 	if (v->contents == NULL)
@@ -82,6 +82,7 @@ int git_vector_insert(git_vector *v, void *element)
 	}
 
 	v->contents[v->length++] = element;
+	v->sorted = 0;
 
 	return GIT_SUCCESS;
 }
@@ -90,22 +91,56 @@ void git_vector_sort(git_vector *v)
 {
 	assert(v);
 
-	if (v->_cmp != NULL)
-		qsort(v->contents, v->length, sizeof(void *), v->_cmp);
+	if (v->sorted || v->_cmp == NULL)
+		return;
+
+	qsort(v->contents, v->length, sizeof(void *), v->_cmp);
+	v->sorted = 1;
+}
+
+int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *key)
+{
+	void **find;
+
+	assert(v && key && key_lookup);
+
+	git_vector_sort(v);
+
+	find = bsearch(key, v->contents, v->length, sizeof(void *), key_lookup);
+	if (find != NULL)
+		return (int)(find - v->contents);
+
+	return GIT_ENOTFOUND;
+}
+
+int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key)
+{
+	unsigned int i;
+
+	assert(v && key && key_lookup);
+
+	for (i = 0; i < v->length; ++i) {
+		if (key_lookup(key, v->contents[i]) == 0)
+			return i;
+	}
+
+	return GIT_ENOTFOUND;
 }
 
 int git_vector_search(git_vector *v, const void *key)
 {
-	void **find;
-
-	if (v->_srch == NULL)
+	if (v->_cmp == NULL)
 		return GIT_ENOTFOUND;
 
-	find = bsearch(key, v->contents, v->length, sizeof(void *), v->_srch);
-	if (find == NULL)
+	return git_vector_search2(v, v->_cmp, key);
+}
+
+int git_vector_bsearch(git_vector *v, const void *key)
+{
+	if (v->_cmp == NULL)
 		return GIT_ENOTFOUND;
 
-	return (int)(find - v->contents);
+	return git_vector_bsearch2(v, v->_cmp, key);
 }
 
 int git_vector_remove(git_vector *v, unsigned int idx)
@@ -128,6 +163,7 @@ void git_vector_clear(git_vector *v)
 {
 	assert(v);
 	v->length = 0;
+	v->sorted = 1;
 }
 
 

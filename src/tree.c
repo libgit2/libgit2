@@ -83,10 +83,7 @@ git_tree *git_tree__new(void)
 
 	memset(tree, 0x0, sizeof(struct git_tree));
 
-	if (git_vector_init(&tree->entries, 
-				DEFAULT_TREE_SIZE,
-				entry_sort_cmp,
-				entry_search_cmp) < GIT_SUCCESS) {
+	if (git_vector_init(&tree->entries, DEFAULT_TREE_SIZE, entry_sort_cmp) < GIT_SUCCESS) {
 		free(tree);
 		return NULL;
 	}
@@ -173,7 +170,7 @@ git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
 	if (!tree->sorted)
 		sort_entries(tree);
 
-	idx = git_vector_search(&tree->entries, filename);
+	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, filename);
 	if (idx == GIT_ENOTFOUND)
 		return NULL;
 
@@ -253,7 +250,7 @@ int git_tree_remove_entry_byname(git_tree *tree, const char *filename)
 	if (!tree->sorted)
 		sort_entries(tree);
 
-	idx = git_vector_search(&tree->entries, filename);
+	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, filename);
 	if (idx == GIT_ENOTFOUND)
 		return GIT_ENOTFOUND;
 

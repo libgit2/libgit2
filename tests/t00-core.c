@@ -64,7 +64,7 @@ END_TEST
 BEGIN_TEST(vector0, "initial size of 1 would cause writing past array bounds")
   git_vector x;
   int i;
-  git_vector_init(&x, 1, NULL, NULL);
+  git_vector_init(&x, 1, NULL);
   for (i = 0; i < 10; ++i) {
     git_vector_insert(&x, (void*) 0xabc);
   }
@@ -74,7 +74,7 @@ END_TEST
 BEGIN_TEST(vector1, "don't read past array bounds on remove()")
   git_vector x;
   // make initial capacity exact for our insertions.
-  git_vector_init(&x, 3, NULL, NULL);
+  git_vector_init(&x, 3, NULL);
   git_vector_insert(&x, (void*) 0xabc);
   git_vector_insert(&x, (void*) 0xdef);
   git_vector_insert(&x, (void*) 0x123);

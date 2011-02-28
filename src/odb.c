@@ -162,7 +162,7 @@ int git_odb_new(git_odb **out)
 	if (!db)
 		return GIT_ENOMEM;
 
-	if (git_vector_init(&db->backends, 4, backend_sort_cmp, NULL) < 0) {
+	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
 		free(db);
 		return GIT_ENOMEM;
 	}

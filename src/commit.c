@@ -112,7 +112,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 
 	/* first parse; the vector hasn't been initialized yet */
 	if (commit->parents.contents == NULL) {
-		git_vector_init(&commit->parents, 4, NULL, NULL);
+		git_vector_init(&commit->parents, 4, NULL);
 	}
 
 	clear_parents(commit);
