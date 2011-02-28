@@ -15,8 +15,6 @@
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_INDEX_FILE "index"
 
-#define GIT_OBJECT_INCREF(ob) ++(((git_object *)(ob))->refcount)
-
 typedef struct {
 	git_rawobj raw;
 	void *write_ptr;
@@ -61,5 +59,13 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len);
 
 int git__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_end, const char *header);
 int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid);
+
+#define GIT_OBJECT_INCREF(ob) git_object__incref((git_object *)(ob))
+
+GIT_INLINE(void) git_object__incref(struct git_object *object)
+{
+	if (object)
+		object->refcount++;
+}
 
 #endif

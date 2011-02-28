@@ -44,6 +44,13 @@
 
 static void clear_parents(git_commit *commit)
 {
+	unsigned int i;
+
+	for (i = 0; i < commit->parents.length; ++i) {
+		git_commit *parent = git_vector_get(&commit->parents, i);
+		git_object_close((git_object *)parent);
+	}
+
 	git_vector_clear(&commit->parents);
 }
 
@@ -242,12 +249,8 @@ const git_tree *git_commit_tree(git_commit *commit)
 	if (!commit->object.in_memory && commit->tree == NULL)
 		git_commit__parse_full(commit);
 
-	if (commit->tree) {
-		GIT_OBJECT_INCREF(commit->tree);
-		return commit->tree;
-	}
-
-	return NULL;
+	GIT_OBJECT_INCREF(commit->tree);
+	return commit->tree;
 }
 
 GIT_COMMIT_GETTER(git_signature *, author)
@@ -273,10 +276,15 @@ unsigned int git_commit_parentcount(git_commit *commit)
 	return commit->parents.length;
 }
 
-git_commit * git_commit_parent(git_commit *commit, unsigned int n)
+git_commit *git_commit_parent(git_commit *commit, unsigned int n)
 {
+	git_commit *parent;
+
 	assert(commit);
-	return git_vector_get(&commit->parents, n);
+
+	parent = git_vector_get(&commit->parents, n);
+	GIT_OBJECT_INCREF(parent);
+	return parent;
 }
 
 void git_commit_set_tree(git_commit *commit, git_tree *tree)
@@ -341,7 +349,10 @@ void git_commit_set_message(git_commit *commit, const char *message)
 
 int git_commit_add_parent(git_commit *commit, git_commit *new_parent)
 {
+	assert(commit && new_parent);
+
 	CHECK_FULL_PARSE();
 	commit->object.modified = 1;
+	GIT_OBJECT_INCREF(new_parent);
 	return git_vector_insert(&commit->parents, new_parent);
 }

@@ -158,6 +158,9 @@ GIT_EXTERN(int) git_repository_index(git_index **index, git_repository *repo);
  */
 GIT_EXTERN(void) git_repository_free(git_repository *repo);
 
+
+GIT_EXTERN(void) git_repository_free__no_gc(git_repository *repo);
+
 /**
  * Creates a new Git repository in the given folder.
  *
