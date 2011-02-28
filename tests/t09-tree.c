@@ -101,8 +101,6 @@ BEGIN_TEST(write0, "add a new entry to a tree and write it back to disk")
 	must_pass(git_object_write((git_object *)tree));
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tree));
 
-	git_object_free((git_object *)tree);
-
 	git_repository_free(repo);
 END_TEST
 
@@ -152,7 +150,6 @@ BEGIN_TEST(write1, "add several entries in-memory and validate that they exist; 
 */
 
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tree));
-	git_object_free((git_object *)tree);
 	git_repository_free(repo);
 END_TEST
 

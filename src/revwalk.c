@@ -114,6 +114,7 @@ static git_revwalk_commit *commit_to_walkcommit(git_revwalk *walk, git_commit *c
 	memset(commit, 0x0, sizeof(git_revwalk_commit));
 
 	commit->commit_object = commit_object;
+	GIT_OBJECT_INCREF(commit_object);
 
 	git_hashtable_insert(walk->commits, commit_object, commit);
 
@@ -229,6 +230,7 @@ int git_revwalk_next(git_commit **commit, git_revwalk *walk)
 	while ((next = walk->next(&walk->iterator)) != NULL) {
 		if (!next->uninteresting) {
 			*commit = next->commit_object;
+			GIT_OBJECT_INCREF(*commit);
 			return GIT_SUCCESS;
 		}
 	}
@@ -246,6 +248,7 @@ void git_revwalk_reset(git_revwalk *walk)
 	assert(walk);
 
 	GIT_HASHTABLE_FOREACH(walk->commits, _unused, commit, {
+		git_object_close((git_object *)commit->commit_object);
 		git_revwalk_list_clear(&commit->parents);
 		free(commit);
 	});

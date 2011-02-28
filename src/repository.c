@@ -209,6 +209,13 @@ static git_repository *repository_alloc()
 		return NULL;
 	}
 
+	if (git_vector_init(&repo->memory_objects, 16, NULL) < GIT_SUCCESS) {
+		git_hashtable_free(repo->objects);
+		git_repository__refcache_free(&repo->references);
+		free(repo);
+		return NULL;
+	}
+
 	return repo;
 }
 
@@ -328,7 +335,8 @@ int git_repository_open(git_repository **repo_out, const char *path)
 void git_repository_free(git_repository *repo)
 {
 	git_object *object;
-	const git_oid *oid;
+	const void *_unused;
+	unsigned int i;
 
 	if (repo == NULL)
 		return;
@@ -338,11 +346,24 @@ void git_repository_free(git_repository *repo)
 	free(repo->path_repository);
 	free(repo->path_odb);
 
-	GIT_HASHTABLE_FOREACH(repo->objects, oid, object, {
-		git_object_free(object);
-	});
+	/* Increment the refcount of all the objects in the repository
+	 * to prevent freeing dependencies */
+	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,
+		GIT_OBJECT_INCREF(object);
+	);
+
+	/* force free all the objects */
+	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,
+		git_object__free(object);
+	);
+
+	for (i = 0; i < repo->memory_objects.length; ++i) {
+		object = git_vector_get(&repo->memory_objects, i);
+		git_object__free(object);
+	}
 
 	git_hashtable_free(repo->objects);
+	git_vector_free(&repo->memory_objects);
 
 	git_repository__refcache_free(&repo->references);
 

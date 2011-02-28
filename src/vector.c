@@ -104,6 +104,10 @@ int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *ke
 
 	assert(v && key && key_lookup);
 
+	/* need comparison function to sort the vector */
+	if (v->_cmp == NULL)
+		return GIT_ENOTFOUND;
+
 	git_vector_sort(v);
 
 	find = bsearch(key, v->contents, v->length, sizeof(void *), key_lookup);
@@ -127,12 +131,14 @@ int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key
 	return GIT_ENOTFOUND;
 }
 
-int git_vector_search(git_vector *v, const void *key)
+static int strict_comparison(const void *a, const void *b)
 {
-	if (v->_cmp == NULL)
-		return GIT_ENOTFOUND;
+	return a - b;
+}
 
-	return git_vector_search2(v, v->_cmp, key);
+int git_vector_search(git_vector *v, const void *entry)
+{
+	return git_vector_search2(v, v->_cmp ? v->_cmp : strict_comparison, entry);
 }
 
 int git_vector_bsearch(git_vector *v, const void *key)

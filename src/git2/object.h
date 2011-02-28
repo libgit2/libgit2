@@ -128,18 +128,27 @@ GIT_EXTERN(git_otype) git_object_type(const git_object *obj);
 GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
 
 /**
- * Free a reference to one of the objects in the repository.
+ * Close an open object
  *
- * Repository objects are managed automatically by the library,
- * but this method can be used to force freeing one of the
- * objects.
+ * This method instructs the library to close an existing
+ * object; note that git_objects are owned by the repository
+ * and are reference counted, so the object may or may not be
+ * freed after this library call, depending on whether any other 
+ * objects still depend on it.
  *
- * Careful: freeing objects in the middle of a repository
- * traversal will most likely cause errors.
+ * IMPORTANT:
+ * It is *not* necessary to call this method when you stop using
+ * an object, since all object memory is automatically reclaimed
+ * by the repository when it is freed.
  *
- * @param object the object to free
+ * Forgetting to call `git_object_close` does not cause memory
+ * leaks, but it's is recommended to close as soon as possible
+ * the biggest objects (e.g. blobs) to prevent wasting memory
+ * space.
+ *
+ * @param object the object to close
  */
-GIT_EXTERN(void) git_object_free(git_object *object);
+GIT_EXTERN(void) git_object_close(git_object *object);
 
 /**
  * Convert an object type to it's string representation.

@@ -67,9 +67,7 @@ void git_tree_clear_entries(git_tree *tree)
 	}
 
 	git_vector_clear(&tree->entries);
-
 	tree->object.modified = 1;
-	tree->sorted = 1;
 }
 
 
@@ -88,7 +86,6 @@ git_tree *git_tree__new(void)
 		return NULL;
 	}
 
-	tree->sorted = 1;
 	return tree;
 }
 
@@ -155,10 +152,7 @@ int git_tree_entry_2object(git_object **object_out, git_tree_entry *entry)
 
 static void sort_entries(git_tree *tree)
 {
-	if (tree->sorted == 0) {
-        git_vector_sort(&tree->entries);
-		tree->sorted = 1;
-	}
+	git_vector_sort(&tree->entries);
 }
 
 git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
@@ -167,8 +161,7 @@ git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
 
 	assert(tree && filename);
 
-	if (!tree->sorted)
-		sort_entries(tree);
+	sort_entries(tree);
 
 	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, filename);
 	if (idx == GIT_ENOTFOUND)
@@ -181,8 +174,7 @@ git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
 {
 	assert(tree);
 
-	if (!tree->sorted)
-		sort_entries(tree);
+	sort_entries(tree);
 
 	return git_vector_get(&tree->entries, (unsigned int)idx);
 }
@@ -216,7 +208,6 @@ int git_tree_add_entry(git_tree_entry **entry_out, git_tree *tree, const git_oid
 		*entry_out = entry;
 
 	tree->object.modified = 1;
-	tree->sorted = 0;
 	return GIT_SUCCESS;
 }
 
@@ -226,8 +217,7 @@ int git_tree_remove_entry_byindex(git_tree *tree, int idx)
 
 	assert(tree);
 
-	if (!tree->sorted)
-		sort_entries(tree);
+	sort_entries(tree);
 
 	remove_ptr = git_vector_get(&tree->entries, (unsigned int)idx);
 	if (remove_ptr == NULL)
@@ -247,8 +237,7 @@ int git_tree_remove_entry_byname(git_tree *tree, const char *filename)
 
 	assert(tree && filename);
 
-	if (!tree->sorted)
-		sort_entries(tree);
+	sort_entries(tree);
 
 	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, filename);
 	if (idx == GIT_ENOTFOUND)
@@ -267,8 +256,7 @@ int git_tree__writeback(git_tree *tree, git_odb_source *src)
 	if (tree->entries.length == 0)
 		return GIT_EMISSINGOBJDATA;
 
-	if (!tree->sorted)
-		sort_entries(tree);
+	sort_entries(tree);
 
 	for (i = 0; i < tree->entries.length; ++i) {
 		git_tree_entry *entry;

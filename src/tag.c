@@ -35,6 +35,7 @@
 void git_tag__free(git_tag *tag)
 {
 	git_signature_free(tag->tagger);
+	git_object_close(tag->target);
 	free(tag->message);
 	free(tag->tag_name);
 	free(tag);
@@ -48,12 +49,16 @@ const git_oid *git_tag_id(git_tag *c)
 const git_object *git_tag_target(git_tag *t)
 {
 	assert(t);
+	GIT_OBJECT_INCREF(t->target);
 	return t->target;
 }
 
 void git_tag_set_target(git_tag *tag, git_object *target)
 {
 	assert(tag && target);
+
+	git_object_close(tag->target);
+	GIT_OBJECT_INCREF(target);
 
 	tag->object.modified = 1;
 	tag->target = target;
@@ -64,14 +69,6 @@ git_otype git_tag_type(git_tag *t)
 {
 	assert(t);
 	return t->type;
-}
-
-void git_tag_set_type(git_tag *tag, git_otype type)
-{
-	assert(tag);
-
-	tag->object.modified = 1;
-	tag->type = type;
 }
 
 const char *git_tag_name(git_tag *t)
@@ -164,6 +161,7 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	if (tag->type == GIT_OBJ_BAD)
 		return GIT_EOBJCORRUPTED;
 
+	git_object_close(tag->target);
 	error = git_object_lookup(&tag->target, tag->object.repo, &target_oid, tag->type);
 	if (error < 0)
 		return error;

@@ -55,6 +55,8 @@ void git_commit__free(git_commit *commit)
 	git_signature_free(commit->author);
 	git_signature_free(commit->committer);
 
+	git_object_close((git_object *)commit->tree);
+
 	free(commit->message);
 	free(commit->message_short);
 	free(commit);
@@ -121,6 +123,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
 		return error;
 
+	git_object_close((git_object *)commit->tree);
 	if ((error = git_object_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < GIT_SUCCESS)
 		return error;
 
@@ -232,7 +235,21 @@ int git_commit__parse_full(git_commit *commit)
 	if (!commit->object.in_memory && !commit->full_parse)\
 		git_commit__parse_full(commit); 
 
-GIT_COMMIT_GETTER(git_tree *, tree)
+const git_tree *git_commit_tree(git_commit *commit)
+{
+	assert(commit);
+
+	if (!commit->object.in_memory && commit->tree == NULL)
+		git_commit__parse_full(commit);
+
+	if (commit->tree) {
+		GIT_OBJECT_INCREF(commit->tree);
+		return commit->tree;
+	}
+
+	return NULL;
+}
+
 GIT_COMMIT_GETTER(git_signature *, author)
 GIT_COMMIT_GETTER(git_signature *, committer)
 GIT_COMMIT_GETTER(char *, message)
@@ -267,6 +284,9 @@ void git_commit_set_tree(git_commit *commit, git_tree *tree)
 	assert(commit && tree);
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
+
+	git_object_close((git_object *)commit->tree);
+	GIT_OBJECT_INCREF(tree);
 	commit->tree = tree;
 }
 

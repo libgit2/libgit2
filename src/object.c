@@ -166,8 +166,12 @@ static int write_back(git_object *object)
 	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < GIT_SUCCESS)
 		return error;
 
-	if (!object->in_memory)
+	if (object->in_memory) {
+		int idx = git_vector_search(&object->repo->memory_objects, object);
+		git_vector_remove(&object->repo->memory_objects, idx);
+	} else {
 		git_hashtable_remove(object->repo->objects, &object->id);
+	}
 
 	git_oid_cpy(&object->id, &new_id);
 	git_hashtable_insert(object->repo->objects, &object->id, object);
@@ -257,6 +261,7 @@ int git_object_new(git_object **object_out, git_repository *repo, git_otype type
 
 	object->source.raw.type = type;
 
+	object->refcount++;
 	*object_out = object;
 	return GIT_SUCCESS;
 }
@@ -317,13 +322,14 @@ int git_object_lookup(git_object **object_out, git_repository *repo, const git_o
 	}
 
 	if (error < GIT_SUCCESS) {
-		git_object_free(object);
+		git_object__free(object);
 		return error;
 	}
 
 	git_object__source_close(object);
 	git_hashtable_insert(repo->objects, &object->id, object);
 
+	object->refcount++;
 	*object_out = object;
 	return GIT_SUCCESS;
 }
@@ -371,13 +377,18 @@ int git_object_write(git_object *object)
 	return write_back(object);
 }
 
-void git_object_free(git_object *object)
+void git_object__free(git_object *object)
 {
-	if (object == NULL)
-		return;
+	assert(object);
 
 	git_object__source_close(object);
-	git_hashtable_remove(object->repo->objects, &object->id);
+
+	if (object->in_memory) {
+		int idx = git_vector_search(&object->repo->memory_objects, object);
+		git_vector_remove(&object->repo->memory_objects, idx);
+	} else {
+		git_hashtable_remove(object->repo->objects, &object->id);
+	}
 
 	switch (object->source.raw.type) {
 	case GIT_OBJ_COMMIT:
@@ -400,6 +411,15 @@ void git_object_free(git_object *object)
 		free(object);
 		break;
 	}
+}
+
+void git_object_close(git_object *object)
+{
+	if (object == NULL)
+		return;
+
+	if (--object->refcount <= 0)
+		git_object__free(object);
 }
 
 const git_oid *git_object_id(const git_object *obj)
