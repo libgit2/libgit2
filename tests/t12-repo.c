@@ -90,8 +90,6 @@ BEGIN_TEST("odb", backend_alternates_sorting)
 	git_odb_close(odb);
 END_TEST
 
-#define WORK_TREE_WITHOUT_TRAILING_SLASH TEST_RESOURCES "/temp_working"
-#define WORK_TREE_WITH_TRAILING_SLASH WORK_TREE_WITHOUT_TRAILING_SLASH "/"
 
 #define STANDARD_REPOSITORY 0
 #define BARE_REPOSITORY 1
@@ -118,20 +116,20 @@ static void ensure_repository_init(git_test *_gittest, char *working_directory, 
 BEGIN_TEST("repo_initialization", init_standard_repo)
 	char path_index[GIT_PATH_MAX], path_repository[GIT_PATH_MAX];
 
-	git__joinpath(path_repository, WORK_TREE_WITH_TRAILING_SLASH, GIT_DIR);
+	git__joinpath(path_repository, TEMP_DIR, GIT_DIR);
 	git__joinpath(path_index, path_repository, GIT_INDEX_FILE);
 
-	ensure_repository_init(_gittest, WORK_TREE_WITH_TRAILING_SLASH, STANDARD_REPOSITORY, path_index, path_repository, WORK_TREE_WITH_TRAILING_SLASH);
-	ensure_repository_init(_gittest, WORK_TREE_WITHOUT_TRAILING_SLASH, STANDARD_REPOSITORY, path_index, path_repository, WORK_TREE_WITH_TRAILING_SLASH);
+	ensure_repository_init(_gittest, TEMP_DIR, STANDARD_REPOSITORY, path_index, path_repository, TEMP_DIR);
+	ensure_repository_init(_gittest, TEMP_DIR_WITHOUT_TRAILING_SLASH, STANDARD_REPOSITORY, path_index, path_repository, TEMP_DIR);
 END_TEST
 
 BEGIN_TEST("repo_initialization", init_bare_repo)
 	char path_repository[GIT_PATH_MAX];
 
-	git__joinpath(path_repository, WORK_TREE_WITH_TRAILING_SLASH, "");
+	git__joinpath(path_repository, TEMP_DIR, "");
 
-	ensure_repository_init(_gittest, WORK_TREE_WITH_TRAILING_SLASH, BARE_REPOSITORY, NULL, path_repository, NULL);
-	ensure_repository_init(_gittest, WORK_TREE_WITHOUT_TRAILING_SLASH, BARE_REPOSITORY, NULL, path_repository, NULL);
+	ensure_repository_init(_gittest, TEMP_DIR, BARE_REPOSITORY, NULL, path_repository, NULL);
+	ensure_repository_init(_gittest, TEMP_DIR_WITHOUT_TRAILING_SLASH, BARE_REPOSITORY, NULL, path_repository, NULL);
 END_TEST
 
 git_testsuite *libgit2_suite_repository(void)
