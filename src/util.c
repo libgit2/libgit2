@@ -206,6 +206,7 @@ void git__joinpath_n(char *buffer_out, int count, ...)
 {
 	va_list ap;
 	int i;
+	char *buffer_start = buffer_out;
 
 	va_start(ap, count);
 	for (i = 0; i < count; ++i) {
@@ -213,8 +214,11 @@ void git__joinpath_n(char *buffer_out, int count, ...)
 		int len;
 
 		path = va_arg(ap, const char *);
-		if (i > 0 && *path == '/')
+		if (i > 0 && *path == '/' && buffer_out > buffer_start && buffer_out[-1] == '/')
 			path++;
+
+		if (!*path)
+			continue;
 
 		len = strlen(path);
 		memcpy(buffer_out, path, len);

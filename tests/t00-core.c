@@ -355,9 +355,11 @@ static int ensure_joinpath(const char *path_a, const char *path_b, const char *e
 }
 
 BEGIN_TEST("path", joinpath)
-	must_pass(ensure_joinpath("", "", "/"));
-	must_pass(ensure_joinpath("", "a", "/a"));
+	must_pass(ensure_joinpath("", "", ""));
+	must_pass(ensure_joinpath("", "a", "a"));
+	must_pass(ensure_joinpath("", "/a", "/a"));
 	must_pass(ensure_joinpath("a", "", "a/"));
+	must_pass(ensure_joinpath("a", "/", "a/"));
 	must_pass(ensure_joinpath("a", "b", "a/b"));
 	must_pass(ensure_joinpath("/", "a", "/a"));
 	must_pass(ensure_joinpath("/", "", "/"));
@@ -365,6 +367,22 @@ BEGIN_TEST("path", joinpath)
 	must_pass(ensure_joinpath("/a", "/b/", "/a/b/"));
 	must_pass(ensure_joinpath("/a/", "b/", "/a/b/"));
 	must_pass(ensure_joinpath("/a/", "/b/", "/a/b/"));
+END_TEST
+
+static int ensure_joinpath_n(const char *path_a, const char *path_b, const char *path_c, const char *path_d, const char *expected_path)
+{
+	char joined_path[GIT_PATH_MAX];
+	git__joinpath_n(joined_path, 4, path_a, path_b, path_c, path_d);
+	return strcmp(joined_path, expected_path) == 0 ? GIT_SUCCESS : GIT_ERROR;
+}
+
+BEGIN_TEST("path", joinpath_n)
+	must_pass(ensure_joinpath_n("", "", "", "", ""));
+	must_pass(ensure_joinpath_n("", "a", "", "", "a/"));
+	must_pass(ensure_joinpath_n("a", "", "", "", "a/"));
+	must_pass(ensure_joinpath_n("", "", "", "a", "a"));
+	must_pass(ensure_joinpath_n("a", "b", "", "/c/d/", "a/b/c/d/"));
+	must_pass(ensure_joinpath_n("a", "b", "", "/c/d", "a/b/c/d"));
 END_TEST
 
 typedef struct name_data {
@@ -627,6 +645,7 @@ git_testsuite *libgit2_suite_core(void)
 	ADD_TEST(suite, "path", file_path_prettifying);
 	ADD_TEST(suite, "path", dir_path_prettifying);
 	ADD_TEST(suite, "path", joinpath);
+	ADD_TEST(suite, "path", joinpath_n);
 
 	ADD_TEST(suite, "dirent", dot);
 	ADD_TEST(suite, "dirent", sub);
