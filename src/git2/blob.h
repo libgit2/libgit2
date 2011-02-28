@@ -28,7 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "repository.h"
+#include "object.h"
 
 /**
  * @file git2/blob.h
@@ -51,7 +51,7 @@ GIT_BEGIN_DECL
  */
 GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git_oid *id)
 {
-	return git_repository_lookup((git_object **)blob, repo, id, GIT_OBJ_BLOB);
+	return git_object_lookup((git_object **)blob, repo, id, GIT_OBJ_BLOB);
 }
 
 /**
@@ -67,7 +67,7 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
  */
 GIT_INLINE(int) git_blob_new(git_blob **blob, git_repository *repo)
 {
-	return git_repository_newobject((git_object **)blob, repo, GIT_OBJ_BLOB);
+	return git_object_new((git_object **)blob, repo, GIT_OBJ_BLOB);
 }
 
 /**

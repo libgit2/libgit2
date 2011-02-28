@@ -121,7 +121,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
 		return error;
 
-	if ((error = git_repository_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < GIT_SUCCESS)
+	if ((error = git_object_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < GIT_SUCCESS)
 		return error;
 
 	/*
@@ -131,7 +131,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
 		git_commit *parent;
 
-		if ((error = git_repository_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
+		if ((error = git_object_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
 			return error;
 
 		if (git_vector_insert(&commit->parents, parent) < GIT_SUCCESS)

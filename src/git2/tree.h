@@ -28,7 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "repository.h"
+#include "object.h"
 
 /**
  * @file git2/tree.h
@@ -51,7 +51,7 @@ GIT_BEGIN_DECL
  */
 GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git_oid *id)
 {
-	return git_repository_lookup((git_object **)tree, repo, id, GIT_OBJ_TREE);
+	return git_object_lookup((git_object **)tree, repo, id, GIT_OBJ_TREE);
 }
 
 /**
@@ -67,7 +67,7 @@ GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
  */
 GIT_INLINE(int) git_tree_new(git_tree **tree, git_repository *repo)
 {
-	return git_repository_newobject((git_object **)tree, repo, GIT_OBJ_TREE);
+	return git_object_new((git_object **)tree, repo, GIT_OBJ_TREE);
 }
 
 /**

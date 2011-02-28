@@ -28,7 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "repository.h"
+#include "object.h"
 
 /**
  * @file git2/tag.h
@@ -51,7 +51,7 @@ GIT_BEGIN_DECL
  */
 GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id)
 {
-	return git_repository_lookup((git_object **)tag, repo, id, (git_otype)GIT_OBJ_TAG);
+	return git_object_lookup((git_object **)tag, repo, id, (git_otype)GIT_OBJ_TAG);
 }
 
 /**
@@ -67,7 +67,7 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
  */
 GIT_INLINE(int) git_tag_new(git_tag **tag, git_repository *repo)
 {
-	return git_repository_newobject((git_object **)tag, repo, (git_otype)GIT_OBJ_TAG);
+	return git_object_new((git_object **)tag, repo, (git_otype)GIT_OBJ_TAG);
 }
 
 /**

@@ -132,26 +132,6 @@ GIT_EXTERN(int) git_repository_open3(git_repository **repository,
 		const char *git_index_file,
 		const char *git_work_tree);
 
-
-/**
- * Lookup a reference to one of the objects in the repostory.
- *
- * The generated reference is owned by the repository and
- * should not be freed by the user.
- *
- * The 'type' parameter must match the type of the object
- * in the odb; the method will fail otherwise.
- * The special value 'GIT_OBJ_ANY' may be passed to let
- * the method guess the object's type.
- *
- * @param object pointer to the looked-up object
- * @param repo the repository to look up the object
- * @param id the unique identifier for the object
- * @param type the type of the object
- * @return a reference to the object
- */
-GIT_EXTERN(int) git_repository_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
-
 /**
  * Get the object database behind a Git repository
  *
@@ -171,29 +151,6 @@ GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
  * @return 0 on success; error code if the index could not be opened
  */
 GIT_EXTERN(int) git_repository_index(git_index **index, git_repository *repo);
-
-/**
- * Create a new in-memory repository object with
- * the given type.
- *
- * The object's attributes can be filled in using the
- * corresponding setter methods.
- *
- * The object will be written back to given git_repository
- * when the git_object_write() function is called; objects
- * cannot be written to disk until all their main
- * attributes have been properly filled.
- *
- * Objects are instantiated with no SHA1 id; their id
- * will be automatically generated when writing to the
- * repository.
- *
- * @param object pointer to the new object
- * @parem repo Repository where the object belongs
- * @param type Type of the object to be created
- * @return the new object
- */
-GIT_EXTERN(int) git_repository_newobject(git_object **object, git_repository *repo, git_otype type);
 
 /**
  * Free a previously allocated repository
@@ -218,22 +175,6 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  */
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
-/**
- * Lookup a reference by its name in the repository.
- *
- * The generated reference is owned by the repository and
- * should not be freed by the user.
- *
- * TODO:
- *	- Ensure the reference name is valid
- *
- * @param reference_out pointer to the looked-up reference
- * @param repo the repository to look up the reference
- * @param name the long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
- * @return a reference to the reference
- */
-GIT_EXTERN(int) git_repository_lookup_ref(git_reference **reference_out, git_repository *repo, const char *name);
-	
 /** @} */
 GIT_END_DECL
 #endif

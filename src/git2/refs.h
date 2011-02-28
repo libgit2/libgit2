@@ -39,6 +39,19 @@
 GIT_BEGIN_DECL
 
 /**
+ * Lookup a reference by its name in a repository.
+ *
+ * The generated reference is owned by the repository and
+ * should not be freed by the user.
+ *
+ * @param reference_out pointer to the looked-up reference
+ * @param repo the repository to look up the reference
+ * @param name the long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
+
+/**
  * Create a new symbolic reference.
  *
  * The reference will be created in the repository and written

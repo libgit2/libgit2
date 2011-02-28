@@ -153,7 +153,7 @@ const git_oid *git_tree_entry_id(git_tree_entry *entry)
 int git_tree_entry_2object(git_object **object_out, git_tree_entry *entry)
 {
 	assert(entry && object_out);
-	return git_repository_lookup(object_out, entry->owner->object.repo, &entry->oid, GIT_OBJ_ANY);
+	return git_object_lookup(object_out, entry->owner->object.repo, &entry->oid, GIT_OBJ_ANY);
 }
 
 static void sort_entries(git_tree *tree)

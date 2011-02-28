@@ -39,6 +39,49 @@
 GIT_BEGIN_DECL
 
 /**
+ * Lookup a reference to one of the objects in a repostory.
+ *
+ * The generated reference is owned by the repository and
+ * should not be freed by the user.
+ *
+ * The 'type' parameter must match the type of the object
+ * in the odb; the method will fail otherwise.
+ * The special value 'GIT_OBJ_ANY' may be passed to let
+ * the method guess the object's type.
+ *
+ * @param object pointer to the looked-up object
+ * @param repo the repository to look up the object
+ * @param id the unique identifier for the object
+ * @param type the type of the object
+ * @return a reference to the object
+ */
+GIT_EXTERN(int) git_object_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
+
+/**
+ * Create a new in-memory repository object with
+ * the given type.
+ *
+ * The object's attributes can be filled in using the
+ * corresponding setter methods.
+ *
+ * The object will be written back to given git_repository
+ * when the git_object_write() function is called; objects
+ * cannot be written to disk until all their main
+ * attributes have been properly filled.
+ *
+ * Objects are instantiated with no SHA1 id; their id
+ * will be automatically generated when writing to the
+ * repository.
+ *
+ * @param object pointer to the new object
+ * @parem repo Repository where the object belongs
+ * @param type Type of the object to be created
+ * @return the new object
+ */
+GIT_EXTERN(int) git_object_new(git_object **object, git_repository *repo, git_otype type);
+
+
+/**
  * Write back an object to disk.
  *
  * The object will be written to its corresponding

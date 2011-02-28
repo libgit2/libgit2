@@ -164,7 +164,7 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	if (tag->type == GIT_OBJ_BAD)
 		return GIT_EOBJCORRUPTED;
 
-	error = git_repository_lookup(&tag->target, tag->object.repo, &target_oid, tag->type);
+	error = git_object_lookup(&tag->target, tag->object.repo, &target_oid, tag->type);
 	if (error < 0)
 		return error;
 

@@ -818,7 +818,7 @@ cleanup:
 /**
  * Constructors
  */
-int git_repository_lookup_ref(git_reference **ref_out, git_repository *repo, const char *name)
+int git_reference_lookup(git_reference **ref_out, git_repository *repo, const char *name)
 {
 	int error;
 	char normalized_name[GIT_PATH_MAX];
@@ -1118,7 +1118,7 @@ int git_reference_delete(git_reference *ref)
 		/* When deleting a loose reference, we have to ensure that an older
 		 * packed version of it doesn't exist
 		 */
-		if (!git_repository_lookup_ref(&reference, ref->owner, ref->name)) {
+		if (!git_reference_lookup(&reference, ref->owner, ref->name)) {
 			assert((reference->type & GIT_REF_PACKED) != 0);
 			error = git_reference_delete(reference);
 		}
@@ -1157,7 +1157,7 @@ int git_reference_rename(git_reference *ref, const char *new_name)
 		return error;
 
 	/* Ensure we're not going to overwrite an existing reference */
-	error = git_repository_lookup_ref(&looked_up_ref, ref->owner, new_name);
+	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
 	if (error == GIT_SUCCESS)
 		return GIT_EINVALIDREFNAME;
 
@@ -1269,7 +1269,7 @@ int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
 		}
 
 		ref_sym = (reference_symbolic *)ref;
-		if ((error = git_repository_lookup_ref(&ref, repo, ref_sym->target)) < GIT_SUCCESS)
+		if ((error = git_reference_lookup(&ref, repo, ref_sym->target)) < GIT_SUCCESS)
 			return error;
 	}
 

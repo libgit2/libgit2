@@ -28,7 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "repository.h"
+#include "object.h"
 
 /**
  * @file git2/commit.h
@@ -52,7 +52,7 @@ GIT_BEGIN_DECL
  */
 GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id)
 {
-	return git_repository_lookup((git_object **)commit, repo, id, GIT_OBJ_COMMIT);
+	return git_object_lookup((git_object **)commit, repo, id, GIT_OBJ_COMMIT);
 }
 
 /**
@@ -68,7 +68,7 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  */
 GIT_INLINE(int) git_commit_new(git_commit **commit, git_repository *repo)
 {
-	return git_repository_newobject((git_object **)commit, repo, GIT_OBJ_COMMIT);
+	return git_object_new((git_object **)commit, repo, GIT_OBJ_COMMIT);
 }
 
 /**
