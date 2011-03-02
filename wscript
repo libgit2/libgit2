@@ -74,7 +74,7 @@ def configure(conf):
         conf.env.DEFINES += ['GIT2_SQLITE_BACKEND']
 
     if conf.options.sha1 not in ['openssl', 'ppc', 'builtin']:
-        ctx.fatal('Invalid SHA1 option')
+        conf.fatal('Invalid SHA1 option')
 
     # check for libcrypto (openssl) if we are using its SHA1 functions
     if conf.options.sha1 == 'openssl':
