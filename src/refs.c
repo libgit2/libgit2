@@ -1124,8 +1124,18 @@ int git_reference_rename(git_reference *ref, const char *new_name)
 	int error;
 	char *old_name;
 	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX];
+	git_reference *looked_up_ref;
 
 	assert(ref);
+
+	/* Ensure we're not going to overwrite an existing reference */
+	error = git_repository_lookup_ref(&looked_up_ref, ref->owner, new_name);
+	if (error == GIT_SUCCESS)
+		return GIT_EINVALIDREFNAME;
+
+	if (error != GIT_ENOTFOUND)
+		return error;
+
 
 	old_name = ref->name;
 	ref->name = git__strdup(new_name);
