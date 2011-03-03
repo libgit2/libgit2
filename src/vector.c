@@ -133,7 +133,7 @@ int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key
 
 static int strict_comparison(const void *a, const void *b)
 {
-	return a - b;
+	return (a == b) ? 0 : -1;
 }
 
 int git_vector_search(git_vector *v, const void *entry)
