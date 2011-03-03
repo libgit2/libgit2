@@ -396,6 +396,25 @@ BEGIN_TEST("renameref", renaming_a_packed_reference_makes_it_loose)
 	must_pass(rmdir_recurs(TEMP_DIR));
 END_TEST
 
+BEGIN_TEST("renameref", can_not_rename_a_reference_with_the_name_of_an_existing_reference)
+	git_reference *looked_up_ref;
+	git_repository *repo;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	/* An existing reference... */
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_head_name));
+
+	/* Can not be renamed to the name of another existing reference. */
+	must_fail(git_reference_rename(looked_up_ref, packed_test_head_name));
+
+	/* Failure to rename it hasn't corrupted its state */
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_head_name));
+	must_be_true(!strcmp(looked_up_ref->name, packed_head_name));
+
+	git_repository_free(repo);
+END_TEST
+
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
 {
 	int error = GIT_SUCCESS;
@@ -597,5 +616,6 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "packrefs", create_packfile_with_empty_folder);
 	ADD_TEST(suite, "packrefs", create_packfile);
 	ADD_TEST(suite, "renameref", renaming_a_packed_reference_makes_it_loose);
+	ADD_TEST(suite, "renameref", can_not_rename_a_reference_with_the_name_of_an_existing_reference);
 	return suite;
 }
