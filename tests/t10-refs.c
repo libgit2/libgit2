@@ -351,6 +351,51 @@ BEGIN_TEST("packrefs", create_packfile)
 	must_pass(rmdir_recurs(TEMP_DIR));
 END_TEST
 
+BEGIN_TEST("renameref", rename_a_loose_reference)
+	git_reference *looked_up_ref, *another_looked_up_ref;
+	git_repository *repo;
+	char temp_path[GIT_PATH_MAX];
+	const char *new_name = "refs/tags/Nemo/knows/refs.kung-fu";
+
+	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
+
+	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
+	must_pass(git_repository_open(&repo, temp_path));
+
+	/* Ensure the ref doesn't exist on the file system */
+	git__joinpath(temp_path, repo->path_repository, new_name);
+	must_pass(!gitfo_exists(temp_path));
+
+	/* Retrieval of the reference to rename */
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, loose_tag_ref_name));
+
+	/* ... which is indeed loose */
+	must_be_true((looked_up_ref->type & GIT_REF_PACKED) == 0);
+
+	/* Now that the reference is renamed... */
+	must_pass(git_reference_rename(looked_up_ref, new_name));
+	must_be_true(!strcmp(looked_up_ref->name, new_name));
+
+	/* ...It can't be looked-up with the old name... */
+	must_fail(git_repository_lookup_ref(&another_looked_up_ref, repo, loose_tag_ref_name));
+
+	/* ...but the new name works ok... */
+	must_pass(git_repository_lookup_ref(&another_looked_up_ref, repo, new_name));
+	must_be_true(!strcmp(another_looked_up_ref->name, new_name));
+
+	/* .. the ref is still loose... */
+	must_be_true((another_looked_up_ref->type & GIT_REF_PACKED) == 0);
+	must_be_true((looked_up_ref->type & GIT_REF_PACKED) == 0);
+
+	/* ...and the ref can be found in the file system */
+	git__joinpath(temp_path, repo->path_repository, new_name);
+	must_pass(gitfo_exists(temp_path));
+
+	git_repository_free(repo);
+
+	must_pass(rmdir_recurs(TEMP_DIR));
+END_TEST
+
 BEGIN_TEST("renameref", renaming_a_packed_reference_makes_it_loose)
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
@@ -638,6 +683,7 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "packrefs", create_packfile_with_empty_folder);
 	ADD_TEST(suite, "packrefs", create_packfile);
 	ADD_TEST(suite, "renameref", renaming_a_packed_reference_makes_it_loose);
+	ADD_TEST(suite, "renameref", rename_a_loose_reference);
 	ADD_TEST(suite, "renameref", can_not_rename_a_reference_with_the_name_of_an_existing_reference);
 	ADD_TEST(suite, "renameref", can_not_rename_a_reference_with_an_invalid_name);
 	return suite;
