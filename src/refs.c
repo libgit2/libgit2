@@ -1089,15 +1089,18 @@ int git_reference_set_target(git_reference *ref, const char *target)
  * operation. We need to remove the reference from
  * the memory cache and then rewrite the whole pack
  *
- * If the reference is loose, we just remove it on
+ * If the reference is loose, we remove it on
  * the filesystem and update the in-memory cache
- * accordingly.
+ * accordingly. We also make sure that an older version
+ * of it doesn't exist as a packed reference. If this
+ * is the case, this packed reference is removed as well.
  *
  * This obviously invalidates the `ref` pointer.
  */
 int git_reference_delete(git_reference *ref)
 {
 	int error;
+	git_reference *reference;
 
 	assert(ref);
 
@@ -1109,8 +1112,19 @@ int git_reference_delete(git_reference *ref)
 		git__joinpath(full_path, ref->owner->path_repository, ref->name);
 		git_hashtable_remove(ref->owner->references.loose_cache, ref->name);
 		error = gitfo_unlink(full_path);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		/* When deleting a loose reference, we have to ensure that an older
+		 * packed version of it doesn't exist
+		 */
+		if (!git_repository_lookup_ref(&reference, ref->owner, ref->name)) {
+			assert((reference->type & GIT_REF_PACKED) != 0);
+			error = git_reference_delete(reference);
+		}
 	}
 
+cleanup:
 	reference_free(ref);
 	return error;
 }
