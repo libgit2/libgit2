@@ -526,6 +526,40 @@ BEGIN_TEST("renameref", can_not_rename_a_reference_with_an_invalid_name)
 	git_repository_free(repo);
 END_TEST
 
+BEGIN_TEST("deleteref", deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem)
+	git_reference *looked_up_ref, *another_looked_up_ref;
+	git_repository *repo;
+	char temp_path[GIT_PATH_MAX];
+
+	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
+
+	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
+	must_pass(git_repository_open(&repo, temp_path));
+
+	/* Ensure the loose reference exists on the file system */
+	git__joinpath(temp_path, repo->path_repository, packed_test_head_name);
+	must_pass(gitfo_exists(temp_path));
+
+	/* Lookup the reference */
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_test_head_name));
+
+	/* Ensure it's the loose version that has been found */
+	must_be_true((looked_up_ref->type & GIT_REF_PACKED) == 0);
+
+	/* Now that the reference is deleted... */
+	must_pass(git_reference_delete(looked_up_ref));
+
+	/* Looking up the reference once again should not retrieve it */
+	must_fail(git_repository_lookup_ref(&another_looked_up_ref, repo, packed_test_head_name));
+
+	/* Ensure the loose reference doesn't exist any longer on the file system */
+	must_pass(!gitfo_exists(temp_path));
+
+	git_repository_free(repo);
+
+	must_pass(rmdir_recurs(TEMP_DIR));
+END_TEST
+
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
 {
 	int error = GIT_SUCCESS;
@@ -731,5 +765,7 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "renameref", rename_a_loose_reference);
 	ADD_TEST(suite, "renameref", can_not_rename_a_reference_with_the_name_of_an_existing_reference);
 	ADD_TEST(suite, "renameref", can_not_rename_a_reference_with_an_invalid_name);
+	ADD_TEST(suite, "deleteref", deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem);
+
 	return suite;
 }
