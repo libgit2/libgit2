@@ -351,6 +351,51 @@ BEGIN_TEST("packrefs", create_packfile)
 	must_pass(rmdir_recurs(TEMP_DIR));
 END_TEST
 
+BEGIN_TEST("renameref", renaming_a_packed_reference_makes_it_loose)
+	git_reference *looked_up_ref, *another_looked_up_ref;
+	git_repository *repo;
+	char temp_path[GIT_PATH_MAX];
+	const char *brand_new_name = "refs/heads/brand_new_name";
+
+	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
+
+	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
+	must_pass(git_repository_open(&repo, temp_path));
+
+	/* Ensure the ref doesn't exist on the file system */
+	git__joinpath(temp_path, repo->path_repository, packed_head_name);
+	must_pass(!gitfo_exists(temp_path));
+
+	/* The reference can however be looked-up... */
+	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_head_name));
+
+	/* .. and it's packed */
+	must_be_true((looked_up_ref->type & GIT_REF_PACKED) != 0);
+
+	/* Now that the reference is renamed... */
+	must_pass(git_reference_rename(looked_up_ref, brand_new_name));
+	must_be_true(!strcmp(looked_up_ref->name, brand_new_name));
+
+	/* ...It can't be looked-up with the old name... */
+	must_fail(git_repository_lookup_ref(&another_looked_up_ref, repo, packed_head_name));
+
+	/* ...but the new name works ok... */
+	must_pass(git_repository_lookup_ref(&another_looked_up_ref, repo, brand_new_name));
+	must_be_true(!strcmp(another_looked_up_ref->name, brand_new_name));
+
+	/* .. the ref is no longer packed... */
+	must_be_true((another_looked_up_ref->type & GIT_REF_PACKED) == 0);
+	must_be_true((looked_up_ref->type & GIT_REF_PACKED) == 0);
+
+	/* ...and the ref now happily lives in the file system */
+	git__joinpath(temp_path, repo->path_repository, brand_new_name);
+	must_pass(gitfo_exists(temp_path));
+
+	git_repository_free(repo);
+
+	must_pass(rmdir_recurs(TEMP_DIR));
+END_TEST
+
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
 {
 	int error = GIT_SUCCESS;
@@ -551,6 +596,6 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "normalizeref", jgit_tests);
 	ADD_TEST(suite, "packrefs", create_packfile_with_empty_folder);
 	ADD_TEST(suite, "packrefs", create_packfile);
-
+	ADD_TEST(suite, "renameref", renaming_a_packed_reference_makes_it_loose);
 	return suite;
 }
