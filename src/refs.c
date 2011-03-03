@@ -287,6 +287,8 @@ static int loose_write(git_reference *ref)
 	int error, contents_size;
 	char *ref_contents = NULL;
 
+	assert((ref->type & GIT_REF_PACKED) == 0);
+
 	git__joinpath(ref_path, ref->owner->path_repository, ref->name);
 
 	if ((error = git_filebuf_open(&file, ref_path, 0)) < GIT_SUCCESS)
@@ -1108,7 +1110,8 @@ int git_reference_delete(git_reference *ref)
  * Rename a reference
  *
  * If the reference is packed, we need to rewrite the
- * packfile. Not cool.
+ * packfile to remove the reference from it and create
+ * the reference back as a loose one.
  *
  * If the reference is loose, we just rename it on
  * the filesystem.
@@ -1120,7 +1123,7 @@ int git_reference_rename(git_reference *ref, const char *new_name)
 {
 	int error;
 	char *old_name;
-	git_hashtable *dest_table;
+	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX];
 
 	assert(ref);
 
@@ -1140,15 +1143,28 @@ int git_reference_rename(git_reference *ref, const char *new_name)
 		 * This doesn't affect writing, though, and allows
 		 * us to rollback if writing fails
 		 */
+
+		ref->type &= ~GIT_REF_PACKED;
+
+		/* Create the loose ref under its new name */
+		error = loose_write(ref);
+		if (error < GIT_SUCCESS) {
+			ref->type |= GIT_REF_PACKED;
+			goto cleanup;
+		}
+
+		/* Remove from the packfile cache in order to avoid packing it back
+		 * Note : we do not rely on git_reference_delete() because this would
+		 * invalidate the reference.
+		 */
+		git_hashtable_remove(ref->owner->references.packfile, old_name);
+
+		/* Recreate the packed-refs file without the reference */
 		error = packed_write(ref->owner);
 		if (error < GIT_SUCCESS)
-			goto cleanup;
+			goto rename_loose_to_old_name;
 
-		dest_table = ref->owner->references.packfile;
 	} else {
-		char old_path[GIT_PATH_MAX];
-		char new_path[GIT_PATH_MAX];
-
 		git__joinpath(old_path, ref->owner->path_repository, old_name);
 		git__joinpath(new_path, ref->owner->path_repository, ref->name);
 
@@ -1156,22 +1172,43 @@ int git_reference_rename(git_reference *ref, const char *new_name)
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 
-		dest_table = ref->owner->references.loose_cache;
+		/* Once succesfully renamed, remove from the cache the reference known by its old name*/
+		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
 	}
 
-	error = git_hashtable_insert(dest_table, ref->name, ref);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	git_hashtable_remove(dest_table, old_name);
+	/* Store the renamed reference into the loose ref cache */
+	error = git_hashtable_insert(ref->owner->references.loose_cache, ref->name, ref);
 
 	free(old_name);
-	return GIT_SUCCESS;
+	return error;
 
 cleanup:
 	/* restore the old name if this failed */
 	free(ref->name);
 	ref->name = old_name;
+	return error;
+
+rename_loose_to_old_name:
+	/* If we hit this point. Something *bad* happened! Think "Ghostbusters
+	 * crossing the streams" definition of bad.
+	 * Either the packed-refs has been correctly generated and something else
+	 * has gone wrong, or the writing of the new packed-refs has failed, and
+	 * we're stuck with the old one. As a loose ref always takes priority over
+	 * a packed ref, we'll eventually try and rename the generated loose ref to
+	 * its former name. It even that fails, well... we might have lost the reference
+	 * for good. :-/
+	*/
+
+	git__joinpath(old_path, ref->owner->path_repository, ref->name);
+	git__joinpath(new_path, ref->owner->path_repository, old_name);
+
+	/* No error checking. We'll return the initial error */
+	gitfo_move_file(old_path, new_path);
+
+	/* restore the old name */
+	free(ref->name);
+	ref->name = old_name;
+
 	return error;
 }
 
