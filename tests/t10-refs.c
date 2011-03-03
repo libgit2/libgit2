@@ -30,7 +30,7 @@
 static const char *loose_tag_ref_name = "refs/tags/test";
 static const char *non_existing_tag_ref_name = "refs/tags/i-do-not-exist";
 
-BEGIN_TEST("readtag", loose_tag_reference_looking_up)
+BEGIN_TEST(readtag0, "lookup a loose tag reference")
 	git_repository *repo;
 	git_reference *reference;
 	git_object *object;
@@ -49,7 +49,7 @@ BEGIN_TEST("readtag", loose_tag_reference_looking_up)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("readtag", non_existing_tag_reference_looking_up)
+BEGIN_TEST(readtag1, "lookup a loose tag reference that doesn't exist")
 	git_repository *repo;
 	git_reference *reference;
 
@@ -63,7 +63,7 @@ static const char *head_tracker_sym_ref_name = "head-tracker";
 static const char *current_head_target = "refs/heads/master";
 static const char *current_master_tip = "be3563ae3f795b2b4353bcce3a527ad0a4f7f644";
 
-BEGIN_TEST("readsymref", symbolic_reference_looking_up)
+BEGIN_TEST(readsym0, "lookup a symbolic reference")
 	git_repository *repo;
 	git_reference *reference, *resolved_ref;
 	git_object *object;
@@ -89,7 +89,7 @@ BEGIN_TEST("readsymref", symbolic_reference_looking_up)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("readsymref", nested_symbolic_reference_looking_up)
+BEGIN_TEST(readsym1, "lookup a nested symbolic reference")
 	git_repository *repo;
 	git_reference *reference, *resolved_ref;
 	git_object *object;
@@ -115,7 +115,7 @@ BEGIN_TEST("readsymref", nested_symbolic_reference_looking_up)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("readsymref", looking_up_head_then_master)
+BEGIN_TEST(readsym2, "lookup the HEAD and resolve the master branch")
 	git_repository *repo;
 	git_reference *reference, *resolved_ref, *comp_base_ref;
 
@@ -136,7 +136,7 @@ BEGIN_TEST("readsymref", looking_up_head_then_master)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("readsymref", looking_up_master_then_head)
+BEGIN_TEST(readsym3, "lookup the master branch and then the HEAD")
 	git_repository *repo;
 	git_reference *reference, *master_ref, *resolved_ref;
 
@@ -154,7 +154,7 @@ END_TEST
 static const char *packed_head_name = "refs/heads/packed";
 static const char *packed_test_head_name = "refs/heads/packed-test";
 
-BEGIN_TEST("readpackedref", packed_reference_looking_up)
+BEGIN_TEST(readpacked0, "lookup a packed reference")
 	git_repository *repo;
 	git_reference *reference;
 	git_object *object;
@@ -173,7 +173,7 @@ BEGIN_TEST("readpackedref", packed_reference_looking_up)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("readpackedref", packed_exists_but_more_recent_loose_reference_is_retrieved)
+BEGIN_TEST(readpacked1, "assure that a loose reference is looked up before a packed reference")
 	git_repository *repo;
 	git_reference *reference;
 
@@ -187,7 +187,7 @@ BEGIN_TEST("readpackedref", packed_exists_but_more_recent_loose_reference_is_ret
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("createref", create_new_symbolic_ref)
+BEGIN_TEST(create0, "create a new symbolic reference")
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_repository *repo;
 	git_oid id;
@@ -232,7 +232,7 @@ BEGIN_TEST("createref", create_new_symbolic_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
-BEGIN_TEST("createref", create_deep_symbolic_ref)
+BEGIN_TEST(create1, "create a deep symbolic reference")
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_repository *repo;
 	git_oid id;
@@ -255,7 +255,7 @@ BEGIN_TEST("createref", create_deep_symbolic_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
-BEGIN_TEST("createref", create_new_object_id_ref)
+BEGIN_TEST(create2, "create a new OID reference")
 	git_reference *new_reference, *looked_up_ref;
 	git_repository *repo;
 	git_oid id;
@@ -295,37 +295,27 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
-BEGIN_TEST("packrefs", create_packfile_with_empty_folder)
+BEGIN_TEST(pack0, "create a packfile for an empty folder")
 	git_repository *repo;
-	git_reference *reference;
 	char temp_path[GIT_PATH_MAX];
-	int path_len = 0;
 	const int mode = 0755; /* or 0777 ? */
 
-	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
-
-	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
-	must_pass(git_repository_open(&repo, temp_path));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 	
 	git__joinpath_n(temp_path, 3, repo->path_repository, GIT_REFS_HEADS_DIR, "empty_dir");
 	must_pass(gitfo_mkdir_recurs(temp_path, mode));
 
 	must_pass(git_reference_packall(repo));
 
-	git_repository_free(repo);
-	must_pass(rmdir_recurs(TEMP_DIR));
+	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST("packrefs", create_packfile)
+BEGIN_TEST(pack1, "create a packfile from all the loose rn a repo")
 	git_repository *repo;
 	git_reference *reference;
 	char temp_path[GIT_PATH_MAX];
-	int path_len = 0;
 
-	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
-
-	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
-	must_pass(git_repository_open(&repo, temp_path));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 	
 	/* Ensure a known loose ref can be looked up */
 	must_pass(git_repository_lookup_ref(&reference, repo, loose_tag_ref_name));
@@ -347,20 +337,16 @@ BEGIN_TEST("packrefs", create_packfile)
 	git__joinpath(temp_path, repo->path_repository, loose_tag_ref_name);
 	must_pass(!gitfo_exists(temp_path));
 
-	git_repository_free(repo);
-	must_pass(rmdir_recurs(TEMP_DIR));
+	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST("renameref", rename_a_loose_reference)
+BEGIN_TEST(rename0, "rename a loose reference")
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
 	const char *new_name = "refs/tags/Nemo/knows/refs.kung-fu";
 
-	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
-
-	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
-	must_pass(git_repository_open(&repo, temp_path));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* Ensure the ref doesn't exist on the file system */
 	git__joinpath(temp_path, repo->path_repository, new_name);
@@ -391,21 +377,16 @@ BEGIN_TEST("renameref", rename_a_loose_reference)
 	git__joinpath(temp_path, repo->path_repository, new_name);
 	must_pass(gitfo_exists(temp_path));
 
-	git_repository_free(repo);
-
-	must_pass(rmdir_recurs(TEMP_DIR));
+	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST("renameref", renaming_a_packed_reference_makes_it_loose)
+BEGIN_TEST(rename1, "rename a packed reference (should make it loose)")
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
 	const char *brand_new_name = "refs/heads/brand_new_name";
 
-	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
-
-	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
-	must_pass(git_repository_open(&repo, temp_path));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* Ensure the ref doesn't exist on the file system */
 	git__joinpath(temp_path, repo->path_repository, packed_head_name);
@@ -436,21 +417,16 @@ BEGIN_TEST("renameref", renaming_a_packed_reference_makes_it_loose)
 	git__joinpath(temp_path, repo->path_repository, brand_new_name);
 	must_pass(gitfo_exists(temp_path));
 
-	git_repository_free(repo);
-
-	must_pass(rmdir_recurs(TEMP_DIR));
+	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST("renameref", renaming_a_packed_reference_does_not_pack_another_reference_which_happens_to_be_in_both_loose_and_pack_state)
+BEGIN_TEST(rename2, "renaming a packed reference does not pack another reference which happens to be in both loose and pack state")
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
 	const char *brand_new_name = "refs/heads/brand_new_name";
 
-	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
-
-	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
-	must_pass(git_repository_open(&repo, temp_path));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* Ensure the other reference exists on the file system */
 	git__joinpath(temp_path, repo->path_repository, packed_test_head_name);
@@ -480,16 +456,14 @@ BEGIN_TEST("renameref", renaming_a_packed_reference_does_not_pack_another_refere
 	/* Ensure the other ref still exists on the file system */
 	must_pass(gitfo_exists(temp_path));
 
-	git_repository_free(repo);
-
-	must_pass(rmdir_recurs(TEMP_DIR));
+	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST("renameref", can_not_rename_a_reference_with_the_name_of_an_existing_reference)
+BEGIN_TEST(rename3, "can not rename a reference with the name of an existing reference")
 	git_reference *looked_up_ref;
 	git_repository *repo;
 
-	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* An existing reference... */
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_head_name));
@@ -501,14 +475,14 @@ BEGIN_TEST("renameref", can_not_rename_a_reference_with_the_name_of_an_existing_
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_head_name));
 	must_be_true(!strcmp(looked_up_ref->name, packed_head_name));
 
-	git_repository_free(repo);
+	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST("renameref", can_not_rename_a_reference_with_an_invalid_name)
+BEGIN_TEST(rename4, "can not rename a reference with an invalid name")
 	git_reference *looked_up_ref;
 	git_repository *repo;
 
-	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* An existing oid reference... */
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_test_head_name));
@@ -523,18 +497,15 @@ BEGIN_TEST("renameref", can_not_rename_a_reference_with_an_invalid_name)
 	must_pass(git_repository_lookup_ref(&looked_up_ref, repo, packed_test_head_name));
 	must_be_true(!strcmp(looked_up_ref->name, packed_test_head_name));
 
-	git_repository_free(repo);
+	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST("deleteref", deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem)
+BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove both tracks in the filesystem")
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
 
-	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
-
-	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
-	must_pass(git_repository_open(&repo, temp_path));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* Ensure the loose reference exists on the file system */
 	git__joinpath(temp_path, repo->path_repository, packed_test_head_name);
@@ -555,9 +526,7 @@ BEGIN_TEST("deleteref", deleting_a_ref_which_is_both_packed_and_loose_should_rem
 	/* Ensure the loose reference doesn't exist any longer on the file system */
 	must_pass(!gitfo_exists(temp_path));
 
-	git_repository_free(repo);
-
-	must_pass(rmdir_recurs(TEMP_DIR));
+	close_temp_repo(repo);
 END_TEST
 
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
@@ -585,7 +554,7 @@ static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, 
 #define OID_REF 1
 #define SYM_REF 0
 
-BEGIN_TEST("normalizeref", normalize_object_id_ref)
+BEGIN_TEST(normalize0, "normalize a direct (OID) reference name")
 	must_fail(ensure_refname_normalized(OID_REF, "a", NULL));
 	must_fail(ensure_refname_normalized(OID_REF, "", NULL));
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a/", NULL));
@@ -606,7 +575,7 @@ BEGIN_TEST("normalizeref", normalize_object_id_ref)
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/v@{ation", NULL));
 END_TEST
 
-BEGIN_TEST("normalizeref", normalize_symbolic_ref)
+BEGIN_TEST(normalize1, "normalize a symbolic reference name")
 	must_pass(ensure_refname_normalized(SYM_REF, "a", "a"));
 	must_pass(ensure_refname_normalized(SYM_REF, "a/b", "a/b"));
 	must_pass(ensure_refname_normalized(SYM_REF, "refs///heads///a", "refs/heads/a"));
@@ -614,158 +583,162 @@ BEGIN_TEST("normalizeref", normalize_symbolic_ref)
 	must_fail(ensure_refname_normalized(SYM_REF, "heads\foo", NULL));
 END_TEST
 
-/* Ported from JGit, BSD licence. See https://github.com/spearce/JGit/commit/e4bf8f6957bbb29362575d641d1e77a02d906739 */
-BEGIN_TEST("normalizeref", jgit_tests)
+/* Ported from JGit, BSD licence.
+ * See https://github.com/spearce/JGit/commit/e4bf8f6957bbb29362575d641d1e77a02d906739 */
+BEGIN_TEST(normalize2, "tests borrowed from JGit")
 
-		/* EmptyString */
-			must_fail(ensure_refname_normalized(SYM_REF, "", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "/", NULL));
+/* EmptyString */
+	must_fail(ensure_refname_normalized(SYM_REF, "", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "/", NULL));
 
-		/* MustHaveTwoComponents */
-			must_fail(ensure_refname_normalized(OID_REF, "master", NULL));
-			must_pass(ensure_refname_normalized(SYM_REF, "heads/master", "heads/master"));
+/* MustHaveTwoComponents */
+	must_fail(ensure_refname_normalized(OID_REF, "master", NULL));
+	must_pass(ensure_refname_normalized(SYM_REF, "heads/master", "heads/master"));
 
-		/* ValidHead */
+/* ValidHead */
 
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/master", "refs/heads/master"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/pu", "refs/heads/pu"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/z", "refs/heads/z"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/FoO", "refs/heads/FoO"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/master", "refs/heads/master"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/pu", "refs/heads/pu"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/z", "refs/heads/z"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/FoO", "refs/heads/FoO"));
 
-		/* ValidTag */
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/tags/v1.0", "refs/tags/v1.0"));
+/* ValidTag */
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/tags/v1.0", "refs/tags/v1.0"));
 
-		/* NoLockSuffix */
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master.lock", NULL));
+/* NoLockSuffix */
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master.lock", NULL));
 
-		/* NoDirectorySuffix */
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master/", NULL));
+/* NoDirectorySuffix */
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master/", NULL));
 
-		/* NoSpace */
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/i haz space", NULL));
+/* NoSpace */
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/i haz space", NULL));
 
-		/* NoAsciiControlCharacters */
-			{
-				char c;
-				char buffer[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
-				for (c = '\1'; c < ' '; c++) {
-					strncpy(buffer, "refs/heads/mast", 15);
-					strncpy(buffer + 15, (const char *)&c, 1);
-					strncpy(buffer + 16, "er", 2);
-					buffer[18 - 1] = '\0';
-					must_fail(ensure_refname_normalized(SYM_REF, buffer, NULL));
-				}
-			}
+/* NoAsciiControlCharacters */
+	{
+		char c;
+		char buffer[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+		for (c = '\1'; c < ' '; c++) {
+			strncpy(buffer, "refs/heads/mast", 15);
+			strncpy(buffer + 15, (const char *)&c, 1);
+			strncpy(buffer + 16, "er", 2);
+			buffer[18 - 1] = '\0';
+			must_fail(ensure_refname_normalized(SYM_REF, buffer, NULL));
+		}
+	}
 
-		/* NoBareDot */
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/.", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/..", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/./master", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/../master", NULL));
+/* NoBareDot */
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/.", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/..", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/./master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/../master", NULL));
 
-		/* NoLeadingOrTrailingDot */
-			must_fail(ensure_refname_normalized(SYM_REF, ".", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/.bar", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/..bar", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/bar.", NULL));
+/* NoLeadingOrTrailingDot */
+	must_fail(ensure_refname_normalized(SYM_REF, ".", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/.bar", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/..bar", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/bar.", NULL));
 
-		/* ContainsDot */
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/m.a.s.t.e.r", "refs/heads/m.a.s.t.e.r"));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master..pu", NULL));
+/* ContainsDot */
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/m.a.s.t.e.r", "refs/heads/m.a.s.t.e.r"));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master..pu", NULL));
 
-		/* NoMagicRefCharacters */
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master^", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/^master", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "^refs/heads/master", NULL));
+/* NoMagicRefCharacters */
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master^", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/^master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "^refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master~", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/~master", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "~refs/heads/master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master~", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/~master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "~refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master:", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/:master", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, ":refs/heads/master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master:", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/:master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, ":refs/heads/master", NULL));
 
-		/* ShellGlob */
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master?", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/?master", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "?refs/heads/master", NULL));
+/* ShellGlob */
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master?", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/?master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "?refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master[", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/[master", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "[refs/heads/master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master[", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/[master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "[refs/heads/master", NULL));
 
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master*", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/*master", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "*refs/heads/master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master*", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/*master", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "*refs/heads/master", NULL));
 
-		/* ValidSpecialCharacters */
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/!", "refs/heads/!"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/\"", "refs/heads/\""));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/#", "refs/heads/#"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/$", "refs/heads/$"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/%", "refs/heads/%"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/&", "refs/heads/&"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/'", "refs/heads/'"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/(", "refs/heads/("));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/)", "refs/heads/)"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/+", "refs/heads/+"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/,", "refs/heads/,"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/-", "refs/heads/-"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/;", "refs/heads/;"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/<", "refs/heads/<"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/=", "refs/heads/="));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/>", "refs/heads/>"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/@", "refs/heads/@"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/]", "refs/heads/]"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/_", "refs/heads/_"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/`", "refs/heads/`"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/{", "refs/heads/{"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/|", "refs/heads/|"));
-			must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/}", "refs/heads/}"));
+/* ValidSpecialCharacters */
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/!", "refs/heads/!"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/\"", "refs/heads/\""));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/#", "refs/heads/#"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/$", "refs/heads/$"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/%", "refs/heads/%"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/&", "refs/heads/&"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/'", "refs/heads/'"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/(", "refs/heads/("));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/)", "refs/heads/)"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/+", "refs/heads/+"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/,", "refs/heads/,"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/-", "refs/heads/-"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/;", "refs/heads/;"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/<", "refs/heads/<"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/=", "refs/heads/="));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/>", "refs/heads/>"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/@", "refs/heads/@"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/]", "refs/heads/]"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/_", "refs/heads/_"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/`", "refs/heads/`"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/{", "refs/heads/{"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/|", "refs/heads/|"));
+	must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/}", "refs/heads/}"));
 
-			// This is valid on UNIX, but not on Windows
-			// hence we make in invalid due to non-portability
-			//
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/\\", NULL));
+	// This is valid on UNIX, but not on Windows
+	// hence we make in invalid due to non-portability
+	//
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/\\", NULL));
 
-		/* UnicodeNames */
-			/*
-			 * Currently this fails.
-			 * must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/\u00e5ngstr\u00f6m", "refs/heads/\u00e5ngstr\u00f6m"));
-			 */
+/* UnicodeNames */
+	/*
+	 * Currently this fails.
+	 * must_pass(ensure_refname_normalized(SYM_REF, "refs/heads/\u00e5ngstr\u00f6m", "refs/heads/\u00e5ngstr\u00f6m"));
+	 */
 
-		/* RefLogQueryIsValidRef */
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1}", NULL));
-			must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1.hour.ago}", NULL));
+/* RefLogQueryIsValidRef */
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1}", NULL));
+	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1.hour.ago}", NULL));
 END_TEST
 
-git_testsuite *libgit2_suite_refs(void)
-{
-	git_testsuite *suite = git_testsuite_new("References");
 
-	ADD_TEST(suite, "readtag", loose_tag_reference_looking_up);
-	ADD_TEST(suite, "readtag", non_existing_tag_reference_looking_up);
-	ADD_TEST(suite, "readsymref", symbolic_reference_looking_up);
-	ADD_TEST(suite, "readsymref", nested_symbolic_reference_looking_up);
-	ADD_TEST(suite, "readsymref", looking_up_head_then_master);
-	ADD_TEST(suite, "readsymref", looking_up_master_then_head);
-	ADD_TEST(suite, "readpackedref", packed_reference_looking_up);
-	ADD_TEST(suite, "readpackedref", packed_exists_but_more_recent_loose_reference_is_retrieved);
-	ADD_TEST(suite, "createref", create_new_symbolic_ref);
-	ADD_TEST(suite, "createref", create_deep_symbolic_ref);
-	ADD_TEST(suite, "createref", create_new_object_id_ref);
-	ADD_TEST(suite, "normalizeref", normalize_object_id_ref);
-	ADD_TEST(suite, "normalizeref", normalize_symbolic_ref);
-	ADD_TEST(suite, "normalizeref", jgit_tests);
-	ADD_TEST(suite, "packrefs", create_packfile_with_empty_folder);
-	ADD_TEST(suite, "packrefs", create_packfile);
-	ADD_TEST(suite, "renameref", renaming_a_packed_reference_makes_it_loose);
-	ADD_TEST(suite, "renameref", renaming_a_packed_reference_does_not_pack_another_reference_which_happens_to_be_in_both_loose_and_pack_state);
-	ADD_TEST(suite, "renameref", rename_a_loose_reference);
-	ADD_TEST(suite, "renameref", can_not_rename_a_reference_with_the_name_of_an_existing_reference);
-	ADD_TEST(suite, "renameref", can_not_rename_a_reference_with_an_invalid_name);
-	ADD_TEST(suite, "deleteref", deleting_a_ref_which_is_both_packed_and_loose_should_remove_both_tracks_in_the_filesystem);
+BEGIN_SUITE(refs)
+	ADD_TEST(readtag0);
+	ADD_TEST(readtag1);
 
-	return suite;
-}
+	ADD_TEST(readsym0);
+	ADD_TEST(readsym1);
+	ADD_TEST(readsym2);
+	ADD_TEST(readsym3);
+
+	ADD_TEST(readpacked0);
+	ADD_TEST(readpacked1);
+
+	ADD_TEST(create0);
+	ADD_TEST(create1);
+	ADD_TEST(create2);
+
+	ADD_TEST(normalize0);
+	ADD_TEST(normalize1);
+	ADD_TEST(normalize2);
+
+	ADD_TEST(pack0);
+	ADD_TEST(pack1);
+
+	ADD_TEST(rename0);
+	ADD_TEST(rename1);
+	ADD_TEST(rename2);
+	ADD_TEST(rename3);
+	ADD_TEST(rename4);
+
+	ADD_TEST(delete0);
+END_SUITE

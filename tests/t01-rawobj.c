@@ -27,7 +27,7 @@
 
 #include "hash.h"
 
-BEGIN_TEST("oid", oid_szs)
+BEGIN_TEST(oid0, "validate size of oid objects")
 	git_oid out;
 	must_be_true(20 == GIT_OID_RAWSZ);
 	must_be_true(40 == GIT_OID_HEXSZ);
@@ -35,12 +35,12 @@ BEGIN_TEST("oid", oid_szs)
 	must_be_true(sizeof(out.id) == GIT_OID_RAWSZ);
 END_TEST
 
-BEGIN_TEST("oid", empty_string)
+BEGIN_TEST(oid1, "fail when parsing an empty string as oid")
 	git_oid out;
 	must_fail(git_oid_mkstr(&out, ""));
 END_TEST
 
-BEGIN_TEST("oid", invalid_string_moo)
+BEGIN_TEST(oid2, "fail when parsing an invalid string as oid")
 	git_oid out;
 	must_fail(git_oid_mkstr(&out, "moo"));
 END_TEST
@@ -56,7 +56,7 @@ static int from_hex(unsigned int i)
 	return -1;
 }
 
-BEGIN_TEST("oid", invalid_string_all_chars)
+BEGIN_TEST(oid3, "find all invalid characters when parsing an oid")
 	git_oid out;
 	unsigned char exp[] = {
 		0x16, 0xa6, 0x77, 0x70, 0xb7,
@@ -80,12 +80,12 @@ BEGIN_TEST("oid", invalid_string_all_chars)
 	}
 END_TEST
 
-BEGIN_TEST("oid", invalid_string_16a67770b7d8d72317c4b775213c23a8bd74f5ez)
+BEGIN_TEST(oid4, "fail when parsing an invalid oid string")
 	git_oid out;
 	must_fail(git_oid_mkstr(&out, "16a67770b7d8d72317c4b775213c23a8bd74f5ez"));
 END_TEST
 
-BEGIN_TEST("oid", valid_string_16a67770b7d8d72317c4b775213c23a8bd74f5e0)
+BEGIN_TEST(oid5, "succeed when parsing a valid oid string")
 	git_oid out;
 	unsigned char exp[] = {
 		0x16, 0xa6, 0x77, 0x70, 0xb7,
@@ -101,7 +101,7 @@ BEGIN_TEST("oid", valid_string_16a67770b7d8d72317c4b775213c23a8bd74f5e0)
 	must_pass(memcmp(out.id, exp, sizeof(out.id)));
 END_TEST
 
-BEGIN_TEST("oid", valid_raw)
+BEGIN_TEST(oid6, "build a valid oid from raw bytes")
 	git_oid out;
 	unsigned char exp[] = {
 		0x16, 0xa6, 0x77, 0x70, 0xb7,
@@ -114,7 +114,7 @@ BEGIN_TEST("oid", valid_raw)
 	must_pass(memcmp(out.id, exp, sizeof(out.id)));
 END_TEST
 
-BEGIN_TEST("oid", copy_oid)
+BEGIN_TEST(oid7, "properly copy an oid to another")
 	git_oid a, b;
 	unsigned char exp[] = {
 		0x16, 0xa6, 0x77, 0x70, 0xb7,
@@ -129,7 +129,7 @@ BEGIN_TEST("oid", copy_oid)
 	must_pass(memcmp(a.id, exp, sizeof(a.id)));
 END_TEST
 
-BEGIN_TEST("oid", cmp_oid_lt)
+BEGIN_TEST(oid8, "compare two oids (lesser than)")
 	git_oid a, b;
 	unsigned char a_in[] = {
 		0x16, 0xa6, 0x77, 0x70, 0xb7,
@@ -149,7 +149,7 @@ BEGIN_TEST("oid", cmp_oid_lt)
 	must_be_true(git_oid_cmp(&a, &b) < 0);
 END_TEST
 
-BEGIN_TEST("oid", cmp_oid_eq)
+BEGIN_TEST(oid9, "compare two oids (equal)")
 	git_oid a, b;
 	unsigned char a_in[] = {
 		0x16, 0xa6, 0x77, 0x70, 0xb7,
@@ -163,7 +163,7 @@ BEGIN_TEST("oid", cmp_oid_eq)
 	must_be_true(git_oid_cmp(&a, &b) == 0);
 END_TEST
 
-BEGIN_TEST("oid", cmp_oid_gt)
+BEGIN_TEST(oid10, "compare two oids (greater than)")
 	git_oid a, b;
 	unsigned char a_in[] = {
 		0x16, 0xa6, 0x77, 0x70, 0xb7,
@@ -183,7 +183,7 @@ BEGIN_TEST("oid", cmp_oid_gt)
 	must_be_true(git_oid_cmp(&a, &b) > 0);
 END_TEST
 
-BEGIN_TEST("oid", cmp_oid_fmt)
+BEGIN_TEST(oid11, "compare formated oids")
 	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
 	char out[GIT_OID_HEXSZ + 1];
@@ -200,7 +200,7 @@ BEGIN_TEST("oid", cmp_oid_fmt)
 	must_pass(strcmp(exp, out));
 END_TEST
 
-BEGIN_TEST("oid", cmp_oid_allocfmt)
+BEGIN_TEST(oid12, "compare oids (allocate + format)")
 	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
 	char *out;
@@ -213,7 +213,7 @@ BEGIN_TEST("oid", cmp_oid_allocfmt)
 	free(out);
 END_TEST
 
-BEGIN_TEST("oid", cmp_oid_pathfmt)
+BEGIN_TEST(oid13, "compare oids (path format)")
 	const char *exp1 = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	const char *exp2 = "16/a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
@@ -231,7 +231,7 @@ BEGIN_TEST("oid", cmp_oid_pathfmt)
 	must_pass(strcmp(exp2, out));
 END_TEST
 
-BEGIN_TEST("oid", oid_to_string)
+BEGIN_TEST(oid14, "convert raw oid to string")
 	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
 	char out[GIT_OID_HEXSZ + 1];
@@ -275,7 +275,7 @@ BEGIN_TEST("oid", oid_to_string)
 	must_pass(strcmp(exp, out));
 END_TEST
 
-BEGIN_TEST("oid", oid_to_string_big)
+BEGIN_TEST(oid15, "convert raw oid to string (big)")
 	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
 	char big[GIT_OID_HEXSZ + 1 + 3]; /* note + 4 => big buffer */
@@ -306,7 +306,7 @@ static char *hello_text = "hello world\n";
 static char *bye_id = "ce08fe4884650f067bd5703b6a59a8b3b3c99a09";
 static char *bye_text = "bye world\n";
 
-BEGIN_TEST("hash", hash_iuf)
+BEGIN_TEST(hash0, "normal hash by blocks")
     git_hash_ctx *ctx;
     git_oid id1, id2;
 
@@ -328,7 +328,7 @@ BEGIN_TEST("hash", hash_iuf)
     git_hash_free_ctx(ctx);
 END_TEST
 
-BEGIN_TEST("hash", hash_buf)
+BEGIN_TEST(hash1, "hash whole buffer in a single call")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, hello_id));
@@ -338,7 +338,7 @@ BEGIN_TEST("hash", hash_buf)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("hash", hash_vec)
+BEGIN_TEST(hash2, "hash a vector")
     git_oid id1, id2;
     git_buf_vec vec[2];
 
@@ -354,7 +354,7 @@ BEGIN_TEST("hash", hash_vec)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("objtype", type_to_string)
+BEGIN_TEST(objtype0, "convert type to string")
 	must_be_true(!strcmp(git_object_type2string(GIT_OBJ_BAD), ""));
 	must_be_true(!strcmp(git_object_type2string(GIT_OBJ__EXT1), ""));
 	must_be_true(!strcmp(git_object_type2string(GIT_OBJ_COMMIT), "commit"));
@@ -370,7 +370,7 @@ BEGIN_TEST("objtype", type_to_string)
 	must_be_true(!strcmp(git_object_type2string(1234), ""));
 END_TEST
 
-BEGIN_TEST("objtype", string_to_type)
+BEGIN_TEST(objtype1, "convert string to type")
 	must_be_true(git_object_string2type(NULL) == GIT_OBJ_BAD);
 	must_be_true(git_object_string2type("") == GIT_OBJ_BAD);
 	must_be_true(git_object_string2type("commit") == GIT_OBJ_COMMIT);
@@ -384,7 +384,7 @@ BEGIN_TEST("objtype", string_to_type)
 	must_be_true(git_object_string2type("hohoho") == GIT_OBJ_BAD);
 END_TEST
 
-BEGIN_TEST("objtype", loose_object)
+BEGIN_TEST(objtype2, "check if an object type is loose")
 	must_be_true(git_object_typeisloose(GIT_OBJ_BAD) == 0);
 	must_be_true(git_object_typeisloose(GIT_OBJ__EXT1) == 0);
 	must_be_true(git_object_typeisloose(GIT_OBJ_COMMIT) == 1);
@@ -400,7 +400,7 @@ BEGIN_TEST("objtype", loose_object)
 	must_be_true(git_object_typeisloose(1234) == 0);
 END_TEST
 
-BEGIN_TEST("objhash", hash_junk)
+BEGIN_TEST(objhash0, "hash junk data")
     git_oid id, id_zero;
 
     must_pass(git_oid_mkstr(&id_zero, zero_id));
@@ -431,7 +431,7 @@ BEGIN_TEST("objhash", hash_junk)
     must_fail(git_rawobj_hash(&id, &junk_obj));
 END_TEST
 
-BEGIN_TEST("objhash", hash_commit)
+BEGIN_TEST(objhash1, "hash a commit object")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, commit_id));
@@ -441,7 +441,7 @@ BEGIN_TEST("objhash", hash_commit)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("objhash", hash_tree)
+BEGIN_TEST(objhash2, "hash a tree object")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, tree_id));
@@ -451,7 +451,7 @@ BEGIN_TEST("objhash", hash_tree)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("objhash", hash_tag)
+BEGIN_TEST(objhash3, "hash a tag object")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, tag_id));
@@ -461,7 +461,7 @@ BEGIN_TEST("objhash", hash_tag)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("objhash", hash_zero)
+BEGIN_TEST(objhash4, "hash a zero-length object")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, zero_id));
@@ -471,7 +471,7 @@ BEGIN_TEST("objhash", hash_zero)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("objhash", hash_one)
+BEGIN_TEST(objhash5, "hash an one-byte long object")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, one_id));
@@ -481,7 +481,7 @@ BEGIN_TEST("objhash", hash_one)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("objhash", hash_two)
+BEGIN_TEST(objhash6, "hash a two-byte long object")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, two_id));
@@ -491,7 +491,7 @@ BEGIN_TEST("objhash", hash_two)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
-BEGIN_TEST("objhash", hash_some)
+BEGIN_TEST(objhash7, "hash an object several bytes long")
     git_oid id1, id2;
 
     must_pass(git_oid_mkstr(&id1, some_id));
@@ -501,46 +501,39 @@ BEGIN_TEST("objhash", hash_some)
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
+BEGIN_SUITE(rawobjects)
+	ADD_TEST(oid0);
+	ADD_TEST(oid1);
+	ADD_TEST(oid2);
+	ADD_TEST(oid3);
+	ADD_TEST(oid4);
+	ADD_TEST(oid5);
+	ADD_TEST(oid6);
+	ADD_TEST(oid7);
+	ADD_TEST(oid8);
+	ADD_TEST(oid9);
+	ADD_TEST(oid10);
+	ADD_TEST(oid11);
+	ADD_TEST(oid12);
+	ADD_TEST(oid13);
+	ADD_TEST(oid14);
+	ADD_TEST(oid15);
 
-git_testsuite *libgit2_suite_rawobjects(void)
-{
-	git_testsuite *suite = git_testsuite_new("Raw Objects");
+	ADD_TEST(hash0);
+	ADD_TEST(hash1);
+	ADD_TEST(hash2);
 
-	ADD_TEST(suite, "hash", hash_iuf);
-	ADD_TEST(suite, "hash", hash_buf);
-	ADD_TEST(suite, "hash", hash_vec);
+	ADD_TEST(objtype0);
+	ADD_TEST(objtype1);
+	ADD_TEST(objtype2);
 
-	ADD_TEST(suite, "oid", oid_szs);
-	ADD_TEST(suite, "oid", empty_string);
-	ADD_TEST(suite, "oid", invalid_string_moo);
-	ADD_TEST(suite, "oid", invalid_string_all_chars);
-	ADD_TEST(suite, "oid", invalid_string_16a67770b7d8d72317c4b775213c23a8bd74f5ez);
-	ADD_TEST(suite, "oid", valid_string_16a67770b7d8d72317c4b775213c23a8bd74f5e0);
-	ADD_TEST(suite, "oid", valid_raw);
-	ADD_TEST(suite, "oid", copy_oid);
-	ADD_TEST(suite, "oid", cmp_oid_lt);
-	ADD_TEST(suite, "oid", cmp_oid_eq);
-	ADD_TEST(suite, "oid", cmp_oid_gt);
-	ADD_TEST(suite, "oid", cmp_oid_fmt);
-	ADD_TEST(suite, "oid", cmp_oid_allocfmt);
-	ADD_TEST(suite, "oid", cmp_oid_pathfmt);
-	ADD_TEST(suite, "oid", oid_to_string);
-	ADD_TEST(suite, "oid", oid_to_string_big);
-
-	ADD_TEST(suite, "objtype", type_to_string);
-	ADD_TEST(suite, "objtype", string_to_type);
-	ADD_TEST(suite, "objtype", loose_object);
-
-	ADD_TEST(suite, "objhash", hash_junk);
-	ADD_TEST(suite, "objhash", hash_commit);
-	ADD_TEST(suite, "objhash", hash_tree);
-	ADD_TEST(suite, "objhash", hash_tag);
-	ADD_TEST(suite, "objhash", hash_zero);
-	ADD_TEST(suite, "objhash", hash_one);
-	ADD_TEST(suite, "objhash", hash_two);
-	ADD_TEST(suite, "objhash", hash_some);
-
-	return suite;
-}
-
+	ADD_TEST(objhash0);
+	ADD_TEST(objhash1);
+	ADD_TEST(objhash2);
+	ADD_TEST(objhash3);
+	ADD_TEST(objhash4);
+	ADD_TEST(objhash5);
+	ADD_TEST(objhash6);
+	ADD_TEST(objhash7);
+END_SUITE
 

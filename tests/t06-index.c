@@ -45,7 +45,7 @@ struct test_entry TEST_ENTRIES[] = {
 	{48, "src/revobject.h", 1448, 0x4C3F7FE2}
 };
 
-BEGIN_TEST("read", index_loadempty_test)
+BEGIN_TEST(read0, "load an empty index")
 	git_index *index;
 
 	must_pass(git_index_open_bare(&index, "in-memory-index"));
@@ -60,7 +60,7 @@ BEGIN_TEST("read", index_loadempty_test)
 	git_index_free(index);
 END_TEST
 
-BEGIN_TEST("read", index_load_test)
+BEGIN_TEST(read1, "load a standard index (default test index)")
 	git_index *index;
 	unsigned int i;
 	git_index_entry **entries;
@@ -87,7 +87,7 @@ BEGIN_TEST("read", index_load_test)
 	git_index_free(index);
 END_TEST
 
-BEGIN_TEST("read", index2_load_test)
+BEGIN_TEST(read2, "load a standard index (git.git index)")
 	git_index *index;
 
 	must_pass(git_index_open_bare(&index, TEST_INDEX2_PATH));
@@ -103,7 +103,7 @@ BEGIN_TEST("read", index2_load_test)
 	git_index_free(index);
 END_TEST
 
-BEGIN_TEST("read", index_find_test)
+BEGIN_TEST(find0, "find an entry on an index")
 	git_index *index;
 	unsigned int i;
 
@@ -118,7 +118,7 @@ BEGIN_TEST("read", index_find_test)
 	git_index_free(index);
 END_TEST
 
-BEGIN_TEST("read", index_findempty_test)
+BEGIN_TEST(find1, "find an entry in an empty index")
 	git_index *index;
 	unsigned int i;
 
@@ -132,7 +132,7 @@ BEGIN_TEST("read", index_findempty_test)
 	git_index_free(index);
 END_TEST
 
-BEGIN_TEST("write", index_write_test)
+BEGIN_TEST(write0, "write an index back to disk")
 	git_index *index;
 
 	must_pass(copy_file(TEST_INDEXBIG_PATH, "index_rewrite"));
@@ -149,7 +149,7 @@ BEGIN_TEST("write", index_write_test)
 	gitfo_unlink("index_rewrite");
 END_TEST
 
-BEGIN_TEST("sort", index_sort_test)
+BEGIN_TEST(sort0, "sort the entires in an index")
 	/*
 	 * TODO: This no longer applies:
 	 * index sorting in Git uses some specific changes to the way
@@ -162,7 +162,7 @@ BEGIN_TEST("sort", index_sort_test)
 END_TEST
 
 
-BEGIN_TEST("sort", index_sort_empty_test)
+BEGIN_TEST(sort1, "sort the entires in an empty index")
 	git_index *index;
 
 	must_pass(git_index_open_bare(&index, "fake-index"));
@@ -173,19 +173,16 @@ BEGIN_TEST("sort", index_sort_empty_test)
 	git_index_free(index);
 END_TEST
 
+BEGIN_SUITE(index)
+	ADD_TEST(read0);
+	ADD_TEST(read1);
+	ADD_TEST(read2);
 
-git_testsuite *libgit2_suite_index(void)
-{
-	git_testsuite *suite = git_testsuite_new("Index");
+	ADD_TEST(find0);
+	ADD_TEST(find1);
 
-	ADD_TEST(suite, "read", index_loadempty_test);
-	ADD_TEST(suite, "read", index_load_test);
-	ADD_TEST(suite, "read", index2_load_test);
-	ADD_TEST(suite, "read", index_find_test);
-	ADD_TEST(suite, "read", index_findempty_test);
-	ADD_TEST(suite, "write", index_write_test);
-	ADD_TEST(suite, "sort", index_sort_test);
-	ADD_TEST(suite, "sort", index_sort_empty_test);
+	ADD_TEST(write0);
 
-	return suite;
-}
+	ADD_TEST(sort0);
+	ADD_TEST(sort1);
+END_SUITE

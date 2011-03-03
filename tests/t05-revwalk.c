@@ -110,7 +110,7 @@ static int test_walk(git_revwalk *walk, git_commit *start_from,
 	return GIT_ERROR;
 }
 
-BEGIN_TEST("walk", simple_walk_test)
+BEGIN_TEST(walk0, "do a simple walk on a repo with different sorting modes")
 	git_oid id;
 	git_repository *repo;
 	git_revwalk *walk;
@@ -145,7 +145,7 @@ BEGIN_TEST("walk", simple_walk_test)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("list", list_timesort_test)
+BEGIN_TEST(list0, "check that a commit list is properly sorted by time")
 
 	git_revwalk_list list;
 	git_revwalk_listnode *n;
@@ -210,12 +210,7 @@ BEGIN_TEST("list", list_timesort_test)
 
 END_TEST
 
-git_testsuite *libgit2_suite_revwalk(void)
-{
-	git_testsuite *suite = git_testsuite_new("Revwalk");
-
-	ADD_TEST(suite, "walk", simple_walk_test);
-	ADD_TEST(suite, "list", list_timesort_test);
-
-	return suite;
-}
+BEGIN_SUITE(revwalk)
+	ADD_TEST(walk0);
+	ADD_TEST(list0);
+END_SUITE

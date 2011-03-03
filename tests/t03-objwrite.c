@@ -80,7 +80,7 @@ static int remove_object_files(object_data *d)
 	return 0;
 }
 
-BEGIN_TEST("write", write_commit)
+BEGIN_TEST(write0, "write loose commit object")
     git_odb *db;
     git_oid id1, id2;
     git_rawobj obj;
@@ -101,7 +101,7 @@ BEGIN_TEST("write", write_commit)
     must_pass(remove_object_files(&commit));
 END_TEST
 
-BEGIN_TEST("write", write_tree)
+BEGIN_TEST(write1, "write loose tree object")
     git_odb *db;
     git_oid id1, id2;
     git_rawobj obj;
@@ -122,7 +122,7 @@ BEGIN_TEST("write", write_tree)
     must_pass(remove_object_files(&tree));
 END_TEST
 
-BEGIN_TEST("write", write_tag)
+BEGIN_TEST(write2, "write loose tag object")
     git_odb *db;
     git_oid id1, id2;
     git_rawobj obj;
@@ -143,7 +143,7 @@ BEGIN_TEST("write", write_tag)
     must_pass(remove_object_files(&tag));
 END_TEST
 
-BEGIN_TEST("write", write_zero)
+BEGIN_TEST(write3, "write zero-length object")
     git_odb *db;
     git_oid id1, id2;
     git_rawobj obj;
@@ -164,7 +164,7 @@ BEGIN_TEST("write", write_zero)
     must_pass(remove_object_files(&zero));
 END_TEST
 
-BEGIN_TEST("write", write_one)
+BEGIN_TEST(write4, "write one-byte long object")
     git_odb *db;
     git_oid id1, id2;
     git_rawobj obj;
@@ -185,7 +185,7 @@ BEGIN_TEST("write", write_one)
     must_pass(remove_object_files(&one));
 END_TEST
 
-BEGIN_TEST("write", write_two)
+BEGIN_TEST(write5, "write two-byte long object")
     git_odb *db;
     git_oid id1, id2;
     git_rawobj obj;
@@ -206,7 +206,7 @@ BEGIN_TEST("write", write_two)
     must_pass(remove_object_files(&two));
 END_TEST
 
-BEGIN_TEST("write", write_some)
+BEGIN_TEST(write6, "write an object which is several bytes long")
     git_odb *db;
     git_oid id1, id2;
     git_rawobj obj;
@@ -227,18 +227,12 @@ BEGIN_TEST("write", write_some)
     must_pass(remove_object_files(&some));
 END_TEST
 
-git_testsuite *libgit2_suite_objwrite(void)
-{
-	git_testsuite *suite = git_testsuite_new("Object Write");
-
-	ADD_TEST(suite, "write", write_commit);
-	ADD_TEST(suite, "write", write_tree);
-	ADD_TEST(suite, "write", write_tag);
-	ADD_TEST(suite, "write", write_zero);
-	ADD_TEST(suite, "write", write_one);
-	ADD_TEST(suite, "write", write_two);
-	ADD_TEST(suite, "write", write_some);
-
-	return suite;
-}
-
+BEGIN_SUITE(objwrite)
+	ADD_TEST(write0);
+	ADD_TEST(write1);
+	ADD_TEST(write2);
+	ADD_TEST(write3);
+	ADD_TEST(write4);
+	ADD_TEST(write5);
+	ADD_TEST(write6);
+END_SUITE

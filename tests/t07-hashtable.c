@@ -49,7 +49,7 @@ int hash_cmpkey(const void *a, const void *b)
 	return git_oid_cmp(a, b);
 }
 
-BEGIN_TEST("table", table_create)
+BEGIN_TEST(table0, "create a new hashtable")
 
 	git_hashtable *table = NULL;
 
@@ -61,7 +61,7 @@ BEGIN_TEST("table", table_create)
 
 END_TEST
 
-BEGIN_TEST("table", table_populate)
+BEGIN_TEST(table1, "fill the hashtable with random entries")
 
 	const int objects_n = 32;
 	int i;
@@ -109,7 +109,7 @@ BEGIN_TEST("table", table_populate)
 END_TEST
 
 
-BEGIN_TEST("table", table_resize)
+BEGIN_TEST(table2, "make sure the table resizes automatically")
 
 	const int objects_n = 64;
 	int i;
@@ -150,7 +150,7 @@ BEGIN_TEST("table", table_resize)
 
 END_TEST
 
-BEGIN_TEST("tableit", table_iterator)
+BEGIN_TEST(tableit0, "iterate through all the contents of the table")
 
 	const int objects_n = 32;
 	int i;
@@ -184,14 +184,10 @@ BEGIN_TEST("tableit", table_iterator)
 END_TEST
 
 
-git_testsuite *libgit2_suite_hashtable(void)
-{
-	git_testsuite *suite = git_testsuite_new("Hashtable");
+BEGIN_SUITE(hashtable)
+	ADD_TEST(table0);
+	ADD_TEST(table1);
+	ADD_TEST(table2);
+	ADD_TEST(tableit0);
+END_SUITE
 
-	ADD_TEST(suite, "table", table_create);
-	ADD_TEST(suite, "table", table_populate);
-	ADD_TEST(suite, "table", table_resize);
-	ADD_TEST(suite, "tableit", table_iterator);
-
-	return suite;
-}

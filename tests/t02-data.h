@@ -23,25 +23,6 @@ static object_data one = {
 };
 
 
-BEGIN_TEST("existsloose", exists_loose_one)
-    git_odb *db;
-    git_oid id, id2;
-
-    must_pass(write_object_files(odb_dir, &one));
-    must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, one.id));
-
-    must_be_true(git_odb_exists(db, &id));
-
-	/* Test for a non-existant object */
-    must_pass(git_oid_mkstr(&id2, "8b137891791fe96927ad78e64b0aad7bded08baa"));
-    must_be_true(0 == git_odb_exists(db, &id2));
-
-    git_odb_close(db);
-    must_pass(remove_object_files(odb_dir, &one));
-END_TEST
-
-
 /* commit == 3d7f8a6af076c8c3f20071a8935cdbe8228594d1 */
 static unsigned char commit_bytes[] = {
     0x78, 0x01, 0x85, 0x50, 0xc1, 0x6a, 0xc3, 0x30,

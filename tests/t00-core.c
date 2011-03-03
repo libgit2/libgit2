@@ -27,7 +27,7 @@
 #include "vector.h"
 #include "fileops.h"
 
-BEGIN_TEST("refcnt", init_inc2_dec2_free)
+BEGIN_TEST(refcnt0, "increment refcount twice, decrement twice")
 	git_refcnt p;
 
 	gitrc_init(&p, 0);
@@ -38,7 +38,7 @@ BEGIN_TEST("refcnt", init_inc2_dec2_free)
 	gitrc_free(&p);
 END_TEST
 
-BEGIN_TEST("strutil", prefix_comparison)
+BEGIN_TEST(string0, "compare prefixes")
 	must_be_true(git__prefixcmp("", "") == 0);
 	must_be_true(git__prefixcmp("a", "") == 0);
 	must_be_true(git__prefixcmp("", "a") < 0);
@@ -49,7 +49,7 @@ BEGIN_TEST("strutil", prefix_comparison)
 	must_be_true(git__prefixcmp("ab", "aa") > 0);
 END_TEST
 
-BEGIN_TEST("strutil", suffix_comparison)
+BEGIN_TEST(string1, "compare suffixes")
 	must_be_true(git__suffixcmp("", "") == 0);
 	must_be_true(git__suffixcmp("a", "") == 0);
 	must_be_true(git__suffixcmp("", "a") < 0);
@@ -60,7 +60,31 @@ BEGIN_TEST("strutil", suffix_comparison)
 	must_be_true(git__suffixcmp("zaz", "ac") > 0);
 END_TEST
 
-BEGIN_TEST("strutil", dirname)
+
+BEGIN_TEST(vector0, "initial size of 1 would cause writing past array bounds")
+  git_vector x;
+  int i;
+  git_vector_init(&x, 1, NULL, NULL);
+  for (i = 0; i < 10; ++i) {
+    git_vector_insert(&x, (void*) 0xabc);
+  }
+  git_vector_free(&x);
+END_TEST
+
+BEGIN_TEST(vector1, "don't read past array bounds on remove()")
+  git_vector x;
+  // make initial capacity exact for our insertions.
+  git_vector_init(&x, 3, NULL, NULL);
+  git_vector_insert(&x, (void*) 0xabc);
+  git_vector_insert(&x, (void*) 0xdef);
+  git_vector_insert(&x, (void*) 0x123);
+
+  git_vector_remove(&x, 0);  // used to read past array bounds.
+  git_vector_free(&x);
+END_TEST
+
+
+BEGIN_TEST(path0, "get the dirname of a path")
 	char dir[64], *dir2;
 
 #define DIRNAME_TEST(A, B) { \
@@ -89,7 +113,7 @@ BEGIN_TEST("strutil", dirname)
 
 END_TEST
 
-BEGIN_TEST("strutil", basename)
+BEGIN_TEST(path1, "get the base name of a path")
 	char base[64], *base2;
 
 #define BASENAME_TEST(A, B) { \
@@ -114,7 +138,7 @@ BEGIN_TEST("strutil", basename)
 
 END_TEST
 
-BEGIN_TEST("strutil", topdir)
+BEGIN_TEST(path2, "get the latest component in a path")
 	const char *dir;
 
 #define TOPDIR_TEST(A, B) { \
@@ -137,32 +161,6 @@ BEGIN_TEST("strutil", topdir)
 
 #undef TOPDIR_TEST
 END_TEST
-
-/* Initial size of 1 will cause writing past array bounds prior to fix */
-BEGIN_TEST("vector", initial_size_one)
-  git_vector x;
-  int i;
-  git_vector_init(&x, 1, NULL, NULL);
-  for (i = 0; i < 10; ++i) {
-    git_vector_insert(&x, (void*) 0xabc);
-  }
-  git_vector_free(&x);
-END_TEST
-
-/* vector used to read past array bounds on remove() */
-BEGIN_TEST("vector", remove)
-  git_vector x;
-  // make initial capacity exact for our insertions.
-  git_vector_init(&x, 3, NULL, NULL);
-  git_vector_insert(&x, (void*) 0xabc);
-  git_vector_insert(&x, (void*) 0xdef);
-  git_vector_insert(&x, (void*) 0x123);
-
-  git_vector_remove(&x, 0);  // used to read past array bounds.
-  git_vector_free(&x);
-END_TEST
-
-
 
 typedef int (normalize_path)(char *, const char *);
 
@@ -194,7 +192,7 @@ static int ensure_file_path_normalized(const char *input_path, const char *expec
 	return ensure_normalized(input_path, expected_path, gitfo_prettify_file_path);
 }
 
-BEGIN_TEST("path", file_path_prettifying)
+BEGIN_TEST(path3, "prettify and validate a path to a file")
 	must_pass(ensure_file_path_normalized("a", "a"));
 	must_pass(ensure_file_path_normalized("./testrepo.git", "testrepo.git"));
 	must_pass(ensure_file_path_normalized("./.git", ".git"));
@@ -274,7 +272,7 @@ BEGIN_TEST("path", file_path_prettifying)
 	must_fail(ensure_file_path_normalized("/d1/.../d2", NULL));
 END_TEST
 
-BEGIN_TEST("path", dir_path_prettifying)
+BEGIN_TEST(path4, "validate and prettify a path to a folder")
 	must_pass(ensure_dir_path_normalized("./testrepo.git", "testrepo.git/"));
 	must_pass(ensure_dir_path_normalized("./.git", ".git/"));
 	must_pass(ensure_dir_path_normalized("./git.", "git./"));
@@ -354,7 +352,7 @@ static int ensure_joinpath(const char *path_a, const char *path_b, const char *e
 	return strcmp(joined_path, expected_path) == 0 ? GIT_SUCCESS : GIT_ERROR;
 }
 
-BEGIN_TEST("path", joinpath)
+BEGIN_TEST(path5, "properly join path components")
 	must_pass(ensure_joinpath("", "", ""));
 	must_pass(ensure_joinpath("", "a", "a"));
 	must_pass(ensure_joinpath("", "/a", "/a"));
@@ -376,7 +374,7 @@ static int ensure_joinpath_n(const char *path_a, const char *path_b, const char 
 	return strcmp(joined_path, expected_path) == 0 ? GIT_SUCCESS : GIT_ERROR;
 }
 
-BEGIN_TEST("path", joinpath_n)
+BEGIN_TEST(path6, "properly join path components for more than one path")
 	must_pass(ensure_joinpath_n("", "", "", "", ""));
 	must_pass(ensure_joinpath_n("", "a", "", "", "a/"));
 	must_pass(ensure_joinpath_n("a", "", "", "", "a/"));
@@ -506,7 +504,7 @@ static walk_data dot = {
 	dot_names
 };
 
-BEGIN_TEST("dirent", dot)
+BEGIN_TEST(dirent0, "make sure that the '.' folder is not traversed")
 
 	must_pass(setup(&dot));
 
@@ -531,7 +529,7 @@ static walk_data sub = {
 	sub_names
 };
 
-BEGIN_TEST("dirent", sub)
+BEGIN_TEST(dirent1, "traverse a subfolder")
 
 	must_pass(setup(&sub));
 
@@ -550,7 +548,7 @@ static walk_data sub_slash = {
 	sub_names
 };
 
-BEGIN_TEST("dirent", sub_slash)
+BEGIN_TEST(dirent2, "traverse a slash-terminated subfolder")
 
 	must_pass(setup(&sub_slash));
 
@@ -579,7 +577,7 @@ static int dont_call_me(void *GIT_UNUSED(state), char *GIT_UNUSED(path))
 	return GIT_ERROR;
 }
 
-BEGIN_TEST("dirent", empty)
+BEGIN_TEST(dirent3, "make sure that empty folders are not traversed")
 
 	must_pass(setup(&empty));
 
@@ -612,7 +610,7 @@ static walk_data odd = {
 	odd_names
 };
 
-BEGIN_TEST("dirent", odd)
+BEGIN_TEST(dirent4, "make sure that strange looking filenames ('..c') are traversed")
 
 	must_pass(setup(&odd));
 
@@ -627,31 +625,26 @@ BEGIN_TEST("dirent", odd)
 END_TEST
 
 
-git_testsuite *libgit2_suite_core(void)
-{
-	git_testsuite *suite = git_testsuite_new("Core");
+BEGIN_SUITE(core)
+	ADD_TEST(refcnt0);
 
-	ADD_TEST(suite, "refcnt", init_inc2_dec2_free);
+	ADD_TEST(string0);
+	ADD_TEST(string1);
 
-	ADD_TEST(suite, "strutil", prefix_comparison);
-	ADD_TEST(suite, "strutil", suffix_comparison);
-	ADD_TEST(suite, "strutil", dirname);
-	ADD_TEST(suite, "strutil", basename);
-	ADD_TEST(suite, "strutil", topdir);
+	ADD_TEST(vector0);
+	ADD_TEST(vector1);
 
-	ADD_TEST(suite, "vector", initial_size_one);
-	ADD_TEST(suite, "vector", remove);
+	ADD_TEST(path0);
+	ADD_TEST(path1);
+	ADD_TEST(path2);
+	ADD_TEST(path3);
+	ADD_TEST(path4);
+	ADD_TEST(path5);
+	ADD_TEST(path6);
 
-	ADD_TEST(suite, "path", file_path_prettifying);
-	ADD_TEST(suite, "path", dir_path_prettifying);
-	ADD_TEST(suite, "path", joinpath);
-	ADD_TEST(suite, "path", joinpath_n);
-
-	ADD_TEST(suite, "dirent", dot);
-	ADD_TEST(suite, "dirent", sub);
-	ADD_TEST(suite, "dirent", sub_slash);
-	ADD_TEST(suite, "dirent", empty);
-	ADD_TEST(suite, "dirent", odd);
-
-	return suite;
-}
+	ADD_TEST(dirent0);
+	ADD_TEST(dirent1);
+	ADD_TEST(dirent2);
+	ADD_TEST(dirent3);
+	ADD_TEST(dirent4);
+END_SUITE

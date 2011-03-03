@@ -109,7 +109,7 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 a simple commit which works\n",
 };
 
-BEGIN_TEST("parse", parse_oid_test)
+BEGIN_TEST(parse0, "parse the OID line in a commit")
 
 	git_oid oid;
 
@@ -151,7 +151,7 @@ BEGIN_TEST("parse", parse_oid_test)
 
 END_TEST
 
-BEGIN_TEST("parse", parse_sig_test)
+BEGIN_TEST(parse1, "parse the signature line in a commit")
 
 #define TEST_SIGNATURE_PASS(_string, _header, _name, _email, _time, _offset) { \
 	char *ptr = _string; \
@@ -285,7 +285,7 @@ END_TEST
 /* External declaration for testing the buffer parsing method */
 int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int parse_flags);
 
-BEGIN_TEST("parse", parse_buffer_test)
+BEGIN_TEST(parse2, "parse a whole commit buffer")
 	const int broken_commit_count = sizeof(test_commits_broken) / sizeof(*test_commits_broken);
 	const int working_commit_count = sizeof(test_commits_working) / sizeof(*test_commits_working);
 
@@ -352,7 +352,7 @@ static const char *commit_ids[] = {
 	"5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
 };
 
-BEGIN_TEST("details", query_details_test)
+BEGIN_TEST(details0, "query the details on a parsed commit")
 	const size_t commit_count = sizeof(commit_ids) / sizeof(const char *);
 
 	unsigned int i;
@@ -407,7 +407,7 @@ This is a commit created in memory and it will be written back to disk\n"
 
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 
-BEGIN_TEST("write", writenew_test)
+BEGIN_TEST(write0, "write a new commit object from memory to disk")
 	git_repository *repo;
 	git_commit *commit, *parent;
 	git_tree *tree;
@@ -474,7 +474,7 @@ BEGIN_TEST("write", writenew_test)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("write", writeback_test)
+BEGIN_TEST(write1, "load a commit object, modify it and write it back")
 	git_repository *repo;
 	git_oid id;
 	git_commit *commit, *parent;
@@ -504,16 +504,11 @@ BEGIN_TEST("write", writeback_test)
 END_TEST
 
 
-git_testsuite *libgit2_suite_commit(void)
-{
-	git_testsuite *suite = git_testsuite_new("Commit");
-
-	ADD_TEST(suite, "parse", parse_oid_test);
-	ADD_TEST(suite, "parse", parse_sig_test);
-	ADD_TEST(suite, "parse", parse_buffer_test);
-	ADD_TEST(suite, "details", query_details_test);
-	ADD_TEST(suite, "write", writenew_test);
-	ADD_TEST(suite, "write", writeback_test);
-
-	return suite;
-}
+BEGIN_SUITE(commit)
+	ADD_TEST(parse0);
+	ADD_TEST(parse1);
+	ADD_TEST(parse2);
+	ADD_TEST(details0);
+	ADD_TEST(write0);
+	ADD_TEST(write1);
+END_SUITE

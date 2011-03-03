@@ -12,10 +12,12 @@
 
 struct git_test {
 	char *name;
+	char *message;
+	char *failed_pos;
+	char *description;
+
 	git_testfunc function;
-	int failed;
-	int ran;
-	const char *message;
+	unsigned failed:1, ran:1;
 	jmp_buf *jump;
 };
 
@@ -25,25 +27,18 @@ struct git_testsuite {
 	git_test *list[GIT_MAX_TEST_CASES];
 };
 
-static void test_init(git_test *t, const char *name, git_testfunc function)
-{
-	t->name = strdup(name);
-	t->failed = 0;
-	t->ran = 0;
-	t->message = NULL;
-	t->function = function;
-	t->jump = NULL;
-}
-
 static void test_free(git_test *t)
 {
 	if (t) {
 		free(t->name);
+		free(t->description);
+		free(t->failed_pos);
+		free(t->message);
 		free(t);
 	}
 }
 
-void test_run(git_test *tc)
+static void test_run(git_test *tc)
 {
 	jmp_buf buf;
 	tc->jump = &buf;
@@ -56,11 +51,26 @@ void test_run(git_test *tc)
 	tc->jump = 0;
 }
 
-git_test *git_test_new(const char *name, git_testfunc function)
+static git_test *create_test(git_testfunc function)
 {
-	git_test *tc = DO_ALLOC(git_test);
-	test_init(tc, name, function);
-	return tc;
+	git_test *t = DO_ALLOC(git_test);
+
+	t->name = NULL;
+	t->failed = 0;
+	t->ran = 0;
+	t->description = NULL;
+	t->message = NULL;
+	t->failed_pos = NULL;
+	t->function = function;
+	t->jump = NULL;
+
+	return t;
+}
+
+void git_test__init(git_test *t, const char *name, const char *description)
+{
+	t->name = strdup(name);
+	t->description = strdup(description);
 }
 
 
@@ -72,10 +82,11 @@ static void fail_test(git_test *tc, const char *file, int line, const char *mess
 {
 	char buf[1024];
 
-	snprintf(buf, 1024, "%s @ %s:%d", message, file, line);
+	snprintf(buf, 1024, "%s:%d", file, line);
 
 	tc->failed = 1;
-	tc->message = strdup(buf);
+	tc->message = strdup(message);
+	tc->failed_pos = strdup(buf);
 
 	if (tc->jump != 0)
 		longjmp(*(tc->jump), 0);
@@ -111,7 +122,7 @@ git_testsuite *git_testsuite_new(const char *name)
 	return ts;
 }
 
-void git_testsuite_free(git_testsuite *ts)
+static void free_suite(git_testsuite *ts)
 {
 	unsigned int n;
 
@@ -122,19 +133,11 @@ void git_testsuite_free(git_testsuite *ts)
 	free(ts);
 }
 
-void git_testsuite_add(git_testsuite *ts, git_test *tc)
+void git_testsuite_add(git_testsuite *ts, git_testfunc test)
 {
 	assert(ts->count < GIT_MAX_TEST_CASES);
-	ts->list[ts->count++] = tc;
+	ts->list[ts->count++] = create_test(test);
 }
-
-void git_testsuite_addsuite(git_testsuite *ts, git_testsuite *ts2)
-{
-	int i;
-	for (i = 0 ; i < ts2->count ; ++i)
-		git_testsuite_add(ts, ts2->list[i]);
-}
-
 
 static void print_details(git_testsuite *ts)
 {
@@ -151,7 +154,8 @@ static void print_details(git_testsuite *ts)
 			git_test *tc = ts->list[i];
 			if (tc->failed) {
 				failCount++;
-				printf("  %d) %s: %s\n", failCount, tc->name, tc->message);
+				printf("  %d) \"%s\" [test %s @ %s]\n\t%s\n",
+					failCount, tc->description, tc->name, tc->failed_pos, tc->message);
 			}
 		}
 	}
@@ -159,7 +163,7 @@ static void print_details(git_testsuite *ts)
 
 int git_testsuite_run(git_testsuite *ts)
 {
-	int i;
+	int i, fail_count;
 
 	printf("Suite \"%s\": ", ts->name);
 
@@ -175,7 +179,9 @@ int git_testsuite_run(git_testsuite *ts)
 	}
 	printf("\n  ");
 	print_details(ts);
+	fail_count = ts->fail_count;
 
-	return ts->fail_count;
+	free_suite(ts);
+	return fail_count;
 }
 

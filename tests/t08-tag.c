@@ -31,7 +31,7 @@ static const char *tag1_id = "b25fa35b38051e4ae45d4222e795f9df2e43f1d1";
 static const char *tag2_id = "7b4384978d2493e851f9cca7858815fac9b10980";
 static const char *tagged_commit = "e90810b8df3e80c413d903f631643c716887138d";
 
-BEGIN_TEST("readtag", readtag)
+BEGIN_TEST(read0, "read and parse a tag from the repository")
 	git_repository *repo;
 	git_tag *tag1, *tag2;
 	git_commit *commit;
@@ -61,7 +61,7 @@ BEGIN_TEST("readtag", readtag)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("write", tag_writeback_test)
+BEGIN_TEST(write0, "write back a tag to the repository")
 	git_oid id;
 	git_repository *repo;
 	git_tag *tag;
@@ -81,12 +81,7 @@ BEGIN_TEST("write", tag_writeback_test)
 END_TEST
 
 
-git_testsuite *libgit2_suite_tag(void)
-{
-	git_testsuite *suite = git_testsuite_new("Tag");
-
-	ADD_TEST(suite, "readtag", readtag);
-	ADD_TEST(suite, "write", tag_writeback_test);
-
-	return suite;
-}
+BEGIN_SUITE(tag)
+	ADD_TEST(read0);
+	ADD_TEST(write0);
+END_SUITE

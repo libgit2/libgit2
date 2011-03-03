@@ -64,7 +64,7 @@ int test_backend_sorting(git_odb *odb)
 	return GIT_SUCCESS;
 }
 
-BEGIN_TEST("odb", backend_sorting)
+BEGIN_TEST(odb0, "assure that ODB backends are properly sorted")
 	git_odb *odb;
 	must_pass(git_odb_new(&odb));
 	must_pass(git_odb_add_backend(odb, new_backend(0), 5));
@@ -75,7 +75,7 @@ BEGIN_TEST("odb", backend_sorting)
 	git_odb_close(odb);
 END_TEST
 
-BEGIN_TEST("odb", backend_alternates_sorting)
+BEGIN_TEST(odb1, "assure that alternate backends are properly sorted")
 	git_odb *odb;
 	must_pass(git_odb_new(&odb));
 	must_pass(git_odb_add_backend(odb, new_backend(0), 5));
@@ -94,52 +94,70 @@ END_TEST
 #define STANDARD_REPOSITORY 0
 #define BARE_REPOSITORY 1
 
-static void ensure_repository_init(git_test *_gittest, char *working_directory, int repository_kind, char *expected_path_index, char *expected_path_repository, char *expected_working_directory)
+static int ensure_repository_init(
+	const char *working_directory,
+	int repository_kind,
+	const char *expected_path_index,
+	const char *expected_path_repository,
+	const char *expected_working_directory)
 {
 	char path_odb[GIT_PATH_MAX];
 	git_repository *repo;
 
-	must_be_true(gitfo_isdir(working_directory));
+	if (gitfo_isdir(working_directory) == GIT_SUCCESS)
+		return GIT_ERROR;
 
 	git__joinpath(path_odb, expected_path_repository, GIT_OBJECTS_DIR);
 
-	must_pass(git_repository_init(&repo, working_directory, repository_kind));
-	must_be_true((repo->path_workdir == NULL && expected_working_directory == NULL) || !strcmp(repo->path_workdir, expected_working_directory));
-	must_be_true(!strcmp(repo->path_odb, path_odb));
-	must_be_true(!strcmp(repo->path_repository, expected_path_repository));
-	must_be_true((repo->path_index == NULL && expected_path_index == NULL) || !strcmp(repo->path_index, expected_path_index));
+	if (git_repository_init(&repo, working_directory, repository_kind) < GIT_SUCCESS)
+		return GIT_ERROR;
+
+	if (repo->path_workdir != NULL || expected_working_directory != NULL) {
+		if (strcmp(repo->path_workdir, expected_working_directory) != 0)
+			return GIT_ERROR;
+	}
+
+	if (strcmp(repo->path_odb, path_odb) != 0)
+		return GIT_ERROR;
+
+	if (strcmp(repo->path_repository, expected_path_repository) != 0)
+		return GIT_ERROR;
+
+	if (repo->path_index != NULL || expected_path_index != NULL) {
+		if (strcmp(repo->path_index, expected_path_index) != 0)
+			return GIT_ERROR;
+	}
 
 	git_repository_free(repo);
-	must_pass(rmdir_recurs(working_directory));
+	rmdir_recurs(working_directory);
+
+	return GIT_SUCCESS;
 }
 
-BEGIN_TEST("repo_initialization", init_standard_repo)
+BEGIN_TEST(init0, "initialize a standard repo")
 	char path_index[GIT_PATH_MAX], path_repository[GIT_PATH_MAX];
 
-	git__joinpath(path_repository, TEMP_DIR, GIT_DIR);
+	git__joinpath(path_repository, TEMP_REPO_FOLDER, GIT_DIR);
 	git__joinpath(path_index, path_repository, GIT_INDEX_FILE);
 
-	ensure_repository_init(_gittest, TEMP_DIR, STANDARD_REPOSITORY, path_index, path_repository, TEMP_DIR);
-	ensure_repository_init(_gittest, TEMP_DIR_WITHOUT_TRAILING_SLASH, STANDARD_REPOSITORY, path_index, path_repository, TEMP_DIR);
+	ensure_repository_init(TEMP_REPO_FOLDER, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER);
+	ensure_repository_init(TEMP_REPO_FOLDER_NS, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER);
 END_TEST
 
-BEGIN_TEST("repo_initialization", init_bare_repo)
+BEGIN_TEST(init1, "initialize a bare repo")
 	char path_repository[GIT_PATH_MAX];
 
-	git__joinpath(path_repository, TEMP_DIR, "");
+	git__joinpath(path_repository, TEMP_REPO_FOLDER, "");
 
-	ensure_repository_init(_gittest, TEMP_DIR, BARE_REPOSITORY, NULL, path_repository, NULL);
-	ensure_repository_init(_gittest, TEMP_DIR_WITHOUT_TRAILING_SLASH, BARE_REPOSITORY, NULL, path_repository, NULL);
+	ensure_repository_init(TEMP_REPO_FOLDER, BARE_REPOSITORY, NULL, path_repository, NULL);
+	ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository, NULL);
 END_TEST
 
-git_testsuite *libgit2_suite_repository(void)
-{
-	git_testsuite *suite = git_testsuite_new("Repository");
 
-	ADD_TEST(suite, "odb", backend_sorting);
-	ADD_TEST(suite, "odb", backend_alternates_sorting);
-	ADD_TEST(suite, "repo_initialization", init_standard_repo);
-	ADD_TEST(suite, "repo_initialization", init_bare_repo);
+BEGIN_SUITE(repository)
+	ADD_TEST(odb0);
+	ADD_TEST(odb1);
+	ADD_TEST(init0);
+	ADD_TEST(init1);
+END_SUITE
 
-	return suite;
-}

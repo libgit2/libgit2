@@ -29,7 +29,7 @@
 
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 
-BEGIN_TEST("readtree", tree_entry_access_test)
+BEGIN_TEST(read0, "acces randomly the entries on a loaded tree")
 	git_oid id;
 	git_repository *repo;
 	git_tree *tree;
@@ -51,7 +51,7 @@ BEGIN_TEST("readtree", tree_entry_access_test)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("readtree", tree_read_test)
+BEGIN_TEST(read1, "read a tree from the repository")
 	git_oid id;
 	git_repository *repo;
 	git_tree *tree;
@@ -76,7 +76,7 @@ BEGIN_TEST("readtree", tree_read_test)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("modify", tree_in_memory_add_test)
+BEGIN_TEST(write0, "add a new entry to a tree and write it back to disk")
 	const unsigned int entry_count = 128;
 
 	git_repository *repo;
@@ -106,7 +106,7 @@ BEGIN_TEST("modify", tree_in_memory_add_test)
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST("modify", tree_add_entry_test)
+BEGIN_TEST(write1, "add several entries in-memory and validate that they exist; write back to disk")
 	git_oid id;
 	git_repository *repo;
 	git_tree *tree;
@@ -157,14 +157,10 @@ BEGIN_TEST("modify", tree_add_entry_test)
 END_TEST
 
 
-git_testsuite *libgit2_suite_tree(void)
-{
-	git_testsuite *suite = git_testsuite_new("Tree");
+BEGIN_SUITE(tree)
+	ADD_TEST(read0);
+	ADD_TEST(read1);
+	ADD_TEST(write0);
+	ADD_TEST(write1);
+END_SUITE
 
-	ADD_TEST(suite, "readtree", tree_entry_access_test);
-	ADD_TEST(suite, "readtree", tree_read_test);
-	ADD_TEST(suite, "modify", tree_in_memory_add_test);
-	ADD_TEST(suite, "modify", tree_add_entry_test);
-
-	return suite;
-}

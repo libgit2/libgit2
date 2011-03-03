@@ -36,8 +36,9 @@
 #define TEST_INDEX2_PATH		(TEST_RESOURCES "/gitgit.index")
 #define TEST_INDEXBIG_PATH		(TEST_RESOURCES "/big.index")
 
-#define TEMP_DIR_WITHOUT_TRAILING_SLASH TEST_RESOURCES "/temp_working"
-#define TEMP_DIR TEMP_DIR_WITHOUT_TRAILING_SLASH "/"
+#define TEMP_FOLDER				"./"
+#define TEMP_REPO_FOLDER		TEMP_FOLDER TEST_REPOSITORY_NAME "/"
+#define TEMP_REPO_FOLDER_NS		TEMP_FOLDER TEST_REPOSITORY_NAME
 
 typedef struct object_data {
     unsigned char *bytes;  /* (compressed) bytes stored in object store */
@@ -62,8 +63,11 @@ extern int remove_loose_object(const char *odb_dir, git_object *object);
 
 extern int cmp_files(const char *a, const char *b);
 extern int copy_file(const char *source, const char *dest);
-extern int rmdir_recurs(char *directory_path);
-extern int copydir_recurs(char *source_directory_path, char *destination_directory_path);
+extern int rmdir_recurs(const char *directory_path);
+extern int copydir_recurs(const char *source_directory_path, const char *destination_directory_path);
+
+extern int open_temp_repo(git_repository **repo, const char *path);
+extern void close_temp_repo(git_repository *repo);
 
 #endif
 /* INCLUDE_test_helpers_h__ */

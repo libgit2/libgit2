@@ -29,81 +29,49 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 
-extern git_testsuite *libgit2_suite_core(void);
-extern git_testsuite *libgit2_suite_rawobjects(void);
-extern git_testsuite *libgit2_suite_objread(void);
-extern git_testsuite *libgit2_suite_objwrite(void);
-extern git_testsuite *libgit2_suite_commit(void);
-extern git_testsuite *libgit2_suite_revwalk(void);
-extern git_testsuite *libgit2_suite_index(void);
-extern git_testsuite *libgit2_suite_hashtable(void);
-extern git_testsuite *libgit2_suite_tag(void);
-extern git_testsuite *libgit2_suite_tree(void);
-extern git_testsuite *libgit2_suite_refs(void);
-extern git_testsuite *libgit2_suite_sqlite(void);
-extern git_testsuite *libgit2_suite_repository(void);
-
-typedef git_testsuite *(*libgit2_suite)(void);
+DECLARE_SUITE(core);
+DECLARE_SUITE(rawobjects);
+DECLARE_SUITE(objread);
+DECLARE_SUITE(objwrite);
+DECLARE_SUITE(commit);
+DECLARE_SUITE(revwalk);
+DECLARE_SUITE(index);
+DECLARE_SUITE(hashtable);
+DECLARE_SUITE(tag);
+DECLARE_SUITE(tree);
+DECLARE_SUITE(refs);
+DECLARE_SUITE(sqlite);
+DECLARE_SUITE(repository);
 
 static libgit2_suite suite_methods[]= {
-	libgit2_suite_core,
-	libgit2_suite_rawobjects,
-	libgit2_suite_objread,
-	libgit2_suite_objwrite,
-	libgit2_suite_commit,
-	libgit2_suite_revwalk,
-	libgit2_suite_index,
-	libgit2_suite_hashtable,
-	libgit2_suite_tag,
-	libgit2_suite_tree,
-	libgit2_suite_refs,
-	libgit2_suite_sqlite,
-	libgit2_suite_repository,
+	SUITE_NAME(core),
+	SUITE_NAME(rawobjects),
+	SUITE_NAME(objread),
+	SUITE_NAME(objwrite),
+	SUITE_NAME(commit),
+	SUITE_NAME(revwalk),
+	SUITE_NAME(index),
+	SUITE_NAME(hashtable),
+	SUITE_NAME(tag),
+	SUITE_NAME(tree),
+	SUITE_NAME(refs),
+	SUITE_NAME(sqlite),
+	SUITE_NAME(repository),
 };
 
 #define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
 
-
-git_testsuite **libgit2_get_suites()
-{
-	git_testsuite **suites;
-	unsigned int i;
-
-	suites = git__malloc(GIT_SUITE_COUNT * sizeof(void *));
-	if (suites == NULL)
-		return NULL;
-
-	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		suites[i] = suite_methods[i]();
-
-	return suites;
-}
-
-void libgit2_free_suites(git_testsuite **suites)
-{
-	unsigned int i;
-
-	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		git_testsuite_free(suites[i]);
-
-	free(suites);
-}
-
 int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
 {
 	unsigned int i, failures;
-	git_testsuite **suites;
 
 	GIT_UNUSED_ARG(argc);
 	GIT_UNUSED_ARG(argv);
 
-	suites = libgit2_get_suites();
 	failures = 0;
 
 	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		failures += git_testsuite_run(suites[i]);
-
-	libgit2_free_suites(suites);
+		failures += git_testsuite_run(suite_methods[i]());
 
 	return failures ? -1 : 0;
 }

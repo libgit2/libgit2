@@ -197,7 +197,7 @@ static int remove_filesystem_element_recurs(void *GIT_UNUSED(nil), char *path)
 	return gitfo_unlink(path);
 }
 
-int rmdir_recurs(char *directory_path)
+int rmdir_recurs(const char *directory_path)
 {
 	char buffer[GIT_PATH_MAX];
 	strcpy(buffer, directory_path);
@@ -227,7 +227,7 @@ static int copy_filesystem_element_recurs(void *_data, char *source)
 	return copy_file(source, data->dst);
 }
 
-int copydir_recurs(char *source_directory_path, char *destination_directory_path)
+int copydir_recurs(const char *source_directory_path, const char *destination_directory_path)
 {
 	char source_buffer[GIT_PATH_MAX];
 	char dest_buffer[GIT_PATH_MAX];
@@ -245,4 +245,19 @@ int copydir_recurs(char *source_directory_path, char *destination_directory_path
 	data.dst_len = strlen(dest_buffer);
 
 	return copy_filesystem_element_recurs(&data, source_buffer);
+}
+
+int open_temp_repo(git_repository **repo, const char *path)
+{
+	int error;
+	if ((error = copydir_recurs(path, TEMP_REPO_FOLDER)) < GIT_SUCCESS)
+		return error;
+
+	return git_repository_open(repo, TEMP_REPO_FOLDER);
+}
+
+void close_temp_repo(git_repository *repo)
+{
+	git_repository_free(repo);
+	rmdir_recurs(TEMP_REPO_FOLDER);
 }
