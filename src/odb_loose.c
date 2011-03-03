@@ -528,7 +528,7 @@ static int write_obj(gitfo_buf *buf, git_oid *id, loose_backend *backend)
 	gitfo_close(fd);
 	gitfo_chmod(temp, 0444);
 
-	if (gitfo_move_file(temp, file) < 0) {
+	if (gitfo_mv(temp, file) < 0) {
 		gitfo_unlink(temp);
 		return GIT_EOSERR;
 	}

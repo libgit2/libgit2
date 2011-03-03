@@ -192,7 +192,7 @@ int git_filebuf_commit(git_filebuf *file)
 	gitfo_close(file->fd);
 	file->fd = -1;
 
-	error = gitfo_move_file(file->path_lock, file->path_original);
+	error = gitfo_mv(file->path_lock, file->path_original);
 
 cleanup:
 	git_filebuf_cleanup(file);

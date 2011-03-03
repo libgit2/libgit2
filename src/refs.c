@@ -1183,7 +1183,7 @@ int git_reference_rename(git_reference *ref, const char *new_name)
 		git__joinpath(old_path, ref->owner->path_repository, old_name);
 		git__joinpath(new_path, ref->owner->path_repository, ref->name);
 
-		error = gitfo_move_file(old_path, new_path);
+		error = gitfo_mv_force(old_path, new_path);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 
@@ -1218,7 +1218,7 @@ rename_loose_to_old_name:
 	git__joinpath(new_path, ref->owner->path_repository, old_name);
 
 	/* No error checking. We'll return the initial error */
-	gitfo_move_file(old_path, new_path);
+	gitfo_mv_force(old_path, new_path);
 
 	/* restore the old name */
 	free(ref->name);

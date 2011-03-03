@@ -142,7 +142,7 @@ void gitfo_free_buf(gitfo_buf *obj)
 	obj->data = NULL;
 }
 
-int gitfo_move_file(char *from, char *to)
+int gitfo_mv(const char *from, const char *to)
 {
 #ifdef GIT_WIN32
 	/*
@@ -163,6 +163,29 @@ int gitfo_move_file(char *from, char *to)
 
 	return GIT_EOSERR;
 #endif
+}
+
+int gitfo_mv_force(const char *from, const char *to)
+{
+	const int mode = 0755; /* or 0777 ? */
+	int error = GIT_SUCCESS;
+	char target_folder_path[GIT_PATH_MAX];
+
+	error = git__dirname_r(target_folder_path, sizeof(target_folder_path), to);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* Does the containing folder exist? */
+	if (gitfo_isdir(target_folder_path)) {
+		git__joinpath(target_folder_path, target_folder_path, ""); /* Ensure there's a trailing slash */
+
+		/* Let's create the tree structure */
+		error = gitfo_mkdir_recurs(target_folder_path, mode);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
+	return gitfo_mv(from, to);
 }
 
 int gitfo_map_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
