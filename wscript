@@ -132,7 +132,7 @@ def build_library(bld, build_type):
     sources = directory.ant_glob('src/*.c')
 
     # Find the version of the library, from our header file
-    version = get_libgit2_version(directory.find_node("src/git2.h").abspath())
+    version = get_libgit2_version(directory.find_node("include/git2.h").abspath())
 
     # Compile platform-dependant code
     # E.g.  src/unix/*.c
@@ -153,7 +153,7 @@ def build_library(bld, build_type):
     BUILD[build_type](
         source=sources,
         target='git2',
-        includes='src',
+        includes=['src', 'include'],
         install_path='${LIBDIR}',
         use=ALL_LIBS,
         vnum=version,
@@ -168,8 +168,8 @@ def build_library(bld, build_type):
         )
 
     # Install headers
-    bld.install_files('${PREFIX}/include', directory.find_node('src/git2.h'))
-    bld.install_files('${PREFIX}/include/git2', directory.ant_glob('src/git2/*.h'))
+    bld.install_files('${PREFIX}/include', directory.find_node('include/git2.h'))
+    bld.install_files('${PREFIX}/include/git2', directory.ant_glob('include/git2/*.h'))
 
     # On Unix systems, let them know about installation
     if bld.env.PLATFORM == 'unix' and bld.cmd == 'install-shared':
@@ -191,7 +191,7 @@ def build_test(bld):
     bld.program(
         source=sources,
         target='libgit2_test',
-        includes=['src', 'tests'],
+        includes=['src', 'tests', 'include'],
         defines=['TEST_RESOURCES="%s"' % resources_path],
         use=['git2'] + ALL_LIBS
     )
