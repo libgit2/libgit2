@@ -695,9 +695,18 @@ static int packed_remove_loose(git_repository *repo, git_vector *packing_list)
 	unsigned int i;
 	char full_path[GIT_PATH_MAX];
 	int error = GIT_SUCCESS;
+	git_reference *reference;
 
 	for (i = 0; i < packing_list->length; ++i) {
 		git_reference *ref = git_vector_get(packing_list, i);
+
+		/* Ensure the packed reference doesn't exist
+		 * in a (more up-to-date?) state as a loose reference
+		 */
+		reference = git_hashtable_lookup(ref->owner->references.loose_cache, ref->name);
+		if (reference != NULL)
+			continue;
+
 		git__joinpath(full_path, repo->path_repository, ref->name);
 
 		if (gitfo_exists(full_path) == GIT_SUCCESS &&
