@@ -295,19 +295,60 @@ BEGIN_TEST("createref", create_new_object_id_ref)
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
-BEGIN_TEST("packrefs", create_packfile)
+BEGIN_TEST("packrefs", create_packfile_with_empty_folder)
 	git_repository *repo;
-	char temp_repo_path[GIT_PATH_MAX];
+	git_reference *reference;
+	char temp_path[GIT_PATH_MAX];
+	int path_len = 0;
+	const int mode = 0755; /* or 0777 ? */
 
 	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
 
-	git__joinpath(temp_repo_path, TEMP_DIR, TEST_REPOSITORY_NAME);
-	must_pass(git_repository_open(&repo, temp_repo_path));
+	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
+	must_pass(git_repository_open(&repo, temp_path));
+	
+	git__joinpath_n(temp_path, 3, repo->path_repository, GIT_REFS_HEADS_DIR, "empty_dir");
+	must_pass(gitfo_mkdir_recurs(temp_path, mode));
+
 	must_pass(git_reference_packall(repo));
 
 	git_repository_free(repo);
 	must_pass(rmdir_recurs(TEMP_DIR));
+END_TEST
 
+BEGIN_TEST("packrefs", create_packfile)
+	git_repository *repo;
+	git_reference *reference;
+	char temp_path[GIT_PATH_MAX];
+	int path_len = 0;
+
+	must_pass(copydir_recurs(REPOSITORY_FOLDER, TEMP_DIR));
+
+	git__joinpath(temp_path, TEMP_DIR, TEST_REPOSITORY_NAME);
+	must_pass(git_repository_open(&repo, temp_path));
+	
+	/* Ensure a known loose ref can be looked up */
+	must_pass(git_repository_lookup_ref(&reference, repo, loose_tag_ref_name));
+	must_be_true((reference->type & GIT_REF_PACKED) == 0);
+	must_be_true(strcmp(reference->name, loose_tag_ref_name) == 0);
+	
+	must_pass(git_reference_packall(repo));
+
+	/* Ensure the packed-refs file exists */
+	git__joinpath(temp_path, repo->path_repository, GIT_PACKEDREFS_FILE);
+	must_pass(gitfo_exists(temp_path));
+
+	/* Ensure the known ref can still be looked up but is now packed */
+	must_pass(git_repository_lookup_ref(&reference, repo, loose_tag_ref_name));
+	must_be_true((reference->type & GIT_REF_PACKED) != 0);
+	must_be_true(strcmp(reference->name, loose_tag_ref_name) == 0);
+
+	/* Ensure the known ref has been removed from the loose folder structure */
+	git__joinpath(temp_path, repo->path_repository, loose_tag_ref_name);
+	must_pass(!gitfo_exists(temp_path));
+
+	git_repository_free(repo);
+	must_pass(rmdir_recurs(TEMP_DIR));
 END_TEST
 
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
@@ -508,7 +549,8 @@ git_testsuite *libgit2_suite_refs(void)
 	ADD_TEST(suite, "normalizeref", normalize_object_id_ref);
 	ADD_TEST(suite, "normalizeref", normalize_symbolic_ref);
 	ADD_TEST(suite, "normalizeref", jgit_tests);
-	//ADD_TEST(suite, "packrefs", create_packfile);
+	ADD_TEST(suite, "packrefs", create_packfile_with_empty_folder);
+	ADD_TEST(suite, "packrefs", create_packfile);
 
 	return suite;
 }
