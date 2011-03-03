@@ -537,7 +537,7 @@ static int _dirent_loose_load(void *data, char *full_path)
 	int error;
 
 	if (gitfo_isdir(full_path) == GIT_SUCCESS)
-		gitfo_dirent(full_path, GIT_PATH_MAX, _dirent_loose_load, repository);
+		return gitfo_dirent(full_path, GIT_PATH_MAX, _dirent_loose_load, repository);
 
 	file_path = full_path + strlen(repository->path_repository);
 	error = loose_lookup(&reference, repository, file_path, 1);
