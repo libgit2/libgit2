@@ -405,7 +405,7 @@ static int packed_parse_oid(
 		const char **buffer_out,
 		const char *buffer_end)
 {
-	reference_oid *ref;
+	reference_oid *ref = NULL;
 
 	const char *buffer = *buffer_out;
 	const char *refname_begin, *refname_end;
