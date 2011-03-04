@@ -132,7 +132,7 @@ int git_blob_writefile(git_oid *written_id, git_repository *repo, const char *pa
 
 	/* FIXME: maybe we don't want to free this already?
 	 * the user may want to access it again */
-	git_object_close((git_object *)blob);
+	GIT_OBJECT_DECREF(repo, blob);
 	return GIT_SUCCESS;
 }
 

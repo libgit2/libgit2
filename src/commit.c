@@ -48,7 +48,7 @@ static void clear_parents(git_commit *commit)
 
 	for (i = 0; i < commit->parents.length; ++i) {
 		git_commit *parent = git_vector_get(&commit->parents, i);
-		git_object_close((git_object *)parent);
+		GIT_OBJECT_DECREF(commit->object.repo, parent);
 	}
 
 	git_vector_clear(&commit->parents);
@@ -62,7 +62,7 @@ void git_commit__free(git_commit *commit)
 	git_signature_free(commit->author);
 	git_signature_free(commit->committer);
 
-	git_object_close((git_object *)commit->tree);
+	GIT_OBJECT_DECREF(commit->object.repo, commit->tree);
 
 	free(commit->message);
 	free(commit->message_short);
@@ -130,7 +130,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
 		return error;
 
-	git_object_close((git_object *)commit->tree);
+	GIT_OBJECT_DECREF(commit->object.repo, commit->tree);
 	if ((error = git_object_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < GIT_SUCCESS)
 		return error;
 
@@ -249,7 +249,7 @@ const git_tree *git_commit_tree(git_commit *commit)
 	if (!commit->object.in_memory && commit->tree == NULL)
 		git_commit__parse_full(commit);
 
-	GIT_OBJECT_INCREF(commit->tree);
+	GIT_OBJECT_INCREF(commit->object.repo, commit->tree);
 	return commit->tree;
 }
 
@@ -283,7 +283,7 @@ git_commit *git_commit_parent(git_commit *commit, unsigned int n)
 	assert(commit);
 
 	parent = git_vector_get(&commit->parents, n);
-	GIT_OBJECT_INCREF(parent);
+	GIT_OBJECT_INCREF(commit->object.repo, parent);
 	return parent;
 }
 
@@ -293,8 +293,8 @@ void git_commit_set_tree(git_commit *commit, git_tree *tree)
 	commit->object.modified = 1;
 	CHECK_FULL_PARSE();
 
-	git_object_close((git_object *)commit->tree);
-	GIT_OBJECT_INCREF(tree);
+	GIT_OBJECT_DECREF(commit->object.repo, commit->tree);
+	GIT_OBJECT_INCREF(commit->object.repo, tree);
 	commit->tree = tree;
 }
 
@@ -353,6 +353,6 @@ int git_commit_add_parent(git_commit *commit, git_commit *new_parent)
 
 	CHECK_FULL_PARSE();
 	commit->object.modified = 1;
-	GIT_OBJECT_INCREF(new_parent);
+	GIT_OBJECT_INCREF(commit->object.repo, new_parent);
 	return git_vector_insert(&commit->parents, new_parent);
 }

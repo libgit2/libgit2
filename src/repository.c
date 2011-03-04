@@ -216,6 +216,7 @@ static git_repository *repository_alloc()
 		return NULL;
 	}
 
+	repo->gc_enabled = 1;
 	return repo;
 }
 
@@ -387,11 +388,7 @@ void git_repository_free(git_repository *repo)
 	if (repo == NULL)
 		return;
 
-	/* Increment the refcount of all the objects in the repository
-	 * to prevent freeing dependencies */
-	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,
-		GIT_OBJECT_INCREF(object);
-	);
+	repo->gc_enabled = 0;
 
 	/* force free all the objects */
 	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,

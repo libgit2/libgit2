@@ -35,7 +35,7 @@
 void git_tag__free(git_tag *tag)
 {
 	git_signature_free(tag->tagger);
-	git_object_close(tag->target);
+	GIT_OBJECT_DECREF(tag->object.repo, tag->target);
 	free(tag->message);
 	free(tag->tag_name);
 	free(tag);
@@ -49,7 +49,7 @@ const git_oid *git_tag_id(git_tag *c)
 const git_object *git_tag_target(git_tag *t)
 {
 	assert(t);
-	GIT_OBJECT_INCREF(t->target);
+	GIT_OBJECT_INCREF(t->object.repo, t->target);
 	return t->target;
 }
 
@@ -57,8 +57,8 @@ void git_tag_set_target(git_tag *tag, git_object *target)
 {
 	assert(tag && target);
 
-	git_object_close(tag->target);
-	GIT_OBJECT_INCREF(target);
+	GIT_OBJECT_DECREF(tag->object.repo, tag->target);
+	GIT_OBJECT_INCREF(tag->object.repo, target);
 
 	tag->object.modified = 1;
 	tag->target = target;
