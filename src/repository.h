@@ -27,7 +27,7 @@ struct git_object {
 	git_repository *repo;
 	git_odb_source source;
 	unsigned short refcount;
-	short in_memory:1, modified:1;
+	unsigned char in_memory, modified;
 };
 
 struct git_repository {
