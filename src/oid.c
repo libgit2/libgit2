@@ -206,7 +206,7 @@ static trie_node *push_leaf(git_oid_shorten *os, node_index idx, int push_at, co
 			return NULL;
 	}
 
-	idx_leaf = os->node_count++;
+	idx_leaf = (node_index)os->node_count++;
 
 	if (os->node_count == SHRT_MAX)
 		os->full = 1;
