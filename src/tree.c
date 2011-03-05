@@ -107,7 +107,7 @@ const git_oid *git_tree_id(git_tree *c)
 	return git_object_id((git_object *)c);
 }
 
-int git_tree_entry_set_attributes(git_tree_entry *entry, int attr)
+int git_tree_entry_set_attributes(git_tree_entry *entry, unsigned int attr)
 {
 	assert(entry && entry->owner);
 	
