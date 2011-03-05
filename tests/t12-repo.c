@@ -199,6 +199,24 @@ BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git"
 	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
 END_TEST
 
+#define SOURCE_EMPTY_REPOSITORY_NAME	"empty_standard_repo/.gitted"
+#define EMPTY_REPOSITORY_NAME			"empty_standard_repo/.git"
+#define EMPTY_REPOSITORY_FOLDER			TEST_RESOURCES "/" SOURCE_EMPTY_REPOSITORY_NAME "/"
+#define DEST_REPOSITORY_FOLDER			TEMP_REPO_FOLDER DOT_GIT "/"
+
+BEGIN_TEST(open1, "Open a standard repository that has just been initialized by git")
+	git_repository *repo;
+
+	must_pass(copydir_recurs(EMPTY_REPOSITORY_FOLDER, DEST_REPOSITORY_FOLDER));
+	must_pass(remove_placeholders(DEST_REPOSITORY_FOLDER, "dummy-marker.txt"));
+	
+	must_pass(git_repository_open(&repo, DEST_REPOSITORY_FOLDER));
+	
+	git_repository_free(repo);
+	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
+END_TEST
+
+
 BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of the current working directory")
 	char new_current_workdir[GIT_PATH_MAX];
 	char current_workdir[GIT_PATH_MAX];
@@ -234,6 +252,7 @@ BEGIN_SUITE(repository)
 	ADD_TEST(init1);
 	ADD_TEST(init2);
 	ADD_TEST(open0);
+	ADD_TEST(open1);
 	ADD_TEST(open2);
 END_SUITE
 
