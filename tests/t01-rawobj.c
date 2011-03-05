@@ -300,6 +300,96 @@ BEGIN_TEST(oid15, "convert raw oid to string (big)")
 	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ+3) == 'Z');
 END_TEST
 
+
+BEGIN_TEST(oid16, "make sure the OID shortener doesn't choke on duplicate sha1s")
+
+	git_oid_shorten *os;
+	int min_len;
+
+	os = git_oid_shorten_new(0);
+	must_be_true(os != NULL);
+
+	git_oid_shorten_add(os, "22596363b3de40b06f981fb85d82312e8c0ed511");
+	git_oid_shorten_add(os, "ce08fe4884650f067bd5703b6a59a8b3b3c99a09");
+	git_oid_shorten_add(os, "16a0123456789abcdef4b775213c23a8bd74f5e0");
+	min_len = git_oid_shorten_add(os, "ce08fe4884650f067bd5703b6a59a8b3b3c99a09");
+
+	must_be_true(min_len == GIT_OID_HEXSZ + 1);
+
+	git_oid_shorten_free(os);
+END_TEST
+
+BEGIN_TEST(oid17, "stress test for the git_oid_shorten object")
+
+#define MAX_OIDS 1000
+
+	git_oid_shorten *os;
+	char *oids[MAX_OIDS];
+	char number_buffer[16];
+	git_oid oid;
+	size_t i, j;
+
+	int min_len, found_collision;
+
+	os = git_oid_shorten_new(0);
+	must_be_true(os != NULL);
+
+	/*
+	 * Insert in the shortener 1000 unique SHA1 ids
+	 */
+	for (i = 0; i < MAX_OIDS; ++i) {
+		char *oid_text;
+
+		sprintf(number_buffer, "%u", (unsigned int)i);
+		git_hash_buf(&oid, number_buffer, strlen(number_buffer));
+
+		oid_text = git__malloc(GIT_OID_HEXSZ + 1);
+		git_oid_fmt(oid_text, &oid);
+		oid_text[GIT_OID_HEXSZ] = 0;
+
+		min_len = git_oid_shorten_add(os, oid_text);
+		must_be_true(min_len >= 0);
+
+		oids[i] = oid_text;
+	}
+
+	/*
+	 * Compare the first `min_char - 1` characters of each
+	 * SHA1 OID. If the minimizer worked, we should find at
+	 * least one collision
+	 */
+	found_collision = 0;
+	for (i = 0; i < MAX_OIDS; ++i) {
+		for (j = 0; j < MAX_OIDS; ++j) {
+			if (i != j && memcmp(oids[i], oids[j], min_len - 1) == 0)
+				found_collision = 1;
+		}
+	}
+	must_be_true(found_collision == 1);
+
+	/*
+	 * Compare the first `min_char` characters of each
+	 * SHA1 OID. If the minimizer worked, every single preffix
+	 * should be unique.
+	 */
+	found_collision = 0;
+	for (i = 0; i < MAX_OIDS; ++i) {
+		for (j = 0; j < MAX_OIDS; ++j) {
+			if (i != j && memcmp(oids[i], oids[j], min_len) == 0)
+				found_collision = 1;
+		}
+	}
+	must_be_true(found_collision == 0);
+
+	/* cleanup */
+	for (i = 0; i < MAX_OIDS; ++i)
+		free(oids[i]);
+
+	git_oid_shorten_free(os);
+
+#undef MAX_OIDS
+END_TEST
+
 static char *hello_id = "22596363b3de40b06f981fb85d82312e8c0ed511";
 static char *hello_text = "hello world\n";
 
@@ -518,6 +608,8 @@ BEGIN_SUITE(rawobjects)
 	ADD_TEST(oid13);
 	ADD_TEST(oid14);
 	ADD_TEST(oid15);
+	ADD_TEST(oid16);
+	ADD_TEST(oid17);
 
 	ADD_TEST(hash0);
 	ADD_TEST(hash1);
