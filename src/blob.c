@@ -30,7 +30,7 @@
 #include "common.h"
 #include "blob.h"
 
-const char *git_blob_rawcontent(git_blob *blob)
+const void *git_blob_rawcontent(git_blob *blob)
 {
 	assert(blob);
 	

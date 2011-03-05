@@ -102,7 +102,7 @@ GIT_EXTERN(int) git_blob_set_rawcontent(git_blob *blob, const void *buffer, size
  * @param blob pointer to the blob
  * @return the pointer; NULL if the blob has no contents
  */
-GIT_EXTERN(const char *) git_blob_rawcontent(git_blob *blob);
+GIT_EXTERN(const void *) git_blob_rawcontent(git_blob *blob);
 
 /**
  * Get the size in bytes of the contents of a blob
