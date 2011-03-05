@@ -291,7 +291,7 @@ static int loose_write(git_reference *ref)
 
 	git__joinpath(ref_path, ref->owner->path_repository, ref->name);
 
-	if ((error = git_filebuf_open(&file, ref_path, 0)) < GIT_SUCCESS)
+	if ((error = git_filebuf_open(&file, ref_path, GIT_FILEBUF_FORCE)) < GIT_SUCCESS)
 		return error;
 
 	if (ref->type & GIT_REF_OID) {

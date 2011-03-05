@@ -2,6 +2,29 @@
 #include "fileops.h"
 #include <ctype.h>
 
+static int force_path(const char *to)
+{
+	const int mode = 0755; /* or 0777 ? */
+	int error = GIT_SUCCESS;
+	char target_folder_path[GIT_PATH_MAX];
+
+	error = git__dirname_r(target_folder_path, sizeof(target_folder_path), to);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* Does the containing folder exist? */
+	if (gitfo_isdir(target_folder_path)) {
+		git__joinpath(target_folder_path, target_folder_path, ""); /* Ensure there's a trailing slash */
+
+		/* Let's create the tree structure */
+		error = gitfo_mkdir_recurs(target_folder_path, mode);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
+	return GIT_SUCCESS;
+}
+
 int gitfo_open(const char *path, int flags)
 {
 	int fd = open(path, flags | O_BINARY);
@@ -12,6 +35,14 @@ int gitfo_creat(const char *path, int mode)
 {
 	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
 	return fd >= 0 ? fd : GIT_EOSERR;
+}
+
+int gitfo_creat_force(const char *path, int mode)
+{
+	if (force_path(path) < GIT_SUCCESS)
+		return GIT_EOSERR;
+
+	return gitfo_creat(path, mode);
 }
 
 int gitfo_read(git_file fd, void *buf, size_t cnt)
@@ -167,23 +198,8 @@ int gitfo_mv(const char *from, const char *to)
 
 int gitfo_mv_force(const char *from, const char *to)
 {
-	const int mode = 0755; /* or 0777 ? */
-	int error = GIT_SUCCESS;
-	char target_folder_path[GIT_PATH_MAX];
-
-	error = git__dirname_r(target_folder_path, sizeof(target_folder_path), to);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	/* Does the containing folder exist? */
-	if (gitfo_isdir(target_folder_path)) {
-		git__joinpath(target_folder_path, target_folder_path, ""); /* Ensure there's a trailing slash */
-
-		/* Let's create the tree structure */
-		error = gitfo_mkdir_recurs(target_folder_path, mode);
-		if (error < GIT_SUCCESS)
-			return error;
-	}
+	if (force_path(to) < GIT_SUCCESS)
+		return GIT_EOSERR;
 
 	return gitfo_mv(from, to);
 }

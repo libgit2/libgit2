@@ -39,7 +39,12 @@ static int lock_file(git_filebuf *file, int flags)
 			return GIT_EOSERR;
 	}
 
-	file->fd = gitfo_creat(file->path_lock, 0644);
+	/* create path to the file buffer is required */
+	if (flags & GIT_FILEBUF_FORCE) {
+		file->fd = gitfo_creat_force(file->path_lock, 0644);
+	} else {
+		file->fd = gitfo_creat(file->path_lock, 0644);
+	}
 
 	if (file->fd < 0)
 		return GIT_EOSERR;
