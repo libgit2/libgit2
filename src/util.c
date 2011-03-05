@@ -221,7 +221,7 @@ void git__joinpath_n(char *buffer_out, int count, ...)
 			continue;
 
 		len = strlen(path);
-		memcpy(buffer_out, path, len);
+		memmove(buffer_out, path, len);
 		buffer_out = buffer_out + len;
 
 		if (i < count - 1 && buffer_out[-1] != '/')
