@@ -114,24 +114,33 @@ static int ensure_repository_init(
 
 	if (repo->path_workdir != NULL || expected_working_directory != NULL) {
 		if (strcmp(repo->path_workdir, expected_working_directory) != 0)
-			return GIT_ERROR;
+			//return GIT_ERROR;
+			goto cleanup;
 	}
 
 	if (strcmp(repo->path_odb, path_odb) != 0)
-		return GIT_ERROR;
+		//return GIT_ERROR;
+		goto cleanup;
 
 	if (strcmp(repo->path_repository, expected_path_repository) != 0)
-		return GIT_ERROR;
+		//return GIT_ERROR;
+		goto cleanup;
 
 	if (repo->path_index != NULL || expected_path_index != NULL) {
 		if (strcmp(repo->path_index, expected_path_index) != 0)
-			return GIT_ERROR;
+			//return GIT_ERROR;
+			goto cleanup;
 	}
 
 	git_repository_free(repo);
 	rmdir_recurs(working_directory);
 
 	return GIT_SUCCESS;
+
+cleanup:
+	git_repository_free(repo);
+	rmdir_recurs(working_directory);
+	return GIT_ERROR;
 }
 
 BEGIN_TEST(init0, "initialize a standard repo")
@@ -140,8 +149,8 @@ BEGIN_TEST(init0, "initialize a standard repo")
 	git__joinpath(path_repository, TEMP_REPO_FOLDER, GIT_DIR);
 	git__joinpath(path_index, path_repository, GIT_INDEX_FILE);
 
-	ensure_repository_init(TEMP_REPO_FOLDER, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER);
-	ensure_repository_init(TEMP_REPO_FOLDER_NS, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER);
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER));
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER));
 END_TEST
 
 BEGIN_TEST(init1, "initialize a bare repo")
@@ -149,8 +158,8 @@ BEGIN_TEST(init1, "initialize a bare repo")
 
 	git__joinpath(path_repository, TEMP_REPO_FOLDER, "");
 
-	ensure_repository_init(TEMP_REPO_FOLDER, BARE_REPOSITORY, NULL, path_repository, NULL);
-	ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository, NULL);
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, BARE_REPOSITORY, NULL, path_repository, NULL));
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository, NULL));
 END_TEST
 
 
