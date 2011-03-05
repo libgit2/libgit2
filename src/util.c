@@ -82,7 +82,7 @@ Exit:
 	}
 
 	if (len >= 0) {
-		memcpy(buffer, startp, len);
+		memmove(buffer, startp, len);
 		buffer[len] = 0;
 	}
 	return result;
@@ -140,7 +140,7 @@ Exit:
     }
 
     if (len >= 0) {
-        memcpy(buffer, path, len);
+        memmove(buffer, path, len);
         buffer[len] = 0;
     }
     return result;
