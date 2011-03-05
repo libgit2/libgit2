@@ -256,3 +256,31 @@ void close_temp_repo(git_repository *repo)
 	git_repository_free(repo);
 	rmdir_recurs(TEMP_REPO_FOLDER);
 }
+
+static int remove_placeholders_recurs(void *filename, char *path)
+{
+	char passed_filename[GIT_PATH_MAX];
+	char *data = (char *)filename;
+
+	if (!gitfo_isdir(path))
+		return gitfo_dirent(path, GIT_PATH_MAX, remove_placeholders_recurs, data);
+
+	 if (git__basename_r(passed_filename, sizeof(passed_filename), path) < GIT_SUCCESS)
+		 return GIT_EINVALIDPATH;
+
+	if (!strcmp(data, passed_filename))
+		return gitfo_unlink(path);
+
+	return GIT_SUCCESS;
+}
+
+int remove_placeholders(char *directory_path, char *filename)
+{
+	char buffer[GIT_PATH_MAX];
+
+	if (gitfo_isdir(directory_path))
+		return GIT_EINVALIDPATH;
+
+	strcpy(buffer, directory_path);
+	return remove_placeholders_recurs(filename, buffer);
+}
