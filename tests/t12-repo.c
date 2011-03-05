@@ -184,6 +184,21 @@ BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping
 	rmdir_recurs(TEMP_REPO_FOLDER);
 END_TEST
 
+#define EMPTY_BARE_REPOSITORY_NAME		"empty_bare.git"
+#define EMPTY_BARE_REPOSITORY_FOLDER	TEST_RESOURCES "/" EMPTY_BARE_REPOSITORY_NAME "/"
+
+BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git")
+	git_repository *repo;
+
+	must_pass(copydir_recurs(EMPTY_BARE_REPOSITORY_FOLDER, TEMP_REPO_FOLDER));
+	must_pass(remove_placeholders(TEMP_REPO_FOLDER, "dummy-marker.txt"));
+
+	must_pass(git_repository_open(&repo, TEMP_REPO_FOLDER));
+
+	git_repository_free(repo);
+	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
+END_TEST
+
 BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of the current working directory")
 	char new_current_workdir[GIT_PATH_MAX];
 	char current_workdir[GIT_PATH_MAX];
@@ -217,6 +232,7 @@ BEGIN_SUITE(repository)
 	ADD_TEST(init0);
 	ADD_TEST(init1);
 	ADD_TEST(init2);
+	ADD_TEST(open0);
 	ADD_TEST(open2);
 END_SUITE
 
