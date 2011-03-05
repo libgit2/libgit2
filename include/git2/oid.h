@@ -132,6 +132,60 @@ GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
  */
 GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
 
+/**
+ * OID Shortener object
+ */
+typedef struct git_oid_shorten git_oid_shorten;
+
+/**
+ * Create a new OID shortener.
+ *
+ * The OID shortener is used to process a list of OIDs
+ * in text form and return the shortest length that would
+ * uniquely identify all of them.
+ *
+ * E.g. look at the result of `git log --abbrev`.
+ *
+ * @param min_length The minimal length for all identifiers,
+ *		which will be used even if shorter OIDs would still
+ *		be unique.
+ *	@return a `git_oid_shorten` instance, NULL if OOM
+ */
+git_oid_shorten *git_oid_shorten_new(size_t min_length);
+
+/**
+ * Add a new OID to set of shortened OIDs and calculate
+ * the minimal length to uniquely identify all the OIDs in
+ * the set.
+ *
+ * The OID is expected to be a 40-char hexadecimal string.
+ * The OID is owned by the user and will not be modified
+ * or freed.
+ *
+ * For performance reasons, there is a hard-limit of how many
+ * OIDs can be added to a single set (around ~22000, assuming
+ * a mostly randomized distribution), which should be enough
+ * for any kind of program, and keeps the algorithm fast and
+ * memory-efficient.
+ *
+ * Attempting to add more than those OIDs will result in a
+ * GIT_ENOMEM error
+ *
+ * @param os a `git_oid_shorten` instance
+ * @param text_oid an OID in text form
+ * @return the minimal length to uniquely identify all OIDs
+ *		added so far to the set; or an error code (<0) if an
+ *		error occurs.
+ */
+int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
+
+/**
+ * Free an OID shortener instance
+ * 
+ * @param os a `git_oid_shorten` instance
+ */
+void git_oid_shorten_free(git_oid_shorten *os);
+
 /** @} */
 GIT_END_DECL
 #endif
