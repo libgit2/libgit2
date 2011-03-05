@@ -329,7 +329,7 @@ BEGIN_TEST(oid17, "stress test for the git_oid_shorten object")
 	git_oid oid;
 	size_t i, j;
 
-	int min_len, found_collision;
+	int min_len = 0, found_collision;
 
 	os = git_oid_shorten_new(0);
 	must_be_true(os != NULL);
