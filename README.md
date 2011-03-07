@@ -117,6 +117,7 @@ Here are the bindings to libgit2 that are currently available:
 * php-git (PHP bindings) <https://github.com/chobie/php-git>
 * luagit2 (Lua bindings) <https://github.com/Neopallium/luagit2>
 * GitForDelphi (Delphi bindings) <https://github.com/jasonpenny/GitForDelphi>
+* objective-git (Objective-C bindings) <https://github.com/libgit2/objective-git>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 
 If you start another language binding to libgit2, please let us know so
