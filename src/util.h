@@ -93,6 +93,8 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 extern char *git__strtok(char *output, char *src, char *delimit);
 extern char *git__strtok_keep(char *output, char *src, char *delimit);
 
+#define STRLEN(str) (sizeof(str) - 1)
+
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold
  * at least 'nr' entries; the number of entries currently allocated
