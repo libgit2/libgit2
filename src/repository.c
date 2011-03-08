@@ -53,7 +53,7 @@ typedef struct {
  * Callbacks for the ODB cache, implemented
  * as a hash table
  */
-uint32_t object_table_hash(const void *key, int hash_id)
+static uint32_t object_table_hash(const void *key, int hash_id)
 {
 	uint32_t r;
 	git_oid *id;

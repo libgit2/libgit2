@@ -28,21 +28,30 @@
 #include "revwalk.h"
 #include "hashtable.h"
 
-uint32_t git_revwalk__commit_hash(const void *key, int hash_id)
+#define COMMIT_SIZE(parent_count) (sizeof(commit) + (sizeof(commit_idx) * ((parent_count) - 1)))
+
+typedef struct rev_commit {
+	git_oid oid;
+	time_t time;
+	unsigned int seen:1,
+			 uninteresting:1,
+			 topo_delay:1,
+			 parsed:1;
+
+	unsigned short in_degree;
+	unsigned short out_degree;
+
+	struct rev_commit **parents;
+} rev_commit;
+
+static uint32_t object_table_hash(const void *key, int hash_id)
 {
 	uint32_t r;
-	git_commit *commit;
+	git_oid *id;
 
-	commit = (git_commit *)key;
-	memcpy(&r, commit->object.id.id + (hash_id * sizeof(uint32_t)), sizeof(r));
+	id = (git_oid *)key;
+	memcpy(&r, id->id + (hash_id * sizeof(uint32_t)), sizeof(r));
 	return r;
-}
-
-int git_revwalk__commit_keycmp(const void *key_a, const void *key_b)
-{
-	git_commit *a = (git_commit *)key_a;
-	git_commit *b = (git_commit *)key_b;
-	return git_oid_cmp(&a->object.id, &b->object.id);
 }
 
 int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
@@ -56,8 +65,8 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	memset(walk, 0x0, sizeof(git_revwalk));
 
 	walk->commits = git_hashtable_alloc(64,
-			git_revwalk__commit_hash,
-			git_revwalk__commit_keycmp);
+			object_table_hash,
+			(git_hash_keyeq_ptr)git_oid_cmp);
 
 	if (walk->commits == NULL) {
 		free(walk);
@@ -98,70 +107,83 @@ int git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 	return GIT_SUCCESS;
 }
 
-static git_revwalk_commit *commit_to_walkcommit(git_revwalk *walk, git_commit *commit_object)
+static rev_commit *commit_find(git_revwalk *walk, const git_oid *oid)
 {
-	git_revwalk_commit *commit;
+	rev_commit *commit;
 
-	commit = (git_revwalk_commit *)git_hashtable_lookup(walk->commits, commit_object);
-
-	if (commit != NULL)
+	if ((commit = git_hashtable_lookup(walk->commits, oid)) != NULL) {
+		commit->in_degree++;
 		return commit;
+	}
 
-	commit = git__malloc(sizeof(git_revwalk_commit));
+	commit = git__calloc(1, sizeof(rev_commit));
 	if (commit == NULL)
 		return NULL;
 
-	memset(commit, 0x0, sizeof(git_revwalk_commit));
+	git_oid_cpy(&commit->oid, oid);
 
-	commit->commit_object = commit_object;
-	GIT_OBJECT_INCREF(walk->repo, commit_object);
+	if (git_hashtable_insert(walk->commits, &commit->oid, commit) < GIT_SUCCESS) {
+		free(commit);
+		return NULL;
+	}
 
-	git_hashtable_insert(walk->commits, commit_object, commit);
-
+	commit->in_degree++;
 	return commit;
 }
 
-static git_revwalk_commit *insert_commit(git_revwalk *walk, git_commit *commit_object)
+static int commit_quick_parse(git_revwalk *walk, rev_commit *commit, git_rawobj *raw)
 {
-	git_revwalk_commit *commit;
-	unsigned int i;
+	const int parent_len = STRLEN("parent ");
 
-	assert(walk && commit_object);
+	unsigned char *buffer = raw->data;
+	unsigned char *buffer_end = buffer + raw->len;
+	unsigned char *parents_start;
 
-	if (commit_object->object.repo != walk->repo || walk->walking)
-		return NULL;
+	int error, i, parents = 0;
+	size_t commit_size;
 
-	commit = commit_to_walkcommit(walk, commit_object);
-	if (commit == NULL)
-		return NULL;
+	rev_commit *commit;
 
-	if (commit->seen)
-		return commit;
+	buffer += STRLEN("tree ") + GIT_OID_HEXSZ + 1;
 
-	commit->seen = 1;
+	last_parent = NULL;
+	parents = 0;
 
-	for (i = 0; i < commit->commit_object->parents.length; ++i) {
-		git_commit *parent_object;
-		git_revwalk_commit *parent;
-
-		parent_object = git_vector_get(&commit->commit_object->parents, i);
-
-		if ((parent = commit_to_walkcommit(walk, parent_object)) == NULL)
-			return NULL;
-
-		parent = insert_commit(walk, parent_object);
-		if (parent == NULL)
-			return NULL;
-
-		parent->in_degree++;
-
-		git_revwalk_list_push_back(&commit->parents, parent);
+	parents_start = buffer;
+	while (buffer < buffer_end && memcmp(buffer, "parent ", parent_len) == 0) {
+		parents++;
+		buffer += parent_len + GIT_OID_HEXSZ + 1;
 	}
 
-	if (git_revwalk_list_push_back(&walk->iterator, commit))
-		return NULL;
+	commit->parents = git__malloc(parents * sizeof(rev_commit *));
+	if (commit->parents == NULL)
+		return GIT_ENOMEM;
 
-	return commit;
+	buffer = parents_start;
+	for (i = 0; i < parents; ++i) {
+		git_oid oid;
+
+		if (git_oid_mkstr(&oid, buffer + parent_len) < GIT_SUCCESS)
+			return GIT_EOBJCORRUPTED;
+
+		commit->parents[i] = commit_find(walk, &oid);
+		buffer += parent_len + GIT_OID_HEXSZ + 1;
+	}
+
+	walk->out_degree = parents;
+
+	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
+		return GIT_EOBJCORRUPTED;
+
+	buffer = memchr(buffer, '>', buffer_end - buffer);
+	if (buffer == NULL)
+		return GIT_EOBJCORRUPTED;
+
+	time = strtol(buffer + 2, NULL, 10);
+	if (time == 0)
+		return GIT_EOBJCORRUPTED;
+
+	return GIT_SUCCESS;
 }
 
 int git_revwalk_push(git_revwalk *walk, git_commit *commit)
@@ -170,19 +192,15 @@ int git_revwalk_push(git_revwalk *walk, git_commit *commit)
 	return insert_commit(walk, commit) ? GIT_SUCCESS : GIT_ENOMEM;
 }
 
-static void mark_uninteresting(git_revwalk_commit *commit)
+static void mark_uninteresting(rev_commit *commit)
 {
-	git_revwalk_listnode *parent;
-
+	unsigned short i;
 	assert(commit);
 
 	commit->uninteresting = 1;
-	parent = commit->parents.head;
 
-	while (parent) {
-		mark_uninteresting(parent->walk_commit);
-		parent = parent->next;
-	}
+	for (i = 0; i < commit->out_degree; ++i)
+		mark_uninteresting(commit->parents[i]);
 }
 
 int git_revwalk_hide(git_revwalk *walk, git_commit *commit)
@@ -216,21 +234,18 @@ static void prepare_walk(git_revwalk *walk)
 	walk->walking = 1;
 }
 
-int git_revwalk_next(git_commit **commit, git_revwalk *walk)
+int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 {
-	git_revwalk_commit *next;
+	rev_commit *next;
 
-	assert(walk && commit);
+	assert(walk && oid);
 
 	if (!walk->walking)
 		prepare_walk(walk);
 
-	*commit = NULL;
-
 	while ((next = walk->next(&walk->iterator)) != NULL) {
 		if (!next->uninteresting) {
-			*commit = next->commit_object;
-			GIT_OBJECT_INCREF(walk->repo, *commit);
+			git_oid_cpy(oid, &next->oid);
 			return GIT_SUCCESS;
 		}
 	}
@@ -243,18 +258,15 @@ int git_revwalk_next(git_commit **commit, git_revwalk *walk)
 void git_revwalk_reset(git_revwalk *walk)
 {
 	const void *_unused;
-	git_revwalk_commit *commit;
+	rev_commit *commit;
 
 	assert(walk);
 
 	GIT_HASHTABLE_FOREACH(walk->commits, _unused, commit, {
-		GIT_OBJECT_DECREF(walk->repo, commit->commit_object);
-		git_revwalk_list_clear(&commit->parents);
 		free(commit);
 	});
 
 	git_hashtable_clear(walk->commits);
-	git_revwalk_list_clear(&walk->iterator);
 	walk->walking = 0;
 }
 
