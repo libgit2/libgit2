@@ -27,6 +27,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "object.h"
 
 /**
  * @file git2/revwalk.h
@@ -88,14 +89,15 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  * @param walker the walker being used for the traversal.
  * @param commit the commit to start from.
  */
-GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, git_commit *commit);
+GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
+
 
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
  * @param walker the walker being used for the traversal.
  * @param commit the commit that will be ignored during the traversal
  */
-GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, git_commit *commit);
+GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
 
 /**
  * Get the next commit from the revision traversal.
@@ -105,7 +107,7 @@ GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, git_commit *commit);
  * @return GIT_SUCCESS if the next commit was found;
  *	GIT_EREVWALKOVER if there are no commits left to iterate
  */
-GIT_EXTERN(int) git_revwalk_next(git_commit **commit, git_revwalk *walk);
+GIT_EXTERN(int) git_revwalk_next(git_oid *oid, git_revwalk *walk);
 
 /**
  * Change the sorting mode when iterating through the
