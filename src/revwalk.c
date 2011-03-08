@@ -322,7 +322,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 		buffer += parent_len;
 	}
 
-	commit->out_degree = parents;
+	commit->out_degree = (unsigned short)parents;
 
 	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
 		return GIT_EOBJCORRUPTED;
