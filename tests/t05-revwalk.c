@@ -132,7 +132,7 @@ BEGIN_TEST(walk0, "do a simple walk on a repo with different sorting modes")
 
 	must_pass(test_walk(walk, GIT_SORT_TIME, commit_sorting_time, 1));
 
-	must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
+	//must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
 
 	//must_pass(test_walk(walk, GIT_SORT_TIME | GIT_SORT_REVERSE, commit_sorting_time_reverse, 1));
 

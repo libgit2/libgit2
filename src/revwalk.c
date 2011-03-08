@@ -27,12 +27,13 @@
 #include "commit.h"
 #include "revwalk.h"
 #include "hashtable.h"
+#include "pqueue.h"
 
 #define COMMIT_SIZE(parent_count) (sizeof(commit) + (sizeof(commit_idx) * ((parent_count) - 1)))
 
 typedef struct commit_object {
 	git_oid oid;
-	time_t time;
+	uint32_t time;
 	unsigned int seen:1,
 			 uninteresting:1,
 			 topo_delay:1,
@@ -44,153 +45,28 @@ typedef struct commit_object {
 	struct commit_object **parents;
 } commit_object;
 
-typedef struct commit_node {
-	commit_object *item;
-	struct commit_node *next;
-} commit_node;
-
 struct git_revwalk {
 	git_repository *repo;
 
 	git_hashtable *commits;
-	commit_node *iterator;
+	git_pqueue iterator;
 	git_vector pending;
 
-	commit_node *(*insert)(commit_node **, commit_object *commit);
+	void *buffer;
+	size_t buffer_alloc;
+	size_t buffer_count;
 
 	unsigned walking:1;
 	unsigned int sorting;
 };
 
-static commit_node *clist_insert(commit_node **list_p, commit_object *commit)
+static int commit_time_cmp(void *a, void *b)
 {
-	commit_node *new_list = git__malloc(sizeof(commit_node));
-	new_list->item = commit;
-	new_list->next = *list_p;
-	*list_p = new_list;
-	return new_list;
+	commit_object *commit_a = (commit_object *)a;
+	commit_object *commit_b = (commit_object *)b;
+
+	return (commit_a->time < commit_b->time);
 }
-
-static commit_node *clist_insert_date(commit_node **list, commit_object *commit)
-{
-	commit_node **pp = list;
-	commit_node *p;
-
-	while ((p = *pp) != NULL) {
-		if (p->item->time < commit->time)
-			break;
-		pp = &p->next;
-	}
-	return clist_insert(pp, commit);
-}
-
-static commit_object *clist_pop(commit_node **stack)
-{
-	commit_node *top = *stack;
-	commit_object *item = top ? top->item : NULL;
-
-	if (top) {
-		*stack = top->next;
-		free(top);
-	}
-
-	return item;
-}
-
-static void clist_free(commit_node *list)
-{
-	while (list) {
-		commit_node *temp = list;
-		list = temp->next;
-		free(temp);
-	}
-}
-
-static void clist_datesort(commit_node **list)
-{
-	commit_node *ret = NULL;
-	while (*list) {
-		clist_insert_date(&ret, (*list)->item);
-		*list = (*list)->next;
-	}
-	*list = ret;
-}
-
-static void clist_toposort(git_revwalk *walk, commit_node **list)
-{
-	commit_node *next, *orig = *list;
-	commit_node *work, **insert;
-	commit_node **pptr;
-
-	unsigned short i;
-
-	if (!orig)
-		return;
-
-	*list = NULL;
-
-	/* update the indegree */
-	for (next = orig; next != NULL; next = next->next) {
-		for (i = 0; i < next->item->out_degree; ++i)
-			next->item->parents[i]->in_degree++;
-	}
-
-	/*
-	 * find the tips
-	 *
-	 * tips are nodes not reachable from any other node in the list
-	 *
-	 * the tips serve as a starting set for the work queue.
-	 */
-	work = NULL;
-	insert = &work;
-	for (next = orig; next != NULL; next = next->next) {
-		commit_object *commit = next->item;
-
-		if (commit->in_degree == 1)
-			insert = &clist_insert(insert, commit)->next;
-	}
-
-	/* process the list in topological order */
-	if (walk->sorting & GIT_SORT_TIME)
-		clist_datesort(&work);
-
-	pptr = list;
-	*list = NULL;
-	while (work) {
-		commit_object *commit;
-		commit_node *work_item;
-
-		work_item = work;
-		work = work_item->next;
-		work_item->next = NULL;
-
-		commit = work_item->item;
-		for (i = 0; i < commit->out_degree; ++i) {
-			commit_object *parent = commit->parents[i];
-
-			if (!parent->in_degree)
-				continue;
-
-			/*
-			 * parents are only enqueued for emission
-			 * when all their children have been emitted thereby
-			 * guaranteeing topological order.
-			 */
-			if (--parent->in_degree == 1)
-				walk->insert(&work, parent);
-		}
-		/*
-		 * work_item is a commit all of whose children
-		 * have already been emitted. we can emit it now.
-		 */
-		commit->in_degree = 0;
-		*pptr = work_item;
-		pptr = &work_item->next;
-	}
-}
-
-
 
 static uint32_t object_table_hash(const void *key, int hash_id)
 {
@@ -368,10 +244,9 @@ static void mark_uninteresting(commit_object *commit)
 			mark_uninteresting(commit->parents[i]);
 }
 
-static int prepare_commit(git_revwalk *walk, commit_object *commit)
+static int process_commit(git_revwalk *walk, commit_object *commit)
 {
 	int error;
-	unsigned short i;
 
 	if (commit->seen)
 		return GIT_SUCCESS;
@@ -384,10 +259,17 @@ static int prepare_commit(git_revwalk *walk, commit_object *commit)
 	if (commit->uninteresting)
 		mark_uninteresting(commit);
 
-	walk->insert(&walk->iterator, commit);
+	return git_pqueue_insert(&walk->iterator, commit);
+}
 
-	for (i = 0; i < commit->out_degree && error == GIT_SUCCESS; ++i)
-		error = prepare_commit(walk, commit->parents[i]);
+static int process_commit_parents(git_revwalk *walk, commit_object *commit)
+{
+	unsigned short i;
+	int error = GIT_SUCCESS;
+
+	for (i = 0; i < commit->out_degree && error == GIT_SUCCESS; ++i) {
+		error = process_commit(walk, commit->parents[i]);
+	}
 
 	return error;
 }
@@ -423,20 +305,15 @@ static int prepare_walk(git_revwalk *walk)
 	unsigned int i;
 	int error;
 
-	if (walk->sorting & GIT_SORT_TIME)
-		walk->insert = &clist_insert_date;
-	else
-		walk->insert = &clist_insert;
+	if ((error = git_pqueue_init(&walk->iterator, 32, commit_time_cmp)) < GIT_SUCCESS)
+		return error;
 
 	for (i = 0; i < walk->pending.length; ++i) {
 		commit_object *commit = walk->pending.contents[i];
-		if ((error = prepare_commit(walk, commit)) < GIT_SUCCESS) {
+		if ((error = process_commit(walk, commit)) < GIT_SUCCESS) {
 			return error;
 		}
 	}
-
-	if (walk->sorting & GIT_SORT_TOPOLOGICAL)
-		clist_toposort(walk, &walk->iterator);
 
 	walk->walking = 1;
 	return GIT_SUCCESS;
@@ -454,7 +331,10 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 			return error;
 	}
 
-	while ((next = clist_pop(&walk->iterator)) != NULL) {
+	while ((next = git_pqueue_pop(&walk->iterator)) != NULL) {
+		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
+			return error;
+
 		if (!next->uninteresting) {
 			git_oid_cpy(oid, &next->oid);
 			return GIT_SUCCESS;
@@ -476,11 +356,7 @@ void git_revwalk_reset(git_revwalk *walk)
 		commit->in_degree = 1;
 	);
 
-	if (walk->iterator) {
-		clist_free(walk->iterator);
-		walk->iterator = NULL;
-	}
-
+	git_pqueue_free(&walk->iterator);
 	walk->walking = 0;
 }
 
