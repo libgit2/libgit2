@@ -29,8 +29,6 @@
 #include "hashtable.h"
 #include "pqueue.h"
 
-#define COMMIT_SIZE(parent_count) (sizeof(commit) + (sizeof(commit_idx) * ((parent_count) - 1)))
-
 typedef struct commit_object {
 	git_oid oid;
 	uint32_t time;
@@ -52,9 +50,8 @@ struct git_revwalk {
 	git_pqueue iterator;
 	git_vector pending;
 
-	void *buffer;
-	size_t buffer_alloc;
-	size_t buffer_count;
+	git_vector memory_alloc;
+	size_t chunk_size;
 
 	unsigned walking:1;
 	unsigned int sorting;
@@ -78,6 +75,44 @@ static uint32_t object_table_hash(const void *key, int hash_id)
 	return r;
 }
 
+#define COMMITS_PER_CHUNK 128
+#define CHUNK_STEP 64
+#define PARENTS_PER_COMMIT ((CHUNK_STEP - sizeof(commit_object)) / sizeof(commit_object *))
+
+static int alloc_chunk(git_revwalk *walk)
+{
+	void *chunk;
+
+	chunk = git__calloc(COMMITS_PER_CHUNK, CHUNK_STEP);
+	if (chunk == NULL)
+		return GIT_ENOMEM;
+
+	walk->chunk_size = 0;
+	return git_vector_insert(&walk->memory_alloc, chunk);
+}
+
+static commit_object *alloc_commit(git_revwalk *walk)
+{
+	unsigned char *chunk;
+
+	if (walk->chunk_size == COMMITS_PER_CHUNK)
+		alloc_chunk(walk);
+
+	chunk = git_vector_get(&walk->memory_alloc, walk->memory_alloc.length - 1);
+	chunk += (walk->chunk_size * CHUNK_STEP);
+	walk->chunk_size++;
+
+	return (commit_object *)chunk;
+}
+
+static commit_object **alloc_parents(commit_object *commit, size_t n_parents)
+{
+	if (n_parents <= PARENTS_PER_COMMIT)
+		return (commit_object **)((unsigned char *)commit + sizeof(commit_object));
+
+	return git__malloc(n_parents * sizeof(commit_object *));
+}
+
 int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 {
 	git_revwalk *walk;
@@ -98,6 +133,8 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	}
 
 	git_vector_init(&walk->pending, 8, NULL);
+	git_vector_init(&walk->memory_alloc, 8, NULL);
+	alloc_chunk(walk);
 
 	walk->repo = repo;
 
@@ -107,19 +144,19 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 void git_revwalk_free(git_revwalk *walk)
 {
-	const void *_unused;
-	commit_object *commit;
+	unsigned int i;
 
 	if (walk == NULL)
 		return;
 
-	GIT_HASHTABLE_FOREACH(walk->commits, _unused, commit,
-		free(commit);
-	);
+	for (i = 0; i < walk->memory_alloc.length; ++i) {
+		free(git_vector_get(&walk->memory_alloc, i));
+	}
 
 	git_revwalk_reset(walk);
 	git_hashtable_free(walk->commits);
 	git_vector_free(&walk->pending);
+	git_vector_free(&walk->memory_alloc);
 	free(walk);
 }
 
@@ -148,7 +185,7 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 	if ((commit = git_hashtable_lookup(walk->commits, oid)) != NULL)
 		return commit;
 
-	commit = git__calloc(1, sizeof(commit_object));
+	commit = alloc_commit(walk);
 	if (commit == NULL)
 		return NULL;
 
@@ -180,7 +217,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 		buffer += parent_len;
 	}
 
-	commit->parents = git__malloc(parents * sizeof(commit_object *));
+	commit->parents = alloc_parents(commit, parents);
 	if (commit->parents == NULL)
 		return GIT_ENOMEM;
 
