@@ -27,7 +27,7 @@ int git_pqueue_init(git_pqueue *q, size_t n, git_pqueue_cmp cmppri)
 	assert(q);
 
     /* Need to allocate n+1 elements since element 0 isn't used. */
-    if (!(q->d = malloc((n + 1) * sizeof(void *))))
+    if ((q->d = malloc((n + 1) * sizeof(void *))) == NULL)
 		return GIT_ENOMEM;
 
     q->size = 1;
@@ -87,7 +87,7 @@ static void percolate_down(git_pqueue *q, size_t i)
     size_t child_node;
     void *moving_node = q->d[i];
 
-    while ((child_node = maxchild(q, i)) &&
+    while ((child_node = maxchild(q, i)) != 0 &&
            q->cmppri(moving_node, q->d[child_node])) {
         q->d[i] = q->d[child_node];
         i = child_node;
@@ -108,8 +108,9 @@ int git_pqueue_insert(git_pqueue *q, void *d)
     /* allocate more memory if necessary */
     if (q->size >= q->avail) {
         newsize = q->size + q->step;
-        if (!(tmp = realloc(q->d, sizeof(void *) * newsize)))
-            return 1;
+        if ((tmp = realloc(q->d, sizeof(void *) * newsize)) == NULL)
+            return GIT_ENOMEM;
+
         q->d = tmp;
         q->avail = newsize;
     }
@@ -119,7 +120,7 @@ int git_pqueue_insert(git_pqueue *q, void *d)
     q->d[i] = d;
     bubble_up(q, i);
 
-    return 0;
+    return GIT_SUCCESS;
 }
 
 
