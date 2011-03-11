@@ -25,6 +25,8 @@ def options(opt):
 PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
     opt.add_option('--debug', action='store_true', default=False,
         help='Compile with debug symbols')
+    opt.add_option('--pic', action='store_true', default=False,
+        help='Compile to position independent code')
     opt.add_option('--msvc', action='store', default=None,
         help='Force a specific MSVC++ version (7.1, 8.0, 9.0, 10.0), if more than one is installed')
     opt.add_option('--arch', action='store', default='x86',
@@ -47,6 +49,9 @@ def configure(conf):
     zlib_name = 'z'
 
     conf.env.CFLAGS = CFLAGS_UNIX + (CFLAGS_UNIX_DBG if dbg else [])
+
+    if conf.options.pic:
+        conf.env.CFLAGS += ['-fPIC']
 
     if conf.env.DEST_OS == 'win32':
         conf.env.PLATFORM = 'win32'
