@@ -149,13 +149,14 @@ void git_revwalk_free(git_revwalk *walk)
 	if (walk == NULL)
 		return;
 
+	git_revwalk_reset(walk);
+	git_hashtable_free(walk->commits);
+	git_vector_free(&walk->pending);
+
 	for (i = 0; i < walk->memory_alloc.length; ++i) {
 		free(git_vector_get(&walk->memory_alloc, i));
 	}
 
-	git_revwalk_reset(walk);
-	git_hashtable_free(walk->commits);
-	git_vector_free(&walk->pending);
 	git_vector_free(&walk->memory_alloc);
 	free(walk);
 }
