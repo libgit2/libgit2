@@ -261,8 +261,12 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 	if (commit->parsed)
 		return GIT_SUCCESS;
 
-	if ((error = git_odb_read(&data, walk->repo->db, &commit->oid)) < GIT_SUCCESS) {
+	if ((error = git_odb_read(&data, walk->repo->db, &commit->oid)) < GIT_SUCCESS)
 		return error;
+
+	if (data.type != GIT_OBJ_COMMIT) {
+		git_rawobj_close(&data);
+		return GIT_EOBJTYPE;
 	}
 
 	error = commit_quick_parse(walk, commit, &data);
