@@ -145,6 +145,7 @@ typedef enum {
 	GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
 	GIT_REF_PACKED = 4,
 	GIT_REF_HAS_PEEL = 8,
+	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
 } git_rtype;
 
 /** @} */

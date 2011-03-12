@@ -710,6 +710,18 @@ BEGIN_TEST(normalize2, "tests borrowed from JGit")
 	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1.hour.ago}", NULL));
 END_TEST
 
+BEGIN_TEST(list0, "try to list all the references in our test repo")
+	git_repository *repo;
+	git_strarray ref_list;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_reference_listall(&ref_list, repo, GIT_REF_LISTALL));
+	must_be_true(ref_list.count == 8); /* 8 refs in total if we include the packed ones */
+
+	git_strarray_free(&ref_list);
+	git_repository_free(repo);
+END_TEST
+
 
 BEGIN_SUITE(refs)
 	ADD_TEST(readtag0);
@@ -741,4 +753,5 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename4);
 
 	ADD_TEST(delete0);
+	ADD_TEST(list0);
 END_SUITE
