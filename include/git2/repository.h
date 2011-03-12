@@ -154,12 +154,20 @@ GIT_EXTERN(int) git_repository_index(git_index **index, git_repository *repo);
 
 /**
  * Free a previously allocated repository
+ *
  * @param repo repository handle to close. If NULL nothing occurs.
  */
 GIT_EXTERN(void) git_repository_free(git_repository *repo);
 
-
-GIT_EXTERN(void) git_repository_free__no_gc(git_repository *repo);
+/**
+ * Force a garbage collector pass on the repository
+ *
+ * This will force-free any cached objects that have been
+ * previously marked by the user as closed (`git_object_close`).
+ *
+ * @param repo repository handle to collect. If NULL nothing occurs.
+ */
+GIT_EXTERN(void) git_repository_close(git_repository *repo);
 
 /**
  * Creates a new Git repository in the given folder.
