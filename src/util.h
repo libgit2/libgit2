@@ -3,7 +3,7 @@
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x)  (CHAR_BIT * sizeof(x))
-#define MSB(type, x, bits) ((x) & (type)(~0ULL << (bitsizeof(x) - (bits))))
+#define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
 
 /* 
  * Don't wrap malloc/calloc.

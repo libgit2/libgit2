@@ -1195,7 +1195,7 @@ static off_t get_delta_base(
 		base_offset = c & 127;
 		while (c & 128) {
 			base_offset += 1;
-			if (!base_offset || MSB(off_t, base_offset, 7))
+			if (!base_offset || MSB(base_offset, 7))
 				return 0;  /* overflow */
 			c = base_info[used++];
 			base_offset = (base_offset << 7) + (c & 127);
