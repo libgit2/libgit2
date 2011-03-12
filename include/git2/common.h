@@ -27,6 +27,7 @@
 
 #include "thread-utils.h"
 #include <time.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 # define GIT_BEGIN_DECL  extern "C" {
@@ -158,6 +159,21 @@
 #define GIT_EINVALIDREFSTATE (GIT_ERROR - 21)
 
 GIT_BEGIN_DECL
+
+typedef struct {
+	char **strings;
+	size_t count;
+} git_strarray;
+
+GIT_INLINE(void) git_strarray_free(git_strarray *array)
+{
+	size_t i;
+	for (i = 0; i < array->count; ++i)
+		free(array->strings[i]);
+
+	free(array->strings);
+}
+
 /** @} */
 GIT_END_DECL
 #endif
