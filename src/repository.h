@@ -27,8 +27,8 @@ struct git_object {
 	git_oid id;
 	git_repository *repo;
 	git_odb_source source;
-	unsigned short refcount;
-	unsigned char in_memory, modified;
+	unsigned int lru;
+	unsigned char in_memory, modified, can_free, _pad;
 };
 
 struct git_repository {
@@ -45,7 +45,8 @@ struct git_repository {
 	char *path_odb;
 	char *path_workdir;
 
-	unsigned is_bare:1, gc_enabled:1;
+	unsigned is_bare:1;
+	unsigned int lru_counter;
 };
 
 int git_object__source_open(git_object *object);
@@ -60,20 +61,5 @@ int git__source_write(git_odb_source *source, const void *bytes, size_t len);
 
 int git__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_end, const char *header);
 int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid);
-
-#define GIT_OBJECT_INCREF(repo, ob) git_object__incref((repo), (git_object *)(ob))
-#define GIT_OBJECT_DECREF(repo, ob) git_object__decref((repo), (git_object *)(ob)) 
-
-GIT_INLINE(void) git_object__incref(git_repository *repo, struct git_object *object)
-{
-	if (repo && repo->gc_enabled && object)
-		object->refcount++;
-}
-
-GIT_INLINE(void) git_object__decref(git_repository *repo, struct git_object *object)
-{
-	if (repo && repo->gc_enabled && object)
-		git_object_close(object);
-}
 
 #endif

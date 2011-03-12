@@ -79,10 +79,18 @@ GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
 
 /**
  * Get the tagged object of a tag
+ * @param target pointer where to store the target
  * @param tag a previously loaded tag.
- * @return reference to a repository object
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(const git_object *) git_tag_target(git_tag *t);
+GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *t);
+
+/**
+ * Get the OID of the tagged object of a tag
+ * @param tag a previously loaded tag.
+ * @return pointer to the OID
+ */
+GIT_EXTERN(const git_oid *) git_tag_target_oid(git_tag *t);
 
 /**
  * Get the type of a tag's tagged object
@@ -117,7 +125,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *t);
  * @param tag The tag to modify
  * @param target the new tagged target
  */
-GIT_EXTERN(void) git_tag_set_target(git_tag *tag, git_object *target);
+GIT_EXTERN(int) git_tag_set_target(git_tag *tag, git_object *target);
 
 /**
  * Set the name of a tag
@@ -130,6 +138,7 @@ GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
  * Set the tagger of a tag
  * @param tag The tag to modify
  * @param tagger_sig signature of the tagging action
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const git_signature *tagger_sig);
 

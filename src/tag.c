@@ -35,7 +35,6 @@
 void git_tag__free(git_tag *tag)
 {
 	git_signature_free(tag->tagger);
-	GIT_OBJECT_DECREF(tag->object.repo, tag->target);
 	free(tag->message);
 	free(tag->tag_name);
 	free(tag);
@@ -46,23 +45,31 @@ const git_oid *git_tag_id(git_tag *c)
 	return git_object_id((git_object *)c);
 }
 
-const git_object *git_tag_target(git_tag *t)
+int git_tag_target(git_object **target, git_tag *t)
 {
 	assert(t);
-	GIT_OBJECT_INCREF(t->object.repo, t->target);
-	return t->target;
+	return git_object_lookup(target, t->object.repo, &t->target, t->type);
 }
 
-void git_tag_set_target(git_tag *tag, git_object *target)
+const git_oid *git_tag_target_oid(git_tag *t)
 {
+	assert(t);
+	return &t->target;
+}
+
+int git_tag_set_target(git_tag *tag, git_object *target)
+{
+	const git_oid *oid;
+
 	assert(tag && target);
 
-	GIT_OBJECT_DECREF(tag->object.repo, tag->target);
-	GIT_OBJECT_INCREF(tag->object.repo, target);
+	if ((oid = git_object_id(target)) == NULL)
+		return GIT_EMISSINGOBJDATA;
 
 	tag->object.modified = 1;
-	tag->target = target;
+	git_oid_cpy(&tag->target, oid);
 	tag->type = git_object_type(target);
+	return GIT_SUCCESS;
 }
 
 git_otype git_tag_type(git_tag *t)
@@ -81,7 +88,6 @@ void git_tag_set_name(git_tag *tag, const char *name)
 {
 	assert(tag && name);
 
-	/* TODO: sanity check? no newlines in message */
 	tag->object.modified = 1;
 
 	if (tag->tag_name)
@@ -128,12 +134,11 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
 	};
 
-	git_oid target_oid;
 	unsigned int i, text_len;
 	char *search;
 	int error;
 
-	if ((error = git__parse_oid(&target_oid, &buffer, buffer_end, "object ")) < 0)
+	if ((error = git__parse_oid(&tag->target, &buffer, buffer_end, "object ")) < 0)
 		return error;
 
 	if (buffer + 5 >= buffer_end)
@@ -160,11 +165,6 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 
 	if (tag->type == GIT_OBJ_BAD)
 		return GIT_EOBJCORRUPTED;
-
-	git_object_close(tag->target);
-	error = git_object_lookup(&tag->target, tag->object.repo, &target_oid, tag->type);
-	if (error < 0)
-		return error;
 
 	if (buffer + 4 >= buffer_end)
 		return GIT_EOBJCORRUPTED;
@@ -210,10 +210,10 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 
 int git_tag__writeback(git_tag *tag, git_odb_source *src)
 {
-	if (tag->target == NULL || tag->tag_name == NULL || tag->tagger == NULL)
+	if (tag->tag_name == NULL || tag->tagger == NULL)
 		return GIT_EMISSINGOBJDATA;
 
-	git__write_oid(src, "object", git_object_id(tag->target));
+	git__write_oid(src, "object", &tag->target);
 	git__source_printf(src, "type %s\n", git_object_type2string(tag->type));
 	git__source_printf(src, "tag %s\n", tag->tag_name);
 	git_signature__write(src, "tagger", tag->tagger);

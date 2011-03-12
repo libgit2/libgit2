@@ -131,10 +131,10 @@ GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
  * Close an open object
  *
  * This method instructs the library to close an existing
- * object; note that git_objects are owned by the repository
- * and are reference counted, so the object may or may not be
- * freed after this library call, depending on whether any other 
- * objects still depend on it.
+ * object; note that git_objects are owned and cached by the repository
+ * so the object may or may not be freed after this library call,
+ * depending on how agressive is the caching mechanism used
+ * by the repository.
  *
  * IMPORTANT:
  * It is *not* necessary to call this method when you stop using

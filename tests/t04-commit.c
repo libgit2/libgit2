@@ -390,11 +390,11 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		must_be_true(commit_time > 0);
 		must_be_true(parents <= 2);
 		for (p = 0;p < parents;p++) {
-			parent = git_commit_parent(commit, p);
+			must_pass(git_commit_parent(&parent, commit, p));
 			must_be_true(parent != NULL);
 			must_be_true(git_commit_author(parent) != NULL); // is it really a commit?
 		}
-		must_be_true(git_commit_parent(commit, parents) == NULL);
+		must_fail(git_commit_parent(&parent, commit, parents));
 	}
 
 	git_repository_free(repo);

@@ -46,23 +46,21 @@ static void clear_parents(git_commit *commit)
 {
 	unsigned int i;
 
-	for (i = 0; i < commit->parents.length; ++i) {
-		git_commit *parent = git_vector_get(&commit->parents, i);
-		GIT_OBJECT_DECREF(commit->object.repo, parent);
+	for (i = 0; i < commit->parent_oids.length; ++i) {
+		git_oid *parent = git_vector_get(&commit->parent_oids, i);
+		free(parent);
 	}
 
-	git_vector_clear(&commit->parents);
+	git_vector_clear(&commit->parent_oids);
 }
 
 void git_commit__free(git_commit *commit)
 {
 	clear_parents(commit);
-	git_vector_free(&commit->parents);
+	git_vector_free(&commit->parent_oids);
 
 	git_signature_free(commit->author);
 	git_signature_free(commit->committer);
-
-	GIT_OBJECT_DECREF(commit->object.repo, commit->tree);
 
 	free(commit->message);
 	free(commit->message_short);
@@ -78,16 +76,13 @@ int git_commit__writeback(git_commit *commit, git_odb_source *src)
 {
 	unsigned int i;
 
-	if (commit->tree == NULL)
-		return GIT_EMISSINGOBJDATA;
+	git__write_oid(src, "tree", &commit->tree_oid);
 
-	git__write_oid(src, "tree", git_tree_id(commit->tree));
+	for (i = 0; i < commit->parent_oids.length; ++i) {
+		git_oid *parent_oid;
 
-	for (i = 0; i < commit->parents.length; ++i) {
-		git_commit *parent;
-
-		parent = git_vector_get(&commit->parents, i);
-		git__write_oid(src, "parent", git_commit_id(parent));
+		parent_oid = git_vector_get(&commit->parent_oids, i);
+		git__write_oid(src, "parent", parent_oid);
 	}
 
 	if (commit->author == NULL)
@@ -103,66 +98,49 @@ int git_commit__writeback(git_commit *commit, git_odb_source *src)
 	if (commit->message != NULL) {
 		git__source_write(src, "\n", 1);
 		git__source_write(src, commit->message, strlen(commit->message));
-        }
-
-	/* Mark the commit as having all attributes */
-	commit->full_parse = 1;
+	}
 
 	return GIT_SUCCESS;
 }
 
-int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int parse_flags)
+int commit_parse_buffer(git_commit *commit, void *data, size_t len)
 {
 	char *buffer = (char *)data;
 	const char *buffer_end = (char *)data + len;
 
-	git_oid oid;
+	git_oid parent_oid;
 	int error;
 
 	/* first parse; the vector hasn't been initialized yet */
-	if (commit->parents.contents == NULL) {
-		git_vector_init(&commit->parents, 4, NULL);
+	if (commit->parent_oids.contents == NULL) {
+		git_vector_init(&commit->parent_oids, 4, NULL);
 	}
 
 	clear_parents(commit);
 
-
-	if ((error = git__parse_oid(&oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
-		return error;
-
-	GIT_OBJECT_DECREF(commit->object.repo, commit->tree);
-	if ((error = git_object_lookup((git_object **)&commit->tree, commit->object.repo, &oid, GIT_OBJ_TREE)) < GIT_SUCCESS)
+	if ((error = git__parse_oid(&commit->tree_oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
 		return error;
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
-	while (git__parse_oid(&oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
-		git_commit *parent;
+	while (git__parse_oid(&parent_oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
+		git_oid *new_oid;
 
-		if ((error = git_object_lookup((git_object **)&parent, commit->object.repo, &oid, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
-			return error;
+		new_oid = git__malloc(sizeof(git_oid));
+		git_oid_cpy(new_oid, &parent_oid);
 
-		if (git_vector_insert(&commit->parents, parent) < GIT_SUCCESS)
+		if (git_vector_insert(&commit->parent_oids, new_oid) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 	}
 
+	if (commit->author)
+		git_signature_free(commit->author);
 
-	if (parse_flags & COMMIT_FULL_PARSE) {
-		if (commit->author)
-			git_signature_free(commit->author);
-
-		commit->author = git__malloc(sizeof(git_signature));
-		if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
-			return error;
-
-	} else {
-		if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
-			return GIT_EOBJCORRUPTED;
-
-		buffer++;
-	}
+	commit->author = git__malloc(sizeof(git_signature));
+	if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
+		return error;
 
 	/* Always parse the committer; we need the commit time */
 	if (commit->committer)
@@ -176,7 +154,7 @@ int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int
 	while (buffer <= buffer_end && *buffer == '\n')
 		buffer++;
 
-	if (parse_flags & COMMIT_FULL_PARSE && buffer < buffer_end) {
+	if (buffer < buffer_end) {
 		const char *line_end;
 		size_t message_len = buffer_end - buffer;
 
@@ -203,106 +181,81 @@ int git_commit__parse(git_commit *commit)
 {
 	assert(commit && commit->object.source.open);
 	return commit_parse_buffer(commit,
-			commit->object.source.raw.data, commit->object.source.raw.len, COMMIT_BASIC_PARSE);
+			commit->object.source.raw.data, commit->object.source.raw.len);
 }
 
-int git_commit__parse_full(git_commit *commit)
-{
-	int error;
-
-	if (commit->full_parse)
-		return GIT_SUCCESS;
-
-	if ((error = git_object__source_open((git_object *)commit)) < GIT_SUCCESS)
-		return error;
-
-	error = commit_parse_buffer(commit,
-			commit->object.source.raw.data, commit->object.source.raw.len, COMMIT_FULL_PARSE);
-
-	git_object__source_close((git_object *)commit);
-
-	commit->full_parse = 1;
-	return error;
-}
-
-
-
-#define GIT_COMMIT_GETTER(_rvalue, _name) \
-	const _rvalue git_commit_##_name(git_commit *commit) \
+#define GIT_COMMIT_GETTER(_rvalue, _name, _return) \
+	_rvalue git_commit_##_name(git_commit *commit) \
 	{\
 		assert(commit); \
-		if (commit->_name) \
-			return commit->_name; \
-		if (!commit->object.in_memory) \
-			git_commit__parse_full(commit); \
-		return commit->_name; \
+		return _return; \
 	}
 
-#define CHECK_FULL_PARSE() \
-	if (!commit->object.in_memory && !commit->full_parse)\
-		git_commit__parse_full(commit); 
+GIT_COMMIT_GETTER(const git_signature *, author, commit->author)
+GIT_COMMIT_GETTER(const git_signature *, committer, commit->committer)
+GIT_COMMIT_GETTER(const char *, message, commit->message)
+GIT_COMMIT_GETTER(const char *, message_short, commit->message_short)
+GIT_COMMIT_GETTER(time_t, time, commit->committer->when.time)
+GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
+GIT_COMMIT_GETTER(unsigned int, parentcount, commit->parent_oids.length)
 
-const git_tree *git_commit_tree(git_commit *commit)
+
+int git_commit_tree(git_tree **tree_out, git_commit *commit)
 {
 	assert(commit);
-
-	if (!commit->object.in_memory && commit->tree == NULL)
-		git_commit__parse_full(commit);
-
-	GIT_OBJECT_INCREF(commit->object.repo, commit->tree);
-	return commit->tree;
+	return git_tree_lookup(tree_out, commit->object.repo, &commit->tree_oid);
 }
 
-GIT_COMMIT_GETTER(git_signature *, author)
-GIT_COMMIT_GETTER(git_signature *, committer)
-GIT_COMMIT_GETTER(char *, message)
-GIT_COMMIT_GETTER(char *, message_short)
-
-time_t git_commit_time(git_commit *commit)
+int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 {
-	assert(commit && commit->committer);
-	return commit->committer->when.time;
-}
-
-int git_commit_time_offset(git_commit *commit)
-{
-	assert(commit && commit->committer);
-	return commit->committer->when.offset;
-}
-
-unsigned int git_commit_parentcount(git_commit *commit)
-{
-	assert(commit);
-	return commit->parents.length;
-}
-
-git_commit *git_commit_parent(git_commit *commit, unsigned int n)
-{
-	git_commit *parent;
-
+	git_oid *parent_oid;
 	assert(commit);
 
-	parent = git_vector_get(&commit->parents, n);
-	GIT_OBJECT_INCREF(commit->object.repo, parent);
-	return parent;
+	parent_oid = git_vector_get(&commit->parent_oids, n);
+	if (parent_oid == NULL)
+		return GIT_ENOTFOUND;
+
+	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
 
-void git_commit_set_tree(git_commit *commit, git_tree *tree)
+
+
+int git_commit_set_tree(git_commit *commit, git_tree *tree)
 {
+	const git_oid *oid;
+
 	assert(commit && tree);
-	commit->object.modified = 1;
-	CHECK_FULL_PARSE();
 
-	GIT_OBJECT_DECREF(commit->object.repo, commit->tree);
-	GIT_OBJECT_INCREF(commit->object.repo, tree);
-	commit->tree = tree;
+	if ((oid = git_object_id((git_object *)tree)) == NULL)
+		return GIT_EMISSINGOBJDATA;
+
+	commit->object.modified = 1;
+	git_oid_cpy(&commit->tree_oid, oid);
+	return GIT_SUCCESS;
+}
+
+int git_commit_add_parent(git_commit *commit, git_commit *new_parent)
+{
+	const git_oid *parent_oid;
+	git_oid *new_oid;
+	assert(commit && new_parent);
+
+	if ((parent_oid = git_object_id((git_object *)new_parent)) == NULL)
+		return GIT_EMISSINGOBJDATA;
+
+	new_oid = git__malloc(sizeof(git_oid));
+	if (new_oid == NULL)
+		return GIT_ENOMEM;
+
+	commit->object.modified = 1;
+	git_oid_cpy(new_oid, parent_oid);
+	return git_vector_insert(&commit->parent_oids, new_oid);
 }
 
 void git_commit_set_author(git_commit *commit, const git_signature *author_sig)
 {
 	assert(commit && author_sig);
 	commit->object.modified = 1;
-	CHECK_FULL_PARSE();
 
 	git_signature_free(commit->author);
 	commit->author = git_signature_dup(author_sig);
@@ -312,7 +265,6 @@ void git_commit_set_committer(git_commit *commit, const git_signature *committer
 {
 	assert(commit && committer_sig);
 	commit->object.modified = 1;
-	CHECK_FULL_PARSE();
 
 	git_signature_free(commit->committer);
 	commit->committer = git_signature_dup(committer_sig);
@@ -324,7 +276,6 @@ void git_commit_set_message(git_commit *commit, const char *message)
 	size_t message_len;
 
 	commit->object.modified = 1;
-	CHECK_FULL_PARSE();
 
 	if (commit->message)
 		free(commit->message);
@@ -347,12 +298,3 @@ void git_commit_set_message(git_commit *commit, const char *message)
 	commit->message_short[message_len] = 0;
 }
 
-int git_commit_add_parent(git_commit *commit, git_commit *new_parent)
-{
-	assert(commit && new_parent);
-
-	CHECK_FULL_PARSE();
-	commit->object.modified = 1;
-	GIT_OBJECT_INCREF(commit->object.repo, new_parent);
-	return git_vector_insert(&commit->parents, new_parent);
-}

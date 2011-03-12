@@ -681,7 +681,6 @@ static int packed_write_ref(reference_oid *ref, git_filebuf *file)
 static int packed_find_peel(reference_oid *ref)
 {
 	git_tag *tag;
-	const git_object *peeled_target;
 	int error;
 
 	if (ref->ref.type & GIT_REF_HAS_PEEL)
@@ -706,11 +705,7 @@ static int packed_find_peel(reference_oid *ref)
 	/*
 	 * Find the object pointed at by this tag
 	 */
-	peeled_target = git_tag_target(tag);
-	if (peeled_target == NULL)
-		return GIT_EOBJCORRUPTED;
-
-	git_oid_cpy(&ref->peel_target, git_object_id(peeled_target));
+	git_oid_cpy(&ref->peel_target, git_tag_target_oid(tag));
 	ref->ref.type |= GIT_REF_HAS_PEEL;
 
 	/* 

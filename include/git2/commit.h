@@ -122,10 +122,11 @@ GIT_EXTERN(const git_signature *) git_commit_author(git_commit *commit);
 
 /**
  * Get the tree pointed to by a commit.
+ * @param tree_out pointer where to store the tree object
  * @param commit a previously loaded commit.
- * @return the tree of a commit
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(const git_tree *) git_commit_tree(git_commit *commit);
+GIT_EXTERN(int) git_commit_tree(git_tree **tree_out, git_commit *commit);
 
 /**
  * Get the number of parents of this commit
@@ -137,11 +138,13 @@ GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
 
 /**
  * Get the specified parent of the commit.
+ *
+ * @param parent Pointer where to store the parent commit
  * @param commit a previously loaded commit.
- * @param n the position of the entry
- * @return a pointer to the commit; NULL if out of bounds
+ * @param n the position of the parent (from 0 to `parentcount`)
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_commit *) git_commit_parent(git_commit *commit, unsigned int n);
+GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n);
 
 /**
  * Add a new parent commit to an existing commit
@@ -176,8 +179,9 @@ GIT_EXTERN(void) git_commit_set_author(git_commit *commit, const git_signature *
  * Set the tree which is pointed to by a commit
  * @param commit the commit object
  * @param tree the new tree
+ * @param 0 on success; error code otherwise
  */
-GIT_EXTERN(void) git_commit_set_tree(git_commit *commit, git_tree *tree);
+GIT_EXTERN(int) git_commit_set_tree(git_commit *commit, git_tree *tree);
 
 /** @} */
 GIT_END_DECL

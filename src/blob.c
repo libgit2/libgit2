@@ -130,9 +130,7 @@ int git_blob_writefile(git_oid *written_id, git_repository *repo, const char *pa
 
 	git_oid_cpy(written_id, git_object_id((git_object *)blob));
 
-	/* FIXME: maybe we don't want to free this already?
-	 * the user may want to access it again */
-	GIT_OBJECT_DECREF(repo, blob);
+	git_object_close((git_object*)blob);
 	return GIT_SUCCESS;
 }
 

@@ -48,12 +48,12 @@ BEGIN_TEST(read0, "read and parse a tag from the repository")
 	must_be_true(strcmp(git_tag_name(tag1), "test") == 0);
 	must_be_true(git_tag_type(tag1) == GIT_OBJ_TAG);
 
-	tag2 = (git_tag *)git_tag_target(tag1);
+	must_pass(git_tag_target((git_object **)&tag2, tag1));
 	must_be_true(tag2 != NULL);
 
 	must_be_true(git_oid_cmp(&id2, git_tag_id(tag2)) == 0);
 
-	commit = (git_commit *)git_tag_target(tag2);
+	must_pass(git_tag_target((git_object **)&commit, tag2));
 	must_be_true(commit != NULL);
 
 	must_be_true(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
