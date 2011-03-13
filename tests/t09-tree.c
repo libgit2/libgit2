@@ -66,6 +66,10 @@ BEGIN_TEST(read1, "read a tree from the repository")
 
 	must_be_true(git_tree_entrycount(tree) == 3);
 
+	/* GH-86: git_object_lookup() should also check the type if the object comes from the cache */
+	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_TREE) == 0);
+	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_BLOB) == GIT_EINVALIDTYPE);
+
 	entry = git_tree_entry_byname(tree, "README");
 	must_be_true(entry != NULL);
 
