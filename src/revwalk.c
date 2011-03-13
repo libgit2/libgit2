@@ -43,12 +43,24 @@ typedef struct commit_object {
 	struct commit_object **parents;
 } commit_object;
 
+typedef struct commit_list {
+	commit_object *item;
+	struct commit_list *next;
+} commit_list;
+
 struct git_revwalk {
 	git_repository *repo;
 
 	git_hashtable *commits;
-	git_pqueue iterator;
 	git_vector pending;
+
+	commit_list *iterator_topo;
+	commit_list *iterator_rand;
+	commit_list *iterator_reverse;
+	git_pqueue iterator_time;
+
+	int (*get_next)(commit_object **, git_revwalk *);
+	int (*enqueue)(git_revwalk *, commit_object *);
 
 	git_vector memory_alloc;
 	size_t chunk_size;
@@ -56,6 +68,36 @@ struct git_revwalk {
 	unsigned walking:1;
 	unsigned int sorting;
 };
+
+commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
+{
+	commit_list *new_list = git__malloc(sizeof(commit_list));
+	new_list->item = item;
+	new_list->next = *list_p;
+	*list_p = new_list;
+	return new_list;
+}
+
+void commit_list_free(commit_list *list)
+{
+	while (list) {
+		commit_list *temp = list;
+		list = temp->next;
+		free(temp);
+	}
+}
+
+commit_object *commit_list_pop(commit_list **stack)
+{
+	commit_list *top = *stack;
+	commit_object *item = top ? top->item : NULL;
+
+	if (top) {
+		*stack = top->next;
+		free(top);
+	}
+	return item;
+}
 
 static int commit_time_cmp(void *a, void *b)
 {
@@ -301,7 +343,7 @@ static int process_commit(git_revwalk *walk, commit_object *commit)
 	if (commit->uninteresting)
 		mark_uninteresting(commit);
 
-	return git_pqueue_insert(&walk->iterator, commit);
+	return walk->enqueue(walk, commit);
 }
 
 static int process_commit_parents(git_revwalk *walk, commit_object *commit)
@@ -342,13 +384,103 @@ int git_revwalk_hide(git_revwalk *walk, const git_oid *oid)
 	return push_commit(walk, oid, 1);
 }
 
+static int revwalk_enqueue_timesort(git_revwalk *walk, commit_object *commit)
+{
+	return git_pqueue_insert(&walk->iterator_time, commit);
+}
+
+static int revwalk_enqueue_unsorted(git_revwalk *walk, commit_object *commit)
+{
+	return commit_list_insert(commit, &walk->iterator_rand) ? GIT_SUCCESS : GIT_ENOMEM;
+}
+
+static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
+{
+	int error;
+	commit_object *next;
+
+	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
+		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
+			return error;
+
+		if (!next->uninteresting) {
+			*object_out = next;
+			return GIT_SUCCESS;
+		}
+	}
+
+	return GIT_EREVWALKOVER;
+}
+
+static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
+{
+	int error;
+	commit_object *next;
+
+	while ((next = commit_list_pop(&walk->iterator_rand)) != NULL) {
+		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
+			return error;
+
+		if (!next->uninteresting) {
+			*object_out = next;
+			return GIT_SUCCESS;
+		}
+	}
+
+	return GIT_EREVWALKOVER;
+}
+
+static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
+{
+	commit_object *next;
+	unsigned short i;
+
+	for (;;) {
+		next = commit_list_pop(&walk->iterator_topo);
+		if (next == NULL)
+			return GIT_EREVWALKOVER;
+
+		if (next->in_degree > 0) {
+			next->topo_delay = 1;
+			continue;
+		}
+
+		for (i = 0; i < next->out_degree; ++i) {
+			commit_object *parent = next->parents[i];
+
+			if (--parent->in_degree == 0 && parent->topo_delay) {
+				parent->topo_delay = 0;
+				commit_list_insert(parent, &walk->iterator_topo);
+			}
+		}
+
+		*object_out = next;
+		return GIT_SUCCESS;
+	}
+}
+
+static int revwalk_next_reverse(commit_object **object_out, git_revwalk *walk)
+{
+	*object_out = commit_list_pop(&walk->iterator_reverse);
+	return *object_out ? GIT_SUCCESS : GIT_EREVWALKOVER;
+}
+
+
 static int prepare_walk(git_revwalk *walk)
 {
 	unsigned int i;
 	int error;
 
-	if ((error = git_pqueue_init(&walk->iterator, 32, commit_time_cmp)) < GIT_SUCCESS)
-		return error;
+	if (walk->sorting & GIT_SORT_TIME) {
+		if ((error = git_pqueue_init(&walk->iterator_time, 32, commit_time_cmp)) < GIT_SUCCESS)
+			return error;
+
+		walk->get_next = &revwalk_next_timesort;
+		walk->enqueue = &revwalk_enqueue_timesort;
+	} else {
+		walk->get_next = &revwalk_next_unsorted;
+		walk->enqueue = &revwalk_enqueue_unsorted;
+	}
 
 	for (i = 0; i < walk->pending.length; ++i) {
 		commit_object *commit = walk->pending.contents[i];
@@ -357,9 +489,43 @@ static int prepare_walk(git_revwalk *walk)
 		}
 	}
 
+	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
+		commit_object *next;
+		unsigned short i;
+		int error;
+
+		while ((error = walk->get_next(&next, walk)) == GIT_SUCCESS) {
+			for (i = 0; i < next->out_degree; ++i) {
+				commit_object *parent = next->parents[i];
+				parent->in_degree++;
+			}
+
+			commit_list_insert(next, &walk->iterator_topo);
+		}
+
+		if (error != GIT_EREVWALKOVER)
+			return error;
+
+		walk->get_next = &revwalk_next_toposort;
+	}
+
+	if (walk->sorting & GIT_SORT_REVERSE) {
+		commit_object *next;
+		int error;
+
+		while ((error = walk->get_next(&next, walk)) == GIT_SUCCESS)
+			commit_list_insert(next, &walk->iterator_reverse);
+
+		if (error != GIT_EREVWALKOVER)
+			return error;
+
+		walk->get_next = &revwalk_next_reverse;
+	}
+
 	walk->walking = 1;
 	return GIT_SUCCESS;
 }
+
 
 int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 {
@@ -373,17 +539,12 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 			return error;
 	}
 
-	while ((next = git_pqueue_pop(&walk->iterator)) != NULL) {
-		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
-			return error;
+	error = walk->get_next(&next, walk);
+	if (error < GIT_SUCCESS)
+		return error;
 
-		if (!next->uninteresting) {
-			git_oid_cpy(oid, &next->oid);
-			return GIT_SUCCESS;
-		}
-	}
-
-	return GIT_EREVWALKOVER;
+	git_oid_cpy(oid, &next->oid);
+	return GIT_SUCCESS;
 }
 
 void git_revwalk_reset(git_revwalk *walk)
@@ -395,10 +556,14 @@ void git_revwalk_reset(git_revwalk *walk)
 
 	GIT_HASHTABLE_FOREACH(walk->commits, _unused, commit,
 		commit->seen = 0;
-		commit->in_degree = 1;
+		commit->in_degree = 0;
+		commit->topo_delay = 0;
 	);
 
-	git_pqueue_free(&walk->iterator);
+	git_pqueue_free(&walk->iterator_time);
+	commit_list_free(walk->iterator_topo);
+	commit_list_free(walk->iterator_rand);
+	commit_list_free(walk->iterator_reverse);
 	walk->walking = 0;
 }
 
