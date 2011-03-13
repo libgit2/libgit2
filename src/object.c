@@ -276,6 +276,9 @@ int git_object_lookup(git_object **object_out, git_repository *repo, const git_o
 
 	object = git_hashtable_lookup(repo->objects, id);
 	if (object != NULL) {
+		if (type != GIT_OBJ_ANY && type != object->source.raw.type)
+			return GIT_EINVALIDTYPE;
+
 		*object_out = object;
 		object->lru = ++repo->lru_counter;
 		object->can_free = 0;
