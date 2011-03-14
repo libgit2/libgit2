@@ -112,10 +112,10 @@ def get_libgit2_version(git2_h):
     line = None
 
     with open(git2_h) as f:
-        line = re.search(r'^#define LIBGIT2_VERSION "(\d\.\d\.\d)"$', f.read(), re.MULTILINE)
+        line = re.search(r'^#define LIBGIT2_VERSION "(\d+\.\d+\.\d+)"$', f.read(), re.MULTILINE)
 
     if line is None:
-        raise "Failed to detect libgit2 version"
+        raise Exception("Failed to detect libgit2 version")
 
     return line.group(1)
 

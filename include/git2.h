@@ -26,9 +26,9 @@
 #ifndef INCLUDE_git_git_h__
 #define INCLUDE_git_git_h__
 
-#define LIBGIT2_VERSION "0.8.0"
+#define LIBGIT2_VERSION "0.10.0"
 #define LIBGIT2_VER_MAJOR 0
-#define LIBGIT2_VER_MINOR 8
+#define LIBGIT2_VER_MINOR 10
 #define LIBGIT2_VER_REVISION 0
 
 #include "git2/common.h"
