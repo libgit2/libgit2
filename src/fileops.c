@@ -633,3 +633,34 @@ int gitfo_cmp_path(const char *name1, int len1, int isdir1,
 	return 0;
 }
 
+static void posixify_path(char *path)
+{
+	while (*path) {
+		if (*path == '\\')
+			*path = '/';
+
+		path++;
+	}
+}
+
+int gitfo_getcwd(char *buffer_out, size_t size)
+{
+	char *cwd_buffer;
+
+	assert(buffer_out && size > 0);
+
+#ifdef GIT_WIN32
+	cwd_buffer = _getcwd(buffer_out, size);
+#else
+	cwd_buffer = getcwd(buffer_out, size); //TODO: Fixme. Ensure the required headers are correctly included
+#endif
+
+	if (cwd_buffer == NULL)
+		return GIT_EOSERR;
+
+	posixify_path(buffer_out);
+
+	git__joinpath(buffer_out, buffer_out, "");	//Ensure the path ends with a trailing slash
+
+	return GIT_SUCCESS;
+}
