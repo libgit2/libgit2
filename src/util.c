@@ -3,6 +3,15 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+void git_strarray_free(git_strarray *array)
+{
+	size_t i;
+	for (i = 0; i < array->count; ++i)
+		free(array->strings[i]);
+
+	free(array->strings);
+}
+
 int git__fmt(char *buf, size_t buf_sz, const char *fmt, ...)
 {
 	va_list va;

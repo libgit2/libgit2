@@ -165,14 +165,7 @@ typedef struct {
 	size_t count;
 } git_strarray;
 
-GIT_INLINE(void) git_strarray_free(git_strarray *array)
-{
-	size_t i;
-	for (i = 0; i < array->count; ++i)
-		free(array->strings[i]);
-
-	free(array->strings);
-}
+GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 
 /** @} */
 GIT_END_DECL
