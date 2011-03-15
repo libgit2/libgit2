@@ -5,12 +5,10 @@ from waflib.Build import BuildContext, CleanContext, \
 # Unix flags
 CFLAGS_UNIX = ["-O2", "-Wall", "-Wextra"]
 CFLAGS_UNIX_DBG = ['-g']
-CFLAGS_UNIX_PED = ['-pedantic', '-Werror']
 
 # Windows MSVC flags
-CFLAGS_WIN32_COMMON = ['/TC', '/W4', '/nologo', '/Zi']
+CFLAGS_WIN32_COMMON = ['/TC', '/W4', '/WX', '/nologo', '/Zi']
 CFLAGS_WIN32_RELEASE = ['/O2', '/MD']
-CFLAGS_WIN32_PED = ['/Wx']
 
 # Note: /RTC* cannot be used with optimization on.
 CFLAGS_WIN32_DBG = ['/Od', '/RTC1', '/RTCc', '/DEBUG', '/MDd']
@@ -33,10 +31,9 @@ PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
         help='Select target architecture (ia64, x64, x86, x86_amd64, x86_ia64)')
     opt.add_option('--without-sqlite', action='store_false', default=True,
         dest='use_sqlite', help='Disable sqlite support')
-    opt.add_option('--strict', action='store_true', default=False,
-        help='Max warning level; treat warnings as errors')
 
 def configure(conf):
+
     # load the MSVC configuration flags
     if conf.options.msvc:
         conf.env['MSVC_VERSIONS'] = ['msvc ' + conf.options.msvc]
@@ -46,35 +43,20 @@ def configure(conf):
     # default configuration for C programs
     conf.load('compiler_c')
 
-    debug = conf.options.debug
-    pedantic = conf.options.strict
+    dbg = conf.options.debug
 
-    if conf.env.CC_NAME == 'msvc':
-        conf.env.CFLAGS = CFLAGS_WIN32_COMMON
-        conf.env.LINKFLAGS = CFLAGS_WIN32_L
-        if debug:
-            conf.env.CFLAGS += CFLAGS_WIN32_DEBUG
-            conf.env.LINKFLAGS += CFLAGS_WIN32_L_DBG
-        else:
-            conf.env.CFLAGS += CFLAGS_WIN32_RELEASE
+    conf.env.CFLAGS = CFLAGS_UNIX + (CFLAGS_UNIX_DBG if dbg else [])
 
-        if pedantic:
-            conf.ENV.CFLAGS += CFLAGS_WIN32_PED
-            
-    elif conf.env.CC_NAME == 'gcc':
-        conf.env.CFLAGS = CFLAGS_UNIX
-        if debug:
-            conf.env.CFLAGS += CFLAGS_UNIX_DBG
-        if pedantic:
-            conf.env.CFLAGS += CFLAGS_UNIX_PED
-
-
-    # Win32 Platform: MinGW and MSVC
     if conf.env.DEST_OS == 'win32':
         conf.env.PLATFORM = 'win32'
-        conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB']
 
-    # Unix-like platforms: Linux, Darwin, Cygwin, *BSD, etc
+        if conf.env.CC_NAME == 'msvc':
+            conf.env.CFLAGS = CFLAGS_WIN32_COMMON + \
+              (CFLAGS_WIN32_DBG if dbg else CFLAGS_WIN32_RELEASE)
+            conf.env.LINKFLAGS += CFLAGS_WIN32_L + \
+              (CFLAGS_WIN32_L_DBG if dbg else [])
+            conf.env.DEFINES += ['WIN32', '_DEBUG', '_LIB']
+
     else:
         conf.env.PLATFORM = 'unix'
         conf.check_cc(lib='pthread', uselib_store='pthread')
