@@ -34,14 +34,16 @@ libgit2 is already very usable.
 Building libgit2 - External dependencies
 ========================================
 
-libgit2 builds cleanly on most platforms without any external dependencies. However, the following libraries
-may be used on some platforms.
+libgit2 builds cleanly on most platforms without any external dependencies.
+Under Unix-like systems, like Linux, *BSD and Mac OS X, libgit2 expects `pthreads` to be available;
+they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
+for threading.
+
+Additionally, he following libraries may be used as replacement for built-in functionality:
 
 * LibSSL **(optional)** <http://www.openssl.org/>
 
 libgit2 can be built using the SHA1 implementation of LibSSL-Crypto, instead of the built-in custom implementations. Performance wise, they are quite similar.
-
-* pthreads-w32 **(required for MinGW)** <http://sourceware.org/pthreads-win32/>
 
 Building libgit2 - Using waf
 ======================

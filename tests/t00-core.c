@@ -27,17 +27,6 @@
 #include "vector.h"
 #include "fileops.h"
 
-BEGIN_TEST(refcnt0, "increment refcount twice, decrement twice")
-	git_refcnt p;
-
-	gitrc_init(&p, 0);
-	gitrc_inc(&p);
-	gitrc_inc(&p);
-	must_be_true(!gitrc_dec(&p));
-	must_be_true(gitrc_dec(&p));
-	gitrc_free(&p);
-END_TEST
-
 BEGIN_TEST(string0, "compare prefixes")
 	must_be_true(git__prefixcmp("", "") == 0);
 	must_be_true(git__prefixcmp("a", "") == 0);
@@ -626,8 +615,6 @@ END_TEST
 
 
 BEGIN_SUITE(core)
-	ADD_TEST(refcnt0);
-
 	ADD_TEST(string0);
 	ADD_TEST(string1);
 

@@ -11,9 +11,6 @@
 #include "git2/thread-utils.h"
 #include "cc-compat.h"
 
-#ifdef GIT_HAS_PTHREAD
-# include <pthread.h>
-#endif
 #ifdef GIT_HAVE_INTTYPES_H
 # include <inttypes.h>
 #endif
@@ -34,6 +31,7 @@
 # include <windows.h>
 # include "msvc-compat.h"
 # include "mingw-compat.h"
+# include "win32/pthread.h"
 
 # define snprintf _snprintf
 
@@ -43,6 +41,7 @@ typedef SSIZE_T ssize_t;
 
 # include <unistd.h>
 # include <arpa/inet.h>
+# include <pthread.h>
 
 #endif
 
