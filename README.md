@@ -124,6 +124,7 @@ Here are the bindings to libgit2 that are currently available:
 * luagit2 (Lua bindings) <https://github.com/libgit2/luagit2>
 * GitForDelphi (Delphi bindings) <https://github.com/libgit2/GitForDelphi>
 * node-gitteh (Node.js bindings) <https://github.com/libgit2/node-gitteh>
+* nodegit (Node.js bindings) <https://github.com/tbranyen/nodegit>
 * libqgit2 (C++ QT bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 
