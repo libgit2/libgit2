@@ -50,6 +50,10 @@ void git_pqueue_free(git_pqueue *q)
 	q->d = NULL;
 }
 
+void git_pqueue_clear(git_pqueue *q)
+{
+	q->size = 1;
+}
 
 size_t git_pqueue_size(git_pqueue *q)
 {

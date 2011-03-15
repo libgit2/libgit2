@@ -53,6 +53,11 @@ int git_pqueue_init(git_pqueue *q, size_t n, git_pqueue_cmp cmppri);
  */
 void git_pqueue_free(git_pqueue *q);
 
+/**
+ * clear all the elements in the queue
+ * @param q the queue
+ */
+void git_pqueue_clear(git_pqueue *q);
 
 /**
  * return the size of the queue.

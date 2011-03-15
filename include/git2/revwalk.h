@@ -70,6 +70,17 @@ GIT_BEGIN_DECL
 /**
  * Allocate a new revision walker to iterate through a repo.
  *
+ * This revision walker uses a custom memory pool and an internal
+ * commit cache, so it is relatively expensive to allocate.
+ *
+ * For maximum performance, this revision walker should be
+ * reused for different walks.
+ *
+ * This revision walker is *not* thread safe: it may only be
+ * used to walk a repository on a single thread; however,
+ * it is possible to have several revision walkers in
+ * several different threads walking the same repository.
+ *
  * @param walker pointer to the new revision walker
  * @param repo the repo to walk through
  * @return 0 on success; error code otherwise
@@ -77,32 +88,67 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_revwalk_new(git_revwalk **walker, git_repository *repo);
 
 /**
- * Reset the walking machinery for reuse.
+ * Reset the revision walker for reuse.
+ *
+ * This will clear all the pushed and hidden commits, and
+ * leave the walker in a blank state (just like at
+ * creation) ready to receive new commit pushes and
+ * start a new walk.
+ *
+ * The revision walk is automatically reset when a walk
+ * is over.
+ *
  * @param walker handle to reset.
  */
 GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
 
 /**
  * Mark a commit to start traversal from.
- * The commit object must belong to the repo which is being walked through.
+ *
+ * The given OID must belong to a commit on the walked
+ * repository.
+ *
+ * The given commit will be used as one of the roots
+ * when starting the revision walk. At least one commit
+ * must be pushed the repository before a walk can
+ * be started.
  *
  * @param walker the walker being used for the traversal.
- * @param commit the commit to start from.
+ * @param oid the oid of the commit to start from.
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
 
 
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
+ *
+ * The given OID must belong to a commit on the walked
+ * repository.
+ *
+ * The resolved commit and all its parents will be hidden from the
+ * output on the revision walk.
+ *
  * @param walker the walker being used for the traversal.
  * @param commit the commit that will be ignored during the traversal
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
 
 /**
- * Get the next commit from the revision traversal.
+ * Get the next commit from the revision walk.
  *
- * @param commit Pointer where to store the next commit
+ * The initial call to this method is *not* blocking when
+ * iterating through a repo with a time-sorting mode.
+ *
+ * Iterating with Topological or inverted modes makes the initial
+ * call blocking to preprocess the commit list, but this block should be
+ * mostly unnoticeable on most repositories (topological preprocessing
+ * times at 0.3s on the git.git repo).
+ *
+ * The revision walker is reset when the walk is over.
+ *
+ * @param oid Pointer where to store the oid of the next commit
  * @param walk the walker to pop the commit from.
  * @return GIT_SUCCESS if the next commit was found;
  *	GIT_EREVWALKOVER if there are no commits left to iterate
@@ -112,14 +158,17 @@ GIT_EXTERN(int) git_revwalk_next(git_oid *oid, git_revwalk *walk);
 /**
  * Change the sorting mode when iterating through the
  * repository's contents.
+ *
  * Changing the sorting mode resets the walker.
+ *
  * @param walk the walker being used for the traversal.
- * @param sort_mode combination of GIT_RPSORT_XXX flags
+ * @param sort_mode combination of GIT_SORT_XXX flags
  */
-GIT_EXTERN(int) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
+GIT_EXTERN(void) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
 
 /**
- * Free a revwalk previously allocated.
+ * Free a revision walker previously allocated.
+ *
  * @param walk traversal handle to close.  If NULL nothing occurs.
  */
 GIT_EXTERN(void) git_revwalk_free(git_revwalk *walk);

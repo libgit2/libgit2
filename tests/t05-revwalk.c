@@ -84,7 +84,7 @@ static int get_commit_index(git_oid *raw_oid)
 	return -1;
 }
 
-static int test_walk(git_revwalk *walk,
+static int test_walk(git_revwalk *walk, const git_oid *root,
 		int flags, const int possible_results[][6], int results_count)
 {
 	git_oid oid;
@@ -92,8 +92,8 @@ static int test_walk(git_revwalk *walk,
 	int i;
 	int result_array[commit_count];
 
-	git_revwalk_reset(walk);
 	git_revwalk_sorting(walk, flags);
+	git_revwalk_push(walk, root);
 
 	for (i = 0; i < commit_count; ++i)
 		result_array[i] = -1;
@@ -124,19 +124,14 @@ BEGIN_TEST(walk0, "do a simple walk on a repo with different sorting modes")
 	git_revwalk *walk;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-
 	must_pass(git_revwalk_new(&walk, repo));
 
 	git_oid_mkstr(&id, commit_head);
-	git_revwalk_push(walk, &id);
 
-	must_pass(test_walk(walk, GIT_SORT_TIME, commit_sorting_time, 1));
-
-	must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
-
-	must_pass(test_walk(walk, GIT_SORT_TIME | GIT_SORT_REVERSE, commit_sorting_time_reverse, 1));
-
-	must_pass(test_walk(walk, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE, commit_sorting_topo_reverse, 2));
+	must_pass(test_walk(walk, &id, GIT_SORT_TIME, commit_sorting_time, 1));
+	must_pass(test_walk(walk, &id, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
+	must_pass(test_walk(walk, &id, GIT_SORT_TIME | GIT_SORT_REVERSE, commit_sorting_time_reverse, 1));
+	must_pass(test_walk(walk, &id, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE, commit_sorting_topo_reverse, 2));
 
 	git_revwalk_free(walk);
 	git_repository_free(repo);
