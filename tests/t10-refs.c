@@ -717,10 +717,28 @@ BEGIN_TEST(list0, "try to list all the references in our test repo")
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_reference_listall(&ref_list, repo, GIT_REF_LISTALL));
 
+	/*{
+		unsigned short i;
+		for (i = 0; i < ref_list.count; ++i)
+			printf("# %s\n", ref_list.strings[i]);
+	}*/
+
 	/* We have exactly 7 refs in total if we include the packed ones:
 	 * there is a reference that exists both in the packfile and as
 	 * loose, but we only list it once */
 	must_be_true(ref_list.count == 7); 
+
+	git_strarray_free(&ref_list);
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(list1, "try to list only the symbolic references")
+	git_repository *repo;
+	git_strarray ref_list;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_reference_listall(&ref_list, repo, GIT_REF_SYMBOLIC));
+	must_be_true(ref_list.count == 0); /* no symrefs in the test repo */ 
 
 	git_strarray_free(&ref_list);
 	git_repository_free(repo);
@@ -758,4 +776,5 @@ BEGIN_SUITE(refs)
 
 	ADD_TEST(delete0);
 	ADD_TEST(list0);
+	ADD_TEST(list1);
 END_SUITE

@@ -560,7 +560,8 @@ static int _dirent_loose_listall(void *_data, char *full_path)
 		return gitfo_dirent(full_path, GIT_PATH_MAX, _dirent_loose_listall, _data);
 
 	/* do not add twice a reference that exists already in the packfile */
-	if (git_hashtable_lookup(data->repo->references.packfile, file_path) != NULL)
+	if ((data->list_flags & GIT_REF_PACKED) != 0 &&
+		git_hashtable_lookup(data->repo->references.packfile, file_path) != NULL)
 		return GIT_SUCCESS;
 
 	if ((data->list_flags & loose_guess_rtype(full_path)) == 0)
