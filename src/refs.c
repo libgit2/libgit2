@@ -507,22 +507,14 @@ static int packed_load(git_repository *repo)
 	buffer_start = (const char *)packfile.data;
 	buffer_end = (const char *)(buffer_start) + packfile.len;
 
-	/* Does the header look like valid? */
-	if (git__prefixcmp((const char *)(buffer_start), GIT_PACKEDREFS_HEADER)) {
-		error = GIT_EPACKEDREFSCORRUPTED;
-		goto cleanup;
-	}
-
-	/* Let's skip the header */
-	buffer_start += strlen(GIT_PACKEDREFS_HEADER);
-
-	if (*buffer_start == '\r')
+	while (buffer_start < buffer_end && buffer_start[0] == '#') {
+		buffer_start = strchr(buffer_start, '\n');
+		if (buffer_start == NULL) {
+			error = GIT_EPACKEDREFSCORRUPTED;
+			goto cleanup;
+		}
 		buffer_start++;
-
-	if (*buffer_start != '\n')
-		return GIT_EPACKEDREFSCORRUPTED;
-
-	buffer_start++;
+	}
 
 	while (buffer_start < buffer_end) {
 		reference_oid *ref = NULL;
@@ -810,7 +802,9 @@ static int packed_write(git_repository *repo)
 	if ((error = git_filebuf_open(&pack_file, pack_file_path, 0)) < GIT_SUCCESS)
 		return error;
 
-	/* Packfiles have a header! */
+	/* Packfiles have a header... apparently
+	 * This is in fact not required, but we might as well print it
+	 * just for kicks */
 	if ((error = git_filebuf_printf(&pack_file, "%s\n", GIT_PACKEDREFS_HEADER)) < GIT_SUCCESS)
 		return error;
 
