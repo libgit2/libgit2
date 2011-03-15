@@ -167,7 +167,7 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  *
  * @param repo repository handle to collect. If NULL nothing occurs.
  */
-GIT_EXTERN(void) git_repository_close(git_repository *repo);
+GIT_EXTERN(void) git_repository_gc(git_repository *repo);
 
 /**
  * Creates a new Git repository in the given folder.
