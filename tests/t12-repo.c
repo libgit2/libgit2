@@ -162,11 +162,33 @@ BEGIN_TEST(init1, "initialize a bare repo")
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository, NULL));
 END_TEST
 
+BEGIN_TEST(init2, "Initialize a bare repo with a relative path escaping out of the current working directory")
+	char path_repository[GIT_PATH_MAX];
+	char current_workdir[GIT_PATH_MAX];
+	const int mode = 0755; /* or 0777 ? */
+	git_repository* repo;
+
+	must_pass(gitfo_getcwd(current_workdir, sizeof(current_workdir)));
+	
+	git__joinpath(path_repository, current_workdir, "a/b/c/");
+	must_pass(gitfo_mkdir_recurs(path_repository, mode));
+
+	must_pass(chdir(path_repository));
+
+	must_pass(git_repository_init(&repo, "../d/e.git", 1));
+	git_repository_free(repo);
+
+	must_pass(chdir(current_workdir));
+	
+	git__joinpath(path_repository, current_workdir, "a/");
+	must_pass(rmdir_recurs(path_repository));
+END_TEST
 
 BEGIN_SUITE(repository)
 	ADD_TEST(odb0);
 	ADD_TEST(odb1);
 	ADD_TEST(init0);
 	ADD_TEST(init1);
+	ADD_TEST(init2);
 END_SUITE
 

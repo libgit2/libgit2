@@ -142,6 +142,8 @@ extern int gitfo_close_cached(gitfo_cache *ioc);
 extern int gitfo_cmp_path(const char *name1, int len1, int isdir1,
 		const char *name2, int len2, int isdir2);
 
+extern int gitfo_getcwd(char *buffer_out, size_t size);
+
 /**
  * Clean up a provided absolute or relative directory path.
  * 
