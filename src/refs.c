@@ -546,6 +546,7 @@ cleanup:
 
 struct dirent_list_data {
 	git_vector ref_list;
+	git_repository *repo;
 	size_t repo_path_len;
 	unsigned int list_flags;
 };
@@ -553,15 +554,17 @@ struct dirent_list_data {
 static int _dirent_loose_listall(void *_data, char *full_path)
 {
 	struct dirent_list_data *data = (struct dirent_list_data *)_data;
-	char *file_path;
+	char *file_path = full_path + data->repo_path_len;
 
 	if (gitfo_isdir(full_path) == GIT_SUCCESS)
 		return gitfo_dirent(full_path, GIT_PATH_MAX, _dirent_loose_listall, _data);
 
+	/* do not add twice a reference that exists already in the packfile */
+	if (git_hashtable_lookup(data->repo->references.packfile, file_path) != NULL)
+		return GIT_SUCCESS;
+
 	if ((data->list_flags & loose_guess_rtype(full_path)) == 0)
 		return GIT_SUCCESS; /* we are filtering out this reference */
-
-	file_path = full_path + data->repo_path_len;
 
 	return git_vector_insert(&data->ref_list, git__strdup(file_path));
 }
@@ -1336,15 +1339,9 @@ int git_reference_listall(git_strarray *array, git_repository *repo, unsigned in
 	git_vector_init(&data.ref_list, 8, NULL);
 	data.repo_path_len = strlen(repo->path_repository);
 	data.list_flags = list_flags;
+	data.repo = repo;
 
-	git__joinpath(refs_path, repo->path_repository, GIT_REFS_DIR);
-	error = gitfo_dirent(refs_path, GIT_PATH_MAX, _dirent_loose_listall, &data);
-
-	if (error < GIT_SUCCESS) {
-		git_vector_free(&data.ref_list);
-		return error;
-	}
-
+	/* list all the packed references first */
 	if (list_flags & GIT_REF_PACKED) {
 		const char *ref_name;
 		void *_unused;
@@ -1357,6 +1354,16 @@ int git_reference_listall(git_strarray *array, git_repository *repo, unsigned in
 		GIT_HASHTABLE_FOREACH(repo->references.packfile, ref_name, _unused,
 			git_vector_insert(&data.ref_list, git__strdup(ref_name));
 		);
+	}
+
+	/* now list the loose references, trying not to
+	 * duplicate the ref names already in the packed-refs file */
+	git__joinpath(refs_path, repo->path_repository, GIT_REFS_DIR);
+	error = gitfo_dirent(refs_path, GIT_PATH_MAX, _dirent_loose_listall, &data);
+
+	if (error < GIT_SUCCESS) {
+		git_vector_free(&data.ref_list);
+		return error;
 	}
 
 	array->strings = (char **)data.ref_list.contents;
