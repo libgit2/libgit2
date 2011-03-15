@@ -78,13 +78,17 @@ commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
 	return new_list;
 }
 
-void commit_list_free(commit_list *list)
+void commit_list_free(commit_list **list_p)
 {
+	commit_list *list = *list_p;
+
 	while (list) {
 		commit_list *temp = list;
 		list = temp->next;
 		free(temp);
 	}
+
+	*list_p = NULL;
 }
 
 commit_object *commit_list_pop(commit_list **stack)
@@ -561,9 +565,9 @@ void git_revwalk_reset(git_revwalk *walk)
 	);
 
 	git_pqueue_free(&walk->iterator_time);
-	commit_list_free(walk->iterator_topo);
-	commit_list_free(walk->iterator_rand);
-	commit_list_free(walk->iterator_reverse);
+	commit_list_free(&walk->iterator_topo);
+	commit_list_free(&walk->iterator_rand);
+	commit_list_free(&walk->iterator_reverse);
 	walk->walking = 0;
 }
 
