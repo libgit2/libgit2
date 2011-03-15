@@ -34,18 +34,14 @@ libgit2 is already very usable.
 Building libgit2 - External dependencies
 ========================================
 
-The following libraries are required to manually build the libgit2 library:
-
-* zlib 1.2+ <http://www.zlib.net/>
-
-When building in Windows using MSVC, make sure you compile ZLib using the MSVC solution that ships in its source distribution.
-Alternatively, you may download precompiled binaries from: <http://www.winimage.com/zLibDll/>
+libgit2 builds cleanly on most platforms without any external dependencies. However, the following libraries
+may be used on some platforms.
 
 * LibSSL **(optional)** <http://www.openssl.org/>
 
 libgit2 can be built using the SHA1 implementation of LibSSL-Crypto, instead of the built-in custom implementations. Performance wise, they are quite similar.
 
-* pthreads-w32 **(required on MinGW)** <http://sourceware.org/pthreads-win32/>
+* pthreads-w32 **(required for MinGW)** <http://sourceware.org/pthreads-win32/>
 
 Building libgit2 - Using waf
 ======================
