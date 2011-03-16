@@ -25,9 +25,10 @@
 
 #include "common.h"
 #include "commit.h"
-#include "revwalk.h"
 #include "hashtable.h"
 #include "pqueue.h"
+
+#include "git2/revwalk.h"
 
 typedef struct commit_object {
 	git_oid oid;

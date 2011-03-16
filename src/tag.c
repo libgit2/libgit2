@@ -27,7 +27,6 @@
 #include "commit.h"
 #include "tag.h"
 #include "signature.h"
-#include "revwalk.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"

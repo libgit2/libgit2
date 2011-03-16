@@ -25,8 +25,6 @@
 #include "test_lib.h"
 #include "test_helpers.h"
 
-#include "revwalk.h"
-
 /*
 	$ git log --oneline --graph --decorate
 	*   a4a7dce (HEAD, br2) Merge branch 'master' into br2

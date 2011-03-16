@@ -25,7 +25,6 @@
 
 #include "common.h"
 #include "commit.h"
-#include "revwalk.h"
 #include "tree.h"
 #include "git2/repository.h"
 #include "git2/object.h"

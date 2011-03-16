@@ -30,7 +30,6 @@
 
 #include "common.h"
 #include "commit.h"
-#include "revwalk.h"
 #include "signature.h"
 
 #define COMMIT_BASIC_PARSE 0x0
