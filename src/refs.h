@@ -23,11 +23,13 @@ struct git_reference {
 	git_repository *owner;
 	char *name;
 	unsigned int type;
+	time_t mtime;
 };
 
 typedef struct {
 	git_hashtable *packfile;
 	git_hashtable *loose_cache;
+	time_t packfile_time;
 } git_refcache;
 
 
