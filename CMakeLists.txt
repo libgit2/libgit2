@@ -75,9 +75,6 @@ FILE(GLOB SRC_SHA1 src/block-sha1/*.c)
 FILE(GLOB SRC_PLAT src/unix/*.c)
 FILE(GLOB SRC_H include/git2/*.h)
 
-# Do not build Zlib with GZIP support
-ADD_DEFINITIONS(-DNO_GZIP)
-
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
     ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_LIB)

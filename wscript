@@ -61,9 +61,6 @@ def configure(conf):
         conf.env.PLATFORM = 'unix'
         conf.check_cc(lib='pthread', uselib_store='pthread')
 
-    # Do not build ZLib with GZIP support
-    conf.env.DEFINES += ['NO_GZIP']
-
     # check for sqlite3
     if conf.options.use_sqlite and conf.check_cc(
         lib='sqlite3', uselib_store='sqlite3', install_path=None, mandatory=False):

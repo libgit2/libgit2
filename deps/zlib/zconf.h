@@ -10,6 +10,7 @@
 
 #include "../../src/common.h"
 
+#define NO_GZIP
 #define STDC
 
 /* Jeez, don't complain about non-prototype
