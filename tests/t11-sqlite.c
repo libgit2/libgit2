@@ -23,10 +23,13 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "test_lib.h"
-#include "t03-data.h"
 
+
+#ifdef GIT2_SQLITE_BACKEND
+#include "t03-data.h"
 #include "fileops.h"
 #include "git2/odb_backend.h"
+
 
 static int cmp_objects(git_rawobj *o1, git_rawobj *o2)
 {
@@ -41,7 +44,6 @@ static int cmp_objects(git_rawobj *o1, git_rawobj *o2)
 
 static git_odb *open_sqlite_odb(void)
 {
-#ifdef GIT2_SQLITE_BACKEND
 	git_odb *odb;
 	git_odb_backend *sqlite;
 
@@ -55,9 +57,6 @@ static git_odb *open_sqlite_odb(void)
 		return NULL;
 
 	return odb;
-#else
-	return NULL;
-#endif
 }
 
 #define TEST_WRITE(PTR) {\
@@ -105,7 +104,6 @@ END_TEST
 
 
 BEGIN_SUITE(sqlite)
-#ifdef GIT2_SQLITE_BACKEND
 	ADD_TEST(sqlite0);
 	ADD_TEST(sqlite1);
 	ADD_TEST(sqlite2);
@@ -113,5 +111,13 @@ BEGIN_SUITE(sqlite)
 	ADD_TEST(sqlite4);
 	ADD_TEST(sqlite5);
 	ADD_TEST(sqlite6);
-#endif
 END_SUITE
+
+#else /* no sqlite builtin */
+BEGIN_SUITE(sqlite)
+	/* empty */
+END_SUITE
+#endif
+
+
+

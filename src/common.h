@@ -31,18 +31,21 @@
 # include <windows.h>
 # include "msvc-compat.h"
 # include "mingw-compat.h"
-# include "win32/pthread.h"
+# ifdef GIT_THREADS
+#  include "win32/pthread.h"
+#endif
 
 # define snprintf _snprintf
 
 typedef SSIZE_T ssize_t;
 
 #else
-
 # include <unistd.h>
 # include <arpa/inet.h>
-# include <pthread.h>
 
+# ifdef GIT_THREADS
+#  include <pthread.h>
+# endif
 #endif
 
 #include "git2/common.h"

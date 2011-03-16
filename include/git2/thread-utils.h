@@ -67,6 +67,4 @@
 # define GIT_TLS
 #endif
 
-#define GIT_THREADS 1
-
 #endif /* INCLUDE_git_thread_utils_h__ */

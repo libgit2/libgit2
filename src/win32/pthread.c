@@ -36,17 +36,27 @@ int pthread_create(pthread_t *GIT_RESTRICT thread,
 	return *thread ? GIT_SUCCESS : GIT_EOSERR;
 }
 
-int pthread_cond_signal(pthread_cond_t *cond)
+int pthread_join(pthread_t thread, void **value_ptr)
 {
-    WakeConditionVariable(cond);
+    int ret;
+    ret = WaitForSingleObject(thread, INFINITE);
+    if (ret && value_ptr)
+        GetExitCodeThread(thread, (void*) value_ptr);
+    return -(!!ret);
+}
+
+int pthread_mutex_init(pthread_mutex_t *GIT_RESTRICT mutex,
+                       const pthread_mutexattr_t *GIT_RESTRICT GIT_UNUSED(mutexattr))
+{
+	GIT_UNUSED_ARG(mutexattr);
+    InitializeCriticalSection(mutex);
     return 0;
 }
 
-int pthread_cond_wait(pthread_cond_t *GIT_RESTRICT cond,
-                      pthread_mutex_t *GIT_RESTRICT mutex)
+int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
     int ret;
-    ret = SleepConditionVariableCS(cond, mutex, INFINITE);
+    ret = CloseHandle(mutex);
     return -(!ret);
 }
 
@@ -59,50 +69,6 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
     LeaveCriticalSection(mutex);
-    return 0;
-}
-
-int pthread_join(pthread_t thread, void **value_ptr)
-{
-    int ret;
-    ret = WaitForSingleObject(thread, INFINITE);
-    if (ret && value_ptr)
-        GetExitCodeThread(thread, (void*) value_ptr);
-    return -(!!ret);
-}
-
-int pthread_cond_broadcast(pthread_cond_t *cond)
-{
-    WakeAllConditionVariable(cond);
-    return 0;
-}
-
-int pthread_mutex_destroy(pthread_mutex_t *mutex)
-{
-    int ret;
-    ret = CloseHandle(mutex);
-    return -(!ret);
-}
-
-int pthread_cond_destroy(pthread_cond_t *GIT_UNUSED(cond))
-{
-	GIT_UNUSED_ARG(cond);
-    return 0;
-}
-
-int pthread_cond_init(pthread_cond_t *GIT_RESTRICT cond,
-                      const pthread_condattr_t *GIT_RESTRICT GIT_UNUSED(condattr))
-{
-	GIT_UNUSED_ARG(condattr);
-    InitializeConditionVariable(cond);
-    return 0;
-}
-
-int pthread_mutex_init(pthread_mutex_t *GIT_RESTRICT mutex,
-                       const pthread_mutexattr_t *GIT_RESTRICT GIT_UNUSED(mutexattr))
-{
-	GIT_UNUSED_ARG(mutexattr);
-    InitializeCriticalSection(mutex);
     return 0;
 }
 

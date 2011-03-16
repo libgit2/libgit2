@@ -21,40 +21,28 @@
  * along with this program; see the file COPYING.  If not, write to
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
- *  Original code by Ramiro Polla (Public Domain)
  */
+#include "test_lib.h"
+#include "test_helpers.h"
+#include "cache.h"
 
-#ifndef GIT_PTHREAD_H
-#define GIT_PTHREAD_H
 
-#include "../common.h"
+typedef struct {
+	git_cached_obj cached;
+	unsigned int __dummy;
+} ttest_obj;
 
-#if defined (_MSC_VER)
-#	define GIT_RESTRICT __restrict
-#else
-#	define GIT_RESTRICT __restrict__
-#endif
+void *cache0_thread(void *data)
+{
+	git_cache *cache = (git_cache*)data;
+	unsigned int num;
 
-typedef int pthread_mutexattr_t;
-typedef int pthread_condattr_t;
-typedef int pthread_attr_t;
-typedef CRITICAL_SECTION pthread_mutex_t;
-typedef HANDLE pthread_t;
+}
 
-#define PTHREAD_MUTEX_INITIALIZER {(void*)-1};
+BEGIN_TEST(cache0, "run several threads polling the cache at the same time")
 
-int pthread_create(pthread_t *GIT_RESTRICT,
-                   const pthread_attr_t *GIT_RESTRICT,
-                   void *(*start_routine)(void*), void *__restrict);
+END_TEST
 
-int pthread_join(pthread_t, void **);
-
-int pthread_mutex_init(pthread_mutex_t *GIT_RESTRICT, const pthread_mutexattr_t *GIT_RESTRICT);
-int pthread_mutex_destroy(pthread_mutex_t *);
-int pthread_mutex_lock(pthread_mutex_t *);
-int pthread_mutex_unlock(pthread_mutex_t *);
-
-int pthread_num_processors_np(void);
-
-#endif
+BEGIN_SUITE(threads)
+	ADD_TEST(cache0);
+END_SUITE

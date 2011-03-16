@@ -29,8 +29,10 @@ PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
         help='Force a specific MSVC++ version (7.1, 8.0, 9.0, 10.0), if more than one is installed')
     opt.add_option('--arch', action='store', default='x86',
         help='Select target architecture (ia64, x64, x86, x86_amd64, x86_ia64)')
-    opt.add_option('--without-sqlite', action='store_false', default=True,
+    opt.add_option('--with-sqlite', action='store_true', default=False,
         dest='use_sqlite', help='Disable sqlite support')
+    opt.add_option('--threadsafe', action='store_true', default=False,
+        help='Make libgit2 thread-safe (requires pthreads)')
 
 def configure(conf):
 
@@ -59,7 +61,11 @@ def configure(conf):
 
     else:
         conf.env.PLATFORM = 'unix'
-        conf.check_cc(lib='pthread', uselib_store='pthread')
+
+    if conf.options.threadsafe:
+        if conf.env.PLATFORM == 'unix':
+            conf.check_cc(lib='pthread', uselib_store='pthread')
+        conf.env.DEFINES += ['GIT_THREADS']
 
     # check for sqlite3
     if conf.options.use_sqlite and conf.check_cc(
