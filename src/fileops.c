@@ -503,12 +503,14 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 
 static int retrieve_previous_path_component_start(const char *path)
 {
-	int offset, len, start = 0;
-	
+	int offset, len, root_offset, start = 0;
+
+	root_offset = retrieve_path_root_offset(path);
+	if (root_offset > -1)
+		start += root_offset;
+
 	len = strlen(path);
 	offset = len - 1;
-
-	//TODO: Deal with Windows rooted path
 
 	/* Skip leading slash */
 	if (path[start] == '/')
@@ -518,7 +520,7 @@ static int retrieve_previous_path_component_start(const char *path)
 	if (path[offset] == '/')
 		offset--;
 
-	if (offset < 0)
+	if (offset < root_offset)
 		return GIT_ERROR;
 
 	while (offset > start && path[offset-1] != '/') {

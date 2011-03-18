@@ -389,6 +389,37 @@ BEGIN_TEST(path6, "properly join path components for more than one path")
 	must_pass(ensure_joinpath_n("a", "b", "", "/c/d", "a/b/c/d"));
 END_TEST
 
+static int count_number_of_path_segments(const char *path)
+{
+	int number = 0;
+	char *current = (char *)path;
+
+	while (*current)
+	{
+		if (*current++ == '/')
+			number++;
+	}
+
+	assert (number > 0);
+
+	return --number;
+}
+
+BEGIN_TEST(path7, "prevent a path which escapes the root directory from being prettified")
+	char current_workdir[GIT_PATH_MAX];
+	char prettified[GIT_PATH_MAX];
+	int i = 0, number_to_escape;
+
+	must_pass(gitfo_getcwd(current_workdir, sizeof(current_workdir)));
+
+	number_to_escape = count_number_of_path_segments(current_workdir);
+
+	for (i = 0; i < number_to_escape + 1; i++)
+		git__joinpath(current_workdir, current_workdir, "../");
+
+	must_fail(gitfo_prettify_dir_path(prettified, sizeof(prettified), current_workdir));
+END_TEST
+
 typedef struct name_data {
 	int  count;  /* return count */
 	char *name;  /* filename     */
@@ -645,6 +676,7 @@ BEGIN_SUITE(core)
 	ADD_TEST(path4);
 	ADD_TEST(path5);
 	ADD_TEST(path6);
+	ADD_TEST(path7);
 
 	ADD_TEST(dirent0);
 	ADD_TEST(dirent1);
