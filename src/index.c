@@ -324,7 +324,7 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 	entry.file_size = st.st_size;
 
 	/* write the blob to disk and get the oid */
-	if ((error = git_blob_writefile(&entry.oid, index->repository, full_path)) < GIT_SUCCESS)
+	if ((error = git_blob_create_fromfile(&entry.oid, index->repository, rel_path)) < GIT_SUCCESS)
 		return error;
 
 	entry.flags |= (stage << GIT_IDXENTRY_STAGESHIFT);

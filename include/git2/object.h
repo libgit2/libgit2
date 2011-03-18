@@ -42,7 +42,8 @@ GIT_BEGIN_DECL
  * Lookup a reference to one of the objects in a repostory.
  *
  * The generated reference is owned by the repository and
- * should not be freed by the user.
+ * should be closed with the `git_object_close` method
+ * instead of free'd manually.
  *
  * The 'type' parameter must match the type of the object
  * in the odb; the method will fail otherwise.
@@ -58,53 +59,7 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_object_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
 
 /**
- * Create a new in-memory repository object with
- * the given type.
- *
- * The object's attributes can be filled in using the
- * corresponding setter methods.
- *
- * The object will be written back to given git_repository
- * when the git_object_write() function is called; objects
- * cannot be written to disk until all their main
- * attributes have been properly filled.
- *
- * Objects are instantiated with no SHA1 id; their id
- * will be automatically generated when writing to the
- * repository.
- *
- * @param object pointer to the new object
- * @parem repo Repository where the object belongs
- * @param type Type of the object to be created
- * @return the new object
- */
-GIT_EXTERN(int) git_object_new(git_object **object, git_repository *repo, git_otype type);
-
-
-/**
- * Write back an object to disk.
- *
- * The object will be written to its corresponding
- * repository.
- *
- * If the object has no changes since it was first
- * read from the repository, no actions will take place.
- *
- * If the object has been modified since it was read from
- * the repository, or it has been created from scratch
- * in memory, it will be written to the repository and
- * its SHA1 ID will be updated accordingly.
- *
- * @param object Git object to write back
- * @return 0 on success; otherwise an error code
- */
-GIT_EXTERN(int) git_object_write(git_object *object);
-
-/**
  * Get the id (SHA1) of a repository object
- *
- * In-memory objects created by git_object_new() do not
- * have a SHA1 ID until they are written on a repository.
  *
  * @param obj the repository object
  * @return the SHA1 id
@@ -137,14 +92,8 @@ GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
  * by the repository.
  *
  * IMPORTANT:
- * It is *not* necessary to call this method when you stop using
- * an object, since all object memory is automatically reclaimed
- * by the repository when it is freed.
- *
- * Forgetting to call `git_object_close` does not cause memory
- * leaks, but it's is recommended to close as soon as possible
- * the biggest objects (e.g. blobs) to prevent wasting memory
- * space.
+ * It *is* necessary to call this method when you stop using
+ * an object. Failure to do so will cause a memory leak.
  *
  * @param object the object to close
  */

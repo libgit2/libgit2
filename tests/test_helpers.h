@@ -29,6 +29,8 @@
 #include "test_lib.h"
 #include <git2.h>
 
+#include "odb.h"
+
 #define TEST_REPOSITORY_NAME	"testrepo.git"
 #define REPOSITORY_FOLDER		TEST_RESOURCES "/" TEST_REPOSITORY_NAME "/"
 #define ODB_FOLDER				(REPOSITORY_FOLDER "objects/")

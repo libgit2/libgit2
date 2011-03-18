@@ -58,8 +58,10 @@ extern int gitfo_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
 extern int gitfo_creat(const char *path, int mode);
 extern int gitfo_creat_force(const char *path, int mode);
+extern int gitfo_creat_tmp(char *path_out, const char *filename);
 extern int gitfo_isdir(const char *path);
 extern int gitfo_mkdir_recurs(const char *path, int mode);
+extern int gitfo_mkdir_2file(const char *path);
 #define gitfo_close(fd) close(fd)
 
 extern int gitfo_read(git_file fd, void *buf, size_t cnt);

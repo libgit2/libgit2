@@ -71,7 +71,6 @@ typedef time_t git_time_t;
 
 #endif
 
-
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
 	GIT_OBJ_ANY = -2,		/**< Object can be any of the following */
@@ -91,6 +90,12 @@ typedef struct git_odb git_odb;
 
 /** A custom backend in an ODB */
 typedef struct git_odb_backend git_odb_backend;
+
+/** An object read from the ODB */
+typedef struct git_odb_object git_odb_object;
+
+/** A stream to read/write from the ODB */
+typedef struct git_odb_stream git_odb_stream;
 
 /**
  * Representation of an existing git repository,

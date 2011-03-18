@@ -27,7 +27,8 @@ static struct {
 	{GIT_EPACKEDREFSCORRUPTED, "The pack-refs file is either corrupted of its format is not currently supported"},
 	{GIT_EINVALIDPATH, "The path is invalid" },
 	{GIT_EREVWALKOVER, "The revision walker is empty; there are no more commits left to iterate"},
-	{GIT_EINVALIDREFSTATE, "The state of the reference is not valid"}
+	{GIT_EINVALIDREFSTATE, "The state of the reference is not valid"},
+	{GIT_ENOTIMPLEMENTED, "This feature has not been implemented yet"}
 };
 
 const char *git_strerror(int num)

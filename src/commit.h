@@ -22,8 +22,6 @@ struct git_commit {
 };
 
 void git_commit__free(git_commit *c);
-int git_commit__parse(git_commit *commit);
-
-int git_commit__writeback(git_commit *commit, git_odb_source *src);
+int git_commit__parse(git_commit *commit, git_odb_object *obj);
 
 #endif

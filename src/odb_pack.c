@@ -1243,7 +1243,7 @@ static int packfile_unpack_delta(
 
 	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type);
 	if (error < GIT_SUCCESS) {
-		git_rawobj_close(&base);
+		free(base.data);
 		return error;
 	}
 
@@ -1252,8 +1252,8 @@ static int packfile_unpack_delta(
 			base.data, base.len,
 			delta.data, delta.len);
 
-	git_rawobj_close(&base);
-	git_rawobj_close(&delta);
+	free(base.data);
+	free(delta.data);
 
 	/* TODO: we might want to cache this shit. eventually */
 	//add_delta_base_cache(p, base_offset, base, base_size, *type);
@@ -1337,15 +1337,23 @@ int pack_backend__read_header(git_rawobj *obj, git_odb_backend *backend, const g
 }
 */
 
-int pack_backend__read(git_rawobj *obj, git_odb_backend *backend, const git_oid *oid)
+int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	struct pack_entry e;
+	git_rawobj raw;
 	int error;
 
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < GIT_SUCCESS)
 		return error;
 
-	return packfile_unpack(obj, (struct pack_backend *)backend, e.p, e.offset);
+	if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset)) < GIT_SUCCESS)
+		return error;
+
+	*buffer_p = raw.data;
+	*len_p = raw.len;
+	*type_p = raw.type;
+
+	return GIT_SUCCESS;
 }
 
 int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
@@ -1397,7 +1405,6 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 
 	backend->parent.read = &pack_backend__read;
 	backend->parent.read_header = NULL;
-	backend->parent.write = NULL;
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.free = &pack_backend__free;
 

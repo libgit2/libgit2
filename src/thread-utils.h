@@ -8,7 +8,7 @@ typedef struct {
 	volatile int val;
 } git_atomic;
 
-static inline void git_atomic_set(git_atomic *a, int val)
+GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {
 	a->val = val;
 }
@@ -36,7 +36,7 @@ static inline void git_atomic_set(git_atomic *a, int val)
 #define git_cond_signal(c)	(void)0		//pthread_cond_signal(c)
 #define git_cond_broadcast(c) (void)0	//pthread_cond_broadcast(c)
 
-static inline int git_atomic_inc(git_atomic *a)
+GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
 #ifdef __GNUC__
 	return __sync_add_and_fetch(&a->val, 1);
@@ -47,7 +47,7 @@ static inline int git_atomic_inc(git_atomic *a)
 #endif
 }
 
-static inline int git_atomic_dec(git_atomic *a)
+GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 {
 #ifdef __GNUC__
 	return __sync_sub_and_fetch(&a->val, 1);
@@ -81,12 +81,12 @@ static inline int git_atomic_dec(git_atomic *a)
 #define git_cond_signal(c) (void)0
 #define git_cond_broadcast(c) (void)0
 
-static inline int git_atomic_inc(git_atomic *a)
+GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
 	return ++a->val;
 }
 
-static inline int git_atomic_dec(git_atomic *a)
+GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 {
 	return --a->val;
 }

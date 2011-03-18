@@ -3,6 +3,7 @@
 
 #include "git2/tag.h"
 #include "repository.h"
+#include "odb.h"
 
 struct git_tag {
 	git_object object;
@@ -16,7 +17,6 @@ struct git_tag {
 };
 
 void git_tag__free(git_tag *tag);
-int git_tag__parse(git_tag *tag);
-int git_tag__writeback(git_tag *tag, git_odb_source *src);
+int git_tag__parse(git_tag *tag, git_odb_object *obj);
 
 #endif

@@ -61,27 +61,62 @@ BEGIN_TEST(read0, "read and parse a tag from the repository")
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST(write0, "write back a tag to the repository")
-	git_oid id;
+
+#define TAGGER_NAME "Vicent Marti"
+#define TAGGER_EMAIL "vicent@github.com"
+#define TAGGER_MESSAGE "This is my tag.\n\nThere are many tags, but this one is mine\n"
+
+BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	git_repository *repo;
 	git_tag *tag;
+	git_oid target_id, tag_id;
+	const git_signature *tagger;
+	git_reference *ref_tag;
+	/* char hex_oid[41]; */
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	git_oid_mkstr(&id, tag1_id);
+	git_oid_mkstr(&target_id, tagged_commit);
 
-	must_pass(git_tag_lookup(&tag, repo, &id));
+	/* create signatures */
+	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
+	must_be_true(tagger != NULL);
 
-	git_tag_set_name(tag, "This is a different tag LOL");
+	must_pass(git_tag_create(
+		&tag_id, /* out id */
+		repo,
+		"the-tag", /* do not update the HEAD */
+		&target_id,
+		GIT_OBJ_COMMIT,
+		tagger,
+		TAGGER_MESSAGE));
 
-	must_pass(git_object_write((git_object *)tag));
+	git_signature_free((git_signature *)tagger);
+
+	must_pass(git_tag_lookup(&tag, repo, &tag_id));
+
+	/* Check attributes were set correctly */
+	tagger = git_tag_tagger(tag);
+	must_be_true(tagger != NULL);
+	must_be_true(strcmp(tagger->name, TAGGER_NAME) == 0);
+	must_be_true(strcmp(tagger->email, TAGGER_EMAIL) == 0);
+	must_be_true(tagger->when.time == 123456789);
+	must_be_true(tagger->when.offset == 60);
+
+	must_be_true(strcmp(git_tag_message(tag), TAGGER_MESSAGE) == 0);
+
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/the-tag"));
+	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
+	must_pass(git_reference_delete(ref_tag));
+
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
 
 	git_repository_free(repo);
+
 END_TEST
 
 
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
-	ADD_TEST(write0);
+	ADD_TEST(write0); 
 END_SUITE

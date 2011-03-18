@@ -158,6 +158,9 @@
 /** The state of the reference is not valid */
 #define GIT_EINVALIDREFSTATE (GIT_ERROR - 21)
 
+/** This feature has not been implemented yet */
+#define GIT_ENOTIMPLEMENTED (GIT_ERROR - 22)
+
 GIT_BEGIN_DECL
 
 typedef struct {

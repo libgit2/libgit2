@@ -97,6 +97,8 @@ extern char *git__strtok_keep(char *output, char *src, char *delimit);
 
 #define STRLEN(str) (sizeof(str) - 1)
 
+#define GIT_OID_LINE_LENGTH(header) (STRLEN(header) + 1 + GIT_OID_HEXSZ + 1)
+
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold
  * at least 'nr' entries; the number of entries currently allocated

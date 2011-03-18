@@ -272,4 +272,13 @@ cleanup:
 	return GIT_ERROR;
 }
 
+#else
+
+int git_odb_backend_sqlite(git_odb_backend **GIT_UNUSED(backend_out), const char *GIT_UNUSED(sqlite_db))
+{
+	GIT_UNUSED_ARG(backend_out);
+	GIT_UNUSED_ARG(sqlite_db);
+	return GIT_ENOTIMPLEMENTED;
+}
+
 #endif /* HAVE_SQLITE3 */

@@ -31,7 +31,7 @@
 #include "git2/odb_backend.h"
 
 
-static int cmp_objects(git_rawobj *o1, git_rawobj *o2)
+static int cmp_objects(raw_object *o1, raw_object *o2)
 {
 	if (o1->type != o2->type)
 		return -1;
@@ -62,7 +62,7 @@ static git_odb *open_sqlite_odb(void)
 #define TEST_WRITE(PTR) {\
     git_odb *db; \
 	git_oid id1, id2; \
-    git_rawobj obj; \
+    raw_object obj; \
 	db = open_sqlite_odb(); \
 	must_be_true(db != NULL); \
     must_pass(git_oid_mkstr(&id1, PTR.id)); \

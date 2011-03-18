@@ -33,104 +33,89 @@
 const void *git_blob_rawcontent(git_blob *blob)
 {
 	assert(blob);
-	
-	if (blob->content.data != NULL)
-		return blob->content.data;
-
-	if (blob->object.in_memory)
-		return NULL;
-
-	if (!blob->object.source.open && git_object__source_open((git_object *)blob) < GIT_SUCCESS)
-		return NULL;
-
-	return blob->object.source.raw.data;
+	return blob->odb_object->raw.data;
 }
 
 int git_blob_rawsize(git_blob *blob)
 {
 	assert(blob);
-
-	if (blob->content.data != NULL)
-		return blob->content.len;
-
-	return blob->object.source.raw.len;
+	return blob->odb_object->raw.len;
 }
 
 void git_blob__free(git_blob *blob)
 {
-	gitfo_free_buf(&blob->content);
+	git_odb_object_close(blob->odb_object);
 	free(blob);
 }
 
-int git_blob__parse(git_blob *blob)
+int git_blob__parse(git_blob *blob, git_odb_object *odb_obj)
 {
 	assert(blob);
+	git_cached_obj_incref((git_cached_obj *)odb_obj);
+	blob->odb_object = odb_obj;
 	return GIT_SUCCESS;
 }
 
-int git_blob__writeback(git_blob *blob, git_odb_source *src)
-{
-	assert(blob->object.modified);
-
-	if (blob->content.data == NULL)
-		return GIT_EMISSINGOBJDATA;
-
-	return git__source_write(src, blob->content.data, blob->content.len);
-}
-
-int git_blob_set_rawcontent(git_blob *blob, const void *buffer, size_t len)
-{
-	assert(blob && buffer);
-
-	blob->object.modified = 1;
-
-	git_object__source_close((git_object *)blob);
-
-	if (blob->content.data != NULL)
-		gitfo_free_buf(&blob->content);
-
-	blob->content.data = git__malloc(len);
-	blob->content.len = len;
-
-	if (blob->content.data == NULL)
-		return GIT_ENOMEM;
-
-	memcpy(blob->content.data, buffer, len);
-
-	return GIT_SUCCESS;
-}
-
-int git_blob_set_rawcontent_fromfile(git_blob *blob, const char *filename)
-{
-	assert(blob && filename);
-	blob->object.modified = 1;
-
-	if (blob->content.data != NULL)
-		gitfo_free_buf(&blob->content);
-
-	return gitfo_read_file(&blob->content, filename);
-}
-
-int git_blob_writefile(git_oid *written_id, git_repository *repo, const char *path)
+int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *buffer, size_t len)
 {
 	int error;
-	git_blob *blob;
+	git_odb_stream *stream;
 
-	if (gitfo_exists(path) < 0)
+	if ((error = git_odb_open_wstream(&stream, repo->db, len, GIT_OBJ_BLOB)) < GIT_SUCCESS)
+		return error;
+
+	stream->write(stream, buffer, len);
+
+	error = stream->finalize_write(oid, stream);
+	stream->free(stream);
+
+	return error;
+}
+
+int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path)
+{
+	int error, fd;
+	char full_path[GIT_PATH_MAX];
+	char buffer[2048];
+	git_off_t size;
+	git_odb_stream *stream;
+
+	if (repo->path_workdir == NULL)
 		return GIT_ENOTFOUND;
 
-	if ((error = git_blob_new(&blob, repo)) < GIT_SUCCESS)
+	git__joinpath(full_path, repo->path_workdir, path);
+
+	if ((fd = gitfo_open(full_path, O_RDONLY)) < 0)
+		return GIT_ENOTFOUND;
+
+	if ((size = gitfo_size(fd)) < 0 || !git__is_sizet(size)) {
+		gitfo_close(fd);
+		return GIT_EOSERR;
+	}
+
+	if ((error = git_odb_open_wstream(&stream, repo->db, (size_t)size, GIT_OBJ_BLOB)) < GIT_SUCCESS) {
+		gitfo_close(fd);
 		return error;
+	}
 
-	if ((error = git_blob_set_rawcontent_fromfile(blob, path)) < GIT_SUCCESS)
-		return error;
+	while (size > 0) {
+		ssize_t read_len;
 
-	if ((error = git_object_write((git_object *)blob)) < GIT_SUCCESS)
-		return error;
+		read_len = read(fd, buffer, sizeof(buffer));
 
-	git_oid_cpy(written_id, git_object_id((git_object *)blob));
+		if (read_len < 0) {
+			gitfo_close(fd);
+			stream->free(stream);
+			return GIT_EOSERR;
+		}
 
-	git_object_close((git_object*)blob);
-	return GIT_SUCCESS;
+		stream->write(stream, buffer, read_len);
+		size -= read_len;
+	}
+
+	error = stream->finalize_write(oid, stream);
+	stream->free(stream);
+
+	return error;
 }
 

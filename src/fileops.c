@@ -2,13 +2,13 @@
 #include "fileops.h"
 #include <ctype.h>
 
-static int force_path(const char *to)
+int gitfo_mkdir_2file(const char *file_path)
 {
 	const int mode = 0755; /* or 0777 ? */
 	int error = GIT_SUCCESS;
 	char target_folder_path[GIT_PATH_MAX];
 
-	error = git__dirname_r(target_folder_path, sizeof(target_folder_path), to);
+	error = git__dirname_r(target_folder_path, sizeof(target_folder_path), file_path);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -25,6 +25,87 @@ static int force_path(const char *to)
 	return GIT_SUCCESS;
 }
 
+static int creat_tempfile(char *path_out, const char *tmp_dir, const char *filename)
+{
+	int fd;
+
+	git__joinpath(path_out, tmp_dir, filename);
+	strcat(path_out, "_git2_XXXXXX");
+
+#ifdef GIT_WIN32
+	/* FIXME: there may be race conditions when multi-threading
+	 * with the library */
+	if (_mktemp_s(path_out, GIT_PATH_MAX) != 0)
+		return GIT_EOSERR;
+
+	fd = gitfo_creat(path_out, 0744);
+#else
+	fd = mkstemp(path_out);
+#endif
+
+	return fd >= 0 ? fd : GIT_EOSERR;
+}
+
+static const char *find_tmpdir(void)
+{
+	static int tmpdir_not_found = 0;
+	static char temp_dir[GIT_PATH_MAX];
+	static const char *env_vars[] = {
+		"TEMP", "TMP", "TMPDIR"
+	};
+
+	unsigned int i, j;
+	char test_file[GIT_PATH_MAX];
+
+	if (tmpdir_not_found)
+		return NULL;
+
+	if (temp_dir[0] != '\0')
+		return temp_dir;
+
+	for (i = 0; i < ARRAY_SIZE(env_vars); ++i) {
+		char *env_path;
+
+		env_path = getenv(env_vars[i]);
+		if (env_path == NULL)
+			continue;
+
+		strcpy(temp_dir, env_path);
+
+		/* Fix backslashes because Windows environment vars
+		 * are probably fucked up */
+		for (j = 0; j < strlen(temp_dir); ++j)
+			if (temp_dir[j] == '\\')
+				temp_dir[j] = '/';
+
+		if (creat_tempfile(test_file, temp_dir, "writetest") >= 0) {
+			gitfo_unlink(test_file);
+			return temp_dir;
+		}
+	}
+
+	/* last resort: current folder. */
+	strcpy(temp_dir, "./");
+	if (creat_tempfile(test_file, temp_dir, "writetest") >= 0) {
+		gitfo_unlink(test_file);
+		return temp_dir;
+	}
+
+	tmpdir_not_found = 1;
+	return NULL;
+}
+
+int gitfo_creat_tmp(char *path_out, const char *filename)
+{
+	const char *tmp_dir;
+
+	tmp_dir = find_tmpdir();
+	if (tmp_dir == NULL)
+		return GIT_EOSERR;
+
+	return creat_tempfile(path_out, tmp_dir, filename);
+}
+
 int gitfo_open(const char *path, int flags)
 {
 	int fd = open(path, flags | O_BINARY);
@@ -39,7 +120,7 @@ int gitfo_creat(const char *path, int mode)
 
 int gitfo_creat_force(const char *path, int mode)
 {
-	if (force_path(path) < GIT_SUCCESS)
+	if (gitfo_mkdir_2file(path) < GIT_SUCCESS)
 		return GIT_EOSERR;
 
 	return gitfo_creat(path, mode);
@@ -117,6 +198,7 @@ int gitfo_isdir(const char *path)
 
 int gitfo_exists(const char *path)
 {
+	assert(path);
 	return access(path, F_OK);
 }
 
@@ -198,7 +280,7 @@ int gitfo_mv(const char *from, const char *to)
 
 int gitfo_mv_force(const char *from, const char *to)
 {
-	if (force_path(to) < GIT_SUCCESS)
+	if (gitfo_mkdir_2file(to) < GIT_SUCCESS)
 		return GIT_EOSERR;
 
 	return gitfo_mv(from, to);

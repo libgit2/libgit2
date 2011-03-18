@@ -1,6 +1,8 @@
 #ifndef INCLUDE_delta_apply_h__
 #define INCLUDE_delta_apply_h__
 
+#include "odb.h"
+
 /**
  * Apply a git binary delta to recover the original content.
  *

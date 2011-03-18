@@ -25,6 +25,7 @@
 
 #include "common.h"
 #include "commit.h"
+#include "odb.h"
 #include "hashtable.h"
 #include "pqueue.h"
 
@@ -236,22 +237,22 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 
 static int commit_parse(git_revwalk *walk, commit_object *commit)
 {
-	git_rawobj data;
+	git_odb_object *obj;
 	int error;
 
 	if (commit->parsed)
 		return GIT_SUCCESS;
 
-	if ((error = git_odb_read(&data, walk->repo->db, &commit->oid)) < GIT_SUCCESS)
+	if ((error = git_odb_read(&obj, walk->repo->db, &commit->oid)) < GIT_SUCCESS)
 		return error;
 
-	if (data.type != GIT_OBJ_COMMIT) {
-		git_rawobj_close(&data);
+	if (obj->raw.type != GIT_OBJ_COMMIT) {
+		git_odb_object_close(obj);
 		return GIT_EOBJTYPE;
 	}
 
-	error = commit_quick_parse(walk, commit, &data);
-	git_rawobj_close(&data);
+	error = commit_quick_parse(walk, commit, &obj->raw);
+	git_odb_object_close(obj);
 	return error;
 }
 

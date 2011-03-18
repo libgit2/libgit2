@@ -40,28 +40,10 @@
 
 #define GIT_BRANCH_MASTER "master"
 
-static const int OBJECT_TABLE_SIZE = 32;
-
 typedef struct {
 	char *path_repository;
 	unsigned is_bare:1, has_been_reinit:1;
 } repo_init;
-
-/*
- * Hash table methods
- *
- * Callbacks for the ODB cache, implemented
- * as a hash table
- */
-static uint32_t object_table_hash(const void *key, int hash_id)
-{
-	uint32_t r;
-	git_oid *id;
-
-	id = (git_oid *)key;
-	memcpy(&r, id->id + (hash_id * sizeof(uint32_t)), sizeof(r));
-	return r;
-}
 
 /*
  * Git repository open methods
@@ -186,25 +168,9 @@ static git_repository *repository_alloc()
 
 	memset(repo, 0x0, sizeof(git_repository));
 
-	repo->objects = git_hashtable_alloc(
-			OBJECT_TABLE_SIZE, 
-			object_table_hash,
-			(git_hash_keyeq_ptr)git_oid_cmp);
-
-	if (repo->objects == NULL) { 
-		free(repo);
-		return NULL;
-	}
+	git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free);
 
 	if (git_repository__refcache_init(&repo->references) < GIT_SUCCESS) {
-		git_hashtable_free(repo->objects);
-		free(repo);
-		return NULL;
-	}
-
-	if (git_vector_init(&repo->memory_objects, 16, NULL) < GIT_SUCCESS) {
-		git_hashtable_free(repo->objects);
-		git_repository__refcache_free(&repo->references);
 		free(repo);
 		return NULL;
 	}
@@ -330,50 +296,18 @@ cleanup:
 	return error;
 }
 
-int git_repository_gc(git_repository *repo)
-{
-	int collected = 0;
-	git_object *object;
-	const void *_unused;
-
-	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,
-		if (object->can_free) {
-			git_object__free(object);
-			collected++;
-		}
-	);
-
-	return collected;
-}
-
 void git_repository_free(git_repository *repo)
 {
-	git_object *object;
-	const void *_unused;
-	unsigned int i;
-
 	if (repo == NULL)
 		return;
 
-	/* force free all the objects */
-	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,
-		git_object__free(object);
-	);
-
-	for (i = 0; i < repo->memory_objects.length; ++i) {
-		object = git_vector_get(&repo->memory_objects, i);
-		git_object__free(object);
-	}
+	git_cache_free(&repo->objects);
+	git_repository__refcache_free(&repo->references);
 
 	free(repo->path_workdir);
 	free(repo->path_index);
 	free(repo->path_repository);
 	free(repo->path_odb);
-
-	git_hashtable_free(repo->objects);
-	git_vector_free(&repo->memory_objects);
-
-	git_repository__refcache_free(&repo->references);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
