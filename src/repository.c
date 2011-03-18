@@ -84,7 +84,7 @@ static int assign_repository_dirs(
 	if (git_dir == NULL)
 		return GIT_ENOTFOUND;
 
-	error = gitfo_prettify_dir_path(path_aux, git_dir);
+	error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_dir);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -99,7 +99,7 @@ static int assign_repository_dirs(
 	if (git_object_directory == NULL)
 		git__joinpath(path_aux, repo->path_repository, GIT_OBJECTS_DIR);
 	else {
-		error = gitfo_prettify_dir_path(path_aux, git_object_directory);
+		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_object_directory);
 		if (error < GIT_SUCCESS)
 			return error;
 	}
@@ -113,7 +113,7 @@ static int assign_repository_dirs(
 	if (git_work_tree == NULL)
 		repo->is_bare = 1;
 	else {
-		error = gitfo_prettify_dir_path(path_aux, git_work_tree);
+		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_work_tree);
 		if (error < GIT_SUCCESS)
 			return error;
 
@@ -126,7 +126,7 @@ static int assign_repository_dirs(
 		if (git_index_file == NULL)
 			git__joinpath(path_aux, repo->path_repository, GIT_INDEX_FILE);
 		else {
-			error = gitfo_prettify_file_path(path_aux, git_index_file);
+			error = gitfo_prettify_file_path(path_aux, sizeof(path_aux), git_index_file);
 			if (error < GIT_SUCCESS)
 				return error;
 		}
@@ -469,7 +469,7 @@ static int repo_init_find_dir(repo_init *results, const char* path)
 	char temp_path[GIT_PATH_MAX];
 	int error = GIT_SUCCESS;
 
-	error = gitfo_prettify_dir_path(temp_path, path);
+	error = gitfo_prettify_dir_path(temp_path, sizeof(temp_path), path);
 	if (error < GIT_SUCCESS)
 		return error;
 

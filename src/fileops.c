@@ -361,22 +361,29 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+
+int retrieve_path_root_offset(const char *path)
+{
+	int offset = 0;
+
 #ifdef GIT_WIN32
 
-static int is_windows_rooted_path(const char *path)
-{
 	/* Does the root of the path look like a windows drive ? */
 	if (isalpha(path[0]) && (path[1] == ':'))
-		return GIT_SUCCESS;
+		offset += 2;
+
+#endif
+
+	if (*(path + offset) == '/')
+		return offset;
 
 	return GIT_ERROR;
 }
 
-#endif
 
 int gitfo_mkdir_recurs(const char *path, int mode)
 {
-	int error;
+	int error, root_path_offset;
 	char *pp, *sp;
     char *path_copy = git__strdup(path);
 
@@ -386,12 +393,9 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	error = GIT_SUCCESS;
 	pp = path_copy;
 
-#ifdef GIT_WIN32
-
-	if (!is_windows_rooted_path(pp))
-		pp += 2; /* Skip the drive name (eg. C: or D:) */
-
-#endif
+	root_path_offset = retrieve_path_root_offset(pp);
+	if (root_path_offset > 0)
+		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
     while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != 0) {
 		if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
@@ -422,6 +426,8 @@ static int retrieve_previous_path_component_start(const char *path)
 	len = strlen(path);
 	offset = len - 1;
 
+	//TODO: Deal with Windows rooted path 
+
 	/* Skip leading slash */
 	if (path[start] == '/')
 		start++;
@@ -440,15 +446,25 @@ static int retrieve_previous_path_component_start(const char *path)
 	return offset;
 }
 
-int gitfo_prettify_dir_path(char *buffer_out, const char *path)
+int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 {
-	int len = 0, segment_len, only_dots;
+	int len = 0, segment_len, only_dots, root_path_offset, error = GIT_SUCCESS;
 	char *current;
 	const char *buffer_out_start, *buffer_end;
-
-	buffer_out_start = buffer_out;
+	
 	current = (char *)path;
 	buffer_end = path + strlen(path);
+	buffer_out_start = buffer_out;
+	
+	root_path_offset = retrieve_path_root_offset(path);
+	if (root_path_offset < 0) {
+		error = gitfo_getcwd(buffer_out, size);
+		if (error < GIT_SUCCESS) 
+			return error;
+
+		len = strlen(buffer_out);
+		buffer_out += len;
+	}
 
 	while (current < buffer_end) {
 		/* Prevent multiple slashes from being added to the output */
@@ -461,7 +477,7 @@ int gitfo_prettify_dir_path(char *buffer_out, const char *path)
 		segment_len = 0;
 
 		/* Copy path segment to the output */
-		while (current < buffer_end && *current !='/')
+		while (current < buffer_end && *current != '/')
 		{
 			only_dots &= (*current == '.');
 			*buffer_out++ = *current++;
@@ -486,7 +502,9 @@ int gitfo_prettify_dir_path(char *buffer_out, const char *path)
 
 			*buffer_out ='\0';
 			len = retrieve_previous_path_component_start(buffer_out_start);
-			if (len < GIT_SUCCESS)
+			
+			/* Are we escaping out of the root dir? */
+			if (len < 0)
 				return GIT_EINVALIDPATH;
 
 			buffer_out = (char *)buffer_out_start + len;
@@ -494,7 +512,7 @@ int gitfo_prettify_dir_path(char *buffer_out, const char *path)
 		}
 
 		/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
-		if (only_dots &&segment_len > 0)
+		if (only_dots && segment_len > 0)
 			return GIT_EINVALIDPATH;
 
 		*buffer_out++ = '/';
@@ -506,12 +524,16 @@ int gitfo_prettify_dir_path(char *buffer_out, const char *path)
 	return GIT_SUCCESS;
 }
 
-int gitfo_prettify_file_path(char *buffer_out, const char *path)
+int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
 {
 	int error, path_len, i;
 	const char* pattern = "/..";
 
 	path_len = strlen(path);
+
+	/* Let's make sure the filename isn't empty nor a dot */
+	if (path_len == 0 || (path_len == 1 && *path == '.'))
+		return GIT_EINVALIDPATH;
 
 	/* Let's make sure the filename doesn't end with "/", "/." or "/.." */
 	for (i = 1; path_len > i && i < 4; i++) {
@@ -519,7 +541,7 @@ int gitfo_prettify_file_path(char *buffer_out, const char *path)
 			return GIT_EINVALIDPATH;
 	}
 
-	error =  gitfo_prettify_dir_path(buffer_out, path);
+	error =  gitfo_prettify_dir_path(buffer_out, size, path);
 	if (error < GIT_SUCCESS)
 		return error;
 

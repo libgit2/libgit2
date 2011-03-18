@@ -113,22 +113,18 @@ static int ensure_repository_init(
 		return GIT_ERROR;
 
 	if (repo->path_workdir != NULL || expected_working_directory != NULL) {
-		if (strcmp(repo->path_workdir, expected_working_directory) != 0)
-			//return GIT_ERROR;
+		if (git__suffixcmp(repo->path_workdir, expected_working_directory) != 0)
 			goto cleanup;
 	}
 
-	if (strcmp(repo->path_odb, path_odb) != 0)
-		//return GIT_ERROR;
+	if (git__suffixcmp(repo->path_odb, path_odb) != 0)
 		goto cleanup;
 
-	if (strcmp(repo->path_repository, expected_path_repository) != 0)
-		//return GIT_ERROR;
+	if (git__suffixcmp(repo->path_repository, expected_path_repository) != 0)
 		goto cleanup;
 
 	if (repo->path_index != NULL || expected_path_index != NULL) {
-		if (strcmp(repo->path_index, expected_path_index) != 0)
-			//return GIT_ERROR;
+		if (git__suffixcmp(repo->path_index, expected_path_index) != 0)
 			goto cleanup;
 	}
 
@@ -170,18 +166,18 @@ BEGIN_TEST(init2, "Initialize a bare repo with a relative path escaping out of t
 
 	must_pass(gitfo_getcwd(current_workdir, sizeof(current_workdir)));
 	
-	git__joinpath(path_repository, current_workdir, "a/b/c/");
+	git__joinpath(path_repository, TEMP_REPO_FOLDER, "a/b/c/");
 	must_pass(gitfo_mkdir_recurs(path_repository, mode));
 
 	must_pass(chdir(path_repository));
 
 	must_pass(git_repository_init(&repo, "../d/e.git", 1));
+	must_pass(git__suffixcmp(repo->path_repository, "/a/b/d/e.git/"));
+
 	git_repository_free(repo);
 
 	must_pass(chdir(current_workdir));
-	
-	git__joinpath(path_repository, current_workdir, "a/");
-	must_pass(rmdir_recurs(path_repository));
+	rmdir_recurs(TEMP_REPO_FOLDER);
 END_TEST
 
 BEGIN_SUITE(repository)
