@@ -223,6 +223,9 @@ void git__joinpath_n(char *buffer_out, int count, ...)
 		int len;
 
 		path = va_arg(ap, const char *);
+
+		assert((i == 0) || path != buffer_start);
+
 		if (i > 0 && *path == '/' && buffer_out > buffer_start && buffer_out[-1] == '/')
 			path++;
 
