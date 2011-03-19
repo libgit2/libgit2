@@ -80,8 +80,38 @@ BEGIN_TEST(write0, "write back a tag to the repository")
 	git_repository_free(repo);
 END_TEST
 
+BEGIN_TEST(write1, "Create a tag pointing to a commit then look it up")
+	git_oid id;
+	git_repository *repo;
+	git_tag *tag, *lookedup_tag;
+	git_oid id_commit, id_tag;
+	git_commit *commit;
+	git_signature *tagger;
+
+	must_pass(git_oid_mkstr(&id_commit, tagged_commit));
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+	must_pass(git_commit_lookup(&commit, repo, &id_commit));
+
+	/* Create and persist a new tag */
+	must_pass(git_tag_new(&tag, repo));
+	git_tag_set_name(tag, "nullTAGen");
+	git_tag_set_message(tag, "I've been tagged!");
+	must_pass(git_tag_set_target(tag, (git_object *)commit));
+	tagger = git_signature_new("nulltoken", "emeric.fermas@gmail.com", 1300557894, 60);
+	git_tag_set_tagger(tag, tagger);
+	must_pass(git_object_write((git_object *)tag));
+
+	/* Lookup the new tag by its expected oid */
+	must_pass(git_oid_mkstr(&id_tag, "24f6de34a108d931c6056fc4687637fe36c6bd6b"));
+	must_pass(git_object_lookup((git_object **)&lookedup_tag, repo, &id_tag, GIT_OBJ_TAG));
+
+	close_temp_repo(repo);
+END_TEST
+
 
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
 	ADD_TEST(write0);
+	ADD_TEST(write1);
 END_SUITE
