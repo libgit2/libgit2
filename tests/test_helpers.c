@@ -141,7 +141,7 @@ int copy_file(const char *src, const char *dst)
 	if (gitfo_read_file(&source_buf, src) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
-	dst_fd = gitfo_creat(dst, 0644);
+	dst_fd = gitfo_creat_force(dst, 0644);
 	if (dst_fd < 0)
 		goto cleanup;
 
@@ -211,18 +211,13 @@ typedef struct {
 
 static int copy_filesystem_element_recurs(void *_data, char *source)
 {
-	const int mode = 0755; /* or 0777 ? */
 	copydir_data *data = (copydir_data *)_data;
 
 	data->dst[data->dst_len] = 0;
 	git__joinpath(data->dst, data->dst, source + data->src_len);
 
-	if (gitfo_isdir(source) == GIT_SUCCESS) {
-		if (gitfo_mkdir(data->dst, mode) < GIT_SUCCESS)
-			return GIT_EOSERR;
-
+	if (gitfo_isdir(source) == GIT_SUCCESS)
 		return gitfo_dirent(source, GIT_PATH_MAX, copy_filesystem_element_recurs, _data);
-	}
 
 	return copy_file(source, data->dst);
 }

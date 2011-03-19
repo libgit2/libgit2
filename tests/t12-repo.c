@@ -196,7 +196,6 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 	must_pass(gitfo_getcwd(current_workdir, sizeof(current_workdir)));
 	strcpy(path_repository, current_workdir);
 	git__joinpath_n(path_repository, 3, path_repository, TEMP_REPO_FOLDER, "a/d/e.git");
-	must_pass(gitfo_mkdir_recurs(path_repository, mode));
 	must_pass(copydir_recurs(REPOSITORY_FOLDER, path_repository));
 
 	/* Change the current working directory */
