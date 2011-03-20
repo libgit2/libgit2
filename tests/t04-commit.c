@@ -366,7 +366,7 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 
 		const git_signature *author, *committer;
 		const char *message, *message_short;
-		time_t commit_time;
+		git_time_t commit_time;
 		unsigned int parents, p;
 		git_commit *parent;
 

@@ -38,7 +38,7 @@ void git_signature_free(git_signature *sig)
 	free(sig);
 }
 
-git_signature *git_signature_new(const char *name, const char *email, time_t time, int offset)
+git_signature *git_signature_new(const char *name, const char *email, git_time_t time, int offset)
 {
 	git_signature *p = NULL;
 

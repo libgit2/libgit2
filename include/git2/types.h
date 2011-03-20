@@ -52,12 +52,12 @@ GIT_BEGIN_DECL
 #if defined(_MSC_VER)
 
 typedef __int64 git_off_t;
-typedef __time64_t git_time_t;
+typedef __time64_t  git_time_t;
 
 #elif defined(__MINGW32__)
 
 typedef off64_t git_off_t;
-typedef time_t git_time_t;
+typedef time64_t git_time_t;
 
 #else  /* POSIX */
 
@@ -66,8 +66,8 @@ typedef time_t git_time_t;
  * before us (directly or indirectly), they'll get 32 bit off_t in their client
  * app, even though /we/ define _FILE_OFFSET_BITS=64.
  */
-typedef long long git_off_t;
-typedef time_t git_time_t;
+typedef int64_t git_off_t;
+typedef time64_t git_time_t;
 
 #endif
 
@@ -124,7 +124,7 @@ typedef struct git_index git_index;
 
 /** Time in a signature */
 typedef struct git_time {
-	time_t time; /** time in seconds from epoch */
+	git_time_t time; /** time in seconds from epoch */
 	int offset; /** timezone offset, in minutes */
 } git_time;
 
