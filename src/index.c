@@ -312,8 +312,8 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 
 	memset(&entry, 0x0, sizeof(git_index_entry));
 
-	entry.ctime.seconds = st.st_ctime;
-	entry.mtime.seconds = st.st_mtime;
+	entry.ctime.seconds = (git_time_t)st.st_ctime;
+	entry.mtime.seconds = (git_time_t)st.st_mtime;
 	/* entry.mtime.nanoseconds = st.st_mtimensec; */
 	/* entry.ctime.nanoseconds = st.st_ctimensec; */
 	entry.dev= st.st_rdev;
@@ -491,10 +491,10 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 
 	source = (const struct entry_short *)(buffer);
 
-	dest->ctime.seconds = (time_t)ntohl(source->ctime.seconds);
-	dest->ctime.nanoseconds = (time_t)ntohl(source->ctime.nanoseconds);
-	dest->mtime.seconds = (time_t)ntohl(source->mtime.seconds);
-	dest->mtime.nanoseconds = (time_t)ntohl(source->mtime.nanoseconds);
+	dest->ctime.seconds = (git_time_t)ntohl(source->ctime.seconds);
+	dest->ctime.nanoseconds = ntohl(source->ctime.nanoseconds);
+	dest->mtime.seconds = (git_time_t)ntohl(source->mtime.seconds);
+	dest->mtime.nanoseconds = ntohl(source->mtime.nanoseconds);
 	dest->dev = ntohl(source->dev);
 	dest->ino = ntohl(source->ino);
 	dest->mode = ntohl(source->mode);

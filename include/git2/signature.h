@@ -47,7 +47,7 @@ GIT_BEGIN_DECL
  * @offset timezone offset in minutes for the time
  * @return the new sig, NULl on out of memory
  */
-GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *email, time_t time, int offset);
+GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *email, git_time_t time, int offset);
 
 /**
  * Create a copy of an existing signature.

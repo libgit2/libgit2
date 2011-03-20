@@ -34,7 +34,7 @@ struct test_entry {
 	unsigned int index;
 	char path[128];
 	git_off_t file_size;
-	time_t mtime;
+	git_time_t mtime;
 };
 
 struct test_entry TEST_ENTRIES[] = {

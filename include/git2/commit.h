@@ -83,7 +83,7 @@ GIT_EXTERN(const char *) git_commit_message(git_commit *commit);
  * @param commit a previously loaded commit.
  * @return the time of a commit
  */
-GIT_EXTERN(time_t) git_commit_time(git_commit *commit);
+GIT_EXTERN(git_time_t) git_commit_time(git_commit *commit);
 
 /**
  * Get the commit timezone offset (i.e. committer's preferred timezone) of a commit.

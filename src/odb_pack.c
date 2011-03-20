@@ -93,7 +93,7 @@ struct pack_file {
 	git_oid *bad_object_sha1; /* array of git_oid */
 
 	int index_version;
-	time_t mtime;
+	git_time_t mtime;
 	int pack_fd;
 	unsigned pack_local:1, pack_keep:1;
 	git_oid sha1;
@@ -827,7 +827,7 @@ static int packfile_check(struct pack_file **pack_out, const char *path, int loc
 	 */
 	p->pack_size = (off_t)st.st_size;
 	p->pack_local = local;
-	p->mtime = st.st_mtime;
+	p->mtime = (git_time_t)st.st_mtime;
 
 	/* see if we can parse the sha1 oid in the packfile name */
 	if (path_len < 40 ||

@@ -315,7 +315,7 @@ GIT_COMMIT_GETTER(const git_signature *, author, commit->author)
 GIT_COMMIT_GETTER(const git_signature *, committer, commit->committer)
 GIT_COMMIT_GETTER(const char *, message, commit->message)
 GIT_COMMIT_GETTER(const char *, message_short, commit->message_short)
-GIT_COMMIT_GETTER(time_t, time, commit->committer->when.time)
+GIT_COMMIT_GETTER(git_time_t, time, commit->committer->when.time)
 GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
 GIT_COMMIT_GETTER(unsigned int, parentcount, commit->parent_oids.length)
 
