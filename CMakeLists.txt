@@ -62,11 +62,20 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
+OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 
 # Build Release by default
 IF (NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
+
+IF (THREADSAFE)
+	IF (NOT WIN32)
+		find_package(Threads REQUIRED)
+	ENDIF()
+
+	ADD_DEFINITIONS(-DGIT_THREADS)
+ENDIF()
 
 # Collect sourcefiles
 FILE(GLOB SRC src/*.c src/backends/*.c)
@@ -79,9 +88,6 @@ FILE(GLOB SRC_H include/git2/*.h)
 IF (WIN32 AND NOT CYGWIN)
     ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_LIB)
     FILE(GLOB SRC_PLAT src/win32/*.c)
-	IF (MINGW)
-		SET(PTHREAD_LIBRARY pthread)
-	ENDIF ()
 ENDIF ()
 
 # Specify sha1 implementation
@@ -97,7 +103,7 @@ ENDIF ()
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_ZLIB})
-TARGET_LINK_LIBRARIES(git2 ${LIB_SHA1} ${PTHREAD_LIBRARY} ${SQLITE3_LIBRARIES})
+TARGET_LINK_LIBRARIES(git2 ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT} ${SQLITE3_LIBRARIES})
 SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
 
@@ -121,7 +127,7 @@ IF (BUILD_TESTS)
 	FILE(GLOB SRC_TEST tests/t??-*.c)
 
 	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_TEST} ${SRC_ZLIB})
-	TARGET_LINK_LIBRARIES(libgit2_test ${LIB_SHA1} ${PTHREAD_LIBRARY} ${SQLITE3_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_test ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT} ${SQLITE3_LIBRARIES})
 
 	ADD_TEST(libgit2_test libgit2_test)
 ENDIF ()
