@@ -109,6 +109,26 @@ static void free_odb_object(void *o)
 	}
 }
 
+const git_oid *git_odb_object_id(git_odb_object *object)
+{
+	return &object->cached.oid;
+}
+
+const void *git_odb_object_data(git_odb_object *object)
+{
+	return object->raw.data;
+}
+
+size_t git_odb_object_size(git_odb_object *object)
+{
+	return object->raw.len;
+}
+
+git_otype git_odb_object_type(git_odb_object *object)
+{
+	return object->raw.type;
+}
+
 void git_odb_object_close(git_odb_object *object)
 {
 	git_cached_obj_decref((git_cached_obj *)object, &free_odb_object);

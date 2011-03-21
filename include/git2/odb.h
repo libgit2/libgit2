@@ -235,6 +235,48 @@ GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otyp
  */
 GIT_EXTERN(void) git_odb_object_close(git_odb_object *object);
 
+/**
+ * Return the OID of an ODB object
+ *
+ * This is the OID from which the object was read from
+ *
+ * @param object the object
+ * @return a pointer to the OID
+ */
+GIT_EXTERN(const git_oid *) git_odb_object_id(git_odb_object *object);
+
+/**
+ * Return the data of an ODB object
+ *
+ * This is the uncompressed, raw data as read from the ODB,
+ * without the leading header.
+ *
+ * This pointer is owned by the object and shall not be free'd.
+ *
+ * @param object the object
+ * @return a pointer to the data
+ */
+GIT_EXTERN(const void *) git_odb_object_data(git_odb_object *object);
+
+/**
+ * Return the size of an ODB object
+ *
+ * This is the real size of the `data` buffer, not the
+ * actual size of the object.
+ *
+ * @param object the object
+ * @return the size
+ */
+GIT_EXTERN(size_t) git_odb_object_size(git_odb_object *object);
+
+/**
+ * Return the type of an ODB object
+ *
+ * @param object the object
+ * @return the type
+ */
+GIT_EXTERN(git_otype) git_odb_object_type(git_odb_object *object);
+
 /** @} */
 GIT_END_DECL
 #endif
