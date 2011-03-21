@@ -5,7 +5,11 @@
 
 /* Common operations even if threading has been disabled */
 typedef struct {
+#if defined(_MSC_VER)
+	volatile long val;
+#else
 	volatile int val;
+#endif
 } git_atomic;
 
 GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
