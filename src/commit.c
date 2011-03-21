@@ -101,7 +101,7 @@ int git_commit_create_v(
 		oid, repo, update_ref, author, committer, message,
 		tree_oid, parent_count, oids);
 
-	free(oids);
+	free((void *)oids);
 	return error;
 }
 
@@ -132,7 +132,7 @@ int git_commit_create_ov(
 		git_object_id((git_object *)tree),
 		parent_count, oids);
 
-	free(oids);
+	free((void *)oids);
 	return error;
 }
 
@@ -160,7 +160,7 @@ int git_commit_create_o(
 		git_object_id((git_object *)tree),
 		parent_count, oids);
 	
-	free(oids);
+	free((void *)oids);
 	return error;
 }
 

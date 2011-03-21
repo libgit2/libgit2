@@ -78,7 +78,7 @@ void *git_cache_get(git_cache *cache, const git_oid *oid)
 {
 	const uint32_t *hash;
 	size_t i, pos, found = 0;
-	cache_node *node;
+	cache_node *node = NULL;
 
 	hash = (const uint32_t *)oid->id;
 
