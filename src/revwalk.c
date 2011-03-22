@@ -482,11 +482,22 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 void git_revwalk_free(git_revwalk *walk)
 {
 	unsigned int i;
+	const void *_unused;
+	commit_object *commit;
 
 	if (walk == NULL)
 		return;
 
 	git_revwalk_reset(walk);
+
+	/* if the parent has more than PARENTS_PER_COMMIT parents,
+	 * we had to allocate a separate array for those parents.
+	 * make sure it's being free'd */
+	GIT_HASHTABLE_FOREACH(walk->commits, _unused, commit, {
+		if (commit->out_degree > PARENTS_PER_COMMIT)
+			free(commit->parents);
+	});
+
 	git_hashtable_free(walk->commits);
 	git_pqueue_free(&walk->iterator_time);
 
