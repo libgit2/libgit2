@@ -295,6 +295,9 @@ static int process_commit_parents(git_revwalk *walk, commit_object *commit)
 		error = process_commit(walk, commit->parents[i]);
 	}
 
+	if(commit->out_degree > PARENTS_PER_COMMIT)
+		free(commit->parents);
+
 	return error;
 }
 
