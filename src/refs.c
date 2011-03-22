@@ -333,6 +333,7 @@ static int loose_lookup(
 
 	ref->mtime = ref_time;
 	*ref_out = ref;
+	gitfo_free_buf(&ref_file);
 	return GIT_SUCCESS;
 
 cleanup:
