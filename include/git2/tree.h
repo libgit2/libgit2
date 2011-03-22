@@ -53,6 +53,24 @@ GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
 }
 
 /**
+ * Close an open tree
+ *
+ * This is a wrapper around git_object_close()
+ *
+ * IMPORTANT:
+ * It *is* necessary to call this method when you stop
+ * using a tree. Failure to do so will cause a memory leak.
+ *
+ * @param tree the tree to close
+ */
+
+GIT_INLINE(void) git_tree_close(git_tree *tree)
+{
+	return git_object_close((git_object *) tree);
+}
+
+
+/**
  * Get the id of a tree.
  *
  * @param tree a previously loaded tree.

@@ -53,6 +53,24 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
 }
 
 /**
+ * Close an open tag
+ *
+ * This is a wrapper around git_object_close()
+ *
+ * IMPORTANT:
+ * It *is* necessary to call this method when you stop
+ * using a tag. Failure to do so will cause a memory leak.
+ *
+ * @param tag the tag to close
+ */
+
+GIT_INLINE(void) git_tag_close(git_tag *tag)
+{
+	return git_object_close((git_object *) tag);
+}
+
+
+/**
  * Get the id of a tag.
  *
  * @param tag a previously loaded tag.

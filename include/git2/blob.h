@@ -53,6 +53,24 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
 }
 
 /**
+ * Close an open blob
+ *
+ * This is a wrapper around git_object_close()
+ *
+ * IMPORTANT:
+ * It *is* necessary to call this method when you stop
+ * using a blob. Failure to do so will cause a memory leak.
+ *
+ * @param blob the blob to close
+ */
+
+GIT_INLINE(void) git_blob_close(git_blob *blob)
+{
+	return git_object_close((git_object *) blob);
+}
+
+
+/**
  * Get a read-only buffer with the raw content of a blob.
  *
  * A pointer to the raw content of a blob is returned;
