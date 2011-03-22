@@ -263,7 +263,7 @@ int gitfo_mv(const char *from, const char *to)
 	 * file exists, the `rename` call fails. This is as
 	 * close as it gets with the Win32 API.
 	 */
-	return MoveFileEx(from, to, MOVEFILE_REPLACE_EXISTING) ? GIT_SUCCESS : GIT_EOSERR;
+	return MoveFileEx(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? GIT_SUCCESS : GIT_EOSERR;
 #else
 	/* Don't even try this on Win32 */
 	if (!link(from, to)) {
