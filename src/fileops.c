@@ -32,7 +32,7 @@ static int creat_tempfile(char *path_out, const char *tmp_dir, const char *filen
 	git__joinpath(path_out, tmp_dir, filename);
 	strcat(path_out, "_git2_XXXXXX");
 
-#ifdef GIT_WIN32
+#if defined(_MSC_VER)
 	/* FIXME: there may be race conditions when multi-threading
 	 * with the library */
 	if (_mktemp_s(path_out, GIT_PATH_MAX) != 0)

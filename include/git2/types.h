@@ -57,7 +57,7 @@ typedef __time64_t  git_time_t;
 #elif defined(__MINGW32__)
 
 typedef off64_t git_off_t;
-typedef time64_t git_time_t;
+typedef __time64_t git_time_t;
 
 #else  /* POSIX */
 
