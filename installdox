@@ -3,12 +3,6 @@
 %subst = ( );
 $quiet   = 0;
 
-if (open(F,"search.cfg"))
-{
-  $_=<F> ; s/[ \t\n]*$//g ; $subst{"_doc"} = $_;
-  $_=<F> ; s/[ \t\n]*$//g ; $subst{"_cgi"} = $_;
-}
-
 while ( @ARGV ) {
   $_ = shift @ARGV;
   if ( s/^-// ) {
@@ -63,7 +57,8 @@ if ( ! @files ) {
       $match = ".html";
       next if ( $file =~ /^\.\.?$/ );
       ($file =~ /$match/) && (push @files, $file);
-      ($file =~ "tree.js") && (push @files, $file);
+      ($file =~ /\.svg/) && (push @files, $file);
+      ($file =~ "navtree.js") && (push @files, $file);
     }
     closedir(D);
   }
@@ -91,7 +86,7 @@ foreach $f (@files)
     }
     if ($oldf ne "tree.js") {
       while (<F>) {
-        s/doxygen\=\"([^ \"\:\t\>\<]*)\:([^ \"\t\>\<]*)\" (href|src)=\"\2/doxygen\=\"$1:$subst{$1}\" \3=\"$subst{$1}/g;
+        s/doxygen\=\"([^ \"\:\t\>\<]*)\:([^ \"\t\>\<]*)\" (xlink:href|href|src)=\"\2/doxygen\=\"$1:$subst{$1}\" \3=\"$subst{$1}/g;
         print G "$_";
       }
     }

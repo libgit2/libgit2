@@ -158,6 +158,7 @@ div.ah {
 	border-radius: 0.5em;
 	-webkit-border-radius: .5em;
 	-moz-border-radius: .5em;
+	box-shadow: 2px 2px 3px #999;
 	-webkit-box-shadow: 2px 2px 3px #999;
 	-moz-box-shadow: rgba(0, 0, 0, 0.15) 2px 2px 2px;
 	background-image: -webkit-gradient(linear, left top, left bottom, from(#eee), to(#000),color-stop(0.3, #444));
@@ -167,7 +168,6 @@ div.ah {
 div.groupHeader {
 	margin-left: 16px;
 	margin-top: 12px;
-	margin-bottom: 6px;
 	font-weight: bold;
 }
 
@@ -376,7 +376,7 @@ table.memberdecls {
 	font-size: 80%;
 	color: #4665A2;
 	font-weight: normal;
-	margin-left: 3px;
+	margin-left: 9px;
 }
 
 .memnav {
@@ -407,6 +407,10 @@ table.memberdecls {
         color: #253555;
         font-weight: bold;
         text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.9);
+        /* opera specific markup */
+        box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.15);
+        border-top-right-radius: 8px;
+        border-top-left-radius: 8px;
         /* firefox specific markup */
         -moz-box-shadow: rgba(0, 0, 0, 0.15) 5px 5px 5px;
         -moz-border-radius-topright: 8px;
@@ -428,6 +432,10 @@ table.memberdecls {
         padding: 2px 5px;
         background-color: #FBFCFD;
         border-top-width: 0;
+        /* opera specific markup */
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.15);
         /* firefox specific markup */
         -moz-border-radius-bottomleft: 8px;
         -moz-border-radius-bottomright: 8px;
@@ -455,6 +463,28 @@ table.memberdecls {
 .paramname em {
 	font-style: normal;
 }
+
+.params, .retval, .exception, .tparams {
+        border-spacing: 6px 2px;
+}       
+
+.params .paramname, .retval .paramname {
+        font-weight: bold;
+        vertical-align: top;
+}
+        
+.params .paramtype {
+        font-style: italic;
+        vertical-align: top;
+}       
+        
+.params .paramdir {
+        font-family: "courier new",courier,monospace;
+        vertical-align: top;
+}
+
+
+
 
 /* @end */
 
@@ -606,14 +636,14 @@ table.doxtable th {
 	list-style-type:none;
 	float:left;
 	padding-left:10px;
-	padding-right: 15px;
+	padding-right:15px;
 	background-image:url('bc_s.png');
 	background-repeat:no-repeat;
 	background-position:right;
 	color:#364D7C;
 }
 
-.navpath a
+.navpath li.navelem a
 {
 	height:32px;
 	display:block;
@@ -621,10 +651,24 @@ table.doxtable th {
 	outline: none;
 }
 
-.navpath a:hover
+.navpath li.navelem a:hover
 {
 	color:#6884BD;
 }
+
+.navpath li.footer
+{
+        list-style-type:none;
+        float:right;
+        padding-left:10px;
+        padding-right:15px;
+        background-image:none;
+        background-repeat:no-repeat;
+        background-position:right;
+        color:#364D7C;
+        font-size: 8pt;
+}
+
 
 div.summary
 {
@@ -636,6 +680,19 @@ div.summary
 }       
 
 div.summary a
+{
+	white-space: nowrap;
+}
+
+div.ingroups
+{
+	font-size: 8pt;
+	padding-left: 5px;
+	width: 50%;
+	text-align: left;
+}
+
+div.ingroups a
 {
 	white-space: nowrap;
 }
@@ -652,5 +709,92 @@ div.header
 div.headertitle
 {
 	padding: 5px 5px 5px 10px;
+}
+
+dl
+{
+        padding: 0 0 0 10px;
+}
+
+dl.note, dl.warning, dl.attention, dl.pre, dl.post, dl.invariant, dl.deprecated, dl.todo, dl.test, dl.bug
+{
+        border-left:4px solid;
+        padding: 0 0 0 6px;
+}
+
+dl.note
+{
+        border-color: #D0D000;
+}
+
+dl.warning, dl.attention
+{
+        border-color: #FF0000;
+}
+
+dl.pre, dl.post, dl.invariant
+{
+        border-color: #00D000;
+}
+
+dl.deprecated
+{
+        border-color: #505050;
+}
+
+dl.todo
+{
+        border-color: #00C0E0;
+}
+
+dl.test
+{
+        border-color: #3030E0;
+}
+
+dl.bug
+{
+        border-color: #C08050;
+}
+
+#projectlogo
+{
+	text-align: center;
+	vertical-align: bottom;
+	border-collapse: separate;
+}
+ 
+#projectlogo img
+{ 
+	border: 0px none;
+}
+ 
+#projectname
+{
+	font: 300% arial,sans-serif;
+	margin: 0px;
+	padding: 0px;
+}
+    
+#projectbrief
+{
+	font: 120% arial,sans-serif;
+	margin: 0px;
+	padding: 0px;
+}
+
+#projectnumber
+{
+	font: 50% arial,sans-serif;
+	margin: 0px;
+	padding: 0px;
+}
+
+#titlearea
+{
+	padding: 0px;
+	margin: 0px;
+	width: 100%;
+	border-bottom: 1px solid #5373B4;
 }
 
