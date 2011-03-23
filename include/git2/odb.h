@@ -157,6 +157,26 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *d
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
 /**
+ * Write an object directly into the ODB
+ *
+ * This method writes a full object straight into the ODB.
+ * For most cases, it is preferred to write objects through a write
+ * stream, which is both faster and less memory intensive, specially
+ * for big objects.
+ *
+ * This method is provided for compatibility with custom backends
+ * which are not able to support streaming writes
+ *
+ * @param oid pointer to store the OID result of the write
+ * @param odb object database where to store the object
+ * @param data buffer with the data to storr
+ * @param len size of the buffer
+ * @param type type of the data to store
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_write(git_oid *oid, git_odb *odb, const void *data, size_t len, git_otype type);
+
+/**
  * Open a stream to write an object into the ODB
  *
  * The type and final length of the object must be specified

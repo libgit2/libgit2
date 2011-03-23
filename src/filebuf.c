@@ -151,8 +151,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 	int error;
 	size_t path_len;
 
-	if (file == NULL)
-		return GIT_ERROR;
+	assert(file && path);
 
 	memset(file, 0x0, sizeof(git_filebuf));
 
@@ -203,7 +202,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 		char tmp_path[GIT_PATH_MAX];
 
 		/* Open the file as temporary for locking */
-		file->fd = gitfo_creat_tmp(tmp_path, "_filebuf_"); 
+		file->fd = gitfo_mktemp(tmp_path, path); 
 		if (file->fd < 0) {
 			error = GIT_EOSERR;
 			goto cleanup;
@@ -218,12 +217,6 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 			goto cleanup;
 		}
 	} else {
-		/* If the file is not temporary, make sure we have a path */
-		if (path == NULL) {
-			error = GIT_ERROR;
-			goto cleanup;
-		}
-
 		path_len = strlen(path);
 
 		/* Save the original path of the file */

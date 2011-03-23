@@ -579,7 +579,7 @@ int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend
 	loose_backend *backend;
 	loose_writestream *stream;
 
-	char hdr[64];
+	char hdr[64], tmp_path[GIT_PATH_MAX];
 	int  hdrlen;
 	int error;
 
@@ -603,7 +603,9 @@ int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend
 	stream->stream.free = &loose_backend__stream_free;
 	stream->stream.mode = GIT_STREAM_WRONLY;
 
-	error = git_filebuf_open(&stream->fbuf, NULL,
+	git__joinpath(tmp_path, backend->objects_dir, "tmp_object");
+
+	error = git_filebuf_open(&stream->fbuf, tmp_path,
 		GIT_FILEBUF_HASH_CONTENTS |
 		GIT_FILEBUF_DEFLATE_CONTENTS |
 		GIT_FILEBUF_TEMPORARY);
