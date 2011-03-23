@@ -66,7 +66,7 @@ GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
 
 GIT_INLINE(void) git_tree_close(git_tree *tree)
 {
-	return git_object_close((git_object *) tree);
+	git_object_close((git_object *) tree);
 }
 
 

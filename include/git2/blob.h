@@ -66,7 +66,7 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
 
 GIT_INLINE(void) git_blob_close(git_blob *blob)
 {
-	return git_object_close((git_object *) blob);
+	git_object_close((git_object *) blob);
 }
 
 

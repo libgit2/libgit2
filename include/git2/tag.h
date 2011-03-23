@@ -66,7 +66,7 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
 
 GIT_INLINE(void) git_tag_close(git_tag *tag)
 {
-	return git_object_close((git_object *) tag);
+	git_object_close((git_object *) tag);
 }
 
 

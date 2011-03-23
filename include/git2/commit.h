@@ -67,7 +67,7 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
 
 GIT_INLINE(void) git_commit_close(git_commit *commit)
 {
-	return git_object_close((git_object *) commit);
+	git_object_close((git_object *) commit);
 }
 
 /**
