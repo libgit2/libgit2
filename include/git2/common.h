@@ -119,13 +119,13 @@
 /** The object type is invalid or doesn't match */
 #define GIT_EINVALIDTYPE (GIT_ERROR - 8)
 
-/** The object cannot be written that because it's missing internal data */
+/** The object cannot be written because it's missing internal data */
 #define GIT_EMISSINGOBJDATA (GIT_ERROR - 9)
 
 /** The packfile for the ODB is corrupted */
 #define GIT_EPACKCORRUPTED (GIT_ERROR - 10)
 
-/** Failed to adquire or release a file lock */
+/** Failed to acquire or release a file lock */
 #define GIT_EFLOCKFAIL (GIT_ERROR - 11)
 
 /** The Z library failed to inflate/deflate an object's data */
@@ -146,7 +146,7 @@
 /** The specified symbolic reference is too deeply nested */
 #define GIT_ETOONESTEDSYMREF (GIT_ERROR - 17)
 
-/** The pack-refs file is either corrupted of its format is not currently supported */
+/** The pack-refs file is either corrupted or its format is not currently supported */
 #define GIT_EPACKEDREFSCORRUPTED (GIT_ERROR - 18)
 
 /** The path is invalid */
