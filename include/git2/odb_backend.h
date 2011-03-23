@@ -28,7 +28,6 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "odb.h"
 
 /**
  * @file git2/backend.h
