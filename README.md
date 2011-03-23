@@ -128,6 +128,7 @@ Here are the bindings to libgit2 that are currently available:
 * node-gitteh (Node.js bindings) <https://github.com/libgit2/node-gitteh>
 * nodegit (Node.js bindings) <https://github.com/tbranyen/nodegit>
 * libqgit2 (C++ QT bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
+* libgit2-ocaml (ocaml bindings) <https://github.com/burdges/libgit2-ocaml>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 
 If you start another language binding to libgit2, please let us know so
