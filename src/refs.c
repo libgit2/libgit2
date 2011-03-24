@@ -1564,8 +1564,9 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 		*buffer_out++ = *current++;
 	}
 
-	/* Object id refname have to contain at least one slash */
-	if (is_oid_ref && !contains_a_slash)
+	/* Object id refname have to contain at least one slash, except
+	 * for HEAD in a detached state */
+	if (is_oid_ref && !contains_a_slash && strcmp(name, GIT_HEAD_FILE))
 				return GIT_EINVALIDREFNAME;
 
 	/* A refname can not end with ".lock" */
@@ -1574,9 +1575,13 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 
 	*buffer_out = '\0';
 
-	/* For object id references, name has to start with refs/(heads|tags|remotes) */
-	if (is_oid_ref && !(!git__prefixcmp(buffer_out_start, GIT_REFS_HEADS_DIR) ||
-			!git__prefixcmp(buffer_out_start, GIT_REFS_TAGS_DIR) || !git__prefixcmp(buffer_out_start, GIT_REFS_REMOTES_DIR)))
+	/*
+	 * For object id references, name has to start with refs/. Again,
+	 * we need to allow HEAD to be in a detached state.
+	 */
+	if (is_oid_ref &&
+		!(git__prefixcmp(buffer_out_start, GIT_REFS_DIR) ||
+		  strcmp(buffer_out_start, GIT_HEAD_FILE)))
 		return GIT_EINVALIDREFNAME;
 
 	return error;
