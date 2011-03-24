@@ -132,7 +132,7 @@ GIT_EXTERN(int) git_index_read(git_index *index);
 GIT_EXTERN(int) git_index_write(git_index *index);
 
 /**
- * Find the first index of any entires which point to given
+ * Find the first index of any entries which point to given
  * path in the Git index.
  *
  * @param index an existing index object
