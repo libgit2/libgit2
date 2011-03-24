@@ -148,7 +148,7 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 		index->on_disk = 1;
 
 	*index_out = index;
-	return GIT_SUCCESS;
+	return git_index_read(index);
 }
 
 int git_index_open_bare(git_index **index_out, const char *index_path)
