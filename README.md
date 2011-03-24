@@ -127,6 +127,7 @@ Here are the bindings to libgit2 that are currently available:
 * GitForDelphi (Delphi bindings) <https://github.com/libgit2/GitForDelphi>
 * node-gitteh (Node.js bindings) <https://github.com/libgit2/node-gitteh>
 * nodegit (Node.js bindings) <https://github.com/tbranyen/nodegit>
+* go-git (Go bindings) <https://github.com/str1ngs/go-git>
 * libqgit2 (C++ QT bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
 * libgit2-ocaml (ocaml bindings) <https://github.com/burdges/libgit2-ocaml>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
