@@ -606,10 +606,12 @@ cleanup:
 
 
 struct dirent_list_data {
-	git_vector ref_list;
 	git_repository *repo;
 	size_t repo_path_len;
 	unsigned int list_flags;
+
+	int (*callback)(const char *, void *);
+	void *callback_payload;
 };
 
 static int _dirent_loose_listall(void *_data, char *full_path)
@@ -625,10 +627,12 @@ static int _dirent_loose_listall(void *_data, char *full_path)
 		git_hashtable_lookup(data->repo->references.packfile, file_path) != NULL)
 		return GIT_SUCCESS;
 
-	if ((data->list_flags & loose_guess_rtype(full_path)) == 0)
-		return GIT_SUCCESS; /* we are filtering out this reference */
+	if (data->list_flags != GIT_REF_LISTALL) {
+		if ((data->list_flags & loose_guess_rtype(full_path)) == 0)
+			return GIT_SUCCESS; /* we are filtering out this reference */
+	}
 
-	return git_vector_insert(&data->ref_list, git__strdup(file_path));
+	return data->callback(file_path, data->callback_payload);
 }
 
 static int _dirent_loose_load(void *data, char *full_path)
@@ -1402,47 +1406,67 @@ int git_reference_packall(git_repository *repo)
 	return packed_write(repo);
 }
 
-int git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags)
+int git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload)
 {
 	int error;
 	struct dirent_list_data data;
 	char refs_path[GIT_PATH_MAX];
-
-	array->strings = NULL;
-	array->count = 0;
-
-	git_vector_init(&data.ref_list, 8, NULL);
-	data.repo_path_len = strlen(repo->path_repository);
-	data.list_flags = list_flags;
-	data.repo = repo;
 
 	/* list all the packed references first */
 	if (list_flags & GIT_REF_PACKED) {
 		const char *ref_name;
 		void *_unused;
 
-		if ((error = packed_load(repo)) < GIT_SUCCESS) {
-			git_vector_free(&data.ref_list);
+		if ((error = packed_load(repo)) < GIT_SUCCESS)
 			return error;
-		}
 
 		GIT_HASHTABLE_FOREACH(repo->references.packfile, ref_name, _unused,
-			git_vector_insert(&data.ref_list, git__strdup(ref_name));
+			if ((error = callback(ref_name, payload)) < GIT_SUCCESS)
+				return error;
 		);
 	}
 
 	/* now list the loose references, trying not to
 	 * duplicate the ref names already in the packed-refs file */
+
+	data.repo_path_len = strlen(repo->path_repository);
+	data.list_flags = list_flags;
+	data.repo = repo;
+	data.callback = callback;
+	data.callback_payload = payload;
+
+
 	git__joinpath(refs_path, repo->path_repository, GIT_REFS_DIR);
-	error = gitfo_dirent(refs_path, GIT_PATH_MAX, _dirent_loose_listall, &data);
+	return gitfo_dirent(refs_path, GIT_PATH_MAX, _dirent_loose_listall, &data);
+}
+
+int cb__reflist_add(const char *ref, void *data)
+{
+	return git_vector_insert((git_vector *)data, git__strdup(ref));
+}
+
+int git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags)
+{
+	int error;
+	git_vector ref_list;
+
+	assert(array && repo);
+
+	array->strings = NULL;
+	array->count = 0;
+
+	if (git_vector_init(&ref_list, 8, NULL) < GIT_SUCCESS)
+		return GIT_ENOMEM;
+
+	error = git_reference_listcb(repo, list_flags, &cb__reflist_add, (void *)&ref_list);
 
 	if (error < GIT_SUCCESS) {
-		git_vector_free(&data.ref_list);
+		git_vector_free(&ref_list);
 		return error;
 	}
 
-	array->strings = (char **)data.ref_list.contents;
-	array->count = data.ref_list.length;
+	array->strings = (char **)ref_list.contents;
+	array->count = ref_list.length;
 	return GIT_SUCCESS;
 }
 

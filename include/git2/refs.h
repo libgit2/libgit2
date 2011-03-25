@@ -241,6 +241,29 @@ GIT_EXTERN(int) git_reference_packall(git_repository *repo);
  */
 GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
 
+
+/**
+ * List all the references in the repository, calling a custom
+ * callback for each one.
+ *
+ * The listed references may be filtered by type, or using
+ * a bitwise OR of several types. Use the magic value
+ * `GIT_REF_LISTALL` to obtain all references, including
+ * packed ones.
+ *
+ * The `callback` function will be called for each of the references
+ * in the repository, and will receive the name of the reference and
+ * the `payload` value passed to this method.
+ *
+ * @param repo Repository where to find the refs
+ * @param list_flags Filtering flags for the reference
+ *		listing.
+ * @param callback Function which will be called for every listed ref
+ * @param payload Additional data to pass to the callback
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
+
 /** @} */
 GIT_END_DECL
 #endif
