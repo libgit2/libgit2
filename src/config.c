@@ -163,6 +163,9 @@ static int is_linebreak(const char *pos)
 			memcmp(pos - 2, LINEBREAK_WIN32, sizeof(LINEBREAK_WIN32)) == 0;
 }
 
+/*
+ * Read a line, but don't consume it
+ */
 static char *cfg_readline(git_config *cfg)
 {
 	char *line = NULL;
@@ -213,10 +216,39 @@ static char *cfg_readline(git_config *cfg)
 	if (*line_end == '\0')
 		cfg->reader.eof = 1;
 
+	/*
 	cfg->reader.line_number++;
 	cfg->reader.read_ptr = line_end;
+	*/
 
 	return line;
+}
+
+/*
+ * Consume a line, without storing it anywhere
+ */
+void cfg_consume_line(git_config *cfg)
+{
+	char *line_start, *line_end;
+	int len;
+
+	line_start = cfg->reader.read_ptr;
+	line_end = strchr(line_start, '\n');
+	/* No newline at EOF */
+	if(line_end == NULL){
+		line_end = strchr(line_start, '\0');
+	}
+
+	len = line_end - line_start;
+
+	if (*line_end == '\n')
+		line_end++;
+
+	if (*line_end == '\0')
+		cfg->reader.eof = 1;
+
+	cfg->reader.line_number++;
+	cfg->reader.read_ptr = line_end;
 }
 
 static inline int config_keychar(int c)
@@ -388,16 +420,22 @@ static int config_parse(git_config *cfg_file)
 			break;
 
 		case '[': /* section header, new section begins */
-			error = parse_section_header(&current_section, line);
+			if (current_section)
+				free(current_section);
+			error = parse_section_header(cfg_file, &current_section, line);
 			break;
 
 		default: /* assume variable declaration */
 			error = parse_variable(cfg_file, current_section, line);
+			cfg_consume_line(cfg_file);
 			break;
 		}
 
 		free(line);
 	}
+
+	if(current_section)
+		free(current_section);
 
 	return error;
 }
