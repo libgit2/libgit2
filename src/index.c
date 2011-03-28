@@ -74,7 +74,7 @@ struct entry_short {
 	uint32_t file_size;
 	git_oid oid;
 	uint16_t flags;
-	char path[1]; /* arbritrary length */
+	char path[1]; /* arbitrary length */
 };
 
 struct entry_long {
@@ -89,7 +89,7 @@ struct entry_long {
 	git_oid oid;
 	uint16_t flags;
 	uint16_t flags_extended;
-	char path[1]; /* arbritrary length */
+	char path[1]; /* arbitrary length */
 };
 
 /* local declarations */
