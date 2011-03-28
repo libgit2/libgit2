@@ -188,6 +188,20 @@ GIT_EXTERN(int) git_tag_create_o(
 		const git_signature *tagger,
 		const char *message);
 
+/**
+ * Create a new tag in the repository from a buffer
+ *
+ * @param oid Pointer where to store the OID of the newly created tag
+ *
+ * @param repo Repository where to store the tag
+ *
+ * @param buffer Raw tag data
+ */
+GIT_EXTERN(int) git_tag_create_frombuffer(
+		git_oid *oid,
+		git_repository *repo,
+		const char *buffer);
+
 /** @} */
 GIT_END_DECL
 #endif

@@ -241,6 +241,43 @@ int git_tag_create(
 	return error;
 }
 
+int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer)
+{
+	git_tag tag;
+	int error;
+	char *buf;
+	git_object *obj;
+
+	assert(oid && buffer);
+
+	memset(&tag, 0, sizeof(tag));
+
+	buf = strdup(buffer);
+	if(buf == NULL)
+		return GIT_ENOMEM;
+
+	if((error = parse_tag_buffer(&tag, buf, buf + strlen(buf))) < 0)
+	   goto exit_freebuf;
+
+	error = git_object_lookup(&obj, repo, &tag.target, tag.type);
+	if(error < 0)
+		goto exit_freetag;
+
+	error = git_tag_create_o(oid, repo, tag.tag_name, obj,
+							 tag.tagger, tag.message);
+
+	git_object_close(obj);
+
+ exit_freetag:
+	git_signature_free(tag.tagger);
+	free(tag.tag_name);
+	free(tag.message);
+ exit_freebuf:
+	free(buf);
+
+	return error;
+}
+
 
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
 {
