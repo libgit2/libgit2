@@ -229,43 +229,68 @@ static char *parse_section_header_ext(char *base_name, git_config *cfg)
 	return base_name;
 }
 
-static int parse_section_header(char **section_out, const char *line)
+static int parse_section_header(git_config *cfg, char **section_out, const char *line)
 {
-	char *name, *name_start, *name_end;
+	char *name, *name_end;
 	int name_length, c;
+	int error = GIT_SUCCESS;
 
 	/* find the end of the variable's name */
-	name_end = strchr(name_start, ']');
+	name_end = strchr(line, ']');
 	if (name_end == NULL)
-		return NULL;
+		return GIT_EOBJCORRUPTED;
 
-	name = (char *)git__malloc((size_t)(name_end - name_start) + 1);
+	name = (char *)git__malloc((size_t)(name_end - line) + 1);
 	if (name == NULL)
-		return NULL;
+		return GIT_EOBJCORRUPTED;
 
 	name_length = 0;
+
+	/* Make sure we were given a section header */
+	c = cfg_getchar(cfg, SKIP_WHITESPACE | SKIP_COMMENTS);
+	if(c != '['){
+		error = GIT_EOBJCORRUPTED;
+		goto error;
+	}
+
 	c = cfg_getchar(cfg, SKIP_WHITESPACE | SKIP_COMMENTS);
 
 	do {
-		if (cfg->reader.eof)
+		if (cfg->reader.eof){
+			error = GIT_EOBJCORRUPTED;
 			goto error;
+		}
 
-		if (isspace(c))
-			return parse_section_name_ext(name, cfg);
+		if (isspace(c)){
+			*section_out = parse_section_header_ext(name, cfg);
+			return GIT_SUCCESS;
+		}
 
-		if (!config_keychar(c) && c != '.')
+		if (!config_keychar(c) && c != '.'){
+			error = GIT_EOBJCORRUPTED;
 			goto error;
+		}
 
 		name[name_length++] = tolower(c);
 
 	} while ((c = cfg_getchar(cfg, SKIP_COMMENTS)) != ']');
 
+	/*
+	 * Here, we enforce that a section name needs to be on its own
+	 * line
+	 */
+	if(cfg_getchar(cfg, SKIP_COMMENTS) != '\n'){
+		error = GIT_EOBJCORRUPTED;
+		goto error;
+	}
+
 	name[name_length] = 0;
-	return name;
+	*section_out = name;
+	return GIT_SUCCESS;
 
 error:
 	free(name);
-	return NULL;
+	return error;
 }
 
 static int skip_bom(git_config *cfg)
