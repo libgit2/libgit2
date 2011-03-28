@@ -30,7 +30,11 @@
 
 #include <ctype.h>
 
-
+/**********************
+ * Forward declarations
+ ***********************/
+static int config_parse(git_config *cfg_file);
+static int parse_variable(git_config *cfg, const char *section_name, const char *line);
 uint32_t config_table_hash(const void *key)
 {
 	const char *var_name = (char *)key;
@@ -48,6 +52,7 @@ int config_table_haskey(void *object, const void *key)
 int git_config_open(git_config **cfg_out, const char *path)
 {
 	git_config *cfg;
+	int error = GIT_SUCCESS;
 
 	assert(cfg_out && path);
 
@@ -58,15 +63,35 @@ int git_config_open(git_config **cfg_out, const char *path)
 	memset(cfg, 0x0, sizeof(git_config));
 
 	cfg->file_path = git__strdup(path);
-	if (cfg->file_path == NULL)
-		return GIT_ENOMEM;
+	if (cfg->file_path == NULL){
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
 
 	cfg->vars = git_hashtable_alloc(16, config_table_hash, config_table_haskey);
-	if (cfg->vars == NULL)
-		return GIT_ENOMEM;
+	if (cfg->vars == NULL){
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
 
 	*cfg_out = cfg;
-	return GIT_SUCCESS;
+
+	error = gitfo_read_file(&cfg->reader.buffer, cfg->file_path);
+	if(error < GIT_SUCCESS)
+		goto cleanup;
+
+	/* Initialise the reading position */
+	cfg->reader.read_ptr = cfg->reader.buffer.data;
+	return config_parse(cfg);
+
+ cleanup:
+	if(cfg->vars)
+		git_hashtable_free(cfg->vars);
+	if(cfg->file_path)
+		free(cfg->file_path);
+	free(cfg);
+
+	return error;
 }
 
 void git_config_free(git_config *cfg)
