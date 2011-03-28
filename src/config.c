@@ -122,8 +122,8 @@ static int cfg_getchar(git_config *cfg_file, int flags)
 	while (skip_whitespace && isspace(c));
 
 	if (skip_comments && (c == '#' || c == ';')) {
-    	do c = cfg_getchar_raw(cfg_file);
-    	while (c != '\n');
+		do c = cfg_getchar_raw(cfg_file);
+		while (c != '\n');
 	}
 
 	return c;
@@ -234,7 +234,7 @@ static int parse_section_header(char **section_out, const char *line)
 		name[name_length++] = tolower(c);
 
 	} while ((c = cfg_getchar(cfg, SKIP_COMMENTS)) != ']');
-	
+
 	name[name_length] = 0;
 	return name;
 
@@ -348,7 +348,7 @@ static int config_parse(git_config *cfg_file)
 
 		free(line);
 	}
-	
+
 	return error;
 }
 
