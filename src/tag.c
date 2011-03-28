@@ -142,7 +142,7 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	tag->tagger = git__malloc(sizeof(git_signature));
 
 	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0)
-		return error;
+		goto cleanup;
 
 	text_len = buffer_end - ++buffer;
 
@@ -151,6 +151,14 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	tag->message[text_len] = '\0';
 
 	return GIT_SUCCESS;
+
+ cleanup:
+	if(tag->tag_name)
+		free(tag->tag_name);
+	if(tag->tagger)
+		git_signature_free(tag->tagger);
+
+	return error;
 }
 
 int git_tag_create_o(
