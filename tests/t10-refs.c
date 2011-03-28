@@ -295,6 +295,79 @@ BEGIN_TEST(create2, "create a new OID reference")
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
+static const char *ref_name = "refs/heads/other";
+static const char *ref_master_name = "refs/heads/master";
+BEGIN_TEST(overwrite0, "Overwrite an existing symbolic reference")
+	git_reference *ref;
+	git_repository *repo;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_symbolic_force(&ref, repo, ref_name, ref_master_name));
+
+	git_reference_delete(ref);
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(overwrite1, "Overwrite an existing object id reference")
+	git_reference *ref;
+	git_repository *repo;
+	git_oid id;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_pass(git_reference_create_oid_force(&ref, repo, ref_name, &id));
+
+	git_reference_delete(ref);
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(overwrite2, "Overwrite an existing object id reference with a symbolic one")
+	git_reference *ref;
+	git_repository *repo;
+	git_oid id;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_symbolic_force(&ref, repo, ref_name, ref_master_name));
+
+	git_reference_delete(ref);
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(overwrite3, "Overwrite an existing symbolic reference with an object id one")
+	git_reference *ref;
+	git_repository *repo;
+	git_oid id;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_pass(git_reference_create_oid_force(&ref, repo, ref_name, &id));
+
+	git_reference_delete(ref);
+	git_repository_free(repo);
+END_TEST
+
 BEGIN_TEST(pack0, "create a packfile for an empty folder")
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
@@ -496,6 +569,25 @@ BEGIN_TEST(rename4, "can not rename a reference with an invalid name")
 	/* Failure to rename it hasn't corrupted its state */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));
 	must_be_true(!strcmp(looked_up_ref->name, packed_test_head_name));
+
+	close_temp_repo(repo);
+END_TEST
+
+BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing reference")
+	git_reference *looked_up_ref;
+	git_repository *repo;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	/* An existing reference... */
+	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
+
+	/* Can not be renamed to the name of another existing reference. */
+	must_pass(git_reference_rename_force(looked_up_ref, packed_test_head_name));
+
+	/* Failure to rename it hasn't corrupted its state */
+	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
+	must_be_true(!strcmp(looked_up_ref->name, packed_head_name));
 
 	close_temp_repo(repo);
 END_TEST
@@ -761,6 +853,11 @@ BEGIN_SUITE(refs)
 	ADD_TEST(create1);
 	ADD_TEST(create2);
 
+	ADD_TEST(overwrite0);
+	ADD_TEST(overwrite1);
+	ADD_TEST(overwrite2);
+	ADD_TEST(overwrite3);
+
 	ADD_TEST(normalize0);
 	ADD_TEST(normalize1);
 	ADD_TEST(normalize2);
@@ -773,6 +870,7 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename2);
 	ADD_TEST(rename3);
 	ADD_TEST(rename4);
+	ADD_TEST(rename5);
 
 	ADD_TEST(delete0);
 	ADD_TEST(list0);
