@@ -110,8 +110,8 @@ GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository
  * Create a new object id reference, overwriting an existing one with
  * the same name, if it exists.
  *
- * If the new reference isn't a symbolic one, any pointers to the old
- * reference become invalid.
+ * If the new reference isn't an object id one, any pointers to the
+ * old reference become invalid.
  *
  * The reference will be created in the repository and written
  * to the disk.
