@@ -915,8 +915,238 @@ cleanup:
 	return error;
 }
 
+/*****************************************
+ * Internal methods - reference creation
+ *****************************************/
+
+int git_reference_create_symbolic_internal(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force)
+{
+	char normalized[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	int error = GIT_SUCCESS, updated = 0;
+	git_reference *ref = NULL, *old_ref = NULL;
+
+	if (git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
+		return GIT_EEXISTS;
+
+	/*
+	 * If they old ref was of the same type, then we can just update
+	 * it (once we've checked that the target is valid). Otherwise we
+	 * need a new reference because we can't make a symbolic ref out
+	 * of an oid one.
+	 * If if didn't exist, then we need to create a new one anyway.
+     */
+	if (ref && ref->type & GIT_REF_SYMBOLIC){
+		updated = 1;
+	} else {
+		ref = NULL;
+		error = reference_create(&ref, repo, name, GIT_REF_SYMBOLIC);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	/* The target can aither be the name of an object id reference or the name of another symbolic reference */
+	error = normalize_name(normalized, target, 0);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	/* set the target; this will write the reference on disk */
+	error = git_reference_set_target(ref, normalized);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	/*
+	 * If we didn't update the ref, then we need to insert or replace
+	 * it in the loose cache. If we replaced a ref, free it.
+	 */
+	if (!updated){
+		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		if(old_ref)
+			reference_free(old_ref);
+	}
+
+	*ref_out = ref;
+
+	return error;
+
+cleanup:
+	reference_free(ref);
+	return error;
+}
+
+int git_reference_create_oid_internal(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force)
+{
+	int error = GIT_SUCCESS, updated = 0;
+	git_reference *ref = NULL, *old_ref = NULL;
+
+	if(git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
+		return GIT_EEXISTS;
+
+	/*
+	 * If they old ref was of the same type, then we can just update
+	 * it (once we've checked that the target is valid). Otherwise we
+	 * need a new reference because we can't make a symbolic ref out
+	 * of an oid one.
+	 * If if didn't exist, then we need to create a new one anyway.
+     */
+	if (ref && ref-> type & GIT_REF_OID){
+		updated = 1;
+	} else {
+		ref = NULL;
+		error = reference_create(&ref, repo, name, GIT_REF_OID);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	/* set the oid; this will write the reference on disk */
+	error = git_reference_set_oid(ref, id);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if(!updated){
+		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		if(old_ref)
+			reference_free(old_ref);
+	}
+
+	*ref_out = ref;
+
+	return error;
+
+cleanup:
+	reference_free(ref);
+	return error;
+}
+
+/*
+ * Rename a reference
+ *
+ * If the reference is packed, we need to rewrite the
+ * packfile to remove the reference from it and create
+ * the reference back as a loose one.
+ *
+ * If the reference is loose, we just rename it on
+ * the filesystem.
+ *
+ * We also need to re-insert the reference on its corresponding
+ * in-memory cache, since the caches are indexed by refname.
+ */
+int git_reference_rename_internal(git_reference *ref, const char *new_name, int force)
+{
+	int error;
+	char *old_name;
+	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX], normalized_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	git_reference *looked_up_ref, *old_ref = NULL;
+
+	assert(ref);
+
+	/* Ensure the name is valid */
+	error = normalize_name(normalized_name, new_name, ref->type & GIT_REF_OID);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* Ensure we're not going to overwrite an existing reference */
+	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
+	if (error == GIT_SUCCESS && !force)
+		return GIT_EEXISTS;
+
+	if (error != GIT_ENOTFOUND)
+		return error;
 
 
+	old_name = ref->name;
+	ref->name = git__strdup(new_name);
+
+	if (ref->name == NULL) {
+		ref->name = old_name;
+		return GIT_ENOMEM;
+	}
+
+	if (ref->type & GIT_REF_PACKED) {
+		/* write the packfile to disk; note
+		 * that the state of the in-memory cache is not
+		 * consistent, because the reference is indexed
+		 * by its old name but it already has the new one.
+		 * This doesn't affect writing, though, and allows
+		 * us to rollback if writing fails
+		 */
+
+		ref->type &= ~GIT_REF_PACKED;
+
+		/* Create the loose ref under its new name */
+		error = loose_write(ref);
+		if (error < GIT_SUCCESS) {
+			ref->type |= GIT_REF_PACKED;
+			goto cleanup;
+		}
+
+		/* Remove from the packfile cache in order to avoid packing it back
+		 * Note : we do not rely on git_reference_delete() because this would
+		 * invalidate the reference.
+		 */
+		git_hashtable_remove(ref->owner->references.packfile, old_name);
+
+		/* Recreate the packed-refs file without the reference */
+		error = packed_write(ref->owner);
+		if (error < GIT_SUCCESS)
+			goto rename_loose_to_old_name;
+
+	} else {
+		git__joinpath(old_path, ref->owner->path_repository, old_name);
+		git__joinpath(new_path, ref->owner->path_repository, ref->name);
+
+		error = gitfo_mv_force(old_path, new_path);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		/* Once succesfully renamed, remove from the cache the reference known by its old name*/
+		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
+	}
+
+	/* Store the renamed reference into the loose ref cache */
+	error = git_hashtable_insert2(ref->owner->references.loose_cache, ref->name, ref, (void **) &old_ref);
+
+	/* If we force-replaced, we need to free the old reference */
+	if(old_ref)
+		reference_free(old_ref);
+
+	free(old_name);
+	return error;
+
+cleanup:
+	/* restore the old name if this failed */
+	free(ref->name);
+	ref->name = old_name;
+	return error;
+
+rename_loose_to_old_name:
+	/* If we hit this point. Something *bad* happened! Think "Ghostbusters
+	 * crossing the streams" definition of bad.
+	 * Either the packed-refs has been correctly generated and something else
+	 * has gone wrong, or the writing of the new packed-refs has failed, and
+	 * we're stuck with the old one. As a loose ref always takes priority over
+	 * a packed ref, we'll eventually try and rename the generated loose ref to
+	 * its former name. It even that fails, well... we might have lost the reference
+	 * for good. :-/
+	*/
+
+	git__joinpath(old_path, ref->owner->path_repository, ref->name);
+	git__joinpath(new_path, ref->owner->path_repository, old_name);
+
+	/* No error checking. We'll return the initial error */
+	gitfo_mv_force(old_path, new_path);
+
+	/* restore the old name */
+	free(ref->name);
+	ref->name = old_name;
+
+	return error;
+}
 
 /*****************************************
  * External Library API
@@ -975,64 +1205,23 @@ int git_reference_lookup(git_reference **ref_out, git_repository *repo, const ch
 
 int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target)
 {
-	char normalized[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
-	int error = GIT_SUCCESS;
-	git_reference *ref = NULL;
+	return git_reference_create_symbolic_internal(ref_out, repo, name, target, 0);
+}
 
-	error = reference_create(&ref, repo, name, GIT_REF_SYMBOLIC);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	/* The target can aither be the name of an object id reference or the name of another symbolic reference */
-	error = normalize_name(normalized, target, 0);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	/* set the target; this will write the reference on disk */
-	error = git_reference_set_target(ref, normalized);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	error = git_hashtable_insert(repo->references.loose_cache, ref->name, ref);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	*ref_out = ref;
-
-	return error;
-
-cleanup:
-	reference_free(ref);
-	return error;
+int git_reference_create_symbolic_force(git_reference **ref_out, git_repository *repo, const char *name, const char *target)
+{
+	return git_reference_create_symbolic_internal(ref_out, repo, name, target, 1);
 }
 
 int git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id)
 {
-	int error = GIT_SUCCESS;
-	git_reference *ref = NULL;
-
-	error = reference_create(&ref, repo, name, GIT_REF_OID);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	/* set the oid; this will write the reference on disk */
-	error = git_reference_set_oid(ref, id);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	error = git_hashtable_insert(repo->references.loose_cache, ref->name, ref);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	*ref_out = ref;
-
-	return error;
-
-cleanup:
-	reference_free(ref);
-	return error;
+	return git_reference_create_oid_internal(ref_out, repo, name, id, 0);
 }
 
+int git_reference_create_oid_force(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id)
+{
+	return git_reference_create_oid_internal(ref_out, repo, name, id, 1);
+}
 
 /**
  * Getters
@@ -1240,125 +1429,14 @@ cleanup:
 	return error;
 }
 
-/*
- * Rename a reference
- *
- * If the reference is packed, we need to rewrite the
- * packfile to remove the reference from it and create
- * the reference back as a loose one.
- *
- * If the reference is loose, we just rename it on
- * the filesystem.
- *
- * We also need to re-insert the reference on its corresponding
- * in-memory cache, since the caches are indexed by refname.
- */
 int git_reference_rename(git_reference *ref, const char *new_name)
 {
-	int error;
-	char *old_name;
-	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX], normalized_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
-	git_reference *looked_up_ref;
+	return git_reference_rename_internal(ref, new_name, 0);
+}
 
-	assert(ref);
-
-	/* Ensure the name is valid */
-	error = normalize_name(normalized_name, new_name, ref->type & GIT_REF_OID);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	/* Ensure we're not going to overwrite an existing reference */
-	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
-	if (error == GIT_SUCCESS)
-		return GIT_EINVALIDREFNAME;
-
-	if (error != GIT_ENOTFOUND)
-		return error;
-
-
-	old_name = ref->name;
-	ref->name = git__strdup(new_name);
-
-	if (ref->name == NULL) {
-		ref->name = old_name;
-		return GIT_ENOMEM;
-	}
-
-	if (ref->type & GIT_REF_PACKED) {
-		/* write the packfile to disk; note
-		 * that the state of the in-memory cache is not
-		 * consistent, because the reference is indexed
-		 * by its old name but it already has the new one.
-		 * This doesn't affect writing, though, and allows
-		 * us to rollback if writing fails
-		 */
-
-		ref->type &= ~GIT_REF_PACKED;
-
-		/* Create the loose ref under its new name */
-		error = loose_write(ref);
-		if (error < GIT_SUCCESS) {
-			ref->type |= GIT_REF_PACKED;
-			goto cleanup;
-		}
-
-		/* Remove from the packfile cache in order to avoid packing it back
-		 * Note : we do not rely on git_reference_delete() because this would
-		 * invalidate the reference.
-		 */
-		git_hashtable_remove(ref->owner->references.packfile, old_name);
-
-		/* Recreate the packed-refs file without the reference */
-		error = packed_write(ref->owner);
-		if (error < GIT_SUCCESS)
-			goto rename_loose_to_old_name;
-
-	} else {
-		git__joinpath(old_path, ref->owner->path_repository, old_name);
-		git__joinpath(new_path, ref->owner->path_repository, ref->name);
-
-		error = gitfo_mv_force(old_path, new_path);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		/* Once succesfully renamed, remove from the cache the reference known by its old name*/
-		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
-	}
-
-	/* Store the renamed reference into the loose ref cache */
-	error = git_hashtable_insert(ref->owner->references.loose_cache, ref->name, ref);
-
-	free(old_name);
-	return error;
-
-cleanup:
-	/* restore the old name if this failed */
-	free(ref->name);
-	ref->name = old_name;
-	return error;
-
-rename_loose_to_old_name:
-	/* If we hit this point. Something *bad* happened! Think "Ghostbusters
-	 * crossing the streams" definition of bad.
-	 * Either the packed-refs has been correctly generated and something else
-	 * has gone wrong, or the writing of the new packed-refs has failed, and
-	 * we're stuck with the old one. As a loose ref always takes priority over
-	 * a packed ref, we'll eventually try and rename the generated loose ref to
-	 * its former name. It even that fails, well... we might have lost the reference
-	 * for good. :-/
-	*/
-
-	git__joinpath(old_path, ref->owner->path_repository, ref->name);
-	git__joinpath(new_path, ref->owner->path_repository, old_name);
-
-	/* No error checking. We'll return the initial error */
-	gitfo_mv_force(old_path, new_path);
-
-	/* restore the old name */
-	free(ref->name);
-	ref->name = old_name;
-
-	return error;
+int git_reference_rename_force(git_reference *ref, const char *new_name)
+{
+	return git_reference_rename_internal(ref, new_name, 1);
 }
 
 int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)

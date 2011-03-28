@@ -69,6 +69,27 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_reposito
 GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
 
 /**
+ * Create a new symbolic reference, overwriting an existing one with
+ * the same name, if it exists.
+ *
+ * If the new reference isn't a symbolic one, any pointers to the old
+ * reference become invalid.
+ *
+ * The reference will be created in the repository and written
+ * to the disk.
+ *
+ * This reference is owned by the repository and shall not
+ * be free'd by the user.
+ *
+ * @param ref_out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param target The target of the reference
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_create_symbolic_force(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
+
+/**
  * Create a new object id reference.
  *
  * The reference will be created in the repository and written
@@ -84,6 +105,27 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
+
+/**
+ * Create a new object id reference, overwriting an existing one with
+ * the same name, if it exists.
+ *
+ * If the new reference isn't a symbolic one, any pointers to the old
+ * reference become invalid.
+ *
+ * The reference will be created in the repository and written
+ * to the disk.
+ *
+ * This reference is owned by the repository and shall not
+ * be free'd by the user.
+ *
+ * @param ref_out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param id The object id pointed to by the reference.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_create_oid_force(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
 
 /**
  * Get the OID pointed to by a reference.
@@ -188,6 +230,20 @@ GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
  *
  */
 GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name);
+
+/**
+ * Rename an existing reference, overwriting an existing one with the
+ * same name, if it exists.
+ *
+ * This method works for both direct and symbolic references.
+ * The new name will be checked for validity and may be
+ * modified into a normalized form.
+ *
+ * The refernece will be immediately renamed in-memory
+ * and on disk.
+ *
+ */
+GIT_EXTERN(int) git_reference_rename_force(git_reference *ref, const char *new_name);
 
 /**
  * Delete an existing reference
