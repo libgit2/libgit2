@@ -28,36 +28,7 @@
 #include "hashtable.h"
 #include "config.h"
 
-struct git_config {
-	char *file_path;
-
-	struct {
-		gitfo_buf buffer;
-		char *read_ptr;
-		int line_number;
-		int eof;
-	} reader;
-
-	git_hashtable *vars;
-};
-
-typedef enum {
-	GIT_VAR_INT,
-	GIT_VAR_BOOL,
-	GIT_VAR_STR
-} git_config_type;
-
-struct git_config_var {
-	git_config_type type;
-	char *name;
-	union {
-		unsigned char boolean;
-		long integer;
-		char *string;
-	} value;
-};
-
-typedef struct git_config git_config;
+#include <ctype.h>
 
 
 uint32_t config_table_hash(const void *key)

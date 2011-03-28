@@ -122,6 +122,12 @@ typedef struct git_tree git_tree;
 /** Memory representation of an index file. */
 typedef struct git_index git_index;
 
+/** Memory representation of a config file */
+typedef struct git_config git_config;
+
+/** Memory representation of a config variable */
+typedef struct git_config_var git_config_var;
+
 /** Time in a signature */
 typedef struct git_time {
 	time_t time; /** time in seconds from epoch */

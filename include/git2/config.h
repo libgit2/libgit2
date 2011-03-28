@@ -22,36 +22,32 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifndef INCLUDE_git_config_h__
+#define INCLUDE_git_config_h__
 
-#ifndef INCLUDE_git_git_h__
-#define INCLUDE_git_git_h__
+#include "common.h"
 
-#define LIBGIT2_VERSION "0.8.0"
-#define LIBGIT2_VER_MAJOR 0
-#define LIBGIT2_VER_MINOR 8
-#define LIBGIT2_VER_REVISION 0
+/**
+ * @file git2/refs.h
+ * @brief Git config management routines
+ * @defgroup git_reference Git config management routines
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
 
-#include "git2/common.h"
-#include "git2/errors.h"
-#include "git2/zlib.h"
+/**
+ * Open a configuration file
+ *
+ * @param cfg_out pointer to the configuration data
+ */
+GIT_EXTERN(int) git_config_open(git_config **cfg_out, const char *path);
 
-#include "git2/types.h"
+/**
+ * Free the configuration and its associated memory
+ */
+GIT_EXTERN(void) git_config_free(git_config *cfg);
 
-#include "git2/oid.h"
-#include "git2/signature.h"
-#include "git2/odb.h"
-
-#include "git2/repository.h"
-#include "git2/revwalk.h"
-#include "git2/refs.h"
-
-#include "git2/object.h"
-#include "git2/blob.h"
-#include "git2/commit.h"
-#include "git2/tag.h"
-#include "git2/tree.h"
-
-#include "git2/index.h"
-#include "git2/config.h"
-
+/** @} */
+GIT_END_DECL
 #endif
