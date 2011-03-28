@@ -161,7 +161,7 @@
 /** This feature has not been implemented yet */
 #define GIT_ENOTIMPLEMENTED (GIT_ERROR - 22)
 
-/** A refernce or object of the same name already exists */
+/** A reference with this name already exists */
 #define GIT_EEXISTS (GIT_ERROR - 23)
 
 GIT_BEGIN_DECL
