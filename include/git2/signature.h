@@ -45,7 +45,7 @@ GIT_BEGIN_DECL
  * @email email of the person
  * @time time when the action happened
  * @offset timezone offset in minutes for the time
- * @return the new sig, NULl on out of memory
+ * @return the new sig, NULL on out of memory
  */
 GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *email, git_time_t time, int offset);
 
