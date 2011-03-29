@@ -227,9 +227,8 @@ BEGIN_TEST(create0, "create a new symbolic reference")
 	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
 
+	git_reference_delete(looked_up_ref);
 	git_repository_free(repo);
-
-	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
 BEGIN_TEST(create1, "create a deep symbolic reference")
@@ -250,9 +249,8 @@ BEGIN_TEST(create1, "create a deep symbolic reference")
 	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
 
+	git_reference_delete(looked_up_ref);
 	git_repository_free(repo);
-
-	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
 BEGIN_TEST(create2, "create a new OID reference")
@@ -290,9 +288,8 @@ BEGIN_TEST(create2, "create a new OID reference")
 	must_pass(git_reference_lookup(&looked_up_ref, repo, new_head));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(looked_up_ref)) == 0);
 
+	git_reference_delete(looked_up_ref);
 	git_repository_free(repo);
-
-	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
 static const char *ref_name = "refs/heads/other";
