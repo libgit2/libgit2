@@ -126,7 +126,7 @@ typedef struct git_index git_index;
 typedef struct git_config git_config;
 
 /** Memory representation of a config variable */
-typedef struct git_config_var git_config_var;
+typedef struct git_cvar git_cvar;
 
 /** Time in a signature */
 typedef struct git_time {

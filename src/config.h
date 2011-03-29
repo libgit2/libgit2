@@ -18,10 +18,10 @@ typedef enum {
 	GIT_VAR_INT,
 	GIT_VAR_BOOL,
 	GIT_VAR_STR
-} git_config_type;
+} git_cvar_type;
 
-struct git_config_var {
-	git_config_type type;
+struct git_cvar {
+	git_cvar_type type;
 	char *name;
 	union {
 		unsigned char boolean;
