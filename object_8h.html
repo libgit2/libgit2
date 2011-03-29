@@ -76,6 +76,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga4ac82821ae26011a548a771d5a9a4720">git_object_lookup</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Lookup a reference to one of the objects in a repostory.  <a href="group__git__object.html#ga4ac82821ae26011a548a771d5a9a4720"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#gadbb8304d5a4714060a44e1a9189b6adf">git_object_new</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new in-memory repository object with the given type.  <a href="group__git__object.html#gadbb8304d5a4714060a44e1a9189b6adf"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e">git_object_write</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *object)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Write back an object to disk.  <a href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga16996d6d574380531b260e18bb0373db">git_object_id</a> (const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the id (SHA1) of a repository object.  <a href="group__git__object.html#ga16996d6d574380531b260e18bb0373db"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#gaccfdc461c24579b18bcef341e91355cd">git_object_type</a> (const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
@@ -110,7 +114,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

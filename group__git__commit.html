@@ -62,38 +62,77 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga6501b39eacd564915489d105b6fa927d">git_commit_lookup</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **commit, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Lookup a commit object from a repository.  <a href="#ga6501b39eacd564915489d105b6fa927d"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga05b7860809cb8ec4a1d90ff6a1ac03c2">git_commit_close</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Close an open commit.  <a href="#ga05b7860809cb8ec4a1d90ff6a1ac03c2"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga3d20e84274804f1687a511ea3954dc83">git_commit_new</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **commit, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new in-memory git_commit.  <a href="#ga3d20e84274804f1687a511ea3954dc83"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gaa926d465afd9a625d689d31a30fa5e92">git_commit_id</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the id of a commit.  <a href="#gaa926d465afd9a625d689d31a30fa5e92"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gac15d05a6ffab7da067d0b27228bc9ad4">git_commit_message_short</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the short (one line) message of a commit.  <a href="#gac15d05a6ffab7da067d0b27228bc9ad4"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gae17931582ac29e852252c507d0cc1281">git_commit_message</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the full message of a commit.  <a href="#gae17931582ac29e852252c507d0cc1281"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">git_time_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gaacc1b27b3d1f253ac00fd46b1bd5677b">git_commit_time</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the commit time (i.e.  <a href="#gaacc1b27b3d1f253ac00fd46b1bd5677b"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">time_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga1378a3f6ecef5cee281518ef5cc9bd0b">git_commit_time</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the commit time (i.e.  <a href="#ga1378a3f6ecef5cee281518ef5cc9bd0b"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga78823eff0066f277574667c212344a48">git_commit_time_offset</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the commit timezone offset (i.e.  <a href="#ga78823eff0066f277574667c212344a48"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga4959e749fe7f9b257f902e96e224451c">git_commit_committer</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the committer of a commit.  <a href="#ga4959e749fe7f9b257f902e96e224451c"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gab1e9d0bc6450a95978a1643e00de5e68">git_commit_author</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the author of a commit.  <a href="#gab1e9d0bc6450a95978a1643e00de5e68"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gaf6367797eeac58c0b232257256d192c3">git_commit_tree</a> (<a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> **tree_out, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the tree pointed to by a commit.  <a href="#gaf6367797eeac58c0b232257256d192c3"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga60865b10f3a64f030e383b5781942ee8">git_commit_tree</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the tree pointed to by a commit.  <a href="#ga60865b10f3a64f030e383b5781942ee8"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga4a195aff6b2ef3fe4f6dc5f70de18c47">git_commit_parentcount</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of parents of this commit.  <a href="#ga4a195aff6b2ef3fe4f6dc5f70de18c47"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga51320a499c192f17c9b6269b536e3124">git_commit_parent</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **parent, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, unsigned int n)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the specified parent of the commit.  <a href="#ga51320a499c192f17c9b6269b536e3124"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gaf833fc3a7f8eb78ba5a2ed833a6f2e94">git_commit_create</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *update_ref, const <a class="el" href="structgit__signature.html">git_signature</a> *author, const <a class="el" href="structgit__signature.html">git_signature</a> *committer, const char *message, const <a class="el" href="structgit__oid.html">git_oid</a> *tree_oid, int parent_count, const <a class="el" href="structgit__oid.html">git_oid</a> *parent_oids[])</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new commit in the repository.  <a href="#gaf833fc3a7f8eb78ba5a2ed833a6f2e94"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gad1c76ec3293251d65af997c8e00d87d8">git_commit_create_o</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *update_ref, const <a class="el" href="structgit__signature.html">git_signature</a> *author, const <a class="el" href="structgit__signature.html">git_signature</a> *committer, const char *message, const <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree, int parent_count, const <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *parents[])</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new commit in the repository using `git_object` instances as parameters.  <a href="#gad1c76ec3293251d65af997c8e00d87d8"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga0191932483886e5bb7b4da62839abefa">git_commit_create_ov</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *update_ref, const <a class="el" href="structgit__signature.html">git_signature</a> *author, const <a class="el" href="structgit__signature.html">git_signature</a> *committer, const char *message, const <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree, int parent_count,...)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new commit in the repository using `git_object` instances and a variable argument list.  <a href="#ga0191932483886e5bb7b4da62839abefa"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga58aa071b4c2a28d1912238e3db96c73f">git_commit_create_v</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *update_ref, const <a class="el" href="structgit__signature.html">git_signature</a> *author, const <a class="el" href="structgit__signature.html">git_signature</a> *committer, const char *message, const <a class="el" href="structgit__oid.html">git_oid</a> *tree_oid, int parent_count,...)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new commit in the repository using a variable argument list.  <a href="#ga58aa071b4c2a28d1912238e3db96c73f"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gaf5a8b591fe9a8d8df1870eeb97908a25">git_commit_parent</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, unsigned int n)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the specified parent of the commit.  <a href="#gaf5a8b591fe9a8d8df1870eeb97908a25"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga8e05b2002d15bd2c535c1b2e3f01688b">git_commit_add_parent</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *new_parent)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a new parent commit to an existing commit.  <a href="#ga8e05b2002d15bd2c535c1b2e3f01688b"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga7177ba22fab1560eda2208870f4aaa3f">git_commit_set_message</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, const char *message)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the message of a commit.  <a href="#ga7177ba22fab1560eda2208870f4aaa3f"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gafc32781aa0aa44e7fa2d9d976c31ea03">git_commit_set_committer</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, const <a class="el" href="structgit__signature.html">git_signature</a> *committer_sig)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the committer of a commit.  <a href="#gafc32781aa0aa44e7fa2d9d976c31ea03"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga55613b216c16977069567b434e07f569">git_commit_set_author</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, const <a class="el" href="structgit__signature.html">git_signature</a> *author_sig)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the author of a commit.  <a href="#ga55613b216c16977069567b434e07f569"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gae1842cd66567820c4ba0ff14fdc0c7a7">git_commit_set_tree</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the tree which is pointed to by a commit.  <a href="#gae1842cd66567820c4ba0ff14fdc0c7a7"></a><br/></td></tr>
 </table>
 <hr/><h2>Function Documentation</h2>
+<a class="anchor" id="ga8e05b2002d15bd2c535c1b2e3f01688b"></a><!-- doxytag: member="commit.h::git_commit_add_parent" ref="ga8e05b2002d15bd2c535c1b2e3f01688b" args="(git_commit *commit, git_commit *new_parent)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_commit_add_parent </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>commit</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>new_parent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Add a new parent commit to an existing commit. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">commit</td><td>the commit object </td></tr>
+    <tr><td class="paramname">new_parent</td><td>the new commit which will be a parent </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+
+</div>
+</div>
 <a class="anchor" id="gab1e9d0bc6450a95978a1643e00de5e68"></a><!-- doxytag: member="commit.h::git_commit_author" ref="gab1e9d0bc6450a95978a1643e00de5e68" args="(git_commit *commit)" -->
 <div class="memitem">
 <div class="memproto">
@@ -120,33 +159,6 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ga05b7860809cb8ec4a1d90ff6a1ac03c2"></a><!-- doxytag: member="commit.h::git_commit_close" ref="ga05b7860809cb8ec4a1d90ff6a1ac03c2" args="(git_commit *commit)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void git_commit_close </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
-          <td class="paramname"><em>commit</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Close an open commit. </p>
-<p>This is a wrapper around <a class="el" href="group__git__object.html#ga3daccfd1b2370d009f2b718aa11a558a" title="Close an open object.">git_object_close()</a></p>
-<p>IMPORTANT: It *is* necessary to call this method when you stop using a commit. Failure to do so will cause a memory leak.</p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table class="params">
-    <tr><td class="paramname">commit</td><td>the commit to close </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
 <a class="anchor" id="ga4959e749fe7f9b257f902e96e224451c"></a><!-- doxytag: member="commit.h::git_commit_committer" ref="ga4959e749fe7f9b257f902e96e224451c" args="(git_commit *commit)" -->
 <div class="memitem">
 <div class="memproto">
@@ -170,315 +182,6 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="return"><dt><b>Returns:</b></dt><dd>the committer of a commit </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="gaf833fc3a7f8eb78ba5a2ed833a6f2e94"></a><!-- doxytag: member="commit.h::git_commit_create" ref="gaf833fc3a7f8eb78ba5a2ed833a6f2e94" args="(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_oid *tree_oid, int parent_count, const git_oid *parent_oids[])" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int git_commit_create </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
-          <td class="paramname"><em>repo</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>update_ref</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>author</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>committer</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>message</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>tree_oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>parent_count</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>parent_oids</em>[]&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Create a new commit in the repository. </p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table class="params">
-    <tr><td class="paramname">oid</td><td>Pointer where to store the OID of the newly created commit</td></tr>
-    <tr><td class="paramname">repo</td><td>Repository where to store the commit</td></tr>
-    <tr><td class="paramname">update_ref</td><td>If not NULL, name of the reference that will be updated to point to this commit. If the reference is not direct, it will be resolved to a direct reference. Use "HEAD" to update the HEAD of the current branch and make it point to this commit</td></tr>
-    <tr><td class="paramname">author</td><td>Signature representing the author and the authory time of this commit</td></tr>
-    <tr><td class="paramname">committer</td><td>Signature representing the committer and the commit time of this commit</td></tr>
-    <tr><td class="paramname">message</td><td>Full message for this commit</td></tr>
-    <tr><td class="paramname">tree_oid</td><td>Object ID of the tree for this commit. Note that no validation is performed on this OID. Use the _o variants of this method to assure a proper tree is passed to the commit.</td></tr>
-    <tr><td class="paramname">parent_count</td><td>Number of parents for this commit</td></tr>
-    <tr><td class="paramname">parents</td><td>Array of pointers to parent OIDs for this commit. Note that no validation is performed on these OIDs. Use the _o variants of this method to assure that are parents for the commit are proper objects.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise The created commit will be written to the Object Database and the given reference will be updated to point to it </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="gad1c76ec3293251d65af997c8e00d87d8"></a><!-- doxytag: member="commit.h::git_commit_create_o" ref="gad1c76ec3293251d65af997c8e00d87d8" args="(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_tree *tree, int parent_count, const git_commit *parents[])" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int git_commit_create_o </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
-          <td class="paramname"><em>repo</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>update_ref</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>author</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>committer</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>message</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *&#160;</td>
-          <td class="paramname"><em>tree</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>parent_count</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
-          <td class="paramname"><em>parents</em>[]&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Create a new commit in the repository using `git_object` instances as parameters. </p>
-<p>The `tree_oid` and `parent_oids` paremeters now take a instance of `git_tree` and `git_commit`, respectively.</p>
-<p>All other parameters remain the same</p>
-<dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="group__git__commit.html#gaf833fc3a7f8eb78ba5a2ed833a6f2e94" title="Create a new commit in the repository.">git_commit_create</a> </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ga0191932483886e5bb7b4da62839abefa"></a><!-- doxytag: member="commit.h::git_commit_create_ov" ref="ga0191932483886e5bb7b4da62839abefa" args="(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_tree *tree, int parent_count,...)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int git_commit_create_ov </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
-          <td class="paramname"><em>repo</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>update_ref</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>author</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>committer</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>message</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *&#160;</td>
-          <td class="paramname"><em>tree</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>parent_count</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>...</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Create a new commit in the repository using `git_object` instances and a variable argument list. </p>
-<p>The `tree_oid` paremeter now takes a instance of `const git_tree *`.</p>
-<p>The parents for the commit are specified as a variable list of pointers to `const git_commit *`. Note that this is a convenience method which may not be safe to export for certain languages or compilers</p>
-<p>All other parameters remain the same</p>
-<dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="group__git__commit.html#gaf833fc3a7f8eb78ba5a2ed833a6f2e94" title="Create a new commit in the repository.">git_commit_create</a> </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ga58aa071b4c2a28d1912238e3db96c73f"></a><!-- doxytag: member="commit.h::git_commit_create_v" ref="ga58aa071b4c2a28d1912238e3db96c73f" args="(git_oid *oid, git_repository *repo, const char *update_ref, const git_signature *author, const git_signature *committer, const char *message, const git_oid *tree_oid, int parent_count,...)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int git_commit_create_v </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
-          <td class="paramname"><em>repo</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>update_ref</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>author</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
-          <td class="paramname"><em>committer</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>message</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>tree_oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>parent_count</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>...</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Create a new commit in the repository using a variable argument list. </p>
-<p>The parents for the commit are specified as a variable list of pointers to `const <a class="el" href="structgit__oid.html" title="Unique identity of any object (commit, tree, blob, tag).">git_oid</a> *`. Note that this is a convenience method which may not be safe to export for certain languages or compilers</p>
-<p>All other parameters remain the same</p>
-<dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="group__git__commit.html#gaf833fc3a7f8eb78ba5a2ed833a6f2e94" title="Create a new commit in the repository.">git_commit_create</a> </dd></dl>
 
 </div>
 </div>
@@ -540,6 +243,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Lookup a commit object from a repository. </p>
+<p>The generated commit object is owned by the revision repo and shall not be freed by the user.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">commit</td><td>pointer to the looked up commit </td></tr>
@@ -604,19 +308,51 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ga51320a499c192f17c9b6269b536e3124"></a><!-- doxytag: member="commit.h::git_commit_parent" ref="ga51320a499c192f17c9b6269b536e3124" args="(git_commit **parent, git_commit *commit, unsigned int n)" -->
+<a class="anchor" id="ga3d20e84274804f1687a511ea3954dc83"></a><!-- doxytag: member="commit.h::git_commit_new" ref="ga3d20e84274804f1687a511ea3954dc83" args="(git_commit **commit, git_repository *repo)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int git_commit_parent </td>
+          <td class="memname">int git_commit_new </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **&#160;</td>
-          <td class="paramname"><em>parent</em>, </td>
+          <td class="paramname"><em>commit</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new in-memory git_commit. </p>
+<p>The commit object must be manually filled using setter methods before it can be written to its repository.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">commit</td><td>pointer to the new commit </td></tr>
+    <tr><td class="paramname">repo</td><td>The repository where the object will reside </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="gaf5a8b591fe9a8d8df1870eeb97908a25"></a><!-- doxytag: member="commit.h::git_commit_parent" ref="gaf5a8b591fe9a8d8df1870eeb97908a25" args="(git_commit *commit, unsigned int n)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a>* git_commit_parent </td>
+          <td>(</td>
           <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
           <td class="paramname"><em>commit</em>, </td>
         </tr>
@@ -638,13 +374,12 @@ Functions</h2></td></tr>
 <p>Get the specified parent of the commit. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">parent</td><td>Pointer where to store the parent commit </td></tr>
     <tr><td class="paramname">commit</td><td>a previously loaded commit. </td></tr>
-    <tr><td class="paramname">n</td><td>the position of the parent (from 0 to `parentcount`) </td></tr>
+    <tr><td class="paramname">n</td><td>the position of the entry </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>a pointer to the commit; NULL if out of bounds </dd></dl>
 
 </div>
 </div>
@@ -674,12 +409,156 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="gaacc1b27b3d1f253ac00fd46b1bd5677b"></a><!-- doxytag: member="commit.h::git_commit_time" ref="gaacc1b27b3d1f253ac00fd46b1bd5677b" args="(git_commit *commit)" -->
+<a class="anchor" id="ga55613b216c16977069567b434e07f569"></a><!-- doxytag: member="commit.h::git_commit_set_author" ref="ga55613b216c16977069567b434e07f569" args="(git_commit *commit, const git_signature *author_sig)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">git_time_t git_commit_time </td>
+          <td class="memname">void git_commit_set_author </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>commit</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
+          <td class="paramname"><em>author_sig</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the author of a commit. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">commit</td><td>the commit object </td></tr>
+    <tr><td class="paramname">author_sig</td><td>signature of the author </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="gafc32781aa0aa44e7fa2d9d976c31ea03"></a><!-- doxytag: member="commit.h::git_commit_set_committer" ref="gafc32781aa0aa44e7fa2d9d976c31ea03" args="(git_commit *commit, const git_signature *committer_sig)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void git_commit_set_committer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>commit</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
+          <td class="paramname"><em>committer_sig</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the committer of a commit. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">commit</td><td>the commit object </td></tr>
+    <tr><td class="paramname">author_sig</td><td>signature of the committer </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="ga7177ba22fab1560eda2208870f4aaa3f"></a><!-- doxytag: member="commit.h::git_commit_set_message" ref="ga7177ba22fab1560eda2208870f4aaa3f" args="(git_commit *commit, const char *message)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void git_commit_set_message </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>commit</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>message</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the message of a commit. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">commit</td><td>the commit object </td></tr>
+    <tr><td class="paramname">message</td><td>the new message </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="gae1842cd66567820c4ba0ff14fdc0c7a7"></a><!-- doxytag: member="commit.h::git_commit_set_tree" ref="gae1842cd66567820c4ba0ff14fdc0c7a7" args="(git_commit *commit, git_tree *tree)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void git_commit_set_tree </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>commit</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *&#160;</td>
+          <td class="paramname"><em>tree</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the tree which is pointed to by a commit. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">commit</td><td>the commit object </td></tr>
+    <tr><td class="paramname">tree</td><td>the new tree </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="ga1378a3f6ecef5cee281518ef5cc9bd0b"></a><!-- doxytag: member="commit.h::git_commit_time" ref="ga1378a3f6ecef5cee281518ef5cc9bd0b" args="(git_commit *commit)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">time_t git_commit_time </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
           <td class="paramname"><em>commit</em></td><td>)</td>
@@ -690,7 +569,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Get the commit time (i.e. </p>
-<p>committer time) of a commit.</p>
+<p>committer time) of a commit. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">commit</td><td>a previously loaded commit. </td></tr>
@@ -717,7 +596,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Get the commit timezone offset (i.e. </p>
-<p>committer's preferred timezone) of a commit.</p>
+<p>committer's preferred timezone) of a commit. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">commit</td><td>a previously loaded commit. </td></tr>
@@ -728,26 +607,16 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="gaf6367797eeac58c0b232257256d192c3"></a><!-- doxytag: member="commit.h::git_commit_tree" ref="gaf6367797eeac58c0b232257256d192c3" args="(git_tree **tree_out, git_commit *commit)" -->
+<a class="anchor" id="ga60865b10f3a64f030e383b5781942ee8"></a><!-- doxytag: member="commit.h::git_commit_tree" ref="ga60865b10f3a64f030e383b5781942ee8" args="(git_commit *commit)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int git_commit_tree </td>
+          <td class="memname">const <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a>* git_commit_tree </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> **&#160;</td>
-          <td class="paramname"><em>tree_out</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
-          <td class="paramname"><em>commit</em>&#160;</td>
-        </tr>
-        <tr>
+          <td class="paramname"><em>commit</em></td><td>)</td>
           <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
 </div>
@@ -756,12 +625,11 @@ Functions</h2></td></tr>
 <p>Get the tree pointed to by a commit. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">tree_out</td><td>pointer where to store the tree object </td></tr>
     <tr><td class="paramname">commit</td><td>a previously loaded commit. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>the tree of a commit </dd></dl>
 
 </div>
 </div>
@@ -780,7 +648,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

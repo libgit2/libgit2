@@ -77,17 +77,17 @@ Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gaa37af1e17f70079065277b5f216cbc6f">git_revwalk_new</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> **walker, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate a new revision walker to iterate through a repo.  <a href="#gaa37af1e17f70079065277b5f216cbc6f"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga9fe98ba31265fce47fbd86de2a6c23fb">git_revwalk_reset</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walker)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset the revision walker for reuse.  <a href="#ga9fe98ba31265fce47fbd86de2a6c23fb"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gac587fb8d522165a1caf18b1bd900e9e5">git_revwalk_push</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, const <a class="el" href="structgit__oid.html">git_oid</a> *oid)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit to start traversal from.  <a href="#gac587fb8d522165a1caf18b1bd900e9e5"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga4ca95c052ef991b3ff37114b287a43dd">git_revwalk_hide</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, const <a class="el" href="structgit__oid.html">git_oid</a> *oid)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit (and its ancestors) uninteresting for the output.  <a href="#ga4ca95c052ef991b3ff37114b287a43dd"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga60d92e44c37d6263f718c4b52ea8abc1">git_revwalk_next</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next commit from the revision walk.  <a href="#ga60d92e44c37d6263f718c4b52ea8abc1"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga97d15a2304622dabc1d480294bbf29a5">git_revwalk_sorting</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, unsigned int sort_mode)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Change the sorting mode when iterating through the repository's contents.  <a href="#ga97d15a2304622dabc1d480294bbf29a5"></a><br/></td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset the walking machinery for reuse.  <a href="#ga9fe98ba31265fce47fbd86de2a6c23fb"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga082d81392e6f05bdafbe816766f4bd60">git_revwalk_push</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit to start traversal from.  <a href="#ga082d81392e6f05bdafbe816766f4bd60"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gadfd57678c43d9c4cfb4d1becea25b3f9">git_revwalk_hide</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit (and its ancestors) uninteresting for the output.  <a href="#gadfd57678c43d9c4cfb4d1becea25b3f9"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga0de04256010c272780508519a16e668b">git_revwalk_next</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **commit, <a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next commit from the revision traversal.  <a href="#ga0de04256010c272780508519a16e668b"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gac787f829d046d92036270d73d8730719">git_revwalk_sorting</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, unsigned int sort_mode)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Change the sorting mode when iterating through the repository's contents.  <a href="#gac787f829d046d92036270d73d8730719"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga86a2eac4a58ce7f6ce309f066424e934">git_revwalk_free</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Free a revision walker previously allocated.  <a href="#ga86a2eac4a58ce7f6ce309f066424e934"></a><br/></td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Free a revwalk previously allocated.  <a href="#ga86a2eac4a58ce7f6ce309f066424e934"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gaca9865be6ebd72767f75f6900db7661e">git_revwalk_repository</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the repository on which this walker is operating.  <a href="#gaca9865be6ebd72767f75f6900db7661e"></a><br/></td></tr>
 </table>
@@ -124,7 +124,7 @@ Functions</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Free a revision walker previously allocated. </p>
+<p>Free a revwalk previously allocated. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">walk</td><td>traversal handle to close. If NULL nothing occurs. </td></tr>
@@ -134,7 +134,7 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ga4ca95c052ef991b3ff37114b287a43dd"></a><!-- doxytag: member="revwalk.h::git_revwalk_hide" ref="ga4ca95c052ef991b3ff37114b287a43dd" args="(git_revwalk *walk, const git_oid *oid)" -->
+<a class="anchor" id="gadfd57678c43d9c4cfb4d1becea25b3f9"></a><!-- doxytag: member="revwalk.h::git_revwalk_hide" ref="gadfd57678c43d9c4cfb4d1becea25b3f9" args="(git_revwalk *walk, git_commit *commit)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -147,8 +147,8 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>&#160;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>commit</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -160,8 +160,6 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Mark a commit (and its ancestors) uninteresting for the output. </p>
-<p>The given OID must belong to a commit on the walked repository.</p>
-<p>The resolved commit and all its parents will be hidden from the output on the revision walk.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">walker</td><td>the walker being used for the traversal. </td></tr>
@@ -169,7 +167,6 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
 
 </div>
 </div>
@@ -199,9 +196,6 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Allocate a new revision walker to iterate through a repo. </p>
-<p>This revision walker uses a custom memory pool and an internal commit cache, so it is relatively expensive to allocate.</p>
-<p>For maximum performance, this revision walker should be reused for different walks.</p>
-<p>This revision walker is *not* thread safe: it may only be used to walk a repository on a single thread; however, it is possible to have several revision walkers in several different threads walking the same repository.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">walker</td><td>pointer to the new revision walker </td></tr>
@@ -213,15 +207,15 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ga60d92e44c37d6263f718c4b52ea8abc1"></a><!-- doxytag: member="revwalk.h::git_revwalk_next" ref="ga60d92e44c37d6263f718c4b52ea8abc1" args="(git_oid *oid, git_revwalk *walk)" -->
+<a class="anchor" id="ga0de04256010c272780508519a16e668b"></a><!-- doxytag: member="revwalk.h::git_revwalk_next" ref="ga0de04256010c272780508519a16e668b" args="(git_commit **commit, git_revwalk *walk)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">int git_revwalk_next </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>, </td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **&#160;</td>
+          <td class="paramname"><em>commit</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -238,13 +232,10 @@ Functions</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Get the next commit from the revision walk. </p>
-<p>The initial call to this method is *not* blocking when iterating through a repo with a time-sorting mode.</p>
-<p>Iterating with Topological or inverted modes makes the initial call blocking to preprocess the commit list, but this block should be mostly unnoticeable on most repositories (topological preprocessing times at 0.3s on the git.git repo).</p>
-<p>The revision walker is reset when the walk is over.</p>
+<p>Get the next commit from the revision traversal. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
-    <tr><td class="paramname">oid</td><td>Pointer where to store the oid of the next commit </td></tr>
+    <tr><td class="paramname">commit</td><td>Pointer where to store the next commit </td></tr>
     <tr><td class="paramname">walk</td><td>the walker to pop the commit from. </td></tr>
   </table>
   </dd>
@@ -253,7 +244,7 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="gac587fb8d522165a1caf18b1bd900e9e5"></a><!-- doxytag: member="revwalk.h::git_revwalk_push" ref="gac587fb8d522165a1caf18b1bd900e9e5" args="(git_revwalk *walk, const git_oid *oid)" -->
+<a class="anchor" id="ga082d81392e6f05bdafbe816766f4bd60"></a><!-- doxytag: member="revwalk.h::git_revwalk_push" ref="ga082d81392e6f05bdafbe816766f4bd60" args="(git_revwalk *walk, git_commit *commit)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -266,8 +257,8 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>&#160;</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
+          <td class="paramname"><em>commit</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -279,16 +270,14 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Mark a commit to start traversal from. </p>
-<p>The given OID must belong to a commit on the walked repository.</p>
-<p>The given commit will be used as one of the roots when starting the revision walk. At least one commit must be pushed the repository before a walk can be started.</p>
+<p>The commit object must belong to the repo which is being walked through.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">walker</td><td>the walker being used for the traversal. </td></tr>
-    <tr><td class="paramname">oid</td><td>the oid of the commit to start from. </td></tr>
+    <tr><td class="paramname">commit</td><td>the commit to start from. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
 
 </div>
 </div>
@@ -333,9 +322,7 @@ Functions</h2></td></tr>
 </div>
 <div class="memdoc">
 
-<p>Reset the revision walker for reuse. </p>
-<p>This will clear all the pushed and hidden commits, and leave the walker in a blank state (just like at creation) ready to receive new commit pushes and start a new walk.</p>
-<p>The revision walk is automatically reset when a walk is over.</p>
+<p>Reset the walking machinery for reuse. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">walker</td><td>handle to reset. </td></tr>
@@ -345,12 +332,12 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ga97d15a2304622dabc1d480294bbf29a5"></a><!-- doxytag: member="revwalk.h::git_revwalk_sorting" ref="ga97d15a2304622dabc1d480294bbf29a5" args="(git_revwalk *walk, unsigned int sort_mode)" -->
+<a class="anchor" id="gac787f829d046d92036270d73d8730719"></a><!-- doxytag: member="revwalk.h::git_revwalk_sorting" ref="gac787f829d046d92036270d73d8730719" args="(git_revwalk *walk, unsigned int sort_mode)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void git_revwalk_sorting </td>
+          <td class="memname">int git_revwalk_sorting </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *&#160;</td>
           <td class="paramname"><em>walk</em>, </td>
@@ -371,11 +358,11 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Change the sorting mode when iterating through the repository's contents. </p>
-<p>Changing the sorting mode resets the walker.</p>
+<p>Changing the sorting mode resets the walker. </p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">walk</td><td>the walker being used for the traversal. </td></tr>
-    <tr><td class="paramname">sort_mode</td><td>combination of GIT_SORT_XXX flags </td></tr>
+    <tr><td class="paramname">sort_mode</td><td>combination of GIT_RPSORT_XXX flags </td></tr>
   </table>
   </dd>
 </dl>
@@ -397,7 +384,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

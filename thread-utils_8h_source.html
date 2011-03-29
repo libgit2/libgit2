@@ -94,42 +94,52 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00032"></a>00032 <span class="comment"> */</span>
 <a name="l00033"></a>00033 
 <a name="l00034"></a>00034 <span class="preprocessor">#define GIT_HAS_TLS 1</span>
-<a name="l00035"></a>00035 <span class="preprocessor"></span>
-<a name="l00036"></a>00036 <span class="preprocessor">#if defined(__APPLE__) &amp;&amp; defined(__MACH__)</span>
-<a name="l00037"></a>00037 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_TLS</span>
-<a name="l00038"></a>00038 <span class="preprocessor"></span>
-<a name="l00039"></a>00039 <span class="preprocessor">#elif defined(__GNUC__) || \</span>
-<a name="l00040"></a>00040 <span class="preprocessor">      defined(__SUNPRO_C) || \</span>
-<a name="l00041"></a>00041 <span class="preprocessor">      defined(__SUNPRO_CC) || \</span>
-<a name="l00042"></a>00042 <span class="preprocessor">      defined(__xlc__) || \</span>
-<a name="l00043"></a>00043 <span class="preprocessor">      defined(__xlC__)</span>
-<a name="l00044"></a>00044 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS __thread</span>
-<a name="l00045"></a>00045 <span class="preprocessor"></span>
-<a name="l00046"></a>00046 <span class="preprocessor">#elif defined(__INTEL_COMPILER)</span>
-<a name="l00047"></a>00047 <span class="preprocessor"></span><span class="preprocessor"># if defined(_WIN32) || defined(_WIN32_CE)</span>
-<a name="l00048"></a>00048 <span class="preprocessor"></span><span class="preprocessor">#  define GIT_TLS __declspec(thread)</span>
-<a name="l00049"></a>00049 <span class="preprocessor"></span><span class="preprocessor"># else</span>
-<a name="l00050"></a>00050 <span class="preprocessor"></span><span class="preprocessor">#  define GIT_TLS __thread</span>
-<a name="l00051"></a>00051 <span class="preprocessor"></span><span class="preprocessor"># endif</span>
-<a name="l00052"></a>00052 <span class="preprocessor"></span>
-<a name="l00053"></a>00053 <span class="preprocessor">#elif defined(_WIN32) || \</span>
-<a name="l00054"></a>00054 <span class="preprocessor">      defined(_WIN32_CE) || \</span>
-<a name="l00055"></a>00055 <span class="preprocessor">      defined(__BORLANDC__)</span>
-<a name="l00056"></a>00056 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS __declspec(thread)</span>
-<a name="l00057"></a>00057 <span class="preprocessor"></span>
-<a name="l00058"></a>00058 <span class="preprocessor">#else</span>
-<a name="l00059"></a>00059 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_HAS_TLS</span>
-<a name="l00060"></a>00060 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS </span><span class="comment">/* nothing: tls vars are thread-global */</span>
-<a name="l00061"></a>00061 <span class="preprocessor">#endif</span>
-<a name="l00062"></a>00062 <span class="preprocessor"></span>
-<a name="l00063"></a>00063 <span class="comment">/* sparse and cygwin don&#39;t grok thread-local variables */</span>
-<a name="l00064"></a>00064 <span class="preprocessor">#if defined(__CHECKER__) || defined(__CYGWIN__)</span>
-<a name="l00065"></a>00065 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_HAS_TLS</span>
-<a name="l00066"></a>00066 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_TLS</span>
-<a name="l00067"></a>00067 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS</span>
-<a name="l00068"></a>00068 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
-<a name="l00069"></a>00069 <span class="preprocessor"></span>
-<a name="l00070"></a>00070 <span class="preprocessor">#endif </span><span class="comment">/* INCLUDE_git_thread_utils_h__ */</span>
+<a name="l00035"></a>00035 <span class="preprocessor"></span><span class="preprocessor">#define GIT_HAS_PTHREAD 1</span>
+<a name="l00036"></a>00036 <span class="preprocessor"></span>
+<a name="l00037"></a>00037 <span class="preprocessor">#if defined(__APPLE__) &amp;&amp; defined(__MACH__)</span>
+<a name="l00038"></a>00038 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_TLS</span>
+<a name="l00039"></a>00039 <span class="preprocessor"></span>
+<a name="l00040"></a>00040 <span class="preprocessor">#elif defined(__GNUC__) || \</span>
+<a name="l00041"></a>00041 <span class="preprocessor">      defined(__SUNPRO_C) || \</span>
+<a name="l00042"></a>00042 <span class="preprocessor">      defined(__SUNPRO_CC) || \</span>
+<a name="l00043"></a>00043 <span class="preprocessor">      defined(__xlc__) || \</span>
+<a name="l00044"></a>00044 <span class="preprocessor">      defined(__xlC__)</span>
+<a name="l00045"></a>00045 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS __thread</span>
+<a name="l00046"></a>00046 <span class="preprocessor"></span>
+<a name="l00047"></a>00047 <span class="preprocessor">#elif defined(__INTEL_COMPILER)</span>
+<a name="l00048"></a>00048 <span class="preprocessor"></span><span class="preprocessor"># if defined(_WIN32) || defined(_WIN32_CE)</span>
+<a name="l00049"></a>00049 <span class="preprocessor"></span><span class="preprocessor">#  define GIT_TLS __declspec(thread)</span>
+<a name="l00050"></a>00050 <span class="preprocessor"></span><span class="preprocessor">#  undef GIT_HAS_PTHREAD</span>
+<a name="l00051"></a>00051 <span class="preprocessor"></span><span class="preprocessor"># else</span>
+<a name="l00052"></a>00052 <span class="preprocessor"></span><span class="preprocessor">#  define GIT_TLS __thread</span>
+<a name="l00053"></a>00053 <span class="preprocessor"></span><span class="preprocessor"># endif</span>
+<a name="l00054"></a>00054 <span class="preprocessor"></span>
+<a name="l00055"></a>00055 <span class="preprocessor">#elif defined(_WIN32) || \</span>
+<a name="l00056"></a>00056 <span class="preprocessor">      defined(_WIN32_CE) || \</span>
+<a name="l00057"></a>00057 <span class="preprocessor">      defined(__BORLANDC__)</span>
+<a name="l00058"></a>00058 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS __declspec(thread)</span>
+<a name="l00059"></a>00059 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_HAS_PTHREAD</span>
+<a name="l00060"></a>00060 <span class="preprocessor"></span>
+<a name="l00061"></a>00061 <span class="preprocessor">#else</span>
+<a name="l00062"></a>00062 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_HAS_TLS</span>
+<a name="l00063"></a>00063 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_HAS_PTHREAD</span>
+<a name="l00064"></a>00064 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS </span><span class="comment">/* nothing: tls vars are thread-global */</span>
+<a name="l00065"></a>00065 <span class="preprocessor">#endif</span>
+<a name="l00066"></a>00066 <span class="preprocessor"></span>
+<a name="l00067"></a>00067 <span class="comment">/* sparse and cygwin don&#39;t grok thread-local variables */</span>
+<a name="l00068"></a>00068 <span class="preprocessor">#if defined(__CHECKER__) || defined(__CYGWIN__)</span>
+<a name="l00069"></a>00069 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_HAS_TLS</span>
+<a name="l00070"></a>00070 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_TLS</span>
+<a name="l00071"></a>00071 <span class="preprocessor"></span><span class="preprocessor"># define GIT_TLS</span>
+<a name="l00072"></a>00072 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
+<a name="l00073"></a>00073 <span class="preprocessor"></span>
+<a name="l00074"></a>00074 <span class="preprocessor">#ifdef GIT_HAS_PTHREAD</span>
+<a name="l00075"></a>00075 <span class="preprocessor"></span><span class="preprocessor"># define GIT_THREADS 1</span>
+<a name="l00076"></a>00076 <span class="preprocessor"></span><span class="preprocessor">#else</span>
+<a name="l00077"></a>00077 <span class="preprocessor"></span><span class="preprocessor"># undef GIT_THREADS</span>
+<a name="l00078"></a>00078 <span class="preprocessor"></span><span class="preprocessor">#endif</span>
+<a name="l00079"></a>00079 <span class="preprocessor"></span>
+<a name="l00080"></a>00080 <span class="preprocessor">#endif </span><span class="comment">/* INCLUDE_git_thread_utils_h__ */</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -146,7 +156,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

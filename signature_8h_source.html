@@ -109,7 +109,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00047"></a>00047 <span class="comment"> * @offset timezone offset in minutes for the time</span>
 <a name="l00048"></a>00048 <span class="comment"> * @return the new sig, NULl on out of memory</span>
 <a name="l00049"></a>00049 <span class="comment"> */</span>
-<a name="l00050"></a>00050 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *) git_signature_new(const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email, git_time_t time, <span class="keywordtype">int</span> offset);
+<a name="l00050"></a>00050 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *) git_signature_new(const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email, time_t time, <span class="keywordtype">int</span> offset);
 <a name="l00051"></a>00051 <span class="comment"></span>
 <a name="l00052"></a>00052 <span class="comment">/**</span>
 <a name="l00053"></a>00053 <span class="comment"> * Create a copy of an existing signature.</span>
@@ -146,7 +146,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

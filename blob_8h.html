@@ -77,16 +77,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gae52fcb2c021f84cde6aa41c5f5ede0a9">git_blob_lookup</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> **blob, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Lookup a blob object from a repository.  <a href="group__git__blob.html#gae52fcb2c021f84cde6aa41c5f5ede0a9"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gad6dca51eb916d23c3304ff8fd97edb8d">git_blob_close</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Close an open blob.  <a href="group__git__blob.html#gad6dca51eb916d23c3304ff8fd97edb8d"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gaeab64ab6752d874d302257436d3e63fb">git_blob_new</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> **blob, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new in-memory git_blob.  <a href="group__git__blob.html#gaeab64ab6752d874d302257436d3e63fb"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga3aa91c96dc9469db03f845ed77382aa8">git_blob_set_rawcontent_fromfile</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob, const char *filename)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Fill a blob with the contents inside the pointed file.  <a href="group__git__blob.html#ga3aa91c96dc9469db03f845ed77382aa8"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga284c63192b7b656a4f29d6f09ad5c437">git_blob_set_rawcontent</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob, const void *buffer, size_t len)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Fill a blob with the contents inside the pointed buffer.  <a href="group__git__blob.html#ga284c63192b7b656a4f29d6f09ad5c437"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga546712a4fdeb9b3f14d6d00b0ea9334b">git_blob_rawcontent</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a read-only buffer with the raw content of a blob.  <a href="group__git__blob.html#ga546712a4fdeb9b3f14d6d00b0ea9334b"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gaac42ead03758db1c8202e8825652a692">git_blob_rawsize</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the size in bytes of the contents of a blob.  <a href="group__git__blob.html#gaac42ead03758db1c8202e8825652a692"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga702604c5516bed8ec90c3eadad587bb0">git_blob_create_fromfile</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *path)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Read a file from the working folder of a repository and write it to the Object Database as a loose blob.  <a href="group__git__blob.html#ga702604c5516bed8ec90c3eadad587bb0"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gaf1819bfe943ffd0dca70948b7f81f41e">git_blob_create_frombuffer</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const void *buffer, size_t len)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Write an in-memory buffer to the ODB as a blob.  <a href="group__git__blob.html#gaf1819bfe943ffd0dca70948b7f81f41e"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga0522c587ba5532d218f7f8dbc6f19e11">git_blob_writefile</a> (<a class="el" href="structgit__oid.html">git_oid</a> *written_id, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *path)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Read a file from the working folder of a repository and write it to the Object Database as a loose blob, if such doesn't exist yet.  <a href="group__git__blob.html#ga0522c587ba5532d218f7f8dbc6f19e11"></a><br/></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
 <div class="textblock"><p>Git blob load and write routines. </p>
@@ -105,7 +107,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

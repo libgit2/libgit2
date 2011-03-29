@@ -62,6 +62,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga4ac82821ae26011a548a771d5a9a4720">git_object_lookup</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Lookup a reference to one of the objects in a repostory.  <a href="#ga4ac82821ae26011a548a771d5a9a4720"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#gadbb8304d5a4714060a44e1a9189b6adf">git_object_new</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **object, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> type)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new in-memory repository object with the given type.  <a href="#gadbb8304d5a4714060a44e1a9189b6adf"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e">git_object_write</a> (<a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *object)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Write back an object to disk.  <a href="#ga69aab28b69c23e6e9ca5f0e8ccd0f74e"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#ga16996d6d574380531b260e18bb0373db">git_object_id</a> (const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the id (SHA1) of a repository object.  <a href="#ga16996d6d574380531b260e18bb0373db"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__object.html#gaccfdc461c24579b18bcef341e91355cd">git_object_type</a> (const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *obj)</td></tr>
@@ -123,8 +127,9 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Close an open object. </p>
-<p>This method instructs the library to close an existing object; note that git_objects are owned and cached by the repository so the object may or may not be freed after this library call, depending on how agressive is the caching mechanism used by the repository.</p>
-<p>IMPORTANT: It *is* necessary to call this method when you stop using an object. Failure to do so will cause a memory leak.</p>
+<p>This method instructs the library to close an existing object; note that git_objects are owned by the repository and are reference counted, so the object may or may not be freed after this library call, depending on whether any other objects still depend on it.</p>
+<p>IMPORTANT: It is *not* necessary to call this method when you stop using an object, since all object memory is automatically reclaimed by the repository when it is freed.</p>
+<p>Forgetting to call `git_object_close` does not cause memory leaks, but it's is recommended to close as soon as possible the biggest objects (e.g. blobs) to prevent wasting memory space.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">object</td><td>the object to close </td></tr>
@@ -150,6 +155,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Get the id (SHA1) of a repository object. </p>
+<p>In-memory objects created by <a class="el" href="group__git__object.html#gadbb8304d5a4714060a44e1a9189b6adf" title="Create a new in-memory repository object with the given type.">git_object_new()</a> do not have a SHA1 ID until they are written on a repository.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">obj</td><td>the repository object </td></tr>
@@ -198,7 +204,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Lookup a reference to one of the objects in a repostory. </p>
-<p>The generated reference is owned by the repository and should be closed with the `git_object_close` method instead of free'd manually.</p>
+<p>The generated reference is owned by the repository and should not be freed by the user.</p>
 <p>The 'type' parameter must match the type of the object in the odb; the method will fail otherwise. The special value 'GIT_OBJ_ANY' may be passed to let the method guess the object's type.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
@@ -210,6 +216,52 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="return"><dt><b>Returns:</b></dt><dd>a reference to the object </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="gadbb8304d5a4714060a44e1a9189b6adf"></a><!-- doxytag: member="object.h::git_object_new" ref="gadbb8304d5a4714060a44e1a9189b6adf" args="(git_object **object, git_repository *repo, git_otype type)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_object_new </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> **&#160;</td>
+          <td class="paramname"><em>object</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&#160;</td>
+          <td class="paramname"><em>type</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new in-memory repository object with the given type. </p>
+<p>The object's attributes can be filled in using the corresponding setter methods.</p>
+<p>The object will be written back to given git_repository when the <a class="el" href="group__git__object.html#ga69aab28b69c23e6e9ca5f0e8ccd0f74e" title="Write back an object to disk.">git_object_write()</a> function is called; objects cannot be written to disk until all their main attributes have been properly filled.</p>
+<p>Objects are instantiated with no SHA1 id; their id will be automatically generated when writing to the repository.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">object</td><td>pointer to the new object  repo Repository where the object belongs </td></tr>
+    <tr><td class="paramname">type</td><td>Type of the object to be created </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>the new object </dd></dl>
 
 </div>
 </div>
@@ -344,6 +396,35 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a class="anchor" id="ga69aab28b69c23e6e9ca5f0e8ccd0f74e"></a><!-- doxytag: member="object.h::git_object_write" ref="ga69aab28b69c23e6e9ca5f0e8ccd0f74e" args="(git_object *object)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_object_write </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *&#160;</td>
+          <td class="paramname"><em>object</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Write back an object to disk. </p>
+<p>The object will be written to its corresponding repository.</p>
+<p>If the object has no changes since it was first read from the repository, no actions will take place.</p>
+<p>If the object has been modified since it was read from the repository, or it has been created from scratch in memory, it will be written to the repository and its SHA1 ID will be updated accordingly.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">object</td><td>Git object to write back </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; otherwise an error code </dd></dl>
+
+</div>
+</div>
 </div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -359,7 +440,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

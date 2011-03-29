@@ -72,6 +72,8 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the Index file of a Git repository.  <a href="#ga3ec158c98f0ba7557a958ff1a89d7bc5"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a">git_repository_free</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Free a previously allocated repository.  <a href="#gadc2e808b765a06f02d456644e561999a"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gaeb8cd045bde19cffb6ee84f8901f8e65"></a><!-- doxytag: member="git_repository::git_repository_free__no_gc" ref="gaeb8cd045bde19cffb6ee84f8901f8e65" args="(git_repository *repo)" -->
+void&#160;</td><td class="memItemRight" valign="bottom"><b>git_repository_free__no_gc</b> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga7abb07c9ae2df7303fae75e33ae21359">git_repository_init</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repo_out, const char *path, unsigned is_bare)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new Git repository in the given folder.  <a href="#ga7abb07c9ae2df7303fae75e33ae21359"></a><br/></td></tr>
 </table>
@@ -118,7 +120,6 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Free a previously allocated repository. </p>
-<p>Note that after a repository is free'd, all the objects it has spawned will still exist until they are manually closed by the user with `git_object_close`, but accessing any of the attributes of an object without a backing repository will result in undefined behavior</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">repo</td><td>repository handle to close. If NULL nothing occurs. </td></tr>
@@ -387,7 +388,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

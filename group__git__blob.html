@@ -62,140 +62,20 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 Functions</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gae52fcb2c021f84cde6aa41c5f5ede0a9">git_blob_lookup</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> **blob, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const <a class="el" href="structgit__oid.html">git_oid</a> *id)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Lookup a blob object from a repository.  <a href="#gae52fcb2c021f84cde6aa41c5f5ede0a9"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gad6dca51eb916d23c3304ff8fd97edb8d">git_blob_close</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Close an open blob.  <a href="#gad6dca51eb916d23c3304ff8fd97edb8d"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gaeab64ab6752d874d302257436d3e63fb">git_blob_new</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> **blob, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new in-memory git_blob.  <a href="#gaeab64ab6752d874d302257436d3e63fb"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga3aa91c96dc9469db03f845ed77382aa8">git_blob_set_rawcontent_fromfile</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob, const char *filename)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Fill a blob with the contents inside the pointed file.  <a href="#ga3aa91c96dc9469db03f845ed77382aa8"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga284c63192b7b656a4f29d6f09ad5c437">git_blob_set_rawcontent</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob, const void *buffer, size_t len)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Fill a blob with the contents inside the pointed buffer.  <a href="#ga284c63192b7b656a4f29d6f09ad5c437"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga546712a4fdeb9b3f14d6d00b0ea9334b">git_blob_rawcontent</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a read-only buffer with the raw content of a blob.  <a href="#ga546712a4fdeb9b3f14d6d00b0ea9334b"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gaac42ead03758db1c8202e8825652a692">git_blob_rawsize</a> (<a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *blob)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the size in bytes of the contents of a blob.  <a href="#gaac42ead03758db1c8202e8825652a692"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga702604c5516bed8ec90c3eadad587bb0">git_blob_create_fromfile</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *path)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Read a file from the working folder of a repository and write it to the Object Database as a loose blob.  <a href="#ga702604c5516bed8ec90c3eadad587bb0"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#gaf1819bfe943ffd0dca70948b7f81f41e">git_blob_create_frombuffer</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const void *buffer, size_t len)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Write an in-memory buffer to the ODB as a blob.  <a href="#gaf1819bfe943ffd0dca70948b7f81f41e"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__blob.html#ga0522c587ba5532d218f7f8dbc6f19e11">git_blob_writefile</a> (<a class="el" href="structgit__oid.html">git_oid</a> *written_id, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *path)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Read a file from the working folder of a repository and write it to the Object Database as a loose blob, if such doesn't exist yet.  <a href="#ga0522c587ba5532d218f7f8dbc6f19e11"></a><br/></td></tr>
 </table>
 <hr/><h2>Function Documentation</h2>
-<a class="anchor" id="gad6dca51eb916d23c3304ff8fd97edb8d"></a><!-- doxytag: member="blob.h::git_blob_close" ref="gad6dca51eb916d23c3304ff8fd97edb8d" args="(git_blob *blob)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void git_blob_close </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *&#160;</td>
-          <td class="paramname"><em>blob</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Close an open blob. </p>
-<p>This is a wrapper around <a class="el" href="group__git__object.html#ga3daccfd1b2370d009f2b718aa11a558a" title="Close an open object.">git_object_close()</a></p>
-<p>IMPORTANT: It *is* necessary to call this method when you stop using a blob. Failure to do so will cause a memory leak.</p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table class="params">
-    <tr><td class="paramname">blob</td><td>the blob to close </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a class="anchor" id="gaf1819bfe943ffd0dca70948b7f81f41e"></a><!-- doxytag: member="blob.h::git_blob_create_frombuffer" ref="gaf1819bfe943ffd0dca70948b7f81f41e" args="(git_oid *oid, git_repository *repo, const void *buffer, size_t len)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int git_blob_create_frombuffer </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
-          <td class="paramname"><em>repo</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const void *&#160;</td>
-          <td class="paramname"><em>buffer</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>len</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Write an in-memory buffer to the ODB as a blob. </p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table class="params">
-    <tr><td class="paramname">oid</td><td>return the oid of the written blob </td></tr>
-    <tr><td class="paramname">repo</td><td>repository where to blob will be written </td></tr>
-    <tr><td class="paramname">buffer</td><td>data to be written into the blob </td></tr>
-    <tr><td class="paramname">len</td><td>length of the data </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
-
-</div>
-</div>
-<a class="anchor" id="ga702604c5516bed8ec90c3eadad587bb0"></a><!-- doxytag: member="blob.h::git_blob_create_fromfile" ref="ga702604c5516bed8ec90c3eadad587bb0" args="(git_oid *oid, git_repository *repo, const char *path)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int git_blob_create_fromfile </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
-          <td class="paramname"><em>oid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
-          <td class="paramname"><em>repo</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>path</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Read a file from the working folder of a repository and write it to the Object Database as a loose blob. </p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table class="params">
-    <tr><td class="paramname">oid</td><td>return the id of the written blob </td></tr>
-    <tr><td class="paramname">repo</td><td>repository where the blob will be written. this repository cannot be bare </td></tr>
-    <tr><td class="paramname">path</td><td>file from which the blob will be created, relative to the repository's working dir </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
-
-</div>
-</div>
 <a class="anchor" id="gae52fcb2c021f84cde6aa41c5f5ede0a9"></a><!-- doxytag: member="blob.h::git_blob_lookup" ref="gae52fcb2c021f84cde6aa41c5f5ede0a9" args="(git_blob **blob, git_repository *repo, const git_oid *id)" -->
 <div class="memitem">
 <div class="memproto">
@@ -228,11 +108,50 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Lookup a blob object from a repository. </p>
+<p>The generated blob object is owned by the revision repo and shall not be freed by the user.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">blob</td><td>pointer to the looked up blob </td></tr>
     <tr><td class="paramname">repo</td><td>the repo to use when locating the blob. </td></tr>
     <tr><td class="paramname">id</td><td>identity of the blob to locate. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="gaeab64ab6752d874d302257436d3e63fb"></a><!-- doxytag: member="blob.h::git_blob_new" ref="gaeab64ab6752d874d302257436d3e63fb" args="(git_blob **blob, git_repository *repo)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_blob_new </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> **&#160;</td>
+          <td class="paramname"><em>blob</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new in-memory git_blob. </p>
+<p>The blob object must be manually filled using the 'set_rawcontent' methods before it can be written back to disk.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">blob</td><td>pointer to the new blob </td></tr>
+    <tr><td class="paramname">repo</td><td>The repository where the object will reside </td></tr>
   </table>
   </dd>
 </dl>
@@ -256,7 +175,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Get a read-only buffer with the raw content of a blob. </p>
-<p>A pointer to the raw content of a blob is returned; this pointer is owned internally by the object and shall not be free'd. The pointer may be invalidated at a later time.</p>
+<p>A pointer to the raw content of a blob is returned; this pointer is owned internally by the object and shall not be free'd. The pointer may be invalidated at a later time (e.g. when changing the contents of the blob).</p>
 <dl><dt><b>Parameters:</b></dt><dd>
   <table class="params">
     <tr><td class="paramname">blob</td><td>pointer to the blob </td></tr>
@@ -293,6 +212,130 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a class="anchor" id="ga284c63192b7b656a4f29d6f09ad5c437"></a><!-- doxytag: member="blob.h::git_blob_set_rawcontent" ref="ga284c63192b7b656a4f29d6f09ad5c437" args="(git_blob *blob, const void *buffer, size_t len)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_blob_set_rawcontent </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *&#160;</td>
+          <td class="paramname"><em>blob</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const void *&#160;</td>
+          <td class="paramname"><em>buffer</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>len</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Fill a blob with the contents inside the pointed buffer. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">blob</td><td>pointer to the blob </td></tr>
+    <tr><td class="paramname">buffer</td><td>buffer with the contents for the blob </td></tr>
+    <tr><td class="paramname">len</td><td>size of the buffer </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga3aa91c96dc9469db03f845ed77382aa8"></a><!-- doxytag: member="blob.h::git_blob_set_rawcontent_fromfile" ref="ga3aa91c96dc9469db03f845ed77382aa8" args="(git_blob *blob, const char *filename)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_blob_set_rawcontent_fromfile </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a05c8479cbe88cffd303398d82b52b3be">git_blob</a> *&#160;</td>
+          <td class="paramname"><em>blob</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>filename</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Fill a blob with the contents inside the pointed file. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">blob</td><td>pointer to the new blob </td></tr>
+    <tr><td class="paramname">filename</td><td>name of the file to read </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga0522c587ba5532d218f7f8dbc6f19e11"></a><!-- doxytag: member="blob.h::git_blob_writefile" ref="ga0522c587ba5532d218f7f8dbc6f19e11" args="(git_oid *written_id, git_repository *repo, const char *path)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_blob_writefile </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>written_id</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>path</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Read a file from the working folder of a repository and write it to the Object Database as a loose blob, if such doesn't exist yet. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">written_id</td><td>return the id of the written blob </td></tr>
+    <tr><td class="paramname">repo</td><td>repository where the blob will be written </td></tr>
+    <tr><td class="paramname">path</td><td>file from which the blob will be created </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 </div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -308,7 +351,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

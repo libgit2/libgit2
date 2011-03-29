@@ -60,7 +60,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <h1>config.h</h1>  </div>
 </div>
 <div class="contents">
-<a href="config_8h.html">Go to the documentation of this file.</a><div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/*</span>
+<div class="fragment"><pre class="fragment"><a name="l00001"></a>00001 <span class="comment">/*</span>
 <a name="l00002"></a>00002 <span class="comment"> * This file is free software; you can redistribute it and/or modify</span>
 <a name="l00003"></a>00003 <span class="comment"> * it under the terms of the GNU General Public License, version 2,</span>
 <a name="l00004"></a>00004 <span class="comment"> * as published by the Free Software Foundation.</span>
@@ -89,25 +89,154 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00027"></a>00027 <span class="preprocessor"></span>
 <a name="l00028"></a>00028 <span class="preprocessor">#include &quot;<a class="code" href="common_8h.html" title="Git common platform definitions.">common.h</a>&quot;</span>
 <a name="l00029"></a>00029 <span class="preprocessor">#include &quot;<a class="code" href="types_8h.html" title="libgit2 base &amp;amp; compatibility types">types.h</a>&quot;</span>
-<a name="l00030"></a>00030 <span class="preprocessor">#include &quot;<a class="code" href="oid_8h.html" title="Git object id routines.">oid.h</a>&quot;</span>
-<a name="l00031"></a>00031 <span class="comment"></span>
-<a name="l00032"></a>00032 <span class="comment">/**</span>
-<a name="l00033"></a>00033 <span class="comment"> * @file git2/config.h</span>
-<a name="l00034"></a>00034 <span class="comment"> * @brief Git repository configuration management routines</span>
-<a name="l00035"></a>00035 <span class="comment"> * @defgroup git_config Git repository configuration management routines</span>
-<a name="l00036"></a>00036 <span class="comment"> * @ingroup Git</span>
-<a name="l00037"></a>00037 <span class="comment"> * @{</span>
-<a name="l00038"></a>00038 <span class="comment"> */</span>
-<a name="l00039"></a>00039 <a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73" title="Start declarations in C mode.">GIT_BEGIN_DECL</a>
-<a name="l00040"></a>00040 
-<a name="l00041"></a>00041 git_config *git_config_new(<span class="keywordtype">void</span>);
-<a name="l00042"></a>00042 
-<a name="l00043"></a>00043 <span class="keywordtype">void</span> git_config_free(git_config *c);
-<a name="l00044"></a>00044 
-<a name="l00045"></a>00045 <span class="comment"></span>
-<a name="l00046"></a>00046 <span class="comment">/** @} */</span>
-<a name="l00047"></a>00047 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00048"></a>00048 <span class="preprocessor">#endif</span>
+<a name="l00030"></a>00030 <span class="comment"></span>
+<a name="l00031"></a>00031 <span class="comment">/**</span>
+<a name="l00032"></a>00032 <span class="comment"> * @file git2/refs.h</span>
+<a name="l00033"></a>00033 <span class="comment"> * @brief Git config management routines</span>
+<a name="l00034"></a>00034 <span class="comment"> * @defgroup git_reference Git config management routines</span>
+<a name="l00035"></a>00035 <span class="comment"> * @ingroup Git</span>
+<a name="l00036"></a>00036 <span class="comment"> * @{</span>
+<a name="l00037"></a>00037 <span class="comment"> */</span>
+<a name="l00038"></a>00038 <a class="code" href="common_8h.html#ab50bf1d4c816c9b4609e93e32abcdd73" title="Start declarations in C mode.">GIT_BEGIN_DECL</a>
+<a name="l00039"></a>00039 <span class="comment"></span>
+<a name="l00040"></a>00040 <span class="comment">/**</span>
+<a name="l00041"></a>00041 <span class="comment"> * Open a configuration file</span>
+<a name="l00042"></a>00042 <span class="comment"> *</span>
+<a name="l00043"></a>00043 <span class="comment"> * @param cfg_out pointer to the configuration data</span>
+<a name="l00044"></a>00044 <span class="comment"> * @param path where to load the confiration from</span>
+<a name="l00045"></a>00045 <span class="comment"> */</span>
+<a name="l00046"></a>00046 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga4dcc8746aaef3c69c3f066f5b13d1691" title="Open a configuration file.">git_config_open</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> **cfg_out, const <span class="keywordtype">char</span> *path);
+<a name="l00047"></a>00047 <span class="comment"></span>
+<a name="l00048"></a>00048 <span class="comment">/**</span>
+<a name="l00049"></a>00049 <span class="comment"> * Free the configuration and its associated memory</span>
+<a name="l00050"></a>00050 <span class="comment"> *</span>
+<a name="l00051"></a>00051 <span class="comment"> * @param cfg the configuration to free</span>
+<a name="l00052"></a>00052 <span class="comment"> */</span>
+<a name="l00053"></a>00053 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__reference.html#ga6b8b3578e46a32ae6216b54f5e6cb4f4" title="Free the configuration and its associated memory.">git_config_free</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg);
+<a name="l00054"></a>00054 <span class="comment"></span>
+<a name="l00055"></a>00055 <span class="comment">/**</span>
+<a name="l00056"></a>00056 <span class="comment"> * Get the value of an integer or boolean config variable.</span>
+<a name="l00057"></a>00057 <span class="comment"> *</span>
+<a name="l00058"></a>00058 <span class="comment"> * This is a more general function to retrieve the value of a integer</span>
+<a name="l00059"></a>00059 <span class="comment"> * or boolean variable.</span>
+<a name="l00060"></a>00060 <span class="comment"> *</span>
+<a name="l00061"></a>00061 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00062"></a>00062 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00063"></a>00063 <span class="comment"> * @param out pointer to the variable where the value should be stored</span>
+<a name="l00064"></a>00064 <span class="comment"> * @param type either GIT_VAR_INT or GIT_VAR_BOOL</span>
+<a name="l00065"></a>00065 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00066"></a>00066 <span class="comment"> */</span>
+<a name="l00067"></a>00067 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga91e2f5229b48f2e49e59873136573351" title="Get the value of an integer or boolean config variable.">git_config_get</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> *out, <a class="code" href="types_8h.html#a34281811faee104b5a078c53cd13b20e" title="Config variable type.">git_cvar_type</a> type);
+<a name="l00068"></a>00068 <span class="comment"></span>
+<a name="l00069"></a>00069 <span class="comment">/**</span>
+<a name="l00070"></a>00070 <span class="comment"> * Get the value of an integer config variable.</span>
+<a name="l00071"></a>00071 <span class="comment"> *</span>
+<a name="l00072"></a>00072 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00073"></a>00073 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00074"></a>00074 <span class="comment"> * @param out pointer to the variable where the value should be stored</span>
+<a name="l00075"></a>00075 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00076"></a>00076 <span class="comment"> */</span>
+<a name="l00077"></a><a class="code" href="group__git__reference.html#ga0ac2512ca59c59ee06ab8662d7d9c141">00077</a> <a class="code" href="common_8h.html#aa21868b5d5083c56d4e7f8f911ddb0e0" title="Declare a function as always inlined.">GIT_INLINE</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga0ac2512ca59c59ee06ab8662d7d9c141" title="Get the value of an integer config variable.">git_config_get_int</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> *out)
+<a name="l00078"></a>00078 {
+<a name="l00079"></a>00079         <span class="keywordflow">return</span> <a class="code" href="group__git__reference.html#ga91e2f5229b48f2e49e59873136573351" title="Get the value of an integer or boolean config variable.">git_config_get</a>(cfg, name, out, GIT_VAR_INT);
+<a name="l00080"></a>00080 }
+<a name="l00081"></a>00081 <span class="comment"></span>
+<a name="l00082"></a>00082 <span class="comment">/**</span>
+<a name="l00083"></a>00083 <span class="comment"> * Get the value of a boolean config variable.</span>
+<a name="l00084"></a>00084 <span class="comment"> *</span>
+<a name="l00085"></a>00085 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00086"></a>00086 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00087"></a>00087 <span class="comment"> * @param out pointer to the variable where the value should be stored</span>
+<a name="l00088"></a>00088 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00089"></a>00089 <span class="comment"> */</span>
+<a name="l00090"></a><a class="code" href="group__git__reference.html#ga1bf281c55385a3af2cda6e6d99512076">00090</a> <a class="code" href="common_8h.html#aa21868b5d5083c56d4e7f8f911ddb0e0" title="Declare a function as always inlined.">GIT_INLINE</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga1bf281c55385a3af2cda6e6d99512076" title="Get the value of a boolean config variable.">git_config_get_bool</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> *out)
+<a name="l00091"></a>00091 {
+<a name="l00092"></a>00092         <span class="keywordflow">return</span> <a class="code" href="group__git__reference.html#ga91e2f5229b48f2e49e59873136573351" title="Get the value of an integer or boolean config variable.">git_config_get</a>(cfg, name, out, <a class="code" href="types_8h.html#a34281811faee104b5a078c53cd13b20eab27e17afac345c8ec91f24ee7aa48dba" title="Stores an integer value.">GIT_VAR_BOOL</a>);
+<a name="l00093"></a>00093 }
+<a name="l00094"></a>00094 <span class="comment"></span>
+<a name="l00095"></a>00095 <span class="comment">/**</span>
+<a name="l00096"></a>00096 <span class="comment"> * Get the value of a string config variable.</span>
+<a name="l00097"></a>00097 <span class="comment"> *</span>
+<a name="l00098"></a>00098 <span class="comment"> * The string is owned by the variable and should not be freed by the</span>
+<a name="l00099"></a>00099 <span class="comment"> * user.</span>
+<a name="l00100"></a>00100 <span class="comment"> *</span>
+<a name="l00101"></a>00101 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00102"></a>00102 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00103"></a>00103 <span class="comment"> * @param out pointer to the variable&#39;s value</span>
+<a name="l00104"></a>00104 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00105"></a>00105 <span class="comment"> */</span>
+<a name="l00106"></a>00106 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#gaf4b11bde9d50293eb8c739d6898061f1" title="Get the value of a string config variable.">git_config_get_string</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> **out);<span class="comment"></span>
+<a name="l00107"></a>00107 <span class="comment">/**</span>
+<a name="l00108"></a>00108 <span class="comment"> * Set the value of an integer or boolean config variable.</span>
+<a name="l00109"></a>00109 <span class="comment"> *</span>
+<a name="l00110"></a>00110 <span class="comment"> * This is a more general function to set the value of a integer or</span>
+<a name="l00111"></a>00111 <span class="comment"> * boolean variable.</span>
+<a name="l00112"></a>00112 <span class="comment"> *</span>
+<a name="l00113"></a>00113 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00114"></a>00114 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00115"></a>00115 <span class="comment"> * @param value the value to store</span>
+<a name="l00116"></a>00116 <span class="comment"> * @param type either GIT_VAR_INT or GIT_VAR_BOOL</span>
+<a name="l00117"></a>00117 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00118"></a>00118 <span class="comment"> */</span>
+<a name="l00119"></a>00119 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga0da24996ff28c10d57759150c3d949aa" title="Set the value of an integer or boolean config variable.">git_config_set</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> value, <a class="code" href="types_8h.html#a34281811faee104b5a078c53cd13b20e" title="Config variable type.">git_cvar_type</a> type);
+<a name="l00120"></a>00120 <span class="comment"></span>
+<a name="l00121"></a>00121 <span class="comment">/**</span>
+<a name="l00122"></a>00122 <span class="comment"> * Set the value of an integer config variable.</span>
+<a name="l00123"></a>00123 <span class="comment"> *</span>
+<a name="l00124"></a>00124 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00125"></a>00125 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00126"></a>00126 <span class="comment"> * @param out pointer to the variable where the value should be stored</span>
+<a name="l00127"></a>00127 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00128"></a>00128 <span class="comment"> */</span>
+<a name="l00129"></a><a class="code" href="group__git__reference.html#ga7ed50aad60bf76ef1c93d92c99bc05d5">00129</a> <a class="code" href="common_8h.html#aa21868b5d5083c56d4e7f8f911ddb0e0" title="Declare a function as always inlined.">GIT_INLINE</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga7ed50aad60bf76ef1c93d92c99bc05d5" title="Set the value of an integer config variable.">git_config_set_int</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> value)
+<a name="l00130"></a>00130 {
+<a name="l00131"></a>00131         <span class="keywordflow">return</span> <a class="code" href="group__git__reference.html#ga0da24996ff28c10d57759150c3d949aa" title="Set the value of an integer or boolean config variable.">git_config_set</a>(cfg, name, value, GIT_VAR_INT);
+<a name="l00132"></a>00132 }
+<a name="l00133"></a>00133 <span class="comment"></span>
+<a name="l00134"></a>00134 <span class="comment">/**</span>
+<a name="l00135"></a>00135 <span class="comment"> * Set the value of a boolean config variable.</span>
+<a name="l00136"></a>00136 <span class="comment"> *</span>
+<a name="l00137"></a>00137 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00138"></a>00138 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00139"></a>00139 <span class="comment"> * @param value the value to store</span>
+<a name="l00140"></a>00140 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00141"></a>00141 <span class="comment"> */</span>
+<a name="l00142"></a><a class="code" href="group__git__reference.html#ga4407bfd8dfb70f15f0bb6db2a8848ece">00142</a> <a class="code" href="common_8h.html#aa21868b5d5083c56d4e7f8f911ddb0e0" title="Declare a function as always inlined.">GIT_INLINE</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga4407bfd8dfb70f15f0bb6db2a8848ece" title="Set the value of a boolean config variable.">git_config_set_bool</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, <span class="keywordtype">int</span> value)
+<a name="l00143"></a>00143 {
+<a name="l00144"></a>00144         <span class="keywordflow">return</span> <a class="code" href="group__git__reference.html#ga0da24996ff28c10d57759150c3d949aa" title="Set the value of an integer or boolean config variable.">git_config_set</a>(cfg, name, value, <a class="code" href="types_8h.html#a34281811faee104b5a078c53cd13b20eab27e17afac345c8ec91f24ee7aa48dba" title="Stores an integer value.">GIT_VAR_BOOL</a>);
+<a name="l00145"></a>00145 }
+<a name="l00146"></a>00146 <span class="comment"></span>
+<a name="l00147"></a>00147 <span class="comment">/**</span>
+<a name="l00148"></a>00148 <span class="comment"> * Set the value of a string config variable.</span>
+<a name="l00149"></a>00149 <span class="comment"> *</span>
+<a name="l00150"></a>00150 <span class="comment"> * A copy of the string is made and the user is free to use it</span>
+<a name="l00151"></a>00151 <span class="comment"> * afterwards.</span>
+<a name="l00152"></a>00152 <span class="comment"> *</span>
+<a name="l00153"></a>00153 <span class="comment"> * @param cfg where to look for the variable</span>
+<a name="l00154"></a>00154 <span class="comment"> * @param name the variable&#39;s name</span>
+<a name="l00155"></a>00155 <span class="comment"> * @param value the string to store.</span>
+<a name="l00156"></a>00156 <span class="comment"> * @return GIT_SUCCESS on success; error code otherwise</span>
+<a name="l00157"></a>00157 <span class="comment"> */</span>
+<a name="l00158"></a>00158 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga547eafbda47a462673383b41d078c7ca" title="Set the value of a string config variable.">git_config_set_string</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *value);
+<a name="l00159"></a>00159 <span class="comment"></span>
+<a name="l00160"></a>00160 <span class="comment">/**</span>
+<a name="l00161"></a>00161 <span class="comment"> * Perform an operation on each config variable.</span>
+<a name="l00162"></a>00162 <span class="comment"> *</span>
+<a name="l00163"></a>00163 <span class="comment"> * The callback is passed a pointer to a config variable and the data</span>
+<a name="l00164"></a>00164 <span class="comment"> * pointer passed to this function. As soon as one of the callback</span>
+<a name="l00165"></a>00165 <span class="comment"> * functions returns something other than 0, this function returns</span>
+<a name="l00166"></a>00166 <span class="comment"> * that value.</span>
+<a name="l00167"></a>00167 <span class="comment"> *</span>
+<a name="l00168"></a>00168 <span class="comment"> * @param cfg where to get the variables from</span>
+<a name="l00169"></a>00169 <span class="comment"> * @param callback the function to call on each variable</span>
+<a name="l00170"></a>00170 <span class="comment"> * @param data the data to pass to the callback</span>
+<a name="l00171"></a>00171 <span class="comment"> * @return GIT_SUCCESS or the return value of the callback which didn&#39;t return 0</span>
+<a name="l00172"></a>00172 <span class="comment"> */</span>
+<a name="l00173"></a>00173 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#gab060c2cb4bfb5edfc4f675c81293439b" title="Perform an operation on each config variable.">git_config_foreach</a>(<a class="code" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3" title="Memory representation of a config file.">git_config</a> *cfg, <span class="keywordtype">int</span> (*callback)(<a class="code" href="types_8h.html#af5a62cfeeae93769366aa605efc9cd2c" title="Memory representation of a config variable.">git_cvar</a> *, <span class="keywordtype">void</span> *data), <span class="keywordtype">void</span> *data);
+<a name="l00174"></a>00174 <span class="comment"></span>
+<a name="l00175"></a>00175 <span class="comment">/** @} */</span>
+<a name="l00176"></a>00176 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00177"></a>00177 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -124,7 +253,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>
