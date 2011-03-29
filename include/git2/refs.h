@@ -87,7 +87,7 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  * @param target The target of the reference
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_reference_create_symbolic_force(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
+GIT_EXTERN(int) git_reference_create_symbolic_f(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
 
 /**
  * Create a new object id reference.
@@ -125,7 +125,7 @@ GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository
  * @param id The object id pointed to by the reference.
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_reference_create_oid_force(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
+GIT_EXTERN(int) git_reference_create_oid_f(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
 
 /**
  * Get the OID pointed to by a reference.
@@ -243,7 +243,7 @@ GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name);
  * and on disk.
  *
  */
-GIT_EXTERN(int) git_reference_rename_force(git_reference *ref, const char *new_name);
+GIT_EXTERN(int) git_reference_rename_f(git_reference *ref, const char *new_name);
 
 /**
  * Delete an existing reference

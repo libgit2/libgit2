@@ -315,7 +315,7 @@ BEGIN_TEST(overwrite0, "Overwrite an existing symbolic reference")
 
 	/* Ensure we can't create it unless we force it to */
 	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
-	must_pass(git_reference_create_symbolic_force(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_symbolic_f(&ref, repo, ref_name, ref_master_name));
 
 	/* Ensure it points to the right place */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -347,7 +347,7 @@ BEGIN_TEST(overwrite1, "Overwrite an existing object id reference")
 
 	/* Ensure we can't overwrite unless we force it */
 	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
-	must_pass(git_reference_create_oid_force(&ref, repo, ref_name, &id));
+	must_pass(git_reference_create_oid_f(&ref, repo, ref_name, &id));
 
 	/* Ensure it has been overwritten */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -370,7 +370,7 @@ BEGIN_TEST(overwrite2, "Overwrite an existing object id reference with a symboli
 
 	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
 	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
-	must_pass(git_reference_create_symbolic_force(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_symbolic_f(&ref, repo, ref_name, ref_master_name));
 
 	/* Ensure it points to the right place */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -396,7 +396,7 @@ BEGIN_TEST(overwrite3, "Overwrite an existing symbolic reference with an object 
 	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
 	/* It shouldn't overwrite unless we tell it to */
 	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
-	must_pass(git_reference_create_oid_force(&ref, repo, ref_name, &id));
+	must_pass(git_reference_create_oid_f(&ref, repo, ref_name, &id));
 
 	/* Ensure it points to the right place */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -622,7 +622,7 @@ BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing r
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
 
 	/* Can not be renamed to the name of another existing reference. */
-	must_pass(git_reference_rename_force(looked_up_ref, packed_test_head_name));
+	must_pass(git_reference_rename_f(looked_up_ref, packed_test_head_name));
 
 	/* Check we actually renamed it */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));

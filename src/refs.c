@@ -79,6 +79,11 @@ static int packed_remove_loose(git_repository *repo, git_vector *packing_list);
 static int packed_sort(const void *a, const void *b);
 static int packed_write(git_repository *repo);
 
+/* internal helpers */
+static int reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force);
+static int reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force);
+static int reference_rename(git_reference *ref, const char *new_name, int force);
+
 /* name normalization */
 static int check_valid_ref_char(char ch);
 static int normalize_name(char *buffer_out, const char *name, int is_oid_ref);
@@ -919,7 +924,7 @@ cleanup:
  * Internal methods - reference creation
  *****************************************/
 
-int git_reference_create_symbolic_internal(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force)
+static int reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force)
 {
 	char normalized[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
 	int error = GIT_SUCCESS, updated = 0;
@@ -976,7 +981,7 @@ cleanup:
 	return error;
 }
 
-int git_reference_create_oid_internal(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force)
+static int reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force)
 {
 	int error = GIT_SUCCESS, updated = 0;
 	git_reference *ref = NULL, *old_ref = NULL;
@@ -1036,7 +1041,7 @@ cleanup:
  * We also need to re-insert the reference on its corresponding
  * in-memory cache, since the caches are indexed by refname.
  */
-int git_reference_rename_internal(git_reference *ref, const char *new_name, int force)
+static int reference_rename(git_reference *ref, const char *new_name, int force)
 {
 	int error;
 	char *old_name;
@@ -1207,22 +1212,22 @@ int git_reference_lookup(git_reference **ref_out, git_repository *repo, const ch
 
 int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target)
 {
-	return git_reference_create_symbolic_internal(ref_out, repo, name, target, 0);
+	return reference_create_symbolic(ref_out, repo, name, target, 0);
 }
 
-int git_reference_create_symbolic_force(git_reference **ref_out, git_repository *repo, const char *name, const char *target)
+int git_reference_create_symbolic_f(git_reference **ref_out, git_repository *repo, const char *name, const char *target)
 {
-	return git_reference_create_symbolic_internal(ref_out, repo, name, target, 1);
+	return reference_create_symbolic(ref_out, repo, name, target, 1);
 }
 
 int git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id)
 {
-	return git_reference_create_oid_internal(ref_out, repo, name, id, 0);
+	return reference_create_oid(ref_out, repo, name, id, 0);
 }
 
-int git_reference_create_oid_force(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id)
+int git_reference_create_oid_f(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id)
 {
-	return git_reference_create_oid_internal(ref_out, repo, name, id, 1);
+	return reference_create_oid(ref_out, repo, name, id, 1);
 }
 
 /**
@@ -1433,12 +1438,12 @@ cleanup:
 
 int git_reference_rename(git_reference *ref, const char *new_name)
 {
-	return git_reference_rename_internal(ref, new_name, 0);
+	return reference_rename(ref, new_name, 0);
 }
 
-int git_reference_rename_force(git_reference *ref, const char *new_name)
+int git_reference_rename_f(git_reference *ref, const char *new_name)
 {
-	return git_reference_rename_internal(ref, new_name, 1);
+	return reference_rename(ref, new_name, 1);
 }
 
 int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
