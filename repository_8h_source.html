@@ -216,33 +216,41 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00154"></a>00154 <span class="comment"></span>
 <a name="l00155"></a>00155 <span class="comment">/**</span>
 <a name="l00156"></a>00156 <span class="comment"> * Free a previously allocated repository</span>
-<a name="l00157"></a>00157 <span class="comment"> * @param repo repository handle to close. If NULL nothing occurs.</span>
-<a name="l00158"></a>00158 <span class="comment"> */</span>
-<a name="l00159"></a>00159 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a" title="Free a previously allocated repository.">git_repository_free</a>(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
-<a name="l00160"></a>00160 
-<a name="l00161"></a>00161 
-<a name="l00162"></a>00162 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) git_repository_free__no_gc(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
-<a name="l00163"></a>00163 <span class="comment"></span>
-<a name="l00164"></a>00164 <span class="comment">/**</span>
-<a name="l00165"></a>00165 <span class="comment"> * Creates a new Git repository in the given folder.</span>
-<a name="l00166"></a>00166 <span class="comment"> *</span>
-<a name="l00167"></a>00167 <span class="comment"> * TODO:</span>
-<a name="l00168"></a>00168 <span class="comment"> *      - Reinit the repository</span>
-<a name="l00169"></a>00169 <span class="comment"> *      - Create config files</span>
-<a name="l00170"></a>00170 <span class="comment"> *</span>
-<a name="l00171"></a>00171 <span class="comment"> * @param repo_out pointer to the repo which will be created or reinitialized</span>
-<a name="l00172"></a>00172 <span class="comment"> * @param path the path to the repository</span>
-<a name="l00173"></a>00173 <span class="comment"> * @param is_bare if true, a Git repository without a working directory is created </span>
-<a name="l00174"></a>00174 <span class="comment"> *              at the pointed path. If false, provided path will be considered as the working </span>
-<a name="l00175"></a>00175 <span class="comment"> *              directory into which the .git directory will be created.</span>
-<a name="l00176"></a>00176 <span class="comment"> *</span>
-<a name="l00177"></a>00177 <span class="comment"> * @return 0 on success; error code otherwise</span>
-<a name="l00178"></a>00178 <span class="comment"> */</span>
-<a name="l00179"></a>00179 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__repository.html#ga7abb07c9ae2df7303fae75e33ae21359" title="Creates a new Git repository in the given folder.">git_repository_init</a>(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> **repo_out, const <span class="keywordtype">char</span> *path, <span class="keywordtype">unsigned</span> is_bare);
-<a name="l00180"></a>00180 <span class="comment"></span>
-<a name="l00181"></a>00181 <span class="comment">/** @} */</span>
-<a name="l00182"></a>00182 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00183"></a>00183 <span class="preprocessor">#endif</span>
+<a name="l00157"></a>00157 <span class="comment"> *</span>
+<a name="l00158"></a>00158 <span class="comment"> * @param repo repository handle to close. If NULL nothing occurs.</span>
+<a name="l00159"></a>00159 <span class="comment"> */</span>
+<a name="l00160"></a>00160 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a" title="Free a previously allocated repository.">git_repository_free</a>(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
+<a name="l00161"></a>00161 <span class="comment"></span>
+<a name="l00162"></a>00162 <span class="comment">/**</span>
+<a name="l00163"></a>00163 <span class="comment"> * Force a garbage collector pass on the repository</span>
+<a name="l00164"></a>00164 <span class="comment"> *</span>
+<a name="l00165"></a>00165 <span class="comment"> * This will force-free any cached objects that have been</span>
+<a name="l00166"></a>00166 <span class="comment"> * previously marked by the user as closed (`git_object_close`).</span>
+<a name="l00167"></a>00167 <span class="comment"> *</span>
+<a name="l00168"></a>00168 <span class="comment"> * @param repo repository handle to collect. If NULL nothing occurs.</span>
+<a name="l00169"></a>00169 <span class="comment"> */</span>
+<a name="l00170"></a>00170 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__repository.html#gac6d9dda7de1bde31a0fd3ac41f53bdfb" title="Force a garbage collector pass on the repository.">git_repository_close</a>(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
+<a name="l00171"></a>00171 <span class="comment"></span>
+<a name="l00172"></a>00172 <span class="comment">/**</span>
+<a name="l00173"></a>00173 <span class="comment"> * Creates a new Git repository in the given folder.</span>
+<a name="l00174"></a>00174 <span class="comment"> *</span>
+<a name="l00175"></a>00175 <span class="comment"> * TODO:</span>
+<a name="l00176"></a>00176 <span class="comment"> *      - Reinit the repository</span>
+<a name="l00177"></a>00177 <span class="comment"> *      - Create config files</span>
+<a name="l00178"></a>00178 <span class="comment"> *</span>
+<a name="l00179"></a>00179 <span class="comment"> * @param repo_out pointer to the repo which will be created or reinitialized</span>
+<a name="l00180"></a>00180 <span class="comment"> * @param path the path to the repository</span>
+<a name="l00181"></a>00181 <span class="comment"> * @param is_bare if true, a Git repository without a working directory is created </span>
+<a name="l00182"></a>00182 <span class="comment"> *              at the pointed path. If false, provided path will be considered as the working </span>
+<a name="l00183"></a>00183 <span class="comment"> *              directory into which the .git directory will be created.</span>
+<a name="l00184"></a>00184 <span class="comment"> *</span>
+<a name="l00185"></a>00185 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00186"></a>00186 <span class="comment"> */</span>
+<a name="l00187"></a>00187 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__repository.html#ga7abb07c9ae2df7303fae75e33ae21359" title="Creates a new Git repository in the given folder.">git_repository_init</a>(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> **repo_out, const <span class="keywordtype">char</span> *path, <span class="keywordtype">unsigned</span> is_bare);
+<a name="l00188"></a>00188 <span class="comment"></span>
+<a name="l00189"></a>00189 <span class="comment">/** @} */</span>
+<a name="l00190"></a>00190 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00191"></a>00191 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -259,7 +267,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

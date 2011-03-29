@@ -93,12 +93,12 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the committer of a commit.  <a href="group__git__commit.html#ga4959e749fe7f9b257f902e96e224451c"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gab1e9d0bc6450a95978a1643e00de5e68">git_commit_author</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the author of a commit.  <a href="group__git__commit.html#gab1e9d0bc6450a95978a1643e00de5e68"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">const <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga60865b10f3a64f030e383b5781942ee8">git_commit_tree</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the tree pointed to by a commit.  <a href="group__git__commit.html#ga60865b10f3a64f030e383b5781942ee8"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gaf6367797eeac58c0b232257256d192c3">git_commit_tree</a> (<a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> **tree_out, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the tree pointed to by a commit.  <a href="group__git__commit.html#gaf6367797eeac58c0b232257256d192c3"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">unsigned int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga4a195aff6b2ef3fe4f6dc5f70de18c47">git_commit_parentcount</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the number of parents of this commit.  <a href="group__git__commit.html#ga4a195aff6b2ef3fe4f6dc5f70de18c47"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gaf5a8b591fe9a8d8df1870eeb97908a25">git_commit_parent</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, unsigned int n)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the specified parent of the commit.  <a href="group__git__commit.html#gaf5a8b591fe9a8d8df1870eeb97908a25"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga51320a499c192f17c9b6269b536e3124">git_commit_parent</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **parent, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, unsigned int n)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the specified parent of the commit.  <a href="group__git__commit.html#ga51320a499c192f17c9b6269b536e3124"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga8e05b2002d15bd2c535c1b2e3f01688b">git_commit_add_parent</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *new_parent)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a new parent commit to an existing commit.  <a href="group__git__commit.html#ga8e05b2002d15bd2c535c1b2e3f01688b"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga7177ba22fab1560eda2208870f4aaa3f">git_commit_set_message</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, const char *message)</td></tr>
@@ -107,8 +107,8 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the committer of a commit.  <a href="group__git__commit.html#gafc32781aa0aa44e7fa2d9d976c31ea03"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga55613b216c16977069567b434e07f569">git_commit_set_author</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, const <a class="el" href="structgit__signature.html">git_signature</a> *author_sig)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the author of a commit.  <a href="group__git__commit.html#ga55613b216c16977069567b434e07f569"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#gae1842cd66567820c4ba0ff14fdc0c7a7">git_commit_set_tree</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the tree which is pointed to by a commit.  <a href="group__git__commit.html#gae1842cd66567820c4ba0ff14fdc0c7a7"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__commit.html#ga42c669909663bd6bdf0e6f42392af394">git_commit_set_tree</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit, <a class="el" href="types_8h.html#a754b8f9603ecc4f3dff649a924ce5b20">git_tree</a> *tree)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the tree which is pointed to by a commit.  <a href="group__git__commit.html#ga42c669909663bd6bdf0e6f42392af394"></a><br/></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
 <div class="textblock"><p>Git commit parsing, formatting routines. </p>
@@ -127,7 +127,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

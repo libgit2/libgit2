@@ -280,9 +280,32 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00218"></a>00218 <span class="comment"> */</span>
 <a name="l00219"></a>00219 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga7ad6b97ea4fdc608f62d72b376b2a150" title="Pack all the loose references in the repository.">git_reference_packall</a>(<a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo);
 <a name="l00220"></a>00220 <span class="comment"></span>
-<a name="l00221"></a>00221 <span class="comment">/** @} */</span>
-<a name="l00222"></a>00222 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00223"></a>00223 <span class="preprocessor">#endif</span>
+<a name="l00221"></a>00221 <span class="comment">/**</span>
+<a name="l00222"></a>00222 <span class="comment"> * Fill a list with all the references that can be found</span>
+<a name="l00223"></a>00223 <span class="comment"> * in a repository.</span>
+<a name="l00224"></a>00224 <span class="comment"> *</span>
+<a name="l00225"></a>00225 <span class="comment"> * The listed references may be filtered by type, or using</span>
+<a name="l00226"></a>00226 <span class="comment"> * a bitwise OR of several types. Use the magic value</span>
+<a name="l00227"></a>00227 <span class="comment"> * `GIT_REF_LISTALL` to obtain all references, including</span>
+<a name="l00228"></a>00228 <span class="comment"> * packed ones.</span>
+<a name="l00229"></a>00229 <span class="comment"> *</span>
+<a name="l00230"></a>00230 <span class="comment"> * The string array will be filled with the names of all</span>
+<a name="l00231"></a>00231 <span class="comment"> * references; these values are owned by the user and</span>
+<a name="l00232"></a>00232 <span class="comment"> * should be free&#39;d manually when no longer needed, using</span>
+<a name="l00233"></a>00233 <span class="comment"> * `git_strarray_free`.</span>
+<a name="l00234"></a>00234 <span class="comment"> *</span>
+<a name="l00235"></a>00235 <span class="comment"> * @param array Pointer to a git_strarray structure where</span>
+<a name="l00236"></a>00236 <span class="comment"> *              the reference names will be stored</span>
+<a name="l00237"></a>00237 <span class="comment"> * @param repo Repository where to find the refs</span>
+<a name="l00238"></a>00238 <span class="comment"> * @param list_flags Filtering flags for the reference</span>
+<a name="l00239"></a>00239 <span class="comment"> *              listing.</span>
+<a name="l00240"></a>00240 <span class="comment"> * @return 0 on success; error code otherwise</span>
+<a name="l00241"></a>00241 <span class="comment"> */</span>
+<a name="l00242"></a>00242 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">int</span>) <a class="code" href="group__git__reference.html#ga3ae9092b0a41e9fc76086cedcb4ef50f" title="Fill a list with all the references that can be found in a repository.">git_reference_listall</a>(<a class="code" href="structgit__strarray.html">git_strarray</a> *array, <a class="code" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5" title="Representation of an existing git repository, including all its object contents.">git_repository</a> *repo, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> list_flags);
+<a name="l00243"></a>00243 <span class="comment"></span>
+<a name="l00244"></a>00244 <span class="comment">/** @} */</span>
+<a name="l00245"></a>00245 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00246"></a>00246 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!--- window showing the filter options -->
@@ -299,7 +322,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

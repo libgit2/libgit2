@@ -52,12 +52,17 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div>
 <div class="header">
   <div class="summary">
-<a href="#define-members">Defines</a>  </div>
+<a href="#nested-classes">Data Structures</a> &#124;
+<a href="#define-members">Defines</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <h1>Git common platform definitions</h1>  </div>
 </div>
 <div class="contents">
 <table class="memberdecls">
+<tr><td colspan="2"><h2><a name="nested-classes"></a>
+Data Structures</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structgit__strarray.html">git_strarray</a></td></tr>
 <tr><td colspan="2"><h2><a name="define-members"></a>
 Defines</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga9dc9f0851a412f67166cf42395f9eb02">GIT_SUCCESS</a>&#160;&#160;&#160;0</td></tr>
@@ -83,7 +88,7 @@ Defines</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">The specified repository is invalid. <br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga868c3c2340cbb6a6f88e1e93e9f3d1fe"></a><!-- doxytag: member="git_common::GIT_EINVALIDTYPE" ref="ga868c3c2340cbb6a6f88e1e93e9f3d1fe" args="" -->
 #define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#ga868c3c2340cbb6a6f88e1e93e9f3d1fe">GIT_EINVALIDTYPE</a>&#160;&#160;&#160;(GIT_ERROR - 8)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">The object or config variable type is invalid or doesn't match. <br/></td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">The object type is invalid or doesn't match. <br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gab561410e4825895ad0b0c65bf62a05c9"></a><!-- doxytag: member="git_common::GIT_EMISSINGOBJDATA" ref="gab561410e4825895ad0b0c65bf62a05c9" args="" -->
 #define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#gab561410e4825895ad0b0c65bf62a05c9">GIT_EMISSINGOBJDATA</a>&#160;&#160;&#160;(GIT_ERROR - 9)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">The object cannot be written that because it's missing internal data. <br/></td></tr>
@@ -123,6 +128,10 @@ Defines</h2></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gaa59e2a71dff511f6601cba08b035ef92"></a><!-- doxytag: member="git_common::GIT_EINVALIDREFSTATE" ref="gaa59e2a71dff511f6601cba08b035ef92" args="" -->
 #define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__common.html#gaa59e2a71dff511f6601cba08b035ef92">GIT_EINVALIDREFSTATE</a>&#160;&#160;&#160;(GIT_ERROR - 21)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">The state of the reference is not valid. <br/></td></tr>
+<tr><td colspan="2"><h2><a name="func-members"></a>
+Functions</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gae48a95febf211701cfc3db2ab77e104b"></a><!-- doxytag: member="git_common::git_strarray_free" ref="gae48a95febf211701cfc3db2ab77e104b" args="(git_strarray *array)" -->
+void&#160;</td><td class="memItemRight" valign="bottom"><b>git_strarray_free</b> (<a class="el" href="structgit__strarray.html">git_strarray</a> *array)</td></tr>
 </table>
 <hr/><h2>Define Documentation</h2>
 <a class="anchor" id="ga2ea7a71cb290007e5a02919a8a703784"></a><!-- doxytag: member="common.h::GIT_ENOMEM" ref="ga2ea7a71cb290007e5a02919a8a703784" args="" -->
@@ -231,7 +240,7 @@ Defines</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

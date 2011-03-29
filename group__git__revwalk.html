@@ -78,12 +78,12 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate a new revision walker to iterate through a repo.  <a href="#gaa37af1e17f70079065277b5f216cbc6f"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga9fe98ba31265fce47fbd86de2a6c23fb">git_revwalk_reset</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walker)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Reset the walking machinery for reuse.  <a href="#ga9fe98ba31265fce47fbd86de2a6c23fb"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga082d81392e6f05bdafbe816766f4bd60">git_revwalk_push</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit to start traversal from.  <a href="#ga082d81392e6f05bdafbe816766f4bd60"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gadfd57678c43d9c4cfb4d1becea25b3f9">git_revwalk_hide</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, <a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *commit)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit (and its ancestors) uninteresting for the output.  <a href="#gadfd57678c43d9c4cfb4d1becea25b3f9"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga0de04256010c272780508519a16e668b">git_revwalk_next</a> (<a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **commit, <a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next commit from the revision traversal.  <a href="#ga0de04256010c272780508519a16e668b"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gac587fb8d522165a1caf18b1bd900e9e5">git_revwalk_push</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, const <a class="el" href="structgit__oid.html">git_oid</a> *oid)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit to start traversal from.  <a href="#gac587fb8d522165a1caf18b1bd900e9e5"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga4ca95c052ef991b3ff37114b287a43dd">git_revwalk_hide</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, const <a class="el" href="structgit__oid.html">git_oid</a> *oid)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark a commit (and its ancestors) uninteresting for the output.  <a href="#ga4ca95c052ef991b3ff37114b287a43dd"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga60d92e44c37d6263f718c4b52ea8abc1">git_revwalk_next</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next commit from the revision traversal.  <a href="#ga60d92e44c37d6263f718c4b52ea8abc1"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#gac787f829d046d92036270d73d8730719">git_revwalk_sorting</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk, unsigned int sort_mode)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Change the sorting mode when iterating through the repository's contents.  <a href="#gac787f829d046d92036270d73d8730719"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__revwalk.html#ga86a2eac4a58ce7f6ce309f066424e934">git_revwalk_free</a> (<a class="el" href="types_8h.html#adc160e727f44ae056097687ac9e74491">git_revwalk</a> *walk)</td></tr>
@@ -134,7 +134,7 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="gadfd57678c43d9c4cfb4d1becea25b3f9"></a><!-- doxytag: member="revwalk.h::git_revwalk_hide" ref="gadfd57678c43d9c4cfb4d1becea25b3f9" args="(git_revwalk *walk, git_commit *commit)" -->
+<a class="anchor" id="ga4ca95c052ef991b3ff37114b287a43dd"></a><!-- doxytag: member="revwalk.h::git_revwalk_hide" ref="ga4ca95c052ef991b3ff37114b287a43dd" args="(git_revwalk *walk, const git_oid *oid)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -147,8 +147,8 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
-          <td class="paramname"><em>commit</em>&#160;</td>
+          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>oid</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -207,15 +207,15 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ga0de04256010c272780508519a16e668b"></a><!-- doxytag: member="revwalk.h::git_revwalk_next" ref="ga0de04256010c272780508519a16e668b" args="(git_commit **commit, git_revwalk *walk)" -->
+<a class="anchor" id="ga60d92e44c37d6263f718c4b52ea8abc1"></a><!-- doxytag: member="revwalk.h::git_revwalk_next" ref="ga60d92e44c37d6263f718c4b52ea8abc1" args="(git_oid *oid, git_revwalk *walk)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">int git_revwalk_next </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> **&#160;</td>
-          <td class="paramname"><em>commit</em>, </td>
+          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>oid</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -244,7 +244,7 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="ga082d81392e6f05bdafbe816766f4bd60"></a><!-- doxytag: member="revwalk.h::git_revwalk_push" ref="ga082d81392e6f05bdafbe816766f4bd60" args="(git_revwalk *walk, git_commit *commit)" -->
+<a class="anchor" id="gac587fb8d522165a1caf18b1bd900e9e5"></a><!-- doxytag: member="revwalk.h::git_revwalk_push" ref="gac587fb8d522165a1caf18b1bd900e9e5" args="(git_revwalk *walk, const git_oid *oid)" -->
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -257,8 +257,8 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="types_8h.html#aa95ee762e2f944535e8bd87140cc6fb2">git_commit</a> *&#160;</td>
-          <td class="paramname"><em>commit</em>&#160;</td>
+          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>oid</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -384,7 +384,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:01:52 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>
