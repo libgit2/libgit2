@@ -35,18 +35,17 @@
  ***********************/
 static int config_parse(git_config *cfg_file);
 static int parse_variable(git_config *cfg, const char *section_name, const char *line);
-uint32_t config_table_hash(const void *key)
-{
-	const char *var_name = (char *)key;
-	return git__hash(key, strlen(var_name), 0x5273eae3);
-}
 
-int config_table_haskey(void *object, const void *key)
+uint32_t config_table_hash(const void *key, int hash_id)
 {
-	git_config_var *var = (git_config_var *)object;
+	static uint32_t hash_seeds[GIT_HASHTABLE_HASHES] = {
+		2147483647,
+		0x5d20bb23,
+		0x7daaab3c
+	};
+
 	const char *var_name = (const char *)key;
-
-	return (strcmp(var->name, var_name) == 0);
+	return git__hash(key, strlen(var_name), hash_seeds[hash_id]);
 }
 
 int git_config_open(git_config **cfg_out, const char *path)
@@ -68,7 +67,8 @@ int git_config_open(git_config **cfg_out, const char *path)
 		goto cleanup;
 	}
 
-	cfg->vars = git_hashtable_alloc(16, config_table_hash, config_table_haskey);
+	cfg->vars = git_hashtable_alloc(16, config_table_hash,
+	                                (git_hash_keyeq_ptr) strcmp);
 	if (cfg->vars == NULL){
 		error = GIT_ENOMEM;
 		goto cleanup;
