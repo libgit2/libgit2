@@ -74,15 +74,20 @@ int git_config_open(git_config **cfg_out, const char *path)
 		goto cleanup;
 	}
 
-	*cfg_out = cfg;
-
 	error = gitfo_read_file(&cfg->reader.buffer, cfg->file_path);
 	if(error < GIT_SUCCESS)
 		goto cleanup;
 
 	/* Initialise the reading position */
 	cfg->reader.read_ptr = cfg->reader.buffer.data;
-	return config_parse(cfg);
+
+	error = config_parse(cfg);
+	if(error < GIT_SUCCESS)
+		git_config_free(cfg);
+	else
+		*cfg_out = cfg;
+
+	return error;
 
  cleanup:
 	if(cfg->vars)
