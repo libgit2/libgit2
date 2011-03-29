@@ -127,7 +127,7 @@ Functions</h2></td></tr>
 <div class="memdoc">
 
 <p>Close an open object. </p>
-<p>This method instructs the library to close an existing object; note that git_objects are owned and cached by the repository so the object may or may not be freed after this library call, depending on how agressive is the caching mechanism used by the repository.</p>
+<p>This method instructs the library to close an existing object; note that git_objects are owned by the repository and are reference counted, so the object may or may not be freed after this library call, depending on whether any other objects still depend on it.</p>
 <p>IMPORTANT: It is *not* necessary to call this method when you stop using an object, since all object memory is automatically reclaimed by the repository when it is freed.</p>
 <p>Forgetting to call `git_object_close` does not cause memory leaks, but it's is recommended to close as soon as possible the biggest objects (e.g. blobs) to prevent wasting memory space.</p>
 <dl><dt><b>Parameters:</b></dt><dd>
@@ -440,7 +440,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:10:32 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

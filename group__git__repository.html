@@ -72,38 +72,12 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the Index file of a Git repository.  <a href="#ga3ec158c98f0ba7557a958ff1a89d7bc5"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gadc2e808b765a06f02d456644e561999a">git_repository_free</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Free a previously allocated repository.  <a href="#gadc2e808b765a06f02d456644e561999a"></a><br/></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#gac6d9dda7de1bde31a0fd3ac41f53bdfb">git_repository_close</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
-<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Force a garbage collector pass on the repository.  <a href="#gac6d9dda7de1bde31a0fd3ac41f53bdfb"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gaeb8cd045bde19cffb6ee84f8901f8e65"></a><!-- doxytag: member="git_repository::git_repository_free__no_gc" ref="gaeb8cd045bde19cffb6ee84f8901f8e65" args="(git_repository *repo)" -->
+void&#160;</td><td class="memItemRight" valign="bottom"><b>git_repository_free__no_gc</b> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo)</td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__repository.html#ga7abb07c9ae2df7303fae75e33ae21359">git_repository_init</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> **repo_out, const char *path, unsigned is_bare)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new Git repository in the given folder.  <a href="#ga7abb07c9ae2df7303fae75e33ae21359"></a><br/></td></tr>
 </table>
 <hr/><h2>Function Documentation</h2>
-<a class="anchor" id="gac6d9dda7de1bde31a0fd3ac41f53bdfb"></a><!-- doxytag: member="repository.h::git_repository_close" ref="gac6d9dda7de1bde31a0fd3ac41f53bdfb" args="(git_repository *repo)" -->
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void git_repository_close </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
-          <td class="paramname"><em>repo</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div>
-<div class="memdoc">
-
-<p>Force a garbage collector pass on the repository. </p>
-<p>This will force-free any cached objects that have been previously marked by the user as closed (`git_object_close`).</p>
-<dl><dt><b>Parameters:</b></dt><dd>
-  <table class="params">
-    <tr><td class="paramname">repo</td><td>repository handle to collect. If NULL nothing occurs. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
 <a class="anchor" id="ga23ffb8169f5509dcf78a26f35ce65197"></a><!-- doxytag: member="repository.h::git_repository_database" ref="ga23ffb8169f5509dcf78a26f35ce65197" args="(git_repository *repo)" -->
 <div class="memitem">
 <div class="memproto">
@@ -414,7 +388,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:10:32 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

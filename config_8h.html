@@ -64,23 +64,40 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div>
 <div class="contents">
 
-<p>Git repository configuration management routines.  
+<p>Git config management routines.  
 <a href="#_details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="common_8h_source.html">common.h</a>&quot;</code><br/>
 <code>#include &quot;<a class="el" href="types_8h_source.html">types.h</a>&quot;</code><br/>
-<code>#include &quot;<a class="el" href="oid_8h_source.html">oid.h</a>&quot;</code><br/>
 </div>
 <p><a href="config_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gaf63e8ecd3310e9322423517dce067f63"></a><!-- doxytag: member="config.h::git_config_new" ref="gaf63e8ecd3310e9322423517dce067f63" args="(void)" -->
-git_config *&#160;</td><td class="memItemRight" valign="bottom"><b>git_config_new</b> (void)</td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga6a6f801c2e4741a246d4ab08f5183b7f"></a><!-- doxytag: member="config.h::git_config_free" ref="ga6a6f801c2e4741a246d4ab08f5183b7f" args="(git_config *c)" -->
-void&#160;</td><td class="memItemRight" valign="bottom"><b>git_config_free</b> (git_config *c)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga4dcc8746aaef3c69c3f066f5b13d1691">git_config_open</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> **cfg_out, const char *path)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Open a configuration file.  <a href="group__git__reference.html#ga4dcc8746aaef3c69c3f066f5b13d1691"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga6b8b3578e46a32ae6216b54f5e6cb4f4">git_config_free</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Free the configuration and its associated memory.  <a href="group__git__reference.html#ga6b8b3578e46a32ae6216b54f5e6cb4f4"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga91e2f5229b48f2e49e59873136573351">git_config_get</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int *out, <a class="el" href="types_8h.html#a34281811faee104b5a078c53cd13b20e">git_cvar_type</a> type)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of an integer or boolean config variable.  <a href="group__git__reference.html#ga91e2f5229b48f2e49e59873136573351"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga0ac2512ca59c59ee06ab8662d7d9c141">git_config_get_int</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int *out)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of an integer config variable.  <a href="group__git__reference.html#ga0ac2512ca59c59ee06ab8662d7d9c141"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga1bf281c55385a3af2cda6e6d99512076">git_config_get_bool</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int *out)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of a boolean config variable.  <a href="group__git__reference.html#ga1bf281c55385a3af2cda6e6d99512076"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#gaf4b11bde9d50293eb8c739d6898061f1">git_config_get_string</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, const char **out)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of a string config variable.  <a href="group__git__reference.html#gaf4b11bde9d50293eb8c739d6898061f1"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga0da24996ff28c10d57759150c3d949aa">git_config_set</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int value, <a class="el" href="types_8h.html#a34281811faee104b5a078c53cd13b20e">git_cvar_type</a> type)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of an integer or boolean config variable.  <a href="group__git__reference.html#ga0da24996ff28c10d57759150c3d949aa"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga7ed50aad60bf76ef1c93d92c99bc05d5">git_config_set_int</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int value)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of an integer config variable.  <a href="group__git__reference.html#ga7ed50aad60bf76ef1c93d92c99bc05d5"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga4407bfd8dfb70f15f0bb6db2a8848ece">git_config_set_bool</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int value)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of a boolean config variable.  <a href="group__git__reference.html#ga4407bfd8dfb70f15f0bb6db2a8848ece"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#ga547eafbda47a462673383b41d078c7ca">git_config_set_string</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, const char *value)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of a string config variable.  <a href="group__git__reference.html#ga547eafbda47a462673383b41d078c7ca"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__reference.html#gab060c2cb4bfb5edfc4f675c81293439b">git_config_foreach</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, int(*callback)(<a class="el" href="types_8h.html#af5a62cfeeae93769366aa605efc9cd2c">git_cvar</a> *, void *data), void *data)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform an operation on each config variable.  <a href="group__git__reference.html#gab060c2cb4bfb5edfc4f675c81293439b"></a><br/></td></tr>
 </table>
 <hr/><a name="_details"></a><h2>Detailed Description</h2>
-<div class="textblock"><p>Git repository configuration management routines. </p>
+<div class="textblock"><p>Git config management routines. </p>
 </div></div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -96,7 +113,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>git_config_free</b> (
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:10:32 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>

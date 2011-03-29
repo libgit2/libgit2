@@ -193,10 +193,10 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00131"></a>00131 <span class="comment"> * Close an open object</span>
 <a name="l00132"></a>00132 <span class="comment"> *</span>
 <a name="l00133"></a>00133 <span class="comment"> * This method instructs the library to close an existing</span>
-<a name="l00134"></a>00134 <span class="comment"> * object; note that git_objects are owned and cached by the repository</span>
-<a name="l00135"></a>00135 <span class="comment"> * so the object may or may not be freed after this library call,</span>
-<a name="l00136"></a>00136 <span class="comment"> * depending on how agressive is the caching mechanism used</span>
-<a name="l00137"></a>00137 <span class="comment"> * by the repository.</span>
+<a name="l00134"></a>00134 <span class="comment"> * object; note that git_objects are owned by the repository</span>
+<a name="l00135"></a>00135 <span class="comment"> * and are reference counted, so the object may or may not be</span>
+<a name="l00136"></a>00136 <span class="comment"> * freed after this library call, depending on whether any other </span>
+<a name="l00137"></a>00137 <span class="comment"> * objects still depend on it.</span>
 <a name="l00138"></a>00138 <span class="comment"> *</span>
 <a name="l00139"></a>00139 <span class="comment"> * IMPORTANT:</span>
 <a name="l00140"></a>00140 <span class="comment"> * It is *not* necessary to call this method when you stop using</span>
@@ -274,7 +274,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:09:16 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:10:32 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>
