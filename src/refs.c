@@ -1319,6 +1319,13 @@ int git_reference_set_oid(git_reference *ref, const git_oid *id)
 
 	ref_oid = (reference_oid *)ref;
 
+	assert(ref->owner);
+
+	/* Don't let the user create references to OIDs that
+	 * don't exist in the ODB */
+	if (!git_odb_exists(git_repository_database(ref->owner), id))
+		return GIT_ENOTFOUND;
+
 	/* duplicate the reference;
 	 * this copy will stay on the packfile cache */
 	if (ref->type & GIT_REF_PACKED) {
