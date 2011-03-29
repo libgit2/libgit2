@@ -1050,12 +1050,14 @@ int git_reference_rename_internal(git_reference *ref, const char *new_name, int 
 	if (error < GIT_SUCCESS)
 		return error;
 
-	/* Ensure we're not going to overwrite an existing reference */
+	/* Ensure we're not going to overwrite an existing reference
+	   unless the user has allowed us */
 	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
 	if (error == GIT_SUCCESS && !force)
 		return GIT_EEXISTS;
 
-	if (error != GIT_ENOTFOUND)
+	if (error < GIT_SUCCESS &&
+	    error != GIT_ENOTFOUND)
 		return error;
 
 
