@@ -42,6 +42,7 @@ static void cvar_free(git_cvar *var)
 	if(var->type == GIT_VAR_STR)
 		free(var->value.string);
 
+	free(var->name);
 	free(var);
 }
 
