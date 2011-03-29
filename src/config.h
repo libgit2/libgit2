@@ -1,5 +1,7 @@
-#ifndef INCLUDE_tag_h__
-#define INCLUDE_tag_h__
+#ifndef INCLUDE_config_h__
+#define INCLUDE_config_h__
+
+#include "git2/config.h"
 
 struct git_config {
 	char *file_path;
@@ -13,12 +15,6 @@ struct git_config {
 
 	git_hashtable *vars;
 };
-
-typedef enum {
-	GIT_VAR_INT,
-	GIT_VAR_BOOL,
-	GIT_VAR_STR
-} git_cvar_type;
 
 struct git_cvar {
 	git_cvar_type type;
