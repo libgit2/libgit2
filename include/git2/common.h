@@ -115,7 +115,7 @@
 /** The specified repository is invalid */
 #define GIT_ENOTAREPO (GIT_ERROR - 7)
 
-/** The object type is invalid or doesn't match */
+/** The object or config variable type is invalid or doesn't match */
 #define GIT_EINVALIDTYPE (GIT_ERROR - 8)
 
 /** The object cannot be written that because it's missing internal data */

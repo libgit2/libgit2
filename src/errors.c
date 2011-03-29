@@ -13,7 +13,7 @@ static struct {
 	{GIT_EOBJTYPE, "The specified object is of invalid type"},
 	{GIT_EOBJCORRUPTED, "The specified object has its data corrupted"},
 	{GIT_ENOTAREPO, "The specified repository is invalid"},
-	{GIT_EINVALIDTYPE, "The object type is invalid or doesn't match"},
+	{GIT_EINVALIDTYPE, "The object or config variable type is invalid or doesn't match"},
 	{GIT_EMISSINGOBJDATA, "The object cannot be written that because it's missing internal data"},
 	{GIT_EPACKCORRUPTED, "The packfile for the ODB is corrupted"},
 	{GIT_EFLOCKFAIL, "Failed to adquire or release a file lock"},
