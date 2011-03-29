@@ -35,6 +35,15 @@
  ***********************/
 static int config_parse(git_config *cfg_file);
 static int parse_variable(git_config *cfg, const char *section_name, const char *line);
+void git_config_free(git_config *cfg);
+
+static void cvar_free(git_cvar *var)
+{
+	if(var->type == GIT_VAR_STR)
+		free(var->value.string);
+
+	free(var);
+}
 
 uint32_t config_table_hash(const void *key, int hash_id)
 {
@@ -101,10 +110,18 @@ int git_config_open(git_config **cfg_out, const char *path)
 
 void git_config_free(git_config *cfg)
 {
+	git_cvar *var;
+	const void *_unused;
+
 	if (cfg == NULL)
 		return;
 
 	free(cfg->file_path);
+
+	GIT_HASHTABLE_FOREACH(cfg->vars, _unused, var,
+		cvar_free(var);
+	);
+
 	git_hashtable_free(cfg->vars);
 	gitfo_free_buf(&cfg->reader.buffer);
 
