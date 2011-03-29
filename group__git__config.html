@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<title>libgit2: Git repository configuration management routines</title>
+<title>libgit2: Git config management routines</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/search.js"></script>
@@ -54,17 +54,512 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="summary">
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
-<h1>Git repository configuration management routines</h1>  </div>
+<h1>Git config management routines</h1>  </div>
 </div>
 <div class="contents">
 <table class="memberdecls">
 <tr><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="gaf63e8ecd3310e9322423517dce067f63"></a><!-- doxytag: member="git_config::git_config_new" ref="gaf63e8ecd3310e9322423517dce067f63" args="(void)" -->
-git_config *&#160;</td><td class="memItemRight" valign="bottom"><b>git_config_new</b> (void)</td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga6a6f801c2e4741a246d4ab08f5183b7f"></a><!-- doxytag: member="git_config::git_config_free" ref="ga6a6f801c2e4741a246d4ab08f5183b7f" args="(git_config *c)" -->
-void&#160;</td><td class="memItemRight" valign="bottom"><b>git_config_free</b> (git_config *c)</td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga4dcc8746aaef3c69c3f066f5b13d1691">git_config_open</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> **cfg_out, const char *path)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Open a configuration file.  <a href="#ga4dcc8746aaef3c69c3f066f5b13d1691"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga6b8b3578e46a32ae6216b54f5e6cb4f4">git_config_free</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Free the configuration and its associated memory.  <a href="#ga6b8b3578e46a32ae6216b54f5e6cb4f4"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga91e2f5229b48f2e49e59873136573351">git_config_get</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int *out, <a class="el" href="types_8h.html#a34281811faee104b5a078c53cd13b20e">git_cvar_type</a> type)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of an integer or boolean config variable.  <a href="#ga91e2f5229b48f2e49e59873136573351"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga0ac2512ca59c59ee06ab8662d7d9c141">git_config_get_int</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int *out)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of an integer config variable.  <a href="#ga0ac2512ca59c59ee06ab8662d7d9c141"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga1bf281c55385a3af2cda6e6d99512076">git_config_get_bool</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int *out)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of a boolean config variable.  <a href="#ga1bf281c55385a3af2cda6e6d99512076"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#gaf4b11bde9d50293eb8c739d6898061f1">git_config_get_string</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, const char **out)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of a string config variable.  <a href="#gaf4b11bde9d50293eb8c739d6898061f1"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga0da24996ff28c10d57759150c3d949aa">git_config_set</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int value, <a class="el" href="types_8h.html#a34281811faee104b5a078c53cd13b20e">git_cvar_type</a> type)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of an integer or boolean config variable.  <a href="#ga0da24996ff28c10d57759150c3d949aa"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga7ed50aad60bf76ef1c93d92c99bc05d5">git_config_set_int</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int value)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of an integer config variable.  <a href="#ga7ed50aad60bf76ef1c93d92c99bc05d5"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga4407bfd8dfb70f15f0bb6db2a8848ece">git_config_set_bool</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, int value)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of a boolean config variable.  <a href="#ga4407bfd8dfb70f15f0bb6db2a8848ece"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#ga547eafbda47a462673383b41d078c7ca">git_config_set_string</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, const char *name, const char *value)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the value of a string config variable.  <a href="#ga547eafbda47a462673383b41d078c7ca"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__config.html#gab060c2cb4bfb5edfc4f675c81293439b">git_config_foreach</a> (<a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *cfg, int(*callback)(<a class="el" href="types_8h.html#af5a62cfeeae93769366aa605efc9cd2c">git_cvar</a> *, void *data), void *data)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform an operation on each config variable.  <a href="#gab060c2cb4bfb5edfc4f675c81293439b"></a><br/></td></tr>
 </table>
+<hr/><h2>Function Documentation</h2>
+<a class="anchor" id="gab060c2cb4bfb5edfc4f675c81293439b"></a><!-- doxytag: member="config.h::git_config_foreach" ref="gab060c2cb4bfb5edfc4f675c81293439b" args="(git_config *cfg, int(*callback)(git_cvar *, void *data), void *data)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_foreach </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int(*)(<a class="el" href="types_8h.html#af5a62cfeeae93769366aa605efc9cd2c">git_cvar</a> *, void *data)&#160;</td>
+          <td class="paramname"><em>callback</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>data</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Perform an operation on each config variable. </p>
+<p>The callback is passed a pointer to a config variable and the data pointer passed to this function. As soon as one of the callback functions returns something other than 0, this function returns that value.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to get the variables from </td></tr>
+    <tr><td class="paramname">callback</td><td>the function to call on each variable </td></tr>
+    <tr><td class="paramname">data</td><td>the data to pass to the callback </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS or the return value of the callback which didn't return 0 </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga6b8b3578e46a32ae6216b54f5e6cb4f4"></a><!-- doxytag: member="config.h::git_config_free" ref="ga6b8b3578e46a32ae6216b54f5e6cb4f4" args="(git_config *cfg)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void git_config_free </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Free the configuration and its associated memory. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>the configuration to free </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="ga91e2f5229b48f2e49e59873136573351"></a><!-- doxytag: member="config.h::git_config_get" ref="ga91e2f5229b48f2e49e59873136573351" args="(git_config *cfg, const char *name, int *out, git_cvar_type type)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_get </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *&#160;</td>
+          <td class="paramname"><em>out</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a34281811faee104b5a078c53cd13b20e">git_cvar_type</a>&#160;</td>
+          <td class="paramname"><em>type</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Get the value of an integer or boolean config variable. </p>
+<p>This is a more general function to retrieve the value of a integer or boolean variable.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">out</td><td>pointer to the variable where the value should be stored </td></tr>
+    <tr><td class="paramname">type</td><td>either GIT_VAR_INT or GIT_VAR_BOOL </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga1bf281c55385a3af2cda6e6d99512076"></a><!-- doxytag: member="config.h::git_config_get_bool" ref="ga1bf281c55385a3af2cda6e6d99512076" args="(git_config *cfg, const char *name, int *out)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_get_bool </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Get the value of a boolean config variable. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">out</td><td>pointer to the variable where the value should be stored </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga0ac2512ca59c59ee06ab8662d7d9c141"></a><!-- doxytag: member="config.h::git_config_get_int" ref="ga0ac2512ca59c59ee06ab8662d7d9c141" args="(git_config *cfg, const char *name, int *out)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_get_int </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Get the value of an integer config variable. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">out</td><td>pointer to the variable where the value should be stored </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="gaf4b11bde9d50293eb8c739d6898061f1"></a><!-- doxytag: member="config.h::git_config_get_string" ref="gaf4b11bde9d50293eb8c739d6898061f1" args="(git_config *cfg, const char *name, const char **out)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_get_string </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char **&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Get the value of a string config variable. </p>
+<p>The string is owned by the variable and should not be freed by the user.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">out</td><td>pointer to the variable's value </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga4dcc8746aaef3c69c3f066f5b13d1691"></a><!-- doxytag: member="config.h::git_config_open" ref="ga4dcc8746aaef3c69c3f066f5b13d1691" args="(git_config **cfg_out, const char *path)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_open </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> **&#160;</td>
+          <td class="paramname"><em>cfg_out</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>path</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Open a configuration file. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg_out</td><td>pointer to the configuration data </td></tr>
+    <tr><td class="paramname">path</td><td>where to load the confiration from </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="ga0da24996ff28c10d57759150c3d949aa"></a><!-- doxytag: member="config.h::git_config_set" ref="ga0da24996ff28c10d57759150c3d949aa" args="(git_config *cfg, const char *name, int value, git_cvar_type type)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_set </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>value</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a34281811faee104b5a078c53cd13b20e">git_cvar_type</a>&#160;</td>
+          <td class="paramname"><em>type</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the value of an integer or boolean config variable. </p>
+<p>This is a more general function to set the value of a integer or boolean variable.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">value</td><td>the value to store </td></tr>
+    <tr><td class="paramname">type</td><td>either GIT_VAR_INT or GIT_VAR_BOOL </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga4407bfd8dfb70f15f0bb6db2a8848ece"></a><!-- doxytag: member="config.h::git_config_set_bool" ref="ga4407bfd8dfb70f15f0bb6db2a8848ece" args="(git_config *cfg, const char *name, int value)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_set_bool </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>value</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the value of a boolean config variable. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">value</td><td>the value to store </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga7ed50aad60bf76ef1c93d92c99bc05d5"></a><!-- doxytag: member="config.h::git_config_set_int" ref="ga7ed50aad60bf76ef1c93d92c99bc05d5" args="(git_config *cfg, const char *name, int value)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_set_int </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>value</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the value of an integer config variable. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">out</td><td>pointer to the variable where the value should be stored </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga547eafbda47a462673383b41d078c7ca"></a><!-- doxytag: member="config.h::git_config_set_string" ref="ga547eafbda47a462673383b41d078c7ca" args="(git_config *cfg, const char *name, const char *value)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_config_set_string </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a0274707786845dcdba74dbf2ea5351d3">git_config</a> *&#160;</td>
+          <td class="paramname"><em>cfg</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>value</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Set the value of a string config variable. </p>
+<p>A copy of the string is made and the user is free to use it afterwards.</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cfg</td><td>where to look for the variable </td></tr>
+    <tr><td class="paramname">name</td><td>the variable's name </td></tr>
+    <tr><td class="paramname">value</td><td>the string to store. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>GIT_SUCCESS on success; error code otherwise </dd></dl>
+
+</div>
+</div>
 </div>
 <!--- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -80,7 +575,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>git_config_free</b> (
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Mar 23 2011 16:37:34 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Tue Mar 29 2011 18:15:10 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.3 </small></address>
 </body>
