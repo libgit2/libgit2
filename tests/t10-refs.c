@@ -560,7 +560,8 @@ BEGIN_TEST(normalize0, "normalize a direct (OID) reference name")
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a/", NULL));
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a.", NULL));
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a.lock", NULL));
-	must_fail(ensure_refname_normalized(OID_REF, "refs/dummy/a", NULL));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/dummy/a", NULL));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/stash", NULL));
 	must_pass(ensure_refname_normalized(OID_REF, "refs/tags/a", "refs/tags/a"));
 	must_pass(ensure_refname_normalized(OID_REF, "refs/heads/a/b", "refs/heads/a/b"));
 	must_pass(ensure_refname_normalized(OID_REF, "refs/heads/a./b", "refs/heads/a./b"));
