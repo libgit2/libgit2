@@ -463,10 +463,25 @@ static int config_parse(git_config *cfg_file)
 	return error;
 }
 
+static const char *build_varname(const char *section, const char *name, int len)
+{
+	static char varname[1024]; /* TODO: What's the longest we should allow? */
+
+	if(strlen(section) + len + 2 > sizeof(varname))
+		return NULL;
+
+	strcpy(varname, section);
+	strcat(varname, ".");
+	strncat(varname, name, len);
+
+	return varname;
+}
+
 static int parse_variable(git_config *cfg, const char *section_name, const char *line)
 {
 	int error;
 	int has_value = 1;
+	const char *varname;
 
 	const char *var_end = NULL;
 	const char *value_start = NULL;
@@ -491,6 +506,8 @@ static int parse_variable(git_config *cfg, const char *section_name, const char 
 		if (value_start[0] == '\0')
 			goto error;
 	}
+
+	varname = build_varname(section_name, line, var_end - line + 1);
 
 	return GIT_SUCCESS;
 
