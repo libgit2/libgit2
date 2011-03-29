@@ -30,7 +30,7 @@ PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
     opt.add_option('--arch', action='store', default='x86',
         help='Select target architecture (ia64, x64, x86, x86_amd64, x86_ia64)')
     opt.add_option('--with-sqlite', action='store_true', default=False,
-        dest='use_sqlite', help='Disable sqlite support')
+        dest='use_sqlite', help='Enable sqlite support')
     opt.add_option('--threadsafe', action='store_true', default=False,
         help='Make libgit2 thread-safe (requires pthreads)')
 
