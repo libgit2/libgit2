@@ -297,17 +297,33 @@ END_TEST
 
 static const char *ref_name = "refs/heads/other";
 static const char *ref_master_name = "refs/heads/master";
+static const char *ref_branch_name = "refs/heads/branch";
+static const char *ref_test_name = "refs/heads/test";
 BEGIN_TEST(overwrite0, "Overwrite an existing symbolic reference")
-	git_reference *ref;
+	git_reference *ref, *branch_ref;
 	git_repository *repo;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	/* The target needds to exist and we need to check the name has changed */
+	must_pass(git_reference_create_symbolic(&branch_ref, repo, ref_branch_name, ref_master_name));
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_branch_name));
+	/* Ensure it points to the right place*/
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_SYMBOLIC);
+	must_be_true(!strcmp(git_reference_target(ref), ref_branch_name));
+
+	/* Ensure we can't create it unless we force it to */
 	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
 	must_pass(git_reference_create_symbolic_force(&ref, repo, ref_name, ref_master_name));
 
-	git_reference_delete(ref);
+	/* Ensure it points to the right place */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_SYMBOLIC);
+	must_be_true(!strcmp(git_reference_target(ref), ref_master_name));
+
+	must_pass(git_reference_delete(ref));
+	must_pass(git_reference_delete(branch_ref));
 	git_repository_free(repo);
 END_TEST
 
@@ -322,9 +338,20 @@ BEGIN_TEST(overwrite1, "Overwrite an existing object id reference")
 	must_be_true(ref->type & GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_oid(ref));
 
+	/* Create it */
 	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_test_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	/* Ensure we can't overwrite unless we force it */
 	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
 	must_pass(git_reference_create_oid_force(&ref, repo, ref_name, &id));
+
+	/* Ensure it has been overwritten */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(!git_oid_cmp(&id, git_reference_oid(ref)));
 
 	git_reference_delete(ref);
 	git_repository_free(repo);
@@ -345,6 +372,11 @@ BEGIN_TEST(overwrite2, "Overwrite an existing object id reference with a symboli
 	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
 	must_pass(git_reference_create_symbolic_force(&ref, repo, ref_name, ref_master_name));
 
+	/* Ensure it points to the right place */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_SYMBOLIC);
+	must_be_true(!strcmp(git_reference_target(ref), ref_master_name));
+
 	git_reference_delete(ref);
 	git_repository_free(repo);
 END_TEST
@@ -360,9 +392,16 @@ BEGIN_TEST(overwrite3, "Overwrite an existing symbolic reference with an object 
 	must_be_true(ref->type & GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_oid(ref));
 
+	/* Create the symbolic ref */
 	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	/* It shouldn't overwrite unless we tell it to */
 	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
 	must_pass(git_reference_create_oid_force(&ref, repo, ref_name, &id));
+
+	/* Ensure it points to the right place */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_OID);
+	must_be_true(!git_oid_cmp(git_reference_oid(ref), &id));
 
 	git_reference_delete(ref);
 	git_repository_free(repo);
