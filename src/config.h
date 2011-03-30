@@ -4,7 +4,8 @@
 #include "git2/config.h"
 
 struct git_config {
-	char *file_path;
+	git_cvar *vars;
+	git_cvar *vars_tail;
 
 	struct {
 		gitfo_buf buffer;
@@ -13,8 +14,7 @@ struct git_config {
 		int eof;
 	} reader;
 
-	git_cvar *vars;
-	git_cvar *vars_tail;
+	char *file_path;
 };
 
 struct git_cvar {
