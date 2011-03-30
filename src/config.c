@@ -661,9 +661,9 @@ static char *build_varname(const char *section, const char *name, int name_len)
 
 static int parse_variable(git_config *cfg, const char *section_name, const char *line)
 {
-	int error;
+	int error = GIT_SUCCESS;
 	int has_value = 1;
-	const char *varname;
+	char *varname;
 
 	const char *var_end = NULL;
 	const char *value_start = NULL;
@@ -690,8 +690,14 @@ static int parse_variable(git_config *cfg, const char *section_name, const char 
 	}
 
 	varname = build_varname(section_name, line, var_end - line + 1);
+	if(varname == NULL)
+		return GIT_ENOMEM;
 
-	return GIT_SUCCESS;
+	config_set(cfg, varname, value_start);
+
+	free(varname);
+
+	return error;
 
 error:
 	return GIT_EOBJCORRUPTED;
