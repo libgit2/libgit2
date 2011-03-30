@@ -686,9 +686,10 @@ static int config_parse(git_config *cfg_file)
 }
 
 /*
- * Gives $section.$name back, using only name_len chars from the name,
- * which is useful so we don't have to copy the variable name twice.
- * Don't forget to free the memory you get.
+ * Returns $section.$name, using only name_len chars from the name,
+ * which is useful so we don't have to copy the variable name
+ * twice. The name of the variable is set to lowercase.
+ *Don't forget to free the buffer.
  */
 static char *build_varname(const char *section, const char *name, int name_len)
 {
@@ -703,6 +704,9 @@ static char *build_varname(const char *section, const char *name, int name_len)
 		return NULL;
 
 	ret = snprintf(varname, total_len, "%s.%s", section, name);
+	if(ret >= 0){
+		strtolower(varname + section_len + 1);
+	}
 
 	return varname;
 }
