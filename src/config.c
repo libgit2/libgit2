@@ -666,8 +666,7 @@ static int config_parse(git_config *cfg_file)
 			break;
 
 		case '[': /* section header, new section begins */
-			if (current_section)
-				free(current_section);
+			free(current_section);
 			error = parse_section_header(cfg_file, &current_section, line);
 			break;
 
