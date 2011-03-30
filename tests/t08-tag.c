@@ -78,14 +78,14 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 	git_oid_mkstr(&target_id, tagged_commit);
 
-	/* create signatures */
+	/* create signature */
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
 	must_be_true(tagger != NULL);
 
 	must_pass(git_tag_create(
 		&tag_id, /* out id */
 		repo,
-		"the-tag", /* do not update the HEAD */
+		"the-tag",
 		&target_id,
 		GIT_OBJ_COMMIT,
 		tagger,
