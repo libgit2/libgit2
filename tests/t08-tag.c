@@ -72,7 +72,6 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	git_oid target_id, tag_id;
 	const git_signature *tagger;
 	git_reference *ref_tag;
-	/* char hex_oid[41]; */
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
@@ -116,8 +115,50 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 END_TEST
 
+BEGIN_TEST(write1, "write a tag to the repository which points to an unknown oid and read it again")
+	git_repository *repo;
+	git_tag *tag;
+	git_oid target_id, tag_id;
+	const git_signature *tagger;
+	git_reference *ref_tag;
+	git_object *zombie;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_mkstr(&target_id, "deadbeef1b46c854b31185ea97743be6a8774479");
+
+	/* create signature */
+	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
+	must_be_true(tagger != NULL);
+
+	must_pass(git_tag_create(
+		&tag_id, /* out id */
+		repo,
+		"the-zombie-tag",
+		&target_id,
+		GIT_OBJ_COMMIT,
+		tagger,
+		TAGGER_MESSAGE));
+
+	git_signature_free((git_signature *)tagger);
+
+	must_pass(git_tag_lookup(&tag, repo, &tag_id));
+	
+	/* The non existent target can not be looked up */
+	must_fail(git_tag_target(&zombie, tag));
+
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/the-zombie-tag"));
+	
+	must_pass(git_reference_delete(ref_tag));
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
+
+	git_repository_free(repo);
+
+END_TEST
+
 
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
 	ADD_TEST(write0); 
+	ADD_TEST(write1); 
 END_SUITE
