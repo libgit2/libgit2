@@ -497,6 +497,34 @@ static inline int config_keychar(int c)
 	return isalnum(c) || c == '-';
 }
 
+/*
+ * Returns $section.$name, using only name_len chars from the name,
+ * which is useful so we don't have to copy the variable name
+ * twice. The name of the variable is set to lowercase.
+ * Don't forget to free the buffer.
+ */
+static char *build_varname(const char *section, const char *name)
+{
+	char *varname;
+	int section_len, ret;
+	int name_len;
+	size_t total_len;
+
+	name_len = strlen(name);
+	section_len = strlen(section);
+	total_len = section_len + name_len + 2;
+	varname = malloc(total_len);
+	if(varname == NULL)
+		return NULL;
+
+	ret = snprintf(varname, total_len, "%s.%s", section, name);
+	if(ret >= 0){
+		strtolower(varname + section_len + 1);
+	}
+
+	return varname;
+}
+
 static char *parse_section_header_ext(char *base_name, git_config *cfg)
 {
 	return base_name;
@@ -683,32 +711,6 @@ static int config_parse(git_config *cfg_file)
 		free(current_section);
 
 	return error;
-}
-
-/*
- * Returns $section.$name, using only name_len chars from the name,
- * which is useful so we don't have to copy the variable name
- * twice. The name of the variable is set to lowercase.
- *Don't forget to free the buffer.
- */
-static char *build_varname(const char *section, const char *name, int name_len)
-{
-	char *varname;
-	int section_len, ret;
-	size_t total_len;
-
-	section_len = strlen(section);
-	total_len = section_len + name_len + 2;
-	varname = malloc(total_len);
-	if(varname == NULL)
-		return NULL;
-
-	ret = snprintf(varname, total_len, "%s.%s", section, name);
-	if(ret >= 0){
-		strtolower(varname + section_len + 1);
-	}
-
-	return varname;
 }
 
 static int parse_variable(git_config *cfg, const char *section_name, const char *line)
