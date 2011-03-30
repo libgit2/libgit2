@@ -86,9 +86,6 @@ int git_config_open(git_config **cfg_out, const char *path)
 	if(error < GIT_SUCCESS)
 		goto cleanup;
 
-	/* Initialise the reading position */
-	cfg->reader.read_ptr = cfg->reader.buffer.data;
-
 	error = config_parse(cfg);
 	if(error < GIT_SUCCESS)
 		git_config_free(cfg);
@@ -598,6 +595,10 @@ static int config_parse(git_config *cfg_file)
 {
 	int error = GIT_SUCCESS;
 	char *current_section = NULL;
+
+	/* Initialise the reading position */
+	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
+	cfg_file->reader.eof = 0;
 
 	skip_bom(cfg_file);
 
