@@ -39,10 +39,8 @@ void git_config_free(git_config *cfg);
 
 static void cvar_free(git_cvar *var)
 {
-	if(var->type == GIT_VAR_STR)
-		free(var->value.string);
-
 	free(var->name);
+	free(var->value);
 	free(var);
 }
 
@@ -133,26 +131,28 @@ void git_config_free(git_config *cfg)
  * Loop over all the variables
  */
 
-int git_config_foreach(git_config *cfg, int (*fn)(git_cvar *, void *), void *data)
+int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *data)
 {
 	int ret = GIT_SUCCESS;
 	git_cvar *var;
-	void *_unused;
+	const void *_unused;
 
 	GIT_HASHTABLE_FOREACH(cfg->vars, _unused, var,
-		ret = fn(var, data);
+		ret = fn(var->name, data);
 		if(ret) break;
 	);
 
 	return ret;
 }
 
-/*
+/**************
  * Setters
- */
+ **************/
 
-int git_config_set(git_config *cfg, const char *name,
-                   int value, git_cvar_type type)
+/*
+ * Internal function to actually set the string value of a variable
+ */
+static int config_set(git_config *cfg, const char *name, const char *value)
 {
 	git_cvar *var = NULL;
 	int error = GIT_SUCCESS;
@@ -170,11 +170,12 @@ int git_config_set(git_config *cfg, const char *name,
 		goto out;
 	}
 
-	var->type = type;
-	if(type == GIT_VAR_BOOL)
-		var->value.boolean = value;
-	else
-		var->value.integer = value;
+	var->value = git__strdup(value);
+	if(var->value == NULL){
+		error = GIT_ENOMEM;
+		cvar_free(var);
+		goto out;
+	}
 
 	error = git_hashtable_insert(cfg->vars, var->name, var);
 	if(error < GIT_SUCCESS)
@@ -182,84 +183,123 @@ int git_config_set(git_config *cfg, const char *name,
 
  out:
 	return error;
+}
+
+int git_config_set_int(git_config *cfg, const char *name, int value)
+{
+	char str_value[5]; /* Most numbers should fit in here */
+	int buf_len = sizeof(str_value), ret;
+	char *help_buf;
+
+	if((ret = snprintf(str_value, buf_len, "%d", value)) >= buf_len - 1){
+		/* The number is too large, we need to allocate more memory */
+		buf_len = ret + 1;
+		help_buf = git__malloc(buf_len);
+		snprintf(help_buf, buf_len, "%d", value);
+	}
+
+	return config_set(cfg, name, str_value);
+}
+
+int git_config_set_bool(git_config *cfg, const char *name, int value)
+{
+	const char *str_value;
+
+	if(value == 0)
+		str_value = "false";
+	else
+		str_value = "true";
+
+	return config_set(cfg, name, str_value);
 }
 
 int git_config_set_string(git_config *cfg, const char *name, const char *value)
 {
-	git_cvar *var = NULL;
-	int error = GIT_SUCCESS;
-
-	var = git__malloc(sizeof(git_cvar));
-	if(var == NULL){
-		error = GIT_ENOMEM;
-		goto out;
-	}
-
-	var->name = git__strdup(name);
-	if(var->name == NULL){
-		error = GIT_ENOMEM;
-		free(var);
-		goto out;
-	}
-
-	var->value.string = git__strdup(value);
-	if(var->value.string == NULL){
-		error = GIT_ENOMEM;
-		cvar_free(var);
-		goto out;
-	}
-
-	var->type = GIT_VAR_STR;
-
-	error = git_hashtable_insert(cfg->vars, var->name, var);
-	if(error < GIT_SUCCESS)
-		cvar_free(var);
-
- out:
-	return error;
+	return config_set(cfg, name, value);
 }
 
+/***********
+ * Getters
+ ***********/
 
 /*
- * Get a config variable's data.
+ * Internal function that actually gets the value in string form
  */
-int git_config_get(git_config *cfg, const char *name,
-                              int *out, git_cvar_type type)
+static int config_get(git_config *cfg, const char *name, const char **out)
 {
 	git_cvar *var;
 	int error = GIT_SUCCESS;
 
 	var = git_hashtable_lookup(cfg->vars, name);
-	if (var == NULL) {
-		error = GIT_ENOTFOUND;
-	} else {
-		if (var->type == type)
-			*out = type == GIT_VAR_INT ?
-			    var->value.integer : var->value.boolean;
+	if (var == NULL)
+		return GIT_ENOTFOUND;
+
+	*out = var->value;
+
+	return error;
+}
+
+int git_config_get_int(git_config *cfg, const char *name, int *out)
+{
+	const char *value;
+	int ret;
+
+	ret = config_get(cfg, name, &value);
+	if(ret < GIT_SUCCESS)
+		return ret;
+
+	ret = sscanf(value, "%d", out);
+	if (ret == 0) /* No items were matched i.e. value isn't a number */
+		return GIT_EINVALIDTYPE;
+	if (ret < 0) {
+		if (errno == EINVAL) /* Format was NULL */
+			return GIT_EINVALIDTYPE;
 		else
-			error = GIT_EINVALIDTYPE;
+			return GIT_EOSERR;
 	}
+
+	return GIT_SUCCESS;
+}
+
+int git_config_get_bool(git_config *cfg, const char *name, int *out)
+{
+	const char *value;
+	int error = GIT_SUCCESS;
+
+	error = config_get(cfg, name, &value);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* A missing value means true */
+	if (value == NULL) {
+		*out = 1;
+		return GIT_SUCCESS;
+	}
+
+	if (!strcasecmp(value, "true") ||
+		!strcasecmp(value, "yes") ||
+		!strcasecmp(value, "on")){
+		*out = 1;
+		return GIT_SUCCESS;
+	}
+	if (!strcasecmp(value, "false") ||
+		!strcasecmp(value, "no") ||
+		!strcasecmp(value, "off")){
+		*out = 0;
+		return GIT_SUCCESS;
+	}
+
+	/* Try to parse it as an integer */
+	error = git_config_get_int(cfg, name, out);
+	if (error == GIT_SUCCESS)
+		*out = !!(*out);
+
 	return error;
 }
 
 int git_config_get_string(git_config *cfg, const char *name, const char **out)
 {
-	git_cvar *var;
-	int error = GIT_SUCCESS;
-
-	var = git_hashtable_lookup(cfg->vars, name);
-	if (var == NULL) {
-		error = GIT_ENOTFOUND;
-		goto out;
-	} else if (var->type != GIT_VAR_STR) {
-		error = GIT_EINVALIDTYPE;
-		goto out;
-	}
-
-	*out = var->value.string;
-
- out:
-	return error;
+	return config_get(cfg, name, out);
 }
 
 static int cfg_getchar_raw(git_config *cfg)

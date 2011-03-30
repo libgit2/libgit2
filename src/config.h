@@ -17,13 +17,8 @@ struct git_config {
 };
 
 struct git_cvar {
-	git_cvar_type type;
 	char *name;
-	union {
-		unsigned char boolean;
-		long integer;
-		char *string;
-	} value;
+	char *value;
 };
 
 #endif

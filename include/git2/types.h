@@ -153,13 +153,6 @@ typedef enum {
 	GIT_REF_HAS_PEEL = 8,
 } git_rtype;
 
-/** Config variable type */
-typedef enum {
-	GIT_VAR_INT,  /** Stores an integer value */
-	GIT_VAR_BOOL, /** Stores a boolean value */
-	GIT_VAR_STR   /** Stores a string */
-} git_cvar_type;
-
 /** @} */
 GIT_END_DECL
 
