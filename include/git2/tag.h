@@ -202,7 +202,7 @@ GIT_EXTERN(int) git_tag_create_o(
 * for consistency.
 *
 * @param target OID to which this tag points; note that no
-*	validation is done on this OID. Use the _o_f version of this
+*	validation is done on this OID. Use the _fo version of this
 *	method to assure a proper object is being tagged
 *
 * @param target_type Type of the tagged OID; note that no
@@ -239,7 +239,7 @@ GIT_EXTERN(int) git_tag_create_f(
  *
  * @see git_tag_create_f
  */
-GIT_EXTERN(int) git_tag_create_o_f(
+GIT_EXTERN(int) git_tag_create_fo(
 		git_oid *oid,
 		git_repository *repo,
 		const char *tag_name,

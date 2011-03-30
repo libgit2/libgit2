@@ -288,7 +288,7 @@ int git_tag_create(
 		tagger, message, 0);
 }
 
-int git_tag_create_o_f(
+int git_tag_create_fo(
 		git_oid *oid,
 		git_repository *repo,
 		const char *tag_name,
