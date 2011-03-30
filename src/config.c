@@ -70,6 +70,20 @@ static git_cvar *cvar_list_find(git_cvar *start, const char *name)
 	return NULL;
 }
 
+void strntolower(char *str, int len)
+{
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		str[len] = tolower(str[len]);
+	}
+}
+
+void strtolower(char *str)
+{
+	strntolower(str, strlen(str));
+}
+
 int git_config_open(git_config **cfg_out, const char *path)
 {
 	git_config *cfg;
@@ -544,6 +558,7 @@ static int parse_section_header(git_config *cfg, char **section_out, const char 
 	}
 
 	name[name_length] = 0;
+	strtolower(name);
 	*section_out = name;
 	return GIT_SUCCESS;
 

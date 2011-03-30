@@ -30,4 +30,7 @@ struct git_cvar {
 #define CVAR_LIST_FOREACH(start, iter) \
 	for ((iter) = (start); (iter) != NULL; (iter) = (iter)->next)
 
+void strtolower(char *str);
+void strntolower(char *str, int len);
+
 #endif
