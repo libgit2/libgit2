@@ -596,16 +596,24 @@ static int config_parse(git_config *cfg_file)
 	return error;
 }
 
-static const char *build_varname(const char *section, const char *name, int len)
+/*
+ * Gives $section.$name back, using only name_len chars from the name,
+ * which is useful so we don't have to copy the variable name twice.
+ * Don't forget to free the memory you get.
+ */
+static char *build_varname(const char *section, const char *name, int name_len)
 {
-	static char varname[1024]; /* TODO: What's the longest we should allow? */
+	char *varname;
+	int section_len, ret;
+	size_t total_len;
 
-	if(strlen(section) + len + 2 > sizeof(varname))
+	section_len = strlen(section);
+	total_len = section_len + name_len + 2;
+	varname = malloc(total_len);
+	if(varname == NULL)
 		return NULL;
 
-	strcpy(varname, section);
-	strcat(varname, ".");
-	strncat(varname, name, len);
+	ret = snprintf(varname, total_len, "%s.%s", section, name);
 
 	return varname;
 }
