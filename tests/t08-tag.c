@@ -225,6 +225,20 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 
 END_TEST
 
+BEGIN_TEST(write4, "Delete an already existing tag")
+	git_repository *repo;
+	git_reference *ref_tag;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_tag_delete(repo,"very-simple"));
+
+	must_fail(git_reference_lookup(&ref_tag, repo, "refs/tags/very-simple"));
+
+	close_temp_repo(repo);
+
+END_TEST
+
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
 	ADD_TEST(write0); 

@@ -247,6 +247,20 @@ GIT_EXTERN(int) git_tag_create_o_f(
 		const git_signature *tagger,
 		const char *message);
 
+/**
+* Delete an existing tag reference.
+*
+* @param repo Repository where lives the tag
+*
+* @param tag_name Name of the tag to be deleted;
+* this name is validated for consistency.
+*
+* @return 0 on success; error code otherwise.
+*/
+GIT_EXTERN(int) git_tag_delete(
+		git_repository *repo,
+		const char *tag_name);
+
 /** @} */
 GIT_END_DECL
 #endif

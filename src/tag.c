@@ -153,6 +153,21 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	return GIT_SUCCESS;
 }
 
+static int retreive_tag_reference(git_reference **tag_reference_out, char *ref_name_out, git_repository *repo, const char *tag_name)
+{
+	git_reference *tag_ref;
+	int error;
+
+	git__joinpath(ref_name_out, GIT_REFS_TAGS_DIR, tag_name);
+	error = git_reference_lookup(&tag_ref, repo, ref_name_out);
+	if (error < GIT_SUCCESS)
+		return error;
+
+		*tag_reference_out = tag_ref;;
+
+	return GIT_SUCCESS;
+}
+
 static int tag_create(
 		git_oid *oid,
 		git_repository *repo,
@@ -177,8 +192,7 @@ static int tag_create(
 
 	/** Ensure the tag name doesn't conflict with an already existing 
 	    reference unless overwriting has explictly been requested **/
-	git__joinpath(ref_name, GIT_REFS_TAGS_DIR, tag_name);
-	error = git_reference_lookup(&new_ref, repo, ref_name);
+	error = retreive_tag_reference(&new_ref, ref_name, repo, tag_name);
 
 	switch (error) {
 	case GIT_SUCCESS:
@@ -303,6 +317,19 @@ int git_tag_create_f(
 		target,
 		target_type,
 		tagger, message, 1);
+}
+
+int git_tag_delete(git_repository *repo, const char *tag_name)
+{
+	int error;
+	git_reference *tag_ref;
+	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+
+	error = retreive_tag_reference(&tag_ref, ref_name, repo, tag_name);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	return git_reference_delete(tag_ref);
 }
 
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
