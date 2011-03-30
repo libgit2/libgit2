@@ -222,12 +222,11 @@ int git_config_set_int(git_config *cfg, const char *name, int value)
 		buf_len = ret + 1;
 		help_buf = git__malloc(buf_len);
 		snprintf(help_buf, buf_len, "%d", value);
-	}
-
-	ret = config_set(cfg, name, str_value);
-
-	if (help_buf != NULL)
+		ret = config_set(cfg, name, help_buf);
 		free(help_buf);
+	} else {
+		ret = config_set(cfg, name, str_value);
+	}
 
 	return ret;
 }
