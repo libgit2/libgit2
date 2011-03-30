@@ -58,6 +58,9 @@ BEGIN_TEST(read0, "read and parse a tag from the repository")
 
 	must_be_true(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
 
+	git_tag_close(tag1);
+	git_tag_close(tag2);
+	git_commit_close(commit);
 	git_repository_free(repo);
 END_TEST
 
@@ -111,6 +114,7 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
 
+	git_tag_close(tag);
 	git_repository_free(repo);
 
 END_TEST
@@ -152,6 +156,7 @@ BEGIN_TEST(write1, "write a tag to the repository which points to an unknown oid
 	must_pass(git_reference_delete(ref_tag));
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
 
+	git_tag_close(tag);
 	git_repository_free(repo);
 
 END_TEST
