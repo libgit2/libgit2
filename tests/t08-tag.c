@@ -94,6 +94,7 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	git_signature_free((git_signature *)tagger);
 
 	must_pass(git_tag_lookup(&tag, repo, &tag_id));
+	must_be_true(git_oid_cmp(git_tag_target_oid(tag), &target_id) == 0);
 
 	/* Check attributes were set correctly */
 	tagger = git_tag_tagger(tag);
