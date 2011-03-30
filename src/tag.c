@@ -182,9 +182,17 @@ int git_tag_create(
 
 	const char *type_str;
 	char *tagger_str;
+	git_reference *new_ref;
+
+	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
 
 	int type_str_len, tag_name_len, tagger_str_len, message_len;
 	int error;
+
+	/** Ensure the tag name doesn't conflict with an already existing reference **/
+	git__joinpath(ref_name, GIT_REFS_TAGS_DIR, tag_name);
+	if (!git_reference_lookup(&new_ref, repo, ref_name))
+		return GIT_EEXISTS;	
 
 
 	type_str = git_object_type2string(target_type);
@@ -223,14 +231,10 @@ int git_tag_create(
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
 
-	if (error == GIT_SUCCESS) {
-		char ref_name[512];
-		git_reference *new_ref;
-		git__joinpath(ref_name, GIT_REFS_TAGS_DIR, tag_name);
-		error = git_reference_create_oid(&new_ref, repo, ref_name, oid);
-	}
+	if (error < GIT_SUCCESS)
+		return error;
 
-	return error;
+	return git_reference_create_oid(&new_ref, repo, ref_name, oid);
 }
 
 

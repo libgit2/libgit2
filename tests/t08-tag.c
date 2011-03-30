@@ -156,9 +156,38 @@ BEGIN_TEST(write1, "write a tag to the repository which points to an unknown oid
 
 END_TEST
 
+BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already existing tag")
+	git_repository *repo;
+	git_oid target_id, tag_id;
+	const git_signature *tagger;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_mkstr(&target_id, tagged_commit);
+
+	/* create signature */
+	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
+	must_be_true(tagger != NULL);
+
+	must_fail(git_tag_create(
+		&tag_id, /* out id */
+		repo,
+		"very-simple",
+		&target_id,
+		GIT_OBJ_COMMIT,
+		tagger,
+		TAGGER_MESSAGE));
+
+	git_signature_free((git_signature *)tagger);
+
+	git_repository_free(repo);
+
+END_TEST
+
 
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
 	ADD_TEST(write0); 
 	ADD_TEST(write1); 
+	ADD_TEST(write2); 
 END_SUITE

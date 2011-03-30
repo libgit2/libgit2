@@ -140,7 +140,8 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *t);
  * @param repo Repository where to store the tag
  *
  * @param tag_name Name for the tag; this name is validated
- * for consistency
+ * for consistency. It should also not conflict with an 
+ * already existing tag name
  *
  * @param target OID to which this tag points; note that no
  *	validation is done on this OID. Use the _o version of this
