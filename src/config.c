@@ -37,23 +37,37 @@ static int config_parse(git_config *cfg_file);
 static int parse_variable(git_config *cfg, const char *section_name, const char *line);
 void git_config_free(git_config *cfg);
 
-static void cvar_free(git_cvar *var)
+static git_cvar *cvar_free(git_cvar *var)
 {
+	git_cvar *next = var->next;
+
 	free(var->name);
 	free(var->value);
 	free(var);
+
+	return next;
 }
 
-uint32_t config_table_hash(const void *key, int hash_id)
+static void cvar_list_free(git_cvar *start)
 {
-	static uint32_t hash_seeds[GIT_HASHTABLE_HASHES] = {
-		2147483647,
-		0x5d20bb23,
-		0x7daaab3c
-	};
+	git_cvar *iter = start;
 
-	const char *var_name = (const char *)key;
-	return git__hash(key, strlen(var_name), hash_seeds[hash_id]);
+	while ((iter = cvar_free(iter)) != NULL);
+}
+
+/*
+ * FIXME: Only the section name is case-insensitive
+ */
+static git_cvar *cvar_list_find(git_cvar *start, const char *name)
+{
+	git_cvar *iter;
+
+	CVAR_LIST_FOREACH (start, iter) {
+		if (!strcasecmp(name, iter->name))
+			return iter;
+	}
+
+	return NULL;
 }
 
 int git_config_open(git_config **cfg_out, const char *path)
@@ -75,20 +89,13 @@ int git_config_open(git_config **cfg_out, const char *path)
 		goto cleanup;
 	}
 
-	cfg->vars = git_hashtable_alloc(16, config_table_hash,
-	                                (git_hash_keyeq_ptr) strcmp);
-	if (cfg->vars == NULL){
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
-
 	error = gitfo_read_file(&cfg->reader.buffer, cfg->file_path);
 	if(error < GIT_SUCCESS)
 		goto cleanup;
 
 	error = config_parse(cfg);
 	if(error < GIT_SUCCESS)
-		git_config_free(cfg);
+		goto cleanup;
 	else
 		*cfg_out = cfg;
 
@@ -96,7 +103,7 @@ int git_config_open(git_config **cfg_out, const char *path)
 
  cleanup:
 	if(cfg->vars)
-		git_hashtable_free(cfg->vars);
+		cvar_list_free(cfg->vars);
 	if(cfg->file_path)
 		free(cfg->file_path);
 	free(cfg);
@@ -106,19 +113,11 @@ int git_config_open(git_config **cfg_out, const char *path)
 
 void git_config_free(git_config *cfg)
 {
-	git_cvar *var;
-	const void *_unused;
-
 	if (cfg == NULL)
 		return;
 
 	free(cfg->file_path);
-
-	GIT_HASHTABLE_FOREACH(cfg->vars, _unused, var,
-		cvar_free(var);
-	);
-
-	git_hashtable_free(cfg->vars);
+	cvar_list_free(cfg->vars);
 	gitfo_free_buf(&cfg->reader.buffer);
 
 	free(cfg);
@@ -132,12 +131,12 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *d
 {
 	int ret = GIT_SUCCESS;
 	git_cvar *var;
-	const void *_unused;
 
-	GIT_HASHTABLE_FOREACH(cfg->vars, _unused, var,
+	CVAR_LIST_FOREACH(cfg->vars, var) {
 		ret = fn(var->name, data);
-		if(ret) break;
-	);
+		if (ret)
+			break;
+	}
 
 	return ret;
 }
@@ -152,7 +151,27 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *d
 static int config_set(git_config *cfg, const char *name, const char *value)
 {
 	git_cvar *var = NULL;
+	git_cvar *existing = NULL;
 	int error = GIT_SUCCESS;
+
+	/*
+	 * If it already exists, we just need to update its value.
+	 */
+	existing = cvar_list_find(cfg->vars, name);
+	if (existing != NULL) {
+		char *tmp = git__strdup(value);
+		if (tmp == NULL)
+			return GIT_ENOMEM;
+
+		free(var->value);
+		var->value = tmp;
+
+		return GIT_SUCCESS;
+	}
+
+	/*
+	 * Otherwise, create it and stick it at the end of the queue.
+	 */
 
 	var = git__malloc(sizeof(git_cvar));
 	if(var == NULL){
@@ -174,19 +193,29 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 		goto out;
 	}
 
-	error = git_hashtable_insert(cfg->vars, var->name, var);
+	var->next = NULL;
+
+	if (cfg->vars_tail == NULL) {
+		cfg->vars = cfg->vars_tail = var;
+	}
+	else {
+		cfg->vars_tail->next = var;
+		cfg->vars_tail = var;
+	}
+
+ out:
 	if(error < GIT_SUCCESS)
 		cvar_free(var);
 
- out:
 	return error;
+
 }
 
 int git_config_set_int(git_config *cfg, const char *name, int value)
 {
 	char str_value[5]; /* Most numbers should fit in here */
 	int buf_len = sizeof(str_value), ret;
-	char *help_buf;
+	char *help_buf = NULL;
 
 	if((ret = snprintf(str_value, buf_len, "%d", value)) >= buf_len - 1){
 		/* The number is too large, we need to allocate more memory */
@@ -195,7 +224,12 @@ int git_config_set_int(git_config *cfg, const char *name, int value)
 		snprintf(help_buf, buf_len, "%d", value);
 	}
 
-	return config_set(cfg, name, str_value);
+	ret = config_set(cfg, name, str_value);
+
+	if (help_buf != NULL)
+		free(help_buf);
+
+	return ret;
 }
 
 int git_config_set_bool(git_config *cfg, const char *name, int value)
@@ -227,7 +261,8 @@ static int config_get(git_config *cfg, const char *name, const char **out)
 	git_cvar *var;
 	int error = GIT_SUCCESS;
 
-	var = git_hashtable_lookup(cfg->vars, name);
+	var = cvar_list_find(cfg->vars, name);
+
 	if (var == NULL)
 		return GIT_ENOTFOUND;
 

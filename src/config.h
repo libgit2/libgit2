@@ -13,12 +13,21 @@ struct git_config {
 		int eof;
 	} reader;
 
-	git_hashtable *vars;
+	git_cvar *vars;
+	git_cvar *vars_tail;
 };
 
 struct git_cvar {
+	git_cvar *next;
 	char *name;
 	char *value;
 };
+
+/*
+ * If you're going to delete something inside this loop, it's such a
+ * hassle that you should use the for-loop directly.
+ */
+#define CVAR_LIST_FOREACH(start, iter) \
+	for ((iter) = (start); (iter) != NULL; (iter) = (iter)->next)
 
 #endif
