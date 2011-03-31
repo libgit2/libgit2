@@ -163,8 +163,8 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 		if (tmp == NULL)
 			return GIT_ENOMEM;
 
-		free(var->value);
-		var->value = tmp;
+		free(existing->value);
+		existing->value = tmp;
 
 		return GIT_SUCCESS;
 	}
