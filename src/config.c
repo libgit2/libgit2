@@ -34,7 +34,7 @@
  * Forward declarations
  ***********************/
 static int config_parse(git_config *cfg_file);
-static int parse_variable(git_config *cfg, const char *section_name, const char *line);
+static int parse_variable(const char *line, char **var_name, char **var_value);
 void git_config_free(git_config *cfg);
 
 static git_cvar *cvar_free(git_cvar *var)
@@ -56,18 +56,110 @@ static void cvar_list_free(git_cvar *start)
 }
 
 /*
- * FIXME: Only the section name is case-insensitive
+ * The order is importart. The first parameter is the name we want to
+ * match against, and the second one is what we're looking for
  */
+static int cvar_section_match(const char *local, const char *input)
+{
+	char *input_dot = strrchr(input, '.');
+	char *local_last_dot = strrchr(local, '.');
+	char *local_sp = strchr(local, ' ');
+	int comparison_len;
+
+	/*
+	 * If the local section name doesn't contain a space, then we can
+	 * just do a case-insensitive compare.
+	 */
+	if (local_sp == NULL)
+		return !strncasecmp(local, input, local_last_dot - local);
+
+	/* Anything before the space in local is case-insensitive */
+	if (strncasecmp(local, input, local_sp - local)) {
+		fprintf(stderr, "copmparison of %s and %s failed\n", local, input);
+		return 0;
+	}
+
+	/*
+	 * We compare starting from the first character after the
+	 * quotation marks, which is two characters beyond the space. For
+	 * the input, we start one character beyond the first dot.
+	 * The length is given by the length between the quotation marks.
+	 *
+	 * this "that".var
+	 *       ^    ^
+	 *       a    b
+	 *
+	 * where a is (local_sp + 2) and b is local_last_dot. The comparison
+	 * length is given by b - 1 - a.
+	 */
+	input_dot = strchr(input, '.');
+	comparison_len = local_last_dot - 1 - (local_sp + 2);
+	return !strncmp(local_sp + 2, input_dot + 1, comparison_len);
+}
+
+static int cvar_name_match(const char *local, const char *input)
+{
+	char *input_dot = strrchr(input, '.');
+	char *local_dot = strrchr(local, '.');
+
+	/*
+	 * First try to match the section name
+	 */
+	if (!cvar_section_match(local, input))
+		return 0;
+
+	/*
+	 * Anything after the last (possibly only) dot is case-insensitive
+	 */
+	if (!strcmp(input_dot, local_dot))
+		return 1;
+
+	return 0;
+}
+
 static git_cvar *cvar_list_find(git_cvar *start, const char *name)
 {
 	git_cvar *iter;
 
 	CVAR_LIST_FOREACH (start, iter) {
-		if (!strcasecmp(name, iter->name))
+		if (cvar_name_match(iter->name, name))
 			return iter;
 	}
 
 	return NULL;
+}
+
+static int cvar_name_normalize(const char *input, char **output)
+{
+	char *input_sp = strchr(input, ' ');
+	char *quote, *str;
+	int i;
+
+	/* We need to make a copy anyway */
+	str = git__strdup(input);
+	if (str == NULL)
+		return GIT_ENOMEM;
+
+	*output = str;
+
+	/* If there aren't any spaces, we don't need to do anything */
+	if (input_sp == NULL)
+		return GIT_SUCCESS;
+
+	/*
+	 * If there are spaces, we replace the space by a dot, move the
+	 * variable name so that the dot before it replaces the last
+	 * quotation mark and repeat so that the first quotation mark
+	 * disappears.
+	 */
+	str[input_sp - input] = '.';
+
+	for (i = 0; i < 2; ++i) {
+		quote = strrchr(str, '"');
+		memmove(quote, quote + 1, strlen(quote));
+	}
+
+	return GIT_SUCCESS;
 }
 
 void strntolower(char *str, int len)
@@ -145,9 +237,15 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *d
 {
 	int ret = GIT_SUCCESS;
 	git_cvar *var;
+	char *normalized;
 
 	CVAR_LIST_FOREACH(cfg->vars, var) {
-		ret = fn(var->name, data);
+		ret = cvar_name_normalize(var->name, &normalized);
+		if (ret < GIT_SUCCESS)
+			return ret;
+
+		ret = fn(normalized, data);
+		free(normalized);
 		if (ret)
 			break;
 	}
@@ -518,16 +616,88 @@ static char *build_varname(const char *section, const char *name)
 		return NULL;
 
 	ret = snprintf(varname, total_len, "%s.%s", section, name);
-	if(ret >= 0){
-		strtolower(varname + section_len + 1);
+	if(ret >= 0){ /* lowercase from the last dot onwards */
+		char *dot = strrchr(varname, '.');
+		if (dot != NULL)
+			strtolower(dot);
 	}
 
 	return varname;
 }
 
-static char *parse_section_header_ext(char *base_name, git_config *cfg)
+static int parse_section_header_ext(git_config *cfg, const char *base_name, const char *line, char **section_name)
 {
-	return base_name;
+	int buf_len, total_len, pos;
+	int c;
+	char *subsection;
+	int error = GIT_SUCCESS;
+	int quote_marks;
+	/*
+	 * base_name is what came before the space. We should be at the
+	 * first quotation mark, except for now, line isn't being kept in
+	 * sync so we only really use it to calculate the length.
+	 */
+
+	buf_len = strrchr(line, '"') - strchr(line, '"') + 2;
+	if(!buf_len)
+		return GIT_EOBJCORRUPTED;
+
+	subsection = git__malloc(buf_len + 2);
+	if(subsection == NULL)
+		return GIT_ENOMEM;
+
+	pos = 0;
+	c = cfg_getchar(cfg, 0);
+	quote_marks = 0;
+
+	/*
+	 * At the end of each iteration, whatever is stored in c will be
+	 * added to the string. In case of error, jump to out
+	 */
+	do {
+		switch(c) {
+		case '"':
+			if (quote_marks++ >= 2)
+				return GIT_EOBJCORRUPTED;
+			break;
+		case '\\':
+			c = cfg_getchar(cfg, 0);
+			switch (c) {
+			case '"':
+			case '\\':
+				break;
+			default:
+				error = GIT_EOBJCORRUPTED;
+				goto out;
+			}
+		default:
+			break;
+		}
+
+		subsection[pos++] = c;
+	} while ((c = cfg_getchar(cfg, 0)) != ']');
+
+	subsection[pos] = '\0';
+
+	if (cfg_getchar(cfg, 0) != '\n'){
+		error = GIT_EOBJCORRUPTED;
+		goto out;
+	}
+
+	total_len = strlen(base_name) + strlen(subsection) + 2;
+	*section_name = git__malloc(total_len);
+	if (*section_name == NULL) {
+		error = GIT_ENOMEM;
+		goto out;
+	}
+
+	sprintf(*section_name, "%s %s", base_name, subsection);
+	strntolower(*section_name, strchr(*section_name, ' ') - *section_name);
+
+ out:
+	free(subsection);
+
+	return error;
 }
 
 static int parse_section_header(git_config *cfg, char **section_out, const char *line)
@@ -563,8 +733,10 @@ static int parse_section_header(git_config *cfg, char **section_out, const char 
 		}
 
 		if (isspace(c)){
-			*section_out = parse_section_header_ext(name, cfg);
-			return GIT_SUCCESS;
+			name[name_length] = '\0';
+			error = parse_section_header_ext(cfg, name, line, section_out);
+			free(name);
+			return error;
 		}
 
 		if (!config_keychar(c) && c != '.'){
@@ -672,6 +844,9 @@ static int config_parse(git_config *cfg_file)
 {
 	int error = GIT_SUCCESS;
 	char *current_section = NULL;
+	char *var_name;
+	char *var_value;
+	char *full_name;
 
 	/* Initialise the reading position */
 	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
@@ -699,8 +874,25 @@ static int config_parse(git_config *cfg_file)
 			break;
 
 		default: /* assume variable declaration */
-			error = parse_variable(cfg_file, current_section, line);
+			error = parse_variable(line, &var_name, &var_value);
 			cfg_consume_line(cfg_file);
+
+			if (error < GIT_SUCCESS)
+				break;
+
+			full_name = build_varname(current_section, var_name);
+			if (full_name == NULL) {
+				error = GIT_ENOMEM;
+				free(var_name);
+				free(var_value);
+				break;
+			}
+
+			config_set(cfg_file, full_name, var_value);
+			free(var_name);
+			free(var_value);
+			free(full_name);
+
 			break;
 		}
 
@@ -713,11 +905,9 @@ static int config_parse(git_config *cfg_file)
 	return error;
 }
 
-static int parse_variable(git_config *cfg, const char *section_name, const char *line)
+static int parse_variable(const char *line, char **var_name, char **var_value)
 {
-	int error = GIT_SUCCESS;
-	int has_value = 1;
-	char *varname;
+	char *tmp;
 
 	const char *var_end = NULL;
 	const char *value_start = NULL;
@@ -743,15 +933,23 @@ static int parse_variable(git_config *cfg, const char *section_name, const char 
 			goto error;
 	}
 
-	varname = build_varname(section_name, line, var_end - line + 1);
-	if(varname == NULL)
+	tmp = strndup(line, var_end - line + 1);
+	if (tmp == NULL)
 		return GIT_ENOMEM;
 
-	config_set(cfg, varname, value_start);
+	*var_name = tmp;
 
-	free(varname);
+	if (value_start != NULL) {
+		tmp = strdup(value_start);
+		if (tmp == NULL) {
+			free(*var_name);
+			return GIT_ENOMEM;
+		}
 
-	return error;
+		*var_value = tmp;
+	}
+
+	return GIT_SUCCESS;
 
 error:
 	return GIT_EOBJCORRUPTED;
