@@ -2,6 +2,8 @@
 #define INCLUDE_util_h__
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
+#define bitsizeof(x)  (CHAR_BIT * sizeof(x))
+#define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
 
 /* 
  * Don't wrap malloc/calloc.
@@ -92,6 +94,10 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 
 extern char *git__strtok(char *output, char *src, char *delimit);
 extern char *git__strtok_keep(char *output, char *src, char *delimit);
+
+#define STRLEN(str) (sizeof(str) - 1)
+
+#define GIT_OID_LINE_LENGTH(header) (STRLEN(header) + 1 + GIT_OID_HEXSZ + 1)
 
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold

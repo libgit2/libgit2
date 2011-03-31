@@ -29,6 +29,8 @@
 #include "test_lib.h"
 #include <git2.h>
 
+#include "odb.h"
+
 #define TEST_REPOSITORY_NAME	"testrepo.git"
 #define REPOSITORY_FOLDER		TEST_RESOURCES "/" TEST_REPOSITORY_NAME "/"
 #define ODB_FOLDER				(REPOSITORY_FOLDER "objects/")
@@ -65,6 +67,7 @@ extern int cmp_files(const char *a, const char *b);
 extern int copy_file(const char *source, const char *dest);
 extern int rmdir_recurs(const char *directory_path);
 extern int copydir_recurs(const char *source_directory_path, const char *destination_directory_path);
+extern int remove_placeholders(char *directory_path, char *filename);
 
 extern int open_temp_repo(git_repository **repo, const char *path);
 extern void close_temp_repo(git_repository *repo);

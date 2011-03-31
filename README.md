@@ -5,6 +5,11 @@ libgit2 is a portable, pure C implementation of the Git core methods provided as
 re-entrant linkable library with a solid API, allowing you to write native
 speed custom Git applications in any language with bindings.
 
+libgit2 is licensed under a **very permissive license** (GPLv2 with a special Linking Exception).
+This basically means that you can link it (unmodified) with any kind of software without having to
+release its source code.
+
+* Mailing list: <libgit2@librelist.org>
 * Website: <http://libgit2.github.com>
 * API documentation: <http://libgit2.github.com/libgit2/modules.html>
 * Usage guide: <http://libgit2.github.com/api.html>
@@ -14,29 +19,31 @@ What It Can Do
 
 libgit2 is already very usable.
 
-* raw <-> hex SHA conversions
-* raw object reading (loose and packed)
-* raw object writing (loose)
-* revlist walker
-* commit, tag and tree object parsing and write-back
+* SHA conversions, formatting and shortening
+* object reading (loose and packed)
+* object writing (loose)
+* commit, tag, tree and blob parsing and write-back
 * tree traversal
-* basic index file (staging area) operations
+* revision walking
+* index file (staging area) manipulation
+* custom ODB backends
+* reference management (including packed references)
+* ...and more
+
 
 Building libgit2 - External dependencies
 ========================================
 
-The following libraries are required to manually build the libgit2 library:
+libgit2 builds cleanly on most platforms without any external dependencies.
+Under Unix-like systems, like Linux, *BSD and Mac OS X, libgit2 expects `pthreads` to be available;
+they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
+for threading.
 
-* zlib 1.2+ <http://www.zlib.net/>
-
-When building in Windows using MSVC, make sure you compile ZLib using the MSVC solution that ships in its source distribution.
-Alternatively, you may download precompiled binaries from: <http://www.winimage.com/zLibDll/>
+Additionally, he following libraries may be used as replacement for built-in functionality:
 
 * LibSSL **(optional)** <http://www.openssl.org/>
 
 libgit2 can be built using the SHA1 implementation of LibSSL-Crypto, instead of the built-in custom implementations. Performance wise, they are quite similar.
-
-* pthreads-w32 **(required on MinGW)** <http://sourceware.org/pthreads-win32/>
 
 Building libgit2 - Using waf
 ======================
@@ -112,11 +119,17 @@ Language Bindings
 Here are the bindings to libgit2 that are currently available:
 
 * Rugged (Ruby bindings) <https://github.com/libgit2/rugged>
+* objective-git (Objective-C bindings) <https://github.com/libgit2/objective-git>
 * pygit2 (Python bindings) <https://github.com/libgit2/pygit2>
-* libgit2sharp (.NET bindings) <https://github.com/nulltoken/libgit2sharp>
-* php-git (PHP bindings) <https://github.com/chobie/php-git>
-* luagit2 (Lua bindings) <https://github.com/Neopallium/luagit2>
-* GitForDelphi (Delphi bindings) <https://github.com/jasonpenny/GitForDelphi>
+* libgit2sharp (.NET bindings) <https://github.com/libgit2/libgit2sharp>
+* php-git (PHP bindings) <https://github.com/libgit2/php-git>
+* luagit2 (Lua bindings) <https://github.com/libgit2/luagit2>
+* GitForDelphi (Delphi bindings) <https://github.com/libgit2/GitForDelphi>
+* node-gitteh (Node.js bindings) <https://github.com/libgit2/node-gitteh>
+* nodegit (Node.js bindings) <https://github.com/tbranyen/nodegit>
+* go-git (Go bindings) <https://github.com/str1ngs/go-git>
+* libqgit2 (C++ QT bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
+* libgit2-ocaml (ocaml bindings) <https://github.com/burdges/libgit2-ocaml>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 
 If you start another language binding to libgit2, please let us know so

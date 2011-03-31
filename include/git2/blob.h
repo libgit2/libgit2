@@ -41,8 +41,6 @@ GIT_BEGIN_DECL
 
 /**
  * Lookup a blob object from a repository.
- * The generated blob object is owned by the revision
- * repo and shall not be freed by the user.
  *
  * @param blob pointer to the looked up blob
  * @param repo the repo to use when locating the blob.
@@ -55,41 +53,22 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
 }
 
 /**
- * Create a new in-memory git_blob.
+ * Close an open blob
  *
- * The blob object must be manually filled using
- * the 'set_rawcontent' methods before it can
- * be written back to disk.
+ * This is a wrapper around git_object_close()
  *
- * @param blob pointer to the new blob
- * @param repo The repository where the object will reside
- * @return 0 on success; error code otherwise
+ * IMPORTANT:
+ * It *is* necessary to call this method when you stop
+ * using a blob. Failure to do so will cause a memory leak.
+ *
+ * @param blob the blob to close
  */
-GIT_INLINE(int) git_blob_new(git_blob **blob, git_repository *repo)
+
+GIT_INLINE(void) git_blob_close(git_blob *blob)
 {
-	return git_object_new((git_object **)blob, repo, GIT_OBJ_BLOB);
+	git_object_close((git_object *) blob);
 }
 
-/**
- * Fill a blob with the contents inside
- * the pointed file.
- *
- * @param blob pointer to the new blob
- * @param filename name of the file to read
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_blob_set_rawcontent_fromfile(git_blob *blob, const char *filename);
-
-/**
- * Fill a blob with the contents inside
- * the pointed buffer
- *
- * @param blob pointer to the blob
- * @param buffer buffer with the contents for the blob
- * @param len size of the buffer
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_blob_set_rawcontent(git_blob *blob, const void *buffer, size_t len);
 
 /**
  * Get a read-only buffer with the raw content of a blob.
@@ -97,7 +76,7 @@ GIT_EXTERN(int) git_blob_set_rawcontent(git_blob *blob, const void *buffer, size
  * A pointer to the raw content of a blob is returned;
  * this pointer is owned internally by the object and shall
  * not be free'd. The pointer may be invalidated at a later
- * time (e.g. when changing the contents of the blob).
+ * time.
  *
  * @param blob pointer to the blob
  * @return the pointer; NULL if the blob has no contents
@@ -114,14 +93,28 @@ GIT_EXTERN(int) git_blob_rawsize(git_blob *blob);
 
 /**
  * Read a file from the working folder of a repository
- * and write it to the Object Database as a loose blob,
- * if such doesn't exist yet.
+ * and write it to the Object Database as a loose blob
  *
- * @param written_id return the id of the written blob
- * @param repo repository where the blob will be written
- * @param path file from which the blob will be created
+ * @param oid return the id of the written blob
+ * @param repo repository where the blob will be written.
+ *	this repository cannot be bare
+ * @param path file from which the blob will be created,
+ *	relative to the repository's working dir
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_blob_writefile(git_oid *written_id, git_repository *repo, const char *path);
+GIT_EXTERN(int) git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path);
+
+
+/**
+ * Write an in-memory buffer to the ODB as a blob
+ *
+ * @param oid return the oid of the written blob
+ * @param repo repository where to blob will be written
+ * @param buffer data to be written into the blob
+ * @param len length of the data
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *buffer, size_t len);
 
 /** @} */
 GIT_END_DECL

@@ -38,7 +38,7 @@ void git_signature_free(git_signature *sig)
 	free(sig);
 }
 
-git_signature *git_signature_new(const char *name, const char *email, time_t time, int offset)
+git_signature *git_signature_new(const char *name, const char *email, git_time_t time, int offset)
 {
 	git_signature *p = NULL;
 
@@ -46,13 +46,7 @@ git_signature *git_signature_new(const char *name, const char *email, time_t tim
 		goto cleanup;
 
 	p->name = git__strdup(name);
-	if (p->name == NULL)
-		goto cleanup;
-
 	p->email = git__strdup(email);
-	if (p->email == NULL)
-		goto cleanup;
-
 	p->when.time = time;
 	p->when.offset = offset;
 
@@ -179,10 +173,12 @@ int git_signature__parse(git_signature *sig, char **buffer_out,
 	return GIT_SUCCESS;
 }
 
-int git_signature__write(git_odb_source *src, const char *header, const git_signature *sig)
+int git_signature__write(char **signature, const char *header, const git_signature *sig)
 {
-	char sign;
 	int offset, hours, mins;
+	char sig_buffer[2048];
+	int sig_buffer_len;
+	char sign;
 
 	offset = sig->when.offset;
 	sign = (sig->when.offset < 0) ? '-' : '+';
@@ -193,7 +189,16 @@ int git_signature__write(git_odb_source *src, const char *header, const git_sign
 	hours = offset / 60;
 	mins = offset % 60;
 
-	return git__source_printf(src, "%s %s <%s> %u %c%02d%02d\n", header, sig->name, sig->email, (unsigned)sig->when.time, sign, hours, mins);
+	sig_buffer_len = snprintf(sig_buffer, sizeof(sig_buffer),
+			"%s %s <%s> %u %c%02d%02d\n",
+			header, sig->name, sig->email,
+			(unsigned)sig->when.time, sign, hours, mins);
+
+	if (sig_buffer_len < 0 || (size_t)sig_buffer_len > sizeof(sig_buffer))
+		return GIT_ENOMEM;
+
+	*signature = git__strdup(sig_buffer);
+	return sig_buffer_len;
 }
 
 

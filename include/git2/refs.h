@@ -69,6 +69,27 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_reposito
 GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
 
 /**
+ * Create a new symbolic reference, overwriting an existing one with
+ * the same name, if it exists.
+ *
+ * If the new reference isn't a symbolic one, any pointers to the old
+ * reference become invalid.
+ *
+ * The reference will be created in the repository and written
+ * to the disk.
+ *
+ * This reference is owned by the repository and shall not
+ * be free'd by the user.
+ *
+ * @param ref_out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param target The target of the reference
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_create_symbolic_f(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
+
+/**
  * Create a new object id reference.
  *
  * The reference will be created in the repository and written
@@ -84,6 +105,27 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
+
+/**
+ * Create a new object id reference, overwriting an existing one with
+ * the same name, if it exists.
+ *
+ * If the new reference isn't an object id one, any pointers to the
+ * old reference become invalid.
+ *
+ * The reference will be created in the repository and written
+ * to the disk.
+ *
+ * This reference is owned by the repository and shall not
+ * be free'd by the user.
+ *
+ * @param ref_out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param id The object id pointed to by the reference.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_create_oid_f(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
 
 /**
  * Get the OID pointed to by a reference.
@@ -190,6 +232,20 @@ GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
 GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name);
 
 /**
+ * Rename an existing reference, overwriting an existing one with the
+ * same name, if it exists.
+ *
+ * This method works for both direct and symbolic references.
+ * The new name will be checked for validity and may be
+ * modified into a normalized form.
+ *
+ * The refernece will be immediately renamed in-memory
+ * and on disk.
+ *
+ */
+GIT_EXTERN(int) git_reference_rename_f(git_reference *ref, const char *new_name);
+
+/**
  * Delete an existing reference
  *
  * This method works for both direct and symbolic references.
@@ -217,6 +273,52 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_reference_packall(git_repository *repo);
+
+/**
+ * Fill a list with all the references that can be found
+ * in a repository.
+ *
+ * The listed references may be filtered by type, or using
+ * a bitwise OR of several types. Use the magic value
+ * `GIT_REF_LISTALL` to obtain all references, including
+ * packed ones.
+ *
+ * The string array will be filled with the names of all
+ * references; these values are owned by the user and
+ * should be free'd manually when no longer needed, using
+ * `git_strarray_free`.
+ *
+ * @param array Pointer to a git_strarray structure where
+ *		the reference names will be stored
+ * @param repo Repository where to find the refs
+ * @param list_flags Filtering flags for the reference
+ *		listing.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
+
+
+/**
+ * List all the references in the repository, calling a custom
+ * callback for each one.
+ *
+ * The listed references may be filtered by type, or using
+ * a bitwise OR of several types. Use the magic value
+ * `GIT_REF_LISTALL` to obtain all references, including
+ * packed ones.
+ *
+ * The `callback` function will be called for each of the references
+ * in the repository, and will receive the name of the reference and
+ * the `payload` value passed to this method.
+ *
+ * @param repo Repository where to find the refs
+ * @param list_flags Filtering flags for the reference
+ *		listing.
+ * @param callback Function which will be called for every listed ref
+ * @param payload Additional data to pass to the callback
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
 
 /** @} */
 GIT_END_DECL

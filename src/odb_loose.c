@@ -30,13 +30,21 @@
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
+#include "filebuf.h"
 
 #include "git2/odb_backend.h"
+#include "git2/types.h"
 
 typedef struct {  /* object header data */
 	git_otype type;  /* object type */
 	size_t    size;  /* object size */
 } obj_hdr;
+
+typedef struct {
+	git_odb_stream stream;
+	git_filebuf fbuf;
+	int finished;
+} loose_writestream;
 
 typedef struct loose_backend {
 	git_odb_backend parent;
@@ -52,38 +60,6 @@ typedef struct loose_backend {
  * MISCELANEOUS HELPER FUNCTIONS
  *
  ***********************************************************/
-
-static int make_temp_file(git_file *fd, char *tmp, size_t n, char *file)
-{
-	char *template = "/tmp_obj_XXXXXX";
-	size_t tmplen = strlen(template);
-	int dirlen;
-
-	if ((dirlen = git__dirname_r(tmp, n, file)) < 0)
-		return GIT_ERROR;
-
-	if ((dirlen + tmplen) >= n)
-		return GIT_ERROR;
-
-	strcpy(tmp + dirlen, (dirlen) ? template : template + 1);
-
-	*fd = gitfo_mkstemp(tmp);
-	if (*fd < 0 && dirlen) {
-		/* create directory if it doesn't exist */
-		tmp[dirlen] = '\0';
-		if ((gitfo_exists(tmp) < 0) && gitfo_mkdir(tmp, 0755))
-			return GIT_ERROR;
-		/* try again */
-		strcpy(tmp + dirlen, template);
-		*fd = gitfo_mkstemp(tmp);
-	}
-	if (*fd < 0)
-		return GIT_ERROR;
-
-	return GIT_SUCCESS;
-}
-
-
 
 static size_t object_file_name(char *name, size_t n, char *dir, const git_oid *id)
 {
@@ -236,70 +212,42 @@ static int finish_inflate(z_stream *s)
 	return GIT_SUCCESS;
 }
 
-static int deflate_buf(z_stream *s, void *in, size_t len, int flush)
-{
-	int status = Z_OK;
-
-	set_stream_input(s, in, len);
-	while (status == Z_OK) {
-		status = deflate(s, flush);
-		if (s->avail_in == 0)
-			break;
-	}
-	return status;
-}
-
-static int deflate_obj(gitfo_buf *buf, char *hdr, int hdrlen, git_rawobj *obj, int level)
-{
-	z_stream zs;
-	int status;
-	size_t size;
-
-	assert(buf && !buf->data && hdr && obj);
-	assert(level == Z_DEFAULT_COMPRESSION || (level >= 0 && level <= 9));
-
-	buf->data = NULL;
-	buf->len  = 0;
-	init_stream(&zs, NULL, 0);
-
-	if (deflateInit(&zs, level) < Z_OK)
-		return GIT_ERROR;
-
-	size = deflateBound(&zs, hdrlen + obj->len);
-
-	if ((buf->data = git__malloc(size)) == NULL) {
-		deflateEnd(&zs);
-		return GIT_ERROR;
-	}
-
-	set_stream_output(&zs, buf->data, size);
-
-	/* compress the header */
-	status = deflate_buf(&zs, hdr, hdrlen, Z_NO_FLUSH);
-
-	/* if header compressed OK, compress the object */
-	if (status == Z_OK)
-		status = deflate_buf(&zs, obj->data, obj->len, Z_FINISH);
-
-	if (status != Z_STREAM_END) {
-		deflateEnd(&zs);
-		free(buf->data);
-		buf->data = NULL;
-		return GIT_ERROR;
-	}
-
-	buf->len = zs.total_out;
-	deflateEnd(&zs);
-
-	return GIT_SUCCESS;
-}
-
 static int is_zlib_compressed_data(unsigned char *data)
 {
 	unsigned int w;
 
 	w = ((unsigned int)(data[0]) << 8) + data[1];
 	return data[0] == 0x78 && !(w % 31);
+}
+
+static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
+{
+	z_stream zs;
+	int status = Z_OK;
+
+	memset(&zs, 0x0, sizeof(zs));
+
+	zs.next_out  = out;
+	zs.avail_out = outlen;
+
+	zs.next_in  = in;
+	zs.avail_in = inlen;
+
+	if (inflateInit(&zs) < Z_OK)
+		return GIT_ERROR;
+
+	while (status == Z_OK)
+		status = inflate(&zs, Z_FINISH);
+
+	inflateEnd(&zs);
+
+	if ((status != Z_STREAM_END) /*|| (zs.avail_in != 0) */)
+		return GIT_ERROR;
+
+	if (zs.total_out != outlen)
+		return GIT_ERROR;
+
+	return GIT_SUCCESS;
 }
 
 static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
@@ -371,7 +319,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, gitfo_buf *obj)
 
 	in  = ((unsigned char *)obj->data) + used;
 	len = obj->len - used;
-	if (git_odb__inflate_buffer(in, len, buf, hdr.size)) {
+	if (inflate_buffer(in, len, buf, hdr.size)) {
 		free(buf);
 		return GIT_ERROR;
 	}
@@ -505,37 +453,6 @@ cleanup:
 	return error;
 }
 
-static int write_obj(gitfo_buf *buf, git_oid *id, loose_backend *backend)
-{
-	char file[GIT_PATH_MAX];
-	char temp[GIT_PATH_MAX];
-	git_file fd;
-
-	if (object_file_name(file, sizeof(file), backend->objects_dir, id))
-		return GIT_EOSERR;
-
-	if (make_temp_file(&fd, temp, sizeof(temp), file) < 0)
-		return GIT_EOSERR;
-
-	if (gitfo_write(fd, buf->data, buf->len) < 0) {
-		gitfo_close(fd);
-		gitfo_unlink(temp);
-		return GIT_EOSERR;
-	}
-
-	if (backend->fsync_object_files)
-		gitfo_fsync(fd);
-	gitfo_close(fd);
-	gitfo_chmod(temp, 0444);
-
-	if (gitfo_mv(temp, file) < 0) {
-		gitfo_unlink(temp);
-		return GIT_EOSERR;
-	}
-
-	return GIT_SUCCESS;
-}
-
 static int locate_object(char *object_location, loose_backend *backend, const git_oid *oid)
 {
 	object_file_name(object_location, GIT_PATH_MAX, backend->objects_dir, oid);
@@ -558,29 +475,44 @@ static int locate_object(char *object_location, loose_backend *backend, const gi
  *
  ***********************************************************/
 
-int loose_backend__read_header(git_rawobj *obj, git_odb_backend *backend, const git_oid *oid)
+int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	char object_path[GIT_PATH_MAX];
+	git_rawobj raw;
+	int error;
 
-	assert(obj && backend && oid);
+	assert(backend && oid);
 
 	if (locate_object(object_path, (loose_backend *)backend, oid) < 0)
 		return GIT_ENOTFOUND;
 
-	return read_header_loose(obj, object_path);
+	if ((error = read_header_loose(&raw, object_path)) < GIT_SUCCESS)
+		return error;
+
+	*len_p = raw.len;
+	*type_p = raw.type;
+	return GIT_SUCCESS;
 }
 
-
-int loose_backend__read(git_rawobj *obj, git_odb_backend *backend, const git_oid *oid)
+int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	char object_path[GIT_PATH_MAX];
+	git_rawobj raw;
+	int error;
 
-	assert(obj && backend && oid);
+	assert(backend && oid);
 
 	if (locate_object(object_path, (loose_backend *)backend, oid) < 0)
 		return GIT_ENOTFOUND;
 
-	return read_loose(obj, object_path);
+	if ((error = read_loose(&raw, object_path)) < GIT_SUCCESS)
+		return error;
+
+	*buffer_p = raw.data;
+	*len_p = raw.len;
+	*type_p = raw.type;
+
+	return GIT_SUCCESS;
 }
 
 int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
@@ -592,32 +524,106 @@ int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	return locate_object(object_path, (loose_backend *)backend, oid) == GIT_SUCCESS;
 }
 
-
-int loose_backend__write(git_oid *id, git_odb_backend *_backend, git_rawobj *obj)
+int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 {
-	char hdr[64];
-	int  hdrlen;
-	gitfo_buf buf = GITFO_BUF_INIT;
-	int error;
-	loose_backend *backend;
+	loose_writestream *stream = (loose_writestream *)_stream;
+	loose_backend *backend = (loose_backend *)_stream->backend;
 
-	assert(id && _backend && obj);
+	int error;
+	char final_path[GIT_PATH_MAX];
+
+	if ((error = git_filebuf_hash(oid, &stream->fbuf)) < GIT_SUCCESS)
+		return error;
+
+	if (object_file_name(final_path, sizeof(final_path), backend->objects_dir, oid))
+		return GIT_ENOMEM;
+
+	if ((error = gitfo_mkdir_2file(final_path)) < GIT_SUCCESS)
+		return error;
+
+	stream->finished = 1;
+	return git_filebuf_commit_at(&stream->fbuf, final_path);
+}
+
+int loose_backend__stream_write(git_odb_stream *_stream, const char *data, size_t len)
+{
+	loose_writestream *stream = (loose_writestream *)_stream;
+	return git_filebuf_write(&stream->fbuf, data, len);
+}
+
+void loose_backend__stream_free(git_odb_stream *_stream)
+{
+	loose_writestream *stream = (loose_writestream *)_stream;
+
+	if (!stream->finished)
+		git_filebuf_cleanup(&stream->fbuf);
+
+	free(stream);
+}
+
+static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
+{
+	const char *type_str = git_object_type2string(obj_type);
+	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
+
+	assert(len > 0);             /* otherwise snprintf() is broken  */
+	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
+
+	if (len < 0 || ((size_t) len) >= n)
+		return GIT_ERROR;
+	return len+1;
+}
+
+int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, size_t length, git_otype type)
+{
+	loose_backend *backend;
+	loose_writestream *stream;
+
+	char hdr[64], tmp_path[GIT_PATH_MAX];
+	int  hdrlen;
+	int error;
+
+	assert(_backend);
 
 	backend = (loose_backend *)_backend;
+	*stream_out = NULL;
 
-	if ((error = git_odb__hash_obj(id, hdr, sizeof(hdr), &hdrlen, obj)) < 0)
+	hdrlen = format_object_header(hdr, sizeof(hdr), length, type);
+	if (hdrlen < GIT_SUCCESS)
+		return GIT_EOBJCORRUPTED;
+
+	stream = git__calloc(1, sizeof(loose_writestream));
+	if (stream == NULL)
+		return GIT_ENOMEM;
+
+	stream->stream.backend = _backend;
+	stream->stream.read = NULL; /* read only */
+	stream->stream.write = &loose_backend__stream_write;
+	stream->stream.finalize_write = &loose_backend__stream_fwrite;
+	stream->stream.free = &loose_backend__stream_free;
+	stream->stream.mode = GIT_STREAM_WRONLY;
+
+	git__joinpath(tmp_path, backend->objects_dir, "tmp_object");
+
+	error = git_filebuf_open(&stream->fbuf, tmp_path,
+		GIT_FILEBUF_HASH_CONTENTS |
+		GIT_FILEBUF_DEFLATE_CONTENTS |
+		GIT_FILEBUF_TEMPORARY);
+
+	if (error < GIT_SUCCESS) {
+		free(stream);
 		return error;
+	}
 
-	if (git_odb_exists(_backend->odb, id))
-		return GIT_SUCCESS;
-
-	if ((error = deflate_obj(&buf, hdr, hdrlen, obj, backend->object_zlib_level)) < 0)
+	error = stream->stream.write((git_odb_stream *)stream, hdr, hdrlen);
+	if (error < GIT_SUCCESS) {
+		git_filebuf_cleanup(&stream->fbuf);
+		free(stream);
 		return error;
+	}
 
-	error = write_obj(&buf, id, backend);
-
-	gitfo_free_buf(&buf);
-	return error;
+	*stream_out = (git_odb_stream *)stream;
+	return GIT_SUCCESS;
 }
 
 void loose_backend__free(git_odb_backend *_backend)
@@ -649,7 +655,7 @@ int git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir
 
 	backend->parent.read = &loose_backend__read;
 	backend->parent.read_header = &loose_backend__read_header;
-	backend->parent.write = &loose_backend__write;
+	backend->parent.writestream = &loose_backend__stream;
 	backend->parent.exists = &loose_backend__exists;
 	backend->parent.free = &loose_backend__free;
 

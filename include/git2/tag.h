@@ -41,8 +41,6 @@ GIT_BEGIN_DECL
 
 /**
  * Lookup a tag object from the repository.
- * The generated tag object is owned by the revision
- * repo and shall not be freed by the user.
  *
  * @param tag pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
@@ -55,23 +53,26 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
 }
 
 /**
- * Create a new in-memory git_tag.
+ * Close an open tag
  *
- * The tag object must be manually filled using
- * setter methods before it can be written to its
- * repository.
+ * This is a wrapper around git_object_close()
  *
- * @param tag pointer to the new tag
- * @param repo The repository where the object will reside
- * @return 0 on success; error code otherwise
+ * IMPORTANT:
+ * It *is* necessary to call this method when you stop
+ * using a tag. Failure to do so will cause a memory leak.
+ *
+ * @param tag the tag to close
  */
-GIT_INLINE(int) git_tag_new(git_tag **tag, git_repository *repo)
+
+GIT_INLINE(void) git_tag_close(git_tag *tag)
 {
-	return git_object_new((git_object **)tag, repo, (git_otype)GIT_OBJ_TAG);
+	git_object_close((git_object *) tag);
 }
+
 
 /**
  * Get the id of a tag.
+ *
  * @param tag a previously loaded tag.
  * @return object identity for the tag.
  */
@@ -79,13 +80,27 @@ GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
 
 /**
  * Get the tagged object of a tag
+ *
+ * This method performs a repository lookup for the
+ * given object and returns it
+ *
+ * @param target pointer where to store the target
  * @param tag a previously loaded tag.
- * @return reference to a repository object
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(const git_object *) git_tag_target(git_tag *t);
+GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *t);
+
+/**
+ * Get the OID of the tagged object of a tag
+ *
+ * @param tag a previously loaded tag.
+ * @return pointer to the OID
+ */
+GIT_EXTERN(const git_oid *) git_tag_target_oid(git_tag *t);
 
 /**
  * Get the type of a tag's tagged object
+ *
  * @param tag a previously loaded tag.
  * @return type of the tagged object
  */
@@ -93,6 +108,7 @@ GIT_EXTERN(git_otype) git_tag_type(git_tag *t);
 
 /**
  * Get the name of a tag
+ *
  * @param tag a previously loaded tag.
  * @return name of the tag
  */
@@ -100,6 +116,7 @@ GIT_EXTERN(const char *) git_tag_name(git_tag *t);
 
 /**
  * Get the tagger (author) of a tag
+ *
  * @param tag a previously loaded tag.
  * @return reference to the tag's author
  */
@@ -107,38 +124,69 @@ GIT_EXTERN(const git_signature *) git_tag_tagger(git_tag *t);
 
 /**
  * Get the message of a tag
+ *
  * @param tag a previously loaded tag.
  * @return message of the tag
  */
 GIT_EXTERN(const char *) git_tag_message(git_tag *t);
 
-/**
- * Set the target of a tag (i.e. the object that the tag points to)
- * @param tag The tag to modify
- * @param target the new tagged target
- */
-GIT_EXTERN(void) git_tag_set_target(git_tag *tag, git_object *target);
 
 /**
- * Set the name of a tag
- * @param tag The tag to modify
- * @param name the new name for the tag
+ * Create a new tag in the repository from an OID
+ *
+ * @param oid Pointer where to store the OID of the
+ *	newly created tag
+ *
+ * @param repo Repository where to store the tag
+ *
+ * @param tag_name Name for the tag; this name is validated
+ * for consistency
+ *
+ * @param target OID to which this tag points; note that no
+ *	validation is done on this OID. Use the _o version of this
+ *	method to assure a proper object is being tagged
+ *
+ * @param target_type Type of the tagged OID; note that no
+ *	validation is performed here either
+ *
+ * @param tagger Signature of the tagger for this tag, and
+ *  of the tagging time
+ *
+ * @param message Full message for this tag
+ *
+ * @return 0 on success; error code otherwise.
+ *	A tag object is written to the ODB, and a proper reference
+ *	is written in the /refs/tags folder, pointing to it
  */
-GIT_EXTERN(void) git_tag_set_name(git_tag *tag, const char *name);
+GIT_EXTERN(int) git_tag_create(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_oid *target,
+		git_otype target_type,
+		const git_signature *tagger,
+		const char *message);
+
 
 /**
- * Set the tagger of a tag
- * @param tag The tag to modify
- * @param tagger_sig signature of the tagging action
+ * Create a new tag in the repository from an existing
+ * `git_object` instance
+ *
+ * This method replaces the `target` and `target_type`
+ * paremeters of `git_tag_create` by a single instance
+ * of a `const git_object *`, which is assured to be
+ * a proper object in the ODB and hence will create
+ * a valid tag
+ *
+ * @see git_tag_create
  */
-GIT_EXTERN(void) git_tag_set_tagger(git_tag *tag, const git_signature *tagger_sig);
-
-/**
- * Set the message of a tag
- * @param tag The tag to modify
- * @param message the new tagger for the tag
- */
-GIT_EXTERN(void) git_tag_set_message(git_tag *tag, const char *message);
+GIT_EXTERN(int) git_tag_create_o(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_object *target,
+		const git_signature *tagger,
+		const char *message);
 
 /** @} */
 GIT_END_DECL

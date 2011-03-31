@@ -40,28 +40,10 @@
 
 #define GIT_BRANCH_MASTER "master"
 
-static const int OBJECT_TABLE_SIZE = 32;
-
 typedef struct {
 	char *path_repository;
 	unsigned is_bare:1, has_been_reinit:1;
 } repo_init;
-
-/*
- * Hash table methods
- *
- * Callbacks for the ODB cache, implemented
- * as a hash table
- */
-uint32_t object_table_hash(const void *key, int hash_id)
-{
-	uint32_t r;
-	git_oid *id;
-
-	id = (git_oid *)key;
-	memcpy(&r, id->id + (hash_id * sizeof(uint32_t)), sizeof(r));
-	return r;
-}
 
 /*
  * Git repository open methods
@@ -84,7 +66,7 @@ static int assign_repository_dirs(
 	if (git_dir == NULL)
 		return GIT_ENOTFOUND;
 
-	error = gitfo_prettify_dir_path(path_aux, git_dir);
+	error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_dir);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -99,7 +81,7 @@ static int assign_repository_dirs(
 	if (git_object_directory == NULL)
 		git__joinpath(path_aux, repo->path_repository, GIT_OBJECTS_DIR);
 	else {
-		error = gitfo_prettify_dir_path(path_aux, git_object_directory);
+		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_object_directory);
 		if (error < GIT_SUCCESS)
 			return error;
 	}
@@ -113,7 +95,7 @@ static int assign_repository_dirs(
 	if (git_work_tree == NULL)
 		repo->is_bare = 1;
 	else {
-		error = gitfo_prettify_dir_path(path_aux, git_work_tree);
+		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_work_tree);
 		if (error < GIT_SUCCESS)
 			return error;
 
@@ -126,7 +108,7 @@ static int assign_repository_dirs(
 		if (git_index_file == NULL)
 			git__joinpath(path_aux, repo->path_repository, GIT_INDEX_FILE);
 		else {
-			error = gitfo_prettify_file_path(path_aux, git_index_file);
+			error = gitfo_prettify_file_path(path_aux, sizeof(path_aux), git_index_file);
 			if (error < GIT_SUCCESS)
 				return error;
 		}
@@ -186,30 +168,13 @@ static git_repository *repository_alloc()
 
 	memset(repo, 0x0, sizeof(git_repository));
 
-	repo->objects = git_hashtable_alloc(
-			OBJECT_TABLE_SIZE, 
-			object_table_hash,
-			(git_hash_keyeq_ptr)git_oid_cmp);
-
-	if (repo->objects == NULL) { 
-		free(repo);
-		return NULL;
-	}
+	git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free);
 
 	if (git_repository__refcache_init(&repo->references) < GIT_SUCCESS) {
-		git_hashtable_free(repo->objects);
 		free(repo);
 		return NULL;
 	}
 
-	if (git_vector_init(&repo->memory_objects, 16, NULL) < GIT_SUCCESS) {
-		git_hashtable_free(repo->objects);
-		git_repository__refcache_free(&repo->references);
-		free(repo);
-		return NULL;
-	}
-
-	repo->gc_enabled = 1;
 	return repo;
 }
 
@@ -331,19 +296,18 @@ cleanup:
 	return error;
 }
 
-static void repository_free(git_repository *repo)
+void git_repository_free(git_repository *repo)
 {
-	assert(repo);
+	if (repo == NULL)
+		return;
+
+	git_cache_free(&repo->objects);
+	git_repository__refcache_free(&repo->references);
 
 	free(repo->path_workdir);
 	free(repo->path_index);
 	free(repo->path_repository);
 	free(repo->path_odb);
-
-	git_hashtable_free(repo->objects);
-	git_vector_free(&repo->memory_objects);
-
-	git_repository__refcache_free(&repo->references);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
@@ -352,53 +316,6 @@ static void repository_free(git_repository *repo)
 		git_index_free(repo->index);
 
 	free(repo);
-}
-
-void git_repository_free__no_gc(git_repository *repo)
-{
-	git_object *object;
-	const void *_unused;
-	unsigned int i;
-
-	if (repo == NULL)
-		return;
-
-	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,
-		object->repo = NULL;
-		object->refcount = 0;
-	);
-
-	for (i = 0; i < repo->memory_objects.length; ++i) {
-		object = git_vector_get(&repo->memory_objects, i);
-		object->repo = NULL;
-		object->refcount = 0;
-	}
-
-	repository_free(repo);
-}
-
-void git_repository_free(git_repository *repo)
-{
-	git_object *object;
-	const void *_unused;
-	unsigned int i;
-
-	if (repo == NULL)
-		return;
-
-	repo->gc_enabled = 0;
-
-	/* force free all the objects */
-	GIT_HASHTABLE_FOREACH(repo->objects, _unused, object,
-		git_object__free(object);
-	);
-
-	for (i = 0; i < repo->memory_objects.length; ++i) {
-		object = git_vector_get(&repo->memory_objects, i);
-		git_object__free(object);
-	}
-
-	repository_free(repo);
 }
 
 int git_repository_index(git_index **index_out, git_repository *repo)
@@ -486,7 +403,7 @@ static int repo_init_find_dir(repo_init *results, const char* path)
 	char temp_path[GIT_PATH_MAX];
 	int error = GIT_SUCCESS;
 
-	error = gitfo_prettify_dir_path(temp_path, path);
+	error = gitfo_prettify_dir_path(temp_path, sizeof(temp_path), path);
 	if (error < GIT_SUCCESS)
 		return error;
 

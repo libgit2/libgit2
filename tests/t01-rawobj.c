@@ -23,9 +23,16 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "test_lib.h"
+
+#include "odb.h"
+#include "hash.h"
+
 #include "t01-data.h"
 
-#include "hash.h"
+static int hash_object(git_oid *oid, git_rawobj *obj)
+{
+	return git_odb_hash(oid, obj->data, obj->len, obj->type);
+}
 
 BEGIN_TEST(oid0, "validate size of oid objects")
 	git_oid out;
@@ -329,7 +336,7 @@ BEGIN_TEST(oid17, "stress test for the git_oid_shorten object")
 	git_oid oid;
 	size_t i, j;
 
-	int min_len, found_collision;
+	int min_len = 0, found_collision;
 
 	os = git_oid_shorten_new(0);
 	must_be_true(os != NULL);
@@ -497,28 +504,28 @@ BEGIN_TEST(objhash0, "hash junk data")
 
     /* invalid types: */
     junk_obj.data = some_data;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
+    must_fail(hash_object(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ__EXT1;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
+    must_fail(hash_object(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ__EXT2;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
+    must_fail(hash_object(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ_OFS_DELTA;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
+    must_fail(hash_object(&id, &junk_obj));
 
     junk_obj.type = GIT_OBJ_REF_DELTA;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
+    must_fail(hash_object(&id, &junk_obj));
 
     /* data can be NULL only if len is zero: */
     junk_obj.type = GIT_OBJ_BLOB;
     junk_obj.data = NULL;
-    must_pass(git_rawobj_hash(&id, &junk_obj));
+    must_pass(hash_object(&id, &junk_obj));
     must_be_true(git_oid_cmp(&id, &id_zero) == 0);
 
     junk_obj.len = 1;
-    must_fail(git_rawobj_hash(&id, &junk_obj));
+    must_fail(hash_object(&id, &junk_obj));
 END_TEST
 
 BEGIN_TEST(objhash1, "hash a commit object")
@@ -526,7 +533,7 @@ BEGIN_TEST(objhash1, "hash a commit object")
 
     must_pass(git_oid_mkstr(&id1, commit_id));
 
-    must_pass(git_rawobj_hash(&id2, &commit_obj));
+    must_pass(hash_object(&id2, &commit_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -536,7 +543,7 @@ BEGIN_TEST(objhash2, "hash a tree object")
 
     must_pass(git_oid_mkstr(&id1, tree_id));
 
-    must_pass(git_rawobj_hash(&id2, &tree_obj));
+    must_pass(hash_object(&id2, &tree_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -546,7 +553,7 @@ BEGIN_TEST(objhash3, "hash a tag object")
 
     must_pass(git_oid_mkstr(&id1, tag_id));
 
-    must_pass(git_rawobj_hash(&id2, &tag_obj));
+    must_pass(hash_object(&id2, &tag_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -556,7 +563,7 @@ BEGIN_TEST(objhash4, "hash a zero-length object")
 
     must_pass(git_oid_mkstr(&id1, zero_id));
 
-    must_pass(git_rawobj_hash(&id2, &zero_obj));
+    must_pass(hash_object(&id2, &zero_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -566,7 +573,7 @@ BEGIN_TEST(objhash5, "hash an one-byte long object")
 
     must_pass(git_oid_mkstr(&id1, one_id));
 
-    must_pass(git_rawobj_hash(&id2, &one_obj));
+    must_pass(hash_object(&id2, &one_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -576,7 +583,7 @@ BEGIN_TEST(objhash6, "hash a two-byte long object")
 
     must_pass(git_oid_mkstr(&id1, two_id));
 
-    must_pass(git_rawobj_hash(&id2, &two_obj));
+    must_pass(hash_object(&id2, &two_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
@@ -586,7 +593,7 @@ BEGIN_TEST(objhash7, "hash an object several bytes long")
 
     must_pass(git_oid_mkstr(&id1, some_id));
 
-    must_pass(git_rawobj_hash(&id2, &some_obj));
+    must_pass(hash_object(&id2, &some_obj));
 
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST

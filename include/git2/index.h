@@ -91,8 +91,8 @@ GIT_EXTERN(int) git_index_open_bare(git_index **index, const char *index_path);
  * Open the Index inside the git repository pointed
  * by 'repo'.
  *
+ * @param index the pointer for the new index
  * @param repo the git repo which owns the index
- * @param index_path the path to the index file in disk
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_index_open_inrepo(git_index **index, git_repository *repo);
@@ -132,7 +132,7 @@ GIT_EXTERN(int) git_index_read(git_index *index);
 GIT_EXTERN(int) git_index_write(git_index *index);
 
 /**
- * Find the first index of any entires which point to given
+ * Find the first index of any entries which point to given
  * path in the Git index.
  *
  * @param index an existing index object

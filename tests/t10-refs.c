@@ -295,6 +295,118 @@ BEGIN_TEST(create2, "create a new OID reference")
 	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
+static const char *ref_name = "refs/heads/other";
+static const char *ref_master_name = "refs/heads/master";
+static const char *ref_branch_name = "refs/heads/branch";
+static const char *ref_test_name = "refs/heads/test";
+BEGIN_TEST(overwrite0, "Overwrite an existing symbolic reference")
+	git_reference *ref, *branch_ref;
+	git_repository *repo;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	/* The target needds to exist and we need to check the name has changed */
+	must_pass(git_reference_create_symbolic(&branch_ref, repo, ref_branch_name, ref_master_name));
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_branch_name));
+	/* Ensure it points to the right place*/
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_SYMBOLIC);
+	must_be_true(!strcmp(git_reference_target(ref), ref_branch_name));
+
+	/* Ensure we can't create it unless we force it to */
+	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_symbolic_f(&ref, repo, ref_name, ref_master_name));
+
+	/* Ensure it points to the right place */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_SYMBOLIC);
+	must_be_true(!strcmp(git_reference_target(ref), ref_master_name));
+
+	must_pass(git_reference_delete(ref));
+	must_pass(git_reference_delete(branch_ref));
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(overwrite1, "Overwrite an existing object id reference")
+	git_reference *ref;
+	git_repository *repo;
+	git_oid id;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	/* Create it */
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_test_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	/* Ensure we can't overwrite unless we force it */
+	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_pass(git_reference_create_oid_f(&ref, repo, ref_name, &id));
+
+	/* Ensure it has been overwritten */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(!git_oid_cmp(&id, git_reference_oid(ref)));
+
+	git_reference_delete(ref);
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(overwrite2, "Overwrite an existing object id reference with a symbolic one")
+	git_reference *ref;
+	git_repository *repo;
+	git_oid id;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_symbolic_f(&ref, repo, ref_name, ref_master_name));
+
+	/* Ensure it points to the right place */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_SYMBOLIC);
+	must_be_true(!strcmp(git_reference_target(ref), ref_master_name));
+
+	git_reference_delete(ref);
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(overwrite3, "Overwrite an existing symbolic reference with an object id one")
+	git_reference *ref;
+	git_repository *repo;
+	git_oid id;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+	must_be_true(ref->type & GIT_REF_OID);
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	/* Create the symbolic ref */
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	/* It shouldn't overwrite unless we tell it to */
+	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_pass(git_reference_create_oid_f(&ref, repo, ref_name, &id));
+
+	/* Ensure it points to the right place */
+	must_pass(git_reference_lookup(&ref, repo, ref_name));
+	must_be_true(git_reference_type(ref) & GIT_REF_OID);
+	must_be_true(!git_oid_cmp(git_reference_oid(ref), &id));
+
+	git_reference_delete(ref);
+	git_repository_free(repo);
+END_TEST
+
 BEGIN_TEST(pack0, "create a packfile for an empty folder")
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
@@ -500,6 +612,25 @@ BEGIN_TEST(rename4, "can not rename a reference with an invalid name")
 	close_temp_repo(repo);
 END_TEST
 
+BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing reference")
+	git_reference *looked_up_ref;
+	git_repository *repo;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	/* An existing reference... */
+	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
+
+	/* Can not be renamed to the name of another existing reference. */
+	must_pass(git_reference_rename_f(looked_up_ref, packed_test_head_name));
+
+	/* Check we actually renamed it */
+	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));
+	must_be_true(!strcmp(looked_up_ref->name, packed_test_head_name));
+
+	close_temp_repo(repo);
+END_TEST
+
 BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove both tracks in the filesystem")
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
@@ -560,7 +691,8 @@ BEGIN_TEST(normalize0, "normalize a direct (OID) reference name")
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a/", NULL));
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a.", NULL));
 	must_fail(ensure_refname_normalized(OID_REF, "refs/heads/a.lock", NULL));
-	must_fail(ensure_refname_normalized(OID_REF, "refs/dummy/a", NULL));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/dummy/a", NULL));
+	must_pass(ensure_refname_normalized(OID_REF, "refs/stash", NULL));
 	must_pass(ensure_refname_normalized(OID_REF, "refs/tags/a", "refs/tags/a"));
 	must_pass(ensure_refname_normalized(OID_REF, "refs/heads/a/b", "refs/heads/a/b"));
 	must_pass(ensure_refname_normalized(OID_REF, "refs/heads/a./b", "refs/heads/a./b"));
@@ -710,6 +842,40 @@ BEGIN_TEST(normalize2, "tests borrowed from JGit")
 	must_fail(ensure_refname_normalized(SYM_REF, "refs/heads/master@{1.hour.ago}", NULL));
 END_TEST
 
+BEGIN_TEST(list0, "try to list all the references in our test repo")
+	git_repository *repo;
+	git_strarray ref_list;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_reference_listall(&ref_list, repo, GIT_REF_LISTALL));
+
+	/*{
+		unsigned short i;
+		for (i = 0; i < ref_list.count; ++i)
+			printf("# %s\n", ref_list.strings[i]);
+	}*/
+
+	/* We have exactly 7 refs in total if we include the packed ones:
+	 * there is a reference that exists both in the packfile and as
+	 * loose, but we only list it once */
+	must_be_true(ref_list.count == 7); 
+
+	git_strarray_free(&ref_list);
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(list1, "try to list only the symbolic references")
+	git_repository *repo;
+	git_strarray ref_list;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_reference_listall(&ref_list, repo, GIT_REF_SYMBOLIC));
+	must_be_true(ref_list.count == 0); /* no symrefs in the test repo */ 
+
+	git_strarray_free(&ref_list);
+	git_repository_free(repo);
+END_TEST
+
 
 BEGIN_SUITE(refs)
 	ADD_TEST(readtag0);
@@ -727,6 +893,11 @@ BEGIN_SUITE(refs)
 	ADD_TEST(create1);
 	ADD_TEST(create2);
 
+	ADD_TEST(overwrite0);
+	ADD_TEST(overwrite1);
+	ADD_TEST(overwrite2);
+	ADD_TEST(overwrite3);
+
 	ADD_TEST(normalize0);
 	ADD_TEST(normalize1);
 	ADD_TEST(normalize2);
@@ -739,6 +910,9 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename2);
 	ADD_TEST(rename3);
 	ADD_TEST(rename4);
+	ADD_TEST(rename5);
 
 	ADD_TEST(delete0);
+	ADD_TEST(list0);
+	ADD_TEST(list1);
 END_SUITE

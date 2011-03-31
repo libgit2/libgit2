@@ -24,6 +24,7 @@
  */
 #include "test_lib.h"
 #include "fileops.h"
+#include "odb.h"
 
 static char *odb_dir = "test-objects";
 #include "t03-data.h"
@@ -80,23 +81,39 @@ static int remove_object_files(object_data *d)
 	return 0;
 }
 
+static int streaming_write(git_oid *oid, git_odb *odb, git_rawobj *raw)
+{
+	git_odb_stream *stream;
+	int error;
+
+	if ((error = git_odb_open_wstream(&stream, odb, raw->len, raw->type)) < GIT_SUCCESS)
+		return error;
+
+	stream->write(stream, raw->data, raw->len);
+
+	error = stream->finalize_write(oid, stream);
+	stream->free(stream);
+
+	return error;
+}
+
 BEGIN_TEST(write0, "write loose commit object")
     git_odb *db;
     git_oid id1, id2;
-    git_rawobj obj;
+    git_odb_object *obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id1, commit.id));
 
-    must_pass(git_odb_write(&id2, db, &commit_obj));
+    must_pass(streaming_write(&id2, db, &commit_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
     must_pass(check_object_files(&commit));
 
     must_pass(git_odb_read(&obj, db, &id1));
-    must_pass(cmp_objects(&obj, &commit_obj));
+    must_pass(cmp_objects(&obj->raw, &commit_obj));
 
-    git_rawobj_close(&obj);
+    git_odb_object_close(obj);
     git_odb_close(db);
     must_pass(remove_object_files(&commit));
 END_TEST
@@ -104,20 +121,20 @@ END_TEST
 BEGIN_TEST(write1, "write loose tree object")
     git_odb *db;
     git_oid id1, id2;
-    git_rawobj obj;
+    git_odb_object *obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id1, tree.id));
 
-    must_pass(git_odb_write(&id2, db, &tree_obj));
+    must_pass(streaming_write(&id2, db, &tree_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
     must_pass(check_object_files(&tree));
 
     must_pass(git_odb_read(&obj, db, &id1));
-    must_pass(cmp_objects(&obj, &tree_obj));
+    must_pass(cmp_objects(&obj->raw, &tree_obj));
 
-    git_rawobj_close(&obj);
+    git_odb_object_close(obj);
     git_odb_close(db);
     must_pass(remove_object_files(&tree));
 END_TEST
@@ -125,20 +142,20 @@ END_TEST
 BEGIN_TEST(write2, "write loose tag object")
     git_odb *db;
     git_oid id1, id2;
-    git_rawobj obj;
+    git_odb_object *obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id1, tag.id));
 
-    must_pass(git_odb_write(&id2, db, &tag_obj));
+    must_pass(streaming_write(&id2, db, &tag_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
     must_pass(check_object_files(&tag));
 
     must_pass(git_odb_read(&obj, db, &id1));
-    must_pass(cmp_objects(&obj, &tag_obj));
+    must_pass(cmp_objects(&obj->raw, &tag_obj));
 
-    git_rawobj_close(&obj);
+    git_odb_object_close(obj);
     git_odb_close(db);
     must_pass(remove_object_files(&tag));
 END_TEST
@@ -146,20 +163,20 @@ END_TEST
 BEGIN_TEST(write3, "write zero-length object")
     git_odb *db;
     git_oid id1, id2;
-    git_rawobj obj;
+    git_odb_object *obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id1, zero.id));
 
-    must_pass(git_odb_write(&id2, db, &zero_obj));
+    must_pass(streaming_write(&id2, db, &zero_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
     must_pass(check_object_files(&zero));
 
     must_pass(git_odb_read(&obj, db, &id1));
-    must_pass(cmp_objects(&obj, &zero_obj));
+    must_pass(cmp_objects(&obj->raw, &zero_obj));
 
-    git_rawobj_close(&obj);
+    git_odb_object_close(obj);
     git_odb_close(db);
     must_pass(remove_object_files(&zero));
 END_TEST
@@ -167,20 +184,20 @@ END_TEST
 BEGIN_TEST(write4, "write one-byte long object")
     git_odb *db;
     git_oid id1, id2;
-    git_rawobj obj;
+    git_odb_object *obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id1, one.id));
 
-    must_pass(git_odb_write(&id2, db, &one_obj));
+    must_pass(streaming_write(&id2, db, &one_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
     must_pass(check_object_files(&one));
 
     must_pass(git_odb_read(&obj, db, &id1));
-    must_pass(cmp_objects(&obj, &one_obj));
+    must_pass(cmp_objects(&obj->raw, &one_obj));
 
-    git_rawobj_close(&obj);
+    git_odb_object_close(obj);
     git_odb_close(db);
     must_pass(remove_object_files(&one));
 END_TEST
@@ -188,20 +205,20 @@ END_TEST
 BEGIN_TEST(write5, "write two-byte long object")
     git_odb *db;
     git_oid id1, id2;
-    git_rawobj obj;
+    git_odb_object *obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id1, two.id));
 
-    must_pass(git_odb_write(&id2, db, &two_obj));
+    must_pass(streaming_write(&id2, db, &two_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
     must_pass(check_object_files(&two));
 
     must_pass(git_odb_read(&obj, db, &id1));
-    must_pass(cmp_objects(&obj, &two_obj));
+    must_pass(cmp_objects(&obj->raw, &two_obj));
 
-    git_rawobj_close(&obj);
+    git_odb_object_close(obj);
     git_odb_close(db);
     must_pass(remove_object_files(&two));
 END_TEST
@@ -209,20 +226,20 @@ END_TEST
 BEGIN_TEST(write6, "write an object which is several bytes long")
     git_odb *db;
     git_oid id1, id2;
-    git_rawobj obj;
+    git_odb_object *obj;
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
     must_pass(git_oid_mkstr(&id1, some.id));
 
-    must_pass(git_odb_write(&id2, db, &some_obj));
+    must_pass(streaming_write(&id2, db, &some_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
     must_pass(check_object_files(&some));
 
     must_pass(git_odb_read(&obj, db, &id1));
-    must_pass(cmp_objects(&obj, &some_obj));
+    must_pass(cmp_objects(&obj->raw, &some_obj));
 
-    git_rawobj_close(&obj);
+    git_odb_object_close(obj);
     git_odb_close(db);
     must_pass(remove_object_files(&some));
 END_TEST

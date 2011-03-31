@@ -28,7 +28,6 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "odb.h"
 
 /**
  * @file git2/backend.h
@@ -39,24 +38,39 @@
  */
 GIT_BEGIN_DECL
 
+struct git_odb_stream;
+
 /** An instance for a custom backend */
 struct git_odb_backend {
 	git_odb *odb;
 
 	int (* read)(
-			git_rawobj *,
+			void **, size_t *, git_otype *,
 			struct git_odb_backend *,
 			const git_oid *);
 
 	int (* read_header)(
-			git_rawobj *,
+			size_t *, git_otype *,
 			struct git_odb_backend *,
 			const git_oid *);
 
 	int (* write)(
-			git_oid *id,
+			git_oid *,
 			struct git_odb_backend *,
-			git_rawobj *obj);
+			const void *,
+			size_t,
+			git_otype);
+
+	int (* writestream)(
+			struct git_odb_stream **,
+			struct git_odb_backend *,
+			size_t,
+			git_otype);
+
+	int (* readstream)(
+			struct git_odb_stream **,
+			struct git_odb_backend *,
+			const git_oid *);
 
 	int (* exists)(
 			struct git_odb_backend *,
@@ -65,12 +79,28 @@ struct git_odb_backend {
 	void (* free)(struct git_odb_backend *);
 };
 
+/** A stream to read/write from a backend */
+struct git_odb_stream {
+	struct git_odb_backend *backend;
+	int mode;
+
+	int (*read)(struct git_odb_stream *stream, char *buffer, size_t len);
+	int (*write)(struct git_odb_stream *stream, const char *buffer, size_t len);
+	int (*finalize_write)(git_oid *oid_p, struct git_odb_stream *stream);
+	void (*free)(struct git_odb_stream *stream);
+};
+
+/** Streaming mode */
+typedef enum {
+	GIT_STREAM_RDONLY = (1 << 1),
+	GIT_STREAM_WRONLY = (1 << 2),
+	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
+} git_odb_streammode;
+
+
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
 GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir);
-
-#ifdef GIT2_SQLITE_BACKEND
 GIT_EXTERN(int) git_odb_backend_sqlite(git_odb_backend **backend_out, const char *sqlite_db);
-#endif
 
 GIT_END_DECL
 

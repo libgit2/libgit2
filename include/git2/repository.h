@@ -154,12 +154,16 @@ GIT_EXTERN(int) git_repository_index(git_index **index, git_repository *repo);
 
 /**
  * Free a previously allocated repository
+ *
+ * Note that after a repository is free'd, all the objects it has spawned
+ * will still exist until they are manually closed by the user
+ * with `git_object_close`, but accessing any of the attributes of
+ * an object without a backing repository will result in undefined
+ * behavior
+ *
  * @param repo repository handle to close. If NULL nothing occurs.
  */
 GIT_EXTERN(void) git_repository_free(git_repository *repo);
-
-
-GIT_EXTERN(void) git_repository_free__no_gc(git_repository *repo);
 
 /**
  * Creates a new Git repository in the given folder.

@@ -143,14 +143,18 @@ int git__parse_oid(git_oid *oid, char **buffer_out,
 	return GIT_SUCCESS;
 }
 
-int git__write_oid(git_odb_source *src, const char *header, const git_oid *oid)
+int git__write_oid(git_odb_stream *stream, const char *header, const git_oid *oid)
 {
-	char hex_oid[41];
+	char hex_oid[42];
 
-	git_oid_fmt(hex_oid, oid);
-	hex_oid[40] = 0;
+	git_oid_fmt(hex_oid + 1, oid);
 
-	return git__source_printf(src, "%s %s\n", header, hex_oid);
+	hex_oid[0] = ' ';
+	hex_oid[41] = '\n';
+
+	stream->write(stream, header, strlen(header));
+	stream->write(stream, hex_oid, 42);
+	return GIT_SUCCESS;
 }
 
 void git_oid_mkraw(git_oid *out, const unsigned char *raw)

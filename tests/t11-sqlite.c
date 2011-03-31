@@ -23,25 +23,30 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "test_lib.h"
-#include "t03-data.h"
+#include "odb.h"
 
+#ifdef GIT2_SQLITE_BACKEND
+#include "t03-data.h"
 #include "fileops.h"
 #include "git2/odb_backend.h"
 
-static int cmp_objects(git_rawobj *o1, git_rawobj *o2)
+
+static int cmp_objects(git_odb_object *odb_obj, git_rawobj *raw)
 {
-	if (o1->type != o2->type)
+	if (raw->type != git_odb_object_type(odb_obj))
 		return -1;
-	if (o1->len != o2->len)
+
+	if (raw->len != git_odb_object_size(odb_obj))
 		return -1;
-	if ((o1->len > 0) && (memcmp(o1->data, o2->data, o1->len) != 0))
+
+	if ((raw->len > 0) && (memcmp(raw->data, git_odb_object_data(odb_obj), raw->len) != 0))
 		return -1;
+
 	return 0;
 }
 
 static git_odb *open_sqlite_odb(void)
 {
-#ifdef GIT2_SQLITE_BACKEND
 	git_odb *odb;
 	git_odb_backend *sqlite;
 
@@ -55,23 +60,20 @@ static git_odb *open_sqlite_odb(void)
 		return NULL;
 
 	return odb;
-#else
-	return NULL;
-#endif
 }
 
 #define TEST_WRITE(PTR) {\
     git_odb *db; \
 	git_oid id1, id2; \
-    git_rawobj obj; \
+    git_odb_object *obj; \
 	db = open_sqlite_odb(); \
 	must_be_true(db != NULL); \
     must_pass(git_oid_mkstr(&id1, PTR.id)); \
-    must_pass(git_odb_write(&id2, db, &PTR##_obj)); \
+    must_pass(git_odb_write(&id2, db, PTR##_obj.data, PTR##_obj.len, PTR##_obj.type)); \
     must_be_true(git_oid_cmp(&id1, &id2) == 0); \
     must_pass(git_odb_read(&obj, db, &id1)); \
-    must_pass(cmp_objects(&obj, &PTR##_obj)); \
-    git_rawobj_close(&obj); \
+    must_pass(cmp_objects(obj, &PTR##_obj)); \
+    git_odb_object_close(obj); \
     git_odb_close(db); \
 }
 
@@ -105,7 +107,6 @@ END_TEST
 
 
 BEGIN_SUITE(sqlite)
-#ifdef GIT2_SQLITE_BACKEND
 	ADD_TEST(sqlite0);
 	ADD_TEST(sqlite1);
 	ADD_TEST(sqlite2);
@@ -113,5 +114,13 @@ BEGIN_SUITE(sqlite)
 	ADD_TEST(sqlite4);
 	ADD_TEST(sqlite5);
 	ADD_TEST(sqlite6);
-#endif
 END_SUITE
+
+#else /* no sqlite builtin */
+BEGIN_SUITE(sqlite)
+	/* empty */
+END_SUITE
+#endif
+
+
+

@@ -28,6 +28,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "odb_backend.h"
 
 /**
  * @file git2/odb.h
@@ -100,61 +101,49 @@ GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, in
 
 /**
  * Close an open object database.
+ *
  * @param db database pointer to close.  If NULL no action is taken.
  */
 GIT_EXTERN(void) git_odb_close(git_odb *db);
 
-/** An object read from the database. */
-typedef struct {
-	void *data;          /**< Raw, decompressed object data. */
-	size_t len;          /**< Total number of bytes in data. */
-	git_otype type;      /**< Type of this object. */
-} git_rawobj;
-
 /**
  * Read an object from the database.
  *
- * If GIT_ENOTFOUND then out->data is set to NULL.
+ * This method queries all avaiable ODB backends
+ * trying to read the given OID.
  *
- * @param out object descriptor to populate upon reading.
+ * The returned object is reference counted and
+ * internally cached, so it should be closed
+ * by the user once it's no longer in use.
+ *
+ * @param out pointer where to store the read object
  * @param db database to search for the object in.
  * @param id identity of the object to read.
  * @return
  * - GIT_SUCCESS if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb_read(git_rawobj *out, git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id);
 
 /**
  * Read the header of an object from the database, without
  * reading its full contents.
  *
- * Only the 'type' and 'len' fields of the git_rawobj structure
- * are filled. The 'data' pointer will always be NULL.
+ * The header includes the length and the type of an object.
  *
- * The raw object pointed by 'out' doesn't need to be manually
- * closed with git_rawobj_close().
+ * Note that most backends do not support reading only the header
+ * of an object, so the whole object will be read and then the
+ * header will be returned.
  *
- * @param out object descriptor to populate upon reading.
+ * @param len_p pointer where to store the length
+ * @param type_p pointer where to store the type
  * @param db database to search for the object in.
  * @param id identity of the object to read.
  * @return
  * - GIT_SUCCESS if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
-GIT_EXTERN(int) git_odb_read_header(git_rawobj *out, git_odb *db, const git_oid *id);
-
-/**
- * Write an object to the database.
- *
- * @param id identity of the object written.
- * @param db database to which the object should be written.
- * @param obj object descriptor for the object to write.
- * @return
- * - GIT_SUCCESS if the object was written;
- * - GIT_ERROR otherwise.
- */
-GIT_EXTERN(int) git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj);
+GIT_EXTERN(int) git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id);
 
 /**
  * Determine if the given object can be found in the object database.
@@ -162,39 +151,151 @@ GIT_EXTERN(int) git_odb_write(git_oid *id, git_odb *db, git_rawobj *obj);
  * @param db database to be searched for the given object.
  * @param id the object to search for.
  * @return
- * - true, if the object was found
- * - false, otherwise
+ * - 1, if the object was found
+ * - 0, otherwise
  */
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
-
-
-
+/**
+ * Write an object directly into the ODB
+ *
+ * This method writes a full object straight into the ODB.
+ * For most cases, it is preferred to write objects through a write
+ * stream, which is both faster and less memory intensive, specially
+ * for big objects.
+ *
+ * This method is provided for compatibility with custom backends
+ * which are not able to support streaming writes
+ *
+ * @param oid pointer to store the OID result of the write
+ * @param odb object database where to store the object
+ * @param data buffer with the data to storr
+ * @param len size of the buffer
+ * @param type type of the data to store
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_write(git_oid *oid, git_odb *odb, const void *data, size_t len, git_otype type);
 
 /**
- * Determine the object-ID (sha1 hash) of the given git_rawobj.
+ * Open a stream to write an object into the ODB
  *
- * The input obj must be a valid loose object type and the data
- * pointer must not be NULL, unless the len field is also zero.
+ * The type and final length of the object must be specified
+ * when opening the stream.
+ *
+ * The returned stream will be of type `GIT_STREAM_WRONLY` and
+ * will have the following methods:
+ *	
+ *		- stream->write: write `n` bytes into the stream
+ *		- stream->finalize_write: close the stream and store the object in
+ *			the odb
+ *		- stream->free: free the stream
+ * 
+ * The streaming write won't be effective until `stream->finalize_write`
+ * is called and returns without an error
+ *
+ * The stream must always be free'd or will leak memory.
+ *
+ * @see git_odb_stream
+ *
+ * @param stream pointer where to store the stream
+ * @param db object database where the stream will write
+ * @param size final size of the object that will be written
+ * @param type type of the object that will be written
+ * @return 0 if the stream was created; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_otype type);
+
+/**
+ * Open a stream to read an object from the ODB
+ *
+ * Note that most backends do *not* support streaming reads
+ * because they store their objects as compressed/delta'ed blobs.
+ *
+ * It's recommended to use `git_odb_read` instead, which is
+ * assured to work on all backends.
+ *
+ * The returned stream will be of type `GIT_STREAM_RDONLY` and
+ * will have the following methods:
+ *	
+ *		- stream->read: read `n` bytes from the stream
+ *		- stream->free: free the stream
+ *
+ * The stream must always be free'd or will leak memory.
+ *
+ * @see git_odb_stream
+ *
+ * @param stream pointer where to store the stream
+ * @param db object database where the stream will read from
+ * @param oid oid of the object the stream will read from
+ * @return 0 if the stream was created; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid);
+
+/**
+ * Determine the object-ID (sha1 hash) of a data buffer
+ *
+ * The resulting SHA-1 OID will the itentifier for the data
+ * buffer as if the data buffer it were to written to the ODB.
  *
  * @param id the resulting object-ID.
- * @param obj the object whose hash is to be determined.
- * @return
- * - GIT_SUCCESS if the object-ID was correctly determined.
- * - GIT_ERROR if the given object is malformed.
+ * @param data data to hash
+ * @param len size of the data
+ * @param type of the data to hash
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_rawobj_hash(git_oid *id, git_rawobj *obj);
+GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type);
 
 /**
- * Release all memory used by the obj structure.
+ * Close an ODB object
  *
- * As a result of this call, obj->data will be set to NULL.
+ * This method must always be called once a `git_odb_object` is no
+ * longer needed, otherwise memory will leak.
  *
- * If obj->data is already NULL, nothing happens.
- *
- * @param obj object descriptor to free.
+ * @param object object to close
  */
-GIT_EXTERN(void) git_rawobj_close(git_rawobj *obj);
+GIT_EXTERN(void) git_odb_object_close(git_odb_object *object);
+
+/**
+ * Return the OID of an ODB object
+ *
+ * This is the OID from which the object was read from
+ *
+ * @param object the object
+ * @return a pointer to the OID
+ */
+GIT_EXTERN(const git_oid *) git_odb_object_id(git_odb_object *object);
+
+/**
+ * Return the data of an ODB object
+ *
+ * This is the uncompressed, raw data as read from the ODB,
+ * without the leading header.
+ *
+ * This pointer is owned by the object and shall not be free'd.
+ *
+ * @param object the object
+ * @return a pointer to the data
+ */
+GIT_EXTERN(const void *) git_odb_object_data(git_odb_object *object);
+
+/**
+ * Return the size of an ODB object
+ *
+ * This is the real size of the `data` buffer, not the
+ * actual size of the object.
+ *
+ * @param object the object
+ * @return the size
+ */
+GIT_EXTERN(size_t) git_odb_object_size(git_odb_object *object);
+
+/**
+ * Return the type of an ODB object
+ *
+ * @param object the object
+ * @return the type
+ */
+GIT_EXTERN(git_otype) git_odb_object_type(git_odb_object *object);
 
 /** @} */
 GIT_END_DECL
