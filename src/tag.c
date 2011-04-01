@@ -31,6 +31,8 @@
 #include "git2/repository.h"
 #include "git2/signature.h"
 
+#include <dir.h>
+
 void git_tag__free(git_tag *tag)
 {
 	git_signature_free(tag->tagger);
@@ -238,5 +240,31 @@ int git_tag__parse(git_tag *tag, git_odb_object *obj)
 {
 	assert(tag);
 	return parse_tag_buffer(tag, obj->raw.data, (char *)obj->raw.data + obj->raw.len);
+}
+
+
+const char* git_get_tag_list(git_repository *repo)
+{
+    int i = 0;
+    DIR *dir;
+    char* result;
+    
+    char *path = (char*)malloc(sizeof(256));
+    strcpy(path, repo->path_repository);
+    char* tag_path = strcat(path, "refs/tags/");
+    
+    struct dirent *ent;
+    dir = opendir (tag_path);
+        
+    while ((ent = readdir (dir)) != NULL) {
+        i++;
+        if (i >= 3)
+        {
+            result = strcat(result, ent->d_name);
+            result = strcat(result, "\n");
+        }
+    }
+    
+    return result; 
 }
 

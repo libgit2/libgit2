@@ -130,6 +130,13 @@ GIT_EXTERN(const git_signature *) git_tag_tagger(git_tag *t);
  */
 GIT_EXTERN(const char *) git_tag_message(git_tag *t);
 
+/**
+ * Get the list of repository tag
+ *
+ * @param repository
+ * @return list of repository tag
+ */
+GIT_EXTERN(const char*) git_get_tag_list(git_repository *repo);
 
 /**
  * Create a new tag in the repository from an OID
