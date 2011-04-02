@@ -142,7 +142,7 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	tag->tagger = git__malloc(sizeof(git_signature));
 
 	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0)
-		return error;
+		goto cleanup;
 
 	text_len = buffer_end - ++buffer;
 
@@ -151,6 +151,14 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	tag->message[text_len] = '\0';
 
 	return GIT_SUCCESS;
+
+ cleanup:
+	if(tag->tag_name)
+		free(tag->tag_name);
+	if(tag->tagger)
+		git_signature_free(tag->tagger);
+
+	return error;
 }
 
 int git_tag_create_o(
@@ -229,6 +237,43 @@ int git_tag_create(
 		git__joinpath(ref_name, GIT_REFS_TAGS_DIR, tag_name);
 		error = git_reference_create_oid(&new_ref, repo, ref_name, oid);
 	}
+
+	return error;
+}
+
+int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer)
+{
+	git_tag tag;
+	int error;
+	char *buf;
+	git_object *obj;
+
+	assert(oid && buffer);
+
+	memset(&tag, 0, sizeof(tag));
+
+	buf = strdup(buffer);
+	if(buf == NULL)
+		return GIT_ENOMEM;
+
+	if((error = parse_tag_buffer(&tag, buf, buf + strlen(buf))) < 0)
+	   goto exit_freebuf;
+
+	error = git_object_lookup(&obj, repo, &tag.target, tag.type);
+	if(error < 0)
+		goto exit_freetag;
+
+	error = git_tag_create_o(oid, repo, tag.tag_name, obj,
+							 tag.tagger, tag.message);
+
+	git_object_close(obj);
+
+ exit_freetag:
+	git_signature_free(tag.tagger);
+	free(tag.tag_name);
+	free(tag.message);
+ exit_freebuf:
+	free(buf);
 
 	return error;
 }
