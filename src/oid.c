@@ -118,13 +118,13 @@ char *git_oid_to_string(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
-int git__parse_oid(git_oid *oid, char **buffer_out,
+int git__parse_oid(git_oid *oid, const char **buffer_out,
 		const char *buffer_end, const char *header)
 {
 	const size_t sha_len = GIT_OID_HEXSZ;
 	const size_t header_len = strlen(header);
 
-	char *buffer = *buffer_out;
+	const char *buffer = *buffer_out;
 
 	if (buffer + (header_len + sha_len + 1) > buffer_end)
 		return GIT_EOBJCORRUPTED;

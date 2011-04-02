@@ -109,14 +109,14 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 }
 
 
-int git_signature__parse(git_signature *sig, char **buffer_out,
+int git_signature__parse(git_signature *sig, const char **buffer_out,
 		const char *buffer_end, const char *header)
 {
 	const size_t header_len = strlen(header);
 
 	int name_length, email_length;
-	char *buffer = *buffer_out;
-	char *line_end, *name_end, *email_end;
+	const char *buffer = *buffer_out;
+	const char *line_end, *name_end, *email_end;
 	int offset = 0;
 
 	memset(sig, 0x0, sizeof(git_signature));
@@ -159,7 +159,7 @@ int git_signature__parse(git_signature *sig, char **buffer_out,
 	if (buffer >= line_end)
 		return GIT_EOBJCORRUPTED;
 
-	sig->when.time = strtol(buffer, &buffer, 10);
+	sig->when.time = strtol(buffer, (char **)&buffer, 10);
 
 	if (sig->when.time == 0)
 		return GIT_EOBJCORRUPTED;

@@ -114,15 +114,15 @@ BEGIN_TEST(parse0, "parse the OID line in a commit")
 	git_oid oid;
 
 #define TEST_OID_PASS(string, header) { \
-	char *ptr = string;\
-	char *ptr_original = ptr;\
+	const char *ptr = string;\
+	const char *ptr_original = ptr;\
 	size_t len = strlen(ptr);\
 	must_pass(git__parse_oid(&oid, &ptr, ptr + len, header));\
 	must_be_true(ptr == ptr_original + len);\
 }
 
 #define TEST_OID_FAIL(string, header) { \
-	char *ptr = string;\
+	const char *ptr = string;\
 	size_t len = strlen(ptr);\
 	must_fail(git__parse_oid(&oid, &ptr, ptr + len, header));\
 }
@@ -154,7 +154,7 @@ END_TEST
 BEGIN_TEST(parse1, "parse the signature line in a commit")
 
 #define TEST_SIGNATURE_PASS(_string, _header, _name, _email, _time, _offset) { \
-	char *ptr = _string; \
+	const char *ptr = _string; \
 	size_t len = strlen(_string);\
 	git_signature person = {NULL, NULL, {0, 0}}; \
 	must_pass(git_signature__parse(&person, &ptr, ptr + len, _header));\
@@ -166,7 +166,7 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 }
 
 #define TEST_SIGNATURE_FAIL(_string, _header) { \
-	char *ptr = _string; \
+	const char *ptr = _string; \
 	size_t len = strlen(_string);\
 	git_signature person = {NULL, NULL, {0, 0}}; \
 	must_fail(git_signature__parse(&person, &ptr, ptr + len, _header));\

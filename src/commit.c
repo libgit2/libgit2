@@ -235,9 +235,9 @@ int git_commit_create(
 	return error;
 }
 
-int commit_parse_buffer(git_commit *commit, void *data, size_t len)
+int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 {
-	char *buffer = (char *)data;
+	const char *buffer = (char *)data;
 	const char *buffer_end = (char *)data + len;
 
 	git_oid parent_oid;

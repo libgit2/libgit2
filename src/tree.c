@@ -127,7 +127,7 @@ size_t git_tree_entrycount(git_tree *tree)
 	return tree->entries.length;
 }
 
-static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
+static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buffer_end)
 {
 	int error = GIT_SUCCESS;
 
@@ -146,7 +146,7 @@ static int tree_parse_buffer(git_tree *tree, char *buffer, char *buffer_end)
 		if (git_vector_insert(&tree->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-		entry->attr = strtol(buffer, &buffer, 8);
+		entry->attr = strtol(buffer, (char **)&buffer, 8);
 
 		if (*buffer++ != ' ') {
 			error = GIT_EOBJCORRUPTED;
