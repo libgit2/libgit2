@@ -227,9 +227,8 @@ BEGIN_TEST(create0, "create a new symbolic reference")
 	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
 
+	git_reference_delete(looked_up_ref);
 	git_repository_free(repo);
-
-	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
 BEGIN_TEST(create1, "create a deep symbolic reference")
@@ -250,9 +249,8 @@ BEGIN_TEST(create1, "create a deep symbolic reference")
 	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
 
+	git_reference_delete(looked_up_ref);
 	git_repository_free(repo);
-
-	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
 END_TEST
 
 BEGIN_TEST(create2, "create a new OID reference")
@@ -290,9 +288,28 @@ BEGIN_TEST(create2, "create a new OID reference")
 	must_pass(git_reference_lookup(&looked_up_ref, repo, new_head));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(looked_up_ref)) == 0);
 
+	git_reference_delete(looked_up_ref);
 	git_repository_free(repo);
+END_TEST
 
-	must_pass(gitfo_unlink(ref_path));	/* TODO: replace with git_reference_delete() when available */
+BEGIN_TEST(create3, "Can not create a new OID reference which targets at an unknown id")
+	git_reference *new_reference, *looked_up_ref;
+	git_repository *repo;
+	git_oid id;
+
+	const char *new_head = "refs/heads/new-head";
+
+	git_oid_mkstr(&id, "deadbeef3f795b2b4353bcce3a527ad0a4f7f644");
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	/* Create and write the new object id reference */
+	must_fail(git_reference_create_oid(&new_reference, repo, new_head, &id));
+
+	/* Ensure the reference can't be looked-up... */
+	must_fail(git_reference_lookup(&looked_up_ref, repo, new_head));
+
+	git_repository_free(repo);
 END_TEST
 
 static const char *ref_name = "refs/heads/other";
@@ -892,6 +909,7 @@ BEGIN_SUITE(refs)
 	ADD_TEST(create0);
 	ADD_TEST(create1);
 	ADD_TEST(create2);
+	ADD_TEST(create3);
 
 	ADD_TEST(overwrite0);
 	ADD_TEST(overwrite1);
