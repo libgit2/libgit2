@@ -346,7 +346,7 @@ static int repo_init_reinit(repo_init *results)
 {
 	/* TODO: reinit the repository */
 	results->has_been_reinit = 1;
-	return GIT_SUCCESS;
+	return GIT_ENOTIMPLEMENTED;
 }
 
 static int repo_init_createhead(git_repository *repo)
