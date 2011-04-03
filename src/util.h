@@ -14,6 +14,7 @@
  */
 #define git__malloc malloc
 #define git__calloc calloc
+#define git__realloc realloc
 #define git__strdup strdup
 
 extern int git__fmt(char *, size_t, const char *, ...)
