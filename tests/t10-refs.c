@@ -27,13 +27,14 @@
 
 #include "repository.h"
 
-static const char *loose_tag_ref_name = "refs/tags/test";
+static const char *loose_tag_ref_name = "refs/tags/e90810b";
 static const char *non_existing_tag_ref_name = "refs/tags/i-do-not-exist";
 
 BEGIN_TEST(readtag0, "lookup a loose tag reference")
 	git_repository *repo;
 	git_reference *reference;
 	git_object *object;
+	char ref_name_from_tag_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
@@ -45,6 +46,10 @@ BEGIN_TEST(readtag0, "lookup a loose tag reference")
 	must_pass(git_object_lookup(&object, repo, git_reference_oid(reference), GIT_OBJ_ANY));
 	must_be_true(object != NULL);
 	must_be_true(git_object_type(object) == GIT_OBJ_TAG);
+
+	/* Ensure the name of the tag matches the name of the reference */
+	git__joinpath(ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object));
+	must_be_true(strcmp(ref_name_from_tag_name, loose_tag_ref_name) == 0);
 
 	git_repository_free(repo);
 END_TEST
