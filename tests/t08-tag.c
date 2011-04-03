@@ -177,7 +177,7 @@ BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already
 	must_fail(git_tag_create(
 		&tag_id, /* out id */
 		repo,
-		"very-simple",
+		"e90810b",
 		&target_id,
 		GIT_OBJ_COMMIT,
 		tagger,
@@ -199,7 +199,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 
 	git_oid_mkstr(&target_id, tagged_commit);
 
-	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/very-simple"));
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));
 
 	/* create signature */
@@ -209,7 +209,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 	must_pass(git_tag_create_f(
 		&tag_id, /* out id */
 		repo,
-		"very-simple",
+		"e90810b",
 		&target_id,
 		GIT_OBJ_COMMIT,
 		tagger,
@@ -217,7 +217,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 
 	git_signature_free((git_signature *)tagger);
 
-	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/very-simple"));
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
 	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &old_tag_id) != 0);
 
@@ -231,9 +231,9 @@ BEGIN_TEST(write4, "Delete an already existing tag")
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
-	must_pass(git_tag_delete(repo,"very-simple"));
+	must_pass(git_tag_delete(repo,"e90810b"));
 
-	must_fail(git_reference_lookup(&ref_tag, repo, "refs/tags/very-simple"));
+	must_fail(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 
 	close_temp_repo(repo);
 
