@@ -138,6 +138,18 @@ GIT_EXTERN(const git_oid *) git_tree_entry_id(git_tree_entry *entry);
  */
 GIT_EXTERN(int) git_tree_entry_2object(git_object **object_out, git_repository *repo, git_tree_entry *entry);
 
+/**
+ * Create tree by scanning the index file.
+ *
+ * @param object identity for the tree
+ * @param repository where to lookup for object db
+ * @param base directory path
+ * @param path length for base
+ * @param index entry offset to start scan
+ * @return number of items added to the tree
+ */
+GIT_EXTERN(int) git_tree_create(git_oid *oid, git_repository *repo, const char *base, int baselen, int entry_no);
+
 /** @} */
 GIT_END_DECL
 #endif
