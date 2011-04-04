@@ -34,7 +34,7 @@
  * Forward declarations
  ***********************/
 static int config_parse(git_config *cfg_file);
-static int parse_variable(const char *line, char **var_name, char **var_value);
+static int parse_variable(git_config *cfg, char **var_name, char **var_value);
 void git_config_free(git_config *cfg);
 
 static git_cvar *cvar_free(git_cvar *var)
@@ -492,6 +492,30 @@ static int cfg_getchar(git_config *cfg_file, int flags)
 	return c;
 }
 
+/*
+ * Read the next char, but don't move the reading pointer.
+ */
+static int cfg_peek(git_config *cfg, int flags)
+{
+	void *old_read_ptr;
+	int old_lineno, old_eof;
+	int ret;
+
+	assert(cfg->reader.read_ptr);
+
+	old_read_ptr = cfg->reader.read_ptr;
+	old_lineno = cfg->reader.line_number;
+	old_eof = cfg->reader.eof;
+
+	ret = cfg_getchar(cfg, flags);
+
+	cfg->reader.read_ptr = old_read_ptr;
+	cfg->reader.line_number = old_lineno;
+	cfg->reader.eof = old_eof;
+
+	return ret;
+}
+
 static const char *LINEBREAK_UNIX = "\\\n";
 static const char *LINEBREAK_WIN32 = "\\\r\n";
 
@@ -502,7 +526,7 @@ static int is_linebreak(const char *pos)
 }
 
 /*
- * Read a line, but don't consume it
+ * Read and consume a line, returning it in newly-allocated memory.
  */
 static char *cfg_readline(git_config *cfg)
 {
@@ -554,10 +578,8 @@ static char *cfg_readline(git_config *cfg)
 	if (*line_end == '\0')
 		cfg->reader.eof = 1;
 
-	/*
 	cfg->reader.line_number++;
 	cfg->reader.read_ptr = line_end;
-	*/
 
 	return line;
 }
@@ -624,11 +646,11 @@ static char *build_varname(const char *section, const char *name)
 	return varname;
 }
 
-static int parse_section_header_ext(git_config *cfg, const char *base_name, const char *line, char **section_name)
+static int parse_section_header_ext(const char *line, const char *base_name, char **section_name)
 {
-	int buf_len, total_len, pos;
+	int buf_len, total_len, pos, rpos;
 	int c;
-	char *subsection;
+	char *subsection, *first_quote, *last_quote;
 	int error = GIT_SUCCESS;
 	int quote_marks;
 	/*
@@ -637,17 +659,24 @@ static int parse_section_header_ext(git_config *cfg, const char *base_name, cons
 	 * sync so we only really use it to calculate the length.
 	 */
 
-	buf_len = strrchr(line, '"') - strchr(line, '"') + 2;
-	if(!buf_len)
+	first_quote = strchr(line, '"');
+	last_quote = strrchr(line, '"');
+
+	if (last_quote - first_quote == 0)
 		return GIT_EOBJCORRUPTED;
+
+	buf_len = last_quote - first_quote + 2;
 
 	subsection = git__malloc(buf_len + 2);
 	if(subsection == NULL)
 		return GIT_ENOMEM;
 
 	pos = 0;
-	c = cfg_getchar(cfg, 0);
+	rpos = 0;
 	quote_marks = 0;
+
+	line = first_quote;
+	c = line[rpos++];
 
 	/*
 	 * At the end of each iteration, whatever is stored in c will be
@@ -660,7 +689,7 @@ static int parse_section_header_ext(git_config *cfg, const char *base_name, cons
 				return GIT_EOBJCORRUPTED;
 			break;
 		case '\\':
-			c = cfg_getchar(cfg, 0);
+			c = line[rpos++];
 			switch (c) {
 			case '"':
 			case '\\':
@@ -674,14 +703,9 @@ static int parse_section_header_ext(git_config *cfg, const char *base_name, cons
 		}
 
 		subsection[pos++] = c;
-	} while ((c = cfg_getchar(cfg, 0)) != ']');
+	} while ((c = line[rpos++]) != ']');
 
 	subsection[pos] = '\0';
-
-	if (cfg_getchar(cfg, 0) != '\n'){
-		error = GIT_EOBJCORRUPTED;
-		goto out;
-	}
 
 	total_len = strlen(base_name) + strlen(subsection) + 2;
 	*section_name = git__malloc(total_len);
@@ -699,11 +723,16 @@ static int parse_section_header_ext(git_config *cfg, const char *base_name, cons
 	return error;
 }
 
-static int parse_section_header(git_config *cfg, char **section_out, const char *line)
+static int parse_section_header(git_config *cfg, char **section_out)
 {
 	char *name, *name_end;
-	int name_length, c;
+	int name_length, c, pos;
 	int error = GIT_SUCCESS;
+	char *line;
+
+	line = cfg_readline(cfg);
+	if (line == NULL)
+		return GIT_ENOMEM;
 
 	/* find the end of the variable's name */
 	name_end = strchr(line, ']');
@@ -715,15 +744,16 @@ static int parse_section_header(git_config *cfg, char **section_out, const char 
 		return GIT_EOBJCORRUPTED;
 
 	name_length = 0;
+	pos = 0;
 
 	/* Make sure we were given a section header */
-	c = cfg_getchar(cfg, SKIP_WHITESPACE | SKIP_COMMENTS);
+	c = line[pos++];
 	if(c != '['){
 		error = GIT_EOBJCORRUPTED;
 		goto error;
 	}
 
-	c = cfg_getchar(cfg, SKIP_WHITESPACE | SKIP_COMMENTS);
+	c = line[pos++];
 
 	do {
 		if (cfg->reader.eof){
@@ -733,7 +763,8 @@ static int parse_section_header(git_config *cfg, char **section_out, const char 
 
 		if (isspace(c)){
 			name[name_length] = '\0';
-			error = parse_section_header_ext(cfg, name, line, section_out);
+			error = parse_section_header_ext(line, name, section_out);
+			free(line);
 			free(name);
 			return error;
 		}
@@ -745,23 +776,16 @@ static int parse_section_header(git_config *cfg, char **section_out, const char 
 
 		name[name_length++] = tolower(c);
 
-	} while ((c = cfg_getchar(cfg, SKIP_COMMENTS)) != ']');
-
-	/*
-	 * Here, we enforce that a section name needs to be on its own
-	 * line
-	 */
-	if(cfg_getchar(cfg, SKIP_COMMENTS) != '\n'){
-		error = GIT_EOBJCORRUPTED;
-		goto error;
-	}
+	} while ((c = line[pos++]) != ']');
 
 	name[name_length] = 0;
+	free(line);
 	strtolower(name);
 	*section_out = name;
 	return GIT_SUCCESS;
 
 error:
+	free(line);
 	free(name);
 	return error;
 }
@@ -841,7 +865,7 @@ static void strip_comments(char *line)
 
 static int config_parse(git_config *cfg_file)
 {
-	int error = GIT_SUCCESS;
+	int error = GIT_SUCCESS, c;
 	char *current_section = NULL;
 	char *var_name;
 	char *var_value;
@@ -855,26 +879,24 @@ static int config_parse(git_config *cfg_file)
 
 	while (error == GIT_SUCCESS && !cfg_file->reader.eof) {
 
-		char *line = cfg_readline(cfg_file);
+		c = cfg_peek(cfg_file, SKIP_WHITESPACE);
 
-		/* not enough memory to allocate line */
-		if (line == NULL)
-			return GIT_ENOMEM;
-
-		strip_comments(line);
-
-		switch (line[0]) {
-		case '\0': /* empty line (only whitespace) */
+		switch (c) {
+		case '\0': /* We've arrived at the end of the file */
 			break;
 
 		case '[': /* section header, new section begins */
 			free(current_section);
-			error = parse_section_header(cfg_file, &current_section, line);
+			error = parse_section_header(cfg_file, &current_section);
+			break;
+
+		case ';':
+		case '#':
+			cfg_consume_line(cfg_file);
 			break;
 
 		default: /* assume variable declaration */
-			error = parse_variable(line, &var_name, &var_value);
-			cfg_consume_line(cfg_file);
+			error = parse_variable(cfg_file, &var_name, &var_value);
 
 			if (error < GIT_SUCCESS)
 				break;
@@ -894,8 +916,6 @@ static int config_parse(git_config *cfg_file)
 
 			break;
 		}
-
-		free(line);
 	}
 
 	if(current_section)
@@ -904,12 +924,19 @@ static int config_parse(git_config *cfg_file)
 	return error;
 }
 
-static int parse_variable(const char *line, char **var_name, char **var_value)
+static int parse_variable(git_config *cfg, char **var_name, char **var_value)
 {
 	char *tmp;
 
 	const char *var_end = NULL;
 	const char *value_start = NULL;
+	char *line;
+
+	line = cfg_readline(cfg);
+	if (line == NULL)
+		return GIT_ENOMEM;
+
+	strip_comments(line);
 
 	var_end = strchr(line, '=');
 
@@ -948,8 +975,11 @@ static int parse_variable(const char *line, char **var_name, char **var_value)
 		*var_value = tmp;
 	}
 
+	free(line);
+
 	return GIT_SUCCESS;
 
 error:
+	free(line);
 	return GIT_EOBJCORRUPTED;
 }
