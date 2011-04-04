@@ -270,8 +270,8 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 	 */
 	existing = cvar_list_find(cfg->vars, name);
 	if (existing != NULL) {
-		char *tmp = git__strdup(value);
-		if (tmp == NULL)
+		char *tmp = value ? git__strdup(value) : NULL;
+		if (tmp == NULL && value != NULL)
 			return GIT_ENOMEM;
 
 		free(existing->value);
@@ -297,8 +297,8 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 		goto out;
 	}
 
-	var->value = git__strdup(value);
-	if(var->value == NULL){
+	var->value = value ? git__strdup(value) : NULL;
+	if(var->value == NULL && value != NULL){
 		error = GIT_ENOMEM;
 		cvar_free(var);
 		goto out;
@@ -1060,6 +1060,9 @@ static int parse_variable(git_config *cfg, char **var_name, char **var_value)
 		}
 
 		*var_value = tmp;
+	} else {
+		/* If thre is no value, boolean true is assumed */
+		*var_value = NULL;
 	}
 
  out:
