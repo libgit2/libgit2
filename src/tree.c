@@ -137,7 +137,7 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
 
-		entry = git__malloc(sizeof(git_tree_entry));
+		entry = git__calloc(1, sizeof(git_tree_entry));
 		if (entry == NULL) {
 			error = GIT_ENOMEM;
 			break;
@@ -178,90 +178,98 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj)
 	return tree_parse_buffer(tree, (char *)obj->raw.data, (char *)obj->raw.data + obj->raw.len);
 }
 
-int git_tree_create(git_oid *oid, git_repository *repo, const char *base, int baselen, int entry_no)
+static int write_entry(char *buffer, int mode, const char *path, size_t path_len, const git_oid *oid)
 {
-	unsigned long size, offset;
+	int written;
+	written = sprintf(buffer, "%o %.*s%c", mode, (int)path_len, path, 0);
+	memcpy(buffer + written, &oid->id, GIT_OID_RAWSZ);
+	return written + GIT_OID_RAWSZ;
+}
+
+static int write_index(git_oid *oid, git_index *index, const char *base, int baselen, int entry_no, int maxentries)
+{
+	size_t size, offset;
 	char *buffer;
-	int nr, maxentries;
-	git_index *index;
-	git_odb_stream *stream;
-	int error;	
-	
-	git_index_open_inrepo(&index,repo);
-	maxentries = git_index_entrycount (index);
-	
-	/* FIXME: A matching error code could not be found. Hence used a close error code GIT_EBAREINDEX */
-	if (maxentries <= 0) {
-		return GIT_EBAREINDEX;
-	}
-	
+	int nr, error;
+
 	/* Guess at some random initial size */
-	size = 8192;
+	size = maxentries * 40;
 	buffer = git__malloc(size);
 	if (buffer == NULL)
 		return GIT_ENOMEM;
 		
 	offset = 0;
-	nr = entry_no;
 	
-	do {
+	for (nr = entry_no; nr < maxentries; ++nr) {
 		git_index_entry *entry = git_index_get(index, nr);
+
 		const char *pathname = entry->path, *filename, *dirname;
 		int pathlen = strlen(pathname), entrylen;
-		git_oid *entry_oid;
-		unsigned int mode;
-		unsigned char *sha1;
+
+		unsigned int write_mode;
+		git_oid subtree_oid;
+		git_oid *write_oid;
 		
 		/* Did we hit the end of the directory? Return how many we wrote */
-		if (baselen >= pathlen || memcmp(base, pathname, baselen))
+		if (baselen >= pathlen || memcmp(base, pathname, baselen) != 0)
 			break;
-		
-		entry_oid = &entry->oid;
-		mode = entry->mode;
-		sha1 = entry_oid->id;
 		
 		/* Do we have _further_ subdirectories? */
 		filename = pathname + baselen;
 		dirname = strchr(filename, '/');
+
+		write_oid = &entry->oid;
+		write_mode = entry->mode;
+
 		if (dirname) {
 			int subdir_written;
-			subdir_written = git_tree_create(oid, repo, pathname, dirname-pathname+1, nr);
+
+#if 0
+			if (entry->mode != S_IFDIR) {
+				free(buffer);
+				return GIT_EOBJCORRUPTED;
+			}
+#endif
+			subdir_written = write_index(&subtree_oid, index, pathname, dirname - pathname + 1, nr, maxentries);
+
+			if (subdir_written < GIT_SUCCESS) {
+				free(buffer);
+				return subdir_written;
+			}
 			
-			if (subdir_written == GIT_ENOMEM) 
-				return GIT_ENOMEM;
-			
-			nr += subdir_written;
+			nr = subdir_written - 1;
 			
 			/* Now we need to write out the directory entry into this tree.. */
-			mode = S_IFDIR;
 			pathlen = dirname - pathname;
-			
-			/* ..but the directory entry doesn't count towards the total count */
-			nr--;
-			sha1 = oid->id;
+			write_oid = &subtree_oid;
+			write_mode = S_IFDIR;
 		}
-		
+
 		entrylen = pathlen - baselen;
-		if (offset + entrylen + 100 > size) {
-			size = alloc_nr(offset + entrylen + 100); 
+		if (offset + entrylen + 32 > size) {
+			size = alloc_nr(offset + entrylen + 32);
 			buffer = git__realloc(buffer, size);
 			
 			if (buffer == NULL)
 				return GIT_ENOMEM;
 		}
-		offset += sprintf(buffer + offset, "%o %.*s", mode, entrylen, filename);
-		buffer[offset++] = 0;
-		memcpy(buffer + offset, sha1, GIT_OID_RAWSZ);
-		offset += GIT_OID_RAWSZ;
-		nr++;
-	} while (nr < maxentries);
-	
-	if ((error = git_odb_open_wstream(&stream, repo->db, offset, GIT_OBJ_TREE)) < GIT_SUCCESS)
-		return error;
-	
-	stream->write(stream, buffer, offset);
-	error = stream->finalize_write(oid, stream);
-	stream->free(stream);
 
-	return nr;
+		offset += write_entry(buffer + offset, write_mode, filename, entrylen, write_oid);
+	}
+	
+	error = git_odb_write(oid, index->repository->db, buffer, offset, GIT_OBJ_TREE);
+	free(buffer);
+
+	return (error == GIT_SUCCESS) ? nr : error;
+}
+
+int git_tree_create_fromindex(git_oid *oid, git_index *index)
+{
+	int error;
+
+	if (index->repository == NULL)
+		return GIT_EBAREINDEX;
+
+	error = write_index(oid, index, "", 0, 0, git_index_entrycount(index));
+	return (error < GIT_SUCCESS) ? error : GIT_SUCCESS;
 }
