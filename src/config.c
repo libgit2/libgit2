@@ -537,12 +537,13 @@ static char *cfg_readline(git_config *cfg)
 	line_src = cfg->reader.read_ptr;
     line_end = strchr(line_src, '\n');
 
-	while (is_linebreak(line_end))
-		line_end = strchr(line_end + 1, '\n');
-
     /* no newline at EOF */
 	if (line_end == NULL)
 		line_end = strchr(line_src, 0);
+	else
+		while (is_linebreak(line_end))
+			line_end = strchr(line_end + 1, '\n');
+
 
 	while (line_src < line_end && isspace(*line_src))
 		line_src++;
