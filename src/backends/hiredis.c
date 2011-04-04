@@ -195,7 +195,7 @@ cleanup:
 
 #else
 
-int g2it_odb_backend_hiredis(git_odb_backend ** GIT_UNUSED(backend_out),
+int git_odb_backend_hiredis(git_odb_backend ** GIT_UNUSED(backend_out),
         const char *GIT_UNUSED(host), int GIT_UNUSED(port)) {
     GIT_UNUSED_ARG(backend_out);
     GIT_UNUSED_ARG(host);
