@@ -46,30 +46,34 @@ typedef struct {
 } hiredis_backend;
 
 int hiredis_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *_backend, const git_oid *oid) {
-        hiredis_backend *backend;
-        int error;
-        redisReply *reply;
+    hiredis_backend *backend;
+    int error;
+    redisReply *reply;
 
-        assert(len_p && type_p && _backend && oid);
+    assert(len_p && type_p && _backend && oid);
 
-        backend = (hiredis_backend *)_backend;
-        error = GIT_ERROR;
+    backend = (hiredis_backend *) _backend;
+    error = GIT_ERROR;
 
-        reply = redisCommand(backend->db, "HMGET %b %s %s", oid->id, GIT_OID_RAWSZ,
-                                                            "type", "size");
-        assert(reply->type != REDIS_REPLY_ERROR);
-        if (reply->type == REDIS_REPLY_ARRAY){
+    reply = redisCommand(backend->db, "HMGET %b %s %s", oid->id, GIT_OID_RAWSZ,
+            "type", "size");
+    assert(reply->type != REDIS_REPLY_ERROR);
+
+    if (reply->type == REDIS_REPLY_ARRAY) {
+        if (reply->element[0]->type != REDIS_REPLY_NIL &&
+                reply->element[0]->type != REDIS_REPLY_NIL) {
+            *type_p = (git_otype) atoi(reply->element[0]->str);
+            *len_p = (size_t) atoi(reply->element[1]->str);
             error = GIT_SUCCESS;
-            *type_p = (git_otype)atoi(reply->element[0]->str);
-            *len_p = (size_t)atoi(reply->element[1]->str);
-        } else if (reply->type == REDIS_REPLY_NIL){
-            error = GIT_ENOTFOUND;
         } else {
-            error = GIT_ERROR;
+            error = GIT_ENOTFOUND;
         }
+    } else {
+        error = GIT_ERROR;
+    }
 
-        freeReplyObject(reply);
-        return error;
+    freeReplyObject(reply);
+    return error;
 }
 
 int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_odb_backend *_backend, const git_oid *oid) {
@@ -79,47 +83,51 @@ int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_o
 
     assert(data_p && len_p && type_p && _backend && oid);
 
-    backend = (hiredis_backend *)_backend;
+    backend = (hiredis_backend *) _backend;
     error = GIT_ERROR;
 
     reply = redisCommand(backend->db, "HMGET %b %s %s %s", oid->id, GIT_OID_RAWSZ,
-                                                           "type", "size", "data");
+            "type", "size", "data");
     assert(reply->type != REDIS_REPLY_ERROR);
-    if (reply->type == REDIS_REPLY_ARRAY){
-        *type_p = (git_otype)atoll(reply->element[0]->str);
-        *len_p = (size_t)atoll(reply->element[1]->str);
-        *data_p = git__malloc(*len_p);
-        if (*data_p == NULL) {
+    if (reply->type == REDIS_REPLY_ARRAY) {
+        if (reply->element[0]->type != REDIS_REPLY_NIL &&
+                reply->element[1]->type != REDIS_REPLY_NIL &&
+                reply->element[2]->type != REDIS_REPLY_NIL) {
+            *type_p = (git_otype) atoi(reply->element[0]->str);
+            *len_p = (size_t) atoi(reply->element[1]->str);
+            *data_p = git__malloc(*len_p);
+            if (*data_p == NULL) {
                 error = GIT_ENOMEM;
-	} else {
+            } else {
                 memcpy(*data_p, reply->element[2]->str, *len_p);
-		error = GIT_SUCCESS;
-	}
-    } else if (reply->type == REDIS_REPLY_NIL){
-        error = GIT_ENOTFOUND;
+                error = GIT_SUCCESS;
+            }
+        } else {
+            error = GIT_ENOTFOUND;
+        }
     } else {
         error = GIT_ERROR;
     }
-    
+
     freeReplyObject(reply);
-    return GIT_SUCCESS;
+    return error;
 }
 
 int hiredis_backend__exists(git_odb_backend *_backend, const git_oid *oid) {
     hiredis_backend *backend;
     int found;
     redisReply *reply;
-    
+
     assert(_backend && oid);
 
-    backend = (hiredis_backend *)_backend;
-    found = 0;    
-    
+    backend = (hiredis_backend *) _backend;
+    found = 0;
+
     reply = redisCommand(backend->db, "exists %b", oid->id, GIT_OID_RAWSZ);
     assert(reply->type == REDIS_REPLY_ERROR);
     if (reply->type != REDIS_REPLY_NIL)
         found = 1;
-            
+
 
     freeReplyObject(reply);
     return found;
@@ -129,22 +137,22 @@ int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *d
     hiredis_backend *backend;
     int error;
     redisReply *reply;
-    
+
     assert(id && _backend && data);
-  
-    backend = (hiredis_backend *)_backend;
+
+    backend = (hiredis_backend *) _backend;
     error = GIT_ERROR;
-    
+
     if ((error = git_odb_hash(id, data, len, type)) < 0)
-	return error;
+        return error;
 
     reply = redisCommand(backend->db, "HMSET %b "
-                                      "type %d "
-                                      "size %d "
-                                      "data %b ", id->id, GIT_OID_RAWSZ,
-                                                  (int)type, len, data, len);
+            "type %d "
+            "size %d "
+            "data %b ", id->id, GIT_OID_RAWSZ,
+            (int) type, len, data, len);
     error = reply->type == REDIS_REPLY_ERROR ? GIT_ERROR : GIT_SUCCESS;
-    
+
     freeReplyObject(reply);
     return error;
 }
@@ -152,47 +160,47 @@ int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *d
 void hiredis_backend__free(git_odb_backend *_backend) {
     hiredis_backend *backend;
     assert(_backend);
-    backend = (hiredis_backend *)_backend;
-    
+    backend = (hiredis_backend *) _backend;
+
     redisFree(backend->db);
-  
+
     free(backend);
 }
 
 int git_odb_backend_hiredis(git_odb_backend **backend_out, const char *host, int port) {
-        hiredis_backend *backend;
+    hiredis_backend *backend;
 
-        backend = git__calloc(1, sizeof (hiredis_backend));
-        if (backend == NULL)
-                return GIT_ENOMEM;
+    backend = git__calloc(1, sizeof (hiredis_backend));
+    if (backend == NULL)
+        return GIT_ENOMEM;
 
 
-        backend->db = redisConnect(host, port);
-        if (backend->db->err)
-                goto cleanup;
-    
-	backend->parent.read = &hiredis_backend__read;
-	backend->parent.read_header = &hiredis_backend__read_header;
-	backend->parent.write = &hiredis_backend__write;
-	backend->parent.exists = &hiredis_backend__exists;
-	backend->parent.free = &hiredis_backend__free;
+    backend->db = redisConnect(host, port);
+    if (backend->db->err)
+        goto cleanup;
 
-	*backend_out = (git_odb_backend *)backend;
-        
-	return GIT_SUCCESS;
+    backend->parent.read = &hiredis_backend__read;
+    backend->parent.read_header = &hiredis_backend__read_header;
+    backend->parent.write = &hiredis_backend__write;
+    backend->parent.exists = &hiredis_backend__exists;
+    backend->parent.free = &hiredis_backend__free;
+
+    *backend_out = (git_odb_backend *) backend;
+
+    return GIT_SUCCESS;
 cleanup:
-        free(backend);
-        return GIT_ERROR;
+    free(backend);
+    return GIT_ERROR;
 }
 
 #else
 
 int g2it_odb_backend_hiredis(git_odb_backend ** GIT_UNUSED(backend_out),
-            const char *GIT_UNUSED(host), int GIT_UNUSED(port)) {
-        GIT_UNUSED_ARG(backend_out);
-        GIT_UNUSED_ARG(host);
-        GIT_UNUSED_ARG(port);
-        return GIT_ENOTIMPLEMENTED;
+        const char *GIT_UNUSED(host), int GIT_UNUSED(port)) {
+    GIT_UNUSED_ARG(backend_out);
+    GIT_UNUSED_ARG(host);
+    GIT_UNUSED_ARG(port);
+    return GIT_ENOTIMPLEMENTED;
 }
 
 #endif /* HAVE_HIREDIS */
