@@ -36,9 +36,6 @@
 
 #include <hiredis/hiredis.h>
 
-#define GIT2_REDIS_PREFIX "git2:"
-#define GIT2_REDIS_PREFIX_LEN 5
-
 typedef struct {
     git_odb_backend parent;
 
