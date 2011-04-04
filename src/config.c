@@ -924,10 +924,85 @@ static int config_parse(git_config *cfg_file)
 	return error;
 }
 
+static int is_multiline_var(const char *str)
+{
+	char *end = strrchr(str, '\0') - 1;
+
+	while (isspace(*end))
+		--end;
+
+	return *end == '\\';
+}
+
+static int parse_multiline_variable(git_config *cfg, const char *first, char **out)
+{
+	char *line = NULL, *end;
+	int error = GIT_SUCCESS, len, ret;
+	char *buf;
+
+	/* Check that the next line exists */
+	line = cfg_readline(cfg);
+	if (line == NULL)
+		return GIT_ENOMEM;
+
+	/* We've reached the end of the file, there is input missing */
+	if (line[0] == '\0') {
+		error = GIT_EOBJCORRUPTED;
+		goto out;
+	}
+
+	strip_comments(line);
+
+	/* If it was just a comment, pretend it didn't exist */
+	if (line[0] == '\0') {
+		error = parse_multiline_variable(cfg, first, out);
+		goto out;
+	}
+
+	/* Find the continuation character '\' and strip the whitespace */
+	end = strrchr(first, '\\');
+	while (isspace(end[-1]))
+		--end;
+
+	*end = '\0'; /* Terminate the string here */
+
+	len = strlen(first) + strlen(line) + 2;
+	buf = git__malloc(len);
+	if (buf == NULL) {
+		error = GIT_ENOMEM;
+		goto out;
+	}
+
+	ret = snprintf(buf, len, "%s %s", first, line);
+	if (ret < 0) {
+		error = GIT_EOSERR;
+		free(buf);
+		goto out;
+	}
+
+	/*
+	 * If we need to continue reading the next line, pretend
+	 * everything we've read up to now was in one line and call
+	 * ourselves.
+	 */
+	if (is_multiline_var(buf)) {
+		char *final_val;
+		error = parse_multiline_variable(cfg, buf, &final_val);
+		free(buf);
+		buf = final_val;
+	}
+
+	*out = buf;
+
+ out:
+	free(line);
+	return error;
+}
+
 static int parse_variable(git_config *cfg, char **var_name, char **var_value)
 {
 	char *tmp;
-
+	int error = GIT_SUCCESS;
 	const char *var_end = NULL;
 	const char *value_start = NULL;
 	char *line;
@@ -950,36 +1025,43 @@ static int parse_variable(git_config *cfg, char **var_name, char **var_value)
 		while (isspace(var_end[0]));
 	}
 
+	tmp = strndup(line, var_end - line + 1);
+	if (tmp == NULL) {
+		error = GIT_ENOMEM;
+		goto out;
+	}
+
+	*var_name = tmp;
+
+	/*
+	 * Now, let's try to parse the value
+	 */
 	if (value_start != NULL) {
 
 		while (isspace(value_start[0]))
 			value_start++;
 
 		if (value_start[0] == '\0')
-			goto error;
-	}
+			goto out;
 
-	tmp = strndup(line, var_end - line + 1);
-	if (tmp == NULL)
-		return GIT_ENOMEM;
+		if (is_multiline_var(value_start)) {
+			error = parse_multiline_variable(cfg, value_start, var_value);
+			if (error < GIT_SUCCESS)
+				free(*var_name);
+			goto out;
+		}
 
-	*var_name = tmp;
-
-	if (value_start != NULL) {
 		tmp = strdup(value_start);
 		if (tmp == NULL) {
 			free(*var_name);
-			return GIT_ENOMEM;
+			error = GIT_ENOMEM;
+			goto out;
 		}
 
 		*var_value = tmp;
 	}
 
+ out:
 	free(line);
-
-	return GIT_SUCCESS;
-
-error:
-	free(line);
-	return GIT_EOBJCORRUPTED;
+	return error;
 }
