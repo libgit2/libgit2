@@ -112,10 +112,27 @@ BEGIN_TEST(config3, "parse a [section.subsection] header")
 	git_config_free(cfg);
 END_TEST
 
+BEGIN_TEST(config4, "a variable name on its own is valid")
+	git_config *cfg;
+const char *str;
+int i;
+
+	must_pass(git_config_open(&cfg, CONFIG_BASE "/config4"));
+
+	must_pass(git_config_get_string(cfg, "some.section.variable", &str));
+	must_be_true(str == NULL);
+
+	must_pass(git_config_get_bool(cfg, "some.section.variable", &i));
+	must_be_true(i == 1);
+
+
+	git_config_free(cfg);
+END_TEST
 
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
 	 ADD_TEST(config2);
 	 ADD_TEST(config3);
+	 ADD_TEST(config4);
 END_SUITE
