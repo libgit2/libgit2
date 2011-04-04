@@ -56,7 +56,7 @@ static void cvar_list_free(git_cvar *start)
 }
 
 /*
- * The order is importart. The first parameter is the name we want to
+ * The order is important. The first parameter is the name we want to
  * match against, and the second one is what we're looking for
  */
 static int cvar_section_match(const char *local, const char *input)
@@ -74,10 +74,8 @@ static int cvar_section_match(const char *local, const char *input)
 		return !strncasecmp(local, input, local_last_dot - local);
 
 	/* Anything before the space in local is case-insensitive */
-	if (strncasecmp(local, input, local_sp - local)) {
-		fprintf(stderr, "copmparison of %s and %s failed\n", local, input);
+	if (strncasecmp(local, input, local_sp - local))
 		return 0;
-	}
 
 	/*
 	 * We compare starting from the first character after the
