@@ -124,6 +124,9 @@ typedef struct git_tree_entry git_tree_entry;
 /** Representation of a tree object. */
 typedef struct git_tree git_tree;
 
+/** Constructor for in-memory trees */
+typedef struct git_treebuilder git_treebuilder;
+
 /** Memory representation of an index file. */
 typedef struct git_index git_index;
 
