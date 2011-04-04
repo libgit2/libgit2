@@ -32,7 +32,7 @@
 
 #define GIT_HIREDIS_BACKEND
 
-//#ifdef GIT2_HIREDIS_BACKEND
+#ifdef GIT2_HIREDIS_BACKEND
 
 #include <hiredis/hiredis.h>
 
@@ -45,66 +45,45 @@ typedef struct {
     redisContext *db;
 } hiredis_backend;
 
-
-char* gen_key(const char* key){
-    char *redis_key;
-    int prefix_len = strlen(GIT2_REDIS_PREFIX);
-    redis_key = (char*)git__malloc(prefix_len + strlen(key));
-    strncpy(redis_key, GIT2_REDIS_PREFIX, prefix_len);
-    strncpy(redis_key + prefix_len, key, 41);
-    return redis_key;
-}
-
 int hiredis_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *_backend, const git_oid *oid) {
-    hiredis_backend *backend;
-    int error;
-    char *key;
-    int j;
-    redisReply *reply;
-    
-    assert(len_p && type_p && _backend && oid);
-    
-    key = gen_key(oid);
-    if (key == NULL){
-        return GIT_ENOMEM;
-    }
-  
-    backend = (hiredis_backend *)_backend;
-    error = GIT_ERROR;
-    
-    reply = redisCommand(backend->db, "HMGET %s %s %s", key, "type", "size");
-    assert(reply->type != REDIS_REPLY_ERROR);
-    
-    if (reply->type == REDIS_REPLY_ARRAY){
-        error = GIT_SUCCESS;
-        *type_p = (git_otype)atoi(reply->element[0]->str);
-	*len_p = (size_t)atoi(reply->element[1]->str);
-    } else if (reply->type == REDIS_REPLY_NIL){
-        error = GIT_ENOTFOUND;
-    } else {
+        hiredis_backend *backend;
+        int error;
+        redisReply *reply;
+
+        assert(len_p && type_p && _backend && oid);
+
+        backend = (hiredis_backend *)_backend;
         error = GIT_ERROR;
-    }
-    
-    free(key);
-    freeReplyObject(reply);
-    return error;
+
+        reply = redisCommand(backend->db, "HMGET %b %s %s", oid->id, GIT_OID_RAWSZ,
+                                                            "type", "size");
+        assert(reply->type != REDIS_REPLY_ERROR);
+        if (reply->type == REDIS_REPLY_ARRAY){
+            error = GIT_SUCCESS;
+            *type_p = (git_otype)atoi(reply->element[0]->str);
+            *len_p = (size_t)atoi(reply->element[1]->str);
+        } else if (reply->type == REDIS_REPLY_NIL){
+            error = GIT_ENOTFOUND;
+        } else {
+            error = GIT_ERROR;
+        }
+
+        freeReplyObject(reply);
+        return error;
 }
 
 int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_odb_backend *_backend, const git_oid *oid) {
     hiredis_backend *backend;
     int error;
     redisReply *reply;
-    
+
     assert(data_p && len_p && type_p && _backend && oid);
 
-    char key[40];
-    git_oid_fmt(key, oid);
-    char* redis_key = gen_key(key);
-  
     backend = (hiredis_backend *)_backend;
     error = GIT_ERROR;
-    
-    reply = redisCommand(backend->db, "HMGET %s %s %s %s", redis_key, "type", "size", "data");
+
+    reply = redisCommand(backend->db, "HMGET %b %s %s %s", oid->id, GIT_OID_RAWSZ,
+                                                           "type", "size", "data");
     assert(reply->type != REDIS_REPLY_ERROR);
     if (reply->type == REDIS_REPLY_ARRAY){
         *type_p = (git_otype)atoll(reply->element[0]->str);
@@ -122,14 +101,28 @@ int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_o
         error = GIT_ERROR;
     }
     
-    free(redis_key);
     freeReplyObject(reply);
     return GIT_SUCCESS;
 }
 
 int hiredis_backend__exists(git_odb_backend *_backend, const git_oid *oid) {
+    hiredis_backend *backend;
+    int found;
+    redisReply *reply;
     
-    return GIT_ERROR;
+    assert(_backend && oid);
+
+    backend = (hiredis_backend *)_backend;
+    found = 0;    
+    
+    reply = redisCommand(backend->db, "exists %b", oid->id, GIT_OID_RAWSZ);
+    assert(reply->type == REDIS_REPLY_ERROR);
+    if (reply->type != REDIS_REPLY_NIL)
+        found = 1;
+            
+
+    freeReplyObject(reply);
+    return found;
 }
 
 int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *data, size_t len, git_otype type) {
@@ -138,8 +131,6 @@ int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *d
     redisReply *reply;
     
     assert(id && _backend && data);
-
-
   
     backend = (hiredis_backend *)_backend;
     error = GIT_ERROR;
@@ -147,28 +138,29 @@ int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *d
     if ((error = git_odb_hash(id, data, len, type)) < 0)
 	return error;
 
-    char key[40];
-    git_oid_fmt(key, id);
-    char* redis_key = gen_key(key);
-    //TODO: convert data to base64
-    reply = redisCommand(backend->db, "HMSET %s "
+    reply = redisCommand(backend->db, "HMSET %b "
                                       "type %d "
                                       "size %d "
-                                      "data %b ", redis_key, (int)type, len, data, len);
+                                      "data %b ", id->id, GIT_OID_RAWSZ,
+                                                  (int)type, len, data, len);
     error = reply->type == REDIS_REPLY_ERROR ? GIT_ERROR : GIT_SUCCESS;
     
-    free(redis_key);
     freeReplyObject(reply);
     return error;
 }
 
 void hiredis_backend__free(git_odb_backend *_backend) {
-    return GIT_SUCCESS;
+    hiredis_backend *backend;
+    assert(_backend);
+    backend = (hiredis_backend *)_backend;
+    
+    redisFree(backend->db);
+  
+    free(backend);
 }
 
 int git_odb_backend_hiredis(git_odb_backend **backend_out, const char *host, int port) {
         hiredis_backend *backend;
-        int error;
 
         backend = git__calloc(1, sizeof (hiredis_backend));
         if (backend == NULL)
@@ -189,10 +181,11 @@ int git_odb_backend_hiredis(git_odb_backend **backend_out, const char *host, int
         
 	return GIT_SUCCESS;
 cleanup:
+        free(backend);
         return GIT_ERROR;
 }
 
-//#else
+#else
 
 int g2it_odb_backend_hiredis(git_odb_backend ** GIT_UNUSED(backend_out),
             const char *GIT_UNUSED(host), int GIT_UNUSED(port)) {
@@ -202,6 +195,5 @@ int g2it_odb_backend_hiredis(git_odb_backend ** GIT_UNUSED(backend_out),
         return GIT_ENOTIMPLEMENTED;
 }
 
-
-//#endif /* HAVE_HIREDIS */
+#endif /* HAVE_HIREDIS */
 

@@ -101,6 +101,7 @@ typedef enum {
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
 GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir);
 GIT_EXTERN(int) git_odb_backend_sqlite(git_odb_backend **backend_out, const char *sqlite_db);
+GIT_EXTERN(int) git_odb_backend_hiredis(git_odb_backend **backend_out, const char *host, int port);
 
 GIT_END_DECL
 
