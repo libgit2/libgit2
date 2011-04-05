@@ -364,7 +364,7 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
 
-	if (pos != GIT_ENOTFOUND) {
+	if (pos == GIT_ENOTFOUND) {
 		if (git_vector_insert(&bld->entries, entry) < 0)
 			return GIT_ENOMEM;
 	}
