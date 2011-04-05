@@ -65,6 +65,25 @@ git_signature *git_signature_dup(const git_signature *sig)
 	return git_signature_new(sig->name, sig->email, sig->when.time, sig->when.offset);
 }
 
+git_signature *git_signature_new_now(const char *name, const char *email)
+{
+	time_t now;
+	struct tm utc_tm, local_tm;
+	int offset;
+
+	time(&now);
+
+	gmtime_r(&now, &utc_tm);
+	localtime_r(&now, &local_tm);
+
+	offset = mktime(&local_tm) - mktime(&utc_tm);
+	offset /= 60;
+	/* mktime takes care of setting tm_isdst correctly */
+	if (local_tm.tm_isdst)
+		offset += 60;
+
+	return git_signature_new(name, email, now, offset);
+}
 
 static int parse_timezone_offset(const char *buffer, long *offset_out)
 {

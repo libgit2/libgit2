@@ -50,6 +50,17 @@ GIT_BEGIN_DECL
 GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *email, git_time_t time, int offset);
 
 /**
+ * Create a new action signature with a timestamp of 'now'. The
+ * signature must be freed manually or using git_signature_free
+ *
+ * @param name name of the person
+ * @param email email of the person
+ * @return the new sig, NULL on out of memory
+ */
+GIT_EXTERN(git_signature *) git_signature_new_now(const char *name, const char *email);
+
+
+/**
  * Create a copy of an existing signature.
  *
  * All internal strings are also duplicated.
