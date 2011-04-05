@@ -209,6 +209,14 @@ static int tag_create(
 		return error;
 	}
 
+	/* Try to find out what the type is */
+	if (target_type == GIT_OBJ_ANY) {
+		size_t _unused;
+		error = git_odb_read_header(&_unused, &target_type, repo->db, target);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
 	type_str = git_object_type2string(target_type);
 
 	tagger_str_len = git_signature__write(&tagger_str, "tagger", tagger);
