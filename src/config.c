@@ -157,7 +157,7 @@ static int cvar_name_normalize(const char *input, char **output)
 	return GIT_SUCCESS;
 }
 
-void strntolower(char *str, int len)
+void git__strntolower(char *str, int len)
 {
 	int i;
 
@@ -166,9 +166,9 @@ void strntolower(char *str, int len)
 	}
 }
 
-void strtolower(char *str)
+void git__strtolower(char *str)
 {
-	strntolower(str, strlen(str));
+	git__strntolower(str, strlen(str));
 }
 
 int git_config_open(git_config **cfg_out, const char *path)
@@ -638,7 +638,7 @@ static char *build_varname(const char *section, const char *name)
 	if (ret >= 0) { /* lowercase from the last dot onwards */
 		char *dot = strrchr(varname, '.');
 		if (dot != NULL)
-			strtolower(dot);
+			git__strtolower(dot);
 	}
 
 	return varname;
@@ -713,7 +713,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	}
 
 	sprintf(*section_name, "%s %s", base_name, subsection);
-	strntolower(*section_name, strchr(*section_name, ' ') - *section_name);
+	git__strntolower(*section_name, strchr(*section_name, ' ') - *section_name);
 
  out:
 	free(subsection);
@@ -778,7 +778,7 @@ static int parse_section_header(git_config *cfg, char **section_out)
 
 	name[name_length] = 0;
 	free(line);
-	strtolower(name);
+	git__strtolower(name);
 	*section_out = name;
 	return GIT_SUCCESS;
 
