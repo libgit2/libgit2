@@ -318,6 +318,7 @@ GIT_COMMIT_GETTER(const char *, message_short, commit->message_short)
 GIT_COMMIT_GETTER(git_time_t, time, commit->committer->when.time)
 GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
 GIT_COMMIT_GETTER(unsigned int, parentcount, commit->parent_oids.length)
+GIT_COMMIT_GETTER(const git_oid *, tree_oid, &commit->tree_oid);
 
 
 int git_commit_tree(git_tree **tree_out, git_commit *commit)
@@ -338,4 +339,9 @@ int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
 
+const git_oid *git_commit_parent_oid(git_commit *commit, unsigned int n)
+{
+	assert(commit);
 
+	return git_vector_get(&commit->parent_oids, n);
+}
