@@ -200,6 +200,8 @@ int git_config_open(git_config **cfg_out, const char *path)
 	else
 		*cfg_out = cfg;
 
+	gitfo_free_buf(&cfg->reader.buffer);
+
 	return error;
 
  cleanup:
@@ -220,7 +222,6 @@ void git_config_free(git_config *cfg)
 
 	free(cfg->file_path);
 	cvar_list_free(cfg->vars);
-	gitfo_free_buf(&cfg->reader.buffer);
 
 	free(cfg);
 }
