@@ -149,6 +149,69 @@ int git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type)
 	return git_odb__hash_obj(id, hdr, sizeof(hdr), &hdrlen, &raw);
 }
 
+/**
+ * FAKE WSTREAM
+ */
+
+typedef struct {
+	git_odb_stream stream;
+	char *buffer;
+	size_t size, written;
+	git_otype type;
+} fake_wstream;
+
+static int fake_wstream__fwrite(git_oid *oid, git_odb_stream *_stream)
+{
+	fake_wstream *stream = (fake_wstream *)_stream;
+	return _stream->backend->write(oid, _stream->backend, stream->buffer, stream->size, stream->type);
+}
+
+static int fake_wstream__write(git_odb_stream *_stream, const char *data, size_t len)
+{
+	fake_wstream *stream = (fake_wstream *)_stream;
+
+	if (stream->written + len >= stream->size)
+		return GIT_ENOMEM;
+
+	memcpy(stream->buffer + stream->written, data, len);
+	stream->written += len;
+	return GIT_SUCCESS;
+}
+
+static void fake_wstream__free(git_odb_stream *_stream)
+{
+	fake_wstream *stream = (fake_wstream *)_stream;
+
+	free(stream->buffer);
+	free(stream);
+}
+
+static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, size_t size, git_otype type)
+{
+	fake_wstream *stream;
+
+	stream = git__calloc(1, sizeof(fake_wstream));
+	if (stream == NULL)
+		return GIT_ENOMEM;
+
+	stream->size = size;
+	stream->type = type;
+	stream->buffer = git__malloc(size);
+	if (stream->buffer == NULL) {
+		free(stream);
+		return GIT_ENOMEM;
+	}
+
+	stream->stream.backend = backend;
+	stream->stream.read = NULL; /* read only */
+	stream->stream.write = &fake_wstream__write;
+	stream->stream.finalize_write = &fake_wstream__fwrite;
+	stream->stream.free = &fake_wstream__free;
+	stream->stream.mode = GIT_STREAM_WRONLY;
+
+	*stream_p = (git_odb_stream *)stream;
+	return GIT_SUCCESS;
+}
 
 /***********************************************************
  *
@@ -467,6 +530,8 @@ int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_
 
 		if (b->writestream != NULL)
 			error = b->writestream(stream, b, size, type);
+		else if (b->write != NULL)
+			error = init_fake_wstream(stream, b, size, type);
 	}
 
 	return error;

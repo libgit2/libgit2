@@ -43,7 +43,7 @@ struct git_repository {
  * export */
 void git_object__free(void *object);
 
-int git__parse_oid(git_oid *oid, char **buffer_out, const char *buffer_end, const char *header);
+int git__parse_oid(git_oid *oid, const char **buffer_out, const char *buffer_end, const char *header);
 int git__write_oid(git_odb_stream *src, const char *header, const git_oid *oid);
 
 #endif

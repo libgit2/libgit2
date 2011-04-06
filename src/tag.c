@@ -79,7 +79,7 @@ const char *git_tag_message(git_tag *t)
 	return t->message;
 }
 
-static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
+static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer_end)
 {
 	static const char *tag_types[] = {
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
@@ -130,9 +130,6 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 
 	text_len = search - buffer;
 
-	if (tag->tag_name != NULL)
-		free(tag->tag_name);
-
 	tag->tag_name = git__malloc(text_len + 1);
 	memcpy(tag->tag_name, buffer, text_len);
 	tag->tag_name[text_len] = '\0';
@@ -141,8 +138,11 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 
 	tag->tagger = git__malloc(sizeof(git_signature));
 
-	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0)
+	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0) {
+		free(tag->tag_name);
+		git_signature_free(tag->tagger);
 		return error;
+	}
 
 	text_len = buffer_end - ++buffer;
 
@@ -153,39 +153,61 @@ static int parse_tag_buffer(git_tag *tag, char *buffer, const char *buffer_end)
 	return GIT_SUCCESS;
 }
 
-int git_tag_create_o(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		const git_signature *tagger,
-		const char *message)
+static int retreive_tag_reference(git_reference **tag_reference_out, char *ref_name_out, git_repository *repo, const char *tag_name)
 {
-	return git_tag_create(
-		oid, repo, tag_name, 
-		git_object_id(target),
-		git_object_type(target),
-		tagger, message);
+	git_reference *tag_ref;
+	int error;
+
+	git__joinpath(ref_name_out, GIT_REFS_TAGS_DIR, tag_name);
+	error = git_reference_lookup(&tag_ref, repo, ref_name_out);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	*tag_reference_out = tag_ref;
+
+	return GIT_SUCCESS;
 }
 
-int git_tag_create(
+static int tag_create(
 		git_oid *oid,
 		git_repository *repo,
 		const char *tag_name,
 		const git_oid *target,
 		git_otype target_type,
 		const git_signature *tagger,
-		const char *message)
+		const char *message,
+		int allow_ref_overwrite)
 {
 	size_t final_size = 0;
 	git_odb_stream *stream;
 
 	const char *type_str;
 	char *tagger_str;
+	git_reference *new_ref;
+
+	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
 
 	int type_str_len, tag_name_len, tagger_str_len, message_len;
-	int error;
+	int error, should_update_ref = 0;
 
+	/** Ensure the tag name doesn't conflict with an already existing 
+	    reference unless overwriting has explictly been requested **/
+	error = retreive_tag_reference(&new_ref, ref_name, repo, tag_name);
+
+	switch (error) {
+	case GIT_SUCCESS:
+		if (!allow_ref_overwrite)
+			return GIT_EEXISTS;	
+		should_update_ref = 1;
+		
+		/* Fall trough */
+
+	case GIT_ENOTFOUND: 
+		break;
+
+	default:
+		return error;
+	}
 
 	type_str = git_object_type2string(target_type);
 
@@ -223,16 +245,120 @@ int git_tag_create(
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
 
-	if (error == GIT_SUCCESS) {
-		char ref_name[512];
-		git_reference *new_ref;
-		git__joinpath(ref_name, GIT_REFS_TAGS_DIR, tag_name);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (!should_update_ref)
 		error = git_reference_create_oid(&new_ref, repo, ref_name, oid);
-	}
+	else
+		error = git_reference_set_oid(new_ref, oid);
+	
+	return error;
+}
+
+int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer)
+{
+	git_tag tag;
+	int error;
+	git_object *obj;
+
+	assert(oid && buffer);
+
+	memset(&tag, 0, sizeof(tag));
+
+	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
+		return error;
+
+	error = git_object_lookup(&obj, repo, &tag.target, tag.type);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_tag_create_o(oid, repo, tag.tag_name, obj, tag.tagger, tag.message);
+
+	git_object_close(obj);
+
+cleanup:
+	git_signature_free(tag.tagger);
+	free(tag.tag_name);
+	free(tag.message);
 
 	return error;
 }
 
+int git_tag_create_o(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_object *target,
+		const git_signature *tagger,
+		const char *message)
+{
+	return tag_create(
+		oid, repo, tag_name, 
+		git_object_id(target),
+		git_object_type(target),
+		tagger, message, 0);
+}
+
+int git_tag_create(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_oid *target,
+		git_otype target_type,
+		const git_signature *tagger,
+		const char *message)
+{
+	return tag_create(
+		oid, repo, tag_name, 
+		target,
+		target_type,
+		tagger, message, 0);
+}
+
+int git_tag_create_fo(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_object *target,
+		const git_signature *tagger,
+		const char *message)
+{
+	return tag_create(
+		oid, repo, tag_name, 
+		git_object_id(target),
+		git_object_type(target),
+		tagger, message, 1);
+}
+
+int git_tag_create_f(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_oid *target,
+		git_otype target_type,
+		const git_signature *tagger,
+		const char *message)
+{
+	return tag_create(
+		oid, repo, tag_name, 
+		target,
+		target_type,
+		tagger, message, 1);
+}
+
+int git_tag_delete(git_repository *repo, const char *tag_name)
+{
+	int error;
+	git_reference *tag_ref;
+	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+
+	error = retreive_tag_reference(&tag_ref, ref_name, repo, tag_name);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	return git_reference_delete(tag_ref);
+}
 
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
 {

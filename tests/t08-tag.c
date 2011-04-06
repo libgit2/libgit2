@@ -58,6 +58,9 @@ BEGIN_TEST(read0, "read and parse a tag from the repository")
 
 	must_be_true(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
 
+	git_tag_close(tag1);
+	git_tag_close(tag2);
+	git_commit_close(commit);
 	git_repository_free(repo);
 END_TEST
 
@@ -72,20 +75,19 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	git_oid target_id, tag_id;
 	const git_signature *tagger;
 	git_reference *ref_tag;
-	/* char hex_oid[41]; */
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_mkstr(&target_id, tagged_commit);
 
-	/* create signatures */
+	/* create signature */
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
 	must_be_true(tagger != NULL);
 
 	must_pass(git_tag_create(
 		&tag_id, /* out id */
 		repo,
-		"the-tag", /* do not update the HEAD */
+		"the-tag",
 		&target_id,
 		GIT_OBJ_COMMIT,
 		tagger,
@@ -94,6 +96,7 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	git_signature_free((git_signature *)tagger);
 
 	must_pass(git_tag_lookup(&tag, repo, &tag_id));
+	must_be_true(git_oid_cmp(git_tag_target_oid(tag), &target_id) == 0);
 
 	/* Check attributes were set correctly */
 	tagger = git_tag_tagger(tag);
@@ -111,12 +114,136 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
 
+	git_tag_close(tag);
 	git_repository_free(repo);
 
 END_TEST
 
+BEGIN_TEST(write1, "write a tag to the repository which points to an unknown oid and read it again")
+	git_repository *repo;
+	git_tag *tag;
+	git_oid target_id, tag_id;
+	const git_signature *tagger;
+	git_reference *ref_tag;
+	git_object *zombie;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_mkstr(&target_id, "deadbeef1b46c854b31185ea97743be6a8774479");
+
+	/* create signature */
+	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
+	must_be_true(tagger != NULL);
+
+	must_pass(git_tag_create(
+		&tag_id, /* out id */
+		repo,
+		"the-zombie-tag",
+		&target_id,
+		GIT_OBJ_COMMIT,
+		tagger,
+		TAGGER_MESSAGE));
+
+	git_signature_free((git_signature *)tagger);
+
+	must_pass(git_tag_lookup(&tag, repo, &tag_id));
+	
+	/* The non existent target can not be looked up */
+	must_fail(git_tag_target(&zombie, tag));
+
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/the-zombie-tag"));
+	
+	must_pass(git_reference_delete(ref_tag));
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
+
+	git_tag_close(tag);
+	git_repository_free(repo);
+
+END_TEST
+
+BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already existing tag")
+	git_repository *repo;
+	git_oid target_id, tag_id;
+	const git_signature *tagger;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_mkstr(&target_id, tagged_commit);
+
+	/* create signature */
+	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
+	must_be_true(tagger != NULL);
+
+	must_fail(git_tag_create(
+		&tag_id, /* out id */
+		repo,
+		"e90810b",
+		&target_id,
+		GIT_OBJ_COMMIT,
+		tagger,
+		TAGGER_MESSAGE));
+
+	git_signature_free((git_signature *)tagger);
+
+	git_repository_free(repo);
+
+END_TEST
+
+BEGIN_TEST(write3, "Replace an already existing tag")
+	git_repository *repo;
+	git_oid target_id, tag_id, old_tag_id;
+	const git_signature *tagger;
+	git_reference *ref_tag;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	git_oid_mkstr(&target_id, tagged_commit);
+
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
+	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));
+
+	/* create signature */
+	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
+	must_be_true(tagger != NULL);
+
+	must_pass(git_tag_create_f(
+		&tag_id, /* out id */
+		repo,
+		"e90810b",
+		&target_id,
+		GIT_OBJ_COMMIT,
+		tagger,
+		TAGGER_MESSAGE));
+
+	git_signature_free((git_signature *)tagger);
+
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
+	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
+	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &old_tag_id) != 0);
+
+	close_temp_repo(repo);
+
+END_TEST
+
+BEGIN_TEST(write4, "Delete an already existing tag")
+	git_repository *repo;
+	git_reference *ref_tag;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_tag_delete(repo,"e90810b"));
+
+	must_fail(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
+
+	close_temp_repo(repo);
+
+END_TEST
 
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
-	ADD_TEST(write0); 
+	ADD_TEST(write0);
+	ADD_TEST(write1);
+	ADD_TEST(write2);
+	ADD_TEST(write3);
+	ADD_TEST(write4);
 END_SUITE
