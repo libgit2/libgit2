@@ -109,10 +109,7 @@ static int cvar_name_match(const char *local, const char *input)
 	/*
 	 * Anything after the last (possibly only) dot is case-insensitive
 	 */
-	if (!strcmp(input_dot, local_dot))
-		return 1;
-
-	return 0;
+	return !strcasecmp(input_dot, local_dot);
 }
 
 static git_cvar *cvar_list_find(git_cvar *start, const char *name)
