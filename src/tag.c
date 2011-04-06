@@ -271,7 +271,6 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 {
 	git_tag tag;
 	int error;
-	git_object *obj;
 
 	assert(oid && buffer);
 
@@ -280,15 +279,8 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
 		return error;
 
-	error = git_object_lookup(&obj, repo, &tag.target, tag.type);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	error = git_tag_create(oid, repo, tag.tag_name, &tag.target, tag.type, tag.tagger, tag.message);
 
-	error = git_tag_create_o(oid, repo, tag.tag_name, obj, tag.tagger, tag.message);
-
-	git_object_close(obj);
-
-cleanup:
 	git_signature_free(tag.tagger);
 	free(tag.tag_name);
 	free(tag.message);
