@@ -185,7 +185,7 @@ int git_config_open(git_config **cfg_out, const char *path)
 	memset(cfg, 0x0, sizeof(git_config));
 
 	cfg->file_path = git__strdup(path);
-	if (cfg->file_path == NULL){
+	if (cfg->file_path == NULL) {
 		error = GIT_ENOMEM;
 		goto cleanup;
 	}
@@ -195,7 +195,7 @@ int git_config_open(git_config **cfg_out, const char *path)
 		goto cleanup;
 
 	error = config_parse(cfg);
-	if(error < GIT_SUCCESS)
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 	else
 		*cfg_out = cfg;
@@ -203,9 +203,9 @@ int git_config_open(git_config **cfg_out, const char *path)
 	return error;
 
  cleanup:
-	if(cfg->vars)
+	if (cfg->vars)
 		cvar_list_free(cfg->vars);
-	if(cfg->file_path)
+	if (cfg->file_path)
 		free(cfg->file_path);
 	gitfo_free_buf(&cfg->reader.buffer);
 	free(cfg);
@@ -295,7 +295,7 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 	}
 
 	var->value = value ? git__strdup(value) : NULL;
-	if(var->value == NULL && value != NULL){
+	if (var->value == NULL && value != NULL) {
 		error = GIT_ENOMEM;
 		cvar_free(var);
 		goto out;
@@ -312,7 +312,7 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 	}
 
  out:
-	if(error < GIT_SUCCESS)
+	if (error < GIT_SUCCESS)
 		cvar_free(var);
 
 	return error;
@@ -325,7 +325,7 @@ int git_config_set_int(git_config *cfg, const char *name, int value)
 	int buf_len = sizeof(str_value), ret;
 	char *help_buf = NULL;
 
-	if((ret = snprintf(str_value, buf_len, "%d", value)) >= buf_len - 1){
+	if ((ret = snprintf(str_value, buf_len, "%d", value)) >= buf_len - 1){
 		/* The number is too large, we need to allocate more memory */
 		buf_len = ret + 1;
 		help_buf = git__malloc(buf_len);
@@ -343,7 +343,7 @@ int git_config_set_bool(git_config *cfg, const char *name, int value)
 {
 	const char *str_value;
 
-	if(value == 0)
+	if (value == 0)
 		str_value = "false";
 	else
 		str_value = "true";
@@ -384,7 +384,7 @@ int git_config_get_int(git_config *cfg, const char *name, int *out)
 	int ret;
 
 	ret = config_get(cfg, name, &value);
-	if(ret < GIT_SUCCESS)
+	if (ret < GIT_SUCCESS)
 		return ret;
 
 	ret = sscanf(value, "%d", out);
@@ -417,13 +417,13 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 
 	if (!strcasecmp(value, "true") ||
 		!strcasecmp(value, "yes") ||
-		!strcasecmp(value, "on")){
+		!strcasecmp(value, "on")) {
 		*out = 1;
 		return GIT_SUCCESS;
 	}
 	if (!strcasecmp(value, "false") ||
 		!strcasecmp(value, "no") ||
-		!strcasecmp(value, "off")){
+		!strcasecmp(value, "off")) {
 		*out = 0;
 		return GIT_SUCCESS;
 	}
@@ -635,7 +635,7 @@ static char *build_varname(const char *section, const char *name)
 		return NULL;
 
 	ret = snprintf(varname, total_len, "%s.%s", section, name);
-	if(ret >= 0){ /* lowercase from the last dot onwards */
+	if (ret >= 0) { /* lowercase from the last dot onwards */
 		char *dot = strrchr(varname, '.');
 		if (dot != NULL)
 			strtolower(dot);
@@ -666,7 +666,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	buf_len = last_quote - first_quote + 2;
 
 	subsection = git__malloc(buf_len + 2);
-	if(subsection == NULL)
+	if (subsection == NULL)
 		return GIT_ENOMEM;
 
 	pos = 0;
@@ -681,7 +681,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	 * added to the string. In case of error, jump to out
 	 */
 	do {
-		switch(c) {
+		switch (c) {
 		case '"':
 			if (quote_marks++ >= 2)
 				return GIT_EOBJCORRUPTED;
@@ -746,7 +746,7 @@ static int parse_section_header(git_config *cfg, char **section_out)
 
 	/* Make sure we were given a section header */
 	c = line[pos++];
-	if(c != '['){
+	if (c != '[') {
 		error = GIT_EOBJCORRUPTED;
 		goto error;
 	}
@@ -767,7 +767,7 @@ static int parse_section_header(git_config *cfg, char **section_out)
 			return error;
 		}
 
-		if (!config_keychar(c) && c != '.'){
+		if (!config_keychar(c) && c != '.') {
 			error = GIT_EOBJCORRUPTED;
 			goto error;
 		}
@@ -916,7 +916,7 @@ static int config_parse(git_config *cfg_file)
 		}
 	}
 
-	if(current_section)
+	if (current_section)
 		free(current_section);
 
 	return error;
