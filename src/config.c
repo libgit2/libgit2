@@ -48,11 +48,15 @@ static git_cvar *cvar_free(git_cvar *var)
 	return next;
 }
 
-static void cvar_list_free(git_cvar *start)
+static void cvar_list_free(git_cvar_list *list)
 {
-	git_cvar *iter = start;
+	git_cvar *cur;
 
-	while ((iter = cvar_free(iter)) != NULL);
+	while (!CVAR_LIST_EMPTY(list)) {
+		cur = CVAR_LIST_HEAD(list);
+		CVAR_LIST_REMOVE_HEAD(list);
+		cvar_free(cur);
+	}
 }
 
 /*
@@ -112,11 +116,11 @@ static int cvar_name_match(const char *local, const char *input)
 	return !strcasecmp(input_dot, local_dot);
 }
 
-static git_cvar *cvar_list_find(git_cvar *start, const char *name)
+static git_cvar *cvar_list_find(git_cvar_list *list, const char *name)
 {
 	git_cvar *iter;
 
-	CVAR_LIST_FOREACH (start, iter) {
+	CVAR_LIST_FOREACH (list, iter) {
 		if (cvar_name_match(iter->name, name))
 			return iter;
 	}
@@ -205,8 +209,7 @@ int git_config_open(git_config **cfg_out, const char *path)
 	return error;
 
  cleanup:
-	if (cfg->vars)
-		cvar_list_free(cfg->vars);
+	cvar_list_free(&cfg->var_list);
 	if (cfg->file_path)
 		free(cfg->file_path);
 	gitfo_free_buf(&cfg->reader.buffer);
@@ -221,7 +224,7 @@ void git_config_free(git_config *cfg)
 		return;
 
 	free(cfg->file_path);
-	cvar_list_free(cfg->vars);
+	cvar_list_free(&cfg->var_list);
 
 	free(cfg);
 }
@@ -236,7 +239,7 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *d
 	git_cvar *var;
 	char *normalized;
 
-	CVAR_LIST_FOREACH(cfg->vars, var) {
+	CVAR_LIST_FOREACH(&cfg->var_list, var) {
 		ret = cvar_name_normalize(var->name, &normalized);
 		if (ret < GIT_SUCCESS)
 			return ret;
@@ -266,7 +269,7 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 	/*
 	 * If it already exists, we just need to update its value.
 	 */
-	existing = cvar_list_find(cfg->vars, name);
+	existing = cvar_list_find(&cfg->var_list, name);
 	if (existing != NULL) {
 		char *tmp = value ? git__strdup(value) : NULL;
 		if (tmp == NULL && value != NULL)
@@ -304,13 +307,7 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 
 	var->next = NULL;
 
-	if (cfg->vars_tail == NULL) {
-		cfg->vars = cfg->vars_tail = var;
-	}
-	else {
-		cfg->vars_tail->next = var;
-		cfg->vars_tail = var;
-	}
+	CVAR_LIST_APPEND(&cfg->var_list, var);
 
  out:
 	if (error < GIT_SUCCESS)
@@ -369,7 +366,7 @@ static int config_get(git_config *cfg, const char *name, const char **out)
 	git_cvar *var;
 	int error = GIT_SUCCESS;
 
-	var = cvar_list_find(cfg->vars, name);
+	var = cvar_list_find(&cfg->var_list, name);
 
 	if (var == NULL)
 		return GIT_ENOTFOUND;
