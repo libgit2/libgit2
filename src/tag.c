@@ -209,6 +209,9 @@ static int tag_create(
 		return error;
 	}
 
+	if (!git_odb_exists(repo->db, target))
+		return GIT_ENOTFOUND;
+
 	/* Try to find out what the type is */
 	if (target_type == GIT_OBJ_ANY) {
 		size_t _unused;
