@@ -648,7 +648,7 @@ static char *build_varname(const char *section, const char *name)
 static int parse_section_header_ext(const char *line, const char *base_name, char **section_name)
 {
 	int buf_len, total_len, pos, rpos;
-	int c;
+	int c, ret;
 	char *subsection, *first_quote, *last_quote;
 	int error = GIT_SUCCESS;
 	int quote_marks;
@@ -713,7 +713,16 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 		goto out;
 	}
 
-	sprintf(*section_name, "%s %s", base_name, subsection);
+	ret = snprintf(*section_name, total_len, "%s %s", base_name, subsection);
+	if (ret >= total_len) {
+		/* If this fails, we've checked the length wrong */
+		error = GIT_ERROR;
+		goto out;
+	} else if (ret < 0) {
+		error = GIT_EOSERR;
+		goto out;
+	}
+
 	git__strntolower(*section_name, strchr(*section_name, ' ') - *section_name);
 
  out:
