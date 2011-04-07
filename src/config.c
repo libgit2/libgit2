@@ -37,15 +37,14 @@ static int config_parse(git_config *cfg_file);
 static int parse_variable(git_config *cfg, char **var_name, char **var_value);
 void git_config_free(git_config *cfg);
 
-static git_cvar *cvar_free(git_cvar *var)
+static void cvar_free(git_cvar *var)
 {
-	git_cvar *next = var->next;
+	if (var == NULL)
+		return;
 
 	free(var->name);
 	free(var->value);
 	free(var);
-
-	return next;
 }
 
 static void cvar_list_free(git_cvar_list *list)
