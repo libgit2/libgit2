@@ -159,9 +159,11 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	if (buffer >= line_end)
 		return GIT_EOBJCORRUPTED;
 
+	/* The only reliable way to check for error is errno */
+	errno = 0;
 	sig->when.time = strtol(buffer, (char **)&buffer, 10);
 
-	if (sig->when.time == 0)
+	if (errno != 0)
 		return GIT_EOBJCORRUPTED;
 
 	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
