@@ -103,33 +103,44 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <a name="l00041"></a>00041 <span class="comment"> * Create a new action signature. The signature must be freed</span>
 <a name="l00042"></a>00042 <span class="comment"> * manually or using git_signature_free</span>
 <a name="l00043"></a>00043 <span class="comment"> *</span>
-<a name="l00044"></a>00044 <span class="comment"> * @name name of the person</span>
-<a name="l00045"></a>00045 <span class="comment"> * @email email of the person</span>
-<a name="l00046"></a>00046 <span class="comment"> * @time time when the action happened</span>
-<a name="l00047"></a>00047 <span class="comment"> * @offset timezone offset in minutes for the time</span>
+<a name="l00044"></a>00044 <span class="comment"> * @param name name of the person</span>
+<a name="l00045"></a>00045 <span class="comment"> * @param mail email of the person</span>
+<a name="l00046"></a>00046 <span class="comment"> * @param time time when the action happened</span>
+<a name="l00047"></a>00047 <span class="comment"> * @param offset timezone offset in minutes for the time</span>
 <a name="l00048"></a>00048 <span class="comment"> * @return the new sig, NULL on out of memory</span>
 <a name="l00049"></a>00049 <span class="comment"> */</span>
-<a name="l00050"></a>00050 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *) git_signature_new(const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email, git_time_t time, <span class="keywordtype">int</span> offset);
+<a name="l00050"></a>00050 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *) <a class="code" href="group__git__signature.html#ga679fb5c22405c0b6eeeae776fb99928c" title="Create a new action signature.">git_signature_new</a>(const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email, git_time_t time, <span class="keywordtype">int</span> offset);
 <a name="l00051"></a>00051 <span class="comment"></span>
 <a name="l00052"></a>00052 <span class="comment">/**</span>
-<a name="l00053"></a>00053 <span class="comment"> * Create a copy of an existing signature.</span>
-<a name="l00054"></a>00054 <span class="comment"> *</span>
-<a name="l00055"></a>00055 <span class="comment"> * All internal strings are also duplicated.</span>
-<a name="l00056"></a>00056 <span class="comment"> * @sig signature to duplicated</span>
-<a name="l00057"></a>00057 <span class="comment"> * @return a copy of sig, NULL on out of memory</span>
-<a name="l00058"></a>00058 <span class="comment"> */</span>
-<a name="l00059"></a>00059 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *) <a class="code" href="group__git__signature.html#ga898695b6971601fc12062abea609394e" title="Create a copy of an existing signature.">git_signature_dup</a>(const <a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *sig);
-<a name="l00060"></a>00060 <span class="comment"></span>
-<a name="l00061"></a>00061 <span class="comment">/**</span>
-<a name="l00062"></a>00062 <span class="comment"> * Free an existing signature</span>
-<a name="l00063"></a>00063 <span class="comment"> *</span>
-<a name="l00064"></a>00064 <span class="comment"> * @sig signature to free</span>
-<a name="l00065"></a>00065 <span class="comment"> */</span>
-<a name="l00066"></a>00066 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__signature.html#ga4085d3221bbeb16a29f6a8a93560a1a6" title="Free an existing signature.">git_signature_free</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *sig);
-<a name="l00067"></a>00067 <span class="comment"></span>
-<a name="l00068"></a>00068 <span class="comment">/** @} */</span>
-<a name="l00069"></a>00069 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
-<a name="l00070"></a>00070 <span class="preprocessor">#endif</span>
+<a name="l00053"></a>00053 <span class="comment"> * Create a new action signature with a timestamp of &#39;now&#39;. The</span>
+<a name="l00054"></a>00054 <span class="comment"> * signature must be freed manually or using git_signature_free</span>
+<a name="l00055"></a>00055 <span class="comment"> *</span>
+<a name="l00056"></a>00056 <span class="comment"> * @param name name of the person</span>
+<a name="l00057"></a>00057 <span class="comment"> * @param email email of the person</span>
+<a name="l00058"></a>00058 <span class="comment"> * @return the new sig, NULL on out of memory</span>
+<a name="l00059"></a>00059 <span class="comment"> */</span>
+<a name="l00060"></a>00060 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *) <a class="code" href="group__git__signature.html#ga01294e528d9687aec86e9a2cfe5ec5e3" title="Create a new action signature with a timestamp of &#39;now&#39;.">git_signature_new_now</a>(const <span class="keywordtype">char</span> *name, const <span class="keywordtype">char</span> *email);
+<a name="l00061"></a>00061 
+<a name="l00062"></a>00062 <span class="comment"></span>
+<a name="l00063"></a>00063 <span class="comment">/**</span>
+<a name="l00064"></a>00064 <span class="comment"> * Create a copy of an existing signature.</span>
+<a name="l00065"></a>00065 <span class="comment"> *</span>
+<a name="l00066"></a>00066 <span class="comment"> * All internal strings are also duplicated.</span>
+<a name="l00067"></a>00067 <span class="comment"> * @param sig signature to duplicated</span>
+<a name="l00068"></a>00068 <span class="comment"> * @return a copy of sig, NULL on out of memory</span>
+<a name="l00069"></a>00069 <span class="comment"> */</span>
+<a name="l00070"></a>00070 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *) <a class="code" href="group__git__signature.html#ga898695b6971601fc12062abea609394e" title="Create a copy of an existing signature.">git_signature_dup</a>(const <a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *sig);
+<a name="l00071"></a>00071 <span class="comment"></span>
+<a name="l00072"></a>00072 <span class="comment">/**</span>
+<a name="l00073"></a>00073 <span class="comment"> * Free an existing signature</span>
+<a name="l00074"></a>00074 <span class="comment"> *</span>
+<a name="l00075"></a>00075 <span class="comment"> * @sig signature to free</span>
+<a name="l00076"></a>00076 <span class="comment"> */</span>
+<a name="l00077"></a>00077 <a class="code" href="common_8h.html#a236c07423afc46bfced3815c121acd94" title="Declare a public function exported for application use.">GIT_EXTERN</a>(<span class="keywordtype">void</span>) <a class="code" href="group__git__signature.html#ga4085d3221bbeb16a29f6a8a93560a1a6" title="Free an existing signature.">git_signature_free</a>(<a class="code" href="structgit__signature.html" title="An action signature (e.g.">git_signature</a> *sig);
+<a name="l00078"></a>00078 <span class="comment"></span>
+<a name="l00079"></a>00079 <span class="comment">/** @} */</span>
+<a name="l00080"></a>00080 <a class="code" href="common_8h.html#ab7361059db5131506b877f76db17f2c5" title="End declarations in C mode.">GIT_END_DECL</a>
+<a name="l00081"></a>00081 <span class="preprocessor">#endif</span>
 </pre></div></div>
 </div>
 <!-- window showing the filter options -->
@@ -146,7 +157,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Apr 6 2011 14:02:39 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Apr 7 2011 13:27:55 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.4 </small></address>
 </body>

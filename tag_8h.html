@@ -97,6 +97,14 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an OID.  <a href="group__git__tag.html#ga5a193c1103d195ccbe7ed94f27310682"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga2c092fb33a207e819ac2044c408944d2">git_tag_create_o</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name, const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *target, const <a class="el" href="structgit__signature.html">git_signature</a> *tagger, const char *message)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an existing `git_object` instance.  <a href="group__git__tag.html#ga2c092fb33a207e819ac2044c408944d2"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga596aadf32b1e499fb0841662b3932c5f">git_tag_create_frombuffer</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *buffer)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from a buffer.  <a href="group__git__tag.html#ga596aadf32b1e499fb0841662b3932c5f"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga870978f3703f6bb4caebc88c1c385feb">git_tag_create_f</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name, const <a class="el" href="structgit__oid.html">git_oid</a> *target, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> target_type, const <a class="el" href="structgit__signature.html">git_signature</a> *tagger, const char *message)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an OID and overwrite an already existing tag reference, if any.  <a href="group__git__tag.html#ga870978f3703f6bb4caebc88c1c385feb"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga86e4545fb58716c7f4047569b322ea1f">git_tag_create_fo</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name, const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *target, const <a class="el" href="structgit__signature.html">git_signature</a> *tagger, const char *message)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an existing `git_object` instance and overwrite an already existing tag reference, if any.  <a href="group__git__tag.html#ga86e4545fb58716c7f4047569b322ea1f"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga457ca74728a1c3ca0faf8c2855558fa0">git_tag_delete</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete an existing tag reference.  <a href="group__git__tag.html#ga457ca74728a1c3ca0faf8c2855558fa0"></a><br/></td></tr>
 </table>
 <hr/><a name="details" id="details"></a><h2>Detailed Description</h2>
 <div class="textblock"><p>Git tag parsing routines. </p>
@@ -115,7 +123,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Apr 6 2011 14:02:39 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Apr 7 2011 13:27:55 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.4 </small></address>
 </body>

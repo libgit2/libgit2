@@ -82,6 +82,14 @@ Functions</h2></td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an OID.  <a href="#ga5a193c1103d195ccbe7ed94f27310682"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga2c092fb33a207e819ac2044c408944d2">git_tag_create_o</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name, const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *target, const <a class="el" href="structgit__signature.html">git_signature</a> *tagger, const char *message)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an existing `git_object` instance.  <a href="#ga2c092fb33a207e819ac2044c408944d2"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga596aadf32b1e499fb0841662b3932c5f">git_tag_create_frombuffer</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *buffer)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from a buffer.  <a href="#ga596aadf32b1e499fb0841662b3932c5f"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga870978f3703f6bb4caebc88c1c385feb">git_tag_create_f</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name, const <a class="el" href="structgit__oid.html">git_oid</a> *target, <a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a> target_type, const <a class="el" href="structgit__signature.html">git_signature</a> *tagger, const char *message)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an OID and overwrite an already existing tag reference, if any.  <a href="#ga870978f3703f6bb4caebc88c1c385feb"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga86e4545fb58716c7f4047569b322ea1f">git_tag_create_fo</a> (<a class="el" href="structgit__oid.html">git_oid</a> *oid, <a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name, const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *target, const <a class="el" href="structgit__signature.html">git_signature</a> *tagger, const char *message)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new tag in the repository from an existing `git_object` instance and overwrite an already existing tag reference, if any.  <a href="#ga86e4545fb58716c7f4047569b322ea1f"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__tag.html#ga457ca74728a1c3ca0faf8c2855558fa0">git_tag_delete</a> (<a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *repo, const char *tag_name)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete an existing tag reference.  <a href="#ga457ca74728a1c3ca0faf8c2855558fa0"></a><br/></td></tr>
 </table>
 <hr/><h2>Function Documentation</h2>
 <a class="anchor" id="ga8a513564edad4e4377b4146626cd5373"></a><!-- doxytag: member="tag.h::git_tag_close" ref="ga8a513564edad4e4377b4146626cd5373" args="(git_tag *tag)" -->
@@ -171,7 +179,7 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">oid</td><td>Pointer where to store the OID of the newly created tag</td></tr>
     <tr><td class="paramname">repo</td><td>Repository where to store the tag</td></tr>
-    <tr><td class="paramname">tag_name</td><td>Name for the tag; this name is validated for consistency</td></tr>
+    <tr><td class="paramname">tag_name</td><td>Name for the tag; this name is validated for consistency. It should also not conflict with an already existing tag name</td></tr>
     <tr><td class="paramname">target</td><td>OID to which this tag points; note that no validation is done on this OID. Use the _o version of this method to assure a proper object is being tagged</td></tr>
     <tr><td class="paramname">target_type</td><td>Type of the tagged OID; note that no validation is performed here either</td></tr>
     <tr><td class="paramname">tagger</td><td>Signature of the tagger for this tag, and of the tagging time</td></tr>
@@ -180,6 +188,176 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise. A tag object is written to the ODB, and a proper reference is written in the /refs/tags folder, pointing to it </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga870978f3703f6bb4caebc88c1c385feb"></a><!-- doxytag: member="tag.h::git_tag_create_f" ref="ga870978f3703f6bb4caebc88c1c385feb" args="(git_oid *oid, git_repository *repo, const char *tag_name, const git_oid *target, git_otype target_type, const git_signature *tagger, const char *message)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_tag_create_f </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>oid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>tag_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>target</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a5c9a2783d4fc110bc6a4f5355d20fedb">git_otype</a>&#160;</td>
+          <td class="paramname"><em>target_type</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
+          <td class="paramname"><em>tagger</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>message</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new tag in the repository from an OID and overwrite an already existing tag reference, if any. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">oid</td><td>Pointer where to store the OID of the newly created tag</td></tr>
+    <tr><td class="paramname">repo</td><td>Repository where to store the tag</td></tr>
+    <tr><td class="paramname">tag_name</td><td>Name for the tag; this name is validated for consistency.</td></tr>
+    <tr><td class="paramname">target</td><td>OID to which this tag points; note that no validation is done on this OID. Use the _fo version of this method to assure a proper object is being tagged</td></tr>
+    <tr><td class="paramname">target_type</td><td>Type of the tagged OID; note that no validation is performed here either</td></tr>
+    <tr><td class="paramname">tagger</td><td>Signature of the tagger for this tag, and of the tagging time</td></tr>
+    <tr><td class="paramname">message</td><td>Full message for this tag</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise. A tag object is written to the ODB, and a proper reference is written in the /refs/tags folder, pointing to it </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga86e4545fb58716c7f4047569b322ea1f"></a><!-- doxytag: member="tag.h::git_tag_create_fo" ref="ga86e4545fb58716c7f4047569b322ea1f" args="(git_oid *oid, git_repository *repo, const char *tag_name, const git_object *target, const git_signature *tagger, const char *message)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_tag_create_fo </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>oid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>tag_name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="types_8h.html#a855e48de855be1ccb0b752295caf374e">git_object</a> *&#160;</td>
+          <td class="paramname"><em>target</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td>
+          <td class="paramname"><em>tagger</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>message</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new tag in the repository from an existing `git_object` instance and overwrite an already existing tag reference, if any. </p>
+<p>This method replaces the `target` and `target_type` paremeters of `git_tag_create_f` by a single instance of a `const git_object *`, which is assured to be a proper object in the ODB and hence will create a valid tag</p>
+<dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="group__git__tag.html#ga870978f3703f6bb4caebc88c1c385feb" title="Create a new tag in the repository from an OID and overwrite an already existing tag reference...">git_tag_create_f</a> </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga596aadf32b1e499fb0841662b3932c5f"></a><!-- doxytag: member="tag.h::git_tag_create_frombuffer" ref="ga596aadf32b1e499fb0841662b3932c5f" args="(git_oid *oid, git_repository *repo, const char *buffer)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_tag_create_frombuffer </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structgit__oid.html">git_oid</a> *&#160;</td>
+          <td class="paramname"><em>oid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>buffer</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new tag in the repository from a buffer. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">oid</td><td>Pointer where to store the OID of the newly created tag</td></tr>
+    <tr><td class="paramname">repo</td><td>Repository where to store the tag</td></tr>
+    <tr><td class="paramname">buffer</td><td>Raw tag data </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -235,6 +413,43 @@ Functions</h2></td></tr>
 <p>Create a new tag in the repository from an existing `git_object` instance. </p>
 <p>This method replaces the `target` and `target_type` paremeters of `git_tag_create` by a single instance of a `const git_object *`, which is assured to be a proper object in the ODB and hence will create a valid tag</p>
 <dl class="see"><dt><b>See also:</b></dt><dd><a class="el" href="group__git__tag.html#ga5a193c1103d195ccbe7ed94f27310682" title="Create a new tag in the repository from an OID.">git_tag_create</a> </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga457ca74728a1c3ca0faf8c2855558fa0"></a><!-- doxytag: member="tag.h::git_tag_delete" ref="ga457ca74728a1c3ca0faf8c2855558fa0" args="(git_repository *repo, const char *tag_name)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int git_tag_delete </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="types_8h.html#a69f80526f06bad7d1aead7949c2840f5">git_repository</a> *&#160;</td>
+          <td class="paramname"><em>repo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>tag_name</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Delete an existing tag reference. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">repo</td><td>Repository where lives the tag</td></tr>
+    <tr><td class="paramname">tag_name</td><td>Name of the tag to be deleted; this name is validated for consistency.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>0 on success; error code otherwise. </dd></dl>
 
 </div>
 </div>
@@ -491,7 +706,7 @@ Functions</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Apr 6 2011 14:02:39 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Apr 7 2011 13:27:55 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.4 </small></address>
 </body>

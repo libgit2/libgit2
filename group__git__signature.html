@@ -51,20 +51,19 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   </div>
 </div>
 <div class="header">
+  <div class="summary">
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">Git signature creation</div>  </div>
 </div>
 <div class="contents">
 <table class="memberdecls">
-<tr><td colspan="2"><h2><a name="member-group"></a>
-name of the person</h2></td></tr>
-<tr><td class="ititle" colspan="2"><p><a class="anchor" id="amgrpa003e90b9df94cffff0c72b7a1d921f8"></a>Create a new action signature.</p>
-<p>The signature must be freed manually or using git_signature_free</p>
-<p>email of the person  time when the action happened  timezone offset in minutes for the time </p>
-<dl class="return"><dt><b>Returns:</b></dt><dd>the new sig, NULL on out of memory </dd></dl>
-</td></tr>
-<tr><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ga679fb5c22405c0b6eeeae776fb99928c"></a><!-- doxytag: member="git_signature::git_signature_new" ref="ga679fb5c22405c0b6eeeae776fb99928c" args="(const char *name, const char *email, git_time_t time, int offset)" -->
-<a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>git_signature_new</b> (const char *name, const char *email, git_time_t time, int offset)</td></tr>
+<tr><td colspan="2"><h2><a name="func-members"></a>
+Functions</h2></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__signature.html#ga679fb5c22405c0b6eeeae776fb99928c">git_signature_new</a> (const char *name, const char *email, git_time_t time, int offset)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new action signature.  <a href="#ga679fb5c22405c0b6eeeae776fb99928c"></a><br/></td></tr>
+<tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__signature.html#ga01294e528d9687aec86e9a2cfe5ec5e3">git_signature_new_now</a> (const char *name, const char *email)</td></tr>
+<tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new action signature with a timestamp of 'now'.  <a href="#ga01294e528d9687aec86e9a2cfe5ec5e3"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top"><a class="el" href="structgit__signature.html">git_signature</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__signature.html#ga898695b6971601fc12062abea609394e">git_signature_dup</a> (const <a class="el" href="structgit__signature.html">git_signature</a> *sig)</td></tr>
 <tr><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a copy of an existing signature.  <a href="#ga898695b6971601fc12062abea609394e"></a><br/></td></tr>
 <tr><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__git__signature.html#ga4085d3221bbeb16a29f6a8a93560a1a6">git_signature_free</a> (<a class="el" href="structgit__signature.html">git_signature</a> *sig)</td></tr>
@@ -87,7 +86,13 @@ name of the person</h2></td></tr>
 <div class="memdoc">
 
 <p>Create a copy of an existing signature. </p>
-<p>All internal strings are also duplicated.  signature to duplicated </p>
+<p>All internal strings are also duplicated. </p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">sig</td><td>signature to duplicated </td></tr>
+  </table>
+  </dd>
+</dl>
 <dl class="return"><dt><b>Returns:</b></dt><dd>a copy of sig, NULL on out of memory </dd></dl>
 
 </div>
@@ -112,6 +117,96 @@ name of the person</h2></td></tr>
 
 </div>
 </div>
+<a class="anchor" id="ga679fb5c22405c0b6eeeae776fb99928c"></a><!-- doxytag: member="signature.h::git_signature_new" ref="ga679fb5c22405c0b6eeeae776fb99928c" args="(const char *name, const char *email, git_time_t time, int offset)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structgit__signature.html">git_signature</a>* git_signature_new </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>email</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">git_time_t&#160;</td>
+          <td class="paramname"><em>time</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>offset</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new action signature. </p>
+<p>The signature must be freed manually or using git_signature_free</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>name of the person </td></tr>
+    <tr><td class="paramname">mail</td><td>email of the person </td></tr>
+    <tr><td class="paramname">time</td><td>time when the action happened </td></tr>
+    <tr><td class="paramname">offset</td><td>timezone offset in minutes for the time </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>the new sig, NULL on out of memory </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="ga01294e528d9687aec86e9a2cfe5ec5e3"></a><!-- doxytag: member="signature.h::git_signature_new_now" ref="ga01294e528d9687aec86e9a2cfe5ec5e3" args="(const char *name, const char *email)" -->
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structgit__signature.html">git_signature</a>* git_signature_new_now </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>email</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div>
+<div class="memdoc">
+
+<p>Create a new action signature with a timestamp of 'now'. </p>
+<p>The signature must be freed manually or using git_signature_free</p>
+<dl><dt><b>Parameters:</b></dt><dd>
+  <table class="params">
+    <tr><td class="paramname">name</td><td>name of the person </td></tr>
+    <tr><td class="paramname">email</td><td>email of the person </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="return"><dt><b>Returns:</b></dt><dd>the new sig, NULL on out of memory </dd></dl>
+
+</div>
+</div>
 </div>
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
@@ -127,7 +222,7 @@ name of the person</h2></td></tr>
 </iframe>
 </div>
 
-<hr class="footer"/><address class="footer"><small>Generated on Wed Apr 6 2011 14:02:39 for libgit2 by&#160;
+<hr class="footer"/><address class="footer"><small>Generated on Thu Apr 7 2011 13:27:55 for libgit2 by&#160;
 <a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.7.4 </small></address>
 </body>
