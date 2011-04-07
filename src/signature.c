@@ -139,6 +139,9 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	name_length = name_end - buffer - 1;
 	sig->name = git__malloc(name_length + 1);
+	if (sig->name == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(sig->name, buffer, name_length);
 	sig->name[name_length] = 0;
 	buffer = name_end + 1;
@@ -152,6 +155,9 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	email_length = email_end - buffer;
 	sig->email = git__malloc(email_length + 1);
+	if (sig->name == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(sig->email, buffer, email_length);
 	sig->email[email_length] = 0;
 	buffer = email_end + 1;
