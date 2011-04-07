@@ -285,26 +285,22 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 	 */
 
 	var = git__malloc(sizeof(git_cvar));
-	if(var == NULL){
-		error = GIT_ENOMEM;
-		goto out;
-	}
+	if (var == NULL)
+		return GIT_ENOMEM;
+
+	memset(var, 0x0, sizeof(git_cvar));
 
 	var->name = git__strdup(name);
-	if(var->name == NULL){
+	if (var->name == NULL) {
 		error = GIT_ENOMEM;
-		free(var);
 		goto out;
 	}
 
 	var->value = value ? git__strdup(value) : NULL;
 	if (var->value == NULL && value != NULL) {
 		error = GIT_ENOMEM;
-		cvar_free(var);
 		goto out;
 	}
-
-	var->next = NULL;
 
 	CVAR_LIST_APPEND(&cfg->var_list, var);
 
@@ -313,7 +309,6 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 		cvar_free(var);
 
 	return error;
-
 }
 
 int git_config_set_int(git_config *cfg, const char *name, int value)
