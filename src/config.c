@@ -311,17 +311,17 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 	return error;
 }
 
-int git_config_set_int(git_config *cfg, const char *name, int value)
+int git_config_set_long(git_config *cfg, const char *name, long int value)
 {
 	char str_value[5]; /* Most numbers should fit in here */
 	int buf_len = sizeof(str_value), ret;
 	char *help_buf = NULL;
 
-	if ((ret = snprintf(str_value, buf_len, "%d", value)) >= buf_len - 1){
+	if ((ret = snprintf(str_value, buf_len, "%ld", value)) >= buf_len - 1){
 		/* The number is too large, we need to allocate more memory */
 		buf_len = ret + 1;
 		help_buf = git__malloc(buf_len);
-		snprintf(help_buf, buf_len, "%d", value);
+		snprintf(help_buf, buf_len, "%ld", value);
 		ret = config_set(cfg, name, help_buf);
 		free(help_buf);
 	} else {
@@ -329,6 +329,11 @@ int git_config_set_int(git_config *cfg, const char *name, int value)
 	}
 
 	return ret;
+}
+
+int git_config_set_int(git_config *cfg, const char *name, int value)
+{
+	return git_config_set_long(cfg, name, value);
 }
 
 int git_config_set_bool(git_config *cfg, const char *name, int value)
@@ -370,26 +375,53 @@ static int config_get(git_config *cfg, const char *name, const char **out)
 	return error;
 }
 
-int git_config_get_int(git_config *cfg, const char *name, int *out)
+int git_config_get_long(git_config *cfg, const char *name, long int *out)
 {
 	const char *value;
+	char *num_end;
 	int ret;
+	long int num;
 
 	ret = config_get(cfg, name, &value);
 	if (ret < GIT_SUCCESS)
 		return ret;
 
-	ret = sscanf(value, "%d", out);
-	if (ret == 0) /* No items were matched i.e. value isn't a number */
+	errno = 0;
+	num = strtol(value, &num_end, 0);
+
+	/* There was some error */
+	if (num_end == value || errno != 0)
 		return GIT_EINVALIDTYPE;
-	if (ret < 0) {
-		if (errno == EINVAL) /* Format was NULL */
-			return GIT_EINVALIDTYPE;
-		else
-			return GIT_EOSERR;
+
+	switch (*num_end) {
+	case 'k':
+		num *= 1024;
+		break;
+	case 'm':
+		num *= 1024 * 1024;
+		break;
+	case 'g':
+		num *= 1024 * 1024 * 1024;
+		break;
+	default:
+		return GIT_EINVALIDTYPE;
 	}
 
+	*out = num;
+
 	return GIT_SUCCESS;
+}
+
+int git_config_get_int(git_config *cfg, const char *name, int *out)
+{
+	long int tmp;
+	int ret;
+
+	ret = git_config_get_long(cfg, name, &tmp);
+
+	*out = (int) tmp;
+
+	return ret;
 }
 
 int git_config_get_bool(git_config *cfg, const char *name, int *out)
