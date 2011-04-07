@@ -131,12 +131,17 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	text_len = search - buffer;
 
 	tag->tag_name = git__malloc(text_len + 1);
+	if (tag->tag_name == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(tag->tag_name, buffer, text_len);
 	tag->tag_name[text_len] = '\0';
 
 	buffer = search + 1;
 
 	tag->tagger = git__malloc(sizeof(git_signature));
+	if (tag->tagger == NULL)
+		return GIT_ENOMEM;
 
 	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0) {
 		free(tag->tag_name);
@@ -147,6 +152,9 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	text_len = buffer_end - ++buffer;
 
 	tag->message = git__malloc(text_len + 1);
+	if (tag->message == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(tag->message, buffer, text_len);
 	tag->message[text_len] = '\0';
 
