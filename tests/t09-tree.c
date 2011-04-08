@@ -134,12 +134,11 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	git_repository *repo;
 	git_treebuilder *builder;
 	git_tree *tree;
-	git_oid id;
-	git_oid bid;
-	git_oid rid;
+	git_oid id, bid, rid, id2;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	git_oid_mkstr(&id, first_tree);
+	git_oid_mkstr(&id2, second_tree);
 	git_oid_mkstr(&bid, blob_oid);
 
 	//create a second tree from first tree using `git_treebuilder_insert` on REPOSITORY_FOLDER.
@@ -148,9 +147,7 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	must_pass(git_treebuilder_insert(NULL,builder,"new.txt",&bid,0100644));
 	must_pass(git_treebuilder_write(&rid,repo,builder));
 
-	char out[41];
-	git_oid_to_string(out,41,&rid);
-	must_pass(strcmp(out,second_tree));
+	must_be_true(git_oid_cmp(&rid, &id2) == 0);
 END_TEST
 
 BEGIN_SUITE(tree)
