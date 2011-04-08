@@ -473,3 +473,18 @@ cleanup:
 	return error;
 }
 
+int git_repository_is_empty(git_repository *repo)
+{
+	git_reference *head, *branch;
+	int error;
+
+	error = git_reference_lookup(&head, repo, "HEAD");
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (git_reference_type(head) != GIT_REF_SYMBOLIC)
+		return GIT_EOBJCORRUPTED;
+
+	return git_reference_resolve(&branch, head) == GIT_SUCCESS ? 0 : 1;
+}
+

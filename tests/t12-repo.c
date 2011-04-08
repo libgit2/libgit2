@@ -244,6 +244,19 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 	rmdir_recurs(TEMP_REPO_FOLDER);
 END_TEST
 
+BEGIN_TEST(empty0, "test if a repository is empty or not")
+
+	git_repository *repo_empty, *repo_normal;
+
+	must_pass(git_repository_open(&repo_normal, REPOSITORY_FOLDER));
+	must_be_true(git_repository_is_empty(repo_normal) == 0);
+	git_repository_free(repo_normal);
+
+	must_pass(git_repository_open(&repo_empty, EMPTY_BARE_REPOSITORY_FOLDER));
+	must_be_true(git_repository_is_empty(repo_empty) == 1);
+	git_repository_free(repo_empty);
+END_TEST
+
 BEGIN_SUITE(repository)
 	ADD_TEST(odb0);
 	ADD_TEST(odb1);
@@ -253,5 +266,6 @@ BEGIN_SUITE(repository)
 	ADD_TEST(open0);
 	ADD_TEST(open1);
 	ADD_TEST(open2);
+	ADD_TEST(empty0);
 END_SUITE
 

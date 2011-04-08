@@ -182,6 +182,18 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  */
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
+/**
+ * Check if a repository is empty
+ *
+ * An empty repository has just been initialized and contains
+ * no commits.
+ *
+ * @param repo Repo to test
+ * @return 1 if the repository is empty, 0 if it isn't, error code
+ * if the repository is corrupted
+ */
+GIT_EXTERN(int) git_repository_is_empty(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
