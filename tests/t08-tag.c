@@ -121,11 +121,8 @@ END_TEST
 
 BEGIN_TEST(write1, "write a tag to the repository which points to an unknown oid should fail")
 	git_repository *repo;
-	git_tag *tag;
 	git_oid target_id, tag_id;
 	const git_signature *tagger;
-	git_reference *ref_tag;
-	git_object *zombie;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 

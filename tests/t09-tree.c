@@ -132,7 +132,6 @@ END_TEST
 
 BEGIN_TEST(write2, "write a tree from a memory")
 	git_repository *repo;
-	git_index *index;
 	git_treebuilder *builder;
 	git_tree *tree;
 	git_oid id;
