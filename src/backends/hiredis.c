@@ -52,7 +52,6 @@ int hiredis_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backe
 
     reply = redisCommand(backend->db, "HMGET %b %s %s", oid->id, GIT_OID_RAWSZ,
             "type", "size");
-    assert(reply->type != REDIS_REPLY_ERROR);
 
     if (reply->type == REDIS_REPLY_ARRAY) {
         if (reply->element[0]->type != REDIS_REPLY_NIL &&
@@ -83,7 +82,7 @@ int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_o
 
     reply = redisCommand(backend->db, "HMGET %b %s %s %s", oid->id, GIT_OID_RAWSZ,
             "type", "size", "data");
-    assert(reply->type != REDIS_REPLY_ERROR);
+
     if (reply->type == REDIS_REPLY_ARRAY) {
         if (reply->element[0]->type != REDIS_REPLY_NIL &&
                 reply->element[1]->type != REDIS_REPLY_NIL &&
@@ -119,8 +118,7 @@ int hiredis_backend__exists(git_odb_backend *_backend, const git_oid *oid) {
     found = 0;
 
     reply = redisCommand(backend->db, "exists %b", oid->id, GIT_OID_RAWSZ);
-    assert(reply->type == REDIS_REPLY_ERROR);
-    if (reply->type != REDIS_REPLY_NIL)
+    if (reply->type != REDIS_REPLY_NIL && reply->type != REDIS_REPLY_ERROR)
         found = 1;
 
 
