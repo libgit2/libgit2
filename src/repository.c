@@ -488,3 +488,14 @@ int git_repository_is_empty(git_repository *repo)
 	return git_reference_resolve(&branch, head) == GIT_SUCCESS ? 0 : 1;
 }
 
+const char *git_repository_path(git_repository *repo)
+{
+	assert(repo);
+	return repo->path_repository;
+}
+
+const char *git_repository_workdir(git_repository *repo)
+{
+	assert(repo);
+	return repo->path_workdir;
+}

@@ -194,6 +194,24 @@ GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path,
  */
 GIT_EXTERN(int) git_repository_is_empty(git_repository *repo);
 
+/**
+ * Get the normalized path to the git repository.
+ *
+ * @param repo a repository object
+ * @return absolute path to the git directory
+ */
+GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
+
+/**
+ * Get the normalized path to the working directory of the repository.
+ *
+ * If the repository is bare, there is no working directory and NULL we be returned.
+ *
+ * @param repo a repository object
+ * @return NULL if the repository is bare; absolute path to the working directory otherwise.
+ */
+GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
