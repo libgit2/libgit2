@@ -57,7 +57,7 @@ GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *emai
  * @param email email of the person
  * @return the new sig, NULL on out of memory
  */
-GIT_EXTERN(git_signature *) git_signature_new_now(const char *name, const char *email);
+GIT_EXTERN(git_signature *) git_signature_now(const char *name, const char *email);
 
 
 /**

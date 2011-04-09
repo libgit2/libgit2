@@ -65,7 +65,7 @@ git_signature *git_signature_dup(const git_signature *sig)
 	return git_signature_new(sig->name, sig->email, sig->when.time, sig->when.offset);
 }
 
-git_signature *git_signature_new_now(const char *name, const char *email)
+git_signature *git_signature_now(const char *name, const char *email)
 {
 	time_t now;
 	struct tm utc_tm, local_tm;
