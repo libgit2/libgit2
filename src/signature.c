@@ -68,7 +68,7 @@ git_signature *git_signature_dup(const git_signature *sig)
 git_signature *git_signature_now(const char *name, const char *email)
 {
 	time_t now;
-	int offset;
+	time_t offset;
 	struct tm *utc_tm, *local_tm;
 
 #ifndef GIT_WIN32
@@ -96,7 +96,7 @@ git_signature *git_signature_now(const char *name, const char *email)
 	if (local_tm->tm_isdst)
 		offset += 60;
 
-	return git_signature_new(name, email, now, offset);
+	return git_signature_new(name, email, now, (int)offset);
 }
 
 static int parse_timezone_offset(const char *buffer, long *offset_out)
