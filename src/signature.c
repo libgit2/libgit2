@@ -66,13 +66,13 @@ git_signature *git_signature_dup(const git_signature *sig)
 }
 
 
-static int parse_timezone_offset(const char *buffer, int *offset_out)
+static int parse_timezone_offset(const char *buffer, long *offset_out)
 {
-	int offset, dec_offset;
+	long offset, dec_offset;
 	int mins, hours;
 
-	const char* offset_start;
-	char* offset_end;
+	const char *offset_start;
+	const char *offset_end;
 
 	offset_start = buffer + 1;
 
@@ -84,7 +84,8 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 	if (offset_start[0] != '-' && offset_start[0] != '+')
 		return GIT_EOBJCORRUPTED;
 
-	dec_offset = strtol(offset_start + 1, &offset_end, 10);
+	if (git__strtol32(&dec_offset, offset_start + 1, &offset_end, 10) < GIT_SUCCESS)
+		return GIT_EOBJCORRUPTED;
 
 	if (offset_end - offset_start != 5)
 		return GIT_EOBJCORRUPTED;
@@ -117,7 +118,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	int name_length, email_length;
 	const char *buffer = *buffer_out;
 	const char *line_end, *name_end, *email_end;
-	int offset = 0;
+	long offset = 0, time;
 
 	memset(sig, 0x0, sizeof(git_signature));
 
@@ -159,10 +160,10 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	if (buffer >= line_end)
 		return GIT_EOBJCORRUPTED;
 
-	sig->when.time = strtol(buffer, (char **)&buffer, 10);
-
-	if (sig->when.time == 0)
+	if (git__strtol32(&time, buffer, &buffer, 10) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
+
+	sig->when.time = (time_t)time;
 
 	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
