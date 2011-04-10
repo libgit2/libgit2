@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from waflib.Context import Context
 from waflib.Build import BuildContext, CleanContext, \
         InstallContext, UninstallContext
