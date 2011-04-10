@@ -38,5 +38,6 @@ int git_repository__refcache_init(git_refcache *refs);
 
 int git_reference__normalize_name(char *buffer_out, const char *name);
 int git_reference__normalize_name_oid(char *buffer_out, const char *name);
+int git_reference_listall_prefixcmp(git_strarray *array, git_repository *repo, unsigned int list_flags, const char *prefix);
 
 #endif

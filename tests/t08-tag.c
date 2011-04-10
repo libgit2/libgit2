@@ -64,6 +64,19 @@ BEGIN_TEST(read0, "read and parse a tag from the repository")
 	git_repository_free(repo);
 END_TEST
 
+BEGIN_TEST(read1, "list all tag names from the repository")
+	git_repository *repo;
+	git_strarray tag_list;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_tag_list(&tag_list, repo, NULL));
+
+	must_be_true(tag_list.count == 3); 
+
+	git_strarray_free(&tag_list);
+	git_repository_free(repo);
+END_TEST
+
 
 #define TAGGER_NAME "Vicent Marti"
 #define TAGGER_EMAIL "vicent@github.com"
@@ -227,6 +240,7 @@ END_TEST
 
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
+	ADD_TEST(read1);
 	ADD_TEST(write0);
 	ADD_TEST(write1);
 	ADD_TEST(write2);

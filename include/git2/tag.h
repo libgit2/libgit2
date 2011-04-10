@@ -275,6 +275,33 @@ GIT_EXTERN(int) git_tag_delete(
 		git_repository *repo,
 		const char *tag_name);
 
+/**
+ * Fill a list with all the tags which name match
+ * the given pattern.
+ *
+ * Passing NULL as the pattern pattern will retrieve all
+ * the tag names.
+ *
+ * The string array will be filled with the names of the
+ * matching tags; these values are owned by the user and
+ * should be free'd manually when no longer needed, using
+ * `git_strarray_free`.
+ *
+ * TODO:
+ *	- Implement pattern based filtering
+ *
+ * @param array Pointer to a git_strarray structure where
+ *		the tag names will be stored
+ * @param repo Repository where to find the tags
+ * @param pattern The pattern used to filter out the name
+ *		of the tags. 
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_tag_list(
+		git_strarray *tag_names,
+		git_repository *repo,
+		const char *pattern);
+
 /** @} */
 GIT_END_DECL
 #endif

@@ -377,3 +377,12 @@ int git_tag__parse(git_tag *tag, git_odb_object *obj)
 	return parse_tag_buffer(tag, obj->raw.data, (char *)obj->raw.data + obj->raw.len);
 }
 
+int git_tag_list(git_strarray *tag_names, git_repository *repo, const char *pattern)
+{
+	//TODO: Implement pattern based filtering
+	if (pattern != NULL)
+		return GIT_ENOTIMPLEMENTED;
+
+	return git_reference_listall_prefixcmp(tag_names, repo, GIT_REF_LISTALL, GIT_REFS_TAGS_DIR);
+}
+

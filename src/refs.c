@@ -44,6 +44,11 @@ typedef struct {
 	char *target;
 } reference_symbolic;
 
+typedef struct {
+	git_vector *ref_list;
+	const char *prefix;
+} reference_list_criteria;
+
 static const int default_table_size = 32;
 
 static uint32_t reftable_hash(const void *key, int hash_id)
@@ -1545,13 +1550,14 @@ int git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*ca
 
 int cb__reflist_add(const char *ref, void *data)
 {
-	return git_vector_insert((git_vector *)data, git__strdup(ref));
+	return git_vector_insert(((reference_list_criteria *)data)->ref_list, git__strdup(ref));
 }
 
-int git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags)
+static int reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), const char *prefix)
 {
 	int error;
 	git_vector ref_list;
+	reference_list_criteria criteria;
 
 	assert(array && repo);
 
@@ -1561,7 +1567,10 @@ int git_reference_listall(git_strarray *array, git_repository *repo, unsigned in
 	if (git_vector_init(&ref_list, 8, NULL) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
-	error = git_reference_listcb(repo, list_flags, &cb__reflist_add, (void *)&ref_list);
+	criteria.prefix = prefix;
+	criteria.ref_list = &ref_list;
+
+	error = git_reference_listcb(repo, list_flags, callback, (void *)&criteria);
 
 	if (error < GIT_SUCCESS) {
 		git_vector_free(&ref_list);
@@ -1571,6 +1580,29 @@ int git_reference_listall(git_strarray *array, git_repository *repo, unsigned in
 	array->strings = (char **)ref_list.contents;
 	array->count = ref_list.length;
 	return GIT_SUCCESS;
+}
+
+int cb__reflist_add_prefixcmp(const char *ref, void *data)
+{
+	const char *prefix;
+	prefix = ((reference_list_criteria *)data)->prefix;
+
+	assert(prefix);
+	
+	if (git__prefixcmp(ref, prefix))
+		return GIT_SUCCESS;
+
+	return cb__reflist_add(ref, data);
+}
+
+int git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags)
+{
+	return reference_listall(array, repo, list_flags, &cb__reflist_add, NULL);
+}
+
+int git_reference_listall_prefixcmp(git_strarray *array, git_repository *repo, unsigned int list_flags, const char *prefix)
+{
+	return reference_listall(array, repo, list_flags, &cb__reflist_add_prefixcmp, prefix);
 }
 
 
