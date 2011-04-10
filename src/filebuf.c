@@ -178,7 +178,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 	if (flags & GIT_FILEBUF_DEFLATE_CONTENTS) {
 
 		/* Initialize the ZLib stream */
-		if (deflateInit(&file->zs, Z_DEFAULT_COMPRESSION) != Z_OK) {
+		if (deflateInit(&file->zs, Z_BEST_SPEED) != Z_OK) {
 			error = GIT_EZLIB;
 			goto cleanup;
 		}

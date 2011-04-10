@@ -136,7 +136,7 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	git_tree *tree;
 	git_oid id, bid, rid, id2;
 
-	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 	git_oid_mkstr(&id, first_tree);
 	git_oid_mkstr(&id2, second_tree);
 	git_oid_mkstr(&bid, blob_oid);
@@ -148,6 +148,7 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	must_pass(git_treebuilder_write(&rid,repo,builder));
 
 	must_be_true(git_oid_cmp(&rid, &id2) == 0);
+	close_temp_repo(repo);
 END_TEST
 
 BEGIN_SUITE(tree)
