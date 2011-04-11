@@ -394,6 +394,8 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 		return GIT_EINVALIDTYPE;
 
 	switch (*num_end) {
+	case '\0':
+		break;
 	case 'k':
 		num *= 1024;
 		break;
