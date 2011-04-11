@@ -194,6 +194,8 @@ BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git"
 	must_pass(remove_placeholders(TEMP_REPO_FOLDER, "dummy-marker.txt"));
 
 	must_pass(git_repository_open(&repo, TEMP_REPO_FOLDER));
+	must_be_true(git_repository_path(repo) != NULL);
+	must_be_true(git_repository_workdir(repo) == NULL);
 
 	git_repository_free(repo);
 	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
@@ -211,6 +213,8 @@ BEGIN_TEST(open1, "Open a standard repository that has just been initialized by 
 	must_pass(remove_placeholders(DEST_REPOSITORY_FOLDER, "dummy-marker.txt"));
 
 	must_pass(git_repository_open(&repo, DEST_REPOSITORY_FOLDER));
+	must_be_true(git_repository_path(repo) != NULL);
+	must_be_true(git_repository_workdir(repo) != NULL);
 
 	git_repository_free(repo);
 	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
@@ -244,6 +248,19 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 	rmdir_recurs(TEMP_REPO_FOLDER);
 END_TEST
 
+BEGIN_TEST(empty0, "test if a repository is empty or not")
+
+	git_repository *repo_empty, *repo_normal;
+
+	must_pass(git_repository_open(&repo_normal, REPOSITORY_FOLDER));
+	must_be_true(git_repository_is_empty(repo_normal) == 0);
+	git_repository_free(repo_normal);
+
+	must_pass(git_repository_open(&repo_empty, EMPTY_BARE_REPOSITORY_FOLDER));
+	must_be_true(git_repository_is_empty(repo_empty) == 1);
+	git_repository_free(repo_empty);
+END_TEST
+
 BEGIN_SUITE(repository)
 	ADD_TEST(odb0);
 	ADD_TEST(odb1);
@@ -253,5 +270,6 @@ BEGIN_SUITE(repository)
 	ADD_TEST(open0);
 	ADD_TEST(open1);
 	ADD_TEST(open2);
+	ADD_TEST(empty0);
 END_SUITE
 

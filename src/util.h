@@ -22,6 +22,8 @@ extern int git__fmt(char *, size_t, const char *, ...)
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
+extern int git__strtol32(long *n, const char *buff, const char **end_buf, int base);
+
 /*
  * The dirname() function shall take a pointer to a character string
  * that contains a pathname, and return a pointer to a string that is a

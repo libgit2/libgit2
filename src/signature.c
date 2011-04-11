@@ -65,14 +65,47 @@ git_signature *git_signature_dup(const git_signature *sig)
 	return git_signature_new(sig->name, sig->email, sig->when.time, sig->when.offset);
 }
 
-
-static int parse_timezone_offset(const char *buffer, int *offset_out)
+git_signature *git_signature_now(const char *name, const char *email)
 {
-	int offset, dec_offset;
+	time_t now;
+	time_t offset;
+	struct tm *utc_tm, *local_tm;
+
+#ifndef GIT_WIN32
+	struct tm _utc, _local;
+#endif
+
+	time(&now);
+
+	/**
+	 * On Win32, `gmtime_r` doesn't exist but
+	 * `gmtime` is threadsafe, so we can use that
+	 */
+#ifdef GIT_WIN32
+	utc_tm = gmtime(&now);
+	local_tm = localtime(&now);
+#else
+	utc_tm = gmtime_r(&now, &_utc);
+	local_tm = localtime_r(&now, &_local);
+#endif
+
+	offset = mktime(local_tm) - mktime(utc_tm);
+	offset /= 60;
+
+	/* mktime takes care of setting tm_isdst correctly */
+	if (local_tm->tm_isdst)
+		offset += 60;
+
+	return git_signature_new(name, email, now, (int)offset);
+}
+
+static int parse_timezone_offset(const char *buffer, long *offset_out)
+{
+	long offset, dec_offset;
 	int mins, hours;
 
-	const char* offset_start;
-	char* offset_end;
+	const char *offset_start;
+	const char *offset_end;
 
 	offset_start = buffer + 1;
 
@@ -84,7 +117,8 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 	if (offset_start[0] != '-' && offset_start[0] != '+')
 		return GIT_EOBJCORRUPTED;
 
-	dec_offset = strtol(offset_start + 1, &offset_end, 10);
+	if (git__strtol32(&dec_offset, offset_start + 1, &offset_end, 10) < GIT_SUCCESS)
+		return GIT_EOBJCORRUPTED;
 
 	if (offset_end - offset_start != 5)
 		return GIT_EOBJCORRUPTED;
@@ -117,7 +151,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	int name_length, email_length;
 	const char *buffer = *buffer_out;
 	const char *line_end, *name_end, *email_end;
-	int offset = 0;
+	long offset = 0, time;
 
 	memset(sig, 0x0, sizeof(git_signature));
 
@@ -139,6 +173,9 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	name_length = name_end - buffer - 1;
 	sig->name = git__malloc(name_length + 1);
+	if (sig->name == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(sig->name, buffer, name_length);
 	sig->name[name_length] = 0;
 	buffer = name_end + 1;
@@ -152,6 +189,9 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	email_length = email_end - buffer;
 	sig->email = git__malloc(email_length + 1);
+	if (sig->name == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(sig->email, buffer, email_length);
 	sig->email[email_length] = 0;
 	buffer = email_end + 1;
@@ -159,10 +199,10 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	if (buffer >= line_end)
 		return GIT_EOBJCORRUPTED;
 
-	sig->when.time = strtol(buffer, (char **)&buffer, 10);
-
-	if (sig->when.time == 0)
+	if (git__strtol32(&time, buffer, &buffer, 10) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
+
+	sig->when.time = (time_t)time;
 
 	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;

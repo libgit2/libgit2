@@ -131,12 +131,17 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	text_len = search - buffer;
 
 	tag->tag_name = git__malloc(text_len + 1);
+	if (tag->tag_name == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(tag->tag_name, buffer, text_len);
 	tag->tag_name[text_len] = '\0';
 
 	buffer = search + 1;
 
 	tag->tagger = git__malloc(sizeof(git_signature));
+	if (tag->tagger == NULL)
+		return GIT_ENOMEM;
 
 	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0) {
 		free(tag->tag_name);
@@ -147,6 +152,9 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	text_len = buffer_end - ++buffer;
 
 	tag->message = git__malloc(text_len + 1);
+	if (tag->message == NULL)
+		return GIT_ENOMEM;
+
 	memcpy(tag->message, buffer, text_len);
 	tag->message[text_len] = '\0';
 
@@ -209,6 +217,17 @@ static int tag_create(
 		return error;
 	}
 
+	if (!git_odb_exists(repo->db, target))
+		return GIT_ENOTFOUND;
+
+	/* Try to find out what the type is */
+	if (target_type == GIT_OBJ_ANY) {
+		size_t _unused;
+		error = git_odb_read_header(&_unused, &target_type, repo->db, target);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
 	type_str = git_object_type2string(target_type);
 
 	tagger_str_len = git_signature__write(&tagger_str, "tagger", tagger);
@@ -260,7 +279,6 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 {
 	git_tag tag;
 	int error;
-	git_object *obj;
 
 	assert(oid && buffer);
 
@@ -269,15 +287,8 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
 		return error;
 
-	error = git_object_lookup(&obj, repo, &tag.target, tag.type);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	error = git_tag_create(oid, repo, tag.tag_name, &tag.target, tag.type, tag.tagger, tag.message);
 
-	error = git_tag_create_o(oid, repo, tag.tag_name, obj, tag.tagger, tag.message);
-
-	git_object_close(obj);
-
-cleanup:
 	git_signature_free(tag.tagger);
 	free(tag.tag_name);
 	free(tag.message);

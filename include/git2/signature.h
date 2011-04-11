@@ -41,19 +41,30 @@ GIT_BEGIN_DECL
  * Create a new action signature. The signature must be freed
  * manually or using git_signature_free
  *
- * @name name of the person
- * @email email of the person
- * @time time when the action happened
- * @offset timezone offset in minutes for the time
+ * @param name name of the person
+ * @param mail email of the person
+ * @param time time when the action happened
+ * @param offset timezone offset in minutes for the time
  * @return the new sig, NULL on out of memory
  */
 GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *email, git_time_t time, int offset);
 
 /**
+ * Create a new action signature with a timestamp of 'now'. The
+ * signature must be freed manually or using git_signature_free
+ *
+ * @param name name of the person
+ * @param email email of the person
+ * @return the new sig, NULL on out of memory
+ */
+GIT_EXTERN(git_signature *) git_signature_now(const char *name, const char *email);
+
+
+/**
  * Create a copy of an existing signature.
  *
  * All internal strings are also duplicated.
- * @sig signature to duplicated
+ * @param sig signature to duplicated
  * @return a copy of sig, NULL on out of memory
  */
 GIT_EXTERN(git_signature *) git_signature_dup(const git_signature *sig);
@@ -61,7 +72,7 @@ GIT_EXTERN(git_signature *) git_signature_dup(const git_signature *sig);
 /**
  * Free an existing signature
  *
- * @sig signature to free
+ * @param sig signature to free
  */
 GIT_EXTERN(void) git_signature_free(git_signature *sig);
 

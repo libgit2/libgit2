@@ -233,7 +233,7 @@ BEGIN_TEST(path3, "prettify and validate a path to a file")
 	must_fail(ensure_file_path_normalized("d1/s1///s2/..//../s3/", NULL, 0));
 	must_pass(ensure_file_path_normalized("d1/s1//../s2/../../d2", "d2", CWD_AS_PREFIX | PATH_AS_SUFFIX));
 	must_fail(ensure_file_path_normalized("dir/sub/../", NULL, 0));
-	must_pass(ensure_file_path_normalized("../../a/../../b/c/d/../../e", "b/e", PATH_AS_SUFFIX));
+	must_pass(ensure_file_path_normalized("../a/../b/c/d/../../e", "b/e", PATH_AS_SUFFIX));
 	must_fail(ensure_file_path_normalized("....", NULL, 0));
 	must_fail(ensure_file_path_normalized("...", NULL, 0));
 	must_fail(ensure_file_path_normalized("./...", NULL, 0));
@@ -309,7 +309,7 @@ BEGIN_TEST(path4, "validate and prettify a path to a folder")
 	must_pass(ensure_dir_path_normalized("d1/s1///s2/..//../s3/", "d1/s3/", CWD_AS_PREFIX | PATH_AS_SUFFIX));
 	must_pass(ensure_dir_path_normalized("d1/s1//../s2/../../d2", "d2/", CWD_AS_PREFIX | PATH_AS_SUFFIX));
 	must_pass(ensure_dir_path_normalized("dir/sub/../", "dir/", CWD_AS_PREFIX | PATH_AS_SUFFIX));
-	must_pass(ensure_dir_path_normalized("../../a/../../b/c/d/../../e", "b/e/", PATH_AS_SUFFIX));
+	must_pass(ensure_dir_path_normalized("../a/../b/c/d/../../e", "b/e/", PATH_AS_SUFFIX));
 	must_fail(ensure_dir_path_normalized("....", NULL, 0));
 	must_fail(ensure_dir_path_normalized("...", NULL, 0));
 	must_fail(ensure_dir_path_normalized("./...", NULL, 0));

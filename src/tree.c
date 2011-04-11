@@ -150,7 +150,8 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		if (git_vector_insert(&tree->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-		entry->attr = strtol(buffer, (char **)&buffer, 8);
+		if (git__strtol32((long *)&entry->attr, buffer, &buffer, 8) < GIT_SUCCESS)
+			return GIT_EOBJCORRUPTED;
 
 		if (*buffer++ != ' ') {
 			error = GIT_EOBJCORRUPTED;
@@ -364,7 +365,7 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
 
-	if (pos != GIT_ENOTFOUND) {
+	if (pos == GIT_ENOTFOUND) {
 		if (git_vector_insert(&bld->entries, entry) < 0)
 			return GIT_ENOMEM;
 	}
