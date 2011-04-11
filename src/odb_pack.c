@@ -300,7 +300,8 @@ static int packfile_unpack_compressed(
 		struct pack_window **w_curs,
 		off_t curpos,
 		size_t size,
-		git_otype type);
+		git_otype type,
+		size_t *uncompressedSize);
 
 static int packfile_unpack_delta(
 		git_rawobj *obj,
@@ -310,10 +311,11 @@ static int packfile_unpack_delta(
 		off_t curpos,
 		size_t delta_size,
 		git_otype delta_type,
-		off_t obj_offset);
+		off_t obj_offset,
+		size_t *uncompressedSize);
 
 static int packfile_unpack(git_rawobj *obj, struct pack_backend *backend,
-		struct pack_file *p, off_t obj_offset);
+		struct pack_file *p, off_t obj_offset, size_t *uncompressedSize);
 
 
 
@@ -1130,11 +1132,14 @@ static int packfile_unpack_compressed(
 		struct pack_window **w_curs,
 		off_t curpos,
 		size_t size,
-		git_otype type)
+		git_otype type,
+		size_t *uncompressedSize)
 {
 	int st;
 	z_stream stream;
 	unsigned char *buffer, *in;
+
+	off_t origpos = curpos;
 
 	buffer = git__malloc(size);
 
@@ -1169,6 +1174,11 @@ static int packfile_unpack_compressed(
 	obj->type = type;
 	obj->len = size;
 	obj->data = buffer;
+
+	if(uncompressedSize) {
+		*uncompressedSize = curpos - origpos;
+	}
+
 	return GIT_SUCCESS;
 }
 
@@ -1223,7 +1233,8 @@ static int packfile_unpack_delta(
 		off_t curpos,
 		size_t delta_size,
 		git_otype delta_type,
-		off_t obj_offset)
+		off_t obj_offset,
+		size_t *uncompressedSize)
 {
 	off_t base_offset;
 	git_rawobj base, delta;
@@ -1234,14 +1245,14 @@ static int packfile_unpack_delta(
 		return GIT_EOBJCORRUPTED;
 
 	pack_window_close(w_curs);
-	error = packfile_unpack(&base, backend, p, base_offset);
+	error = packfile_unpack(&base, backend, p, base_offset, uncompressedSize);
 
 	/* TODO: git.git tries to load the base from other packfiles
 	 * or loose objects */
 	if (error < GIT_SUCCESS)
 		return error;
 
-	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type);
+	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type, uncompressedSize);
 	if (error < GIT_SUCCESS) {
 		free(base.data);
 		return error;
@@ -1264,7 +1275,8 @@ static int packfile_unpack(
 		git_rawobj *obj,
 		struct pack_backend *backend,
 		struct pack_file *p,
-		off_t obj_offset)
+		off_t obj_offset,
+		size_t *uncompressedSize)
 {
 	struct pack_window *w_curs = NULL;
 	off_t curpos = obj_offset;
@@ -1290,7 +1302,7 @@ static int packfile_unpack(
 	case GIT_OBJ_REF_DELTA:
 		error = packfile_unpack_delta(
 				obj, backend, p, &w_curs, curpos,
-				size, type, obj_offset);
+				size, type, obj_offset, uncompressedSize);
 		break;
 
 	case GIT_OBJ_COMMIT:
@@ -1299,7 +1311,7 @@ static int packfile_unpack(
 	case GIT_OBJ_TAG:
 		error = packfile_unpack_compressed(
 				obj, backend, p, &w_curs, curpos,
-				size, type);
+				size, type, uncompressedSize);
 		break;
 
 	default:
@@ -1346,7 +1358,7 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < GIT_SUCCESS)
 		return error;
 
-	if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset)) < GIT_SUCCESS)
+	if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset, NULL)) < GIT_SUCCESS)
 		return error;
 
 	*buffer_p = raw.data;
@@ -1409,5 +1421,76 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->parent.free = &pack_backend__free;
 
 	*backend_out = (git_odb_backend *)backend;
+	return GIT_SUCCESS;
+}
+
+/**
+ * Building an index from a packfile requires us to do the following:
+ * - assert pack header preamble ("PACK") is valid.
+ * - assert version is valid
+ * - grab entry count
+ *
+ * With this done, we then do the following:
+ * 1. Starting from first offset, we read header.
+ */
+
+int git_pack_build_index(const char *path)
+{
+	struct pack_file *p;
+	size_t path_len;
+	struct stat st;
+	struct pack_backend *backend;
+	struct pack_window *w_curs;
+	unsigned char *data;
+	struct pack_header hdr;
+
+	// We'll be using a dummy pack_backend during this operation.
+	backend = git__calloc(1, sizeof(struct pack_backend));
+	if (backend == NULL)
+		return GIT_ENOMEM;
+
+	path_len = strlen(path);
+	p = packfile_alloc(path_len + 2);
+	memcpy(p->pack_name, path, path_len);
+
+	if (gitfo_stat(p->pack_name, &st) < GIT_SUCCESS || !S_ISREG(st.st_mode)) {
+		free(p);
+		free(backend);
+		return GIT_ENOTFOUND;
+	}
+
+	/* ok, it looks sane as far as we can check without
+	 * actually mapping the pack file.
+	 */
+	p->pack_size = (off_t)st.st_size;
+	p->pack_local = 1;
+	p->mtime = (git_time_t)st.st_mtime;
+
+	/* see if we can parse the sha1 oid in the packfile name */
+	if (path_len < 40 ||
+		git_oid_mkstr(&p->sha1, path + path_len - GIT_OID_HEXSZ) < GIT_SUCCESS)
+		memset(&p->sha1, 0x0, GIT_OID_RAWSZ);
+
+	backend->window_size = DEFAULT_WINDOW_SIZE;
+	backend->mapped_limit = DEFAULT_MAPPED_LIMIT;
+
+	data = pack_window_open(backend, p, &w_curs, 0, NULL);
+
+
+	if (hdr.hdr_signature != htonl(PACK_SIGNATURE)) {
+		pack_window_close(&w_curs);
+		free(p);
+		free(backend);
+		return GIT_EPACKCORRUPTED;
+	}
+
+	if (!pack_version_ok(hdr.hdr_version)) {
+		pack_window_close(&w_curs);
+		free(p);
+		free(backend);
+		return GIT_EPACKCORRUPTED;
+	}
+
+	memcpy(&hdr, data, sizeof(struct pack_header));
 	return GIT_SUCCESS;
 }
