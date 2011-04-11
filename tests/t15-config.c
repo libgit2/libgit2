@@ -129,10 +129,34 @@ int i;
 	git_config_free(cfg);
 END_TEST
 
+BEGIN_TEST(config5, "test number suffixes")
+	git_config *cfg;
+	const char *str;
+	long int i;
+
+	must_pass(git_config_open(&cfg, CONFIG_BASE "/config5"));
+
+	must_pass(git_config_get_long(cfg, "number.simple", &i));
+	must_be_true(i == 1);
+
+	must_pass(git_config_get_long(cfg, "number.k", &i));
+	must_be_true(i == 1 * 1024);
+
+	must_pass(git_config_get_long(cfg, "number.m", &i));
+	must_be_true(i == 1 * 1024 * 1024);
+
+	must_pass(git_config_get_long(cfg, "number.g", &i));
+	must_be_true(i == 1 * 1024 * 1024 * 1024);
+
+	git_config_free(cfg);
+END_TEST
+
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
 	 ADD_TEST(config2);
 	 ADD_TEST(config3);
 	 ADD_TEST(config4);
+	 ADD_TEST(config5);
 END_SUITE
