@@ -411,6 +411,7 @@ static git_index_tree *read_tree_internal(
 {
 	git_index_tree *tree;
 	const char *name_start, *buffer;
+	long count;
 
 	if ((tree = git__malloc(sizeof(git_index_tree))) == NULL)
 		return NULL;
@@ -429,12 +430,22 @@ static git_index_tree *read_tree_internal(
 		goto error_cleanup;
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
-	tree->entries = strtol(buffer, (char **)&buffer, 10);
+	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS ||
+		count < 0)
+		goto error_cleanup;
+
+	tree->entries = (size_t)count;
+
 	if (*buffer != ' ' || ++buffer >= buffer_end)
 		goto error_cleanup;
 
 	 /* Number of children of the tree, newline-terminated */
-	tree->children_count = strtol(buffer, (char **)&buffer, 10);
+	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS ||
+		count < 0)
+		goto error_cleanup;
+
+	tree->children_count = (size_t)count;
+
 	if (*buffer != '\n' || ++buffer >= buffer_end)
 		goto error_cleanup;
 

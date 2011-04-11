@@ -29,7 +29,9 @@ static struct {
 	{GIT_EREVWALKOVER, "The revision walker is empty; there are no more commits left to iterate"},
 	{GIT_EINVALIDREFSTATE, "The state of the reference is not valid"},
 	{GIT_ENOTIMPLEMENTED, "This feature has not been implemented yet"},
-	{GIT_EEXISTS, "A reference with this name already exists"}
+	{GIT_EEXISTS, "A reference with this name already exists"},
+	{GIT_EOVERFLOW, "The given integer literal is too large to be parsed"},
+	{GIT_ENOTNUM, "The given literal is not a valid number"},
 };
 
 const char *git_strerror(int num)

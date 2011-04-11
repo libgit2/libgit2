@@ -136,6 +136,16 @@ GIT_EXTERN(const git_signature *) git_commit_author(git_commit *commit);
 GIT_EXTERN(int) git_commit_tree(git_tree **tree_out, git_commit *commit);
 
 /**
+ * Get the id of the tree pointed to by a commit. This differs from
+ * `git_commit_tree` in that no attempts are made to fetch an object
+ * from the ODB.
+ *
+ * @param commit a previously loaded commit.
+ * @return the id of tree pointed to by commit.
+ */
+GIT_EXTERN(const git_oid *) git_commit_tree_oid(git_commit *commit);
+
+/**
  * Get the number of parents of this commit
  *
  * @param commit a previously loaded commit.
@@ -153,6 +163,16 @@ GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
  */
 GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n);
 
+/**
+ * Get the oid of a specified parent for a commit. This is different from
+ * `git_commit_parent`, which will attempt to load the parent commit from
+ * the ODB.
+ *
+ * @param commit a previously loaded commit.
+ * @param n the position of the parent (from 0 to `parentcount`)
+ * @return the id of the parent, NULL on error.
+ */
+GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned int n);
 
 /**
  * Create a new commit in the repository

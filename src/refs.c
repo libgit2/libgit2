@@ -746,7 +746,7 @@ static int packed_write_ref(reference_oid *ref, git_filebuf *file)
  */
 static int packed_find_peel(reference_oid *ref)
 {
-	git_tag *tag;
+	git_object *object;
 	int error;
 
 	if (ref->ref.type & GIT_REF_HAS_PEEL)
@@ -760,25 +760,32 @@ static int packed_find_peel(reference_oid *ref)
 		return GIT_SUCCESS;
 
 	/*
-	 * Find the tag in the repository. The tag must exist,
-	 * otherwise this reference is broken and we shouldn't
-	 * pack it.
+	 * Find the tagged object in the repository
 	 */
-	error = git_tag_lookup(&tag, ref->ref.owner, &ref->oid);
+	error = git_object_lookup(&object, ref->ref.owner, &ref->oid, GIT_OBJ_ANY);
 	if (error < GIT_SUCCESS)
 		return GIT_EOBJCORRUPTED;
 
 	/*
-	 * Find the object pointed at by this tag
+	 * If the tagged object is a Tag object, we need to resolve it;
+	 * if the ref is actually a 'weak' ref, we don't need to resolve
+	 * anything.
 	 */
-	git_oid_cpy(&ref->peel_target, git_tag_target_oid(tag));
-	ref->ref.type |= GIT_REF_HAS_PEEL;
+	if (git_object_type(object) == GIT_OBJ_TAG) {
+		git_tag *tag = (git_tag *)object;
 
-	/* 
-	 * The reference has now cached the resolved OID, and is
-	 * marked at such. When written to the packfile, it'll be
-	 * accompanied by this resolved oid
-	 */
+		/*
+		 * Find the object pointed at by this tag
+		 */
+		git_oid_cpy(&ref->peel_target, git_tag_target_oid(tag));
+		ref->ref.type |= GIT_REF_HAS_PEEL;
+
+		/*
+		 * The reference has now cached the resolved OID, and is
+		 * marked at such. When written to the packfile, it'll be
+		 * accompanied by this resolved oid
+		 */
+	}
 
 	return GIT_SUCCESS;
 }
@@ -1419,6 +1426,10 @@ int git_reference_delete(git_reference *ref)
 	assert(ref);
 
 	if (ref->type & GIT_REF_PACKED) {
+		/* load the existing packfile */
+		if ((error = packed_load(ref->owner)) < GIT_SUCCESS)
+			return error;
+		
 		git_hashtable_remove(ref->owner->references.packfile, ref->name);
 		error = packed_write(ref->owner);
 	} else {
