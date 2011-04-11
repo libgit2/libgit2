@@ -386,12 +386,9 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 	if (ret < GIT_SUCCESS)
 		return ret;
 
-	errno = 0;
-	num = strtol(value, &num_end, 0);
-
-	/* There was some error */
-	if (num_end == value || errno != 0)
-		return GIT_EINVALIDTYPE;
+	ret = git__strtol32(&num, value, &num_end, 0);
+	if (ret < GIT_SUCCESS)
+		return ret;
 
 	switch (*num_end) {
 	case '\0':
