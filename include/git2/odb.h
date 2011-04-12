@@ -297,6 +297,8 @@ GIT_EXTERN(size_t) git_odb_object_size(git_odb_object *object);
  */
 GIT_EXTERN(git_otype) git_odb_object_type(git_odb_object *object);
 
+GIT_EXTERN(int) git_pack_build_index(const char *path);
+
 /** @} */
 GIT_END_DECL
 #endif
