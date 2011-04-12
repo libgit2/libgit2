@@ -377,3 +377,29 @@ int git_tag__parse(git_tag *tag, git_odb_object *obj)
 	return parse_tag_buffer(tag, obj->raw.data, (char *)obj->raw.data + obj->raw.len);
 }
 
+static int tag_list_cb(const char *tag_name, void *payload)
+{
+	if (git__prefixcmp(tag_name, GIT_REFS_TAGS_DIR) == 0)
+		return git_vector_insert((git_vector *)payload, git__strdup(tag_name));
+
+	return GIT_SUCCESS;
+}
+
+int git_tag_list(git_strarray *tag_names, git_repository *repo)
+{
+	int error;
+	git_vector taglist;
+
+	if (git_vector_init(&taglist, 8, NULL) < GIT_SUCCESS)
+		return GIT_ENOMEM;
+
+	error = git_reference_listcb(repo, GIT_REF_OID|GIT_REF_PACKED, &tag_list_cb, (void *)&taglist);
+	if (error < GIT_SUCCESS) {
+		git_vector_free(&taglist);
+		return error;
+	}
+
+	tag_names->strings = (char **)taglist.contents;
+	tag_names->count = taglist.length;
+	return GIT_SUCCESS;
+}
