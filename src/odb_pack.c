@@ -958,10 +958,10 @@ static int pack_entry_find_offset(
 		index += 4;
 	}
 
-//#ifdef INDEX_DEBUG_LOOKUP
+#ifdef INDEX_DEBUG_LOOKUP
 	printf("%02x%02x%02x... lo %u hi %u nr %d\n",
 		oid->id[0], oid->id[1], oid->id[2], lo, hi, p->num_objects);
-//#endif
+#endif
 
 #ifdef GIT2_INDEX_LOOKUP /* TODO: use the advanced lookup method from git.git */
 
@@ -978,8 +978,6 @@ static int pack_entry_find_offset(
 		unsigned mi = (lo + hi) / 2;
 		int cmp = memcmp(index + mi * stride, oid->id, GIT_OID_RAWSZ);
 
-		//fprintf(stdout, "Need %s, got %s. cmp=%i\n", git_oid_allocfmt(oid), git_oid_allocfmt((git_oid*)(index + mi * stride)), cmp);fflush(stdout);
-
 		if (!cmp) {
 			*offset_out = nth_packed_object_offset(p, mi);
 			return GIT_SUCCESS;
@@ -991,8 +989,6 @@ static int pack_entry_find_offset(
 			lo = mi+1;
 
 	} while (lo < hi);
-
-	//fprintf(stdout, "Couldn't find delta base %s :(\n", git_oid_allocfmt(oid));
 
 	return GIT_ENOTFOUND;
 #endif
@@ -1221,7 +1217,6 @@ static off_t get_delta_base(
 		*curpos += 20;
 
 		/* The base entry _must_ be in the same pack */
-		//////fprintf(stdout, "Delta needs base: %s\n", git_oid_allocfmt((git_oid *)base_info));fflush(stdout);
 		error = pack_entry_find_offset(&base_offset, p, (git_oid *)base_info);
 		if (error < GIT_SUCCESS)
 			return error;
@@ -1345,7 +1340,6 @@ static int packfile_unpack(
 	// We only provide packed size if we didn't fail miserably.
 	if((error == GIT_SUCCESS || error == GIT_ENOTFOUND) && packedSize) {
 		*packedSize = (curpos - obj_offset) + dataSize;
-		//////fprintf(stdout, "Updated packed size: %i\n", *packedSize);fflush(stdout);
 	}
 
 	pack_window_close(&w_curs);
@@ -1598,10 +1592,6 @@ int git_pack_build_index(const char *path)
 	git_hash_ctx *hashCtx;
 	git_oid indexSha1;
 
-	// TODO: delete me
-	setbuf(stdout, NULL);
-	setbuf(stderr, NULL);
-
 	// We'll be using a dummy pack_backend during this operation.
 	backend = git__calloc(1, sizeof(struct pack_backend));
 	if (backend == NULL)
@@ -1743,7 +1733,6 @@ int git_pack_build_index(const char *path)
 
 	do {
 		if(prev_unresolvedObjectCount > 0 && (prev_unresolvedObjectCount == unresolvedObjectCount)) {
-//			////fprintf(stdout, "ERROR: Endless loop detected %i.\n", unresolvedObjectCount);fflush(stdout);
 			error = GIT_EPACKCORRUPTED;
 			goto cleanup;
 		}
@@ -1785,11 +1774,9 @@ int git_pack_build_index(const char *path)
 				free(obj.data);
 				char idStrLol[GIT_OID_HEXSZ];
 				git_oid_fmt(idStrLol, &objId);
-				//fprintf(stdout, "Entry %i: Resolved object: %.40s\n", i, idStrLol);fflush(stdout);
 			}
 			else {
 				unresolvedObjectCount++;
-				//fprintf(stdout, "Entry %i: Couldn't resolve delta.\n", i);fflush(stdout);
 			}
 
 			offset += objPackSize;
@@ -1799,15 +1786,12 @@ int git_pack_build_index(const char *path)
 		// accounted for. Either way we wanna sort out sha1 list nicely.
 		git_vector_sort(&packEntries);
 
-//		////fprintf(stdout, "Resolved: %i/%i\n", packEntries.length, p->num_objects);fflush(stdout);
-
 		// Now we'll write what we have for an index so far.
 		fanout = 0;
 		fanout_offset = 0;
 		memset(indexFanout, 0, (255*4));
 		memset(indexShas, 0, (GIT_OID_RAWSZ * p->num_objects));
 		memset(indexOffsets, 0, (4 * p->num_objects));
-		//////fprintf(stdout, "Entry count: %i\n", packEntries.length);fflush(stdout);
 		for(i = 0; i < packEntries.length; i++) {
 			tempEntry = git_vector_get(&packEntries, i);
 
@@ -1820,27 +1804,18 @@ int git_pack_build_index(const char *path)
 				if(fanout > -1) {
 					for(j = fanout; j < tempEntry->sha1.id[0]; j++) {
 						indexFanout[j] = htonl(i);
-						//fprintf(stdout, "Fanout entry %i = %i\n", j, i);fflush(stdout);
 					}
-					////////fprintf(stdout, "Fanout %i offset %i\n", fanout, fanout_firstOffset);fflush(stdout);
-					//indexFanout[fanout] = htonl(fanout_firstOffset);
 				}
 
 				fanout = tempEntry->sha1.id[0];
-				//fanout_firstOffset = 0;
 			}
 
-			//fprintf(stdout, "Vector %i: %s (ptr %i) \n", i, git_oid_allocfmt(&tempEntry->sha1), tempEntry);fflush(stdout);
 		}
 
 		// Complete the fanout table.
 		for(j = fanout; j <= 255; j++) {
-			//fprintf(stdout, "Fanout entry %i = %i\n", j, i);fflush(stdout);
 			indexFanout[j] = htonl(i);
 		}
-
-		////fprintf(stdout, "===============================================\n");fflush(stdout);
-
 	} while(unresolvedObjectCount > 0);
 
 	// Right! If we got here we successfully resolved all objects. Good stuff.
@@ -1862,8 +1837,6 @@ int git_pack_build_index(const char *path)
 
 	git_hash_final(&indexSha1, hashCtx);
 	git_hash_free_ctx(hashCtx);
-
-	//fprintf(stdout, "Index %s\n", git_oid_allocfmt(&indexSha1));fflush(stdout);
 
 	error = GIT_SUCCESS;
 
