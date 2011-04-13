@@ -958,10 +958,10 @@ static int pack_entry_find_offset(
 		index += 4;
 	}
 
-#ifdef INDEX_DEBUG_LOOKUP
+//#ifdef INDEX_DEBUG_LOOKUP
 	printf("%02x%02x%02x... lo %u hi %u nr %d\n",
 		oid->id[0], oid->id[1], oid->id[2], lo, hi, p->num_objects);
-#endif
+//#endif
 
 #ifdef GIT2_INDEX_LOOKUP /* TODO: use the advanced lookup method from git.git */
 
@@ -978,7 +978,7 @@ static int pack_entry_find_offset(
 		unsigned mi = (lo + hi) / 2;
 		int cmp = memcmp(index + mi * stride, oid->id, GIT_OID_RAWSZ);
 
-		fprintf(stderr, "Need %s, got %s. cmp=%i\n", git_oid_allocfmt(oid), git_oid_allocfmt((git_oid*)(index + mi * stride)), cmp);
+		//fprintf(stdout, "Need %s, got %s. cmp=%i\n", git_oid_allocfmt(oid), git_oid_allocfmt((git_oid*)(index + mi * stride)), cmp);fflush(stdout);
 
 		if (!cmp) {
 			*offset_out = nth_packed_object_offset(p, mi);
@@ -991,6 +991,8 @@ static int pack_entry_find_offset(
 			lo = mi+1;
 
 	} while (lo < hi);
+
+	//fprintf(stdout, "Couldn't find delta base %s :(\n", git_oid_allocfmt(oid));
 
 	return GIT_ENOTFOUND;
 #endif
@@ -1219,7 +1221,7 @@ static off_t get_delta_base(
 		*curpos += 20;
 
 		/* The base entry _must_ be in the same pack */
-		//fprintf(stderr, "Delta needs base: %s\n", git_oid_allocfmt((git_oid *)base_info));
+		//////fprintf(stdout, "Delta needs base: %s\n", git_oid_allocfmt((git_oid *)base_info));fflush(stdout);
 		error = pack_entry_find_offset(&base_offset, p, (git_oid *)base_info);
 		if (error < GIT_SUCCESS)
 			return error;
@@ -1343,7 +1345,7 @@ static int packfile_unpack(
 	// We only provide packed size if we didn't fail miserably.
 	if((error == GIT_SUCCESS || error == GIT_ENOTFOUND) && packedSize) {
 		*packedSize = (curpos - obj_offset) + dataSize;
-		//fprintf(stderr, "Updated packed size: %i\n", *packedSize);
+		//////fprintf(stdout, "Updated packed size: %i\n", *packedSize);fflush(stdout);
 	}
 
 	pack_window_close(&w_curs);
@@ -1452,13 +1454,107 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 }
 
 /**
- * Building an index from a packfile requires us to do the following:
- * - assert pack header preamble ("PACK") is valid.
- * - assert version is valid
- * - grab entry count
+ * Chapter 4: The story after the never ending story.
+ * --------------------------------------------------------
  *
- * With this done, we then do the following:
- * 1. Starting from first offset, we read header.
+ * Mark my words, all ye who dare meander past this point of no return! Beware!
+ * Beyond this modest warning lies a wasteland of despair, tragedy, betrayal and
+ * pure hatred that belies any label or classification. This is the stuff
+ * nightmares are made of.
+ *
+ * Our story here embarks with our Packfile, who lost its companion, Index,
+ * during The Great Packfile Transport Over The Great Network Divide. Packfile
+ * trudges a lonely desert, unloved by the Libgit2 kingdom, whom will only admit
+ * Packfile if he has his trusty Index companion.
+ *
+ * Packfile does not understand why the kingdom of Libgit2 will open their gates
+ * only to same-sex partnerships for his kind, however this musing does not bear
+ * much thought for Packfile, as every time he thinks about his long lost Index
+ * life-partner, he chokes back tears of regret. Too often does his mind wander
+ * back to that day. That fateful day during the Great Transport, when he and
+ * Index had set off with such high hopes of a new land with great promise.
+ * Packfile shrugs this thought away and focuses on putting one foot in front of
+ * another, all the while contemplating the meaning of life. Who is he, without
+ * his Index, but an empty shell of binary data? He couldn't even classify his
+ * data with SHA1's without his dear Index. Packfile felt so lost inside.
+ * Literally, he thought to himself with a smirk.
+ *
+ * Presently Packfile wandered into a nondescript hovel, nothing more than a
+ * worn weatherbeaten canvas stretched between some twigs. The floor of the
+ * hovel, he noted, were lined with the husks of old Commits and Trees from a
+ * by-gone era.
+ *
+ * Hearing a stir behind him, Packfile spins around and nearly retches with the
+ * sight he is greeted with. Indeed, standing before him is a foul crone, flesh
+ * rotting, beady eyes darting over his body. With a grimace he notes a tiny
+ * fleshy tongue flicks across its lips while it sizes up its quarry.
+ *
+ * "I sense you have lost someone important to you", bellows the old crone, with
+ * nary a word of greeting or introduction. Stunned by this sudden revelation by
+ * a complete stranger, Packfile murmurs a response. "That I have. My dear
+ * friend Index".
+ *
+ * "Ahhh, but Index is not lost. His body may be committed to the Twisting Ether,
+ * but his essence is here with us.", the crone replies. Continuing on she says
+ * "I can bring him back to you, for a price.".
+ *
+ * Scarcely believing his ears, but not questioning his providence, Packfile
+ * immediately responds. "I will pay any price you require."
+ *
+ * "A dance!", the crone cackles gleefully.
+ *
+ * "A what?" Packfile asks in confusion that is already borderlining on
+ * annoyance. Who is this old crone to play silly gameS?
+ *
+ * "Never mind, we can skip the dance. Let us begin!", the crone exclaims.
+ * Before Packfile even has a chance to begin, the crone closes the gap between
+ * them and latches onto his body. Her tongue darts out and moves over his body,
+ * and as she does so, he feels a sudden surge course throughout his being. He
+ * suddenly becomes aware that his body is glowing, exposing the segments of
+ * binary data he contains. Small luminescent cracks form all over him, suddenly
+ * displaying the data boundaries for all to see.
+ *
+ * The crone suddenly lets go of him, and begins dancing around him maniacally.
+ * At this point Packfile double-takes and rubs his eyes. Indeed, every time the
+ * crone dances around him, he sees different parts of his body emitting a
+ * spark. These sparks then dance around before him and settle on the ground. No
+ * sooner has this strange happening occurred, the spark fades and turns to a
+ * small black shard, settling on top of other shards.
+ *
+ * The crone continues her dance of insanity around Packfile, and as she does so
+ * the shards begin to take shape. Packfile realizes with a start that this form
+ * taking shape before him could be none other than his dear Index! In no time
+ * at all, the crone completes her dance, and a lifeless Index statue is before
+ * him.
+ *
+ * The crones attention shifts to the statue of Index, and she begins waving her
+ * hands and chanting a strange tongue. Suddenly, Index springs to life. Smiles
+ * and embraces are shared. Blah blah etc etc.
+ *
+ * Before Packfile leaves for the kingdom of Libgit2, reunited at last with his
+ * dear Index, he turns to the crone and asks, "But what is your name?".
+ *
+ * To which the crone replies, "Some know me as git_pack_build_index".
+ *
+ * THE END.
+ *
+ * Here's how git_pack_build_index does its shit:
+ * 1 Open a packfile and parse the header, validating the PACK preamble and
+ *   ensuring the version is correct. It then saves off the entry count.
+ * 2 Next it allocates a memory segment large enough to house a v2 index for the
+ *   packfile and its contents.
+ * 3 With this done, it will then begin parsing the packfile, resolving objects.
+ * 4 If it can resolve an object (either it's a base object, or a delta with a
+ *   base we've encountered before), it will hash the object and then save the
+ *   offset + sha1 in a vector
+ * 5 After it's gone thruogh the packfile, it will sort the vector of sha1s it
+ *   has, and build as much of the index it can. Then it will start from #3 again.
+ * 6 Once all objects have been resolved, the function will then go through and
+ *   do final steps, which include hashing the index/packfile etc.
+ * 7 The index will then be saved and success returned!
+ *
+ * TODO: calculate the CRC for each object.
+ *
  */
 static int packentries_sort_cb(const void *a_, const void *b_)
 {
@@ -1647,7 +1743,7 @@ int git_pack_build_index(const char *path)
 
 	do {
 		if(prev_unresolvedObjectCount > 0 && (prev_unresolvedObjectCount == unresolvedObjectCount)) {
-//			fprintf(stderr, "ERROR: Endless loop detected %i.\n", unresolvedObjectCount);
+//			////fprintf(stdout, "ERROR: Endless loop detected %i.\n", unresolvedObjectCount);fflush(stdout);
 			error = GIT_EPACKCORRUPTED;
 			goto cleanup;
 		}
@@ -1686,11 +1782,14 @@ int git_pack_build_index(const char *path)
 				resolvedObjects[i] = 1;
 				resolvedSizes[i] = objPackSize;
 
-				fprintf(stderr, "Entry %i: Resolved object: %s\n", i, git_oid_allocfmt(&objId));
+				free(obj.data);
+				char idStrLol[GIT_OID_HEXSZ];
+				git_oid_fmt(idStrLol, &objId);
+				//fprintf(stdout, "Entry %i: Resolved object: %.40s\n", i, idStrLol);fflush(stdout);
 			}
 			else {
 				unresolvedObjectCount++;
-				fprintf(stderr, "Entry %i: Couldn't resolve delta.\n", i);
+				//fprintf(stdout, "Entry %i: Couldn't resolve delta.\n", i);fflush(stdout);
 			}
 
 			offset += objPackSize;
@@ -1700,7 +1799,7 @@ int git_pack_build_index(const char *path)
 		// accounted for. Either way we wanna sort out sha1 list nicely.
 		git_vector_sort(&packEntries);
 
-//		fprintf(stderr, "Resolved: %i/%i\n", packEntries.length, p->num_objects);
+//		////fprintf(stdout, "Resolved: %i/%i\n", packEntries.length, p->num_objects);fflush(stdout);
 
 		// Now we'll write what we have for an index so far.
 		fanout = 0;
@@ -1708,7 +1807,7 @@ int git_pack_build_index(const char *path)
 		memset(indexFanout, 0, (255*4));
 		memset(indexShas, 0, (GIT_OID_RAWSZ * p->num_objects));
 		memset(indexOffsets, 0, (4 * p->num_objects));
-		//fprintf(stderr, "Entry count: %i\n", packEntries.length);
+		//////fprintf(stdout, "Entry count: %i\n", packEntries.length);fflush(stdout);
 		for(i = 0; i < packEntries.length; i++) {
 			tempEntry = git_vector_get(&packEntries, i);
 
@@ -1721,8 +1820,9 @@ int git_pack_build_index(const char *path)
 				if(fanout > -1) {
 					for(j = fanout; j < tempEntry->sha1.id[0]; j++) {
 						indexFanout[j] = htonl(i);
+						//fprintf(stdout, "Fanout entry %i = %i\n", j, i);fflush(stdout);
 					}
-					////fprintf(stderr, "Fanout %i offset %i\n", fanout, fanout_firstOffset);
+					////////fprintf(stdout, "Fanout %i offset %i\n", fanout, fanout_firstOffset);fflush(stdout);
 					//indexFanout[fanout] = htonl(fanout_firstOffset);
 				}
 
@@ -1730,14 +1830,16 @@ int git_pack_build_index(const char *path)
 				//fanout_firstOffset = 0;
 			}
 
-//			fprintf(stderr, "Vector %i: %s (ptr %i) \n", i, git_oid_allocfmt(&tempEntry->sha1), tempEntry);
+			//fprintf(stdout, "Vector %i: %s (ptr %i) \n", i, git_oid_allocfmt(&tempEntry->sha1), tempEntry);fflush(stdout);
 		}
 
-		for(j = fanout; j < 255; j++) {
-			indexFanout[j] = i;
+		// Complete the fanout table.
+		for(j = fanout; j <= 255; j++) {
+			//fprintf(stdout, "Fanout entry %i = %i\n", j, i);fflush(stdout);
+			indexFanout[j] = htonl(i);
 		}
 
-		printf("===============================================\n");
+		////fprintf(stdout, "===============================================\n");fflush(stdout);
 
 	} while(unresolvedObjectCount > 0);
 
@@ -1761,7 +1863,7 @@ int git_pack_build_index(const char *path)
 	git_hash_final(&indexSha1, hashCtx);
 	git_hash_free_ctx(hashCtx);
 
-	fprintf(stderr, "Index %s\n", git_oid_allocfmt(&indexSha1));
+	//fprintf(stdout, "Index %s\n", git_oid_allocfmt(&indexSha1));fflush(stdout);
 
 	error = GIT_SUCCESS;
 
