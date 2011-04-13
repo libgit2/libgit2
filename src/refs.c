@@ -787,6 +787,8 @@ static int packed_find_peel(reference_oid *ref)
 		 */
 	}
 
+	git_object_close(object);
+
 	return GIT_SUCCESS;
 }
 
