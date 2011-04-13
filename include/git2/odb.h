@@ -297,7 +297,14 @@ GIT_EXTERN(size_t) git_odb_object_size(git_odb_object *object);
  */
 GIT_EXTERN(git_otype) git_odb_object_type(git_odb_object *object);
 
-GIT_EXTERN(int) git_pack_build_index(const char *path);
+/**
+ * Creates an index for a given packfile.
+ *
+ * @param path absolute path to a pack file.
+ * @param indexFile path to where index file should be written
+ * @return GIT_SUCCESS if index was built successfully, error otherwise.
+ */
+GIT_EXTERN(int) git_pack_build_index(const char *path, const char *indexFile);
 
 /** @} */
 GIT_END_DECL

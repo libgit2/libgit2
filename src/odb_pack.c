@@ -27,6 +27,7 @@
 #include "git2/zlib.h"
 #include "git2/repository.h"
 #include "fileops.h"
+#include "filebuf.h"
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
@@ -105,6 +106,7 @@ struct pack_file {
 struct pack_entry {
 	off_t offset;
 	git_oid sha1;
+	uint32_t crc;
 	struct pack_file *p;
 };
 
@@ -277,13 +279,14 @@ static int pack_entry_find(struct pack_entry *e,
 static off_t get_delta_base(struct pack_backend *backend,
 		struct pack_file *p, struct pack_window **w_curs,
 		off_t *curpos, git_otype type,
-		off_t delta_obj_offset);
+		off_t delta_obj_offset, uint32_t *crc);
 
 static unsigned long packfile_unpack_header1(
 		size_t *sizep,
 		git_otype *type, 
 		const unsigned char *buf,
-		unsigned long len);
+		unsigned long len,
+		uint32_t *crc);
 
 static int packfile_unpack_header(
 		size_t *size_p,
@@ -291,7 +294,8 @@ static int packfile_unpack_header(
 		struct pack_backend *backend,
 		struct pack_file *p,
 		struct pack_window **w_curs,
-		off_t *curpos);
+		off_t *curpos,
+		uint32_t *crc);
 
 static int packfile_unpack_compressed(
 		git_rawobj *obj,
@@ -301,7 +305,8 @@ static int packfile_unpack_compressed(
 		off_t curpos,
 		size_t size,
 		git_otype type,
-		size_t *packedSize);
+		size_t *packedSize,
+		uint32_t *crc);
 
 static int packfile_unpack_delta(
 		git_rawobj *obj,
@@ -312,10 +317,11 @@ static int packfile_unpack_delta(
 		size_t delta_size,
 		git_otype delta_type,
 		off_t obj_offset,
-		size_t *packedSize);
+		size_t *packedSize,
+		uint32_t *crc);
 
 static int packfile_unpack(git_rawobj *obj, struct pack_backend *backend,
-		struct pack_file *p, off_t obj_offset, size_t *packedSize);
+		struct pack_file *p, off_t obj_offset, size_t *packedSize, uint32_t *crc_out);
 
 
 
@@ -1071,12 +1077,14 @@ static unsigned long packfile_unpack_header1(
 		size_t *sizep,
 		git_otype *type, 
 		const unsigned char *buf,
-		unsigned long len)
+		unsigned long len,
+		uint32_t *crc)
 {
 	unsigned shift;
 	unsigned long size, c;
 	unsigned long used = 0;
 
+	*crc = crc32(*crc, buf, 1);
 	c = buf[used++];
 	*type = (c >> 4) & 7;
 	size = c & 15;
@@ -1085,6 +1093,7 @@ static unsigned long packfile_unpack_header1(
 		if (len <= used || bitsizeof(long) <= shift)
 			return 0;
 
+		*crc = crc32(*crc, buf + used, 1);
 		c = buf[used++];
 		size += (c & 0x7f) << shift;
 		shift += 7;
@@ -1100,7 +1109,8 @@ static int packfile_unpack_header(
 		struct pack_backend *backend,
 		struct pack_file *p,
 		struct pack_window **w_curs,
-		off_t *curpos)
+		off_t *curpos,
+		uint32_t *crc)
 {
 	unsigned char *base;
 	unsigned int left;
@@ -1116,7 +1126,7 @@ static int packfile_unpack_header(
 	if (base == NULL)
 		return GIT_ENOMEM;
 
-	used = packfile_unpack_header1(size_p, type_p, base, left);
+	used = packfile_unpack_header1(size_p, type_p, base, left, crc);
 
 	if (used == 0)
 		return GIT_EOBJCORRUPTED;
@@ -1133,7 +1143,8 @@ static int packfile_unpack_compressed(
 		off_t curpos,
 		size_t size,
 		git_otype type,
-		size_t *dataSize)
+		size_t *dataSize,
+		uint32_t *crc)
 {
 	int st;
 	z_stream stream;
@@ -1160,6 +1171,7 @@ static int packfile_unpack_compressed(
 		if (!stream.avail_out)
 			break; /* the payload is larger than it should be */
 
+		*crc = crc32(*crc, in, stream.next_in - in);
 		curpos += stream.next_in - in;
 	} while (st == Z_OK || st == Z_BUF_ERROR);
 
@@ -1186,7 +1198,8 @@ static off_t get_delta_base(
 		struct pack_window **w_curs,
 		off_t *curpos,
 		git_otype type,
-		off_t delta_obj_offset)
+		off_t delta_obj_offset,
+		uint32_t *crc)
 {
 	unsigned char *base_info = pack_window_open(backend, p, w_curs, *curpos, NULL);
 	off_t base_offset;
@@ -1200,12 +1213,14 @@ static off_t get_delta_base(
 	 */
 	if (type == GIT_OBJ_OFS_DELTA) {
 		unsigned used = 0;
+		*crc = crc32(*crc, base_info, 1);
 		unsigned char c = base_info[used++];
 		base_offset = c & 127;
 		while (c & 128) {
 			base_offset += 1;
 			if (!base_offset || MSB(base_offset, 7))
 				return 0;  /* overflow */
+			*crc = crc32(*crc, base_info + used, 1);
 			c = base_info[used++];
 			base_offset = (base_offset << 7) + (c & 127);
 		}
@@ -1214,6 +1229,7 @@ static off_t get_delta_base(
 			return 0;  /* out of bound */
 		*curpos += used;
 	} else if (type == GIT_OBJ_REF_DELTA) {
+		*crc = crc32(*crc, base_info, 20);
 		*curpos += 20;
 
 		/* The base entry _must_ be in the same pack */
@@ -1235,7 +1251,8 @@ static int packfile_unpack_delta(
 		size_t delta_size,
 		git_otype delta_type,
 		off_t obj_offset,
-		size_t *packedSize)
+		size_t *packedSize,
+		uint32_t *crc)
 {
 	off_t base_offset;
 	off_t originalOffset = curpos;
@@ -1243,9 +1260,9 @@ static int packfile_unpack_delta(
 	int error;
 	size_t compressedSize;
 
-	base_offset = get_delta_base(backend, p, w_curs, &curpos, delta_type, obj_offset);
+	base_offset = get_delta_base(backend, p, w_curs, &curpos, delta_type, obj_offset, crc);
 
-	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type, &compressedSize);
+	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type, &compressedSize, crc);
 	if (error < GIT_SUCCESS) {
 		return error;
 	}
@@ -1264,7 +1281,7 @@ static int packfile_unpack_delta(
 	}
 
 	pack_window_close(w_curs);
-	error = packfile_unpack(&base, backend, p, base_offset, NULL);
+	error = packfile_unpack(&base, backend, p, base_offset, NULL, NULL);
 
 	/* TODO: git.git tries to load the base from other packfiles
 	 * or loose objects */
@@ -1290,11 +1307,13 @@ static int packfile_unpack(
 		struct pack_backend *backend,
 		struct pack_file *p,
 		off_t obj_offset,
-		size_t *packedSize)
+		size_t *packedSize,
+		uint32_t *crc_out)
 {
 	struct pack_window *w_curs = NULL;
 	off_t curpos = obj_offset;
 	int error;
+	uint32_t crc = 0;
 
 	size_t size;
 	git_otype type;
@@ -1308,7 +1327,7 @@ static int packfile_unpack(
 	obj->len = 0;
 	obj->type = GIT_OBJ_BAD;
 
-	error = packfile_unpack_header(&size, &type, backend, p, &w_curs, &curpos);
+	error = packfile_unpack_header(&size, &type, backend, p, &w_curs, &curpos, &crc);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -1317,7 +1336,7 @@ static int packfile_unpack(
 	case GIT_OBJ_REF_DELTA:
 		error = packfile_unpack_delta(
 				obj, backend, p, &w_curs, curpos,
-				size, type, obj_offset, &dataSize);
+				size, type, obj_offset, &dataSize, &crc);
 		break;
 
 	case GIT_OBJ_COMMIT:
@@ -1326,7 +1345,7 @@ static int packfile_unpack(
 	case GIT_OBJ_TAG:
 		error = packfile_unpack_compressed(
 				obj, backend, p, &w_curs, curpos,
-				size, type, &dataSize);
+				size, type, &dataSize, &crc);
 		break;
 
 	default:
@@ -1340,6 +1359,10 @@ static int packfile_unpack(
 	// We only provide packed size if we didn't fail miserably.
 	if((error == GIT_SUCCESS || error == GIT_ENOTFOUND) && packedSize) {
 		*packedSize = (curpos - obj_offset) + dataSize;
+	}
+
+	if(error == GIT_SUCCESS  && crc_out) {
+		*crc_out = crc;
 	}
 
 	pack_window_close(&w_curs);
@@ -1381,7 +1404,7 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < GIT_SUCCESS)
 		return error;
 
-	if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset, NULL)) < GIT_SUCCESS)
+	if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset, NULL, NULL)) < GIT_SUCCESS)
 		return error;
 
 	*buffer_p = raw.data;
@@ -1547,8 +1570,6 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
  *   do final steps, which include hashing the index/packfile etc.
  * 7 The index will then be saved and success returned!
  *
- * TODO: calculate the CRC for each object.
- *
  */
 static int packentries_sort_cb(const void *a_, const void *b_)
 {
@@ -1559,13 +1580,13 @@ static int packentries_sort_cb(const void *a_, const void *b_)
 	return git_oid_cmp(&a->sha1, &b->sha1);
 }
 
-int git_pack_build_index(const char *path)
+int git_pack_build_index(const char *path, const char *indexFile)
 {
-	struct pack_file *p;
+	struct pack_file *p = NULL;
 	size_t path_len;
 	struct stat st;
-	struct pack_backend *backend;
-	struct pack_window *w_curs;
+	struct pack_backend *backend = NULL;
+	struct pack_window *w_curs = NULL;
 	unsigned char *data;
 	struct pack_header *hdr;
 	unsigned int remaining;
@@ -1577,6 +1598,7 @@ int git_pack_build_index(const char *path)
 	uint32_t *indexOffsets;
 	uint32_t *indexFanout;
 	git_oid *indexShas;
+	uint32_t *indexCRCs;
 	char objHdr[64];
 	int  objHdrlen;
 	git_oid objId;
@@ -1584,22 +1606,35 @@ int git_pack_build_index(const char *path)
 	git_vector packEntries;
 	size_t unresolvedObjectCount;
 	size_t prev_unresolvedObjectCount = 0;
-	char *resolvedObjects;
-	uint32_t *resolvedSizes;
+	char *resolvedObjects = NULL;
+	uint32_t *resolvedSizes = NULL;
 	struct pack_entry *tempEntry;
 	short fanout;
 	uint32_t fanout_offset;
-	git_hash_ctx *hashCtx;
+	git_hash_ctx *hashCtx = NULL;
 	git_oid indexSha1;
+	git_oid indexFileSha1;
+	git_oid *indexTrailingSha;
+	git_filebuf file;
+	uint32_t *indexHeader;
+	uint32_t crc;
+
+	if ((error = git_filebuf_open(&file, indexFile, GIT_FILEBUF_FORCE)) < GIT_SUCCESS) {
+		return error;
+	}
 
 	// We'll be using a dummy pack_backend during this operation.
 	backend = git__calloc(1, sizeof(struct pack_backend));
-	if (backend == NULL)
-		return GIT_ENOMEM;
+	if (backend == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	memset(backend, 0, sizeof(struct pack_backend));
 
 	if (git_vector_init(&backend->packs, 1, packfile_sort__cb) < GIT_SUCCESS) {
-		free(backend);
-		return GIT_ENOMEM;
+		error = GIT_ENOMEM;
+		goto cleanup;
 	}
 
 	path_len = strlen(path);
@@ -1607,9 +1642,8 @@ int git_pack_build_index(const char *path)
 	strcpy(p->pack_name, path);
 
 	if (gitfo_stat(p->pack_name, &st) < GIT_SUCCESS || !S_ISREG(st.st_mode)) {
-		free(p);
-		free(backend);
-		return GIT_ENOTFOUND;
+		error = GIT_ENOTFOUND;
+		goto cleanup;
 	}
 
 	/* ok, it looks sane as far as we can check without
@@ -1620,9 +1654,8 @@ int git_pack_build_index(const char *path)
 	p->mtime = (git_time_t)st.st_mtime;
 
 	if(git_vector_insert(&backend->packs, p) < GIT_SUCCESS) {
-		free(p);
-		free(backend);
-		return GIT_ENOMEM;
+		error = GIT_ENOMEM;
+		goto cleanup;
 	}
 
 	backend->window_size = DEFAULT_WINDOW_SIZE;
@@ -1630,17 +1663,14 @@ int git_pack_build_index(const char *path)
 
 	p->pack_fd = gitfo_open(p->pack_name, O_RDONLY);
 	if (p->pack_fd < 0 || gitfo_fstat(p->pack_fd, &st) < GIT_SUCCESS) {
-		free(p);
-		free(backend);
-		return GIT_EOSERR;
+		error = GIT_EOSERR;
+		goto cleanup;
 	}
 
-	w_curs = NULL;
 	data = pack_window_open(backend, p, &w_curs, 0, &remaining);
 	if(data == NULL) {
-		free(p);
-		free(backend);
-		return GIT_EOSERR;
+		error = GIT_EOSERR;
+		goto cleanup;
 	}
 
 	assert(remaining > sizeof(struct pack_header));
@@ -1648,17 +1678,13 @@ int git_pack_build_index(const char *path)
 	hdr = (struct pack_header*)data;
 
 	if (hdr->hdr_signature != htonl(PACK_SIGNATURE)) {
-		pack_window_close(&w_curs);
-		free(p);
-		free(backend);
-		return GIT_EPACKCORRUPTED;
+		error = GIT_EPACKCORRUPTED;
+		goto cleanup;
 	}
 
 	if (!pack_version_ok(hdr->hdr_version)) {
-		pack_window_close(&w_curs);
-		free(p);
-		free(backend);
-		return GIT_EPACKCORRUPTED;
+		error = GIT_EPACKCORRUPTED;
+		goto cleanup;
 	}
 
 	// Save off entry count.
@@ -1692,18 +1718,17 @@ int git_pack_build_index(const char *path)
 	p->index_map.data = git__malloc(p->index_map.len);
 	memset(p->index_map.data, 0, p->index_map.len);
 
-	// What we'll do is build a "dirty" index first - this index will just have
-	// entries thrown into it as they're parsed (so the internal implementation
-	// can resolve deltas), then we'll build a nice binary sorted one afterwards,
-	// with fanout and crcs accounted for also. In order to do this though, the
-	// entries we *do* have need to be sorted nicely otherwise binary search will
-	// fail.
+	indexHeader = p->index_map.data;
+	*(indexHeader++) = htonl(PACK_IDX_SIGNATURE);
+	*(indexHeader++) = htonl(PACK_VERSION);
+
 	git_vector_init(&packEntries, p->num_objects, packentries_sort_cb);
 
 	// Let's setup some quick shortcuts to relevant parts of the index.
 	indexOffsets = p->index_map.data + 8 + (256*4) + (p->num_objects*20) + (p->num_objects*4);
 	indexShas = p->index_map.data + 8 + (256*4);
 	indexFanout = p->index_map.data + 8;
+	indexCRCs = p->index_map.data + 8 + (256*4) + (p->num_objects*20);
 
 	assert(p->num_objects > 0);
 
@@ -1732,6 +1757,8 @@ int git_pack_build_index(const char *path)
 	unresolvedObjectCount = 0;
 
 	do {
+		// Make sure we don't get stuck in an infinite loop if we can't resolve
+		// all objects.
 		if(prev_unresolvedObjectCount > 0 && (prev_unresolvedObjectCount == unresolvedObjectCount)) {
 			error = GIT_EPACKCORRUPTED;
 			goto cleanup;
@@ -1744,13 +1771,13 @@ int git_pack_build_index(const char *path)
 		offset = sizeof(struct pack_header);
 
 		for(i = 0; i < p->num_objects; i++) {
-
 			if(resolvedObjects[i]) {
 				offset += resolvedSizes[i];
 				continue;
 			}
 
-			error = packfile_unpack(&obj, backend, p, offset, &objPackSize);
+			crc = 0;
+			error = packfile_unpack(&obj, backend, p, offset, &objPackSize, &crc);
 			if(error < GIT_SUCCESS && error != GIT_ENOTFOUND) {
 				error = GIT_EPACKCORRUPTED;
 				goto cleanup;
@@ -1766,14 +1793,14 @@ int git_pack_build_index(const char *path)
 				tempEntry->offset = offset;
 				tempEntry->p = p;
 				tempEntry->sha1 = objId;
+				tempEntry->crc = crc;
 				git_vector_insert(&packEntries, tempEntry);
 
 				resolvedObjects[i] = 1;
 				resolvedSizes[i] = objPackSize;
 
 				free(obj.data);
-				char idStrLol[GIT_OID_HEXSZ];
-				git_oid_fmt(idStrLol, &objId);
+				obj.data = NULL;
 			}
 			else {
 				unresolvedObjectCount++;
@@ -1798,8 +1825,6 @@ int git_pack_build_index(const char *path)
 			indexOffsets[i] = htonl(tempEntry->offset);
 			indexShas[i] = tempEntry->sha1;
 
-			//fanout_firstOffset++;
-
 			if(tempEntry->sha1.id[0] > fanout) {
 				if(fanout > -1) {
 					for(j = fanout; j < tempEntry->sha1.id[0]; j++) {
@@ -1822,7 +1847,6 @@ int git_pack_build_index(const char *path)
 	// Last steps are to generate crcs for all the objects, and then hash the
 	// whole pack, then the whole index.
 
-
 	hashCtx = git_hash_new_ctx();
 	if(!hashCtx) {
 		// Haha. What a shitty place to fail. I hope this never happens to anyone.
@@ -1832,26 +1856,80 @@ int git_pack_build_index(const char *path)
 
 	for(i = 0; i < packEntries.length; i++) {
 		tempEntry = git_vector_get(&packEntries, i);
+		indexCRCs[i] = htonl(tempEntry->crc);
+
 		git_hash_update(hashCtx, &tempEntry->sha1, GIT_OID_RAWSZ);
 	}
 
 	git_hash_final(&indexSha1, hashCtx);
-	git_hash_free_ctx(hashCtx);
+
+	data = pack_window_open(backend, p, &w_curs, p->pack_size - GIT_OID_RAWSZ, &remaining);
+	if(remaining != GIT_OID_RAWSZ) {
+		error = GIT_EPACKCORRUPTED;
+		goto cleanup;
+	}
+
+	indexTrailingSha = p->index_map.data + p->index_map.len - (GIT_OID_RAWSZ * 2);
+	memcpy(indexTrailingSha, data, GIT_OID_RAWSZ);
+	pack_window_close(&w_curs);
+
+	indexTrailingSha++;
+
+	// Hash the index as a whole.
+	git_hash_init(hashCtx);
+	git_hash_update(hashCtx, p->index_map.data, p->index_map.len - GIT_OID_RAWSZ);
+	git_hash_final(&indexFileSha1, hashCtx);
+	*indexTrailingSha = indexFileSha1;
+
+	if ((error = git_filebuf_write(&file, p->index_map.data, p->index_map.len)) < GIT_SUCCESS) {
+		goto cleanup;
+	}
+
+	if((error = git_filebuf_commit(&file)) < GIT_SUCCESS) {
+		goto cleanup;
+	}
+
+	// So we know not to double free file.
+	file.buffer = NULL;
 
 	error = GIT_SUCCESS;
 
 cleanup:
-fflush(NULL);
-	for(j = packEntries.length - 1; j >= 0; j--) {
-		free(git_vector_get(&packEntries, j));
+	if(hashCtx) {
+		git_hash_free_ctx(hashCtx);
 	}
-	git_vector_free(&packEntries);
 
-	free(resolvedSizes);
-	free(resolvedObjects);
-	free(p->index_map.data);
-	free(p);
-	free(backend);
+	if(obj.data)
+		free(obj.data);
+
+	if(file.buffer) {
+		git_filebuf_cleanup(&file);
+	}
+
+	if(packEntries.contents) {
+		for(j = packEntries.length - 1; j >= 0; j--) {
+			free(git_vector_get(&packEntries, j));
+		}
+		git_vector_free(&packEntries);
+	}
+
+	if(w_curs)
+		pack_window_close(&w_curs);
+	if(resolvedSizes)
+		free(resolvedSizes);
+	if(resolvedObjects)
+		free(resolvedObjects);
+	if(p->index_map.data)
+		free(p->index_map.data);
+	if(p)
+		free(p);
+	if(backend) {
+		if(backend->packs.contents) {
+			git_vector_free(&backend->packs);
+		}
+		free(backend);
+	}
+
 	return error;
 }
 
