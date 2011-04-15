@@ -4,7 +4,7 @@ from waflib.Build import BuildContext, CleanContext, \
         InstallContext, UninstallContext
 
 # Unix flags
-CFLAGS_UNIX = ["-O2", "-Wall", "-Wextra"]
+CFLAGS_UNIX = ["-O2", "-Wall", "-Wextra", "-fPIC"]
 CFLAGS_UNIX_DBG = ['-g', '-O0']
 
 # Windows MSVC flags
