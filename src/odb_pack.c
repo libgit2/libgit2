@@ -108,15 +108,12 @@ struct pack_entry {
 	struct pack_file *p;
 };
 
-struct pack__dirent {
-	struct pack_backend *backend;
-	int is_pack_local;
-};
-
 struct pack_backend {
 	git_odb_backend parent;
 	git_vector packs;
 	struct pack_file *last_found;
+	char *pack_folder;
+	off_t pack_folder_size;
 
 	size_t window_size; /* needs default value */
 
@@ -259,9 +256,9 @@ static int pack_index_open(struct pack_file *p);
 
 static struct pack_file *packfile_alloc(int extra);
 static int packfile_open(struct pack_file *p);
-static int packfile_check(struct pack_file **pack_out, const char *path, int local);
+static int packfile_check(struct pack_file **pack_out, const char *path);
 static int packfile_load__cb(void *_data, char *path);
-static int packfile_load_all(struct pack_backend *backend, const char *odb_path, int local);
+static int packfile_refresh_all(struct pack_backend *backend);
 
 static off_t nth_packed_object_offset(const struct pack_file *p, uint32_t n);
 
@@ -790,7 +787,7 @@ cleanup:
 	return GIT_EPACKCORRUPTED;
 }
 
-static int packfile_check(struct pack_file **pack_out, const char *path, int local)
+static int packfile_check(struct pack_file **pack_out, const char *path)
 {
 	struct stat st;
 	struct pack_file *p;
@@ -826,7 +823,7 @@ static int packfile_check(struct pack_file **pack_out, const char *path, int loc
 	 * actually mapping the pack file.
 	 */
 	p->pack_size = (off_t)st.st_size;
-	p->pack_local = local;
+	p->pack_local = 1;
 	p->mtime = (git_time_t)st.st_mtime;
 
 	/* see if we can parse the sha1 oid in the packfile name */
@@ -840,22 +837,25 @@ static int packfile_check(struct pack_file **pack_out, const char *path, int loc
 
 static int packfile_load__cb(void *_data, char *path)
 {
-	struct pack__dirent *data = (struct pack__dirent *)_data;
+	struct pack_backend *backend = (struct pack_backend *)_data;
 	struct pack_file *pack;
 	int error;
+	size_t i;
 
 	if (git__suffixcmp(path, ".idx") != 0)
 		return GIT_SUCCESS; /* not an index */
 
-	/* FIXME: git.git checks for duplicate packs.
-	 * But that makes no fucking sense. Our dirent is not
-	 * going to generate dupicate entries */
+	for (i = 0; i < backend->packs.length; ++i) {
+		struct pack_file *p = git_vector_get(&backend->packs, i);
+		if (memcmp(p->pack_name, path, strlen(path) - STRLEN(".idx")) == 0)
+			return GIT_SUCCESS;
+	}
 
-	error = packfile_check(&pack, path, data->is_pack_local);
+	error = packfile_check(&pack, path);
 	if (error < GIT_SUCCESS)
 		return error;
 
-	if (git_vector_insert(&data->backend->packs, pack) < GIT_SUCCESS) {
+	if (git_vector_insert(&backend->packs, pack) < GIT_SUCCESS) {
 		free(pack);
 		return GIT_ENOMEM;
 	}
@@ -863,25 +863,29 @@ static int packfile_load__cb(void *_data, char *path)
 	return GIT_SUCCESS;
 }
 
-static int packfile_load_all(struct pack_backend *backend, const char *odb_path, int local)
+static int packfile_refresh_all(struct pack_backend *backend)
 {
 	int error;
-	char path[GIT_PATH_MAX];
-	struct pack__dirent data;
+	struct stat st;
 
-	data.backend = backend;
-	data.is_pack_local = local;
-
-	git__joinpath(path, odb_path, "pack");
-	if (gitfo_isdir(path) < GIT_SUCCESS)
+	if (backend->pack_folder == NULL)
 		return GIT_SUCCESS;
 
-	error = gitfo_dirent(path, GIT_PATH_MAX, packfile_load__cb, (void *)&data);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (gitfo_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
+		return GIT_ENOTFOUND;
 
-	git_vector_sort(&backend->packs);
-	backend->last_found = git_vector_get(&backend->packs, 0);
+	if (st.st_size != backend->pack_folder_size) {
+		char path[GIT_PATH_MAX];
+		strcpy(path, backend->pack_folder);
+
+		/* reload all packs */
+		error = gitfo_dirent(path, GIT_PATH_MAX, packfile_load__cb, (void *)backend);
+		if (error < GIT_SUCCESS)
+			return error;
+
+		git_vector_sort(&backend->packs);
+		backend->pack_folder_size = st.st_size;
+	}
 
 	return GIT_SUCCESS;
 }
@@ -1026,7 +1030,11 @@ static int pack_entry_find1(
 
 static int pack_entry_find(struct pack_entry *e, struct pack_backend *backend, const git_oid *oid)
 {
+	int error;
 	size_t i;
+
+	if ((error = packfile_refresh_all(backend)) < GIT_SUCCESS)
+		return error;
 
 	if (backend->last_found &&
 		pack_entry_find1(e, backend->last_found, oid) == GIT_SUCCESS)
@@ -1382,8 +1390,8 @@ void pack_backend__free(git_odb_backend *_backend)
 
 int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 {
-	int error;
 	struct pack_backend *backend;
+	char path[GIT_PATH_MAX];
 
 	backend = git__calloc(1, sizeof(struct pack_backend));
 	if (backend == NULL)
@@ -1397,10 +1405,15 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->window_size = DEFAULT_WINDOW_SIZE;
 	backend->mapped_limit = DEFAULT_MAPPED_LIMIT;
 
-	error = packfile_load_all(backend, objects_dir, 1);
-	if (error < GIT_SUCCESS) {
-		pack_backend__free((git_odb_backend *)backend);
-		return error;
+	git__joinpath(path, objects_dir, "pack");
+	if (gitfo_isdir(path) == GIT_SUCCESS) {
+		backend->pack_folder = git__strdup(path);
+		backend->pack_folder_size = -1;
+
+		if (backend->pack_folder == NULL) {
+			free(backend);
+			return GIT_ENOMEM;
+		}
 	}
 
 	backend->parent.read = &pack_backend__read;
