@@ -115,6 +115,7 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
+	gitfo_close(fd);
 
 	return error;
 }
