@@ -394,12 +394,15 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 	case '\0':
 		break;
 	case 'k':
+	case 'K':
 		num *= 1024;
 		break;
 	case 'm':
+	case 'M':
 		num *= 1024 * 1024;
 		break;
 	case 'g':
+	case 'G':
 		num *= 1024 * 1024 * 1024;
 		break;
 	default:
