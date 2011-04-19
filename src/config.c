@@ -377,8 +377,7 @@ static int config_get(git_config *cfg, const char *name, const char **out)
 
 int git_config_get_long(git_config *cfg, const char *name, long int *out)
 {
-	const char *value;
-	char *num_end;
+	const char *value, *num_end;
 	int ret;
 	long int num;
 
