@@ -34,6 +34,7 @@ ENDIF ()
 
 INCLUDE(FindPkgConfig)
 
+IF (NOT WITHOUT_SQLITE3)
 # Show SQLite3 settings in GUI (if they won't be found out)
 SET(SQLITE3_INCLUDE_DIRS "" CACHE PATH "SQLite include directory")
 SET(SQLITE3_LIBRARIES "" CACHE FILEPATH "SQLite library")
@@ -53,6 +54,7 @@ IF (SQLITE3_FOUND)
 	ADD_DEFINITIONS(-DGIT2_SQLITE_BACKEND)
 	INCLUDE_DIRECTORIES(${SQLITE3_INCLUDE_DIRS})
 ENDIF ()
+ENDIF (NOT WITHOUT_SQLITE3)
 
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
