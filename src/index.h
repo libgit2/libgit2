@@ -29,6 +29,8 @@ struct git_index {
 
 	unsigned int on_disk:1;
 	git_index_tree *tree;
+
+	git_vector unmerged;
 };
 
 #endif

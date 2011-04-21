@@ -111,6 +111,12 @@ typedef struct git_index_entry {
 	char *path;
 } git_index_entry;
 
+/** Representation of an unmerged file entry in the index. */
+typedef struct git_index_entry_unmerged {
+	unsigned int mode[3];
+	git_oid oid[3];
+	char *path;
+} git_index_entry_unmerged;
 
 /**
  * Create a new Git index object as a memory representation
@@ -232,6 +238,24 @@ GIT_EXTERN(git_index_entry *) git_index_get(git_index *index, int n);
  * @return integer of count of current entries
  */
 GIT_EXTERN(unsigned int) git_index_entrycount(git_index *index);
+
+/**
+ * Get the count of unmerged entries currently in the index
+ *
+ * @param index an existing index object
+ * @return integer of count of current unmerged entries
+ */
+GIT_EXTERN(unsigned int) git_index_unmerged_entrycount(git_index *index);
+
+/**
+ * Get an unmerged entry from the index.
+ *
+ * @param entry the pointer to the new unmerged entry
+ * @param index an existing index object
+ * @param path path to search
+ * @return 0 on success, otherwise an error code
+ */
+GIT_EXTERN(int) git_index_get_unmerged(git_index_entry_unmerged **entry, git_index *index, const char *path);
 
 
 /** @} */
