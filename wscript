@@ -65,6 +65,9 @@ def configure(conf):
     else:
         conf.env.PLATFORM = 'unix'
 
+    if conf.env.DEST_OS == 'sunos':
+        conf.env.DEFINES += ['NO_VIZ']
+
     if conf.options.threadsafe:
         if conf.env.PLATFORM == 'unix':
             conf.check_cc(lib='pthread', uselib_store='pthread')
