@@ -434,6 +434,9 @@ static int read_header_loose(git_rawobj *out, const char *loc)
 		if ((read_bytes = read(fd, raw_buffer, sizeof(raw_buffer))) > 0) {
 			set_stream_input(&zs, raw_buffer, read_bytes);
 			z_return = inflate(&zs, 0);
+		} else {
+			z_return = Z_STREAM_END;
+			break;
 		}
 	} while (z_return == Z_OK);
 
