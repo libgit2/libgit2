@@ -330,7 +330,7 @@ int git_index_add(git_index *index, const char *rel_path, int stage)
 	entry.flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
 	entry.path = (char *)rel_path; /* do not duplicate; index_insert already does this */
 
-	return git_index_insert(index, &entry);
+	return git_index_insert(index, &entry, 1);
 }
 
 void sort_index(git_index *index)
@@ -338,7 +338,7 @@ void sort_index(git_index *index)
 	git_vector_sort(&index->entries);
 }
 
-int git_index_insert(git_index *index, const git_index_entry *source_entry)
+int git_index_insert(git_index *index, const git_index_entry *source_entry, int replace)
 {
 	git_index_entry *entry;
 	size_t path_length;
@@ -374,13 +374,15 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 	/* look if an entry with this path already exists */
 	position = git_index_find(index, source_entry->path);
 
-	/* if no entry exists, add the entry at the end;
+	/* if no entry exists and replace is not set,
+	 * add the entry at the end;
 	 * the index is no longer sorted */
-	if (position == GIT_ENOTFOUND) {
+	if (!replace || position == GIT_ENOTFOUND) {
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-	/* if a previous entry exists, replace it */
+	/* if a previous entry exists and replace is set,
+	 * replace it */
 	} else {
 		git_index_entry **entry_array = (git_index_entry **)index->entries.contents;
 
