@@ -203,15 +203,16 @@ GIT_EXTERN(int) git_index_remove(git_index *index, int position);
 /**
  * Insert an entry into the index.
  * A full copy (including the 'path' string) of the given
- * 'source_entry' will be inserted on the index; if the index
- * already contains an entry for the same path, the entry
- * will be updated.
+ * 'source_entry' will be inserted on the index; if the
+ * replace flag is not set and the index already contains
+ * an entry for the same path, the entry will be updated.
  *
  * @param index an existing index object
  * @param source_entry new entry object
+ * @param replace if set, existing entries will be replaced
  * @return 0 on success, otherwise an error code
  */
-GIT_EXTERN(int) git_index_insert(git_index *index, const git_index_entry *source_entry);
+GIT_EXTERN(int) git_index_insert(git_index *index, const git_index_entry *source_entry, int replace);
 
 /**
  * Get a pointer to one of the entries in the index
