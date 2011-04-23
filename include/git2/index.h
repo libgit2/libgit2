@@ -182,7 +182,12 @@ GIT_EXTERN(int) git_index_write(git_index *index);
 GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
 
 /**
- * Add or update an index entry from a file in disk.
+ * Add or update an index entry from a file in disk
+ *
+ * The file `path` must be relative to the repository's
+ * working folder and must be readable.
+ *
+ * This method will fail in bare index instances.
  *
  * @param index an existing index object
  * @param path filename to add
@@ -190,6 +195,54 @@ GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
  * @return 0 on success, otherwise an error code
  */
 GIT_EXTERN(int) git_index_add(git_index *index, const char *path, int stage);
+
+/**
+ * Add or update an index entry from an in-memory struct
+ *
+ * A full copy (including the 'path' string) of the given
+ * 'source_entry' will be inserted on the index.
+ *
+ * @param index an existing index object
+ * @param source_entry new entry object
+ * @return 0 on success, otherwise an error code
+ */
+GIT_EXTERN(int) git_index_add2(git_index *index, const git_index_entry *source_entry);
+
+/**
+ * Add (append) an index entry from a file in disk
+ *
+ * A new entry will always be inserted into the index;
+ * if the index already contains an entry for such
+ * path, the old entry will **not** be replaced.
+ *
+ * The file `path` must be relative to the repository's
+ * working folder and must be readable.
+ *
+ * This method will fail in bare index instances.
+ *
+ * @param index an existing index object
+ * @param path filename to add
+ * @param stage stage for the entry
+ * @return 0 on success, otherwise an error code
+ */
+GIT_EXTERN(int) git_index_append(git_index *index, const char *path, int stage);
+
+/**
+ * Add (append) an index entry from an in-memory struct
+ *
+ * A new entry will always be inserted into the index;
+ * if the index already contains an entry for the path
+ * in the `entry` struct, the old entry will **not** be
+ * replaced.
+ *
+ * A full copy (including the 'path' string) of the given
+ * 'source_entry' will be inserted on the index.
+ *
+ * @param index an existing index object
+ * @param source_entry new entry object
+ * @return 0 on success, otherwise an error code
+ */
+GIT_EXTERN(int) git_index_apppend2(git_index *index, const git_index_entry *source_entry);
 
 /**
  * Remove an entry from the index 
@@ -200,19 +253,6 @@ GIT_EXTERN(int) git_index_add(git_index *index, const char *path, int stage);
  */
 GIT_EXTERN(int) git_index_remove(git_index *index, int position);
 
-/**
- * Insert an entry into the index.
- * A full copy (including the 'path' string) of the given
- * 'source_entry' will be inserted on the index; if the
- * replace flag is not set and the index already contains
- * an entry for the same path, the entry will be updated.
- *
- * @param index an existing index object
- * @param source_entry new entry object
- * @param replace if set, existing entries will be replaced
- * @return 0 on success, otherwise an error code
- */
-GIT_EXTERN(int) git_index_insert(git_index *index, const git_index_entry *source_entry, int replace);
 
 /**
  * Get a pointer to one of the entries in the index

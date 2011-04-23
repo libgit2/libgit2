@@ -289,56 +289,12 @@ git_index_entry *git_index_get(git_index *index, int n)
 	return git_vector_get(&index->entries, (unsigned int)n);
 }
 
-int git_index_add(git_index *index, const char *rel_path, int stage)
-{
-	git_index_entry entry;
-	char full_path[GIT_PATH_MAX];
-	struct stat st;
-	int error;
-
-	if (index->repository == NULL)
-		return GIT_EBAREINDEX;
-
-	git__joinpath(full_path, index->repository->path_workdir, rel_path);
-
-	if (gitfo_exists(full_path) < 0)
-		return GIT_ENOTFOUND;
-
-	if (gitfo_stat(full_path, &st) < 0)
-		return GIT_EOSERR;
-
-	if (stage < 0 || stage > 3)
-		return GIT_ERROR;
-
-	memset(&entry, 0x0, sizeof(git_index_entry));
-
-	entry.ctime.seconds = (git_time_t)st.st_ctime;
-	entry.mtime.seconds = (git_time_t)st.st_mtime;
-	/* entry.mtime.nanoseconds = st.st_mtimensec; */
-	/* entry.ctime.nanoseconds = st.st_ctimensec; */
-	entry.dev= st.st_rdev;
-	entry.ino = st.st_ino;
-	entry.mode = st.st_mode;
-	entry.uid = st.st_uid;
-	entry.gid = st.st_gid;
-	entry.file_size = st.st_size;
-
-	/* write the blob to disk and get the oid */
-	if ((error = git_blob_create_fromfile(&entry.oid, index->repository, rel_path)) < GIT_SUCCESS)
-		return error;
-
-	entry.flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
-	entry.path = (char *)rel_path; /* do not duplicate; index_insert already does this */
-
-	return git_index_insert(index, &entry, 1);
-}
-
-void sort_index(git_index *index)
+static void sort_index(git_index *index)
 {
 	git_vector_sort(&index->entries);
 }
 
-int git_index_insert(git_index *index, const git_index_entry *source_entry, int replace)
+static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
 {
 	git_index_entry *entry;
 	size_t path_length;
@@ -394,6 +350,81 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry, int 
 
 	return GIT_SUCCESS;
 }
+
+static int index_init_entry(git_index_entry *entry, git_index *index, const char *rel_path, int stage)
+{
+	char full_path[GIT_PATH_MAX];
+	struct stat st;
+	int error;
+
+	if (index->repository == NULL)
+		return GIT_EBAREINDEX;
+
+	git__joinpath(full_path, index->repository->path_workdir, rel_path);
+
+	if (gitfo_exists(full_path) < 0)
+		return GIT_ENOTFOUND;
+
+	if (gitfo_stat(full_path, &st) < 0)
+		return GIT_EOSERR;
+
+	if (stage < 0 || stage > 3)
+		return GIT_ERROR;
+
+	memset(entry, 0x0, sizeof(git_index_entry));
+
+	entry->ctime.seconds = (git_time_t)st.st_ctime;
+	entry->mtime.seconds = (git_time_t)st.st_mtime;
+	/* entry.mtime.nanoseconds = st.st_mtimensec; */
+	/* entry.ctime.nanoseconds = st.st_ctimensec; */
+	entry->dev= st.st_rdev;
+	entry->ino = st.st_ino;
+	entry->mode = st.st_mode;
+	entry->uid = st.st_uid;
+	entry->gid = st.st_gid;
+	entry->file_size = st.st_size;
+
+	/* write the blob to disk and get the oid */
+	if ((error = git_blob_create_fromfile(&entry->oid, index->repository, rel_path)) < GIT_SUCCESS)
+		return error;
+
+	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
+	entry->path = (char *)rel_path; /* do not duplicate; index_insert already does this */
+	return GIT_SUCCESS;
+}
+
+int git_index_add(git_index *index, const char *path, int stage)
+{
+	int error;
+	git_index_entry entry;
+
+	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
+		return error;
+
+	return index_insert(index, &entry, 1);
+}
+
+int git_index_append(git_index *index, const char *path, int stage)
+{
+	int error;
+	git_index_entry entry;
+
+	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
+		return error;
+
+	return index_insert(index, &entry, 0);
+}
+
+int git_index_add2(git_index *index, const git_index_entry *source_entry)
+{
+	return index_insert(index, source_entry, 1);
+}
+
+int git_index_apppend2(git_index *index, const git_index_entry *source_entry)
+{
+	return index_insert(index, source_entry, 0);
+}
+
 
 int git_index_remove(git_index *index, int position)
 {
