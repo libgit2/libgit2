@@ -331,8 +331,7 @@ int git_filebuf_write(git_filebuf *file, const void *buff, size_t len)
 		/* write too-large chunks immediately */
 		if (len > file->buf_size) {
 			error = file->write(file, buf, len);
-			if (error < GIT_SUCCESS)
-				return error;
+			return error;
 		}
 	}
 }
