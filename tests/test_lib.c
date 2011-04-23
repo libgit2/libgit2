@@ -130,6 +130,7 @@ static void free_suite(git_testsuite *ts)
 		if (ts->list[n])
 			test_free(ts->list[n]);
 
+	free(ts->name);
 	free(ts);
 }
 

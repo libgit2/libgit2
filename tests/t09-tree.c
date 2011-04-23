@@ -82,6 +82,7 @@ BEGIN_TEST(read0, "acces randomly the entries on a loaded tree")
 	must_be_true(git_tree_entry_byindex(tree, 3) == NULL);
 	must_be_true(git_tree_entry_byindex(tree, -1) == NULL);
 
+	git_tree_close(tree);
 	git_repository_free(repo);
 END_TEST
 
@@ -102,7 +103,9 @@ BEGIN_TEST(read1, "read a tree from the repository")
 
 	/* GH-86: git_object_lookup() should also check the type if the object comes from the cache */
 	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_TREE) == 0);
+	git_object_close(obj);
 	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_BLOB) == GIT_EINVALIDTYPE);
+	git_object_close(obj);
 
 	entry = git_tree_entry_byname(tree, "README");
 	must_be_true(entry != NULL);
@@ -111,6 +114,8 @@ BEGIN_TEST(read1, "read a tree from the repository")
 
 	must_pass(git_tree_entry_2object(&obj, repo, entry));
 
+	git_object_close(obj);
+	git_tree_close(tree);
 	git_repository_free(repo);
 END_TEST
 
@@ -148,6 +153,9 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	must_pass(git_treebuilder_write(&rid,repo,builder));
 
 	must_be_true(git_oid_cmp(&rid, &id2) == 0);
+
+	git_treebuilder_free(builder);
+	git_tree_close(tree);
 	close_temp_repo(repo);
 END_TEST
 
