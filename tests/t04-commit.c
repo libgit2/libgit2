@@ -368,7 +368,7 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		const char *message, *message_short;
 		git_time_t commit_time;
 		unsigned int parents, p;
-		git_commit *parent;
+		git_commit *parent = NULL, *old_parent = NULL;
 
 		git_oid_mkstr(&id, commit_ids[i]);
 
@@ -390,11 +390,19 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		must_be_true(commit_time > 0);
 		must_be_true(parents <= 2);
 		for (p = 0;p < parents;p++) {
+			if (old_parent != NULL)
+				git_commit_close(old_parent);
+
+			old_parent = parent;
 			must_pass(git_commit_parent(&parent, commit, p));
 			must_be_true(parent != NULL);
 			must_be_true(git_commit_author(parent) != NULL); // is it really a commit?
 		}
+		git_commit_close(old_parent);
+		git_commit_close(parent);
+
 		must_fail(git_commit_parent(&parent, commit, parents));
+		git_commit_close(commit);
 	}
 
 	git_repository_free(repo);
@@ -462,6 +470,7 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
 
+	git_commit_close(commit);
 	git_repository_free(repo);
 END_TEST
 
