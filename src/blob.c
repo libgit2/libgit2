@@ -64,7 +64,10 @@ int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *b
 	if ((error = git_odb_open_wstream(&stream, repo->db, len, GIT_OBJ_BLOB)) < GIT_SUCCESS)
 		return error;
 
-	stream->write(stream, buffer, len);
+	if ((error = stream->write(stream, buffer, len)) < GIT_SUCCESS) {
+		stream->free(stream);
+		return error;
+	}
 
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
