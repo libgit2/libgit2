@@ -483,7 +483,7 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 void git_revwalk_free(git_revwalk *walk)
 {
 	unsigned int i;
-	const void *_unused;
+	const void *GIT_UNUSED(_unused);
 	commit_object *commit;
 
 	if (walk == NULL)
@@ -558,7 +558,7 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 
 void git_revwalk_reset(git_revwalk *walk)
 {
-	const void *_unused;
+	const void *GIT_UNUSED(_unused);
 	commit_object *commit;
 
 	assert(walk);

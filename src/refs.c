@@ -684,7 +684,7 @@ static int packed_loadloose(git_repository *repository)
 
 	/* Remove any loose references from the cache */
 	{
-		const void *_unused;
+		const void *GIT_UNUSED(_unused);
 		git_reference *reference;
 
 		GIT_HASHTABLE_FOREACH(repository->references.loose_cache, _unused, reference,
@@ -868,7 +868,7 @@ static int packed_write(git_repository *repo)
 	/* Load all the packfile into a vector */
 	{
 		git_reference *reference;
-		const void *_unused;
+		const void *GIT_UNUSED(_unused);
 
 		GIT_HASHTABLE_FOREACH(repo->references.packfile, _unused, reference,
 			git_vector_insert(&packing_list, reference);  /* cannot fail: vector already has the right size */
@@ -1518,7 +1518,7 @@ int git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*ca
 	/* list all the packed references first */
 	if (list_flags & GIT_REF_PACKED) {
 		const char *ref_name;
-		void *_unused;
+		void *GIT_UNUSED(_unused);
 
 		if ((error = packed_load(repo)) < GIT_SUCCESS)
 			return error;
@@ -1597,7 +1597,7 @@ int git_repository__refcache_init(git_refcache *refs)
 void git_repository__refcache_free(git_refcache *refs)
 {
 	git_reference *reference;
-	const void *_unused;
+	const void *GIT_UNUSED(_unused);
 
 	assert(refs);
 
