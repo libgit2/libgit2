@@ -165,7 +165,7 @@ void git__strntolower(char *str, int len)
 	int i;
 
 	for (i = 0; i < len; ++i) {
-		str[len] = tolower(str[len]);
+		str[i] = tolower(str[i]);
 	}
 }
 
