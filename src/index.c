@@ -99,7 +99,6 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 static int read_header(struct index_header *dest, const void *buffer);
 
 static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
-static int read_unmerged_internal(git_index *, const char **, size_t buffer_size);
 static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
 static int read_unmerged_internal(git_index *, const char **, size_t buffer_size);
 
