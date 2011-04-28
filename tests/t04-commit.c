@@ -474,6 +474,72 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 	git_repository_free(repo);
 END_TEST
 
+#define ROOT_COMMIT_MESSAGE "This is a root commit\n\
+This is a root commit and should be the only one in this branch\n"
+
+BEGIN_TEST(root0, "create a root commit")
+	git_repository *repo;
+	git_commit *commit;
+	git_oid tree_id, commit_id;
+	const git_oid *branch_oid;
+	const git_signature *author, *committer;
+	const char *branch_name = "refs/heads/root-commit-branch";
+	git_reference *head, *branch;
+	char *head_old;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_mkstr(&tree_id, tree_oid);
+
+	/* create signatures */
+	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
+	must_be_true(committer != NULL);
+
+	author = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90);
+	must_be_true(author != NULL);
+
+	/* First we need to update HEAD so it points to our non-existant branch */
+	must_pass(git_reference_lookup(&head, repo, "HEAD"));
+	must_be_true(git_reference_type(head) == GIT_REF_SYMBOLIC);
+	head_old = git__strdup(git_reference_target(head));
+	must_be_true(head_old != NULL);
+
+	must_pass(git_reference_set_target(head, branch_name));
+
+	must_pass(git_commit_create_v(
+		&commit_id, /* out id */
+		repo,
+		"HEAD",
+		author,
+		committer,
+		ROOT_COMMIT_MESSAGE,
+		&tree_id,
+		0));
+
+	git_signature_free((git_signature *)committer);
+	git_signature_free((git_signature *)author);
+
+	/*
+	 * The fact that creating a commit works has already been
+	 * tested. Here we just make sure it's our commit and that it was
+	 * written as a root commit.
+	 */
+	must_pass(git_commit_lookup(&commit, repo, &commit_id));
+	must_be_true(git_commit_parentcount(commit) == 0);
+	must_pass(git_reference_lookup(&branch, repo, branch_name));
+	branch_oid = git_reference_oid(branch);
+	must_pass(git_oid_cmp(branch_oid, &commit_id));
+	must_be_true(!strcmp(git_commit_message(commit), ROOT_COMMIT_MESSAGE));
+
+	/* Remove the data we just added to the repo */
+	must_pass(git_reference_lookup(&head, repo, "HEAD"));
+	must_pass(git_reference_set_target(head, head_old));
+	must_pass(git_reference_delete(branch));
+	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
+	free(head_old);
+	git_commit_close(commit);
+	git_repository_free(repo);
+END_TEST
 
 BEGIN_SUITE(commit)
 	ADD_TEST(parse0);
@@ -483,4 +549,6 @@ BEGIN_SUITE(commit)
 
 	ADD_TEST(write0);
 	//ADD_TEST(write1);
+
+	ADD_TEST(root0);
 END_SUITE
