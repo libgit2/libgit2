@@ -39,7 +39,7 @@ Under Unix-like systems, like Linux, *BSD and Mac OS X, libgit2 expects `pthread
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
-Additionally, he following libraries may be used as replacement for built-in functionality:
+Additionally, the following libraries may be used as replacement for built-in functionality:
 
 * LibSSL **(optional)** <http://www.openssl.org/>
 
