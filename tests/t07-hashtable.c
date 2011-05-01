@@ -155,7 +155,7 @@ BEGIN_TEST(tableit0, "iterate through all the contents of the table")
 	const int objects_n = 32;
 	int i;
 	table_item *objects, *ob;
-	const void *_unused;
+	const void *GIT_UNUSED(_unused);
 
 	git_hashtable *table = NULL;
 

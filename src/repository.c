@@ -58,7 +58,6 @@ static int assign_repository_dirs(
 		const char *git_work_tree)
 {
 	char path_aux[GIT_PATH_MAX];
-	size_t git_dir_path_len;
 	int error = GIT_SUCCESS;
 
 	assert(repo);
@@ -69,8 +68,6 @@ static int assign_repository_dirs(
 	error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_dir);
 	if (error < GIT_SUCCESS)
 		return error;
-
-	git_dir_path_len = strlen(path_aux);
 
 	/* store GIT_DIR */
 	repo->path_repository = git__strdup(path_aux);
