@@ -1408,7 +1408,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	git__joinpath(path, objects_dir, "pack");
 	if (gitfo_isdir(path) == GIT_SUCCESS) {
 		backend->pack_folder = git__strdup(path);
-		backend->pack_folder_size = 0;
+		backend->pack_folder_size = -1;
 
 		if (backend->pack_folder == NULL) {
 			free(backend);
