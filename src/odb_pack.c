@@ -1385,6 +1385,7 @@ void pack_backend__free(git_odb_backend *_backend)
 	}
 
 	git_vector_free(&backend->packs);
+	free(backend->pack_folder);
 	free(backend);
 }
 
