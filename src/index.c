@@ -101,6 +101,7 @@ static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
 static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
+static int is_index_extended(git_index *index);
 static void sort_index(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
@@ -718,6 +719,24 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	return GIT_SUCCESS;
 }
 
+static int is_index_extended(git_index *index)
+{
+	unsigned int i, extended;
+
+	extended = 0;
+
+	for (i = 0; i < index->entries.length; ++i) {
+		git_index_entry *entry;
+		entry = git_vector_get(&index->entries, i);
+		entry->flags &= ~GIT_IDXENTRY_EXTENDED;
+		if (entry->flags_extended & GIT_IDXENTRY_EXTENDED_FLAGS) {
+			extended++;
+			entry->flags |= GIT_IDXENTRY_EXTENDED;
+		}
+	}
+	return extended;
+}
+
 static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 {
 	struct entry_short *ondisk;
@@ -786,12 +805,14 @@ static int write_index(git_index *index, git_filebuf *file)
 
 	struct index_header header;
 
-	int is_extended = 1;
+	int is_extended;
 
 	assert(index && file);
 
+	is_extended = is_index_extended(index);
+
 	header.signature = htonl(INDEX_HEADER_SIG);
-	header.version = htonl(is_extended ? INDEX_VERSION_NUMBER : INDEX_VERSION_NUMBER_EXT);
+	header.version = htonl(is_extended ? INDEX_VERSION_NUMBER_EXT : INDEX_VERSION_NUMBER);
 	header.entry_count = htonl(index->entries.length);
 
 	git_filebuf_write(file, &header, sizeof(struct index_header));
