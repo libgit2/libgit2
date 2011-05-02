@@ -1482,8 +1482,9 @@ int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
 	for (i = 0; i < MAX_NESTING_LEVEL; ++i) {
 		reference_symbolic *ref_sym;
 
+		*resolved_ref = ref;
+
 		if (ref->type & GIT_REF_OID) {
-			*resolved_ref = ref;
 			return GIT_SUCCESS;
 		}
 
