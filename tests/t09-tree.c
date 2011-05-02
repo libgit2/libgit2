@@ -32,6 +32,7 @@ static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 static const char *blob_oid = "fa49b077972391ad58037050f2a75f74e3671e92";
 static const char *first_tree  = "181037049a54a1eb5fab404658a3a250b44335d7";
 static const char *second_tree = "f60079018b664e4e79329a7ef9559c8d9e0378d1";
+static const char *third_tree = "eb86d8b81d6adbd5290a935d6c9976882de98488";
 
 #if 0
 static int print_tree(git_repository *repo, const git_oid *tree_oid, int depth)
@@ -159,6 +160,44 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	close_temp_repo(repo);
 END_TEST
 
+BEGIN_TEST(write3, "write a hierarchical tree from a memory")
+	git_repository *repo;
+	git_treebuilder *builder;
+	git_tree *tree;
+	git_oid id, bid, subtree_id, id2, id3;
+	git_oid id_hiearar;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+	git_oid_mkstr(&id, first_tree);
+	git_oid_mkstr(&id2, second_tree);
+	git_oid_mkstr(&id3, third_tree);
+	git_oid_mkstr(&bid, blob_oid);
+
+	//create subtree
+	must_pass(git_treebuilder_create(&builder, NULL));
+	must_pass(git_treebuilder_insert(NULL,builder,"new.txt",&bid,0100644));
+	must_pass(git_treebuilder_write(&subtree_id,repo,builder));
+	git_treebuilder_free(builder);
+
+        // create parent tree
+        must_pass(git_tree_lookup(&tree, repo, &id));
+	must_pass(git_treebuilder_create(&builder, tree));
+	must_pass(git_treebuilder_insert(NULL,builder,"new",&subtree_id,040000));
+	must_pass(git_treebuilder_write(&id_hiearar,repo,builder));
+	git_treebuilder_free(builder);
+	git_tree_close(tree);
+
+        must_be_true(git_oid_cmp(&id_hiearar, &id3) == 0);
+
+        // check data is correct
+        must_pass(git_tree_lookup(&tree, repo, &id_hiearar));
+        must_be_true(2 == git_tree_entrycount(tree));
+	git_tree_close(tree);
+
+        close_temp_repo(repo);
+
+END_TEST
+
 BEGIN_SUITE(tree)
 	//ADD_TEST(print0);
 	ADD_TEST(read0);
@@ -166,5 +205,6 @@ BEGIN_SUITE(tree)
 	//ADD_TEST(write0);
 	//ADD_TEST(write1);
 	ADD_TEST(write2);
+	ADD_TEST(write3);
 END_SUITE
 

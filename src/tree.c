@@ -424,7 +424,8 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 		if (entry->removed)
 			continue;
 
-		size += (entry->attr > 0x7FF) ? 7 : 6;
+		snprintf(filemode, sizeof(filemode), "%o ", entry->attr);
+		size += strlen(filemode);
 		size += entry->filename_len + 1;
 		size += GIT_OID_RAWSZ;
 	}
