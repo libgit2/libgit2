@@ -16,6 +16,8 @@ struct git_test {
 	char *failed_pos;
 	char *description;
 
+	int ret_value;
+
 	git_testfunc function;
 	unsigned failed:1, ran:1;
 	jmp_buf *jump;
@@ -60,6 +62,7 @@ static git_test *create_test(git_testfunc function)
 	t->ran = 0;
 	t->description = NULL;
 	t->message = NULL;
+	t->ret_value = 0;
 	t->failed_pos = NULL;
 	t->function = function;
 	t->jump = NULL;
@@ -78,7 +81,7 @@ void git_test__init(git_test *t, const char *name, const char *description)
  * Public assert methods
  *-------------------------------------------------------------------------*/
 
-static void fail_test(git_test *tc, const char *file, int line, const char *message)
+static void fail_test(git_test *tc, const char *file, int line, const char *message, int ret_value)
 {
 	char buf[1024];
 
@@ -86,6 +89,7 @@ static void fail_test(git_test *tc, const char *file, int line, const char *mess
 
 	tc->failed = 1;
 	tc->message = strdup(message);
+	tc->ret_value = ret_value;
 	tc->failed_pos = strdup(buf);
 
 	if (tc->jump != 0)
@@ -95,7 +99,13 @@ static void fail_test(git_test *tc, const char *file, int line, const char *mess
 void git_test__assert(git_test *tc, const char *file, int line, const char *message, int condition)
 {
 	if (condition == 0)
-		fail_test(tc, file, line, message);
+		fail_test(tc, file, line, message, 0);
+}
+
+void git_test__assert_pass(git_test *tc, const char *file, int line, const char *message, int ret_value)
+{
+	if (ret_value < 0)
+		fail_test(tc, file, line, message, ret_value);
 }
 
 /*-------------------------------------------------------------------------*
@@ -152,6 +162,8 @@ static void print_details(git_testsuite *ts)
 				failCount++;
 				printf("  %d) \"%s\" [test %s @ %s]\n\t%s\n",
 					failCount, tc->description, tc->name, tc->failed_pos, tc->message);
+				if (tc->ret_value)
+					printf("\tError: (%d) %s\n", tc->ret_value, git_strerror(tc->ret_value));
 			}
 		}
 	}
