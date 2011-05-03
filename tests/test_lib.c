@@ -92,11 +92,6 @@ static void fail_test(git_test *tc, const char *file, int line, const char *mess
 		longjmp(*(tc->jump), 0);
 }
 
-void git_test__fail(git_test *tc, const char *file, int line, const char *message)
-{
-	fail_test(tc, file, line, message);
-}
-
 void git_test__assert(git_test *tc, const char *file, int line, const char *message, int condition)
 {
 	if (condition == 0)
