@@ -6,16 +6,41 @@
 #define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
 
 /* 
- * Don't wrap malloc/calloc.
- * Use the default versions in glibc, and make
- * sure that any methods that allocate memory
- * return a GIT_ENOMEM error when allocation
- * fails.
+ * Custom memory allocation wrappers
+ * that set error code and error message
+ * on allocation failure
  */
-#define git__malloc malloc
-#define git__calloc calloc
-#define git__realloc realloc
-#define git__strdup strdup
+GIT_INLINE(void *) git__malloc(size_t len)
+{
+	void *ptr = malloc(len);
+	if (!ptr)
+		git__error(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)len);
+	return ptr;
+}
+
+GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
+{
+	void *ptr = calloc(nelem, elsize);
+	if (!ptr)
+		git__error(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)elsize);
+	return ptr;
+}
+
+GIT_INLINE(char *) git__strdup(const char *str)
+{
+	char *ptr = strdup(str);
+	if (!ptr)
+		git__error(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+	return ptr;
+}
+
+GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
+{
+	void *new_ptr = realloc(ptr, size);
+	if (!new_ptr)
+		git__error(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)size);
+	return new_ptr;
+}
 
 extern int git__fmt(char *, size_t, const char *, ...)
 	GIT_FORMAT_PRINTF(3, 4);
