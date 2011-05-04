@@ -146,4 +146,7 @@ extern char *git__strtok_keep(char *output, char *src, char *delimit);
 		} \
 	} while (0)
 
+#define GIT__SHORTID "%02X%02X%02X"
+#define GIT__GET_SHORTID(oid) (oid)->id[0], (oid)->id[1], (oid)->id[2]
+
 #endif /* INCLUDE_util_h__ */

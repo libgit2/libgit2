@@ -91,6 +91,8 @@ int git_commit_create_v(
 	const git_oid **oids;
 
 	oids = git__malloc(parent_count * sizeof(git_oid *));
+	if (oids == NULL)
+		return GIT_ENOMEM;
 
 	va_start(ap, parent_count);
 	for (i = 0; i < parent_count; ++i)
@@ -121,6 +123,8 @@ int git_commit_create_ov(
 	const git_oid **oids;
 
 	oids = git__malloc(parent_count * sizeof(git_oid *));
+	if (oids == NULL)
+		return GIT_ENOMEM;
 
 	va_start(ap, parent_count);
 	for (i = 0; i < parent_count; ++i)
@@ -151,6 +155,8 @@ int git_commit_create_o(
 	const git_oid **oids;
 
 	oids = git__malloc(parent_count * sizeof(git_oid *));
+	if (oids == NULL)
+		return GIT_ENOMEM;
 
 	for (i = 0; i < parent_count; ++i)
 		oids[i] = git_object_id((git_object *)parents[i]);
@@ -309,8 +315,20 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 
 int git_commit__parse(git_commit *commit, git_odb_object *obj)
 {
+	int error;
+
 	assert(commit);
-	return commit_parse_buffer(commit, obj->raw.data, obj->raw.len);
+	error = commit_parse_buffer(commit, obj->raw.data, obj->raw.len);
+
+	switch (error) {
+	case GIT_SUCCESS:
+	case GIT_ENOMEM:
+		return error;
+
+	default:
+		return git__error(error, "Error when parsing commit " GIT__SHORTID "; the commit is corrupted",
+			GIT__GET_SHORTID(&obj->cached.oid));
+	}
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \
