@@ -56,4 +56,6 @@ typedef SSIZE_T ssize_t;
 
 #define GIT_PATH_MAX 4096
 
+extern int git__error(int error, const char *, ...) GIT_FORMAT_PRINTF(2, 3);
+
 #endif /* INCLUDE_common_h__ */
