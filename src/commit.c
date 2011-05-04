@@ -223,6 +223,9 @@ int git_commit_create(
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
 
+	if (error < GIT_SUCCESS)
+		return git__error(GIT_ESTREAM, "Failed to write commit to ODB; streaming error");
+
 	if (error == GIT_SUCCESS && update_ref != NULL) {
 		git_reference *head;
 
