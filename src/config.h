@@ -23,6 +23,7 @@ struct git_config {
 
 struct git_cvar {
 	git_cvar *next;
+	char *section;
 	char *name;
 	char *value;
 };

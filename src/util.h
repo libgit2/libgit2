@@ -16,6 +16,7 @@
 #define git__calloc calloc
 #define git__realloc realloc
 #define git__strdup strdup
+#define git__strndup strndup
 
 extern int git__fmt(char *, size_t, const char *, ...)
 	GIT_FORMAT_PRINTF(3, 4);

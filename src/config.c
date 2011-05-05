@@ -42,6 +42,7 @@ static void cvar_free(git_cvar *var)
 	if (var == NULL)
 		return;
 
+	free(var->section);
 	free(var->name);
 	free(var->value);
 	free(var);
@@ -59,13 +60,15 @@ static void cvar_list_free(git_cvar_list *list)
 }
 
 /*
- * The order is important. The first parameter is the name we want to
- * match against, and the second one is what we're looking for
+ * Compare two strings according to the git section-subsection
+ * rules. The order of the strings is important because local is
+ * assumed to have the internal format (only the section name and with
+ * case information) and input the normalized one (only dots, no case
+ * information).
  */
-static int cvar_section_match(const char *local, const char *input)
+static int cvar_match_section(const char *local, const char *input)
 {
-	char *input_dot = strrchr(input, '.');
-	char *local_last_dot = strrchr(local, '.');
+	char *first_dot, *last_dot;
 	char *local_sp = strchr(local, ' ');
 	int comparison_len;
 
@@ -74,45 +77,48 @@ static int cvar_section_match(const char *local, const char *input)
 	 * just do a case-insensitive compare.
 	 */
 	if (local_sp == NULL)
-		return !strncasecmp(local, input, local_last_dot - local);
+		return !strncasecmp(local, input, strlen(local));
 
-	/* Anything before the space in local is case-insensitive */
+	/*
+	 * From here onwards, there is a space diving the section and the
+	 * subsection. Anything before the space in local is
+	 * case-insensitive.
+	 */
 	if (strncasecmp(local, input, local_sp - local))
 		return 0;
 
 	/*
 	 * We compare starting from the first character after the
 	 * quotation marks, which is two characters beyond the space. For
-	 * the input, we start one character beyond the first dot.
+	 * the input, we start one character beyond the dot. If the names
+	 * have different lengths, then we can fail early, as we know they
+	 * can't be the same.
 	 * The length is given by the length between the quotation marks.
-	 *
-	 * this "that".var
-	 *       ^    ^
-	 *       a    b
-	 *
-	 * where a is (local_sp + 2) and b is local_last_dot. The comparison
-	 * length is given by b - 1 - a.
 	 */
-	input_dot = strchr(input, '.');
-	comparison_len = local_last_dot - 1 - (local_sp + 2);
-	return !strncmp(local_sp + 2, input_dot + 1, comparison_len);
-}
 
-static int cvar_name_match(const char *local, const char *input)
-{
-	char *input_dot = strrchr(input, '.');
-	char *local_dot = strrchr(local, '.');
+	first_dot = strchr(input, '.');
+	last_dot = strrchr(input, '.');
+	comparison_len = strlen(local_sp + 2) - 1;
 
-	/*
-	 * First try to match the section name
-	 */
-	if (!cvar_section_match(local, input))
+	if (last_dot == first_dot || last_dot - first_dot - 1 != comparison_len)
 		return 0;
 
-	/*
-	 * Anything after the last (possibly only) dot is case-insensitive
-	 */
-	return !strcasecmp(input_dot, local_dot);
+	return !strncmp(local_sp + 2, first_dot + 1, comparison_len);
+}
+
+static int cvar_match_name(const git_cvar *var, const char *str)
+{
+	const char *name_start;
+
+	if (!cvar_match_section(var->section, str)) {
+		return 0;
+	}
+	/* Early exit if the lengths are different */
+	name_start = strrchr(str, '.') + 1;
+	if (strlen(var->name) != strlen(name_start))
+		return 0;
+
+	return !strcasecmp(var->name, name_start);
 }
 
 static git_cvar *cvar_list_find(git_cvar_list *list, const char *name)
@@ -120,7 +126,7 @@ static git_cvar *cvar_list_find(git_cvar_list *list, const char *name)
 	git_cvar *iter;
 
 	CVAR_LIST_FOREACH (list, iter) {
-		if (cvar_name_match(iter->name, name))
+		if (cvar_match_name(iter, name))
 			return iter;
 	}
 
@@ -264,6 +270,7 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 	git_cvar *var = NULL;
 	git_cvar *existing = NULL;
 	int error = GIT_SUCCESS;
+	const char *last_dot;
 
 	/*
 	 * If it already exists, we just need to update its value.
@@ -290,7 +297,19 @@ static int config_set(git_config *cfg, const char *name, const char *value)
 
 	memset(var, 0x0, sizeof(git_cvar));
 
-	var->name = git__strdup(name);
+	last_dot = strrchr(name, '.');
+	if (last_dot == NULL) {
+		error = GIT_ERROR;
+		goto out;
+	}
+
+	var->section = git__strndup(name, last_dot - name);
+	if (var->section == NULL) {
+		error = GIT_ENOMEM;
+		goto out;
+	}
+
+	var->name = git__strdup(last_dot + 1);
 	if (var->name == NULL) {
 		error = GIT_ENOMEM;
 		goto out;
@@ -639,36 +658,6 @@ static inline int config_keychar(int c)
 	return isalnum(c) || c == '-';
 }
 
-/*
- * Returns $section.$name, using only name_len chars from the name,
- * which is useful so we don't have to copy the variable name
- * twice. The name of the variable is set to lowercase.
- * Don't forget to free the buffer.
- */
-static char *build_varname(const char *section, const char *name)
-{
-	char *varname;
-	int section_len, ret;
-	int name_len;
-	size_t total_len;
-
-	name_len = strlen(name);
-	section_len = strlen(section);
-	total_len = section_len + name_len + 2;
-	varname = malloc(total_len);
-	if(varname == NULL)
-		return NULL;
-
-	ret = snprintf(varname, total_len, "%s.%s", section, name);
-	if (ret >= 0) { /* lowercase from the last dot onwards */
-		char *dot = strrchr(varname, '.');
-		if (dot != NULL)
-			git__strtolower(dot);
-	}
-
-	return varname;
-}
-
 static int parse_section_header_ext(const char *line, const char *base_name, char **section_name)
 {
 	int buf_len, total_len, pos, rpos;
@@ -901,7 +890,7 @@ static int config_parse(git_config *cfg_file)
 	char *current_section = NULL;
 	char *var_name;
 	char *var_value;
-	char *full_name;
+	git_cvar *var;
 
 	/* Initialise the reading position */
 	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
@@ -933,18 +922,26 @@ static int config_parse(git_config *cfg_file)
 			if (error < GIT_SUCCESS)
 				break;
 
-			full_name = build_varname(current_section, var_name);
-			if (full_name == NULL) {
+			var = malloc(sizeof(git_cvar));
+			if (var == NULL) {
 				error = GIT_ENOMEM;
-				free(var_name);
-				free(var_value);
 				break;
 			}
 
-			config_set(cfg_file, full_name, var_value);
-			free(var_name);
-			free(var_value);
-			free(full_name);
+			memset(var, 0x0, sizeof(git_cvar));
+
+			var->section = git__strdup(current_section);
+			if (var->section == NULL) {
+				error = GIT_ENOMEM;
+				free(var);
+				break;
+			}
+
+			var->name = var_name;
+			var->value = var_value;
+			git__strtolower(var->name);
+
+			CVAR_LIST_APPEND(&cfg_file->var_list, var);
 
 			break;
 		}
