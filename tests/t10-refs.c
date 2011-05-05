@@ -292,7 +292,7 @@ BEGIN_TEST(create2, "create a new OID reference")
 	/* Similar test with a fresh new repository */
 	must_pass(git_repository_open(&repo2, TEMP_REPO_FOLDER));
 
-	must_pass(git_reference_lookup(&looked_up_ref, repo, new_head));
+	must_pass(git_reference_lookup(&looked_up_ref, repo2, new_head));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(looked_up_ref)) == 0);
 
 	close_temp_repo(repo2);
