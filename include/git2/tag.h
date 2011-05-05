@@ -275,6 +275,23 @@ GIT_EXTERN(int) git_tag_delete(
 		git_repository *repo,
 		const char *tag_name);
 
+/**
+ * Fill a list with all the tags in the Repository
+ *
+ * The string array will be filled with the names of the
+ * matching tags; these values are owned by the user and
+ * should be free'd manually when no longer needed, using
+ * `git_strarray_free`.
+ *
+ * @param array Pointer to a git_strarray structure where
+ *		the tag names will be stored
+ * @param repo Repository where to find the tags
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_tag_list(
+		git_strarray *tag_names,
+		git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif

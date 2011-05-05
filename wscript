@@ -4,7 +4,7 @@ from waflib.Build import BuildContext, CleanContext, \
         InstallContext, UninstallContext
 
 # Unix flags
-CFLAGS_UNIX = ["-O2", "-Wall", "-Wextra"]
+CFLAGS_UNIX = ["-O2", "-Wall", "-Wextra", "-fPIC"]
 CFLAGS_UNIX_DBG = ['-g', '-O0']
 
 # Windows MSVC flags
@@ -64,6 +64,9 @@ def configure(conf):
 
     else:
         conf.env.PLATFORM = 'unix'
+
+    if conf.env.DEST_OS == 'sunos':
+        conf.env.DEFINES += ['NO_VIZ']
 
     if conf.options.threadsafe:
         if conf.env.PLATFORM == 'unix':

@@ -101,6 +101,7 @@ static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
 static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
+static int is_index_extended(git_index *index);
 static void sort_index(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
@@ -289,56 +290,12 @@ git_index_entry *git_index_get(git_index *index, int n)
 	return git_vector_get(&index->entries, (unsigned int)n);
 }
 
-int git_index_add(git_index *index, const char *rel_path, int stage)
-{
-	git_index_entry entry;
-	char full_path[GIT_PATH_MAX];
-	struct stat st;
-	int error;
-
-	if (index->repository == NULL)
-		return GIT_EBAREINDEX;
-
-	git__joinpath(full_path, index->repository->path_workdir, rel_path);
-
-	if (gitfo_exists(full_path) < 0)
-		return GIT_ENOTFOUND;
-
-	if (gitfo_stat(full_path, &st) < 0)
-		return GIT_EOSERR;
-
-	if (stage < 0 || stage > 3)
-		return GIT_ERROR;
-
-	memset(&entry, 0x0, sizeof(git_index_entry));
-
-	entry.ctime.seconds = (git_time_t)st.st_ctime;
-	entry.mtime.seconds = (git_time_t)st.st_mtime;
-	/* entry.mtime.nanoseconds = st.st_mtimensec; */
-	/* entry.ctime.nanoseconds = st.st_ctimensec; */
-	entry.dev= st.st_rdev;
-	entry.ino = st.st_ino;
-	entry.mode = st.st_mode;
-	entry.uid = st.st_uid;
-	entry.gid = st.st_gid;
-	entry.file_size = st.st_size;
-
-	/* write the blob to disk and get the oid */
-	if ((error = git_blob_create_fromfile(&entry.oid, index->repository, rel_path)) < GIT_SUCCESS)
-		return error;
-
-	entry.flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
-	entry.path = (char *)rel_path; /* do not duplicate; index_insert already does this */
-
-	return git_index_insert(index, &entry);
-}
-
-void sort_index(git_index *index)
+static void sort_index(git_index *index)
 {
 	git_vector_sort(&index->entries);
 }
 
-int git_index_insert(git_index *index, const git_index_entry *source_entry)
+static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
 {
 	git_index_entry *entry;
 	size_t path_length;
@@ -374,13 +331,15 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 	/* look if an entry with this path already exists */
 	position = git_index_find(index, source_entry->path);
 
-	/* if no entry exists, add the entry at the end;
+	/* if no entry exists and replace is not set,
+	 * add the entry at the end;
 	 * the index is no longer sorted */
-	if (position == GIT_ENOTFOUND) {
+	if (!replace || position == GIT_ENOTFOUND) {
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-	/* if a previous entry exists, replace it */
+	/* if a previous entry exists and replace is set,
+	 * replace it */
 	} else {
 		git_index_entry **entry_array = (git_index_entry **)index->entries.contents;
 
@@ -392,6 +351,81 @@ int git_index_insert(git_index *index, const git_index_entry *source_entry)
 
 	return GIT_SUCCESS;
 }
+
+static int index_init_entry(git_index_entry *entry, git_index *index, const char *rel_path, int stage)
+{
+	char full_path[GIT_PATH_MAX];
+	struct stat st;
+	int error;
+
+	if (index->repository == NULL)
+		return GIT_EBAREINDEX;
+
+	git__joinpath(full_path, index->repository->path_workdir, rel_path);
+
+	if (gitfo_exists(full_path) < 0)
+		return GIT_ENOTFOUND;
+
+	if (gitfo_stat(full_path, &st) < 0)
+		return GIT_EOSERR;
+
+	if (stage < 0 || stage > 3)
+		return GIT_ERROR;
+
+	memset(entry, 0x0, sizeof(git_index_entry));
+
+	entry->ctime.seconds = (git_time_t)st.st_ctime;
+	entry->mtime.seconds = (git_time_t)st.st_mtime;
+	/* entry.mtime.nanoseconds = st.st_mtimensec; */
+	/* entry.ctime.nanoseconds = st.st_ctimensec; */
+	entry->dev= st.st_rdev;
+	entry->ino = st.st_ino;
+	entry->mode = st.st_mode;
+	entry->uid = st.st_uid;
+	entry->gid = st.st_gid;
+	entry->file_size = st.st_size;
+
+	/* write the blob to disk and get the oid */
+	if ((error = git_blob_create_fromfile(&entry->oid, index->repository, rel_path)) < GIT_SUCCESS)
+		return error;
+
+	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
+	entry->path = (char *)rel_path; /* do not duplicate; index_insert already does this */
+	return GIT_SUCCESS;
+}
+
+int git_index_add(git_index *index, const char *path, int stage)
+{
+	int error;
+	git_index_entry entry;
+
+	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
+		return error;
+
+	return index_insert(index, &entry, 1);
+}
+
+int git_index_append(git_index *index, const char *path, int stage)
+{
+	int error;
+	git_index_entry entry;
+
+	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
+		return error;
+
+	return index_insert(index, &entry, 0);
+}
+
+int git_index_add2(git_index *index, const git_index_entry *source_entry)
+{
+	return index_insert(index, source_entry, 1);
+}
+
+int git_index_apppend2(git_index *index, const git_index_entry *source_entry)
+{
+	return index_insert(index, source_entry, 0);
+}
+
 
 int git_index_remove(git_index *index, int position)
 {
@@ -685,6 +719,24 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	return GIT_SUCCESS;
 }
 
+static int is_index_extended(git_index *index)
+{
+	unsigned int i, extended;
+
+	extended = 0;
+
+	for (i = 0; i < index->entries.length; ++i) {
+		git_index_entry *entry;
+		entry = git_vector_get(&index->entries, i);
+		entry->flags &= ~GIT_IDXENTRY_EXTENDED;
+		if (entry->flags_extended & GIT_IDXENTRY_EXTENDED_FLAGS) {
+			extended++;
+			entry->flags |= GIT_IDXENTRY_EXTENDED;
+		}
+	}
+	return extended;
+}
+
 static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 {
 	struct entry_short *ondisk;
@@ -753,12 +805,14 @@ static int write_index(git_index *index, git_filebuf *file)
 
 	struct index_header header;
 
-	int is_extended = 1;
+	int is_extended;
 
 	assert(index && file);
 
+	is_extended = is_index_extended(index);
+
 	header.signature = htonl(INDEX_HEADER_SIG);
-	header.version = htonl(is_extended ? INDEX_VERSION_NUMBER : INDEX_VERSION_NUMBER_EXT);
+	header.version = htonl(is_extended ? INDEX_VERSION_NUMBER_EXT : INDEX_VERSION_NUMBER);
 	header.entry_count = htonl(index->entries.length);
 
 	git_filebuf_write(file, &header, sizeof(struct index_header));
