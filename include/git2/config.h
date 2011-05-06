@@ -38,12 +38,22 @@
 GIT_BEGIN_DECL
 
 /**
+ * Allocate a new configuration
+ */
+GIT_EXTERN(int) git_config_new(git_config **out);
+
+/**
  * Open a configuration file
  *
  * @param cfg_out pointer to the configuration data
  * @param path where to load the confiration from
  */
-GIT_EXTERN(int) git_config_open(git_config **cfg_out, const char *path);
+GIT_EXTERN(int) git_config_open_bare(git_config **cfg_out, const char *path);
+
+/**
+ *
+ */
+GIT_EXTERN(int) git_config_add_backend(git_config *cfg, git_config_backend *backend, int priority);
 
 /**
  * Free the configuration and its associated memory

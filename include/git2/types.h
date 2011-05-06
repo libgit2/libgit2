@@ -133,6 +133,9 @@ typedef struct git_index git_index;
 /** Memory representation of a config file */
 typedef struct git_config git_config;
 
+/** A specific implementation of a config backend */
+typedef struct git_config_backend git_config_backend;
+
 /** Memory representation of a config variable */
 typedef struct git_cvar git_cvar;
 
