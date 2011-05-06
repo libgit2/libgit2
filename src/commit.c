@@ -286,7 +286,7 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 
 	if (buffer < buffer_end) {
 		const char *line_end;
-		size_t message_len = buffer_end - buffer;
+		size_t message_len;
 
 		/* Long message */
 		message_len = buffer_end - buffer;
