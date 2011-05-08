@@ -221,7 +221,7 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
  *
  ***********************************************************/
 
-int backend_sort_cmp(const void *a, const void *b)
+static int backend_sort_cmp(const void *a, const void *b)
 {
 	const backend_internal *backend_a = *(const backend_internal **)(a);
 	const backend_internal *backend_b = *(const backend_internal **)(b);
