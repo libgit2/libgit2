@@ -421,7 +421,7 @@ int git_index_add2(git_index *index, const git_index_entry *source_entry)
 	return index_insert(index, source_entry, 1);
 }
 
-int git_index_apppend2(git_index *index, const git_index_entry *source_entry)
+int git_index_append2(git_index *index, const git_index_entry *source_entry)
 {
 	return index_insert(index, source_entry, 0);
 }
