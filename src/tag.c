@@ -205,7 +205,7 @@ static int tag_create(
 	switch (error) {
 	case GIT_SUCCESS:
 		if (!allow_ref_overwrite)
-			return git__error(GIT_EEXISTS,
+			return git__catcherror(GIT_EEXISTS,
 					"Tag already exists. Use the `force` method to force overwritting");
 		should_update_ref = 1;
 		
@@ -219,7 +219,7 @@ static int tag_create(
 	}
 
 	if (!git_odb_exists(repo->db, target))
-		return git__error(GIT_ENOTFOUND,
+		return git__catcherror(GIT_ENOTFOUND,
 				"Cannot locate tag target [" GIT__SHORTID "]", GIT__GET_SHORTID(target));
 
 	/* Try to find out what the type is */
@@ -267,7 +267,7 @@ static int tag_create(
 	stream->free(stream);
 
 	if (error < GIT_SUCCESS)
-		return git__error(GIT_ESTREAM, "Failed to write tag to ODB; streaming error");
+		return git__catcherror(GIT_ESTREAM, "Failed to write tag to ODB; streaming error");
 
 	if (!should_update_ref)
 		error = git_reference_create_oid(&new_ref, repo, ref_name, oid);
@@ -287,7 +287,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	memset(&tag, 0, sizeof(tag));
 
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
-		return git__error(GIT_EOBJCORRUPTED, "Failed to create tag from buffer; "
+		return git__catcherror(GIT_EOBJCORRUPTED, "Failed to create tag from buffer; "
 				"the tag text is corrupted or badly formatted");
 
 	error = git_tag_create(oid, repo, tag.tag_name, &tag.target, tag.type, tag.tagger, tag.message);
@@ -387,7 +387,7 @@ int git_tag__parse(git_tag *tag, git_odb_object *obj)
 		return error;
 
 	default:
-		return git__error(error, "Error when parsing tag " GIT__SHORTID "; the tag is corrupted",
+		return git__catcherror(error, "Error when parsing tag " GIT__SHORTID "; the tag is corrupted",
 			GIT__GET_SHORTID(&obj->cached.oid));
 	}
 }

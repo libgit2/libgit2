@@ -30,13 +30,17 @@
  
 static GIT_TLS char g_last_error[1024];
 
-int git__error(int error, const char *msg, ...)
+int git__catcherror(int error, const char *msg, ...)
 {
 	va_list va;
 
-	va_start(va, msg);
-	vsnprintf(g_last_error, sizeof(g_last_error), msg, va);
-	va_end(va);
+	if (error == GIT_SUCCESS)
+		g_last_error[0] ='\0';
+	else {
+		va_start(va, msg);
+		vsnprintf(g_last_error, sizeof(g_last_error), msg, va);
+		va_end(va);
+	}
 
 	return error;
 }

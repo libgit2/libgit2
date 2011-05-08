@@ -224,7 +224,7 @@ int git_commit_create(
 	stream->free(stream);
 
 	if (error < GIT_SUCCESS)
-		return git__error(GIT_ESTREAM, "Failed to write commit to ODB; streaming error");
+		return git__catcherror(GIT_ESTREAM, "Failed to write commit to ODB; streaming error");
 
 	if (error == GIT_SUCCESS && update_ref != NULL) {
 		git_reference *head;
@@ -329,7 +329,7 @@ int git_commit__parse(git_commit *commit, git_odb_object *obj)
 		return error;
 
 	default:
-		return git__error(error, "Error when parsing commit " GIT__SHORTID "; the commit is corrupted",
+		return git__catcherror(error, "Error when parsing commit " GIT__SHORTID "; the commit is corrupted",
 			GIT__GET_SHORTID(&obj->cached.oid));
 	}
 }

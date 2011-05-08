@@ -235,7 +235,7 @@ int git_signature__write(char **signature, const char *header, const git_signatu
 			(unsigned)sig->when.time, sign, hours, mins);
 
 	if (sig_buffer_len < 0 || (size_t)sig_buffer_len > sizeof(sig_buffer))
-		return git__error(GIT_ENOMEM, "Failed to compose signature in buffer; the sig is too long");
+		return git__catcherror(GIT_ENOMEM, "Failed to compose signature in buffer; the sig is too long");
 
 	*signature = git__strdup(sig_buffer);
 	return sig_buffer_len;
