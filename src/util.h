@@ -14,7 +14,7 @@ GIT_INLINE(void *) git__malloc(size_t len)
 {
 	void *ptr = malloc(len);
 	if (!ptr)
-		git__error(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)len);
+		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)len);
 	return ptr;
 }
 
@@ -22,7 +22,7 @@ GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 {
 	void *ptr = calloc(nelem, elsize);
 	if (!ptr)
-		git__error(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)elsize);
+		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)elsize);
 	return ptr;
 }
 
@@ -30,7 +30,7 @@ GIT_INLINE(char *) git__strdup(const char *str)
 {
 	char *ptr = strdup(str);
 	if (!ptr)
-		git__error(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
 	return ptr;
 }
 
@@ -38,7 +38,7 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 {
 	void *new_ptr = realloc(ptr, size);
 	if (!new_ptr)
-		git__error(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)size);
+		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)size);
 	return new_ptr;
 }
 
