@@ -34,11 +34,11 @@
 GIT_BEGIN_DECL
 
 /**
- * strerror() for the Git library
- * @param num The error code to explain
- * @return a string explaining the error code
+ * Return a detailed error string with the latest error
+ * that occurred in the library.
+ * @return a string explaining the error
  */
-GIT_EXTERN(const char *) git_strerror(int num);
+GIT_EXTERN(const char *) git_lasterror(void);
 
 /** @} */
 GIT_END_DECL

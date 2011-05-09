@@ -170,6 +170,12 @@
 /** The given literal is not a valid number */
 #define GIT_ENOTNUM (GIT_ERROR - 25)
 
+/** Streaming error */
+#define GIT_ESTREAM (GIT_ERROR - 26)
+
+/** invalid arguments to function */
+#define GIT_EINVALIDARGS (GIT_ERROR - 27)
+
 GIT_BEGIN_DECL
 
 typedef struct {
