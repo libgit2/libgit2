@@ -50,6 +50,7 @@ typedef SSIZE_T ssize_t;
 
 #include "git2/common.h"
 #include "git2/types.h"
+#include "git2/errors.h"
 #include "thread-utils.h"
 #include "bswap.h"
 
