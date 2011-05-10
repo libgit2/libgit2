@@ -40,6 +40,18 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(const char *) git_lasterror(void);
 
+/**
+ * strerror() for the Git library
+ *
+ * Get a string description for a given error code.
+ * NOTE: This method will be eventually deprecated in favor
+ * of the new `git_lasterror`.
+ *
+ * @param num The error code to explain
+ * @return a string explaining the error code
+ */
+GIT_EXTERN(const char *) git_strerror(int num);
+
 /** @} */
 GIT_END_DECL
 #endif
