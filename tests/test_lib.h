@@ -36,10 +36,10 @@ typedef void (*git_testfunc)(git_test *);
 typedef git_testsuite *(*libgit2_suite)(void);
 
 void git_test__init(git_test *t, const char *name, const char *description);
-void git_test__fail(git_test *tc, const char *file, int line, const char *message);
 void git_test__assert(git_test *tc, const char *file, int line, const char *message, int condition);
+void git_test__assert_pass(git_test *tc, const char *file, int line, const char *message, int ret_value);
 
-#define must_pass(expr) git_test__assert(_gittest, __FILE__, __LINE__, "Method failed: " #expr, (expr) == 0)
+#define must_pass(expr) git_test__assert_pass(_gittest, __FILE__, __LINE__, "Method failed: " #expr, (expr))
 #define must_fail(expr) git_test__assert(_gittest, __FILE__, __LINE__, "Expected method to fail: " #expr, (expr) < 0)
 #define must_be_true(expr) git_test__assert(_gittest, __FILE__, __LINE__, "Expression is not true: " #expr, !!(expr))
 
