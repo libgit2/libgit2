@@ -185,6 +185,8 @@ typedef struct {
 
 GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 
+GIT_EXTERN(const char*) git_lasterror(void);
+
 /** @} */
 GIT_END_DECL
 #endif
