@@ -88,6 +88,9 @@ The waf build system for libgit2 accepts the following flags:
 	--with-sqlite
 		Enable sqlite support.
 
+	--with-redis
+		Enable redis support.
+
 You can run `./waf --help` to see a full list of install options and
 targets.
 
