@@ -62,7 +62,7 @@ int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *b
 	git_odb_stream *stream;
 
 	if ((error = git_odb_open_wstream(&stream, repo->db, len, GIT_OBJ_BLOB)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to create blob. Can't open write stream");
 
 	stream->write(stream, buffer, len);
 
@@ -81,7 +81,7 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	git_odb_stream *stream;
 
 	if (repo->path_workdir == NULL)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to create blob. No workdir given");
 
 	git__joinpath(full_path, repo->path_workdir, path);
 
@@ -106,7 +106,7 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		if (read_len < 0) {
 			gitfo_close(fd);
 			stream->free(stream);
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Failed to create blob. Can't read full file");
 		}
 
 		stream->write(stream, buffer, read_len);
