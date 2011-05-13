@@ -210,7 +210,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 		git_oid oid;
 
 		if (git_oid_mkstr(&oid, (char *)buffer + STRLEN("parent ")) < GIT_SUCCESS)
-			return GIT_EOBJCORRUPTED;
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Parent object is corrupted");
 
 		commit->parents[i] = commit_lookup(walk, &oid);
 		if (commit->parents[i] == NULL)
@@ -222,14 +222,14 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 	commit->out_degree = (unsigned short)parents;
 
 	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Object is corrupted");
 
 	buffer = memchr(buffer, '>', buffer_end - buffer);
 	if (buffer == NULL)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Can't find author");
 
 	if (git__strtol32(&commit_time, (char *)buffer + 2, NULL, 10) < GIT_SUCCESS)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Can't parse commit time");
 
 	commit->time = (time_t)commit_time;
 	commit->parsed = 1;
@@ -245,11 +245,11 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 		return GIT_SUCCESS;
 
 	if ((error = git_odb_read(&obj, walk->repo->db, &commit->oid)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to parse commit. Can't read object");
 
 	if (obj->raw.type != GIT_OBJ_COMMIT) {
 		git_odb_object_close(obj);
-		return GIT_EOBJTYPE;
+		return git__throw(GIT_EOBJTYPE, "Failed to parse commit. Object is no commit object");
 	}
 
 	error = commit_quick_parse(walk, commit, &obj->raw);
@@ -305,7 +305,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 
 	commit = commit_lookup(walk, oid);
 	if (commit == NULL)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to push commit. Object not found");
 
 	commit->uninteresting = uninteresting;
 
@@ -349,7 +349,7 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_EREVWALKOVER;
+	return git__throw(GIT_EREVWALKOVER, "No more commits left to iterate");
 }
 
 static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
@@ -367,7 +367,7 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_EREVWALKOVER;
+	return git__throw(GIT_EREVWALKOVER, "No more commits left to iterate");
 }
 
 static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
@@ -378,7 +378,7 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 	for (;;) {
 		next = commit_list_pop(&walk->iterator_topo);
 		if (next == NULL)
-			return GIT_EREVWALKOVER;
+			return git__throw(GIT_EREVWALKOVER, "No more commits left to iterate");
 
 		if (next->in_degree > 0) {
 			next->topo_delay = 1;
