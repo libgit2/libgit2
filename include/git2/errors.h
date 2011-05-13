@@ -25,6 +25,8 @@
 #ifndef INCLUDE_git_errors_h__
 #define INCLUDE_git_errors_h__
 
+#include "common.h"
+
 /**
  * @file git2/errors.h
  * @brief Git error handling routines and variables
