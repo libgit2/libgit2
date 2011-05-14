@@ -51,7 +51,7 @@ void git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_p
 	cache->lru_count = 0;
 	cache->free_obj = free_ptr;
 
-	cache->nodes = git__malloc((size + 1) * sizeof(cache_node));
+	cache->nodes = git__malloc((size + 1) * sizeof(cache_node));	//TODO: How should we deal with GIT_ENOMEM?
 
 	for (i = 0; i < (size + 1); ++i) {
 		git_mutex_init(&cache->nodes[i].lock);
