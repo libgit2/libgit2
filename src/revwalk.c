@@ -349,7 +349,7 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return git__throw(GIT_EREVWALKOVER, "No more commits left to iterate");
+	return GIT_EREVWALKOVER;
 }
 
 static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
@@ -367,7 +367,7 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return git__throw(GIT_EREVWALKOVER, "No more commits left to iterate");
+	return GIT_EREVWALKOVER;
 }
 
 static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
@@ -378,7 +378,7 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 	for (;;) {
 		next = commit_list_pop(&walk->iterator_topo);
 		if (next == NULL)
-			return git__throw(GIT_EREVWALKOVER, "No more commits left to iterate");
+			return GIT_EREVWALKOVER;
 
 		if (next->in_degree > 0) {
 			next->topo_delay = 1;
