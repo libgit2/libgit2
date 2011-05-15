@@ -444,7 +444,7 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 			return error;
 
 		*len_p = object->raw.len;
-		*type_p = object->raw.len;
+		*type_p = object->raw.type;
 		git_odb_object_close(object);
 	}
 
