@@ -60,6 +60,8 @@ int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_pt
 		cache->nodes[i].ptr = NULL;
 		cache->nodes[i].lru = 0;
 	}
+
+	return GIT_SUCCESS;
 }
 
 void git_cache_free(git_cache *cache)
