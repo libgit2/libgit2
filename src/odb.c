@@ -240,13 +240,13 @@ int git_odb_new(git_odb **out)
 	if (!db)
 		return GIT_ENOMEM;
 
-	git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
+	error = git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
 	if (error < GIT_SUCCESS)
 		return error;
 
-	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < GIT_SUCCESS) {
+	if ((error = git_vector_init(&db->backends, 4, backend_sort_cmp)) < GIT_SUCCESS) {
 		free(db);
-		return GIT_ENOMEM;
+		return error;
 	}
 
 	*out = db;
