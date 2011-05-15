@@ -234,13 +234,17 @@ static int backend_sort_cmp(const void *a, const void *b)
 
 int git_odb_new(git_odb **out)
 {
+	int error;
+
 	git_odb *db = git__calloc(1, sizeof(*db));
 	if (!db)
 		return GIT_ENOMEM;
 
 	git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
+	if (error < GIT_SUCCESS)
+		return error;
 
-	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
+	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < GIT_SUCCESS) {
 		free(db);
 		return GIT_ENOMEM;
 	}
