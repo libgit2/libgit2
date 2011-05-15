@@ -159,13 +159,19 @@ static int guess_repository_dirs(git_repository *repo, const char *repository_pa
 
 static git_repository *repository_alloc()
 {
+	int error;
+
 	git_repository *repo = git__malloc(sizeof(git_repository));
 	if (!repo)
 		return NULL;
 
 	memset(repo, 0x0, sizeof(git_repository));
 
-	git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free);
+	error = git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free);
+	if (error < GIT_SUCCESS) {
+		free(repo);
+		return NULL;
+	}
 
 	if (git_repository__refcache_init(&repo->references) < GIT_SUCCESS) {
 		free(repo);

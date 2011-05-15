@@ -31,7 +31,7 @@ typedef struct {
 } git_cache;
 
 
-void git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr);
+int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr);
 void git_cache_free(git_cache *cache);
 
 void *git_cache_try_store(git_cache *cache, void *entry);
