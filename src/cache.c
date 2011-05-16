@@ -110,7 +110,7 @@ void *git_cache_try_store(git_cache *cache, void *entry)
 	cache_node *nodes[GIT_CACHE_OPENADR], *lru_node;
 	const uint32_t *hash;
 	const git_oid *oid;
-	size_t i;
+	size_t i, j, node_count;
 
 	oid = &((git_cached_obj*)entry)->oid;
 	hash = (const uint32_t *)oid->id;
@@ -119,16 +119,24 @@ void *git_cache_try_store(git_cache *cache, void *entry)
 	 * the cache now owns it */
 	git_cached_obj_incref(entry);
 
+	node_count = 0;
 	for (i = 0; i < GIT_CACHE_OPENADR; ++i) {
 		size_t pos = hash[i] & cache->size_mask;
+		cache_node *node = &cache->nodes[pos];
 
-		nodes[i] = &cache->nodes[pos];
-		git_mutex_lock(&nodes[i]->lock);
+		for (j = 0; j < node_count; ++j)
+			if (nodes[j] == node)
+				break;
+
+		if (j == node_count) {
+			nodes[node_count++] = node;
+			git_mutex_lock(node);
+		}
 	}
 
 	lru_node = nodes[0];
 
-	for (i = 0; i < GIT_CACHE_OPENADR; ++i) {
+	for (i = 0; i < node_count; ++i) {
 
 		if (nodes[i]->ptr == NULL) {
 			nodes[i]->ptr = entry;
@@ -145,7 +153,7 @@ void *git_cache_try_store(git_cache *cache, void *entry)
 			lru_node = nodes[i];
 	}
 
-	if (i == GIT_CACHE_OPENADR) {
+	if (i == node_count) {
 		void *old_entry = lru_node->ptr;
 		assert(old_entry);
 
@@ -158,7 +166,7 @@ void *git_cache_try_store(git_cache *cache, void *entry)
 	 * returning it to the user */
 	git_cached_obj_incref(entry);
 
-	for (i = 0; i < GIT_CACHE_OPENADR; ++i)
+	for (i = 0; i < node_count; ++i)
 		git_mutex_unlock(&nodes[i]->lock);
 
 	return entry;
