@@ -19,7 +19,6 @@ typedef struct {
 typedef struct {
 	git_cached_obj *ptr;
 	git_mutex lock;
-	unsigned int lru;
 } cache_node;
 
 typedef struct {
