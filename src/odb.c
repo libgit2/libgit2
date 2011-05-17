@@ -221,7 +221,7 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
  *
  ***********************************************************/
 
-int backend_sort_cmp(const void *a, const void *b)
+static int backend_sort_cmp(const void *a, const void *b)
 {
 	const backend_internal *backend_a = *(const backend_internal **)(a);
 	const backend_internal *backend_b = *(const backend_internal **)(b);
@@ -234,15 +234,19 @@ int backend_sort_cmp(const void *a, const void *b)
 
 int git_odb_new(git_odb **out)
 {
+	int error;
+
 	git_odb *db = git__calloc(1, sizeof(*db));
 	if (!db)
 		return GIT_ENOMEM;
 
-	git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
+	error = git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
+	if (error < GIT_SUCCESS)
+		return error;
 
-	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
+	if ((error = git_vector_init(&db->backends, 4, backend_sort_cmp)) < GIT_SUCCESS) {
 		free(db);
-		return GIT_ENOMEM;
+		return error;
 	}
 
 	*out = db;
@@ -444,7 +448,7 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 			return error;
 
 		*len_p = object->raw.len;
-		*type_p = object->raw.len;
+		*type_p = object->raw.type;
 		git_odb_object_close(object);
 	}
 

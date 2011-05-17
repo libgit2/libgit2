@@ -232,10 +232,10 @@ GIT_EXTERN(int) git_index_append(git_index *index, const char *path, int stage);
  * @param source_entry new entry object
  * @return 0 on success, otherwise an error code
  */
-GIT_EXTERN(int) git_index_apppend2(git_index *index, const git_index_entry *source_entry);
+GIT_EXTERN(int) git_index_append2(git_index *index, const git_index_entry *source_entry);
 
 /**
- * Remove an entry from the index 
+ * Remove an entry from the index
  *
  * @param index an existing index object
  * @param position position of the entry to remove

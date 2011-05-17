@@ -53,7 +53,7 @@ int hiredis_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backe
     reply = redisCommand(backend->db, "HMGET %b %s %s", oid->id, GIT_OID_RAWSZ,
             "type", "size");
 
-    if (reply->type == REDIS_REPLY_ARRAY) {
+    if (reply && reply->type == REDIS_REPLY_ARRAY) {
         if (reply->element[0]->type != REDIS_REPLY_NIL &&
                 reply->element[0]->type != REDIS_REPLY_NIL) {
             *type_p = (git_otype) atoi(reply->element[0]->str);
@@ -83,7 +83,7 @@ int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_o
     reply = redisCommand(backend->db, "HMGET %b %s %s %s", oid->id, GIT_OID_RAWSZ,
             "type", "size", "data");
 
-    if (reply->type == REDIS_REPLY_ARRAY) {
+    if (reply && reply->type == REDIS_REPLY_ARRAY) {
         if (reply->element[0]->type != REDIS_REPLY_NIL &&
                 reply->element[1]->type != REDIS_REPLY_NIL &&
                 reply->element[2]->type != REDIS_REPLY_NIL) {
@@ -118,7 +118,7 @@ int hiredis_backend__exists(git_odb_backend *_backend, const git_oid *oid) {
     found = 0;
 
     reply = redisCommand(backend->db, "exists %b", oid->id, GIT_OID_RAWSZ);
-    if (reply->type != REDIS_REPLY_NIL && reply->type != REDIS_REPLY_ERROR)
+    if (reply && reply->type != REDIS_REPLY_NIL && reply->type != REDIS_REPLY_ERROR)
         found = 1;
 
 
@@ -144,7 +144,8 @@ int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *d
             "size %d "
             "data %b ", id->id, GIT_OID_RAWSZ,
             (int) type, len, data, len);
-    error = reply->type == REDIS_REPLY_ERROR ? GIT_ERROR : GIT_SUCCESS;
+
+    error = (reply == NULL || reply->type == REDIS_REPLY_ERROR) ? GIT_ERROR : GIT_SUCCESS;
 
     freeReplyObject(reply);
     return error;

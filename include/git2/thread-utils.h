@@ -35,6 +35,7 @@
 
 #if defined(__APPLE__) && defined(__MACH__)
 # undef GIT_TLS
+# define GIT_TLS
 
 #elif defined(__GNUC__) || \
       defined(__SUNPRO_C) || \

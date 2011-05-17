@@ -106,7 +106,7 @@ int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *ke
 
 	/* need comparison function to sort the vector */
 	if (v->_cmp == NULL)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Can't sort vector. No comparison function set");
 
 	git_vector_sort(v);
 
@@ -114,7 +114,7 @@ int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *ke
 	if (find != NULL)
 		return (int)(find - v->contents);
 
-	return GIT_ENOTFOUND;
+	return git__throw(GIT_ENOTFOUND, "Can't find element");
 }
 
 int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key)
@@ -128,7 +128,7 @@ int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key
 			return i;
 	}
 
-	return GIT_ENOTFOUND;
+	return git__throw(GIT_ENOTFOUND, "Can't find element");
 }
 
 static int strict_comparison(const void *a, const void *b)
@@ -143,9 +143,6 @@ int git_vector_search(git_vector *v, const void *entry)
 
 int git_vector_bsearch(git_vector *v, const void *key)
 {
-	if (v->_cmp == NULL)
-		return GIT_ENOTFOUND;
-
 	return git_vector_bsearch2(v, v->_cmp, key);
 }
 
@@ -156,7 +153,7 @@ int git_vector_remove(git_vector *v, unsigned int idx)
 	assert(v);
 
 	if (idx >= v->length || v->length == 0)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Can't remove element. Index out of bounds");
 
 	for (i = idx; i < v->length - 1; ++i)
 		v->contents[i] = v->contents[i + 1];

@@ -122,7 +122,8 @@ static int reference_create(
 	else if (type == GIT_REF_OID)
 		size = sizeof(reference_oid);
 	else
-		return GIT_EINVALIDREFSTATE;
+		return git__throw(GIT_EINVALIDARGS,
+			"Invalid reference type. Use either GIT_REF_OID or GIT_REF_SYMBOLIC as type specifier");
 
 	reference = git__malloc(size);
 	if (reference == NULL)
@@ -159,11 +160,9 @@ static int reference_read(gitfo_buf *file_content, time_t *mtime, const char *re
 	/* Determine the full path of the file */
 	git__joinpath(path, repo_path, ref_name);
 
-	if (gitfo_stat(path, &st) < 0)
-		return GIT_ENOTFOUND;
-
-	if (S_ISDIR(st.st_mode))
-		return GIT_EOBJCORRUPTED;
+	if (gitfo_stat(path, &st) < 0 || S_ISDIR(st.st_mode))
+		return git__throw(GIT_ENOTFOUND,
+			"Cannot read reference file '%s'", ref_name);
 
 	if (mtime)
 		*mtime = st.st_mtime;
@@ -205,7 +204,8 @@ static int loose_update(git_reference *ref)
 	else if (ref->type == GIT_REF_OID)
 		error = loose_parse_oid(ref, &ref_file);
 	else
-		error = GIT_EINVALIDREFSTATE;
+		error = git__throw(GIT_EOBJCORRUPTED,
+			"Invalid reference type (%d) for loose reference", ref->type);
 
 	gitfo_free_buf(&ref_file);
 
@@ -229,7 +229,8 @@ static int loose_parse_symbolic(git_reference *ref, gitfo_buf *file_content)
 	ref_sym = (reference_symbolic *)ref;
 
 	if (file_content->len < (header_len + 1))
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Object too short");
 
 	/* 
 	 * Assume we have already checked for the header
@@ -246,7 +247,8 @@ static int loose_parse_symbolic(git_reference *ref, gitfo_buf *file_content)
 	/* remove newline at the end of file */
 	eol = strchr(ref_sym->target, '\n');
 	if (eol == NULL)
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Missing EOL");
 
 	*eol = '\0';
 	if (eol[-1] == '\r')
@@ -257,6 +259,7 @@ static int loose_parse_symbolic(git_reference *ref, gitfo_buf *file_content)
 
 static int loose_parse_oid(git_reference *ref, gitfo_buf *file_content)
 {
+	int error;
 	reference_oid *ref_oid;
 	char *buffer;
 
@@ -265,17 +268,19 @@ static int loose_parse_oid(git_reference *ref, gitfo_buf *file_content)
 
 	/* File format: 40 chars (OID) + newline */
 	if (file_content->len < GIT_OID_HEXSZ + 1)
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Reference too short");
 
-	if (git_oid_mkstr(&ref_oid->oid, buffer) < GIT_SUCCESS)
-		return GIT_EREFCORRUPTED;
+	if ((error = git_oid_mkstr(&ref_oid->oid, buffer)) < GIT_SUCCESS)
+		return git__rethrow(GIT_EOBJCORRUPTED, "Failed to parse loose reference.");
 
 	buffer = buffer + GIT_OID_HEXSZ;
 	if (*buffer == '\r')
 		buffer++;
 
 	if (*buffer != '\n')
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Missing EOL");
 
 	return GIT_SUCCESS;
 }
@@ -387,7 +392,7 @@ static int loose_write(git_reference *ref)
 		strcpy(ref_contents, GIT_SYMREF);
 		strcat(ref_contents, ref_sym->target);
 	} else {
-		error = GIT_EINVALIDREFSTATE;
+		error = git__throw(GIT_EOBJCORRUPTED, "Failed to write reference. Invalid reference type");
 		goto unlock;
 	}
 
