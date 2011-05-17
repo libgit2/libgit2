@@ -23,35 +23,35 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDE_git_git_h__
-#define INCLUDE_git_git_h__
+#ifndef INCLUDE_git_config_backend_h__
+#define INCLUDE_git_config_backend_h__
 
-#define LIBGIT2_VERSION "0.12.0"
-#define LIBGIT2_VER_MAJOR 0
-#define LIBGIT2_VER_MINOR 12
-#define LIBGIT2_VER_REVISION 0
+#include "common.h"
+#include "types.h"
+#include "config.h"
 
-#include "git2/common.h"
-#include "git2/errors.h"
-#include "git2/zlib.h"
+GIT_BEGIN_DECL
 
-#include "git2/types.h"
+struct git_config;
 
-#include "git2/oid.h"
-#include "git2/signature.h"
-#include "git2/odb.h"
+struct git_config_backend {
+	struct git_config *cfg;
+	/* Open means open the file/database and parse if necessary */
+	int (*open)(struct git_config_backend *);
+	int (* get)(struct git_config_backend *, const char *key, const char **value);
+	int (* set)(struct git_config_backend *, const char *key, const char *value);
+	int (*foreach)(struct git_config_backend *, int (*fn)(const char *, void *), void *data);
+	void (*free)(struct git_config_backend *);
+};
 
-#include "git2/repository.h"
-#include "git2/revwalk.h"
-#include "git2/refs.h"
+/**
+ * Create a file-backed configuration backend
+ *
+ * @param out the new backend
+ * @path where the config file is located
+ */
+GIT_EXTERN(int) git_config_backend_file(struct git_config_backend **out, const char *path);
 
-#include "git2/object.h"
-#include "git2/blob.h"
-#include "git2/commit.h"
-#include "git2/tag.h"
-#include "git2/tree.h"
-
-#include "git2/index.h"
-#include "git2/config.h"
+GIT_END_DECL
 
 #endif
