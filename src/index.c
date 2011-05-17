@@ -287,7 +287,7 @@ int git_index_write(git_index *index)
 	}
 
 	if ((error = git_filebuf_commit(&file)) < GIT_SUCCESS)
-		return git_rethrow(error, "Failed to write index");
+		return git__rethrow(error, "Failed to write index");
 
 	if (gitfo_stat(index->index_file_path, &indexst) == 0) {
 		index->last_modified = indexst.st_mtime;
