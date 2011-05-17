@@ -41,4 +41,6 @@ Categories
 
 13__: Threads, empty as of now
 
-14__: Configuration parsing
+14__: Redis backend
+
+15__: Configuration parsing
