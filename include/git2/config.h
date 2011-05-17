@@ -51,6 +51,13 @@ GIT_EXTERN(int) git_config_new(git_config **out);
 GIT_EXTERN(int) git_config_open_bare(git_config **cfg_out, const char *path);
 
 /**
+ * Open the global configuration file at $HOME/.gitconfig
+ *
+ * @param cfg pointer to the configuration
+ */
+GIT_EXTERN(int) git_config_open_global(git_config **cfg);
+
+/**
  *
  */
 GIT_EXTERN(int) git_config_add_backend(git_config *cfg, git_config_backend *backend, int priority);

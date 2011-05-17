@@ -70,6 +70,40 @@ int git_config_open_bare(git_config **out, const char *path)
 	return error;
 }
 
+int git_config_open_global(git_config **out)
+{
+	char *home = NULL, *filename = NULL;
+	const char *gitconfig = ".gitconfig";
+	int filename_len, ret, error;
+
+	home = git__strdup(getenv("HOME"));
+	if (home == NULL)
+		return GIT_ENOMEM;
+
+	filename_len = strlen(home) + strlen(gitconfig) + 1;
+	filename = git__malloc(filename_len + 1);
+	if (filename == NULL) {
+		error = GIT_ENOMEM;
+		goto out;
+	}
+
+	ret = snprintf(filename, filename_len, "%s/%s", home, gitconfig);
+	if (ret < 0) {
+		error = git__throw(GIT_EOSERR, "Failed to build global filename. OS err: %s", strerror(errno));
+		goto out;
+	} else if (ret >= filename_len) {
+		error = git__throw(GIT_ERROR, "Failed to build global filename. Length calulation wrong");
+		goto out;
+	}
+
+	error = git_config_open_bare(out, filename);
+
+ out:
+	free(home);
+	free(filename);
+	return error;
+}
+
 void git_config_free(git_config *cfg)
 {
 	unsigned int i;
