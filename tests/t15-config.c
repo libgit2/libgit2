@@ -131,7 +131,6 @@ END_TEST
 
 BEGIN_TEST(config5, "test number suffixes")
 	git_config *cfg;
-	const char *str;
 	long int i;
 
 	must_pass(git_config_open_bare(&cfg, CONFIG_BASE "/config5"));
