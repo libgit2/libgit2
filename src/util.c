@@ -104,6 +104,20 @@ int git__fmt(char *buf, size_t buf_sz, const char *fmt, ...)
 	return r;
 }
 
+void git__strntolower(char *str, int len)
+{
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		str[i] = tolower(str[i]);
+	}
+}
+
+void git__strtolower(char *str)
+{
+	git__strntolower(str, strlen(str));
+}
+
 int git__prefixcmp(const char *str, const char *prefix)
 {
 	for (;;) {

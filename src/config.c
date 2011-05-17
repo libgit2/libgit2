@@ -37,20 +37,6 @@ typedef struct {
 	int priority;
 } backend_internal;
 
-void git__strntolower(char *str, int len)
-{
-	int i;
-
-	for (i = 0; i < len; ++i) {
-		str[i] = tolower(str[i]);
-	}
-}
-
-void git__strtolower(char *str)
-{
-	git__strntolower(str, strlen(str));
-}
-
 int git_config_open_bare(git_config **out, const char *path)
 {
 	git_config_backend *backend = NULL;

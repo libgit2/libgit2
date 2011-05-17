@@ -9,7 +9,4 @@ struct git_config {
 	git_vector backends;
 };
 
-void git__strtolower(char *str);
-void git__strntolower(char *str, int len);
-
 #endif

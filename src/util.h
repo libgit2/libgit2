@@ -142,6 +142,9 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 extern char *git__strtok(char *output, char *src, char *delimit);
 extern char *git__strtok_keep(char *output, char *src, char *delimit);
 
+extern void git__strntolower(char *str, int len);
+extern void git__strtolower(char *str);
+
 #define STRLEN(str) (sizeof(str) - 1)
 
 #define GIT_OID_LINE_LENGTH(header) (STRLEN(header) + 1 + GIT_OID_HEXSZ + 1)
