@@ -23,14 +23,22 @@ Categories
 
 04__: Parsing and loading commit data
 
-05__: To be described
+05__: Revision walking
 
-06__: To be described
+06__: Index reading, writing and searching
 
-07__: To be described
+07__: Tests for the internal hashtable code
 
-08__: To be described
+08__: Tag reading and writing
 
-09__: To be described
+09__: Reading tree objects
 
 10__: Symbolic, loose and packed references reading and writing.
+
+11__: SQLite backend
+
+12__: Repository init and opening
+
+13__: Threads, empty as of now
+
+14__: Configuration parsing
