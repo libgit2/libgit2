@@ -178,7 +178,7 @@ int git_index_open_bare(git_index **index_out, const char *index_path)
 int git_index_open_inrepo(git_index **index_out, git_repository *repo)
 {
 	if (repo->is_bare)
-		return GIT_EBAREINDEX;
+		return git__throw(GIT_EBAREINDEX, "Failed to open index. Repository is bare");
 
 	return index_initialize(index_out, repo, repo->path_index);
 }
@@ -244,17 +244,17 @@ int git_index_read(git_index *index)
 	}
 
 	if (gitfo_stat(index->index_file_path, &indexst) < 0)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to read index. %s does not exist or is corrupted", index->index_file_path);
 
 	if (!S_ISREG(indexst.st_mode))
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to read index. %s is not an index file", index->index_file_path);
 
 	if (indexst.st_mtime != index->last_modified) {
 
 		gitfo_buf buffer;
 
-		if (gitfo_read_file(&buffer, index->index_file_path) < GIT_SUCCESS)
-			return GIT_EOSERR;
+		if ((error = gitfo_read_file(&buffer, index->index_file_path)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to read index");
 
 		git_index_clear(index);
 		error = parse_index(index, buffer.data, buffer.len);
@@ -265,6 +265,8 @@ int git_index_read(git_index *index)
 		gitfo_free_buf(&buffer);
 	}
 
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to read index");
 	return error;
 }
 
@@ -277,15 +279,15 @@ int git_index_write(git_index *index)
 	sort_index(index);
 
 	if ((error = git_filebuf_open(&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to write index");
 
 	if ((error = write_index(index, &file)) < GIT_SUCCESS) {
 		git_filebuf_cleanup(&file);
-		return error;
+		return git__rethrow(error, "Failed to write index");
 	}
 
 	if ((error = git_filebuf_commit(&file)) < GIT_SUCCESS)
-		return error;
+		return git_rethrow(error, "Failed to write index");
 
 	if (gitfo_stat(index->index_file_path, &indexst) == 0) {
 		index->last_modified = indexst.st_mtime;
@@ -332,7 +334,7 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	assert(index && source_entry);
 
 	if (source_entry->path == NULL)
-		return GIT_EMISSINGOBJDATA;
+		return git__throw(GIT_EMISSINGOBJDATA, "Failed to insert into index. Entry has no path");
 
 	entry = git__malloc(sizeof(git_index_entry));
 	if (entry == NULL)
@@ -387,18 +389,18 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 	int error;
 
 	if (index->repository == NULL)
-		return GIT_EBAREINDEX;
+		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
 
 	git__joinpath(full_path, index->repository->path_workdir, rel_path);
 
 	if (gitfo_exists(full_path) < 0)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. %s does not exist", full_path);
 
 	if (gitfo_stat(full_path, &st) < 0)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to initialize entry. %s appears to be corrupted", full_path);
 
 	if (stage < 0 || stage > 3)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to initialize entry. Invalid stage %i", stage);
 
 	memset(entry, 0x0, sizeof(git_index_entry));
 
