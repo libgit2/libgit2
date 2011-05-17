@@ -34,6 +34,25 @@ GIT_INLINE(char *) git__strdup(const char *str)
 	return ptr;
 }
 
+GIT_INLINE(char *) git__strndup(const char *str, size_t n)
+{
+	size_t length;
+	char *ptr;
+
+	length = strlen(str);
+	if (n < length)
+		length = n;
+
+	ptr = malloc(length + 1);
+	if (!ptr)
+		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+
+	memcpy(ptr, str, length);
+	ptr[length] = 0;
+
+	return ptr;
+}
+
 GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 {
 	void *new_ptr = realloc(ptr, size);
