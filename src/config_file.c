@@ -26,8 +26,10 @@
 #include "common.h"
 #include "config.h"
 #include "fileops.h"
+#include "filebuf.h"
 #include "git2/config.h"
 #include "git2/types.h"
+
 
 #include <ctype.h>
 
@@ -98,6 +100,7 @@ typedef struct {
 
 static int config_parse(diskfile_backend *cfg_file);
 static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
+static int config_write(diskfile_backend *cfg, cvar_t *var);
 
 static void cvar_free(cvar_t *var)
 {
@@ -349,7 +352,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		free(existing->value);
 		existing->value = tmp;
 
-		return GIT_SUCCESS;
+		return config_write(b, existing);
 	}
 
 	/*
@@ -386,6 +389,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 	}
 
 	CVAR_LIST_APPEND(&b->var_list, var);
+	error = config_write(b, var);
 
  out:
 	if (error < GIT_SUCCESS)
@@ -890,6 +894,173 @@ static int config_parse(diskfile_backend *cfg_file)
 	free(current_section);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse config");
+}
+
+static int write_section(git_filebuf *file, cvar_t *var)
+{
+	int error;
+
+	error = git_filebuf_printf(file, "[%s]\n", var->section);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = git_filebuf_printf(file, "    %s = %s\n", var->name, var->value);
+	return error;
+}
+
+/*
+ * This is pretty much the parsing, except we write out anything we don't have
+ */
+static int config_write(diskfile_backend *cfg, cvar_t *var)
+{
+	int error = GIT_SUCCESS, c;
+	int section_matches = 0, last_section_matched = 0;
+	char *current_section = NULL;
+	char *var_name, *var_value, *data_start;
+	git_filebuf file;
+	const char *pre_end = NULL, *post_start = NULL;
+
+	/* We need to read in our own config file */
+	error = gitfo_read_file(&cfg->reader.buffer, cfg->file_path);
+	if (error < GIT_SUCCESS) {
+		return git__rethrow(error, "Failed to read existing config file %s", cfg->file_path);
+	}
+
+	/* Initialise the reading position */
+	cfg->reader.read_ptr = cfg->reader.buffer.data;
+	cfg->reader.eof = 0;
+	data_start = cfg->reader.read_ptr;
+
+	/* Lock the file */
+	error = git_filebuf_open(&file, cfg->file_path, 0);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to lock config file");
+
+	skip_bom(cfg);
+
+	while (error == GIT_SUCCESS && !cfg->reader.eof) {
+		c = cfg_peek(cfg, SKIP_WHITESPACE);
+
+		switch (c) {
+		case '\0': /* We've arrived at the end of the file */
+			break;
+
+		case '[': /* section header, new section begins */
+			/*
+			 * We set both positions to the current one in case we
+			 * need to add a variable to the end of a section. In that
+			 * case, we want both variables to point just before the
+			 * new section. If we actually want to replace it, the
+			 * default case will take care of updating them.
+			 */
+			pre_end = post_start = cfg->reader.read_ptr;
+			free(current_section);
+			error = parse_section_header(cfg, &current_section);
+			if (error < GIT_SUCCESS)
+				break;
+
+			/* Keep track of when it stops matching */
+			last_section_matched = section_matches;
+			section_matches = !strcmp(current_section, var->section);
+			break;
+
+		case ';':
+		case '#':
+			cfg_consume_line(cfg);
+			break;
+
+		default:
+			/*
+			 * If the section doesn't match, but the last section did,
+			 * it means we need to add a variable (so skip the line
+			 * otherwise). If both the section and name match, we need
+			 * to overwrite the variable (so skip the line
+			 * otherwise). pre_end needs to be updated each time so we
+			 * don't loose that information, but we only need to
+			 * update post_start if we're going to use it in this
+			 * iteration.
+			 */
+			if (!section_matches) {
+				if (!last_section_matched) {
+					cfg_consume_line(cfg);
+					break;
+				}
+			} else {
+				pre_end = cfg->reader.read_ptr;
+				error = parse_variable(cfg, &var_name, &var_value);
+				if (error < GIT_SUCCESS || strcasecmp(var->name, var_name))
+					break;
+				post_start = cfg->reader.read_ptr;
+			}
+
+			/*
+			 * We've found the variable we wanted to change, so
+			 * write anything up to it
+			 */
+			error = git_filebuf_write(&file, data_start, pre_end - data_start);
+			if (error < GIT_SUCCESS) {
+				git__rethrow(error, "Failed to write the first part of the file");
+				break;
+			}
+
+			/* Then replace the variable */
+			error = git_filebuf_printf(&file, "    %s = %s\n", var->name, var->value);
+			if (error < GIT_SUCCESS) {
+				git__rethrow(error, "Failed to overwrite the variable");
+				break;
+			}
+
+			/* And then the write out rest of the file */
+			error = git_filebuf_write(&file, post_start,
+			            cfg->reader.buffer.len - (post_start - data_start));
+
+			if (error < GIT_SUCCESS) {
+				git__rethrow(error, "Failed to write the rest of the file");
+					break;
+			}
+
+			goto cleanup;
+		}
+	}
+
+	/*
+	 * Being here can mean that
+	 *
+	 * 1) our section is the last one in the file and we're
+	 * adding a variable
+	 *
+	 * 2) we didn't find a section for us so we need to create it
+	 * ourselves.
+	 *
+	 * Either way we need to write out the whole file.
+	 */
+
+	error = git_filebuf_write(&file, cfg->reader.buffer.data, cfg->reader.buffer.len);
+	if (error < GIT_SUCCESS) {
+		git__rethrow(error, "Failed to write original config content");
+		goto cleanup;
+	}
+
+	/* And now if we just need to add a variable */
+	if (section_matches) {
+		error = git_filebuf_printf(&file, "    %s = %s\n", var->name, var->value);
+		goto cleanup;
+	}
+
+	/* Or maybe we need to write out a whole section */
+	error = write_section(&file, var);
+	if (error < GIT_SUCCESS)
+		git__rethrow(error, "Failed to write new section");
+
+ cleanup:
+	free(current_section);
+
+	if (error < GIT_SUCCESS)
+		git_filebuf_cleanup(&file);
+	else
+		error = git_filebuf_commit(&file);
+
+	return error;
 }
 
 static int is_multiline_var(const char *str)
