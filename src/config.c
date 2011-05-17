@@ -67,7 +67,7 @@ int git_config_open_bare(git_config **out, const char *path)
 	if(backend)
 		backend->free(backend);
 
-	return error;
+	return git__rethrow(error, "Failed to open config file");
 }
 
 void git_config_free(git_config *cfg)
@@ -230,11 +230,11 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 
 	ret = git_config_get_string(cfg, name, &value);
 	if (ret < GIT_SUCCESS)
-		return ret;
+		return git__rethrow(ret, "Failed to get value for %s", name);
 
 	ret = git__strtol32(&num, value, &num_end, 0);
 	if (ret < GIT_SUCCESS)
-		return ret;
+		return git__rethrow(ret, "Failed to get value for %s", name);
 
 	switch (*num_end) {
 	case '\0':
@@ -252,7 +252,7 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 		num *= 1024 * 1024 * 1024;
 		break;
 	default:
-		return GIT_EINVALIDTYPE;
+		return git__throw(GIT_EINVALIDTYPE, "Failed to get value for %s. Value is of invalid type");
 	}
 
 	*out = num;
@@ -279,7 +279,7 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 
 	error = git_config_get_string(cfg, name, &value);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to get value for %s", name);
 
 	/* A missing value means true */
 	if (value == NULL) {
@@ -305,6 +305,8 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 	if (error == GIT_SUCCESS)
 		*out = !!(*out);
 
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to get value for %s", name);
 	return error;
 }
 
