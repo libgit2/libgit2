@@ -90,13 +90,13 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	int error;
 
 	if ((error = git__parse_oid(&tag->target, &buffer, buffer_end, "object ")) < 0)
-		return error;
+		return git__rethrow(error, "Failed to parse tag. Object field invalid");
 
 	if (buffer + 5 >= buffer_end)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. Object too short");
 
 	if (memcmp(buffer, "type ", 5) != 0)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. Type field not found");
 	buffer += 5;
 
 	tag->type = GIT_OBJ_BAD;
@@ -105,7 +105,7 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 		size_t type_length = strlen(tag_types[i]);
 
 		if (buffer + type_length >= buffer_end)
-			return GIT_EOBJCORRUPTED;
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. Object too short");
 
 		if (memcmp(buffer, tag_types[i], type_length) == 0) {
 			tag->type = i;
@@ -115,18 +115,19 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	}
 
 	if (tag->type == GIT_OBJ_BAD)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. Invalid object type");
 
 	if (buffer + 4 >= buffer_end)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. Object too short");
 
 	if (memcmp(buffer, "tag ", 4) != 0)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. Tag field not found");
+
 	buffer += 4;
 
 	search = memchr(buffer, '\n', buffer_end - buffer);
 	if (search == NULL)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. Object too short");
 
 	text_len = search - buffer;
 
@@ -218,7 +219,7 @@ static int tag_create(
 	}
 
 	if (!git_odb_exists(repo->db, target))
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to create tag. Object to tag doesn't exist");
 
 	/* Try to find out what the type is */
 	if (target_type == GIT_OBJ_ANY) {

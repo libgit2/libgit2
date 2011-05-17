@@ -10,7 +10,7 @@ int gitfo_mkdir_2file(const char *file_path)
 
 	error = git__dirname_r(target_folder_path, sizeof(target_folder_path), file_path);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__throw(GIT_EINVALIDPATH, "Failed to recursively build `%s` tree structure. Unable to parse parent folder name", file_path);
 
 	/* Does the containing folder exist? */
 	if (gitfo_isdir(target_folder_path)) {
@@ -19,7 +19,7 @@ int gitfo_mkdir_2file(const char *file_path)
 		/* Let's create the tree structure */
 		error = gitfo_mkdir_recurs(target_folder_path, mode);
 		if (error < GIT_SUCCESS)
-			return error;
+			return error;	/* The callee already takes care of setting the correct error message. */
 	}
 
 	return GIT_SUCCESS;
@@ -164,19 +164,19 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 
 	if (((size = gitfo_size(fd)) < 0) || !git__is_sizet(size+1)) {
 		gitfo_close(fd);
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to read file `%s`. Either an error occured while calculating its size or the file is too large", path);
 	}
 	len = (size_t) size;
 
 	if ((buff = git__malloc(len + 1)) == NULL) {
 		gitfo_close(fd);
-		return GIT_ERROR;
+		return GIT_ENOMEM;
 	}
 
 	if (gitfo_read(fd, buff, len) < 0) {
 		gitfo_close(fd);
 		free(buff);
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to read file `%s`", path);
 	}
 	buff[len] = '\0';
 
@@ -197,13 +197,15 @@ void gitfo_free_buf(gitfo_buf *obj)
 
 int gitfo_mv(const char *from, const char *to)
 {
+	int error;
+
 #ifdef GIT_WIN32
 	/*
 	 * Win32 POSIX compilance my ass. If the destination
 	 * file exists, the `rename` call fails. This is as
 	 * close as it gets with the Win32 API.
 	 */
-	return MoveFileEx(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? GIT_SUCCESS : GIT_EOSERR;
+	error = MoveFileEx(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? GIT_SUCCESS : GIT_EOSERR;
 #else
 	/* Don't even try this on Win32 */
 	if (!link(from, to)) {
@@ -214,16 +216,21 @@ int gitfo_mv(const char *from, const char *to)
 	if (!rename(from, to))
 		return GIT_SUCCESS;
 
-	return GIT_EOSERR;
+	error = GIT_EOSERR;
 #endif
+
+	if (error < GIT_SUCCESS)
+		return git__throw(error, "Failed to move file from `%s`to `%s`", from, to);
+
+	return GIT_SUCCESS;
 }
 
 int gitfo_mv_force(const char *from, const char *to)
 {
 	if (gitfo_mkdir_2file(to) < GIT_SUCCESS)
-		return GIT_EOSERR;
+		return GIT_EOSERR;	/* The callee already takes care of setting the correct error message. */
 
-	return gitfo_mv(from, to);
+	return gitfo_mv(from, to);	/* The callee already takes care of setting the correct error message. */
 }
 
 int gitfo_map_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
@@ -338,7 +345,7 @@ int gitfo_dirent(
 	struct dirent *de;
 
 	if (!wd_len || path_sz < wd_len + 2)
-		return GIT_ERROR;
+		return git__throw(GIT_EINVALIDARGS, "Failed to process `%s` tree structure. Path is either empty or buffer size is too short", path);
 
 	while (path[wd_len - 1] == '/')
 		wd_len--;
@@ -347,7 +354,7 @@ int gitfo_dirent(
 
 	dir = opendir(path);
 	if (!dir)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure. An error occured while opening the directory", path);
 
 	while ((de = readdir(dir)) != NULL) {
 		size_t de_len;
@@ -364,14 +371,14 @@ int gitfo_dirent(
 		de_len = strlen(de->d_name);
 		if (path_sz < wd_len + de_len + 1) {
 			closedir(dir);
-			return GIT_ERROR;
+			return git__throw(GIT_ERROR, "Failed to process `%s` tree structure. Buffer size is too short", path);
 		}
 
 		strcpy(path + wd_len, de->d_name);
 		result = fn(arg, path);
 		if (result < GIT_SUCCESS) {
 			closedir(dir);
-			return result;
+			return result;	/* The callee is reponsible for setting the correct error message */
 		}
 		if (result > 0) {
 			closedir(dir);
@@ -399,7 +406,7 @@ int retrieve_path_root_offset(const char *path)
 	if (*(path + offset) == '/')
 		return offset;
 
-	return GIT_ERROR;
+	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
 }
 
 
@@ -438,7 +445,11 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 		error = gitfo_mkdir(path, mode);
 
 	free(path_copy);
-	return error;
+
+	if (error < GIT_SUCCESS)
+		return git__throw(error, "Failed to recursively create `%s` tree structure", path);
+
+	return GIT_SUCCESS;
 }
 
 static int retrieve_previous_path_component_start(const char *path)
@@ -484,7 +495,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 	if (root_path_offset < 0) {
 		error = gitfo_getcwd(buffer_out, size);
 		if (error < GIT_SUCCESS)
-			return error;
+			return error;	/* The callee already takes care of setting the correct error message. */
 
 		len = strlen(buffer_out);
 		buffer_out += len;
@@ -529,7 +540,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 
 			/* Are we escaping out of the root dir? */
 			if (len < 0)
-				return GIT_EINVALIDPATH;
+				return git__throw(GIT_EINVALIDPATH, "Failed to normalize path `%s`. The path escapes out of the root directory", path);
 
 			buffer_out = (char *)buffer_out_start + len;
 			continue;
@@ -537,7 +548,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 
 		/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
 		if (only_dots && segment_len > 0)
-			return GIT_EINVALIDPATH;
+			return git__throw(GIT_EINVALIDPATH, "Failed to normalize path `%s`. The path contains a segment with three `.` or more", path);
 
 		*buffer_out++ = '/';
 		len++;
@@ -557,21 +568,21 @@ int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
 
 	/* Let's make sure the filename isn't empty nor a dot */
 	if (path_len == 0 || (path_len == 1 && *path == '.'))
-		return GIT_EINVALIDPATH;
+		return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path is either empty or equals `.`", path);
 
 	/* Let's make sure the filename doesn't end with "/", "/." or "/.." */
 	for (i = 1; path_len > i && i < 4; i++) {
 		if (!strncmp(path + path_len - i, pattern, i))
-			return GIT_EINVALIDPATH;
+			return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 	}
 
 	error =  gitfo_prettify_dir_path(buffer_out, size, path);
 	if (error < GIT_SUCCESS)
-		return error;
+		return error;	/* The callee already takes care of setting the correct error message. */
 
 	path_len = strlen(buffer_out);
-	if (path_len < 2)
-		return GIT_EINVALIDPATH;
+	if (path_len < 2)	/* TODO: Fixme. We should also take of detecting Windows rooted path (probably through usage of retrieve_path_root_offset) */
+		return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 
 	/* Remove the trailing slash */
 	buffer_out[path_len - 1] = '\0';
@@ -616,11 +627,11 @@ int gitfo_getcwd(char *buffer_out, size_t size)
 #ifdef GIT_WIN32
 	cwd_buffer = _getcwd(buffer_out, size);
 #else
-	cwd_buffer = getcwd(buffer_out, size); //TODO: Fixme. Ensure the required headers are correctly included
+	cwd_buffer = getcwd(buffer_out, size);
 #endif
 
 	if (cwd_buffer == NULL)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to retrieve current working directory");
 
 	posixify_path(buffer_out);
 

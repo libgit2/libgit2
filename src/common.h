@@ -50,10 +50,14 @@ typedef SSIZE_T ssize_t;
 
 #include "git2/common.h"
 #include "git2/types.h"
-#include "util.h"
+#include "git2/errors.h"
 #include "thread-utils.h"
 #include "bswap.h"
 
 #define GIT_PATH_MAX 4096
+extern int git__throw(int error, const char *, ...) GIT_FORMAT_PRINTF(2, 3);
+extern int git__rethrow(int error, const char *, ...) GIT_FORMAT_PRINTF(2, 3);
+
+#include "util.h"
 
 #endif /* INCLUDE_common_h__ */

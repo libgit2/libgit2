@@ -113,7 +113,7 @@ struct pack_backend {
 	git_vector packs;
 	struct pack_file *last_found;
 	char *pack_folder;
-	off_t pack_folder_size;
+	time_t pack_folder_mtime;
 
 	size_t window_size; /* needs default value */
 
@@ -874,7 +874,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 	if (gitfo_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
 		return GIT_ENOTFOUND;
 
-	if (st.st_size != backend->pack_folder_size) {
+	if (st.st_mtime != backend->pack_folder_mtime) {
 		char path[GIT_PATH_MAX];
 		strcpy(path, backend->pack_folder);
 
@@ -884,7 +884,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 			return error;
 
 		git_vector_sort(&backend->packs);
-		backend->pack_folder_size = st.st_size;
+		backend->pack_folder_mtime = st.st_mtime;
 	}
 
 	return GIT_SUCCESS;
@@ -1385,6 +1385,7 @@ void pack_backend__free(git_odb_backend *_backend)
 	}
 
 	git_vector_free(&backend->packs);
+	free(backend->pack_folder);
 	free(backend);
 }
 
@@ -1408,7 +1409,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	git__joinpath(path, objects_dir, "pack");
 	if (gitfo_isdir(path) == GIT_SUCCESS) {
 		backend->pack_folder = git__strdup(path);
-		backend->pack_folder_size = -1;
+		backend->pack_folder_mtime = 0;
 
 		if (backend->pack_folder == NULL) {
 			free(backend);

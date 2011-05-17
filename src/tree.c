@@ -151,15 +151,15 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 			return GIT_ENOMEM;
 
 		if (git__strtol32((long *)&entry->attr, buffer, &buffer, 8) < GIT_SUCCESS)
-			return GIT_EOBJCORRUPTED;
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Can't parse attributes");
 
 		if (*buffer++ != ' ') {
-			error = GIT_EOBJCORRUPTED;
+			error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Object it corrupted");
 			break;
 		}
 
 		if (memchr(buffer, 0, buffer_end - buffer) == NULL) {
-			error = GIT_EOBJCORRUPTED;
+			error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Object it corrupted");
 			break;
 		}
 
@@ -274,7 +274,7 @@ int git_tree_create_fromindex(git_oid *oid, git_index *index)
 	int error;
 
 	if (index->repository == NULL)
-		return GIT_EBAREINDEX;
+		return git__throw(GIT_EBAREINDEX, "Failed to create tree. The index file is not backed up by an existing repository");
 
 	error = write_index(oid, index, "", 0, 0, git_index_entrycount(index));
 	return (error < GIT_SUCCESS) ? error : GIT_SUCCESS;
@@ -343,7 +343,7 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	assert(bld && id && filename);
 
 	if (!valid_attributes(attributes))
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid atrributes");
 
 	if ((pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, filename)) != GIT_ENOTFOUND) {
 		entry = git_vector_get(&bld->entries, pos);
@@ -400,7 +400,7 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 	git_tree_entry *remove_ptr = (git_tree_entry *)git_treebuilder_get(bld, filename);
 
 	if (remove_ptr == NULL || remove_ptr->removed)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to remove entry. File isn't in the tree");
 
 	remove_ptr->removed = 1;
 	bld->entry_count--;
@@ -424,13 +424,14 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 		if (entry->removed)
 			continue;
 
-		size += (entry->attr > 0x7FF) ? 7 : 6;
+		snprintf(filemode, sizeof(filemode), "%o ", entry->attr);
+		size += strlen(filemode);
 		size += entry->filename_len + 1;
 		size += GIT_OID_RAWSZ;
 	}
 
 	if ((error = git_odb_open_wstream(&stream, git_repository_database(repo), size, GIT_OBJ_TREE)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to write tree. Can't open write stream");
 
 	for (i = 0; i < bld->entries.length; ++i) {
 		git_tree_entry *entry = bld->entries.contents[i];

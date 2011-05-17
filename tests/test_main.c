@@ -44,6 +44,7 @@ DECLARE_SUITE(sqlite);
 DECLARE_SUITE(hiredis);
 DECLARE_SUITE(repository);
 DECLARE_SUITE(threads);
+DECLARE_SUITE(config);
 
 static libgit2_suite suite_methods[]= {
 	SUITE_NAME(core),
@@ -60,7 +61,8 @@ static libgit2_suite suite_methods[]= {
 	SUITE_NAME(sqlite),
 	SUITE_NAME(repository),
 	SUITE_NAME(threads),
-	SUITE_NAME(hiredis)
+	SUITE_NAME(hiredis),
+	SUITE_NAME(config),
 };
 
 #define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))

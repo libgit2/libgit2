@@ -122,7 +122,8 @@ static int reference_create(
 	else if (type == GIT_REF_OID)
 		size = sizeof(reference_oid);
 	else
-		return GIT_EINVALIDREFSTATE;
+		return git__throw(GIT_EINVALIDARGS,
+			"Invalid reference type. Use either GIT_REF_OID or GIT_REF_SYMBOLIC as type specifier");
 
 	reference = git__malloc(size);
 	if (reference == NULL)
@@ -159,11 +160,9 @@ static int reference_read(gitfo_buf *file_content, time_t *mtime, const char *re
 	/* Determine the full path of the file */
 	git__joinpath(path, repo_path, ref_name);
 
-	if (gitfo_stat(path, &st) < 0)
-		return GIT_ENOTFOUND;
-
-	if (S_ISDIR(st.st_mode))
-		return GIT_EOBJCORRUPTED;
+	if (gitfo_stat(path, &st) < 0 || S_ISDIR(st.st_mode))
+		return git__throw(GIT_ENOTFOUND,
+			"Cannot read reference file '%s'", ref_name);
 
 	if (mtime)
 		*mtime = st.st_mtime;
@@ -205,7 +204,8 @@ static int loose_update(git_reference *ref)
 	else if (ref->type == GIT_REF_OID)
 		error = loose_parse_oid(ref, &ref_file);
 	else
-		error = GIT_EINVALIDREFSTATE;
+		error = git__throw(GIT_EOBJCORRUPTED,
+			"Invalid reference type (%d) for loose reference", ref->type);
 
 	gitfo_free_buf(&ref_file);
 
@@ -229,7 +229,8 @@ static int loose_parse_symbolic(git_reference *ref, gitfo_buf *file_content)
 	ref_sym = (reference_symbolic *)ref;
 
 	if (file_content->len < (header_len + 1))
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Object too short");
 
 	/* 
 	 * Assume we have already checked for the header
@@ -246,7 +247,8 @@ static int loose_parse_symbolic(git_reference *ref, gitfo_buf *file_content)
 	/* remove newline at the end of file */
 	eol = strchr(ref_sym->target, '\n');
 	if (eol == NULL)
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Missing EOL");
 
 	*eol = '\0';
 	if (eol[-1] == '\r')
@@ -257,6 +259,7 @@ static int loose_parse_symbolic(git_reference *ref, gitfo_buf *file_content)
 
 static int loose_parse_oid(git_reference *ref, gitfo_buf *file_content)
 {
+	int error;
 	reference_oid *ref_oid;
 	char *buffer;
 
@@ -265,17 +268,19 @@ static int loose_parse_oid(git_reference *ref, gitfo_buf *file_content)
 
 	/* File format: 40 chars (OID) + newline */
 	if (file_content->len < GIT_OID_HEXSZ + 1)
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Reference too short");
 
-	if (git_oid_mkstr(&ref_oid->oid, buffer) < GIT_SUCCESS)
-		return GIT_EREFCORRUPTED;
+	if ((error = git_oid_mkstr(&ref_oid->oid, buffer)) < GIT_SUCCESS)
+		return git__rethrow(GIT_EOBJCORRUPTED, "Failed to parse loose reference.");
 
 	buffer = buffer + GIT_OID_HEXSZ;
 	if (*buffer == '\r')
 		buffer++;
 
 	if (*buffer != '\n')
-		return GIT_EREFCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED,
+			"Failed to parse loose reference. Missing EOL");
 
 	return GIT_SUCCESS;
 }
@@ -387,7 +392,7 @@ static int loose_write(git_reference *ref)
 		strcpy(ref_contents, GIT_SYMREF);
 		strcat(ref_contents, ref_sym->target);
 	} else {
-		error = GIT_EINVALIDREFSTATE;
+		error = git__throw(GIT_EOBJCORRUPTED, "Failed to write reference. Invalid reference type");
 		goto unlock;
 	}
 
@@ -684,7 +689,7 @@ static int packed_loadloose(git_repository *repository)
 
 	/* Remove any loose references from the cache */
 	{
-		const void *_unused;
+		const void *GIT_UNUSED(_unused);
 		git_reference *reference;
 
 		GIT_HASHTABLE_FOREACH(repository->references.loose_cache, _unused, reference,
@@ -787,6 +792,8 @@ static int packed_find_peel(reference_oid *ref)
 		 */
 	}
 
+	git_object_close(object);
+
 	return GIT_SUCCESS;
 }
 
@@ -868,7 +875,7 @@ static int packed_write(git_repository *repo)
 	/* Load all the packfile into a vector */
 	{
 		git_reference *reference;
-		const void *_unused;
+		const void *GIT_UNUSED(_unused);
 
 		GIT_HASHTABLE_FOREACH(repo->references.packfile, _unused, reference,
 			git_vector_insert(&packing_list, reference);  /* cannot fail: vector already has the right size */
@@ -1480,8 +1487,9 @@ int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
 	for (i = 0; i < MAX_NESTING_LEVEL; ++i) {
 		reference_symbolic *ref_sym;
 
+		*resolved_ref = ref;
+
 		if (ref->type & GIT_REF_OID) {
-			*resolved_ref = ref;
 			return GIT_SUCCESS;
 		}
 
@@ -1518,7 +1526,7 @@ int git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*ca
 	/* list all the packed references first */
 	if (list_flags & GIT_REF_PACKED) {
 		const char *ref_name;
-		void *_unused;
+		void *GIT_UNUSED(_unused);
 
 		if ((error = packed_load(repo)) < GIT_SUCCESS)
 			return error;
@@ -1597,7 +1605,7 @@ int git_repository__refcache_init(git_refcache *refs)
 void git_repository__refcache_free(git_refcache *refs)
 {
 	git_reference *reference;
-	const void *_unused;
+	const void *GIT_UNUSED(_unused);
 
 	assert(refs);
 
@@ -1692,8 +1700,9 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 	}
 
 	/* Object id refname have to contain at least one slash, except
-	 * for HEAD in a detached state */
-	if (is_oid_ref && !contains_a_slash && strcmp(name, GIT_HEAD_FILE))
+	 * for HEAD in a detached state or MERGE_HEAD if we're in the
+	 * middle of a merge */
+	if (is_oid_ref && !contains_a_slash && (strcmp(name, GIT_HEAD_FILE) && strcmp(name, GIT_MERGE_HEAD_FILE)))
 				return GIT_EINVALIDREFNAME;
 
 	/* A refname can not end with ".lock" */

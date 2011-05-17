@@ -336,7 +336,6 @@ static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
 {
 	unsigned char head[64], *buf;
 	z_stream zs;
-	int z_status;
 	obj_hdr hdr;
 	size_t used;
 
@@ -350,7 +349,7 @@ static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
 	 * inflate the initial part of the io buffer in order
 	 * to parse the object header (type and size).
 	 */
-	if ((z_status = start_inflate(&zs, obj, head, sizeof(head))) < Z_OK)
+	if (start_inflate(&zs, obj, head, sizeof(head)) < Z_OK)
 		return GIT_ERROR;
 
 	if ((used = get_object_header(&hdr, head)) == 0)
@@ -434,6 +433,9 @@ static int read_header_loose(git_rawobj *out, const char *loc)
 		if ((read_bytes = read(fd, raw_buffer, sizeof(raw_buffer))) > 0) {
 			set_stream_input(&zs, raw_buffer, read_bytes);
 			z_return = inflate(&zs, 0);
+		} else {
+			z_return = Z_STREAM_END;
+			break;
 		}
 	} while (z_return == Z_OK);
 

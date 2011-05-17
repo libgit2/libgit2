@@ -58,7 +58,6 @@ static int assign_repository_dirs(
 		const char *git_work_tree)
 {
 	char path_aux[GIT_PATH_MAX];
-	size_t git_dir_path_len;
 	int error = GIT_SUCCESS;
 
 	assert(repo);
@@ -69,8 +68,6 @@ static int assign_repository_dirs(
 	error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_dir);
 	if (error < GIT_SUCCESS)
 		return error;
-
-	git_dir_path_len = strlen(path_aux);
 
 	/* store GIT_DIR */
 	repo->path_repository = git__strdup(path_aux);
@@ -127,16 +124,16 @@ static int check_repository_dirs(git_repository *repo)
 	char path_aux[GIT_PATH_MAX];
 
 	if (gitfo_isdir(repo->path_repository) < GIT_SUCCESS)
-		return GIT_ENOTAREPO;
+		return git__throw(GIT_ENOTAREPO, "`%s` is not a folder", repo->path_repository);
 
 	/* Ensure GIT_OBJECT_DIRECTORY exists */
 	if (gitfo_isdir(repo->path_odb) < GIT_SUCCESS)
-		return GIT_ENOTAREPO;
+		return git__throw(GIT_ENOTAREPO, "`%s` does not exist", repo->path_odb);
 
 	/* Ensure HEAD file exists */
 	git__joinpath(path_aux, repo->path_repository, GIT_HEAD_FILE);
 	if (gitfo_exists(path_aux) < 0)
-		return GIT_ENOTAREPO;
+		return git__throw(GIT_ENOTAREPO, "HEAD file is missing");
 
 	return GIT_SUCCESS;
 }
@@ -148,12 +145,12 @@ static int guess_repository_dirs(git_repository *repo, const char *repository_pa
 
 	/* Git directory name */
 	if (git__basename_r(buffer, sizeof(buffer), repository_path) < 0)
-		return GIT_EINVALIDPATH;
+		return git__throw(GIT_EINVALIDPATH, "Unable to parse folder name from `%s`", repository_path);
 
 	if (strcmp(buffer, DOT_GIT) == 0) {
 		/* Path to working dir */
 		if (git__dirname_r(buffer, sizeof(buffer), repository_path) < 0)
-			return GIT_EINVALIDPATH;
+			return git__throw(GIT_EINVALIDPATH, "Unable to parse parent folder name from `%s`", repository_path);
 		path_work_tree = buffer;
 	}
 
@@ -162,13 +159,19 @@ static int guess_repository_dirs(git_repository *repo, const char *repository_pa
 
 static git_repository *repository_alloc()
 {
+	int error;
+
 	git_repository *repo = git__malloc(sizeof(git_repository));
 	if (!repo)
 		return NULL;
 
 	memset(repo, 0x0, sizeof(git_repository));
 
-	git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free);
+	error = git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free);
+	if (error < GIT_SUCCESS) {
+		free(repo);
+		return NULL;
+	}
 
 	if (git_repository__refcache_init(&repo->references) < GIT_SUCCESS) {
 		free(repo);
@@ -180,7 +183,7 @@ static git_repository *repository_alloc()
 
 static int init_odb(git_repository *repo)
 {
-	return git_odb_open(&repo->db, repo->path_odb);
+	return git_odb_open(&repo->db, repo->path_odb);	/* TODO: Move odb.c to new error handling */
 }
 
 int git_repository_open3(git_repository **repo_out,
@@ -195,7 +198,7 @@ int git_repository_open3(git_repository **repo_out,
 	assert(repo_out);
 
 	if (object_database == NULL)
-		return GIT_ERROR;
+		return git__throw(GIT_EINVALIDARGS, "Failed to open repository. `object_database` can't be null");
 
 	repo = repository_alloc();
 	if (repo == NULL)
@@ -221,7 +224,7 @@ int git_repository_open3(git_repository **repo_out,
 
 cleanup:
 	git_repository_free(repo);
-	return error;
+	return git__rethrow(error, "Failed to open repository");
 }
 
 
@@ -262,7 +265,7 @@ int git_repository_open2(git_repository **repo_out,
 
 cleanup:
 	git_repository_free(repo);
-	return error;
+	return git__rethrow(error, "Failed to open repository");
 }
 
 int git_repository_open(git_repository **repo_out, const char *path)
@@ -293,7 +296,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 
 cleanup:
 	git_repository_free(repo);
-	return error;
+	return git__rethrow(error, "Failed to open repository");
 }
 
 void git_repository_free(git_repository *repo)
@@ -312,8 +315,10 @@ void git_repository_free(git_repository *repo)
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
 
-	if (repo->index != NULL)
+	if (repo->index != NULL) {
+		repo->index->repository = NULL;
 		git_index_free(repo->index);
+	}
 
 	free(repo);
 }
@@ -325,7 +330,7 @@ int git_repository_index(git_index **index_out, git_repository *repo)
 	assert(index_out && repo);
 
 	if (repo->index == NULL) {
-		error = git_index_open_inrepo(&repo->index, repo);
+		error = git_index_open_inrepo(&repo->index, repo);	/* TODO: move index.c to new error handling */
 		if (error < GIT_SUCCESS)
 			return error;
 
@@ -352,7 +357,7 @@ static int repo_init_reinit(repo_init *results)
 static int repo_init_createhead(git_repository *repo)
 {
 	git_reference *head_reference;
-	return  git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE);
+	return git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE);	/* TODO: finalize moving refs.c to new error handling */
 }
 
 static int repo_init_check_head_existence(char * repository_path)
@@ -366,6 +371,7 @@ static int repo_init_check_head_existence(char * repository_path)
 static int repo_init_structure(repo_init *results)
 {
 	const int mode = 0755; /* or 0777 ? */
+	int error;
 
 	char temp_path[GIT_PATH_MAX];
 	char *git_dir = results->path_repository;
@@ -375,23 +381,27 @@ static int repo_init_structure(repo_init *results)
 
 	/* Creates the '/objects/info/' directory */
 	git__joinpath(temp_path, git_dir, GIT_OBJECTS_INFO_DIR);
-	if (gitfo_mkdir_recurs(temp_path, mode) < GIT_SUCCESS)
-		return GIT_ERROR;
+	error = gitfo_mkdir_recurs(temp_path, mode);
+	if (error < GIT_SUCCESS)
+		return error;
 
 	/* Creates the '/objects/pack/' directory */
 	git__joinpath(temp_path, git_dir, GIT_OBJECTS_PACK_DIR);
-	if (gitfo_mkdir(temp_path, mode))
-		return GIT_ERROR;
+	error = gitfo_mkdir(temp_path, mode);
+	if (error < GIT_SUCCESS)
+		return git__throw(error, "Unable to create `%s` folder", temp_path);
 
 	/* Creates the '/refs/heads/' directory */
 	git__joinpath(temp_path, git_dir, GIT_REFS_HEADS_DIR);
-	if (gitfo_mkdir_recurs(temp_path, mode))
-		return GIT_ERROR;
+	error = gitfo_mkdir_recurs(temp_path, mode);
+	if (error < GIT_SUCCESS)
+		return error;
 
 	/* Creates the '/refs/tags/' directory */
 	git__joinpath(temp_path, git_dir, GIT_REFS_TAGS_DIR);
-	if (gitfo_mkdir(temp_path, mode))
-		return GIT_ERROR;
+	error = gitfo_mkdir(temp_path, mode);
+	if (error < GIT_SUCCESS)
+		return git__throw(error, "Unable to create `%s` folder", temp_path);
 
 	/* TODO: what's left? templates? */
 
@@ -470,7 +480,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 cleanup:
 	free(results.path_repository);
 	git_repository_free(repo);
-	return error;
+	return git__rethrow(error, "Failed to (re)init the repository `%s`", path);
 }
 
 int git_repository_is_empty(git_repository *repo)
@@ -480,10 +490,10 @@ int git_repository_is_empty(git_repository *repo)
 
 	error = git_reference_lookup(&head, repo, "HEAD");
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__throw(error, "Failed to determine the emptiness of the repository. An error occured while retrieving the HEAD reference");
 
 	if (git_reference_type(head) != GIT_REF_SYMBOLIC)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to determine the emptiness of the repository. HEAD is probably in detached state");
 
 	return git_reference_resolve(&branch, head) == GIT_SUCCESS ? 0 : 1;
 }
