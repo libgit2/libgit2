@@ -102,6 +102,9 @@ int git_commit_create_v(
 		tree_oid, parent_count, oids);
 
 	free((void *)oids);
+
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create commit");
 	return error;
 }
 
@@ -133,6 +136,9 @@ int git_commit_create_ov(
 		parent_count, oids);
 
 	free((void *)oids);
+
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create commit");
 	return error;
 }
 
@@ -161,6 +167,9 @@ int git_commit_create_o(
 		parent_count, oids);
 	
 	free((void *)oids);
+
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create commit");
 	return error;
 }
 
@@ -197,7 +206,7 @@ int git_commit_create(
 	final_size += 1 + message_length;
 
 	if ((error = git_odb_open_wstream(&stream, repo->db, final_size, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to create commit");
 
 	git__write_oid(stream, "tree", tree_oid);
 
@@ -222,12 +231,12 @@ int git_commit_create(
 
 		error = git_reference_lookup(&head, repo, update_ref);
 		if (error < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to create commit");
 
 		error = git_reference_resolve(&head, head);
 		if (error < GIT_SUCCESS) {
 			if (error != GIT_ENOTFOUND)
-				return error;
+				return git__rethrow(error, "Failed to create commit");
 		/*
 		 * The target of the reference was not found. This can happen
 		 * just after a repository has been initialized (the master
@@ -241,6 +250,8 @@ int git_commit_create(
 		error = git_reference_set_oid(head, oid);
 	}
 
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create commit");
 	return error;
 }
 
@@ -255,7 +266,7 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 	git_vector_init(&commit->parent_oids, 4, NULL);
 
 	if ((error = git__parse_oid(&commit->tree_oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to parse buffer");
 
 	/*
 	 * TODO: commit grafts!
@@ -273,12 +284,12 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 
 	commit->author = git__malloc(sizeof(git_signature));
 	if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to parse buffer");
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
 	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ")) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to parse buffer");
 
 	/* parse commit message */
 	while (buffer <= buffer_end && *buffer == '\n')
@@ -343,7 +354,7 @@ int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 
 	parent_oid = git_vector_get(&commit->parent_oids, n);
 	if (parent_oid == NULL)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to get parent. Parent does not exist");
 
 	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
