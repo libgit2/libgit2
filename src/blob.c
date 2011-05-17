@@ -69,6 +69,8 @@ int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *b
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
 
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create blob");
 	return error;
 }
 
@@ -86,16 +88,16 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	git__joinpath(full_path, repo->path_workdir, path);
 
 	if ((fd = gitfo_open(full_path, O_RDONLY)) < 0)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to create blob. Could not open %s", full_path);
 
 	if ((size = gitfo_size(fd)) < 0 || !git__is_sizet(size)) {
 		gitfo_close(fd);
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to create blob. %s appears to be corrupted", full_path);
 	}
 
 	if ((error = git_odb_open_wstream(&stream, repo->db, (size_t)size, GIT_OBJ_BLOB)) < GIT_SUCCESS) {
 		gitfo_close(fd);
-		return error;
+		return git__rethrow(error, "Failed to create blob");
 	}
 
 	while (size > 0) {
@@ -117,6 +119,8 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	stream->free(stream);
 	gitfo_close(fd);
 
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create blob");
 	return error;
 }
 
