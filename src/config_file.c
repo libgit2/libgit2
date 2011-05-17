@@ -31,17 +31,17 @@
 
 #include <ctype.h>
 
-struct git_cvar {
-	git_cvar *next;
+typedef struct cvar_t {
+	struct cvar_t *next;
 	char *section;
 	char *name;
 	char *value;
-};
+} cvar_t;
 
 typedef struct {
-	git_cvar *head;
-	git_cvar *tail;
-} git_cvar_list;
+	struct cvar_t *head;
+	struct cvar_t *tail;
+} cvar_t_list;
 
 #define CVAR_LIST_HEAD(list) ((list)->head)
 
@@ -86,7 +86,7 @@ typedef struct {
 typedef struct {
 	git_config_backend parent;
 
-	git_cvar_list var_list;
+	cvar_t_list var_list;
 
 	struct {
 		gitfo_buf buffer;
@@ -101,7 +101,7 @@ typedef struct {
 static int config_parse(file_backend *cfg_file);
 static int parse_variable(file_backend *cfg, char **var_name, char **var_value);
 
-static void cvar_free(git_cvar *var)
+static void cvar_free(cvar_t *var)
 {
 	if (var == NULL)
 		return;
@@ -112,9 +112,9 @@ static void cvar_free(git_cvar *var)
 	free(var);
 }
 
-static void cvar_list_free(git_cvar_list *list)
+static void cvar_list_free(cvar_t_list *list)
 {
-	git_cvar *cur;
+	cvar_t *cur;
 
 	while (!CVAR_LIST_EMPTY(list)) {
 		cur = CVAR_LIST_HEAD(list);
@@ -170,7 +170,7 @@ static int cvar_match_section(const char *local, const char *input)
 	return !strncmp(local_sp + 2, first_dot + 1, comparison_len);
 }
 
-static int cvar_match_name(const git_cvar *var, const char *str)
+static int cvar_match_name(const cvar_t *var, const char *str)
 {
 	const char *name_start;
 
@@ -185,9 +185,9 @@ static int cvar_match_name(const git_cvar *var, const char *str)
 	return !strcasecmp(var->name, name_start);
 }
 
-static git_cvar *cvar_list_find(git_cvar_list *list, const char *name)
+static cvar_t *cvar_list_find(cvar_t_list *list, const char *name)
 {
-	git_cvar *iter;
+	cvar_t *iter;
 
 	CVAR_LIST_FOREACH (list, iter) {
 		if (cvar_match_name(iter, name))
@@ -270,8 +270,8 @@ static void backend_free(git_config_backend *_backend)
 
 static int file_foreach(git_config_backend *backend, int (*fn)(const char *, void *), void *data)
 {
-	int ret;
-	git_cvar *var;
+	int ret = GIT_SUCCESS;
+	cvar_t *var;
 	char *normalized;
 	file_backend *b = (file_backend *)backend;
 
@@ -291,8 +291,8 @@ static int file_foreach(git_config_backend *backend, int (*fn)(const char *, voi
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
-	git_cvar *var = NULL;
-	git_cvar *existing = NULL;
+	cvar_t *var = NULL;
+	cvar_t *existing = NULL;
 	int error = GIT_SUCCESS;
 	const char *last_dot;
 	file_backend *b = (file_backend *)cfg;
@@ -321,11 +321,11 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 		return git__throw(GIT_EINVALIDTYPE, "Variables without section aren't allowed");
 	}
 
-	var = git__malloc(sizeof(git_cvar));
+	var = git__malloc(sizeof(cvar_t));
 	if (var == NULL)
 		return GIT_ENOMEM;
 
-	memset(var, 0x0, sizeof(git_cvar));
+	memset(var, 0x0, sizeof(cvar_t));
 
 	var->section = git__strndup(name, last_dot - name);
 	if (var->section == NULL) {
@@ -359,7 +359,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
  */
 static int config_get(git_config_backend *cfg, const char *name, const char **out)
 {
-	git_cvar *var;
+	cvar_t *var;
 	int error = GIT_SUCCESS;
 	file_backend *b = (file_backend *)cfg;
 
@@ -641,7 +641,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	ret = snprintf(*section_name, total_len, "%s %s", base_name, subsection);
 	if (ret >= total_len) {
 		/* If this fails, we've checked the length wrong */
-		error = git__thow(GIT_ERROR, "Failed to parse ext header. Wrong total lenght calculation");
+		error = git__throw(GIT_ERROR, "Failed to parse ext header. Wrong total lenght calculation");
 		goto out;
 	} else if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to parse ext header. OS error: %s", strerror(errno));
@@ -725,7 +725,7 @@ error:
 
 static int skip_bom(file_backend *cfg)
 {
-	static const unsigned char *utf8_bom = "\xef\xbb\xbf";
+	static const char *utf8_bom = "\xef\xbb\xbf";
 
 	if (memcmp(cfg->reader.read_ptr, utf8_bom, sizeof(utf8_bom)) == 0)
 		cfg->reader.read_ptr += sizeof(utf8_bom);
@@ -802,7 +802,7 @@ static int config_parse(file_backend *cfg_file)
 	char *current_section = NULL;
 	char *var_name;
 	char *var_value;
-	git_cvar *var;
+	cvar_t *var;
 
 	/* Initialise the reading position */
 	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
@@ -834,13 +834,13 @@ static int config_parse(file_backend *cfg_file)
 			if (error < GIT_SUCCESS)
 				break;
 
-			var = malloc(sizeof(git_cvar));
+			var = malloc(sizeof(cvar_t));
 			if (var == NULL) {
 				error = GIT_ENOMEM;
 				break;
 			}
 
-			memset(var, 0x0, sizeof(git_cvar));
+			memset(var, 0x0, sizeof(cvar_t));
 
 			var->section = git__strdup(current_section);
 			if (var->section == NULL) {
@@ -966,7 +966,7 @@ static int parse_variable(file_backend *cfg, char **var_name, char **var_value)
 		while (isspace(var_end[0]));
 	}
 
-	tmp = strndup(line, var_end - line + 1);
+	tmp = git__strndup(line, var_end - line + 1);
 	if (tmp == NULL) {
 		error = GIT_ENOMEM;
 		goto out;
