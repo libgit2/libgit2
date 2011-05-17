@@ -248,7 +248,7 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 		num *= 1024 * 1024 * 1024;
 		break;
 	default:
-		return git__throw(GIT_EINVALIDTYPE, "Failed to get value for %s. Value is of invalid type");
+		return git__throw(GIT_EINVALIDTYPE, "Failed to get value for %s. Value is of invalid type", name);
 	}
 
 	*out = num;
