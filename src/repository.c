@@ -315,8 +315,10 @@ void git_repository_free(git_repository *repo)
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
 
-	if (repo->index != NULL)
+	if (repo->index != NULL) {
+		repo->index->repository = NULL;
 		git_index_free(repo->index);
+	}
 
 	free(repo);
 }
