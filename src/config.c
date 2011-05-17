@@ -65,7 +65,9 @@ int git_config_open_bare(git_config **out, const char *path)
 	if (error < GIT_SUCCESS)
 		goto error;
 
-	git_config_add_backend(cfg, backend, 1);
+	error = git_config_add_backend(cfg, backend, 1);
+	if (error < GIT_SUCCESS)
+		goto error;
 
 	error = backend->open(backend);
 	if (error < GIT_SUCCESS)

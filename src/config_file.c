@@ -316,17 +316,16 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	 * Otherwise, create it and stick it at the end of the queue.
 	 */
 
+	last_dot = strrchr(name, '.');
+	if (last_dot == NULL) {
+		return git__throw(GIT_EINVALIDTYPE, "Variables without section aren't allowed");
+	}
+
 	var = git__malloc(sizeof(git_cvar));
 	if (var == NULL)
 		return GIT_ENOMEM;
 
 	memset(var, 0x0, sizeof(git_cvar));
-
-	last_dot = strrchr(name, '.');
-	if (last_dot == NULL) {
-		error = GIT_ERROR;
-		goto out;
-	}
 
 	var->section = git__strndup(name, last_dot - name);
 	if (var->section == NULL) {
@@ -367,7 +366,7 @@ static int config_get(git_config_backend *cfg, const char *name, const char **ou
 	var = cvar_list_find(&b->var_list, name);
 
 	if (var == NULL)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
 
 	*out = var->value;
 
@@ -588,7 +587,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	last_quote = strrchr(line, '"');
 
 	if (last_quote - first_quote == 0)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. There is no final quotation mark");
 
 	buf_len = last_quote - first_quote + 2;
 
@@ -611,7 +610,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 		switch (c) {
 		case '"':
 			if (quote_marks++ >= 2)
-				return GIT_EOBJCORRUPTED;
+				return git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Too many quotes");
 			break;
 		case '\\':
 			c = line[rpos++];
@@ -620,7 +619,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 			case '\\':
 				break;
 			default:
-				error = GIT_EOBJCORRUPTED;
+				error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Unsupported escape char \\%c", c);
 				goto out;
 			}
 		default:
@@ -642,10 +641,10 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	ret = snprintf(*section_name, total_len, "%s %s", base_name, subsection);
 	if (ret >= total_len) {
 		/* If this fails, we've checked the length wrong */
-		error = GIT_ERROR;
+		error = git__thow(GIT_ERROR, "Failed to parse ext header. Wrong total lenght calculation");
 		goto out;
 	} else if (ret < 0) {
-		error = GIT_EOSERR;
+		error = git__throw(GIT_EOSERR, "Failed to parse ext header. OS error: %s", strerror(errno));
 		goto out;
 	}
 
@@ -671,11 +670,11 @@ static int parse_section_header(file_backend *cfg, char **section_out)
 	/* find the end of the variable's name */
 	name_end = strchr(line, ']');
 	if (name_end == NULL)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Can't find header name end");
 
 	name = (char *)git__malloc((size_t)(name_end - line) + 1);
 	if (name == NULL)
-		return GIT_EOBJCORRUPTED;
+		return GIT_ENOMEM;
 
 	name_length = 0;
 	pos = 0;
@@ -683,7 +682,7 @@ static int parse_section_header(file_backend *cfg, char **section_out)
 	/* Make sure we were given a section header */
 	c = line[pos++];
 	if (c != '[') {
-		error = GIT_EOBJCORRUPTED;
+		error = git__throw(GIT_ERROR, "Failed to parse header. Didn't get section header. This is a bug");
 		goto error;
 	}
 
@@ -691,7 +690,7 @@ static int parse_section_header(file_backend *cfg, char **section_out)
 
 	do {
 		if (cfg->reader.eof){
-			error = GIT_EOBJCORRUPTED;
+			error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Config file ended unexpectedly");
 			goto error;
 		}
 
@@ -704,7 +703,7 @@ static int parse_section_header(file_backend *cfg, char **section_out)
 		}
 
 		if (!config_keychar(c) && c != '.') {
-			error = GIT_EOBJCORRUPTED;
+			error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Wrong format on header");
 			goto error;
 		}
 
@@ -889,7 +888,7 @@ static int parse_multiline_variable(file_backend *cfg, const char *first, char *
 
 	/* We've reached the end of the file, there is input missing */
 	if (line[0] == '\0') {
-		error = GIT_EOBJCORRUPTED;
+		error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse multiline var. File ended unexpectedly");
 		goto out;
 	}
 
@@ -917,7 +916,7 @@ static int parse_multiline_variable(file_backend *cfg, const char *first, char *
 
 	ret = snprintf(buf, len, "%s %s", first, line);
 	if (ret < 0) {
-		error = GIT_EOSERR;
+		error = git__throw(GIT_EOSERR, "Failed to parse multiline var. Failed to put together two lines. OS err: %s", strerror(errno));
 		free(buf);
 		goto out;
 	}
