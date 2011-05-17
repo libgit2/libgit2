@@ -36,32 +36,32 @@ int gitfo_mktemp(char *path_out, const char *filename)
 	/* FIXME: there may be race conditions when multi-threading
 	 * with the library */
 	if (_mktemp_s(path_out, GIT_PATH_MAX) != 0)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to make temporary file %s", path_out);
 
 	fd = gitfo_creat(path_out, 0744);
 #else
 	fd = mkstemp(path_out);
 #endif
 
-	return fd >= 0 ? fd : GIT_EOSERR;
+	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to create temporary file %s", path_out);
 }
 
 int gitfo_open(const char *path, int flags)
 {
 	int fd = open(path, flags | O_BINARY);
-	return fd >= 0 ? fd : GIT_EOSERR;
+	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to open %s", path);
 }
 
 int gitfo_creat(const char *path, int mode)
 {
 	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
-	return fd >= 0 ? fd : GIT_EOSERR;
+	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to create file. Could not open %s", path);
 }
 
 int gitfo_creat_force(const char *path, int mode)
 {
 	if (gitfo_mkdir_2file(path) < GIT_SUCCESS)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to create file %s", path);
 
 	return gitfo_creat(path, mode);
 }
@@ -74,11 +74,11 @@ int gitfo_read(git_file fd, void *buf, size_t cnt)
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Failed to read from file");
 		}
 		if (!r) {
 			errno = EPIPE;
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Failed to read from file");
 		}
 		cnt -= r;
 		b += r;
@@ -94,11 +94,11 @@ int gitfo_write(git_file fd, void *buf, size_t cnt)
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Failed to write to file");
 		}
 		if (!r) {
 			errno = EPIPE;
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Failed to write to file");
 		}
 		cnt -= r;
 		b += r;
@@ -112,7 +112,7 @@ int gitfo_isdir(const char *path)
 	int len, stat_error;
 
 	if (!path)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "No path given to gitfo_isdir");
 
 	len = strlen(path);
 
@@ -128,10 +128,10 @@ int gitfo_isdir(const char *path)
 	}
 
 	if (stat_error < GIT_SUCCESS)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "%s does not exist", path);
 
 	if (!S_ISDIR(st.st_mode))
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "%s is not a file", path);
 
 	return GIT_SUCCESS;
 }
@@ -146,7 +146,7 @@ git_off_t gitfo_size(git_file fd)
 {
 	struct stat sb;
 	if (gitfo_fstat(fd, &sb))
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to get size of file. File missing or corrupted");
 	return sb.st_size;
 }
 
@@ -160,7 +160,7 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 	assert(obj && path && *path);
 
 	if ((fd = gitfo_open(path, O_RDONLY)) < 0)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to open %s for reading", path);
 
 	if (((size = gitfo_size(fd)) < 0) || !git__is_sizet(size+1)) {
 		gitfo_close(fd);
@@ -287,6 +287,8 @@ int gitfo_flush_cached(gitfo_cache *ioc)
 		ioc->pos = 0;
 	}
 
+	if (result < GIT_SUCCESS)
+		return git__rethrow(result, "Failed to flush cache");
 	return result;
 }
 
@@ -325,7 +327,7 @@ int gitfo_close_cached(gitfo_cache *ioc)
 	git_file fd;
 
 	if (gitfo_flush_cached(ioc) < GIT_SUCCESS)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to close cache. Could not flush cache");
 
 	fd = ioc->fd;
 	free(ioc->cache);
@@ -472,7 +474,7 @@ static int retrieve_previous_path_component_start(const char *path)
 		offset--;
 
 	if (offset < root_offset)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to retrieve path component. Wrong offset");
 
 	while (offset > start && path[offset-1] != '/') {
 		offset--;
