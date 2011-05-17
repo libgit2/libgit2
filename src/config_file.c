@@ -197,36 +197,49 @@ static cvar_t *cvar_list_find(cvar_t_list *list, const char *name)
 	return NULL;
 }
 
-static int cvar_name_normalize(const char *input, char **output)
+static int cvar_normalize_name(cvar_t *var, char **output)
 {
-	char *input_sp = strchr(input, ' ');
-	char *quote, *str;
-	int i;
-
-	/* We need to make a copy anyway */
-	str = git__strdup(input);
-	if (str == NULL)
-		return GIT_ENOMEM;
-
-	*output = str;
-
-	/* If there aren't any spaces, we don't need to do anything */
-	if (input_sp == NULL)
-		return GIT_SUCCESS;
+	char *section_sp = strchr(var->section, ' ');
+	char *quote, *name;
+	int len, ret;
 
 	/*
-	 * If there are spaces, we replace the space by a dot, move the
-	 * variable name so that the dot before it replaces the last
-	 * quotation mark and repeat so that the first quotation mark
-	 * disappears.
+	 * The final string is going to be at most one char longer than
+	 * the input
 	 */
-	str[input_sp - input] = '.';
+	len = strlen(var->section) + strlen(var->name) + 1;
+	name = git__malloc(len + 1);
+	if (name == NULL)
+		return GIT_ENOMEM;
 
-	for (i = 0; i < 2; ++i) {
-		quote = strrchr(str, '"');
-		memmove(quote, quote + 1, strlen(quote));
+	/* If there aren't any spaces in the section, it's easy */
+	if (section_sp == NULL) {
+		ret = snprintf(name, len + 1, "%s.%s", var->section, var->name);
+		if (ret < 0)
+			return git__throw(GIT_EOSERR, "Failed to normalize name. OS err: %s", strerror(errno));
+
+		*output = name;
+		return GIT_SUCCESS;
 	}
 
+	/*
+	 * If there are spaces, we replace the space by a dot, move
+	 * section name so it overwrites the first quotation mark and
+	 * replace the last quotation mark by a dot. We then append the
+	 * variable name.
+	 */
+	strcpy(name, var->section);
+	section_sp = strchr(name, ' ');
+	*section_sp = '.';
+	/* Remove first quote */
+	quote = strchr(name, '"');
+	memmove(quote, quote+1, strlen(quote+1));
+	/* Remove second quote */
+	quote = strchr(name, '"');
+	*quote = '.';
+	strcpy(quote+1, var->name);
+
+	*output = name;
 	return GIT_SUCCESS;
 }
 
@@ -276,7 +289,7 @@ static int file_foreach(git_config_backend *backend, int (*fn)(const char *, voi
 	file_backend *b = (file_backend *)backend;
 
 	CVAR_LIST_FOREACH(&b->var_list, var) {
-		ret = cvar_name_normalize(var->name, &normalized);
+		ret = cvar_normalize_name(var, &normalized);
 		if (ret < GIT_SUCCESS)
 			return ret;
 
