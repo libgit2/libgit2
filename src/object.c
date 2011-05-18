@@ -86,7 +86,7 @@ static int create_object(git_object **object_out, git_otype type)
 		break;
 
 	default:
-		return GIT_EINVALIDTYPE;
+		return git__throw(GIT_EINVALIDTYPE, "Failed to create object. Given type is invalid");
 	}
 
 	object->type = type;
@@ -106,7 +106,7 @@ int git_object_lookup(git_object **object_out, git_repository *repo, const git_o
 	object = git_cache_get(&repo->objects, id);
 	if (object != NULL) {
 		if (type != GIT_OBJ_ANY && type != object->type)
-			return GIT_EINVALIDTYPE;
+			return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. Given type does not match found type");
 
 		*object_out = object;
 		return GIT_SUCCESS;
@@ -114,17 +114,17 @@ int git_object_lookup(git_object **object_out, git_repository *repo, const git_o
 
 	error = git_odb_read(&odb_obj, repo->db, id);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to lookup object");
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
 		git_odb_object_close(odb_obj);
-		return GIT_EINVALIDTYPE;
+		return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. Given type does not match found type");
 	}
 
 	type = odb_obj->raw.type;
 
 	if ((error = create_object(&object, type)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to lookup object");
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->cached.oid, id);
@@ -155,7 +155,7 @@ int git_object_lookup(git_object **object_out, git_repository *repo, const git_o
 
 	if (error < GIT_SUCCESS) {
 		git_object__free(object);
-		return error;
+		return git__rethrow(error, "Failed to lookup object");
 	}
 
 	*object_out = git_cache_try_store(&repo->objects, object);
