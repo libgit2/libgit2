@@ -565,7 +565,7 @@ void cfg_consume_line(file_backend *cfg)
 	cfg->reader.read_ptr = line_end;
 }
 
-static inline int config_keychar(int c)
+GIT_INLINE(int) config_keychar(int c)
 {
 	return isalnum(c) || c == '-';
 }
