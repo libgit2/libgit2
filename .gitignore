@@ -14,8 +14,11 @@ build/
 tests/tmp/
 msvc/Debug/
 msvc/Release/
+*.sln
 *.suo
-*.user
+*.vc*proj*
 *.sdf
 *.opensdf
+CMake*
+*.cmake
 .DS_Store
