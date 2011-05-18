@@ -17,6 +17,10 @@
 # define S_ISREG(m)   (((m) & _S_IFMT) == _S_IFREG)
 # define S_ISFIFO(m)  (((m) & _S_IFMT) == _S_IFIFO)
 
+/* case-insensitive string comparision */
+# define strcasecmp   _stricmp
+# define strncasecmp  _strnicmp
+
 #if (_MSC_VER >= 1600)
 #	include <stdint.h>
 #else
