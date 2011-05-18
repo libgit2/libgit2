@@ -50,7 +50,7 @@ def configure(conf):
 
     dbg = conf.options.debug
 
-    conf.env.CFLAGS = CFLAGS_UNIX + (CFLAGS_UNIX_DBG if dbg else [])
+    conf.env.CFLAGS += CFLAGS_UNIX + (CFLAGS_UNIX_DBG if dbg else [])
 
     if conf.env.DEST_OS == 'win32':
         conf.env.PLATFORM = 'win32'
