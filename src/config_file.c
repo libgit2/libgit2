@@ -252,7 +252,7 @@ static int config_open(git_config_backend *cfg)
 	gitfo_free_buf(&b->reader.buffer);
 	free(cfg);
 
-	return error;
+	return git__rethrow(error, "Failed to open config");
 }
 
 static void backend_free(git_config_backend *_backend)
@@ -351,7 +351,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	if (error < GIT_SUCCESS)
 		cvar_free(var);
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to set config value");
 }
 
 /*
@@ -370,7 +370,7 @@ static int config_get(git_config_backend *cfg, const char *name, const char **ou
 
 	*out = var->value;
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to get config value for %s", name);
 }
 
 int git_config_backend_file(git_config_backend **out, const char *path)
@@ -699,7 +699,7 @@ static int parse_section_header(file_backend *cfg, char **section_out)
 			error = parse_section_header_ext(line, name, section_out);
 			free(line);
 			free(name);
-			return error;
+			return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse header");
 		}
 
 		if (!config_keychar(c) && c != '.') {
@@ -862,7 +862,7 @@ static int config_parse(file_backend *cfg_file)
 	if (current_section)
 		free(current_section);
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse config");
 }
 
 static int is_multiline_var(const char *str)
