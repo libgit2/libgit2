@@ -641,7 +641,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	ret = snprintf(*section_name, total_len, "%s %s", base_name, subsection);
 	if (ret >= total_len) {
 		/* If this fails, we've checked the length wrong */
-		error = git__throw(GIT_ERROR, "Failed to parse ext header. Wrong total lenght calculation");
+		error = git__throw(GIT_ERROR, "Failed to parse ext header. Wrong total length calculation");
 		goto out;
 	} else if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to parse ext header. OS error: %s", strerror(errno));
@@ -804,7 +804,7 @@ static int config_parse(file_backend *cfg_file)
 	char *var_value;
 	cvar_t *var;
 
-	/* Initialise the reading position */
+	/* Initialize the reading position */
 	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
 	cfg_file->reader.eof = 0;
 
@@ -1001,7 +1001,7 @@ static int parse_variable(file_backend *cfg, char **var_name, char **var_value)
 
 		*var_value = tmp;
 	} else {
-		/* If thre is no value, boolean true is assumed */
+		/* If there is no value, boolean true is assumed */
 		*var_value = NULL;
 	}
 
