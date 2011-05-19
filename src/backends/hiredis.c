@@ -67,7 +67,7 @@ int hiredis_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backe
     }
 
     freeReplyObject(reply);
-    return error;
+    return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read header");
 }
 
 int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_odb_backend *_backend, const git_oid *oid) {
@@ -104,7 +104,7 @@ int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_o
     }
 
     freeReplyObject(reply);
-    return error;
+    return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read backend");
 }
 
 int hiredis_backend__exists(git_odb_backend *_backend, const git_oid *oid) {
@@ -137,7 +137,7 @@ int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *d
     error = GIT_ERROR;
 
     if ((error = git_odb_hash(id, data, len, type)) < 0)
-        return error;
+        return git__rethrow(error, "Failed to write backend");
 
     reply = redisCommand(backend->db, "HMSET %b "
             "type %d "
@@ -148,7 +148,7 @@ int hiredis_backend__write(git_oid *id, git_odb_backend *_backend, const void *d
     error = (reply == NULL || reply->type == REDIS_REPLY_ERROR) ? GIT_ERROR : GIT_SUCCESS;
 
     freeReplyObject(reply);
-    return error;
+    return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write backend");
 }
 
 void hiredis_backend__free(git_odb_backend *_backend) {
@@ -184,7 +184,7 @@ int git_odb_backend_hiredis(git_odb_backend **backend_out, const char *host, int
     return GIT_SUCCESS;
 cleanup:
     free(backend);
-    return GIT_ERROR;
+    return git__throw(GIT_ERROR, "Failed to get ODB backend");
 }
 
 #else
@@ -194,7 +194,7 @@ int git_odb_backend_hiredis(git_odb_backend ** GIT_UNUSED(backend_out),
     GIT_UNUSED_ARG(backend_out);
     GIT_UNUSED_ARG(host);
     GIT_UNUSED_ARG(port);
-    return GIT_ENOTIMPLEMENTED;
+    return git__throw(GIT_ENOTIMPLEMENTED, "Failed to get ODB backend. Feature not yet implemented");
 }
 
 
