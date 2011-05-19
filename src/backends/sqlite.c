@@ -66,7 +66,7 @@ int sqlite_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backen
 	}
 
 	sqlite3_reset(backend->st_read_header);
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "SQLite backend: Failed to read header");
 }
 
 
@@ -100,7 +100,7 @@ int sqlite_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_od
 	}
 
 	sqlite3_reset(backend->st_read);
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "SQLite backend: Failed to read");
 }
 
 int sqlite_backend__exists(git_odb_backend *_backend, const git_oid *oid)
@@ -135,7 +135,7 @@ int sqlite_backend__write(git_oid *id, git_odb_backend *_backend, const void *da
 	backend = (sqlite_backend *)_backend;
 
 	if ((error = git_odb_hash(id, data, len, type)) < 0)
-		return error;
+		return git__rethrow(error, "SQLite backend: Failed to write");
 
 	error = SQLITE_ERROR;
 
@@ -147,7 +147,7 @@ int sqlite_backend__write(git_oid *id, git_odb_backend *_backend, const void *da
 	}
 
 	sqlite3_reset(backend->st_write);
-	return (error == SQLITE_DONE) ? GIT_SUCCESS : GIT_ERROR;
+	return (error == SQLITE_DONE) ? GIT_SUCCESS : git__throw(GIT_ERROR, "SQLite backend: Failed to write");
 }
 
 
@@ -175,7 +175,7 @@ static int create_table(sqlite3 *db)
 		"'data' BLOB);";
 
 	if (sqlite3_exec(db, sql_creat, NULL, NULL, NULL) != SQLITE_OK)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "SQLite backend: Failed to create table");
 
 	return GIT_SUCCESS;
 }
@@ -189,7 +189,7 @@ static int init_db(sqlite3 *db)
 	int error;
 
 	if (sqlite3_prepare_v2(db, sql_check, -1, &st_check, NULL) != SQLITE_OK)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "SQLite backend: Failed to initialize database");
 
 	switch (sqlite3_step(st_check)) {
 	case SQLITE_DONE:
@@ -208,7 +208,7 @@ static int init_db(sqlite3 *db)
 	}
 
 	sqlite3_finalize(st_check);
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "SQLite backend: Failed to initialize database");
 }
 
 static int init_statements(sqlite_backend *backend)
@@ -223,13 +223,13 @@ static int init_statements(sqlite_backend *backend)
 		"INSERT OR IGNORE INTO '" GIT2_TABLE_NAME "' VALUES (?, ?, ?, ?);";
 
 	if (sqlite3_prepare_v2(backend->db, sql_read, -1, &backend->st_read, NULL) != SQLITE_OK)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "SQLite backend: Failed to initialize statements");
 
 	if (sqlite3_prepare_v2(backend->db, sql_read_header, -1, &backend->st_read_header, NULL) != SQLITE_OK)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "SQLite backend: Failed to initialize statements");
 
 	if (sqlite3_prepare_v2(backend->db, sql_write, -1, &backend->st_write, NULL) != SQLITE_OK)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "SQLite backend: Failed to initialize statements");
 
 	return GIT_SUCCESS;
 }
@@ -265,7 +265,7 @@ int git_odb_backend_sqlite(git_odb_backend **backend_out, const char *sqlite_db)
 
 cleanup:
 	sqlite_backend__free((git_odb_backend *)backend);
-	return GIT_ERROR;
+	return git__throw(GIT_ERROR, "SQLite backend: Failed to get ODB backend");
 }
 
 #else
@@ -274,7 +274,7 @@ int git_odb_backend_sqlite(git_odb_backend **GIT_UNUSED(backend_out), const char
 {
 	GIT_UNUSED_ARG(backend_out);
 	GIT_UNUSED_ARG(sqlite_db);
-	return GIT_ENOTIMPLEMENTED;
+	return git__throw(GIT_ENOTIMPLEMENTED, "SQLite backend: Failed to get ODB backend. Operation not yet implemented");
 }
 
 #endif /* HAVE_SQLITE3 */
