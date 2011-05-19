@@ -46,6 +46,7 @@ static const unsigned int INDEX_VERSION_NUMBER_EXT = 3;
 
 static const unsigned int INDEX_HEADER_SIG = 0x44495243;
 static const char INDEX_EXT_TREECACHE_SIG[] = {'T', 'R', 'E', 'E'};
+static const char INDEX_EXT_UNMERGED_SIG[] = {'R', 'E', 'U', 'C'};
 
 struct index_header {
 	uint32_t signature;
@@ -99,6 +100,7 @@ static int read_header(struct index_header *dest, const void *buffer);
 
 static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
 static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
+static int read_unmerged_internal(git_index *, const char **, size_t buffer_size);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
 static int is_index_extended(git_index *index);
@@ -121,6 +123,21 @@ int index_cmp(const void *a, const void *b)
 	return strcmp(entry_a->path, entry_b->path);
 }
 
+int unmerged_srch(const void *key, const void *array_member)
+{
+	const char *path = (const char *) key;
+	const git_index_entry_unmerged *entry = *(const git_index_entry_unmerged **) (array_member);
+
+	return strcmp(path, entry->path);
+}
+
+int unmerged_cmp(const void *a, const void *b)
+{
+	const git_index_entry_unmerged *info_a = *(const git_index_entry_unmerged **)(a);
+	const git_index_entry_unmerged *info_b = *(const git_index_entry_unmerged **)(b);
+
+	return strcmp(info_a->path, info_b->path);
+}
 
 static int index_initialize(git_index **index_out, git_repository *owner, const char *index_path)
 {
@@ -143,6 +160,7 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 	index->repository = owner;
 
 	git_vector_init(&index->entries, 32, index_cmp);
+	git_vector_init(&index->unmerged, 32, unmerged_cmp);
 
 	/* Check if index file is stored on disk already */
 	if (gitfo_exists(index->index_file_path) == 0)
@@ -160,7 +178,7 @@ int git_index_open_bare(git_index **index_out, const char *index_path)
 int git_index_open_inrepo(git_index **index_out, git_repository *repo)
 {
 	if (repo->is_bare)
-		return GIT_EBAREINDEX;
+		return git__throw(GIT_EBAREINDEX, "Failed to open index. Repository is bare");
 
 	return index_initialize(index_out, repo, repo->path_index);
 }
@@ -226,17 +244,17 @@ int git_index_read(git_index *index)
 	}
 
 	if (gitfo_stat(index->index_file_path, &indexst) < 0)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to read index. %s does not exist or is corrupted", index->index_file_path);
 
 	if (!S_ISREG(indexst.st_mode))
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to read index. %s is not an index file", index->index_file_path);
 
 	if (indexst.st_mtime != index->last_modified) {
 
 		gitfo_buf buffer;
 
-		if (gitfo_read_file(&buffer, index->index_file_path) < GIT_SUCCESS)
-			return GIT_EOSERR;
+		if ((error = gitfo_read_file(&buffer, index->index_file_path)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to read index");
 
 		git_index_clear(index);
 		error = parse_index(index, buffer.data, buffer.len);
@@ -247,6 +265,8 @@ int git_index_read(git_index *index)
 		gitfo_free_buf(&buffer);
 	}
 
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to read index");
 	return error;
 }
 
@@ -259,15 +279,15 @@ int git_index_write(git_index *index)
 	sort_index(index);
 
 	if ((error = git_filebuf_open(&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to write index");
 
 	if ((error = write_index(index, &file)) < GIT_SUCCESS) {
 		git_filebuf_cleanup(&file);
-		return error;
+		return git__rethrow(error, "Failed to write index");
 	}
 
 	if ((error = git_filebuf_commit(&file)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to write index");
 
 	if (gitfo_stat(index->index_file_path, &indexst) == 0) {
 		index->last_modified = indexst.st_mtime;
@@ -281,6 +301,16 @@ unsigned int git_index_entrycount(git_index *index)
 {
 	assert(index);
 	return index->entries.length;
+}
+
+unsigned int git_index_unmerged_entrycount(git_index *index)
+{
+	assert(index);
+
+	if (!&index->unmerged)
+		return 0;
+
+	return index->unmerged.length;
 }
 
 git_index_entry *git_index_get(git_index *index, int n)
@@ -304,7 +334,7 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	assert(index && source_entry);
 
 	if (source_entry->path == NULL)
-		return GIT_EMISSINGOBJDATA;
+		return git__throw(GIT_EMISSINGOBJDATA, "Failed to insert into index. Entry has no path");
 
 	entry = git__malloc(sizeof(git_index_entry));
 	if (entry == NULL)
@@ -359,18 +389,18 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 	int error;
 
 	if (index->repository == NULL)
-		return GIT_EBAREINDEX;
+		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
 
 	git__joinpath(full_path, index->repository->path_workdir, rel_path);
 
 	if (gitfo_exists(full_path) < 0)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. %s does not exist", full_path);
 
 	if (gitfo_stat(full_path, &st) < 0)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to initialize entry. %s appears to be corrupted", full_path);
 
 	if (stage < 0 || stage > 3)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to initialize entry. Invalid stage %i", stage);
 
 	memset(entry, 0x0, sizeof(git_index_entry));
 
@@ -439,6 +469,22 @@ int git_index_find(git_index *index, const char *path)
 	sort_index(index);
 	return git_vector_bsearch2(&index->entries, index_srch, path);
 }
+
+int git_index_get_unmerged(git_index_entry_unmerged **entry, git_index *index, const char *path)
+{
+	int pos;
+	assert(index);
+
+	if ((pos = git_vector_bsearch2(&index->unmerged, unmerged_srch, path)) < GIT_SUCCESS)
+		return pos;
+
+	if ((*entry = git_vector_get(&index->unmerged, pos)) == NULL) {
+		return GIT_ENOTFOUND;
+	}
+
+	return GIT_SUCCESS;
+}
+
 
 static git_index_tree *read_tree_internal(
 		const char **buffer_in, const char *buffer_end, git_index_tree *parent)
@@ -520,6 +566,68 @@ static int read_tree(git_index *index, const char *buffer, size_t buffer_size)
 
 	index->tree = read_tree_internal(&buffer, buffer_end, NULL);
 	return (index->tree != NULL && buffer == buffer_end) ? GIT_SUCCESS : GIT_EOBJCORRUPTED;
+}
+
+static int read_unmerged_internal(
+		git_index *index, const char **buffer_in, size_t buffer_size)
+{
+	const char *buffer, *endptr;
+	size_t size, len;
+	int i;
+
+	size = buffer_size;
+
+	while (size) {
+		git_index_entry_unmerged *lost;
+
+		buffer = *buffer_in;
+
+		len = strlen(buffer) + 1;
+		if (size <= len)
+			return GIT_ERROR;
+
+		if ((lost = git__malloc(sizeof(git_index_entry_unmerged))) == NULL)
+			return GIT_ERROR;
+
+		if ((lost->path = git__malloc(strlen(buffer))) == NULL)
+			return GIT_ERROR;
+		strcpy(lost->path, buffer);
+
+		if (git_vector_insert(&index->unmerged, lost) < GIT_SUCCESS)
+			return GIT_ERROR;
+
+		size -= len;
+		buffer += len;
+
+		for (i = 0; i < 3; i++) {
+			if (git__strtol32((long int *) &lost->mode[i], buffer, &endptr, 8) < GIT_SUCCESS || !endptr || endptr == buffer || *endptr)
+				return GIT_ERROR;
+			len = (endptr + 1) - (char *) buffer;
+			if (size <= len)
+				return GIT_ERROR;
+			size -= len;
+			buffer += len;
+		}
+
+		for (i = 0; i < 3; i++) {
+			if (!lost->mode[i])
+				continue;
+			if (size < 20)
+				return GIT_ERROR;
+			git_oid_mkraw(&lost->oid[i], (unsigned char *) buffer);
+			size -= 20;
+			buffer += 20;
+		}
+	}
+
+	*buffer_in = buffer;
+	return GIT_SUCCESS;
+}
+
+static int read_unmerged(git_index *index, const char *buffer, size_t buffer_size)
+{
+	read_unmerged_internal(index, &buffer, buffer_size);
+	return (&index->unmerged != NULL) ? GIT_SUCCESS : GIT_EOBJCORRUPTED;
 }
 
 static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffer_size)
@@ -627,6 +735,13 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 
 			if (read_tree(index, buffer + 8, dest.extension_size) < GIT_SUCCESS)
 				return 0;
+
+		} else if (memcmp(dest.signature, INDEX_EXT_UNMERGED_SIG, 4) == 0) {
+
+			if (read_unmerged(index, buffer + 8, dest.extension_size) < GIT_SUCCESS)
+				return 0;
+		} else {
+			;
 		}
 	} else {
 		/* we cannot handle non-ignorable extensions;
