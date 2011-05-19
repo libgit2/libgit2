@@ -33,7 +33,7 @@ int pthread_create(pthread_t *GIT_RESTRICT thread,
 {
 	GIT_UNUSED_ARG(attr);
 	*thread = (pthread_t) CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)start_routine, arg, 0, NULL);
-	return *thread ? GIT_SUCCESS : GIT_EOSERR;
+	return *thread ? GIT_SUCCESS : git__throw(GIT_EOSERR, "Failed to create pthread");
 }
 
 int pthread_join(pthread_t thread, void **value_ptr)
