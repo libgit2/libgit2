@@ -98,14 +98,14 @@ typedef struct git_index_entry {
 	unsigned short flags;
 	unsigned short flags_extended;
 
-	char *path;
+	const char *path;
 } git_index_entry;
 
 /** Representation of an unmerged file entry in the index. */
 typedef struct git_index_entry_unmerged {
 	unsigned int mode[3];
 	git_oid oid[3];
-	char *path;
+	const char *path;
 } git_index_entry_unmerged;
 
 /**
@@ -256,6 +256,8 @@ GIT_EXTERN(int) git_index_remove(git_index *index, int position);
  * This entry can be modified, and the changes will be written
  * back to disk on the next write() call.
  *
+ * The entry should not be freed by the caller.
+ *
  * @param index an existing index object
  * @param n the position of the entry
  * @return a pointer to the entry; NULL if out of bounds
@@ -276,17 +278,19 @@ GIT_EXTERN(unsigned int) git_index_entrycount(git_index *index);
  * @param index an existing index object
  * @return integer of count of current unmerged entries
  */
-GIT_EXTERN(unsigned int) git_index_unmerged_entrycount(git_index *index);
+GIT_EXTERN(unsigned int) git_index_entrycount_unmerged(git_index *index);
 
 /**
  * Get an unmerged entry from the index.
  *
- * @param entry the pointer to the new unmerged entry
+ * The returned entry is read-only and should not be modified
+ * of freed by the caller.
+ *
  * @param index an existing index object
  * @param path path to search
- * @return 0 on success, otherwise an error code
+ * @return the unmerged entry; NULL if not found
  */
-GIT_EXTERN(int) git_index_get_unmerged(git_index_entry_unmerged **entry, git_index *index, const char *path);
+GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged(git_index *index, const char *path);
 
 
 /** @} */
