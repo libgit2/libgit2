@@ -63,11 +63,11 @@ static int assign_repository_dirs(
 	assert(repo);
 
 	if (git_dir == NULL)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to open repository. Git dir not found");
 
 	error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_dir);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to open repository");
 
 	/* store GIT_DIR */
 	repo->path_repository = git__strdup(path_aux);
@@ -80,7 +80,7 @@ static int assign_repository_dirs(
 	else {
 		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_object_directory);
 		if (error < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to open repository");
 	}
 
 	/* Store GIT_OBJECT_DIRECTORY */
@@ -94,7 +94,7 @@ static int assign_repository_dirs(
 	else {
 		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_work_tree);
 		if (error < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to open repository");
 
 		/* Store GIT_WORK_TREE */
 		repo->path_workdir = git__strdup(path_aux);
@@ -107,7 +107,7 @@ static int assign_repository_dirs(
 		else {
 			error = gitfo_prettify_file_path(path_aux, sizeof(path_aux), git_index_file);
 			if (error < GIT_SUCCESS)
-				return error;
+				return git__rethrow(error, "Failed to open repository");
 		}
 
 		/* store GIT_INDEX_FILE */
@@ -332,7 +332,7 @@ int git_repository_index(git_index **index_out, git_repository *repo)
 	if (repo->index == NULL) {
 		error = git_index_open_inrepo(&repo->index, repo);	/* TODO: move index.c to new error handling */
 		if (error < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to open repository index");
 
 		assert(repo->index != NULL);
 	}
@@ -351,7 +351,7 @@ static int repo_init_reinit(repo_init *results)
 {
 	/* TODO: reinit the repository */
 	results->has_been_reinit = 1;
-	return GIT_ENOTIMPLEMENTED;
+	return git__throw(GIT_ENOTIMPLEMENTED, "Failed to reinitialize the repository. This feature is not yet implemented");
 }
 
 static int repo_init_createhead(git_repository *repo)
@@ -377,13 +377,13 @@ static int repo_init_structure(repo_init *results)
 	char *git_dir = results->path_repository;
 
 	if (gitfo_mkdir_recurs(git_dir, mode))
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to initialize repository structure. Could not mkdir");
 
 	/* Creates the '/objects/info/' directory */
 	git__joinpath(temp_path, git_dir, GIT_OBJECTS_INFO_DIR);
 	error = gitfo_mkdir_recurs(temp_path, mode);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to initialize repository structure");
 
 	/* Creates the '/objects/pack/' directory */
 	git__joinpath(temp_path, git_dir, GIT_OBJECTS_PACK_DIR);
@@ -395,7 +395,7 @@ static int repo_init_structure(repo_init *results)
 	git__joinpath(temp_path, git_dir, GIT_REFS_HEADS_DIR);
 	error = gitfo_mkdir_recurs(temp_path, mode);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to initialize repository structure");
 
 	/* Creates the '/refs/tags/' directory */
 	git__joinpath(temp_path, git_dir, GIT_REFS_TAGS_DIR);
@@ -415,7 +415,7 @@ static int repo_init_find_dir(repo_init *results, const char* path)
 
 	error = gitfo_prettify_dir_path(temp_path, sizeof(temp_path), path);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to find directory to initialize repository");
 
 	if (!results->is_bare) {
 		git__joinpath(temp_path, temp_path, GIT_DIR);
