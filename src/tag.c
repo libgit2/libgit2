@@ -147,7 +147,7 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0) {
 		free(tag->tag_name);
 		git_signature_free(tag->tagger);
-		return error;
+		return git__rethrow(error, "Failed to parse tag");
 	}
 
 	text_len = buffer_end - ++buffer;
@@ -170,7 +170,7 @@ static int retreive_tag_reference(git_reference **tag_reference_out, char *ref_n
 	git__joinpath(ref_name_out, GIT_REFS_TAGS_DIR, tag_name);
 	error = git_reference_lookup(&tag_ref, repo, ref_name_out);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to retrieve tag reference");
 
 	*tag_reference_out = tag_ref;
 
@@ -215,7 +215,7 @@ static int tag_create(
 		break;
 
 	default:
-		return error;
+		return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 	}
 
 	if (!git_odb_exists(repo->db, target))
@@ -226,7 +226,7 @@ static int tag_create(
 		size_t _unused;
 		error = git_odb_read_header(&_unused, &target_type, repo->db, target);
 		if (error < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to create tag");
 	}
 
 	type_str = git_object_type2string(target_type);
@@ -244,7 +244,7 @@ static int tag_create(
 	final_size += 1 + message_len;
 
 	if ((error = git_odb_open_wstream(&stream, repo->db, final_size, GIT_OBJ_TAG)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to create tag");
 
 	git__write_oid(stream, "object", target);
 
@@ -266,14 +266,14 @@ static int tag_create(
 	stream->free(stream);
 
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to create tag");
 
 	if (!should_update_ref)
 		error = git_reference_create_oid(&new_ref, repo, ref_name, oid);
 	else
 		error = git_reference_set_oid(new_ref, oid);
 	
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 }
 
 int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer)
@@ -286,7 +286,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	memset(&tag, 0, sizeof(tag));
 
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to create tag");
 
 	error = git_tag_create(oid, repo, tag.tag_name, &tag.target, tag.type, tag.tagger, tag.message);
 
@@ -294,7 +294,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	free(tag.tag_name);
 	free(tag.message);
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 }
 
 int git_tag_create_o(
@@ -367,7 +367,7 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 
 	error = retreive_tag_reference(&tag_ref, ref_name, repo, tag_name);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to delete tag");
 
 	return git_reference_delete(tag_ref);
 }
@@ -397,7 +397,7 @@ int git_tag_list(git_strarray *tag_names, git_repository *repo)
 	error = git_reference_listcb(repo, GIT_REF_OID|GIT_REF_PACKED, &tag_list_cb, (void *)&taglist);
 	if (error < GIT_SUCCESS) {
 		git_vector_free(&taglist);
-		return error;
+		return git__rethrow(error, "Failed to list tags");
 	}
 
 	tag_names->strings = (char **)taglist.contents;
