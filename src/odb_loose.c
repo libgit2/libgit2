@@ -315,7 +315,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, gitfo_buf *obj)
 	 */
 	buf = git__malloc(hdr.size + 1);
 	if (!buf)
-		return GIT_ERROR;
+		return GIT_ENOMEM;
 
 	in  = ((unsigned char *)obj->data) + used;
 	len = obj->len - used;
@@ -363,7 +363,7 @@ static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
 	 * (including the initial sequence in the head buffer).
 	 */
 	if ((buf = inflate_tail(&zs, head, used, &hdr)) == NULL)
-		return GIT_ERROR;
+		return GIT_ENOMEM;
 	buf[hdr.size] = '\0';
 
 	out->data = buf;
