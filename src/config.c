@@ -72,36 +72,16 @@ int git_config_open_bare(git_config **out, const char *path)
 
 int git_config_open_global(git_config **out)
 {
-	char *home = NULL, *filename = NULL;
-	const char *gitconfig = ".gitconfig";
-	int filename_len, ret, error;
+	char full_path[GIT_PATH_MAX];
+	const char *home;
 
-	home = git__strdup(getenv("HOME"));
+	home = getenv("HOME");
 	if (home == NULL)
-		return GIT_ENOMEM;
+		return git__throw(GIT_EOSERR, "Failed to find $HOME variable");
 
-	filename_len = strlen(home) + strlen(gitconfig) + 1;
-	filename = git__malloc(filename_len + 1);
-	if (filename == NULL) {
-		error = GIT_ENOMEM;
-		goto out;
-	}
+	git__joinpath(full_path, home, GIT_CONFIG_FILENAME);
 
-	ret = snprintf(filename, filename_len, "%s/%s", home, gitconfig);
-	if (ret < 0) {
-		error = git__throw(GIT_EOSERR, "Failed to build global filename. OS err: %s", strerror(errno));
-		goto out;
-	} else if (ret >= filename_len) {
-		error = git__throw(GIT_ERROR, "Failed to build global filename. Length calulation wrong");
-		goto out;
-	}
-
-	error = git_config_open_bare(out, filename);
-
- out:
-	free(home);
-	free(filename);
-	return error;
+	return git_config_open_bare(out, filename);
 }
 
 void git_config_free(git_config *cfg)

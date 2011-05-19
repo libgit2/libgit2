@@ -5,6 +5,8 @@
 #include "git2/config.h"
 #include "vector.h"
 
+#define GIT_CONFIG_FILENAME ".gitconfig"
+
 struct git_config {
 	git_vector backends;
 };
