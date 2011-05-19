@@ -51,7 +51,21 @@ GIT_EXTERN(int) git_config_new(git_config **out);
 GIT_EXTERN(int) git_config_open_bare(git_config **cfg_out, const char *path);
 
 /**
+ * Open the global configuration file at $HOME/.gitconfig
  *
+ * @param cfg pointer to the configuration
+ */
+GIT_EXTERN(int) git_config_open_global(git_config **cfg);
+
+/**
+ * Add a config backend to an existing instance
+ *
+ * Note that the configuration will call the backend's ->free()
+ * function.
+ *
+ * @param cfg the configuration to add the backend to
+ * @param backend the backend to add
+ * @param priority the priority the backend should have
  */
 GIT_EXTERN(int) git_config_add_backend(git_config *cfg, git_config_backend *backend, int priority);
 
