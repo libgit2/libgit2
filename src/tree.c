@@ -175,7 +175,7 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		buffer += GIT_OID_RAWSZ;
 	}
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse buffer");
 }
 
 int git_tree__parse(git_tree *tree, git_odb_object *obj)
@@ -266,7 +266,7 @@ static int write_index(git_oid *oid, git_index *index, const char *base, int bas
 	error = git_odb_write(oid, index->repository->db, buffer, offset, GIT_OBJ_TREE);
 	free(buffer);
 
-	return (error == GIT_SUCCESS) ? nr : error;
+	return (error == GIT_SUCCESS) ? nr : git__rethrow(error, "Failed to write index");
 }
 
 int git_tree_create_fromindex(git_oid *oid, git_index *index)
@@ -277,7 +277,7 @@ int git_tree_create_fromindex(git_oid *oid, git_index *index)
 		return git__throw(GIT_EBAREINDEX, "Failed to create tree. The index file is not backed up by an existing repository");
 
 	error = write_index(oid, index, "", 0, 0, git_index_entrycount(index));
-	return (error < GIT_SUCCESS) ? error : GIT_SUCCESS;
+	return (error < GIT_SUCCESS) ? git__rethrow(error, "Failed to create tree") : GIT_SUCCESS;
 }
 
 static void sort_entries(git_treebuilder *bld)
@@ -448,7 +448,7 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write tree");
 }
 
 void git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_entry *, void *), void *payload)
