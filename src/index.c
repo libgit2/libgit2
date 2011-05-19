@@ -417,7 +417,7 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 
 	/* write the blob to disk and get the oid */
 	if ((error = git_blob_create_fromfile(&entry->oid, index->repository, rel_path)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to initialize index entry");
 
 	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
 	entry->path = (char *)rel_path; /* do not duplicate; index_insert already does this */
@@ -430,7 +430,7 @@ int git_index_add(git_index *index, const char *path, int stage)
 	git_index_entry entry;
 
 	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to add to index");
 
 	return index_insert(index, &entry, 1);
 }
@@ -441,7 +441,7 @@ int git_index_append(git_index *index, const char *path, int stage)
 	git_index_entry entry;
 
 	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to append to index");
 
 	return index_insert(index, &entry, 0);
 }
@@ -479,7 +479,7 @@ int git_index_get_unmerged(git_index_entry_unmerged **entry, git_index *index, c
 		return pos;
 
 	if ((*entry = git_vector_get(&index->unmerged, pos)) == NULL) {
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to get unmerged index entry. Entry not found");
 	}
 
 	return GIT_SUCCESS;
@@ -584,27 +584,27 @@ static int read_unmerged_internal(
 
 		len = strlen(buffer) + 1;
 		if (size <= len)
-			return GIT_ERROR;
+			return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 
 		if ((lost = git__malloc(sizeof(git_index_entry_unmerged))) == NULL)
-			return GIT_ERROR;
+			return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 
 		if ((lost->path = git__malloc(strlen(buffer))) == NULL)
-			return GIT_ERROR;
+			return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 		strcpy(lost->path, buffer);
 
 		if (git_vector_insert(&index->unmerged, lost) < GIT_SUCCESS)
-			return GIT_ERROR;
+			return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 
 		size -= len;
 		buffer += len;
 
 		for (i = 0; i < 3; i++) {
 			if (git__strtol32((long int *) &lost->mode[i], buffer, &endptr, 8) < GIT_SUCCESS || !endptr || endptr == buffer || *endptr)
-				return GIT_ERROR;
+				return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 			len = (endptr + 1) - (char *) buffer;
 			if (size <= len)
-				return GIT_ERROR;
+				return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 			size -= len;
 			buffer += len;
 		}
@@ -613,7 +613,7 @@ static int read_unmerged_internal(
 			if (!lost->mode[i])
 				continue;
 			if (size < 20)
-				return GIT_ERROR;
+				return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 			git_oid_mkraw(&lost->oid[i], (unsigned char *) buffer);
 			size -= 20;
 			buffer += 20;
@@ -627,7 +627,7 @@ static int read_unmerged_internal(
 static int read_unmerged(git_index *index, const char *buffer, size_t buffer_size)
 {
 	read_unmerged_internal(index, &buffer, buffer_size);
-	return (&index->unmerged != NULL) ? GIT_SUCCESS : GIT_EOBJCORRUPTED;
+	return (&index->unmerged != NULL) ? GIT_SUCCESS : git__throw(GIT_EOBJCORRUPTED, "Failed to read unmerged entries. No unmerged entries found");
 }
 
 static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffer_size)
@@ -701,12 +701,12 @@ static int read_header(struct index_header *dest, const void *buffer)
 
 	dest->signature = ntohl(source->signature);
 	if (dest->signature != INDEX_HEADER_SIG)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to read header. Invalid signature");
 
 	dest->version = ntohl(source->version);
 	if (dest->version != INDEX_VERSION_NUMBER_EXT &&
 		dest->version != INDEX_VERSION_NUMBER)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to read header. Invalid index version number");
 
 	dest->entry_count = ntohl(source->entry_count);
 	return GIT_SUCCESS;
@@ -760,13 +760,13 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 #define seek_forward(_increase) { \
 	if (_increase >= buffer_size) \
-		return GIT_EOBJCORRUPTED; \
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to seek forward. Buffer size exceeded"); \
 	buffer += _increase; \
 	buffer_size -= _increase;\
 }
 
 	if (buffer_size < INDEX_HEADER_SIZE + INDEX_FOOTER_SIZE)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Buffer too small");
 
 	/* Precalculate the SHA1 of the files's contents -- we'll match it to
 	 * the provided SHA1 in the footer */
@@ -774,7 +774,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	/* Parse header */
 	if (read_header(&header, buffer) < GIT_SUCCESS)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Header is corrupted");
 
 	seek_forward(INDEX_HEADER_SIZE);
 
@@ -793,7 +793,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 		/* 0 bytes read means an object corruption */
 		if (entry_size == 0)
-			return GIT_EOBJCORRUPTED;
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Entry size is zero");
 
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
@@ -802,7 +802,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	}
 
 	if (i != header.entry_count)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Header entries changed while parsing");
 
 	/* There's still space for some extensions! */
 	while (buffer_size > INDEX_FOOTER_SIZE) {
@@ -812,19 +812,19 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 		/* see if we have read any bytes from the extension */
 		if (extension_size == 0)
-			return GIT_EOBJCORRUPTED;
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Extension size is zero");
 
 		seek_forward(extension_size);
 	}
 
 	if (buffer_size != INDEX_FOOTER_SIZE)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Buffer size does not match index footer size");
 
 	/* 160-bit SHA-1 over the content of the index file before this checksum. */
 	git_oid_mkraw(&checksum_expected, (const unsigned char *)buffer);
 
 	if (git_oid_cmp(&checksum_calculated, &checksum_expected) != 0)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Calculated checksum does not match expected checksum");
 
 #undef seek_forward
 
@@ -934,7 +934,7 @@ static int write_index(git_index *index, git_filebuf *file)
 
 	error = write_entries(index, file);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to write index");
 
 	/* TODO: write extensions (tree cache) */
 
@@ -944,5 +944,5 @@ static int write_index(git_index *index, git_filebuf *file)
 	/* write it at the end of the file */
 	git_filebuf_write(file, hash_final.id, GIT_OID_RAWSZ);
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write index");
 }
