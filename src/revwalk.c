@@ -254,7 +254,7 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 
 	error = commit_quick_parse(walk, commit, &obj->raw);
 	git_odb_object_close(obj);
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse commit");
 }
 
 static void mark_uninteresting(commit_object *commit)
@@ -279,7 +279,7 @@ static int process_commit(git_revwalk *walk, commit_object *commit)
 	commit->seen = 1;
 
 	if ((error = commit_parse(walk, commit)) < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to process commit");
 
 	if (commit->uninteresting)
 		mark_uninteresting(commit);
@@ -296,7 +296,7 @@ static int process_commit_parents(git_revwalk *walk, commit_object *commit)
 		error = process_commit(walk, commit->parents[i]);
 	}
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to process commit parents");
 }
 
 static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
@@ -341,7 +341,7 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 
 	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
 		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to load next revision");
 
 		if (!next->uninteresting) {
 			*object_out = next;
@@ -349,7 +349,7 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_EREVWALKOVER;
+	return git__throw(GIT_EREVWALKOVER, "Failed to load next revision");
 }
 
 static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
@@ -359,7 +359,7 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 
 	while ((next = commit_list_pop(&walk->iterator_rand)) != NULL) {
 		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to load next revision");
 
 		if (!next->uninteresting) {
 			*object_out = next;
@@ -367,7 +367,7 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_EREVWALKOVER;
+	return git__throw(GIT_EREVWALKOVER, "Failed to load next revision");
 }
 
 static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
@@ -378,7 +378,7 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 	for (;;) {
 		next = commit_list_pop(&walk->iterator_topo);
 		if (next == NULL)
-			return GIT_EREVWALKOVER;
+			return git__throw(GIT_EREVWALKOVER, "Failed to load next revision");
 
 		if (next->in_degree > 0) {
 			next->topo_delay = 1;
@@ -424,7 +424,7 @@ static int prepare_walk(git_revwalk *walk)
 		}
 
 		if (error != GIT_EREVWALKOVER)
-			return error;
+			return git__rethrow(error, "Failed to prepare revision walk");
 
 		walk->get_next = &revwalk_next_toposort;
 	}
@@ -435,7 +435,7 @@ static int prepare_walk(git_revwalk *walk)
 			commit_list_insert(next, &walk->iterator_reverse);
 
 		if (error != GIT_EREVWALKOVER)
-			return error;
+			return git__rethrow(error, "Failed to prepare revision walk");
 
 		walk->get_next = &revwalk_next_reverse;
 	}
@@ -542,14 +542,14 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 
 	if (!walk->walking) {
 		if ((error = prepare_walk(walk)) < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to load next revision");
 	}
 
 	error = walk->get_next(&next, walk);
 	if (error < GIT_SUCCESS) {
 		if (error == GIT_EREVWALKOVER)
 			git_revwalk_reset(walk);
-		return error;
+		return git__rethrow(error, "Failed to load next revision");
 	}
 
 	git_oid_cpy(oid, &next->oid);

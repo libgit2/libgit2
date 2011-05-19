@@ -110,7 +110,7 @@ static int node_insert(git_hashtable *self, git_hashtable_node *new_node)
 	}
 
 	if (self->is_resizing) 
-		return GIT_EBUSY;
+		return git__throw(GIT_EBUSY, "Failed to insert node. Hashtable is currently resizing");
 
 	resize_to(self, self->size * 2);
 	git_hashtable_insert(self, new_node->key, new_node->value);
@@ -248,7 +248,7 @@ int git_hashtable_remove(git_hashtable *self, const void *key)
 		}
 	}
 
-	return GIT_ENOTFOUND;
+	return git__throw(GIT_ENOTFOUND, "Failed to remove entry. Entry not found");
 }
 
 int git_hashtable_merge(git_hashtable *self, git_hashtable *other)

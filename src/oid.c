@@ -56,7 +56,7 @@ int git_oid_mkstr(git_oid *out, const char *str)
 		int v = (from_hex[(unsigned char)str[0]] << 4)
 		       | from_hex[(unsigned char)str[1]];
 		if (v < 0)
-			return GIT_ENOTOID;
+			return git__throw(GIT_ENOTOID, "Failed to generate sha1. Given string is not a valid sha1 hash");
 		out->id[p] = (unsigned char)v;
 	}
 	return GIT_SUCCESS;
@@ -127,16 +127,16 @@ int git__parse_oid(git_oid *oid, const char **buffer_out,
 	const char *buffer = *buffer_out;
 
 	if (buffer + (header_len + sha_len + 1) > buffer_end)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse OID. Buffer too small");
 
 	if (memcmp(buffer, header, header_len) != 0)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse OID. Buffer and header do not match");
 
 	if (buffer[header_len + sha_len] != '\n')
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse OID. Buffer not terminated correctly");
 
 	if (git_oid_mkstr(oid, buffer + header_len) < GIT_SUCCESS)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse OID. Failed to generate sha1");
 
 	*buffer_out = buffer + (header_len + sha_len + 1);
 
@@ -312,7 +312,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 		trie_node *node;
 
 		if (c == -1)
-			return GIT_ENOTOID;
+			return git__throw(GIT_ENOTOID, "Failed to shorten OID. Invalid hex value");
 
 		node = &os->nodes[idx];
 

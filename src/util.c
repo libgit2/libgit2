@@ -79,13 +79,13 @@ int git__strtol32(long *result, const char *nptr, const char **endptr, int base)
 
 Return:
 	if (ndig == 0)
-		return GIT_ENOTNUM;
+		return git__throw(GIT_ENOTNUM, "Failed to convert string to long. Not a number");
 
 	if (endptr)
 		*endptr = p;
 
 	if (ovfl)
-		return GIT_EOVERFLOW;
+		return git__throw(GIT_EOVERFLOW, "Failed to convert string to long. Overflow error");
 
 	*result = neg ? -n : n;
 	return GIT_SUCCESS;
@@ -100,7 +100,7 @@ int git__fmt(char *buf, size_t buf_sz, const char *fmt, ...)
 	r = vsnprintf(buf, buf_sz, fmt, va);
 	va_end(va);
 	if (r < 0 || ((size_t) r) >= buf_sz)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to format string");
 	return r;
 }
 

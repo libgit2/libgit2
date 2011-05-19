@@ -31,7 +31,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 
 	if ((out == NULL) || (len == 0)) {
 		errno = EINVAL;
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to mmap. No map or zero length");
 	}
 
 	out->data = NULL;
@@ -40,7 +40,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 
 	if (fh == INVALID_HANDLE_VALUE) {
 		errno = EBADF;
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to mmap. Invalid handle value");
 	}
 
 	if (prot & GIT_PROT_WRITE)
@@ -49,7 +49,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 		fmap_prot |= PAGE_READONLY;
 	else {
 		errno = EINVAL;
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to mmap. Invalid protection parameters");
 	}
 
 	if (prot & GIT_PROT_WRITE)
@@ -59,7 +59,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 
 	if (flags & GIT_MAP_FIXED) {
 		errno = EINVAL;
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to mmap. FIXED not set");
 	}
 
 	page_start = (offset / page_size) * page_size;
@@ -67,14 +67,14 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 
 	if (page_offset != 0) {  /* offset must be multiple of page size */
 		errno = EINVAL;
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to mmap. Offset must be multiple of page size");
 	}
 
 	out->fmh = CreateFileMapping(fh, NULL, fmap_prot, 0, 0, NULL);
 	if (!out->fmh || out->fmh == INVALID_HANDLE_VALUE) {
 		/* errno = ? */
 		out->fmh = NULL;
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to mmap. Invalid handle value");
 	}
 
 	assert(sizeof(git_off_t) == 8);
@@ -85,7 +85,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 		/* errno = ? */
 		CloseHandle(out->fmh);
 		out->fmh = NULL;
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to mmap. No data written");
 	}
 	out->len = len;
 
@@ -97,7 +97,7 @@ int git__munmap(git_map *map)
 	assert(map != NULL);
 
 	if (!map)
-		return GIT_ERROR;
+		return git__throw(GIT_ERROR, "Failed to munmap. Map does not exist");
 
 	if (map->data) {
 		if (!UnmapViewOfFile(map->data)) {
@@ -105,7 +105,7 @@ int git__munmap(git_map *map)
 			CloseHandle(map->fmh);
 			map->data = NULL;
 			map->fmh = NULL;
-			return GIT_ERROR;
+			return git__throw(GIT_ERROR, "Failed to munmap. Could not unmap view of file");
 		}
 		map->data = NULL;
 	}
@@ -114,7 +114,7 @@ int git__munmap(git_map *map)
 		if (!CloseHandle(map->fmh)) {
 			/* errno = ? */
 			map->fmh = NULL;
-			return GIT_ERROR;
+			return git__throw(GIT_ERROR, "Failed to munmap. Could not close handle");
 		}
 		map->fmh = NULL;
 	}

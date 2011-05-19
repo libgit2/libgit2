@@ -405,7 +405,7 @@ static int pack_window_close_lru(
 		return GIT_SUCCESS;
 	}
 
-	return GIT_ERROR;
+	return git__throw(GIT_ERROR, "Failed to close pack window");
 }
 
 static void pack_window_close(struct pack_window **w_cursor)
@@ -532,11 +532,11 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 	int error;
 
 	if (fd < 0)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to check index. File missing or corrupted");
 
 	if (gitfo_fstat(fd, &st) < GIT_SUCCESS) {
 		gitfo_close(fd);
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to check index. File appears to be corrupted");
 	}
 
 	if (!git__is_sizet(st.st_size))
@@ -546,14 +546,14 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 
 	if (idx_size < 4 * 256 + 20 + 20) {
 		gitfo_close(fd);
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Object is corrupted");
 	}
 
 	error = gitfo_map_ro(&p->index_map, fd, 0, idx_size);
 	gitfo_close(fd);
 
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to check index");
 
 	hdr = idx_map = p->index_map.data;
 
@@ -562,7 +562,7 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 
 		if (version < 2 || version > 2) {
 			gitfo_free_map(&p->index_map);
-			return GIT_EOBJCORRUPTED; /* unsupported index version */
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Unsupported index version");
 		}
 
 	} else
@@ -578,7 +578,7 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 		uint32_t n = ntohl(index[i]);
 		if (n < nr) {
 			gitfo_free_map(&p->index_map);
-			return GIT_EOBJCORRUPTED; /* non-monotonic index */
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Index is non-monotonic");
 		}
 		nr = n;
 	}
@@ -593,7 +593,7 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 		 */
 		if (idx_size != 4*256 + nr * 24 + 20 + 20) {
 			gitfo_free_map(&p->index_map);
-			return GIT_EOBJCORRUPTED;
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Object is corrupted");
 		}
 	} else if (version == 2) {
 		/*
@@ -617,14 +617,14 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 
 		if (idx_size < min_size || idx_size > max_size) {
 			gitfo_free_map(&p->index_map);
-			return GIT_EOBJCORRUPTED;
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Wrong index size");
 		}
 
 		/* Make sure that off_t is big enough to access the whole pack...
 		 * Is this an issue in libgit2? It shouldn't. */
 		if (idx_size != min_size && (sizeof(off_t) <= 4)) {
 			gitfo_free_map(&p->index_map);
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Failed to check index. off_t not big enough to access the whole pack");
 		}
 	}
 
@@ -647,7 +647,7 @@ static int pack_index_open(struct pack_file *p)
 	error = pack_index_check(idx_name, p);
 	free(idx_name);
 
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to open index");
 }
 
 
@@ -726,12 +726,12 @@ static int packfile_open(struct pack_file *p)
 	unsigned char *idx_sha1;
 
 	if (!p->index_map.data && pack_index_open(p) < GIT_SUCCESS)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to open packfile. File not found");
 
 	/* TODO: open with noatime */
 	p->pack_fd = gitfo_open(p->pack_name, O_RDONLY);
 	if (p->pack_fd < 0 || gitfo_fstat(p->pack_fd, &st) < GIT_SUCCESS)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to open packfile. File appears to be corrupted");
 
 	/* If we created the struct before we had the pack we lack size. */
 	if (!p->pack_size) {
@@ -784,7 +784,7 @@ static int packfile_open(struct pack_file *p)
 cleanup:
 	gitfo_close(p->pack_fd);
 	p->pack_fd = -1;
-	return GIT_EPACKCORRUPTED;
+	return git__throw(GIT_EPACKCORRUPTED, "Failed to packfile. Pack is corrupted");
 }
 
 static int packfile_check(struct pack_file **pack_out, const char *path)
@@ -804,7 +804,7 @@ static int packfile_check(struct pack_file **pack_out, const char *path)
 	path_len -= STRLEN(".idx");
 	if (path_len < 1) {
 		free(p);
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to check packfile. Wrong path name");
 	}
 
 	memcpy(p->pack_name, path, path_len);
@@ -816,7 +816,7 @@ static int packfile_check(struct pack_file **pack_out, const char *path)
 	strcpy(p->pack_name + path_len, ".pack");
 	if (gitfo_stat(p->pack_name, &st) < GIT_SUCCESS || !S_ISREG(st.st_mode)) {
 		free(p);
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to check packfile. File not found");
 	}
 
 	/* ok, it looks sane as far as we can check without
@@ -853,7 +853,7 @@ static int packfile_load__cb(void *_data, char *path)
 
 	error = packfile_check(&pack, path);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to load packfile");
 
 	if (git_vector_insert(&backend->packs, pack) < GIT_SUCCESS) {
 		free(pack);
@@ -872,7 +872,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 		return GIT_SUCCESS;
 
 	if (gitfo_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to refresh packfiles. Backend not found");
 
 	if (st.st_mtime != backend->pack_folder_mtime) {
 		char path[GIT_PATH_MAX];
@@ -881,7 +881,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 		/* reload all packs */
 		error = gitfo_dirent(path, GIT_PATH_MAX, packfile_load__cb, (void *)backend);
 		if (error < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to refresh packfiles");
 
 		git_vector_sort(&backend->packs);
 		backend->pack_folder_mtime = st.st_mtime;
@@ -936,7 +936,7 @@ static int pack_entry_find_offset(
 		int error;
 
 		if ((error = pack_index_open(p)) < GIT_SUCCESS)
-			return error;
+			return git__rethrow(error, "Failed to find offset for pack entry");
 
 		assert(p->index_map.data);
 
@@ -969,7 +969,7 @@ static int pack_entry_find_offset(
 
 	int pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, oid);
 	if (pos < 0)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to find offset for pack entry. Entry not found");
 
 	*offset_out = nth_packed_object_offset(p, pos);
 	return GIT_SUCCESS;
@@ -992,7 +992,7 @@ static int pack_entry_find_offset(
 
 	} while (lo < hi);
 
-	return GIT_ENOTFOUND;
+	return git__throw(GIT_ENOTFOUND, "Failed to find offset for pack entry. Entry not found");
 #endif
 }
 
@@ -1009,17 +1009,17 @@ static int pack_entry_find1(
 		unsigned i;
 		for (i = 0; i < p->num_bad_objects; i++)
 			if (git_oid_cmp(oid, &p->bad_object_sha1[i]) == 0)
-				return GIT_ERROR;
+				return git__throw(GIT_ERROR, "Failed to find pack entry. Bad object found");
 	}
 
 	if (pack_entry_find_offset(&offset, p, oid) < GIT_SUCCESS)
-		return GIT_ENOTFOUND;
+		return git__throw(GIT_ENOTFOUND, "Failed to find pack entry. Couldn't find offset");
 	
 	/* we found an entry in the index;
 	 * make sure the packfile backing the index 
 	 * still exists on disk */
 	if (p->pack_fd == -1 && packfile_open(p) < GIT_SUCCESS)
-		return GIT_EOSERR;
+		return git__throw(GIT_EOSERR, "Failed to find pack entry. Packfile doesn't exist on disk");
 
 	e->offset = offset;
 	e->p = p;
@@ -1034,7 +1034,7 @@ static int pack_entry_find(struct pack_entry *e, struct pack_backend *backend, c
 	size_t i;
 
 	if ((error = packfile_refresh_all(backend)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to find pack entry");
 
 	if (backend->last_found &&
 		pack_entry_find1(e, backend->last_found, oid) == GIT_SUCCESS)
@@ -1053,7 +1053,7 @@ static int pack_entry_find(struct pack_entry *e, struct pack_backend *backend, c
 		}
 	}
 
-	return GIT_ENOTFOUND;
+	return git__throw(GIT_ENOTFOUND, "Failed to find pack entry");
 }
 
 
@@ -1125,7 +1125,7 @@ static int packfile_unpack_header(
 	used = packfile_unpack_header1(size_p, type_p, base, left);
 
 	if (used == 0)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to unpack packfile header. Header length is zero");
 
 	*curpos += used;
 	return GIT_SUCCESS;
@@ -1153,7 +1153,7 @@ static int packfile_unpack_compressed(
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
 		free(buffer);
-		return GIT_EZLIB;
+		return git__throw(GIT_EZLIB, "Failed to unpack compressed packfile. Error in zlib");
 	}
 
 	do {
@@ -1171,7 +1171,7 @@ static int packfile_unpack_compressed(
 
 	if ((st != Z_STREAM_END) || stream.total_out != size) {
 		free(buffer);
-		return GIT_EZLIB;
+		return git__throw(GIT_EZLIB, "Failed to unpack compressed packfile. Error in zlib");
 	}
 
 	obj->type = type;
@@ -1215,7 +1215,7 @@ static off_t get_delta_base(
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* The base entry _must_ be in the same pack */
 		if (pack_entry_find_offset(&base_offset, p, (git_oid *)base_info) < GIT_SUCCESS)
-			return GIT_EPACKCORRUPTED;
+			return git__throw(GIT_EPACKCORRUPTED, "Failed to get base entry delta. Base entry is not in the same pack");
 		*curpos += 20;
 	} else
 		return 0;
@@ -1239,7 +1239,7 @@ static int packfile_unpack_delta(
 
 	base_offset = get_delta_base(backend, p, w_curs, &curpos, delta_type, obj_offset);
 	if (base_offset == 0)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to get delta for unpacked packfile. Offset is zero");
 
 	pack_window_close(w_curs);
 	error = packfile_unpack(&base, backend, p, base_offset);
@@ -1247,12 +1247,12 @@ static int packfile_unpack_delta(
 	/* TODO: git.git tries to load the base from other packfiles
 	 * or loose objects */
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to get delta for unpacked packfile");
 
 	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type);
 	if (error < GIT_SUCCESS) {
 		free(base.data);
-		return error;
+		return git__rethrow(error, "Failed to get delta for unpacked packfile");
 	}
 
 	obj->type = base.type;
@@ -1265,7 +1265,7 @@ static int packfile_unpack_delta(
 
 	/* TODO: we might want to cache this shit. eventually */
 	//add_delta_base_cache(p, base_offset, base, base_size, *type);
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to get delta for unpacked packfile");
 }
 
 static int packfile_unpack(
@@ -1291,7 +1291,7 @@ static int packfile_unpack(
 
 	error = packfile_unpack_header(&size, &type, backend, p, &w_curs, &curpos);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to unpack packfile");
 
 	switch (type) {
 	case GIT_OBJ_OFS_DELTA:
@@ -1316,7 +1316,7 @@ static int packfile_unpack(
 	}
 
 	pack_window_close(&w_curs);
-	return error;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to unpack packfile");
 }
 
 
@@ -1352,10 +1352,10 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 	int error;
 
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to read pack backend");
 
 	if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset)) < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to read pack backend");
 
 	*buffer_p = raw.data;
 	*len_p = raw.len;

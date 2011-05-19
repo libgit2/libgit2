@@ -205,7 +205,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	sig->when.time = (time_t)time;
 
 	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
-		return GIT_EOBJCORRUPTED;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Could not parse timezone offset");
 	
 	sig->when.offset = offset;
 

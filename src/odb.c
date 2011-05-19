@@ -55,7 +55,7 @@ static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
 
 	if (len < 0 || ((size_t) len) >= n)
-		return git__throw(GIT_ERROR, "Can't format object header");
+		return git__throw(GIT_ERROR, "Failed to format object header. Length is out of bounds");
 	return len+1;
 }
 
@@ -67,13 +67,13 @@ int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *ob
 	assert(id && hdr && len && obj);
 
 	if (!git_object_typeisloose(obj->type))
-		return git__throw(GIT_ERROR, "Couldn't hash object. Wrong object type");
+		return git__throw(GIT_ERROR, "Failed to hash object. Wrong object type");
 
 	if (!obj->data && obj->len != 0)
-		return git__throw(GIT_ERROR, "Couldn't hash object. No data given");
+		return git__throw(GIT_ERROR, "Failed to hash object. No data given");
 
 	if ((hdrlen = format_object_header(hdr, n, obj)) < 0)
-		return GIT_ERROR; 
+		return git__rethrow(hdrlen, "Failed hash object");
 
 	*len = hdrlen;
 
@@ -243,12 +243,12 @@ int git_odb_new(git_odb **out)
 	error = git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
 	if (error < GIT_SUCCESS) {
 		free(db);
-		return git__throw(GIT_ERROR, "Couldn't create object database. Can't init cache");
+		return git__rethrow(error, "Failed to create object database");
 	}
 
 	if ((error = git_vector_init(&db->backends, 4, backend_sort_cmp)) < GIT_SUCCESS) {
 		free(db);
-		return git__throw(GIT_ERROR, "Couldn't create object database. Can't init backends");
+		return git__rethrow(error, "Failed to create object database");
 	}
 
 	*out = db;
@@ -262,7 +262,7 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 	assert(odb && backend);
 
 	if (backend->odb != NULL && backend->odb != odb)
-		return git__throw(GIT_EBUSY, "Couldn't add backend. Object is busy");
+		return git__throw(GIT_EBUSY, "Failed to add backend. Object is busy");
 
 	internal = git__malloc(sizeof(backend_internal));
 	if (internal == NULL)
@@ -300,20 +300,20 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 	/* add the loose object backend */
 	error = git_odb_backend_loose(&loose, objects_dir);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Couldn't add backend. Can't add loose object backend");
+		return git__rethrow(error, "Failed tp add backend. Can't add loose object backend");
 
 	error = add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Couldn't add backend. Can't add loose object backend");
+		return git__rethrow(error, "Failed to add backend");
 
 	/* add the packed file backend */
 	error = git_odb_backend_pack(&packed, objects_dir);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Couldn't add backend. Can't add packed object backend");
+		return git__rethrow(error, "Failed to add backend");
 
 	error = add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Couldn't add backend. Can't add packed object backend");
+		return git__rethrow(error, "Failed to add backend");
 
 	return GIT_SUCCESS;
 }
@@ -333,7 +333,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 		return GIT_SUCCESS;
 
 	if (gitfo_read_file(&alternates_buf, alternates_path) < GIT_SUCCESS)
-		return git__throw(GIT_EOSERR, "Couldn't add backend. Can't read alternates");
+		return git__throw(GIT_EOSERR, "Failed to add backend. Can't read alternates");
 
 	buffer = (char *)alternates_buf.data;
 	error = GIT_SUCCESS;
@@ -343,6 +343,8 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 		error = add_default_backends(odb, alternate, 1);
 
 	gitfo_free_buf(&alternates_buf);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to load alternates");
 	return error;
 }
 
@@ -356,7 +358,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	*out = NULL;
 
 	if ((error = git_odb_new(&db)) < 0)
-		return error;
+		return git__rethrow(error, "Failed to open ODB");
 
 	if ((error = add_default_backends(db, objects_dir, 0)) < GIT_SUCCESS)
 		goto cleanup;
@@ -481,7 +483,9 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 		*out = git_cache_try_store(&db->cache, new_odb_object(id, &raw));
 	}
 
-	return git__rethrow(error, "Couldn't read object");
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to read object");
+	return error;
 }
 
 int git_odb_write(git_oid *oid, git_odb *db, const void *data, size_t len, git_otype type)
@@ -517,7 +521,7 @@ int git_odb_write(git_oid *oid, git_odb *db, const void *data, size_t len, git_o
 	}
 
 	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Couldn't write object");
+		git__rethrow(error, "Failed to write object");
 }
 
 int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_otype type)
@@ -542,7 +546,7 @@ int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_
 	}
 
 	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Couldn't open stream to write");
+		git__rethrow(error, "Failed to open write stream");
 }
 
 int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid) 
@@ -561,6 +565,6 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 	}
 
 	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Couldn't open stream to read");
+		git__rethrow(error, "Failed to open read stream");
 }
 
