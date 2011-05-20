@@ -26,7 +26,7 @@
 #include "common.h"
 #include "config.h"
 #include "fileops.h"
-#include "git2/config_backend.h"
+#include "git2/config.h"
 #include "git2/types.h"
 
 #include <ctype.h>
@@ -81,10 +81,8 @@ typedef struct {
 		 (iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
 		 (iter) = (tmp))
 
-
-
 typedef struct {
-	git_config_backend parent;
+	git_config_file parent;
 
 	cvar_t_list var_list;
 
@@ -96,10 +94,10 @@ typedef struct {
 	} reader;
 
 	char *file_path;
-} file_backend;
+} diskfile_backend;
 
-static int config_parse(file_backend *cfg_file);
-static int parse_variable(file_backend *cfg, char **var_name, char **var_value);
+static int config_parse(diskfile_backend *cfg_file);
+static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
 
 static void cvar_free(cvar_t *var)
 {
@@ -243,10 +241,10 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 	return GIT_SUCCESS;
 }
 
-static int config_open(git_config_backend *cfg)
+static int config_open(git_config_file *cfg)
 {
 	int error;
-	file_backend *b = (file_backend *)cfg;
+	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	error = gitfo_read_file(&b->reader.buffer, b->file_path);
 	if(error < GIT_SUCCESS)
@@ -268,9 +266,9 @@ static int config_open(git_config_backend *cfg)
 	return error;
 }
 
-static void backend_free(git_config_backend *_backend)
+static void backend_free(git_config_file *_backend)
 {
-	file_backend *backend = (file_backend *)_backend;
+	diskfile_backend *backend = (diskfile_backend *)_backend;
 
 	if (backend == NULL)
 		return;
@@ -281,14 +279,15 @@ static void backend_free(git_config_backend *_backend)
 	free(backend);
 }
 
-static int file_foreach(git_config_backend *backend, int (*fn)(const char *, void *), void *data)
+static int file_foreach(git_config_file *backend, int (*fn)(const char *, void *), void *data)
 {
 	int ret = GIT_SUCCESS;
 	cvar_t *var;
-	char *normalized;
-	file_backend *b = (file_backend *)backend;
+	diskfile_backend *b = (diskfile_backend *)backend;
 
 	CVAR_LIST_FOREACH(&b->var_list, var) {
+		char *normalized = NULL;
+
 		ret = cvar_normalize_name(var, &normalized);
 		if (ret < GIT_SUCCESS)
 			return ret;
@@ -302,13 +301,13 @@ static int file_foreach(git_config_backend *backend, int (*fn)(const char *, voi
 	return ret;
 }
 
-static int config_set(git_config_backend *cfg, const char *name, const char *value)
+static int config_set(git_config_file *cfg, const char *name, const char *value)
 {
 	cvar_t *var = NULL;
 	cvar_t *existing = NULL;
 	int error = GIT_SUCCESS;
 	const char *last_dot;
-	file_backend *b = (file_backend *)cfg;
+	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	/*
 	 * If it already exists, we just need to update its value.
@@ -370,11 +369,11 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 /*
  * Internal function that actually gets the value in string form
  */
-static int config_get(git_config_backend *cfg, const char *name, const char **out)
+static int config_get(git_config_file *cfg, const char *name, const char **out)
 {
 	cvar_t *var;
 	int error = GIT_SUCCESS;
-	file_backend *b = (file_backend *)cfg;
+	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	var = cvar_list_find(&b->var_list, name);
 
@@ -386,15 +385,15 @@ static int config_get(git_config_backend *cfg, const char *name, const char **ou
 	return error;
 }
 
-int git_config_backend_file(git_config_backend **out, const char *path)
+int git_config_file__ondisk(git_config_file **out, const char *path)
 {
-	file_backend *backend;
+	diskfile_backend *backend;
 
-	backend = git__malloc(sizeof(file_backend));
+	backend = git__malloc(sizeof(diskfile_backend));
 	if (backend == NULL)
 		return GIT_ENOMEM;
 
-	memset(backend, 0x0, sizeof(file_backend));
+	memset(backend, 0x0, sizeof(diskfile_backend));
 
 	backend->file_path = git__strdup(path);
 	if (backend->file_path == NULL) {
@@ -408,12 +407,12 @@ int git_config_backend_file(git_config_backend **out, const char *path)
 	backend->parent.foreach = file_foreach;
 	backend->parent.free = backend_free;
 
-	*out = (git_config_backend *)backend;
+	*out = (git_config_file *)backend;
 
 	return GIT_SUCCESS;
 }
 
-static int cfg_getchar_raw(file_backend *cfg)
+static int cfg_getchar_raw(diskfile_backend *cfg)
 {
 	int c;
 
@@ -442,7 +441,7 @@ static int cfg_getchar_raw(file_backend *cfg)
 #define SKIP_WHITESPACE (1 << 1)
 #define SKIP_COMMENTS (1 << 2)
 
-static int cfg_getchar(file_backend *cfg_file, int flags)
+static int cfg_getchar(diskfile_backend *cfg_file, int flags)
 {
 	const int skip_whitespace = (flags & SKIP_WHITESPACE);
 	const int skip_comments = (flags & SKIP_COMMENTS);
@@ -464,7 +463,7 @@ static int cfg_getchar(file_backend *cfg_file, int flags)
 /*
  * Read the next char, but don't move the reading pointer.
  */
-static int cfg_peek(file_backend *cfg, int flags)
+static int cfg_peek(diskfile_backend *cfg, int flags)
 {
 	void *old_read_ptr;
 	int old_lineno, old_eof;
@@ -497,7 +496,7 @@ static int is_linebreak(const char *pos)
 /*
  * Read and consume a line, returning it in newly-allocated memory.
  */
-static char *cfg_readline(file_backend *cfg)
+static char *cfg_readline(diskfile_backend *cfg)
 {
 	char *line = NULL;
 	char *line_src, *line_end;
@@ -557,7 +556,7 @@ static char *cfg_readline(file_backend *cfg)
 /*
  * Consume a line, without storing it anywhere
  */
-void cfg_consume_line(file_backend *cfg)
+void cfg_consume_line(diskfile_backend *cfg)
 {
 	char *line_start, *line_end;
 
@@ -669,7 +668,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	return error;
 }
 
-static int parse_section_header(file_backend *cfg, char **section_out)
+static int parse_section_header(diskfile_backend *cfg, char **section_out)
 {
 	char *name, *name_end;
 	int name_length, c, pos;
@@ -736,7 +735,7 @@ error:
 	return error;
 }
 
-static int skip_bom(file_backend *cfg)
+static int skip_bom(diskfile_backend *cfg)
 {
 	static const char *utf8_bom = "\xef\xbb\xbf";
 
@@ -809,7 +808,7 @@ static void strip_comments(char *line)
 	}
 }
 
-static int config_parse(file_backend *cfg_file)
+static int config_parse(diskfile_backend *cfg_file)
 {
 	int error = GIT_SUCCESS, c;
 	char *current_section = NULL;
@@ -888,7 +887,7 @@ static int is_multiline_var(const char *str)
 	return *end == '\\';
 }
 
-static int parse_multiline_variable(file_backend *cfg, const char *first, char **out)
+static int parse_multiline_variable(diskfile_backend *cfg, const char *first, char **out)
 {
 	char *line = NULL, *end;
 	int error = GIT_SUCCESS, len, ret;
@@ -953,7 +952,7 @@ static int parse_multiline_variable(file_backend *cfg, const char *first, char *
 	return error;
 }
 
-static int parse_variable(file_backend *cfg, char **var_name, char **var_value)
+static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value)
 {
 	char *tmp;
 	int error = GIT_SUCCESS;

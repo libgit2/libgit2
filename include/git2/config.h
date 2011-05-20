@@ -38,6 +38,32 @@
 GIT_BEGIN_DECL
 
 /**
+ * Generic backend that implements the interface to
+ * access a configuration file
+ */
+struct git_config_file {
+	struct git_config *cfg;
+
+	/* Open means open the file/database and parse if necessary */
+	int (*open)(struct git_config_file *);
+	int (*get)(struct git_config_file *, const char *key, const char **value);
+	int (*set)(struct git_config_file *, const char *key, const char *value);
+	int (*foreach)(struct git_config_file *, int (*fn)(const char *, void *), void *data);
+	void (*free)(struct git_config_file *);
+};
+
+/**
+ * Create a configuration file backend for ondisk files
+ *
+ * These are the normal `.gitconfig` files that Core Git
+ * processes.
+ *
+ * @param out the new backend
+ * @path where the config file is located
+ */
+GIT_EXTERN(int) git_config_file__ondisk(struct git_config_file **out, const char *path);
+
+/**
  * Allocate a new configuration
  */
 GIT_EXTERN(int) git_config_new(git_config **out);
@@ -48,7 +74,7 @@ GIT_EXTERN(int) git_config_new(git_config **out);
  * @param cfg_out pointer to the configuration data
  * @param path where to load the confiration from
  */
-GIT_EXTERN(int) git_config_open_bare(git_config **cfg_out, const char *path);
+GIT_EXTERN(int) git_config_open_file(git_config **cfg_out, const char *path);
 
 /**
  * Open the global configuration file at $HOME/.gitconfig
@@ -67,7 +93,7 @@ GIT_EXTERN(int) git_config_open_global(git_config **cfg);
  * @param backend the backend to add
  * @param priority the priority the backend should have
  */
-GIT_EXTERN(int) git_config_add_backend(git_config *cfg, git_config_backend *backend, int priority);
+GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int priority);
 
 /**
  * Free the configuration and its associated memory

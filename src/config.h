@@ -8,7 +8,7 @@
 #define GIT_CONFIG_FILENAME ".gitconfig"
 
 struct git_config {
-	git_vector backends;
+	git_vector files;
 };
 
 #endif

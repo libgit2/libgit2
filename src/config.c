@@ -27,47 +27,48 @@
 #include "fileops.h"
 #include "hashtable.h"
 #include "config.h"
-#include "git2/config_backend.h"
+#include "git2/config.h"
 #include "vector.h"
 
 #include <ctype.h>
 
 typedef struct {
-	git_config_backend *backend;
+	git_config_file *file;
 	int priority;
-} backend_internal;
+} file_internal;
 
-int git_config_open_bare(git_config **out, const char *path)
+int git_config_open_file(git_config **out, const char *path)
 {
-	git_config_backend *backend = NULL;
+	git_config_file *file = NULL;
 	git_config *cfg = NULL;
 	int error = GIT_SUCCESS;
 
 	error = git_config_new(&cfg);
 	if (error < GIT_SUCCESS)
-		goto error;
+		return error;
 
-	error = git_config_backend_file(&backend, path);
-	if (error < GIT_SUCCESS)
-		goto error;
+	error = git_config_file__ondisk(&file, path);
+	if (error < GIT_SUCCESS) {
+		git_config_free(cfg);
+		return error;
+	}
 
-	error = git_config_add_backend(cfg, backend, 1);
-	if (error < GIT_SUCCESS)
-		goto error;
+	error = git_config_add_file(cfg, file, 1);
+	if (error < GIT_SUCCESS) {
+		file->free(file);
+		git_config_free(cfg);
+		return error;
+	}
 
-	error = backend->open(backend);
-	if (error < GIT_SUCCESS)
-		goto error;
+	error = file->open(file);
+	if (error < GIT_SUCCESS) {
+		git_config_free(cfg);
+		return git__rethrow(error, "Failed to open config file");
+	}
 
 	*out = cfg;
 
-	return error;
-
- error:
-	if(backend)
-		backend->free(backend);
-
-	return error;
+	return GIT_SUCCESS;
 }
 
 int git_config_open_global(git_config **out)
@@ -81,30 +82,30 @@ int git_config_open_global(git_config **out)
 
 	git__joinpath(full_path, home, GIT_CONFIG_FILENAME);
 
-	return git_config_open_bare(out, filename);
+	return git_config_open_file(out, full_path);
 }
 
 void git_config_free(git_config *cfg)
 {
 	unsigned int i;
-	git_config_backend *backend;
-	backend_internal *internal;
+	git_config_file *file;
+	file_internal *internal;
 
-	for(i = 0; i < cfg->backends.length; ++i){
-		internal = git_vector_get(&cfg->backends, i);
-		backend = internal->backend;
-		backend->free(backend);
+	for(i = 0; i < cfg->files.length; ++i){
+		internal = git_vector_get(&cfg->files, i);
+		file = internal->file;
+		file->free(file);
 		free(internal);
 	}
 
-	git_vector_free(&cfg->backends);
+	git_vector_free(&cfg->files);
 	free(cfg);
 }
 
 static int config_backend_cmp(const void *a, const void *b)
 {
-	const backend_internal *bk_a = *(const backend_internal **)(a);
-	const backend_internal *bk_b = *(const backend_internal **)(b);
+	const file_internal *bk_a = *(const file_internal **)(a);
+	const file_internal *bk_b = *(const file_internal **)(b);
 
 	return bk_b->priority - bk_a->priority;
 }
@@ -119,7 +120,7 @@ int git_config_new(git_config **out)
 
 	memset(cfg, 0x0, sizeof(git_config));
 
-	if (git_vector_init(&cfg->backends, 3, config_backend_cmp) < 0) {
+	if (git_vector_init(&cfg->files, 3, config_backend_cmp) < 0) {
 		free(cfg);
 		return GIT_ENOMEM;
 	}
@@ -129,26 +130,26 @@ int git_config_new(git_config **out)
 	return GIT_SUCCESS;
 }
 
-int git_config_add_backend(git_config *cfg, git_config_backend *backend, int priority)
+int git_config_add_file(git_config *cfg, git_config_file *file, int priority)
 {
-	backend_internal *internal;
+	file_internal *internal;
 
-	assert(cfg && backend);
+	assert(cfg && file);
 
-	internal = git__malloc(sizeof(backend_internal));
+	internal = git__malloc(sizeof(file_internal));
 	if (internal == NULL)
 		return GIT_ENOMEM;
 
-	internal->backend = backend;
+	internal->file = file;
 	internal->priority = priority;
 
-	if (git_vector_insert(&cfg->backends, internal) < 0) {
+	if (git_vector_insert(&cfg->files, internal) < 0) {
 		free(internal);
 		return GIT_ENOMEM;
 	}
 
-	git_vector_sort(&cfg->backends);
-	internal->backend->cfg = cfg;
+	git_vector_sort(&cfg->files);
+	internal->file->cfg = cfg;
 
 	return GIT_SUCCESS;
 }
@@ -161,13 +162,13 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *d
 {
 	int ret = GIT_SUCCESS;
 	unsigned int i;
-	backend_internal *internal;
-	git_config_backend *backend;
+	file_internal *internal;
+	git_config_file *file;
 
-	for(i = 0; i < cfg->backends.length && ret == 0; ++i) {
-		internal = git_vector_get(&cfg->backends, i);
-		backend = internal->backend;
-		ret = backend->foreach(backend, fn, data);
+	for(i = 0; i < cfg->files.length && ret == 0; ++i) {
+		internal = git_vector_get(&cfg->files, i);
+		file = internal->file;
+		ret = file->foreach(file, fn, data);
 	}
 
 	return ret;
@@ -221,15 +222,16 @@ int git_config_set_bool(git_config *cfg, const char *name, int value)
 
 int git_config_set_string(git_config *cfg, const char *name, const char *value)
 {
-	backend_internal *internal;
-	git_config_backend *backend;
+	file_internal *internal;
+	git_config_file *file;
 
-	assert(cfg->backends.length > 0);
+	if (cfg->files.length == 0)
+		return git__throw(GIT_EINVALIDARGS, "Cannot set variable value; no files open in the `git_config` instance");
 
-	internal = git_vector_get(&cfg->backends, 0);
-	backend = internal->backend;
+	internal = git_vector_get(&cfg->files, 0);
+	file = internal->file;
 
-	return backend->set(backend, name, value);
+	return file->set(file, name, value);
 }
 
 /***********
@@ -324,14 +326,15 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 
 int git_config_get_string(git_config *cfg, const char *name, const char **out)
 {
-	backend_internal *internal;
-	git_config_backend *backend;
+	file_internal *internal;
+	git_config_file *file;
 
-	assert(cfg->backends.length > 0);
+	if (cfg->files.length == 0)
+		return git__throw(GIT_EINVALIDARGS, "Cannot get variable value; no files open in the `git_config` instance");
 
-	internal = git_vector_get(&cfg->backends, 0);
-	backend = internal->backend;
+	internal = git_vector_get(&cfg->files, 0);
+	file = internal->file;
 
-	return backend->get(backend, name, out);
+	return file->get(file, name, out);
 }
 

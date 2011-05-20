@@ -36,7 +36,7 @@ BEGIN_TEST(config0, "read a simple configuration")
 	git_config *cfg;
 	int i;
 
-	must_pass(git_config_open_bare(&cfg, CONFIG_BASE "/config0"));
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config0"));
 	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &i));
 	must_be_true(i == 0);
 	must_pass(git_config_get_bool(cfg, "core.filemode", &i));
@@ -58,7 +58,7 @@ BEGIN_TEST(config1, "case sensitivity")
 	int i;
 	const char *str;
 
-	must_pass(git_config_open_bare(&cfg, CONFIG_BASE "/config1"));
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config1"));
 
 	must_pass(git_config_get_string(cfg, "this.that.other", &str));
 	must_be_true(!strcmp(str, "true"));
@@ -84,7 +84,7 @@ BEGIN_TEST(config2, "parse a multiline value")
 	git_config *cfg;
 	const char *str;
 
-	must_pass(git_config_open_bare(&cfg, CONFIG_BASE "/config2"));
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config2"));
 
 	must_pass(git_config_get_string(cfg, "this.That.and", &str));
 	must_be_true(!strcmp(str, "one one one two two three three"));
@@ -99,7 +99,7 @@ BEGIN_TEST(config3, "parse a [section.subsection] header")
 	git_config *cfg;
 	const char *str;
 
-	must_pass(git_config_open_bare(&cfg, CONFIG_BASE "/config3"));
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config3"));
 
 	must_pass(git_config_get_string(cfg, "section.subsection.var", &str));
 	must_be_true(!strcmp(str, "hello"));
@@ -117,7 +117,7 @@ BEGIN_TEST(config4, "a variable name on its own is valid")
 const char *str;
 int i;
 
-	must_pass(git_config_open_bare(&cfg, CONFIG_BASE "/config4"));
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config4"));
 
 	must_pass(git_config_get_string(cfg, "some.section.variable", &str));
 	must_be_true(str == NULL);
@@ -133,7 +133,7 @@ BEGIN_TEST(config5, "test number suffixes")
 	git_config *cfg;
 	long int i;
 
-	must_pass(git_config_open_bare(&cfg, CONFIG_BASE "/config5"));
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config5"));
 
 	must_pass(git_config_get_long(cfg, "number.simple", &i));
 	must_be_true(i == 1);
