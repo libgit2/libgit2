@@ -248,7 +248,7 @@ int git_hashtable_remove(git_hashtable *self, const void *key)
 		}
 	}
 
-	return git__throw(GIT_ENOTFOUND, "Failed to remove entry. Entry not found");
+	return git__throw(GIT_ENOTFOUND, "Entry not found in hash table");
 }
 
 int git_hashtable_merge(git_hashtable *self, git_hashtable *other)
