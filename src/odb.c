@@ -55,7 +55,7 @@ static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
 	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
 
 	if (len < 0 || ((size_t) len) >= n)
-		return git__throw(GIT_ERROR, "Failed to format object header. Length is out of bounds");
+		return git__throw(GIT_ERROR, "Cannot format object header. Length is out of bounds");
 	return len+1;
 }
 
@@ -73,7 +73,7 @@ int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *ob
 		return git__throw(GIT_ERROR, "Failed to hash object. No data given");
 
 	if ((hdrlen = format_object_header(hdr, n, obj)) < 0)
-		return git__rethrow(hdrlen, "Failed hash object");
+		return git__rethrow(hdrlen, "Failed to hash object");
 
 	*len = hdrlen;
 
@@ -262,7 +262,7 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 	assert(odb && backend);
 
 	if (backend->odb != NULL && backend->odb != odb)
-		return git__throw(GIT_EBUSY, "Failed to add backend. Object is busy");
+		return git__throw(GIT_EBUSY, "The backend is already owned by another ODB");
 
 	internal = git__malloc(sizeof(backend_internal));
 	if (internal == NULL)
@@ -300,7 +300,7 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 	/* add the loose object backend */
 	error = git_odb_backend_loose(&loose, objects_dir);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed tp add backend. Can't add loose object backend");
+		return error;
 
 	error = add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates);
 	if (error < GIT_SUCCESS)
@@ -309,7 +309,7 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 	/* add the packed file backend */
 	error = git_odb_backend_pack(&packed, objects_dir);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to add backend");
+		return error;
 
 	error = add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates);
 	if (error < GIT_SUCCESS)
