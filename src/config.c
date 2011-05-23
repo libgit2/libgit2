@@ -78,7 +78,7 @@ int git_config_open_global(git_config **out)
 
 	home = getenv("HOME");
 	if (home == NULL)
-		return git__throw(GIT_EOSERR, "Failed to find $HOME variable");
+		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot find $HOME variable");
 
 	git__joinpath(full_path, home, GIT_CONFIG_FILENAME);
 
@@ -185,22 +185,9 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *d
 
 int git_config_set_long(git_config *cfg, const char *name, long int value)
 {
-	char str_value[5]; /* Most numbers should fit in here */
-	int buf_len = sizeof(str_value), ret;
-	char *help_buf = NULL;
-
-	if ((ret = snprintf(str_value, buf_len, "%ld", value)) >= buf_len - 1){
-		/* The number is too large, we need to allocate more memory */
-		buf_len = ret + 1;
-		help_buf = git__malloc(buf_len);
-		snprintf(help_buf, buf_len, "%ld", value);
-		ret = git_config_set_string(cfg, name, help_buf);
-		free(help_buf);
-	} else {
-		ret = git_config_set_string(cfg, name, str_value);
-	}
-
-	return ret;
+	char str_value[32]; /* All numbers should fit in here */
+	snprintf(str_value, sizeof(str_value), "%ld", value);
+	return git_config_set_string(cfg, name, str_value);
 }
 
 int git_config_set_int(git_config *cfg, const char *name, int value)
@@ -210,14 +197,7 @@ int git_config_set_int(git_config *cfg, const char *name, int value)
 
 int git_config_set_bool(git_config *cfg, const char *name, int value)
 {
-	const char *str_value;
-
-	if (value == 0)
-		str_value = "false";
-	else
-		str_value = "true";
-
-	return git_config_set_string(cfg, name, str_value);
+	return git_config_set_string(cfg, name, value ? "true" : "false");
 }
 
 int git_config_set_string(git_config *cfg, const char *name, const char *value)
@@ -246,11 +226,11 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 
 	ret = git_config_get_string(cfg, name, &value);
 	if (ret < GIT_SUCCESS)
-		return ret;
+		return git__rethrow(ret, "Failed to get value for %s", name);
 
 	ret = git__strtol32(&num, value, &num_end, 0);
 	if (ret < GIT_SUCCESS)
-		return ret;
+		return git__rethrow(ret, "Failed to get value for %s", name);
 
 	switch (*num_end) {
 	case '\0':
@@ -268,7 +248,7 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 		num *= 1024 * 1024 * 1024;
 		break;
 	default:
-		return GIT_EINVALIDTYPE;
+		return git__throw(GIT_EINVALIDTYPE, "Failed to get value for %s. Value is of invalid type");
 	}
 
 	*out = num;
@@ -295,7 +275,7 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 
 	error = git_config_get_string(cfg, name, &value);
 	if (error < GIT_SUCCESS)
-		return error;
+		return git__rethrow(error, "Failed to get value for %s", name);
 
 	/* A missing value means true */
 	if (value == NULL) {
@@ -321,6 +301,8 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 	if (error == GIT_SUCCESS)
 		*out = !!(*out);
 
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to get value for %s", name);
 	return error;
 }
 
