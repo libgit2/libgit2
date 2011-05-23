@@ -179,7 +179,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 		/* Initialize the ZLib stream */
 		if (deflateInit(&file->zs, Z_BEST_SPEED) != Z_OK) {
-			error = GIT_EZLIB;
+			error = git__throw(GIT_EZLIB, "Failed to initialize zlib");
 			goto cleanup;
 		}
 
@@ -245,15 +245,14 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 cleanup:
 	git_filebuf_cleanup(file);
-	return git__rethrow(error, "Failed to open file");
+	return git__rethrow(error, "Failed to open file buffer for '%s'", path);
 }
 
 int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 {
 	int error;
 
-	if (file->digest == NULL)
-		return git__throw(GIT_ERROR, "Failed to get hash for file. File has no digest");
+	assert(oid && file && file->digest);
 
 	if ((error = flush_buffer(file)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to get hash for file");
@@ -279,9 +278,8 @@ int git_filebuf_commit(git_filebuf *file)
 {
 	int error;
 
-	/* tmp file cannot be commited */
-	if (file->path_original == NULL)
-		return git__throw(GIT_EOSERR, "Failed to commit from buffer. File path does not exist");
+	/* temporary files cannot be committed */
+	assert(file && file->path_original);
 
 	file->flush_mode = Z_FINISH;
 	if ((error = flush_buffer(file)) < GIT_SUCCESS)
@@ -295,8 +293,8 @@ int git_filebuf_commit(git_filebuf *file)
 cleanup:
 	git_filebuf_cleanup(file);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to commit from buffer");
-	return error;
+		return git__rethrow(error, "Failed to commit locked file from buffer");
+	return GIT_SUCCESS;
 }
 
 GIT_INLINE(void) add_to_cache(git_filebuf *file, const void *buf, size_t len)
@@ -372,7 +370,7 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 	if (len < 0 || (size_t)len >= space_left) {
 		if ((error = flush_buffer(file)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to print to buffer");
+			return git__rethrow(error, "Failed to output to buffer");
 
 		len = vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
 		if (len < 0 || (size_t)len > file->buf_size)
