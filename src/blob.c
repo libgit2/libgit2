@@ -62,7 +62,7 @@ int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *b
 	git_odb_stream *stream;
 
 	if ((error = git_odb_open_wstream(&stream, repo->db, len, GIT_OBJ_BLOB)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create blob. Can't open write stream");
+		return git__rethrow(error, "Failed to create blob");
 
 	stream->write(stream, buffer, len);
 
@@ -71,7 +71,8 @@ int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *b
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create blob");
-	return error;
+
+	return GIT_SUCCESS;
 }
 
 int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path)
@@ -83,16 +84,16 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	git_odb_stream *stream;
 
 	if (repo->path_workdir == NULL)
-		return git__throw(GIT_ENOTFOUND, "Failed to create blob. No workdir given");
+		return git__throw(GIT_ENOTFOUND, "Failed to create blob. (No working directory found)");
 
 	git__joinpath(full_path, repo->path_workdir, path);
 
 	if ((fd = gitfo_open(full_path, O_RDONLY)) < 0)
-		return git__throw(GIT_ENOTFOUND, "Failed to create blob. Could not open %s", full_path);
+		return git__throw(GIT_ENOTFOUND, "Failed to create blob. Could not open '%s'", full_path);
 
 	if ((size = gitfo_size(fd)) < 0 || !git__is_sizet(size)) {
 		gitfo_close(fd);
-		return git__throw(GIT_EOSERR, "Failed to create blob. %s appears to be corrupted", full_path);
+		return git__throw(GIT_EOSERR, "Failed to create blob. '%s' appears to be corrupted", full_path);
 	}
 
 	if ((error = git_odb_open_wstream(&stream, repo->db, (size_t)size, GIT_OBJ_BLOB)) < GIT_SUCCESS) {
@@ -121,6 +122,7 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create blob");
-	return error;
+
+	return GIT_SUCCESS;
 }
 
