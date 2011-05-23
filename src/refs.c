@@ -1489,16 +1489,15 @@ int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
 
 		*resolved_ref = ref;
 
-		if (ref->type & GIT_REF_OID) {
+		if (ref->type & GIT_REF_OID)
 			return GIT_SUCCESS;
-		}
 
 		ref_sym = (reference_symbolic *)ref;
 		if ((error = git_reference_lookup(&ref, repo, ref_sym->target)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to resolve reference");
+			return error;
 	}
 
-	return git__throw(GIT_ETOONESTEDSYMREF, "Failed to resolve reference. Reference is too nested");
+	return git__throw(GIT_ENOMEM, "Failed to resolve reference. Reference is too nested");
 }
 
 int git_reference_packall(git_repository *repo)
@@ -1533,7 +1532,7 @@ int git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*ca
 
 		GIT_HASHTABLE_FOREACH(repo->references.packfile, ref_name, _unused,
 			if ((error = callback(ref_name, payload)) < GIT_SUCCESS)
-				return git__rethrow(error, "Failed to list references");
+				return git__throw(error, "Failed to list references. User callback failed");
 		);
 	}
 
@@ -1573,7 +1572,7 @@ int git_reference_listall(git_strarray *array, git_repository *repo, unsigned in
 
 	if (error < GIT_SUCCESS) {
 		git_vector_free(&ref_list);
-		return git__rethrow(error, "Failed to list references");
+		return error;
 	}
 
 	array->strings = (char **)ref_list.contents;
@@ -1632,7 +1631,7 @@ void git_repository__refcache_free(git_refcache *refs)
 static int check_valid_ref_char(char ch)
 {
 	if (ch <= ' ')
-		return git__throw(GIT_ERROR, "Not a valid reference char");
+		return GIT_ERROR;
 
 	switch (ch) {
 	case '~':
@@ -1642,7 +1641,7 @@ static int check_valid_ref_char(char ch)
 	case '?':
 	case '[':
 	case '*':
-		return git__throw(GIT_ERROR, "Not a valid reference char");
+		return GIT_ERROR;
 		break;
 
 	default:
@@ -1652,7 +1651,6 @@ static int check_valid_ref_char(char ch)
 
 static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 {
-	int error = GIT_SUCCESS;
 	const char *name_end, *buffer_out_start;
 	char *current;
 	int contains_a_slash = 0;
@@ -1673,7 +1671,7 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 
 	while (current < name_end) {
 		if (check_valid_ref_char(*current))
-				return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name contains invalid characters");
+			return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name contains invalid characters");
 
 		if (buffer_out > buffer_out_start) {
 			char prev = *(buffer_out - 1);
@@ -1703,11 +1701,11 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 	 * for HEAD in a detached state or MERGE_HEAD if we're in the
 	 * middle of a merge */
 	if (is_oid_ref && !contains_a_slash && (strcmp(name, GIT_HEAD_FILE) && strcmp(name, GIT_MERGE_HEAD_FILE)))
-				return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name contains no slashes");
+		return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name contains no slashes");
 
 	/* A refname can not end with ".lock" */
 	if (!git__suffixcmp(name, GIT_FILELOCK_EXTENSION))
-				return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name ends with '.lock'");
+		return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name ends with '.lock'");
 
 	*buffer_out = '\0';
 
@@ -1715,12 +1713,11 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 	 * For object id references, name has to start with refs/. Again,
 	 * we need to allow HEAD to be in a detached state.
 	 */
-	if (is_oid_ref &&
-		!(git__prefixcmp(buffer_out_start, GIT_REFS_DIR) ||
-		  strcmp(buffer_out_start, GIT_HEAD_FILE)))
+	if (is_oid_ref && !(git__prefixcmp(buffer_out_start, GIT_REFS_DIR) ||
+		strcmp(buffer_out_start, GIT_HEAD_FILE)))
 		return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name does not start with 'refs/'");
 
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to normalize name");
+	return GIT_SUCCESS;
 }
 
 int git_reference__normalize_name(char *buffer_out, const char *name)
