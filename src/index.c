@@ -687,12 +687,12 @@ static int read_header(struct index_header *dest, const void *buffer)
 
 	dest->signature = ntohl(source->signature);
 	if (dest->signature != INDEX_HEADER_SIG)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to read header. Invalid signature");
+		return GIT_EOBJCORRUPTED;
 
 	dest->version = ntohl(source->version);
 	if (dest->version != INDEX_VERSION_NUMBER_EXT &&
 		dest->version != INDEX_VERSION_NUMBER)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to read header. Invalid index version number");
+		return GIT_EOBJCORRUPTED;
 
 	dest->entry_count = ntohl(source->entry_count);
 	return GIT_SUCCESS;
