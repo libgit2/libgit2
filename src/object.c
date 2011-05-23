@@ -86,7 +86,7 @@ static int create_object(git_object **object_out, git_otype type)
 		break;
 
 	default:
-		return git__throw(GIT_EINVALIDTYPE, "Failed to create object. Given type is invalid");
+		return git__throw(GIT_EINVALIDTYPE, "The given type is invalid");
 	}
 
 	object->type = type;
@@ -106,7 +106,7 @@ int git_object_lookup(git_object **object_out, git_repository *repo, const git_o
 	object = git_cache_get(&repo->objects, id);
 	if (object != NULL) {
 		if (type != GIT_OBJ_ANY && type != object->type)
-			return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. Given type does not match found type");
+			return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
 
 		*object_out = object;
 		return GIT_SUCCESS;
@@ -118,7 +118,7 @@ int git_object_lookup(git_object **object_out, git_repository *repo, const git_o
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
 		git_odb_object_close(odb_obj);
-		return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. Given type does not match found type");
+		return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
 	}
 
 	type = odb_obj->raw.type;
