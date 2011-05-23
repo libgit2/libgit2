@@ -47,7 +47,6 @@ extern int git__fsync(int fd);
 #define GITFO_BUF_INIT {NULL, 0}
 
 typedef int git_file;
-typedef struct gitfo_cache gitfo_cache;
 
 typedef struct {  /* file io buffer  */
 	void *data;  /* data bytes   */
@@ -134,12 +133,6 @@ extern int gitfo_dirent(
 	size_t pathmax,
 	int (*fn)(void *, char *),
 	void *state);
-
-extern gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size);
-extern int gitfo_write_cached(gitfo_cache *ioc, void *buf, size_t len);
-extern int gitfo_flush_cached(gitfo_cache *ioc);
-extern int gitfo_close_cached(gitfo_cache *ioc);
-
 
 extern int gitfo_cmp_path(const char *name1, int len1, int isdir1,
 		const char *name2, int len2, int isdir2);

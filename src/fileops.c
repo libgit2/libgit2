@@ -164,7 +164,7 @@ int gitfo_read_file(gitfo_buf *obj, const char *path)
 
 	if (((size = gitfo_size(fd)) < 0) || !git__is_sizet(size+1)) {
 		gitfo_close(fd);
-		return git__throw(GIT_ERROR, "Failed to read file `%s`. Either an error occured while calculating its size or the file is too large", path);
+		return git__throw(GIT_ERROR, "Failed to read file `%s`. An error occured while calculating its size", path);
 	}
 	len = (size_t) size;
 
@@ -220,7 +220,7 @@ int gitfo_mv(const char *from, const char *to)
 #endif
 
 	if (error < GIT_SUCCESS)
-		return git__throw(error, "Failed to move file from `%s`to `%s`", from, to);
+		return git__throw(error, "Failed to move file from `%s` to `%s`", from, to);
 
 	return GIT_SUCCESS;
 }
@@ -243,97 +243,6 @@ int gitfo_map_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
 void gitfo_free_map(git_map *out)
 {
 	git__munmap(out);
-}
-
-/* cached diskio */
-struct gitfo_cache {
-	git_file fd;
-	size_t cache_size, pos;
-	unsigned char *cache;
-};
-
-gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size)
-{
-	gitfo_cache *ioc;
-
-	ioc = git__malloc(sizeof(*ioc));
-	if (!ioc)
-		return NULL;
-
-	ioc->fd = fd;
-	ioc->pos = 0;
-	ioc->cache_size = cache_size;
-	ioc->cache = git__malloc(cache_size);
-	if (!ioc->cache) {
-		free(ioc);
-		return NULL;
-	}
-
-	return ioc;
-}
-
-GIT_INLINE(void) gitfo_add_to_cache(gitfo_cache *ioc, void *buf, size_t len)
-{
-	memcpy(ioc->cache + ioc->pos, buf, len);
-	ioc->pos += len;
-}
-
-int gitfo_flush_cached(gitfo_cache *ioc)
-{
-	int result = GIT_SUCCESS;
-
-	if (ioc->pos) {
-		result = gitfo_write(ioc->fd, ioc->cache, ioc->pos);
-		ioc->pos = 0;
-	}
-
-	if (result < GIT_SUCCESS)
-		return git__rethrow(result, "Failed to flush cache");
-	return result;
-}
-
-int gitfo_write_cached(gitfo_cache *ioc, void *buff, size_t len)
-{
-	unsigned char *buf = buff;
-
-	for (;;) {
-		size_t space_left = ioc->cache_size - ioc->pos;
-		/* cache if it's small */
-		if (space_left > len) {
-			gitfo_add_to_cache(ioc, buf, len);
-			return GIT_SUCCESS;
-		}
-
-		/* flush the cache if it doesn't fit */
-		if (ioc->pos) {
-			int rc;
-			gitfo_add_to_cache(ioc, buf, space_left);
-			rc = gitfo_flush_cached(ioc);
-			if (rc < 0)
-				return rc;
-
-			len -= space_left;
-			buf += space_left;
-		}
-
-		/* write too-large chunks immediately */
-		if (len > ioc->cache_size)
-			return gitfo_write(ioc->fd, buf, len);
-	}
-}
-
-int gitfo_close_cached(gitfo_cache *ioc)
-{
-	git_file fd;
-
-	if (gitfo_flush_cached(ioc) < GIT_SUCCESS)
-		return git__throw(GIT_ERROR, "Failed to close cache. Could not flush cache");
-
-	fd = ioc->fd;
-	free(ioc->cache);
-	free(ioc);
-
-	return gitfo_close(fd);
 }
 
 int gitfo_dirent(
