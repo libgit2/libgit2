@@ -452,7 +452,11 @@ static int read_header_loose(git_rawobj *out, const char *loc)
 cleanup:
 	finish_inflate(&zs);
 	gitfo_close(fd);
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read loose object header");
+
+	if (error < GIT_SUCCESS)
+		return git__throw(error, "Failed to read loose object header. Header is corrupted");
+
+	return GIT_SUCCESS;
 }
 
 static int locate_object(char *object_location, loose_backend *backend, const git_oid *oid)
@@ -485,11 +489,14 @@ int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend
 
 	assert(backend && oid);
 
+	raw.len = 0;
+	raw.type = GIT_OBJ_BAD;
+
 	if (locate_object(object_path, (loose_backend *)backend, oid) < 0)
 		return git__throw(GIT_ENOTFOUND, "Failed to read loose backend header. Object not found");
 
 	if ((error = read_header_loose(&raw, object_path)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to read loose backend header");
+		return error;
 
 	*len_p = raw.len;
 	*type_p = raw.type;
