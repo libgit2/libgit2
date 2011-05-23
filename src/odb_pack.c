@@ -1125,7 +1125,7 @@ static int packfile_unpack_header(
 	used = packfile_unpack_header1(size_p, type_p, base, left);
 
 	if (used == 0)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to unpack packfile header. Header length is zero");
+		return git__throw(GIT_EOBJCORRUPTED, "Header length is zero");
 
 	*curpos += used;
 	return GIT_SUCCESS;
@@ -1153,7 +1153,7 @@ static int packfile_unpack_compressed(
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
 		free(buffer);
-		return git__throw(GIT_EZLIB, "Failed to unpack compressed packfile. Error in zlib");
+		return git__throw(GIT_EZLIB, "Error in zlib");
 	}
 
 	do {
@@ -1171,7 +1171,7 @@ static int packfile_unpack_compressed(
 
 	if ((st != Z_STREAM_END) || stream.total_out != size) {
 		free(buffer);
-		return git__throw(GIT_EZLIB, "Failed to unpack compressed packfile. Error in zlib");
+		return git__throw(GIT_EZLIB, "Error in zlib");
 	}
 
 	obj->type = type;
@@ -1215,7 +1215,7 @@ static off_t get_delta_base(
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* The base entry _must_ be in the same pack */
 		if (pack_entry_find_offset(&base_offset, p, (git_oid *)base_info) < GIT_SUCCESS)
-			return git__throw(GIT_EPACKCORRUPTED, "Failed to get base entry delta. Base entry is not in the same pack");
+			return git__throw(GIT_EPACKCORRUPTED, "Base entry delta is not in the same pack");
 		*curpos += 20;
 	} else
 		return 0;
@@ -1239,7 +1239,7 @@ static int packfile_unpack_delta(
 
 	base_offset = get_delta_base(backend, p, w_curs, &curpos, delta_type, obj_offset);
 	if (base_offset == 0)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to get delta for unpacked packfile. Offset is zero");
+		return git__throw(GIT_EOBJCORRUPTED, "Delta offset is zero");
 
 	pack_window_close(w_curs);
 	error = packfile_unpack(&base, backend, p, base_offset);
@@ -1247,12 +1247,12 @@ static int packfile_unpack_delta(
 	/* TODO: git.git tries to load the base from other packfiles
 	 * or loose objects */
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to get delta for unpacked packfile");
+		return git__rethrow(error, "Corrupted delta");
 
 	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type);
 	if (error < GIT_SUCCESS) {
 		free(base.data);
-		return git__rethrow(error, "Failed to get delta for unpacked packfile");
+		return git__rethrow(error, "Corrupted delta");
 	}
 
 	obj->type = base.type;
@@ -1265,7 +1265,7 @@ static int packfile_unpack_delta(
 
 	/* TODO: we might want to cache this shit. eventually */
 	//add_delta_base_cache(p, base_offset, base, base_size, *type);
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to get delta for unpacked packfile");
+	return error; /* error set by git__delta_apply */
 }
 
 static int packfile_unpack(
@@ -1278,7 +1278,7 @@ static int packfile_unpack(
 	off_t curpos = obj_offset;
 	int error;
 
-	size_t size;
+	size_t size = 0;
 	git_otype type;
 
 	/* 
