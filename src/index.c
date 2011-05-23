@@ -157,6 +157,7 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 	}
 
 	index->repository = owner;
+	owner->index = index;
 
 	git_vector_init(&index->entries, 32, index_cmp);
 
