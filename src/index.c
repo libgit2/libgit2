@@ -514,8 +514,17 @@ static int read_tree_internal(git_index_tree **out,
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
 	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS ||
-		count < 0) {
+		count < -1) {
 		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
+
+	/* Invalidated TREE. Free the tree but report success */
+	if (count == -1) {
+		buffer = buffer_end;
+		free_tree(tree); /* Needs to be done manually */
+		tree = NULL;
+		error = GIT_SUCCESS;
 		goto exit;
 	}
 
