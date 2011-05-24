@@ -92,6 +92,7 @@ static int assign_repository_dirs(
 	if (git_work_tree == NULL)
 		repo->is_bare = 1;
 	else {
+		repo->is_bare = 0;
 		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_work_tree);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to open repository");
@@ -286,6 +287,73 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	error = check_repository_dirs(repo);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
+
+	error = init_odb(repo);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	*repo_out = repo;
+	return GIT_SUCCESS;
+
+cleanup:
+	git_repository_free(repo);
+	return git__rethrow(error, "Failed to open repository");
+}
+
+int git_repository_open4(git_repository **repo_out)
+{
+	git_repository *repo;
+	int error = GIT_SUCCESS;
+
+	assert(repo_out && path);
+
+	repo = repository_alloc();
+	if (repo == NULL)
+		return GIT_ENOMEM;
+
+	char bare_path[GIT_PATH_MAX];
+	char normal_path[GIT_PATH_MAX];
+	char *lookup_path = normal_path;
+
+	error = gitfo_getcwd(bare_path, sizeof(bare_path));
+
+	if (error < GIT_SUCCESS)
+		return error;
+
+	int root_offset = retrieve_path_root_offset(bare_path);
+	git__joinpath(normal_path, bare_path, DOT_GIT);
+
+	while(1){
+		error = guess_repository_dirs(repo, lookup_path);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		error = check_repository_dirs(repo);
+		if (error < GIT_SUCCESS) {
+			if (error == GIT_ENOTAREPO) {
+				if (lookup_path == normal_path) {
+					lookup_path = bare_path;
+					continue;
+				} else {
+					if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
+						goto cleanup;
+
+					if (!normal_path[root_offset + 1])
+						git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories)");
+						goto cleanup;
+
+					strcpy(bare_path, normal_path);
+					git__joinpath(normal_path, bare_path, DOT_GIT);
+					lookup_path = normal_path;
+
+					continue;
+				}
+			} else
+				goto cleanup;
+		}
+
+		break;
+	}
 
 	error = init_odb(repo);
 	if (error < GIT_SUCCESS)
