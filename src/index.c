@@ -99,7 +99,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 static int read_header(struct index_header *dest, const void *buffer);
 
 static int read_tree(git_index *index, const char *buffer, size_t buffer_size);
-static git_index_tree *read_tree_internal(const char **, const char *, git_index_tree *);
+static int read_tree_internal(git_index_tree **, const char **, const char *, git_index_tree *);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
 static int is_index_extended(git_index *index);
@@ -479,52 +479,81 @@ const git_index_entry_unmerged *git_index_get_unmerged(git_index *index, const c
 }
 
 
-static git_index_tree *read_tree_internal(
+static int read_tree_internal(git_index_tree **out,
 		const char **buffer_in, const char *buffer_end, git_index_tree *parent)
 {
 	git_index_tree *tree;
 	const char *name_start, *buffer;
 	long count;
+	int error = GIT_SUCCESS;
 
 	if ((tree = git__malloc(sizeof(git_index_tree))) == NULL)
-		return NULL;
+		return GIT_ENOMEM;
 
 	memset(tree, 0x0, sizeof(git_index_tree));
 	tree->parent = parent;
 
 	buffer = name_start = *buffer_in;
 
-	if ((buffer = memchr(buffer, '\0', buffer_end - buffer)) == NULL)
-		goto error_cleanup;
+	if ((buffer = memchr(buffer, '\0', buffer_end - buffer)) == NULL) {
+		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
 
 	/* NUL-terminated tree name */
 	tree->name = git__strdup(name_start);
-	if (++buffer >= buffer_end)
-		goto error_cleanup;
+	if (tree->name == NULL) {
+		error = GIT_ENOMEM;
+		goto exit;
+	}
+
+	if (++buffer >= buffer_end) {
+		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
 	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS ||
-		count < 0)
-		goto error_cleanup;
+		count < -1) {
+		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
+
+	/* Invalidated TREE. Free the tree but report success */
+	if (count == -1) {
+		buffer = buffer_end;
+		free_tree(tree); /* Needs to be done manually */
+		tree = NULL;
+		error = GIT_SUCCESS;
+		goto exit;
+	}
 
 	tree->entries = (size_t)count;
 
-	if (*buffer != ' ' || ++buffer >= buffer_end)
-		goto error_cleanup;
+	if (*buffer != ' ' || ++buffer >= buffer_end) {
+		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
 
 	 /* Number of children of the tree, newline-terminated */
 	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS ||
-		count < 0)
-		goto error_cleanup;
+		count < 0) {
+		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
 
 	tree->children_count = (size_t)count;
 
-	if (*buffer != '\n' || ++buffer >= buffer_end)
-		goto error_cleanup;
+	if (*buffer != '\n' || ++buffer >= buffer_end) {
+		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
 
 	/* 160-bit SHA-1 for this tree and it's children */
-	if (buffer + GIT_OID_RAWSZ > buffer_end)
-		goto error_cleanup;
+	if (buffer + GIT_OID_RAWSZ > buffer_end) {
+		error = GIT_EOBJCORRUPTED;
+		goto exit;
+	}
 
 	git_oid_mkraw(&tree->oid, (const unsigned char *)buffer);
 	buffer += GIT_OID_RAWSZ;
@@ -532,33 +561,38 @@ static git_index_tree *read_tree_internal(
 	/* Parse children: */
 	if (tree->children_count > 0) {
 		unsigned int i;
+		int err;
 
 		tree->children = git__malloc(tree->children_count * sizeof(git_index_tree *));
 		if (tree->children == NULL)
-			goto error_cleanup;
+			goto exit;
 
 		for (i = 0; i < tree->children_count; ++i) {
-			tree->children[i] = read_tree_internal(&buffer, buffer_end, tree);
+			err = read_tree_internal(&tree->children[i], &buffer, buffer_end, tree);
 
-			if (tree->children[i] == NULL)
-				goto error_cleanup;
+			if (err < GIT_SUCCESS)
+				goto exit;
 		}
 	}
 
+ exit:
 	*buffer_in = buffer;
-	return tree;
-
-error_cleanup:
-	free_tree(tree);
-	return NULL;
+	if (error < GIT_SUCCESS) {
+		free_tree(tree);
+	} else {
+		*out = tree;
+	}
+	return error;
 }
 
 static int read_tree(git_index *index, const char *buffer, size_t buffer_size)
 {
 	const char *buffer_end = buffer + buffer_size;
+	int error;
 
-	index->tree = read_tree_internal(&buffer, buffer_end, NULL);
-	return (index->tree != NULL && buffer == buffer_end) ? GIT_SUCCESS : GIT_EOBJCORRUPTED;
+	error = read_tree_internal(&index->tree, &buffer, buffer_end, NULL);
+
+	return (error == GIT_SUCCESS && buffer == buffer_end) ? GIT_SUCCESS : GIT_EOBJCORRUPTED;
 }
 
 static int read_unmerged(git_index *index, const char *buffer, size_t size)
