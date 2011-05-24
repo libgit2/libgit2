@@ -509,3 +509,9 @@ const char *git_repository_workdir(git_repository *repo)
 	assert(repo);
 	return repo->path_workdir;
 }
+
+int git_repository_is_bare(git_repository *repo)
+{
+	assert(repo);
+	return repo->is_bare;
+}

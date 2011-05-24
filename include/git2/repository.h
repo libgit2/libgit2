@@ -212,6 +212,14 @@ GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
  */
 GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
 
+/**
+ * Check if a repository is bare
+ *
+ * @param repo Repo to test
+ * @return 1 if the repository is empty, 0 otherwise.
+ */
+GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
