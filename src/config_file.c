@@ -638,7 +638,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 			break;
 		}
 
-		subsection[pos++] = c;
+		subsection[pos++] = (char) c;
 	} while ((c = line[rpos++]) != ']');
 
 	subsection[pos] = '\0';
@@ -719,7 +719,7 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 			goto error;
 		}
 
-		name[name_length++] = tolower(c);
+		name[name_length++] = (char) tolower(c);
 
 	} while ((c = line[pos++]) != ']');
 

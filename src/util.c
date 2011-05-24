@@ -109,7 +109,7 @@ void git__strntolower(char *str, int len)
 	int i;
 
 	for (i = 0; i < len; ++i) {
-		str[i] = tolower(str[i]);
+		str[i] = (char) tolower(str[i]);
 	}
 }
 
