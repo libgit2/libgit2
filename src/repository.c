@@ -120,6 +120,21 @@ static int assign_repository_dirs(
 	return GIT_SUCCESS;
 }
 
+static void git_repository__dirs_free(git_repository *repo)
+{
+	/* Set paths to NULL to avoid double free (may happen with
+	 * git_repository_open4
+	 * */
+	free(repo->path_workdir);
+	repo->path_workdir = NULL;
+	free(repo->path_index);
+	repo->path_index = NULL;
+	free(repo->path_repository);
+	repo->path_repository = NULL;
+	free(repo->path_odb);
+	repo->path_odb = NULL;
+}
+
 static int check_repository_dirs(git_repository *repo)
 {
 	char path_aux[GIT_PATH_MAX];
@@ -331,6 +346,8 @@ int git_repository_open4(git_repository **repo_out)
 		error = check_repository_dirs(repo);
 		if (error < GIT_SUCCESS) {
 			if (error == GIT_ENOTAREPO) {
+				git_repository__dirs_free(repo);
+
 				if (lookup_path == normal_path) {
 					lookup_path = bare_path;
 					continue;
@@ -374,11 +391,7 @@ void git_repository_free(git_repository *repo)
 
 	git_cache_free(&repo->objects);
 	git_repository__refcache_free(&repo->references);
-
-	free(repo->path_workdir);
-	free(repo->path_index);
-	free(repo->path_repository);
-	free(repo->path_odb);
+	git_repository__dirs_free(repo);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
