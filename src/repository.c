@@ -352,11 +352,12 @@ int git_repository_open4(git_repository **repo_out)
 					lookup_path = bare_path;
 					continue;
 				} else {
-					if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
-						goto cleanup;
-
-					if (!normal_path[root_offset + 1])
+					if (!bare_path[root_offset + 1]) {
 						git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories)");
+						goto cleanup;
+					}
+
+					if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
 						goto cleanup;
 
 					strcpy(bare_path, normal_path);
