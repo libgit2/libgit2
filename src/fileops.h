@@ -12,6 +12,14 @@
 #include <fcntl.h>
 #include <time.h>
 
+#define GIT_PATH_LIST_SEPARATOR ':'
+
+#ifdef GIT__WIN32
+#define GIT_PLATFORM_PATH_SEP '/'
+#else
+#define GIT_PLATFORM_PATH_SEP '\\'
+#endif
+
 #ifdef GIT_WIN32
 GIT_INLINE(int) link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
@@ -187,5 +195,51 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
  */
 int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path);
 
-int retrieve_path_root_offset(const char *path);
+int gitfo_retrieve_path_root_offset(const char *path);
+
+/*
+ * path = Canonical absolute path
+ * prefix_list = Colon-separated list of absolute paths
+ *
+ * Determines, for each path in prefix_list, whether the "prefix" really
+ * is an ancestor directory of path.  Returns the length of the longest
+ * ancestor directory, excluding any trailing slashes, or
+ * gitfo_retrieve_path_ceiling_offset(path) + 1 if no prefix
+ * is an ancestor.  (Note that this means 1 is returned if prefix_list is
+ * "/".) "/foo" is not considered an ancestor of "/foobar".  Directories
+ * are not considered to be their own ancestors.  path must be in a
+ * canonical form: empty components, or "." or ".." components are not
+ * allowed.  prefix_list may be null, which is like "".
+ */
+int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list);
+
+/*
+ * Compute an absolute symlinks free and posixified path from a given path (must exists).
+ * Posixified means that '/' are used as directory separators.
+ * The entered path must exists in the filesystem, and may be relative or absolute.
+ *
+ * @param path path to be resolved (must exists in the filesystem).
+ * @param buffer_out buffer to populate with the normalized path
+ * (must be at least GIT_PATH_MAX long)
+ * @return
+ * - GIT_SUCCESS on success;
+ * - GIT_ERROR on error (and then buffer_out contains the path causing the error)
+ */
+int gitfo_realpath(const char *path, char *buffer_out);
+
+#ifdef GIT__WIN32
+GIT_INLINE(int) gitfo_has_dos_drive_prefix(const char path)
+{
+	return isalpha(path[0]) && (path[1] == ':');
+}
+#endif
+
+GIT_INLINE(int) gitfo_is_absolute_path(const char *path)
+{
+	#ifdef GIT__WIN32
+		return gitfo_has_dos_drive_prefix(path);
+	#else
+		return path[0] == '/';
+	#endif
+}
 #endif /* INCLUDE_fileops_h__ */

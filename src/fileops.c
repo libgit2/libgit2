@@ -301,15 +301,26 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+static void posixify_path(char *path)
+{
+	#if GIT_PLATFORM_PATH_SEP != '/'
+		while (*path) {
+			if (*path == GIT_PLATFORM_PATH_SEP)
+				*path = '/';
 
-int retrieve_path_root_offset(const char *path)
+			path++;
+		}
+	#endif
+}
+
+int gitfo_retrieve_path_root_offset(const char *path)
 {
 	int offset = 0;
 
 #ifdef GIT_WIN32
 
 	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(path[0]) && (path[1] == ':'))
+	if (gitfo_has_dos_drive_prefix(path))
 		offset += 2;
 
 #endif
@@ -318,6 +329,46 @@ int retrieve_path_root_offset(const char *path)
 		return offset;
 
 	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
+}
+
+int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list)
+{
+	assert(path);
+
+	char buf[GIT_PATH_MAX + 1];
+	char buf2[GIT_PATH_MAX + 1];
+	const char *ceil, *sep;
+	int len, max_len = -1;
+	int min_len = gitfo_retrieve_path_root_offset(path) + 1;
+
+	if (prefix_list == NULL || !strcmp(path, "/"))
+		return min_len;
+
+	for (sep = ceil = prefix_list; *sep; ceil = sep + 1) {
+		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
+		len = sep - ceil;
+
+		if (len == 0 || len > GIT_PATH_MAX || !gitfo_is_absolute_path(ceil))
+			continue;
+
+		strlcpy(buf, ceil, len+1);
+		posixify_path(buf);
+		if (gitfo_prettify_dir_path(buf2, sizeof(buf2), buf) < GIT_SUCCESS)
+			continue;
+
+		len = strlen(buf2);
+		if (len > 0 && buf2[len-1] == '/')
+			buf[--len] = '\0';
+
+		if (!strncmp(path, buf2, len) &&
+			path[len] == '/' &&
+			len > max_len)
+		{
+			max_len = len;
+		}
+	}
+
+	return max_len <= min_len ? min_len : max_len;
 }
 
 
@@ -333,7 +384,7 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	error = GIT_SUCCESS;
 	pp = path_copy;
 
-	root_path_offset = retrieve_path_root_offset(pp);
+	root_path_offset = gitfo_retrieve_path_root_offset(pp);
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
@@ -367,7 +418,7 @@ static int retrieve_previous_path_component_start(const char *path)
 {
 	int offset, len, root_offset, start = 0;
 
-	root_offset = retrieve_path_root_offset(path);
+	root_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_offset > -1)
 		start += root_offset;
 
@@ -402,7 +453,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 	buffer_end = path + strlen(path);
 	buffer_out_start = buffer_out;
 
-	root_path_offset = retrieve_path_root_offset(path);
+	root_path_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_path_offset < 0) {
 		error = gitfo_getcwd(buffer_out, size);
 		if (error < GIT_SUCCESS)
@@ -519,16 +570,6 @@ int gitfo_cmp_path(const char *name1, int len1, int isdir1,
 	return 0;
 }
 
-static void posixify_path(char *path)
-{
-	while (*path) {
-		if (*path == '\\')
-			*path = '/';
-
-		path++;
-	}
-}
-
 int gitfo_getcwd(char *buffer_out, size_t size)
 {
 	char *cwd_buffer;
@@ -547,6 +588,18 @@ int gitfo_getcwd(char *buffer_out, size_t size)
 	posixify_path(buffer_out);
 
 	git__joinpath(buffer_out, buffer_out, "");	//Ensure the path ends with a trailing slash
+
+	return GIT_SUCCESS;
+}
+
+int gitfo_realpath(const char *path, char *buffer_out)
+{
+	assert(buffer_out);
+
+	if (!realpath(path, buffer_out))
+		git__throw(GIT_EOSERR, "Failed to retrieve real path: %s causing errors", buffer_out);
+
+	posixify_path(buffer_out);
 
 	return GIT_SUCCESS;
 }
