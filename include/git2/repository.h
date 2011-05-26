@@ -133,6 +133,22 @@ GIT_EXTERN(int) git_repository_open3(git_repository **repository,
 		const char *git_work_tree);
 
 /**
+ * Look for a git repository and open it. The lookup start in the current working
+ * directory and then goes to parent folders if no repository is found. The lookup
+ * ends when the first repository is found or when we can't perform the lookup any
+ * further.
+ *
+ *	The method will automatically detect if the repository is bare (if there is
+ *	a repository).
+ *
+ * @param start_path The initial path for the lookup.
+ * @parent repository_path A pointer to the string to store the found repository
+ * (if success) or NULL otherwise.
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_repository_discover(const char *start_path, char **repository_path);
+
+/**
  * Get the object database behind a Git repository
  *
  * @param repo a repository object

@@ -32,6 +32,7 @@
 #include "tag.h"
 #include "blob.h"
 #include "fileops.h"
+#include "git2/environment.h"
 
 #include "refs.h"
 
@@ -92,6 +93,7 @@ static int assign_repository_dirs(
 	if (git_work_tree == NULL)
 		repo->is_bare = 1;
 	else {
+		repo->is_bare = 0;
 		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_work_tree);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to open repository");
@@ -299,6 +301,18 @@ cleanup:
 	return git__rethrow(error, "Failed to open repository");
 }
 
+void git_repository__free_dirs(git_repository *repo)
+{
+	free(repo->path_workdir);
+	repo->path_workdir = NULL;
+	free(repo->path_index);
+	repo->path_index = NULL;
+	free(repo->path_repository);
+	repo->path_repository = NULL;
+	free(repo->path_odb);
+	repo->path_odb = NULL;
+}
+
 void git_repository_free(git_repository *repo)
 {
 	if (repo == NULL)
@@ -306,11 +320,7 @@ void git_repository_free(git_repository *repo)
 
 	git_cache_free(&repo->objects);
 	git_repository__refcache_free(&repo->references);
-
-	free(repo->path_workdir);
-	free(repo->path_index);
-	free(repo->path_repository);
-	free(repo->path_odb);
+	git_repository__free_dirs(repo);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
@@ -321,6 +331,103 @@ void git_repository_free(git_repository *repo)
 	}
 
 	free(repo);
+}
+
+int git_repository_discover(const char *start_path, char **repository_path)
+{
+	assert(start_path && repository_path);
+
+	*repository_path = NULL;
+	int error = GIT_SUCCESS;
+	git_repository repo;
+	memset(&repo, 0x0, sizeof(git_repository));
+
+	char bare_path[GIT_PATH_MAX];
+	char normal_path[GIT_PATH_MAX];
+	char *lookup_path = normal_path;
+	int across_filesystem;
+	dev_t current_device;
+	struct stat path_info;
+
+	if (git_config_get_env_bool(GIT_DISCOVERY_ACROSS_FILESYSTEM_ENVIRONMENT, &across_filesystem) < GIT_SUCCESS)
+		across_filesystem = 0;
+
+	error = gitfo_realpath(start_path, bare_path);
+
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (!across_filesystem) {
+		if (gitfo_stat(bare_path, &path_info)) {
+			error = GIT_EOSERR;
+			goto cleanup;
+		}
+		current_device = path_info.st_dev;
+	}
+
+	char *ceiling_dirs = getenv(GIT_CEILING_DIRECTORIES_ENVIRONMENT);
+	int ceiling_offset = gitfo_retrieve_path_ceiling_offset(bare_path, ceiling_dirs);
+	git__joinpath(normal_path, bare_path, DOT_GIT);
+
+	while(1){
+		error = guess_repository_dirs(&repo, lookup_path);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		error = check_repository_dirs(&repo);
+		if (error < GIT_SUCCESS) {
+			if (error == GIT_ENOTAREPO) {
+				git_repository__free_dirs(&repo);
+
+				if (lookup_path == normal_path) {
+					lookup_path = bare_path;
+					continue;
+				} else {
+					if (!bare_path[ceiling_offset]) {
+						error = GIT_ENOTAREPO;
+						git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
+						goto cleanup;
+					}
+
+					if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
+						goto cleanup;
+
+					if (gitfo_stat(bare_path, &path_info)) {
+						error = GIT_EOSERR;
+						goto cleanup;
+					}
+
+					if (!across_filesystem) {
+						if (current_device != path_info.st_dev) {
+							error = GIT_ENOTAREPO;
+							git__throw(GIT_ENOTAREPO,"Not a git repository (or any parent up to mount parent %s)\n"
+								"Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM_ENVIRONMENT not set).", bare_path);
+							goto cleanup;
+						}
+						current_device = path_info.st_dev;
+					}
+
+					strcpy(bare_path, normal_path);
+					git__joinpath(normal_path, bare_path, DOT_GIT);
+					lookup_path = normal_path;
+
+					continue;
+				}
+			} else
+				goto cleanup;
+		}
+
+		break;
+	}
+
+	*repository_path = git__strdup(repo.path_repository);
+	git_repository__free_dirs(&repo);
+
+	return GIT_SUCCESS;
+
+cleanup:
+	git_repository__free_dirs(&repo);
+	return git__rethrow(error, "Failed to discover repository");
 }
 
 int git_repository_index(git_index **index_out, git_repository *repo)

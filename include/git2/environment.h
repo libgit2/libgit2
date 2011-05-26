@@ -22,38 +22,39 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifndef INCLUDE_git_environment_h__
+#define INCLUDE_git_environment_h__
 
-#ifndef INCLUDE_git_git_h__
-#define INCLUDE_git_git_h__
+#include "common.h"
 
-#define LIBGIT2_VERSION "0.12.0"
-#define LIBGIT2_VER_MAJOR 0
-#define LIBGIT2_VER_MINOR 12
-#define LIBGIT2_VER_REVISION 0
+/**
+ * @file git2/errors.h
+ * @brief Git environment variable names
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
 
-#include "git2/common.h"
-#include "git2/errors.h"
-#include "git2/zlib.h"
+/**
+ * The environment variable name to specify the git repository.
+ */
+#define GIT_DIR_ENVIRONMENT "GIT_DIR"
 
-#include "git2/types.h"
+/**
+ * The environment variable name to specify the working tree.
+ */
+#define GIT_WORK_TREE_ENVIRONMENT "GIT_WORK_TREE"
 
-#include "git2/oid.h"
-#include "git2/signature.h"
-#include "git2/odb.h"
+/**
+ * The environment variable name to specify the git ceiling directories
+ */
+#define GIT_CEILING_DIRECTORIES_ENVIRONMENT "GIT_CEILING_DIRECTORIES"
 
-#include "git2/repository.h"
-#include "git2/revwalk.h"
-#include "git2/refs.h"
+/**
+ * The environment variable name to enable the git repository discovery across filesystem.
+ */
+#define GIT_DISCOVERY_ACROSS_FILESYSTEM_ENVIRONMENT "GIT_DISCOVERY_ACROSS_FILESYSTEM"
 
-#include "git2/object.h"
-#include "git2/blob.h"
-#include "git2/commit.h"
-#include "git2/tag.h"
-#include "git2/tree.h"
-
-#include "git2/index.h"
-#include "git2/config.h"
-
-#include "git2/environment.h"
-
+/** @} */
+GIT_END_DECL
 #endif
