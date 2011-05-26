@@ -218,15 +218,11 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
  * Getters
  ***********/
 
-int git_config_get_long(git_config *cfg, const char *name, long int *out)
+int git_config__parse_long(const char *name, const char *value, long int *out)
 {
-	const char *value, *num_end;
+	const char *num_end;
 	int ret;
 	long int num;
-
-	ret = git_config_get_string(cfg, name, &value);
-	if (ret < GIT_SUCCESS)
-		return git__rethrow(ret, "Failed to get value for %s", name);
 
 	ret = git__strtol32(&num, value, &num_end, 0);
 	if (ret < GIT_SUCCESS)
@@ -256,27 +252,42 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 	return GIT_SUCCESS;
 }
 
-int git_config_get_int(git_config *cfg, const char *name, int *out)
+int git_config_get_long(git_config *cfg, const char *name, long int *out)
+{
+	const char *value;
+	int ret = git_config_get_string(cfg, name, &value);
+
+	if (ret < GIT_SUCCESS)
+		return git__rethrow(ret, "Failed to get value for %s", name);
+
+	return git_config__parse_long(name, value, out);
+}
+
+int git_config__parse_int(const char *name, const char *value, int *out)
 {
 	long int tmp;
 	int ret;
 
-	ret = git_config_get_long(cfg, name, &tmp);
+	ret = git_config__parse_long(name, value, &tmp);
 
 	*out = (int) tmp;
 
 	return ret;
 }
 
-int git_config_get_bool(git_config *cfg, const char *name, int *out)
+int git_config_get_int(git_config *cfg, const char *name, int *out)
 {
 	const char *value;
-	int error = GIT_SUCCESS;
+	int ret = git_config_get_string(cfg, name, &value);
 
-	error = git_config_get_string(cfg, name, &value);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to get value for %s", name);
+	if (ret < GIT_SUCCESS)
+		return git__rethrow(ret, "Failed to get value for %s", name);
 
+	return git_config__parse_int(name, value, out);
+}
+
+int git_config__parse_bool(const char *name, const char *value, int *out)
+{
 	/* A missing value means true */
 	if (value == NULL) {
 		*out = 1;
@@ -297,13 +308,36 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 	}
 
 	/* Try to parse it as an integer */
-	error = git_config_get_int(cfg, name, out);
+	int error = git_config__parse_int(name, value , out);
 	if (error == GIT_SUCCESS)
 		*out = !!(*out);
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to get value for %s", name);
 	return error;
+}
+
+int git_config_get_env_bool(const char *name, int *out)
+{
+	char *value = getenv(name);
+
+	if (!value) {
+		return git__rethrow(GIT_ENOTFOUND, "Environment variable %s is not set", name);
+	}
+
+	return git_config__parse_bool(name, value, out);
+}
+
+int git_config_get_bool(git_config *cfg, const char *name, int *out)
+{
+	const char *value;
+	int error = GIT_SUCCESS;
+
+	error = git_config_get_string(cfg, name, &value);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to get value for %s", name);
+
+	return git_config__parse_bool(name, value, out);
 }
 
 int git_config_get_string(git_config *cfg, const char *name, const char **out)
