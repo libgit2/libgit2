@@ -69,6 +69,7 @@ GIT_BEGIN_DECL
  */
 #define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
 #define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
+#define GIT_IDXENTRY_STAGE(entry)      (((entry)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
 /* GIT_IDXENTRY_EXTENDED2 is for future extension */
 #define GIT_IDXENTRY_EXTENDED2         (1 << 15)
 
