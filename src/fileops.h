@@ -70,6 +70,9 @@ extern int gitfo_isdir(const char *path);
 extern int gitfo_mkdir_recurs(const char *path, int mode);
 extern int gitfo_mkdir_2file(const char *path);
 #define gitfo_close(fd) close(fd)
+extern int gitfo_lock_exclusive(int fd);
+extern int gitfo_lock_shared(int fd);
+extern int gitfo_unlock(int fd);
 
 extern int gitfo_read(git_file fd, void *buf, size_t cnt);
 extern int gitfo_write(git_file fd, void *buf, size_t cnt);

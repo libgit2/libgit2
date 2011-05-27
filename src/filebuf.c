@@ -49,7 +49,8 @@ static int lock_file(git_filebuf *file, int flags)
 	if (file->fd < 0)
 		return git__throw(GIT_EOSERR, "Failed to create lock");
 
-	/* TODO: do a flock() in the descriptor file_lock */
+	if (gitfo_lock_exclusive(file->fd) < 0)
+		return git__throw(GIT_EOSERR, "Failed to acquire lock");
 
 	if ((flags & GIT_FILEBUF_APPEND) && gitfo_exists(file->path_original) == 0) {
 		git_file source;
@@ -68,6 +69,9 @@ static int lock_file(git_filebuf *file, int flags)
 
 		gitfo_close(source);
 	}
+
+	gitfo_unlock(file->fd);
+	gitfo_close(file->fd);
 
 	return GIT_SUCCESS;
 }

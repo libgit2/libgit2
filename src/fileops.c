@@ -301,6 +301,21 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+int gitfo_lock_exclusive(int fd)
+{
+	return flock(fd, LOCK_EX);
+}
+
+int gitfo_lock_shared(int fd)
+{
+	return flock(fd, LOCK_SH);
+}
+
+int gitfo_unlock(int fd)
+{
+	return flock(fd, LOCK_UN);
+}
+
 static void posixify_path(char *path)
 {
 	#if GIT_PLATFORM_PATH_SEP != '/'
