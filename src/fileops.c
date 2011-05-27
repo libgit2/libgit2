@@ -619,3 +619,16 @@ int gitfo_realpath(const char *path, char *buffer_out)
 
 	return GIT_SUCCESS;
 }
+
+dev_t gitfo_retrieve_device(const char *path, dev_t *device)
+{
+	assert(device);
+
+	struct stat path_info;
+	if (gitfo_stat(path, &path_info))
+		return git__throw(GIT_EOSERR, "Failed to get file informations: %s", path);
+
+	*device = path_info.st_dev;
+
+	return GIT_SUCCESS;
+}

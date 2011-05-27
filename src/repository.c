@@ -347,7 +347,6 @@ int git_repository_discover(const char *start_path, char **repository_path)
 	char *lookup_path = normal_path;
 	int across_filesystem;
 	dev_t current_device;
-	struct stat path_info;
 
 	if (git_config_get_env_bool(GIT_DISCOVERY_ACROSS_FILESYSTEM_ENVIRONMENT, &across_filesystem) < GIT_SUCCESS)
 		across_filesystem = 0;
@@ -358,11 +357,10 @@ int git_repository_discover(const char *start_path, char **repository_path)
 		goto cleanup;
 
 	if (!across_filesystem) {
-		if (gitfo_stat(bare_path, &path_info)) {
-			error = GIT_EOSERR;
+		error = gitfo_retrieve_device(bare_path, &current_device);
+
+		if (error < GIT_SUCCESS)
 			goto cleanup;
-		}
-		current_device = path_info.st_dev;
 	}
 
 	char *ceiling_dirs = getenv(GIT_CEILING_DIRECTORIES_ENVIRONMENT);
@@ -384,27 +382,26 @@ int git_repository_discover(const char *start_path, char **repository_path)
 					continue;
 				} else {
 					if (!bare_path[ceiling_offset]) {
-						error = GIT_ENOTAREPO;
-						git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
+						error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
 						goto cleanup;
 					}
 
 					if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
 						goto cleanup;
 
-					if (gitfo_stat(bare_path, &path_info)) {
-						error = GIT_EOSERR;
-						goto cleanup;
-					}
-
 					if (!across_filesystem) {
-						if (current_device != path_info.st_dev) {
-							error = GIT_ENOTAREPO;
-							git__throw(GIT_ENOTAREPO,"Not a git repository (or any parent up to mount parent %s)\n"
+						dev_t new_device;
+						error = gitfo_retrieve_device(normal_path, &new_device);
+
+						if (error < GIT_SUCCESS)
+							goto cleanup;
+
+						if (current_device != new_device) {
+							error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any parent up to mount parent %s)\n"
 								"Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM_ENVIRONMENT not set).", bare_path);
 							goto cleanup;
 						}
-						current_device = path_info.st_dev;
+						current_device = new_device;
 					}
 
 					strcpy(bare_path, normal_path);

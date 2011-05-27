@@ -91,6 +91,7 @@ extern int gitfo_mv_force(const char *from, const char *to);
 
 #define gitfo_stat(p,b) stat(p, b)
 #define gitfo_fstat(f,b) fstat(f, b)
+extern dev_t gitfo_retrieve_device(const char *path, dev_t *device);
 
 #define gitfo_unlink(p) unlink(p)
 #define gitfo_rmdir(p) rmdir(p)
