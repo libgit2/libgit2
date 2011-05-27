@@ -543,7 +543,8 @@ int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
 		return error;	/* The callee already takes care of setting the correct error message. */
 
 	path_len = strlen(buffer_out);
-	if (path_len < 2)	/* TODO: Fixme. We should also take of detecting Windows rooted path (probably through usage of retrieve_path_root_offset) */
+	int root_offset = gitfo_retrieve_path_root_offset(buffer_out);
+	if (root_offset >= 0 && path_len <= root_offset + 1)
 		return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 
 	/* Remove the trailing slash */
