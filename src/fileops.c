@@ -414,7 +414,7 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	return GIT_SUCCESS;
 }
 
-static int retrieve_previous_path_component_start(const char *path)
+static int gitfo_retrieve_previous_path_component_start(const char *path)
 {
 	int offset, len, root_offset, start = 0;
 
@@ -498,7 +498,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 			buffer_out -= segment_len;
 
 			*buffer_out ='\0';
-			len = retrieve_previous_path_component_start(buffer_out_start);
+			len = gitfo_retrieve_previous_path_component_start(buffer_out_start);
 
 			/* Are we escaping out of the root dir? */
 			if (len < 0)
