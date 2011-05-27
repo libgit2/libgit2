@@ -1364,6 +1364,20 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 	return GIT_SUCCESS;
 }
 
+int pack_backend__read_unique_short_oid(git_oid *out_oid, void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend,
+					const git_oid *short_oid, unsigned int len)
+{
+	if (len >= GIT_OID_HEXSZ) {
+		int error = pack_backend__read(buffer_p, len_p, type_p, backend, short_oid);
+		if (error == GIT_SUCCESS)
+			git_oid_cpy(out_oid, short_oid);
+
+		return error;
+	} else if (len < GIT_OID_HEXSZ) {
+		return git__throw(GIT_ENOTIMPLEMENTED, "Pack backend cannot search objects from short oid");
+	}
+}
+
 int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
 {
 	struct pack_entry e;
@@ -1418,6 +1432,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	}
 
 	backend->parent.read = &pack_backend__read;
+	backend->parent.read_unique_short_oid = &pack_backend__read_unique_short_oid;
 	backend->parent.read_header = NULL;
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.free = &pack_backend__free;

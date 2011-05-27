@@ -524,6 +524,20 @@ int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_o
 	return GIT_SUCCESS;
 }
 
+int loose_backend__read_unique_short_oid(git_oid *out_oid, void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend,
+					const git_oid *short_oid, unsigned int len)
+{
+	if (len >= GIT_OID_HEXSZ) {
+		int error = loose_backend__read(buffer_p, len_p, type_p, backend, short_oid);
+		if (error == GIT_SUCCESS)
+			git_oid_cpy(out_oid, short_oid);
+
+		return error;
+	} else if (len < GIT_OID_HEXSZ) {
+		return git__throw(GIT_ENOTIMPLEMENTED, "Loose backend cannot search objects from short oid");
+	}
+}
+
 int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 {
 	char object_path[GIT_PATH_MAX];
@@ -663,6 +677,7 @@ int git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir
 	backend->fsync_object_files = 0;
 
 	backend->parent.read = &loose_backend__read;
+	backend->parent.read_unique_short_oid = &loose_backend__read_unique_short_oid;
 	backend->parent.read_header = &loose_backend__read_header;
 	backend->parent.writestream = &loose_backend__stream;
 	backend->parent.exists = &loose_backend__exists;
