@@ -488,6 +488,48 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 	return error;
 }
 
+int git_odb_read_unique_short_oid(git_oid *out_oid, git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
+{
+	unsigned int i;
+	int error = GIT_ENOTFOUND;
+	git_rawobj raw;
+	int found = 0;
+
+	assert(out && db && id && len > 0);
+
+	if (len > GIT_OID_HEXSZ)
+		len = GIT_OID_HEXSZ;
+
+	if (len == GIT_OID_HEXSZ) {
+		*out = git_cache_get(&db->cache, short_id);
+		if (*out != NULL) {
+			git_oid_cpy(out_oid, short_id);
+			return GIT_SUCCESS;
+		}
+	}
+
+	for (i = 0; i < db->backends.length && found < 2; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (b->read != NULL) {
+			error = b->read_unique_short_oid(out_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
+			if (error == GIT_SUCCESS)
+				found++;
+		}
+	}
+
+	if (found == 1) {
+		*out = git_cache_try_store(&db->cache, new_odb_object(out_oid, &raw));
+	} else if (found > 1) {
+		return git__rethrow(GIT_EAMBIGUOUSOIDPREFIX, "Ambiguous sha1");
+	} else {
+		return git__rethrow(GIT_ENOTFOUND, "Failed to read object");
+	}
+
+	return GIT_SUCCESS;
+}
+
 int git_odb_write(git_oid *oid, git_odb *db, const void *data, size_t len, git_otype type)
 {
 	unsigned int i;
