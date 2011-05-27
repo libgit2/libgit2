@@ -119,6 +119,9 @@ typedef enum {
 
 	/** The specified object has its data corrupted */
 	GIT_EOBJCORRUPTED = -28,
+
+	/** The given short oid is ambiguous */
+	GIT_EAMBIGUOUSOIDPREFIX = -29,
 } git_error;
 
 /**

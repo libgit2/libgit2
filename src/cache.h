@@ -42,6 +42,11 @@ GIT_INLINE(int) git_cached_obj_compare(git_cached_obj *obj, const git_oid *oid)
 	return git_oid_cmp(&obj->oid, oid);
 }
 
+GIT_INLINE(int) git_cached_obj_match(unsigned int len, git_cached_obj *obj, const git_oid *oid)
+{
+	return git_oid_match(len, &obj->oid, oid);
+}
+
 GIT_INLINE(void) git_cached_obj_incref(git_cached_obj *obj)
 {
 	git_atomic_inc(&obj->refcount);
