@@ -30,6 +30,20 @@
 #include "common.h"
 #include "util.h"
 
+static int flush_pkt(git_pkt **out)
+{
+	git_pkt *pkt;
+
+	pkt = git__malloc(sizeof(git_pkt));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_FLUSH;
+	*out = pkt;
+
+	return GIT_SUCCESS;
+}
+
 /*
  * As per the documentation, the syntax is:
  *
@@ -54,24 +68,19 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 	if (error < GIT_SUCCESS)
 		return error;
 
+	line = num_end;
 	/*
 	 * TODO: How do we deal with empty lines? Try again? with the next
 	 * line?
 	 */
 	if (len == 4) {
-		*out = num_end;
+		*out = line;
 		return GIT_SUCCESS;
 	}
 
-	if (len == 0) { /* Flush, should go into its own fn */
-		pkt = git__malloc(sizeof(git_pkt));
-		if (pkt == NULL)
-			return GIT_ENOMEM;
-
-		pkt->type = GIT_PKT_FLUSH;
-		*head = pkt;
-		*out = num_end;
-		return GIT_SUCCESS;
+	if (len == 0) { /* Flush pkt */
+		*out = line;
+		return flush_pkt(head);
 	}
 
 	/* TODO: Write the rest of this thing */
