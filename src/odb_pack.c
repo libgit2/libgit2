@@ -268,6 +268,8 @@ static off_t nth_packed_object_offset(const struct pack_file *p, uint32_t n);
  * a prefix of an identifier.
  * Throws GIT_EAMBIGUOUSOIDPREFIX if short oid
  * is ambiguous within the pack.
+ * This method assumes that len is between
+ * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
  */
 static int pack_entry_find_offset(
 		off_t *offset_out,
@@ -289,6 +291,8 @@ static int pack_entry_find(struct pack_entry *e,
  * a prefix of an identifier.
  * Throws GIT_EAMBIGUOUSOIDPREFIX if short oid
  * is ambiguous.
+ * This method assumes that len is between
+ * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
  */
 static int pack_entry_find_unique_short_oid(struct pack_entry *e,
 					struct pack_backend *backend,

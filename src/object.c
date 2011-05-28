@@ -104,8 +104,8 @@ int git_object_lookup_short_oid(git_object **object_out, git_repository *repo, c
 
 	assert(repo && object_out && id);
 
-	if (len == 0)
-		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to lookup object. Prefix length should be not be 0.");
+	if (len < GIT_OID_MINPREFIXLEN)
+		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
 	if (len > GIT_OID_HEXSZ) {
 		len = GIT_OID_HEXSZ;
 	}

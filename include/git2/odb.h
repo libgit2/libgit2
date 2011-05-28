@@ -132,9 +132,10 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * This method queries all available ODB backends
  * trying to match the 'len' first hexadecimal
  * characters of the 'short_id'.
- * The remaining bits (GIT_OID_HEXSZ-len)*4 bits of
+ * The remaining (GIT_OID_HEXSZ-len)*4 bits of
  * 'short_id' must be 0s.
- * The prefix must be long enough to identify
+ * 'len' must be at least GIT_OID_MINPREFIXLEN,
+ * and the prefix must be long enough to identify
  * a unique object in all the backends; the
  * method will fail otherwise.
  *
