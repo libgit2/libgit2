@@ -28,7 +28,7 @@
 enum git_pkt_type {
 	GIT_PKT_CMD,
 	GIT_PKT_FLUSH,
-	GIT_PKT_HEAD,
+	GIT_PKT_REF,
 	GIT_PKT_HAVE,
 };
 
@@ -45,7 +45,7 @@ struct git_pkt_cmd {
 };
 
 /* This is a pkt-line with some info in it */
-struct git_pkt_head {
+struct git_pkt_ref {
 	enum git_pkt_type type;
 	git_remote_head head;
 };

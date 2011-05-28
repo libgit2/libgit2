@@ -186,7 +186,7 @@ typedef struct git_headarray git_headarray;
 typedef enum git_pkt_type git_pkt_type;
 typedef struct git_pkt git_pkt;
 typedef struct git_pkt_cmd git_pkt_cmd;
-typedef struct git_pkt_head git_pkt_head;
+typedef struct git_pkt_ref git_pkt_ref;
 
 /** @} */
 GIT_END_DECL

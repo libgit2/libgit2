@@ -45,6 +45,53 @@ static int flush_pkt(git_pkt **out)
 }
 
 /*
+ * Parse an other-ref line.
+ */
+int ref_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_ref *pkt;
+	int error;
+	size_t name_len;
+
+	pkt = git__malloc(sizeof(git_pkt_ref));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_REF;
+	error = git_oid_fromstr(&pkt->head.oid, line);
+	if (error < GIT_SUCCESS) {
+		error = git__throw(error, "Failed to parse reference ID");
+		goto out;
+	}
+
+	/* Check for a bit of consistency */
+	if (line[GIT_OID_HEXSZ] != ' ') {
+		error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse ref. No SP");
+		goto out;
+	}
+
+	line += GIT_OID_HEXSZ + 1;
+
+	name_len = len - (GIT_OID_HEXSZ + 1);
+	if (line[name_len - 1] == '\n')
+		--name_len;
+
+	pkt->head.name = git__strndup(line, name_len);
+	if (pkt->head.name == NULL) {
+		error = GIT_ENOMEM;
+		goto out;
+	}
+
+out:
+	if (error < GIT_SUCCESS)
+		free(pkt);
+	else
+		*out = (git_pkt *)pkt;
+
+	return error;
+}
+
+/*
  * As per the documentation, the syntax is:
  *
  * pkt-line    = data-pkt / flush-pkt
@@ -64,7 +111,6 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 	const int num_len = 4;
 	char *num;
 	const char *num_end;
-	git_pkt *pkt;
 
 	num = git__strndup(line, num_len);
 	if (num == NULL)
@@ -73,7 +119,7 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 	error = git__strtol32(&len, num, &num_end, 16);
 	if (error < GIT_SUCCESS) {
 		free(num);
-		return error;
+		return git__throw(error, "Failed to parse pkt length");
 	}
 	if (num_end - num != num_len) {
 		free(num);
@@ -96,7 +142,14 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 		return flush_pkt(head);
 	}
 
-	/* TODO: Write the rest of this thing */
+	len -= num_len; /* the length includes the space for the length */
 
-	return GIT_SUCCESS;
+	/*
+	 * For now, we're just going to assume we're parsing references
+	 */
+
+	error = ref_pkt(head, line, len);
+	*out = line + len;
+
+	return error;
 }
