@@ -65,9 +65,9 @@ GIT_EXTERN(int) git_object_lookup(git_object **object, git_repository *repo, con
  * The object obtained will be so that its identifier
  * matches the first 'len' hexadecimal characters
  * (packets of 4 bits) of the given 'id'.
- * 'len' must be long enough to identify a unique
- * object matching the prefix; otherwise the method will
- * fail.
+ * 'len' must be at least GIT_OID_MINPREFIXLEN, and
+ * long enough to identify a unique object matching
+ * the prefix; otherwise the method will fail.
  *
  * The generated reference is owned by the repository and
  * should be closed with the `git_object_close` method

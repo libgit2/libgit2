@@ -43,6 +43,10 @@ GIT_BEGIN_DECL
 /** Size (in bytes) of a hex formatted oid */
 #define GIT_OID_HEXSZ (GIT_OID_RAWSZ * 2)
 
+/** Minimum length (in number of hex characters,
+ * i.e. packets of 4 bits) of an oid prefix */
+#define GIT_OID_MINPREFIXLEN 4
+
 /** Unique identity of any object (commit, tree, blob, tag). */
 typedef struct {
 	/** raw binary formatted id */
