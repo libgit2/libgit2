@@ -644,7 +644,7 @@ BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing r
 	/* An existing reference... */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
 
-	/* Can not be renamed to the name of another existing reference. */
+	/* Can be force-renamed to the name of another existing reference. */
 	must_pass(git_reference_rename_f(looked_up_ref, packed_test_head_name));
 
 	/* Check we actually renamed it */
