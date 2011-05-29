@@ -177,15 +177,20 @@ int git_oid_match_raw(unsigned int len, const unsigned char *a, const unsigned c
 {
         do { 
                 if (*a != *b)
-                        return 0;
+                        return 1;
                 a++; 
                 b++; 
                 len -= 2;
         } while (len > 1);
         if (len)
                 if ((*a ^ *b) & 0xf0)
-                        return 0;
-        return 1;
+                        return 1;
+        return 0;
+}
+
+int git_oid_match_hex(unsigned int len, const unsigned char *a, const unsigned char *b)
+{
+	return memcmp(a, b, len);
 }
 
 int gid_oid_match(unsigned int len, git_oid *a, git_oid *b)
