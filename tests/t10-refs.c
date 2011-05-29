@@ -654,6 +654,38 @@ BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing r
 	close_temp_repo(repo);
 END_TEST
 
+static const char *ref_one_name = "refs/heads/one/branch";
+static const char *ref_one_name_new = "refs/heads/two/branch";
+static const char *ref_two_name = "refs/heads/two";
+
+BEGIN_TEST(rename6, "can not overwrite name of packed reference when renaming")
+	git_reference *ref, *ref_one, *ref_one_new, *ref_two;
+	git_repository *repo;
+	git_oid id;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+	must_be_true(ref->type & GIT_REF_OID);
+
+	git_oid_cpy(&id, git_reference_oid(ref));
+
+	/* Create loose references */
+	must_pass(git_reference_create_oid(&ref_one, repo, ref_one_name, &id));
+	must_pass(git_reference_create_oid(&ref_two, repo, ref_two_name, &id));
+
+	/* Pack everything */
+	must_pass(git_reference_packall(repo));
+
+	/*  Attempt to create illegal reference */
+	must_fail(git_reference_create_oid(&ref_one_new, repo, ref_one_name_new, &id));
+
+	/* Reference couldn't be renamed so this cannot work */
+	must_fail(git_reference_lookup(&ref_one_new, repo, ref_one_name_new));
+
+	close_temp_repo(repo);
+END_TEST
+
 BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove both tracks in the filesystem")
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
@@ -935,6 +967,7 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename3);
 	ADD_TEST(rename4);
 	ADD_TEST(rename5);
+	ADD_TEST(rename6);
 
 	ADD_TEST(delete0);
 	ADD_TEST(list0);
