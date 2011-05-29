@@ -54,6 +54,20 @@ typedef struct loose_backend {
 	char *objects_dir;
 } loose_backend;
 
+/* State structure for exploring directories,
+ * in order to locate objects matching a short oid.
+ */
+typedef struct {
+	size_t dir_len;
+	unsigned char short_oid[GIT_OID_HEXSZ]; /* hex formatted oid to match */
+	unsigned int short_oid_len;
+	int found;				/* number of matching
+						 * objects already found */
+	unsigned char res_oid[GIT_OID_HEXSZ];	/* hex formatted oid of
+						 * the object found */
+} loose_locate_object_state;
+
+
 
 /***********************************************************
  *
@@ -465,6 +479,84 @@ static int locate_object(char *object_location, loose_backend *backend, const gi
 	return gitfo_exists(object_location);
 }
 
+/* Explore an entry of a directory and see if it matches a short oid */
+int fn_locate_object_short_oid(void *state, char *pathbuf) {
+	loose_locate_object_state *sstate = (loose_locate_object_state *)state;
+
+	size_t pathbuf_len = strlen(pathbuf);
+	if (pathbuf_len - sstate->dir_len != GIT_OID_HEXSZ - 2) {
+		/* Entry cannot be an object. Continue to next entry */
+		return GIT_SUCCESS;
+	}
+
+	if (!gitfo_exists(pathbuf) && gitfo_isdir(pathbuf)) {
+		/* We are already in the directory matching the 2 first hex characters */
+		if (!git_oid_match_hex(sstate->short_oid_len-2, sstate->short_oid+2, pathbuf+sstate->dir_len)) {
+			if (!sstate->found) {
+				sstate->res_oid[0] = sstate->short_oid[0];
+				sstate->res_oid[1] = sstate->short_oid[1];
+				memcpy(sstate->res_oid+2, pathbuf+sstate->dir_len, GIT_OID_HEXSZ-2);
+			}
+			sstate->found++;
+		}
+	}
+	if (sstate->found > 1) {
+		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Ambiguous sha1 prefix within loose objects");
+	} else {
+		return GIT_SUCCESS;
+	}
+}
+
+/* Locate an object matching a given short oid */
+static int locate_object_short_oid(char *object_location, git_oid *res_oid, loose_backend *backend, const git_oid *short_oid, unsigned int len)
+{
+	char *objects_dir = backend->objects_dir;
+	size_t dir_len = strlen(objects_dir);
+	loose_locate_object_state state;
+	int error;
+
+	if (dir_len+43 > GIT_PATH_MAX)
+		return git__throw(GIT_ERROR, "Failed to locate object from short oid. Object path too long");
+
+	strcpy(object_location, objects_dir);
+
+	/* Add a separator if not already there */
+	if (object_location[dir_len-1] != '/')
+		object_location[dir_len++] = '/';
+
+	/* Convert raw oid to hex formatted oid */
+	git_oid_fmt(state.short_oid, short_oid);
+	/* Explore OBJ_DIR/xx/ where xx is the beginning of hex formatted short oid */
+	sprintf(object_location+dir_len, "%.2s/", state.short_oid);
+
+	/* Check that directory exists */
+	if (gitfo_exists(object_location) || gitfo_isdir(object_location))
+		return git__throw(GIT_ENOTFOUND, "Failed to locate object from short oid. Object not found");
+
+	state.dir_len = dir_len+3;
+	state.short_oid_len = len;
+	state.found = 0;
+	/* Explore directory to find a unique object matching short_oid */
+	error = gitfo_dirent(object_location, GIT_PATH_MAX, fn_locate_object_short_oid, &state);
+	if (error) {
+		return git__rethrow(error, "Failed to locate object from short oid");
+	}
+	if (!state.found) {
+		return git__throw(GIT_ENOTFOUND, "Failed to locate object from short oid. Object not found");
+	}
+	
+	/* Convert obtained hex formatted oid to raw */
+	error = git_oid_mkstr(res_oid, state.res_oid);
+	if (error) {
+		return git__rethrow(error, "Failed to locate object from short oid");
+	}
+
+	/* Update the location according to the oid obtained */
+	git_oid_pathfmt(object_location+dir_len, res_oid);
+
+	return GIT_SUCCESS;
+}
+
 
 
 
@@ -527,15 +619,36 @@ int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_o
 int loose_backend__read_unique_short_oid(git_oid *out_oid, void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend,
 					const git_oid *short_oid, unsigned int len)
 {
+	if (len < GIT_OID_MINPREFIXLEN)
+		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to read loose backend. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+
 	if (len >= GIT_OID_HEXSZ) {
+		/* We can fall back to regular read method */
 		int error = loose_backend__read(buffer_p, len_p, type_p, backend, short_oid);
 		if (error == GIT_SUCCESS)
 			git_oid_cpy(out_oid, short_oid);
 
 		return error;
-	} else if (len < GIT_OID_HEXSZ) {
-		return git__throw(GIT_ENOTIMPLEMENTED, "Loose backend cannot search objects from short oid");
+	} else {
+		char object_path[GIT_PATH_MAX];
+		git_rawobj raw;
+		int error;
+
+		assert(backend && short_oid);
+
+		if ((error = locate_object_short_oid(object_path, out_oid, (loose_backend *)backend, short_oid, len)) < 0) {
+			return git__rethrow(error, "Failed to read loose backend");
+		}
+
+		if ((error = read_loose(&raw, object_path)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to read loose backend");
+
+		*buffer_p = raw.data;
+		*len_p = raw.len;
+		*type_p = raw.type;
 	}
+
+	return GIT_SUCCESS;
 }
 
 int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
