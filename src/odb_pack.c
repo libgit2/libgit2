@@ -1011,7 +1011,7 @@ static int pack_entry_find_offset(
 		if (pos < p->num_objects) {
 			current = index + pos * stride;
 
-			if (git_oid_match_raw(len, short_oid->id, current)) {
+			if (!git_oid_match_raw(len, short_oid->id, current)) {
 				found = 1;
 			}
 		}
@@ -1020,7 +1020,7 @@ static int pack_entry_find_offset(
 		/* Check for ambiguousity */
 		const unsigned char *next = current + stride;
 
-		if (git_oid_match_raw(len, short_oid->id, next)) {
+		if (!git_oid_match_raw(len, short_oid->id, next)) {
 			found = 2;
 		}
 	}
@@ -1465,21 +1465,32 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 int pack_backend__read_unique_short_oid(git_oid *out_oid, void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend,
 					const git_oid *short_oid, unsigned int len)
 {
-	struct pack_entry e;
-	git_rawobj raw;
-	int error;
+	if (len < GIT_OID_MINPREFIXLEN)
+		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to read pack backend. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
 
-	if ((error = pack_entry_find_unique_short_oid(&e, (struct pack_backend *)backend, short_oid, len)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to read pack backend");
+	if (len >= GIT_OID_HEXSZ) {
+		/* We can fall back to regular read method */
+		int error = pack_backend__read(buffer_p, len_p, type_p, backend, short_oid);
+		if (error == GIT_SUCCESS)
+			git_oid_cpy(out_oid, short_oid);
 
-	if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to read pack backend");
+		return error;
+	} else {
+		struct pack_entry e;
+		git_rawobj raw;
+		int error;
 
-	*buffer_p = raw.data;
-	*len_p = raw.len;
-	*type_p = raw.type;
-	git_oid_cpy(out_oid, &e.sha1);
+		if ((error = pack_entry_find_unique_short_oid(&e, (struct pack_backend *)backend, short_oid, len)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to read pack backend");
 
+		if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to read pack backend");
+
+		*buffer_p = raw.data;
+		*len_p = raw.len;
+		*type_p = raw.type;
+		git_oid_cpy(out_oid, &e.sha1);
+	}
 
 	return GIT_SUCCESS;
 }
