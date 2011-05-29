@@ -142,7 +142,7 @@ GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
  * @param len the number of hex chars to compare
  * @param a first oid structure.
  * @param b second oid structure.
- * @return 1 in case of a match
+ * @return 0 in case of a match
  */
 GIT_EXTERN(int) gid_oid_match(unsigned int len, git_oid *a, git_oid *b);
 
