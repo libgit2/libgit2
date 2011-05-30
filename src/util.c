@@ -339,15 +339,20 @@ void git__joinpath_n(char *buffer_out, int count, ...)
 
 static char *strtok_raw(char *output, char *src, char *delimit, int keep)
 {
+	char *oldsrc = src;
+
 	while (*src && strchr(delimit, *src) == NULL)
 		*output++ = *src++;
 
-	*output = 0;
+	if (oldsrc == src)
+		return NULL;
 
-	if (keep)
-		return src;
-	else
-		return *src ? src+1 : src;
+	if (keep && *src)
+		*output++ = *src;
+
+	*output = '\0';
+
+	return *src ? src+1 : src;
 }
 
 char *git__strtok(char *output, char *src, char *delimit)
