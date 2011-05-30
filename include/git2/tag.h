@@ -135,7 +135,9 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *t);
  * Create a new tag in the repository from an OID
  *
  * @param oid Pointer where to store the OID of the
- *	newly created tag
+ *	newly created tag. If the tag already exists, this parameter
+ * will be the oid of the existed tag, and the function will
+ * return a GIT_EEXISTS error code.
  *
  * @param repo Repository where to store the tag
  *

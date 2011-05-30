@@ -205,8 +205,10 @@ static int tag_create(
 
 	switch (error) {
 	case GIT_SUCCESS:
-		if (!allow_ref_overwrite)
+		if (!allow_ref_overwrite) {
+			git_oid_cpy(oid, git_reference_oid(new_ref));
 			return git__throw(GIT_EEXISTS, "Tag already exists");
+		}
 		should_update_ref = 1;
 		
 		/* Fall trough */
