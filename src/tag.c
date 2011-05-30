@@ -206,7 +206,7 @@ static int tag_create(
 	switch (error) {
 	case GIT_SUCCESS:
 		if (!allow_ref_overwrite)
-			return GIT_EEXISTS;	
+			return git__throw(GIT_EEXISTS, "Tag already exists");
 		should_update_ref = 1;
 		
 		/* Fall trough */
@@ -215,7 +215,7 @@ static int tag_create(
 		break;
 
 	default:
-		return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
+		return git__rethrow(error, "Failed to create tag");
 	}
 
 	if (!git_odb_exists(repo->db, target))
