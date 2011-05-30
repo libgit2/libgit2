@@ -366,7 +366,9 @@ int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list
 		if (len == 0 || len > GIT_PATH_MAX || !gitfo_is_absolute_path(ceil))
 			continue;
 
-		strlcpy(buf, ceil, len+1);
+		memcpy(buf, ceil, len+1);
+		buf[len + 1] = '\0';
+
 		posixify_path(buf);
 		if (gitfo_prettify_dir_path(buf2, sizeof(buf2), buf) < GIT_SUCCESS)
 			continue;
