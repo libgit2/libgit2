@@ -174,6 +174,13 @@ BEGIN_TEST(config6, "test blank lines")
 	git_config_free(cfg);
 END_TEST
 
+BEGIN_TEST(config7, "test for invalid ext headers")
+	git_config *cfg;
+
+	must_fail(git_config_open_file(&cfg, CONFIG_BASE "/config7"));
+
+END_TEST
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
@@ -182,4 +189,5 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config4);
 	 ADD_TEST(config5);
 	 ADD_TEST(config6);
+	 ADD_TEST(config7);
 END_SUITE
