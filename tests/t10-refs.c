@@ -658,7 +658,7 @@ static const char *ref_one_name = "refs/heads/one/branch";
 static const char *ref_one_name_new = "refs/heads/two/branch";
 static const char *ref_two_name = "refs/heads/two";
 
-BEGIN_TEST(rename6, "can not overwrite name of packed reference when renaming")
+BEGIN_TEST(rename6, "can not overwrite name of existing reference")
 	git_reference *ref, *ref_one, *ref_one_new, *ref_two;
 	git_repository *repo;
 	git_oid id;
@@ -680,7 +680,7 @@ BEGIN_TEST(rename6, "can not overwrite name of packed reference when renaming")
 	/*  Attempt to create illegal reference */
 	must_fail(git_reference_create_oid(&ref_one_new, repo, ref_one_name_new, &id));
 
-	/* Reference couldn't be renamed so this cannot work */
+	/* Illegal reference couldn't be created so this is supposed to fail */
 	must_fail(git_reference_lookup(&ref_one_new, repo, ref_one_name_new));
 
 	close_temp_repo(repo);
