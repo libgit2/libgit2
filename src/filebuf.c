@@ -70,9 +70,6 @@ static int lock_file(git_filebuf *file, int flags)
 		gitfo_close(source);
 	}
 
-	gitfo_unlock(file->fd);
-	gitfo_close(file->fd);
-
 	return GIT_SUCCESS;
 }
 
