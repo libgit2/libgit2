@@ -59,6 +59,7 @@ static int assign_repository_dirs(
 		const char *git_work_tree)
 {
 	char path_aux[GIT_PATH_MAX];
+	char path_aux2[GIT_PATH_MAX];
 	int error = GIT_SUCCESS;
 
 	assert(repo);
@@ -76,6 +77,14 @@ static int assign_repository_dirs(
 		return GIT_ENOMEM;
 
 	/* path to GIT_OBJECT_DIRECTORY */
+	if (git_object_directory == NULL) {
+		const char *object_env = getenv(GIT_OBJECT_DIRECTORY_ENVIRONMENT);
+		if (object_env != NULL) {
+			git__joinpath(path_aux2, repo->path_repository, object_env);
+			git_object_directory = path_aux2;
+		}
+	}
+
 	if (git_object_directory == NULL)
 		git__joinpath(path_aux, repo->path_repository, GIT_OBJECTS_DIR);
 	else {
@@ -91,6 +100,9 @@ static int assign_repository_dirs(
 
 	/* path to GIT_WORK_TREE */
 	if (git_work_tree == NULL)
+		git_work_tree = getenv(GIT_WORK_TREE_ENVIRONMENT);
+
+	if (git_work_tree == NULL)
 		repo->is_bare = 1;
 	else {
 		repo->is_bare = 0;
@@ -104,6 +116,14 @@ static int assign_repository_dirs(
 			return GIT_ENOMEM;
 
 		/* Path to GIT_INDEX_FILE */
+		if (git_index_file == NULL) {
+			const char *index_env = getenv(GIT_INDEX_FILE_ENVIRONMENT);
+			if ( index_env!= NULL) {
+				git__joinpath(path_aux2, repo->path_repository, index_env);
+				git_index_file = path_aux2;
+			}
+		}
+
 		if (git_index_file == NULL)
 			git__joinpath(path_aux, repo->path_repository, GIT_INDEX_FILE);
 		else {

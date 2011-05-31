@@ -46,6 +46,16 @@ GIT_BEGIN_DECL
 #define GIT_WORK_TREE_ENVIRONMENT "GIT_WORK_TREE"
 
 /**
+ * The environment variable name to specify the git object directory name
+ */
+#define GIT_OBJECT_DIRECTORY_ENVIRONMENT "GIT_OBJECT_DIRECTORY"
+
+/**
+ * The environment variable name to specify the git index filename
+ */
+#define GIT_INDEX_FILE_ENVIRONMENT "GIT_INDEX_FILE"
+
+/**
  * The environment variable name to specify the git ceiling directories
  */
 #define GIT_CEILING_DIRECTORIES_ENVIRONMENT "GIT_CEILING_DIRECTORIES"
