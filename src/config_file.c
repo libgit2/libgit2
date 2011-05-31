@@ -597,8 +597,10 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	do {
 		switch (c) {
 		case '"':
-			if (quote_marks++ >= 2)
-				return git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Too many quotes");
+			if (quote_marks++ >= 2) {
+				error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Too many quotes");
+				goto out;
+			}
 			break;
 		case '\\':
 			c = line[rpos++];
