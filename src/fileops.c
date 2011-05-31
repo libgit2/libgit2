@@ -382,7 +382,7 @@ int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list
 		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
 		len = sep - ceil;
 
-		if (len == 0 || len > GIT_PATH_MAX || !gitfo_is_absolute_path(ceil))
+		if (len == 0 || len > GIT_PATH_MAX || gitfo_retrieve_path_root_offset(ceil) == -1)
 			continue;
 
 		memcpy(buf, ceil, len+1);

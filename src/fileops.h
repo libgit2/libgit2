@@ -235,16 +235,8 @@ int gitfo_realpath(const char *path, char *buffer_out);
 #ifdef GIT__WIN32
 GIT_INLINE(int) gitfo_has_dos_drive_prefix(const char path)
 {
-	return isalpha(path[0]) && (path[1] == ':');
+	return isalpha(path[0]) && (path[1] == ':') ? GIT_SUCCESS : GIT_ERROR;
 }
 #endif
 
-GIT_INLINE(int) gitfo_is_absolute_path(const char *path)
-{
-	#ifdef GIT__WIN32
-		return gitfo_has_dos_drive_prefix(path);
-	#else
-		return path[0] == '/';
-	#endif
-}
 #endif /* INCLUDE_fileops_h__ */
