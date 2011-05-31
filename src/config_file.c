@@ -261,7 +261,6 @@ static int config_open(git_config_file *cfg)
  cleanup:
 	cvar_list_free(&b->var_list);
 	gitfo_free_buf(&b->reader.buffer);
-	free(cfg);
 
 	return git__rethrow(error, "Failed to open config");
 }
