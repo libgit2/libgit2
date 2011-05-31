@@ -808,6 +808,7 @@ static int config_parse(diskfile_backend *cfg_file)
 
 		case '[': /* section header, new section begins */
 			free(current_section);
+			current_section = NULL;
 			error = parse_section_header(cfg_file, &current_section);
 			break;
 
@@ -847,8 +848,7 @@ static int config_parse(diskfile_backend *cfg_file)
 		}
 	}
 
-	if (current_section)
-		free(current_section);
+	free(current_section);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse config");
 }
