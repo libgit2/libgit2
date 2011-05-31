@@ -304,20 +304,49 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 {
 	git_tag tag;
 	int error;
-
+	git_odb_stream *stream;
+	
 	assert(oid && buffer);
-
+	
 	memset(&tag, 0, sizeof(tag));
-
+	
+	/* validate the buffer */
+	
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
-
-	error = git_tag_create(oid, repo, tag.tag_name, &tag.target, tag.type, tag.tagger, tag.message);
-
+	
+	git_reference *new_ref;
+	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	
+	if ((error = tag_valid_in_odb(&new_ref, ref_name, &tag.target, tag.type, repo, tag.tag_name)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create tag");
+	
+	if(new_ref != NULL) {
+		git_oid_cpy(oid, git_reference_oid(new_ref));
+		return git__throw(GIT_EEXISTS, "Tag already exists");
+	}
+	
+	
+	/* write the buffer */
+	
+	if ((error = git_odb_open_wstream(&stream, repo->db, strlen(buffer), GIT_OBJ_TAG)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create tag");
+	
+	stream->write(stream, buffer, strlen(buffer));
+	
+	error = stream->finalize_write(oid, stream);
+	stream->free(stream);
+	
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create tag");
+	
+	
+	error = git_reference_create_oid(&new_ref, repo, ref_name, oid);
+	
 	git_signature_free(tag.tagger);
 	free(tag.tag_name);
 	free(tag.message);
-
+	
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 }
 
