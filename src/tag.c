@@ -150,6 +150,9 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 		return git__rethrow(error, "Failed to parse tag");
 	}
 
+	if( *buffer != '\n' )
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tag. No new line before message");
+
 	text_len = buffer_end - ++buffer;
 
 	tag->message = git__malloc(text_len + 1);
