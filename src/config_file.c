@@ -802,6 +802,10 @@ static int config_parse(diskfile_backend *cfg_file)
 	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
 	cfg_file->reader.eof = 0;
 
+	/* If the file is empty, there's nothing for us to do */
+	if (*cfg_file->reader.read_ptr == '\0')
+		return GIT_SUCCESS;
+
 	skip_bom(cfg_file);
 
 	while (error == GIT_SUCCESS && !cfg_file->reader.eof) {
