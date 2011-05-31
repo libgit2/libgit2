@@ -595,12 +595,15 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	 * added to the string. In case of error, jump to out
 	 */
 	do {
+		if (quote_marks == 2) {
+			error = git__throw(GIT_EOBJCORRUPTED, "Falied to parse ext header. Text after closing quote");
+			goto out;
+
+		}
+
 		switch (c) {
 		case '"':
-			if (quote_marks++ >= 2) {
-				error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Too many quotes");
-				goto out;
-			}
+			++quote_marks;
 			break;
 		case '\\':
 			c = line[rpos++];
@@ -612,6 +615,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 				error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Unsupported escape char \\%c", c);
 				goto out;
 			}
+			break;
 		default:
 			break;
 		}
