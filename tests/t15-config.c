@@ -159,6 +159,20 @@ BEGIN_TEST(config5, "test number suffixes")
 	git_config_free(cfg);
 END_TEST
 
+BEGIN_TEST(config6, "test blank lines")
+	git_config *cfg;
+	int i;
+
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config6"));
+
+	must_pass(git_config_get_bool(cfg, "valid.subsection.something", &i));
+	must_be_true(i == 1);
+
+	must_pass(git_config_get_bool(cfg, "something.else.something", &i));
+	must_be_true(i == 0);
+
+	git_config_free(cfg);
+END_TEST
 
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
@@ -167,4 +181,5 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config3);
 	 ADD_TEST(config4);
 	 ADD_TEST(config5);
+	 ADD_TEST(config6);
 END_SUITE
