@@ -181,6 +181,14 @@ BEGIN_TEST(config7, "test for invalid ext headers")
 
 END_TEST
 
+BEGIN_TEST(config8, "don't fail on empty files")
+	git_config *cfg;
+
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config8"));
+
+	git_config_free(cfg);
+END_TEST
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
@@ -190,4 +198,5 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config5);
 	 ADD_TEST(config6);
 	 ADD_TEST(config7);
+	 ADD_TEST(config8);
 END_SUITE
