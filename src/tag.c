@@ -177,6 +177,46 @@ static int retreive_tag_reference(git_reference **tag_reference_out, char *ref_n
 	return GIT_SUCCESS;
 }
 
+/* tag_reference_out will contain the reference of the tag if exists, otherwise NULL */
+static int tag_valid_in_odb(
+	git_reference **tag_reference_out,
+	char *ref_name_out,
+	const git_oid *target,
+	git_otype target_type,
+	git_repository *repo,
+	const char *tag_name) {
+	
+	int error;
+	
+	*tag_reference_out = NULL;
+	
+	
+	error = retreive_tag_reference(tag_reference_out, ref_name_out, repo, tag_name);
+	
+	switch (error) {
+		case GIT_SUCCESS:
+		/* Fall trough */
+		case GIT_ENOTFOUND: 
+			break;
+		
+		default:
+			return git__rethrow(error, "Failed to create tag");
+	}
+	
+	if (!git_odb_exists(repo->db, target))
+		return git__throw(GIT_ENOTFOUND, "Failed to create tag. Object to tag doesn't exist");
+	
+	/* Try to find out what the type is */
+	if (target_type == GIT_OBJ_ANY) {
+		size_t _unused;
+		error = git_odb_read_header(&_unused, &target_type, repo->db, target);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to create tag");
+	}
+	
+	return GIT_SUCCESS;
+}
+
 static int tag_create(
 		git_oid *oid,
 		git_repository *repo,
@@ -199,36 +239,18 @@ static int tag_create(
 	int type_str_len, tag_name_len, tagger_str_len, message_len;
 	int error, should_update_ref = 0;
 
+	if ((error = tag_valid_in_odb(&new_ref, ref_name, target, target_type, repo, tag_name)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create tag");
+	
 	/** Ensure the tag name doesn't conflict with an already existing 
-	    reference unless overwriting has explictly been requested **/
-	error = retreive_tag_reference(&new_ref, ref_name, repo, tag_name);
-
-	switch (error) {
-	case GIT_SUCCESS:
-		if (!allow_ref_overwrite) {
+	 *   reference unless overwriting has explictly been requested **/
+	if(new_ref != NULL) {
+		if(!allow_ref_overwrite) {
 			git_oid_cpy(oid, git_reference_oid(new_ref));
 			return git__throw(GIT_EEXISTS, "Tag already exists");
+		} else {
+			should_update_ref = 1;
 		}
-		should_update_ref = 1;
-		
-		/* Fall trough */
-
-	case GIT_ENOTFOUND: 
-		break;
-
-	default:
-		return git__rethrow(error, "Failed to create tag");
-	}
-
-	if (!git_odb_exists(repo->db, target))
-		return git__throw(GIT_ENOTFOUND, "Failed to create tag. Object to tag doesn't exist");
-
-	/* Try to find out what the type is */
-	if (target_type == GIT_OBJ_ANY) {
-		size_t _unused;
-		error = git_odb_read_header(&_unused, &target_type, repo->db, target);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to create tag");
 	}
 
 	type_str = git_object_type2string(target_type);
