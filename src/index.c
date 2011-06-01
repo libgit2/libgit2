@@ -194,6 +194,7 @@ void git_index_free(git_index *index)
 
 	git_index_clear(index);
 	git_vector_free(&index->entries);
+	git_vector_free(&index->unmerged);
 
 	free(index->index_file_path);
 	free(index);
@@ -227,7 +228,15 @@ void git_index_clear(git_index *index)
 		free(e);
 	}
 
+	for (i = 0; i < index->unmerged.length; ++i) {
+		git_index_entry_unmerged *e;
+		e = git_vector_get(&index->unmerged, i);
+		free((char *)e->path);
+		free(e);
+	}
+
 	git_vector_clear(&index->entries);
+	git_vector_clear(&index->unmerged);
 	index->last_modified = 0;
 
 	free_tree(index->tree);
