@@ -261,7 +261,6 @@ static int config_open(git_config_file *cfg)
  cleanup:
 	cvar_list_free(&b->var_list);
 	gitfo_free_buf(&b->reader.buffer);
-	free(cfg);
 
 	return git__rethrow(error, "Failed to open config");
 }
@@ -484,15 +483,6 @@ static int cfg_peek(diskfile_backend *cfg, int flags)
 	return ret;
 }
 
-static const char *LINEBREAK_UNIX = "\\\n";
-static const char *LINEBREAK_WIN32 = "\\\r\n";
-
-static int is_linebreak(const char *pos)
-{
-	return	memcmp(pos - 1, LINEBREAK_UNIX, sizeof(LINEBREAK_UNIX)) == 0 ||
-			memcmp(pos - 2, LINEBREAK_WIN32, sizeof(LINEBREAK_WIN32)) == 0;
-}
-
 /*
  * Read and consume a line, returning it in newly-allocated memory.
  */
@@ -503,38 +493,24 @@ static char *cfg_readline(diskfile_backend *cfg)
 	int line_len;
 
 	line_src = cfg->reader.read_ptr;
+
+	/* Skip empty empty lines */
+	while (isspace(*line_src))
+		++line_src;
+
     line_end = strchr(line_src, '\n');
 
     /* no newline at EOF */
 	if (line_end == NULL)
 		line_end = strchr(line_src, 0);
-	else
-		while (is_linebreak(line_end))
-			line_end = strchr(line_end + 1, '\n');
 
+	line_len = line_end - line_src;
 
-	while (line_src < line_end && isspace(*line_src))
-		line_src++;
-
-	line = (char *)git__malloc((size_t)(line_end - line_src) + 1);
+	line = git__malloc(line_len + 1);
 	if (line == NULL)
 		return NULL;
 
-	line_len = 0;
-	while (line_src < line_end) {
-
-		if (memcmp(line_src, LINEBREAK_UNIX, sizeof(LINEBREAK_UNIX)) == 0) {
-			line_src += sizeof(LINEBREAK_UNIX);
-			continue;
-		}
-
-		if (memcmp(line_src, LINEBREAK_WIN32, sizeof(LINEBREAK_WIN32)) == 0) {
-			line_src += sizeof(LINEBREAK_WIN32);
-			continue;
-		}
-
-		line[line_len++] = *line_src++;
-	}
+	memcpy(line, line_src, line_len);
 
 	line[line_len] = '\0';
 
@@ -619,10 +595,15 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	 * added to the string. In case of error, jump to out
 	 */
 	do {
+		if (quote_marks == 2) {
+			error = git__throw(GIT_EOBJCORRUPTED, "Falied to parse ext header. Text after closing quote");
+			goto out;
+
+		}
+
 		switch (c) {
 		case '"':
-			if (quote_marks++ >= 2)
-				return git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Too many quotes");
+			++quote_marks;
 			break;
 		case '\\':
 			c = line[rpos++];
@@ -634,6 +615,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 				error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. Unsupported escape char \\%c", c);
 				goto out;
 			}
+			break;
 		default:
 			break;
 		}
@@ -820,6 +802,10 @@ static int config_parse(diskfile_backend *cfg_file)
 	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
 	cfg_file->reader.eof = 0;
 
+	/* If the file is empty, there's nothing for us to do */
+	if (*cfg_file->reader.read_ptr == '\0')
+		return GIT_SUCCESS;
+
 	skip_bom(cfg_file);
 
 	while (error == GIT_SUCCESS && !cfg_file->reader.eof) {
@@ -832,6 +818,7 @@ static int config_parse(diskfile_backend *cfg_file)
 
 		case '[': /* section header, new section begins */
 			free(current_section);
+			current_section = NULL;
 			error = parse_section_header(cfg_file, &current_section);
 			break;
 
@@ -871,8 +858,7 @@ static int config_parse(diskfile_backend *cfg_file)
 		}
 	}
 
-	if (current_section)
-		free(current_section);
+	free(current_section);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse config");
 }
