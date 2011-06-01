@@ -131,7 +131,7 @@ int gitfo_isdir(const char *path)
 		return git__throw(GIT_ENOTFOUND, "%s does not exist", path);
 
 	if (!S_ISDIR(st.st_mode))
-		return git__throw(GIT_ENOTFOUND, "%s is not a file", path);
+		return git__throw(GIT_ENOTFOUND, "%s is a file", path);
 
 	return GIT_SUCCESS;
 }
