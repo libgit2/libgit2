@@ -56,7 +56,11 @@ GIT_BEGIN_DECL
  * @param type the type of the object
  * @return a reference to the object
  */
-GIT_EXTERN(int) git_object_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
+GIT_EXTERN(int) git_object_lookup(
+		git_object **object,
+		git_repository *repo,
+		const git_oid *id,
+		git_otype type);
 
 /**
  * Lookup a reference to one of the objects in a repostory,
@@ -85,8 +89,12 @@ GIT_EXTERN(int) git_object_lookup(git_object **object, git_repository *repo, con
  * @param type the type of the object
  * @return a reference to the object
  */
-GIT_EXTERN(int) git_object_lookup_short_oid(git_object **object_out, git_repository *repo,
-					const git_oid *id, unsigned int len, git_otype type);
+GIT_EXTERN(int) git_object_lookup_prefix(
+		git_object **object_out,
+		git_repository *repo,
+		const git_oid *id,
+		unsigned int len,
+		git_otype type);
 
 /**
  * Get the id (SHA1) of a repository object

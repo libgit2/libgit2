@@ -488,26 +488,26 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 	return error;
 }
 
-int git_odb_read_unique_short_oid(git_oid *out_oid, git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
+int git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
 {
 	unsigned int i;
 	int error = GIT_ENOTFOUND;
+	git_oid full_oid;
 	git_rawobj raw;
 	int found = 0;
 
-	assert(out && db && id);
+	assert(out && db);
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+
 	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
 
 	if (len == GIT_OID_HEXSZ) {
 		*out = git_cache_get(&db->cache, short_id);
-		if (*out != NULL) {
-			git_oid_cpy(out_oid, short_id);
+		if (*out != NULL)
 			return GIT_SUCCESS;
-		}
 	}
 
 	for (i = 0; i < db->backends.length && found < 2; ++i) {
@@ -515,7 +515,7 @@ int git_odb_read_unique_short_oid(git_oid *out_oid, git_odb_object **out, git_od
 		git_odb_backend *b = internal->backend;
 
 		if (b->read != NULL) {
-			error = b->read_unique_short_oid(out_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
+			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
 			switch (error) {
 			case GIT_SUCCESS:
 				found++;
@@ -531,7 +531,7 @@ int git_odb_read_unique_short_oid(git_oid *out_oid, git_odb_object **out, git_od
 	}
 
 	if (found == 1) {
-		*out = git_cache_try_store(&db->cache, new_odb_object(out_oid, &raw));
+		*out = git_cache_try_store(&db->cache, new_odb_object(&full_oid, &raw));
 	} else if (found > 1) {
 		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to read object. Ambiguous sha1 prefix");
 	} else {

@@ -154,7 +154,7 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * - GIT_ENOTFOUND if the object is not in the database.
  * - GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
  */
-GIT_EXTERN(int) git_odb_read_unique_short_oid(git_oid *out_oid, git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len);
+GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len);
 
 /**
  * Read the header of an object from the database, without

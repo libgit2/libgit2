@@ -95,20 +95,20 @@ static int create_object(git_object **object_out, git_otype type)
 	return GIT_SUCCESS;
 }
 
-int git_object_lookup_short_oid(git_object **object_out, git_repository *repo, const git_oid *id, unsigned int len, git_otype type)
+int git_object_lookup_prefix(git_object **object_out, git_repository *repo, const git_oid *id, unsigned int len, git_otype type)
 {
 	git_object *object = NULL;
 	git_odb_object *odb_obj;
 	int error = GIT_SUCCESS;
-	git_oid out_oid;
 
 	assert(repo && object_out && id);
 
 	if (len < GIT_OID_MINPREFIXLEN)
-		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
-	if (len > GIT_OID_HEXSZ) {
+		return git__throw(GIT_EAMBIGUOUSOIDPREFIX,
+			"Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+
+	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
-	}
 
 	if (len == GIT_OID_HEXSZ)  {
 		/* We want to match the full id : we can first look up in the cache,
@@ -129,7 +129,6 @@ int git_object_lookup_short_oid(git_object **object_out, git_repository *repo, c
 		 * but it may be much more costly for sqlite and hiredis.
 		 */
 		error = git_odb_read(&odb_obj, repo->db, id);
-		git_oid_cpy(&out_oid, id);
 	} else {
 		git_oid short_oid;
 
@@ -149,7 +148,7 @@ int git_object_lookup_short_oid(git_object **object_out, git_repository *repo, c
 		 * - We never explore the cache, go right to exploring the backends
 		 * We chose the latter : we explore directly the backends.
 		 */
-		error = git_odb_read_unique_short_oid(&out_oid, &odb_obj, repo->db, &short_oid, len);
+		error = git_odb_read_prefix(&odb_obj, repo->db, &short_oid, len);
 	}
 
 	if (error < GIT_SUCCESS)
@@ -166,7 +165,7 @@ int git_object_lookup_short_oid(git_object **object_out, git_repository *repo, c
 		return git__rethrow(error, "Failed to lookup object");
 
 	/* Initialize parent object */
-	git_oid_cpy(&object->cached.oid, &out_oid);
+	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
 	object->repo = repo;
 
 	switch (type) {
@@ -202,7 +201,7 @@ int git_object_lookup_short_oid(git_object **object_out, git_repository *repo, c
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_otype type) {
-	return git_object_lookup_short_oid(object_out, repo, id, GIT_OID_HEXSZ, type);
+	return git_object_lookup_prefix(object_out, repo, id, GIT_OID_HEXSZ, type);
 }
 
 void git_object__free(void *_obj)

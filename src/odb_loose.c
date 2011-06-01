@@ -29,6 +29,7 @@
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
+#include "oid.h"
 #include "delta-apply.h"
 #include "filebuf.h"
 
@@ -491,7 +492,7 @@ int fn_locate_object_short_oid(void *state, char *pathbuf) {
 
 	if (!gitfo_exists(pathbuf) && gitfo_isdir(pathbuf)) {
 		/* We are already in the directory matching the 2 first hex characters */
-		if (!git_oid_match_hex(sstate->short_oid_len-2, sstate->short_oid+2, pathbuf+sstate->dir_len)) {
+		if (!git_oid_match_hex(sstate->short_oid_len-2, sstate->short_oid+2, (unsigned char *)pathbuf + sstate->dir_len)) {
 			if (!sstate->found) {
 				sstate->res_oid[0] = sstate->short_oid[0];
 				sstate->res_oid[1] = sstate->short_oid[1];
@@ -500,11 +501,10 @@ int fn_locate_object_short_oid(void *state, char *pathbuf) {
 			sstate->found++;
 		}
 	}
-	if (sstate->found > 1) {
+	if (sstate->found > 1)
 		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Ambiguous sha1 prefix within loose objects");
-	} else {
-		return GIT_SUCCESS;
-	}
+
+	return GIT_SUCCESS;
 }
 
 /* Locate an object matching a given short oid */
@@ -525,7 +525,7 @@ static int locate_object_short_oid(char *object_location, git_oid *res_oid, loos
 		object_location[dir_len++] = '/';
 
 	/* Convert raw oid to hex formatted oid */
-	git_oid_fmt(state.short_oid, short_oid);
+	git_oid_fmt((char *)state.short_oid, short_oid);
 	/* Explore OBJ_DIR/xx/ where xx is the beginning of hex formatted short oid */
 	sprintf(object_location+dir_len, "%.2s/", state.short_oid);
 
@@ -546,7 +546,7 @@ static int locate_object_short_oid(char *object_location, git_oid *res_oid, loos
 	}
 
 	/* Convert obtained hex formatted oid to raw */
-	error = git_oid_mkstr(res_oid, state.res_oid);
+	error = git_oid_mkstr(res_oid, (char *)state.res_oid);
 	if (error) {
 		return git__rethrow(error, "Failed to locate object from short oid");
 	}
@@ -616,8 +616,14 @@ int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_o
 	return GIT_SUCCESS;
 }
 
-int loose_backend__read_unique_short_oid(git_oid *out_oid, void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend,
-					const git_oid *short_oid, unsigned int len)
+int loose_backend__read_prefix(
+	git_oid *out_oid,
+	void **buffer_p,
+	size_t *len_p,
+	git_otype *type_p,
+	git_odb_backend *backend,
+	const git_oid *short_oid,
+	unsigned int len)
 {
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to read loose backend. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
@@ -790,7 +796,7 @@ int git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir
 	backend->fsync_object_files = 0;
 
 	backend->parent.read = &loose_backend__read;
-	backend->parent.read_unique_short_oid = &loose_backend__read_unique_short_oid;
+	backend->parent.read_prefix = &loose_backend__read_prefix;
 	backend->parent.read_header = &loose_backend__read_header;
 	backend->parent.writestream = &loose_backend__stream;
 	backend->parent.exists = &loose_backend__exists;
