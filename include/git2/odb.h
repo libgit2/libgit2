@@ -109,7 +109,7 @@ GIT_EXTERN(void) git_odb_close(git_odb *db);
 /**
  * Read an object from the database.
  *
- * This method queries all avaiable ODB backends
+ * This method queries all available ODB backends
  * trying to read the given OID.
  *
  * The returned object is reference counted and
@@ -124,6 +124,37 @@ GIT_EXTERN(void) git_odb_close(git_odb *db);
  * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id);
+
+/**
+ * Read an object from the database, given a prefix
+ * of its identifier.
+ *
+ * This method queries all available ODB backends
+ * trying to match the 'len' first hexadecimal
+ * characters of the 'short_id'.
+ * The remaining (GIT_OID_HEXSZ-len)*4 bits of
+ * 'short_id' must be 0s.
+ * 'len' must be at least GIT_OID_MINPREFIXLEN,
+ * and the prefix must be long enough to identify
+ * a unique object in all the backends; the
+ * method will fail otherwise.
+ *
+ * The returned object is reference counted and
+ * internally cached, so it should be closed
+ * by the user once it's no longer in use.
+ *
+ * @param out_oid the oid of the unique object matching
+ * the short id
+ * @param out pointer where to store the read object
+ * @param db database to search for the object in.
+ * @param short_id a prefix of the id of the object to read.
+ * @param len the length of the prefix
+ * @return
+ * - GIT_SUCCESS if the object was read;
+ * - GIT_ENOTFOUND if the object is not in the database.
+ * - GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
+ */
+GIT_EXTERN(int) git_odb_read_unique_short_oid(git_oid *out_oid, git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len);
 
 /**
  * Read the header of an object from the database, without

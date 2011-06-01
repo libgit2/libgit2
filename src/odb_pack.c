@@ -29,7 +29,9 @@
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
+#include "oid.h"
 #include "delta-apply.h"
+#include "sha1_lookup.h"
 
 #include "git2/odb_backend.h"
 
@@ -262,14 +264,40 @@ static int packfile_refresh_all(struct pack_backend *backend);
 
 static off_t nth_packed_object_offset(const struct pack_file *p, uint32_t n);
 
-static int pack_entry_find_offset(off_t *offset_out,
-		struct pack_file *p, const git_oid *oid);
+/* Can find the offset of an object given
+ * a prefix of an identifier.
+ * Throws GIT_EAMBIGUOUSOIDPREFIX if short oid
+ * is ambiguous within the pack.
+ * This method assumes that len is between
+ * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
+ */
+static int pack_entry_find_offset(
+		off_t *offset_out,
+		git_oid *found_oid,
+		struct pack_file *p,
+		const git_oid *short_oid,
+		unsigned int len);
 
-static int pack_entry_find1(struct pack_entry *e,
-		struct pack_file *p, const git_oid *oid);
+static int pack_entry_find1(
+		struct pack_entry *e,
+		struct pack_file *p,
+		const git_oid *short_oid,
+		unsigned int len);
 
 static int pack_entry_find(struct pack_entry *e,
 		struct pack_backend *backend, const git_oid *oid);
+
+/* Can find the offset of an object given
+ * a prefix of an identifier.
+ * Throws GIT_EAMBIGUOUSOIDPREFIX if short oid
+ * is ambiguous.
+ * This method assumes that len is between
+ * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
+ */
+static int pack_entry_find_unique_short_oid(struct pack_entry *e,
+					struct pack_backend *backend,
+					const git_oid *short_oid,
+					unsigned int len);
 
 static off_t get_delta_base(struct pack_backend *backend,
 		struct pack_file *p, struct pack_window **w_curs,
@@ -923,12 +951,15 @@ static off_t nth_packed_object_offset(const struct pack_file *p, uint32_t n)
 
 static int pack_entry_find_offset(
 		off_t *offset_out,
+		git_oid *found_oid,
 		struct pack_file *p,
-		const git_oid *oid)
+		const git_oid *short_oid,
+		unsigned int len)
 {
 	const uint32_t *level1_ofs = p->index_map.data;
 	const unsigned char *index = p->index_map.data;
 	unsigned hi, lo, stride;
+	int found = 0;
 
 	*offset_out = 0;
 
@@ -950,8 +981,8 @@ static int pack_entry_find_offset(
 	}
 
 	index += 4 * 256;
-	hi = ntohl(level1_ofs[(int)oid->id[0]]);
-	lo = ((oid->id[0] == 0x0) ? 0 : ntohl(level1_ofs[(int)oid->id[0] - 1]));
+	hi = ntohl(level1_ofs[(int)short_oid->id[0]]);
+	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(level1_ofs[(int)short_oid->id[0] - 1]));
 
 	if (p->index_version > 1) {
 		stride = 20;
@@ -962,60 +993,79 @@ static int pack_entry_find_offset(
 
 #ifdef INDEX_DEBUG_LOOKUP
 	printf("%02x%02x%02x... lo %u hi %u nr %d\n",
-		oid->id[0], oid->id[1], oid->id[2], lo, hi, p->num_objects);
+		short_oid->id[0], short_oid->id[1], short_oid->id[2], lo, hi, p->num_objects);
 #endif
 
-#ifdef GIT2_INDEX_LOOKUP /* TODO: use the advanced lookup method from git.git */
+	/* Use git.git lookup code */
+	int pos =  sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
 
-	int pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, oid);
-	if (pos < 0)
-		return git__throw(GIT_ENOTFOUND, "Failed to find offset for pack entry. Entry not found");
+	const unsigned char *current;
+	if (pos >= 0) {
+		/* An object matching exactly the oid was found */
+		found = 1;
+		current = index + pos * stride;
+	} else {
+		/* No object was found */
+		pos = - 1 - pos;
+		/* pos refers to the object with the "closest" oid to short_oid */
+		if (pos < p->num_objects) {
+			current = index + pos * stride;
 
-	*offset_out = nth_packed_object_offset(p, pos);
-	return GIT_SUCCESS;
-
-#else /* use an old and boring binary search */
-
-	do {
-		unsigned mi = (lo + hi) / 2;
-		int cmp = memcmp(index + mi * stride, oid->id, GIT_OID_RAWSZ);
-
-		if (!cmp) {
-			*offset_out = nth_packed_object_offset(p, mi);
-			return GIT_SUCCESS;
+			if (!git_oid_match_raw(len, short_oid->id, current)) {
+				found = 1;
+			}
 		}
+	}
+	if (found && pos + 1 < p->num_objects) {
+		/* Check for ambiguousity */
+		const unsigned char *next = current + stride;
 
-		if (cmp > 0)
-			hi = mi;
-		else
-			lo = mi+1;
+		if (!git_oid_match_raw(len, short_oid->id, next)) {
+			found = 2;
+		}
+	}
 
-	} while (lo < hi);
+	if (!found) {
+		return git__throw(GIT_ENOTFOUND, "Failed to find offset for pack entry. Entry not found");
+	} else if (found > 1) {
+		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to find offset for pack entry. Ambiguous sha1 prefix within pack");
+	} else {
+		*offset_out = nth_packed_object_offset(p, pos);
+		git_oid_mkraw(found_oid, current);
 
-	return git__throw(GIT_ENOTFOUND, "Failed to find offset for pack entry. Entry not found");
+#ifdef INDEX_DEBUG_LOOKUP
+		unsigned char hex_sha1[GIT_OID_HEXSZ + 1];
+		git_oid_fmt(hex_sha1, found_oid);
+		hex_sha1[GIT_OID_HEXSZ] = '\0';
+		printf("found lo=%d %s\n", lo, hex_sha1);
 #endif
+		return GIT_SUCCESS;
+	}
 }
 
 static int pack_entry_find1(
 		struct pack_entry *e,
 		struct pack_file *p,
-		const git_oid *oid)
+		const git_oid *short_oid,
+		unsigned int len)
 {
 	off_t offset;
 
 	assert(p);
 
-	if (p->num_bad_objects) {
+	if (len == GIT_OID_HEXSZ && p->num_bad_objects) {
 		unsigned i;
 		for (i = 0; i < p->num_bad_objects; i++)
-			if (git_oid_cmp(oid, &p->bad_object_sha1[i]) == 0)
+			if (git_oid_cmp(short_oid, &p->bad_object_sha1[i]) == 0)
 				return git__throw(GIT_ERROR, "Failed to find pack entry. Bad object found");
 	}
 
-	if (pack_entry_find_offset(&offset, p, oid) < GIT_SUCCESS)
-		return git__throw(GIT_ENOTFOUND, "Failed to find pack entry. Couldn't find offset");
-	
-	/* we found an entry in the index;
+	git_oid found_oid;
+	int error = pack_entry_find_offset(&offset, &found_oid, p, short_oid, len);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to find pack entry. Couldn't find offset");
+
+	/* we found a unique entry in the index;
 	 * make sure the packfile backing the index 
 	 * still exists on disk */
 	if (p->pack_fd == -1 && packfile_open(p) < GIT_SUCCESS)
@@ -1024,7 +1074,7 @@ static int pack_entry_find1(
 	e->offset = offset;
 	e->p = p;
 
-	git_oid_cpy(&e->sha1, oid);
+	git_oid_cpy(&e->sha1, &found_oid);
 	return GIT_SUCCESS;
 }
 
@@ -1037,7 +1087,7 @@ static int pack_entry_find(struct pack_entry *e, struct pack_backend *backend, c
 		return git__rethrow(error, "Failed to find pack entry");
 
 	if (backend->last_found &&
-		pack_entry_find1(e, backend->last_found, oid) == GIT_SUCCESS)
+		pack_entry_find1(e, backend->last_found, oid, GIT_OID_HEXSZ) == GIT_SUCCESS)
 		return GIT_SUCCESS;
 
 	for (i = 0; i < backend->packs.length; ++i) {
@@ -1047,13 +1097,60 @@ static int pack_entry_find(struct pack_entry *e, struct pack_backend *backend, c
 		if (p == backend->last_found)
 			continue;
 
-		if (pack_entry_find1(e, p, oid) == GIT_SUCCESS) {
+		if (pack_entry_find1(e, p, oid, GIT_OID_HEXSZ) == GIT_SUCCESS) {
 			backend->last_found = p;
 			return GIT_SUCCESS;
 		}
 	}
 
 	return git__throw(GIT_ENOTFOUND, "Failed to find pack entry");
+}
+
+static int pack_entry_find_unique_short_oid(struct pack_entry *e, struct pack_backend *backend,
+					const git_oid *short_oid, unsigned int len)
+{
+	int error;
+	size_t i;
+
+	if ((error = packfile_refresh_all(backend)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to find pack entry");
+
+	unsigned found = 0;
+	if (backend->last_found) {
+		error = pack_entry_find1(e, backend->last_found, short_oid, len);
+		if (error == GIT_EAMBIGUOUSOIDPREFIX) {
+			return git__rethrow(error, "Failed to find pack entry. Ambiguous sha1 prefix");
+		} else if (error == GIT_SUCCESS) {
+			found = 1;
+		}
+	}
+
+	for (i = 0; i < backend->packs.length; ++i) {
+		struct pack_file *p;
+
+		p = git_vector_get(&backend->packs, i);
+		if (p == backend->last_found)
+			continue;
+
+		error = pack_entry_find1(e, p, short_oid, len);
+		if (error == GIT_EAMBIGUOUSOIDPREFIX) {
+			return git__rethrow(error, "Failed to find pack entry. Ambiguous sha1 prefix");
+		} else if (error == GIT_SUCCESS) {
+			found++;
+			if (found > 1);
+				break;
+			backend->last_found = p;
+		}
+	}
+
+	if (!found) {
+		return git__rethrow(GIT_ENOTFOUND, "Failed to find pack entry");
+	} else if (found > 1) {
+		return git__rethrow(GIT_EAMBIGUOUSOIDPREFIX, "Failed to find pack entry. Ambiguous sha1 prefix");
+	} else {
+		return GIT_SUCCESS;
+	}
+
 }
 
 
@@ -1190,6 +1287,7 @@ static off_t get_delta_base(
 {
 	unsigned char *base_info = pack_window_open(backend, p, w_curs, *curpos, NULL);
 	off_t base_offset;
+	git_oid unused;
 
 	/* pack_window_open() assured us we have [base_info, base_info + 20)
 	 * as a range that we can look at without walking off the
@@ -1214,7 +1312,7 @@ static off_t get_delta_base(
 		*curpos += used;
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* The base entry _must_ be in the same pack */
-		if (pack_entry_find_offset(&base_offset, p, (git_oid *)base_info) < GIT_SUCCESS)
+		if (pack_entry_find_offset(&base_offset, &unused, p, (git_oid *)base_info, GIT_OID_HEXSZ) < GIT_SUCCESS)
 			return git__throw(GIT_EPACKCORRUPTED, "Base entry delta is not in the same pack");
 		*curpos += 20;
 	} else
@@ -1364,6 +1462,39 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 	return GIT_SUCCESS;
 }
 
+int pack_backend__read_unique_short_oid(git_oid *out_oid, void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend,
+					const git_oid *short_oid, unsigned int len)
+{
+	if (len < GIT_OID_MINPREFIXLEN)
+		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to read pack backend. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+
+	if (len >= GIT_OID_HEXSZ) {
+		/* We can fall back to regular read method */
+		int error = pack_backend__read(buffer_p, len_p, type_p, backend, short_oid);
+		if (error == GIT_SUCCESS)
+			git_oid_cpy(out_oid, short_oid);
+
+		return error;
+	} else {
+		struct pack_entry e;
+		git_rawobj raw;
+		int error;
+
+		if ((error = pack_entry_find_unique_short_oid(&e, (struct pack_backend *)backend, short_oid, len)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to read pack backend");
+
+		if ((error = packfile_unpack(&raw, (struct pack_backend *)backend, e.p, e.offset)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to read pack backend");
+
+		*buffer_p = raw.data;
+		*len_p = raw.len;
+		*type_p = raw.type;
+		git_oid_cpy(out_oid, &e.sha1);
+	}
+
+	return GIT_SUCCESS;
+}
+
 int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
 {
 	struct pack_entry e;
@@ -1418,6 +1549,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	}
 
 	backend->parent.read = &pack_backend__read;
+	backend->parent.read_unique_short_oid = &pack_backend__read_unique_short_oid;
 	backend->parent.read_header = NULL;
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.free = &pack_backend__free;

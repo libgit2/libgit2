@@ -43,6 +43,10 @@ GIT_BEGIN_DECL
 /** Size (in bytes) of a hex formatted oid */
 #define GIT_OID_HEXSZ (GIT_OID_RAWSZ * 2)
 
+/** Minimum length (in number of hex characters,
+ * i.e. packets of 4 bits) of an oid prefix */
+#define GIT_OID_MINPREFIXLEN 4
+
 /** Unique identity of any object (commit, tree, blob, tag). */
 typedef struct {
 	/** raw binary formatted id */
@@ -131,6 +135,16 @@ GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
  * @return <0, 0, >0 if a < b, a == b, a > b.
  */
 GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
+
+/**
+ * Compare the first 'len' hexadecimal characters (packets of 4 bits)
+ * of two oid structures.
+ * @param len the number of hex chars to compare
+ * @param a first oid structure.
+ * @param b second oid structure.
+ * @return 0 in case of a match
+ */
+GIT_EXTERN(int) gid_oid_match(unsigned int len, git_oid *a, git_oid *b);
 
 /**
  * OID Shortener object

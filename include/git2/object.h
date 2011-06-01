@@ -59,6 +59,36 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_object_lookup(git_object **object, git_repository *repo, const git_oid *id, git_otype type);
 
 /**
+ * Lookup a reference to one of the objects in a repostory,
+ * given a prefix of its identifier (short id).
+ * 
+ * The object obtained will be so that its identifier
+ * matches the first 'len' hexadecimal characters
+ * (packets of 4 bits) of the given 'id'.
+ * 'len' must be at least GIT_OID_MINPREFIXLEN, and
+ * long enough to identify a unique object matching
+ * the prefix; otherwise the method will fail.
+ *
+ * The generated reference is owned by the repository and
+ * should be closed with the `git_object_close` method
+ * instead of free'd manually.
+ *
+ * The 'type' parameter must match the type of the object
+ * in the odb; the method will fail otherwise.
+ * The special value 'GIT_OBJ_ANY' may be passed to let
+ * the method guess the object's type.
+ *
+ * @param object pointer to the looked-up object
+ * @param repo the repository to look up the object
+ * @param id a short identifier for the object
+ * @param len the length of the short identifier
+ * @param type the type of the object
+ * @return a reference to the object
+ */
+GIT_EXTERN(int) git_object_lookup_short_oid(git_object **object_out, git_repository *repo,
+					const git_oid *id, unsigned int len, git_otype type);
+
+/**
  * Get the id (SHA1) of a repository object
  *
  * @param obj the repository object

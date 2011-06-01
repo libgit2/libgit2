@@ -61,6 +61,7 @@ static struct {
 	{GIT_EEXISTS, "A reference with this name already exists"},
 	{GIT_EOVERFLOW, "The given integer literal is too large to be parsed"},
 	{GIT_ENOTNUM, "The given literal is not a valid number"},
+	{GIT_EAMBIGUOUSOIDPREFIX, "The given oid prefix is ambiguous"},
 };
 
 const char *git_strerror(int num)

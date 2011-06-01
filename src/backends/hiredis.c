@@ -107,6 +107,21 @@ int hiredis_backend__read(void **data_p, size_t *len_p, git_otype *type_p, git_o
     return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read backend");
 }
 
+int hiredis_backend__read_unique_short_oid(git_oid *out_oid, void **data_p, size_t *len_p, git_otype *type_p, git_odb_backend *_backend,
+					const git_oid *short_oid, unsigned int len) {
+	if (len >= GIT_OID_HEXSZ) {
+		/* Just match the full identifier */
+		int error = hiredis_backend__read(data_p, len_p, type_p, backend, short_oid);
+		if (error == GIT_SUCCESS)
+			git_oid_cpy(out_oid, short_oid);
+
+		return error;
+	} else if (len < GIT_OID_HEXSZ) {
+		/* TODO */
+		return git__throw(GIT_ENOTIMPLEMENTED, "Hiredis backend cannot search objects from short oid");
+	}
+}
+
 int hiredis_backend__exists(git_odb_backend *_backend, const git_oid *oid) {
     hiredis_backend *backend;
     int found;
@@ -174,6 +189,7 @@ int git_odb_backend_hiredis(git_odb_backend **backend_out, const char *host, int
         goto cleanup;
 
     backend->parent.read = &hiredis_backend__read;
+    backend->parent.read_unique_short_oid = &hiredis_backend__read_unique_short_oid;
     backend->parent.read_header = &hiredis_backend__read_header;
     backend->parent.write = &hiredis_backend__write;
     backend->parent.exists = &hiredis_backend__exists;
