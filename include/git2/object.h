@@ -77,6 +77,12 @@ GIT_EXTERN(git_otype) git_object_type(const git_object *obj);
 /**
  * Get the repository that owns this object
  *
+ * Freeing or calling `git_repository_close` on the
+ * returned pointer will invalidate the actual object.
+ *
+ * Any other operation may be run on the repository without
+ * affecting the object.
+ *
  * @param obj the object
  * @return the repository who owns this object
  */
