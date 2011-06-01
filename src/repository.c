@@ -41,6 +41,9 @@
 
 #define GIT_BRANCH_MASTER "master"
 
+#define GIT_FILE_CONTENT_PREFIX "gitdir: "
+#define GIT_FILE_CONTENT_PREFIX_LENGTH 8
+
 typedef struct {
 	char *path_repository;
 	unsigned is_bare:1, has_been_reinit:1;
@@ -158,6 +161,46 @@ static int check_repository_dirs(git_repository *repo)
 		return git__throw(GIT_ENOTAREPO, "HEAD file is missing");
 
 	return GIT_SUCCESS;
+}
+
+static int read_gitfile(const char *file_path, char **directory_path, const char *base_path)
+{
+	assert(file_path && directory_path);
+	gitfo_buf file;
+	int error;
+
+	error = gitfo_read_file(&file, file_path);
+
+	if (error < GIT_SUCCESS)
+		return error;
+
+	char *data = (char*)(file.data);
+
+	if (git__prefixcmp(data, GIT_FILE_CONTENT_PREFIX)) {
+		gitfo_free_buf(&file);
+		return git__throw(GIT_ENOTFOUND, "Invalid gitfile format `%s`", file_path);
+	}
+
+	int end_offset = strlen(data) - 1;
+
+	for (;data[end_offset] != '\r' && data[end_offset] != '\n'; --end_offset);
+	data[end_offset] = '\0';
+
+	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset) {
+		gitfo_free_buf(&file);
+		return git__throw(GIT_ENOTFOUND, "No path in git file `%s`", file_path);
+	}
+
+	*directory_path = git__malloc(sizeof(char)* GIT_PATH_MAX);
+	if (*directory_path == NULL) {
+		gitfo_free_buf(&file);
+		return GIT_ENOMEM;
+	}
+
+	error = gitfo_prettify_dir_path(*directory_path, sizeof(*directory_path), data + GIT_FILE_CONTENT_PREFIX_LENGTH, base_path);
+	gitfo_free_buf(&file);
+
+	return error;
 }
 
 static int guess_repository_dirs(git_repository *repo, const char *repository_path)
@@ -388,6 +431,21 @@ int git_repository_discover(const char *start_path, char **repository_path)
 	git__joinpath(normal_path, bare_path, DOT_GIT);
 
 	while(1){
+		if (lookup_path == normal_path) {
+			if (gitfo_isfile(lookup_path) == GIT_SUCCESS) {
+				error = read_gitfile(normal_path, *repository_path, bare_path);
+
+				if (error < GIT_SUCCESS) {
+					git__rethrow(error, "Unable to read git file `%s`", normal_path);
+					goto cleanup;
+				}
+
+				git_repository__free_dirs(&repo);
+
+				return GIT_SUCCESS;
+			}
+		}
+
 		error = guess_repository_dirs(&repo, lookup_path);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
@@ -438,6 +496,11 @@ int git_repository_discover(const char *start_path, char **repository_path)
 	}
 
 	*repository_path = git__strdup(repo.path_repository);
+	if (*repository_path == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
 	git_repository__free_dirs(&repo);
 
 	return GIT_SUCCESS;
