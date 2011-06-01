@@ -107,6 +107,7 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 	const char *offset_start;
 	const char *offset_end;
 
+	//we are sure that *buffer == ' ' 
 	offset_start = buffer + 1;
 
 	if (*offset_start == '\n') {
@@ -117,17 +118,23 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 	if (offset_start[0] != '-' && offset_start[0] != '+')
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. It doesn't start with '+' or '-'");
 
+	if (offset_start[1] < '0' || offset_start[1] > '9')
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset.
+
 	if (git__strtol32(&dec_offset, offset_start + 1, &offset_end, 10) < GIT_SUCCESS)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. It isn't a number");
 
 	if (offset_end - offset_start != 5)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Invalid length");
 
+	if (dec_offset > 1400)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Value too large");
+
 	hours = dec_offset / 100;
 	mins = dec_offset % 100;
 
 	if (hours > 14)	// see http://www.worldtimezone.com/faq.html 
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Hour value too large");;
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Hour value too large");
 
 	if (mins > 59)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Minute value too large");
@@ -168,23 +175,26 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	buffer += header_len;
 
 	/* Parse name */
-	if ((name_end = memchr(buffer, '<', buffer_end - buffer)) == NULL)
+	if ((name_end = strstr(buffer, " <")) == NULL)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Can't find e-mail start");
 
-	name_length = name_end - buffer - 1;
+	name_length = name_end - buffer;
+	if (name_length <= 0)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Missing tagger name");
+
 	sig->name = git__malloc(name_length + 1);
 	if (sig->name == NULL)
 		return GIT_ENOMEM;
 
 	memcpy(sig->name, buffer, name_length);
 	sig->name[name_length] = 0;
-	buffer = name_end + 1;
+	buffer = name_end + 2;
 
 	if (buffer >= line_end)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Ended unexpectedly");
 
 	/* Parse email */
-	if ((email_end = memchr(buffer, '>', buffer_end - buffer)) == NULL)
+	if ((email_end = strstr(buffer, "> ")) == NULL)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Can't find e-mail end");
 
 	email_length = email_end - buffer;
@@ -194,10 +204,14 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	memcpy(sig->email, buffer, email_length);
 	sig->email[email_length] = 0;
-	buffer = email_end + 1;
+	buffer = email_end + 2;
 
 	if (buffer >= line_end)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Ended unexpectedly");
+
+	/* verify email */
+	if (strpbrk(sig->email, "><\n ") != NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Malformed e-mail");
 
 	if (git__strtol32(&time, buffer, &buffer, 10) < GIT_SUCCESS)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Timestamp isn't a number");
