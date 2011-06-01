@@ -960,6 +960,7 @@ static int pack_entry_find_offset(
 	const unsigned char *index = p->index_map.data;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
+	const unsigned char *current;
 
 	*offset_out = 0;
 
@@ -999,7 +1000,6 @@ static int pack_entry_find_offset(
 	/* Use git.git lookup code */
 	pos =  sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
 
-	const unsigned char *current;
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
 		found = 1;
@@ -1051,6 +1051,8 @@ static int pack_entry_find1(
 		unsigned int len)
 {
 	off_t offset;
+	git_oid found_oid;
+	int error;
 
 	assert(p);
 
@@ -1061,8 +1063,7 @@ static int pack_entry_find1(
 				return git__throw(GIT_ERROR, "Failed to find pack entry. Bad object found");
 	}
 
-	git_oid found_oid;
-	int error = pack_entry_find_offset(&offset, &found_oid, p, short_oid, len);
+	error = pack_entry_find_offset(&offset, &found_oid, p, short_oid, len);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to find pack entry. Couldn't find offset");
 
@@ -1115,11 +1116,11 @@ static int pack_entry_find_prefix(
 {
 	int error;
 	size_t i;
+	unsigned found = 0;
 
 	if ((error = packfile_refresh_all(backend)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to find pack entry");
 
-	unsigned found = 0;
 	if (backend->last_found) {
 		error = pack_entry_find1(e, backend->last_found, short_oid, len);
 		if (error == GIT_EAMBIGUOUSOIDPREFIX) {
