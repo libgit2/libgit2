@@ -389,7 +389,7 @@ int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list
 		buf[len + 1] = '\0';
 
 		posixify_path(buf);
-		if (gitfo_prettify_dir_path(buf2, sizeof(buf2), buf) < GIT_SUCCESS)
+		if (gitfo_prettify_dir_path(buf2, sizeof(buf2), buf, NULL) < GIT_SUCCESS)
 			continue;
 
 		len = strlen(buf2);
@@ -479,7 +479,7 @@ static int gitfo_retrieve_previous_path_component_start(const char *path)
 	return offset;
 }
 
-int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
+int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, const char *base_path)
 {
 	int len = 0, segment_len, only_dots, root_path_offset, error = GIT_SUCCESS;
 	char *current;
@@ -491,9 +491,15 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 
 	root_path_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_path_offset < 0) {
-		error = gitfo_getcwd(buffer_out, size);
-		if (error < GIT_SUCCESS)
-			return error;	/* The callee already takes care of setting the correct error message. */
+		if (base_path == NULL) {
+			error = gitfo_getcwd(buffer_out, size);
+			if (error < GIT_SUCCESS)
+				return error;	/* The callee already takes care of setting the correct error message. */
+		} else {
+			strcpy(buffer_out, base_path);
+			posixify_path(buffer_out);
+			git__joinpath(buffer_out, buffer_out, "");
+		}
 
 		len = strlen(buffer_out);
 		buffer_out += len;
@@ -557,7 +563,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 	return GIT_SUCCESS;
 }
 
-int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
+int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path)
 {
 	int error, path_len, i;
 	const char* pattern = "/..";
@@ -574,7 +580,7 @@ int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
 			return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 	}
 
-	error =  gitfo_prettify_dir_path(buffer_out, size, path);
+	error =  gitfo_prettify_dir_path(buffer_out, size, path, base_path);
 	if (error < GIT_SUCCESS)
 		return error;	/* The callee already takes care of setting the correct error message. */
 

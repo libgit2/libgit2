@@ -171,11 +171,13 @@ extern int gitfo_getcwd(char *buffer_out, size_t size);
  * @param buffer_out buffer to populate with the normalized path.
  * @param size buffer size.
  * @param path directory path to clean up.
+ * @param base_path : the absolute path to be used as a working directory, or NULL
+ * if you want to use the actual current working directory.
  * @return
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
+int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, const char *base_bath);
 
 /**
  * Clean up a provided absolute or relative file path.
@@ -194,11 +196,13 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
  * @param buffer_out buffer to populate with the normalized path.
  * @param size buffer size.
  * @param path file path to clean up.
+ * @param base_path : the absolute path to be used as a working directory, or NULL
+ * if you want to use the actual current working directory.
  * @return
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path);
+int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path);
 
 int gitfo_retrieve_path_root_offset(const char *path);
 
