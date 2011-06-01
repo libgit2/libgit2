@@ -109,29 +109,24 @@ typedef struct git_index_entry_unmerged {
 } git_index_entry_unmerged;
 
 /**
- * Create a new Git index object as a memory representation
+ * Create a new bare Git index object as a memory representation
  * of the Git index file in 'index_path', without a repository
  * to back it.
  *
- * Since there is no ODB behind this index, any Index methods
- * which rely on the ODB (e.g. index_add) will fail with the
- * GIT_EBAREINDEX error code.
+ * Since there is no ODB or working directory behind this index,
+ * any Index methods which rely on these (e.g. index_add) will
+ * fail with the GIT_EBAREINDEX error code.
+ *
+ * If you need to access the index of an actual repository,
+ * use the `git_repository_index` wrapper.
+ *
+ * The index must be freed once it's no longer in use.
  *
  * @param index the pointer for the new index
  * @param index_path the path to the index file in disk
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_index_open_bare(git_index **index, const char *index_path);
-
-/**
- * Open the Index inside the git repository pointed
- * by 'repo'.
- *
- * @param index the pointer for the new index
- * @param repo the git repo which owns the index
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_index_open_inrepo(git_index **index, git_repository *repo);
+GIT_EXTERN(int) git_index_open(git_index **index, const char *index_path);
 
 /**
  * Clear the contents (all the entries) of an index object.

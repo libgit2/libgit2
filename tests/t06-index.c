@@ -48,7 +48,7 @@ struct test_entry TEST_ENTRIES[] = {
 BEGIN_TEST(read0, "load an empty index")
 	git_index *index;
 
-	must_pass(git_index_open_bare(&index, "in-memory-index"));
+	must_pass(git_index_open(&index, "in-memory-index"));
 	must_be_true(index->on_disk == 0);
 
 	must_pass(git_index_read(index));
@@ -65,7 +65,7 @@ BEGIN_TEST(read1, "load a standard index (default test index)")
 	unsigned int i;
 	git_index_entry **entries;
 
-	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
+	must_pass(git_index_open(&index, TEST_INDEX_PATH));
 	must_be_true(index->on_disk);
 
 	must_pass(git_index_read(index));
@@ -90,7 +90,7 @@ END_TEST
 BEGIN_TEST(read2, "load a standard index (git.git index)")
 	git_index *index;
 
-	must_pass(git_index_open_bare(&index, TEST_INDEX2_PATH));
+	must_pass(git_index_open(&index, TEST_INDEX2_PATH));
 	must_be_true(index->on_disk);
 
 	must_pass(git_index_read(index));
@@ -107,7 +107,7 @@ BEGIN_TEST(find0, "find an entry on an index")
 	git_index *index;
 	unsigned int i;
 
-	must_pass(git_index_open_bare(&index, TEST_INDEX_PATH));
+	must_pass(git_index_open(&index, TEST_INDEX_PATH));
 	must_pass(git_index_read(index));
 
 	for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
@@ -122,7 +122,7 @@ BEGIN_TEST(find1, "find an entry in an empty index")
 	git_index *index;
 	unsigned int i;
 
-	must_pass(git_index_open_bare(&index, "fake-index"));
+	must_pass(git_index_open(&index, "fake-index"));
 
 	for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
 		int idx = git_index_find(index, TEST_ENTRIES[i].path);
@@ -137,7 +137,7 @@ BEGIN_TEST(write0, "write an index back to disk")
 
 	must_pass(copy_file(TEST_INDEXBIG_PATH, "index_rewrite"));
 
-	must_pass(git_index_open_bare(&index, "index_rewrite"));
+	must_pass(git_index_open(&index, "index_rewrite"));
 	must_pass(git_index_read(index));
 	must_be_true(index->on_disk);
 
@@ -165,7 +165,7 @@ END_TEST
 BEGIN_TEST(sort1, "sort the entires in an empty index")
 	git_index *index;
 
-	must_pass(git_index_open_bare(&index, "fake-index"));
+	must_pass(git_index_open(&index, "fake-index"));
 
 	/* FIXME: this test is slightly dumb */
 	must_be_true(index->entries.sorted);

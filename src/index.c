@@ -168,13 +168,19 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 	return git_index_read(index);
 }
 
-int git_index_open_bare(git_index **index_out, const char *index_path)
+int git_index_open(git_index **index_out, const char *index_path)
 {
+	assert(index_out && index_path);
 	return index_initialize(index_out, NULL, index_path);
 }
 
-int git_index_open_inrepo(git_index **index_out, git_repository *repo)
+/*
+ * Moved from `repository.c`
+ */
+int git_repository_index(git_index **index_out, git_repository *repo)
 {
+	assert(index_out && repo);
+
 	if (repo->is_bare)
 		return git__throw(GIT_EBAREINDEX, "Failed to open index. Repository is bare");
 
@@ -183,7 +189,7 @@ int git_index_open_inrepo(git_index **index_out, git_repository *repo)
 
 void git_index_free(git_index *index)
 {
-	if (index == NULL || index->repository != NULL)
+	if (index == NULL)
 		return;
 
 	git_index_clear(index);

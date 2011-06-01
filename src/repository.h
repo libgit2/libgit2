@@ -25,7 +25,6 @@ struct git_object {
 
 struct git_repository {
 	git_odb *db;
-	git_index *index;
 
 	git_cache objects;
 	git_refcache references;

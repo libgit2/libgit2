@@ -315,30 +315,7 @@ void git_repository_free(git_repository *repo)
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
 
-	if (repo->index != NULL) {
-		repo->index->repository = NULL;
-		git_index_free(repo->index);
-	}
-
 	free(repo);
-}
-
-int git_repository_index(git_index **index_out, git_repository *repo)
-{
-	int error;
-
-	assert(index_out && repo);
-
-	if (repo->index == NULL) {
-		error = git_index_open_inrepo(&repo->index, repo);	/* TODO: move index.c to new error handling */
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to open repository index");
-
-		assert(repo->index != NULL);
-	}
-
-	*index_out = repo->index;
-	return GIT_SUCCESS;
 }
 
 git_odb *git_repository_database(git_repository *repo)

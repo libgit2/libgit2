@@ -141,10 +141,18 @@ GIT_EXTERN(int) git_repository_open3(git_repository **repository,
 GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
 
 /**
- * Get the Index file of a Git repository
+ * Open the Index file of a Git repository
  *
- * This is a cheap operation; the index is only opened on the first call,
- * and subsequent calls only retrieve the previous pointer.
+ * This returns a new and unique `git_index` object representing the
+ * active index for the repository.
+ *
+ * This method may be called more than once (e.g. on different threads).
+ *
+ * Each returned `git_index` object is independent and suffers no race
+ * conditions: synchronization is done at the FS level.
+ *
+ * Each returned `git_index` object must be manually freed by the user,
+ * using `git_index_free`.
  *
  * @param index Pointer where to store the index
  * @param repo a repository object
