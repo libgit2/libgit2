@@ -959,7 +959,7 @@ static int pack_entry_find_offset(
 	const uint32_t *level1_ofs = p->index_map.data;
 	const unsigned char *index = p->index_map.data;
 	unsigned hi, lo, stride;
-	int found = 0;
+	int pos, found = 0;
 
 	*offset_out = 0;
 
@@ -997,7 +997,7 @@ static int pack_entry_find_offset(
 #endif
 
 	/* Use git.git lookup code */
-	int pos =  sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
+	pos =  sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
 
 	const unsigned char *current;
 	if (pos >= 0) {
