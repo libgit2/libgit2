@@ -189,6 +189,8 @@ int git_testsuite_run(git_testsuite *ts)
 			putchar('F');
 		} else
 			putchar('.');
+
+		fflush(stdout);
 	}
 	printf("\n  ");
 	print_details(ts);
