@@ -119,7 +119,7 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. It doesn't start with '+' or '-'");
 
 	if (offset_start[1] < '0' || offset_start[1] > '9')
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset.
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset.");
 
 	if (git__strtol32(&dec_offset, offset_start + 1, &offset_end, 10) < GIT_SUCCESS)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. It isn't a number");
