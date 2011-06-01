@@ -126,7 +126,14 @@ static int ensure_repository_init(
 	if (repo->path_index != NULL || expected_path_index != NULL) {
 		if (git__suffixcmp(repo->path_index, expected_path_index) != 0)
 			goto cleanup;
-	}
+
+		if (git_repository_is_bare(repo) == 1)
+			goto cleanup;
+	} else if (git_repository_is_bare(repo) == 0)
+			goto cleanup;
+
+	if (git_repository_is_empty(repo) == 0)
+		goto cleanup;
 
 	git_repository_free(repo);
 	rmdir_recurs(working_directory);
