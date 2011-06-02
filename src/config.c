@@ -288,6 +288,8 @@ int git_config_get_int(git_config *cfg, const char *name, int *out)
 
 int git_config__parse_bool(const char *name, const char *value, int *out)
 {
+	int error;
+	
 	/* A missing value means true */
 	if (value == NULL) {
 		*out = 1;
@@ -308,7 +310,7 @@ int git_config__parse_bool(const char *name, const char *value, int *out)
 	}
 
 	/* Try to parse it as an integer */
-	int error = git_config__parse_int(name, value , out);
+	error = git_config__parse_int(name, value , out);
 	if (error == GIT_SUCCESS)
 		*out = !!(*out);
 

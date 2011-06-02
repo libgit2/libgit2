@@ -33,6 +33,7 @@
 #include "blob.h"
 #include "fileops.h"
 #include "git2/environment.h"
+#include "config.h"
 
 #include "refs.h"
 
@@ -165,23 +166,26 @@ static int check_repository_dirs(git_repository *repo)
 
 static int read_gitfile(const char *file_path, char **directory_path, const char *base_path)
 {
-	assert(file_path && directory_path);
 	gitfo_buf file;
-	int error;
+	int error, end_offset;
+	char *data;
+
+	assert(file_path && directory_path);
+
 
 	error = gitfo_read_file(&file, file_path);
 
 	if (error < GIT_SUCCESS)
 		return error;
 
-	char *data = (char*)(file.data);
+	data = (char*)(file.data);
 
 	if (git__prefixcmp(data, GIT_FILE_CONTENT_PREFIX)) {
 		gitfo_free_buf(&file);
 		return git__throw(GIT_ENOTFOUND, "Invalid gitfile format `%s`", file_path);
 	}
 
-	int end_offset = strlen(data) - 1;
+	end_offset = strlen(data) - 1;
 
 	for (;data[end_offset] != '\r' && data[end_offset] != '\n'; --end_offset);
 	data[end_offset] = '\0';
@@ -398,18 +402,22 @@ void git_repository_free(git_repository *repo)
 
 int git_repository_discover(const char *start_path, char **repository_path)
 {
-	assert(start_path && repository_path);
-
-	*repository_path = NULL;
-	int error = GIT_SUCCESS;
 	git_repository repo;
-	memset(&repo, 0x0, sizeof(git_repository));
+	int error;
 
 	char bare_path[GIT_PATH_MAX];
 	char normal_path[GIT_PATH_MAX];
 	char *lookup_path = normal_path;
 	int across_filesystem;
 	dev_t current_device;
+	char *ceiling_dirs;
+	int ceiling_offset;
+
+	error = GIT_SUCCESS;
+	*repository_path = NULL;
+
+	assert(start_path && repository_path);
+	memset(&repo, 0x0, sizeof(git_repository));
 
 	if (git_config_get_env_bool(GIT_DISCOVERY_ACROSS_FILESYSTEM_ENVIRONMENT, &across_filesystem) < GIT_SUCCESS)
 		across_filesystem = 0;
@@ -426,8 +434,8 @@ int git_repository_discover(const char *start_path, char **repository_path)
 			goto cleanup;
 	}
 
-	char *ceiling_dirs = getenv(GIT_CEILING_DIRECTORIES_ENVIRONMENT);
-	int ceiling_offset = gitfo_retrieve_path_ceiling_offset(bare_path, ceiling_dirs);
+	ceiling_dirs = getenv(GIT_CEILING_DIRECTORIES_ENVIRONMENT);
+	ceiling_offset = gitfo_retrieve_path_ceiling_offset(bare_path, ceiling_dirs);
 	git__joinpath(normal_path, bare_path, DOT_GIT);
 
 	while(1){
