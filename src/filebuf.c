@@ -41,16 +41,10 @@ static int lock_file(git_filebuf *file, int flags)
 
 	/* create path to the file buffer is required */
 	if (flags & GIT_FILEBUF_FORCE) {
-		file->fd = gitfo_creat_force(file->path_lock, 0644);
+		file->fd = gitfo_creat_locked_force(file->path_lock, 0644);
 	} else {
-		file->fd = gitfo_creat(file->path_lock, 0644);
+		file->fd = gitfo_creat_locked(file->path_lock, 0644);
 	}
-
-	if (file->fd < 0)
-		return git__throw(GIT_EOSERR, "Failed to create lock");
-
-	if (gitfo_lock_exclusive(file->fd) < 0)
-		return git__throw(GIT_EOSERR, "Failed to acquire lock");
 
 	if ((flags & GIT_FILEBUF_APPEND) && gitfo_exists(file->path_original) == 0) {
 		git_file source;

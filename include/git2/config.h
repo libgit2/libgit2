@@ -123,6 +123,18 @@ GIT_EXTERN(int) git_config_get_int(git_config *cfg, const char *name, int *out);
 GIT_EXTERN(int) git_config_get_long(git_config *cfg, const char *name, long int *out);
 
 /**
+ * Get the value of a boolean config variable.
+ *
+ * This function uses the usual C convention of 0 being false and
+ * anything else true.
+ *
+ * @param name the variable's name
+ * @param out pointer to the variable where the value should be stored
+ * @return GIT_SUCCESS on success; error code otherwise
+ */
+GIT_EXTERN(int) git_config_get_bool(git_config *cg, const char *name, int *out);
+
+/**
  * Get the value of a boolean environment variable.
  *
  * This function uses the usual C convention of 0 being false and

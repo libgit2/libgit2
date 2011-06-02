@@ -66,6 +66,20 @@ int gitfo_creat_force(const char *path, int mode)
 	return gitfo_creat(path, mode);
 }
 
+int gitfo_creat_locked(const char *path, int mode)
+{
+	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXLOCK, mode);
+	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to create locked file. Could not open %s", path);
+}
+
+int gitfo_creat_locked_force(const char *path, int mode)
+{
+	if (gitfo_mkdir_2file(path) < GIT_SUCCESS)
+		return git__throw(GIT_EOSERR, "Failed to create locked file %s", path);
+
+	return gitfo_creat_locked(path, mode);
+}
+
 int gitfo_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
@@ -320,21 +334,6 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
-int gitfo_lock_exclusive(int fd)
-{
-	return flock(fd, LOCK_EX);
-}
-
-int gitfo_lock_shared(int fd)
-{
-	return flock(fd, LOCK_SH);
-}
-
-int gitfo_unlock(int fd)
-{
-	return flock(fd, LOCK_UN);
-}
-
 static void posixify_path(char *path)
 {
 	#if GIT_PLATFORM_PATH_SEP != '/'
@@ -369,8 +368,8 @@ int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list
 {
 	assert(path);
 
-	char buf[GIT_PATH_MAX + 1];
-	char buf2[GIT_PATH_MAX + 1];
+	char buf[GIT_PATH_MAX];
+	char buf2[GIT_PATH_MAX];
 	const char *ceil, *sep;
 	int len, max_len = -1;
 	int min_len = gitfo_retrieve_path_root_offset(path) + 1;
@@ -382,7 +381,7 @@ int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list
 		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
 		len = sep - ceil;
 
-		if (len == 0 || len > GIT_PATH_MAX || gitfo_retrieve_path_root_offset(ceil) == -1)
+		if (len == 0 || len >= GIT_PATH_MAX || gitfo_retrieve_path_root_offset(ceil) == -1)
 			continue;
 
 		memcpy(buf, ceil, len+1);

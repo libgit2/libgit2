@@ -403,8 +403,7 @@ void git_repository_free(git_repository *repo)
 int git_repository_discover(const char *start_path, char **repository_path)
 {
 	git_repository repo;
-	int error;
-
+	int error = GIT_SUCCESS;
 	char bare_path[GIT_PATH_MAX];
 	char normal_path[GIT_PATH_MAX];
 	char *lookup_path = normal_path;
@@ -413,7 +412,6 @@ int git_repository_discover(const char *start_path, char **repository_path)
 	char *ceiling_dirs;
 	int ceiling_offset;
 
-	error = GIT_SUCCESS;
 	*repository_path = NULL;
 
 	assert(start_path && repository_path);
@@ -441,7 +439,7 @@ int git_repository_discover(const char *start_path, char **repository_path)
 	while(1){
 		if (lookup_path == normal_path) {
 			if (gitfo_isfile(lookup_path) == GIT_SUCCESS) {
-				error = read_gitfile(normal_path, *repository_path, bare_path);
+				error = read_gitfile(normal_path, repository_path, bare_path);
 
 				if (error < GIT_SUCCESS) {
 					git__rethrow(error, "Unable to read git file `%s`", normal_path);

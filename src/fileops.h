@@ -14,7 +14,7 @@
 
 #define GIT_PATH_LIST_SEPARATOR ':'
 
-#ifdef GIT__WIN32
+#ifdef GIT_WIN32
 #define GIT_PLATFORM_PATH_SEP '/'
 #else
 #define GIT_PLATFORM_PATH_SEP '\\'
@@ -65,15 +65,14 @@ extern int gitfo_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
 extern int gitfo_creat(const char *path, int mode);
 extern int gitfo_creat_force(const char *path, int mode);
+extern int gitfo_creat_locked(const char *path, int mode);
+extern int gitfo_creat_locked_force(const char *path, int mode);
 extern int gitfo_mktemp(char *path_out, const char *filename);
 extern int gitfo_isdir(const char *path);
 extern int gitfo_isfile(const char *path);
 extern int gitfo_mkdir_recurs(const char *path, int mode);
 extern int gitfo_mkdir_2file(const char *path);
 #define gitfo_close(fd) close(fd)
-extern int gitfo_lock_exclusive(int fd);
-extern int gitfo_lock_shared(int fd);
-extern int gitfo_unlock(int fd);
 
 extern int gitfo_read(git_file fd, void *buf, size_t cnt);
 extern int gitfo_write(git_file fd, void *buf, size_t cnt);
@@ -236,7 +235,7 @@ int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list
  */
 int gitfo_realpath(const char *path, char *buffer_out);
 
-#ifdef GIT__WIN32
+#ifdef GIT_WIN32
 GIT_INLINE(int) gitfo_has_dos_drive_prefix(const char path)
 {
 	return isalpha(path[0]) && (path[1] == ':') ? GIT_SUCCESS : GIT_ERROR;
