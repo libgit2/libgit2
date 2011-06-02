@@ -11,6 +11,7 @@
 #include "dir.h"
 #include <fcntl.h>
 #include <time.h>
+#include <ctype.h>
 
 #define GIT_PATH_LIST_SEPARATOR ':'
 
@@ -236,7 +237,7 @@ int gitfo_retrieve_path_ceiling_offset(const char *path, const char *prefix_list
 int gitfo_realpath(const char *path, char *buffer_out);
 
 #ifdef GIT_WIN32
-GIT_INLINE(int) gitfo_has_dos_drive_prefix(const char path)
+GIT_INLINE(int) gitfo_has_dos_drive_prefix(const char *path)
 {
 	return isalpha(path[0]) && (path[1] == ':') ? GIT_SUCCESS : GIT_ERROR;
 }
