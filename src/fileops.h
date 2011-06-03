@@ -65,6 +65,8 @@ extern int gitfo_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
 extern int gitfo_creat(const char *path, int mode);
 extern int gitfo_creat_force(const char *path, int mode);
+extern int gitfo_creat_locked(const char *path, int mode);
+extern int gitfo_creat_locked_force(const char *path, int mode);
 extern int gitfo_mktemp(char *path_out, const char *filename);
 extern int gitfo_isdir(const char *path);
 extern int gitfo_isfile(const char *path);

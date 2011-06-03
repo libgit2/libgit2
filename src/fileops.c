@@ -66,6 +66,20 @@ int gitfo_creat_force(const char *path, int mode)
 	return gitfo_creat(path, mode);
 }
 
+int gitfo_creat_locked(const char *path, int mode)
+{
+	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
+	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to create locked file. Could not open %s", path);
+}
+
+int gitfo_creat_locked_force(const char *path, int mode)
+{
+	if (gitfo_mkdir_2file(path) < GIT_SUCCESS)
+		return git__throw(GIT_EOSERR, "Failed to create locked file %s", path);
+
+	return gitfo_creat_locked(path, mode);
+}
+
 int gitfo_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
