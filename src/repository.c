@@ -299,6 +299,81 @@ cleanup:
 	return git__rethrow(error, "Failed to open repository");
 }
 
+static int abspath(char *buffer_out, size_t size, const char *path)
+{
+	assert(buffer_out && size >= GIT_PATH_MAX);
+
+	#ifdef GIT_WIN32
+		if (_fullpath(buffer_out, path, size) == NULL)
+			return git__throw(GIT_EOSERR, "Failed to retrieve real path: %s causing errors", buffer_out);
+	#else
+		if (realpath(path, buffer_out) == NULL)
+			return git__throw(GIT_EOSERR, "Failed to retrieve real path: %s causing errors", buffer_out);
+	#endif
+
+	gitfo_posixify_path(buffer_out);
+
+	return GIT_SUCCESS;
+}
+
+static dev_t retrieve_device(dev_t *device_out, const char *path)
+{
+	struct stat path_info;
+
+	assert(device_out);
+
+	if (gitfo_stat(path, &path_info))
+		return git__throw(GIT_EOSERR, "Failed to get file informations: %s", path);
+
+	*device_out = path_info.st_dev;
+
+	return GIT_SUCCESS;
+}
+
+static int retrieve_ceiling_directories_offset(const char *path, const char *ceiling_directories)
+{
+	char buf[GIT_PATH_MAX + 1];
+	char buf2[GIT_PATH_MAX + 1];
+	const char *ceil, *sep;
+	int len, max_len = -1;
+	int min_len;
+
+	assert(path);
+
+	min_len = gitfo_retrieve_path_root_offset(path) + 1;
+
+	if (ceiling_directories == NULL || min_len == 0)
+		return min_len;
+
+	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
+		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
+		len = sep - ceil;
+
+		if (len == 0 || len > GIT_PATH_MAX || gitfo_retrieve_path_root_offset(ceil) == -1)
+			continue;
+
+		strncpy(buf, ceil, len);
+		buf[len] = '\0';
+
+		gitfo_posixify_path(buf);
+		if (gitfo_prettify_dir_path(buf2, sizeof(buf2), buf, NULL) < GIT_SUCCESS)
+			continue;
+
+		len = strlen(buf2);
+		if (len > 0 && buf2[len-1] == '/')
+			buf[--len] = '\0';
+
+		if (!strncmp(path, buf2, len) &&
+			path[len] == '/' &&
+			len > max_len)
+		{
+			max_len = len;
+		}
+	}
+
+	return max_len <= min_len ? min_len : max_len;
+}
+
 void git_repository_free(git_repository *repo)
 {
 	if (repo == NULL)

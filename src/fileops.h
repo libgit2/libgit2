@@ -198,6 +198,8 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, con
  */
 int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path);
 
+void gitfo_posixify_path(char *path);
+
 int gitfo_retrieve_path_root_offset(const char *path);
 
 #endif /* INCLUDE_fileops_h__ */

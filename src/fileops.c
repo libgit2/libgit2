@@ -334,7 +334,7 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
-static void posixify_path(char *path)
+void gitfo_posixify_path(char *path)
 {
 	#if GIT_PLATFORM_PATH_SEP != '/'
 		while (*path) {
@@ -456,7 +456,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, con
 				return git__throw(GIT_EOVERFLOW, "Failed to prettify dir path: the base path is too long for the buffer.");
 
 			strcpy(buffer_out, base_path);
-			posixify_path(buffer_out);
+			gitfo_posixify_path(buffer_out);
 			git__joinpath(buffer_out, buffer_out, "");
 		}
 
@@ -587,7 +587,7 @@ int gitfo_getcwd(char *buffer_out, size_t size)
 	if (cwd_buffer == NULL)
 		return git__throw(GIT_EOSERR, "Failed to retrieve current working directory");
 
-	posixify_path(buffer_out);
+	gitfo_posixify_path(buffer_out);
 
 	git__joinpath(buffer_out, buffer_out, "");	//Ensure the path ends with a trailing slash
 
