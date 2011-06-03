@@ -413,6 +413,18 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 	return error;
 }
 
+static void git_repository__free_dirs(git_repository *repo)
+{
+	free(repo->path_workdir);
+	repo->path_workdir = NULL;
+	free(repo->path_index);
+	repo->path_index = NULL;
+	free(repo->path_repository);
+	repo->path_repository = NULL;
+	free(repo->path_odb);
+	repo->path_odb = NULL;
+}
+
 void git_repository_free(git_repository *repo)
 {
 	if (repo == NULL)
@@ -420,11 +432,7 @@ void git_repository_free(git_repository *repo)
 
 	git_cache_free(&repo->objects);
 	git_repository__refcache_free(&repo->references);
-
-	free(repo->path_workdir);
-	free(repo->path_index);
-	free(repo->path_repository);
-	free(repo->path_odb);
+	git_repository__free_dirs(repo);
 
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
