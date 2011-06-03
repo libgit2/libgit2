@@ -12,6 +12,14 @@
 #include <fcntl.h>
 #include <time.h>
 
+#define GIT_PATH_LIST_SEPARATOR ':'
+
+#ifdef GIT__WIN32
+#define GIT_PLATFORM_PATH_SEP '/'
+#else
+#define GIT_PLATFORM_PATH_SEP '\\'
+#endif
+
 #ifdef GIT_WIN32
 GIT_INLINE(int) link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
@@ -187,5 +195,6 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
  */
 int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path);
 
-int retrieve_path_root_offset(const char *path);
+int gitfo_retrieve_path_root_offset(const char *path);
+
 #endif /* INCLUDE_fileops_h__ */

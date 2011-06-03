@@ -301,8 +301,19 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+static void posixify_path(char *path)
+{
+	#if GIT_PLATFORM_PATH_SEP != '/'
+		while (*path) {
+			if (*path == GIT_PLATFORM_PATH_SEP)
+				*path = '/';
 
-int retrieve_path_root_offset(const char *path)
+			path++;
+		}
+	#endif
+}
+
+int gitfo_retrieve_path_root_offset(const char *path)
 {
 	int offset = 0;
 
@@ -320,7 +331,6 @@ int retrieve_path_root_offset(const char *path)
 	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
 }
 
-
 int gitfo_mkdir_recurs(const char *path, int mode)
 {
 	int error, root_path_offset;
@@ -333,7 +343,7 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	error = GIT_SUCCESS;
 	pp = path_copy;
 
-	root_path_offset = retrieve_path_root_offset(pp);
+	root_path_offset = gitfo_retrieve_path_root_offset(pp);
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
@@ -367,7 +377,7 @@ static int retrieve_previous_path_component_start(const char *path)
 {
 	int offset, len, root_offset, start = 0;
 
-	root_offset = retrieve_path_root_offset(path);
+	root_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_offset > -1)
 		start += root_offset;
 
@@ -402,7 +412,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 	buffer_end = path + strlen(path);
 	buffer_out_start = buffer_out;
 
-	root_path_offset = retrieve_path_root_offset(path);
+	root_path_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_path_offset < 0) {
 		error = gitfo_getcwd(buffer_out, size);
 		if (error < GIT_SUCCESS)
@@ -517,16 +527,6 @@ int gitfo_cmp_path(const char *name1, int len1, int isdir1,
 		return ((!isdir1 && !isdir2) ? 1 :
                         (isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
 	return 0;
-}
-
-static void posixify_path(char *path)
-{
-	while (*path) {
-		if (*path == '\\')
-			*path = '/';
-
-		path++;
-	}
 }
 
 int gitfo_getcwd(char *buffer_out, size_t size)
