@@ -139,8 +139,7 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 #	define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
 #endif
 
-extern char *git__strtok(char *output, char *src, char *delimit);
-extern char *git__strtok_keep(char *output, char *src, char *delimit);
+extern char *git__strtok(char **end, const char *sep);
 
 extern void git__strntolower(char *str, int len);
 extern void git__strtolower(char *str);

@@ -321,8 +321,7 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 static int load_alternates(git_odb *odb, const char *objects_dir)
 {
 	char alternates_path[GIT_PATH_MAX];
-	char alternate[GIT_PATH_MAX];
-	char *buffer;
+	char *buffer, *alternate;
 
 	gitfo_buf alternates_buf = GITFO_BUF_INIT;
 	int error;
@@ -339,8 +338,21 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 	error = GIT_SUCCESS;
 
 	/* add each alternate as a new backend; one alternate per line */
-	while ((error == GIT_SUCCESS) && (buffer = git__strtok(alternate, buffer, "\r\n")) != NULL)
-		error = add_default_backends(odb, alternate, 1);
+	while ((alternate = git__strtok(&buffer, "\r\n")) != NULL) {
+		char full_path[GIT_PATH_MAX];
+
+		if (*alternate == '\0' || *alternate == '#')
+			continue;
+
+		/* relative path: build based on the current `objects` folder */
+		if (*alternate == '.') {
+			git__joinpath(full_path, objects_dir, alternate);
+			alternate = full_path;
+		}
+
+		if ((error = add_default_backends(odb, alternate, 1)) < GIT_SUCCESS)
+			break;
+	}
 
 	gitfo_free_buf(&alternates_buf);
 	if (error < GIT_SUCCESS)

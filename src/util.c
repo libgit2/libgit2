@@ -337,27 +337,29 @@ void git__joinpath_n(char *buffer_out, int count, ...)
 	*buffer_out = '\0';
 }
 
-static char *strtok_raw(char *output, char *src, char *delimit, int keep)
+char *git__strtok(char **end, const char *sep)
 {
-	while (*src && strchr(delimit, *src) == NULL)
-		*output++ = *src++;
+	char *ptr = *end;
 
-	*output = 0;
+	while (*ptr && strchr(sep, *ptr))
+		++ptr;
 
-	if (keep)
-		return src;
-	else
-		return *src ? src+1 : src;
-}
+	if (*ptr) {
+		char *start = ptr;
+		*end = start + 1;
 
-char *git__strtok(char *output, char *src, char *delimit)
-{
-	return strtok_raw(output, src, delimit, 0);
-}
+		while (**end && !strchr(sep, **end))
+			++*end;
 
-char *git__strtok_keep(char *output, char *src, char *delimit)
-{
-	return strtok_raw(output, src, delimit, 1);
+		if (**end) {
+			**end = '\0';
+			++*end;
+		}
+
+		return start;
+	}
+
+	return NULL;
 }
 
 void git__hexdump(const char *buffer, size_t len)
