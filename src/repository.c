@@ -271,6 +271,21 @@ cleanup:
 	return git__rethrow(error, "Failed to open repository");
 }
 
+static int discover_repository_dirs(git_repository *repo, const char *path)
+{
+	int error;
+
+	error = guess_repository_dirs(repo, path);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = check_repository_dirs(repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	return GIT_SUCCESS;
+}
+
 int git_repository_open(git_repository **repo_out, const char *path)
 {
 	git_repository *repo;
@@ -282,11 +297,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	if (repo == NULL)
 		return GIT_ENOMEM;
 
-	error = guess_repository_dirs(repo, path);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	error = check_repository_dirs(repo);
+	error = discover_repository_dirs(repo, path);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -438,6 +449,119 @@ void git_repository_free(git_repository *repo)
 		git_odb_close(repo->db);
 
 	free(repo);
+}
+
+int git_repository_discover(char *repository_path, size_t size, const char *start_path, int across_fs, const char *ceiling_dirs)
+{
+	git_repository repo;
+	int error, ceiling_offset;
+	char bare_path[GIT_PATH_MAX];
+	char normal_path[GIT_PATH_MAX];
+	char *found_path;
+	dev_t current_device;
+
+	assert(start_path && repository_path);
+	memset(&repo, 0x0, sizeof(git_repository));
+
+	error = abspath(bare_path, sizeof(bare_path), start_path);
+
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (!across_fs) {
+		error = retrieve_device(&current_device, bare_path);
+
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	ceiling_offset = retrieve_ceiling_directories_offset(bare_path, ceiling_dirs);
+	git__joinpath(normal_path, bare_path, DOT_GIT);
+
+	while(1){
+		//look for .git file
+		if (gitfo_isfile(normal_path) == GIT_SUCCESS) {
+			error = read_gitfile(repository_path, size, normal_path, bare_path);
+
+			if (error < GIT_SUCCESS) {
+				git__rethrow(error, "Unable to read git file `%s`", normal_path);
+				goto cleanup;
+			}
+
+			error = discover_repository_dirs(&repo, repository_path);
+			if (error < GIT_SUCCESS)
+				goto cleanup;
+
+			git_repository__free_dirs(&repo);
+
+			return GIT_SUCCESS;
+		}
+
+		//look for .git repository
+		error = discover_repository_dirs(&repo, normal_path);
+		if (error < GIT_SUCCESS && error != GIT_ENOTAREPO)
+			goto cleanup;
+
+		if (error == GIT_SUCCESS) {
+			found_path = normal_path;
+			break;
+		}
+
+		git_repository__free_dirs(&repo);
+
+		//look for bare repository in current directory
+		error = discover_repository_dirs(&repo, bare_path);
+		if (error < GIT_SUCCESS && error != GIT_ENOTAREPO)
+			goto cleanup;
+
+		if (error == GIT_SUCCESS) {
+			found_path = bare_path;
+			break;
+		}
+
+		git_repository__free_dirs(&repo);
+
+		//nothing has been found, lets try the parent directory
+		if (bare_path[ceiling_offset] == '\0') {
+			error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
+			goto cleanup;
+		}
+
+		if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
+			goto cleanup;
+
+		if (!across_fs) {
+			dev_t new_device;
+			error = retrieve_device(&new_device, normal_path);
+
+			if (error < GIT_SUCCESS)
+				goto cleanup;
+
+			if (current_device != new_device) {
+				error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any parent up to mount parent %s)\n"
+					"Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM_ENVIRONMENT not set).", bare_path);
+				goto cleanup;
+			}
+			current_device = new_device;
+		}
+
+		strcpy(bare_path, normal_path);
+		git__joinpath(normal_path, bare_path, DOT_GIT);
+	}
+
+	if (size < (strlen(found_path) + 1) * sizeof(char)) {
+		error = git__throw(GIT_EOVERFLOW, "The repository buffer is not long enough to handle the repository path `%s`", found_path);
+		goto cleanup;
+	}
+
+	strcpy(repository_path, found_path);
+	git_repository__free_dirs(&repo);
+
+	return GIT_SUCCESS;
+
+	cleanup:
+		git_repository__free_dirs(&repo);
+		return git__rethrow(error, "Failed to discover repository");
 }
 
 git_odb *git_repository_database(git_repository *repo)
