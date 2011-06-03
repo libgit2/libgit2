@@ -151,7 +151,7 @@ BEGIN_TEST(path2, "get the latest component in a path")
 #undef TOPDIR_TEST
 END_TEST
 
-typedef int (normalize_path)(char *, size_t, const char *);
+typedef int (normalize_path)(char *, size_t, const char *, const char *);
 
 /* Assert flags */
 #define CWD_AS_PREFIX 1
@@ -168,7 +168,7 @@ static int ensure_normalized(const char *input_path, const char *expected_path, 
 	if (error < GIT_SUCCESS)
 		return error;
 
-	error = normalizer(buffer_out, sizeof(buffer_out), input_path);
+	error = normalizer(buffer_out, sizeof(buffer_out), input_path, NULL);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -417,7 +417,7 @@ BEGIN_TEST(path7, "prevent a path which escapes the root directory from being pr
 	for (i = 0; i < number_to_escape + 1; i++)
 		git__joinpath(current_workdir, current_workdir, "../");
 
-	must_fail(gitfo_prettify_dir_path(prettified, sizeof(prettified), current_workdir));
+	must_fail(gitfo_prettify_dir_path(prettified, sizeof(prettified), current_workdir, NULL));
 END_TEST
 
 typedef struct name_data {

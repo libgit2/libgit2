@@ -170,7 +170,7 @@ extern int gitfo_getcwd(char *buffer_out, size_t size);
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
+int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, const char *base_path);
 
 /**
  * Clean up a provided absolute or relative file path.
@@ -193,7 +193,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path);
+int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path);
 
 int gitfo_retrieve_path_root_offset(const char *path);
 

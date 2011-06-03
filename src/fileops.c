@@ -402,7 +402,7 @@ static int retrieve_previous_path_component_start(const char *path)
 	return offset;
 }
 
-int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
+int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, const char *base_path)
 {
 	int len = 0, segment_len, only_dots, root_path_offset, error = GIT_SUCCESS;
 	char *current;
@@ -414,9 +414,18 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 
 	root_path_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_path_offset < 0) {
-		error = gitfo_getcwd(buffer_out, size);
-		if (error < GIT_SUCCESS)
-			return error;	/* The callee already takes care of setting the correct error message. */
+		if (base_path == NULL) {
+			error = gitfo_getcwd(buffer_out, size);
+			if (error < GIT_SUCCESS)
+				return error;	/* The callee already takes care of setting the correct error message. */
+		} else {
+			if (size < (strlen(base_path) + 1) * sizeof(char))
+				return git__throw(GIT_EOVERFLOW, "Failed to prettify dir path: the base path is too long for the buffer.");
+
+			strcpy(buffer_out, base_path);
+			posixify_path(buffer_out);
+			git__joinpath(buffer_out, buffer_out, "");
+		}
 
 		len = strlen(buffer_out);
 		buffer_out += len;
@@ -480,9 +489,9 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 	return GIT_SUCCESS;
 }
 
-int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
+int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path)
 {
-	int error, path_len, i;
+	int error, path_len, i, root_offset;
 	const char* pattern = "/..";
 
 	path_len = strlen(path);
@@ -497,12 +506,13 @@ int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
 			return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 	}
 
-	error =  gitfo_prettify_dir_path(buffer_out, size, path);
+	error =  gitfo_prettify_dir_path(buffer_out, size, path, base_path);
 	if (error < GIT_SUCCESS)
 		return error;	/* The callee already takes care of setting the correct error message. */
 
 	path_len = strlen(buffer_out);
-	if (path_len < 2)	/* TODO: Fixme. We should also take of detecting Windows rooted path (probably through usage of retrieve_path_root_offset) */
+	root_offset = gitfo_retrieve_path_root_offset(buffer_out) + 1;
+	if (path_len == root_offset)
 		return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 
 	/* Remove the trailing slash */
