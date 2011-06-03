@@ -287,6 +287,18 @@ GIT_EXTERN(unsigned int) git_index_entrycount_unmerged(git_index *index);
  */
 GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged(git_index *index, const char *path);
 
+/**
+ * Return the stage number from a git index entry
+ *
+ * This entry is calculated from the entrie's flag
+ * attribute like this:
+ *
+ *	(entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT
+ *
+ * @param entry The entry
+ * @returns the stage number
+ */
+GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
 
 /** @} */
 GIT_END_DECL

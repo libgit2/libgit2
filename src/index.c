@@ -980,3 +980,8 @@ static int write_index(git_index *index, git_filebuf *file)
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write index");
 }
+
+int git_index_entry_stage(const git_index_entry *entry)
+{
+	return (entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT;
+}
