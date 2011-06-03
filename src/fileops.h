@@ -14,10 +14,10 @@
 
 #define GIT_PATH_LIST_SEPARATOR ':'
 
-#ifdef GIT__WIN32
-#define GIT_PLATFORM_PATH_SEP '/'
-#else
+#ifdef GIT_WIN32
 #define GIT_PLATFORM_PATH_SEP '\\'
+#else
+#define GIT_PLATFORM_PATH_SEP '/'
 #endif
 
 #ifdef GIT_WIN32
