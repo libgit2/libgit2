@@ -38,6 +38,9 @@
 #define GIT_OBJECTS_INFO_DIR GIT_OBJECTS_DIR "info/"
 #define GIT_OBJECTS_PACK_DIR GIT_OBJECTS_DIR "pack/"
 
+#define GIT_FILE_CONTENT_PREFIX "gitdir: "
+#define GIT_FILE_CONTENT_PREFIX_LENGTH 8
+
 #define GIT_BRANCH_MASTER "master"
 
 typedef struct {
@@ -372,6 +375,42 @@ static int retrieve_ceiling_directories_offset(const char *path, const char *cei
 	}
 
 	return max_len <= min_len ? min_len : max_len;
+}
+
+static int read_gitfile(char *path_out, size_t size, const char *file_path, const char *base_path)
+{
+	gitfo_buf file;
+	int error, end_offset;
+	char *data;
+
+	assert(file_path && path_out && size > 0);
+
+	error = gitfo_read_file(&file, file_path);
+
+	if (error < GIT_SUCCESS)
+		return error;
+
+	data = (char*)(file.data);
+
+	if (git__prefixcmp(data, GIT_FILE_CONTENT_PREFIX)) {
+		gitfo_free_buf(&file);
+		return git__throw(GIT_ENOTFOUND, "Invalid gitfile format `%s`", file_path);
+	}
+
+	end_offset = strlen(data) - 1;
+
+	for (;data[end_offset] != '\r' && data[end_offset] != '\n'; --end_offset);
+	data[end_offset] = '\0';
+
+	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset) {
+		gitfo_free_buf(&file);
+		return git__throw(GIT_ENOTFOUND, "No path in git file `%s`", file_path);
+	}
+
+	error = gitfo_prettify_dir_path(path_out, size, data + GIT_FILE_CONTENT_PREFIX_LENGTH, base_path);
+	gitfo_free_buf(&file);
+
+	return error;
 }
 
 void git_repository_free(git_repository *repo)
