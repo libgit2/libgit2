@@ -418,6 +418,13 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 	}
 
 	error = gitfo_prettify_dir_path(path_out, size, data + GIT_FILE_CONTENT_PREFIX_LENGTH, base_path);
+	if (error == GIT_SUCCESS) {
+		end_offset = strlen(path_out);
+
+		if (end_offset > 0 && path_out[end_offset - 1] == '/')
+			path_out[end_offset - 1 ] = '\0';
+	}
+
 	gitfo_free_buf(&file);
 
 	return error;
