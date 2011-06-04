@@ -37,23 +37,23 @@
 # undef GIT_TLS
 # define GIT_TLS
 
-#elif defined(__GNUC__) || \
+#elif defined(GIT_THREADS) && (defined(__GNUC__) || \
       defined(__SUNPRO_C) || \
       defined(__SUNPRO_CC) || \
       defined(__xlc__) || \
-      defined(__xlC__)
+      defined(__xlC__))
 # define GIT_TLS __thread
 
-#elif defined(__INTEL_COMPILER)
+#elif defined(GIT_THREADS) && defined(__INTEL_COMPILER)
 # if defined(_WIN32) || defined(_WIN32_CE)
 #  define GIT_TLS __declspec(thread)
 # else
 #  define GIT_TLS __thread
 # endif
 
-#elif defined(_WIN32) || \
+#elif defined(GIT_THREADS) && (defined(_WIN32) || \
       defined(_WIN32_CE) || \
-      defined(__BORLANDC__)
+      defined(__BORLANDC__))
 # define GIT_TLS __declspec(thread)
 
 #else
