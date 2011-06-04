@@ -133,6 +133,34 @@ GIT_EXTERN(int) git_repository_open3(git_repository **repository,
 		const char *git_work_tree);
 
 /**
+ * Look for a git repository and copy its path in the given buffer. The lookup start
+ * from base_path and walk across parent directories if nothing has been found. The
+ * lookup ends when the first repository is found, or when reaching a directory
+ * referenced in ceiling_dirs or when the filesystem changes (in case across_fs
+ * is true).
+ *
+ * The method will automatically detect if the repository is bare (if there is
+ * a repository).
+ *
+ * @param repository_path The user allocated buffer which will contain the found path.
+ *
+ * @param size repository_path size
+ *
+ * @param start_path The base path where the lookup starts.
+ *
+ * @param across_fs If true, then the lookup will not stop when a filesystem device change
+ * is detected while exploring parent directories.
+ *
+ * @param ceiling_dirs A colon separated of absolute symbolic link free paths. The lookup will
+ * stop when any of this paths is reached. Note that the lookup always performs on start_path
+ * no matter start_path appears in ceiling_dirs
+ * ceiling_dirs might be NULL (which is equivalent to an empty string)
+ *
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_repository_discover(char *repository_path, size_t size, const char *start_path, int across_fs, const char *ceiling_dirs);
+
+/**
  * Get the object database behind a Git repository
  *
  * @param repo a repository object

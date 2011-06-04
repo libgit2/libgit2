@@ -12,6 +12,14 @@
 #include <fcntl.h>
 #include <time.h>
 
+#define GIT_PATH_LIST_SEPARATOR ':'
+
+#ifdef GIT_WIN32
+#define GIT_PLATFORM_PATH_SEP '\\'
+#else
+#define GIT_PLATFORM_PATH_SEP '/'
+#endif
+
 #ifdef GIT_WIN32
 GIT_INLINE(int) link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
@@ -57,8 +65,11 @@ extern int gitfo_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
 extern int gitfo_creat(const char *path, int mode);
 extern int gitfo_creat_force(const char *path, int mode);
+extern int gitfo_creat_locked(const char *path, int mode);
+extern int gitfo_creat_locked_force(const char *path, int mode);
 extern int gitfo_mktemp(char *path_out, const char *filename);
 extern int gitfo_isdir(const char *path);
+extern int gitfo_isfile(const char *path);
 extern int gitfo_mkdir_recurs(const char *path, int mode);
 extern int gitfo_mkdir_2file(const char *path);
 #define gitfo_close(fd) close(fd)
@@ -162,7 +173,7 @@ extern int gitfo_getcwd(char *buffer_out, size_t size);
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
+int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, const char *base_path);
 
 /**
  * Clean up a provided absolute or relative file path.
@@ -185,7 +196,10 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path);
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path);
+int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path);
 
-int retrieve_path_root_offset(const char *path);
+void gitfo_posixify_path(char *path);
+
+int gitfo_retrieve_path_root_offset(const char *path);
+
 #endif /* INCLUDE_fileops_h__ */

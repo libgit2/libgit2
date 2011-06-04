@@ -66,6 +66,20 @@ int gitfo_creat_force(const char *path, int mode)
 	return gitfo_creat(path, mode);
 }
 
+int gitfo_creat_locked(const char *path, int mode)
+{
+	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
+	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to create locked file. Could not open %s", path);
+}
+
+int gitfo_creat_locked_force(const char *path, int mode)
+{
+	if (gitfo_mkdir_2file(path) < GIT_SUCCESS)
+		return git__throw(GIT_EOSERR, "Failed to create locked file %s", path);
+
+	return gitfo_creat_locked(path, mode);
+}
+
 int gitfo_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
@@ -131,7 +145,26 @@ int gitfo_isdir(const char *path)
 		return git__throw(GIT_ENOTFOUND, "%s does not exist", path);
 
 	if (!S_ISDIR(st.st_mode))
-		return git__throw(GIT_ENOTFOUND, "%s is a file", path);
+		return git__throw(GIT_ENOTFOUND, "%s is not a directory", path);
+
+	return GIT_SUCCESS;
+}
+
+int gitfo_isfile(const char *path)
+{
+	struct stat st;
+	int stat_error;
+
+	if (!path)
+		return git__throw(GIT_ENOTFOUND, "No path given to gitfo_isfile");
+
+	stat_error = gitfo_stat(path, &st);
+
+	if (stat_error < GIT_SUCCESS)
+		return git__throw(GIT_ENOTFOUND, "%s does not exist", path);
+
+	if (!S_ISREG(st.st_mode))
+		return git__throw(GIT_ENOTFOUND, "%s is not a file", path);
 
 	return GIT_SUCCESS;
 }
@@ -301,8 +334,19 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+void gitfo_posixify_path(char *path)
+{
+	#if GIT_PLATFORM_PATH_SEP != '/'
+		while (*path) {
+			if (*path == GIT_PLATFORM_PATH_SEP)
+				*path = '/';
 
-int retrieve_path_root_offset(const char *path)
+			path++;
+		}
+	#endif
+}
+
+int gitfo_retrieve_path_root_offset(const char *path)
 {
 	int offset = 0;
 
@@ -320,7 +364,6 @@ int retrieve_path_root_offset(const char *path)
 	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
 }
 
-
 int gitfo_mkdir_recurs(const char *path, int mode)
 {
 	int error, root_path_offset;
@@ -333,7 +376,7 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	error = GIT_SUCCESS;
 	pp = path_copy;
 
-	root_path_offset = retrieve_path_root_offset(pp);
+	root_path_offset = gitfo_retrieve_path_root_offset(pp);
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
@@ -367,7 +410,7 @@ static int retrieve_previous_path_component_start(const char *path)
 {
 	int offset, len, root_offset, start = 0;
 
-	root_offset = retrieve_path_root_offset(path);
+	root_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_offset > -1)
 		start += root_offset;
 
@@ -392,7 +435,7 @@ static int retrieve_previous_path_component_start(const char *path)
 	return offset;
 }
 
-int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
+int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, const char *base_path)
 {
 	int len = 0, segment_len, only_dots, root_path_offset, error = GIT_SUCCESS;
 	char *current;
@@ -402,11 +445,20 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 	buffer_end = path + strlen(path);
 	buffer_out_start = buffer_out;
 
-	root_path_offset = retrieve_path_root_offset(path);
+	root_path_offset = gitfo_retrieve_path_root_offset(path);
 	if (root_path_offset < 0) {
-		error = gitfo_getcwd(buffer_out, size);
-		if (error < GIT_SUCCESS)
-			return error;	/* The callee already takes care of setting the correct error message. */
+		if (base_path == NULL) {
+			error = gitfo_getcwd(buffer_out, size);
+			if (error < GIT_SUCCESS)
+				return error;	/* The callee already takes care of setting the correct error message. */
+		} else {
+			if (size < (strlen(base_path) + 1) * sizeof(char))
+				return git__throw(GIT_EOVERFLOW, "Failed to prettify dir path: the base path is too long for the buffer.");
+
+			strcpy(buffer_out, base_path);
+			gitfo_posixify_path(buffer_out);
+			git__joinpath(buffer_out, buffer_out, "");
+		}
 
 		len = strlen(buffer_out);
 		buffer_out += len;
@@ -470,9 +522,9 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path)
 	return GIT_SUCCESS;
 }
 
-int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
+int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path)
 {
-	int error, path_len, i;
+	int error, path_len, i, root_offset;
 	const char* pattern = "/..";
 
 	path_len = strlen(path);
@@ -487,12 +539,13 @@ int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path)
 			return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 	}
 
-	error =  gitfo_prettify_dir_path(buffer_out, size, path);
+	error =  gitfo_prettify_dir_path(buffer_out, size, path, base_path);
 	if (error < GIT_SUCCESS)
 		return error;	/* The callee already takes care of setting the correct error message. */
 
 	path_len = strlen(buffer_out);
-	if (path_len < 2)	/* TODO: Fixme. We should also take of detecting Windows rooted path (probably through usage of retrieve_path_root_offset) */
+	root_offset = gitfo_retrieve_path_root_offset(buffer_out) + 1;
+	if (path_len == root_offset)
 		return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 
 	/* Remove the trailing slash */
@@ -519,16 +572,6 @@ int gitfo_cmp_path(const char *name1, int len1, int isdir1,
 	return 0;
 }
 
-static void posixify_path(char *path)
-{
-	while (*path) {
-		if (*path == '\\')
-			*path = '/';
-
-		path++;
-	}
-}
-
 int gitfo_getcwd(char *buffer_out, size_t size)
 {
 	char *cwd_buffer;
@@ -544,7 +587,7 @@ int gitfo_getcwd(char *buffer_out, size_t size)
 	if (cwd_buffer == NULL)
 		return git__throw(GIT_EOSERR, "Failed to retrieve current working directory");
 
-	posixify_path(buffer_out);
+	gitfo_posixify_path(buffer_out);
 
 	git__joinpath(buffer_out, buffer_out, "");	//Ensure the path ends with a trailing slash
 

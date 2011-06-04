@@ -97,7 +97,7 @@ int sha1_entry_pos(const void *table,
 		   unsigned lo, unsigned hi, unsigned nr,
 		   const unsigned char *key)
 {
-	const unsigned char *base = table;
+	const unsigned char *base = (const unsigned char*)table;
 	const unsigned char *hi_key, *lo_key;
 	unsigned ofs_0;
 
@@ -192,5 +192,5 @@ int sha1_entry_pos(const void *table,
 			lo_key = mi_key + elem_size;
 		}
 	} while (lo < hi);
-	return -lo-1;
+	return -((int)lo)-1;
 }
