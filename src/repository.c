@@ -409,8 +409,8 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 
 	end_offset = strlen(data) - 1;
 
-	for (;data[end_offset] != '\r' && data[end_offset] != '\n'; --end_offset);
-	data[end_offset] = '\0';
+	for (;data[end_offset] == '\r' || data[end_offset] == '\n'; --end_offset);
+	data[end_offset + 1] = '\0';
 
 	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset) {
 		gitfo_free_buf(&file);
