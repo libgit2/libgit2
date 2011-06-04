@@ -721,16 +721,26 @@ int git_repository_is_empty(git_repository *repo)
 	return git_reference_resolve(&branch, head) == GIT_SUCCESS ? 0 : 1;
 }
 
-const char *git_repository_path(git_repository *repo)
+const char *git_repository_path(git_repository *repo, git_repository_pathid id)
 {
 	assert(repo);
-	return repo->path_repository;
-}
 
-const char *git_repository_workdir(git_repository *repo)
-{
-	assert(repo);
-	return repo->path_workdir;
+	switch (id) {
+	case GIT_REPO_PATH:
+		return repo->path_repository;
+
+	case GIT_REPO_PATH_INDEX:
+		return repo->path_index;
+
+	case GIT_REPO_PATH_ODB:
+		return repo->path_odb;
+
+	case GIT_REPO_PATH_WORKDIR:
+		return repo->path_workdir;
+
+	default:
+		return NULL;
+	}
 }
 
 int git_repository_is_bare(git_repository *repo)

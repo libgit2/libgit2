@@ -231,22 +231,31 @@ GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path,
 GIT_EXTERN(int) git_repository_is_empty(git_repository *repo);
 
 /**
- * Get the normalized path to the git repository.
- *
- * @param repo a repository object
- * @return absolute path to the git directory
+ * Internal path identifiers for a repository
  */
-GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
+typedef enum {
+	GIT_REPO_PATH,
+	GIT_REPO_PATH_INDEX,
+	GIT_REPO_PATH_ODB,
+	GIT_REPO_PATH_WORKDIR
+} git_repository_pathid;
 
 /**
- * Get the normalized path to the working directory of the repository.
+ * Get one of the paths to the repository
  *
- * If the repository is bare, there is no working directory and NULL we be returned.
+ * Possible values for `id`:
+ *
+ *	GIT_REPO_PATH: return the path to the repository
+ *	GIT_REPO_PATH_INDEX: return the path to the index
+ *	GIT_REPO_PATH_ODB: return the path to the ODB
+ *	GIT_REPO_PATH_WORKDIR: return the path to the working
+ *		directory
  *
  * @param repo a repository object
- * @return NULL if the repository is bare; absolute path to the working directory otherwise.
+ * @param id The ID of the path to return
+ * @return absolute path of the requested id
  */
-GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
+GIT_EXTERN(const char *) git_repository_path(git_repository *repo, git_repository_pathid id);
 
 /**
  * Check if a repository is bare

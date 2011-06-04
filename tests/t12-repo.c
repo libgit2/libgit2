@@ -201,8 +201,8 @@ BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git"
 	must_pass(remove_placeholders(TEMP_REPO_FOLDER, "dummy-marker.txt"));
 
 	must_pass(git_repository_open(&repo, TEMP_REPO_FOLDER));
-	must_be_true(git_repository_path(repo) != NULL);
-	must_be_true(git_repository_workdir(repo) == NULL);
+	must_be_true(git_repository_path(repo, GIT_REPO_PATH) != NULL);
+	must_be_true(git_repository_path(repo, GIT_REPO_PATH_WORKDIR) == NULL);
 
 	git_repository_free(repo);
 	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
@@ -220,8 +220,8 @@ BEGIN_TEST(open1, "Open a standard repository that has just been initialized by 
 	must_pass(remove_placeholders(DEST_REPOSITORY_FOLDER, "dummy-marker.txt"));
 
 	must_pass(git_repository_open(&repo, DEST_REPOSITORY_FOLDER));
-	must_be_true(git_repository_path(repo) != NULL);
-	must_be_true(git_repository_workdir(repo) != NULL);
+	must_be_true(git_repository_path(repo, GIT_REPO_PATH) != NULL);
+	must_be_true(git_repository_path(repo, GIT_REPO_PATH_WORKDIR) != NULL);
 
 	git_repository_free(repo);
 	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
