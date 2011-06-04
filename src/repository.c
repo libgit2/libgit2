@@ -369,8 +369,7 @@ static int retrieve_ceiling_directories_offset(const char *path, const char *cei
 		strncpy(buf, ceil, len);
 		buf[len] = '\0';
 
-		gitfo_posixify_path(buf);
-		if (gitfo_prettify_dir_path(buf2, sizeof(buf2), buf, NULL) < GIT_SUCCESS)
+		if (abspath(buf2, sizeof(buf2), buf) < GIT_SUCCESS)
 			continue;
 
 		len = strlen(buf2);
@@ -521,12 +520,6 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 
 		git_repository__free_dirs(&repo);
 
-		//nothing has been found, lets try the parent directory
-		if (bare_path[ceiling_offset] == '\0') {
-			error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
-			goto cleanup;
-		}
-
 		if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
 			goto cleanup;
 
@@ -547,6 +540,13 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 
 		strcpy(bare_path, normal_path);
 		git__joinpath(normal_path, bare_path, DOT_GIT);
+
+		//nothing has been found, lets try the parent directory
+		if (bare_path[ceiling_offset] == '\0') {
+			error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
+			goto cleanup;
+		}
+
 	}
 
 	if (size < (strlen(found_path) + 1) * sizeof(char)) {
