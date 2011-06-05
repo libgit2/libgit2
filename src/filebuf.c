@@ -363,14 +363,19 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 	int len, error;
 
 	va_start(arglist, format);
-
 	len = vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
+	va_end(arglist);
 
 	if (len < 0 || (size_t)len >= space_left) {
 		if ((error = flush_buffer(file)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to output to buffer");
 
+		space_left = file->buf_size - file->buf_pos;
+
+		va_start(arglist, format);
 		len = vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
+		va_end(arglist);
+
 		if (len < 0 || (size_t)len > file->buf_size)
 			return GIT_ENOMEM;
 	}
