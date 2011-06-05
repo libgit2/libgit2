@@ -119,13 +119,13 @@ const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename
 	return git_vector_get(&tree->entries, idx);
 }
 
-const git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
+const git_tree_entry *git_tree_entry_byindex(git_tree *tree, unsigned int idx)
 {
 	assert(tree);
-	return git_vector_get(&tree->entries, (unsigned int)idx);
+	return git_vector_get(&tree->entries, idx);
 }
 
-size_t git_tree_entrycount(git_tree *tree)
+unsigned int git_tree_entrycount(git_tree *tree)
 {
 	assert(tree);
 	return tree->entries.length;
