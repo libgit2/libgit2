@@ -1084,7 +1084,7 @@ static int reference_available(git_repository *repo, const char *ref, const char
 
 	git_vector_free(&refs);
 
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Reference `%s` already exists", ref);
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__throw(GIT_EEXISTS, "Reference name `%s` conflicts with existing reference", ref);
 }
 
 /*
@@ -1124,7 +1124,7 @@ static int reference_rename(git_reference *ref, const char *new_name, int force)
 	    error != GIT_ENOTFOUND)
 		return git__rethrow(error, "Failed to rename reference");
 
-	if ((error == reference_available(ref->owner, new_name, ref->name)) < GIT_SUCCESS)
+	if ((error = reference_available(ref->owner, new_name, ref->name)) < GIT_SUCCESS)
 		return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference. Reference already exists");
 
 	old_name = ref->name;
