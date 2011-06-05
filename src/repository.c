@@ -330,7 +330,7 @@ static int abspath(char *buffer_out, size_t size, const char *path)
 	return GIT_SUCCESS;
 }
 
-static dev_t retrieve_device(dev_t *device_out, const char *path)
+static int retrieve_device(dev_t *device_out, const char *path)
 {
 	struct stat path_info;
 
