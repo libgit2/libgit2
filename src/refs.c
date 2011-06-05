@@ -83,6 +83,7 @@ static int packed_write(git_repository *repo);
 static int reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force);
 static int reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force);
 static int reference_rename(git_reference *ref, const char *new_name, int force);
+static int reference_available(git_repository *repo, const char *ref, const char *old_ref);
 
 /* name normalization */
 static int check_valid_ref_char(char ch);
@@ -1003,6 +1004,9 @@ static int reference_create_oid(git_reference **ref_out, git_repository *repo, c
 	if(git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
 		return git__throw(GIT_EEXISTS, "Failed to create reference OID. Reference already exists");
 
+	if ((error = reference_available(repo, name, NULL)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create reference");
+
 	/*
 	 * If they old ref was of the same type, then we can just update
 	 * it (once we've checked that the target is valid). Otherwise we
@@ -1042,6 +1046,47 @@ cleanup:
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create reference OID");
 }
 
+static int _reference_available_cb(const char *ref, void *data)
+{
+	assert(ref && data);
+
+	git_vector *refs = (git_vector *)data;
+
+	const char *new = (const char *)git_vector_get(refs, 0);
+	const char *old = (const char *)git_vector_get(refs, 1);
+
+	if (!old || strcmp(old, ref)) {
+		int reflen = strlen(ref);
+		int newlen = strlen(new);
+		int cmplen = reflen < newlen ? reflen : newlen;
+		const char *lead = reflen < newlen ? new : ref;
+
+		if (!strncmp(new, ref, cmplen) &&
+		    lead[cmplen] == '/')
+			return GIT_EEXISTS;
+	}
+
+	return GIT_SUCCESS;
+}
+
+static int reference_available(git_repository *repo, const char *ref, const char* old_ref)
+{
+	int error;
+	git_vector refs;
+
+	if (git_vector_init(&refs, 2, NULL) < GIT_SUCCESS)
+		return GIT_ENOMEM;
+
+	git_vector_insert(&refs, (void *)ref);
+	git_vector_insert(&refs, (void *)old_ref);
+
+	error = git_reference_listcb(repo, GIT_REF_LISTALL, _reference_available_cb, (void *)&refs);
+
+	git_vector_free(&refs);
+
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Reference `%s` already exists", ref);
+}
+
 /*
  * Rename a reference
  *
@@ -1079,6 +1124,8 @@ static int reference_rename(git_reference *ref, const char *new_name, int force)
 	    error != GIT_ENOTFOUND)
 		return git__rethrow(error, "Failed to rename reference");
 
+	if ((error == reference_available(ref->owner, new_name, ref->name)) < GIT_SUCCESS)
+		return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference. Reference already exists");
 
 	old_name = ref->name;
 	ref->name = git__strdup(new_name);
