@@ -903,8 +903,11 @@ static int packed_write(git_repository *repo)
 		 * this is a disaster */
 		assert(ref->ref.type & GIT_REF_OID);
 
-		if ((error = packed_find_peel(ref)) < GIT_SUCCESS)
+		if ((error = packed_find_peel(ref)) < GIT_SUCCESS) {
+			error = git__throw(GIT_EOBJCORRUPTED, "A reference cannot be peeled");
 			goto cleanup;
+		}
+
 
 		if ((error = packed_write_ref(ref, &pack_file)) < GIT_SUCCESS)
 			goto cleanup;
@@ -1437,7 +1440,9 @@ int git_reference_delete(git_reference *ref)
 		if ((error = packed_load(ref->owner)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to delete reference");
 		
-		git_hashtable_remove(ref->owner->references.packfile, ref->name);
+		if (git_hashtable_remove(ref->owner->references.packfile, ref->name) < GIT_SUCCESS)
+			return git__throw(GIT_ENOTFOUND, "Reference not found");
+
 		error = packed_write(ref->owner);
 	} else {
 		char full_path[GIT_PATH_MAX];
