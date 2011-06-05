@@ -334,7 +334,7 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
-void gitfo_posixify_path(char *path)
+void gitfo_posixify_path(char *GIT_UNUSED(path))
 {
 	#if GIT_PLATFORM_PATH_SEP != '/'
 		while (*path) {
