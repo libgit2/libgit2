@@ -322,11 +322,11 @@ unsigned int git_index_entrycount_unmerged(git_index *index)
 	return index->unmerged.length;
 }
 
-git_index_entry *git_index_get(git_index *index, int n)
+git_index_entry *git_index_get(git_index *index, unsigned int n)
 {
 	assert(index);
 	sort_index(index);
-	return git_vector_get(&index->entries, (unsigned int)n);
+	return git_vector_get(&index->entries, n);
 }
 
 static void sort_index(git_index *index)
@@ -479,7 +479,7 @@ int git_index_find(git_index *index, const char *path)
 	return git_vector_bsearch2(&index->entries, index_srch, path);
 }
 
-const git_index_entry_unmerged *git_index_get_unmerged(git_index *index, const char *path)
+const git_index_entry_unmerged *git_index_get_unmerged_bypath(git_index *index, const char *path)
 {
 	int pos;
 	assert(index && path);
@@ -491,6 +491,12 @@ const git_index_entry_unmerged *git_index_get_unmerged(git_index *index, const c
 		return NULL;
 
 	return git_vector_get(&index->unmerged, pos);
+}
+
+const git_index_entry_unmerged *git_index_get_unmerged_byindex(git_index *index, unsigned int n)
+{
+	assert(index);
+	return git_vector_get(&index->unmerged, n);
 }
 
 

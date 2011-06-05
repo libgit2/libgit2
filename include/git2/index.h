@@ -257,7 +257,7 @@ GIT_EXTERN(int) git_index_remove(git_index *index, int position);
  * @param n the position of the entry
  * @return a pointer to the entry; NULL if out of bounds
  */
-GIT_EXTERN(git_index_entry *) git_index_get(git_index *index, int n);
+GIT_EXTERN(git_index_entry *) git_index_get(git_index *index, unsigned int n);
 
 /**
  * Get the count of entries currently in the index
@@ -285,7 +285,19 @@ GIT_EXTERN(unsigned int) git_index_entrycount_unmerged(git_index *index);
  * @param path path to search
  * @return the unmerged entry; NULL if not found
  */
-GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged(git_index *index, const char *path);
+GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged_bypath(git_index *index, const char *path);
+
+/**
+ * Get an unmerged entry from the index.
+ *
+ * The returned entry is read-only and should not be modified
+ * of freed by the caller.
+ *
+ * @param index an existing index object
+ * @param n the position of the entry
+ * @return a pointer to the unmerged entry; NULL if out of bounds
+ */
+GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged_byindex(git_index *index, unsigned int n);
 
 /**
  * Return the stage number from a git index entry
