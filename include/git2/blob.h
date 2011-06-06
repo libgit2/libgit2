@@ -53,6 +53,23 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
 }
 
 /**
+ * Lookup a blob object from a repository,
+ * given a prefix of its identifier (short id).
+ *
+ * @see git_object_lookup_prefix
+ *
+ * @param blob pointer to the looked up blob
+ * @param repo the repo to use when locating the blob.
+ * @param id identity of the blob to locate.
+ * @param len the length of the short identifier
+ * @return 0 on success; error code otherwise
+ */
+GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, const git_oid *id, unsigned int len)
+{
+	return git_object_lookup_prefix((git_object **)blob, repo, id, len, GIT_OBJ_BLOB);
+}
+
+/**
  * Close an open blob
  *
  * This is a wrapper around git_object_close()

@@ -54,6 +54,24 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
 }
 
 /**
+ * Lookup a commit object from a repository,
+ * given a prefix of its identifier (short id).
+ *
+ * @see git_object_lookup_prefix
+ *
+ * @param commit pointer to the looked up commit
+ * @param repo the repo to use when locating the commit.
+ * @param id identity of the commit to locate.  If the object is
+ *        an annotated tag it will be peeled back to the commit.
+ * @param len the length of the short identifier
+ * @return 0 on success; error code otherwise
+ */
+GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, unsigned len)
+{
+	return git_object_lookup_prefix((git_object **)commit, repo, id, len, GIT_OBJ_COMMIT);
+}
+
+/**
  * Close an open commit
  *
  * This is a wrapper around git_object_close()
