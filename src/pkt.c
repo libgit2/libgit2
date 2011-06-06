@@ -61,14 +61,27 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 {
 	int error = GIT_SUCCESS;
 	long int len;
+	const int num_len = 4;
+	char *num;
 	const char *num_end;
 	git_pkt *pkt;
 
-	error = git__strtol32(&len, line, &num_end, 16);
-	if (error < GIT_SUCCESS)
-		return error;
+	num = git__strndup(line, num_len);
+	if (num == NULL)
+		return GIT_ENOMEM;
 
-	line = num_end;
+	error = git__strtol32(&len, num, &num_end, 16);
+	if (error < GIT_SUCCESS) {
+		free(num);
+		return error;
+	}
+	if (num_end - num != num_len) {
+		free(num);
+		return git__throw(GIT_EOBJCORRUPTED, "Wrong pkt length");
+	}
+	free(num);
+
+	line += num_len;
 	/*
 	 * TODO: How do we deal with empty lines? Try again? with the next
 	 * line?
