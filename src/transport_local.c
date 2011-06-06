@@ -8,17 +8,12 @@
 #include "refs.h"
 #include "transport.h"
 
-typedef struct {
-	git_vector *vec;
-	git_repository *repo;
-} callback_data;
-
-static int compare_heads(const void *a, const void *b)
+static int cmp_refs(const void *a, const void *b)
 {
-	const git_remote_head *heada = *(const git_remote_head **)a;
-	const git_remote_head *headb = *(const git_remote_head **)b;
+	const char *stra = *(const char **) a;
+	const char *strb = *(const char **) b;
 
-	return strcmp(heada->name, headb->name);
+	return strcmp(stra, strb);
 }
 
 /*
@@ -50,11 +45,8 @@ static int local_connect(git_transport *transport, git_net_direction GIT_UNUSED(
 	return GIT_SUCCESS;
 }
 
-static int heads_cb(const char *name, void *ptr)
+static int add_ref(const char *name, git_repository *repo, git_vector *vec)
 {
-	callback_data *data = ptr;
-	git_vector *vec = data->vec;
-	git_repository *repo = data->repo;
 	const char peeled[] = "^{}";
 	git_remote_head *head;
 	git_reference *ref;
@@ -125,26 +117,44 @@ static int heads_cb(const char *name, void *ptr)
 static int local_ls(git_transport *transport, git_headarray *array)
 {
 	int error;
+	unsigned int i;
 	git_repository *repo;
 	git_vector vec;
-	callback_data data;
+	git_strarray refs;
 
 	assert(transport && transport->connected);
 
 	repo = transport->private;
-	error = git_vector_init(&vec, 16, compare_heads);
-	if (error < GIT_SUCCESS)
-		return error;
 
-	data.vec = &vec;
-	data.repo = repo;
-	error = git_reference_foreach(repo, GIT_REF_LISTALL, heads_cb, &data);
+	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to list remote heads");
 
-	git_vector_sort(&vec);
+	error = git_vector_init(&vec, refs.count, NULL);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* Sort the references first */
+	qsort(refs.strings, refs.count, sizeof(char *), cmp_refs);
+
+	/* Add HEAD */
+	error = add_ref(GIT_HEAD_FILE, repo, &vec);
+	if (error < GIT_SUCCESS)
+		goto out;
+
+	for (i = 0; i < refs.count; ++i) {
+		error = add_ref(refs.strings[i], repo, &vec);
+		if (error < GIT_SUCCESS)
+			goto out;
+	}
+
 	array->len = vec.length;
 	array->heads = (git_remote_head **) vec.contents;
+
+ out:
+	if (error < GIT_SUCCESS) {
+		git_strarray_free(&refs);
+	}
 
 	return error;
 }
