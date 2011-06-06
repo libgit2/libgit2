@@ -129,6 +129,14 @@ GIT_EXTERN(const char *) git_tree_entry_name(const git_tree_entry *entry);
 GIT_EXTERN(const git_oid *) git_tree_entry_id(const git_tree_entry *entry);
 
 /**
+ * Get the type of the object pointed by the entry
+ *
+ * @param entry a tree entry
+ * @return the type of the pointed object
+ */
+GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
+
+/**
  * Convert a tree entry to the git_object it points too.
  *
  * @param object pointer to the converted object
