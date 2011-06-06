@@ -8,6 +8,11 @@
 #include "refs.h"
 #include "transport.h"
 
+typedef struct {
+	git_repository *repo;
+	git_vector *refs;
+} local_priv;
+
 static int cmp_refs(const void *a, const void *b)
 {
 	const char *stra = *(const char **) a;
@@ -24,6 +29,7 @@ static int local_connect(git_transport *transport, git_net_direction GIT_UNUSED(
 {
 	git_repository *repo;
 	int error;
+	local_priv *priv;
 	const char *path;
 	const char file_prefix[] = "file://";
 	GIT_UNUSED_ARG(dir);
@@ -38,7 +44,15 @@ static int local_connect(git_transport *transport, git_net_direction GIT_UNUSED(
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to open remote");
 
-	transport->private = repo;
+	priv = git__malloc(sizeof(local_priv));
+	if (priv == NULL) {
+		git_repository_free(repo);
+		return GIT_ENOMEM;
+	}
+
+	priv->repo = repo;
+
+	transport->private = priv;
 
 	transport->connected = 1;
 
@@ -119,18 +133,25 @@ static int local_ls(git_transport *transport, git_headarray *array)
 	int error;
 	unsigned int i;
 	git_repository *repo;
-	git_vector vec;
+	git_vector *vec;
 	git_strarray refs;
+	local_priv *priv = transport->private;
 
 	assert(transport && transport->connected);
 
-	repo = transport->private;
+	repo = priv->repo;
 
 	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to list remote heads");
 
-	error = git_vector_init(&vec, refs.count, NULL);
+	vec = git__malloc(sizeof(git_vector));
+	if (vec == NULL) {
+		error = GIT_ENOMEM;
+		goto out;
+	}
+
+	error = git_vector_init(vec, refs.count, NULL);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -138,23 +159,24 @@ static int local_ls(git_transport *transport, git_headarray *array)
 	qsort(refs.strings, refs.count, sizeof(char *), cmp_refs);
 
 	/* Add HEAD */
-	error = add_ref(GIT_HEAD_FILE, repo, &vec);
+	error = add_ref(GIT_HEAD_FILE, repo, vec);
 	if (error < GIT_SUCCESS)
 		goto out;
 
 	for (i = 0; i < refs.count; ++i) {
-		error = add_ref(refs.strings[i], repo, &vec);
+		error = add_ref(refs.strings[i], repo, vec);
 		if (error < GIT_SUCCESS)
 			goto out;
 	}
 
-	array->len = vec.length;
-	array->heads = (git_remote_head **) vec.contents;
+	array->len = vec->length;
+	array->heads = (git_remote_head **)vec->contents;
+
+	priv->refs = vec;
 
  out:
-	if (error < GIT_SUCCESS) {
-		git_strarray_free(&refs);
-	}
+
+	git_strarray_free(&refs);
 
 	return error;
 }
@@ -168,9 +190,21 @@ static int local_close(git_transport *GIT_UNUSED(transport))
 
 static void local_free(git_transport *transport)
 {
+	unsigned int i;
+	local_priv *priv = transport->private;
+	git_vector *vec = priv->refs;
+
 	assert(transport);
 
-	git_repository_free(transport->private);
+	for (i = 0; i < vec->length; ++i) {
+		git_remote_head *h = git_vector_get(vec, i);
+		free(h->name);
+		free(h);
+	}
+	git_vector_free(vec);
+	free(vec);
+	git_repository_free(priv->repo);
+	free(priv);
 	free(transport->url);
 	free(transport);
 }
