@@ -412,7 +412,7 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 	for (;data[end_offset] == '\r' || data[end_offset] == '\n'; --end_offset);
 	data[end_offset + 1] = '\0';
 
-	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset) {
+	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset + 1) {
 		gitfo_free_buf(&file);
 		return git__throw(GIT_ENOTFOUND, "No path in git file `%s`", file_path);
 	}
