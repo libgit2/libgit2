@@ -144,7 +144,7 @@ GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
  * @param b second oid structure.
  * @return 0 in case of a match
  */
-GIT_EXTERN(int) gid_oid_match(unsigned int len, git_oid *a, git_oid *b);
+GIT_EXTERN(int) gid_oid_ncmp(unsigned int len, git_oid *a, git_oid *b);
 
 /**
  * OID Shortener object

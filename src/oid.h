@@ -6,12 +6,12 @@
  * This can be useful for internal use.
  * Return 0 if they match.
  */
-int git_oid_match_raw(unsigned int len, const unsigned char *a, const unsigned char *b);
+int git_oid_ncmp_raw(unsigned int len, const unsigned char *a, const unsigned char *b);
 
 /**
  * Compare the first 'len' characters of two hex formatted oids.
  * Return 0 if they match.
  */
-int git_oid_match_hex(unsigned int len, const unsigned char *a, const unsigned char *b);
+int git_oid_ncmp_hex(unsigned int len, const unsigned char *a, const unsigned char *b);
 
 #endif
