@@ -237,6 +237,39 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 	return GIT_SUCCESS;
 }
 
+static char  *interiorize_section(const char *orig)
+{
+	char *dot, *last_dot, *section, *ret;
+	int len;
+
+	dot = strchr(orig, '.');
+	last_dot = strrchr(orig, '.');
+	len = last_dot - orig;
+
+	/* No subsection, this is easy */
+	if (last_dot == dot)
+		return git__strndup(orig, dot - orig);
+
+	section = git__malloc(len + 4);
+	if (section == NULL)
+		return NULL;
+
+	memset(section, 0x0, len + 4);
+	ret = section;
+	len = dot - orig;
+	memcpy(section, orig, len);
+	section += len;
+	len = STRLEN(" \"");
+	memcpy(section, " \"", len);
+	section += len;
+	len = last_dot - dot - 1;
+	memcpy(section, dot + 1, len);
+	section += len;
+	*section = '"';
+
+	return ret;
+}
+
 static int config_open(git_config_file *cfg)
 {
 	int error;
@@ -334,7 +367,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 
 	memset(var, 0x0, sizeof(cvar_t));
 
-	var->section = git__strndup(name, last_dot - name);
+	var->section = interiorize_section(name);
 	if (var->section == NULL) {
 		error = GIT_ENOMEM;
 		goto out;
