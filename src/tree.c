@@ -119,13 +119,13 @@ const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename
 	return git_vector_get(&tree->entries, idx);
 }
 
-const git_tree_entry *git_tree_entry_byindex(git_tree *tree, int idx)
+const git_tree_entry *git_tree_entry_byindex(git_tree *tree, unsigned int idx)
 {
 	assert(tree);
-	return git_vector_get(&tree->entries, (unsigned int)idx);
+	return git_vector_get(&tree->entries, idx);
 }
 
-size_t git_tree_entrycount(git_tree *tree)
+unsigned int git_tree_entrycount(git_tree *tree)
 {
 	assert(tree);
 	return tree->entries.length;
@@ -288,7 +288,7 @@ static void sort_entries(git_treebuilder *bld)
 int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 {
 	git_treebuilder *bld;
-	size_t i, source_entries = DEFAULT_TREE_SIZE;
+	unsigned int i, source_entries = DEFAULT_TREE_SIZE;
 
 	assert(builder_p);
 
@@ -409,7 +409,7 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 
 int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld)
 {
-	size_t i, size = 0;
+	unsigned int i, size = 0;
 	char filemode[MAX_FILEMODE_BYTES + 1 + 1];
 	git_odb_stream *stream;
 	int error;
@@ -443,7 +443,7 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 		stream->write(stream, filemode, strlen(filemode));
 		stream->write(stream, entry->filename, entry->filename_len + 1);
 		stream->write(stream, (char *)entry->oid.id, GIT_OID_RAWSZ);
-	} 
+	}
 
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
@@ -453,7 +453,7 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 
 void git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_entry *, void *), void *payload)
 {
-	size_t i;
+	unsigned int i;
 
 	assert(bld && filter);
 
@@ -466,7 +466,7 @@ void git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_e
 
 void git_treebuilder_clear(git_treebuilder *bld)
 {
-	size_t i;
+	unsigned int i;
 	assert(bld);
 
 	for (i = 0; i < bld->entries.length; ++i) {

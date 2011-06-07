@@ -84,7 +84,7 @@ GIT_EXTERN(const git_oid *) git_tree_id(git_tree *tree);
  * @param tree a previously loaded tree.
  * @return the number of entries in the tree
  */
-GIT_EXTERN(size_t) git_tree_entrycount(git_tree *tree);
+GIT_EXTERN(unsigned int) git_tree_entrycount(git_tree *tree);
 
 /**
  * Lookup a tree entry by its filename
@@ -102,7 +102,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byname(git_tree *tree, const c
  * @param idx the position in the entry list
  * @return the tree entry; NULL if not found
  */
-GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, int idx);
+GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, unsigned int idx);
 
 /**
  * Get the UNIX file attributes of a tree entry
