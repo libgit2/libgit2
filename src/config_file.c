@@ -130,7 +130,7 @@ static void cvar_list_free(cvar_t_list *list)
  */
 static int cvar_match_section(const char *local, const char *input)
 {
-	char *first_dot, *last_dot;
+	char *first_dot;
 	char *local_sp = strchr(local, ' ');
 	int comparison_len;
 
@@ -159,11 +159,7 @@ static int cvar_match_section(const char *local, const char *input)
 	 */
 
 	first_dot = strchr(input, '.');
-	last_dot = strrchr(input, '.');
 	comparison_len = strlen(local_sp + 2) - 1;
-
-	if (last_dot == first_dot || last_dot - first_dot - 1 != comparison_len)
-		return 0;
 
 	return !strncmp(local_sp + 2, first_dot + 1, comparison_len);
 }
