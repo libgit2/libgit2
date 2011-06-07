@@ -1011,7 +1011,7 @@ static int pack_entry_find_offset(
 		if (pos < (int)p->num_objects) {
 			current = index + pos * stride;
 
-			if (!git_oid_match_raw(len, short_oid->id, current)) {
+			if (!git_oid_ncmp_raw(len, short_oid->id, current)) {
 				found = 1;
 			}
 		}
@@ -1021,7 +1021,7 @@ static int pack_entry_find_offset(
 		/* Check for ambiguousity */
 		const unsigned char *next = current + stride;
 
-		if (!git_oid_match_raw(len, short_oid->id, next)) {
+		if (!git_oid_ncmp_raw(len, short_oid->id, next)) {
 			found = 2;
 		}
 	}

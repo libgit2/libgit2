@@ -492,7 +492,7 @@ int fn_locate_object_short_oid(void *state, char *pathbuf) {
 
 	if (!gitfo_exists(pathbuf) && gitfo_isdir(pathbuf)) {
 		/* We are already in the directory matching the 2 first hex characters */
-		if (!git_oid_match_hex(sstate->short_oid_len-2, sstate->short_oid+2, (unsigned char *)pathbuf + sstate->dir_len)) {
+		if (!git_oid_ncmp_hex(sstate->short_oid_len-2, sstate->short_oid+2, (unsigned char *)pathbuf + sstate->dir_len)) {
 			if (!sstate->found) {
 				sstate->res_oid[0] = sstate->short_oid[0];
 				sstate->res_oid[1] = sstate->short_oid[1];
