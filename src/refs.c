@@ -1117,6 +1117,8 @@ static int reference_rename(git_reference *ref, const char *new_name, int force)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to rename reference");
 
+	new_name = normalized_name;
+
 	/* Ensure we're not going to overwrite an existing reference
 	   unless the user has allowed us */
 	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
