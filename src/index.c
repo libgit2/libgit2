@@ -411,7 +411,7 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 
 	git__joinpath(full_path, index->repository->path_workdir, rel_path);
 
-	if (gitfo_exists(full_path) < 0)
+	if (gitfo_shallow_exists(full_path) < 0)
 		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. %s does not exist", full_path);
 
 	if (gitfo_lstat(full_path, &st) < 0)
