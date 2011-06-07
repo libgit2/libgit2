@@ -464,7 +464,7 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 	char bare_path[GIT_PATH_MAX];
 	char normal_path[GIT_PATH_MAX];
 	char *found_path;
-	dev_t current_device;
+	dev_t current_device = 0;
 
 	assert(start_path && repository_path);
 	memset(&repo, 0x0, sizeof(git_repository));

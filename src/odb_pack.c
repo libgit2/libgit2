@@ -960,7 +960,7 @@ static int pack_entry_find_offset(
 	const unsigned char *index = p->index_map.data;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
-	const unsigned char *current;
+	const unsigned char *current = 0;
 
 	*offset_out = 0;
 
