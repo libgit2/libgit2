@@ -334,17 +334,22 @@ int gitfo_dirent(
 	return GIT_SUCCESS;
 }
 
+#if GIT_PLATFORM_PATH_SEP == '/'
+void gitfo_posixify_path(char *GIT_UNUSED(path))
+{
+	/* nothing to do*/
+}
+#else
 void gitfo_posixify_path(char *path)
 {
-	#if GIT_PLATFORM_PATH_SEP != '/'
-		while (*path) {
-			if (*path == GIT_PLATFORM_PATH_SEP)
-				*path = '/';
+	while (*path) {
+		if (*path == GIT_PLATFORM_PATH_SEP)
+			*path = '/';
 
-			path++;
-		}
-	#endif
+		path++;
+	}
 }
+#endif
 
 int gitfo_retrieve_path_root_offset(const char *path)
 {
