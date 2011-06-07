@@ -20,6 +20,9 @@
 #define GIT_PLATFORM_PATH_SEP '/'
 #endif
 
+#define S_IFGITLINK 0160000
+#define S_ISGITLINK(m) (((m) & S_IFMT) == S_IFGITLINK)
+
 #ifdef GIT_WIN32
 GIT_INLINE(int) link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {

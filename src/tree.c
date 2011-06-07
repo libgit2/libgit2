@@ -100,6 +100,18 @@ const git_oid *git_tree_entry_id(const git_tree_entry *entry)
 	return &entry->oid;
 }
 
+git_otype git_tree_entry_type(const git_tree_entry *entry)
+{
+	assert(entry);
+
+	if (S_ISGITLINK(entry->attr))
+		return GIT_OBJ_COMMIT;
+	else if (S_ISDIR(entry->attr))
+		return GIT_OBJ_TREE;
+	else
+		return GIT_OBJ_BLOB;
+}
+
 int git_tree_entry_2object(git_object **object_out, git_repository *repo, const git_tree_entry *entry)
 {
 	assert(entry && object_out);
