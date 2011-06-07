@@ -1051,12 +1051,15 @@ cleanup:
 
 static int _reference_available_cb(const char *ref, void *data)
 {
+	const char *new, *old;
+	git_vector *refs;
+
 	assert(ref && data);
 
-	git_vector *refs = (git_vector *)data;
+	refs = (git_vector *)data;
 
-	const char *new = (const char *)git_vector_get(refs, 0);
-	const char *old = (const char *)git_vector_get(refs, 1);
+	new = (const char *)git_vector_get(refs, 0);
+	old = (const char *)git_vector_get(refs, 1);
 
 	if (!old || strcmp(old, ref)) {
 		int reflen = strlen(ref);
