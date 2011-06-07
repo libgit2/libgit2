@@ -89,8 +89,8 @@ GIT_EXTERN(int) git_config_open_global(git_config **cfg);
  * Note that the configuration will call the backend's ->free()
  * function.
  *
- * @param cfg the configuration to add the backend to
- * @param backend the backend to add
+ * @param cfg the configuration to add the file to
+ * @param file the configuration source (file) to add
  * @param priority the priority the backend should have
  */
 GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int priority);
