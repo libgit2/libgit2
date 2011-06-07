@@ -75,7 +75,7 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->fd >= 0)
 		gitfo_close(file->fd);
 
-	if (file->path_lock && gitfo_exists(file->path_lock) == GIT_SUCCESS)
+	if (file->fd >= 0 && file->path_lock && gitfo_exists(file->path_lock) == GIT_SUCCESS)
 		gitfo_unlink(file->path_lock);
 
 	if (file->digest)
