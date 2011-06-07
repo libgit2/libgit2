@@ -330,7 +330,7 @@ static int abspath(char *buffer_out, size_t size, const char *path)
 	return GIT_SUCCESS;
 }
 
-static dev_t retrieve_device(dev_t *device_out, const char *path)
+static int retrieve_device(dev_t *device_out, const char *path)
 {
 	struct stat path_info;
 
@@ -369,8 +369,7 @@ static int retrieve_ceiling_directories_offset(const char *path, const char *cei
 		strncpy(buf, ceil, len);
 		buf[len] = '\0';
 
-		gitfo_posixify_path(buf);
-		if (gitfo_prettify_dir_path(buf2, sizeof(buf2), buf, NULL) < GIT_SUCCESS)
+		if (abspath(buf2, sizeof(buf2), buf) < GIT_SUCCESS)
 			continue;
 
 		len = strlen(buf2);
@@ -410,15 +409,22 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 
 	end_offset = strlen(data) - 1;
 
-	for (;data[end_offset] != '\r' && data[end_offset] != '\n'; --end_offset);
-	data[end_offset] = '\0';
+	for (;data[end_offset] == '\r' || data[end_offset] == '\n'; --end_offset);
+	data[end_offset + 1] = '\0';
 
-	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset) {
+	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset + 1) {
 		gitfo_free_buf(&file);
 		return git__throw(GIT_ENOTFOUND, "No path in git file `%s`", file_path);
 	}
 
 	error = gitfo_prettify_dir_path(path_out, size, data + GIT_FILE_CONTENT_PREFIX_LENGTH, base_path);
+	if (error == GIT_SUCCESS) {
+		end_offset = strlen(path_out);
+
+		if (end_offset > 0 && path_out[end_offset - 1] == '/')
+			path_out[end_offset - 1 ] = '\0';
+	}
+
 	gitfo_free_buf(&file);
 
 	return error;
@@ -521,12 +527,6 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 
 		git_repository__free_dirs(&repo);
 
-		//nothing has been found, lets try the parent directory
-		if (bare_path[ceiling_offset] == '\0') {
-			error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
-			goto cleanup;
-		}
-
 		if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
 			goto cleanup;
 
@@ -547,6 +547,13 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 
 		strcpy(bare_path, normal_path);
 		git__joinpath(normal_path, bare_path, DOT_GIT);
+
+		//nothing has been found, lets try the parent directory
+		if (bare_path[ceiling_offset] == '\0') {
+			error = git__throw(GIT_ENOTAREPO,"Not a git repository (or any of the parent directories): %s", start_path);
+			goto cleanup;
+		}
+
 	}
 
 	if (size < (strlen(found_path) + 1) * sizeof(char)) {

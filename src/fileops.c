@@ -380,7 +380,7 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
-    while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != 0) {
+    while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != NULL) {
 		if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
 			*sp = 0;
 			error = gitfo_mkdir(path_copy, mode);
@@ -395,8 +395,11 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 		pp = sp + 1;
 	}
 
-	if (*(pp - 1) != '/' && error == GIT_SUCCESS)
+	if (*pp != '\0' && error == GIT_SUCCESS) {
 		error = gitfo_mkdir(path, mode);
+		if (errno == EEXIST)
+			error = GIT_SUCCESS;
+	}
 
 	free(path_copy);
 
