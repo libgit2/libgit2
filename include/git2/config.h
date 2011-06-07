@@ -56,7 +56,9 @@ struct git_config_file {
  * Create a configuration file backend for ondisk files
  *
  * These are the normal `.gitconfig` files that Core Git
- * processes.
+ * processes. Note that you first have to add this file to a
+ * configuration object before you can query it for configuration
+ * variables.
  *
  * @param out the new backend
  * @path where the config file is located
@@ -64,12 +66,20 @@ struct git_config_file {
 GIT_EXTERN(int) git_config_file__ondisk(struct git_config_file **out, const char *path);
 
 /**
- * Allocate a new configuration
+ * Allocate a new configuration object
+ *
+ * This object is empty, so you have to add a file to it before you
+ * can do anything with it.
+ *
+ * @param out pointer to the new configuration
  */
 GIT_EXTERN(int) git_config_new(git_config **out);
 
 /**
  * Open a configuration file
+ *
+ * This creates a new configuration object and adds the specified file
+ * to it.
  *
  * @param cfg_out pointer to the configuration data
  * @param path where to load the confiration from
@@ -86,17 +96,17 @@ GIT_EXTERN(int) git_config_open_global(git_config **cfg);
 /**
  * Add a config backend to an existing instance
  *
- * Note that the configuration will call the backend's ->free()
- * function.
+ * Note that the configuration object will free the file
+ * automatically.
  *
- * @param cfg the configuration to add the backend to
- * @param backend the backend to add
+ * @param cfg the configuration to add the file to
+ * @param file the configuration file (backend) to add
  * @param priority the priority the backend should have
  */
 GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int priority);
 
 /**
- * Free the configuration and its associated memory
+ * Free the configuration and its associated memory and files
  *
  * @param cfg the configuration to free
  */
