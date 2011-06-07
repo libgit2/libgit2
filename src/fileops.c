@@ -172,7 +172,9 @@ int gitfo_isfile(const char *path)
 int gitfo_exists(const char *path)
 {
 	assert(path);
-	return access(path, F_OK);
+
+	struct stat st;
+	return gitfo_lstat(path, &st);
 }
 
 git_off_t gitfo_size(git_file fd)

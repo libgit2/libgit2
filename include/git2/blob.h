@@ -119,7 +119,7 @@ GIT_EXTERN(int) git_blob_rawsize(git_blob *blob);
  *	relative to the repository's working dir
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path);
+GIT_EXTERN(int) git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path, struct stat st);
 
 
 /**
