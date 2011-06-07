@@ -78,7 +78,7 @@ int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *b
 	return GIT_SUCCESS;
 }
 
-int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path)
+int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path, struct stat st)
 {
 	int error, islnk;
 	int fd = 0;
@@ -89,6 +89,8 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	struct stat st;
 
 	gitfo_lstat(path, &st);
+
+	islnk = S_ISLNK(st.st_mode);
 
 	islnk = S_ISLNK(st.st_mode);
 
