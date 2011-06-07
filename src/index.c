@@ -434,7 +434,7 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 	entry->file_size = st.st_size;
 
 	/* write the blob to disk and get the oid */
-	if ((error = git_blob_create_fromfile(&entry->oid, index->repository, rel_path, st)) < GIT_SUCCESS)
+	if ((error = git_blob_create_fromfile(&entry->oid, index->repository, rel_path)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to initialize index entry");
 
 	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
