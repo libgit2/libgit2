@@ -306,6 +306,9 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	int error;
 	git_odb_stream *stream;
 	
+	git_reference *new_ref;
+	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	
 	assert(oid && buffer);
 	
 	memset(&tag, 0, sizeof(tag));
@@ -314,9 +317,6 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
-	
-	git_reference *new_ref;
-	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
 	
 	if ((error = tag_valid_in_odb(&new_ref, ref_name, &tag.target, tag.type, repo, tag.tag_name)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
