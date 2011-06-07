@@ -138,6 +138,15 @@ int unmerged_cmp(const void *a, const void *b)
 	return strcmp(info_a->path, info_b->path);
 }
 
+unsigned int index_create_mode(unsigned int mode)
+{
+	if (S_ISLNK(mode))
+		return S_IFLNK;
+	if (S_ISDIR(mode) || (mode & S_IFMT) == 0160000)
+		return 0160000;
+	return S_IFREG | ((mode & 0100) ? 0755 : 0644);
+}
+
 static int index_initialize(git_index **index_out, git_repository *owner, const char *index_path)
 {
 	git_index *index;
@@ -402,10 +411,10 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 
 	git__joinpath(full_path, index->repository->path_workdir, rel_path);
 
-	if (gitfo_exists(full_path) < 0)
+	if (gitfo_shallow_exists(full_path) < 0)
 		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. %s does not exist", full_path);
 
-	if (gitfo_stat(full_path, &st) < 0)
+	if (gitfo_lstat(full_path, &st) < 0)
 		return git__throw(GIT_EOSERR, "Failed to initialize entry. %s appears to be corrupted", full_path);
 
 	if (stage < 0 || stage > 3)
@@ -419,7 +428,7 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 	/* entry.ctime.nanoseconds = st.st_ctimensec; */
 	entry->dev= st.st_rdev;
 	entry->ino = st.st_ino;
-	entry->mode = st.st_mode;
+	entry->mode = index_create_mode(st.st_mode);
 	entry->uid = st.st_uid;
 	entry->gid = st.st_gid;
 	entry->file_size = st.st_size;
