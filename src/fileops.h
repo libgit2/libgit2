@@ -65,6 +65,7 @@ typedef struct {  /* file io buffer  */
 } gitfo_buf;
 
 extern int gitfo_exists(const char *path);
+extern int gitfo_shallow_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
 extern int gitfo_creat(const char *path, int mode);
 extern int gitfo_creat_force(const char *path, int mode);
