@@ -11,11 +11,18 @@
 # define lseek _lseeki64
 # define stat _stat64
 # define fstat _fstat64
+# define lstat _stat64
 
 /* stat: file mode type testing macros */
 # define S_ISDIR(m)   (((m) & _S_IFMT) == _S_IFDIR)
 # define S_ISREG(m)   (((m) & _S_IFMT) == _S_IFREG)
 # define S_ISFIFO(m)  (((m) & _S_IFMT) == _S_IFIFO)
+/* On Windows nothing is a link */
+# define S_ISLNK(m)	  0
+# define S_IFLNK      0x0000
+
+/* Windows does not support symbolic links */
+# define readlink(m1,m2,m3) -1
 
 /* case-insensitive string comparison */
 # define strcasecmp   _stricmp
