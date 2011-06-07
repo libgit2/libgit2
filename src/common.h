@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #ifdef GIT_WIN32
 

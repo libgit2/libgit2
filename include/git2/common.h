@@ -28,7 +28,6 @@
 #include "thread-utils.h"
 #include <time.h>
 #include <stdlib.h>
-#include <sys/stat.h>
 
 #ifdef __cplusplus
 # define GIT_BEGIN_DECL  extern "C" {
