@@ -931,24 +931,9 @@ BEGIN_TEST(list1, "try to list only the symbolic references")
 	git_repository_free(repo);
 END_TEST
 
-BEGIN_TEST(corruption0, "Check a the packed-refs file is not corrupted")
-	git_reference *ref;
-	git_repository *repo;
-
-	must_pass(git_repository_open(&repo, "/Users/vicent/src/github/.git"));
-
-	/* Lookup the reference */
-	must_pass(git_reference_lookup(&ref, repo, "refs/heads/redcarpet-deploy"));
-
-	/* Now that the reference is deleted... */
-	must_pass(git_reference_delete(ref));
-
-	git_repository_free(repo);
-END_TEST
-
 
 BEGIN_SUITE(refs)
-/*	ADD_TEST(readtag0);
+	ADD_TEST(readtag0);
 	ADD_TEST(readtag1);
 
 	ADD_TEST(readsym0);
@@ -986,6 +971,5 @@ BEGIN_SUITE(refs)
 
 	ADD_TEST(delete0);
 	ADD_TEST(list0);
-	ADD_TEST(list1); */
-	ADD_TEST(corruption0);
+	ADD_TEST(list1);
 END_SUITE
