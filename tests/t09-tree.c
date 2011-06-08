@@ -81,7 +81,7 @@ BEGIN_TEST(read0, "acces randomly the entries on a loaded tree")
 	must_be_true(git_tree_entry_byindex(tree, 0) != NULL);
 	must_be_true(git_tree_entry_byindex(tree, 2) != NULL);
 	must_be_true(git_tree_entry_byindex(tree, 3) == NULL);
-	must_be_true(git_tree_entry_byindex(tree, -1) == NULL);
+	must_be_true(git_tree_entry_byindex(tree, (unsigned int)-1) == NULL);
 
 	git_tree_close(tree);
 	git_repository_free(repo);

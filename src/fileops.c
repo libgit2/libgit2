@@ -633,7 +633,7 @@ static int do_lstat(const char *file_name, struct stat *buf)
 		buf->st_gid = 0;
 		buf->st_uid = 0;
 		buf->st_nlink = 1;
-		buf->st_mode = fMode;
+		buf->st_mode = (unsigned short)fMode;
 		buf->st_size = fdata.nFileSizeLow; /* Can't use nFileSizeHigh, since it's not a stat64 */
 		buf->st_dev = buf->st_rdev = (_getdrive() - 1);
 		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
@@ -686,6 +686,7 @@ int gitfo_lstat__w32(const char *file_name, struct stat *buf)
 	alt_name[namelen] = 0;
 	return do_lstat(alt_name, buf);
 }
+
 int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 {
 	HANDLE hFile;
@@ -711,7 +712,7 @@ int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 	if (dwRet > 4) {
 		/* Skip first 4 characters if they are "\\?\" */
 		if (target[0] == '\\' && target[1] == '\\' && target[2] == '?' && target[3] ==  '\\') {
-			char tmp[MAXPATHLEN];
+			char tmp[GIT_PATH_MAX];
 			unsigned int offset = 4;
 			dwRet -= 4;
 
