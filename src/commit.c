@@ -292,6 +292,7 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 
 	if (buffer < buffer_end) {
 		const char *line_end;
+		unsigned int i;
 		size_t message_len;
 
 		/* Long message */
@@ -301,12 +302,18 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 		commit->message[message_len] = 0;
 
 		/* Short message */
-		if((line_end = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
-			line_end = buffer_end;
+		if((line_end = strstr(buffer, "\n\n")) == NULL) {
+			/* Cut the last '\n' if there is one */
+			if (message_len && buffer[message_len - 1] == '\n')
+				line_end = buffer_end - 1;
+			else
+				line_end = buffer_end;
+		}
 		message_len = line_end - buffer;
-
 		commit->message_short = git__malloc(message_len + 1);
-		memcpy(commit->message_short, buffer, message_len);
+		for (i = 0; i < message_len; ++i) {
+			commit->message_short[i] = (buffer[i] == '\n') ? ' ' : buffer[i];
+		}
 		commit->message_short[message_len] = 0;
 	}
 
