@@ -26,6 +26,7 @@
 
 #include "vector.h"
 #include "fileops.h"
+#include "filebuf.h"
 
 BEGIN_TEST(string0, "compare prefixes")
 	must_be_true(git__prefixcmp("", "") == 0);
@@ -661,6 +662,15 @@ BEGIN_TEST(dirent4, "make sure that strange looking filenames ('..c') are traver
 	must_pass(knockdown(&odd));
 END_TEST
 
+BEGIN_TEST(filebuf0, "make sure git_filebuf_open doesn't delete an existing lock")
+	git_filebuf file;
+	char test[] = "test", testlock[] = "test.lock";
+
+	must_pass(gitfo_creat(testlock, 0744));
+	must_fail(git_filebuf_open(&file, test, 0));
+	must_pass(gitfo_exists(testlock));
+	must_pass(gitfo_unlink(testlock));
+END_TEST
 
 BEGIN_SUITE(core)
 	ADD_TEST(string0);
@@ -683,4 +693,6 @@ BEGIN_SUITE(core)
 	ADD_TEST(dirent2);
 	ADD_TEST(dirent3);
 	ADD_TEST(dirent4);
+
+	ADD_TEST(filebuf0);
 END_SUITE
