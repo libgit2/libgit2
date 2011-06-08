@@ -65,7 +65,6 @@ typedef struct {  /* file io buffer  */
 } gitfo_buf;
 
 extern int gitfo_exists(const char *path);
-extern int gitfo_shallow_exists(const char *path);
 extern int gitfo_open(const char *path, int flags);
 extern int gitfo_creat(const char *path, int mode);
 extern int gitfo_creat_force(const char *path, int mode);
@@ -95,7 +94,14 @@ extern int gitfo_mv_force(const char *from, const char *to);
 
 #define gitfo_stat(p,b) stat(p, b)
 #define gitfo_fstat(f,b) fstat(f, b)
-#define gitfo_lstat(p,b) lstat(p,b)
+
+#ifdef GIT_WIN32
+#  define gitfo_lstat(p,b) gitfo_lstat__w32(p,b)
+#  define gitfo_readlink(a, b, c) gitfo_readlink__w32(a, b, c)
+#else
+#  define gitfo_lstat(p,b) lstat(p,b)
+#  define gitfo_readlink(a, b, c) readlink(a, b, c)
+#endif
 
 #define gitfo_unlink(p) unlink(p)
 #define gitfo_rmdir(p) rmdir(p)

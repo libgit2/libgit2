@@ -175,14 +175,6 @@ int gitfo_exists(const char *path)
 	return access(path, F_OK);
 }
 
-int gitfo_shallow_exists(const char *path)
-{
-	assert(path);
-
-	struct stat st;
-	return gitfo_lstat(path, &st);
-}
-
 git_off_t gitfo_size(git_file fd)
 {
 	struct stat sb;
@@ -609,3 +601,134 @@ int gitfo_getcwd(char *buffer_out, size_t size)
 
 	return GIT_SUCCESS;
 }
+
+#ifdef GIT_WIN32
+static inline time_t filetime_to_time_t(const FILETIME *ft)
+{
+	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
+	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
+	winTime /= 10000000;		 /* Nano to seconds resolution */
+	return (time_t)winTime;
+}
+
+static int do_lstat(const char *file_name, struct stat *buf)
+{
+	WIN32_FILE_ATTRIBUTE_DATA fdata;
+
+	if (GetFileAttributesExA(file_name, GetFileExInfoStandard, &fdata)) {
+		int fMode = S_IREAD;
+
+		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			fMode |= S_IFDIR;
+		else
+			fMode |= S_IFREG;
+
+		if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
+			fMode |= S_IWRITE;
+
+		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+			fMode |= _S_IFLNK;
+
+		buf->st_ino = 0;
+		buf->st_gid = 0;
+		buf->st_uid = 0;
+		buf->st_nlink = 1;
+		buf->st_mode = fMode;
+		buf->st_size = fdata.nFileSizeLow; /* Can't use nFileSizeHigh, since it's not a stat64 */
+		buf->st_dev = buf->st_rdev = (_getdrive() - 1);
+		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
+		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
+		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
+		return GIT_SUCCESS;
+	}
+
+	switch (GetLastError()) {
+	case ERROR_ACCESS_DENIED:
+	case ERROR_SHARING_VIOLATION:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_SHARING_BUFFER_EXCEEDED:
+		return GIT_EOSERR;
+
+	case ERROR_BUFFER_OVERFLOW:
+	case ERROR_NOT_ENOUGH_MEMORY:
+		return GIT_ENOMEM;
+
+	default:
+		return GIT_EINVALIDPATH;
+	}
+}
+
+int gitfo_lstat__w32(const char *file_name, struct stat *buf)
+{
+	int namelen, error;
+	char alt_name[GIT_PATH_MAX];
+
+	if ((error = do_lstat(file_name, buf)) == GIT_SUCCESS)
+		return GIT_SUCCESS;
+
+	/* if file_name ended in a '/', Windows returned ENOENT;
+	 * try again without trailing slashes
+	 */
+	if (error != GIT_EINVALIDPATH)
+		return git__throw(GIT_EOSERR, "Failed to lstat file");
+
+	namelen = strlen(file_name);
+	if (namelen && file_name[namelen-1] != '/')
+		return git__throw(GIT_EOSERR, "Failed to lstat file");
+
+	while (namelen && file_name[namelen-1] == '/')
+		--namelen;
+
+	if (!namelen || namelen >= GIT_PATH_MAX)
+		return git__throw(GIT_ENOMEM, "Failed to lstat file");
+
+	memcpy(alt_name, file_name, namelen);
+	alt_name[namelen] = 0;
+	return do_lstat(alt_name, buf);
+}
+int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
+{
+	HANDLE hFile;
+	DWORD dwRet;
+
+	hFile = CreateFile(link,            // file to open
+				 GENERIC_READ,          // open for reading
+				 FILE_SHARE_READ,       // share for reading
+				 NULL,                  // default security
+				 OPEN_EXISTING,         // existing file only
+				 FILE_FLAG_BACKUP_SEMANTICS, // normal file
+				 NULL);                 // no attr. template
+
+	if (hFile == INVALID_HANDLE_VALUE)
+		return GIT_EOSERR;
+
+	dwRet = GetFinalPathNameByHandleA(hFile, target, target_len, VOLUME_NAME_DOS);
+	if (dwRet >= target_len)
+		return GIT_ENOMEM;
+
+	CloseHandle(hFile);
+
+	if (dwRet > 4) {
+		/* Skip first 4 characters if they are "\\?\" */
+		if (target[0] == '\\' && target[1] == '\\' && target[2] == '?' && target[3] ==  '\\') {
+			char tmp[MAXPATHLEN];
+			unsigned int offset = 4;
+			dwRet -= 4;
+
+			/* \??\UNC\ */
+			if (dwRet > 7 && target[4] == 'U' && target[5] == 'N' && target[6] == 'C') {
+				offset += 2;
+				dwRet -= 2;
+				target[offset] = '\\';
+			}
+
+			memcpy(tmp, target + offset, dwRet);
+			memcpy(target, tmp, dwRet);
+		}
+	}
+
+	target[dwRet] = '\0';
+	return dwRet;
+}
+
+#endif
