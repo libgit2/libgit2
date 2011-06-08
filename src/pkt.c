@@ -173,6 +173,17 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 	return error;
 }
 
+void git_pkt_free(git_pkt *pkt)
+{
+	if(pkt->type == GIT_PKT_REF) {
+		git_pkt_ref *p = (git_pkt_ref *) pkt;
+		free(p->capabilities);
+		free(p->head.name);
+	}
+
+	free(pkt);
+}
+
 /*
  * Create a git procol request.
  *

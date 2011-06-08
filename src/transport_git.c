@@ -286,12 +286,7 @@ static void git_free(git_transport *transport)
 
 	for (i = 0; i < refs->length; ++i) {
 		git_pkt *p = git_vector_get(refs, i);
-		if (p->type == GIT_PKT_REF) {
-			free(((git_pkt_ref *)p)->head.name);
-			free(((git_pkt_ref *)p)->capabilities);
-		}
-
-		free(p);
+		git_pkt_free(p);
 	}
 
 	git_vector_free(refs);

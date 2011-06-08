@@ -56,3 +56,4 @@ struct git_pkt_ref {
  */
 int git_pkt_gen_proto(char **out, int *outlen, const char *url);
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out);
+void git_pkt_free(git_pkt *pkt);
