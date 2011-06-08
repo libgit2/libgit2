@@ -177,9 +177,9 @@ int gitfo_exists(const char *path)
 
 int gitfo_shallow_exists(const char *path)
 {
+	struct stat st;
 	assert(path);
 
-	struct stat st;
 	return gitfo_lstat(path, &st);
 }
 
