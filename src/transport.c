@@ -8,7 +8,7 @@ struct {
 	char *prefix;
 	git_transport_cb fn;
 } transports[] = {
-	{"git://", git_transport_dummy},
+	{"git://", git_transport_git},
 	{"http://", git_transport_dummy},
 	{"https://", git_transport_dummy},
 	{"file://", git_transport_local},
