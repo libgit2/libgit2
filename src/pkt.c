@@ -57,6 +57,7 @@ int ref_pkt(git_pkt **out, const char *line, size_t len)
 	if (pkt == NULL)
 		return GIT_ENOMEM;
 
+	memset(pkt, 0x0, sizeof(git_pkt_ref));
 	pkt->type = GIT_PKT_REF;
 	error = git_oid_fromstr(&pkt->head.oid, line);
 	if (error < GIT_SUCCESS) {
@@ -70,9 +71,11 @@ int ref_pkt(git_pkt **out, const char *line, size_t len)
 		goto out;
 	}
 
+	/* Jump from the name */
 	line += GIT_OID_HEXSZ + 1;
+	len -= (GIT_OID_HEXSZ + 1);
 
-	name_len = len - (GIT_OID_HEXSZ + 1);
+	name_len = min(strlen(line), len);
 	if (line[name_len - 1] == '\n')
 		--name_len;
 
@@ -80,6 +83,22 @@ int ref_pkt(git_pkt **out, const char *line, size_t len)
 	if (pkt->head.name == NULL) {
 		error = GIT_ENOMEM;
 		goto out;
+	}
+
+	/* Try to get the capabilities */
+	line += name_len + 1; /* + \0 */
+	len -= (name_len + 1);
+	if (line[len - 1] == '\n')
+		--len;
+
+	if (len > 0) { /* capatilities */
+		pkt->capabilities = git__malloc(len);
+		if (pkt->capabilities == NULL) {
+			error = GIT_ENOMEM;
+			goto out;
+		}
+
+		memcpy(pkt->capabilities, line, len);
 	}
 
 out:

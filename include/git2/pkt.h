@@ -48,4 +48,5 @@ struct git_pkt_cmd {
 struct git_pkt_ref {
 	enum git_pkt_type type;
 	git_remote_head head;
+	char *capabilities;
 };
