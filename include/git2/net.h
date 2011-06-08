@@ -5,6 +5,8 @@
 #include "oid.h"
 #include "types.h"
 
+#define GIT_DEFAULT_PORT "9418"
+
 /*
  * We need this because we need to know whether we should call
  * git-upload-pack or git-receive-pack on the remote end when get_refs

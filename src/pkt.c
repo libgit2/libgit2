@@ -172,3 +172,42 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 
 	return error;
 }
+
+/*
+ * Create a git procol request.
+ *
+ * For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
+ *
+ * TODO: the command should not be hard-coded
+ */
+int git_pkt_gen_proto(char **out, int *outlen, const char *url)
+{
+	char *delim, *repo, *ptr;
+	char command[] = "git-upload-pack";
+	char host[] = "host=";
+	int len;
+
+	delim = strchr(url, '/');
+	if (delim == NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to create proto-request: malformed URL");
+
+	repo = delim;
+
+	delim = strchr(url, ':');
+	if (delim == NULL)
+		delim = strchr(url, '/');
+
+	len = 4 + STRLEN(command) + 1 + strlen(repo) + 1 + STRLEN(host) + (delim - url) + 2;
+
+	*out = git__malloc(len);
+	if (*out == NULL)
+		return GIT_ENOMEM;
+
+	*outlen = len - 1;
+	ptr = *out;
+	memset(ptr, 0x0, len);
+	/* We expect the return value to be > len - 1 so don't bother checking it */
+	snprintf(ptr, len -1, "%04x%s %s%c%s%s", len - 1, command, repo, 0, host, url);
+
+	return GIT_SUCCESS;
+}

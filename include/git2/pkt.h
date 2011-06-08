@@ -50,3 +50,8 @@ struct git_pkt_ref {
 	git_remote_head head;
 	char *capabilities;
 };
+
+/**
+ * Create a git protocol request.
+ */
+int git_pkt_gen_proto(char **out, int *outlen, const char *url);
