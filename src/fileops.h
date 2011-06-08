@@ -103,6 +103,11 @@ extern int gitfo_mv_force(const char *from, const char *to);
 #  define gitfo_readlink(a, b, c) readlink(a, b, c)
 #endif
 
+#ifdef GIT_WIN32
+extern int gitfo_lstat__w32(const char *file_name, struct stat *buf);
+extern int gitfo_readlink__w32(const char *link, char *target, size_t target_len);
+#endif
+
 #define gitfo_unlink(p) unlink(p)
 #define gitfo_rmdir(p) rmdir(p)
 #define gitfo_chdir(p) chdir(p)
