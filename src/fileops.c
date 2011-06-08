@@ -603,7 +603,7 @@ int gitfo_getcwd(char *buffer_out, size_t size)
 }
 
 #ifdef GIT_WIN32
-static inline time_t filetime_to_time_t(const FILETIME *ft)
+GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 {
 	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
 	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
@@ -711,7 +711,7 @@ int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 	if (dwRet > 4) {
 		/* Skip first 4 characters if they are "\\?\" */
 		if (target[0] == '\\' && target[1] == '\\' && target[2] == '?' && target[3] ==  '\\') {
-			char tmp[MAXPATHLEN];
+			char tmp[GIT_PATH_MAX];
 			unsigned int offset = 4;
 			dwRet -= 4;
 

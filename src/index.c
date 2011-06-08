@@ -141,7 +141,7 @@ int unmerged_cmp(const void *a, const void *b)
 unsigned int index_create_mode(unsigned int mode)
 {
 	if (S_ISLNK(mode))
-		return S_IFLNK;
+		return _S_IFLNK;
 	if (S_ISDIR(mode) || (mode & S_IFMT) == 0160000)
 		return 0160000;
 	return S_IFREG | ((mode & 0100) ? 0755 : 0644);
