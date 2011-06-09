@@ -409,6 +409,31 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	return GIT_SUCCESS;
 }
 
+static int _rmdir_recurs_cb(void *GIT_UNUSED(nil), char *path)
+{
+	int error = GIT_SUCCESS;
+
+	error = gitfo_isdir(path);
+	if (error == GIT_SUCCESS) {
+		size_t root_size = strlen(path);
+
+		if ((error = gitfo_dirent(path, GIT_PATH_MAX, _rmdir_recurs_cb, NULL)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to remove directory `%s`", path);
+
+		path[root_size] = '\0';
+		return gitfo_rmdir(path);
+	}
+
+	return git__rethrow(error, "Failed to remove directory. `%s` is not a directory", path);
+}
+
+int gitfo_rmdir_recurs(const char *path)
+{
+	char p[GIT_PATH_MAX];
+	strncpy(p, path, GIT_PATH_MAX);
+	return  _rmdir_recurs_cb(NULL, p);
+}
+
 static int retrieve_previous_path_component_start(const char *path)
 {
 	int offset, len, root_offset, start = 0;
