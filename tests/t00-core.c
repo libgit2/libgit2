@@ -705,6 +705,54 @@ BEGIN_TEST(filebuf2, "make sure git_filebuf_write writes large buffer correctly"
 	must_pass(gitfo_unlink(test));
 END_TEST
 
+static char *empty_tmp_dir = "test_gitfo_rmdir_recurs_test";
+
+static int setup_empty_tmp_dir()
+{
+	char path[GIT_PATH_MAX];
+
+	if (mkdir(empty_tmp_dir, 0755))
+		return -1;
+
+	git__joinpath(path, empty_tmp_dir, "/one");
+	if (mkdir(path, 0755))
+		return -1;
+
+	git__joinpath(path, empty_tmp_dir, "/one/two_one");
+	if (mkdir(path, 0755))
+		return -1;
+
+	git__joinpath(path, empty_tmp_dir, "/one/two_two");
+	if (mkdir(path, 0755))
+		return -1;
+
+	git__joinpath(path, empty_tmp_dir, "/one/two_two/three");
+	if (mkdir(path, 0755))
+		return -1;
+
+	git__joinpath(path, empty_tmp_dir, "/two");
+	if (mkdir(path, 0755))
+		return -1;
+
+	return 0;
+}
+
+BEGIN_TEST(rmdir0, "make sure empty dir can be deleted recusively")
+	must_pass(setup_empty_tmp_dir());
+	must_pass(gitfo_rmdir_recurs(empty_tmp_dir));
+END_TEST
+
+BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
+	char file[GIT_PATH_MAX];
+
+	must_pass(setup_empty_tmp_dir());
+	git__joinpath(file, empty_tmp_dir, "/two/file.txt");
+	must_pass(gitfo_creat(file, 0755));
+	must_fail(gitfo_rmdir_recurs(empty_tmp_dir));
+	must_pass(gitfo_unlink(file));
+	must_pass(gitfo_rmdir_recurs(empty_tmp_dir));
+END_TEST
+
 BEGIN_SUITE(core)
 	ADD_TEST(string0);
 	ADD_TEST(string1);
@@ -730,4 +778,7 @@ BEGIN_SUITE(core)
 	ADD_TEST(filebuf0);
 	ADD_TEST(filebuf1);
 	ADD_TEST(filebuf2);
+
+	ADD_TEST(rmdir0);
+	ADD_TEST(rmdir1);
 END_SUITE
