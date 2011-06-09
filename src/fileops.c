@@ -301,13 +301,8 @@ int gitfo_dirent(
 		size_t de_len;
 		int result;
 
-		/* always skip '.' and '..' */
-		if (de->d_name[0] == '.') {
-			if (de->d_name[1] == '\0')
-				continue;
-			if (de->d_name[1] == '.' && de->d_name[2] == '\0')
-				continue;
-		}
+		if (is_dot_or_dotdot(de->d_name))
+			continue;
 
 		de_len = strlen(de->d_name);
 		if (path_sz < wd_len + de_len + 1) {

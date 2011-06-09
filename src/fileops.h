@@ -114,6 +114,14 @@ extern int gitfo_mv_force(const char *from, const char *to);
 #define gitfo_fsync(fd) fsync(fd)
 #define gitfo_chmod(p,m) chmod(p, m)
 
+/* Taken from git.git */
+static inline int is_dot_or_dotdot(const char *name)
+{
+	return (name[0] == '.' &&
+		(name[1] == '\0' ||
+		 (name[1] == '.' && name[2] == '\0')));
+}
+
 /**
  * Read-only map all or part of a file into memory.
  * When possible this function should favor a virtual memory
