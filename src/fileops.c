@@ -301,6 +301,31 @@ int git_futils_mkdir_r(const char *path, int mode)
 	return GIT_SUCCESS;
 }
 
+static int _rmdir_recurs_cb(void *GIT_UNUSED(nil), char *path)
+{
+	int error = GIT_SUCCESS;
+
+	error = git_futils_isdir(path);
+	if (error == GIT_SUCCESS) {
+		size_t root_size = strlen(path);
+
+		if ((error = git_futils_direach(path, GIT_PATH_MAX, _rmdir_recurs_cb, NULL)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to remove directory `%s`", path);
+
+		path[root_size] = '\0';
+		return p_rmdir(path);
+	}
+
+	return git__rethrow(error, "Failed to remove directory. `%s` is not a directory", path);
+}
+
+int git_futils_rmdir_recurs(const char *path)
+{
+	char p[GIT_PATH_MAX];
+	strncpy(p, path, GIT_PATH_MAX);
+	return  _rmdir_recurs_cb(NULL, p);
+}
+
 int git_futils_cmp_path(const char *name1, int len1, int isdir1,
 		const char *name2, int len2, int isdir2)
 {

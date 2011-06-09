@@ -102,6 +102,9 @@ extern int git_futils_mv_withpath(const char *from, const char *to);
  */
 extern git_off_t git_futils_filesize(git_file fd);
 
+/* Recursively remove an empty directory structure */
+extern int git_futils_rmdir_recurs(const char *path);
+
 /* Taken from git.git */
 static inline int is_dot_or_dotdot(const char *name)
 {
