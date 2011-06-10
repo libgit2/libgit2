@@ -627,7 +627,7 @@ static int do_lstat(const char *file_name, struct stat *buf)
 			fMode |= S_IWRITE;
 
 		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-			fMode |= _S_IFLNK;
+			fMode |= S_IFLNK;
 
 		buf->st_ino = 0;
 		buf->st_gid = 0;
