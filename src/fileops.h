@@ -98,6 +98,9 @@ extern int gitfo_mv_force(const char *from, const char *to);
 #ifdef GIT_WIN32
 #  define gitfo_lstat(p,b) gitfo_lstat__w32(p,b)
 #  define gitfo_readlink(a, b, c) gitfo_readlink__w32(a, b, c)
+
+   extern int gitfo_lstat__w32(const char *file_name, struct stat *buf);
+   extern int gitfo_readlink__w32(const char *link, char *target, size_t target_len);
 #else
 #  define gitfo_lstat(p,b) lstat(p,b)
 #  define gitfo_readlink(a, b, c) readlink(a, b, c)
