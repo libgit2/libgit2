@@ -142,8 +142,8 @@ unsigned int index_create_mode(unsigned int mode)
 {
 	if (S_ISLNK(mode))
 		return S_IFLNK;
-	if (S_ISDIR(mode) || (mode & S_IFMT) == 0160000)
-		return 0160000;
+	if (S_ISDIR(mode) || (mode & S_IFMT) == (S_IFLNK | S_IFDIR))
+		return (S_IFLNK | S_IFDIR);
 	return S_IFREG | ((mode & 0100) ? 0755 : 0644);
 }
 
