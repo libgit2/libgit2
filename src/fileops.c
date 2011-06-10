@@ -603,7 +603,7 @@ int gitfo_getcwd(char *buffer_out, size_t size)
 }
 
 #ifdef GIT_WIN32
-static inline time_t filetime_to_time_t(const FILETIME *ft)
+GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 {
 	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
 	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
