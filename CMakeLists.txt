@@ -32,28 +32,6 @@ ELSEIF ()
     SET(SHA1_TYPE "builtin" CACHE STRING "Which SHA1 implementation to use: builtin, ppc")
 ENDIF ()
 
-INCLUDE(FindPkgConfig)
-
-# Show SQLite3 settings in GUI (if they won't be found out)
-SET(SQLITE3_INCLUDE_DIRS "" CACHE PATH "SQLite include directory")
-SET(SQLITE3_LIBRARIES "" CACHE FILEPATH "SQLite library")
-
-# Are SQLite3 variables already set up? (poor Windows/no pkg-config/no sqlite3.pc)
-IF (SQLITE3_INCLUDE_DIRS AND SQLITE3_LIBRARIES)
-	SET(SQLITE3_FOUND 1)
-ENDIF ()
-
-# Try to find SQLite3 via pkg-config
-IF (PKG_CONFIG_FOUND AND NOT SQLITE3_FOUND)
-	pkg_check_modules(SQLITE3 sqlite3)
-ENDIF ()
-
-# Compile SQLite backend if SQLite3 is available
-IF (SQLITE3_FOUND)
-	ADD_DEFINITIONS(-DGIT2_SQLITE_BACKEND)
-	INCLUDE_DIRECTORIES(${SQLITE3_INCLUDE_DIRS})
-ENDIF ()
-
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
 SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")

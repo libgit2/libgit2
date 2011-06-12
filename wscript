@@ -17,7 +17,7 @@ CFLAGS_WIN32_L = ['/RELEASE']  # used for /both/ debug and release builds.
                                # sets the module's checksum in the header.
 CFLAGS_WIN32_L_DBG = ['/DEBUG']
 
-ALL_LIBS = ['crypto', 'pthread', 'sqlite3', 'hiredis']
+ALL_LIBS = ['crypto', 'pthread']
 
 def options(opt):
     opt.load('compiler_c')
@@ -30,10 +30,6 @@ PPC optimized version (ppc) or the SHA1 functions from OpenSSL (openssl)")
         help='Force a specific MSVC++ version (7.1, 8.0, 9.0, 10.0), if more than one is installed')
     opt.add_option('--arch', action='store', default='x86',
         help='Select target architecture (ia64, x64, x86, x86_amd64, x86_ia64)')
-    opt.add_option('--with-sqlite', action='store_true', default=False,
-        dest='use_sqlite', help='Enable sqlite support')
-    opt.add_option('--with-hiredis', action='store_true', default=False,
-        dest='use_hiredis', help='Enable redis support using hiredis')
     opt.add_option('--threadsafe', action='store_true', default=False,
         help='Make libgit2 thread-safe (requires pthreads)')
 
@@ -72,17 +68,6 @@ def configure(conf):
         if conf.env.PLATFORM == 'unix':
             conf.check_cc(lib='pthread', uselib_store='pthread')
         conf.env.DEFINES += ['GIT_THREADS']
-
-    # check for sqlite3
-    if conf.options.use_sqlite and conf.check_cc(
-        lib='sqlite3', uselib_store='sqlite3', install_path=None, mandatory=False):
-        conf.env.DEFINES += ['GIT2_SQLITE_BACKEND']
-
-    # check for hiredis
-    if conf.options.use_hiredis and conf.check_cc(
-        lib='hiredis', uselib_store='hiredis', install_path=None, mandatory=False):
-        conf.env.DEFINES += ['GIT2_HIREDIS_BACKEND']
-
 
     if conf.options.sha1 not in ['openssl', 'ppc', 'builtin']:
         conf.fatal('Invalid SHA1 option')
@@ -149,7 +134,6 @@ def build_library(bld, build_type):
     # E.g.  src/unix/*.c
     #       src/win32/*.c
     sources = sources + directory.ant_glob('src/%s/*.c' % bld.env.PLATFORM)
-    sources = sources + directory.ant_glob('src/backends/*.c')
     sources = sources + directory.ant_glob('deps/zlib/*.c')
 
     # SHA1 methods source
