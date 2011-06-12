@@ -53,7 +53,7 @@ static git_odb *open_sqlite_odb(void)
 	if (git_odb_new(&odb) < GIT_SUCCESS)
 		return NULL;
 
-	if (git_odb_backend_sqlite(&sqlite, ":memory") < GIT_SUCCESS)
+	if (git_odb_backend_sqlite(&sqlite, ":memory:") < GIT_SUCCESS)
 		return NULL;
 
 	if (git_odb_add_backend(odb, sqlite, 0) < GIT_SUCCESS)
