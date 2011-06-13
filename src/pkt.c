@@ -30,6 +30,10 @@
 #include "common.h"
 #include "util.h"
 
+#include <ctype.h>
+
+#define PKT_LEN_SIZE 4
+
 static int flush_pkt(git_pkt **out)
 {
 	git_pkt *pkt;
@@ -50,8 +54,7 @@ static int flush_pkt(git_pkt **out)
 int ref_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_ref *pkt;
-	int error;
-	size_t name_len;
+	int error, has_caps = 0;
 
 	pkt = git__malloc(sizeof(git_pkt_ref));
 	if (pkt == NULL)
@@ -75,30 +78,22 @@ int ref_pkt(git_pkt **out, const char *line, size_t len)
 	line += GIT_OID_HEXSZ + 1;
 	len -= (GIT_OID_HEXSZ + 1);
 
-	name_len = min(strlen(line), len);
-	if (line[name_len - 1] == '\n')
-		--name_len;
+	if (strlen(line) < len)
+		has_caps = 1;
 
-	pkt->head.name = git__strndup(line, name_len);
+	if (line[len - 1] == '\n')
+		--len;
+
+	pkt->head.name = git__malloc(len + 1);
 	if (pkt->head.name == NULL) {
 		error = GIT_ENOMEM;
 		goto out;
 	}
+	memcpy(pkt->head.name, line, len);
+	pkt->head.name[len] = '\0';
 
-	/* Try to get the capabilities */
-	line += name_len + 1; /* + \0 */
-	len -= (name_len + 1);
-	if (line[len - 1] == '\n')
-		--len;
-
-	if (len > 0) { /* capatilities */
-		pkt->capabilities = git__malloc(len);
-		if (pkt->capabilities == NULL) {
-			error = GIT_ENOMEM;
-			goto out;
-		}
-
-		memcpy(pkt->capabilities, line, len);
+	if (has_caps) {
+		pkt->capabilities = strchr(pkt->head.name, '\0') + 1;
 	}
 
 out:
@@ -108,6 +103,29 @@ out:
 		*out = (git_pkt *)pkt;
 
 	return error;
+}
+
+static unsigned int parse_len(const char *line)
+{
+	char num[PKT_LEN_SIZE + 1];
+	int i, error;
+	long len;
+	const char *num_end;
+
+	memcpy(num, line, PKT_LEN_SIZE);
+	num[PKT_LEN_SIZE] = '\0';
+
+	for (i = 0; i < PKT_LEN_SIZE; ++i) {
+		if (!isxdigit(num[i]))
+			return GIT_ENOTNUM;
+	}
+
+	error = git__strtol32(&len, num, &num_end, 16);
+	if (error < GIT_SUCCESS) {
+		return error;
+	}
+
+	return (unsigned int) len;
 }
 
 /*
@@ -123,35 +141,34 @@ out:
  * in ASCII hexadecimal (including itself)
  */
 
-int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
+int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, unsigned int bufflen)
 {
 	int error = GIT_SUCCESS;
-	long int len;
-	const int num_len = 4;
-	char *num;
-	const char *num_end;
+	unsigned int len;
 
-	num = git__strndup(line, num_len);
-	if (num == NULL)
-		return GIT_ENOMEM;
+	/* Not even enough for the length */
+	if (bufflen > 0 && bufflen < PKT_LEN_SIZE)
+		return GIT_ESHORTBUFFER;
 
-	error = git__strtol32(&len, num, &num_end, 16);
-	if (error < GIT_SUCCESS) {
-		free(num);
+	error = parse_len(line);
+	if (error < GIT_SUCCESS)
 		return git__throw(error, "Failed to parse pkt length");
-	}
-	if (num_end - num != num_len) {
-		free(num);
-		return git__throw(GIT_EOBJCORRUPTED, "Wrong pkt length");
-	}
-	free(num);
 
-	line += num_len;
+	len = error;
+
+	/*
+	 * If we were given a buffer length, then make sure there is
+	 * enough in the buffer to satisfy this line
+	 */
+	if (bufflen > 0 && bufflen < len)
+		return GIT_ESHORTBUFFER;
+
+	line += PKT_LEN_SIZE;
 	/*
 	 * TODO: How do we deal with empty lines? Try again? with the next
 	 * line?
 	 */
-	if (len == 4) {
+	if (len == PKT_LEN_SIZE) {
 		*out = line;
 		return GIT_SUCCESS;
 	}
@@ -161,7 +178,7 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out)
 		return flush_pkt(head);
 	}
 
-	len -= num_len; /* the length includes the space for the length */
+	len -= PKT_LEN_SIZE; /* the encoded length includes its own size */
 
 	/*
 	 * For now, we're just going to assume we're parsing references
@@ -177,7 +194,6 @@ void git_pkt_free(git_pkt *pkt)
 {
 	if(pkt->type == GIT_PKT_REF) {
 		git_pkt_ref *p = (git_pkt_ref *) pkt;
-		free(p->capabilities);
 		free(p->head.name);
 	}
 

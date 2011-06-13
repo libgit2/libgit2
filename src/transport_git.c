@@ -157,46 +157,58 @@ static int store_refs(git_priv *priv)
 	int s = priv->socket;
 	git_vector *refs = &priv->refs;
 	int error = GIT_SUCCESS;
-	char buffer[1024] = {0};
+	char buffer[1024];
 	const char *line_end, *ptr;
 	int off = 0, ret;
+	unsigned int bufflen = 0;
 	git_pkt *pkt;
 
+	memset(buffer, 0x0, sizeof(buffer));
+
 	while (1) {
-		ret = recv(s, buffer, sizeof(buffer) - off, 0);
+		ret = recv(s, buffer + off, sizeof(buffer) - off, 0);
 		if (ret < 0)
 			return git__throw(GIT_EOSERR, "Failed to receive data");
-		if (ret == 0)
-			puts("got zero!");
+		if (ret == 0) /* Orderly shutdown, so exit */
+			return GIT_SUCCESS;
 
+		bufflen += ret;
 		ptr = buffer;
 		while (1) {
-			error = git_pkt_parse_line(&pkt, ptr, &line_end);
-			/*
-			 * An error here can mean that the input in corrupt or
-			 * (more likely) that the input hasn't arrived yet.
-			 *
-			 * FIXME: Add actual error checking. Right now we just ask
-			 * for more input.
-			 */
-			if (error < GIT_SUCCESS)
+			if (bufflen == 0)
 				break;
+			error = git_pkt_parse_line(&pkt, ptr, &line_end, bufflen);
+			/*
+			 * If the error is GIT_ESHORTBUFFER, it means the buffer
+			 * isn't long enough to satisfy the request. Break out and
+			 * wait for more input.
+			 * On any other error, fail.
+			 */
+			if (error == GIT_ESHORTBUFFER) {
+				line_end = ptr;
+				break;
+			}
+			if (error < GIT_SUCCESS) {
+				return error;
+			}
 
 			error = git_vector_insert(refs, pkt);
 			if (error < GIT_SUCCESS)
 				return error;
 
-			if (pkt->type != GIT_PKT_REF)
+			if (pkt->type == GIT_PKT_FLUSH)
 				return GIT_SUCCESS;
 
+			bufflen -= line_end - ptr;
 			ptr = line_end;
 		}
 
 		/*
 		 * Move the rest to the start of the buffer
 		 */
-		memmove(buffer, line_end, sizeof(buffer) - (line_end - buffer));
-		off = ret - (line_end - buffer);
+		memmove(buffer, line_end, bufflen);
+		off = bufflen;
+		memset(buffer + off, 0x0, sizeof(buffer) - off);
 	}
 
 	return error;
@@ -270,6 +282,8 @@ static int git_close(git_transport *transport)
 	git_priv *priv = transport->private;
 	int s = priv->socket;
 	int error;
+
+	/* FIXME:  We probably want to send a flush pkt back */
 
 	error = close(s);
 	if (error < 0)
