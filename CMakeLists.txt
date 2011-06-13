@@ -24,14 +24,6 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 # Find required dependencies
 INCLUDE_DIRECTORIES(deps/zlib src include)
 
-# Try finding openssl
-FIND_PACKAGE(OpenSSL)
-IF (OPENSSL_CRYPTO_LIBRARIES)
-    SET(SHA1_TYPE "openssl" CACHE STRING "Which SHA1 implementation to use: builtin, ppc, openssl")
-ELSEIF ()
-    SET(SHA1_TYPE "builtin" CACHE STRING "Which SHA1 implementation to use: builtin, ppc")
-ENDIF ()
-
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
 SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
@@ -68,20 +60,9 @@ IF (WIN32 AND NOT CYGWIN)
     FILE(GLOB SRC_PLAT src/win32/*.c)
 ENDIF ()
 
-# Specify sha1 implementation
-IF (SHA1_TYPE STREQUAL "ppc")
-    ADD_DEFINITIONS(-DPPC_SHA1)
-    FILE(GLOB SRC_SHA1 src/ppc/*.c)
-ELSEIF (SHA1_TYPE STREQUAL "openssl")
-    ADD_DEFINITIONS(-DOPENSSL_SHA1)
-    SET (SRC_SHA1)
-    INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
-    SET (LIB_SHA1 ${OPENSSL_CRYPTO_LIBRARIES})
-ENDIF ()
-
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_ZLIB})
-TARGET_LINK_LIBRARIES(git2 ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT})
+TARGET_LINK_LIBRARIES(git2 ${CMAKE_THREAD_LIBS_INIT})
 SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
 
@@ -95,13 +76,13 @@ INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 
 # Tests
-#IF (BUILD_TESTS)
-#    SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
-#    ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
-#
-#    INCLUDE_DIRECTORIES(tests)
-#	ADD_EXECUTABLE(libgit2_test tests/libgit2_test.cpp)
-#	TARGET_LINK_LIBRARIES(libgit2_test git2 ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT})
-#
-#	ADD_TEST(libgit2_test libgit2_test)
-#ENDIF ()
+IF (BUILD_TESTS)
+	SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
+    ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
+
+    INCLUDE_DIRECTORIES(tests)
+	FILE(GLOB SRC_TEST tests/t??-*.c)
+
+	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_TEST} ${SRC_ZLIB})
+	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
+ENDIF ()
