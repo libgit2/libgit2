@@ -38,13 +38,13 @@ SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
 SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 
 # Build options
-OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
+OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" OFF)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 
 # Build Release by default
 IF (NOT CMAKE_BUILD_TYPE)
-    SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
 
 IF (THREADSAFE)
@@ -81,7 +81,7 @@ ENDIF ()
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_ZLIB})
-TARGET_LINK_LIBRARIES(git2 ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT} ${SQLITE3_LIBRARIES})
+TARGET_LINK_LIBRARIES(git2 ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT})
 SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
 
@@ -95,17 +95,13 @@ INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 
 # Tests
-IF (BUILD_TESTS)
-    SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
-    ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
-    
-    ENABLE_TESTING()
-    INCLUDE_DIRECTORIES(tests)
-
-	FILE(GLOB SRC_TEST tests/t??-*.c)
-
-	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_TEST} ${SRC_ZLIB})
-	TARGET_LINK_LIBRARIES(libgit2_test ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT} ${SQLITE3_LIBRARIES})
-
-	ADD_TEST(libgit2_test libgit2_test)
-ENDIF ()
+#IF (BUILD_TESTS)
+#    SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
+#    ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
+#
+#    INCLUDE_DIRECTORIES(tests)
+#	ADD_EXECUTABLE(libgit2_test tests/libgit2_test.cpp)
+#	TARGET_LINK_LIBRARIES(libgit2_test git2 ${LIB_SHA1} ${CMAKE_THREAD_LIBS_INIT})
+#
+#	ADD_TEST(libgit2_test libgit2_test)
+#ENDIF ()
