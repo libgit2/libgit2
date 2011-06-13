@@ -203,7 +203,7 @@ def build_test(bld):
     bld.program(
         source=sources,
         target='libgit2_test',
-        includes=['src', 'tests', 'include'],
+        includes=['src', 'tests', 'include', 'deps/zlib'],
         defines=['TEST_RESOURCES="%s"' % resources_path],
         use=['git2'] + ALL_LIBS
     )
