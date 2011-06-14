@@ -41,7 +41,6 @@ typedef SSIZE_T ssize_t;
 
 #else
 # include <unistd.h>
-# include <arpa/inet.h>
 
 # ifdef GIT_THREADS
 #  include <pthread.h>
