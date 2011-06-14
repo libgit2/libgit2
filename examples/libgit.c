@@ -3,10 +3,9 @@
 // to write native speed custom Git applications in any language which 
 // supports C bindings. 
 //
-// [This file][ex] is an example of using that API in a real, compilable C file.
-// Before published, this file is compiled and run to make sure it actually
-// runs.  As the API is updated, this file will be updated to demonstrate the
-// new functionality. This project is [on GitHub][ex].
+// This file is an example of using that API in a real, compilable C file.
+// As the API is updated, this file will be updated to demonstrate the
+// new functionality.
 //
 // If you're trying to write something in C using [libgit2][lg], you will also want
 // to check out the generated [API documentation][ap] and the [Usage Guide][ug]. We've
@@ -17,10 +16,9 @@
 // to work with Git at this level, check out [Chapter 9][pg] of the Pro Git book.
 //
 // [lg]: http://libgit2.github.com
-// [ap]: http://libgit2.github.com/libgit2/modules.html
+// [ap]: http://libgit2.github.com/libgit2
 // [ug]: http://libgit2.github.com/api.html
 // [pg]: http://progit.org/book/ch9-0.html
-// [ex]: http://github.com/schacon/libgit2-examples
 
 // ### Includes
 
@@ -38,7 +36,7 @@ int main (int argc, char** argv)
   // There are also [methods][me] for specifying the index file and work tree locations, here
   // we are assuming they are in the normal places.
   //
-  // [me]: http://libgit2.github.com/libgit2/group__git__repository.html
+  // [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
   git_repository *repo;
   git_repository_open(&repo, "/opt/libgit2-test/.git");
 
@@ -70,7 +68,7 @@ int main (int argc, char** argv)
   // The object database is where the actual objects are stored in Git. For 
   // working with raw objects, we'll need to get this structure from the 
   // repository.
-  // [odb]: http://libgit2.github.com/libgit2/group__git__odb.html
+  // [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
   git_odb *odb;
   odb = git_repository_database(repo);
 
@@ -130,7 +128,7 @@ int main (int argc, char** argv)
   // #### Commit Parsing
   // [Parsing commit objects][pco] is simple and gives you access to all the data in the commit 
   // - the // author (name, email, datetime), committer (same), tree, message, encoding and parent(s).
-  // [pco]: http://libgit2.github.com/libgit2/group__git__commit.html
+  // [pco]: http://libgit2.github.com/libgit2/#HEAD/group/commit
 
   printf("\n*Commit Parsing*\n");
 
@@ -178,7 +176,7 @@ int main (int argc, char** argv)
   // libgit2 provides a couple of methods to create commit objects easily as well. There are four
   // different create signatures, we'll just show one of them here.  You can read about the other
   // ones in the [commit API docs][cd].
-  // [cd]: http://libgit2.github.com/libgit2/group__git__commit.html
+  // [cd]: http://libgit2.github.com/libgit2/#HEAD/group/commit
 
   printf("\n*Commit Writing*\n");
   git_oid tree_id, parent_id, commit_id;
@@ -216,7 +214,7 @@ int main (int argc, char** argv)
   // #### Tag Parsing
   // You can parse and create tags with the [tag management API][tm], which functions very similarly
   // to the commit lookup, parsing and creation methods, since the objects themselves are very similar.
-  // [tm]: http://libgit2.github.com/libgit2/group__git__tag.html
+  // [tm]: http://libgit2.github.com/libgit2/#HEAD/group/tag
   printf("\n*Tag Parsing*\n");
   git_tag *tag;
   const char *tmessage, *tname;
@@ -244,7 +242,7 @@ int main (int argc, char** argv)
   // tree entry.  This is not an actual object type in Git, but a useful structure for parsing and
   // traversing tree entries.
   //
-  // [tp]: http://libgit2.github.com/libgit2/group__git__tree.html
+  // [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
   printf("\n*Tree Parsing*\n");
 
   git_tree *tree;
@@ -281,7 +279,7 @@ int main (int argc, char** argv)
   // of the content.  There is also a helper for reading a file from disk and writing it to the db and
   // getting the oid back so you don't have to do all those steps yourself.
   //
-  // [ba]: http://libgit2.github.com/libgit2/group__git__blob.html
+  // [ba]: http://libgit2.github.com/libgit2/#HEAD/group/blob
 
   printf("\n*Blob Parsing*\n");
   git_blob *blob;
@@ -304,7 +302,7 @@ int main (int argc, char** argv)
   // were ancestors of (reachable from) a given starting point.  This can allow you to create `git log`
   // type functionality.
   //
-  // [rw]: http://libgit2.github.com/libgit2/group__git__revwalk.html
+  // [rw]: http://libgit2.github.com/libgit2/#HEAD/group/revwalk
 
   printf("\n*Revwalking*\n");
   git_revwalk *walk;
@@ -348,7 +346,7 @@ int main (int argc, char** argv)
   // The [index file API][gi] allows you to read, traverse, update and write the Git index file 
   // (sometimes thought of as the staging area).
   //
-  // [gi]: http://libgit2.github.com/libgit2/group__git__index.html
+  // [gi]: http://libgit2.github.com/libgit2/#HEAD/group/index
 
   printf("\n*Index Walking*\n");
 
@@ -380,7 +378,7 @@ int main (int argc, char** argv)
   // The [reference API][ref] allows you to list, resolve, create and update references such as
   // branches, tags and remote references (everything in the .git/refs directory).
   //
-  // [ref]: http://libgit2.github.com/libgit2/refs_8h.html
+  // [ref]: http://libgit2.github.com/libgit2/#HEAD/group/reference
 
   printf("\n*Reference Listing*\n");
 
