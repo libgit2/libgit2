@@ -1004,7 +1004,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 			}
 
 			/* Then replace the variable */
-			error = git_filebuf_printf(&file, "    %s = %s\n", var->name, var->value);
+			error = git_filebuf_printf(&file, "\t%s = %s\n", var->name, var->value);
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to overwrite the variable");
 				break;
@@ -1043,7 +1043,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 
 	/* And now if we just need to add a variable */
 	if (section_matches) {
-		error = git_filebuf_printf(&file, "    %s = %s\n", var->name, var->value);
+		error = git_filebuf_printf(&file, "\t%s = %s\n", var->name, var->value);
 		goto cleanup;
 	}
 
