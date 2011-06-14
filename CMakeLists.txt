@@ -34,6 +34,13 @@ OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" OFF)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 
+# Platform specific compilation flags
+IF (MSVC)
+	SET(CMAKE_C_FLAGS "/TC /W4 /WX /nologo /Zi")
+	SET(CMAKE_C_FLAGS_DEBUG "/Od /RTC1 /RTCc /DEBUG /MTd")
+	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
+ENDIF()
+
 # Build Release by default
 IF (NOT CMAKE_BUILD_TYPE)
 	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
