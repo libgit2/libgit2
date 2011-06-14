@@ -22,3 +22,4 @@ msvc/Release/
 CMake*
 *.cmake
 .DS_Store
+waf3*
