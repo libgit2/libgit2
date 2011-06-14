@@ -20,85 +20,27 @@ What It Can Do
 libgit2 is already very usable.
 
 * SHA conversions, formatting and shortening
-* object reading (loose and packed)
-* object writing (loose)
-* commit, tag, tree and blob parsing and write-back
+* abstracked ODB backend system
+* commit, tag, tree and blob parsing, editing, and write-back
 * tree traversal
 * revision walking
 * index file (staging area) manipulation
-* custom ODB backends
 * reference management (including packed references)
-* ...and more
+* config file management
+* high level repository management
+* thread safety and reentrancy
+* descriptive and detailed error messages
+* ...and more (over 175 different API calls)
 
-
-Building libgit2 - External dependencies
-========================================
+Building libgit2 - Using CMake
+==============================
 
 libgit2 builds cleanly on most platforms without any external dependencies.
 Under Unix-like systems, like Linux, *BSD and Mac OS X, libgit2 expects `pthreads` to be available;
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
-Additionally, the following libraries may be used as replacement for built-in functionality:
-
-* LibSSL **(optional)** <http://www.openssl.org/>
-
-libgit2 can be built using the SHA1 implementation of LibSSL-Crypto, instead of the built-in custom implementations. Performance wise, they are quite similar.
-
-Building libgit2 - Using waf
-======================
-
-Waf is a minimalist build system which only requires a Python 2.5+ interpreter to run. This is the default build system for libgit2.
-
-To build libgit2 using waf, first configure the build system by running:
-
-    $ ./waf configure
-
-Then build the library, either in its shared (libgit2.so) or static form (libgit2.a):
-
-    $ ./waf build-static
-    $ ./waf build-shared
-
-You can then run the full test suite with:
-
-    $ ./waf test
-
-And finally you can install the library with (you may need to sudo):
-
-    $ sudo ./waf install
-
-The waf build system for libgit2 accepts the following flags:
-
-	--debug
-		build the library with debug symbols.
-		Defaults to off.
-
-	--sha1=[builtin|ppc|openssl]
-		use the builtin SHA1 functions, the optimized PPC versions
-		or the SHA1 functions from LibCrypto (OpenSSL).
-		Defaults to 'builtin'.
-
-	--msvc=[7.1|8.0|9.0|10.0]
-		Force a specific version of the MSVC compiler, if more than
-		one version is installed.
-
-	--arch=[ia64|x64|x86|x86_amd64|x86_ia64]
-		Force a specific architecture for compilers that support it.
-
-	--with-sqlite
-		Enable sqlite support.
-
-	--with-redis
-		Enable redis support.
-
-You can run `./waf --help` to see a full list of install options and
-targets.
-
-
-Building libgit2 - Using CMake
-==============================
-
-The libgit2 library can also be built using CMake 2.6+ (<http://www.cmake.org>) on all platforms.
+The libgit2 library is built using CMake 2.6+ (<http://www.cmake.org>) on all platforms.
 
 On most systems you can build the library using the following commands
 
@@ -115,6 +57,14 @@ To install the library you can specify the install prefix by setting:
 
 For more advanced use or questions about CMake please read <http://www.cmake.org/Wiki/CMake_FAQ>.
 
+The following CMake variables are declared:
+
+- `INSTALL_BIN`: Where to install binaries to.
+- `INSTALL_LIB`: Where to install libraries to.
+- `INSTALL_INC`: Where to install headers to.
+- `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to OFF)
+- `BUILD_TESTS`: Build the libgit2 test suite (defaults to ON)
+- `THREADSAFE`: Build libgit2 with threading support (defaults to OFF)
 
 Language Bindings
 ==================================
@@ -134,6 +84,7 @@ Here are the bindings to libgit2 that are currently available:
 * libqgit2 (C++ QT bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
 * libgit2-ocaml (ocaml bindings) <https://github.com/burdges/libgit2-ocaml>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
+* libgit2net (.NET bindings, low level) <https://github.com/txdv/libgit2net>
 
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
