@@ -701,13 +701,13 @@ BEGIN_TEST(rename7, "can be renamed to a new name prefixed with the old name")
 	git_oid_cpy(&id, git_reference_oid(ref));
 
 	/* Create loose references */
-	must_pass(git_reference_create_oid(&ref_two, repo, ref_two_name, &id));
+	must_pass(git_reference_create_oid(&ref_two, repo, ref_two_name, &id, 0));
 
 	/* An existing reference... */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, ref_two_name));
 
 	/* Can be rename to a new name starting with the old name. */
-	must_pass(git_reference_rename(looked_up_ref, ref_two_name_new));
+	must_pass(git_reference_rename(looked_up_ref, ref_two_name_new, 0));
 
 	/* Check we actually renamed it */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, ref_two_name_new));
