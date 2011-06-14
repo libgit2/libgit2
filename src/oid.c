@@ -193,7 +193,7 @@ int git_oid_ncmp_hex(unsigned int len, const unsigned char *a, const unsigned ch
 	return memcmp(a, b, len);
 }
 
-int gid_oid_ncmp(unsigned int len, git_oid *a, git_oid *b)
+int git_oid_ncmp(unsigned int len, git_oid *a, git_oid *b)
 {
 	return git_oid_ncmp_raw(len, a->id, b->id);
 }

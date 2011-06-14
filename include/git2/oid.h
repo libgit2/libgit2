@@ -97,7 +97,7 @@ GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
 GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
 
 /**
- * Format a gid_oid into a newly allocated c-string.
+ * Format a git_oid into a newly allocated c-string.
  * @param oid the oid structure to format
  * @return the c-string; NULL if memory is exhausted.  Caller must
  *         deallocate the string with free().
@@ -144,7 +144,7 @@ GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
  * @param b second oid structure.
  * @return 0 in case of a match
  */
-GIT_EXTERN(int) gid_oid_ncmp(unsigned int len, git_oid *a, git_oid *b);
+GIT_EXTERN(int) git_oid_ncmp(unsigned int len, git_oid *a, git_oid *b);
 
 /**
  * OID Shortener object
