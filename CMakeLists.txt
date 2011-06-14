@@ -92,4 +92,7 @@ IF (BUILD_TESTS)
 
 	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_TEST} ${SRC_ZLIB})
 	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
+
+	ENABLE_TESTING()
+	ADD_TEST(libgit2_test libgit2_test)
 ENDIF ()
