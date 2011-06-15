@@ -42,6 +42,7 @@
 #include "vector.h"
 #include "transport.h"
 #include "common.h"
+#include "netops.h"
 
 typedef struct {
 	int socket;
@@ -91,53 +92,29 @@ static int do_connect(git_priv *priv, const char *url)
 	char *host, *port, *msg;
 	const char prefix[] = "git://";
 	int error, ret, msg_len, connected = 0;
-	struct addrinfo *info, *p;
-	struct addrinfo hints;
-
-	memset(&hints, 0x0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC; /* IPv4 or IPv6 */
-	hints.ai_socktype = SOCK_STREAM; /* TCP */
 
 	if (!git__prefixcmp(url, prefix))
 		url += STRLEN(prefix);
 
 	error = extract_host_and_port(&host, &port, url);
+	s = gitno_connect(host, port);
+	connected = 1;
 
-	ret = getaddrinfo(host, port, &hints, &info);
-	if (ret != 0) {
-		info = NULL;
-		error = git__throw(GIT_EOSERR, "Failed to get address info: %s", gai_strerror(ret));
+	error = git_pkt_gen_proto(&msg, &msg_len, url);
+	if (error < GIT_SUCCESS)
 		goto cleanup;
-	}
 
-	for (p = info; p != NULL; p = p->ai_next) {
-		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-		if (s < 0) {
-			error = git__throw(GIT_EOSERR, "Failed to create socket");
-			goto cleanup;
-		}
-
-		ret = connect(s, p->ai_addr, p->ai_addrlen);
-		if (ret < 0) { /* Try the next one */
-			continue;
-		}
-		connected = 1;
-
-		error = git_pkt_gen_proto(&msg, &msg_len, url);
-		if (error < GIT_SUCCESS)
-			break;
-
-		/* FIXME: Do this in a loop */
-		ret = send(s, msg, msg_len, 0);
-		free(msg);
-		if (ret < 0)
-			error = git__throw(GIT_EOSERR, "Failed to send request");
+	/* FIXME: Do this in a loop */
+	ret = send(s, msg, msg_len, 0);
+	free(msg);
+	if (ret < 0) {
+		error = git__throw(GIT_EOSERR, "Failed to send request");
+		goto cleanup;
 	}
 
 	priv->socket = s;
 
 cleanup:
-	freeaddrinfo(info);
 	free(host);
 	free(port);
 

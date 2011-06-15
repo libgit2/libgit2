@@ -1,0 +1,76 @@
+/*
+ * This file is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2,
+ * as published by the Free Software Foundation.
+ *
+ * In addition to the permissions in the GNU General Public License,
+ * the authors give you unlimited permission to link the compiled
+ * version of this file into combinations with other programs,
+ * and to distribute those combinations without any restriction
+ * coming from the use of this file.  (The General Public License
+ * restrictions do apply in other respects; for example, they cover
+ * modification of the file, and distribution when not linked into
+ * a combined executable.)
+ *
+ * This file is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
+ */
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
+#include "git2/errors.h"
+
+#include "common.h"
+#include "netops.h"
+
+int gitno_connect(const char *host, const char *port)
+{
+	struct addrinfo *info, *p;
+	struct addrinfo hints;
+	int ret, error = GIT_SUCCESS;
+	int s;
+
+	memset(&hints, 0x0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	ret = getaddrinfo(host, port, &hints, &info);
+	if (ret != 0) {
+		error = GIT_EOSERR;
+		goto cleanup;
+	}
+
+	for (p = info; p != NULL; p = p->ai_next) {
+		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (s < 0) {
+			error = GIT_EOSERR;
+			goto cleanup;
+		}
+
+		ret = connect(s, p->ai_addr, p->ai_addrlen);
+		/* If we can't connect, try the next one */
+		if (ret < 0) {
+			continue;
+		}
+
+		/* Return the socket */
+		error = s;
+		goto cleanup;
+	}
+
+	/* Oops, we couldn't connect to any address */
+	error = GIT_EOSERR;
+
+cleanup:
+	freeaddrinfo(info);
+	return error;
+}
