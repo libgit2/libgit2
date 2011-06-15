@@ -89,9 +89,9 @@ static int extract_host_and_port(char **host, char **port, const char *url)
 static int do_connect(git_priv *priv, const char *url)
 {
 	int s = -1;
-	char *host, *port, *msg;
+	char *host, *port;
 	const char prefix[] = "git://";
-	int error, msg_len, connected = 0;
+	int error, connected = 0;
 
 	if (!git__prefixcmp(url, prefix))
 		url += STRLEN(prefix);
@@ -99,19 +99,9 @@ static int do_connect(git_priv *priv, const char *url)
 	error = extract_host_and_port(&host, &port, url);
 	s = gitno_connect(host, port);
 	connected = 1;
-
-	error = git_pkt_gen_proto(&msg, &msg_len, url);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	error = gitno_send(s, msg, msg_len, 0);
-	free(msg);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
+	error = git_pkt_send_request(s, NULL, url);
 	priv->socket = s;
 
-cleanup:
 	free(host);
 	free(port);
 

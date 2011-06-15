@@ -29,6 +29,7 @@
 
 #include "common.h"
 #include "util.h"
+#include "netops.h"
 
 #include <ctype.h>
 
@@ -207,10 +208,10 @@ void git_pkt_free(git_pkt *pkt)
  *
  * TODO: the command should not be hard-coded
  */
-int git_pkt_gen_proto(char **out, int *outlen, const char *url)
+int git_pkt_gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 {
 	char *delim, *repo, *ptr;
-	char command[] = "git-upload-pack";
+	char default_command[] = "git-upload-pack";
 	char host[] = "host=";
 	int len;
 
@@ -224,7 +225,10 @@ int git_pkt_gen_proto(char **out, int *outlen, const char *url)
 	if (delim == NULL)
 		delim = strchr(url, '/');
 
-	len = 4 + STRLEN(command) + 1 + strlen(repo) + 1 + STRLEN(host) + (delim - url) + 2;
+	if (cmd == NULL)
+		cmd = default_command;
+
+	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + STRLEN(host) + (delim - url) + 2;
 
 	*out = git__malloc(len);
 	if (*out == NULL)
@@ -234,7 +238,30 @@ int git_pkt_gen_proto(char **out, int *outlen, const char *url)
 	ptr = *out;
 	memset(ptr, 0x0, len);
 	/* We expect the return value to be > len - 1 so don't bother checking it */
-	snprintf(ptr, len -1, "%04x%s %s%c%s%s", len - 1, command, repo, 0, host, url);
+	snprintf(ptr, len -1, "%04x%s %s%c%s%s", len - 1, cmd, repo, 0, host, url);
 
 	return GIT_SUCCESS;
+}
+
+int git_pkt_send_request(int s, const char *cmd, const char *url)
+{
+	int error, len;
+	char *msg = NULL;
+
+	error = git_pkt_gen_proto(&msg, &len, cmd, url);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = gitno_send(s, msg, len, 0);
+
+cleanup:
+	free(msg);
+	return error;
+}
+
+int git_pkt_send_flush(int s)
+{
+	char flush[] = "0000";
+
+	return gitno_send(s, flush, STRLEN(flush), 0);
 }
