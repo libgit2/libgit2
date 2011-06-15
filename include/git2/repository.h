@@ -151,9 +151,9 @@ GIT_EXTERN(int) git_repository_open3(git_repository **repository,
  * @param across_fs If true, then the lookup will not stop when a filesystem device change
  * is detected while exploring parent directories.
  *
- * @param ceiling_dirs A colon separated of absolute symbolic link free paths. The lookup will
- * stop when any of this paths is reached. Note that the lookup always performs on start_path
- * no matter start_path appears in ceiling_dirs
+ * @param ceiling_dirs A GIT_PATH_LIST_SEPARATOR separated list of absolute symbolic link
+ * free paths. The lookup will stop when any of this paths is reached. Note that the
+ * lookup always performs on start_path no matter start_path appears in ceiling_dirs
  * ceiling_dirs might be NULL (which is equivalent to an empty string)
  *
  * @return 0 on success; error code otherwise
