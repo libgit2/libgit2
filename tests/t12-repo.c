@@ -334,7 +334,7 @@ static int append_ceiling_dir(char *ceiling_dirs, const char *path)
 		return git__rethrow(error, "Failed to append ceiling directory.");
 
 	if (len)
-		ceiling_dirs[len] = ':';
+		ceiling_dirs[len] = GIT_PATH_LIST_SEPARATOR;
 
 	return GIT_SUCCESS;
 }

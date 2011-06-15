@@ -12,8 +12,6 @@
 #include <fcntl.h>
 #include <time.h>
 
-#define GIT_PATH_LIST_SEPARATOR ':'
-
 #ifdef GIT_WIN32
 #define GIT_PLATFORM_PATH_SEP '\\'
 #else
