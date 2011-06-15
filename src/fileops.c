@@ -97,7 +97,7 @@ int gitfo_read(git_file fd, void *buf, size_t cnt)
 		cnt -= r;
 		b += r;
 	}
-	return GIT_SUCCESS;
+	return (int)(b - (char *)buf);
 }
 
 int gitfo_write(git_file fd, void *buf, size_t cnt)

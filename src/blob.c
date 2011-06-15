@@ -119,9 +119,9 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		ssize_t read_len;
 
 		if (!islnk)
-			read_len = gitfo_read(fd, buffer, sizeof(buffer));
+			read_len = gitfo_read(fd, buffer, (size_t)(size < sizeof(buffer) ? size : sizeof(buffer)));
 		else
-			read_len = gitfo_readlink(full_path, buffer, sizeof(buffer));
+			read_len = gitfo_readlink(full_path, buffer, (size_t)size);
 
 		if (read_len < 0) {
 			if (!islnk)
