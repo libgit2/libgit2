@@ -664,9 +664,12 @@ END_TEST
 
 BEGIN_TEST(filebuf0, "make sure git_filebuf_open doesn't delete an existing lock")
 	git_filebuf file;
+	int fd;
 	char test[] = "test", testlock[] = "test.lock";
 
-	must_pass(gitfo_creat(testlock, 0744));
+	fd = gitfo_creat(testlock, 0744);
+	must_pass(fd);
+	must_pass(gitfo_close(fd));
 	must_fail(git_filebuf_open(&file, test, 0));
 	must_pass(gitfo_exists(testlock));
 	must_pass(gitfo_unlink(testlock));
