@@ -21,7 +21,7 @@
 # define S_ISFIFO(m)  (((m) & _S_IFMT) == _S_IFIFO)
 # define S_ISLNK(m)  (((m) & _S_IFMT) == _S_IFLNK)
 
-# define MAXPATHLEN MAX_PATH
+# define mode_t unsigned short
 
 /* case-insensitive string comparison */
 # define strcasecmp   _stricmp
