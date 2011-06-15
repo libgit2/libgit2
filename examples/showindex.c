@@ -12,9 +12,9 @@ int main (int argc, char** argv)
   char out[41];
   out[40] = '\0';
 
-  git_repository_open(&repo, "/tmp/gittalk/.git");
+  git_repository_open(&repo, "/opt/libgit2-test/.git");
 
-  git_index_open_inrepo(&index, repo);
+  git_repository_index(&index, repo);
   git_index_read(index);
 
   ecount = git_index_entrycount(index);

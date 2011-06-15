@@ -4,7 +4,7 @@
  "input":  "include/git2",
  "prefix": "git_",
  "output": "docs",
- "xbranch": "gh-pages",
+ "branch": "gh-pages",
  "examples": "examples",
  "legacy":  {
     "input": {"src/git": ["v0.1.0"],

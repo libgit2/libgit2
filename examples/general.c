@@ -246,7 +246,7 @@ int main (int argc, char** argv)
   printf("\n*Tree Parsing*\n");
 
   git_tree *tree;
-  git_tree_entry *entry;
+  const git_tree_entry *entry;
   git_object *objt;
 
   // Create the oid and lookup the tree object just like the other objects.
@@ -356,7 +356,7 @@ int main (int argc, char** argv)
   // You can either open the index from the standard location in an open repository, as we're doing
   // here, or you can open and manipulate any index file with `git_index_open_bare()`. The index
   // for the repository will be located and loaded from disk.
-  git_index_open_inrepo(&index, repo);
+  git_repository_index(&index, repo);
 
   // For each entry in the index, you can get a bunch of information including the SHA (oid), path
   // and mode which map to the tree objects that are written out.  It also has filesystem properties
@@ -409,6 +409,29 @@ int main (int argc, char** argv)
   }
 
   git_strarray_free(&ref_list);
+
+  // ### Config Files
+  //
+  // The [config API][config] allows you to list and updatee config values in
+  // any of the accessible config file locations (system, global, local).
+  //
+  // [config]: http://libgit2.github.com/libgit2/#HEAD/group/config
+
+  printf("\n*Config Listing*\n");
+
+  const char *email;
+  int j;
+
+  git_config *cfg;
+
+  // Open a config object so we can read global values from it.
+  git_config_open_global(&cfg);
+
+  git_config_get_int(cfg, "help.autocorrect", &j);
+  printf("Autocorrect: %d\n", j);
+
+  git_config_get_string(cfg, "user.email", &email);
+  printf("Email: %s\n", email);
 
   // Finally, when you're done with the repository, you can free it as well.
   git_repository_free(repo);
