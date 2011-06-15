@@ -91,7 +91,7 @@ static int do_connect(git_priv *priv, const char *url)
 	int s = -1;
 	char *host, *port, *msg;
 	const char prefix[] = "git://";
-	int error, ret, msg_len, connected = 0;
+	int error, msg_len, connected = 0;
 
 	if (!git__prefixcmp(url, prefix))
 		url += STRLEN(prefix);
@@ -104,13 +104,10 @@ static int do_connect(git_priv *priv, const char *url)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	/* FIXME: Do this in a loop */
-	ret = send(s, msg, msg_len, 0);
+	error = gitno_send(s, msg, msg_len, 0);
 	free(msg);
-	if (ret < 0) {
-		error = git__throw(GIT_EOSERR, "Failed to send request");
+	if (error < GIT_SUCCESS)
 		goto cleanup;
-	}
 
 	priv->socket = s;
 

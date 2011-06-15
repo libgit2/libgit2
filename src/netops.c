@@ -23,9 +23,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
+#ifndef _MSC_VER
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netdb.h>
+#else
+# include <winsock2.h>
+# include <Ws2tcpip.h>
+# pragma comment(lib, "Ws2_32.lib")
+#endif
 
 #include "git2/errors.h"
 
@@ -73,4 +79,19 @@ int gitno_connect(const char *host, const char *port)
 cleanup:
 	freeaddrinfo(info);
 	return error;
+}
+
+int gitno_send(int s, const char *msg, int len, int flags)
+{
+	int ret, off = 0;
+
+	while (off < len) {
+		ret = send(s, msg + off, len - off, flags);
+		if (ret < 0)
+			return GIT_EOSERR;
+
+		off += ret;
+	}
+
+	return off;
 }
