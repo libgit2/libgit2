@@ -299,10 +299,9 @@ GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo,
 
 
 /**
- * List all the references in the repository, calling a custom
- * callback for each one.
+ * Perform an operation on each reference in the repository
  *
- * The listed references may be filtered by type, or using
+ * The processed references may be filtered by type, or using
  * a bitwise OR of several types. Use the magic value
  * `GIT_REF_LISTALL` to obtain all references, including
  * packed ones.
@@ -318,7 +317,7 @@ GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo,
  * @param payload Additional data to pass to the callback
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
+GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
 
 /** @} */
 GIT_END_DECL

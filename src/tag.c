@@ -450,7 +450,7 @@ int git_tag_list(git_strarray *tag_names, git_repository *repo)
 	if (git_vector_init(&taglist, 8, NULL) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
-	error = git_reference_listcb(repo, GIT_REF_OID|GIT_REF_PACKED, &tag_list_cb, (void *)&taglist);
+	error = git_reference_foreach(repo, GIT_REF_OID|GIT_REF_PACKED, &tag_list_cb, (void *)&taglist);
 	if (error < GIT_SUCCESS) {
 		git_vector_free(&taglist);
 		return git__rethrow(error, "Failed to list tags");

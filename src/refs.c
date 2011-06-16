@@ -1086,7 +1086,7 @@ static int reference_available(git_repository *repo, const char *ref, const char
 	git_vector_insert(&refs, (void *)ref);
 	git_vector_insert(&refs, (void *)old_ref);
 
-	error = git_reference_listcb(repo, GIT_REF_LISTALL, _reference_available_cb, (void *)&refs);
+	error = git_reference_foreach(repo, GIT_REF_LISTALL, _reference_available_cb, (void *)&refs);
 
 	git_vector_free(&refs);
 
@@ -1573,7 +1573,7 @@ int git_reference_packall(git_repository *repo)
 	return packed_write(repo);
 }
 
-int git_reference_listcb(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload)
+int git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload)
 {
 	int error;
 	struct dirent_list_data data;
@@ -1625,7 +1625,7 @@ int git_reference_listall(git_strarray *array, git_repository *repo, unsigned in
 	if (git_vector_init(&ref_list, 8, NULL) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
-	error = git_reference_listcb(repo, list_flags, &cb__reflist_add, (void *)&ref_list);
+	error = git_reference_foreach(repo, list_flags, &cb__reflist_add, (void *)&ref_list);
 
 	if (error < GIT_SUCCESS) {
 		git_vector_free(&ref_list);
