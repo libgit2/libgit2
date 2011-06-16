@@ -32,7 +32,7 @@
 #include "tag.h"
 #include "blob.h"
 #include "fileops.h"
-
+#include "config.h"
 #include "refs.h"
 
 #define GIT_OBJECTS_INFO_DIR GIT_OBJECTS_DIR "info/"
@@ -269,6 +269,42 @@ int git_repository_open2(git_repository **repo_out,
 cleanup:
 	git_repository_free(repo);
 	return git__rethrow(error, "Failed to open repository");
+}
+
+int git_repository_config(git_config **out, git_repository *repo)
+{
+	git_config *cfg = NULL;
+	git_config_file *local = NULL;
+	char gitconfig[GIT_PATH_MAX];
+	int error = GIT_SUCCESS;
+
+	error = git_config_open_global(&cfg);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to open global config");
+
+	git__joinpath(gitconfig, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
+	error = git_config_file__ondisk(&local, gitconfig);
+	if (error < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to open local config");
+		goto cleanup;
+	}
+
+	error = git_config_add_file(cfg, local, 2);
+	if (error < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to add the local config");
+		goto cleanup;
+	}
+
+	*out = cfg;
+
+cleanup:
+	if (error < GIT_SUCCESS) {
+		git_config_free(cfg);
+		if (local)
+			local->free(local);
+	}
+
+	return error;
 }
 
 static int discover_repository_dirs(git_repository *repo, const char *path)
