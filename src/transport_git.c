@@ -49,6 +49,61 @@ typedef struct {
 	git_vector refs;
 	git_remote_head **heads;
 } git_priv;
+/*
+ * Create a git procol request.
+ *
+ * For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
+ */
+static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
+{
+	char *delim, *repo, *ptr;
+	char default_command[] = "git-upload-pack";
+	char host[] = "host=";
+	int len;
+
+	delim = strchr(url, '/');
+	if (delim == NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to create proto-request: malformed URL");
+
+	repo = delim;
+
+	delim = strchr(url, ':');
+	if (delim == NULL)
+		delim = strchr(url, '/');
+
+	if (cmd == NULL)
+		cmd = default_command;
+
+	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + STRLEN(host) + (delim - url) + 2;
+
+	*out = git__malloc(len);
+	if (*out == NULL)
+		return GIT_ENOMEM;
+
+	*outlen = len - 1;
+	ptr = *out;
+	memset(ptr, 0x0, len);
+	/* We expect the return value to be > len - 1 so don't bother checking it */
+	snprintf(ptr, len -1, "%04x%s %s%c%s%s", len - 1, cmd, repo, 0, host, url);
+
+	return GIT_SUCCESS;
+}
+
+static int send_request(int s, const char *cmd, const char *url)
+{
+	int error, len;
+	char *msg = NULL;
+
+	error = gen_proto(&msg, &len, cmd, url);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = gitno_send(s, msg, len, 0);
+
+cleanup:
+	free(msg);
+	return error;
+}
 
 /* The URL should already have been stripped of the protocol */
 static int extract_host_and_port(char **host, char **port, const char *url)
@@ -99,7 +154,7 @@ static int do_connect(git_priv *priv, const char *url)
 	error = extract_host_and_port(&host, &port, url);
 	s = gitno_connect(host, port);
 	connected = 1;
-	error = git_pkt_send_request(s, NULL, url);
+	error = send_request(s, NULL, url);
 	priv->socket = s;
 
 	free(host);
