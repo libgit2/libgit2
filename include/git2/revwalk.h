@@ -113,7 +113,7 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  * must be pushed the repository before a walk can
  * be started.
  *
- * @param walker the walker being used for the traversal.
+ * @param walk the walker being used for the traversal.
  * @param oid the oid of the commit to start from.
  * @return 0 on success; error code otherwise
  */
@@ -129,8 +129,8 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
  * The resolved commit and all its parents will be hidden from the
  * output on the revision walk.
  *
- * @param walker the walker being used for the traversal.
- * @param commit the commit that will be ignored during the traversal
+ * @param walk the walker being used for the traversal.
+ * @param oid the oid of commit that will be ignored during the traversal
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);

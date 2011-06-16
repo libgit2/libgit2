@@ -74,10 +74,14 @@ GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
 /**
  * Add a custom backend to an existing Object DB
  *
+ * The backends are checked in relative ordering, based on the
+ * value of the `priority` parameter.
+ *
  * Read <odb_backends.h> for more information.
  *
  * @param odb database to add the backend to
- * @paramm backend pointer to a git_odb_backend instance
+ * @param backend pointer to a git_odb_backend instance
+ * @param priority Value for ordering the backends queue
  * @return 0 on sucess; error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
@@ -87,14 +91,18 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
  * backend will work as an alternate.
  *
  * Alternate backends are always checked for objects *after*
- * all the main backends have been exhausted.
+ * all the main backends have been exhausted. 
+ *
+ * The backends are checked in relative ordering, based on the
+ * value of the `priority` parameter.
  *
  * Writing is disabled on alternate backends.
  *
  * Read <odb_backends.h> for more information.
  *
  * @param odb database to add the backend to
- * @paramm backend pointer to a git_odb_backend instance
+ * @param backend pointer to a git_odb_backend instance
+ * @param priority Value for ordering the backends queue
  * @return 0 on sucess; error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
@@ -143,16 +151,13 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * internally cached, so it should be closed
  * by the user once it's no longer in use.
  *
- * @param out_oid the oid of the unique object matching
- * the short id
  * @param out pointer where to store the read object
  * @param db database to search for the object in.
  * @param short_id a prefix of the id of the object to read.
  * @param len the length of the prefix
- * @return
- * - GIT_SUCCESS if the object was read;
- * - GIT_ENOTFOUND if the object is not in the database.
- * - GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
+ * @return GIT_SUCCESS if the object was read;
+ *	GIT_ENOTFOUND if the object is not in the database.
+ *	GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
  */
 GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len);
 

@@ -195,7 +195,6 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
 /**
  * Create a new commit in the repository
  *
- *
  * @param oid Pointer where to store the OID of the
  *	newly created commit
  *
@@ -221,7 +220,7 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  *
  * @param parent_count Number of parents for this commit
  *
- * @param parents Array of pointers to parent OIDs for this commit.
+ * @param parent_oids[] Array of pointers to parent OIDs for this commit.
  *	Note that no validation is performed on these OIDs. Use the _o
  *	variants of this method to assure that are parents for the commit
  *	are proper objects.

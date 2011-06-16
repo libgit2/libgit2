@@ -213,7 +213,7 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const char *target)
  * memory and on disk.
  *
  * @param ref The reference
- * @param target The new target OID for the reference
+ * @param id The new target OID for the reference
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);

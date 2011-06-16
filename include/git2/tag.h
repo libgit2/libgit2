@@ -105,7 +105,7 @@ GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
  * @param tag a previously loaded tag.
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *t);
+GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *tag);
 
 /**
  * Get the OID of the tagged object of a tag
@@ -113,7 +113,7 @@ GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *t);
  * @param tag a previously loaded tag.
  * @return pointer to the OID
  */
-GIT_EXTERN(const git_oid *) git_tag_target_oid(git_tag *t);
+GIT_EXTERN(const git_oid *) git_tag_target_oid(git_tag *tag);
 
 /**
  * Get the type of a tag's tagged object
@@ -121,7 +121,7 @@ GIT_EXTERN(const git_oid *) git_tag_target_oid(git_tag *t);
  * @param tag a previously loaded tag.
  * @return type of the tagged object
  */
-GIT_EXTERN(git_otype) git_tag_type(git_tag *t);
+GIT_EXTERN(git_otype) git_tag_type(git_tag *tag);
 
 /**
  * Get the name of a tag
@@ -129,7 +129,7 @@ GIT_EXTERN(git_otype) git_tag_type(git_tag *t);
  * @param tag a previously loaded tag.
  * @return name of the tag
  */
-GIT_EXTERN(const char *) git_tag_name(git_tag *t);
+GIT_EXTERN(const char *) git_tag_name(git_tag *tag);
 
 /**
  * Get the tagger (author) of a tag
@@ -137,7 +137,7 @@ GIT_EXTERN(const char *) git_tag_name(git_tag *t);
  * @param tag a previously loaded tag.
  * @return reference to the tag's author
  */
-GIT_EXTERN(const git_signature *) git_tag_tagger(git_tag *t);
+GIT_EXTERN(const git_signature *) git_tag_tagger(git_tag *tag);
 
 /**
  * Get the message of a tag
@@ -145,7 +145,7 @@ GIT_EXTERN(const git_signature *) git_tag_tagger(git_tag *t);
  * @param tag a previously loaded tag.
  * @return message of the tag
  */
-GIT_EXTERN(const char *) git_tag_message(git_tag *t);
+GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
 
 
 /**
@@ -302,7 +302,7 @@ GIT_EXTERN(int) git_tag_delete(
  * should be free'd manually when no longer needed, using
  * `git_strarray_free`.
  *
- * @param array Pointer to a git_strarray structure where
+ * @param tag_names Pointer to a git_strarray structure where
  *		the tag names will be stored
  * @param repo Repository where to find the tags
  * @return 0 on success; error code otherwise

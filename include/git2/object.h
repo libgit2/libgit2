@@ -82,12 +82,12 @@ GIT_EXTERN(int) git_object_lookup(
  * The special value 'GIT_OBJ_ANY' may be passed to let
  * the method guess the object's type.
  *
- * @param object pointer to the looked-up object
+ * @param object_out pointer where to store the looked-up object
  * @param repo the repository to look up the object
  * @param id a short identifier for the object
  * @param len the length of the short identifier
  * @param type the type of the object
- * @return a reference to the object
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_object_lookup_prefix(
 		git_object **object_out,

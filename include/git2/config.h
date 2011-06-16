@@ -163,7 +163,7 @@ GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const c
  *
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
+ * @param value Integer value for the variable
  * @return GIT_SUCCESS on success; error code otherwise
  */
 GIT_EXTERN(int) git_config_set_int(git_config *cfg, const char *name, int value);
@@ -173,7 +173,7 @@ GIT_EXTERN(int) git_config_set_int(git_config *cfg, const char *name, int value)
  *
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
+ * @param value Long integer value for the variable
  * @return GIT_SUCCESS on success; error code otherwise
  */
 GIT_EXTERN(int) git_config_set_long(git_config *cfg, const char *name, long int value);

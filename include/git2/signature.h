@@ -42,7 +42,7 @@ GIT_BEGIN_DECL
  * manually or using git_signature_free
  *
  * @param name name of the person
- * @param mail email of the person
+ * @param email email of the person
  * @param time time when the action happened
  * @param offset timezone offset in minutes for the time
  * @return the new sig, NULL on out of memory
