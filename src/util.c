@@ -1,8 +1,16 @@
 #define GIT__NO_HIDE_MALLOC
+#include <git2.h>
 #include "common.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
+
+void git_libgit2_version(int *major, int *minor, int *rev)
+{
+	*major = LIBGIT2_VER_MAJOR;
+	*minor = LIBGIT2_VER_MINOR;
+	*rev = LIBGIT2_VER_REVISION;
+}
 
 void git_strarray_free(git_strarray *array)
 {

@@ -113,6 +113,16 @@ typedef struct {
 
 GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 
+/**
+ * Return the version of the libgit2 library
+ * being currently used.
+ *
+ * @param major Store the major version number
+ * @param minor Store the minor version number
+ * @param rev Store the revision (patch) number
+ */
+GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
+
 /** @} */
 GIT_END_DECL
 #endif
