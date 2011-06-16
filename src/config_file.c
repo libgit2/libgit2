@@ -240,7 +240,7 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 	return GIT_SUCCESS;
 }
 
-static char  *interiorize_section(const char *orig)
+static char *interiorize_section(const char *orig)
 {
 	char *dot, *last_dot, *section, *ret;
 	int len;
