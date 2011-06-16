@@ -310,13 +310,19 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 {
 	file_internal *internal;
 	git_config_file *file;
+	int i, error;
 
 	if (cfg->files.length == 0)
 		return git__throw(GIT_EINVALIDARGS, "Cannot get variable value; no files open in the `git_config` instance");
 
-	internal = git_vector_get(&cfg->files, 0);
-	file = internal->file;
+	for (i = 0; i < cfg->files.length; ++i) {
+		internal = git_vector_get(&cfg->files, i);
+		file = internal->file;
+		error = file->get(file, name, out);
+		if (error == GIT_SUCCESS)
+			break;
+	}
 
-	return file->get(file, name, out);
+	return error;
 }
 
