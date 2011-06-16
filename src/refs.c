@@ -357,8 +357,7 @@ static int loose_write(git_reference *ref)
 {
 	git_filebuf file;
 	char ref_path[GIT_PATH_MAX];
-	int error, contents_size;
-	char *ref_contents = NULL;
+	int error;
 	struct stat st;
 
 	assert((ref->type & GIT_REF_PACKED) == 0);
@@ -370,50 +369,33 @@ static int loose_write(git_reference *ref)
 
 	if (ref->type & GIT_REF_OID) {
 		reference_oid *ref_oid = (reference_oid *)ref;
+		char oid[GIT_OID_HEXSZ + 1];
 
-		contents_size = GIT_OID_HEXSZ + 1;
-		ref_contents = git__malloc(contents_size);
-		if (ref_contents == NULL) {
-			error = GIT_ENOMEM;
+		memset(oid, 0x0, sizeof(oid));
+
+		git_oid_fmt(oid, &ref_oid->oid);
+		error = git_filebuf_printf(&file, "%s\n", oid);
+		if (error < GIT_SUCCESS)
 			goto unlock;
-		}
-
-		git_oid_fmt(ref_contents, &ref_oid->oid);
 
 	} else if (ref->type & GIT_REF_SYMBOLIC) { /* GIT_REF_SYMBOLIC */
 		reference_symbolic *ref_sym = (reference_symbolic *)ref;
 
-		contents_size = strlen(GIT_SYMREF) + strlen(ref_sym->target) + 1;
-		ref_contents = git__malloc(contents_size);
-		if (ref_contents == NULL) {
-			error = GIT_ENOMEM;
-			goto unlock;
-		}
-
-		strcpy(ref_contents, GIT_SYMREF);
-		strcat(ref_contents, ref_sym->target);
+		error = git_filebuf_printf(&file, GIT_SYMREF "%s\n", ref_sym->target);
 	} else {
 		error = git__throw(GIT_EOBJCORRUPTED, "Failed to write reference. Invalid reference type");
 		goto unlock;
 	}
-
-	/* TODO: win32 carriage return when writing references in Windows? */
-	ref_contents[contents_size - 1] = '\n';
-
-	if ((error = git_filebuf_write(&file, ref_contents, contents_size)) < GIT_SUCCESS)
-		goto unlock;
 
 	error = git_filebuf_commit(&file);
 
 	if (gitfo_stat(ref_path, &st) == GIT_SUCCESS)
 		ref->mtime = st.st_mtime;
 
-	free(ref_contents);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write loose reference");
 
 unlock:
 	git_filebuf_cleanup(&file);
-	free(ref_contents);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write loose reference");
 }
 
