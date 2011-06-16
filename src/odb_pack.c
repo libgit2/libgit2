@@ -26,10 +26,10 @@
 #include "common.h"
 #include "git2/zlib.h"
 #include "git2/repository.h"
+#include "git2/oid.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
-#include "oid.h"
 #include "delta-apply.h"
 #include "sha1_lookup.h"
 
@@ -1011,7 +1011,7 @@ static int pack_entry_find_offset(
 		if (pos < (int)p->num_objects) {
 			current = index + pos * stride;
 
-			if (!git_oid_ncmp_raw(len, short_oid->id, current)) {
+			if (!git_oid_ncmp(short_oid, (const git_oid *)current, len)) {
 				found = 1;
 			}
 		}
@@ -1021,7 +1021,7 @@ static int pack_entry_find_offset(
 		/* Check for ambiguousity */
 		const unsigned char *next = current + stride;
 
-		if (!git_oid_ncmp_raw(len, short_oid->id, next)) {
+		if (!git_oid_ncmp(short_oid, (const git_oid *)next, len)) {
 			found = 2;
 		}
 	}

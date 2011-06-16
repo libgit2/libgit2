@@ -172,30 +172,24 @@ int git_oid_cmp(const git_oid *a, const git_oid *b)
 	return memcmp(a->id, b->id, sizeof(a->id));
 }
 
-
-int git_oid_ncmp_raw(unsigned int len, const unsigned char *a, const unsigned char *b)
+int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, unsigned int len)
 {
-        do {
-                if (*a != *b)
-                        return 1;
-                a++;
-                b++;
-                len -= 2;
-        } while (len > 1);
-        if (len)
-                if ((*a ^ *b) & 0xf0)
-                        return 1;
-        return 0;
-}
+	const unsigned char *a = oid_a->id;
+	const unsigned char *b = oid_b->id;
 
-int git_oid_ncmp_hex(unsigned int len, const unsigned char *a, const unsigned char *b)
-{
-	return memcmp(a, b, len);
-}
+	do {
+		if (*a != *b)
+			return 1;
+		a++;
+		b++;
+		len -= 2;
+	} while (len > 1);
 
-int git_oid_ncmp(unsigned int len, git_oid *a, git_oid *b)
-{
-	return git_oid_ncmp_raw(len, a->id, b->id);
+	if (len)
+		if ((*a ^ *b) & 0xf0)
+			return 1;
+
+	return 0;
 }
 
 typedef short node_index;

@@ -26,10 +26,10 @@
 #include "common.h"
 #include "git2/zlib.h"
 #include "git2/object.h"
+#include "git2/oid.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
-#include "oid.h"
 #include "delta-apply.h"
 #include "filebuf.h"
 
@@ -491,8 +491,12 @@ int fn_locate_object_short_oid(void *state, char *pathbuf) {
 	}
 
 	if (!gitfo_exists(pathbuf) && gitfo_isdir(pathbuf)) {
-		/* We are already in the directory matching the 2 first hex characters */
-		if (!git_oid_ncmp_hex(sstate->short_oid_len-2, sstate->short_oid+2, (unsigned char *)pathbuf + sstate->dir_len)) {
+		/* We are already in the directory matching the 2 first hex characters,
+		 * compare the first ncmp characters of the oids */
+		if (!memcmp(sstate->short_oid + 2,
+			(unsigned char *)pathbuf + sstate->dir_len,
+			sstate->short_oid_len - 2)) {
+
 			if (!sstate->found) {
 				sstate->res_oid[0] = sstate->short_oid[0];
 				sstate->res_oid[1] = sstate->short_oid[1];
