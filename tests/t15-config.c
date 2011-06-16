@@ -189,6 +189,27 @@ BEGIN_TEST(config8, "don't fail on empty files")
 	git_config_free(cfg);
 END_TEST
 
+BEGIN_TEST
+(config9, "replace a value")
+	git_config *cfg;
+	int i;
+
+	/* By freeing the config, we make sure we flush the values  */
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_set_int(cfg, "core.dummy", 5));
+	git_config_free(cfg);
+
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_get_int(cfg, "core.dummy", &i));
+	must_be_true(i == 5);
+	git_config_free(cfg);
+
+	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_set_int(cfg, "core.dummy", 1));
+	git_config_free(cfg);
+
+END_TEST
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
@@ -199,4 +220,5 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config6);
 	 ADD_TEST(config7);
 	 ADD_TEST(config8);
+	 ADD_TEST(config9);
 END_SUITE
