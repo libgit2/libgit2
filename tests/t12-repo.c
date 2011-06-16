@@ -355,6 +355,7 @@ BEGIN_TEST(discover0, "test discover")
 
 	must_pass(git_repository_init(&repo, DISCOVER_FOLDER, 1));
 	must_pass(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));
+	git_repository_free(repo);
 
 	must_pass(git_repository_init(&repo, SUB_REPOSITORY_FOLDER, 0));
 	must_pass(gitfo_mkdir_recurs(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, mode));
@@ -402,6 +403,7 @@ BEGIN_TEST(discover0, "test discover")
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, repository_path));
 
 	rmdir_recurs(DISCOVER_FOLDER);
+	git_repository_free(repo);
 END_TEST
 
 BEGIN_SUITE(repository)
