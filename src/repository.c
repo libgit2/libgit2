@@ -295,6 +295,12 @@ int git_repository_config(git_config **out, git_repository *repo)
 		goto cleanup;
 	}
 
+	error = local->open(local);
+	if (error < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to open config file");
+		goto cleanup;
+	}
+
 	*out = cfg;
 
 cleanup:
