@@ -582,7 +582,7 @@ static int read_tree_internal(git_index_tree **out,
 		goto cleanup;
 	}
 
-	git_oid_mkraw(&tree->oid, (const unsigned char *)buffer);
+	git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
 	buffer += GIT_OID_RAWSZ;
 
 	/* Parse children: */
@@ -670,7 +670,7 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 				continue;
 			if (size < 20)
 				return git__throw(GIT_ERROR, "Failed to read unmerged entries");
-			git_oid_mkraw(&lost->oid[i], (unsigned char *) buffer);
+			git_oid_fromraw(&lost->oid[i], (unsigned char *) buffer);
 			size -= 20;
 			buffer += 20;
 		}
@@ -867,7 +867,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Buffer size does not match index footer size");
 
 	/* 160-bit SHA-1 over the content of the index file before this checksum. */
-	git_oid_mkraw(&checksum_expected, (const unsigned char *)buffer);
+	git_oid_fromraw(&checksum_expected, (const unsigned char *)buffer);
 
 	if (git_oid_cmp(&checksum_calculated, &checksum_expected) != 0)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse index. Calculated checksum does not match expected checksum");

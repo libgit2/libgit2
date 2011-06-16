@@ -856,7 +856,7 @@ static int packfile_check(struct pack_file **pack_out, const char *path)
 
 	/* see if we can parse the sha1 oid in the packfile name */
 	if (path_len < 40 ||
-		git_oid_mkstr(&p->sha1, path + path_len - GIT_OID_HEXSZ) < GIT_SUCCESS)
+		git_oid_fromstr(&p->sha1, path + path_len - GIT_OID_HEXSZ) < GIT_SUCCESS)
 		memset(&p->sha1, 0x0, GIT_OID_RAWSZ);
 
 	*pack_out = p;
@@ -1032,7 +1032,7 @@ static int pack_entry_find_offset(
 		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to find offset for pack entry. Ambiguous sha1 prefix within pack");
 	} else {
 		*offset_out = nth_packed_object_offset(p, pos);
-		git_oid_mkraw(found_oid, current);
+		git_oid_fromraw(found_oid, current);
 
 #ifdef INDEX_DEBUG_LOOKUP
 		unsigned char hex_sha1[GIT_OID_HEXSZ + 1];

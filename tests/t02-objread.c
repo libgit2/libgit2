@@ -36,12 +36,12 @@ BEGIN_TEST(existsloose0, "check if a loose object exists on the odb")
 
     must_pass(write_object_files(odb_dir, &one));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, one.id));
+    must_pass(git_oid_fromstr(&id, one.id));
 
     must_be_true(git_odb_exists(db, &id));
 
 	/* Test for a non-existant object */
-    must_pass(git_oid_mkstr(&id2, "8b137891791fe96927ad78e64b0aad7bded08baa"));
+    must_pass(git_oid_fromstr(&id2, "8b137891791fe96927ad78e64b0aad7bded08baa"));
     must_be_true(0 == git_odb_exists(db, &id2));
 
     git_odb_close(db);
@@ -55,7 +55,7 @@ BEGIN_TEST(readloose0, "read a loose commit")
 
     must_pass(write_object_files(odb_dir, &commit));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, commit.id));
+    must_pass(git_oid_fromstr(&id, commit.id));
 
     must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects((git_rawobj *)&obj->raw, &commit));
@@ -72,7 +72,7 @@ BEGIN_TEST(readloose1, "read a loose tree")
 
     must_pass(write_object_files(odb_dir, &tree));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, tree.id));
+    must_pass(git_oid_fromstr(&id, tree.id));
 
     must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects((git_rawobj *)&obj->raw, &tree));
@@ -89,7 +89,7 @@ BEGIN_TEST(readloose2, "read a loose tag")
 
     must_pass(write_object_files(odb_dir, &tag));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, tag.id));
+    must_pass(git_oid_fromstr(&id, tag.id));
 
     must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects((git_rawobj *)&obj->raw, &tag));
@@ -106,7 +106,7 @@ BEGIN_TEST(readloose3, "read a loose zero-bytes object")
 
     must_pass(write_object_files(odb_dir, &zero));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, zero.id));
+    must_pass(git_oid_fromstr(&id, zero.id));
 
     must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects((git_rawobj *)&obj->raw, &zero));
@@ -123,7 +123,7 @@ BEGIN_TEST(readloose4, "read a one-byte long loose object")
 
     must_pass(write_object_files(odb_dir, &one));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, one.id));
+    must_pass(git_oid_fromstr(&id, one.id));
 
     must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj->raw, &one));
@@ -140,7 +140,7 @@ BEGIN_TEST(readloose5, "read a two-bytes long loose object")
 
     must_pass(write_object_files(odb_dir, &two));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, two.id));
+    must_pass(git_oid_fromstr(&id, two.id));
 
     must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj->raw, &two));
@@ -157,7 +157,7 @@ BEGIN_TEST(readloose6, "read a loose object which is several bytes long")
 
     must_pass(write_object_files(odb_dir, &some));
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id, some.id));
+    must_pass(git_oid_fromstr(&id, some.id));
 
     must_pass(git_odb_read(&obj, db, &id));
     must_pass(cmp_objects(&obj->raw, &some));
@@ -177,7 +177,7 @@ BEGIN_TEST(readpack0, "read several packed objects")
 		git_oid id;
 		git_odb_object *obj;
 
-		must_pass(git_oid_mkstr(&id, packed_objects[i]));
+		must_pass(git_oid_fromstr(&id, packed_objects[i]));
 		must_be_true(git_odb_exists(db, &id) == 1);
 		must_pass(git_odb_read(&obj, db, &id));
 
@@ -199,7 +199,7 @@ BEGIN_TEST(readheader0, "read only the header of several packed objects")
 		size_t len;
 		git_otype type;
 
-		must_pass(git_oid_mkstr(&id, packed_objects[i]));
+		must_pass(git_oid_fromstr(&id, packed_objects[i]));
 
 		must_pass(git_odb_read(&obj, db, &id));
 		must_pass(git_odb_read_header(&len, &type, db, &id));
@@ -225,7 +225,7 @@ BEGIN_TEST(readheader1, "read only the header of several loose objects")
 		size_t len;
 		git_otype type;
 
-		must_pass(git_oid_mkstr(&id, loose_objects[i]));
+		must_pass(git_oid_fromstr(&id, loose_objects[i]));
 
 		must_be_true(git_odb_exists(db, &id) == 1);
 

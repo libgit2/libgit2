@@ -183,7 +183,7 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 
 		buffer++;
 
-		git_oid_mkraw(&entry->oid, (const unsigned char *)buffer);
+		git_oid_fromraw(&entry->oid, (const unsigned char *)buffer);
 		buffer += GIT_OID_RAWSZ;
 	}
 

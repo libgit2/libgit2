@@ -49,7 +49,7 @@ static signed char from_hex[] = {
 };
 static char to_hex[] = "0123456789abcdef";
 
-int git_oid_mkstr(git_oid *out, const char *str)
+int git_oid_fromstr(git_oid *out, const char *str)
 {
 	size_t p;
 	for (p = 0; p < sizeof(out->id); p++, str += 2) {
@@ -135,7 +135,7 @@ int git__parse_oid(git_oid *oid, const char **buffer_out,
 	if (buffer[header_len + sha_len] != '\n')
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse OID. Buffer not terminated correctly");
 
-	if (git_oid_mkstr(oid, buffer + header_len) < GIT_SUCCESS)
+	if (git_oid_fromstr(oid, buffer + header_len) < GIT_SUCCESS)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse OID. Failed to generate sha1");
 
 	*buffer_out = buffer + (header_len + sha_len + 1);
@@ -157,7 +157,7 @@ int git__write_oid(git_odb_stream *stream, const char *header, const git_oid *oi
 	return GIT_SUCCESS;
 }
 
-void git_oid_mkraw(git_oid *out, const unsigned char *raw)
+void git_oid_fromraw(git_oid *out, const unsigned char *raw)
 {
 	memcpy(out->id, raw, sizeof(out->id));
 }

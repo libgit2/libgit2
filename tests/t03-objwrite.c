@@ -104,7 +104,7 @@ BEGIN_TEST(write0, "write loose commit object")
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id1, commit.id));
+    must_pass(git_oid_fromstr(&id1, commit.id));
 
     must_pass(streaming_write(&id2, db, &commit_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
@@ -125,7 +125,7 @@ BEGIN_TEST(write1, "write loose tree object")
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id1, tree.id));
+    must_pass(git_oid_fromstr(&id1, tree.id));
 
     must_pass(streaming_write(&id2, db, &tree_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
@@ -146,7 +146,7 @@ BEGIN_TEST(write2, "write loose tag object")
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id1, tag.id));
+    must_pass(git_oid_fromstr(&id1, tag.id));
 
     must_pass(streaming_write(&id2, db, &tag_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
@@ -167,7 +167,7 @@ BEGIN_TEST(write3, "write zero-length object")
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id1, zero.id));
+    must_pass(git_oid_fromstr(&id1, zero.id));
 
     must_pass(streaming_write(&id2, db, &zero_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
@@ -188,7 +188,7 @@ BEGIN_TEST(write4, "write one-byte long object")
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id1, one.id));
+    must_pass(git_oid_fromstr(&id1, one.id));
 
     must_pass(streaming_write(&id2, db, &one_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
@@ -209,7 +209,7 @@ BEGIN_TEST(write5, "write two-byte long object")
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id1, two.id));
+    must_pass(git_oid_fromstr(&id1, two.id));
 
     must_pass(streaming_write(&id2, db, &two_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
@@ -230,7 +230,7 @@ BEGIN_TEST(write6, "write an object which is several bytes long")
 
     must_pass(make_odb_dir());
     must_pass(git_odb_open(&db, odb_dir));
-    must_pass(git_oid_mkstr(&id1, some.id));
+    must_pass(git_oid_fromstr(&id1, some.id));
 
     must_pass(streaming_write(&id2, db, &some_obj));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);

@@ -546,7 +546,7 @@ static int locate_object_short_oid(char *object_location, git_oid *res_oid, loos
 	}
 
 	/* Convert obtained hex formatted oid to raw */
-	error = git_oid_mkstr(res_oid, (char *)state.res_oid);
+	error = git_oid_fromstr(res_oid, (char *)state.res_oid);
 	if (error) {
 		return git__rethrow(error, "Failed to locate object from short oid");
 	}

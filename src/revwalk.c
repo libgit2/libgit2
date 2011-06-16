@@ -209,7 +209,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 	for (i = 0; i < parents; ++i) {
 		git_oid oid;
 
-		if (git_oid_mkstr(&oid, (char *)buffer + STRLEN("parent ")) < GIT_SUCCESS)
+		if (git_oid_fromstr(&oid, (char *)buffer + STRLEN("parent ")) < GIT_SUCCESS)
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Parent object is corrupted");
 
 		commit->parents[i] = commit_lookup(walk, &oid);

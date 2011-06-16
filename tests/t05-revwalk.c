@@ -124,7 +124,7 @@ BEGIN_TEST(walk0, "do a simple walk on a repo with different sorting modes")
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_revwalk_new(&walk, repo));
 
-	git_oid_mkstr(&id, commit_head);
+	git_oid_fromstr(&id, commit_head);
 
 	must_pass(test_walk(walk, &id, GIT_SORT_TIME, commit_sorting_time, 1));
 	must_pass(test_walk(walk, &id, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));

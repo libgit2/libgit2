@@ -49,7 +49,7 @@ int main (int argc, char** argv)
   // The `git_oid` is the structure that keeps the SHA value. We will use this throughout the example
   // for storing the value of the current SHA key we're working with.
   git_oid oid;
-  git_oid_mkstr(&oid, hex);
+  git_oid_fromstr(&oid, hex);
 
   // Once we've converted the string into the oid value, we can get the raw value of the SHA.
   printf("Raw 20 bytes: [%s]\n", (&oid)->id);
@@ -133,7 +133,7 @@ int main (int argc, char** argv)
   printf("\n*Commit Parsing*\n");
 
   git_commit *commit;
-  git_oid_mkstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
 
   error = git_commit_lookup(&commit, repo, &oid);
 
@@ -192,8 +192,8 @@ int main (int argc, char** argv)
 
   // Commit objects need a tree to point to and optionally one or more parents.  Here we're creating oid
   // objects to create the commit with, but you can also use 
-  git_oid_mkstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
-  git_oid_mkstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
+  git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
 
   // Here we actually create the commit object with a single call with all the values we need to create
   // the commit.  The SHA key is written to the `commit_id` variable here.
@@ -222,7 +222,7 @@ int main (int argc, char** argv)
 
   // We create an oid for the tag object if we know the SHA and look it up in the repository the same
   // way that we would a commit (or any other) object.
-  git_oid_mkstr(&oid, "bc422d45275aca289c51d79830b45cecebff7c3a");
+  git_oid_fromstr(&oid, "bc422d45275aca289c51d79830b45cecebff7c3a");
 
   error = git_tag_lookup(&tag, repo, &oid);
 
@@ -250,7 +250,7 @@ int main (int argc, char** argv)
   git_object *objt;
 
   // Create the oid and lookup the tree object just like the other objects.
-  git_oid_mkstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5");
+  git_oid_fromstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5");
   git_tree_lookup(&tree, repo, &oid);
 
   // Getting the count of entries in the tree so you can iterate over them if you want to.
@@ -284,7 +284,7 @@ int main (int argc, char** argv)
   printf("\n*Blob Parsing*\n");
   git_blob *blob;
 
-  git_oid_mkstr(&oid, "af7574ea73f7b166f869ef1a39be126d9a186ae0");
+  git_oid_fromstr(&oid, "af7574ea73f7b166f869ef1a39be126d9a186ae0");
   git_blob_lookup(&blob, repo, &oid);
 
   // You can access a buffer with the raw contents of the blob directly.
@@ -308,7 +308,7 @@ int main (int argc, char** argv)
   git_revwalk *walk;
   git_commit *wcommit;
 
-  git_oid_mkstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
 
   // To use the revwalker, create a new walker, tell it how you want to sort the output and then push
   // one or more starting points onto the walker.  If you want to emulate the output of `git log` you

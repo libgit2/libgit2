@@ -44,12 +44,12 @@ END_TEST
 
 BEGIN_TEST(oid1, "fail when parsing an empty string as oid")
 	git_oid out;
-	must_fail(git_oid_mkstr(&out, ""));
+	must_fail(git_oid_fromstr(&out, ""));
 END_TEST
 
 BEGIN_TEST(oid2, "fail when parsing an invalid string as oid")
 	git_oid out;
-	must_fail(git_oid_mkstr(&out, "moo"));
+	must_fail(git_oid_fromstr(&out, "moo"));
 END_TEST
 
 static int from_hex(unsigned int i)
@@ -79,17 +79,17 @@ BEGIN_TEST(oid3, "find all invalid characters when parsing an oid")
 
 		if (from_hex(i) >= 0) {
 			exp[19] = (unsigned char)(from_hex(i) << 4);
-			must_pass(git_oid_mkstr(&out, in));
+			must_pass(git_oid_fromstr(&out, in));
 			must_be_true(memcmp(out.id, exp, sizeof(out.id)) == 0);
 		} else {
-			must_fail(git_oid_mkstr(&out, in));
+			must_fail(git_oid_fromstr(&out, in));
 		}
 	}
 END_TEST
 
 BEGIN_TEST(oid4, "fail when parsing an invalid oid string")
 	git_oid out;
-	must_fail(git_oid_mkstr(&out, "16a67770b7d8d72317c4b775213c23a8bd74f5ez"));
+	must_fail(git_oid_fromstr(&out, "16a67770b7d8d72317c4b775213c23a8bd74f5ez"));
 END_TEST
 
 BEGIN_TEST(oid5, "succeed when parsing a valid oid string")
@@ -101,10 +101,10 @@ BEGIN_TEST(oid5, "succeed when parsing a valid oid string")
 		0xa8, 0xbd, 0x74, 0xf5, 0xe0,
 	};
 
-	must_pass(git_oid_mkstr(&out, "16a67770b7d8d72317c4b775213c23a8bd74f5e0"));
+	must_pass(git_oid_fromstr(&out, "16a67770b7d8d72317c4b775213c23a8bd74f5e0"));
 	must_pass(memcmp(out.id, exp, sizeof(out.id)));
 
-	must_pass(git_oid_mkstr(&out, "16A67770B7D8D72317C4b775213C23A8BD74F5E0"));
+	must_pass(git_oid_fromstr(&out, "16A67770B7D8D72317C4b775213C23A8BD74F5E0"));
 	must_pass(memcmp(out.id, exp, sizeof(out.id)));
 END_TEST
 
@@ -117,7 +117,7 @@ BEGIN_TEST(oid6, "build a valid oid from raw bytes")
 		0xa8, 0xbd, 0x74, 0xf5, 0xe0,
 	};
 
-	git_oid_mkraw(&out, exp);
+	git_oid_fromraw(&out, exp);
 	must_pass(memcmp(out.id, exp, sizeof(out.id)));
 END_TEST
 
@@ -131,7 +131,7 @@ BEGIN_TEST(oid7, "properly copy an oid to another")
 	};
 
 	memset(&b, 0, sizeof(b));
-	git_oid_mkraw(&a, exp);
+	git_oid_fromraw(&a, exp);
 	git_oid_cpy(&b, &a);
 	must_pass(memcmp(a.id, exp, sizeof(a.id)));
 END_TEST
@@ -151,8 +151,8 @@ BEGIN_TEST(oid8, "compare two oids (lesser than)")
 		0xa8, 0xbd, 0x74, 0xf5, 0xf0,
 	};
 
-	git_oid_mkraw(&a, a_in);
-	git_oid_mkraw(&b, b_in);
+	git_oid_fromraw(&a, a_in);
+	git_oid_fromraw(&b, b_in);
 	must_be_true(git_oid_cmp(&a, &b) < 0);
 END_TEST
 
@@ -165,8 +165,8 @@ BEGIN_TEST(oid9, "compare two oids (equal)")
 		0xa8, 0xbd, 0x74, 0xf5, 0xe0,
 	};
 
-	git_oid_mkraw(&a, a_in);
-	git_oid_mkraw(&b, a_in);
+	git_oid_fromraw(&a, a_in);
+	git_oid_fromraw(&b, a_in);
 	must_be_true(git_oid_cmp(&a, &b) == 0);
 END_TEST
 
@@ -185,8 +185,8 @@ BEGIN_TEST(oid10, "compare two oids (greater than)")
 		0xa8, 0xbd, 0x74, 0xf5, 0xd0,
 	};
 
-	git_oid_mkraw(&a, a_in);
-	git_oid_mkraw(&b, b_in);
+	git_oid_fromraw(&a, a_in);
+	git_oid_fromraw(&b, b_in);
 	must_be_true(git_oid_cmp(&a, &b) > 0);
 END_TEST
 
@@ -195,7 +195,7 @@ BEGIN_TEST(oid11, "compare formated oids")
 	git_oid in;
 	char out[GIT_OID_HEXSZ + 1];
 
-	must_pass(git_oid_mkstr(&in, exp));
+	must_pass(git_oid_fromstr(&in, exp));
 
 	/* Format doesn't touch the last byte */
 	out[GIT_OID_HEXSZ] = 'Z';
@@ -212,7 +212,7 @@ BEGIN_TEST(oid12, "compare oids (allocate + format)")
 	git_oid in;
 	char *out;
 
-	must_pass(git_oid_mkstr(&in, exp));
+	must_pass(git_oid_fromstr(&in, exp));
 
 	out = git_oid_allocfmt(&in);
 	must_be_true(out);
@@ -226,7 +226,7 @@ BEGIN_TEST(oid13, "compare oids (path format)")
 	git_oid in;
 	char out[GIT_OID_HEXSZ + 2];
 
-	must_pass(git_oid_mkstr(&in, exp1));
+	must_pass(git_oid_fromstr(&in, exp1));
 
 	/* Format doesn't touch the last byte */
 	out[GIT_OID_HEXSZ + 1] = 'Z';
@@ -245,7 +245,7 @@ BEGIN_TEST(oid14, "convert raw oid to string")
 	char *str;
 	int i;
 
-	must_pass(git_oid_mkstr(&in, exp));
+	must_pass(git_oid_fromstr(&in, exp));
 
 	/* NULL buffer pointer, returns static empty string */
 	str = git_oid_to_string(NULL, sizeof(out), &in);
@@ -288,7 +288,7 @@ BEGIN_TEST(oid15, "convert raw oid to string (big)")
 	char big[GIT_OID_HEXSZ + 1 + 3]; /* note + 4 => big buffer */
 	char *str;
 
-	must_pass(git_oid_mkstr(&in, exp));
+	must_pass(git_oid_fromstr(&in, exp));
 
 	/* place some tail material */
 	big[GIT_OID_HEXSZ+0] = 'W'; /* should be '\0' afterwards */
@@ -412,14 +412,14 @@ BEGIN_TEST(hash0, "normal hash by blocks")
 	/* should already be init'd */
     git_hash_update(ctx, hello_text, strlen(hello_text));
     git_hash_final(&id2, ctx);
-    must_pass(git_oid_mkstr(&id1, hello_id));
+    must_pass(git_oid_fromstr(&id1, hello_id));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 
 	/* reinit should permit reuse */
     git_hash_init(ctx);
     git_hash_update(ctx, bye_text, strlen(bye_text));
     git_hash_final(&id2, ctx);
-    must_pass(git_oid_mkstr(&id1, bye_id));
+    must_pass(git_oid_fromstr(&id1, bye_id));
     must_be_true(git_oid_cmp(&id1, &id2) == 0);
 
     git_hash_free_ctx(ctx);
@@ -428,7 +428,7 @@ END_TEST
 BEGIN_TEST(hash1, "hash whole buffer in a single call")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, hello_id));
+    must_pass(git_oid_fromstr(&id1, hello_id));
 
     git_hash_buf(&id2, hello_text, strlen(hello_text));
 
@@ -439,7 +439,7 @@ BEGIN_TEST(hash2, "hash a vector")
     git_oid id1, id2;
     git_buf_vec vec[2];
 
-    must_pass(git_oid_mkstr(&id1, hello_id));
+    must_pass(git_oid_fromstr(&id1, hello_id));
 
     vec[0].data = hello_text;
     vec[0].len  = 4;
@@ -500,7 +500,7 @@ END_TEST
 BEGIN_TEST(objhash0, "hash junk data")
     git_oid id, id_zero;
 
-    must_pass(git_oid_mkstr(&id_zero, zero_id));
+    must_pass(git_oid_fromstr(&id_zero, zero_id));
 
     /* invalid types: */
     junk_obj.data = some_data;
@@ -531,7 +531,7 @@ END_TEST
 BEGIN_TEST(objhash1, "hash a commit object")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, commit_id));
+    must_pass(git_oid_fromstr(&id1, commit_id));
 
     must_pass(hash_object(&id2, &commit_obj));
 
@@ -541,7 +541,7 @@ END_TEST
 BEGIN_TEST(objhash2, "hash a tree object")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, tree_id));
+    must_pass(git_oid_fromstr(&id1, tree_id));
 
     must_pass(hash_object(&id2, &tree_obj));
 
@@ -551,7 +551,7 @@ END_TEST
 BEGIN_TEST(objhash3, "hash a tag object")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, tag_id));
+    must_pass(git_oid_fromstr(&id1, tag_id));
 
     must_pass(hash_object(&id2, &tag_obj));
 
@@ -561,7 +561,7 @@ END_TEST
 BEGIN_TEST(objhash4, "hash a zero-length object")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, zero_id));
+    must_pass(git_oid_fromstr(&id1, zero_id));
 
     must_pass(hash_object(&id2, &zero_obj));
 
@@ -571,7 +571,7 @@ END_TEST
 BEGIN_TEST(objhash5, "hash an one-byte long object")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, one_id));
+    must_pass(git_oid_fromstr(&id1, one_id));
 
     must_pass(hash_object(&id2, &one_obj));
 
@@ -581,7 +581,7 @@ END_TEST
 BEGIN_TEST(objhash6, "hash a two-byte long object")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, two_id));
+    must_pass(git_oid_fromstr(&id1, two_id));
 
     must_pass(hash_object(&id2, &two_obj));
 
@@ -591,7 +591,7 @@ END_TEST
 BEGIN_TEST(objhash7, "hash an object several bytes long")
     git_oid id1, id2;
 
-    must_pass(git_oid_mkstr(&id1, some_id));
+    must_pass(git_oid_fromstr(&id1, some_id));
 
     must_pass(hash_object(&id2, &some_obj));
 

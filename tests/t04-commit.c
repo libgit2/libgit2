@@ -370,7 +370,7 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		unsigned int parents, p;
 		git_commit *parent = NULL, *old_parent = NULL;
 
-		git_oid_mkstr(&id, commit_ids[i]);
+		git_oid_fromstr(&id, commit_ids[i]);
 
 		must_pass(git_commit_lookup(&commit, repo, &id));
 
@@ -426,8 +426,8 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 
-	git_oid_mkstr(&tree_id, tree_oid);
-	git_oid_mkstr(&parent_id, commit_ids[4]);
+	git_oid_fromstr(&tree_id, tree_oid);
+	git_oid_fromstr(&parent_id, commit_ids[4]);
 
 	/* create signatures */
 	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
@@ -489,7 +489,7 @@ BEGIN_TEST(root0, "create a root commit")
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	git_oid_mkstr(&tree_id, tree_oid);
+	git_oid_fromstr(&tree_id, tree_oid);
 
 	/* create signatures */
 	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);

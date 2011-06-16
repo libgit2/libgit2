@@ -39,9 +39,9 @@ BEGIN_TEST(read0, "read and parse a tag from the repository")
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	git_oid_mkstr(&id1, tag1_id);
-	git_oid_mkstr(&id2, tag2_id);
-	git_oid_mkstr(&id_commit, tagged_commit);
+	git_oid_fromstr(&id1, tag1_id);
+	git_oid_fromstr(&id2, tag2_id);
+	git_oid_fromstr(&id_commit, tagged_commit);
 
 	must_pass(git_tag_lookup(&tag1, repo, &id1));
 
@@ -91,7 +91,7 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	git_oid_mkstr(&target_id, tagged_commit);
+	git_oid_fromstr(&target_id, tagged_commit);
 
 	/* create signature */
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
@@ -139,7 +139,7 @@ BEGIN_TEST(write1, "write a tag to the repository which points to an unknown oid
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	git_oid_mkstr(&target_id, "deadbeef1b46c854b31185ea97743be6a8774479");
+	git_oid_fromstr(&target_id, "deadbeef1b46c854b31185ea97743be6a8774479");
 
 	/* create signature */
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
@@ -167,7 +167,7 @@ BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	git_oid_mkstr(&target_id, tagged_commit);
+	git_oid_fromstr(&target_id, tagged_commit);
 
 	/* create signature */
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
@@ -196,7 +196,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
-	git_oid_mkstr(&target_id, tagged_commit);
+	git_oid_fromstr(&target_id, tagged_commit);
 
 	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));

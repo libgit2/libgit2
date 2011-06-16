@@ -89,7 +89,7 @@ BEGIN_TEST(readsym0, "lookup a symbolic reference")
 	must_be_true(object != NULL);
 	must_be_true(git_object_type(object) == GIT_OBJ_COMMIT);
 
-	git_oid_mkstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip);
 	must_be_true(git_oid_cmp(&id, git_object_id(object)) == 0);
 
 	git_object_close(object);
@@ -116,7 +116,7 @@ BEGIN_TEST(readsym1, "lookup a nested symbolic reference")
 	must_be_true(object != NULL);
 	must_be_true(git_object_type(object) == GIT_OBJ_COMMIT);
 
-	git_oid_mkstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip);
 	must_be_true(git_oid_cmp(&id, git_object_id(object)) == 0);
 
 	git_object_close(object);
@@ -204,7 +204,7 @@ BEGIN_TEST(create0, "create a new symbolic reference")
 
 	const char *new_head_tracker = "another-head-tracker";
 
-	git_oid_mkstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip);
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
@@ -247,7 +247,7 @@ BEGIN_TEST(create1, "create a deep symbolic reference")
 
 	const char *new_head_tracker = "deep/rooted/tracker";
 
-	git_oid_mkstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip);
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
@@ -268,7 +268,7 @@ BEGIN_TEST(create2, "create a new OID reference")
 
 	const char *new_head = "refs/heads/new-head";
 
-	git_oid_mkstr(&id, current_master_tip);
+	git_oid_fromstr(&id, current_master_tip);
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
@@ -305,7 +305,7 @@ BEGIN_TEST(create3, "Can not create a new OID reference which targets at an unkn
 
 	const char *new_head = "refs/heads/new-head";
 
-	git_oid_mkstr(&id, "deadbeef3f795b2b4353bcce3a527ad0a4f7f644");
+	git_oid_fromstr(&id, "deadbeef3f795b2b4353bcce3a527ad0a4f7f644");
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 

@@ -272,7 +272,7 @@ static int loose_parse_oid(git_reference *ref, gitfo_buf *file_content)
 		return git__throw(GIT_EOBJCORRUPTED,
 			"Failed to parse loose reference. Reference too short");
 
-	if ((error = git_oid_mkstr(&ref_oid->oid, buffer)) < GIT_SUCCESS)
+	if ((error = git_oid_fromstr(&ref_oid->oid, buffer)) < GIT_SUCCESS)
 		return git__rethrow(GIT_EOBJCORRUPTED, "Failed to parse loose reference.");
 
 	buffer = buffer + GIT_OID_HEXSZ;
@@ -447,7 +447,7 @@ static int packed_parse_peel(
 		return git__throw(GIT_EPACKEDREFSCORRUPTED, "Failed to parse packed reference. Buffer too small");
 
 	/* Is this a valid object id? */
-	if (git_oid_mkstr(&tag_ref->peel_target, buffer) < GIT_SUCCESS)
+	if (git_oid_fromstr(&tag_ref->peel_target, buffer) < GIT_SUCCESS)
 		return git__throw(GIT_EPACKEDREFSCORRUPTED, "Failed to parse packed reference. Not a valid object ID");
 
 	buffer = buffer + GIT_OID_HEXSZ;
@@ -487,7 +487,7 @@ static int packed_parse_oid(
 	}
 
 	/* Is this a valid object id? */
-	if ((error = git_oid_mkstr(&id, buffer)) < GIT_SUCCESS)
+	if ((error = git_oid_fromstr(&id, buffer)) < GIT_SUCCESS)
 		goto cleanup;
 
 	refname_end = memchr(refname_begin, '\n', buffer_end - refname_begin);
