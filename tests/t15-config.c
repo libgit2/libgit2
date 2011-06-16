@@ -210,6 +210,26 @@ BEGIN_TEST
 
 END_TEST
 
+BEGIN_TEST(config10, "a repo's config overrides the global config")
+	git_repository *repo;
+	char home_orig[GIT_PATH_MAX];
+	char *home;
+	git_config *cfg;
+	int version;
+
+	home = getenv("HOME");
+	strcpy(home_orig, home);
+	setenv("HOME", CONFIG_BASE, 1);
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_repository_config(&cfg, repo));
+	setenv("HOME", home_orig, 1);
+	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &version));
+	must_be_true(version == 0);
+	git_config_free(cfg);
+	git_repository_free(repo);
+END_TEST
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
@@ -221,4 +241,5 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config7);
 	 ADD_TEST(config8);
 	 ADD_TEST(config9);
+	 ADD_TEST(config10);
 END_SUITE
