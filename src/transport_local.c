@@ -9,9 +9,10 @@
 #include "transport.h"
 
 typedef struct {
+	git_transport parent;
 	git_repository *repo;
 	git_vector *refs;
-} local_priv;
+} transport_local;
 
 static int cmp_refs(const void *a, const void *b)
 {
@@ -29,7 +30,7 @@ static int local_connect(git_transport *transport, git_net_direction GIT_UNUSED(
 {
 	git_repository *repo;
 	int error;
-	local_priv *priv;
+	transport_local *t = (transport_local *) transport;
 	const char *path;
 	const char file_prefix[] = "file://";
 	GIT_UNUSED_ARG(dir);
@@ -44,17 +45,8 @@ static int local_connect(git_transport *transport, git_net_direction GIT_UNUSED(
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to open remote");
 
-	priv = git__malloc(sizeof(local_priv));
-	if (priv == NULL) {
-		git_repository_free(repo);
-		return GIT_ENOMEM;
-	}
-
-	priv->repo = repo;
-
-	transport->private = priv;
-
-	transport->connected = 1;
+	t->repo = repo;
+	t->parent.connected = 1;
 
 	return GIT_SUCCESS;
 }
@@ -135,11 +127,11 @@ static int local_ls(git_transport *transport, git_headarray *array)
 	git_repository *repo;
 	git_vector *vec;
 	git_strarray refs;
-	local_priv *priv = transport->private;
+	transport_local *t = (transport_local *) transport;
 
 	assert(transport && transport->connected);
 
-	repo = priv->repo;
+	repo = t->repo;
 
 	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
 	if (error < GIT_SUCCESS)
@@ -172,7 +164,7 @@ static int local_ls(git_transport *transport, git_headarray *array)
 	array->len = vec->length;
 	array->heads = (git_remote_head **)vec->contents;
 
-	priv->refs = vec;
+	t->refs = vec;
 
  out:
 
@@ -191,8 +183,8 @@ static int local_close(git_transport *GIT_UNUSED(transport))
 static void local_free(git_transport *transport)
 {
 	unsigned int i;
-	local_priv *priv = transport->private;
-	git_vector *vec = priv->refs;
+	transport_local *t = (transport_local *) transport;
+	git_vector *vec = t->refs;
 
 	assert(transport);
 
@@ -203,22 +195,29 @@ static void local_free(git_transport *transport)
 	}
 	git_vector_free(vec);
 	free(vec);
-	git_repository_free(priv->repo);
-	free(priv);
-	free(transport->url);
-	free(transport);
+	git_repository_free(t->repo);
+	free(t->parent.url);
+	free(t);
 }
 
 /**************
  * Public API *
  **************/
 
-int git_transport_local(git_transport *transport)
+int git_transport_local(git_transport **out)
 {
-	transport->connect = local_connect;
-	transport->ls = local_ls;
-	transport->close = local_close;
-	transport->free = local_free;
+	transport_local *t;
+
+	t = git__malloc(sizeof(transport_local));
+	if (t == NULL)
+		return GIT_ENOMEM;
+
+	t->parent.connect = local_connect;
+	t->parent.ls = local_ls;
+	t->parent.close = local_close;
+	t->parent.free = local_free;
+
+	*out = (git_transport *) t;
 
 	return GIT_SUCCESS;
 }

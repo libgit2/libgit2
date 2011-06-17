@@ -45,10 +45,12 @@
 #include "netops.h"
 
 typedef struct {
+	git_transport parent;
 	int socket;
 	git_vector refs;
 	git_remote_head **heads;
-} git_priv;
+} transport_git;
+
 /*
  * Create a git procol request.
  *
@@ -141,7 +143,7 @@ static int extract_host_and_port(char **host, char **port, const char *url)
  * out. For convenience this also takes care of asking for the remote
  * refs
  */
-static int do_connect(git_priv *priv, const char *url)
+static int do_connect(transport_git *t, const char *url)
 {
 	int s = -1;
 	char *host, *port;
@@ -155,7 +157,7 @@ static int do_connect(git_priv *priv, const char *url)
 	s = gitno_connect(host, port);
 	connected = 1;
 	error = send_request(s, NULL, url);
-	priv->socket = s;
+	t->socket = s;
 
 	free(host);
 	free(port);
@@ -171,10 +173,10 @@ static int do_connect(git_priv *priv, const char *url)
 /*
  * Read from the socket and store the references in the vector
  */
-static int store_refs(git_priv *priv)
+static int store_refs(transport_git *t)
 {
-	int s = priv->socket;
-	git_vector *refs = &priv->refs;
+	int s = t->socket;
+	git_vector *refs = &t->refs;
 	int error = GIT_SUCCESS;
 	char buffer[1024];
 	const char *line_end, *ptr;
@@ -239,33 +241,26 @@ static int store_refs(git_priv *priv)
  */
 static int git_connect(git_transport *transport, git_net_direction direction)
 {
-	git_priv *priv;
+	transport_git *t = (transport_git *) transport;
 	int error = GIT_SUCCESS;
 
 	if (direction == INTENT_PUSH)
 		return git__throw(GIT_EINVALIDARGS, "Pushing is not supported with the git protocol");
 
-	priv = git__malloc(sizeof(git_priv));
-	if (priv == NULL)
-		return GIT_ENOMEM;
-
-	memset(priv, 0x0, sizeof(git_priv));
-	transport->private = priv;
-	error = git_vector_init(&priv->refs, 16, NULL);
+	error = git_vector_init(&t->refs, 16, NULL);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	/* Connect and ask for the refs */
-	error = do_connect(priv, transport->url);
+	error = do_connect(t, transport->url);
 	if (error < GIT_SUCCESS)
 		return error;
 
-	error = store_refs(priv);
+	error = store_refs(t);
 
 cleanup:
 	if (error < GIT_SUCCESS) {
-		git_vector_free(&priv->refs);
-		free(priv);
+		git_vector_free(&t->refs);
 	}
 
 	return error;
@@ -273,8 +268,8 @@ cleanup:
 
 static int git_ls(git_transport *transport, git_headarray *array)
 {
-	git_priv *priv = transport->private;
-	git_vector *refs = &priv->refs;
+	transport_git *t = (transport_git *) transport;
+	git_vector *refs = &t->refs;
 	int len = 0;
 	unsigned int i;
 
@@ -291,19 +286,19 @@ static int git_ls(git_transport *transport, git_headarray *array)
 		array->heads[i] = &(((git_pkt_ref *) p)->head);
 	}
 	array->len = len;
-	priv->heads = array->heads;
+	t->heads = array->heads;
 
 	return GIT_SUCCESS;
 }
 
 static int git_close(git_transport *transport)
 {
-	git_priv *priv = transport->private;
-	int s = priv->socket;
+	transport_git *t = (transport_git*) transport;
+	int s = t->socket;
 	int error;
 
-	/* FIXME:  We probably want to send a flush pkt back */
-
+	/* Can't do anything if there's an error, so don't bother checking  */
+	git_pkt_send_flush(s);
 	error = close(s);
 	if (error < 0)
 		error = git__throw(GIT_EOSERR, "Failed to close socket");
@@ -313,8 +308,8 @@ static int git_close(git_transport *transport)
 
 static void git_free(git_transport *transport)
 {
-	git_priv *priv = transport->private;
-	git_vector *refs = &priv->refs;
+	transport_git *t = (transport_git *) transport;
+	git_vector *refs = &t->refs;
 	unsigned int i;
 
 	for (i = 0; i < refs->length; ++i) {
@@ -323,18 +318,25 @@ static void git_free(git_transport *transport)
 	}
 
 	git_vector_free(refs);
-	free(priv->heads);
-	free(priv);
-	free(transport->url);
-	free(transport);
+	free(t->heads);
+	free(t->parent.url);
+	free(t);
 }
 
-int git_transport_git(git_transport *transport)
+int git_transport_git(git_transport **out)
 {
-	transport->connect = git_connect;
-	transport->ls = git_ls;
-	transport->close = git_close;
-	transport->free = git_free;
+	transport_git *t;
+
+	t = git__malloc(sizeof(transport_git));
+	if (t == NULL)
+		return GIT_ENOMEM;
+
+	t->parent.connect = git_connect;
+	t->parent.ls = git_ls;
+	t->parent.close = git_close;
+	t->parent.free = git_free;
+
+	*out = (git_transport *) t;
 
 	return GIT_SUCCESS;
 }

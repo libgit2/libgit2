@@ -177,7 +177,7 @@ typedef struct git_transport git_transport;
 /** Whether to push or pull */
 typedef enum git_net_direction git_net_direction;
 
-typedef int (*git_transport_cb)(git_transport *transport);
+typedef int (*git_transport_cb)(git_transport **transport);
 
 typedef struct git_remote_head git_remote_head;
 typedef struct git_headarray git_headarray;
