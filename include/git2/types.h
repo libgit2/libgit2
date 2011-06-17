@@ -167,6 +167,9 @@ typedef enum {
 	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
 } git_rtype;
 
+typedef struct git_refspec git_refspec;
+typedef struct git_remote git_remote;
+
 /** @} */
 GIT_END_DECL
 

@@ -23,38 +23,44 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDE_git_git_h__
-#define INCLUDE_git_git_h__
+#include "common.h"
+#include "refspec.h"
 
-#define LIBGIT2_VERSION "0.13.0"
-#define LIBGIT2_VER_MAJOR 0
-#define LIBGIT2_VER_MINOR 13
-#define LIBGIT2_VER_REVISION 0
+int git_refspec_parse(git_refspec *refspec, const char *str)
+{
+	char *delim;
 
-#include "git2/common.h"
-#include "git2/errors.h"
-#include "git2/zlib.h"
+	memset(refspec, 0x0, sizeof(git_refspec));
 
-#include "git2/types.h"
+	if (*str == '+') {
+		refspec->force = 1;
+		str++;
+	}
 
-#include "git2/oid.h"
-#include "git2/signature.h"
-#include "git2/odb.h"
+	delim = strchr(str, ':');
+	if (delim == NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse refspec. No ':'");
 
-#include "git2/repository.h"
-#include "git2/revwalk.h"
-#include "git2/refs.h"
+	refspec->src = git__strndup(str, delim - str);
+	if (refspec->src == NULL)
+		return GIT_ENOMEM;
 
-#include "git2/object.h"
-#include "git2/blob.h"
-#include "git2/commit.h"
-#include "git2/tag.h"
-#include "git2/tree.h"
+	refspec->dst = git__strdup(delim + 1);
+	if (refspec->dst == NULL) {
+		free(refspec->src);
+		refspec->src = NULL;
+		return GIT_ENOMEM;
+	}
 
-#include "git2/index.h"
-#include "git2/config.h"
+	return GIT_SUCCESS;
+}
 
-#include "git2/remote.h"
-#include "git2/refspec.h"
+const char *git_refspec_src(const git_refspec *refspec)
+{
+	return refspec->src;
+}
 
-#endif
+const char *git_refspec_dst(const git_refspec *refspec)
+{
+	return refspec->dst;
+}
