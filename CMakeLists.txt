@@ -30,7 +30,7 @@ SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
 SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 
 # Build options
-OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" OFF)
+OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 

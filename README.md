@@ -62,7 +62,7 @@ The following CMake variables are declared:
 - `INSTALL_BIN`: Where to install binaries to.
 - `INSTALL_LIB`: Where to install libraries to.
 - `INSTALL_INC`: Where to install headers to.
-- `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to OFF)
+- `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
 - `BUILD_TESTS`: Build the libgit2 test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to OFF)
 
