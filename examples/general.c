@@ -425,7 +425,7 @@ int main (int argc, char** argv)
   git_config *cfg;
 
   // Open a config object so we can read global values from it.
-  git_config_open_global(&cfg);
+  git_config_open_ondisk(&cfg, "~/.gitconfig");
 
   git_config_get_int(cfg, "help.autocorrect", &j);
   printf("Autocorrect: %d\n", j);
