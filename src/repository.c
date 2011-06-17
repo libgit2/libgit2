@@ -271,45 +271,42 @@ cleanup:
 	return git__rethrow(error, "Failed to open repository");
 }
 
-int git_repository_config(git_config **out, git_repository *repo)
+int git_repository_config(
+		git_config **out,
+		git_repository *repo,
+		const char *user_config_path,
+		const char *system_config_path)
 {
-	git_config *cfg = NULL;
-	git_config_file *local = NULL;
-	char gitconfig[GIT_PATH_MAX];
-	int error = GIT_SUCCESS;
+	char config_path[GIT_PATH_MAX];
+	int error;
 
-	error = git_config_open_global(&cfg);
+	assert(out && repo);
+
+	error = git_config_new(out);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to open global config");
+		return error;
 
-	git__joinpath(gitconfig, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
-	error = git_config_file__ondisk(&local, gitconfig);
-	if (error < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to open local config");
+	git__joinpath(config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
+	error = git_config_add_file_ondisk(*out, config_path, 1);
+	if (error < GIT_SUCCESS)
 		goto cleanup;
+
+	if (user_config_path != NULL) {
+		error = git_config_add_file_ondisk(*out, user_config_path, 2);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
 	}
 
-	error = git_config_add_file(cfg, local, 2);
-	if (error < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to add the local config");
-		goto cleanup;
+	if (system_config_path != NULL) {
+		error = git_config_add_file_ondisk(*out, system_config_path, 3);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
 	}
 
-	error = local->open(local);
-	if (error < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to open config file");
-		goto cleanup;
-	}
-
-	*out = cfg;
+	return GIT_SUCCESS;
 
 cleanup:
-	if (error < GIT_SUCCESS) {
-		git_config_free(cfg);
-		if (local)
-			local->free(local);
-	}
-
+	git_config_free(*out);
 	return error;
 }
 

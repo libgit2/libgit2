@@ -36,7 +36,7 @@ BEGIN_TEST(config0, "read a simple configuration")
 	git_config *cfg;
 	int i;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config0"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config0"));
 	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &i));
 	must_be_true(i == 0);
 	must_pass(git_config_get_bool(cfg, "core.filemode", &i));
@@ -58,7 +58,7 @@ BEGIN_TEST(config1, "case sensitivity")
 	int i;
 	const char *str;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config1"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config1"));
 
 	must_pass(git_config_get_string(cfg, "this.that.other", &str));
 	must_be_true(!strcmp(str, "true"));
@@ -84,7 +84,7 @@ BEGIN_TEST(config2, "parse a multiline value")
 	git_config *cfg;
 	const char *str;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config2"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config2"));
 
 	must_pass(git_config_get_string(cfg, "this.That.and", &str));
 	must_be_true(!strcmp(str, "one one one two two three three"));
@@ -99,7 +99,7 @@ BEGIN_TEST(config3, "parse a [section.subsection] header")
 	git_config *cfg;
 	const char *str;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config3"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config3"));
 
 	must_pass(git_config_get_string(cfg, "section.subsection.var", &str));
 	must_be_true(!strcmp(str, "hello"));
@@ -117,7 +117,7 @@ BEGIN_TEST(config4, "a variable name on its own is valid")
 const char *str;
 int i;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config4"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config4"));
 
 	must_pass(git_config_get_string(cfg, "some.section.variable", &str));
 	must_be_true(str == NULL);
@@ -133,7 +133,7 @@ BEGIN_TEST(config5, "test number suffixes")
 	git_config *cfg;
 	long int i;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config5"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config5"));
 
 	must_pass(git_config_get_long(cfg, "number.simple", &i));
 	must_be_true(i == 1);
@@ -163,7 +163,7 @@ BEGIN_TEST(config6, "test blank lines")
 	git_config *cfg;
 	int i;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config6"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config6"));
 
 	must_pass(git_config_get_bool(cfg, "valid.subsection.something", &i));
 	must_be_true(i == 1);
@@ -177,14 +177,14 @@ END_TEST
 BEGIN_TEST(config7, "test for invalid ext headers")
 	git_config *cfg;
 
-	must_fail(git_config_open_file(&cfg, CONFIG_BASE "/config7"));
+	must_fail(git_config_open_ondisk(&cfg, CONFIG_BASE "/config7"));
 
 END_TEST
 
 BEGIN_TEST(config8, "don't fail on empty files")
 	git_config *cfg;
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config8"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config8"));
 
 	git_config_free(cfg);
 END_TEST
@@ -195,16 +195,16 @@ BEGIN_TEST
 	int i;
 
 	/* By freeing the config, we make sure we flush the values  */
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
 	must_pass(git_config_set_int(cfg, "core.dummy", 5));
 	git_config_free(cfg);
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
 	must_pass(git_config_get_int(cfg, "core.dummy", &i));
 	must_be_true(i == 5);
 	git_config_free(cfg);
 
-	must_pass(git_config_open_file(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
 	must_pass(git_config_set_int(cfg, "core.dummy", 1));
 	git_config_free(cfg);
 
@@ -222,7 +222,7 @@ BEGIN_TEST(config10, "a repo's config overrides the global config")
 	setenv("HOME", CONFIG_BASE, 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo));
+	must_pass(git_repository_config(&cfg, repo, NULL, NULL));
 	setenv("HOME", home_orig, 1);
 	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &version));
 	must_be_true(version == 0);
@@ -232,18 +232,11 @@ END_TEST
 
 BEGIN_TEST(config11, "fall back to the global config")
 	git_repository *repo;
-	char home_orig[GIT_PATH_MAX];
-	char *home;
 	git_config *cfg;
 	int num;
 
-	home = getenv("HOME");
-	strcpy(home_orig, home);
-	setenv("HOME", CONFIG_BASE, 1);
-
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo));
-	setenv("HOME", home_orig, 1);
+	must_pass(git_repository_config(&cfg, repo, CONFIG_BASE "/.gitconfig", NULL));
 	must_pass(git_config_get_int(cfg, "core.something", &num));
 	must_be_true(num == 2);
 	git_config_free(cfg);

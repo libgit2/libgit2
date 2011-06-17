@@ -37,54 +37,6 @@ typedef struct {
 	int priority;
 } file_internal;
 
-int git_config_open_file(git_config **out, const char *path)
-{
-	git_config_file *file = NULL;
-	git_config *cfg = NULL;
-	int error = GIT_SUCCESS;
-
-	error = git_config_new(&cfg);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	error = git_config_file__ondisk(&file, path);
-	if (error < GIT_SUCCESS) {
-		git_config_free(cfg);
-		return error;
-	}
-
-	error = git_config_add_file(cfg, file, 1);
-	if (error < GIT_SUCCESS) {
-		file->free(file);
-		git_config_free(cfg);
-		return error;
-	}
-
-	error = file->open(file);
-	if (error < GIT_SUCCESS) {
-		git_config_free(cfg);
-		return git__rethrow(error, "Failed to open config file");
-	}
-
-	*out = cfg;
-
-	return GIT_SUCCESS;
-}
-
-int git_config_open_global(git_config **out)
-{
-	char full_path[GIT_PATH_MAX];
-	const char *home;
-
-	home = getenv("HOME");
-	if (home == NULL)
-		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot find $HOME variable");
-
-	git__joinpath(full_path, home, GIT_CONFIG_FILENAME);
-
-	return git_config_open_file(out, full_path);
-}
-
 void git_config_free(git_config *cfg)
 {
 	unsigned int i;
@@ -130,11 +82,48 @@ int git_config_new(git_config **out)
 	return GIT_SUCCESS;
 }
 
+int git_config_add_file_ondisk(git_config *cfg, const char *path, int priority)
+{
+	git_config_file *file = NULL;
+	int error;
+
+	error = git_config_file__ondisk(&file, path);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = git_config_add_file(cfg, file, priority);
+	if (error < GIT_SUCCESS) {
+		file->free(file); /* free manually; the file is not owned by the ODB yet */
+		return error;
+	}
+
+	return GIT_SUCCESS;
+}
+
+int git_config_open_ondisk(git_config **cfg, const char *path)
+{
+	int error;
+
+	error = git_config_new(cfg);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = git_config_add_file_ondisk(*cfg, path, 1);
+	if (error < GIT_SUCCESS)
+		git_config_free(*cfg);
+
+	return error;
+}
+
 int git_config_add_file(git_config *cfg, git_config_file *file, int priority)
 {
 	file_internal *internal;
+	int error;
 
 	assert(cfg && file);
+
+	if ((error = file->open(file)) < GIT_SUCCESS)
+		return git__throw(error, "Failed to open config file");
 
 	internal = git__malloc(sizeof(file_internal));
 	if (internal == NULL)

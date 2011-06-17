@@ -268,12 +268,40 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
 /**
  * Retrieve the relevant configuration for a repository
  *
- * Puts together the configuration from the global and local files.
+ * By default he returned `git_config` instance contains a single
+ * configuration file, the `.gitconfig' file that may be found
+ * inside the repository.
+ *
+ * If the `user_config_path` variable is not NULL, the given config
+ * file will be also included in the configuration set. On most UNIX
+ * systems, this file may be found on `$HOME/.gitconfig`.
+ *
+ * If the `system_config_path` variable is not NULL, the given config
+ * file will be also included in the configuration set. On most UNIX
+ * systems, this file may be found on `$PREFIX/etc/gitconfig`.
+ *
+ * The resulting `git_config` instance will query the files in the following
+ * order:
+ *
+ *	- Repository configuration file
+ *	- User configuration file
+ *	- System configuration file
+ *
+ * The method will fail if any of the passed config files cannot be
+ * found or accessed.
+ *
+ * The returned `git_config` instance is owned by the caller and must
+ * be manually free'd once it's no longer on use.
  *
  * @param out the repository's configuration
  * @param repo the repository for which to get the config
+ * @param user_config_path Path to the user config file
+ * @param system_config_path Path to the system-wide config file
  */
-GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
+GIT_EXTERN(int) git_repository_config(git_config **out,
+	git_repository *repo,
+	const char *user_config_path,
+	const char *system_config_path);
 
 /** @} */
 GIT_END_DECL

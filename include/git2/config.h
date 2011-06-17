@@ -76,34 +76,54 @@ GIT_EXTERN(int) git_config_file__ondisk(struct git_config_file **out, const char
 GIT_EXTERN(int) git_config_new(git_config **out);
 
 /**
- * Open a configuration file
- *
- * This creates a new configuration object and adds the specified file
- * to it.
- *
- * @param cfg_out pointer to the configuration data
- * @param path where to load the confiration from
- */
-GIT_EXTERN(int) git_config_open_file(git_config **cfg_out, const char *path);
-
-/**
- * Open the global configuration file at $HOME/.gitconfig
- *
- * @param cfg pointer to the configuration
- */
-GIT_EXTERN(int) git_config_open_global(git_config **cfg);
-
-/**
- * Add a config backend to an existing instance
+ * Add a generic config file instance to an existing config
  *
  * Note that the configuration object will free the file
  * automatically.
+ *
+ * Further queries on this config object will access each
+ * of the config file instances in order (instances with
+ * a higher priority will be accessed first).
  *
  * @param cfg the configuration to add the file to
  * @param file the configuration file (backend) to add
  * @param priority the priority the backend should have
  */
 GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int priority);
+
+/**
+ * Add an on-disk config file instance to an existing config
+ *
+ * The on-disk file pointed at by `path` will be opened and
+ * parsed; it's expected to be a native Git config file following
+ * the default Git config syntax (see man git-config).
+ *
+ * Note that the configuration object will free the file
+ * automatically.
+ *
+ * Further queries on this config object will access each
+ * of the config file instances in order (instances with
+ * a higher priority will be accessed first).
+ *
+ * @param cfg the configuration to add the file to
+ * @param file path to the configuration file (backend) to add
+ * @param priority the priority the backend should have
+ */
+GIT_EXTERN(int) git_config_add_file_ondisk(git_config *cfg, const char *path, int priority);
+
+
+/**
+ * Create a new config instance containing a single on-disk file
+ *
+ * This method is a simple utility wrapper for the following sequence
+ * of calls:
+ *	- git_config_new
+ *	- git_config_add_file_ondisk
+ *
+ * @param cfg The configuration instance to create
+ * @param path Path to the on-disk file to open
+ */
+GIT_EXTERN(int) git_config_open_ondisk(git_config **cfg, const char *path);
 
 /**
  * Free the configuration and its associated memory and files
