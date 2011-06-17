@@ -93,7 +93,11 @@ int git_config_add_file_ondisk(git_config *cfg, const char *path, int priority)
 
 	error = git_config_add_file(cfg, file, priority);
 	if (error < GIT_SUCCESS) {
-		file->free(file); /* free manually; the file is not owned by the ODB yet */
+		/*
+		 * free manually; the file is not owned by the config
+		 * instance yet and will not be freed on cleanup
+		 */
+		file->free(file);
 		return error;
 	}
 
