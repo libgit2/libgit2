@@ -53,6 +53,34 @@ struct git_config_file {
 };
 
 /**
+ * Locate the path to the global configuration file
+ *
+ * The user or global configuration file is usually
+ * located in `$HOME/.gitconfig`.
+ *
+ * This method will try to guess the full path to that
+ * file, if the file exists. The returned path
+ * may be used on any `git_config` call to load the
+ * global configuration file.
+ *
+ * @param path Buffer of GIT_PATH_MAX length to store the path
+ * @return GIT_SUCCESS if a global configuration file has been
+ *	found. Its path will be stored in `buffer`.
+ */
+GIT_EXTERN(int) git_config_find_global(char *global_config_path);
+
+/**
+ * Open the global configuration file
+ *
+ * Utility wrapper that calls `git_config_find_global`
+ * and opens the located file, if it exists.
+ *
+ * @param out Pointer to store the config instance
+ * @return GIT_SUCCESS on success; error code otherwise
+ */
+GIT_EXTERN(int) git_config_open_global(git_config **out);
+
+/**
  * Create a configuration file backend for ondisk files
  *
  * These are the normal `.gitconfig` files that Core Git
@@ -61,7 +89,7 @@ struct git_config_file {
  * variables.
  *
  * @param out the new backend
- * @path where the config file is located
+ * @param path where the config file is located
  */
 GIT_EXTERN(int) git_config_file__ondisk(struct git_config_file **out, const char *path);
 
@@ -72,6 +100,7 @@ GIT_EXTERN(int) git_config_file__ondisk(struct git_config_file **out, const char
  * can do anything with it.
  *
  * @param out pointer to the new configuration
+ * @return GIT_SUCCESS on success; error code otherwise
  */
 GIT_EXTERN(int) git_config_new(git_config **out);
 
@@ -88,6 +117,7 @@ GIT_EXTERN(int) git_config_new(git_config **out);
  * @param cfg the configuration to add the file to
  * @param file the configuration file (backend) to add
  * @param priority the priority the backend should have
+ * @return GIT_SUCCESS on success; error code otherwise
  */
 GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int priority);
 
@@ -108,6 +138,7 @@ GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int 
  * @param cfg the configuration to add the file to
  * @param file path to the configuration file (backend) to add
  * @param priority the priority the backend should have
+ * @return GIT_SUCCESS on success; error code otherwise
  */
 GIT_EXTERN(int) git_config_add_file_ondisk(git_config *cfg, const char *path, int priority);
 
@@ -122,6 +153,7 @@ GIT_EXTERN(int) git_config_add_file_ondisk(git_config *cfg, const char *path, in
  *
  * @param cfg The configuration instance to create
  * @param path Path to the on-disk file to open
+ * @return GIT_SUCCESS on success; error code otherwise
  */
 GIT_EXTERN(int) git_config_open_ondisk(git_config **cfg, const char *path);
 

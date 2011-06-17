@@ -319,3 +319,36 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 	return git__throw(error, "Config value '%s' not found", name);
 }
 
+int git_config_find_global(char *global_config_path)
+{
+	const char *home;
+
+	home = getenv("HOME");
+
+#ifdef GIT_WIN32
+	if (home == NULL)
+		home = getenv("USERPROFILE");
+#endif
+
+	if (home == NULL)
+		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot locate the user's home directory");
+
+	git__joinpath(global_config_path, home, GIT_CONFIG_FILENAME);
+
+	if (gitfo_exists(global_config_path) < GIT_SUCCESS)
+		return git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");
+
+	return GIT_SUCCESS;
+}
+
+int git_config_open_global(git_config **out)
+{
+	int error;
+	char global_path[GIT_PATH_MAX];
+
+	if ((error = git_config_find_global(global_path)) < GIT_SUCCESS)
+		return error;
+
+	return git_config_open_ondisk(out, global_path);
+}
+
