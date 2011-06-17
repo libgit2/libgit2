@@ -43,7 +43,7 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 	if (n < length)
 		length = n;
 
-	ptr = malloc(length + 1);
+	ptr = (char*)malloc(length + 1);
 	if (!ptr)
 		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
 
