@@ -689,8 +689,24 @@ int gitfo_lstat__w32(const char *file_name, struct stat *buf)
 
 int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 {
+	static DWORD (*pGetFinalPath)(HANDLE, LPTSTR, DWORD, DWORD) = NULL;
 	HANDLE hFile;
 	DWORD dwRet;
+
+	/*
+	 * Try to load the pointer to pGetFinalPath dynamically, because
+	 * it is not available in platforms older than Vista
+	 */
+	if (pGetFinalPath == NULL) {
+		HANDLE library = LoadLibrary("kernel32");
+
+		if (library != NULL)
+			pGetFinalPath = GetProcAddress(library, "GetFinalPathNameByHandleA");
+
+		if (pGetFinalPath == NULL)
+			return git__throw(GIT_EOSERR,
+				"'GetFinalPathNameByHandleA' is not available in this platform");
+	}
 
 	hFile = CreateFile(link,            // file to open
 				 GENERIC_READ,          // open for reading
@@ -703,7 +719,7 @@ int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 	if (hFile == INVALID_HANDLE_VALUE)
 		return GIT_EOSERR;
 
-	dwRet = GetFinalPathNameByHandleA(hFile, target, target_len, VOLUME_NAME_DOS);
+	dwRet = pGetFinalPath(hFile, target, target_len, VOLUME_NAME_DOS);
 	if (dwRet >= target_len)
 		return GIT_ENOMEM;
 
