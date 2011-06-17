@@ -303,7 +303,8 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 {
 	file_internal *internal;
 	git_config_file *file;
-	int i, error;
+	int error = GIT_ENOTFOUND;
+	unsigned int i;
 
 	if (cfg->files.length == 0)
 		return git__throw(GIT_EINVALIDARGS, "Cannot get variable value; no files open in the `git_config` instance");
@@ -311,11 +312,10 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 	for (i = 0; i < cfg->files.length; ++i) {
 		internal = git_vector_get(&cfg->files, i);
 		file = internal->file;
-		error = file->get(file, name, out);
-		if (error == GIT_SUCCESS)
-			break;
+		if ((error = file->get(file, name, out)) == GIT_SUCCESS)
+			return GIT_SUCCESS;
 	}
 
-	return error;
+	return git__throw(error, "Config value '%s' not found", name);
 }
 
