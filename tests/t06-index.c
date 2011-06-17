@@ -208,6 +208,7 @@ BEGIN_TEST(add0, "add a new file to the index")
 	/* And the built-in hashing mechanism worked as expected */
     must_be_true(git_oid_cmp(&id1, &entry->oid) == 0);
 
+    git_index_free(index);
 	git_repository_free(repo);
 	rmdir_recurs(TEMP_REPO_FOLDER);
 END_TEST
