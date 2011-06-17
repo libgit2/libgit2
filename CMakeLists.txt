@@ -41,7 +41,7 @@ IF (MSVC)
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 ENDIF()
 
-# Build Release by default
+# Build Debug by default
 IF (NOT CMAKE_BUILD_TYPE)
 	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
