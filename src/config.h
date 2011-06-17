@@ -6,6 +6,7 @@
 #include "vector.h"
 
 #define GIT_CONFIG_FILENAME ".gitconfig"
+#define GIT_CONFIG_FILENAME_INREPO "config"
 
 struct git_config {
 	git_vector files;
