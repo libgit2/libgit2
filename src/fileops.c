@@ -689,7 +689,8 @@ int gitfo_lstat__w32(const char *file_name, struct stat *buf)
 
 int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 {
-	static DWORD (*pGetFinalPath)(HANDLE, LPTSTR, DWORD, DWORD) = NULL;
+	typedef DWORD (WINAPI *fpath_func)(HANDLE, LPTSTR, DWORD, DWORD);
+	static fpath_func pGetFinalPath = NULL;
 	HANDLE hFile;
 	DWORD dwRet;
 
@@ -698,10 +699,10 @@ int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 	 * it is not available in platforms older than Vista
 	 */
 	if (pGetFinalPath == NULL) {
-		HANDLE library = LoadLibrary("kernel32");
+		HINSTANCE library = LoadLibrary("kernel32");
 
 		if (library != NULL)
-			pGetFinalPath = GetProcAddress(library, "GetFinalPathNameByHandleA");
+			pGetFinalPath = (fpath_func)GetProcAddress(library, "GetFinalPathNameByHandleA");
 
 		if (pGetFinalPath == NULL)
 			return git__throw(GIT_EOSERR,
