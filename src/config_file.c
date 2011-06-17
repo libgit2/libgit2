@@ -986,17 +986,16 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 					break;
 				}
 			} else {
-				int cmp;
+				int cmp = -1;
 
 				pre_end = cfg->reader.read_ptr;
-				error = parse_variable(cfg, &var_name, &var_value);
-				if (error == GIT_SUCCESS)
+				if ((error = parse_variable(cfg, &var_name, &var_value)) == GIT_SUCCESS)
 					cmp = strcasecmp(var->name, var_name);
 
 				free(var_name);
 				free(var_value);
 
-				if (error < GIT_SUCCESS || cmp)
+				if (cmp != 0)
 					break;
 
 				post_start = cfg->reader.read_ptr;
