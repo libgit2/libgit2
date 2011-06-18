@@ -287,7 +287,7 @@ int git_repository_config(
 		return error;
 
 	git__joinpath(config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
-	error = git_config_add_file_ondisk(*out, config_path, 1);
+	error = git_config_add_file_ondisk(*out, config_path, 3);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -298,7 +298,7 @@ int git_repository_config(
 	}
 
 	if (system_config_path != NULL) {
-		error = git_config_add_file_ondisk(*out, system_config_path, 3);
+		error = git_config_add_file_ondisk(*out, system_config_path, 1);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 	}

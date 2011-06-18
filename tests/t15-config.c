@@ -189,8 +189,7 @@ BEGIN_TEST(config8, "don't fail on empty files")
 	git_config_free(cfg);
 END_TEST
 
-BEGIN_TEST
-(config9, "replace a value")
+BEGIN_TEST(config9, "replace a value")
 	git_config *cfg;
 	int i;
 
