@@ -63,7 +63,7 @@ struct git_config_file {
  * may be used on any `git_config` call to load the
  * global configuration file.
  *
- * @param path Buffer of GIT_PATH_MAX length to store the path
+ * @param global_config_path Buffer of GIT_PATH_MAX length to store the path
  * @return GIT_SUCCESS if a global configuration file has been
  *	found. Its path will be stored in `buffer`.
  */
@@ -136,7 +136,7 @@ GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int 
  * a higher priority will be accessed first).
  *
  * @param cfg the configuration to add the file to
- * @param file path to the configuration file (backend) to add
+ * @param path path to the configuration file (backend) to add
  * @param priority the priority the backend should have
  * @return GIT_SUCCESS on success; error code otherwise
  */
