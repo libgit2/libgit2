@@ -720,7 +720,7 @@ int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 	if (hFile == INVALID_HANDLE_VALUE)
 		return GIT_EOSERR;
 
-	dwRet = pGetFinalPath(hFile, target, target_len, VOLUME_NAME_DOS);
+	dwRet = pGetFinalPath(hFile, target, target_len, 0x0);
 	if (dwRet >= target_len)
 		return GIT_ENOMEM;
 

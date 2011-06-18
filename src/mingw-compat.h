@@ -8,6 +8,11 @@
 # define stat _stati64
 # define fstat _fstati64
 
+/* stat: file mode type testing macros */
+# define _S_IFLNK 0120000
+# define S_IFLNK _S_IFLNK
+# define S_ISLNK(m)  (((m) & _S_IFMT) == _S_IFLNK)
+
 #endif
 
 #endif /* INCLUDE_mingw_compat__ */
