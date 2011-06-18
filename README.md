@@ -11,7 +11,7 @@ release its source code.
 
 * Mailing list: <libgit2@librelist.org>
 * Website: <http://libgit2.github.com>
-* API documentation: <http://libgit2.github.com/libgit2/modules.html>
+* API documentation: <http://libgit2.github.com/libgit2>
 * Usage guide: <http://libgit2.github.com/api.html>
 
 What It Can Do
