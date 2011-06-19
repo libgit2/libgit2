@@ -330,10 +330,16 @@ int git_signature__write(char **signature, const char *header, const git_signatu
 	hours = offset / 60;
 	mins = offset % 60;
 
-	sig_buffer_len = snprintf(sig_buffer, sizeof(sig_buffer),
-			"%s %s <%s> %u %c%02d%02d\n",
-			header, sig->name, sig->email,
-			(unsigned)sig->when.time, sign, hours, mins);
+	if (header)
+		sig_buffer_len = snprintf(sig_buffer, sizeof(sig_buffer),
+				"%s %s <%s> %u %c%02d%02d\n",
+				header, sig->name, sig->email,
+				(unsigned)sig->when.time, sign, hours, mins);
+	else
+		sig_buffer_len = snprintf(sig_buffer, sizeof(sig_buffer),
+				"%s <%s> %u %c%02d%02d\n",
+				sig->name, sig->email,
+				(unsigned)sig->when.time, sign, hours, mins);
 
 	if (sig_buffer_len < 0 || (size_t)sig_buffer_len > sizeof(sig_buffer))
 		return GIT_ENOMEM;
