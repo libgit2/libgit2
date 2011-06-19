@@ -122,6 +122,9 @@ typedef enum {
 
 	/** The given short oid is ambiguous */
 	GIT_EAMBIGUOUSOIDPREFIX = -29,
+
+	/** Skip and passthrough the given ODB backend */
+	GIT_EPASSTHROUGH = -30,
 } git_error;
 
 /**

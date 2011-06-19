@@ -455,6 +455,9 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 			error = b->read_header(len_p, type_p, b, id);
 	}
 
+	if (error == GIT_EPASSTHROUGH)
+		return GIT_SUCCESS;
+
 	/*
 	 * no backend could read only the header.
 	 * try reading the whole object and freeing the contents
@@ -491,13 +494,12 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 	}
 
-	if (error == GIT_SUCCESS) {
+	if (error == GIT_EPASSTHROUGH || error == GIT_SUCCESS) {
 		*out = git_cache_try_store(&db->cache, new_odb_object(id, &raw));
+		return GIT_SUCCESS;
 	}
 
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to read object");
-	return error;
+	return git__rethrow(error, "Failed to read object");
 }
 
 int git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
@@ -533,6 +535,7 @@ int git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_
 				found++;
 				break;
 			case GIT_ENOTFOUND:
+			case GIT_EPASSTHROUGH:
 				break;
 			case GIT_EAMBIGUOUSOIDPREFIX:
 				return git__rethrow(error, "Failed to read object. Ambiguous sha1 prefix");
@@ -557,6 +560,7 @@ int git_odb_write(git_oid *oid, git_odb *db, const void *data, size_t len, git_o
 {
 	unsigned int i;
 	int error = GIT_ERROR;
+	git_odb_stream *stream;
 
 	assert(oid && db);
 
@@ -572,21 +576,21 @@ int git_odb_write(git_oid *oid, git_odb *db, const void *data, size_t len, git_o
 			error = b->write(oid, b, data, len, type);
 	}
 
+	if (error == GIT_EPASSTHROUGH || error == GIT_SUCCESS)
+		return GIT_SUCCESS;
+
 	/* if no backends were able to write the object directly, we try a streaming
 	 * write to the backends; just write the whole object into the stream in one
 	 * push */
-	if (error < GIT_SUCCESS) {
-		git_odb_stream *stream;
 
-		if ((error = git_odb_open_wstream(&stream, db, len, type)) == GIT_SUCCESS) {
-			stream->write(stream, data, len);
-			error = stream->finalize_write(oid, stream);
-			stream->free(stream);
-		}
+	if ((error = git_odb_open_wstream(&stream, db, len, type)) == GIT_SUCCESS) {
+		stream->write(stream, data, len);
+		error = stream->finalize_write(oid, stream);
+		stream->free(stream);
+		return GIT_SUCCESS;
 	}
 
-	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Failed to write object");
+	return git__rethrow(error, "Failed to write object");
 }
 
 int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_otype type)
@@ -610,8 +614,10 @@ int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_
 			error = init_fake_wstream(stream, b, size, type);
 	}
 
-	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Failed to open write stream");
+	if (error == GIT_EPASSTHROUGH || error == GIT_SUCCESS)
+		return GIT_SUCCESS;
+
+	return git__rethrow(error, "Failed to open write stream");
 }
 
 int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid) 
@@ -629,7 +635,9 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 			error = b->readstream(stream, b, oid);
 	}
 
-	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Failed to open read stream");
+	if (error == GIT_EPASSTHROUGH || error == GIT_SUCCESS)
+		return GIT_SUCCESS;
+
+	return git__rethrow(error, "Failed to open read stream");
 }
 
