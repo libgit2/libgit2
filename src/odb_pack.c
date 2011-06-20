@@ -1246,7 +1246,8 @@ static int packfile_unpack_compressed(
 	z_stream stream;
 	unsigned char *buffer, *in;
 
-	buffer = git__malloc(size);
+	buffer = git__malloc(size + 1);
+	memset(buffer, 0x0, size + 1);
 
 	memset(&stream, 0, sizeof(stream));
 	stream.next_out = buffer;
