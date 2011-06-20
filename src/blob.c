@@ -88,14 +88,18 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	git_odb_stream *stream;
 	struct stat st;
 
-	gitfo_lstat(path, &st);
-
-	islnk = S_ISLNK(st.st_mode);
-
 	if (repo->path_workdir == NULL)
 		return git__throw(GIT_ENOTFOUND, "Failed to create blob. (No working directory found)");
 
 	git__joinpath(full_path, repo->path_workdir, path);
+
+	error = gitfo_lstat(full_path, &st);
+	if (error < 0) {
+		return git__throw(GIT_EOSERR, "Failed to stat blob. %s", strerror(errno));
+	}
+
+	islnk = S_ISLNK(st.st_mode);
+
 
 	if (!islnk) {
 		if ((fd = gitfo_open(full_path, O_RDONLY)) < 0)
