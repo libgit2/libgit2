@@ -69,7 +69,7 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	if (error < GIT_SUCCESS)
 		return error;
 
-	return git_refspec_parse(refspec, val);
+	return refspec_parse(refspec, val);
 }
 
 int git_remote_get(git_remote **out, git_config *cfg, const char *name)
@@ -122,13 +122,11 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = git_config_get_string(cfg, buf, &val);
-	if (error < GIT_SUCCESS)
+	error = parse_remote_refspec(cfg, &remote->fetch, buf);
+	if (error < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to get fetch refspec");
 		goto cleanup;
-
-	error = refspec_parse(&remote->fetch, val);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	}
 
 	ret = snprintf(buf, buf_len, "%s.%s.%s", "remote", name, "push");
 	if (ret < 0) {
@@ -136,11 +134,11 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = git_config_get_string(cfg, buf, &val);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	error = parse_remote_refspec(cfg, &remote->push, buf);
+	/* Not finding push is fine */
+	if (error == GIT_ENOTFOUND)
+		error = GIT_SUCCESS;
 
-	error = refspec_parse(&remote->push, val);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
