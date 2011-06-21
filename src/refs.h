@@ -11,6 +11,8 @@
 #define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
 #define GIT_REFS_REMOTES_DIR GIT_REFS_DIR "remotes/"
 
+#define GIT_RENAMED_REF_FILE GIT_REFS_DIR "RENAMED-REF"
+
 #define GIT_SYMREF "ref: "
 #define GIT_PACKEDREFS_FILE "packed-refs"
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled "
