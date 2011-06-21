@@ -90,10 +90,8 @@ int gitfo_read(git_file fd, void *buf, size_t cnt)
 				continue;
 			return git__throw(GIT_EOSERR, "Failed to read from file");
 		}
-		if (!r) {
-			errno = EPIPE;
-			return git__throw(GIT_EOSERR, "Failed to read from file");
-		}
+		if (!r)
+			break;
 		cnt -= r;
 		b += r;
 	}
