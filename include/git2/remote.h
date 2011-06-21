@@ -5,6 +5,14 @@
 #include "git2/repository.h"
 #include "git2/refspec.h"
 
+/*
+ * TODO: This functions still need to be implemented:
+ * - _listcb/_foreach
+ * - _add
+ * - _rename
+ * - _del (needs support from config)
+ */
+
 /**
  * Get the information for a particular remote
  *
