@@ -43,6 +43,25 @@ BEGIN_TEST(remotes0, "remote parsing works")
 	git_repository_free(repo);
 END_TEST
 
+BEGIN_TEST(refspec0, "remote with refspec works")
+	git_remote *remote;
+	git_repository *repo;
+	git_config *cfg;
+	const git_refspec *refspec = NULL;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(git_repository_config(&cfg, repo, NULL, NULL));
+	must_pass(git_remote_get(&remote, cfg, "test"));
+	refspec = git_remote_fetchspec(remote);
+	must_be_true(refspec != NULL);
+	must_be_true(!strcmp(git_refspec_src(refspec), "refs/heads/*"));
+	must_be_true(!strcmp(git_refspec_dst(refspec), "refs/remotes/test/*"));
+	git_remote_free(remote);
+	git_config_free(cfg);
+	git_repository_free(repo);
+END_TEST
+
 BEGIN_SUITE(remotes)
-	ADD_TEST(remotes0)
+	 ADD_TEST(remotes0)
+	 ADD_TEST(refspec0)
 END_SUITE
