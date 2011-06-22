@@ -27,10 +27,10 @@
 #include "fileops.h"
 #include "git2/status.h"
 
-#define STATUS_FOLDER TEST_RESOURCES "/status/"
+#define STATUS_FOLDER TEST_RESOURCES "/status"
 #define TEMP_STATUS_FOLDER TEMP_FOLDER "status"
 
-static const char *test_blob_oid = "9daeafb9864cf43055ae93beb0afd6c7d144bfa4";
+static const char *test_blob_oid = "d4fa8600b4f37d7516bef4816ae2c64dbf029e3a";
 
 BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
 	char current_workdir[GIT_PATH_MAX];
@@ -43,7 +43,7 @@ BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
 	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
 
 	must_pass(copydir_recurs(STATUS_FOLDER, path_statusfiles));
-	git_path_join(temp_path, path_statusfiles, "test.txt");
+	git_path_join(temp_path, path_statusfiles, "new_file");
 
 	must_pass(git_futils_exists(temp_path));
 
@@ -55,7 +55,96 @@ BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
 	git_futils_rmdir_r(TEMP_STATUS_FOLDER, 1);
 END_TEST
 
+static const char *entry_paths[] = {
+	"current_file",
+	"file_deleted",
+	"modified_file",
+	"new_file",
+	"staged_changes",
+	"staged_changes_file_deleted",
+	"staged_changes_modified_file",
+	"staged_delete_file_deleted",
+	"staged_delete_modified_file",
+	"staged_new_file",
+	"staged_new_file_deleted_file",
+	"staged_new_file_modified_file",
+};
+static const int entry_statuses[] = {
+	GIT_STATUS_CURRENT,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_WT_DELETED,
+	GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_INDEX_DELETED,
+	GIT_STATUS_INDEX_DELETED | GIT_STATUS_WT_NEW,
+	GIT_STATUS_INDEX_NEW,
+	GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_DELETED,
+	GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED,
+};
+#define ENTRY_COUNT 12
+
+static unsigned int get_expected_entry_status(const char *path)
+{
+	int i;
+
+	for (i = 0; i < ENTRY_COUNT; ++i)
+		if (!strcmp(path, entry_paths[i]))
+			return entry_statuses[i];
+
+	return (unsigned int)-1;
+}
+
+struct status_entry_counts {
+	int wrong_status_flags_count;
+	int entry_count;
+};
+
+static int status_cb(const char *path, unsigned int status_flags, void *payload)
+{
+	unsigned int expected_status_flags = get_expected_entry_status(path);
+	struct status_entry_counts *counts = (struct status_entry_counts *)payload;
+
+	counts->entry_count++;
+	if (status_flags != expected_status_flags)
+		counts->wrong_status_flags_count++;
+
+	return GIT_SUCCESS;
+}
+
+BEGIN_TEST(statuscb0, "test retrieving status for worktree of repository")
+	char current_workdir[GIT_PATH_MAX];
+	char path_statusfiles[GIT_PATH_MAX];
+	char temp_path[GIT_PATH_MAX];
+	char gitted[GIT_PATH_MAX];
+	git_repository *repo;
+	struct status_entry_counts counts;
+
+	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
+	strcpy(path_statusfiles, current_workdir);
+	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
+
+	must_pass(copydir_recurs(STATUS_FOLDER, path_statusfiles));
+
+	git_path_join(gitted, path_statusfiles, ".gitted");
+	git_path_join(temp_path, path_statusfiles, ".git");
+	copydir_recurs(gitted, temp_path);
+	git_futils_rmdir_r(gitted, 1);
+	must_pass(git_repository_open(&repo, temp_path));
+
+	memset(&counts, 0x0, sizeof(struct status_entry_counts));
+	git_status_foreach(repo, status_cb, &counts);
+	must_be_true(counts.entry_count == ENTRY_COUNT);
+	must_be_true(counts.wrong_status_flags_count == 0);
+
+	git_repository_free(repo);
+
+	git_futils_rmdir_r(TEMP_STATUS_FOLDER, 1);
+END_TEST
+
 BEGIN_SUITE(status)
 	ADD_TEST(file0);
+	ADD_TEST(statuscb0);
 END_SUITE
 

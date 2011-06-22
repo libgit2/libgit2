@@ -37,6 +37,20 @@
  */
 GIT_BEGIN_DECL
 
+#define GIT_STATUS_CURRENT        0
+/** Flags for index status */
+#define GIT_STATUS_INDEX_NEW      (1 << 0)
+#define GIT_STATUS_INDEX_MODIFIED (1 << 1)
+#define GIT_STATUS_INDEX_DELETED  (1 << 2)
+
+/** Flags for worktree status */
+#define GIT_STATUS_WT_NEW         (1 << 3)
+#define GIT_STATUS_WT_MODIFIED    (1 << 4)
+#define GIT_STATUS_WT_DELETED     (1 << 5)
+
+// TODO Ignored files not handled yet
+#define GIT_STATUS_IGNORED        (1 << 6)
+
 /**
  * Read a file from disk and fill a git_oid with the object id
  * that the file would have if it were written to the Object
@@ -48,6 +62,19 @@ GIT_BEGIN_DECL
  * @return GIT_SUCCESS if valid; error code otherwise
  */
 GIT_EXTERN(int) git_status_hashfile(git_oid *out, const char *path);
+
+/**
+ * Gather file statuses and run a callback for each one.
+ *
+ * The callback is passed the path of the file, the status and the data pointer
+ * passed to this function. If the callback returns something other than
+ * GIT_SUCCESS, this function will return that value.
+ *
+ * @param repo a repository object
+ * @param callback the function to call on each file
+ * @return GIT_SUCCESS or the return value of the callback which did not return 0;
+ */
+GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload);
 
 /** @} */
 GIT_END_DECL
