@@ -25,6 +25,7 @@
 
 #include "common.h"
 #include "refspec.h"
+#include "util.h"
 
 int git_refspec_parse(git_refspec *refspec, const char *str)
 {
@@ -63,4 +64,9 @@ const char *git_refspec_src(const git_refspec *refspec)
 const char *git_refspec_dst(const git_refspec *refspec)
 {
 	return refspec->dst;
+}
+
+int git_refspec_src_match(const git_refspec *refspec, const char *refname)
+{
+	return git__fnmatch(refspec->src, refname, 0);
 }
