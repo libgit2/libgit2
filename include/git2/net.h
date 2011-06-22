@@ -48,10 +48,17 @@ GIT_BEGIN_DECL
 #define GIT_DIR_FETCH 0
 #define GIT_DIR_PUSH 1
 
+enum git_whn {
+	GIT_WHN_NONE,
+	GIT_WHN_HAVE,
+	GIT_WHN_WANT,
+};
+
 /**
  * Remote head description, given out on `ls` calls.
  */
 struct git_remote_head {
+	enum git_whn type;
 	git_oid oid;
 	char *name;
 };
