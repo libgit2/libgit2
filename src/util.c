@@ -1,9 +1,16 @@
 #define GIT__NO_HIDE_MALLOC
 #include <git2.h>
 #include "common.h"
+#include "fnmatch.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
+
+#ifdef _MSV_VER
+# include <Shlwapi.h>
+#else
+# include <fnmatch.h>
+#endif
 
 void git_libgit2_version(int *major, int *minor, int *rev)
 {
@@ -19,6 +26,21 @@ void git_strarray_free(git_strarray *array)
 		free(array->strings[i]);
 
 	free(array->strings);
+}
+
+int git__fnmatch(const char *pattern, const char *name, int flags)
+{
+	int ret;
+
+	ret = fnmatch(pattern, name, flags);
+	switch (ret) {
+	case 0:
+		return GIT_SUCCESS;
+	case FNM_NOMATCH:
+		return GIT_ENOMATCH;
+	default:
+		return git__throw(GIT_EOSERR, "Error trying to match path");
+	}
 }
 
 int git__strtol32(long *result, const char *nptr, const char **endptr, int base)

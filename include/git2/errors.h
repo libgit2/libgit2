@@ -125,6 +125,9 @@ typedef enum {
 
 	/** Skip and passthrough the given ODB backend */
 	GIT_EPASSTHROUGH = -30,
+
+	/** The path pattern and string did not match */
+	GIT_ENOMATCH = -31,
 } git_error;
 
 /**
