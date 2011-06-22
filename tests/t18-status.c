@@ -22,65 +22,40 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-
-#include <string.h>
-#include <git2.h>
-
 #include "test_lib.h"
 #include "test_helpers.h"
+#include "fileops.h"
+#include "git2/status.h"
 
-DECLARE_SUITE(core);
-DECLARE_SUITE(rawobjects);
-DECLARE_SUITE(objread);
-DECLARE_SUITE(objwrite);
-DECLARE_SUITE(commit);
-DECLARE_SUITE(revwalk);
-DECLARE_SUITE(index);
-DECLARE_SUITE(hashtable);
-DECLARE_SUITE(tag);
-DECLARE_SUITE(tree);
-DECLARE_SUITE(refs);
-DECLARE_SUITE(repository);
-DECLARE_SUITE(threads);
-DECLARE_SUITE(config);
-DECLARE_SUITE(remotes);
-DECLARE_SUITE(buffers);
-DECLARE_SUITE(status);
+#define STATUS_FOLDER TEST_RESOURCES "/status/"
+#define TEMP_STATUS_FOLDER TEMP_FOLDER "status"
 
-static libgit2_suite suite_methods[]= {
-	SUITE_NAME(core),
-	SUITE_NAME(rawobjects),
-	SUITE_NAME(objread),
-	SUITE_NAME(objwrite),
-	SUITE_NAME(commit),
-	SUITE_NAME(revwalk),
-	SUITE_NAME(index),
-	SUITE_NAME(hashtable),
-	SUITE_NAME(tag),
-	SUITE_NAME(tree),
-	SUITE_NAME(refs),
-	SUITE_NAME(repository),
-	SUITE_NAME(threads),
-	SUITE_NAME(config),
-	SUITE_NAME(remotes),
-	SUITE_NAME(buffers),
-	SUITE_NAME(status),
-};
+static const char *test_blob_oid = "9daeafb9864cf43055ae93beb0afd6c7d144bfa4";
 
-#define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
+BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
+	char current_workdir[GIT_PATH_MAX];
+	char path_statusfiles[GIT_PATH_MAX];
+	char temp_path[GIT_PATH_MAX];
+	git_oid expected_id, actual_id;
 
-int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
-{
-	unsigned int i, failures;
+	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
+	strcpy(path_statusfiles, current_workdir);
+	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
 
-	GIT_UNUSED_ARG(argc);
-	GIT_UNUSED_ARG(argv);
+	must_pass(copydir_recurs(STATUS_FOLDER, path_statusfiles));
+	git_path_join(temp_path, path_statusfiles, "test.txt");
 
-	failures = 0;
+	must_pass(git_futils_exists(temp_path));
 
-	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		failures += git_testsuite_run(suite_methods[i]());
+	git_oid_fromstr(&expected_id, test_blob_oid);
+	must_pass(git_status_hashfile(&actual_id, temp_path));
 
-	return failures ? -1 : 0;
-}
+	must_be_true(git_oid_cmp(&expected_id, &actual_id) == 0);
+
+	git_futils_rmdir_r(TEMP_STATUS_FOLDER, 1);
+END_TEST
+
+BEGIN_SUITE(status)
+	ADD_TEST(file0);
+END_SUITE
 
