@@ -23,6 +23,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "git2/errors.h"
+
 #include "common.h"
 #include "refspec.h"
 #include "util.h"
@@ -69,4 +71,38 @@ const char *git_refspec_dst(const git_refspec *refspec)
 int git_refspec_src_match(const git_refspec *refspec, const char *refname)
 {
 	return git__fnmatch(refspec->src, refname, 0);
+}
+
+int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec,  const char *name)
+{
+	size_t baselen, namelen;
+
+	baselen = strlen(spec->dst);
+	if (outlen <= baselen)
+		return git__throw(GIT_EINVALIDREFNAME, "Reference name too long");
+
+	/*
+	 * No '*' at the end means that it's mapped to one specific local
+	 * branch, so no actual transformation is needed.
+	 */
+	if (spec->dst[baselen - 1] != '*') {
+		memcpy(out, spec->dst, baselen + 1); /* include '\0' */
+		return GIT_SUCCESS;
+	}
+
+	/* There's a '*' at the end, so remove its length */
+	baselen--;
+
+	/* skip the prefix, -1 is for the '*' */
+	name += strlen(spec->src) - 1;
+
+	namelen = strlen(name);
+
+	if (outlen <= baselen + namelen)
+		return git__throw(GIT_EINVALIDREFNAME, "Reference name too long");
+
+	memcpy(out, spec->dst, baselen);
+	memcpy(out + baselen, name, namelen + 1);
+
+	return GIT_SUCCESS;
 }
