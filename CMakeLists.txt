@@ -36,7 +36,7 @@ OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
-	SET(CMAKE_C_FLAGS "/TC /W4 /WX /nologo /Zi")
+	SET(CMAKE_C_FLAGS "/W4 /WX /nologo /Zi")
 	# TODO: bring back /RTC1 /RTCc
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
