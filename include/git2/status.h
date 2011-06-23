@@ -76,6 +76,16 @@ GIT_EXTERN(int) git_status_hashfile(git_oid *out, const char *path);
  */
 GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload);
 
+/**
+ * Get file status for a single file
+ *
+ * @param status_flags the status value
+ * @param repo a repository object
+ * @param path the file to retrieve status for, rooted at the repo's workdir
+ * @return GIT_SUCCESS
+ */
+GIT_EXTERN(int) git_status_file(unsigned int *status_flags, git_repository *repo, const char *path);
+
 /** @} */
 GIT_END_DECL
 #endif
