@@ -172,6 +172,35 @@ const git_refspec *git_remote_pushspec(struct git_remote *remote)
 	return &remote->push;
 }
 
+int git_remote_connect(git_remote *remote, git_net_direction dir)
+{
+	int error;
+	git_transport *t;
+
+	error = git_transport_new(&t, remote->url);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create transport");
+
+	error = git_transport_connect(t, dir);
+	if (error < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to connect the transport");
+		goto cleanup;
+	}
+
+	remote->transport = t;
+
+cleanup:
+	if (error < GIT_SUCCESS)
+		git_transport_free(t);
+
+	return error;
+}
+
+int git_remote_ls(git_remote *remote, git_headarray *refs)
+{
+	return git_transport_ls(remote->transport, refs);
+}
+
 void git_remote_free(git_remote *remote)
 {
 	free(remote->fetch.src);
@@ -180,5 +209,10 @@ void git_remote_free(git_remote *remote)
 	free(remote->push.dst);
 	free(remote->url);
 	free(remote->name);
+	if (remote->transport != NULL) {
+		if (remote->transport->connected)
+			git_transport_close(remote->transport);
+		git_transport_free(remote->transport);
+	}
 	free(remote);
 }

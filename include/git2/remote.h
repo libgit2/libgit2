@@ -57,6 +57,27 @@ GIT_EXTERN(const git_refspec *) git_remote_fetchspec(struct git_remote *remote);
 GIT_EXTERN(const git_refspec *) git_remote_fetchspec(struct git_remote *remote);
 
 /**
+ * Open a connection to a remote
+ *
+ * The transport is selected based on the URL
+ *
+ * @param remote the remote to connect to
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, git_net_direction dir);
+
+/**
+ * Get a list of refs at the remote
+ *
+ * The remote (or more exactly its transport) must be connected.
+ *
+ * @param refs where to store the refs
+ * @param remote the remote
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
+
+/**
  * Free the memory associated with a remote
  *
  * @param remote the remote to free
