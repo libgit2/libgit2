@@ -14,11 +14,12 @@
 #define GIT_SYMREF "ref: "
 #define GIT_PACKEDREFS_FILE "packed-refs"
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled "
-#define MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH 100
 
 #define GIT_HEAD_FILE "HEAD"
 #define GIT_MERGE_HEAD_FILE "MERGE_HEAD"
 #define GIT_REFS_HEADS_MASTER_FILE GIT_REFS_HEADS_DIR "master"
+
+#define GIT_REFNAME_MAX 1024
 
 struct git_reference {
 	git_repository *owner;
@@ -37,7 +38,7 @@ typedef struct {
 void git_repository__refcache_free(git_refcache *refs);
 int git_repository__refcache_init(git_refcache *refs);
 
-int git_reference__normalize_name(char *buffer_out, const char *name);
-int git_reference__normalize_name_oid(char *buffer_out, const char *name);
+int git_reference__normalize_name(char *buffer_out, size_t out_size, const char *name);
+int git_reference__normalize_name_oid(char *buffer_out, size_t out_size, const char *name);
 
 #endif

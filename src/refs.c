@@ -87,7 +87,7 @@ static int reference_available(git_repository *repo, const char *ref, const char
 
 /* name normalization */
 static int check_valid_ref_char(char ch);
-static int normalize_name(char *buffer_out, const char *name, int is_oid_ref);
+static int normalize_name(char *buffer_out, size_t out_size, const char *name, int is_oid_ref);
 
 /*****************************************
  * Internal methods - Constructor/destructor
@@ -112,7 +112,7 @@ static int reference_create(
 	const char *name,
 	git_rtype type)
 {
-	char normalized[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char normalized[GIT_REFNAME_MAX];
 	int error = GIT_SUCCESS, size;
 	git_reference *reference = NULL;
 
@@ -134,7 +134,7 @@ static int reference_create(
 	reference->owner = repo;
 	reference->type = type;
 
-	error = normalize_name(normalized, name, (type & GIT_REF_OID));
+	error = normalize_name(normalized, sizeof(normalized), name, (type & GIT_REF_OID));
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -458,7 +458,7 @@ static int packed_parse_oid(
 
 	int error = GIT_SUCCESS;
 	int refname_len;
-	char refname[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char refname[GIT_REFNAME_MAX];
 	git_oid id;
 
 	refname_begin = (buffer + GIT_OID_HEXSZ + 1);
@@ -926,7 +926,7 @@ cleanup:
 
 static int reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force)
 {
-	char normalized[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char normalized[GIT_REFNAME_MAX];
 	int error = GIT_SUCCESS, updated = 0;
 	git_reference *ref = NULL, *old_ref = NULL;
 
@@ -950,7 +950,7 @@ static int reference_create_symbolic(git_reference **ref_out, git_repository *re
 	}
 
 	/* The target can aither be the name of an object id reference or the name of another symbolic reference */
-	error = normalize_name(normalized, target, 0);
+	error = normalize_name(normalized, sizeof(normalized), target, 0);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -1092,13 +1092,13 @@ static int reference_rename(git_reference *ref, const char *new_name, int force)
 {
 	int error;
 	char *old_name;
-	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX], normalized_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX], normalized_name[GIT_REFNAME_MAX];
 	git_reference *looked_up_ref, *old_ref = NULL;
 
 	assert(ref);
 
 	/* Ensure the name is valid */
-	error = normalize_name(normalized_name, new_name, ref->type & GIT_REF_OID);
+	error = normalize_name(normalized_name, sizeof(normalized_name), new_name, ref->type & GIT_REF_OID);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to rename reference");
 
@@ -1216,13 +1216,13 @@ rename_loose_to_old_name:
 int git_reference_lookup(git_reference **ref_out, git_repository *repo, const char *name)
 {
 	int error;
-	char normalized_name[GIT_PATH_MAX];
+	char normalized_name[GIT_REFNAME_MAX];
 
 	assert(ref_out && repo && name);
 
 	*ref_out = NULL;
 
-	error = normalize_name(normalized_name, name, 0);
+	error = normalize_name(normalized_name, sizeof(normalized_name), name, 0);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to lookup reference");
 
@@ -1688,7 +1688,7 @@ static int check_valid_ref_char(char ch)
 	}
 }
 
-static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
+static int normalize_name(char *buffer_out, size_t out_size, const char *name, int is_oid_ref)
 {
 	const char *name_end, *buffer_out_start;
 	char *current;
@@ -1700,6 +1700,9 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 	current = (char *)name;
 	name_end = name + strlen(name);
 
+	/* Terminating null byte */
+	out_size--;
+
 	/* A refname can not be empty */
 	if (name_end == name)
 		return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name is empty");
@@ -1708,7 +1711,7 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 	if (*(name_end - 1) == '.' || *(name_end - 1) == '/')
 		return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name ends with dot or slash");
 
-	while (current < name_end) {
+	while (current < name_end && out_size) {
 		if (check_valid_ref_char(*current))
 			return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name contains invalid characters");
 
@@ -1734,7 +1737,11 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 			contains_a_slash = 1;
 
 		*buffer_out++ = *current++;
+		out_size--;
 	}
+
+	if (!out_size)
+		return git__throw(GIT_EINVALIDREFNAME, "Reference name is too long");
 
 	/* Object id refname have to contain at least one slash, except
 	 * for HEAD in a detached state or MERGE_HEAD if we're in the
@@ -1759,14 +1766,14 @@ static int normalize_name(char *buffer_out, const char *name, int is_oid_ref)
 	return GIT_SUCCESS;
 }
 
-int git_reference__normalize_name(char *buffer_out, const char *name)
+int git_reference__normalize_name(char *buffer_out, size_t out_size, const char *name)
 {
-	return normalize_name(buffer_out, name, 0);
+	return normalize_name(buffer_out, out_size, name, 0);
 }
 
-int git_reference__normalize_name_oid(char *buffer_out, const char *name)
+int git_reference__normalize_name_oid(char *buffer_out, size_t out_size, const char *name)
 {
-	return normalize_name(buffer_out, name, 1);
+	return normalize_name(buffer_out, out_size, name, 1);
 }
 
 

@@ -34,7 +34,7 @@ BEGIN_TEST(readtag0, "lookup a loose tag reference")
 	git_repository *repo;
 	git_reference *reference;
 	git_object *object;
-	char ref_name_from_tag_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char ref_name_from_tag_name[GIT_REFNAME_MAX];
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
@@ -718,12 +718,12 @@ END_TEST
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
 {
 	int error = GIT_SUCCESS;
-	char buffer_out[GIT_PATH_MAX];
+	char buffer_out[GIT_REFNAME_MAX];
 
 	if (is_oid_ref)
-		error = git_reference__normalize_name_oid(buffer_out, input_refname);
+		error = git_reference__normalize_name_oid(buffer_out, sizeof(buffer_out), input_refname);
 	else
-		error = git_reference__normalize_name(buffer_out, input_refname);
+		error = git_reference__normalize_name(buffer_out, sizeof(buffer_out), input_refname);
 
 	if (error < GIT_SUCCESS)
 		return error;
@@ -804,7 +804,7 @@ BEGIN_TEST(normalize2, "tests borrowed from JGit")
 /* NoAsciiControlCharacters */
 	{
 		char c;
-		char buffer[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+		char buffer[GIT_REFNAME_MAX];
 		for (c = '\1'; c < ' '; c++) {
 			strncpy(buffer, "refs/heads/mast", 15);
 			strncpy(buffer + 15, (const char *)&c, 1);

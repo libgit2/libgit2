@@ -237,7 +237,7 @@ static int tag_create(
 	char *tagger_str;
 	git_reference *new_ref;
 
-	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char ref_name[GIT_REFNAME_MAX];
 
 	int type_str_len, tag_name_len, tagger_str_len, message_len;
 	int error, should_update_ref = 0;
@@ -310,7 +310,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	git_odb_stream *stream;
 	
 	git_reference *new_ref;
-	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char ref_name[GIT_REFNAME_MAX];
 	
 	assert(oid && buffer);
 	
@@ -324,14 +324,12 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	if ((error = tag_valid_in_odb(&new_ref, ref_name, &tag.target, tag.type, repo, tag.tag_name)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
 	
-	if(new_ref != NULL) {
+	if (new_ref != NULL) {
 		git_oid_cpy(oid, git_reference_oid(new_ref));
 		return git__throw(GIT_EEXISTS, "Tag already exists");
 	}
 	
-	
 	/* write the buffer */
-	
 	if ((error = git_odb_open_wstream(&stream, repo->db, strlen(buffer), GIT_OBJ_TAG)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
 	
@@ -419,7 +417,7 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 {
 	int error;
 	git_reference *tag_ref;
-	char ref_name[MAX_GITDIR_TREE_STRUCTURE_PATH_LENGTH];
+	char ref_name[GIT_REFNAME_MAX];
 
 	error = retreive_tag_reference(&tag_ref, ref_name, repo, tag_name);
 	if (error < GIT_SUCCESS)
