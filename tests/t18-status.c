@@ -69,7 +69,7 @@ static const char *entry_paths[] = {
 	"staged_new_file_deleted_file",
 	"staged_new_file_modified_file",
 };
-static const int entry_statuses[] = {
+static const unsigned int entry_statuses[] = {
 	GIT_STATUS_CURRENT,
 	GIT_STATUS_WT_DELETED,
 	GIT_STATUS_WT_MODIFIED,
@@ -143,8 +143,40 @@ BEGIN_TEST(statuscb0, "test retrieving status for worktree of repository")
 	git_futils_rmdir_r(TEMP_STATUS_FOLDER, 1);
 END_TEST
 
+BEGIN_TEST(singlestatus0, "test retrieving status for single file")
+	char current_workdir[GIT_PATH_MAX];
+	char path_statusfiles[GIT_PATH_MAX];
+	char temp_path[GIT_PATH_MAX];
+	char gitted[GIT_PATH_MAX];
+	git_repository *repo;
+	unsigned int status_flags;
+	int i;
+
+	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
+	strcpy(path_statusfiles, current_workdir);
+	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
+
+	must_pass(copydir_recurs(STATUS_FOLDER, path_statusfiles));
+
+	git_path_join(gitted, path_statusfiles, ".gitted");
+	git_path_join(temp_path, path_statusfiles, ".git");
+	copydir_recurs(gitted, temp_path);
+	git_futils_rmdir_r(gitted, 1);
+	must_pass(git_repository_open(&repo, temp_path));
+
+	for (i = 0; i < ENTRY_COUNT; ++i) {
+		must_pass(git_status_file(&status_flags, repo, entry_paths[i]));
+		must_be_true(status_flags == entry_statuses[i]);
+	}
+
+	git_repository_free(repo);
+
+	git_futils_rmdir_r(TEMP_STATUS_FOLDER, 1);
+END_TEST
+
 BEGIN_SUITE(status)
 	ADD_TEST(file0);
 	ADD_TEST(statuscb0);
+	ADD_TEST(singlestatus0);
 END_SUITE
 

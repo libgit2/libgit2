@@ -117,7 +117,8 @@ static struct status_entry *new_status_entry(git_vector *entries, const char *pa
 {
 	struct status_entry *e = git__malloc(sizeof(struct status_entry));
 	memset(e, 0x0, sizeof(struct status_entry));
-	git_vector_insert(entries, e);
+	if (entries != NULL)
+		git_vector_insert(entries, e);
 	strcpy(e->path, path);
 	return e;
 }
@@ -187,6 +188,64 @@ static int dirent_cb(void *state, char *full_path)
 	return 0;
 }
 
+static int single_dirent_cb(void *state, char *full_path)
+{
+	struct status_entry *e = *(struct status_entry **)(state);
+	char *file_path = full_path + workdir_path_len;
+	struct stat filest;
+	git_oid oid;
+
+	if ((git_futils_isdir(full_path) == GIT_SUCCESS) && (!strcmp(".git", file_path)))
+		return 0;
+
+	if (git_futils_isdir(full_path) == GIT_SUCCESS)
+		return git_futils_direach(full_path, GIT_PATH_MAX, single_dirent_cb, state);
+
+	if (!strcmp(file_path, e->path)) {
+		if (p_stat(full_path, &filest) < 0)
+			return git__throw(GIT_EOSERR, "Failed to read file %s", full_path);
+
+		if (e->mtime.seconds == (git_time_t)filest.st_mtime) {
+			git_oid_cpy(&e->wt_oid, &e->index_oid);
+			return 1;
+		}
+
+		git_status_hashfile(&oid, full_path);
+		git_oid_cpy(&e->wt_oid, &oid);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int set_status_flags(struct status_entry *e)
+{
+	git_oid zero;
+	int head_zero, index_zero, wt_zero;
+
+	memset(&zero, 0x0, sizeof(git_oid));
+
+	head_zero = git_oid_cmp(&zero, &e->head_oid);
+	index_zero = git_oid_cmp(&zero, &e->index_oid);
+	wt_zero = git_oid_cmp(&zero, &e->wt_oid);
+
+	if (head_zero == 0 && index_zero != 0)
+		e->status_flags |= GIT_STATUS_INDEX_NEW;
+	else if (index_zero == 0 && head_zero != 0)
+		e->status_flags |= GIT_STATUS_INDEX_DELETED;
+	else if (git_oid_cmp(&e->head_oid, &e->index_oid) != 0)
+		e->status_flags |= GIT_STATUS_INDEX_MODIFIED;
+
+	if (index_zero == 0 && wt_zero != 0)
+		e->status_flags |= GIT_STATUS_WT_NEW;
+	else if (wt_zero == 0 && index_zero != 0)
+		e->status_flags |= GIT_STATUS_WT_DELETED;
+	else if (git_oid_cmp(&e->index_oid, &e->wt_oid) != 0)
+		e->status_flags |= GIT_STATUS_WT_MODIFIED;
+
+	return GIT_SUCCESS;
+}
+
 int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload)
 {
 	git_vector entries;
@@ -229,26 +288,9 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 
 	memset(&zero, 0x0, sizeof(git_oid));
 	for (i = 0; i < entries.length; ++i) {
-		int head_zero, index_zero, wt_zero;
 		e = (struct status_entry *)git_vector_get(&entries, i);
 
-		head_zero = git_oid_cmp(&zero, &e->head_oid);
-		index_zero = git_oid_cmp(&zero, &e->index_oid);
-		wt_zero = git_oid_cmp(&zero, &e->wt_oid);
-
-		if (head_zero == 0 && index_zero != 0)
-			e->status_flags |= GIT_STATUS_INDEX_NEW;
-		else if (index_zero == 0 && head_zero != 0)
-			e->status_flags |= GIT_STATUS_INDEX_DELETED;
-		else if (git_oid_cmp(&e->head_oid, &e->index_oid) != 0)
-			e->status_flags |= GIT_STATUS_INDEX_MODIFIED;
-
-		if (index_zero == 0 && wt_zero != 0)
-			e->status_flags |= GIT_STATUS_WT_NEW;
-		else if (wt_zero == 0 && index_zero != 0)
-			e->status_flags |= GIT_STATUS_WT_DELETED;
-		else if (git_oid_cmp(&e->index_oid, &e->wt_oid) != 0)
-			e->status_flags |= GIT_STATUS_WT_MODIFIED;
+		set_status_flags(e);
 	}
 
 
@@ -268,3 +310,54 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	return GIT_SUCCESS;
 }
 
+int git_status_file(unsigned int *status_flags, git_repository *repo, const char *path)
+{
+	struct status_entry *e;
+	git_index *index;
+	git_index_entry *index_entry;
+	char temp_path[GIT_PATH_MAX];
+	int idx;
+	git_tree *tree;
+	git_reference *head_ref, *resolved_head_ref;
+	git_commit *head_commit;
+	const git_tree_entry *tree_entry;
+
+	assert(status_flags);
+
+	e = new_status_entry(NULL, path);
+
+	// Find file in Index
+	git_repository_index(&index, repo);
+	idx = git_index_find(index, path);
+	if (idx >= 0) {
+		index_entry = git_index_get(index, idx);
+		git_oid_cpy(&e->index_oid, &index_entry->oid);
+		e->mtime = index_entry->mtime;
+	}
+
+	// Find file in HEAD
+	git_reference_lookup(&head_ref, repo, GIT_HEAD_FILE);
+	git_reference_resolve(&resolved_head_ref, head_ref);
+
+	git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref));
+
+	git_commit_tree(&tree, head_commit);
+	// TODO: handle subdirectories by walking into subtrees
+	tree_entry = git_tree_entry_byname(tree, path);
+	if (tree_entry != NULL) {
+		git_oid_cpy(&e->head_oid, &tree_entry->oid);
+	}
+	git_tree_close(tree);
+
+	// Find file in Workdir
+	workdir_path_len = strlen(repo->path_workdir);
+	strcpy(temp_path, repo->path_workdir);
+	git_futils_direach(temp_path, GIT_PATH_MAX, single_dirent_cb, &e);
+
+	set_status_flags(e);
+	*status_flags = e->status_flags;
+
+	free(e);
+
+	return GIT_SUCCESS;
+}
