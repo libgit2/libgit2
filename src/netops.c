@@ -38,6 +38,53 @@
 #include "common.h"
 #include "netops.h"
 
+void gitno_buffer_setup(gitno_buffer *buf, void*data,  unsigned int len, int fd)
+{
+	memset(buf, 0x0, sizeof(gitno_buffer));
+	memset(data, 0x0, len);
+	buf->data = data;
+	buf->len = len - 1;
+	buf->offset = 0;
+	buf->fd = fd;
+}
+
+int gitno_recv(gitno_buffer *buf)
+{
+	int ret;
+
+	ret = recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
+	if (ret < 0)
+		return git__throw(GIT_EOSERR, "Failed to receive data");
+	if (ret == 0) /* Orderly shutdown, so exit */
+		return GIT_SUCCESS;
+
+	buf->offset += ret;
+
+	return ret;
+}
+
+/* Consume up to ptr and move the rest of the buffer to the beginning */
+void gitno_consume(gitno_buffer *buf, void *ptr)
+{
+	int left;
+
+	assert(ptr - buf->data <= (int) buf->len);
+
+	left = buf->len - (ptr - buf->data);
+
+	memmove(buf->data, ptr, left);
+	memset(ptr, 0x0, left);
+	buf->offset = left;
+}
+
+/* Consume const bytes and move the rest of the buffer to the beginning */
+void gitno_consume_n(gitno_buffer *buf, unsigned int cons)
+{
+	memmove(buf->data, buf->data + cons, buf->len - buf->offset);
+	memset(buf->data + cons, 0x0, buf->len - buf->offset);
+	buf->offset -= cons;
+}
+
 int gitno_connect(const char *host, const char *port)
 {
 	struct addrinfo *info, *p;
