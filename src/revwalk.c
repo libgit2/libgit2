@@ -546,11 +546,14 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 	}
 
 	error = walk->get_next(&next, walk);
-	if (error < GIT_SUCCESS) {
-		if (error == GIT_EREVWALKOVER)
-			git_revwalk_reset(walk);
-		return git__rethrow(error, "Failed to load next revision");
+
+	if (error == GIT_EREVWALKOVER) {
+		git_revwalk_reset(walk);
+		return GIT_EREVWALKOVER;
 	}
+
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to load next revision");
 
 	git_oid_cpy(oid, &next->oid);
 	return GIT_SUCCESS;
