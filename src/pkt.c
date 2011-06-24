@@ -209,3 +209,29 @@ int git_pkt_send_flush(int s)
 
 	return gitno_send(s, flush, STRLEN(flush), 0);
 }
+
+/*
+ * All "want" packets have the same length and format, so what we do
+ * is overwrite the OID each time.
+ */
+#define WANT_PREFIX "0032want "
+
+int git_pkt_send_wants(git_headarray *refs)
+{
+	unsigned int i;
+	int ret = GIT_SUCCESS;
+	char buf[STRLEN(WANT_PREFIX) + GIT_OID_HEXSZ + 2];
+	git_remote_head *head;
+
+	memcpy(buf, WANT_PREFIX, STRLEN(WANT_PREFIX));
+	buf[sizeof(buf) - 2] = '\n';
+	buf[sizeof(buf) - 1] = '\0';
+
+	for (i = 0; i < refs->len; ++i) {
+		head = refs->heads[i];
+		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
+		printf("would send %s\n", buf);
+	}
+
+	return ret;
+}
