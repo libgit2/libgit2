@@ -175,30 +175,28 @@ static int do_connect(transport_git *t, const char *url)
  */
 static int store_refs(transport_git *t)
 {
+	gitno_buffer buf;
 	int s = t->socket;
 	git_vector *refs = &t->refs;
 	int error = GIT_SUCCESS;
 	char buffer[1024];
 	const char *line_end, *ptr;
-	int off = 0, ret;
-	unsigned int bufflen = 0;
 	git_pkt *pkt;
 
-	memset(buffer, 0x0, sizeof(buffer));
+	gitno_buffer_setup(&buf, buffer, sizeof(buffer), s);
 
 	while (1) {
-		ret = recv(s, buffer + off, sizeof(buffer) - off, 0);
-		if (ret < 0)
-			return git__throw(GIT_EOSERR, "Failed to receive data");
-		if (ret == 0) /* Orderly shutdown, so exit */
+		error = gitno_recv(&buf);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(GIT_EOSERR, "Failed to receive data");
+		if (error == GIT_SUCCESS) /* Orderly shutdown, so exit */
 			return GIT_SUCCESS;
 
-		bufflen += ret;
-		ptr = buffer;
+		ptr = buf.data;
 		while (1) {
-			if (bufflen == 0)
+			if (buf.offset == 0)
 				break;
-			error = git_pkt_parse_line(&pkt, ptr, &line_end, bufflen);
+			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
 			/*
 			 * If the error is GIT_ESHORTBUFFER, it means the buffer
 			 * isn't long enough to satisfy the request. Break out and
@@ -206,12 +204,14 @@ static int store_refs(transport_git *t)
 			 * On any other error, fail.
 			 */
 			if (error == GIT_ESHORTBUFFER) {
-				line_end = ptr;
 				break;
 			}
 			if (error < GIT_SUCCESS) {
 				return error;
 			}
+
+			/* Get rid of the part we've used already */
+			gitno_consume(&buf, line_end);
 
 			error = git_vector_insert(refs, pkt);
 			if (error < GIT_SUCCESS)
@@ -220,16 +220,7 @@ static int store_refs(transport_git *t)
 			if (pkt->type == GIT_PKT_FLUSH)
 				return GIT_SUCCESS;
 
-			bufflen -= line_end - ptr;
-			ptr = line_end;
 		}
-
-		/*
-		 * Move the rest to the start of the buffer
-		 */
-		memmove(buffer, line_end, bufflen);
-		off = bufflen;
-		memset(buffer + off, 0x0, sizeof(buffer) - off);
 	}
 
 	return error;

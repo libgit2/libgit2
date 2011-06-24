@@ -38,7 +38,7 @@
 #include "common.h"
 #include "netops.h"
 
-void gitno_buffer_setup(gitno_buffer *buf, void*data,  unsigned int len, int fd)
+void gitno_buffer_setup(gitno_buffer *buf, char *data,  unsigned int len, int fd)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
@@ -64,17 +64,17 @@ int gitno_recv(gitno_buffer *buf)
 }
 
 /* Consume up to ptr and move the rest of the buffer to the beginning */
-void gitno_consume(gitno_buffer *buf, void *ptr)
+void gitno_consume(gitno_buffer *buf, const char *ptr)
 {
-	int left;
+	int consumed;
 
 	assert(ptr - buf->data <= (int) buf->len);
 
-	left = buf->len - (ptr - buf->data);
+	consumed = ptr - buf->data;
 
-	memmove(buf->data, ptr, left);
-	memset(ptr, 0x0, left);
-	buf->offset = left;
+	memmove(buf->data, ptr, buf->offset - consumed);
+	memset(buf->data + buf->offset, 0x0, buf->len - buf->offset);
+	buf->offset -= consumed;
 }
 
 /* Consume const bytes and move the rest of the buffer to the beginning */

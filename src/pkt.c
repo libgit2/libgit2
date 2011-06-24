@@ -152,8 +152,9 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 		return GIT_ESHORTBUFFER;
 
 	error = parse_len(line);
-	if (error < GIT_SUCCESS)
+	if (error < GIT_SUCCESS) {
 		return git__throw(error, "Failed to parse pkt length");
+	}
 
 	len = error;
 
