@@ -26,6 +26,7 @@
 #include "git2/remote.h"
 #include "git2/oid.h"
 #include "git2/refs.h"
+#include "git2/revwalk.h"
 
 #include "common.h"
 #include "transport.h"
@@ -50,9 +51,10 @@ int git_fetch_list_want(git_headarray *whn_list, git_repository *repo, git_remot
 	git_headarray refs, lrefs;
 	git_transport *t = remote->transport;
 	const git_refspec *spec;
-	int error, i;
+	int error;
+	unsigned int i;
 
-	error = git_vector_init(&list, 16, whn_cmp);
+	error = git_vector_init(&list, whn_list->len, whn_cmp);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -99,11 +101,15 @@ int git_fetch_list_want(git_headarray *whn_list, git_repository *repo, git_remot
 		if (ref != NULL) {
 			if (!git_oid_cmp(&head->oid, git_reference_oid(ref)))
 				continue;
+
+			head->local = 1;
+			git_oid_cpy(&head->loid, git_reference_oid(ref));
 		}
 
 		/*
 		 * Now we know we want to have that ref, so add it as a "want"
-		 * to the list.
+		 * to the list, storing the local oid for that branch so we
+		 * don't have to look for it again.
 		 */
 		head->type = GIT_WHN_WANT;
 		error = git_vector_insert(&list, head);
@@ -120,4 +126,68 @@ int git_fetch_list_want(git_headarray *whn_list, git_repository *repo, git_remot
 cleanup:
 	git_vector_free(&list);
 	return error;
+}
+
+/* Push any (OID) ref it gets into the walker */
+static int push_stuff(const char *name, void *data)
+{
+	git_revwalk *walk = (git_revwalk *) data;
+	git_reference *ref;
+	git_repository *repo;
+	int error;
+
+	repo = git_revwalk_repository(walk);
+	error = git_reference_lookup(&ref, repo, name);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	return git_revwalk_push(walk, git_reference_oid(ref));
+}
+
+/*
+ * In this first version, we push all our refs in and start sending
+ * them out. When we get an ACK we hide that commit and continue
+ * traversing until we're done
+ */
+int git_fetch_negotiate(git_headarray *list, git_repository *repo, git_remote *remote)
+{
+	git_revwalk *walk;
+	int error;
+	unsigned int i;
+	char local[1024];
+	git_refspec *spec;
+
+	error = git_revwalk_new(&walk, repo);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create walker");
+
+	for (i = 0; i < list->len; ++i) {
+		git_reference *ref;
+		git_remote_head *head = list->heads[i];
+
+		if (!head->local)
+			continue;
+
+		error = git_revwalk_push(walk, &head->loid);
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to push a local OID");
+			goto cleanup;
+		}
+	}
+
+	/*
+	 * Now we have everything set up so we can start tell the server
+	 * what we want and what we have.
+	 */
+	git_pkt_send_wants(list);
+
+
+cleanup:
+	git_revwalk_free(walk);
+	return error;
+}
+
+int git_fetch_download_pack(git_remote *remote)
+{
+	return GIT_ENOTIMPLEMENTED;
 }

@@ -59,7 +59,9 @@ enum git_whn {
  */
 struct git_remote_head {
 	enum git_whn type;
+	int local; /** Exists locally */
 	git_oid oid;
+	git_oid loid;
 	char *name;
 };
 
