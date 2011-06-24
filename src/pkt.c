@@ -216,7 +216,7 @@ int git_pkt_send_flush(int s)
  */
 #define WANT_PREFIX "0032want "
 
-int git_pkt_send_wants(git_headarray *refs)
+int git_pkt_send_wants(git_headarray *refs, int fd)
 {
 	unsigned int i;
 	int ret = GIT_SUCCESS;
