@@ -152,6 +152,35 @@ static void recurse_tree_entries(git_tree *tree, git_vector *entries, char *path
 	git_tree_close(tree);
 }
 
+static void recurse_tree_entry(git_tree *tree, struct status_entry *e, const char *path)
+{
+	char *dir_sep;
+	char buffer[GIT_PATH_MAX];
+	const git_tree_entry *tree_entry;
+	git_tree *subtree;
+
+	strcpy(buffer, path);
+
+	dir_sep = strchr(buffer, '/');
+	if (dir_sep) {
+		*dir_sep = '\0';
+
+		tree_entry = git_tree_entry_byname(tree, buffer);
+		if (tree_entry != NULL) {
+			if (git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid) == GIT_SUCCESS) {
+				recurse_tree_entry(subtree, e, dir_sep+1);
+				return;
+			}
+		}
+	}
+
+	tree_entry = git_tree_entry_byname(tree, path);
+	if (tree_entry != NULL) {
+		git_oid_cpy(&e->head_oid, &tree_entry->oid);
+	}
+	git_tree_close(tree);
+}
+
 static int workdir_path_len;
 static int dirent_cb(void *state, char *full_path)
 {
@@ -320,7 +349,6 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	git_tree *tree;
 	git_reference *head_ref, *resolved_head_ref;
 	git_commit *head_commit;
-	const git_tree_entry *tree_entry;
 
 	assert(status_flags);
 
@@ -342,12 +370,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref));
 
 	git_commit_tree(&tree, head_commit);
-	// TODO: handle subdirectories by walking into subtrees
-	tree_entry = git_tree_entry_byname(tree, path);
-	if (tree_entry != NULL) {
-		git_oid_cpy(&e->head_oid, &tree_entry->oid);
-	}
-	git_tree_close(tree);
+	recurse_tree_entry(tree, e, path);
 
 	// Find file in Workdir
 	workdir_path_len = strlen(repo->path_workdir);

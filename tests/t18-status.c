@@ -68,6 +68,11 @@ static const char *entry_paths[] = {
 	"staged_new_file",
 	"staged_new_file_deleted_file",
 	"staged_new_file_modified_file",
+
+	"subdir/current_file",
+	"subdir/deleted_file",
+	"subdir/modified_file",
+	"subdir/new_file",
 };
 static const unsigned int entry_statuses[] = {
 	GIT_STATUS_CURRENT,
@@ -82,8 +87,13 @@ static const unsigned int entry_statuses[] = {
 	GIT_STATUS_INDEX_NEW,
 	GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_DELETED,
 	GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED,
+
+	GIT_STATUS_CURRENT,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
 };
-#define ENTRY_COUNT 12
+#define ENTRY_COUNT 16
 
 static unsigned int get_expected_entry_status(const char *path)
 {
