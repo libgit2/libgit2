@@ -27,7 +27,7 @@ struct git_remote_head {
 
 struct git_headarray {
 	unsigned int len;
-	struct git_remote_head *heads;
+	struct git_remote_head **heads;
 };
 
 #endif

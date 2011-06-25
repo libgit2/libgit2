@@ -58,4 +58,7 @@
 #include "git2/remote.h"
 #include "git2/refspec.h"
 
+#include "git2/net.h"
+#include "git2/transport.h"
+
 #endif

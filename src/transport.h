@@ -43,6 +43,7 @@ struct git_transport {
 	 * Whether we want to push or fetch
 	 */
 	git_net_direction direction;
+	int connected : 1;
 	/**
 	 * Connect and store the remote heads
 	 */
@@ -71,6 +72,10 @@ struct git_transport {
 	 * Close the connection
 	 */
 	int (*close)(struct git_transport *transport);
+	/**
+	 * Free the associated resources
+	 */
+	void (*free)(struct git_transport *transport);
 };
 
 int git_transport_local(struct git_transport *transport);

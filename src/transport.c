@@ -61,6 +61,8 @@ int git_transport_new(git_transport **out, git_repository *repo, const char *url
 	if (transport == NULL)
 		return GIT_ENOMEM;
 
+	memset(transport, 0x0, sizeof(git_transport));
+
 	transport->url = git__strdup(url);
 	if (transport->url == NULL)
 		return GIT_ENOMEM;
@@ -74,4 +76,24 @@ int git_transport_new(git_transport **out, git_repository *repo, const char *url
 	*out = transport;
 
 	return GIT_SUCCESS;
+}
+
+int git_transport_connect(git_transport *transport, git_net_direction dir)
+{
+	return transport->connect(transport, dir);
+}
+
+int git_transport_ls(git_transport *transport, git_headarray *array)
+{
+	return transport->ls(transport, array);
+}
+
+int git_transport_close(git_transport *transport)
+{
+	return transport->close(transport);
+}
+
+void git_transport_free(git_transport *transport)
+{
+	transport->free(transport);
 }

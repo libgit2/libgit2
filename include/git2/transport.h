@@ -43,12 +43,14 @@ GIT_BEGIN_DECL
  * @param tranport the transport for the url
  * @param url the url of the repo
  */
-GIT_EXTERN(int) git_transport_get(git_transport *transport, const char *url);
+GIT_EXTERN(int) git_transport_new(git_transport **transport, git_repository *repo, const char *url);
 
 GIT_EXTERN(int) git_transport_connect(git_transport *transport, git_net_direction direction);
-/*
-GIT_EXTERN(const git_vector *) git_transport_get_refs(git_transport *transport);
-*/
+
+GIT_EXTERN(int) git_transport_ls(git_transport *transport, git_headarray *array);
+GIT_EXTERN(int) git_transport_close(git_transport *transport);
+GIT_EXTERN(void) git_transport_free(git_transport *transport);
+
 GIT_EXTERN(int) git_transport_add(git_transport *transport, const char *prefix);
 
 /** @} */
