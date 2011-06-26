@@ -40,6 +40,10 @@ IF (MSVC)
 	# TODO: bring back /RTC1 /RTCc
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
+ELSE ()
+	SET(CMAKE_C_FLAGS "-Wall -Wextra -fPIC")
+	SET(CMAKE_C_FLAGS_DEBUG "-g -O0")
+	SET(CMAKE_C_FLAGS_RELEASE "-O2")
 ENDIF()
 
 # Build Debug by default
