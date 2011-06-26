@@ -106,7 +106,7 @@ out:
 	return error;
 }
 
-static unsigned int parse_len(const char *line)
+static ssize_t parse_len(const char *line)
 {
 	char num[PKT_LEN_SIZE + 1];
 	int i, error;
@@ -142,10 +142,10 @@ static unsigned int parse_len(const char *line)
  * in ASCII hexadecimal (including itself)
  */
 
-int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, unsigned int bufflen)
+int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t bufflen)
 {
 	int error = GIT_SUCCESS;
-	unsigned int len;
+	size_t len;
 
 	/* Not even enough for the length */
 	if (bufflen > 0 && bufflen < PKT_LEN_SIZE)

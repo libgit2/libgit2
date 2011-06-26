@@ -56,5 +56,5 @@ struct git_pkt_ref {
  */
 int git_pkt_gen_proto(char **out, int *outlen, const char *cmd, const char *url);
 int git_pkt_send_request(int socket, const char *cmd, const char *url);
-int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, unsigned int len);
+int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 void git_pkt_free(git_pkt *pkt);
