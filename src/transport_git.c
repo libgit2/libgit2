@@ -247,6 +247,7 @@ static int git_connect(git_transport *transport, git_net_direction direction)
 	if (error < GIT_SUCCESS)
 		return error;
 
+	t->parent.connected = 1;
 	error = store_refs(t);
 
 cleanup:
@@ -321,6 +322,8 @@ int git_transport_git(git_transport **out)
 	t = git__malloc(sizeof(transport_git));
 	if (t == NULL)
 		return GIT_ENOMEM;
+
+	memset(t, 0x0, sizeof(transport_git));
 
 	t->parent.connect = git_connect;
 	t->parent.ls = git_ls;
