@@ -172,7 +172,7 @@ const git_refspec *git_remote_pushspec(struct git_remote *remote)
 	return &remote->push;
 }
 
-int git_remote_connect(git_remote *remote, git_net_direction dir)
+int git_remote_connect(git_remote *remote, int direction)
 {
 	int error;
 	git_transport *t;
@@ -181,7 +181,7 @@ int git_remote_connect(git_remote *remote, git_net_direction dir)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create transport");
 
-	error = git_transport_connect(t, dir);
+	error = git_transport_connect(t, direction);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to connect the transport");
 		goto cleanup;

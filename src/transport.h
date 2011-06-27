@@ -32,22 +32,14 @@ struct git_transport {
 	 */
 	char *url;
 	/**
-	 * Where each transport stores its private/instance data
-	 */
-	void *private;
-	/**
-	 * The repo we want to act on
-	 */
-	git_repository *repo;
-	/**
 	 * Whether we want to push or fetch
 	 */
-	git_net_direction direction;
+	int direction : 1; /* 0 fetch, 1 push */
 	int connected : 1;
 	/**
 	 * Connect and store the remote heads
 	 */
-	int (*connect)(struct git_transport *transport, git_net_direction intent);
+	int (*connect)(struct git_transport *transport, int dir);
 	/**
 	 * Give a list of references, useful for ls-remote
 	 */

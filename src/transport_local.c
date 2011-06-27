@@ -26,7 +26,7 @@ static int cmp_refs(const void *a, const void *b)
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calulating the heads ourselves.
  */
-static int local_connect(git_transport *transport, git_net_direction GIT_UNUSED(dir))
+static int local_connect(git_transport *transport, int GIT_UNUSED(direction))
 {
 	git_repository *repo;
 	int error;

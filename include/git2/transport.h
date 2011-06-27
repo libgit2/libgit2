@@ -45,7 +45,7 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
 
-GIT_EXTERN(int) git_transport_connect(git_transport *transport, git_net_direction direction);
+GIT_EXTERN(int) git_transport_connect(git_transport *transport, int direction);
 
 GIT_EXTERN(int) git_transport_ls(git_transport *transport, git_headarray *array);
 GIT_EXTERN(int) git_transport_close(git_transport *transport);

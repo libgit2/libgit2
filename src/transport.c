@@ -70,9 +70,9 @@ int git_transport_new(git_transport **out, const char *url)
 	return GIT_SUCCESS;
 }
 
-int git_transport_connect(git_transport *transport, git_net_direction dir)
+int git_transport_connect(git_transport *transport, int direction)
 {
-	return transport->connect(transport, dir);
+	return transport->connect(transport, direction);
 }
 
 int git_transport_ls(git_transport *transport, git_headarray *array)

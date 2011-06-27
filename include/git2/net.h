@@ -13,10 +13,8 @@
  * gets called.
  */
 
-enum git_net_direction {
-	INTENT_PUSH,
-	INTENT_PULL
-};
+#define GIT_DIR_FETCH 0
+#define GIT_DIR_PUSH 1
 
 /*
  * This is what we give out on ->ls()

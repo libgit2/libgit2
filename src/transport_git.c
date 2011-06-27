@@ -230,14 +230,15 @@ static int store_refs(transport_git *t)
  * Since this is a network connection, we need to parse and store the
  * pkt-lines at this stage and keep them there.
  */
-static int git_connect(git_transport *transport, git_net_direction direction)
+static int git_connect(git_transport *transport, int direction)
 {
 	transport_git *t = (transport_git *) transport;
 	int error = GIT_SUCCESS;
 
-	if (direction == INTENT_PUSH)
+	if (direction == GIT_DIR_PUSH)
 		return git__throw(GIT_EINVALIDARGS, "Pushing is not supported with the git protocol");
 
+	t->parent.direction = direction;
 	error = git_vector_init(&t->refs, 16, NULL);
 	if (error < GIT_SUCCESS)
 		goto cleanup;

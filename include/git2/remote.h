@@ -64,7 +64,7 @@ GIT_EXTERN(const git_refspec *) git_remote_fetchspec(struct git_remote *remote);
  * @param remote the remote to connect to
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, git_net_direction dir);
+GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, int direction);
 
 /**
  * Get a list of refs at the remote
