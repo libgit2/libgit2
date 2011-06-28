@@ -254,7 +254,15 @@ GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value
 GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const char *value);
 
 /**
- * Perform an operation on each config variable
+ * Delete a config variable
+ *
+ * @param cfg the configuration
+ * @param name the variable to delete
+ */
+GIT_EXTERN(int) git_config_del(git_config *cfg, const char *name);
+
+/**
+ * Perform an operation on each config variable.
  *
  * The callback receives the normalized name and value of each variable
  * in the config backend, and the data pointer passed to this function.
