@@ -241,6 +241,78 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 		123456,
 		-60);
 
+	/* Parse a signature without an author field */
+	TEST_SIGNATURE_PASS(
+		"committer <tanoku@gmail.com> 123456 -0100 \n",
+		"committer ",
+		"",
+		"tanoku@gmail.com",
+		123456,
+		-60);
+
+	/* Parse a signature without an author field */
+	TEST_SIGNATURE_PASS(
+		"committer  <tanoku@gmail.com> 123456 -0100 \n",
+		"committer ",
+		"",
+		"tanoku@gmail.com",
+		123456,
+		-60);
+
+	/* Parse a signature with an empty author field */
+	TEST_SIGNATURE_PASS(
+		"committer   <tanoku@gmail.com> 123456 -0100 \n",
+		"committer ",
+		" ",
+		"tanoku@gmail.com",
+		123456,
+		-60);
+
+	/* Parse a signature with an empty email field */
+	TEST_SIGNATURE_PASS(
+		"committer Vicent Marti <> 123456 -0100 \n",
+		"committer ",
+		"Vicent Marti",
+		"",
+		123456,
+		-60);
+
+	/* Parse a signature with an empty email field */
+	TEST_SIGNATURE_PASS(
+		"committer Vicent Marti < > 123456 -0100 \n",
+		"committer ",
+		"Vicent Marti",
+		" ",
+		123456,
+		-60);
+
+	/* Parse a signature with empty name and email */
+	TEST_SIGNATURE_PASS(
+		"committer <> 123456 -0100 \n",
+		"committer ",
+		"",
+		"",
+		123456,
+		-60);
+
+	/* Parse a signature with empty name and email */
+	TEST_SIGNATURE_PASS(
+		"committer  < > 123456 -0100 \n",
+		"committer ",
+		"",
+		" ",
+		123456,
+		-60);
+
+	/* Parse an obviously invalid signature */
+	TEST_SIGNATURE_PASS(
+		"committer foo<@bar> 123456 -0100 \n",
+		"committer ",
+		"fo",
+		"@bar",
+		123456,
+		-60);
+
 	TEST_SIGNATURE_FAIL(
 		"committer Vicent Marti <tanoku@gmail.com> 123456 -1500 \n",
 		"committer ");
