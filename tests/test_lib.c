@@ -15,8 +15,7 @@ struct git_test {
 	char *message;
 	char *failed_pos;
 	char *description;
-
-	int ret_value;
+	char *error_message;
 
 	git_testfunc function;
 	unsigned failed:1, ran:1;
@@ -36,6 +35,7 @@ static void test_free(git_test *t)
 		free(t->description);
 		free(t->failed_pos);
 		free(t->message);
+		free(t->error_message);
 		free(t);
 	}
 }
@@ -57,15 +57,8 @@ static git_test *create_test(git_testfunc function)
 {
 	git_test *t = DO_ALLOC(git_test);
 
-	t->name = NULL;
-	t->failed = 0;
-	t->ran = 0;
-	t->description = NULL;
-	t->message = NULL;
-	t->ret_value = 0;
-	t->failed_pos = NULL;
+	memset(t, 0x0, sizeof(git_test));
 	t->function = function;
-	t->jump = NULL;
 
 	return t;
 }
@@ -81,7 +74,7 @@ void git_test__init(git_test *t, const char *name, const char *description)
  * Public assert methods
  *-------------------------------------------------------------------------*/
 
-static void fail_test(git_test *tc, const char *file, int line, const char *message, int ret_value)
+static void fail_test(git_test *tc, const char *file, int line, const char *message)
 {
 	char buf[1024];
 
@@ -89,8 +82,8 @@ static void fail_test(git_test *tc, const char *file, int line, const char *mess
 
 	tc->failed = 1;
 	tc->message = strdup(message);
-	tc->ret_value = ret_value;
 	tc->failed_pos = strdup(buf);
+	tc->error_message = strdup(git_lasterror());
 
 	if (tc->jump != 0)
 		longjmp(*(tc->jump), 0);
@@ -98,19 +91,19 @@ static void fail_test(git_test *tc, const char *file, int line, const char *mess
 
 void git_test__fail(git_test *tc, const char *file, int line, const char *message)
 {
-	fail_test(tc, file, line, message, 0);
+	fail_test(tc, file, line, message);
 }
 
 void git_test__assert(git_test *tc, const char *file, int line, const char *message, int condition)
 {
 	if (condition == 0)
-		fail_test(tc, file, line, message, 0);
+		fail_test(tc, file, line, message);
 }
 
 void git_test__assert_pass(git_test *tc, const char *file, int line, const char *message, int ret_value)
 {
 	if (ret_value < 0)
-		fail_test(tc, file, line, message, ret_value);
+		fail_test(tc, file, line, message);
 }
 
 /*-------------------------------------------------------------------------*
@@ -167,8 +160,8 @@ static void print_details(git_testsuite *ts)
 				failCount++;
 				printf("  %d) \"%s\" [test %s @ %s]\n\t%s\n",
 					failCount, tc->description, tc->name, tc->failed_pos, tc->message);
-				if (tc->ret_value)
-					printf("\tError: (%d) %s\n", tc->ret_value, git_lasterror());
+				if (tc->error_message)
+					printf("\tError: %s\n", tc->error_message);
 			}
 		}
 	}
