@@ -80,8 +80,6 @@ static int packed_sort(const void *a, const void *b);
 static int packed_write(git_repository *repo);
 
 /* internal helpers */
-static int reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force);
-static int reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force);
 static int reference_rename(git_reference *ref, const char *new_name, int force);
 static int reference_available(git_repository *repo, const char *ref, const char *old_ref);
 
