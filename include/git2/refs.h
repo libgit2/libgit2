@@ -60,34 +60,17 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_reposito
  * This reference is owned by the repository and shall not
  * be free'd by the user.
  *
- * @param ref_out Pointer to the newly created reference
- * @param repo Repository where that reference will live
- * @param name The name of the reference
- * @param target The target of the reference
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
-
-/**
- * Create a new symbolic reference, overwriting an existing one with
- * the same name, if it exists.
- *
- * If the new reference isn't a symbolic one, any pointers to the old
- * reference become invalid.
- *
- * The reference will be created in the repository and written
- * to the disk.
- *
- * This reference is owned by the repository and shall not
- * be free'd by the user.
+ * If `force` is true and there already exists a reference
+ * with the same name, it will be overwritten.
  *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
  * @param target The target of the reference
+ * @param force Overwrite existing references
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_reference_create_symbolic_f(git_reference **ref_out, git_repository *repo, const char *name, const char *target);
+GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force);
 
 /**
  * Create a new object id reference.
@@ -98,34 +81,17 @@ GIT_EXTERN(int) git_reference_create_symbolic_f(git_reference **ref_out, git_rep
  * This reference is owned by the repository and shall not
  * be free'd by the user.
  *
- * @param ref_out Pointer to the newly created reference
- * @param repo Repository where that reference will live
- * @param name The name of the reference
- * @param id The object id pointed to by the reference.
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
-
-/**
- * Create a new object id reference, overwriting an existing one with
- * the same name, if it exists.
- *
- * If the new reference isn't an object id one, any pointers to the
- * old reference become invalid.
- *
- * The reference will be created in the repository and written
- * to the disk.
- *
- * This reference is owned by the repository and shall not
- * be free'd by the user.
+ * If `force` is true and there already exists a reference
+ * with the same name, it will be overwritten.
  *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
  * @param id The object id pointed to by the reference.
+ * @param force Overwrite existing references
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_reference_create_oid_f(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id);
+GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force);
 
 /**
  * Get the OID pointed to by a reference.

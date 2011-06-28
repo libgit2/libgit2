@@ -74,7 +74,6 @@ const git_oid *git_commit_id(git_commit *c)
 	return git_object_id((git_object *)c);
 }
 
-
 int git_commit_create_v(
 		git_oid *oid,
 		git_repository *repo,
@@ -82,87 +81,26 @@ int git_commit_create_v(
 		const git_signature *author,
 		const git_signature *committer,
 		const char *message,
-		const git_oid *tree_oid,
-		int parent_count,
-		...)
-{
-	va_list ap;
-	int i, error;
-	const git_oid **oids;
-
-	oids = git__malloc(parent_count * sizeof(git_oid *));
-
-	va_start(ap, parent_count);
-	for (i = 0; i < parent_count; ++i)
-		oids[i] = va_arg(ap, const git_oid *);
-	va_end(ap);
-
-	error = git_commit_create(
-		oid, repo, update_ref, author, committer, message,
-		tree_oid, parent_count, oids);
-
-	free((void *)oids);
-
-	return error;
-}
-
-int git_commit_create_ov(
-		git_oid *oid,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message,
 		const git_tree *tree,
 		int parent_count,
 		...)
 {
 	va_list ap;
 	int i, error;
-	const git_oid **oids;
+	const git_commit **parents;
 
-	oids = git__malloc(parent_count * sizeof(git_oid *));
+	parents = git__malloc(parent_count * sizeof(git_commit *));
 
 	va_start(ap, parent_count);
 	for (i = 0; i < parent_count; ++i)
-		oids[i] = git_object_id(va_arg(ap, const git_object *));
+		parents[i] = va_arg(ap, const git_commit *);
 	va_end(ap);
 
 	error = git_commit_create(
 		oid, repo, update_ref, author, committer, message,
-		git_object_id((git_object *)tree),
-		parent_count, oids);
+		tree, parent_count, parents);
 
-	free((void *)oids);
-
-	return error;
-}
-
-int git_commit_create_o(
-		git_oid *oid,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message,
-		const git_tree *tree,
-		int parent_count,
-		const git_commit *parents[])
-{
-	int i, error;
-	const git_oid **oids;
-
-	oids = git__malloc(parent_count * sizeof(git_oid *));
-
-	for (i = 0; i < parent_count; ++i)
-		oids[i] = git_object_id((git_object *)parents[i]);
-
-	error = git_commit_create(
-		oid, repo, update_ref, author, committer, message,
-		git_object_id((git_object *)tree),
-		parent_count, oids);
-	
-	free((void *)oids);
+	free((void *)parents);
 
 	return error;
 }
@@ -174,9 +112,9 @@ int git_commit_create(
 		const git_signature *author,
 		const git_signature *committer,
 		const char *message,
-		const git_oid *tree_oid,
+		const git_tree *tree,
 		int parent_count,
-		const git_oid *parents[])
+		const git_commit *parents[])
 {
 	size_t final_size = 0;
 	int message_length, author_length, committer_length;
@@ -202,17 +140,23 @@ int git_commit_create(
 	if ((error = git_odb_open_wstream(&stream, repo->db, final_size, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create commit");
 
-	git__write_oid(stream, "tree", tree_oid);
+	if (git_object_owner((const git_object *)tree) != repo)
+		return git__throw(GIT_EINVALIDARGS, "The given tree does not belong to this repository");
 
-	for (i = 0; i < parent_count; ++i)
-		git__write_oid(stream, "parent", parents[i]);
+	git__write_oid(stream, "tree", git_object_id((const git_object *)tree));
+
+	for (i = 0; i < parent_count; ++i) {
+		if (git_object_owner((const git_object *)parents[i]) != repo)
+			return git__throw(GIT_EINVALIDARGS, "The given parent does not belong to this repository");
+
+		git__write_oid(stream, "parent", git_object_id((const git_object *)parents[i]));
+	}
 
 	stream->write(stream, author_str, author_length);
 	free(author_str);
 
 	stream->write(stream, committer_str, committer_length);
 	free(committer_str);
-
 
 	stream->write(stream, "\n", 1);
 	stream->write(stream, message, message_length);
@@ -238,7 +182,7 @@ int git_commit_create(
 		 * point to) or after an orphan checkout, so if the target
 		 * branch doesn't exist yet, create it and return.
 		 */
-			return git_reference_create_oid_f(&head, repo, git_reference_target(head), oid);
+			return git_reference_create_oid(&head, repo, git_reference_target(head), oid, 1);
 		}
 
 		error = git_reference_set_oid(head, oid);

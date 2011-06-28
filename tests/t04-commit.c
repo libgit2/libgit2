@@ -415,19 +415,21 @@ This is a commit created in memory and it will be written back to disk\n"
 
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 
-
 BEGIN_TEST(write0, "write a new commit object from memory to disk")
 	git_repository *repo;
 	git_commit *commit;
 	git_oid tree_id, parent_id, commit_id;
 	const git_signature *author, *committer;
-	/* char hex_oid[41]; */
+	git_commit *parent;
+	git_tree *tree;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-
 	git_oid_fromstr(&tree_id, tree_oid);
+	must_pass(git_tree_lookup(&tree, repo, &tree_id));
+
 	git_oid_fromstr(&parent_id, commit_ids[4]);
+	must_pass(git_commit_lookup(&parent, repo, &parent_id));
 
 	/* create signatures */
 	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
@@ -443,8 +445,11 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 		author,
 		committer,
 		COMMIT_MESSAGE,
-		&tree_id,
-		1, &parent_id));
+		tree,
+		1, parent));
+
+	git_object_close((git_object *)parent);
+	git_object_close((git_object *)tree);
 
 	git_signature_free((git_signature *)committer);
 	git_signature_free((git_signature *)author);
@@ -486,10 +491,12 @@ BEGIN_TEST(root0, "create a root commit")
 	const char *branch_name = "refs/heads/root-commit-branch";
 	git_reference *head, *branch;
 	char *head_old;
+	git_tree *tree;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_fromstr(&tree_id, tree_oid);
+	must_pass(git_tree_lookup(&tree, repo, &tree_id));
 
 	/* create signatures */
 	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
@@ -513,9 +520,10 @@ BEGIN_TEST(root0, "create a root commit")
 		author,
 		committer,
 		ROOT_COMMIT_MESSAGE,
-		&tree_id,
+		tree,
 		0));
 
+	git_object_close((git_object *)tree);
 	git_signature_free((git_signature *)committer);
 	git_signature_free((git_signature *)author);
 

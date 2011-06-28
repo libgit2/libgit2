@@ -626,7 +626,7 @@ static int repo_init_reinit(repo_init *results)
 static int repo_init_createhead(git_repository *repo)
 {
 	git_reference *head_reference;
-	return git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE);	/* TODO: finalize moving refs.c to new error handling */
+	return git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE, 0);
 }
 
 static int repo_init_check_head_existence(char * repository_path)

@@ -193,7 +193,8 @@ GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsig
 GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned int n);
 
 /**
- * Create a new commit in the repository
+ * Create a new commit in the repository using `git_object`
+ * instances as parameters.
  *
  * @param oid Pointer where to store the OID of the
  *	newly created commit
@@ -214,16 +215,16 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  *
  * @param message Full message for this commit
  *
- * @param tree_oid Object ID of the tree for this commit. Note that
- *  no validation is performed on this OID. Use the _o variants of
- *  this method to assure a proper tree is passed to the commit.
+ * @param tree An instance of a `git_tree` object that will
+ * be used as the tree for the commit. This tree object must
+ * also be owned by the given `repo`.
  *
  * @param parent_count Number of parents for this commit
  *
- * @param parent_oids[] Array of pointers to parent OIDs for this commit.
- *	Note that no validation is performed on these OIDs. Use the _o
- *	variants of this method to assure that are parents for the commit
- *	are proper objects.
+ * @param parents[] Array of `parent_count` pointers to `git_commit`
+ * objects that will be used as the parents for this commit. This
+ * array may be NULL if `parent_count` is 0 (root commit). All the
+ * given commits must be owned by the `repo`.
  *
  * @return 0 on success; error code otherwise
  *	The created commit will be written to the Object Database and
@@ -236,66 +237,16 @@ GIT_EXTERN(int) git_commit_create(
 		const git_signature *author,
 		const git_signature *committer,
 		const char *message,
-		const git_oid *tree_oid,
-		int parent_count,
-		const git_oid *parent_oids[]);
-
-/**
- * Create a new commit in the repository using `git_object`
- * instances as parameters.
- *
- * The `tree_oid` and `parent_oids` paremeters now take a instance
- * of `git_tree` and `git_commit`, respectively.
- *
- * All other parameters remain the same
- *
- * @see git_commit_create
- */
-GIT_EXTERN(int) git_commit_create_o(
-		git_oid *oid,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message,
 		const git_tree *tree,
 		int parent_count,
 		const git_commit *parents[]);
 
 /**
- * Create a new commit in the repository using `git_object`
- * instances and a variable argument list.
- *
- * The `tree_oid` paremeter now takes a instance
- * of `const git_tree *`.
+ * Create a new commit in the repository using a variable
+ * argument list.
  *
  * The parents for the commit are specified as a variable
  * list of pointers to `const git_commit *`. Note that this
- * is a convenience method which may not be safe to export
- * for certain languages or compilers
- *
- * All other parameters remain the same
- *
- * @see git_commit_create
- */
-GIT_EXTERN(int) git_commit_create_ov(
-		git_oid *oid,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message,
-		const git_tree *tree,
-		int parent_count,
-		...);
-
-
-/**
- * Create a new commit in the repository using 
- * a variable argument list.
- *
- * The parents for the commit are specified as a variable
- * list of pointers to `const git_oid *`. Note that this
  * is a convenience method which may not be safe to export
  * for certain languages or compilers
  *
@@ -310,7 +261,7 @@ GIT_EXTERN(int) git_commit_create_v(
 		const git_signature *author,
 		const git_signature *committer,
 		const char *message,
-		const git_oid *tree_oid,
+		const git_tree *tree,
 		int parent_count,
 		...);
 

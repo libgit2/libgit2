@@ -920,117 +920,6 @@ cleanup:
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write packed reference");
 }
 
-/*****************************************
- * Internal methods - reference creation
- *****************************************/
-
-static int reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force)
-{
-	char normalized[GIT_REFNAME_MAX];
-	int error = GIT_SUCCESS, updated = 0;
-	git_reference *ref = NULL, *old_ref = NULL;
-
-	if (git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
-		return git__throw(GIT_EEXISTS, "Failed to create symbolic reference. Reference already exists");
-
-	/*
-	 * If they old ref was of the same type, then we can just update
-	 * it (once we've checked that the target is valid). Otherwise we
-	 * need a new reference because we can't make a symbolic ref out
-	 * of an oid one.
-	 * If if didn't exist, then we need to create a new one anyway.
-     */
-	if (ref && ref->type & GIT_REF_SYMBOLIC){
-		updated = 1;
-	} else {
-		ref = NULL;
-		error = reference_create(&ref, repo, name, GIT_REF_SYMBOLIC);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-	}
-
-	/* The target can aither be the name of an object id reference or the name of another symbolic reference */
-	error = normalize_name(normalized, sizeof(normalized), target, 0);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	/* set the target; this will write the reference on disk */
-	error = git_reference_set_target(ref, normalized);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	/*
-	 * If we didn't update the ref, then we need to insert or replace
-	 * it in the loose cache. If we replaced a ref, free it.
-	 */
-	if (!updated){
-		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		if(old_ref)
-			reference_free(old_ref);
-	}
-
-	*ref_out = ref;
-
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create symbolic reference");
-
-cleanup:
-	reference_free(ref);
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create symbolic reference");
-}
-
-static int reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force)
-{
-	int error = GIT_SUCCESS, updated = 0;
-	git_reference *ref = NULL, *old_ref = NULL;
-
-	if(git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
-		return git__throw(GIT_EEXISTS, "Failed to create reference OID. Reference already exists");
-
-	if ((error = reference_available(repo, name, NULL)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create reference");
-
-	/*
-	 * If they old ref was of the same type, then we can just update
-	 * it (once we've checked that the target is valid). Otherwise we
-	 * need a new reference because we can't make a symbolic ref out
-	 * of an oid one.
-	 * If if didn't exist, then we need to create a new one anyway.
-     */
-	if (ref && ref-> type & GIT_REF_OID){
-		updated = 1;
-	} else {
-		ref = NULL;
-		error = reference_create(&ref, repo, name, GIT_REF_OID);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-	}
-
-	/* set the oid; this will write the reference on disk */
-	error = git_reference_set_oid(ref, id);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	if(!updated){
-		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		if(old_ref)
-			reference_free(old_ref);
-	}
-
-	*ref_out = ref;
-
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create reference OID");
-
-cleanup:
-	reference_free(ref);
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create reference OID");
-}
-
 static int _reference_available_cb(const char *ref, void *data)
 {
 	const char *new, *old;
@@ -1261,26 +1150,6 @@ int git_reference_lookup(git_reference **ref_out, git_repository *repo, const ch
 	return git__throw(GIT_ENOTFOUND, "Failed to lookup reference. Reference doesn't exist");
 }
 
-int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target)
-{
-	return reference_create_symbolic(ref_out, repo, name, target, 0);
-}
-
-int git_reference_create_symbolic_f(git_reference **ref_out, git_repository *repo, const char *name, const char *target)
-{
-	return reference_create_symbolic(ref_out, repo, name, target, 1);
-}
-
-int git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id)
-{
-	return reference_create_oid(ref_out, repo, name, id, 0);
-}
-
-int git_reference_create_oid_f(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id)
-{
-	return reference_create_oid(ref_out, repo, name, id, 1);
-}
-
 /**
  * Getters
  */
@@ -1333,6 +1202,113 @@ const char *git_reference_target(git_reference *ref)
 		return NULL;
 
 	return ((reference_symbolic *)ref)->target;
+}
+
+int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force)
+{
+	char normalized[GIT_REFNAME_MAX];
+	int error = GIT_SUCCESS, updated = 0;
+	git_reference *ref = NULL, *old_ref = NULL;
+
+	if (git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
+		return git__throw(GIT_EEXISTS, "Failed to create symbolic reference. Reference already exists");
+
+	/*
+	 * If they old ref was of the same type, then we can just update
+	 * it (once we've checked that the target is valid). Otherwise we
+	 * need a new reference because we can't make a symbolic ref out
+	 * of an oid one.
+	 * If if didn't exist, then we need to create a new one anyway.
+     */
+	if (ref && ref->type & GIT_REF_SYMBOLIC){
+		updated = 1;
+	} else {
+		ref = NULL;
+		error = reference_create(&ref, repo, name, GIT_REF_SYMBOLIC);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	/* The target can aither be the name of an object id reference or the name of another symbolic reference */
+	error = normalize_name(normalized, sizeof(normalized), target, 0);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	/* set the target; this will write the reference on disk */
+	error = git_reference_set_target(ref, normalized);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	/*
+	 * If we didn't update the ref, then we need to insert or replace
+	 * it in the loose cache. If we replaced a ref, free it.
+	 */
+	if (!updated){
+		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		if(old_ref)
+			reference_free(old_ref);
+	}
+
+	*ref_out = ref;
+
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create symbolic reference");
+
+cleanup:
+	reference_free(ref);
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create symbolic reference");
+}
+
+int git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force)
+{
+	int error = GIT_SUCCESS, updated = 0;
+	git_reference *ref = NULL, *old_ref = NULL;
+
+	if(git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
+		return git__throw(GIT_EEXISTS, "Failed to create reference OID. Reference already exists");
+
+	if ((error = reference_available(repo, name, NULL)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create reference");
+
+	/*
+	 * If they old ref was of the same type, then we can just update
+	 * it (once we've checked that the target is valid). Otherwise we
+	 * need a new reference because we can't make a symbolic ref out
+	 * of an oid one.
+	 * If if didn't exist, then we need to create a new one anyway.
+     */
+	if (ref && ref-> type & GIT_REF_OID){
+		updated = 1;
+	} else {
+		ref = NULL;
+		error = reference_create(&ref, repo, name, GIT_REF_OID);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	/* set the oid; this will write the reference on disk */
+	error = git_reference_set_oid(ref, id);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if(!updated){
+		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		if(old_ref)
+			reference_free(old_ref);
+	}
+
+	*ref_out = ref;
+
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create reference OID");
+
+cleanup:
+	reference_free(ref);
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create reference OID");
 }
 
 /**

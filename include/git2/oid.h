@@ -65,6 +65,19 @@ typedef struct {
 GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
 
 /**
+ * Parse N characters of a hex formatted object id into a git_oid
+ *
+ * If N is odd, N-1 characters will be parsed instead.
+ * The remaining space in the git_oid will be set to zero.
+ *
+ * @param out oid structure the result is written into.
+ * @param str input hex string of at least size `length`
+ * @param length length of the input string
+ * @return GIT_SUCCESS if valid; GIT_ENOTOID on failure.
+ */
+GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
+
+/**
  * Copy an already raw oid into a git_oid structure.
  *
  * @param out oid structure the result is written into.

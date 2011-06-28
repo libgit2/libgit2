@@ -88,10 +88,12 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	git_oid target_id, tag_id;
 	const git_signature *tagger;
 	git_reference *ref_tag;
+	git_object *target;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_fromstr(&target_id, tagged_commit);
+	must_pass(git_object_lookup(&target, repo, &target_id, GIT_OBJ_COMMIT));
 
 	/* create signature */
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
@@ -101,11 +103,12 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 		&tag_id, /* out id */
 		repo,
 		"the-tag",
-		&target_id,
-		GIT_OBJ_COMMIT,
+		target,
 		tagger,
-		TAGGER_MESSAGE));
+		TAGGER_MESSAGE,
+		0));
 
+	git_object_close(target);
 	git_signature_free((git_signature *)tagger);
 
 	must_pass(git_tag_lookup(&tag, repo, &tag_id));
@@ -132,42 +135,16 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 END_TEST
 
-BEGIN_TEST(write1, "write a tag to the repository which points to an unknown oid should fail")
-	git_repository *repo;
-	git_oid target_id, tag_id;
-	const git_signature *tagger;
-
-	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-
-	git_oid_fromstr(&target_id, "deadbeef1b46c854b31185ea97743be6a8774479");
-
-	/* create signature */
-	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-	must_be_true(tagger != NULL);
-
-	must_fail(git_tag_create(
-		&tag_id, /* out id */
-		repo,
-		"the-zombie-tag",
-		&target_id,
-		GIT_OBJ_COMMIT,
-		tagger,
-		TAGGER_MESSAGE));
-
-	git_signature_free((git_signature *)tagger);
-
-	git_repository_free(repo);
-
-END_TEST
-
 BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already existing tag")
 	git_repository *repo;
 	git_oid target_id, tag_id;
 	const git_signature *tagger;
+	git_object *target;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	git_oid_fromstr(&target_id, tagged_commit);
+	must_pass(git_object_lookup(&target, repo, &target_id, GIT_OBJ_COMMIT));
 
 	/* create signature */
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
@@ -177,11 +154,12 @@ BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already
 		&tag_id, /* out id */
 		repo,
 		"e90810b",
-		&target_id,
-		GIT_OBJ_COMMIT,
+		target,
 		tagger,
-		TAGGER_MESSAGE));
+		TAGGER_MESSAGE,
+		0));
 
+	git_object_close(target);
 	git_signature_free((git_signature *)tagger);
 
 	git_repository_free(repo);
@@ -193,10 +171,12 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 	git_oid target_id, tag_id, old_tag_id;
 	const git_signature *tagger;
 	git_reference *ref_tag;
+	git_object *target;
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	git_oid_fromstr(&target_id, tagged_commit);
+	must_pass(git_object_lookup(&target, repo, &target_id, GIT_OBJ_COMMIT));
 
 	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));
@@ -205,15 +185,16 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
 	must_be_true(tagger != NULL);
 
-	must_pass(git_tag_create_f(
+	must_pass(git_tag_create(
 		&tag_id, /* out id */
 		repo,
 		"e90810b",
-		&target_id,
-		GIT_OBJ_COMMIT,
+		target,
 		tagger,
-		TAGGER_MESSAGE));
+		TAGGER_MESSAGE,
+		1));
 
+	git_object_close(target);
 	git_signature_free((git_signature *)tagger);
 
 	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
@@ -242,7 +223,6 @@ BEGIN_SUITE(tag)
 	ADD_TEST(read0);
 	ADD_TEST(read1);
 	ADD_TEST(write0);
-	ADD_TEST(write1);
 	ADD_TEST(write2);
 	ADD_TEST(write3);
 	ADD_TEST(write4);

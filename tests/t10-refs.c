@@ -212,7 +212,7 @@ BEGIN_TEST(create0, "create a new symbolic reference")
 	git__joinpath(ref_path, repo->path_repository, new_head_tracker);
 
 	/* Create and write the new symbolic reference */
-	must_pass(git_reference_create_symbolic(&new_reference, repo, new_head_tracker, current_head_target));
+	must_pass(git_reference_create_symbolic(&new_reference, repo, new_head_tracker, current_head_target, 0));
 
 	/* Ensure the reference can be looked-up... */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, new_head_tracker));
@@ -252,7 +252,7 @@ BEGIN_TEST(create1, "create a deep symbolic reference")
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	git__joinpath(ref_path, repo->path_repository, new_head_tracker);
-	must_pass(git_reference_create_symbolic(&new_reference, repo, new_head_tracker, current_head_target));
+	must_pass(git_reference_create_symbolic(&new_reference, repo, new_head_tracker, current_head_target, 0));
 	must_pass(git_reference_lookup(&looked_up_ref, repo, new_head_tracker));
 	must_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
 	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
@@ -276,7 +276,7 @@ BEGIN_TEST(create2, "create a new OID reference")
 	git__joinpath(ref_path, repo->path_repository, new_head);
 
 	/* Create and write the new object id reference */
-	must_pass(git_reference_create_oid(&new_reference, repo, new_head, &id));
+	must_pass(git_reference_create_oid(&new_reference, repo, new_head, &id, 0));
 
 	/* Ensure the reference can be looked-up... */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, new_head));
@@ -310,7 +310,7 @@ BEGIN_TEST(create3, "Can not create a new OID reference which targets at an unkn
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	/* Create and write the new object id reference */
-	must_fail(git_reference_create_oid(&new_reference, repo, new_head, &id));
+	must_fail(git_reference_create_oid(&new_reference, repo, new_head, &id, 0));
 
 	/* Ensure the reference can't be looked-up... */
 	must_fail(git_reference_lookup(&looked_up_ref, repo, new_head));
@@ -329,16 +329,16 @@ BEGIN_TEST(overwrite0, "Overwrite an existing symbolic reference")
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* The target needds to exist and we need to check the name has changed */
-	must_pass(git_reference_create_symbolic(&branch_ref, repo, ref_branch_name, ref_master_name));
-	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_branch_name));
+	must_pass(git_reference_create_symbolic(&branch_ref, repo, ref_branch_name, ref_master_name, 0));
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_branch_name, 0));
 	/* Ensure it points to the right place*/
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
 	must_be_true(git_reference_type(ref) & GIT_REF_SYMBOLIC);
 	must_be_true(!strcmp(git_reference_target(ref), ref_branch_name));
 
 	/* Ensure we can't create it unless we force it to */
-	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
-	must_pass(git_reference_create_symbolic_f(&ref, repo, ref_name, ref_master_name));
+	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name, 0));
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name, 1));
 
 	/* Ensure it points to the right place */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -360,15 +360,15 @@ BEGIN_TEST(overwrite1, "Overwrite an existing object id reference")
 	git_oid_cpy(&id, git_reference_oid(ref));
 
 	/* Create it */
-	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id, 0));
 
 	must_pass(git_reference_lookup(&ref, repo, ref_test_name));
 	must_be_true(ref->type & GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_oid(ref));
 
 	/* Ensure we can't overwrite unless we force it */
-	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
-	must_pass(git_reference_create_oid_f(&ref, repo, ref_name, &id));
+	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id, 0));
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id, 1));
 
 	/* Ensure it has been overwritten */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -388,9 +388,9 @@ BEGIN_TEST(overwrite2, "Overwrite an existing object id reference with a symboli
 	must_be_true(ref->type & GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_oid(ref));
 
-	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id));
-	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
-	must_pass(git_reference_create_symbolic_f(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id, 0));
+	must_fail(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name, 0));
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name, 1));
 
 	/* Ensure it points to the right place */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -412,10 +412,10 @@ BEGIN_TEST(overwrite3, "Overwrite an existing symbolic reference with an object 
 	git_oid_cpy(&id, git_reference_oid(ref));
 
 	/* Create the symbolic ref */
-	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name));
+	must_pass(git_reference_create_symbolic(&ref, repo, ref_name, ref_master_name, 0));
 	/* It shouldn't overwrite unless we tell it to */
-	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id));
-	must_pass(git_reference_create_oid_f(&ref, repo, ref_name, &id));
+	must_fail(git_reference_create_oid(&ref, repo, ref_name, &id, 0));
+	must_pass(git_reference_create_oid(&ref, repo, ref_name, &id, 1));
 
 	/* Ensure it points to the right place */
 	must_pass(git_reference_lookup(&ref, repo, ref_name));
@@ -671,14 +671,14 @@ BEGIN_TEST(rename6, "can not overwrite name of existing reference")
 	git_oid_cpy(&id, git_reference_oid(ref));
 
 	/* Create loose references */
-	must_pass(git_reference_create_oid(&ref_one, repo, ref_one_name, &id));
-	must_pass(git_reference_create_oid(&ref_two, repo, ref_two_name, &id));
+	must_pass(git_reference_create_oid(&ref_one, repo, ref_one_name, &id, 0));
+	must_pass(git_reference_create_oid(&ref_two, repo, ref_two_name, &id, 0));
 
 	/* Pack everything */
 	must_pass(git_reference_packall(repo));
 
 	/* Attempt to create illegal reference */
-	must_fail(git_reference_create_oid(&ref_one_new, repo, ref_one_name_new, &id));
+	must_fail(git_reference_create_oid(&ref_one_new, repo, ref_one_name_new, &id, 0));
 
 	/* Illegal reference couldn't be created so this is supposed to fail */
 	must_fail(git_reference_lookup(&ref_one_new, repo, ref_one_name_new));

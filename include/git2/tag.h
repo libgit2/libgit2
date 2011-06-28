@@ -151,6 +151,10 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
 /**
  * Create a new tag in the repository from an OID
  *
+ * A new reference will also be created pointing to
+ * this tag object. If `force` is true and a reference
+ * already exists with the given name, it'll be replaced.
+ *
  * @param oid Pointer where to store the OID of the
  * newly created tag. If the tag already exists, this parameter
  * will be the oid of the existed tag, and the function will
@@ -162,17 +166,15 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  * for consistency. It should also not conflict with an 
  * already existing tag name
  *
- * @param target OID to which this tag points; note that no
- *	validation is done on this OID. Use the _o version of this
- *	method to assure a proper object is being tagged
- *
- * @param target_type Type of the tagged OID; note that no
- *	validation is performed here either
+ * @param target Object to which this tag points. This object
+ * must belong to the given `repo`.
  *
  * @param tagger Signature of the tagger for this tag, and
  *  of the tagging time
  *
  * @param message Full message for this tag
+ *
+ * @param force Overwritte existing references
  *
  * @return 0 on success; error code otherwise.
  *	A tag object is written to the ODB, and a proper reference
@@ -182,103 +184,25 @@ GIT_EXTERN(int) git_tag_create(
 		git_oid *oid,
 		git_repository *repo,
 		const char *tag_name,
-		const git_oid *target,
-		git_otype target_type,
-		const git_signature *tagger,
-		const char *message);
-
-
-/**
- * Create a new tag in the repository from an existing
- * `git_object` instance
- *
- * This method replaces the `target` and `target_type`
- * paremeters of `git_tag_create` by a single instance
- * of a `const git_object *`, which is assured to be
- * a proper object in the ODB and hence will create
- * a valid tag
- *
- * @see git_tag_create
- */
-GIT_EXTERN(int) git_tag_create_o(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
 		const git_object *target,
 		const git_signature *tagger,
-		const char *message);
+		const char *message,
+		int force);
 
 /**
  * Create a new tag in the repository from a buffer
  *
  * @param oid Pointer where to store the OID of the newly created tag
- *
  * @param repo Repository where to store the tag
- *
  * @param buffer Raw tag data
+ * @param force Overwrite existing tags
+ * @return 0 on sucess; error code otherwise
  */
 GIT_EXTERN(int) git_tag_create_frombuffer(
 		git_oid *oid,
 		git_repository *repo,
-		const char *buffer);
-
-/**
- * Create a new tag in the repository from an OID
- * and overwrite an already existing tag reference, if any.
- *
- * @param oid Pointer where to store the OID of the
- *	newly created tag
- *
- * @param repo Repository where to store the tag
- *
- * @param tag_name Name for the tag; this name is validated
- * for consistency.
- *
- * @param target OID to which this tag points; note that no
- *	validation is done on this OID. Use the _fo version of this
- *	method to assure a proper object is being tagged
- *
- * @param target_type Type of the tagged OID; note that no
- *	validation is performed here either
- *
- * @param tagger Signature of the tagger for this tag, and
- *  of the tagging time
- *
- * @param message Full message for this tag
- *
- * @return 0 on success; error code otherwise.
- *	A tag object is written to the ODB, and a proper reference
- *	is written in the /refs/tags folder, pointing to it
- */
-GIT_EXTERN(int) git_tag_create_f(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_oid *target,
-		git_otype target_type,
-		const git_signature *tagger,
-		const char *message);
-
-/**
- * Create a new tag in the repository from an existing
- * `git_object` instance and overwrite an already existing 
- * tag reference, if any.
- *
- * This method replaces the `target` and `target_type`
- * paremeters of `git_tag_create_f` by a single instance
- * of a `const git_object *`, which is assured to be
- * a proper object in the ODB and hence will create
- * a valid tag
- *
- * @see git_tag_create_f
- */
-GIT_EXTERN(int) git_tag_create_fo(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		const git_signature *tagger,
-		const char *message);
+		const char *buffer,
+		int force);
 
 /**
  * Delete an existing tag reference.
