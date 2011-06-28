@@ -263,6 +263,14 @@ BEGIN_TEST(config13, "can't delete a non-existent value")
 	git_config_free(cfg);
 END_TEST
 
+BEGIN_TEST(config14, "don't fail horribly if a section header is in the last line")
+	git_config *cfg;
+
+	/* By freeing the config, we make sure we flush the values  */
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config10"));
+	git_config_free(cfg);
+END_TEST
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
@@ -278,4 +286,5 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config11);
 	 ADD_TEST(config12);
 	 ADD_TEST(config13);
+	 ADD_TEST(config14);
 END_SUITE
