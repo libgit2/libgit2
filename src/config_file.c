@@ -356,8 +356,13 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 	}
 
 	/*
-	 * Otherwise, create it and stick it at the end of the queue.
+	 * Otherwise, create it and stick it at the end of the queue. If
+	 * value is NULL, we return an error, because you can't delete a
+	 * variable that doesn't exist.
 	 */
+
+	if (value == NULL)
+		return git__throw(GIT_ENOTFOUND, "Can't delete non-exitent variable");
 
 	last_dot = strrchr(name, '.');
 	if (last_dot == NULL) {
@@ -1011,8 +1016,15 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 				break;
 			}
 
-			/* Then replace the variable */
-			error = git_filebuf_printf(&file, "\t%s = %s\n", var->name, var->value);
+			/*
+			 * Then replace the variable. If the value is NULL, it
+			 * means we want to delete it, so pretend everything went
+			 * fine
+			 */
+			if (var->value == NULL)
+				error = GIT_SUCCESS;
+			else
+				error = git_filebuf_printf(&file, "\t%s = %s\n", var->name, var->value);
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to overwrite the variable");
 				break;
