@@ -99,19 +99,11 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	}
 
 	islnk = S_ISLNK(st.st_mode);
+	size = st.st_size;
 
-
-	if (!islnk) {
+	if (!islnk)
 		if ((fd = gitfo_open(full_path, O_RDONLY)) < 0)
 			return git__throw(GIT_ENOTFOUND, "Failed to create blob. Could not open '%s'", full_path);
-
-		if ((size = gitfo_size(fd)) < 0 || !git__is_sizet(size)) {
-			gitfo_close(fd);
-			return git__throw(GIT_EOSERR, "Failed to create blob. '%s' appears to be corrupted", full_path);
-		}
-	} else {
-		size = st.st_size;
-	}
 
 	if ((error = git_odb_open_wstream(&stream, repo->db, (size_t)size, GIT_OBJ_BLOB)) < GIT_SUCCESS) {
 		if (!islnk)
@@ -123,9 +115,9 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		ssize_t read_len;
 
 		if (!islnk)
-			read_len = gitfo_read(fd, buffer, (size_t)(size < sizeof(buffer) ? size : sizeof(buffer)));
+			read_len = gitfo_read(fd, buffer, sizeof(buffer));
 		else
-			read_len = gitfo_readlink(full_path, buffer, (size_t)size);
+			read_len = gitfo_readlink(full_path, buffer, sizeof(buffer));
 
 		if (read_len < 0) {
 			if (!islnk)
@@ -143,9 +135,6 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	if (!islnk)
 		gitfo_close(fd);
 
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create blob");
-
-	return GIT_SUCCESS;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create blob");
 }
 
