@@ -219,6 +219,30 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
 /**
+ * Check if a repository's HEAD is detached
+ *
+ * A repository's HEAD is detached when it points directly to a commit
+ * instead of a branch.
+ *
+ * @param repo Repo to test
+ * @return 1 if HEAD is detached, 0 if i'ts not; error code if there
+ * was an error.
+ */
+int git_repository_is_detached(git_repository *repo);
+
+/**
+ * Check if the current branch is an orphan
+ *
+ * An orphan branch is one named from HEAD but which doesn't exist in
+ * the refs namespace, because it doesn't have any commit to point to.
+ *
+ * @param repo Repo to test
+ * @return 1 if the current branch is an orphan, 0 if it's not; error
+ * code if therewas an error
+ */
+int git_repository_is_orphan(git_repository *repo);
+
+/**
  * Check if a repository is empty
  *
  * An empty repository has just been initialized and contains

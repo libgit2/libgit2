@@ -268,6 +268,46 @@ BEGIN_TEST(empty0, "test if a repository is empty or not")
 	git_repository_free(repo_empty);
 END_TEST
 
+BEGIN_TEST(detached0, "test if HEAD is detached")
+	git_repository *repo;
+	git_reference *ref;
+	git_oid oid;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_be_true(git_repository_is_detached(repo) == 0);
+
+	/* detach the HEAD */
+	git_oid_fromstr(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd");
+	must_pass(git_reference_create_oid_f(&ref, repo, "HEAD", &oid));
+	must_be_true(git_repository_is_detached(repo) == 1);
+
+	/* take the reop back to it's original state */
+	must_pass(git_reference_create_symbolic_f(&ref, repo, "HEAD", "refs/heads/master"));
+	must_be_true(git_repository_is_detached(repo) == 0);
+
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(orphan0, "test if HEAD is orphan")
+	git_repository *repo;
+	git_reference *ref;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_be_true(git_repository_is_orphan(repo) == 0);
+
+	/* orphan HEAD */
+	must_pass(git_reference_create_symbolic_f(&ref, repo, "HEAD", "refs/heads/orphan"));
+	must_be_true(git_repository_is_orphan(repo) == 1);
+
+	/* take the reop back to it's original state */
+	must_pass(git_reference_create_symbolic_f(&ref, repo, "HEAD", "refs/heads/master"));
+	must_be_true(git_repository_is_orphan(repo) == 0);
+
+	git_repository_free(repo);
+END_TEST
+
 #define DISCOVER_FOLDER TEST_RESOURCES "/discover.git"
 
 #define SUB_REPOSITORY_FOLDER_NAME "sub_repo"
@@ -416,6 +456,8 @@ BEGIN_SUITE(repository)
 	ADD_TEST(open1);
 	ADD_TEST(open2);
 	ADD_TEST(empty0);
+	ADD_TEST(detached0);
+	ADD_TEST(orphan0);
 	ADD_TEST(discover0);
 END_SUITE
 
