@@ -275,16 +275,16 @@ BEGIN_TEST(detached0, "test if HEAD is detached")
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	must_be_true(git_repository_is_detached(repo) == 0);
+	must_be_true(git_repository_head_detached(repo) == 0);
 
 	/* detach the HEAD */
 	git_oid_fromstr(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd");
-	must_pass(git_reference_create_oid_f(&ref, repo, "HEAD", &oid));
-	must_be_true(git_repository_is_detached(repo) == 1);
+	must_pass(git_reference_create_oid(&ref, repo, "HEAD", &oid, 1));
+	must_be_true(git_repository_head_detached(repo) == 1);
 
 	/* take the reop back to it's original state */
-	must_pass(git_reference_create_symbolic_f(&ref, repo, "HEAD", "refs/heads/master"));
-	must_be_true(git_repository_is_detached(repo) == 0);
+	must_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
+	must_be_true(git_repository_head_detached(repo) == 0);
 
 	git_repository_free(repo);
 END_TEST
@@ -295,15 +295,15 @@ BEGIN_TEST(orphan0, "test if HEAD is orphan")
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
-	must_be_true(git_repository_is_orphan(repo) == 0);
+	must_be_true(git_repository_head_orphan(repo) == 0);
 
 	/* orphan HEAD */
-	must_pass(git_reference_create_symbolic_f(&ref, repo, "HEAD", "refs/heads/orphan"));
-	must_be_true(git_repository_is_orphan(repo) == 1);
+	must_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/orphan", 1));
+	must_be_true(git_repository_head_orphan(repo) == 1);
 
 	/* take the reop back to it's original state */
-	must_pass(git_reference_create_symbolic_f(&ref, repo, "HEAD", "refs/heads/master"));
-	must_be_true(git_repository_is_orphan(repo) == 0);
+	must_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
+	must_be_true(git_repository_head_orphan(repo) == 0);
 
 	git_repository_free(repo);
 END_TEST

@@ -752,7 +752,7 @@ cleanup:
 	return git__rethrow(error, "Failed to (re)init the repository `%s`", path);
 }
 
-int git_repository_is_detached(git_repository *repo)
+int git_repository_head_detached(git_repository *repo)
 {
 	git_reference *ref;
 	int error;
@@ -776,7 +776,7 @@ int git_repository_is_detached(git_repository *repo)
 	return 1;
 }
 
-int git_repository_is_orphan(git_repository *repo)
+int git_repository_head_orphan(git_repository *repo)
 {
 	git_reference *ref;
 	int error;
