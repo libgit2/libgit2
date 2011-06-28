@@ -721,11 +721,6 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	c = line[pos++];
 
 	do {
-		if (cfg->reader.eof){
-			error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Config file ended unexpectedly");
-			goto error;
-		}
-
 		if (isspace(c)){
 			name[name_length] = '\0';
 			error = parse_section_header_ext(line, name, section_out);
@@ -742,6 +737,9 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 		name[name_length++] = (char) tolower(c);
 
 	} while ((c = line[pos++]) != ']');
+
+	if (line[pos - 1] != ']')
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Config file ended unexpectedly");
 
 	name[name_length] = 0;
 	free(line);
