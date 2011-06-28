@@ -271,6 +271,32 @@ BEGIN_TEST(config14, "don't fail horribly if a section header is in the last lin
 	git_config_free(cfg);
 END_TEST
 
+BEGIN_TEST(config15, "add a variable in an existing section")
+	git_config *cfg;
+	int i;
+
+	/* By freeing the config, we make sure we flush the values  */
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config10"));
+	must_pass(git_config_set_int(cfg, "empty.tmp", 5));
+	must_pass(git_config_get_int(cfg, "empty.tmp", &i));
+	must_be_true(i == 5);
+	must_pass(git_config_del(cfg, "empty.tmp"));
+	git_config_free(cfg);
+END_TEST
+
+BEGIN_TEST(config16, "add a variable in a new section")
+	git_config *cfg;
+	int i;
+
+	/* By freeing the config, we make sure we flush the values  */
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config10"));
+	must_pass(git_config_set_int(cfg, "section.tmp", 5));
+	must_pass(git_config_get_int(cfg, "section.tmp", &i));
+	must_be_true(i == 5);
+	must_pass(git_config_del(cfg, "section.tmp"));
+	git_config_free(cfg);
+END_TEST
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
@@ -287,4 +313,6 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config12);
 	 ADD_TEST(config13);
 	 ADD_TEST(config14);
+	 ADD_TEST(config15);
+	 ADD_TEST(config16);
 END_SUITE
