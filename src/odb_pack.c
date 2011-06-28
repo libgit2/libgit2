@@ -32,16 +32,9 @@
 #include "odb.h"
 #include "delta-apply.h"
 #include "sha1_lookup.h"
+#include "mwindow.h"
 
 #include "git2/odb_backend.h"
-
-#define DEFAULT_WINDOW_SIZE \
-	(sizeof(void*) >= 8 \
-		?  1 * 1024 * 1024 * 1024 \
-		: 32 * 1024 * 1024)
-
-#define DEFAULT_MAPPED_LIMIT \
-	((1024L * 1024L) * (sizeof(void*) >= 8 ? 8192 : 256))
 
 #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
 #define PACK_VERSION 2
@@ -76,18 +69,11 @@ struct pack_idx_header {
 	uint32_t idx_version;
 };
 
-struct pack_window {
-	struct pack_window *next;
-	git_map window_map;
-	off_t offset;
-	unsigned int last_used;
-	unsigned int inuse_cnt;
-};
-
 struct pack_file {
-	struct pack_window *windows;
+	int pack_fd;
+	git_mwindow_file mwf;
+	//git_mwindow *windows;
 	off_t pack_size;
-
 	git_map index_map;
 
 	uint32_t num_objects;
@@ -96,7 +82,6 @@ struct pack_file {
 
 	int index_version;
 	git_time_t mtime;
-	int pack_fd;
 	unsigned pack_local:1, pack_keep:1;
 	git_oid sha1;
 
@@ -116,19 +101,6 @@ struct pack_backend {
 	struct pack_file *last_found;
 	char *pack_folder;
 	time_t pack_folder_mtime;
-
-	size_t window_size; /* needs default value */
-
-	size_t mapped_limit; /* needs default value */
-	size_t peak_mapped;
-	size_t mapped;
-
-	size_t used_ctr;
-
-	unsigned int peak_open_windows;
-	unsigned int open_windows;
-
-	unsigned int mmap_calls;
 };
 
 /**
@@ -226,8 +198,6 @@ struct pack_backend {
  */
 
 
-
-
 /***********************************************************
  *
  * FORWARD DECLARATIONS
@@ -235,19 +205,10 @@ struct pack_backend {
  ***********************************************************/
 
 static void pack_window_free_all(struct pack_backend *backend, struct pack_file *p);
-static int pack_window_contains(struct pack_window *win, off_t offset);
+static int pack_window_contains(git_mwindow *win, off_t offset);
 
-static void pack_window_scan_lru(struct pack_file *p, struct pack_file **lru_p,
-		struct pack_window **lru_w, struct pack_window **lru_l);
-
-static int pack_window_close_lru( struct pack_backend *backend,
-		struct pack_file *current, git_file keep_fd);
-
-static void pack_window_close(struct pack_window **w_cursor);
-
-static unsigned char *pack_window_open( struct pack_backend *backend,
-		struct pack_file *p, struct pack_window **w_cursor, off_t offset,
-		unsigned int *left);
+static unsigned char *pack_window_open(struct pack_file *p,
+		git_mwindow **w_cursor, off_t offset, unsigned int *left);
 
 static int packfile_sort__cb(const void *a_, const void *b_);
 
@@ -299,8 +260,7 @@ static int pack_entry_find_prefix(struct pack_entry *e,
 					const git_oid *short_oid,
 					unsigned int len);
 
-static off_t get_delta_base(struct pack_backend *backend,
-		struct pack_file *p, struct pack_window **w_curs,
+static off_t get_delta_base(struct pack_file *p, git_mwindow **w_curs,
 		off_t *curpos, git_otype type,
 		off_t delta_obj_offset);
 
@@ -313,16 +273,14 @@ static unsigned long packfile_unpack_header1(
 static int packfile_unpack_header(
 		size_t *size_p,
 		git_otype *type_p,
-		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_curs,
+		git_mwindow **w_curs,
 		off_t *curpos);
 
 static int packfile_unpack_compressed(
 		git_rawobj *obj,
-		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_curs,
+		git_mwindow **w_curs,
 		off_t curpos,
 		size_t size,
 		git_otype type);
@@ -331,7 +289,7 @@ static int packfile_unpack_delta(
 		git_rawobj *obj,
 		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_curs,
+		git_mwindow **w_curs,
 		off_t curpos,
 		size_t delta_size,
 		git_otype delta_type,
@@ -350,23 +308,12 @@ static int packfile_unpack(git_rawobj *obj, struct pack_backend *backend,
  *
  ***********************************************************/
 
-void pack_window_free_all(struct pack_backend *backend, struct pack_file *p)
+GIT_INLINE(void) pack_window_free_all(struct pack_backend *GIT_UNUSED(backend), struct pack_file *p)
 {
-	while (p->windows) {
-		struct pack_window *w = p->windows;
-		assert(w->inuse_cnt == 0);
-
-		backend->mapped -= w->window_map.len;
-		backend->open_windows--;
-
-		git_futils_mmap_free(&w->window_map);
-
-		p->windows = w->next;
-		free(w);
-	}
+	git_mwindow_free_all(&p->mwf);
 }
 
-GIT_INLINE(int) pack_window_contains(struct pack_window *win, off_t offset)
+GIT_INLINE(int) pack_window_contains(git_mwindow *win, off_t offset)
 {
 	/* We must promise at least 20 bytes (one hash) after the
 	 * offset is available from this window, otherwise the offset
@@ -374,86 +321,15 @@ GIT_INLINE(int) pack_window_contains(struct pack_window *win, off_t offset)
 	 * has that one hash excess) must be used.  This is to support
 	 * the object header and delta base parsing routines below.
 	 */
-	off_t win_off = win->offset;
-	return win_off <= offset
-		&& (offset + 20) <= (off_t)(win_off + win->window_map.len);
-}
-
-static void pack_window_scan_lru(
-	struct pack_file *p,
-	struct pack_file **lru_p,
-	struct pack_window **lru_w,
-	struct pack_window **lru_l)
-{
-	struct pack_window *w, *w_l;
-
-	for (w_l = NULL, w = p->windows; w; w = w->next) {
-		if (!w->inuse_cnt) {
-			if (!*lru_w || w->last_used < (*lru_w)->last_used) {
-				*lru_p = p;
-				*lru_w = w;
-				*lru_l = w_l;
-			}
-		}
-		w_l = w;
-	}
-}
-
-static int pack_window_close_lru(
-		struct pack_backend *backend,
-		struct pack_file *current,
-		git_file keep_fd)
-{
-	struct pack_file *lru_p = NULL;
-	struct pack_window *lru_w = NULL, *lru_l = NULL;
-	size_t i;
-
-	if (current)
-		pack_window_scan_lru(current, &lru_p, &lru_w, &lru_l);
-
-	for (i = 0; i < backend->packs.length; ++i)
-		pack_window_scan_lru(git_vector_get(&backend->packs, i), &lru_p, &lru_w, &lru_l);
-
-	if (lru_p) {
-		backend->mapped -= lru_w->window_map.len;
-		git_futils_mmap_free(&lru_w->window_map);
-
-		if (lru_l)
-			lru_l->next = lru_w->next;
-		else {
-			lru_p->windows = lru_w->next;
-			if (!lru_p->windows && lru_p->pack_fd != keep_fd) {
-				p_close(lru_p->pack_fd);
-				lru_p->pack_fd = -1;
-			}
-		}
-
-		free(lru_w);
-		backend->open_windows--;
-		return GIT_SUCCESS;
-	}
-
-	return git__throw(GIT_ERROR, "Failed to close pack window");
-}
-
-static void pack_window_close(struct pack_window **w_cursor)
-{
-	struct pack_window *w = *w_cursor;
-	if (w) {
-		w->inuse_cnt--;
-		*w_cursor = NULL;
-	}
+	return git_mwindow_contains(win, offset + 20);
 }
 
 static unsigned char *pack_window_open(
-		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_cursor,
+		git_mwindow **w_cursor,
 		off_t offset,
 		unsigned int *left)
 {
-	struct pack_window *win = *w_cursor;
-
 	if (p->pack_fd == -1 && packfile_open(p) < GIT_SUCCESS)
 		return NULL;
 
@@ -465,73 +341,8 @@ static unsigned char *pack_window_open(
 	if (offset > (p->pack_size - 20))
 		return NULL;
 
-	if (!win || !pack_window_contains(win, offset)) {
-
-		if (win)
-			win->inuse_cnt--;
-
-		for (win = p->windows; win; win = win->next) {
-			if (pack_window_contains(win, offset))
-				break;
-		}
-
-		if (!win) {
-			size_t window_align = backend->window_size / 2;
-			size_t len;
-
-			win = git__calloc(1, sizeof(*win));
-			if (win == NULL)
-				return NULL;
-
-			win->offset = (offset / window_align) * window_align;
-
-			len = (size_t)(p->pack_size - win->offset);
-			if (len > backend->window_size)
-				len = backend->window_size;
-
-			backend->mapped += len;
-
-			while (backend->mapped_limit < backend->mapped &&
-				pack_window_close_lru(backend, p, p->pack_fd) == GIT_SUCCESS) {}
-
-			if (git_futils_mmap_ro(&win->window_map, p->pack_fd,
-					win->offset, len) < GIT_SUCCESS) {
-				free(win);
-				return NULL;
-			}
-
-			backend->mmap_calls++;
-			backend->open_windows++;
-
-			if (backend->mapped > backend->peak_mapped)
-				backend->peak_mapped = backend->mapped;
-
-			if (backend->open_windows > backend->peak_open_windows)
-				backend->peak_open_windows = backend->open_windows;
-
-			win->next = p->windows;
-			p->windows = win;
-		}
-	}
-
-	if (win != *w_cursor) {
-		win->last_used = backend->used_ctr++;
-		win->inuse_cnt++;
-		*w_cursor = win;
-	}
-
-	offset -= win->offset;
-	assert(git__is_sizet(offset));
-
-	if (left)
-		*left = win->window_map.len - (size_t)offset;
-
-	return (unsigned char *)win->window_map.data + offset;
-}
-
-
-
-
+	return git_mwindow_open(&p->mwf, w_cursor, p->pack_fd, p->pack_size, offset, 20, left);
+ }
 
 
 
@@ -765,6 +576,11 @@ static int packfile_open(struct pack_file *p)
 	p->pack_fd = p_open(p->pack_name, O_RDONLY);
 	if (p->pack_fd < 0 || p_fstat(p->pack_fd, &st) < GIT_SUCCESS)
 		return git__throw(GIT_EOSERR, "Failed to open packfile. File appears to be corrupted");
+
+	if (git_mwindow_file_register(&p->mwf) < GIT_SUCCESS) {
+		p_close(p->pack_fd);
+		return git__throw(GIT_ERROR, "Failed to register packfile windows");
+	}
 
 	/* If we created the struct before we had the pack we lack size. */
 	if (!p->pack_size) {
@@ -1210,9 +1026,8 @@ static unsigned long packfile_unpack_header1(
 static int packfile_unpack_header(
 		size_t *size_p,
 		git_otype *type_p,
-		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_curs,
+		git_mwindow **w_curs,
 		off_t *curpos)
 {
 	unsigned char *base;
@@ -1225,7 +1040,7 @@ static int packfile_unpack_header(
 	 * the maximum deflated object size is 2^137, which is just
 	 * insane, so we know won't exceed what we have been given.
 	 */
-	base = pack_window_open(backend, p, w_curs, *curpos, &left);
+	base = pack_window_open(p, w_curs, *curpos, &left);
 	if (base == NULL)
 		return GIT_ENOMEM;
 
@@ -1240,9 +1055,8 @@ static int packfile_unpack_header(
 
 static int packfile_unpack_compressed(
 		git_rawobj *obj,
-		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_curs,
+		git_mwindow **w_curs,
 		off_t curpos,
 		size_t size,
 		git_otype type)
@@ -1265,7 +1079,7 @@ static int packfile_unpack_compressed(
 	}
 
 	do {
-		in = pack_window_open(backend, p, w_curs, curpos, &stream.avail_in);
+		in = pack_window_open(p, w_curs, curpos, &stream.avail_in);
 		stream.next_in = in;
 		st = inflate(&stream, Z_FINISH);
 
@@ -1289,14 +1103,13 @@ static int packfile_unpack_compressed(
 }
 
 static off_t get_delta_base(
-		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_curs,
+		git_mwindow **w_curs,
 		off_t *curpos,
 		git_otype type,
 		off_t delta_obj_offset)
 {
-	unsigned char *base_info = pack_window_open(backend, p, w_curs, *curpos, NULL);
+	unsigned char *base_info = pack_window_open(p, w_curs, *curpos, NULL);
 	off_t base_offset;
 	git_oid unused;
 
@@ -1336,7 +1149,7 @@ static int packfile_unpack_delta(
 		git_rawobj *obj,
 		struct pack_backend *backend,
 		struct pack_file *p,
-		struct pack_window **w_curs,
+		git_mwindow **w_curs,
 		off_t curpos,
 		size_t delta_size,
 		git_otype delta_type,
@@ -1346,11 +1159,11 @@ static int packfile_unpack_delta(
 	git_rawobj base, delta;
 	int error;
 
-	base_offset = get_delta_base(backend, p, w_curs, &curpos, delta_type, obj_offset);
+	base_offset = get_delta_base(p, w_curs, &curpos, delta_type, obj_offset);
 	if (base_offset == 0)
 		return git__throw(GIT_EOBJCORRUPTED, "Delta offset is zero");
 
-	pack_window_close(w_curs);
+	git_mwindow_close(w_curs);
 	error = packfile_unpack(&base, backend, p, base_offset);
 
 	/* TODO: git.git tries to load the base from other packfiles
@@ -1358,7 +1171,7 @@ static int packfile_unpack_delta(
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Corrupted delta");
 
-	error = packfile_unpack_compressed(&delta, backend, p, w_curs, curpos, delta_size, delta_type);
+	error = packfile_unpack_compressed(&delta, p, w_curs, curpos, delta_size, delta_type);
 	if (error < GIT_SUCCESS) {
 		free(base.data);
 		return git__rethrow(error, "Corrupted delta");
@@ -1383,7 +1196,7 @@ static int packfile_unpack(
 		struct pack_file *p,
 		off_t obj_offset)
 {
-	struct pack_window *w_curs = NULL;
+	git_mwindow *w_curs = NULL;
 	off_t curpos = obj_offset;
 	int error;
 
@@ -1398,7 +1211,7 @@ static int packfile_unpack(
 	obj->len = 0;
 	obj->type = GIT_OBJ_BAD;
 
-	error = packfile_unpack_header(&size, &type, backend, p, &w_curs, &curpos);
+	error = packfile_unpack_header(&size, &type, p, &w_curs, &curpos);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to unpack packfile");
 
@@ -1415,7 +1228,7 @@ static int packfile_unpack(
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TAG:
 		error = packfile_unpack_compressed(
-				obj, backend, p, &w_curs, curpos,
+				obj, p, &w_curs, curpos,
 				size, type);
 		break;
 
@@ -1424,7 +1237,7 @@ static int packfile_unpack(
 		break;
 	}
 
-	pack_window_close(&w_curs);
+	git_mwindow_close(&w_curs);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to unpack packfile");
 }
 
@@ -1550,9 +1363,6 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 		free(backend);
 		return GIT_ENOMEM;
 	}
-
-	backend->window_size = DEFAULT_WINDOW_SIZE;
-	backend->mapped_limit = DEFAULT_MAPPED_LIMIT;
 
 	git_path_join(path, objects_dir, "pack");
 	if (git_futils_isdir(path) == GIT_SUCCESS) {
