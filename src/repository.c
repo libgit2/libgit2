@@ -800,12 +800,16 @@ int git_repository_is_empty(git_repository *repo)
 
 	error = git_reference_lookup(&head, repo, "HEAD");
 	if (error < GIT_SUCCESS)
-		return git__throw(error, "Failed to determine the emptiness of the repository. An error occured while retrieving the HEAD reference");
+		return git__throw(error, "Corrupted repository. HEAD does not exist");
 
 	if (git_reference_type(head) != GIT_REF_SYMBOLIC)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to determine the emptiness of the repository. HEAD is probably in detached state");
+		return 0;
 
-	return git_reference_resolve(&branch, head) == GIT_SUCCESS ? 0 : 1;
+	if (strcmp(git_reference_target(head), "refs/heads/master") != 0)
+		return 0;
+
+	error = git_reference_resolve(&branch, head);
+	return error == GIT_ENOTFOUND ? 1 : error;
 }
 
 const char *git_repository_path(git_repository *repo, git_repository_pathid id)
