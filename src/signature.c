@@ -210,7 +210,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Ended unexpectedly");
 
 	/* verify email */
-	if (strpbrk(sig->email, "><\n ") != NULL)
+	if (strpbrk(sig->email, "><\n") != NULL)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Malformed e-mail");
 
 	if (git__strtol32(&time, buffer, &buffer, 10) < GIT_SUCCESS)
