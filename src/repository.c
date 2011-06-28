@@ -752,6 +752,47 @@ cleanup:
 	return git__rethrow(error, "Failed to (re)init the repository `%s`", path);
 }
 
+int git_repository_is_detached(git_repository *repo)
+{
+	git_reference *ref;
+	int error;
+	size_t GIT_UNUSED(_size);
+	git_otype type;
+
+	error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+		return 0;
+
+	error = git_odb_read_header(&_size, &type, repo->db, git_reference_oid(ref));
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (type != GIT_OBJ_COMMIT)
+		return git__throw(GIT_EOBJCORRUPTED, "HEAD is not a commit");
+
+	return 1;
+}
+
+int git_repository_is_orphan(git_repository *repo)
+{
+	git_reference *ref;
+	int error;
+
+	error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (git_reference_type(ref) == GIT_REF_OID)
+		return 0;
+
+	error = git_reference_resolve(&ref, ref);
+
+	return error == GIT_ENOTFOUND ? 1 : error;
+}
+
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head, *branch;
