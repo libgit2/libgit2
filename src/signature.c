@@ -179,8 +179,6 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Can't find e-mail start");
 
 	name_length = name_end - buffer;
-	if (name_length <= 0)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Missing tagger name");
 
 	sig->name = git__malloc(name_length + 1);
 	if (sig->name == NULL)
