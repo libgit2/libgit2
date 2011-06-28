@@ -77,13 +77,16 @@ void git_test__init(git_test *t, const char *name, const char *description)
 static void fail_test(git_test *tc, const char *file, int line, const char *message)
 {
 	char buf[1024];
+	const char *last_error = git_lasterror();
 
 	snprintf(buf, 1024, "%s:%d", file, line);
 
 	tc->failed = 1;
 	tc->message = strdup(message);
 	tc->failed_pos = strdup(buf);
-	tc->error_message = strdup(git_lasterror());
+
+	if (last_error)
+		tc->error_message = strdup(last_error);
 
 	if (tc->jump != 0)
 		longjmp(*(tc->jump), 0);

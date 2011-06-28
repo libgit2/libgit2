@@ -146,6 +146,11 @@ GIT_EXTERN(const char *) git_lasterror(void);
  */
 GIT_EXTERN(const char *) git_strerror(int num);
 
+/**
+ * Clear the latest library error
+ */
+GIT_EXTERN(void) git_clearerror(void);
+
 /** @} */
 GIT_END_DECL
 #endif

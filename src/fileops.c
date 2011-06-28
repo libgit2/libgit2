@@ -123,8 +123,7 @@ int gitfo_isdir(const char *path)
 	struct stat st;
 	int len, stat_error;
 
-	if (!path)
-		return git__throw(GIT_ENOTFOUND, "No path given to gitfo_isdir");
+	assert(path);
 
 	len = strlen(path);
 
@@ -140,10 +139,10 @@ int gitfo_isdir(const char *path)
 	}
 
 	if (stat_error < GIT_SUCCESS)
-		return git__throw(GIT_ENOTFOUND, "%s does not exist", path);
+		return GIT_ERROR;
 
 	if (!S_ISDIR(st.st_mode))
-		return git__throw(GIT_ENOTFOUND, "%s is not a directory", path);
+		return GIT_ERROR;
 
 	return GIT_SUCCESS;
 }

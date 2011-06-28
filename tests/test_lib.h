@@ -26,6 +26,7 @@
 #define BEGIN_TEST(TNAME, DESC) \
 	static void _gittest__##TNAME(git_test *_gittest) { \
 		git_test__init(_gittest, #TNAME, DESC); \
+		git_clearerror();\
 		{\
 
 #define END_TEST }}

@@ -108,6 +108,13 @@ int git__throw(int error, const char *msg, ...)
 
 const char *git_lasterror(void)
 {
+	if (!g_last_error[0])
+		return NULL;
+
 	return g_last_error;
 }
 
+void git_clearerror(void)
+{
+	g_last_error[0] = '\0';
+}
