@@ -1,2 +1,3 @@
 [core]
+	dummy2 = 42
 	dummy = 1
