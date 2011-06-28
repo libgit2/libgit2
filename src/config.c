@@ -167,14 +167,14 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *d
 	return ret;
 }
 
+int git_config_del(git_config *cfg, const char *name)
+{
+	return  git_config_set_string(cfg, name, NULL);
+}
 
 /**************
  * Setters
  **************/
-
-/*
- * Internal function to actually set the string value of a variable
- */
 
 int git_config_set_long(git_config *cfg, const char *name, long int value)
 {
