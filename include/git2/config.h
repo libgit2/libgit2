@@ -263,7 +263,7 @@ GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const c
  *
  * @param cfg where to get the variables from
  * @param callback the function to call on each variable
- * @param data the data to pass to the callback
+ * @param payload the data to pass to the callback
  * @return GIT_SUCCESS or the return value of the callback which didn't return 0
  */
 GIT_EXTERN(int) git_config_foreach(
