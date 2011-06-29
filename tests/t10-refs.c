@@ -494,7 +494,7 @@ BEGIN_TEST(rename0, "rename a loose reference")
 	must_be_true((looked_up_ref->type & GIT_REF_PACKED) == 0);
 
 	/* Now that the reference is renamed... */
-	must_pass(git_reference_rename(looked_up_ref, new_name));
+	must_pass(git_reference_rename(looked_up_ref, new_name, 0));
 	must_be_true(!strcmp(looked_up_ref->name, new_name));
 
 	/* ...It can't be looked-up with the old name... */
@@ -534,7 +534,7 @@ BEGIN_TEST(rename1, "rename a packed reference (should make it loose)")
 	must_be_true((looked_up_ref->type & GIT_REF_PACKED) != 0);
 
 	/* Now that the reference is renamed... */
-	must_pass(git_reference_rename(looked_up_ref, brand_new_name));
+	must_pass(git_reference_rename(looked_up_ref, brand_new_name, 0));
 	must_be_true(!strcmp(looked_up_ref->name, brand_new_name));
 
 	/* ...It can't be looked-up with the old name... */
@@ -580,7 +580,7 @@ BEGIN_TEST(rename2, "renaming a packed reference does not pack another reference
 	must_be_true((looked_up_ref->type & GIT_REF_PACKED) != 0);
 
 	/* Now that the reference is renamed... */
-	must_pass(git_reference_rename(looked_up_ref, brand_new_name));
+	must_pass(git_reference_rename(looked_up_ref, brand_new_name, 0));
 
 	/* Lookup the other reference */
 	must_pass(git_reference_lookup(&another_looked_up_ref, repo, packed_test_head_name));
@@ -604,7 +604,7 @@ BEGIN_TEST(rename3, "can not rename a reference with the name of an existing ref
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
 
 	/* Can not be renamed to the name of another existing reference. */
-	must_fail(git_reference_rename(looked_up_ref, packed_test_head_name));
+	must_fail(git_reference_rename(looked_up_ref, packed_test_head_name, 0));
 
 	/* Failure to rename it hasn't corrupted its state */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
@@ -623,10 +623,10 @@ BEGIN_TEST(rename4, "can not rename a reference with an invalid name")
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));
 
 	/* Can not be renamed with an invalid name. */
-	must_fail(git_reference_rename(looked_up_ref, "Hello! I'm a very invalid name."));
+	must_fail(git_reference_rename(looked_up_ref, "Hello! I'm a very invalid name.", 0));
 
 	/* Can not be renamed outside of the refs hierarchy. */
-	must_fail(git_reference_rename(looked_up_ref, "i-will-sudo-you"));
+	must_fail(git_reference_rename(looked_up_ref, "i-will-sudo-you", 0));
 
 	/* Failure to rename it hasn't corrupted its state */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));
@@ -645,7 +645,7 @@ BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing r
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
 
 	/* Can be force-renamed to the name of another existing reference. */
-	must_pass(git_reference_rename_f(looked_up_ref, packed_test_head_name));
+	must_pass(git_reference_rename(looked_up_ref, packed_test_head_name, 1));
 
 	/* Check we actually renamed it */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));

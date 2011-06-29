@@ -195,21 +195,7 @@ GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
  * and on disk.
  *
  */
-GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name);
-
-/**
- * Rename an existing reference, overwriting an existing one with the
- * same name, if it exists.
- *
- * This method works for both direct and symbolic references.
- * The new name will be checked for validity and may be
- * modified into a normalized form.
- *
- * The refernece will be immediately renamed in-memory
- * and on disk.
- *
- */
-GIT_EXTERN(int) git_reference_rename_f(git_reference *ref, const char *new_name);
+GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name, int force);
 
 /**
  * Delete an existing reference

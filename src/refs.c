@@ -80,7 +80,6 @@ static int packed_sort(const void *a, const void *b);
 static int packed_write(git_repository *repo);
 
 /* internal helpers */
-static int reference_rename(git_reference *ref, const char *new_name, int force);
 static int reference_available(git_repository *repo, const char *ref, const char *old_ref);
 
 /* name normalization */
@@ -962,137 +961,6 @@ static int reference_available(git_repository *repo, const char *ref, const char
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__throw(GIT_EEXISTS, "Reference name `%s` conflicts with existing reference", ref);
 }
 
-/*
- * Rename a reference
- *
- * If the reference is packed, we need to rewrite the
- * packfile to remove the reference from it and create
- * the reference back as a loose one.
- *
- * If the reference is loose, we just rename it on
- * the filesystem.
- *
- * We also need to re-insert the reference on its corresponding
- * in-memory cache, since the caches are indexed by refname.
- */
-static int reference_rename(git_reference *ref, const char *new_name, int force)
-{
-	int error;
-	char *old_name;
-	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX], normalized_name[GIT_REFNAME_MAX];
-	git_reference *looked_up_ref, *old_ref = NULL;
-
-	assert(ref);
-
-	/* Ensure the name is valid */
-	error = normalize_name(normalized_name, sizeof(normalized_name), new_name, ref->type & GIT_REF_OID);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to rename reference");
-
-	new_name = normalized_name;
-
-	/* Ensure we're not going to overwrite an existing reference
-	   unless the user has allowed us */
-	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
-	if (error == GIT_SUCCESS && !force)
-		return git__throw(GIT_EEXISTS, "Failed to rename reference. Reference already exists");
-
-	if (error < GIT_SUCCESS &&
-	    error != GIT_ENOTFOUND)
-		return git__rethrow(error, "Failed to rename reference");
-
-	if ((error = reference_available(ref->owner, new_name, ref->name)) < GIT_SUCCESS)
-		return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference. Reference already exists");
-
-	old_name = ref->name;
-	ref->name = git__strdup(new_name);
-
-	if (ref->name == NULL) {
-		ref->name = old_name;
-		return GIT_ENOMEM;
-	}
-
-	if (ref->type & GIT_REF_PACKED) {
-		/* write the packfile to disk; note
-		 * that the state of the in-memory cache is not
-		 * consistent, because the reference is indexed
-		 * by its old name but it already has the new one.
-		 * This doesn't affect writing, though, and allows
-		 * us to rollback if writing fails
-		 */
-
-		ref->type &= ~GIT_REF_PACKED;
-
-		/* Create the loose ref under its new name */
-		error = loose_write(ref);
-		if (error < GIT_SUCCESS) {
-			ref->type |= GIT_REF_PACKED;
-			goto cleanup;
-		}
-
-		/* Remove from the packfile cache in order to avoid packing it back
-		 * Note : we do not rely on git_reference_delete() because this would
-		 * invalidate the reference.
-		 */
-		git_hashtable_remove(ref->owner->references.packfile, old_name);
-
-		/* Recreate the packed-refs file without the reference */
-		error = packed_write(ref->owner);
-		if (error < GIT_SUCCESS)
-			goto rename_loose_to_old_name;
-
-	} else {
-		git__joinpath(old_path, ref->owner->path_repository, old_name);
-		git__joinpath(new_path, ref->owner->path_repository, ref->name);
-
-		error = gitfo_mv_force(old_path, new_path);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		/* Once succesfully renamed, remove from the cache the reference known by its old name*/
-		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
-	}
-
-	/* Store the renamed reference into the loose ref cache */
-	error = git_hashtable_insert2(ref->owner->references.loose_cache, ref->name, ref, (void **) &old_ref);
-
-	/* If we force-replaced, we need to free the old reference */
-	if(old_ref)
-		reference_free(old_ref);
-
-	free(old_name);
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
-
-cleanup:
-	/* restore the old name if this failed */
-	free(ref->name);
-	ref->name = old_name;
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
-
-rename_loose_to_old_name:
-	/* If we hit this point. Something *bad* happened! Think "Ghostbusters
-	 * crossing the streams" definition of bad.
-	 * Either the packed-refs has been correctly generated and something else
-	 * has gone wrong, or the writing of the new packed-refs has failed, and
-	 * we're stuck with the old one. As a loose ref always takes priority over
-	 * a packed ref, we'll eventually try and rename the generated loose ref to
-	 * its former name. It even that fails, well... we might have lost the reference
-	 * for good. :-/
-	*/
-
-	git__joinpath(old_path, ref->owner->path_repository, ref->name);
-	git__joinpath(new_path, ref->owner->path_repository, old_name);
-
-	/* No error checking. We'll return the initial error */
-	gitfo_mv_force(old_path, new_path);
-
-	/* restore the old name */
-	free(ref->name);
-	ref->name = old_name;
-
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
-}
-
 /*****************************************
  * External Library API
  *****************************************/
@@ -1422,6 +1290,138 @@ int git_reference_set_target(git_reference *ref, const char *target)
  */
 
 /*
+ * Rename a reference
+ *
+ * If the reference is packed, we need to rewrite the
+ * packfile to remove the reference from it and create
+ * the reference back as a loose one.
+ *
+ * If the reference is loose, we just rename it on
+ * the filesystem.
+ *
+ * We also need to re-insert the reference on its corresponding
+ * in-memory cache, since the caches are indexed by refname.
+ */
+int git_reference_rename(git_reference *ref, const char *new_name, int force)
+{
+	int error;
+	char *old_name;
+	char old_path[GIT_PATH_MAX], new_path[GIT_PATH_MAX], normalized_name[GIT_REFNAME_MAX];
+	git_reference *looked_up_ref, *old_ref = NULL;
+
+	assert(ref);
+
+	/* Ensure the name is valid */
+	error = normalize_name(normalized_name, sizeof(normalized_name), new_name, ref->type & GIT_REF_OID);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to rename reference");
+
+	new_name = normalized_name;
+
+	/* Ensure we're not going to overwrite an existing reference
+	   unless the user has allowed us */
+	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
+	if (error == GIT_SUCCESS && !force)
+		return git__throw(GIT_EEXISTS, "Failed to rename reference. Reference already exists");
+
+	if (error < GIT_SUCCESS &&
+	    error != GIT_ENOTFOUND)
+		return git__rethrow(error, "Failed to rename reference");
+
+	if ((error = reference_available(ref->owner, new_name, ref->name)) < GIT_SUCCESS)
+		return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference. Reference already exists");
+
+	old_name = ref->name;
+	ref->name = git__strdup(new_name);
+
+	if (ref->name == NULL) {
+		ref->name = old_name;
+		return GIT_ENOMEM;
+	}
+
+	if (ref->type & GIT_REF_PACKED) {
+		/* write the packfile to disk; note
+		 * that the state of the in-memory cache is not
+		 * consistent, because the reference is indexed
+		 * by its old name but it already has the new one.
+		 * This doesn't affect writing, though, and allows
+		 * us to rollback if writing fails
+		 */
+
+		ref->type &= ~GIT_REF_PACKED;
+
+		/* Create the loose ref under its new name */
+		error = loose_write(ref);
+		if (error < GIT_SUCCESS) {
+			ref->type |= GIT_REF_PACKED;
+			goto cleanup;
+		}
+
+		/* Remove from the packfile cache in order to avoid packing it back
+		 * Note : we do not rely on git_reference_delete() because this would
+		 * invalidate the reference.
+		 */
+		git_hashtable_remove(ref->owner->references.packfile, old_name);
+
+		/* Recreate the packed-refs file without the reference */
+		error = packed_write(ref->owner);
+		if (error < GIT_SUCCESS)
+			goto rename_loose_to_old_name;
+
+	} else {
+		git__joinpath(old_path, ref->owner->path_repository, old_name);
+		git__joinpath(new_path, ref->owner->path_repository, ref->name);
+
+		error = gitfo_mv_force(old_path, new_path);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		/* Once succesfully renamed, remove from the cache the reference known by its old name*/
+		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
+	}
+
+	/* Store the renamed reference into the loose ref cache */
+	error = git_hashtable_insert2(ref->owner->references.loose_cache, ref->name, ref, (void **) &old_ref);
+
+	/* If we force-replaced, we need to free the old reference */
+	if(old_ref)
+		reference_free(old_ref);
+
+	free(old_name);
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
+
+cleanup:
+	/* restore the old name if this failed */
+	free(ref->name);
+	ref->name = old_name;
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
+
+rename_loose_to_old_name:
+	/* If we hit this point. Something *bad* happened! Think "Ghostbusters
+	 * crossing the streams" definition of bad.
+	 * Either the packed-refs has been correctly generated and something else
+	 * has gone wrong, or the writing of the new packed-refs has failed, and
+	 * we're stuck with the old one. As a loose ref always takes priority over
+	 * a packed ref, we'll eventually try and rename the generated loose ref to
+	 * its former name. It even that fails, well... we might have lost the reference
+	 * for good. :-/
+	*/
+
+	git__joinpath(old_path, ref->owner->path_repository, ref->name);
+	git__joinpath(new_path, ref->owner->path_repository, old_name);
+
+	/* No error checking. We'll return the initial error */
+	gitfo_mv_force(old_path, new_path);
+
+	/* restore the old name */
+	free(ref->name);
+	ref->name = old_name;
+
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
+}
+
+
+/*
  * Delete a reference.
  *
  * If the reference is packed, this is an expensive
@@ -1472,16 +1472,6 @@ int git_reference_delete(git_reference *ref)
 cleanup:
 	reference_free(ref);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to delete reference");
-}
-
-int git_reference_rename(git_reference *ref, const char *new_name)
-{
-	return reference_rename(ref, new_name, 0);
-}
-
-int git_reference_rename_f(git_reference *ref, const char *new_name)
-{
-	return reference_rename(ref, new_name, 1);
 }
 
 int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
