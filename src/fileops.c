@@ -746,4 +746,16 @@ int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 	return dwRet;
 }
 
+int gitfo_hide_directory__w32(const char *path)
+{
+	int error;
+
+	error = SetFileAttributes(path, FILE_ATTRIBUTE_HIDDEN) != 0 ?
+        GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
+
+	if (error < GIT_SUCCESS)	
+		error = git__throw(GIT_EOSERR, "Failed to hide directory '%s'", path);
+
+	return error;
+}
 #endif
