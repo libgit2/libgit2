@@ -127,6 +127,11 @@ static int ensure_repository_init(
 		if (git__suffixcmp(repo->path_index, expected_path_index) != 0)
 			goto cleanup;
 
+#ifdef GIT_WIN32
+		if ((GetFileAttributes(repo->path_repository) & FILE_ATTRIBUTE_HIDDEN) == 0)
+			goto cleanup;
+#endif
+
 		if (git_repository_is_bare(repo) == 1)
 			goto cleanup;
 	} else if (git_repository_is_bare(repo) == 0)
