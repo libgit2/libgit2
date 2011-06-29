@@ -310,7 +310,7 @@ static void backend_free(git_config_file *_backend)
 	free(backend);
 }
 
-static int file_foreach(git_config_file *backend, int (*fn)(const char *, void *), void *data)
+static int file_foreach(git_config_file *backend, int (*fn)(const char *, const char *, void *), void *data)
 {
 	int ret = GIT_SUCCESS;
 	cvar_t *var;
@@ -323,7 +323,7 @@ static int file_foreach(git_config_file *backend, int (*fn)(const char *, void *
 		if (ret < GIT_SUCCESS)
 			return ret;
 
-		ret = fn(normalized, data);
+		ret = fn(normalized, var->value, data);
 		free(normalized);
 		if (ret)
 			break;

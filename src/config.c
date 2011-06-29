@@ -151,7 +151,7 @@ int git_config_add_file(git_config *cfg, git_config_file *file, int priority)
  * Loop over all the variables
  */
 
-int git_config_foreach(git_config *cfg, int (*fn)(const char *, void *), void *data)
+int git_config_foreach(git_config *cfg, int (*fn)(const char *, const char *, void *), void *data)
 {
 	int ret = GIT_SUCCESS;
 	unsigned int i;

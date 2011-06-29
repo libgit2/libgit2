@@ -48,7 +48,7 @@ struct git_config_file {
 	int (*open)(struct git_config_file *);
 	int (*get)(struct git_config_file *, const char *key, const char **value);
 	int (*set)(struct git_config_file *, const char *key, const char *value);
-	int (*foreach)(struct git_config_file *, int (*fn)(const char *, void *), void *data);
+	int (*foreach)(struct git_config_file *, int (*fn)(const char *, const char *, void *), void *data);
 	void (*free)(struct git_config_file *);
 };
 
@@ -254,19 +254,22 @@ GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value
 GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const char *value);
 
 /**
- * Perform an operation on each config variable.
+ * Perform an operation on each config variable
  *
- * The callback is passed a pointer to a config variable name and the
- * data pointer passed to this function. As soon as one of the
- * callback functions returns something other than 0, this function
- * returns that value.
+ * The callback receives the normalized name and value of each variable
+ * in the config backend, and the data pointer passed to this function.
+ * As soon as one of the callback functions returns something other than 0,
+ * this function returns that value.
  *
  * @param cfg where to get the variables from
  * @param callback the function to call on each variable
  * @param data the data to pass to the callback
  * @return GIT_SUCCESS or the return value of the callback which didn't return 0
  */
-GIT_EXTERN(int) git_config_foreach(git_config *cfg, int (*callback)(const char *, void *data), void *data);
+GIT_EXTERN(int) git_config_foreach(
+	git_config *cfg,
+	int (*callback)(const char *var_name, const char *value, void *payload),
+	void *payload);
 
 /** @} */
 GIT_END_DECL
