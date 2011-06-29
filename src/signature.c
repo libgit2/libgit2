@@ -153,8 +153,6 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 int git_signature__parse(git_signature *sig, const char **buffer_out,
 		const char *buffer_end, const char *header)
 {
-	const size_t header_len = strlen(header);
-
 	int name_length, email_length;
 	const char *buffer = *buffer_out;
 	const char *line_end, *name_end, *email_end;
@@ -162,38 +160,40 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	memset(sig, 0x0, sizeof(git_signature));
 
-	line_end = memchr(buffer, '\n', buffer_end - buffer);
-	if (!line_end)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. No newline found");;
+	if ((line_end = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. No newline given");
 
-	if (buffer + (header_len + 1) > line_end)
+	if (header) {
+		const size_t header_len = strlen(header);
+
+		if (memcmp(buffer, header, header_len) != 0)
+			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Expected prefix '%s' doesn't match actual", header);
+
+		buffer += header_len;
+	}
+
+	if (buffer > line_end)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
 
-	if (memcmp(buffer, header, header_len) != 0)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Expected prefix '%s' doesn't match actual", header);
+	if ((name_end = strchr(buffer, '<')) == NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Cannot find '<' in signature");
 
-	buffer += header_len;
-
-	/* Parse name */
-	if ((name_end = strstr(buffer, " <")) == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Can't find e-mail start");
-
-	name_length = name_end - buffer;
-
+	name_length = name_end - 1 - buffer;
+	if (name_length < 0)
+		name_length = 0;
 	sig->name = git__malloc(name_length + 1);
 	if (sig->name == NULL)
 		return GIT_ENOMEM;
 
 	memcpy(sig->name, buffer, name_length);
 	sig->name[name_length] = 0;
-	buffer = name_end + 2;
+	buffer = name_end + 1;
 
-	if (buffer >= line_end)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Ended unexpectedly");
+	if (buffer > line_end)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
 
-	/* Parse email */
-	if ((email_end = strstr(buffer, "> ")) == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Can't find e-mail end");
+	if ((email_end = strchr(buffer, '>')) == NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Cannot find '>' in signature");
 
 	email_length = email_end - buffer;
 	sig->email = git__malloc(email_length + 1);
@@ -204,10 +204,9 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	sig->email[email_length] = 0;
 	buffer = email_end + 2;
 
-	if (buffer >= line_end)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Ended unexpectedly");
+	if (buffer > line_end)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
 
-	/* verify email */
 	if (strpbrk(sig->email, "><\n") != NULL)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Malformed e-mail");
 
@@ -221,7 +220,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	
 	sig->when.offset = offset;
 
-	*buffer_out = (line_end + 1);
+	*buffer_out = line_end + 1;
+
 	return GIT_SUCCESS;
 }
 
