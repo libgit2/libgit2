@@ -945,7 +945,7 @@ static off_t nth_packed_object_offset(const struct pack_file *p, uint32_t n)
 			return off;
 		index += p->num_objects * 4 + (off & 0x7fffffff) * 8;
 		return (((uint64_t)ntohl(*((uint32_t *)(index + 0)))) << 32) |
-				   ntohl(*((uint32_t *)(index + 4)));
+			ntohl(*((uint32_t *)(index + 4)));
 	}
 }
 

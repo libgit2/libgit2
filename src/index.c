@@ -562,7 +562,7 @@ static int read_tree_internal(git_index_tree **out,
 		goto cleanup;
 	}
 
-	 /* Number of children of the tree, newline-terminated */
+	/* Number of children of the tree, newline-terminated */
 	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS ||
 		count < 0) {
 		error = GIT_EOBJCORRUPTED;
@@ -606,7 +606,7 @@ static int read_tree_internal(git_index_tree **out,
 	*out = tree;
 	return GIT_SUCCESS;
 
- cleanup:
+cleanup:
 	free_tree(tree);
 	return error;
 }

@@ -61,7 +61,7 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 
 	for (p = 0; p < length; p += 2) {
 		int v = (from_hex[(unsigned char)str[p + 0]] << 4)
-		       | from_hex[(unsigned char)str[p + 1]];
+			| from_hex[(unsigned char)str[p + 1]];
 
 		if (v < 0)
 			return git__throw(GIT_ENOTOID, "Failed to generate sha1. Given string is not a valid sha1 hash");

@@ -935,8 +935,7 @@ static int _reference_available_cb(const char *ref, void *data)
 		int cmplen = reflen < newlen ? reflen : newlen;
 		const char *lead = reflen < newlen ? new : ref;
 
-		if (!strncmp(new, ref, cmplen) &&
-		    lead[cmplen] == '/')
+		if (!strncmp(new, ref, cmplen) && lead[cmplen] == '/')
 			return GIT_EEXISTS;
 	}
 
@@ -1085,7 +1084,7 @@ int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo,
 	 * need a new reference because we can't make a symbolic ref out
 	 * of an oid one.
 	 * If if didn't exist, then we need to create a new one anyway.
-     */
+	 */
 	if (ref && ref->type & GIT_REF_SYMBOLIC){
 		updated = 1;
 	} else {
@@ -1144,7 +1143,7 @@ int git_reference_create_oid(git_reference **ref_out, git_repository *repo, cons
 	 * need a new reference because we can't make a symbolic ref out
 	 * of an oid one.
 	 * If if didn't exist, then we need to create a new one anyway.
-     */
+	 */
 	if (ref && ref-> type & GIT_REF_OID){
 		updated = 1;
 	} else {
@@ -1318,14 +1317,15 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 
 	new_name = normalized_name;
 
-	/* Ensure we're not going to overwrite an existing reference
-	   unless the user has allowed us */
+	/*
+	 * Ensure we're not going to overwrite an existing reference
+	 * unless the user has allowed us
+	 */
 	error = git_reference_lookup(&looked_up_ref, ref->owner, new_name);
 	if (error == GIT_SUCCESS && !force)
 		return git__throw(GIT_EEXISTS, "Failed to rename reference. Reference already exists");
 
-	if (error < GIT_SUCCESS &&
-	    error != GIT_ENOTFOUND)
+	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
 		return git__rethrow(error, "Failed to rename reference");
 
 	if ((error = reference_available(ref->owner, new_name, ref->name)) < GIT_SUCCESS)

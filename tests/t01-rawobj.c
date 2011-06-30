@@ -404,51 +404,51 @@ static char *bye_id = "ce08fe4884650f067bd5703b6a59a8b3b3c99a09";
 static char *bye_text = "bye world\n";
 
 BEGIN_TEST(hash0, "normal hash by blocks")
-    git_hash_ctx *ctx;
-    git_oid id1, id2;
+	git_hash_ctx *ctx;
+	git_oid id1, id2;
 
-    must_be_true((ctx = git_hash_new_ctx()) != NULL);
+	must_be_true((ctx = git_hash_new_ctx()) != NULL);
 
 	/* should already be init'd */
-    git_hash_update(ctx, hello_text, strlen(hello_text));
-    git_hash_final(&id2, ctx);
-    must_pass(git_oid_fromstr(&id1, hello_id));
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	git_hash_update(ctx, hello_text, strlen(hello_text));
+	git_hash_final(&id2, ctx);
+	must_pass(git_oid_fromstr(&id1, hello_id));
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 
 	/* reinit should permit reuse */
-    git_hash_init(ctx);
-    git_hash_update(ctx, bye_text, strlen(bye_text));
-    git_hash_final(&id2, ctx);
-    must_pass(git_oid_fromstr(&id1, bye_id));
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	git_hash_init(ctx);
+	git_hash_update(ctx, bye_text, strlen(bye_text));
+	git_hash_final(&id2, ctx);
+	must_pass(git_oid_fromstr(&id1, bye_id));
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 
-    git_hash_free_ctx(ctx);
+	git_hash_free_ctx(ctx);
 END_TEST
 
 BEGIN_TEST(hash1, "hash whole buffer in a single call")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, hello_id));
+	must_pass(git_oid_fromstr(&id1, hello_id));
 
-    git_hash_buf(&id2, hello_text, strlen(hello_text));
+	git_hash_buf(&id2, hello_text, strlen(hello_text));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(hash2, "hash a vector")
-    git_oid id1, id2;
-    git_buf_vec vec[2];
+	git_oid id1, id2;
+	git_buf_vec vec[2];
 
-    must_pass(git_oid_fromstr(&id1, hello_id));
+	must_pass(git_oid_fromstr(&id1, hello_id));
 
-    vec[0].data = hello_text;
-    vec[0].len  = 4;
-    vec[1].data = hello_text+4;
-    vec[1].len  = strlen(hello_text)-4;
+	vec[0].data = hello_text;
+	vec[0].len  = 4;
+	vec[1].data = hello_text+4;
+	vec[1].len  = strlen(hello_text)-4;
 
-    git_hash_vec(&id2, vec, 2);
+	git_hash_vec(&id2, vec, 2);
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(objtype0, "convert type to string")
@@ -498,104 +498,104 @@ BEGIN_TEST(objtype2, "check if an object type is loose")
 END_TEST
 
 BEGIN_TEST(objhash0, "hash junk data")
-    git_oid id, id_zero;
+	git_oid id, id_zero;
 
-    must_pass(git_oid_fromstr(&id_zero, zero_id));
+	must_pass(git_oid_fromstr(&id_zero, zero_id));
 
-    /* invalid types: */
-    junk_obj.data = some_data;
-    must_fail(hash_object(&id, &junk_obj));
+	/* invalid types: */
+	junk_obj.data = some_data;
+	must_fail(hash_object(&id, &junk_obj));
 
-    junk_obj.type = GIT_OBJ__EXT1;
-    must_fail(hash_object(&id, &junk_obj));
+	junk_obj.type = GIT_OBJ__EXT1;
+	must_fail(hash_object(&id, &junk_obj));
 
-    junk_obj.type = GIT_OBJ__EXT2;
-    must_fail(hash_object(&id, &junk_obj));
+	junk_obj.type = GIT_OBJ__EXT2;
+	must_fail(hash_object(&id, &junk_obj));
 
-    junk_obj.type = GIT_OBJ_OFS_DELTA;
-    must_fail(hash_object(&id, &junk_obj));
+	junk_obj.type = GIT_OBJ_OFS_DELTA;
+	must_fail(hash_object(&id, &junk_obj));
 
-    junk_obj.type = GIT_OBJ_REF_DELTA;
-    must_fail(hash_object(&id, &junk_obj));
+	junk_obj.type = GIT_OBJ_REF_DELTA;
+	must_fail(hash_object(&id, &junk_obj));
 
-    /* data can be NULL only if len is zero: */
-    junk_obj.type = GIT_OBJ_BLOB;
-    junk_obj.data = NULL;
-    must_pass(hash_object(&id, &junk_obj));
-    must_be_true(git_oid_cmp(&id, &id_zero) == 0);
+	/* data can be NULL only if len is zero: */
+	junk_obj.type = GIT_OBJ_BLOB;
+	junk_obj.data = NULL;
+	must_pass(hash_object(&id, &junk_obj));
+	must_be_true(git_oid_cmp(&id, &id_zero) == 0);
 
-    junk_obj.len = 1;
-    must_fail(hash_object(&id, &junk_obj));
+	junk_obj.len = 1;
+	must_fail(hash_object(&id, &junk_obj));
 END_TEST
 
 BEGIN_TEST(objhash1, "hash a commit object")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, commit_id));
+	must_pass(git_oid_fromstr(&id1, commit_id));
 
-    must_pass(hash_object(&id2, &commit_obj));
+	must_pass(hash_object(&id2, &commit_obj));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(objhash2, "hash a tree object")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, tree_id));
+	must_pass(git_oid_fromstr(&id1, tree_id));
 
-    must_pass(hash_object(&id2, &tree_obj));
+	must_pass(hash_object(&id2, &tree_obj));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(objhash3, "hash a tag object")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, tag_id));
+	must_pass(git_oid_fromstr(&id1, tag_id));
 
-    must_pass(hash_object(&id2, &tag_obj));
+	must_pass(hash_object(&id2, &tag_obj));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(objhash4, "hash a zero-length object")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, zero_id));
+	must_pass(git_oid_fromstr(&id1, zero_id));
 
-    must_pass(hash_object(&id2, &zero_obj));
+	must_pass(hash_object(&id2, &zero_obj));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(objhash5, "hash an one-byte long object")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, one_id));
+	must_pass(git_oid_fromstr(&id1, one_id));
 
-    must_pass(hash_object(&id2, &one_obj));
+	must_pass(hash_object(&id2, &one_obj));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(objhash6, "hash a two-byte long object")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, two_id));
+	must_pass(git_oid_fromstr(&id1, two_id));
 
-    must_pass(hash_object(&id2, &two_obj));
+	must_pass(hash_object(&id2, &two_obj));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_TEST(objhash7, "hash an object several bytes long")
-    git_oid id1, id2;
+	git_oid id1, id2;
 
-    must_pass(git_oid_fromstr(&id1, some_id));
+	must_pass(git_oid_fromstr(&id1, some_id));
 
-    must_pass(hash_object(&id2, &some_obj));
+	must_pass(hash_object(&id2, &some_obj));
 
-    must_be_true(git_oid_cmp(&id1, &id2) == 0);
+	must_be_true(git_oid_cmp(&id1, &id2) == 0);
 END_TEST
 
 BEGIN_SUITE(rawobjects)

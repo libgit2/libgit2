@@ -34,10 +34,10 @@
 typedef struct commit_object {
 	git_oid oid;
 	uint32_t time;
-	unsigned int seen:1,
-			 uninteresting:1,
-			 topo_delay:1,
-			 parsed:1;
+	unsigned int seen:1;
+	unsigned int uninteresting:1;
+	unsigned int topo_delay:1;
+	unsigned int parsed:1;
 
 	unsigned short in_degree;
 	unsigned short out_degree;

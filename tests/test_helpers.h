@@ -43,14 +43,14 @@
 #define TEMP_REPO_FOLDER_NS		TEMP_FOLDER TEST_REPOSITORY_NAME
 
 typedef struct object_data {
-    unsigned char *bytes;  /* (compressed) bytes stored in object store */
-    size_t        blen;    /* length of data in object store            */
-    char          *id;     /* object id (sha1)                          */
-    char          *type;   /* object type                               */
-    char          *dir;    /* object store (fan-out) directory name     */
-    char          *file;   /* object store filename                     */
-    unsigned char *data;   /* (uncompressed) object data                */
-    size_t        dlen;    /* length of (uncompressed) object data      */
+	unsigned char *bytes;  /* (compressed) bytes stored in object store */
+	size_t        blen;    /* length of data in object store            */
+	char          *id;     /* object id (sha1)                          */
+	char          *type;   /* object type                               */
+	char          *dir;    /* object store (fan-out) directory name     */
+	char          *file;   /* object store filename                     */
+	unsigned char *data;   /* (uncompressed) object data                */
+	size_t        dlen;    /* length of (uncompressed) object data      */
 } object_data;
 
 extern int write_object_data(char *file, void *data, size_t len);

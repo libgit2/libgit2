@@ -126,7 +126,7 @@ add RE(t),RE(t),%r0;  rotlwi RB(t),RB(t),30;  rotlwi W(s),W(s),1
  * We could use W(s) as a temp register, but we don't need it.
  */
 #define STEPD1(t) \
-                        add   RE(t),RE(t),W(t); xor    %r0,RD(t),RB(t); \
+			add   RE(t),RE(t),W(t); xor    %r0,RD(t),RB(t); \
 rotlwi RB(t),RB(t),30;  add   RE(t),RE(t),%r5;  xor    %r0,%r0,RC(t);   \
 add    RE(t),RE(t),%r0; rotlwi %r0,RA(t),5;     /* spare slot */        \
 add    RE(t),RE(t),%r0

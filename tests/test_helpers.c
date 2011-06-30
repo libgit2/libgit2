@@ -265,8 +265,8 @@ static int remove_placeholders_recurs(void *filename, char *path)
 	if (!gitfo_isdir(path))
 		return gitfo_dirent(path, GIT_PATH_MAX, remove_placeholders_recurs, data);
 
-	 if (git__basename_r(passed_filename, sizeof(passed_filename), path) < GIT_SUCCESS)
-		 return GIT_EINVALIDPATH;
+	if (git__basename_r(passed_filename, sizeof(passed_filename), path) < GIT_SUCCESS)
+		return GIT_EINVALIDPATH;
 
 	if (!strcmp(data, passed_filename))
 		return gitfo_unlink(path);

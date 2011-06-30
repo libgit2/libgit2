@@ -204,93 +204,93 @@ Exit:
  */
 int git__dirname_r(char *buffer, size_t bufflen, const char *path)
 {
-    const char *endp;
-    int result, len;
+	const char *endp;
+	int result, len;
 
-    /* Empty or NULL string gets treated as "." */
-    if (path == NULL || *path == '\0') {
-        path = ".";
-        len  = 1;
-        goto Exit;
-    }
+	/* Empty or NULL string gets treated as "." */
+	if (path == NULL || *path == '\0') {
+		path = ".";
+		len  = 1;
+		goto Exit;
+	}
 
-    /* Strip trailing slashes */
-    endp = path + strlen(path) - 1;
-    while (endp > path && *endp == '/')
-        endp--;
+	/* Strip trailing slashes */
+	endp = path + strlen(path) - 1;
+	while (endp > path && *endp == '/')
+		endp--;
 
-    /* Find the start of the dir */
-    while (endp > path && *endp != '/')
-        endp--;
+	/* Find the start of the dir */
+	while (endp > path && *endp != '/')
+		endp--;
 
-    /* Either the dir is "/" or there are no slashes */
-    if (endp == path) {
-        path = (*endp == '/') ? "/" : ".";
-        len  = 1;
-        goto Exit;
-    }
+	/* Either the dir is "/" or there are no slashes */
+	if (endp == path) {
+		path = (*endp == '/') ? "/" : ".";
+		len  = 1;
+		goto Exit;
+	}
 
-    do {
-        endp--;
-    } while (endp > path && *endp == '/');
+	do {
+		endp--;
+	} while (endp > path && *endp == '/');
 
-    len = endp - path +1;
+	len = endp - path +1;
 
 Exit:
-    result = len;
-    if (len+1 > GIT_PATH_MAX) {
-        return GIT_ENOMEM;
-    }
-    if (buffer == NULL)
-        return result;
+	result = len;
+	if (len+1 > GIT_PATH_MAX) {
+		return GIT_ENOMEM;
+	}
+	if (buffer == NULL)
+		return result;
 
-    if (len > (int)bufflen-1) {
-        len    = (int)bufflen-1;
-        result = GIT_ENOMEM;
-    }
+	if (len > (int)bufflen-1) {
+		len    = (int)bufflen-1;
+		result = GIT_ENOMEM;
+	}
 
-    if (len >= 0) {
-        memmove(buffer, path, len);
-        buffer[len] = 0;
-    }
-    return result;
+	if (len >= 0) {
+		memmove(buffer, path, len);
+		buffer[len] = 0;
+	}
+	return result;
 }
 
 
 char *git__dirname(const char *path)
 {
-    char *dname = NULL;
-    int len;
+	char *dname = NULL;
+	int len;
 
 	len = (path ? strlen(path) : 0) + 2;
 	dname = (char *)git__malloc(len);
 	if (dname == NULL)
 		return NULL;
 
-    if (git__dirname_r(dname, len, path) < GIT_SUCCESS) {
+	if (git__dirname_r(dname, len, path) < GIT_SUCCESS) {
 		free(dname);
 		return NULL;
 	}
 
-    return dname;
+	return dname;
 }
 
 char *git__basename(const char *path)
 {
-    char *bname = NULL;
-    int len;
+	char *bname = NULL;
+	int len;
 
 	len = (path ? strlen(path) : 0) + 2;
 	bname = (char *)git__malloc(len);
 	if (bname == NULL)
 		return NULL;
 
-    if (git__basename_r(bname, len, path) < GIT_SUCCESS) {
+	if (git__basename_r(bname, len, path) < GIT_SUCCESS) {
 		free(bname);
 		return NULL;
 	}
 
-    return bname;
+	return bname;
 }
 
 
@@ -442,7 +442,7 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 	case 3: h ^= data[2] << 16;
 	case 2: h ^= data[1] << 8;
 	case 1: h ^= data[0];
-	        h *= m;
+		h *= m;
 	};
 
 	h ^= h >> 13;
@@ -463,13 +463,13 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 {
 
 #define MURMUR_BLOCK() {\
-    k1 *= c1; \
-    k1  = git__rotl(k1,11);\
-    k1 *= c2;\
-    h1 ^= k1;\
-    h1 = h1*3 + 0x52dce729;\
-    c1 = c1*5 + 0x7b7d159c;\
-    c2 = c2*5 + 0x6bce6396;\
+	k1 *= c1; \
+	k1  = git__rotl(k1,11);\
+	k1 *= c2;\
+	h1 ^= k1;\
+	h1 = h1*3 + 0x52dce729;\
+	c1 = c1*5 + 0x7b7d159c;\
+	c2 = c2*5 + 0x6bce6396;\
 }
 
 	const uint8_t *data = (const uint8_t*)key;

@@ -72,16 +72,16 @@ typedef struct {
 
 #define CVAR_LIST_FOREACH(list, iter)\
 	for ((iter) = CVAR_LIST_HEAD(list);\
-		 (iter) != NULL;\
-		 (iter) = CVAR_LIST_NEXT(iter))
+		(iter) != NULL;\
+		(iter) = CVAR_LIST_NEXT(iter))
 
 /*
  * Inspired by the FreeBSD functions
  */
 #define CVAR_LIST_FOREACH_SAFE(start, iter, tmp)\
 	for ((iter) = CVAR_LIST_HEAD(vars);\
-		 (iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
-		 (iter) = (tmp))
+		(iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
+		(iter) = (tmp))
 
 typedef struct {
 	git_config_file parent;
@@ -290,7 +290,7 @@ static int config_open(git_config_file *cfg)
 
 	return error;
 
- cleanup:
+cleanup:
 	cvar_list_free(&b->var_list);
 	gitfo_free_buf(&b->reader.buffer);
 
@@ -391,7 +391,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 	CVAR_LIST_APPEND(&b->var_list, var);
 	error = config_write(b, var);
 
- out:
+out:
 	if (error < GIT_SUCCESS)
 		cvar_free(var);
 
@@ -531,9 +531,9 @@ static char *cfg_readline(diskfile_backend *cfg)
 	while (isspace(*line_src))
 		++line_src;
 
-    line_end = strchr(line_src, '\n');
+	line_end = strchr(line_src, '\n');
 
-    /* no newline at EOF */
+	/* no newline at EOF */
 	if (line_end == NULL)
 		line_end = strchr(line_src, 0);
 
@@ -677,7 +677,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 
 	git__strntolower(*section_name, strchr(*section_name, ' ') - *section_name);
 
- out:
+out:
 	free(subsection);
 
 	return error;
@@ -1020,7 +1020,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 
 			/* And then the write out rest of the file */
 			error = git_filebuf_write(&file, post_start,
-			            cfg->reader.buffer.len - (post_start - data_start));
+					cfg->reader.buffer.len - (post_start - data_start));
 
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to write the rest of the file");
@@ -1060,7 +1060,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 	if (error < GIT_SUCCESS)
 		git__rethrow(error, "Failed to write new section");
 
- cleanup:
+cleanup:
 	free(current_section);
 
 	if (error < GIT_SUCCESS)
@@ -1142,7 +1142,7 @@ static int parse_multiline_variable(diskfile_backend *cfg, const char *first, ch
 
 	*out = buf;
 
- out:
+out:
 	free(line);
 	return error;
 }
@@ -1212,7 +1212,7 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 		*var_value = NULL;
 	}
 
- out:
+out:
 	free(line);
 	return error;
 }

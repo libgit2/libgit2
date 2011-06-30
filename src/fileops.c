@@ -370,7 +370,7 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 {
 	int error, root_path_offset;
 	char *pp, *sp;
-    char *path_copy = git__strdup(path);
+	char *path_copy = git__strdup(path);
 
 	if (path_copy == NULL)
 		return GIT_ENOMEM;
@@ -382,7 +382,7 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
-    while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != NULL) {
+	while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != NULL) {
 		if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
 			*sp = 0;
 			error = gitfo_mkdir(path_copy, mode);
@@ -570,10 +570,10 @@ int gitfo_cmp_path(const char *name1, int len1, int isdir1,
 		return cmp;
 	if (len1 < len2)
 		return ((!isdir1 && !isdir2) ? -1 :
-                        (isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
+			(isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
 	if (len1 > len2)
 		return ((!isdir1 && !isdir2) ? 1 :
-                        (isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
+			(isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
 	return 0;
 }
 
@@ -707,12 +707,12 @@ int gitfo_readlink__w32(const char *link, char *target, size_t target_len)
 	}
 
 	hFile = CreateFile(link,            // file to open
-				 GENERIC_READ,          // open for reading
-				 FILE_SHARE_READ,       // share for reading
-				 NULL,                  // default security
-				 OPEN_EXISTING,         // existing file only
-				 FILE_FLAG_BACKUP_SEMANTICS, // normal file
-				 NULL);                 // no attr. template
+			GENERIC_READ,          // open for reading
+			FILE_SHARE_READ,       // share for reading
+			NULL,                  // default security
+			OPEN_EXISTING,         // existing file only
+			FILE_FLAG_BACKUP_SEMANTICS, // normal file
+			NULL);                 // no attr. template
 
 	if (hFile == INVALID_HANDLE_VALUE)
 		return GIT_EOSERR;
@@ -751,7 +751,7 @@ int gitfo_hide_directory__w32(const char *path)
 	int error;
 
 	error = SetFileAttributes(path, FILE_ATTRIBUTE_HIDDEN) != 0 ?
-        GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
+		GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
 
 	if (error < GIT_SUCCESS)
 		error = git__throw(GIT_EOSERR, "Failed to hide directory '%s'", path);

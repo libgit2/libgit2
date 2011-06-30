@@ -29,9 +29,9 @@ typedef int (*git_pqueue_cmp)(void *a, void *b);
 
 /** the priority queue handle */
 typedef struct {
-    size_t size, avail, step;
-    git_pqueue_cmp cmppri;
-    void **d;
+	size_t size, avail, step;
+	git_pqueue_cmp cmppri;
+	void **d;
 } git_pqueue;
 
 
