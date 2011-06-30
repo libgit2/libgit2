@@ -167,4 +167,7 @@ extern void git__strtolower(char *str);
 		} \
 	} while (0)
 
+extern int git__msort(void *b, size_t n, size_t s,
+		int (*cmp)(const void *, const void *));
+
 #endif /* INCLUDE_util_h__ */
