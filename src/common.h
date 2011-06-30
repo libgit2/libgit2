@@ -2,10 +2,6 @@
 #define INCLUDE_common_h__
 
 #include "git2/common.h"
-
-/** Force 64 bit off_t size on POSIX. */
-#define _FILE_OFFSET_BITS 64
-
 #include "git2/thread-utils.h"
 #include "cc-compat.h"
 
