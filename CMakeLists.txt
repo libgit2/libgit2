@@ -22,7 +22,18 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" 
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(deps/zlib src include)
+INCLUDE_DIRECTORIES(src include)
+IF (NOT WIN32)
+	FIND_PACKAGE(ZLIB)
+ENDIF()
+
+IF (ZLIB_FOUND)
+	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
+	LINK_LIBRARIES(${ZLIB_LIBRARIES})
+ELSE (ZLIB_FOUND)
+	INCLUDE_DIRECTORIES(deps/zlib)
+	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
+ENDIF()
 
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
@@ -61,7 +72,6 @@ ENDIF()
 
 # Collect sourcefiles
 FILE(GLOB SRC src/*.c src/backends/*.c)
-FILE(GLOB SRC_ZLIB deps/zlib/*.c)
 FILE(GLOB SRC_SHA1 src/block-sha1/*.c)
 FILE(GLOB SRC_PLAT src/unix/*.c)
 FILE(GLOB SRC_H include/git2/*.h)
