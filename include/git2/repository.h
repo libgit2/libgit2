@@ -228,7 +228,7 @@ GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path,
  * @return 1 if HEAD is detached, 0 if i'ts not; error code if there
  * was an error.
  */
-int git_repository_head_detached(git_repository *repo);
+GIT_EXTERN(int) git_repository_head_detached(git_repository *repo);
 
 /**
  * Check if the current branch is an orphan
@@ -240,7 +240,7 @@ int git_repository_head_detached(git_repository *repo);
  * @return 1 if the current branch is an orphan, 0 if it's not; error
  * code if therewas an error
  */
-int git_repository_head_orphan(git_repository *repo);
+GIT_EXTERN(int) git_repository_head_orphan(git_repository *repo);
 
 /**
  * Check if a repository is empty
