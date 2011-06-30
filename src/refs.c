@@ -51,7 +51,7 @@ static uint32_t reftable_hash(const void *key, int hash_id)
 	static uint32_t hash_seeds[GIT_HASHTABLE_HASHES] = {
 		2147483647,
 		0x5d20bb23,
-		0x7daaab3c 
+		0x7daaab3c
 	};
 
 	return git__hash(key, strlen((const char *)key), hash_seeds[hash_id]);
@@ -230,9 +230,9 @@ static int loose_parse_symbolic(git_reference *ref, gitfo_buf *file_content)
 		return git__throw(GIT_EOBJCORRUPTED,
 			"Failed to parse loose reference. Object too short");
 
-	/* 
+	/*
 	 * Assume we have already checked for the header
-	 * before calling this function 
+	 * before calling this function
 	 */
 
 	refname_start += header_len;
@@ -303,8 +303,8 @@ static git_rtype loose_guess_rtype(const char *full_path)
 }
 
 static int loose_lookup(
-		git_reference **ref_out, 
-		git_repository *repo, 
+		git_reference **ref_out,
+		git_repository *repo,
 		const char *name,
 		int skip_symbolic)
 {
@@ -407,7 +407,7 @@ unlock:
 
 static int packed_parse_peel(
 		reference_oid *tag_ref,
-		const char **buffer_out, 
+		const char **buffer_out,
 		const char *buffer_end)
 {
 	const char *buffer = *buffer_out + 1;
@@ -527,7 +527,7 @@ static int packed_load(git_repository *repo)
 		git_hashtable_clear(repo->references.packfile);
 	} else {
 		ref_cache->packfile = git_hashtable_alloc(
-			default_table_size, 
+			default_table_size,
 			reftable_hash,
 			(git_hash_keyeq_ptr)strcmp);
 
@@ -682,7 +682,7 @@ static int packed_loadloose(git_repository *repository)
 	/*
 	 * Load all the loose files from disk into the Packfile table.
 	 * This will overwrite any old packed entries with their
-	 * updated loose versions 
+	 * updated loose versions
 	 */
 	return gitfo_dirent(refs_path, GIT_PATH_MAX, _dirent_loose_load, repository);
 }
@@ -698,7 +698,7 @@ static int packed_write_ref(reference_oid *ref, git_filebuf *file)
 	git_oid_fmt(oid, &ref->oid);
 	oid[GIT_OID_HEXSZ] = 0;
 
-	/* 
+	/*
 	 * For references that peel to an object in the repo, we must
 	 * write the resulting peel on a separate line, e.g.
 	 *
@@ -724,7 +724,7 @@ static int packed_write_ref(reference_oid *ref, git_filebuf *file)
 /*
  * Find out what object this reference resolves to.
  *
- * For references that point to a 'big' tag (e.g. an 
+ * For references that point to a 'big' tag (e.g. an
  * actual tag object on the repository), we need to
  * cache on the packfile the OID of the object to
  * which that 'big tag' is pointing to.
@@ -1000,7 +1000,7 @@ int git_reference_lookup(git_reference **ref_out, git_repository *repo, const ch
 
 	/*
 	 * If we cannot find a loose reference, we look into the packfile
-	 * Load the packfile first if it hasn't been loaded 
+	 * Load the packfile first if it hasn't been loaded
 	 */
 	/* load all the packed references */
 	error = packed_load(repo);
@@ -1236,7 +1236,7 @@ int git_reference_set_oid(git_reference *ref, const git_oid *id)
 	git_oid_cpy(&ref_oid->oid, id);
 	ref->type &= ~GIT_REF_HAS_PEEL;
 
-	error = loose_write(ref); 
+	error = loose_write(ref);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -1447,7 +1447,7 @@ int git_reference_delete(git_reference *ref)
 		/* load the existing packfile */
 		if ((error = packed_load(ref->owner)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to delete reference");
-		
+
 		if (git_hashtable_remove(ref->owner->references.packfile, ref->name) < GIT_SUCCESS)
 			return git__throw(GIT_ENOTFOUND, "Reference not found");
 
@@ -1484,7 +1484,7 @@ int git_reference_resolve(git_reference **resolved_ref, git_reference *ref)
 
 	if ((error = loose_update(ref)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to resolve reference");
-	
+
 	repo = ref->owner;
 
 	for (i = 0; i < MAX_NESTING_LEVEL; ++i) {

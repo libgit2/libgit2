@@ -61,7 +61,7 @@ int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp
 
 	v->_alloc_size = initial_size;
 	v->_cmp = cmp;
-	
+
 	v->length = 0;
 	v->sorted = 1;
 

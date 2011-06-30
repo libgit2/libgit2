@@ -71,7 +71,7 @@ GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *pat
  *
  * @param git_dir The full path to the repository folder
  *		e.g. a '.git' folder for live repos, any folder for bare
- *		Equivalent to $GIT_DIR. 
+ *		Equivalent to $GIT_DIR.
  *		Cannot be NULL.
  *
  * @param git_object_directory The full path to the ODB folder.
@@ -105,7 +105,7 @@ GIT_EXTERN(int) git_repository_open2(git_repository **repository,
  *
  * @param git_dir The full path to the repository folder
  *		e.g. a '.git' folder for live repos, any folder for bare
- *		Equivalent to $GIT_DIR. 
+ *		Equivalent to $GIT_DIR.
  *		Cannot be NULL.
  *
  * @param object_database A pointer to a git_odb created & initialized
@@ -210,8 +210,8 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  *
  * @param repo_out pointer to the repo which will be created or reinitialized
  * @param path the path to the repository
- * @param is_bare if true, a Git repository without a working directory is created 
- *		at the pointed path. If false, provided path will be considered as the working 
+ * @param is_bare if true, a Git repository without a working directory is created
+ *		at the pointed path. If false, provided path will be considered as the working
  *		directory into which the .git directory will be created.
  *
  * @return 0 on success; error code otherwise

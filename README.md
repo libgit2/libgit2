@@ -101,7 +101,7 @@ GitHub, or join us on the mailing list by sending an email to:
 libgit2@librelist.com
 
 
-License 
+License
 ==================================
 libgit2 is under GPL2 **with linking exemption**. This means you
 can link to the library with any program, commercial, open source or

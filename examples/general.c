@@ -1,7 +1,7 @@
 // [**libgit2**][lg] is a portable, pure C implementation of the Git core methods
 // provided as a re-entrant linkable library with a solid API, allowing you
-// to write native speed custom Git applications in any language which 
-// supports C bindings. 
+// to write native speed custom Git applications in any language which
+// supports C bindings.
 //
 // This file is an example of using that API in a real, compilable C file.
 // As the API is updated, this file will be updated to demonstrate the
@@ -65,8 +65,8 @@ int main (int argc, char** argv)
 
   // ### Working with the Object Database
   // **libgit2** provides [direct access][odb] to the object database.
-  // The object database is where the actual objects are stored in Git. For 
-  // working with raw objects, we'll need to get this structure from the 
+  // The object database is where the actual objects are stored in Git. For
+  // working with raw objects, we'll need to get this structure from the
   // repository.
   // [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
   git_odb *odb;
@@ -94,10 +94,10 @@ int main (int argc, char** argv)
   data = (const unsigned char *)git_odb_object_data(obj);
   otype = git_odb_object_type(obj);
 
-  // We provide methods to convert from the object type which is an enum, to a string 
+  // We provide methods to convert from the object type which is an enum, to a string
   // representation of that value (and vice-versa).
   str_type = git_object_type2string(otype);
-  printf("object length and type: %d, %s\n", 
+  printf("object length and type: %d, %s\n",
       (int)git_odb_object_size(obj),
       str_type);
 
@@ -126,7 +126,7 @@ int main (int argc, char** argv)
   // yourself.
 
   // #### Commit Parsing
-  // [Parsing commit objects][pco] is simple and gives you access to all the data in the commit 
+  // [Parsing commit objects][pco] is simple and gives you access to all the data in the commit
   // - the // author (name, email, datetime), committer (same), tree, message, encoding and parent(s).
   // [pco]: http://libgit2.github.com/libgit2/#HEAD/group/commit
 
@@ -156,7 +156,7 @@ int main (int argc, char** argv)
   printf("Author: %s (%s)\n", author->name, author->email);
 
   // Commits can have zero or more parents. The first (root) commit will have no parents, most commits
-  // will have one, which is the commit it was based on, and merge commits will have two or more. 
+  // will have one, which is the commit it was based on, and merge commits will have two or more.
   // Commits can technically have any number, though it's pretty rare to have more than two.
   parents  = git_commit_parentcount(commit);
   for (p = 0;p < parents;p++) {
@@ -191,7 +191,7 @@ int main (int argc, char** argv)
       987654321, 90);
 
   // Commit objects need a tree to point to and optionally one or more parents.  Here we're creating oid
-  // objects to create the commit with, but you can also use 
+  // objects to create the commit with, but you can also use
   git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
   git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
 
@@ -227,7 +227,7 @@ int main (int argc, char** argv)
   error = git_tag_lookup(&tag, repo, &oid);
 
   // Now that we have the tag object, we can extract the information it generally contains: the target
-  // (usually a commit object), the type of the target object (usually 'commit'), the name ('v1.0'), 
+  // (usually a commit object), the type of the target object (usually 'commit'), the name ('v1.0'),
   // the tagger (a git_signature - name, email, timestamp), and the tag message.
   git_tag_target((git_object **)&commit, tag);
   tname = git_tag_name(tag);    // "test"
@@ -275,7 +275,7 @@ int main (int argc, char** argv)
   //
   // The last object type is the simplest and requires the least parsing help. Blobs are just file
   // contents and can contain anything, there is no structure to it. The main advantage to using the
-  // [simple blob api][ba] is that when you're creating blobs you don't have to calculate the size 
+  // [simple blob api][ba] is that when you're creating blobs you don't have to calculate the size
   // of the content.  There is also a helper for reading a file from disk and writing it to the db and
   // getting the oid back so you don't have to do all those steps yourself.
   //
@@ -343,7 +343,7 @@ int main (int argc, char** argv)
 
   // ### Index File Manipulation
   //
-  // The [index file API][gi] allows you to read, traverse, update and write the Git index file 
+  // The [index file API][gi] allows you to read, traverse, update and write the Git index file
   // (sometimes thought of as the staging area).
   //
   // [gi]: http://libgit2.github.com/libgit2/#HEAD/group/index

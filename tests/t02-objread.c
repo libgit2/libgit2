@@ -210,7 +210,7 @@ BEGIN_TEST(readheader0, "read only the header of several packed objects")
 		git_odb_object_close(obj);
 	}
 
-    git_odb_close(db); 
+    git_odb_close(db);
 END_TEST
 
 BEGIN_TEST(readheader1, "read only the header of several loose objects")

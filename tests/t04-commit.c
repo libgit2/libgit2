@@ -359,7 +359,7 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 	git_repository *repo;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	
+
 	for (i = 0; i < commit_count; ++i) {
 		git_oid id;
 		git_commit *commit;

@@ -95,7 +95,7 @@ GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository
 
 /**
  * Get the OID pointed to by a reference.
- * 
+ *
  * Only available if the reference is direct (i.e. not symbolic)
  *
  * @param ref The reference
@@ -105,7 +105,7 @@ GIT_EXTERN(const git_oid *) git_reference_oid(git_reference *ref);
 
 /**
  * Get full name to the reference pointed by this reference
- * 
+ *
  * Only available if the reference is symbolic
  *
  * @param ref The reference
@@ -132,7 +132,7 @@ GIT_EXTERN(git_rtype) git_reference_type(git_reference *ref);
 GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
 
 /**
- * Resolve a symbolic reference 
+ * Resolve a symbolic reference
  *
  * Thie method iteratively peels a symbolic reference
  * until it resolves to a direct reference to an OID.
@@ -212,7 +212,7 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * Pack all the loose references in the repository
  *
  * This method will load into the cache all the loose
- * references on the repository and update the 
+ * references on the repository and update the
  * `packed-refs` file with them.
  *
  * Once the `packed-refs` file has been written properly,

@@ -241,7 +241,7 @@ BEGIN_TEST(path3, "prettify and validate a path to a file")
 	must_fail(ensure_file_path_normalized("d1/...", NULL, 0));
 	must_fail(ensure_file_path_normalized("d1/.../", NULL, 0));
 	must_fail(ensure_file_path_normalized("d1/.../d2", NULL, 0));
-	
+
 	must_pass(ensure_file_path_normalized("/a", "/a", ROOTED_PATH));
 	must_pass(ensure_file_path_normalized("/./testrepo.git", "/testrepo.git", ROOTED_PATH));
 	must_pass(ensure_file_path_normalized("/./.git", "/.git", ROOTED_PATH));

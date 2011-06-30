@@ -427,17 +427,17 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 	while(len >= 4) {
 		uint32_t k = *(uint32_t *)data;
 
-		k *= m; 
-		k ^= k >> r; 
-		k *= m; 
-		
-		h *= m; 
+		k *= m;
+		k ^= k >> r;
+		k *= m;
+
+		h *= m;
 		h ^= k;
 
 		data += 4;
 		len -= 4;
 	}
-	
+
 	switch(len) {
 	case 3: h ^= data[2] << 16;
 	case 2: h ^= data[1] << 8;
@@ -450,7 +450,7 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 	h ^= h >> 15;
 
 	return h;
-} 
+}
 #else
 /*
 	Cross-platform version of Murmurhash3
@@ -508,5 +508,5 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 	h1 ^= h1 >> 16;
 
 	return h1;
-} 
+}
 #endif

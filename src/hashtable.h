@@ -31,7 +31,7 @@ struct git_hashtable {
 typedef struct git_hashtable_node git_hashtable_node;
 typedef struct git_hashtable git_hashtable;
 
-git_hashtable *git_hashtable_alloc(size_t min_size, 
+git_hashtable *git_hashtable_alloc(size_t min_size,
 		git_hash_ptr hash,
 		git_hash_keyeq_ptr key_eq);
 void *git_hashtable_lookup(git_hashtable *h, const void *key);

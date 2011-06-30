@@ -431,7 +431,7 @@ BEGIN_TEST(pack0, "create a packfile for an empty folder")
 	const int mode = 0755; /* or 0777 ? */
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
-	
+
 	git__joinpath_n(temp_path, 3, repo->path_repository, GIT_REFS_HEADS_DIR, "empty_dir");
 	must_pass(gitfo_mkdir_recurs(temp_path, mode));
 
@@ -446,12 +446,12 @@ BEGIN_TEST(pack1, "create a packfile from all the loose rn a repo")
 	char temp_path[GIT_PATH_MAX];
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
-	
+
 	/* Ensure a known loose ref can be looked up */
 	must_pass(git_reference_lookup(&reference, repo, loose_tag_ref_name));
 	must_be_true((reference->type & GIT_REF_PACKED) == 0);
 	must_be_true(strcmp(reference->name, loose_tag_ref_name) == 0);
-	
+
 	/*
 	 * We are now trying to pack also a loose reference
 	 * called `points_to_blob`, to make sure we can properly
@@ -913,7 +913,7 @@ BEGIN_TEST(list0, "try to list all the references in our test repo")
 	/* We have exactly 8 refs in total if we include the packed ones:
 	 * there is a reference that exists both in the packfile and as
 	 * loose, but we only list it once */
-	must_be_true(ref_list.count == 8); 
+	must_be_true(ref_list.count == 8);
 
 	git_strarray_free(&ref_list);
 	git_repository_free(repo);
@@ -925,7 +925,7 @@ BEGIN_TEST(list1, "try to list only the symbolic references")
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_reference_listall(&ref_list, repo, GIT_REF_SYMBOLIC));
-	must_be_true(ref_list.count == 0); /* no symrefs in the test repo */ 
+	must_be_true(ref_list.count == 0); /* no symrefs in the test repo */
 
 	git_strarray_free(&ref_list);
 	git_repository_free(repo);

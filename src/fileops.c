@@ -475,7 +475,7 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, con
 			current++;
 			continue;
 		}
-		
+
 		only_dots = 1;
 		segment_len = 0;
 
@@ -753,7 +753,7 @@ int gitfo_hide_directory__w32(const char *path)
 	error = SetFileAttributes(path, FILE_ATTRIBUTE_HIDDEN) != 0 ?
         GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
 
-	if (error < GIT_SUCCESS)	
+	if (error < GIT_SUCCESS)
 		error = git__throw(GIT_EOSERR, "Failed to hide directory '%s'", path);
 
 	return error;
