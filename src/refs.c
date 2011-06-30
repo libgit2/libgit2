@@ -357,8 +357,6 @@ static int loose_write(git_reference *ref)
 	int error;
 	struct stat st;
 
-	assert((ref->type & GIT_REF_PACKED) == 0);
-
 	git__joinpath(ref_path, ref->owner->path_repository, ref->name);
 
 	if ((error = git_filebuf_open(&file, ref_path, GIT_FILEBUF_FORCE)) < GIT_SUCCESS)
@@ -1348,14 +1346,14 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		 * us to rollback if writing fails
 		 */
 
-		ref->type &= ~GIT_REF_PACKED;
-
 		/* Create the loose ref under its new name */
 		error = loose_write(ref);
 		if (error < GIT_SUCCESS) {
 			ref->type |= GIT_REF_PACKED;
 			goto cleanup;
 		}
+
+		ref->type &= ~GIT_REF_PACKED;
 
 		/* Remove from the packfile cache in order to avoid packing it back
 		 * Note : we do not rely on git_reference_delete() because this would
