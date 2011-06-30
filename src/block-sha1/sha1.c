@@ -53,11 +53,11 @@
  */
 
 #if defined(__i386__) || defined(__x86_64__)
-  #define setW(x, val) (*(volatile unsigned int *)&W(x) = (val))
+#define setW(x, val) (*(volatile unsigned int *)&W(x) = (val))
 #elif defined(__GNUC__) && defined(__arm__)
-  #define setW(x, val) do { W(x) = (val); __asm__("":::"memory"); } while (0)
+#define setW(x, val) do { W(x) = (val); __asm__("":::"memory"); } while (0)
 #else
-  #define setW(x, val) (W(x) = (val))
+#define setW(x, val) (W(x) = (val))
 #endif
 
 /*
@@ -68,10 +68,10 @@
  */
 
 #if defined(__i386__) || defined(__x86_64__) || \
-    defined(_M_IX86) || defined(_M_X64) || \
-    defined(__ppc__) || defined(__ppc64__) || \
-    defined(__powerpc__) || defined(__powerpc64__) || \
-    defined(__s390__) || defined(__s390x__)
+	defined(_M_IX86) || defined(_M_X64) || \
+	defined(__ppc__) || defined(__ppc64__) || \
+	defined(__powerpc__) || defined(__powerpc64__) || \
+	defined(__s390__) || defined(__s390x__)
 
 #define get_be32(p)	ntohl(*(unsigned int *)(p))
 #define put_be32(p, v)	do { *(unsigned int *)(p) = htonl(v); } while (0)

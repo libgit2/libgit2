@@ -52,25 +52,25 @@ END_TEST
 
 
 BEGIN_TEST(vector0, "initial size of 1 would cause writing past array bounds")
-  git_vector x;
-  int i;
-  git_vector_init(&x, 1, NULL);
-  for (i = 0; i < 10; ++i) {
-    git_vector_insert(&x, (void*) 0xabc);
-  }
-  git_vector_free(&x);
+	git_vector x;
+	int i;
+	git_vector_init(&x, 1, NULL);
+	for (i = 0; i < 10; ++i) {
+		git_vector_insert(&x, (void*) 0xabc);
+	}
+	git_vector_free(&x);
 END_TEST
 
 BEGIN_TEST(vector1, "don't read past array bounds on remove()")
-  git_vector x;
-  // make initial capacity exact for our insertions.
-  git_vector_init(&x, 3, NULL);
-  git_vector_insert(&x, (void*) 0xabc);
-  git_vector_insert(&x, (void*) 0xdef);
-  git_vector_insert(&x, (void*) 0x123);
+	git_vector x;
+	// make initial capacity exact for our insertions.
+	git_vector_init(&x, 3, NULL);
+	git_vector_insert(&x, (void*) 0xabc);
+	git_vector_insert(&x, (void*) 0xdef);
+	git_vector_insert(&x, (void*) 0x123);
 
-  git_vector_remove(&x, 0);  // used to read past array bounds.
-  git_vector_free(&x);
+	git_vector_remove(&x, 0);  // used to read past array bounds.
+	git_vector_free(&x);
 END_TEST
 
 
@@ -241,7 +241,7 @@ BEGIN_TEST(path3, "prettify and validate a path to a file")
 	must_fail(ensure_file_path_normalized("d1/...", NULL, 0));
 	must_fail(ensure_file_path_normalized("d1/.../", NULL, 0));
 	must_fail(ensure_file_path_normalized("d1/.../d2", NULL, 0));
-	
+
 	must_pass(ensure_file_path_normalized("/a", "/a", ROOTED_PATH));
 	must_pass(ensure_file_path_normalized("/./testrepo.git", "/testrepo.git", ROOTED_PATH));
 	must_pass(ensure_file_path_normalized("/./.git", "/.git", ROOTED_PATH));
@@ -547,9 +547,9 @@ BEGIN_TEST(dirent0, "make sure that the '.' folder is not traversed")
 	must_pass(setup(&dot));
 
 	must_pass(gitfo_dirent(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &dot));
+				sizeof(path_buffer),
+				one_entry,
+				&dot));
 
 	must_pass(check_counts(&dot));
 
@@ -572,9 +572,9 @@ BEGIN_TEST(dirent1, "traverse a subfolder")
 	must_pass(setup(&sub));
 
 	must_pass(gitfo_dirent(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &sub));
+				sizeof(path_buffer),
+				one_entry,
+				&sub));
 
 	must_pass(check_counts(&sub));
 
@@ -591,9 +591,9 @@ BEGIN_TEST(dirent2, "traverse a slash-terminated subfolder")
 	must_pass(setup(&sub_slash));
 
 	must_pass(gitfo_dirent(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &sub_slash));
+				sizeof(path_buffer),
+				one_entry,
+				&sub_slash));
 
 	must_pass(check_counts(&sub_slash));
 
@@ -620,17 +620,17 @@ BEGIN_TEST(dirent3, "make sure that empty folders are not traversed")
 	must_pass(setup(&empty));
 
 	must_pass(gitfo_dirent(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &empty));
+				sizeof(path_buffer),
+				one_entry,
+				&empty));
 
 	must_pass(check_counts(&empty));
 
 	/* make sure callback not called */
 	must_pass(gitfo_dirent(path_buffer,
-			       sizeof(path_buffer),
-			       dont_call_me,
-			       &empty));
+				sizeof(path_buffer),
+				dont_call_me,
+				&empty));
 
 	must_pass(knockdown(&empty));
 END_TEST
@@ -653,9 +653,9 @@ BEGIN_TEST(dirent4, "make sure that strange looking filenames ('..c') are traver
 	must_pass(setup(&odd));
 
 	must_pass(gitfo_dirent(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &odd));
+				sizeof(path_buffer),
+				one_entry,
+				&odd));
 
 	must_pass(check_counts(&odd));
 

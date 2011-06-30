@@ -227,7 +227,7 @@ struct pack_backend {
 
 
 
- 
+
 /***********************************************************
  *
  * FORWARD DECLARATIONS
@@ -306,7 +306,7 @@ static off_t get_delta_base(struct pack_backend *backend,
 
 static unsigned long packfile_unpack_header1(
 		size_t *sizep,
-		git_otype *type, 
+		git_otype *type,
 		const unsigned char *buf,
 		unsigned long len);
 
@@ -807,7 +807,7 @@ static int packfile_open(struct pack_file *p)
 	if (git_oid_cmp(&sha1, (git_oid *)idx_sha1) != 0)
 		goto cleanup;
 
-	return GIT_SUCCESS;	
+	return GIT_SUCCESS;
 
 cleanup:
 	gitfo_close(p->pack_fd);
@@ -945,7 +945,7 @@ static off_t nth_packed_object_offset(const struct pack_file *p, uint32_t n)
 			return off;
 		index += p->num_objects * 4 + (off & 0x7fffffff) * 8;
 		return (((uint64_t)ntohl(*((uint32_t *)(index + 0)))) << 32) |
-				   ntohl(*((uint32_t *)(index + 4)));
+			ntohl(*((uint32_t *)(index + 4)));
 	}
 }
 
@@ -1068,7 +1068,7 @@ static int pack_entry_find1(
 		return git__rethrow(error, "Failed to find pack entry. Couldn't find offset");
 
 	/* we found a unique entry in the index;
-	 * make sure the packfile backing the index 
+	 * make sure the packfile backing the index
 	 * still exists on disk */
 	if (p->pack_fd == -1 && packfile_open(p) < GIT_SUCCESS)
 		return git__throw(GIT_EOSERR, "Failed to find pack entry. Packfile doesn't exist on disk");
@@ -1177,7 +1177,7 @@ static int pack_entry_find_prefix(
 
 static unsigned long packfile_unpack_header1(
 		size_t *sizep,
-		git_otype *type, 
+		git_otype *type,
 		const unsigned char *buf,
 		unsigned long len)
 {
@@ -1385,7 +1385,7 @@ static int packfile_unpack(
 	size_t size = 0;
 	git_otype type;
 
-	/* 
+	/*
 	 * TODO: optionally check the CRC on the packfile
 	 */
 

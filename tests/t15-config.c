@@ -236,16 +236,16 @@ BEGIN_TEST(config11, "fall back to the global config")
 END_TEST
 
 BEGIN_SUITE(config)
-	 ADD_TEST(config0);
-	 ADD_TEST(config1);
-	 ADD_TEST(config2);
-	 ADD_TEST(config3);
-	 ADD_TEST(config4);
-	 ADD_TEST(config5);
-	 ADD_TEST(config6);
-	 ADD_TEST(config7);
-	 ADD_TEST(config8);
-	 ADD_TEST(config9);
-	 ADD_TEST(config10);
-	 ADD_TEST(config11);
+	ADD_TEST(config0);
+	ADD_TEST(config1);
+	ADD_TEST(config2);
+	ADD_TEST(config3);
+	ADD_TEST(config4);
+	ADD_TEST(config5);
+	ADD_TEST(config6);
+	ADD_TEST(config7);
+	ADD_TEST(config8);
+	ADD_TEST(config9);
+	ADD_TEST(config10);
+	ADD_TEST(config11);
 END_SUITE

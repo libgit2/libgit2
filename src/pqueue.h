@@ -11,7 +11,7 @@
  *		Copyright 2010 Volkan Yazıcı <volkan.yazici@gmail.com>
  *		Copyright 2006-2010 The Apache Software Foundation
  *
- *  This file is licensed under the Apache 2.0 license, which 
+ *  This file is licensed under the Apache 2.0 license, which
  *  supposedly makes it compatible with the GPLv2 that libgit2 uses.
  *
  *  Check the Apache license at:
@@ -29,9 +29,9 @@ typedef int (*git_pqueue_cmp)(void *a, void *b);
 
 /** the priority queue handle */
 typedef struct {
-    size_t size, avail, step;
-    git_pqueue_cmp cmppri;
-    void **d;
+	size_t size, avail, step;
+	git_pqueue_cmp cmppri;
+	void **d;
 } git_pqueue;
 
 

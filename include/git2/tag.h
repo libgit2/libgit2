@@ -163,7 +163,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  * @param repo Repository where to store the tag
  *
  * @param tag_name Name for the tag; this name is validated
- * for consistency. It should also not conflict with an 
+ * for consistency. It should also not conflict with an
  * already existing tag name
  *
  * @param target Object to which this tag points. This object

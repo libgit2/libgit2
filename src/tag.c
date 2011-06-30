@@ -205,7 +205,7 @@ int git_tag_create(
 		return git__throw(GIT_EINVALIDARGS, "The given target does not belong to this repository");
 
 	error = retreive_tag_reference(&new_ref, ref_name, repo, tag_name);
-	
+
 	switch (error) {
 		case GIT_SUCCESS:
 		case GIT_ENOTFOUND:
@@ -215,7 +215,7 @@ int git_tag_create(
 			return git__rethrow(error, "Failed to create tag");
 	}
 
-	/** Ensure the tag name doesn't conflict with an already existing 
+	/** Ensure the tag name doesn't conflict with an already existing
 	 *   reference unless overwriting has explictly been requested **/
 	if (new_ref != NULL) {
 		if (!allow_ref_overwrite) {
@@ -268,7 +268,7 @@ int git_tag_create(
 		error = git_reference_create_oid(&new_ref, repo, ref_name, oid, 0);
 	else
 		error = git_reference_set_oid(new_ref, oid);
-	
+
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 }
 
@@ -278,14 +278,14 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	int error, should_update_ref = 0;
 	git_odb_stream *stream;
 	git_odb_object *target_obj;
-	
+
 	git_reference *new_ref;
 	char ref_name[GIT_REFNAME_MAX];
-	
+
 	assert(oid && buffer);
-	
+
 	memset(&tag, 0, sizeof(tag));
-	
+
 	/* validate the buffer */
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
@@ -298,7 +298,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		return git__throw(error, "The type for the given target is invalid");
 
 	git_odb_object_close(target_obj);
-	
+
 	error = retreive_tag_reference(&new_ref, ref_name, repo, tag.tag_name);
 
 	switch (error) {
@@ -320,16 +320,16 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 			should_update_ref = 1;
 		}
 	}
-	
+
 	/* write the buffer */
 	if ((error = git_odb_open_wstream(&stream, repo->db, strlen(buffer), GIT_OBJ_TAG)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
-	
+
 	stream->write(stream, buffer, strlen(buffer));
-	
+
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
-	
+
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
 
@@ -337,11 +337,11 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		error = git_reference_create_oid(&new_ref, repo, ref_name, oid, 0);
 	else
 		error = git_reference_set_oid(new_ref, oid);
-	
+
 	git_signature_free(tag.tagger);
 	free(tag.tag_name);
 	free(tag.message);
-	
+
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 }
 

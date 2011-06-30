@@ -15,7 +15,7 @@
 #define BEGIN_SUITE(SNAME) \
 	git_testsuite *libgit2_suite_##SNAME(void) {\
 		git_testsuite *_gitsuite = git_testsuite_new(#SNAME);
-	
+
 #define ADD_TEST(TNAME) \
 	git_testsuite_add(_gitsuite, _gittest__##TNAME);
 

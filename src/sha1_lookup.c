@@ -92,10 +92,10 @@
  * "hi" is higher than the entry it is looking for.
  */
 int sha1_entry_pos(const void *table,
-		   size_t elem_size,
-		   size_t key_offset,
-		   unsigned lo, unsigned hi, unsigned nr,
-		   const unsigned char *key)
+		size_t elem_size,
+		size_t key_offset,
+		unsigned lo, unsigned hi, unsigned nr,
+		const unsigned char *key)
 {
 	const unsigned char *base = (const unsigned char*)table;
 	const unsigned char *hi_key, *lo_key;
@@ -173,7 +173,7 @@ int sha1_entry_pos(const void *table,
 #ifdef INDEX_DEBUG_LOOKUP
 		printf("lo %u hi %u rg %u mi %u ", lo, hi, range, mi);
 		printf("ofs %u lov %x, hiv %x, kyv %x\n",
-		       ofs_0, lov, hiv, kyv);
+				ofs_0, lov, hiv, kyv);
 #endif
 
 		if (!(lo <= mi && mi < hi)) {

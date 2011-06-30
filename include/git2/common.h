@@ -33,17 +33,16 @@
 # define GIT_BEGIN_DECL  extern "C" {
 # define GIT_END_DECL    }
 #else
-  /** Start declarations in C mode */
+/** Start declarations in C mode */
 # define GIT_BEGIN_DECL  /* empty */
-  /** End declarations in C mode */
+/** End declarations in C mode */
 # define GIT_END_DECL    /* empty */
 #endif
 
 /** Declare a public function exported for application use. */
 #ifdef __GNUC__
-# define GIT_EXTERN(type) extern \
-			  __attribute__((visibility("default"))) \
-			  type
+# define GIT_EXTERN(type) extern __attribute__((visibility("default"))) \
+	type
 #elif defined(_MSC_VER)
 # define GIT_EXTERN(type) __declspec(dllexport) type
 #else
@@ -52,10 +51,9 @@
 
 /** Declare a public TLS symbol exported for application use. */
 #ifdef __GNUC__
-# define GIT_EXTERN_TLS(type) extern \
-			      __attribute__((visibility("default"))) \
-			      GIT_TLS \
-			      type
+# define GIT_EXTERN_TLS(type) extern __attribute__((visibility("default"))) \
+	GIT_TLS \
+	type
 #elif defined(_MSC_VER)
 # define GIT_EXTERN_TLS(type) __declspec(dllexport) GIT_TLS type
 #else

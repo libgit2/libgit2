@@ -61,7 +61,7 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 
 	for (p = 0; p < length; p += 2) {
 		int v = (from_hex[(unsigned char)str[p + 0]] << 4)
-		       | from_hex[(unsigned char)str[p + 1]];
+			| from_hex[(unsigned char)str[p + 1]];
 
 		if (v < 0)
 			return git__throw(GIT_ENOTOID, "Failed to generate sha1. Given string is not a valid sha1 hash");
@@ -305,7 +305,7 @@ void git_oid_shorten_free(git_oid_shorten *os)
  *
  *	- Each normal node points to 16 children (one for each possible
  *	character in the oid). This is *not* stored in an array of
- *	pointers, because in a 64-bit arch this would be sucking 
+ *	pointers, because in a 64-bit arch this would be sucking
  *	16*sizeof(void*) = 128 bytes of memory per node, which is fucking
  *	insane. What we do is store Node Indexes, and use these indexes
  *	to look up each node in the om->index array. These indexes are

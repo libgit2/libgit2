@@ -46,10 +46,10 @@
 
 /* Normal TLS for GCC */
 #  elif defined(__GNUC__) || \
-        defined(__SUNPRO_C) || \
-        defined(__SUNPRO_CC) || \
-        defined(__xlc__) || \
-        defined(__xlC__)
+	defined(__SUNPRO_C) || \
+	defined(__SUNPRO_CC) || \
+	defined(__xlc__) || \
+	defined(__xlC__)
 #    define GIT_TLS __thread
 
 /* ICC may run on Windows or Linux */
@@ -62,8 +62,8 @@
 
 /* Declspec for MSVC in Win32 */
 #  elif defined(_WIN32) || \
-        defined(_WIN32_CE) || \
-        defined(__BORLANDC__)
+	defined(_WIN32_CE) || \
+	defined(__BORLANDC__)
 #    define GIT_TLS __declspec(thread)
 
 /* Other platform; no TLS */

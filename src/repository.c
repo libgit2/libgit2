@@ -118,7 +118,7 @@ static int assign_repository_dirs(
 		if (repo->path_index == NULL)
 			return GIT_ENOMEM;
 	}
-	
+
 	return GIT_SUCCESS;
 }
 
@@ -207,8 +207,8 @@ int git_repository_open3(git_repository **repo_out,
 	if (repo == NULL)
 		return GIT_ENOMEM;
 
-	error = assign_repository_dirs(repo, 
-			git_dir, 
+	error = assign_repository_dirs(repo,
+			git_dir,
 			NULL,
 			git_index_file,
 			git_work_tree);
@@ -247,7 +247,7 @@ int git_repository_open2(git_repository **repo_out,
 		return GIT_ENOMEM;
 
 	error = assign_repository_dirs(repo,
-			git_dir, 
+			git_dir,
 			git_object_directory,
 			git_index_file,
 			git_work_tree);
@@ -711,7 +711,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 	int error = GIT_SUCCESS;
 	git_repository *repo = NULL;
 	repo_init results;
-	
+
 	assert(repo_out && path);
 
 	results.path_repository = NULL;

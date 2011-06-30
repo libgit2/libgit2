@@ -34,7 +34,7 @@
 #define MAX_FILEMODE_BYTES 6
 
 static int valid_attributes(const int attributes) {
-	return attributes >= 0 && attributes <= MAX_FILEMODE; 
+	return attributes >= 0 && attributes <= MAX_FILEMODE;
 }
 
 int entry_search_cmp(const void *key, const void *array_member)
@@ -47,7 +47,7 @@ int entry_search_cmp(const void *key, const void *array_member)
 
 #if 0
 static int valid_attributes(const int attributes) {
-	return attributes >= 0 && attributes <= MAX_FILEMODE; 
+	return attributes >= 0 && attributes <= MAX_FILEMODE;
 }
 #endif
 
@@ -57,9 +57,9 @@ int entry_sort_cmp(const void *a, const void *b)
 	const git_tree_entry *entry_b = *(const git_tree_entry **)(b);
 
 	return gitfo_cmp_path(entry_a->filename, strlen(entry_a->filename),
-                                  entry_a->attr & 040000,
-                                  entry_b->filename, strlen(entry_b->filename),
-                                  entry_b->attr & 040000);
+			entry_a->attr & 040000,
+			entry_b->filename, strlen(entry_b->filename),
+			entry_b->attr & 040000);
 }
 
 void git_tree__free(git_tree *tree)
@@ -215,9 +215,9 @@ static int write_index(git_oid *oid, git_index *index, const char *base, int bas
 	buffer = git__malloc(size);
 	if (buffer == NULL)
 		return GIT_ENOMEM;
-		
+
 	offset = 0;
-	
+
 	for (nr = entry_no; nr < maxentries; ++nr) {
 		git_index_entry *entry = git_index_get(index, nr);
 
@@ -227,11 +227,11 @@ static int write_index(git_oid *oid, git_index *index, const char *base, int bas
 		unsigned int write_mode;
 		git_oid subtree_oid;
 		git_oid *write_oid;
-		
+
 		/* Did we hit the end of the directory? Return how many we wrote */
 		if (baselen >= pathlen || memcmp(base, pathname, baselen) != 0)
 			break;
-		
+
 		/* Do we have _further_ subdirectories? */
 		filename = pathname + baselen;
 		dirname = strchr(filename, '/');
@@ -254,9 +254,9 @@ static int write_index(git_oid *oid, git_index *index, const char *base, int bas
 				free(buffer);
 				return subdir_written;
 			}
-			
+
 			nr = subdir_written - 1;
-			
+
 			/* Now we need to write out the directory entry into this tree.. */
 			pathlen = dirname - pathname;
 			write_oid = &subtree_oid;
@@ -267,14 +267,14 @@ static int write_index(git_oid *oid, git_index *index, const char *base, int bas
 		if (offset + entrylen + 32 > size) {
 			size = alloc_nr(offset + entrylen + 32);
 			buffer = git__realloc(buffer, size);
-			
+
 			if (buffer == NULL)
 				return GIT_ENOMEM;
 		}
 
 		offset += write_index_entry(buffer + offset, write_mode, filename, entrylen, write_oid);
 	}
-	
+
 	error = git_odb_write(oid, index->repository->db, buffer, offset, GIT_OBJ_TREE);
 	free(buffer);
 

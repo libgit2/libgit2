@@ -620,7 +620,7 @@ int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_
 	return git__rethrow(error, "Failed to open write stream");
 }
 
-int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid) 
+int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)
 {
 	unsigned int i;
 	int error = GIT_ERROR;

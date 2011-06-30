@@ -66,7 +66,7 @@ typedef __haiku_std_int64 git_time_t;
 
 #else  /* POSIX */
 
-/* 
+/*
  * Note: Can't use off_t since if a client program includes <sys/types.h>
  * before us (directly or indirectly), they'll get 32 bit off_t in their client
  * app, even though /we/ define _FILE_OFFSET_BITS=64.
