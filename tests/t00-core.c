@@ -692,6 +692,19 @@ BEGIN_TEST(filebuf1, "make sure GIT_FILEBUF_APPEND works as expected")
 	must_pass(gitfo_unlink(test));
 END_TEST
 
+BEGIN_TEST(filebuf2, "make sure git_filebuf_write writes large buffer correctly")
+	git_filebuf file;
+	char test[] = "test";
+	unsigned char buf[4096 * 4]; /* 2 * WRITE_BUFFER_SIZE */
+
+	memset(buf, 0xfe, sizeof(buf));
+	must_pass(git_filebuf_open(&file, test, 0));
+	must_pass(git_filebuf_write(&file, buf, sizeof(buf)));
+	must_pass(git_filebuf_commit(&file));
+
+	must_pass(gitfo_unlink(test));
+END_TEST
+
 BEGIN_SUITE(core)
 	ADD_TEST(string0);
 	ADD_TEST(string1);
@@ -716,4 +729,5 @@ BEGIN_SUITE(core)
 
 	ADD_TEST(filebuf0);
 	ADD_TEST(filebuf1);
+	ADD_TEST(filebuf2);
 END_SUITE

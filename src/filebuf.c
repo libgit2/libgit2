@@ -331,6 +331,7 @@ int git_filebuf_write(git_filebuf *file, const void *buff, size_t len)
 			error = file->write(file, buf, len);
 			if (error < GIT_SUCCESS)
 				return git__rethrow(error, "Failed to write to buffer");
+			return GIT_SUCCESS;
 		}
 	}
 }
