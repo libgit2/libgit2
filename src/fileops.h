@@ -165,10 +165,10 @@ extern int gitfo_getcwd(char *buffer_out, size_t size);
 
 /**
  * Clean up a provided absolute or relative directory path.
- * 
- * This prettification relies on basic operations such as coalescing 
- * multiple forward slashes into a single slash, removing '.' and 
- * './' current directory segments, and removing parent directory 
+ *
+ * This prettification relies on basic operations such as coalescing
+ * multiple forward slashes into a single slash, removing '.' and
+ * './' current directory segments, and removing parent directory
  * whenever '..' is encountered.
  *
  * If not empty, the returned path ends with a forward slash.
@@ -176,7 +176,7 @@ extern int gitfo_getcwd(char *buffer_out, size_t size);
  * For instance, this will turn "d1/s1///s2/..//../s3" into "d1/s3/".
  *
  * This only performs a string based analysis of the path.
- * No checks are done to make sure the path actually makes sense from 
+ * No checks are done to make sure the path actually makes sense from
  * the file system perspective.
  *
  * @param buffer_out buffer to populate with the normalized path.
@@ -190,16 +190,16 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, con
 
 /**
  * Clean up a provided absolute or relative file path.
- * 
- * This prettification relies on basic operations such as coalescing 
- * multiple forward slashes into a single slash, removing '.' and 
- * './' current directory segments, and removing parent directory 
+ *
+ * This prettification relies on basic operations such as coalescing
+ * multiple forward slashes into a single slash, removing '.' and
+ * './' current directory segments, and removing parent directory
  * whenever '..' is encountered.
  *
  * For instance, this will turn "d1/s1///s2/..//../s3" into "d1/s3".
  *
  * This only performs a string based analysis of the path.
- * No checks are done to make sure the path actually makes sense from 
+ * No checks are done to make sure the path actually makes sense from
  * the file system perspective.
  *
  * @param buffer_out buffer to populate with the normalized path.

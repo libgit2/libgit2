@@ -305,7 +305,7 @@ void git_oid_shorten_free(git_oid_shorten *os)
  *
  *	- Each normal node points to 16 children (one for each possible
  *	character in the oid). This is *not* stored in an array of
- *	pointers, because in a 64-bit arch this would be sucking 
+ *	pointers, because in a 64-bit arch this would be sucking
  *	16*sizeof(void*) = 128 bytes of memory per node, which is fucking
  *	insane. What we do is store Node Indexes, and use these indexes
  *	to look up each node in the om->index array. These indexes are

@@ -215,7 +215,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
 
 /**
  * Free an OID shortener instance
- * 
+ *
  * @param os a `git_oid_shorten` instance
  */
 void git_oid_shorten_free(git_oid_shorten *os);

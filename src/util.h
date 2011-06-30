@@ -5,7 +5,7 @@
 #define bitsizeof(x)  (CHAR_BIT * sizeof(x))
 #define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
 
-/* 
+/*
  * Custom memory allocation wrappers
  * that set error code and error message
  * on allocation failure
@@ -78,7 +78,7 @@ extern int git__strtol32(long *n, const char *buff, const char **end_buf, int ba
  * the string ".". If path is a null pointer or points to an empty string,
  * dirname() shall return a pointer to the string "." .
  *
- * The `git__dirname` implementation is thread safe. The returned 
+ * The `git__dirname` implementation is thread safe. The returned
  * string must be manually free'd.
  *
  * The `git__dirname_r` implementation expects a string allocated
@@ -96,7 +96,7 @@ extern int git__dirname_r(char *buffer, size_t bufflen, const char *path);
  * Trailing slashes and backslashes are significant: the basename of
  * c:/foo/bar/ is an empty string after the rightmost slash.
  *
- * The `git__basename` implementation is thread safe. The returned 
+ * The `git__basename` implementation is thread safe. The returned
  * string must be manually free'd.
  *
  * The `git__basename_r` implementation expects a string allocated
@@ -112,7 +112,7 @@ extern const char *git__topdir(const char *path);
  * middle slashes and everything
  *
  * The paths are joined together into buffer_out; this is expected
- * to be an user allocated buffer of `GIT_PATH_MAX` size 
+ * to be an user allocated buffer of `GIT_PATH_MAX` size
  */
 extern void git__joinpath_n(char *buffer_out, int npath, ...);
 

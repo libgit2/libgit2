@@ -107,7 +107,7 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 	const char *offset_start;
 	const char *offset_end;
 
-	//we are sure that *buffer == ' ' 
+	//we are sure that *buffer == ' '
 	offset_start = buffer + 1;
 
 	if (*offset_start == '\n') {
@@ -133,7 +133,7 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 	hours = dec_offset / 100;
 	mins = dec_offset % 100;
 
-	if (hours > 14)	// see http://www.worldtimezone.com/faq.html 
+	if (hours > 14)	// see http://www.worldtimezone.com/faq.html
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Hour value too large");
 
 	if (mins > 59)
@@ -143,7 +143,7 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 
 	if (offset_start[0] == '-')
 		offset *= -1;
-	
+
 	*offset_out = offset;
 
 	return GIT_SUCCESS;
@@ -218,7 +218,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Could not parse timezone offset");
-	
+
 	sig->when.offset = offset;
 
 	*buffer_out = (line_end + 1);
@@ -234,7 +234,7 @@ int git_signature__write(char **signature, const char *header, const git_signatu
 
 	offset = sig->when.offset;
 	sign = (sig->when.offset < 0) ? '-' : '+';
-	
+
 	if (offset < 0)
 		offset = -offset;
 

@@ -200,7 +200,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 		char tmp_path[GIT_PATH_MAX];
 
 		/* Open the file as temporary for locking */
-		file->fd = gitfo_mktemp(tmp_path, path); 
+		file->fd = gitfo_mktemp(tmp_path, path);
 		if (file->fd < 0) {
 			error = GIT_EOSERR;
 			goto cleanup;

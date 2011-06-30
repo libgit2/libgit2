@@ -91,7 +91,7 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
  * backend will work as an alternate.
  *
  * Alternate backends are always checked for objects *after*
- * all the main backends have been exhausted. 
+ * all the main backends have been exhausted.
  *
  * The backends are checked in relative ordering, based on the
  * value of the `priority` parameter.
@@ -220,12 +220,12 @@ GIT_EXTERN(int) git_odb_write(git_oid *oid, git_odb *odb, const void *data, size
  *
  * The returned stream will be of type `GIT_STREAM_WRONLY` and
  * will have the following methods:
- *	
+ *
  *		- stream->write: write `n` bytes into the stream
  *		- stream->finalize_write: close the stream and store the object in
  *			the odb
  *		- stream->free: free the stream
- * 
+ *
  * The streaming write won't be effective until `stream->finalize_write`
  * is called and returns without an error
  *
@@ -252,7 +252,7 @@ GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_
  *
  * The returned stream will be of type `GIT_STREAM_RDONLY` and
  * will have the following methods:
- *	
+ *
  *		- stream->read: read `n` bytes from the stream
  *		- stream->free: free the stream
  *

@@ -145,7 +145,7 @@ BEGIN_TEST(write0, "write an index back to disk")
 	must_pass(cmp_files(TEST_INDEXBIG_PATH, "index_rewrite"));
 
 	git_index_free(index);
-	
+
 	gitfo_unlink("index_rewrite");
 END_TEST
 

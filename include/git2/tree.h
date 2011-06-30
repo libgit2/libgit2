@@ -190,7 +190,7 @@ GIT_EXTERN(int) git_tree_create_fromindex(git_oid *oid, git_index *index);
  *
  * If the `source` parameter is not NULL, the tree builder
  * will be initialized with the entries of the given tree.
- * 
+ *
  * If the `source` parameter is NULL, the tree builder will
  * have no entries and will have to be filled manually.
  *
