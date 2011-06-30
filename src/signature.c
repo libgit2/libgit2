@@ -153,10 +153,10 @@ static int parse_timezone_offset(const char *buffer, long *offset_out)
 int git_signature__parse(git_signature *sig, const char **buffer_out,
 		const char *buffer_end, const char *header)
 {
-	int name_length, email_length;
+	int name_length = 0, email_length = 0;
 	const char *buffer = *buffer_out;
 	const char *line_end, *name_end, *email_end;
-	long offset = 0, time;
+	long offset = 0, time = 0;
 
 	memset(sig, 0x0, sizeof(git_signature));
 
@@ -178,9 +178,22 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	if ((name_end = strchr(buffer, '<')) == NULL)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Cannot find '<' in signature");
 
-	name_length = name_end - 1 - buffer;
-	if (name_length < 0)
-		name_length = 0;
+	if ((email_end = strchr(buffer, '>')) == NULL)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Cannot find '>' in signature");
+
+	if (email_end < name_end)
+		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Malformed e-mail");
+
+	/* Skip leading spaces before the name */
+	while (*buffer == ' ')
+		buffer++;
+
+	name_length = name_end - buffer;
+
+	/* Trim trailing spaces after the name */
+	while (buffer[name_length - 1] == ' ' && name_length > 0)
+		name_length--;
+
 	sig->name = git__malloc(name_length + 1);
 	if (sig->name == NULL)
 		return GIT_ENOMEM;
@@ -192,32 +205,36 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	if (buffer > line_end)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
 
-	if ((email_end = strchr(buffer, '>')) == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Cannot find '>' in signature");
+	/* Skip leading spaces before the email */
+	while (*buffer == ' ')
+		buffer++;
 
 	email_length = email_end - buffer;
+
+	/* Trim trailing spaces after the email */
+	while (buffer[email_length - 1] == ' ' && email_length > 0)
+		email_length--;
+
 	sig->email = git__malloc(email_length + 1);
-	if (sig->name == NULL)
+	if (sig->email == NULL)
 		return GIT_ENOMEM;
 
 	memcpy(sig->email, buffer, email_length);
 	sig->email[email_length] = 0;
-	buffer = email_end + 2;
+	buffer = email_end + 1;
 
 	if (buffer > line_end)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
 
-	if (strpbrk(sig->email, "><\n") != NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Malformed e-mail");
-
 	if (git__strtol32(&time, buffer, &buffer, 10) < GIT_SUCCESS)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Timestamp isn't a number");
+		return GIT_SUCCESS;
 
 	sig->when.time = (time_t)time;
 
-	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Could not parse timezone offset");
-	
+	if (parse_timezone_offset(buffer, &offset) < GIT_SUCCESS) {
+		git_clearerror();
+		return GIT_SUCCESS;
+	}
 	sig->when.offset = offset;
 
 	*buffer_out = line_end + 1;

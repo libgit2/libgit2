@@ -263,7 +263,7 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 	TEST_SIGNATURE_PASS(
 		"committer   <tanoku@gmail.com> 123456 -0100 \n",
 		"committer ",
-		" ",
+		"",
 		"tanoku@gmail.com",
 		123456,
 		-60);
@@ -282,7 +282,7 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 		"committer Vicent Marti < > 123456 -0100 \n",
 		"committer ",
 		"Vicent Marti",
-		" ",
+		"",
 		123456,
 		-60);
 
@@ -297,10 +297,19 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 
 	/* Parse a signature with empty name and email */
 	TEST_SIGNATURE_PASS(
+		"committer  <> 123456 -0100 \n",
+		"committer ",
+		"",
+		"",
+		123456,
+		-60);
+
+	/* Parse a signature with empty name and email */
+	TEST_SIGNATURE_PASS(
 		"committer  < > 123456 -0100 \n",
 		"committer ",
 		"",
-		" ",
+		"",
 		123456,
 		-60);
 
@@ -308,17 +317,64 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 	TEST_SIGNATURE_PASS(
 		"committer foo<@bar> 123456 -0100 \n",
 		"committer ",
-		"fo",
+		"foo",
 		"@bar",
 		123456,
 		-60);
 
-	TEST_SIGNATURE_FAIL(
+	/* Parse an obviously invalid signature */
+	TEST_SIGNATURE_PASS(
+		"committer    foo<@bar>123456 -0100 \n",
+		"committer ",
+		"foo",
+		"@bar",
+		123456,
+		-60);
+
+	
+	/* Parse an obviously invalid signature */
+	TEST_SIGNATURE_PASS(
+		"committer <>\n",
+		"committer ",
+		"",
+		"",
+		0,
+		0);
+
+	TEST_SIGNATURE_PASS(
 		"committer Vicent Marti <tanoku@gmail.com> 123456 -1500 \n",
-		"committer ");
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		0);
+
+	TEST_SIGNATURE_PASS(
+		"committer Vicent Marti <tanoku@gmail.com> 123456 +0163 \n",
+		"committer ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		123456,
+		0);
+
+	TEST_SIGNATURE_PASS(
+		"author Vicent Marti <tanoku@gmail.com> notime \n",
+		"author ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		0,
+		0);
+
+	TEST_SIGNATURE_PASS(
+		"author Vicent Marti <tanoku@gmail.com>\n",
+		"author ",
+		"Vicent Marti",
+		"tanoku@gmail.com",
+		0,
+		0);
 
 	TEST_SIGNATURE_FAIL(
-		"committer Vicent Marti <tanoku@gmail.com> 123456 +0163 \n",
+		"committer Vicent Marti tanoku@gmail.com> 123456 -0100 \n",
 		"committer ");
 
 	TEST_SIGNATURE_FAIL(
@@ -338,12 +394,8 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 		"author ");
 
 	TEST_SIGNATURE_FAIL(
-		"author Vicent Marti <tanoku@gmail.com> notime \n",
-		"author ");
-
-	TEST_SIGNATURE_FAIL(
-		"author Vicent Marti <tanoku@gmail.com>\n",
-		"author ");
+		"committer Vicent Marti ><\n",
+		"committer ");
 
 	TEST_SIGNATURE_FAIL(
 		"author ",
@@ -628,7 +680,6 @@ BEGIN_SUITE(commit)
 	ADD_TEST(details0);
 
 	ADD_TEST(write0);
-	//ADD_TEST(write1);
 
 	ADD_TEST(root0);
 END_SUITE
