@@ -22,7 +22,19 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" 
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(deps/zlib src include)
+INCLUDE_DIRECTORIES(src include)
+IF (NOT WIN32)
+	FIND_PACKAGE(ZLIB)
+ENDIF()
+
+IF (ZLIB_FOUND)
+	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
+	LINK_LIBRARIES(${ZLIB_LIBRARIES})
+ELSE (ZLIB_FOUND)
+	INCLUDE_DIRECTORIES(deps/zlib)
+	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
+	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
+ENDIF()
 
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
@@ -61,7 +73,6 @@ ENDIF()
 
 # Collect sourcefiles
 FILE(GLOB SRC src/*.c)
-FILE(GLOB SRC_ZLIB deps/zlib/*.c)
 FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
@@ -70,7 +81,7 @@ IF (WIN32 AND NOT CYGWIN)
 	FILE(GLOB SRC src/*.c src/win32/*.c)
 ENDIF ()
 
-ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64 -DNO_VIZ -DSTDC -DNO_GZIP)
+ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB})
