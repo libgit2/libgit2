@@ -487,6 +487,11 @@ int git_index_find(git_index *index, const char *path)
 	return git_vector_bsearch2(&index->entries, index_srch, path);
 }
 
+void git_index_uniq(git_index *index)
+{
+	git_vector_uniq(&index->entries);
+}
+
 const git_index_entry_unmerged *git_index_get_unmerged_bypath(git_index *index, const char *path)
 {
 	int pos;
