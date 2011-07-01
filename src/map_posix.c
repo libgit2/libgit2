@@ -1,8 +1,10 @@
+#include <git2/common.h>
+
+#ifndef GIT_WIN32
 
 #include "map.h"
 #include <sys/mman.h>
 #include <errno.h>
-
 
 int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
@@ -58,4 +60,5 @@ int git__munmap(git_map *map)
 	return GIT_SUCCESS;
 }
 
+#endif
 

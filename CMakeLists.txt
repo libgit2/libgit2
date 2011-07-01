@@ -60,22 +60,20 @@ IF (THREADSAFE)
 ENDIF()
 
 # Collect sourcefiles
-FILE(GLOB SRC src/*.c src/backends/*.c)
+FILE(GLOB SRC src/*.c)
 FILE(GLOB SRC_ZLIB deps/zlib/*.c)
-FILE(GLOB SRC_SHA1 src/block-sha1/*.c)
-FILE(GLOB SRC_PLAT src/unix/*.c)
 FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
     ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_LIB)
-    FILE(GLOB SRC_PLAT src/win32/*.c)
+	FILE(GLOB SRC src/*.c src/win32/*.c)
 ENDIF ()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_ZLIB})
+ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB})
 TARGET_LINK_LIBRARIES(git2 ${CMAKE_THREAD_LIBS_INIT})
 SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
@@ -97,7 +95,7 @@ IF (BUILD_TESTS)
     INCLUDE_DIRECTORIES(tests)
 	FILE(GLOB SRC_TEST tests/t??-*.c)
 
-	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_PLAT} ${SRC_SHA1} ${SRC_TEST} ${SRC_ZLIB})
+	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB})
 	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
 
 	ENABLE_TESTING()
