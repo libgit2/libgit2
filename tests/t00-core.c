@@ -73,6 +73,28 @@ BEGIN_TEST(vector1, "don't read past array bounds on remove()")
   git_vector_free(&x);
 END_TEST
 
+static int test_cmp(const void *a, const void *b)
+{
+	int n1 = *(int *)a;
+	int n2 = *(int *)b;
+
+	return n1 - n2;
+}
+
+BEGIN_TEST(vector2, "remove duplicates")
+	git_vector x;
+	must_pass(git_vector_init(&x, 5, test_cmp));
+	must_pass(git_vector_insert(&x, (void *) 0xdeadbeef));
+	must_pass(git_vector_insert(&x, (void *) 0xcafebabe));
+	must_pass(git_vector_insert(&x, (void *) 0xcafebabe));
+	must_pass(git_vector_insert(&x, (void *) 0xdeadbeef));
+	must_pass(git_vector_insert(&x, (void *) 0xcafebabe));
+	must_be_true(x.length == 5);
+	git_vector_uniq(&x);
+	must_be_true(x.length == 2);
+	git_vector_free(&x);
+END_TEST
+
 
 BEGIN_TEST(path0, "get the dirname of a path")
 	char dir[64], *dir2;
@@ -480,6 +502,7 @@ BEGIN_SUITE(core)
 
 	ADD_TEST(vector0);
 	ADD_TEST(vector1);
+	ADD_TEST(vector2);
 
 	ADD_TEST(path0);
 	ADD_TEST(path1);
