@@ -118,7 +118,7 @@ extern int gitfo_rmdir_recurs(const char *path);
 #define gitfo_chmod(p,m) chmod(p, m)
 
 /* Taken from git.git */
-static inline int is_dot_or_dotdot(const char *name)
+GIT_INLINE(int) is_dot_or_dotdot(const char *name)
 {
 	return (name[0] == '.' &&
 		(name[1] == '\0' ||

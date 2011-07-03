@@ -744,10 +744,13 @@ END_TEST
 
 BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
 	char file[GIT_PATH_MAX];
+	int fd;
 
 	must_pass(setup_empty_tmp_dir());
 	git__joinpath(file, empty_tmp_dir, "/two/file.txt");
-	must_pass(gitfo_creat(file, 0755));
+	fd = gitfo_creat(file, 0755);
+	must_pass(fd);
+	must_pass(gitfo_close(fd));
 	must_fail(gitfo_rmdir_recurs(empty_tmp_dir));
 	must_pass(gitfo_unlink(file));
 	must_pass(gitfo_rmdir_recurs(empty_tmp_dir));

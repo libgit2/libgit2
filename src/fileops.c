@@ -410,6 +410,8 @@ static int _rmdir_recurs_cb(void *GIT_UNUSED(nil), char *path)
 {
 	int error = GIT_SUCCESS;
 
+	GIT_UNUSED_ARG(nil)
+
 	error = gitfo_isdir(path);
 	if (error == GIT_SUCCESS) {
 		size_t root_size = strlen(path);
