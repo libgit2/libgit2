@@ -71,17 +71,18 @@ IF (THREADSAFE)
 	ADD_DEFINITIONS(-DGIT_THREADS)
 ENDIF()
 
+ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
+
 # Collect sourcefiles
-FILE(GLOB SRC src/*.c)
 FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
     ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_LIB)
 	FILE(GLOB SRC src/*.c src/win32/*.c)
+ELSE()
+	FILE(GLOB SRC src/*.c src/unix/*.c)
 ENDIF ()
-
-ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB})

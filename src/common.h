@@ -23,8 +23,8 @@
 # include <io.h>
 # include <direct.h>
 # include <windows.h>
-# include "msvc-compat.h"
-# include "mingw-compat.h"
+# include "win32/msvc-compat.h"
+# include "win32/mingw-compat.h"
 # ifdef GIT_THREADS
 #  include "win32/pthread.h"
 #endif
