@@ -80,6 +80,8 @@ extern int git_futils_mkdir_r(const char *path, int mode);
  */
 extern int git_futils_mkpath2file(const char *path);
 
+extern int git_futils_rmdir_recurs(const char *path, int force_removal_of_non_empty_directory);
+
 /**
  * Create and open a temporary file with a `_git2_` suffix
  */
@@ -101,9 +103,6 @@ extern int git_futils_mv_withpath(const char *from, const char *to);
  * Get the filesize in bytes of a file
  */
 extern git_off_t git_futils_filesize(git_file fd);
-
-/* Recursively remove an empty directory structure */
-extern int git_futils_rmdir_recurs(const char *path);
 
 /* Taken from git.git */
 GIT_INLINE(int) is_dot_or_dotdot(const char *name)
