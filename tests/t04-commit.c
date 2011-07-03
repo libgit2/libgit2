@@ -331,7 +331,6 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 		123456,
 		-60);
 
-	
 	/* Parse an obviously invalid signature */
 	TEST_SIGNATURE_PASS(
 		"committer <>\n",
@@ -444,6 +443,39 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 #undef TEST_SIGNATURE_PASS
 #undef TEST_SIGNATURE_FAIL
 
+END_TEST
+
+static int try_build_signature(const char *name, const char *email, git_time_t time, int offset)
+{
+	git_signature *sign;
+	int error = GIT_SUCCESS;
+
+	sign = git_signature_new(name, email, time, offset);
+
+	if (sign == NULL)
+		error = GIT_ERROR;
+
+	git_signature_free((git_signature *)sign);
+
+	return error;
+}
+
+BEGIN_TEST(signature0, "creating a signature trims leading and trailing spaces")
+	git_signature *sign;
+	sign = git_signature_new("  nulltoken ", "   emeric.fermas@gmail.com     ", 1234567890, 60);
+	must_be_true(sign != NULL);
+	must_pass(strcmp(sign->name, "nulltoken"));
+	must_pass(strcmp(sign->email, "emeric.fermas@gmail.com"));
+	git_signature_free((git_signature *)sign);
+END_TEST
+
+BEGIN_TEST(signature1, "can not create a signature with empty name or email")
+	must_pass(try_build_signature("nulltoken", "emeric.fermas@gmail.com", 1234567890, 60));
+
+	must_fail(try_build_signature("", "emeric.fermas@gmail.com", 1234567890, 60));
+	must_fail(try_build_signature("   ", "emeric.fermas@gmail.com", 1234567890, 60));
+	must_fail(try_build_signature("nulltoken", "", 1234567890, 60));
+	must_fail(try_build_signature("nulltoken", "  ", 1234567890, 60));
 END_TEST
 
 /* External declaration for testing the buffer parsing method */
@@ -722,4 +754,7 @@ BEGIN_SUITE(commit)
 	ADD_TEST(write0);
 
 	ADD_TEST(root0);
+
+	ADD_TEST(signature0);
+	ADD_TEST(signature1);
 END_SUITE

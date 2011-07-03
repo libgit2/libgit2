@@ -33,25 +33,83 @@ void git_signature_free(git_signature *sig)
 	if (sig == NULL)
 		return;
 
-	free(sig->name);
-	free(sig->email);
+	if (sig->name)
+		free(sig->name);
+
+	if (sig->email)
+		free(sig->email);
+
 	free(sig);
+}
+
+static const char *skip_leading_spaces(const char *buffer, const char *buffer_end)
+{
+	while (*buffer == ' ' && buffer < buffer_end)
+		buffer++;
+
+	return buffer;
+}
+
+static const char *skip_trailing_spaces(const char *buffer_start, const char *buffer_end)
+{
+	while (*buffer_end == ' ' && buffer_end > buffer_start)
+		buffer_end--;
+
+	return buffer_end;
+}
+
+static int process_trimming(const char *input, char **storage, const char *input_end, int fail_when_empty)
+{
+	const char *left, *right;
+	int trimmed_input_length;
+
+	left = skip_leading_spaces(input, input_end);
+	right = skip_trailing_spaces(input, input_end - 1);
+
+	if (right <= left)
+		if (fail_when_empty)
+			return git__throw(GIT_EINVALIDARGS, "Failed to trim. Input is either empty or only contains spaces");
+		else
+			right = left - 1;
+
+	trimmed_input_length = right - left + 1;
+
+	*storage = git__malloc(trimmed_input_length + 1);
+	if (*storage == NULL)
+		return GIT_ENOMEM;
+
+	memcpy(*storage, left, trimmed_input_length);
+	(*storage)[trimmed_input_length] = 0;
+
+	return GIT_SUCCESS;
 }
 
 git_signature *git_signature_new(const char *name, const char *email, git_time_t time, int offset)
 {
+	int error;
 	git_signature *p = NULL;
+
+	assert(name && email);
 
 	if ((p = git__malloc(sizeof(git_signature))) == NULL)
 		goto cleanup;
 
-	p->name = git__strdup(name);
-	p->email = git__strdup(email);
+	memset(p, 0x0, sizeof(git_signature));
+
+	error = process_trimming(name, &p->name, name + strlen(name), 1);
+	if (error < GIT_SUCCESS) {
+		git__rethrow(GIT_EINVALIDARGS, "Failed to create signature. 'name' argument is invalid");
+		goto cleanup;
+	}
+
+	error = process_trimming(email, &p->email, email + strlen(email), 1);
+	if (error < GIT_SUCCESS) {
+		git__rethrow(GIT_EINVALIDARGS, "Failed to create signature. 'email' argument is invalid");
+		goto cleanup;
+	}
+
 	p->when.time = time;
 	p->when.offset = offset;
-
-	if (p->name == NULL || p->email == NULL)
-		goto cleanup;
 
 	return p;
 
@@ -149,47 +207,29 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 }
 
 int process_next_token(const char **buffer_out, char **storage,
-	const char *token_end, const char *line_end)
+	const char *token_end, const char *right_boundary)
 {
-	int name_length = 0;
-	const char *buffer = *buffer_out;
+	int error = process_trimming(*buffer_out, storage, token_end, 0);
+	if (error < GIT_SUCCESS)
+		return error;
 
-	/* Skip leading spaces before the name */
-	while (*buffer == ' ' && buffer < line_end)
-		buffer++;
+	*buffer_out = token_end + 1;
 
-	name_length = token_end - buffer;
-
-	/* Trim trailing spaces after the name */
-	while (buffer[name_length - 1] == ' ' && name_length > 0)
-		name_length--;
-
-	*storage = git__malloc(name_length + 1);
-	if (*storage == NULL)
-		return GIT_ENOMEM;
-
-	memcpy(*storage, buffer, name_length);
-	(*storage)[name_length] = 0;
-	buffer = token_end + 1;
-
-	if (buffer > line_end)
+	if (*buffer_out > right_boundary)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
 
-	*buffer_out = buffer;
 	return GIT_SUCCESS;
 }
 
-const char* scan_for_previous_token(const char *buffer, const char *left_boundary)
+const char *scan_for_previous_token(const char *buffer, const char *left_boundary)
 {
-	const char *start = buffer;
+	const char *start;
 
-	if (start <= left_boundary)
+	if (buffer <= left_boundary)
 		return NULL;
 
-	/* Trim potential trailing spaces */
-	while (*start == ' ' && start > left_boundary)
-		start--;
-	
+	start = skip_trailing_spaces(left_boundary, buffer);
+
 	/* Search for previous occurence of space */
 	while (start[-1] != ' ' && start > left_boundary)
 		start--;
@@ -262,7 +302,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		goto clean_exit;	/* No timezone nor date */
 
 	time_start = scan_for_previous_token(tz_start - 1, buffer);
-	if (time_start == NULL || parse_time(&sig->when.time, time_start) < GIT_SUCCESS) {	
+	if (time_start == NULL || parse_time(&sig->when.time, time_start) < GIT_SUCCESS) {
 		/* The tz_start might point at the time */
 		parse_time(&sig->when.time, tz_start);
 		goto clean_exit;
