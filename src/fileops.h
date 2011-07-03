@@ -91,7 +91,7 @@ extern int gitfo_mv(const char *from, const char *to);
 extern int gitfo_mv_force(const char *from, const char *to);
 
 /* Recursively remove an empty directory structure */
-extern int gitfo_rmdir_recurs(const char *path);
+extern int gitfo_rmdir_recurs(const char *path, int force_removal_of_non_empty_directory);
 
 #define gitfo_stat(p,b) stat(p, b)
 #define gitfo_fstat(f,b) fstat(f, b)

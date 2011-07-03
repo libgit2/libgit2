@@ -1355,7 +1355,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 
 	if (gitfo_exists(new_path) == GIT_SUCCESS) {
 		if (gitfo_isdir(new_path) == GIT_SUCCESS) {
-			if ((error = gitfo_rmdir_recurs(new_path)) < GIT_SUCCESS)
+			if ((error = gitfo_rmdir_recurs(new_path, 0)) < GIT_SUCCESS)
 				goto rollback;
 		} else goto rollback;
 	}

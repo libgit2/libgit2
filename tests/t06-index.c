@@ -210,7 +210,7 @@ BEGIN_TEST(add0, "add a new file to the index")
 
     git_index_free(index);
 	git_repository_free(repo);
-	rmdir_recurs(TEMP_REPO_FOLDER);
+	must_pass(gitfo_rmdir_recurs(TEMP_REPO_FOLDER, 1));
 END_TEST
 
 BEGIN_SUITE(index)

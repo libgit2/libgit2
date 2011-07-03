@@ -739,7 +739,7 @@ static int setup_empty_tmp_dir()
 
 BEGIN_TEST(rmdir0, "make sure empty dir can be deleted recusively")
 	must_pass(setup_empty_tmp_dir());
-	must_pass(gitfo_rmdir_recurs(empty_tmp_dir));
+	must_pass(gitfo_rmdir_recurs(empty_tmp_dir, 0));
 END_TEST
 
 BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
@@ -751,9 +751,9 @@ BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
 	fd = gitfo_creat(file, 0755);
 	must_pass(fd);
 	must_pass(gitfo_close(fd));
-	must_fail(gitfo_rmdir_recurs(empty_tmp_dir));
+	must_fail(gitfo_rmdir_recurs(empty_tmp_dir, 0));
 	must_pass(gitfo_unlink(file));
-	must_pass(gitfo_rmdir_recurs(empty_tmp_dir));
+	must_pass(gitfo_rmdir_recurs(empty_tmp_dir, 0));
 END_TEST
 
 BEGIN_SUITE(core)

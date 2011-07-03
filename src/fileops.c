@@ -406,31 +406,32 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 	return GIT_SUCCESS;
 }
 
-static int _rmdir_recurs_cb(void *GIT_UNUSED(nil), char *path)
+static int _rmdir_recurs_foreach(void *force_removal_of_non_empty_directory, char *path)
 {
 	int error = GIT_SUCCESS;
-
-	GIT_UNUSED_ARG(nil)
 
 	error = gitfo_isdir(path);
 	if (error == GIT_SUCCESS) {
 		size_t root_size = strlen(path);
 
-		if ((error = gitfo_dirent(path, GIT_PATH_MAX, _rmdir_recurs_cb, NULL)) < GIT_SUCCESS)
+		if ((error = gitfo_dirent(path, GIT_PATH_MAX, _rmdir_recurs_foreach, force_removal_of_non_empty_directory)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to remove directory `%s`", path);
 
 		path[root_size] = '\0';
 		return gitfo_rmdir(path);
 	}
 
-	return git__rethrow(error, "Failed to remove directory. `%s` is not a directory", path);
+	if (*(int *)(force_removal_of_non_empty_directory))
+		return gitfo_unlink(path);
+	else
+		return git__rethrow(error, "Failed to remove directory. `%s` is not a directory", path);
 }
 
-int gitfo_rmdir_recurs(const char *path)
+int gitfo_rmdir_recurs(const char *path, int force_removal_of_non_empty_directory)
 {
 	char p[GIT_PATH_MAX];
 	strncpy(p, path, GIT_PATH_MAX);
-	return  _rmdir_recurs_cb(NULL, p);
+	return  _rmdir_recurs_foreach(&force_removal_of_non_empty_directory, p);
 }
 
 static int retrieve_previous_path_component_start(const char *path)

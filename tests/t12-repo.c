@@ -141,13 +141,13 @@ static int ensure_repository_init(
 		goto cleanup;
 
 	git_repository_free(repo);
-	rmdir_recurs(working_directory);
+	gitfo_rmdir_recurs(working_directory, 1);
 
 	return GIT_SUCCESS;
 
 cleanup:
 	git_repository_free(repo);
-	rmdir_recurs(working_directory);
+	gitfo_rmdir_recurs(working_directory, 1);
 	return GIT_ERROR;
 }
 
@@ -193,7 +193,7 @@ BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping
 	git_repository_free(repo);
 
 	must_pass(chdir(current_workdir));
-	rmdir_recurs(TEMP_REPO_FOLDER);
+	must_pass(gitfo_rmdir_recurs(TEMP_REPO_FOLDER, 1));
 END_TEST
 
 #define EMPTY_BARE_REPOSITORY_NAME		"empty_bare.git"
@@ -210,7 +210,7 @@ BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git"
 	must_be_true(git_repository_path(repo, GIT_REPO_PATH_WORKDIR) == NULL);
 
 	git_repository_free(repo);
-	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
+	must_pass(gitfo_rmdir_recurs(TEMP_REPO_FOLDER, 1));
 END_TEST
 
 #define SOURCE_EMPTY_REPOSITORY_NAME	"empty_standard_repo/.gitted"
@@ -229,7 +229,7 @@ BEGIN_TEST(open1, "Open a standard repository that has just been initialized by 
 	must_be_true(git_repository_path(repo, GIT_REPO_PATH_WORKDIR) != NULL);
 
 	git_repository_free(repo);
-	must_pass(rmdir_recurs(TEMP_REPO_FOLDER));
+	must_pass(gitfo_rmdir_recurs(TEMP_REPO_FOLDER, 1));
 END_TEST
 
 
@@ -257,7 +257,7 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 	git_repository_free(repo);
 
 	must_pass(chdir(current_workdir));
-	rmdir_recurs(TEMP_REPO_FOLDER);
+	must_pass(gitfo_rmdir_recurs(TEMP_REPO_FOLDER, 1));
 END_TEST
 
 BEGIN_TEST(empty0, "test if a repository is empty or not")
@@ -392,9 +392,8 @@ BEGIN_TEST(discover0, "test discover")
 	char found_path[GIT_PATH_MAX];
 	int mode = 0755;
 
-	rmdir_recurs(DISCOVER_FOLDER);
 	must_pass(append_ceiling_dir(ceiling_dirs,TEST_RESOURCES));
-	gitfo_mkdir_recurs(DISCOVER_FOLDER, mode);
+	must_pass(gitfo_mkdir_recurs(DISCOVER_FOLDER, mode));
 
 	must_be_true(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
 
@@ -447,7 +446,7 @@ BEGIN_TEST(discover0, "test discover")
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path));
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, repository_path));
 
-	rmdir_recurs(DISCOVER_FOLDER);
+	must_pass(gitfo_rmdir_recurs(DISCOVER_FOLDER, 1));
 	git_repository_free(repo);
 END_TEST
 
