@@ -513,13 +513,14 @@ END_TEST
 
 BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
 	char file[GIT_PATH_MAX];
+	int fd;
 
 	must_pass(setup_empty_tmp_dir());
 	git_path_join(file, empty_tmp_dir, "/two/file.txt");
-	must_pass(fd = p_creat(file, 0755));
+	fd = p_creat(file, 0755);
 	must_pass(fd);
-	must_fail(git_futils_rmdir_recurs(empty_tmp_dir));
 	must_pass(p_close(fd));
+	must_fail(git_futils_rmdir_recurs(empty_tmp_dir));
 	must_pass(p_unlink(file));
 	must_pass(git_futils_rmdir_recurs(empty_tmp_dir));
 END_TEST

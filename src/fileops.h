@@ -106,7 +106,7 @@ extern git_off_t git_futils_filesize(git_file fd);
 extern int git_futils_rmdir_recurs(const char *path);
 
 /* Taken from git.git */
-static inline int is_dot_or_dotdot(const char *name)
+GIT_INLINE(int) is_dot_or_dotdot(const char *name)
 {
 	return (name[0] == '.' &&
 		(name[1] == '\0' ||
