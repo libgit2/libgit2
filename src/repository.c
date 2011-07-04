@@ -42,11 +42,6 @@
 
 #define GIT_BRANCH_MASTER "master"
 
-typedef struct {
-	char *path_repository;
-	unsigned is_bare:1, has_been_reinit:1;
-} repo_init;
-
 /*
  * Git repository open methods
  *
@@ -595,11 +590,13 @@ git_odb *git_repository_database(git_repository *repo)
 	return repo->db;
 }
 
-static int repo_init_reinit(repo_init *results)
+static int repo_init_reinit(const char *repository_path, int is_bare)
 {
 	/* TODO: reinit the repository */
-	results->has_been_reinit = 1;
-	return git__throw(GIT_ENOTIMPLEMENTED, "Failed to reinitialize the repository. This feature is not yet implemented");
+	return git__throw(GIT_ENOTIMPLEMENTED,
+		"Failed to reinitialize the %srepository at '%s'. "
+		"This feature is not yet implemented",
+		is_bare ? "bare" : "", repository_path);
 }
 
 static int repo_init_createhead(git_repository *repo)
@@ -608,21 +605,12 @@ static int repo_init_createhead(git_repository *repo)
 	return git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE, 0);
 }
 
-static int repo_init_check_head_existence(char * repository_path)
-{
-	char temp_path[GIT_PATH_MAX];
-
-	git_path_join(temp_path, repository_path, GIT_HEAD_FILE);
-	return git_futils_exists(temp_path);
-}
-
-static int repo_init_structure(repo_init *results)
+static int repo_init_structure(const char *git_dir)
 {
 	const int mode = 0755; /* or 0777 ? */
 	int error;
 
 	char temp_path[GIT_PATH_MAX];
-	char *git_dir = results->path_repository;
 
 	if (git_futils_mkdir_r(git_dir, mode))
 		return git__throw(GIT_ERROR, "Failed to initialize repository structure. Could not mkdir");
@@ -665,50 +653,22 @@ static int repo_init_structure(repo_init *results)
 	return GIT_SUCCESS;
 }
 
-static int repo_init_find_dir(repo_init *results, const char* path)
-{
-	char temp_path[GIT_PATH_MAX];
-	int error;
-
-	if (git_futils_isdir(path) < GIT_SUCCESS) {
-		error = git_futils_mkdir_r(path, 0755);
-		if (error < GIT_SUCCESS)
-			return git__throw(GIT_EOSERR,
-				"Failed to initialize repository; cannot create full path");
-	}
-
-	if (git_path_prettify_dir(temp_path, path, NULL) < GIT_SUCCESS)
-		return git__throw(GIT_ENOTFOUND, "Failed to resolve repository path (%s)", path);
-
-	if (!results->is_bare)
-		git_path_join(temp_path, temp_path, GIT_DIR);
-
-	results->path_repository = git__strdup(temp_path);
-	if (results->path_repository == NULL)
-		return GIT_ENOMEM;
-
-	return GIT_SUCCESS;
-}
-
 int git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare)
 {
 	int error = GIT_SUCCESS;
 	git_repository *repo = NULL;
-	repo_init results;
+	char repository_path[GIT_PATH_MAX];
 
 	assert(repo_out && path);
 
-	results.path_repository = NULL;
-	results.is_bare = is_bare;
+	git_path_join(repository_path, path, is_bare ? "" : GIT_DIR);
 
-	error = repo_init_find_dir(&results, path);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	if (git_futils_isdir(repository_path)) {
+		if (quickcheck_repository_dir(repository_path) == GIT_SUCCESS)
+			return repo_init_reinit(repository_path, is_bare);
+	}
 
-	if (!repo_init_check_head_existence(results.path_repository))
-		return repo_init_reinit(&results);
-
-	error = repo_init_structure(&results);
+	error = repo_init_structure(repository_path);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -718,7 +678,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 		goto cleanup;
 	}
 
-	error = guess_repository_dirs(repo, results.path_repository);
+	error = guess_repository_dirs(repo, repository_path);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -735,12 +695,10 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 	/* should never fail */
 	assert(check_repository_dirs(repo) == GIT_SUCCESS);
 
-	free(results.path_repository);
 	*repo_out = repo;
 	return GIT_SUCCESS;
 
 cleanup:
-	free(results.path_repository);
 	git_repository_free(repo);
 	return git__rethrow(error, "Failed to (re)init the repository `%s`", path);
 }
