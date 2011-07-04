@@ -59,6 +59,11 @@ GIT_INLINE(void) git_path_join(char *buffer_out, const char *path_a, const char 
 	git_path_join_n(buffer_out, 2, path_a, path_b);
 }
 
+int git_path_root(const char *path);
+
+int git_path_prettify(char *path_out, const char *path, const char *base);
+int git_path_prettify_dir(char *path_out, const char *path, const char *base);
+
 #ifdef GIT_WIN32
 GIT_INLINE(void) git_path_mkposix(char *path)
 {

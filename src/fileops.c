@@ -125,18 +125,16 @@ int git_futils_isfile(const char *path)
 	struct stat st;
 	int stat_error;
 
-	if (!path)
-		return git__throw(GIT_ENOTFOUND, "No path given to git_futils_isfile");
-
+	assert(path);
 	stat_error = p_stat(path, &st);
 
 	if (stat_error < GIT_SUCCESS)
-		return git__throw(GIT_ENOTFOUND, "%s does not exist", path);
+		return -1;
 
 	if (!S_ISREG(st.st_mode))
-		return git__throw(GIT_ENOTFOUND, "%s is not a file", path);
+		return -1;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_futils_exists(const char *path)
@@ -149,7 +147,8 @@ git_off_t git_futils_filesize(git_file fd)
 {
 	struct stat sb;
 	if (p_fstat(fd, &sb))
-		return git__throw(GIT_EOSERR, "Failed to get size of file. File missing or corrupted");
+		return GIT_ERROR;
+
 	return sb.st_size;
 }
 
@@ -273,22 +272,6 @@ int git_futils_direach(
 	return GIT_SUCCESS;
 }
 
-int git_futils_root_offset(const char *path)
-{
-	int offset = 0;
-
-#ifdef GIT_WIN32
-	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(path[0]) && (path[1] == ':'))
-		offset += 2;
-#endif
-
-	if (*(path + offset) == '/')
-		return offset;
-
-	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
-}
-
 int git_futils_mkdir_r(const char *path, int mode)
 {
 	int error, root_path_offset;
@@ -301,7 +284,7 @@ int git_futils_mkdir_r(const char *path, int mode)
 	error = GIT_SUCCESS;
 	pp = path_copy;
 
-	root_path_offset = git_futils_root_offset(pp);
+	root_path_offset = git_path_root(pp);
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
@@ -338,7 +321,7 @@ static int retrieve_previous_path_component_start(const char *path)
 {
 	int offset, len, root_offset, start = 0;
 
-	root_offset = git_futils_root_offset(path);
+	root_offset = git_path_root(path);
 	if (root_offset > -1)
 		start += root_offset;
 
@@ -373,7 +356,7 @@ int git_futils_prettify_dir(char *buffer_out, size_t size, const char *path, con
 	buffer_end = path + strlen(path);
 	buffer_out_start = buffer_out;
 
-	root_path_offset = git_futils_root_offset(path);
+	root_path_offset = git_path_root(path);
 	if (root_path_offset < 0) {
 		if (base_path == NULL) {
 			error = p_getcwd(buffer_out, size);
@@ -446,7 +429,6 @@ int git_futils_prettify_dir(char *buffer_out, size_t size, const char *path, con
 	}
 
 	*buffer_out = '\0';
-
 	return GIT_SUCCESS;
 }
 
@@ -472,7 +454,7 @@ int git_futils_prettyify_file(char *buffer_out, size_t size, const char *path, c
 		return error;	/* The callee already takes care of setting the correct error message. */
 
 	path_len = strlen(buffer_out);
-	root_offset = git_futils_root_offset(buffer_out) + 1;
+	root_offset = git_path_root(buffer_out) + 1;
 	if (path_len == root_offset)
 		return git__throw(GIT_EINVALIDPATH, "Failed to normalize file path `%s`. The path points to a folder", path);
 

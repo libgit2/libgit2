@@ -1,4 +1,7 @@
 #include "common.h"
+#include "path.h"
+#include "posix.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -202,3 +205,50 @@ void git_path_join_n(char *buffer_out, int count, ...)
 	*buffer_out = '\0';
 }
 
+int git_path_root(const char *path)
+{
+	int offset = 0;
+
+#ifdef GIT_WIN32
+	/* Does the root of the path look like a windows drive ? */
+	if (isalpha(path[0]) && (path[1] == ':'))
+		offset += 2;
+#endif
+
+	if (*(path + offset) == '/')
+		return offset;
+
+	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
+}
+
+int git_path_prettify(char *path_out, const char *path, const char *base)
+{
+	char *result;
+
+	if (base == NULL || git_path_root(path) >= 0) {
+		result = p_realpath(path, path_out);
+	} else {
+		char aux_path[GIT_PATH_MAX];
+		git_path_join(aux_path, base, path);
+		result = p_realpath(aux_path, path_out);
+	}
+
+	return result ? GIT_SUCCESS : GIT_EOSERR;
+}
+
+int git_path_prettify_dir(char *path_out, const char *path, const char *base)
+{
+	size_t end;
+
+	if (git_path_prettify(path_out, path, base) < GIT_SUCCESS)
+		return GIT_EOSERR;
+
+	end = strlen(path_out);
+
+	if (end && path_out[end - 1] != '/') {
+		path_out[end] = '/';
+		path_out[end + 1] = '\0';
+	}
+
+	return GIT_SUCCESS;
+}

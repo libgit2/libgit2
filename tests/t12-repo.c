@@ -431,15 +431,15 @@ BEGIN_TEST(discover0, "test discover")
 	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER1, 0, ceiling_dirs));
 	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER2, 0, ceiling_dirs));
 	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER3, 0, ceiling_dirs));
-	must_be_true(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_NOT_FOUND_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
+	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_NOT_FOUND_FOLDER, 0, ceiling_dirs));
 
 	must_pass(append_ceiling_dir(ceiling_dirs, SUB_REPOSITORY_FOLDER));
 	//this must pass as ceiling_directories cannot predent the current
 	//working directory to be checked
 	must_pass(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
-	must_be_true(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB, 0, ceiling_dirs) == GIT_ENOTAREPO);
-	must_be_true(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB_SUB, 0, ceiling_dirs) == GIT_ENOTAREPO);
-	must_be_true(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, 0, ceiling_dirs) == GIT_ENOTAREPO);
+	must_fail(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB, 0, ceiling_dirs));
+	must_fail(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB_SUB, 0, ceiling_dirs));
+	must_fail(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, 0, ceiling_dirs));
 
 	//.gitfile redirection should not be affected by ceiling directories
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER, ceiling_dirs, sub_repository_path));

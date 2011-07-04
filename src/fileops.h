@@ -198,6 +198,5 @@ int git_futils_prettify_dir(char *buffer_out, size_t size, const char *path, con
  */
 int git_futils_prettyify_file(char *buffer_out, size_t size, const char *path, const char *base_path);
 
-int git_futils_root_offset(const char *path);
 
 #endif /* INCLUDE_fileops_h__ */

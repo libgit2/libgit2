@@ -1,4 +1,5 @@
 #include "posix.h"
+#include "path.h"
 #include <errno.h>
 
 int p_unlink(const char *path)
@@ -187,5 +188,15 @@ int p_hide_directory__w32(const char *path)
 		error = git__throw(GIT_EOSERR, "Failed to hide directory '%s'", path);
 
 	return error;
+}
+
+int p_realpath(const char *orig_path, char *buffer)
+{
+	int ret = GetFullPathName(orig_path, GIT_PATH_MAX, buffer, NULL);
+	if (!ret || ret > GIT_PATH_MAX)
+		return GIT_EOSERR;
+
+	git_path_mkposix(buffer);
+	return GIT_SUCCESS;
 }
 

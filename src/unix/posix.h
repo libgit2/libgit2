@@ -9,6 +9,6 @@
 #define p_unlink(p) unlink(p)
 #define p_mkdir(p,m) mkdir(p, m)
 #define p_fsync(fd) fsync(fd)
-#define p_realpath(p, r) realpath(p, r)
+#define p_realpath(p, po) realpath(p, po)
 
 #endif
