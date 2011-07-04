@@ -190,13 +190,22 @@ int p_hide_directory__w32(const char *path)
 	return error;
 }
 
-int p_realpath(const char *orig_path, char *buffer)
+char *p_realpath(const char *orig_path, char *buffer)
 {
-	int ret = GetFullPathName(orig_path, GIT_PATH_MAX, buffer, NULL);
-	if (!ret || ret > GIT_PATH_MAX)
-		return GIT_EOSERR;
+	int ret, alloc = 0;
+	
+	if (buffer == NULL) {
+		buffer = (char *)git__malloc(GIT_PATH_MAX);
+		alloc = 1;
+	}
+
+	ret = GetFullPathName(orig_path, GIT_PATH_MAX, buffer, NULL);
+	if (!ret || ret > GIT_PATH_MAX) {
+		if (alloc) free(buffer);
+		return NULL;
+	}
 
 	git_path_mkposix(buffer);
-	return GIT_SUCCESS;
+	return buffer;
 }
 

@@ -93,31 +93,20 @@ int git_futils_creat_locked_withpath(const char *path, int mode)
 
 int git_futils_isdir(const char *path)
 {
+#ifdef GIT_WIN32
+	DWORD attr = GetFileAttributes(path);
+	if (attr == INVALID_FILE_ATTRIBUTES)
+		return GIT_ERROR;
+
+	return (attr & FILE_ATTRIBUTE_DIRECTORY) ? GIT_SUCCESS : GIT_ERROR;
+
+#else
 	struct stat st;
-	int len, stat_error;
-
-	assert(path);
-
-	len = strlen(path);
-
-	/* win32: stat path for folders cannot end in a slash */
-	if (path[len - 1] == '/') {
-		char *path_fixed = NULL;
-		path_fixed = git__strdup(path);
-		path_fixed[len - 1] = 0;
-		stat_error = p_stat(path_fixed, &st);
-		free(path_fixed);
-	} else {
-		stat_error = p_stat(path, &st);
-	}
-
-	if (stat_error < GIT_SUCCESS)
+	if (p_stat(path, &st) < GIT_SUCCESS)
 		return GIT_ERROR;
 
-	if (!S_ISDIR(st.st_mode))
-		return GIT_ERROR;
-
-	return GIT_SUCCESS;
+	return S_ISDIR(st.st_mode) ? GIT_SUCCESS : GIT_ERROR;
+#endif
 }
 
 int git_futils_isfile(const char *path)
