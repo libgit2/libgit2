@@ -9,110 +9,98 @@
 #include "common.h"
 #include "map.h"
 #include "dir.h"
-#include <fcntl.h>
-#include <time.h>
+#include "posix.h"
+#include "path.h"
 
-#ifdef GIT_WIN32
-#define GIT_PLATFORM_PATH_SEP '\\'
-#else
-#define GIT_PLATFORM_PATH_SEP '/'
-#endif
-
-#define S_IFGITLINK 0160000
-#define S_ISGITLINK(m) (((m) & S_IFMT) == S_IFGITLINK)
-
-#ifdef GIT_WIN32
-GIT_INLINE(int) link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
-{
-	GIT_UNUSED_ARG(old)
-	GIT_UNUSED_ARG(new)
-	errno = ENOSYS;
-	return -1;
-}
-
-GIT_INLINE(int) git__mkdir(const char *path, int GIT_UNUSED(mode))
-{
-	GIT_UNUSED_ARG(mode)
-	return mkdir(path);
-}
-
-extern int git__unlink(const char *path);
-extern int git__mkstemp(char *template);
-extern int git__fsync(int fd);
-
-# ifndef GIT__WIN32_NO_HIDE_FILEOPS
-#  define unlink(p) git__unlink(p)
-#  define mkstemp(t) git__mkstemp(t)
-#  define mkdir(p,m) git__mkdir(p, m)
-#  define fsync(fd) git__fsync(fd)
-# endif
-#endif  /* GIT_WIN32 */
-
-
-#if !defined(O_BINARY)
-#define O_BINARY 0
-#endif
-
-#define GITFO_BUF_INIT {NULL, 0}
-
-typedef int git_file;
+/**
+ * Filebuffer methods
+ *
+ * Read whole files into an in-memory buffer for processing
+ */
+#define GIT_FBUFFER_INIT {NULL, 0}
 
 typedef struct {  /* file io buffer  */
 	void *data;  /* data bytes   */
 	size_t len;  /* data length  */
-} gitfo_buf;
+} git_fbuffer;
 
-extern int gitfo_exists(const char *path);
-extern int gitfo_open(const char *path, int flags);
-extern int gitfo_creat(const char *path, int mode);
-extern int gitfo_creat_force(const char *path, int mode);
-extern int gitfo_creat_locked(const char *path, int mode);
-extern int gitfo_creat_locked_force(const char *path, int mode);
-extern int gitfo_mktemp(char *path_out, const char *filename);
-extern int gitfo_isdir(const char *path);
-extern int gitfo_isfile(const char *path);
-extern int gitfo_mkdir_recurs(const char *path, int mode);
-extern int gitfo_mkdir_2file(const char *path);
-#define gitfo_close(fd) close(fd)
+extern int git_futils_readbuffer(git_fbuffer *obj, const char *path);
+extern void git_futils_freebuffer(git_fbuffer *obj);
 
-extern int gitfo_read(git_file fd, void *buf, size_t cnt);
-extern int gitfo_write(git_file fd, void *buf, size_t cnt);
-#define gitfo_lseek(f,n,w) lseek(f, n, w)
-extern git_off_t gitfo_size(git_file fd);
+/**
+ * File utils
+ *
+ * These are custom filesystem-related helper methods. They are
+ * rather high level, and wrap the underlying POSIX methods
+ *
+ * All these methods return GIT_SUCCESS on success,
+ * or an error code on failure and an error message is set.
+ */
 
-extern int gitfo_read_file(gitfo_buf *obj, const char *path);
-extern void gitfo_free_buf(gitfo_buf *obj);
+/**
+ * Check if a file exists and can be accessed.
+ */
+extern int git_futils_exists(const char *path);
 
-/* Move (rename) a file; this operation is atomic */
-extern int gitfo_mv(const char *from, const char *to);
+/**
+ * Create and open a file, while also
+ * creating all the folders in its path
+ */
+extern int git_futils_creat_withpath(const char *path, int mode);
 
-/* Move a file (forced); this will create the destination
- * path if it doesn't exist */
-extern int gitfo_mv_force(const char *from, const char *to);
+/**
+ * Create an open a process-locked file
+ */
+extern int git_futils_creat_locked(const char *path, int mode);
 
-#define gitfo_stat(p,b) stat(p, b)
-#define gitfo_fstat(f,b) fstat(f, b)
+/**
+ * Create an open a process-locked file, while
+ * also creating all the folders in its path
+ */
+extern int git_futils_creat_locked_withpath(const char *path, int mode);
 
-#ifdef GIT_WIN32
-#  define gitfo_lstat(p,b) gitfo_lstat__w32(p,b)
-#  define gitfo_readlink(a, b, c) gitfo_readlink__w32(a, b, c)
+/**
+ * Check if the given path points to a directory
+ */
+extern int git_futils_isdir(const char *path);
 
-   extern int gitfo_lstat__w32(const char *file_name, struct stat *buf);
-   extern int gitfo_readlink__w32(const char *link, char *target, size_t target_len);
-   extern int gitfo_hide_directory__w32(const char *path);
-#else
-#  define gitfo_lstat(p,b) lstat(p,b)
-#  define gitfo_readlink(a, b, c) readlink(a, b, c)
-#endif
+/**
+ * Check if the given path points to a regular file
+ */
+extern int git_futils_isfile(const char *path);
 
-#define gitfo_unlink(p) unlink(p)
-#define gitfo_rmdir(p) rmdir(p)
-#define gitfo_chdir(p) chdir(p)
-#define gitfo_mkdir(p,m) mkdir(p, m)
+/**
+ * Create a path recursively
+ */
+extern int git_futils_mkdir_r(const char *path, int mode);
 
-#define gitfo_mkstemp(t) mkstemp(t)
-#define gitfo_fsync(fd) fsync(fd)
-#define gitfo_chmod(p,m) chmod(p, m)
+/**
+ * Create all the folders required to contain
+ * the full path of a file
+ */
+extern int git_futils_mkpath2file(const char *path);
+
+/**
+ * Create and open a temporary file with a `_git2_` suffix
+ */
+extern int git_futils_mktmp(char *path_out, const char *filename);
+
+/**
+ * Atomically rename a file on the filesystem
+ */
+extern int git_futils_mv_atomic(const char *from, const char *to);
+
+/**
+ * Move a file on the filesystem, create the
+ * destination path if it doesn't exist
+ */
+extern int git_futils_mv_withpath(const char *from, const char *to);
+
+
+/**
+ * Get the filesize in bytes of a file
+ */
+extern git_off_t git_futils_filesize(git_file fd);
 
 /**
  * Read-only map all or part of a file into memory.
@@ -129,7 +117,7 @@ extern int gitfo_mv_force(const char *from, const char *to);
  * - GIT_SUCCESS on success;
  * - GIT_EOSERR on an unspecified OS related error.
  */
-extern int gitfo_map_ro(
+extern int git_futils_mmap_ro(
 	git_map *out,
 	git_file fd,
 	git_off_t begin,
@@ -139,7 +127,7 @@ extern int gitfo_map_ro(
  * Release the memory associated with a previous memory mapping.
  * @param map the mapping description previously configured.
  */
-extern void gitfo_free_map(git_map *map);
+extern void git_futils_mmap_free(git_map *map);
 
 /**
  * Walk each directory entry, except '.' and '..', calling fn(state).
@@ -152,16 +140,15 @@ extern void gitfo_free_map(git_map *map);
  *		may modify the pathbuf, but only by appending new text.
  * @param state to pass to fn as the first arg.
  */
-extern int gitfo_dirent(
+extern int git_futils_direach(
 	char *pathbuf,
 	size_t pathmax,
 	int (*fn)(void *, char *),
 	void *state);
 
-extern int gitfo_cmp_path(const char *name1, int len1, int isdir1,
+extern int git_futils_cmp_path(const char *name1, int len1, int isdir1,
 		const char *name2, int len2, int isdir2);
 
-extern int gitfo_getcwd(char *buffer_out, size_t size);
 
 /**
  * Clean up a provided absolute or relative directory path.
@@ -186,7 +173,7 @@ extern int gitfo_getcwd(char *buffer_out, size_t size);
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, const char *base_path);
+int git_futils_prettify_dir(char *buffer_out, size_t size, const char *path, const char *base_path);
 
 /**
  * Clean up a provided absolute or relative file path.
@@ -209,10 +196,8 @@ int gitfo_prettify_dir_path(char *buffer_out, size_t size, const char *path, con
  * - GIT_SUCCESS on success;
  * - GIT_ERROR when the input path is invalid or escapes the current directory.
  */
-int gitfo_prettify_file_path(char *buffer_out, size_t size, const char *path, const char *base_path);
+int git_futils_prettyify_file(char *buffer_out, size_t size, const char *path, const char *base_path);
 
-void gitfo_posixify_path(char *path);
-
-int gitfo_retrieve_path_root_offset(const char *path);
+int git_futils_root_offset(const char *path);
 
 #endif /* INCLUDE_fileops_h__ */

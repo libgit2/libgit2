@@ -78,9 +78,9 @@ BEGIN_TEST(path0, "get the dirname of a path")
 	char dir[64], *dir2;
 
 #define DIRNAME_TEST(A, B) { \
-	must_be_true(git__dirname_r(dir, sizeof(dir), A) >= 0); \
+	must_be_true(git_path_dirname_r(dir, sizeof(dir), A) >= 0); \
 	must_be_true(strcmp(dir, B) == 0);				\
-	must_be_true((dir2 = git__dirname(A)) != NULL);	\
+	must_be_true((dir2 = git_path_dirname(A)) != NULL);	\
 	must_be_true(strcmp(dir2, B) == 0);				\
 	free(dir2);										\
 }
@@ -107,9 +107,9 @@ BEGIN_TEST(path1, "get the base name of a path")
 	char base[64], *base2;
 
 #define BASENAME_TEST(A, B) { \
-	must_be_true(git__basename_r(base, sizeof(base), A) >= 0); \
+	must_be_true(git_path_basename_r(base, sizeof(base), A) >= 0); \
 	must_be_true(strcmp(base, B) == 0);					\
-	must_be_true((base2 = git__basename(A)) != NULL);	\
+	must_be_true((base2 = git_path_basename(A)) != NULL);	\
 	must_be_true(strcmp(base2, B) == 0);				\
 	free(base2);										\
 }
@@ -132,7 +132,7 @@ BEGIN_TEST(path2, "get the latest component in a path")
 	const char *dir;
 
 #define TOPDIR_TEST(A, B) { \
-	must_be_true((dir = git__topdir(A)) != NULL);	\
+	must_be_true((dir = git_path_topdir(A)) != NULL);	\
 	must_be_true(strcmp(dir, B) == 0);				\
 }
 
@@ -144,10 +144,10 @@ BEGIN_TEST(path2, "get the latest component in a path")
 	TOPDIR_TEST("/", "/");
 	TOPDIR_TEST("a/", "a/");
 
-	must_be_true(git__topdir("/usr/.git") == NULL);
-	must_be_true(git__topdir(".") == NULL);
-	must_be_true(git__topdir("") == NULL);
-	must_be_true(git__topdir("a") == NULL);
+	must_be_true(git_path_topdir("/usr/.git") == NULL);
+	must_be_true(git_path_topdir(".") == NULL);
+	must_be_true(git_path_topdir("") == NULL);
+	must_be_true(git_path_topdir("a") == NULL);
 
 #undef TOPDIR_TEST
 END_TEST
@@ -165,7 +165,7 @@ static int ensure_normalized(const char *input_path, const char *expected_path, 
 	char buffer_out[GIT_PATH_MAX];
 	char current_workdir[GIT_PATH_MAX];
 
-	error = gitfo_getcwd(current_workdir, sizeof(current_workdir));
+	error = p_getcwd(current_workdir, sizeof(current_workdir));
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -193,12 +193,12 @@ static int ensure_normalized(const char *input_path, const char *expected_path, 
 
 static int ensure_dir_path_normalized(const char *input_path, const char *expected_path, int assert_flags)
 {
-	return ensure_normalized(input_path, expected_path, gitfo_prettify_dir_path, assert_flags);
+	return ensure_normalized(input_path, expected_path, git_futils_prettify_dir, assert_flags);
 }
 
 static int ensure_file_path_normalized(const char *input_path, const char *expected_path, int assert_flags)
 {
-	return ensure_normalized(input_path, expected_path, gitfo_prettify_file_path, assert_flags);
+	return ensure_normalized(input_path, expected_path, git_futils_prettyify_file, assert_flags);
 }
 
 BEGIN_TEST(path3, "prettify and validate a path to a file")
@@ -355,7 +355,7 @@ END_TEST
 static int ensure_joinpath(const char *path_a, const char *path_b, const char *expected_path)
 {
 	char joined_path[GIT_PATH_MAX];
-	git__joinpath(joined_path, path_a, path_b);
+	git_path_join(joined_path, path_a, path_b);
 	return strcmp(joined_path, expected_path) == 0 ? GIT_SUCCESS : GIT_ERROR;
 }
 
@@ -377,7 +377,7 @@ END_TEST
 static int ensure_joinpath_n(const char *path_a, const char *path_b, const char *path_c, const char *path_d, const char *expected_path)
 {
 	char joined_path[GIT_PATH_MAX];
-	git__joinpath_n(joined_path, 4, path_a, path_b, path_c, path_d);
+	git_path_join_n(joined_path, 4, path_a, path_b, path_c, path_d);
 	return strcmp(joined_path, expected_path) == 0 ? GIT_SUCCESS : GIT_ERROR;
 }
 
@@ -411,14 +411,14 @@ BEGIN_TEST(path7, "prevent a path which escapes the root directory from being pr
 	char prettified[GIT_PATH_MAX];
 	int i = 0, number_to_escape;
 
-	must_pass(gitfo_getcwd(current_workdir, sizeof(current_workdir)));
+	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
 
 	number_to_escape = count_number_of_path_segments(current_workdir);
 
 	for (i = 0; i < number_to_escape + 1; i++)
-		git__joinpath(current_workdir, current_workdir, "../");
+		git_path_join(current_workdir, current_workdir, "../");
 
-	must_fail(gitfo_prettify_dir_path(prettified, sizeof(prettified), current_workdir, NULL));
+	must_fail(git_futils_prettify_dir(prettified, sizeof(prettified), current_workdir, NULL));
 END_TEST
 
 typedef struct name_data {
@@ -451,24 +451,24 @@ static int setup(walk_data *d)
 {
 	name_data *n;
 
-	if (gitfo_mkdir(top_dir, 0755) < 0)
+	if (p_mkdir(top_dir, 0755) < 0)
 		return error("can't mkdir(\"%s\")", top_dir);
 
-	if (gitfo_chdir(top_dir) < 0)
+	if (p_chdir(top_dir) < 0)
 		return error("can't chdir(\"%s\")", top_dir);
 
 	if (strcmp(d->sub, ".") != 0)
-		if (gitfo_mkdir(d->sub, 0755) < 0)
+		if (p_mkdir(d->sub, 0755) < 0)
 			return error("can't mkdir(\"%s\")", d->sub);
 
 	strcpy(path_buffer, d->sub);
 	state_loc = d;
 
 	for (n = d->names; n->name; n++) {
-		git_file fd = gitfo_creat(n->name, 0600);
+		git_file fd = p_creat(n->name, 0600);
 		if (fd < 0)
 			return GIT_ERROR;
-		gitfo_close(fd);
+		p_close(fd);
 		n->count = 0;
 	}
 
@@ -480,18 +480,18 @@ static int knockdown(walk_data *d)
 	name_data *n;
 
 	for (n = d->names; n->name; n++) {
-		if (gitfo_unlink(n->name) < 0)
+		if (p_unlink(n->name) < 0)
 			return error("can't unlink(\"%s\")", n->name);
 	}
 
 	if (strcmp(d->sub, ".") != 0)
-		if (gitfo_rmdir(d->sub) < 0)
+		if (p_rmdir(d->sub) < 0)
 			return error("can't rmdir(\"%s\")", d->sub);
 
-	if (gitfo_chdir("..") < 0)
+	if (p_chdir("..") < 0)
 		return error("can't chdir(\"..\")");
 
-	if (gitfo_rmdir(top_dir) < 0)
+	if (p_rmdir(top_dir) < 0)
 		return error("can't rmdir(\"%s\")", top_dir);
 
 	return 0;
@@ -546,7 +546,7 @@ BEGIN_TEST(dirent0, "make sure that the '.' folder is not traversed")
 
 	must_pass(setup(&dot));
 
-	must_pass(gitfo_dirent(path_buffer,
+	must_pass(git_futils_direach(path_buffer,
 			       sizeof(path_buffer),
 			       one_entry,
 			       &dot));
@@ -571,7 +571,7 @@ BEGIN_TEST(dirent1, "traverse a subfolder")
 
 	must_pass(setup(&sub));
 
-	must_pass(gitfo_dirent(path_buffer,
+	must_pass(git_futils_direach(path_buffer,
 			       sizeof(path_buffer),
 			       one_entry,
 			       &sub));
@@ -590,7 +590,7 @@ BEGIN_TEST(dirent2, "traverse a slash-terminated subfolder")
 
 	must_pass(setup(&sub_slash));
 
-	must_pass(gitfo_dirent(path_buffer,
+	must_pass(git_futils_direach(path_buffer,
 			       sizeof(path_buffer),
 			       one_entry,
 			       &sub_slash));
@@ -619,7 +619,7 @@ BEGIN_TEST(dirent3, "make sure that empty folders are not traversed")
 
 	must_pass(setup(&empty));
 
-	must_pass(gitfo_dirent(path_buffer,
+	must_pass(git_futils_direach(path_buffer,
 			       sizeof(path_buffer),
 			       one_entry,
 			       &empty));
@@ -627,7 +627,7 @@ BEGIN_TEST(dirent3, "make sure that empty folders are not traversed")
 	must_pass(check_counts(&empty));
 
 	/* make sure callback not called */
-	must_pass(gitfo_dirent(path_buffer,
+	must_pass(git_futils_direach(path_buffer,
 			       sizeof(path_buffer),
 			       dont_call_me,
 			       &empty));
@@ -652,7 +652,7 @@ BEGIN_TEST(dirent4, "make sure that strange looking filenames ('..c') are traver
 
 	must_pass(setup(&odd));
 
-	must_pass(gitfo_dirent(path_buffer,
+	must_pass(git_futils_direach(path_buffer,
 			       sizeof(path_buffer),
 			       one_entry,
 			       &odd));
@@ -667,12 +667,12 @@ BEGIN_TEST(filebuf0, "make sure git_filebuf_open doesn't delete an existing lock
 	int fd;
 	char test[] = "test", testlock[] = "test.lock";
 
-	fd = gitfo_creat(testlock, 0744);
+	fd = p_creat(testlock, 0744);
 	must_pass(fd);
-	must_pass(gitfo_close(fd));
+	must_pass(p_close(fd));
 	must_fail(git_filebuf_open(&file, test, 0));
-	must_pass(gitfo_exists(testlock));
-	must_pass(gitfo_unlink(testlock));
+	must_pass(git_futils_exists(testlock));
+	must_pass(p_unlink(testlock));
 END_TEST
 
 BEGIN_TEST(filebuf1, "make sure GIT_FILEBUF_APPEND works as expected")
@@ -680,16 +680,16 @@ BEGIN_TEST(filebuf1, "make sure GIT_FILEBUF_APPEND works as expected")
 	int fd;
 	char test[] = "test";
 
-	fd = gitfo_creat(test, 0644);
+	fd = p_creat(test, 0644);
 	must_pass(fd);
-	must_pass(gitfo_write(fd, "libgit2 rocks\n", 14));
-	must_pass(gitfo_close(fd));
+	must_pass(p_write(fd, "libgit2 rocks\n", 14));
+	must_pass(p_close(fd));
 
 	must_pass(git_filebuf_open(&file, test, GIT_FILEBUF_APPEND));
 	must_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 	must_pass(git_filebuf_commit(&file));
 
-	must_pass(gitfo_unlink(test));
+	must_pass(p_unlink(test));
 END_TEST
 
 BEGIN_TEST(filebuf2, "make sure git_filebuf_write writes large buffer correctly")
@@ -702,7 +702,7 @@ BEGIN_TEST(filebuf2, "make sure git_filebuf_write writes large buffer correctly"
 	must_pass(git_filebuf_write(&file, buf, sizeof(buf)));
 	must_pass(git_filebuf_commit(&file));
 
-	must_pass(gitfo_unlink(test));
+	must_pass(p_unlink(test));
 END_TEST
 
 BEGIN_SUITE(core)

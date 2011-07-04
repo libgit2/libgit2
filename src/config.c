@@ -333,9 +333,9 @@ int git_config_find_global(char *global_config_path)
 	if (home == NULL)
 		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot locate the user's home directory");
 
-	git__joinpath(global_config_path, home, GIT_CONFIG_FILENAME);
+	git_path_join(global_config_path, home, GIT_CONFIG_FILENAME);
 
-	if (gitfo_exists(global_config_path) < GIT_SUCCESS)
+	if (git_futils_exists(global_config_path) < GIT_SUCCESS)
 		return git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");
 
 	return GIT_SUCCESS;

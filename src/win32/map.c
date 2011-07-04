@@ -16,7 +16,7 @@ static DWORD get_page_size(void)
 	return page_size;
 }
 
-int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
 	DWORD page_size = get_page_size();
@@ -92,7 +92,7 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 	return GIT_SUCCESS;
 }
 
-int git__munmap(git_map *map)
+int p_munmap(git_map *map)
 {
 	assert(map != NULL);
 

@@ -89,7 +89,7 @@ typedef struct {
 	cvar_t_list var_list;
 
 	struct {
-		gitfo_buf buffer;
+		git_fbuffer buffer;
 		char *read_ptr;
 		int line_number;
 		int eof;
@@ -278,7 +278,7 @@ static int config_open(git_config_file *cfg)
 	int error;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
-	error = gitfo_read_file(&b->reader.buffer, b->file_path);
+	error = git_futils_readbuffer(&b->reader.buffer, b->file_path);
 	if(error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -286,13 +286,13 @@ static int config_open(git_config_file *cfg)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	gitfo_free_buf(&b->reader.buffer);
+	git_futils_freebuffer(&b->reader.buffer);
 
 	return error;
 
  cleanup:
 	cvar_list_free(&b->var_list);
-	gitfo_free_buf(&b->reader.buffer);
+	git_futils_freebuffer(&b->reader.buffer);
 
 	return git__rethrow(error, "Failed to open config");
 }
@@ -921,7 +921,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 	const char *pre_end = NULL, *post_start = NULL;
 
 	/* We need to read in our own config file */
-	error = gitfo_read_file(&cfg->reader.buffer, cfg->file_path);
+	error = git_futils_readbuffer(&cfg->reader.buffer, cfg->file_path);
 	if (error < GIT_SUCCESS) {
 		return git__rethrow(error, "Failed to read existing config file %s", cfg->file_path);
 	}
@@ -1068,7 +1068,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 	else
 		error = git_filebuf_commit(&file);
 
-	gitfo_free_buf(&cfg->reader.buffer);
+	git_futils_freebuffer(&cfg->reader.buffer);
 	return error;
 }
 

@@ -68,7 +68,7 @@ static int assign_repository_dirs(
 	if (git_dir == NULL)
 		return git__throw(GIT_ENOTFOUND, "Failed to open repository. Git dir not found");
 
-	error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_dir, NULL);
+	error = git_futils_prettify_dir(path_aux, sizeof(path_aux), git_dir, NULL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to open repository");
 
@@ -79,9 +79,9 @@ static int assign_repository_dirs(
 
 	/* path to GIT_OBJECT_DIRECTORY */
 	if (git_object_directory == NULL)
-		git__joinpath(path_aux, repo->path_repository, GIT_OBJECTS_DIR);
+		git_path_join(path_aux, repo->path_repository, GIT_OBJECTS_DIR);
 	else {
-		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_object_directory, NULL);
+		error = git_futils_prettify_dir(path_aux, sizeof(path_aux), git_object_directory, NULL);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to open repository");
 	}
@@ -95,7 +95,7 @@ static int assign_repository_dirs(
 	if (git_work_tree == NULL)
 		repo->is_bare = 1;
 	else {
-		error = gitfo_prettify_dir_path(path_aux, sizeof(path_aux), git_work_tree, NULL);
+		error = git_futils_prettify_dir(path_aux, sizeof(path_aux), git_work_tree, NULL);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to open repository");
 
@@ -106,9 +106,9 @@ static int assign_repository_dirs(
 
 		/* Path to GIT_INDEX_FILE */
 		if (git_index_file == NULL)
-			git__joinpath(path_aux, repo->path_repository, GIT_INDEX_FILE);
+			git_path_join(path_aux, repo->path_repository, GIT_INDEX_FILE);
 		else {
-			error = gitfo_prettify_file_path(path_aux, sizeof(path_aux), git_index_file, NULL);
+			error = git_futils_prettyify_file(path_aux, sizeof(path_aux), git_index_file, NULL);
 			if (error < GIT_SUCCESS)
 				return git__rethrow(error, "Failed to open repository");
 		}
@@ -126,16 +126,16 @@ static int check_repository_dirs(git_repository *repo)
 {
 	char path_aux[GIT_PATH_MAX];
 
-	if (gitfo_isdir(repo->path_repository) < GIT_SUCCESS)
+	if (git_futils_isdir(repo->path_repository) < GIT_SUCCESS)
 		return git__throw(GIT_ENOTAREPO, "`%s` is not a folder", repo->path_repository);
 
 	/* Ensure GIT_OBJECT_DIRECTORY exists */
-	if (gitfo_isdir(repo->path_odb) < GIT_SUCCESS)
+	if (git_futils_isdir(repo->path_odb) < GIT_SUCCESS)
 		return git__throw(GIT_ENOTAREPO, "`%s` does not exist", repo->path_odb);
 
 	/* Ensure HEAD file exists */
-	git__joinpath(path_aux, repo->path_repository, GIT_HEAD_FILE);
-	if (gitfo_exists(path_aux) < 0)
+	git_path_join(path_aux, repo->path_repository, GIT_HEAD_FILE);
+	if (git_futils_exists(path_aux) < 0)
 		return git__throw(GIT_ENOTAREPO, "HEAD file is missing");
 
 	return GIT_SUCCESS;
@@ -147,12 +147,12 @@ static int guess_repository_dirs(git_repository *repo, const char *repository_pa
 	const char *path_work_tree = NULL;
 
 	/* Git directory name */
-	if (git__basename_r(buffer, sizeof(buffer), repository_path) < 0)
+	if (git_path_basename_r(buffer, sizeof(buffer), repository_path) < 0)
 		return git__throw(GIT_EINVALIDPATH, "Unable to parse folder name from `%s`", repository_path);
 
 	if (strcmp(buffer, DOT_GIT) == 0) {
 		/* Path to working dir */
-		if (git__dirname_r(buffer, sizeof(buffer), repository_path) < 0)
+		if (git_path_dirname_r(buffer, sizeof(buffer), repository_path) < 0)
 			return git__throw(GIT_EINVALIDPATH, "Unable to parse parent folder name from `%s`", repository_path);
 		path_work_tree = buffer;
 	}
@@ -286,7 +286,7 @@ int git_repository_config(
 	if (error < GIT_SUCCESS)
 		return error;
 
-	git__joinpath(config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
+	git_path_join(config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
 	error = git_config_add_file_ondisk(*out, config_path, 3);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
@@ -364,7 +364,7 @@ static int abspath(char *buffer_out, size_t size, const char *path)
 			return git__throw(GIT_EOSERR, "Failed to retrieve real path: %s causing errors", buffer_out);
 	#endif
 
-	gitfo_posixify_path(buffer_out);
+	git_path_mkposix(buffer_out);
 
 	return GIT_SUCCESS;
 }
@@ -375,7 +375,7 @@ static int retrieve_device(dev_t *device_out, const char *path)
 
 	assert(device_out);
 
-	if (gitfo_stat(path, &path_info))
+	if (p_stat(path, &path_info))
 		return git__throw(GIT_EOSERR, "Failed to get file informations: %s", path);
 
 	*device_out = path_info.st_dev;
@@ -393,7 +393,7 @@ static int retrieve_ceiling_directories_offset(const char *path, const char *cei
 
 	assert(path);
 
-	min_len = gitfo_retrieve_path_root_offset(path) + 1;
+	min_len = git_futils_root_offset(path) + 1;
 
 	if (ceiling_directories == NULL || min_len == 0)
 		return min_len;
@@ -402,7 +402,7 @@ static int retrieve_ceiling_directories_offset(const char *path, const char *cei
 		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
 		len = sep - ceil;
 
-		if (len == 0 || len > GIT_PATH_MAX || gitfo_retrieve_path_root_offset(ceil) == -1)
+		if (len == 0 || len > GIT_PATH_MAX || git_futils_root_offset(ceil) == -1)
 			continue;
 
 		strncpy(buf, ceil, len);
@@ -428,13 +428,13 @@ static int retrieve_ceiling_directories_offset(const char *path, const char *cei
 
 static int read_gitfile(char *path_out, size_t size, const char *file_path, const char *base_path)
 {
-	gitfo_buf file;
+	git_fbuffer file;
 	int error, end_offset;
 	char *data;
 
 	assert(file_path && path_out && size > 0);
 
-	error = gitfo_read_file(&file, file_path);
+	error = git_futils_readbuffer(&file, file_path);
 
 	if (error < GIT_SUCCESS)
 		return error;
@@ -442,7 +442,7 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 	data = (char*)(file.data);
 
 	if (git__prefixcmp(data, GIT_FILE_CONTENT_PREFIX)) {
-		gitfo_free_buf(&file);
+		git_futils_freebuffer(&file);
 		return git__throw(GIT_ENOTFOUND, "Invalid gitfile format `%s`", file_path);
 	}
 
@@ -452,11 +452,11 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 	data[end_offset + 1] = '\0';
 
 	if (GIT_FILE_CONTENT_PREFIX_LENGTH == end_offset + 1) {
-		gitfo_free_buf(&file);
+		git_futils_freebuffer(&file);
 		return git__throw(GIT_ENOTFOUND, "No path in git file `%s`", file_path);
 	}
 
-	error = gitfo_prettify_dir_path(path_out, size, data + GIT_FILE_CONTENT_PREFIX_LENGTH, base_path);
+	error = git_futils_prettify_dir(path_out, size, data + GIT_FILE_CONTENT_PREFIX_LENGTH, base_path);
 	if (error == GIT_SUCCESS) {
 		end_offset = strlen(path_out);
 
@@ -464,7 +464,7 @@ static int read_gitfile(char *path_out, size_t size, const char *file_path, cons
 			path_out[end_offset - 1 ] = '\0';
 	}
 
-	gitfo_free_buf(&file);
+	git_futils_freebuffer(&file);
 
 	return error;
 }
@@ -521,11 +521,11 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 	}
 
 	ceiling_offset = retrieve_ceiling_directories_offset(bare_path, ceiling_dirs);
-	git__joinpath(normal_path, bare_path, DOT_GIT);
+	git_path_join(normal_path, bare_path, DOT_GIT);
 
 	while(1){
 		//look for .git file
-		if (gitfo_isfile(normal_path) == GIT_SUCCESS) {
+		if (git_futils_isfile(normal_path) == GIT_SUCCESS) {
 			error = read_gitfile(repository_path, size, normal_path, bare_path);
 
 			if (error < GIT_SUCCESS) {
@@ -566,7 +566,7 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 
 		git_repository__free_dirs(&repo);
 
-		if (git__dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
+		if (git_path_dirname_r(normal_path, sizeof(normal_path), bare_path) < GIT_SUCCESS)
 			goto cleanup;
 
 		if (!across_fs) {
@@ -585,7 +585,7 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 		}
 
 		strcpy(bare_path, normal_path);
-		git__joinpath(normal_path, bare_path, DOT_GIT);
+		git_path_join(normal_path, bare_path, DOT_GIT);
 
 		//nothing has been found, lets try the parent directory
 		if (bare_path[ceiling_offset] == '\0') {
@@ -633,8 +633,8 @@ static int repo_init_check_head_existence(char * repository_path)
 {
 	char temp_path[GIT_PATH_MAX];
 
-	git__joinpath(temp_path, repository_path, GIT_HEAD_FILE);
-	return gitfo_exists(temp_path);
+	git_path_join(temp_path, repository_path, GIT_HEAD_FILE);
+	return git_futils_exists(temp_path);
 }
 
 static int repo_init_structure(repo_init *results)
@@ -645,39 +645,39 @@ static int repo_init_structure(repo_init *results)
 	char temp_path[GIT_PATH_MAX];
 	char *git_dir = results->path_repository;
 
-	if (gitfo_mkdir_recurs(git_dir, mode))
+	if (git_futils_mkdir_r(git_dir, mode))
 		return git__throw(GIT_ERROR, "Failed to initialize repository structure. Could not mkdir");
 
 #ifdef GIT_WIN32
 	/* Hides the ".git" directory */
 	if (!results->is_bare) {
-		error = gitfo_hide_directory__w32(git_dir);
+		error = p_hide_directory__w32(git_dir);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to initialize repository structure");
 	}
 #endif
 
 	/* Creates the '/objects/info/' directory */
-	git__joinpath(temp_path, git_dir, GIT_OBJECTS_INFO_DIR);
-	error = gitfo_mkdir_recurs(temp_path, mode);
+	git_path_join(temp_path, git_dir, GIT_OBJECTS_INFO_DIR);
+	error = git_futils_mkdir_r(temp_path, mode);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to initialize repository structure");
 
 	/* Creates the '/objects/pack/' directory */
-	git__joinpath(temp_path, git_dir, GIT_OBJECTS_PACK_DIR);
-	error = gitfo_mkdir(temp_path, mode);
+	git_path_join(temp_path, git_dir, GIT_OBJECTS_PACK_DIR);
+	error = p_mkdir(temp_path, mode);
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Unable to create `%s` folder", temp_path);
 
 	/* Creates the '/refs/heads/' directory */
-	git__joinpath(temp_path, git_dir, GIT_REFS_HEADS_DIR);
-	error = gitfo_mkdir_recurs(temp_path, mode);
+	git_path_join(temp_path, git_dir, GIT_REFS_HEADS_DIR);
+	error = git_futils_mkdir_r(temp_path, mode);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to initialize repository structure");
 
 	/* Creates the '/refs/tags/' directory */
-	git__joinpath(temp_path, git_dir, GIT_REFS_TAGS_DIR);
-	error = gitfo_mkdir(temp_path, mode);
+	git_path_join(temp_path, git_dir, GIT_REFS_TAGS_DIR);
+	error = p_mkdir(temp_path, mode);
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Unable to create `%s` folder", temp_path);
 
@@ -691,12 +691,12 @@ static int repo_init_find_dir(repo_init *results, const char* path)
 	char temp_path[GIT_PATH_MAX];
 	int error = GIT_SUCCESS;
 
-	error = gitfo_prettify_dir_path(temp_path, sizeof(temp_path), path, NULL);
+	error = git_futils_prettify_dir(temp_path, sizeof(temp_path), path, NULL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to find directory to initialize repository");
 
 	if (!results->is_bare) {
-		git__joinpath(temp_path, temp_path, GIT_DIR);
+		git_path_join(temp_path, temp_path, GIT_DIR);
 	}
 
 	results->path_repository = git__strdup(temp_path);

@@ -170,7 +170,7 @@ static int retreive_tag_reference(git_reference **tag_reference_out, char *ref_n
 	git_reference *tag_ref;
 	int error;
 
-	git__joinpath(ref_name_out, GIT_REFS_TAGS_DIR, tag_name);
+	git_path_join(ref_name_out, GIT_REFS_TAGS_DIR, tag_name);
 	error = git_reference_lookup(&tag_ref, repo, ref_name_out);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to retrieve tag reference");

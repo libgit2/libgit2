@@ -146,7 +146,7 @@ BEGIN_TEST(write0, "write an index back to disk")
 
 	git_index_free(index);
 
-	gitfo_unlink("index_rewrite");
+	p_unlink("index_rewrite");
 END_TEST
 
 BEGIN_TEST(sort0, "sort the entires in an index")
@@ -187,7 +187,7 @@ BEGIN_TEST(add0, "add a new file to the index")
 	must_pass(git_index_entrycount(index) == 0);
 
 	/* Create a new file in the working directory */
-	must_pass(gitfo_mkdir_2file(TEMP_REPO_FOLDER "myrepo/test.txt"));
+	must_pass(git_futils_mkpath2file(TEMP_REPO_FOLDER "myrepo/test.txt"));
 	must_pass(git_filebuf_open(&file, TEMP_REPO_FOLDER "myrepo/test.txt", 0));
 	must_pass(git_filebuf_write(&file, "hey there\n", 10));
 	must_pass(git_filebuf_commit(&file));

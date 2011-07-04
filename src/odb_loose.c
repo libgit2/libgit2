@@ -97,7 +97,7 @@ static size_t object_file_name(char *name, size_t n, char *dir, const git_oid *i
 }
 
 
-static size_t get_binary_object_header(obj_hdr *hdr, gitfo_buf *obj)
+static size_t get_binary_object_header(obj_hdr *hdr, git_fbuffer *obj)
 {
 	unsigned char c;
 	unsigned char *data = obj->data;
@@ -199,7 +199,7 @@ static void set_stream_output(z_stream *s, void *out, size_t len)
 }
 
 
-static int start_inflate(z_stream *s, gitfo_buf *obj, void *out, size_t len)
+static int start_inflate(z_stream *s, git_fbuffer *obj, void *out, size_t len)
 {
 	int status;
 
@@ -309,7 +309,7 @@ static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
  * of loose object data into packs. This format is no longer used, but
  * we must still read it.
  */
-static int inflate_packlike_loose_disk_obj(git_rawobj *out, gitfo_buf *obj)
+static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_fbuffer *obj)
 {
 	unsigned char *in, *buf;
 	obj_hdr hdr;
@@ -347,7 +347,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, gitfo_buf *obj)
 	return GIT_SUCCESS;
 }
 
-static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
+static int inflate_disk_obj(git_rawobj *out, git_fbuffer *obj)
 {
 	unsigned char head[64], *buf;
 	z_stream zs;
@@ -405,7 +405,7 @@ static int inflate_disk_obj(git_rawobj *out, gitfo_buf *obj)
 static int read_loose(git_rawobj *out, const char *loc)
 {
 	int error;
-	gitfo_buf obj = GITFO_BUF_INIT;
+	git_fbuffer obj = GIT_FBUFFER_INIT;
 
 	assert(out && loc);
 
@@ -413,11 +413,11 @@ static int read_loose(git_rawobj *out, const char *loc)
 	out->len  = 0;
 	out->type = GIT_OBJ_BAD;
 
-	if (gitfo_read_file(&obj, loc) < 0)
+	if (git_futils_readbuffer(&obj, loc) < 0)
 		return git__throw(GIT_ENOTFOUND, "Failed to read loose object. File not found");
 
 	error = inflate_disk_obj(out, &obj);
-	gitfo_free_buf(&obj);
+	git_futils_freebuffer(&obj);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read loose object");
 }
@@ -434,7 +434,7 @@ static int read_header_loose(git_rawobj *out, const char *loc)
 
 	out->data = NULL;
 
-	if ((fd = gitfo_open(loc, O_RDONLY)) < 0)
+	if ((fd = p_open(loc, O_RDONLY)) < 0)
 		return git__throw(GIT_ENOTFOUND, "Failed to read loose object header. File not found");
 
 	init_stream(&zs, inflated_buffer, sizeof(inflated_buffer));
@@ -466,7 +466,7 @@ static int read_header_loose(git_rawobj *out, const char *loc)
 
 cleanup:
 	finish_inflate(&zs);
-	gitfo_close(fd);
+	p_close(fd);
 
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Failed to read loose object header. Header is corrupted");
@@ -477,7 +477,7 @@ cleanup:
 static int locate_object(char *object_location, loose_backend *backend, const git_oid *oid)
 {
 	object_file_name(object_location, GIT_PATH_MAX, backend->objects_dir, oid);
-	return gitfo_exists(object_location);
+	return git_futils_exists(object_location);
 }
 
 /* Explore an entry of a directory and see if it matches a short oid */
@@ -490,7 +490,7 @@ int fn_locate_object_short_oid(void *state, char *pathbuf) {
 		return GIT_SUCCESS;
 	}
 
-	if (!gitfo_exists(pathbuf) && gitfo_isdir(pathbuf)) {
+	if (!git_futils_exists(pathbuf) && git_futils_isdir(pathbuf)) {
 		/* We are already in the directory matching the 2 first hex characters,
 		 * compare the first ncmp characters of the oids */
 		if (!memcmp(sstate->short_oid + 2,
@@ -534,14 +534,14 @@ static int locate_object_short_oid(char *object_location, git_oid *res_oid, loos
 	sprintf(object_location+dir_len, "%.2s/", state.short_oid);
 
 	/* Check that directory exists */
-	if (gitfo_exists(object_location) || gitfo_isdir(object_location))
+	if (git_futils_exists(object_location) || git_futils_isdir(object_location))
 		return git__throw(GIT_ENOTFOUND, "Failed to locate object from short oid. Object not found");
 
 	state.dir_len = dir_len+3;
 	state.short_oid_len = len;
 	state.found = 0;
 	/* Explore directory to find a unique object matching short_oid */
-	error = gitfo_dirent(object_location, GIT_PATH_MAX, fn_locate_object_short_oid, &state);
+	error = git_futils_direach(object_location, GIT_PATH_MAX, fn_locate_object_short_oid, &state);
 	if (error) {
 		return git__rethrow(error, "Failed to locate object from short oid");
 	}
@@ -684,7 +684,7 @@ int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 	if (object_file_name(final_path, sizeof(final_path), backend->objects_dir, oid))
 		return GIT_ENOMEM;
 
-	if ((error = gitfo_mkdir_2file(final_path)) < GIT_SUCCESS)
+	if ((error = git_futils_mkpath2file(final_path)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to write loose backend");
 
 	stream->finished = 1;
@@ -749,7 +749,7 @@ int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend
 	stream->stream.free = &loose_backend__stream_free;
 	stream->stream.mode = GIT_STREAM_WRONLY;
 
-	git__joinpath(tmp_path, backend->objects_dir, "tmp_object");
+	git_path_join(tmp_path, backend->objects_dir, "tmp_object");
 
 	error = git_filebuf_open(&stream->fbuf, tmp_path,
 		GIT_FILEBUF_HASH_CONTENTS |

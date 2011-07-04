@@ -31,7 +31,7 @@ static char *odb_dir = "test-objects";
 
 static int make_odb_dir(void)
 {
-	if (gitfo_mkdir(odb_dir, 0755) < 0) {
+	if (p_mkdir(odb_dir, 0755) < 0) {
 		int err = errno;
 		fprintf(stderr, "can't make directory \"%s\"", odb_dir);
 		if (err == EEXIST)
@@ -44,9 +44,9 @@ static int make_odb_dir(void)
 
 static int check_object_files(object_data *d)
 {
-	if (gitfo_exists(d->dir) < 0)
+	if (git_futils_exists(d->dir) < 0)
 		return -1;
-	if (gitfo_exists(d->file) < 0)
+	if (git_futils_exists(d->file) < 0)
 		return -1;
 	return 0;
 }
@@ -64,16 +64,16 @@ static int cmp_objects(git_rawobj *o1, git_rawobj *o2)
 
 static int remove_object_files(object_data *d)
 {
-	if (gitfo_unlink(d->file) < 0) {
+	if (p_unlink(d->file) < 0) {
 		fprintf(stderr, "can't delete object file \"%s\"\n", d->file);
 		return -1;
 	}
-	if ((gitfo_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
+	if ((p_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
 		fprintf(stderr, "can't remove directory \"%s\"\n", d->dir);
 		return -1;
 	}
 
-	if (gitfo_rmdir(odb_dir) < 0) {
+	if (p_rmdir(odb_dir) < 0) {
 		fprintf(stderr, "can't remove directory \"%s\"\n", odb_dir);
 		return -1;
 	}

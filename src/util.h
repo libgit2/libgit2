@@ -68,62 +68,8 @@ extern int git__suffixcmp(const char *str, const char *suffix);
 
 extern int git__strtol32(long *n, const char *buff, const char **end_buf, int base);
 
-/*
- * The dirname() function shall take a pointer to a character string
- * that contains a pathname, and return a pointer to a string that is a
- * pathname of the parent directory of that file. Trailing '/' characters
- * in the path are not counted as part of the path.
- *
- * If path does not contain a '/', then dirname() shall return a pointer to
- * the string ".". If path is a null pointer or points to an empty string,
- * dirname() shall return a pointer to the string "." .
- *
- * The `git__dirname` implementation is thread safe. The returned
- * string must be manually free'd.
- *
- * The `git__dirname_r` implementation expects a string allocated
- * by the user with big enough size.
- */
-extern char *git__dirname(const char *path);
-extern int git__dirname_r(char *buffer, size_t bufflen, const char *path);
-
-/*
- * This function returns the basename of the file, which is the last
- * part of its full name given by fname, with the drive letter and
- * leading directories stripped off. For example, the basename of
- * c:/foo/bar/file.ext is file.ext, and the basename of a:foo is foo.
- *
- * Trailing slashes and backslashes are significant: the basename of
- * c:/foo/bar/ is an empty string after the rightmost slash.
- *
- * The `git__basename` implementation is thread safe. The returned
- * string must be manually free'd.
- *
- * The `git__basename_r` implementation expects a string allocated
- * by the user with big enough size.
- */
-extern char *git__basename(const char *path);
-extern int git__basename_r(char *buffer, size_t bufflen, const char *path);
-
-extern const char *git__topdir(const char *path);
-
-/**
- * Join two paths together. Takes care of properly fixing the
- * middle slashes and everything
- *
- * The paths are joined together into buffer_out; this is expected
- * to be an user allocated buffer of `GIT_PATH_MAX` size
- */
-extern void git__joinpath_n(char *buffer_out, int npath, ...);
-
-GIT_INLINE(void) git__joinpath(char *buffer_out, const char *path_a, const char *path_b)
-{
-	git__joinpath_n(buffer_out, 2, path_a, path_b);
-}
-
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
-
 
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(git_off_t p)

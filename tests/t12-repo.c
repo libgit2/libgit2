@@ -104,10 +104,10 @@ static int ensure_repository_init(
 	char path_odb[GIT_PATH_MAX];
 	git_repository *repo;
 
-	if (gitfo_isdir(working_directory) == GIT_SUCCESS)
+	if (git_futils_isdir(working_directory) == GIT_SUCCESS)
 		return GIT_ERROR;
 
-	git__joinpath(path_odb, expected_path_repository, GIT_OBJECTS_DIR);
+	git_path_join(path_odb, expected_path_repository, GIT_OBJECTS_DIR);
 
 	if (git_repository_init(&repo, working_directory, repository_kind) < GIT_SUCCESS)
 		return GIT_ERROR;
@@ -154,8 +154,8 @@ cleanup:
 BEGIN_TEST(init0, "initialize a standard repo")
 	char path_index[GIT_PATH_MAX], path_repository[GIT_PATH_MAX];
 
-	git__joinpath(path_repository, TEMP_REPO_FOLDER, GIT_DIR);
-	git__joinpath(path_index, path_repository, GIT_INDEX_FILE);
+	git_path_join(path_repository, TEMP_REPO_FOLDER, GIT_DIR);
+	git_path_join(path_index, path_repository, GIT_INDEX_FILE);
 
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER));
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER));
@@ -164,7 +164,7 @@ END_TEST
 BEGIN_TEST(init1, "initialize a bare repo")
 	char path_repository[GIT_PATH_MAX];
 
-	git__joinpath(path_repository, TEMP_REPO_FOLDER, "");
+	git_path_join(path_repository, TEMP_REPO_FOLDER, "");
 
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, BARE_REPOSITORY, NULL, path_repository, NULL));
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository, NULL));
@@ -176,10 +176,10 @@ BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping
 	const int mode = 0755; /* or 0777 ? */
 	git_repository* repo;
 
-	must_pass(gitfo_getcwd(current_workdir, sizeof(current_workdir)));
+	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
 
-	git__joinpath(path_repository, TEMP_REPO_FOLDER, "a/b/c/");
-	must_pass(gitfo_mkdir_recurs(path_repository, mode));
+	git_path_join(path_repository, TEMP_REPO_FOLDER, "a/b/c/");
+	must_pass(git_futils_mkdir_r(path_repository, mode));
 
 	must_pass(chdir(path_repository));
 
@@ -242,14 +242,14 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 	git_repository* repo;
 
 	/* Setup the repository to open */
-	must_pass(gitfo_getcwd(current_workdir, sizeof(current_workdir)));
+	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
 	strcpy(path_repository, current_workdir);
-	git__joinpath_n(path_repository, 3, path_repository, TEMP_REPO_FOLDER, "a/d/e.git");
+	git_path_join_n(path_repository, 3, path_repository, TEMP_REPO_FOLDER, "a/d/e.git");
 	must_pass(copydir_recurs(REPOSITORY_FOLDER, path_repository));
 
 	/* Change the current working directory */
-	git__joinpath(new_current_workdir, TEMP_REPO_FOLDER, "a/b/c/");
-	must_pass(gitfo_mkdir_recurs(new_current_workdir, mode));
+	git_path_join(new_current_workdir, TEMP_REPO_FOLDER, "a/b/c/");
+	must_pass(git_futils_mkdir_r(new_current_workdir, mode));
 	must_pass(chdir(new_current_workdir));
 
 	must_pass(git_repository_open(&repo, "../../d/e.git"));
@@ -350,20 +350,20 @@ static int write_file(const char *path, const char *content)
 	int error;
 	git_file file;
 
-	if (gitfo_exists(path) == GIT_SUCCESS) {
-		error = gitfo_unlink(path);
+	if (git_futils_exists(path) == GIT_SUCCESS) {
+		error = p_unlink(path);
 
 		if (error < GIT_SUCCESS)
 			return error;
 	}
 
-	file = gitfo_creat_force(path, 0644);
+	file = git_futils_creat_withpath(path, 0644);
 	if (file < GIT_SUCCESS)
 		return file;
 
-	error = gitfo_write(file, (void*)content, strlen(content) * sizeof(char));
+	error = p_write(file, (void*)content, strlen(content) * sizeof(char));
 
-	gitfo_close(file);
+	p_close(file);
 
 	return error;
 }
@@ -374,7 +374,7 @@ static int append_ceiling_dir(char *ceiling_dirs, const char *path)
 	int len = strlen(ceiling_dirs);
 	int error;
 
-	error = gitfo_prettify_dir_path(ceiling_dirs + len + (len ? 1 : 0), GIT_PATH_MAX, path, NULL);
+	error = git_futils_prettify_dir(ceiling_dirs + len + (len ? 1 : 0), GIT_PATH_MAX, path, NULL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to append ceiling directory.");
 
@@ -394,7 +394,7 @@ BEGIN_TEST(discover0, "test discover")
 
 	rmdir_recurs(DISCOVER_FOLDER);
 	must_pass(append_ceiling_dir(ceiling_dirs,TEST_RESOURCES));
-	gitfo_mkdir_recurs(DISCOVER_FOLDER, mode);
+	git_futils_mkdir_r(DISCOVER_FOLDER, mode);
 
 	must_be_true(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
 
@@ -403,15 +403,15 @@ BEGIN_TEST(discover0, "test discover")
 	git_repository_free(repo);
 
 	must_pass(git_repository_init(&repo, SUB_REPOSITORY_FOLDER, 0));
-	must_pass(gitfo_mkdir_recurs(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, mode));
+	must_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, mode));
 	must_pass(git_repository_discover(sub_repository_path, sizeof(sub_repository_path), SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
 
-	must_pass(gitfo_mkdir_recurs(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, mode));
+	must_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, mode));
 	must_pass(ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB, ceiling_dirs, sub_repository_path));
 	must_pass(ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path));
 	must_pass(ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, ceiling_dirs, sub_repository_path));
 
-	must_pass(gitfo_mkdir_recurs(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, mode));
+	must_pass(git_futils_mkdir_r(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, mode));
 	must_pass(write_file(REPOSITORY_ALTERNATE_FOLDER "/" DOT_GIT, "gitdir: ../" SUB_REPOSITORY_FOLDER_NAME "/" DOT_GIT));
 	must_pass(write_file(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB "/" DOT_GIT, "gitdir: ../../../" SUB_REPOSITORY_FOLDER_NAME "/" DOT_GIT));
 	must_pass(write_file(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB "/" DOT_GIT, "gitdir: ../../../../"));
@@ -420,13 +420,13 @@ BEGIN_TEST(discover0, "test discover")
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path));
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, repository_path));
 
-	must_pass(gitfo_mkdir_recurs(ALTERNATE_MALFORMED_FOLDER1, mode));
+	must_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER1, mode));
 	must_pass(write_file(ALTERNATE_MALFORMED_FOLDER1 "/" DOT_GIT, "Anything but not gitdir:"));
-	must_pass(gitfo_mkdir_recurs(ALTERNATE_MALFORMED_FOLDER2, mode));
+	must_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER2, mode));
 	must_pass(write_file(ALTERNATE_MALFORMED_FOLDER2 "/" DOT_GIT, "gitdir:"));
-	must_pass(gitfo_mkdir_recurs(ALTERNATE_MALFORMED_FOLDER3, mode));
+	must_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER3, mode));
 	must_pass(write_file(ALTERNATE_MALFORMED_FOLDER3 "/" DOT_GIT, "gitdir: \n\n\n"));
-	must_pass(gitfo_mkdir_recurs(ALTERNATE_NOT_FOUND_FOLDER, mode));
+	must_pass(git_futils_mkdir_r(ALTERNATE_NOT_FOUND_FOLDER, mode));
 	must_pass(write_file(ALTERNATE_NOT_FOUND_FOLDER "/" DOT_GIT, "gitdir: a_repository_that_surely_does_not_exist"));
 	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER1, 0, ceiling_dirs));
 	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER2, 0, ceiling_dirs));

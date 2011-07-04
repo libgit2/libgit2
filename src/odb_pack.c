@@ -359,7 +359,7 @@ void pack_window_free_all(struct pack_backend *backend, struct pack_file *p)
 		backend->mapped -= w->window_map.len;
 		backend->open_windows--;
 
-		gitfo_free_map(&w->window_map);
+		git_futils_mmap_free(&w->window_map);
 
 		p->windows = w->next;
 		free(w);
@@ -416,14 +416,14 @@ static int pack_window_close_lru(
 
 	if (lru_p) {
 		backend->mapped -= lru_w->window_map.len;
-		gitfo_free_map(&lru_w->window_map);
+		git_futils_mmap_free(&lru_w->window_map);
 
 		if (lru_l)
 			lru_l->next = lru_w->next;
 		else {
 			lru_p->windows = lru_w->next;
 			if (!lru_p->windows && lru_p->pack_fd != keep_fd) {
-				gitfo_close(lru_p->pack_fd);
+				p_close(lru_p->pack_fd);
 				lru_p->pack_fd = -1;
 			}
 		}
@@ -491,7 +491,7 @@ static unsigned char *pack_window_open(
 			while (backend->mapped_limit < backend->mapped &&
 				pack_window_close_lru(backend, p, p->pack_fd) == GIT_SUCCESS) {}
 
-			if (gitfo_map_ro(&win->window_map, p->pack_fd,
+			if (git_futils_mmap_ro(&win->window_map, p->pack_fd,
 					win->offset, len) < GIT_SUCCESS)
 				return NULL;
 
@@ -539,7 +539,7 @@ static unsigned char *pack_window_open(
 static void pack_index_free(struct pack_file *p)
 {
 	if (p->index_map.data) {
-		gitfo_free_map(&p->index_map);
+		git_futils_mmap_free(&p->index_map);
 		p->index_map.data = NULL;
 	}
 }
@@ -555,15 +555,15 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 	struct stat st;
 
 	/* TODO: properly open the file without access time */
-	git_file fd = gitfo_open(path, O_RDONLY /*| O_NOATIME */);
+	git_file fd = p_open(path, O_RDONLY /*| O_NOATIME */);
 
 	int error;
 
 	if (fd < 0)
 		return git__throw(GIT_EOSERR, "Failed to check index. File missing or corrupted");
 
-	if (gitfo_fstat(fd, &st) < GIT_SUCCESS) {
-		gitfo_close(fd);
+	if (p_fstat(fd, &st) < GIT_SUCCESS) {
+		p_close(fd);
 		return git__throw(GIT_EOSERR, "Failed to check index. File appears to be corrupted");
 	}
 
@@ -573,12 +573,12 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 	idx_size = (size_t)st.st_size;
 
 	if (idx_size < 4 * 256 + 20 + 20) {
-		gitfo_close(fd);
+		p_close(fd);
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Object is corrupted");
 	}
 
-	error = gitfo_map_ro(&p->index_map, fd, 0, idx_size);
-	gitfo_close(fd);
+	error = git_futils_mmap_ro(&p->index_map, fd, 0, idx_size);
+	p_close(fd);
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to check index");
@@ -589,7 +589,7 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 		version = ntohl(hdr->idx_version);
 
 		if (version < 2 || version > 2) {
-			gitfo_free_map(&p->index_map);
+			git_futils_mmap_free(&p->index_map);
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Unsupported index version");
 		}
 
@@ -605,7 +605,7 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 	for (i = 0; i < 256; i++) {
 		uint32_t n = ntohl(index[i]);
 		if (n < nr) {
-			gitfo_free_map(&p->index_map);
+			git_futils_mmap_free(&p->index_map);
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Index is non-monotonic");
 		}
 		nr = n;
@@ -620,7 +620,7 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 		 *  - 20-byte SHA1 file checksum
 		 */
 		if (idx_size != 4*256 + nr * 24 + 20 + 20) {
-			gitfo_free_map(&p->index_map);
+			git_futils_mmap_free(&p->index_map);
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Object is corrupted");
 		}
 	} else if (version == 2) {
@@ -644,14 +644,14 @@ static int pack_index_check(const char *path,  struct pack_file *p)
 			max_size += (nr - 1)*8;
 
 		if (idx_size < min_size || idx_size > max_size) {
-			gitfo_free_map(&p->index_map);
+			git_futils_mmap_free(&p->index_map);
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to check index. Wrong index size");
 		}
 
 		/* Make sure that off_t is big enough to access the whole pack...
 		 * Is this an issue in libgit2? It shouldn't. */
 		if (idx_size != min_size && (sizeof(off_t) <= 4)) {
-			gitfo_free_map(&p->index_map);
+			git_futils_mmap_free(&p->index_map);
 			return git__throw(GIT_EOSERR, "Failed to check index. off_t not big enough to access the whole pack");
 		}
 	}
@@ -738,7 +738,7 @@ static void packfile_free(struct pack_backend *backend, struct pack_file *p)
 	pack_window_free_all(backend, p);
 
 	if (p->pack_fd != -1)
-		gitfo_close(p->pack_fd);
+		p_close(p->pack_fd);
 
 	pack_index_free(p);
 
@@ -757,8 +757,8 @@ static int packfile_open(struct pack_file *p)
 		return git__throw(GIT_ENOTFOUND, "Failed to open packfile. File not found");
 
 	/* TODO: open with noatime */
-	p->pack_fd = gitfo_open(p->pack_name, O_RDONLY);
-	if (p->pack_fd < 0 || gitfo_fstat(p->pack_fd, &st) < GIT_SUCCESS)
+	p->pack_fd = p_open(p->pack_name, O_RDONLY);
+	if (p->pack_fd < 0 || p_fstat(p->pack_fd, &st) < GIT_SUCCESS)
 		return git__throw(GIT_EOSERR, "Failed to open packfile. File appears to be corrupted");
 
 	/* If we created the struct before we had the pack we lack size. */
@@ -783,7 +783,7 @@ static int packfile_open(struct pack_file *p)
 #endif
 
 	/* Verify we recognize this pack file format. */
-	if (gitfo_read(p->pack_fd, &hdr, sizeof(hdr)) < GIT_SUCCESS)
+	if (p_read(p->pack_fd, &hdr, sizeof(hdr)) < GIT_SUCCESS)
 		goto cleanup;
 
 	if (hdr.hdr_signature != htonl(PACK_SIGNATURE))
@@ -796,10 +796,10 @@ static int packfile_open(struct pack_file *p)
 	if (p->num_objects != ntohl(hdr.hdr_entries))
 		goto cleanup;
 
-	if (gitfo_lseek(p->pack_fd, p->pack_size - GIT_OID_RAWSZ, SEEK_SET) == -1)
+	if (p_lseek(p->pack_fd, p->pack_size - GIT_OID_RAWSZ, SEEK_SET) == -1)
 		goto cleanup;
 
-	if (gitfo_read(p->pack_fd, sha1.id, GIT_OID_RAWSZ) < GIT_SUCCESS)
+	if (p_read(p->pack_fd, sha1.id, GIT_OID_RAWSZ) < GIT_SUCCESS)
 		goto cleanup;
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
@@ -810,7 +810,7 @@ static int packfile_open(struct pack_file *p)
 	return GIT_SUCCESS;
 
 cleanup:
-	gitfo_close(p->pack_fd);
+	p_close(p->pack_fd);
 	p->pack_fd = -1;
 	return git__throw(GIT_EPACKCORRUPTED, "Failed to packfile. Pack is corrupted");
 }
@@ -838,11 +838,11 @@ static int packfile_check(struct pack_file **pack_out, const char *path)
 	memcpy(p->pack_name, path, path_len);
 
 	strcpy(p->pack_name + path_len, ".keep");
-	if (gitfo_exists(p->pack_name) == GIT_SUCCESS)
+	if (git_futils_exists(p->pack_name) == GIT_SUCCESS)
 		p->pack_keep = 1;
 
 	strcpy(p->pack_name + path_len, ".pack");
-	if (gitfo_stat(p->pack_name, &st) < GIT_SUCCESS || !S_ISREG(st.st_mode)) {
+	if (p_stat(p->pack_name, &st) < GIT_SUCCESS || !S_ISREG(st.st_mode)) {
 		free(p);
 		return git__throw(GIT_ENOTFOUND, "Failed to check packfile. File not found");
 	}
@@ -899,7 +899,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 	if (backend->pack_folder == NULL)
 		return GIT_SUCCESS;
 
-	if (gitfo_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
+	if (p_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
 		return git__throw(GIT_ENOTFOUND, "Failed to refresh packfiles. Backend not found");
 
 	if (st.st_mtime != backend->pack_folder_mtime) {
@@ -907,7 +907,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 		strcpy(path, backend->pack_folder);
 
 		/* reload all packs */
-		error = gitfo_dirent(path, GIT_PATH_MAX, packfile_load__cb, (void *)backend);
+		error = git_futils_direach(path, GIT_PATH_MAX, packfile_load__cb, (void *)backend);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to refresh packfiles");
 
@@ -1549,8 +1549,8 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->window_size = DEFAULT_WINDOW_SIZE;
 	backend->mapped_limit = DEFAULT_MAPPED_LIMIT;
 
-	git__joinpath(path, objects_dir, "pack");
-	if (gitfo_isdir(path) == GIT_SUCCESS) {
+	git_path_join(path, objects_dir, "pack");
+	if (git_futils_isdir(path) == GIT_SUCCESS) {
 		backend->pack_folder = git__strdup(path);
 		backend->pack_folder_mtime = 0;
 

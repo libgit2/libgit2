@@ -170,7 +170,7 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 	git_vector_init(&index->entries, 32, index_cmp);
 
 	/* Check if index file is stored on disk already */
-	if (gitfo_exists(index->index_file_path) == 0)
+	if (git_futils_exists(index->index_file_path) == 0)
 		index->on_disk = 1;
 
 	*index_out = index;
@@ -259,13 +259,13 @@ int git_index_read(git_index *index)
 
 	assert(index->index_file_path);
 
-	if (!index->on_disk || gitfo_exists(index->index_file_path) < 0) {
+	if (!index->on_disk || git_futils_exists(index->index_file_path) < 0) {
 		git_index_clear(index);
 		index->on_disk = 0;
 		return GIT_SUCCESS;
 	}
 
-	if (gitfo_stat(index->index_file_path, &indexst) < 0)
+	if (p_stat(index->index_file_path, &indexst) < 0)
 		return git__throw(GIT_EOSERR, "Failed to read index. %s does not exist or is corrupted", index->index_file_path);
 
 	if (!S_ISREG(indexst.st_mode))
@@ -273,9 +273,9 @@ int git_index_read(git_index *index)
 
 	if (indexst.st_mtime != index->last_modified) {
 
-		gitfo_buf buffer;
+		git_fbuffer buffer;
 
-		if ((error = gitfo_read_file(&buffer, index->index_file_path)) < GIT_SUCCESS)
+		if ((error = git_futils_readbuffer(&buffer, index->index_file_path)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to read index");
 
 		git_index_clear(index);
@@ -284,7 +284,7 @@ int git_index_read(git_index *index)
 		if (error == GIT_SUCCESS)
 			index->last_modified = indexst.st_mtime;
 
-		gitfo_free_buf(&buffer);
+		git_futils_freebuffer(&buffer);
 	}
 
 	if (error < GIT_SUCCESS)
@@ -311,7 +311,7 @@ int git_index_write(git_index *index)
 	if ((error = git_filebuf_commit(&file)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to write index");
 
-	if (gitfo_stat(index->index_file_path, &indexst) == 0) {
+	if (p_stat(index->index_file_path, &indexst) == 0) {
 		index->last_modified = indexst.st_mtime;
 		index->on_disk = 1;
 	}
@@ -409,9 +409,9 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 	if (index->repository == NULL)
 		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
 
-	git__joinpath(full_path, index->repository->path_workdir, rel_path);
+	git_path_join(full_path, index->repository->path_workdir, rel_path);
 
-	if (gitfo_lstat(full_path, &st) < 0)
+	if (p_lstat(full_path, &st) < 0)
 		return git__throw(GIT_EOSERR, "Failed to initialize entry. '%s' cannot be opened", full_path);
 
 	if (stage < 0 || stage > 3)
