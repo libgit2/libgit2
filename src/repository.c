@@ -67,7 +67,7 @@ static int assign_repository_dirs(
 	if (git_dir == NULL)
 		return git__throw(GIT_ENOTFOUND, "Failed to open repository. Git dir not found");
 
-	error = git_futils_prettify_dir(path_aux, sizeof(path_aux), git_dir, NULL);
+	error = git_path_prettify_dir(path_aux, git_dir, NULL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to open repository");
 
@@ -80,7 +80,7 @@ static int assign_repository_dirs(
 	if (git_object_directory == NULL)
 		git_path_join(path_aux, repo->path_repository, GIT_OBJECTS_DIR);
 	else {
-		error = git_futils_prettify_dir(path_aux, sizeof(path_aux), git_object_directory, NULL);
+		error = git_path_prettify_dir(path_aux, git_object_directory, NULL);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to open repository");
 	}
@@ -94,7 +94,7 @@ static int assign_repository_dirs(
 	if (git_work_tree == NULL)
 		repo->is_bare = 1;
 	else {
-		error = git_futils_prettify_dir(path_aux, sizeof(path_aux), git_work_tree, NULL);
+		error = git_path_prettify_dir(path_aux, git_work_tree, NULL);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to open repository");
 
@@ -107,7 +107,7 @@ static int assign_repository_dirs(
 		if (git_index_file == NULL)
 			git_path_join(path_aux, repo->path_repository, GIT_INDEX_FILE);
 		else {
-			error = git_futils_prettyify_file(path_aux, sizeof(path_aux), git_index_file, NULL);
+			error = git_path_prettify(path_aux, git_index_file, NULL);
 			if (error < GIT_SUCCESS)
 				return git__rethrow(error, "Failed to open repository");
 		}
@@ -670,12 +670,15 @@ static int repo_init_find_dir(repo_init *results, const char* path)
 	char temp_path[GIT_PATH_MAX];
 	int error;
 
-	error = git_futils_prettify_dir(temp_path, sizeof(temp_path), path, NULL);
-	if (error < GIT_SUCCESS)
-		return git__throw(GIT_ENOTFOUND, "Invalid directory to initialize repository");
+	if (git_futils_isdir(path) < GIT_SUCCESS) {
+		error = git_futils_mkdir_r(path, 0755);
+		if (error < GIT_SUCCESS)
+			return git__throw(GIT_EOSERR,
+				"Failed to initialize repository; cannot create full path");
+	}
 
-//	if (p_realpath(path, temp_path) == NULL)
-//		return git__throw(GIT_ENOTFOUND, "Invalid directory to initialize repository");
+	if (git_path_prettify_dir(temp_path, path, NULL) < GIT_SUCCESS)
+		return git__throw(GIT_ENOTFOUND, "Failed to resolve repository path (%s)", path);
 
 	if (!results->is_bare)
 		git_path_join(temp_path, temp_path, GIT_DIR);

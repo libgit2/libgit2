@@ -374,7 +374,7 @@ static int append_ceiling_dir(char *ceiling_dirs, const char *path)
 	int len = strlen(ceiling_dirs);
 	int error;
 
-	error = git_futils_prettify_dir(ceiling_dirs + len + (len ? 1 : 0), GIT_PATH_MAX, path, NULL);
+	error = git_path_prettify_dir(ceiling_dirs + len + (len ? 1 : 0), path, NULL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to append ceiling directory.");
 
