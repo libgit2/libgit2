@@ -354,7 +354,7 @@ int main (int argc, char** argv)
   printf("\n*Index Walking*\n");
 
   git_index *index;
-  unsigned int i, e, ecount;
+  unsigned int i, ecount;
 
   // You can either open the index from the standard location in an open repository, as we're doing
   // here, or you can open and manipulate any index file with `git_index_open_bare()`. The index
@@ -390,7 +390,7 @@ int main (int argc, char** argv)
   git_strarray ref_list;
   git_reference_listall(&ref_list, repo, GIT_REF_LISTALL);
 
-  const char *refname, *reftarget;
+  const char *refname;
   git_reference *ref;
 
   // Now that we have the list of reference names, we can lookup each ref one at a time and
@@ -441,5 +441,7 @@ int main (int argc, char** argv)
 
   // Finally, when you're done with the repository, you can free it as well.
   git_repository_free(repo);
+
+  return 0;
 }
 
