@@ -480,6 +480,9 @@ static unsigned char *pack_window_open(
 			size_t len;
 
 			win = git__calloc(1, sizeof(*win));
+			if (win == NULL)
+				return NULL;
+
 			win->offset = (offset / window_align) * window_align;
 
 			len = (size_t)(p->pack_size - win->offset);
@@ -492,8 +495,10 @@ static unsigned char *pack_window_open(
 				pack_window_close_lru(backend, p, p->pack_fd) == GIT_SUCCESS) {}
 
 			if (git_futils_mmap_ro(&win->window_map, p->pack_fd,
-					win->offset, len) < GIT_SUCCESS)
+					win->offset, len) < GIT_SUCCESS) {
+				free(win);
 				return NULL;
+			}
 
 			backend->mmap_calls++;
 			backend->open_windows++;
