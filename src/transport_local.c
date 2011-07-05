@@ -33,7 +33,7 @@ static int local_connect(git_transport *transport, int GIT_UNUSED(direction))
 	transport_local *t = (transport_local *) transport;
 	const char *path;
 	const char file_prefix[] = "file://";
-	GIT_UNUSED_ARG(dir);
+	GIT_UNUSED_ARG(direction);
 
 	/* The repo layer doesn't want the prefix */
 	if (!git__prefixcmp(transport->url, file_prefix))
