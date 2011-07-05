@@ -2,6 +2,7 @@
 #define INCLUDE_posix__w32_h__
 
 #include "common.h"
+#include "fnmatch.h"
 
 GIT_INLINE(int) p_link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {

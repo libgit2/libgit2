@@ -1,14 +1,12 @@
 #include <git2.h>
 #include "common.h"
-#include "fnmatch.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
+#include "posix.h"
 
 #ifdef _MSV_VER
 # include <Shlwapi.h>
-#else
-# include <fnmatch.h>
 #endif
 
 void git_libgit2_version(int *major, int *minor, int *rev)
@@ -31,7 +29,7 @@ int git__fnmatch(const char *pattern, const char *name, int flags)
 {
 	int ret;
 
-	ret = fnmatch(pattern, name, flags);
+	ret = p_fnmatch(pattern, name, flags);
 	switch (ret) {
 	case 0:
 		return GIT_SUCCESS;
