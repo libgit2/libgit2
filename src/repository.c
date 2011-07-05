@@ -615,14 +615,14 @@ static int repo_init_structure(const char *git_dir, int is_bare)
 	if (git_futils_mkdir_r(git_dir, mode))
 		return git__throw(GIT_ERROR, "Failed to initialize repository structure. Could not mkdir");
 
-#ifdef GIT_WIN32
 	/* Hides the ".git" directory */
 	if (!is_bare) {
+#ifdef GIT_WIN32
 		error = p_hide_directory__w32(git_dir);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to initialize repository structure");
-	}
 #endif
+	}
 
 	/* Creates the '/objects/info/' directory */
 	git_path_join(temp_path, git_dir, GIT_OBJECTS_INFO_DIR);
