@@ -125,6 +125,12 @@ typedef enum {
 
 	/** Skip and passthrough the given ODB backend */
 	GIT_EPASSTHROUGH = -30,
+
+	/** The path pattern and string did not match */
+	GIT_ENOMATCH = -31,
+
+	/**  The buffer is too short to satisfy the request */
+	GIT_ESHORTBUFFER = -32,
 } git_error;
 
 /**

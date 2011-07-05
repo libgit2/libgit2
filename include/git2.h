@@ -53,5 +53,13 @@
 
 #include "git2/index.h"
 #include "git2/config.h"
+#include "git2/remote.h"
+
+#include "git2/remote.h"
+#include "git2/refspec.h"
+
+#include "git2/net.h"
+#include "git2/transport.h"
+#include "git2/pkt.h"
 
 #endif

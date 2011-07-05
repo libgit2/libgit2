@@ -4,6 +4,9 @@
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x)  (CHAR_BIT * sizeof(x))
 #define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
+#ifndef min
+# define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /*
  * Custom memory allocation wrappers
@@ -93,6 +96,8 @@ extern void git__strtolower(char *str);
 #define STRLEN(str) (sizeof(str) - 1)
 
 #define GIT_OID_LINE_LENGTH(header) (STRLEN(header) + 1 + GIT_OID_HEXSZ + 1)
+
+extern int git__fnmatch(const char *pattern, const char *name, int flags);
 
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold

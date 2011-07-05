@@ -22,61 +22,37 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifndef INCLUDE_git_transport_h__
+#define INCLUDE_git_transport_h__
 
-#include <string.h>
-#include <git2.h>
+#include "common.h"
+#include "types.h"
+#include "net.h"
 
-#include "test_lib.h"
-#include "test_helpers.h"
+/**
+ * @file git2/transport.h
+ * @brief Git protocol transport abstraction
+ * @defgroup git_transport Git protocol transport abstraction
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
 
-DECLARE_SUITE(core);
-DECLARE_SUITE(rawobjects);
-DECLARE_SUITE(objread);
-DECLARE_SUITE(objwrite);
-DECLARE_SUITE(commit);
-DECLARE_SUITE(revwalk);
-DECLARE_SUITE(index);
-DECLARE_SUITE(hashtable);
-DECLARE_SUITE(tag);
-DECLARE_SUITE(tree);
-DECLARE_SUITE(refs);
-DECLARE_SUITE(repository);
-DECLARE_SUITE(threads);
-DECLARE_SUITE(config);
-DECLARE_SUITE(remotes);
+/**
+ * Get the appropriate transport for an URL.
+ * @param tranport the transport for the url
+ * @param url the url of the repo
+ */
+GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
 
-static libgit2_suite suite_methods[]= {
-	SUITE_NAME(core),
-	SUITE_NAME(rawobjects),
-	SUITE_NAME(objread),
-	SUITE_NAME(objwrite),
-	SUITE_NAME(commit),
-	SUITE_NAME(revwalk),
-	SUITE_NAME(index),
-	SUITE_NAME(hashtable),
-	SUITE_NAME(tag),
-	SUITE_NAME(tree),
-	SUITE_NAME(refs),
-	SUITE_NAME(repository),
-	SUITE_NAME(threads),
-	SUITE_NAME(config),
-	SUITE_NAME(remotes),
-};
+GIT_EXTERN(int) git_transport_connect(git_transport *transport, int direction);
 
-#define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
+GIT_EXTERN(int) git_transport_ls(git_transport *transport, git_headarray *array);
+GIT_EXTERN(int) git_transport_close(git_transport *transport);
+GIT_EXTERN(void) git_transport_free(git_transport *transport);
 
-int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
-{
-	unsigned int i, failures;
+GIT_EXTERN(int) git_transport_add(git_transport *transport, const char *prefix);
 
-	GIT_UNUSED_ARG(argc);
-	GIT_UNUSED_ARG(argv);
-
-	failures = 0;
-
-	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		failures += git_testsuite_run(suite_methods[i]());
-
-	return failures ? -1 : 0;
-}
-
+/** @} */
+GIT_END_DECL
+#endif
