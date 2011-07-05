@@ -180,6 +180,8 @@ int main (int argc, char** argv)
 
   printf("\n*Commit Writing*\n");
   git_oid tree_id, parent_id, commit_id;
+  git_tree *tree;
+  git_commit *parent;
 
   // Creating signatures for an authoring identity and time is pretty simple - you will need to have
   // this to create a commit in order to specify who created it and when.  Default values for the name
@@ -193,7 +195,9 @@ int main (int argc, char** argv)
   // Commit objects need a tree to point to and optionally one or more parents.  Here we're creating oid
   // objects to create the commit with, but you can also use
   git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
+  git_tree_lookup(&tree, repo, &tree_id);
   git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_commit_lookup(&parent, repo, &parent_id);
 
   // Here we actually create the commit object with a single call with all the values we need to create
   // the commit.  The SHA key is written to the `commit_id` variable here.
@@ -204,8 +208,8 @@ int main (int argc, char** argv)
     author,
     cmtter,
     "example commit",
-    &tree_id,
-    1, &parent_id);
+    tree,
+    1, parent);
 
   // Now we can take a look at the commit SHA we've generated.
   git_oid_fmt(out, &commit_id);
@@ -245,7 +249,6 @@ int main (int argc, char** argv)
   // [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
   printf("\n*Tree Parsing*\n");
 
-  git_tree *tree;
   const git_tree_entry *entry;
   git_object *objt;
 
@@ -351,7 +354,7 @@ int main (int argc, char** argv)
   printf("\n*Index Walking*\n");
 
   git_index *index;
-  unsigned int i, e, ecount;
+  unsigned int i, ecount;
 
   // You can either open the index from the standard location in an open repository, as we're doing
   // here, or you can open and manipulate any index file with `git_index_open_bare()`. The index
@@ -387,7 +390,7 @@ int main (int argc, char** argv)
   git_strarray ref_list;
   git_reference_listall(&ref_list, repo, GIT_REF_LISTALL);
 
-  const char *refname, *reftarget;
+  const char *refname;
   git_reference *ref;
 
   // Now that we have the list of reference names, we can lookup each ref one at a time and
@@ -405,6 +408,9 @@ int main (int argc, char** argv)
     case GIT_REF_SYMBOLIC:
       printf("%s => %s\n", refname, git_reference_target(ref));
       break;
+    default:
+      fprintf(stderr, "Unexpected reference type\n");
+      exit(1);
     }
   }
 
@@ -435,5 +441,7 @@ int main (int argc, char** argv)
 
   // Finally, when you're done with the repository, you can free it as well.
   git_repository_free(repo);
+
+  return 0;
 }
 
