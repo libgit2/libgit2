@@ -4,6 +4,7 @@
 #include "git2/common.h"
 #include "git2/oid.h"
 #include "git2/odb.h"
+#include "common.h"
 
 #define GIT_HASHTABLE_HASHES 3
 
