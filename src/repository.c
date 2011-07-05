@@ -429,7 +429,7 @@ static int read_gitfile(char *path_out, const char *file_path, const char *base_
 	int error, end_offset;
 	char *data;
 
-	assert(path_out && file_path && path_out);
+	assert(path_out && file_path && base_path);
 
 	error = git_futils_readbuffer(&file, file_path);
 
