@@ -28,6 +28,10 @@
 #include <git2.h>
 #include <stdio.h>
 
+/* Some variables have to be marked UNUSED to
+ * satisfy gcc. */
+#define UNUSED(x) (void)x
+
 int main (int argc, char** argv)
 {
   // ### Opening the Repository
@@ -80,6 +84,9 @@ int main (int argc, char** argv)
   const unsigned char *data;
   const char *str_type;
   int error;
+
+  UNUSED(data);
+  UNUSED(error);
 
   // We can read raw objects directly from the object database if we have the oid (SHA)
   // of the object.  This allows us to access objects without knowing thier type and inspect
@@ -142,6 +149,10 @@ int main (int argc, char** argv)
   time_t ctime;
   unsigned int parents, p;
 
+  UNUSED(ctime);
+  UNUSED(message);
+  UNUSED(message_short);
+
   // Each of the properties of the commit object are accessible via methods, including commonly
   // needed variations, such as `git_commit_time` which returns the author time and `_message_short`
   // which gives you just the first line of the commit message.
@@ -180,6 +191,7 @@ int main (int argc, char** argv)
 
   printf("\n*Commit Writing*\n");
   git_oid tree_id, parent_id, commit_id;
+  git_tree *tree;
 
   // Creating signatures for an authoring identity and time is pretty simple - you will need to have
   // this to create a commit in order to specify who created it and when.  Default values for the name
@@ -195,6 +207,8 @@ int main (int argc, char** argv)
   git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
   git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
 
+  git_tree_lookup(&tree, repo, &tree_id);
+
   // Here we actually create the commit object with a single call with all the values we need to create
   // the commit.  The SHA key is written to the `commit_id` variable here.
   git_commit_create_v(
@@ -204,7 +218,7 @@ int main (int argc, char** argv)
     author,
     cmtter,
     "example commit",
-    &tree_id,
+    tree,
     1, &parent_id);
 
   // Now we can take a look at the commit SHA we've generated.
@@ -219,6 +233,9 @@ int main (int argc, char** argv)
   git_tag *tag;
   const char *tmessage, *tname;
   git_otype ttype;
+
+  UNUSED(tname);
+  UNUSED(ttype);
 
   // We create an oid for the tag object if we know the SHA and look it up in the repository the same
   // way that we would a commit (or any other) object.
@@ -245,7 +262,6 @@ int main (int argc, char** argv)
   // [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
   printf("\n*Tree Parsing*\n");
 
-  git_tree *tree;
   const git_tree_entry *entry;
   git_object *objt;
 
@@ -351,7 +367,7 @@ int main (int argc, char** argv)
   printf("\n*Index Walking*\n");
 
   git_index *index;
-  unsigned int i, e, ecount;
+  unsigned int i, ecount;
 
   // You can either open the index from the standard location in an open repository, as we're doing
   // here, or you can open and manipulate any index file with `git_index_open_bare()`. The index
@@ -387,7 +403,7 @@ int main (int argc, char** argv)
   git_strarray ref_list;
   git_reference_listall(&ref_list, repo, GIT_REF_LISTALL);
 
-  const char *refname, *reftarget;
+  const char *refname;
   git_reference *ref;
 
   // Now that we have the list of reference names, we can lookup each ref one at a time and
@@ -404,6 +420,9 @@ int main (int argc, char** argv)
 
     case GIT_REF_SYMBOLIC:
       printf("%s => %s\n", refname, git_reference_target(ref));
+      break;
+
+    default:
       break;
     }
   }
@@ -435,5 +454,7 @@ int main (int argc, char** argv)
 
   // Finally, when you're done with the repository, you can free it as well.
   git_repository_free(repo);
+
+  return 0;
 }
 
