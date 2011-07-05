@@ -23,60 +23,34 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include <string.h>
-#include <git2.h>
+#include "git2/net.h"
 
-#include "test_lib.h"
-#include "test_helpers.h"
-
-DECLARE_SUITE(core);
-DECLARE_SUITE(rawobjects);
-DECLARE_SUITE(objread);
-DECLARE_SUITE(objwrite);
-DECLARE_SUITE(commit);
-DECLARE_SUITE(revwalk);
-DECLARE_SUITE(index);
-DECLARE_SUITE(hashtable);
-DECLARE_SUITE(tag);
-DECLARE_SUITE(tree);
-DECLARE_SUITE(refs);
-DECLARE_SUITE(repository);
-DECLARE_SUITE(threads);
-DECLARE_SUITE(config);
-DECLARE_SUITE(remotes);
-
-static libgit2_suite suite_methods[]= {
-	SUITE_NAME(core),
-	SUITE_NAME(rawobjects),
-	SUITE_NAME(objread),
-	SUITE_NAME(objwrite),
-	SUITE_NAME(commit),
-	SUITE_NAME(revwalk),
-	SUITE_NAME(index),
-	SUITE_NAME(hashtable),
-	SUITE_NAME(tag),
-	SUITE_NAME(tree),
-	SUITE_NAME(refs),
-	SUITE_NAME(repository),
-	SUITE_NAME(threads),
-	SUITE_NAME(config),
-	SUITE_NAME(remotes),
+enum git_pkt_type {
+	GIT_PKT_CMD,
+	GIT_PKT_FLUSH,
+	GIT_PKT_REF,
+	GIT_PKT_HAVE,
 };
 
-#define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
+/* This would be a flush pkt */
+struct git_pkt {
+	enum git_pkt_type type;
+};
 
-int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
-{
-	unsigned int i, failures;
+struct git_pkt_cmd {
+	enum git_pkt_type type;
+	char *cmd;
+	char *path;
+	char *host;
+};
 
-	GIT_UNUSED_ARG(argc);
-	GIT_UNUSED_ARG(argv);
+/* This is a pkt-line with some info in it */
+struct git_pkt_ref {
+	enum git_pkt_type type;
+	git_remote_head head;
+	char *capabilities;
+};
 
-	failures = 0;
-
-	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		failures += git_testsuite_run(suite_methods[i]());
-
-	return failures ? -1 : 0;
-}
-
+int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
+int git_pkt_send_flush(int s);
+void git_pkt_free(git_pkt *pkt);
