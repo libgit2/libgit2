@@ -26,6 +26,7 @@
 #include "test_helpers.h"
 
 #include <git2.h>
+#include "filebuf.h"
 
 #define CONFIG_BASE TEST_RESOURCES "/config"
 
@@ -287,6 +288,7 @@ END_TEST
 BEGIN_TEST(config16, "add a variable in a new section")
 	git_config *cfg;
 	int i;
+	git_filebuf buf;
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config10"));
@@ -295,6 +297,11 @@ BEGIN_TEST(config16, "add a variable in a new section")
 	must_be_true(i == 5);
 	must_pass(git_config_del(cfg, "section.tmp"));
 	git_config_free(cfg);
+
+	/* As the section wasn't removed, owerwrite the file */
+	must_pass(git_filebuf_open(&buf, CONFIG_BASE "/config10", 0));
+	must_pass(git_filebuf_write(&buf, "[empty]\n", STRLEN("[empty]\n")));
+	must_pass(git_filebuf_commit(&buf));
 END_TEST
 
 BEGIN_SUITE(config)
