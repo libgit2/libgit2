@@ -408,6 +408,9 @@ int main (int argc, char** argv)
     case GIT_REF_SYMBOLIC:
       printf("%s => %s\n", refname, git_reference_target(ref));
       break;
+    default:
+      fprintf(stderr, "Unexpected reference type\n");
+      exit(1);
     }
   }
 
