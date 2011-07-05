@@ -180,6 +180,8 @@ int main (int argc, char** argv)
 
   printf("\n*Commit Writing*\n");
   git_oid tree_id, parent_id, commit_id;
+  git_tree *tree;
+  git_commit *parent;
 
   // Creating signatures for an authoring identity and time is pretty simple - you will need to have
   // this to create a commit in order to specify who created it and when.  Default values for the name
@@ -193,7 +195,9 @@ int main (int argc, char** argv)
   // Commit objects need a tree to point to and optionally one or more parents.  Here we're creating oid
   // objects to create the commit with, but you can also use
   git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
+  git_tree_lookup(&tree, repo, &tree_id);
   git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_commit_lookup(&parent, repo, &parent_id);
 
   // Here we actually create the commit object with a single call with all the values we need to create
   // the commit.  The SHA key is written to the `commit_id` variable here.
@@ -204,8 +208,8 @@ int main (int argc, char** argv)
     author,
     cmtter,
     "example commit",
-    &tree_id,
-    1, &parent_id);
+    tree,
+    1, parent);
 
   // Now we can take a look at the commit SHA we've generated.
   git_oid_fmt(out, &commit_id);
@@ -245,7 +249,6 @@ int main (int argc, char** argv)
   // [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
   printf("\n*Tree Parsing*\n");
 
-  git_tree *tree;
   const git_tree_entry *entry;
   git_object *objt;
 
