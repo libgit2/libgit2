@@ -33,12 +33,8 @@ void git_signature_free(git_signature *sig)
 	if (sig == NULL)
 		return;
 
-	if (sig->name)
-		free(sig->name);
-
-	if (sig->email)
-		free(sig->email);
-
+	free(sig->name);
+	free(sig->email);
 	free(sig);
 }
 
@@ -66,11 +62,12 @@ static int process_trimming(const char *input, char **storage, const char *input
 	left = skip_leading_spaces(input, input_end);
 	right = skip_trailing_spaces(input, input_end - 1);
 
-	if (right <= left)
+	if (right <= left) {
 		if (fail_when_empty)
 			return git__throw(GIT_EINVALIDARGS, "Failed to trim. Input is either empty or only contains spaces");
 		else
 			right = left - 1;
+	}
 
 	trimmed_input_length = right - left + 1;
 
