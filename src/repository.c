@@ -605,7 +605,7 @@ static int repo_init_createhead(git_repository *repo)
 	return git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE, 0);
 }
 
-static int repo_init_structure(const char *git_dir)
+static int repo_init_structure(const char *git_dir, int is_bare)
 {
 	const int mode = 0755; /* or 0777 ? */
 	int error;
@@ -617,7 +617,7 @@ static int repo_init_structure(const char *git_dir)
 
 #ifdef GIT_WIN32
 	/* Hides the ".git" directory */
-	if (!results->is_bare) {
+	if (!is_bare) {
 		error = p_hide_directory__w32(git_dir);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to initialize repository structure");
@@ -668,7 +668,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 			return repo_init_reinit(repository_path, is_bare);
 	}
 
-	error = repo_init_structure(repository_path);
+	error = repo_init_structure(repository_path, is_bare);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
