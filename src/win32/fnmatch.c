@@ -100,7 +100,7 @@ p_fnmatch(const char *pattern, const char *string, int flags)
 
                         /* General case, use recursion. */
                         while ((test = *string) != EOS) {
-                                if (!fnmatch(pattern, string, flags & ~FNM_PERIOD))
+                                if (!p_fnmatch(pattern, string, flags & ~FNM_PERIOD))
                                         return (0);
                                 if (test == '/' && (flags & FNM_PATHNAME))
                                         break;
@@ -162,7 +162,7 @@ rangematch(const char *pattern, char test, int flags, char **newp)
          * consistency with the regular expression syntax.
          * J.T. Conklin (conklin@ngai.kaleida.com)
          */
-        if ((negate = (*pattern == '!' || *pattern == '^')))
+        if ((negate = (*pattern == '!' || *pattern == '^')) != 0)
                 ++pattern;
 
         if (flags & FNM_CASEFOLD)
