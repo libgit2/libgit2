@@ -43,6 +43,7 @@ DECLARE_SUITE(refs);
 DECLARE_SUITE(repository);
 DECLARE_SUITE(threads);
 DECLARE_SUITE(config);
+DECLARE_SUITE(remotes);
 
 static libgit2_suite suite_methods[]= {
 	SUITE_NAME(core),
@@ -59,6 +60,7 @@ static libgit2_suite suite_methods[]= {
 	SUITE_NAME(repository),
 	SUITE_NAME(threads),
 	SUITE_NAME(config),
+	SUITE_NAME(remotes),
 };
 
 #define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))

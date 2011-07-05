@@ -94,6 +94,8 @@ extern void git__strtolower(char *str);
 
 #define GIT_OID_LINE_LENGTH(header) (STRLEN(header) + 1 + GIT_OID_HEXSZ + 1)
 
+extern int git__fnmatch(const char *pattern, const char *name, int flags);
+
 /*
  * Realloc the buffer pointed at by variable 'x' so that it can hold
  * at least 'nr' entries; the number of entries currently allocated

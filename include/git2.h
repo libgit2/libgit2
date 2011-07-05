@@ -53,5 +53,9 @@
 
 #include "git2/index.h"
 #include "git2/config.h"
+#include "git2/remote.h"
+
+#include "git2/remote.h"
+#include "git2/refspec.h"
 
 #endif
