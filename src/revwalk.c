@@ -269,9 +269,12 @@ static void mark_uninteresting(commit_object *commit)
 			mark_uninteresting(commit->parents[i]);
 }
 
-static int process_commit(git_revwalk *walk, commit_object *commit)
+static int process_commit(git_revwalk *walk, commit_object *commit, int hide)
 {
 	int error;
+
+	if (hide)
+		mark_uninteresting(commit);
 
 	if (commit->seen)
 		return GIT_SUCCESS;
@@ -280,9 +283,6 @@ static int process_commit(git_revwalk *walk, commit_object *commit)
 
 	if ((error = commit_parse(walk, commit)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to process commit");
-
-	if (commit->uninteresting)
-		mark_uninteresting(commit);
 
 	return walk->enqueue(walk, commit);
 }
@@ -293,7 +293,7 @@ static int process_commit_parents(git_revwalk *walk, commit_object *commit)
 	int error = GIT_SUCCESS;
 
 	for (i = 0; i < commit->out_degree && error == GIT_SUCCESS; ++i) {
-		error = process_commit(walk, commit->parents[i]);
+		error = process_commit(walk, commit->parents[i], commit->uninteresting);
 	}
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to process commit parents");
@@ -307,9 +307,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 	if (commit == NULL)
 		return git__throw(GIT_ENOTFOUND, "Failed to push commit. Object not found");
 
-	commit->uninteresting = uninteresting;
-
-	return process_commit(walk, commit);
+	return process_commit(walk, commit, uninteresting);
 }
 
 int git_revwalk_push(git_revwalk *walk, const git_oid *oid)
