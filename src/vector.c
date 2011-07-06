@@ -94,7 +94,7 @@ void git_vector_sort(git_vector *v)
 	if (v->sorted || v->_cmp == NULL)
 		return;
 
-	qsort(v->contents, v->length, sizeof(void *), v->_cmp);
+	git__msort(v->contents, v->length, sizeof(void *), v->_cmp);
 	v->sorted = 1;
 }
 
@@ -160,6 +160,26 @@ int git_vector_remove(git_vector *v, unsigned int idx)
 
 	v->length--;
 	return GIT_SUCCESS;
+}
+
+void git_vector_uniq(git_vector *v)
+{
+	git_vector_cmp cmp;
+	unsigned int i, j;
+
+	if (v->length <= 1)
+		return;
+
+	git_vector_sort(v);
+	cmp = v->_cmp ? v->_cmp : strict_comparison;
+
+	for (i = 0, j = 1 ; j < v->length; ++j)
+		if (!cmp(v->contents + i, v->contents + j))
+			v->contents[i] = v->contents[j];
+		else
+			v->contents[++i] = v->contents[j];
+
+	v->length -= j - i - 1;
 }
 
 void git_vector_clear(git_vector *v)
