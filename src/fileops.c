@@ -205,6 +205,14 @@ void git_futils_mmap_free(git_map *out)
 	p_munmap(out);
 }
 
+/* Taken from git.git */
+GIT_INLINE(int) is_dot_or_dotdot(const char *name)
+{
+	return (name[0] == '.' &&
+		(name[1] == '\0' ||
+		 (name[1] == '.' && name[2] == '\0')));
+}
+
 int git_futils_direach(
 	char *path,
 	size_t path_sz,
@@ -301,34 +309,32 @@ int git_futils_mkdir_r(const char *path, int mode)
 	return GIT_SUCCESS;
 }
 
-static int _rmdir_recurs_foreach(void *force_removal_of_non_empty_directory, char *path)
+static int _rmdir_recurs_foreach(void *opaque, char *path)
 {
 	int error = GIT_SUCCESS;
+	int force = *(int *)opaque;
 
-	GIT_UNUSED_ARG(nil)
-
-	error = git_futils_isdir(path);
-	if (error == GIT_SUCCESS) {
+	if (git_futils_isdir(path) == GIT_SUCCESS) {
 		size_t root_size = strlen(path);
 
-		if ((error = git_futils_direach(path, GIT_PATH_MAX, _rmdir_recurs_foreach, force_removal_of_non_empty_directory)) < GIT_SUCCESS)
+		if ((error = git_futils_direach(path, GIT_PATH_MAX, _rmdir_recurs_foreach, opaque)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to remove directory `%s`", path);
 
 		path[root_size] = '\0';
 		return p_rmdir(path);
+
+	} else if (force) {
+		return p_unlink(path);
 	}
 
-	if (*(int *)(force_removal_of_non_empty_directory))
-		return p_unlink(path);
-	else
-		return git__rethrow(error, "Failed to remove directory. `%s` is not a directory", path);
+	return git__rethrow(error, "Failed to remove directory. `%s` is not empty", path);
 }
 
-int git_futils_rmdir_recurs(const char *path, int force_removal_of_non_empty_directory)
+int git_futils_rmdir_r(const char *path, int force)
 {
 	char p[GIT_PATH_MAX];
 	strncpy(p, path, GIT_PATH_MAX);
-	return  _rmdir_recurs_foreach(&force_removal_of_non_empty_directory, p);
+	return  _rmdir_recurs_foreach(&force, p);
 }
 
 int git_futils_cmp_path(const char *name1, int len1, int isdir1,

@@ -227,7 +227,7 @@ int open_temp_repo(git_repository **repo, const char *path)
 void close_temp_repo(git_repository *repo)
 {
 	git_repository_free(repo);
-	git_futils_rmdir_recurs(TEMP_REPO_FOLDER, 1);
+	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
 }
 
 static int remove_placeholders_recurs(void *filename, char *path)

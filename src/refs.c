@@ -1291,10 +1291,10 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 {
 	int error;
 	char *old_name = git__strdup(ref->name);
-	char new_path[GIT_PATH_MAX];
-	char old_path[GIT_PATH_MAX];
-	char old_logs[GIT_PATH_MAX];
+
+	char aux_path[GIT_PATH_MAX];
 	char normalized[GIT_REFNAME_MAX];
+
 	const char *target_ref = NULL;
 	const char *head_target = NULL;
 	const git_oid *target_oid = NULL;
@@ -1344,18 +1344,19 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		if ((error = packed_write(ref->owner)) < GIT_SUCCESS)
 			goto rollback;
 	} else {
-		git_path_join(old_path, ref->owner->path_repository, old_name);
-		if ((error = p_unlink(old_path)) < GIT_SUCCESS)
+		git_path_join(aux_path, ref->owner->path_repository, old_name);
+		if ((error = p_unlink(aux_path)) < GIT_SUCCESS)
 			goto cleanup;
 
 		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
 	}
 
-	git_path_join(new_path, ref->owner->path_repository, new_name);
+	/* build new path */
+	git_path_join(aux_path, ref->owner->path_repository, new_name);
 
-	if (git_futils_exists(new_path) == GIT_SUCCESS) {
-		if (git_futils_isdir(new_path) == GIT_SUCCESS) {
-			if ((error = git_futils_rmdir_recurs(new_path, 0)) < GIT_SUCCESS)
+	if (git_futils_exists(aux_path) == GIT_SUCCESS) {
+		if (git_futils_isdir(aux_path) == GIT_SUCCESS) {
+			if ((error = git_futils_rmdir_r(aux_path, 0)) < GIT_SUCCESS)
 				goto rollback;
 		} else goto rollback;
 	}
@@ -1377,17 +1378,15 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	 *
 	 */
 
-	git_path_join_n(old_logs, 3, ref->owner->path_repository, "logs", old_name);
-	if (git_futils_exists(old_logs) == GIT_SUCCESS) {
-		if (git_futils_isfile(old_logs) == GIT_SUCCESS)
-			if ((error = p_unlink(old_logs)) < GIT_SUCCESS)
-				goto rollback;
+	git_path_join_n(aux_path, 3, ref->owner->path_repository, "logs", old_name);
+	if (git_futils_isfile(aux_path) == GIT_SUCCESS) {
+		if ((error = p_unlink(aux_path)) < GIT_SUCCESS)
+			goto rollback;
 	}
 
 	/*
 	 * Finally we can create the new reference.
 	 */
-
 	if (ref->type & GIT_REF_SYMBOLIC) {
 		if ((error = git_reference_create_symbolic(&new_ref, ref->owner, new_name, target_ref, 0)) < GIT_SUCCESS)
 			goto rollback;
