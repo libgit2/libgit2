@@ -176,34 +176,6 @@ int cmp_files(const char *a, const char *b)
 	return error;
 }
 
-static int remove_filesystem_element_recurs(void *GIT_UNUSED(nil), char *path)
-{
-	int error = GIT_SUCCESS;
-
-	GIT_UNUSED_ARG(nil);
-
-	error = git_futils_isdir(path);
-	if (error == GIT_SUCCESS) {
-		size_t root_size = strlen(path);
-
-		error = git_futils_direach(path, GIT_PATH_MAX, remove_filesystem_element_recurs, NULL);
-		if (error < GIT_SUCCESS)
-			return error;
-
-		path[root_size] = 0;
-		return rmdir(path);
-	}
-
-	return p_unlink(path);
-}
-
-int rmdir_recurs(const char *directory_path)
-{
-	char buffer[GIT_PATH_MAX];
-	strcpy(buffer, directory_path);
-	return remove_filesystem_element_recurs(NULL, buffer);
-}
-
 typedef struct {
 	size_t src_len, dst_len;
 	char *dst;
@@ -255,7 +227,7 @@ int open_temp_repo(git_repository **repo, const char *path)
 void close_temp_repo(git_repository *repo)
 {
 	git_repository_free(repo);
-	rmdir_recurs(TEMP_REPO_FOLDER);
+	git_futils_rmdir_recurs(TEMP_REPO_FOLDER, 1);
 }
 
 static int remove_placeholders_recurs(void *filename, char *path)

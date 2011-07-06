@@ -231,13 +231,8 @@ int git_futils_direach(
 		size_t de_len;
 		int result;
 
-		/* always skip '.' and '..' */
-		if (de->d_name[0] == '.') {
-			if (de->d_name[1] == '\0')
-				continue;
-			if (de->d_name[1] == '.' && de->d_name[2] == '\0')
-				continue;
-		}
+		if (is_dot_or_dotdot(de->d_name))
+			continue;
 
 		de_len = strlen(de->d_name);
 		if (path_sz < wd_len + de_len + 1) {
@@ -304,6 +299,36 @@ int git_futils_mkdir_r(const char *path, int mode)
 		return git__throw(error, "Failed to recursively create `%s` tree structure", path);
 
 	return GIT_SUCCESS;
+}
+
+static int _rmdir_recurs_foreach(void *force_removal_of_non_empty_directory, char *path)
+{
+	int error = GIT_SUCCESS;
+
+	GIT_UNUSED_ARG(nil)
+
+	error = git_futils_isdir(path);
+	if (error == GIT_SUCCESS) {
+		size_t root_size = strlen(path);
+
+		if ((error = git_futils_direach(path, GIT_PATH_MAX, _rmdir_recurs_foreach, force_removal_of_non_empty_directory)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to remove directory `%s`", path);
+
+		path[root_size] = '\0';
+		return p_rmdir(path);
+	}
+
+	if (*(int *)(force_removal_of_non_empty_directory))
+		return p_unlink(path);
+	else
+		return git__rethrow(error, "Failed to remove directory. `%s` is not a directory", path);
+}
+
+int git_futils_rmdir_recurs(const char *path, int force_removal_of_non_empty_directory)
+{
+	char p[GIT_PATH_MAX];
+	strncpy(p, path, GIT_PATH_MAX);
+	return  _rmdir_recurs_foreach(&force_removal_of_non_empty_directory, p);
 }
 
 int git_futils_cmp_path(const char *name1, int len1, int isdir1,
