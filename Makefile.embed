@@ -1,0 +1,26 @@
+rm=rm -f
+CC=cc
+AR=ar cq
+RANLIB=ranlib
+LIBNAME=libgit2.a
+
+INCLUDES= -I. -Isrc -Iinclude -Ideps/zlib
+
+DEFINES= $(INCLUDES) -DNO_VIZ -DSTDC -DNO_GZIP -D_FILE_OFFSET_BITS=64
+CFLAGS= -g $(DEFINES) -Wall -Wextra -fPIC -O2
+
+SRCS = $(wildcard src/*.c) $(wildcard src/unix/*.c) $(wildcard deps/zlib/*.c)
+OBJS = $(patsubst %.c,%.o,$(SRCS))
+
+%.c.o:
+	$(CC) $(CFLAGS) -c $*.c
+
+all: $(LIBNAME)
+
+$(LIBNAME): $(OBJS)
+	$(rm) $@
+	$(AR) $@ $(OBJS)
+	$(RANLIB) $@
+
+clean:
+	$(rm) $(OBJS) $(LIBNAME)
