@@ -217,9 +217,10 @@ int copydir_recurs(const char *source_directory_path, const char *destination_di
 
 int open_temp_repo(git_repository **repo, const char *path)
 {
-	int error;
-	if ((error = copydir_recurs(path, TEMP_REPO_FOLDER)) < GIT_SUCCESS)
-		return error;
+	if (copydir_recurs(path, TEMP_REPO_FOLDER) < GIT_SUCCESS) {
+		printf("\nFailed to create temporary folder. Aborting test suite.\n");
+		exit(-1);
+	}
 
 	return git_repository_open(repo, TEMP_REPO_FOLDER);
 }
@@ -227,7 +228,10 @@ int open_temp_repo(git_repository **repo, const char *path)
 void close_temp_repo(git_repository *repo)
 {
 	git_repository_free(repo);
-	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
+	if (git_futils_rmdir_r(TEMP_REPO_FOLDER, 1) < GIT_SUCCESS) {
+		printf("\nFailed to remove temporary folder. Aborting test suite.\n");
+		exit(-1);
+	}
 }
 
 static int remove_placeholders_recurs(void *filename, char *path)
