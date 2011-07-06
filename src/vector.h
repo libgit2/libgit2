@@ -32,5 +32,5 @@ GIT_INLINE(void *) git_vector_get(git_vector *v, unsigned int position)
 
 int git_vector_insert(git_vector *v, void *element);
 int git_vector_remove(git_vector *v, unsigned int idx);
-
+void git_vector_uniq(git_vector *v);
 #endif
