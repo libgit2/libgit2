@@ -23,16 +23,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef _MSC_VER
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netdb.h>
-#else
-# include <winsock2.h>
-# include <Ws2tcpip.h>
-# pragma comment(lib, "Ws2_32.lib")
-#endif
-
 #include "git2/net.h"
 #include "git2/pkt.h"
 #include "git2/common.h"
