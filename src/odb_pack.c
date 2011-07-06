@@ -699,8 +699,8 @@ static int pack_index_open(struct pack_file *p)
 
 static int packfile_sort__cb(const void *a_, const void *b_)
 {
-	struct pack_file *a = *((struct pack_file **)a_);
-	struct pack_file *b = *((struct pack_file **)b_);
+	struct pack_file *a = (struct pack_file *)a_;
+	struct pack_file *b = (struct pack_file *)b_;
 	int st;
 
 	/*

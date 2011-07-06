@@ -223,8 +223,8 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 
 static int backend_sort_cmp(const void *a, const void *b)
 {
-	const backend_internal *backend_a = *(const backend_internal **)(a);
-	const backend_internal *backend_b = *(const backend_internal **)(b);
+	const backend_internal *backend_a = (const backend_internal *)(a);
+	const backend_internal *backend_b = (const backend_internal *)(b);
 
 	if (backend_a->is_alternate == backend_b->is_alternate)
 		return (backend_b->priority - backend_a->priority);

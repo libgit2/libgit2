@@ -40,7 +40,7 @@ static int valid_attributes(const int attributes) {
 int entry_search_cmp(const void *key, const void *array_member)
 {
 	const char *filename = (const char *)key;
-	const git_tree_entry *entry = *(const git_tree_entry **)(array_member);
+	const git_tree_entry *entry = (const git_tree_entry *)(array_member);
 
 	return strcmp(filename, entry->filename);
 }
@@ -53,8 +53,8 @@ static int valid_attributes(const int attributes) {
 
 int entry_sort_cmp(const void *a, const void *b)
 {
-	const git_tree_entry *entry_a = *(const git_tree_entry **)(a);
-	const git_tree_entry *entry_b = *(const git_tree_entry **)(b);
+	const git_tree_entry *entry_a = (const git_tree_entry *)(a);
+	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
 
 	return git_futils_cmp_path(entry_a->filename, strlen(entry_a->filename),
                                   entry_a->attr & 040000,

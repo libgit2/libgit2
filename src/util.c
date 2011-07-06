@@ -331,66 +331,27 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 }
 #endif
 
-/*
- * A merge sort implementation, simplified from the qsort implementation
- * by Mike Haertel, which is a part of the GNU C Library.
+/**
+ * A modified `bsearch` from the BSD glibc.
+ *
+ * Copyright (c) 1990 Regents of the University of California.
+ * All rights reserved.
  */
-static void msort_with_tmp(void *b, size_t n, size_t s,
-		int (*cmp)(const void *, const void *),
-		char *t)
+void **git__bsearch(const void *key, void **base, size_t nmemb, int (*compar)(const void *, const void *))
 {
-	char *tmp;
-	char *b1, *b2;
-	size_t n1, n2;
+        int lim, cmp;
+        void **p;
 
-	if (n <= 1)
-		return;
-
-	n1 = n / 2;
-	n2 = n - n1;
-	b1 = b;
-	b2 = (char *)b + (n1 * s);
-
-	msort_with_tmp(b1, n1, s, cmp, t);
-	msort_with_tmp(b2, n2, s, cmp, t);
-
-	tmp = t;
-
-	while (n1 > 0 && n2 > 0) {
-		if (cmp(b1, b2) <= 0) {
-			memcpy(tmp, b1, s);
-			tmp += s;
-			b1 += s;
-			--n1;
-		} else {
-			memcpy(tmp, b2, s);
-			tmp += s;
-			b2 += s;
-			--n2;
-		}
-	}
-	if (n1 > 0)
-		memcpy(tmp, b1, n1 * s);
-	memcpy(b, t, (n - n2) * s);
+        for (lim = nmemb; lim != 0; lim >>= 1) {
+                p = base + (lim >> 1);
+                cmp = (*compar)(key, *p);
+                if (cmp > 0) {  /* key > p: move right */
+                        base = p + 1;
+                        lim--;
+                } else if (cmp == 0) {
+                        return (void **)p;
+                } /* else move left */
+        }
+        return NULL;
 }
 
-int git__msort(void *b, size_t n, size_t s,
-		int (*cmp)(const void *, const void *))
-{
-	const size_t size = n * s;
-	char buf[1024];
-
-	if (size < sizeof(buf)) {
-		/* The temporary array fits on the small on-stack buffer. */
-		msort_with_tmp(b, n, s, cmp, buf);
-	} else {
-		/* It's somewhat large, so malloc it.  */
-		char *tmp = git__malloc(size);
-		if (tmp == NULL)
-			return GIT_ENOMEM;
-		msort_with_tmp(b, n, s, cmp, tmp);
-		free(tmp);
-	}
-
-	return GIT_SUCCESS;
-}

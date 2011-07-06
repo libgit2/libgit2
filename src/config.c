@@ -56,8 +56,8 @@ void git_config_free(git_config *cfg)
 
 static int config_backend_cmp(const void *a, const void *b)
 {
-	const file_internal *bk_a = *(const file_internal **)(a);
-	const file_internal *bk_b = *(const file_internal **)(b);
+	const file_internal *bk_a = (const file_internal *)(a);
+	const file_internal *bk_b = (const file_internal *)(b);
 
 	return bk_b->priority - bk_a->priority;
 }

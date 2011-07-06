@@ -94,7 +94,7 @@ void git_vector_sort(git_vector *v)
 	if (v->sorted || v->_cmp == NULL)
 		return;
 
-	git__msort(v->contents, v->length, sizeof(void *), v->_cmp);
+	git__tsort(v->contents, v->length, v->_cmp);
 	v->sorted = 1;
 }
 
@@ -110,7 +110,7 @@ int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *ke
 
 	git_vector_sort(v);
 
-	find = bsearch(key, v->contents, v->length, sizeof(void *), key_lookup);
+	find = git__bsearch(key, v->contents, v->length, key_lookup);
 	if (find != NULL)
 		return (int)(find - v->contents);
 
@@ -174,7 +174,7 @@ void git_vector_uniq(git_vector *v)
 	cmp = v->_cmp ? v->_cmp : strict_comparison;
 
 	for (i = 0, j = 1 ; j < v->length; ++j)
-		if (!cmp(v->contents + i, v->contents + j))
+		if (!cmp(v->contents[i], v->contents[j]))
 			v->contents[i] = v->contents[j];
 		else
 			v->contents[++i] = v->contents[j];

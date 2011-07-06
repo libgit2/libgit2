@@ -118,7 +118,8 @@ extern int git__fnmatch(const char *pattern, const char *name, int flags);
 		} \
 	} while (0)
 
-extern int git__msort(void *b, size_t n, size_t s,
-		int (*cmp)(const void *, const void *));
+extern int git__tsort(void **b, size_t n, int (*cmp)(const void *, const void *));
+extern void **git__bsearch(const void *key, void **base, size_t nmemb,
+	int (*compar)(const void *, const void *));
 
 #endif /* INCLUDE_util_h__ */

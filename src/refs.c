@@ -825,8 +825,8 @@ static int packed_remove_loose(git_repository *repo, git_vector *packing_list)
 
 static int packed_sort(const void *a, const void *b)
 {
-	const git_reference *ref_a = *(const git_reference **)a;
-	const git_reference *ref_b = *(const git_reference **)b;
+	const git_reference *ref_a = (const git_reference *)a;
+	const git_reference *ref_b = (const git_reference *)b;
 
 	return strcmp(ref_a->name, ref_b->name);
 }
