@@ -23,9 +23,20 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "git2/indexer.h"
+
 #include "common.h"
 #include "pack.h"
+#include "mwindow.h"
 #include "posix.h"
+
+typedef struct git_pack_indexer {
+	struct pack_file *pack;
+	git_vector objects;
+	git_vector deltas;
+	struct stat st;
+	git_indexer_stats stats;
+} git_pack_indexer;
 
 static int parse_header(git_pack_indexer *idx)
 {
@@ -58,6 +69,8 @@ static int parse_header(git_pack_indexer *idx)
 	error = git_vector_init(&idx->deltas, hdr.hdr_entries, NULL /* FIXME: probably need something */);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
+
+	idx->stats.total = hdr.hdr_entries;
 
 	return GIT_SUCCESS;
 
@@ -119,6 +132,27 @@ int git_pack_indexer_new(git_pack_indexer **out, const char *packname)
 cleanup:
 	free(idx->pack);
 	free(idx);
+
+	return error;
+}
+
+/*
+ * Create the index. Every time something interesting happens
+ * (something has been parse or resolved), the callback gets called
+ * with some stats so it can tell the user how hard we're working
+ */
+int git_pack_indexer_run(git_pack_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *data)
+{
+	git_mwindow_file *mwf = &idx->pack->mwf;
+	int error;
+
+	error = git_mwindow_file_register(mwf);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to register mwindow file");
+
+	/* notify early */
+	if (cb)
+		cb(&idx->stats, data);
 
 	return error;
 }
