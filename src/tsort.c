@@ -1,11 +1,5 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdlib.h>
-
-#ifndef GIT_WIN32
 #include <common.h>
-#endif
+
 /**
  * An array-of-pointers implementation of Python's Timsort
  * Based on code by Christopher Swenson under the MIT license
