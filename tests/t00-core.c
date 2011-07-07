@@ -75,21 +75,32 @@ END_TEST
 
 static int test_cmp(const void *a, const void *b)
 {
-	return (int)a - (int)b;
+	return *(int *)a - *(int *)b;
 }
 
 BEGIN_TEST(vector2, "remove duplicates")
 	git_vector x;
+	int *ptrs[2];
+
+	ptrs[0] = git__malloc(sizeof(int));
+	ptrs[1] = git__malloc(sizeof(int));
+
+	*ptrs[0] = 2;
+	*ptrs[1] = 1;
+
 	must_pass(git_vector_init(&x, 5, test_cmp));
-	must_pass(git_vector_insert(&x, (void *) 0xdeadbeef));
-	must_pass(git_vector_insert(&x, (void *) 0xcafebabe));
-	must_pass(git_vector_insert(&x, (void *) 0xcafebabe));
-	must_pass(git_vector_insert(&x, (void *) 0xdeadbeef));
-	must_pass(git_vector_insert(&x, (void *) 0xcafebabe));
+	must_pass(git_vector_insert(&x, ptrs[0]));
+	must_pass(git_vector_insert(&x, ptrs[1]));
+	must_pass(git_vector_insert(&x, ptrs[1]));
+	must_pass(git_vector_insert(&x, ptrs[0]));
+	must_pass(git_vector_insert(&x, ptrs[1]));
 	must_be_true(x.length == 5);
 	git_vector_uniq(&x);
 	must_be_true(x.length == 2);
 	git_vector_free(&x);
+
+	free(ptrs[0]);
+	free(ptrs[1]);
 END_TEST
 
 
