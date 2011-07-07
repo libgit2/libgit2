@@ -1309,8 +1309,12 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	new_name = normalized;
 
 	error = git_reference_lookup(&new_ref, ref->owner, new_name);
-	if (error == GIT_SUCCESS && !force)
-		return git__throw(GIT_EEXISTS, "Failed to rename reference. Reference already exists");
+	if (error == GIT_SUCCESS) {
+		if (!force)
+			return git__throw(GIT_EEXISTS, "Failed to rename reference. Reference already exists");
+
+		error = git_reference_delete(new_ref);
+	}
 
 	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
 		goto cleanup;
