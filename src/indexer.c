@@ -24,21 +24,22 @@
  */
 
 #include "git2/indexer.h"
+#include "git2/zlib.h"
 
 #include "common.h"
 #include "pack.h"
 #include "mwindow.h"
 #include "posix.h"
 
-typedef struct git_pack_indexer {
+typedef struct git_indexer {
 	struct pack_file *pack;
 	git_vector objects;
 	git_vector deltas;
 	struct stat st;
 	git_indexer_stats stats;
-} git_pack_indexer;
+} git_indexer;
 
-static int parse_header(git_pack_indexer *idx)
+static int parse_header(git_indexer *idx)
 {
 	struct pack_header hdr;
 	int error;
@@ -81,13 +82,13 @@ cleanup:
 	return error;
 }
 
-int git_pack_indexer_new(git_pack_indexer **out, const char *packname)
+int git_indexer_new(git_indexer **out, const char *packname)
 {
-	struct git_pack_indexer *idx;
+	git_indexer *idx;
 	unsigned int namelen;
 	int ret, error;
 
-	idx = git__malloc(sizeof(struct git_pack_indexer));
+	idx = git__malloc(sizeof(git_indexer));
 	if (idx == NULL)
 		return GIT_ENOMEM;
 
@@ -137,27 +138,114 @@ cleanup:
 }
 
 /*
+ * Parse the variable-width length and return it. Assumes that the
+ * whole number exists inside the buffer. As this is the git format,
+ * the first byte only contains length information in the lower nibble
+ * because the higher one is used for type and continuation. The
+ * output parameter is necessary because we don't know how long the
+ * entry is actually going to be.
+ */
+static unsigned long entry_len(const char **bufout, const char *buf)
+{
+	unsigned long size, c;
+	const char *p = buf;
+	unsigned shift;
+
+	c = *p;
+	size = c & 0xf;
+	shift = 4;
+
+	/* As long as the MSB is set, we need to continue */
+	while (c & 0x80) {
+		p++;
+		c = *p;
+		size += (c & 0x7f) << shift;
+		shift += 7;
+	}
+
+	*bufout = p;
+	return size;
+}
+
+static git_otype entry_type(const char *buf)
+{
+	return (*buf >> 4) & 7;
+}
+
+/*
  * Create the index. Every time something interesting happens
  * (something has been parse or resolved), the callback gets called
  * with some stats so it can tell the user how hard we're working
  */
-int git_pack_indexer_run(git_pack_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *data)
+int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *data)
 {
 	git_mwindow_file *mwf = &idx->pack->mwf;
+	git_mwindow *w = NULL;
+	off_t off = 0;
 	int error;
+	const char *ptr;
+	unsigned int fanout[256] = {0};
 
 	error = git_mwindow_file_register(mwf);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to register mwindow file");
 
-	/* notify early */
+	/* Notify before the first one */
 	if (cb)
 		cb(&idx->stats, data);
 
+	while (idx->stats.processed < idx->stats.total) {
+		unsigned long size;
+		git_otype type;
+
+		/* 4k is a bit magic for the moment */
+		ptr = git_mwindow_open(mwf, &w, idx->pack->pack_fd, 4096, off, 0, NULL);
+		if (ptr == NULL) {
+			error = GIT_ENOMEM;
+			goto cleanup;
+		}
+
+		/*
+		 * The size is when expanded, so we need to inflate the object
+		 * so we know where the next one ist.
+		 */
+		type = entry_type(ptr);
+		size = entry_len(&data, ptr);
+
+		switch (type) {
+		case GIT_OBJ_COMMIT:
+		case GIT_OBJ_TREE:
+		case GIT_OBJ_BLOB:
+		case GIT_OBJ_TAG:
+			break;
+		default:
+			error = git__throw(GIT_EOBJCORRUPTED, "Invalid object type");
+			goto cleanup;
+		}
+
+		/*
+		 * Do we need to uncompress everything if we're not running in
+		 * strict mode? Or at least can't we free the data?
+		 */
+
+		/* Get a window for the compressed data */
+		//ptr = git_mwindow_open(mwf, &w, idx->pack->pack_fd, size, data - ptr, 0, NULL);
+
+		idx->stats.processed++;
+
+		if (cb)
+			cb(&idx->stats, data);
+
+	}
+
+cleanup:
+	git_mwindow_free_all(mwf);
+
 	return error;
+
 }
 
-void git_pack_indexer_free(git_pack_indexer *idx)
+void git_indexer_free(git_indexer *idx)
 {
 	p_close(idx->pack->pack_fd);
 	git_vector_free(&idx->objects);
@@ -165,3 +253,4 @@ void git_pack_indexer_free(git_pack_indexer *idx)
 	free(idx->pack);
 	free(idx);
 }
+

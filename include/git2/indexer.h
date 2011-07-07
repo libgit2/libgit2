@@ -5,15 +5,15 @@
 
 typedef struct git_indexer_stats {
 	unsigned int total;
-	unsigned int parsed;
+	unsigned int processed;
 } git_indexer_stats;
 
 
-typedef struct git_pack_indexer git_pack_indexer;
+typedef struct git_indexer git_indexer;
 
-GIT_EXTERN(int) git_pack_indexer_new(git_pack_indexer **out, const char *packname);
-GIT_EXTERN(int) git_pack_indexer_run(git_pack_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *data);
-GIT_EXTERN(void) git_pack_indexer_free(git_pack_indexer *idx);
+GIT_EXTERN(int) git_indexer_new(git_indexer **out, const char *packname);
+GIT_EXTERN(int) git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *data);
+GIT_EXTERN(void) git_indexer_free(git_indexer *idx);
 
 
 #endif
