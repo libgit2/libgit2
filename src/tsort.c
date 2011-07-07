@@ -40,7 +40,7 @@ typedef int (*cmp_ptr_t)(const void *, const void *);
 static int binsearch(void **dst, const void *x, size_t size, cmp_ptr_t cmp)
 {
 	int l, c, r;
-	void *lx, *cx, *rx;
+	void *lx, *cx;
 
 	l = 0;
 	r = size - 1;
@@ -58,7 +58,6 @@ static int binsearch(void **dst, const void *x, size_t size, cmp_ptr_t cmp)
 		return i;
 	}
 
-	rx = dst[r];
 	/* guaranteed not to be >= rx */
 	cx = dst[c];
 	while (1) {
@@ -66,7 +65,6 @@ static int binsearch(void **dst, const void *x, size_t size, cmp_ptr_t cmp)
 		if (val < 0) {
 			if (c - l <= 1) return c;
 			r = c;
-			rx = cx;
 		} else if (val > 0) {
 			if (r - c <= 1) return c + 1;
 			l = c;
