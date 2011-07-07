@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifndef GIT_WIN32
+#include <common.h>
+#endif
 /**
  * An array-of-pointers implementation of Python's Timsort
  * Based on code by Christopher Swenson under the MIT license
@@ -89,6 +92,8 @@ static int binsearch(void **dst, const void *x, size_t size, cmp_ptr_t cmp)
 static void bisort(void **dst, size_t start, size_t size, cmp_ptr_t cmp)
 {
 	size_t i;
+	void *x;
+	int location;
 
 	for (i = start; i < size; i++) {
 		int j;
@@ -97,8 +102,8 @@ static void bisort(void **dst, size_t start, size_t size, cmp_ptr_t cmp)
 			continue;
 
 		/* Else we need to find the right place, shift everything over, and squeeze in */
-		void *x = dst[i];
-		int location = binsearch(dst, x, i, cmp);
+		x = dst[i];
+		location = binsearch(dst, x, i, cmp);
 		for (j = i - 1; j >= location; j--) {
 			dst[j + 1] = dst[j];
 		}
@@ -323,7 +328,8 @@ static ssize_t collapse(void **dst, struct tsort_run *stack, ssize_t stack_curr,
 		bisort(&dst[curr], len, run, cmp);\
 		len = run;\
 	}\
-	run_stack[stack_curr++] = (struct tsort_run) {curr, len};\
+	run_stack[stack_curr].start = curr;\
+	run_stack[stack_curr++].length = len;\
 	curr += len;\
 	if (curr == (ssize_t)size) {\
 		/* finish up */ \
@@ -340,7 +346,6 @@ static ssize_t collapse(void **dst, struct tsort_run *stack, ssize_t stack_curr,
 	}\
 }\
 while (0)
-
 
 void git__tsort(void **dst, size_t size, cmp_ptr_t cmp)
 {
