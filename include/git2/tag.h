@@ -235,6 +235,29 @@ GIT_EXTERN(int) git_tag_list(
 		git_strarray *tag_names,
 		git_repository *repo);
 
+/**
+ * Fill a list with all the tags in the Repository
+ * which name match a defined pattern
+ *
+ * If an empty pattern is provided, all the tags
+ * will be returned.
+ *
+ * The string array will be filled with the names of the
+ * matching tags; these values are owned by the user and
+ * should be free'd manually when no longer needed, using
+ * `git_strarray_free`.
+ *
+ * @param tag_names Pointer to a git_strarray structure where
+ *		the tag names will be stored
+ * @param pattern Standard fnmatch pattern
+ * @param repo Repository where to find the tags
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_tag_list_match(
+		git_strarray *tag_names,
+		const char *pattern,
+		git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif

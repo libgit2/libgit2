@@ -77,6 +77,35 @@ BEGIN_TEST(read1, "list all tag names from the repository")
 	git_repository_free(repo);
 END_TEST
 
+static int ensure_tag_pattern_match(git_repository *repo, const char *pattern, const size_t expected_matches)
+{
+	git_strarray tag_list;
+	int error = GIT_SUCCESS;
+
+	if ((error = git_tag_list_match(&tag_list, pattern, repo)) < GIT_SUCCESS)
+		goto exit;
+
+	if (tag_list.count != expected_matches)
+		error = GIT_ERROR;
+
+exit:
+	git_strarray_free(&tag_list);
+	return error;
+}
+
+BEGIN_TEST(read2, "list all tag names from the repository matching a specified pattern")
+	git_repository *repo;
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	must_pass(ensure_tag_pattern_match(repo, "", 3));
+	must_pass(ensure_tag_pattern_match(repo, "*", 3));
+	must_pass(ensure_tag_pattern_match(repo, "t*", 1));
+	must_pass(ensure_tag_pattern_match(repo, "*b", 2));
+	must_pass(ensure_tag_pattern_match(repo, "e", 0));
+	must_pass(ensure_tag_pattern_match(repo, "e90810b", 1));
+	must_pass(ensure_tag_pattern_match(repo, "e90810[ab]", 1));
+	git_repository_free(repo);
+END_TEST
+
 
 #define TAGGER_NAME "Vicent Marti"
 #define TAGGER_EMAIL "vicent@github.com"
@@ -222,6 +251,8 @@ END_TEST
 BEGIN_SUITE(tag)
 	ADD_TEST(read0);
 	ADD_TEST(read1);
+	ADD_TEST(read2);
+
 	ADD_TEST(write0);
 	ADD_TEST(write2);
 	ADD_TEST(write3);
