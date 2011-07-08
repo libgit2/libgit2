@@ -209,3 +209,12 @@ char *p_realpath(const char *orig_path, char *buffer)
 	return buffer;
 }
 
+int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
+{
+#ifdef _MSV_VER
+	int len = _vsnprintf(buffer, count, format, argptr);
+	return (len < 0) ? _vscprintf(format, argptr) : len;
+#else /* MinGW */
+	return vsnprintf(buffer, count, format, argptr);
+#endif
+}

@@ -360,29 +360,48 @@ int git_filebuf_reserve(git_filebuf *file, void **buffer, size_t len)
 int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 {
 	va_list arglist;
-	size_t space_left = file->buf_size - file->buf_pos;
+	size_t space_left;
 	int len, error;
+	char *tmp_buffer;
 
-	va_start(arglist, format);
-	len = vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
-	va_end(arglist);
+	space_left = file->buf_size - file->buf_pos;
 
-	if (len < 0 || (size_t)len >= space_left) {
+	do {
+		va_start(arglist, format);
+		len = p_vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
+		va_end(arglist);
+
+		if (len < 0)
+			return git__throw(GIT_EOSERR, "Failed to format string");
+
+		if ((size_t)len <= space_left) {
+			file->buf_pos += len;
+			return GIT_SUCCESS;
+		}
+
 		if ((error = flush_buffer(file)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to output to buffer");
 
 		space_left = file->buf_size - file->buf_pos;
 
-		va_start(arglist, format);
-		len = vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
-		va_end(arglist);
+	} while ((size_t)len <= space_left);
 
-		if (len < 0 || (size_t)len > file->buf_size)
-			return GIT_ENOMEM;
+	tmp_buffer = git__malloc(len + 1);
+	if (!tmp_buffer)
+		return GIT_ENOMEM;
+
+	va_start(arglist, format);
+	len = p_vsnprintf(tmp_buffer, len + 1, format, arglist);
+	va_end(arglist);
+
+	if (len < 0) {
+		free(tmp_buffer);
+		return git__throw(GIT_EOSERR, "Failed to format string");
 	}
 
-	file->buf_pos += len;
-	return GIT_SUCCESS;
+	error = git_filebuf_write(file, tmp_buffer, len);
+	free(tmp_buffer);
 
+	return error;
 }
 
