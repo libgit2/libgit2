@@ -227,7 +227,7 @@ int git_tag_create(
 	}
 
 	type_str = git_object_type2string(git_object_type(target));
-	tagger_str_len = git_signature__write(&tagger_str, "tagger", tagger);
+	tagger_str_len = git_signature__write(&tagger_str, "tagger ", tagger);
 
 	type_str_len = strlen(type_str);
 	tag_name_len = strlen(tag_name);

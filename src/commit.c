@@ -125,8 +125,8 @@ int git_commit_create(
 	git_odb_stream *stream;
 
 	message_length = strlen(message);
-	author_length = git_signature__write(&author_str, "author", author);
-	committer_length = git_signature__write(&committer_str, "committer", committer);
+	author_length = git_signature__write(&author_str, "author ", author);
+	committer_length = git_signature__write(&committer_str, "committer ", committer);
 
 	if (author_length < 0 || committer_length < 0)
 		return git__throw(GIT_EINVALIDARGS, "Cannot create commit. Failed to parse signature");
