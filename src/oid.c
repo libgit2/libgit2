@@ -341,6 +341,9 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 	if (os->full)
 		return GIT_ENOMEM;
 
+	if (text_oid == NULL)
+		return os->min_length;
+
 	idx = 0;
 	is_leaf = 0;
 
