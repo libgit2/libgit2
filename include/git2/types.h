@@ -141,6 +141,12 @@ typedef struct git_config git_config;
 /** Interface to access a configuration file */
 typedef struct git_config_file git_config_file;
 
+/** Representation of a reference log entry */
+typedef struct git_reflog_entry git_reflog_entry;
+
+/** Representation of a reference log */
+typedef struct git_reflog git_reflog;
+
 /** Time in a signature */
 typedef struct git_time {
 	git_time_t time; /** time in seconds from epoch */

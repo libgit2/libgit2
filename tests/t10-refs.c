@@ -27,6 +27,9 @@
 
 #include "repository.h"
 
+#include "git2/reflog.h"
+#include "reflog.h"
+
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
 static const char *non_existing_tag_ref_name = "refs/tags/i-do-not-exist";
 
@@ -993,6 +996,61 @@ BEGIN_TEST(list1, "try to list only the symbolic references")
 	git_repository_free(repo);
 END_TEST
 
+static const char *new_ref = "refs/heads/test-reflog";
+
+BEGIN_TEST(reflog0, "write a reflog for a given reference")
+	git_repository *repo;
+	git_reference *ref;
+	git_oid oid;
+	git_signature *committer;
+
+	git_oid_fromstr(&oid, current_master_tip);
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_create_oid(&ref, repo, new_ref, &oid, 0));
+	must_pass(git_reference_lookup(&ref, repo, new_ref));
+
+	committer = git_signature_now("foo", "foo@bar");
+
+	must_pass(git_reflog_write(ref, NULL, committer, NULL));
+	must_fail(git_reflog_write(ref, NULL, committer, "no\nnewline"));
+	must_pass(git_reflog_write(ref, &oid, committer, "commit: bla bla"));
+
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(reflog1, "read a reflog for a given reference")
+	unsigned int i;
+	git_repository *repo;
+	git_reference *ref;
+	git_reflog *reflog;
+	git_reflog_entry *GIT_UNUSED(entry);
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	must_pass(git_reference_lookup(&ref, repo, new_ref));
+
+	must_pass(git_reflog_read(&reflog, ref));
+
+	for (i=0; i<reflog->entries.length; ++i) {
+		entry = git_vector_get(&reflog->entries, i);
+		/*
+		fprintf(stderr, "\nold:  %s\n", entry->oid_old);
+		fprintf(stderr, "cur:  %s\n", entry->oid_cur);
+		fprintf(stderr, "name: %s\n", entry->committer->name);
+		fprintf(stderr, "mail: %s\n", entry->committer->email);
+		if (entry->msg)
+			fprintf(stderr, "msg:  %s\n", entry->msg);
+		*/
+	}
+
+	git_reflog_free(reflog);
+
+	must_pass(git_reference_delete(ref));
+	git_repository_free(repo);
+END_TEST
+
 
 BEGIN_SUITE(refs)
 	ADD_TEST(readtag0);
@@ -1034,6 +1092,10 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename8);
 
 	ADD_TEST(delete0);
+
 	ADD_TEST(list0);
 	ADD_TEST(list1);
+
+	ADD_TEST(reflog0);
+	ADD_TEST(reflog1);
 END_SUITE
