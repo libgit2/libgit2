@@ -635,14 +635,16 @@ BEGIN_TEST(rename4, "can not rename a reference with an invalid name")
 	close_temp_repo(repo);
 END_TEST
 
-BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing reference")
+BEGIN_TEST(rename5, "can force-rename a packed reference with the name of an existing loose and packed reference")
 	git_reference *looked_up_ref;
 	git_repository *repo;
+	git_oid oid;
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	/* An existing reference... */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
+	git_oid_cpy(&oid, git_reference_oid(looked_up_ref));
 
 	/* Can be force-renamed to the name of another existing reference. */
 	must_pass(git_reference_rename(looked_up_ref, packed_test_head_name, 1));
@@ -650,6 +652,35 @@ BEGIN_TEST(rename5, "can force-rename a reference with the name of an existing r
 	/* Check we actually renamed it */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));
 	must_be_true(!strcmp(looked_up_ref->name, packed_test_head_name));
+	must_be_true(!git_oid_cmp(&oid, git_reference_oid(looked_up_ref)));
+
+	/* And that the previous one doesn't exist any longer */
+	must_fail(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
+
+	close_temp_repo(repo);
+END_TEST
+
+BEGIN_TEST(rename6, "can force-rename a loose reference with the name of an existing loose reference")
+	git_reference *looked_up_ref;
+	git_repository *repo;
+	git_oid oid;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	/* An existing reference... */
+	must_pass(git_reference_lookup(&looked_up_ref, repo, "refs/heads/br2"));
+	git_oid_cpy(&oid, git_reference_oid(looked_up_ref));
+
+	/* Can be force-renamed to the name of another existing reference. */
+	must_pass(git_reference_rename(looked_up_ref, "refs/heads/test", 1));
+
+	/* Check we actually renamed it */
+	must_pass(git_reference_lookup(&looked_up_ref, repo, "refs/heads/test"));
+	must_be_true(!strcmp(looked_up_ref->name,  "refs/heads/test"));
+	must_be_true(!git_oid_cmp(&oid, git_reference_oid(looked_up_ref)));
+
+	/* And that the previous one doesn't exist any longer */
+	must_fail(git_reference_lookup(&looked_up_ref, repo, "refs/heads/br2"));
 
 	close_temp_repo(repo);
 END_TEST
@@ -658,7 +689,7 @@ static const char *ref_one_name = "refs/heads/one/branch";
 static const char *ref_one_name_new = "refs/heads/two/branch";
 static const char *ref_two_name = "refs/heads/two";
 
-BEGIN_TEST(rename6, "can not overwrite name of existing reference")
+BEGIN_TEST(rename7, "can not overwrite name of existing reference")
 	git_reference *ref, *ref_one, *ref_one_new, *ref_two;
 	git_repository *repo;
 	git_oid id;
@@ -688,7 +719,7 @@ END_TEST
 
 static const char *ref_two_name_new = "refs/heads/two/two";
 
-BEGIN_TEST(rename7, "can be renamed to a new name prefixed with the old name")
+BEGIN_TEST(rename8, "can be renamed to a new name prefixed with the old name")
 	git_reference *ref, *ref_two, *looked_up_ref;
 	git_repository *repo;
 	git_oid id;
@@ -1000,6 +1031,7 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename5);
 	ADD_TEST(rename6);
 	ADD_TEST(rename7);
+	ADD_TEST(rename8);
 
 	ADD_TEST(delete0);
 	ADD_TEST(list0);
