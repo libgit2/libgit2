@@ -33,10 +33,10 @@ int git_refspec_src_match(const git_refspec *refspec, const char *refname);
  * Transform a reference to its target following the refspec's rules
  *
  * @param out where to store the target name
- * @param in the source reference
+ * @param outlen the size ouf the `out` buffer
  * @param spec the refspec
- * @param len the length of the out buffer
+ * @param name the name of the reference to transform
  * @preturn GIT_SUCCESS, GIT_ESHORTBUFFER or another error
  */
-int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec,  const char *name);
+int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name);
 #endif
