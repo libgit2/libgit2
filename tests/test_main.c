@@ -45,6 +45,7 @@ DECLARE_SUITE(threads);
 DECLARE_SUITE(config);
 DECLARE_SUITE(remotes);
 DECLARE_SUITE(buffers);
+DECLARE_SUITE(status);
 
 static libgit2_suite suite_methods[]= {
 	SUITE_NAME(core),
@@ -63,6 +64,7 @@ static libgit2_suite suite_methods[]= {
 	SUITE_NAME(config),
 	SUITE_NAME(remotes),
 	SUITE_NAME(buffers),
+	SUITE_NAME(status),
 };
 
 #define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
