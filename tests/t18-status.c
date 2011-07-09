@@ -68,7 +68,7 @@ BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
 	must_pass(git_futils_exists(temp_path));
 
 	git_oid_fromstr(&expected_id, test_blob_oid);
-	must_pass(git_status_hashfile(&actual_id, temp_path));
+	must_pass(git_odb_hashfile(&actual_id, temp_path, GIT_OBJ_BLOB));
 
 	must_be_true(git_oid_cmp(&expected_id, &actual_id) == 0);
 

@@ -282,6 +282,19 @@ GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const
 GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type);
 
 /**
+ * Read a file from disk and fill a git_oid with the object id
+ * that the file would have if it were written to the Object
+ * Database as an object of the given type. Similar functionality
+ * to git.git's `git hash-object` without the `-w` flag.
+ *
+ * @param out oid structure the result is written into.
+ * @param path file to read and determine object id for
+ * @param type the type of the object that will be hashed
+ * @return GIT_SUCCESS if valid; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_otype type);
+
+/**
  * Close an ODB object
  *
  * This method must always be called once a `git_odb_object` is no

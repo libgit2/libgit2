@@ -31,54 +31,6 @@
 #include "tree.h"
 #include "git2/status.h"
 
-int git_status_hashfile(git_oid *out, const char *path)
-{
-	int fd, len;
-	char hdr[64], buffer[2048];
-	git_off_t size;
-	git_hash_ctx *ctx;
-
-	if ((fd = p_open(path, O_RDONLY)) < 0)
-		return git__throw(GIT_ENOTFOUND, "Could not open '%s'", path);
-
-	if ((size = git_futils_filesize(fd)) < 0 || !git__is_sizet(size)) {
-		p_close(fd);
-		return git__throw(GIT_EOSERR, "'%s' appears to be corrupted", path);
-	}
-
-	ctx = git_hash_new_ctx();
-
-	len = snprintf(hdr, sizeof(hdr), "blob %"PRIuZ, (size_t)size);
-	assert(len > 0);
-	assert(((size_t) len) < sizeof(hdr));
-	if (len < 0 || ((size_t) len) >= sizeof(hdr))
-		return git__throw(GIT_ERROR, "Failed to format blob header. Length is out of bounds");
-
-	git_hash_update(ctx, hdr, len+1);
-
-	while (size > 0) {
-		ssize_t read_len;
-
-		read_len = read(fd, buffer, sizeof(buffer));
-
-		if (read_len < 0) {
-			p_close(fd);
-			git_hash_free_ctx(ctx);
-			return git__throw(GIT_EOSERR, "Can't read full file '%s'", path);
-		}
-
-		git_hash_update(ctx, buffer, read_len);
-		size -= read_len;
-	}
-
-	p_close(fd);
-
-	git_hash_final(out, ctx);
-	git_hash_free_ctx(ctx);
-
-	return GIT_SUCCESS;
-}
-
 struct status_entry {
 	char path[GIT_PATH_MAX];
 
@@ -181,13 +133,21 @@ static void recurse_tree_entry(git_tree *tree, struct status_entry *e, const cha
 	git_tree_close(tree);
 }
 
-static int workdir_path_len;
+struct status_st {
+	union {
+		git_vector *vector;
+		struct status_entry *e;
+	} entry;
+
+	int workdir_path_len;
+};
+
 static int dirent_cb(void *state, char *full_path)
 {
 	int idx;
 	struct status_entry *e;
-	git_vector *entries = (git_vector *)state;
-	char *file_path = full_path + workdir_path_len;
+	struct status_st *st = (struct status_st *)state;
+	char *file_path = full_path + st->workdir_path_len;
 	struct stat filest;
 	git_oid oid;
 
@@ -197,8 +157,8 @@ static int dirent_cb(void *state, char *full_path)
 	if (git_futils_isdir(full_path) == GIT_SUCCESS)
 		return git_futils_direach(full_path, GIT_PATH_MAX, dirent_cb, state);
 
-	if ((idx = find_status_entry(entries, file_path)) != GIT_ENOTFOUND) {
-		e = (struct status_entry *)git_vector_get(entries, idx);
+	if ((idx = find_status_entry(st->entry.vector, file_path)) != GIT_ENOTFOUND) {
+		e = (struct status_entry *)git_vector_get(st->entry.vector, idx);
 
 		if (p_stat(full_path, &filest) < 0)
 			return git__throw(GIT_EOSERR, "Failed to read file %s", full_path);
@@ -208,10 +168,10 @@ static int dirent_cb(void *state, char *full_path)
 			return 0;
 		}
 	} else {
-		e = new_status_entry(entries, file_path);
+		e = new_status_entry(st->entry.vector, file_path);
 	}
 
-	git_status_hashfile(&oid, full_path);
+	git_odb_hashfile(&oid, full_path, GIT_OBJ_BLOB);
 	git_oid_cpy(&e->wt_oid, &oid);
 
 	return 0;
@@ -219,8 +179,10 @@ static int dirent_cb(void *state, char *full_path)
 
 static int single_dirent_cb(void *state, char *full_path)
 {
-	struct status_entry *e = *(struct status_entry **)(state);
-	char *file_path = full_path + workdir_path_len;
+	struct status_st *st = (struct status_st *)state;
+	struct status_entry *e = st->entry.e;
+
+	char *file_path = full_path + st->workdir_path_len;
 	struct stat filest;
 	git_oid oid;
 
@@ -239,7 +201,7 @@ static int single_dirent_cb(void *state, char *full_path)
 			return 1;
 		}
 
-		git_status_hashfile(&oid, full_path);
+		git_odb_hashfile(&oid, full_path, GIT_OBJ_BLOB);
 		git_oid_cpy(&e->wt_oid, &oid);
 		return 1;
 	}
@@ -289,6 +251,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	git_oid zero;
 	int error;
 	git_tree *tree;
+	struct status_st dirent_st;
 
 	git_reference *head_ref, *resolved_head_ref;
 	git_commit *head_commit;
@@ -314,9 +277,10 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	git_commit_tree(&tree, head_commit);
 	recurse_tree_entries(tree, &entries, "");
 
-	workdir_path_len = strlen(repo->path_workdir);
+	dirent_st.workdir_path_len = strlen(repo->path_workdir);
+	dirent_st.entry.vector = &entries;
 	strcpy(temp_path, repo->path_workdir);
-	git_futils_direach(temp_path, GIT_PATH_MAX, dirent_cb, &entries);
+	git_futils_direach(temp_path, GIT_PATH_MAX, dirent_cb, &dirent_st);
 
 	memset(&zero, 0x0, sizeof(git_oid));
 	for (i = 0; i < entries.length; ++i) {
@@ -352,6 +316,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	git_tree *tree;
 	git_reference *head_ref, *resolved_head_ref;
 	git_commit *head_commit;
+	struct status_st dirent_st;
 
 	assert(status_flags);
 
@@ -376,9 +341,10 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	recurse_tree_entry(tree, e, path);
 
 	// Find file in Workdir
-	workdir_path_len = strlen(repo->path_workdir);
+	dirent_st.workdir_path_len = strlen(repo->path_workdir);
+	dirent_st.entry.e = e;
 	strcpy(temp_path, repo->path_workdir);
-	git_futils_direach(temp_path, GIT_PATH_MAX, single_dirent_cb, &e);
+	git_futils_direach(temp_path, GIT_PATH_MAX, single_dirent_cb, &dirent_st);
 
 	if ((error = set_status_flags(e)) < GIT_SUCCESS)
 		return git__throw(error, "Nonexistent file");

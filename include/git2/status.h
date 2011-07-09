@@ -52,18 +52,6 @@ GIT_BEGIN_DECL
 #define GIT_STATUS_IGNORED        (1 << 6)
 
 /**
- * Read a file from disk and fill a git_oid with the object id
- * that the file would have if it were written to the Object
- * Database as a loose blob. Similar functionality to git.git's
- * `git hash-object` without the `-w` flag.
- *
- * @param out oid structure the result is written into.
- * @param path file to read and determine object id for
- * @return GIT_SUCCESS if valid; error code otherwise
- */
-GIT_EXTERN(int) git_status_hashfile(git_oid *out, const char *path);
-
-/**
  * Gather file statuses and run a callback for each one.
  *
  * The callback is passed the path of the file, the status and the data pointer

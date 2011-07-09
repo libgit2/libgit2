@@ -46,10 +46,10 @@ typedef struct
 	int is_alternate;
 } backend_internal;
 
-static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
+static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
 {
-	const char *type_str = git_object_type2string(obj->type);
-	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj->len);
+	const char *type_str = git_object_type2string(obj_type);
+	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
 
 	assert(len > 0);             /* otherwise snprintf() is broken  */
 	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
@@ -72,7 +72,7 @@ int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *ob
 	if (!obj->data && obj->len != 0)
 		return git__throw(GIT_ERROR, "Failed to hash object. No data given");
 
-	if ((hdrlen = format_object_header(hdr, n, obj)) < 0)
+	if ((hdrlen = format_object_header(hdr, n, obj->len, obj->type)) < 0)
 		return git__rethrow(hdrlen, "Failed to hash object");
 
 	*len = hdrlen;
@@ -132,6 +132,52 @@ git_otype git_odb_object_type(git_odb_object *object)
 void git_odb_object_close(git_odb_object *object)
 {
 	git_cached_obj_decref((git_cached_obj *)object, &free_odb_object);
+}
+
+int git_odb_hashfile(git_oid *out, const char *path, git_otype type)
+{
+	int fd, hdr_len;
+	char hdr[64], buffer[2048];
+	git_off_t size;
+	git_hash_ctx *ctx;
+
+	if ((fd = p_open(path, O_RDONLY)) < 0)
+		return git__throw(GIT_ENOTFOUND, "Could not open '%s'", path);
+
+	if ((size = git_futils_filesize(fd)) < 0 || !git__is_sizet(size)) {
+		p_close(fd);
+		return git__throw(GIT_EOSERR, "'%s' appears to be corrupted", path);
+	}
+
+	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
+	if (hdr_len < 0)
+		return git__throw(GIT_ERROR, "Failed to format blob header. Length is out of bounds");
+
+	ctx = git_hash_new_ctx();
+
+	git_hash_update(ctx, hdr, hdr_len);
+
+	while (size > 0) {
+		ssize_t read_len;
+
+		read_len = read(fd, buffer, sizeof(buffer));
+
+		if (read_len < 0) {
+			p_close(fd);
+			git_hash_free_ctx(ctx);
+			return git__throw(GIT_EOSERR, "Can't read full file '%s'", path);
+		}
+
+		git_hash_update(ctx, buffer, read_len);
+		size -= read_len;
+	}
+
+	p_close(fd);
+
+	git_hash_final(out, ctx);
+	git_hash_free_ctx(ctx);
+
+	return GIT_SUCCESS;
 }
 
 int git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type)
