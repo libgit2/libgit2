@@ -211,7 +211,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {
-#ifdef _MSV_VER
+#ifdef _MSC_VER
 	int len = _vsnprintf(buffer, count, format, argptr);
 	return (len < 0) ? _vscprintf(format, argptr) : len;
 #else /* MinGW */
