@@ -32,17 +32,37 @@
 
 static const char *test_blob_oid = "d4fa8600b4f37d7516bef4816ae2c64dbf029e3a";
 
-BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
+static int copy_status_repo(char *path_statusfiles, char *temp_path)
+{
 	char current_workdir[GIT_PATH_MAX];
+	char gitted[GIT_PATH_MAX];
+	int error;
+
+	error = p_getcwd(current_workdir, sizeof(current_workdir));
+	if (error < 0)
+		return error;
+	strcpy(path_statusfiles, current_workdir);
+	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
+
+	error = copydir_recurs(STATUS_FOLDER, path_statusfiles);
+	if (error < 0)
+		return error;
+
+	git_path_join(gitted, path_statusfiles, ".gitted");
+	git_path_join(temp_path, path_statusfiles, ".git");
+	copydir_recurs(gitted, temp_path);
+	git_futils_rmdir_r(gitted, 1);
+
+	return GIT_SUCCESS;
+}
+
+BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
 	char path_statusfiles[GIT_PATH_MAX];
 	char temp_path[GIT_PATH_MAX];
 	git_oid expected_id, actual_id;
 
-	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
-	strcpy(path_statusfiles, current_workdir);
-	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
+	must_pass(copy_status_repo(path_statusfiles, temp_path));
 
-	must_pass(copydir_recurs(STATUS_FOLDER, path_statusfiles));
 	git_path_join(temp_path, path_statusfiles, "new_file");
 
 	must_pass(git_futils_exists(temp_path));
@@ -124,23 +144,13 @@ static int status_cb(const char *path, unsigned int status_flags, void *payload)
 }
 
 BEGIN_TEST(statuscb0, "test retrieving status for worktree of repository")
-	char current_workdir[GIT_PATH_MAX];
 	char path_statusfiles[GIT_PATH_MAX];
 	char temp_path[GIT_PATH_MAX];
-	char gitted[GIT_PATH_MAX];
 	git_repository *repo;
 	struct status_entry_counts counts;
 
-	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
-	strcpy(path_statusfiles, current_workdir);
-	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
+	must_pass(copy_status_repo(path_statusfiles, temp_path));
 
-	must_pass(copydir_recurs(STATUS_FOLDER, path_statusfiles));
-
-	git_path_join(gitted, path_statusfiles, ".gitted");
-	git_path_join(temp_path, path_statusfiles, ".git");
-	copydir_recurs(gitted, temp_path);
-	git_futils_rmdir_r(gitted, 1);
 	must_pass(git_repository_open(&repo, temp_path));
 
 	memset(&counts, 0x0, sizeof(struct status_entry_counts));
@@ -154,24 +164,14 @@ BEGIN_TEST(statuscb0, "test retrieving status for worktree of repository")
 END_TEST
 
 BEGIN_TEST(singlestatus0, "test retrieving status for single file")
-	char current_workdir[GIT_PATH_MAX];
 	char path_statusfiles[GIT_PATH_MAX];
 	char temp_path[GIT_PATH_MAX];
-	char gitted[GIT_PATH_MAX];
 	git_repository *repo;
 	unsigned int status_flags;
 	int i;
 
-	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
-	strcpy(path_statusfiles, current_workdir);
-	git_path_join(path_statusfiles, path_statusfiles, TEMP_STATUS_FOLDER);
+	must_pass(copy_status_repo(path_statusfiles, temp_path));
 
-	must_pass(copydir_recurs(STATUS_FOLDER, path_statusfiles));
-
-	git_path_join(gitted, path_statusfiles, ".gitted");
-	git_path_join(temp_path, path_statusfiles, ".git");
-	copydir_recurs(gitted, temp_path);
-	git_futils_rmdir_r(gitted, 1);
 	must_pass(git_repository_open(&repo, temp_path));
 
 	for (i = 0; i < ENTRY_COUNT; ++i) {
