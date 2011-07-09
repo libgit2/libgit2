@@ -44,3 +44,7 @@ Categories
 14__: Redis backend
 
 15__: Configuration parsing
+
+16__: Remotes
+
+17__: Buffers
