@@ -24,6 +24,7 @@
  */
 
 #include "git2/indexer.h"
+#include "git2/object.h"
 #include "git2/zlib.h"
 
 #include "common.h"
@@ -45,7 +46,7 @@ static int parse_header(git_indexer *idx)
 	int error;
 
 	/* Verify we recognize this pack file format. */
-	if ((error = p_read(idx->pack->pack_fd, &hdr, sizeof(hdr))) < GIT_SUCCESS)
+	if ((error = p_read(idx->pack->mwf.fd, &hdr, sizeof(hdr))) < GIT_SUCCESS)
 		goto cleanup;
 
 	if (hdr.hdr_signature != htonl(PACK_SIGNATURE)) {
@@ -118,7 +119,7 @@ int git_indexer_new(git_indexer **out, const char *packname)
 		goto cleanup;
 	}
 
-	idx->pack->pack_fd = ret;
+	idx->pack->mwf.fd = ret;
 
 	error = parse_header(idx);
 	if (error < GIT_SUCCESS) {
@@ -177,7 +178,7 @@ static git_otype entry_type(const char *buf)
  * (something has been parse or resolved), the callback gets called
  * with some stats so it can tell the user how hard we're working
  */
-int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *data)
+int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *cb_data)
 {
 	git_mwindow_file *mwf = &idx->pack->mwf;
 	git_mwindow *w = NULL;
@@ -192,25 +193,13 @@ int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void 
 
 	/* Notify before the first one */
 	if (cb)
-		cb(&idx->stats, data);
+		cb(&idx->stats, cb_data);
 
 	while (idx->stats.processed < idx->stats.total) {
-		unsigned long size;
+		size_t size;
 		git_otype type;
 
-		/* 4k is a bit magic for the moment */
-		ptr = git_mwindow_open(mwf, &w, idx->pack->pack_fd, 4096, off, 0, NULL);
-		if (ptr == NULL) {
-			error = GIT_ENOMEM;
-			goto cleanup;
-		}
-
-		/*
-		 * The size is when expanded, so we need to inflate the object
-		 * so we know where the next one ist.
-		 */
-		type = entry_type(ptr);
-		size = entry_len(&data, ptr);
+		error = git_packfile_unpack_header(&size, &type, mwf, &w, &off);
 
 		switch (type) {
 		case GIT_OBJ_COMMIT:
@@ -234,7 +223,7 @@ int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void 
 		idx->stats.processed++;
 
 		if (cb)
-			cb(&idx->stats, data);
+			cb(&idx->stats, cb_data);
 
 	}
 
@@ -247,7 +236,7 @@ cleanup:
 
 void git_indexer_free(git_indexer *idx)
 {
-	p_close(idx->pack->pack_fd);
+	p_close(idx->pack->mwf.fd);
 	git_vector_free(&idx->objects);
 	git_vector_free(&idx->deltas);
 	free(idx->pack);

@@ -203,8 +203,8 @@ cleanup:
  * Open a new window, closing the least recenty used until we have
  * enough space. Don't forget to add it to your list
  */
-unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, git_file fd,
-								size_t size, off_t offset, int extra, unsigned int *left)
+unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor,
+                                off_t offset, int extra, unsigned int *left)
 {
 	git_mwindow *w = *cursor;
 
@@ -223,7 +223,7 @@ unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, git
 		 * one.
 		 */
 		if (!w) {
-			w = new_window(mwf, fd, size, offset);
+			w = new_window(mwf, mwf->fd, mwf->size, offset);
 			if (w == NULL)
 				return NULL;
 			w->next = mwf->windows;

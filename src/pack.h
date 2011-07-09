@@ -31,6 +31,7 @@
 #include "common.h"
 #include "map.h"
 #include "mwindow.h"
+#include "odb.h"
 
 #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
 #define PACK_VERSION 2
@@ -67,9 +68,7 @@ struct pack_idx_header {
 };
 
 struct pack_file {
-	int pack_fd;
 	git_mwindow_file mwf;
-	off_t pack_size;
 	git_map index_map;
 
 	uint32_t num_objects;
@@ -90,5 +89,30 @@ struct pack_entry {
 	git_oid sha1;
 	struct pack_file *p;
 };
+
+static unsigned char *pack_window_open(struct pack_file *p,
+		git_mwindow **w_cursor, off_t offset, unsigned int *left);
+
+int git_packfile_unpack_header(
+		size_t *size_p,
+		git_otype *type_p,
+		git_mwindow_file *mwf,
+		git_mwindow **w_curs,
+		off_t *curpos);
+
+int packfile_unpack_delta(
+		git_rawobj *obj,
+		struct pack_file *p,
+		git_mwindow **w_curs,
+		off_t curpos,
+		size_t delta_size,
+		git_otype delta_type,
+		off_t obj_offset);
+
+int packfile_unpack(git_rawobj *obj, struct pack_file *p, off_t obj_offset);
+
+off_t get_delta_base(struct pack_file *p, git_mwindow **w_curs,
+		off_t *curpos, git_otype type,
+		off_t delta_obj_offset);
 
 #endif
