@@ -258,6 +258,9 @@ static int set_status_flags(struct status_entry *e)
 	index_zero = git_oid_cmp(&zero, &e->index_oid);
 	wt_zero = git_oid_cmp(&zero, &e->wt_oid);
 
+	if (head_zero == 0 && index_zero == 0 && wt_zero == 0)
+		return GIT_ENOTFOUND;
+
 	if (head_zero == 0 && index_zero != 0)
 		e->status_flags |= GIT_STATUS_INDEX_NEW;
 	else if (index_zero == 0 && head_zero != 0)
@@ -345,7 +348,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	git_index *index;
 	git_index_entry *index_entry;
 	char temp_path[GIT_PATH_MAX];
-	int idx;
+	int idx, error;
 	git_tree *tree;
 	git_reference *head_ref, *resolved_head_ref;
 	git_commit *head_commit;
@@ -377,7 +380,9 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	strcpy(temp_path, repo->path_workdir);
 	git_futils_direach(temp_path, GIT_PATH_MAX, single_dirent_cb, &e);
 
-	set_status_flags(e);
+	if ((error = set_status_flags(e)) < GIT_SUCCESS)
+		return git__throw(error, "Nonexistent file");
+
 	*status_flags = e->status_flags;
 
 	free(e);
