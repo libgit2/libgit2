@@ -16,25 +16,6 @@
 #	define MIN(x,y) (((x) < (y) ? (x) : (y)))
 #endif
 
-#if defined(__GNUC__)
-#	define CLZ(x) __builtin_clz(x)
-#elif defined(_MSC_VER)
-#	define CLZ(x) _CountLeadingZeros(x)
-#else
-int CLZ(int32_t x)
-{
-    int e = 31;
-
-    if (!x) return 32;
-    if (x&0xFFFF0000)   { e -=16; x >>=16; }
-    if (x&0x0000FF00)   { e -= 8; x >>= 8; }
-    if (x&0x000000F0)   { e -= 4; x >>= 4; }
-    if (x&0x0000000C)   { e -= 2; x >>= 2; }
-    if (x&0x00000002)   { e -= 1; }
-    return e;
-}
-#endif
-
 typedef int (*cmp_ptr_t)(const void *, const void *);
 
 static int binsearch(void **dst, const void *x, size_t size, cmp_ptr_t cmp)
