@@ -149,7 +149,7 @@ int git_odb_hashfile(git_oid *out, const char *path, git_otype type)
 		return git__throw(GIT_EOSERR, "'%s' appears to be corrupted", path);
 	}
 
-	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
+	hdr_len = format_object_header(hdr, sizeof(hdr), (size_t)size, type);
 	if (hdr_len < 0)
 		return git__throw(GIT_ERROR, "Failed to format blob header. Length is out of bounds");
 
