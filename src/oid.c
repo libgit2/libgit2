@@ -175,6 +175,16 @@ int git__write_oid(git_odb_stream *stream, const char *header, const git_oid *oi
 	return GIT_SUCCESS;
 }
 
+void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid)
+{
+	char hex_oid[GIT_OID_HEXSZ];
+
+	git_oid_fmt(hex_oid, oid);
+	git_buf_puts(buf, header);
+	git_buf_put(buf, hex_oid, GIT_OID_HEXSZ);
+	git_buf_putc(buf, '\n');
+}
+
 void git_oid_fromraw(git_oid *out, const unsigned char *raw)
 {
 	memcpy(out->id, raw, sizeof(out->id));

@@ -772,6 +772,49 @@ int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend
 	return GIT_SUCCESS;
 }
 
+int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const void *data, size_t len, git_otype type)
+{
+	int error, header_len;
+	char final_path[GIT_PATH_MAX], header[64];
+	git_filebuf fbuf;
+	loose_backend *backend;
+
+	backend = (loose_backend *)_backend;
+
+	/* prepare the header for the file */
+	{
+		header_len = format_object_header(header, sizeof(header), len, type);
+		if (header_len < GIT_SUCCESS)
+			return GIT_EOBJCORRUPTED;
+	}
+
+	git_path_join(final_path, backend->objects_dir, "tmp_object");
+
+	error = git_filebuf_open(&fbuf, final_path,
+		GIT_FILEBUF_HASH_CONTENTS |
+		GIT_FILEBUF_DEFLATE_CONTENTS |
+		GIT_FILEBUF_TEMPORARY);
+
+	if (error < GIT_SUCCESS)
+		return error;
+
+	git_filebuf_write(&fbuf, header, header_len);
+	git_filebuf_write(&fbuf, data, len);
+	git_filebuf_hash(oid, &fbuf);
+
+	if ((error = object_file_name(final_path, sizeof(final_path), backend->objects_dir, oid)) < GIT_SUCCESS)
+		goto cleanup;
+
+	if ((error = git_futils_mkpath2file(final_path)) < GIT_SUCCESS)
+		goto cleanup;
+
+	return git_filebuf_commit_at(&fbuf, final_path);
+
+cleanup:
+	git_filebuf_cleanup(&fbuf);
+	return error;
+}
+
 void loose_backend__free(git_odb_backend *_backend)
 {
 	loose_backend *backend;
@@ -800,6 +843,7 @@ int git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir
 	backend->fsync_object_files = 0;
 
 	backend->parent.read = &loose_backend__read;
+	backend->parent.write = &loose_backend__write;
 	backend->parent.read_prefix = &loose_backend__read_prefix;
 	backend->parent.read_header = &loose_backend__read_header;
 	backend->parent.writestream = &loose_backend__stream;

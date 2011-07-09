@@ -41,7 +41,7 @@ typedef struct git_filebuf git_filebuf;
 
 int git_filebuf_write(git_filebuf *lock, const void *buff, size_t len);
 int git_filebuf_reserve(git_filebuf *file, void **buff, size_t len);
-int git_filebuf_printf(git_filebuf *file, const char *format, ...);
+int git_filebuf_printf(git_filebuf *file, const char *format, ...) GIT_FORMAT_PRINTF(2, 3);
 
 int git_filebuf_open(git_filebuf *lock, const char *path, int flags);
 int git_filebuf_commit(git_filebuf *lock);

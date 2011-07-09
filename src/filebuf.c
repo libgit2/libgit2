@@ -374,7 +374,7 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 		if (len < 0)
 			return git__throw(GIT_EOSERR, "Failed to format string");
 
-		if ((size_t)len <= space_left) {
+		if ((size_t)len + 1 <= space_left) {
 			file->buf_pos += len;
 			return GIT_SUCCESS;
 		}
@@ -384,7 +384,7 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 		space_left = file->buf_size - file->buf_pos;
 
-	} while ((size_t)len <= space_left);
+	} while ((size_t)len + 1 <= space_left);
 
 	tmp_buffer = git__malloc(len + 1);
 	if (!tmp_buffer)

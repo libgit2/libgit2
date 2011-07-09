@@ -189,16 +189,10 @@ int git_tag_create(
 		const char *message,
 		int allow_ref_overwrite)
 {
-	size_t final_size = 0;
-	git_odb_stream *stream;
-
-	const char *type_str;
-	char *tagger_str;
 	git_reference *new_ref = NULL;
-
 	char ref_name[GIT_REFNAME_MAX];
+	git_buf tag = GIT_BUF_INIT;
 
-	int type_str_len, tag_name_len, tagger_str_len, message_len;
 	int error, should_update_ref = 0;
 
 	if (git_object_owner(target) != repo)
@@ -226,40 +220,20 @@ int git_tag_create(
 		}
 	}
 
-	type_str = git_object_type2string(git_object_type(target));
-	tagger_str_len = git_signature__write(&tagger_str, "tagger ", tagger);
+	git_oid__writebuf(&tag, "object ", git_object_id(target));
+	git_buf_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
+	git_buf_printf(&tag, "tag %s\n", tag_name);
+	git_signature__writebuf(&tag, "tagger ", tagger);
+	git_buf_putc(&tag, '\n');
+	git_buf_puts(&tag, message);
 
-	type_str_len = strlen(type_str);
-	tag_name_len = strlen(tag_name);
-	message_len = strlen(message);
+	if (git_buf_oom(&tag)) {
+		git_buf_free(&tag);
+		return git__throw(GIT_ENOMEM, "Not enough memory to build the tag data");
+	}
 
-	final_size += GIT_OID_LINE_LENGTH("object");
-	final_size += STRLEN("type ") + type_str_len + 1;
-	final_size += STRLEN("tag ") + tag_name_len + 1;
-	final_size += tagger_str_len;
-	final_size += 1 + message_len;
-
-	if ((error = git_odb_open_wstream(&stream, repo->db, final_size, GIT_OBJ_TAG)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create tag");
-
-	git__write_oid(stream, "object", git_object_id(target));
-
-	stream->write(stream, "type ", STRLEN("type "));
-	stream->write(stream, type_str, type_str_len);
-
-	stream->write(stream, "\ntag ", STRLEN("\ntag "));
-	stream->write(stream, tag_name, tag_name_len);
-	stream->write(stream, "\n", 1);
-
-	stream->write(stream, tagger_str, tagger_str_len);
-	free(tagger_str);
-
-	stream->write(stream, "\n", 1);
-	stream->write(stream, message, message_len);
-
-
-	error = stream->finalize_write(oid, stream);
-	stream->free(stream);
+	error = git_odb_write(oid, git_repository_database(repo), tag.ptr, tag.size, GIT_OBJ_TAG);
+	git_buf_free(&tag);
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");

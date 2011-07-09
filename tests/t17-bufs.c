@@ -22,63 +22,38 @@
  * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-
-#include <string.h>
-#include <git2.h>
-
 #include "test_lib.h"
 #include "test_helpers.h"
 
-DECLARE_SUITE(core);
-DECLARE_SUITE(rawobjects);
-DECLARE_SUITE(objread);
-DECLARE_SUITE(objwrite);
-DECLARE_SUITE(commit);
-DECLARE_SUITE(revwalk);
-DECLARE_SUITE(index);
-DECLARE_SUITE(hashtable);
-DECLARE_SUITE(tag);
-DECLARE_SUITE(tree);
-DECLARE_SUITE(refs);
-DECLARE_SUITE(repository);
-DECLARE_SUITE(threads);
-DECLARE_SUITE(config);
-DECLARE_SUITE(remotes);
-DECLARE_SUITE(buffers);
+#include <git2.h>
+#include "buffer.h"
 
-static libgit2_suite suite_methods[]= {
-	SUITE_NAME(core),
-	SUITE_NAME(rawobjects),
-	SUITE_NAME(objread),
-	SUITE_NAME(objwrite),
-	SUITE_NAME(commit),
-	SUITE_NAME(revwalk),
-	SUITE_NAME(index),
-	SUITE_NAME(hashtable),
-	SUITE_NAME(tag),
-	SUITE_NAME(tree),
-	SUITE_NAME(refs),
-	SUITE_NAME(repository),
-	SUITE_NAME(threads),
-	SUITE_NAME(config),
-	SUITE_NAME(remotes),
-	SUITE_NAME(buffers),
-};
+const char *test_string = "Have you seen that? Have you seeeen that??";
 
-#define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
+BEGIN_TEST(buf0, "check that resizing works properly")
+	git_buf buf = GIT_BUF_INIT;
+	git_buf_puts(&buf, test_string);
 
-int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
-{
-	unsigned int i, failures;
+	must_be_true(git_buf_oom(&buf) == 0);
+	must_be_true(strcmp(git_buf_cstr(&buf), test_string) == 0);
 
-	GIT_UNUSED_ARG(argc);
-	GIT_UNUSED_ARG(argv);
+	git_buf_puts(&buf, test_string);
+	must_be_true(strlen(git_buf_cstr(&buf)) == strlen(test_string) * 2);
+END_TEST
 
-	failures = 0;
+BEGIN_TEST(buf1, "check that printf works properly")
+	git_buf buf = GIT_BUF_INIT;
 
-	for (i = 0; i < GIT_SUITE_COUNT; ++i)
-		failures += git_testsuite_run(suite_methods[i]());
+	git_buf_printf(&buf, "%s %s %d ", "shoop", "da", 23);
+	must_be_true(git_buf_oom(&buf) == 0);
+	must_be_true(strcmp(git_buf_cstr(&buf), "shoop da 23 ") == 0);
 
-	return failures ? -1 : 0;
-}
+	git_buf_printf(&buf, "%s %d", "woop", 42);
+	must_be_true(git_buf_oom(&buf) == 0);
+	must_be_true(strcmp(git_buf_cstr(&buf), "shoop da 23 woop 42") == 0);
+END_TEST
 
+BEGIN_SUITE(buffers)
+	 ADD_TEST(buf0)
+	 ADD_TEST(buf1)
+END_SUITE

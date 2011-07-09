@@ -342,4 +342,22 @@ int git_signature__write(char **signature, const char *header, const git_signatu
 	return sig_buffer_len;
 }
 
+void git_signature__writebuf(git_buf *buf, const char *header, const git_signature *sig)
+{
+	int offset, hours, mins;
+	char sign;
+
+	offset = sig->when.offset;
+	sign = (sig->when.offset < 0) ? '-' : '+';
+
+	if (offset < 0)
+		offset = -offset;
+
+	hours = offset / 60;
+	mins = offset % 60;
+
+	git_buf_printf(buf, "%s%s <%s> %u %c%02d%02d\n",
+			header ? header : "", sig->name, sig->email,
+			(unsigned)sig->when.time, sign, hours, mins);
+}
 

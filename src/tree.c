@@ -421,29 +421,16 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 
 int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld)
 {
-	unsigned int i, size = 0;
-	char filemode[MAX_FILEMODE_BYTES + 1 + 1];
-	git_odb_stream *stream;
+	unsigned int i;
 	int error;
+	git_buf tree = GIT_BUF_INIT;
 
 	assert(bld);
 
 	sort_entries(bld);
 
-	for (i = 0; i < bld->entries.length; ++i) {
-		git_tree_entry *entry = bld->entries.contents[i];
-
-		if (entry->removed)
-			continue;
-
-		snprintf(filemode, sizeof(filemode), "%o ", entry->attr);
-		size += strlen(filemode);
-		size += entry->filename_len + 1;
-		size += GIT_OID_RAWSZ;
-	}
-
-	if ((error = git_odb_open_wstream(&stream, git_repository_database(repo), size, GIT_OBJ_TREE)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to write tree. Can't open write stream");
+	/* Grow the buffer beforehand to an estimated size */
+	git_buf_grow(&tree, bld->entries.length * 72);
 
 	for (i = 0; i < bld->entries.length; ++i) {
 		git_tree_entry *entry = bld->entries.contents[i];
@@ -451,14 +438,18 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 		if (entry->removed)
 			continue;
 
-		snprintf(filemode, sizeof(filemode), "%o ", entry->attr);
-		stream->write(stream, filemode, strlen(filemode));
-		stream->write(stream, entry->filename, entry->filename_len + 1);
-		stream->write(stream, (char *)entry->oid.id, GIT_OID_RAWSZ);
+		git_buf_printf(&tree, "%o ", entry->attr);
+		git_buf_put(&tree, entry->filename, entry->filename_len + 1);
+		git_buf_put(&tree, (char *)entry->oid.id, GIT_OID_RAWSZ);
 	}
 
-	error = stream->finalize_write(oid, stream);
-	stream->free(stream);
+	if (git_buf_oom(&tree)) {
+		git_buf_free(&tree);
+		return git__throw(GIT_ENOMEM, "Not enough memory to build the tree data");
+	}
+
+	error = git_odb_write(oid, git_repository_database(repo), tree.ptr, tree.size, GIT_OBJ_TREE);
+	git_buf_free(&tree);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write tree");
 }

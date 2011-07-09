@@ -116,53 +116,36 @@ int git_commit_create(
 		int parent_count,
 		const git_commit *parents[])
 {
-	size_t final_size = 0;
-	int message_length, author_length, committer_length;
-
-	char *author_str, *committer_str;
-
+	git_buf commit = GIT_BUF_INIT;
 	int error, i;
-	git_odb_stream *stream;
-
-	message_length = strlen(message);
-	author_length = git_signature__write(&author_str, "author ", author);
-	committer_length = git_signature__write(&committer_str, "committer ", committer);
-
-	if (author_length < 0 || committer_length < 0)
-		return git__throw(GIT_EINVALIDARGS, "Cannot create commit. Failed to parse signature");
-
-	final_size += GIT_OID_LINE_LENGTH("tree");
-	final_size += GIT_OID_LINE_LENGTH("parent") * parent_count;
-	final_size += author_length;
-	final_size += committer_length;
-	final_size += 1 + message_length;
-
-	if ((error = git_odb_open_wstream(&stream, repo->db, final_size, GIT_OBJ_COMMIT)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create commit");
 
 	if (git_object_owner((const git_object *)tree) != repo)
 		return git__throw(GIT_EINVALIDARGS, "The given tree does not belong to this repository");
 
-	git__write_oid(stream, "tree", git_object_id((const git_object *)tree));
+	git_oid__writebuf(&commit, "tree ", git_object_id((const git_object *)tree));
 
 	for (i = 0; i < parent_count; ++i) {
-		if (git_object_owner((const git_object *)parents[i]) != repo)
-			return git__throw(GIT_EINVALIDARGS, "The given parent does not belong to this repository");
+		if (git_object_owner((const git_object *)parents[i]) != repo) {
+			error = git__throw(GIT_EINVALIDARGS, "The given parent does not belong to this repository");
+			goto cleanup;
+		}
 
-		git__write_oid(stream, "parent", git_object_id((const git_object *)parents[i]));
+		git_oid__writebuf(&commit, "parent ", git_object_id((const git_object *)parents[i]));
 	}
 
-	stream->write(stream, author_str, author_length);
-	free(author_str);
+	git_signature__writebuf(&commit, "author ", author);
+	git_signature__writebuf(&commit, "committer ", committer);
 
-	stream->write(stream, committer_str, committer_length);
-	free(committer_str);
+	git_buf_putc(&commit, '\n');
+	git_buf_puts(&commit, message);
 
-	stream->write(stream, "\n", 1);
-	stream->write(stream, message, message_length);
+	if (git_buf_oom(&commit)) {
+		error = git__throw(GIT_ENOMEM, "Not enough memory to build the commit data");
+		goto cleanup;
+	}
 
-	error = stream->finalize_write(oid, stream);
-	stream->free(stream);
+	error = git_odb_write(oid, git_repository_database(repo), commit.ptr, commit.size, GIT_OBJ_COMMIT);
+	git_buf_free(&commit);
 
 	if (error == GIT_SUCCESS && update_ref != NULL) {
 		git_reference *head;
@@ -192,6 +175,10 @@ int git_commit_create(
 		return git__rethrow(error, "Failed to create commit");
 
 	return GIT_SUCCESS;
+
+cleanup:
+	git_buf_free(&commit);
+	return error;
 }
 
 int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
