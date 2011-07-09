@@ -184,9 +184,30 @@ BEGIN_TEST(singlestatus0, "test retrieving status for single file")
 	git_futils_rmdir_r(TEMP_STATUS_FOLDER, 1);
 END_TEST
 
+BEGIN_TEST(singlestatus1, "test retrieving status for nonexistent file")
+	char path_statusfiles[GIT_PATH_MAX];
+	char temp_path[GIT_PATH_MAX];
+	git_repository *repo;
+	unsigned int status_flags;
+	int error;
+
+	must_pass(copy_status_repo(path_statusfiles, temp_path));
+
+	must_pass(git_repository_open(&repo, temp_path));
+
+	// "nonexistent" does not exist in HEAD, Index or the worktree
+	error = git_status_file(&status_flags, repo, "nonexistent");
+	must_be_true(error == GIT_ENOTFOUND);
+
+	git_repository_free(repo);
+
+	git_futils_rmdir_r(TEMP_STATUS_FOLDER, 1);
+END_TEST
+
 BEGIN_SUITE(status)
 	ADD_TEST(file0);
 	ADD_TEST(statuscb0);
 	ADD_TEST(singlestatus0);
+	ADD_TEST(singlestatus1);
 END_SUITE
 
