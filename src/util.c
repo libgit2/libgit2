@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include "posix.h"
 
-#ifdef _MSV_VER
+#ifdef _MSC_VER
 # include <Shlwapi.h>
 #endif
 

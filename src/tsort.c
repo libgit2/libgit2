@@ -18,7 +18,7 @@
 
 #if defined(__GNUC__)
 #	define CLZ(x) __builtin_clz(x)
-#elif defined(_MSV_VER)
+#elif defined(_MSC_VER)
 #	define CLZ(x) _CountLeadingZeros(x)
 #else
 int CLZ(int32_t x)

@@ -105,7 +105,7 @@ static int reflog_write(git_repository *repo, const char *ref_name,
 
 static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 {
-	int error;
+	int error = GIT_SUCCESS;
 	const char *ptr;
 	git_reflog_entry *entry;
 
