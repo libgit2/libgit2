@@ -25,20 +25,13 @@
 
 #include "git2/net.h"
 
-enum git_pkt_type {
-	GIT_PKT_CMD,
-	GIT_PKT_FLUSH,
-	GIT_PKT_REF,
-	GIT_PKT_HAVE,
-};
-
 /* This would be a flush pkt */
 struct git_pkt {
-	enum git_pkt_type type;
+	git_pkt_type type;
 };
 
 struct git_pkt_cmd {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	char *cmd;
 	char *path;
 	char *host;
@@ -46,7 +39,7 @@ struct git_pkt_cmd {
 
 /* This is a pkt-line with some info in it */
 struct git_pkt_ref {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	git_remote_head head;
 	char *capabilities;
 };
