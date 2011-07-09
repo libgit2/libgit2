@@ -59,8 +59,8 @@ static int reflog_write(git_repository *repo, const char *ref_name,
 {
 	int error;
 	char log_path[GIT_PATH_MAX];
-	char *sig = NULL;
-	git_filebuf log;
+	git_buf log = GIT_BUF_INIT;
+	git_filebuf fbuf;
 
 	assert(repo && ref_name && oid_old && oid_new && committer);
 
@@ -73,38 +73,33 @@ static int reflog_write(git_repository *repo, const char *ref_name,
 	} else if (git_futils_isfile(log_path))
 		return git__throw(GIT_ERROR, "Failed to write reflog. `%s` is directory", log_path);
 
-	if ((error = git_filebuf_open(&log, log_path, GIT_FILEBUF_APPEND)) < GIT_SUCCESS)
-		return git__throw(GIT_ERROR, "Failed to write reflog. Cannot open reflog `%s`", log_path);
+	git_buf_puts(&log, oid_old);
+	git_buf_puts(&log, oid_new);
 
-	if ((error = git_signature__write(&sig, NULL, committer)) < GIT_SUCCESS)
-		goto cleanup;
-
-	sig[strlen(sig)-1] = '\0'; /* drop LF */
-
-	if ((error = git_filebuf_printf(&log, "%s %s %s", oid_old, oid_new, sig)) < GIT_SUCCESS)
-		goto cleanup;
+	git_signature__writebuf(&log, NULL, committer);
+	log.size--; /* drop LF */
 
 	if (msg) {
 		if (strchr(msg, '\n')) {
-			error = git__throw(GIT_ERROR, "msg must not contain newline");
-			goto cleanup;
+			git_buf_free(&log);
+			return git__throw(GIT_ERROR, "Reflog message cannot contain newline");
 		}
 
-		if ((error = git_filebuf_printf(&log, "\t%s", msg)) < GIT_SUCCESS)
-			goto cleanup;
+		git_buf_putc(&log, '\t');
+		git_buf_puts(&log, msg);
 	}
 
-	error = git_filebuf_printf(&log, "\n");
+	git_buf_putc(&log, '\n');
 
-cleanup:
-	if (error < GIT_SUCCESS)
-		git_filebuf_cleanup(&log);
-	else
-		error = git_filebuf_commit(&log);
+	if ((error = git_filebuf_open(&fbuf, log_path, GIT_FILEBUF_APPEND)) < GIT_SUCCESS) {
+		git_buf_free(&log);
+		return git__throw(GIT_ERROR, "Failed to write reflog. Cannot open reflog `%s`", log_path);
+	}
 
-	if (sig)
-		free(sig);
+	git_filebuf_write(&fbuf, log.ptr, log.size);
+	error = git_filebuf_commit(&fbuf);
 
+	git_buf_free(&log);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write reflog");
 }
 

@@ -191,14 +191,14 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 
 	git_vector_init(&commit->parent_oids, 4, NULL);
 
-	if ((error = git__parse_oid(&commit->tree_oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
+	if ((error = git_oid__parse(&commit->tree_oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to parse buffer");
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
-	while (git__parse_oid(&parent_oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
+	while (git_oid__parse(&parent_oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
 		git_oid *new_oid;
 
 		new_oid = git__malloc(sizeof(git_oid));

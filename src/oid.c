@@ -136,7 +136,7 @@ char *git_oid_to_string(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
-int git__parse_oid(git_oid *oid, const char **buffer_out,
+int git_oid__parse(git_oid *oid, const char **buffer_out,
 		const char *buffer_end, const char *header)
 {
 	const size_t sha_len = GIT_OID_HEXSZ;
@@ -158,20 +158,6 @@ int git__parse_oid(git_oid *oid, const char **buffer_out,
 
 	*buffer_out = buffer + (header_len + sha_len + 1);
 
-	return GIT_SUCCESS;
-}
-
-int git__write_oid(git_odb_stream *stream, const char *header, const git_oid *oid)
-{
-	char hex_oid[42];
-
-	git_oid_fmt(hex_oid + 1, oid);
-
-	hex_oid[0] = ' ';
-	hex_oid[41] = '\n';
-
-	stream->write(stream, header, strlen(header));
-	stream->write(stream, hex_oid, 42);
 	return GIT_SUCCESS;
 }
 

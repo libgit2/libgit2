@@ -89,7 +89,7 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	char *search;
 	int error;
 
-	if ((error = git__parse_oid(&tag->target, &buffer, buffer_end, "object ")) < 0)
+	if ((error = git_oid__parse(&tag->target, &buffer, buffer_end, "object ")) < 0)
 		return git__rethrow(error, "Failed to parse tag. Object field invalid");
 
 	if (buffer + 5 >= buffer_end)

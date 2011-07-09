@@ -117,14 +117,14 @@ BEGIN_TEST(parse0, "parse the OID line in a commit")
 	const char *ptr = string;\
 	const char *ptr_original = ptr;\
 	size_t len = strlen(ptr);\
-	must_pass(git__parse_oid(&oid, &ptr, ptr + len, header));\
+	must_pass(git_oid__parse(&oid, &ptr, ptr + len, header));\
 	must_be_true(ptr == ptr_original + len);\
 }
 
 #define TEST_OID_FAIL(string, header) { \
 	const char *ptr = string;\
 	size_t len = strlen(ptr);\
-	must_fail(git__parse_oid(&oid, &ptr, ptr + len, header));\
+	must_fail(git_oid__parse(&oid, &ptr, ptr + len, header));\
 }
 
 	TEST_OID_PASS("parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "parent ");
