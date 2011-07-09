@@ -180,16 +180,19 @@ typedef struct git_remote git_remote;
 /** A transport to use */
 typedef struct git_transport git_transport;
 
-/** Whether to push or pull */
-typedef enum git_net_direction git_net_direction;
-
 typedef int (*git_transport_cb)(git_transport **transport);
 
 typedef struct git_remote_head git_remote_head;
 typedef struct git_headarray git_headarray;
 
 /* Several types of packets */
-typedef enum git_pkt_type git_pkt_type;
+typedef enum {
+	GIT_PKT_CMD,
+	GIT_PKT_FLUSH,
+	GIT_PKT_REF,
+	GIT_PKT_HAVE,
+} git_pkt_type;
+
 typedef struct git_pkt git_pkt;
 typedef struct git_pkt_cmd git_pkt_cmd;
 typedef struct git_pkt_ref git_pkt_ref;
