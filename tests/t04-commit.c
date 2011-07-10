@@ -157,7 +157,7 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 	const char *ptr = _string; \
 	size_t len = strlen(_string);\
 	git_signature person = {NULL, NULL, {0, 0}}; \
-	must_pass(git_signature__parse(&person, &ptr, ptr + len, _header));\
+	must_pass(git_signature__parse(&person, &ptr, ptr + len, _header, '\n'));\
 	must_be_true(strcmp(_name, person.name) == 0);\
 	must_be_true(strcmp(_email, person.email) == 0);\
 	must_be_true(_time == person.when.time);\
@@ -169,7 +169,7 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 	const char *ptr = _string; \
 	size_t len = strlen(_string);\
 	git_signature person = {NULL, NULL, {0, 0}}; \
-	must_fail(git_signature__parse(&person, &ptr, ptr + len, _header));\
+	must_fail(git_signature__parse(&person, &ptr, ptr + len, _header, '\n'));\
 	free(person.name); free(person.email);\
 }
 

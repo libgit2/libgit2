@@ -209,12 +209,12 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 	}
 
 	commit->author = git__malloc(sizeof(git_signature));
-	if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ")) < GIT_SUCCESS)
+	if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n')) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to parse buffer");
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
-	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ")) < GIT_SUCCESS)
+	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n')) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to parse buffer");
 
 	/* parse commit message */
