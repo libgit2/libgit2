@@ -185,12 +185,6 @@ typedef int (*git_transport_cb)(git_transport **transport);
 typedef struct git_remote_head git_remote_head;
 typedef struct git_headarray git_headarray;
 
-/* Several types of packets */
-typedef enum git_pkt_type git_pkt_type;
-typedef struct git_pkt git_pkt;
-typedef struct git_pkt_cmd git_pkt_cmd;
-typedef struct git_pkt_ref git_pkt_ref;
-
 /** @} */
 GIT_END_DECL
 
