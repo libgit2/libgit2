@@ -997,17 +997,40 @@ BEGIN_TEST(list1, "try to list only the symbolic references")
 END_TEST
 
 static const char *new_ref = "refs/heads/test-reflog";
+#define commit_msg "commit: bla bla"
 
-BEGIN_TEST(reflog0, "write a reflog for a given reference")
-	git_repository *repo;
-	git_reference *ref;
+static int assert_signature(git_signature *expected, git_signature *actual)
+{
+	if (actual == NULL)
+		return GIT_ERROR;
+
+	if (strcmp(expected->name, actual->name) != 0)
+		return GIT_ERROR;
+
+	if (strcmp(expected->email, actual->email) != 0)
+		return GIT_ERROR;
+
+	if (expected->when.offset != actual->when.offset)
+		return GIT_ERROR;
+
+	if (expected->when.time != actual->when.time)
+		return GIT_ERROR;
+
+	return GIT_SUCCESS;
+}
+
+BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be read back")
+	git_repository *repo, *repo2;
+	git_reference *ref, *lookedup_ref;
 	git_oid oid;
 	git_signature *committer;
+	git_reflog *reflog;
+	git_reflog_entry *entry;
 
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	/* Create a new branch pointing at the HEAD */
 	git_oid_fromstr(&oid, current_master_tip);
-
-	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-
 	must_pass(git_reference_create_oid(&ref, repo, new_ref, &oid, 0));
 	must_pass(git_reference_lookup(&ref, repo, new_ref));
 
@@ -1015,42 +1038,35 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference")
 
 	must_pass(git_reflog_write(ref, NULL, committer, NULL));
 	must_fail(git_reflog_write(ref, NULL, committer, "no\nnewline"));
-	must_pass(git_reflog_write(ref, &oid, committer, "commit: bla bla"));
+	must_pass(git_reflog_write(ref, &oid, committer, commit_msg));
 
 	git_repository_free(repo);
-END_TEST
 
-BEGIN_TEST(reflog1, "read a reflog for a given reference")
-	unsigned int i;
-	git_repository *repo;
-	git_reference *ref;
-	git_reflog *reflog;
-	git_reflog_entry *GIT_UNUSED(entry);
+	/* Reopen a new instance of the repository */
+	must_pass(git_repository_open(&repo2, TEMP_REPO_FOLDER));
 
-	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	/* Lookup the preivously created branch */
+	must_pass(git_reference_lookup(&lookedup_ref, repo2, new_ref));
 
-	must_pass(git_reference_lookup(&ref, repo, new_ref));
+	/* Read and parse the reflog for this branch */
+	must_pass(git_reflog_read(&reflog, lookedup_ref));
+	must_be_true(reflog->entries.length == 2);
 
-	must_pass(git_reflog_read(&reflog, ref));
+	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 0);
+	must_pass(assert_signature(committer, entry->committer));
+	must_be_true(strcmp("0000000000000000000000000000000000000000", entry->oid_old) == 0);
+	must_be_true(strcmp(current_master_tip, entry->oid_cur) == 0);
+	must_be_true(entry->msg == NULL);
 
-	for (i=0; i<reflog->entries.length; ++i) {
-		entry = git_vector_get(&reflog->entries, i);
-		/*
-		fprintf(stderr, "\nold:  %s\n", entry->oid_old);
-		fprintf(stderr, "cur:  %s\n", entry->oid_cur);
-		fprintf(stderr, "name: %s\n", entry->committer->name);
-		fprintf(stderr, "mail: %s\n", entry->committer->email);
-		if (entry->msg)
-			fprintf(stderr, "msg:  %s\n", entry->msg);
-		*/
-	}
+	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 1);
+	must_pass(assert_signature(committer, entry->committer));
+	must_be_true(strcmp(current_master_tip, entry->oid_old) == 0);
+	must_be_true(strcmp(current_master_tip, entry->oid_cur) == 0);
+	must_be_true(strcmp(commit_msg, entry->msg) == 0);
 
 	git_reflog_free(reflog);
-
-	must_pass(git_reference_delete(ref));
-	git_repository_free(repo);
+	close_temp_repo(repo2);
 END_TEST
-
 
 BEGIN_SUITE(refs)
 	ADD_TEST(readtag0);
@@ -1097,5 +1113,4 @@ BEGIN_SUITE(refs)
 	ADD_TEST(list1);
 
 	ADD_TEST(reflog0);
-	ADD_TEST(reflog1);
 END_SUITE

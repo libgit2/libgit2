@@ -144,7 +144,7 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	if (tag->tagger == NULL)
 		return GIT_ENOMEM;
 
-	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ")) != 0) {
+	if ((error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n')) != 0) {
 		free(tag->tag_name);
 		git_signature_free(tag->tagger);
 		return git__rethrow(error, "Failed to parse tag");
