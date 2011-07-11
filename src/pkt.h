@@ -37,9 +37,9 @@ enum git_pkt_type {
 };
 
 /* This would be a flush pkt */
-struct git_pkt {
+typedef struct {
 	enum git_pkt_type type;
-};
+} git_pkt;
 
 struct git_pkt_cmd {
 	enum git_pkt_type type;
@@ -49,11 +49,11 @@ struct git_pkt_cmd {
 };
 
 /* This is a pkt-line with some info in it */
-struct git_pkt_ref {
+typedef struct {
 	enum git_pkt_type type;
 	git_remote_head head;
 	char *capabilities;
-};
+} git_pkt_ref;
 
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 int git_pkt_send_flush(int s);
