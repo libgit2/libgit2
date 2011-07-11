@@ -234,18 +234,72 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 
 END_TEST
 
-BEGIN_TEST(write4, "Delete an already existing tag")
+BEGIN_TEST(write4, "write a lightweight tag to the repository and read it again")
+	git_repository *repo;
+	git_oid target_id, object_id;
+	git_reference *ref_tag;
+	git_object *target;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_fromstr(&target_id, tagged_commit);
+	must_pass(git_object_lookup(&target, repo, &target_id, GIT_OBJ_COMMIT));
+
+	must_pass(git_tag_create_lightweight(
+		&object_id,
+		repo,
+		"light-tag",
+		target,
+		0));
+
+	git_object_close(target);
+
+	must_be_true(git_oid_cmp(&object_id, &target_id) == 0);
+
+	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/light-tag"));
+	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &target_id) == 0);
+
+	must_pass(git_tag_delete(repo, "light-tag"));
+
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(write5, "Attempt to write a lightweight tag bearing the same name than an already existing tag")
+	git_repository *repo;
+	git_oid target_id, object_id, existing_object_id;
+	git_object *target;
+
+	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+
+	git_oid_fromstr(&target_id, tagged_commit);
+	must_pass(git_object_lookup(&target, repo, &target_id, GIT_OBJ_COMMIT));
+
+	must_fail(git_tag_create_lightweight(
+		&object_id,
+		repo,
+		"e90810b",
+		target,
+		0));
+
+	git_oid_fromstr(&existing_object_id, tag2_id);
+	must_be_true(git_oid_cmp(&object_id, &existing_object_id) == 0);
+
+	git_object_close(target);
+
+	git_repository_free(repo);
+END_TEST
+
+BEGIN_TEST(delete0, "Delete an already existing tag")
 	git_repository *repo;
 	git_reference *ref_tag;
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
-	must_pass(git_tag_delete(repo,"e90810b"));
+	must_pass(git_tag_delete(repo, "e90810b"));
 
 	must_fail(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 
 	close_temp_repo(repo);
-
 END_TEST
 
 BEGIN_SUITE(tag)
@@ -257,4 +311,8 @@ BEGIN_SUITE(tag)
 	ADD_TEST(write2);
 	ADD_TEST(write3);
 	ADD_TEST(write4);
+	ADD_TEST(write5);
+
+	ADD_TEST(delete0);
+
 END_SUITE

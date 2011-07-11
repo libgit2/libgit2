@@ -180,20 +180,55 @@ static int retreive_tag_reference(git_reference **tag_reference_out, char *ref_n
 	return GIT_SUCCESS;
 }
 
-int git_tag_create(
+static int write_tag_annotation(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_object *target,
+		const git_signature *tagger,
+		const char *message)
+{
+	int error = GIT_SUCCESS;
+	git_buf tag = GIT_BUF_INIT;
+
+	git_oid__writebuf(&tag, "object ", git_object_id(target));
+	git_buf_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
+	git_buf_printf(&tag, "tag %s\n", tag_name);
+	git_signature__writebuf(&tag, "tagger ", tagger);
+	git_buf_putc(&tag, '\n');
+	git_buf_puts(&tag, message);
+
+	if (git_buf_oom(&tag)) {
+		git_buf_free(&tag);
+		return git__throw(GIT_ENOMEM, "Not enough memory to build the tag data");
+	}
+
+	error = git_odb_write(oid, git_repository_database(repo), tag.ptr, tag.size, GIT_OBJ_TAG);
+	git_buf_free(&tag);
+
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create tag annotation");
+
+	return error;
+}
+
+static int git_tag_create__internal(
 		git_oid *oid,
 		git_repository *repo,
 		const char *tag_name,
 		const git_object *target,
 		const git_signature *tagger,
 		const char *message,
-		int allow_ref_overwrite)
+		int allow_ref_overwrite,
+		int create_tag_annotation)
 {
 	git_reference *new_ref = NULL;
 	char ref_name[GIT_REFNAME_MAX];
-	git_buf tag = GIT_BUF_INIT;
 
 	int error, should_update_ref = 0;
+
+	assert(repo && tag_name && target);
+	assert(!create_tag_annotation || (tagger && message));
 
 	if (git_object_owner(target) != repo)
 		return git__throw(GIT_EINVALIDARGS, "The given target does not belong to this repository");
@@ -220,23 +255,11 @@ int git_tag_create(
 		}
 	}
 
-	git_oid__writebuf(&tag, "object ", git_object_id(target));
-	git_buf_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
-	git_buf_printf(&tag, "tag %s\n", tag_name);
-	git_signature__writebuf(&tag, "tagger ", tagger);
-	git_buf_putc(&tag, '\n');
-	git_buf_puts(&tag, message);
-
-	if (git_buf_oom(&tag)) {
-		git_buf_free(&tag);
-		return git__throw(GIT_ENOMEM, "Not enough memory to build the tag data");
-	}
-
-	error = git_odb_write(oid, git_repository_database(repo), tag.ptr, tag.size, GIT_OBJ_TAG);
-	git_buf_free(&tag);
-
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create tag");
+	if (create_tag_annotation) {
+		if ((error = write_tag_annotation(oid, repo, tag_name, target, tagger, message)) < GIT_SUCCESS)
+			return error;
+	} else
+		git_oid_cpy(oid, git_object_id(target));
 
 	if (!should_update_ref)
 		error = git_reference_create_oid(&new_ref, repo, ref_name, oid, 0);
@@ -244,6 +267,28 @@ int git_tag_create(
 		error = git_reference_set_oid(new_ref, oid);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
+}
+
+int git_tag_create(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_object *target,
+		const git_signature *tagger,
+		const char *message,
+		int allow_ref_overwrite)
+{
+	return git_tag_create__internal(oid, repo, tag_name, target, tagger, message, allow_ref_overwrite, 1);
+}
+
+int git_tag_create_lightweight(
+		git_oid *oid,
+		git_repository *repo,
+		const char *tag_name,
+		const git_object *target,
+		int allow_ref_overwrite)
+{
+	return git_tag_create__internal(oid, repo, tag_name, target, NULL, NULL, allow_ref_overwrite, 0);
 }
 
 int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *buffer, int allow_ref_overwrite)
