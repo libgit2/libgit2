@@ -210,4 +210,3 @@ BEGIN_SUITE(status)
 	ADD_TEST(singlestatus0);
 	ADD_TEST(singlestatus1);
 END_SUITE
-

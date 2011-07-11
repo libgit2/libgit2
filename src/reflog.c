@@ -74,9 +74,11 @@ static int reflog_write(git_repository *repo, const char *ref_name,
 		return git__throw(GIT_ERROR, "Failed to write reflog. `%s` is directory", log_path);
 
 	git_buf_puts(&log, oid_old);
+	git_buf_putc(&log, ' ');
+
 	git_buf_puts(&log, oid_new);
 
-	git_signature__writebuf(&log, NULL, committer);
+	git_signature__writebuf(&log, " ", committer);
 	log.size--; /* drop LF */
 
 	if (msg) {
@@ -122,10 +124,10 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 			return GIT_ENOMEM;
 
 		entry->oid_old = git__strndup(buf, GIT_OID_HEXSZ);
-		seek_forward(GIT_OID_HEXSZ+1);
+		seek_forward(GIT_OID_HEXSZ + 1);
 
 		entry->oid_cur = git__strndup(buf, GIT_OID_HEXSZ);
-		seek_forward(GIT_OID_HEXSZ+1);
+		seek_forward(GIT_OID_HEXSZ + 1);
 
 		ptr = buf;
 
@@ -137,7 +139,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		if (entry->committer == NULL)
 			return GIT_ENOMEM;
 
-		if ((error = git_signature__parse(entry->committer, &ptr, buf + buf_size, NULL)) < GIT_SUCCESS)
+		if ((error = git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf)) < GIT_SUCCESS)
 			goto cleanup;
 
 		if (*buf == '\t') {

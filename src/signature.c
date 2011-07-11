@@ -253,7 +253,7 @@ int parse_time(git_time_t *time_out, const char *buffer)
 }
 
 int git_signature__parse(git_signature *sig, const char **buffer_out,
-		const char *buffer_end, const char *header)
+		const char *buffer_end, const char *header, char ender)
 {
 	const char *buffer = *buffer_out;
 	const char *line_end, *name_end, *email_end, *tz_start, *time_start;
@@ -261,7 +261,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	memset(sig, 0x0, sizeof(git_signature));
 
-	if ((line_end = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
+	if ((line_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. No newline given");
 
 	if (header) {
