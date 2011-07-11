@@ -23,11 +23,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#include "git2/pkt.h"
+#include "common.h"
+
 #include "git2/types.h"
 #include "git2/errors.h"
 
-#include "common.h"
+#include "pkt.h"
 #include "util.h"
 #include "netops.h"
 

@@ -24,13 +24,13 @@
  */
 
 #include "git2/net.h"
-#include "git2/pkt.h"
 #include "git2/common.h"
 #include "git2/types.h"
 #include "git2/errors.h"
 
 #include "vector.h"
 #include "transport.h"
+#include "pkt.h"
 #include "common.h"
 #include "netops.h"
 

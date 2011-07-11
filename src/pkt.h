@@ -23,6 +23,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef INCLUDE_pkt_h__
+#define INCLUDE_pkt_h__
+
+#include "common.h"
 #include "git2/net.h"
 
 enum git_pkt_type {
@@ -54,3 +58,5 @@ struct git_pkt_ref {
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 int git_pkt_send_flush(int s);
 void git_pkt_free(git_pkt *pkt);
+
+#endif
