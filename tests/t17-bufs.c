@@ -39,6 +39,7 @@ BEGIN_TEST(buf0, "check that resizing works properly")
 
 	git_buf_puts(&buf, test_string);
 	must_be_true(strlen(git_buf_cstr(&buf)) == strlen(test_string) * 2);
+	git_buf_free(&buf);
 END_TEST
 
 BEGIN_TEST(buf1, "check that printf works properly")
@@ -51,6 +52,7 @@ BEGIN_TEST(buf1, "check that printf works properly")
 	git_buf_printf(&buf, "%s %d", "woop", 42);
 	must_be_true(git_buf_oom(&buf) == 0);
 	must_be_true(strcmp(git_buf_cstr(&buf), "shoop da 23 woop 42") == 0);
+	git_buf_free(&buf);
 END_TEST
 
 BEGIN_SUITE(buffers)
