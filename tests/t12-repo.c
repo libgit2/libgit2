@@ -196,8 +196,7 @@ BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping
 	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
 END_TEST
 
-#define EMPTY_BARE_REPOSITORY_NAME		"empty_bare.git"
-#define EMPTY_BARE_REPOSITORY_FOLDER	TEST_RESOURCES "/" EMPTY_BARE_REPOSITORY_NAME "/"
+#define EMPTY_BARE_REPOSITORY_FOLDER TEST_RESOURCES "/empty_bare.git/"
 
 BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git")
 	git_repository *repo;
@@ -213,18 +212,15 @@ BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git"
 	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
 END_TEST
 
-#define SOURCE_EMPTY_REPOSITORY_NAME	"empty_standard_repo/.gitted"
-#define EMPTY_REPOSITORY_NAME			"empty_standard_repo/.git"
-#define EMPTY_REPOSITORY_FOLDER			TEST_RESOURCES "/" SOURCE_EMPTY_REPOSITORY_NAME "/"
-#define DEST_REPOSITORY_FOLDER			TEMP_REPO_FOLDER DOT_GIT "/"
+#define EMPTY_REPOSITORY_FOLDER TEST_RESOURCES "/empty_standard_repo/.gitted/"
 
 BEGIN_TEST(open1, "Open a standard repository that has just been initialized by git")
 	git_repository *repo;
 
-	must_pass(copydir_recurs(EMPTY_REPOSITORY_FOLDER, DEST_REPOSITORY_FOLDER));
-	must_pass(remove_placeholders(DEST_REPOSITORY_FOLDER, "dummy-marker.txt"));
+	must_pass(copydir_recurs(EMPTY_REPOSITORY_FOLDER, TEST_STD_REPO_FOLDER));
+	must_pass(remove_placeholders(TEST_STD_REPO_FOLDER, "dummy-marker.txt"));
 
-	must_pass(git_repository_open(&repo, DEST_REPOSITORY_FOLDER));
+	must_pass(git_repository_open(&repo, TEST_STD_REPO_FOLDER));
 	must_be_true(git_repository_path(repo, GIT_REPO_PATH) != NULL);
 	must_be_true(git_repository_path(repo, GIT_REPO_PATH_WORKDIR) != NULL);
 

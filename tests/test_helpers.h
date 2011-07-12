@@ -41,6 +41,7 @@
 #define TEMP_FOLDER				""
 #define TEMP_REPO_FOLDER		TEMP_FOLDER TEST_REPOSITORY_NAME "/"
 #define TEMP_REPO_FOLDER_NS		TEMP_FOLDER TEST_REPOSITORY_NAME
+#define TEST_STD_REPO_FOLDER	TEMP_REPO_FOLDER ".git/"
 
 typedef struct object_data {
     unsigned char *bytes;  /* (compressed) bytes stored in object store */
