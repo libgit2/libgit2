@@ -657,9 +657,13 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 		buffer += len;
 
 		for (i = 0; i < 3; i++) {
-			if (git__strtol32((long int *) &lost->mode[i], buffer, &endptr, 8) < GIT_SUCCESS ||
-				!endptr || endptr == buffer || *endptr)
+			long tmp;
+
+			if (git__strtol32(&tmp, buffer, &endptr, 8) < GIT_SUCCESS ||
+				!endptr || endptr == buffer || *endptr || tmp > UINT_MAX)
 				return GIT_ERROR;
+
+			lost->mode[i] = tmp;
 
 			len = (endptr + 1) - buffer;
 			if (size <= len)
