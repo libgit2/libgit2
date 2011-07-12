@@ -103,42 +103,39 @@ static int read_tree_internal(git_index_tree **, const char **, const char *, gi
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
 static int is_index_extended(git_index *index);
-static void sort_index(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
-int index_srch(const void *key, const void *array_member)
+static int index_srch(const void *key, const void *array_member)
 {
-	const char *filename = (const char *)key;
-	const git_index_entry *entry = (const git_index_entry *)(array_member);
+	const git_index_entry *entry = array_member;
 
-	return strcmp(filename, entry->path);
+	return strcmp(key, entry->path);
 }
 
-int index_cmp(const void *a, const void *b)
+static int index_cmp(const void *a, const void *b)
 {
-	const git_index_entry *entry_a = (const git_index_entry *)(a);
-	const git_index_entry *entry_b = (const git_index_entry *)(b);
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
 
 	return strcmp(entry_a->path, entry_b->path);
 }
 
-int unmerged_srch(const void *key, const void *array_member)
+static int unmerged_srch(const void *key, const void *array_member)
 {
-	const char *path = (const char *) key;
-	const git_index_entry_unmerged *entry = (const git_index_entry_unmerged *)(array_member);
+	const git_index_entry_unmerged *entry = array_member;
 
-	return strcmp(path, entry->path);
+	return strcmp(key, entry->path);
 }
 
-int unmerged_cmp(const void *a, const void *b)
+static int unmerged_cmp(const void *a, const void *b)
 {
-	const git_index_entry_unmerged *info_a = (const git_index_entry_unmerged *)(a);
-	const git_index_entry_unmerged *info_b = (const git_index_entry_unmerged *)(b);
+	const git_index_entry_unmerged *info_a = a;
+	const git_index_entry_unmerged *info_b = b;
 
 	return strcmp(info_a->path, info_b->path);
 }
 
-unsigned int index_create_mode(unsigned int mode)
+static unsigned int index_create_mode(unsigned int mode)
 {
 	if (S_ISLNK(mode))
 		return S_IFLNK;
@@ -179,7 +176,6 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 
 int git_index_open(git_index **index_out, const char *index_path)
 {
-	assert(index_out && index_path);
 	return index_initialize(index_out, NULL, index_path);
 }
 
@@ -188,8 +184,6 @@ int git_index_open(git_index **index_out, const char *index_path)
  */
 int git_repository_index(git_index **index_out, git_repository *repo)
 {
-	assert(index_out && repo);
-
 	if (repo->is_bare)
 		return git__throw(GIT_EBAREINDEX, "Failed to open index. Repository is bare");
 
@@ -202,8 +196,6 @@ void git_index_free(git_index *index)
 		return;
 
 	git_index_clear(index);
-	git_vector_free(&index->entries);
-	git_vector_free(&index->unmerged);
 
 	free(index->index_file_path);
 	free(index);
@@ -298,7 +290,7 @@ int git_index_write(git_index *index)
 	struct stat indexst;
 	int error;
 
-	sort_index(index);
+	git_vector_sort(&index->entries);
 
 	if ((error = git_filebuf_open(&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to write index");
@@ -333,14 +325,8 @@ unsigned int git_index_entrycount_unmerged(git_index *index)
 
 git_index_entry *git_index_get(git_index *index, unsigned int n)
 {
-	assert(index);
-	sort_index(index);
-	return git_vector_get(&index->entries, n);
-}
-
-static void sort_index(git_index *index)
-{
 	git_vector_sort(&index->entries);
+	return git_vector_get(&index->entries, n);
 }
 
 static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
@@ -450,7 +436,7 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 		return git__rethrow(error, "Failed to initialize index entry");
 
 	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
-	entry->path = (char *)rel_path; /* do not duplicate; index_insert already does this */
+	entry->path = rel_path; /* do not duplicate; index_insert already does this */
 	return GIT_SUCCESS;
 }
 
@@ -489,14 +475,12 @@ int git_index_append2(git_index *index, const git_index_entry *source_entry)
 
 int git_index_remove(git_index *index, int position)
 {
-	assert(index);
-	sort_index(index);
+	git_vector_sort(&index->entries);
 	return git_vector_remove(&index->entries, (unsigned int)position);
 }
 
 int git_index_find(git_index *index, const char *path)
 {
-	sort_index(index);
 	return git_vector_bsearch2(&index->entries, index_srch, path);
 }
 
@@ -575,7 +559,7 @@ static int read_tree_internal(git_index_tree **out,
 		return GIT_SUCCESS;
 	}
 
-	tree->entries = (size_t)count;
+	tree->entries = count;
 
 	if (*buffer != ' ' || ++buffer >= buffer_end) {
 		error = GIT_EOBJCORRUPTED;
@@ -589,7 +573,7 @@ static int read_tree_internal(git_index_tree **out,
 		goto cleanup;
 	}
 
-	tree->children_count = (size_t)count;
+	tree->children_count = count;
 
 	if (*buffer != '\n' || ++buffer >= buffer_end) {
 		error = GIT_EOBJCORRUPTED;
@@ -673,11 +657,15 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 		buffer += len;
 
 		for (i = 0; i < 3; i++) {
-			if (git__strtol32((long int *) &lost->mode[i], buffer, &endptr, 8) < GIT_SUCCESS ||
-				!endptr || endptr == buffer || *endptr)
+			long tmp;
+
+			if (git__strtol32(&tmp, buffer, &endptr, 8) < GIT_SUCCESS ||
+				!endptr || endptr == buffer || *endptr || tmp > UINT_MAX)
 				return GIT_ERROR;
 
-			len = (endptr + 1) - (char *) buffer;
+			lost->mode[i] = tmp;
+
+			len = (endptr + 1) - buffer;
 			if (size <= len)
 				return git__throw(GIT_ERROR, "Failed to read unmerged entries");
 
@@ -704,14 +692,12 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 	size_t path_length, entry_size;
 	uint16_t flags_raw;
 	const char *path_ptr;
-	const struct entry_short *source;
+	const struct entry_short *source = buffer;
 
 	if (INDEX_FOOTER_SIZE + minimal_entry_size > buffer_size)
 		return 0;
 
 	memset(dest, 0x0, sizeof(git_index_entry));
-
-	source = (const struct entry_short *)(buffer);
 
 	dest->ctime.seconds = (git_time_t)ntohl(source->ctime.seconds);
 	dest->ctime.nanoseconds = ntohl(source->ctime.nanoseconds);
@@ -765,8 +751,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 
 static int read_header(struct index_header *dest, const void *buffer)
 {
-	const struct index_header *source;
-	source = (const struct index_header *)(buffer);
+	const struct index_header *source = buffer;
 
 	dest->signature = ntohl(source->signature);
 	if (dest->signature != INDEX_HEADER_SIG)
@@ -836,7 +821,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	/* Precalculate the SHA1 of the files's contents -- we'll match it to
 	 * the provided SHA1 in the footer */
-	git_hash_buf(&checksum_calculated, (const void *)buffer, buffer_size - INDEX_FOOTER_SIZE);
+	git_hash_buf(&checksum_calculated, buffer, buffer_size - INDEX_FOOTER_SIZE);
 
 	/* Parse header */
 	if (read_header(&header, buffer) < GIT_SUCCESS)
@@ -936,8 +921,8 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 
 	memset(ondisk, 0x0, disk_size);
 
-	ondisk->ctime.seconds = htonl((unsigned long)entry->ctime.seconds);
-	ondisk->mtime.seconds = htonl((unsigned long)entry->mtime.seconds);
+	ondisk->ctime.seconds = htonl(entry->ctime.seconds);
+	ondisk->mtime.seconds = htonl(entry->mtime.seconds);
 	ondisk->ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
 	ondisk->mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
 	ondisk->dev  = htonl(entry->dev);
@@ -945,7 +930,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	ondisk->mode = htonl(entry->mode);
 	ondisk->uid  = htonl(entry->uid);
 	ondisk->gid  = htonl(entry->gid);
-	ondisk->file_size = htonl((unsigned long)entry->file_size);
+	ondisk->file_size = htonl(entry->file_size);
 
 	git_oid_cpy(&ondisk->oid, &entry->oid);
 
