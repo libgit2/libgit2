@@ -267,6 +267,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 		git_oid_cpy(&e->index_oid, &index_entry->oid);
 		e->mtime = index_entry->mtime;
 	}
+	git_index_free(index);
 
 	git_reference_lookup(&head_ref, repo, GIT_HEAD_FILE);
 	git_reference_resolve(&resolved_head_ref, head_ref);
@@ -276,6 +277,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	// recurse through tree entries
 	git_commit_tree(&tree, head_commit);
 	recurse_tree_entries(tree, &entries, "");
+	git_commit_close(head_commit);
 
 	dirent_st.workdir_path_len = strlen(repo->path_workdir);
 	dirent_st.entry.vector = &entries;
@@ -330,6 +332,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 		git_oid_cpy(&e->index_oid, &index_entry->oid);
 		e->mtime = index_entry->mtime;
 	}
+	git_index_free(index);
 
 	// Find file in HEAD
 	git_reference_lookup(&head_ref, repo, GIT_HEAD_FILE);
@@ -339,6 +342,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 
 	git_commit_tree(&tree, head_commit);
 	recurse_tree_entry(tree, e, path);
+	git_commit_close(head_commit);
 
 	// Find file in Workdir
 	dirent_st.workdir_path_len = strlen(repo->path_workdir);
@@ -346,8 +350,10 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	strcpy(temp_path, repo->path_workdir);
 	git_futils_direach(temp_path, GIT_PATH_MAX, single_dirent_cb, &dirent_st);
 
-	if ((error = set_status_flags(e)) < GIT_SUCCESS)
+	if ((error = set_status_flags(e)) < GIT_SUCCESS) {
+		free(e);
 		return git__throw(error, "Nonexistent file");
+	}
 
 	*status_flags = e->status_flags;
 
