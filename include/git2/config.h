@@ -259,7 +259,7 @@ GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const c
  * @param cfg the configuration
  * @param name the variable to delete
  */
-GIT_EXTERN(int) git_config_del(git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_delete(git_config *cfg, const char *name);
 
 /**
  * Perform an operation on each config variable.

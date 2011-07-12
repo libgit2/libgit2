@@ -246,7 +246,7 @@ BEGIN_TEST(config12, "delete a value")
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_del(cfg, "core.dummy"));
+	must_pass(git_config_delete(cfg, "core.dummy"));
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
@@ -260,7 +260,7 @@ BEGIN_TEST(config13, "can't delete a non-existent value")
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_be_true(git_config_del(cfg, "core.imaginary") == GIT_ENOTFOUND);
+	must_be_true(git_config_delete(cfg, "core.imaginary") == GIT_ENOTFOUND);
 	git_config_free(cfg);
 END_TEST
 
@@ -281,7 +281,7 @@ BEGIN_TEST(config15, "add a variable in an existing section")
 	must_pass(git_config_set_int(cfg, "empty.tmp", 5));
 	must_pass(git_config_get_int(cfg, "empty.tmp", &i));
 	must_be_true(i == 5);
-	must_pass(git_config_del(cfg, "empty.tmp"));
+	must_pass(git_config_delete(cfg, "empty.tmp"));
 	git_config_free(cfg);
 END_TEST
 
@@ -295,7 +295,7 @@ BEGIN_TEST(config16, "add a variable in a new section")
 	must_pass(git_config_set_int(cfg, "section.tmp", 5));
 	must_pass(git_config_get_int(cfg, "section.tmp", &i));
 	must_be_true(i == 5);
-	must_pass(git_config_del(cfg, "section.tmp"));
+	must_pass(git_config_delete(cfg, "section.tmp"));
 	git_config_free(cfg);
 
 	/* As the section wasn't removed, owerwrite the file */
