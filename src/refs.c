@@ -1290,7 +1290,7 @@ int git_reference_set_target(git_reference *ref, const char *target)
 int git_reference_rename(git_reference *ref, const char *new_name, int force)
 {
 	int error;
-	char *old_name = git__strdup(ref->name);
+	char *old_name = NULL;
 
 	char aux_path[GIT_PATH_MAX];
 	char normalized[GIT_REFNAME_MAX];
@@ -1327,6 +1327,8 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	 * reference won't work, since we may have to remove it to create
 	 * the new reference, e.g. when renaming foo/bar -> foo.
 	 */
+
+	old_name = git__strdup(ref->name);
 
 	if (ref->type & GIT_REF_SYMBOLIC) {
 		if ((target_ref = git_reference_target(ref)) == NULL)
