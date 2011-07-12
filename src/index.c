@@ -103,7 +103,6 @@ static int read_tree_internal(git_index_tree **, const char **, const char *, gi
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
 static int is_index_extended(git_index *index);
-static void sort_index(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
 int index_srch(const void *key, const void *array_member)
@@ -296,7 +295,7 @@ int git_index_write(git_index *index)
 	struct stat indexst;
 	int error;
 
-	sort_index(index);
+	git_vector_sort(&index->entries);
 
 	if ((error = git_filebuf_open(&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to write index");
@@ -331,14 +330,8 @@ unsigned int git_index_entrycount_unmerged(git_index *index)
 
 git_index_entry *git_index_get(git_index *index, unsigned int n)
 {
-	assert(index);
-	sort_index(index);
-	return git_vector_get(&index->entries, n);
-}
-
-static void sort_index(git_index *index)
-{
 	git_vector_sort(&index->entries);
+	return git_vector_get(&index->entries, n);
 }
 
 static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
@@ -487,8 +480,7 @@ int git_index_append2(git_index *index, const git_index_entry *source_entry)
 
 int git_index_remove(git_index *index, int position)
 {
-	assert(index);
-	sort_index(index);
+	git_vector_sort(&index->entries);
 	return git_vector_remove(&index->entries, (unsigned int)position);
 }
 
