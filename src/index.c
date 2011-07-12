@@ -494,7 +494,6 @@ int git_index_remove(git_index *index, int position)
 
 int git_index_find(git_index *index, const char *path)
 {
-	sort_index(index);
 	return git_vector_bsearch2(&index->entries, index_srch, path);
 }
 
