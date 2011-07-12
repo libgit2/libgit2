@@ -178,7 +178,6 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 
 int git_index_open(git_index **index_out, const char *index_path)
 {
-	assert(index_out && index_path);
 	return index_initialize(index_out, NULL, index_path);
 }
 
@@ -187,8 +186,6 @@ int git_index_open(git_index **index_out, const char *index_path)
  */
 int git_repository_index(git_index **index_out, git_repository *repo)
 {
-	assert(index_out && repo);
-
 	if (repo->is_bare)
 		return git__throw(GIT_EBAREINDEX, "Failed to open index. Repository is bare");
 
