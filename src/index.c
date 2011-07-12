@@ -105,7 +105,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 static int is_index_extended(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
-int index_srch(const void *key, const void *array_member)
+static int index_srch(const void *key, const void *array_member)
 {
 	const char *filename = (const char *)key;
 	const git_index_entry *entry = (const git_index_entry *)(array_member);
@@ -113,7 +113,7 @@ int index_srch(const void *key, const void *array_member)
 	return strcmp(filename, entry->path);
 }
 
-int index_cmp(const void *a, const void *b)
+static int index_cmp(const void *a, const void *b)
 {
 	const git_index_entry *entry_a = (const git_index_entry *)(a);
 	const git_index_entry *entry_b = (const git_index_entry *)(b);
@@ -121,7 +121,7 @@ int index_cmp(const void *a, const void *b)
 	return strcmp(entry_a->path, entry_b->path);
 }
 
-int unmerged_srch(const void *key, const void *array_member)
+static int unmerged_srch(const void *key, const void *array_member)
 {
 	const char *path = (const char *) key;
 	const git_index_entry_unmerged *entry = (const git_index_entry_unmerged *)(array_member);
@@ -129,7 +129,7 @@ int unmerged_srch(const void *key, const void *array_member)
 	return strcmp(path, entry->path);
 }
 
-int unmerged_cmp(const void *a, const void *b)
+static int unmerged_cmp(const void *a, const void *b)
 {
 	const git_index_entry_unmerged *info_a = (const git_index_entry_unmerged *)(a);
 	const git_index_entry_unmerged *info_b = (const git_index_entry_unmerged *)(b);
@@ -137,7 +137,7 @@ int unmerged_cmp(const void *a, const void *b)
 	return strcmp(info_a->path, info_b->path);
 }
 
-unsigned int index_create_mode(unsigned int mode)
+static unsigned int index_create_mode(unsigned int mode)
 {
 	if (S_ISLNK(mode))
 		return S_IFLNK;
