@@ -87,7 +87,7 @@ GIT_EXTERN(const git_refspec *) git_remote_fetchspec(struct git_remote *remote);
  * @return a pointer to the push refspec or NULL if it doesn't exist
  */
 
-GIT_EXTERN(const git_refspec *) git_remote_fetchspec(struct git_remote *remote);
+GIT_EXTERN(const git_refspec *) git_remote_pushspec(struct git_remote *remote);
 
 /**
  * Open a connection to a remote
