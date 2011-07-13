@@ -37,29 +37,29 @@ static int valid_attributes(const int attributes) {
 	return attributes >= 0 && attributes <= MAX_FILEMODE;
 }
 
+struct tree_key_search {
+	const char *filename;
+	size_t filename_len;
+};
+
 int entry_search_cmp(const void *key, const void *array_member)
 {
-	const char *filename = (const char *)key;
+	struct tree_key_search *ksearch = (struct tree_key_search *)key;
 	const git_tree_entry *entry = (const git_tree_entry *)(array_member);
 
-	return strcmp(filename, entry->filename);
+	return git_futils_cmp_path(
+		ksearch->filename, ksearch->filename_len, entry->attr & 040000,
+        entry->filename, entry->filename_len, entry->attr & 040000);
 }
-
-#if 0
-static int valid_attributes(const int attributes) {
-	return attributes >= 0 && attributes <= MAX_FILEMODE;
-}
-#endif
 
 int entry_sort_cmp(const void *a, const void *b)
 {
 	const git_tree_entry *entry_a = (const git_tree_entry *)(a);
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
 
-	return git_futils_cmp_path(entry_a->filename, strlen(entry_a->filename),
-                                  entry_a->attr & 040000,
-                                  entry_b->filename, strlen(entry_b->filename),
-                                  entry_b->attr & 040000);
+	return git_futils_cmp_path(
+		entry_a->filename, entry_a->filename_len, entry_a->attr & 040000,
+		entry_b->filename, entry_b->filename_len, entry_b->attr & 040000);
 }
 
 void git_tree__free(git_tree *tree)
@@ -121,10 +121,14 @@ int git_tree_entry_2object(git_object **object_out, git_repository *repo, const 
 const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
 {
 	int idx;
+	struct tree_key_search ksearch;
 
 	assert(tree && filename);
 
-	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, filename);
+	ksearch.filename = filename;
+	ksearch.filename_len = strlen(filename);
+
+	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, &ksearch);
 	if (idx == GIT_ENOTFOUND)
 		return NULL;
 
@@ -351,13 +355,17 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 {
 	git_tree_entry *entry;
 	int pos;
+	struct tree_key_search ksearch;
 
 	assert(bld && id && filename);
 
 	if (!valid_attributes(attributes))
 		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid atrributes");
 
-	if ((pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, filename)) != GIT_ENOTFOUND) {
+	ksearch.filename = filename;
+	ksearch.filename_len = strlen(filename);
+
+	if ((pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch)) != GIT_ENOTFOUND) {
 		entry = git_vector_get(&bld->entries, pos);
 		if (entry->removed) {
 			entry->removed = 0;
@@ -392,11 +400,15 @@ const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const char *file
 {
 	int idx;
 	git_tree_entry *entry;
+	struct tree_key_search ksearch;
 
 	assert(bld && filename);
 
+	ksearch.filename = filename;
+	ksearch.filename_len = strlen(filename);
+
 	sort_entries(bld);
-	idx = git_vector_bsearch2(&bld->entries, entry_search_cmp, filename);
+	idx = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch);
 	if (idx == GIT_ENOTFOUND)
 		return NULL;
 
