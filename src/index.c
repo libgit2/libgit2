@@ -921,8 +921,18 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 
 	memset(ondisk, 0x0, disk_size);
 
-	ondisk->ctime.seconds = htonl(entry->ctime.seconds);
-	ondisk->mtime.seconds = htonl(entry->mtime.seconds);
+	/**
+	 * Yes, we have to truncate.
+	 *
+	 * The on-disk format for Index entries clearly defines
+	 * the time and size fields to be 4 bytes each -- so even if
+	 * we store these values with 8 bytes on-memory, they must
+	 * be truncated to 4 bytes before writing to disk.
+	 *
+	 * In 2038 I will be either too dead or too rich to care about this
+	 */
+	ondisk->ctime.seconds = htonl((uint32_t)entry->ctime.seconds);
+	ondisk->mtime.seconds = htonl((uint32_t)entry->mtime.seconds);
 	ondisk->ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
 	ondisk->mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
 	ondisk->dev  = htonl(entry->dev);
@@ -930,7 +940,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	ondisk->mode = htonl(entry->mode);
 	ondisk->uid  = htonl(entry->uid);
 	ondisk->gid  = htonl(entry->gid);
-	ondisk->file_size = htonl(entry->file_size);
+	ondisk->file_size = htonl((uint32_t)entry->file_size);
 
 	git_oid_cpy(&ondisk->oid, &entry->oid);
 
