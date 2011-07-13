@@ -47,9 +47,12 @@ int entry_search_cmp(const void *key, const void *array_member)
 	struct tree_key_search *ksearch = (struct tree_key_search *)key;
 	const git_tree_entry *entry = (const git_tree_entry *)(array_member);
 
-	return git_futils_cmp_path(
-		ksearch->filename, ksearch->filename_len, entry->attr & 040000,
-        entry->filename, entry->filename_len, entry->attr & 040000);
+	int result =
+		git_futils_cmp_path(
+			ksearch->filename, ksearch->filename_len, entry->attr & 040000,
+			entry->filename, entry->filename_len, entry->attr & 040000);
+
+	return result ? result : ((int)ksearch->filename_len - (int)entry->filename_len);
 }
 
 int entry_sort_cmp(const void *a, const void *b)
@@ -60,6 +63,22 @@ int entry_sort_cmp(const void *a, const void *b)
 	return git_futils_cmp_path(
 		entry_a->filename, entry_a->filename_len, entry_a->attr & 040000,
 		entry_b->filename, entry_b->filename_len, entry_b->attr & 040000);
+}
+
+static int build_ksearch(struct tree_key_search *ksearch, const char *path)
+{
+	size_t len = strlen(path);
+
+	if (len && path[len - 1] == '/')
+		len--;
+
+	if (len == 0 || memchr(path, '/', len) != NULL)
+		return GIT_ERROR;
+
+	ksearch->filename = path;
+	ksearch->filename_len = len;
+
+	return GIT_SUCCESS;
 }
 
 void git_tree__free(git_tree *tree)
@@ -125,8 +144,8 @@ const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename
 
 	assert(tree && filename);
 
-	ksearch.filename = filename;
-	ksearch.filename_len = strlen(filename);
+	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
+		return NULL;
 
 	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, &ksearch);
 	if (idx == GIT_ENOTFOUND)
@@ -362,10 +381,8 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	if (!valid_attributes(attributes))
 		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid atrributes");
 
-	ksearch.filename = filename;
-	ksearch.filename_len = strlen(filename);
-
-	if ((pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch)) != GIT_ENOTFOUND) {
+	if (build_ksearch(&ksearch, filename) == GIT_SUCCESS &&
+		(pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch)) != GIT_ENOTFOUND) {
 		entry = git_vector_get(&bld->entries, pos);
 		if (entry->removed) {
 			entry->removed = 0;
@@ -404,8 +421,8 @@ const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const char *file
 
 	assert(bld && filename);
 
-	ksearch.filename = filename;
-	ksearch.filename_len = strlen(filename);
+	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
+		return NULL;
 
 	sort_entries(bld);
 	idx = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch);
