@@ -150,6 +150,11 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	//create a second tree from first tree using `git_treebuilder_insert` on REPOSITORY_FOLDER.
 	must_pass(git_tree_lookup(&tree, repo, &id));
 	must_pass(git_treebuilder_create(&builder, tree));
+
+	must_fail(git_treebuilder_insert(NULL, builder, "", &bid, 0100644));
+	must_fail(git_treebuilder_insert(NULL, builder, "/", &bid, 0100644));
+	must_fail(git_treebuilder_insert(NULL, builder, "folder/new.txt", &bid, 0100644));
+
 	must_pass(git_treebuilder_insert(NULL,builder,"new.txt",&bid,0100644));
 	must_pass(git_treebuilder_write(&rid,repo,builder));
 
