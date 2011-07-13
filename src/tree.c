@@ -379,10 +379,12 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	assert(bld && id && filename);
 
 	if (!valid_attributes(attributes))
-		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid atrributes");
+		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid attributes");
 
-	if (build_ksearch(&ksearch, filename) == GIT_SUCCESS &&
-		(pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch)) != GIT_ENOTFOUND) {
+	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
+		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid filename '%s'", filename);
+
+	if ((pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch)) != GIT_ENOTFOUND) {
 		entry = git_vector_get(&bld->entries, pos);
 		if (entry->removed) {
 			entry->removed = 0;
