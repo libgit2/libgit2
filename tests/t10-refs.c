@@ -1064,6 +1064,7 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 	must_be_true(strcmp(current_master_tip, entry->oid_cur) == 0);
 	must_be_true(strcmp(commit_msg, entry->msg) == 0);
 
+	git_signature_free(committer);
 	git_reflog_free(reflog);
 	close_temp_repo(repo2);
 END_TEST

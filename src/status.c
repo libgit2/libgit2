@@ -90,6 +90,7 @@ static void recurse_tree_entries(git_tree *tree, git_vector *entries, char *path
 
 		if (git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid) == GIT_SUCCESS) {
 			recurse_tree_entries(subtree, entries, file_path);
+			git_tree_close(subtree);
 			return;
 		}
 
@@ -100,8 +101,6 @@ static void recurse_tree_entries(git_tree *tree, git_vector *entries, char *path
 
 		git_oid_cpy(&e->head_oid, &tree_entry->oid);
 	}
-
-	git_tree_close(tree);
 }
 
 static void recurse_tree_entry(git_tree *tree, struct status_entry *e, const char *path)
@@ -121,6 +120,7 @@ static void recurse_tree_entry(git_tree *tree, struct status_entry *e, const cha
 		if (tree_entry != NULL) {
 			if (git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid) == GIT_SUCCESS) {
 				recurse_tree_entry(subtree, e, dir_sep+1);
+				git_tree_close(subtree);
 				return;
 			}
 		}
@@ -130,7 +130,6 @@ static void recurse_tree_entry(git_tree *tree, struct status_entry *e, const cha
 	if (tree_entry != NULL) {
 		git_oid_cpy(&e->head_oid, &tree_entry->oid);
 	}
-	git_tree_close(tree);
 }
 
 struct status_st {
@@ -277,6 +276,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	// recurse through tree entries
 	git_commit_tree(&tree, head_commit);
 	recurse_tree_entries(tree, &entries, "");
+	git_tree_close(tree);
 	git_commit_close(head_commit);
 
 	dirent_st.workdir_path_len = strlen(repo->path_workdir);
@@ -342,6 +342,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 
 	git_commit_tree(&tree, head_commit);
 	recurse_tree_entry(tree, e, path);
+	git_tree_close(tree);
 	git_commit_close(head_commit);
 
 	// Find file in Workdir
