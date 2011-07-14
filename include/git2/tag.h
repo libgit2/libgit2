@@ -231,7 +231,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  *	A proper reference is written in the /refs/tags folder,
  *  pointing to the provided target object
  */
-int git_tag_create_lightweight(
+GIT_EXTERN(int) git_tag_create_lightweight(
 		git_oid *oid,
 		git_repository *repo,
 		const char *tag_name,
