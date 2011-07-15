@@ -37,9 +37,8 @@ typedef struct _aux_object {
 uint32_t hash_func(const void *key, int hash_id)
 {
 	uint32_t r;
-	git_oid *id;
+	const git_oid *id = key;
 
-	id = (git_oid *)key;
 	memcpy(&r, id->id + (hash_id * sizeof(uint32_t)), sizeof(r));
 	return r;
 }
