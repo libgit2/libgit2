@@ -699,8 +699,8 @@ static int pack_index_open(struct pack_file *p)
 
 static int packfile_sort__cb(const void *a_, const void *b_)
 {
-	struct pack_file *a = (struct pack_file *)a_;
-	struct pack_file *b = (struct pack_file *)b_;
+	const struct pack_file *a = a_;
+	const struct pack_file *b = b_;
 	int st;
 
 	/*
@@ -941,16 +941,16 @@ static off_t nth_packed_object_offset(const struct pack_file *p, uint32_t n)
 	const unsigned char *index = p->index_map.data;
 	index += 4 * 256;
 	if (p->index_version == 1) {
-		return ntohl(*((uint32_t *)(index + 24 * n)));
+		return ntohl(*((const uint32_t *)(index + 24 * n)));
 	} else {
 		uint32_t off;
 		index += 8 + p->num_objects * (20 + 4);
-		off = ntohl(*((uint32_t *)(index + 4 * n)));
+		off = ntohl(*((const uint32_t *)(index + 4 * n)));
 		if (!(off & 0x80000000))
 			return off;
 		index += p->num_objects * 4 + (off & 0x7fffffff) * 8;
-		return (((uint64_t)ntohl(*((uint32_t *)(index + 0)))) << 32) |
-				   ntohl(*((uint32_t *)(index + 4)));
+		return (((uint64_t)ntohl(*((const uint32_t *)(index + 0)))) << 32) |
+				   ntohl(*((const uint32_t *)(index + 4)));
 	}
 }
 
