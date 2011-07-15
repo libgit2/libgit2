@@ -98,14 +98,14 @@ typedef struct git_index_entry {
 	unsigned short flags;
 	unsigned short flags_extended;
 
-	const char *path;
+	char *path;
 } git_index_entry;
 
 /** Representation of an unmerged file entry in the index. */
 typedef struct git_index_entry_unmerged {
 	unsigned int mode[3];
 	git_oid oid[3];
-	const char *path;
+	char *path;
 } git_index_entry_unmerged;
 
 /**
