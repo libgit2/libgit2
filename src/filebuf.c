@@ -102,7 +102,7 @@ static int write_normal(git_filebuf *file, const void *source, size_t len)
 	int result = 0;
 
 	if (len > 0) {
-		result = p_write(file->fd, (void *)source, len);
+		result = p_write(file->fd, source, len);
 		if (file->digest)
 			git_hash_update(file->digest, source, len);
 	}
@@ -116,7 +116,14 @@ static int write_deflate(git_filebuf *file, const void *source, size_t len)
 	z_stream *zs = &file->zs;
 
 	if (len > 0 || file->flush_mode == Z_FINISH) {
-		zs->next_in = (void *)source;
+		void *data;
+
+		data = git__malloc(len);
+		if (!data)
+			return GIT_ENOMEM;
+		memcpy(data, source, len);
+
+		zs->next_in = data;
 		zs->avail_in = len;
 
 		do {
@@ -130,8 +137,11 @@ static int write_deflate(git_filebuf *file, const void *source, size_t len)
 
             have = file->buf_size - zs->avail_out;
 
-			if (p_write(file->fd, file->z_buf, have) < GIT_SUCCESS)
+			if (p_write(file->fd, file->z_buf, have) < GIT_SUCCESS) {
+				free(data);
 				return git__throw(GIT_EOSERR, "Failed to write to file");
+			}
+		free(data);
 
         } while (zs->avail_out == 0);
 
