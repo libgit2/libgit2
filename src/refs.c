@@ -1672,13 +1672,13 @@ static int check_valid_ref_char(char ch)
 static int normalize_name(char *buffer_out, size_t out_size, const char *name, int is_oid_ref)
 {
 	const char *name_end, *buffer_out_start;
-	char *current;
+	const char *current;
 	int contains_a_slash = 0;
 
 	assert(name && buffer_out);
 
 	buffer_out_start = buffer_out;
-	current = (char *)name;
+	current = name;
 	name_end = name + strlen(name);
 
 	/* Terminating null byte */
