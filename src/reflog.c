@@ -145,12 +145,12 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		if (*buf == '\t') {
 			/* We got a message. Read everything till we reach LF. */
 			seek_forward(1);
-			entry->msg = (char *)buf;
+			ptr = buf;
 
 			while (*buf && *buf != '\n')
 				seek_forward(1);
 
-			entry->msg = git__strndup(entry->msg, buf - entry->msg);
+			entry->msg = git__strndup(ptr, buf - ptr);
 		} else
 			entry->msg = NULL;
 
