@@ -184,7 +184,7 @@ cleanup:
 int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 {
 	const char *buffer = data;
-	const char *buffer_end = data + len;
+	const char *buffer_end = (const char *)data + len;
 
 	git_oid parent_oid;
 	int error;
