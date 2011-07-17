@@ -44,8 +44,8 @@ struct tree_key_search {
 
 int entry_search_cmp(const void *key, const void *array_member)
 {
-	struct tree_key_search *ksearch = (struct tree_key_search *)key;
-	const git_tree_entry *entry = (const git_tree_entry *)(array_member);
+	const struct tree_key_search *ksearch = key;
+	const git_tree_entry *entry = array_member;
 
 	int result =
 		git_futils_cmp_path(
@@ -415,7 +415,7 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	return GIT_SUCCESS;
 }
 
-const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const char *filename)
+static git_tree_entry *__git_treebuilder_get(git_treebuilder *bld, const char *filename)
 {
 	int idx;
 	git_tree_entry *entry;
@@ -438,9 +438,14 @@ const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const char *file
 	return entry;
 }
 
+const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const char *filename)
+{
+	return __git_treebuilder_get(bld, filename);
+}
+
 int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 {
-	git_tree_entry *remove_ptr = (git_tree_entry *)git_treebuilder_get(bld, filename);
+	git_tree_entry *remove_ptr = __git_treebuilder_get(bld, filename);
 
 	if (remove_ptr == NULL || remove_ptr->removed)
 		return git__throw(GIT_ENOTFOUND, "Failed to remove entry. File isn't in the tree");

@@ -73,16 +73,16 @@
     defined(__powerpc__) || defined(__powerpc64__) || \
     defined(__s390__) || defined(__s390x__)
 
-#define get_be32(p)	ntohl(*(unsigned int *)(p))
+#define get_be32(p)	ntohl(*(const unsigned int *)(p))
 #define put_be32(p, v)	do { *(unsigned int *)(p) = htonl(v); } while (0)
 
 #else
 
 #define get_be32(p)	( \
-	(*((unsigned char *)(p) + 0) << 24) | \
-	(*((unsigned char *)(p) + 1) << 16) | \
-	(*((unsigned char *)(p) + 2) <<  8) | \
-	(*((unsigned char *)(p) + 3) <<  0) )
+	(*((const unsigned char *)(p) + 0) << 24) | \
+	(*((const unsigned char *)(p) + 1) << 16) | \
+	(*((const unsigned char *)(p) + 2) <<  8) | \
+	(*((const unsigned char *)(p) + 3) <<  0) )
 #define put_be32(p, v)	do { \
 	unsigned int __v = (v); \
 	*((unsigned char *)(p) + 0) = __v >> 24; \

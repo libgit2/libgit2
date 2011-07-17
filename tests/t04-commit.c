@@ -615,7 +615,8 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 	git_repository *repo;
 	git_commit *commit;
 	git_oid tree_id, parent_id, commit_id;
-	const git_signature *author, *committer;
+	git_signature *author, *committer;
+	const git_signature *author1, *committer1;
 	git_commit *parent;
 	git_tree *tree;
 
@@ -647,25 +648,25 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 	git_object_close((git_object *)parent);
 	git_object_close((git_object *)tree);
 
-	git_signature_free((git_signature *)committer);
-	git_signature_free((git_signature *)author);
+	git_signature_free(committer);
+	git_signature_free(author);
 
 	must_pass(git_commit_lookup(&commit, repo, &commit_id));
 
 	/* Check attributes were set correctly */
-	author = git_commit_author(commit);
-	must_be_true(author != NULL);
-	must_be_true(strcmp(author->name, COMMITTER_NAME) == 0);
-	must_be_true(strcmp(author->email, COMMITTER_EMAIL) == 0);
-	must_be_true(author->when.time == 987654321);
-	must_be_true(author->when.offset == 90);
+	author1 = git_commit_author(commit);
+	must_be_true(author1 != NULL);
+	must_be_true(strcmp(author1->name, COMMITTER_NAME) == 0);
+	must_be_true(strcmp(author1->email, COMMITTER_EMAIL) == 0);
+	must_be_true(author1->when.time == 987654321);
+	must_be_true(author1->when.offset == 90);
 
-	committer = git_commit_committer(commit);
-	must_be_true(committer != NULL);
-	must_be_true(strcmp(committer->name, COMMITTER_NAME) == 0);
-	must_be_true(strcmp(committer->email, COMMITTER_EMAIL) == 0);
-	must_be_true(committer->when.time == 123456789);
-	must_be_true(committer->when.offset == 60);
+	committer1 = git_commit_committer(commit);
+	must_be_true(committer1 != NULL);
+	must_be_true(strcmp(committer1->name, COMMITTER_NAME) == 0);
+	must_be_true(strcmp(committer1->email, COMMITTER_EMAIL) == 0);
+	must_be_true(committer1->when.time == 123456789);
+	must_be_true(committer1->when.offset == 60);
 
 	must_be_true(strcmp(git_commit_message(commit), COMMIT_MESSAGE) == 0);
 
@@ -683,7 +684,7 @@ BEGIN_TEST(root0, "create a root commit")
 	git_commit *commit;
 	git_oid tree_id, commit_id;
 	const git_oid *branch_oid;
-	const git_signature *author, *committer;
+	git_signature *author, *committer;
 	const char *branch_name = "refs/heads/root-commit-branch";
 	git_reference *head, *branch;
 	char *head_old;
@@ -720,8 +721,8 @@ BEGIN_TEST(root0, "create a root commit")
 		0));
 
 	git_object_close((git_object *)tree);
-	git_signature_free((git_signature *)committer);
-	git_signature_free((git_signature *)author);
+	git_signature_free(committer);
+	git_signature_free(author);
 
 	/*
 	 * The fact that creating a commit works has already been

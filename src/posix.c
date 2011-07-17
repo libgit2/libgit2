@@ -32,9 +32,9 @@ int p_read(git_file fd, void *buf, size_t cnt)
 	return (int)(b - (char *)buf);
 }
 
-int p_write(git_file fd, void *buf, size_t cnt)
+int p_write(git_file fd, const void *buf, size_t cnt)
 {
-	char *b = buf;
+	const char *b = buf;
 	while (cnt) {
 		ssize_t r = write(fd, b, cnt);
 		if (r < 0) {

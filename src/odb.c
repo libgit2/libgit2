@@ -185,14 +185,25 @@ int git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type)
 	char hdr[64];
 	int  hdrlen;
 	git_rawobj raw;
+	int ret;
 
 	assert(id);
 
-	raw.data = (void *)data;
+	if (!data && len != 0)
+		return git__throw(GIT_ERROR, "Failed to hash object. No data given");
+
+	raw.data = git__malloc(len);
+	if (!raw.data)
+		return GIT_ENOMEM;
+	memcpy(raw.data, data, len);
 	raw.len = len;
 	raw.type = type;
 
-	return git_odb__hash_obj(id, hdr, sizeof(hdr), &hdrlen, &raw);
+	ret = git_odb__hash_obj(id, hdr, sizeof(hdr), &hdrlen, &raw);
+
+	free(raw.data);
+
+	return ret;
 }
 
 /**

@@ -225,14 +225,14 @@ void git_index_clear(git_index *index)
 	for (i = 0; i < index->entries.length; ++i) {
 		git_index_entry *e;
 		e = git_vector_get(&index->entries, i);
-		free((char *)e->path);
+		free(e->path);
 		free(e);
 	}
 
 	for (i = 0; i < index->unmerged.length; ++i) {
 		git_index_entry_unmerged *e;
 		e = git_vector_get(&index->unmerged, i);
-		free((char *)e->path);
+		free(e->path);
 		free(e);
 	}
 
@@ -389,14 +389,14 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 
 	/* exists, replace it */
 	entry_array = (git_index_entry **) index->entries.contents;
-	free((char *)entry_array[position]->path);
+	free(entry_array[position]->path);
 	free(entry_array[position]);
 	entry_array[position] = entry;
 
 	return GIT_SUCCESS;
 
 cleanup_oom:
-	free((char *)entry->path);
+	free(entry->path);
 	free(entry);
 	return GIT_ENOMEM;;
 }
@@ -436,7 +436,9 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 		return git__rethrow(error, "Failed to initialize index entry");
 
 	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
-	entry->path = rel_path; /* do not duplicate; index_insert already does this */
+	entry->path = git__strdup(rel_path);
+	if (entry->path == NULL)
+		return GIT_ENOMEM;
 	return GIT_SUCCESS;
 }
 
@@ -678,7 +680,7 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 				continue;
 			if (size < 20)
 				return git__throw(GIT_ERROR, "Failed to read unmerged entries");
-			git_oid_fromraw(&lost->oid[i], (unsigned char *) buffer);
+			git_oid_fromraw(&lost->oid[i], (const unsigned char *) buffer);
 			size -= 20;
 			buffer += 20;
 		}
@@ -713,7 +715,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 	dest->flags = ntohs(source->flags);
 
 	if (dest->flags & GIT_IDXENTRY_EXTENDED) {
-		struct entry_long *source_l = (struct entry_long *)source;
+		const struct entry_long *source_l = (const struct entry_long *)source;
 		path_ptr = source_l->path;
 
 		flags_raw = ntohs(source_l->flags_extended);

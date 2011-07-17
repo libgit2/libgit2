@@ -115,7 +115,8 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	git_repository *repo;
 	git_tag *tag;
 	git_oid target_id, tag_id;
-	const git_signature *tagger;
+	git_signature *tagger;
+	const git_signature *tagger1;
 	git_reference *ref_tag;
 	git_object *target;
 
@@ -138,18 +139,18 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 		0));
 
 	git_object_close(target);
-	git_signature_free((git_signature *)tagger);
+	git_signature_free(tagger);
 
 	must_pass(git_tag_lookup(&tag, repo, &tag_id));
 	must_be_true(git_oid_cmp(git_tag_target_oid(tag), &target_id) == 0);
 
 	/* Check attributes were set correctly */
-	tagger = git_tag_tagger(tag);
-	must_be_true(tagger != NULL);
-	must_be_true(strcmp(tagger->name, TAGGER_NAME) == 0);
-	must_be_true(strcmp(tagger->email, TAGGER_EMAIL) == 0);
-	must_be_true(tagger->when.time == 123456789);
-	must_be_true(tagger->when.offset == 60);
+	tagger1 = git_tag_tagger(tag);
+	must_be_true(tagger1 != NULL);
+	must_be_true(strcmp(tagger1->name, TAGGER_NAME) == 0);
+	must_be_true(strcmp(tagger1->email, TAGGER_EMAIL) == 0);
+	must_be_true(tagger1->when.time == 123456789);
+	must_be_true(tagger1->when.offset == 60);
 
 	must_be_true(strcmp(git_tag_message(tag), TAGGER_MESSAGE) == 0);
 
@@ -167,7 +168,7 @@ END_TEST
 BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already existing tag")
 	git_repository *repo;
 	git_oid target_id, tag_id;
-	const git_signature *tagger;
+	git_signature *tagger;
 	git_object *target;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
@@ -189,7 +190,7 @@ BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already
 		0));
 
 	git_object_close(target);
-	git_signature_free((git_signature *)tagger);
+	git_signature_free(tagger);
 
 	git_repository_free(repo);
 
@@ -198,7 +199,7 @@ END_TEST
 BEGIN_TEST(write3, "Replace an already existing tag")
 	git_repository *repo;
 	git_oid target_id, tag_id, old_tag_id;
-	const git_signature *tagger;
+	git_signature *tagger;
 	git_reference *ref_tag;
 	git_object *target;
 
@@ -224,7 +225,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 		1));
 
 	git_object_close(target);
-	git_signature_free((git_signature *)tagger);
+	git_signature_free(tagger);
 
 	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
