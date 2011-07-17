@@ -92,6 +92,8 @@ ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB})
 
 IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+	TARGET_LINK_LIBRARIES(git2 socket nsl)
 ENDIF ()
 
 TARGET_LINK_LIBRARIES(git2 ${CMAKE_THREAD_LIBS_INIT})
@@ -117,6 +119,11 @@ IF (BUILD_TESTS)
 
 	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB})
 	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
+	IF (WIN32)
+		TARGET_LINK_LIBRARIES(libgit2_test ws2_32)
+	ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+		TARGET_LINK_LIBRARIES(libgit2_test socket nsl)
+	ENDIF ()
 
 	ENABLE_TESTING()
 	ADD_TEST(libgit2_test libgit2_test)
