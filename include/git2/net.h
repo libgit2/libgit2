@@ -64,4 +64,6 @@ struct git_headarray {
 	struct git_remote_head **heads;
 };
 
+GIT_END_DECL
+
 #endif

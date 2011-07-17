@@ -72,4 +72,7 @@ int git_refspec_src_match(const git_refspec *refspec, const char *refname);
  * @preturn GIT_SUCCESS, GIT_ESHORTBUFFER or another error
  */
 int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name);
+
+GIT_END_DECL
+
 #endif
