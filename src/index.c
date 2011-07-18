@@ -349,6 +349,14 @@ static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
 	return entry;
 }
 
+static void index_entry_free(git_index_entry *entry)
+{
+	if (!entry)
+		return;
+	free(entry->path);
+	free(entry);
+}
+
 static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
 {
 	git_index_entry *entry;
@@ -402,15 +410,13 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 
 	/* exists, replace it */
 	entry_array = (git_index_entry **) index->entries.contents;
-	free(entry_array[position]->path);
-	free(entry_array[position]);
+	index_entry_free(entry_array[position]);
 	entry_array[position] = entry;
 
 	return GIT_SUCCESS;
 
 cleanup_oom:
-	free(entry->path);
-	free(entry);
+	index_entry_free(entry);
 	return GIT_ENOMEM;;
 }
 
