@@ -53,7 +53,7 @@ IF (MSVC)
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 ELSE ()
-	SET(CMAKE_C_FLAGS "-Wall -Wextra -Wcast-qual")
+	SET(CMAKE_C_FLAGS "-Wall -Wextra -Wcast-qual -Wpointer-arith")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
