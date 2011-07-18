@@ -355,21 +355,16 @@ static void index_entry_free(git_index_entry *entry)
 	free(entry);
 }
 
-static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
+static int index_insert(git_index *index, git_index_entry *entry, int replace)
 {
-	git_index_entry *entry;
 	size_t path_length;
 	int position;
 	git_index_entry **entry_array;
 
-	assert(index && source_entry);
+	assert(index && entry);
 
-	if (source_entry->path == NULL)
+	if (entry->path == NULL)
 		return git__throw(GIT_EMISSINGOBJDATA, "Failed to insert into index. Entry has no path");
-
-	entry = index_entry_dup(source_entry);
-	if (!entry)
-		return GIT_ENOMEM;
 
 	/* make sure that the path length flag is correct */
 	path_length = strlen(entry->path);
@@ -387,13 +382,13 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	 */
 	if (!replace) {
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
-			goto cleanup_oom;
+			return GIT_ENOMEM;
 
 		return GIT_SUCCESS;
 	}
 
 	/* look if an entry with this path already exists */
-	position = git_index_find(index, source_entry->path);
+	position = git_index_find(index, entry->path);
 
 	/*
 	 * if no entry exists add the entry at the end;
@@ -401,7 +396,7 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	 */
 	if (position == GIT_ENOTFOUND) {
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
-			goto cleanup_oom;
+			return GIT_ENOMEM;
 
 		return GIT_SUCCESS;
 	}
@@ -412,10 +407,6 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	entry_array[position] = entry;
 
 	return GIT_SUCCESS;
-
-cleanup_oom:
-	index_entry_free(entry);
-	return GIT_ENOMEM;;
 }
 
 static int index_init_entry(git_index_entry *entry, git_index *index, const char *rel_path, int stage)
@@ -460,35 +451,64 @@ static int index_init_entry(git_index_entry *entry, git_index *index, const char
 int git_index_add(git_index *index, const char *path, int stage)
 {
 	int error;
-	git_index_entry entry;
+	git_index_entry entry, *dup_entry;
 
 	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to add to index");
 
-	return index_insert(index, &entry, 1);
+	dup_entry = index_entry_dup(&entry);
+	if (dup_entry == NULL)
+		return GIT_ENOMEM;
+
+	return index_insert(index, dup_entry, 1);
 }
 
 int git_index_append(git_index *index, const char *path, int stage)
 {
 	int error;
-	git_index_entry entry;
+	git_index_entry entry, *dup_entry;
 
 	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to append to index");
 
-	return index_insert(index, &entry, 0);
+	dup_entry = index_entry_dup(&entry);
+	if (dup_entry == NULL)
+		return GIT_ENOMEM;
+
+	return index_insert(index, dup_entry, 0);
+}
+
+static int index_add2(git_index *index, const git_index_entry *source_entry,
+		int replace)
+{
+	git_index_entry *entry = NULL;
+	int ret;
+
+	entry = index_entry_dup(source_entry);
+	if (entry == NULL) {
+		ret = GIT_ENOMEM;
+		goto err;
+	}
+
+	ret = index_insert(index, entry, replace);
+	if (ret)
+		goto err;
+
+	return ret;
+err:
+	index_entry_free(entry);
+	return git__rethrow(ret, "Failed to append to index");
 }
 
 int git_index_add2(git_index *index, const git_index_entry *source_entry)
 {
-	return index_insert(index, source_entry, 1);
+	return index_add2(index, source_entry, 1);
 }
 
 int git_index_append2(git_index *index, const git_index_entry *source_entry)
 {
-	return index_insert(index, source_entry, 0);
+	return index_add2(index, source_entry, 1);
 }
-
 
 int git_index_remove(git_index *index, int position)
 {
