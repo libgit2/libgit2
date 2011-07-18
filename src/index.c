@@ -331,6 +331,24 @@ git_index_entry *git_index_get(git_index *index, unsigned int n)
 	return git_vector_get(&index->entries, n);
 }
 
+static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
+{
+	git_index_entry *entry;
+
+	entry = git__malloc(sizeof(git_index_entry));
+	if (!entry)
+		return NULL;
+
+	memcpy(entry, source_entry, sizeof(git_index_entry));
+
+	/* duplicate the path string so we own it */
+	entry->path = git__strdup(entry->path);
+	if (!entry->path)
+		return NULL;
+
+	return entry;
+}
+
 static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
 {
 	git_index_entry *entry;
@@ -343,15 +361,8 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	if (source_entry->path == NULL)
 		return git__throw(GIT_EMISSINGOBJDATA, "Failed to insert into index. Entry has no path");
 
-	entry = git__malloc(sizeof(git_index_entry));
-	if (entry == NULL)
-		return GIT_ENOMEM;
-
-	memcpy(entry, source_entry, sizeof(git_index_entry));
-
-	/* duplicate the path string so we own it */
-	entry->path = git__strdup(entry->path);
-	if (entry->path == NULL)
+	entry = index_entry_dup(source_entry);
+	if (!entry)
 		return GIT_ENOMEM;
 
 	/* make sure that the path length flag is correct */
