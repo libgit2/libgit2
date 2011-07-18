@@ -331,6 +331,57 @@ git_index_entry *git_index_get(git_index *index, unsigned int n)
 	return git_vector_get(&index->entries, n);
 }
 
+static int index_entry_init(git_index_entry **entry_out, git_index *index, const char *rel_path, int stage)
+{
+	git_index_entry *entry;
+	char full_path[GIT_PATH_MAX];
+	struct stat st;
+	git_oid oid;
+	int error;
+
+	if (index->repository == NULL)
+		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
+
+	git_path_join(full_path, index->repository->path_workdir, rel_path);
+
+	if (p_lstat(full_path, &st) < 0)
+		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. '%s' cannot be opened", full_path);
+
+	if (stage < 0 || stage > 3)
+		return git__throw(GIT_ERROR, "Failed to initialize entry. Invalid stage %i", stage);
+
+	/* write the blob to disk and get the oid */
+	if ((error = git_blob_create_fromfile(&oid, index->repository, rel_path)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to initialize index entry");
+
+	entry = git__malloc(sizeof(git_index_entry));
+	if (!entry)
+		return GIT_ENOMEM;
+	memset(entry, 0x0, sizeof(git_index_entry));
+
+	entry->ctime.seconds = (git_time_t)st.st_ctime;
+	entry->mtime.seconds = (git_time_t)st.st_mtime;
+	/* entry.mtime.nanoseconds = st.st_mtimensec; */
+	/* entry.ctime.nanoseconds = st.st_ctimensec; */
+	entry->dev= st.st_rdev;
+	entry->ino = st.st_ino;
+	entry->mode = index_create_mode(st.st_mode);
+	entry->uid = st.st_uid;
+	entry->gid = st.st_gid;
+	entry->file_size = st.st_size;
+	entry->oid = oid;
+
+	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
+	entry->path = git__strdup(rel_path);
+	if (entry->path == NULL) {
+		free(entry);
+		return GIT_ENOMEM;
+	}
+
+	*entry_out = entry;
+	return GIT_SUCCESS;
+}
+
 static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
 {
 	git_index_entry *entry;
@@ -405,79 +456,40 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 
 	/* exists, replace it */
 	entry_array = (git_index_entry **) index->entries.contents;
-	index_entry_free(entry_array[position]);
+	free(entry_array[position]->path);
+	free(entry_array[position]);
 	entry_array[position] = entry;
 
 	return GIT_SUCCESS;
 }
 
-static int index_init_entry(git_index_entry *entry, git_index *index, const char *rel_path, int stage)
+static int index_add(git_index *index, const char *path, int stage, int replace)
 {
-	char full_path[GIT_PATH_MAX];
-	struct stat st;
-	int error;
+	git_index_entry *entry = NULL;
+	int ret;
 
-	if (index->repository == NULL)
-		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
+	ret = index_entry_init(&entry, index, path, stage);
+	if (ret)
+		goto err;
 
-	git_path_join(full_path, index->repository->path_workdir, rel_path);
+	ret = index_insert(index, entry, replace);
+	if (ret)
+		goto err;
 
-	if (p_lstat(full_path, &st) < 0)
-		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. '%s' cannot be opened", full_path);
-
-	if (stage < 0 || stage > 3)
-		return git__throw(GIT_ERROR, "Failed to initialize entry. Invalid stage %i", stage);
-
-	memset(entry, 0x0, sizeof(git_index_entry));
-
-	entry->ctime.seconds = (git_time_t)st.st_ctime;
-	entry->mtime.seconds = (git_time_t)st.st_mtime;
-	/* entry.mtime.nanoseconds = st.st_mtimensec; */
-	/* entry.ctime.nanoseconds = st.st_ctimensec; */
-	entry->dev= st.st_rdev;
-	entry->ino = st.st_ino;
-	entry->mode = index_create_mode(st.st_mode);
-	entry->uid = st.st_uid;
-	entry->gid = st.st_gid;
-	entry->file_size = st.st_size;
-
-	/* write the blob to disk and get the oid */
-	if ((error = git_blob_create_fromfile(&entry->oid, index->repository, rel_path)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to initialize index entry");
-
-	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
-	entry->path = rel_path; /* do not duplicate; index_insert already does this */
-	return GIT_SUCCESS;
+	return ret;
+err:
+	index_entry_free(entry);
+	return git__rethrow(ret, "Failed to append to index");
 }
 
 int git_index_add(git_index *index, const char *path, int stage)
 {
-	int error;
-	git_index_entry entry, *dup_entry;
-
-	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to add to index");
-
-	dup_entry = index_entry_dup(&entry);
-	if (dup_entry == NULL)
-		return GIT_ENOMEM;
-
-	return index_insert(index, dup_entry, 1);
+	return index_add(index, path, stage, 1);
 }
 
 int git_index_append(git_index *index, const char *path, int stage)
 {
-	int error;
-	git_index_entry entry, *dup_entry;
-
-	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to append to index");
-
-	dup_entry = index_entry_dup(&entry);
-	if (dup_entry == NULL)
-		return GIT_ENOMEM;
-
-	return index_insert(index, dup_entry, 0);
+	return index_add(index, path, stage, 0);
 }
 
 static int index_add2(git_index *index, const git_index_entry *source_entry,
