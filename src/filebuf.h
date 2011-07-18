@@ -22,8 +22,7 @@ struct git_filebuf {
 	char *path_original;
 	char *path_lock;
 
-	int (*write)(struct git_filebuf *file,
-			const void *source, size_t len);
+	int (*write)(struct git_filebuf *file, void *source, size_t len);
 
 	git_hash_ctx *digest;
 
