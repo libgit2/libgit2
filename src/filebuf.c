@@ -97,7 +97,7 @@ GIT_INLINE(int) flush_buffer(git_filebuf *file)
 	return result;
 }
 
-static int write_normal(git_filebuf *file, const void *source, size_t len)
+static int write_normal(git_filebuf *file, void *source, size_t len)
 {
 	int result = 0;
 
@@ -110,7 +110,7 @@ static int write_normal(git_filebuf *file, const void *source, size_t len)
 	return result;
 }
 
-static int write_deflate(git_filebuf *file, const void *source, size_t len)
+static int write_deflate(git_filebuf *file, void *source, size_t len)
 {
 	int result = Z_OK;
 	z_stream *zs = &file->zs;
@@ -315,24 +315,13 @@ int git_filebuf_write(git_filebuf *file, const void *buff, size_t len)
 			return GIT_SUCCESS;
 		}
 
-		/* flush the cache if it doesn't fit */
-		if (file->buf_pos > 0) {
-			add_to_cache(file, buf, space_left);
+		add_to_cache(file, buf, space_left);
 
-			if ((error = flush_buffer(file)) < GIT_SUCCESS)
-				return git__rethrow(error, "Failed to write to buffer");
+		if ((error = flush_buffer(file)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to write to buffer");
 
-			len -= space_left;
-			buf += space_left;
-		}
-
-		/* write too-large chunks immediately */
-		if (len > file->buf_size) {
-			error = file->write(file, buf, len);
-			if (error < GIT_SUCCESS)
-				return git__rethrow(error, "Failed to write to buffer");
-			return GIT_SUCCESS;
-		}
+		len -= space_left;
+		buf += space_left;
 	}
 }
 
