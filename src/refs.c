@@ -1404,7 +1404,14 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	free(ref->name);
 	ref->name = new_ref->name;
 
-	if ((error = git_hashtable_insert2(ref->owner->references.loose_cache, new_ref->name, new_ref, (void **)&old_ref)) < GIT_SUCCESS)
+	/*
+	 * No need in new_ref anymore. We created it to fix the change on disk.
+	 * TODO: Refactoring required.
+	 */
+	new_ref->name = NULL;
+	reference_free(new_ref);
+
+	if ((error = git_hashtable_insert2(ref->owner->references.loose_cache, ref->name, ref, (void **)&old_ref)) < GIT_SUCCESS)
 		goto rollback;
 
 	/*
@@ -1417,7 +1424,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	head_target = git_reference_target(head);
 
 	if (head_target && !strcmp(head_target, old_name))
-		if ((error = git_reference_create_symbolic(&head, new_ref->owner, "HEAD", new_ref->name, 1)) < GIT_SUCCESS)
+		if ((error = git_reference_create_symbolic(&head, ref->owner, "HEAD", ref->name, 1)) < GIT_SUCCESS)
 			goto rollback;
 
 cleanup:

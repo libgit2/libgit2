@@ -196,6 +196,8 @@ void git_index_free(git_index *index)
 		return;
 
 	git_index_clear(index);
+	git_vector_free(&index->entries);
+	git_vector_free(&index->unmerged);
 
 	free(index->index_file_path);
 	free(index);
