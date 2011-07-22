@@ -165,7 +165,7 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	return GIT_SUCCESS;
 }
 
-static int retreive_tag_reference(git_reference **tag_reference_out, char *ref_name_out, git_repository *repo, const char *tag_name)
+static int retrieve_tag_reference(git_reference **tag_reference_out, char *ref_name_out, git_repository *repo, const char *tag_name)
 {
 	git_reference *tag_ref;
 	int error;
@@ -233,7 +233,7 @@ static int git_tag_create__internal(
 	if (git_object_owner(target) != repo)
 		return git__throw(GIT_EINVALIDARGS, "The given target does not belong to this repository");
 
-	error = retreive_tag_reference(&new_ref, ref_name, repo, tag_name);
+	error = retrieve_tag_reference(&new_ref, ref_name, repo, tag_name);
 
 	switch (error) {
 		case GIT_SUCCESS:
@@ -318,7 +318,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 
 	git_odb_object_close(target_obj);
 
-	error = retreive_tag_reference(&new_ref, ref_name, repo, tag.tag_name);
+	error = retrieve_tag_reference(&new_ref, ref_name, repo, tag.tag_name);
 
 	switch (error) {
 		case GIT_SUCCESS:
@@ -370,7 +370,7 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 	git_reference *tag_ref;
 	char ref_name[GIT_REFNAME_MAX];
 
-	error = retreive_tag_reference(&tag_ref, ref_name, repo, tag_name);
+	error = retrieve_tag_reference(&tag_ref, ref_name, repo, tag_name);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to delete tag");
 
