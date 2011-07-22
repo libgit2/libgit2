@@ -86,6 +86,7 @@ Here are the bindings to libgit2 that are currently available:
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 * libgit2net (.NET bindings, low level) <https://github.com/txdv/libgit2net>
 * parrot-libgit2 (Parrot Virtual Machine bindings) <https://github.com/letolabs/parrot-libgit2>
+* hgit2 (Haskell bindings) <https://github.com/norm2782/hgit2>
 
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
