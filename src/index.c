@@ -248,8 +248,9 @@ void git_index_clear(git_index *index)
 
 int git_index_read(git_index *index)
 {
-	struct stat indexst;
-	int error = GIT_SUCCESS;
+	int error = GIT_SUCCESS, updated;
+	git_fbuffer buffer = GIT_FBUFFER_INIT;
+	time_t mtime;
 
 	assert(index->index_file_path);
 
@@ -259,30 +260,24 @@ int git_index_read(git_index *index)
 		return GIT_SUCCESS;
 	}
 
-	if (p_stat(index->index_file_path, &indexst) < 0)
-		return git__throw(GIT_EOSERR, "Failed to read index. %s does not exist or is corrupted", index->index_file_path);
+	/* We don't want to update the mtime if we fail to parse the index */
+	mtime = index->last_modified;
+	error = git_futils_readbuffer_updated(&buffer, index->index_file_path, &mtime, &updated);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to read index");
 
-	if (!S_ISREG(indexst.st_mode))
-		return git__throw(GIT_ENOTFOUND, "Failed to read index. %s is not an index file", index->index_file_path);
-
-	if (indexst.st_mtime != index->last_modified) {
-
-		git_fbuffer buffer;
-
-		if ((error = git_futils_readbuffer(&buffer, index->index_file_path)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to read index");
-
+	if (updated) {
 		git_index_clear(index);
 		error = parse_index(index, buffer.data, buffer.len);
 
 		if (error == GIT_SUCCESS)
-			index->last_modified = indexst.st_mtime;
+			index->last_modified = mtime;
 
 		git_futils_freebuffer(&buffer);
 	}
 
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to read index");
+		return git__rethrow(error, "Failed to parse index");
 	return error;
 }
 
