@@ -16,8 +16,8 @@ typedef struct {
 
 static int cmp_refs(const void *a, const void *b)
 {
-	const char *stra = *(const char **) a;
-	const char *strb = *(const char **) b;
+	const char *stra = *(const char * const *) a;
+	const char *strb = *(const char * const *) b;
 
 	return strcmp(stra, strb);
 }

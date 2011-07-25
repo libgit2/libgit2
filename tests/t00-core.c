@@ -75,7 +75,7 @@ END_TEST
 
 static int test_cmp(const void *a, const void *b)
 {
-	return *(int *)a - *(int *)b;
+	return *(const int *)a - *(const int *)b;
 }
 
 BEGIN_TEST(vector2, "remove duplicates")

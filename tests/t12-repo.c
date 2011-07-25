@@ -357,7 +357,7 @@ static int write_file(const char *path, const char *content)
 	if (file < GIT_SUCCESS)
 		return file;
 
-	error = p_write(file, (void*)content, strlen(content) * sizeof(char));
+	error = p_write(file, content, strlen(content) * sizeof(char));
 
 	p_close(file);
 

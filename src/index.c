@@ -227,14 +227,14 @@ void git_index_clear(git_index *index)
 	for (i = 0; i < index->entries.length; ++i) {
 		git_index_entry *e;
 		e = git_vector_get(&index->entries, i);
-		free((char *)e->path);
+		free(e->path);
 		free(e);
 	}
 
 	for (i = 0; i < index->unmerged.length; ++i) {
 		git_index_entry_unmerged *e;
 		e = git_vector_get(&index->unmerged, i);
-		free((char *)e->path);
+		free(e->path);
 		free(e);
 	}
 
@@ -331,28 +331,93 @@ git_index_entry *git_index_get(git_index *index, unsigned int n)
 	return git_vector_get(&index->entries, n);
 }
 
-static int index_insert(git_index *index, const git_index_entry *source_entry, int replace)
+static int index_entry_init(git_index_entry **entry_out, git_index *index, const char *rel_path, int stage)
 {
 	git_index_entry *entry;
-	size_t path_length;
-	int position;
-	git_index_entry **entry_array;
+	char full_path[GIT_PATH_MAX];
+	struct stat st;
+	git_oid oid;
+	int error;
 
-	assert(index && source_entry);
+	if (index->repository == NULL)
+		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
 
-	if (source_entry->path == NULL)
-		return git__throw(GIT_EMISSINGOBJDATA, "Failed to insert into index. Entry has no path");
+	git_path_join(full_path, index->repository->path_workdir, rel_path);
+
+	if (p_lstat(full_path, &st) < 0)
+		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. '%s' cannot be opened", full_path);
+
+	if (stage < 0 || stage > 3)
+		return git__throw(GIT_ERROR, "Failed to initialize entry. Invalid stage %i", stage);
+
+	/* write the blob to disk and get the oid */
+	if ((error = git_blob_create_fromfile(&oid, index->repository, rel_path)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to initialize index entry");
 
 	entry = git__malloc(sizeof(git_index_entry));
-	if (entry == NULL)
+	if (!entry)
 		return GIT_ENOMEM;
+	memset(entry, 0x0, sizeof(git_index_entry));
+
+	entry->ctime.seconds = (git_time_t)st.st_ctime;
+	entry->mtime.seconds = (git_time_t)st.st_mtime;
+	/* entry.mtime.nanoseconds = st.st_mtimensec; */
+	/* entry.ctime.nanoseconds = st.st_ctimensec; */
+	entry->dev= st.st_rdev;
+	entry->ino = st.st_ino;
+	entry->mode = index_create_mode(st.st_mode);
+	entry->uid = st.st_uid;
+	entry->gid = st.st_gid;
+	entry->file_size = st.st_size;
+	entry->oid = oid;
+
+	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
+	entry->path = git__strdup(rel_path);
+	if (entry->path == NULL) {
+		free(entry);
+		return GIT_ENOMEM;
+	}
+
+	*entry_out = entry;
+	return GIT_SUCCESS;
+}
+
+static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
+{
+	git_index_entry *entry;
+
+	entry = git__malloc(sizeof(git_index_entry));
+	if (!entry)
+		return NULL;
 
 	memcpy(entry, source_entry, sizeof(git_index_entry));
 
 	/* duplicate the path string so we own it */
 	entry->path = git__strdup(entry->path);
+	if (!entry->path)
+		return NULL;
+
+	return entry;
+}
+
+static void index_entry_free(git_index_entry *entry)
+{
+	if (!entry)
+		return;
+	free(entry->path);
+	free(entry);
+}
+
+static int index_insert(git_index *index, git_index_entry *entry, int replace)
+{
+	size_t path_length;
+	int position;
+	git_index_entry **entry_array;
+
+	assert(index && entry);
+
 	if (entry->path == NULL)
-		return GIT_ENOMEM;
+		return git__throw(GIT_EMISSINGOBJDATA, "Failed to insert into index. Entry has no path");
 
 	/* make sure that the path length flag is correct */
 	path_length = strlen(entry->path);
@@ -370,13 +435,13 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	 */
 	if (!replace) {
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
-			goto cleanup_oom;
+			return GIT_ENOMEM;
 
 		return GIT_SUCCESS;
 	}
 
 	/* look if an entry with this path already exists */
-	position = git_index_find(index, source_entry->path);
+	position = git_index_find(index, entry->path);
 
 	/*
 	 * if no entry exists add the entry at the end;
@@ -384,96 +449,80 @@ static int index_insert(git_index *index, const git_index_entry *source_entry, i
 	 */
 	if (position == GIT_ENOTFOUND) {
 		if (git_vector_insert(&index->entries, entry) < GIT_SUCCESS)
-			goto cleanup_oom;
+			return GIT_ENOMEM;
 
 		return GIT_SUCCESS;
 	}
 
 	/* exists, replace it */
 	entry_array = (git_index_entry **) index->entries.contents;
-	free((char *)entry_array[position]->path);
+	free(entry_array[position]->path);
 	free(entry_array[position]);
 	entry_array[position] = entry;
 
 	return GIT_SUCCESS;
-
-cleanup_oom:
-	free((char *)entry->path);
-	free(entry);
-	return GIT_ENOMEM;;
 }
 
-static int index_init_entry(git_index_entry *entry, git_index *index, const char *rel_path, int stage)
+static int index_add(git_index *index, const char *path, int stage, int replace)
 {
-	char full_path[GIT_PATH_MAX];
-	struct stat st;
-	int error;
+	git_index_entry *entry = NULL;
+	int ret;
 
-	if (index->repository == NULL)
-		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
+	ret = index_entry_init(&entry, index, path, stage);
+	if (ret)
+		goto err;
 
-	git_path_join(full_path, index->repository->path_workdir, rel_path);
+	ret = index_insert(index, entry, replace);
+	if (ret)
+		goto err;
 
-	if (p_lstat(full_path, &st) < 0)
-		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. '%s' cannot be opened", full_path);
-
-	if (stage < 0 || stage > 3)
-		return git__throw(GIT_ERROR, "Failed to initialize entry. Invalid stage %i", stage);
-
-	memset(entry, 0x0, sizeof(git_index_entry));
-
-	entry->ctime.seconds = (git_time_t)st.st_ctime;
-	entry->mtime.seconds = (git_time_t)st.st_mtime;
-	/* entry.mtime.nanoseconds = st.st_mtimensec; */
-	/* entry.ctime.nanoseconds = st.st_ctimensec; */
-	entry->dev= st.st_rdev;
-	entry->ino = st.st_ino;
-	entry->mode = index_create_mode(st.st_mode);
-	entry->uid = st.st_uid;
-	entry->gid = st.st_gid;
-	entry->file_size = st.st_size;
-
-	/* write the blob to disk and get the oid */
-	if ((error = git_blob_create_fromfile(&entry->oid, index->repository, rel_path)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to initialize index entry");
-
-	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
-	entry->path = rel_path; /* do not duplicate; index_insert already does this */
-	return GIT_SUCCESS;
+	return ret;
+err:
+	index_entry_free(entry);
+	return git__rethrow(ret, "Failed to append to index");
 }
 
 int git_index_add(git_index *index, const char *path, int stage)
 {
-	int error;
-	git_index_entry entry;
-
-	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to add to index");
-
-	return index_insert(index, &entry, 1);
+	return index_add(index, path, stage, 1);
 }
 
 int git_index_append(git_index *index, const char *path, int stage)
 {
-	int error;
-	git_index_entry entry;
+	return index_add(index, path, stage, 0);
+}
 
-	if ((error = index_init_entry(&entry, index, path, stage)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to append to index");
+static int index_add2(git_index *index, const git_index_entry *source_entry,
+		int replace)
+{
+	git_index_entry *entry = NULL;
+	int ret;
 
-	return index_insert(index, &entry, 0);
+	entry = index_entry_dup(source_entry);
+	if (entry == NULL) {
+		ret = GIT_ENOMEM;
+		goto err;
+	}
+
+	ret = index_insert(index, entry, replace);
+	if (ret)
+		goto err;
+
+	return ret;
+err:
+	index_entry_free(entry);
+	return git__rethrow(ret, "Failed to append to index");
 }
 
 int git_index_add2(git_index *index, const git_index_entry *source_entry)
 {
-	return index_insert(index, source_entry, 1);
+	return index_add2(index, source_entry, 1);
 }
 
 int git_index_append2(git_index *index, const git_index_entry *source_entry)
 {
-	return index_insert(index, source_entry, 0);
+	return index_add2(index, source_entry, 1);
 }
-
 
 int git_index_remove(git_index *index, int position)
 {
@@ -680,7 +729,7 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 				continue;
 			if (size < 20)
 				return git__throw(GIT_ERROR, "Failed to read unmerged entries");
-			git_oid_fromraw(&lost->oid[i], (unsigned char *) buffer);
+			git_oid_fromraw(&lost->oid[i], (const unsigned char *) buffer);
 			size -= 20;
 			buffer += 20;
 		}
@@ -715,7 +764,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 	dest->flags = ntohs(source->flags);
 
 	if (dest->flags & GIT_IDXENTRY_EXTENDED) {
-		struct entry_long *source_l = (struct entry_long *)source;
+		const struct entry_long *source_l = (const struct entry_long *)source;
 		path_ptr = source_l->path;
 
 		flags_raw = ntohs(source_l->flags_extended);
