@@ -200,7 +200,7 @@ static git_repository *repository_alloc()
 
 static int init_odb(git_repository *repo)
 {
-	return git_odb_open(&repo->db, repo->path_odb);	/* TODO: Move odb.c to new error handling */
+	return git_odb_open(&repo->db, repo->path_odb);
 }
 
 int git_repository_open3(git_repository **repo_out,
