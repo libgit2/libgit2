@@ -14,12 +14,7 @@ static int read_tree_internal(git_tree_cache **out,
 	const char *name_start, *buffer;
 	int count;
 	int error = GIT_SUCCESS;
-
-	if ((tree = git__malloc(sizeof(git_tree_cache))) == NULL)
-		return GIT_ENOMEM;
-
-	memset(tree, 0x0, sizeof(git_tree_cache));
-	tree->parent = parent;
+	size_t name_len;
 
 	buffer = name_start = *buffer_in;
 
@@ -28,17 +23,21 @@ static int read_tree_internal(git_tree_cache **out,
 		goto cleanup;
 	}
 
-	/* NUL-terminated tree name */
-	tree->name = git__strdup(name_start);
-	if (tree->name == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
-
 	if (++buffer >= buffer_end) {
 		error = GIT_EOBJCORRUPTED;
 		goto cleanup;
 	}
+
+	name_len = strlen(name_start);
+	if ((tree = git__malloc(sizeof(git_tree_cache) + name_len + 1)) == NULL)
+		return GIT_ENOMEM;
+
+	memset(tree, 0x0, sizeof(git_tree_cache));
+	tree->parent = parent;
+
+	/* NUL-terminated tree name */
+	memcpy(tree->name, name_start, name_len);
+	tree->name[name_len] = '\0';
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
 	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS || count < -1) {
@@ -135,7 +134,6 @@ void git_tree_cache_free(git_tree_cache *tree)
 	for (i = 0; i < tree->children_count; ++i)
 		git_tree_cache_free(tree->children[i]);
 
-	free(tree->name);
 	free(tree->children);
 	free(tree);
 }
