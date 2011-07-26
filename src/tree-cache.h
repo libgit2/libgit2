@@ -12,14 +12,13 @@
 #include "git2/oid.h"
 
 struct git_tree_cache {
-	char *name;
-
 	struct git_tree_cache *parent;
 	struct git_tree_cache **children;
 	size_t children_count;
 
 	ssize_t entries;
 	git_oid oid;
+	char name[GIT_FLEX_ARRAY];
 };
 
 typedef struct git_tree_cache git_tree_cache;
