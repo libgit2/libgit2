@@ -436,6 +436,8 @@ static int index_add(git_index *index, const char *path, int stage, int replace)
 	if (ret)
 		goto err;
 
+	git_tree_cache_invalidate_path(index->tree, entry->path);
+
 	return ret;
 err:
 	index_entry_free(entry);
@@ -467,6 +469,8 @@ static int index_add2(git_index *index, const git_index_entry *source_entry,
 	ret = index_insert(index, entry, replace);
 	if (ret)
 		goto err;
+
+	git_tree_cache_invalidate_path(index->tree, entry->path);
 
 	return ret;
 err:
