@@ -144,12 +144,10 @@ static int guess_repository_dirs(git_repository *repo, const char *repository_pa
 	if (git_path_basename_r(buffer, sizeof(buffer), repository_path) < 0)
 		return git__throw(GIT_EINVALIDPATH, "Unable to parse folder name from `%s`", repository_path);
 
-	if (strcmp(buffer, DOT_GIT) == 0) {
 		/* Path to working dir */
 		if (git_path_dirname_r(buffer, sizeof(buffer), repository_path) < 0)
 			return git__throw(GIT_EINVALIDPATH, "Unable to parse parent folder name from `%s`", repository_path);
 		path_work_tree = buffer;
-	}
 
 	return assign_repository_dirs(repo, repository_path, NULL, NULL, path_work_tree);
 }
