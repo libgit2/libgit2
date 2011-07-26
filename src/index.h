@@ -10,21 +10,9 @@
 #include "fileops.h"
 #include "filebuf.h"
 #include "vector.h"
+#include "tree-cache.h"
 #include "git2/odb.h"
 #include "git2/index.h"
-
-struct git_index_tree {
-	char *name;
-
-	struct git_index_tree *parent;
-	struct git_index_tree **children;
-	size_t children_count;
-
-	size_t entries;
-	git_oid oid;
-};
-
-typedef struct git_index_tree git_index_tree;
 
 struct git_index {
 	git_repository *repository;
@@ -34,7 +22,7 @@ struct git_index {
 	git_vector entries;
 
 	unsigned int on_disk:1;
-	git_index_tree *tree;
+	git_tree_cache *tree;
 
 	git_vector unmerged;
 };
