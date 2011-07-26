@@ -45,16 +45,6 @@ static int read_tree_internal(git_tree_cache **out,
 		goto cleanup;
 	}
 
-	/* Invalidated TREE. Free the tree but report success */
-	if (count == -1) {
-		/* FIXME: return buffer_end or the end position for
-		 * this single tree entry */
-		*buffer_in = buffer_end;
-		*out = NULL;
-		git_tree_cache_free(tree); /* Needs to be done manually */
-		return GIT_SUCCESS;
-	}
-
 	tree->entries = count;
 
 	if (*buffer != ' ' || ++buffer >= buffer_end) {
@@ -76,14 +66,17 @@ static int read_tree_internal(git_tree_cache **out,
 		goto cleanup;
 	}
 
-	/* 160-bit SHA-1 for this tree and it's children */
-	if (buffer + GIT_OID_RAWSZ > buffer_end) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
+	/* The SHA1 is only there if it's not invalidated */
+	if (tree->entries >= 0) {
+		/* 160-bit SHA-1 for this tree and it's children */
+		if (buffer + GIT_OID_RAWSZ > buffer_end) {
+			error = GIT_EOBJCORRUPTED;
+			goto cleanup;
+		}
 
-	git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
-	buffer += GIT_OID_RAWSZ;
+		git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
+		buffer += GIT_OID_RAWSZ;
+	}
 
 	/* Parse children: */
 	if (tree->children_count > 0) {
