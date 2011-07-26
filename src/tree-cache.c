@@ -7,10 +7,56 @@
 
 #include "tree-cache.h"
 
+static git_tree_cache *find_child(git_tree_cache *tree, const char *path)
+{
+	size_t i, dirlen;
+	const char *end;
+
+	end = strchr(path, '/');
+	if (end == NULL) {
+		end = strrchr(path, '\0');
+	}
+
+	dirlen = end - path;
+
+	for (i = 0; i < tree->children_count; ++i) {
+		const char *childname = tree->children[i]->name;
+
+		if (strlen(childname) == dirlen && !memcmp(path, childname, dirlen))
+			return tree->children[i];
+	}
+
+	return NULL;
+}
+
+void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path)
+{
+	const char *ptr = path, *end;
+
+	if (tree == NULL)
+		return;
+
+	tree->entries = -1;
+
+	while (ptr != NULL) {
+		end = strchr(ptr, '/');
+
+		if (end == NULL) /* End of path */
+			break;
+
+		tree = find_child(tree, ptr);
+		if (tree == NULL) /* We don't have that tree */
+			return;
+
+		tree->entries = -1;
+		ptr = end + 1;
+	}
+}
+
 static int read_tree_internal(git_tree_cache **out,
 		const char **buffer_in, const char *buffer_end, git_tree_cache *parent)
 {
-	git_tree_cache *tree;
+	git_tree_cache *tree = NULL;
 	const char *name_start, *buffer;
 	int count;
 	int error = GIT_SUCCESS;
