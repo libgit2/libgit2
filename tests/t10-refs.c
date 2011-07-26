@@ -808,6 +808,37 @@ BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove
 	close_temp_repo(repo);
 END_TEST
 
+BEGIN_TEST(delete1, "can delete a just packed reference")
+	git_reference *ref;
+	git_repository *repo;
+	git_oid id;
+	const char *new_ref = "refs/heads/new_ref";
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	/* Create and write the new object id reference */
+	must_pass(git_reference_create_oid(&ref, repo, new_ref, &id, 0));
+
+	/* Lookup the reference */
+	must_pass(git_reference_lookup(&ref, repo, new_ref));
+
+	/* Ensure it's a loose reference */
+	must_be_true(git_reference_is_packed(ref) == 0);
+
+	/* Pack all existing references */
+	must_pass(git_reference_packall(repo));
+
+	/* Ensure it's a packed reference */
+	must_be_true(git_reference_is_packed(ref) == 1);
+
+	/* This should pass */
+	must_pass(git_reference_delete(ref));
+
+	close_temp_repo(repo);
+END_TEST
+
 static int ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
 {
 	int error = GIT_SUCCESS;
@@ -1172,6 +1203,7 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename9);
 
 	ADD_TEST(delete0);
+	ADD_TEST(delete1);
 
 	ADD_TEST(list0);
 	ADD_TEST(list1);
