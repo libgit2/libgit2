@@ -33,7 +33,7 @@
 #include "posix.h"
 
 typedef struct git_indexer {
-	struct pack_file *pack;
+	struct git_pack_file *pack;
 	git_vector objects;
 	git_vector deltas;
 	struct stat st;
@@ -42,7 +42,7 @@ typedef struct git_indexer {
 
 static int parse_header(git_indexer *idx)
 {
-	struct pack_header hdr;
+	struct git_pack_header hdr;
 	int error;
 
 	/* Verify we recognize this pack file format. */
@@ -96,11 +96,11 @@ int git_indexer_new(git_indexer **out, const char *packname)
 	memset(idx, 0x0, sizeof(*idx));
 
 	namelen = strlen(packname);
-	idx->pack = git__malloc(sizeof(struct pack_file) + namelen + 1);
+	idx->pack = git__malloc(sizeof(struct git_pack_file) + namelen + 1);
 	if (idx->pack == NULL)
 		goto cleanup;
 
-	memset(idx->pack, 0x0, sizeof(struct pack_file));
+	memset(idx->pack, 0x0, sizeof(struct git_pack_file));
 	memcpy(idx->pack->pack_name, packname, namelen);
 
 	ret = p_stat(packname, &idx->st);

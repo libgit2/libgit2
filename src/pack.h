@@ -36,7 +36,7 @@
 #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
 #define PACK_VERSION 2
 #define pack_version_ok(v) ((v) == htonl(2) || (v) == htonl(3))
-struct pack_header {
+struct git_pack_header {
 	uint32_t hdr_signature;
 	uint32_t hdr_version;
 	uint32_t hdr_entries;
@@ -62,12 +62,12 @@ struct pack_header {
 
 #define PACK_IDX_SIGNATURE 0xff744f63	/* "\377tOc" */
 
-struct pack_idx_header {
+struct git_pack_idx_header {
 	uint32_t idx_signature;
 	uint32_t idx_version;
 };
 
-struct pack_file {
+struct git_pack_file {
 	git_mwindow_file mwf;
 	git_map index_map;
 
@@ -84,14 +84,11 @@ struct pack_file {
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
 };
 
-struct pack_entry {
+struct git_pack_entry {
 	off_t offset;
 	git_oid sha1;
-	struct pack_file *p;
+	struct git_pack_file *p;
 };
-
-static unsigned char *pack_window_open(struct pack_file *p,
-		git_mwindow **w_cursor, off_t offset, unsigned int *left);
 
 int git_packfile_unpack_header(
 		size_t *size_p,
@@ -100,19 +97,18 @@ int git_packfile_unpack_header(
 		git_mwindow **w_curs,
 		off_t *curpos);
 
-int packfile_unpack_delta(
-		git_rawobj *obj,
-		struct pack_file *p,
-		git_mwindow **w_curs,
-		off_t curpos,
-		size_t delta_size,
-		git_otype delta_type,
-		off_t obj_offset);
+int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, off_t obj_offset);
 
-int packfile_unpack(git_rawobj *obj, struct pack_file *p, off_t obj_offset);
-
-off_t get_delta_base(struct pack_file *p, git_mwindow **w_curs,
+off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
 		off_t *curpos, git_otype type,
 		off_t delta_obj_offset);
+
+void packfile_free(struct git_pack_file *p);
+int git_packfile_check(struct git_pack_file **pack_out, const char *path);
+int git_pack_entry_find(
+		struct git_pack_entry *e,
+		struct git_pack_file *p,
+		const git_oid *short_oid,
+		unsigned int len);
 
 #endif
