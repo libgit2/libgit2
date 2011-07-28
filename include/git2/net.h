@@ -29,6 +29,14 @@
 #include "oid.h"
 #include "types.h"
 
+/**
+ * @file git2/net.h
+ * @brief Git networking declarations
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
+
 #define GIT_DEFAULT_PORT "9418"
 
 /*
@@ -39,14 +47,6 @@
 
 #define GIT_DIR_FETCH 0
 #define GIT_DIR_PUSH 1
-
-/**
- * @file git2/net.h
- * @brief Git networking declarations
- * @ingroup Git
- * @{
- */
-GIT_BEGIN_DECL
 
 /**
  * Remote head description, given out on `ls` calls.
@@ -64,6 +64,6 @@ struct git_headarray {
 	struct git_remote_head **heads;
 };
 
+/** @} */
 GIT_END_DECL
-
 #endif
