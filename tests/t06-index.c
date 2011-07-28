@@ -51,9 +51,6 @@ BEGIN_TEST(read0, "load an empty index")
 	must_pass(git_index_open(&index, "in-memory-index"));
 	must_be_true(index->on_disk == 0);
 
-	must_pass(git_index_read(index));
-
-	must_be_true(index->on_disk == 0);
 	must_be_true(git_index_entrycount(index) == 0);
 	must_be_true(index->entries.sorted);
 
@@ -68,9 +65,6 @@ BEGIN_TEST(read1, "load a standard index (default test index)")
 	must_pass(git_index_open(&index, TEST_INDEX_PATH));
 	must_be_true(index->on_disk);
 
-	must_pass(git_index_read(index));
-
-	must_be_true(index->on_disk);
 	must_be_true(git_index_entrycount(index) == TEST_INDEX_ENTRY_COUNT);
 	must_be_true(index->entries.sorted);
 
@@ -93,9 +87,6 @@ BEGIN_TEST(read2, "load a standard index (git.git index)")
 	must_pass(git_index_open(&index, TEST_INDEX2_PATH));
 	must_be_true(index->on_disk);
 
-	must_pass(git_index_read(index));
-
-	must_be_true(index->on_disk);
 	must_be_true(git_index_entrycount(index) == TEST_INDEX2_ENTRY_COUNT);
 	must_be_true(index->entries.sorted);
 	must_be_true(index->tree != NULL);
@@ -108,7 +99,6 @@ BEGIN_TEST(find0, "find an entry on an index")
 	unsigned int i;
 
 	must_pass(git_index_open(&index, TEST_INDEX_PATH));
-	must_pass(git_index_read(index));
 
 	for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
 		int idx = git_index_find(index, TEST_ENTRIES[i].path);
@@ -138,7 +128,6 @@ BEGIN_TEST(write0, "write an index back to disk")
 	must_pass(copy_file(TEST_INDEXBIG_PATH, "index_rewrite"));
 
 	must_pass(git_index_open(&index, "index_rewrite"));
-	must_pass(git_index_read(index));
 	must_be_true(index->on_disk);
 
 	must_pass(git_index_write(index));
