@@ -25,6 +25,7 @@ typedef struct {  /* file io buffer  */
 } git_fbuffer;
 
 extern int git_futils_readbuffer(git_fbuffer *obj, const char *path);
+extern int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mtime, int *updated);
 extern void git_futils_freebuffer(git_fbuffer *obj);
 
 /**
