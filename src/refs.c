@@ -59,7 +59,7 @@ static uint32_t reftable_hash(const void *key, int hash_id)
 
 static void reference_free(git_reference *reference);
 static int reference_create(git_reference **ref_out, git_repository *repo, const char *name, git_rtype type);
-static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *repo_path, const char *ref_name);
+static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *repo_path, const char *ref_name, int *updated);
 
 /* loose refs */
 static int loose_parse_symbolic(git_reference *ref, git_fbuffer *file_content);
@@ -150,23 +150,16 @@ cleanup:
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create reference");
 }
 
-static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *repo_path, const char *ref_name)
+static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *repo_path, const char *ref_name, int *updated)
 {
-	struct stat st;
 	char path[GIT_PATH_MAX];
+
+	assert(file_content && repo_path && ref_name);
 
 	/* Determine the full path of the file */
 	git_path_join(path, repo_path, ref_name);
 
-	if (p_stat(path, &st) < 0 || S_ISDIR(st.st_mode))
-		return git__throw(GIT_ENOTFOUND,
-			"Cannot read reference file '%s'", ref_name);
-
-	if (mtime)
-		*mtime = st.st_mtime;
-
-	if (file_content)
-		return git_futils_readbuffer(file_content, path);
+	return git_futils_readbuffer_updated(file_content, path, mtime, updated);
 
 	return GIT_SUCCESS;
 }
@@ -179,22 +172,24 @@ static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *
  *****************************************/
 static int loose_update(git_reference *ref)
 {
-	int error;
-	time_t ref_time;
+	int error, updated;
 	git_fbuffer ref_file = GIT_FBUFFER_INIT;
 
 	if (ref->type & GIT_REF_PACKED)
 		return packed_load(ref->owner);
 
-	error = reference_read(NULL, &ref_time, ref->owner->path_repository, ref->name);
+/*	error = reference_read(NULL, &ref_time, ref->owner->path_repository, ref->name);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	if (ref_time == ref->mtime)
 		return GIT_SUCCESS;
-
-	error = reference_read(&ref_file, &ref->mtime, ref->owner->path_repository, ref->name);
+*/
+	error = reference_read(&ref_file, &ref->mtime, ref->owner->path_repository, ref->name, &updated);
 	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (!updated)
 		goto cleanup;
 
 	if (ref->type == GIT_REF_SYMBOLIC)
@@ -205,9 +200,9 @@ static int loose_update(git_reference *ref)
 		error = git__throw(GIT_EOBJCORRUPTED,
 			"Invalid reference type (%d) for loose reference", ref->type);
 
-	git_futils_freebuffer(&ref_file);
 
 cleanup:
+	git_futils_freebuffer(&ref_file);
 	if (error != GIT_SUCCESS) {
 		reference_free(ref);
 		git_hashtable_remove(ref->owner->references.loose_cache, ref->name);
@@ -311,11 +306,11 @@ static int loose_lookup(
 	int error = GIT_SUCCESS;
 	git_fbuffer ref_file = GIT_FBUFFER_INIT;
 	git_reference *ref = NULL;
-	time_t ref_time;
+	time_t ref_time = 0;
 
 	*ref_out = NULL;
 
-	error = reference_read(&ref_file, &ref_time, repo->path_repository, name);
+	error = reference_read(&ref_file, &ref_time, repo->path_repository, name, NULL);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -500,53 +495,49 @@ cleanup:
 
 static int packed_load(git_repository *repo)
 {
-	int error = GIT_SUCCESS;
+	int error = GIT_SUCCESS, updated;
 	git_fbuffer packfile = GIT_FBUFFER_INIT;
 	const char *buffer_start, *buffer_end;
 	git_refcache *ref_cache = &repo->references;
 
-	/* already loaded */
-	if (repo->references.packfile != NULL) {
-		time_t packed_time;
-
-		/* check if we can read the time of the index;
-		 * if we can read it and it matches the time of the
-		 * index we had previously loaded, we don't need to do
-		 * anything else.
-		 *
-		 * if we cannot load the time (e.g. the packfile
-		 * has disappeared) or the time is different, we
-		 * have to reload the packfile */
-
-		if (!reference_read(NULL, &packed_time, repo->path_repository, GIT_PACKEDREFS_FILE) &&
-			packed_time == ref_cache->packfile_time)
-			return GIT_SUCCESS;
-
-		git_hashtable_clear(repo->references.packfile);
-	} else {
+	/* First we make sure we have allocated the hash table */
+	if (ref_cache->packfile == NULL) {
 		ref_cache->packfile = git_hashtable_alloc(
 			default_table_size,
 			reftable_hash,
 			(git_hash_keyeq_ptr)strcmp);
 
-		if (ref_cache->packfile == NULL)
-			return GIT_ENOMEM;
+		if (ref_cache->packfile == NULL) {
+			error = GIT_ENOMEM;
+			goto cleanup;
+		}
 	}
 
-	/* read the packfile from disk;
-	 * store its modification time to check for future reloads */
-	error = reference_read(
-			&packfile,
-			&ref_cache->packfile_time,
-			repo->path_repository,
-			GIT_PACKEDREFS_FILE);
+	error = reference_read(&packfile, &ref_cache->packfile_time,
+						   repo->path_repository, GIT_PACKEDREFS_FILE, &updated);
 
-	/* there is no packfile on disk; that's ok */
-	if (error == GIT_ENOTFOUND)
+	/*
+	 * If we couldn't find the file, we need to clear the table and
+	 * return. On any other error, we return that error. If everything
+	 * went fine and the file wasn't updated, then there's nothing new
+	 * for us here, so just return. Anything else means we need to
+	 * refresh the packed refs.
+	 */
+	if (error == GIT_ENOTFOUND) {
+		git_hashtable_clear(ref_cache->packfile);
 		return GIT_SUCCESS;
+	} else if (error < GIT_SUCCESS) {
+		return git__rethrow(error, "Failed to read packed refs");
+	} else if (!updated) {
+		return GIT_SUCCESS;
+	}
 
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	/*
+	 * At this point, we want to refresh the packed refs. We already
+	 * have the contents in our buffer.
+	 */
+
+	git_hashtable_clear(ref_cache->packfile);
 
 	buffer_start = (const char *)packfile.data;
 	buffer_end = (const char *)(buffer_start) + packfile.len;
@@ -1624,6 +1615,7 @@ int git_repository__refcache_init(git_refcache *refs)
 
 	/* packfile loaded lazily */
 	refs->packfile = NULL;
+	refs->packfile_time = 0;
 
 	return (refs->loose_cache) ? GIT_SUCCESS : GIT_ENOMEM;
 }

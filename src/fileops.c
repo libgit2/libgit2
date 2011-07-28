@@ -141,23 +141,40 @@ git_off_t git_futils_filesize(git_file fd)
 	return sb.st_size;
 }
 
-int git_futils_readbuffer(git_fbuffer *obj, const char *path)
+int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mtime, int *updated)
 {
 	git_file fd;
 	size_t len;
-	git_off_t size;
+	struct stat st;
 	unsigned char *buff;
 
 	assert(obj && path && *path);
 
-	if ((fd = p_open(path, O_RDONLY)) < 0)
-		return git__throw(GIT_ERROR, "Failed to open %s for reading", path);
+	if (updated != NULL)
+		*updated = 0;
 
-	if (((size = git_futils_filesize(fd)) < 0) || !git__is_sizet(size+1)) {
-		p_close(fd);
+	if (p_stat(path, &st) < 0)
+		return git__throw(GIT_ENOTFOUND, "Failed to stat file %s", path);
+
+	if (S_ISDIR(st.st_mode))
+		return git__throw(GIT_ERROR, "Can't read a dir into a buffer");
+
+	/*
+	 * If we were given a time, we only want to read the file if it
+	 * has been modified.
+	 */
+	if (mtime != NULL && *mtime >= st.st_mtime)
+		return GIT_SUCCESS;
+
+	if (mtime != NULL)
+		*mtime = st.st_mtime;
+	if (!git__is_sizet(st.st_size+1))
 		return git__throw(GIT_ERROR, "Failed to read file `%s`. An error occured while calculating its size", path);
-	}
-	len = (size_t) size;
+
+	len = (size_t) st.st_size;
+
+	if ((fd = p_open(path, O_RDONLY)) < 0)
+		return git__throw(GIT_EOSERR, "Failed to open %s for reading", path);
 
 	if ((buff = git__malloc(len + 1)) == NULL) {
 		p_close(fd);
@@ -173,10 +190,20 @@ int git_futils_readbuffer(git_fbuffer *obj, const char *path)
 
 	p_close(fd);
 
+	if (mtime != NULL)
+		*mtime = st.st_mtime;
+	if (updated != NULL)
+		*updated = 1;
+
 	obj->data = buff;
 	obj->len  = len;
 
 	return GIT_SUCCESS;
+}
+
+int git_futils_readbuffer(git_fbuffer *obj, const char *path)
+{
+	return git_futils_readbuffer_updated(obj, path, NULL, NULL);
 }
 
 void git_futils_freebuffer(git_fbuffer *obj)
