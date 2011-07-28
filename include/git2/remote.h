@@ -28,6 +28,14 @@
 #include "git2/common.h"
 #include "git2/repository.h"
 #include "git2/refspec.h"
+/**
+ * @file git2/remote.h
+ * @brief Git remote management functions
+ * @defgroup git_remote remote management functions
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
 
 /*
  * TODO: This functions still need to be implemented:
@@ -117,6 +125,6 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
  */
 GIT_EXTERN(void) git_remote_free(struct git_remote *remote);
 
+/** @} */
 GIT_END_DECL
-
 #endif
