@@ -32,55 +32,37 @@
 #include "mwindow.h"
 #include "posix.h"
 
+struct entry {
+	unsigned char sha[GIT_OID_RAWSZ];
+	uint32_t crc;
+	uint32_t offset;
+	uint64_t offset_long;
+};
+
 typedef struct git_indexer {
 	struct git_pack_file *pack;
-	git_vector objects;
-	git_vector deltas;
 	struct stat st;
 	git_indexer_stats stats;
+	struct git_pack_header hdr;
+	struct entry *objects;
 } git_indexer;
 
 static int parse_header(git_indexer *idx)
 {
-	struct git_pack_header hdr;
 	int error;
 
 	/* Verify we recognize this pack file format. */
-	if ((error = p_read(idx->pack->mwf.fd, &hdr, sizeof(hdr))) < GIT_SUCCESS)
-		goto cleanup;
+	if ((error = p_read(idx->pack->mwf.fd, &idx->hdr, sizeof(idx->hdr))) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to read in pack header");
 
-	if (hdr.hdr_signature != htonl(PACK_SIGNATURE)) {
-		error = git__throw(GIT_EOBJCORRUPTED, "Wrong pack signature");
-		goto cleanup;
-	}
+	if (idx->hdr.hdr_signature != htonl(PACK_SIGNATURE))
+		return git__throw(GIT_EOBJCORRUPTED, "Wrong pack signature");
 
-	if (!pack_version_ok(hdr.hdr_version)) {
-		error = git__throw(GIT_EOBJCORRUPTED, "Wrong pack version");
-		goto cleanup;
-	}
+	if (!pack_version_ok(idx->hdr.hdr_version))
+		return git__throw(GIT_EOBJCORRUPTED, "Wrong pack version");
 
-	/*
-	 * FIXME: At this point we have no idea how many of the are
-	 * deltas, so assume all objects are both until we get a better
-	 * idea 
-	 */
-	error = git_vector_init(&idx->objects, hdr.hdr_entries, NULL /* FIXME: probably need something */);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	error = git_vector_init(&idx->deltas, hdr.hdr_entries, NULL /* FIXME: probably need something */);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	idx->stats.total = hdr.hdr_entries;
 
 	return GIT_SUCCESS;
-
-cleanup:
-	git_vector_free(&idx->objects);
-	git_vector_free(&idx->deltas);
-
-	return error;
 }
 
 int git_indexer_new(git_indexer **out, const char *packname)
@@ -127,6 +109,14 @@ int git_indexer_new(git_indexer **out, const char *packname)
 		goto cleanup;
 	}
 
+	idx->objects = git__calloc(sizeof(struct entry), idx->hdr.hdr_entries);
+	if (idx->objects == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	idx->stats.total = idx->hdr.hdr_entries;
+
 	*out = idx;
 
 	return GIT_SUCCESS;
@@ -139,41 +129,6 @@ cleanup:
 }
 
 /*
- * Parse the variable-width length and return it. Assumes that the
- * whole number exists inside the buffer. As this is the git format,
- * the first byte only contains length information in the lower nibble
- * because the higher one is used for type and continuation. The
- * output parameter is necessary because we don't know how long the
- * entry is actually going to be.
- */
-static unsigned long entry_len(const char **bufout, const char *buf)
-{
-	unsigned long size, c;
-	const char *p = buf;
-	unsigned shift;
-
-	c = *p;
-	size = c & 0xf;
-	shift = 4;
-
-	/* As long as the MSB is set, we need to continue */
-	while (c & 0x80) {
-		p++;
-		c = *p;
-		size += (c & 0x7f) << shift;
-		shift += 7;
-	}
-
-	*bufout = p;
-	return size;
-}
-
-static git_otype entry_type(const char *buf)
-{
-	return (*buf >> 4) & 7;
-}
-
-/*
  * Create the index. Every time something interesting happens
  * (something has been parse or resolved), the callback gets called
  * with some stats so it can tell the user how hard we're working
@@ -181,11 +136,11 @@ static git_otype entry_type(const char *buf)
 int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void *), void *cb_data)
 {
 	git_mwindow_file *mwf = &idx->pack->mwf;
-	git_mwindow *w = NULL;
 	off_t off = 0;
 	int error;
-	const char *ptr;
 	unsigned int fanout[256] = {0};
+
+	/* FIXME: Write the keep file */
 
 	error = git_mwindow_file_register(mwf);
 	if (error < GIT_SUCCESS)
@@ -196,29 +151,45 @@ int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void 
 		cb(&idx->stats, cb_data);
 
 	while (idx->stats.processed < idx->stats.total) {
-		size_t size;
-		git_otype type;
+		git_rawobj obj;
+		git_oid oid;
+		struct entry entry;
+		char hdr[512] = {0}; /* FIXME: How long should this be? */
+		int i, hdr_len;
 
-		error = git_packfile_unpack_header(&size, &type, mwf, &w, &off);
+		memset(&entry, 0x0, sizeof(entry)); /* Necessary? */
 
-		switch (type) {
-		case GIT_OBJ_COMMIT:
-		case GIT_OBJ_TREE:
-		case GIT_OBJ_BLOB:
-		case GIT_OBJ_TAG:
-			break;
-		default:
-			error = git__throw(GIT_EOBJCORRUPTED, "Invalid object type");
+		if (off > UINT31_MAX) {
+			entry.offset = ~0ULL;
+			entry.offset_long = off;
+		} else {
+			entry.offset = off;
+		}
+
+		error = git_packfile_unpack(&obj, idx->pack, &off);
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to unpack object");
 			goto cleanup;
 		}
 
-		/*
-		 * Do we need to uncompress everything if we're not running in
-		 * strict mode? Or at least can't we free the data?
-		 */
+		error = git_odb__hash_obj(&oid, hdr, sizeof(hdr), &hdr_len, &obj);
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to hash object");
+			goto cleanup;
+		}
 
-		/* Get a window for the compressed data */
-		//ptr = git_mwindow_open(mwf, &w, idx->pack->pack_fd, size, data - ptr, 0, NULL);
+		memcpy(&entry.sha, oid.id, GIT_OID_RAWSZ);
+		/* entry.crc = crc32(obj.data) */
+
+		/* Add the object to the list */
+		//memcpy(&idx->objects[idx->stats.processed], &entry, sizeof(entry));
+		idx->objects[idx->stats.processed] = entry;
+
+		for (i = oid.id[0]; i < 256; ++i) {
+			fanout[i]++;
+		}
+
+		free(obj.data);
 
 		idx->stats.processed++;
 
@@ -226,6 +197,10 @@ int git_indexer_run(git_indexer *idx, int (*cb)(const git_indexer_stats *, void 
 			cb(&idx->stats, cb_data);
 
 	}
+
+	/*
+	 * All's gone well, so let's write the index file.
+	 */
 
 cleanup:
 	git_mwindow_free_all(mwf);
@@ -237,8 +212,7 @@ cleanup:
 void git_indexer_free(git_indexer *idx)
 {
 	p_close(idx->pack->mwf.fd);
-	git_vector_free(&idx->objects);
-	git_vector_free(&idx->deltas);
+	free(idx->objects);
 	free(idx->pack);
 	free(idx);
 }

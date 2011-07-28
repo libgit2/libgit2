@@ -389,7 +389,7 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to read pack backend");
 
-	if ((error = git_packfile_unpack(&raw, e.p, e.offset)) < GIT_SUCCESS)
+	if ((error = git_packfile_unpack(&raw, e.p, &e.offset)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to read pack backend");
 
 	*buffer_p = raw.data;
@@ -426,7 +426,7 @@ int pack_backend__read_prefix(
 		if ((error = pack_entry_find_prefix(&e, (struct pack_backend *)backend, short_oid, len)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to read pack backend");
 
-		if ((error = git_packfile_unpack(&raw, e.p, e.offset)) < GIT_SUCCESS)
+		if ((error = git_packfile_unpack(&raw, e.p, &e.offset)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to read pack backend");
 
 		*buffer_p = raw.data;

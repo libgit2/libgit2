@@ -38,7 +38,7 @@ int packfile_unpack_compressed(
 		git_rawobj *obj,
 		struct git_pack_file *p,
 		git_mwindow **w_curs,
-		off_t curpos,
+		off_t *curpos,
 		size_t size,
 		git_otype type);
 
@@ -286,7 +286,7 @@ static int packfile_unpack_delta(
 		git_rawobj *obj,
 		struct git_pack_file *p,
 		git_mwindow **w_curs,
-		off_t curpos,
+		off_t *curpos,
 		size_t delta_size,
 		git_otype delta_type,
 		off_t obj_offset)
@@ -295,12 +295,12 @@ static int packfile_unpack_delta(
 	git_rawobj base, delta;
 	int error;
 
-	base_offset = get_delta_base(p, w_curs, &curpos, delta_type, obj_offset);
+	base_offset = get_delta_base(p, w_curs, curpos, delta_type, obj_offset);
 	if (base_offset == 0)
 		return git__throw(GIT_EOBJCORRUPTED, "Delta offset is zero");
 
 	git_mwindow_close(w_curs);
-	error = git_packfile_unpack(&base, p, base_offset);
+	error = git_packfile_unpack(&base, p, &base_offset);
 
 	/*
 	 * TODO: git.git tries to load the base from other packfiles
@@ -333,10 +333,10 @@ static int packfile_unpack_delta(
 int git_packfile_unpack(
 		git_rawobj *obj,
 		struct git_pack_file *p,
-		off_t obj_offset)
+		off_t *obj_offset)
 {
 	git_mwindow *w_curs = NULL;
-	off_t curpos = obj_offset;
+	off_t curpos = *obj_offset;
 	int error;
 
 	size_t size = 0;
@@ -358,8 +358,8 @@ int git_packfile_unpack(
 	case GIT_OBJ_OFS_DELTA:
 	case GIT_OBJ_REF_DELTA:
 		error = packfile_unpack_delta(
-				obj, p, &w_curs, curpos,
-				size, type, obj_offset);
+				obj, p, &w_curs, &curpos,
+				size, type, *obj_offset);
 		break;
 
 	case GIT_OBJ_COMMIT:
@@ -367,7 +367,7 @@ int git_packfile_unpack(
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TAG:
 		error = packfile_unpack_compressed(
-				obj, p, &w_curs, curpos,
+				obj, p, &w_curs, &curpos,
 				size, type);
 		break;
 
@@ -377,14 +377,19 @@ int git_packfile_unpack(
 	}
 
 	git_mwindow_close(&w_curs);
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to unpack packfile");
+
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to unpack object");
+
+	*obj_offset = curpos;
+	return GIT_SUCCESS;
 }
 
 int packfile_unpack_compressed(
 		git_rawobj *obj,
 		struct git_pack_file *p,
 		git_mwindow **w_curs,
-		off_t curpos,
+		off_t *curpos,
 		size_t size,
 		git_otype type)
 {
@@ -406,14 +411,14 @@ int packfile_unpack_compressed(
 	}
 
 	do {
-		in = pack_window_open(p, w_curs, curpos, &stream.avail_in);
+		in = pack_window_open(p, w_curs, *curpos, &stream.avail_in);
 		stream.next_in = in;
 		st = inflate(&stream, Z_FINISH);
 
 		if (!stream.avail_out)
 			break; /* the payload is larger than it should be */
 
-		curpos += stream.next_in - in;
+		*curpos += stream.next_in - in;
 	} while (st == Z_OK || st == Z_BUF_ERROR);
 
 	inflateEnd(&stream);
@@ -429,6 +434,10 @@ int packfile_unpack_compressed(
 	return GIT_SUCCESS;
 }
 
+/*
+ * curpos is where the data starts, delta_obj_offset is the where the
+ * header starts
+ */
 off_t get_delta_base(
 		struct git_pack_file *p,
 		git_mwindow **w_curs,
