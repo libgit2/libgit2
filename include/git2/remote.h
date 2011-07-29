@@ -46,15 +46,6 @@ GIT_BEGIN_DECL
  */
 
 /**
- * @file git2/remote.h
- * @brief Git remote management
- * @defgroup git_remote Git remote management routines
- * @ingroup Git
- * @{
- */
-GIT_BEGIN_DECL
-
-/**
  * Get the information for a particular remote
  *
  * @param out pointer to the new remote object
