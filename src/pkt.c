@@ -27,6 +27,8 @@
 
 #include "git2/types.h"
 #include "git2/errors.h"
+#include "git2/refs.h"
+#include "git2/revwalk.h"
 
 #include "pkt.h"
 #include "util.h"
@@ -229,9 +231,70 @@ int git_pkt_send_wants(git_headarray *refs, int fd)
 
 	for (i = 0; i < refs->len; ++i) {
 		head = refs->heads[i];
+		if (head->type != GIT_WHN_WANT)
+			continue;
+
 		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
-		printf("would send %s\n", buf);
+		printf("would send %s", buf);
 	}
 
+	/* TODO: git_pkt_send_flush(fd) */
+	printf("Wound send 0000\n");
+
+	return ret;
+}
+
+#define HAVE_PREFIX "0032have "
+
+int git_pkt_send_haves(git_repository *repo, int fd)
+{
+	unsigned int i;
+	int ret = GIT_SUCCESS;
+	char buf[STRLEN(HAVE_PREFIX) + GIT_OID_HEXSZ + 2];
+	git_oid oid;
+	git_revwalk *walk;
+	git_strarray refs;
+	git_reference *ref;
+	git_remote_head *head;
+
+	memcpy(buf, HAVE_PREFIX, STRLEN(HAVE_PREFIX));
+	buf[sizeof(buf) - 2] = '\n';
+	buf[sizeof(buf) - 1] = '\0';
+
+	ret = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
+	if (ret < GIT_ERROR)
+		return git__rethrow(ret, "Failed to list all references");
+
+	ret = git_revwalk_new(&walk, repo);
+	if (ret < GIT_ERROR) {
+		ret = git__rethrow(ret, "Failed to list all references");
+		goto cleanup;
+	}
+
+	for (i = 0; i < refs.count; ++i) {
+		ret = git_reference_lookup(&ref, repo, refs.strings[i]);
+		if (ret < GIT_ERROR) {
+			ret = git__rethrow(ret, "Failed to lookup %s", refs.strings[i]);
+			goto cleanup;
+		}
+
+		ret = git_revwalk_push(walk, git_reference_oid(ref));
+		if (ret < GIT_ERROR) {
+			ret = git__rethrow(ret, "Failed to push %s", refs.strings[i]);
+			goto cleanup;
+		}
+	}
+
+	while ((ret = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+		git_oid_fmt(buf + STRLEN(HAVE_PREFIX), &oid);
+		printf("would send %s", buf);
+	}
+
+	/* TODO: git_pkt_send_flush(fd) */
+	printf("Wound send 0000\n");
+
+cleanup:
+	git_revwalk_free(walk);
+	git_strarray_free(&refs);
 	return ret;
 }
