@@ -165,6 +165,15 @@ static int local_ls(git_transport *transport, git_headarray *array)
 	return error;
 }
 
+static int local_send_wants(git_transport *GIT_UNUSED(transport), git_headarray *GIT_UNUSED(array))
+{
+	GIT_UNUSED_ARG(tranport);
+	GIT_UNUSED_ARG(array);
+
+	/* We're local anyway, so we don't need this */
+	return GIT_SUCCESS;
+}
+
 static int local_close(git_transport *GIT_UNUSED(transport))
 {
 	/* Nothing to do */

@@ -31,6 +31,11 @@
 #include "repository.h"
 #include "remote.h"
 
+int git_remote_send_wants(git_remote *remote, git_headarray *list)
+{
+	return git_transport_send_wants(remote->transport, list);
+}
+
 static int refspec_parse(git_refspec *refspec, const char *str)
 {
 	char *delim;
