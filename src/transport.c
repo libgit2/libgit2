@@ -80,6 +80,11 @@ int git_transport_ls(git_transport *transport, git_headarray *array)
 	return transport->ls(transport, array);
 }
 
+int git_transport_send_wants(struct git_transport *transport, git_headarray *array)
+{
+	return transport->send_wants(transport, array);
+}
+
 int git_transport_close(git_transport *transport)
 {
 	return transport->close(transport);

@@ -44,7 +44,10 @@ static int whn_cmp(const void *a, const void *b)
 	return headb->type - heada->type;
 }
 
-/* FIXME: we assume that the transport has been connected, enforce that somehow */
+/*
+ * FIXME: we assume that the transport has been connected, enforce
+ * that somehow, we also want to be called from _negotiate
+ */
 int git_fetch_list_want(git_headarray *whn_list, git_repository *repo, git_remote *remote)
 {
 	git_vector list;
@@ -179,7 +182,7 @@ int git_fetch_negotiate(git_headarray *list, git_repository *repo, git_remote *r
 	 * Now we have everything set up so we can start tell the server
 	 * what we want and what we have.
 	 */
-	git_pkt_send_wants(list);
+	git_remote_send_wants(remote, list);
 	
 
 cleanup:

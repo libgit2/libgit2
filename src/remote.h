@@ -13,4 +13,6 @@ struct git_remote {
 	git_transport *transport;
 };
 
+int git_remote_send_wants(git_remote *remote, git_headarray *list);
+
 #endif

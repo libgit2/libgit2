@@ -57,6 +57,10 @@ struct git_transport {
 	 */
 	int (*push)(struct git_transport *transport);
 	/**
+	 * Send the list of 'want' refs
+	 */
+	int (*send_wants)(struct git_transport *transport, git_headarray *list);
+	/**
 	 * Fetch the changes
 	 */
 	int (*fetch)(struct git_transport *transport);
@@ -73,5 +77,7 @@ struct git_transport {
 int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
+
+int git_transport_send_wants(struct git_transport *transport, git_headarray *array);
 
 #endif
