@@ -57,6 +57,8 @@ typedef struct {
 
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 int git_pkt_send_flush(int s);
+int git_pkt_send_haves(git_repository *repo, int fd);
+int git_pkt_send_wants(git_headarray *refs, int fd);
 void git_pkt_free(git_pkt *pkt);
 
 #endif

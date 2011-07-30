@@ -38,8 +38,8 @@
  */
 static int whn_cmp(const void *a, const void *b)
 {
-	git_remote_head *heada = *(git_remote_head **)(a);
-	git_remote_head *headb = *(git_remote_head **)(b);
+	git_remote_head *heada = (git_remote_head *) a;
+	git_remote_head *headb = (git_remote_head *) b;
 
 	return headb->type - heada->type;
 }
@@ -57,7 +57,7 @@ int git_fetch_list_want(git_headarray *whn_list, git_repository *repo, git_remot
 	int error;
 	unsigned int i;
 
-	error = git_vector_init(&list, whn_list->len, whn_cmp);
+	error = git_vector_init(&list, 16, whn_cmp);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -182,8 +182,8 @@ int git_fetch_negotiate(git_headarray *list, git_repository *repo, git_remote *r
 	 * Now we have everything set up so we can start tell the server
 	 * what we want and what we have.
 	 */
-	git_remote_send_wants(remote, list);
-	
+	git_transport_send_wants(remote->transport, list);
+	git_transport_send_haves(remote->transport, repo);
 
 cleanup:
 	git_revwalk_free(walk);
