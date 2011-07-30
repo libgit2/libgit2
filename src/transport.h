@@ -63,7 +63,7 @@ struct git_transport {
 	/**
 	 * Send the list of 'have' refs
 	 */
-	int (*send_haves)(struct git_transport *transport, git_repository *repo);
+	int (*send_have)(struct git_transport *transport, git_oid *oid);
 	/**
 	 * Fetch the changes
 	 */
@@ -83,5 +83,7 @@ int git_transport_git(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
 
 int git_transport_send_wants(struct git_transport *transport, git_headarray *array);
+int git_transport_send_have(struct git_transport *transport, git_oid *oid);
+int git_transport_send_done(struct git_transport *transport);
 
 #endif

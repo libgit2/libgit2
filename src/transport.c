@@ -85,11 +85,15 @@ int git_transport_send_wants(struct git_transport *transport, git_headarray *arr
 	return transport->send_wants(transport, array);
 }
 
-int git_transport_send_haves(struct git_transport *transport, git_repository *repo)
+int git_transport_send_have(struct git_transport *transport, git_oid *oid)
 {
-	return transport->send_haves(transport, repo);
+	return transport->send_have(transport, oid);
 }
 
+int git_transport_send_done(struct git_transport *transport)
+{
+	return transport->send_done(transport);
+}
 int git_transport_close(git_transport *transport)
 {
 	return transport->close(transport);
