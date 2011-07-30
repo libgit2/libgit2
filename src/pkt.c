@@ -52,10 +52,38 @@ static int flush_pkt(git_pkt **out)
 	return GIT_SUCCESS;
 }
 
+static int ack_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt *pkt;
+
+	pkt = git__malloc(sizeof(git_pkt));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_ACK;
+	*out = pkt;
+
+	return GIT_SUCCESS;
+}
+
+static int nack_pkt(git_pkt **out)
+{
+	git_pkt *pkt;
+
+	pkt = git__malloc(sizeof(git_pkt));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_NACK;
+	*out = pkt;
+
+	return GIT_SUCCESS;
+}
+
 /*
  * Parse an other-ref line.
  */
-int ref_pkt(git_pkt **out, const char *line, size_t len)
+static int ref_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_ref *pkt;
 	int error, has_caps = 0;
@@ -185,11 +213,14 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 
 	len -= PKT_LEN_SIZE; /* the encoded length includes its own size */
 
-	/*
-	 * For now, we're just going to assume we're parsing references
-	 */
+	/* Assming the minimal size is actually 4 */
+	if (!git__prefixcmp(line, "ACK"))
+		error = ack_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "NACK"))
+		error = nack_pkt(head);
+	else
+		error = ref_pkt(head, line, len);
 
-	error = ref_pkt(head, line, len);
 	*out = line + len;
 
 	return error;
@@ -239,62 +270,32 @@ int git_pkt_send_wants(git_headarray *refs, int fd)
 	}
 
 	/* TODO: git_pkt_send_flush(fd) */
-	printf("Wound send 0000\n");
+	printf("Would send 0000\n");
 
 	return ret;
 }
 
+/*
+ * TODO: this should be a more generic function, maybe to be used by
+ * git_pkt_send_wants, as it's not performance-critical
+ */
 #define HAVE_PREFIX "0032have "
 
-int git_pkt_send_haves(git_repository *repo, int fd)
+int git_pkt_send_have(git_oid *oid, int fd)
 {
-	unsigned int i;
 	int ret = GIT_SUCCESS;
-	char buf[STRLEN(HAVE_PREFIX) + GIT_OID_HEXSZ + 2];
-	git_oid oid;
-	git_revwalk *walk;
-	git_strarray refs;
-	git_reference *ref;
-	git_remote_head *head;
+	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
 
-	memcpy(buf, HAVE_PREFIX, STRLEN(HAVE_PREFIX));
-	buf[sizeof(buf) - 2] = '\n';
-	buf[sizeof(buf) - 1] = '\0';
+	git_oid_fmt(buf + STRLEN(HAVE_PREFIX), oid);
+	printf("would send %s", buf);
 
-	ret = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
-	if (ret < GIT_ERROR)
-		return git__rethrow(ret, "Failed to list all references");
-
-	ret = git_revwalk_new(&walk, repo);
-	if (ret < GIT_ERROR) {
-		ret = git__rethrow(ret, "Failed to list all references");
-		goto cleanup;
-	}
-
-	for (i = 0; i < refs.count; ++i) {
-		ret = git_reference_lookup(&ref, repo, refs.strings[i]);
-		if (ret < GIT_ERROR) {
-			ret = git__rethrow(ret, "Failed to lookup %s", refs.strings[i]);
-			goto cleanup;
-		}
-
-		ret = git_revwalk_push(walk, git_reference_oid(ref));
-		if (ret < GIT_ERROR) {
-			ret = git__rethrow(ret, "Failed to push %s", refs.strings[i]);
-			goto cleanup;
-		}
-	}
-
-	while ((ret = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
-		git_oid_fmt(buf + STRLEN(HAVE_PREFIX), &oid);
-		printf("would send %s", buf);
-	}
-
-	/* TODO: git_pkt_send_flush(fd) */
-	printf("Wound send 0000\n");
-
-cleanup:
-	git_revwalk_free(walk);
-	git_strarray_free(&refs);
 	return ret;
+}
+
+int git_pkt_send_have(int fd)
+{
+	char buf[] = "0009done\n";
+	printf("Would send %s", buf);
+
+	return GIT_SUCCESS;
 }

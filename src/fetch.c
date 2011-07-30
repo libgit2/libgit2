@@ -51,7 +51,7 @@ static int whn_cmp(const void *a, const void *b)
 int git_fetch_list_want(git_headarray *whn_list, git_repository *repo, git_remote *remote)
 {
 	git_vector list;
-	git_headarray refs, lrefs;
+	git_headarray refs;
 	git_transport *t = remote->transport;
 	const git_refspec *spec;
 	int error;
@@ -159,31 +159,49 @@ int git_fetch_negotiate(git_headarray *list, git_repository *repo, git_remote *r
 	unsigned int i;
 	char local[1024];
 	git_refspec *spec;
-
-	error = git_revwalk_new(&walk, repo);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create walker");
-
-	for (i = 0; i < list->len; ++i) {
-		git_reference *ref;
-		git_remote_head *head = list->heads[i];
-
-		if (!head->local)
-			continue;
-
-		error = git_revwalk_push(walk, &head->loid);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to push a local OID");
-			goto cleanup;
-		}
-	}
+	git_reference *ref;
+	git_strarray refs;
+	git_oid oid;
 
 	/*
 	 * Now we have everything set up so we can start tell the server
 	 * what we want and what we have.
 	 */
 	git_transport_send_wants(remote->transport, list);
-	git_transport_send_haves(remote->transport, repo);
+
+	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
+	if (error < GIT_ERROR)
+		return git__rethrow(error, "Failed to list all references");
+
+	error = git_revwalk_new(&walk, repo);
+	if (error < GIT_ERROR) {
+		error = git__rethrow(error, "Failed to list all references");
+		goto cleanup;
+	}
+
+	for (i = 0; i < refs.count; ++i) {
+		error = git_reference_lookup(&ref, repo, refs.strings[i]);
+		if (error < GIT_ERROR) {
+			error = git__rethrow(error, "Failed to lookup %s", refs.strings[i]);
+			goto cleanup;
+		}
+
+		error = git_revwalk_push(walk, git_reference_oid(ref));
+		if (error < GIT_ERROR) {
+			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
+			goto cleanup;
+		}
+	}
+	git_strarray_free(&refs);
+
+	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+		git_transport_send_have(remote->transport, &oid);
+	}
+	if (error == GIT_EREVWALKOVER)
+		error = GIT_SUCCESS;
+
+	/* TODO: git_pkt_send_flush(fd), or git_transport_flush() */
+	printf("Wound send 0000\n");
 
 cleanup:
 	git_revwalk_free(walk);
@@ -192,5 +210,8 @@ cleanup:
 
 int git_fetch_download_pack(git_remote *remote)
 {
+	/*
+	 * First, we ignore any ACKs we receive and wait for a NACK
+	 */
 	return GIT_ENOTIMPLEMENTED;
 }

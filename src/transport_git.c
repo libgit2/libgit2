@@ -281,11 +281,18 @@ static int git_send_wants(git_transport *transport, git_headarray *array)
 	return git_pkt_send_wants(array, t->socket);
 }
 
-static int git_send_haves(git_transport *transport, git_repository *repo)
+static int git_send_have(git_transport *transport, git_oid *oid)
 {
 	transport_git *t = (transport_git *) transport;
 
-	return git_pkt_send_haves(repo, t->socket);
+	return git_pkt_send_have(oid, t->socket);
+}
+
+static int git_send_done(git_transport *transport)
+{
+	transport_git *t = (transport_git *) transport;
+
+	return git_pkt_send_done(t->socket);
 }
 
 static int git_close(git_transport *transport)
@@ -333,7 +340,8 @@ int git_transport_git(git_transport **out)
 	t->parent.connect = git_connect;
 	t->parent.ls = git_ls;
 	t->parent.send_wants = git_send_wants;
-	t->parent.send_haves = git_send_haves;
+	t->parent.send_have = git_send_have;
+	t->parent.send_done = git_send_done;
 	t->parent.close = git_close;
 	t->parent.free = git_free;
 
