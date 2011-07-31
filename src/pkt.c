@@ -52,9 +52,12 @@ static int flush_pkt(git_pkt **out)
 	return GIT_SUCCESS;
 }
 
-static int ack_pkt(git_pkt **out, const char *line, size_t len)
+/* the rest of the line will be useful for multi_ack */
+static int ack_pkt(git_pkt **out, const char *GIT_UNUSED(line), size_t GIT_UNUSED(len))
 {
 	git_pkt *pkt;
+	GIT_UNUSED_ARG(line);
+	GIT_UNUSED_ARG(len);
 
 	pkt = git__malloc(sizeof(git_pkt));
 	if (pkt == NULL)
@@ -66,7 +69,7 @@ static int ack_pkt(git_pkt **out, const char *line, size_t len)
 	return GIT_SUCCESS;
 }
 
-static int nack_pkt(git_pkt **out)
+static int nak_pkt(git_pkt **out)
 {
 	git_pkt *pkt;
 
@@ -74,7 +77,21 @@ static int nack_pkt(git_pkt **out)
 	if (pkt == NULL)
 		return GIT_ENOMEM;
 
-	pkt->type = GIT_PKT_NACK;
+	pkt->type = GIT_PKT_NAK;
+	*out = pkt;
+
+	return GIT_SUCCESS;
+}
+
+static int pack_pkt(git_pkt **out)
+{
+	git_pkt *pkt;
+
+	pkt = git__malloc(sizeof(git_pkt));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_PACK;
 	*out = pkt;
 
 	return GIT_SUCCESS;
@@ -184,6 +201,15 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 
 	error = parse_len(line);
 	if (error < GIT_SUCCESS) {
+		/*
+		 * If we fail to parse the length, it might be because the
+		 * server is trying to send us the packfile already.
+		 */
+		if (bufflen >= 4 && !git__prefixcmp(line, "PACK")) {
+			*out = line;
+			return pack_pkt(head);
+		}
+
 		return git__throw(error, "Failed to parse pkt length");
 	}
 
@@ -216,8 +242,8 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 	/* Assming the minimal size is actually 4 */
 	if (!git__prefixcmp(line, "ACK"))
 		error = ack_pkt(head, line, len);
-	else if (!git__prefixcmp(line, "NACK"))
-		error = nack_pkt(head);
+	else if (!git__prefixcmp(line, "NAK"))
+		error = nak_pkt(head);
 	else
 		error = ref_pkt(head, line, len);
 
@@ -266,11 +292,10 @@ int git_pkt_send_wants(git_headarray *refs, int fd)
 			continue;
 
 		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
-		printf("would send %s", buf);
+		gitno_send(fd, buf, STRLEN(buf), 0);
 	}
 
-	/* TODO: git_pkt_send_flush(fd) */
-	printf("Would send 0000\n");
+	git_pkt_send_flush(fd);
 
 	return ret;
 }
@@ -283,19 +308,15 @@ int git_pkt_send_wants(git_headarray *refs, int fd)
 
 int git_pkt_send_have(git_oid *oid, int fd)
 {
-	int ret = GIT_SUCCESS;
 	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
 
 	git_oid_fmt(buf + STRLEN(HAVE_PREFIX), oid);
-	printf("would send %s", buf);
-
-	return ret;
+	return gitno_send(fd, buf, STRLEN(buf), 0);
 }
 
-int git_pkt_send_have(int fd)
+int git_pkt_send_done(int fd)
 {
 	char buf[] = "0009done\n";
-	printf("Would send %s", buf);
 
-	return GIT_SUCCESS;
+	return gitno_send(fd, buf, STRLEN(buf), 0);
 }

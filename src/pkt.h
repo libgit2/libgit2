@@ -35,7 +35,8 @@ enum git_pkt_type {
 	GIT_PKT_REF,
 	GIT_PKT_HAVE,
 	GIT_PKT_ACK,
-	GIT_PKT_NACK,
+	GIT_PKT_NAK,
+	GIT_PKT_PACK,
 };
 
 /* Used for multi-ack */
@@ -74,6 +75,7 @@ typedef struct {
 
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 int git_pkt_send_flush(int s);
+int git_pkt_send_done(int s);
 int git_pkt_send_wants(git_headarray *refs, int fd);
 int git_pkt_send_have(git_oid *oid, int fd);
 void git_pkt_free(git_pkt *pkt);

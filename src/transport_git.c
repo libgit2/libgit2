@@ -33,6 +33,8 @@
 #include "pkt.h"
 #include "common.h"
 #include "netops.h"
+#include "filebuf.h"
+#include "repository.h"
 
 typedef struct {
 	git_transport parent;
@@ -288,12 +290,101 @@ static int git_send_have(git_transport *transport, git_oid *oid)
 	return git_pkt_send_have(oid, t->socket);
 }
 
+static int git_send_flush(git_transport *transport)
+{
+	transport_git *t = (transport_git *) transport;
+
+	return git_pkt_send_flush(t->socket);
+}
+
 static int git_send_done(git_transport *transport)
 {
 	transport_git *t = (transport_git *) transport;
 
 	return git_pkt_send_done(t->socket);
 }
+
+static int store_pack(gitno_buffer *buf, git_repository *repo)
+{
+	git_filebuf file;
+	int error;
+	char path[GIT_PATH_MAX], suff[] = "/objects/pack/pack-XXXX.pack\0";
+	off_t off = 0;
+
+	memcpy(path, repo->path_repository, GIT_PATH_MAX - off);
+	off += strlen(repo->path_repository);
+	memcpy(path + off, suff, GIT_PATH_MAX - off - STRLEN(suff));
+
+	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	while (1) {
+		if (buf->offset == 0)
+			break;
+
+		error = git_filebuf_write(&file, buf->data, buf->offset);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		gitno_consume_n(buf, buf->offset);
+	}
+
+cleanup:
+	if (error < GIT_SUCCESS)
+		git_filebuf_cleanup(&file);
+	return error;
+}
+
+static int git_download_pack(git_transport *transport, git_repository *repo)
+{
+	transport_git *t = (transport_git *) transport;
+	int s = t->socket, error = GIT_SUCCESS, pack = 0;
+	gitno_buffer buf;
+	char buffer[1024];
+	git_pkt *pkt;
+	const char *line_end, *ptr;
+
+	gitno_buffer_setup(&buf, buffer, sizeof(buffer), s);
+	/*
+	 * First, we ignore any ACKs and wait for a NACK
+	 */
+	while (1) {
+		error = gitno_recv(&buf);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(GIT_EOSERR, "Failed to receive data");
+		if (error < GIT_SUCCESS) /* Orderly shutdown */
+			return GIT_SUCCESS;
+
+		ptr = buf.data;
+		/* Whilst we're searching for the pack */
+		while (!pack) {
+			if (buf.offset == 0)
+				break;
+			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
+			if (error == GIT_ESHORTBUFFER)
+				break;
+			if (error < GIT_SUCCESS)
+				return error;
+
+			gitno_consume(&buf, line_end);
+			if (pkt->type == GIT_PKT_PACK)
+				pack = 1;
+			/* For now we don't care about anything */
+			free(pkt);
+		}
+
+		/*
+		 * No we have the packet, let's just put anything we get now
+		 * into a packfile
+		 */
+
+		return store_pack(&buf, repo);
+	}
+
+	return error;
+}
+
 
 static int git_close(git_transport *transport)
 {
@@ -341,7 +432,9 @@ int git_transport_git(git_transport **out)
 	t->parent.ls = git_ls;
 	t->parent.send_wants = git_send_wants;
 	t->parent.send_have = git_send_have;
+	t->parent.send_flush = git_send_flush;
 	t->parent.send_done = git_send_done;
+	t->parent.download_pack = git_download_pack;
 	t->parent.close = git_close;
 	t->parent.free = git_free;
 

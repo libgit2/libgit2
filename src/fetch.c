@@ -131,22 +131,6 @@ cleanup:
 	return error;
 }
 
-/* Push any (OID) ref it gets into the walker */
-static int push_stuff(const char *name, void *data)
-{
-	git_revwalk *walk = (git_revwalk *) data;
-	git_reference *ref;
-	git_repository *repo;
-	int error;
-
-	repo = git_revwalk_repository(walk);
-	error = git_reference_lookup(&ref, repo, name);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	return git_revwalk_push(walk, git_reference_oid(ref));
-}
-
 /*
  * In this first version, we push all our refs in and start sending
  * them out. When we get an ACK we hide that commit and continue
@@ -157,11 +141,13 @@ int git_fetch_negotiate(git_headarray *list, git_repository *repo, git_remote *r
 	git_revwalk *walk;
 	int error;
 	unsigned int i;
-	char local[1024];
-	git_refspec *spec;
 	git_reference *ref;
 	git_strarray refs;
 	git_oid oid;
+
+	/* Don't try to negotiate when we don't want anything */
+	if (list->len == 0)
+		return GIT_EINVALIDARGS;
 
 	/*
 	 * Now we have everything set up so we can start tell the server
@@ -201,17 +187,15 @@ int git_fetch_negotiate(git_headarray *list, git_repository *repo, git_remote *r
 		error = GIT_SUCCESS;
 
 	/* TODO: git_pkt_send_flush(fd), or git_transport_flush() */
-	printf("Wound send 0000\n");
+	git_transport_send_flush(remote->transport);
+	git_transport_send_done(remote->transport);
 
 cleanup:
 	git_revwalk_free(walk);
 	return error;
 }
 
-int git_fetch_download_pack(git_remote *remote)
+int git_fetch_download_pack(git_remote *remote, git_repository *repo)
 {
-	/*
-	 * First, we ignore any ACKs we receive and wait for a NACK
-	 */
-	return GIT_ENOTIMPLEMENTED;
+	return git_transport_download_pack(remote->transport, repo);
 }
