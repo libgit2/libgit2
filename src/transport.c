@@ -90,10 +90,21 @@ int git_transport_send_have(struct git_transport *transport, git_oid *oid)
 	return transport->send_have(transport, oid);
 }
 
+int git_transport_send_flush(struct git_transport *transport)
+{
+	return transport->send_flush(transport);
+}
+
 int git_transport_send_done(struct git_transport *transport)
 {
 	return transport->send_done(transport);
 }
+
+int git_transport_download_pack(git_transport *transport, git_repository *repo)
+{
+	return transport->download_pack(transport, repo);
+}
+
 int git_transport_close(git_transport *transport)
 {
 	return transport->close(transport);

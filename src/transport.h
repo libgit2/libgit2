@@ -65,6 +65,18 @@ struct git_transport {
 	 */
 	int (*send_have)(struct git_transport *transport, git_oid *oid);
 	/**
+	 * Send a 'done' message
+	 */
+	int (*send_done)(struct git_transport *transport);
+	/**
+	 * Send a flush
+	 */
+	int (*send_flush)(struct git_transport *transport);
+	/**
+	 * Download the packfile
+	 */
+	int (*download_pack)(struct git_transport *transport, git_repository *repo);
+	/**
 	 * Fetch the changes
 	 */
 	int (*fetch)(struct git_transport *transport);
@@ -85,5 +97,7 @@ int git_transport_dummy(struct git_transport **transport);
 int git_transport_send_wants(struct git_transport *transport, git_headarray *array);
 int git_transport_send_have(struct git_transport *transport, git_oid *oid);
 int git_transport_send_done(struct git_transport *transport);
+int git_transport_send_flush(struct git_transport *transport);
+int git_transport_download_pack(git_transport *transport, git_repository *repo);
 
 #endif
