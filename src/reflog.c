@@ -53,25 +53,15 @@ static int reflog_init(git_reflog **reflog, git_reference *ref)
 	return GIT_SUCCESS;
 }
 
-static int reflog_write(git_repository *repo, const char *ref_name,
-		        const char *oid_old, const char *oid_new,
-		        const git_signature *committer, const char *msg)
+static int reflog_write(const char *log_path, const char *oid_old,
+			const char *oid_new, const git_signature *committer,
+			const char *msg)
 {
 	int error;
-	char log_path[GIT_PATH_MAX];
 	git_buf log = GIT_BUF_INIT;
 	git_filebuf fbuf;
 
-	assert(repo && ref_name && oid_old && oid_new && committer);
-
-	git_path_join_n(log_path, 3, repo->path_repository, GIT_REFLOG_DIR, ref_name);
-
-	if (git_futils_exists(log_path)) {
-		if ((error = git_futils_mkpath2file(log_path)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to write reflog. Cannot create reflog directory");
-
-	} else if (git_futils_isfile(log_path))
-		return git__throw(GIT_ERROR, "Failed to write reflog. `%s` is directory", log_path);
+	assert(log_path && oid_old && oid_new && committer);
 
 	git_buf_puts(&log, oid_old);
 	git_buf_putc(&log, ' ');
@@ -222,6 +212,7 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 	int error;
 	char old[GIT_OID_HEXSZ+1];
 	char new[GIT_OID_HEXSZ+1];
+	char log_path[GIT_PATH_MAX];
 	git_reference *r;
 	const git_oid *oid;
 
@@ -234,12 +225,22 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 
 	git_oid_to_string(new, GIT_OID_HEXSZ+1, oid);
 
+	git_path_join_n(log_path, 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
+
+	if (git_futils_exists(log_path)) {
+		if ((error = git_futils_mkpath2file(log_path)) < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to write reflog. Cannot create reflog directory");
+	} else if (git_futils_isfile(log_path)) {
+		return git__throw(GIT_ERROR, "Failed to write reflog. `%s` is directory", log_path);
+	} else if (oid_old == NULL)
+		return git__throw(GIT_ERROR, "Failed to write reflog. Old OID cannot be NULL for existing reference");
+
 	if (oid_old)
 		git_oid_to_string(old, GIT_OID_HEXSZ+1, oid_old);
 	else
 		snprintf(old, GIT_OID_HEXSZ+1, "%0*d", GIT_OID_HEXSZ, 0);
 
-	return reflog_write(ref->owner, ref->name, old, new, committer, msg);
+	return reflog_write(log_path, old, new, committer, msg);
 }
 
 unsigned int git_reflog_entrycount(git_reflog *reflog)
