@@ -1069,6 +1069,34 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 	close_temp_repo(repo2);
 END_TEST
 
+BEGIN_TEST(reflog1, "avoid writing an obviously wrong reflog")
+	git_repository *repo;
+	git_reference *ref;
+	git_oid oid;
+	git_signature *committer;
+
+	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+	/* Create a new branch pointing at the HEAD */
+	git_oid_fromstr(&oid, current_master_tip);
+	must_pass(git_reference_create_oid(&ref, repo, new_ref, &oid, 0));
+	must_pass(git_reference_lookup(&ref, repo, new_ref));
+
+	committer = git_signature_now("foo", "foo@bar");
+
+	/* Write the reflog for the new branch */
+	must_pass(git_reflog_write(ref, NULL, committer, NULL));
+
+	/* Try to update the reflog with wrong information:
+	 * It's no new reference, so the ancestor OID cannot
+	 * be NULL. */
+	must_fail(git_reflog_write(ref, NULL, committer, NULL));
+
+	git_signature_free(committer);
+
+	close_temp_repo(repo);
+END_TEST
+
 BEGIN_SUITE(refs)
 	ADD_TEST(readtag0);
 	ADD_TEST(readtag1);
@@ -1114,4 +1142,5 @@ BEGIN_SUITE(refs)
 	ADD_TEST(list1);
 
 	ADD_TEST(reflog0);
+	ADD_TEST(reflog1);
 END_SUITE
