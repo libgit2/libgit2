@@ -166,7 +166,7 @@ static void index_path(char *path, git_indexer *idx)
 	memcpy(ptr, suffix, STRLEN(suffix));
 }
 
-static int write_index(git_indexer *idx)
+int git_indexer_write(git_indexer *idx)
 {
 	git_mwindow *w = NULL;
 	int error, namelen;
@@ -358,12 +358,6 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		stats->processed = ++processed;
 	}
 
-	/*
-	 * All's gone well, so let's write the index file.
-	 */
-	error = write_index(idx);
-
-	/* Delete keep file */
 cleanup:
 	git_mwindow_free_all(mwf);
 

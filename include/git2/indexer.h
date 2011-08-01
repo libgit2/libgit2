@@ -15,6 +15,7 @@ typedef struct git_indexer git_indexer;
 GIT_EXTERN(int) git_indexer_new(git_indexer **out, const char *packname);
 GIT_EXTERN(int) git_indexer_run(git_indexer *idx, git_indexer_stats *stats);
 GIT_EXTERN(const git_oid *) git_indexer_result(git_indexer *idx);
+GIT_EXTERN(int) git_indexer_write(git_indexer *idx);
 GIT_EXTERN(void) git_indexer_free(git_indexer *idx);
 
 
