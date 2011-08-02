@@ -117,7 +117,10 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		object = git_cache_get(&repo->objects, id);
 		if (object != NULL) {
 			if (type != GIT_OBJ_ANY && type != object->type)
+			{
+				git_object_close(object);
 				return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
+			}
 
 			*object_out = object;
 			return GIT_SUCCESS;
