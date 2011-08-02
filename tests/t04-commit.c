@@ -478,6 +478,31 @@ BEGIN_TEST(signature1, "can not create a signature with empty name or email")
 	must_fail(try_build_signature("nulltoken", "  ", 1234567890, 60));
 END_TEST
 
+BEGIN_TEST(signature2, "creating a one character signature")
+	git_signature *sign;
+	sign = git_signature_new("x", "foo@bar.baz", 1234567890, 60);
+	must_be_true(sign != NULL);
+	must_pass(strcmp(sign->name, "x"));
+	must_pass(strcmp(sign->email, "foo@bar.baz"));
+	git_signature_free((git_signature *)sign);
+END_TEST
+
+BEGIN_TEST(signature3, "creating a two character signature")
+	git_signature *sign;
+	sign = git_signature_new("xx", "x@y.z", 1234567890, 60);
+	must_be_true(sign != NULL);
+	must_pass(strcmp(sign->name, "x"));
+	must_pass(strcmp(sign->email, "foo@bar.baz"));
+	git_signature_free((git_signature *)sign);
+END_TEST
+
+BEGIN_TEST(signature4, "creating a zero character signature")
+	git_signature *sign;
+	sign = git_signature_new("", "x@y.z", 1234567890, 60);
+	must_be_true(sign == NULL);
+END_TEST
+
+
 /* External declaration for testing the buffer parsing method */
 int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int parse_flags);
 
@@ -758,4 +783,7 @@ BEGIN_SUITE(commit)
 
 	ADD_TEST(signature0);
 	ADD_TEST(signature1);
+	ADD_TEST(signature2);
+	ADD_TEST(signature3);
+	ADD_TEST(signature4);
 END_SUITE

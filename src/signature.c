@@ -62,7 +62,7 @@ static int process_trimming(const char *input, char **storage, const char *input
 	left = skip_leading_spaces(input, input_end);
 	right = skip_trailing_spaces(input, input_end - 1);
 
-	if (right <= left) {
+	if (right < left) {
 		if (fail_when_empty)
 			return git__throw(GIT_EINVALIDARGS, "Failed to trim. Input is either empty or only contains spaces");
 		else
