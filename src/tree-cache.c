@@ -7,7 +7,7 @@
 
 #include "tree-cache.h"
 
-static git_tree_cache *find_child(git_tree_cache *tree, const char *path)
+static git_tree_cache *find_child(const git_tree_cache *tree, const char *path)
 {
 	size_t i, dirlen;
 	const char *end;
@@ -49,6 +49,29 @@ void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path)
 			return;
 
 		tree->entries = -1;
+		ptr = end + 1;
+	}
+}
+
+const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char *path)
+{
+	const char *ptr = path, *end;
+
+	if (tree == NULL) {
+		return NULL;
+	}
+
+	while (1) {
+		end = strchr(ptr, '/');
+
+		tree = find_child(tree, ptr);
+		if (tree == NULL) { /* Can't find it */
+			return NULL;
+		}
+
+		if (end == NULL || end + 1 == '\0')
+			return tree;
+
 		ptr = end + 1;
 	}
 }
