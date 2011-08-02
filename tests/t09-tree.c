@@ -104,9 +104,11 @@ BEGIN_TEST(read1, "read a tree from the repository")
 
 	/* GH-86: git_object_lookup() should also check the type if the object comes from the cache */
 	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_TREE) == 0);
+	must_be_true(obj != NULL);
 	git_object_close(obj);
+	obj = NULL;
 	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_BLOB) == GIT_EINVALIDTYPE);
-	git_object_close(obj);
+	must_be_true(obj == NULL);
 
 	entry = git_tree_entry_byname(tree, "README");
 	must_be_true(entry != NULL);
@@ -114,6 +116,7 @@ BEGIN_TEST(read1, "read a tree from the repository")
 	must_be_true(strcmp(git_tree_entry_name(entry), "README") == 0);
 
 	must_pass(git_tree_entry_2object(&obj, repo, entry));
+	must_be_true(obj != NULL);
 
 	git_object_close(obj);
 	git_tree_close(tree);
