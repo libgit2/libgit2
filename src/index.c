@@ -490,7 +490,13 @@ int git_index_append2(git_index *index, const git_index_entry *source_entry)
 
 int git_index_remove(git_index *index, int position)
 {
+	git_index_entry *entry;
+
 	git_vector_sort(&index->entries);
+	entry = git_vector_get(&index->entries, position);
+	if (entry != NULL)
+		git_tree_cache_invalidate_path(index->tree, entry->path);
+
 	return git_vector_remove(&index->entries, (unsigned int)position);
 }
 
