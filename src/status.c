@@ -247,7 +247,6 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	unsigned int i, cnt;
 	git_index_entry *index_entry;
 	char temp_path[GIT_PATH_MAX];
-	git_oid zero;
 	int error;
 	git_tree *tree;
 	struct status_st dirent_st;
@@ -284,7 +283,6 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	strcpy(temp_path, repo->path_workdir);
 	git_futils_direach(temp_path, GIT_PATH_MAX, dirent_cb, &dirent_st);
 
-	memset(&zero, 0x0, sizeof(git_oid));
 	for (i = 0; i < entries.length; ++i) {
 		e = (struct status_entry *)git_vector_get(&entries, i);
 
