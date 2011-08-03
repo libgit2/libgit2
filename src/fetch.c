@@ -48,11 +48,12 @@ static int whn_cmp(const void *a, const void *b)
  * FIXME: we assume that the transport has been connected, enforce
  * that somehow, we also want to be called from _negotiate
  */
-int git_fetch_list_want(git_headarray *whn_list, git_repository *repo, git_remote *remote)
+int git_fetch_list_want(git_headarray *whn_list, git_remote *remote)
 {
 	git_vector list;
 	git_headarray refs;
 	git_transport *t = remote->transport;
+	git_repository *repo = remote->repo;
 	const git_refspec *spec;
 	int error;
 	unsigned int i;
@@ -136,13 +137,14 @@ cleanup:
  * them out. When we get an ACK we hide that commit and continue
  * traversing until we're done
  */
-int git_fetch_negotiate(git_headarray *list, git_repository *repo, git_remote *remote)
+int git_fetch_negotiate(git_headarray *list, git_remote *remote)
 {
 	git_revwalk *walk;
 	int error;
 	unsigned int i;
 	git_reference *ref;
 	git_strarray refs;
+	git_repository *repo = remote->repo;
 	git_oid oid;
 
 	/* Don't try to negotiate when we don't want anything */
@@ -195,7 +197,7 @@ cleanup:
 	return error;
 }
 
-int git_fetch_download_pack(git_remote *remote, git_repository *repo)
+int git_fetch_download_pack(git_remote *remote)
 {
-	return git_transport_download_pack(remote->transport, repo);
+	return git_transport_download_pack(remote->transport, remote->repo);
 }

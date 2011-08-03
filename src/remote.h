@@ -11,6 +11,7 @@ struct git_remote {
 	struct git_refspec fetch;
 	struct git_refspec push;
 	git_transport *transport;
+	git_repository *repo;
 };
 
 #endif

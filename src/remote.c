@@ -110,6 +110,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
+	remote->repo = cfg->repo;
 	remote->url = git__strdup(val);
 	if (remote->url == NULL) {
 		error = GIT_ENOMEM;
