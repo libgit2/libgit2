@@ -61,7 +61,6 @@ static int status_srch(const void *key, const void *array_member)
 
 static int find_status_entry(git_vector *entries, const char *path)
 {
-	git_vector_sort(entries);
 	return git_vector_bsearch2(entries, status_srch, path);
 }
 
