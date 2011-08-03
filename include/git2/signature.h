@@ -41,23 +41,25 @@ GIT_BEGIN_DECL
  * Create a new action signature. The signature must be freed
  * manually or using git_signature_free
  *
+ * @param sig_out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
  * @param time time when the action happened
  * @param offset timezone offset in minutes for the time
- * @return the new sig, NULL on out of memory
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_signature *) git_signature_new(const char *name, const char *email, git_time_t time, int offset);
+GIT_EXTERN(int) git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset);
 
 /**
  * Create a new action signature with a timestamp of 'now'. The
  * signature must be freed manually or using git_signature_free
  *
+ * @param sig_out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
- * @return the new sig, NULL on out of memory
+ * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(git_signature *) git_signature_now(const char *name, const char *email);
+GIT_EXTERN(int) git_signature_now(git_signature **sig_out, const char *name, const char *email);
 
 
 /**

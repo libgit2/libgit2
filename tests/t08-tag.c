@@ -126,8 +126,7 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	must_pass(git_object_lookup(&target, repo, &target_id, GIT_OBJ_COMMIT));
 
 	/* create signature */
-	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-	must_be_true(tagger != NULL);
+	must_pass(git_signature_new(&tagger, TAGGER_NAME, TAGGER_EMAIL, 123456789, 60));
 
 	must_pass(git_tag_create(
 		&tag_id, /* out id */
@@ -177,8 +176,7 @@ BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already
 	must_pass(git_object_lookup(&target, repo, &target_id, GIT_OBJ_COMMIT));
 
 	/* create signature */
-	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-	must_be_true(tagger != NULL);
+	must_pass(git_signature_new(&tagger, TAGGER_NAME, TAGGER_EMAIL, 123456789, 60));
 
 	must_fail(git_tag_create(
 		&tag_id, /* out id */
@@ -212,8 +210,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));
 
 	/* create signature */
-	tagger = git_signature_new(TAGGER_NAME, TAGGER_EMAIL, 123456789, 60);
-	must_be_true(tagger != NULL);
+	must_pass(git_signature_new(&tagger, TAGGER_NAME, TAGGER_EMAIL, 123456789, 60));
 
 	must_pass(git_tag_create(
 		&tag_id, /* out id */

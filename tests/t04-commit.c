@@ -450,10 +450,8 @@ static int try_build_signature(const char *name, const char *email, git_time_t t
 	git_signature *sign;
 	int error = GIT_SUCCESS;
 
-	sign = git_signature_new(name, email, time, offset);
-
-	if (sign == NULL)
-		error = GIT_ERROR;
+	if ((error =  git_signature_new(&sign, name, email, time, offset)) < GIT_SUCCESS)
+		return error;
 
 	git_signature_free((git_signature *)sign);
 
@@ -462,8 +460,7 @@ static int try_build_signature(const char *name, const char *email, git_time_t t
 
 BEGIN_TEST(signature0, "creating a signature trims leading and trailing spaces")
 	git_signature *sign;
-	sign = git_signature_new("  nulltoken ", "   emeric.fermas@gmail.com     ", 1234567890, 60);
-	must_be_true(sign != NULL);
+	must_pass(git_signature_new(&sign, "  nulltoken ", "   emeric.fermas@gmail.com     ", 1234567890, 60));
 	must_pass(strcmp(sign->name, "nulltoken"));
 	must_pass(strcmp(sign->email, "emeric.fermas@gmail.com"));
 	git_signature_free((git_signature *)sign);
@@ -480,8 +477,7 @@ END_TEST
 
 BEGIN_TEST(signature2, "creating a one character signature")
 	git_signature *sign;
-	sign = git_signature_new("x", "foo@bar.baz", 1234567890, 60);
-	must_be_true(sign != NULL);
+	must_pass(git_signature_new(&sign, "x", "foo@bar.baz", 1234567890, 60));
 	must_pass(strcmp(sign->name, "x"));
 	must_pass(strcmp(sign->email, "foo@bar.baz"));
 	git_signature_free((git_signature *)sign);
@@ -489,8 +485,7 @@ END_TEST
 
 BEGIN_TEST(signature3, "creating a two character signature")
 	git_signature *sign;
-	sign = git_signature_new("xx", "x@y.z", 1234567890, 60);
-	must_be_true(sign != NULL);
+	must_pass(git_signature_new(&sign, "xx", "x@y.z", 1234567890, 60));
 	must_pass(strcmp(sign->name, "x"));
 	must_pass(strcmp(sign->email, "foo@bar.baz"));
 	git_signature_free((git_signature *)sign);
@@ -498,7 +493,7 @@ END_TEST
 
 BEGIN_TEST(signature4, "creating a zero character signature")
 	git_signature *sign;
-	sign = git_signature_new("", "x@y.z", 1234567890, 60);
+	must_fail(git_signature_new(&sign, "", "x@y.z", 1234567890, 60));
 	must_be_true(sign == NULL);
 END_TEST
 
@@ -654,11 +649,8 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 	must_pass(git_commit_lookup(&parent, repo, &parent_id));
 
 	/* create signatures */
-	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
-	must_be_true(committer != NULL);
-
-	author = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90);
-	must_be_true(author != NULL);
+	must_pass(git_signature_new(&committer, COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60));
+	must_pass(git_signature_new(&author, COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90));
 
 	must_pass(git_commit_create_v(
 		&commit_id, /* out id */
@@ -721,11 +713,8 @@ BEGIN_TEST(root0, "create a root commit")
 	must_pass(git_tree_lookup(&tree, repo, &tree_id));
 
 	/* create signatures */
-	committer = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60);
-	must_be_true(committer != NULL);
-
-	author = git_signature_new(COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90);
-	must_be_true(author != NULL);
+	must_pass(git_signature_new(&committer, COMMITTER_NAME, COMMITTER_EMAIL, 123456789, 60));
+	must_pass(git_signature_new(&author, COMMITTER_NAME, COMMITTER_EMAIL, 987654321, 90));
 
 	/* First we need to update HEAD so it points to our non-existant branch */
 	must_pass(git_reference_lookup(&head, repo, "HEAD"));
