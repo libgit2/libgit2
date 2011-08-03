@@ -123,6 +123,13 @@ typedef enum {
 GIT_EXTERN(const char *) git_lasterror(void);
 
 /**
+ * Return the last error code
+ *
+ * @return the last error code
+ */
+GIT_EXTERN(int) git_lasterror_code(void);
+
+/**
  * strerror() for the Git library
  *
  * Get a string description for a given error code.
