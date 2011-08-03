@@ -91,7 +91,7 @@ static void recurse_tree_entries(git_tree *tree, git_vector *entries, char *path
 		if (git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid) == GIT_SUCCESS) {
 			recurse_tree_entries(subtree, entries, file_path);
 			git_tree_close(subtree);
-			return;
+			continue;
 		}
 
 		if ((idx = find_status_entry(entries, file_path)) != GIT_ENOTFOUND)
