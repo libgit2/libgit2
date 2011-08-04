@@ -62,7 +62,7 @@ static int process_trimming(const char *input, char **storage, const char *input
 	left = skip_leading_spaces(input, input_end);
 	right = skip_trailing_spaces(input, input_end - 1);
 
-	if (right <= left) {
+	if (right < left) {
 		if (fail_when_empty)
 			return git__throw(GIT_EINVALIDARGS, "Failed to trim. Input is either empty or only contains spaces");
 		else
@@ -81,15 +81,19 @@ static int process_trimming(const char *input, char **storage, const char *input
 	return GIT_SUCCESS;
 }
 
-git_signature *git_signature_new(const char *name, const char *email, git_time_t time, int offset)
+int git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset)
 {
 	int error;
 	git_signature *p = NULL;
 
 	assert(name && email);
 
-	if ((p = git__malloc(sizeof(git_signature))) == NULL)
+	*sig_out = NULL;
+
+	if ((p = git__malloc(sizeof(git_signature))) == NULL) {
+		error = GIT_ENOMEM;
 		goto cleanup;
+	}
 
 	memset(p, 0x0, sizeof(git_signature));
 
@@ -108,27 +112,36 @@ git_signature *git_signature_new(const char *name, const char *email, git_time_t
 	p->when.time = time;
 	p->when.offset = offset;
 
-	return p;
+	*sig_out = p;
+
+	return error;
 
 cleanup:
 	git_signature_free(p);
-	return NULL;
+	return error;
 }
 
 git_signature *git_signature_dup(const git_signature *sig)
 {
-	return git_signature_new(sig->name, sig->email, sig->when.time, sig->when.offset);
+	git_signature *new;
+	if (git_signature_new(&new, sig->name, sig->email, sig->when.time, sig->when.offset) < GIT_SUCCESS)
+		return NULL;
+	return new;
 }
 
-git_signature *git_signature_now(const char *name, const char *email)
+int git_signature_now(git_signature **sig_out, const char *name, const char *email)
 {
+	int error;
 	time_t now;
 	time_t offset;
 	struct tm *utc_tm, *local_tm;
+	git_signature *sig;
 
 #ifndef GIT_WIN32
 	struct tm _utc, _local;
 #endif
+
+	*sig_out = NULL;
 
 	time(&now);
 
@@ -151,7 +164,12 @@ git_signature *git_signature_now(const char *name, const char *email)
 	if (local_tm->tm_isdst)
 		offset += 60;
 
-	return git_signature_new(name, email, now, (int)offset);
+	if ((error = git_signature_new(&sig, name, email, now, (int)offset)) < GIT_SUCCESS)
+		return error;
+
+	*sig_out = sig;
+
+	return error;
 }
 
 static int parse_timezone_offset(const char *buffer, int *offset_out)
