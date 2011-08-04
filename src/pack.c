@@ -298,6 +298,8 @@ static int packfile_unpack_delta(
 	base_offset = get_delta_base(p, w_curs, curpos, delta_type, obj_offset);
 	if (base_offset == 0)
 		return git__throw(GIT_EOBJCORRUPTED, "Delta offset is zero");
+	if (base_offset < 0)
+		return git__rethrow(base_offset, "Failed to get delta base");
 
 	git_mwindow_close(w_curs);
 	error = git_packfile_unpack(&base, p, &base_offset);
