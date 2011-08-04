@@ -426,7 +426,6 @@ static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filenam
 	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
 		return NULL;
 
-	sort_entries(bld);
 	idx = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch);
 	if (idx == GIT_ENOTFOUND)
 		return NULL;

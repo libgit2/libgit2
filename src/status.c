@@ -61,7 +61,6 @@ static int status_srch(const void *key, const void *array_member)
 
 static int find_status_entry(git_vector *entries, const char *path)
 {
-	git_vector_sort(entries);
 	return git_vector_bsearch2(entries, status_srch, path);
 }
 
@@ -91,7 +90,7 @@ static void recurse_tree_entries(git_tree *tree, git_vector *entries, char *path
 		if (git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid) == GIT_SUCCESS) {
 			recurse_tree_entries(subtree, entries, file_path);
 			git_tree_close(subtree);
-			return;
+			continue;
 		}
 
 		if ((idx = find_status_entry(entries, file_path)) != GIT_ENOTFOUND)
@@ -247,7 +246,6 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	unsigned int i, cnt;
 	git_index_entry *index_entry;
 	char temp_path[GIT_PATH_MAX];
-	git_oid zero;
 	int error;
 	git_tree *tree;
 	struct status_st dirent_st;
@@ -284,7 +282,6 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	strcpy(temp_path, repo->path_workdir);
 	git_futils_direach(temp_path, GIT_PATH_MAX, dirent_cb, &dirent_st);
 
-	memset(&zero, 0x0, sizeof(git_oid));
 	for (i = 0; i < entries.length; ++i) {
 		e = (struct status_entry *)git_vector_get(&entries, i);
 
