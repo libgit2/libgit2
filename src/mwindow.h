@@ -23,43 +23,44 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDE_git_git_h__
-#define INCLUDE_git_git_h__
+#ifndef INCLUDE_mwindow__
+#define INCLUDE_mwindow__
 
-#define LIBGIT2_VERSION "0.14.0"
-#define LIBGIT2_VER_MAJOR 0
-#define LIBGIT2_VER_MINOR 14
-#define LIBGIT2_VER_REVISION 0
+#include "map.h"
+#include "vector.h"
+#include "fileops.h"
 
-#include "git2/common.h"
-#include "git2/errors.h"
-#include "git2/zlib.h"
+typedef struct git_mwindow {
+	struct git_mwindow *next;
+	git_map window_map;
+	off_t offset;
+	unsigned int last_used;
+	unsigned int inuse_cnt;
+} git_mwindow;
 
-#include "git2/types.h"
+typedef struct git_mwindow_file {
+	git_mwindow *windows;
+	int fd;
+	off_t size;
+} git_mwindow_file;
 
-#include "git2/oid.h"
-#include "git2/signature.h"
-#include "git2/odb.h"
+typedef struct git_mwindow_ctl {
+	size_t mapped;
+	unsigned int open_windows;
+	size_t window_size; /* needs default value */
+	size_t mapped_limit; /* needs default value */
+	unsigned int mmap_calls;
+	unsigned int peak_open_windows;
+	size_t peak_mapped;
+	size_t used_ctr;
+	git_vector windowfiles;
+} git_mwindow_ctl;
 
-#include "git2/repository.h"
-#include "git2/revwalk.h"
-#include "git2/refs.h"
-#include "git2/reflog.h"
-
-#include "git2/object.h"
-#include "git2/blob.h"
-#include "git2/commit.h"
-#include "git2/tag.h"
-#include "git2/tree.h"
-
-#include "git2/index.h"
-#include "git2/config.h"
-#include "git2/remote.h"
-
-#include "git2/refspec.h"
-#include "git2/net.h"
-#include "git2/transport.h"
-#include "git2/status.h"
-#include "git2/indexer.h"
+int git_mwindow_contains(git_mwindow *win, off_t offset);
+void git_mwindow_free_all(git_mwindow_file *mwf);
+unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, off_t offset, int extra, unsigned int *left);
+void git_mwindow_scan_lru(git_mwindow_file *mwf, git_mwindow **lru_w, git_mwindow **lru_l);
+int git_mwindow_file_register(git_mwindow_file *mwf);
+void git_mwindow_close(git_mwindow **w_cursor);
 
 #endif
