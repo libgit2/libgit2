@@ -30,6 +30,9 @@ GIT_INLINE(void *) git_vector_get(git_vector *v, unsigned int position)
 	return (position < v->length) ? v->contents[position] : NULL;
 }
 
+#define git_vector_foreach(v, iter, elem)	\
+	for ((iter) = 0; (iter) < (v)->length && ((elem) = (v)->contents[(iter)], 1); (iter)++ )
+
 int git_vector_insert(git_vector *v, void *element);
 int git_vector_remove(git_vector *v, unsigned int idx);
 void git_vector_uniq(git_vector *v);
