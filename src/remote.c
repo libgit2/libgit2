@@ -208,6 +208,11 @@ int git_remote_negotiate(git_remote *remote)
 	return git_fetch_negotiate(remote);
 }
 
+int git_remote_download(char **filename, git_remote *remote)
+{
+	return git_fetch_download_pack(filename, remote);
+}
+
 git_headarray *git_remote_tips(git_remote *remote)
 {
 	return &remote->refs;

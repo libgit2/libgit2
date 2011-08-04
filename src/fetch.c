@@ -45,7 +45,7 @@ static int whn_cmp(const void *a, const void *b)
 	return headb->type - heada->type;
 }
 
-int filter_wants(git_remote *remote)
+static int filter_wants(git_remote *remote)
 {
 	git_vector list;
 	git_headarray refs;
@@ -61,13 +61,13 @@ int filter_wants(git_remote *remote)
 
 	error = git_transport_ls(t, &refs);
 	if (error < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to list local refs");
+		error = git__rethrow(error, "Failed to get remote ref list");
 		goto cleanup;
 	}
 
 	spec = git_remote_fetchspec(remote);
 	if (spec == NULL) {
-		error = git__throw(GIT_ERROR, "The remote has to fetchspec");
+		error = git__throw(GIT_ERROR, "The remote has no fetchspec");
 		goto cleanup;
 	}
 
@@ -152,11 +152,11 @@ int git_fetch_negotiate(git_remote *remote)
 	/* Don't try to negotiate when we don't want anything */
 	if (list->len == 0)
 		return GIT_SUCCESS;
-
 	/*
 	 * Now we have everything set up so we can start tell the server
 	 * what we want and what we have.
 	 */
+	remote->need_pack = 1;
 	git_transport_send_wants(remote->transport, list);
 
 	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
@@ -201,5 +201,10 @@ cleanup:
 
 int git_fetch_download_pack(char **out, git_remote *remote)
 {
+	if(!remote->need_pack) {
+		*out = NULL;
+		return GIT_SUCCESS;
+	}
+
 	return git_transport_download_pack(out, remote->transport, remote->repo);
 }
