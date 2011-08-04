@@ -461,8 +461,8 @@ static int try_build_signature(const char *name, const char *email, git_time_t t
 BEGIN_TEST(signature0, "creating a signature trims leading and trailing spaces")
 	git_signature *sign;
 	must_pass(git_signature_new(&sign, "  nulltoken ", "   emeric.fermas@gmail.com     ", 1234567890, 60));
-	must_pass(strcmp(sign->name, "nulltoken"));
-	must_pass(strcmp(sign->email, "emeric.fermas@gmail.com"));
+	must_be_true(strcmp(sign->name, "nulltoken") == 0);
+	must_be_true(strcmp(sign->email, "emeric.fermas@gmail.com") == 0);
 	git_signature_free((git_signature *)sign);
 END_TEST
 
@@ -478,16 +478,16 @@ END_TEST
 BEGIN_TEST(signature2, "creating a one character signature")
 	git_signature *sign;
 	must_pass(git_signature_new(&sign, "x", "foo@bar.baz", 1234567890, 60));
-	must_pass(strcmp(sign->name, "x"));
-	must_pass(strcmp(sign->email, "foo@bar.baz"));
+	must_be_true(strcmp(sign->name, "x") == 0);
+	must_be_true(strcmp(sign->email, "foo@bar.baz") == 0);
 	git_signature_free((git_signature *)sign);
 END_TEST
 
 BEGIN_TEST(signature3, "creating a two character signature")
 	git_signature *sign;
 	must_pass(git_signature_new(&sign, "xx", "x@y.z", 1234567890, 60));
-	must_pass(strcmp(sign->name, "x"));
-	must_pass(strcmp(sign->email, "foo@bar.baz"));
+	must_be_true(strcmp(sign->name, "xx") == 0);
+	must_be_true(strcmp(sign->email, "x@y.z") == 0);
 	git_signature_free((git_signature *)sign);
 END_TEST
 
