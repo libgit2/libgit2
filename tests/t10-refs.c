@@ -1034,7 +1034,7 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 	must_pass(git_reference_create_oid(&ref, repo, new_ref, &oid, 0));
 	must_pass(git_reference_lookup(&ref, repo, new_ref));
 
-	committer = git_signature_now("foo", "foo@bar");
+	must_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
 	must_pass(git_reflog_write(ref, NULL, committer, NULL));
 	must_fail(git_reflog_write(ref, NULL, committer, "no\nnewline"));
@@ -1082,7 +1082,7 @@ BEGIN_TEST(reflog1, "avoid writing an obviously wrong reflog")
 	must_pass(git_reference_create_oid(&ref, repo, new_ref, &oid, 0));
 	must_pass(git_reference_lookup(&ref, repo, new_ref));
 
-	committer = git_signature_now("foo", "foo@bar");
+	must_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
 	/* Write the reflog for the new branch */
 	must_pass(git_reflog_write(ref, NULL, committer, NULL));
