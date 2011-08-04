@@ -30,6 +30,7 @@
 #include "config.h"
 #include "repository.h"
 #include "remote.h"
+#include "fetch.h"
 
 static int refspec_parse(git_refspec *refspec, const char *str)
 {
@@ -200,6 +201,16 @@ cleanup:
 int git_remote_ls(git_remote *remote, git_headarray *refs)
 {
 	return git_transport_ls(remote->transport, refs);
+}
+
+int git_remote_negotiate(git_remote *remote)
+{
+	return git_fetch_negotiate(remote);
+}
+
+git_headarray *git_remote_tips(git_remote *remote)
+{
+	return &remote->refs;
 }
 
 void git_remote_free(git_remote *remote)
