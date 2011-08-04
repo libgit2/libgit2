@@ -32,6 +32,7 @@
 #include "transport.h"
 #include "remote.h"
 #include "refspec.h"
+#include "fetch.h"
 
 /*
  * Don't forget that this depends on the enum being correctly set
@@ -44,11 +45,7 @@ static int whn_cmp(const void *a, const void *b)
 	return headb->type - heada->type;
 }
 
-/*
- * FIXME: we assume that the transport has been connected, enforce
- * that somehow, we also want to be called from _negotiate
- */
-int git_fetch_list_want(git_headarray *whn_list, git_remote *remote)
+int filter_wants(git_remote *remote)
 {
 	git_vector list;
 	git_headarray refs;
@@ -122,8 +119,8 @@ int git_fetch_list_want(git_headarray *whn_list, git_remote *remote)
 	}
 
 	git_vector_sort(&list);
-	whn_list->len = list.length;
-	whn_list->heads = (git_remote_head **) list.contents;
+	remote->refs.len = list.length;
+	remote->refs.heads = (git_remote_head **) list.contents;
 
 	return GIT_SUCCESS;
 
@@ -137,19 +134,24 @@ cleanup:
  * them out. When we get an ACK we hide that commit and continue
  * traversing until we're done
  */
-int git_fetch_negotiate(git_headarray *list, git_remote *remote)
+int git_fetch_negotiate(git_remote *remote)
 {
 	git_revwalk *walk;
 	int error;
 	unsigned int i;
 	git_reference *ref;
 	git_strarray refs;
+	git_headarray *list = &remote->refs;
 	git_repository *repo = remote->repo;
 	git_oid oid;
 
+	error = filter_wants(remote);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to filter the reference list for wants");
+
 	/* Don't try to negotiate when we don't want anything */
 	if (list->len == 0)
-		return GIT_EINVALIDARGS;
+		return GIT_SUCCESS;
 
 	/*
 	 * Now we have everything set up so we can start tell the server
