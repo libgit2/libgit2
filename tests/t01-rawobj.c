@@ -204,7 +204,7 @@ BEGIN_TEST(oid11, "compare formated oids")
 
 	/* Format produced the right result */
 	out[GIT_OID_HEXSZ] = '\0';
-	must_pass(strcmp(exp, out));
+	must_be_true(strcmp(exp, out) == 0);
 END_TEST
 
 BEGIN_TEST(oid12, "compare oids (allocate + format)")
@@ -216,7 +216,7 @@ BEGIN_TEST(oid12, "compare oids (allocate + format)")
 
 	out = git_oid_allocfmt(&in);
 	must_be_true(out);
-	must_pass(strcmp(exp, out));
+	must_be_true(strcmp(exp, out) == 0);
 	free(out);
 END_TEST
 
@@ -235,7 +235,7 @@ BEGIN_TEST(oid13, "compare oids (path format)")
 
 	/* Format produced the right result */
 	out[GIT_OID_HEXSZ + 1] = '\0';
-	must_pass(strcmp(exp2, out));
+	must_be_true(strcmp(exp2, out) == 0);
 END_TEST
 
 BEGIN_TEST(oid14, "convert raw oid to string")
@@ -279,7 +279,7 @@ BEGIN_TEST(oid14, "convert raw oid to string")
 	/* returns out as hex formatted c-string */
 	str = git_oid_to_string(out, sizeof(out), &in);
 	must_be_true(str && str == out && *(str+GIT_OID_HEXSZ) == '\0');
-	must_pass(strcmp(exp, out));
+	must_be_true(strcmp(exp, out) == 0);
 END_TEST
 
 BEGIN_TEST(oid15, "convert raw oid to string (big)")
@@ -299,7 +299,7 @@ BEGIN_TEST(oid15, "convert raw oid to string (big)")
 	/* returns big as hex formatted c-string */
 	str = git_oid_to_string(big, sizeof(big), &in);
 	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ) == '\0');
-	must_pass(strcmp(exp, big));
+	must_be_true(strcmp(exp, big) == 0);
 
 	/* check tail material is untouched */
 	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ+1) == 'X');
