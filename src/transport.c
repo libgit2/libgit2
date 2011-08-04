@@ -100,9 +100,9 @@ int git_transport_send_done(struct git_transport *transport)
 	return transport->send_done(transport);
 }
 
-int git_transport_download_pack(git_transport *transport, git_repository *repo)
+int git_transport_download_pack(char **out, git_transport *transport, git_repository *repo)
 {
-	return transport->download_pack(transport, repo);
+	return transport->download_pack(out, transport, repo);
 }
 
 int git_transport_close(git_transport *transport)

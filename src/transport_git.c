@@ -304,11 +304,11 @@ static int git_send_done(git_transport *transport)
 	return git_pkt_send_done(t->socket);
 }
 
-static int store_pack(gitno_buffer *buf, git_repository *repo)
+static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
 {
 	git_filebuf file;
 	int error;
-	char path[GIT_PATH_MAX], suff[] = "/objects/pack/pack-XXXX.pack\0";
+	char path[GIT_PATH_MAX], suff[] = "/objects/pack/pack-received\0";
 	off_t off = 0;
 
 	memcpy(path, repo->path_repository, GIT_PATH_MAX - off);
@@ -330,13 +330,17 @@ static int store_pack(gitno_buffer *buf, git_repository *repo)
 		gitno_consume_n(buf, buf->offset);
 	}
 
+	*out = git__strdup(file.path_lock);
+	if (*out == NULL)
+		error = GIT_ENOMEM;
+
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
 	return error;
 }
 
-static int git_download_pack(git_transport *transport, git_repository *repo)
+static int git_download_pack(char **out, git_transport *transport, git_repository *repo)
 {
 	transport_git *t = (transport_git *) transport;
 	int s = t->socket, error = GIT_SUCCESS, pack = 0;
@@ -379,7 +383,7 @@ static int git_download_pack(git_transport *transport, git_repository *repo)
 		 * into a packfile
 		 */
 
-		return store_pack(&buf, repo);
+		return store_pack(out, &buf, repo);
 	}
 
 	return error;

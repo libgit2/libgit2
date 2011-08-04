@@ -199,7 +199,7 @@ cleanup:
 	return error;
 }
 
-int git_fetch_download_pack(git_remote *remote)
+int git_fetch_download_pack(char **out, git_remote *remote)
 {
-	return git_transport_download_pack(remote->transport, remote->repo);
+	return git_transport_download_pack(out, remote->transport, remote->repo);
 }
