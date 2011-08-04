@@ -121,6 +121,20 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
 GIT_EXTERN(int) git_remote_negotiate(git_remote *remote);
 
 /**
+ * Download the packfile
+ *
+ * The packfile is downloaded with a temporary filename, as it's final
+ * name is not known yet. If there was no packfile needed (all the
+ * objects were available locally), filename will be NULL and the
+ * function will return success.
+ *
+ * @param remote the remote to download from
+ * @param filename where to store the temproray filename
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
+
+/**
  * Free the memory associated with a remote
  *
  * @param remote the remote to free

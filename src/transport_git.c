@@ -320,7 +320,10 @@ static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
 		goto cleanup;
 
 	while (1) {
-		if (buf->offset == 0)
+		error = gitno_recv(buf);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+		if (error == 0) /* Orderly shutdown */
 			break;
 
 		error = git_filebuf_write(&file, buf->data, buf->offset);
@@ -331,12 +334,17 @@ static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
 	}
 
 	*out = git__strdup(file.path_lock);
-	if (*out == NULL)
+	if (*out == NULL) {
 		error = GIT_ENOMEM;
+		goto cleanup;
+	}
 
+	/* A bit dodgy, but we need to keep the pack at the temporary path */
+	error = git_filebuf_commit_at(&file, file.path_lock);
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
+
 	return error;
 }
 
@@ -357,7 +365,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 		error = gitno_recv(&buf);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(GIT_EOSERR, "Failed to receive data");
-		if (error < GIT_SUCCESS) /* Orderly shutdown */
+		if (error == 0) /* Orderly shutdown */
 			return GIT_SUCCESS;
 
 		ptr = buf.data;
@@ -382,7 +390,6 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 		 * No we have the packet, let's just put anything we get now
 		 * into a packfile
 		 */
-
 		return store_pack(out, &buf, repo);
 	}
 
