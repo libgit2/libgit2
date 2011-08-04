@@ -75,7 +75,7 @@ struct git_transport {
 	/**
 	 * Download the packfile
 	 */
-	int (*download_pack)(struct git_transport *transport, git_repository *repo);
+	int (*download_pack)(char **out, struct git_transport *transport, git_repository *repo);
 	/**
 	 * Fetch the changes
 	 */
@@ -98,6 +98,6 @@ int git_transport_send_wants(struct git_transport *transport, git_headarray *arr
 int git_transport_send_have(struct git_transport *transport, git_oid *oid);
 int git_transport_send_done(struct git_transport *transport);
 int git_transport_send_flush(struct git_transport *transport);
-int git_transport_download_pack(git_transport *transport, git_repository *repo);
+int git_transport_download_pack(char **out, git_transport *transport, git_repository *repo);
 
 #endif
