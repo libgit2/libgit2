@@ -475,7 +475,7 @@ off_t get_delta_base(
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* The base entry _must_ be in the same pack */
 		if (pack_entry_find_offset(&base_offset, &unused, p, (git_oid *)base_info, GIT_OID_HEXSZ) < GIT_SUCCESS)
-			return git__throw(GIT_EPACKCORRUPTED, "Base entry delta is not in the same pack");
+			return git__rethrow(GIT_EPACKCORRUPTED, "Base entry delta is not in the same pack");
 		*curpos += 20;
 	} else
 		return 0;
