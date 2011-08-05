@@ -269,13 +269,35 @@ int git_pkt_send_flush(int s)
 	return gitno_send(s, flush, STRLEN(flush), 0);
 }
 
+static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, int fd)
+{
+	char capstr[20]; /* Longer than we need */
+	char oid[GIT_OID_HEXSZ +1] = {0}, *cmd;
+	int error, len;
+
+	if (caps->ofs_delta)
+		strcpy(capstr, GIT_CAP_OFS_DELTA);
+
+	len = STRLEN("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ + strlen(capstr) + 1 /* LF */;
+	cmd = git__malloc(len + 1);
+	if (cmd == NULL)
+		return GIT_ENOMEM;
+
+	git_oid_fmt(oid, &head->oid);
+	memset(cmd, 0x0, len + 1);
+	snprintf(cmd, len + 1, "%04xwant %s%c%s\n", len, oid, 0, capstr);
+	error = gitno_send(fd, cmd, len, 0);
+	free(cmd);
+	return error;
+}
+
 /*
  * All "want" packets have the same length and format, so what we do
  * is overwrite the OID each time.
  */
 #define WANT_PREFIX "0032want "
 
-int git_pkt_send_wants(git_headarray *refs, int fd)
+int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 {
 	unsigned int i;
 	int ret = GIT_SUCCESS;
@@ -286,10 +308,18 @@ int git_pkt_send_wants(git_headarray *refs, int fd)
 	buf[sizeof(buf) - 2] = '\n';
 	buf[sizeof(buf) - 1] = '\0';
 
-	for (i = 0; i < refs->len; ++i) {
+	if (refs->len > 0 && caps->common) {
+		/* Some capabilities are active, so we need to send what we support */
+		send_want_with_caps(refs->heads[0], caps, fd);
+		i = 1;
+	} else {
+		i = 0;
+	}
+
+	for (; i < refs->len; ++i) {
 		head = refs->heads[i];
 		if (head->type != GIT_WHN_WANT)
-			continue;
+			continue; /* FIXME: return? refs shouldn't have any other type */
 
 		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
 		gitno_send(fd, buf, STRLEN(buf), 0);

@@ -5,6 +5,13 @@
 #include "git2/net.h"
 #include "vector.h"
 
+#define GIT_CAP_OFS_DELTA "ofs-delta"
+
+typedef struct git_transport_caps {
+	int common:1,
+	    ofs_delta:1;
+} git_transport_caps;
+
 /*
  * A day in the life of a network operation
  * ========================================
