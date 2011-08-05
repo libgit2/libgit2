@@ -14,7 +14,7 @@ typedef struct {
 	git_vector *refs;
 } transport_local;
 
-static int cmp_refs(const void *a, const void *b)
+static int CRTCALLBACK cmp_refs(const void *a, const void *b)
 {
 	const char *stra = *(const char * const *) a;
 	const char *strb = *(const char * const *) b;
