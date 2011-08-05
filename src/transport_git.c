@@ -346,9 +346,10 @@ static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
 	char path[GIT_PATH_MAX], suff[] = "/objects/pack/pack-received\0";
 	off_t off = 0;
 
-	memcpy(path, repo->path_repository, GIT_PATH_MAX - off);
+	strcpy(path, repo->path_repository);
 	off += strlen(repo->path_repository);
-	memcpy(path + off, suff, GIT_PATH_MAX - off - STRLEN(suff));
+	strcat(path, suff);
+	//memcpy(path + off, suff, GIT_PATH_MAX - off - STRLEN(suff) - 1);
 
 	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
 	if (error < GIT_SUCCESS)
