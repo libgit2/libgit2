@@ -69,7 +69,7 @@ static libgit2_suite suite_methods[]= {
 
 #define GIT_SUITE_COUNT (ARRAY_SIZE(suite_methods))
 
-int main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
+int CRTCALLBACK main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
 {
 	unsigned int i, failures;
 
