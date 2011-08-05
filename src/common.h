@@ -33,12 +33,20 @@
 
 typedef SSIZE_T ssize_t;
 
+/* NB: We normally use the stdcall calling convention, but callbacks to CRT
+ * functions require cdecl */
+#define CRTCALLBACK __cdecl
+
 #else
 # include <unistd.h>
 
 # ifdef GIT_THREADS
 #  include <pthread.h>
 # endif
+
+/* Unix has no need for this silliness */
+#define CRTCALLBACK
+
 #endif
 
 #include "git2/types.h"
