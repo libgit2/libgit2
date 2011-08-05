@@ -27,6 +27,7 @@
 #define INCLUDE_pkt_h__
 
 #include "common.h"
+#include "transport.h"
 #include "git2/net.h"
 
 enum git_pkt_type {
@@ -76,7 +77,7 @@ typedef struct {
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 int git_pkt_send_flush(int s);
 int git_pkt_send_done(int s);
-int git_pkt_send_wants(git_headarray *refs, int fd);
+int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd);
 int git_pkt_send_have(git_oid *oid, int fd);
 void git_pkt_free(git_pkt *pkt);
 
