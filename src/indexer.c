@@ -45,7 +45,7 @@ struct entry {
 	uint64_t offset_long;
 };
 
-typedef struct git_indexer {
+struct git_indexer {
 	struct git_pack_file *pack;
 	struct stat st;
 	struct git_pack_header hdr;
@@ -54,7 +54,7 @@ typedef struct git_indexer {
 	git_filebuf file;
 	unsigned int fanout[256];
 	git_oid hash;
-} git_indexer;
+};
 
 const git_oid *git_indexer_hash(git_indexer *idx)
 {
