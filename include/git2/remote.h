@@ -141,6 +141,16 @@ GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
  */
 GIT_EXTERN(void) git_remote_free(struct git_remote *remote);
 
+/**
+ * Update the tips to the new state
+ *
+ * Make sure that you only call this once you've successfully indexed
+ * or expanded the packfile.
+ *
+ * @param remote the remote to update
+ */
+GIT_EXTERN(int) git_remote_update_tips(struct git_remote *remote);
+
 /** @} */
 GIT_END_DECL
 #endif
