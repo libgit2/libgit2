@@ -102,6 +102,8 @@ int git_indexer_new(git_indexer **out, const char *packname)
 	unsigned int namelen;
 	int ret, error;
 
+	assert(out && packname);
+
 	if (git_path_root(packname) < 0)
 		return git__throw(GIT_EINVALIDPATH, "Path is not absolute");
 
