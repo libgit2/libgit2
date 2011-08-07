@@ -318,8 +318,8 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 
 	for (; i < refs->len; ++i) {
 		head = refs->heads[i];
-		if (head->type != GIT_WHN_WANT)
-			continue; /* FIXME: return? refs shouldn't have any other type */
+		if (head->local)
+			continue;
 
 		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
 		gitno_send(fd, buf, STRLEN(buf), 0);

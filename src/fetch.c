@@ -34,17 +34,6 @@
 #include "refspec.h"
 #include "fetch.h"
 
-/*
- * Don't forget that this depends on the enum being correctly set
- */
-static int whn_cmp(const void *a, const void *b)
-{
-	git_remote_head *heada = (git_remote_head *) a;
-	git_remote_head *headb = (git_remote_head *) b;
-
-	return headb->type - heada->type;
-}
-
 static int filter_wants(git_remote *remote)
 {
 	git_vector list;
@@ -55,7 +44,7 @@ static int filter_wants(git_remote *remote)
 	int error;
 	unsigned int i;
 
-	error = git_vector_init(&list, 16, whn_cmp);
+	error = git_vector_init(&list, 16, NULL);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -112,13 +101,12 @@ static int filter_wants(git_remote *remote)
 		 * to the list, storing the local oid for that branch so we
 		 * don't have to look for it again.
 		 */
-		head->type = GIT_WHN_WANT;
+		head->want = 1;
 		error = git_vector_insert(&list, head);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 	}
 
-	git_vector_sort(&list);
 	remote->refs.len = list.length;
 	remote->refs.heads = (git_remote_head **) list.contents;
 
