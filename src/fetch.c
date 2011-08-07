@@ -61,8 +61,6 @@ static int filter_wants(git_remote *remote)
 	}
 
 	for (i = 0; i < refs.len; ++i) {
-		char local[1024];
-		git_reference *ref;
 		git_remote_head *head = refs.heads[i];
 
 		/* If it doesn't match the refpec, we don't want it */
@@ -74,34 +72,10 @@ static int filter_wants(git_remote *remote)
 			goto cleanup;
 		}
 
-		/* If the local ref is the same, we don't want it either */
-		error = git_refspec_transform(local, sizeof(local), spec, head->name);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Error transforming ref name");
-			goto cleanup;
-		}
-
-		error = git_reference_lookup(&ref, repo, local);
-		/* If we don't have it locally, it's new, so we want it */
-		if (error < GIT_SUCCESS && error != GIT_ENOTFOUND) {
-			error = git__rethrow(error, "Error looking up local ref");
-			goto cleanup;
-		}
-
-		if (ref != NULL) {
-			if (!git_oid_cmp(&head->oid, git_reference_oid(ref)))
-				continue;
-
+		/* If we have the object, mark it so we don't ask for it */
+		if (git_odb_exists(repo->db, &head->oid))
 			head->local = 1;
-			git_oid_cpy(&head->loid, git_reference_oid(ref));
-		}
 
-		/*
-		 * Now we know we want to have that ref, so add it as a "want"
-		 * to the list, storing the local oid for that branch so we
-		 * don't have to look for it again.
-		 */
-		head->want = 1;
 		error = git_vector_insert(&list, head);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
