@@ -351,6 +351,10 @@ static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
 	strcat(path, suff);
 	//memcpy(path + off, suff, GIT_PATH_MAX - off - STRLEN(suff) - 1);
 
+	if (memcmp(buf->data, "PACK", STRLEN("PACK"))) {
+		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
+	}
+
 	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
@@ -387,7 +391,7 @@ cleanup:
 static int git_download_pack(char **out, git_transport *transport, git_repository *repo)
 {
 	transport_git *t = (transport_git *) transport;
-	int s = t->socket, error = GIT_SUCCESS, pack = 0;
+	int s = t->socket, error = GIT_SUCCESS;
 	gitno_buffer buf;
 	char buffer[1024];
 	git_pkt *pkt;
@@ -395,7 +399,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 
 	gitno_buffer_setup(&buf, buffer, sizeof(buffer), s);
 	/*
-	 * First, we ignore any ACKs and wait for a NACK
+	 * For now, we ignore everything and wait for the pack
 	 */
 	while (1) {
 		error = gitno_recv(&buf);
@@ -406,7 +410,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 
 		ptr = buf.data;
 		/* Whilst we're searching for the pack */
-		while (!pack) {
+		while (1) {
 			if (buf.offset == 0)
 				break;
 			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
@@ -415,21 +419,14 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 			if (error < GIT_SUCCESS)
 				return error;
 
-			gitno_consume(&buf, line_end);
-			if (pkt->type == GIT_PKT_PACK)
-				pack = 1;
+			if (pkt->type == GIT_PKT_PACK) {
+				return store_pack(out, &buf, repo);
+			}
 			/* For now we don't care about anything */
 			free(pkt);
+			gitno_consume(&buf, line_end);
 		}
-
-		/*
-		 * No we have the packet, let's just put anything we get now
-		 * into a packfile
-		 */
-		return store_pack(out, &buf, repo);
 	}
-
-	return error;
 }
 
 
