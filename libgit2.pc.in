@@ -1,11 +1,9 @@
-prefix=@prefix@
-exec_prefix=${prefix}
-libdir=@libdir@
-includedir=${prefix}/include
+libdir=@CMAKE_INSTALL_PREFIX@/@INSTALL_LIB@
+includedir=@CMAKE_INSTALL_PREFIX@/@INSTALL_INC@
 
 Name: libgit2
 Description: The git library, take 2
-Version: @version@
+Version: @LIBGIT2_VERSION_STRING@
 Requires: libcrypto
 Libs: -L${libdir} -lgit2 -lz -lcrypto
 Cflags: -I${includedir}
