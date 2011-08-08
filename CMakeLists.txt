@@ -45,10 +45,14 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
+OPTION (STDCALL "Buildl libgit2 with the __stdcall convention (Windows)" ON)
 
 # Platform specific compilation flags
 IF (MSVC)
 	SET(CMAKE_C_FLAGS "/W4 /WX /nologo /Zi")
+	IF (STDCALL)
+	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
+	ENDIF ()
 	# TODO: bring back /RTC1 /RTCc
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
