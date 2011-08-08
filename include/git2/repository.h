@@ -219,6 +219,16 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
 /**
+ * Retrieve and resolve the reference pointed at by HEAD.
+ *
+ * @param head_out pointer to the reference which will be retrieved
+ * @param repo a repository object
+ *
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_repository_head(git_reference **head_out, git_repository *repo);
+
+/**
  * Check if a repository's HEAD is detached
  *
  * A repository's HEAD is detached when it points directly to a commit
