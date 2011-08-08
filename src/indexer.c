@@ -104,8 +104,10 @@ int git_indexer_new(git_indexer **out, const char *packname)
 
 	namelen = strlen(packname);
 	idx->pack = git__malloc(sizeof(struct git_pack_file) + namelen + 1);
-	if (idx->pack == NULL)
+	if (idx->pack == NULL) {
+		error = GIT_ENOMEM;
 		goto cleanup;
+	}
 
 	memset(idx->pack, 0x0, sizeof(struct git_pack_file));
 	memcpy(idx->pack->pack_name, packname, namelen + 1);
@@ -127,7 +129,7 @@ int git_indexer_new(git_indexer **out, const char *packname)
 	}
 
 	idx->pack->mwf.fd = ret;
-	idx->pack->mwf.size = idx->st.st_size;
+	idx->pack->mwf.size = (git_off_t)idx->st.st_size;
 
 	error = parse_header(idx);
 	if (error < GIT_SUCCESS) {
@@ -170,7 +172,7 @@ int git_indexer_write(git_indexer *idx)
 {
 	git_mwindow *w = NULL;
 	int error, namelen;
-	unsigned int i, long_offsets, left;
+	unsigned int i, long_offsets = 0, left;
 	struct git_pack_idx_header hdr;
 	char filename[GIT_PATH_MAX];
 	struct entry *entry;

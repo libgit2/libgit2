@@ -499,7 +499,7 @@ END_TEST
 
 
 /* External declaration for testing the buffer parsing method */
-int commit_parse_buffer(git_commit *commit, void *data, size_t len, unsigned int parse_flags);
+int commit_parse_buffer(git_commit *commit, void *data, size_t len);
 
 BEGIN_TEST(parse2, "parse a whole commit buffer")
 	const int broken_commit_count = sizeof(test_commits_broken) / sizeof(*test_commits_broken);
@@ -519,8 +519,7 @@ BEGIN_TEST(parse2, "parse a whole commit buffer")
 		must_fail(commit_parse_buffer(
 					commit,
 					test_commits_broken[i],
-					strlen(test_commits_broken[i]),
-					0x1)
+					strlen(test_commits_broken[i]))
 				);
 
 		git_commit__free(commit);
@@ -536,8 +535,7 @@ BEGIN_TEST(parse2, "parse a whole commit buffer")
 		must_pass(commit_parse_buffer(
 					commit,
 					test_commits_working[i],
-					strlen(test_commits_working[i]),
-					0x0)
+					strlen(test_commits_working[i]))
 				);
 
 		git_commit__free(commit);
@@ -549,8 +547,7 @@ BEGIN_TEST(parse2, "parse a whole commit buffer")
 		must_pass(commit_parse_buffer(
 					commit,
 					test_commits_working[i],
-					strlen(test_commits_working[i]),
-					0x1)
+					strlen(test_commits_working[i]))
 				);
 
 		git_commit__free(commit);

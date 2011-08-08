@@ -179,6 +179,7 @@ static int pack_entry_find_prefix(struct git_pack_entry *e,
 
 GIT_INLINE(void) pack_window_free_all(struct pack_backend *GIT_UNUSED(backend), struct git_pack_file *p)
 {
+	GIT_UNUSED_ARG(backend);
 	git_mwindow_free_all(&p->mwf);
 }
 

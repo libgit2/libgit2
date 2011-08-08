@@ -160,8 +160,6 @@ static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *
 	git_path_join(path, repo_path, ref_name);
 
 	return git_futils_readbuffer_updated(file_content, path, mtime, updated);
-
-	return GIT_SUCCESS;
 }
 
 

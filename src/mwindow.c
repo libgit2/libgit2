@@ -44,8 +44,10 @@
  */
 
 static git_mwindow_ctl ctl = {
-	.window_size = DEFAULT_WINDOW_SIZE,
-	.mapped_limit = DEFAULT_MAPPED_LIMIT
+	0,
+	0,
+	DEFAULT_WINDOW_SIZE,
+	DEFAULT_MAPPED_LIMIT
 };
 
 /*
@@ -87,11 +89,11 @@ void git_mwindow_free_all(git_mwindow_file *mwf)
 /*
  * Check if a window 'win' contains the address 'offset'
  */
-int git_mwindow_contains(git_mwindow *win, off_t offset)
+int git_mwindow_contains(git_mwindow *win, git_off_t offset)
 {
-	off_t win_off = win->offset;
+	git_off_t win_off = win->offset;
 	return win_off <= offset
-		&& offset <= (off_t)(win_off + win->window_map.len);
+		&& offset <= (git_off_t)(win_off + win->window_map.len);
 }
 
 /*
@@ -156,10 +158,10 @@ int git_mwindow_close_lru(git_mwindow_file *mwf)
 	return git__throw(GIT_ERROR, "Failed to close memory window. Couln't find LRU");
 }
 
-static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, size_t size, off_t offset)
+static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, git_off_t size, git_off_t offset)
 {
 	size_t walign = ctl.window_size / 2;
-	size_t len;
+	git_off_t len;
 	git_mwindow *w;
 
 	w = git__malloc(sizeof(*w));
@@ -170,17 +172,17 @@ static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, size_t size, 
 	w->offset = (offset / walign) * walign;
 
 	len = size - w->offset;
-	if (len > ctl.window_size)
-		len = ctl.window_size;
+	if (len > (git_off_t)ctl.window_size)
+		len = (git_off_t)ctl.window_size;
 
-	ctl.mapped += len;
+	ctl.mapped += (size_t)len;
 
 	while(ctl.mapped_limit < ctl.mapped &&
 	      git_mwindow_close_lru(mwf) == GIT_SUCCESS) {}
 
 	/* FIXME: Shouldn't we error out if there's an error in closing lru? */
 
-	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, len) < GIT_SUCCESS)
+	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < GIT_SUCCESS)
 		goto cleanup;
 
 	ctl.mmap_calls++;
@@ -204,7 +206,7 @@ cleanup:
  * enough space. Don't forget to add it to your list
  */
 unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor,
-                                off_t offset, int extra, unsigned int *left)
+                                git_off_t offset, int extra, unsigned int *left)
 {
 	git_mwindow *w = *cursor;
 
@@ -242,12 +244,9 @@ unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor,
 	assert(git__is_sizet(offset));
 
 	if (left)
-		*left = w->window_map.len - offset;
+		*left = (unsigned int)(w->window_map.len - offset);
 
 	return (unsigned char *) w->window_map.data + offset;
-
-	free(w);
-	return NULL;
 }
 
 int git_mwindow_file_register(git_mwindow_file *mwf)
