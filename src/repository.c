@@ -729,19 +729,31 @@ int git_repository_head_detached(git_repository *repo)
 	return 1;
 }
 
+int git_repository_head(git_reference **head_out, git_repository *repo)
+{
+	git_reference *ref;
+	int error;
+
+	*head_out = NULL;
+
+	error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(GIT_ENOTAREPO, "Failed to locate the HEAD");
+
+	error = git_reference_resolve(&ref, ref);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to resolve the HEAD");
+
+	*head_out = ref;
+	return GIT_SUCCESS;
+}
+
 int git_repository_head_orphan(git_repository *repo)
 {
 	git_reference *ref;
 	int error;
 
-	error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	if (git_reference_type(ref) == GIT_REF_OID)
-		return 0;
-
-	error = git_reference_resolve(&ref, ref);
+	error = git_repository_head(&ref, repo);
 
 	return error == GIT_ENOTFOUND ? 1 : error;
 }
