@@ -47,7 +47,12 @@ static git_mwindow_ctl ctl = {
 	0,
 	0,
 	DEFAULT_WINDOW_SIZE,
-	DEFAULT_MAPPED_LIMIT
+	DEFAULT_MAPPED_LIMIT,
+	0,
+	0,
+	0,
+	0,
+	{0, 0, 0, 0, 0}
 };
 
 /*
