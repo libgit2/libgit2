@@ -503,7 +503,7 @@ static int packed_load(git_repository *repo)
 		ref_cache->packfile = git_hashtable_alloc(
 			default_table_size,
 			reftable_hash,
-			(git_hash_keyeq_ptr)strcmp);
+			(git_hash_keyeq_ptr)(&git__strcmp_cb));
 
 		if (ref_cache->packfile == NULL) {
 			error = GIT_ENOMEM;
@@ -1609,7 +1609,7 @@ int git_repository__refcache_init(git_refcache *refs)
 	refs->loose_cache = git_hashtable_alloc(
 		default_table_size,
 		reftable_hash,
-		(git_hash_keyeq_ptr)strcmp);
+		(git_hash_keyeq_ptr)(&git__strcmp_cb));
 
 	/* packfile loaded lazily */
 	refs->packfile = NULL;
@@ -1753,5 +1753,3 @@ int git_reference__normalize_name_oid(char *buffer_out, size_t out_size, const c
 {
 	return normalize_name(buffer_out, out_size, name, 1);
 }
-
-

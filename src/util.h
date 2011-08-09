@@ -120,4 +120,6 @@ extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const v
 extern void **git__bsearch(const void *key, void **base, size_t nmemb,
 	int (*compar)(const void *, const void *));
 
+extern int git__strcmp_cb(const void *a, const void *b);
+
 #endif /* INCLUDE_util_h__ */

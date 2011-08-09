@@ -14,13 +14,6 @@ typedef struct {
 	git_vector *refs;
 } transport_local;
 
-static int cmp_refs(const void *a, const void *b)
-{
-	const char *stra = (const char *)a;
-	const char *strb = (const char *)b;
-	return strcmp(stra, strb);
-}
-
 /*
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calulating the heads ourselves.
@@ -147,7 +140,7 @@ static int local_ls(git_transport *transport, git_headarray *array)
 		return error;
 
 	/* Sort the references first */
-	git__tsort((void **)refs.strings, refs.count, &cmp_refs);
+	git__tsort((void **)refs.strings, refs.count, &git__strcmp_cb);
 
 	/* Add HEAD */
 	error = add_ref(GIT_HEAD_FILE, repo, vec);
