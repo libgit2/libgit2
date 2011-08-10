@@ -25,6 +25,8 @@
 #ifndef INCLUDE_git_types_h__
 #define INCLUDE_git_types_h__
 
+#include "common.h"
+
 /**
  * @file git2/types.h
  * @brief libgit2 base & compatibility types
