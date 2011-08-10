@@ -90,6 +90,11 @@ int git_transport_send_have(struct git_transport *transport, git_oid *oid)
 	return transport->send_have(transport, oid);
 }
 
+int git_transport_negotiate_fetch(struct git_transport *transport, git_repository *repo, git_headarray *list)
+{
+	return transport->negotiate_fetch(transport, repo, list);
+}
+
 int git_transport_send_flush(struct git_transport *transport)
 {
 	return transport->send_flush(transport);

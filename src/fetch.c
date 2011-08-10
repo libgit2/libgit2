@@ -98,14 +98,8 @@ cleanup:
  */
 int git_fetch_negotiate(git_remote *remote)
 {
-	git_revwalk *walk;
 	int error;
-	unsigned int i;
-	git_reference *ref;
-	git_strarray refs;
 	git_headarray *list = &remote->refs;
-	git_repository *repo = remote->repo;
-	git_oid oid;
 
 	error = filter_wants(remote);
 	if (error < GIT_SUCCESS)
@@ -119,47 +113,11 @@ int git_fetch_negotiate(git_remote *remote)
 	 * what we want and what we have.
 	 */
 	remote->need_pack = 1;
-	git_transport_send_wants(remote->transport, list);
+	error = git_transport_send_wants(remote->transport, list);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to send want list");
 
-	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
-	if (error < GIT_ERROR)
-		return git__rethrow(error, "Failed to list all references");
-
-	error = git_revwalk_new(&walk, repo);
-	if (error < GIT_ERROR) {
-		error = git__rethrow(error, "Failed to list all references");
-		goto cleanup;
-	}
-	git_revwalk_sorting(walk, GIT_SORT_TIME);
-
-	for (i = 0; i < refs.count; ++i) {
-		error = git_reference_lookup(&ref, repo, refs.strings[i]);
-		if (error < GIT_ERROR) {
-			error = git__rethrow(error, "Failed to lookup %s", refs.strings[i]);
-			goto cleanup;
-		}
-
-		error = git_revwalk_push(walk, git_reference_oid(ref));
-		if (error < GIT_ERROR) {
-			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
-			goto cleanup;
-		}
-	}
-	git_strarray_free(&refs);
-
-	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
-		git_transport_send_have(remote->transport, &oid);
-	}
-	if (error == GIT_EREVWALKOVER)
-		error = GIT_SUCCESS;
-
-	/* TODO: git_pkt_send_flush(fd), or git_transport_flush() */
-	git_transport_send_flush(remote->transport);
-	git_transport_send_done(remote->transport);
-
-cleanup:
-	git_revwalk_free(walk);
-	return error;
+	return git_transport_negotiate_fetch(remote->transport, remote->repo, &remote->refs);
 }
 
 int git_fetch_download_pack(char **out, git_remote *remote)
