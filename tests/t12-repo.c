@@ -309,7 +309,7 @@ BEGIN_TEST(orphan0, "test if HEAD is orphan")
 	git_repository_free(repo);
 END_TEST
 
-#define DISCOVER_FOLDER TEST_RESOURCES "/discover.git"
+#define DISCOVER_FOLDER TEMP_REPO_FOLDER "discover.git"
 
 #define SUB_REPOSITORY_FOLDER_NAME "sub_repo"
 #define SUB_REPOSITORY_FOLDER DISCOVER_FOLDER "/" SUB_REPOSITORY_FOLDER_NAME
@@ -388,7 +388,7 @@ BEGIN_TEST(discover0, "test discover")
 	char found_path[GIT_PATH_MAX];
 	int mode = 0755;
 
-	must_pass(append_ceiling_dir(ceiling_dirs,TEST_RESOURCES));
+	must_pass(append_ceiling_dir(ceiling_dirs, TEMP_REPO_FOLDER));
 	git_futils_mkdir_r(DISCOVER_FOLDER, mode);
 
 	must_be_true(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
@@ -442,7 +442,7 @@ BEGIN_TEST(discover0, "test discover")
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path));
 	must_pass(ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, repository_path));
 
-	must_pass(git_futils_rmdir_r(DISCOVER_FOLDER, 1));
+	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
 	git_repository_free(repo);
 END_TEST
 
