@@ -388,8 +388,8 @@ BEGIN_TEST(discover0, "test discover")
 	char found_path[GIT_PATH_MAX];
 	int mode = 0755;
 
-	must_pass(append_ceiling_dir(ceiling_dirs, TEMP_REPO_FOLDER));
 	git_futils_mkdir_r(DISCOVER_FOLDER, mode);
+	must_pass(append_ceiling_dir(ceiling_dirs, TEMP_REPO_FOLDER));
 
 	must_be_true(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
 
