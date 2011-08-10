@@ -23,8 +23,7 @@ GIT_BEGIN_DECL
 /**
  * Lookup a reference by its name in a repository.
  *
- * The generated reference is owned by the repository and
- * should not be freed by the user.
+ * The generated reference must be freed by the user.
  *
  * @param reference_out pointer to the looked-up reference
  * @param repo the repository to look up the reference
@@ -39,8 +38,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_reposito
  * The reference will be created in the repository and written
  * to the disk.
  *
- * This reference is owned by the repository and shall not
- * be free'd by the user.
+ * The generated reference must be freed by the user.
  *
  * If `force` is true and there already exists a reference
  * with the same name, it will be overwritten.
@@ -60,8 +58,7 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  * The reference will be created in the repository and written
  * to the disk.
  *
- * This reference is owned by the repository and shall not
- * be free'd by the user.
+ * The generated reference must be freed by the user.
  *
  * If `force` is true and there already exists a reference
  * with the same name, it will be overwritten.
@@ -173,7 +170,9 @@ GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
  * The new name will be checked for validity and may be
  * modified into a normalized form.
  *
- * The refernece will be immediately renamed in-memory
+ * The given git_reference will be updated.
+ *
+ * The reference will be immediately renamed in-memory
  * and on disk.
  *
  */
@@ -199,9 +198,6 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  *
  * Once the `packed-refs` file has been written properly,
  * the loose references will be removed from disk.
- *
- * WARNING: calling this method may invalidate any existing
- * references previously loaded on the cache.
  *
  * @param repo Repository where the loose refs will be packed
  * @return GIT_SUCCESS or an error code
@@ -252,6 +248,21 @@ GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo,
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
+
+/**
+ * Check if a reference is packed
+ *
+ * @param ref git_reference
+ * @return 0 in case it's not packed; 1 otherwise
+ */
+GIT_EXTERN(int) git_reference_is_packed(git_reference *ref);
+
+/**
+ * Free the given reference
+ *
+ * @param ref git_reference
+ */
+GIT_EXTERN(void) git_reference_free(git_reference *ref);
 
 /** @} */
 GIT_END_DECL
