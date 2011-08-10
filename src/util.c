@@ -355,3 +355,16 @@ void **git__bsearch(const void *key, void **base, size_t nmemb, int (*compar)(co
         return NULL;
 }
 
+/**
+ * A strcmp wrapper
+ * 
+ * We don't want direct pointers to the CRT on Windows, we may
+ * get stdcall conflicts.
+ */
+int git__strcmp_cb(const void *a, const void *b)
+{
+	const char *stra = (const char *)a;
+	const char *strb = (const char *)b;
+
+	return strcmp(stra, strb);
+}
