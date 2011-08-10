@@ -560,6 +560,7 @@ static const char *commit_ids[] = {
 	"c47800c7266a2be04c571c04d5a6614691ea99bd", /* 3 */
 	"8496071c1b46c854b31185ea97743be6a8774479", /* 4 */
 	"5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
+	"a65fedf39aefe402d3bb6e24df4d4f5fe4547750", /* 6 */
 };
 
 BEGIN_TEST(details0, "query the details on a parsed commit")
@@ -594,6 +595,7 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		must_be_true(strcmp(author->email, "schacon@gmail.com") == 0);
 		must_be_true(strcmp(committer->name, "Scott Chacon") == 0);
 		must_be_true(strcmp(committer->email, "schacon@gmail.com") == 0);
+		must_be_true(message != NULL);
 		must_be_true(strchr(message, '\n') != NULL);
 		must_be_true(commit_time > 0);
 		must_be_true(parents <= 2);
