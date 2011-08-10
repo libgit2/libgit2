@@ -137,12 +137,13 @@ int git_commit_create(
 
 	if (error == GIT_SUCCESS && update_ref != NULL) {
 		git_reference *head;
+		git_reference *target;
 
 		error = git_reference_lookup(&head, repo, update_ref);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to create commit");
 
-		error = git_reference_resolve(&head, head);
+		error = git_reference_resolve(&target, head);
 		if (error < GIT_SUCCESS) {
 			if (error != GIT_ENOTFOUND)
 				return git__rethrow(error, "Failed to create commit");
@@ -156,7 +157,7 @@ int git_commit_create(
 			return git_reference_create_oid(&head, repo, git_reference_target(head), oid, 1);
 		}
 
-		error = git_reference_set_oid(head, oid);
+		error = git_reference_set_oid(target, oid);
 	}
 
 	if (error < GIT_SUCCESS)
