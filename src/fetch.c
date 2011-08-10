@@ -130,6 +130,7 @@ int git_fetch_negotiate(git_remote *remote)
 		error = git__rethrow(error, "Failed to list all references");
 		goto cleanup;
 	}
+	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
 	for (i = 0; i < refs.count; ++i) {
 		error = git_reference_lookup(&ref, repo, refs.strings[i]);
