@@ -27,6 +27,8 @@
 #include "git2/common.h"
 #include "git2/types.h"
 #include "git2/errors.h"
+#include "git2/net.h"
+#include "git2/revwalk.h"
 
 #include "vector.h"
 #include "transport.h"
@@ -325,6 +327,70 @@ static int git_send_have(git_transport *transport, git_oid *oid)
 	return git_pkt_send_have(oid, t->socket);
 }
 
+static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *list)
+{
+	transport_git *t = (transport_git *) transport;
+	git_revwalk *walk;
+	git_reference *ref;
+	git_strarray refs;
+	git_oid oid;
+	int error;
+	unsigned int i;
+
+	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
+	if (error < GIT_ERROR)
+		return git__rethrow(error, "Failed to list all references");
+
+	error = git_revwalk_new(&walk, repo);
+	if (error < GIT_ERROR) {
+		error = git__rethrow(error, "Failed to list all references");
+		goto cleanup;
+	}
+	git_revwalk_sorting(walk, GIT_SORT_TIME);
+
+	for (i = 0; i < refs.count; ++i) {
+		error = git_reference_lookup(&ref, repo, refs.strings[i]);
+		if (error < GIT_ERROR) {
+			error = git__rethrow(error, "Failed to lookup %s", refs.strings[i]);
+			goto cleanup;
+		}
+
+		error = git_revwalk_push(walk, git_reference_oid(ref));
+		if (error < GIT_ERROR) {
+			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
+			goto cleanup;
+		}
+	}
+	git_strarray_free(&refs);
+
+	/*
+	 * We don't support any kind of ACK extensions, so the negotiation
+	 * boils down to sending what we have and listening for an ACK
+	 * every once in a while.
+	 */
+	i = 0;
+	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+		error = git_pkt_send_have(&oid, t->socket);
+		i++;
+		/*
+		 * This is a magic number so we don't flood the server. We
+		 * should check every once in a while to see if the server has
+		 * sent an ACK.
+		 */
+		if (i % 160 == 0)
+			break;
+	}
+	if (error == GIT_EREVWALKOVER)
+		error = GIT_SUCCESS;
+
+	git_pkt_send_flush(t->socket);
+	git_pkt_send_done(t->socket);
+
+cleanup:
+	git_revwalk_free(walk);
+	return error;
+}
+
 static int git_send_flush(git_transport *transport)
 {
 	transport_git *t = (transport_git *) transport;
@@ -476,6 +542,7 @@ int git_transport_git(git_transport **out)
 	t->parent.ls = git_ls;
 	t->parent.send_wants = git_send_wants;
 	t->parent.send_have = git_send_have;
+	t->parent.negotiate_fetch = git_negotiate_fetch;
 	t->parent.send_flush = git_send_flush;
 	t->parent.send_done = git_send_done;
 	t->parent.download_pack = git_download_pack;
