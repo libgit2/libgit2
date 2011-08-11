@@ -603,8 +603,14 @@ static int repo_init_reinit(const char *repository_path, int is_bare)
 
 static int repo_init_createhead(git_repository *repo)
 {
+	int error;
 	git_reference *head_reference;
-	return git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE, 0);
+
+	error = git_reference_create_symbolic(&head_reference, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_MASTER_FILE, 0);
+
+	git_reference_free(head_reference);
+
+	return error;
 }
 
 static int repo_init_structure(const char *git_dir, int is_bare)
@@ -715,10 +721,15 @@ int git_repository_head_detached(git_repository *repo)
 	if (error < GIT_SUCCESS)
 		return error;
 
-	if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+		git_reference_free(ref);
 		return 0;
+	}
 
 	error = git_odb_read_header(&_size, &type, repo->db, git_reference_oid(ref));
+
+	git_reference_free(ref);
+
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -730,7 +741,7 @@ int git_repository_head_detached(git_repository *repo)
 
 int git_repository_head(git_reference **head_out, git_repository *repo)
 {
-	git_reference *ref;
+	git_reference *ref, *resolved_ref;
 	int error;
 
 	*head_out = NULL;
@@ -739,11 +750,15 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(GIT_ENOTAREPO, "Failed to locate the HEAD");
 
-	error = git_reference_resolve(&ref, ref);
-	if (error < GIT_SUCCESS)
+	error = git_reference_resolve(&resolved_ref, ref);
+	if (error < GIT_SUCCESS) {
+		git_reference_free(ref);
 		return git__rethrow(error, "Failed to resolve the HEAD");
+	}
 
-	*head_out = ref;
+	git_reference_free(ref);
+
+	*head_out = resolved_ref;
 	return GIT_SUCCESS;
 }
 
@@ -753,6 +768,9 @@ int git_repository_head_orphan(git_repository *repo)
 	int error;
 
 	error = git_repository_head(&ref, repo);
+
+	if (error == GIT_SUCCESS)
+		git_reference_free(ref);
 
 	return error == GIT_ENOTFOUND ? 1 : error;
 }
@@ -766,13 +784,21 @@ int git_repository_is_empty(git_repository *repo)
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Corrupted repository. HEAD does not exist");
 
-	if (git_reference_type(head) != GIT_REF_SYMBOLIC)
+	if (git_reference_type(head) != GIT_REF_SYMBOLIC) {
+		git_reference_free(head);
 		return 0;
+	}
 
-	if (strcmp(git_reference_target(head), "refs/heads/master") != 0)
+	if (strcmp(git_reference_target(head), "refs/heads/master") != 0) {
+		git_reference_free(head);
 		return 0;
+	}
 
 	error = git_reference_resolve(&branch, head);
+
+	git_reference_free(head);
+	git_reference_free(branch);
+
 	return error == GIT_ENOTFOUND ? 1 : error;
 }
 

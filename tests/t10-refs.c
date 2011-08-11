@@ -56,6 +56,8 @@ BEGIN_TEST(readtag0, "lookup a loose tag reference")
 
 	git_object_close(object);
 	git_repository_free(repo);
+
+	git_reference_free(reference);
 END_TEST
 
 BEGIN_TEST(readtag1, "lookup a loose tag reference that doesn't exist")
@@ -66,6 +68,8 @@ BEGIN_TEST(readtag1, "lookup a loose tag reference that doesn't exist")
 	must_fail(git_reference_lookup(&reference, repo, non_existing_tag_ref_name));
 
 	git_repository_free(repo);
+
+	git_reference_free(reference);
 END_TEST
 
 static const char *head_tracker_sym_ref_name = "head-tracker";
@@ -97,6 +101,9 @@ BEGIN_TEST(readsym0, "lookup a symbolic reference")
 
 	git_object_close(object);
 	git_repository_free(repo);
+
+	git_reference_free(reference);
+	git_reference_free(resolved_ref);
 END_TEST
 
 BEGIN_TEST(readsym1, "lookup a nested symbolic reference")
@@ -124,6 +131,9 @@ BEGIN_TEST(readsym1, "lookup a nested symbolic reference")
 
 	git_object_close(object);
 	git_repository_free(repo);
+
+	git_reference_free(reference);
+	git_reference_free(resolved_ref);
 END_TEST
 
 BEGIN_TEST(readsym2, "lookup the HEAD and resolve the master branch")
@@ -145,6 +155,10 @@ BEGIN_TEST(readsym2, "lookup the HEAD and resolve the master branch")
 	must_pass(git_oid_cmp(git_reference_oid(comp_base_ref), git_reference_oid(resolved_ref)));
 
 	git_repository_free(repo);
+
+	git_reference_free(reference);
+	git_reference_free(resolved_ref);
+	git_reference_free(comp_base_ref);
 END_TEST
 
 BEGIN_TEST(readsym3, "lookup the master branch and then the HEAD")
@@ -160,6 +174,10 @@ BEGIN_TEST(readsym3, "lookup the master branch and then the HEAD")
 	must_pass(git_oid_cmp(git_reference_oid(master_ref), git_reference_oid(resolved_ref)));
 
 	git_repository_free(repo);
+
+	git_reference_free(reference);
+	git_reference_free(resolved_ref);
+	git_reference_free(master_ref);
 END_TEST
 
 static const char *packed_head_name = "refs/heads/packed";
@@ -183,6 +201,8 @@ BEGIN_TEST(readpacked0, "lookup a packed reference")
 
 	git_object_close(object);
 	git_repository_free(repo);
+
+	git_reference_free(reference);
 END_TEST
 
 BEGIN_TEST(readpacked1, "assure that a loose reference is looked up before a packed reference")
@@ -197,6 +217,8 @@ BEGIN_TEST(readpacked1, "assure that a loose reference is looked up before a pac
 	must_be_true(strcmp(reference->name, packed_test_head_name) == 0);
 
 	git_repository_free(repo);
+
+	git_reference_free(reference);
 END_TEST
 
 BEGIN_TEST(create0, "create a new symbolic reference")
@@ -240,6 +262,10 @@ BEGIN_TEST(create0, "create a new symbolic reference")
 	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
 
 	close_temp_repo(repo2);
+
+	git_reference_free(new_reference);
+	git_reference_free(looked_up_ref);
+	git_reference_free(resolved_ref);
 END_TEST
 
 BEGIN_TEST(create1, "create a deep symbolic reference")
@@ -261,6 +287,10 @@ BEGIN_TEST(create1, "create a deep symbolic reference")
 	must_be_true(git_oid_cmp(&id, git_reference_oid(resolved_ref)) == 0);
 
 	close_temp_repo(repo);
+
+	git_reference_free(new_reference);
+	git_reference_free(looked_up_ref);
+	git_reference_free(resolved_ref);
 END_TEST
 
 BEGIN_TEST(create2, "create a new OID reference")
@@ -299,6 +329,9 @@ BEGIN_TEST(create2, "create a new OID reference")
 	must_be_true(git_oid_cmp(&id, git_reference_oid(looked_up_ref)) == 0);
 
 	close_temp_repo(repo2);
+
+	git_reference_free(new_reference);
+	git_reference_free(looked_up_ref);
 END_TEST
 
 BEGIN_TEST(create3, "Can not create a new OID reference which targets at an unknown id")
@@ -349,6 +382,9 @@ BEGIN_TEST(overwrite0, "Overwrite an existing symbolic reference")
 	must_be_true(!strcmp(git_reference_target(ref), ref_master_name));
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref);
+	git_reference_free(branch_ref);
 END_TEST
 
 BEGIN_TEST(overwrite1, "Overwrite an existing object id reference")
@@ -378,6 +414,8 @@ BEGIN_TEST(overwrite1, "Overwrite an existing object id reference")
 	must_be_true(!git_oid_cmp(&id, git_reference_oid(ref)));
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref);
 END_TEST
 
 BEGIN_TEST(overwrite2, "Overwrite an existing object id reference with a symbolic one")
@@ -401,6 +439,8 @@ BEGIN_TEST(overwrite2, "Overwrite an existing object id reference with a symboli
 	must_be_true(!strcmp(git_reference_target(ref), ref_master_name));
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref);
 END_TEST
 
 BEGIN_TEST(overwrite3, "Overwrite an existing symbolic reference with an object id one")
@@ -426,6 +466,8 @@ BEGIN_TEST(overwrite3, "Overwrite an existing symbolic reference with an object 
 	must_be_true(!git_oid_cmp(git_reference_oid(ref), &id));
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref);
 END_TEST
 
 BEGIN_TEST(pack0, "create a packfile for an empty folder")
@@ -475,6 +517,8 @@ BEGIN_TEST(pack1, "create a packfile from all the loose rn a repo")
 	must_pass(!git_futils_exists(temp_path));
 
 	close_temp_repo(repo);
+
+	git_reference_free(reference);
 END_TEST
 
 BEGIN_TEST(rename0, "rename a loose reference")
@@ -515,6 +559,9 @@ BEGIN_TEST(rename0, "rename a loose reference")
 	must_pass(git_futils_exists(temp_path));
 
 	close_temp_repo(repo);
+
+	git_reference_free(looked_up_ref);
+	git_reference_free(another_looked_up_ref);
 END_TEST
 
 BEGIN_TEST(rename1, "rename a packed reference (should make it loose)")
@@ -555,6 +602,9 @@ BEGIN_TEST(rename1, "rename a packed reference (should make it loose)")
 	must_pass(git_futils_exists(temp_path));
 
 	close_temp_repo(repo);
+
+	git_reference_free(looked_up_ref);
+	git_reference_free(another_looked_up_ref);
 END_TEST
 
 BEGIN_TEST(rename2, "renaming a packed reference does not pack another reference which happens to be in both loose and pack state")
@@ -594,6 +644,9 @@ BEGIN_TEST(rename2, "renaming a packed reference does not pack another reference
 	must_pass(git_futils_exists(temp_path));
 
 	close_temp_repo(repo);
+
+	git_reference_free(looked_up_ref);
+	git_reference_free(another_looked_up_ref);
 END_TEST
 
 BEGIN_TEST(rename3, "can not rename a reference with the name of an existing reference")
@@ -613,6 +666,8 @@ BEGIN_TEST(rename3, "can not rename a reference with the name of an existing ref
 	must_be_true(!strcmp(looked_up_ref->name, packed_head_name));
 
 	close_temp_repo(repo);
+
+	git_reference_free(looked_up_ref);
 END_TEST
 
 BEGIN_TEST(rename4, "can not rename a reference with an invalid name")
@@ -635,6 +690,8 @@ BEGIN_TEST(rename4, "can not rename a reference with an invalid name")
 	must_be_true(!strcmp(looked_up_ref->name, packed_test_head_name));
 
 	close_temp_repo(repo);
+
+	git_reference_free(looked_up_ref);
 END_TEST
 
 BEGIN_TEST(rename5, "can force-rename a packed reference with the name of an existing loose and packed reference")
@@ -660,6 +717,8 @@ BEGIN_TEST(rename5, "can force-rename a packed reference with the name of an exi
 	must_fail(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
 
 	close_temp_repo(repo);
+
+	git_reference_free(looked_up_ref);
 END_TEST
 
 BEGIN_TEST(rename6, "can force-rename a loose reference with the name of an existing loose reference")
@@ -685,6 +744,8 @@ BEGIN_TEST(rename6, "can force-rename a loose reference with the name of an exis
 	must_fail(git_reference_lookup(&looked_up_ref, repo, "refs/heads/br2"));
 
 	close_temp_repo(repo);
+
+	git_reference_free(looked_up_ref);
 END_TEST
 
 static const char *ref_one_name = "refs/heads/one/branch";
@@ -717,6 +778,11 @@ BEGIN_TEST(rename7, "can not overwrite name of existing reference")
 	must_fail(git_reference_lookup(&ref_one_new, repo, ref_one_name_new));
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref);
+	git_reference_free(ref_one);
+	git_reference_free(ref_one_new);
+	git_reference_free(ref_two);
 END_TEST
 
 static const char *ref_two_name_new = "refs/heads/two/two";
@@ -748,6 +814,10 @@ BEGIN_TEST(rename8, "can be renamed to a new name prefixed with the old name")
 	must_fail(git_reference_lookup(&looked_up_ref, repo, ref_two_name));
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref);
+	git_reference_free(ref_two);
+	git_reference_free(looked_up_ref);
 END_TEST
 
 BEGIN_TEST(rename9, "can move a reference to a upper reference hierarchy")
@@ -806,6 +876,8 @@ BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove
 	must_pass(!git_futils_exists(temp_path));
 
 	close_temp_repo(repo);
+
+	git_reference_free(another_looked_up_ref);
 END_TEST
 
 BEGIN_TEST(delete1, "can delete a just packed reference")
@@ -1132,6 +1204,9 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 	git_signature_free(committer);
 	git_reflog_free(reflog);
 	close_temp_repo(repo2);
+
+	git_reference_free(ref);
+	git_reference_free(lookedup_ref);
 END_TEST
 
 BEGIN_TEST(reflog1, "avoid writing an obviously wrong reflog")
@@ -1160,6 +1235,8 @@ BEGIN_TEST(reflog1, "avoid writing an obviously wrong reflog")
 	git_signature_free(committer);
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref);
 END_TEST
 
 BEGIN_SUITE(refs)
