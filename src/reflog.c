@@ -218,8 +218,12 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 		return git__rethrow(error, "Failed to write reflog. Cannot resolve reference `%s`", ref->name);
 
 	oid = git_reference_oid(r);
-	if (oid == NULL)
+	if (oid == NULL) {
+		git_reference_free(r);
 		return git__throw(GIT_ERROR, "Failed to write reflog. Cannot resolve reference `%s`", r->name);
+	}
+
+	git_reference_free(r);
 
 	git_oid_to_string(new, GIT_OID_HEXSZ+1, oid);
 
