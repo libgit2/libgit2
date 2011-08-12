@@ -299,8 +299,8 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
 
 int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 {
-	unsigned int i;
-	int ret = GIT_SUCCESS;
+	unsigned int i = 0;
+	int error = GIT_SUCCESS;
 	char buf[STRLEN(WANT_PREFIX) + GIT_OID_HEXSZ + 2];
 	git_remote_head *head;
 
@@ -308,26 +308,35 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 	buf[sizeof(buf) - 2] = '\n';
 	buf[sizeof(buf) - 1] = '\0';
 
-	if (refs->len > 0 && caps->common) {
-		/* Some capabilities are active, so we need to send what we support */
-		send_want_with_caps(refs->heads[0], caps, fd);
-		i = 1;
-	} else {
-		i = 0;
+	/* If there are common caps, find the first one */
+	if (caps->common) {
+		for (; i < refs->len; ++i) {
+			head = refs->heads[i];
+			if (head->local)
+				continue;
+			else
+				break;
+		}
+
+		error = send_want_with_caps(refs->heads[i], caps, fd);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send want pkt with caps");
+		/* Increase it here so it's correct whether we run this or not */
+		i++;
 	}
 
+	/* Continue from where we left off */
 	for (; i < refs->len; ++i) {
 		head = refs->heads[i];
 		if (head->local)
 			continue;
 
 		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
-		gitno_send(fd, buf, STRLEN(buf), 0);
+		error = gitno_send(fd, buf, STRLEN(buf), 0);
+		return git__rethrow(error, "Failed to send want pkt");
 	}
 
-	git_pkt_send_flush(fd);
-
-	return ret;
+	return git_pkt_send_flush(fd);
 }
 
 /*

@@ -55,7 +55,7 @@ int gitno_recv(gitno_buffer *buf)
 
 	ret = recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
 	if (ret < 0)
-		return git__throw(GIT_EOSERR, "Failed to receive data");
+		return git__throw(GIT_EOSERR, "Failed to receive data: %s", strerror(errno));
 	if (ret == 0) /* Orderly shutdown, so exit */
 		return GIT_SUCCESS;
 

@@ -75,6 +75,8 @@ static int filter_wants(git_remote *remote)
 		/* If we have the object, mark it so we don't ask for it */
 		if (git_odb_exists(repo->db, &head->oid))
 			head->local = 1;
+		else
+			remote->need_pack = 1;
 
 		error = git_vector_insert(&list, head);
 		if (error < GIT_SUCCESS)
@@ -108,11 +110,13 @@ int git_fetch_negotiate(git_remote *remote)
 	/* Don't try to negotiate when we don't want anything */
 	if (list->len == 0)
 		return GIT_SUCCESS;
+	if (!remote->need_pack)
+		return GIT_SUCCESS;
+
 	/*
 	 * Now we have everything set up so we can start tell the server
 	 * what we want and what we have.
 	 */
-	remote->need_pack = 1;
 	error = git_transport_send_wants(remote->transport, list);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to send want list");
