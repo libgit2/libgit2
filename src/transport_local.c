@@ -12,6 +12,7 @@ typedef struct {
 	git_transport parent;
 	git_repository *repo;
 	git_vector *refs;
+	git_headarray wants_list;
 } transport_local;
 
 /*
@@ -165,10 +166,17 @@ static int local_ls(git_transport *transport, git_headarray *array)
 	return error;
 }
 
-static int local_send_wants(git_transport *GIT_UNUSED(transport), git_headarray *GIT_UNUSED(array))
+static int local_send_wants(git_transport *transport, git_headarray *array)
 {
-	GIT_UNUSED_ARG(tranport);
-	GIT_UNUSED_ARG(array);
+	transport_local *t = (transport_local *) transport;
+	git_headarray *wants = &t->wants_list;
+
+	/*
+	 * We need to store the list of wanted references so we can figure
+	 * out what to transmit later.
+	 */
+	wants->len = array->len;
+	wants->heads = array->heads;
 
 	/* We're local anyway, so we don't need this */
 	return GIT_SUCCESS;
@@ -215,6 +223,7 @@ int git_transport_local(git_transport **out)
 
 	t->parent.connect = local_connect;
 	t->parent.ls = local_ls;
+	t->parent.send_wants = local_send_wants;
 	t->parent.close = local_close;
 	t->parent.free = local_free;
 
