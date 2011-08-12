@@ -327,7 +327,7 @@ static int git_send_have(git_transport *transport, git_oid *oid)
 	return git_pkt_send_have(oid, t->socket);
 }
 
-static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *list)
+static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *GIT_UNUSED(list))
 {
 	transport_git *t = (transport_git *) transport;
 	git_revwalk *walk;
@@ -336,6 +336,11 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	git_oid oid;
 	int error;
 	unsigned int i;
+	char buff[128];
+	gitno_buffer buf;
+	GIT_UNUSED_ARG(list);
+
+	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
 
 	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
 	if (error < GIT_ERROR)
@@ -349,12 +354,18 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
 	for (i = 0; i < refs.count; ++i) {
+		/* No tags */
+		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
+			continue;
+
 		error = git_reference_lookup(&ref, repo, refs.strings[i]);
 		if (error < GIT_ERROR) {
 			error = git__rethrow(error, "Failed to lookup %s", refs.strings[i]);
 			goto cleanup;
 		}
 
+		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+			continue;
 		error = git_revwalk_push(walk, git_reference_oid(ref));
 		if (error < GIT_ERROR) {
 			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
@@ -372,17 +383,42 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
 		error = git_pkt_send_have(&oid, t->socket);
 		i++;
-		/*
-		 * This is a magic number so we don't flood the server. We
-		 * should check every once in a while to see if the server has
-		 * sent an ACK.
-		 */
-		if (i % 160 == 0)
-			break;
+		if (i % 20 == 0) {
+			const char *ptr = buf.data, *line_end;
+			git_pkt *pkt;
+			git_pkt_send_flush(t->socket);
+			while (1) {
+				error = gitno_recv(&buf);
+				if (error < GIT_SUCCESS) {
+				  error = git__rethrow(error, "Error receiving data");
+				  goto cleanup;
+				}
+				error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
+				if (error == GIT_ESHORTBUFFER)
+					continue;
+				if (error < GIT_SUCCESS) {
+					error = git__rethrow(error, "Failed to get answer");
+					goto cleanup;
+				}
+
+				gitno_consume(&buf, line_end);
+
+				if (pkt->type == GIT_PKT_ACK) {
+					error = GIT_SUCCESS;
+					goto done;
+				} else if (pkt->type == GIT_PKT_NAK) {
+					break;
+				} else {
+					error = git__throw(GIT_ERROR, "Got unexpected pkt type");
+					goto cleanup;
+				}
+			}
+		}
 	}
 	if (error == GIT_EREVWALKOVER)
 		error = GIT_SUCCESS;
 
+done:
 	git_pkt_send_flush(t->socket);
 	git_pkt_send_done(t->socket);
 
@@ -426,17 +462,17 @@ static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
 		goto cleanup;
 
 	while (1) {
-		error = gitno_recv(buf);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-		if (error == 0) /* Orderly shutdown */
-			break;
-
+		/* Part of the packfile has been received, don't loose it */
 		error = git_filebuf_write(&file, buf->data, buf->offset);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 
 		gitno_consume_n(buf, buf->offset);
+		error = gitno_recv(buf);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+		if (error == 0) /* Orderly shutdown */
+			break;
 	}
 
 	*out = git__strdup(file.path_lock);
@@ -485,9 +521,9 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 			if (error < GIT_SUCCESS)
 				return error;
 
-			if (pkt->type == GIT_PKT_PACK) {
+			if (pkt->type == GIT_PKT_PACK)
 				return store_pack(out, &buf, repo);
-			}
+
 			/* For now we don't care about anything */
 			free(pkt);
 			gitno_consume(&buf, line_end);
