@@ -17,8 +17,8 @@ struct git_commit {
 	git_signature *author;
 	git_signature *committer;
 
+	char *message_encoding;
 	char *message;
-	char *message_short;
 };
 
 void git_commit__free(git_commit *c);

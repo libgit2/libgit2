@@ -97,12 +97,16 @@ GIT_INLINE(void) git_commit_close(git_commit *commit)
 GIT_EXTERN(const git_oid *) git_commit_id(git_commit *commit);
 
 /**
- * Get the short (one line) message of a commit.
+ * Get the encoding for the message of a commit,
+ * as a string representing a standard encoding name.
+ *
+ * The encoding may be NULL if the `encoding` header
+ * in the commit is missing; in that case UTF-8 is assumed.
  *
  * @param commit a previously loaded commit.
- * @return the short message of a commit
+ * @return NULL, or the encoding
  */
-GIT_EXTERN(const char *) git_commit_message_short(git_commit *commit);
+GIT_EXTERN(const char *) git_commit_message_encoding(git_commit *commit);
 
 /**
  * Get the full message of a commit.
@@ -213,6 +217,11 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  * @param committer Signature representing the committer and the
  *  commit time of this commit
  *
+ * @param message_encoding The encoding for the message in the
+ * commit, represented with a standard encoding name.
+ * E.g. "UTF-8". If NULL, no encoding header is written and
+ * UTF-8 is assumed.
+ *
  * @param message Full message for this commit
  *
  * @param tree An instance of a `git_tree` object that will
@@ -236,6 +245,7 @@ GIT_EXTERN(int) git_commit_create(
 		const char *update_ref,
 		const git_signature *author,
 		const git_signature *committer,
+		const char *message_encoding,
 		const char *message,
 		const git_tree *tree,
 		int parent_count,
@@ -260,6 +270,7 @@ GIT_EXTERN(int) git_commit_create_v(
 		const char *update_ref,
 		const git_signature *author,
 		const git_signature *committer,
+		const char *message_encoding,
 		const char *message,
 		const git_tree *tree,
 		int parent_count,

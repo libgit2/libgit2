@@ -578,7 +578,7 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		git_commit *commit;
 
 		const git_signature *author, *committer;
-		const char *message, *message_short;
+		const char *message;
 		git_time_t commit_time;
 		unsigned int parents, p;
 		git_commit *parent = NULL, *old_parent = NULL;
@@ -588,7 +588,6 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		must_pass(git_commit_lookup(&commit, repo, &id));
 
 		message = git_commit_message(commit);
-		message_short = git_commit_message_short(commit);
 		author = git_commit_author(commit);
 		committer = git_commit_committer(commit);
 		commit_time = git_commit_time(commit);
@@ -599,7 +598,6 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		must_be_true(strcmp(committer->name, "Scott Chacon") == 0);
 		must_be_true(strcmp(committer->email, "schacon@gmail.com") == 0);
 		must_be_true(strchr(message, '\n') != NULL);
-		must_be_true(strchr(message_short, '\n') == NULL);
 		must_be_true(commit_time > 0);
 		must_be_true(parents <= 2);
 		for (p = 0;p < parents;p++) {
@@ -655,6 +653,7 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 		NULL, /* do not update the HEAD */
 		author,
 		committer,
+		NULL,
 		COMMIT_MESSAGE,
 		tree,
 		1, parent));
@@ -727,6 +726,7 @@ BEGIN_TEST(root0, "create a root commit")
 		"HEAD",
 		author,
 		committer,
+		NULL,
 		ROOT_COMMIT_MESSAGE,
 		tree,
 		0));

@@ -65,7 +65,7 @@ void git_commit__free(git_commit *commit)
 	git_signature_free(commit->committer);
 
 	free(commit->message);
-	free(commit->message_short);
+	free(commit->message_encoding);
 	free(commit);
 }
 
@@ -80,6 +80,7 @@ int git_commit_create_v(
 		const char *update_ref,
 		const git_signature *author,
 		const git_signature *committer,
+		const char *message_encoding,
 		const char *message,
 		const git_tree *tree,
 		int parent_count,
@@ -97,7 +98,8 @@ int git_commit_create_v(
 	va_end(ap);
 
 	error = git_commit_create(
-		oid, repo, update_ref, author, committer, message,
+		oid, repo, update_ref, author, committer,
+		message_encoding, message,
 		tree, parent_count, parents);
 
 	free((void *)parents);
@@ -111,6 +113,7 @@ int git_commit_create(
 		const char *update_ref,
 		const git_signature *author,
 		const git_signature *committer,
+		const char *message_encoding,
 		const char *message,
 		const git_tree *tree,
 		int parent_count,
@@ -135,6 +138,9 @@ int git_commit_create(
 
 	git_signature__writebuf(&commit, "author ", author);
 	git_signature__writebuf(&commit, "committer ", committer);
+
+	if (message_encoding != NULL)
+		git_buf_printf(&commit, "encoding %s\n", message_encoding);
 
 	git_buf_putc(&commit, '\n');
 	git_buf_puts(&commit, message);
@@ -210,42 +216,36 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 
 	commit->author = git__malloc(sizeof(git_signature));
 	if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n')) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to parse buffer");
+		return git__rethrow(error, "Failed to parse commit");
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
 	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n')) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to parse buffer");
+		return git__rethrow(error, "Failed to parse commit");
+
+	if (git__prefixcmp(buffer, "encoding ") == 0) {
+		const char *encoding_end;
+		buffer += STRLEN("encoding ");
+
+		encoding_end = buffer;
+		while (encoding_end < buffer_end && *encoding_end != '\n')
+			encoding_end++;
+
+		commit->message_encoding = git__strndup(buffer, encoding_end - buffer);
+		if (!commit->message_encoding)
+			return GIT_ENOMEM;
+
+		buffer = encoding_end;
+	}
 
 	/* parse commit message */
-	while (buffer <= buffer_end && *buffer == '\n')
+	while (buffer < buffer_end && *buffer == '\n')
 		buffer++;
 
 	if (buffer < buffer_end) {
-		const char *line_end;
-		unsigned int i;
-		size_t message_len;
-
-		/* Long message */
-		message_len = buffer_end - buffer;
-		commit->message = git__malloc(message_len + 1);
-		memcpy(commit->message, buffer, message_len);
-		commit->message[message_len] = 0;
-
-		/* Short message */
-		if((line_end = strstr(buffer, "\n\n")) == NULL) {
-			/* Cut the last '\n' if there is one */
-			if (message_len && buffer[message_len - 1] == '\n')
-				line_end = buffer_end - 1;
-			else
-				line_end = buffer_end;
-		}
-		message_len = line_end - buffer;
-		commit->message_short = git__malloc(message_len + 1);
-		for (i = 0; i < message_len; ++i) {
-			commit->message_short[i] = (buffer[i] == '\n') ? ' ' : buffer[i];
-		}
-		commit->message_short[message_len] = 0;
+		commit->message = git__strndup(buffer, buffer_end - buffer);
+		if (!commit->message)
+			return GIT_ENOMEM;
 	}
 
 	return GIT_SUCCESS;
@@ -267,7 +267,7 @@ int git_commit__parse(git_commit *commit, git_odb_object *obj)
 GIT_COMMIT_GETTER(const git_signature *, author, commit->author)
 GIT_COMMIT_GETTER(const git_signature *, committer, commit->committer)
 GIT_COMMIT_GETTER(const char *, message, commit->message)
-GIT_COMMIT_GETTER(const char *, message_short, commit->message_short)
+GIT_COMMIT_GETTER(const char *, message_encoding, commit->message_encoding)
 GIT_COMMIT_GETTER(git_time_t, time, commit->committer->when.time)
 GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
 GIT_COMMIT_GETTER(unsigned int, parentcount, commit->parent_oids.length)
