@@ -4,6 +4,8 @@
 #include "git2/common.h"
 #include "git2/oid.h"
 
+GIT_BEGIN_DECL
+
 /**
  * This is passed as the first argument to the callback to allow the
  * user to see the progress.
@@ -63,5 +65,6 @@ GIT_EXTERN(const git_oid *) git_indexer_hash(git_indexer *idx);
  */
 GIT_EXTERN(void) git_indexer_free(git_indexer *idx);
 
+GIT_END_DECL
 
 #endif
