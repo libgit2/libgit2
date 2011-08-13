@@ -1419,15 +1419,12 @@ int git_reference_set_target(git_reference *ref_in, const char *target)
 int git_reference_rename(git_reference *ref_in, const char *new_name, int force)
 {
 	int error;
-	char *old_name = NULL;
 
 	char aux_path[GIT_PATH_MAX];
 	char normalized[GIT_REFNAME_MAX];
 
-	const char *target_ref = NULL;
 	const char *head_target = NULL;
-	const git_oid *target_oid = NULL;
-	reference *ref = NULL, *new_ref = NULL, *head = NULL;
+	reference *ref = NULL, *new_ref = NULL, *head = NULL, *tmp_ref = NULL;
 
 	assert(ref_in);
 
@@ -1466,36 +1463,32 @@ int git_reference_rename(git_reference *ref_in, const char *new_name, int force)
 	 * the new reference, e.g. when renaming foo/bar -> foo.
 	 */
 
-	old_name = git__strdup(ref->name);
+	if (ref->type & GIT_REF_SYMBOLIC)
+		tmp_ref = git__malloc(sizeof(reference_symbolic));
+	else
+		tmp_ref = git__malloc(sizeof(reference_oid));
 
-	if (ref->type & GIT_REF_SYMBOLIC) {
-		if ((target_ref = ref_target(ref)) == NULL)
-			goto cleanup;
-	} else {
-		if ((target_oid = ref_oid(ref)) == NULL)
-			goto cleanup;
-	}
+	if (tmp_ref == NULL)
+		return GIT_ENOMEM;
+
+	tmp_ref->name  = git__strdup(ref->name);
+	tmp_ref->type  = ref->type;
+	tmp_ref->owner = ref->owner;
+
+	if (ref->type & GIT_REF_SYMBOLIC)
+		((reference_symbolic *)tmp_ref)->target = git__strdup(((reference_symbolic *)ref)->target);
+	else
+		((reference_oid *)tmp_ref)->oid = ((reference_oid *)ref)->oid;
 
 	/*
 	 * Now delete the old ref and remove an possibly existing directory
 	 * named `new_name`.
 	 */
 
-	if (ref->type & GIT_REF_PACKED) {
-		ref->type &= ~GIT_REF_PACKED;
+	if ((error = reference_delete(ref)) < GIT_SUCCESS)
+		goto cleanup;
 
-		git_hashtable_remove(ref->owner->references.packfile, old_name);
-		if ((error = packed_write(ref->owner)) < GIT_SUCCESS)
-			goto rollback;
-	} else {
-		git_path_join(aux_path, ref->owner->path_repository, old_name);
-		if ((error = p_unlink(aux_path)) < GIT_SUCCESS)
-			goto cleanup;
-
-		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
-	}
-
-	git_path_join(aux_path, ref->owner->path_repository, new_name);
+	git_path_join(aux_path, tmp_ref->owner->path_repository, new_name);
 	if (git_futils_exists(aux_path) == GIT_SUCCESS) {
 		if (git_futils_isdir(aux_path) == GIT_SUCCESS) {
 			if ((error = git_futils_rmdir_r(aux_path, 0)) < GIT_SUCCESS)
@@ -1520,7 +1513,7 @@ int git_reference_rename(git_reference *ref_in, const char *new_name, int force)
 	 *
 	 */
 
-	git_path_join_n(aux_path, 3, ref->owner->path_repository, "logs", old_name);
+	git_path_join_n(aux_path, 3, tmp_ref->owner->path_repository, "logs", tmp_ref->name);
 	if (git_futils_isfile(aux_path) == GIT_SUCCESS) {
 		if ((error = p_unlink(aux_path)) < GIT_SUCCESS)
 			goto rollback;
@@ -1529,11 +1522,11 @@ int git_reference_rename(git_reference *ref_in, const char *new_name, int force)
 	/*
 	 * Finally we can create the new reference.
 	 */
-	if (ref->type & GIT_REF_SYMBOLIC) {
-		if ((error = reference_create_symbolic(&new_ref, ref->owner, new_name, target_ref, 0)) < GIT_SUCCESS)
+	if (tmp_ref->type & GIT_REF_SYMBOLIC) {
+		if ((error = reference_create_symbolic(&new_ref, tmp_ref->owner, new_name, ((reference_symbolic *)tmp_ref)->target, 0)) < GIT_SUCCESS)
 			goto rollback;
 	} else {
-		if ((error = reference_create_oid(&new_ref, ref->owner, new_name, target_oid, 0)) < GIT_SUCCESS)
+		if ((error = reference_create_oid(&new_ref, tmp_ref->owner, new_name, &((reference_oid *)tmp_ref)->oid, 0)) < GIT_SUCCESS)
 			goto rollback;
 	}
 
@@ -1543,7 +1536,7 @@ int git_reference_rename(git_reference *ref_in, const char *new_name, int force)
 	free(ref_in->name);
 	ref_in->name = git__strdup(new_ref->name);
 
-	if ((error = git_hashtable_insert(ref->owner->references.loose_cache, ref->name, ref)) < GIT_SUCCESS)
+	if ((error = git_hashtable_insert(new_ref->owner->references.loose_cache, new_ref->name, new_ref)) < GIT_SUCCESS)
 		goto rollback;
 
 	/*
@@ -1555,12 +1548,12 @@ int git_reference_rename(git_reference *ref_in, const char *new_name, int force)
 
 	head_target = ref_target(head);
 
-	if (head_target && !strcmp(head_target, old_name))
+	if (head_target && !strcmp(head_target, tmp_ref->name))
 		if ((error = reference_create_symbolic(&head, new_ref->owner, "HEAD", new_ref->name, 1)) < GIT_SUCCESS)
 			goto rollback;
 
 cleanup:
-	free(old_name);
+	reference_free(tmp_ref);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
 
 rollback:
@@ -1568,13 +1561,18 @@ rollback:
 	 * Try to create the old reference again.
 	 */
 	if (ref->type & GIT_REF_SYMBOLIC)
-		error = reference_create_symbolic(&new_ref, ref->owner, old_name, target_ref, 0);
+		error = reference_create_symbolic(&new_ref, tmp_ref->owner, tmp_ref->name, ((reference_symbolic *)tmp_ref)->target, 0);
 	else
-		error = reference_create_oid(&new_ref, ref->owner, old_name, target_oid, 0);
+		error = reference_create_oid(&new_ref, ref->owner, tmp_ref->name, &((reference_oid *)tmp_ref)->oid, 0);
 
-	ref_in->name = old_name;
+	free(ref_in->name);
+	ref_in->name = git__strdup(tmp_ref->name);
 
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference. Failed to rollback");
+	reference_free(tmp_ref);
+
+	return error == GIT_SUCCESS ?
+		git__rethrow(GIT_ERROR, "Failed to rename reference. Did rollback") :
+		git__rethrow(error, "Failed to rename reference. Failed to rollback");
 }
 
 /*
