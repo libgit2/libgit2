@@ -89,7 +89,7 @@ typedef enum {
 	GIT_OBJ_TAG = 4,        /**< An annotated tag object. */
 	GIT_OBJ__EXT2 = 5,      /**< Reserved for future use. */
 	GIT_OBJ_OFS_DELTA = 6,  /**< A delta, base is given by an offset. */
-	GIT_OBJ_REF_DELTA = 7,  /**< A delta, base is given by object id. */
+	GIT_OBJ_REF_DELTA = 7   /**< A delta, base is given by object id. */
 } git_otype;
 
 /** An open object database handle. */
@@ -172,7 +172,7 @@ typedef enum {
 	GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
 	GIT_REF_PACKED = 4,
 	GIT_REF_HAS_PEEL = 8,
-	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
+	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED
 } git_rtype;
 
 

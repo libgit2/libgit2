@@ -134,7 +134,7 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
 /**
  * Resolve a symbolic reference
  *
- * Thie method iteratively peels a symbolic reference
+ * This method iteratively peels a symbolic reference
  * until it resolves to a direct reference to an OID.
  *
  * If a direct reference is passed as an argument,
