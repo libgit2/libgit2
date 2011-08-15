@@ -10,8 +10,8 @@
 #define GIT_REFLOG_SIZE_MIN (2*GIT_OID_HEXSZ+2+17)
 
 struct git_reflog_entry {
-	char *oid_old;
-	char *oid_cur;
+	git_oid oid_old;
+	git_oid oid_cur;
 
 	git_signature *committer;
 
