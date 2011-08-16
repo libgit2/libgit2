@@ -1647,7 +1647,7 @@ void git_repository__refcache_free(git_refcache *refs)
  *****************************************/
 static int check_valid_ref_char(char ch)
 {
-	if (ch <= ' ')
+	if ((unsigned) ch <= ' ')
 		return GIT_ERROR;
 
 	switch (ch) {
