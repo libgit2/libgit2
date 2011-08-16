@@ -192,8 +192,10 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 
 	git_path_join_n(log_path, 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
 
-	if ((error = git_futils_readbuffer(&log_file, log_path)) < GIT_SUCCESS)
+	if ((error = git_futils_readbuffer(&log_file, log_path)) < GIT_SUCCESS) {
+		git_reflog_free(log);
 		return git__rethrow(error, "Failed to read reflog. Cannot read file `%s`", log_path);
+	}
 
 	error = reflog_parse(log, log_file.data, log_file.len);
 
@@ -201,6 +203,8 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 
 	if (error == GIT_SUCCESS)
 		*reflog = log;
+	else
+		git_reflog_free(log);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read reflog");
 }
