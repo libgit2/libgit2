@@ -322,8 +322,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		git_oid oid;
 		struct git_pack_entry *pentry;
 		git_mwindow *w = NULL;
-		char hdr[512] = {0}; /* FIXME: How long should this be? */
-		int i, hdr_len;
+		int i;
 		off_t entry_start = off;
 		void *packed;
 		size_t entry_size;
@@ -345,7 +344,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		}
 
 		/* FIXME: Parse the object instead of hashing it */
-		error = git_odb__hash_obj(&oid, hdr, sizeof(hdr), &hdr_len, &obj);
+		error = git_odb__hash_obj(&oid, &obj);
 		if (error < GIT_SUCCESS) {
 			error = git__rethrow(error, "Failed to hash object");
 			goto cleanup;

@@ -28,6 +28,6 @@ struct git_odb {
 	git_cache cache;
 };
 
-int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj);
+int git_odb__hash_obj(git_oid *id, git_rawobj *obj);
 
 #endif

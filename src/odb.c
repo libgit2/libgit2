@@ -59,12 +59,13 @@ static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype o
 	return len+1;
 }
 
-int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj)
+int git_odb__hash_obj(git_oid *id, git_rawobj *obj)
 {
 	git_buf_vec vec[2];
-	int  hdrlen;
+	char header[64];
+	int hdrlen;
 
-	assert(id && hdr && len && obj);
+	assert(id && obj);
 
 	if (!git_object_typeisloose(obj->type))
 		return git__throw(GIT_ERROR, "Failed to hash object. Wrong object type");
@@ -72,12 +73,10 @@ int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *ob
 	if (!obj->data && obj->len != 0)
 		return git__throw(GIT_ERROR, "Failed to hash object. No data given");
 
-	if ((hdrlen = format_object_header(hdr, n, obj->len, obj->type)) < 0)
+	if ((hdrlen = format_object_header(header, sizeof(header), obj->len, obj->type)) < 0)
 		return git__rethrow(hdrlen, "Failed to hash object");
 
-	*len = hdrlen;
-
-	vec[0].data = hdr;
+	vec[0].data = header;
 	vec[0].len  = hdrlen;
 	vec[1].data = obj->data;
 	vec[1].len  = obj->len;
@@ -182,8 +181,6 @@ int git_odb_hashfile(git_oid *out, const char *path, git_otype type)
 
 int git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type)
 {
-	char hdr[64];
-	int  hdrlen;
 	git_rawobj raw;
 
 	assert(id);
@@ -192,7 +189,7 @@ int git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type)
 	raw.len = len;
 	raw.type = type;
 
-	return git_odb__hash_obj(id, hdr, sizeof(hdr), &hdrlen, &raw);
+	return git_odb__hash_obj(id, &raw);
 }
 
 /**
