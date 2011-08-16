@@ -113,10 +113,12 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		if (entry == NULL)
 			return GIT_ENOMEM;
 
-		entry->oid_old = git__strndup(buf, GIT_OID_HEXSZ);
+		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < GIT_SUCCESS)
+			return GIT_ERROR;
 		seek_forward(GIT_OID_HEXSZ + 1);
 
-		entry->oid_cur = git__strndup(buf, GIT_OID_HEXSZ);
+		if (git_oid_fromstrn(&entry->oid_cur, buf, GIT_OID_HEXSZ) < GIT_SUCCESS)
+			return GIT_ERROR;
 		seek_forward(GIT_OID_HEXSZ + 1);
 
 		ptr = buf;
@@ -165,9 +167,6 @@ void git_reflog_free(git_reflog *reflog)
 	for (i=0; i < reflog->entries.length; i++) {
 		entry = git_vector_get(&reflog->entries, i);
 
-		free(entry->oid_old);
-		free(entry->oid_cur);
-
 		git_signature_free(entry->committer);
 
 		free(entry->msg);
@@ -193,8 +192,10 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 
 	git_path_join_n(log_path, 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
 
-	if ((error = git_futils_readbuffer(&log_file, log_path)) < GIT_SUCCESS)
+	if ((error = git_futils_readbuffer(&log_file, log_path)) < GIT_SUCCESS) {
+		git_reflog_free(log);
 		return git__rethrow(error, "Failed to read reflog. Cannot read file `%s`", log_path);
+	}
 
 	error = reflog_parse(log, log_file.data, log_file.len);
 
@@ -202,6 +203,8 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 
 	if (error == GIT_SUCCESS)
 		*reflog = log;
+	else
+		git_reflog_free(log);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read reflog");
 }
@@ -255,16 +258,16 @@ const git_reflog_entry * git_reflog_entry_byindex(git_reflog *reflog, unsigned i
 	return git_vector_get(&reflog->entries, idx);
 }
 
-char * git_reflog_entry_oidold(const git_reflog_entry *entry)
+const git_oid * git_reflog_entry_oidold(const git_reflog_entry *entry)
 {
 	assert(entry);
-	return entry->oid_old;
+	return &entry->oid_old;
 }
 
-char * git_reflog_entry_oidnew(const git_reflog_entry *entry)
+const git_oid * git_reflog_entry_oidnew(const git_reflog_entry *entry)
 {
 	assert(entry);
-	return entry->oid_cur;
+	return &entry->oid_cur;
 }
 
 git_signature * git_reflog_entry_committer(const git_reflog_entry *entry)

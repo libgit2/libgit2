@@ -1026,6 +1026,7 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 	git_signature *committer;
 	git_reflog *reflog;
 	git_reflog_entry *entry;
+	char oid_str[GIT_OID_HEXSZ+1];
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
@@ -1037,6 +1038,7 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 	must_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
 	must_pass(git_reflog_write(ref, NULL, committer, NULL));
+	must_fail(git_reflog_write(ref, NULL, committer, "no ancestor NULL for an existing reflog"));
 	must_fail(git_reflog_write(ref, NULL, committer, "no\nnewline"));
 	must_pass(git_reflog_write(ref, &oid, committer, commit_msg));
 
@@ -1054,14 +1056,18 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 0);
 	must_pass(assert_signature(committer, entry->committer));
-	must_be_true(strcmp("0000000000000000000000000000000000000000", entry->oid_old) == 0);
-	must_be_true(strcmp(current_master_tip, entry->oid_cur) == 0);
+	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
+	must_be_true(strcmp("0000000000000000000000000000000000000000", oid_str) == 0);
+	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
+	must_be_true(strcmp(current_master_tip, oid_str) == 0);
 	must_be_true(entry->msg == NULL);
 
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 1);
 	must_pass(assert_signature(committer, entry->committer));
-	must_be_true(strcmp(current_master_tip, entry->oid_old) == 0);
-	must_be_true(strcmp(current_master_tip, entry->oid_cur) == 0);
+	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
+	must_be_true(strcmp(current_master_tip, oid_str) == 0);
+	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
+	must_be_true(strcmp(current_master_tip, oid_str) == 0);
 	must_be_true(strcmp(commit_msg, entry->msg) == 0);
 
 	git_signature_free(committer);

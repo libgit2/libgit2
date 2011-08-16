@@ -91,7 +91,7 @@ GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog
  * @param entry a reflog entry
  * @return the old oid
  */
-GIT_EXTERN(char *) git_reflog_entry_oidold(const git_reflog_entry *entry);
+GIT_EXTERN(const git_oid *) git_reflog_entry_oidold(const git_reflog_entry *entry);
 
 /**
  * Get the new oid
@@ -99,7 +99,7 @@ GIT_EXTERN(char *) git_reflog_entry_oidold(const git_reflog_entry *entry);
  * @param entry a reflog entry
  * @return the new oid at this time
  */
-GIT_EXTERN(char *) git_reflog_entry_oidnew(const git_reflog_entry *entry);
+GIT_EXTERN(const git_oid *) git_reflog_entry_oidnew(const git_reflog_entry *entry);
 
 /**
  * Get the committer of this entry
