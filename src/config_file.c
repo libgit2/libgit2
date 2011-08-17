@@ -212,8 +212,10 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 	/* If there aren't any spaces in the section, it's easy */
 	if (section_sp == NULL) {
 		ret = snprintf(name, len + 1, "%s.%s", var->section, var->name);
-		if (ret < 0)
+		if (ret < 0) {
+			free(name);
 			return git__throw(GIT_EOSERR, "Failed to normalize name. OS err: %s", strerror(errno));
+		}
 
 		*output = name;
 		return GIT_SUCCESS;
@@ -701,12 +703,16 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 
 	/* find the end of the variable's name */
 	name_end = strchr(line, ']');
-	if (name_end == NULL)
+	if (name_end == NULL) {
+		free(line);
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Can't find header name end");
+	}
 
 	name = (char *)git__malloc((size_t)(name_end - line) + 1);
-	if (name == NULL)
+	if (name == NULL) {
+		free(line);
 		return GIT_ENOMEM;
+	}
 
 	name_length = 0;
 	pos = 0;
@@ -738,8 +744,10 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 
 	} while ((c = line[pos++]) != ']');
 
-	if (line[pos - 1] != ']')
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Config file ended unexpectedly");
+	if (line[pos - 1] != ']') {
+		error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Config file ended unexpectedly");
+		goto error;
+	}
 
 	name[name_length] = 0;
 	free(line);
@@ -957,7 +965,8 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 			 * default case will take care of updating them.
 			 */
 			pre_end = post_start = cfg->reader.read_ptr;
-			free(current_section);
+			if (current_section)
+				free(current_section);
 			error = parse_section_header(cfg, &current_section);
 			if (error < GIT_SUCCESS)
 				break;
