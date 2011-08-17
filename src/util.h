@@ -47,11 +47,13 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 		length = n;
 
 	ptr = (char*)malloc(length + 1);
-	if (!ptr)
+	if (!ptr) {
 		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+		return NULL;
+	}
 
 	memcpy(ptr, str, length);
-	ptr[length] = 0;
+	ptr[length] = '\0';
 
 	return ptr;
 }
