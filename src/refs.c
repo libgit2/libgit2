@@ -1659,8 +1659,6 @@ static int check_valid_ref_char(char ch)
 	case '[':
 	case '*':
 		return GIT_ERROR;
-		break;
-
 	default:
 		return GIT_SUCCESS;
 	}
