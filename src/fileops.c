@@ -55,11 +55,13 @@ int git_futils_mktmp(char *path_out, const char *filename)
 	strcpy(path_out, filename);
 	strcat(path_out, "_git2_XXXXXX");
 
-#if defined(_MSC_VER)
-	/* FIXME: there may be race conditions when multi-threading
-	 * with the library */
-	if (_mktemp_s(path_out, GIT_PATH_MAX) != 0)
+#if defined(GIT_WIN32)
+    char temp_path[GIT_PATH_MAX];
+
+    GetTempPathA(GIT_PATH_MAX, temp_path);
+    if (!GetTempFileNameA(temp_path, "_git2_", 0, path_out)) {
 		return git__throw(GIT_EOSERR, "Failed to make temporary file %s", path_out);
+    }
 
 	fd = p_creat(path_out, 0744);
 #else
