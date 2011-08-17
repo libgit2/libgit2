@@ -1,7 +1,6 @@
 #ifndef INCLUDE_posix__w32_h__
 #define INCLUDE_posix__w32_h__
 
-#include "common.h"
 #include <fnmatch.h>
 
 #define p_lstat(p,b) lstat(p,b)
