@@ -46,8 +46,8 @@ struct git_transport {
 	/**
 	 * Whether we want to push or fetch
 	 */
-	int direction : 1; /* 0 fetch, 1 push */
-	int connected : 1;
+	int direction : 1, /* 0 fetch, 1 push */
+		connected : 1;
 	/**
 	 * Connect and store the remote heads
 	 */
