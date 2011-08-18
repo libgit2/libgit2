@@ -91,9 +91,12 @@ GIT_EXTERN(const git_refspec *) git_remote_pushspec(struct git_remote *remote);
 /**
  * Open a connection to a remote
  *
- * The transport is selected based on the URL
+ * The transport is selected based on the URL. The direction argument
+ * is due to a limitation of the git protocol (over TCP or SSH) which
+ * starts up a specific binary which can only do the one or the other.
  *
  * @param remote the remote to connect to
+ * @param direction whether you want to receive or send data
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, int direction);
@@ -110,11 +113,43 @@ GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, int direction);
 GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
 
 /**
+ * Negotiate what data needs to be exchanged to synchroize the remtoe
+ * and local references
+ *
+ * @param remote the remote you want to negotiate with
+ */
+GIT_EXTERN(int) git_remote_negotiate(git_remote *remote);
+
+/**
+ * Download the packfile
+ *
+ * The packfile is downloaded with a temporary filename, as it's final
+ * name is not known yet. If there was no packfile needed (all the
+ * objects were available locally), filename will be NULL and the
+ * function will return success.
+ *
+ * @param remote the remote to download from
+ * @param filename where to store the temproray filename
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
+
+/**
  * Free the memory associated with a remote
  *
  * @param remote the remote to free
  */
 GIT_EXTERN(void) git_remote_free(struct git_remote *remote);
+
+/**
+ * Update the tips to the new state
+ *
+ * Make sure that you only call this once you've successfully indexed
+ * or expanded the packfile.
+ *
+ * @param remote the remote to update
+ */
+GIT_EXTERN(int) git_remote_update_tips(struct git_remote *remote);
 
 /** @} */
 GIT_END_DECL

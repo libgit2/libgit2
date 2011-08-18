@@ -30,6 +30,8 @@
 #include "config.h"
 #include "repository.h"
 #include "remote.h"
+#include "fetch.h"
+#include "refs.h"
 
 static int refspec_parse(git_refspec *refspec, const char *str)
 {
@@ -110,6 +112,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
+	remote->repo = cfg->repo;
 	remote->url = git__strdup(val);
 	if (remote->url == NULL) {
 		error = GIT_ENOMEM;
@@ -199,6 +202,47 @@ cleanup:
 int git_remote_ls(git_remote *remote, git_headarray *refs)
 {
 	return git_transport_ls(remote->transport, refs);
+}
+
+int git_remote_negotiate(git_remote *remote)
+{
+	return git_fetch_negotiate(remote);
+}
+
+int git_remote_download(char **filename, git_remote *remote)
+{
+	return git_fetch_download_pack(filename, remote);
+}
+
+git_headarray *git_remote_tips(git_remote *remote)
+{
+	return &remote->refs;
+}
+
+int git_remote_update_tips(struct git_remote *remote)
+{
+	int error = GIT_SUCCESS;
+	unsigned int i;
+	char refname[GIT_PATH_MAX];
+	git_headarray *refs = &remote->refs;
+	git_remote_head *head;
+	git_reference *ref;
+	struct git_refspec *spec = &remote->fetch;
+
+	memset(refname, 0x0, sizeof(refname));
+
+	for (i = 0; i < refs->len; ++i) {
+		head = refs->heads[i];
+		error = git_refspec_transform(refname, sizeof(refname), spec, head->name);
+		if (error < GIT_SUCCESS)
+			return error;
+
+		error = git_reference_create_oid(&ref, remote->repo, refname, &head->oid, 1);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
+	return GIT_SUCCESS;
 }
 
 void git_remote_free(git_remote *remote)

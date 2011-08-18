@@ -317,6 +317,7 @@ int git_repository_config(
 			goto cleanup;
 	}
 
+	(*out)->repo = repo;
 	return GIT_SUCCESS;
 
 cleanup:

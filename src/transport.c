@@ -80,6 +80,36 @@ int git_transport_ls(git_transport *transport, git_headarray *array)
 	return transport->ls(transport, array);
 }
 
+int git_transport_send_wants(struct git_transport *transport, git_headarray *array)
+{
+	return transport->send_wants(transport, array);
+}
+
+int git_transport_send_have(struct git_transport *transport, git_oid *oid)
+{
+	return transport->send_have(transport, oid);
+}
+
+int git_transport_negotiate_fetch(struct git_transport *transport, git_repository *repo, git_headarray *list)
+{
+	return transport->negotiate_fetch(transport, repo, list);
+}
+
+int git_transport_send_flush(struct git_transport *transport)
+{
+	return transport->send_flush(transport);
+}
+
+int git_transport_send_done(struct git_transport *transport)
+{
+	return transport->send_done(transport);
+}
+
+int git_transport_download_pack(char **out, git_transport *transport, git_repository *repo)
+{
+	return transport->download_pack(out, transport, repo);
+}
+
 int git_transport_close(git_transport *transport)
 {
 	return transport->close(transport);

@@ -27,6 +27,8 @@
 
 #include "git2/types.h"
 #include "git2/errors.h"
+#include "git2/refs.h"
+#include "git2/revwalk.h"
 
 #include "pkt.h"
 #include "util.h"
@@ -50,10 +52,55 @@ static int flush_pkt(git_pkt **out)
 	return GIT_SUCCESS;
 }
 
+/* the rest of the line will be useful for multi_ack */
+static int ack_pkt(git_pkt **out, const char *GIT_UNUSED(line), size_t GIT_UNUSED(len))
+{
+	git_pkt *pkt;
+	GIT_UNUSED_ARG(line);
+	GIT_UNUSED_ARG(len);
+
+	pkt = git__malloc(sizeof(git_pkt));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_ACK;
+	*out = pkt;
+
+	return GIT_SUCCESS;
+}
+
+static int nak_pkt(git_pkt **out)
+{
+	git_pkt *pkt;
+
+	pkt = git__malloc(sizeof(git_pkt));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_NAK;
+	*out = pkt;
+
+	return GIT_SUCCESS;
+}
+
+static int pack_pkt(git_pkt **out)
+{
+	git_pkt *pkt;
+
+	pkt = git__malloc(sizeof(git_pkt));
+	if (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_PACK;
+	*out = pkt;
+
+	return GIT_SUCCESS;
+}
+
 /*
  * Parse an other-ref line.
  */
-int ref_pkt(git_pkt **out, const char *line, size_t len)
+static int ref_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_ref *pkt;
 	int error, has_caps = 0;
@@ -154,6 +201,15 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 
 	error = parse_len(line);
 	if (error < GIT_SUCCESS) {
+		/*
+		 * If we fail to parse the length, it might be because the
+		 * server is trying to send us the packfile already.
+		 */
+		if (bufflen >= 4 && !git__prefixcmp(line, "PACK")) {
+			*out = line;
+			return pack_pkt(head);
+		}
+
 		return git__throw(error, "Failed to parse pkt length");
 	}
 
@@ -183,11 +239,14 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 
 	len -= PKT_LEN_SIZE; /* the encoded length includes its own size */
 
-	/*
-	 * For now, we're just going to assume we're parsing references
-	 */
+	/* Assming the minimal size is actually 4 */
+	if (!git__prefixcmp(line, "ACK"))
+		error = ack_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "NAK"))
+		error = nak_pkt(head);
+	else
+		error = ref_pkt(head, line, len);
 
-	error = ref_pkt(head, line, len);
 	*out = line + len;
 
 	return error;
@@ -208,4 +267,95 @@ int git_pkt_send_flush(int s)
 	char flush[] = "0000";
 
 	return gitno_send(s, flush, STRLEN(flush), 0);
+}
+
+static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, int fd)
+{
+	char capstr[20]; /* Longer than we need */
+	char oid[GIT_OID_HEXSZ +1] = {0}, *cmd;
+	int error, len;
+
+	if (caps->ofs_delta)
+		strcpy(capstr, GIT_CAP_OFS_DELTA);
+
+	len = STRLEN("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ + strlen(capstr) + 1 /* LF */;
+	cmd = git__malloc(len + 1);
+	if (cmd == NULL)
+		return GIT_ENOMEM;
+
+	git_oid_fmt(oid, &head->oid);
+	memset(cmd, 0x0, len + 1);
+	snprintf(cmd, len + 1, "%04xwant %s%c%s\n", len, oid, 0, capstr);
+	error = gitno_send(fd, cmd, len, 0);
+	free(cmd);
+	return error;
+}
+
+/*
+ * All "want" packets have the same length and format, so what we do
+ * is overwrite the OID each time.
+ */
+#define WANT_PREFIX "0032want "
+
+int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
+{
+	unsigned int i = 0;
+	int error = GIT_SUCCESS;
+	char buf[STRLEN(WANT_PREFIX) + GIT_OID_HEXSZ + 2];
+	git_remote_head *head;
+
+	memcpy(buf, WANT_PREFIX, STRLEN(WANT_PREFIX));
+	buf[sizeof(buf) - 2] = '\n';
+	buf[sizeof(buf) - 1] = '\0';
+
+	/* If there are common caps, find the first one */
+	if (caps->common) {
+		for (; i < refs->len; ++i) {
+			head = refs->heads[i];
+			if (head->local)
+				continue;
+			else
+				break;
+		}
+
+		error = send_want_with_caps(refs->heads[i], caps, fd);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send want pkt with caps");
+		/* Increase it here so it's correct whether we run this or not */
+		i++;
+	}
+
+	/* Continue from where we left off */
+	for (; i < refs->len; ++i) {
+		head = refs->heads[i];
+		if (head->local)
+			continue;
+
+		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
+		error = gitno_send(fd, buf, STRLEN(buf), 0);
+		return git__rethrow(error, "Failed to send want pkt");
+	}
+
+	return git_pkt_send_flush(fd);
+}
+
+/*
+ * TODO: this should be a more generic function, maybe to be used by
+ * git_pkt_send_wants, as it's not performance-critical
+ */
+#define HAVE_PREFIX "0032have "
+
+int git_pkt_send_have(git_oid *oid, int fd)
+{
+	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
+
+	git_oid_fmt(buf + STRLEN(HAVE_PREFIX), oid);
+	return gitno_send(fd, buf, STRLEN(buf), 0);
+}
+
+int git_pkt_send_done(int fd)
+{
+	char buf[] = "0009done\n";
+
+	return gitno_send(fd, buf, STRLEN(buf), 0);
 }

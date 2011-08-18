@@ -79,7 +79,7 @@ static int parse_header(git_indexer *idx)
 	return GIT_SUCCESS;
 }
 
-int objects_cmp(const void *a, const void *b)
+static int objects_cmp(const void *a, const void *b)
 {
 	const struct entry *entrya = a;
 	const struct entry *entryb = b;
@@ -87,11 +87,22 @@ int objects_cmp(const void *a, const void *b)
 	return git_oid_cmp(&entrya->oid, &entryb->oid);
 }
 
+static int cache_cmp(const void *a, const void *b)
+{
+	const struct git_pack_entry *ea = a;
+	const struct git_pack_entry *eb = b;
+
+	return git_oid_cmp(&ea->sha1, &eb->sha1);
+}
+
+
 int git_indexer_new(git_indexer **out, const char *packname)
 {
 	git_indexer *idx;
 	unsigned int namelen;
 	int ret, error;
+
+	assert(out && packname);
 
 	if (git_path_root(packname) < 0)
 		return git__throw(GIT_EINVALIDPATH, "Path is not absolute");
@@ -139,10 +150,14 @@ int git_indexer_new(git_indexer **out, const char *packname)
 
 	idx->nr_objects = ntohl(idx->hdr.hdr_entries);
 
-	error = git_vector_init(&idx->objects, idx->nr_objects, objects_cmp);
-	if (error < GIT_SUCCESS) {
+	error = git_vector_init(&idx->pack->cache, idx->nr_objects, cache_cmp);
+	if (error < GIT_SUCCESS)
 		goto cleanup;
-	}
+
+	idx->pack->has_cache = 1;
+	error = git_vector_init(&idx->objects, idx->nr_objects, objects_cmp);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
 	*out = idx;
 
@@ -250,6 +265,7 @@ int git_indexer_write(git_indexer *idx)
 	/* Write out the packfile trailer */
 
 	packfile_hash = git_mwindow_open(&idx->pack->mwf, &w, idx->st.st_size - GIT_OID_RAWSZ, GIT_OID_RAWSZ, &left);
+	git_mwindow_close(&w);
 	if (packfile_hash == NULL) {
 		error = git__rethrow(GIT_ENOMEM, "Failed to open window to packfile hash");
 		goto cleanup;
@@ -276,6 +292,7 @@ int git_indexer_write(git_indexer *idx)
 	error = git_filebuf_commit_at(&idx->file, filename);
 
 cleanup:
+	git_mwindow_free_all(&idx->pack->mwf);
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&idx->file);
 
@@ -303,6 +320,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 	while (processed < idx->nr_objects) {
 		git_rawobj obj;
 		git_oid oid;
+		struct git_pack_entry *pentry;
 		git_mwindow *w = NULL;
 		char hdr[512] = {0}; /* FIXME: How long should this be? */
 		int i, hdr_len;
@@ -326,11 +344,23 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 			goto cleanup;
 		}
 
+		/* FIXME: Parse the object instead of hashing it */
 		error = git_odb__hash_obj(&oid, hdr, sizeof(hdr), &hdr_len, &obj);
 		if (error < GIT_SUCCESS) {
 			error = git__rethrow(error, "Failed to hash object");
 			goto cleanup;
 		}
+
+		pentry = git__malloc(sizeof(struct git_pack_entry));
+		if (pentry == NULL) {
+			error = GIT_ENOMEM;
+			goto cleanup;
+		}
+		git_oid_cpy(&pentry->sha1, &oid);
+		pentry->offset = entry_start;
+		error = git_vector_insert(&idx->pack->cache, pentry);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
 
 		git_oid_cpy(&entry->oid, &oid);
 		entry->crc = crc32(0L, Z_NULL, 0);
@@ -371,11 +401,15 @@ void git_indexer_free(git_indexer *idx)
 {
 	unsigned int i;
 	struct entry *e;
+	struct git_pack_entry *pe;
 
 	p_close(idx->pack->mwf.fd);
 	git_vector_foreach(&idx->objects, i, e)
 		free(e);
 	git_vector_free(&idx->objects);
+	git_vector_foreach(&idx->pack->cache, i, pe)
+		free(pe);
+	git_vector_free(&idx->pack->cache);
 	free(idx->pack);
 	free(idx);
 }

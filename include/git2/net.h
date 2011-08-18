@@ -52,7 +52,9 @@ GIT_BEGIN_DECL
  * Remote head description, given out on `ls` calls.
  */
 struct git_remote_head {
+	int local:1; /* available locally */
 	git_oid oid;
+	git_oid loid;
 	char *name;
 };
 
