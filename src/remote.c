@@ -100,7 +100,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	ret = snprintf(buf, buf_len, "%s.%s.%s", "remote", name, "url");
+	ret = p_snprintf(buf, buf_len, "%s.%s.%s", "remote", name, "url");
 	if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to build config var name");
 		goto cleanup;
@@ -119,7 +119,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	ret = snprintf(buf, buf_len, "%s.%s.%s", "remote", name, "fetch");
+	ret = p_snprintf(buf, buf_len, "%s.%s.%s", "remote", name, "fetch");
 	if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to build config var name");
 		goto cleanup;
@@ -131,7 +131,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	ret = snprintf(buf, buf_len, "%s.%s.%s", "remote", name, "push");
+	ret = p_snprintf(buf, buf_len, "%s.%s.%s", "remote", name, "push");
 	if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to build config var name");
 		goto cleanup;

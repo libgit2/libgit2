@@ -211,7 +211,7 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 
 	/* If there aren't any spaces in the section, it's easy */
 	if (section_sp == NULL) {
-		ret = snprintf(name, len + 1, "%s.%s", var->section, var->name);
+		ret = p_snprintf(name, len + 1, "%s.%s", var->section, var->name);
 		if (ret < 0) {
 			free(name);
 			return git__throw(GIT_EOSERR, "Failed to normalize name. OS err: %s", strerror(errno));
@@ -672,12 +672,8 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 		goto out;
 	}
 
-	ret = snprintf(*section_name, total_len, "%s %s", base_name, subsection);
-	if (ret >= total_len) {
-		/* If this fails, we've checked the length wrong */
-		error = git__throw(GIT_ERROR, "Failed to parse ext header. Wrong total length calculation");
-		goto out;
-	} else if (ret < 0) {
+	ret = p_snprintf(*section_name, total_len, "%s %s", base_name, subsection);
+	if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to parse ext header. OS error: %s", strerror(errno));
 		goto out;
 	}
@@ -1140,7 +1136,7 @@ static int parse_multiline_variable(diskfile_backend *cfg, const char *first, ch
 		goto out;
 	}
 
-	ret = snprintf(buf, len, "%s %s", first, line);
+	ret = p_snprintf(buf, len, "%s %s", first, line);
 	if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to parse multiline var. Failed to put together two lines. OS err: %s", strerror(errno));
 		free(buf);

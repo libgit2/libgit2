@@ -118,19 +118,6 @@ Return:
 	return GIT_SUCCESS;
 }
 
-int git__fmt(char *buf, size_t buf_sz, const char *fmt, ...)
-{
-	va_list va;
-	int r;
-
-	va_start(va, fmt);
-	r = vsnprintf(buf, buf_sz, fmt, va);
-	va_end(va);
-	if (r < 0 || ((size_t) r) >= buf_sz)
-		return git__throw(GIT_ERROR, "Failed to format string");
-	return r;
-}
-
 void git__strntolower(char *str, int len)
 {
 	int i;

@@ -33,6 +33,7 @@
 #include "pkt.h"
 #include "util.h"
 #include "netops.h"
+#include "posix.h"
 
 #include <ctype.h>
 
@@ -285,7 +286,7 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
 
 	git_oid_fmt(oid, &head->oid);
 	memset(cmd, 0x0, len + 1);
-	snprintf(cmd, len + 1, "%04xwant %s%c%s\n", len, oid, 0, capstr);
+	p_snprintf(cmd, len + 1, "%04xwant %s%c%s\n", len, oid, 0, capstr);
 	error = gitno_send(fd, cmd, len, 0);
 	free(cmd);
 	return error;

@@ -218,3 +218,15 @@ int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 	return vsnprintf(buffer, count, format, argptr);
 #endif
 }
+
+int p_snprintf(char *buffer, size_t count, const char *format, ...)
+{
+	va_list va;
+	int r;
+
+	va_start(va, format);
+	r = p_vsnprintf(buffer, count, format, va);
+	va_end(va);
+
+	return r;
+}

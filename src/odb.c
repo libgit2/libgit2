@@ -49,13 +49,11 @@ typedef struct
 static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
 {
 	const char *type_str = git_object_type2string(obj_type);
-	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
-
-	assert(len > 0);             /* otherwise snprintf() is broken  */
-	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
+	int len = p_snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
 
 	if (len < 0 || ((size_t) len) >= n)
 		return git__throw(GIT_ERROR, "Cannot format object header. Length is out of bounds");
+
 	return len+1;
 }
 

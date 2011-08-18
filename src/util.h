@@ -66,8 +66,6 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 	return new_ptr;
 }
 
-extern int git__fmt(char *, size_t, const char *, ...)
-	GIT_FORMAT_PRINTF(3, 4);
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 

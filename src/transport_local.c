@@ -7,6 +7,7 @@
 #include "git2/tag.h"
 #include "refs.h"
 #include "transport.h"
+#include "posix.h"
 
 typedef struct {
 	git_transport parent;
@@ -93,7 +94,7 @@ static int add_ref(const char *name, git_repository *repo, git_vector *vec)
 	head = git__malloc(sizeof(git_remote_head));
 	peel_len = strlen(name) + STRLEN(peeled);
 	head->name = git__malloc(peel_len + 1);
-	ret = snprintf(head->name, peel_len + 1, "%s%s", name, peeled);
+	ret = p_snprintf(head->name, peel_len + 1, "%s%s", name, peeled);
 	if (ret >= peel_len + 1) {
 		error = git__throw(GIT_ERROR, "The string is magically to long");
 	}

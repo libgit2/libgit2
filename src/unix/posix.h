@@ -12,5 +12,6 @@
 #define p_realpath(p, po) realpath(p, po)
 #define p_fnmatch(p, s, f) fnmatch(p, s, f)
 #define p_vsnprintf(b, c, f, a) vsnprintf(b, c, f, a)
+#define p_snprintf(b, c, f, ...) snprintf(b, c, f, __VA_ARGS__)
 
 #endif

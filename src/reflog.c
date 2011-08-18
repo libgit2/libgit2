@@ -254,7 +254,7 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 	if (oid_old)
 		git_oid_to_string(old, GIT_OID_HEXSZ+1, oid_old);
 	else
-		snprintf(old, GIT_OID_HEXSZ+1, "%0*d", GIT_OID_HEXSZ, 0);
+		p_snprintf(old, GIT_OID_HEXSZ+1, "%0*d", GIT_OID_HEXSZ, 0);
 
 	return reflog_write(log_path, old, new, committer, msg);
 }
