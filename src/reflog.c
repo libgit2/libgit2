@@ -102,8 +102,12 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 	git_reflog_entry *entry;
 
 #define seek_forward(_increase) { \
-	if (_increase >= buf_size) \
+	if (_increase >= buf_size) { \
+		if (entry->committer) \
+			free(entry->committer); \
+		free(entry); \
 		return git__throw(GIT_ERROR, "Failed to seek forward. Buffer size exceeded"); \
+	} \
 	buf += _increase; \
 	buf_size -= _increase; \
 }
@@ -112,13 +116,18 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		entry = git__malloc(sizeof(git_reflog_entry));
 		if (entry == NULL)
 			return GIT_ENOMEM;
+		entry->committer = NULL;
 
-		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < GIT_SUCCESS)
+		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < GIT_SUCCESS) {
+			free(entry);
 			return GIT_ERROR;
+		}
 		seek_forward(GIT_OID_HEXSZ + 1);
 
-		if (git_oid_fromstrn(&entry->oid_cur, buf, GIT_OID_HEXSZ) < GIT_SUCCESS)
+		if (git_oid_fromstrn(&entry->oid_cur, buf, GIT_OID_HEXSZ) < GIT_SUCCESS) {
+			free(entry);
 			return GIT_ERROR;
+		}
 		seek_forward(GIT_OID_HEXSZ + 1);
 
 		ptr = buf;
@@ -128,11 +137,16 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 			seek_forward(1);
 
 		entry->committer = git__malloc(sizeof(git_signature));
-		if (entry->committer == NULL)
+		if (entry->committer == NULL) {
+			free(entry);
 			return GIT_ENOMEM;
+		}
 
-		if ((error = git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf)) < GIT_SUCCESS)
-			goto cleanup;
+		if ((error = git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf)) < GIT_SUCCESS) {
+			free(entry->committer);
+			free(entry);
+			return git__rethrow(error, "Failed to parse reflog. Could not parse signature");
+		}
 
 		if (*buf == '\t') {
 			/* We got a message. Read everything till we reach LF. */
@@ -150,12 +164,11 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 			seek_forward(1);
 
 		if ((error = git_vector_insert(&log->entries, entry)) < GIT_SUCCESS)
-			goto cleanup;
+			return git__rethrow(error, "Failed to parse reflog. Could not add new entry");
 	}
 
 #undef seek_forward
 
-cleanup:
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse reflog");
 }
 
