@@ -23,10 +23,6 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef __MINGW32__
-#include <sys/select.h>
-#endif
-
 #include "git2/net.h"
 #include "git2/common.h"
 #include "git2/types.h"
@@ -394,16 +390,8 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 			git_pkt *pkt;
 			git_pkt_send_flush(t->socket);
 			while (1) {
-				fd_set fds;
-				struct timeval tv;
-
-				FD_ZERO(&fds);
-				FD_SET(t->socket, &fds);
-				tv.tv_sec = 1; /* Wait for max. 1 second */
-				tv.tv_usec = 0;
-
-				/* The select(2) interface is silly */
-				error = select(t->socket + 1, &fds, NULL, NULL, &tv);
+				/* Wait for max. 1 second */
+				error = gitno_select_in(&buf, 1, 0);
 				if (error < GIT_SUCCESS) {
 					error = git__throw(GIT_EOSERR, "Error in select");
 				} else if (error == 0) {

@@ -26,6 +26,7 @@
 #ifndef _WIN32
 # include <sys/types.h>
 # include <sys/socket.h>
+# include <sys/select.h>
 # include <netdb.h>
 #else
 # define _WIN32_WINNT 0x0501
@@ -142,4 +143,19 @@ int gitno_send(int s, const char *msg, int len, int flags)
 	}
 
 	return off;
+}
+
+int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
+{
+	fd_set fds;
+	struct timeval tv;
+
+	tv.tv_sec = sec;
+	tv.tv_usec = usec;
+
+	FD_ZERO(&fds);
+	FD_SET(buf->fd, &fds);
+
+	/* The select(2) interface is silly */
+	return select(buf->fd + 1, &fds, NULL, NULL, &tv);
 }
