@@ -74,6 +74,26 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	return refspec_parse(refspec, val);
 }
 
+int git_remote_new(git_remote **out, git_repository *repo, const char *url)
+{
+	git_remote *remote;
+
+	remote = git__malloc(sizeof(git_remote));
+	if (remote == NULL)
+		return GIT_ENOMEM;
+
+	memset(remote, 0x0, sizeof(git_remote));
+	remote->repo = repo;
+	remote->url = git__strdup(url);
+	if (remote->url == NULL) {
+		free(remote);
+		return GIT_ENOMEM;
+	}
+
+	*out = remote;
+	return GIT_SUCCESS;
+}
+
 int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 {
 	git_remote *remote;
