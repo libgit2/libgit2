@@ -48,7 +48,7 @@ static int filter_wants(git_remote *remote)
 	if (error < GIT_SUCCESS)
 		return error;
 
-	error = git_transport_ls(t, &refs);
+	error = t->ls(t, &refs);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to get remote ref list");
 		goto cleanup;
@@ -102,6 +102,7 @@ int git_fetch_negotiate(git_remote *remote)
 {
 	int error;
 	git_headarray *list = &remote->refs;
+	git_transport *t = remote->transport;
 
 	error = filter_wants(remote);
 	if (error < GIT_SUCCESS)
@@ -117,11 +118,11 @@ int git_fetch_negotiate(git_remote *remote)
 	 * Now we have everything set up so we can start tell the server
 	 * what we want and what we have.
 	 */
-	error = git_transport_send_wants(remote->transport, list);
+	error = t->send_wants(t, list);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to send want list");
 
-	return git_transport_negotiate_fetch(remote->transport, remote->repo, &remote->refs);
+	return t->negotiate_fetch(t, remote->repo, &remote->refs);
 }
 
 int git_fetch_download_pack(char **out, git_remote *remote)
@@ -131,5 +132,5 @@ int git_fetch_download_pack(char **out, git_remote *remote)
 		return GIT_SUCCESS;
 	}
 
-	return git_transport_download_pack(out, remote->transport, remote->repo);
+	return remote->transport->download_pack(out, remote->transport, remote->repo);
 }

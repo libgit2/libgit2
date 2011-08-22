@@ -103,11 +103,4 @@ int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
 
-int git_transport_send_wants(struct git_transport *transport, git_headarray *array);
-int git_transport_negotiate_fetch(struct git_transport *transport, git_repository *repo, git_headarray *array);
-int git_transport_send_have(struct git_transport *transport, git_oid *oid);
-int git_transport_send_done(struct git_transport *transport);
-int git_transport_send_flush(struct git_transport *transport);
-int git_transport_download_pack(char **out, git_transport *transport, git_repository *repo);
-
 #endif
