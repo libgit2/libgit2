@@ -46,6 +46,18 @@ GIT_BEGIN_DECL
  */
 
 /**
+ * Create a new unnamed remote
+ *
+ * Useful when you don't want to store the remote
+ *
+ * @param out pointer to the new remote object
+ * @param repo the associtated repository
+ * @param url the remote repository's URL
+ * @return GIT_SUCCESS or an error message
+ */
+int git_remote_new(git_remote **out, git_repository *repo, const char *url);
+
+/**
  * Get the information for a particular remote
  *
  * @param out pointer to the new remote object
