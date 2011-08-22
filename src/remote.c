@@ -184,7 +184,7 @@ int git_remote_connect(git_remote *remote, int direction)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create transport");
 
-	error = git_transport_connect(t, direction);
+	error = t->connect(t, direction);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to connect the transport");
 		goto cleanup;
@@ -194,14 +194,14 @@ int git_remote_connect(git_remote *remote, int direction)
 
 cleanup:
 	if (error < GIT_SUCCESS)
-		git_transport_free(t);
+		t->free(t);
 
 	return error;
 }
 
 int git_remote_ls(git_remote *remote, git_headarray *refs)
 {
-	return git_transport_ls(remote->transport, refs);
+	return remote->transport->ls(remote->transport, refs);
 }
 
 int git_remote_negotiate(git_remote *remote)
@@ -255,8 +255,9 @@ void git_remote_free(git_remote *remote)
 	free(remote->name);
 	if (remote->transport != NULL) {
 		if (remote->transport->connected)
-			git_transport_close(remote->transport);
-		git_transport_free(remote->transport);
+			remote->transport->close(remote->transport);
+
+		remote->transport->free(remote->transport);
 	}
 	free(remote);
 }
