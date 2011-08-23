@@ -90,7 +90,7 @@ static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 
 static int send_request(int s, const char *cmd, const char *url)
 {
-	int error, len;
+	int error, len = 0;
 	char *msg = NULL;
 
 	error = gen_proto(&msg, &len, cmd, url);
@@ -143,7 +143,7 @@ static int extract_host_and_port(char **host, char **port, const char *url)
 static int do_connect(transport_git *t, const char *url)
 {
 	int s = -1;
-	char *host, *port;
+	char *host = NULL, *port = NULL;
 	const char prefix[] = "git://";
 	int error, connected = 0;
 
