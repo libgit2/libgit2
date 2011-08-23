@@ -59,6 +59,8 @@ extern void git___rethrow(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
 #define git__rethrow(error, ...) \
 	(git___rethrow(__VA_ARGS__), error)
 
+#include "errors.h"
+
 #include "util.h"
 
 #endif /* INCLUDE_common_h__ */

@@ -8,6 +8,7 @@
 #define INCLUDE_git_errors_h__
 
 #include "common.h"
+#include "types.h"
 
 /**
  * @file git2/errors.h
@@ -113,7 +114,7 @@ typedef enum {
 
 	/** The buffer is too short to satisfy the request */
 	GIT_ESHORTBUFFER = -32,
-} git_error;
+} git_error_code;
 
 /**
  * Return a detailed error string with the latest error
@@ -138,6 +139,8 @@ GIT_EXTERN(const char *) git_strerror(int num);
  * Clear the latest library error
  */
 GIT_EXTERN(void) git_clearerror(void);
+
+GIT_EXTERN(void) git_error_free(git_error *err);
 
 /** @} */
 GIT_END_DECL
