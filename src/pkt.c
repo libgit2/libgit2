@@ -302,7 +302,7 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 {
 	unsigned int i = 0;
 	int error = GIT_SUCCESS;
-	char buf[strlen(WANT_PREFIX) + GIT_OID_HEXSZ + 2];
+	char buf[sizeof(WANT_PREFIX) + GIT_OID_HEXSZ + 1];
 	git_remote_head *head;
 
 	memcpy(buf, WANT_PREFIX, strlen(WANT_PREFIX));
