@@ -225,7 +225,7 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 
 	if (git__prefixcmp(buffer, "encoding ") == 0) {
 		const char *encoding_end;
-		buffer += STRLEN("encoding ");
+		buffer += strlen("encoding ");
 
 		encoding_end = buffer;
 		while (encoding_end < buffer_end && *encoding_end != '\n')

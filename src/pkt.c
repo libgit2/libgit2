@@ -267,7 +267,7 @@ int git_pkt_send_flush(int s)
 {
 	char flush[] = "0000";
 
-	return gitno_send(s, flush, STRLEN(flush), 0);
+	return gitno_send(s, flush, strlen(flush), 0);
 }
 
 static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, int fd)
@@ -279,7 +279,7 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
 	if (caps->ofs_delta)
 		strcpy(capstr, GIT_CAP_OFS_DELTA);
 
-	len = STRLEN("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ + strlen(capstr) + 1 /* LF */;
+	len = strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ + strlen(capstr) + 1 /* LF */;
 	cmd = git__malloc(len + 1);
 	if (cmd == NULL)
 		return GIT_ENOMEM;
@@ -302,10 +302,10 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 {
 	unsigned int i = 0;
 	int error = GIT_SUCCESS;
-	char buf[STRLEN(WANT_PREFIX) + GIT_OID_HEXSZ + 2];
+	char buf[strlen(WANT_PREFIX) + GIT_OID_HEXSZ + 2];
 	git_remote_head *head;
 
-	memcpy(buf, WANT_PREFIX, STRLEN(WANT_PREFIX));
+	memcpy(buf, WANT_PREFIX, strlen(WANT_PREFIX));
 	buf[sizeof(buf) - 2] = '\n';
 	buf[sizeof(buf) - 1] = '\0';
 
@@ -332,8 +332,8 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 		if (head->local)
 			continue;
 
-		git_oid_fmt(buf + STRLEN(WANT_PREFIX), &head->oid);
-		error = gitno_send(fd, buf, STRLEN(buf), 0);
+		git_oid_fmt(buf + strlen(WANT_PREFIX), &head->oid);
+		error = gitno_send(fd, buf, strlen(buf), 0);
 		return git__rethrow(error, "Failed to send want pkt");
 	}
 
@@ -350,13 +350,13 @@ int git_pkt_send_have(git_oid *oid, int fd)
 {
 	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
 
-	git_oid_fmt(buf + STRLEN(HAVE_PREFIX), oid);
-	return gitno_send(fd, buf, STRLEN(buf), 0);
+	git_oid_fmt(buf + strlen(HAVE_PREFIX), oid);
+	return gitno_send(fd, buf, strlen(buf), 0);
 }
 
 int git_pkt_send_done(int fd)
 {
 	char buf[] = "0009done\n";
 
-	return gitno_send(fd, buf, STRLEN(buf), 0);
+	return gitno_send(fd, buf, strlen(buf), 0);
 }

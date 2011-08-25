@@ -176,11 +176,11 @@ static void index_path(char *path, git_indexer *idx)
 
 	ptr = strrchr(path, '/') + 1;
 
-	memcpy(ptr, prefix, STRLEN(prefix));
-	ptr += STRLEN(prefix);
+	memcpy(ptr, prefix, strlen(prefix));
+	ptr += strlen(prefix);
 	git_oid_fmt(ptr, &idx->hash);
 	ptr += GIT_OID_HEXSZ;
-	memcpy(ptr, suffix, STRLEN(suffix));
+	memcpy(ptr, suffix, strlen(suffix));
 }
 
 int git_indexer_write(git_indexer *idx)
@@ -199,7 +199,7 @@ int git_indexer_write(git_indexer *idx)
 
 	namelen = strlen(idx->pack->pack_name);
 	memcpy(filename, idx->pack->pack_name, namelen);
-	memcpy(filename + namelen - STRLEN("pack"), "idx\0", STRLEN("idx\0"));
+	memcpy(filename + namelen - strlen("pack"), "idx", strlen("idx") + 1);
 
 	error = git_filebuf_open(&idx->file, filename, GIT_FILEBUF_HASH_CONTENTS);
 

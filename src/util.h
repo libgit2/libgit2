@@ -93,8 +93,6 @@ extern char *git__strtok(char **end, const char *sep);
 extern void git__strntolower(char *str, int len);
 extern void git__strtolower(char *str);
 
-#define STRLEN(str) (sizeof(str) - 1)
-
 extern int git__fnmatch(const char *pattern, const char *name, int flags);
 
 /*
