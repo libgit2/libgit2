@@ -93,7 +93,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 	}
 
 	/* "fetch" is the longest var name we're interested in */
-	buf_len = STRLEN("remote.") + STRLEN(".fetch") + strlen(name) + 1;
+	buf_len = strlen("remote.") + strlen(".fetch") + strlen(name) + 1;
 	buf = git__malloc(buf_len);
 	if (buf == NULL) {
 		error = GIT_ENOMEM;

@@ -264,7 +264,7 @@ static char *interiorize_section(const char *orig)
 	len = dot - orig;
 	memcpy(section, orig, len);
 	section += len;
-	len = STRLEN(" \"");
+	len = strlen(" \"");
 	memcpy(section, " \"", len);
 	section += len;
 	len = last_dot - dot - 1;

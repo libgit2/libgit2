@@ -388,7 +388,7 @@ typedef struct {
   const char *pattern;
 } tag_filter_data;
 
-#define GIT_REFS_TAGS_DIR_LEN STRLEN(GIT_REFS_TAGS_DIR)
+#define GIT_REFS_TAGS_DIR_LEN strlen(GIT_REFS_TAGS_DIR)
 
 static int tag_list_cb(const char *tag_name, void *payload)
 {

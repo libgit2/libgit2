@@ -449,12 +449,12 @@ static int read_gitfile(char *path_out, const char *file_path, const char *base_
 	for (;data[end_offset] == '\r' || data[end_offset] == '\n'; --end_offset);
 	data[end_offset + 1] = '\0';
 
-	if (STRLEN(GIT_FILE_CONTENT_PREFIX) == end_offset + 1) {
+	if (strlen(GIT_FILE_CONTENT_PREFIX) == end_offset + 1) {
 		git_futils_freebuffer(&file);
 		return git__throw(GIT_ENOTFOUND, "No path in git file `%s`", file_path);
 	}
 
-	data = data + STRLEN(GIT_FILE_CONTENT_PREFIX);
+	data = data + strlen(GIT_FILE_CONTENT_PREFIX);
 	error = git_path_prettify_dir(path_out, data, base_path);
 	git_futils_freebuffer(&file);
 
