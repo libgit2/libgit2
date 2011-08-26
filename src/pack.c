@@ -196,7 +196,7 @@ static int pack_index_open(struct git_pack_file *p)
 		return GIT_SUCCESS;
 
 	idx_name = git__strdup(p->pack_name);
-	strcpy(idx_name + strlen(idx_name) - STRLEN(".pack"), ".idx");
+	strcpy(idx_name + strlen(idx_name) - strlen(".pack"), ".idx");
 
 	error = pack_index_check(idx_name, p);
 	free(idx_name);
@@ -614,7 +614,7 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	 * Make sure a corresponding .pack file exists and that
 	 * the index looks sane.
 	 */
-	path_len -= STRLEN(".idx");
+	path_len -= strlen(".idx");
 	if (path_len < 1) {
 		free(p);
 		return git__throw(GIT_ENOTFOUND, "Failed to check packfile. Wrong path name");

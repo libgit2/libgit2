@@ -183,7 +183,7 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 
 static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawobj *raw)
 {
-	const int parent_len = STRLEN("parent ") + GIT_OID_HEXSZ + 1;
+	const int parent_len = strlen("parent ") + GIT_OID_HEXSZ + 1;
 
 	unsigned char *buffer = raw->data;
 	unsigned char *buffer_end = buffer + raw->len;
@@ -192,10 +192,10 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 	int i, parents = 0;
 	long commit_time;
 
-	buffer += STRLEN("tree ") + GIT_OID_HEXSZ + 1;
+	buffer += strlen("tree ") + GIT_OID_HEXSZ + 1;
 
 	parents_start = buffer;
-	while (buffer + parent_len < buffer_end && memcmp(buffer, "parent ", STRLEN("parent ")) == 0) {
+	while (buffer + parent_len < buffer_end && memcmp(buffer, "parent ", strlen("parent ")) == 0) {
 		parents++;
 		buffer += parent_len;
 	}
@@ -208,7 +208,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 	for (i = 0; i < parents; ++i) {
 		git_oid oid;
 
-		if (git_oid_fromstr(&oid, (char *)buffer + STRLEN("parent ")) < GIT_SUCCESS)
+		if (git_oid_fromstr(&oid, (char *)buffer + strlen("parent ")) < GIT_SUCCESS)
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Parent object is corrupted");
 
 		commit->parents[i] = commit_lookup(walk, &oid);

@@ -73,7 +73,7 @@ static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 	if (cmd == NULL)
 		cmd = default_command;
 
-	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + STRLEN(host) + (delim - url) + 2;
+	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 2;
 
 	*out = git__malloc(len);
 	if (*out == NULL)
@@ -148,7 +148,7 @@ static int do_connect(transport_git *t, const char *url)
 	int error, connected = 0;
 
 	if (!git__prefixcmp(url, prefix))
-		url += STRLEN(prefix);
+		url += strlen(prefix);
 
 	error = extract_host_and_port(&host, &port, url);
 	s = gitno_connect(host, port);
@@ -242,7 +242,7 @@ static int detect_caps(transport_git *t)
 
 		if(!git__prefixcmp(ptr, GIT_CAP_OFS_DELTA)) {
 			caps->common = caps->ofs_delta = 1;
-			ptr += STRLEN(GIT_CAP_OFS_DELTA);
+			ptr += strlen(GIT_CAP_OFS_DELTA);
 			continue;
 		}
 
@@ -474,9 +474,9 @@ static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
 	strcpy(path, repo->path_repository);
 	off += strlen(repo->path_repository);
 	strcat(path, suff);
-	//memcpy(path + off, suff, GIT_PATH_MAX - off - STRLEN(suff) - 1);
+	//memcpy(path + off, suff, GIT_PATH_MAX - off - strlen(suff) - 1);
 
-	if (memcmp(buf->data, "PACK", STRLEN("PACK"))) {
+	if (memcmp(buf->data, "PACK", strlen("PACK"))) {
 		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
 	}
 
