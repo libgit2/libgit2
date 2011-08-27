@@ -46,8 +46,13 @@ typedef SSIZE_T ssize_t;
 #include "thread-utils.h"
 #include "bswap.h"
 
-extern int git__throw(int error, const char *, ...) GIT_FORMAT_PRINTF(2, 3);
-extern int git__rethrow(int error, const char *, ...) GIT_FORMAT_PRINTF(2, 3);
+extern void git___throw(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
+#define git__throw(error, ...) \
+	(git___throw(__VA_ARGS__), error)
+
+extern void git___rethrow(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
+#define git__rethrow(error, ...) \
+	(git___rethrow(__VA_ARGS__), error)
 
 #include "util.h"
 

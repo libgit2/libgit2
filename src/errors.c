@@ -77,7 +77,7 @@ const char *git_strerror(int num)
 	return "Unknown error";
 }
 
-int git__rethrow(int error, const char *msg, ...)
+void git___rethrow(const char *msg, ...)
 {
 	char new_error[1024];
 	char *old_error = NULL;
@@ -91,19 +91,15 @@ int git__rethrow(int error, const char *msg, ...)
 	old_error = strdup(g_last_error);
 	snprintf(g_last_error, sizeof(g_last_error), "%s \n    - %s", new_error, old_error);
 	free(old_error);
-
-	return error;
 }
 
-int git__throw(int error, const char *msg, ...)
+void git___throw(const char *msg, ...)
 {
 	va_list va;
 
 	va_start(va, msg);
 	vsnprintf(g_last_error, sizeof(g_last_error), msg, va);
 	va_end(va);
-
-	return error;
 }
 
 const char *git_lasterror(void)

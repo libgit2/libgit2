@@ -151,6 +151,8 @@ static int do_connect(transport_git *t, const char *url)
 		url += strlen(prefix);
 
 	error = extract_host_and_port(&host, &port, url);
+	if (error < GIT_SUCCESS)
+		return error;
 	s = gitno_connect(host, port);
 	connected = 1;
 	error = send_request(s, NULL, url);
