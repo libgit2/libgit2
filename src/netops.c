@@ -40,7 +40,7 @@
 #include "common.h"
 #include "netops.h"
 
-void gitno_buffer_setup(gitno_buffer *buf, char *data,  unsigned int len, int fd)
+void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
@@ -68,8 +68,9 @@ int gitno_recv(gitno_buffer *buf)
 /* Consume up to ptr and move the rest of the buffer to the beginning */
 void gitno_consume(gitno_buffer *buf, const char *ptr)
 {
-	int consumed;
+	size_t consumed;
 
+	assert(ptr - buf->data >= 0);
 	assert(ptr - buf->data <= (int) buf->len);
 
 	consumed = ptr - buf->data;
@@ -80,7 +81,7 @@ void gitno_consume(gitno_buffer *buf, const char *ptr)
 }
 
 /* Consume const bytes and move the rest of the buffer to the beginning */
-void gitno_consume_n(gitno_buffer *buf, unsigned int cons)
+void gitno_consume_n(gitno_buffer *buf, size_t cons)
 {
 	memmove(buf->data, buf->data + cons, buf->len - buf->offset);
 	memset(buf->data + cons, 0x0, buf->len - buf->offset);
@@ -130,9 +131,10 @@ cleanup:
 	return error;
 }
 
-int gitno_send(int s, const char *msg, int len, int flags)
+int gitno_send(int s, const char *msg, size_t len, int flags)
 {
-	int ret, off = 0;
+	int ret;
+	size_t off = 0;
 
 	while (off < len) {
 		ret = send(s, msg + off, len - off, flags);
