@@ -506,7 +506,7 @@ END_TEST
 
 static char *empty_tmp_dir = "test_gitfo_rmdir_recurs_test";
 
-static int setup_empty_tmp_dir()
+static int setup_empty_tmp_dir(void)
 {
 	char path[GIT_PATH_MAX];
 
