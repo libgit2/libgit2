@@ -1,6 +1,7 @@
 #include "posix.h"
 #include "path.h"
 #include <errno.h>
+#include <io.h>
 
 int p_unlink(const char *path)
 {
@@ -229,4 +230,20 @@ int p_snprintf(char *buffer, size_t count, const char *format, ...)
 	va_end(va);
 
 	return r;
+}
+
+int p_mkstemp(char *tmp_path)
+{
+	int r;
+
+#if defined(_MSC_VER)
+	r = _mktemp_s(tmp_path, GIT_PATH_MAX);
+#else
+	r = _mktemp(tmp_path);
+#endif
+
+	if (r != 0)
+		return GIT_EOSERR;
+
+	return p_creat(tmp_path, 0744);
 }

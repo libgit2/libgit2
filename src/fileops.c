@@ -55,18 +55,10 @@ int git_futils_mktmp(char *path_out, const char *filename)
 	strcpy(path_out, filename);
 	strcat(path_out, "_git2_XXXXXX");
 
-#if defined(_MSC_VER)
-	/* FIXME: there may be race conditions when multi-threading
-	 * with the library */
-	if (_mktemp_s(path_out, GIT_PATH_MAX) != 0)
-		return git__throw(GIT_EOSERR, "Failed to make temporary file %s", path_out);
+	if ((fd = p_mkstemp(path_out)) < 0)
+		return git__throw(GIT_EOSERR, "Failed to create temporary file %s", path_out);
 
-	fd = p_creat(path_out, 0744);
-#else
-	fd = mkstemp(path_out);
-#endif
-
-	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to create temporary file %s", path_out);
+	return fd;
 }
 
 int git_futils_creat_withpath(const char *path, int mode)
