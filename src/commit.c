@@ -187,7 +187,7 @@ cleanup:
 	return error;
 }
 
-int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
+int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 {
 	const char *buffer = data;
 	const char *buffer_end = (const char *)data + len;
@@ -254,7 +254,7 @@ int commit_parse_buffer(git_commit *commit, const void *data, size_t len)
 int git_commit__parse(git_commit *commit, git_odb_object *obj)
 {
 	assert(commit);
-	return commit_parse_buffer(commit, obj->raw.data, obj->raw.len);
+	return git_commit__parse_buffer(commit, obj->raw.data, obj->raw.len);
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \

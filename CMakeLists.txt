@@ -57,7 +57,7 @@ IF (MSVC)
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 ELSE ()
-	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes")
+	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()

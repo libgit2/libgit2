@@ -34,7 +34,7 @@ typedef struct {
 	int position;
 } fake_backend;
 
-git_odb_backend *new_backend(int position)
+static git_odb_backend *new_backend(int position)
 {
 	fake_backend *b;
 
@@ -47,7 +47,7 @@ git_odb_backend *new_backend(int position)
 	return (git_odb_backend *)b;
 }
 
-int test_backend_sorting(git_odb *odb)
+static int test_backend_sorting(git_odb *odb)
 {
 	unsigned int i;
 

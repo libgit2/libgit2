@@ -13,6 +13,7 @@
 #define SUITE_NAME(SNAME) libgit2_suite_##SNAME
 
 #define BEGIN_SUITE(SNAME) \
+	git_testsuite *libgit2_suite_##SNAME(void);\
 	git_testsuite *libgit2_suite_##SNAME(void) {\
 		git_testsuite *_gitsuite = git_testsuite_new(#SNAME);
 

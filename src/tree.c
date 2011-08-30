@@ -42,7 +42,7 @@ struct tree_key_search {
 	size_t filename_len;
 };
 
-int entry_search_cmp(const void *key, const void *array_member)
+static int entry_search_cmp(const void *key, const void *array_member)
 {
 	const struct tree_key_search *ksearch = key;
 	const git_tree_entry *entry = array_member;
@@ -55,7 +55,7 @@ int entry_search_cmp(const void *key, const void *array_member)
 	return result ? result : ((int)ksearch->filename_len - (int)entry->filename_len);
 }
 
-int entry_sort_cmp(const void *a, const void *b)
+static int entry_sort_cmp(const void *a, const void *b)
 {
 	const git_tree_entry *entry_a = (const git_tree_entry *)(a);
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);

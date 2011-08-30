@@ -381,7 +381,7 @@ int pack_backend__read_header(git_rawobj *obj, git_odb_backend *backend, const g
 }
 */
 
-int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
+static int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
 	git_rawobj raw;
@@ -400,7 +400,7 @@ int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_od
 	return GIT_SUCCESS;
 }
 
-int pack_backend__read_prefix(
+static int pack_backend__read_prefix(
 	git_oid *out_oid,
 	void **buffer_p,
 	size_t *len_p,
@@ -439,13 +439,13 @@ int pack_backend__read_prefix(
 	return GIT_SUCCESS;
 }
 
-int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
+static int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
 	return pack_entry_find(&e, (struct pack_backend *)backend, oid) == GIT_SUCCESS;
 }
 
-void pack_backend__free(git_odb_backend *_backend)
+static void pack_backend__free(git_odb_backend *_backend)
 {
 	struct pack_backend *backend;
 	size_t i;

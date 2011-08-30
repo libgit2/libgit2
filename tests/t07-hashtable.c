@@ -34,7 +34,7 @@ typedef struct _aux_object {
 	int visited;
 } table_item;
 
-uint32_t hash_func(const void *key, int hash_id)
+static uint32_t hash_func(const void *key, int hash_id)
 {
 	uint32_t r;
 	const git_oid *id = key;
@@ -43,7 +43,7 @@ uint32_t hash_func(const void *key, int hash_id)
 	return r;
 }
 
-int hash_cmpkey(const void *a, const void *b)
+static int hash_cmpkey(const void *a, const void *b)
 {
 	return git_oid_cmp(a, b);
 }

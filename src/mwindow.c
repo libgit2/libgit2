@@ -131,7 +131,7 @@ void git_mwindow_scan_lru(
  * Close the least recently used window. You should check to see if
  * the file descriptors need closing from time to time.
  */
-int git_mwindow_close_lru(git_mwindow_file *mwf)
+static int git_mwindow_close_lru(git_mwindow_file *mwf)
 {
 	unsigned int i;
 	git_mwindow *lru_w = NULL, *lru_l = NULL;
