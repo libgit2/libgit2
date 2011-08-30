@@ -23,7 +23,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifndef __MINGW32__
 #include <sys/select.h>
+#endif
 
 #include "git2/net.h"
 #include "git2/common.h"
