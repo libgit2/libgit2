@@ -427,7 +427,8 @@ static int retrieve_ceiling_directories_offset(const char *path, const char *cei
 static int read_gitfile(char *path_out, const char *file_path, const char *base_path)
 {
 	git_fbuffer file;
-	int error, end_offset;
+	int error;
+	size_t end_offset;
 	char *data;
 
 	assert(path_out && file_path && base_path);
