@@ -232,6 +232,8 @@ int p_snprintf(char *buffer, size_t count, const char *format, ...)
 	return r;
 }
 
+extern int p_creat(const char *path, int mode);
+
 int p_mkstemp(char *tmp_path)
 {
 	int r;

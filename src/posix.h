@@ -8,12 +8,6 @@
 #include <fcntl.h>
 #include <time.h>
 
-#ifdef GIT_WIN32
-#	include "win32/posix.h"
-#else
-#	include "unix/posix.h"
-#endif
-
 #define S_IFGITLINK 0160000
 #define S_ISGITLINK(m) (((m) & S_IFMT) == S_IFGITLINK)
 
@@ -22,7 +16,6 @@
 #endif
 
 typedef int git_file;
-
 
 /**
  * Standard POSIX Methods
@@ -50,5 +43,14 @@ extern int p_getcwd(char *buffer_out, size_t size);
 #define p_rmdir(p) rmdir(p)
 #define p_chmod(p,m) chmod(p, m)
 #define p_close(fd) close(fd)
+
+/**
+ * Platform-dependent methods
+ */
+#ifdef GIT_WIN32
+#	include "win32/posix.h"
+#else
+#	include "unix/posix.h"
+#endif
 
 #endif
