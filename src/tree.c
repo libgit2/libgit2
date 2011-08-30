@@ -175,6 +175,7 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
+		long tmp;
 
 		entry = git__calloc(1, sizeof(git_tree_entry));
 		if (entry == NULL) {
@@ -185,8 +186,10 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		if (git_vector_insert(&tree->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-		if (git__strtol32((long *)&entry->attr, buffer, &buffer, 8) < GIT_SUCCESS)
+		if (git__strtol32(&tmp, buffer, &buffer, 8) < GIT_SUCCESS ||
+			!buffer || tmp > UINT_MAX || tmp < 0)
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Can't parse attributes");
+		entry->attr = tmp;
 
 		if (*buffer++ != ' ') {
 			error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Object it corrupted");

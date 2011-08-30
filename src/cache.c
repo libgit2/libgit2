@@ -76,12 +76,12 @@ void git_cache_free(git_cache *cache)
 
 void *git_cache_get(git_cache *cache, const git_oid *oid)
 {
-	const uint32_t *hash;
+	uint32_t hash;
 	cache_node *node = NULL;
 	void *result = NULL;
 
-	hash = (const uint32_t *)oid->id;
-	node = &cache->nodes[hash[0] & cache->size_mask];
+	memcpy(&hash, oid->id, sizeof(hash));
+	node = &cache->nodes[hash & cache->size_mask];
 
 	git_mutex_lock(&node->lock);
 	{
@@ -97,13 +97,13 @@ void *git_cache_get(git_cache *cache, const git_oid *oid)
 
 void *git_cache_try_store(git_cache *cache, void *entry)
 {
-	const uint32_t *hash;
+	uint32_t hash;
 	const git_oid *oid;
 	cache_node *node = NULL;
 
 	oid = &((git_cached_obj*)entry)->oid;
-	hash = (const uint32_t *)oid->id;
-	node = &cache->nodes[hash[0] & cache->size_mask];
+	memcpy(&hash, oid->id, sizeof(hash));
+	node = &cache->nodes[hash & cache->size_mask];
 
 	/* increase the refcount on this object, because
 	 * the cache now owns it */
