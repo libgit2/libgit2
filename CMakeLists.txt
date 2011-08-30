@@ -57,12 +57,10 @@ IF (MSVC)
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 ELSE ()
-	SET(CMAKE_C_FLAGS "-Wall -Wextra")
+	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
-	SET(CMAKE_C_FLAGS_DEBUG "-g -O0")
-	SET(CMAKE_C_FLAGS_RELEASE "-O2")
 ENDIF()
 
 # Build Debug by default
