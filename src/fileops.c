@@ -2,6 +2,13 @@
 #include "fileops.h"
 #include <ctype.h>
 
+#if defined(_MSC_VER)
+#define MKTEMP(path,n) _mktemp_s(path, n)
+#elif defined(__MINGW32__)
+#include <io.h>
+#define MKTEMP(path,n) _mktemp(path)
+#endif
+
 int git_futils_mv_atomic(const char *from, const char *to)
 {
 #ifdef GIT_WIN32
@@ -55,12 +62,12 @@ int git_futils_mktmp(char *path_out, const char *filename)
 	strcpy(path_out, filename);
 	strcat(path_out, "_git2_XXXXXX");
 
-#if defined(_MSC_VER)
+#if defined(GIT_WIN32)
 	/* FIXME: there may be race conditions when multi-threading
 	 * with the library */
-	if (_mktemp_s(path_out, GIT_PATH_MAX) != 0)
+	if (MKTEMP(path_out, GIT_PATH_MAX) != 0)
 		return git__throw(GIT_EOSERR, "Failed to make temporary file %s", path_out);
-
+        
 	fd = p_creat(path_out, 0744);
 #else
 	fd = mkstemp(path_out);
