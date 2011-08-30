@@ -4,7 +4,7 @@
 #ifndef INCLUDE_netops_h__
 #define INCLUDE_netops_h__
 
-#ifndef _WIN32
+#ifndef GIT_WIN32
 typedef int GIT_SOCKET;
 #else
 typedef unsigned int GIT_SOCKET;
