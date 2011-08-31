@@ -706,7 +706,7 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 			long tmp;
 
 			if (git__strtol32(&tmp, buffer, &endptr, 8) < GIT_SUCCESS ||
-				!endptr || endptr == buffer || *endptr || tmp > UINT_MAX)
+				!endptr || endptr == buffer || *endptr || (unsigned)tmp > UINT_MAX)
 				return GIT_ERROR;
 
 			lost->mode[i] = tmp;

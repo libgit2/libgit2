@@ -236,16 +236,13 @@ extern int p_creat(const char *path, int mode);
 
 int p_mkstemp(char *tmp_path)
 {
-	int r;
-
 #if defined(_MSC_VER)
-	r = _mktemp_s(tmp_path, GIT_PATH_MAX);
-#else
-	r = _mktemp(tmp_path);
-#endif
-
-	if (r != 0)
+	if (_mktemp_s(tmp_path, GIT_PATH_MAX) != 0)
 		return GIT_EOSERR;
+#else
+	if (_mktemp(tmp_path) == NULL)
+		return GIT_EOSERR;
+#endif
 
 	return p_creat(tmp_path, 0744);
 }
