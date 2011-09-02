@@ -96,6 +96,16 @@ int git_path_dirname_r(char *buffer, size_t bufflen, const char *path)
 
     len = endp - path +1;
 
+#ifdef GIT_WIN32
+    /* Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
+       'C:/' here */
+
+    if (len == 2 && isalpha(path[0]) && path[1] == ':') {
+      len = 3;
+      goto Exit;
+    }
+#endif
+
 Exit:
     result = len;
     if (len+1 > GIT_PATH_MAX) {
