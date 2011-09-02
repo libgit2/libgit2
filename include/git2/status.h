@@ -70,7 +70,9 @@ GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const c
  * @param status_flags the status value
  * @param repo a repository object
  * @param path the file to retrieve status for, rooted at the repo's workdir
- * @return GIT_SUCCESS
+ * @return GIT_EINVALIDPATH when `path` points at a folder, GIT_ENOTFOUND when 
+ *		the file doesn't exist in any of HEAD, the index or the worktree,
+ *		GIT_SUCCESS otherwise
  */
 GIT_EXTERN(int) git_status_file(unsigned int *status_flags, git_repository *repo, const char *path);
 

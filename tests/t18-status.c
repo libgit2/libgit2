@@ -174,6 +174,66 @@ BEGIN_TEST(singlestatus1, "test retrieving status for nonexistent file")
 	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
 END_TEST
 
+BEGIN_TEST(singlestatus2, "test retrieving status for a non existent file in an empty repository")
+	git_repository *repo;
+	unsigned int status_flags;
+	int error;
+
+	must_pass(copydir_recurs(EMPTY_REPOSITORY_FOLDER, TEST_STD_REPO_FOLDER));
+	must_pass(remove_placeholders(TEST_STD_REPO_FOLDER, "dummy-marker.txt"));
+	must_pass(git_repository_open(&repo, TEST_STD_REPO_FOLDER));
+
+	error = git_status_file(&status_flags, repo, "nonexistent");
+	must_be_true(error == GIT_ENOTFOUND);
+
+	git_repository_free(repo);
+
+	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
+END_TEST
+
+BEGIN_TEST(singlestatus3, "test retrieving status for a new file in an empty repository")
+	git_repository *repo;
+	unsigned int status_flags;
+	char file_path[GIT_PATH_MAX];
+	char filename[] = "new_file";
+	int fd;
+
+	must_pass(copydir_recurs(EMPTY_REPOSITORY_FOLDER, TEST_STD_REPO_FOLDER));
+	must_pass(remove_placeholders(TEST_STD_REPO_FOLDER, "dummy-marker.txt"));
+
+	git_path_join(file_path, TEMP_REPO_FOLDER, filename);
+	fd = p_creat(file_path, 0644);
+	must_pass(fd);
+	must_pass(p_write(fd, "new_file\n", 9));
+	must_pass(p_close(fd));
+
+	must_pass(git_repository_open(&repo, TEST_STD_REPO_FOLDER));
+
+	must_pass(git_status_file(&status_flags, repo, filename));
+	must_be_true(status_flags == GIT_STATUS_WT_NEW);
+
+	git_repository_free(repo);
+
+	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
+END_TEST
+
+BEGIN_TEST(singlestatus4, "can't determine the status for a folder")
+	git_repository *repo;
+	unsigned int status_flags;
+	int error;
+
+	must_pass(copydir_recurs(STATUS_WORKDIR_FOLDER, TEMP_REPO_FOLDER));
+	must_pass(git_futils_mv_atomic(STATUS_REPOSITORY_TEMP_FOLDER, TEST_STD_REPO_FOLDER));
+	must_pass(git_repository_open(&repo, TEST_STD_REPO_FOLDER));
+
+	error = git_status_file(&status_flags, repo, "subdir");
+	must_be_true(error == GIT_EINVALIDPATH);
+
+	git_repository_free(repo);
+
+	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
+END_TEST
+
 BEGIN_SUITE(status)
 	ADD_TEST(file0);
 
@@ -181,4 +241,7 @@ BEGIN_SUITE(status)
 
 	ADD_TEST(singlestatus0);
 	ADD_TEST(singlestatus1);
+	ADD_TEST(singlestatus2);
+	ADD_TEST(singlestatus3);
+	ADD_TEST(singlestatus4);
 END_SUITE
