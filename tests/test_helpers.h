@@ -37,6 +37,7 @@
 #define TEST_INDEX_PATH			(REPOSITORY_FOLDER "index")
 #define TEST_INDEX2_PATH		(TEST_RESOURCES "/gitgit.index")
 #define TEST_INDEXBIG_PATH		(TEST_RESOURCES "/big.index")
+#define EMPTY_REPOSITORY_FOLDER	TEST_RESOURCES "/empty_standard_repo/.gitted/"
 
 #define TEMP_FOLDER				""
 #define TEMP_REPO_FOLDER		TEMP_FOLDER TEST_REPOSITORY_NAME "/"

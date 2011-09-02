@@ -30,10 +30,9 @@
 #include "vector.h"
 #include "tree.h"
 #include "git2/status.h"
+#include "repository.h"
 
 struct status_entry {
-	char path[GIT_PATH_MAX];
-
 	git_index_time mtime;
 
 	git_oid head_oid;
@@ -41,6 +40,8 @@ struct status_entry {
 	git_oid wt_oid;
 
 	unsigned int status_flags:6;
+
+	char path[GIT_FLEX_ARRAY]; /* more */
 };
 
 static int status_cmp(const void *a, const void *b)
@@ -66,11 +67,17 @@ static int find_status_entry(git_vector *entries, const char *path)
 
 static struct status_entry *new_status_entry(git_vector *entries, const char *path)
 {
-	struct status_entry *e = git__malloc(sizeof(struct status_entry));
-	memset(e, 0x0, sizeof(struct status_entry));
+	struct status_entry *e = git__malloc(sizeof(*e) + strlen(path) + 1);
+	if (e == NULL)
+		return NULL;
+
+	memset(e, 0x0, sizeof(*e));
+
 	if (entries != NULL)
 		git_vector_insert(entries, e);
+
 	strcpy(e->path, path);
+
 	return e;
 }
 
@@ -102,33 +109,39 @@ static void recurse_tree_entries(git_tree *tree, git_vector *entries, char *path
 	}
 }
 
-static void recurse_tree_entry(git_tree *tree, struct status_entry *e, const char *path)
+static int recurse_tree_entry(git_tree *tree, struct status_entry *e, const char *path)
 {
 	char *dir_sep;
-	char buffer[GIT_PATH_MAX];
 	const git_tree_entry *tree_entry;
 	git_tree *subtree;
+	int error = GIT_SUCCESS;
 
-	strcpy(buffer, path);
+	dir_sep = strchr(path, '/');
+	if (!dir_sep) {
+		tree_entry = git_tree_entry_byname(tree, path);
+		if (tree_entry == NULL)
+			return GIT_SUCCESS;	/* The leaf doesn't exist in the tree*/
 
-	dir_sep = strchr(buffer, '/');
-	if (dir_sep) {
-		*dir_sep = '\0';
-
-		tree_entry = git_tree_entry_byname(tree, buffer);
-		if (tree_entry != NULL) {
-			if (git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid) == GIT_SUCCESS) {
-				recurse_tree_entry(subtree, e, dir_sep+1);
-				git_tree_close(subtree);
-				return;
-			}
-		}
+		git_oid_cpy(&e->head_oid, &tree_entry->oid);
+		return GIT_SUCCESS;
 	}
+
+	/* Retrieve subtree name */
+	*dir_sep = '\0';
 
 	tree_entry = git_tree_entry_byname(tree, path);
-	if (tree_entry != NULL) {
-		git_oid_cpy(&e->head_oid, &tree_entry->oid);
-	}
+	if (tree_entry == NULL)
+		return GIT_SUCCESS;	/* The subtree doesn't exist in the tree*/
+
+	*dir_sep = '/';
+
+	/* Retreive subtree */
+	if ((error = git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid)) < GIT_SUCCESS)
+		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", &tree_entry->filename);
+
+	error = recurse_tree_entry(subtree, e, dir_sep+1);
+	git_tree_close(subtree);
+	return error;
 }
 
 struct status_st {
@@ -149,7 +162,7 @@ static int dirent_cb(void *state, char *full_path)
 	struct stat filest;
 	git_oid oid;
 
-	if ((git_futils_isdir(full_path) == GIT_SUCCESS) && (!strcmp(".git", file_path)))
+	if ((git_futils_isdir(full_path) == GIT_SUCCESS) && (!strcmp(DOT_GIT, file_path)))
 		return 0;
 
 	if (git_futils_isdir(full_path) == GIT_SUCCESS)
@@ -171,38 +184,6 @@ static int dirent_cb(void *state, char *full_path)
 
 	git_odb_hashfile(&oid, full_path, GIT_OBJ_BLOB);
 	git_oid_cpy(&e->wt_oid, &oid);
-
-	return 0;
-}
-
-static int single_dirent_cb(void *state, char *full_path)
-{
-	struct status_st *st = (struct status_st *)state;
-	struct status_entry *e = st->entry.e;
-
-	char *file_path = full_path + st->workdir_path_len;
-	struct stat filest;
-	git_oid oid;
-
-	if ((git_futils_isdir(full_path) == GIT_SUCCESS) && (!strcmp(".git", file_path)))
-		return 0;
-
-	if (git_futils_isdir(full_path) == GIT_SUCCESS)
-		return git_futils_direach(full_path, GIT_PATH_MAX, single_dirent_cb, state);
-
-	if (!strcmp(file_path, e->path)) {
-		if (p_stat(full_path, &filest) < 0)
-			return git__throw(GIT_EOSERR, "Failed to read file %s", full_path);
-
-		if (e->mtime.seconds == (git_time_t)filest.st_mtime) {
-			git_oid_cpy(&e->wt_oid, &e->index_oid);
-			return 1;
-		}
-
-		git_odb_hashfile(&oid, full_path, GIT_OBJ_BLOB);
-		git_oid_cpy(&e->wt_oid, &oid);
-		return 1;
-	}
 
 	return 0;
 }
@@ -305,24 +286,81 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	return GIT_SUCCESS;
 }
 
+static int retrieve_head_tree(git_tree **tree_out, git_repository *repo)
+{
+	git_reference *resolved_head_ref;
+	git_commit *head_commit = NULL;
+	git_tree *tree;
+	int error = GIT_SUCCESS;
+
+	*tree_out = NULL;
+
+	error = git_repository_head(&resolved_head_ref, repo);
+	if (error != GIT_SUCCESS && error != GIT_ENOTFOUND)
+		return git__rethrow(error, "HEAD can't be resolved");
+
+	/*
+	 * We assume that a situation where HEAD exists but can not be resolved is valid.
+	 * A new repository fits this description for instance.
+	 */
+
+	if (error == GIT_ENOTFOUND)
+		return GIT_SUCCESS;
+
+	if ((error = git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref))) < GIT_SUCCESS)
+		return git__rethrow(error, "The tip of HEAD can't be retrieved");
+
+	if ((error = git_commit_tree(&tree, head_commit)) < GIT_SUCCESS) {
+		error = git__rethrow(error, "The tree of HEAD can't be retrieved");
+		goto exit;
+	}
+
+	*tree_out = tree;
+
+exit:
+	git_commit_close(head_commit);
+	return error;
+}
+
 int git_status_file(unsigned int *status_flags, git_repository *repo, const char *path)
 {
 	struct status_entry *e;
-	git_index *index;
+	git_index *index = NULL;
 	git_index_entry *index_entry;
 	char temp_path[GIT_PATH_MAX];
-	int idx, error;
-	git_tree *tree;
-	git_reference *head_ref, *resolved_head_ref;
-	git_commit *head_commit;
-	struct status_st dirent_st;
+	int idx, error = GIT_SUCCESS;
+	git_tree *tree = NULL;
+	struct stat filest;
 
-	assert(status_flags);
+	assert(status_flags && repo && path);
+
+	git_path_join(temp_path, repo->path_workdir, path);
+	if (git_futils_isdir(temp_path) == GIT_SUCCESS)
+		return git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path leads to a folder, not a file", path);
 
 	e = new_status_entry(NULL, path);
+	if (e == NULL)
+		return GIT_ENOMEM;
 
-	// Find file in Index
-	git_repository_index(&index, repo);
+	/* Find file in Workdir */
+	if (git_futils_exists(temp_path) == GIT_SUCCESS) {
+		if (p_stat(temp_path, &filest) < GIT_SUCCESS) {
+			error = git__throw(GIT_EOSERR, "Failed to determine status of file '%s'. Can't read file", temp_path);
+			goto exit;
+		}
+
+		if (e->mtime.seconds == (git_time_t)filest.st_mtime)
+			git_oid_cpy(&e->wt_oid, &e->index_oid);
+		else
+			git_odb_hashfile(&e->wt_oid, temp_path, GIT_OBJ_BLOB);
+	}
+
+	/* Find file in Index */
+	if ((error = git_repository_index(&index, repo)) < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to determine status of file '%s'. Index can't be opened", path);
+		goto exit;
+	}
+
 	idx = git_index_find(index, path);
 	if (idx >= 0) {
 		index_entry = git_index_get(index, idx);
@@ -331,31 +369,32 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	}
 	git_index_free(index);
 
-	// Find file in HEAD
-	git_reference_lookup(&head_ref, repo, GIT_HEAD_FILE);
-	git_reference_resolve(&resolved_head_ref, head_ref);
+	if ((error = retrieve_head_tree(&tree, repo)) < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to determine status of file '%s'", path);
+		goto exit;
+	}
 
-	git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref));
+	/* If the repository is not empty, try and locate the file in HEAD */
+	if (tree != NULL) {
+		strcpy(temp_path, path);
 
-	git_commit_tree(&tree, head_commit);
-	recurse_tree_entry(tree, e, path);
-	git_tree_close(tree);
-	git_commit_close(head_commit);
+		error = recurse_tree_entry(tree, e, temp_path);
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to determine status of file '%s'. An error occured while processing the tree", path);
+			goto exit;
+		}
+	}
 
-	// Find file in Workdir
-	dirent_st.workdir_path_len = strlen(repo->path_workdir);
-	dirent_st.entry.e = e;
-	strcpy(temp_path, repo->path_workdir);
-	git_futils_direach(temp_path, GIT_PATH_MAX, single_dirent_cb, &dirent_st);
-
+	/* Determine status */
 	if ((error = set_status_flags(e)) < GIT_SUCCESS) {
-		free(e);
-		return git__throw(error, "Nonexistent file");
+		error = git__throw(error, "Nonexistent file");
+		goto exit;
 	}
 
 	*status_flags = e->status_flags;
 
+exit:
+	git_tree_close(tree);
 	free(e);
-
-	return GIT_SUCCESS;
+	return error;
 }
