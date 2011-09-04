@@ -119,9 +119,9 @@ IF (BUILD_TESTS)
     ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
 
     INCLUDE_DIRECTORIES(tests)
-	FILE(GLOB SRC_TEST tests/t??-*.c)
+	FILE(GLOB SRC_TEST tests/*.c)
 
-	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB})
+	ADD_EXECUTABLE(libgit2_test ${SRC} ${SRC_TEST} ${SRC_ZLIB})
 	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
 	IF (WIN32)
 		TARGET_LINK_LIBRARIES(libgit2_test ws2_32)
