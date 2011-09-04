@@ -98,6 +98,23 @@ static int pack_pkt(git_pkt **out)
 	return GIT_SUCCESS;
 }
 
+static int comment_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_comment *pkt;
+
+	pkt = git__malloc(sizeof(git_pkt_comment) + len + 1);
+	if  (pkt == NULL)
+		return GIT_ENOMEM;
+
+	pkt->type = GIT_PKT_COMMENT;
+	memcpy(pkt->comment, line, len);
+	pkt->comment[len] = '\0';
+
+	*out = (git_pkt *) pkt;
+
+	return GIT_SUCCESS;
+}
+
 /*
  * Parse an other-ref line.
  */
@@ -242,6 +259,8 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 		error = ack_pkt(head, line, len);
 	else if (!git__prefixcmp(line, "NAK"))
 		error = nak_pkt(head);
+	else if (*line == '#')
+		error = comment_pkt(head, line, len);
 	else
 		error = ref_pkt(head, line, len);
 
