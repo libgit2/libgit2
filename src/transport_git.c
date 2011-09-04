@@ -102,37 +102,6 @@ cleanup:
 	return error;
 }
 
-/* The URL should already have been stripped of the protocol */
-static int extract_host_and_port(char **host, char **port, const char *url)
-{
-	char *colon, *slash, *delim;
-	int error = GIT_SUCCESS;
-
-	colon = strchr(url, ':');
-	slash = strchr(url, '/');
-
-	if (slash == NULL)
-			return git__throw(GIT_EOBJCORRUPTED, "Malformed URL: missing /");
-
-	if (colon == NULL) {
-		*port = git__strdup(GIT_DEFAULT_PORT);
-	} else {
-		*port = git__strndup(colon + 1, slash - colon - 1);
-	}
-	if (*port == NULL)
-		return GIT_ENOMEM;;
-
-
-	delim = colon == NULL ? slash : colon;
-	*host = git__strndup(url, delim - url);
-	if (*host == NULL) {
-		free(*port);
-		error = GIT_ENOMEM;
-	}
-
-	return error;
-}
-
 /*
  * Parse the URL and connect to a server, storing the socket in
  * out. For convenience this also takes care of asking for the remote
@@ -148,9 +117,10 @@ static int do_connect(transport_git *t, const char *url)
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
 
-	error = extract_host_and_port(&host, &port, url);
+	error = gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT);
 	if (error < GIT_SUCCESS)
 		return error;
+
 	s = gitno_connect(host, port);
 	connected = 1;
 	error = send_request(s, NULL, url);

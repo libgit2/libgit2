@@ -161,3 +161,33 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	/* The select(2) interface is silly */
 	return select(buf->fd + 1, &fds, NULL, NULL, &tv);
 }
+
+int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)
+{
+	char *colon, *slash, *delim;
+	int error = GIT_SUCCESS;
+
+	colon = strchr(url, ':');
+	slash = strchr(url, '/');
+
+	if (slash == NULL)
+			return git__throw(GIT_EOBJCORRUPTED, "Malformed URL: missing /");
+
+	if (colon == NULL) {
+		*port = git__strdup(default_port);
+	} else {
+		*port = git__strndup(colon + 1, slash - colon - 1);
+	}
+	if (*port == NULL)
+		return GIT_ENOMEM;;
+
+
+	delim = colon == NULL ? slash : colon;
+	*host = git__strndup(url, delim - url);
+	if (*host == NULL) {
+		free(*port);
+		error = GIT_ENOMEM;
+	}
+
+	return error;
+}
