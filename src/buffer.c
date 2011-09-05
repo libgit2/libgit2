@@ -98,3 +98,10 @@ void git_buf_clear(git_buf *buf)
 {
 	buf->size = 0;
 }
+
+void git_buf_consume(git_buf *buf, const char *end)
+{
+	size_t consumed = end - buf->ptr;
+	memmove(buf->ptr, end, buf->size - consumed);
+	buf->size -= consumed;
+}

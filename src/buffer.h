@@ -19,6 +19,7 @@ void git_buf_printf(git_buf *buf, const char *format, ...) GIT_FORMAT_PRINTF(2, 
 const char *git_buf_cstr(git_buf *buf);
 void git_buf_free(git_buf *buf);
 void git_buf_clear(git_buf *buf);
+void git_buf_consume(git_buf *buf, const char *end);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 
