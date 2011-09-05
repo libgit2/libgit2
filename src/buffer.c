@@ -93,3 +93,8 @@ void git_buf_free(git_buf *buf)
 {
 	free(buf->ptr);
 }
+
+void git_buf_clear(git_buf *buf)
+{
+	buf->size = 0;
+}
