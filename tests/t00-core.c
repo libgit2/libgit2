@@ -264,7 +264,7 @@ static int setup(walk_data *d)
 	state_loc = d;
 
 	for (n = d->names; n->name; n++) {
-		git_file fd = p_creat(n->name, 0600);
+		git_file fd = p_creat(n->name, 0666);
 		if (fd < 0)
 			return GIT_ERROR;
 		p_close(fd);
@@ -479,14 +479,14 @@ BEGIN_TEST(filebuf1, "make sure GIT_FILEBUF_APPEND works as expected")
 	int fd;
 	char test[] = "test";
 
-	fd = p_creat(test, 0644);
+	fd = p_creat(test, 0666);
 	must_pass(fd);
 	must_pass(p_write(fd, "libgit2 rocks\n", 14));
 	must_pass(p_close(fd));
 
 	must_pass(git_filebuf_open(&file, test, GIT_FILEBUF_APPEND));
 	must_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
-	must_pass(git_filebuf_commit(&file));
+	must_pass(git_filebuf_commit(&file, 0666));
 
 	must_pass(p_unlink(test));
 END_TEST
@@ -499,7 +499,7 @@ BEGIN_TEST(filebuf2, "make sure git_filebuf_write writes large buffer correctly"
 	memset(buf, 0xfe, sizeof(buf));
 	must_pass(git_filebuf_open(&file, test, 0));
 	must_pass(git_filebuf_write(&file, buf, sizeof(buf)));
-	must_pass(git_filebuf_commit(&file));
+	must_pass(git_filebuf_commit(&file, 0666));
 
 	must_pass(p_unlink(test));
 END_TEST

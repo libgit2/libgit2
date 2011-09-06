@@ -71,7 +71,7 @@ static int reflog_write(const char *log_path, const char *oid_old,
 	}
 
 	git_filebuf_write(&fbuf, log.ptr, log.size);
-	error = git_filebuf_commit(&fbuf);
+	error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
 
 	git_buf_free(&log);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write reflog");

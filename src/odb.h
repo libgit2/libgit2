@@ -16,6 +16,7 @@
 
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_OBJECT_DIR_MODE 0777
+#define GIT_OBJECT_FILE_MODE 0444
 
 /* DO NOT EXPORT */
 typedef struct {

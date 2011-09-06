@@ -39,7 +39,7 @@ void test_core_rmdir__fail_to_delete_non_empty_dir(void)
 
 	git_path_join(file, empty_tmp_dir, "/two/file.txt");
 
-	fd = p_creat(file, 0755);
+	fd = p_creat(file, 0666);
 	cl_assert(fd >= 0);
 
 	cl_must_pass(p_close(fd));

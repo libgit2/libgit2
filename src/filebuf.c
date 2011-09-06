@@ -10,6 +10,8 @@
 #include "filebuf.h"
 #include "fileops.h"
 
+#define GIT_LOCK_FILE_MODE 0644
+
 static const size_t WRITE_BUFFER_SIZE = (4096 * 2);
 
 static int lock_file(git_filebuf *file, int flags)
@@ -24,9 +26,9 @@ static int lock_file(git_filebuf *file, int flags)
 	/* create path to the file buffer is required */
 	if (flags & GIT_FILEBUF_FORCE) {
 		/* XXX: Should dirmode here be configurable? Or is 0777 always fine? */
-		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0777, 0644);
+		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0777, GIT_LOCK_FILE_MODE);
 	} else {
-		file->fd = git_futils_creat_locked(file->path_lock, 0644);
+		file->fd = git_futils_creat_locked(file->path_lock, GIT_LOCK_FILE_MODE);
 	}
 
 	if (file->fd < 0)
@@ -247,17 +249,17 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 	return GIT_SUCCESS;
 }
 
-int git_filebuf_commit_at(git_filebuf *file, const char *path)
+int git_filebuf_commit_at(git_filebuf *file, const char *path, mode_t mode)
 {
 	free(file->path_original);
 	file->path_original = git__strdup(path);
 	if (file->path_original == NULL)
 		return GIT_ENOMEM;
 
-	return git_filebuf_commit(file);
+	return git_filebuf_commit(file, mode);
 }
 
-int git_filebuf_commit(git_filebuf *file)
+int git_filebuf_commit(git_filebuf *file, mode_t mode)
 {
 	int error;
 
@@ -270,6 +272,11 @@ int git_filebuf_commit(git_filebuf *file)
 
 	p_close(file->fd);
 	file->fd = -1;
+
+	if (p_chmod(file->path_lock, mode)) {
+		error = git__throw(GIT_EOSERR, "Failed to chmod locked file before committing");
+		goto cleanup;
+	}
 
 	error = git_futils_mv_atomic(file->path_lock, file->path_original);
 

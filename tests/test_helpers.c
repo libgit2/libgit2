@@ -110,6 +110,18 @@ void locate_loose_object(const char *repository_folder, git_object *object, char
 		*out_folder = top_folder;
 }
 
+int loose_object_mode(const char *repository_folder, git_object *object)
+{
+	char *object_path;
+	struct stat st;
+
+	locate_loose_object(repository_folder, object, &object_path, NULL);
+	assert(p_stat(object_path, &st) == 0);
+	free(object_path);
+
+	return st.st_mode;
+}
+
 int loose_object_dir_mode(const char *repository_folder, git_object *object)
 {
 	char *object_path;
@@ -175,7 +187,7 @@ int copy_file(const char *src, const char *dst)
 	if (git_futils_readbuffer(&source_buf, src) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
-	dst_fd = git_futils_creat_withpath(dst, 0777, 0644);
+	dst_fd = git_futils_creat_withpath(dst, 0777, 0666);
 	if (dst_fd < 0)
 		goto cleanup;
 

@@ -9,6 +9,7 @@
 #include "hash.h"
 #include "repository.h"
 #include "fileops.h"
+#include "pack.h"
 
 #include <git2/tag.h>
 #include <git2/object.h>
@@ -357,7 +358,7 @@ static int loose_write(git_reference *ref)
 		goto unlock;
 	}
 
-	error = git_filebuf_commit(&file);
+	error = git_filebuf_commit(&file, GIT_REFS_FILE_MODE);
 
 	if (p_stat(ref_path, &st) == GIT_SUCCESS)
 		ref->mtime = st.st_mtime;
@@ -870,7 +871,7 @@ cleanup:
 	/* if we've written all the references properly, we can commit
 	 * the packfile to make the changes effective */
 	if (error == GIT_SUCCESS) {
-		error = git_filebuf_commit(&pack_file);
+		error = git_filebuf_commit(&pack_file, GIT_PACK_FILE_MODE);
 
 		/* when and only when the packfile has been properly written,
 		 * we can go ahead and remove the loose refs */

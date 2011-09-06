@@ -319,7 +319,7 @@ BEGIN_TEST(config16, "add a variable in a new section")
 	/* As the section wasn't removed, owerwrite the file */
 	must_pass(git_filebuf_open(&buf, CONFIG_BASE "/config10", 0));
 	must_pass(git_filebuf_write(&buf, "[empty]\n", strlen("[empty]\n")));
-	must_pass(git_filebuf_commit(&buf));
+	must_pass(git_filebuf_commit(&buf, 0666));
 END_TEST
 
 BEGIN_TEST(config17, "prefixes aren't broken")

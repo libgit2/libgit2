@@ -14,6 +14,7 @@
 
 #define GIT_CONFIG_FILENAME ".gitconfig"
 #define GIT_CONFIG_FILENAME_INREPO "config"
+#define GIT_CONFIG_FILE_MODE 0666
 
 struct git_config {
 	git_vector files;

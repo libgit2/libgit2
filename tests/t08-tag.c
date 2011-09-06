@@ -189,6 +189,9 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/the-tag"));
 	must_be_true(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
 	must_pass(git_reference_delete(ref_tag));
+#ifndef GIT_WIN32
+	must_be_true((loose_object_mode(REPOSITORY_FOLDER, (git_object *)tag) & 0777) == GIT_OBJECT_FILE_MODE);
+#endif
 
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
 

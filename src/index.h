@@ -14,6 +14,9 @@
 #include "git2/odb.h"
 #include "git2/index.h"
 
+#define GIT_INDEX_FILE "index"
+#define GIT_INDEX_FILE_MODE 0666
+
 struct git_index {
 	git_repository *repository;
 	char *index_file_path;

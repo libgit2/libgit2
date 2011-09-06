@@ -31,7 +31,7 @@ static void setup(walk_data *d)
 	state_loc = d;
 
 	for (n = d->names; n->name; n++) {
-		git_file fd = p_creat(n->name, 0600);
+		git_file fd = p_creat(n->name, 0666);
 		cl_assert(fd >= 0);
 		p_close(fd);
 		n->count = 0;

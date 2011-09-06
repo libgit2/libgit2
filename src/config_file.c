@@ -1034,7 +1034,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
 	else
-		error = git_filebuf_commit(&file);
+		error = git_filebuf_commit(&file, GIT_CONFIG_FILE_MODE);
 
 	git_futils_freebuffer(&cfg->reader.buffer);
 	return error;

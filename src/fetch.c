@@ -14,6 +14,7 @@
 #include "transport.h"
 #include "remote.h"
 #include "refspec.h"
+#include "pack.h"
 #include "fetch.h"
 #include "netops.h"
 
@@ -181,7 +182,7 @@ int git_fetch__download_pack(char **out, const char *buffered, size_t buffered_s
 	}
 
 	/* A bit dodgy, but we need to keep the pack at the temporary path */
-	error = git_filebuf_commit_at(&file, file.path_lock);
+	error = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);

@@ -351,7 +351,7 @@ static int write_file(const char *path, const char *content)
 			return error;
 	}
 
-	file = git_futils_creat_withpath(path, 0777, 0644);
+	file = git_futils_creat_withpath(path, 0777, 0666);
 	if (file < GIT_SUCCESS)
 		return file;
 
