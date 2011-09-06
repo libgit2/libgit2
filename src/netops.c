@@ -102,6 +102,7 @@ int gitno_connect(const char *host, const char *port)
 	ret = getaddrinfo(host, port, &hints, &info);
 	if (ret != 0) {
 		error = GIT_EOSERR;
+		info = NULL;
 		goto cleanup;
 	}
 
