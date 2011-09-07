@@ -12,6 +12,7 @@
 #include "vector.h"
 
 #define GIT_REFLOG_DIR "logs/"
+#define GIT_REFLOG_DIR_MODE 0777
 
 #define GIT_REFLOG_SIZE_MIN (2*GIT_OID_HEXSZ+2+17)
 

@@ -31,9 +31,8 @@ int git_futils_mv_atomic(const char *from, const char *to)
 #endif
 }
 
-int git_futils_mkpath2file(const char *file_path)
+int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
-	const mode_t mode = 0755; /* or 0777 ? */
 	int error = GIT_SUCCESS;
 	char target_folder_path[GIT_PATH_MAX];
 
@@ -67,9 +66,9 @@ int git_futils_mktmp(char *path_out, const char *filename)
 	return fd;
 }
 
-int git_futils_creat_withpath(const char *path, const mode_t mode)
+int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode)
 {
-	if (git_futils_mkpath2file(path) < GIT_SUCCESS)
+	if (git_futils_mkpath2file(path, dirmode) < GIT_SUCCESS)
 		return git__throw(GIT_EOSERR, "Failed to create file %s", path);
 
 	return p_creat(path, mode);
@@ -81,9 +80,9 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 	return fd >= 0 ? fd : git__throw(GIT_EOSERR, "Failed to create locked file. Could not open %s", path);
 }
 
-int git_futils_creat_locked_withpath(const char *path, const mode_t mode)
+int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode)
 {
-	if (git_futils_mkpath2file(path) < GIT_SUCCESS)
+	if (git_futils_mkpath2file(path, dirmode) < GIT_SUCCESS)
 		return git__throw(GIT_EOSERR, "Failed to create locked file %s", path);
 
 	return git_futils_creat_locked(path, mode);
@@ -212,9 +211,9 @@ void git_futils_freebuffer(git_fbuffer *obj)
 }
 
 
-int git_futils_mv_withpath(const char *from, const char *to)
+int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode)
 {
-	if (git_futils_mkpath2file(to) < GIT_SUCCESS)
+	if (git_futils_mkpath2file(to, dirmode) < GIT_SUCCESS)
 		return GIT_EOSERR;	/* The callee already takes care of setting the correct error message. */
 
 	return git_futils_mv_atomic(from, to);	/* The callee already takes care of setting the correct error message. */

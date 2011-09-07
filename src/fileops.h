@@ -48,7 +48,7 @@ extern int git_futils_exists(const char *path);
  * Create and open a file, while also
  * creating all the folders in its path
  */
-extern int git_futils_creat_withpath(const char *path, const mode_t mode);
+extern int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
 /**
  * Create an open a process-locked file
@@ -59,7 +59,7 @@ extern int git_futils_creat_locked(const char *path, const mode_t mode);
  * Create an open a process-locked file, while
  * also creating all the folders in its path
  */
-extern int git_futils_creat_locked_withpath(const char *path, const mode_t mode);
+extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
 /**
  * Check if the given path points to a directory
@@ -80,7 +80,7 @@ extern int git_futils_mkdir_r(const char *path, const mode_t mode);
  * Create all the folders required to contain
  * the full path of a file
  */
-extern int git_futils_mkpath2file(const char *path);
+extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 
 extern int git_futils_rmdir_r(const char *path, int force);
 
@@ -98,7 +98,7 @@ extern int git_futils_mv_atomic(const char *from, const char *to);
  * Move a file on the filesystem, create the
  * destination path if it doesn't exist
  */
-extern int git_futils_mv_withpath(const char *from, const char *to);
+extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
 
 
 /**

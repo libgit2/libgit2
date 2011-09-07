@@ -23,7 +23,8 @@ static int lock_file(git_filebuf *file, int flags)
 
 	/* create path to the file buffer is required */
 	if (flags & GIT_FILEBUF_FORCE) {
-		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0644);
+		/* XXX: Should dirmode here be configurable? Or is 0777 always fine? */
+		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0777, 0644);
 	} else {
 		file->fd = git_futils_creat_locked(file->path_lock, 0644);
 	}

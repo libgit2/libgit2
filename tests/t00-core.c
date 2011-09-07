@@ -250,14 +250,14 @@ static int setup(walk_data *d)
 {
 	name_data *n;
 
-	if (p_mkdir(top_dir, 0755) < 0)
+	if (p_mkdir(top_dir, 0777) < 0)
 		return error("can't mkdir(\"%s\")", top_dir);
 
 	if (p_chdir(top_dir) < 0)
 		return error("can't chdir(\"%s\")", top_dir);
 
 	if (strcmp(d->sub, ".") != 0)
-		if (p_mkdir(d->sub, 0755) < 0)
+		if (p_mkdir(d->sub, 0777) < 0)
 			return error("can't mkdir(\"%s\")", d->sub);
 
 	strcpy(path_buffer, d->sub);
@@ -510,27 +510,27 @@ static int setup_empty_tmp_dir(void)
 {
 	char path[GIT_PATH_MAX];
 
-	if (p_mkdir(empty_tmp_dir, 0755))
+	if (p_mkdir(empty_tmp_dir, 0777))
 		return -1;
 
 	git_path_join(path, empty_tmp_dir, "/one");
-	if (p_mkdir(path, 0755))
+	if (p_mkdir(path, 0777))
 		return -1;
 
 	git_path_join(path, empty_tmp_dir, "/one/two_one");
-	if (p_mkdir(path, 0755))
+	if (p_mkdir(path, 0777))
 		return -1;
 
 	git_path_join(path, empty_tmp_dir, "/one/two_two");
-	if (p_mkdir(path, 0755))
+	if (p_mkdir(path, 0777))
 		return -1;
 
 	git_path_join(path, empty_tmp_dir, "/one/two_two/three");
-	if (p_mkdir(path, 0755))
+	if (p_mkdir(path, 0777))
 		return -1;
 
 	git_path_join(path, empty_tmp_dir, "/two");
-	if (p_mkdir(path, 0755))
+	if (p_mkdir(path, 0777))
 		return -1;
 
 	return 0;
@@ -547,7 +547,7 @@ BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
 
 	must_pass(setup_empty_tmp_dir());
 	git_path_join(file, empty_tmp_dir, "/two/file.txt");
-	fd = p_creat(file, 0755);
+	fd = p_creat(file, 0777);
 	must_pass(fd);
 	must_pass(p_close(fd));
 	must_fail(git_futils_rmdir_r(empty_tmp_dir, 0));

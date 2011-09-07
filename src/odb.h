@@ -14,6 +14,9 @@
 #include "vector.h"
 #include "cache.h"
 
+#define GIT_OBJECTS_DIR "objects/"
+#define GIT_OBJECT_DIR_MODE 0777
+
 /* DO NOT EXPORT */
 typedef struct {
 	void *data;			/**< Raw, decompressed object data. */

@@ -20,12 +20,12 @@ static void setup(walk_data *d)
 {
 	name_data *n;
 
-	cl_must_pass(p_mkdir(top_dir, 0755));
+	cl_must_pass(p_mkdir(top_dir, 0777));
 
 	cl_must_pass(p_chdir(top_dir));
 
 	if (strcmp(d->sub, ".") != 0)
-		cl_must_pass(p_mkdir(d->sub, 0755));
+		cl_must_pass(p_mkdir(d->sub, 0777));
 
 	strcpy(path_buffer, d->sub);
 	state_loc = d;
