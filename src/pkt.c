@@ -104,7 +104,7 @@ static int pack_pkt(git_pkt **out)
 static int ref_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_ref *pkt;
-	int error, has_caps = 0;
+	int error;
 
 	pkt = git__malloc(sizeof(git_pkt_ref));
 	if (pkt == NULL)
@@ -128,9 +128,6 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	line += GIT_OID_HEXSZ + 1;
 	len -= (GIT_OID_HEXSZ + 1);
 
-	if (strlen(line) < len)
-		has_caps = 1;
-
 	if (line[len - 1] == '\n')
 		--len;
 
@@ -142,7 +139,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	memcpy(pkt->head.name, line, len);
 	pkt->head.name[len] = '\0';
 
-	if (has_caps) {
+	if (strlen(pkt->head.name) < len) {
 		pkt->capabilities = strchr(pkt->head.name, '\0') + 1;
 	}
 
