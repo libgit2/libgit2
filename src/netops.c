@@ -45,7 +45,7 @@ void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
 	buf->data = data;
-	buf->len = len - 1;
+	buf->len = len;
 	buf->offset = 0;
 	buf->fd = fd;
 }
