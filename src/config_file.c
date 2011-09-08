@@ -539,9 +539,9 @@ static char *cfg_readline(diskfile_backend *cfg)
 	while (isspace(*line_src))
 		++line_src;
 
-    line_end = strchr(line_src, '\n');
+	line_end = strchr(line_src, '\n');
 
-    /* no newline at EOF */
+	/* no newline at EOF */
 	if (line_end == NULL)
 		line_end = strchr(line_src, 0);
 

@@ -125,15 +125,15 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 			zs->next_out = file->z_buf;
 			zs->avail_out = file->buf_size;
 
-            result = deflate(zs, file->flush_mode);
-            assert(result != Z_STREAM_ERROR);
+			result = deflate(zs, file->flush_mode);
+			assert(result != Z_STREAM_ERROR);
 
-            have = file->buf_size - zs->avail_out;
+			have = file->buf_size - zs->avail_out;
 
 			if (p_write(file->fd, file->z_buf, have) < GIT_SUCCESS)
 				return git__throw(GIT_EOSERR, "Failed to write to file");
 
-        } while (zs->avail_out == 0);
+		} while (zs->avail_out == 0);
 
 		assert(zs->avail_in == 0);
 
