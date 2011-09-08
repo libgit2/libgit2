@@ -117,18 +117,18 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 	if (len > 0 || file->flush_mode == Z_FINISH) {
 		zs->next_in = source;
-		zs->avail_in = len;
+		zs->avail_in = (uInt)len;
 
 		do {
-			int have;
+			size_t have;
 
 			zs->next_out = file->z_buf;
-			zs->avail_out = file->buf_size;
+			zs->avail_out = (uInt)file->buf_size;
 
 			result = deflate(zs, file->flush_mode);
 			assert(result != Z_STREAM_ERROR);
 
-			have = file->buf_size - zs->avail_out;
+			have = file->buf_size - (size_t)zs->avail_out;
 
 			if (p_write(file->fd, file->z_buf, have) < GIT_SUCCESS)
 				return git__throw(GIT_EOSERR, "Failed to write to file");

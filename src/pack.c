@@ -404,7 +404,7 @@ int packfile_unpack_compressed(
 
 	memset(&stream, 0, sizeof(stream));
 	stream.next_out = buffer;
-	stream.avail_out = size + 1;
+	stream.avail_out = (uInt)size + 1;
 
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
