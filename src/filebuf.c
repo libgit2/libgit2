@@ -116,7 +116,7 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 	z_stream *zs = &file->zs;
 
 	if (len > 0 || file->flush_mode == Z_FINISH) {
-		zs->next_in = (void *)source;
+		zs->next_in = source;
 		zs->avail_in = len;
 
 		do {
