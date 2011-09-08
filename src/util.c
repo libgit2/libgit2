@@ -118,9 +118,9 @@ Return:
 	return GIT_SUCCESS;
 }
 
-void git__strntolower(char *str, int len)
+void git__strntolower(char *str, size_t len)
 {
-	int i;
+	size_t i;
 
 	for (i = 0; i < len; ++i) {
 		str[i] = (char) tolower(str[i]);

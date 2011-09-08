@@ -135,7 +135,7 @@ static int cvar_match_section(const char *local, const char *input)
 {
 	char *first_dot;
 	char *local_sp = strchr(local, ' ');
-	int comparison_len;
+	size_t comparison_len;
 
 	/*
 	 * If the local section name doesn't contain a space, then we can
@@ -198,7 +198,8 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 {
 	char *section_sp = strchr(var->section, ' ');
 	char *quote, *name;
-	int len, ret;
+	size_t len;
+	int ret;
 
 	/*
 	 * The final string is going to be at most one char longer than
@@ -245,7 +246,7 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 static char *interiorize_section(const char *orig)
 {
 	char *dot, *last_dot, *section, *ret;
-	int len;
+	size_t len;
 
 	dot = strchr(orig, '.');
 	last_dot = strrchr(orig, '.');
@@ -530,7 +531,7 @@ static char *cfg_readline(diskfile_backend *cfg)
 {
 	char *line = NULL;
 	char *line_src, *line_end;
-	int line_len;
+	size_t line_len;
 
 	line_src = cfg->reader.read_ptr;
 
@@ -538,9 +539,9 @@ static char *cfg_readline(diskfile_backend *cfg)
 	while (isspace(*line_src))
 		++line_src;
 
-    line_end = strchr(line_src, '\n');
+	line_end = strchr(line_src, '\n');
 
-    /* no newline at EOF */
+	/* no newline at EOF */
 	if (line_end == NULL)
 		line_end = strchr(line_src, 0);
 
@@ -600,7 +601,8 @@ GIT_INLINE(int) config_keychar(int c)
 
 static int parse_section_header_ext(const char *line, const char *base_name, char **section_name)
 {
-	int buf_len, total_len, pos, rpos;
+	size_t buf_len, total_len;
+	int pos, rpos;
 	int c, ret;
 	char *subsection, *first_quote, *last_quote;
 	int error = GIT_SUCCESS;
@@ -1100,7 +1102,8 @@ static int is_multiline_var(const char *str)
 static int parse_multiline_variable(diskfile_backend *cfg, const char *first, char **out)
 {
 	char *line = NULL, *end;
-	int error = GIT_SUCCESS, len, ret;
+	int error = GIT_SUCCESS, ret;
+	size_t len;
 	char *buf;
 
 	/* Check that the next line exists */

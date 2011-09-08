@@ -99,7 +99,7 @@ static int cache_cmp(const void *a, const void *b)
 int git_indexer_new(git_indexer **out, const char *packname)
 {
 	git_indexer *idx;
-	unsigned int namelen;
+	size_t namelen;
 	int ret, error;
 
 	assert(out && packname);
@@ -186,7 +186,8 @@ static void index_path(char *path, git_indexer *idx)
 int git_indexer_write(git_indexer *idx)
 {
 	git_mwindow *w = NULL;
-	int error, namelen;
+	int error;
+	size_t namelen;
 	unsigned int i, long_offsets = 0, left;
 	struct git_pack_idx_header hdr;
 	char filename[GIT_PATH_MAX];

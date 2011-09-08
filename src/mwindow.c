@@ -35,7 +35,7 @@
 		: 32 * 1024 * 1024)
 
 #define DEFAULT_MAPPED_LIMIT \
-	((1024L * 1024L) * (sizeof(void*) >= 8 ? 8192 : 256))
+	((1024 * 1024) * (sizeof(void*) >= 8 ? 8192ULL : 256UL))
 
 /*
  * We need this because each process is only allowed a specific amount
