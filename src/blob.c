@@ -36,7 +36,7 @@ const void *git_blob_rawcontent(git_blob *blob)
 	return blob->odb_object->raw.data;
 }
 
-int git_blob_rawsize(git_blob *blob)
+size_t git_blob_rawsize(git_blob *blob)
 {
 	assert(blob);
 	return blob->odb_object->raw.len;

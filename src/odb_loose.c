@@ -183,19 +183,19 @@ static void init_stream(z_stream *s, void *out, size_t len)
 {
 	memset(s, 0, sizeof(*s));
 	s->next_out  = out;
-	s->avail_out = len;
+	s->avail_out = (uInt)len;
 }
 
 static void set_stream_input(z_stream *s, void *in, size_t len)
 {
 	s->next_in  = in;
-	s->avail_in = len;
+	s->avail_in = (uInt)len;
 }
 
 static void set_stream_output(z_stream *s, void *out, size_t len)
 {
 	s->next_out  = out;
-	s->avail_out = len;
+	s->avail_out = (uInt)len;
 }
 
 
@@ -243,10 +243,10 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	memset(&zs, 0x0, sizeof(zs));
 
 	zs.next_out  = out;
-	zs.avail_out = outlen;
+	zs.avail_out = (uInt)outlen;
 
 	zs.next_in  = in;
-	zs.avail_in = inlen;
+	zs.avail_in = (uInt)inlen;
 
 	if (inflateInit(&zs) < Z_OK)
 		return git__throw(GIT_ERROR, "Failed to inflate buffer");

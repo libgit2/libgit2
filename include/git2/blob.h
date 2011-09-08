@@ -106,7 +106,7 @@ GIT_EXTERN(const void *) git_blob_rawcontent(git_blob *blob);
  * @param blob pointer to the blob
  * @return size on bytes
  */
-GIT_EXTERN(int) git_blob_rawsize(git_blob *blob);
+GIT_EXTERN(size_t) git_blob_rawsize(git_blob *blob);
 
 /**
  * Read a file from the working folder of a repository
