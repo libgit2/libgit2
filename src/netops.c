@@ -140,7 +140,7 @@ int gitno_send(int s, const char *msg, size_t len, int flags)
 	while (off < len) {
 		ret = send(s, msg + off, len - off, flags);
 		if (ret < 0)
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Error sending data: %s", strerror(errno));
 
 		off += ret;
 	}
