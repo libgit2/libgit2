@@ -181,6 +181,12 @@ static int on_headers_complete(http_parser *parser)
 	transport_http *t = (transport_http *) parser->data;
 	git_buf *buf = &t->buf;
 
+	if (t->content_type == NULL) {
+		t->content_type = git__strdup(git_buf_cstr(buf));
+		if (t->content_type == NULL)
+			return t->error = GIT_ENOMEM;
+	}
+
 	git_buf_clear(buf);
 	git_buf_printf(buf, "application/x-git-%s-advertisement", t->service);
 	if (git_buf_oom(buf))
