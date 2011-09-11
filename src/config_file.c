@@ -555,7 +555,9 @@ static char *cfg_readline(diskfile_backend *cfg)
 
 	line[line_len] = '\0';
 
-	while (--line_len >= 0 && isspace(line[line_len]))
+    // Count back from line_len.
+    // By the time line len is one the zeroth index is checked and the next pass will return false.
+	while (line_len && isspace(line[--line_len]))
 		line[line_len] = '\0';
 
 	if (*line_end == '\n')
