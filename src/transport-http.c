@@ -42,9 +42,10 @@ typedef struct {
 	int error;
 	int transfer_finished :1;
 	char *content_type;
+	char *service;
 } transport_http;
 
-static int gen_request(git_buf *buf, const char *url, const char *host)
+static int gen_request(git_buf *buf, const char *url, const char *host, const char *service)
 {
 	const char *path = url;
 
@@ -52,7 +53,7 @@ static int gen_request(git_buf *buf, const char *url, const char *host)
 	if (path == NULL) /* Is 'git fetch http://host.com/' valid? */
 		path = "/";
 
-	git_buf_printf(buf, "GET %s/info/refs?service=git-upload-pack HTTP/1.1\r\n", path);
+	git_buf_printf(buf, "GET %s/info/refs?service=git-%s HTTP/1.1\r\n", path, service);
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", host);
 	git_buf_puts(buf, "Accept: */*\r\n" "Pragma: no-cache\r\n\r\n");
@@ -63,7 +64,7 @@ static int gen_request(git_buf *buf, const char *url, const char *host)
 	return GIT_SUCCESS;
 }
 
-static int do_connect(transport_http *t)
+static int do_connect(transport_http *t, const char *service)
 {
 	int s = -1, error;;
 	const char *url = t->parent.url, *prefix = "http://";
@@ -77,6 +78,12 @@ static int do_connect(transport_http *t)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
+	t->service = git__strdup(service);
+	if (t->service == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
 	s = gitno_connect(host, port);
 	if (s < GIT_SUCCESS) {
 	    error = git__throw(error, "Failed to connect to host");
@@ -84,7 +91,7 @@ static int do_connect(transport_http *t)
 	t->socket = s;
 
 	/* Generate and send the HTTP request */
-	error = gen_request(&request, url, host);
+	error = gen_request(&request, url, host, service);
 	if (error < GIT_SUCCESS) {
 		error = git__throw(error, "Failed to generate request");
 		goto cleanup;
@@ -115,7 +122,6 @@ static enum {
 } last_cb = NONE;
 
 static int ct_found, ct_finished;
-static const char *ctstr = "application/x-git-upload-pack-advertisement";
 static const char *typestr = "Content-Type";
 
 static int on_header_field(http_parser *parser, const char *str, size_t len)
@@ -175,8 +181,12 @@ static int on_headers_complete(http_parser *parser)
 	transport_http *t = (transport_http *) parser->data;
 	git_buf *buf = &t->buf;
 
-	/* This shold be configurable */
-	if (strcmp(t->content_type, ctstr))
+	git_buf_clear(buf);
+	git_buf_printf(buf, "application/x-git-%s-advertisement", t->service);
+	if (git_buf_oom(buf))
+		return GIT_ENOMEM;
+
+	if (strcmp(t->content_type, git_buf_cstr(buf)))
 		return t->error = git__throw(GIT_EOBJCORRUPTED, "Content-Type '%s' is wrong", t->content_type);
 
 	git_buf_clear(buf);
@@ -290,7 +300,7 @@ static int http_connect(git_transport *transport, int direction)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to init refs vector");
 
-	error = do_connect(t);
+	error = do_connect(t, "upload-pack");
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to connect to host");
 		goto cleanup;
@@ -357,6 +367,7 @@ static void http_free(git_transport *transport)
 	git_vector_free(refs);
 	free(t->heads);
 	free(t->content_type);
+	free(t->service);
 	free(t->parent.url);
 	free(t);
 }
