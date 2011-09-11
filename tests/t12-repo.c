@@ -212,8 +212,6 @@ BEGIN_TEST(open0, "Open a bare repository that has just been initialized by git"
 	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
 END_TEST
 
-#define EMPTY_REPOSITORY_FOLDER TEST_RESOURCES "/empty_standard_repo/.gitted/"
-
 BEGIN_TEST(open1, "Open a standard repository that has just been initialized by git")
 	git_repository *repo;
 
