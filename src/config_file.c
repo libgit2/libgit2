@@ -555,7 +555,7 @@ static char *cfg_readline(diskfile_backend *cfg)
 
 	line[line_len] = '\0';
 
-	while (--line_len >= 0 && isspace(line[line_len]))
+	while (isspace(line[line_len--]))
 		line[line_len] = '\0';
 
 	if (*line_end == '\n')
