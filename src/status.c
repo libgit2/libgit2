@@ -44,28 +44,7 @@ struct status_entry {
 	char path[GIT_FLEX_ARRAY]; /* more */
 };
 
-static int status_cmp(const void *a, const void *b)
-{
-	const struct status_entry *entry_a = (const struct status_entry *)(a);
-	const struct status_entry *entry_b = (const struct status_entry *)(b);
-
-	return strcmp(entry_a->path, entry_b->path);
-}
-
-static int status_srch(const void *key, const void *array_member)
-{
-	const char *path = (const char *)key;
-	const struct status_entry *entry = (const struct status_entry *)(array_member);
-
-	return strcmp(path, entry->path);
-}
-
-static int find_status_entry(git_vector *entries, const char *path)
-{
-	return git_vector_bsearch2(entries, status_srch, path);
-}
-
-static struct status_entry *new_status_entry(git_vector *entries, const char *path)
+static struct status_entry *status_entry_new(git_vector *entries, const char *path)
 {
 	struct status_entry *e = git__malloc(sizeof(*e) + strlen(path) + 1);
 	if (e == NULL)
@@ -81,114 +60,53 @@ static struct status_entry *new_status_entry(git_vector *entries, const char *pa
 	return e;
 }
 
-static void recurse_tree_entries(git_tree *tree, git_vector *entries, char *path)
+GIT_INLINE(void) status_entry_update_from_tree_entry(struct status_entry *e, const git_tree_entry *tree_entry)
 {
-	int i, cnt, idx;
-	struct status_entry *e;
-	char file_path[GIT_PATH_MAX];
-	git_tree *subtree;
+	assert(e && tree_entry);
 
-	cnt = git_tree_entrycount(tree);
-	for (i = 0; i < cnt; ++i) {
-		const git_tree_entry *tree_entry = git_tree_entry_byindex(tree, i);
-
-		git_path_join(file_path, path, tree_entry->filename);
-
-		if (git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid) == GIT_SUCCESS) {
-			recurse_tree_entries(subtree, entries, file_path);
-			git_tree_close(subtree);
-			continue;
-		}
-
-		if ((idx = find_status_entry(entries, file_path)) != GIT_ENOTFOUND)
-			e = (struct status_entry *)git_vector_get(entries, idx);
-		else
-			e = new_status_entry(entries, file_path);
-
-		git_oid_cpy(&e->head_oid, &tree_entry->oid);
-	}
+	git_oid_cpy(&e->head_oid, &tree_entry->oid);
 }
 
-static int recurse_tree_entry(git_tree *tree, struct status_entry *e, const char *path)
+GIT_INLINE(void) status_entry_update_from_index_entry(struct status_entry *e, const git_index_entry *index_entry)
 {
-	char *dir_sep;
-	const git_tree_entry *tree_entry;
-	git_tree *subtree;
-	int error = GIT_SUCCESS;
+	assert(e && index_entry);
 
-	dir_sep = strchr(path, '/');
-	if (!dir_sep) {
-		tree_entry = git_tree_entry_byname(tree, path);
-		if (tree_entry == NULL)
-			return GIT_SUCCESS;	/* The leaf doesn't exist in the tree*/
-
-		git_oid_cpy(&e->head_oid, &tree_entry->oid);
-		return GIT_SUCCESS;
-	}
-
-	/* Retrieve subtree name */
-	*dir_sep = '\0';
-
-	tree_entry = git_tree_entry_byname(tree, path);
-	if (tree_entry == NULL)
-		return GIT_SUCCESS;	/* The subtree doesn't exist in the tree*/
-
-	*dir_sep = '/';
-
-	/* Retreive subtree */
-	if ((error = git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid)) < GIT_SUCCESS)
-		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", &tree_entry->filename);
-
-	error = recurse_tree_entry(subtree, e, dir_sep+1);
-	git_tree_close(subtree);
-	return error;
+	git_oid_cpy(&e->index_oid, &index_entry->oid);
+	e->mtime = index_entry->mtime;
 }
 
-struct status_st {
-	union {
-		git_vector *vector;
-		struct status_entry *e;
-	} entry;
-
-	int workdir_path_len;
-};
-
-static int dirent_cb(void *state, char *full_path)
+static void status_entry_update_from_index(struct status_entry *e, git_index *index)
 {
 	int idx;
-	struct status_entry *e;
-	struct status_st *st = (struct status_st *)state;
-	char *file_path = full_path + st->workdir_path_len;
-	struct stat filest;
-	git_oid oid;
+	git_index_entry *index_entry;
 
-	if ((git_futils_isdir(full_path) == GIT_SUCCESS) && (!strcmp(DOT_GIT, file_path)))
-		return 0;
+	assert(e && index);
 
-	if (git_futils_isdir(full_path) == GIT_SUCCESS)
-		return git_futils_direach(full_path, GIT_PATH_MAX, dirent_cb, state);
+	idx = git_index_find(index, e->path);
+	if (idx < 0)
+		return;
 
-	if ((idx = find_status_entry(st->entry.vector, file_path)) != GIT_ENOTFOUND) {
-		e = (struct status_entry *)git_vector_get(st->entry.vector, idx);
+	index_entry = git_index_get(index, idx);
 
-		if (p_stat(full_path, &filest) < 0)
-			return git__throw(GIT_EOSERR, "Failed to read file %s", full_path);
-
-		if (e->mtime.seconds == (git_time_t)filest.st_mtime) {
-			git_oid_cpy(&e->wt_oid, &e->index_oid);
-			return 0;
-		}
-	} else {
-		e = new_status_entry(st->entry.vector, file_path);
-	}
-
-	git_odb_hashfile(&oid, full_path, GIT_OBJ_BLOB);
-	git_oid_cpy(&e->wt_oid, &oid);
-
-	return 0;
+	status_entry_update_from_index_entry(e, index_entry);
 }
 
-static int set_status_flags(struct status_entry *e)
+static int status_entry_update_from_workdir(struct status_entry *e, char* full_path)
+{
+	struct stat filest;
+
+	if (p_stat(full_path, &filest) < GIT_SUCCESS)
+		return git__throw(GIT_EOSERR, "Failed to determine status of file '%s'. Can't read file", full_path);
+
+	if (e->mtime.seconds == (git_time_t)filest.st_mtime)
+		git_oid_cpy(&e->wt_oid, &e->index_oid);
+	else
+		git_odb_hashfile(&e->wt_oid, full_path, GIT_OBJ_BLOB);
+
+	return GIT_SUCCESS;
+}
+
+static int status_entry_update_flags(struct status_entry *e)
 {
 	git_oid zero;
 	int head_zero, index_zero, wt_zero;
@@ -219,72 +137,18 @@ static int set_status_flags(struct status_entry *e)
 	return GIT_SUCCESS;
 }
 
-int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload)
-{
-	git_vector entries;
-	struct status_entry *e;
+struct status_st {
+	git_vector *vector;
 	git_index *index;
-	unsigned int i, cnt;
-	git_index_entry *index_entry;
-	char temp_path[GIT_PATH_MAX];
-	int error;
 	git_tree *tree;
-	struct status_st dirent_st;
 
-	git_reference *head_ref, *resolved_head_ref;
-	git_commit *head_commit;
-
-	git_repository_index(&index, repo);
-
-	cnt = git_index_entrycount(index);
-	git_vector_init(&entries, cnt, status_cmp);
-	for (i = 0; i < cnt; ++i) {
-		index_entry = git_index_get(index, i);
-
-		e = new_status_entry(&entries, index_entry->path);
-		git_oid_cpy(&e->index_oid, &index_entry->oid);
-		e->mtime = index_entry->mtime;
-	}
-	git_index_free(index);
-
-	git_reference_lookup(&head_ref, repo, GIT_HEAD_FILE);
-	git_reference_resolve(&resolved_head_ref, head_ref);
-
-	git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref));
-
-	// recurse through tree entries
-	git_commit_tree(&tree, head_commit);
-	recurse_tree_entries(tree, &entries, "");
-	git_tree_close(tree);
-	git_commit_close(head_commit);
-
-	dirent_st.workdir_path_len = strlen(repo->path_workdir);
-	dirent_st.entry.vector = &entries;
-	strcpy(temp_path, repo->path_workdir);
-	git_futils_direach(temp_path, GIT_PATH_MAX, dirent_cb, &dirent_st);
-
-	for (i = 0; i < entries.length; ++i) {
-		e = (struct status_entry *)git_vector_get(&entries, i);
-
-		set_status_flags(e);
-	}
-
-
-	for (i = 0; i < entries.length; ++i) {
-		e = (struct status_entry *)git_vector_get(&entries, i);
-
-		if ((error = callback(e->path, e->status_flags, payload)) < GIT_SUCCESS)
-			return git__throw(error, "Failed to list statuses. User callback failed");
-	}
-
-	for (i = 0; i < entries.length; ++i) {
-		e = (struct status_entry *)git_vector_get(&entries, i);
-		free(e);
-	}
-	git_vector_free(&entries);
-
-	return GIT_SUCCESS;
-}
+	int workdir_path_len;
+	char* head_tree_relative_path;
+	int head_tree_relative_path_len;
+	unsigned int tree_position;
+	unsigned int index_position;
+	int is_dir:1;
+};
 
 static int retrieve_head_tree(git_tree **tree_out, git_repository *repo)
 {
@@ -322,15 +186,355 @@ exit:
 	return error;
 }
 
+#define GIT_STATUS_PATH_NULL	-2
+#define GIT_STATUS_PATH_IGNORE	-1
+#define GIT_STATUS_PATH_FILE	0
+#define GIT_STATUS_PATH_FOLDER	1
+
+static int dirent_cb(void *state, char *full_path);
+static int alphasorted_futils_direach(
+	char *path, size_t path_sz,
+	int (*fn)(void *, char *), void *arg);
+
+static int process_folder(struct status_st *st, const git_tree_entry *tree_entry, char *full_path, int path_type)
+{
+	git_object *subtree = NULL;
+	git_tree *pushed_tree = NULL;
+	int error, pushed_tree_position = 0;
+	git_otype tree_entry_type;
+
+	tree_entry_type = git_tree_entry_type(tree_entry);
+
+	switch (tree_entry_type) {
+	case GIT_OBJ_TREE:
+		error = git_tree_entry_2object(&subtree, ((git_object *)(st->tree))->repo, tree_entry);
+		pushed_tree = st->tree;
+		pushed_tree_position = st->tree_position;
+		st->tree = (git_tree *)subtree;
+		st->tree_position = 0;
+		st->head_tree_relative_path_len += 1 + tree_entry->filename_len; /* path + '/' + name */
+		break;
+
+	case GIT_OBJ_BLOB:
+		/* No op */
+		break;
+
+	default:
+		error = git__throw(GIT_EINVALIDTYPE, "Unexpected tree entry type");	/* TODO: How should we deal with submodules? */
+	}
+
+	if (full_path != NULL && path_type == GIT_STATUS_PATH_FOLDER)
+		error = alphasorted_futils_direach(full_path, GIT_PATH_MAX, dirent_cb, st);
+	else {
+		error = dirent_cb(st, NULL);
+	}
+
+	if (tree_entry_type == GIT_OBJ_TREE) {
+		git_object_close(subtree);
+		st->head_tree_relative_path_len -= 1 + tree_entry->filename_len;
+		st->tree = pushed_tree;
+		st->tree_position = pushed_tree_position;
+		st->tree_position++;
+	}
+
+	return error;
+}
+
+static int store_if_changed(struct status_st *st, struct status_entry *e)
+{
+	int error;
+	if ((error = status_entry_update_flags(e)) < GIT_SUCCESS)
+			return git__throw(error, "Failed to process the file '%s'. It doesn't exist in the workdir, in the HEAD nor in the index", e->path);
+
+	if (e->status_flags == GIT_STATUS_CURRENT) {
+		free(e);
+		return GIT_SUCCESS;
+	}
+
+	return git_vector_insert(st->vector, e);
+}
+
+static int determine_status(struct status_st *st,
+	int in_head, int in_index, int in_workdir,
+	const git_tree_entry *tree_entry,
+	const git_index_entry *index_entry,
+	char *full_path,
+	const char *status_path,
+	int path_type)
+{
+	struct status_entry *e;
+	int error = GIT_SUCCESS;
+	git_otype tree_entry_type = GIT_OBJ_BAD;
+
+	if (tree_entry != NULL)
+		tree_entry_type = git_tree_entry_type(tree_entry);
+
+	/* If we're dealing with a directory in the workdir, let's recursively tackle it first */
+	if (path_type == GIT_STATUS_PATH_FOLDER)
+		return process_folder(st, tree_entry, full_path, path_type);
+
+	/* Are we dealing with a file somewhere? */
+	if (in_workdir || in_index || (in_head && tree_entry_type == GIT_OBJ_BLOB)) {
+		e = status_entry_new(NULL, status_path);
+
+		if (in_head && tree_entry_type == GIT_OBJ_BLOB) {
+			status_entry_update_from_tree_entry(e, tree_entry);
+			st->tree_position++;
+		}
+
+		if (in_index) {
+			status_entry_update_from_index_entry(e, index_entry);
+			st->index_position++;
+		}
+
+		if (in_workdir)
+			if ((error = status_entry_update_from_workdir(e, full_path)) < GIT_SUCCESS)
+				return error;	/* The callee has already set the error message */
+
+		return store_if_changed(st, e);
+	}
+
+	/* Last option, we're dealing with a leftover folder tree entry */
+	assert(in_head && !in_index && !in_workdir && (tree_entry_type == GIT_OBJ_TREE));
+	return process_folder(st, tree_entry, full_path, path_type);
+}
+
+static int path_type_from(char *full_path, int is_dir)
+{
+	if (full_path == NULL)
+		return GIT_STATUS_PATH_NULL;
+
+	if (!is_dir)
+		return GIT_STATUS_PATH_FILE;
+
+	if (!git__suffixcmp(full_path, "/" DOT_GIT))
+		return GIT_STATUS_PATH_IGNORE;
+
+	return GIT_STATUS_PATH_FOLDER;
+}
+
+static const char *status_path(const char *first, const char *second, const char *third)
+{
+	/* At least one of them can not be NULL */
+	assert(first != NULL || second != NULL || third != NULL);
+
+	/* TODO: Fixme. Ensure that when non null, they're all equal */
+	if (first != NULL)
+		return first;
+
+	if (second != NULL)
+		return second;
+
+	return third;
+}
+
+static int compare(const char *left, const char *right)
+{
+	if (left == NULL && right == NULL)
+		return 0;
+
+	if (left == NULL)
+		return 1;
+
+	if (right == NULL)
+		return -1;
+
+	return strcmp(left, right);
+}
+
+/*
+ * Convenience method to enumerate a tree. Contrarily to the git_tree_entry_byindex()
+ * method, it allows the tree to be enumerated to be NULL. In this case, every returned
+ * tree entry will be NULL as well.
+ */
+static const git_tree_entry *git_tree_entry_bypos(git_tree *tree, unsigned int idx)
+{
+	if (tree == NULL)
+		return NULL;
+
+	return git_vector_get(&tree->entries, idx);
+}
+
+/*
+ * Convenience method to enumerate the index. This method is not supposed to be exposed
+ * as part of the index API because it precludes that the index will not be altered
+ * while the enumeration is being processed. Which wouldn't be very API friendly :)
+ */
+static const git_index_entry *git_index_entry_bypos(git_index *index, unsigned int idx)
+{
+	assert(index);
+	return git_vector_get(&index->entries, idx);
+}
+
+/* Greatly inspired from JGit IndexTreeWalker */
+/* https://github.com/spearce/jgit/blob/ed47e29c777accfa78c6f50685a5df2b8f5b8ff5/org.spearce.jgit/src/org/spearce/jgit/lib/IndexTreeWalker.java#L88 */
+
+static int dirent_cb(void *state, char *a)
+{
+	const git_tree_entry *m;
+	const git_index_entry *entry;
+	int path_type;
+	int cmpma, cmpmi, cmpai, error;
+	const char *pm, *pa, *pi;
+	const char *m_name, *i_name, *a_name;
+
+	struct status_st *st = (struct status_st *)state;
+
+	path_type = path_type_from(a, st->is_dir);
+
+	if (path_type == GIT_STATUS_PATH_IGNORE)
+		return GIT_SUCCESS;	/* Let's skip the ".git" directory */
+
+	a_name = (path_type != GIT_STATUS_PATH_NULL) ? a + st->workdir_path_len : NULL;
+
+	while (1) {
+		m = git_tree_entry_bypos(st->tree, st->tree_position);
+		entry = git_index_entry_bypos(st->index, st->index_position);
+
+		if ((m == NULL) && (a == NULL) && (entry == NULL))
+			return GIT_SUCCESS;
+
+		if (m != NULL) {
+			st->head_tree_relative_path[st->head_tree_relative_path_len] = '\0';
+			git_path_join(st->head_tree_relative_path, st->head_tree_relative_path, m->filename);
+			m_name = st->head_tree_relative_path;
+		} else
+			m_name = NULL;
+
+		i_name = (entry != NULL) ? entry->path : NULL;
+
+		cmpma = compare(m_name, a_name);
+		cmpmi = compare(m_name, i_name);
+		cmpai = compare(a_name, i_name);
+
+		pm = ((cmpma <= 0) && (cmpmi <= 0)) ? m_name : NULL;
+		pa = ((cmpma >= 0) && (cmpai <= 0)) ? a_name : NULL;
+		pi = ((cmpmi >= 0) && (cmpai >= 0)) ? i_name : NULL;
+
+		error = determine_status(st, pm != NULL, pi != NULL, pa != NULL, m, entry, a, status_path(pm, pi, pa), path_type);
+
+		if (pa != NULL)
+			return GIT_SUCCESS;
+	}
+}
+
+static int status_cmp(const void *a, const void *b)
+{
+	const struct status_entry *entry_a = (const struct status_entry *)(a);
+	const struct status_entry *entry_b = (const struct status_entry *)(b);
+
+	return strcmp(entry_a->path, entry_b->path);
+}
+
+#define DEFAULT_SIZE 16
+
+int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload)
+{
+	git_vector entries;
+	git_index *index = NULL;
+	char temp_path[GIT_PATH_MAX];
+	char tree_path[GIT_PATH_MAX] = "";
+	struct status_st dirent_st;
+	int error = GIT_SUCCESS;
+	unsigned int i;
+	git_tree *tree;
+	struct status_entry *e;
+
+	if ((error = git_repository_index(&index, repo)) < GIT_SUCCESS) {
+		return git__rethrow(error, "Failed to determine statuses. Index can't be opened");
+	}
+
+	if ((error = retrieve_head_tree(&tree, repo)) < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to determine statuses");
+		goto exit;
+	}
+
+	git_vector_init(&entries, DEFAULT_SIZE, status_cmp);
+
+	dirent_st.workdir_path_len = strlen(repo->path_workdir);
+	dirent_st.tree_position = 0;
+	dirent_st.index_position = 0;
+	dirent_st.tree = tree;
+	dirent_st.index = index;
+	dirent_st.vector = &entries;
+	dirent_st.head_tree_relative_path = tree_path;
+	dirent_st.head_tree_relative_path_len = 0;
+	dirent_st.is_dir = 1;
+
+	strcpy(temp_path, repo->path_workdir);
+
+	if (git_futils_isdir(temp_path)) {
+		error = git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path doesn't lead to a folder", temp_path);
+		goto exit;
+	}
+
+	if ((error = alphasorted_futils_direach(temp_path, sizeof(temp_path), dirent_cb, &dirent_st)) < GIT_SUCCESS)
+		error = git__rethrow(error, "Failed to determine statuses. An error occured while processing the working directory");
+
+	if ((error == GIT_SUCCESS) && ((error = dirent_cb(&dirent_st, NULL)) < GIT_SUCCESS))
+		error = git__rethrow(error, "Failed to determine statuses. An error occured while post-processing the HEAD tree and the index");
+
+	for (i = 0; i < entries.length; ++i) {
+		e = (struct status_entry *)git_vector_get(&entries, i);
+
+		if (error == GIT_SUCCESS) {
+			error = callback(e->path, e->status_flags, payload);
+			if (error < GIT_SUCCESS)
+				error = git__rethrow(error, "Failed to determine statuses. User callback failed");
+		}
+
+		free(e);
+	}
+
+exit:
+	git_vector_free(&entries);
+	git_tree_close(tree);
+	git_index_free(index);
+	return error;
+}
+
+static int recurse_tree_entry(git_tree *tree, struct status_entry *e, const char *path)
+{
+	char *dir_sep;
+	const git_tree_entry *tree_entry;
+	git_tree *subtree;
+	int error = GIT_SUCCESS;
+
+	dir_sep = strchr(path, '/');
+	if (!dir_sep) {
+		tree_entry = git_tree_entry_byname(tree, path);
+		if (tree_entry == NULL)
+			return GIT_SUCCESS;	/* The leaf doesn't exist in the tree*/
+
+		status_entry_update_from_tree_entry(e, tree_entry);
+		return GIT_SUCCESS;
+	}
+
+	/* Retrieve subtree name */
+	*dir_sep = '\0';
+
+	tree_entry = git_tree_entry_byname(tree, path);
+	if (tree_entry == NULL)
+		return GIT_SUCCESS;	/* The subtree doesn't exist in the tree*/
+
+	*dir_sep = '/';
+
+	/* Retreive subtree */
+	if ((error = git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid)) < GIT_SUCCESS)
+		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", &tree_entry->filename);
+
+	error = recurse_tree_entry(subtree, e, dir_sep+1);
+	git_tree_close(subtree);
+	return error;
+}
+
 int git_status_file(unsigned int *status_flags, git_repository *repo, const char *path)
 {
 	struct status_entry *e;
 	git_index *index = NULL;
-	git_index_entry *index_entry;
 	char temp_path[GIT_PATH_MAX];
-	int idx, error = GIT_SUCCESS;
+	int error = GIT_SUCCESS;
 	git_tree *tree = NULL;
-	struct stat filest;
 
 	assert(status_flags && repo && path);
 
@@ -338,21 +542,14 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	if (git_futils_isdir(temp_path) == GIT_SUCCESS)
 		return git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path leads to a folder, not a file", path);
 
-	e = new_status_entry(NULL, path);
+	e = status_entry_new(NULL, path);
 	if (e == NULL)
 		return GIT_ENOMEM;
 
 	/* Find file in Workdir */
 	if (git_futils_exists(temp_path) == GIT_SUCCESS) {
-		if (p_stat(temp_path, &filest) < GIT_SUCCESS) {
-			error = git__throw(GIT_EOSERR, "Failed to determine status of file '%s'. Can't read file", temp_path);
-			goto exit;
-		}
-
-		if (e->mtime.seconds == (git_time_t)filest.st_mtime)
-			git_oid_cpy(&e->wt_oid, &e->index_oid);
-		else
-			git_odb_hashfile(&e->wt_oid, temp_path, GIT_OBJ_BLOB);
+		if ((error = status_entry_update_from_workdir(e, temp_path)) < GIT_SUCCESS)
+			goto exit;	/* The callee has already set the error message */
 	}
 
 	/* Find file in Index */
@@ -361,12 +558,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 		goto exit;
 	}
 
-	idx = git_index_find(index, path);
-	if (idx >= 0) {
-		index_entry = git_index_get(index, idx);
-		git_oid_cpy(&e->index_oid, &index_entry->oid);
-		e->mtime = index_entry->mtime;
-	}
+	status_entry_update_from_index(e, index);
 	git_index_free(index);
 
 	if ((error = retrieve_head_tree(&tree, repo)) < GIT_SUCCESS) {
@@ -386,7 +578,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	}
 
 	/* Determine status */
-	if ((error = set_status_flags(e)) < GIT_SUCCESS) {
+	if ((error = status_entry_update_flags(e)) < GIT_SUCCESS) {
 		error = git__throw(error, "Nonexistent file");
 		goto exit;
 	}
@@ -396,5 +588,97 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 exit:
 	git_tree_close(tree);
 	free(e);
+	return error;
+}
+
+/*
+ * git_futils_direach is not supposed to return entries in an ordered manner.
+ * alphasorted_futils_direach wraps git_futils_direach and invokes the callback
+ * function by passing it alphabeticcally sorted paths parameters.
+ *
+ */
+
+struct alphasorted_dirent_info {
+	int is_dir;
+
+	char path[GIT_FLEX_ARRAY]; /* more */
+};
+
+static struct alphasorted_dirent_info *alphasorted_dirent_info_new(const char *path)
+{
+	int is_dir;
+	struct alphasorted_dirent_info *di;
+
+	is_dir = git_futils_isdir(path) == GIT_SUCCESS ? 1 : 0;
+
+	di = git__malloc(sizeof(*di) + (is_dir ? GIT_PATH_MAX : strlen(path)) + 1);
+	if (di == NULL)
+		return NULL;
+
+	memset(di, 0x0, sizeof(*di));
+
+	strcpy(di->path, path);
+	di->is_dir = is_dir;
+
+	return di;
+}
+
+int alphasorted_dirent_info_cmp(const void *a, const void *b)
+{
+	struct alphasorted_dirent_info *stra = (struct alphasorted_dirent_info *)a;
+	struct alphasorted_dirent_info *strb = (struct alphasorted_dirent_info *)b;
+
+	return strcmp(stra->path, strb->path);
+}
+
+static int alphasorted_dirent_cb(void *state, char *full_path)
+{
+	struct alphasorted_dirent_info *entry;
+	git_vector *entry_names;
+
+	entry_names = (git_vector *)state;
+	entry = alphasorted_dirent_info_new(full_path);
+
+	if (entry == NULL)
+		return GIT_ENOMEM;
+
+	if (git_vector_insert(entry_names, entry) < GIT_SUCCESS) {
+		free(entry);
+		return GIT_ENOMEM;
+	}
+
+	return GIT_SUCCESS;
+}
+
+static int alphasorted_futils_direach(
+	char *path,
+	size_t path_sz,
+	int (*fn)(void *, char *),
+	void *arg)
+{
+	struct alphasorted_dirent_info *entry;
+	git_vector entry_names;
+	unsigned int idx;
+	int error = GIT_SUCCESS;
+
+	if (git_vector_init(&entry_names, 16, alphasorted_dirent_info_cmp) < GIT_SUCCESS)
+		return GIT_ENOMEM;
+
+	error = git_futils_direach(path, path_sz, alphasorted_dirent_cb, &entry_names);
+
+	git_vector_sort(&entry_names);
+
+	for (idx = 0; idx < entry_names.length; ++idx) {
+		entry = (struct alphasorted_dirent_info *)git_vector_get(&entry_names, idx);
+
+		if (error == GIT_SUCCESS) {
+			((struct status_st *)arg)->is_dir = entry->is_dir;
+			error = fn(arg, entry->path);
+		}
+
+		free(entry);
+	}
+
+	git_vector_free(&entry_names);
 	return error;
 }
