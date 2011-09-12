@@ -32,14 +32,17 @@ typedef struct {
 		ct_found :1,
 		ct_finished :1;
 	enum last_cb last_cb;
+	http_parser parser;
 	char *content_type;
+	char *host;
+	char *port;
 	char *service;
 #ifdef GIT_WIN32
 	WSADATA wsd;
 #endif
 } transport_http;
 
-static int gen_request(git_buf *buf, const char *url, const char *host, const char *service)
+static int gen_request(git_buf *buf, const char *url, const char *host, const char *op, const char *service)
 {
 	const char *path = url;
 
@@ -47,7 +50,7 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	if (path == NULL) /* Is 'git fetch http://host.com/' valid? */
 		path = "/";
 
-	git_buf_printf(buf, "GET %s/info/refs?service=git-%s HTTP/1.1\r\n", path, service);
+	git_buf_printf(buf, "%s %s/info/refs?service=git-%s HTTP/1.1\r\n", op, path, service);
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", host);
 	git_buf_puts(buf, "Accept: */*\r\n" "Pragma: no-cache\r\n\r\n");
@@ -58,52 +61,21 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	return GIT_SUCCESS;
 }
 
-static int do_connect(transport_http *t, const char *service)
+static int do_connect(transport_http *t, const char *host, const char *port)
 {
-	git_buf request = GIT_BUF_INIT;
-	int error;
-	int s;
-	const char *url, *prefix;
-	char *host = NULL, *port = NULL;
+	GIT_SOCKET s = -1;
 
-	url = t->parent.url;
-	prefix = "http://";
-
-	if (!git__prefixcmp(url, prefix))
-		url += strlen(prefix);
-
-	error = gitno_extract_host_and_port(&host, &port, url, "80");
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	t->service = git__strdup(service);
-	if (t->service == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	if (t->parent.connected && http_should_keep_alive(&t->parser))
+		return GIT_SUCCESS;
 
 	s = gitno_connect(host, port);
 	if (s < GIT_SUCCESS) {
-	    error = git__throw(error, "Failed to connect to host");
+	    return git__rethrow(s, "Failed to connect to host");
 	}
 	t->socket = s;
+	t->parent.connected = 1;
 
-	/* Generate and send the HTTP request */
-	error = gen_request(&request, url, host, service);
-	if (error < GIT_SUCCESS) {
-		error = git__throw(error, "Failed to generate request");
-		goto cleanup;
-	}
-	error = gitno_send(s, git_buf_cstr(&request), strlen(git_buf_cstr(&request)), 0);
-	if (error < GIT_SUCCESS)
-		error = git__rethrow(error, "Failed to send the HTTP request");
-
-cleanup:
-	git_buf_free(&request);
-	free(host);
-	free(port);
-
-	return error;
+	return GIT_SUCCESS;
 }
 
 /*
@@ -248,13 +220,12 @@ static int on_message_complete(http_parser *parser)
 static int store_refs(transport_http *t)
 {
 	int error = GIT_SUCCESS;
-	http_parser parser;
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
 
-	http_parser_init(&parser, HTTP_RESPONSE);
-	parser.data = t;
+	http_parser_init(&t->parser, HTTP_RESPONSE);
+	t->parser.data = t;
 	memset(&settings, 0x0, sizeof(http_parser_settings));
 	settings.on_header_field = on_header_field;
 	settings.on_header_value = on_header_value;
@@ -271,7 +242,7 @@ static int store_refs(transport_http *t)
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Error receiving data from network");
 
-		parsed = http_parser_execute(&parser, &settings, buf.data, buf.offset);
+		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
 		/* Both should happen at the same time */
 		if (parsed != buf.offset || t->error < GIT_SUCCESS)
 			return git__rethrow(t->error, "Error parsing HTTP data");
@@ -289,6 +260,9 @@ static int http_connect(git_transport *transport, int direction)
 {
 	transport_http *t = (transport_http *) transport;
 	int error;
+	git_buf request = GIT_BUF_INIT;
+	const char *service = "upload-pack";
+	const char *url = t->parent.url, *prefix = "http://";
 
 	if (direction == GIT_DIR_PUSH)
 		return git__throw(GIT_EINVALIDARGS, "Pushing over HTTP is not supported");
@@ -298,17 +272,41 @@ static int http_connect(git_transport *transport, int direction)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to init refs vector");
 
-	error = do_connect(t, "upload-pack");
+	if (!git__prefixcmp(url, prefix))
+		url += strlen(prefix);
+
+	error = gitno_extract_host_and_port(&t->host, &t->port, url, "80");
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	t->service = git__strdup(service);
+	if (t->service == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	error = do_connect(t, t->host, t->port);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to connect to host");
 		goto cleanup;
 	}
 
+	/* Generate and send the HTTP request */
+	error = gen_request(&request, url, t->host, "GET", service);
+	if (error < GIT_SUCCESS) {
+		error = git__throw(error, "Failed to generate request");
+		goto cleanup;
+	}
+
+	error = gitno_send(t->socket, git_buf_cstr(&request), strlen(git_buf_cstr(&request)), 0);
+	if (error < GIT_SUCCESS)
+		error = git__rethrow(error, "Failed to send the HTTP request");
+
 	error = store_refs(t);
 
 cleanup:
+	git_buf_free(&request);
 	git_buf_clear(&t->buf);
-	git_buf_free(&t->buf);
 
 	return error;
 }
@@ -371,8 +369,11 @@ static void http_free(git_transport *transport)
 		git_pkt_free(p);
 	}
 	git_vector_free(refs);
+	git_buf_free(&t->buf);
 	free(t->heads);
 	free(t->content_type);
+	free(t->host);
+	free(t->port);
 	free(t->service);
 	free(t->parent.url);
 	free(t);
