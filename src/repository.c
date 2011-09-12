@@ -288,7 +288,6 @@ cleanup:
 int git_repository_config(
 		git_config **out,
 		git_repository *repo,
-		const char *user_config_path,
 		const char *system_config_path)
 {
 	char config_path[GIT_PATH_MAX];
@@ -305,10 +304,9 @@ int git_repository_config(
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (user_config_path != NULL) {
-		error = git_config_add_file_ondisk(*out, user_config_path, 2);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
+	error = git_config_find_global(config_path);
+	if (error == GIT_SUCCESS) {
+		error = git_config_add_file_ondisk(*out, config_path, 2);
 	}
 
 	if (system_config_path != NULL) {
