@@ -28,6 +28,19 @@
 #include <git2.h>
 #include <stdio.h>
 
+// It's not necessarily recommended that you use macros like this in a real application
+// but they're handy for a simple demo.
+#define CHK_INT(fcn) \
+  if ((fcn) != GIT_SUCCESS) { \
+    fprintf(stderr, "%s: Error: %s at %s:%d\n", argv[0], git_lasterror(), __FILE__, __LINE__); \
+    exit(2); \
+  }
+#define CHK_PTR(fcn) \
+  if ((fcn) == NULL) { \
+    fprintf(stderr, "%s: Error: %s at %s:%d\n", argv[0], git_lasterror(), __FILE__, __LINE__); \
+    exit(2); \
+  }
+
 int main (int argc, char** argv)
 {
   // ### Opening the Repository
@@ -38,7 +51,11 @@ int main (int argc, char** argv)
   //
   // [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
   git_repository *repo;
-  git_repository_open(&repo, "/opt/libgit2-test/.git");
+  if (argc > 1) {
+    CHK_INT(git_repository_open(&repo, argv[1]));
+  } else {
+    CHK_INT(git_repository_open(&repo, "/opt/libgit2-test/.git"));
+  }
 
   // ### SHA-1 Value Conversions
 
@@ -49,10 +66,10 @@ int main (int argc, char** argv)
   // The `git_oid` is the structure that keeps the SHA value. We will use this throughout the example
   // for storing the value of the current SHA key we're working with.
   git_oid oid;
-  git_oid_fromstr(&oid, hex);
+  CHK_INT(git_oid_fromstr(&oid, hex));
 
   // Once we've converted the string into the oid value, we can get the raw value of the SHA.
-  printf("Raw 20 bytes: [%s]\n", (&oid)->id);
+  printf("Raw 20 bytes: [%.20s]\n", (&oid)->id);
 
   // Next we will convert the 20 byte raw SHA1 value to a human readable 40 char hex value.
   printf("\n*Raw to Hex*\n");
@@ -70,7 +87,7 @@ int main (int argc, char** argv)
   // repository.
   // [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
   git_odb *odb;
-  odb = git_repository_database(repo);
+  CHK_PTR(odb = git_repository_database(repo));
 
   // #### Raw Object Reading
 
@@ -79,12 +96,11 @@ int main (int argc, char** argv)
   git_otype otype;
   const unsigned char *data;
   const char *str_type;
-  int error;
 
   // We can read raw objects directly from the object database if we have the oid (SHA)
   // of the object.  This allows us to access objects without knowing thier type and inspect
   // the raw bytes unparsed.
-  error = git_odb_read(&obj, odb, &oid);
+  CHK_INT(git_odb_read(&obj, odb, &oid));
 
   // A raw object only has three properties - the type (commit, blob, tree or tag), the size
   // of the raw data and the raw, unparsed data itself.  For a commit or tag, that raw data
@@ -113,7 +129,7 @@ int main (int argc, char** argv)
   // direct access to the key/value properties of Git.  Here we'll write a new blob object
   // that just contains a simple string.  Notice that we have to specify the object type as
   // the `git_otype` enum.
-  git_odb_write(&oid, odb, "test data", sizeof("test data") - 1, GIT_OBJ_BLOB);
+  CHK_INT(git_odb_write(&oid, odb, "test data", sizeof("test data") - 1, GIT_OBJ_BLOB));
 
   // Now that we've written the object, we can check out what SHA1 was generated when the
   // object was written to our database.
@@ -133,20 +149,19 @@ int main (int argc, char** argv)
   printf("\n*Commit Parsing*\n");
 
   git_commit *commit;
-  git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  CHK_INT(git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1"));
 
-  error = git_commit_lookup(&commit, repo, &oid);
+  CHK_INT(git_commit_lookup(&commit, repo, &oid));
 
   const git_signature *author, *cmtter;
-  const char *message, *message_short;
+  const char *message;
   time_t ctime;
   unsigned int parents, p;
 
   // Each of the properties of the commit object are accessible via methods, including commonly
-  // needed variations, such as `git_commit_time` which returns the author time and `_message_short`
-  // which gives you just the first line of the commit message.
+  // needed variations, such as `git_commit_time` which returns the author time and `_message`
+  // which gives you the commit message.
   message  = git_commit_message(commit);
-  message_short = git_commit_message_short(commit);
   author   = git_commit_author(commit);
   cmtter   = git_commit_committer(commit);
   ctime    = git_commit_time(commit);
@@ -161,7 +176,7 @@ int main (int argc, char** argv)
   parents  = git_commit_parentcount(commit);
   for (p = 0;p < parents;p++) {
     git_commit *parent;
-    git_commit_parent(&parent, commit, p);
+    CHK_INT(git_commit_parent(&parent, commit, p));
     git_oid_fmt(out, git_commit_id(parent));
     printf("Parent: %s\n", out);
     git_commit_close(parent);
@@ -187,17 +202,17 @@ int main (int argc, char** argv)
   // this to create a commit in order to specify who created it and when.  Default values for the name
   // and email should be found in the `user.name` and `user.email` configuration options.  See the `config`
   // section of this example file to see how to access config values.
-  author = git_signature_new("Scott Chacon", "schacon@gmail.com",
-      123456789, 60);
-  cmtter = git_signature_new("Scott A Chacon", "scott@github.com",
-      987654321, 90);
+  CHK_INT(git_signature_new(&author, "Scott Chacon", "schacon@gmail.com",
+      123456789, 60));
+  CHK_INT(git_signature_new(&cmtter, "Scott A Chacon", "scott@github.com",
+      987654321, 90));
 
   // Commit objects need a tree to point to and optionally one or more parents.  Here we're creating oid
   // objects to create the commit with, but you can also use
-  git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
-  git_tree_lookup(&tree, repo, &tree_id);
-  git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
-  git_commit_lookup(&parent, repo, &parent_id);
+  CHK_INT(git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac"));
+  CHK_INT(git_tree_lookup(&tree, repo, &tree_id));
+  CHK_INT(git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1"));
+  CHK_INT(git_commit_lookup(&parent, repo, &parent_id));
 
   // Here we actually create the commit object with a single call with all the values we need to create
   // the commit.  The SHA key is written to the `commit_id` variable here.
@@ -207,6 +222,7 @@ int main (int argc, char** argv)
     NULL, /* do not update the HEAD */
     author,
     cmtter,
+    NULL, /* use default message encoding */
     "example commit",
     tree,
     1, parent);
@@ -226,14 +242,14 @@ int main (int argc, char** argv)
 
   // We create an oid for the tag object if we know the SHA and look it up in the repository the same
   // way that we would a commit (or any other) object.
-  git_oid_fromstr(&oid, "bc422d45275aca289c51d79830b45cecebff7c3a");
+  CHK_INT(git_oid_fromstr(&oid, "bc422d45275aca289c51d79830b45cecebff7c3a"));
 
-  error = git_tag_lookup(&tag, repo, &oid);
+  CHK_INT(git_tag_lookup(&tag, repo, &oid));
 
   // Now that we have the tag object, we can extract the information it generally contains: the target
   // (usually a commit object), the type of the target object (usually 'commit'), the name ('v1.0'),
   // the tagger (a git_signature - name, email, timestamp), and the tag message.
-  git_tag_target((git_object **)&commit, tag);
+  CHK_INT(git_tag_target((git_object **)&commit, tag));
   tname = git_tag_name(tag);    // "test"
   ttype = git_tag_type(tag);    // GIT_OBJ_COMMIT (otype enum)
   tmessage = git_tag_message(tag); // "tag message\n"
@@ -253,18 +269,18 @@ int main (int argc, char** argv)
   git_object *objt;
 
   // Create the oid and lookup the tree object just like the other objects.
-  git_oid_fromstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5");
-  git_tree_lookup(&tree, repo, &oid);
+  CHK_INT(git_oid_fromstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5"));
+  CHK_INT(git_tree_lookup(&tree, repo, &oid));
 
   // Getting the count of entries in the tree so you can iterate over them if you want to.
   int cnt = git_tree_entrycount(tree); // 3
   printf("tree entries: %d\n", cnt);
 
-  entry = git_tree_entry_byindex(tree, 0);
+  CHK_PTR(entry = git_tree_entry_byindex(tree, 0));
   printf("Entry name: %s\n", git_tree_entry_name(entry)); // "hello.c"
 
   // You can also access tree entries by name if you know the name of the entry you're looking for.
-  entry = git_tree_entry_byname(tree, "hello.c");
+  CHK_PTR(entry = git_tree_entry_byname(tree, "hello.c"));
   git_tree_entry_name(entry); // "hello.c"
 
   // Once you have the entry object, you can access the content or subtree (or commit, in the case
@@ -287,15 +303,15 @@ int main (int argc, char** argv)
   printf("\n*Blob Parsing*\n");
   git_blob *blob;
 
-  git_oid_fromstr(&oid, "af7574ea73f7b166f869ef1a39be126d9a186ae0");
-  git_blob_lookup(&blob, repo, &oid);
+  CHK_INT(git_oid_fromstr(&oid, "af7574ea73f7b166f869ef1a39be126d9a186ae0"));
+  CHK_INT(git_blob_lookup(&blob, repo, &oid));
 
   // You can access a buffer with the raw contents of the blob directly.
   // Note that this buffer may not be contain ASCII data for certain blobs (e.g. binary files):
   // do not consider the buffer a NULL-terminated string, and use the `git_blob_rawsize` attribute to
   // find out its exact size in bytes
   printf("Blob Size: %d\n", git_blob_rawsize(blob)); // 8
-  git_blob_rawcontent(blob); // "content"
+  CHK_PTR(git_blob_rawcontent(blob)); // "content"
 
   // ### Revwalking
   //
@@ -311,7 +327,7 @@ int main (int argc, char** argv)
   git_revwalk *walk;
   git_commit *wcommit;
 
-  git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  CHK_INT(git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1"));
 
   // To use the revwalker, create a new walker, tell it how you want to sort the output and then push
   // one or more starting points onto the walker.  If you want to emulate the output of `git log` you
@@ -319,9 +335,9 @@ int main (int argc, char** argv)
   // You can also 'hide' commits that you want to stop at or not see any of their ancestors.  So if you
   // want to emulate `git log branch1..branch2`, you would push the oid of `branch2` and hide the oid
   // of `branch1`.
-  git_revwalk_new(&walk, repo);
+  CHK_INT(git_revwalk_new(&walk, repo));
   git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE);
-  git_revwalk_push(walk, &oid);
+  CHK_INT(git_revwalk_push(walk, &oid));
 
   const git_signature *cauth;
   const char *cmsg;
@@ -332,8 +348,8 @@ int main (int argc, char** argv)
   // note that this operation is specially fast since the raw contents of the commit object will
   // be cached in memory
   while ((git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
-    error = git_commit_lookup(&wcommit, repo, &oid);
-    cmsg  = git_commit_message_short(wcommit);
+    CHK_INT(git_commit_lookup(&wcommit, repo, &oid));
+    cmsg  = git_commit_message(wcommit);
     cauth = git_commit_author(wcommit);
     printf("%s (%s)\n", cmsg, cauth->email);
     git_commit_close(wcommit);
@@ -359,7 +375,7 @@ int main (int argc, char** argv)
   // You can either open the index from the standard location in an open repository, as we're doing
   // here, or you can open and manipulate any index file with `git_index_open_bare()`. The index
   // for the repository will be located and loaded from disk.
-  git_repository_index(&index, repo);
+  CHK_INT(git_repository_index(&index, repo));
 
   // For each entry in the index, you can get a bunch of information including the SHA (oid), path
   // and mode which map to the tree objects that are written out.  It also has filesystem properties
@@ -388,7 +404,7 @@ int main (int argc, char** argv)
   // Here we will implement something like `git for-each-ref` simply listing out all available
   // references and the object SHA they resolve to.
   git_strarray ref_list;
-  git_reference_listall(&ref_list, repo, GIT_REF_LISTALL);
+  CHK_INT(git_reference_listall(&ref_list, repo, GIT_REF_LISTALL));
 
   const char *refname;
   git_reference *ref;
@@ -397,7 +413,7 @@ int main (int argc, char** argv)
   // resolve them to the SHA, then print both values out.
   for (i = 0; i < ref_list.count; ++i) {
     refname = ref_list.strings[i];
-    git_reference_lookup(&ref, repo, refname);
+    CHK_INT(git_reference_lookup(&ref, repo, refname));
 
     switch (git_reference_type(ref)) {
     case GIT_REF_OID:
@@ -431,7 +447,7 @@ int main (int argc, char** argv)
   git_config *cfg;
 
   // Open a config object so we can read global values from it.
-  git_config_open_ondisk(&cfg, "~/.gitconfig");
+  CHK_INT(git_config_open_ondisk(&cfg, "~/.gitconfig"));
 
   git_config_get_int(cfg, "help.autocorrect", &j);
   printf("Autocorrect: %d\n", j);

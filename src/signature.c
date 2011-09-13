@@ -81,7 +81,7 @@ static int process_trimming(const char *input, char **storage, const char *input
 	return GIT_SUCCESS;
 }
 
-int git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset)
+int git_signature_new(const git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset)
 {
 	int error;
 	git_signature *p = NULL;
