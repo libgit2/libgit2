@@ -267,6 +267,9 @@ int git_remote_update_tips(struct git_remote *remote)
 
 void git_remote_free(git_remote *remote)
 {
+	if (remote == NULL)
+		return;
+
 	free(remote->fetch.src);
 	free(remote->fetch.dst);
 	free(remote->push.src);
