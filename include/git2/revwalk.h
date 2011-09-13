@@ -83,7 +83,7 @@ GIT_BEGIN_DECL
  *
  * @param walker pointer to the new revision walker
  * @param repo the repo to walk through
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_revwalk_new(git_revwalk **walker, git_repository *repo);
 
@@ -115,7 +115,7 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  *
  * @param walk the walker being used for the traversal.
  * @param oid the oid of the commit to start from.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
 
@@ -131,7 +131,7 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
  *
  * @param walk the walker being used for the traversal.
  * @param oid the oid of commit that will be ignored during the traversal
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
 

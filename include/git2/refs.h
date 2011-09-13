@@ -47,7 +47,7 @@ GIT_BEGIN_DECL
  * @param reference_out pointer to the looked-up reference
  * @param repo the repository to look up the reference
  * @param name the long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
 
@@ -68,7 +68,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_reposito
  * @param name The name of the reference
  * @param target The target of the reference
  * @param force Overwrite existing references
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force);
 
@@ -89,7 +89,7 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  * @param name The name of the reference
  * @param id The object id pointed to by the reference.
  * @param force Overwrite existing references
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force);
 
@@ -142,7 +142,7 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
  *
  * @param resolved_ref Pointer to the peeled reference
  * @param ref The reference
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_resolve(git_reference **resolved_ref, git_reference *ref);
 
@@ -165,7 +165,7 @@ GIT_EXTERN(git_repository *) git_reference_owner(git_reference *ref);
  *
  * @param ref The reference
  * @param target The new target for the reference
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const char *target);
 
@@ -180,7 +180,7 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const char *target)
  *
  * @param ref The reference
  * @param id The new target OID for the reference
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
 
@@ -222,7 +222,7 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * references previously loaded on the cache.
  *
  * @param repo Repository where the loose refs will be packed
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_packall(git_repository *repo);
 
@@ -245,7 +245,7 @@ GIT_EXTERN(int) git_reference_packall(git_repository *repo);
  * @param repo Repository where to find the refs
  * @param list_flags Filtering flags for the reference
  *		listing.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
 
@@ -267,7 +267,7 @@ GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo,
  *		listing.
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
 

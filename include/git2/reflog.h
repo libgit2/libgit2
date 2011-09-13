@@ -46,7 +46,7 @@ GIT_BEGIN_DECL
  *
  * @param reflog pointer to reflog
  * @param ref reference to read the reflog for
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
 
@@ -64,7 +64,7 @@ GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
  * @param oid_old the OID the reference was pointing to
  * @param committer the signature of the committer
  * @param msg the reflog message
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reflog_write(git_reference *ref, const git_oid *oid_old, const git_signature *committer, const char *msg);
 

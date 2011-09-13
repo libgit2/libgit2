@@ -45,7 +45,7 @@ GIT_BEGIN_DECL
  * @param blob pointer to the looked up blob
  * @param repo the repo to use when locating the blob.
  * @param id identity of the blob to locate.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git_oid *id)
 {
@@ -62,7 +62,7 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
  * @param repo the repo to use when locating the blob.
  * @param id identity of the blob to locate.
  * @param len the length of the short identifier
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, const git_oid *id, unsigned int len)
 {
@@ -117,7 +117,7 @@ GIT_EXTERN(size_t) git_blob_rawsize(git_blob *blob);
  *	this repository cannot be bare
  * @param path file from which the blob will be created,
  *	relative to the repository's working dir
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path);
 
@@ -129,7 +129,7 @@ GIT_EXTERN(int) git_blob_create_fromfile(git_oid *oid, git_repository *repo, con
  * @param repo repository where to blob will be written
  * @param buffer data to be written into the blob
  * @param len length of the data
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *buffer, size_t len);
 

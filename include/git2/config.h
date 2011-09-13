@@ -76,7 +76,7 @@ GIT_EXTERN(int) git_config_find_global(char *global_config_path);
  * and opens the located file, if it exists.
  *
  * @param out Pointer to store the config instance
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_open_global(git_config **out);
 
@@ -100,7 +100,7 @@ GIT_EXTERN(int) git_config_file__ondisk(struct git_config_file **out, const char
  * can do anything with it.
  *
  * @param out pointer to the new configuration
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_new(git_config **out);
 
@@ -117,7 +117,7 @@ GIT_EXTERN(int) git_config_new(git_config **out);
  * @param cfg the configuration to add the file to
  * @param file the configuration file (backend) to add
  * @param priority the priority the backend should have
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int priority);
 
@@ -138,7 +138,7 @@ GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int 
  * @param cfg the configuration to add the file to
  * @param path path to the configuration file (backend) to add
  * @param priority the priority the backend should have
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_add_file_ondisk(git_config *cfg, const char *path, int priority);
 
@@ -153,7 +153,7 @@ GIT_EXTERN(int) git_config_add_file_ondisk(git_config *cfg, const char *path, in
  *
  * @param cfg The configuration instance to create
  * @param path Path to the on-disk file to open
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_open_ondisk(git_config **cfg, const char *path);
 
@@ -170,7 +170,7 @@ GIT_EXTERN(void) git_config_free(git_config *cfg);
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param out pointer to the variable where the value should be stored
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_get_int(git_config *cfg, const char *name, int *out);
 
@@ -180,7 +180,7 @@ GIT_EXTERN(int) git_config_get_int(git_config *cfg, const char *name, int *out);
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param out pointer to the variable where the value should be stored
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_get_long(git_config *cfg, const char *name, long int *out);
 
@@ -193,7 +193,7 @@ GIT_EXTERN(int) git_config_get_long(git_config *cfg, const char *name, long int 
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param out pointer to the variable where the value should be stored
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out);
 
@@ -206,7 +206,7 @@ GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out)
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param out pointer to the variable's value
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const char **out);
 
@@ -216,7 +216,7 @@ GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const c
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value Integer value for the variable
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_set_int(git_config *cfg, const char *name, int value);
 
@@ -226,7 +226,7 @@ GIT_EXTERN(int) git_config_set_int(git_config *cfg, const char *name, int value)
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value Long integer value for the variable
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_set_long(git_config *cfg, const char *name, long int value);
 
@@ -236,7 +236,7 @@ GIT_EXTERN(int) git_config_set_long(git_config *cfg, const char *name, long int 
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value the value to store
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value);
 
@@ -249,7 +249,7 @@ GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value the string to store.
- * @return GIT_SUCCESS on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const char *value);
 
