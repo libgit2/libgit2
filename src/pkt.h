@@ -81,10 +81,10 @@ typedef struct {
 } git_pkt_comment;
 
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
-int git_pkt_send_flush(int s);
-int git_pkt_send_done(int s);
-int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd);
-int git_pkt_send_have(git_oid *oid, int fd);
+int git_pkt_send_flush(int s, int chunked);
+int git_pkt_send_done(int s, int chunked);
+int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd, int chunked);
+int git_pkt_send_have(git_oid *oid, int fd, int chunked);
 void git_pkt_free(git_pkt *pkt);
 
 #endif
