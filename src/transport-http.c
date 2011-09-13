@@ -32,6 +32,7 @@
 #include "netops.h"
 #include "buffer.h"
 #include "pkt.h"
+#include "refs.h"
 
 typedef struct {
 	git_transport parent;
@@ -46,6 +47,7 @@ typedef struct {
 	char *host;
 	char *port;
 	char *service;
+	git_transport_caps caps;
 } transport_http;
 
 static int gen_request(git_buf *buf, const char *url, const char *host, const char *op, const char *service)
@@ -60,6 +62,8 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", host);
 	git_buf_puts(buf, "Accept: */*\r\n" "Pragma: no-cache\r\n\r\n");
+	if (strncmp(service, "POST", strlen("POST")))
+		git_buf_puts(buf, "Content-Encoding: chunked");
 
 	if (git_buf_oom(buf))
 		return GIT_ENOMEM;
@@ -349,6 +353,92 @@ static int http_ls(git_transport *transport, git_headarray *array)
 	return GIT_SUCCESS;
 }
 
+static int http_send_wants(git_transport *transport, git_headarray *array)
+{
+	transport_http *t = (transport_http *) transport;
+	const char *prefix = "http://", *url = t->parent.url;
+	git_buf request = GIT_BUF_INIT;
+	int error;
+
+	/* TODO: Store url in the transport */
+	if (!git__prefixcmp(url, prefix))
+		url += strlen(prefix);
+
+	error = do_connect(t, t->host, t->port);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Faile to connect to host");
+
+	error = gen_request(&request, url, t->host, "POST", "upload-pack");
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to generate request");
+
+	error =  gitno_send(t->socket, request.ptr, request.size, 0);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to send request");
+
+	return git_pkt_send_wants(array, &t->caps, t->socket, 1);
+}
+
+static int http_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *GIT_UNUSED(list))
+{
+	transport_http *t = (transport_http *) transport;
+	GIT_UNUSED_ARG(list);
+	int error;
+	unsigned int i;
+	char buff[128];
+	gitno_buffer buf;
+	git_strarray refs;
+	git_revwalk *walk;
+	git_reference *ref;
+	git_oid oid;
+
+	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
+
+	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to list references");
+
+	error = git_revwalk_new(&walk, repo);
+	if (error < GIT_ERROR) {
+		error = git__rethrow(error, "Failed to list all references");
+		goto cleanup;
+	}
+	git_revwalk_sorting(walk, GIT_SORT_TIME);
+
+	for (i = 0; i < refs.count; ++i) {
+		/* No tags */
+		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
+			continue;
+
+		error = git_reference_lookup(&ref, repo, refs.strings[i]);
+		if (error < GIT_ERROR) {
+			error = git__rethrow(error, "Failed to lookup %s", refs.strings[i]);
+			goto cleanup;
+		}
+
+		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+			continue;
+		error = git_revwalk_push(walk, git_reference_oid(ref));
+		if (error < GIT_ERROR) {
+			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
+			goto cleanup;
+		}
+	}
+	git_strarray_free(&refs);
+
+	i = 0;
+	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+		error = git_pkt_send_have(&oid, t->socket, 1);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send have");
+		i++;
+	}
+
+cleanup:
+	git_revwalk_free(walk);
+	return error;
+}
+
 static int http_close(git_transport *transport)
 {
 	transport_http *t = (transport_http *) transport;
@@ -396,6 +486,8 @@ int git_transport_http(git_transport **out)
 
 	t->parent.connect = http_connect;
 	t->parent.ls = http_ls;
+	t->parent.send_wants = http_send_wants;
+	t->parent.negotiate_fetch = http_negotiate_fetch;
 	t->parent.close = http_close;
 	t->parent.free = http_free;
 
