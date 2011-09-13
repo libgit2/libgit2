@@ -46,7 +46,7 @@ GIT_BEGIN_DECL
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate.  If the object is
  *        an annotated tag it will be peeled back to the commit.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id)
 {
@@ -64,7 +64,7 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param id identity of the commit to locate.  If the object is
  *        an annotated tag it will be peeled back to the commit.
  * @param len the length of the short identifier
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, unsigned len)
 {
@@ -153,7 +153,7 @@ GIT_EXTERN(const git_signature *) git_commit_author(git_commit *commit);
  *
  * @param tree_out pointer where to store the tree object
  * @param commit a previously loaded commit.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_commit_tree(git_tree **tree_out, git_commit *commit);
 
@@ -181,7 +181,7 @@ GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
  * @param parent Pointer where to store the parent commit
  * @param commit a previously loaded commit.
  * @param n the position of the parent (from 0 to `parentcount`)
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n);
 
@@ -235,7 +235,7 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  * array may be NULL if `parent_count` is 0 (root commit). All the
  * given commits must be owned by the `repo`.
  *
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  *	The created commit will be written to the Object Database and
  *	the given reference will be updated to point to it
  */

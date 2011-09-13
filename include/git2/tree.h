@@ -45,7 +45,7 @@ GIT_BEGIN_DECL
  * @param tree pointer to the looked up tree
  * @param repo the repo to use when locating the tree.
  * @param id identity of the tree to locate.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git_oid *id)
 {
@@ -62,7 +62,7 @@ GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
  * @param repo the repo to use when locating the tree.
  * @param id identity of the tree to locate.
  * @param len the length of the short identifier
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_tree_lookup_prefix(git_tree **tree, git_repository *repo, const git_oid *id, unsigned int len)
 {
@@ -159,7 +159,7 @@ GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
  * @param object pointer to the converted object
  * @param repo repository where to lookup the pointed object
  * @param entry a tree entry
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_tree_entry_2object(git_object **object_out, git_repository *repo, const git_tree_entry *entry);
 
@@ -177,7 +177,7 @@ GIT_EXTERN(int) git_tree_entry_2object(git_object **object_out, git_repository *
  *
  * @param oid Pointer where to store the written tree
  * @param index Index to write
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_tree_create_fromindex(git_oid *oid, git_index *index);
 
@@ -247,7 +247,7 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(git_treebuilder *bld, con
  * @param filename Filename of the entry
  * @param id SHA1 oid of the entry
  * @param attributes Folder attributes of the entry
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, const char *filename, const git_oid *id, unsigned int attributes);
 
@@ -282,7 +282,7 @@ GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, int (*filter)(cons
  * @param oid Pointer where to store the written OID
  * @param repo Repository where to store the object
  * @param bld Tree builder to write
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld);
 

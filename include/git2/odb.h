@@ -47,8 +47,7 @@ GIT_BEGIN_DECL
  *
  * @param out location to store the database pointer, if opened.
  *            Set to NULL if the open failed.
- * @return GIT_SUCCESS if the database was created; otherwise an error
- *         code describing why the open was not possible.
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_odb_new(git_odb **out);
 
@@ -66,8 +65,7 @@ GIT_EXTERN(int) git_odb_new(git_odb **out);
  * @param out location to store the database pointer, if opened.
  *            Set to NULL if the open failed.
  * @param objects_dir path of the backends' "objects" directory.
- * @return GIT_SUCCESS if the database opened; otherwise an error
- *         code describing why the open was not possible.
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
 
@@ -208,7 +206,7 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  * @param data buffer with the data to storr
  * @param len size of the buffer
  * @param type type of the data to store
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_odb_write(git_oid *oid, git_odb *odb, const void *data, size_t len, git_otype type);
 
@@ -277,7 +275,7 @@ GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const
  * @param data data to hash
  * @param len size of the data
  * @param type of the data to hash
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type);
 
@@ -290,7 +288,7 @@ GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otyp
  * @param out oid structure the result is written into.
  * @param path file to read and determine object id for
  * @param type the type of the object that will be hashed
- * @return GIT_SUCCESS if valid; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_otype type);
 

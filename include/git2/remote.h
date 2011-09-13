@@ -53,7 +53,7 @@ GIT_BEGIN_DECL
  * @param out pointer to the new remote object
  * @param repo the associtated repository
  * @param url the remote repository's URL
- * @return GIT_SUCCESS or an error message
+ * @return GIT_SUCCESS or an error code
  */
 int git_remote_new(git_remote **out, git_repository *repo, const char *url);
 
@@ -63,7 +63,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url);
  * @param out pointer to the new remote object
  * @param cfg the repository's configuration
  * @param name the remote's name
- * @return 0 on success; error value otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_remote_get(struct git_remote **out, struct git_config *cfg, const char *name);
 
