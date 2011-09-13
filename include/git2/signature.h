@@ -48,7 +48,7 @@ GIT_BEGIN_DECL
  * @param offset timezone offset in minutes for the time
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_signature_new(const git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset);
+GIT_EXTERN(int) git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset);
 
 /**
  * Create a new action signature with a timestamp of 'now'. The

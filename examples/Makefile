@@ -1,15 +1,13 @@
 .PHONY: all
 
+CC = gcc
 CFLAGS = -g -I../include
-LFLAGS = -Ldirectory-containing-libgit
+LFLAGS = -L../build -lgit2 -lz
 
 all: general showindex
 
-general : general.c
-	gcc -o general $(CFLAGS) general.c $(LFLAGS) -lgit2 -lz
-
-showindex : showindex.c
-	gcc -o showindex $(CFLAGS) showindex.c $(LFLAGS) -lgit2 -lz
+% : %.c
+	$(CC) -o $@ $(CFLAGS) $< $(LFLAGS)
 
 clean:
-	rm general showindex
+	$(RM) general showindex
