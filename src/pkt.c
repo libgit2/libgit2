@@ -16,6 +16,7 @@
 #include "util.h"
 #include "netops.h"
 #include "posix.h"
+#include "buffer.h"
 
 #include <ctype.h>
 
@@ -261,18 +262,25 @@ void git_pkt_free(git_pkt *pkt)
 	free(pkt);
 }
 
-int git_pkt_send_flush(int s)
+int git_pkt_send_flush(int s, int chunked)
 {
 	char flush[] = "0000";
+	int error;
 
+	if (chunked) {
+		error = gitno_send_chunk_size(s, strlen(flush));
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send chunk size");
+	}
 	return gitno_send(s, flush, strlen(flush), 0);
 }
 
-static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, int fd)
+static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, int fd, int chunked)
 {
 	char capstr[20]; /* Longer than we need */
 	char oid[GIT_OID_HEXSZ +1] = {0}, *cmd;
 	int error, len;
+	git_buf buf = GIT_BUF_INIT;
 
 	if (caps->ofs_delta)
 		strcpy(capstr, GIT_CAP_OFS_DELTA);
@@ -283,9 +291,13 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
 		return GIT_ENOMEM;
 
 	git_oid_fmt(oid, &head->oid);
-	memset(cmd, 0x0, len + 1);
-	p_snprintf(cmd, len + 1, "%04xwant %s%c%s\n", len, oid, 0, capstr);
-	error = gitno_send(fd, cmd, len, 0);
+	git_buf_printf(&buf, "%04xwant %s%c%s\n", len, oid, 0, capstr);
+	if (chunked) {
+		error = gitno_send_chunk_size(fd, len);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send first want chunk size");
+	}
+	error = gitno_send(fd, git_buf_cstr(&buf), len, 0);
 	free(cmd);
 	return error;
 }
@@ -296,7 +308,7 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
  */
 #define WANT_PREFIX "0032want "
 
-int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
+int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd, int chunked)
 {
 	unsigned int i = 0;
 	int error = GIT_SUCCESS;
@@ -317,7 +329,7 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 				break;
 		}
 
-		error = send_want_with_caps(refs->heads[i], caps, fd);
+		error = send_want_with_caps(refs->heads[i], caps, fd, chunked);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to send want pkt with caps");
 		/* Increase it here so it's correct whether we run this or not */
@@ -331,13 +343,17 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 			continue;
 
 		git_oid_fmt(buf + strlen(WANT_PREFIX), &head->oid);
-		error = gitno_send(fd, buf, strlen(buf), 0);
-		if (error < 0) {
-			return git__rethrow(error, "Failed to send want pkt");
+		if (chunked) {
+			error = gitno_send_chunk_size(fd, strlen(buf));
+			if (error < GIT_SUCCESS)
+				return git__rethrow(error, "Failed to send want chunk size");
 		}
+		error = gitno_send(fd, buf, strlen(buf), 0);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send want pkt");
 	}
 
-	return git_pkt_send_flush(fd);
+	return git_pkt_send_flush(fd, chunked);
 }
 
 /*
@@ -346,17 +362,29 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
  */
 #define HAVE_PREFIX "0032have "
 
-int git_pkt_send_have(git_oid *oid, int fd)
+int git_pkt_send_have(git_oid *oid, int fd, int chunked)
 {
 	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
+	int error;
 
+	if (chunked) {
+		error = gitno_send_chunk_size(fd, strlen(buf));
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send chunk size");
+	}
 	git_oid_fmt(buf + strlen(HAVE_PREFIX), oid);
 	return gitno_send(fd, buf, strlen(buf), 0);
 }
 
-int git_pkt_send_done(int fd)
+int git_pkt_send_done(int fd, int chunked)
 {
 	char buf[] = "0009done\n";
+	int error;
 
+	if (chunked) {
+		error = gitno_send_chunk_size(fd, strlen(buf));
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send chunk size");
+	}
 	return gitno_send(fd, buf, strlen(buf), 0);
 }
