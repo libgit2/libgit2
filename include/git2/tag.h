@@ -45,7 +45,7 @@ GIT_BEGIN_DECL
  * @param tag pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id)
 {
@@ -62,7 +62,7 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
  * @param len the length of the short identifier
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_tag_lookup_prefix(git_tag **tag, git_repository *repo, const git_oid *id, unsigned int len)
 {
@@ -103,7 +103,7 @@ GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
  *
  * @param target pointer where to store the target
  * @param tag a previously loaded tag.
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *tag);
 
@@ -176,7 +176,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  *
  * @param force Overwrite existing references
  *
- * @return 0 on success; error code otherwise.
+ * @return GIT_SUCCESS or an error code
  *	A tag object is written to the ODB, and a proper reference
  *	is written in the /refs/tags folder, pointing to it
  */
@@ -227,7 +227,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  *
  * @param force Overwrite existing references
  *
- * @return 0 on success; error code otherwise.
+ * @return GIT_SUCCESS or an error code
  *	A proper reference is written in the /refs/tags folder,
  *  pointing to the provided target object
  */
@@ -246,7 +246,7 @@ GIT_EXTERN(int) git_tag_create_lightweight(
  * @param tag_name Name of the tag to be deleted;
  * this name is validated for consistency.
  *
- * @return 0 on success; error code otherwise.
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_tag_delete(
 		git_repository *repo,
@@ -263,7 +263,7 @@ GIT_EXTERN(int) git_tag_delete(
  * @param tag_names Pointer to a git_strarray structure where
  *		the tag names will be stored
  * @param repo Repository where to find the tags
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_tag_list(
 		git_strarray *tag_names,
@@ -285,7 +285,7 @@ GIT_EXTERN(int) git_tag_list(
  *		the tag names will be stored
  * @param pattern Standard fnmatch pattern
  * @param repo Repository where to find the tags
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_tag_list_match(
 		git_strarray *tag_names,

@@ -59,7 +59,7 @@ GIT_BEGIN_DECL
  *
  * @param repository pointer to the repo which will be opened
  * @param path the path to the repository
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
 
@@ -88,7 +88,7 @@ GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *pat
  *		Equivalent to $GIT_WORK_TREE.
  *		If NULL, the repository is assumed to be bare.
  *
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_repository_open2(git_repository **repository,
 		const char *git_dir,
@@ -123,7 +123,7 @@ GIT_EXTERN(int) git_repository_open2(git_repository **repository,
  *		Equivalent to $GIT_WORK_TREE.
  *		If NULL, the repository is assumed to be bare.
  *
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 
 GIT_EXTERN(int) git_repository_open3(git_repository **repository,
@@ -156,7 +156,7 @@ GIT_EXTERN(int) git_repository_open3(git_repository **repository,
  * lookup always performs on start_path no matter start_path appears in ceiling_dirs
  * ceiling_dirs might be NULL (which is equivalent to an empty string)
  *
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_repository_discover(char *repository_path, size_t size, const char *start_path, int across_fs, const char *ceiling_dirs);
 
@@ -184,7 +184,7 @@ GIT_EXTERN(git_odb *) git_repository_database(git_repository *repo);
  *
  * @param index Pointer where to store the index
  * @param repo a repository object
- * @return 0 on success; error code if the index could not be opened
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_repository_index(git_index **index, git_repository *repo);
 
@@ -214,7 +214,7 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  *		at the pointed path. If false, provided path will be considered as the working
  *		directory into which the .git directory will be created.
  *
- * @return 0 on success; error code otherwise
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 

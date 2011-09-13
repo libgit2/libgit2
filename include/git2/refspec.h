@@ -69,7 +69,7 @@ int git_refspec_src_match(const git_refspec *refspec, const char *refname);
  * @param outlen the size ouf the `out` buffer
  * @param spec the refspec
  * @param name the name of the reference to transform
- * @preturn GIT_SUCCESS, GIT_ESHORTBUFFER or another error
+ * @return GIT_SUCCESS, GIT_ESHORTBUFFER or another error
  */
 int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name);
 

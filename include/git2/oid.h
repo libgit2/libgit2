@@ -61,7 +61,7 @@ struct _git_oid {
  * @param str input hex string; must be pointing at the start of
  *        the hex sequence and have at least the number of bytes
  *        needed for an oid encoded in hex (40 bytes).
- * @return GIT_SUCCESS if valid; GIT_ENOTOID on failure.
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
 
@@ -74,7 +74,7 @@ GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
  * @param out oid structure the result is written into.
  * @param str input hex string of at least size `length`
  * @param length length of the input string
- * @return GIT_SUCCESS if valid; GIT_ENOTOID on failure.
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
 

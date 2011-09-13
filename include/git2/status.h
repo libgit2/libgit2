@@ -60,7 +60,7 @@ GIT_BEGIN_DECL
  *
  * @param repo a repository object
  * @param callback the function to call on each file
- * @return GIT_SUCCESS or the return value of the callback which did not return 0;
+ * @return GIT_SUCCESS or the return value of the callback which did not return GIT_SUCCESS
  */
 GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload);
 
@@ -70,7 +70,7 @@ GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const c
  * @param status_flags the status value
  * @param repo a repository object
  * @param path the file to retrieve status for, rooted at the repo's workdir
- * @return GIT_SUCCESS
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_status_file(unsigned int *status_flags, git_repository *repo, const char *path);
 
