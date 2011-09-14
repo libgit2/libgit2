@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>showindex.c</title>
+  <link rel="stylesheet" href="http://jashkenas.github.com/docco/resources/docco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.14.0">API Docs</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="showindex.html">showindex.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>showindex.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cp">#include &lt;git2.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+
+<span class="kt">int</span> <span class="nf">main</span> <span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span>
+  <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
+  <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">ecount</span><span class="p">;</span>
+  <span class="n">git_index_entry</span> <span class="o">**</span><span class="n">entries</span><span class="p">;</span>
+  <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
+
+  <span class="kt">char</span> <span class="n">out</span><span class="p">[</span><span class="mi">41</span><span class="p">];</span>
+  <span class="n">out</span><span class="p">[</span><span class="mi">40</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+
+  <span class="n"><a name="git_repository_open-6" href="../../#v0.14.0/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;/opt/libgit2-test/.git&quot;</span><span class="p">);</span>
+
+  <span class="n"><a name="git_repository_index-1" href="../../#v0.14.0/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_index_read-5" href="../../#v0.14.0/group/index/git_index_read">git_index_read</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+
+  <span class="n">ecount</span> <span class="o">=</span> <span class="n"><a name="git_index_entrycount-8" href="../../#v0.14.0/group/index/git_index_entrycount">git_index_entrycount</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">ecount</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">git_index_entry</span> <span class="o">*</span><span class="n">e</span> <span class="o">=</span> <span class="n"><a name="git_index_get-2" href="../../#v0.14.0/group/index/git_index_get">git_index_get</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+
+    <span class="n">oid</span> <span class="o">=</span> <span class="n">e</span><span class="o">-&gt;</span><span class="n">oid</span><span class="p">;</span>
+    <span class="n"><a name="git_oid_fmt-7" href="../../#v0.14.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;File Path: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="o">-&gt;</span><span class="n">path</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot; Blob SHA: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">out</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;File Size: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">file_size</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;   Device: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">dev</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;    Inode: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">ino</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;      UID: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">uid</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;      GID: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">gid</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;    ctime: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">ctime</span><span class="p">.</span><span class="n">seconds</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;    mtime: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">e</span><span class="o">-&gt;</span><span class="n">mtime</span><span class="p">.</span><span class="n">seconds</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_index_free-4" href="../../#v0.14.0/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+
+  <span class="n"><a name="git_repository_free-3" href="../../#v0.14.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>

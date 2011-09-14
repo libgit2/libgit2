@@ -1,0 +1,240 @@
+html {
+  height: 100%;
+}
+
+/* Remove Below */
+
+#header a.logo {
+  font-size: 35px;
+  font-weight: bold;
+  color: #014d65;
+  padding-top: 12px;
+}
+
+#header {
+  height:81px;
+}
+#main {
+  background-position-y: -10px
+}
+#search-field {
+  margin: 0px;
+}
+
+#versions li h3 {
+  padding: 10px;
+}
+
+h3 #version {
+  display: inline;
+  color: #743;
+}
+
+.category_index { float: left; margin: 0.25em; width:19em; }
+.category_index h2 { background: #ddd; text-align: center; padding: 0.25em; margin-bottom: 0.5em; }
+.category_index dt, .category_index dd { margin-right: 0.5em; }
+.category_index dt { margin-left: 0.5em !important; }
+.category_index dd { margin-left: 1.5em !important; }
+
+
+/*********************/
+/*      Sidebar      */
+/*********************/
+
+#guides .guide .sidebar h3 {
+  padding: 4px;
+  margin: .2em 0;
+}
+#guides .guide .sidebar h3:focus { outline: none; }
+
+.sidebar dl { padding: 0 0.5em 0.5em 0.5em; }
+.sidebar dt {
+  font-weight: bold;
+  margin-top: 0.5em;
+}
+
+.ui-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  background-position: -2px 2px;
+  background-repeat: no-repeat;
+}
+.ui-icon-triangle-expand { background-image: url(../images/expand.png); }
+.ui-icon-triangle-collapse { background-image: url(../images/collapse.png); }
+
+div.sidebar-shell {
+  margin: 0 0;
+}
+
+div.sidebar-module {
+  width: 232px;
+}
+.content {
+  width: 660px;
+}
+
+input.search {
+  font-size: 12px;
+  width: 200px;
+  padding: 5px 5px 5px 23px;
+  margin-bottom: 8px;
+  font-family: Helvetica,Arial,freesans,sans-serif;
+  border: 1px solid #DDD;
+  border-top-color: #CCC;
+  border-bottom-color: #EAEAEA;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  background: url(../images/search_icon.png) 5px 50% no-repeat white;
+}
+
+a small { 
+  font-size: 0.8em;
+  color: #aaa;
+}
+
+h2 small { 
+  font-size: 0.8em;
+  font-weight: normal;
+  color: #666;
+}
+
+table.methods {
+  width: 100%;
+}
+table.methods tr td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+}
+table.methods tr td.methodName a {
+  font-weight: bold;
+}
+
+table.funcTable tr td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #eee;
+}
+table.funcTable tr td.comment {
+  color: #999;
+}
+table.funcTable tr td.var {
+  font-weight: bold;
+  color: #833;
+}
+
+code.params {
+ white-space: pre-wrap;       /* css-3 */
+ white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+ white-space: -pre-wrap;      /* Opera 4-6 */
+ white-space: -o-pre-wrap;    /* Opera 7 */
+ word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+
+.example {
+  padding: 10px;
+  background: #efe;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #7a7;
+}
+.example h3 {
+  margin: 8px 0;
+  margin-top: 0;
+  color: #585;
+}
+
+.returns { margin-bottom: 15px; }
+
+h1.funcTitle {
+  font-size: 1.6em;
+}
+h3.funcDesc {
+  font-size: 1.0em;
+  font-weight: normal;
+  color: #686;
+  padding-bottom: 10px;
+  margin: 0;
+}
+
+h1.funcTitle small {
+  font-size: 0.8em;
+  font-weight: normal;
+  color: #888;
+  margin-left: 10px;
+}
+
+.also {
+  padding: 10px;
+  border-top: 1px solid #ddd;
+  background: #eee;
+}
+
+.sidebar-module ul ul li span.divide {
+  background: #eee;
+  cursor: default;
+}
+
+.fileLink {
+  padding: 10px;
+}
+
+.signatures {
+  padding: 10px;
+}
+
+.funcEx {
+  padding: 10px;
+}
+
+.signatures a {
+  background: #ddd;
+  padding: 4px;
+  margin: 0;
+  color: #000;
+}
+
+.signatures a.changed {
+  background: #ffd4aa;
+}
+
+.signatures a.current {
+  border-bottom: 3px solid #933;
+}
+
+.signatures h3 {
+  margin: 8px 0;
+  margin-top: 0;
+}
+
+h2.funcGroup {
+  border: 0;
+  margin: 5px 0;
+  margin-top: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+p.functionList {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+p.functionList a.changed {
+  background: #ffd4aa;
+}
+
+p.functionList a.introd {
+  background: #cec;
+}
+
+.changelog li.adds a {
+  color: #393;
+}
+.changelog li.changes a {
+  color: #993;
+}
+.changelog li.deletes {
+  color: #933;
+}
