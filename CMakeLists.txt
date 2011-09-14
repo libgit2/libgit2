@@ -43,9 +43,10 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
-OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (STDCALL "Buildl libgit2 with the __stdcall convention (Windows)" ON)
+OPTION (BUILD_TESTS "Build Tests" OFF)
+OPTION (BUILD_CLAY "Build Tests using the Clay suite" ON)
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -113,15 +114,31 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${INSTALL_LIB}/
 INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 
+SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
+ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
+
 # Tests
 IF (BUILD_TESTS)
-	SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
-    ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
-
     INCLUDE_DIRECTORIES(tests)
 	FILE(GLOB SRC_TEST tests/t??-*.c)
 
 	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB})
+	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
+	IF (WIN32)
+		TARGET_LINK_LIBRARIES(libgit2_test ws2_32)
+	ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+		TARGET_LINK_LIBRARIES(libgit2_test socket nsl)
+	ENDIF ()
+
+	ENABLE_TESTING()
+	ADD_TEST(libgit2_test libgit2_test)
+ENDIF ()
+
+IF (BUILD_CLAY)
+    INCLUDE_DIRECTORIES(tests-clay)
+	FILE(GLOB_RECURSE SRC_TEST tests-clay/*.c)
+
+	ADD_EXECUTABLE(libgit2_test ${SRC} ${SRC_TEST} ${SRC_ZLIB})
 	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
 	IF (WIN32)
 		TARGET_LINK_LIBRARIES(libgit2_test ws2_32)
