@@ -39,13 +39,14 @@
 
 #include "common.h"
 #include "netops.h"
+#include "posix.h"
 
 void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
 	buf->data = data;
-	buf->len = len - 1;
+	buf->len = len;
 	buf->offset = 0;
 	buf->fd = fd;
 }
@@ -102,6 +103,7 @@ int gitno_connect(const char *host, const char *port)
 	ret = getaddrinfo(host, port, &hints, &info);
 	if (ret != 0) {
 		error = GIT_EOSERR;
+		info = NULL;
 		goto cleanup;
 	}
 
@@ -139,12 +141,25 @@ int gitno_send(int s, const char *msg, size_t len, int flags)
 	while (off < len) {
 		ret = send(s, msg + off, len - off, flags);
 		if (ret < 0)
-			return GIT_EOSERR;
+			return git__throw(GIT_EOSERR, "Error sending data: %s", strerror(errno));
 
 		off += ret;
 	}
 
 	return off;
+}
+
+int gitno_send_chunk_size(int s, size_t len)
+{
+	char str[8] = {0};
+	int ret;
+
+	ret = p_snprintf(str, sizeof(str), "%zx", len);
+	if (ret >= (int) sizeof(str)) {
+		return git__throw(GIT_ESHORTBUFFER, "Your number is too fucking big");
+	}
+
+	return gitno_send(s, str, ret, 0 /* MSG_MORE */);
 }
 
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
@@ -160,4 +175,34 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 
 	/* The select(2) interface is silly */
 	return select(buf->fd + 1, &fds, NULL, NULL, &tv);
+}
+
+int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)
+{
+	char *colon, *slash, *delim;
+	int error = GIT_SUCCESS;
+
+	colon = strchr(url, ':');
+	slash = strchr(url, '/');
+
+	if (slash == NULL)
+			return git__throw(GIT_EOBJCORRUPTED, "Malformed URL: missing /");
+
+	if (colon == NULL) {
+		*port = git__strdup(default_port);
+	} else {
+		*port = git__strndup(colon + 1, slash - colon - 1);
+	}
+	if (*port == NULL)
+		return GIT_ENOMEM;;
+
+
+	delim = colon == NULL ? slash : colon;
+	*host = git__strndup(url, delim - url);
+	if (*host == NULL) {
+		free(*port);
+		error = GIT_ENOMEM;
+	}
+
+	return error;
 }

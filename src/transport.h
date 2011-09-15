@@ -101,6 +101,7 @@ struct git_transport {
 
 int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
+int git_transport_http(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
 
 #endif

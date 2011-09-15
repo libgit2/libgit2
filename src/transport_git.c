@@ -102,37 +102,6 @@ cleanup:
 	return error;
 }
 
-/* The URL should already have been stripped of the protocol */
-static int extract_host_and_port(char **host, char **port, const char *url)
-{
-	char *colon, *slash, *delim;
-	int error = GIT_SUCCESS;
-
-	colon = strchr(url, ':');
-	slash = strchr(url, '/');
-
-	if (slash == NULL)
-			return git__throw(GIT_EOBJCORRUPTED, "Malformed URL: missing /");
-
-	if (colon == NULL) {
-		*port = git__strdup(GIT_DEFAULT_PORT);
-	} else {
-		*port = git__strndup(colon + 1, slash - colon - 1);
-	}
-	if (*port == NULL)
-		return GIT_ENOMEM;;
-
-
-	delim = colon == NULL ? slash : colon;
-	*host = git__strndup(url, delim - url);
-	if (*host == NULL) {
-		free(*port);
-		error = GIT_ENOMEM;
-	}
-
-	return error;
-}
-
 /*
  * Parse the URL and connect to a server, storing the socket in
  * out. For convenience this also takes care of asking for the remote
@@ -148,9 +117,10 @@ static int do_connect(transport_git *t, const char *url)
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
 
-	error = extract_host_and_port(&host, &port, url);
+	error = gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT);
 	if (error < GIT_SUCCESS)
 		return error;
+
 	s = gitno_connect(host, port);
 	connected = 1;
 	error = send_request(s, NULL, url);
@@ -319,14 +289,14 @@ static int git_send_wants(git_transport *transport, git_headarray *array)
 {
 	transport_git *t = (transport_git *) transport;
 
-	return git_pkt_send_wants(array, &t->caps, t->socket);
+	return git_pkt_send_wants(array, &t->caps, t->socket, 0);
 }
 
 static int git_send_have(git_transport *transport, git_oid *oid)
 {
 	transport_git *t = (transport_git *) transport;
 
-	return git_pkt_send_have(oid, t->socket);
+	return git_pkt_send_have(oid, t->socket, 0);
 }
 
 static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *GIT_UNUSED(list))
@@ -383,12 +353,12 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	 */
 	i = 0;
 	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
-		error = git_pkt_send_have(&oid, t->socket);
+		error = git_pkt_send_have(&oid, t->socket, 1);
 		i++;
 		if (i % 20 == 0) {
 			const char *ptr = buf.data, *line_end;
 			git_pkt *pkt;
-			git_pkt_send_flush(t->socket);
+			git_pkt_send_flush(t->socket, 0);
 			while (1) {
 				/* Wait for max. 1 second */
 				error = gitno_select_in(&buf, 1, 0);
@@ -434,8 +404,8 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 		error = GIT_SUCCESS;
 
 done:
-	git_pkt_send_flush(t->socket);
-	git_pkt_send_done(t->socket);
+	git_pkt_send_flush(t->socket, 0);
+	git_pkt_send_done(t->socket, 0);
 
 cleanup:
 	git_revwalk_free(walk);
@@ -446,14 +416,14 @@ static int git_send_flush(git_transport *transport)
 {
 	transport_git *t = (transport_git *) transport;
 
-	return git_pkt_send_flush(t->socket);
+	return git_pkt_send_flush(t->socket, 1);
 }
 
 static int git_send_done(git_transport *transport)
 {
 	transport_git *t = (transport_git *) transport;
 
-	return git_pkt_send_done(t->socket);
+	return git_pkt_send_done(t->socket, 1);
 }
 
 static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
@@ -554,7 +524,7 @@ static int git_close(git_transport *transport)
 	int error;
 
 	/* Can't do anything if there's an error, so don't bother checking  */
-	git_pkt_send_flush(s);
+	git_pkt_send_flush(s, 0);
 	error = close(s);
 	if (error < 0)
 		error = git__throw(GIT_EOSERR, "Failed to close socket");
