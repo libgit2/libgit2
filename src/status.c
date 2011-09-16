@@ -521,7 +521,7 @@ static int recurse_tree_entry(git_tree *tree, struct status_entry *e, const char
 
 	/* Retreive subtree */
 	if ((error = git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid)) < GIT_SUCCESS)
-		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", &tree_entry->filename);
+		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", tree_entry->filename);
 
 	error = recurse_tree_entry(subtree, e, dir_sep+1);
 	git_tree_close(subtree);
