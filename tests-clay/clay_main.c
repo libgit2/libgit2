@@ -665,7 +665,7 @@ extern void test_core_path__1(void);
 extern void test_core_path__2(void);
 extern void test_core_path__5(void);
 extern void test_core_path__6(void);
-extern void test_core_rmdir__initialize();
+extern void test_core_rmdir__initialize(void);
 extern void test_core_rmdir__delete_recursive(void);
 extern void test_core_rmdir__fail_to_delete_non_empty_dir(void);
 extern void test_core_string__0(void);
@@ -674,10 +674,10 @@ extern void test_core_vector__0(void);
 extern void test_core_vector__1(void);
 extern void test_core_vector__2(void);
 extern void test_status_single__hash_single_file();
-extern void test_status_worktree__initialize();
+extern void test_status_worktree__initialize(void);
 extern void test_status_worktree__cleanup();
-extern void test_status_worktree__whole_repository();
-extern void test_status_worktree__empty_repository();
+extern void test_status_worktree__whole_repository(void);
+extern void test_status_worktree__empty_repository(void);
 
 static const struct clay_func _all_callbacks[] = {
     {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 0},
