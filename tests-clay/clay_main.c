@@ -23,19 +23,25 @@
 #ifdef _WIN32
 #	include <windows.h>
 #	include <io.h>
-#	include <Shellapi.h>
+#	include <shellapi.h>
+#	include <direct.h>
 #	pragma comment(lib, "shell32")
+
+#	define _CC __cdecl
 
 #	define stat(path, st) _stat(path, st)
 #	define mkdir(path, mode) _mkdir(path)
+#	define chdir(path) _chdir(path)
 #	define access(path, mode) _access(path, mode)
-#	define mktemp(path) _mktemp(path)
+#	define strdup(str) _strdup(str)
+#	define strncpy(to, from, to_size) strncpy_s(to, to_size, from, _TRUNCATE)
 
 #	define W_OK 02
-#	define S_ISDIR(x) (x & _S_IFDIR) != 0
+#	define S_ISDIR(x) ((x & _S_IFDIR) != 0)
 	typedef struct _stat STAT_T;
 #else
 #	include <unistd.h>
+#	define _CC
 	typedef struct stat STAT_T;
 #endif
 
@@ -373,12 +379,11 @@ find_tmp_path(char *buffer, size_t length)
 		"TMPDIR", "TMP", "TEMP", "USERPROFILE"
  	};
 
- 	size_t i;
-
 #ifdef _WIN32
 	if (GetTempPath((DWORD)length, buffer))
 		return 0;
-#endif
+#else
+ 	size_t i;
 
 	for (i = 0; i < var_count; ++i) {
 		const char *env = getenv(env_vars[i]);
@@ -396,6 +401,7 @@ find_tmp_path(char *buffer, size_t length)
 		strncpy(buffer, "/tmp", length);
 		return 0;
 	}
+#endif
 
 	/* This system doesn't like us, try to use the current directory */
 	if (is_valid_tmp_path(".")) {
@@ -442,10 +448,15 @@ static int build_sandbox_path(void)
 		_clay_path[len++] = '/';
 	}
 
-	strcpy(_clay_path + len, path_tail);
+	strncpy(_clay_path + len, path_tail, sizeof(_clay_path) - len);
 
+#ifdef _WIN32
+	if (_mktemp_s(_clay_path, sizeof(_clay_path)) != 0)
+		return -1;
+#else
 	if (mktemp(_clay_path) == NULL)
 		return -1;
+#endif
 
 	return 0;
 }
@@ -673,9 +684,9 @@ extern void test_core_string__1(void);
 extern void test_core_vector__0(void);
 extern void test_core_vector__1(void);
 extern void test_core_vector__2(void);
-extern void test_status_single__hash_single_file();
+extern void test_status_single__hash_single_file(void);
 extern void test_status_worktree__initialize(void);
-extern void test_status_worktree__cleanup();
+extern void test_status_worktree__cleanup(void);
 extern void test_status_worktree__whole_repository(void);
 extern void test_status_worktree__empty_repository(void);
 
@@ -758,7 +769,7 @@ static const struct clay_suite _all_suites[] = {
 
 static const char _suites_str[] = "core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::vector, status::single, status::worktree";
 
-int main(int argc, char *argv[])
+int _CC main(int argc, char *argv[])
 {
     return clay_test(
         argc, argv, _suites_str,

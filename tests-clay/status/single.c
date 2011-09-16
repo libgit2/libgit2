@@ -17,7 +17,7 @@ file_create(const char *filename, const char *content)
 }
 
 /* test retrieving OID from a file apart from the ODB */
-void test_status_single__hash_single_file()
+void test_status_single__hash_single_file(void)
 {
 	static const char file_name[] = "new_file";
 	static const char file_contents[] = "new_file\n";

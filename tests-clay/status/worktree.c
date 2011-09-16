@@ -86,7 +86,7 @@ void test_status_worktree__initialize(void)
  * This will be called once after each test finishes, even
  * if the test failed
  */
-void test_status_worktree__cleanup()
+void test_status_worktree__cleanup(void)
 {
 	git_repository_free(_repository);
 	_repository = NULL;
