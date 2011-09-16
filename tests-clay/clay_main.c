@@ -17,10 +17,35 @@
 #include <math.h>
 
 /* required for sandboxing */
+#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+#	include <windows.h>
+#	include <io.h>
+#	include <Shellapi.h>
+#	pragma comment(lib, "shell32")
+
+#	define stat(path, st) _stat(path, st)
+#	define mkdir(path, mode) _mkdir(path)
+#	define access(path, mode) _access(path, mode)
+#	define mktemp(path) _mktemp(path)
+
+#	define W_OK 02
+#	define S_ISDIR(x) (x & _S_IFDIR) != 0
+	typedef struct _stat STAT_T;
+#else
+#	include <unistd.h>
+	typedef struct stat STAT_T;
+#endif
 
 #include "clay.h"
+
+static void fs_rm(const char *_source);
+static void fs_copy(const char *_source, const char *dest);
+
+static const char *
+fixture_path(const char *base, const char *fixture_name);
 
 struct clay_error {
 	const char *test;
@@ -243,7 +268,7 @@ clay_test(
 {
 	clay_print("Loaded %d suites: %s\n", (int)suite_count, suites_str);
 
-	if (!clay_sandbox()) {
+	if (clay_sandbox() < 0) {
 		fprintf(stderr,
 			"Failed to sandbox the test runner.\n"
 			"Testing will proceed without sandboxing.\n");
@@ -310,7 +335,7 @@ clay__assert(
 	if (should_abort) {
 		if (!_clay.trampoline_enabled) {
 			fprintf(stderr,
-				"Unhandled exception: a cleanup method raised an exception.");
+				"Fatal error: a cleanup method raised an exception.");
 			exit(-1);
 		}
 
@@ -324,22 +349,20 @@ void cl_set_cleanup(void (*cleanup)(void *), void *opaque)
 	_clay.local_cleanup_payload = opaque;
 }
 
-#ifdef _WIN32
-#	define PLATFORM_SEP '\\'
-#else
-#	define PLATFORM_SEP '/'
-#endif
-
 static char _clay_path[4096];
 
 static int
 is_valid_tmp_path(const char *path)
 {
-	struct stat st;
-	return (lstat(path, &st) == 0 &&
-		(S_ISDIR(st.st_mode) ||
-		S_ISLNK(st.st_mode)) &&
-		access(path, W_OK) == 0);
+	STAT_T st;
+
+	if (stat(path, &st) != 0)
+		return 0;
+
+	if (!S_ISDIR(st.st_mode))
+		return 0;
+
+	return (access(path, W_OK) == 0);
 }
 
 static int
@@ -354,7 +377,7 @@ find_tmp_path(char *buffer, size_t length)
 
 #ifdef _WIN32
 	if (GetTempPath((DWORD)length, buffer))
-		return 1;
+		return 0;
 #endif
 
 	for (i = 0; i < var_count; ++i) {
@@ -364,37 +387,23 @@ find_tmp_path(char *buffer, size_t length)
 
 		if (is_valid_tmp_path(env)) {
 			strncpy(buffer, env, length);
-			return 1;
+			return 0;
 		}
 	}
 
 	/* If the environment doesn't say anything, try to use /tmp */
 	if (is_valid_tmp_path("/tmp")) {
 		strncpy(buffer, "/tmp", length);
-		return 1;
+		return 0;
 	}
 
 	/* This system doesn't like us, try to use the current directory */
 	if (is_valid_tmp_path(".")) {
 		strncpy(buffer, ".", length);
-		return 1;
+		return 0;
 	}
 
-	return 0;
-}
-
-static int clean_folder(const char *path)
-{
-	const char os_cmd[] =
-#ifdef _WIN32
-		"rd /s /q \"%s\"";
-#else
-		"rm -rf \"%s\"";
-#endif
-
-	char command[4096];
-	snprintf(command, sizeof(command), os_cmd, path);
-	return system(command);
+	return -1;
 }
 
 static void clay_unsandbox(void)
@@ -402,37 +411,245 @@ static void clay_unsandbox(void)
 	if (_clay_path[0] == '\0')
 		return;
 
-	clean_folder(_clay_path);
+#ifdef _WIN32
+	chdir("..");
+#endif
+
+	fs_rm(_clay_path);
 }
 
-static int clay_sandbox(void)
+static int build_sandbox_path(void)
 {
 	const char path_tail[] = "clay_tmp_XXXXXX";
 	size_t len;
 
-	if (!find_tmp_path(_clay_path, sizeof(_clay_path)))
-		return 0;
+	if (find_tmp_path(_clay_path, sizeof(_clay_path)) < 0)
+		return -1;
 
 	len = strlen(_clay_path);
 
-	if (_clay_path[len - 1] != PLATFORM_SEP) {
-		_clay_path[len++] = PLATFORM_SEP;
+#ifdef _WIN32
+	{ /* normalize path to POSIX forward slashes */
+		size_t i;
+		for (i = 0; i < len; ++i) {
+			if (_clay_path[i] == '\\')
+				_clay_path[i] = '/';
+		}
+	}
+#endif
+
+	if (_clay_path[len - 1] != '/') {
+		_clay_path[len++] = '/';
 	}
 
 	strcpy(_clay_path + len, path_tail);
 
 	if (mktemp(_clay_path) == NULL)
-		return 0;
+		return -1;
 
-	if (mkdir(_clay_path, 0700) != 0)
-		return 0;
-
-	if (chdir(_clay_path) != 0)
-		return 0;
-
-	return 1;
+	return 0;
 }
 
+static int clay_sandbox(void)
+{
+	if (_clay_path[0] == '\0' && build_sandbox_path() < 0)
+		return -1;
+
+	if (mkdir(_clay_path, 0700) != 0)
+		return -1;
+
+	if (chdir(_clay_path) != 0)
+		return -1;
+
+	return 0;
+}
+
+
+static const char *
+fixture_path(const char *base, const char *fixture_name)
+{
+	static char _path[4096];
+	size_t root_len;
+
+	root_len = strlen(base);
+	strncpy(_path, base, sizeof(_path));
+
+	if (_path[root_len - 1] != '/')
+		_path[root_len++] = '/';
+
+	if (fixture_name[0] == '/')
+		fixture_name++;
+
+	strncpy(_path + root_len,
+		fixture_name,
+		sizeof(_path) - root_len);
+
+	return _path;
+}
+
+#ifdef CLAY_FIXTURE_PATH
+const char *cl_fixture(const char *fixture_name)
+{
+	return fixture_path(CLAY_FIXTURE_PATH, fixture_name);
+}
+
+void cl_fixture_sandbox(const char *fixture_name)
+{
+	fs_copy(cl_fixture(fixture_name), _clay_path);
+}
+
+void cl_fixture_cleanup(const char *fixture_name)
+{
+	fs_rm(fixture_path(_clay_path, fixture_name));
+}
+#endif
+
+#ifdef _WIN32
+
+#define FOF_FLAGS (FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR)
+
+static char *
+fileops_path(const char *_path)
+{
+	char *path = NULL;
+	size_t length, i;
+
+	if (_path == NULL)
+		return NULL;
+
+	length = strlen(_path);
+	path = malloc(length + 2);
+
+	if (path == NULL)
+		return NULL;
+
+	memcpy(path, _path, length);
+	path[length] = 0;
+	path[length + 1] = 0;
+
+	for (i = 0; i < length; ++i) {
+		if (path[i] == '/')
+			path[i] = '\\';
+	}
+
+	return path;
+}
+
+static void
+fileops(int mode, const char *_source, const char *_dest)
+{
+	SHFILEOPSTRUCT fops;
+
+	char *source = fileops_path(_source);
+	char *dest = fileops_path(_dest);
+
+	ZeroMemory(&fops, sizeof(SHFILEOPSTRUCT));
+
+	fops.wFunc = mode;
+	fops.pFrom = source;
+	fops.pTo = dest;
+	fops.fFlags = FOF_FLAGS;
+
+	cl_assert_(
+		SHFileOperation(&fops) == 0,
+		"Windows SHFileOperation failed"
+	);
+
+	free(source);
+	free(dest);
+}
+
+static void
+fs_rm(const char *_source)
+{
+	fileops(FO_DELETE, _source, NULL);
+}
+
+static void
+fs_copy(const char *_source, const char *_dest)
+{
+	fileops(FO_COPY, _source, _dest);
+}
+
+void
+cl_fs_cleanup(void)
+{
+	fs_rm(fixture_path(_clay_path, "*"));
+}
+
+#else
+static int
+shell_out(char * const argv[])
+{
+	int status;
+	pid_t pid;
+
+	pid = fork();
+
+	if (pid < 0) {
+		fprintf(stderr,
+			"System error: `fork()` call failed.\n");
+		exit(-1);
+	}
+
+	if (pid == 0) {
+		execv(argv[0], argv);
+	}
+
+	waitpid(pid, &status, 0);
+	return WEXITSTATUS(status);
+}
+
+static void
+fs_copy(const char *_source, const char *dest)
+{
+	char *argv[5];
+	char *source;
+	size_t source_len;
+
+	source = strdup(_source);
+	source_len = strlen(source);
+
+	if (source[source_len - 1] == '/')
+		source[source_len - 1] = 0;
+
+	argv[0] = "/bin/cp";
+	argv[1] = "-R";
+	argv[2] = source;
+	argv[3] = (char *)dest;
+	argv[4] = NULL;
+
+	cl_must_pass_(
+		shell_out(argv),
+		"Failed to copy test fixtures to sandbox"
+	);
+
+	free(source);
+}
+
+static void
+fs_rm(const char *source)
+{
+	char *argv[4];
+
+	argv[0] = "/bin/rm";
+	argv[1] = "-Rf";
+	argv[2] = (char *)source;
+	argv[3] = NULL;
+
+	cl_must_pass_(
+		shell_out(argv),
+		"Failed to cleanup the sandbox"
+	);
+}
+
+void
+cl_fs_cleanup(void)
+{
+	clay_unsandbox();
+	clay_sandbox();
+}
+#endif
 
 
 extern void test_core_dirent__dont_traverse_dot(void);
@@ -456,6 +673,11 @@ extern void test_core_string__1(void);
 extern void test_core_vector__0(void);
 extern void test_core_vector__1(void);
 extern void test_core_vector__2(void);
+extern void test_status_single__hash_single_file();
+extern void test_status_worktree__initialize();
+extern void test_status_worktree__cleanup();
+extern void test_status_worktree__whole_repository();
+extern void test_status_worktree__empty_repository();
 
 static const struct clay_func _all_callbacks[] = {
     {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 0},
@@ -477,7 +699,10 @@ static const struct clay_func _all_callbacks[] = {
 	{"1", &test_core_string__1, 4},
 	{"0", &test_core_vector__0, 5},
 	{"1", &test_core_vector__1, 5},
-	{"2", &test_core_vector__2, 5}
+	{"2", &test_core_vector__2, 5},
+	{"hash_single_file", &test_status_single__hash_single_file, 6},
+	{"whole_repository", &test_status_worktree__whole_repository, 7},
+	{"empty_repository", &test_status_worktree__empty_repository, 7}
 };
 
 static const struct clay_suite _all_suites[] = {
@@ -516,16 +741,28 @@ static const struct clay_suite _all_suites[] = {
         {NULL, NULL, 0},
         {NULL, NULL, 0},
         &_all_callbacks[17], 3
+    },
+	{
+        "status::single",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[20], 1
+    },
+	{
+        "status::worktree",
+        {"initialize", &test_status_worktree__initialize, 7},
+        {"cleanup", &test_status_worktree__cleanup, 7},
+        &_all_callbacks[21], 2
     }
 };
 
-static const char _suites_str[] = "core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::vector";
+static const char _suites_str[] = "core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::vector, status::single, status::worktree";
 
 int main(int argc, char *argv[])
 {
     return clay_test(
         argc, argv, _suites_str,
-        _all_callbacks, 20,
-        _all_suites, 6
+        _all_callbacks, 23,
+        _all_suites, 8
     );
 }

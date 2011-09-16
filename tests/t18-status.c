@@ -48,20 +48,6 @@ static int file_create(const char *filename, const char *content)
 	return GIT_SUCCESS;
 }
 
-BEGIN_TEST(file0, "test retrieving OID from a file apart from the ODB")
-	git_oid expected_id, actual_id;
-	char filename[] = "new_file";
-
-	must_pass(file_create(filename, "new_file\n\0"));
-
-	must_pass(git_odb_hashfile(&actual_id, filename, GIT_OBJ_BLOB));
-
-	must_pass(git_oid_fromstr(&expected_id, test_blob_oid));
-	must_be_true(git_oid_cmp(&expected_id, &actual_id) == 0);
-
-	must_pass(p_unlink(filename));
-END_TEST
-
 static const char *entry_paths0[] = {
 	"file_deleted",
 	"modified_file",
@@ -99,15 +85,6 @@ static const unsigned int entry_statuses0[] = {
 };
 
 #define ENTRY_COUNT0 14
-
-struct status_entry_counts {
-	int wrong_status_flags_count;
-	int wrong_sorted_path;
-	int entry_count;
-	const unsigned int* expected_statuses;
-	const char** expected_paths;
-	int expected_entry_count;
-};
 
 static int status_cb(const char *path, unsigned int status_flags, void *payload)
 {
@@ -153,18 +130,6 @@ BEGIN_TEST(statuscb0, "test retrieving status for worktree of repository")
 
 	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
 END_TEST
-
-static int status_cb1(const char *path, unsigned int status_flags, void *payload)
-{
-	int *count = (int *)payload;;
-
-	GIT_UNUSED_ARG(path);
-	GIT_UNUSED_ARG(status_flags);
-
-	*count++;
-
-	return GIT_SUCCESS;
-}
 
 BEGIN_TEST(statuscb1, "test retrieving status for a worktree of an empty repository")
 	git_repository *repo;
