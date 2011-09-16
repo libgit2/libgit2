@@ -3,7 +3,7 @@
 
 static const char *empty_tmp_dir = "test_gitfo_rmdir_recurs_test";
 
-void test_core_rmdir__initialize()
+void test_core_rmdir__initialize(void)
 {
 	char path[GIT_PATH_MAX];
 

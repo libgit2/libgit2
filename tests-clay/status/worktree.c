@@ -40,8 +40,8 @@ cb_status__count(const char *GIT_UNUSED(p), unsigned int GIT_UNUSED(s), void *pa
 {
 	volatile int *count = (int *)payload;
 
-	GIT_UNUSED_ARG(path);
-	GIT_UNUSED_ARG(status_flags);
+	GIT_UNUSED_ARG(p);
+	GIT_UNUSED_ARG(s);
 
 	*count++;
 
@@ -56,7 +56,7 @@ cb_status__count(const char *GIT_UNUSED(p), unsigned int GIT_UNUSED(s), void *pa
  * This method is called once before starting each
  * test, and will load the required fixtures
  */
-void test_status_worktree__initialize()
+void test_status_worktree__initialize(void)
 {
 	/*
 	 * Sandbox the `status/` repository from our Fixtures.
@@ -97,7 +97,7 @@ void test_status_worktree__cleanup()
 /**
  * Tests - Status determination on a working tree
  */
-void test_status_worktree__whole_repository()
+void test_status_worktree__whole_repository(void)
 {
 	struct status_entry_counts counts;
 
@@ -113,7 +113,7 @@ void test_status_worktree__whole_repository()
 	cl_assert(counts.wrong_sorted_path == 0);
 }
 
-void test_status_worktree__empty_repository()
+void test_status_worktree__empty_repository(void)
 {
 	int count = 0;
 
