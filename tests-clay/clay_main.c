@@ -684,6 +684,12 @@ extern void test_core_string__1(void);
 extern void test_core_vector__0(void);
 extern void test_core_vector__1(void);
 extern void test_core_vector__2(void);
+extern void test_network_remotes__initialize(void);
+extern void test_network_remotes__cleanup(void);
+extern void test_network_remotes__parsing(void);
+extern void test_network_remotes__refspec_parsing(void);
+extern void test_network_remotes__fnmatch(void);
+extern void test_network_remotes__transform(void);
 extern void test_status_single__hash_single_file(void);
 extern void test_status_worktree__initialize(void);
 extern void test_status_worktree__cleanup(void);
@@ -711,9 +717,13 @@ static const struct clay_func _all_callbacks[] = {
 	{"0", &test_core_vector__0, 5},
 	{"1", &test_core_vector__1, 5},
 	{"2", &test_core_vector__2, 5},
-	{"hash_single_file", &test_status_single__hash_single_file, 6},
-	{"whole_repository", &test_status_worktree__whole_repository, 7},
-	{"empty_repository", &test_status_worktree__empty_repository, 7}
+	{"parsing", &test_network_remotes__parsing, 6},
+	{"refspec_parsing", &test_network_remotes__refspec_parsing, 6},
+	{"fnmatch", &test_network_remotes__fnmatch, 6},
+	{"transform", &test_network_remotes__transform, 6},
+	{"hash_single_file", &test_status_single__hash_single_file, 7},
+	{"whole_repository", &test_status_worktree__whole_repository, 8},
+	{"empty_repository", &test_status_worktree__empty_repository, 8}
 };
 
 static const struct clay_suite _all_suites[] = {
@@ -754,26 +764,32 @@ static const struct clay_suite _all_suites[] = {
         &_all_callbacks[17], 3
     },
 	{
+        "network::remotes",
+        {"initialize", &test_network_remotes__initialize, 6},
+        {"cleanup", &test_network_remotes__cleanup, 6},
+        &_all_callbacks[20], 4
+    },
+	{
         "status::single",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[20], 1
+        &_all_callbacks[24], 1
     },
 	{
         "status::worktree",
-        {"initialize", &test_status_worktree__initialize, 7},
-        {"cleanup", &test_status_worktree__cleanup, 7},
-        &_all_callbacks[21], 2
+        {"initialize", &test_status_worktree__initialize, 8},
+        {"cleanup", &test_status_worktree__cleanup, 8},
+        &_all_callbacks[25], 2
     }
 };
 
-static const char _suites_str[] = "core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::vector, status::single, status::worktree";
+static const char _suites_str[] = "core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::vector, network::remotes, status::single, status::worktree";
 
 int _CC main(int argc, char *argv[])
 {
     return clay_test(
         argc, argv, _suites_str,
-        _all_callbacks, 23,
-        _all_suites, 8
+        _all_callbacks, 27,
+        _all_suites, 9
     );
 }
