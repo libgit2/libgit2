@@ -411,7 +411,8 @@ static int dirent_cb(void *state, char *a)
 		pa = ((cmpma >= 0) && (cmpai <= 0)) ? a_name : NULL;
 		pi = ((cmpmi >= 0) && (cmpai >= 0)) ? i_name : NULL;
 
-		error = determine_status(st, pm != NULL, pi != NULL, pa != NULL, m, entry, a, status_path(pm, pi, pa), path_type);
+		if((error = determine_status(st, pm != NULL, pi != NULL, pa != NULL, m, entry, a, status_path(pm, pi, pa), path_type)) < GIT_SUCCESS)
+			return git__rethrow(error, "An error occured while determining the status of '%s'", a);
 
 		if (pa != NULL)
 			return GIT_SUCCESS;
