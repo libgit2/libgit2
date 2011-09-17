@@ -113,7 +113,7 @@ static int status_cb(const char *path, unsigned int status_flags, void *payload)
 {
 	struct status_entry_counts *counts = (struct status_entry_counts *)payload;
 
-	if (counts->entry_count > counts->expected_entry_count) {
+	if (counts->entry_count >= counts->expected_entry_count) {
 		counts->wrong_status_flags_count++;
 		goto exit;
 	}
