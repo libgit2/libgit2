@@ -67,14 +67,6 @@ struct git_transport {
 	 */
 	int (*push)(struct git_transport *transport);
 	/**
-	 * Send the list of 'want' refs
-	 */
-	int (*send_wants)(struct git_transport *transport, git_headarray *list);
-	/**
-	 * Send the list of 'have' refs
-	 */
-	int (*send_have)(struct git_transport *transport, git_oid *oid);
-	/**
 	 * Send a 'done' message
 	 */
 	int (*send_done)(struct git_transport *transport);

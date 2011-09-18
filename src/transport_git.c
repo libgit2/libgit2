@@ -265,21 +265,7 @@ static int git_ls(git_transport *transport, git_headarray *array)
 	return GIT_SUCCESS;
 }
 
-static int git_send_wants(git_transport *transport, git_headarray *array)
-{
-	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_wants(array, &t->caps, t->socket, 0);
-}
-
-static int git_send_have(git_transport *transport, git_oid *oid)
-{
-	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_have(oid, t->socket, 0);
-}
-
-static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *GIT_UNUSED(list))
+static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
 {
 	transport_git *t = (transport_git *) transport;
 	git_revwalk *walk;
@@ -290,7 +276,10 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	unsigned int i;
 	char buff[128];
 	gitno_buffer buf;
-	GIT_UNUSED_ARG(list);
+
+	error = git_pkt_send_wants(wants, &t->caps, t->socket, 0);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to send wants list");
 
 	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
 
@@ -548,8 +537,6 @@ int git_transport_git(git_transport **out)
 
 	t->parent.connect = git_connect;
 	t->parent.ls = git_ls;
-	t->parent.send_wants = git_send_wants;
-	t->parent.send_have = git_send_have;
 	t->parent.negotiate_fetch = git_negotiate_fetch;
 	t->parent.send_flush = git_send_flush;
 	t->parent.send_done = git_send_done;
