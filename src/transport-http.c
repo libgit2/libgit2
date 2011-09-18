@@ -341,52 +341,22 @@ static int http_ls(git_transport *transport, git_headarray *array)
 	return GIT_SUCCESS;
 }
 
-static int http_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
+static int setup_walk(git_revwalk **out, git_repository *repo)
 {
-	transport_http *t = (transport_http *) transport;
-	GIT_UNUSED_ARG(list);
-	int error;
-	unsigned int i;
-	char buff[128];
-	gitno_buffer buf;
-	git_strarray refs;
 	git_revwalk *walk;
+	git_strarray refs;
+	unsigned int i;
 	git_reference *ref;
-	git_oid oid;
-	const char *prefix = "http://", *url = t->parent.url;
-	git_buf request = GIT_BUF_INIT;
-
-	/* TODO: Store url in the transport */
-	if (!git__prefixcmp(url, prefix))
-		url += strlen(prefix);
-
-	error = do_connect(t, t->host, t->port);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Faile to connect to host");
-
-	error = gen_request(&request, url, t->host, "POST", "upload-pack");
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to generate request");
-
-	error =  gitno_send(t->socket, request.ptr, request.size, 0);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to send request");
-
-	error =  git_pkt_send_wants(wants, &t->caps, t->socket, 1);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to send wants");
-
-	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
+	int error;
 
 	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to list references");
 
 	error = git_revwalk_new(&walk, repo);
-	if (error < GIT_ERROR) {
-		error = git__rethrow(error, "Failed to list all references");
-		goto cleanup;
-	}
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to setup walk");
+
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
 	for (i = 0; i < refs.count; ++i) {
@@ -408,17 +378,65 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 			goto cleanup;
 		}
 	}
+
+	*out = walk;
+cleanup:
 	git_strarray_free(&refs);
 
-	i = 0;
-	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
-		error = git_pkt_send_have(&oid, t->socket, 1);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to send have");
-		i++;
-	}
+	return error;
+}
 
-cleanup:
+static int http_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
+{
+	transport_http *t = (transport_http *) transport;
+	GIT_UNUSED_ARG(list);
+	int error;
+	unsigned int i;
+	char buff[128];
+	gitno_buffer buf;
+	git_revwalk *walk;
+	git_oid oid;
+	const char *prefix = "http://", *url = t->parent.url;
+	git_buf request = GIT_BUF_INIT;
+	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
+
+	/* TODO: Store url in the transport */
+	if (!git__prefixcmp(url, prefix))
+		url += strlen(prefix);
+
+	error = setup_walk(&walk, repo);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to setup walk");
+
+	do {
+		error = do_connect(t, t->host, t->port);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to connect to host");
+
+		error = gen_request(&request, url, t->host, "POST", "upload-pack");
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to generate request");
+
+		error =  gitno_send(t->socket, request.ptr, request.size, 0);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send request");
+
+		error =  git_pkt_send_wants(wants, &t->caps, t->socket, 1);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to send wants");
+
+
+		i = 0;
+		while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+			error = git_pkt_send_have(&oid, t->socket, 1);
+			if (error < GIT_SUCCESS)
+				return git__rethrow(error, "Failed to send have");
+			i++;
+		}
+		if (error < GIT_SUCCESS || i >= 256)
+			break;
+	} while(1);
+
 	git_revwalk_free(walk);
 	return error;
 }
