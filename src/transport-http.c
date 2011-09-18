@@ -341,12 +341,20 @@ static int http_ls(git_transport *transport, git_headarray *array)
 	return GIT_SUCCESS;
 }
 
-static int http_send_wants(git_transport *transport, git_headarray *array)
+static int http_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
 {
 	transport_http *t = (transport_http *) transport;
+	GIT_UNUSED_ARG(list);
+	int error;
+	unsigned int i;
+	char buff[128];
+	gitno_buffer buf;
+	git_strarray refs;
+	git_revwalk *walk;
+	git_reference *ref;
+	git_oid oid;
 	const char *prefix = "http://", *url = t->parent.url;
 	git_buf request = GIT_BUF_INIT;
-	int error;
 
 	/* TODO: Store url in the transport */
 	if (!git__prefixcmp(url, prefix))
@@ -364,21 +372,9 @@ static int http_send_wants(git_transport *transport, git_headarray *array)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to send request");
 
-	return git_pkt_send_wants(array, &t->caps, t->socket, 1);
-}
-
-static int http_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *GIT_UNUSED(list))
-{
-	transport_http *t = (transport_http *) transport;
-	GIT_UNUSED_ARG(list);
-	int error;
-	unsigned int i;
-	char buff[128];
-	gitno_buffer buf;
-	git_strarray refs;
-	git_revwalk *walk;
-	git_reference *ref;
-	git_oid oid;
+	error =  git_pkt_send_wants(wants, &t->caps, t->socket, 1);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to send wants");
 
 	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
 
@@ -481,7 +477,6 @@ int git_transport_http(git_transport **out)
 
 	t->parent.connect = http_connect;
 	t->parent.ls = http_ls;
-	t->parent.send_wants = http_send_wants;
 	t->parent.negotiate_fetch = http_negotiate_fetch;
 	t->parent.close = http_close;
 	t->parent.free = http_free;
