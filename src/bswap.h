@@ -1,8 +1,8 @@
 /*
- * Let's make sure we always have a sane definition for ntohl()/htonl().
- * Some libraries define those as a function call, just to perform byte
- * shifting, bringing significant overhead to what should be a simple
- * operation.
+ * Copyright (C) 2009-2011 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 
 #include "common.h"

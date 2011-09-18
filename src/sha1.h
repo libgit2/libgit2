@@ -1,9 +1,8 @@
 /*
- * SHA1 routine optimized to do word accesses rather than byte accesses,
- * and to avoid unnecessary copies into the context array.
+ * Copyright (C) 2009-2011 the libgit2 contributors
  *
- * This was initially based on the Mozilla SHA1 implementation, although
- * none of the original Mozilla code remains.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 
 typedef struct {

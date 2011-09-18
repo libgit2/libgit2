@@ -1,10 +1,8 @@
 /*
- * SHA-1 implementation.
+ * Copyright (C) 2009-2011 the libgit2 contributors
  *
- * Copyright (C) 2005 Paul Mackerras <paulus@samba.org>
- *
- * This version assumes we are running on a big-endian machine.
- * It calls an external sha1_core() to process blocks of 64 bytes.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #include <stdio.h>
 #include <string.h>

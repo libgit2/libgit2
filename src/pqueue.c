@@ -1,24 +1,8 @@
 /*
- *	BORING COPYRIGHT NOTICE:
+ * Copyright (C) 2009-2011 the libgit2 contributors
  *
- *	This file is a heavily modified version of the priority queue found
- *	in the Apache project and the libpqueue library.
- *
- *		https://github.com/vy/libpqueue
- *
- *	These are the original authors:
- *
- *		Copyright 2010 Volkan Yazıcı <volkan.yazici@gmail.com>
- *		Copyright 2006-2010 The Apache Software Foundation
- *
- *  This file is licensed under the Apache 2.0 license, which
- *  supposedly makes it compatible with the GPLv2 that libgit2 uses.
- *
- *  Check the Apache license at:
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  So much licensing trouble for a binary heap. Oh well.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 
 #include "common.h"
