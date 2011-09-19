@@ -108,7 +108,8 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 			zs->avail_out = (uInt)file->buf_size;
 
 			result = deflate(zs, file->flush_mode);
-			assert(result != Z_STREAM_ERROR);
+			if (result == Z_STREAM_ERROR)
+				return git__throw(GIT_ERROR, "Failed to deflate input");
 
 			have = file->buf_size - (size_t)zs->avail_out;
 
