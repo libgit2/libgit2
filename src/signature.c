@@ -203,7 +203,7 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 	return GIT_SUCCESS;
 }
 
-int process_next_token(const char **buffer_out, char **storage,
+static int process_next_token(const char **buffer_out, char **storage,
 	const char *token_end, const char *right_boundary)
 {
 	int error = process_trimming(*buffer_out, storage, token_end, 0);
@@ -218,7 +218,7 @@ int process_next_token(const char **buffer_out, char **storage,
 	return GIT_SUCCESS;
 }
 
-const char *scan_for_previous_token(const char *buffer, const char *left_boundary)
+static const char *scan_for_previous_token(const char *buffer, const char *left_boundary)
 {
 	const char *start;
 
@@ -234,7 +234,7 @@ const char *scan_for_previous_token(const char *buffer, const char *left_boundar
 	return start;
 }
 
-int parse_time(git_time_t *time_out, const char *buffer)
+static int parse_time(git_time_t *time_out, const char *buffer)
 {
 	long time;
 	int error;

@@ -1548,7 +1548,7 @@ int git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*c
 	return git_futils_direach(refs_path, GIT_PATH_MAX, _dirent_loose_listall, &data);
 }
 
-int cb__reflist_add(const char *ref, void *data)
+static int cb__reflist_add(const char *ref, void *data)
 {
 	return git_vector_insert((git_vector *)data, git__strdup(ref));
 }

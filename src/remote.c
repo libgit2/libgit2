@@ -216,11 +216,6 @@ int git_remote_download(char **filename, git_remote *remote)
 	return git_fetch_download_pack(filename, remote);
 }
 
-git_headarray *git_remote_tips(git_remote *remote)
-{
-	return &remote->refs;
-}
-
 int git_remote_update_tips(struct git_remote *remote)
 {
 	int error = GIT_SUCCESS;

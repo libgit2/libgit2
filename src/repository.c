@@ -156,7 +156,7 @@ static int quickcheck_repository_dir(const char *repository_path)
 	return GIT_SUCCESS;
 }
 
-static git_repository *repository_alloc()
+static git_repository *repository_alloc(void)
 {
 	int error;
 
