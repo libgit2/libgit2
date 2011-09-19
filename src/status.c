@@ -606,7 +606,7 @@ static struct alphasorted_dirent_info *alphasorted_dirent_info_new(const char *p
 	return di;
 }
 
-int alphasorted_dirent_info_cmp(const void *a, const void *b)
+static int alphasorted_dirent_info_cmp(const void *a, const void *b)
 {
 	struct alphasorted_dirent_info *stra = (struct alphasorted_dirent_info *)a;
 	struct alphasorted_dirent_info *strb = (struct alphasorted_dirent_info *)b;
