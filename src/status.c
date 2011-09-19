@@ -393,7 +393,8 @@ static int dirent_cb(void *state, char *a)
 		pa = ((cmpma >= 0) && (cmpai <= 0)) ? a_name : NULL;
 		pi = ((cmpmi >= 0) && (cmpai >= 0)) ? i_name : NULL;
 
-		error = determine_status(st, pm != NULL, pi != NULL, pa != NULL, m, entry, a, status_path(pm, pi, pa), path_type);
+		if((error = determine_status(st, pm != NULL, pi != NULL, pa != NULL, m, entry, a, status_path(pm, pi, pa), path_type)) < GIT_SUCCESS)
+			return git__rethrow(error, "An error occured while determining the status of '%s'", a);
 
 		if (pa != NULL)
 			return GIT_SUCCESS;
@@ -503,7 +504,7 @@ static int recurse_tree_entry(git_tree *tree, struct status_entry *e, const char
 
 	/* Retreive subtree */
 	if ((error = git_tree_lookup(&subtree, tree->object.repo, &tree_entry->oid)) < GIT_SUCCESS)
-		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", &tree_entry->filename);
+		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", tree_entry->filename);
 
 	error = recurse_tree_entry(subtree, e, dir_sep+1);
 	git_tree_close(subtree);
