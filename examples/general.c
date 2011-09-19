@@ -38,7 +38,11 @@ int main (int argc, char** argv)
   //
   // [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
   git_repository *repo;
-  git_repository_open(&repo, "/opt/libgit2-test/.git");
+  if (argc > 1) {
+    git_repository_open(&repo, argv[1]);
+  } else {
+    git_repository_open(&repo, "/opt/libgit2-test/.git");
+  }
 
   // ### SHA-1 Value Conversions
 
@@ -52,7 +56,7 @@ int main (int argc, char** argv)
   git_oid_fromstr(&oid, hex);
 
   // Once we've converted the string into the oid value, we can get the raw value of the SHA.
-  printf("Raw 20 bytes: [%s]\n", (&oid)->id);
+  printf("Raw 20 bytes: [%.20s]\n", (&oid)->id);
 
   // Next we will convert the 20 byte raw SHA1 value to a human readable 40 char hex value.
   printf("\n*Raw to Hex*\n");
@@ -138,15 +142,14 @@ int main (int argc, char** argv)
   error = git_commit_lookup(&commit, repo, &oid);
 
   const git_signature *author, *cmtter;
-  const char *message, *message_short;
+  const char *message;
   time_t ctime;
   unsigned int parents, p;
 
   // Each of the properties of the commit object are accessible via methods, including commonly
-  // needed variations, such as `git_commit_time` which returns the author time and `_message_short`
-  // which gives you just the first line of the commit message.
+  // needed variations, such as `git_commit_time` which returns the author time and `_message`
+  // which gives you the commit message.
   message  = git_commit_message(commit);
-  message_short = git_commit_message_short(commit);
   author   = git_commit_author(commit);
   cmtter   = git_commit_committer(commit);
   ctime    = git_commit_time(commit);
@@ -187,9 +190,9 @@ int main (int argc, char** argv)
   // this to create a commit in order to specify who created it and when.  Default values for the name
   // and email should be found in the `user.name` and `user.email` configuration options.  See the `config`
   // section of this example file to see how to access config values.
-  author = git_signature_new("Scott Chacon", "schacon@gmail.com",
+  git_signature_new((git_signature **)&author, "Scott Chacon", "schacon@gmail.com",
       123456789, 60);
-  cmtter = git_signature_new("Scott A Chacon", "scott@github.com",
+  git_signature_new((git_signature **)&cmtter, "Scott A Chacon", "scott@github.com",
       987654321, 90);
 
   // Commit objects need a tree to point to and optionally one or more parents.  Here we're creating oid
@@ -207,6 +210,7 @@ int main (int argc, char** argv)
     NULL, /* do not update the HEAD */
     author,
     cmtter,
+    NULL, /* use default message encoding */
     "example commit",
     tree,
     1, parent);
@@ -294,7 +298,7 @@ int main (int argc, char** argv)
   // Note that this buffer may not be contain ASCII data for certain blobs (e.g. binary files):
   // do not consider the buffer a NULL-terminated string, and use the `git_blob_rawsize` attribute to
   // find out its exact size in bytes
-  printf("Blob Size: %d\n", git_blob_rawsize(blob)); // 8
+  printf("Blob Size: %ld\n", git_blob_rawsize(blob)); // 8
   git_blob_rawcontent(blob); // "content"
 
   // ### Revwalking
@@ -333,7 +337,7 @@ int main (int argc, char** argv)
   // be cached in memory
   while ((git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
     error = git_commit_lookup(&wcommit, repo, &oid);
-    cmsg  = git_commit_message_short(wcommit);
+    cmsg  = git_commit_message(wcommit);
     cauth = git_commit_author(wcommit);
     printf("%s (%s)\n", cmsg, cauth->email);
     git_commit_close(wcommit);
