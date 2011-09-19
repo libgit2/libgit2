@@ -201,89 +201,101 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj)
 	return tree_parse_buffer(tree, (char *)obj->raw.data, (char *)obj->raw.data + obj->raw.len);
 }
 
-static int write_index_entry(char *buffer, int mode, const char *path, size_t path_len, const git_oid *oid)
+static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsigned int start)
 {
-	int written;
-	written = sprintf(buffer, "%o %.*s%c", mode, (int)path_len, path, 0);
-	memcpy(buffer + written, &oid->id, GIT_OID_RAWSZ);
-	return written + GIT_OID_RAWSZ;
-}
+	git_treebuilder *bld = NULL;
+	unsigned int i, entries = git_index_entrycount(index);
+	int error;
+	size_t dirname_len = strlen(dirname);
 
-static int write_index(git_oid *oid, git_index *index, const char *base, int baselen, int entry_no, int maxentries)
-{
-	size_t size, offset;
-	char *buffer;
-	int nr, error;
-
-	/* Guess at some random initial size */
-	size = maxentries * 40;
-	buffer = git__malloc(size);
-	if (buffer == NULL)
+	error = git_treebuilder_create(&bld, NULL);
+	if (bld == NULL) {
 		return GIT_ENOMEM;
-
-	offset = 0;
-
-	for (nr = entry_no; nr < maxentries; ++nr) {
-		git_index_entry *entry = git_index_get(index, nr);
-
-		const char *pathname = entry->path, *filename, *dirname;
-		int pathlen = strlen(pathname), entrylen;
-
-		unsigned int write_mode;
-		git_oid subtree_oid;
-		git_oid *write_oid;
-
-		/* Did we hit the end of the directory? Return how many we wrote */
-		if (baselen >= pathlen || memcmp(base, pathname, baselen) != 0)
-			break;
-
-		/* Do we have _further_ subdirectories? */
-		filename = pathname + baselen;
-		dirname = strchr(filename, '/');
-
-		write_oid = &entry->oid;
-		write_mode = entry->mode;
-
-		if (dirname) {
-			int subdir_written;
-
-#if 0
-			if (entry->mode != S_IFDIR) {
-				free(buffer);
-				return GIT_EOBJCORRUPTED;
-			}
-#endif
-			subdir_written = write_index(&subtree_oid, index, pathname, dirname - pathname + 1, nr, maxentries);
-
-			if (subdir_written < GIT_SUCCESS) {
-				free(buffer);
-				return subdir_written;
-			}
-
-			nr = subdir_written - 1;
-
-			/* Now we need to write out the directory entry into this tree.. */
-			pathlen = dirname - pathname;
-			write_oid = &subtree_oid;
-			write_mode = S_IFDIR;
-		}
-
-		entrylen = pathlen - baselen;
-		if (offset + entrylen + 32 > size) {
-			size = alloc_nr(offset + entrylen + 32);
-			buffer = git__realloc(buffer, size);
-
-			if (buffer == NULL)
-				return GIT_ENOMEM;
-		}
-
-		offset += write_index_entry(buffer + offset, write_mode, filename, entrylen, write_oid);
 	}
 
-	error = git_odb_write(oid, index->repository->db, buffer, offset, GIT_OBJ_TREE);
-	free(buffer);
+	/*
+	 * This loop is unfortunate, but necessary. The index doesn't have
+	 * any directores, so we need to handle that manually, and we
+	 * need to keep track of the current position.
+	 */
+	for (i = start; i < entries; ++i) {
+		git_index_entry *entry = git_index_get(index, i);
+		char *filename, *next_slash;
 
-	return (error == GIT_SUCCESS) ? nr : git__rethrow(error, "Failed to write index");
+	/*
+	 * If we've left our (sub)tree, exit the loop and return. The
+	 * first check is an early out (and security for the
+	 * third). The second check is a simple prefix comparison. The
+	 * third check catches situations where there is a directory
+	 * win32/sys and a file win32mmap.c. Without it, the following
+	 * code believes there is a file win32/mmap.c
+	 */
+		if (strlen(entry->path) < dirname_len ||
+		    memcmp(entry->path, dirname, dirname_len) ||
+		    (dirname_len > 0 && entry->path[dirname_len] != '/')) {
+			break;
+		}
+
+		filename = entry->path + dirname_len;
+		if (*filename == '/')
+			filename++;
+		next_slash = strchr(filename, '/');
+		if (next_slash) {
+			git_oid sub_oid;
+			int written;
+			char *subdir, *last_comp;
+
+			subdir = git__strndup(entry->path, next_slash - entry->path);
+			if (subdir == NULL) {
+				error = GIT_ENOMEM;
+				goto cleanup;
+			}
+
+			/* Write out the subtree */
+			written = write_tree(&sub_oid, index, subdir, i);
+			if (written < 0) {
+				error = git__rethrow(written, "Failed to write subtree %s", subdir);
+			} else {
+				i = written - 1; /* -1 because of the loop increment */
+			}
+
+			/*
+			 * We need to figure out what we want toinsert
+			 * into this tree. If we're traversing
+			 * deps/zlib/, then we only want to write
+			 * 'zlib' into the tree.
+			 */
+			last_comp = strrchr(subdir, '/');
+			if (last_comp) {
+				last_comp++; /* Get rid of the '/' */
+			} else {
+				last_comp = subdir;
+			}
+			error = git_treebuilder_insert(NULL, bld, last_comp, &sub_oid, S_IFDIR);
+			free(subdir);
+			if (error < GIT_SUCCESS) {
+				error = git__rethrow(error, "Failed to insert dir");
+				goto cleanup;
+			}
+		} else {
+			error = git_treebuilder_insert(NULL, bld, filename, &entry->oid, entry->mode);
+			if (error < GIT_SUCCESS) {
+				error = git__rethrow(error, "Failed to insert file");
+			}
+		}
+	}
+
+	error = git_treebuilder_write(oid, index->repository, bld);
+	if (error < GIT_SUCCESS)
+		error = git__rethrow(error, "Failed to write tree to db");
+
+ cleanup:
+	git_treebuilder_free(bld);
+
+	if (error < GIT_SUCCESS)
+		return error;
+	else
+		return i;
 }
 
 int git_tree_create_fromindex(git_oid *oid, git_index *index)
@@ -293,7 +305,8 @@ int git_tree_create_fromindex(git_oid *oid, git_index *index)
 	if (index->repository == NULL)
 		return git__throw(GIT_EBAREINDEX, "Failed to create tree. The index file is not backed up by an existing repository");
 
-	error = write_index(oid, index, "", 0, 0, git_index_entrycount(index));
+	/* The tree cache didn't help us */
+	error = write_tree(oid, index, "", 0);
 	return (error < GIT_SUCCESS) ? git__rethrow(error, "Failed to create tree") : GIT_SUCCESS;
 }
 
