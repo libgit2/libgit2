@@ -11,7 +11,7 @@ void test_network_remotes__initialize(void)
 {
 	cl_fixture_sandbox(REPOSITORY_FOLDER);
 	cl_git_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	cl_git_pass(git_repository_config(&cfg, repo, NULL, NULL));
+	cl_git_pass(git_repository_config(&cfg, repo, NULL));
 	cl_git_pass(git_remote_get(&remote, cfg, "test"));
 	refspec = git_remote_fetchspec(remote);
 	cl_assert(refspec != NULL);
