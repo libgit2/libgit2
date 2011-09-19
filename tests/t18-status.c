@@ -113,7 +113,7 @@ static int status_cb(const char *path, unsigned int status_flags, void *payload)
 {
 	struct status_entry_counts *counts = (struct status_entry_counts *)payload;
 
-	if (counts->entry_count > counts->expected_entry_count) {
+	if (counts->entry_count >= counts->expected_entry_count) {
 		counts->wrong_status_flags_count++;
 		goto exit;
 	}
@@ -144,7 +144,7 @@ BEGIN_TEST(statuscb0, "test retrieving status for worktree of repository")
 	counts.expected_paths = entry_paths0;
 	counts.expected_statuses = entry_statuses0;
 
-	git_status_foreach(repo, status_cb, &counts);
+	must_pass(git_status_foreach(repo, status_cb, &counts));
 	must_be_true(counts.entry_count == counts.expected_entry_count);
 	must_be_true(counts.wrong_status_flags_count == 0);
 	must_be_true(counts.wrong_sorted_path == 0);
@@ -174,7 +174,7 @@ BEGIN_TEST(statuscb1, "test retrieving status for a worktree of an empty reposit
 	must_pass(remove_placeholders(TEST_STD_REPO_FOLDER, "dummy-marker.txt"));
 	must_pass(git_repository_open(&repo, TEST_STD_REPO_FOLDER));
 
-	git_status_foreach(repo, status_cb1, &count);
+	must_pass(git_status_foreach(repo, status_cb1, &count));
 	must_be_true(count == 0);
 
 	git_repository_free(repo);
@@ -242,7 +242,7 @@ BEGIN_TEST(statuscb2, "test retrieving status for a purged worktree of an valid 
 	counts.expected_paths = entry_paths2;
 	counts.expected_statuses = entry_statuses2;
 
-	git_status_foreach(repo, status_cb, &counts);
+	must_pass(git_status_foreach(repo, status_cb, &counts));
 	must_be_true(counts.entry_count == counts.expected_entry_count);
 	must_be_true(counts.wrong_status_flags_count == 0);
 	must_be_true(counts.wrong_sorted_path == 0);
@@ -325,7 +325,7 @@ BEGIN_TEST(statuscb3, "test retrieving status for a worktree where a file and a 
 	counts.expected_paths = entry_paths3;
 	counts.expected_statuses = entry_statuses3;
 
-	git_status_foreach(repo, status_cb, &counts);
+	must_pass(git_status_foreach(repo, status_cb, &counts));
 	must_be_true(counts.entry_count == counts.expected_entry_count);
 	must_be_true(counts.wrong_status_flags_count == 0);
 	must_be_true(counts.wrong_sorted_path == 0);
