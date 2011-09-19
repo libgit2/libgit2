@@ -214,26 +214,40 @@ BEGIN_TEST(config10, "a repo's config overrides the global config")
 	git_repository *repo;
 	git_config *cfg;
 	int version;
+	char *old_home;
+
+	old_home = git__strdup(getenv("HOME"));
+	setenv("HOME", CONFIG_BASE, 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo, CONFIG_BASE "/.gitconfig", NULL));
+	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &version));
 	must_be_true(version == 0);
 	git_config_free(cfg);
 	git_repository_free(repo);
+
+	setenv("HOME", old_home, 1);
+	free(old_home);
 END_TEST
 
 BEGIN_TEST(config11, "fall back to the global config")
 	git_repository *repo;
 	git_config *cfg;
 	int num;
+	char *old_home;
+
+	old_home = git__strdup(getenv("HOME"));
+	setenv("HOME", CONFIG_BASE, 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo, CONFIG_BASE "/.gitconfig", NULL));
+	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_config_get_int(cfg, "core.something", &num));
 	must_be_true(num == 2);
 	git_config_free(cfg);
 	git_repository_free(repo);
+
+	setenv("HOME", old_home, 1);
+	free(old_home);
 END_TEST
 
 BEGIN_TEST(config12, "delete a value")
