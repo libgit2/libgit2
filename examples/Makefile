@@ -1,10 +1,13 @@
+.PHONY: all
+
+CC = gcc
+CFLAGS = -g -I../include
+LFLAGS = -L../build -lgit2 -lz
+
 all: general showindex
 
-general : general.c
-		gcc -lgit2 -o general general.c
-
-showindex : showindex.c
-		gcc -lgit2 -o showindex showindex.c
+% : %.c
+	$(CC) -o $@ $(CFLAGS) $< $(LFLAGS)
 
 clean:
-		rm general showindex
+	$(RM) general showindex
