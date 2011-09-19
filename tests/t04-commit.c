@@ -498,9 +498,6 @@ BEGIN_TEST(signature4, "creating a zero character signature")
 END_TEST
 
 
-/* External declaration for testing the buffer parsing method */
-int commit_parse_buffer(git_commit *commit, void *data, size_t len);
-
 BEGIN_TEST(parse2, "parse a whole commit buffer")
 	const int broken_commit_count = sizeof(test_commits_broken) / sizeof(*test_commits_broken);
 	const int working_commit_count = sizeof(test_commits_working) / sizeof(*test_commits_working);
@@ -516,7 +513,7 @@ BEGIN_TEST(parse2, "parse a whole commit buffer")
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
 
-		must_fail(commit_parse_buffer(
+		must_fail(git_commit__parse_buffer(
 					commit,
 					test_commits_broken[i],
 					strlen(test_commits_broken[i]))
@@ -532,7 +529,7 @@ BEGIN_TEST(parse2, "parse a whole commit buffer")
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
 
-		must_pass(commit_parse_buffer(
+		must_pass(git_commit__parse_buffer(
 					commit,
 					test_commits_working[i],
 					strlen(test_commits_working[i]))
@@ -544,7 +541,7 @@ BEGIN_TEST(parse2, "parse a whole commit buffer")
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = repo;
 
-		must_pass(commit_parse_buffer(
+		must_pass(git_commit__parse_buffer(
 					commit,
 					test_commits_working[i],
 					strlen(test_commits_working[i]))

@@ -24,7 +24,7 @@ struct tree_key_search {
 	size_t filename_len;
 };
 
-int entry_search_cmp(const void *key, const void *array_member)
+static int entry_search_cmp(const void *key, const void *array_member)
 {
 	const struct tree_key_search *ksearch = key;
 	const git_tree_entry *entry = array_member;
@@ -37,7 +37,7 @@ int entry_search_cmp(const void *key, const void *array_member)
 	return result ? result : ((int)ksearch->filename_len - (int)entry->filename_len);
 }
 
-int entry_sort_cmp(const void *a, const void *b)
+static int entry_sort_cmp(const void *a, const void *b)
 {
 	const git_tree_entry *entry_a = (const git_tree_entry *)(a);
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
@@ -157,6 +157,7 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
+		long tmp;
 
 		entry = git__calloc(1, sizeof(git_tree_entry));
 		if (entry == NULL) {
@@ -167,8 +168,10 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		if (git_vector_insert(&tree->entries, entry) < GIT_SUCCESS)
 			return GIT_ENOMEM;
 
-		if (git__strtol32((long *)&entry->attr, buffer, &buffer, 8) < GIT_SUCCESS)
+		if (git__strtol32(&tmp, buffer, &buffer, 8) < GIT_SUCCESS ||
+			!buffer || tmp > UINT_MAX || tmp < 0)
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Can't parse attributes");
+		entry->attr = tmp;
 
 		if (*buffer++ != ' ') {
 			error = git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Object it corrupted");

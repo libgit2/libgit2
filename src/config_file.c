@@ -553,7 +553,7 @@ static char *cfg_readline(diskfile_backend *cfg)
 /*
  * Consume a line, without storing it anywhere
  */
-void cfg_consume_line(diskfile_backend *cfg)
+static void cfg_consume_line(diskfile_backend *cfg)
 {
 	char *line_start, *line_end;
 

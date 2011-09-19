@@ -30,4 +30,5 @@ struct git_commit {
 void git_commit__free(git_commit *c);
 int git_commit__parse(git_commit *commit, git_odb_object *obj);
 
+int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len);
 #endif

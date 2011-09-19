@@ -463,7 +463,7 @@ static int locate_object(char *object_location, loose_backend *backend, const gi
 }
 
 /* Explore an entry of a directory and see if it matches a short oid */
-int fn_locate_object_short_oid(void *state, char *pathbuf) {
+static int fn_locate_object_short_oid(void *state, char *pathbuf) {
 	loose_locate_object_state *sstate = (loose_locate_object_state *)state;
 
 	size_t pathbuf_len = strlen(pathbuf);
@@ -559,7 +559,7 @@ static int locate_object_short_oid(char *object_location, git_oid *res_oid, loos
  *
  ***********************************************************/
 
-int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
+static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	char object_path[GIT_PATH_MAX];
 	git_rawobj raw;
@@ -581,7 +581,7 @@ int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend
 	return GIT_SUCCESS;
 }
 
-int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
+static int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	char object_path[GIT_PATH_MAX];
 	git_rawobj raw;
@@ -602,7 +602,7 @@ int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_o
 	return GIT_SUCCESS;
 }
 
-int loose_backend__read_prefix(
+static int loose_backend__read_prefix(
 	git_oid *out_oid,
 	void **buffer_p,
 	size_t *len_p,
@@ -643,7 +643,7 @@ int loose_backend__read_prefix(
 	return GIT_SUCCESS;
 }
 
-int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
+static int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 {
 	char object_path[GIT_PATH_MAX];
 
@@ -652,7 +652,7 @@ int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	return locate_object(object_path, (loose_backend *)backend, oid) == GIT_SUCCESS;
 }
 
-int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
+static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 {
 	loose_writestream *stream = (loose_writestream *)_stream;
 	loose_backend *backend = (loose_backend *)_stream->backend;
@@ -673,13 +673,13 @@ int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 	return git_filebuf_commit_at(&stream->fbuf, final_path);
 }
 
-int loose_backend__stream_write(git_odb_stream *_stream, const char *data, size_t len)
+static int loose_backend__stream_write(git_odb_stream *_stream, const char *data, size_t len)
 {
 	loose_writestream *stream = (loose_writestream *)_stream;
 	return git_filebuf_write(&stream->fbuf, data, len);
 }
 
-void loose_backend__stream_free(git_odb_stream *_stream)
+static void loose_backend__stream_free(git_odb_stream *_stream)
 {
 	loose_writestream *stream = (loose_writestream *)_stream;
 
@@ -702,7 +702,7 @@ static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype o
 	return len+1;
 }
 
-int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, size_t length, git_otype type)
+static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, size_t length, git_otype type)
 {
 	loose_backend *backend;
 	loose_writestream *stream;
@@ -754,7 +754,7 @@ int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend
 	return GIT_SUCCESS;
 }
 
-int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const void *data, size_t len, git_otype type)
+static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const void *data, size_t len, git_otype type)
 {
 	int error, header_len;
 	char final_path[GIT_PATH_MAX], header[64];
@@ -797,7 +797,7 @@ cleanup:
 	return error;
 }
 
-void loose_backend__free(git_odb_backend *_backend)
+static void loose_backend__free(git_odb_backend *_backend)
 {
 	loose_backend *backend;
 	assert(_backend);

@@ -52,7 +52,7 @@ struct git_revwalk {
 	unsigned int sorting;
 };
 
-commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
+static commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
 {
 	commit_list *new_list = git__malloc(sizeof(commit_list));
 	new_list->item = item;
@@ -61,7 +61,7 @@ commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
 	return new_list;
 }
 
-void commit_list_free(commit_list **list_p)
+static void commit_list_free(commit_list **list_p)
 {
 	commit_list *list = *list_p;
 
@@ -74,7 +74,7 @@ void commit_list_free(commit_list **list_p)
 	*list_p = NULL;
 }
 
-commit_object *commit_list_pop(commit_list **stack)
+static commit_object *commit_list_pop(commit_list **stack)
 {
 	commit_list *top = *stack;
 	commit_object *item = top ? top->item : NULL;
