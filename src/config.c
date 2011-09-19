@@ -25,6 +25,9 @@ void git_config_free(git_config *cfg)
 	git_config_file *file;
 	file_internal *internal;
 
+	if (cfg == NULL)
+		return;
+
 	for(i = 0; i < cfg->files.length; ++i){
 		internal = git_vector_get(&cfg->files, i);
 		file = internal->file;
