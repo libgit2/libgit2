@@ -40,7 +40,7 @@
 #endif
 
 /** Declare a public function exported for application use. */
-#ifdef __GNUC__
+#if __GNUC__ >= 4
 # define GIT_EXTERN(type) extern \
 			  __attribute__((visibility("default"))) \
 			  type
@@ -51,7 +51,7 @@
 #endif
 
 /** Declare a public TLS symbol exported for application use. */
-#ifdef __GNUC__
+#if __GNUC__ >= 4
 # define GIT_EXTERN_TLS(type) extern \
 			      __attribute__((visibility("default"))) \
 			      GIT_TLS \
