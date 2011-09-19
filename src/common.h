@@ -37,7 +37,9 @@
 
 # define snprintf _snprintf
 
+#ifndef _SSIZE_T_DEFINED
 typedef SSIZE_T ssize_t;
+#endif
 
 #else
 # include <unistd.h>
