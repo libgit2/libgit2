@@ -26,6 +26,7 @@ static int init_filter(char *filter, size_t n, const char *dir)
 git__DIR *git__opendir(const char *dir)
 {
 	char filter[4096];
+	wchar_t* filter_w;
 	git__DIR *new;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
@@ -42,7 +43,10 @@ git__DIR *git__opendir(const char *dir)
 	}
 	strcpy(new->dir, dir);
 
-	new->h = FindFirstFile(filter, &new->f);
+	filter_w = conv_utf8_to_utf16(filter);
+	new->h = FindFirstFileW(filter_w, &new->f);
+	free(filter_w);
+
 	if (new->h == INVALID_HANDLE_VALUE) {
 		free(new->dir);
 		free(new);
@@ -61,15 +65,15 @@ struct git__dirent *git__readdir(git__DIR *d)
 	if (d->first)
 		d->first = 0;
 	else {
-		if (!FindNextFile(d->h, &d->f))
+		if (!FindNextFileW(d->h, &d->f))
 			return NULL;
 	}
 
-	if (strlen(d->f.cFileName) >= sizeof(d->entry.d_name))
+	if (wcslen(d->f.cFileName) >= sizeof(d->entry.d_name))
 		return NULL;
 
 	d->entry.d_ino = 0;
-	strcpy(d->entry.d_name, d->f.cFileName);
+	WideCharToMultiByte(CP_UTF8, 0, d->f.cFileName, -1, d->entry.d_name, GIT_PATH_MAX, NULL, NULL);
 
 	return &d->entry;
 }
@@ -77,14 +81,19 @@ struct git__dirent *git__readdir(git__DIR *d)
 void git__rewinddir(git__DIR *d)
 {
 	char filter[4096];
+	wchar_t* filter_w;
 
 	if (d) {
 		if (d->h != INVALID_HANDLE_VALUE)
 			FindClose(d->h);
 		d->h = INVALID_HANDLE_VALUE;
 		d->first = 0;
+
 		if (init_filter(filter, sizeof(filter), d->dir)) {
-			d->h = FindFirstFile(filter, &d->f);
+			filter_w = conv_utf8_to_utf16(filter);
+			d->h = FindFirstFileW(filter_w, &d->f);
+			free(filter_w);
+
 			if (d->h != INVALID_HANDLE_VALUE)
 				d->first = 1;
 		}
