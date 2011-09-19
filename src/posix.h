@@ -33,19 +33,26 @@ typedef int git_file;
  * Use your manpages to check the docs on these.
  * Straightforward 
  */
-extern int p_open(const char *path, int flags);
-extern int p_creat(const char *path, int mode);
+
 extern int p_read(git_file fd, void *buf, size_t cnt);
 extern int p_write(git_file fd, const void *buf, size_t cnt);
+
+#define p_fstat(f,b) fstat(f, b)
+#define p_lseek(f,n,w) lseek(f, n, w)
+#define p_close(fd) close(fd)
+
+extern int p_open(const char *path, int flags);
+extern int p_creat(const char *path, int mode);
 extern int p_getcwd(char *buffer_out, size_t size);
 
-#define p_lseek(f,n,w) lseek(f, n, w)
+#ifndef GIT_WIN32
+
 #define p_stat(p,b) stat(p, b)
-#define p_fstat(f,b) fstat(f, b)
 #define p_chdir(p) chdir(p)
 #define p_rmdir(p) rmdir(p)
 #define p_chmod(p,m) chmod(p, m)
-#define p_close(fd) close(fd)
+
+#endif
 
 /**
  * Platform-dependent methods
