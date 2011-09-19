@@ -110,7 +110,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 
 	error = git_config_get_string(cfg, buf, &val);
 	if (error < GIT_SUCCESS) {
-		error = git__rethrow(error,  "Remote's url doesn't exist");
+		error = git__rethrow(error, "Remote's url doesn't exist");
 		goto cleanup;
 	}
 

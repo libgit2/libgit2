@@ -41,8 +41,8 @@ struct _git_oid {
  *
  * @param out oid structure the result is written into.
  * @param str input hex string; must be pointing at the start of
- *        the hex sequence and have at least the number of bytes
- *        needed for an oid encoded in hex (40 bytes).
+ *		the hex sequence and have at least the number of bytes
+ *		needed for an oid encoded in hex (40 bytes).
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
@@ -72,10 +72,10 @@ GIT_EXTERN(void) git_oid_fromraw(git_oid *out, const unsigned char *raw);
  * Format a git_oid into a hex string.
  *
  * @param str output hex string; must be pointing at the start of
- *        the hex sequence and have at least the number of bytes
- *        needed for an oid encoded in hex (40 bytes).  Only the
- *        oid digits are written; a '\\0' terminator must be added
- *        by the caller if it is required.
+ *		the hex sequence and have at least the number of bytes
+ *		needed for an oid encoded in hex (40 bytes). Only the
+ *		oid digits are written; a '\\0' terminator must be added
+ *		by the caller if it is required.
  * @param oid oid structure to format.
  */
 GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
@@ -87,10 +87,10 @@ GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
  * hex digitis of the oid and "..." is the remaining 38 digits.
  *
  * @param str output hex string; must be pointing at the start of
- *        the hex sequence and have at least the number of bytes
- *        needed for an oid encoded in hex (41 bytes).  Only the
- *        oid digits are written; a '\\0' terminator must be added
- *        by the caller if it is required.
+ *		the hex sequence and have at least the number of bytes
+ *		needed for an oid encoded in hex (41 bytes). Only the
+ *		oid digits are written; a '\\0' terminator must be added
+ *		by the caller if it is required.
  * @param oid oid structure to format.
  */
 GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
@@ -99,8 +99,8 @@ GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
  * Format a git_oid into a newly allocated c-string.
  *
  * @param oid the oid structure to format
- * @return the c-string; NULL if memory is exhausted.  Caller must
- *         deallocate the string with free().
+ * @return the c-string; NULL if memory is exhausted. Caller must
+ *			deallocate the string with free().
  */
 GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
 
@@ -117,7 +117,7 @@ GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
  * @param n the size of the out buffer.
  * @param oid the oid structure to format.
  * @return the out buffer pointer, assuming no input parameter
- *         errors, otherwise a pointer to an empty string.
+ *			errors, otherwise a pointer to an empty string.
  */
 GIT_EXTERN(char *) git_oid_to_string(char *out, size_t n, const git_oid *oid);
 

@@ -13,7 +13,7 @@
 
 #define DEFAULT_WINDOW_SIZE \
 	(sizeof(void*) >= 8 \
-		?  1 * 1024 * 1024 * 1024 \
+		? 1 * 1024 * 1024 * 1024 \
 		: 32 * 1024 * 1024)
 
 #define DEFAULT_MAPPED_LIMIT \
@@ -165,7 +165,7 @@ static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, git_off_t siz
 	ctl.mapped += (size_t)len;
 
 	while(ctl.mapped_limit < ctl.mapped &&
-	      git_mwindow_close_lru(mwf) == GIT_SUCCESS) {}
+			git_mwindow_close_lru(mwf) == GIT_SUCCESS) {}
 
 	/* FIXME: Shouldn't we error out if there's an error in closing lru? */
 
@@ -193,7 +193,7 @@ cleanup:
  * enough space. Don't forget to add it to your list
  */
 unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor,
-                                git_off_t offset, int extra, unsigned int *left)
+								git_off_t offset, int extra, unsigned int *left)
 {
 	git_mwindow *w = *cursor;
 
@@ -241,7 +241,7 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	int error;
 
 	if (ctl.windowfiles.length == 0 &&
-	    (error = git_vector_init(&ctl.windowfiles, 8, NULL)) < GIT_SUCCESS)
+		(error = git_vector_init(&ctl.windowfiles, 8, NULL)) < GIT_SUCCESS)
 		return error;
 
 	return git_vector_insert(&ctl.windowfiles, mwf);

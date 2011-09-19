@@ -15,7 +15,7 @@ static signed char from_hex[] = {
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 00 */
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 10 */
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 20 */
- 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1, /* 30 */
+ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1, /* 30 */
 -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 40 */
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 50 */
 -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 60 */
@@ -43,7 +43,7 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 
 	for (p = 0; p < length; p += 2) {
 		int v = (from_hex[(unsigned char)str[p + 0]] << 4)
-		       | from_hex[(unsigned char)str[p + 1]];
+				| from_hex[(unsigned char)str[p + 1]];
 
 		if (v < 0)
 			return git__throw(GIT_ENOTOID, "Failed to generate sha1. Given string is not a valid sha1 hash");
@@ -104,7 +104,7 @@ char *git_oid_to_string(char *out, size_t n, const git_oid *oid)
 	if (!out || n == 0 || !oid)
 		return "";
 
-	n--;  /* allow room for terminating NUL */
+	n--; /* allow room for terminating NUL */
 
 	if (n > 0) {
 		git_oid_fmt(str, oid);

@@ -64,7 +64,7 @@ typedef enum {
 	GIT_EINVALIDREFNAME = -15,
 
 	/** The specified reference has its data corrupted */
-	GIT_EREFCORRUPTED  = -16,
+	GIT_EREFCORRUPTED = -16,
 
 	/** The specified symbolic reference is too deeply nested */
 	GIT_ETOONESTEDSYMREF = -17,
@@ -111,7 +111,7 @@ typedef enum {
 	/** The path pattern and string did not match */
 	GIT_ENOMATCH = -31,
 
-	/**  The buffer is too short to satisfy the request */
+	/** The buffer is too short to satisfy the request */
 	GIT_ESHORTBUFFER = -32,
 } git_error;
 

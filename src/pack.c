@@ -52,7 +52,7 @@ static void pack_index_free(struct git_pack_file *p)
 	}
 }
 
-static int pack_index_check(const char *path,  struct git_pack_file *p)
+static int pack_index_check(const char *path, struct git_pack_file *p)
 {
 	struct git_pack_idx_header *hdr;
 	uint32_t version, nr, i, *index;
@@ -108,7 +108,7 @@ static int pack_index_check(const char *path,  struct git_pack_file *p)
 	index = idx_map;
 
 	if (version > 1)
-		index += 2;  /* skip index header */
+		index += 2; /* skip index header */
 
 	for (i = 0; i < 256; i++) {
 		uint32_t n = ntohl(index[i]);
@@ -122,10 +122,10 @@ static int pack_index_check(const char *path,  struct git_pack_file *p)
 	if (version == 1) {
 		/*
 		 * Total size:
-		 *  - 256 index entries 4 bytes each
-		 *  - 24-byte entries * nr (20-byte sha1 + 4-byte offset)
-		 *  - 20-byte SHA1 of the packfile
-		 *  - 20-byte SHA1 file checksum
+		 * - 256 index entries 4 bytes each
+		 * - 24-byte entries * nr (20-byte sha1 + 4-byte offset)
+		 * - 20-byte SHA1 of the packfile
+		 * - 20-byte SHA1 file checksum
 		 */
 		if (idx_size != 4*256 + nr * 24 + 20 + 20) {
 			git_futils_mmap_free(&p->index_map);
@@ -134,13 +134,13 @@ static int pack_index_check(const char *path,  struct git_pack_file *p)
 	} else if (version == 2) {
 		/*
 		 * Minimum size:
-		 *  - 8 bytes of header
-		 *  - 256 index entries 4 bytes each
-		 *  - 20-byte sha1 entry * nr
-		 *  - 4-byte crc entry * nr
-		 *  - 4-byte offset entry * nr
-		 *  - 20-byte SHA1 of the packfile
-		 *  - 20-byte SHA1 file checksum
+		 * - 8 bytes of header
+		 * - 256 index entries 4 bytes each
+		 * - 20-byte sha1 entry * nr
+		 * - 4-byte crc entry * nr
+		 * - 4-byte offset entry * nr
+		 * - 20-byte SHA1 of the packfile
+		 * - 20-byte SHA1 file checksum
 		 * And after the 4-byte offset table might be a
 		 * variable sized table containing 8-byte entries
 		 * for offsets larger than 2^31.
@@ -245,8 +245,8 @@ int git_packfile_unpack_header(
 	unsigned long used;
 
 	/* pack_window_open() assures us we have [base, base + 20) available
-	 * as a range that we can look at at.  (Its actually the hash
-	 * size that is assured.)  With our object header encoding
+	 * as a range that we can look at at. (Its actually the hash
+	 * size that is assured.) With our object header encoding
 	 * the maximum deflated object size is 2^137, which is just
 	 * insane, so we know won't exceed what we have been given.
 	 */
@@ -435,8 +435,8 @@ off_t get_delta_base(
 
 	/* pack_window_open() assured us we have [base_info, base_info + 20)
 	 * as a range that we can look at without walking off the
-	 * end of the mapped window.  Its actually the hash size
-	 * that is assured.  An OFS_DELTA longer than the hash size
+	 * end of the mapped window. Its actually the hash size
+	 * that is assured. An OFS_DELTA longer than the hash size
 	 * is stupid, as then a REF_DELTA would be smaller to store.
 	 */
 	if (type == GIT_OBJ_OFS_DELTA) {
@@ -446,13 +446,13 @@ off_t get_delta_base(
 		while (c & 128) {
 			base_offset += 1;
 			if (!base_offset || MSB(base_offset, 7))
-				return 0;  /* overflow */
+				return 0; /* overflow */
 			c = base_info[used++];
 			base_offset = (base_offset << 7) + (c & 127);
 		}
 		base_offset = delta_obj_offset - base_offset;
 		if (base_offset <= 0 || base_offset >= delta_obj_offset)
-			return 0;  /* out of bound */
+			return 0; /* out of bound */
 		*curpos += used;
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
@@ -650,7 +650,7 @@ static off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n)
 			return off;
 		index += p->num_objects * 4 + (off & 0x7fffffff) * 8;
 		return (((uint64_t)ntohl(*((uint32_t *)(index + 0)))) << 32) |
-				   ntohl(*((uint32_t *)(index + 4)));
+					ntohl(*((uint32_t *)(index + 4)));
 	}
 }
 
@@ -703,7 +703,7 @@ static int pack_entry_find_offset(
 #endif
 
 	/* Use git.git lookup code */
-	pos =  sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
+	pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */

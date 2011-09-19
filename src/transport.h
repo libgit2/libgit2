@@ -15,7 +15,7 @@
 
 typedef struct git_transport_caps {
 	int common:1,
-	    ofs_delta:1;
+		ofs_delta:1;
 } git_transport_caps;
 
 /*

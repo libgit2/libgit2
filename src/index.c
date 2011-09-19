@@ -963,11 +963,11 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	ondisk->mtime.seconds = htonl((uint32_t)entry->mtime.seconds);
 	ondisk->ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
 	ondisk->mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
-	ondisk->dev  = htonl(entry->dev);
-	ondisk->ino  = htonl(entry->ino);
+	ondisk->dev = htonl(entry->dev);
+	ondisk->ino = htonl(entry->ino);
 	ondisk->mode = htonl(entry->mode);
-	ondisk->uid  = htonl(entry->uid);
-	ondisk->gid  = htonl(entry->gid);
+	ondisk->uid = htonl(entry->uid);
+	ondisk->gid = htonl(entry->gid);
 	ondisk->file_size = htonl((uint32_t)entry->file_size);
 
 	git_oid_cpy(&ondisk->oid, &entry->oid);

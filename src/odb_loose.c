@@ -18,9 +18,9 @@
 #include "git2/odb_backend.h"
 #include "git2/types.h"
 
-typedef struct {  /* object header data */
-	git_otype type;  /* object type */
-	size_t    size;  /* object size */
+typedef struct { /* object header data */
+	git_otype type; /* object type */
+	size_t	size; /* object size */
 } obj_hdr;
 
 typedef struct {
@@ -124,7 +124,7 @@ static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
 	if (used == 0)
 		return 0;
 	hdr->type = git_object_string2type(typename);
-	used++;  /* consume the space */
+	used++; /* consume the space */
 
 	/*
 	 * length follows immediately in decimal (without
@@ -164,19 +164,19 @@ static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
 static void init_stream(z_stream *s, void *out, size_t len)
 {
 	memset(s, 0, sizeof(*s));
-	s->next_out  = out;
+	s->next_out = out;
 	s->avail_out = (uInt)len;
 }
 
 static void set_stream_input(z_stream *s, void *in, size_t len)
 {
-	s->next_in  = in;
+	s->next_in = in;
 	s->avail_in = (uInt)len;
 }
 
 static void set_stream_output(z_stream *s, void *out, size_t len)
 {
-	s->next_out  = out;
+	s->next_out = out;
 	s->avail_out = (uInt)len;
 }
 
@@ -224,10 +224,10 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 
 	memset(&zs, 0x0, sizeof(zs));
 
-	zs.next_out  = out;
+	zs.next_out = out;
 	zs.avail_out = (uInt)outlen;
 
-	zs.next_in  = in;
+	zs.next_in = in;
 	zs.avail_in = (uInt)inlen;
 
 	if (inflateInit(&zs) < Z_OK)
@@ -314,7 +314,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_fbuffer *obj)
 	if (!buf)
 		return GIT_ENOMEM;
 
-	in  = ((unsigned char *)obj->data) + used;
+	in = ((unsigned char *)obj->data) + used;
 	len = obj->len - used;
 	if (inflate_buffer(in, len, buf, hdr.size)) {
 		free(buf);
@@ -323,7 +323,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_fbuffer *obj)
 	buf[hdr.size] = '\0';
 
 	out->data = buf;
-	out->len  = hdr.size;
+	out->len = hdr.size;
 	out->type = hdr.type;
 
 	return GIT_SUCCESS;
@@ -364,7 +364,7 @@ static int inflate_disk_obj(git_rawobj *out, git_fbuffer *obj)
 	buf[hdr.size] = '\0';
 
 	out->data = buf;
-	out->len  = hdr.size;
+	out->len = hdr.size;
 	out->type = hdr.type;
 
 	return GIT_SUCCESS;
@@ -392,7 +392,7 @@ static int read_loose(git_rawobj *out, const char *loc)
 	assert(out && loc);
 
 	out->data = NULL;
-	out->len  = 0;
+	out->len = 0;
 	out->type = GIT_OBJ_BAD;
 
 	if (git_futils_readbuffer(&obj, loc) < 0)
@@ -443,7 +443,7 @@ static int read_header_loose(git_rawobj *out, const char *loc)
 		goto cleanup;
 	}
 
-	out->len  = header_obj.size;
+	out->len = header_obj.size;
 	out->type = header_obj.type;
 
 cleanup:
@@ -694,8 +694,8 @@ static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype o
 	const char *type_str = git_object_type2string(obj_type);
 	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
 
-	assert(len > 0);             /* otherwise snprintf() is broken  */
-	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
+	assert(len > 0);				/* otherwise snprintf() is broken */
+	assert(((size_t) len) < n); /* otherwise the caller is broken! */
 
 	if (len < 0 || ((size_t) len) >= n)
 		return git__throw(GIT_ERROR, "Failed to format object header. Length is out of bounds");
@@ -708,7 +708,7 @@ int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend
 	loose_writestream *stream;
 
 	char hdr[64], tmp_path[GIT_PATH_MAX];
-	int  hdrlen;
+	int hdrlen;
 	int error;
 
 	assert(_backend);

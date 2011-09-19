@@ -152,7 +152,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  * must belong to the given `repo`.
  *
  * @param tagger Signature of the tagger for this tag, and
- *  of the tagging time
+ * of the tagging time
  *
  * @param message Full message for this tag
  *
@@ -211,7 +211,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  *
  * @return GIT_SUCCESS or an error code
  *	A proper reference is written in the /refs/tags folder,
- *  pointing to the provided target object
+ * pointing to the provided target object
  */
 GIT_EXTERN(int) git_tag_create_lightweight(
 		git_oid *oid,

@@ -8,7 +8,7 @@
 #define INCLUDE_util_h__
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
-#define bitsizeof(x)  (CHAR_BIT * sizeof(x))
+#define bitsizeof(x) (CHAR_BIT * sizeof(x))
 #define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
 #ifndef min
 # define min(a,b) ((a) < (b) ? (a) : (b))

@@ -748,7 +748,7 @@ static int skip_bom(diskfile_backend *cfg)
 	if (memcmp(cfg->reader.read_ptr, utf8_bom, sizeof(utf8_bom)) == 0)
 		cfg->reader.read_ptr += sizeof(utf8_bom);
 
-	/*  TODO: the reference implementation does pretty stupid
+	/* TODO: the reference implementation does pretty stupid
 		shit with the BoM
 	*/
 
@@ -1019,7 +1019,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 
 			/* And then the write out rest of the file */
 			error = git_filebuf_write(&file, post_start,
-			            cfg->reader.buffer.len - (post_start - data_start));
+						cfg->reader.buffer.len - (post_start - data_start));
 
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to write the rest of the file");

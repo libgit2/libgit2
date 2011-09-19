@@ -194,7 +194,7 @@ int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mt
 		*updated = 1;
 
 	obj->data = buff;
-	obj->len  = len;
+	obj->len = len;
 
 	return GIT_SUCCESS;
 }
@@ -293,7 +293,7 @@ int git_futils_mkdir_r(const char *path, int mode)
 {
 	int error, root_path_offset;
 	char *pp, *sp;
-    char *path_copy = git__strdup(path);
+	char *path_copy = git__strdup(path);
 
 	if (path_copy == NULL)
 		return GIT_ENOMEM;
@@ -305,7 +305,7 @@ int git_futils_mkdir_r(const char *path, int mode)
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
-    while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != NULL) {
+	while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != NULL) {
 		if (sp != pp && git_futils_isdir(path_copy) < GIT_SUCCESS) {
 			*sp = 0;
 			error = p_mkdir(path_copy, mode);
@@ -359,7 +359,7 @@ int git_futils_rmdir_r(const char *path, int force)
 {
 	char p[GIT_PATH_MAX];
 	strncpy(p, path, GIT_PATH_MAX);
-	return  _rmdir_recurs_foreach(&force, p);
+	return _rmdir_recurs_foreach(&force, p);
 }
 
 int git_futils_cmp_path(const char *name1, int len1, int isdir1,
@@ -373,10 +373,10 @@ int git_futils_cmp_path(const char *name1, int len1, int isdir1,
 		return cmp;
 	if (len1 < len2)
 		return ((!isdir1 && !isdir2) ? -1 :
-                        (isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
+						(isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
 	if (len1 > len2)
 		return ((!isdir1 && !isdir2) ? 1 :
-                        (isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
+						(isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
 	return 0;
 }
 

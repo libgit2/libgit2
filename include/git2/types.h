@@ -36,7 +36,7 @@ GIT_BEGIN_DECL
 #if defined(_MSC_VER)
 
 typedef __int64 git_off_t;
-typedef __time64_t  git_time_t;
+typedef __time64_t git_time_t;
 
 #elif defined(__MINGW32__)
 
@@ -48,7 +48,7 @@ typedef __time64_t git_time_t;
 typedef __haiku_std_int64 git_off_t;
 typedef __haiku_std_int64 git_time_t;
 
-#else  /* POSIX */
+#else /* POSIX */
 
 /*
  * Note: Can't use off_t since if a client program includes <sys/types.h>
@@ -63,15 +63,15 @@ typedef int64_t git_time_t;
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
 	GIT_OBJ_ANY = -2,		/**< Object can be any of the following */
-	GIT_OBJ_BAD = -1,       /**< Object is invalid. */
-	GIT_OBJ__EXT1 = 0,      /**< Reserved for future use. */
-	GIT_OBJ_COMMIT = 1,     /**< A commit object. */
-	GIT_OBJ_TREE = 2,       /**< A tree (directory listing) object. */
-	GIT_OBJ_BLOB = 3,       /**< A file revision object. */
-	GIT_OBJ_TAG = 4,        /**< An annotated tag object. */
-	GIT_OBJ__EXT2 = 5,      /**< Reserved for future use. */
-	GIT_OBJ_OFS_DELTA = 6,  /**< A delta, base is given by an offset. */
-	GIT_OBJ_REF_DELTA = 7,  /**< A delta, base is given by object id. */
+	GIT_OBJ_BAD = -1,		/**< Object is invalid. */
+	GIT_OBJ__EXT1 = 0,		/**< Reserved for future use. */
+	GIT_OBJ_COMMIT = 1,		/**< A commit object. */
+	GIT_OBJ_TREE = 2,		/**< A tree (directory listing) object. */
+	GIT_OBJ_BLOB = 3,		/**< A file revision object. */
+	GIT_OBJ_TAG = 4,		/**< An annotated tag object. */
+	GIT_OBJ__EXT2 = 5,		/**< Reserved for future use. */
+	GIT_OBJ_OFS_DELTA = 6, /**< A delta, base is given by an offset. */
+	GIT_OBJ_REF_DELTA = 7, /**< A delta, base is given by object id. */
 } git_otype;
 
 /** An open object database handle. */

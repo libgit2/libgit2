@@ -205,7 +205,7 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 }
 
 int git_reflog_write(git_reference *ref, const git_oid *oid_old,
-		     const git_signature *committer, const char *msg)
+				const git_signature *committer, const char *msg)
 {
 	int error;
 	char old[GIT_OID_HEXSZ+1];

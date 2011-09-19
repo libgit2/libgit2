@@ -163,11 +163,11 @@ static ssize_t parse_len(const char *line)
 /*
  * As per the documentation, the syntax is:
  *
- * pkt-line    = data-pkt / flush-pkt
- * data-pkt    = pkt-len pkt-payload
- * pkt-len     = 4*(HEXDIG)
+ * pkt-line	= data-pkt / flush-pkt
+ * data-pkt	= pkt-len pkt-payload
+ * pkt-len		= 4*(HEXDIG)
  * pkt-payload = (pkt-len -4)*(OCTET)
- * flush-pkt   = "0000"
+ * flush-pkt	= "0000"
  *
  * Which means that the first four bytes are the length of the line,
  * in ASCII hexadecimal (including itself)

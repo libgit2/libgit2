@@ -19,8 +19,8 @@
 static const int OBJECT_BASE_SIZE = 4096;
 
 static struct {
-	const char	*str;   /* type name string */
-	int			loose;  /* valid loose object type flag */
+	const char	*str;	/* type name string */
+	int			loose; /* valid loose object type flag */
 	size_t		size;	/* size in bytes of the object structure */
 } git_objects_table[] = {
 	/* 0 = GIT_OBJ__EXT1 */
@@ -92,7 +92,7 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
 
-	if (len == GIT_OID_HEXSZ)  {
+	if (len == GIT_OID_HEXSZ) {
 		/* We want to match the full id : we can first look up in the cache,
 		 * since there is no need to check for non ambiguousity
 		 */
@@ -126,10 +126,10 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
 		 * 2 options :
 		 * - We always search in the cache first. If we find that short oid is
-		 *   ambiguous, we can stop. But in all the other cases, we must then
-		 *   explore all the backends (to find an object if there was match,
-		 *   or to check that oid is not ambiguous if we have found 1 match in
-		 *   the cache)
+		 *	ambiguous, we can stop. But in all the other cases, we must then
+		 *	explore all the backends (to find an object if there was match,
+		 *	or to check that oid is not ambiguous if we have found 1 match in
+		 *	the cache)
 		 * - We never explore the cache, go right to exploring the backends
 		 * We chose the latter : we explore directly the backends.
 		 */

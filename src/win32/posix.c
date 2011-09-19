@@ -144,13 +144,13 @@ int p_readlink(const char *link, char *target, size_t target_len)
 				"'GetFinalPathNameByHandleA' is not available in this platform");
 	}
 
-	hFile = CreateFile(link,            // file to open
-				 GENERIC_READ,          // open for reading
-				 FILE_SHARE_READ,       // share for reading
-				 NULL,                  // default security
-				 OPEN_EXISTING,         // existing file only
+	hFile = CreateFile(link,			// file to open
+				 GENERIC_READ,			// open for reading
+				 FILE_SHARE_READ,		// share for reading
+				 NULL,					// default security
+				 OPEN_EXISTING,			// existing file only
 				 FILE_FLAG_BACKUP_SEMANTICS, // normal file
-				 NULL);                 // no attr. template
+				 NULL);					// no attr. template
 
 	if (hFile == INVALID_HANDLE_VALUE)
 		return GIT_EOSERR;
@@ -163,7 +163,7 @@ int p_readlink(const char *link, char *target, size_t target_len)
 
 	if (dwRet > 4) {
 		/* Skip first 4 characters if they are "\\?\" */
-		if (target[0] == '\\' && target[1] == '\\' && target[2] == '?' && target[3] ==  '\\') {
+		if (target[0] == '\\' && target[1] == '\\' && target[2] == '?' && target[3] == '\\') {
 			char tmp[GIT_PATH_MAX];
 			unsigned int offset = 4;
 			dwRet -= 4;
@@ -189,7 +189,7 @@ int p_hide_directory__w32(const char *path)
 	int error;
 
 	error = SetFileAttributes(path, FILE_ATTRIBUTE_HIDDEN) != 0 ?
-        GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
+		GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
 
 	if (error < GIT_SUCCESS)
 		error = git__throw(GIT_EOSERR, "Failed to hide directory '%s'", path);

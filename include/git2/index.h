@@ -20,10 +20,10 @@
  */
 GIT_BEGIN_DECL
 
-#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
+#define GIT_IDXENTRY_NAMEMASK (0x0fff)
 #define GIT_IDXENTRY_STAGEMASK (0x3000)
-#define GIT_IDXENTRY_EXTENDED  (0x4000)
-#define GIT_IDXENTRY_VALID     (0x8000)
+#define GIT_IDXENTRY_EXTENDED (0x4000)
+#define GIT_IDXENTRY_VALID		(0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
 
 /*
@@ -33,26 +33,26 @@ GIT_BEGIN_DECL
  *
  * In-memory only flags:
  */
-#define GIT_IDXENTRY_UPDATE            (1 << 0)
-#define GIT_IDXENTRY_REMOVE            (1 << 1)
-#define GIT_IDXENTRY_UPTODATE          (1 << 2)
-#define GIT_IDXENTRY_ADDED             (1 << 3)
+#define GIT_IDXENTRY_UPDATE			(1 << 0)
+#define GIT_IDXENTRY_REMOVE			(1 << 1)
+#define GIT_IDXENTRY_UPTODATE			(1 << 2)
+#define GIT_IDXENTRY_ADDED				(1 << 3)
 
-#define GIT_IDXENTRY_HASHED            (1 << 4)
-#define GIT_IDXENTRY_UNHASHED          (1 << 5)
-#define GIT_IDXENTRY_WT_REMOVE         (1 << 6) /* remove in work directory */
-#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
+#define GIT_IDXENTRY_HASHED			(1 << 4)
+#define GIT_IDXENTRY_UNHASHED			(1 << 5)
+#define GIT_IDXENTRY_WT_REMOVE			(1 << 6) /* remove in work directory */
+#define GIT_IDXENTRY_CONFLICTED		(1 << 7)
 
-#define GIT_IDXENTRY_UNPACKED          (1 << 8)
+#define GIT_IDXENTRY_UNPACKED			(1 << 8)
 #define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
 
 /*
  * Extended on-disk flags:
  */
-#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
-#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
+#define GIT_IDXENTRY_INTENT_TO_ADD		(1 << 13)
+#define GIT_IDXENTRY_SKIP_WORKTREE		(1 << 14)
 /* GIT_IDXENTRY_EXTENDED2 is for future extension */
-#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
+#define GIT_IDXENTRY_EXTENDED2			(1 << 15)
 
 #define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
 

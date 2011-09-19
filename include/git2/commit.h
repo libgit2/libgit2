@@ -26,8 +26,8 @@ GIT_BEGIN_DECL
  *
  * @param commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
- * @param id identity of the commit to locate.  If the object is
- *        an annotated tag it will be peeled back to the commit.
+ * @param id identity of the commit to locate. If the object is
+ *		an annotated tag it will be peeled back to the commit.
  * @return GIT_SUCCESS or an error code
  */
 GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id)
@@ -43,8 +43,8 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  *
  * @param commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
- * @param id identity of the commit to locate.  If the object is
- *        an annotated tag it will be peeled back to the commit.
+ * @param id identity of the commit to locate. If the object is
+ *		an annotated tag it will be peeled back to the commit.
  * @param len the length of the short identifier
  * @return GIT_SUCCESS or an error code
  */
@@ -197,7 +197,7 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  *	time of this commit
  *
  * @param committer Signature representing the committer and the
- *  commit time of this commit
+ * commit time of this commit
  *
  * @param message_encoding The encoding for the message in the
  * commit, represented with a standard encoding name.

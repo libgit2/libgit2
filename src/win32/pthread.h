@@ -25,8 +25,8 @@ typedef HANDLE pthread_t;
 #define PTHREAD_MUTEX_INITIALIZER {(void*)-1};
 
 int pthread_create(pthread_t *GIT_RESTRICT,
-                   const pthread_attr_t *GIT_RESTRICT,
-                   void *(*start_routine)(void*), void *__restrict);
+					const pthread_attr_t *GIT_RESTRICT,
+					void *(*start_routine)(void*), void *__restrict);
 
 int pthread_join(pthread_t, void **);
 

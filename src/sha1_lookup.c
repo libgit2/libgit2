@@ -14,69 +14,69 @@
  * Conventional binary search loop looks like this:
  *
  *	unsigned lo, hi;
- *      do {
- *              unsigned mi = (lo + hi) / 2;
- *              int cmp = "entry pointed at by mi" minus "target";
- *              if (!cmp)
- *                      return (mi is the wanted one)
- *              if (cmp > 0)
- *                      hi = mi; "mi is larger than target"
- *              else
- *                      lo = mi+1; "mi is smaller than target"
- *      } while (lo < hi);
+ *		do {
+ *				unsigned mi = (lo + hi) / 2;
+ *				int cmp = "entry pointed at by mi" minus "target";
+ *				if (!cmp)
+ *						return (mi is the wanted one)
+ *				if (cmp > 0)
+ *						hi = mi; "mi is larger than target"
+ *				else
+ *						lo = mi+1; "mi is smaller than target"
+ *		} while (lo < hi);
  *
  * The invariants are:
  *
  * - When entering the loop, lo points at a slot that is never
- *   above the target (it could be at the target), hi points at a
- *   slot that is guaranteed to be above the target (it can never
- *   be at the target).
+ *	above the target (it could be at the target), hi points at a
+ *	slot that is guaranteed to be above the target (it can never
+ *	be at the target).
  *
  * - We find a point 'mi' between lo and hi (mi could be the same
- *   as lo, but never can be as same as hi), and check if it hits
- *   the target.  There are three cases:
+ *	as lo, but never can be as same as hi), and check if it hits
+ *	the target. There are three cases:
  *
- *    - if it is a hit, we are happy.
+ *	- if it is a hit, we are happy.
  *
- *    - if it is strictly higher than the target, we set it to hi,
- *      and repeat the search.
+ *	- if it is strictly higher than the target, we set it to hi,
+ *		and repeat the search.
  *
- *    - if it is strictly lower than the target, we update lo to
- *      one slot after it, because we allow lo to be at the target.
+ *	- if it is strictly lower than the target, we update lo to
+ *		one slot after it, because we allow lo to be at the target.
  *
- *   If the loop exits, there is no matching entry.
+ *	If the loop exits, there is no matching entry.
  *
  * When choosing 'mi', we do not have to take the "middle" but
  * anywhere in between lo and hi, as long as lo <= mi < hi is
- * satisfied.  When we somehow know that the distance between the
+ * satisfied. When we somehow know that the distance between the
  * target and lo is much shorter than the target and hi, we could
  * pick mi that is much closer to lo than the midway.
  *
  * Now, we can take advantage of the fact that SHA-1 is a good hash
  * function, and as long as there are enough entries in the table, we
- * can expect uniform distribution.  An entry that begins with for
+ * can expect uniform distribution. An entry that begins with for
  * example "deadbeef..." is much likely to appear much later than in
- * the midway of the table.  It can reasonably be expected to be near
+ * the midway of the table. It can reasonably be expected to be near
  * 87% (222/256) from the top of the table.
  *
- * However, we do not want to pick "mi" too precisely.  If the entry at
+ * However, we do not want to pick "mi" too precisely. If the entry at
  * the 87% in the above example turns out to be higher than the target
  * we are looking for, we would end up narrowing the search space down
  * only by 13%, instead of 50% we would get if we did a simple binary
- * search.  So we would want to hedge our bets by being less aggressive.
+ * search. So we would want to hedge our bets by being less aggressive.
  *
  * The table at "table" holds at least "nr" entries of "elem_size"
- * bytes each.  Each entry has the SHA-1 key at "key_offset".  The
- * table is sorted by the SHA-1 key of the entries.  The caller wants
+ * bytes each. Each entry has the SHA-1 key at "key_offset". The
+ * table is sorted by the SHA-1 key of the entries. The caller wants
  * to find the entry with "key", and knows that the entry at "lo" is
  * not higher than the entry it is looking for, and that the entry at
  * "hi" is higher than the entry it is looking for.
  */
 int sha1_entry_pos(const void *table,
-		   size_t elem_size,
-		   size_t key_offset,
-		   unsigned lo, unsigned hi, unsigned nr,
-		   const unsigned char *key)
+			size_t elem_size,
+			size_t key_offset,
+			unsigned lo, unsigned hi, unsigned nr,
+			const unsigned char *key)
 {
 	const unsigned char *base = (const unsigned char*)table;
 	const unsigned char *hi_key, *lo_key;
@@ -138,7 +138,7 @@ int sha1_entry_pos(const void *table,
 		 * end up narrowing the search space by a smaller
 		 * amount (i.e. the distance between 'mi' and 'hi')
 		 * than what we would have (i.e. about half of 'lo'
-		 * and 'hi').  Hedge our bets to pick 'mi' less
+		 * and 'hi'). Hedge our bets to pick 'mi' less
 		 * aggressively, i.e. make 'mi' a bit closer to the
 		 * middle than we would otherwise pick.
 		 */
@@ -154,7 +154,7 @@ int sha1_entry_pos(const void *table,
 #ifdef INDEX_DEBUG_LOOKUP
 		printf("lo %u hi %u rg %u mi %u ", lo, hi, range, mi);
 		printf("ofs %u lov %x, hiv %x, kyv %x\n",
-		       ofs_0, lov, hiv, kyv);
+				ofs_0, lov, hiv, kyv);
 #endif
 
 		if (!(lo <= mi && mi < hi)) {

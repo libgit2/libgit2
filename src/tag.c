@@ -227,7 +227,7 @@ static int git_tag_create__internal(
 	}
 
 	/** Ensure the tag name doesn't conflict with an already existing
-	 *   reference unless overwriting has explictly been requested **/
+	 *	reference unless overwriting has explictly been requested **/
 	if (new_ref != NULL) {
 		if (!allow_ref_overwrite) {
 			git_oid_cpy(oid, git_reference_oid(new_ref));
@@ -312,7 +312,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	}
 
 	/** Ensure the tag name doesn't conflict with an already existing
-	 *   reference unless overwriting has explictly been requested **/
+	 *	reference unless overwriting has explictly been requested **/
 	if (new_ref != NULL) {
 		if (!allow_ref_overwrite) {
 			git_oid_cpy(oid, git_reference_oid(new_ref));
@@ -366,8 +366,8 @@ int git_tag__parse(git_tag *tag, git_odb_object *obj)
 }
 
 typedef struct {
-  git_vector *taglist;
-  const char *pattern;
+ git_vector *taglist;
+ const char *pattern;
 } tag_filter_data;
 
 #define GIT_REFS_TAGS_DIR_LEN strlen(GIT_REFS_TAGS_DIR)

@@ -30,9 +30,9 @@ struct pack_backend {
 /**
  * The wonderful tale of a Packed Object lookup query
  * ===================================================
- *   A riveting and epic story of epicness and ASCII
- *          art, presented by yours truly,
- *               Sir Vicent of Marti
+ *	A riveting and epic story of epicness and ASCII
+ *			art, presented by yours truly,
+ *				Sir Vicent of Marti
  *
  *
  *	Chapter 1: Once upon a time...
@@ -43,32 +43,32 @@ struct pack_backend {
  *	| Creates the pack backend structure, initializes the
  *	| callback pointers to our default read() and exist() methods,
  *	| and tries to preload all the known packfiles in the ODB.
- *  |
+ * |
  *	|-# packfile_load_all
- *	  | Tries to find the `pack` folder, if it exists. ODBs without
- *	  | a pack folder are ignored altogether. If there's a `pack` folder
- *	  | we run a `dirent` callback through every file in the pack folder
- *	  | to find our packfiles. The packfiles are then sorted according
- *	  | to a sorting callback.
- * 	  |
- *	  |-# packfile_load__cb
- *	  | | This callback is called from `dirent` with every single file
- *	  | | inside the pack folder. We find the packs by actually locating
- *	  | | their index (ends in ".idx"). From that index, we verify that
- *	  | | the corresponding packfile exists and is valid, and if so, we
- *    | | add it to the pack list.
- *	  | |
- *	  | |-# packfile_check
- *	  |     Make sure that there's a packfile to back this index, and store
- *	  |     some very basic information regarding the packfile itself,
- *	  |     such as the full path, the size, and the modification time.
- *	  |     We don't actually open the packfile to check for internal consistency.
- *    |
- *    |-# packfile_sort__cb
- *        Sort all the preloaded packs according to some specific criteria:
- *        we prioritize the "newer" packs because it's more likely they
- *        contain the objects we are looking for, and we prioritize local
- *        packs over remote ones.
+ *	 | Tries to find the `pack` folder, if it exists. ODBs without
+ *	 | a pack folder are ignored altogether. If there's a `pack` folder
+ *	 | we run a `dirent` callback through every file in the pack folder
+ *	 | to find our packfiles. The packfiles are then sorted according
+ *	 | to a sorting callback.
+ * 	 |
+ *	 |-# packfile_load__cb
+ *	 | | This callback is called from `dirent` with every single file
+ *	 | | inside the pack folder. We find the packs by actually locating
+ *	 | | their index (ends in ".idx"). From that index, we verify that
+ *	 | | the corresponding packfile exists and is valid, and if so, we
+ *	| | add it to the pack list.
+ *	 | |
+ *	 | |-# packfile_check
+ *	 |		Make sure that there's a packfile to back this index, and store
+ *	 |		some very basic information regarding the packfile itself,
+ *	 |		such as the full path, the size, and the modification time.
+ *	 |		We don't actually open the packfile to check for internal consistency.
+ *	|
+ *	|-# packfile_sort__cb
+ *		Sort all the preloaded packs according to some specific criteria:
+ *		we prioritize the "newer" packs because it's more likely they
+ *		contain the objects we are looking for, and we prioritize local
+ *		packs over remote ones.
  *
  *
  *
@@ -76,41 +76,41 @@ struct pack_backend {
  *	A standard packed `exist` query for an OID
  *	--------------------------------------------------
  *
- *  # pack_backend__exists
- *  | Check if the given SHA1 oid exists in any of the packs
- *  | that have been loaded for our ODB.
- *  |
- *  |-# pack_entry_find
- *    | Iterate through all the packs that have been preloaded
- *    | (starting by the pack where the latest object was found)
- *    | to try to find the OID in one of them.
- *    |
- *    |-# pack_entry_find1
- *      | Check the index of an individual pack to see if the SHA1
- *      | OID can be found. If we can find the offset to that SHA1
- *      | inside of the index, that means the object is contained
- *      | inside of the packfile and we can stop searching.
- *      | Before returning, we verify that the packfile behing the
- *      | index we are searching still exists on disk.
- *      |
- *      |-# pack_entry_find_offset
- *      | | Mmap the actual index file to disk if it hasn't been opened
- *      | | yet, and run a binary search through it to find the OID.
- *      | | See <http://book.git-scm.com/7_the_packfile.html> for specifics
- *      | | on the Packfile Index format and how do we find entries in it.
- *      | |
- *      | |-# pack_index_open
- *      |   | Guess the name of the index based on the full path to the
- *      |   | packfile, open it and verify its contents. Only if the index
- *      |   | has not been opened already.
- *      |   |
- *      |   |-# pack_index_check
- *      |       Mmap the index file and do a quick run through the header
- *      |       to guess the index version (right now we support v1 and v2),
- *      |       and to verify that the size of the index makes sense.
- *      |
- *      |-# packfile_open
- *          See `packfile_open` in Chapter 3
+ * # pack_backend__exists
+ * | Check if the given SHA1 oid exists in any of the packs
+ * | that have been loaded for our ODB.
+ * |
+ * |-# pack_entry_find
+ *	| Iterate through all the packs that have been preloaded
+ *	| (starting by the pack where the latest object was found)
+ *	| to try to find the OID in one of them.
+ *	|
+ *	|-# pack_entry_find1
+ *		| Check the index of an individual pack to see if the SHA1
+ *		| OID can be found. If we can find the offset to that SHA1
+ *		| inside of the index, that means the object is contained
+ *		| inside of the packfile and we can stop searching.
+ *		| Before returning, we verify that the packfile behing the
+ *		| index we are searching still exists on disk.
+ *		|
+ *		|-# pack_entry_find_offset
+ *		| | Mmap the actual index file to disk if it hasn't been opened
+ *		| | yet, and run a binary search through it to find the OID.
+ *		| | See <http://book.git-scm.com/7_the_packfile.html> for specifics
+ *		| | on the Packfile Index format and how do we find entries in it.
+ *		| |
+ *		| |-# pack_index_open
+ *		|	| Guess the name of the index based on the full path to the
+ *		|	| packfile, open it and verify its contents. Only if the index
+ *		|	| has not been opened already.
+ *		|	|
+ *		|	|-# pack_index_check
+ *		|		Mmap the index file and do a quick run through the header
+ *		|		to guess the index version (right now we support v1 and v2),
+ *		|		and to verify that the size of the index makes sense.
+ *		|
+ *		|-# packfile_open
+ *			See `packfile_open` in Chapter 3
  *
  *
  *
@@ -170,7 +170,7 @@ GIT_INLINE(int) pack_window_contains(git_mwindow *win, off_t offset)
 	/* We must promise at least 20 bytes (one hash) after the
 	 * offset is available from this window, otherwise the offset
 	 * is not actually in this window and a different window (which
-	 * has that one hash excess) must be used.  This is to support
+	 * has that one hash excess) must be used. This is to support
 	 * the object header and delta base parsing routines below.
 	 */
 	return git_mwindow_contains(win, offset + 20);
@@ -184,7 +184,7 @@ static int packfile_sort__cb(const void *a_, const void *b_)
 
 	/*
 	 * Local packs tend to contain objects specific to our
-	 * variant of the project than remote ones.  In addition,
+	 * variant of the project than remote ones. In addition,
 	 * remote ones could be on a network mounted filesystem.
 	 * Favor local ones for these reasons.
 	 */

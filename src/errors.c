@@ -71,7 +71,7 @@ void git___rethrow(const char *msg, ...)
 	va_end(va);
 
 	old_error = strdup(g_last_error);
-	snprintf(g_last_error, sizeof(g_last_error), "%s \n    - %s", new_error, old_error);
+	snprintf(g_last_error, sizeof(g_last_error), "%s \n	- %s", new_error, old_error);
 	free(old_error);
 }
 

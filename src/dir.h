@@ -16,7 +16,7 @@
 #ifdef GIT_WIN32
 
 struct git__dirent {
-	int  d_ino;
+	int d_ino;
 	char d_name[261];
 };
 
@@ -34,12 +34,12 @@ extern void git__rewinddir(git__DIR *);
 extern int git__closedir(git__DIR *);
 
 # ifndef GIT__WIN32_NO_WRAP_DIR
-#  define dirent git__dirent
-#  define DIR git__DIR
-#  define opendir   git__opendir
-#  define readdir   git__readdir
-#  define rewinddir git__rewinddir
-#  define closedir  git__closedir
+#	define dirent git__dirent
+#	define DIR git__DIR
+#	define opendir	git__opendir
+#	define readdir	git__readdir
+#	define rewinddir git__rewinddir
+#	define closedir git__closedir
 # endif
 
 #endif

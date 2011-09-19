@@ -24,7 +24,7 @@ void test_core_vector__1(void)
 	git_vector_insert(&x, (void*) 0xdef);
 	git_vector_insert(&x, (void*) 0x123);
 
-	git_vector_remove(&x, 0);  // used to read past array bounds.
+	git_vector_remove(&x, 0); // used to read past array bounds.
 	git_vector_free(&x);
 }
 

@@ -32,7 +32,7 @@
 # include "win32/msvc-compat.h"
 # include "win32/mingw-compat.h"
 # ifdef GIT_THREADS
-#  include "win32/pthread.h"
+#	include "win32/pthread.h"
 #endif
 
 # define snprintf _snprintf
@@ -43,7 +43,7 @@ typedef SSIZE_T ssize_t;
 # include <unistd.h>
 
 # ifdef GIT_THREADS
-#  include <pthread.h>
+#	include <pthread.h>
 # endif
 #endif
 

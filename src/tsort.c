@@ -68,7 +68,7 @@ static int binsearch(void **dst, const void *x, size_t size, cmp_ptr_t cmp)
 	}
 }
 
-/* Binary insertion sort, but knowing that the first "start" entries are sorted.  Used in timsort. */
+/* Binary insertion sort, but knowing that the first "start" entries are sorted. Used in timsort. */
 static void bisort(void **dst, size_t start, size_t size, cmp_ptr_t cmp)
 {
 	size_t i;
@@ -207,7 +207,7 @@ static void merge(void **dst, const struct tsort_run *stack, int stack_curr, str
 	if (resize(store, MIN(A, B)) < 0)
 		return;
 
-	storage =  store->storage;
+	storage = store->storage;
 
 	/* left merge */
 	if (A < B) {

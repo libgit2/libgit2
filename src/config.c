@@ -151,7 +151,7 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, const char *, vo
 
 int git_config_delete(git_config *cfg, const char *name)
 {
-	return  git_config_set_string(cfg, name, NULL);
+	return git_config_set_string(cfg, name, NULL);
 }
 
 /**************

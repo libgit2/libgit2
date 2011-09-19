@@ -55,7 +55,7 @@ int git_refspec_src_match(const git_refspec *refspec, const char *refname)
 	return git__fnmatch(refspec->src, refname, 0);
 }
 
-int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec,  const char *name)
+int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name)
 {
 	size_t baselen, namelen;
 

@@ -20,9 +20,9 @@
  */
 #define GIT_FBUFFER_INIT {NULL, 0}
 
-typedef struct {  /* file io buffer  */
-	void *data;  /* data bytes   */
-	size_t len;  /* data length  */
+typedef struct { /* file io buffer */
+	void *data; /* data bytes	*/
+	size_t len; /* data length */
 } git_fbuffer;
 
 extern int git_futils_readbuffer(git_fbuffer *obj, const char *path);
@@ -139,8 +139,8 @@ extern void git_futils_mmap_free(git_map *map);
  * @param pathbuf buffer the function reads the initial directory
  * 		path from, and updates with each successive entry's name.
  * @param pathmax maximum allocation of pathbuf.
- * @param fn function to invoke with each entry.  The first arg is
- *		the input state and the second arg is pathbuf.  The function
+ * @param fn function to invoke with each entry. The first arg is
+ *		the input state and the second arg is pathbuf. The function
  *		may modify the pathbuf, but only by appending new text.
  * @param state to pass to fn as the first arg.
  */

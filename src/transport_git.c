@@ -387,8 +387,8 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 
 				error = gitno_recv(&buf);
 				if (error < GIT_SUCCESS) {
-				  error = git__rethrow(error, "Error receiving data");
-				  goto cleanup;
+				 error = git__rethrow(error, "Error receiving data");
+				 goto cleanup;
 				}
 				error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
 				if (error == GIT_ESHORTBUFFER)
@@ -535,7 +535,7 @@ static int git_close(git_transport *transport)
 	int s = t->socket;
 	int error;
 
-	/* Can't do anything if there's an error, so don't bother checking  */
+	/* Can't do anything if there's an error, so don't bother checking */
 	git_pkt_send_flush(s);
 	error = close(s);
 	if (error < 0)

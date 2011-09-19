@@ -8,10 +8,10 @@
 #include "thread-utils.h"
 
 #ifdef _WIN32
-#  define WIN32_LEAN_AND_MEAN
-#  include <windows.h>
+#	define WIN32_LEAN_AND_MEAN
+#	include <windows.h>
 #elif defined(hpux) || defined(__hpux) || defined(_hpux)
-#  include <sys/pstat.h>
+#	include <sys/pstat.h>
 #endif
 
 /*
@@ -20,11 +20,11 @@
  * with this disgusting nest of #ifdefs.
  */
 #ifndef _SC_NPROCESSORS_ONLN
-#  ifdef _SC_NPROC_ONLN
-#    define _SC_NPROCESSORS_ONLN _SC_NPROC_ONLN
-#  elif defined _SC_CRAY_NCPU
-#    define _SC_NPROCESSORS_ONLN _SC_CRAY_NCPU
-#  endif
+#	ifdef _SC_NPROC_ONLN
+#		define _SC_NPROCESSORS_ONLN _SC_NPROC_ONLN
+#	elif defined _SC_CRAY_NCPU
+#		define _SC_NPROCESSORS_ONLN _SC_CRAY_NCPU
+#	endif
 #endif
 
 int git_online_cpus(void)

@@ -494,7 +494,7 @@ static int packed_load(git_repository *repo)
 	}
 
 	error = reference_read(&packfile, &ref_cache->packfile_time,
-						   repo->path_repository, GIT_PACKEDREFS_FILE, &updated);
+							repo->path_repository, GIT_PACKEDREFS_FILE, &updated);
 
 	/*
 	 * If we couldn't find the file, we need to clear the table and
@@ -827,7 +827,7 @@ static int packed_write(git_repository *repo)
 		const void *GIT_UNUSED(_unused);
 
 		GIT_HASHTABLE_FOREACH(repo->references.packfile, _unused, reference,
-			git_vector_insert(&packing_list, reference);  /* cannot fail: vector already has the right size */
+			git_vector_insert(&packing_list, reference); /* cannot fail: vector already has the right size */
 		);
 	}
 
@@ -905,7 +905,7 @@ static int _reference_available_cb(const char *ref, void *data)
 		const char *lead = reflen < newlen ? new : ref;
 
 		if (!strncmp(new, ref, cmplen) &&
-		    lead[cmplen] == '/')
+			lead[cmplen] == '/')
 			return GIT_EEXISTS;
 	}
 
@@ -1054,7 +1054,7 @@ int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo,
 	 * need a new reference because we can't make a symbolic ref out
 	 * of an oid one.
 	 * If if didn't exist, then we need to create a new one anyway.
-     */
+		*/
 	if (ref && ref->type & GIT_REF_SYMBOLIC){
 		updated = 1;
 	} else {
@@ -1113,7 +1113,7 @@ int git_reference_create_oid(git_reference **ref_out, git_repository *repo, cons
 	 * need a new reference because we can't make a symbolic ref out
 	 * of an oid one.
 	 * If if didn't exist, then we need to create a new one anyway.
-     */
+		*/
 	if (ref && ref-> type & GIT_REF_OID){
 		updated = 1;
 	} else {
@@ -1344,10 +1344,10 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	 * writes reflogs by default in any repo with a working directory:
 	 *
 	 * "We only enable reflogs in repositories that have a working directory
-	 *  associated with them, as shared/bare repositories do not have
-	 *  an easy means to prune away old log entries, or may fail logging
-	 *  entirely if the user's gecos information is not valid during a push.
-	 *  This heuristic was suggested on the mailing list by Junio."
+	 * associated with them, as shared/bare repositories do not have
+	 * an easy means to prune away old log entries, or may fail logging
+	 * entirely if the user's gecos information is not valid during a push.
+	 * This heuristic was suggested on the mailing list by Junio."
 	 *
 	 * 	Shawn O. Pearce - 0bee59186976b1d9e6b2dd77332480c9480131d5
 	 *

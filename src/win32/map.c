@@ -29,7 +29,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	DWORD fmap_prot = 0;
 	DWORD view_prot = 0;
 	DWORD off_low = 0;
-	DWORD off_hi  = 0;
+	DWORD off_hi = 0;
 	git_off_t page_start;
 	git_off_t page_offset;
 
@@ -71,7 +71,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	page_start = (offset / page_size) * page_size;
 	page_offset = offset - page_start;
 
-	if (page_offset != 0) {  /* offset must be multiple of page size */
+	if (page_offset != 0) { /* offset must be multiple of page size */
 		errno = EINVAL;
 		return git__throw(GIT_ERROR, "Failed to mmap. Offset must be multiple of page size");
 	}

@@ -16,9 +16,9 @@
 
 /* DO NOT EXPORT */
 typedef struct {
-	void *data;          /**< Raw, decompressed object data. */
-	size_t len;          /**< Total number of bytes in data. */
-	git_otype type;      /**< Type of this object. */
+	void *data;			/**< Raw, decompressed object data. */
+	size_t len;			/**< Total number of bytes in data. */
+	git_otype type;		/**< Type of this object. */
 } git_rawobj;
 
 /* EXPORT */

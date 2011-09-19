@@ -57,9 +57,9 @@ int git_odb__hash_obj(git_oid *id, git_rawobj *obj)
 		return git__rethrow(hdrlen, "Failed to hash object");
 
 	vec[0].data = header;
-	vec[0].len  = hdrlen;
+	vec[0].len = hdrlen;
 	vec[1].data = obj->data;
-	vec[1].len  = obj->len;
+	vec[1].len = obj->len;
 
 	git_hash_vec(id, vec, 2);
 

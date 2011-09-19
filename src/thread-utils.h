@@ -33,10 +33,10 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 
 /* Pthreads Mutex */
 #define git_mutex pthread_mutex_t
-#define git_mutex_init(a)   pthread_mutex_init(a, NULL)
-#define git_mutex_lock(a)   pthread_mutex_lock(a)
+#define git_mutex_init(a)	pthread_mutex_init(a, NULL)
+#define git_mutex_lock(a)	pthread_mutex_lock(a)
 #define git_mutex_unlock(a) pthread_mutex_unlock(a)
-#define git_mutex_free(a)   pthread_mutex_destroy(a)
+#define git_mutex_free(a)	pthread_mutex_destroy(a)
 
 /* Pthreads condition vars -- disabled by now */
 #define git_cond unsigned int //pthread_cond_t

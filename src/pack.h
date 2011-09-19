@@ -38,7 +38,7 @@ struct git_pack_header {
  * Very old git binaries will also compare the first 4 bytes to the
  * next 4 bytes in the index and abort with a "non-monotonic index"
  * error if the second 4 byte word is smaller than the first 4
- * byte word.  This would be true in the proposed future index
+ * byte word. This would be true in the proposed future index
  * format as idx_signature would be greater than idx_version.
  */
 

@@ -2,13 +2,13 @@
 #include "fileops.h"
 
 typedef struct name_data {
-	int  count;  /* return count */
-	char *name;  /* filename     */
+	int count; /* return count */
+	char *name; /* filename		*/
 } name_data;
 
 typedef struct walk_data {
-	char *sub;        /* sub-directory name */
-	name_data *names; /* name state data    */
+	char *sub;		/* sub-directory name */
+	name_data *names; /* name state data	*/
 } walk_data;
 
 
@@ -112,9 +112,9 @@ void test_core_dirent__dont_traverse_dot(void)
 	setup(&dot);
 
 	cl_git_pass(git_futils_direach(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &dot));
+					sizeof(path_buffer),
+					one_entry,
+					&dot));
 
 	check_counts(&dot);
 }
@@ -138,9 +138,9 @@ void test_core_dirent__traverse_subfolder(void)
 	setup(&sub);
 
 	cl_git_pass(git_futils_direach(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &sub));
+					sizeof(path_buffer),
+					one_entry,
+					&sub));
 
 	check_counts(&sub);
 }
@@ -158,9 +158,9 @@ void test_core_dirent__traverse_slash_terminated_folder(void)
 	setup(&sub_slash);
 
 	cl_git_pass(git_futils_direach(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &sub_slash));
+					sizeof(path_buffer),
+					one_entry,
+					&sub_slash));
 
 	check_counts(&sub_slash);
 }
@@ -181,17 +181,17 @@ void test_core_dirent__dont_traverse_empty_folders(void)
 	setup(&empty);
 
 	cl_git_pass(git_futils_direach(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &empty));
+					sizeof(path_buffer),
+					one_entry,
+					&empty));
 
 	check_counts(&empty);
 
 	/* make sure callback not called */
 	cl_git_pass(git_futils_direach(path_buffer,
-			       sizeof(path_buffer),
-			       dont_call_me,
-			       &empty));
+					sizeof(path_buffer),
+					dont_call_me,
+					&empty));
 }
 
 static name_data odd_names[] = {
@@ -199,7 +199,7 @@ static name_data odd_names[] = {
 	{ 0, "odd/..c" },
 	/* the following don't work on cygwin/win32 */
 	/* { 0, "odd/.b." }, */
-	/* { 0, "odd/..d.." },  */
+	/* { 0, "odd/..d.." }, */
 	{ 0, NULL }
 };
 static walk_data odd = {
@@ -214,9 +214,9 @@ void test_core_dirent__traverse_weird_filenames(void)
 	setup(&odd);
 
 	cl_git_pass(git_futils_direach(path_buffer,
-			       sizeof(path_buffer),
-			       one_entry,
-			       &odd));
+					sizeof(path_buffer),
+					one_entry,
+					&odd));
 
 	check_counts(&odd);
 }

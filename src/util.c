@@ -214,7 +214,7 @@ void git__hexdump(const char *buffer, size_t len)
 			printf("%02X ", (unsigned char)*line & 0xFF);
 
 		for (j = 0; j < (LINE_WIDTH - last_line); ++j)
-			printf("   ");
+			printf("	");
 
 		printf("| ");
 
@@ -255,7 +255,7 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 	case 3: h ^= data[2] << 16;
 	case 2: h ^= data[1] << 8;
 	case 1: h ^= data[0];
-	        h *= m;
+			h *= m;
 	};
 
 	h ^= h >> 13;
@@ -276,13 +276,13 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 {
 
 #define MURMUR_BLOCK() {\
-    k1 *= c1; \
-    k1  = git__rotl(k1,11);\
-    k1 *= c2;\
-    h1 ^= k1;\
-    h1 = h1*3 + 0x52dce729;\
-    c1 = c1*5 + 0x7b7d159c;\
-    c2 = c2*5 + 0x6bce6396;\
+	k1 *= c1; \
+	k1 = git__rotl(k1,11);\
+	k1 *= c2;\
+	h1 ^= k1;\
+	h1 = h1*3 + 0x52dce729;\
+	c1 = c1*5 + 0x7b7d159c;\
+	c2 = c2*5 + 0x6bce6396;\
 }
 
 	const uint8_t *data = (const uint8_t*)key;
@@ -332,20 +332,20 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
  */
 void **git__bsearch(const void *key, void **base, size_t nmemb, int (*compar)(const void *, const void *))
 {
-        int lim, cmp;
-        void **p;
+		int lim, cmp;
+		void **p;
 
-        for (lim = nmemb; lim != 0; lim >>= 1) {
-                p = base + (lim >> 1);
-                cmp = (*compar)(key, *p);
-                if (cmp > 0) {  /* key > p: move right */
-                        base = p + 1;
-                        lim--;
-                } else if (cmp == 0) {
-                        return (void **)p;
-                } /* else move left */
-        }
-        return NULL;
+		for (lim = nmemb; lim != 0; lim >>= 1) {
+				p = base + (lim >> 1);
+				cmp = (*compar)(key, *p);
+				if (cmp > 0) { /* key > p: move right */
+						base = p + 1;
+						lim--;
+				} else if (cmp == 0) {
+						return (void **)p;
+				} /* else move left */
+		}
+		return NULL;
 }
 
 /**

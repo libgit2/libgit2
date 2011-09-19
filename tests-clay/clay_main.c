@@ -139,7 +139,7 @@ clay_run_test(
 static void
 clay_print_error(int num, const struct clay_error *error)
 {
-	clay_print("  %d) Failure:\n", num);
+	clay_print(" %d) Failure:\n", num);
 
 	clay_print("%s::%s (%s) [%s:%d] [-t%d]\n",
 		error->suite,
@@ -149,10 +149,10 @@ clay_print_error(int num, const struct clay_error *error)
 		error->line_number,
 		error->test_number);
 
-	clay_print("  %s\n", error->error_msg);
+	clay_print(" %s\n", error->error_msg);
 
 	if (error->description != NULL)
-		clay_print("  %s\n", error->description);
+		clay_print(" %s\n", error->description);
 
 	clay_print("\n");
 }
@@ -204,8 +204,8 @@ clay_usage(const char *arg)
 {
 	printf("Usage: %s [options]\n\n", arg);
 	printf("Options:\n");
-	printf("  -tXX\t\tRun only the test number XX\n");
-	printf("  -sXX\t\tRun only the suite number XX\n");
+	printf(" -tXX\t\tRun only the test number XX\n");
+	printf(" -sXX\t\tRun only the suite number XX\n");
 	exit(-1);
 }
 
@@ -691,7 +691,7 @@ extern void test_status_worktree__whole_repository(void);
 extern void test_status_worktree__empty_repository(void);
 
 static const struct clay_func _all_callbacks[] = {
-    {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 0},
+	{"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 0},
 	{"traverse_subfolder", &test_core_dirent__traverse_subfolder, 0},
 	{"traverse_slash_terminated_folder", &test_core_dirent__traverse_slash_terminated_folder, 0},
 	{"dont_traverse_empty_folders", &test_core_dirent__dont_traverse_empty_folders, 0},
@@ -717,63 +717,63 @@ static const struct clay_func _all_callbacks[] = {
 };
 
 static const struct clay_suite _all_suites[] = {
-    {
-        "core::dirent",
-        {NULL, NULL, 0},
-        {NULL, NULL, 0},
-        &_all_callbacks[0], 5
-    },
 	{
-        "core::filebuf",
-        {NULL, NULL, 0},
-        {NULL, NULL, 0},
-        &_all_callbacks[5], 3
-    },
+		"core::dirent",
+		{NULL, NULL, 0},
+		{NULL, NULL, 0},
+		&_all_callbacks[0], 5
+	},
 	{
-        "core::path",
-        {NULL, NULL, 0},
-        {NULL, NULL, 0},
-        &_all_callbacks[8], 5
-    },
+		"core::filebuf",
+		{NULL, NULL, 0},
+		{NULL, NULL, 0},
+		&_all_callbacks[5], 3
+	},
 	{
-        "core::rmdir",
-        {"initialize", &test_core_rmdir__initialize, 3},
-        {NULL, NULL, 0},
-        &_all_callbacks[13], 2
-    },
+		"core::path",
+		{NULL, NULL, 0},
+		{NULL, NULL, 0},
+		&_all_callbacks[8], 5
+	},
 	{
-        "core::string",
-        {NULL, NULL, 0},
-        {NULL, NULL, 0},
-        &_all_callbacks[15], 2
-    },
+		"core::rmdir",
+		{"initialize", &test_core_rmdir__initialize, 3},
+		{NULL, NULL, 0},
+		&_all_callbacks[13], 2
+	},
 	{
-        "core::vector",
-        {NULL, NULL, 0},
-        {NULL, NULL, 0},
-        &_all_callbacks[17], 3
-    },
+		"core::string",
+		{NULL, NULL, 0},
+		{NULL, NULL, 0},
+		&_all_callbacks[15], 2
+	},
 	{
-        "status::single",
-        {NULL, NULL, 0},
-        {NULL, NULL, 0},
-        &_all_callbacks[20], 1
-    },
+		"core::vector",
+		{NULL, NULL, 0},
+		{NULL, NULL, 0},
+		&_all_callbacks[17], 3
+	},
 	{
-        "status::worktree",
-        {"initialize", &test_status_worktree__initialize, 7},
-        {"cleanup", &test_status_worktree__cleanup, 7},
-        &_all_callbacks[21], 2
-    }
+		"status::single",
+		{NULL, NULL, 0},
+		{NULL, NULL, 0},
+		&_all_callbacks[20], 1
+	},
+	{
+		"status::worktree",
+		{"initialize", &test_status_worktree__initialize, 7},
+		{"cleanup", &test_status_worktree__cleanup, 7},
+		&_all_callbacks[21], 2
+	}
 };
 
 static const char _suites_str[] = "core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::vector, status::single, status::worktree";
 
 int _CC main(int argc, char *argv[])
 {
-    return clay_test(
-        argc, argv, _suites_str,
-        _all_callbacks, 23,
-        _all_suites, 8
-    );
+	return clay_test(
+		argc, argv, _suites_str,
+		_all_callbacks, 23,
+		_all_suites, 8
+	);
 }
