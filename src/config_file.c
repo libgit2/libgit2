@@ -535,10 +535,8 @@ static char *cfg_readline(diskfile_backend *cfg)
 
 	memcpy(line, line_src, line_len);
 
-	line[line_len] = '\0';
-
-	while (--line_len >= 0 && isspace(line[line_len]))
-		line[line_len] = '\0';
+	do line[line_len] = '\0';
+	while (line_len-- > 0 && isspace(line[line_len]));
 
 	if (*line_end == '\n')
 		line_end++;
