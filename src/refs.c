@@ -1287,8 +1287,13 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		error = git_reference_delete(new_ref);
 	}
 
-	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
-		goto cleanup;
+	if (error < GIT_SUCCESS) {
+		git_path_join(aux_path, ref->owner->path_repository, new_name);
+		/* If we couldn't read the reference because it doesn't
+		 * exist it's ok - otherwise return */
+		if (git_futils_isfile(aux_path) == GIT_SUCCESS)
+			goto cleanup;
+	}
 
 	if ((error = reference_available(ref->owner, new_name, ref->name)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to rename reference. Reference already exists");
@@ -1328,9 +1333,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		git_hashtable_remove(ref->owner->references.loose_cache, old_name);
 	}
 
-	/* build new path */
 	git_path_join(aux_path, ref->owner->path_repository, new_name);
-
 	if (git_futils_exists(aux_path) == GIT_SUCCESS) {
 		if (git_futils_isdir(aux_path) == GIT_SUCCESS) {
 			if ((error = git_futils_rmdir_r(aux_path, 0)) < GIT_SUCCESS)
