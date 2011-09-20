@@ -6,13 +6,23 @@
  */
 #include "posix.h"
 #include "path.h"
+#include "utf8-conv.h"
 #include <errno.h>
 #include <io.h>
+#include <fcntl.h>
+
 
 int p_unlink(const char *path)
 {
-	chmod(path, 0666);
-	return unlink(path);
+	int ret = 0;
+	wchar_t* buf;
+
+	buf = conv_utf8_to_utf16(path);
+	_wchmod(buf, 0666);
+	ret = _wunlink(buf);
+	free(buf);
+
+	return ret;
 }
 
 int p_fsync(int fd)
@@ -49,8 +59,9 @@ GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 static int do_lstat(const char *file_name, struct stat *buf)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
+	wchar_t* fbuf = conv_utf8_to_utf16(file_name);
 
-	if (GetFileAttributesExA(file_name, GetFileExInfoStandard, &fdata)) {
+	if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
 		int fMode = S_IREAD;
 
 		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
@@ -74,22 +85,26 @@ static int do_lstat(const char *file_name, struct stat *buf)
 		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
 		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
+
+		free(fbuf);
 		return GIT_SUCCESS;
 	}
 
+	free(fbuf);
+
 	switch (GetLastError()) {
-	case ERROR_ACCESS_DENIED:
-	case ERROR_SHARING_VIOLATION:
-	case ERROR_LOCK_VIOLATION:
-	case ERROR_SHARING_BUFFER_EXCEEDED:
-		return GIT_EOSERR;
+		case ERROR_ACCESS_DENIED:
+		case ERROR_SHARING_VIOLATION:
+		case ERROR_LOCK_VIOLATION:
+		case ERROR_SHARING_BUFFER_EXCEEDED:
+			return GIT_EOSERR;
 
-	case ERROR_BUFFER_OVERFLOW:
-	case ERROR_NOT_ENOUGH_MEMORY:
-		return GIT_ENOMEM;
+		case ERROR_BUFFER_OVERFLOW:
+		case ERROR_NOT_ENOUGH_MEMORY:
+			return GIT_ENOMEM;
 
-	default:
-		return GIT_EINVALIDPATH;
+		default:
+			return GIT_EINVALIDPATH;
 	}
 }
 
@@ -124,10 +139,12 @@ int p_lstat(const char *file_name, struct stat *buf)
 
 int p_readlink(const char *link, char *target, size_t target_len)
 {
-	typedef DWORD (WINAPI *fpath_func)(HANDLE, LPTSTR, DWORD, DWORD);
+	typedef DWORD (WINAPI *fpath_func)(HANDLE, LPWSTR, DWORD, DWORD);
 	static fpath_func pGetFinalPath = NULL;
 	HANDLE hFile;
 	DWORD dwRet;
+	wchar_t* link_w;
+	wchar_t* target_w;
 
 	/*
 	 * Try to load the pointer to pGetFinalPath dynamically, because
@@ -137,28 +154,47 @@ int p_readlink(const char *link, char *target, size_t target_len)
 		HINSTANCE library = LoadLibrary("kernel32");
 
 		if (library != NULL)
-			pGetFinalPath = (fpath_func)GetProcAddress(library, "GetFinalPathNameByHandleA");
+			pGetFinalPath = (fpath_func)GetProcAddress(library, "GetFinalPathNameByHandleW");
 
 		if (pGetFinalPath == NULL)
 			return git__throw(GIT_EOSERR,
-				"'GetFinalPathNameByHandleA' is not available in this platform");
+				"'GetFinalPathNameByHandleW' is not available in this platform");
 	}
 
-	hFile = CreateFile(link,			// file to open
-				 GENERIC_READ,			// open for reading
-				 FILE_SHARE_READ,		// share for reading
-				 NULL,					// default security
-				 OPEN_EXISTING,			// existing file only
-				 FILE_FLAG_BACKUP_SEMANTICS, // normal file
-				 NULL);					// no attr. template
+	link_w = conv_utf8_to_utf16(link);
+
+	hFile = CreateFileW(link_w,			// file to open
+			GENERIC_READ,			// open for reading
+			FILE_SHARE_READ,		// share for reading
+			NULL,					// default security
+			OPEN_EXISTING,			// existing file only
+			FILE_FLAG_BACKUP_SEMANTICS, // normal file
+			NULL);					// no attr. template
+
+	free(link_w);
 
 	if (hFile == INVALID_HANDLE_VALUE)
 		return GIT_EOSERR;
 
-	dwRet = pGetFinalPath(hFile, target, target_len, 0x0);
-	if (dwRet >= target_len)
-		return GIT_ENOMEM;
+	if (target_len <= 0) {
+		return GIT_EINVALIDARGS;
+	}
 
+	target_w = (wchar_t*)git__malloc(target_len * sizeof(wchar_t));
+
+	dwRet = pGetFinalPath(hFile, target_w, target_len, 0x0);
+	if (dwRet >= target_len) {
+		free(target_w);
+		CloseHandle(hFile);
+		return GIT_ENOMEM;
+	}
+
+	if (!WideCharToMultiByte(CP_UTF8, 0, target_w, -1, target, target_len * sizeof(char), NULL, NULL)) {
+		free(target_w);
+		return GIT_EOSERR;
+	}
+
+	free(target_w);
 	CloseHandle(hFile);
 
 	if (dwRet > 4) {
@@ -184,12 +220,81 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	return dwRet;
 }
 
+int p_open(const char *path, int flags)
+{
+	int fd;
+	wchar_t* buf = conv_utf8_to_utf16(path);
+	fd = _wopen(buf, flags | _O_BINARY);
+
+	free(buf);
+	return fd;
+}
+
+int p_creat(const char *path, int mode)
+{
+	int fd;
+	wchar_t* buf = conv_utf8_to_utf16(path);
+	fd = _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, mode);
+
+	free(buf);
+	return fd;
+}
+
+int p_getcwd(char *buffer_out, size_t size)
+{
+	wchar_t* buf = (wchar_t*)git__malloc(sizeof(wchar_t) * (int)size);
+	_wgetcwd(buf, (int)size);
+
+	if (!WideCharToMultiByte(CP_UTF8, 0, buf, -1, buffer_out, size, NULL, NULL)) {
+		free(buf);
+		return GIT_EOSERR;
+	}
+
+	free(buf);
+	return GIT_SUCCESS;
+}
+
+int p_stat(const char* path, struct stat* buf)
+{
+	return do_lstat(path, buf);
+}
+
+int p_chdir(const char* path)
+{
+	wchar_t* buf = conv_utf8_to_utf16(path);
+	int ret = _wchdir(buf);
+
+	free(buf);
+	return ret;
+}
+
+int p_chmod(const char* path, int mode)
+{
+	wchar_t* buf = conv_utf8_to_utf16(path);
+	int ret = _wchmod(buf, mode);
+
+	free(buf);
+	return ret;
+}
+
+int p_rmdir(const char* path)
+{
+	wchar_t* buf = conv_utf8_to_utf16(path);
+	int ret = _wrmdir(buf);
+
+	free(buf);
+	return ret;
+}
+
 int p_hide_directory__w32(const char *path)
 {
 	int error;
+	wchar_t* buf = conv_utf8_to_utf16(path);
 
-	error = SetFileAttributes(path, FILE_ATTRIBUTE_HIDDEN) != 0 ?
+	error = SetFileAttributesW(buf, FILE_ATTRIBUTE_HIDDEN) != 0 ?
 		GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
+
+	free(buf);
 
 	if (error < GIT_SUCCESS)
 		error = git__throw(GIT_EOSERR, "Failed to hide directory '%s'", path);
@@ -200,18 +305,30 @@ int p_hide_directory__w32(const char *path)
 char *p_realpath(const char *orig_path, char *buffer)
 {
 	int ret, alloc = 0;
-	
+	wchar_t* orig_path_w = conv_utf8_to_utf16(orig_path);
+	wchar_t* buffer_w = (wchar_t*)git__malloc(GIT_PATH_MAX * sizeof(wchar_t));
+
 	if (buffer == NULL) {
 		buffer = (char *)git__malloc(GIT_PATH_MAX);
 		alloc = 1;
 	}
 
-	ret = GetFullPathName(orig_path, GIT_PATH_MAX, buffer, NULL);
+	ret = GetFullPathNameW(orig_path_w, GIT_PATH_MAX, buffer_w, NULL);
+	free(orig_path_w);
+
 	if (!ret || ret > GIT_PATH_MAX) {
+		free(buffer_w);
 		if (alloc) free(buffer);
+
 		return NULL;
 	}
 
+	if (!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL)) {
+		free(buffer_w);
+		if (alloc) free(buffer);
+	}
+	
+	free(buffer_w);
 	git_path_mkposix(buffer);
 	return buffer;
 }

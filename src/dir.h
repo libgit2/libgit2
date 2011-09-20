@@ -22,7 +22,7 @@ struct git__dirent {
 
 typedef struct {
 	HANDLE h;
-	WIN32_FIND_DATA f;
+	WIN32_FIND_DATAW f;
 	struct git__dirent entry;
 	char *dir;
 	int first;
