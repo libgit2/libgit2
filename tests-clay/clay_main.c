@@ -34,10 +34,12 @@
 #	define chdir(path) _chdir(path)
 #	define access(path, mode) _access(path, mode)
 #	define strdup(str) _strdup(str)
-#	define strncpy(to, from, to_size) strncpy_s(to, to_size, from, _TRUNCATE)
 
-#	define W_OK 02
-#	define S_ISDIR(x) ((x & _S_IFDIR) != 0)
+#	ifndef __MINGW32__
+#		define strncpy(to, from, to_size) strncpy_s(to, to_size, from, _TRUNCATE)
+#		define W_OK 02
+#		define S_ISDIR(x) ((x & _S_IFDIR) != 0)
+#	endif
 	typedef struct _stat STAT_T;
 #else
 #	include <unistd.h>
@@ -139,7 +141,7 @@ clay_run_test(
 static void
 clay_print_error(int num, const struct clay_error *error)
 {
-	clay_print(" %d) Failure:\n", num);
+	clay_print("  %d) Failure:\n", num);
 
 	clay_print("%s::%s (%s) [%s:%d] [-t%d]\n",
 		error->suite,
@@ -149,10 +151,10 @@ clay_print_error(int num, const struct clay_error *error)
 		error->line_number,
 		error->test_number);
 
-	clay_print(" %s\n", error->error_msg);
+	clay_print("  %s\n", error->error_msg);
 
 	if (error->description != NULL)
-		clay_print(" %s\n", error->description);
+		clay_print("  %s\n", error->description);
 
 	clay_print("\n");
 }
@@ -204,8 +206,8 @@ clay_usage(const char *arg)
 {
 	printf("Usage: %s [options]\n\n", arg);
 	printf("Options:\n");
-	printf(" -tXX\t\tRun only the test number XX\n");
-	printf(" -sXX\t\tRun only the suite number XX\n");
+	printf("  -tXX\t\tRun only the test number XX\n");
+	printf("  -sXX\t\tRun only the suite number XX\n");
 	exit(-1);
 }
 
@@ -450,7 +452,7 @@ static int build_sandbox_path(void)
 
 	strncpy(_clay_path + len, path_tail, sizeof(_clay_path) - len);
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 	if (_mktemp_s(_clay_path, sizeof(_clay_path)) != 0)
 		return -1;
 #else
@@ -697,7 +699,7 @@ extern void test_status_worktree__whole_repository(void);
 extern void test_status_worktree__empty_repository(void);
 
 static const struct clay_func _all_callbacks[] = {
-	{"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 0},
+    {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 0},
 	{"traverse_subfolder", &test_core_dirent__traverse_subfolder, 0},
 	{"traverse_slash_terminated_folder", &test_core_dirent__traverse_slash_terminated_folder, 0},
 	{"dont_traverse_empty_folders", &test_core_dirent__dont_traverse_empty_folders, 0},
@@ -727,36 +729,42 @@ static const struct clay_func _all_callbacks[] = {
 };
 
 static const struct clay_suite _all_suites[] = {
+    {
+        "core::dirent",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[0], 5
+    },
 	{
-		"core::dirent",
-		{NULL, NULL, 0},
-		{NULL, NULL, 0},
-		&_all_callbacks[0], 5
-	},
+        "core::filebuf",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[5], 3
+    },
 	{
-		"core::filebuf",
-		{NULL, NULL, 0},
-		{NULL, NULL, 0},
-		&_all_callbacks[5], 3
-	},
+        "core::path",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[8], 5
+    },
 	{
-		"core::path",
-		{NULL, NULL, 0},
-		{NULL, NULL, 0},
-		&_all_callbacks[8], 5
-	},
+        "core::rmdir",
+        {"initialize", &test_core_rmdir__initialize, 3},
+        {NULL, NULL, 0},
+        &_all_callbacks[13], 2
+    },
 	{
-		"core::rmdir",
-		{"initialize", &test_core_rmdir__initialize, 3},
-		{NULL, NULL, 0},
-		&_all_callbacks[13], 2
-	},
+        "core::string",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[15], 2
+    },
 	{
-		"core::string",
-		{NULL, NULL, 0},
-		{NULL, NULL, 0},
-		&_all_callbacks[15], 2
-	},
+        "core::vector",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[17], 3
+    },
 	{
         "network::remotes",
         {"initialize", &test_network_remotes__initialize, 6},
