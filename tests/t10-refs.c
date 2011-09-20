@@ -751,6 +751,35 @@ BEGIN_TEST(rename8, "can be renamed to a new name prefixed with the old name")
 	close_temp_repo(repo);
 END_TEST
 
+BEGIN_TEST(rename9, "can move a reference to a upper reference hierarchy")
+    git_reference *ref, *ref_two, *looked_up_ref;
+    git_repository *repo;
+    git_oid id;
+
+    must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
+
+    must_pass(git_reference_lookup(&ref, repo, ref_master_name));
+    must_be_true(ref->type & GIT_REF_OID);
+
+    git_oid_cpy(&id, git_reference_oid(ref));
+
+    /* Create loose references */
+    must_pass(git_reference_create_oid(&ref_two, repo, ref_two_name_new, &id, 0));
+
+    /* An existing reference... */
+    must_pass(git_reference_lookup(&looked_up_ref, repo, ref_two_name_new));
+
+    /* Can be renamed upward the reference tree. */
+    must_pass(git_reference_rename(looked_up_ref, ref_two_name, 0));
+
+    /* Check we actually renamed it */
+    must_pass(git_reference_lookup(&looked_up_ref, repo, ref_two_name));
+    must_be_true(!strcmp(looked_up_ref->name, ref_two_name));
+    must_fail(git_reference_lookup(&looked_up_ref, repo, ref_two_name_new));
+
+    close_temp_repo(repo);
+END_TEST
+
 BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove both tracks in the filesystem")
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_repository *repo;
@@ -1141,6 +1170,7 @@ BEGIN_SUITE(refs)
 	ADD_TEST(rename6);
 	ADD_TEST(rename7);
 	ADD_TEST(rename8);
+	ADD_TEST(rename9);
 
 	ADD_TEST(delete0);
 
