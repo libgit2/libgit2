@@ -558,8 +558,8 @@ int git_repository_discover(char *repository_path, size_t size, const char *star
 		}
 	}
 
-	if (size < (strlen(found_path) + 2) * sizeof(char)) {
-		return git__throw(GIT_EOVERFLOW, "The repository buffer is not long enough to handle the repository path `%s`", found_path);
+	if (size < strlen(found_path) + 2) {
+		return git__throw(GIT_ESHORTBUFFER, "The repository buffer is not long enough to handle the repository path `%s`", found_path);
 	}
 
 	git_path_join(repository_path, found_path, "");
