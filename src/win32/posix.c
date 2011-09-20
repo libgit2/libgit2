@@ -252,3 +252,11 @@ int p_mkstemp(char *tmp_path)
 
 	return p_creat(tmp_path, 0744);
 }
+
+int p_setenv(const char* name, const char* value, int overwrite)
+{
+	if (overwrite != 1)
+		return EINVAL;
+
+	return (SetEnvironmentVariableA(name, value) == 0 ? GIT_EOSERR : GIT_SUCCESS);
+}

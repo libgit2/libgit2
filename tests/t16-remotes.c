@@ -26,6 +26,7 @@
 #include "test_helpers.h"
 
 #include <git2.h>
+#include <posix.h>
 
 BEGIN_TEST(remotes0, "remote parsing works")
 	git_remote *remote;
@@ -34,7 +35,7 @@ BEGIN_TEST(remotes0, "remote parsing works")
 	char *old_home;
 
 	old_home = git__strdup(getenv("HOME"));
-	setenv("HOME", "/dev/null", 1);
+	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
@@ -46,7 +47,7 @@ BEGIN_TEST(remotes0, "remote parsing works")
 	git_config_free(cfg);
 	git_repository_free(repo);
 
-	setenv("HOME", old_home, 1);
+	p_setenv("HOME", old_home, 1);
 	free(old_home);
 END_TEST
 
@@ -58,7 +59,7 @@ BEGIN_TEST(refspec0, "remote with refspec works")
 	char *old_home;
 
 	old_home = git__strdup(getenv("HOME"));
-	setenv("HOME", "/dev/null", 1);
+	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
@@ -71,7 +72,7 @@ BEGIN_TEST(refspec0, "remote with refspec works")
 	git_config_free(cfg);
 	git_repository_free(repo);
 
-	setenv("HOME", old_home, 1);
+	p_setenv("HOME", old_home, 1);
 	free(old_home);
 END_TEST
 
@@ -83,7 +84,7 @@ BEGIN_TEST(refspec1, "remote fnmatch works as expected")
 	char *old_home;
 
 	old_home = git__strdup(getenv("HOME"));
-	setenv("HOME", "/dev/null", 1);
+	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
@@ -96,7 +97,7 @@ BEGIN_TEST(refspec1, "remote fnmatch works as expected")
 	git_config_free(cfg);
 	git_repository_free(repo);
 
-	setenv("HOME", old_home, 1);
+	p_setenv("HOME", old_home, 1);
 	free(old_home);
 END_TEST
 
@@ -109,7 +110,7 @@ BEGIN_TEST(refspec2, "refspec transform")
 	char *old_home;
 
 	old_home = git__strdup(getenv("HOME"));
-	setenv("HOME", "/dev/null", 1);
+	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
@@ -122,7 +123,7 @@ BEGIN_TEST(refspec2, "refspec transform")
 	git_config_free(cfg);
 	git_repository_free(repo);
 
-	setenv("HOME", old_home, 1);
+	p_setenv("HOME", old_home, 1);
 	free(old_home);
 END_TEST
 

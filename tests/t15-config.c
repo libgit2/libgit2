@@ -26,6 +26,7 @@
 #include "test_helpers.h"
 
 #include <git2.h>
+#include <posix.h>
 #include "filebuf.h"
 
 #define CONFIG_BASE TEST_RESOURCES "/config"
@@ -217,7 +218,7 @@ BEGIN_TEST(config10, "a repo's config overrides the global config")
 	char *old_home;
 
 	old_home = git__strdup(getenv("HOME"));
-	setenv("HOME", CONFIG_BASE, 1);
+	p_setenv("HOME", CONFIG_BASE, 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
@@ -226,7 +227,7 @@ BEGIN_TEST(config10, "a repo's config overrides the global config")
 	git_config_free(cfg);
 	git_repository_free(repo);
 
-	setenv("HOME", old_home, 1);
+	p_setenv("HOME", old_home, 1);
 	free(old_home);
 END_TEST
 
@@ -237,7 +238,7 @@ BEGIN_TEST(config11, "fall back to the global config")
 	char *old_home;
 
 	old_home = git__strdup(getenv("HOME"));
-	setenv("HOME", CONFIG_BASE, 1);
+	p_setenv("HOME", CONFIG_BASE, 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
@@ -246,7 +247,7 @@ BEGIN_TEST(config11, "fall back to the global config")
 	git_config_free(cfg);
 	git_repository_free(repo);
 
-	setenv("HOME", old_home, 1);
+	p_setenv("HOME", old_home, 1);
 	free(old_home);
 END_TEST
 
