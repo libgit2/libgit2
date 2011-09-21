@@ -388,14 +388,17 @@ find_tmp_path(char *buffer, size_t length)
  	size_t i;
 
 	for (i = 0; i < var_count; ++i) {
-		const char *env = getenv(env_vars[i]);
+		char *env = p_getenv(env_vars[i]);
 		if (!env)
 			continue;
 
 		if (is_valid_tmp_path(env)) {
 			strncpy(buffer, env, length);
+			free(env);
 			return 0;
 		}
+
+		free(env);
 	}
 
 	/* If the environment doesn't say anything, try to use /tmp */

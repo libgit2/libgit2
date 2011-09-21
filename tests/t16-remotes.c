@@ -34,7 +34,7 @@ BEGIN_TEST(remotes0, "remote parsing works")
 	git_config *cfg;
 	char *old_home;
 
-	old_home = git__strdup(getenv("HOME"));
+	old_home = p_getenv("HOME");
 	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
@@ -58,7 +58,7 @@ BEGIN_TEST(refspec0, "remote with refspec works")
 	const git_refspec *refspec = NULL;
 	char *old_home;
 
-	old_home = git__strdup(getenv("HOME"));
+	old_home = p_getenv("HOME");
 	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
@@ -83,7 +83,7 @@ BEGIN_TEST(refspec1, "remote fnmatch works as expected")
 	const git_refspec *refspec = NULL;
 	char *old_home;
 
-	old_home = git__strdup(getenv("HOME"));
+	old_home = p_getenv("HOME");
 	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
@@ -109,7 +109,7 @@ BEGIN_TEST(refspec2, "refspec transform")
 	char ref[1024] = {0};
 	char *old_home;
 
-	old_home = git__strdup(getenv("HOME"));
+	old_home = p_getenv("HOME");
 	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
