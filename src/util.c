@@ -46,10 +46,10 @@ int git__fnmatch(const char *pattern, const char *name, int flags)
 	}
 }
 
-int git__strtol32(long *result, const char *nptr, const char **endptr, int base)
+int git__strtol64(long long *result, const char *nptr, const char **endptr, int base)
 {
 	const char *p;
-	long n, nn;
+	long long n, nn;
 	int c, ovfl, v, neg, ndig;
 
 	p = nptr;
@@ -122,6 +122,23 @@ Return:
 
 	*result = neg ? -n : n;
 	return GIT_SUCCESS;
+}
+
+int git__strtol32(int *result, const char *nptr, const char **endptr, int base)
+{
+	int tmp_int, error = GIT_SUCCESS;
+	long long tmp_long;
+
+	if ((error = git__strtol64(&tmp_long, nptr, endptr, base)) < GIT_SUCCESS)
+		return error;
+
+	tmp_int = tmp_long & 0xFFFFFFFF;
+	if (tmp_int != tmp_long)
+		return git__throw(GIT_EOVERFLOW, "Failed to convert. '%s' is too large", nptr);
+
+	*result = tmp_int;
+	
+	return error;
 }
 
 void git__strntolower(char *str, size_t len)

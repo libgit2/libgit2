@@ -157,7 +157,7 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
-		long tmp;
+		int tmp;
 
 		entry = git__calloc(1, sizeof(git_tree_entry));
 		if (entry == NULL) {

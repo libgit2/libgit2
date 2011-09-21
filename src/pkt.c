@@ -141,7 +141,7 @@ static ssize_t parse_len(const char *line)
 {
 	char num[PKT_LEN_SIZE + 1];
 	int i, error;
-	long len;
+	int len;
 	const char *num_end;
 
 	memcpy(num, line, PKT_LEN_SIZE);

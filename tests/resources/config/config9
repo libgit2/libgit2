@@ -1,3 +1,4 @@
 [core]
 	dummy2 = 42
+	verylong = 1
 	dummy = 1

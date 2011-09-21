@@ -161,16 +161,16 @@ int git_config_delete(git_config *cfg, const char *name)
  * Setters
  **************/
 
-int git_config_set_long(git_config *cfg, const char *name, long int value)
+int git_config_set_long(git_config *cfg, const char *name, long long value)
 {
 	char str_value[32]; /* All numbers should fit in here */
-	p_snprintf(str_value, sizeof(str_value), "%ld", value);
+	p_snprintf(str_value, sizeof(str_value), "%lld", value);
 	return git_config_set_string(cfg, name, str_value);
 }
 
 int git_config_set_int(git_config *cfg, const char *name, int value)
 {
-	return git_config_set_long(cfg, name, value);
+	return git_config_set_long(cfg, name, (long long)value);
 }
 
 int git_config_set_bool(git_config *cfg, const char *name, int value)
@@ -196,19 +196,19 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
  * Getters
  ***********/
 
-int git_config_get_long(git_config *cfg, const char *name, long int *out)
+int git_config_get_long(git_config *cfg, const char *name, long long *out)
 {
 	const char *value, *num_end;
 	int ret;
-	long int num;
+	long long num;
 
 	ret = git_config_get_string(cfg, name, &value);
 	if (ret < GIT_SUCCESS)
-		return git__rethrow(ret, "Failed to get value for %s", name);
+		return git__rethrow(ret, "Failed to retrieve value for '%s'", name);
 
-	ret = git__strtol32(&num, value, &num_end, 0);
+	ret = git__strtol64(&num, value, &num_end, 0);
 	if (ret < GIT_SUCCESS)
-		return git__rethrow(ret, "Failed to get value for %s", name);
+		return git__rethrow(ret, "Failed to convert value for '%s'", name);
 
 	switch (*num_end) {
 	case '\0':
@@ -226,7 +226,7 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 		num *= 1024 * 1024 * 1024;
 		break;
 	default:
-		return git__throw(GIT_EINVALIDTYPE, "Failed to get value for %s. Value is of invalid type", name);
+		return git__throw(GIT_EINVALIDTYPE, "Failed to get value for '%s'. Value is of invalid type", name);
 	}
 
 	*out = num;
@@ -236,12 +236,18 @@ int git_config_get_long(git_config *cfg, const char *name, long int *out)
 
 int git_config_get_int(git_config *cfg, const char *name, int *out)
 {
-	long int tmp;
-	int ret;
+	long long tmp_long;
+	int tmp_int, ret;
 
-	ret = git_config_get_long(cfg, name, &tmp);
+	ret = git_config_get_long(cfg, name, &tmp_long);
+	if (ret < GIT_SUCCESS)
+		return git__rethrow(ret, "Failed to convert value for '%s'", name);
+	
+	tmp_int = tmp_long & 0xFFFFFFFF;
+	if (tmp_int != tmp_long)
+		return git__throw(GIT_EOVERFLOW, "Value for '%s' is too large", name);
 
-	*out = (int) tmp;
+	*out = tmp_int;
 
 	return ret;
 }

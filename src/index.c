@@ -543,7 +543,7 @@ static int read_tree_internal(git_index_tree **out,
 {
 	git_index_tree *tree;
 	const char *name_start, *buffer;
-	long count;
+	int count;
 	int error = GIT_SUCCESS;
 
 	if ((tree = git__malloc(sizeof(git_index_tree))) == NULL)
@@ -685,7 +685,7 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 		buffer += len;
 
 		for (i = 0; i < 3; i++) {
-			long tmp;
+			int tmp;
 
 			if (git__strtol32(&tmp, buffer, &endptr, 8) < GIT_SUCCESS ||
 				!endptr || endptr == buffer || *endptr || (unsigned)tmp > UINT_MAX)
