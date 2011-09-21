@@ -31,6 +31,38 @@
 
 #define CONFIG_BASE TEST_RESOURCES "/config"
 
+static char *old_home;
+static char *home_var;
+
+static int save_home(const char *new_home)
+{
+	old_home = p_getenv("HOME");
+	home_var = "HOME";
+#if GIT_WIN32
+	if (old_home == NULL) {
+		old_home = p_getenv("USERPROFILE");
+		home_var = "USERPROFILE";
+	}
+#endif
+
+	if (old_home == NULL)
+		return GIT_ERROR;
+
+	return p_setenv(home_var, new_home, 1);
+}
+
+static int restore_home(void)
+{
+	int error;
+
+	error = p_setenv(home_var, old_home, 1);
+	if (error < 0)
+		return git__throw(GIT_EOSERR, "Failed to restore home: %s", strerror(errno));
+
+	free(old_home);
+	return GIT_SUCCESS;
+}
+
 /*
  * This one is so we know the code isn't completely broken
  */
@@ -215,40 +247,30 @@ BEGIN_TEST(config10, "a repo's config overrides the global config")
 	git_repository *repo;
 	git_config *cfg;
 	int version;
-	char *old_home;
 
-	old_home = p_getenv("HOME");
-	p_setenv("HOME", CONFIG_BASE, 1);
-
+	must_pass(save_home(CONFIG_BASE));
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &version));
 	must_be_true(version == 0);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
+	must_pass(restore_home());
 END_TEST
 
 BEGIN_TEST(config11, "fall back to the global config")
 	git_repository *repo;
 	git_config *cfg;
 	int num;
-	char *old_home;
 
-	old_home = p_getenv("HOME");
-	p_setenv("HOME", CONFIG_BASE, 1);
-
+	must_pass(save_home(CONFIG_BASE));
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_config_get_int(cfg, "core.something", &num));
 	must_be_true(num == 2);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
+	must_pass(restore_home());
 END_TEST
 
 BEGIN_TEST(config12, "delete a value")

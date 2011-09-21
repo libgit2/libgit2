@@ -28,15 +28,44 @@
 #include <git2.h>
 #include <posix.h>
 
+static char *old_home;
+static char *home_var;
+
+static int save_home(const char *new_home)
+{
+	old_home = p_getenv("HOME");
+	home_var = "HOME";
+#if GIT_WIN32
+	if (old_home == NULL) {
+		old_home = p_getenv("USERPROFILE");
+		home_var = "USERPROFILE";
+	}
+#endif
+
+	if (old_home == NULL)
+		return GIT_ERROR;
+
+	return p_setenv(home_var, new_home, 1);
+}
+
+static int restore_home(void)
+{
+	int error;
+
+	error = p_setenv(home_var, old_home, 1);
+	if (error < 0)
+		return git__throw(GIT_EOSERR, "Failed to restore home: %s", strerror(errno));
+
+	free(old_home);
+	return GIT_SUCCESS;
+}
+
 BEGIN_TEST(remotes0, "remote parsing works")
 	git_remote *remote;
 	git_repository *repo;
 	git_config *cfg;
-	char *old_home;
 
-	old_home = p_getenv("HOME");
-	p_setenv("HOME", "/dev/null", 1);
-
+	must_pass(save_home("/dev/null"));
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
@@ -46,9 +75,7 @@ BEGIN_TEST(remotes0, "remote parsing works")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
+	must_pass(restore_home());
 END_TEST
 
 BEGIN_TEST(refspec0, "remote with refspec works")
@@ -56,11 +83,8 @@ BEGIN_TEST(refspec0, "remote with refspec works")
 	git_repository *repo;
 	git_config *cfg;
 	const git_refspec *refspec = NULL;
-	char *old_home;
 
-	old_home = p_getenv("HOME");
-	p_setenv("HOME", "/dev/null", 1);
-
+	must_pass(save_home("/dev/null"));
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
@@ -71,9 +95,7 @@ BEGIN_TEST(refspec0, "remote with refspec works")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
+	must_pass(restore_home());
 END_TEST
 
 BEGIN_TEST(refspec1, "remote fnmatch works as expected")
@@ -81,11 +103,8 @@ BEGIN_TEST(refspec1, "remote fnmatch works as expected")
 	git_repository *repo;
 	git_config *cfg;
 	const git_refspec *refspec = NULL;
-	char *old_home;
 
-	old_home = p_getenv("HOME");
-	p_setenv("HOME", "/dev/null", 1);
-
+	must_pass(save_home("/dev/null"));
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
@@ -96,9 +115,7 @@ BEGIN_TEST(refspec1, "remote fnmatch works as expected")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
+	must_pass(restore_home());
 END_TEST
 
 BEGIN_TEST(refspec2, "refspec transform")
@@ -107,11 +124,8 @@ BEGIN_TEST(refspec2, "refspec transform")
 	git_config *cfg;
 	const git_refspec *refspec = NULL;
 	char ref[1024] = {0};
-	char *old_home;
 
-	old_home = p_getenv("HOME");
-	p_setenv("HOME", "/dev/null", 1);
-
+	must_pass(save_home("/dev/null"));
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
@@ -122,9 +136,7 @@ BEGIN_TEST(refspec2, "refspec transform")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
+	must_pass(restore_home());
 END_TEST
 
 BEGIN_SUITE(remotes)
