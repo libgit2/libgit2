@@ -33,6 +33,12 @@
 #include "buffer.h"
 #include "pkt.h"
 
+typedef enum {
+	NONE,
+	FIELD,
+	VALUE
+} last_cb_type;
+
 typedef struct {
 	git_transport parent;
 	git_vector refs;
@@ -40,7 +46,10 @@ typedef struct {
 	git_buf buf;
 	git_remote_head **heads;
 	int error;
-	int transfer_finished :1;
+	int transfer_finished :1,
+		ct_found :1,
+		ct_finished :1,
+		last_cb :3;
 	char *content_type;
 	char *service;
 } transport_http;
@@ -115,13 +124,7 @@ cleanup:
  * Content-Type. on_header_{field,value} should be kept generic enough
  * to work for any request.
  */
-static enum {
-	FIELD,
-	VALUE,
-	NONE
-} last_cb = NONE;
 
-static int ct_found, ct_finished;
 static const char *typestr = "Content-Type";
 
 static int on_header_field(http_parser *parser, const char *str, size_t len)
@@ -129,25 +132,25 @@ static int on_header_field(http_parser *parser, const char *str, size_t len)
 	transport_http *t = (transport_http *) parser->data;
 	git_buf *buf = &t->buf;
 
-	if (last_cb == VALUE && ct_found) {
-		ct_finished = 1;
-		ct_found = 0;
+	if (t->last_cb == VALUE && t->ct_found) {
+		t->ct_finished = 1;
+		t->ct_found = 0;
 		t->content_type = git__strdup(git_buf_cstr(buf));
 		if (t->content_type == NULL)
 			return t->error = GIT_ENOMEM;
 		git_buf_clear(buf);
 	}
 
-	if (ct_found) {
-		last_cb = FIELD;
+	if (t->ct_found) {
+		t->last_cb = FIELD;
 		return 0;
 	}
 
-	if (last_cb != FIELD)
+	if (t->last_cb != FIELD)
 		git_buf_clear(buf);
 
 	git_buf_put(buf, str, len);
-	last_cb = FIELD;
+	t->last_cb = FIELD;
 
 	return git_buf_oom(buf);
 }
@@ -157,21 +160,21 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	transport_http *t = (transport_http *) parser->data;
 	git_buf *buf = &t->buf;
 
-	if (ct_finished) {
-		last_cb = VALUE;
+	if (t->ct_finished) {
+		t->last_cb = VALUE;
 		return 0;
 	}
 
-	if (last_cb == VALUE)
+	if (t->last_cb == VALUE)
 		git_buf_put(buf, str, len);
 
-	if (last_cb == FIELD && !strcmp(git_buf_cstr(buf), typestr)) {
-		ct_found = 1;
+	if (t->last_cb == FIELD && !strcmp(git_buf_cstr(buf), typestr)) {
+		t->ct_found = 1;
 		git_buf_clear(buf);
 		git_buf_put(buf, str, len);
 	}
 
-	last_cb = VALUE;
+	t->last_cb = VALUE;
 
 	return git_buf_oom(buf);
 }
