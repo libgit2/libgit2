@@ -11,6 +11,9 @@
 #include "config.h"
 #include "git2/config.h"
 #include "vector.h"
+#if GIT_WIN32
+# include <windows.h>
+#endif
 
 #include <ctype.h>
 
@@ -334,6 +337,62 @@ int git_config_find_global(char *global_config_path)
 		return git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");
 
 	return GIT_SUCCESS;
+}
+
+
+
+#if GIT_WIN32
+static int win32_find_system(char *system_config_path)
+{
+	const wchar_t *query = L"%PROGRAMFILES%\\Git\\etc\\gitconfig";
+	wchar_t *apphome_utf16;
+	char *apphome_utf8;
+	DWORD size, ret;
+
+	size = ExpandEnvironmentStringsW(query, NULL, 0);
+	/* The function gave us the full size of the buffer in chars, including NUL */
+	apphome_utf16 = git__malloc(size * sizeof(wchar_t));
+	if (apphome_utf16 == NULL)
+		return GIT_ENOMEM;
+
+	ret = ExpandEnvironmentStringsW(query, apphome_utf16, size);
+	free(query_utf16);
+	if (ret == 0 || ret >= size)
+		return git__throw(GIT_ERROR, "Failed to expand environment strings");
+
+	if (_waccess(apphome_utf16, F_OK) < 0) {
+		free(apphome_utf16);
+		return GIT_ENOTFOUND;
+	}
+
+	apphome_utf8 = conv_utf16_to_utf8(apphome_utf16);
+	free(apphome_utf16);
+
+	if (strlen(apphome_utf8) >= GIT_PATH_MAX) {
+		free(apphome_utf8);
+		return git__throw(GIT_ESHORTBUFFER, "Path is too long");
+	}
+
+	strcpy(system_config_path, apphome_utf8);
+	free(apphome_utf8);
+	return GIT_SUCCESS;
+}
+#endif
+
+int git_config_find_system(char *system_config_path)
+{
+	const char *etc = "/etc/gitconfig";
+
+	if (git_futils_exists(etc) == GIT_SUCCESS) {
+		memcpy(system_config_path, etc, strlen(etc) + 1);
+		return GIT_SUCCESS;
+	}
+
+#if GIT_WIN32
+	return win32_find_system(system_config_path);
+#else
+	return GIT_ENOTFOUND;
+#endif
 }
 
 int git_config_open_global(git_config **out)

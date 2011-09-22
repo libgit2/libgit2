@@ -52,6 +52,18 @@ struct git_config_file {
 GIT_EXTERN(int) git_config_find_global(char *global_config_path);
 
 /**
+ * Locate the path to the system configuration file
+ *
+ * If /etc/gitconfig doesn't exist, it will look for
+ * %PROGRAMFILES%\Git\etc\gitconfig.
+
+ * @param system_config_path Buffer of GIT_PATH_MAX length to store the path
+ * @return GIT_SUCCESS if a system configuration file has been
+ *	found. Its path will be stored in `buffer`.
+ */
+GIT_EXTERN(int) git_config_find_system(char *system_config_path);
+
+/**
  * Open the global configuration file
  *
  * Utility wrapper that calls `git_config_find_global`
