@@ -156,7 +156,7 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 
 static int parse_timezone_offset(const char *buffer, int *offset_out)
 {
-	long dec_offset;
+	int dec_offset;
 	int mins, hours, offset;
 
 	const char *offset_start;
@@ -236,7 +236,7 @@ static const char *scan_for_previous_token(const char *buffer, const char *left_
 
 static int parse_time(git_time_t *time_out, const char *buffer)
 {
-	long time;
+	int time;
 	int error;
 
 	if (*buffer == '+' || *buffer == '-')

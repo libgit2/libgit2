@@ -172,7 +172,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 	unsigned char *parents_start;
 
 	int i, parents = 0;
-	long commit_time;
+	int commit_time;
 
 	buffer += strlen("tree ") + GIT_OID_HEXSZ + 1;
 
