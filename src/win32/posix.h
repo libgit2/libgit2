@@ -43,6 +43,6 @@ extern int p_stat(const char* path, struct stat* buf);
 extern int p_chdir(const char* path);
 extern int p_chmod(const char* path, int mode);
 extern int p_rmdir(const char* path);
-
+extern int p_access(const char* path, int mode);
 
 #endif
