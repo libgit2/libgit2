@@ -29,4 +29,6 @@ int gitno_connect(const char *host, const char *port);
 int gitno_send(int s, const char *msg, size_t len, int flags);
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec);
 
+int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port);
+
 #endif
