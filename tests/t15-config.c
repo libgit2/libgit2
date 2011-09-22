@@ -133,7 +133,7 @@ END_TEST
 
 BEGIN_TEST(config5, "test number suffixes")
 	git_config *cfg;
-	long int i;
+	long long i;
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config5"));
 
@@ -194,6 +194,7 @@ END_TEST
 BEGIN_TEST(config9, "replace a value")
 	git_config *cfg;
 	int i;
+	long long l, expected = +9223372036854775803;
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
@@ -207,6 +208,23 @@ BEGIN_TEST(config9, "replace a value")
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
 	must_pass(git_config_set_int(cfg, "core.dummy", 1));
+	git_config_free(cfg);
+
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_set_long(cfg, "core.verylong", expected));
+	git_config_free(cfg);
+
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_get_long(cfg, "core.verylong", &l));
+	must_be_true(l == expected);
+	git_config_free(cfg);
+
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
+	must_fail(git_config_get_int(cfg, "core.verylong", &i));
+	git_config_free(cfg);
+
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_set_long(cfg, "core.verylong", 1));
 	git_config_free(cfg);
 
 END_TEST

@@ -555,6 +555,47 @@ BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
 	must_pass(git_futils_rmdir_r(empty_tmp_dir, 0));
 END_TEST
 
+BEGIN_TEST(strtol0, "parsing out 32 integers from a string")
+	int i;
+
+	must_pass(git__strtol32(&i, "123", NULL, 10));
+	must_be_true(i == 123);
+
+	must_pass(git__strtol32(&i, "  +123 ", NULL, 10));
+	must_be_true(i == 123);
+
+	must_pass(git__strtol32(&i, "  +2147483647 ", NULL, 10));
+	must_be_true(i == 2147483647);
+
+	must_pass(git__strtol32(&i, "  -2147483648 ", NULL, 10));
+	must_be_true(i == -2147483648LL);
+
+	must_fail(git__strtol32(&i, "  2147483657 ", NULL, 10));
+	must_fail(git__strtol32(&i, "  -2147483657 ", NULL, 10));
+END_TEST
+
+BEGIN_TEST(strtol1, "parsing out 64 integers from a string")
+	long long i;
+
+	must_pass(git__strtol64(&i, "123", NULL, 10));
+	must_be_true(i == 123);
+
+	must_pass(git__strtol64(&i, "  +123 ", NULL, 10));
+	must_be_true(i == 123);
+
+	must_pass(git__strtol64(&i, "  +2147483647 ", NULL, 10));
+	must_be_true(i == 2147483647);
+
+	must_pass(git__strtol64(&i, "  -2147483648 ", NULL, 10));
+	must_be_true(i == -2147483648LL);
+
+	must_pass(git__strtol64(&i, "  2147483657 ", NULL, 10));
+	must_be_true(i == 2147483657LL);
+
+	must_pass(git__strtol64(&i, "  -2147483657 ", NULL, 10));
+	must_be_true(i == -2147483657LL);
+END_TEST
+
 BEGIN_SUITE(core)
 	ADD_TEST(string0);
 	ADD_TEST(string1);
@@ -581,4 +622,7 @@ BEGIN_SUITE(core)
 
 	ADD_TEST(rmdir0);
 	ADD_TEST(rmdir1);
+
+	ADD_TEST(strtol0);
+	ADD_TEST(strtol1);
 END_SUITE
