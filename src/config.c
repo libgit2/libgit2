@@ -312,23 +312,19 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 
 int git_config_find_global(char *global_config_path)
 {
-	char *home;
+	const char *home;
 
-	home = p_getenv("HOME");
+	home = getenv("HOME");
 
 #ifdef GIT_WIN32
 	if (home == NULL)
-		home = p_getenv("USERPROFILE");
+		home = getenv("USERPROFILE");
 #endif
 
-	if (home == NULL) {
-		free(home);
+	if (home == NULL)
 		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot locate the user's home directory");
-	}
 
 	git_path_join(global_config_path, home, GIT_CONFIG_FILENAME);
-
-	free(home);
 
 	if (git_futils_exists(global_config_path) < GIT_SUCCESS)
 		return git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");

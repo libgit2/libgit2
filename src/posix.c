@@ -39,15 +39,6 @@ int p_getcwd(char *buffer_out, size_t size)
 	return GIT_SUCCESS;
 }
 
-char* p_getenv(const char* name)
-{
-	char* buf = getenv(name);
-	if (!buf)
-		return buf;
-
-	return git__strdup(buf);
-}
-
 #endif
 
 int p_read(git_file fd, void *buf, size_t cnt)

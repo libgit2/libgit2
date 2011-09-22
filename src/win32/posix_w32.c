@@ -370,30 +370,6 @@ int p_mkstemp(char *tmp_path)
 	return p_creat(tmp_path, 0744);
 }
 
-char* p_getenv(const char* name)
-{
-	wchar_t* buf;
-	wchar_t* name_w = conv_utf8_to_utf16(name);
-	char* ret;
-	DWORD len;
-
-	len = GetEnvironmentVariableW(name_w, NULL, 0);
-	if (len == 0) {
-		free(name_w);
-		return NULL;
-	}
-
-	len++;  /* Null Terminator */
-	buf = malloc(sizeof(wchar_t) * len);
-	GetEnvironmentVariableW(name_w, buf, len);
-
-	ret = conv_utf16_to_utf8(buf);
-
-	free(name_w);
-	free(buf);
-	return ret;
-}
-
 int p_setenv(const char* name, const char* value, int overwrite)
 {
 	if (overwrite != 1)

@@ -235,7 +235,7 @@ BEGIN_TEST(config10, "a repo's config overrides the global config")
 	int version;
 	char *old_home;
 
-	old_home = p_getenv("HOME");
+	old_home = git__strdup(getenv("HOME"));
 	p_setenv("HOME", CONFIG_BASE, 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
@@ -255,7 +255,7 @@ BEGIN_TEST(config11, "fall back to the global config")
 	int num;
 	char *old_home;
 
-	old_home = p_getenv("HOME");
+	old_home = git__strdup(getenv("HOME"));
 	p_setenv("HOME", CONFIG_BASE, 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));

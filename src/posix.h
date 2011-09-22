@@ -44,7 +44,6 @@ extern int p_write(git_file fd, const void *buf, size_t cnt);
 extern int p_open(const char *path, int flags);
 extern int p_creat(const char *path, int mode);
 extern int p_getcwd(char *buffer_out, size_t size);
-extern char* p_getenv(const char* name);
 
 #ifndef GIT_WIN32
 
