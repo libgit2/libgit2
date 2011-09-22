@@ -32,13 +32,9 @@ BEGIN_TEST(remotes0, "remote parsing works")
 	git_remote *remote;
 	git_repository *repo;
 	git_config *cfg;
-	char *old_home;
-
-	old_home = git__strdup(getenv("HOME"));
-	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo, NULL));
+	must_pass(git_repository_config(&cfg, repo, NULL, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
 	must_be_true(!strcmp(git_remote_name(remote), "test"));
 	must_be_true(!strcmp(git_remote_url(remote), "git://github.com/libgit2/libgit2"));
@@ -46,9 +42,6 @@ BEGIN_TEST(remotes0, "remote parsing works")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
 END_TEST
 
 BEGIN_TEST(refspec0, "remote with refspec works")
@@ -56,13 +49,9 @@ BEGIN_TEST(refspec0, "remote with refspec works")
 	git_repository *repo;
 	git_config *cfg;
 	const git_refspec *refspec = NULL;
-	char *old_home;
-
-	old_home = git__strdup(getenv("HOME"));
-	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo, NULL));
+	must_pass(git_repository_config(&cfg, repo, NULL, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
 	refspec = git_remote_fetchspec(remote);
 	must_be_true(refspec != NULL);
@@ -71,9 +60,6 @@ BEGIN_TEST(refspec0, "remote with refspec works")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
 END_TEST
 
 BEGIN_TEST(refspec1, "remote fnmatch works as expected")
@@ -81,13 +67,9 @@ BEGIN_TEST(refspec1, "remote fnmatch works as expected")
 	git_repository *repo;
 	git_config *cfg;
 	const git_refspec *refspec = NULL;
-	char *old_home;
-
-	old_home = git__strdup(getenv("HOME"));
-	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo, NULL));
+	must_pass(git_repository_config(&cfg, repo, NULL, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
 	refspec = git_remote_fetchspec(remote);
 	must_be_true(refspec != NULL);
@@ -96,9 +78,6 @@ BEGIN_TEST(refspec1, "remote fnmatch works as expected")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
 END_TEST
 
 BEGIN_TEST(refspec2, "refspec transform")
@@ -107,13 +86,9 @@ BEGIN_TEST(refspec2, "refspec transform")
 	git_config *cfg;
 	const git_refspec *refspec = NULL;
 	char ref[1024] = {0};
-	char *old_home;
-
-	old_home = git__strdup(getenv("HOME"));
-	p_setenv("HOME", "/dev/null", 1);
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(git_repository_config(&cfg, repo, NULL));
+	must_pass(git_repository_config(&cfg, repo, NULL, NULL));
 	must_pass(git_remote_get(&remote, cfg, "test"));
 	refspec = git_remote_fetchspec(remote);
 	must_be_true(refspec != NULL);
@@ -122,9 +97,6 @@ BEGIN_TEST(refspec2, "refspec transform")
 	git_remote_free(remote);
 	git_config_free(cfg);
 	git_repository_free(repo);
-
-	p_setenv("HOME", old_home, 1);
-	free(old_home);
 END_TEST
 
 BEGIN_SUITE(remotes)

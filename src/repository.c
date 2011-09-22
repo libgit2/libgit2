@@ -270,6 +270,7 @@ cleanup:
 int git_repository_config(
 		git_config **out,
 		git_repository *repo,
+		const char *global_config_path,
 		const char *system_config_path)
 {
 	char config_path[GIT_PATH_MAX];
@@ -286,9 +287,10 @@ int git_repository_config(
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	error = git_config_find_global(config_path);
-	if (error == GIT_SUCCESS) {
-		error = git_config_add_file_ondisk(*out, config_path, 2);
+	if (global_config_path != NULL) {
+		error = git_config_add_file_ondisk(*out, global_config_path, 2);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
 	}
 
 	if (system_config_path != NULL) {
@@ -303,6 +305,24 @@ int git_repository_config(
 cleanup:
 	git_config_free(*out);
 	return error;
+}
+
+int git_repository_config_autoload(
+		git_config **out,
+		git_repository *repo)
+{
+	char global[GIT_PATH_MAX], system[GIT_PATH_MAX];
+	char *global_path, *system_path;
+	int error;
+
+
+	error = git_config_find_global(global);
+	global_path = error < GIT_SUCCESS ? NULL : global;
+
+	error = git_config_find_system(system);
+	system_path = error < GIT_SUCCESS ? NULL : system;
+
+	return git_repository_config(out, repo, global_path, system_path);
 }
 
 static int discover_repository_dirs(git_repository *repo, const char *path)
