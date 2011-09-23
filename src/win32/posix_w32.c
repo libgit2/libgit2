@@ -401,3 +401,14 @@ int p_setenv(const char* name, const char* value, int overwrite)
 
 	return (SetEnvironmentVariableA(name, value) == 0 ? GIT_EOSERR : GIT_SUCCESS);
 }
+
+int p_access(const char* path, int mode)
+{
+	wchar_t *buf = conv_utf8_to_utf16(path);
+	int ret;
+
+	ret = _waccess(buf, mode);
+	free(buf);
+
+	return ret;
+}
