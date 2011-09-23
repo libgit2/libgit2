@@ -364,11 +364,13 @@ size_t http_parser_execute (http_parser *parser,
   char c, ch;
   int8_t unhex_val;
   const char *p = data, *pe;
-  int64_t to_read;
+  off_t to_read;
   enum state state;
   enum header_states header_state;
   uint64_t index = parser->index;
   uint64_t nread = parser->nread;
+  const char *header_field_mark, *header_value_mark, *url_mark;
+  const char *matcher;
 
   /* We're in an error state. Don't bother doing anything. */
   if (HTTP_PARSER_ERRNO(parser) != HPE_OK) {
@@ -399,9 +401,9 @@ size_t http_parser_execute (http_parser *parser,
   /* technically we could combine all of these (except for url_mark) into one
      variable, saving stack space, but it seems more clear to have them
      separated. */
-  const char *header_field_mark = 0;
-  const char *header_value_mark = 0;
-  const char *url_mark = 0;
+  header_field_mark = 0;
+  header_value_mark = 0;
+  url_mark = 0;
 
   if (state == s_header_field)
     header_field_mark = data;
@@ -695,7 +697,7 @@ size_t http_parser_execute (http_parser *parser,
           goto error;
         }
 
-        const char *matcher = method_strings[parser->method];
+        matcher = method_strings[parser->method];
         if (ch == ' ' && matcher[index] == '\0') {
           state = s_req_spaces_before_url;
         } else if (ch == matcher[index]) {
@@ -1576,7 +1578,7 @@ size_t http_parser_execute (http_parser *parser,
       }
 
       case s_body_identity:
-        to_read = MIN(pe - p, (int64_t)parser->content_length);
+        to_read = (off_t) MIN(pe - p, parser->content_length);
         if (to_read > 0) {
           if (settings->on_body) settings->on_body(parser, p, to_read);
           p += to_read - 1;
@@ -1670,7 +1672,7 @@ size_t http_parser_execute (http_parser *parser,
       {
         assert(parser->flags & F_CHUNKED);
 
-        to_read = MIN(pe - p, (int64_t)(parser->content_length));
+        to_read = (off_t) MIN(pe - p, parser->content_length);
 
         if (to_read > 0) {
           if (settings->on_body) settings->on_body(parser, p, to_read);
@@ -1710,7 +1712,7 @@ size_t http_parser_execute (http_parser *parser,
 
   parser->state = state;
   parser->header_state = header_state;
-  parser->index = index;
+  parser->index = (unsigned char) index;
   parser->nread = nread;
 
   return len;
