@@ -204,12 +204,37 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj)
 	return tree_parse_buffer(tree, (char *)obj->raw.data, (char *)obj->raw.data + obj->raw.len);
 }
 
+static unsigned int find_next_dir(const char *dirname, git_index *index, unsigned int start)
+{
+	unsigned int i, entries = git_index_entrycount(index);
+	size_t dirlen;
+
+	dirlen = strlen(dirname);
+	for (i = start; i < entries; ++i) {
+		git_index_entry *entry = git_index_get(index, i);
+		if (strlen(entry->path) < dirlen ||
+		    memcmp(entry->path, dirname, dirlen) ||
+			(dirlen > 0 && entry->path[dirlen] != '/')) {
+			break;
+		}
+	}
+
+	return i;
+}
+
 static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsigned int start)
 {
 	git_treebuilder *bld = NULL;
 	unsigned int i, entries = git_index_entrycount(index);
 	int error;
 	size_t dirname_len = strlen(dirname);
+	const git_tree_cache *cache;
+
+	cache = git_tree_cache_get(index->tree, dirname);
+	if (cache != NULL && cache->entries >= 0){
+		git_oid_cpy(oid, &cache->oid);
+		return find_next_dir(dirname, index, start);
+	}
 
 	error = git_treebuilder_create(&bld, NULL);
 	if (bld == NULL) {
@@ -307,6 +332,11 @@ int git_tree_create_fromindex(git_oid *oid, git_index *index)
 
 	if (index->repository == NULL)
 		return git__throw(GIT_EBAREINDEX, "Failed to create tree. The index file is not backed up by an existing repository");
+
+	if (index->tree != NULL && index->tree->entries >= 0) {
+		git_oid_cpy(oid, &index->tree->oid);
+		return GIT_SUCCESS;
+	}
 
 	/* The tree cache didn't help us */
 	error = write_tree(oid, index, "", 0);
