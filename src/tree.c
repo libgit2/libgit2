@@ -169,7 +169,7 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 			return GIT_ENOMEM;
 
 		if (git__strtol32(&tmp, buffer, &buffer, 8) < GIT_SUCCESS ||
-			!buffer || tmp > UINT_MAX || tmp < 0)
+			!buffer || (unsigned)tmp > UINT_MAX || tmp < 0)
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Can't parse attributes");
 		entry->attr = tmp;
 
