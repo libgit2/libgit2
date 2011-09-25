@@ -127,7 +127,7 @@ int git_futils_isfile(const char *path)
 int git_futils_exists(const char *path)
 {
 	assert(path);
-	return access(path, F_OK);
+	return p_access(path, F_OK);
 }
 
 git_off_t git_futils_filesize(git_file fd)

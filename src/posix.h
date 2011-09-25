@@ -52,6 +52,7 @@ extern char* p_getenv(const char* name);
 #define p_chdir(p) chdir(p)
 #define p_rmdir(p) rmdir(p)
 #define p_chmod(p,m) chmod(p, m)
+#define p_access(p,m) access(p,m)
 
 #endif
 
