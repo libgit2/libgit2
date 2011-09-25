@@ -138,6 +138,7 @@ IF (BUILD_TESTS)
 ENDIF ()
 
 IF (BUILD_CLAY)
+	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes")
 	SET(CLAY_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
 	ADD_DEFINITIONS(-DCLAY_FIXTURE_PATH=\"${CLAY_FIXTURES}\")
 
