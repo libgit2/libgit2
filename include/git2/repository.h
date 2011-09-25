@@ -284,14 +284,11 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
 /**
  * Retrieve the relevant configuration for a repository
  *
- * By default he returned `git_config` instance contains the two most
- * common configuration files, the `config' file that may be found
- * inside the repository, and the `$HOME/.gitconfig' "global"
- * configuration file.
- *
- * If the `system_config_path` variable is not NULL, the given config
- * file will be also included in the configuration set. On most UNIX
- * systems, this file may be found on `$PREFIX/etc/gitconfig`.
+ * If either the `global_config_path` or `system_config_path`
+ * variables are not NULL, the given config files will be also
+ * included in the configuration set. The global configuration file is
+ * located in $HOME/.gitconfig. On most UNIX systems, the system
+ * config file file may be found on `$sysconfdir/gitconfig`.
  *
  * The resulting `git_config` instance will query the files in the following
  * order:
@@ -300,19 +297,36 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  *	- Global configuration file
  *	- System configuration file
  *
- * The method will fail if any of the passed system config file found
- * or accessed.
+ * The method will fail if any of the given config files can't be
+ * found or accessed.
  *
  * The returned `git_config` instance is owned by the caller and must
  * be manually free'd once it's no longer on use.
  *
  * @param out the repository's configuration
  * @param repo the repository for which to get the config
+ * @param system_config_path Path to the global config file
  * @param system_config_path Path to the system-wide config file
  */
+
 GIT_EXTERN(int) git_repository_config(git_config **out,
 	git_repository *repo,
+	const char *global_config_path,
 	const char *system_config_path);
+
+/**
+ * Automatically load the configuration files
+ *
+ * A wrapper around `git_repository_config` that tries to guess where
+ * the global and system config files are located. No error is
+ * reported if either of these files
+ *
+ * @param out the repository's configuration
+ * @param repo the repository for which to get the config
+ */
+int git_repository_config_autoload(
+		git_config **out,
+		git_repository *repo);
 
 /** @} */
 GIT_END_DECL
