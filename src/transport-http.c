@@ -394,8 +394,9 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	unsigned int i;
 	char buff[128];
 	gitno_buffer buf;
-	git_revwalk *walk;
-	git_oid oid;
+	git_revwalk *walk = NULL;
+	git_oid oid, *poid;
+	git_vector common;
 	const char *prefix = "http://", *url = t->parent.url;
 	git_buf request = GIT_BUF_INIT;
 	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
@@ -404,39 +405,64 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
 
-	error = setup_walk(&walk, repo);
+	error = git_vector_init(&common, 16, NULL);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to setup walk");
+		return git__rethrow(error, "Failed to init common vector");
+
+	error = setup_walk(&walk, repo);
+	if (error < GIT_SUCCESS) {
+		error =  git__rethrow(error, "Failed to setup walk");
+		goto cleanup;
+	}
 
 	do {
 		error = do_connect(t, t->host, t->port);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to connect to host");
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to connect to host");
+			goto cleanup;
+		}
 
 		error = gen_request(&request, url, t->host, "POST", "upload-pack");
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to generate request");
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to generate request");
+			goto cleanup;
+		}
 
 		error =  gitno_send(t->socket, request.ptr, request.size, 0);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to send request");
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to send request");
+			goto cleanup;
+		}
 
 		error =  git_pkt_send_wants(wants, &t->caps, t->socket, 1);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to send wants");
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to send wants");
+			goto cleanup;
+		}
 
+		/* We need to send these on each connection */
+		git_vector_foreach (&common, i, poid) {
+			error = git_pkt_send_have(poid, t->socket, 1);
+			if (error < GIT_SUCCESS) {
+				error = git__rethrow(error, "Failed to send common have");
+				goto cleanup;
+			}
+		}
 
 		i = 0;
 		while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
 			error = git_pkt_send_have(&oid, t->socket, 1);
-			if (error < GIT_SUCCESS)
-				return git__rethrow(error, "Failed to send have");
+			if (error < GIT_SUCCESS) {
+				error = git__rethrow(error, "Failed to send have");
+				goto cleanup;
+			}
 			i++;
 		}
 		if (error < GIT_SUCCESS || i >= 256)
 			break;
 	} while(1);
 
+cleanup:
 	git_revwalk_free(walk);
 	return error;
 }
