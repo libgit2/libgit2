@@ -222,6 +222,28 @@ static unsigned int find_next_dir(const char *dirname, git_index *index, unsigne
 	return i;
 }
 
+static int append_entry(git_treebuilder *bld, const char *filename, const git_oid *id, unsigned int attributes)
+{
+	git_tree_entry *entry;
+
+	if ((entry = git__malloc(sizeof(git_tree_entry))) == NULL)
+		return GIT_ENOMEM;
+
+	memset(entry, 0x0, sizeof(git_tree_entry));
+	entry->filename = git__strdup(filename);
+	entry->filename_len = strlen(entry->filename);
+
+	bld->entry_count++;
+
+	git_oid_cpy(&entry->oid, id);
+	entry->attr = attributes;
+
+	if (git_vector_insert(&bld->entries, entry) < 0)
+		return GIT_ENOMEM;
+
+	return GIT_SUCCESS;
+}
+
 static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsigned int start)
 {
 	git_treebuilder *bld = NULL;
@@ -299,14 +321,14 @@ static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsig
 			} else {
 				last_comp = subdir;
 			}
-			error = git_treebuilder_insert(NULL, bld, last_comp, &sub_oid, S_IFDIR);
+			error = append_entry(bld, last_comp, &sub_oid, S_IFDIR);
 			free(subdir);
 			if (error < GIT_SUCCESS) {
 				error = git__rethrow(error, "Failed to insert dir");
 				goto cleanup;
 			}
 		} else {
-			error = git_treebuilder_insert(NULL, bld, filename, &entry->oid, entry->mode);
+			error = append_entry(bld, filename, &entry->oid, entry->mode);
 			if (error < GIT_SUCCESS) {
 				error = git__rethrow(error, "Failed to insert file");
 			}
@@ -368,29 +390,13 @@ int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 	}
 
 	if (source != NULL) {
-		bld->entry_count = source_entries;
 		for (i = 0; i < source->entries.length; ++i) {
 			git_tree_entry *entry_src = source->entries.contents[i];
-			git_tree_entry *entry = git__calloc(1, sizeof(git_tree_entry));
 
-			if (entry == NULL) {
+			if (append_entry(bld, entry_src->filename, &entry_src->oid, entry_src->attr) < 0) {
 				git_treebuilder_free(bld);
 				return GIT_ENOMEM;
 			}
-
-			entry->filename = git__strdup(entry_src->filename);
-
-			if (entry->filename == NULL) {
-				free(entry);
-				git_treebuilder_free(bld);
-				return GIT_ENOMEM;
-			}
-
-			entry->filename_len = entry_src->filename_len;
-			git_oid_cpy(&entry->oid, &entry_src->oid);
-			entry->attr = entry_src->attr;
-
-			git_vector_insert(&bld->entries, entry);
 		}
 	}
 
