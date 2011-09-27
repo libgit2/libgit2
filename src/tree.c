@@ -15,7 +15,8 @@
 #define MAX_FILEMODE 0777777
 #define MAX_FILEMODE_BYTES 6
 
-static int valid_attributes(const int attributes) {
+static int valid_attributes(const int attributes)
+{
 	return attributes >= 0 && attributes <= MAX_FILEMODE;
 }
 
@@ -169,8 +170,9 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 			return GIT_ENOMEM;
 
 		if (git__strtol32(&tmp, buffer, &buffer, 8) < GIT_SUCCESS ||
-			!buffer || tmp > UINT_MAX || tmp < 0)
+			!buffer || !valid_attributes(tmp))
 			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse tree. Can't parse attributes");
+
 		entry->attr = tmp;
 
 		if (*buffer++ != ' ') {
