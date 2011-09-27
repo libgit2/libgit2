@@ -368,7 +368,7 @@ size_t http_parser_execute (http_parser *parser,
   enum state state;
   enum header_states header_state;
   uint64_t index = parser->index;
-  uint64_t nread = parser->nread;
+  uint32_t nread = parser->nread;
   const char *header_field_mark, *header_value_mark, *url_mark;
   const char *matcher;
 
