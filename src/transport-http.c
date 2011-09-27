@@ -33,11 +33,11 @@
 #include "buffer.h"
 #include "pkt.h"
 
-typedef enum {
+enum last_cb {
 	NONE,
 	FIELD,
 	VALUE
-} last_cb_type;
+};
 
 typedef struct {
 	git_transport parent;
@@ -48,8 +48,8 @@ typedef struct {
 	int error;
 	int transfer_finished :1,
 		ct_found :1,
-		ct_finished :1,
-		last_cb :3;
+		ct_finished :1;
+	enum last_cb last_cb;
 	char *content_type;
 	char *service;
 } transport_http;
@@ -75,10 +75,13 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 
 static int do_connect(transport_http *t, const char *service)
 {
-	int s = -1, error;;
-	const char *url = t->parent.url, *prefix = "http://";
-	char *host = NULL, *port = NULL;
 	git_buf request = GIT_BUF_INIT;
+	int s = -1, error;
+	const char *url, *prefix;
+	char *host = NULL, *port = NULL;
+
+	url = t->parent.url;
+	prefix = "http://";
 
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
