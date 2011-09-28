@@ -9,6 +9,16 @@
 
 #if defined(_MSC_VER)
 
+/*
+ * Disable silly MSVC warnings
+ */
+
+/* conditional expression is constant */
+#pragma warning(disable: 4127) 
+
+/* nonstandard extension used : bit field types other than int */
+#pragma warning(disable: 4214)
+
 /* access() mode parameter #defines	*/
 # define F_OK 0 /* existence check */
 # define W_OK 2 /* write mode check */

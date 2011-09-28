@@ -53,7 +53,7 @@ OPTION (BUILD_CLAY "Build Tests using the Clay suite" ON)
 
 # Platform specific compilation flags
 IF (MSVC)
-	SET(CMAKE_C_FLAGS "/W4 /WX /nologo /Zi /wd4127")
+	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
