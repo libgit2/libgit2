@@ -201,7 +201,7 @@ enum http_errno {
 
 struct http_parser {
   /** PRIVATE **/
-  uint32_t nread;
+  size_t nread;
   int64_t content_length;
 
   unsigned char type;

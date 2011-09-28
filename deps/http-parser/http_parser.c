@@ -367,8 +367,8 @@ size_t http_parser_execute (http_parser *parser,
   size_t to_read;
   enum state state;
   enum header_states header_state;
-  uint64_t index = parser->index;
-  uint32_t nread = parser->nread;
+  size_t index = parser->index;
+  size_t nread = parser->nread;
   const char *header_field_mark, *header_value_mark, *url_mark;
   const char *matcher;
 
@@ -1679,7 +1679,7 @@ size_t http_parser_execute (http_parser *parser,
           p += to_read - 1;
         }
 
-        if (to_read == (size_t)parser->content_length) {
+        if ((signed)to_read == parser->content_length) {
           state = s_chunk_data_almost_done;
         }
 
