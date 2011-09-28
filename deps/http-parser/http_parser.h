@@ -201,29 +201,28 @@ enum http_errno {
 
 struct http_parser {
   /** PRIVATE **/
-  size_t nread;
-  int64_t content_length;
-
-  unsigned char type;
-  unsigned char flags; /* F_* values from 'flags' enum; semi-public */
+  unsigned char type : 2;
+  unsigned char flags : 6; /* F_* values from 'flags' enum; semi-public */
   unsigned char state;
   unsigned char header_state;
   unsigned char index;
 
+  size_t nread;
+  int64_t content_length;
+
   /** READ-ONLY **/
+  unsigned short http_major;
+  unsigned short http_minor;
+  unsigned short status_code; /* responses only */
+  unsigned char method;    /* requests only */
+  unsigned char http_errno : 7;
 
   /* 1 = Upgrade header was present and the parser has exited because of that.
    * 0 = No upgrade header present.
    * Should be checked when http_parser_execute() returns in addition to
    * error checking.
    */
-  unsigned char upgrade;
-
-  unsigned short http_major;
-  unsigned short http_minor;
-  unsigned short status_code; /* responses only */
-  unsigned char method;    /* requests only */
-  unsigned char http_errno;
+  unsigned char upgrade : 1;
 
 #if HTTP_PARSER_DEBUG
   uint32_t error_lineno;
