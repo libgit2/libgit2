@@ -364,7 +364,7 @@ size_t http_parser_execute (http_parser *parser,
   char c, ch;
   int8_t unhex_val;
   const char *p = data, *pe;
-  off_t to_read;
+  size_t to_read;
   enum state state;
   enum header_states header_state;
   uint64_t index = parser->index;
@@ -1578,7 +1578,7 @@ size_t http_parser_execute (http_parser *parser,
       }
 
       case s_body_identity:
-        to_read = (off_t) MIN(pe - p, parser->content_length);
+        to_read = (size_t)MIN(pe - p, parser->content_length);
         if (to_read > 0) {
           if (settings->on_body) settings->on_body(parser, p, to_read);
           p += to_read - 1;
@@ -1672,14 +1672,14 @@ size_t http_parser_execute (http_parser *parser,
       {
         assert(parser->flags & F_CHUNKED);
 
-        to_read = (off_t) MIN(pe - p, parser->content_length);
+        to_read = (size_t)MIN(pe - p, parser->content_length);
 
         if (to_read > 0) {
           if (settings->on_body) settings->on_body(parser, p, to_read);
           p += to_read - 1;
         }
 
-        if (to_read == parser->content_length) {
+        if (to_read == (size_t)parser->content_length) {
           state = s_chunk_data_almost_done;
         }
 
