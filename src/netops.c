@@ -4,18 +4,20 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-
 #ifndef _WIN32
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <sys/select.h>
-# include <netdb.h>
+#	include <sys/types.h>
+#	include <sys/socket.h>
+#	include <sys/select.h>
+#	include <netdb.h>
 #else
-# define _WIN32_WINNT 0x0501
-# include <winsock2.h>
-# include <Ws2tcpip.h>
-# pragma comment(lib, "Ws2_32.lib")
+#	define _WIN32_WINNT 0x0501
+#	include <winsock2.h>
+#	include <Ws2tcpip.h>
+#	ifdef _MSC_VER
+#		pragma comment(lib, "Ws2_32.lib")
+#	endif
 #endif
+
 
 #include "git2/errors.h"
 
