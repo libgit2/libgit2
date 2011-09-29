@@ -65,13 +65,6 @@
 # define PRIuZ "zu"
 #endif
 
-/* Define the printf format for 64 bit types */
-#if defined(__MINGW32__)
-#	define PRIdMAX "I64d"
-#else
-#	define PRIdMAX "lld"
-#endif
-
 /* Micosoft Visual C/C++ */
 #if defined(_MSC_VER)
 /* disable "deprecated function" warnings */

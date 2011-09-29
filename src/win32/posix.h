@@ -11,6 +11,9 @@
 #include "fnmatch.h"
 #include "utf8-conv.h"
 
+/* Define the printf format for 64 bit types */
+#define PRId64 "I64d"
+
 GIT_INLINE(int) p_link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
 	GIT_UNUSED_ARG(old)
@@ -44,5 +47,9 @@ extern int p_chdir(const char* path);
 extern int p_chmod(const char* path, int mode);
 extern int p_rmdir(const char* path);
 extern int p_access(const char* path, int mode);
+extern int p_fsync(int fd);
+extern int p_open(const char *path, int flags);
+extern int p_creat(const char *path, int mode);
+extern int p_getcwd(char *buffer_out, size_t size);
 
 #endif

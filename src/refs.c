@@ -421,6 +421,7 @@ static int packed_parse_oid(
 		const char **buffer_out,
 		const char *buffer_end)
 {
+	git_reference *_ref = NULL;
 	reference_oid *ref = NULL;
 
 	const char *buffer = *buffer_out;
@@ -456,9 +457,11 @@ static int packed_parse_oid(
 	if (refname[refname_len - 1] == '\r')
 		refname[refname_len - 1] = 0;
 
-	error = reference_create((git_reference **)&ref, repo, refname, GIT_REF_OID);
+	error = reference_create(&_ref, repo, refname, GIT_REF_OID);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
+
+	ref = (reference_oid *)_ref;
 
 	git_oid_cpy(&ref->oid, &id);
 	ref->ref.type |= GIT_REF_PACKED;
@@ -597,7 +600,8 @@ static int _dirent_loose_listall(void *_data, char *full_path)
 static int _dirent_loose_load(void *data, char *full_path)
 {
 	git_repository *repository = (git_repository *)data;
-	git_reference *reference, *old_ref;
+	git_reference *reference;
+	void *old_ref = NULL;
 	char *file_path;
 	int error;
 
@@ -609,13 +613,13 @@ static int _dirent_loose_load(void *data, char *full_path)
 	if (error == GIT_SUCCESS && reference != NULL) {
 		reference->type |= GIT_REF_PACKED;
 
-		if (git_hashtable_insert2(repository->references.packfile, reference->name, reference, (void **)&old_ref) < GIT_SUCCESS) {
+		if (git_hashtable_insert2(repository->references.packfile, reference->name, reference, &old_ref) < GIT_SUCCESS) {
 			reference_free(reference);
 			return GIT_ENOMEM;
 		}
 
 		if (old_ref != NULL)
-			reference_free(old_ref);
+			reference_free((git_reference *)old_ref);
 	}
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to load loose dirent");
@@ -1043,7 +1047,8 @@ int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo,
 {
 	char normalized[GIT_REFNAME_MAX];
 	int error = GIT_SUCCESS, updated = 0;
-	git_reference *ref = NULL, *old_ref = NULL;
+	git_reference *ref = NULL;
+	void *old_ref = NULL;
 
 	if (git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
 		return git__throw(GIT_EEXISTS, "Failed to create symbolic reference. Reference already exists");
@@ -1079,12 +1084,12 @@ int git_reference_create_symbolic(git_reference **ref_out, git_repository *repo,
 	 * it in the loose cache. If we replaced a ref, free it.
 	 */
 	if (!updated){
-		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
+		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, &old_ref);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 
-		if(old_ref)
-			reference_free(old_ref);
+		if (old_ref != NULL)
+			reference_free((git_reference *)old_ref);
 	}
 
 	*ref_out = ref;
@@ -1099,7 +1104,8 @@ cleanup:
 int git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force)
 {
 	int error = GIT_SUCCESS, updated = 0;
-	git_reference *ref = NULL, *old_ref = NULL;
+	git_reference *ref = NULL;
+	void *old_ref = NULL;
 
 	if(git_reference_lookup(&ref, repo, name) == GIT_SUCCESS && !force)
 		return git__throw(GIT_EEXISTS, "Failed to create reference OID. Reference already exists");
@@ -1129,12 +1135,12 @@ int git_reference_create_oid(git_reference **ref_out, git_repository *repo, cons
 		goto cleanup;
 
 	if(!updated){
-		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, (void **) &old_ref);
+		error = git_hashtable_insert2(repo->references.loose_cache, ref->name, ref, &old_ref);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 
-		if(old_ref)
-			reference_free(old_ref);
+		if (old_ref != NULL)
+			reference_free((git_reference *)old_ref);
 	}
 
 	*ref_out = ref;
@@ -1269,7 +1275,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	const char *target_ref = NULL;
 	const char *head_target = NULL;
 	const git_oid *target_oid = NULL;
-	git_reference *new_ref = NULL, *old_ref = NULL, *head = NULL;
+	git_reference *new_ref = NULL, *head = NULL;
 
 	assert(ref);
 
@@ -1385,7 +1391,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	new_ref->name = NULL;
 	reference_free(new_ref);
 
-	if ((error = git_hashtable_insert2(ref->owner->references.loose_cache, ref->name, ref, (void **)&old_ref)) < GIT_SUCCESS)
+	if ((error = git_hashtable_insert2(ref->owner->references.loose_cache, ref->name, ref, NULL)) < GIT_SUCCESS)
 		goto rollback;
 
 	/*
