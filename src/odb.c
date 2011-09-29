@@ -321,7 +321,7 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 	int error;
 
 	/* add the loose object backend */
-	error = git_odb_backend_loose(&loose, objects_dir);
+	error = git_odb_backend_loose(&loose, objects_dir, -1, 0);
 	if (error < GIT_SUCCESS)
 		return error;
 

@@ -807,7 +807,11 @@ static void loose_backend__free(git_odb_backend *_backend)
 	free(backend);
 }
 
-int git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir)
+int git_odb_backend_loose(
+	git_odb_backend **backend_out,
+	const char *objects_dir,
+	int compression_level,
+	int do_fsync)
 {
 	loose_backend *backend;
 
@@ -821,8 +825,11 @@ int git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir
 		return GIT_ENOMEM;
 	}
 
-	backend->object_zlib_level = Z_BEST_SPEED;
-	backend->fsync_object_files = 0;
+	if (compression_level < 0)
+		compression_level = Z_BEST_SPEED;
+
+	backend->object_zlib_level = compression_level;
+	backend->fsync_object_files = do_fsync;
 
 	backend->parent.read = &loose_backend__read;
 	backend->parent.write = &loose_backend__write;
