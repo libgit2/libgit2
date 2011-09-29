@@ -735,8 +735,8 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 
 	error = git_filebuf_open(&stream->fbuf, tmp_path,
 		GIT_FILEBUF_HASH_CONTENTS |
-		GIT_FILEBUF_DEFLATE_CONTENTS |
-		GIT_FILEBUF_TEMPORARY);
+		GIT_FILEBUF_TEMPORARY |
+		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT));
 
 	if (error < GIT_SUCCESS) {
 		free(stream);
@@ -774,8 +774,8 @@ static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const v
 
 	error = git_filebuf_open(&fbuf, final_path,
 		GIT_FILEBUF_HASH_CONTENTS |
-		GIT_FILEBUF_DEFLATE_CONTENTS |
-		GIT_FILEBUF_TEMPORARY);
+		GIT_FILEBUF_TEMPORARY |
+		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT));
 
 	if (error < GIT_SUCCESS)
 		return error;

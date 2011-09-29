@@ -129,7 +129,7 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 {
-	int error;
+	int error, compression;
 	size_t path_len;
 
 	assert(file && path);
@@ -155,11 +155,12 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 		}
 	}
 
-	/* If we are deflating on-write, */
-	if (flags & GIT_FILEBUF_DEFLATE_CONTENTS) {
+	compression = flags >> GIT_FILEBUF_DEFLATE_SHIFT;
 
+	/* If we are deflating on-write, */
+	if (compression != 0) {
 		/* Initialize the ZLib stream */
-		if (deflateInit(&file->zs, Z_BEST_SPEED) != Z_OK) {
+		if (deflateInit(&file->zs, compression) != Z_OK) {
 			error = git__throw(GIT_EZLIB, "Failed to initialize zlib");
 			goto cleanup;
 		}
