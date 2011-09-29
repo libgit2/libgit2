@@ -807,6 +807,7 @@ static int is_index_extended(git_index *index)
 
 static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 {
+	void *mem = NULL;
 	struct entry_short *ondisk;
 	size_t path_len, disk_size;
 	char *path;
@@ -818,8 +819,10 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	else
 		disk_size = short_entry_size(path_len);
 
-	if (git_filebuf_reserve(file, (void **)&ondisk, disk_size) < GIT_SUCCESS)
+	if (git_filebuf_reserve(file, &mem, disk_size) < GIT_SUCCESS)
 		return GIT_ENOMEM;
+
+	ondisk = (struct entry_short *)mem;
 
 	memset(ondisk, 0x0, disk_size);
 
