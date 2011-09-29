@@ -27,6 +27,11 @@ extern "C" {
 #define HTTP_PARSER_VERSION_MAJOR 1
 #define HTTP_PARSER_VERSION_MINOR 0
 
+#ifdef _MSC_VER
+	/* disable silly warnings */
+#	pragma warning(disable: 4127 4214)
+#endif
+
 #include <sys/types.h>
 #if defined(_WIN32) && !defined(__MINGW32__) && !defined(_MSC_VER)
 typedef __int8 int8_t;
