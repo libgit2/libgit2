@@ -167,7 +167,7 @@ int git_config_delete(git_config *cfg, const char *name)
 int git_config_set_long(git_config *cfg, const char *name, long long value)
 {
 	char str_value[32]; /* All numbers should fit in here */
-	p_snprintf(str_value, sizeof(str_value), "%lld", value);
+	p_snprintf(str_value, sizeof(str_value), "%" PRIdMAX, value);
 	return git_config_set_string(cfg, name, str_value);
 }
 
