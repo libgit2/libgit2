@@ -352,7 +352,7 @@ static int win32_find_system(char *system_config_path)
 		return GIT_ENOMEM;
 
 	ret = ExpandEnvironmentStringsW(query, apphome_utf16, size);
-	if (ret == 0 || ret >= size)
+	if (ret != size)
 		return git__throw(GIT_ERROR, "Failed to expand environment strings");
 
 	if (_waccess(apphome_utf16, F_OK) < 0) {
