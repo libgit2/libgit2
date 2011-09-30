@@ -10,7 +10,7 @@
 #ifndef GIT_WIN32
 typedef int GIT_SOCKET;
 #else
-typedef unsigned int GIT_SOCKET;
+typedef SOCKET GIT_SOCKET;
 #endif
 
 typedef struct gitno_buffer {
@@ -26,7 +26,7 @@ void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
 
 int gitno_connect(const char *host, const char *port);
-int gitno_send(int s, const char *msg, size_t len, int flags);
+int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags);
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec);
 
 int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port);

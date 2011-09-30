@@ -22,10 +22,13 @@
 
 typedef struct {
 	git_transport parent;
-	int socket;
+	GIT_SOCKET socket;
 	git_vector refs;
 	git_remote_head **heads;
 	git_transport_caps caps;
+#ifdef GIT_WIN32
+	WSADATA wsd;
+#endif
 } transport_git;
 
 /*
@@ -68,7 +71,7 @@ static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 	return GIT_SUCCESS;
 }
 
-static int send_request(int s, const char *cmd, const char *url)
+static int send_request(GIT_SOCKET s, const char *cmd, const char *url)
 {
 	int error, len;
 	char *msg = NULL;
@@ -91,7 +94,7 @@ cleanup:
  */
 static int do_connect(transport_git *t, const char *url)
 {
-	int s = -1;
+	GIT_SOCKET s;
 	char *host, *port;
 	const char prefix[] = "git://";
 	int error, connected = 0;
@@ -525,6 +528,10 @@ static void git_free(git_transport *transport)
 		git_pkt_free(p);
 	}
 
+#ifdef GIT_WIN32
+	WSACleanup();
+#endif
+
 	git_vector_free(refs);
 	free(t->heads);
 	free(t->parent.url);
@@ -534,6 +541,9 @@ static void git_free(git_transport *transport)
 int git_transport_git(git_transport **out)
 {
 	transport_git *t;
+#ifdef GIT_WIN32
+	int ret;
+#endif
 
 	t = git__malloc(sizeof(transport_git));
 	if (t == NULL)
@@ -553,6 +563,14 @@ int git_transport_git(git_transport **out)
 	t->parent.free = git_free;
 
 	*out = (git_transport *) t;
+
+#ifdef GIT_WIN32
+	ret = WSAStartup(MAKEWORD(2,2), &t->wsd);
+	if (ret != 0) {
+		git_free(*out);
+		return git__throw(GIT_EOSERR, "Winsock init failed");
+	}
+#endif
 
 	return GIT_SUCCESS;
 }
