@@ -55,8 +55,7 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 		p += 2;
 	}
 
-	for (; p < GIT_OID_HEXSZ; p += 2)
-		out->id[p / 2] = 0x0;
+	memset(out->id + p / 2, 0, (GIT_OID_HEXSZ - p) / 2);
 
 	return GIT_SUCCESS;
 }
