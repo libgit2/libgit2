@@ -36,6 +36,9 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	size_t p;
 	int v;
 
+	if (length < 4)
+		return git__throw(GIT_ENOTOID, "Failed to generate sha1. Given string is too short");
+
 	if (length > GIT_OID_HEXSZ)
 		length = GIT_OID_HEXSZ;
 
