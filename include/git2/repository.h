@@ -319,12 +319,13 @@ GIT_EXTERN(int) git_repository_config(git_config **out,
  *
  * A wrapper around `git_repository_config` that tries to guess where
  * the global and system config files are located. No error is
- * reported if either of these files
+ * reported if either of these files are missing at the guessed
+ * locations.
  *
  * @param out the repository's configuration
  * @param repo the repository for which to get the config
  */
-int git_repository_config_autoload(
+GIT_EXTERN(int) git_repository_config_autoload(
 		git_config **out,
 		git_repository *repo);
 
