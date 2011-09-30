@@ -201,16 +201,19 @@ static void local_free(git_transport *transport)
 	unsigned int i;
 	transport_local *t = (transport_local *) transport;
 	git_vector *vec = t->refs;
+	git_remote_head *h;
 
 	assert(transport);
 
-	for (i = 0; i < vec->length; ++i) {
-		git_remote_head *h = git_vector_get(vec, i);
-		free(h->name);
-		free(h);
+	if (t->refs != NULL) {
+		git_vector_foreach (vec, i, h) {
+			free(h->name);
+			free(h);
+		}
+		git_vector_free(vec);
+		free(vec);
 	}
-	git_vector_free(vec);
-	free(vec);
+
 	git_repository_free(t->repo);
 	free(t->parent.url);
 	free(t);
@@ -227,6 +230,8 @@ int git_transport_local(git_transport **out)
 	t = git__malloc(sizeof(transport_local));
 	if (t == NULL)
 		return GIT_ENOMEM;
+
+	memset(t, 0x0, sizeof(transport_local));
 
 	t->parent.connect = local_connect;
 	t->parent.ls = local_ls;
