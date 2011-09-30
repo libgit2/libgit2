@@ -164,16 +164,16 @@ int git_config_delete(git_config *cfg, const char *name)
  * Setters
  **************/
 
-int git_config_set_long(git_config *cfg, const char *name, long long value)
+int git_config_set_int64(git_config *cfg, const char *name, int64_t value)
 {
 	char str_value[32]; /* All numbers should fit in here */
 	p_snprintf(str_value, sizeof(str_value), "%" PRId64, value);
 	return git_config_set_string(cfg, name, str_value);
 }
 
-int git_config_set_int(git_config *cfg, const char *name, int value)
+int git_config_set_int32(git_config *cfg, const char *name, int32_t value)
 {
-	return git_config_set_long(cfg, name, (long long)value);
+	return git_config_set_int64(cfg, name, (int64_t)value);
 }
 
 int git_config_set_bool(git_config *cfg, const char *name, int value)
@@ -199,11 +199,11 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
  * Getters
  ***********/
 
-int git_config_get_long(git_config *cfg, const char *name, long long *out)
+int git_config_get_int64(git_config *cfg, const char *name, int64_t *out)
 {
 	const char *value, *num_end;
 	int ret;
-	long long num;
+	int64_t num;
 
 	ret = git_config_get_string(cfg, name, &value);
 	if (ret < GIT_SUCCESS)
@@ -214,35 +214,45 @@ int git_config_get_long(git_config *cfg, const char *name, long long *out)
 		return git__rethrow(ret, "Failed to convert value for '%s'", name);
 
 	switch (*num_end) {
-	case '\0':
-		break;
+	case 'g':
+	case 'G':
+		num *= 1024;
+		/* fallthrough */
+
+	case 'm':
+	case 'M':
+		num *= 1024;
+		/* fallthrough */
+
 	case 'k':
 	case 'K':
 		num *= 1024;
-		break;
-	case 'm':
-	case 'M':
-		num *= 1024 * 1024;
-		break;
-	case 'g':
-	case 'G':
-		num *= 1024 * 1024 * 1024;
-		break;
+
+		/* check that that there are no more characters after the
+		 * given modifier suffix */
+		if (num_end[1] != '\0')
+			return git__throw(GIT_EINVALIDTYPE,
+				"Failed to get value for '%s'. Invalid type suffix", name);
+
+		/* fallthrough */
+
+	case '\0':
+		*out = num;
+		return GIT_SUCCESS;
+
 	default:
-		return git__throw(GIT_EINVALIDTYPE, "Failed to get value for '%s'. Value is of invalid type", name);
+		return git__throw(GIT_EINVALIDTYPE,
+			"Failed to get value for '%s'. Value is of invalid type", name);
 	}
-
-	*out = num;
-
-	return GIT_SUCCESS;
 }
 
-int git_config_get_int(git_config *cfg, const char *name, int *out)
+int git_config_get_int32(git_config *cfg, const char *name, int32_t *out)
 {
-	long long tmp_long;
-	int tmp_int, ret;
+	int64_t tmp_long;
+	int32_t tmp_int;
+	int ret;
 
-	ret = git_config_get_long(cfg, name, &tmp_long);
+	ret = git_config_get_int64(cfg, name, &tmp_long);
 	if (ret < GIT_SUCCESS)
 		return git__rethrow(ret, "Failed to convert value for '%s'", name);
 	
@@ -284,7 +294,7 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 	}
 
 	/* Try to parse it as an integer */
-	error = git_config_get_int(cfg, name, out);
+	error = git_config_get_int32(cfg, name, out);
 	if (error == GIT_SUCCESS)
 		*out = !!(*out);
 

@@ -37,10 +37,10 @@
  */
 BEGIN_TEST(config0, "read a simple configuration")
 	git_config *cfg;
-	int i;
+	int32_t i;
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config0"));
-	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &i));
+	must_pass(git_config_get_int32(cfg, "core.repositoryformatversion", &i));
 	must_be_true(i == 0);
 	must_pass(git_config_get_bool(cfg, "core.filemode", &i));
 	must_be_true(i == 1);
@@ -134,29 +134,29 @@ END_TEST
 
 BEGIN_TEST(config5, "test number suffixes")
 	git_config *cfg;
-	long long i;
+	int64_t i;
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config5"));
 
-	must_pass(git_config_get_long(cfg, "number.simple", &i));
+	must_pass(git_config_get_int64(cfg, "number.simple", &i));
 	must_be_true(i == 1);
 
-	must_pass(git_config_get_long(cfg, "number.k", &i));
+	must_pass(git_config_get_int64(cfg, "number.k", &i));
 	must_be_true(i == 1 * 1024);
 
-	must_pass(git_config_get_long(cfg, "number.kk", &i));
+	must_pass(git_config_get_int64(cfg, "number.kk", &i));
 	must_be_true(i == 1 * 1024);
 
-	must_pass(git_config_get_long(cfg, "number.m", &i));
+	must_pass(git_config_get_int64(cfg, "number.m", &i));
 	must_be_true(i == 1 * 1024 * 1024);
 
-	must_pass(git_config_get_long(cfg, "number.mm", &i));
+	must_pass(git_config_get_int64(cfg, "number.mm", &i));
 	must_be_true(i == 1 * 1024 * 1024);
 
-	must_pass(git_config_get_long(cfg, "number.g", &i));
+	must_pass(git_config_get_int64(cfg, "number.g", &i));
 	must_be_true(i == 1 * 1024 * 1024 * 1024);
 
-	must_pass(git_config_get_long(cfg, "number.gg", &i));
+	must_pass(git_config_get_int64(cfg, "number.gg", &i));
 	must_be_true(i == 1 * 1024 * 1024 * 1024);
 
 	git_config_free(cfg);
@@ -195,37 +195,37 @@ END_TEST
 BEGIN_TEST(config9, "replace a value")
 	git_config *cfg;
 	int i;
-	long long l, expected = +9223372036854775803;
+	int64_t l, expected = +9223372036854775803;
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_set_int(cfg, "core.dummy", 5));
+	must_pass(git_config_set_int32(cfg, "core.dummy", 5));
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_get_int(cfg, "core.dummy", &i));
+	must_pass(git_config_get_int32(cfg, "core.dummy", &i));
 	must_be_true(i == 5);
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_set_int(cfg, "core.dummy", 1));
+	must_pass(git_config_set_int32(cfg, "core.dummy", 1));
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_set_long(cfg, "core.verylong", expected));
+	must_pass(git_config_set_int64(cfg, "core.verylong", expected));
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_get_long(cfg, "core.verylong", &l));
+	must_pass(git_config_get_int64(cfg, "core.verylong", &l));
 	must_be_true(l == expected);
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_fail(git_config_get_int(cfg, "core.verylong", &i));
+	must_fail(git_config_get_int32(cfg, "core.verylong", &i));
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_set_long(cfg, "core.verylong", 1));
+	must_pass(git_config_set_int64(cfg, "core.verylong", 1));
 	git_config_free(cfg);
 
 END_TEST
@@ -233,11 +233,11 @@ END_TEST
 BEGIN_TEST(config10, "a repo's config overrides the global config")
 	git_repository *repo;
 	git_config *cfg;
-	int version;
+	int32_t version;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, GLOBAL_CONFIG, NULL));
-	must_pass(git_config_get_int(cfg, "core.repositoryformatversion", &version));
+	must_pass(git_config_get_int32(cfg, "core.repositoryformatversion", &version));
 	must_be_true(version == 0);
 	git_config_free(cfg);
 	git_repository_free(repo);
@@ -246,11 +246,11 @@ END_TEST
 BEGIN_TEST(config11, "fall back to the global config")
 	git_repository *repo;
 	git_config *cfg;
-	int num;
+	int32_t num;
 
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_repository_config(&cfg, repo, GLOBAL_CONFIG, NULL));
-	must_pass(git_config_get_int(cfg, "core.something", &num));
+	must_pass(git_config_get_int32(cfg, "core.something", &num));
 	must_be_true(num == 2);
 	git_config_free(cfg);
 	git_repository_free(repo);
@@ -258,11 +258,11 @@ END_TEST
 
 BEGIN_TEST(config12, "delete a value")
 	git_config *cfg;
-	int i;
+	int32_t i;
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_pass(git_config_set_int(cfg, "core.dummy", 5));
+	must_pass(git_config_set_int32(cfg, "core.dummy", 5));
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
@@ -270,8 +270,8 @@ BEGIN_TEST(config12, "delete a value")
 	git_config_free(cfg);
 
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
-	must_be_true(git_config_get_int(cfg, "core.dummy", &i) == GIT_ENOTFOUND);
-	must_pass(git_config_set_int(cfg, "core.dummy", 1));
+	must_be_true(git_config_get_int32(cfg, "core.dummy", &i) == GIT_ENOTFOUND);
+	must_pass(git_config_set_int32(cfg, "core.dummy", 1));
 	git_config_free(cfg);
 END_TEST
 
@@ -294,12 +294,12 @@ END_TEST
 
 BEGIN_TEST(config15, "add a variable in an existing section")
 	git_config *cfg;
-	int i;
+	int32_t i;
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config10"));
-	must_pass(git_config_set_int(cfg, "empty.tmp", 5));
-	must_pass(git_config_get_int(cfg, "empty.tmp", &i));
+	must_pass(git_config_set_int32(cfg, "empty.tmp", 5));
+	must_pass(git_config_get_int32(cfg, "empty.tmp", &i));
 	must_be_true(i == 5);
 	must_pass(git_config_delete(cfg, "empty.tmp"));
 	git_config_free(cfg);
@@ -307,13 +307,13 @@ END_TEST
 
 BEGIN_TEST(config16, "add a variable in a new section")
 	git_config *cfg;
-	int i;
+	int32_t i;
 	git_filebuf buf;
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config10"));
-	must_pass(git_config_set_int(cfg, "section.tmp", 5));
-	must_pass(git_config_get_int(cfg, "section.tmp", &i));
+	must_pass(git_config_set_int32(cfg, "section.tmp", 5));
+	must_pass(git_config_get_int32(cfg, "section.tmp", &i));
 	must_be_true(i == 5);
 	must_pass(git_config_delete(cfg, "section.tmp"));
 	git_config_free(cfg);
