@@ -556,7 +556,7 @@ BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
 END_TEST
 
 BEGIN_TEST(strtol0, "parsing out 32 integers from a string")
-	int i;
+	int32_t i;
 
 	must_pass(git__strtol32(&i, "123", NULL, 10));
 	must_be_true(i == 123);
@@ -575,7 +575,7 @@ BEGIN_TEST(strtol0, "parsing out 32 integers from a string")
 END_TEST
 
 BEGIN_TEST(strtol1, "parsing out 64 integers from a string")
-	long long i;
+	int64_t i;
 
 	must_pass(git__strtol64(&i, "123", NULL, 10));
 	must_be_true(i == 123);
