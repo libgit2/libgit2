@@ -138,6 +138,18 @@ int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 	return off;
 }
 
+#ifdef GIT_WIN32
+int gitno_close(GIT_SOCKET s)
+{
+	return closesocket(s) == SOCKET_ERROR ? -1 : 0;
+}
+#else
+int gitno_close(GIT_SOCKET s)
+{
+	return close(s);
+}
+#endif
+
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 {
 	fd_set fds;

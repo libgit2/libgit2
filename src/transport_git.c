@@ -505,14 +505,17 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 static int git_close(git_transport *transport)
 {
 	transport_git *t = (transport_git*) transport;
-	int s = t->socket;
 	int error;
 
 	/* Can't do anything if there's an error, so don't bother checking */
-	git_pkt_send_flush(s);
-	error = close(s);
+	git_pkt_send_flush(t->socket);
+	error = gitno_close(t->socket);
 	if (error < 0)
 		error = git__throw(GIT_EOSERR, "Failed to close socket");
+
+#ifdef GIT_WIN32
+	WSACleanup();
+#endif
 
 	return error;
 }
@@ -527,10 +530,6 @@ static void git_free(git_transport *transport)
 		git_pkt *p = git_vector_get(refs, i);
 		git_pkt_free(p);
 	}
-
-#ifdef GIT_WIN32
-	WSACleanup();
-#endif
 
 	git_vector_free(refs);
 	free(t->heads);

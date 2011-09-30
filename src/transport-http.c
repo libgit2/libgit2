@@ -362,7 +362,7 @@ static int http_close(git_transport *transport)
 	transport_http *t = (transport_http *) transport;
 	int error;
 
-	error = close(t->socket);
+	error = gitno_close(t->socket);
 	if (error < 0)
 		return git__throw(GIT_EOSERR, "Failed to close the socket: %s", strerror(errno));
 
