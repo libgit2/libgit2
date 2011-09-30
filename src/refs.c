@@ -1391,7 +1391,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	new_ref->name = NULL;
 	reference_free(new_ref);
 
-	if ((error = git_hashtable_insert2(ref->owner->references.loose_cache, ref->name, ref, NULL)) < GIT_SUCCESS)
+	if ((error = git_hashtable_insert(ref->owner->references.loose_cache, ref->name, ref)) < GIT_SUCCESS)
 		goto rollback;
 
 	/*
