@@ -35,10 +35,11 @@ typedef struct {
  */
 static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 {
-	char *delim, *repo, *ptr;
+	char *delim, *repo;
 	char default_command[] = "git-upload-pack";
 	char host[] = "host=";
 	int len;
+	git_buf buf = GIT_BUF_INIT;
 
 	delim = strchr(url, '/');
 	if (delim == NULL)
@@ -53,17 +54,16 @@ static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 	if (cmd == NULL)
 		cmd = default_command;
 
-	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 2;
+	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1 + 1;
 
-	*out = git__malloc(len);
-	if (*out == NULL)
-		return GIT_ENOMEM;
+	git_buf_grow(&buf, len);
 
-	*outlen = len - 1;
-	ptr = *out;
-	memset(ptr, 0x0, len);
-	/* We expect the return value to be > len - 1 so don't bother checking it */
-	snprintf(ptr, len -1, "%04x%s %s%c%s%s", len - 1, cmd, repo, 0, host, url);
+	git_buf_printf(&buf, "%04x%s %s%c%s", len, cmd, repo, 0, host);
+	git_buf_put(&buf, url, delim - url);
+	git_buf_putc(&buf, '\0');
+
+	*outlen = len;
+	*out = buf.ptr;
 
 	return GIT_SUCCESS;
 }
