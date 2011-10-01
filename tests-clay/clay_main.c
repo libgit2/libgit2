@@ -16,7 +16,6 @@
 #	include <io.h>
 #	include <shellapi.h>
 #	include <direct.h>
-#	pragma comment(lib, "shell32")
 
 #	define _MAIN_CC __cdecl
 
@@ -27,9 +26,11 @@
 #	define strdup(str) _strdup(str)
 
 #	ifndef __MINGW32__
+#		pragma comment(lib, "shell32")
 #		define strncpy(to, from, to_size) strncpy_s(to, to_size, from, _TRUNCATE)
 #		define W_OK 02
 #		define S_ISDIR(x) ((x & _S_IFDIR) != 0)
+#		define mktemp_s(path, len) _mktemp_s(path, len)
 #	endif
 	typedef struct _stat STAT_T;
 #else
@@ -368,15 +369,12 @@ is_valid_tmp_path(const char *path)
 static int
 find_tmp_path(char *buffer, size_t length)
 {
+#ifndef _WIN32
 	static const size_t var_count = 4;
 	static const char *env_vars[] = {
 		"TMPDIR", "TMP", "TEMP", "USERPROFILE"
  	};
 
-#ifdef _WIN32
-	if (GetTempPath((DWORD)length, buffer))
-		return 0;
-#else
  	size_t i;
 
 	for (i = 0; i < var_count; ++i) {
@@ -395,6 +393,10 @@ find_tmp_path(char *buffer, size_t length)
 		strncpy(buffer, "/tmp", length);
 		return 0;
 	}
+
+#else
+	if (GetTempPath((DWORD)length, buffer))
+		return 0;
 #endif
 
 	/* This system doesn't like us, try to use the current directory */
@@ -444,8 +446,8 @@ static int build_sandbox_path(void)
 
 	strncpy(_clay_path + len, path_tail, sizeof(_clay_path) - len);
 
-#ifdef _MSC_VER
-	if (_mktemp_s(_clay_path, sizeof(_clay_path)) != 0)
+#ifdef _WIN32
+	if (mktemp_s(_clay_path, sizeof(_clay_path)) != 0)
 		return -1;
 
 	if (mkdir(_clay_path, 0700) != 0)
