@@ -332,7 +332,9 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 
 		git_oid_fmt(buf + strlen(WANT_PREFIX), &head->oid);
 		error = gitno_send(fd, buf, strlen(buf), 0);
-		return git__rethrow(error, "Failed to send want pkt");
+		if (error < 0) {
+			return git__rethrow(error, "Failed to send want pkt");
+		}
 	}
 
 	return git_pkt_send_flush(fd);
