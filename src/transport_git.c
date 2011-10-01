@@ -36,13 +36,12 @@ typedef struct {
  *
  * For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
  */
-static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
+static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
 	char *delim, *repo;
 	char default_command[] = "git-upload-pack";
 	char host[] = "host=";
 	int len;
-	git_buf buf = GIT_BUF_INIT;
 
 	delim = strchr(url, '/');
 	if (delim == NULL)
@@ -59,31 +58,27 @@ static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 
 	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1 + 1;
 
-	git_buf_grow(&buf, len);
+	git_buf_grow(request, len);
+	git_buf_printf(request, "%04x%s %s%c%s", len, cmd, repo, 0, host);
+	git_buf_put(request, url, delim - url);
+	git_buf_putc(request, '\0');
 
-	git_buf_printf(&buf, "%04x%s %s%c%s", len, cmd, repo, 0, host);
-	git_buf_put(&buf, url, delim - url);
-	git_buf_putc(&buf, '\0');
-
-	*outlen = len;
-	*out = buf.ptr;
-
-	return GIT_SUCCESS;
+	return git_buf_oom(request);
 }
 
 static int send_request(GIT_SOCKET s, const char *cmd, const char *url)
 {
-	int error, len;
-	char *msg = NULL;
+	int error;
+	git_buf request = GIT_BUF_INIT;
 
-	error = gen_proto(&msg, &len, cmd, url);
+	error = gen_proto(&request, cmd, url);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	error = gitno_send(s, msg, len, 0);
+	error = gitno_send(s, request.ptr, request.size, 0);
 
 cleanup:
-	free(msg);
+	git_buf_free(&request);
 	return error;
 }
 
