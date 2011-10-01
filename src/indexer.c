@@ -385,6 +385,9 @@ void git_indexer_free(git_indexer *idx)
 	struct entry *e;
 	struct git_pack_entry *pe;
 
+	if (idx == NULL)
+		return;
+
 	p_close(idx->pack->mwf.fd);
 	git_vector_foreach(&idx->objects, i, e)
 		free(e);
