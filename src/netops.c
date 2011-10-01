@@ -77,7 +77,7 @@ int gitno_connect(const char *host, const char *port)
 	struct addrinfo *info, *p;
 	struct addrinfo hints;
 	int ret, error = GIT_SUCCESS;
-	int s;
+	GIT_SOCKET s;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
@@ -92,7 +92,11 @@ int gitno_connect(const char *host, const char *port)
 
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+#ifdef GIT_WIN32
+		if (s == INVALID_SOCKET) {
+#else
 		if (s < 0) {
+#endif
 			error = GIT_EOSERR;
 			goto cleanup;
 		}
@@ -109,19 +113,21 @@ int gitno_connect(const char *host, const char *port)
 	}
 
 	/* Oops, we couldn't connect to any address */
-	error = GIT_EOSERR;
+	error = git__throw(GIT_EOSERR, "Failed to connect: %s", strerror(errno));
 
 cleanup:
 	freeaddrinfo(info);
 	return error;
 }
 
-int gitno_send(int s, const char *msg, size_t len, int flags)
+int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 {
 	int ret;
 	size_t off = 0;
 
 	while (off < len) {
+		errno = 0;
+
 		ret = send(s, msg + off, len - off, flags);
 		if (ret < 0)
 			return git__throw(GIT_EOSERR, "Error sending data: %s", strerror(errno));
@@ -131,6 +137,18 @@ int gitno_send(int s, const char *msg, size_t len, int flags)
 
 	return off;
 }
+
+#ifdef GIT_WIN32
+int gitno_close(GIT_SOCKET s)
+{
+	return closesocket(s) == SOCKET_ERROR ? -1 : 0;
+}
+#else
+int gitno_close(GIT_SOCKET s)
+{
+	return close(s);
+}
+#endif
 
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 {

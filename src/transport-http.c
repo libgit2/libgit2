@@ -52,6 +52,9 @@ typedef struct {
 	enum last_cb last_cb;
 	char *content_type;
 	char *service;
+#ifdef GIT_WIN32
+	WSADATA wsd;
+#endif
 } transport_http;
 
 static int gen_request(git_buf *buf, const char *url, const char *host, const char *service)
@@ -76,7 +79,8 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 static int do_connect(transport_http *t, const char *service)
 {
 	git_buf request = GIT_BUF_INIT;
-	int s = -1, error;
+	int error;
+	int s;
 	const char *url, *prefix;
 	char *host = NULL, *port = NULL;
 
@@ -358,9 +362,13 @@ static int http_close(git_transport *transport)
 	transport_http *t = (transport_http *) transport;
 	int error;
 
-	error = close(t->socket);
+	error = gitno_close(t->socket);
 	if (error < 0)
 		return git__throw(GIT_EOSERR, "Failed to close the socket: %s", strerror(errno));
+
+#ifdef GIT_WIN32
+	WSACleanup();
+#endif
 
 	return GIT_SUCCESS;
 }
@@ -388,6 +396,9 @@ static void http_free(git_transport *transport)
 int git_transport_http(git_transport **out)
 {
 	transport_http *t;
+#ifdef GIT_WIN32
+	int ret;
+#endif
 
 	t = git__malloc(sizeof(transport_http));
 	if (t == NULL)
@@ -401,6 +412,14 @@ int git_transport_http(git_transport **out)
 	t->parent.free = http_free;
 
 	*out = (git_transport *) t;
+
+#ifdef GIT_WIN32
+	ret = WSAStartup(MAKEWORD(2,2), &t->wsd);
+	if (ret != 0) {
+		http_free(*out);
+		return git__throw(GIT_EOSERR, "Winsock init failed");
+	}
+#endif
 
 	return GIT_SUCCESS;
 }
