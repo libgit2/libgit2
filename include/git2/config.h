@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include <stdint.h>
 
 /**
  * @file git2/config.h
