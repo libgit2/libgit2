@@ -56,7 +56,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	if (cmd == NULL)
 		cmd = default_command;
 
-	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1 + 1;
+	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1;
 
 	git_buf_grow(request, len);
 	git_buf_printf(request, "%04x%s %s%c%s", len, cmd, repo, 0, host);
