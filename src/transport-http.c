@@ -397,7 +397,7 @@ int git_transport_http(git_transport **out)
 	/* on win32, the WSA context needs to be initialized
 	 * before any socket calls can be performed */
 	if (WSAStartup(MAKEWORD(2,2), &t->wsd) != 0) {
-		http_free(t);
+		http_free((git_transport *) t);
 		return git__throw(GIT_EOSERR, "Winsock init failed");
 	}
 #endif

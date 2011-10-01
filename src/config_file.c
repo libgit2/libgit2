@@ -134,7 +134,7 @@ static int cvar_match_section(const char *section, const char *query)
 	qsub = query + section_len;
 	qdot = strchr(qsub, '.');
 	/* Make sure the subsections are the same length */
-	if (strlen(sdot + 1) != qdot - qsub)
+	if (strlen(sdot + 1) != (size_t) (qdot - qsub))
 		return 0;
 
 	/* The subsection is case-sensitive */
