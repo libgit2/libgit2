@@ -22,10 +22,13 @@
 
 typedef struct {
 	git_transport parent;
-	int socket;
+	GIT_SOCKET socket;
 	git_vector refs;
 	git_remote_head **heads;
 	git_transport_caps caps;
+#ifdef GIT_WIN32
+	WSADATA wsd;
+#endif
 } transport_git;
 
 /*
@@ -35,10 +38,11 @@ typedef struct {
  */
 static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 {
-	char *delim, *repo, *ptr;
+	char *delim, *repo;
 	char default_command[] = "git-upload-pack";
 	char host[] = "host=";
 	int len;
+	git_buf buf = GIT_BUF_INIT;
 
 	delim = strchr(url, '/');
 	if (delim == NULL)
@@ -53,22 +57,21 @@ static int gen_proto(char **out, int *outlen, const char *cmd, const char *url)
 	if (cmd == NULL)
 		cmd = default_command;
 
-	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 2;
+	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1 + 1;
 
-	*out = git__malloc(len);
-	if (*out == NULL)
-		return GIT_ENOMEM;
+	git_buf_grow(&buf, len);
 
-	*outlen = len - 1;
-	ptr = *out;
-	memset(ptr, 0x0, len);
-	/* We expect the return value to be > len - 1 so don't bother checking it */
-	snprintf(ptr, len -1, "%04x%s %s%c%s%s", len - 1, cmd, repo, 0, host, url);
+	git_buf_printf(&buf, "%04x%s %s%c%s", len, cmd, repo, 0, host);
+	git_buf_put(&buf, url, delim - url);
+	git_buf_putc(&buf, '\0');
+
+	*outlen = len;
+	*out = buf.ptr;
 
 	return GIT_SUCCESS;
 }
 
-static int send_request(int s, const char *cmd, const char *url)
+static int send_request(GIT_SOCKET s, const char *cmd, const char *url)
 {
 	int error, len;
 	char *msg = NULL;
@@ -91,7 +94,7 @@ cleanup:
  */
 static int do_connect(transport_git *t, const char *url)
 {
-	int s = -1;
+	GIT_SOCKET s;
 	char *host, *port;
 	const char prefix[] = "git://";
 	int error, connected = 0;
@@ -502,14 +505,17 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 static int git_close(git_transport *transport)
 {
 	transport_git *t = (transport_git*) transport;
-	int s = t->socket;
 	int error;
 
 	/* Can't do anything if there's an error, so don't bother checking */
-	git_pkt_send_flush(s);
-	error = close(s);
+	git_pkt_send_flush(t->socket);
+	error = gitno_close(t->socket);
 	if (error < 0)
 		error = git__throw(GIT_EOSERR, "Failed to close socket");
+
+#ifdef GIT_WIN32
+	WSACleanup();
+#endif
 
 	return error;
 }
@@ -534,6 +540,9 @@ static void git_free(git_transport *transport)
 int git_transport_git(git_transport **out)
 {
 	transport_git *t;
+#ifdef GIT_WIN32
+	int ret;
+#endif
 
 	t = git__malloc(sizeof(transport_git));
 	if (t == NULL)
@@ -553,6 +562,14 @@ int git_transport_git(git_transport **out)
 	t->parent.free = git_free;
 
 	*out = (git_transport *) t;
+
+#ifdef GIT_WIN32
+	ret = WSAStartup(MAKEWORD(2,2), &t->wsd);
+	if (ret != 0) {
+		git_free(*out);
+		return git__throw(GIT_EOSERR, "Winsock init failed");
+	}
+#endif
 
 	return GIT_SUCCESS;
 }
