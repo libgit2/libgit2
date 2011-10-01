@@ -9,6 +9,7 @@
 #include "config.h"
 #include "fileops.h"
 #include "filebuf.h"
+#include "buffer.h"
 #include "git2/config.h"
 #include "git2/types.h"
 
@@ -107,46 +108,37 @@ static void cvar_list_free(cvar_t_list *list)
 }
 
 /*
- * Compare two strings according to the git section-subsection
- * rules. The order of the strings is important because local is
- * assumed to have the internal format (only the section name and with
- * case information) and input the normalized one (only dots, no case
- * information).
+ * Compare according to the git rules. Section contains the section as
+ * it's stored internally. query is the full name as would be given to
+ * 'git config'.
  */
-static int cvar_match_section(const char *local, const char *input)
+static int cvar_match_section(const char *section, const char *query)
 {
-	char *first_dot;
-	char *local_sp = strchr(local, ' ');
-	size_t comparison_len;
+	const char *sdot, *qdot, *qsub;
+	size_t section_len;
+
+	sdot = strchr(section, '.');
+
+	/* If the section doesn't have any dots, it's easy */
+	if (sdot == NULL)
+		return !strncasecmp(section, query, strlen(section));
 
 	/*
-	 * If the local section name doesn't contain a space, then we can
-	 * just do a case-insensitive compare.
+	 * If it does have dots, compare the sections
+	 * case-insensitively. The comparison includes the dots.
 	 */
-	if (local_sp == NULL)
-		return !strncasecmp(local, input, strlen(local));
-
-	/*
-	 * From here onwards, there is a space diving the section and the
-	 * subsection. Anything before the space in local is
-	 * case-insensitive.
-	 */
-	if (strncasecmp(local, input, local_sp - local))
+	section_len = sdot - section + 1;
+	if (strncasecmp(section, query, sdot - section))
 		return 0;
 
-	/*
-	 * We compare starting from the first character after the
-	 * quotation marks, which is two characters beyond the space. For
-	 * the input, we start one character beyond the dot. If the names
-	 * have different lengths, then we can fail early, as we know they
-	 * can't be the same.
-	 * The length is given by the length between the quotation marks.
-	 */
+	qsub = query + section_len;
+	qdot = strchr(qsub, '.');
+	/* Make sure the subsections are the same length */
+	if (strlen(sdot + 1) != qdot - qsub)
+		return 0;
 
-	first_dot = strchr(input, '.');
-	comparison_len = strlen(local_sp + 2) - 1;
-
-	return !strncmp(local_sp + 2, first_dot + 1, comparison_len);
+	/* The subsection is case-sensitive */
+	return !strncmp(sdot + 1, qsub, strlen(sdot + 1));
 }
 
 static int cvar_match_name(const cvar_t *var, const char *str)
@@ -581,10 +573,9 @@ GIT_INLINE(int) config_keychar(int c)
 
 static int parse_section_header_ext(const char *line, const char *base_name, char **section_name)
 {
-	size_t buf_len, total_len;
-	int pos, rpos;
-	int c, ret;
-	char *subsection, *first_quote, *last_quote;
+	int c, rpos;
+	char *first_quote, *last_quote;
+	git_buf buf = GIT_BUF_INIT;
 	int error = GIT_SUCCESS;
 	int quote_marks;
 	/*
@@ -599,13 +590,9 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	if (last_quote - first_quote == 0)
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse ext header. There is no final quotation mark");
 
-	buf_len = last_quote - first_quote + 2;
+	git_buf_grow(&buf, strlen(base_name) + last_quote - first_quote + 2);
+	git_buf_printf(&buf, "%s.", base_name);
 
-	subsection = git__malloc(buf_len + 2);
-	if (subsection == NULL)
-		return GIT_ENOMEM;
-
-	pos = 0;
 	rpos = 0;
 	quote_marks = 0;
 
@@ -626,7 +613,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 		switch (c) {
 		case '"':
 			++quote_marks;
-			break;
+			continue;
 		case '\\':
 			c = line[rpos++];
 			switch (c) {
@@ -642,28 +629,12 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 			break;
 		}
 
-		subsection[pos++] = (char) c;
+		git_buf_putc(&buf, c);
 	} while ((c = line[rpos++]) != ']');
 
-	subsection[pos] = '\0';
-
-	total_len = strlen(base_name) + strlen(subsection) + 2;
-	*section_name = git__malloc(total_len);
-	if (*section_name == NULL) {
-		error = GIT_ENOMEM;
-		goto out;
-	}
-
-	ret = p_snprintf(*section_name, total_len, "%s %s", base_name, subsection);
-	if (ret < 0) {
-		error = git__throw(GIT_EOSERR, "Failed to parse ext header. OS error: %s", strerror(errno));
-		goto out;
-	}
-
-	git__strntolower(*section_name, strchr(*section_name, ' ') - *section_name);
-
+	*section_name = git__strdup(git_buf_cstr(&buf));
  out:
-	free(subsection);
+	git_buf_free(&buf);
 
 	return error;
 }

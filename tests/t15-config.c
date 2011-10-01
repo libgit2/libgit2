@@ -107,10 +107,8 @@ BEGIN_TEST(config3, "parse a [section.subsection] header")
 	must_pass(git_config_get_string(cfg, "section.subsection.var", &str));
 	must_be_true(!strcmp(str, "hello"));
 
-	/* Avoid a false positive */
-	str = "nohello";
-	must_pass(git_config_get_string(cfg, "section.subSectIon.var", &str));
-	must_be_true(!strcmp(str, "hello"));
+	/* The subsection is transformed to lower-case */
+	must_fail(git_config_get_string(cfg, "section.subSectIon.var", &str));
 
 	git_config_free(cfg);
 END_TEST
@@ -324,6 +322,20 @@ BEGIN_TEST(config16, "add a variable in a new section")
 	must_pass(git_filebuf_commit(&buf));
 END_TEST
 
+BEGIN_TEST(config17, "prefixes aren't broken")
+	git_config *cfg;
+	const char *str;
+
+	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config9"));
+	must_pass(git_config_get_string(cfg, "remote.ab.url", &str));
+	must_be_true(strcmp(str, "http://example.com/git/ab") == 0);
+
+	must_pass(git_config_get_string(cfg, "remote.abba.url", &str));
+	must_be_true(strcmp(str, "http://example.com/git/abba") == 0);
+
+	git_config_free(cfg);
+END_TEST
+
 BEGIN_SUITE(config)
 	 ADD_TEST(config0);
 	 ADD_TEST(config1);
@@ -342,4 +354,5 @@ BEGIN_SUITE(config)
 	 ADD_TEST(config14);
 	 ADD_TEST(config15);
 	 ADD_TEST(config16);
+	 ADD_TEST(config17);
 END_SUITE
