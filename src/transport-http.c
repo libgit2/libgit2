@@ -348,10 +348,6 @@ static int http_close(git_transport *transport)
 	if (error < 0)
 		return git__throw(GIT_EOSERR, "Failed to close the socket: %s", strerror(errno));
 
-#ifdef GIT_WIN32
-	WSACleanup();
-#endif
-
 	return GIT_SUCCESS;
 }
 
@@ -362,6 +358,14 @@ static void http_free(git_transport *transport)
 	git_vector *refs = &t->refs;
 	unsigned int i;
 	git_pkt *p;
+
+#ifdef GIT_WIN32
+	/* cleanup the WSA context. note that this context
+	 * can be initialized more than once with WSAStartup(),
+	 * and needs to be cleaned one time for each init call
+	 */
+	WSACleanup();
+#endif
 
 	git_vector_foreach(refs, i, p) {
 		git_pkt_free(p);
@@ -374,13 +378,9 @@ static void http_free(git_transport *transport)
 	free(t);
 }
 
-
 int git_transport_http(git_transport **out)
 {
 	transport_http *t;
-#ifdef GIT_WIN32
-	int ret;
-#endif
 
 	t = git__malloc(sizeof(transport_http));
 	if (t == NULL)
@@ -393,15 +393,15 @@ int git_transport_http(git_transport **out)
 	t->parent.close = http_close;
 	t->parent.free = http_free;
 
-	*out = (git_transport *) t;
-
 #ifdef GIT_WIN32
-	ret = WSAStartup(MAKEWORD(2,2), &t->wsd);
-	if (ret != 0) {
-		http_free(*out);
+	/* on win32, the WSA context needs to be initialized
+	 * before any socket calls can be performed */
+	if (WSAStartup(MAKEWORD(2,2), &t->wsd) != 0) {
+		http_free(t);
 		return git__throw(GIT_EOSERR, "Winsock init failed");
 	}
 #endif
 
+	*out = (git_transport *) t;
 	return GIT_SUCCESS;
 }
