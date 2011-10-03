@@ -36,11 +36,13 @@ static int filter_wants(git_remote *remote)
 		goto cleanup;
 	}
 
+	/*
+	 * The fetch refspec can be NULL, and what this means is that the
+	 * user didn't specify one. This is fine, as it means that we're
+	 * not interested in any particular branch but just the remote's
+	 * HEAD, which will be stored in FETCH_HEAD after the fetch.
+	 */
 	spec = git_remote_fetchspec(remote);
-	if (spec == NULL) {
-		error = git__throw(GIT_ERROR, "The remote has no fetchspec");
-		goto cleanup;
-	}
 
 	for (i = 0; i < refs.len; ++i) {
 		git_remote_head *head = refs.heads[i];
