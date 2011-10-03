@@ -224,7 +224,10 @@ static int packfile_load__cb(void *_data, char *path)
 	}
 
 	error = git_packfile_check(&pack, path);
-	if (error < GIT_SUCCESS)
+	if (error == GIT_ENOTFOUND) {
+		/* ignore missing .pack file as git does */
+		return GIT_SUCCESS;
+	} else if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to load packfile");
 
 	if (git_vector_insert(&backend->packs, pack) < GIT_SUCCESS) {
