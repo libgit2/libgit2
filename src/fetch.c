@@ -24,7 +24,7 @@ static int filter_wants(git_remote *remote)
 	git_repository *repo = remote->repo;
 	const git_refspec *spec;
 	int error;
-	unsigned int i;
+	unsigned int i = 0;
 
 	error = git_vector_init(&list, 16, NULL);
 	if (error < GIT_SUCCESS)
@@ -44,7 +44,24 @@ static int filter_wants(git_remote *remote)
 	 */
 	spec = git_remote_fetchspec(remote);
 
-	for (i = 0; i < refs.len; ++i) {
+	/*
+	 * We need to handle HEAD separately, as we always want it, but it
+	 * probably won't matcht he refspec.
+	 */
+	head = refs.heads[0];
+	if (refs.len > 0 && !strcmp(head->name, GIT_HEAD_FILE)) {
+		if (git_odb_exists(repo->db, &head->oid))
+			head->local = 1;
+		else
+			remote->need_pack = 1;
+
+		i = 1;
+		error = git_vector_insert(&list, refs.heads[0]);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	for (; i < refs.len; ++i) {
 		git_remote_head *head = refs.heads[i];
 
 		/* If it doesn't match the refpec, we don't want it */

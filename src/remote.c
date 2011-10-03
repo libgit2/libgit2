@@ -219,7 +219,7 @@ int git_remote_download(char **filename, git_remote *remote)
 int git_remote_update_tips(struct git_remote *remote)
 {
 	int error = GIT_SUCCESS;
-	unsigned int i;
+	unsigned int i = 0;
 	char refname[GIT_PATH_MAX];
 	git_headarray *refs = &remote->refs;
 	git_remote_head *head;
@@ -228,8 +228,21 @@ int git_remote_update_tips(struct git_remote *remote)
 
 	memset(refname, 0x0, sizeof(refname));
 
-	for (i = 0; i < refs->len; ++i) {
+	if (refs->len == 0)
+		return GIT_SUCCESS;
+
+	/* HEAD is only allowed to be the first in the list */
+	head = refs->heads[0];
+	if (!strcmp(head->name, GIT_HEAD_FILE)) {
+		error = git_reference_create_oid(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1);
+		i = 1;
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to update FETCH_HEAD");
+	}
+
+	for (; i < refs->len; ++i) {
 		head = refs->heads[i];
+
 		error = git_refspec_transform(refname, sizeof(refname), spec, head->name);
 		if (error < GIT_SUCCESS)
 			return error;
