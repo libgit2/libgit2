@@ -262,6 +262,12 @@ void git_pkt_free(git_pkt *pkt)
 	free(pkt);
 }
 
+int git_pkt_buffer_flush(git_buf *buf)
+{
+	git_buf_puts(buf, "0000");
+	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
+}
+
 int git_pkt_send_flush(int s, int chunked)
 {
 	char flush[] = "0000";
@@ -275,30 +281,36 @@ int git_pkt_send_flush(int s, int chunked)
 	return gitno_send(s, flush, strlen(flush), 0);
 }
 
-static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, int fd, int chunked)
+static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps, git_buf *buf)
 {
-	char capstr[20]; /* Longer than we need */
-	char oid[GIT_OID_HEXSZ +1] = {0}, *cmd;
-	int error, len;
-	git_buf buf = GIT_BUF_INIT;
+	char capstr[20];
+	char oid[GIT_OID_HEXSZ +1] = {0};
+	int len;
 
 	if (caps->ofs_delta)
 		strcpy(capstr, GIT_CAP_OFS_DELTA);
 
 	len = strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ + strlen(capstr) + 1 /* LF */;
-	cmd = git__malloc(len + 1);
-	if (cmd == NULL)
-		return GIT_ENOMEM;
+	git_buf_grow(buf, buf->size + len);
 
 	git_oid_fmt(oid, &head->oid);
-	git_buf_printf(&buf, "%04xwant %s%c%s\n", len, oid, 0, capstr);
-	if (chunked) {
-		error = gitno_send_chunk_size(fd, len);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to send first want chunk size");
-	}
-	error = gitno_send(fd, git_buf_cstr(&buf), len, 0);
-	free(cmd);
+	git_buf_printf(buf, "%04xwant %s%c%s\n", len, oid, 0, capstr);
+
+	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
+}
+
+static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, GIT_SOCKET fd)
+{
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	error = buffer_want_with_caps(head, caps, &buf);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to buffer want with caps");
+
+	error = gitno_send(fd, buf.ptr, buf.size, 0);
+	git_buf_free(&buf);
+
 	return error;
 }
 
@@ -307,6 +319,41 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
  * is overwrite the OID each time.
  */
 #define WANT_PREFIX "0032want "
+
+int git_pkt_buffer_wants(git_headarray *refs, git_transport_caps *caps, git_buf *buf)
+{
+	unsigned int i = 0;
+	int error;
+	git_remote_head *head;
+
+	if (caps->common) {
+		for (; i < refs->len; ++i) {
+			head = refs->heads[i];
+			if (!head->local)
+				break;
+		}
+
+		error = buffer_want_with_caps(refs->heads[i], caps, buf);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to buffer want with caps");
+
+		i++;
+	}
+
+	for (; i < refs->len; ++i) {
+		char oid[GIT_OID_HEXSZ];
+
+		head = refs->heads[i];
+		if (head->local)
+			continue;
+
+		git_oid_fmt(oid, &head->oid);
+		git_buf_puts(buf, WANT_PREFIX);
+		git_buf_put(buf, oid, GIT_OID_HEXSZ);
+	}
+
+	return git_pkt_buffer_flush(buf);
+}
 
 int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd, int chunked)
 {
@@ -329,7 +376,7 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd, in
 				break;
 		}
 
-		error = send_want_with_caps(refs->heads[i], caps, fd, chunked);
+		error = send_want_with_caps(refs->heads[i], caps, fd);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to send want pkt with caps");
 		/* Increase it here so it's correct whether we run this or not */
@@ -356,11 +403,17 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd, in
 	return git_pkt_send_flush(fd, chunked);
 }
 
-/*
- * TODO: this should be a more generic function, maybe to be used by
- * git_pkt_send_wants, as it's not performance-critical
- */
 #define HAVE_PREFIX "0032have "
+
+int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
+{
+	char oidhex[GIT_OID_HEXSZ + 1];
+
+	memset(oidhex, 0x0, sizeof(oidhex));
+	git_oid_fmt(oidhex, oid);
+	git_buf_printf(buf, "%s%s\n", HAVE_PREFIX, oidhex);
+	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
+}
 
 int git_pkt_send_have(git_oid *oid, int fd, int chunked)
 {
@@ -374,6 +427,14 @@ int git_pkt_send_have(git_oid *oid, int fd, int chunked)
 	}
 	git_oid_fmt(buf + strlen(HAVE_PREFIX), oid);
 	return gitno_send(fd, buf, strlen(buf), 0);
+}
+
+static char *donestr = "0009done\n";
+
+int git_pkt_buffer_done(git_buf *buf)
+{
+	git_buf_puts(buf, donestr);
+	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
 int git_pkt_send_done(int fd, int chunked)
