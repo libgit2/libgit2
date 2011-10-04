@@ -25,6 +25,7 @@ enum last_cb {
 typedef struct {
 	git_transport parent;
 	git_vector refs;
+	git_vector common;
 	int socket;
 	git_buf buf;
 	git_remote_head **heads;
@@ -55,9 +56,10 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	git_buf_printf(buf, "%s %s/info/refs?service=git-%s HTTP/1.1\r\n", op, path, service);
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", host);
-	git_buf_puts(buf, "Accept: */*\r\n" "Pragma: no-cache\r\n\r\n");
-	if (strncmp(service, "POST", strlen("POST")))
-		git_buf_puts(buf, "Content-Encoding: chunked");
+	git_buf_puts(buf, "Accept: */*\r\n" "Pragma: no-cache\r\n");
+	if (!strncmp(op, "POST", strlen("POST")))
+		git_buf_puts(buf, "Transfer-Encoding: chunked\r\n");
+	git_buf_puts(buf, "\r\n");
 
 	if (git_buf_oom(buf))
 		return GIT_ENOMEM;
@@ -341,6 +343,98 @@ static int http_ls(git_transport *transport, git_headarray *array)
 	return GIT_SUCCESS;
 }
 
+static int on_body_parse_response(http_parser *parser, const char *str, size_t len)
+{
+	transport_http *t = (transport_http *) parser->data;
+	git_buf *buf = &t->buf;
+	git_vector *common = &t->common;
+	int error;
+	const char *line_end, *ptr;
+	static int first_pkt = 1;
+
+	if (len == 0) { /* EOF */
+		if (buf->size != 0)
+			return t->error = git__throw(GIT_ERROR, "EOF and unprocessed data");
+		else
+			return 0;
+	}
+
+	git_buf_put(buf, str, len);
+	ptr = buf->ptr;
+	while (1) {
+		git_pkt *pkt;
+
+		if (buf->size == 0)
+			return 0;
+
+		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
+		if (error == GIT_ESHORTBUFFER)
+			return 0; /* Ask for more */
+		if (error < GIT_SUCCESS)
+			return t->error = git__rethrow(error, "Failed to parse pkt-line");
+
+		git_buf_consume(buf, line_end);
+
+		if (first_pkt) {
+			first_pkt = 0;
+			if (pkt->type != GIT_PKT_COMMENT)
+				return t->error = git__throw(GIT_EOBJCORRUPTED, "Not a valid smart HTTP response");
+		}
+
+		if (pkt->type == GIT_PKT_NAK)
+			return 0;
+
+		if (pkt->type != GIT_PKT_ACK)
+			continue;
+
+		error = git_vector_insert(common, pkt);
+		if (error < GIT_SUCCESS)
+			return t->error = git__rethrow(error, "Failed to add pkt to list");
+	}
+
+	return error;
+
+}
+
+static int parse_response(transport_http *t)
+{
+	int error = GIT_SUCCESS;
+	http_parser_settings settings;
+	char buffer[1024];
+	gitno_buffer buf;
+
+	http_parser_init(&t->parser, HTTP_RESPONSE);
+	t->parser.data = t;
+	memset(&settings, 0x0, sizeof(http_parser_settings));
+	settings.on_header_field = on_header_field;
+	settings.on_header_value = on_header_value;
+	settings.on_headers_complete = on_headers_complete;
+	settings.on_body = on_body_parse_response;
+	settings.on_message_complete = on_message_complete;
+
+	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
+
+	while(1) {
+		size_t parsed;
+
+		error = gitno_recv(&buf);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Error receiving data from network");
+
+		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
+		/* Both should happen at the same time */
+		if (parsed != buf.offset || t->error < GIT_SUCCESS)
+			return git__rethrow(t->error, "Error parsing HTTP data");
+
+		gitno_consume_n(&buf, parsed);
+
+		if (error == 0 || t->transfer_finished)
+			return GIT_SUCCESS;
+	}
+
+	return error;
+}
+
 static int setup_walk(git_revwalk **out, git_repository *repo)
 {
 	git_revwalk *walk;
@@ -395,8 +489,9 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	char buff[128];
 	gitno_buffer buf;
 	git_revwalk *walk = NULL;
-	git_oid oid, *poid;
-	git_vector common;
+	git_oid oid;
+	git_pkt_ack *pkt;
+	git_vector *common = &t->common;
 	const char *prefix = "http://", *url = t->parent.url;
 	git_buf request = GIT_BUF_INIT;
 	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
@@ -405,7 +500,7 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
 
-	error = git_vector_init(&common, 16, NULL);
+	error = git_vector_init(common, 16, NULL);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to init common vector");
 
@@ -441,8 +536,8 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 		}
 
 		/* We need to send these on each connection */
-		git_vector_foreach (&common, i, poid) {
-			error = git_pkt_send_have(poid, t->socket, 1);
+		git_vector_foreach (common, i, pkt) {
+			error = git_pkt_send_have(&pkt->oid, t->socket, 1);
 			if (error < GIT_SUCCESS) {
 				error = git__rethrow(error, "Failed to send common have");
 				goto cleanup;
@@ -450,7 +545,7 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 		}
 
 		i = 0;
-		while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+		while ((i < 256) && ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS)) {
 			error = git_pkt_send_have(&oid, t->socket, 1);
 			if (error < GIT_SUCCESS) {
 				error = git__rethrow(error, "Failed to send have");
@@ -460,6 +555,9 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 		}
 		if (error < GIT_SUCCESS || i >= 256)
 			break;
+
+		error = parse_response(t);
+
 	} while(1);
 
 cleanup:
