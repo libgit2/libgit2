@@ -157,9 +157,9 @@ int gitno_send_chunk_size(int s, size_t len)
 	char str[8] = {0};
 	int ret;
 
-	ret = p_snprintf(str, sizeof(str), "%zx", len);
+	ret = p_snprintf(str, sizeof(str), "%zx\r\n", len);
 	if (ret >= (int) sizeof(str)) {
-		return git__throw(GIT_ESHORTBUFFER, "Your number is too fucking big");
+		return git__throw(GIT_ESHORTBUFFER, "Your number is too big");
 	}
 
 	return gitno_send(s, str, ret, 0 /* TODO: MSG_MORE */);
