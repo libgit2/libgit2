@@ -9,7 +9,7 @@
 
 #include "common.h"
 #include "types.h"
-#include <stdint.h>
+#include "win32/msvc-compat.h"
 
 /**
  * @file git2/config.h
