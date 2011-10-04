@@ -17,6 +17,7 @@
 #include "pack.h"
 #include "filebuf.h"
 #include "sha1.h"
+#include "win32/msvc-compat.h"
 
 #define UINT31_MAX (0x7FFFFFFF)
 

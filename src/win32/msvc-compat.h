@@ -51,6 +51,8 @@ typedef unsigned long long uint64_t;
 
 typedef long long intmax_t;
 typedef unsigned long long uintmax_t;
+
+#define UINT32_MAX 4294967295U
 #endif
 
 #endif
