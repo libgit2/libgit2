@@ -11,9 +11,6 @@
 #include "git2/thread-utils.h"
 #include "cc-compat.h"
 
-#ifdef GIT_HAVE_INTTYPES_H
-# include <inttypes.h>
-#endif
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>

@@ -11,6 +11,12 @@
 #include <time.h>
 #include <stdlib.h>
 
+#ifdef _MSC_VER
+#	include "inttypes.h"
+#else
+#	include <inttypes.h>
+#endif
+
 #ifdef __cplusplus
 # define GIT_BEGIN_DECL extern "C" {
 # define GIT_END_DECL	}

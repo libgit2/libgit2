@@ -11,9 +11,6 @@
 #include "fnmatch.h"
 #include "utf8-conv.h"
 
-/* Define the printf format for 64 bit types */
-#define PRId64 "I64d"
-
 GIT_INLINE(int) p_link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
 	GIT_UNUSED_ARG(old)
