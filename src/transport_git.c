@@ -277,7 +277,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	char buff[128];
 	gitno_buffer buf;
 
-	error = git_pkt_send_wants(wants, &t->caps, t->socket, 0);
+	error = git_pkt_send_wants(wants, &t->caps, t->socket);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to send wants list");
 
@@ -322,12 +322,12 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	 */
 	i = 0;
 	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
-		error = git_pkt_send_have(&oid, t->socket, 1);
+		error = git_pkt_send_have(&oid, t->socket);
 		i++;
 		if (i % 20 == 0) {
 			const char *ptr = buf.data, *line_end;
 			git_pkt *pkt;
-			git_pkt_send_flush(t->socket, 0);
+			git_pkt_send_flush(t->socket);
 			while (1) {
 				/* Wait for max. 1 second */
 				error = gitno_select_in(&buf, 1, 0);
@@ -373,8 +373,8 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 		error = GIT_SUCCESS;
 
 done:
-	git_pkt_send_flush(t->socket, 0);
-	git_pkt_send_done(t->socket, 0);
+	git_pkt_send_flush(t->socket);
+	git_pkt_send_done(t->socket);
 
 cleanup:
 	git_revwalk_free(walk);
@@ -385,14 +385,14 @@ static int git_send_flush(git_transport *transport)
 {
 	transport_git *t = (transport_git *) transport;
 
-	return git_pkt_send_flush(t->socket, 1);
+	return git_pkt_send_flush(t->socket);
 }
 
 static int git_send_done(git_transport *transport)
 {
 	transport_git *t = (transport_git *) transport;
 
-	return git_pkt_send_done(t->socket, 1);
+	return git_pkt_send_done(t->socket);
 }
 
 static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
@@ -492,7 +492,7 @@ static int git_close(git_transport *transport)
 	int error;
 
 	/* Can't do anything if there's an error, so don't bother checking  */
-	git_pkt_send_flush(t->socket, 0);
+	git_pkt_send_flush(t->socket);
 	error = gitno_close(t->socket);
 
 	if (error < 0)
