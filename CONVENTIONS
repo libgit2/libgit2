@@ -105,3 +105,10 @@ after replacing non-identifier characters with '_'.
 	GIT_END_DECL
 	#endif
 ----
+
+
+Visual Studio 2008
+------------------
+
+There is no stdint.h available in Visual Studio up to version 2008.
+So do not include <stdint.h> directly, but use "win32/msvc-compat.h".
