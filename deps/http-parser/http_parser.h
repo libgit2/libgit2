@@ -30,24 +30,12 @@ extern "C" {
 #ifdef _MSC_VER
 	/* disable silly warnings */
 #	pragma warning(disable: 4127 4214)
+#	include "win32/msvc-compat.h"
+#else
+#	include <stdint.h>
 #endif
 
 #include <sys/types.h>
-#if defined(_WIN32) && !defined(__MINGW32__) && !defined(_MSC_VER)
-typedef __int8 int8_t;
-typedef unsigned __int8 uint8_t;
-typedef __int16 int16_t;
-typedef unsigned __int16 uint16_t;
-typedef __int32 int32_t;
-typedef unsigned __int32 uint32_t;
-typedef __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-
-typedef unsigned int size_t;
-typedef int ssize_t;
-#else
-#include <stdint.h>
-#endif
 
 /* Compile with -DHTTP_PARSER_STRICT=0 to make less checks, but run
  * faster
