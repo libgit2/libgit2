@@ -32,7 +32,8 @@ typedef struct {
 	int error;
 	int transfer_finished :1,
 		ct_found :1,
-		ct_finished :1;
+		ct_finished :1,
+		pack_ready :1;
 	enum last_cb last_cb;
 	http_parser parser;
 	char *content_type;
@@ -45,7 +46,8 @@ typedef struct {
 #endif
 } transport_http;
 
-static int gen_request(git_buf *buf, const char *url, const char *host, const char *op, const char *service)
+static int gen_request(git_buf *buf, const char *url, const char *host, const char *op,
+                       const char *service, ssize_t content_length, int ls)
 {
 	const char *path = url;
 
@@ -53,12 +55,20 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	if (path == NULL) /* Is 'git fetch http://host.com/' valid? */
 		path = "/";
 
-	git_buf_printf(buf, "%s %s/info/refs?service=git-%s HTTP/1.1\r\n", op, path, service);
+	if (ls) {
+		git_buf_printf(buf, "%s %s/info/refs?service=git-%s HTTP/1.1\r\n", op, path, service);
+	} else {
+		git_buf_printf(buf, "%s %s/git-%s HTTP/1.1\r\n", op, path, service);
+	}
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", host);
-	git_buf_puts(buf, "Accept: */*\r\n" "Pragma: no-cache\r\n");
-	if (!strncmp(op, "POST", strlen("POST")))
-		git_buf_puts(buf, "Transfer-Encoding: chunked\r\n");
+	if (content_length > 0) {
+		git_buf_printf(buf, "Accept: application/x-git-%s-result\r\n", service);
+		git_buf_printf(buf, "Content-Type: application/x-git-%s-request\r\n", service);
+		git_buf_printf(buf, "Content-Length: %zd\r\n", content_length);
+	} else {
+		git_buf_puts(buf, "Accept: */*\r\n");
+	}
 	git_buf_puts(buf, "\r\n");
 
 	if (git_buf_oom(buf))
@@ -298,7 +308,7 @@ static int http_connect(git_transport *transport, int direction)
 	}
 
 	/* Generate and send the HTTP request */
-	error = gen_request(&request, url, t->host, "GET", service);
+	error = gen_request(&request, url, t->host, "GET", service, 0, 1);
 	if (error < GIT_SUCCESS) {
 		error = git__throw(error, "Failed to generate request");
 		goto cleanup;
@@ -381,6 +391,11 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 				return t->error = git__throw(GIT_EOBJCORRUPTED, "Not a valid smart HTTP response");
 		}
 
+		if (pkt->type == GIT_PKT_PACK) {
+			t->pack_ready = 1;
+			return 0;
+		}
+
 		if (pkt->type == GIT_PKT_NAK)
 			return 0;
 
@@ -428,7 +443,7 @@ static int parse_response(transport_http *t)
 
 		gitno_consume_n(&buf, parsed);
 
-		if (error == 0 || t->transfer_finished)
+		if (error == 0 || t->transfer_finished || t->pack_ready)
 			return GIT_SUCCESS;
 	}
 
@@ -493,7 +508,7 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	git_pkt_ack *pkt;
 	git_vector *common = &t->common;
 	const char *prefix = "http://", *url = t->parent.url;
-	git_buf request = GIT_BUF_INIT;
+	git_buf request = GIT_BUF_INIT, data = GIT_BUF_INIT;
 	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
 
 	/* TODO: Store url in the transport */
@@ -517,7 +532,34 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 			goto cleanup;
 		}
 
-		error = gen_request(&request, url, t->host, "POST", "upload-pack");
+		error =  git_pkt_buffer_wants(wants, &t->caps, &data);
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to send wants");
+			goto cleanup;
+		}
+
+		/* We need to send these on each connection */
+		git_vector_foreach (common, i, pkt) {
+			error = git_pkt_buffer_have(&pkt->oid, &data);
+			if (error < GIT_SUCCESS) {
+				error = git__rethrow(error, "Failed to buffer common have");
+				goto cleanup;
+			}
+		}
+
+		i = 0;
+		while ((i < 20) && ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS)) {
+			error = git_pkt_buffer_have(&oid, &data);
+			if (error < GIT_SUCCESS) {
+				error = git__rethrow(error, "Failed to buffer have");
+				goto cleanup;
+			}
+			i++;
+		}
+
+		git_pkt_buffer_done(&data);
+
+		error = gen_request(&request, url, t->host, "POST", "upload-pack", data.size, 0);
 		if (error < GIT_SUCCESS) {
 			error = git__rethrow(error, "Failed to generate request");
 			goto cleanup;
@@ -529,34 +571,22 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 			goto cleanup;
 		}
 
-		error =  git_pkt_send_wants(wants, &t->caps, t->socket, 1);
+		error =  gitno_send(t->socket, data.ptr, data.size, 0);
 		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to send wants");
+			error = git__rethrow(error, "Failed to send data");
 			goto cleanup;
 		}
 
-		/* We need to send these on each connection */
-		git_vector_foreach (common, i, pkt) {
-			error = git_pkt_send_have(&pkt->oid, t->socket, 1);
-			if (error < GIT_SUCCESS) {
-				error = git__rethrow(error, "Failed to send common have");
-				goto cleanup;
-			}
-		}
+		git_buf_clear(&request);
+		git_buf_clear(&data);
 
-		i = 0;
-		while ((i < 256) && ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS)) {
-			error = git_pkt_send_have(&oid, t->socket, 1);
-			if (error < GIT_SUCCESS) {
-				error = git__rethrow(error, "Failed to send have");
-				goto cleanup;
-			}
-			i++;
-		}
 		if (error < GIT_SUCCESS || i >= 256)
 			break;
 
 		error = parse_response(t);
+
+		if (t->pack_ready)
+			return 0;
 
 	} while(1);
 
