@@ -15,6 +15,9 @@
 #include "buffer.h"
 #include "pkt.h"
 #include "refs.h"
+#include "fetch.h"
+#include "filebuf.h"
+#include "repository.h"
 
 enum last_cb {
 	NONE,
@@ -314,7 +317,7 @@ static int http_connect(git_transport *transport, int direction)
 		goto cleanup;
 	}
 
-	error = gitno_send(t->socket, git_buf_cstr(&request), strlen(git_buf_cstr(&request)), 0);
+	error = gitno_send(t->socket, request.ptr, request.size, 0);
 	if (error < GIT_SUCCESS)
 		error = git__rethrow(error, "Failed to send the HTTP request");
 
@@ -360,7 +363,6 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 	git_vector *common = &t->common;
 	int error;
 	const char *line_end, *ptr;
-	static int first_pkt = 1;
 
 	if (len == 0) { /* EOF */
 		if (buf->size != 0)
@@ -378,18 +380,13 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 			return 0;
 
 		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
-		if (error == GIT_ESHORTBUFFER)
+		if (error == GIT_ESHORTBUFFER) {
 			return 0; /* Ask for more */
+		}
 		if (error < GIT_SUCCESS)
 			return t->error = git__rethrow(error, "Failed to parse pkt-line");
 
 		git_buf_consume(buf, line_end);
-
-		if (first_pkt) {
-			first_pkt = 0;
-			if (pkt->type != GIT_PKT_COMMENT)
-				return t->error = git__throw(GIT_EOBJCORRUPTED, "Not a valid smart HTTP response");
-		}
 
 		if (pkt->type == GIT_PKT_PACK) {
 			t->pack_ready = 1;
@@ -420,6 +417,7 @@ static int parse_response(transport_http *t)
 
 	http_parser_init(&t->parser, HTTP_RESPONSE);
 	t->parser.data = t;
+	t->transfer_finished = 0;
 	memset(&settings, 0x0, sizeof(http_parser_settings));
 	settings.on_header_field = on_header_field;
 	settings.on_header_value = on_header_value;
@@ -443,8 +441,9 @@ static int parse_response(transport_http *t)
 
 		gitno_consume_n(&buf, parsed);
 
-		if (error == 0 || t->transfer_finished || t->pack_ready)
+		if (error == 0 || t->transfer_finished || t->pack_ready) {
 			return GIT_SUCCESS;
+		}
 	}
 
 	return error;
@@ -584,14 +583,125 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 			break;
 
 		error = parse_response(t);
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Error parsing the response");
+			goto cleanup;
+		}
 
-		if (t->pack_ready)
-			return 0;
+		if (t->pack_ready) {
+			error = GIT_SUCCESS;
+			goto cleanup;
+		}
 
 	} while(1);
 
 cleanup:
 	git_revwalk_free(walk);
+	return error;
+}
+
+typedef struct {
+	git_filebuf *file;
+	transport_http *transport;
+} download_pack_cbdata;
+
+static int on_message_complete_download_pack(http_parser *parser)
+{
+	download_pack_cbdata *data = (download_pack_cbdata *) parser->data;
+
+	data->transport->transfer_finished = 1;
+
+	return 0;
+}
+static int on_body_download_pack(http_parser *parser, const char *str, size_t len)
+{
+	download_pack_cbdata *data = (download_pack_cbdata *) parser->data;
+	transport_http *t = data->transport;
+	git_filebuf *file = data->file;
+
+
+	return t->error = git_filebuf_write(file, str, len);
+}
+
+/*
+ * As the server is probably using Transfer-Encoding: chunked, we have
+ * to use the HTTP parser to download the pack instead of giving it to
+ * the simple downloader. Furthermore, we're using keep-alive
+ * connections, so the simple downloader would just hang.
+ */
+static int http_download_pack(char **out, git_transport *transport, git_repository *repo)
+{
+	transport_http *t = (transport_http *) transport;
+	git_buf *oldbuf = &t->buf;
+	int error = GIT_SUCCESS;
+	http_parser_settings settings;
+	char buffer[1024];
+	gitno_buffer buf;
+	download_pack_cbdata data;
+	git_filebuf file;
+	char path[GIT_PATH_MAX], suff[] = "/objects/pack/pack-received\0";
+
+	/*
+	 * This is part of the previous response, so we don't want to
+	 * re-init the parser, just set these two callbacks.
+	 */
+	data.file = &file;
+	data.transport = t;
+	t->parser.data = &data;
+	t->transfer_finished = 0;
+	memset(&settings, 0x0, sizeof(settings));
+	settings.on_message_complete = on_message_complete_download_pack;
+	settings.on_body = on_body_download_pack;
+
+	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
+
+	git_path_join(path, repo->path_repository, suff);
+
+	if (memcmp(oldbuf->ptr, "PACK", strlen("PACK"))) {
+		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
+	}
+
+	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	/* Part of the packfile has been received, don't loose it */
+	error = git_filebuf_write(&file, oldbuf->ptr, oldbuf->size);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	while(1) {
+		size_t parsed;
+
+		error = gitno_recv(&buf);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Error receiving data from network");
+
+		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
+		/* Both should happen at the same time */
+		if (parsed != buf.offset || t->error < GIT_SUCCESS)
+			return git__rethrow(t->error, "Error parsing HTTP data");
+
+		gitno_consume_n(&buf, parsed);
+
+		if (error == 0 || t->transfer_finished) {
+			break;
+		}
+	}
+
+	*out = git__strdup(file.path_lock);
+	if (*out == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	/* A bit dodgy, but we need to keep the pack at the temporary path */
+	error = git_filebuf_commit_at(&file, file.path_lock);
+
+cleanup:
+	if (error < GIT_SUCCESS)
+		git_filebuf_cleanup(&file);
+
 	return error;
 }
 
@@ -650,6 +760,7 @@ int git_transport_http(git_transport **out)
 	t->parent.connect = http_connect;
 	t->parent.ls = http_ls;
 	t->parent.negotiate_fetch = http_negotiate_fetch;
+	t->parent.download_pack = http_download_pack;
 	t->parent.close = http_close;
 	t->parent.free = http_free;
 
