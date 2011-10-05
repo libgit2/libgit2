@@ -357,9 +357,11 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 				gitno_consume(buf, line_end);
 
 				if (pkt->type == GIT_PKT_ACK) {
+					free(pkt);
 					error = GIT_SUCCESS;
 					goto done;
 				} else if (pkt->type == GIT_PKT_NAK) {
+					free(pkt);
 					break;
 				} else {
 					error = git__throw(GIT_ERROR, "Got unexpected pkt type");
@@ -422,6 +424,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 				return error;
 
 			if (pkt->type == GIT_PKT_PACK) {
+				free(pkt);
 				return git_fetch__download_pack(out, buf->data, buf->offset, t->socket, repo);
 			}
 

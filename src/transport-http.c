@@ -389,15 +389,20 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 		git_buf_consume(buf, line_end);
 
 		if (pkt->type == GIT_PKT_PACK) {
+			free(pkt);
 			t->pack_ready = 1;
 			return 0;
 		}
 
-		if (pkt->type == GIT_PKT_NAK)
+		if (pkt->type == GIT_PKT_NAK) {
+			free(pkt);
 			return 0;
+		}
 
-		if (pkt->type != GIT_PKT_ACK)
+		if (pkt->type != GIT_PKT_ACK) {
+			free(pkt);
 			continue;
+		}
 
 		error = git_vector_insert(common, pkt);
 		if (error < GIT_SUCCESS)
@@ -596,6 +601,8 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	} while(1);
 
 cleanup:
+	git_buf_free(&request);
+	git_buf_free(&data);
 	git_revwalk_free(walk);
 	return error;
 }
@@ -722,6 +729,7 @@ static void http_free(git_transport *transport)
 {
 	transport_http *t = (transport_http *) transport;
 	git_vector *refs = &t->refs;
+	git_vector *common = &t->common;
 	unsigned int i;
 	git_pkt *p;
 
@@ -737,6 +745,10 @@ static void http_free(git_transport *transport)
 		git_pkt_free(p);
 	}
 	git_vector_free(refs);
+	git_vector_foreach(common, i, p) {
+		git_pkt_free(p);
+	}
+	git_vector_free(common);
 	git_buf_free(&t->buf);
 	free(t->heads);
 	free(t->content_type);
