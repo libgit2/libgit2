@@ -268,16 +268,10 @@ int git_pkt_buffer_flush(git_buf *buf)
 	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
-int git_pkt_send_flush(int s, int chunked)
+int git_pkt_send_flush(int s)
 {
 	char flush[] = "0000";
-	int error;
 
-	if (chunked) {
-		error = gitno_send_chunk_size(s, strlen(flush));
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to send chunk size");
-	}
 	return gitno_send(s, flush, strlen(flush), 0);
 }
 
@@ -356,7 +350,7 @@ int git_pkt_buffer_wants(git_headarray *refs, git_transport_caps *caps, git_buf 
 	return git_pkt_buffer_flush(buf);
 }
 
-int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd, int chunked)
+int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 {
 	unsigned int i = 0;
 	int error = GIT_SUCCESS;
@@ -391,17 +385,12 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd, in
 			continue;
 
 		git_oid_fmt(buf + strlen(WANT_PREFIX), &head->oid);
-		if (chunked) {
-			error = gitno_send_chunk_size(fd, strlen(buf));
-			if (error < GIT_SUCCESS)
-				return git__rethrow(error, "Failed to send want chunk size");
-		}
 		error = gitno_send(fd, buf, strlen(buf), 0);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to send want pkt");
 	}
 
-	return git_pkt_send_flush(fd, chunked);
+	return git_pkt_send_flush(fd);
 }
 
 #define HAVE_PREFIX "0032have "
@@ -416,16 +405,10 @@ int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
 	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
-int git_pkt_send_have(git_oid *oid, int fd, int chunked)
+int git_pkt_send_have(git_oid *oid, int fd)
 {
 	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
-	int error;
 
-	if (chunked) {
-		error = gitno_send_chunk_size(fd, strlen(buf));
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to send chunk size");
-	}
 	git_oid_fmt(buf + strlen(HAVE_PREFIX), oid);
 	return gitno_send(fd, buf, strlen(buf), 0);
 }
@@ -438,15 +421,9 @@ int git_pkt_buffer_done(git_buf *buf)
 	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
-int git_pkt_send_done(int fd, int chunked)
+int git_pkt_send_done(int fd)
 {
 	char buf[] = "0009done\n";
-	int error;
 
-	if (chunked) {
-		error = gitno_send_chunk_size(fd, strlen(buf));
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to send chunk size");
-	}
 	return gitno_send(fd, buf, strlen(buf), 0);
 }
