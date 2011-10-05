@@ -412,6 +412,14 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 		1234567890,
 		0);
 
+	TEST_SIGNATURE_PASS(
+		"author A U Thor> <author@example.com> and others 1234567890\n",
+		"author ",
+		"A U Thor>",
+		"author@example.com",
+		1234567890,
+		0);
+
 	TEST_SIGNATURE_FAIL(
 		"committer Vicent Marti tanoku@gmail.com> 123456 -0100 \n",
 		"committer ");
