@@ -350,6 +350,7 @@ int git_pkt_buffer_wants(git_headarray *refs, git_transport_caps *caps, git_buf 
 		git_oid_fmt(oid, &head->oid);
 		git_buf_puts(buf, WANT_PREFIX);
 		git_buf_put(buf, oid, GIT_OID_HEXSZ);
+		git_buf_putc(buf, '\n');
 	}
 
 	return git_pkt_buffer_flush(buf);
