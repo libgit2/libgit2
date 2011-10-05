@@ -154,7 +154,7 @@ cleanup:
 static void index_path(char *path, git_indexer *idx)
 {
 	char *ptr;
-	const char prefix[] = "pack-", suffix[] = ".idx\0";
+	const char prefix[] = "pack-", suffix[] = ".idx";
 
 	ptr = strrchr(path, '/') + 1;
 
@@ -162,7 +162,7 @@ static void index_path(char *path, git_indexer *idx)
 	ptr += strlen(prefix);
 	git_oid_fmt(ptr, &idx->hash);
 	ptr += GIT_OID_HEXSZ;
-	memcpy(ptr, suffix, strlen(suffix));
+	memcpy(ptr, suffix, strlen(suffix) + 1);
 }
 
 int git_indexer_write(git_indexer *idx)
