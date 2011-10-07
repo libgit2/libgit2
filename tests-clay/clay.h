@@ -57,6 +57,17 @@ void cl_fixture_cleanup(const char *fixture_name);
 /**
  * Test method declarations
  */
+extern void test_status_single__hash_single_file(void);
+extern void test_status_worktree__initialize(void);
+extern void test_status_worktree__cleanup(void);
+extern void test_status_worktree__whole_repository(void);
+extern void test_status_worktree__empty_repository(void);
+extern void test_network_remotes__initialize(void);
+extern void test_network_remotes__cleanup(void);
+extern void test_network_remotes__parsing(void);
+extern void test_network_remotes__refspec_parsing(void);
+extern void test_network_remotes__fnmatch(void);
+extern void test_network_remotes__transform(void);
 extern void test_core_dirent__dont_traverse_dot(void);
 extern void test_core_dirent__traverse_subfolder(void);
 extern void test_core_dirent__traverse_slash_terminated_folder(void);
@@ -75,19 +86,10 @@ extern void test_core_rmdir__delete_recursive(void);
 extern void test_core_rmdir__fail_to_delete_non_empty_dir(void);
 extern void test_core_string__0(void);
 extern void test_core_string__1(void);
+extern void test_core_strtol__int32(void);
+extern void test_core_strtol__int64(void);
 extern void test_core_vector__0(void);
 extern void test_core_vector__1(void);
 extern void test_core_vector__2(void);
-extern void test_network_remotes__initialize(void);
-extern void test_network_remotes__cleanup(void);
-extern void test_network_remotes__parsing(void);
-extern void test_network_remotes__refspec_parsing(void);
-extern void test_network_remotes__fnmatch(void);
-extern void test_network_remotes__transform(void);
-extern void test_status_single__hash_single_file(void);
-extern void test_status_worktree__initialize(void);
-extern void test_status_worktree__cleanup(void);
-extern void test_status_worktree__whole_repository(void);
-extern void test_status_worktree__empty_repository(void);
 
 #endif

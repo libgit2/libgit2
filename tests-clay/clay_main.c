@@ -660,99 +660,107 @@ cl_fs_cleanup(void)
 
 
 static const struct clay_func _all_callbacks[] = {
-    {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 0},
-	{"traverse_subfolder", &test_core_dirent__traverse_subfolder, 0},
-	{"traverse_slash_terminated_folder", &test_core_dirent__traverse_slash_terminated_folder, 0},
-	{"dont_traverse_empty_folders", &test_core_dirent__dont_traverse_empty_folders, 0},
-	{"traverse_weird_filenames", &test_core_dirent__traverse_weird_filenames, 0},
-	{"0", &test_core_filebuf__0, 1},
-	{"1", &test_core_filebuf__1, 1},
-	{"2", &test_core_filebuf__2, 1},
-	{"0", &test_core_path__0, 2},
-	{"1", &test_core_path__1, 2},
-	{"2", &test_core_path__2, 2},
-	{"5", &test_core_path__5, 2},
-	{"6", &test_core_path__6, 2},
-	{"delete_recursive", &test_core_rmdir__delete_recursive, 3},
-	{"fail_to_delete_non_empty_dir", &test_core_rmdir__fail_to_delete_non_empty_dir, 3},
-	{"0", &test_core_string__0, 4},
-	{"1", &test_core_string__1, 4},
-	{"0", &test_core_vector__0, 5},
-	{"1", &test_core_vector__1, 5},
-	{"2", &test_core_vector__2, 5},
-	{"parsing", &test_network_remotes__parsing, 6},
-	{"refspec_parsing", &test_network_remotes__refspec_parsing, 6},
-	{"fnmatch", &test_network_remotes__fnmatch, 6},
-	{"transform", &test_network_remotes__transform, 6},
-	{"hash_single_file", &test_status_single__hash_single_file, 7},
-	{"whole_repository", &test_status_worktree__whole_repository, 8},
-	{"empty_repository", &test_status_worktree__empty_repository, 8}
+    {"hash_single_file", &test_status_single__hash_single_file, 0},
+	{"whole_repository", &test_status_worktree__whole_repository, 1},
+	{"empty_repository", &test_status_worktree__empty_repository, 1},
+	{"parsing", &test_network_remotes__parsing, 2},
+	{"refspec_parsing", &test_network_remotes__refspec_parsing, 2},
+	{"fnmatch", &test_network_remotes__fnmatch, 2},
+	{"transform", &test_network_remotes__transform, 2},
+	{"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 3},
+	{"traverse_subfolder", &test_core_dirent__traverse_subfolder, 3},
+	{"traverse_slash_terminated_folder", &test_core_dirent__traverse_slash_terminated_folder, 3},
+	{"dont_traverse_empty_folders", &test_core_dirent__dont_traverse_empty_folders, 3},
+	{"traverse_weird_filenames", &test_core_dirent__traverse_weird_filenames, 3},
+	{"0", &test_core_filebuf__0, 4},
+	{"1", &test_core_filebuf__1, 4},
+	{"2", &test_core_filebuf__2, 4},
+	{"0", &test_core_path__0, 5},
+	{"1", &test_core_path__1, 5},
+	{"2", &test_core_path__2, 5},
+	{"5", &test_core_path__5, 5},
+	{"6", &test_core_path__6, 5},
+	{"delete_recursive", &test_core_rmdir__delete_recursive, 6},
+	{"fail_to_delete_non_empty_dir", &test_core_rmdir__fail_to_delete_non_empty_dir, 6},
+	{"0", &test_core_string__0, 7},
+	{"1", &test_core_string__1, 7},
+	{"int32", &test_core_strtol__int32, 8},
+	{"int64", &test_core_strtol__int64, 8},
+	{"0", &test_core_vector__0, 9},
+	{"1", &test_core_vector__1, 9},
+	{"2", &test_core_vector__2, 9}
 };
 
 static const struct clay_suite _all_suites[] = {
     {
+        "status::single",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[0], 1
+    },
+	{
+        "status::worktree",
+        {"initialize", &test_status_worktree__initialize, 1},
+        {"cleanup", &test_status_worktree__cleanup, 1},
+        &_all_callbacks[1], 2
+    },
+	{
+        "network::remotes",
+        {"initialize", &test_network_remotes__initialize, 2},
+        {"cleanup", &test_network_remotes__cleanup, 2},
+        &_all_callbacks[3], 4
+    },
+	{
         "core::dirent",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[0], 5
+        &_all_callbacks[7], 5
     },
 	{
         "core::filebuf",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[5], 3
+        &_all_callbacks[12], 3
     },
 	{
         "core::path",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[8], 5
+        &_all_callbacks[15], 5
     },
 	{
         "core::rmdir",
-        {"initialize", &test_core_rmdir__initialize, 3},
+        {"initialize", &test_core_rmdir__initialize, 6},
         {NULL, NULL, 0},
-        &_all_callbacks[13], 2
+        &_all_callbacks[20], 2
     },
 	{
         "core::string",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[15], 2
+        &_all_callbacks[22], 2
+    },
+	{
+        "core::strtol",
+        {NULL, NULL, 0},
+        {NULL, NULL, 0},
+        &_all_callbacks[24], 2
     },
 	{
         "core::vector",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[17], 3
-    },
-	{
-        "network::remotes",
-        {"initialize", &test_network_remotes__initialize, 6},
-        {"cleanup", &test_network_remotes__cleanup, 6},
-        &_all_callbacks[20], 4
-    },
-	{
-        "status::single",
-        {NULL, NULL, 0},
-        {NULL, NULL, 0},
-        &_all_callbacks[24], 1
-    },
-	{
-        "status::worktree",
-        {"initialize", &test_status_worktree__initialize, 8},
-        {"cleanup", &test_status_worktree__cleanup, 8},
-        &_all_callbacks[25], 2
+        &_all_callbacks[26], 3
     }
 };
 
-static const char _suites_str[] = "core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::vector, network::remotes, status::single, status::worktree";
+static const char _suites_str[] = "status::single, status::worktree, network::remotes, core::dirent, core::filebuf, core::path, core::rmdir, core::string, core::strtol, core::vector";
 
 int _MAIN_CC main(int argc, char *argv[])
 {
     return clay_test(
         argc, argv, _suites_str,
-        _all_callbacks, 27,
-        _all_suites, 9
+        _all_callbacks, 29,
+        _all_suites, 10
     );
 }
