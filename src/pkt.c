@@ -21,6 +21,10 @@
 #include <ctype.h>
 
 #define PKT_LEN_SIZE 4
+static const char pkt_done_str[] = "0009done\n";
+static const char pkt_flush_str[] = "0000";
+static const char pkt_have_prefix[] = "0032have ";
+static const char pkt_want_prefix[] = "0032want ";
 
 static int flush_pkt(git_pkt **out)
 {
@@ -264,15 +268,14 @@ void git_pkt_free(git_pkt *pkt)
 
 int git_pkt_buffer_flush(git_buf *buf)
 {
-	git_buf_puts(buf, "0000");
+	git_buf_put(buf, pkt_flush_str, strlen(pkt_flush_str));
 	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
 int git_pkt_send_flush(int s)
 {
-	char flush[] = "0000";
 
-	return gitno_send(s, flush, strlen(flush), 0);
+	return gitno_send(s, pkt_flush_str, strlen(pkt_flush_str), 0);
 }
 
 static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps, git_buf *buf)
@@ -312,7 +315,6 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
  * All "want" packets have the same length and format, so what we do
  * is overwrite the OID each time.
  */
-#define WANT_PREFIX "0032want "
 
 int git_pkt_buffer_wants(git_headarray *refs, git_transport_caps *caps, git_buf *buf)
 {
@@ -342,7 +344,7 @@ int git_pkt_buffer_wants(git_headarray *refs, git_transport_caps *caps, git_buf 
 			continue;
 
 		git_oid_fmt(oid, &head->oid);
-		git_buf_puts(buf, WANT_PREFIX);
+		git_buf_put(buf, pkt_want_prefix, strlen(pkt_want_prefix));
 		git_buf_put(buf, oid, GIT_OID_HEXSZ);
 		git_buf_putc(buf, '\n');
 	}
@@ -354,10 +356,10 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 {
 	unsigned int i = 0;
 	int error = GIT_SUCCESS;
-	char buf[sizeof(WANT_PREFIX) + GIT_OID_HEXSZ + 1];
+	char buf[sizeof(pkt_want_prefix) + GIT_OID_HEXSZ + 1];
 	git_remote_head *head;
 
-	memcpy(buf, WANT_PREFIX, strlen(WANT_PREFIX));
+	memcpy(buf, pkt_want_prefix, strlen(pkt_want_prefix));
 	buf[sizeof(buf) - 2] = '\n';
 	buf[sizeof(buf) - 1] = '\0';
 
@@ -384,7 +386,7 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 		if (head->local)
 			continue;
 
-		git_oid_fmt(buf + strlen(WANT_PREFIX), &head->oid);
+		git_oid_fmt(buf + strlen(pkt_want_prefix), &head->oid);
 		error = gitno_send(fd, buf, strlen(buf), 0);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to send want pkt");
@@ -393,15 +395,13 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 	return git_pkt_send_flush(fd);
 }
 
-#define HAVE_PREFIX "0032have "
-
 int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
 {
 	char oidhex[GIT_OID_HEXSZ + 1];
 
 	memset(oidhex, 0x0, sizeof(oidhex));
 	git_oid_fmt(oidhex, oid);
-	git_buf_printf(buf, "%s%s\n", HAVE_PREFIX, oidhex);
+	git_buf_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
 	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
@@ -409,21 +409,18 @@ int git_pkt_send_have(git_oid *oid, int fd)
 {
 	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
 
-	git_oid_fmt(buf + strlen(HAVE_PREFIX), oid);
+	git_oid_fmt(buf + strlen(pkt_have_prefix), oid);
 	return gitno_send(fd, buf, strlen(buf), 0);
 }
 
-static char *donestr = "0009done\n";
 
 int git_pkt_buffer_done(git_buf *buf)
 {
-	git_buf_puts(buf, donestr);
+	git_buf_puts(buf, pkt_done_str);
 	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
 int git_pkt_send_done(int fd)
 {
-	char buf[] = "0009done\n";
-
-	return gitno_send(fd, buf, strlen(buf), 0);
+	return gitno_send(fd, pkt_done_str, strlen(pkt_done_str), 0);
 }
