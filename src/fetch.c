@@ -24,7 +24,7 @@ static int filter_wants(git_remote *remote)
 	git_repository *repo = remote->repo;
 	const git_refspec *spec;
 	int error;
-	unsigned int i;
+	unsigned int i = 0;
 
 	error = git_vector_init(&list, 16, NULL);
 	if (error < GIT_SUCCESS)
@@ -36,13 +36,32 @@ static int filter_wants(git_remote *remote)
 		goto cleanup;
 	}
 
+	/*
+	 * The fetch refspec can be NULL, and what this means is that the
+	 * user didn't specify one. This is fine, as it means that we're
+	 * not interested in any particular branch but just the remote's
+	 * HEAD, which will be stored in FETCH_HEAD after the fetch.
+	 */
 	spec = git_remote_fetchspec(remote);
-	if (spec == NULL) {
-		error = git__throw(GIT_ERROR, "The remote has no fetchspec");
-		goto cleanup;
+
+	/*
+	 * We need to handle HEAD separately, as we always want it, but it
+	 * probably won't matcht he refspec.
+	 */
+	head = refs.heads[0];
+	if (refs.len > 0 && !strcmp(head->name, GIT_HEAD_FILE)) {
+		if (git_odb_exists(repo->db, &head->oid))
+			head->local = 1;
+		else
+			remote->need_pack = 1;
+
+		i = 1;
+		error = git_vector_insert(&list, refs.heads[0]);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
 	}
 
-	for (i = 0; i < refs.len; ++i) {
+	for (; i < refs.len; ++i) {
 		git_remote_head *head = refs.heads[i];
 
 		/* If it doesn't match the refpec, we don't want it */
