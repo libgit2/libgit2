@@ -88,7 +88,7 @@ FILE(GLOB SRC_H include/git2/*.h)
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
     ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
-	FILE(GLOB SRC src/*.c src/win32/*.c)
+	FILE(GLOB SRC src/*.c src/win32/*.c src/win32/git2.rc)
 ELSE()
 	FILE(GLOB SRC src/*.c src/unix/*.c)
 ENDIF ()

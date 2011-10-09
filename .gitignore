@@ -19,6 +19,7 @@ msvc/Release/
 *.vc*proj*
 *.sdf
 *.opensdf
+*.aps
 CMake*
 *.cmake
 .DS_Store
