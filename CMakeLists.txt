@@ -87,7 +87,7 @@ FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-    ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_LIB)
+    ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
 	FILE(GLOB SRC src/*.c src/win32/*.c)
 ELSE()
 	FILE(GLOB SRC src/*.c src/unix/*.c)
