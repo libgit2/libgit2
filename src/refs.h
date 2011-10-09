@@ -24,6 +24,7 @@
 #define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled "
 
 #define GIT_HEAD_FILE "HEAD"
+#define GIT_FETCH_HEAD_FILE "FETCH_HEAD"
 #define GIT_MERGE_HEAD_FILE "MERGE_HEAD"
 #define GIT_REFS_HEADS_MASTER_FILE GIT_REFS_HEADS_DIR "master"
 

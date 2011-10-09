@@ -1713,7 +1713,8 @@ static int normalize_name(char *buffer_out, size_t out_size, const char *name, i
 	/* Object id refname have to contain at least one slash, except
 	 * for HEAD in a detached state or MERGE_HEAD if we're in the
 	 * middle of a merge */
-	if (is_oid_ref && !contains_a_slash && (strcmp(name, GIT_HEAD_FILE) && strcmp(name, GIT_MERGE_HEAD_FILE)))
+	if (is_oid_ref && !contains_a_slash && (strcmp(name, GIT_HEAD_FILE) && strcmp(name, GIT_MERGE_HEAD_FILE)
+	                                        && strcmp(name, GIT_FETCH_HEAD_FILE)))
 		return git__throw(GIT_EINVALIDREFNAME, "Failed to normalize name. Reference name contains no slashes");
 
 	/* A refname can not end with ".lock" */
