@@ -1004,10 +1004,10 @@ BEGIN_TEST(list0, "try to list all the references in our test repo")
 			printf("# %s\n", ref_list.strings[i]);
 	}*/
 
-	/* We have exactly 8 refs in total if we include the packed ones:
+	/* We have exactly 9 refs in total if we include the packed ones:
 	 * there is a reference that exists both in the packfile and as
 	 * loose, but we only list it once */
-	must_be_true(ref_list.count == 8);
+	must_be_true(ref_list.count == 9);
 
 	git_strarray_free(&ref_list);
 	git_repository_free(repo);
