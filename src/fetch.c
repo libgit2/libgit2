@@ -20,6 +20,7 @@ static int filter_wants(git_remote *remote)
 {
 	git_vector list;
 	git_headarray refs;
+	git_remote_head *head;
 	git_transport *t = remote->transport;
 	git_repository *repo = remote->repo;
 	const git_refspec *spec;
@@ -62,7 +63,7 @@ static int filter_wants(git_remote *remote)
 	}
 
 	for (; i < refs.len; ++i) {
-		git_remote_head *head = refs.heads[i];
+		head = refs.heads[i];
 
 		/* If it doesn't match the refpec, we don't want it */
 		error = git_refspec_src_match(spec, head->name);
