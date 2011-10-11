@@ -59,25 +59,31 @@ ENDIF ()
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	OPTION (OSX_UNIVERSAL "Build an OSX universal binary" OFF)
 	IF (OSX_UNIVERSAL)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -arch i386 -arch x86_64")
+		SET(COMPILE_FLAGS "${COMPILE_FLAGS} -arch i386 -arch x86_64")
 	ENDIF ()
 ENDIF ()
 
 # Platform specific compilation flags
 IF (MSVC)
-	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi")
+	SET(COMPILE_FLAGS "${COMPILE_FLAGS} /W4 /nologo /Zi")
 	IF (STDCALL)
-	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
+	  SET(COMPILE_FLAGS "${COMPILE_FLAGS} /Gz")
 	ENDIF ()
 	# TODO: bring back /RTC1 /RTCc
-	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
-	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
+	SET(COMPILE_FLAGS_DEBUG "/Od /DEBUG /MTd")
+	SET(COMPILE_FLAGS_RELEASE "/MT /O2")
 ELSE ()
-	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes")
+	SET(COMPILE_FLAGS "${COMPILE_FLAGS} -O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+		SET(COMPILE_FLAGS "${COMPILE_FLAGS} -fPIC")
 	ENDIF ()
 ENDIF()
+
+# Now that we're done playing with the flags, append whatever the user
+# gave us. This can be set with the CFLAGS environment variable or by
+# setting CMAKE_C_FLAGS. We do it in this order so the user-provided
+# flags take precedence.
+SET(CMAKE_C_FLAGS "${COMPILE_FLAGS} ${CMAKE_C_FLAGS}")
 
 # Build Debug by default
 IF (NOT CMAKE_BUILD_TYPE)
