@@ -47,13 +47,17 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
-OPTION (STDCALL "Buildl libgit2 with the __stdcall convention (Windows)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (BUILD_CLAY "Build Tests using the Clay suite" OFF)
 
+# Not using __stdcall with the CRT causes problems
+IF (MSVC)
+	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
+ENDIF ()
+
 # Platform specific compilation flags
 IF (MSVC)
-	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi")
+	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
@@ -61,7 +65,7 @@ IF (MSVC)
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 ELSE ()
-	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes")
+	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
