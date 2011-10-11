@@ -51,6 +51,14 @@ OPTION (STDCALL "Buildl libgit2 with the __stdcall convention (Windows)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (BUILD_CLAY "Build Tests using the Clay suite" OFF)
 
+# Universal binary only makes sense on OSX
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	OPTION (OSX_UNIVERSAL "Build an OSX universal binary" OFF)
+	IF (OSX_UNIVERSAL)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -arch i386 -arch x86_64")
+	ENDIF ()
+ENDIF ()
+
 # Platform specific compilation flags
 IF (MSVC)
 	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi")
