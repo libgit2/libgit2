@@ -55,6 +55,10 @@ To install the library you can specify the install prefix by setting:
 	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
 	$ cmake --build . --target install
 
+If you want to build a universal binary for Mac OS X, CMake sets it
+all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
+when configuring.
+
 For more advanced use or questions about CMake please read <http://www.cmake.org/Wiki/CMake_FAQ>.
 
 The following CMake variables are declared:
