@@ -47,9 +47,13 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
-OPTION (STDCALL "Buildl libgit2 with the __stdcall convention (Windows)" ON)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (BUILD_CLAY "Build Tests using the Clay suite" OFF)
+
+# Not using __stdcall with the CRT causes problems
+IF (MSVC)
+	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
+ENDIF ()
 
 # Universal binary only makes sense on OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
