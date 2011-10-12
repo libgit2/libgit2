@@ -33,8 +33,6 @@
 struct git_reference {
 	git_repository *owner;
 	char *name;
-	unsigned int type;
-	time_t mtime;
 };
 
 typedef struct {

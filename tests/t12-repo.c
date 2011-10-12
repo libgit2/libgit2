@@ -286,6 +286,8 @@ BEGIN_TEST(detached0, "test if HEAD is detached")
 	must_be_true(git_repository_head_detached(repo) == 0);
 
 	git_repository_free(repo);
+
+	git_reference_free(ref);
 END_TEST
 
 BEGIN_TEST(orphan0, "test if HEAD is orphan")
@@ -305,6 +307,8 @@ BEGIN_TEST(orphan0, "test if HEAD is orphan")
 	must_be_true(git_repository_head_orphan(repo) == 0);
 
 	git_repository_free(repo);
+
+	git_reference_free(ref);
 END_TEST
 
 #define DISCOVER_FOLDER TEMP_REPO_FOLDER "discover.git"

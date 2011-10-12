@@ -161,7 +161,6 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 	git_tag_close(tag);
 	git_repository_free(repo);
-
 END_TEST
 
 BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already existing tag")
@@ -230,6 +229,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 
 	close_temp_repo(repo);
 
+	git_reference_free(ref_tag);
 END_TEST
 
 BEGIN_TEST(write4, "write a lightweight tag to the repository and read it again")
@@ -260,6 +260,8 @@ BEGIN_TEST(write4, "write a lightweight tag to the repository and read it again"
 	must_pass(git_tag_delete(repo, "light-tag"));
 
 	git_repository_free(repo);
+
+	git_reference_free(ref_tag);
 END_TEST
 
 BEGIN_TEST(write5, "Attempt to write a lightweight tag bearing the same name than an already existing tag")
@@ -298,6 +300,8 @@ BEGIN_TEST(delete0, "Delete an already existing tag")
 	must_fail(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 
 	close_temp_repo(repo);
+
+	git_reference_free(ref_tag);
 END_TEST
 
 BEGIN_SUITE(tag)

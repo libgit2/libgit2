@@ -752,6 +752,8 @@ BEGIN_TEST(root0, "create a root commit")
 	free(head_old);
 	git_commit_close(commit);
 	git_repository_free(repo);
+
+	git_reference_free(head);
 END_TEST
 
 BEGIN_SUITE(commit)
