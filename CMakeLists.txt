@@ -14,7 +14,7 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-FILE(STRINGS "include/git2.h" GIT2_HEADER REGEX "^#define LIBGIT2_VERSION \"[^\"]*\"$")
+FILE(STRINGS "include/git2/version.h" GIT2_HEADER REGEX "^#define LIBGIT2_VERSION \"[^\"]*\"$")
 
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"([0-9]+).*$" "\\1" LIBGIT2_VERSION_MAJOR "${GIT2_HEADER}")
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_VERSION_MINOR  "${GIT2_HEADER}")
@@ -91,8 +91,8 @@ FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-    ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_LIB)
-	FILE(GLOB SRC src/*.c src/win32/*.c)
+    ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
+	FILE(GLOB SRC src/*.c src/win32/*.c src/win32/git2.rc)
 ELSE()
 	FILE(GLOB SRC src/*.c src/unix/*.c)
 ENDIF ()
