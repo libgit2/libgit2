@@ -50,13 +50,11 @@ OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (BUILD_CLAY "Build Tests using the Clay suite" OFF)
 
-# Not using __stdcall with the CRT causes problems
-IF (MSVC)
-	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
-ENDIF ()
-
 # Platform specific compilation flags
 IF (MSVC)
+	# Not using __stdcall with the CRT causes problems
+	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
+
 	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
@@ -64,6 +62,7 @@ IF (MSVC)
 	# TODO: bring back /RTC1 /RTCc
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
+	SET(WIN_RC "src/win32/git2.rc")
 ELSE ()
 	SET(CMAKE_C_FLAGS "-O2 -g -Wall -Wextra -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
@@ -92,13 +91,13 @@ FILE(GLOB SRC_H include/git2/*.h)
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
     ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
-	FILE(GLOB SRC src/*.c src/win32/*.c src/win32/git2.rc)
+	FILE(GLOB SRC src/*.c src/win32/*.c)
 ELSE()
 	FILE(GLOB SRC src/*.c src/unix/*.c)
 ENDIF ()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP})
+ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${WIN_RC})
 
 IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
