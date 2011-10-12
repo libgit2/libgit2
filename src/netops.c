@@ -23,6 +23,7 @@
 
 #include "common.h"
 #include "netops.h"
+#include "posix.h"
 
 void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
 {
@@ -137,6 +138,7 @@ int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 
 	return off;
 }
+
 
 #ifdef GIT_WIN32
 int gitno_close(GIT_SOCKET s)

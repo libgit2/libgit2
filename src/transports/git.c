@@ -19,6 +19,7 @@
 #include "netops.h"
 #include "filebuf.h"
 #include "repository.h"
+#include "fetch.h"
 
 typedef struct {
 	git_transport parent;
@@ -26,6 +27,8 @@ typedef struct {
 	git_vector refs;
 	git_remote_head **heads;
 	git_transport_caps caps;
+	char buff[1024];
+	gitno_buffer buf;
 #ifdef GIT_WIN32
 	WSADATA wsd;
 #endif
@@ -122,28 +125,25 @@ static int do_connect(transport_git *t, const char *url)
  */
 static int store_refs(transport_git *t)
 {
-	gitno_buffer buf;
-	int s = t->socket;
+	gitno_buffer *buf = &t->buf;
 	git_vector *refs = &t->refs;
 	int error = GIT_SUCCESS;
-	char buffer[1024];
 	const char *line_end, *ptr;
 	git_pkt *pkt;
 
-	gitno_buffer_setup(&buf, buffer, sizeof(buffer), s);
 
 	while (1) {
-		error = gitno_recv(&buf);
+		error = gitno_recv(buf);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(GIT_EOSERR, "Failed to receive data");
 		if (error == GIT_SUCCESS) /* Orderly shutdown, so exit */
 			return GIT_SUCCESS;
 
-		ptr = buf.data;
+		ptr = buf->data;
 		while (1) {
-			if (buf.offset == 0)
+			if (buf->offset == 0)
 				break;
-			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
+			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
 			/*
 			 * If the error is GIT_ESHORTBUFFER, it means the buffer
 			 * isn't long enough to satisfy the request. Break out and
@@ -158,7 +158,7 @@ static int store_refs(transport_git *t)
 			}
 
 			/* Get rid of the part we've used already */
-			gitno_consume(&buf, line_end);
+			gitno_consume(buf, line_end);
 
 			error = git_vector_insert(refs, pkt);
 			if (error < GIT_SUCCESS)
@@ -225,6 +225,8 @@ static int git_connect(git_transport *transport, int direction)
 	if (error < GIT_SUCCESS)
 		return error;
 
+	gitno_buffer_setup(&t->buf, t->buff, sizeof(t->buff), t->socket);
+
 	t->parent.connected = 1;
 	error = store_refs(t);
 	if (error < GIT_SUCCESS)
@@ -265,21 +267,7 @@ static int git_ls(git_transport *transport, git_headarray *array)
 	return GIT_SUCCESS;
 }
 
-static int git_send_wants(git_transport *transport, git_headarray *array)
-{
-	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_wants(array, &t->caps, t->socket);
-}
-
-static int git_send_have(git_transport *transport, git_oid *oid)
-{
-	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_have(oid, t->socket);
-}
-
-static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *GIT_UNUSED(list))
+static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
 {
 	transport_git *t = (transport_git *) transport;
 	git_revwalk *walk;
@@ -288,11 +276,11 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 	git_oid oid;
 	int error;
 	unsigned int i;
-	char buff[128];
-	gitno_buffer buf;
-	GIT_UNUSED_ARG(list);
+	gitno_buffer *buf = &t->buf;
 
-	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
+	error = git_pkt_send_wants(wants, &t->caps, t->socket);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to send wants list");
 
 	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
 	if (error < GIT_ERROR)
@@ -336,12 +324,12 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 		error = git_pkt_send_have(&oid, t->socket);
 		i++;
 		if (i % 20 == 0) {
-			const char *ptr = buf.data, *line_end;
+			const char *ptr = buf->data, *line_end;
 			git_pkt *pkt;
 			git_pkt_send_flush(t->socket);
 			while (1) {
 				/* Wait for max. 1 second */
-				error = gitno_select_in(&buf, 1, 0);
+				error = gitno_select_in(buf, 1, 0);
 				if (error < GIT_SUCCESS) {
 					error = git__throw(GIT_EOSERR, "Error in select");
 				} else if (error == 0) {
@@ -353,12 +341,12 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 					break;
 				}
 
-				error = gitno_recv(&buf);
+				error = gitno_recv(buf);
 				if (error < GIT_SUCCESS) {
 				 error = git__rethrow(error, "Error receiving data");
 				 goto cleanup;
 				}
-				error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
+				error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
 				if (error == GIT_ESHORTBUFFER)
 					continue;
 				if (error < GIT_SUCCESS) {
@@ -366,12 +354,14 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 					goto cleanup;
 				}
 
-				gitno_consume(&buf, line_end);
+				gitno_consume(buf, line_end);
 
 				if (pkt->type == GIT_PKT_ACK) {
+					free(pkt);
 					error = GIT_SUCCESS;
 					goto done;
 				} else if (pkt->type == GIT_PKT_NAK) {
+					free(pkt);
 					break;
 				} else {
 					error = git__throw(GIT_ERROR, "Got unexpected pkt type");
@@ -389,6 +379,7 @@ done:
 
 cleanup:
 	git_revwalk_free(walk);
+
 	return error;
 }
 
@@ -406,93 +397,49 @@ static int git_send_done(git_transport *transport)
 	return git_pkt_send_done(t->socket);
 }
 
-static int store_pack(char **out, gitno_buffer *buf, git_repository *repo)
-{
-	git_filebuf file;
-	int error;
-	char path[GIT_PATH_MAX], suff[] = "/objects/pack/pack-received\0";
-	off_t off = 0;
-
-	strcpy(path, repo->path_repository);
-	off += strlen(repo->path_repository);
-	strcat(path, suff);
-	//memcpy(path + off, suff, GIT_PATH_MAX - off - strlen(suff) - 1);
-
-	if (memcmp(buf->data, "PACK", strlen("PACK"))) {
-		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
-	}
-
-	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	while (1) {
-		/* Part of the packfile has been received, don't loose it */
-		error = git_filebuf_write(&file, buf->data, buf->offset);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-
-		gitno_consume_n(buf, buf->offset);
-		error = gitno_recv(buf);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-		if (error == 0) /* Orderly shutdown */
-			break;
-	}
-
-	*out = git__strdup(file.path_lock);
-	if (*out == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
-
-	/* A bit dodgy, but we need to keep the pack at the temporary path */
-	error = git_filebuf_commit_at(&file, file.path_lock);
-cleanup:
-	if (error < GIT_SUCCESS)
-		git_filebuf_cleanup(&file);
-
-	return error;
-}
-
 static int git_download_pack(char **out, git_transport *transport, git_repository *repo)
 {
 	transport_git *t = (transport_git *) transport;
-	int s = t->socket, error = GIT_SUCCESS;
-	gitno_buffer buf;
-	char buffer[1024];
+	int error = GIT_SUCCESS;
+	gitno_buffer *buf = &t->buf;
 	git_pkt *pkt;
 	const char *line_end, *ptr;
 
-	gitno_buffer_setup(&buf, buffer, sizeof(buffer), s);
 	/*
 	 * For now, we ignore everything and wait for the pack
 	 */
 	while (1) {
-		error = gitno_recv(&buf);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(GIT_EOSERR, "Failed to receive data");
-		if (error == 0) /* Orderly shutdown */
-			return GIT_SUCCESS;
-
-		ptr = buf.data;
+		ptr = buf->data;
 		/* Whilst we're searching for the pack */
 		while (1) {
-			if (buf.offset == 0)
+			if (buf->offset == 0) {
 				break;
-			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf.offset);
+			}
+
+			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
 			if (error == GIT_ESHORTBUFFER)
 				break;
+
 			if (error < GIT_SUCCESS)
 				return error;
 
-			if (pkt->type == GIT_PKT_PACK)
-				return store_pack(out, &buf, repo);
+			if (pkt->type == GIT_PKT_PACK) {
+				free(pkt);
+				return git_fetch__download_pack(out, buf->data, buf->offset, t->socket, repo);
+			}
 
 			/* For now we don't care about anything */
 			free(pkt);
-			gitno_consume(&buf, line_end);
+			gitno_consume(buf, line_end);
 		}
+
+		error = gitno_recv(buf);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(GIT_EOSERR, "Failed to receive data");
+		if (error == 0) { /* Orderly shutdown */
+			return GIT_SUCCESS;
+		}
+
 	}
 }
 
@@ -502,9 +449,10 @@ static int git_close(git_transport *transport)
 	transport_git *t = (transport_git*) transport;
 	int error;
 
-	/* Can't do anything if there's an error, so don't bother checking */
+	/* Can't do anything if there's an error, so don't bother checking  */
 	git_pkt_send_flush(t->socket);
 	error = gitno_close(t->socket);
+
 	if (error < 0)
 		error = git__throw(GIT_EOSERR, "Failed to close socket");
 
@@ -547,8 +495,6 @@ int git_transport_git(git_transport **out)
 
 	t->parent.connect = git_connect;
 	t->parent.ls = git_ls;
-	t->parent.send_wants = git_send_wants;
-	t->parent.send_have = git_send_have;
 	t->parent.negotiate_fetch = git_negotiate_fetch;
 	t->parent.send_flush = git_send_flush;
 	t->parent.send_done = git_send_done;

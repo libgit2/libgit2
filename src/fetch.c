@@ -15,6 +15,7 @@
 #include "remote.h"
 #include "refspec.h"
 #include "fetch.h"
+#include "netops.h"
 
 static int filter_wants(git_remote *remote)
 {
@@ -103,7 +104,6 @@ cleanup:
 int git_fetch_negotiate(git_remote *remote)
 {
 	int error;
-	git_headarray *list = &remote->refs;
 	git_transport *t = remote->transport;
 
 	error = filter_wants(remote);
@@ -111,7 +111,7 @@ int git_fetch_negotiate(git_remote *remote)
 		return git__rethrow(error, "Failed to filter the reference list for wants");
 
 	/* Don't try to negotiate when we don't want anything */
-	if (list->len == 0)
+	if (remote->refs.len == 0)
 		return GIT_SUCCESS;
 	if (!remote->need_pack)
 		return GIT_SUCCESS;
@@ -120,10 +120,6 @@ int git_fetch_negotiate(git_remote *remote)
 	 * Now we have everything set up so we can start tell the server
 	 * what we want and what we have.
 	 */
-	error = t->send_wants(t, list);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to send want list");
-
 	return t->negotiate_fetch(t, remote->repo, &remote->refs);
 }
 
@@ -135,4 +131,61 @@ int git_fetch_download_pack(char **out, git_remote *remote)
 	}
 
 	return remote->transport->download_pack(out, remote->transport, remote->repo);
+}
+
+/* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
+int git_fetch__download_pack(char **out, const char *buffered, size_t buffered_size,
+                             GIT_SOCKET fd, git_repository *repo)
+{
+	git_filebuf file;
+	int error;
+	char buff[1024], path[GIT_PATH_MAX];
+	static const char suff[] = "/objects/pack/pack-received";
+	gitno_buffer buf;
+
+
+	git_path_join(path, repo->path_repository, suff);
+
+	gitno_buffer_setup(&buf, buff, sizeof(buff), fd);
+
+	if (memcmp(buffered, "PACK", strlen("PACK"))) {
+		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
+	}
+
+	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	/* Part of the packfile has been received, don't loose it */
+	error = git_filebuf_write(&file, buffered, buffered_size);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	while (1) {
+		error = git_filebuf_write(&file, buf.data, buf.offset);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+
+		gitno_consume_n(&buf, buf.offset);
+		error = gitno_recv(&buf);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+		if (error == 0) /* Orderly shutdown */
+			break;
+	}
+
+	*out = git__strdup(file.path_lock);
+	if (*out == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	/* A bit dodgy, but we need to keep the pack at the temporary path */
+	error = git_filebuf_commit_at(&file, file.path_lock);
+cleanup:
+	if (error < GIT_SUCCESS)
+		git_filebuf_cleanup(&file);
+
+	return error;
+
 }
