@@ -502,7 +502,6 @@ cleanup:
 static int http_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
 {
 	transport_http *t = (transport_http *) transport;
-	GIT_UNUSED_ARG(list);
 	int error;
 	unsigned int i;
 	char buff[128];

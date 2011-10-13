@@ -187,22 +187,22 @@ BEGIN_TEST(write3, "write a hierarchical tree from a memory")
 	must_pass(git_treebuilder_write(&subtree_id,repo,builder));
 	git_treebuilder_free(builder);
 
-        // create parent tree
-        must_pass(git_tree_lookup(&tree, repo, &id));
+	// create parent tree
+	must_pass(git_tree_lookup(&tree, repo, &id));
 	must_pass(git_treebuilder_create(&builder, tree));
 	must_pass(git_treebuilder_insert(NULL,builder,"new",&subtree_id,040000));
 	must_pass(git_treebuilder_write(&id_hiearar,repo,builder));
 	git_treebuilder_free(builder);
 	git_tree_close(tree);
 
-        must_be_true(git_oid_cmp(&id_hiearar, &id3) == 0);
+	must_be_true(git_oid_cmp(&id_hiearar, &id3) == 0);
 
-        // check data is correct
-        must_pass(git_tree_lookup(&tree, repo, &id_hiearar));
-        must_be_true(2 == git_tree_entrycount(tree));
+	// check data is correct
+	must_pass(git_tree_lookup(&tree, repo, &id_hiearar));
+	must_be_true(2 == git_tree_entrycount(tree));
 	git_tree_close(tree);
 
-        close_temp_repo(repo);
+	close_temp_repo(repo);
 
 END_TEST
 
@@ -215,4 +215,3 @@ BEGIN_SUITE(tree)
 	ADD_TEST(write2);
 	ADD_TEST(write3);
 END_SUITE
-
