@@ -268,6 +268,20 @@ GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, int (*filter)(cons
  */
 GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld);
 
+/**
+ * Retrieve the tree object containing a tree entry, given
+ * a relative path to this tree entry
+ *
+ * The returned tree is owned by the repository and
+ * should be closed with the `git_object_close` method.
+ *
+ * @param parent_out Pointer where to store the parent tree
+ * @param root A previously loaded tree which will be the root of the relative path
+ * @param treeentry_path Path to the tree entry from which to extract the last tree object
+ * @return GIT_SUCCESS on success; GIT_ENOTFOUND if the path does not lead to an
+ * entry, GIT_EINVALIDPATH or an error code
+ */
+GIT_EXTERN(int) git_tree_frompath(git_tree **parent_out, git_tree *root, const char *treeentry_path);
 /** @} */
 GIT_END_DECL
 #endif

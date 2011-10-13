@@ -150,6 +150,16 @@ GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
 GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, unsigned int len);
 
 /**
+ * Check if an oid equals an hex formatted object id.
+ *
+ * @param a oid structure.
+ * @param str input hex string of an object id.
+ * @return GIT_ENOTOID if str is not a valid hex string,
+ * GIT_SUCCESS in case of a match, GIT_ERROR otherwise.
+ */
+GIT_EXTERN(int) git_oid_streq(const git_oid *a, const char *str);
+
+/**
  * OID Shortener object
  */
 typedef struct git_oid_shorten git_oid_shorten;

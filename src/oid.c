@@ -197,6 +197,17 @@ int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, unsigned int len)
 	return 0;
 }
 
+int git_oid_streq(const git_oid *a, const char *str)
+{
+	git_oid id;
+	int error;
+
+	if ((error = git_oid_fromstr(&id, str)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to convert '%s' to oid.", str);
+
+	return git_oid_cmp(a, &id) == 0 ? GIT_SUCCESS : GIT_ERROR;
+}
+
 typedef short node_index;
 
 typedef union {
