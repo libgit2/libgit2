@@ -70,7 +70,7 @@ END_TEST
 
 static const char *head_tracker_sym_ref_name = "head-tracker";
 static const char *current_head_target = "refs/heads/master";
-static const char *current_master_tip = "be3563ae3f795b2b4353bcce3a527ad0a4f7f644";
+static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
 
 BEGIN_TEST(readsym0, "lookup a symbolic reference")
 	git_repository *repo;

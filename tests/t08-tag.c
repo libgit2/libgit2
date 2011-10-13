@@ -30,6 +30,8 @@
 static const char *tag1_id = "b25fa35b38051e4ae45d4222e795f9df2e43f1d1";
 static const char *tag2_id = "7b4384978d2493e851f9cca7858815fac9b10980";
 static const char *tagged_commit = "e90810b8df3e80c413d903f631643c716887138d";
+static const char *bad_tag_id = "eda9f45a2a98d4c17a09d681d88569fa4ea91755";
+static const char *badly_tagged_commit = "e90810b8df3e80c413d903f631643c716887138d";
 
 BEGIN_TEST(read0, "read and parse a tag from the repository")
 	git_repository *repo;
@@ -103,6 +105,37 @@ BEGIN_TEST(read2, "list all tag names from the repository matching a specified p
 	must_pass(ensure_tag_pattern_match(repo, "e", 0));
 	must_pass(ensure_tag_pattern_match(repo, "e90810b", 1));
 	must_pass(ensure_tag_pattern_match(repo, "e90810[ab]", 1));
+	git_repository_free(repo);
+END_TEST
+
+#define BAD_TAG_REPOSITORY_FOLDER TEST_RESOURCES "/bad_tag.git/"
+
+BEGIN_TEST(read3, "read and parse a tag without a tagger field")
+	git_repository *repo;
+	git_tag *bad_tag;
+	git_commit *commit;
+	git_oid id, id_commit;
+
+	must_pass(git_repository_open(&repo, BAD_TAG_REPOSITORY_FOLDER));
+
+	git_oid_fromstr(&id, bad_tag_id);
+	git_oid_fromstr(&id_commit, badly_tagged_commit);
+
+	must_pass(git_tag_lookup(&bad_tag, repo, &id));
+	must_be_true(bad_tag != NULL);
+
+	must_be_true(strcmp(git_tag_name(bad_tag), "e90810b") == 0);
+	must_be_true(git_oid_cmp(&id, git_tag_id(bad_tag)) == 0);
+	must_be_true(bad_tag->tagger == NULL);
+
+	must_pass(git_tag_target((git_object **)&commit, bad_tag));
+	must_be_true(commit != NULL);
+
+	must_be_true(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
+
+	git_tag_close(bad_tag);
+	git_commit_close(commit);
+
 	git_repository_free(repo);
 END_TEST
 
@@ -304,6 +337,7 @@ BEGIN_SUITE(tag)
 	ADD_TEST(read0);
 	ADD_TEST(read1);
 	ADD_TEST(read2);
+	ADD_TEST(read3);
 
 	ADD_TEST(write0);
 	ADD_TEST(write2);
