@@ -221,10 +221,10 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 	}
 
 	/* parse commit message */
-	while (buffer < buffer_end && *buffer == '\n')
+	while (buffer < buffer_end - 1 && *buffer == '\n')
 		buffer++;
 
-	if (buffer < buffer_end) {
+	if (buffer <= buffer_end) {
 		commit->message = git__strndup(buffer, buffer_end - buffer);
 		if (!commit->message)
 			return GIT_ENOMEM;
