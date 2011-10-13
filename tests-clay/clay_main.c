@@ -687,9 +687,12 @@ static const struct clay_func _all_callbacks[] = {
 	{"refspec_parsing", &test_network_remotes__refspec_parsing, 8},
 	{"fnmatch", &test_network_remotes__fnmatch, 8},
 	{"transform", &test_network_remotes__transform, 8},
-	{"hash_single_file", &test_status_single__hash_single_file, 9},
-	{"whole_repository", &test_status_worktree__whole_repository, 10},
-	{"empty_repository", &test_status_worktree__empty_repository, 10}
+	{"retrieve_tree_from_path_to_treeentry", &test_object_tree_frompath__retrieve_tree_from_path_to_treeentry, 9},
+	{"fail_when_processing_an_unknown_tree_segment", &test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment, 9},
+	{"fail_when_processing_an_invalid_path", &test_object_tree_frompath__fail_when_processing_an_invalid_path, 9},
+	{"hash_single_file", &test_status_single__hash_single_file, 10},
+	{"whole_repository", &test_status_worktree__whole_repository, 11},
+	{"empty_repository", &test_status_worktree__empty_repository, 11}
 };
 
 static const struct clay_suite _all_suites[] = {
@@ -748,26 +751,32 @@ static const struct clay_suite _all_suites[] = {
         &_all_callbacks[23], 4
     },
 	{
+        "object::tree::frompath",
+        {"initialize", &test_object_tree_frompath__initialize, 9},
+        {"cleanup", &test_object_tree_frompath__cleanup, 9},
+        &_all_callbacks[27], 3
+    },
+	{
         "status::single",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[27], 1
+        &_all_callbacks[30], 1
     },
 	{
         "status::worktree",
-        {"initialize", &test_status_worktree__initialize, 10},
-        {"cleanup", &test_status_worktree__cleanup, 10},
-        &_all_callbacks[28], 2
+        {"initialize", &test_status_worktree__initialize, 11},
+        {"cleanup", &test_status_worktree__cleanup, 11},
+        &_all_callbacks[31], 2
     }
 };
 
-static const char _suites_str[] = "core::dirent, core::filebuf, core::oid, core::path, core::rmdir, core::string, core::strtol, core::vector, network::remotes, status::single, status::worktree";
+static const char _suites_str[] = "core::dirent, core::filebuf, core::oid, core::path, core::rmdir, core::string, core::strtol, core::vector, network::remotes, object::tree::frompath, status::single, status::worktree";
 
 int _MAIN_CC main(int argc, char *argv[])
 {
     return clay_test(
         argc, argv, _suites_str,
-        _all_callbacks, 30,
-        _all_suites, 11
+        _all_callbacks, 33,
+        _all_suites, 12
     );
 }
