@@ -722,7 +722,7 @@ static int pack_entry_find_offset(
 		}
 	}
 
-	if (found && pos + 1 < (int)p->num_objects) {
+	if (found && len != GIT_OID_HEXSZ && pos + 1 < (int)p->num_objects) {
 		/* Check for ambiguousity */
 		const unsigned char *next = current + stride;
 
