@@ -4,12 +4,12 @@ AR=ar cq
 RANLIB=ranlib
 LIBNAME=libgit2.a
 
-INCLUDES= -I. -Isrc -Iinclude -Ideps/zlib
+INCLUDES= -I. -Isrc -Iinclude -Ideps/http-parser -Ideps/zlib
 
 DEFINES= $(INCLUDES) -DNO_VIZ -DSTDC -DNO_GZIP -D_FILE_OFFSET_BITS=64
 CFLAGS= -g $(DEFINES) -Wall -Wextra -fPIC -O2
 
-SRCS = $(wildcard src/*.c) $(wildcard src/unix/*.c) $(wildcard deps/zlib/*.c)
+SRCS = $(wildcard src/*.c) $(wildcard src/unix/*.c) $(wildcard deps/http-parser/*.c) $(wildcard deps/zlib/*.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 
 %.c.o:
