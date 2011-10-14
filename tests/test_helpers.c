@@ -217,10 +217,9 @@ int copydir_recurs(const char *source_directory_path, const char *destination_di
 
 int open_temp_repo(git_repository **repo, const char *path)
 {
-	if (copydir_recurs(path, TEMP_REPO_FOLDER) < GIT_SUCCESS) {
-		printf("\nFailed to create temporary folder. Aborting test suite.\n");
-		exit(-1);
-	}
+	int error;
+	if ((error = copydir_recurs(path, TEMP_REPO_FOLDER)) < GIT_SUCCESS)
+		return error;
 
 	return git_repository_open(repo, TEMP_REPO_FOLDER);
 }
