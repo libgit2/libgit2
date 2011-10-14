@@ -48,18 +48,18 @@ extern int git_futils_exists(const char *path);
  * Create and open a file, while also
  * creating all the folders in its path
  */
-extern int git_futils_creat_withpath(const char *path, int mode);
+extern int git_futils_creat_withpath(const char *path, const mode_t mode);
 
 /**
  * Create an open a process-locked file
  */
-extern int git_futils_creat_locked(const char *path, int mode);
+extern int git_futils_creat_locked(const char *path, const mode_t mode);
 
 /**
  * Create an open a process-locked file, while
  * also creating all the folders in its path
  */
-extern int git_futils_creat_locked_withpath(const char *path, int mode);
+extern int git_futils_creat_locked_withpath(const char *path, const mode_t mode);
 
 /**
  * Check if the given path points to a directory
@@ -74,7 +74,7 @@ extern int git_futils_isfile(const char *path);
 /**
  * Create a path recursively
  */
-extern int git_futils_mkdir_r(const char *path, int mode);
+extern int git_futils_mkdir_r(const char *path, const mode_t mode);
 
 /**
  * Create all the folders required to contain

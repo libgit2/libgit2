@@ -609,7 +609,7 @@ static int repo_init_createhead(git_repository *repo)
 
 static int repo_init_structure(const char *git_dir, int is_bare)
 {
-	const int mode = 0755; /* or 0777 ? */
+	const mode_t mode = 0755; /* or 0777 ? */
 	int error;
 
 	char temp_path[GIT_PATH_MAX];

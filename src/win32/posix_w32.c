@@ -230,7 +230,7 @@ int p_open(const char *path, int flags)
 	return fd;
 }
 
-int p_creat(const char *path, int mode)
+int p_creat(const char *path, mode_t mode)
 {
 	int fd;
 	wchar_t* buf = conv_utf8_to_utf16(path);
@@ -268,7 +268,7 @@ int p_chdir(const char* path)
 	return ret;
 }
 
-int p_chmod(const char* path, int mode)
+int p_chmod(const char* path, mode_t mode)
 {
 	wchar_t* buf = conv_utf8_to_utf16(path);
 	int ret = _wchmod(buf, mode);
@@ -355,7 +355,7 @@ int p_snprintf(char *buffer, size_t count, const char *format, ...)
 	return r;
 }
 
-extern int p_creat(const char *path, int mode);
+extern int p_creat(const char *path, mode_t mode);
 
 int p_mkstemp(char *tmp_path)
 {
@@ -378,7 +378,7 @@ int p_setenv(const char* name, const char* value, int overwrite)
 	return (SetEnvironmentVariableA(name, value) == 0 ? GIT_EOSERR : GIT_SUCCESS);
 }
 
-int p_access(const char* path, int mode)
+int p_access(const char* path, mode_t mode)
 {
 	wchar_t *buf = conv_utf8_to_utf16(path);
 	int ret;

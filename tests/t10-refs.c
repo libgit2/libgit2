@@ -431,7 +431,7 @@ END_TEST
 BEGIN_TEST(pack0, "create a packfile for an empty folder")
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
-	const int mode = 0755; /* or 0777 ? */
+	const mode_t mode = 0755; /* or 0777 ? */
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
