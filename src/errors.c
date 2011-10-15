@@ -11,6 +11,7 @@
 #include <stdarg.h>
 
 static GIT_TLS char g_last_error[1024];
+static GIT_TLS int  g_last_error_code;
 
 static struct {
 	int num;
@@ -66,6 +67,8 @@ void git___rethrow(const char *msg, ...)
 
 	va_list va;
 
+	g_last_error_code = error;
+
 	va_start(va, msg);
 	vsnprintf(new_error, sizeof(new_error), msg, va);
 	va_end(va);
@@ -79,6 +82,8 @@ void git___throw(const char *msg, ...)
 {
 	va_list va;
 
+	g_last_error_code = error;
+
 	va_start(va, msg);
 	vsnprintf(g_last_error, sizeof(g_last_error), msg, va);
 	va_end(va);
@@ -90,6 +95,11 @@ const char *git_lasterror(void)
 		return NULL;
 
 	return g_last_error;
+}
+
+int git_lasterror_code(void)
+{
+	return g_last_error_code;
 }
 
 void git_clearerror(void)
