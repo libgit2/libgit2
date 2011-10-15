@@ -116,25 +116,28 @@ void git_mwindow_scan_lru(
 static int git_mwindow_close_lru(git_mwindow_file *mwf)
 {
 	unsigned int i;
-	git_mwindow *lru_w = NULL, *lru_l = NULL;
+	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = &mwf->windows;
 
 	/* FIMXE: Does this give us any advantage? */
 	if(mwf->windows)
 		git_mwindow_scan_lru(mwf, &lru_w, &lru_l);
 
 	for (i = 0; i < ctl.windowfiles.length; ++i) {
-		git_mwindow_scan_lru(git_vector_get(&ctl.windowfiles, i), &lru_w, &lru_l);
+		git_mwindow *last = lru_w;
+		git_mwindow_file *cur = git_vector_get(&ctl.windowfiles, i);
+		git_mwindow_scan_lru(cur, &lru_w, &lru_l);
+		if (lru_w != last)
+			list = &cur->windows;
 	}
 
 	if (lru_w) {
-		git_mwindow_close(&lru_w);
 		ctl.mapped -= lru_w->window_map.len;
 		git_futils_mmap_free(&lru_w->window_map);
 
 		if (lru_l)
 			lru_l->next = lru_w->next;
 		else
-			mwf->windows = lru_w->next;
+			*list = lru_w->next;
 
 		free(lru_w);
 		ctl.open_windows--;
@@ -167,7 +170,11 @@ static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, git_off_t siz
 	while(ctl.mapped_limit < ctl.mapped &&
 			git_mwindow_close_lru(mwf) == GIT_SUCCESS) {}
 
-	/* FIXME: Shouldn't we error out if there's an error in closing lru? */
+	/*
+	 * We treat ctl.mapped_limit as a soft limit. If we can't find a
+	 * window to close and are above the limit, we still mmap the new
+	 * window.
+	 */
 
 	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < GIT_SUCCESS)
 		goto cleanup;
