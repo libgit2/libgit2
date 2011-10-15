@@ -162,6 +162,17 @@ git_error * git_error_create(const char *file, int line, int code,
 	return git_error_createf(file, line, code, child, "%s", msg);
 }
 
+#undef git_error_quick_wrap
+git_error * git_error_quick_wrap(const char *file, int line,
+				 git_error *child, const char *msg)
+{
+	if (child == GIT_SUCCESS)
+		return GIT_SUCCESS;
+
+	return git_error_createf(file, line, child->code,
+				 child, "%s", msg);
+}
+
 void git_error_free(git_error *err)
 {
 	if (err->child)
