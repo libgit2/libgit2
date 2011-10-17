@@ -3,6 +3,11 @@
 
 #include "git2/common.h"
 
+/*
+ * This implementation is loosely based on subversion's error
+ * handling.
+ */
+
 git_error * git_error_create(const char *file, int line, int code,
 			     git_error *child, const char *msg);
 
@@ -19,9 +24,24 @@ git_error * git_error_quick_wrap(const char *file, int line,
 #define git_error_createf(code, child, format, ...) \
 	git_error_createf(__FILE__, __LINE__, code, child, format, __VA_ARGS__)
 
+/*
+ * Wrap an error with a message. All git_error values are assigned with
+ * child's fields.
+ */
 #define git_error_quick_wrap(child, message) \
 	git_error_quick_wrap(__FILE__, __LINE__, child, message)
 
+/*
+ * Use this function to wrap functions like
+ *
+ *	git_error * foo(void)
+ *	{
+ *		return git_error_trace(bar());
+ *	}
+ *
+ * Otherwise the call of foo() wouldn't be visible in the trace.
+ *
+ */
 #define git_error_trace(error) \
 	git_error_quick_wrap(error, "traced error");
 
