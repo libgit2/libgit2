@@ -22,6 +22,9 @@ git_error * git_error_quick_wrap(const char *file, int line,
 #define git_error_quick_wrap(child, message) \
 	git_error_quick_wrap(__FILE__, __LINE__, child, message)
 
+#define git_error_trace(error) \
+	git_error_quick_wrap(error, "traced error");
+
 /* Throw an out-of-memory error */
 extern git_error * git_error_oom(void);
 
