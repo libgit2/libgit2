@@ -3,6 +3,16 @@
 
 #include "git2/common.h"
 
+/* Deprecated - please use the more advanced functions below. */
+extern void git___throw(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
+#define git__throw(error, ...) \
+	(git___throw(__VA_ARGS__), error)
+
+/* Deprecated - please use the more advanced functions below. */
+extern void git___rethrow(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
+#define git__rethrow(error, ...) \
+	(git___rethrow(__VA_ARGS__), error)
+
 /*
  * This implementation is loosely based on subversion's error
  * handling.
