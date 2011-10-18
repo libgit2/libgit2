@@ -23,6 +23,7 @@ static int valid_attributes(const int attributes)
 struct tree_key_search {
 	const char *filename;
 	size_t filename_len;
+	int is_folder;
 };
 
 static int entry_search_cmp(const void *key, const void *array_member)
@@ -32,7 +33,7 @@ static int entry_search_cmp(const void *key, const void *array_member)
 
 	int result =
 		git_futils_cmp_path(
-			ksearch->filename, ksearch->filename_len, entry->attr & 040000,
+			ksearch->filename, ksearch->filename_len, ksearch->is_folder,
 			entry->filename, entry->filename_len, entry->attr & 040000);
 
 	return result ? result : ((int)ksearch->filename_len - (int)entry->filename_len);
@@ -51,15 +52,19 @@ static int entry_sort_cmp(const void *a, const void *b)
 static int build_ksearch(struct tree_key_search *ksearch, const char *path)
 {
 	size_t len = strlen(path);
+	int is_folder = 0;
 
-	if (len && path[len - 1] == '/')
+	if (len && path[len - 1] == '/') {
+		is_folder = 1;
 		len--;
+	}
 
 	if (len == 0 || memchr(path, '/', len) != NULL)
 		return GIT_ERROR;
 
 	ksearch->filename = path;
 	ksearch->filename_len = len;
+	ksearch->is_folder = is_folder;
 
 	return GIT_SUCCESS;
 }
@@ -419,6 +424,10 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 
 	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
 		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid filename '%s'", filename);
+
+	if ((attributes & 040000) != 0) {
+		ksearch.is_folder = 1;
+	}
 
 	if ((pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch)) != GIT_ENOTFOUND) {
 		entry = git_vector_get(&bld->entries, pos);
