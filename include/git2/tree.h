@@ -88,9 +88,6 @@ GIT_EXTERN(unsigned int) git_tree_entrycount(git_tree *tree);
 /**
  * Lookup a tree entry by its filename
  *
- * Note that if the entry in the tree is a folder instead of
- * a standard file, the given name must be ended with a slash.
- *
  * @param tree a previously loaded tree.
  * @param filename the filename of the desired entry
  * @return the tree entry; NULL if not found
@@ -205,9 +202,6 @@ GIT_EXTERN(void) git_treebuilder_free(git_treebuilder *bld);
 
 /**
  * Get an entry from the builder from its filename
- *
- * Note that if the entry in the tree is a folder instead of
- * a standard file, the given name must be ended with a slash.
  *
  * The returned entry is owned by the builder and should
  * not be freed manually.

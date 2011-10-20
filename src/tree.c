@@ -20,23 +20,9 @@ static int valid_attributes(const int attributes)
 	return attributes >= 0 && attributes <= MAX_FILEMODE;
 }
 
-struct tree_key_search {
-	const char *filename;
-	size_t filename_len;
-	int is_folder;
-};
-
-static int entry_search_cmp(const void *key, const void *array_member)
+static int valid_entry_name(const char *filename)
 {
-	const struct tree_key_search *ksearch = key;
-	const git_tree_entry *entry = array_member;
-
-	int result =
-		git_futils_cmp_path(
-			ksearch->filename, ksearch->filename_len, ksearch->is_folder,
-			entry->filename, entry->filename_len, entry->attr & 040000);
-
-	return result ? result : ((int)ksearch->filename_len - (int)entry->filename_len);
+	return strlen(filename) > 0 && strchr(filename, '/') == NULL;
 }
 
 static int entry_sort_cmp(const void *a, const void *b)
@@ -49,24 +35,89 @@ static int entry_sort_cmp(const void *a, const void *b)
 		entry_b->filename, entry_b->filename_len, entry_b->attr & 040000);
 }
 
-static int build_ksearch(struct tree_key_search *ksearch, const char *path)
-{
-	size_t len = strlen(path);
-	int is_folder = 0;
 
-	if (len && path[len - 1] == '/') {
-		is_folder = 1;
-		len--;
+struct tree_key_search {
+	const char *filename;
+	size_t filename_len;
+};
+
+static int homing_search_cmp(const void *key, const void *array_member)
+{
+	const struct tree_key_search *ksearch = key;
+	const git_tree_entry *entry = array_member;
+
+	const size_t len1 = ksearch->filename_len;
+	const size_t len2 = entry->filename_len;
+
+	return memcmp(
+		ksearch->filename,
+		entry->filename,
+		len1 < len2 ? len1 : len2
+	);
+}
+
+/*
+ * Search for an entry in a given tree.
+ *
+ * Note that this search is performed in two steps because
+ * of the way tree entries are sorted internally in git:
+ *
+ * Entries in a tree are not sorted alphabetically; two entries
+ * with the same root prefix will have different positions
+ * depending on whether they are folders (subtrees) or normal files.
+ *
+ * Consequently, it is not possible to find an entry on the tree
+ * with a binary search if you don't know whether the filename
+ * you're looking for is a folder or a normal file.
+ *
+ * To work around this, we first perform a homing binary search
+ * on the tree, using the minimal length root prefix of our filename.
+ * Once the comparisons for this homing search start becoming
+ * ambiguous because of folder vs file sorting, we look linearly
+ * around the area for our target file.
+ */
+static int tree_key_search(git_vector *entries, const char *filename)
+{
+	struct tree_key_search ksearch;
+	const git_tree_entry *entry;
+
+	int homing, i;
+
+	ksearch.filename = filename;
+	ksearch.filename_len = strlen(filename);
+
+	/* Initial homing search; find an entry on the tree with
+	 * the same prefix as the filename we're looking for */
+	homing = git_vector_bsearch2(entries, &homing_search_cmp, &ksearch);
+	if (homing < 0)
+		return homing;
+
+	/* We found a common prefix. Look forward as long as
+	 * there are entries that share the common prefix */
+	for (i = homing; i < (int)entries->length; ++i) {
+		entry = entries->contents[i];
+
+		if (homing_search_cmp(&ksearch, entry) != 0)
+			break;
+
+		if (strcmp(filename, entry->filename) == 0)
+			return i;
 	}
 
-	if (len == 0 || memchr(path, '/', len) != NULL)
-		return GIT_ERROR;
+	/* If we haven't found our filename yet, look backwards
+	 * too as long as we have entries with the same prefix */
+	for (i = homing - 1; i >= 0; --i) {
+		entry = entries->contents[i];
 
-	ksearch->filename = path;
-	ksearch->filename_len = len;
-	ksearch->is_folder = is_folder;
+		if (homing_search_cmp(&ksearch, entry) != 0)
+			break;
 
-	return GIT_SUCCESS;
+		if (strcmp(filename, entry->filename) == 0)
+			return i;
+	}
+
+	/* The filename doesn't exist at all */
+	return GIT_ENOTFOUND;
 }
 
 void git_tree__free(git_tree *tree)
@@ -128,14 +179,10 @@ int git_tree_entry_2object(git_object **object_out, git_repository *repo, const 
 const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
 {
 	int idx;
-	struct tree_key_search ksearch;
 
 	assert(tree && filename);
 
-	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
-		return NULL;
-
-	idx = git_vector_bsearch2(&tree->entries, entry_search_cmp, &ksearch);
+	idx = tree_key_search(&tree->entries, filename);
 	if (idx == GIT_ENOTFOUND)
 		return NULL;
 
@@ -415,21 +462,18 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 {
 	git_tree_entry *entry;
 	int pos;
-	struct tree_key_search ksearch;
 
 	assert(bld && id && filename);
 
 	if (!valid_attributes(attributes))
 		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid attributes");
 
-	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
-		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid filename '%s'", filename);
+	if (!valid_entry_name(filename))
+		return git__throw(GIT_ERROR, "Failed to insert entry. Invalid name for a tree entry");
 
-	if ((attributes & 040000) != 0) {
-		ksearch.is_folder = 1;
-	}
+	pos = tree_key_search(&bld->entries, filename);
 
-	if ((pos = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch)) != GIT_ENOTFOUND) {
+	if (pos >= 0) {
 		entry = git_vector_get(&bld->entries, pos);
 		if (entry->removed) {
 			entry->removed = 0;
@@ -464,15 +508,11 @@ static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filenam
 {
 	int idx;
 	git_tree_entry *entry;
-	struct tree_key_search ksearch;
 
 	assert(bld && filename);
 
-	if (build_ksearch(&ksearch, filename) < GIT_SUCCESS)
-		return NULL;
-
-	idx = git_vector_bsearch2(&bld->entries, entry_search_cmp, &ksearch);
-	if (idx == GIT_ENOTFOUND)
+	idx = tree_key_search(&bld->entries, filename);
+	if (idx < 0)
 		return NULL;
 
 	entry = git_vector_get(&bld->entries, idx);
