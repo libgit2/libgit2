@@ -142,16 +142,14 @@ static int retrieve_head_tree(git_tree **tree_out, git_repository *repo)
 	*tree_out = NULL;
 
 	error = git_repository_head(&resolved_head_ref, repo);
-	if (error != GIT_SUCCESS && error != GIT_ENOTFOUND)
-		return git__rethrow(error, "HEAD can't be resolved");
-
 	/*
 	 * We assume that a situation where HEAD exists but can not be resolved is valid.
 	 * A new repository fits this description for instance.
 	 */
-
 	if (error == GIT_ENOTFOUND)
 		return GIT_SUCCESS;
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "HEAD can't be resolved");
 
 	if ((error = git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref))) < GIT_SUCCESS)
 		return git__rethrow(error, "The tip of HEAD can't be retrieved");
