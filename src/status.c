@@ -324,19 +324,6 @@ static int compare(const char *left, const char *right)
 	return strcmp(left, right);
 }
 
-/*
- * Convenience method to enumerate a tree. Contrarily to the git_tree_entry_byindex()
- * method, it allows the tree to be enumerated to be NULL. In this case, every returned
- * tree entry will be NULL as well.
- */
-static const git_tree_entry *git_tree_entry_bypos(git_tree *tree, unsigned int idx)
-{
-	if (tree == NULL)
-		return NULL;
-
-	return git_vector_get(&tree->entries, idx);
-}
-
 /* Greatly inspired from JGit IndexTreeWalker */
 /* https://github.com/spearce/jgit/blob/ed47e29c777accfa78c6f50685a5df2b8f5b8ff5/org.spearce.jgit/src/org/spearce/jgit/lib/IndexTreeWalker.java#L88 */
 
@@ -359,7 +346,11 @@ static int dirent_cb(void *state, char *a)
 	a_name = (path_type != GIT_STATUS_PATH_NULL) ? a + st->workdir_path_len : NULL;
 
 	while (1) {
-		m = git_tree_entry_bypos(st->tree, st->tree_position);
+		if (st->tree == NULL)
+			m = NULL;
+		else
+			m = git_tree_entry_byindex(st->tree, st->tree_position);
+
 		entry = git_index_get(st->index, st->index_position);
 
 		if ((m == NULL) && (a == NULL) && (entry == NULL))
