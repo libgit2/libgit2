@@ -337,17 +337,6 @@ static const git_tree_entry *git_tree_entry_bypos(git_tree *tree, unsigned int i
 	return git_vector_get(&tree->entries, idx);
 }
 
-/*
- * Convenience method to enumerate the index. This method is not supposed to be exposed
- * as part of the index API because it precludes that the index will not be altered
- * while the enumeration is being processed. Which wouldn't be very API friendly :)
- */
-static const git_index_entry *git_index_entry_bypos(git_index *index, unsigned int idx)
-{
-	assert(index);
-	return git_vector_get(&index->entries, idx);
-}
-
 /* Greatly inspired from JGit IndexTreeWalker */
 /* https://github.com/spearce/jgit/blob/ed47e29c777accfa78c6f50685a5df2b8f5b8ff5/org.spearce.jgit/src/org/spearce/jgit/lib/IndexTreeWalker.java#L88 */
 
@@ -371,7 +360,7 @@ static int dirent_cb(void *state, char *a)
 
 	while (1) {
 		m = git_tree_entry_bypos(st->tree, st->tree_position);
-		entry = git_index_entry_bypos(st->index, st->index_position);
+		entry = git_index_get(st->index, st->index_position);
 
 		if ((m == NULL) && (a == NULL) && (entry == NULL))
 			return GIT_SUCCESS;
