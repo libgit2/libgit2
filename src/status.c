@@ -166,17 +166,19 @@ exit:
 	return error;
 }
 
-#define GIT_STATUS_PATH_NULL	-2
-#define GIT_STATUS_PATH_IGNORE	-1
-#define GIT_STATUS_PATH_FILE	0
-#define GIT_STATUS_PATH_FOLDER	1
+enum path_type {
+	GIT_STATUS_PATH_NULL,
+	GIT_STATUS_PATH_IGNORE,
+	GIT_STATUS_PATH_FILE,
+	GIT_STATUS_PATH_FOLDER,
+};
 
 static int dirent_cb(void *state, char *full_path);
 static int alphasorted_futils_direach(
 	char *path, size_t path_sz,
 	int (*fn)(void *, char *), void *arg);
 
-static int process_folder(struct status_st *st, const git_tree_entry *tree_entry, char *full_path, int path_type)
+static int process_folder(struct status_st *st, const git_tree_entry *tree_entry, char *full_path, enum path_type path_type)
 {
 	git_object *subtree = NULL;
 	git_tree *pushed_tree = NULL;
@@ -240,7 +242,7 @@ static int determine_status(struct status_st *st,
 	const git_index_entry *index_entry,
 	char *full_path,
 	const char *status_path,
-	int path_type)
+	enum path_type path_type)
 {
 	struct status_entry *e;
 	int error = GIT_SUCCESS;
@@ -329,7 +331,7 @@ static int dirent_cb(void *state, char *a)
 {
 	const git_tree_entry *m;
 	const git_index_entry *entry;
-	int path_type;
+	enum path_type path_type;
 	int cmpma, cmpmi, cmpai, error;
 	const char *pm, *pa, *pi;
 	const char *m_name, *i_name, *a_name;
