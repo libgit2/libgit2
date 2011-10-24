@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>fetch.c</title>
+  <link rel="stylesheet" href="http://jashkenas.github.com/docco/resources/docco.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#HEAD">API Docs</a>
+          <a class="source" href="../general.html">general.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="git2.html">git2.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="../showindex.html">showindex.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>fetch.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include &lt;git2.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">show_refs</span><span class="p">(</span><span class="n">git_headarray</span> <span class="o">*</span><span class="n">refs</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="n">git_remote_head</span> <span class="o">*</span><span class="n">head</span><span class="p">;</span>
+
+  <span class="k">if</span><span class="p">(</span><span class="n">refs</span><span class="o">-&gt;</span><span class="n">len</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">puts</span><span class="p">(</span><span class="s">&quot;Everything up-to-date&quot;</span><span class="p">);</span>
+
+  <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">refs</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">){</span>
+    <span class="kt">char</span> <span class="n">oid</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">havewant</span><span class="p">;</span>
+    <span class="n">head</span> <span class="o">=</span> <span class="n">refs</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+    <span class="n"><a name="git_oid_fmt-9" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">head</span><span class="o">-&gt;</span><span class="n">oid</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oid</span><span class="p">,</span> <span class="n">head</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">rename_packfile</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">packname</span><span class="p">,</span> <span class="n">git_indexer</span> <span class="o">*</span><span class="n">idx</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">path</span><span class="p">[</span><span class="n">GIT_PATH_MAX</span><span class="p">],</span> <span class="n">oid</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="o">*</span><span class="n">slash</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
+
+  <span class="n">strcpy</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">packname</span><span class="p">);</span>
+  <span class="n">slash</span> <span class="o">=</span> <span class="n">strrchr</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sc">&#39;/&#39;</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">slash</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">GIT_EINVALIDARGS</span><span class="p">;</span>
+
+  <span class="n">memset</span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">oid</span><span class="p">));</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>The name of the packfile is given by it&rsquo;s hash which you can get
+with <a name="git_indexer_hash-6" class="fnlink" href="../../#HEAD/group/indexer/git_indexer_hash">git_indexer_hash</a> after the index has been written out to
+disk. Rename the packfile to its &ldquo;real&rdquo; name in the same
+directory as it was originally (libgit2 stores it in the folder
+where the packs go, so a rename in place is the right thing to do here</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fmt-10" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-7" class="fnlink" href="../../#HEAD/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
+  <span class="n">ret</span> <span class="o">=</span> <span class="n">sprintf</span><span class="p">(</span><span class="n">slash</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;pack-%s.pack&quot;</span><span class="p">,</span> <span class="n">oid</span><span class="p">);</span>
+  <span class="k">if</span><span class="p">(</span><span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">GIT_EOSERR</span><span class="p">;</span>
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Renaming pack to %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">rename</span><span class="p">(</span><span class="n">packname</span><span class="p">,</span> <span class="n">path</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">fetch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_config</span> <span class="o">*</span><span class="n">cfg</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_indexer</span> <span class="o">*</span><span class="n">idx</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_indexer_stats</span> <span class="n">stats</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">packname</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>Load the repository&rsquo;s configuration</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_config-5" class="fnlink" href="../../#HEAD/group/repository/git_repository_config">git_repository_config</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>Get the remote and connect to it</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetching %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_get-15" class="fnlink" href="../../#HEAD/group/remote/git_remote_get">git_remote_get</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-13" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIR_FETCH</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-5">&#182;</a>
+        </div>
+        <p>Perform the packfile negotiation. This is where the two ends
+figure out the minimal amount of data that should be transmitted
+to bring the repository up-to-date</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_negotiate-1" class="fnlink" href="../../#HEAD/group/remote/git_remote_negotiate">git_remote_negotiate</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-6'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-6">&#182;</a>
+        </div>
+        <p>Download the packfile from the server. As we don&rsquo;t know its hash
+yet, it will get a temporary filename</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_download-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">packname</span><span class="p">,</span> <span class="n">remote</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-7'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-7">&#182;</a>
+        </div>
+        <p>No error and a NULL packname means no packfile was needed</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">packname</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;The packname is %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">packname</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-8'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-8">&#182;</a>
+        </div>
+        <p>Create a new instance indexer</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_new-4" class="fnlink" href="../../#HEAD/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">idx</span><span class="p">,</span> <span class="n">packname</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-9'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-9">&#182;</a>
+        </div>
+        <p>This should be run in paralel, but it&rsquo;d be too complicated for the example</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_run-11" class="fnlink" href="../../#HEAD/group/indexer/git_indexer_run">git_indexer_run</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Received %d objects</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">total</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-10'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-10">&#182;</a>
+        </div>
+        <p>Write the index file. The index will be stored with the
+correct filename</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_write-12" class="fnlink" href="../../#HEAD/group/indexer/git_indexer_write">git_indexer_write</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+
+    <span class="n">error</span> <span class="o">=</span> <span class="n">rename_packfile</span><span class="p">(</span><span class="n">packname</span><span class="p">,</span> <span class="n">idx</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-11'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-11">&#182;</a>
+        </div>
+        <p>Update the references in the remote&rsquo;s namespace to point to the
+right commits. This may be needed even if there was no packfile
+to download, which can happen e.g. when the branches have been
+changed but all the neede objects are available locally.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_update_tips-14" class="fnlink" href="../../#HEAD/group/remote/git_remote_update_tips">git_remote_update_tips</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+
+  <span class="n">free</span><span class="p">(</span><span class="n">packname</span><span class="p">);</span>
+  <span class="n"><a name="git_indexer_free-2" class="fnlink" href="../../#HEAD/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+  <span class="n"><a name="git_remote_free-8" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">GIT_SUCCESS</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>

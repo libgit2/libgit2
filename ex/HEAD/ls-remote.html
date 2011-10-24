@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>ls-remote.c</title>
+  <link rel="stylesheet" href="http://jashkenas.github.com/docco/resources/docco.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#HEAD">API Docs</a>
+          <a class="source" href="../general.html">general.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="git2.html">git2.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="../showindex.html">showindex.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>ls-remote.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cp">#include &lt;git2.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+<span class="cp">#include &quot;common.h&quot;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">show_refs</span><span class="p">(</span><span class="n">git_headarray</span> <span class="o">*</span><span class="n">refs</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="n">git_remote_head</span> <span class="o">*</span><span class="n">head</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>Take each head that the remote has advertised, store the string
+representation of the OID in a buffer and print it</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">refs</span><span class="o">-&gt;</span><span class="n">len</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">){</span>
+    <span class="kt">char</span> <span class="n">oid</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+    <span class="n">head</span> <span class="o">=</span> <span class="n">refs</span><span class="o">-&gt;</span><span class="n">heads</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+    <span class="n"><a name="git_oid_fmt-7" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">head</span><span class="o">-&gt;</span><span class="n">oid</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oid</span><span class="p">,</span> <span class="n">head</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">use_unnamed</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">url</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_headarray</span> <span class="n">refs</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>Create an instance of a remote from the URL. The transport to use
+is detected from the URL</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_new-8" class="fnlink" href="../../#HEAD/group/remote/git_remote_new">git_remote_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>When connecting, the underlying code needs to know wether we
+want to push or fetch</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-9" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIR_FETCH</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-5">&#182;</a>
+        </div>
+        <p>With <a name="git_remote_ls-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a> we can retrieve the advertised heads</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-5" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">refs</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="n">show_refs</span><span class="p">(</span><span class="o">&amp;</span><span class="n">refs</span><span class="p">);</span>
+
+<span class="nl">cleanup:</span>
+  <span class="n"><a name="git_remote_free-2" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">use_remote</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_config</span> <span class="o">*</span><span class="n">cfg</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_headarray</span> <span class="n">refs</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-6'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-6">&#182;</a>
+        </div>
+        <p>Load the local configuration for the repository</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_config-1" class="fnlink" href="../../#HEAD/group/repository/git_repository_config">git_repository_config</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-7'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-7">&#182;</a>
+        </div>
+        <p>Find the remote by name</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_get-11" class="fnlink" href="../../#HEAD/group/remote/git_remote_get">git_remote_get</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-10" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIR_FETCH</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-6" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">refs</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="n">show_refs</span><span class="p">(</span><span class="o">&amp;</span><span class="n">refs</span><span class="p">);</span>
+
+<span class="nl">cleanup:</span>
+  <span class="n"><a name="git_remote_free-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-8'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-8">&#182;</a>
+        </div>
+        <p>This gets called to do the work. The remote can be given either as
+the name of a configured remote or an URL.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">ls_remote</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_headarray</span> <span class="n">heads</span><span class="p">;</span>
+  <span class="n">git_remote_head</span> <span class="o">*</span><span class="n">head</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">,</span> <span class="n">i</span><span class="p">;</span>
+
+  <span class="cm">/* If there&#39;s a &#39;:&#39; in the name, assume it&#39;s an URL */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">strchr</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="sc">&#39;:&#39;</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">use_unnamed</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n">use_remote</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
