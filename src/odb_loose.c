@@ -214,7 +214,7 @@ static int is_zlib_compressed_data(unsigned char *data)
 	unsigned int w;
 
 	w = ((unsigned int)(data[0]) << 8) + data[1];
-	return data[0] == 0x78 && !(w % 31);
+	return (data[0] & 0x8F) == 0x08 && !(w % 31);
 }
 
 static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
