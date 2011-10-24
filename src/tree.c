@@ -706,3 +706,177 @@ int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode)
 				"Invalid walking mode for tree walk");
 	}
 }
+
+static int tree_entry_cmp(const git_tree_entry *a, const git_tree_entry *b)
+{
+	int ret;
+
+	ret = a->attr - b->attr;
+	if (ret != 0)
+		return ret;
+
+	return git_oid_cmp(&a->oid, &b->oid);
+}
+
+static void mark_del(git_tree_diff_data *diff, git_tree_entry *entry)
+{
+	diff->old_attr = entry->attr;
+	git_oid_cpy(&diff->old_oid, &entry->oid);
+	diff->path = entry->filename;
+	diff->status |= GIT_STATUS_DELETED;
+}
+
+static void mark_add(git_tree_diff_data *diff, git_tree_entry *entry)
+{
+	diff->new_attr = entry->attr;
+	git_oid_cpy(&diff->new_oid, &entry->oid);
+	diff->path = entry->filename;
+	diff->status |= GIT_STATUS_ADDED;
+}
+
+static int signal_additions(git_tree *tree, int start, int end, git_tree_diff_cb cb, void *data)
+{
+	git_tree_diff_data diff;
+	git_tree_entry *entry;
+	int i, error;
+
+	if (end < 0)
+		end = git_tree_entrycount(tree);
+
+	for (i = start; i < end; ++i) {
+		memset(&diff, 0x0, sizeof(git_tree_diff_data));
+		entry = git_vector_get(&tree->entries, i);
+		mark_add(&diff, entry);
+
+		error = cb(&diff, data);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
+	return GIT_SUCCESS;
+}
+
+static int signal_addition(git_tree_entry *entry, git_tree_diff_cb cb, void *data)
+{
+	git_tree_diff_data diff;
+
+	memset(&diff, 0x0, sizeof(git_tree_diff_data));
+
+	mark_add(&diff, entry);
+
+	return cb(&diff, data);
+}
+
+static int signal_deletions(git_tree *tree, int start, int end, git_tree_diff_cb cb, void *data)
+{
+	git_tree_diff_data diff;
+	git_tree_entry *entry;
+	int i, error;
+
+	if (end < 0)
+		end = git_tree_entrycount(tree);
+
+	for (i = start; i < end; ++i) {
+		memset(&diff, 0x0, sizeof(git_tree_diff_data));
+		entry = git_vector_get(&tree->entries, i);
+		mark_del(&diff, entry);
+
+		error = cb(&diff, data);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
+	return GIT_SUCCESS;
+}
+
+static int signal_deletion(git_tree_entry *entry, git_tree_diff_cb cb, void *data)
+{
+	git_tree_diff_data diff;
+
+	memset(&diff, 0x0, sizeof(git_tree_diff_data));
+
+	mark_del(&diff, entry);
+
+	return cb(&diff, data);
+}
+
+static int signal_modification(git_tree_entry *a, git_tree_entry *b,
+							   git_tree_diff_cb cb, void *data)
+{
+	git_tree_diff_data diff;
+
+	memset(&diff, 0x0, sizeof(git_tree_diff_data));
+
+	mark_del(&diff, a);
+	mark_add(&diff, b);
+
+	return cb(&diff, data);
+}
+
+int git_tree_diff(git_tree *a, git_tree *b, git_tree_diff_cb cb, void *data)
+{
+	unsigned int i_a = 0, i_b = 0; /* Counters for trees a and b */
+	git_tree_entry *entry_a = NULL, *entry_b = NULL;
+	git_tree_diff_data diff;
+	int error = GIT_SUCCESS, cmp;
+
+	while (1) {
+		entry_a = a == NULL ? NULL : git_vector_get(&a->entries, i_a);
+		entry_b = b == NULL ? NULL : git_vector_get(&b->entries, i_b);
+
+		if (!entry_a && !entry_b)
+			goto exit;
+
+		memset(&diff, 0x0, sizeof(git_tree_diff_data));
+
+		/*
+		 * We've run out of tree on one side so the rest of the
+		 * entries on the tree with remaining entries are all
+		 * deletions or additions.
+		 */
+		if (entry_a && !entry_b)
+			return signal_deletions(a, i_a, -1, cb, data);
+		if (!entry_a && entry_b)
+			return signal_additions(b, i_b, -1, cb, data);
+
+		/*
+		 * Both trees are sorted with git's almost-alphabetical
+		 * sorting, so a comparison value < 0 means the entry was
+		 * deleted in the right tree. > 0 means the entry was added.
+		 */
+		cmp = entry_sort_cmp(entry_a, entry_b);
+
+		if (cmp == 0) {
+			i_a++;
+			i_b++;
+
+			/* If everything's the same, jump to next pair */
+			if (!tree_entry_cmp(entry_a, entry_b))
+				continue;
+
+			/* If they're not both dirs or both files, it's add + del */
+			if (S_ISDIR(entry_a->attr) != S_ISDIR(entry_b->attr)) {
+				if ((error = signal_addition(entry_a, cb, data)) < 0)
+					goto exit;
+				if ((error = signal_deletion(entry_b, cb, data)) < 0)
+					goto exit;
+			}
+
+			/* Otherwise consider it a modification */
+			if ((error = signal_modification(entry_a, entry_b, cb, data)) < 0)
+				goto exit;
+
+		} else if (cmp < 0) {
+			i_a++;
+			if ((error = signal_deletion(entry_a, cb, data)) < 0)
+				goto exit;
+		} else if (cmp > 0) {
+			i_b++;
+			if ((error = signal_addition(entry_b, cb, data)) < 0)
+				goto exit;
+		}
+	}
+
+exit:
+	return error;
+}
