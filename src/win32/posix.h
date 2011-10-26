@@ -9,7 +9,7 @@
 
 #include "common.h"
 #include "fnmatch.h"
-#include "utf8-conv.h"
+#include "utf-conv.h"
 
 GIT_INLINE(int) p_link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
@@ -21,7 +21,7 @@ GIT_INLINE(int) p_link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 
 GIT_INLINE(int) p_mkdir(const char *path, int GIT_UNUSED(mode))
 {
-	wchar_t* buf = conv_utf8_to_utf16(path);
+	wchar_t* buf = gitwin_to_utf16(path);
 	int ret = _wmkdir(buf);
 
 	GIT_UNUSED_ARG(mode)

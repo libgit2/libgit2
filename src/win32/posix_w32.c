@@ -6,7 +6,7 @@
  */
 #include "posix.h"
 #include "path.h"
-#include "utf8-conv.h"
+#include "utf-conv.h"
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
@@ -17,7 +17,7 @@ int p_unlink(const char *path)
 	int ret = 0;
 	wchar_t* buf;
 
-	buf = conv_utf8_to_utf16(path);
+	buf = gitwin_to_utf16(path);
 	_wchmod(buf, 0666);
 	ret = _wunlink(buf);
 	free(buf);
@@ -59,7 +59,7 @@ GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 static int do_lstat(const char *file_name, struct stat *buf)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
-	wchar_t* fbuf = conv_utf8_to_utf16(file_name);
+	wchar_t* fbuf = gitwin_to_utf16(file_name);
 
 	if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
 		int fMode = S_IREAD;
@@ -161,7 +161,7 @@ int p_readlink(const char *link, char *target, size_t target_len)
 				"'GetFinalPathNameByHandleW' is not available in this platform");
 	}
 
-	link_w = conv_utf8_to_utf16(link);
+	link_w = gitwin_to_utf16(link);
 
 	hFile = CreateFileW(link_w,			// file to open
 			GENERIC_READ,			// open for reading
@@ -223,7 +223,7 @@ int p_readlink(const char *link, char *target, size_t target_len)
 int p_open(const char *path, int flags)
 {
 	int fd;
-	wchar_t* buf = conv_utf8_to_utf16(path);
+	wchar_t* buf = gitwin_to_utf16(path);
 	fd = _wopen(buf, flags | _O_BINARY);
 
 	free(buf);
@@ -233,7 +233,7 @@ int p_open(const char *path, int flags)
 int p_creat(const char *path, int mode)
 {
 	int fd;
-	wchar_t* buf = conv_utf8_to_utf16(path);
+	wchar_t* buf = gitwin_to_utf16(path);
 	fd = _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, mode);
 
 	free(buf);
@@ -261,7 +261,7 @@ int p_stat(const char* path, struct stat* buf)
 
 int p_chdir(const char* path)
 {
-	wchar_t* buf = conv_utf8_to_utf16(path);
+	wchar_t* buf = gitwin_to_utf16(path);
 	int ret = _wchdir(buf);
 
 	free(buf);
@@ -270,7 +270,7 @@ int p_chdir(const char* path)
 
 int p_chmod(const char* path, int mode)
 {
-	wchar_t* buf = conv_utf8_to_utf16(path);
+	wchar_t* buf = gitwin_to_utf16(path);
 	int ret = _wchmod(buf, mode);
 
 	free(buf);
@@ -279,7 +279,7 @@ int p_chmod(const char* path, int mode)
 
 int p_rmdir(const char* path)
 {
-	wchar_t* buf = conv_utf8_to_utf16(path);
+	wchar_t* buf = gitwin_to_utf16(path);
 	int ret = _wrmdir(buf);
 
 	free(buf);
@@ -289,7 +289,7 @@ int p_rmdir(const char* path)
 int p_hide_directory__w32(const char *path)
 {
 	int error;
-	wchar_t* buf = conv_utf8_to_utf16(path);
+	wchar_t* buf = gitwin_to_utf16(path);
 
 	error = SetFileAttributesW(buf, FILE_ATTRIBUTE_HIDDEN) != 0 ?
 		GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
@@ -305,7 +305,7 @@ int p_hide_directory__w32(const char *path)
 char *p_realpath(const char *orig_path, char *buffer)
 {
 	int ret, alloc = 0;
-	wchar_t* orig_path_w = conv_utf8_to_utf16(orig_path);
+	wchar_t* orig_path_w = gitwin_to_utf16(orig_path);
 	wchar_t* buffer_w = (wchar_t*)git__malloc(GIT_PATH_MAX * sizeof(wchar_t));
 
 	if (buffer == NULL) {
@@ -380,7 +380,7 @@ int p_setenv(const char* name, const char* value, int overwrite)
 
 int p_access(const char* path, int mode)
 {
-	wchar_t *buf = conv_utf8_to_utf16(path);
+	wchar_t *buf = gitwin_to_utf16(path);
 	int ret;
 
 	ret = _waccess(buf, mode);

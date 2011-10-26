@@ -370,7 +370,7 @@ static int win32_find_system(char *system_config_path)
 		return GIT_ENOTFOUND;
 	}
 
-	apphome_utf8 = conv_utf16_to_utf8(apphome_utf16);
+	apphome_utf8 = gitwin_from_utf16(apphome_utf16);
 	free(apphome_utf16);
 
 	if (strlen(apphome_utf8) >= GIT_PATH_MAX) {
