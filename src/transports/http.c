@@ -19,6 +19,7 @@
 #include "fetch.h"
 #include "filebuf.h"
 #include "repository.h"
+#include "protocol.h"
 
 enum last_cb {
 	NONE,
@@ -28,6 +29,7 @@ enum last_cb {
 
 typedef struct {
 	git_transport parent;
+	git_protocol proto;
 	git_vector refs;
 	git_vector common;
 	int socket;
@@ -186,47 +188,8 @@ static int on_headers_complete(http_parser *parser)
 static int on_body_store_refs(http_parser *parser, const char *str, size_t len)
 {
 	transport_http *t = (transport_http *) parser->data;
-	git_buf *buf = &t->buf;
-	git_vector *refs = &t->refs;
-	int error;
-	const char *line_end, *ptr;
-	static int first_pkt = 1;
 
-	if (len == 0) { /* EOF */
-		if (buf->size != 0)
-			return t->error = git__throw(GIT_ERROR, "EOF and unprocessed data");
-		else
-			return 0;
-	}
-
-	git_buf_put(buf, str, len);
-	ptr = buf->ptr;
-	while (1) {
-		git_pkt *pkt;
-
-		if (buf->size == 0)
-			return 0;
-
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
-		if (error == GIT_ESHORTBUFFER)
-			return 0; /* Ask for more */
-		if (error < GIT_SUCCESS)
-			return t->error = git__rethrow(error, "Failed to parse pkt-line");
-
-		git_buf_consume(buf, line_end);
-
-		if (first_pkt) {
-			first_pkt = 0;
-			if (pkt->type != GIT_PKT_COMMENT)
-				return t->error = git__throw(GIT_EOBJCORRUPTED, "Not a valid smart HTTP response");
-		}
-
-		error = git_vector_insert(refs, pkt);
-		if (error < GIT_SUCCESS)
-			return t->error = git__rethrow(error, "Failed to add pkt to list");
-	}
-
-	return error;
+	return git_protocol_store_refs(&t->proto, str, len);
 }
 
 static int on_message_complete(http_parser *parser)
@@ -243,6 +206,7 @@ static int store_refs(transport_http *t)
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
+	git_pkt *pkt;
 
 	http_parser_init(&t->parser, HTTP_RESPONSE);
 	t->parser.data = t;
@@ -272,6 +236,12 @@ static int store_refs(transport_http *t)
 		if (error == 0 || t->transfer_finished)
 			return GIT_SUCCESS;
 	}
+
+	pkt = git_vector_get(&t->refs, 0);
+	if (pkt == NULL || pkt->type != GIT_PKT_COMMENT)
+		return t->error = git__throw(GIT_EOBJCORRUPTED, "Not a valid smart HTTP response");
+	else
+		git_vector_remove(&t->refs, 0);
 
 	return error;
 }
@@ -750,6 +720,7 @@ static void http_free(git_transport *transport)
 	}
 	git_vector_free(common);
 	git_buf_free(&t->buf);
+	git_buf_free(&t->proto.buf);
 	git__free(t->heads);
 	git__free(t->content_type);
 	git__free(t->host);
@@ -775,6 +746,8 @@ int git_transport_http(git_transport **out)
 	t->parent.download_pack = http_download_pack;
 	t->parent.close = http_close;
 	t->parent.free = http_free;
+	t->proto.refs = &t->refs;
+	t->proto.transport = (git_transport *) t;
 
 #ifdef GIT_WIN32
 	/* on win32, the WSA context needs to be initialized
