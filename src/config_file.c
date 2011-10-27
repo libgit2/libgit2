@@ -1158,19 +1158,25 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 		while (isspace(value_start[0]))
 			value_start++;
 
-		if (value_start[0] == '\0')
+		if (value_start[0] == '\0') {
+			*var_value = NULL;
 			goto out;
+		}
 
 		if (is_multiline_var(value_start)) {
 			error = parse_multiline_variable(cfg, value_start, var_value);
-			if (error < GIT_SUCCESS)
+			if (error != GIT_SUCCESS)
+			{
+				*var_value = NULL;
 				free(*var_name);
+			}
 			goto out;
 		}
 
 		tmp = strdup(value_start);
 		if (tmp == NULL) {
 			free(*var_name);
+			*var_value = NULL;
 			error = GIT_ENOMEM;
 			goto out;
 		}
