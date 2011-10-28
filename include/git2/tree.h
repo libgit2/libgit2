@@ -346,6 +346,7 @@ typedef int (*git_tree_diff_cb)(const git_tree_diff_data *ptr, void *data);
  */
 int git_tree_diff(git_tree *old, git_tree *newer, git_tree_diff_cb cb, void *data);
 
+int git_tree_diff_index_recursive(git_tree *tree, git_index *index, git_tree_diff_cb cb, void *data);
 
 GIT_END_DECL
 #endif
