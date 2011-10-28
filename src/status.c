@@ -142,16 +142,14 @@ static int retrieve_head_tree(git_tree **tree_out, git_repository *repo)
 	*tree_out = NULL;
 
 	error = git_repository_head(&resolved_head_ref, repo);
-	if (error != GIT_SUCCESS && error != GIT_ENOTFOUND)
-		return git__rethrow(error, "HEAD can't be resolved");
-
 	/*
 	 * We assume that a situation where HEAD exists but can not be resolved is valid.
 	 * A new repository fits this description for instance.
 	 */
-
 	if (error == GIT_ENOTFOUND)
 		return GIT_SUCCESS;
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "HEAD can't be resolved");
 
 	if ((error = git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref))) < GIT_SUCCESS)
 		return git__rethrow(error, "The tip of HEAD can't be retrieved");
@@ -168,17 +166,19 @@ exit:
 	return error;
 }
 
-#define GIT_STATUS_PATH_NULL	-2
-#define GIT_STATUS_PATH_IGNORE	-1
-#define GIT_STATUS_PATH_FILE	0
-#define GIT_STATUS_PATH_FOLDER	1
+enum path_type {
+	GIT_STATUS_PATH_NULL,
+	GIT_STATUS_PATH_IGNORE,
+	GIT_STATUS_PATH_FILE,
+	GIT_STATUS_PATH_FOLDER,
+};
 
 static int dirent_cb(void *state, char *full_path);
 static int alphasorted_futils_direach(
 	char *path, size_t path_sz,
 	int (*fn)(void *, char *), void *arg);
 
-static int process_folder(struct status_st *st, const git_tree_entry *tree_entry, char *full_path, int path_type)
+static int process_folder(struct status_st *st, const git_tree_entry *tree_entry, char *full_path, enum path_type path_type)
 {
 	git_object *subtree = NULL;
 	git_tree *pushed_tree = NULL;
@@ -242,7 +242,7 @@ static int determine_status(struct status_st *st,
 	const git_index_entry *index_entry,
 	char *full_path,
 	const char *status_path,
-	int path_type)
+	enum path_type path_type)
 {
 	struct status_entry *e;
 	int error = GIT_SUCCESS;
@@ -324,30 +324,6 @@ static int compare(const char *left, const char *right)
 	return strcmp(left, right);
 }
 
-/*
- * Convenience method to enumerate a tree. Contrarily to the git_tree_entry_byindex()
- * method, it allows the tree to be enumerated to be NULL. In this case, every returned
- * tree entry will be NULL as well.
- */
-static const git_tree_entry *git_tree_entry_bypos(git_tree *tree, unsigned int idx)
-{
-	if (tree == NULL)
-		return NULL;
-
-	return git_vector_get(&tree->entries, idx);
-}
-
-/*
- * Convenience method to enumerate the index. This method is not supposed to be exposed
- * as part of the index API because it precludes that the index will not be altered
- * while the enumeration is being processed. Which wouldn't be very API friendly :)
- */
-static const git_index_entry *git_index_entry_bypos(git_index *index, unsigned int idx)
-{
-	assert(index);
-	return git_vector_get(&index->entries, idx);
-}
-
 /* Greatly inspired from JGit IndexTreeWalker */
 /* https://github.com/spearce/jgit/blob/ed47e29c777accfa78c6f50685a5df2b8f5b8ff5/org.spearce.jgit/src/org/spearce/jgit/lib/IndexTreeWalker.java#L88 */
 
@@ -355,7 +331,7 @@ static int dirent_cb(void *state, char *a)
 {
 	const git_tree_entry *m;
 	const git_index_entry *entry;
-	int path_type;
+	enum path_type path_type;
 	int cmpma, cmpmi, cmpai, error;
 	const char *pm, *pa, *pi;
 	const char *m_name, *i_name, *a_name;
@@ -370,8 +346,12 @@ static int dirent_cb(void *state, char *a)
 	a_name = (path_type != GIT_STATUS_PATH_NULL) ? a + st->workdir_path_len : NULL;
 
 	while (1) {
-		m = git_tree_entry_bypos(st->tree, st->tree_position);
-		entry = git_index_entry_bypos(st->index, st->index_position);
+		if (st->tree == NULL)
+			m = NULL;
+		else
+			m = git_tree_entry_byindex(st->tree, st->tree_position);
+
+		entry = git_index_get(st->index, st->index_position);
 
 		if ((m == NULL) && (a == NULL) && (entry == NULL))
 			return GIT_SUCCESS;
