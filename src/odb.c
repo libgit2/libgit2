@@ -83,8 +83,8 @@ static void free_odb_object(void *o)
 	git_odb_object *object = (git_odb_object *)o;
 
 	if (object != NULL) {
-		free(object->raw.data);
-		free(object);
+		git__free(object->raw.data);
+		git__free(object);
 	}
 }
 
@@ -205,8 +205,8 @@ static void fake_wstream__free(git_odb_stream *_stream)
 {
 	fake_wstream *stream = (fake_wstream *)_stream;
 
-	free(stream->buffer);
-	free(stream);
+	git__free(stream->buffer);
+	git__free(stream);
 }
 
 static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, size_t size, git_otype type)
@@ -221,7 +221,7 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 	stream->type = type;
 	stream->buffer = git__malloc(size);
 	if (stream->buffer == NULL) {
-		free(stream);
+		git__free(stream);
 		return GIT_ENOMEM;
 	}
 
@@ -265,12 +265,12 @@ int git_odb_new(git_odb **out)
 
 	error = git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
 	if (error < GIT_SUCCESS) {
-		free(db);
+		git__free(db);
 		return git__rethrow(error, "Failed to create object database");
 	}
 
 	if ((error = git_vector_init(&db->backends, 4, backend_sort_cmp)) < GIT_SUCCESS) {
-		free(db);
+		git__free(db);
 		return git__rethrow(error, "Failed to create object database");
 	}
 
@@ -296,7 +296,7 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 	internal->is_alternate = is_alternate;
 
 	if (git_vector_insert(&odb->backends, internal) < 0) {
-		free(internal);
+		git__free(internal);
 		return GIT_ENOMEM;
 	}
 
@@ -421,14 +421,14 @@ void git_odb_close(git_odb *db)
 		git_odb_backend *backend = internal->backend;
 
 		if (backend->free) backend->free(backend);
-		else free(backend);
+		else git__free(backend);
 
-		free(internal);
+		git__free(internal);
 	}
 
 	git_vector_free(&db->backends);
 	git_cache_free(&db->cache);
-	free(db);
+	git__free(db);
 }
 
 int git_odb_exists(git_odb *db, const git_oid *id)

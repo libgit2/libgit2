@@ -68,7 +68,7 @@ static void commit_list_free(commit_list **list_p)
 	while (list) {
 		commit_list *temp = list;
 		list = temp->next;
-		free(temp);
+		git__free(temp);
 	}
 
 	*list_p = NULL;
@@ -81,7 +81,7 @@ static commit_object *commit_list_pop(commit_list **stack)
 
 	if (top) {
 		*stack = top->next;
-		free(top);
+		git__free(top);
 	}
 	return item;
 }
@@ -156,7 +156,7 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 	git_oid_cpy(&commit->oid, oid);
 
 	if (git_hashtable_insert(walk->commits, &commit->oid, commit) < GIT_SUCCESS) {
-		free(commit);
+		git__free(commit);
 		return NULL;
 	}
 
@@ -442,7 +442,7 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 			(git_hash_keyeq_ptr)git_oid_cmp);
 
 	if (walk->commits == NULL) {
-		free(walk);
+		git__free(walk);
 		return GIT_ENOMEM;
 	}
 
@@ -475,17 +475,17 @@ void git_revwalk_free(git_revwalk *walk)
 	 * make sure it's being free'd */
 	GIT_HASHTABLE_FOREACH(walk->commits, _unused, commit, {
 		if (commit->out_degree > PARENTS_PER_COMMIT)
-			free(commit->parents);
+			git__free(commit->parents);
 	});
 
 	git_hashtable_free(walk->commits);
 	git_pqueue_free(&walk->iterator_time);
 
 	for (i = 0; i < walk->memory_alloc.length; ++i)
-		free(git_vector_get(&walk->memory_alloc, i));
+		git__free(git_vector_get(&walk->memory_alloc, i));
 
 	git_vector_free(&walk->memory_alloc);
-	free(walk);
+	git__free(walk);
 }
 
 git_repository *git_revwalk_repository(git_revwalk *walk)

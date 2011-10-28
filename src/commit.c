@@ -32,7 +32,7 @@ static void clear_parents(git_commit *commit)
 
 	for (i = 0; i < commit->parent_oids.length; ++i) {
 		git_oid *parent = git_vector_get(&commit->parent_oids, i);
-		free(parent);
+		git__free(parent);
 	}
 
 	git_vector_clear(&commit->parent_oids);
@@ -46,9 +46,9 @@ void git_commit__free(git_commit *commit)
 	git_signature_free(commit->author);
 	git_signature_free(commit->committer);
 
-	free(commit->message);
-	free(commit->message_encoding);
-	free(commit);
+	git__free(commit->message);
+	git__free(commit->message_encoding);
+	git__free(commit);
 }
 
 const git_oid *git_commit_id(git_commit *c)
@@ -84,7 +84,7 @@ int git_commit_create_v(
 		message_encoding, message,
 		tree, parent_count, parents);
 
-	free((void *)parents);
+	git__free((void *)parents);
 
 	return error;
 }

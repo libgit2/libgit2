@@ -277,7 +277,7 @@ static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
 	else {
 		set_stream_output(s, buf + used, hdr->size - used);
 		if (finish_inflate(s)) {
-			free(buf);
+			git__free(buf);
 			return NULL;
 		}
 	}
@@ -317,7 +317,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_fbuffer *obj)
 	in = ((unsigned char *)obj->data) + used;
 	len = obj->len - used;
 	if (inflate_buffer(in, len, buf, hdr.size)) {
-		free(buf);
+		git__free(buf);
 		return git__throw(GIT_ERROR, "Failed to inflate loose object. Could not inflate buffer");
 	}
 	buf[hdr.size] = '\0';
@@ -686,7 +686,7 @@ static void loose_backend__stream_free(git_odb_stream *_stream)
 	if (!stream->finished)
 		git_filebuf_cleanup(&stream->fbuf);
 
-	free(stream);
+	git__free(stream);
 }
 
 static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
@@ -739,14 +739,14 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT));
 
 	if (error < GIT_SUCCESS) {
-		free(stream);
+		git__free(stream);
 		return git__rethrow(error, "Failed to create loose backend stream");
 	}
 
 	error = stream->stream.write((git_odb_stream *)stream, hdr, hdrlen);
 	if (error < GIT_SUCCESS) {
 		git_filebuf_cleanup(&stream->fbuf);
-		free(stream);
+		git__free(stream);
 		return git__rethrow(error, "Failed to create loose backend stream");
 	}
 
@@ -803,8 +803,8 @@ static void loose_backend__free(git_odb_backend *_backend)
 	assert(_backend);
 	backend = (loose_backend *)_backend;
 
-	free(backend->objects_dir);
-	free(backend);
+	git__free(backend->objects_dir);
+	git__free(backend);
 }
 
 int git_odb_backend_loose(
@@ -821,7 +821,7 @@ int git_odb_backend_loose(
 
 	backend->objects_dir = git__strdup(objects_dir);
 	if (backend->objects_dir == NULL) {
-		free(backend);
+		git__free(backend);
 		return GIT_ENOMEM;
 	}
 

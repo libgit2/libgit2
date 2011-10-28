@@ -77,12 +77,12 @@ static void reference_free(git_reference *reference)
 		return;
 
 	if (reference->name)
-		free(reference->name);
+		git__free(reference->name);
 
 	if (reference->type == GIT_REF_SYMBOLIC)
-		free(((reference_symbolic *)reference)->target);
+		git__free(((reference_symbolic *)reference)->target);
 
-	free(reference);
+	git__free(reference);
 }
 
 static int reference_create(
@@ -212,7 +212,7 @@ static int loose_parse_symbolic(git_reference *ref, git_fbuffer *file_content)
 
 	refname_start += header_len;
 
-	free(ref_sym->target);
+	git__free(ref_sym->target);
 	ref_sym->target = git__strdup(refname_start);
 	if (ref_sym->target == NULL)
 		return GIT_ENOMEM;
@@ -1203,7 +1203,7 @@ int git_reference_set_oid(git_reference *ref, const git_oid *id)
 
 		ref_old->ref.name = git__strdup(ref->name);
 		if (ref_old->ref.name == NULL) {
-			free(ref_old);
+			git__free(ref_old);
 			return GIT_ENOMEM;
 		}
 	}
@@ -1252,7 +1252,7 @@ int git_reference_set_target(git_reference *ref, const char *target)
 
 	ref_sym = (reference_symbolic *)ref;
 
-	free(ref_sym->target);
+	git__free(ref_sym->target);
 	ref_sym->target = git__strdup(target);
 	if (ref_sym->target == NULL)
 		return GIT_ENOMEM;
@@ -1381,7 +1381,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 			goto rollback;
 	}
 
-	free(ref->name);
+	git__free(ref->name);
 	ref->name = new_ref->name;
 
 	/*
@@ -1408,7 +1408,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 			goto rollback;
 
 cleanup:
-	free(old_name);
+	git__free(old_name);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to rename reference");
 
 rollback:

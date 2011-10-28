@@ -26,7 +26,7 @@ GIT_INLINE(int) p_mkdir(const char *path, int GIT_UNUSED(mode))
 
 	GIT_UNUSED_ARG(mode)
 
-	free(buf);
+	git__free(buf);
 	return ret;
 }
 

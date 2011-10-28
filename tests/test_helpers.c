@@ -116,7 +116,7 @@ int remove_loose_object(const char *repository_folder, git_object *object)
 		return -1;
 	}
 
-	free(full_path);
+	git__free(full_path);
 
 	return GIT_SUCCESS;
 }

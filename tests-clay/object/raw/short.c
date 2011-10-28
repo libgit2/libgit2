@@ -86,7 +86,7 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 
 	/* cleanup */
 	for (i = 0; i < MAX_OIDS; ++i)
-		free(oids[i]);
+		git__free(oids[i]);
 
 	git_oid_shorten_free(os);
 

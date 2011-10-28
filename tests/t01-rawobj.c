@@ -217,7 +217,7 @@ BEGIN_TEST(oid12, "compare oids (allocate + format)")
 	out = git_oid_allocfmt(&in);
 	must_be_true(out);
 	must_be_true(strcmp(exp, out) == 0);
-	free(out);
+	git__free(out);
 END_TEST
 
 BEGIN_TEST(oid13, "compare oids (path format)")
@@ -390,7 +390,7 @@ BEGIN_TEST(oid17, "stress test for the git_oid_shorten object")
 
 	/* cleanup */
 	for (i = 0; i < MAX_OIDS; ++i)
-		free(oids[i]);
+		git__free(oids[i]);
 
 	git_oid_shorten_free(os);
 

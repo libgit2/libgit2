@@ -231,7 +231,7 @@ static int packfile_load__cb(void *_data, char *path)
 		return git__rethrow(error, "Failed to load packfile");
 
 	if (git_vector_insert(&backend->packs, pack) < GIT_SUCCESS) {
-		free(pack);
+		git__free(pack);
 		return GIT_ENOMEM;
 	}
 
@@ -445,8 +445,8 @@ static void pack_backend__free(git_odb_backend *_backend)
 	}
 
 	git_vector_free(&backend->packs);
-	free(backend->pack_folder);
-	free(backend);
+	git__free(backend->pack_folder);
+	git__free(backend);
 }
 
 int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
@@ -459,7 +459,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 		return GIT_ENOMEM;
 
 	if (git_vector_init(&backend->packs, 8, packfile_sort__cb) < GIT_SUCCESS) {
-		free(backend);
+		git__free(backend);
 		return GIT_ENOMEM;
 	}
 
@@ -469,7 +469,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 		backend->pack_folder_mtime = 0;
 
 		if (backend->pack_folder == NULL) {
-			free(backend);
+			git__free(backend);
 			return GIT_ENOMEM;
 		}
 	}

@@ -11,7 +11,7 @@ check_dirname(const char *A, const char *B)
 	cl_assert((dir2 = git_path_dirname(A)) != NULL);
 	cl_assert(strcmp(dir2, B) == 0);
 
-	free(dir2);
+	git__free(dir2);
 }
 
 static void
@@ -24,7 +24,7 @@ check_basename(const char *A, const char *B)
 	cl_assert((base2 = git_path_basename(A)) != NULL);
 	cl_assert(strcmp(base2, B) == 0);
 
-	free(base2);
+	git__free(base2);
 }
 
 static void

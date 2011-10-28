@@ -138,7 +138,7 @@ static int index_initialize(git_index **index_out, git_repository *owner, const 
 
 	index->index_file_path = git__strdup(index_path);
 	if (index->index_file_path == NULL) {
-		free(index);
+		git__free(index);
 		return GIT_ENOMEM;
 	}
 
@@ -179,8 +179,8 @@ void git_index_free(git_index *index)
 	git_vector_free(&index->entries);
 	git_vector_free(&index->unmerged);
 
-	free(index->index_file_path);
-	free(index);
+	git__free(index->index_file_path);
+	git__free(index);
 }
 
 void git_index_clear(git_index *index)
@@ -192,15 +192,15 @@ void git_index_clear(git_index *index)
 	for (i = 0; i < index->entries.length; ++i) {
 		git_index_entry *e;
 		e = git_vector_get(&index->entries, i);
-		free(e->path);
-		free(e);
+		git__free(e->path);
+		git__free(e);
 	}
 
 	for (i = 0; i < index->unmerged.length; ++i) {
 		git_index_entry_unmerged *e;
 		e = git_vector_get(&index->unmerged, i);
-		free(e->path);
-		free(e);
+		git__free(e->path);
+		git__free(e);
 	}
 
 	git_vector_clear(&index->entries);
@@ -334,7 +334,7 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	entry->flags |= (stage << GIT_IDXENTRY_STAGESHIFT);
 	entry->path = git__strdup(rel_path);
 	if (entry->path == NULL) {
-		free(entry);
+		git__free(entry);
 		return GIT_ENOMEM;
 	}
 
@@ -364,8 +364,8 @@ static void index_entry_free(git_index_entry *entry)
 {
 	if (!entry)
 		return;
-	free(entry->path);
-	free(entry);
+	git__free(entry->path);
+	git__free(entry);
 }
 
 static int index_insert(git_index *index, git_index_entry *entry, int replace)
@@ -416,8 +416,8 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 
 	/* exists, replace it */
 	entry_array = (git_index_entry **) index->entries.contents;
-	free(entry_array[position]->path);
-	free(entry_array[position]);
+	git__free(entry_array[position]->path);
+	git__free(entry_array[position]);
 	entry_array[position] = entry;
 
 	return GIT_SUCCESS;

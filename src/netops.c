@@ -190,7 +190,7 @@ int gitno_extract_host_and_port(char **host, char **port, const char *url, const
 	delim = colon == NULL ? slash : colon;
 	*host = git__strndup(url, delim - url);
 	if (*host == NULL) {
-		free(*port);
+		git__free(*port);
 		error = GIT_ENOMEM;
 	}
 

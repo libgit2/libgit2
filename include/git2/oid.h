@@ -100,7 +100,7 @@ GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
  *
  * @param oid the oid structure to format
  * @return the c-string; NULL if memory is exhausted. Caller must
- *			deallocate the string with free().
+ *			deallocate the string with git__free().
  */
 GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
 

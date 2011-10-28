@@ -50,7 +50,7 @@ wchar_t* gitwin_to_utf16(const char* str)
 	ret = (wchar_t*)git__malloc(cb);
 
 	if (MultiByteToWideChar(_active_codepage, 0, str, -1, ret, cb) == 0) {
-		free(ret);
+		git__free(ret);
 		ret = NULL;
 	}
 
@@ -79,7 +79,7 @@ char* gitwin_from_utf16(const wchar_t* str)
 	ret = (char*)git__malloc(cb);
 
 	if (WideCharToMultiByte(_active_codepage, 0, str, -1, ret, cb, NULL, NULL) == 0) {
-		free(ret);
+		git__free(ret);
 		ret = NULL;
 	}
 

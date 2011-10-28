@@ -149,7 +149,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 
 out:
 	if (error < GIT_SUCCESS)
-		free(pkt);
+		git__free(pkt);
 	else
 		*out = (git_pkt *)pkt;
 
@@ -260,10 +260,10 @@ void git_pkt_free(git_pkt *pkt)
 {
 	if(pkt->type == GIT_PKT_REF) {
 		git_pkt_ref *p = (git_pkt_ref *) pkt;
-		free(p->head.name);
+		git__free(p->head.name);
 	}
 
-	free(pkt);
+	git__free(pkt);
 }
 
 int git_pkt_buffer_flush(git_buf *buf)

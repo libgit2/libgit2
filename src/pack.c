@@ -181,7 +181,7 @@ static int pack_index_open(struct git_pack_file *p)
 	strcpy(idx_name + strlen(idx_name) - strlen(".pack"), ".idx");
 
 	error = pack_index_check(idx_name, p);
-	free(idx_name);
+	git__free(idx_name);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to open index");
 }
@@ -297,7 +297,7 @@ static int packfile_unpack_delta(
 
 	error = packfile_unpack_compressed(&delta, p, w_curs, curpos, delta_size, delta_type);
 	if (error < GIT_SUCCESS) {
-		free(base.data);
+		git__free(base.data);
 		return git__rethrow(error, "Corrupted delta");
 	}
 
@@ -306,8 +306,8 @@ static int packfile_unpack_delta(
 			base.data, base.len,
 			delta.data, delta.len);
 
-	free(base.data);
-	free(delta.data);
+	git__free(base.data);
+	git__free(delta.data);
 
 	/* TODO: we might want to cache this shit. eventually */
 	//add_delta_base_cache(p, base_offset, base, base_size, *type);
@@ -390,7 +390,7 @@ int packfile_unpack_compressed(
 
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
-		free(buffer);
+		git__free(buffer);
 		return git__throw(GIT_EZLIB, "Error in zlib");
 	}
 
@@ -408,7 +408,7 @@ int packfile_unpack_compressed(
 	inflateEnd(&stream);
 
 	if ((st != Z_STREAM_END) || stream.total_out != size) {
-		free(buffer);
+		git__free(buffer);
 		return git__throw(GIT_EZLIB, "Error in zlib");
 	}
 
@@ -504,8 +504,8 @@ void packfile_free(struct git_pack_file *p)
 
 	pack_index_free(p);
 
-	free(p->bad_object_sha1);
-	free(p);
+	git__free(p->bad_object_sha1);
+	git__free(p);
 }
 
 static int packfile_open(struct git_pack_file *p)
@@ -598,7 +598,7 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	 */
 	path_len -= strlen(".idx");
 	if (path_len < 1) {
-		free(p);
+		git__free(p);
 		return git__throw(GIT_ENOTFOUND, "Failed to check packfile. Wrong path name");
 	}
 
@@ -610,7 +610,7 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 
 	strcpy(p->pack_name + path_len, ".pack");
 	if (p_stat(p->pack_name, &st) < GIT_SUCCESS || !S_ISREG(st.st_mode)) {
-		free(p);
+		git__free(p);
 		return git__throw(GIT_ENOTFOUND, "Failed to check packfile. File not found");
 	}
 

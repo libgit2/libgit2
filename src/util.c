@@ -26,9 +26,9 @@ void git_strarray_free(git_strarray *array)
 {
 	size_t i;
 	for (i = 0; i < array->count; ++i)
-		free(array->strings[i]);
+		git__free(array->strings[i]);
 
-	free(array->strings);
+	git__free(array->strings);
 }
 
 int git__fnmatch(const char *pattern, const char *name, int flags)

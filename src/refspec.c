@@ -32,7 +32,7 @@ int git_refspec_parse(git_refspec *refspec, const char *str)
 
 	refspec->dst = git__strdup(delim + 1);
 	if (refspec->dst == NULL) {
-		free(refspec->src);
+		git__free(refspec->src);
 		refspec->src = NULL;
 		return GIT_ENOMEM;
 	}

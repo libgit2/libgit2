@@ -18,7 +18,7 @@ static int resize_vector(git_vector *v)
 	if (v->_alloc_size < minimum_size)
 		v->_alloc_size = minimum_size;
 
-	v->contents = realloc(v->contents, v->_alloc_size * sizeof(void *));
+	v->contents = git__realloc(v->contents, v->_alloc_size * sizeof(void *));
 	if (v->contents == NULL)
 		return GIT_ENOMEM;
 
@@ -29,7 +29,7 @@ static int resize_vector(git_vector *v)
 void git_vector_free(git_vector *v)
 {
 	assert(v);
-	free(v->contents);
+	git__free(v->contents);
 }
 
 int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp)

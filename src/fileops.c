@@ -181,7 +181,7 @@ int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mt
 
 	if (p_read(fd, buff, len) < 0) {
 		p_close(fd);
-		free(buff);
+		git__free(buff);
 		return git__throw(GIT_ERROR, "Failed to read file `%s`", path);
 	}
 	buff[len] = '\0';
@@ -207,7 +207,7 @@ int git_futils_readbuffer(git_fbuffer *obj, const char *path)
 void git_futils_freebuffer(git_fbuffer *obj)
 {
 	assert(obj);
-	free(obj->data);
+	git__free(obj->data);
 	obj->data = NULL;
 }
 
@@ -326,7 +326,7 @@ int git_futils_mkdir_r(const char *path, int mode)
 			error = GIT_SUCCESS;
 	}
 
-	free(path_copy);
+	git__free(path_copy);
 
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Failed to recursively create `%s` tree structure", path);

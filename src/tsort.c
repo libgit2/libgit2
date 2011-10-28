@@ -178,7 +178,7 @@ static int check_invariant(struct tsort_run *stack, int stack_curr)
 static int resize(struct tsort_store *store, size_t new_size)
 {
 	if (store->alloc < new_size) {
-		void **tempstore = realloc(store->storage, new_size * sizeof(void *));
+		void **tempstore = git__realloc(store->storage, new_size * sizeof(void *));
 
 		/**
 		 * Do not propagate on OOM; this will abort the sort and
@@ -319,7 +319,7 @@ static ssize_t collapse(void **dst, struct tsort_run *stack, ssize_t stack_curr,
 			stack_curr--; \
 		} \
 		if (store->storage != NULL) {\
-			free(store->storage);\
+			git__free(store->storage);\
 			store->storage = NULL;\
 		}\
 		return;\

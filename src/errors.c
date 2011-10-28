@@ -70,9 +70,9 @@ void git___rethrow(const char *msg, ...)
 	vsnprintf(new_error, sizeof(new_error), msg, va);
 	va_end(va);
 
-	old_error = strdup(g_last_error);
+	old_error = git__strdup(g_last_error);
 	snprintf(g_last_error, sizeof(g_last_error), "%s \n	- %s", new_error, old_error);
-	free(old_error);
+	git__free(old_error);
 }
 
 void git___throw(const char *msg, ...)

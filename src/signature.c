@@ -15,9 +15,9 @@ void git_signature_free(git_signature *sig)
 	if (sig == NULL)
 		return;
 
-	free(sig->name);
-	free(sig->email);
-	free(sig);
+	git__free(sig->name);
+	git__free(sig->email);
+	git__free(sig);
 }
 
 static const char *skip_leading_spaces(const char *buffer, const char *buffer_end)

@@ -39,17 +39,17 @@ static int resize_to(git_hashtable *self, size_t new_size)
 			self->is_resizing = 0;
 		else {
 			new_size *= 2;
-			free(self->nodes);
+			git__free(self->nodes);
 		}
 	} while(self->is_resizing);
 
-	free(old_nodes);
+	git__free(old_nodes);
 	return GIT_SUCCESS;
 }
 
 static int set_size(git_hashtable *self, size_t new_size)
 {
-	self->nodes = realloc(self->nodes, new_size * sizeof(git_hashtable_node));
+	self->nodes = git__realloc(self->nodes, new_size * sizeof(git_hashtable_node));
 	if (self->nodes == NULL)
 		return GIT_ENOMEM;
 
@@ -156,8 +156,8 @@ void git_hashtable_free(git_hashtable *self)
 {
 	assert(self);
 
-	free(self->nodes);
-	free(self);
+	git__free(self->nodes);
+	git__free(self);
 }
 
 
