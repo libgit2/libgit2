@@ -103,7 +103,7 @@ BEGIN_TEST(table1, "fill the hashtable with random entries")
 	}
 
 	git_hashtable_free(table);
-	free(objects);
+	git__free(objects);
 
 END_TEST
 
@@ -145,7 +145,7 @@ BEGIN_TEST(table2, "make sure the table resizes automatically")
 	}
 
 	git_hashtable_free(table);
-	free(objects);
+	git__free(objects);
 
 END_TEST
 
@@ -179,7 +179,7 @@ BEGIN_TEST(tableit0, "iterate through all the contents of the table")
 		must_be_true(objects[i].visited);
 
 	git_hashtable_free(table);
-	free(objects);
+	git__free(objects);
 END_TEST
 
 

@@ -16,9 +16,9 @@
 void git_tag__free(git_tag *tag)
 {
 	git_signature_free(tag->tagger);
-	free(tag->message);
-	free(tag->tag_name);
-	free(tag);
+	git__free(tag->message);
+	git__free(tag->tag_name);
+	git__free(tag);
 }
 
 const git_oid *git_tag_id(git_tag *c)
@@ -341,8 +341,8 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		error = git_reference_set_oid(new_ref, oid);
 
 	git_signature_free(tag.tagger);
-	free(tag.tag_name);
-	free(tag.message);
+	git__free(tag.tag_name);
+	git__free(tag.message);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 }

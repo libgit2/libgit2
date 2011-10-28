@@ -109,8 +109,8 @@ static int do_connect(transport_git *t, const char *url)
 	error = send_request(s, NULL, url);
 	t->socket = s;
 
-	free(host);
-	free(port);
+	git__free(host);
+	git__free(port);
 
 	if (error < GIT_SUCCESS && s > 0)
 		close(s);
@@ -357,11 +357,11 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 				gitno_consume(buf, line_end);
 
 				if (pkt->type == GIT_PKT_ACK) {
-					free(pkt);
+					git__free(pkt);
 					error = GIT_SUCCESS;
 					goto done;
 				} else if (pkt->type == GIT_PKT_NAK) {
-					free(pkt);
+					git__free(pkt);
 					break;
 				} else {
 					error = git__throw(GIT_ERROR, "Got unexpected pkt type");
@@ -424,12 +424,12 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 				return error;
 
 			if (pkt->type == GIT_PKT_PACK) {
-				free(pkt);
+				git__free(pkt);
 				return git_fetch__download_pack(out, buf->data, buf->offset, t->socket, repo);
 			}
 
 			/* For now we don't care about anything */
-			free(pkt);
+			git__free(pkt);
 			gitno_consume(buf, line_end);
 		}
 
@@ -475,9 +475,9 @@ static void git_free(git_transport *transport)
 	}
 
 	git_vector_free(refs);
-	free(t->heads);
-	free(t->parent.url);
-	free(t);
+	git__free(t->heads);
+	git__free(t->parent.url);
+	git__free(t);
 }
 
 int git_transport_git(git_transport **out)

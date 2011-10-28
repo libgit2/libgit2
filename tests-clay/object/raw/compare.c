@@ -101,7 +101,7 @@ void test_object_raw_compare__compare_allocfmt_oids(void)
 	out = git_oid_allocfmt(&in);
 	cl_assert(out);
 	cl_assert(strcmp(exp, out) == 0);
-	free(out);
+	git__free(out);
 }
 
 void test_object_raw_compare__compare_pathfmt_oids(void)

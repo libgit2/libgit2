@@ -59,8 +59,8 @@ void test_core_vector__2(void)
 
 	git_vector_free(&x);
 
-	free(ptrs[0]);
-	free(ptrs[1]);
+	git__free(ptrs[0]);
+	git__free(ptrs[1]);
 }
 
 

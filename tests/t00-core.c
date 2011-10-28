@@ -99,8 +99,8 @@ BEGIN_TEST(vector2, "remove duplicates")
 	must_be_true(x.length == 2);
 	git_vector_free(&x);
 
-	free(ptrs[0]);
-	free(ptrs[1]);
+	git__free(ptrs[0]);
+	git__free(ptrs[1]);
 END_TEST
 
 
@@ -112,7 +112,7 @@ BEGIN_TEST(path0, "get the dirname of a path")
 	must_be_true(strcmp(dir, B) == 0);				\
 	must_be_true((dir2 = git_path_dirname(A)) != NULL);	\
 	must_be_true(strcmp(dir2, B) == 0);				\
-	free(dir2);										\
+	git__free(dir2);										\
 }
 
 	DIRNAME_TEST(NULL, ".");
@@ -141,7 +141,7 @@ BEGIN_TEST(path1, "get the base name of a path")
 	must_be_true(strcmp(base, B) == 0);					\
 	must_be_true((base2 = git_path_basename(A)) != NULL);	\
 	must_be_true(strcmp(base2, B) == 0);				\
-	free(base2);										\
+	git__free(base2);										\
 }
 
 	BASENAME_TEST(NULL, ".");

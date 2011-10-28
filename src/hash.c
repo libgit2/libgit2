@@ -32,7 +32,7 @@ git_hash_ctx *git_hash_new_ctx(void)
 
 void git_hash_free_ctx(git_hash_ctx *ctx)
 {
-	free(ctx);
+	git__free(ctx);
 }
 
 void git_hash_init(git_hash_ctx *ctx)

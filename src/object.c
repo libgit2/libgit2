@@ -213,7 +213,7 @@ void git_object__free(void *_obj)
 		break;
 
 	default:
-		free(object);
+		git__free(object);
 		break;
 	}
 }

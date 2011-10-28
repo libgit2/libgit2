@@ -25,8 +25,8 @@ static int reflog_init(git_reflog **reflog, git_reference *ref)
 	log->ref_name = git__strdup(ref->name);
 
 	if (git_vector_init(&log->entries, 0, NULL) < 0) {
-		free(log->ref_name);
-		free(log);
+		git__free(log->ref_name);
+		git__free(log);
 		return GIT_ENOMEM;
 	}
 
@@ -86,8 +86,8 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 #define seek_forward(_increase) { \
 	if (_increase >= buf_size) { \
 		if (entry->committer) \
-			free(entry->committer); \
-		free(entry); \
+			git__free(entry->committer); \
+		git__free(entry); \
 		return git__throw(GIT_ERROR, "Failed to seek forward. Buffer size exceeded"); \
 	} \
 	buf += _increase; \
@@ -101,13 +101,13 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		entry->committer = NULL;
 
 		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < GIT_SUCCESS) {
-			free(entry);
+			git__free(entry);
 			return GIT_ERROR;
 		}
 		seek_forward(GIT_OID_HEXSZ + 1);
 
 		if (git_oid_fromstrn(&entry->oid_cur, buf, GIT_OID_HEXSZ) < GIT_SUCCESS) {
-			free(entry);
+			git__free(entry);
 			return GIT_ERROR;
 		}
 		seek_forward(GIT_OID_HEXSZ + 1);
@@ -120,13 +120,13 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 
 		entry->committer = git__malloc(sizeof(git_signature));
 		if (entry->committer == NULL) {
-			free(entry);
+			git__free(entry);
 			return GIT_ENOMEM;
 		}
 
 		if ((error = git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf)) < GIT_SUCCESS) {
-			free(entry->committer);
-			free(entry);
+			git__free(entry->committer);
+			git__free(entry);
 			return git__rethrow(error, "Failed to parse reflog. Could not parse signature");
 		}
 
@@ -164,13 +164,13 @@ void git_reflog_free(git_reflog *reflog)
 
 		git_signature_free(entry->committer);
 
-		free(entry->msg);
-		free(entry);
+		git__free(entry->msg);
+		git__free(entry);
 	}
 
 	git_vector_free(&reflog->entries);
-	free(reflog->ref_name);
-	free(reflog);
+	git__free(reflog->ref_name);
+	git__free(reflog);
 }
 
 int git_reflog_read(git_reflog **reflog, git_reference *ref)

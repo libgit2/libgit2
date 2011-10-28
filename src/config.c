@@ -35,11 +35,11 @@ void git_config_free(git_config *cfg)
 		internal = git_vector_get(&cfg->files, i);
 		file = internal->file;
 		file->free(file);
-		free(internal);
+		git__free(internal);
 	}
 
 	git_vector_free(&cfg->files);
-	free(cfg);
+	git__free(cfg);
 }
 
 static int config_backend_cmp(const void *a, const void *b)
@@ -61,7 +61,7 @@ int git_config_new(git_config **out)
 	memset(cfg, 0x0, sizeof(git_config));
 
 	if (git_vector_init(&cfg->files, 3, config_backend_cmp) < 0) {
-		free(cfg);
+		git__free(cfg);
 		return GIT_ENOMEM;
 	}
 
@@ -125,7 +125,7 @@ int git_config_add_file(git_config *cfg, git_config_file *file, int priority)
 	internal->priority = priority;
 
 	if (git_vector_insert(&cfg->files, internal) < 0) {
-		free(internal);
+		git__free(internal);
 		return GIT_ENOMEM;
 	}
 
@@ -366,20 +366,20 @@ static int win32_find_system(char *system_config_path)
 		return git__throw(GIT_ERROR, "Failed to expand environment strings");
 
 	if (_waccess(apphome_utf16, F_OK) < 0) {
-		free(apphome_utf16);
+		git__free(apphome_utf16);
 		return GIT_ENOTFOUND;
 	}
 
 	apphome_utf8 = gitwin_from_utf16(apphome_utf16);
-	free(apphome_utf16);
+	git__free(apphome_utf16);
 
 	if (strlen(apphome_utf8) >= GIT_PATH_MAX) {
-		free(apphome_utf8);
+		git__free(apphome_utf8);
 		return git__throw(GIT_ESHORTBUFFER, "Path is too long");
 	}
 
 	strcpy(system_config_path, apphome_utf8);
-	free(apphome_utf8);
+	git__free(apphome_utf8);
 	return GIT_SUCCESS;
 }
 #endif

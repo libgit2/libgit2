@@ -97,7 +97,7 @@ const char *git_buf_cstr(git_buf *buf)
 
 void git_buf_free(git_buf *buf)
 {
-	free(buf->ptr);
+	git__free(buf->ptr);
 }
 
 void git_buf_clear(git_buf *buf)

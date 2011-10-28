@@ -39,18 +39,18 @@ git__DIR *git__opendir(const char *dir)
 
 	new->dir = git__malloc(strlen(dir)+1);
 	if (!new->dir) {
-		free(new);
+		git__free(new);
 		return NULL;
 	}
 	strcpy(new->dir, dir);
 
 	filter_w = gitwin_to_utf16(filter);
 	new->h = FindFirstFileW(filter_w, &new->f);
-	free(filter_w);
+	git__free(filter_w);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
-		free(new->dir);
-		free(new);
+		git__free(new->dir);
+		git__free(new);
 		return NULL;
 	}
 	new->first = 1;
@@ -93,7 +93,7 @@ void git__rewinddir(git__DIR *d)
 		if (init_filter(filter, sizeof(filter), d->dir)) {
 			filter_w = gitwin_to_utf16(filter);
 			d->h = FindFirstFileW(filter_w, &d->f);
-			free(filter_w);
+			git__free(filter_w);
 
 			if (d->h != INVALID_HANDLE_VALUE)
 				d->first = 1;
@@ -107,8 +107,8 @@ int git__closedir(git__DIR *d)
 		if (d->h != INVALID_HANDLE_VALUE)
 			FindClose(d->h);
 		if (d->dir)
-			free(d->dir);
-		free(d);
+			git__free(d->dir);
+		git__free(d);
 	}
 	return 0;
 }

@@ -223,7 +223,7 @@ struct git_oid_shorten {
 
 static int resize_trie(git_oid_shorten *self, size_t new_size)
 {
-	self->nodes = realloc(self->nodes, new_size * sizeof(trie_node));
+	self->nodes = git__realloc(self->nodes, new_size * sizeof(trie_node));
 	if (self->nodes == NULL)
 		return GIT_ENOMEM;
 
@@ -270,7 +270,7 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 	memset(os, 0x0, sizeof(git_oid_shorten));
 
 	if (resize_trie(os, 16) < GIT_SUCCESS) {
-		free(os);
+		git__free(os);
 		return NULL;
 	}
 
@@ -282,8 +282,8 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 
 void git_oid_shorten_free(git_oid_shorten *os)
 {
-	free(os->nodes);
-	free(os);
+	git__free(os->nodes);
+	git__free(os);
 }
 
 

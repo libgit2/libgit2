@@ -389,18 +389,18 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 		git_buf_consume(buf, line_end);
 
 		if (pkt->type == GIT_PKT_PACK) {
-			free(pkt);
+			git__free(pkt);
 			t->pack_ready = 1;
 			return 0;
 		}
 
 		if (pkt->type == GIT_PKT_NAK) {
-			free(pkt);
+			git__free(pkt);
 			return 0;
 		}
 
 		if (pkt->type != GIT_PKT_ACK) {
-			free(pkt);
+			git__free(pkt);
 			continue;
 		}
 
@@ -749,13 +749,13 @@ static void http_free(git_transport *transport)
 	}
 	git_vector_free(common);
 	git_buf_free(&t->buf);
-	free(t->heads);
-	free(t->content_type);
-	free(t->host);
-	free(t->port);
-	free(t->service);
-	free(t->parent.url);
-	free(t);
+	git__free(t->heads);
+	git__free(t->content_type);
+	git__free(t->host);
+	git__free(t->port);
+	git__free(t->service);
+	git__free(t->parent.url);
+	git__free(t);
 }
 
 int git_transport_http(git_transport **out)

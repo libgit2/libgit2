@@ -53,7 +53,7 @@ void git_cache_free(git_cache *cache)
 		git_mutex_free(&cache->nodes[i].lock);
 	}
 
-	free(cache->nodes);
+	git__free(cache->nodes);
 }
 
 void *git_cache_get(git_cache *cache, const git_oid *oid)

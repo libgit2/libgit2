@@ -168,12 +168,12 @@ static git_repository *repository_alloc(void)
 
 	error = git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free);
 	if (error < GIT_SUCCESS) {
-		free(repo);
+		git__free(repo);
 		return NULL;
 	}
 
 	if (git_repository__refcache_init(&repo->references) < GIT_SUCCESS) {
-		free(repo);
+		git__free(repo);
 		return NULL;
 	}
 
@@ -467,13 +467,13 @@ static int read_gitfile(char *path_out, const char *file_path, const char *base_
 
 static void git_repository__free_dirs(git_repository *repo)
 {
-	free(repo->path_workdir);
+	git__free(repo->path_workdir);
 	repo->path_workdir = NULL;
-	free(repo->path_index);
+	git__free(repo->path_index);
 	repo->path_index = NULL;
-	free(repo->path_repository);
+	git__free(repo->path_repository);
 	repo->path_repository = NULL;
-	free(repo->path_odb);
+	git__free(repo->path_odb);
 	repo->path_odb = NULL;
 }
 
@@ -489,7 +489,7 @@ void git_repository_free(git_repository *repo)
 	if (repo->db != NULL)
 		git_odb_close(repo->db);
 
-	free(repo);
+	git__free(repo);
 }
 
 int git_repository_discover(char *repository_path, size_t size, const char *start_path, int across_fs, const char *ceiling_dirs)

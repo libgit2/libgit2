@@ -162,7 +162,7 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 	must_be_true(strcmp(_email, person.email) == 0);\
 	must_be_true(_time == person.when.time);\
 	must_be_true(_offset == person.when.offset);\
-	free(person.name); free(person.email);\
+	git__free(person.name); git__free(person.email);\
 }
 
 #define TEST_SIGNATURE_FAIL(_string, _header) { \
@@ -170,7 +170,7 @@ BEGIN_TEST(parse1, "parse the signature line in a commit")
 	size_t len = strlen(_string);\
 	git_signature person = {NULL, NULL, {0, 0}}; \
 	must_fail(git_signature__parse(&person, &ptr, ptr + len, _header, '\n'));\
-	free(person.name); free(person.email);\
+	git__free(person.name); git__free(person.email);\
 }
 
 	TEST_SIGNATURE_PASS(
@@ -759,7 +759,7 @@ BEGIN_TEST(root0, "create a root commit")
 	must_pass(git_reference_set_target(head, head_old));
 	must_pass(git_reference_delete(branch));
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
-	free(head_old);
+	git__free(head_old);
 	git_commit_close(commit);
 	git_repository_free(repo);
 END_TEST

@@ -196,6 +196,6 @@ void git_tree_cache_free(git_tree_cache *tree)
 	for (i = 0; i < tree->children_count; ++i)
 		git_tree_cache_free(tree->children[i]);
 
-	free(tree->children);
-	free(tree);
+	git__free(tree->children);
+	git__free(tree);
 }

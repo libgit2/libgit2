@@ -130,12 +130,12 @@ void git_tree__free(git_tree *tree)
 		git_tree_entry *e;
 		e = git_vector_get(&tree->entries, i);
 
-		free(e->filename);
-		free(e);
+		git__free(e->filename);
+		git__free(e);
 	}
 
 	git_vector_free(&tree->entries);
-	free(tree);
+	git__free(tree);
 }
 
 const git_oid *git_tree_id(git_tree *c)
@@ -378,7 +378,7 @@ static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsig
 				last_comp = subdir;
 			}
 			error = append_entry(bld, last_comp, &sub_oid, S_IFDIR);
-			free(subdir);
+			git__free(subdir);
 			if (error < GIT_SUCCESS) {
 				error = git__rethrow(error, "Failed to insert dir");
 				goto cleanup;
@@ -441,7 +441,7 @@ int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 		source_entries = source->entries.length;
 
 	if (git_vector_init(&bld->entries, source_entries, entry_sort_cmp) < GIT_SUCCESS) {
-		free(bld);
+		git__free(bld);
 		return GIT_ENOMEM;
 	}
 
@@ -596,8 +596,8 @@ void git_treebuilder_clear(git_treebuilder *bld)
 
 	for (i = 0; i < bld->entries.length; ++i) {
 		git_tree_entry *e = bld->entries.contents[i];
-		free(e->filename);
-		free(e);
+		git__free(e->filename);
+		git__free(e);
 	}
 
 	git_vector_clear(&bld->entries);
@@ -607,7 +607,7 @@ void git_treebuilder_free(git_treebuilder *bld)
 {
 	git_treebuilder_clear(bld);
 	git_vector_free(&bld->entries);
-	free(bld);
+	git__free(bld);
 }
 
 static int tree_frompath(git_tree **parent_out, git_tree *root, const char *treeentry_path, int offset)

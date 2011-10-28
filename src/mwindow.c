@@ -69,7 +69,7 @@ void git_mwindow_free_all(git_mwindow_file *mwf)
 		git_futils_mmap_free(&w->window_map);
 
 		mwf->windows = w->next;
-		free(w);
+		git__free(w);
 	}
 }
 
@@ -139,7 +139,7 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 		else
 			*list = lru_w->next;
 
-		free(lru_w);
+		git__free(lru_w);
 		ctl.open_windows--;
 
 		return GIT_SUCCESS;
@@ -191,7 +191,7 @@ static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, git_off_t siz
 	return w;
 
 cleanup:
-	free(w);
+	git__free(w);
 	return NULL;
 }
 

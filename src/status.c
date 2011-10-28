@@ -229,7 +229,7 @@ static int store_if_changed(struct status_st *st, struct status_entry *e)
 			return git__throw(error, "Failed to process the file '%s'. It doesn't exist in the workdir, in the HEAD nor in the index", e->path);
 
 	if (e->status_flags == GIT_STATUS_CURRENT) {
-		free(e);
+		git__free(e);
 		return GIT_SUCCESS;
 	}
 
@@ -446,7 +446,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 				error = git__rethrow(error, "Failed to determine statuses. User callback failed");
 		}
 
-		free(e);
+		git__free(e);
 	}
 
 exit:
@@ -550,7 +550,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 
 exit:
 	git_tree_close(tree);
-	free(e);
+	git__free(e);
 	return error;
 }
 
@@ -606,7 +606,7 @@ static int alphasorted_dirent_cb(void *state, char *full_path)
 		return GIT_ENOMEM;
 
 	if (git_vector_insert(entry_names, entry) < GIT_SUCCESS) {
-		free(entry);
+		git__free(entry);
 		return GIT_ENOMEM;
 	}
 
@@ -639,7 +639,7 @@ static int alphasorted_futils_direach(
 			error = fn(arg, entry->path);
 		}
 
-		free(entry);
+		git__free(entry);
 	}
 
 	git_vector_free(&entry_names);

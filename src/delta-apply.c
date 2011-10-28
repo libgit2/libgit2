@@ -109,7 +109,7 @@ int git__delta_apply(
 	return GIT_SUCCESS;
 
 fail:
-	free(out->data);
+	git__free(out->data);
 	out->data = NULL;
 	return git__throw(GIT_ERROR, "Failed to apply delta");
 }

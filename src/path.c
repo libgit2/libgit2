@@ -144,7 +144,7 @@ char *git_path_dirname(const char *path)
 		return NULL;
 
 	if (git_path_dirname_r(dname, len, path) < GIT_SUCCESS) {
-		free(dname);
+		git__free(dname);
 		return NULL;
 	}
 
@@ -162,7 +162,7 @@ char *git_path_basename(const char *path)
 		return NULL;
 
 	if (git_path_basename_r(bname, len, path) < GIT_SUCCESS) {
-		free(bname);
+		git__free(bname);
 		return NULL;
 	}
 

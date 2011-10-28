@@ -63,13 +63,13 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->digest)
 		git_hash_free_ctx(file->digest);
 
-	free(file->buffer);
-	free(file->z_buf);
+	git__free(file->buffer);
+	git__free(file->z_buf);
 
 	deflateEnd(&file->zs);
 
-	free(file->path_original);
-	free(file->path_lock);
+	git__free(file->path_original);
+	git__free(file->path_lock);
 }
 
 GIT_INLINE(int) flush_buffer(git_filebuf *file)
@@ -248,7 +248,7 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 
 int git_filebuf_commit_at(git_filebuf *file, const char *path)
 {
-	free(file->path_original);
+	git__free(file->path_original);
 	file->path_original = git__strdup(path);
 	if (file->path_original == NULL)
 		return GIT_ENOMEM;
@@ -368,12 +368,12 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 	va_end(arglist);
 
 	if (len < 0) {
-		free(tmp_buffer);
+		git__free(tmp_buffer);
 		return git__throw(GIT_EOSERR, "Failed to format string");
 	}
 
 	error = git_filebuf_write(file, tmp_buffer, len);
-	free(tmp_buffer);
+	git__free(tmp_buffer);
 
 	return error;
 }

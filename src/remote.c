@@ -36,7 +36,7 @@ static int refspec_parse(git_refspec *refspec, const char *str)
 
 	refspec->dst = git__strdup(delim + 1);
 	if (refspec->dst == NULL) {
-		free(refspec->src);
+		git__free(refspec->src);
 		refspec->src = NULL;
 		return GIT_ENOMEM;
 	}
@@ -68,7 +68,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url)
 	remote->repo = repo;
 	remote->url = git__strdup(url);
 	if (remote->url == NULL) {
-		free(remote);
+		git__free(remote);
 		return GIT_ENOMEM;
 	}
 
@@ -150,7 +150,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 	*out = remote;
 
 cleanup:
-	free(buf);
+	git__free(buf);
 	if (error < GIT_SUCCESS)
 		git_remote_free(remote);
 
@@ -260,17 +260,17 @@ void git_remote_free(git_remote *remote)
 	if (remote == NULL)
 		return;
 
-	free(remote->fetch.src);
-	free(remote->fetch.dst);
-	free(remote->push.src);
-	free(remote->push.dst);
-	free(remote->url);
-	free(remote->name);
+	git__free(remote->fetch.src);
+	git__free(remote->fetch.dst);
+	git__free(remote->push.src);
+	git__free(remote->push.dst);
+	git__free(remote->url);
+	git__free(remote->name);
 	if (remote->transport != NULL) {
 		if (remote->transport->connected)
 			remote->transport->close(remote->transport);
 
 		remote->transport->free(remote->transport);
 	}
-	free(remote);
+	git__free(remote);
 }

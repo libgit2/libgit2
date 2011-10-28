@@ -90,10 +90,10 @@ static void cvar_free(cvar_t *var)
 	if (var == NULL)
 		return;
 
-	free(var->section);
-	free(var->name);
-	free(var->value);
-	free(var);
+	git__free(var->section);
+	git__free(var->name);
+	git__free(var->value);
+	git__free(var);
 }
 
 static void cvar_list_free(cvar_t_list *list)
@@ -188,7 +188,7 @@ static int cvar_normalize_name(cvar_t *var, char **output)
 	if (section_sp == NULL) {
 		ret = p_snprintf(name, len + 1, "%s.%s", var->section, var->name);
 		if (ret < 0) {
-			free(name);
+			git__free(name);
 			return git__throw(GIT_EOSERR, "Failed to normalize name. OS err: %s", strerror(errno));
 		}
 
@@ -281,10 +281,10 @@ static void backend_free(git_config_file *_backend)
 	if (backend == NULL)
 		return;
 
-	free(backend->file_path);
+	git__free(backend->file_path);
 	cvar_list_free(&backend->var_list);
 
-	free(backend);
+	git__free(backend);
 }
 
 static int file_foreach(git_config_file *backend, int (*fn)(const char *, const char *, void *), void *data)
@@ -301,7 +301,7 @@ static int file_foreach(git_config_file *backend, int (*fn)(const char *, const 
 			return ret;
 
 		ret = fn(normalized, var->value, data);
-		free(normalized);
+		git__free(normalized);
 		if (ret)
 			break;
 	}
@@ -326,7 +326,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		if (tmp == NULL && value != NULL)
 			return GIT_ENOMEM;
 
-		free(existing->value);
+		git__free(existing->value);
 		existing->value = tmp;
 
 		return config_write(b, existing);
@@ -411,7 +411,7 @@ int git_config_file__ondisk(git_config_file **out, const char *path)
 
 	backend->file_path = git__strdup(path);
 	if (backend->file_path == NULL) {
-		free(backend);
+		git__free(backend);
 		return GIT_ENOMEM;
 	}
 
@@ -653,13 +653,13 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	/* find the end of the variable's name */
 	name_end = strchr(line, ']');
 	if (name_end == NULL) {
-		free(line);
+		git__free(line);
 		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse header. Can't find header name end");
 	}
 
 	name = (char *)git__malloc((size_t)(name_end - line) + 1);
 	if (name == NULL) {
-		free(line);
+		git__free(line);
 		return GIT_ENOMEM;
 	}
 
@@ -679,8 +679,8 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 		if (isspace(c)){
 			name[name_length] = '\0';
 			error = parse_section_header_ext(line, name, section_out);
-			free(line);
-			free(name);
+			git__free(line);
+			git__free(name);
 			return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse header");
 		}
 
@@ -699,14 +699,14 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	}
 
 	name[name_length] = 0;
-	free(line);
+	git__free(line);
 	git__strtolower(name);
 	*section_out = name;
 	return GIT_SUCCESS;
 
 error:
-	free(line);
-	free(name);
+	git__free(line);
+	git__free(name);
 	return error;
 }
 
@@ -810,7 +810,7 @@ static int config_parse(diskfile_backend *cfg_file)
 			break;
 
 		case '[': /* section header, new section begins */
-			free(current_section);
+			git__free(current_section);
 			current_section = NULL;
 			error = parse_section_header(cfg_file, &current_section);
 			break;
@@ -826,7 +826,7 @@ static int config_parse(diskfile_backend *cfg_file)
 			if (error < GIT_SUCCESS)
 				break;
 
-			var = malloc(sizeof(cvar_t));
+			var = git__malloc(sizeof(cvar_t));
 			if (var == NULL) {
 				error = GIT_ENOMEM;
 				break;
@@ -837,7 +837,7 @@ static int config_parse(diskfile_backend *cfg_file)
 			var->section = git__strdup(current_section);
 			if (var->section == NULL) {
 				error = GIT_ENOMEM;
-				free(var);
+				git__free(var);
 				break;
 			}
 
@@ -851,7 +851,7 @@ static int config_parse(diskfile_backend *cfg_file)
 		}
 	}
 
-	free(current_section);
+	git__free(current_section);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse config");
 }
@@ -915,7 +915,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 			 */
 			pre_end = post_start = cfg->reader.read_ptr;
 			if (current_section)
-				free(current_section);
+				git__free(current_section);
 			error = parse_section_header(cfg, &current_section);
 			if (error < GIT_SUCCESS)
 				break;
@@ -953,8 +953,8 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 				if ((error = parse_variable(cfg, &var_name, &var_value)) == GIT_SUCCESS)
 					cmp = strcasecmp(var->name, var_name);
 
-				free(var_name);
-				free(var_value);
+				git__free(var_name);
+				git__free(var_value);
 
 				if (cmp != 0)
 					break;
@@ -1029,7 +1029,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 		git__rethrow(error, "Failed to write new section");
 
  cleanup:
-	free(current_section);
+	git__free(current_section);
 
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
@@ -1093,7 +1093,7 @@ static int parse_multiline_variable(diskfile_backend *cfg, const char *first, ch
 	ret = p_snprintf(buf, len, "%s %s", first, line);
 	if (ret < 0) {
 		error = git__throw(GIT_EOSERR, "Failed to parse multiline var. Failed to put together two lines. OS err: %s", strerror(errno));
-		free(buf);
+		git__free(buf);
 		goto out;
 	}
 
@@ -1105,14 +1105,14 @@ static int parse_multiline_variable(diskfile_backend *cfg, const char *first, ch
 	if (is_multiline_var(buf)) {
 		char *final_val;
 		error = parse_multiline_variable(cfg, buf, &final_val);
-		free(buf);
+		git__free(buf);
 		buf = final_val;
 	}
 
 	*out = buf;
 
  out:
-	free(line);
+	git__free(line);
 	return error;
 }
 
@@ -1168,14 +1168,14 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 			if (error != GIT_SUCCESS)
 			{
 				*var_value = NULL;
-				free(*var_name);
+				git__free(*var_name);
 			}
 			goto out;
 		}
 
-		tmp = strdup(value_start);
+		tmp = git__strdup(value_start);
 		if (tmp == NULL) {
-			free(*var_name);
+			git__free(*var_name);
 			*var_value = NULL;
 			error = GIT_ENOMEM;
 			goto out;
@@ -1188,6 +1188,6 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 	}
 
  out:
-	free(line);
+	git__free(line);
 	return error;
 }

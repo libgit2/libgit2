@@ -113,8 +113,8 @@ static int add_ref(const char *name, git_repository *repo, git_vector *vec)
  out:
 	git_object_close(obj);
 	if (error < GIT_SUCCESS) {
-		free(head->name);
-		free(head);
+		git__free(head->name);
+		git__free(head);
 	}
 	return error;
 }
@@ -190,16 +190,16 @@ static void local_free(git_transport *transport)
 
 	if (t->refs != NULL) {
 		git_vector_foreach (vec, i, h) {
-			free(h->name);
-			free(h);
+			git__free(h->name);
+			git__free(h);
 		}
 		git_vector_free(vec);
-		free(vec);
+		git__free(vec);
 	}
 
 	git_repository_free(t->repo);
-	free(t->parent.url);
-	free(t);
+	git__free(t->parent.url);
+	git__free(t);
 }
 
 /**************
