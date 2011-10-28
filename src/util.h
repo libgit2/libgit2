@@ -14,6 +14,8 @@
 # define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#include "halloc.h"
+
 /*
  * Custom memory allocation wrappers
  * that set error code and error message
@@ -21,7 +23,7 @@
  */
 GIT_INLINE(void *) git__malloc(size_t len)
 {
-	void *ptr = malloc(len);
+	void *ptr = halloc(NULL, len);
 	if (!ptr)
 		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)len);
 	return ptr;
@@ -29,7 +31,7 @@ GIT_INLINE(void *) git__malloc(size_t len)
 
 GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 {
-	void *ptr = calloc(nelem, elsize);
+	void *ptr = h_calloc(nelem, elsize);
 	if (!ptr)
 		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)elsize);
 	return ptr;
@@ -37,7 +39,7 @@ GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 
 GIT_INLINE(char *) git__strdup(const char *str)
 {
-	char *ptr = strdup(str);
+	char *ptr = h_strdup(str);
 	if (!ptr)
 		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
 	return ptr;
@@ -52,7 +54,7 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 	if (n < length)
 		length = n;
 
-	ptr = (char*)malloc(length + 1);
+	ptr = (char*)halloc(NULL, length + 1);
 	if (!ptr) {
 		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
 		return NULL;
@@ -66,13 +68,13 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 
 GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 {
-	void *new_ptr = realloc(ptr, size);
+	void *new_ptr = halloc(ptr, size);
 	if (!new_ptr)
 		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)size);
 	return new_ptr;
 }
 
-#define git__free(ptr) free(ptr)
+#define git__free(ptr) halloc(ptr, 0)
 
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);

@@ -22,9 +22,9 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" 
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(src include deps/http-parser)
+INCLUDE_DIRECTORIES(src include deps/http-parser deps/halloc)
 
-FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/halloc/*.c)
 
 IF (NOT WIN32)
 	FIND_PACKAGE(ZLIB)
