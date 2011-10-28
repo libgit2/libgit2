@@ -282,6 +282,36 @@ GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_tr
  * entry, GIT_EINVALIDPATH or an error code
  */
 GIT_EXTERN(int) git_tree_frompath(git_tree **parent_out, git_tree *root, const char *treeentry_path);
+
+/** Callback for the tree traversal method */
+typedef int (*git_treewalk_cb)(const char *root, git_tree_entry *entry);
+
+/** Tree traversal modes */
+enum git_treewalk_mode {
+	GIT_TREEWALK_PRE = 0, /* Pre-order */
+	GIT_TREEWALK_POST = 1, /* Post-order */
+};
+
+/**
+ * Traverse the entries in a tree and its subtrees in
+ * post or pre order
+ *
+ * The entries will be traversed in the specified order,
+ * children subtrees will be automatically loaded as required,
+ * and the `callback` will be called once per entry with
+ * the current (relative) root for the entry and the entry
+ * data itself.
+ *
+ * If the callback returns a negative value, the passed entry
+ * will be skiped on the traversal.
+ *
+ * @param tree The tree to walk
+ * @param callback Function to call on each tree entry
+ * @param mode Traversal mode (pre or post-order)
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_tree_walk(git_tree *walk, git_treewalk_cb callback, int mode);
+
 /** @} */
 GIT_END_DECL
 #endif

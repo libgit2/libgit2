@@ -15,6 +15,8 @@
 #define MAX_FILEMODE 0777777
 #define MAX_FILEMODE_BYTES 6
 
+#define ENTRY_IS_TREE(e) ((e)->attr & 040000)
+
 static int valid_attributes(const int attributes)
 {
 	return attributes >= 0 && attributes <= MAX_FILEMODE;
@@ -31,8 +33,8 @@ static int entry_sort_cmp(const void *a, const void *b)
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
 
 	return git_futils_cmp_path(
-		entry_a->filename, entry_a->filename_len, entry_a->attr & 040000,
-		entry_b->filename, entry_b->filename_len, entry_b->attr & 040000);
+		entry_a->filename, entry_a->filename_len, ENTRY_IS_TREE(entry_a),
+		entry_b->filename, entry_b->filename_len, ENTRY_IS_TREE(entry_b));
 }
 
 
@@ -653,4 +655,54 @@ int git_tree_frompath(git_tree **parent_out, git_tree *root, const char *treeent
 
 	strcpy(buffer, treeentry_path);
 	return tree_frompath(parent_out, root, buffer, 0);
+}
+
+static int tree_walk_post(git_tree *tree, git_treewalk_cb callback, char *root, size_t root_len)
+{
+	int error;
+	unsigned int i;
+
+	for (i = 0; i < tree->entries.length; ++i) {
+		git_tree_entry *entry = tree->entries.contents[i];
+
+		root[root_len] = '\0';
+
+		if (callback(root, entry) < 0)
+			continue;
+
+		if (ENTRY_IS_TREE(entry)) {
+			git_tree *subtree;
+
+			if ((error = git_tree_lookup(&subtree, tree->object.repo, &entry->oid)) < 0)
+				return error;
+
+			strcpy(root + root_len, entry->filename);
+			root[root_len + entry->filename_len] = '/';
+
+			tree_walk_post(subtree, callback, root, root_len + entry->filename_len + 1);
+
+			git_tree_close(subtree);
+		}
+	}
+
+	return GIT_SUCCESS;
+}
+
+int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode)
+{
+	char root_path[GIT_PATH_MAX];
+
+	root_path[0] = '\0';
+	switch (mode) {
+		case GIT_TREEWALK_POST:
+			return tree_walk_post(tree, callback, root_path, 0);
+
+		case GIT_TREEWALK_PRE:
+			return git__throw(GIT_ENOTIMPLEMENTED,
+				"Preorder tree walking is still not implemented");
+
+		default:
+			return git__throw(GIT_EINVALIDARGS,
+				"Invalid walking mode for tree walk");
+	}
 }
