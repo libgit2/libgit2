@@ -131,6 +131,15 @@ typedef struct git_reflog_entry git_reflog_entry;
 /** Representation of a reference log */
 typedef struct git_reflog git_reflog;
 
+/** Represensation of a git_error */
+typedef struct git_error {
+	int code;
+	char *msg;
+	struct git_error *child;
+	const char *file;
+	long line;
+} git_error;
+
 /** Time in a signature */
 typedef struct git_time {
 	git_time_t time; /** time in seconds from epoch */

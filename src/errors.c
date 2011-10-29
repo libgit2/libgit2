@@ -4,11 +4,16 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
 #include "common.h"
+#include "errors.h"
 #include "git2/thread-utils.h" /* for GIT_TLS */
 #include "thread-utils.h" /* for GIT_TLS */
+#include "posix.h"
 
 #include <stdarg.h>
+
+#define ERROR_MSG_MAXSZ 1024
 
 static GIT_TLS char g_last_error[1024];
 
@@ -95,4 +100,86 @@ const char *git_lasterror(void)
 void git_clearerror(void)
 {
 	g_last_error[0] = '\0';
+}
+
+
+static git_error git_error_OOM = {
+	GIT_ENOMEM,
+	"out of memory",
+	NULL,
+	NULL,
+	-1
+};
+
+git_error * git_error_oom(void)
+{
+	 /*
+	  * Throw an out-of-memory error:
+	  * what we return is actually a static pointer, because on
+	  * oom situations we cannot afford to allocate a new error
+	  * object.
+	  *
+	  * The `git_error_free` function will take care of not
+	  * freeing this special type of error.
+	  *
+	  */
+	return &git_error_OOM;
+}
+
+#undef git_error_createf
+git_error * git_error_createf(const char *file, int line, int code,
+			      git_error *child, const char *fmt, ...)
+{
+	git_error *err;
+	va_list ap;
+
+	err = git__malloc(sizeof(git_error));
+	if (err == NULL)
+		return git_error_oom();
+
+	err->msg = git__malloc(ERROR_MSG_MAXSZ);
+	if (err->msg == NULL) {
+		free(err);
+		return git_error_oom();
+	}
+
+	va_start(ap, fmt);
+	p_vsnprintf(err->msg, ERROR_MSG_MAXSZ, fmt, ap);
+	va_end(ap);
+
+	err->code  = code;
+	err->child = child;
+	err->file  = file;
+	err->line  = line;
+
+	return err;
+}
+
+#undef git_error_create
+git_error * git_error_create(const char *file, int line, int code,
+			      git_error *child, const char *msg)
+{
+	return git_error_createf(file, line, code, child, "%s", msg);
+}
+
+#undef git_error_quick_wrap
+git_error * git_error_quick_wrap(const char *file, int line,
+				 git_error *child, const char *msg)
+{
+	if (child == GIT_SUCCESS)
+		return GIT_SUCCESS;
+
+	return git_error_createf(file, line, child->code,
+				 child, "%s", msg);
+}
+
+void git_error_free(git_error *err)
+{
+	if (err->child)
+		git_error_free(err->child);
+
+	if (err->msg)
+		free(err->msg);
+
+	free(err);
 }
