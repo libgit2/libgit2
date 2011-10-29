@@ -40,9 +40,10 @@ extern int p_write(git_file fd, const void *buf, size_t cnt);
 #define p_fstat(f,b) fstat(f, b)
 #define p_lseek(f,n,w) lseek(f, n, w)
 #define p_close(fd) close(fd)
+#define p_umask(m) umask(m)
 
 extern int p_open(const char *path, int flags);
-extern int p_creat(const char *path, int mode);
+extern int p_creat(const char *path, mode_t mode);
 extern int p_getcwd(char *buffer_out, size_t size);
 
 #ifndef GIT_WIN32

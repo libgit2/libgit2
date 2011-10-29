@@ -431,12 +431,11 @@ END_TEST
 BEGIN_TEST(pack0, "create a packfile for an empty folder")
 	git_repository *repo;
 	char temp_path[GIT_PATH_MAX];
-	const int mode = 0755; /* or 0777 ? */
 
 	must_pass(open_temp_repo(&repo, REPOSITORY_FOLDER));
 
 	git_path_join_n(temp_path, 3, repo->path_repository, GIT_REFS_HEADS_DIR, "empty_dir");
-	must_pass(git_futils_mkdir_r(temp_path, mode));
+	must_pass(git_futils_mkdir_r(temp_path, GIT_REFS_DIR_MODE));
 
 	must_pass(git_reference_packall(repo));
 

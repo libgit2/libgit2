@@ -262,7 +262,7 @@ int git_index_write(git_index *index)
 		return git__rethrow(error, "Failed to write index");
 	}
 
-	if ((error = git_filebuf_commit(&file)) < GIT_SUCCESS)
+	if ((error = git_filebuf_commit(&file, GIT_INDEX_FILE_MODE)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to write index");
 
 	if (p_stat(index->index_file_path, &indexst) == 0) {

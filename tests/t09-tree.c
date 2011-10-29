@@ -200,6 +200,10 @@ BEGIN_TEST(write3, "write a hierarchical tree from a memory")
 	// check data is correct
 	must_pass(git_tree_lookup(&tree, repo, &id_hiearar));
 	must_be_true(2 == git_tree_entrycount(tree));
+#ifndef GIT_WIN32
+	must_be_true((loose_object_dir_mode(TEMP_REPO_FOLDER, (git_object *)tree) & 0777) == GIT_OBJECT_DIR_MODE);
+	must_be_true((loose_object_mode(TEMP_REPO_FOLDER, (git_object *)tree) & 0777) == GIT_OBJECT_FILE_MODE);
+#endif
 	git_tree_close(tree);
 
 	close_temp_repo(repo);

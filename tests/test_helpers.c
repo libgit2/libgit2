@@ -42,7 +42,7 @@ int write_object_data(char *file, void *data, size_t len)
 
 int write_object_files(const char *odb_dir, object_data *d)
 {
-	if (p_mkdir(odb_dir, 0755) < 0) {
+	if (p_mkdir(odb_dir, GIT_OBJECT_DIR_MODE) < 0) {
 		int err = errno;
 		fprintf(stderr, "can't make directory \"%s\"", odb_dir);
 		if (err == EEXIST)
@@ -51,7 +51,7 @@ int write_object_files(const char *odb_dir, object_data *d)
 		return -1;
 	}
 
-	if ((p_mkdir(d->dir, 0755) < 0) && (errno != EEXIST)) {
+	if ((p_mkdir(d->dir, GIT_OBJECT_DIR_MODE) < 0) && (errno != EEXIST)) {
 		fprintf(stderr, "can't make object directory \"%s\"\n", d->dir);
 		return -1;
 	}
@@ -82,7 +82,7 @@ int remove_object_files(const char *odb_dir, object_data *d)
 	return 0;
 }
 
-int remove_loose_object(const char *repository_folder, git_object *object)
+void locate_loose_object(const char *repository_folder, git_object *object, char **out, char **out_folder)
 {
 	static const char *objects_folder = "objects/";
 
@@ -103,6 +103,52 @@ int remove_loose_object(const char *repository_folder, git_object *object)
 	git_oid_pathfmt(ptr, git_object_id(object));
 	ptr += GIT_OID_HEXSZ + 1;
 	*ptr = 0;
+
+	*out = full_path;
+
+	if (out_folder)
+		*out_folder = top_folder;
+}
+
+int loose_object_mode(const char *repository_folder, git_object *object)
+{
+	char *object_path;
+	struct stat st;
+
+	locate_loose_object(repository_folder, object, &object_path, NULL);
+	assert(p_stat(object_path, &st) == 0);
+	free(object_path);
+
+	return st.st_mode;
+}
+
+int loose_object_dir_mode(const char *repository_folder, git_object *object)
+{
+	char *object_path;
+	size_t pos;
+	struct stat st;
+
+	locate_loose_object(repository_folder, object, &object_path, NULL);
+
+	pos = strlen(object_path);
+	while (pos--) {
+		if (object_path[pos] == '/') {
+			object_path[pos] = 0;
+			break;
+		}
+	}
+
+	assert(p_stat(object_path, &st) == 0);
+	free(object_path);
+
+	return st.st_mode;
+}
+
+int remove_loose_object(const char *repository_folder, git_object *object)
+{
+	char *full_path, *top_folder;
+
+	locate_loose_object(repository_folder, object, &full_path, &top_folder);
 
 	if (p_unlink(full_path) < 0) {
 		fprintf(stderr, "can't delete object file \"%s\"\n", full_path);
@@ -141,7 +187,7 @@ int copy_file(const char *src, const char *dst)
 	if (git_futils_readbuffer(&source_buf, src) < GIT_SUCCESS)
 		return GIT_ENOTFOUND;
 
-	dst_fd = git_futils_creat_withpath(dst, 0644);
+	dst_fd = git_futils_creat_withpath(dst, 0777, 0666);
 	if (dst_fd < 0)
 		goto cleanup;
 

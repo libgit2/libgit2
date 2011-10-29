@@ -10,7 +10,7 @@ cleanup__remove_file(void *_file)
 static void
 file_create(const char *filename, const char *content)
 {
-	int fd = p_creat(filename, 0644);
+	int fd = p_creat(filename, 0666);
 	cl_assert(fd >= 0);
 	cl_must_pass(p_write(fd, content, strlen(content)));
 	cl_must_pass(p_close(fd));

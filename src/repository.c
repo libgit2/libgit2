@@ -609,12 +609,11 @@ static int repo_init_createhead(git_repository *repo)
 
 static int repo_init_structure(const char *git_dir, int is_bare)
 {
-	const int mode = 0755; /* or 0777 ? */
 	int error;
 
 	char temp_path[GIT_PATH_MAX];
 
-	if (git_futils_mkdir_r(git_dir, mode))
+	if (git_futils_mkdir_r(git_dir, is_bare ? GIT_BARE_DIR_MODE : GIT_DIR_MODE))
 		return git__throw(GIT_ERROR, "Failed to initialize repository structure. Could not mkdir");
 
 	/* Hides the ".git" directory */
@@ -628,25 +627,25 @@ static int repo_init_structure(const char *git_dir, int is_bare)
 
 	/* Creates the '/objects/info/' directory */
 	git_path_join(temp_path, git_dir, GIT_OBJECTS_INFO_DIR);
-	error = git_futils_mkdir_r(temp_path, mode);
+	error = git_futils_mkdir_r(temp_path, GIT_OBJECT_DIR_MODE);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to initialize repository structure");
 
 	/* Creates the '/objects/pack/' directory */
 	git_path_join(temp_path, git_dir, GIT_OBJECTS_PACK_DIR);
-	error = p_mkdir(temp_path, mode);
+	error = p_mkdir(temp_path, GIT_OBJECT_DIR_MODE);
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Unable to create `%s` folder", temp_path);
 
 	/* Creates the '/refs/heads/' directory */
 	git_path_join(temp_path, git_dir, GIT_REFS_HEADS_DIR);
-	error = git_futils_mkdir_r(temp_path, mode);
+	error = git_futils_mkdir_r(temp_path, GIT_REFS_DIR_MODE);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to initialize repository structure");
 
 	/* Creates the '/refs/tags/' directory */
 	git_path_join(temp_path, git_dir, GIT_REFS_TAGS_DIR);
-	error = p_mkdir(temp_path, mode);
+	error = p_mkdir(temp_path, GIT_REFS_DIR_MODE);
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Unable to create `%s` folder", temp_path);
 

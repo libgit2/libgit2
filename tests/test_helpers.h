@@ -63,6 +63,11 @@ extern int remove_object_files(const char *odb_dir, object_data *d);
 
 extern int cmp_objects(git_rawobj *o, object_data *d);
 
+extern void locate_loose_object(const char *odb_dir, git_object *object, char **out, char **out_folder);
+
+extern int loose_object_mode(const char *odb_dir, git_object *object);
+extern int loose_object_dir_mode(const char *odb_dir, git_object *object);
+
 extern int remove_loose_object(const char *odb_dir, git_object *object);
 
 extern int cmp_files(const char *a, const char *b);
