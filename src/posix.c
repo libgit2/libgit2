@@ -17,7 +17,7 @@ int p_open(const char *path, int flags)
 	return open(path, flags | O_BINARY);
 }
 
-int p_creat(const char *path, int mode)
+int p_creat(const char *path, mode_t mode)
 {
 	return open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
 }

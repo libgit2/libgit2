@@ -71,7 +71,7 @@ static int reflog_write(const char *log_path, const char *oid_old,
 	}
 
 	git_filebuf_write(&fbuf, log.ptr, log.size);
-	error = git_filebuf_commit(&fbuf);
+	error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
 
 	git_buf_free(&log);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write reflog");
@@ -226,7 +226,7 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 	git_path_join_n(log_path, 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
 
 	if (git_futils_exists(log_path)) {
-		if ((error = git_futils_mkpath2file(log_path)) < GIT_SUCCESS)
+		if ((error = git_futils_mkpath2file(log_path, GIT_REFLOG_DIR_MODE)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to write reflog. Cannot create reflog directory");
 	} else if (git_futils_isfile(log_path)) {
 		return git__throw(GIT_ERROR, "Failed to write reflog. `%s` is directory", log_path);

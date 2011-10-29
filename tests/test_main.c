@@ -26,6 +26,8 @@
 #include <string.h>
 #include <git2.h>
 
+#include "posix.h"
+
 #include "test_lib.h"
 #include "test_helpers.h"
 
@@ -80,6 +82,8 @@ main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
 
 	GIT_UNUSED_ARG(argc);
 	GIT_UNUSED_ARG(argv);
+
+	p_umask(0);
 
 	failures = 0;
 

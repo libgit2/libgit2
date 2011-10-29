@@ -272,7 +272,7 @@ int git_indexer_write(git_indexer *idx)
 	/* Figure out what the final name should be */
 	index_path(filename, idx);
 	/* Commit file */
-	error = git_filebuf_commit_at(&idx->file, filename);
+	error = git_filebuf_commit_at(&idx->file, filename, GIT_PACK_FILE_MODE);
 
 cleanup:
 	git_mwindow_free_all(&idx->pack->mwf);

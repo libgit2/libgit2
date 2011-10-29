@@ -15,6 +15,8 @@
 #include "mwindow.h"
 #include "odb.h"
 
+#define GIT_PACK_FILE_MODE 0444
+
 #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
 #define PACK_VERSION 2
 #define pack_version_ok(v) ((v) == htonl(2) || (v) == htonl(3))

@@ -19,7 +19,7 @@ GIT_INLINE(int) p_link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 	return -1;
 }
 
-GIT_INLINE(int) p_mkdir(const char *path, int GIT_UNUSED(mode))
+GIT_INLINE(int) p_mkdir(const char *path, mode_t GIT_UNUSED(mode))
 {
 	wchar_t* buf = gitwin_to_utf16(path);
 	int ret = _wmkdir(buf);
@@ -41,12 +41,12 @@ extern int p_mkstemp(char *tmp_path);
 extern int p_setenv(const char* name, const char* value, int overwrite);
 extern int p_stat(const char* path, struct stat* buf);
 extern int p_chdir(const char* path);
-extern int p_chmod(const char* path, int mode);
+extern int p_chmod(const char* path, mode_t mode);
 extern int p_rmdir(const char* path);
-extern int p_access(const char* path, int mode);
+extern int p_access(const char* path, mode_t mode);
 extern int p_fsync(int fd);
 extern int p_open(const char *path, int flags);
-extern int p_creat(const char *path, int mode);
+extern int p_creat(const char *path, mode_t mode);
 extern int p_getcwd(char *buffer_out, size_t size);
 
 #endif

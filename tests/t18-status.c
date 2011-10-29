@@ -37,7 +37,7 @@ static int file_create(const char *filename, const char *content)
 {
 	int fd;
 
-	fd = p_creat(filename, 0644);
+	fd = p_creat(filename, 0666);
 	if (fd == 0)
 		return GIT_ERROR;
 	if (p_write(fd, content, strlen(content)) != 0)
@@ -400,7 +400,7 @@ BEGIN_TEST(singlestatus3, "test retrieving status for a new file in an empty rep
 	must_pass(remove_placeholders(TEST_STD_REPO_FOLDER, "dummy-marker.txt"));
 
 	git_path_join(file_path, TEMP_REPO_FOLDER, filename);
-	fd = p_creat(file_path, 0644);
+	fd = p_creat(file_path, 0666);
 	must_pass(fd);
 	must_pass(p_write(fd, "new_file\n", 9));
 	must_pass(p_close(fd));

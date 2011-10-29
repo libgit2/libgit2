@@ -20,18 +20,18 @@ static void setup(walk_data *d)
 {
 	name_data *n;
 
-	cl_must_pass(p_mkdir(top_dir, 0755));
+	cl_must_pass(p_mkdir(top_dir, 0777));
 
 	cl_must_pass(p_chdir(top_dir));
 
 	if (strcmp(d->sub, ".") != 0)
-		cl_must_pass(p_mkdir(d->sub, 0755));
+		cl_must_pass(p_mkdir(d->sub, 0777));
 
 	strcpy(path_buffer, d->sub);
 	state_loc = d;
 
 	for (n = d->names; n->name; n++) {
-		git_file fd = p_creat(n->name, 0600);
+		git_file fd = p_creat(n->name, 0666);
 		cl_assert(fd >= 0);
 		p_close(fd);
 		n->count = 0;

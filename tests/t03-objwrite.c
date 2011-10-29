@@ -31,7 +31,7 @@ static char *odb_dir = "test-objects";
 
 static int make_odb_dir(void)
 {
-	if (p_mkdir(odb_dir, 0755) < 0) {
+	if (p_mkdir(odb_dir, GIT_OBJECT_DIR_MODE) < 0) {
 		int err = errno;
 		fprintf(stderr, "can't make directory \"%s\"", odb_dir);
 		if (err == EEXIST)

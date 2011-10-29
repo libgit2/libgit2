@@ -49,8 +49,8 @@ int git_filebuf_reserve(git_filebuf *file, void **buff, size_t len);
 int git_filebuf_printf(git_filebuf *file, const char *format, ...) GIT_FORMAT_PRINTF(2, 3);
 
 int git_filebuf_open(git_filebuf *lock, const char *path, int flags);
-int git_filebuf_commit(git_filebuf *lock);
-int git_filebuf_commit_at(git_filebuf *lock, const char *path);
+int git_filebuf_commit(git_filebuf *lock, mode_t mode);
+int git_filebuf_commit_at(git_filebuf *lock, const char *path, mode_t mode);
 void git_filebuf_cleanup(git_filebuf *lock);
 int git_filebuf_hash(git_oid *oid, git_filebuf *file);
 

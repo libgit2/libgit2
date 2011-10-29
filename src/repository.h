@@ -18,11 +18,12 @@
 #include "cache.h"
 #include "refs.h"
 #include "buffer.h"
+#include "odb.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
-#define GIT_OBJECTS_DIR "objects/"
-#define GIT_INDEX_FILE "index"
+#define GIT_DIR_MODE 0755
+#define GIT_BARE_DIR_MODE 0777
 
 struct git_object {
 	git_cached_obj cached;
