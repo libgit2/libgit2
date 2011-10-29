@@ -183,26 +183,28 @@ static int process_folder(struct status_st *st, const git_tree_entry *tree_entry
 	git_object *subtree = NULL;
 	git_tree *pushed_tree = NULL;
 	int error, pushed_tree_position = 0;
-	git_otype tree_entry_type;
+	git_otype tree_entry_type = GIT_OBJ_BAD;
 
-	tree_entry_type = git_tree_entry_type(tree_entry);
+	if (tree_entry != NULL) {
+		tree_entry_type = git_tree_entry_type(tree_entry);
 
-	switch (tree_entry_type) {
-	case GIT_OBJ_TREE:
-		error = git_tree_entry_2object(&subtree, ((git_object *)(st->tree))->repo, tree_entry);
-		pushed_tree = st->tree;
-		pushed_tree_position = st->tree_position;
-		st->tree = (git_tree *)subtree;
-		st->tree_position = 0;
-		st->head_tree_relative_path_len += 1 + tree_entry->filename_len; /* path + '/' + name */
-		break;
+		switch (tree_entry_type) {
+		case GIT_OBJ_TREE:
+			error = git_tree_entry_2object(&subtree, ((git_object *)(st->tree))->repo, tree_entry);
+			pushed_tree = st->tree;
+			pushed_tree_position = st->tree_position;
+			st->tree = (git_tree *)subtree;
+			st->tree_position = 0;
+			st->head_tree_relative_path_len += 1 + tree_entry->filename_len; /* path + '/' + name */
+			break;
 
-	case GIT_OBJ_BLOB:
-		/* No op */
-		break;
+		case GIT_OBJ_BLOB:
+			/* No op */
+			break;
 
-	default:
-		error = git__throw(GIT_EINVALIDTYPE, "Unexpected tree entry type");	/* TODO: How should we deal with submodules? */
+		default:
+			error = git__throw(GIT_EINVALIDTYPE, "Unexpected tree entry type");	/* TODO: How should we deal with submodules? */
+		}
 	}
 
 	if (full_path != NULL && path_type == GIT_STATUS_PATH_FOLDER)
