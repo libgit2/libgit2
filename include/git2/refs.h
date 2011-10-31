@@ -116,8 +116,13 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
  * Thie method iteratively peels a symbolic reference
  * until it resolves to a direct reference to an OID.
  *
+ * The peeled reference is returned in the `resolved_ref`
+ * argument, and must be freed manually once it's no longer
+ * needed.
+ *
  * If a direct reference is passed as an argument,
- * that reference is returned immediately
+ * a copy of that reference is returned. This copy must
+ * be manually freed too.
  *
  * @param resolved_ref Pointer to the peeled reference
  * @param ref The reference
@@ -170,10 +175,18 @@ GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
  * The new name will be checked for validity and may be
  * modified into a normalized form.
  *
- * The given git_reference will be updated.
+ * The given git_reference will be updated in place.
  *
  * The reference will be immediately renamed in-memory
  * and on disk.
+ *
+ * If the `force` flag is not enabled, and there's already
+ * a reference with the given name, the renaming will fail.
+ *
+ * @param ref The reference to rename
+ * @param new_name The new name for the reference
+ * @param force Overwrite an existing reference
+ * @return GIT_SUCCESS or an error code
  *
  */
 GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name, int force);
@@ -186,6 +199,8 @@ GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name, i
  * The reference will be immediately removed on disk and from
  * memory. The given reference pointer will no longer be valid.
  *
+ * @param ref The reference to remove
+ * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 
@@ -250,12 +265,32 @@ GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo,
 GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
 
 /**
- * Check if a reference is packed
+ * Check if a reference has been loaded from a packfile
  *
- * @param ref git_reference
+ * @param ref A git reference
  * @return 0 in case it's not packed; 1 otherwise
  */
 GIT_EXTERN(int) git_reference_is_packed(git_reference *ref);
+
+/**
+ * Reload a reference from disk
+ *
+ * Reference pointers may become outdated if the Git
+ * repository is accessed simultaneously by other clients
+ * whilt the library is open.
+ *
+ * This method forces a reload of the reference from disk,
+ * to ensure that the provided information is still
+ * reliable.
+ *
+ * If the reload fails (e.g. the reference no longer exists
+ * on disk, or has become corrupted), an error code will be
+ * returned and the reference pointer will be invalidated.
+ *
+ * @param ref The reference to reload
+ * @return GIT_SUCCESS on success, or an error code
+ */
+GIT_EXTERN(int) git_reference_reload(git_reference *ref);
 
 /**
  * Free the given reference

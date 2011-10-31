@@ -172,11 +172,6 @@ static git_repository *repository_alloc(void)
 		return NULL;
 	}
 
-	if (git_repository__refcache_init(&repo->references) < GIT_SUCCESS) {
-		git__free(repo);
-		return NULL;
-	}
-
 	return repo;
 }
 
@@ -777,7 +772,7 @@ int git_repository_head_orphan(git_repository *repo)
 
 int git_repository_is_empty(git_repository *repo)
 {
-	git_reference *head, *branch;
+	git_reference *head = NULL, *branch = NULL;
 	int error;
 
 	error = git_reference_lookup(&head, repo, "HEAD");

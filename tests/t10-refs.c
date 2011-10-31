@@ -143,22 +143,23 @@ BEGIN_TEST(readsym2, "lookup the HEAD and resolve the master branch")
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 
 	must_pass(git_reference_lookup(&reference, repo, head_tracker_sym_ref_name));
-	must_pass(git_reference_resolve(&resolved_ref, reference));
-	comp_base_ref = resolved_ref;
+	must_pass(git_reference_resolve(&comp_base_ref, reference));
+	git_reference_free(reference);
 
 	must_pass(git_reference_lookup(&reference, repo, GIT_HEAD_FILE));
 	must_pass(git_reference_resolve(&resolved_ref, reference));
 	must_pass(git_oid_cmp(git_reference_oid(comp_base_ref), git_reference_oid(resolved_ref)));
+	git_reference_free(reference);
+	git_reference_free(resolved_ref);
 
 	must_pass(git_reference_lookup(&reference, repo, current_head_target));
 	must_pass(git_reference_resolve(&resolved_ref, reference));
 	must_pass(git_oid_cmp(git_reference_oid(comp_base_ref), git_reference_oid(resolved_ref)));
-
-	git_repository_free(repo);
-
 	git_reference_free(reference);
 	git_reference_free(resolved_ref);
+
 	git_reference_free(comp_base_ref);
+	git_repository_free(repo);
 END_TEST
 
 BEGIN_TEST(readsym3, "lookup the master branch and then the HEAD")
@@ -901,6 +902,9 @@ BEGIN_TEST(delete1, "can delete a just packed reference")
 
 	/* Pack all existing references */
 	must_pass(git_reference_packall(repo));
+
+	/* Reload the reference from disk */
+	must_pass(git_reference_reload(ref));
 
 	/* Ensure it's a packed reference */
 	must_be_true(git_reference_is_packed(ref) == 1);

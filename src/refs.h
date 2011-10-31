@@ -33,19 +33,23 @@
 #define GIT_REFNAME_MAX 1024
 
 struct git_reference {
+	unsigned int flags;
 	git_repository *owner;
 	char *name;
+	time_t mtime;
+
+	union {
+		git_oid oid;
+		char *symbolic;
+	} target;
 };
 
 typedef struct {
 	git_hashtable *packfile;
-	git_hashtable *loose_cache;
 	time_t packfile_time;
 } git_refcache;
 
-
 void git_repository__refcache_free(git_refcache *refs);
-int git_repository__refcache_init(git_refcache *refs);
 
 int git_reference__normalize_name(char *buffer_out, size_t out_size, const char *name);
 int git_reference__normalize_name_oid(char *buffer_out, size_t out_size, const char *name);
