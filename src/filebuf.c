@@ -278,7 +278,7 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 		goto cleanup;
 	}
 
-	error = git_futils_mv_atomic(file->path_lock, file->path_original);
+	error = p_rename(file->path_lock, file->path_original);
 
 cleanup:
 	git_filebuf_cleanup(file);
