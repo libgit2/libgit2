@@ -116,7 +116,8 @@ int loose_object_mode(const char *repository_folder, git_object *object)
 	struct stat st;
 
 	locate_loose_object(repository_folder, object, &object_path, NULL);
-	assert(p_stat(object_path, &st) == 0);
+	if (p_stat(object_path, &st) < 0)
+		return 0;
 	free(object_path);
 
 	return st.st_mode;
@@ -138,7 +139,8 @@ int loose_object_dir_mode(const char *repository_folder, git_object *object)
 		}
 	}
 
-	assert(p_stat(object_path, &st) == 0);
+	if (p_stat(object_path, &st) < 0)
+		return 0;
 	free(object_path);
 
 	return st.st_mode;
