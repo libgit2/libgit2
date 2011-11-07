@@ -430,14 +430,14 @@ int main (int argc, char** argv)
   printf("\n*Config Listing*\n");
 
   const char *email;
-  int j;
+  int32_t j;
 
   git_config *cfg;
 
   // Open a config object so we can read global values from it.
   git_config_open_ondisk(&cfg, "~/.gitconfig");
 
-  git_config_get_int(cfg, "help.autocorrect", &j);
+  git_config_get_int32(cfg, "help.autocorrect", &j);
   printf("Autocorrect: %d\n", j);
 
   git_config_get_string(cfg, "user.email", &email);

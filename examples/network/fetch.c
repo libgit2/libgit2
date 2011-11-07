@@ -119,7 +119,7 @@ int fetch(git_repository *repo, int argc, char **argv)
   if (error < GIT_SUCCESS)
     return error;
 
-  git__free(packname);
+  free(packname);
   git_indexer_free(idx);
   git_remote_free(remote);
 
