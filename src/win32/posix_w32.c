@@ -388,3 +388,17 @@ int p_access(const char* path, mode_t mode)
 
 	return ret;
 }
+
+extern int p_rename(const char *from, const char *to)
+{
+	wchar_t *wfrom = gitwin_to_utf16(from);
+	wchar_t *wto = gitwin_to_utf16(to);
+	int ret;
+
+	ret = MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? GIT_SUCCESS : GIT_EOSERR;
+
+	git__free(wfrom);
+	git__free(wto);
+
+	return ret;
+}

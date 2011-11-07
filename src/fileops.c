@@ -8,29 +8,6 @@
 #include "fileops.h"
 #include <ctype.h>
 
-int git_futils_mv_atomic(const char *from, const char *to)
-{
-#ifdef GIT_WIN32
-	/*
-	 * Win32 POSIX compilance my ass. If the destination
-	 * file exists, the `rename` call fails. This is as
-	 * close as it gets with the Win32 API.
-	 */
-	return MoveFileEx(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? GIT_SUCCESS : GIT_EOSERR;
-#else
-	/* Don't even try this on Win32 */
-	if (!link(from, to)) {
-		p_unlink(from);
-		return GIT_SUCCESS;
-	}
-
-	if (!rename(from, to))
-		return GIT_SUCCESS;
-
-	return GIT_ERROR;
-#endif
-}
-
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
 	int error = GIT_SUCCESS;
@@ -216,7 +193,7 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 	if (git_futils_mkpath2file(to, dirmode) < GIT_SUCCESS)
 		return GIT_EOSERR;	/* The callee already takes care of setting the correct error message. */
 
-	return git_futils_mv_atomic(from, to);	/* The callee already takes care of setting the correct error message. */
+	return p_rename(from, to); /* The callee already takes care of setting the correct error message. */
 }
 
 int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
