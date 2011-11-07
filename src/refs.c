@@ -757,7 +757,7 @@ static int packed_write(git_repository *repo)
 	total_refs = repo->references.packfile->key_count;
 	if ((error =
 		git_vector_init(&packing_list, total_refs, packed_sort)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to write packed reference");
+		return git__rethrow(error, "Failed to init packed refernces list");
 
 	/* Load all the packfile into a vector */
 	{
@@ -776,14 +776,14 @@ static int packed_write(git_repository *repo)
 	/* Now we can open the file! */
 	git_path_join(pack_file_path, repo->path_repository, GIT_PACKEDREFS_FILE);
 	if ((error = git_filebuf_open(&pack_file, pack_file_path, 0)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to write packed reference");
+		return git__rethrow(error, "Failed to write open packed references file");
 
 	/* Packfiles have a header... apparently
 	 * This is in fact not required, but we might as well print it
 	 * just for kicks */
 	if ((error =
 		git_filebuf_printf(&pack_file, "%s\n", GIT_PACKEDREFS_HEADER)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to write packed reference");
+		return git__rethrow(error, "Failed to write packed references file header");
 
 	for (i = 0; i < packing_list.length; ++i) {
 		struct packref *ref = (struct packref *)git_vector_get(&packing_list, i);
@@ -821,7 +821,7 @@ cleanup:
 
 	return error == GIT_SUCCESS ?
 		GIT_SUCCESS :
-		git__rethrow(error, "Failed to write packed reference");
+		git__rethrow(error, "Failed to write packed references file");
 }
 
 static int _reference_available_cb(const char *ref, void *data)
