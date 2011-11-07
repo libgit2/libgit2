@@ -44,7 +44,8 @@ int main(int argc, char **argv)
 	int i, error;
 
 	if (argc < 2) {
-		fprintf(stderr, "usage: %s <cmd> [repo]", argv[0]);
+		fprintf(stderr, "usage: %s <cmd> [repo]\n", argv[0]);
+		exit(EXIT_FAILURE);
 	}
 
 	for (i = 0; commands[i].name != NULL; ++i) {
@@ -53,5 +54,5 @@ int main(int argc, char **argv)
 	}
 
 	fprintf(stderr, "Command not found: %s\n", argv[1]);
-  
+	return 1;
 }
