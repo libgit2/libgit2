@@ -48,5 +48,6 @@ extern int p_fsync(int fd);
 extern int p_open(const char *path, int flags);
 extern int p_creat(const char *path, mode_t mode);
 extern int p_getcwd(char *buffer_out, size_t size);
+extern int p_rename(const char *from, const char *to);
 
 #endif

@@ -71,7 +71,7 @@ void test_status_worktree__initialize(void)
 	 * inside the fixtures folder in our libgit2 repo.
 	 */
 	cl_git_pass(
-		git_futils_mv_atomic("status/.gitted", "status/.git")
+		p_rename("status/.gitted", "status/.git")
 	);
 
 	/*

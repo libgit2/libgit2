@@ -39,6 +39,20 @@ int p_getcwd(char *buffer_out, size_t size)
 	return GIT_SUCCESS;
 }
 
+int p_rename(const char *from, const char *to)
+{
+	if (!link(from, to)) {
+		p_unlink(from);
+		return GIT_SUCCESS;
+	}
+
+	if (!rename(from, to))
+		return GIT_SUCCESS;
+
+	return GIT_ERROR;
+
+}
+
 #endif
 
 int p_read(git_file fd, void *buf, size_t cnt)
