@@ -19,21 +19,24 @@ typedef struct { /* path buffer */
 	size_t size;
 } git_path;
 
-#define GIT_PATH_INIT {NULL,0}
-#define GIT_PATH_INIT_STR(S) {(S)?git__strdup(S):NULL,(S)?strlen(S):0}
+#define GIT_PATH_INIT			{NULL,0}
+#define GIT_PATH_INIT_STR(S)	{(S)?git__strdup(S):NULL,(S)?strlen(S):0}
+/* the ability to prealloc a git_path is useful while transitioning code */
+#define GIT_PATH_INIT_N(N)		{(N)>0?git__calloc(N,1):NULL,N}
 
-extern void git_path_free(git_path *path);
-extern void git_path_expand(git_path *path, size_t newsize);
-extern void git_path_strncat(git_path *path, const char *str, size_t n);
+extern void git__path_free(git_path *path);
+extern int git__path_realloc(git_path *path, size_t newsize);
+extern int git__path_strncat(git_path *path, const char *str, size_t n);
+/* TODO: extern void git__path_append_n(git_path *path, int npath, ...); */
 
-GIT_INLINE(void) git_path_strcat(git_path *path, const char *str)
+GIT_INLINE(int) git__path_strcat(git_path *path, const char *str)
 {
-	git_path_strncat(path, str, UINT_MAX);
+	return git__path_strncat(path, str, UINT_MAX);
 }
 
-GIT_INLINE(void) git_path_append(git_path *tgt, const git_path *src)
+GIT_INLINE(int) git__path_append(git_path *tgt, const git_path *src)
 {
-	git_path_strcat(tgt, src->data);
+	return git__path_strncat(tgt, src->data, src->size);
 }
 
 /*
@@ -53,7 +56,7 @@ GIT_INLINE(void) git_path_append(git_path *tgt, const git_path *src)
  * object which will be (re-)allocated as needed to be big enough.
  */
 extern char *git_path_dirname(const char *path);
-extern int git_path_dirname_r(char *buffer, size_t bufflen, const char *path);
+extern int git_path_dirname_r(git_path *parent_path, const char *path);
 
 /*
  * This function returns the basename of the file, which is the last
@@ -67,11 +70,11 @@ extern int git_path_dirname_r(char *buffer, size_t bufflen, const char *path);
  * The `git_path_basename` implementation is thread safe. The returned
  * string must be manually free'd.
  *
- * The `git_path_basename_r` implementation expects a string allocated
- * by the user with big enough size.
+ * The `git_path_basename_r` implementation expects an initialized git_path
+ * object which will be (re-)allocated as needed to be big enough.
  */
 extern char *git_path_basename(const char *path);
-extern int git_path_basename_r(char *buffer, size_t bufflen, const char *path);
+extern int git_path_basename_r(git_path *base_path, const char *path);
 
 extern const char *git_path_topdir(const char *path);
 

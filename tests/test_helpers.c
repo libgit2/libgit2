@@ -283,19 +283,23 @@ void close_temp_repo(git_repository *repo)
 
 static int remove_placeholders_recurs(void *filename, char *path)
 {
-	char passed_filename[GIT_PATH_MAX];
+	git_path passed_path = GIT_PATH_INIT;
 	char *data = (char *)filename;
+    int error = GIT_SUCCESS;
 
 	if (!git_futils_isdir(path))
 		return git_futils_direach(path, GIT_PATH_MAX, remove_placeholders_recurs, data);
 
-	if (git_path_basename_r(passed_filename, sizeof(passed_filename), path) < GIT_SUCCESS)
+	if (git_path_basename_r(&passed_path, path) < GIT_SUCCESS)
 		return GIT_EINVALIDPATH;
 
-	if (!strcmp(data, passed_filename))
-		return p_unlink(path);
+	if (!strcmp(data, passed_path.data)) {
+		error = p_unlink(path);
+    }
 
-	return GIT_SUCCESS;
+    git__path_free(&passed_path);
+
+	return error;
 }
 
 int remove_placeholders(char *directory_path, char *filename)

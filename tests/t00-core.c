@@ -105,14 +105,16 @@ END_TEST
 
 
 BEGIN_TEST(path0, "get the dirname of a path")
-	char dir[64], *dir2;
+	char *dir2;
 
 #define DIRNAME_TEST(A, B) { \
-	must_be_true(git_path_dirname_r(dir, sizeof(dir), A) >= 0); \
-	must_be_true(strcmp(dir, B) == 0);				\
+	git_path dir = GIT_PATH_INIT;	\
+	must_be_true(git_path_dirname_r(&dir, A) >= 0);	\
+	must_be_true(strcmp(dir.data, B) == 0);			\
+	git__path_free(&dir);	\
 	must_be_true((dir2 = git_path_dirname(A)) != NULL);	\
 	must_be_true(strcmp(dir2, B) == 0);				\
-	git__free(dir2);										\
+	git__free(dir2);								\
 }
 
 	DIRNAME_TEST(NULL, ".");
@@ -134,14 +136,16 @@ BEGIN_TEST(path0, "get the dirname of a path")
 END_TEST
 
 BEGIN_TEST(path1, "get the base name of a path")
-	char base[64], *base2;
+	char *base2;
 
 #define BASENAME_TEST(A, B) { \
-	must_be_true(git_path_basename_r(base, sizeof(base), A) >= 0); \
-	must_be_true(strcmp(base, B) == 0);					\
+    git_path base = GIT_PATH_INIT;	\
+	must_be_true(git_path_basename_r(&base, A) >= 0);	\
+	must_be_true(strcmp(base.data, B) == 0);			\
+	git__path_free(&base);	\
 	must_be_true((base2 = git_path_basename(A)) != NULL);	\
 	must_be_true(strcmp(base2, B) == 0);				\
-	git__free(base2);										\
+	git__free(base2);									\
 }
 
 	BASENAME_TEST(NULL, ".");
