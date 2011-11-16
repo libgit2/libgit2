@@ -59,6 +59,46 @@ check_joinpath_n(
 	cl_assert(strcmp(joined_path, expected_path) == 0);
 }
 
+static void
+check_path_append(
+	const char* path_a,
+	const char* path_b,
+	const char* expected_path,
+	size_t expected_size)
+{
+    git_path tgt = GIT_PATH_INIT_STR(path_a);
+
+    git_path_strcat(&tgt, path_b);
+
+    if (!expected_path) {
+        cl_assert(!tgt.data);
+    } else {
+        cl_assert(strcmp(tgt.data, expected_path) == 0);
+    }
+
+    cl_assert(tgt.size == expected_size);
+}
+
+static void
+check_path_strncat(
+	const char* path_a,
+	const char* path_b,
+    size_t      len,
+	const char* expected_path,
+	size_t expected_size)
+{
+    git_path tgt = GIT_PATH_INIT_STR(path_a);
+
+    git_path_strncat(&tgt, path_b, len);
+
+    if (!expected_path) {
+        cl_assert(!tgt.data);
+    } else {
+        cl_assert(strcmp(tgt.data, expected_path) == 0);
+    }
+
+    cl_assert(tgt.size == expected_size);
+}
 
 /* get the dirname of a path */
 void test_core_path__0(void)
@@ -136,4 +176,41 @@ void test_core_path__6(void)
 	check_joinpath_n("", "", "", "a", "a");
 	check_joinpath_n("a", "b", "", "/c/d/", "a/b/c/d/");
 	check_joinpath_n("a", "b", "", "/c/d", "a/b/c/d");
+}
+
+#define REP4(STR)    STR STR STR STR
+#define TESTSTR_4096 REP4(REP4(REP4(REP4(REP4("....")))))
+#define TESTSTR_8192 TESTSTR_4096 TESTSTR_4096
+
+/* test basic path object manipulation */
+void test_core_path__7(void)
+{
+    check_path_append(NULL, NULL, NULL, 0);
+    check_path_append(NULL, "", "", 1);
+    check_path_append("", NULL, "", 1);
+    check_path_append("", "", "", 1);
+    check_path_append("a", NULL, "a", 2);
+    check_path_append(NULL, "a", "a", 2);
+    check_path_append("", "a", "a", 2);
+    check_path_append("a", "", "a", 2);
+    check_path_append("a", "b", "ab", 3);
+    check_path_append(TESTSTR_4096, NULL, TESTSTR_4096, 4097);
+    check_path_append(TESTSTR_4096, "", TESTSTR_4096, 4097);
+    check_path_append(TESTSTR_4096, TESTSTR_4096, TESTSTR_8192, 8193);
+
+    check_path_strncat(NULL, NULL, 0, NULL, 0);
+    check_path_strncat(NULL, NULL, 1, NULL, 0);
+    check_path_strncat(NULL, "a", 0, "", 1);
+    check_path_strncat(NULL, "a", 1, "a", 2);
+    check_path_strncat(NULL, "a", 2, "a", 2);
+    check_path_strncat(NULL, "a", 3, "a", 2);
+    check_path_strncat(NULL, "ab", 0, "", 1);
+    check_path_strncat(NULL, "ab", 1, "a", 2);
+    check_path_strncat(NULL, "ab", 2, "ab", 3);
+    check_path_strncat(NULL, "ab", 3, "ab", 3);
+    check_path_strncat("ab", "cd", 0, "ab", 3);
+    check_path_strncat("ab", "cd", 1, "abc", 4);
+    check_path_strncat("ab", "cd", 2, "abcd", 5);
+    check_path_strncat("ab", "cd", 3, "abcd", 5);
+    check_path_strncat("ab", "cd", 4, "abcd", 5);
 }

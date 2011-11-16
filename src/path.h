@@ -9,6 +9,33 @@
 
 #include "common.h"
 
+/**
+ * Path object
+ *
+ * Dynamically reallocated path object
+ */
+typedef struct { /* path buffer */
+	char*  data;
+	size_t size;
+} git_path;
+
+#define GIT_PATH_INIT {NULL,0}
+#define GIT_PATH_INIT_STR(S) {(S)?git__strdup(S):NULL,(S)?strlen(S):0}
+
+extern void git_path_free(git_path *path);
+extern void git_path_expand(git_path *path, size_t newsize);
+extern void git_path_strncat(git_path *path, const char *str, size_t n);
+
+GIT_INLINE(void) git_path_strcat(git_path *path, const char *str)
+{
+	git_path_strncat(path, str, UINT_MAX);
+}
+
+GIT_INLINE(void) git_path_append(git_path *tgt, const git_path *src)
+{
+	git_path_strcat(tgt, src->data);
+}
+
 /*
  * The dirname() function shall take a pointer to a character string
  * that contains a pathname, and return a pointer to a string that is a
@@ -22,8 +49,8 @@
  * The `git_path_dirname` implementation is thread safe. The returned
  * string must be manually free'd.
  *
- * The `git_path_dirname_r` implementation expects a string allocated
- * by the user with big enough size.
+ * The `git_path_dirname_r` implementation expects an initialized git_path
+ * object which will be (re-)allocated as needed to be big enough.
  */
 extern char *git_path_dirname(const char *path);
 extern int git_path_dirname_r(char *buffer, size_t bufflen, const char *path);

@@ -12,6 +12,53 @@
 #include <stdio.h>
 #include <ctype.h>
 
+void git_path_free(git_path *path)
+{
+	assert(path);
+	git__free(path->data);
+	path->data = NULL;
+	path->size = 0;
+}
+
+void git_path_expand(git_path *path, size_t newsize)
+{
+	assert(path);
+
+	if (!path->data) {
+		path->data = git__malloc(newsize);
+		if (path->data) {
+			*(path->data) = '\0';
+		}
+		path->size = newsize;
+	}
+	else if (path->size < newsize) {
+		path->data = git__realloc(path->data, newsize);
+		path->size = newsize;
+	}
+}
+
+void git_path_strncat(git_path *path, const char* str, size_t n)
+{
+	assert(path);
+
+	size_t old_size	 = path->data ? strlen(path->data) : 0;
+	size_t add_size	 = str ? strlen(str) : 0;
+	if (add_size > n) add_size = n;
+	size_t null_byte = (size_t)((path->data != NULL) || (str != NULL));
+	size_t new_size	 = old_size + add_size + null_byte;
+
+	if (path->size < new_size) {
+		git_path_expand(path, new_size);
+	}
+
+	if (add_size > 0) {
+		memcpy(path->data + old_size, str, add_size);
+
+		/* make sure to terminate new string */
+		*(path->data + old_size + add_size + 1) = '\0';
+	}
+}
+
 /*
  * Based on the Android implementation, BSD licensed.
  * Check http://android.git.kernel.org/
