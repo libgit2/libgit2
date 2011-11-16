@@ -36,7 +36,7 @@ Building libgit2 - Using CMake
 ==============================
 
 libgit2 builds cleanly on most platforms without any external dependencies.
-Under Unix-like systems, like Linux, * BSD and Mac OS X, libgit2 expects `pthreads` to be available;
+Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthreads` to be available;
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
