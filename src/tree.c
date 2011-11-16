@@ -576,7 +576,7 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write tree");
 }
 
-void git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_entry *, void *), void *payload)
+void git_treebuilder_filter(git_treebuilder *bld, git_filter_cb filter, void *payload)
 {
 	unsigned int i;
 
