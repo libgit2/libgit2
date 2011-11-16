@@ -10,6 +10,7 @@
 #include "vector.h"
 #include "fileops.h"
 #include "map.h"
+#include "global.h"
 
 #define DEFAULT_WINDOW_SIZE \
 	(sizeof(void*) >= 8 \
@@ -20,21 +21,15 @@
 	((1024 * 1024) * (sizeof(void*) >= 8 ? 8192ULL : 256UL))
 
 /*
- * We need this because each process is only allowed a specific amount
- * of memory. Making it writable should generate one instance per
- * process, but we still need to set a couple of variables.
+ * These are the global options for mmmap limits.
+ * TODO: allow the user to change these
  */
-
-static git_mwindow_ctl ctl = {
-	0,
-	0,
+static struct {
+	size_t window_size;
+	size_t mapped_limit;
+} _mw_options = {
 	DEFAULT_WINDOW_SIZE,
 	DEFAULT_MAPPED_LIMIT,
-	0,
-	0,
-	0,
-	0,
-	{0, 0, 0, 0, 0}
 };
 
 /*
@@ -43,28 +38,29 @@ static git_mwindow_ctl ctl = {
  */
 void git_mwindow_free_all(git_mwindow_file *mwf)
 {
+	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
 	unsigned int i;
 	/*
 	 * Remove these windows from the global list
 	 */
-	for (i = 0; i < ctl.windowfiles.length; ++i){
-		if (git_vector_get(&ctl.windowfiles, i) == mwf) {
-			git_vector_remove(&ctl.windowfiles, i);
+	for (i = 0; i < ctl->windowfiles.length; ++i){
+		if (git_vector_get(&ctl->windowfiles, i) == mwf) {
+			git_vector_remove(&ctl->windowfiles, i);
 			break;
 		}
 	}
 
-	if (ctl.windowfiles.length == 0) {
-		git_vector_free(&ctl.windowfiles);
-		ctl.windowfiles.contents = NULL;
+	if (ctl->windowfiles.length == 0) {
+		git_vector_free(&ctl->windowfiles);
+		ctl->windowfiles.contents = NULL;
 	}
 
 	while (mwf->windows) {
 		git_mwindow *w = mwf->windows;
 		assert(w->inuse_cnt == 0);
 
-		ctl.mapped -= w->window_map.len;
-		ctl.open_windows--;
+		ctl->mapped -= w->window_map.len;
+		ctl->open_windows--;
 
 		git_futils_mmap_free(&w->window_map);
 
@@ -115,6 +111,7 @@ void git_mwindow_scan_lru(
  */
 static int git_mwindow_close_lru(git_mwindow_file *mwf)
 {
+	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
 	unsigned int i;
 	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = &mwf->windows;
 
@@ -122,16 +119,16 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	if(mwf->windows)
 		git_mwindow_scan_lru(mwf, &lru_w, &lru_l);
 
-	for (i = 0; i < ctl.windowfiles.length; ++i) {
+	for (i = 0; i < ctl->windowfiles.length; ++i) {
 		git_mwindow *last = lru_w;
-		git_mwindow_file *cur = git_vector_get(&ctl.windowfiles, i);
+		git_mwindow_file *cur = git_vector_get(&ctl->windowfiles, i);
 		git_mwindow_scan_lru(cur, &lru_w, &lru_l);
 		if (lru_w != last)
 			list = &cur->windows;
 	}
 
 	if (lru_w) {
-		ctl.mapped -= lru_w->window_map.len;
+		ctl->mapped -= lru_w->window_map.len;
 		git_futils_mmap_free(&lru_w->window_map);
 
 		if (lru_l)
@@ -140,7 +137,7 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 			*list = lru_w->next;
 
 		git__free(lru_w);
-		ctl.open_windows--;
+		ctl->open_windows--;
 
 		return GIT_SUCCESS;
 	}
@@ -148,9 +145,14 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	return git__throw(GIT_ERROR, "Failed to close memory window. Couln't find LRU");
 }
 
-static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, git_off_t size, git_off_t offset)
+static git_mwindow *new_window(
+	git_mwindow_file *mwf,
+	git_file fd,
+	git_off_t size,
+	git_off_t offset)
 {
-	size_t walign = ctl.window_size / 2;
+	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	size_t walign = _mw_options.window_size / 2;
 	git_off_t len;
 	git_mwindow *w;
 
@@ -162,16 +164,16 @@ static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, git_off_t siz
 	w->offset = (offset / walign) * walign;
 
 	len = size - w->offset;
-	if (len > (git_off_t)ctl.window_size)
-		len = (git_off_t)ctl.window_size;
+	if (len > (git_off_t)_mw_options.window_size)
+		len = (git_off_t)_mw_options.window_size;
 
-	ctl.mapped += (size_t)len;
+	ctl->mapped += (size_t)len;
 
-	while(ctl.mapped_limit < ctl.mapped &&
-			git_mwindow_close_lru(mwf) == GIT_SUCCESS) {}
+	while (_mw_options.mapped_limit < ctl->mapped &&
+			git_mwindow_close_lru(mwf) == GIT_SUCCESS) /* nop */;
 
 	/*
-	 * We treat ctl.mapped_limit as a soft limit. If we can't find a
+	 * We treat _mw_options.mapped_limit as a soft limit. If we can't find a
 	 * window to close and are above the limit, we still mmap the new
 	 * window.
 	 */
@@ -179,14 +181,14 @@ static git_mwindow *new_window(git_mwindow_file *mwf, git_file fd, git_off_t siz
 	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < GIT_SUCCESS)
 		goto cleanup;
 
-	ctl.mmap_calls++;
-	ctl.open_windows++;
+	ctl->mmap_calls++;
+	ctl->open_windows++;
 
-	if (ctl.mapped > ctl.peak_mapped)
-		ctl.peak_mapped = ctl.mapped;
+	if (ctl->mapped > ctl->peak_mapped)
+		ctl->peak_mapped = ctl->mapped;
 
-	if (ctl.open_windows > ctl.peak_open_windows)
-		ctl.peak_open_windows = ctl.open_windows;
+	if (ctl->open_windows > ctl->peak_open_windows)
+		ctl->peak_open_windows = ctl->open_windows;
 
 	return w;
 
@@ -199,9 +201,14 @@ cleanup:
  * Open a new window, closing the least recenty used until we have
  * enough space. Don't forget to add it to your list
  */
-unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor,
-								git_off_t offset, int extra, unsigned int *left)
+unsigned char *git_mwindow_open(
+	git_mwindow_file *mwf,
+	git_mwindow **cursor,
+	git_off_t offset,
+	int extra,
+	unsigned int *left)
 {
+	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
 	git_mwindow *w = *cursor;
 
 	if (!w || !git_mwindow_contains(w, offset + extra)) {
@@ -229,7 +236,7 @@ unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor,
 
 	/* If we changed w, store it in the cursor */
 	if (w != *cursor) {
-		w->last_used = ctl.used_ctr++;
+		w->last_used = ctl->used_ctr++;
 		w->inuse_cnt++;
 		*cursor = w;
 	}
@@ -245,13 +252,14 @@ unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor,
 
 int git_mwindow_file_register(git_mwindow_file *mwf)
 {
+	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
 	int error;
 
-	if (ctl.windowfiles.length == 0 &&
-		(error = git_vector_init(&ctl.windowfiles, 8, NULL)) < GIT_SUCCESS)
+	if (ctl->windowfiles.length == 0 &&
+		(error = git_vector_init(&ctl->windowfiles, 8, NULL)) < GIT_SUCCESS)
 		return error;
 
-	return git_vector_insert(&ctl.windowfiles, mwf);
+	return git_vector_insert(&ctl->windowfiles, mwf);
 }
 
 void git_mwindow_close(git_mwindow **window)

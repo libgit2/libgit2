@@ -10,7 +10,6 @@
 
 #include "map.h"
 #include "vector.h"
-#include "fileops.h"
 
 typedef struct git_mwindow {
 	struct git_mwindow *next;
@@ -29,8 +28,6 @@ typedef struct git_mwindow_file {
 typedef struct git_mwindow_ctl {
 	size_t mapped;
 	unsigned int open_windows;
-	size_t window_size; /* needs default value */
-	size_t mapped_limit; /* needs default value */
 	unsigned int mmap_calls;
 	unsigned int peak_open_windows;
 	size_t peak_mapped;

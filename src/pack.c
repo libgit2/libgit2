@@ -5,11 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "mwindow.h"
+#include "common.h"
 #include "odb.h"
 #include "pack.h"
 #include "delta-apply.h"
 #include "sha1_lookup.h"
+#include "mwindow.h"
+#include "fileops.h"
 
 #include "git2/oid.h"
 #include "git2/zlib.h"

@@ -11,6 +11,7 @@
 #include "git2/version.h"
 
 #include "git2/common.h"
+#include "git2/threads.h"
 #include "git2/errors.h"
 #include "git2/zlib.h"
 

@@ -8,7 +8,6 @@
 #define INCLUDE_common_h__
 
 #include "git2/common.h"
-#include "git2/thread-utils.h"
 #include "cc-compat.h"
 
 #include <assert.h>

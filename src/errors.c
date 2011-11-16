@@ -5,12 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
-#include "git2/thread-utils.h" /* for GIT_TLS */
-#include "thread-utils.h" /* for GIT_TLS */
-
+#include "global.h"
 #include <stdarg.h>
-
-static GIT_TLS char g_last_error[1024];
 
 static struct {
 	int num;
@@ -59,19 +55,26 @@ const char *git_strerror(int num)
 	return "Unknown error";
 }
 
+#define ERROR_MAX_LEN 1024
+
 void git___rethrow(const char *msg, ...)
 {
-	char new_error[1024];
+	char new_error[ERROR_MAX_LEN];
+	char *last_error;
 	char *old_error = NULL;
 
 	va_list va;
 
+	last_error = GIT_GLOBAL->error.last;
+
 	va_start(va, msg);
-	vsnprintf(new_error, sizeof(new_error), msg, va);
+	vsnprintf(new_error, ERROR_MAX_LEN, msg, va);
 	va_end(va);
 
-	old_error = git__strdup(g_last_error);
-	snprintf(g_last_error, sizeof(g_last_error), "%s \n	- %s", new_error, old_error);
+	old_error = git__strdup(last_error);
+
+	snprintf(last_error, ERROR_MAX_LEN, "%s \n	- %s", new_error, old_error);
+
 	git__free(old_error);
 }
 
@@ -80,19 +83,22 @@ void git___throw(const char *msg, ...)
 	va_list va;
 
 	va_start(va, msg);
-	vsnprintf(g_last_error, sizeof(g_last_error), msg, va);
+	vsnprintf(GIT_GLOBAL->error.last, ERROR_MAX_LEN, msg, va);
 	va_end(va);
 }
 
 const char *git_lasterror(void)
 {
-	if (!g_last_error[0])
+	char *last_error = GIT_GLOBAL->error.last;
+
+	if (!last_error[0])
 		return NULL;
 
-	return g_last_error;
+	return last_error;
 }
 
 void git_clearerror(void)
 {
-	g_last_error[0] = '\0';
+	char *last_error = GIT_GLOBAL->error.last;
+	last_error[0] = '\0';
 }
