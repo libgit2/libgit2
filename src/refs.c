@@ -16,8 +16,6 @@
 
 #define MAX_NESTING_LEVEL 5
 
-#define GIT_PACKED_REFS_FILE_MODE 0644
-
 enum {
 	GIT_PACKREF_HAS_PEEL = 1,
 	GIT_PACKREF_WAS_LOOSE = 2
@@ -804,7 +802,7 @@ cleanup:
 	/* if we've written all the references properly, we can commit
 	 * the packfile to make the changes effective */
 	if (error == GIT_SUCCESS) {
-		error = git_filebuf_commit(&pack_file, GIT_PACKED_REFS_FILE_MODE);
+		error = git_filebuf_commit(&pack_file, GIT_PACKEDREFS_FILE_MODE);
 
 		/* when and only when the packfile has been properly written,
 		 * we can go ahead and remove the loose refs */
