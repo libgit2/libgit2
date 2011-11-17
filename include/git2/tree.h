@@ -284,7 +284,7 @@ GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_tr
 GIT_EXTERN(int) git_tree_frompath(git_tree **parent_out, git_tree *root, const char *treeentry_path);
 
 /** Callback for the tree traversal method */
-typedef int (*git_treewalk_cb)(const char *root, git_tree_entry *entry);
+typedef int (*git_treewalk_cb)(const char *root, git_tree_entry *entry, void *data);
 
 /** Tree traversal modes */
 enum git_treewalk_mode {
@@ -310,8 +310,43 @@ enum git_treewalk_mode {
  * @param mode Traversal mode (pre or post-order)
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_tree_walk(git_tree *walk, git_treewalk_cb callback, int mode);
+GIT_EXTERN(int) git_tree_walk(git_tree *walk, git_treewalk_cb callback, void *data, int mode);
 
 /** @} */
+
+typedef enum {
+	GIT_STATUS_ADDED = 1,
+	GIT_STATUS_DELETED = 2,
+	GIT_STATUS_MODIFIED = 3,
+} git_status_t;
+
+typedef struct {
+	unsigned int old_attr;
+	unsigned int new_attr;
+	git_oid old_oid;
+	git_oid new_oid;
+	git_status_t status;
+	const char *path;
+} git_tree_diff_data;
+
+typedef int (*git_tree_diff_cb)(const git_tree_diff_data *ptr, void *data);
+
+/**
+ * Diff two trees
+ *
+ * Compare two trees. For each difference in the trees, the callback
+ * will be called with a git_tree_diff_data filled with the relevant
+ * information.
+ *
+ * @param old the "old" tree
+ * @param newer the "newer" tree
+ * @param cb callback
+ * @param data data to give to the callback
+ * @return GIT_SUCCESS or an error code
+ */
+int git_tree_diff(git_tree *old, git_tree *newer, git_tree_diff_cb cb, void *data);
+
+int git_tree_diff_index_recursive(git_tree *tree, git_index *index, git_tree_diff_cb cb, void *data);
+
 GIT_END_DECL
 #endif
