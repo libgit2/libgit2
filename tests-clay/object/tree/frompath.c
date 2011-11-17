@@ -29,7 +29,7 @@ static void assert_tree_from_path(git_tree *root, const char *path, git_error ex
 {
 	git_tree *containing_tree = NULL;
 
-	cl_assert(git_tree_frompath(&containing_tree, root, path) == expected_result);
+	cl_assert(git_tree_get_subtree(&containing_tree, root, path) == expected_result);
 	
 	if (containing_tree == NULL && expected_result != GIT_SUCCESS)
 		return;
