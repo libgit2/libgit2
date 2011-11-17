@@ -121,7 +121,10 @@ static const struct clay_func _clay_cb_core_dirent[] = {
 static const struct clay_func _clay_cb_core_filebuf[] = {
     {"0", &test_core_filebuf__0},
 	{"1", &test_core_filebuf__1},
-	{"2", &test_core_filebuf__2}
+	{"2", &test_core_filebuf__2},
+	{"3", &test_core_filebuf__3},
+	{"4", &test_core_filebuf__4},
+	{"5", &test_core_filebuf__5}
 };
 static const struct clay_func _clay_cb_core_oid[] = {
     {"streq", &test_core_oid__streq}
@@ -241,7 +244,7 @@ static const struct clay_suite _clay_suites[] = {
         "core::filebuf",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_core_filebuf, 3
+        _clay_cb_core_filebuf, 6
     },
 	{
         "core::oid",
@@ -360,7 +363,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 23;
-static size_t _clay_callback_count = 67;
+static size_t _clay_callback_count = 70;
 
 /* Core test functions */
 static void

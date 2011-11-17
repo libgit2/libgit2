@@ -4,7 +4,7 @@
 /* make sure git_filebuf_open doesn't delete an existing lock */
 void test_core_filebuf__0(void)
 {
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	int fd;
 	char test[] = "test", testlock[] = "test.lock";
 
@@ -23,7 +23,7 @@ void test_core_filebuf__0(void)
 /* make sure GIT_FILEBUF_APPEND works as expected */
 void test_core_filebuf__1(void)
 {
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	int fd;
 	char test[] = "test";
 
@@ -43,7 +43,7 @@ void test_core_filebuf__1(void)
 /* make sure git_filebuf_write writes large buffer correctly */
 void test_core_filebuf__2(void)
 {
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	char test[] = "test";
 	unsigned char buf[4096 * 4]; /* 2 * WRITE_BUFFER_SIZE */
 
@@ -56,3 +56,51 @@ void test_core_filebuf__2(void)
 	cl_must_pass(p_unlink(test));
 }
 
+
+/* make sure git_filebuf_open won't reopen an open buffer */
+void test_core_filebuf__3(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	char test[] = "test";
+
+	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_git_fail(git_filebuf_open(&file, test, 0));
+
+	git_filebuf_cleanup(&file);
+}
+
+
+/* make sure git_filebuf_cleanup clears the buffer */
+void test_core_filebuf__4(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	char test[] = "test";
+
+	cl_assert(file.buffer == NULL);
+
+	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_assert(file.buffer != NULL);
+
+	git_filebuf_cleanup(&file);
+	cl_assert(file.buffer == NULL);
+}
+
+
+/* make sure git_filebuf_commit clears the buffer */
+void test_core_filebuf__5(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	char test[] = "test";
+
+	cl_assert(file.buffer == NULL);
+
+	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_assert(file.buffer != NULL);
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+	cl_assert(file.buffer != NULL);
+
+	cl_git_pass(git_filebuf_commit(&file, 0666));
+	cl_assert(file.buffer == NULL);
+
+	cl_must_pass(p_unlink(test));
+}
