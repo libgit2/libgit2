@@ -284,7 +284,7 @@ GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_tr
 GIT_EXTERN(int) git_tree_get_subtree(git_tree **subtree, git_tree *root, const char *subtree_path);
 
 /** Callback for the tree traversal method */
-typedef int (*git_treewalk_cb)(const char *root, git_tree_entry *entry);
+typedef int (*git_treewalk_cb)(const char *root, git_tree_entry *entry, void *payload);
 
 /** Tree traversal modes */
 enum git_treewalk_mode {
@@ -310,7 +310,7 @@ enum git_treewalk_mode {
  * @param mode Traversal mode (pre or post-order)
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_tree_walk(git_tree *walk, git_treewalk_cb callback, int mode);
+GIT_EXTERN(int) git_tree_walk(git_tree *walk, git_treewalk_cb callback, int mode, void *payload);
 
 /** @} */
 GIT_END_DECL

@@ -683,7 +683,8 @@ static int tree_walk_post(
 	git_tree *tree,
 	git_treewalk_cb callback,
 	char *root,
-	size_t root_len)
+	size_t root_len,
+	void *payload)
 {
 	int error;
 	unsigned int i;
@@ -693,7 +694,7 @@ static int tree_walk_post(
 
 		root[root_len] = '\0';
 
-		if (callback(root, entry) < 0)
+		if (callback(root, entry, payload) < 0)
 			continue;
 
 		if (ENTRY_IS_TREE(entry)) {
@@ -707,7 +708,10 @@ static int tree_walk_post(
 			root[root_len + entry->filename_len] = '/';
 
 			tree_walk_post(subtree,
-				callback, root, root_len + entry->filename_len + 1);
+				callback, root,
+				root_len + entry->filename_len + 1,
+				payload
+			);
 
 			git_tree_close(subtree);
 		}
@@ -716,14 +720,14 @@ static int tree_walk_post(
 	return GIT_SUCCESS;
 }
 
-int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode)
+int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)
 {
 	char root_path[GIT_PATH_MAX];
 
 	root_path[0] = '\0';
 	switch (mode) {
 		case GIT_TREEWALK_POST:
-			return tree_walk_post(tree, callback, root_path, 0);
+			return tree_walk_post(tree, callback, root_path, 0, payload);
 
 		case GIT_TREEWALK_PRE:
 			return git__throw(GIT_ENOTIMPLEMENTED,
