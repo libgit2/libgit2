@@ -670,6 +670,17 @@ static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 		return git__rethrow(error, "Failed to write loose backend");
 
 	stream->finished = 1;
+
+	/*
+	 * Don't try to add an existing object to the repository. This
+	 * is what git does and allows us to sidestep the fact that
+	 * we're not allowed to overwrite a read-only file on Windows.
+	 */
+	if (git_futils_exists(final_path) == GIT_SUCCESS) {
+		git_filebuf_cleanup(&stream->fbuf);
+		return GIT_SUCCESS;
+	}
+
 	return git_filebuf_commit_at(&stream->fbuf, final_path, GIT_OBJECT_FILE_MODE);
 }
 
