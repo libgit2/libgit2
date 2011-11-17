@@ -41,7 +41,7 @@ static int reflog_write(const char *log_path, const char *oid_old,
 {
 	int error;
 	git_buf log = GIT_BUF_INIT;
-	git_filebuf fbuf;
+	git_filebuf fbuf = GIT_FILEBUF_INIT;
 
 	assert(log_path && oid_old && oid_new && committer);
 

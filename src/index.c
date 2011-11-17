@@ -248,7 +248,7 @@ int git_index_read(git_index *index)
 
 int git_index_write(git_index *index)
 {
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	struct stat indexst;
 	int error;
 

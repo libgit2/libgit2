@@ -306,7 +306,7 @@ END_TEST
 BEGIN_TEST(config16, "add a variable in a new section")
 	git_config *cfg;
 	int32_t i;
-	git_filebuf buf;
+	git_filebuf buf = GIT_FILEBUF_INIT;
 
 	/* By freeing the config, we make sure we flush the values  */
 	must_pass(git_config_open_ondisk(&cfg, CONFIG_BASE "/config10"));

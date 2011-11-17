@@ -163,7 +163,7 @@ END_TEST
 
 BEGIN_TEST(add0, "add a new file to the index")
 	git_index *index;
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	git_repository *repo;
 	git_index_entry *entry;
 	git_oid id1;

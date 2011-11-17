@@ -758,7 +758,7 @@ static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const v
 {
 	int error, header_len;
 	char final_path[GIT_PATH_MAX], header[64];
-	git_filebuf fbuf;
+	git_filebuf fbuf = GIT_FILEBUF_INIT;
 	loose_backend *backend;
 
 	backend = (loose_backend *)_backend;

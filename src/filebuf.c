@@ -66,13 +66,22 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->digest)
 		git_hash_free_ctx(file->digest);
 
-	git__free(file->buffer);
-	git__free(file->z_buf);
+	if (file->buffer)
+		git__free(file->buffer);
 
-	deflateEnd(&file->zs);
+	/* use the presence of z_buf to decide if we need to deflateEnd */
+	if (file->z_buf) {
+		git__free(file->z_buf);
+		deflateEnd(&file->zs);
+	}
 
-	git__free(file->path_original);
-	git__free(file->path_lock);
+	if (file->path_original)
+		git__free(file->path_original);
+	if (file->path_lock)
+		git__free(file->path_lock);
+
+	memset(file, 0x0, sizeof(git_filebuf));
+	file->fd = -1;
 }
 
 GIT_INLINE(int) flush_buffer(git_filebuf *file)
@@ -136,6 +145,9 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 	size_t path_len;
 
 	assert(file && path);
+
+	if (file->buffer)
+		return git__throw(GIT_EINVALIDARGS, "Tried to reopen an open filebuf");
 
 	memset(file, 0x0, sizeof(git_filebuf));
 
