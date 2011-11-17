@@ -877,7 +877,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 	int section_matches = 0, last_section_matched = 0;
 	char *current_section = NULL;
 	char *var_name, *var_value, *data_start;
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *pre_end = NULL, *post_start = NULL;
 
 	/* We need to read in our own config file */

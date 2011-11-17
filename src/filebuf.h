@@ -44,6 +44,21 @@ struct git_filebuf {
 
 typedef struct git_filebuf git_filebuf;
 
+#define GIT_FILEBUF_INIT {0}
+
+/* The git_filebuf object lifecycle is:
+ * - Allocate git_filebuf, preferably using GIT_FILEBUF_INIT.
+ * - Call git_filebuf_open() to initialize the filebuf for use.
+ * - Make as many calls to git_filebuf_write(), git_filebuf_printf(),
+ *   git_filebuf_reserve() as you like.
+ * - While you are writing, you may call git_filebuf_hash() to get
+ *   the hash of all you have written so far.
+ * - To close the git_filebuf, you may call git_filebuf_commit() or
+ *   git_filebuf_commit_at() to save the file, or
+ *   git_filebuf_cleanup() to abandon the file.  All of these will
+ *   clear the git_filebuf object.
+ */
+
 int git_filebuf_write(git_filebuf *lock, const void *buff, size_t len);
 int git_filebuf_reserve(git_filebuf *file, void **buff, size_t len);
 int git_filebuf_printf(git_filebuf *file, const char *format, ...) GIT_FORMAT_PRINTF(2, 3);

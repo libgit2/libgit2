@@ -285,7 +285,7 @@ cleanup:
 
 static int loose_write(git_reference *ref)
 {
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	char ref_path[GIT_PATH_MAX];
 	int error;
 	struct stat st;
@@ -744,7 +744,7 @@ static int packed_sort(const void *a, const void *b)
  */
 static int packed_write(git_repository *repo)
 {
-	git_filebuf pack_file;
+	git_filebuf pack_file = GIT_FILEBUF_INIT;
 	int error;
 	unsigned int i;
 	char pack_file_path[GIT_PATH_MAX];

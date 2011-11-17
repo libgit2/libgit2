@@ -138,7 +138,7 @@ int git_fetch_download_pack(char **out, git_remote *remote)
 int git_fetch__download_pack(char **out, const char *buffered, size_t buffered_size,
                              GIT_SOCKET fd, git_repository *repo)
 {
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 	char buff[1024], path[GIT_PATH_MAX];
 	static const char suff[] = "/objects/pack/pack-received";
