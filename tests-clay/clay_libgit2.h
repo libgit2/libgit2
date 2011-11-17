@@ -23,6 +23,6 @@
  * just for consistency. Use with `git_` library
  * calls that are supposed to fail!
  */
-#define cl_git_fail(expr) cl_must_fail((expr))
+#define cl_git_fail(expr) cl_must_fail(expr)
 
 #endif

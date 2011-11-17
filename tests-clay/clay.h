@@ -37,16 +37,16 @@ void cl_fixture_cleanup(const char *fixture_name);
 /**
  * Assertion macros with no error message
  */
-#define cl_must_pass(expr) cl_must_pass_((expr), NULL)
-#define cl_must_fail(expr) cl_must_fail_((expr), NULL)
-#define cl_assert(expr) cl_assert_((expr), NULL)
+#define cl_must_pass(expr) cl_must_pass_(expr, NULL)
+#define cl_must_fail(expr) cl_must_fail_(expr, NULL)
+#define cl_assert(expr) cl_assert_(expr, NULL)
 
 /**
  * Check macros with no error message
  */
-#define cl_check_pass(expr) cl_check_pass_((expr), NULL)
-#define cl_check_fail(expr) cl_check_fail_((expr), NULL)
-#define cl_check(expr) cl_check_((expr), NULL)
+#define cl_check_pass(expr) cl_check_pass_(expr, NULL)
+#define cl_check_fail(expr) cl_check_fail_(expr, NULL)
+#define cl_check(expr) cl_check_(expr, NULL)
 
 /**
  * Forced failure/warning
@@ -57,21 +57,13 @@ void cl_fixture_cleanup(const char *fixture_name);
 /**
  * Test method declarations
  */
-extern void test_status_single__hash_single_file(void);
-extern void test_status_worktree__initialize(void);
-extern void test_status_worktree__cleanup(void);
-extern void test_status_worktree__whole_repository(void);
-extern void test_status_worktree__empty_repository(void);
-extern void test_network_remotes__initialize(void);
-extern void test_network_remotes__cleanup(void);
-extern void test_network_remotes__parsing(void);
-extern void test_network_remotes__refspec_parsing(void);
-extern void test_network_remotes__fnmatch(void);
-extern void test_network_remotes__transform(void);
+extern void test_config_stress__cleanup(void);
+extern void test_config_stress__dont_break_on_invalid_input(void);
+extern void test_config_stress__initialize(void);
 extern void test_core_dirent__dont_traverse_dot(void);
-extern void test_core_dirent__traverse_subfolder(void);
-extern void test_core_dirent__traverse_slash_terminated_folder(void);
 extern void test_core_dirent__dont_traverse_empty_folders(void);
+extern void test_core_dirent__traverse_slash_terminated_folder(void);
+extern void test_core_dirent__traverse_subfolder(void);
 extern void test_core_dirent__traverse_weird_filenames(void);
 extern void test_core_filebuf__0(void);
 extern void test_core_filebuf__1(void);
@@ -83,9 +75,9 @@ extern void test_core_path__1(void);
 extern void test_core_path__2(void);
 extern void test_core_path__5(void);
 extern void test_core_path__6(void);
-extern void test_core_rmdir__initialize(void);
 extern void test_core_rmdir__delete_recursive(void);
 extern void test_core_rmdir__fail_to_delete_non_empty_dir(void);
+extern void test_core_rmdir__initialize(void);
 extern void test_core_string__0(void);
 extern void test_core_string__1(void);
 extern void test_core_strtol__int32(void);
@@ -93,40 +85,51 @@ extern void test_core_strtol__int64(void);
 extern void test_core_vector__0(void);
 extern void test_core_vector__1(void);
 extern void test_core_vector__2(void);
-extern void test_object_tree_frompath__initialize(void);
-extern void test_object_tree_frompath__cleanup(void);
-extern void test_object_tree_frompath__retrieve_tree_from_path_to_treeentry(void);
-extern void test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment(void);
-extern void test_object_tree_frompath__fail_when_processing_an_invalid_path(void);
-extern void test_object_raw_chars__find_invalid_chars_in_oid(void);
+extern void test_network_remotes__cleanup(void);
+extern void test_network_remotes__fnmatch(void);
+extern void test_network_remotes__initialize(void);
+extern void test_network_remotes__parsing(void);
+extern void test_network_remotes__refspec_parsing(void);
+extern void test_network_remotes__transform(void);
 extern void test_object_raw_chars__build_valid_oid_from_raw_bytes(void);
+extern void test_object_raw_chars__find_invalid_chars_in_oid(void);
+extern void test_object_raw_compare__compare_allocfmt_oids(void);
+extern void test_object_raw_compare__compare_fmt_oids(void);
+extern void test_object_raw_compare__compare_pathfmt_oids(void);
 extern void test_object_raw_compare__succeed_on_copy_oid(void);
-extern void test_object_raw_compare__succeed_on_oid_comparison_lesser(void);
 extern void test_object_raw_compare__succeed_on_oid_comparison_equal(void);
 extern void test_object_raw_compare__succeed_on_oid_comparison_greater(void);
-extern void test_object_raw_compare__compare_fmt_oids(void);
-extern void test_object_raw_compare__compare_allocfmt_oids(void);
-extern void test_object_raw_compare__compare_pathfmt_oids(void);
+extern void test_object_raw_compare__succeed_on_oid_comparison_lesser(void);
 extern void test_object_raw_convert__succeed_on_oid_to_string_conversion(void);
 extern void test_object_raw_convert__succeed_on_oid_to_string_conversion_big(void);
 extern void test_object_raw_fromstr__fail_on_invalid_oid_string(void);
 extern void test_object_raw_fromstr__succeed_on_valid_oid_string(void);
-extern void test_object_raw_hash__hash_by_blocks(void);
 extern void test_object_raw_hash__hash_buffer_in_single_call(void);
-extern void test_object_raw_hash__hash_vector(void);
-extern void test_object_raw_hash__hash_junk_data(void);
+extern void test_object_raw_hash__hash_by_blocks(void);
 extern void test_object_raw_hash__hash_commit_object(void);
-extern void test_object_raw_hash__hash_tree_object(void);
-extern void test_object_raw_hash__hash_tag_object(void);
-extern void test_object_raw_hash__hash_zero_length_object(void);
-extern void test_object_raw_hash__hash_one_byte_object(void);
-extern void test_object_raw_hash__hash_two_byte_object(void);
+extern void test_object_raw_hash__hash_junk_data(void);
 extern void test_object_raw_hash__hash_multi_byte_object(void);
+extern void test_object_raw_hash__hash_one_byte_object(void);
+extern void test_object_raw_hash__hash_tag_object(void);
+extern void test_object_raw_hash__hash_tree_object(void);
+extern void test_object_raw_hash__hash_two_byte_object(void);
+extern void test_object_raw_hash__hash_vector(void);
+extern void test_object_raw_hash__hash_zero_length_object(void);
 extern void test_object_raw_short__oid_shortener_no_duplicates(void);
 extern void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void);
 extern void test_object_raw_size__validate_oid_size(void);
-extern void test_object_raw_type2string__convert_type_to_string(void);
-extern void test_object_raw_type2string__convert_string_to_type(void);
 extern void test_object_raw_type2string__check_type_is_loose(void);
+extern void test_object_raw_type2string__convert_string_to_type(void);
+extern void test_object_raw_type2string__convert_type_to_string(void);
+extern void test_object_tree_frompath__cleanup(void);
+extern void test_object_tree_frompath__fail_when_processing_an_invalid_path(void);
+extern void test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment(void);
+extern void test_object_tree_frompath__initialize(void);
+extern void test_object_tree_frompath__retrieve_tree_from_path_to_treeentry(void);
+extern void test_status_single__hash_single_file(void);
+extern void test_status_worktree__cleanup(void);
+extern void test_status_worktree__empty_repository(void);
+extern void test_status_worktree__initialize(void);
+extern void test_status_worktree__whole_repository(void);
 
 #endif
