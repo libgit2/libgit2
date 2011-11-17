@@ -663,66 +663,67 @@ static const struct clay_func _all_callbacks[] = {
     {"hash_single_file", &test_status_single__hash_single_file, 0},
 	{"whole_repository", &test_status_worktree__whole_repository, 1},
 	{"empty_repository", &test_status_worktree__empty_repository, 1},
-	{"parsing", &test_network_remotes__parsing, 2},
-	{"refspec_parsing", &test_network_remotes__refspec_parsing, 2},
-	{"fnmatch", &test_network_remotes__fnmatch, 2},
-	{"transform", &test_network_remotes__transform, 2},
-	{"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 3},
-	{"traverse_subfolder", &test_core_dirent__traverse_subfolder, 3},
-	{"traverse_slash_terminated_folder", &test_core_dirent__traverse_slash_terminated_folder, 3},
-	{"dont_traverse_empty_folders", &test_core_dirent__dont_traverse_empty_folders, 3},
-	{"traverse_weird_filenames", &test_core_dirent__traverse_weird_filenames, 3},
-	{"0", &test_core_filebuf__0, 4},
-	{"1", &test_core_filebuf__1, 4},
-	{"2", &test_core_filebuf__2, 4},
-	{"streq", &test_core_oid__streq, 5},
-	{"0", &test_core_path__0, 6},
-	{"1", &test_core_path__1, 6},
-	{"2", &test_core_path__2, 6},
-	{"5", &test_core_path__5, 6},
-	{"6", &test_core_path__6, 6},
-	{"delete_recursive", &test_core_rmdir__delete_recursive, 7},
-	{"fail_to_delete_non_empty_dir", &test_core_rmdir__fail_to_delete_non_empty_dir, 7},
-	{"0", &test_core_string__0, 8},
-	{"1", &test_core_string__1, 8},
-	{"int32", &test_core_strtol__int32, 9},
-	{"int64", &test_core_strtol__int64, 9},
-	{"0", &test_core_vector__0, 10},
-	{"1", &test_core_vector__1, 10},
-	{"2", &test_core_vector__2, 10},
-	{"retrieve_tree_from_path_to_treeentry", &test_object_tree_frompath__retrieve_tree_from_path_to_treeentry, 11},
-	{"fail_when_processing_an_unknown_tree_segment", &test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment, 11},
-	{"fail_when_processing_an_invalid_path", &test_object_tree_frompath__fail_when_processing_an_invalid_path, 11},
-	{"find_invalid_chars_in_oid", &test_object_raw_chars__find_invalid_chars_in_oid, 12},
-	{"build_valid_oid_from_raw_bytes", &test_object_raw_chars__build_valid_oid_from_raw_bytes, 12},
-	{"succeed_on_copy_oid", &test_object_raw_compare__succeed_on_copy_oid, 13},
-	{"succeed_on_oid_comparison_lesser", &test_object_raw_compare__succeed_on_oid_comparison_lesser, 13},
-	{"succeed_on_oid_comparison_equal", &test_object_raw_compare__succeed_on_oid_comparison_equal, 13},
-	{"succeed_on_oid_comparison_greater", &test_object_raw_compare__succeed_on_oid_comparison_greater, 13},
-	{"compare_fmt_oids", &test_object_raw_compare__compare_fmt_oids, 13},
-	{"compare_allocfmt_oids", &test_object_raw_compare__compare_allocfmt_oids, 13},
-	{"compare_pathfmt_oids", &test_object_raw_compare__compare_pathfmt_oids, 13},
-	{"succeed_on_oid_to_string_conversion", &test_object_raw_convert__succeed_on_oid_to_string_conversion, 14},
-	{"succeed_on_oid_to_string_conversion_big", &test_object_raw_convert__succeed_on_oid_to_string_conversion_big, 14},
-	{"fail_on_invalid_oid_string", &test_object_raw_fromstr__fail_on_invalid_oid_string, 15},
-	{"succeed_on_valid_oid_string", &test_object_raw_fromstr__succeed_on_valid_oid_string, 15},
-	{"hash_by_blocks", &test_object_raw_hash__hash_by_blocks, 16},
-	{"hash_buffer_in_single_call", &test_object_raw_hash__hash_buffer_in_single_call, 16},
-	{"hash_vector", &test_object_raw_hash__hash_vector, 16},
-	{"hash_junk_data", &test_object_raw_hash__hash_junk_data, 16},
-	{"hash_commit_object", &test_object_raw_hash__hash_commit_object, 16},
-	{"hash_tree_object", &test_object_raw_hash__hash_tree_object, 16},
-	{"hash_tag_object", &test_object_raw_hash__hash_tag_object, 16},
-	{"hash_zero_length_object", &test_object_raw_hash__hash_zero_length_object, 16},
-	{"hash_one_byte_object", &test_object_raw_hash__hash_one_byte_object, 16},
-	{"hash_two_byte_object", &test_object_raw_hash__hash_two_byte_object, 16},
-	{"hash_multi_byte_object", &test_object_raw_hash__hash_multi_byte_object, 16},
-	{"oid_shortener_no_duplicates", &test_object_raw_short__oid_shortener_no_duplicates, 17},
-	{"oid_shortener_stresstest_git_oid_shorten", &test_object_raw_short__oid_shortener_stresstest_git_oid_shorten, 17},
-	{"validate_oid_size", &test_object_raw_size__validate_oid_size, 18},
-	{"convert_type_to_string", &test_object_raw_type2string__convert_type_to_string, 19},
-	{"convert_string_to_type", &test_object_raw_type2string__convert_string_to_type, 19},
-	{"check_type_is_loose", &test_object_raw_type2string__check_type_is_loose, 19}
+	{"dont_break_on_invalid_input", &test_config_stress__dont_break_on_invalid_input, 2},
+	{"parsing", &test_network_remotes__parsing, 3},
+	{"refspec_parsing", &test_network_remotes__refspec_parsing, 3},
+	{"fnmatch", &test_network_remotes__fnmatch, 3},
+	{"transform", &test_network_remotes__transform, 3},
+	{"dont_traverse_dot", &test_core_dirent__dont_traverse_dot, 4},
+	{"traverse_subfolder", &test_core_dirent__traverse_subfolder, 4},
+	{"traverse_slash_terminated_folder", &test_core_dirent__traverse_slash_terminated_folder, 4},
+	{"dont_traverse_empty_folders", &test_core_dirent__dont_traverse_empty_folders, 4},
+	{"traverse_weird_filenames", &test_core_dirent__traverse_weird_filenames, 4},
+	{"0", &test_core_filebuf__0, 5},
+	{"1", &test_core_filebuf__1, 5},
+	{"2", &test_core_filebuf__2, 5},
+	{"streq", &test_core_oid__streq, 6},
+	{"0", &test_core_path__0, 7},
+	{"1", &test_core_path__1, 7},
+	{"2", &test_core_path__2, 7},
+	{"5", &test_core_path__5, 7},
+	{"6", &test_core_path__6, 7},
+	{"delete_recursive", &test_core_rmdir__delete_recursive, 8},
+	{"fail_to_delete_non_empty_dir", &test_core_rmdir__fail_to_delete_non_empty_dir, 8},
+	{"0", &test_core_string__0, 9},
+	{"1", &test_core_string__1, 9},
+	{"int32", &test_core_strtol__int32, 10},
+	{"int64", &test_core_strtol__int64, 10},
+	{"0", &test_core_vector__0, 11},
+	{"1", &test_core_vector__1, 11},
+	{"2", &test_core_vector__2, 11},
+	{"retrieve_tree_from_path_to_treeentry", &test_object_tree_frompath__retrieve_tree_from_path_to_treeentry, 12},
+	{"fail_when_processing_an_unknown_tree_segment", &test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment, 12},
+	{"fail_when_processing_an_invalid_path", &test_object_tree_frompath__fail_when_processing_an_invalid_path, 12},
+	{"find_invalid_chars_in_oid", &test_object_raw_chars__find_invalid_chars_in_oid, 13},
+	{"build_valid_oid_from_raw_bytes", &test_object_raw_chars__build_valid_oid_from_raw_bytes, 13},
+	{"succeed_on_copy_oid", &test_object_raw_compare__succeed_on_copy_oid, 14},
+	{"succeed_on_oid_comparison_lesser", &test_object_raw_compare__succeed_on_oid_comparison_lesser, 14},
+	{"succeed_on_oid_comparison_equal", &test_object_raw_compare__succeed_on_oid_comparison_equal, 14},
+	{"succeed_on_oid_comparison_greater", &test_object_raw_compare__succeed_on_oid_comparison_greater, 14},
+	{"compare_fmt_oids", &test_object_raw_compare__compare_fmt_oids, 14},
+	{"compare_allocfmt_oids", &test_object_raw_compare__compare_allocfmt_oids, 14},
+	{"compare_pathfmt_oids", &test_object_raw_compare__compare_pathfmt_oids, 14},
+	{"succeed_on_oid_to_string_conversion", &test_object_raw_convert__succeed_on_oid_to_string_conversion, 15},
+	{"succeed_on_oid_to_string_conversion_big", &test_object_raw_convert__succeed_on_oid_to_string_conversion_big, 15},
+	{"fail_on_invalid_oid_string", &test_object_raw_fromstr__fail_on_invalid_oid_string, 16},
+	{"succeed_on_valid_oid_string", &test_object_raw_fromstr__succeed_on_valid_oid_string, 16},
+	{"hash_by_blocks", &test_object_raw_hash__hash_by_blocks, 17},
+	{"hash_buffer_in_single_call", &test_object_raw_hash__hash_buffer_in_single_call, 17},
+	{"hash_vector", &test_object_raw_hash__hash_vector, 17},
+	{"hash_junk_data", &test_object_raw_hash__hash_junk_data, 17},
+	{"hash_commit_object", &test_object_raw_hash__hash_commit_object, 17},
+	{"hash_tree_object", &test_object_raw_hash__hash_tree_object, 17},
+	{"hash_tag_object", &test_object_raw_hash__hash_tag_object, 17},
+	{"hash_zero_length_object", &test_object_raw_hash__hash_zero_length_object, 17},
+	{"hash_one_byte_object", &test_object_raw_hash__hash_one_byte_object, 17},
+	{"hash_two_byte_object", &test_object_raw_hash__hash_two_byte_object, 17},
+	{"hash_multi_byte_object", &test_object_raw_hash__hash_multi_byte_object, 17},
+	{"oid_shortener_no_duplicates", &test_object_raw_short__oid_shortener_no_duplicates, 18},
+	{"oid_shortener_stresstest_git_oid_shorten", &test_object_raw_short__oid_shortener_stresstest_git_oid_shorten, 18},
+	{"validate_oid_size", &test_object_raw_size__validate_oid_size, 19},
+	{"convert_type_to_string", &test_object_raw_type2string__convert_type_to_string, 20},
+	{"convert_string_to_type", &test_object_raw_type2string__convert_string_to_type, 20},
+	{"check_type_is_loose", &test_object_raw_type2string__check_type_is_loose, 20}
 };
 
 static const struct clay_suite _all_suites[] = {
@@ -739,122 +740,128 @@ static const struct clay_suite _all_suites[] = {
         &_all_callbacks[1], 2
     },
 	{
+        "config::stress",
+        {"initialize", &test_config_stress__initialize, 2},
+        {"cleanup", &test_config_stress__cleanup, 2},
+        &_all_callbacks[3], 1
+    },
+	{
         "network::remotes",
-        {"initialize", &test_network_remotes__initialize, 2},
-        {"cleanup", &test_network_remotes__cleanup, 2},
-        &_all_callbacks[3], 4
+        {"initialize", &test_network_remotes__initialize, 3},
+        {"cleanup", &test_network_remotes__cleanup, 3},
+        &_all_callbacks[4], 4
     },
 	{
         "core::dirent",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[7], 5
+        &_all_callbacks[8], 5
     },
 	{
         "core::filebuf",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[12], 3
+        &_all_callbacks[13], 3
     },
 	{
         "core::oid",
-        {"initialize", &test_core_oid__initialize, 5},
+        {"initialize", &test_core_oid__initialize, 6},
         {NULL, NULL, 0},
-        &_all_callbacks[15], 1
+        &_all_callbacks[16], 1
     },
 	{
         "core::path",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[16], 5
+        &_all_callbacks[17], 5
     },
 	{
         "core::rmdir",
-        {"initialize", &test_core_rmdir__initialize, 7},
+        {"initialize", &test_core_rmdir__initialize, 8},
         {NULL, NULL, 0},
-        &_all_callbacks[21], 2
+        &_all_callbacks[22], 2
     },
 	{
         "core::string",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[23], 2
+        &_all_callbacks[24], 2
     },
 	{
         "core::strtol",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[25], 2
+        &_all_callbacks[26], 2
     },
 	{
         "core::vector",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[27], 3
+        &_all_callbacks[28], 3
     },
 	{
         "object::tree::frompath",
-        {"initialize", &test_object_tree_frompath__initialize, 11},
-        {"cleanup", &test_object_tree_frompath__cleanup, 11},
-        &_all_callbacks[30], 3
+        {"initialize", &test_object_tree_frompath__initialize, 12},
+        {"cleanup", &test_object_tree_frompath__cleanup, 12},
+        &_all_callbacks[31], 3
     },
 	{
         "object::raw::chars",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[33], 2
+        &_all_callbacks[34], 2
     },
 	{
         "object::raw::compare",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[35], 7
+        &_all_callbacks[36], 7
     },
 	{
         "object::raw::convert",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[42], 2
+        &_all_callbacks[43], 2
     },
 	{
         "object::raw::fromstr",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[44], 2
+        &_all_callbacks[45], 2
     },
 	{
         "object::raw::hash",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[46], 11
+        &_all_callbacks[47], 11
     },
 	{
         "object::raw::short",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[57], 2
+        &_all_callbacks[58], 2
     },
 	{
         "object::raw::size",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[59], 1
+        &_all_callbacks[60], 1
     },
 	{
         "object::raw::type2string",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[60], 3
+        &_all_callbacks[61], 3
     }
 };
 
-static const char _suites_str[] = "status::single, status::worktree, network::remotes, core::dirent, core::filebuf, core::oid, core::path, core::rmdir, core::string, core::strtol, core::vector, object::tree::frompath, object::raw::chars, object::raw::compare, object::raw::convert, object::raw::fromstr, object::raw::hash, object::raw::short, object::raw::size, object::raw::type2string";
+static const char _suites_str[] = "status::single, status::worktree, config::stress, network::remotes, core::dirent, core::filebuf, core::oid, core::path, core::rmdir, core::string, core::strtol, core::vector, object::tree::frompath, object::raw::chars, object::raw::compare, object::raw::convert, object::raw::fromstr, object::raw::hash, object::raw::short, object::raw::size, object::raw::type2string";
 
 int _MAIN_CC main(int argc, char *argv[])
 {
     return clay_test(
         argc, argv, _suites_str,
-        _all_callbacks, 63,
-        _all_suites, 20
+        _all_callbacks, 64,
+        _all_suites, 21
     );
 }
