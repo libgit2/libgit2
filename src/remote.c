@@ -206,13 +206,13 @@ int git_remote_ls(git_remote *remote, git_headarray *refs)
 	return remote->transport->ls(remote->transport, refs);
 }
 
-int git_remote_negotiate(git_remote *remote)
-{
-	return git_fetch_negotiate(remote);
-}
-
 int git_remote_download(char **filename, git_remote *remote)
 {
+	int error;
+
+	if ((error = git_fetch_negotiate(remote)) < 0)
+		return git__rethrow(error, "Error negotiating");
+
 	return git_fetch_download_pack(filename, remote);
 }
 

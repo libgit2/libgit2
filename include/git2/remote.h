@@ -107,20 +107,13 @@ GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, int direction);
 GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
 
 /**
- * Negotiate what data needs to be exchanged to synchroize the remtoe
- * and local references
- *
- * @param remote the remote you want to negotiate with
- */
-GIT_EXTERN(int) git_remote_negotiate(git_remote *remote);
-
-/**
  * Download the packfile
  *
- * The packfile is downloaded with a temporary filename, as it's final
- * name is not known yet. If there was no packfile needed (all the
- * objects were available locally), filename will be NULL and the
- * function will return success.
+ * Negotiate what objects should be downloaded and download the
+ * packfile with those objects. The packfile is downloaded with a
+ * temporary filename, as it's final name is not known yet. If there
+ * was no packfile needed (all the objects were available locally),
+ * filename will be NULL and the function will return success.
  *
  * @param remote the remote to download from
  * @param filename where to store the temproray filename
