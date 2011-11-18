@@ -146,6 +146,9 @@ static const struct clay_func _clay_cb_core_vector[] = {
 	{"1", &test_core_vector__1},
 	{"2", &test_core_vector__2}
 };
+static const struct clay_func _clay_cb_index_rename[] = {
+    {"single_file", &test_index_rename__single_file}
+};
 static const struct clay_func _clay_cb_network_remotes[] = {
     {"fnmatch", &test_network_remotes__fnmatch},
 	{"parsing", &test_network_remotes__parsing},
@@ -267,6 +270,12 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_core_vector, 3
     },
 	{
+        "index::rename",
+        {NULL, NULL},
+        {NULL, NULL},
+        _clay_cb_index_rename, 1
+    },
+	{
         "network::remotes",
         {"initialize", &test_network_remotes__initialize},
         {"cleanup", &test_network_remotes__cleanup},
@@ -340,8 +349,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 21;
-static size_t _clay_callback_count = 64;
+static size_t _clay_suite_count = 22;
+static size_t _clay_callback_count = 65;
 
 /* Core test functions */
 static void

@@ -85,6 +85,7 @@ extern void test_core_strtol__int64(void);
 extern void test_core_vector__0(void);
 extern void test_core_vector__1(void);
 extern void test_core_vector__2(void);
+extern void test_index_rename__single_file(void);
 extern void test_network_remotes__cleanup(void);
 extern void test_network_remotes__fnmatch(void);
 extern void test_network_remotes__initialize(void);
