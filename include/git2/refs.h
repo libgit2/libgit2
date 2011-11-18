@@ -243,6 +243,7 @@ GIT_EXTERN(int) git_reference_packall(git_repository *repo);
 GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
 
 
+typedef int (*git_reference_cb)(const char *, void *);
 /**
  * Perform an operation on each reference in the repository
  *
@@ -262,7 +263,7 @@ GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo,
  * @param payload Additional data to pass to the callback
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
+GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, git_reference_cb callback, void *payload);
 
 /**
  * Check if a reference has been loaded from a packfile

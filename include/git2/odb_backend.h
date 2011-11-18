@@ -20,16 +20,54 @@
  */
 GIT_BEGIN_DECL
 
+typedef int (* git_odb_backend_read_cb)(
+	void **, size_t *, git_otype *,
+	struct git_odb_backend *,
+	const git_oid *);
+
+typedef int (* git_odb_backend_read_prefix_cb)(
+	git_oid *,
+	void **, size_t *, git_otype *,
+	struct git_odb_backend *,
+	const git_oid *,
+	unsigned int);
+
+typedef int (* git_odb_backend_read_header_cb)(
+	size_t *, git_otype *,
+	struct git_odb_backend *,
+	const git_oid *);
+
+typedef int (* git_odb_backend_write_cb)(
+	git_oid *,
+	struct git_odb_backend *,
+	const void *,
+	size_t,
+	git_otype);
+
+typedef int (* git_odb_backend_writestream_cb)(
+	struct git_odb_stream **,
+	struct git_odb_backend *,
+	size_t,
+	git_otype);
+
+typedef int (* git_odb_backend_readstream_cb)(
+	struct git_odb_stream **,
+	struct git_odb_backend *,
+	const git_oid *);
+
+typedef int (* git_odb_backend_exists_cb)(
+	struct git_odb_backend *,
+	const git_oid *);
+
+typedef void (* git_odb_backend_free_cb)(struct git_odb_backend *);
+
 struct git_odb_stream;
 
 /** An instance for a custom backend */
 struct git_odb_backend {
 	git_odb *odb;
 
-	int (* read)(
-			void **, size_t *, git_otype *,
-			struct git_odb_backend *,
-			const git_oid *);
+	git_odb_backend_read_cb read;
 
 	/* To find a unique object given a prefix
 	 * of its oid.
@@ -37,52 +75,35 @@ struct git_odb_backend {
 	 * remaining (GIT_OID_HEXSZ - len)*4 bits
 	 * are 0s.
 	 */
-	int (* read_prefix)(
-			git_oid *,
-			void **, size_t *, git_otype *,
-			struct git_odb_backend *,
-			const git_oid *,
-			unsigned int);
+	git_odb_backend_read_prefix_cb read_prefix;
 
-	int (* read_header)(
-			size_t *, git_otype *,
-			struct git_odb_backend *,
-			const git_oid *);
+	git_odb_backend_read_header_cb read_header;
 
-	int (* write)(
-			git_oid *,
-			struct git_odb_backend *,
-			const void *,
-			size_t,
-			git_otype);
+	git_odb_backend_write_cb write;
 
-	int (* writestream)(
-			struct git_odb_stream **,
-			struct git_odb_backend *,
-			size_t,
-			git_otype);
+	git_odb_backend_writestream_cb writestream;
 
-	int (* readstream)(
-			struct git_odb_stream **,
-			struct git_odb_backend *,
-			const git_oid *);
+	git_odb_backend_readstream_cb readstream;
 
-	int (* exists)(
-			struct git_odb_backend *,
-			const git_oid *);
+	git_odb_backend_exists_cb exists;
 
-	void (* free)(struct git_odb_backend *);
+	git_odb_backend_free_cb free;
 };
+
+typedef int (*git_odb_stream_read_cb)(struct git_odb_stream *stream, char *buffer, size_t len);
+typedef int (*git_odb_stream_write_cb)(struct git_odb_stream *stream, const char *buffer, size_t len);
+typedef int (*git_odb_stream_finalize_write_cb)(git_oid *oid_p, struct git_odb_stream *stream);
+typedef void (*git_odb_stream_free_cb)(struct git_odb_stream *stream);
 
 /** A stream to read/write from a backend */
 struct git_odb_stream {
 	struct git_odb_backend *backend;
 	int mode;
 
-	int (*read)(struct git_odb_stream *stream, char *buffer, size_t len);
-	int (*write)(struct git_odb_stream *stream, const char *buffer, size_t len);
-	int (*finalize_write)(git_oid *oid_p, struct git_odb_stream *stream);
-	void (*free)(struct git_odb_stream *stream);
+	git_odb_stream_read_cb read;
+	git_odb_stream_write_cb write;
+	git_odb_stream_finalize_write_cb finalize_write;
+	git_odb_stream_free_cb free;
 };
 
 /** Streaming mode */

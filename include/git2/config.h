@@ -19,6 +19,12 @@
  */
 GIT_BEGIN_DECL
 
+typedef int (*git_config_file_open_cb)(struct git_config_file *);
+typedef int (*git_config_file_get_cb)(struct git_config_file *, const char *key, const char **value);
+typedef int (*git_config_file_set_cb)(struct git_config_file *, const char *key, const char *value);
+typedef int (*git_config_file_foreach_cb)(struct git_config_file *, int (*fn)(const char *, const char *, void *), void *data);
+typedef void (*git_config_file_free_cb)(struct git_config_file *);
+
 /**
  * Generic backend that implements the interface to
  * access a configuration file
@@ -27,11 +33,11 @@ struct git_config_file {
 	struct git_config *cfg;
 
 	/* Open means open the file/database and parse if necessary */
-	int (*open)(struct git_config_file *);
-	int (*get)(struct git_config_file *, const char *key, const char **value);
-	int (*set)(struct git_config_file *, const char *key, const char *value);
-	int (*foreach)(struct git_config_file *, int (*fn)(const char *, const char *, void *), void *data);
-	void (*free)(struct git_config_file *);
+	git_config_file_open_cb open;
+	git_config_file_get_cb get;
+	git_config_file_set_cb set;
+	git_config_file_foreach_cb foreach;
+	git_config_file_free_cb free;
 };
 
 /**
@@ -255,6 +261,7 @@ GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const c
  */
 GIT_EXTERN(int) git_config_delete(git_config *cfg, const char *name);
 
+typedef int (*git_config_cb)(const char *var_name, const char *value, void *payload);
 /**
  * Perform an operation on each config variable.
  *
@@ -270,7 +277,7 @@ GIT_EXTERN(int) git_config_delete(git_config *cfg, const char *name);
  */
 GIT_EXTERN(int) git_config_foreach(
 	git_config *cfg,
-	int (*callback)(const char *var_name, const char *value, void *payload),
+	git_config_cb callback,
 	void *payload);
 
 /** @} */

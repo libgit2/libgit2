@@ -241,6 +241,7 @@ GIT_EXTERN(int) git_treebuilder_insert(git_tree_entry **entry_out, git_treebuild
  */
 GIT_EXTERN(int) git_treebuilder_remove(git_treebuilder *bld, const char *filename);
 
+typedef int (*git_filter_cb)(const git_tree_entry *, void *);
 /**
  * Filter the entries in the tree
  *
@@ -252,7 +253,7 @@ GIT_EXTERN(int) git_treebuilder_remove(git_treebuilder *bld, const char *filenam
  * @param bld Tree builder
  * @param filter Callback to filter entries
  */
-GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_entry *, void *), void *payload);
+GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, git_filter_cb filter, void *payload);
 
 /**
  * Write the contents of the tree builder as a tree object

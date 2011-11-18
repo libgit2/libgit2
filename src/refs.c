@@ -1465,7 +1465,7 @@ int git_reference_packall(git_repository *repo)
 int git_reference_foreach(
 	git_repository *repo,
 	unsigned int list_flags,
-	int (*callback)(const char *, void *),
+	git_reference_cb callback,
 	void *payload)
 {
 	int error;
