@@ -7,8 +7,8 @@
 #ifndef _INCLUDE_git_indexer_h__
 #define _INCLUDE_git_indexer_h__
 
-#include "git2/common.h"
-#include "git2/oid.h"
+#include "common.h"
+#include "oid.h"
 
 GIT_BEGIN_DECL
 

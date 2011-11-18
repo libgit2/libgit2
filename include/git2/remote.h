@@ -7,9 +7,9 @@
 #ifndef INCLUDE_git_remote_h__
 #define INCLUDE_git_remote_h__
 
-#include "git2/common.h"
-#include "git2/repository.h"
-#include "git2/refspec.h"
+#include "common.h"
+#include "repository.h"
+#include "refspec.h"
 /**
  * @file git2/remote.h
  * @brief Git remote management functions

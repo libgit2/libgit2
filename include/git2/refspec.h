@@ -7,7 +7,7 @@
 #ifndef INCLUDE_git_refspec_h__
 #define INCLUDE_git_refspec_h__
 
-#include "git2/types.h"
+#include "types.h"
 
 /**
  * @file git2/refspec.h
