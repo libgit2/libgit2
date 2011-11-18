@@ -28,16 +28,18 @@ GIT_BEGIN_DECL
  */
 
 /**
- * Create a new unnamed remote
+ * Create a remote in memory
  *
- * Useful when you don't want to store the remote
+ * Create a remote with the default refspecs in memory. You can use
+ * this when you have a URL instead of a remote's name.
  *
  * @param out pointer to the new remote object
  * @param repo the associtated repository
  * @param url the remote repository's URL
+ * @param name the remote's name
  * @return GIT_SUCCESS or an error code
  */
-int git_remote_new(git_remote **out, git_repository *repo, const char *url);
+int git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name);
 
 /**
  * Get the information for a particular remote

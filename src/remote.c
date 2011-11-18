@@ -56,9 +56,12 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	return refspec_parse(refspec, val);
 }
 
-int git_remote_new(git_remote **out, git_repository *repo, const char *url)
+int git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name)
 {
 	git_remote *remote;
+
+	if (url == NULL)
+		return git__throw(GIT_EINVALIDARGS, "No URL was given");
 
 	remote = git__malloc(sizeof(git_remote));
 	if (remote == NULL)
@@ -66,10 +69,19 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url)
 
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->repo = repo;
+
 	remote->url = git__strdup(url);
 	if (remote->url == NULL) {
 		git__free(remote);
 		return GIT_ENOMEM;
+	}
+
+	if (name != NULL) {
+		remote->name = git__strdup(name);
+		if (remote->name == NULL) {
+			git__free(remote);
+			return GIT_ENOMEM;
+		}
 	}
 
 	*out = remote;
