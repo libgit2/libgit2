@@ -11,7 +11,7 @@ https://github.com/tanoku/clay
 
 * Mix the tests:
 
-        ./clay .
+        ./clay -vtap .
 
 * Make sure you actually build the tests by setting:
 
