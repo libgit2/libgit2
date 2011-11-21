@@ -10,6 +10,7 @@
 #include "repository.h"
 #include "fileops.h"
 #include "pack.h"
+#include "reflog.h"
 
 #include <git2/tag.h>
 #include <git2/object.h>
@@ -1319,28 +1320,6 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	}
 
 	/*
-	 * Crude hack: delete any logs till we support proper reflogs.
-	 * Otherwise git.git will possibly fail and leave a mess. git.git
-	 * writes reflogs by default in any repo with a working directory:
-	 *
-	 * "We only enable reflogs in repositories that have a working directory
-	 * associated with them, as shared/bare repositories do not have
-	 * an easy means to prune away old log entries, or may fail logging
-	 * entirely if the user's gecos information is not valid during a push.
-	 * This heuristic was suggested on the mailing list by Junio."
-	 *
-	 * 	Shawn O. Pearce - 0bee59186976b1d9e6b2dd77332480c9480131d5
-	 *
-	 * TODO
-	 *
-	 */
-	git_path_join_n(aux_path, 3, ref->owner->path_repository, "logs", ref->name);
-	if (git_futils_isfile(aux_path) == GIT_SUCCESS) {
-		if ((error = p_unlink(aux_path)) < GIT_SUCCESS)
-			goto rollback;
-	}
-
-	/*
 	 * Finally we can create the new reference.
 	 */
 	if (ref->flags & GIT_REF_SYMBOLIC) {
@@ -1370,6 +1349,14 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 	}
+
+	/*
+	 * Rename the reflog file.
+	 */
+	git_path_join_n(aux_path, 3, ref->owner->path_repository,
+			GIT_REFLOG_DIR, ref->name);
+	if (git_futils_exists(aux_path) == GIT_SUCCESS)
+		error = git_reflog_rename(ref, new_name);
 
 	/*
 	 * Change the name of the reference given by the user.
