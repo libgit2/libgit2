@@ -267,6 +267,16 @@ int git_remote_update_tips(struct git_remote *remote)
 	return GIT_SUCCESS;
 }
 
+void git_remote_disconnect(git_remote *remote)
+{
+	if (remote->transport != NULL) {
+		if (remote->transport->connected)
+			remote->transport->close(remote->transport);
+
+		remote->transport->free(remote->transport);
+	}
+}
+
 void git_remote_free(git_remote *remote)
 {
 	if (remote == NULL)
@@ -278,11 +288,6 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->push.dst);
 	git__free(remote->url);
 	git__free(remote->name);
-	if (remote->transport != NULL) {
-		if (remote->transport->connected)
-			remote->transport->close(remote->transport);
-
-		remote->transport->free(remote->transport);
-	}
+	git_remote_disconnect(remote);
 	git__free(remote);
 }

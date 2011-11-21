@@ -124,6 +124,16 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
 GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
 
 /**
+ * Disconnect from the remote
+ *
+ * Close the connection to the remote and free the underlying
+ * transport.
+ *
+ * @param remote the remote to disconnect from
+ */
+GIT_EXTERN(void) git_remote_disconnect(git_remote *remote);
+
+/**
  * Free the memory associated with a remote
  *
  * @param remote the remote to free
