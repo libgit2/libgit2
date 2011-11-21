@@ -1352,7 +1352,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	}
 
 	if (error < GIT_SUCCESS)
-		goto cleanup;
+		goto rollback;
 
 	/*
 	 * Check if we have to update HEAD.
@@ -1397,6 +1397,9 @@ rollback:
 	else
 		error = git_reference_create_oid(
 			NULL, ref->owner, ref->name, &ref->target.oid, 0);
+
+	/* The reference is no longer packed */
+	ref->flags &= ~GIT_REF_PACKED;
 
 	return error == GIT_SUCCESS ?
 		git__rethrow(GIT_ERROR, "Failed to rename reference. Did rollback") :
