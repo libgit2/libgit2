@@ -124,6 +124,16 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
 GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
 
 /**
+ * Check whether the remote is connected
+ *
+ * Check whether the remote's underlying transport is connected to the
+ * remote host.
+ *
+ * @return 1 if it's connected, 0 otherwise.
+ */
+GIT_EXTERN(int) git_remote_connected(git_remote *remote);
+
+/**
  * Disconnect from the remote
  *
  * Close the connection to the remote and free the underlying

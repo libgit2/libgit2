@@ -267,6 +267,11 @@ int git_remote_update_tips(struct git_remote *remote)
 	return GIT_SUCCESS;
 }
 
+int git_remote_connected(git_remote *remote)
+{
+	return remote->transport == NULL ? 0 : remote->transport->connected;
+}
+
 void git_remote_disconnect(git_remote *remote)
 {
 	if (remote->transport != NULL) {
