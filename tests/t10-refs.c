@@ -54,7 +54,7 @@ BEGIN_TEST(readtag0, "lookup a loose tag reference")
 	must_pass(git_path_join(&ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object)));
 	must_be_true(strcmp(ref_name_from_tag_name.data, loose_tag_ref_name) == 0);
 
-	git__path_free(&ref_name_from_tag_name);
+	git_path_free(&ref_name_from_tag_name);
 	git_object_close(object);
 	git_repository_free(repo);
 
@@ -265,7 +265,7 @@ BEGIN_TEST(create0, "create a new symbolic reference")
 
 	close_temp_repo(repo2);
 
-	git__path_free(&ref_path);
+	git_path_free(&ref_path);
 	git_reference_free(new_reference);
 	git_reference_free(looked_up_ref);
 	git_reference_free(resolved_ref);
@@ -291,7 +291,7 @@ BEGIN_TEST(create1, "create a deep symbolic reference")
 
 	close_temp_repo(repo);
 
-	git__path_free(&ref_path);
+	git_path_free(&ref_path);
 	git_reference_free(new_reference);
 	git_reference_free(looked_up_ref);
 	git_reference_free(resolved_ref);
@@ -334,7 +334,7 @@ BEGIN_TEST(create2, "create a new OID reference")
 
 	close_temp_repo(repo2);
 
-	git__path_free(&ref_path);
+	git_path_free(&ref_path);
 	git_reference_free(new_reference);
 	git_reference_free(looked_up_ref);
 END_TEST
@@ -486,7 +486,7 @@ BEGIN_TEST(pack0, "create a packfile for an empty folder")
 
 	must_pass(git_reference_packall(repo));
 
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	close_temp_repo(repo);
 END_TEST
 
@@ -524,7 +524,7 @@ BEGIN_TEST(pack1, "create a packfile from all the loose rn a repo")
 
 	close_temp_repo(repo);
 
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	git_reference_free(reference);
 END_TEST
 
@@ -567,7 +567,7 @@ BEGIN_TEST(rename0, "rename a loose reference")
 
 	close_temp_repo(repo);
 
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	git_reference_free(looked_up_ref);
 	git_reference_free(another_looked_up_ref);
 END_TEST
@@ -611,7 +611,7 @@ BEGIN_TEST(rename1, "rename a packed reference (should make it loose)")
 
 	close_temp_repo(repo);
 
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	git_reference_free(looked_up_ref);
 	git_reference_free(another_looked_up_ref);
 END_TEST
@@ -654,7 +654,7 @@ BEGIN_TEST(rename2, "renaming a packed reference does not pack another reference
 
 	close_temp_repo(repo);
 
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	git_reference_free(looked_up_ref);
 	git_reference_free(another_looked_up_ref);
 END_TEST
@@ -887,7 +887,7 @@ BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove
 
 	close_temp_repo(repo);
 
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	git_reference_free(another_looked_up_ref);
 END_TEST
 

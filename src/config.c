@@ -348,7 +348,7 @@ int git_config_find_global(char *global_config_path)
 	if (error == GIT_SUCCESS)
 		strncpy(global_config_path, path.data, GIT_PATH_MAX);
 
-	git__path_free(&path);
+	git_path_free(&path);
 
 	return error;
 }

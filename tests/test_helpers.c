@@ -269,7 +269,7 @@ int copydir_recurs(const char *source_directory_path, const char *destination_di
 
 	error = copy_filesystem_element_recurs(&data, source_buffer);
 
-	git__path_free(&data.dst);
+	git_path_free(&data.dst);
 
 	return error;
 }
@@ -308,7 +308,7 @@ static int remove_placeholders_recurs(void *filename, char *path)
 		error = p_unlink(path);
     }
 
-    git__path_free(&passed_path);
+    git_path_free(&passed_path);
 
 	return error;
 }

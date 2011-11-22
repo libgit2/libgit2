@@ -15,7 +15,7 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 
 	error = git_path_dirname_r(&target_folder, file_path);
 	if (error < GIT_SUCCESS) {
-		git__path_free(&target_folder);
+		git_path_free(&target_folder);
 		return git__throw(GIT_EINVALIDPATH, "Failed to recursively build `%s` tree structure. Unable to parse parent folder name", file_path);
 	}
 
@@ -30,7 +30,7 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 		/* Let error fall through - the callee took care of setting the correct error message. */
 	}
 
-	git__path_free(&target_folder);
+	git_path_free(&target_folder);
 	return error;
 }
 

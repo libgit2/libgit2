@@ -136,7 +136,7 @@ static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *
 	if (error == GIT_SUCCESS)
 		error = git_futils_readbuffer_updated(file_content, path.data, mtime, updated);
 
-	git__path_free(&path);
+	git_path_free(&path);
 
 	return error;
 }
@@ -326,12 +326,12 @@ static int loose_write(git_reference *ref)
 	if (p_stat(ref_path.data, &st) == GIT_SUCCESS)
 		ref->mtime = st.st_mtime;
 
-	git__path_free(&ref_path);
+	git_path_free(&ref_path);
 
 	return git_filebuf_commit(&file, GIT_REFS_FILE_MODE);
 
 unlock:
-	git__path_free(&ref_path);
+	git_path_free(&ref_path);
 	git_filebuf_cleanup(&file);
 	return git__rethrow(error, "Failed to write loose reference");
 }
@@ -601,7 +601,7 @@ static int packed_loadloose(git_repository *repository)
 	assert(repository->references.packfile);
 
 	/* preallocate buffer so direach can write into later */
-	error = git__path_realloc(&refs_path, GIT_PATH_MAX);
+	error = git_path_realloc(&refs_path, GIT_PATH_MAX);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -619,7 +619,7 @@ static int packed_loadloose(git_repository *repository)
 		_dirent_loose_load, repository);
 
 cleanup:
-	git__path_free(&refs_path);
+	git_path_free(&refs_path);
 	return error;
 }
 
@@ -755,7 +755,7 @@ static int packed_remove_loose(git_repository *repo, git_vector *packing_list)
 			error = last_error;
 	}
 
-	git__path_free(&full_path);
+	git_path_free(&full_path);
 
 	return error == GIT_SUCCESS ?
 		GIT_SUCCESS :
@@ -851,7 +851,7 @@ cleanup:
 	else git_filebuf_cleanup(&pack_file);
 
 	git_vector_free(&packing_list);
-	git__path_free(&pack_file_path);
+	git_path_free(&pack_file_path);
 
 	return error == GIT_SUCCESS ?
 		GIT_SUCCESS :
@@ -923,7 +923,7 @@ static int reference_exists(int *exists, git_repository *repo, const char *ref_n
 		*exists = 0;
 	}
 
-	git__path_free(&ref_path);
+	git_path_free(&ref_path);
 
 	return GIT_SUCCESS;
 }
@@ -1017,7 +1017,7 @@ static int reference_delete(git_reference *ref)
 			goto cleanup;
 
 		error = p_unlink(full_path.data);
-		git__path_free(&full_path); /* always can free at this point */
+		git_path_free(&full_path); /* always can free at this point */
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 
@@ -1351,7 +1351,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		max_len += (new_len > ref_len) ? new_len : ref_len;
 		max_len += strlen(ref->owner->path_repository) + 3;
 
-		error = git__path_realloc(&aux_path, max_len);
+		error = git_path_realloc(&aux_path, max_len);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 	}
@@ -1555,7 +1555,7 @@ int git_reference_foreach(
 	data.callback_payload = payload;
 
 	/* preallocate buffer so direach can write into later */
-	error = git__path_realloc(&refs_path, GIT_PATH_MAX);
+	error = git_path_realloc(&refs_path, GIT_PATH_MAX);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -1567,7 +1567,7 @@ int git_reference_foreach(
 							   _dirent_loose_listall, &data);
 
 cleanup:
-	git__path_free(&refs_path);
+	git_path_free(&refs_path);
 	return error;
 }
 

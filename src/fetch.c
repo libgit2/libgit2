@@ -157,7 +157,7 @@ int git_fetch__download_pack(
 
 	error = git_path_join(&path, repo->path_repository, suff);
 	if (error < GIT_SUCCESS) {
-		git__path_free(&path);
+		git_path_free(&path);
 		return error;
 	}
 
@@ -195,7 +195,7 @@ int git_fetch__download_pack(
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
-    git__path_free(&path);
+    git_path_free(&path);
 
 	return error;
 }

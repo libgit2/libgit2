@@ -681,7 +681,7 @@ static int http_download_pack(char **out, git_transport *transport, git_reposito
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
-	git__path_free(&path);
+	git_path_free(&path);
 
 	return error;
 }

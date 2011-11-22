@@ -410,7 +410,7 @@ BEGIN_TEST(singlestatus3, "test retrieving status for a new file in an empty rep
 	must_pass(git_status_file(&status_flags, repo, filename));
 	must_be_true(status_flags == GIT_STATUS_WT_NEW);
 
-	git__path_free(&file_path);
+	git_path_free(&file_path);
 	git_repository_free(repo);
 
 	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);

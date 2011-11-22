@@ -351,17 +351,17 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 
 	error = git_path_join(&alternates_path, objects_dir, GIT_ALTERNATES_FILE);
 	if (error < GIT_SUCCESS) {
-		git__path_free(&alternates_path);
+		git_path_free(&alternates_path);
 		return error;
 	}
 
 	if (git_futils_exists(alternates_path.data) < GIT_SUCCESS) {
-		git__path_free(&alternates_path);
+		git_path_free(&alternates_path);
 		return GIT_SUCCESS;
 	}
 
 	if (git_futils_readbuffer(&alternates_buf, alternates_path.data) < GIT_SUCCESS) {
-		git__path_free(&alternates_path);
+		git_path_free(&alternates_path);
 		return git__throw(GIT_EOSERR, "Failed to add backend. Can't read alternates");
 	}
 
@@ -384,7 +384,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 			break;
 	}
 
-	git__path_free(&alternates_path);
+	git_path_free(&alternates_path);
 	git_futils_freebuffer(&alternates_buf);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to load alternates");

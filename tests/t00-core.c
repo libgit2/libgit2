@@ -111,7 +111,7 @@ BEGIN_TEST(path0, "get the dirname of a path")
 	git_path dir = GIT_PATH_INIT;	\
 	must_be_true(git_path_dirname_r(&dir, A) >= 0);	\
 	must_be_true(strcmp(dir.data, B) == 0);			\
-	git__path_free(&dir);	\
+	git_path_free(&dir);	\
 	must_be_true((dir2 = git_path_dirname(A)) != NULL);	\
 	must_be_true(strcmp(dir2, B) == 0);				\
 	git__free(dir2);								\
@@ -142,7 +142,7 @@ BEGIN_TEST(path1, "get the base name of a path")
     git_path base = GIT_PATH_INIT;	\
 	must_be_true(git_path_basename_r(&base, A) >= 0);	\
 	must_be_true(strcmp(base.data, B) == 0);			\
-	git__path_free(&base);	\
+	git_path_free(&base);	\
 	must_be_true((base2 = git_path_basename(A)) != NULL);	\
 	must_be_true(strcmp(base2, B) == 0);				\
 	git__free(base2);									\
@@ -194,7 +194,7 @@ static int ensure_joinpath(const char *path_a, const char *path_b, const char *e
 	if (error == GIT_SUCCESS &&
 		strcmp(joined_path.data, expected_path) != 0)
 		error = GIT_ERROR;
-	git__path_free(&joined_path);
+	git_path_free(&joined_path);
 	return error;
 }
 
@@ -221,7 +221,7 @@ static int ensure_joinpath_n(const char *path_a, const char *path_b, const char 
 	if (error == GIT_SUCCESS &&
 		strcmp(joined_path.data, expected_path) != 0)
 		error = GIT_ERROR;
-	git__path_free(&joined_path);
+	git_path_free(&joined_path);
 	return error;
 }
 
@@ -537,7 +537,7 @@ static int setup_empty_tmp_dir(void)
 		git_path_join(&path, empty_tmp_dir, "/two") ||
 		p_mkdir(path.data, 0777);
 
-	git__path_free(&path);
+	git_path_free(&path);
 
 	return error ? -1 : 0;
 }
@@ -559,7 +559,7 @@ BEGIN_TEST(rmdir1, "make sure non-empty dir cannot be deleted recusively")
 	must_fail(git_futils_rmdir_r(empty_tmp_dir, 0));
 	must_pass(p_unlink(file.data));
 	must_pass(git_futils_rmdir_r(empty_tmp_dir, 0));
-	git__path_free(&file);
+	git_path_free(&file);
 END_TEST
 
 BEGIN_TEST(strtol0, "parsing out 32 integers from a string")

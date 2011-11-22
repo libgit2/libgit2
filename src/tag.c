@@ -253,7 +253,7 @@ static int git_tag_create__internal(
 
 cleanup:
 	git_reference_free(new_ref);
-	git__path_free(&ref_name);
+	git_path_free(&ref_name);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
 }
@@ -352,7 +352,7 @@ cleanup:
 		git__free(tag.tag_name);
 	if (tag.message)
 		git__free(tag.message);
-	git__path_free(&ref_name);
+	git_path_free(&ref_name);
 
 	if (error < GIT_SUCCESS)
 		git__rethrow(error, "%s", errmsg);
@@ -368,7 +368,7 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 
 	error = retrieve_tag_reference(&tag_ref, &ref_name, repo, tag_name);
 
-	git__path_free(&ref_name);
+	git_path_free(&ref_name);
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to delete tag");

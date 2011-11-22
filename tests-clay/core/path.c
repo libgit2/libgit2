@@ -9,7 +9,7 @@ check_dirname(const char *A, const char *B)
 
 	cl_assert(git_path_dirname_r(&dir, A) >= 0);
 	cl_assert_strequal(B, dir.data);
-	git__path_free(&dir);
+	git_path_free(&dir);
 
 	cl_assert((dir2 = git_path_dirname(A)) != NULL);
 	cl_assert_strequal(B, dir2);
@@ -24,7 +24,7 @@ check_basename(const char *A, const char *B)
 
 	cl_assert(git_path_basename_r(&base, A) >= 0);
 	cl_assert_strequal(B, base.data);
-	git__path_free(&base);
+	git_path_free(&base);
 
 	cl_assert((base2 = git_path_basename(A)) != NULL);
 	cl_assert_strequal(B, base2);
@@ -46,7 +46,7 @@ check_joinpath(const char *path_a, const char *path_b, const char *expected_path
 	git_path joined_path = GIT_PATH_INIT;
 	cl_git_pass(git_path_join(&joined_path, path_a, path_b));
 	cl_assert_strequal(expected_path, joined_path.data);
-	git__path_free(&joined_path);
+	git_path_free(&joined_path);
 }
 
 static void
@@ -60,7 +60,7 @@ check_joinpath_n(
 	git_path joined_path = GIT_PATH_INIT;
 	cl_git_pass(git_path_join_n(&joined_path, 4, path_a, path_b, path_c, path_d));
 	cl_assert_strequal(expected_path, joined_path.data);
-	git__path_free(&joined_path);
+	git_path_free(&joined_path);
 }
 
 static void
@@ -72,11 +72,11 @@ check_path_append(
 {
 	git_path tgt = GIT_PATH_INIT_STR(path_a);
 
-	cl_git_pass(git__path_strcat(&tgt, path_b));
+	cl_git_pass(git_path_strcat(&tgt, path_b));
 	cl_assert_strequal(expected_path, tgt.data);
 	cl_assert(tgt.size == expected_size);
 
-	git__path_free(&tgt);
+	git_path_free(&tgt);
 }
 
 static void
@@ -92,18 +92,18 @@ check_path_append_2(
 {
 	git_path tgt = GIT_PATH_INIT_STR(path_a);
 
-	cl_git_pass(git__path_strcat(&tgt, path_b));
+	cl_git_pass(git_path_strcat(&tgt, path_b));
 	cl_assert_strequal(expected_ab, tgt.data);
-	cl_git_pass(git__path_strcat(&tgt, path_c));
+	cl_git_pass(git_path_strcat(&tgt, path_c));
 	cl_assert_strequal(expected_abc, tgt.data);
-	cl_git_pass(git__path_strcat(&tgt, path_a));
+	cl_git_pass(git_path_strcat(&tgt, path_a));
 	cl_assert_strequal(expected_abca, tgt.data);
-	cl_git_pass(git__path_strcat(&tgt, path_b));
+	cl_git_pass(git_path_strcat(&tgt, path_b));
 	cl_assert_strequal(expected_abcab, tgt.data);
-	cl_git_pass(git__path_strcat(&tgt, path_c));
+	cl_git_pass(git_path_strcat(&tgt, path_c));
 	cl_assert_strequal(expected_abcabc, tgt.data);
 
-	git__path_free(&tgt);
+	git_path_free(&tgt);
 }
 
 static void
@@ -116,11 +116,11 @@ check_path_strncat(
 {
 	git_path tgt = GIT_PATH_INIT_STR(path_a);
 
-	cl_git_pass(git__path_strncat(&tgt, path_b, len));
+	cl_git_pass(git_path_strncat(&tgt, path_b, len));
 	cl_assert_strequal(expected_path, tgt.data);
 	cl_assert(tgt.size == expected_size);
 
-	git__path_free(&tgt);
+	git_path_free(&tgt);
 }
 
 static void
@@ -130,10 +130,10 @@ check_path_as_dir(
 {
 	git_path tgt = GIT_PATH_INIT_STR(path);
 
-	cl_git_pass(git_path_as_dir(&tgt))
+	cl_git_pass(git_path_as_dir(&tgt));
 	cl_assert_strequal(expected, tgt.data);
 
-	git__path_free(&tgt);
+	git_path_free(&tgt);
 }
 
 static void
@@ -331,12 +331,12 @@ void test_core_path__9(void)
 
 	cl_assert_strequal("foo", a.data);
 	cl_assert_strequal("bar", b.data);
-	git__path_swap(&a, &b);
+	git_path_swap(&a, &b);
 	cl_assert_strequal("bar", a.data);
 	cl_assert_strequal("foo", b.data);
 
-	git__path_free(&a);
-	git__path_free(&b);
+	git_path_free(&a);
+	git_path_free(&b);
 }
 
 void test_core_path__10(void)
@@ -345,13 +345,13 @@ void test_core_path__10(void)
 	char *b = NULL;
 
 	cl_assert_strequal("foo", a.data);
-	b = git__path_take_data(&a);
+	b = git_path_take_data(&a);
 	cl_assert_strequal("foo", b);
 	cl_assert_strequal(NULL, a.data);
 
 	git__free(b);
 
-	b = git__path_take_data(&a);
+	b = git_path_take_data(&a);
 	cl_assert_strequal(NULL, b);
 	cl_assert_strequal(NULL, a.data);
 }
@@ -364,17 +364,17 @@ void test_core_path__11(void)
 
 	cl_assert_strequal(NULL, a.data);
 
-	cl_git_pass(git__path_strcpy(&a, str_test));
+	cl_git_pass(git_path_strcpy(&a, str_test));
 	cl_assert_strequal(str_test, a.data);
 
-	cl_git_pass(git__path_strcpy(&a, str_8192));
+	cl_git_pass(git_path_strcpy(&a, str_8192));
 	cl_assert_strequal(str_8192, a.data);
 
-	cl_git_pass(git__path_strcpy(&a, NULL));
+	cl_git_pass(git_path_strcpy(&a, NULL));
 	cl_assert_strequal(NULL, a.data);
 
-	cl_git_pass(git__path_strcpy(&a, str_test));
+	cl_git_pass(git_path_strcpy(&a, str_test));
 	cl_assert_strequal(str_test, a.data);
 
-	git__path_free(&a);
+	git_path_free(&a);
 }

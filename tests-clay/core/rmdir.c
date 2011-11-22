@@ -24,7 +24,7 @@ void test_core_rmdir__initialize(void)
 	cl_git_pass(git_path_join(&path, empty_tmp_dir, "/two"));
 	cl_must_pass(p_mkdir(path.data, 0777));
 
-	git__path_free(&path);
+	git_path_free(&path);
 }
 
 /* make sure empty dir can be deleted recusively */
@@ -50,5 +50,5 @@ void test_core_rmdir__fail_to_delete_non_empty_dir(void)
 	cl_must_pass(p_unlink(file.data));
 	cl_git_pass(git_futils_rmdir_r(empty_tmp_dir, 0));
 
-	git__path_free(&file);
+	git_path_free(&file);
 }

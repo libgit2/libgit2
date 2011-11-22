@@ -121,7 +121,7 @@ cleanup:
         stream->free(stream);
 	if (!islnk && fd)
 		p_close(fd);
-    git__path_free(&full_path);
+    git_path_free(&full_path);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create blob");
 }

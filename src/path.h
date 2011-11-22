@@ -24,22 +24,22 @@ typedef struct { /* path buffer */
 /* the ability to prealloc a git_path is useful while transitioning code */
 #define GIT_PATH_INIT_N(N)		{(N)>0?git__calloc(N,1):NULL,N}
 
-extern void git__path_free(git_path *path);
-extern int git__path_realloc(git_path *path, size_t newsize);
-extern void git__path_swap(git_path *path_a, git_path *path_b);
-extern char* git__path_take_data(git_path *path);
+extern void git_path_free(git_path *path);
+extern int git_path_realloc(git_path *path, size_t newsize);
+extern void git_path_swap(git_path *path_a, git_path *path_b);
+extern char* git_path_take_data(git_path *path);
 
-extern int git__path_strcpy(git_path *path, const char *str);
-extern int git__path_strncat(git_path *path, const char *str, size_t n);
+extern int git_path_strcpy(git_path *path, const char *str);
+extern int git_path_strncat(git_path *path, const char *str, size_t n);
 
-GIT_INLINE(int) git__path_strcat(git_path *path, const char *str)
+GIT_INLINE(int) git_path_strcat(git_path *path, const char *str)
 {
-	return git__path_strncat(path, str, UINT_MAX);
+	return git_path_strncat(path, str, UINT_MAX);
 }
 
-GIT_INLINE(int) git__path_append(git_path *tgt, const git_path *src)
+GIT_INLINE(int) git_path_append(git_path *tgt, const git_path *src)
 {
-	return git__path_strncat(tgt, src->data, src->size);
+	return git_path_strncat(tgt, src->data, src->size);
 }
 
 /*

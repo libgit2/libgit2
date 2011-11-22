@@ -49,7 +49,7 @@ static int assign_repository_dirs(
 		goto cleanup;
 
 	/* store GIT_DIR */
-	repo->path_repository = git__path_take_data(&path_aux);
+	repo->path_repository = git_path_take_data(&path_aux);
 
 	/* path to GIT_OBJECT_DIRECTORY */
 	if (git_object_directory == NULL)
@@ -60,7 +60,7 @@ static int assign_repository_dirs(
 		goto cleanup;
 
 	/* Store GIT_OBJECT_DIRECTORY */
-	repo->path_odb = git__path_take_data(&path_aux);
+	repo->path_odb = git_path_take_data(&path_aux);
 
 	/* path to GIT_WORK_TREE */
 	if (git_work_tree == NULL)
@@ -71,7 +71,7 @@ static int assign_repository_dirs(
 			goto cleanup;
 
 		/* Store GIT_WORK_TREE */
-		repo->path_workdir = git__path_take_data(&path_aux);
+		repo->path_workdir = git_path_take_data(&path_aux);
 
 		/* Path to GIT_INDEX_FILE */
 		if (git_index_file == NULL)
@@ -82,11 +82,11 @@ static int assign_repository_dirs(
 			goto cleanup;
 
 		/* store GIT_INDEX_FILE */
-		repo->path_index = git__path_take_data(&path_aux);
+		repo->path_index = git_path_take_data(&path_aux);
 	}
 
 cleanup:
-	git__path_free(&path_aux);
+	git_path_free(&path_aux);
 
 	return (error < GIT_SUCCESS) ?
 		git__rethrow(error, "Failed to open repository") : error;
@@ -112,7 +112,7 @@ static int check_repository_dirs(git_repository *repo)
 	if (git_futils_isfile(path_aux.data) < 0)
 		error = git__throw(GIT_ENOTAREPO, "HEAD file is missing");
 
-	git__path_free(&path_aux);
+	git_path_free(&path_aux);
 	return error;
 }
 
@@ -124,14 +124,14 @@ static int guess_repository_dirs(git_repository *repo, const char *repository_pa
 
 	/* Git directory name */
 	if (git_path_basename_r(&path, repository_path) < 0) {
-		git__path_free(&path);
+		git_path_free(&path);
 		return git__throw(GIT_EINVALIDPATH, "Unable to parse folder name from `%s`", repository_path);
 	}
 
 	if (strcmp(path.data, DOT_GIT) == 0) {
 		/* Path to working dir */
 		if (git_path_dirname_r(&path, repository_path) < 0) {
-			git__path_free(&path);
+			git_path_free(&path);
 			return git__throw(GIT_EINVALIDPATH, "Unable to parse parent folder name from `%s`", repository_path);
 		}
 		path_work_tree = path.data;
@@ -139,7 +139,7 @@ static int guess_repository_dirs(git_repository *repo, const char *repository_pa
 
 	error = assign_repository_dirs(repo, repository_path, NULL, NULL, path_work_tree);
 
-	git__path_free(&path);
+	git_path_free(&path);
 
 	return error;
 }
@@ -179,7 +179,7 @@ static int quickcheck_repository_dir(const char *repository_path)
 	}
 
 cleanup:
-	git__path_free(&path_aux);
+	git_path_free(&path_aux);
 	return error;
 }
 
@@ -328,7 +328,7 @@ int git_repository_config(
 	return GIT_SUCCESS;
 
 cleanup:
-	git__path_free(&config_path);
+	git_path_free(&config_path);
 	git_config_free(*out);
 	return error;
 }
@@ -489,11 +489,11 @@ static int read_gitfile(char *path_out, const char *file_path, const char *base_
 
 	if (error == GIT_SUCCESS && git_futils_exists(found_path.data) == 0) {
 		strncpy(path_out, found_path.data, GIT_PATH_MAX);
-		git__path_free(&found_path);
+		git_path_free(&found_path);
 		return GIT_SUCCESS;
 	}
 
-	git__path_free(&found_path);
+	git_path_free(&found_path);
 
 	return git__throw(GIT_EOBJCORRUPTED, "The `.git` file points to a nonexistent path");
 }
@@ -619,7 +619,7 @@ int git_repository_discover(
 			current_device = new_device;
 		}
 
-		git__path_swap(&bare_path, &normal_path);
+		git_path_swap(&bare_path, &normal_path);
 		error = git_path_join(&normal_path, bare_path.data, DOT_GIT);
 		if (error < GIT_SUCCESS)
 			goto cleanup;
@@ -645,8 +645,8 @@ int git_repository_discover(
 	}
 
 cleanup:
-	git__path_free(&bare_path);
-	git__path_free(&normal_path);
+	git_path_free(&bare_path);
+	git_path_free(&normal_path);
 	return error;
 }
 
@@ -741,7 +741,7 @@ rethrow_and_cleanup:
 		git__rethrow(error, "Failed to initialize repository structure");
 
 cleanup:
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	return error;
 }
 
@@ -760,7 +760,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 	if (git_futils_isdir(repo_path.data)) {
 		if (quickcheck_repository_dir(repo_path.data) == GIT_SUCCESS) {
 			error = repo_init_reinit(repo_path.data, is_bare);
-			git__path_free(&repo_path);
+			git_path_free(&repo_path);
 			return error;
 		}
 	}
@@ -792,7 +792,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 	/* should never fail */
 	assert(check_repository_dirs(repo) == GIT_SUCCESS);
 
-	git__path_free(&repo_path);
+	git_path_free(&repo_path);
 
 	*repo_out = repo;
 
@@ -800,7 +800,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 
 cleanup:
 	git_repository_free(repo);
-	git__path_free(&repo_path);
+	git_path_free(&repo_path);
 	return git__rethrow(error, "Failed to (re)init the repository `%s`", path);
 }
 

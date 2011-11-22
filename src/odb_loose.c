@@ -61,7 +61,7 @@ static int object_file_name(git_path *name, const char *dir, const git_oid *id)
 {
 	size_t len = strlen(dir);
 
-	int error = git__path_realloc(name, len + 43);
+	int error = git_path_realloc(name, len + 43);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -581,7 +581,7 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 		*type_p = raw.type;
 	}
 
-	git__path_free(&object_path);
+	git_path_free(&object_path);
 
 	return error;
 }
@@ -606,7 +606,7 @@ static int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p
 		*type_p = raw.type;
 	}
 
-	git__path_free(&object_path);
+	git_path_free(&object_path);
 
 	return error;
 }
@@ -661,7 +661,7 @@ static int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 
 	error = locate_object(&object_path, (loose_backend *)backend, oid);
 
-	git__path_free(&object_path);
+	git_path_free(&object_path);
 
 	return (error == GIT_SUCCESS);
 }
@@ -683,14 +683,12 @@ static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 	if ((error = git_futils_mkpath2file(final_path.data, GIT_OBJECT_DIR_MODE)) < GIT_SUCCESS)
 		goto cleanup;
 
-	stream->finished = 1;
-
 	/*
 	 * Don't try to add an existing object to the repository. This
 	 * is what git does and allows us to sidestep the fact that
 	 * we're not allowed to overwrite a read-only file on Windows.
 	 */
-	if (git_futils_exists(final_path) == GIT_SUCCESS) {
+	if (git_futils_exists(final_path.data) == GIT_SUCCESS) {
 		git_filebuf_cleanup(&stream->fbuf);
 		goto cleanup;
 	}
@@ -698,7 +696,7 @@ static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 	error = git_filebuf_commit_at(&stream->fbuf, final_path.data, GIT_OBJECT_FILE_MODE);
 
 cleanup:
-	git__path_free(&final_path);
+	git_path_free(&final_path);
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to write loose backend");
@@ -782,7 +780,7 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 
 cleanup:
 	git_filebuf_cleanup(&stream->fbuf);
-	git__path_free(&tmp_path);
+	git_path_free(&tmp_path);
 	git__free(stream);
 
 	return git__rethrow(error, "Failed to create loose backend stream");
@@ -833,7 +831,7 @@ static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const v
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&fbuf);
-	git__path_free(&final_path);
+	git_path_free(&final_path);
 	return error;
 }
 

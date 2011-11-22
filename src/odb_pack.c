@@ -489,7 +489,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 cleanup:
 	if (error < GIT_SUCCESS && backend != NULL)
 		git__free(backend);
-	git__path_free(&path);
+	git_path_free(&path);
 
 	return error;
 }

@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-void git__path_free(git_path *path)
+void git_path_free(git_path *path)
 {
 	assert(path);
 	if (path->data) {
@@ -22,14 +22,14 @@ void git__path_free(git_path *path)
 	path->size = 0;
 }
 
-void git__path_swap(git_path *path_a, git_path *path_b)
+void git_path_swap(git_path *path_a, git_path *path_b)
 {
 	git_path temp = *path_a;
 	*path_a = *path_b;
 	*path_b = temp;
 }
 
-char* git__path_take_data(git_path *path)
+char* git_path_take_data(git_path *path)
 {
 	char *data = path->data;
 
@@ -40,7 +40,7 @@ char* git__path_take_data(git_path *path)
 }
 
 
-int git__path_realloc(git_path *path, size_t newsize)
+int git_path_realloc(git_path *path, size_t newsize)
 {
 	assert(path);
 
@@ -70,7 +70,7 @@ int git__path_realloc(git_path *path, size_t newsize)
 	return GIT_SUCCESS;
 }
 
-int git__path_strcpy(git_path *path, const char* str)
+int git_path_strcpy(git_path *path, const char* str)
 {
 	int    error = GIT_SUCCESS;
 	size_t len = str ? strlen(str) + 1 : 0;
@@ -78,10 +78,10 @@ int git__path_strcpy(git_path *path, const char* str)
 	assert(path);
 
 	if (len == 0) {
-		git__path_free(path);
+		git_path_free(path);
 	} else {
 		if (path->size < len)
-			error = git__path_realloc(path, len);
+			error = git_path_realloc(path, len);
 
 		if (error == GIT_SUCCESS)
 			memmove(path->data, str, len);
@@ -90,7 +90,7 @@ int git__path_strcpy(git_path *path, const char* str)
 	return error;
 }
 
-int git__path_strncat(git_path *path, const char* str, size_t n)
+int git_path_strncat(git_path *path, const char* str, size_t n)
 {
 	assert(path);
 
@@ -102,7 +102,7 @@ int git__path_strncat(git_path *path, const char* str, size_t n)
 	size_t new_size	 = old_size + add_size + null_byte;
 
 	if (path->size < new_size)
-		error = git__path_realloc(path, new_size);
+		error = git_path_realloc(path, new_size);
 
 	if (add_size > 0 && error == GIT_SUCCESS) {
 		memmove(path->data + old_size, str, add_size);
@@ -157,7 +157,7 @@ Exit:
 	}
 
 	if (len > (int)base_path->size - 1) {
-		int error = git__path_realloc(base_path, len + 1);
+		int error = git_path_realloc(base_path, len + 1);
 		if (error != GIT_SUCCESS)
 			return git__rethrow(error, "Could not get basename of '%s'", path);
 	}
@@ -225,7 +225,7 @@ Exit:
 		return result;
 
 	if (len > (int)parent_path->size - 1) {
-		int error = git__path_realloc(parent_path, len + 1);
+		int error = git_path_realloc(parent_path, len + 1);
 		if (error != GIT_SUCCESS)
 			return git__rethrow(error, "Could not get dirname of '%s'", path);
 	}
@@ -244,7 +244,7 @@ char *git_path_dirname(const char *path)
 	git_path dname = GIT_PATH_INIT;
 
 	if (git_path_dirname_r(&dname, path) < GIT_SUCCESS) {
-		git__path_free(&dname);
+		git_path_free(&dname);
 		return NULL;
 	}
 
@@ -256,7 +256,7 @@ char *git_path_basename(const char *path)
 	git_path bname = GIT_PATH_INIT;
 
 	if (git_path_basename_r(&bname, path) < GIT_SUCCESS) {
-		git__path_free(&bname);
+		git_path_free(&bname);
 		return NULL;
 	}
 
@@ -311,7 +311,7 @@ int git_path_join_n(git_path *path_out, int count, ...)
 	va_end(ap);
 
 	/* perform only one alloc */
-	if (git__path_realloc(path_out, path_size) < GIT_SUCCESS)
+	if (git_path_realloc(path_out, path_size) < GIT_SUCCESS)
         return git__throw(GIT_ENOMEM, "Failed to expand path");
 
 	buffer_start = buffer_out = path_out->data;
@@ -377,7 +377,7 @@ int git_path_prettify(git_path *path_out, const char *path, const char *base)
 
 	if (result) {
 		/* transfer allocated buffer into path_out */
-		git__path_free(path_out);
+		git_path_free(path_out);
 		path_out->data = result;
 		path_out->size = strlen(result);
 	} else { /* !result */
@@ -419,7 +419,7 @@ int git_path_as_dir(git_path *path)
 	size_t end = (path && path->data) ? strlen(path->data) : 0;
 
 	if (end && path->data[end - 1] != '/') {
-		error = git__path_realloc(path, end + 2);
+		error = git_path_realloc(path, end + 2);
 		if (error == GIT_SUCCESS) {
 			path->data[end] = '/';
 			path->data[end + 1] = '\0';

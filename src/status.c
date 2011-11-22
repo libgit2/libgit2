@@ -359,7 +359,7 @@ static int dirent_cb(void *state, char *a)
 			return GIT_SUCCESS;
 
 		if (m != NULL) {
-			int error = git__path_realloc(&st->head_tree_relative_path,
+			int error = git_path_realloc(&st->head_tree_relative_path,
 										  st->head_tree_relative_path_len + 1);
 			if (error < GIT_SUCCESS)
 				goto fail;
@@ -438,7 +438,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	dirent_st.tree = tree;
 	dirent_st.index = index;
 	dirent_st.vector = &entries;
-	git__path_strcpy(&dirent_st.head_tree_relative_path, "");
+	git_path_strcpy(&dirent_st.head_tree_relative_path, "");
 	dirent_st.head_tree_relative_path_len = 0;
 	dirent_st.is_dir = 1;
 
@@ -524,13 +524,13 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 		return git__rethrow(error, "Failed to determine status of file '%s'", path);
 
 	if (git_futils_isdir(temp_path.data) == GIT_SUCCESS) {
-		git__path_free(&temp_path);
+		git_path_free(&temp_path);
 		return git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path leads to a folder, not a file", path);
 	}
 
 	e = status_entry_new(NULL, path);
 	if (e == NULL) {
-		git__path_free(&temp_path);
+		git_path_free(&temp_path);
 		return GIT_ENOMEM;
 	}
 
@@ -556,7 +556,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 
 	/* If the repository is not empty, try and locate the file in HEAD */
 	if (tree != NULL) {
-		git__path_strcpy(&temp_path, path);
+		git_path_strcpy(&temp_path, path);
 
 		error = recurse_tree_entry(tree, e, temp_path.data);
 		if (error < GIT_SUCCESS) {
@@ -574,7 +574,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	*status_flags = e->status_flags;
 
 exit:
-	git__path_free(&temp_path);
+	git_path_free(&temp_path);
 	git_tree_close(tree);
 	git__free(e);
 	return error;

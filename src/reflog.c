@@ -56,7 +56,7 @@ static int reflog_write(git_path *log_path, const char *oid_old,
 	if (msg) {
 		if (strchr(msg, '\n')) {
 			git_buf_free(&log);
-			git__path_free(log_path);
+			git_path_free(log_path);
 			return git__throw(GIT_ERROR, "Reflog message cannot contain newline");
 		}
 
@@ -69,7 +69,7 @@ static int reflog_write(git_path *log_path, const char *oid_old,
 	if ((error = git_filebuf_open(&fbuf, log_path->data, GIT_FILEBUF_APPEND)) < GIT_SUCCESS) {
 		git_buf_free(&log);
 		git__throw(error, "Failed to write reflog. Cannot open reflog `%s`", log_path->data);
-		git__path_free(log_path);
+		git_path_free(log_path);
 		return error;
 	}
 
@@ -77,7 +77,7 @@ static int reflog_write(git_path *log_path, const char *oid_old,
 	error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
 
 	git_buf_free(&log);
-	git__path_free(log_path);
+	git_path_free(log_path);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write reflog");
 }
@@ -209,7 +209,7 @@ cleanup:
 	if (error != GIT_SUCCESS && log != NULL)
 		git_reflog_free(log);
 	git_futils_freebuffer(&log_file);
-	git__path_free(&log_path);
+	git_path_free(&log_path);
 
 	return error;
 }
@@ -272,7 +272,7 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 	return reflog_write(&log_path, old, new, committer, msg);
 
 fail:
-	git__path_free(&log_path);
+	git_path_free(&log_path);
 	return error;
 }
 

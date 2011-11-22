@@ -147,7 +147,7 @@ static int ensure_repository_init(
 	return GIT_SUCCESS;
 
 cleanup:
-	git__path_free(&path_odb);
+	git_path_free(&path_odb);
 	git_repository_free(repo);
 	git_futils_rmdir_r(working_directory, 1);
 	return GIT_ERROR;
@@ -163,8 +163,8 @@ BEGIN_TEST(init0, "initialize a standard repo")
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, STANDARD_REPOSITORY, path_index.data, path_repository.data, TEMP_REPO_FOLDER));
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, STANDARD_REPOSITORY, path_index.data, path_repository.data, TEMP_REPO_FOLDER));
 
-	git__path_free(&path_index);
-	git__path_free(&path_repository);
+	git_path_free(&path_index);
+	git_path_free(&path_repository);
 END_TEST
 
 BEGIN_TEST(init1, "initialize a bare repo")
@@ -175,7 +175,7 @@ BEGIN_TEST(init1, "initialize a bare repo")
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, BARE_REPOSITORY, NULL, path_repository.data, NULL));
 	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository.data, NULL));
 
-	git__path_free(&path_repository);
+	git_path_free(&path_repository);
 END_TEST
 
 BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping out of the current working directory")
@@ -203,7 +203,7 @@ BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping
 	must_pass(chdir(current_workdir));
 	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
 
-	git__path_free(&path_repository);
+	git_path_free(&path_repository);
 END_TEST
 
 #define EMPTY_BARE_REPOSITORY_FOLDER TEST_RESOURCES "/empty_bare.git/"
@@ -247,7 +247,7 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 
 	/* Setup the repository to open */
 	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
-	must_pass(git__path_strcpy(&path_repository, current_workdir));
+	must_pass(git_path_strcpy(&path_repository, current_workdir));
 	must_pass(git_path_join_n(&path_repository, 3, path_repository.data, TEMP_REPO_FOLDER, "a/d/e.git"));
 	must_pass(copydir_recurs(REPOSITORY_FOLDER, path_repository.data));
 
@@ -263,8 +263,8 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 	must_pass(chdir(current_workdir));
 	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
 
-	git__path_free(&path_repository);
-	git__path_free(&new_current_workdir);
+	git_path_free(&path_repository);
+	git_path_free(&new_current_workdir);
 END_TEST
 
 BEGIN_TEST(empty0, "test if a repository is empty or not")
@@ -389,10 +389,10 @@ static int append_ceiling_dir(git_path *ceiling_dirs, const char *path)
 	error = git_path_prettify_dir(&pretty_path, path, NULL);
 
 	if (!error && ceiling_dirs->data && ceiling_dirs->data[0])
-		error = git__path_strcat(ceiling_dirs, separator);
+		error = git_path_strcat(ceiling_dirs, separator);
 
 	if (!error)
-		error = git__path_append(ceiling_dirs, &pretty_path);
+		error = git_path_append(ceiling_dirs, &pretty_path);
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to append ceiling directory '%s'", path);
