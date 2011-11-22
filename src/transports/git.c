@@ -20,9 +20,11 @@
 #include "filebuf.h"
 #include "repository.h"
 #include "fetch.h"
+#include "protocol.h"
 
 typedef struct {
 	git_transport parent;
+	git_protocol proto;
 	GIT_SOCKET socket;
 	git_vector refs;
 	git_remote_head **heads;
@@ -126,11 +128,7 @@ static int do_connect(transport_git *t, const char *url)
 static int store_refs(transport_git *t)
 {
 	gitno_buffer *buf = &t->buf;
-	git_vector *refs = &t->refs;
 	int error = GIT_SUCCESS;
-	const char *line_end, *ptr;
-	git_pkt *pkt;
-
 
 	while (1) {
 		error = gitno_recv(buf);
@@ -139,34 +137,20 @@ static int store_refs(transport_git *t)
 		if (error == GIT_SUCCESS) /* Orderly shutdown, so exit */
 			return GIT_SUCCESS;
 
-		ptr = buf->data;
-		while (1) {
-			if (buf->offset == 0)
-				break;
-			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-			/*
-			 * If the error is GIT_ESHORTBUFFER, it means the buffer
-			 * isn't long enough to satisfy the request. Break out and
-			 * wait for more input.
-			 * On any other error, fail.
-			 */
-			if (error == GIT_ESHORTBUFFER) {
-				break;
-			}
-			if (error < GIT_SUCCESS) {
-				return error;
-			}
+		error = git_protocol_store_refs(&t->proto, buf->data, buf->offset);
+		if (error == GIT_ESHORTBUFFER) {
+			gitno_consume_n(buf, buf->len);
+			continue;
+		}
 
-			/* Get rid of the part we've used already */
-			gitno_consume(buf, line_end);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to store refs");
 
-			error = git_vector_insert(refs, pkt);
-			if (error < GIT_SUCCESS)
-				return error;
+		gitno_consume_n(buf, buf->offset);
 
-			if (pkt->type == GIT_PKT_FLUSH)
-				return GIT_SUCCESS;
-
+		if (t->proto.flush) { /* No more refs */
+			t->proto.flush = 0;
+			return GIT_SUCCESS;
 		}
 	}
 
@@ -476,6 +460,7 @@ static void git_free(git_transport *transport)
 
 	git_vector_free(refs);
 	git__free(t->heads);
+	git_buf_free(&t->proto.buf);
 	git__free(t->parent.url);
 	git__free(t);
 }
@@ -501,6 +486,8 @@ int git_transport_git(git_transport **out)
 	t->parent.download_pack = git_download_pack;
 	t->parent.close = git_close;
 	t->parent.free = git_free;
+	t->proto.refs = &t->refs;
+	t->proto.transport = (git_transport *) t;
 
 	*out = (git_transport *) t;
 

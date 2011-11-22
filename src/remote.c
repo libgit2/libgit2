@@ -56,9 +56,12 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	return refspec_parse(refspec, val);
 }
 
-int git_remote_new(git_remote **out, git_repository *repo, const char *url)
+int git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name)
 {
 	git_remote *remote;
+
+	if (url == NULL)
+		return git__throw(GIT_EINVALIDARGS, "No URL was given");
 
 	remote = git__malloc(sizeof(git_remote));
 	if (remote == NULL)
@@ -66,10 +69,19 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url)
 
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->repo = repo;
+
 	remote->url = git__strdup(url);
 	if (remote->url == NULL) {
 		git__free(remote);
 		return GIT_ENOMEM;
+	}
+
+	if (name != NULL) {
+		remote->name = git__strdup(name);
+		if (remote->name == NULL) {
+			git__free(remote);
+			return GIT_ENOMEM;
+		}
 	}
 
 	*out = remote;
@@ -206,13 +218,13 @@ int git_remote_ls(git_remote *remote, git_headarray *refs)
 	return remote->transport->ls(remote->transport, refs);
 }
 
-int git_remote_negotiate(git_remote *remote)
-{
-	return git_fetch_negotiate(remote);
-}
-
 int git_remote_download(char **filename, git_remote *remote)
 {
+	int error;
+
+	if ((error = git_fetch_negotiate(remote)) < 0)
+		return git__rethrow(error, "Error negotiating");
+
 	return git_fetch_download_pack(filename, remote);
 }
 
@@ -255,6 +267,21 @@ int git_remote_update_tips(struct git_remote *remote)
 	return GIT_SUCCESS;
 }
 
+int git_remote_connected(git_remote *remote)
+{
+	return remote->transport == NULL ? 0 : remote->transport->connected;
+}
+
+void git_remote_disconnect(git_remote *remote)
+{
+	if (remote->transport != NULL) {
+		if (remote->transport->connected)
+			remote->transport->close(remote->transport);
+
+		remote->transport->free(remote->transport);
+	}
+}
+
 void git_remote_free(git_remote *remote)
 {
 	if (remote == NULL)
@@ -266,11 +293,6 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->push.dst);
 	git__free(remote->url);
 	git__free(remote->name);
-	if (remote->transport != NULL) {
-		if (remote->transport->connected)
-			remote->transport->close(remote->transport);
-
-		remote->transport->free(remote->transport);
-	}
+	git_remote_disconnect(remote);
 	git__free(remote);
 }

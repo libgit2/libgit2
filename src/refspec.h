@@ -10,9 +10,12 @@
 #include "git2/refspec.h"
 
 struct git_refspec {
-	int force;
+	struct git_refspec *next;
 	char *src;
 	char *dst;
+	unsigned int force :1,
+		pattern :1,
+		matching :1;
 };
 
 int git_refspec_parse(struct git_refspec *refspec, const char *str);
