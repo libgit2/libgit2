@@ -677,6 +677,11 @@ static const struct clay_func _all_callbacks[] = {
 	{"2", &test_core_path__2, 3},
 	{"5", &test_core_path__5, 3},
 	{"6", &test_core_path__6, 3},
+	{"7", &test_core_path__7, 3},
+	{"8", &test_core_path__8, 3},
+	{"9", &test_core_path__9, 3},
+	{"10", &test_core_path__10, 3},
+	{"11", &test_core_path__11, 3},
 	{"delete_recursive", &test_core_rmdir__delete_recursive, 4},
 	{"fail_to_delete_non_empty_dir", &test_core_rmdir__fail_to_delete_non_empty_dir, 4},
 	{"0", &test_core_string__0, 5},
@@ -751,103 +756,103 @@ static const struct clay_suite _all_suites[] = {
         "core::path",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[12], 5
+        &_all_callbacks[12], 10
     },
 	{
         "core::rmdir",
         {"initialize", &test_core_rmdir__initialize, 4},
         {NULL, NULL, 0},
-        &_all_callbacks[17], 2
+        &_all_callbacks[22], 2
     },
 	{
         "core::string",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[19], 2
+        &_all_callbacks[24], 2
     },
 	{
         "core::strtol",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[21], 2
+        &_all_callbacks[26], 2
     },
 	{
         "core::vector",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[23], 3
+        &_all_callbacks[28], 3
     },
 	{
         "network::remotes",
         {"initialize", &test_network_remotes__initialize, 8},
         {"cleanup", &test_network_remotes__cleanup, 8},
-        &_all_callbacks[26], 4
+        &_all_callbacks[31], 4
     },
 	{
         "object::raw::chars",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[30], 2
+        &_all_callbacks[35], 2
     },
 	{
         "object::raw::compare",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[32], 7
+        &_all_callbacks[37], 7
     },
 	{
         "object::raw::convert",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[39], 2
+        &_all_callbacks[44], 2
     },
 	{
         "object::raw::fromstr",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[41], 2
+        &_all_callbacks[46], 2
     },
 	{
         "object::raw::hash",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[43], 11
+        &_all_callbacks[48], 11
     },
 	{
         "object::raw::short",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[54], 2
+        &_all_callbacks[59], 2
     },
 	{
         "object::raw::size",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[56], 1
+        &_all_callbacks[61], 1
     },
 	{
         "object::raw::type2string",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[57], 3
+        &_all_callbacks[62], 3
     },
 	{
         "object::tree::frompath",
         {"initialize", &test_object_tree_frompath__initialize, 17},
         {"cleanup", &test_object_tree_frompath__cleanup, 17},
-        &_all_callbacks[60], 3
+        &_all_callbacks[65], 3
     },
 	{
         "status::single",
         {NULL, NULL, 0},
         {NULL, NULL, 0},
-        &_all_callbacks[63], 1
+        &_all_callbacks[68], 1
     },
 	{
         "status::worktree",
         {"initialize", &test_status_worktree__initialize, 19},
         {"cleanup", &test_status_worktree__cleanup, 19},
-        &_all_callbacks[64], 2
+        &_all_callbacks[69], 2
     }
 };
 
@@ -857,7 +862,7 @@ int _MAIN_CC main(int argc, char *argv[])
 {
     return clay_test(
         argc, argv, _suites_str,
-        _all_callbacks, 66,
+        _all_callbacks, 71,
         _all_suites, 20
     );
 }

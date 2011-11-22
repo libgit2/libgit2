@@ -22,9 +22,30 @@ void git__path_free(git_path *path)
 	path->size = 0;
 }
 
+void git__path_swap(git_path *path_a, git_path *path_b)
+{
+	git_path temp = *path_a;
+	*path_a = *path_b;
+	*path_b = temp;
+}
+
+char* git__path_take_data(git_path *path)
+{
+	char *data = path->data;
+
+	path->data = NULL;
+	path->size = 0;
+
+	return data;
+}
+
+
 int git__path_realloc(git_path *path, size_t newsize)
 {
 	assert(path);
+
+	/* round size up to multiple of 8 (since allocator usually does that internally already */
+	newsize = (newsize + 7) & (size_t)0xFFFFFFF8L;
 
 	if (!path->data) {
 		path->data = git__malloc(newsize);
@@ -49,6 +70,26 @@ int git__path_realloc(git_path *path, size_t newsize)
 	return GIT_SUCCESS;
 }
 
+int git__path_strcpy(git_path *path, const char* str)
+{
+	int    error = GIT_SUCCESS;
+	size_t len = str ? strlen(str) + 1 : 0;
+
+	assert(path);
+
+	if (len == 0) {
+		git__path_free(path);
+	} else {
+		if (path->size < len)
+			error = git__path_realloc(path, len);
+
+		if (error == GIT_SUCCESS)
+			memmove(path->data, str, len);
+	}
+
+	return error;
+}
+
 int git__path_strncat(git_path *path, const char* str, size_t n)
 {
 	assert(path);
@@ -67,7 +108,7 @@ int git__path_strncat(git_path *path, const char* str, size_t n)
 		memmove(path->data + old_size, str, add_size);
 
 		/* make sure to terminate new string */
-		*(path->data + old_size + add_size + 1) = '\0';
+		path->data[old_size + add_size] = '\0';
 	}
 
 	return error;
@@ -241,11 +282,39 @@ const char *git_path_topdir(const char *path)
 	return &path[i + 1];
 }
 
-void git_path_join_n(char *buffer_out, int count, ...)
+int git_path_join_n(git_path *path_out, int count, ...)
 {
 	va_list ap;
 	int i;
-	char *buffer_start = buffer_out;
+	char *buffer_start, *buffer_out;
+	int path_size = 1; /* start with space for NULL byte */
+
+	/* Make two passes over the args to avoid multiple path
+	 * reallocations.
+	 */
+
+	va_start(ap, count);
+	for (i = 0; i < count; ++i) {
+		const char *path;
+		int len;
+
+		path = va_arg(ap, const char *);
+		if (!*path)
+			continue;
+
+		len = strlen(path);
+		path_size += len;
+
+		if (path[len] != '/') /* make space for trailing slash */
+			path_size++;
+	}
+	va_end(ap);
+
+	/* perform only one alloc */
+	if (git__path_realloc(path_out, path_size) < GIT_SUCCESS)
+        return git__throw(GIT_ENOMEM, "Failed to expand path");
+
+	buffer_start = buffer_out = path_out->data;
 
 	va_start(ap, count);
 	for (i = 0; i < count; ++i) {
@@ -272,6 +341,8 @@ void git_path_join_n(char *buffer_out, int count, ...)
 	va_end(ap);
 
 	*buffer_out = '\0';
+
+	return GIT_SUCCESS;
 }
 
 int git_path_root(const char *path)
@@ -290,34 +361,70 @@ int git_path_root(const char *path)
 	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
 }
 
-int git_path_prettify(char *path_out, const char *path, const char *base)
+int git_path_prettify(git_path *path_out, const char *path, const char *base)
 {
-	char *result;
+	char *result = NULL;
+	int   error = GIT_SUCCESS;
 
 	if (base == NULL || git_path_root(path) >= 0) {
-		result = p_realpath(path, path_out);
+		/* allow realpath to allocate the buffer */
+		result = p_realpath(path, NULL);
 	} else {
-		char aux_path[GIT_PATH_MAX];
-		git_path_join(aux_path, base, path);
-		result = p_realpath(aux_path, path_out);
+		error = git_path_join(path_out, base, path);
+		if (error == GIT_SUCCESS)
+			result = p_realpath(path_out->data, NULL);
 	}
 
-	return result ? GIT_SUCCESS : GIT_EOSERR;
+	if (result) {
+		/* transfer allocated buffer into path_out */
+		git__path_free(path_out);
+		path_out->data = result;
+		path_out->size = strlen(result);
+	} else { /* !result */
+		if (error == GIT_SUCCESS)
+			error = GIT_EOSERR;
+	}
+
+	return error;
 }
 
-int git_path_prettify_dir(char *path_out, const char *path, const char *base)
+int git_path_prettify_dir(git_path *path_out, const char *path, const char *base)
 {
-	size_t end;
+	int error = git_path_prettify(path_out, path, base);
 
-	if (git_path_prettify(path_out, path, base) < GIT_SUCCESS)
-		return GIT_EOSERR;
-
-	end = strlen(path_out);
-
-	if (end && path_out[end - 1] != '/') {
-		path_out[end] = '/';
-		path_out[end + 1] = '\0';
+	if (error == GIT_SUCCESS) {
+		/* it is unfortunate, but because of how we are using p_realpath
+		 * to reallocate the path_out when we prettify, the following
+		 * line will always end up having to call realloc on the buffer.
+		 */
+		error = git_path_as_dir(path_out);
 	}
 
-	return GIT_SUCCESS;
+	return error;
+}
+
+void git_path_string_as_dir(char* path, size_t size)
+{
+	size_t end = strlen(path);
+
+	if (end && path[end - 1] != '/' && end < size) {
+		path[end] = '/';
+		path[end + 1] = '\0';
+	}
+}
+
+int git_path_as_dir(git_path *path)
+{
+	int error = GIT_SUCCESS;
+	size_t end = (path && path->data) ? strlen(path->data) : 0;
+
+	if (end && path->data[end - 1] != '/') {
+		error = git__path_realloc(path, end + 2);
+		if (error == GIT_SUCCESS) {
+			path->data[end] = '/';
+			path->data[end + 1] = '\0';
+		}
+	}
+
+	return error;
 }

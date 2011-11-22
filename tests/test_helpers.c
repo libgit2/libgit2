@@ -65,21 +65,23 @@ int write_object_files(const char *odb_dir, object_data *d)
 
 int remove_object_files(const char *odb_dir, object_data *d)
 {
+    int error = 0;
+
 	if (p_unlink(d->file) < 0) {
 		fprintf(stderr, "can't delete object file \"%s\"\n", d->file);
-		return -1;
+		error = -1;
 	}
 	if ((p_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
 		fprintf(stderr, "can't remove object directory \"%s\"\n", d->dir);
-		return -1;
+		error = -1;
 	}
 
 	if (p_rmdir(odb_dir) < 0) {
 		fprintf(stderr, "can't remove directory \"%s\"\n", odb_dir);
-		return -1;
+		error = -1;
 	}
 
-	return 0;
+	return error;
 }
 
 void locate_loose_object(const char *repository_folder, git_object *object, char **out, char **out_folder)
@@ -226,41 +228,50 @@ int cmp_files(const char *a, const char *b)
 
 typedef struct {
 	size_t src_len, dst_len;
-	char *dst;
+	git_path dst;
 } copydir_data;
 
 static int copy_filesystem_element_recurs(void *_data, char *source)
 {
 	copydir_data *data = (copydir_data *)_data;
 
-	data->dst[data->dst_len] = 0;
-	git_path_join(data->dst, data->dst, source + data->src_len);
+	/* truncate dst back to original path prefix */
+	data->dst.data[data->dst_len] = 0;
+	/* now append latest src suffix */
+	if (git_path_join(&data->dst, data->dst.data, source + data->src_len) < GIT_SUCCESS)
+		return GIT_ENOMEM;
 
 	if (git_futils_isdir(source) == GIT_SUCCESS)
 		return git_futils_direach(source, GIT_PATH_MAX, copy_filesystem_element_recurs, _data);
 
-	return copy_file(source, data->dst);
+	return copy_file(source, data->dst.data);
 }
 
 int copydir_recurs(const char *source_directory_path, const char *destination_directory_path)
 {
 	char source_buffer[GIT_PATH_MAX];
-	char dest_buffer[GIT_PATH_MAX];
-	copydir_data data;
+	copydir_data data = {0};
+	int error = GIT_SUCCESS;
 
 	/* Source has to exist, Destination hast to _not_ exist */
 	if (git_futils_isdir(source_directory_path) != GIT_SUCCESS ||
 		git_futils_isdir(destination_directory_path) == GIT_SUCCESS)
 		return GIT_EINVALIDPATH;
 
-	git_path_join(source_buffer, source_directory_path, "");
+	strncpy(source_buffer, source_directory_path, GIT_PATH_MAX);
+	git_path_string_as_dir(source_buffer, GIT_PATH_MAX);
 	data.src_len = strlen(source_buffer);
 
-	git_path_join(dest_buffer, destination_directory_path, "");
-	data.dst = dest_buffer;
-	data.dst_len = strlen(dest_buffer);
+	error = git_path_join(&data.dst, destination_directory_path, "");
+	if (error < GIT_SUCCESS)
+		return error;
+	data.dst_len = strlen(data.dst.data);
 
-	return copy_filesystem_element_recurs(&data, source_buffer);
+	error = copy_filesystem_element_recurs(&data, source_buffer);
+
+	git__path_free(&data.dst);
+
+	return error;
 }
 
 int open_temp_repo(git_repository **repo, const char *path)

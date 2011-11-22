@@ -135,17 +135,19 @@ int git_fetch_download_pack(char **out, git_remote *remote)
 }
 
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
-int git_fetch__download_pack(char **out, const char *buffered, size_t buffered_size,
-                             GIT_SOCKET fd, git_repository *repo)
+int git_fetch__download_pack(
+	char **out,
+	const char *buffered,
+	size_t buffered_size,
+	GIT_SOCKET fd,
+	git_repository *repo)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
-	char buff[1024], path[GIT_PATH_MAX];
+	char buff[1024];
+	git_path path = GIT_PATH_INIT;
 	static const char suff[] = "/objects/pack/pack-received";
 	gitno_buffer buf;
-
-
-	git_path_join(path, repo->path_repository, suff);
 
 	gitno_buffer_setup(&buf, buff, sizeof(buff), fd);
 
@@ -153,7 +155,13 @@ int git_fetch__download_pack(char **out, const char *buffered, size_t buffered_s
 		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
 	}
 
-	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
+	error = git_path_join(&path, repo->path_repository, suff);
+	if (error < GIT_SUCCESS) {
+		git__path_free(&path);
+		return error;
+	}
+
+	error = git_filebuf_open(&file, path.data, GIT_FILEBUF_TEMPORARY);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -183,10 +191,11 @@ int git_fetch__download_pack(char **out, const char *buffered, size_t buffered_s
 
 	/* A bit dodgy, but we need to keep the pack at the temporary path */
 	error = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);
+
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
+    git__path_free(&path);
 
 	return error;
-
 }

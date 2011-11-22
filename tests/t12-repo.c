@@ -101,13 +101,14 @@ static int ensure_repository_init(
 	const char *expected_path_repository,
 	const char *expected_working_directory)
 {
-	char path_odb[GIT_PATH_MAX];
+	git_path path_odb = GIT_PATH_INIT;
 	git_repository *repo;
 
 	if (git_futils_isdir(working_directory) == GIT_SUCCESS)
 		return GIT_ERROR;
 
-	git_path_join(path_odb, expected_path_repository, GIT_OBJECTS_DIR);
+	if (git_path_join(&path_odb, expected_path_repository, GIT_OBJECTS_DIR) < GIT_SUCCESS)
+		return GIT_ENOMEM;
 
 	if (git_repository_init(&repo, working_directory, repository_kind) < GIT_SUCCESS)
 		return GIT_ERROR;
@@ -117,7 +118,7 @@ static int ensure_repository_init(
 			goto cleanup;
 	}
 
-	if (git__suffixcmp(repo->path_odb, path_odb) != 0)
+	if (git__suffixcmp(repo->path_odb, path_odb.data) != 0)
 		goto cleanup;
 
 	if (git__suffixcmp(repo->path_repository, expected_path_repository) != 0)
@@ -146,42 +147,49 @@ static int ensure_repository_init(
 	return GIT_SUCCESS;
 
 cleanup:
+	git__path_free(&path_odb);
 	git_repository_free(repo);
 	git_futils_rmdir_r(working_directory, 1);
 	return GIT_ERROR;
 }
 
 BEGIN_TEST(init0, "initialize a standard repo")
-	char path_index[GIT_PATH_MAX], path_repository[GIT_PATH_MAX];
+	git_path path_index = GIT_PATH_INIT;
+	git_path path_repository = GIT_PATH_INIT;
 
-	git_path_join(path_repository, TEMP_REPO_FOLDER, GIT_DIR);
-	git_path_join(path_index, path_repository, GIT_INDEX_FILE);
+	must_pass(git_path_join(&path_repository, TEMP_REPO_FOLDER, GIT_DIR));
+	must_pass(git_path_join(&path_index, path_repository.data, GIT_INDEX_FILE));
 
-	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER));
-	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, STANDARD_REPOSITORY, path_index, path_repository, TEMP_REPO_FOLDER));
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, STANDARD_REPOSITORY, path_index.data, path_repository.data, TEMP_REPO_FOLDER));
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, STANDARD_REPOSITORY, path_index.data, path_repository.data, TEMP_REPO_FOLDER));
+
+	git__path_free(&path_index);
+	git__path_free(&path_repository);
 END_TEST
 
 BEGIN_TEST(init1, "initialize a bare repo")
-	char path_repository[GIT_PATH_MAX];
+	git_path path_repository = GIT_PATH_INIT;
 
-	git_path_join(path_repository, TEMP_REPO_FOLDER, "");
+	must_pass(git_path_join(&path_repository, TEMP_REPO_FOLDER, ""));
 
-	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, BARE_REPOSITORY, NULL, path_repository, NULL));
-	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository, NULL));
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER, BARE_REPOSITORY, NULL, path_repository.data, NULL));
+	must_pass(ensure_repository_init(TEMP_REPO_FOLDER_NS, BARE_REPOSITORY, NULL, path_repository.data, NULL));
+
+	git__path_free(&path_repository);
 END_TEST
 
 BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping out of the current working directory")
-	char path_repository[GIT_PATH_MAX];
+	git_path path_repository = GIT_PATH_INIT;
 	char current_workdir[GIT_PATH_MAX];
 	const mode_t mode = 0777;
 	git_repository* repo;
 
 	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
 
-	git_path_join(path_repository, TEMP_REPO_FOLDER, "a/b/c/");
-	must_pass(git_futils_mkdir_r(path_repository, mode));
+	must_pass(git_path_join(&path_repository, TEMP_REPO_FOLDER, "a/b/c/"));
+	must_pass(git_futils_mkdir_r(path_repository.data, mode));
 
-	must_pass(chdir(path_repository));
+	must_pass(chdir(path_repository.data));
 
 	must_pass(git_repository_init(&repo, "../d/e.git", 1));
 	must_pass(git__suffixcmp(repo->path_repository, "/a/b/d/e.git/"));
@@ -194,6 +202,8 @@ BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping
 
 	must_pass(chdir(current_workdir));
 	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
+
+	git__path_free(&path_repository);
 END_TEST
 
 #define EMPTY_BARE_REPOSITORY_FOLDER TEST_RESOURCES "/empty_bare.git/"
@@ -228,23 +238,23 @@ END_TEST
 
 
 BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of the current working directory")
-	char new_current_workdir[GIT_PATH_MAX];
+	git_path new_current_workdir = GIT_PATH_INIT;
 	char current_workdir[GIT_PATH_MAX];
-	char path_repository[GIT_PATH_MAX];
+	git_path path_repository = GIT_PATH_INIT;
 
 	const mode_t mode = 0777;
 	git_repository* repo;
 
 	/* Setup the repository to open */
 	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
-	strcpy(path_repository, current_workdir);
-	git_path_join_n(path_repository, 3, path_repository, TEMP_REPO_FOLDER, "a/d/e.git");
-	must_pass(copydir_recurs(REPOSITORY_FOLDER, path_repository));
+	must_pass(git__path_strcpy(&path_repository, current_workdir));
+	must_pass(git_path_join_n(&path_repository, 3, path_repository.data, TEMP_REPO_FOLDER, "a/d/e.git"));
+	must_pass(copydir_recurs(REPOSITORY_FOLDER, path_repository.data));
 
 	/* Change the current working directory */
-	git_path_join(new_current_workdir, TEMP_REPO_FOLDER, "a/b/c/");
-	must_pass(git_futils_mkdir_r(new_current_workdir, mode));
-	must_pass(chdir(new_current_workdir));
+	must_pass(git_path_join(&new_current_workdir, TEMP_REPO_FOLDER, "a/b/c/"));
+	must_pass(git_futils_mkdir_r(new_current_workdir.data, mode));
+	must_pass(chdir(new_current_workdir.data));
 
 	must_pass(git_repository_open(&repo, "../../d/e.git"));
 
@@ -252,6 +262,9 @@ BEGIN_TEST(open2, "Open a bare repository with a relative path escaping out of t
 
 	must_pass(chdir(current_workdir));
 	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
+
+	git__path_free(&path_repository);
+	git__path_free(&new_current_workdir);
 END_TEST
 
 BEGIN_TEST(empty0, "test if a repository is empty or not")
@@ -367,31 +380,38 @@ static int write_file(const char *path, const char *content)
 }
 
 //no check is performed on ceiling_dirs length, so be sure it's long enough
-static int append_ceiling_dir(char *ceiling_dirs, const char *path)
+static int append_ceiling_dir(git_path *ceiling_dirs, const char *path)
 {
-	int len = strlen(ceiling_dirs);
+	git_path pretty_path = GIT_PATH_INIT;
 	int error;
+	char separator[2] = { GIT_PATH_LIST_SEPARATOR, '\0' };
 
-	error = git_path_prettify_dir(ceiling_dirs + len + (len ? 1 : 0), path, NULL);
+	error = git_path_prettify_dir(&pretty_path, path, NULL);
+
+	if (!error && ceiling_dirs->data && ceiling_dirs->data[0])
+		error = git__path_strcat(ceiling_dirs, separator);
+
+	if (!error)
+		error = git__path_append(ceiling_dirs, &pretty_path);
+
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to append ceiling directory.");
-
-	if (len)
-		ceiling_dirs[len] = GIT_PATH_LIST_SEPARATOR;
+		return git__rethrow(error, "Failed to append ceiling directory '%s'", path);
 
 	return GIT_SUCCESS;
 }
 
 BEGIN_TEST(discover0, "test discover")
 	git_repository *repo;
-	char ceiling_dirs[GIT_PATH_MAX * 2] = "";
+	git_path ceiling_dirs_buffer = GIT_PATH_INIT;
+	char *ceiling_dirs;
 	char repository_path[GIT_PATH_MAX];
 	char sub_repository_path[GIT_PATH_MAX];
 	char found_path[GIT_PATH_MAX];
 	const mode_t mode = 0777;
 
 	git_futils_mkdir_r(DISCOVER_FOLDER, mode);
-	must_pass(append_ceiling_dir(ceiling_dirs, TEMP_REPO_FOLDER));
+	must_pass(append_ceiling_dir(&ceiling_dirs_buffer, TEMP_REPO_FOLDER));
+	ceiling_dirs = ceiling_dirs_buffer.data;
 
 	must_be_true(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
 
@@ -430,7 +450,9 @@ BEGIN_TEST(discover0, "test discover")
 	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER3, 0, ceiling_dirs));
 	must_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_NOT_FOUND_FOLDER, 0, ceiling_dirs));
 
-	must_pass(append_ceiling_dir(ceiling_dirs, SUB_REPOSITORY_FOLDER));
+	must_pass(append_ceiling_dir(&ceiling_dirs_buffer, SUB_REPOSITORY_FOLDER));
+	ceiling_dirs = ceiling_dirs_buffer.data;
+
 	//this must pass as ceiling_directories cannot predent the current
 	//working directory to be checked
 	must_pass(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));

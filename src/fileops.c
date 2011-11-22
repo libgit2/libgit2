@@ -11,7 +11,7 @@
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
 	int error = GIT_SUCCESS;
-	git_path target_folder = GIT_PATH_INIT_N(GIT_PATH_MAX); /* prealloc during transition to git_path */
+	git_path target_folder = GIT_PATH_INIT;
 
 	error = git_path_dirname_r(&target_folder, file_path);
 	if (error < GIT_SUCCESS) {
@@ -21,15 +21,16 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 
 	/* Does the containing folder exist? */
 	if (git_futils_isdir(target_folder.data)) {
-		git_path_join(target_folder.data, target_folder.data, ""); /* Ensure there's a trailing slash */
+		error = git_path_as_dir(&target_folder);
 
 		/* Let's create the tree structure */
-		error = git_futils_mkdir_r(target_folder.data, mode);
+		if (error == GIT_SUCCESS)
+			error = git_futils_mkdir_r(target_folder.data, mode);
+
 		/* Let error fall through - the callee took care of setting the correct error message. */
 	}
 
 	git__path_free(&target_folder);
-
 	return error;
 }
 
@@ -186,8 +187,10 @@ int git_futils_readbuffer(git_fbuffer *obj, const char *path)
 void git_futils_freebuffer(git_fbuffer *obj)
 {
 	assert(obj);
-	git__free(obj->data);
-	obj->data = NULL;
+	if (obj->data) {
+		git__free(obj->data);
+		obj->data = NULL;
+	}
 }
 
 

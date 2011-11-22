@@ -326,6 +326,8 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 int git_config_find_global(char *global_config_path)
 {
 	const char *home;
+	int error = GIT_SUCCESS;
+	git_path path = GIT_PATH_INIT;
 
 	home = getenv("HOME");
 
@@ -337,12 +339,18 @@ int git_config_find_global(char *global_config_path)
 	if (home == NULL)
 		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot locate the user's home directory");
 
-	git_path_join(global_config_path, home, GIT_CONFIG_FILENAME);
+	error = git_path_join(&path, home, GIT_CONFIG_FILENAME);
 
-	if (git_futils_exists(global_config_path) < GIT_SUCCESS)
-		return git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");
+	if (error == GIT_SUCCESS &&
+		git_futils_exists(path.data) < GIT_SUCCESS)
+		error = git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");
 
-	return GIT_SUCCESS;
+	if (error == GIT_SUCCESS)
+		strncpy(global_config_path, path.data, GIT_PATH_MAX);
+
+	git__path_free(&path);
+
+	return error;
 }
 
 

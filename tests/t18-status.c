@@ -392,15 +392,15 @@ END_TEST
 BEGIN_TEST(singlestatus3, "test retrieving status for a new file in an empty repository")
 	git_repository *repo;
 	unsigned int status_flags;
-	char file_path[GIT_PATH_MAX];
+	git_path file_path = GIT_PATH_INIT;
 	char filename[] = "new_file";
 	int fd;
 
 	must_pass(copydir_recurs(EMPTY_REPOSITORY_FOLDER, TEST_STD_REPO_FOLDER));
 	must_pass(remove_placeholders(TEST_STD_REPO_FOLDER, "dummy-marker.txt"));
 
-	git_path_join(file_path, TEMP_REPO_FOLDER, filename);
-	fd = p_creat(file_path, 0666);
+	must_pass(git_path_join(&file_path, TEMP_REPO_FOLDER, filename));
+	fd = p_creat(file_path.data, 0666);
 	must_pass(fd);
 	must_pass(p_write(fd, "new_file\n", 9));
 	must_pass(p_close(fd));
@@ -410,6 +410,7 @@ BEGIN_TEST(singlestatus3, "test retrieving status for a new file in an empty rep
 	must_pass(git_status_file(&status_flags, repo, filename));
 	must_be_true(status_flags == GIT_STATUS_WT_NEW);
 
+	git__path_free(&file_path);
 	git_repository_free(repo);
 
 	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);

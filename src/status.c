@@ -73,7 +73,7 @@ static void status_entry_update_from_index(struct status_entry *e, git_index *in
 	status_entry_update_from_index_entry(e, index_entry);
 }
 
-static int status_entry_update_from_workdir(struct status_entry *e, char* full_path)
+static int status_entry_update_from_workdir(struct status_entry *e, const char* full_path)
 {
 	struct stat filest;
 
@@ -125,7 +125,7 @@ struct status_st {
 	git_tree *tree;
 
 	int workdir_path_len;
-	char* head_tree_relative_path;
+	git_path head_tree_relative_path;
 	int head_tree_relative_path_len;
 	unsigned int tree_position;
 	unsigned int index_position;
@@ -359,15 +359,23 @@ static int dirent_cb(void *state, char *a)
 			return GIT_SUCCESS;
 
 		if (m != NULL) {
-			st->head_tree_relative_path[st->head_tree_relative_path_len] = '\0';
+			int error = git__path_realloc(&st->head_tree_relative_path,
+										  st->head_tree_relative_path_len + 1);
+			if (error < GIT_SUCCESS)
+				goto fail;
+
+			st->head_tree_relative_path.data[st->head_tree_relative_path_len] = '\0';
+
+			error = git_path_join(&st->head_tree_relative_path, st->head_tree_relative_path.data, m->filename);
 
 			/* When the tree entry is a folder, append a forward slash to its name */
-			if (git_tree_entry_type(m) == GIT_OBJ_TREE)
-				git_path_join_n(st->head_tree_relative_path, 3, st->head_tree_relative_path, m->filename, "");
-			else
-				git_path_join(st->head_tree_relative_path, st->head_tree_relative_path, m->filename);
-		
-			m_name = st->head_tree_relative_path;
+			if (error == GIT_SUCCESS && git_tree_entry_type(m) == GIT_OBJ_TREE)
+				error = git_path_as_dir(&st->head_tree_relative_path);
+
+			if (error < GIT_SUCCESS)
+				goto fail;
+
+			m_name = st->head_tree_relative_path.data;
 		} else
 			m_name = NULL;
 
@@ -382,11 +390,14 @@ static int dirent_cb(void *state, char *a)
 		pi = ((cmpmi >= 0) && (cmpai >= 0)) ? i_name : NULL;
 
 		if((error = determine_status(st, pm != NULL, pi != NULL, pa != NULL, m, entry, a, status_path(pm, pi, pa), path_type)) < GIT_SUCCESS)
-			return git__rethrow(error, "An error occured while determining the status of '%s'", a);
+			goto fail;
 
 		if ((pa != NULL) || (path_type == GIT_STATUS_PATH_FOLDER))
 			return GIT_SUCCESS;
 	}
+
+fail:
+	return git__rethrow(error, "An error occured while determining the status of '%s'", a);
 }
 
 static int status_cmp(const void *a, const void *b)
@@ -404,8 +415,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	git_vector entries;
 	git_index *index = NULL;
 	char temp_path[GIT_PATH_MAX];
-	char tree_path[GIT_PATH_MAX] = "";
-	struct status_st dirent_st;
+	struct status_st dirent_st = {0};
 	int error = GIT_SUCCESS;
 	unsigned int i;
 	git_tree *tree;
@@ -428,11 +438,11 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	dirent_st.tree = tree;
 	dirent_st.index = index;
 	dirent_st.vector = &entries;
-	dirent_st.head_tree_relative_path = tree_path;
+	git__path_strcpy(&dirent_st.head_tree_relative_path, "");
 	dirent_st.head_tree_relative_path_len = 0;
 	dirent_st.is_dir = 1;
 
-	strcpy(temp_path, repo->path_workdir);
+	strncpy(temp_path, repo->path_workdir, GIT_PATH_MAX);
 
 	if (git_futils_isdir(temp_path)) {
 		error = git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path doesn't lead to a folder", temp_path);
@@ -503,23 +513,30 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 {
 	struct status_entry *e;
 	git_index *index = NULL;
-	char temp_path[GIT_PATH_MAX];
+	git_path temp_path = GIT_PATH_INIT;
 	int error = GIT_SUCCESS;
 	git_tree *tree = NULL;
 
 	assert(status_flags && repo && path);
 
-	git_path_join(temp_path, repo->path_workdir, path);
-	if (git_futils_isdir(temp_path) == GIT_SUCCESS)
+	error = git_path_join(&temp_path, repo->path_workdir, path);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to determine status of file '%s'", path);
+
+	if (git_futils_isdir(temp_path.data) == GIT_SUCCESS) {
+		git__path_free(&temp_path);
 		return git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path leads to a folder, not a file", path);
+	}
 
 	e = status_entry_new(NULL, path);
-	if (e == NULL)
+	if (e == NULL) {
+		git__path_free(&temp_path);
 		return GIT_ENOMEM;
+	}
 
 	/* Find file in Workdir */
-	if (git_futils_exists(temp_path) == GIT_SUCCESS) {
-		if ((error = status_entry_update_from_workdir(e, temp_path)) < GIT_SUCCESS)
+	if (git_futils_exists(temp_path.data) == GIT_SUCCESS) {
+		if ((error = status_entry_update_from_workdir(e, temp_path.data)) < GIT_SUCCESS)
 			goto exit;	/* The callee has already set the error message */
 	}
 
@@ -539,9 +556,9 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 
 	/* If the repository is not empty, try and locate the file in HEAD */
 	if (tree != NULL) {
-		strcpy(temp_path, path);
+		git__path_strcpy(&temp_path, path);
 
-		error = recurse_tree_entry(tree, e, temp_path);
+		error = recurse_tree_entry(tree, e, temp_path.data);
 		if (error < GIT_SUCCESS) {
 			error = git__rethrow(error, "Failed to determine status of file '%s'. An error occured while processing the tree", path);
 			goto exit;
@@ -557,6 +574,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	*status_flags = e->status_flags;
 
 exit:
+	git__path_free(&temp_path);
 	git_tree_close(tree);
 	git__free(e);
 	return error;

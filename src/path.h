@@ -20,14 +20,17 @@ typedef struct { /* path buffer */
 } git_path;
 
 #define GIT_PATH_INIT			{NULL,0}
-#define GIT_PATH_INIT_STR(S)	{(S)?git__strdup(S):NULL,(S)?strlen(S):0}
+#define GIT_PATH_INIT_STR(S)	{(S)?git__strdup(S):NULL,(S)?strlen(S)+1:0}
 /* the ability to prealloc a git_path is useful while transitioning code */
 #define GIT_PATH_INIT_N(N)		{(N)>0?git__calloc(N,1):NULL,N}
 
 extern void git__path_free(git_path *path);
 extern int git__path_realloc(git_path *path, size_t newsize);
+extern void git__path_swap(git_path *path_a, git_path *path_b);
+extern char* git__path_take_data(git_path *path);
+
+extern int git__path_strcpy(git_path *path, const char *str);
 extern int git__path_strncat(git_path *path, const char *str, size_t n);
-/* TODO: extern void git__path_append_n(git_path *path, int npath, ...); */
 
 GIT_INLINE(int) git__path_strcat(git_path *path, const char *str)
 {
@@ -79,23 +82,31 @@ extern int git_path_basename_r(git_path *base_path, const char *path);
 extern const char *git_path_topdir(const char *path);
 
 /**
- * Join two paths together. Takes care of properly fixing the
- * middle slashes and everything
+ * Join path strings together into a git_path. Takes care of properly
+ * fixing the middle slashes and everything.
  *
- * The paths are joined together into buffer_out; this is expected
- * to be an user allocated buffer of `GIT_PATH_MAX` size
+ * Note, the arguments to this function (besides the path_out) are
+ * strings, not git_paths.
+ *
+ * The paths are joined together into path_out.
  */
-extern void git_path_join_n(char *buffer_out, int npath, ...);
+extern int git_path_join_n(git_path *path_out, int npath, ...);
 
-GIT_INLINE(void) git_path_join(char *buffer_out, const char *path_a, const char *path_b)
+GIT_INLINE(int) git_path_join(git_path *path_out, const char *path_a, const char *path_b)
 {
-	git_path_join_n(buffer_out, 2, path_a, path_b);
+	return git_path_join_n(path_out, 2, path_a, path_b);
 }
 
 int git_path_root(const char *path);
 
-int git_path_prettify(char *path_out, const char *path, const char *base);
-int git_path_prettify_dir(char *path_out, const char *path, const char *base);
+int git_path_prettify(git_path *path_out, const char *path, const char *base);
+int git_path_prettify_dir(git_path *path_out, const char *path, const char *base);
+
+/**
+ * Ensure path has a trailing slash.
+ */
+int git_path_as_dir(git_path *path);
+void git_path_string_as_dir(char* path, size_t size);
 
 #ifdef GIT_WIN32
 GIT_INLINE(void) git_path_mkposix(char *path)
