@@ -295,6 +295,7 @@ void git_remote_disconnect(git_remote *remote)
 			remote->transport->close(remote->transport);
 
 		remote->transport->free(remote->transport);
+		remote->transport = NULL;
 	}
 }
 
