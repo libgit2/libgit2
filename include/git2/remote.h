@@ -100,7 +100,8 @@ GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, int direction);
 /**
  * Get a list of refs at the remote
  *
- * The remote (or more exactly its transport) must be connected.
+ * The remote (or more exactly its transport) must be connected. The
+ * memory belongs to the remote.
  *
  * @param refs where to store the refs
  * @param remote the remote
