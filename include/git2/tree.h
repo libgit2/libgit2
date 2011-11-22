@@ -308,9 +308,10 @@ enum git_treewalk_mode {
  * @param tree The tree to walk
  * @param callback Function to call on each tree entry
  * @param mode Traversal mode (pre or post-order)
+ * @param payload Opaque pointer to be passed on each callback
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_tree_walk(git_tree *walk, git_treewalk_cb callback, int mode, void *payload);
+GIT_EXTERN(int) git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload);
 
 /** @} */
 GIT_END_DECL
