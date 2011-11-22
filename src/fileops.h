@@ -90,11 +90,6 @@ extern int git_futils_rmdir_r(const char *path, int force);
 extern int git_futils_mktmp(char *path_out, const char *filename);
 
 /**
- * Atomically rename a file on the filesystem
- */
-extern int git_futils_mv_atomic(const char *from, const char *to);
-
-/**
  * Move a file on the filesystem, create the
  * destination path if it doesn't exist
  */
