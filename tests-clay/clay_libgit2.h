@@ -16,7 +16,7 @@
 	git_clearerror(); \
 	if ((expr) != GIT_SUCCESS) \
 		clay__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, git_lasterror(), 1); \
-	} while(0);
+	} while(0)
 
 /**
  * Wrapper for `clay_must_fail` -- this one is

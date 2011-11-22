@@ -8,7 +8,7 @@ static void file_create(const char *filename, const char *content)
 	fd = p_creat(filename, 0666);
 	cl_assert(fd != 0);
 	cl_git_pass(p_write(fd, content, strlen(content)));
-	cl_git_pass(p_close(fd))
+	cl_git_pass(p_close(fd));
 }
 
 void test_index_rename__single_file(void)
