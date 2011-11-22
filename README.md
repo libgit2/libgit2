@@ -20,7 +20,7 @@ What It Can Do
 libgit2 is already very usable.
 
 * SHA conversions, formatting and shortening
-* abstracked ODB backend system
+* abstracted ODB backend system
 * commit, tag, tree and blob parsing, editing, and write-back
 * tree traversal
 * revision walking
@@ -85,7 +85,7 @@ Here are the bindings to libgit2 that are currently available:
 * node-gitteh (Node.js bindings) <https://github.com/libgit2/node-gitteh>
 * nodegit (Node.js bindings) <https://github.com/tbranyen/nodegit>
 * go-git (Go bindings) <https://github.com/str1ngs/go-git>
-* libqgit2 (C++ QT bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
+* libqgit2 (C++ Qt bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
 * libgit2-ocaml (ocaml bindings) <https://github.com/burdges/libgit2-ocaml>
 * Geef (Erlang bindings) <https://github.com/schacon/geef>
 * libgit2net (.NET bindings, low level) <https://github.com/txdv/libgit2net>
