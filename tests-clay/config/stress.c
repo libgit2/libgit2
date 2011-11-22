@@ -8,7 +8,7 @@
 
 void test_config_stress__initialize(void)
 {
-	git_filebuf file;
+	git_filebuf file = GIT_FILEBUF_INIT;
 
 	git_filebuf_open(&file, TEST_CONFIG, 0);
 
