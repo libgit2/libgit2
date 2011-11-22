@@ -10,7 +10,7 @@
 #include "git2/net.h"
 #include "transport.h"
 
-struct {
+static struct {
 	char *prefix;
 	git_transport_cb fn;
 } transports[] = {
@@ -23,26 +23,20 @@ struct {
 	{NULL, 0}
 };
 
-static git_transport_cb transport_new_fn(const char *url)
+#define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0]))
+
+static git_transport_cb transport_find_fn(const char *url)
 {
-	int i = 0;
+	size_t i = 0;
 
-	while (1) {
-		if (transports[i].prefix == NULL)
-			break;
+	 /* TODO: Parse "example.com:project.git" as an SSH URL */
 
+	for (i = 0; i < GIT_TRANSPORT_COUNT; ++i) {
 		if (!strncasecmp(url, transports[i].prefix, strlen(transports[i].prefix)))
 			return transports[i].fn;
-
-		++i;
 	}
 
-	/*
-	 * If we still haven't found the transport, we assume we mean a
-	 * local file.
-	 * TODO: Parse "example.com:project.git" as an SSH URL
-	 */
-	return git_transport_local;
+	return NULL;
 }
 
 /**************
@@ -55,13 +49,25 @@ int git_transport_dummy(git_transport **GIT_UNUSED(transport))
 	return git__throw(GIT_ENOTIMPLEMENTED, "This protocol isn't implemented. Sorry");
 }
 
+int git_transport_valid_url(const char *url)
+{
+	return transport_find_fn(url) != NULL;
+}
+
 int git_transport_new(git_transport **out, const char *url)
 {
 	git_transport_cb fn;
 	git_transport *transport;
 	int error;
 
-	fn = transport_new_fn(url);
+	fn = transport_find_fn(url);
+
+	/*
+	 * If we haven't found the transport, we assume we mean a
+	 * local file.
+	 */
+	if (fn == NULL)
+		fn = &git_transport_local;
 
 	error = fn(&transport);
 	if (error < GIT_SUCCESS)

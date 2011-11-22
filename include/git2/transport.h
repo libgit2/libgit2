@@ -27,6 +27,14 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
 
+/**
+ * Return whether a string is a valid transport URL
+ *
+ * @param tranport the url to check
+ * @param 1 if the url is valid, 0 otherwise
+ */
+GIT_EXTERN(int) git_transport_valid_url(const char *url);
+
 /** @} */
 GIT_END_DECL
 #endif
