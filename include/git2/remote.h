@@ -28,16 +28,18 @@ GIT_BEGIN_DECL
  */
 
 /**
- * Create a new unnamed remote
+ * Create a remote in memory
  *
- * Useful when you don't want to store the remote
+ * Create a remote with the default refspecs in memory. You can use
+ * this when you have a URL instead of a remote's name.
  *
  * @param out pointer to the new remote object
  * @param repo the associtated repository
  * @param url the remote repository's URL
+ * @param name the remote's name
  * @return GIT_SUCCESS or an error code
  */
-int git_remote_new(git_remote **out, git_repository *repo, const char *url);
+int git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name);
 
 /**
  * Get the information for a particular remote
@@ -107,26 +109,39 @@ GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, int direction);
 GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
 
 /**
- * Negotiate what data needs to be exchanged to synchroize the remtoe
- * and local references
- *
- * @param remote the remote you want to negotiate with
- */
-GIT_EXTERN(int) git_remote_negotiate(git_remote *remote);
-
-/**
  * Download the packfile
  *
- * The packfile is downloaded with a temporary filename, as it's final
- * name is not known yet. If there was no packfile needed (all the
- * objects were available locally), filename will be NULL and the
- * function will return success.
+ * Negotiate what objects should be downloaded and download the
+ * packfile with those objects. The packfile is downloaded with a
+ * temporary filename, as it's final name is not known yet. If there
+ * was no packfile needed (all the objects were available locally),
+ * filename will be NULL and the function will return success.
  *
  * @param remote the remote to download from
  * @param filename where to store the temproray filename
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
+
+/**
+ * Check whether the remote is connected
+ *
+ * Check whether the remote's underlying transport is connected to the
+ * remote host.
+ *
+ * @return 1 if it's connected, 0 otherwise.
+ */
+GIT_EXTERN(int) git_remote_connected(git_remote *remote);
+
+/**
+ * Disconnect from the remote
+ *
+ * Close the connection to the remote and free the underlying
+ * transport.
+ *
+ * @param remote the remote to disconnect from
+ */
+GIT_EXTERN(void) git_remote_disconnect(git_remote *remote);
 
 /**
  * Free the memory associated with a remote

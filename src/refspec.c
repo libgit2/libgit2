@@ -23,8 +23,13 @@ int git_refspec_parse(git_refspec *refspec, const char *str)
 	}
 
 	delim = strchr(str, ':');
-	if (delim == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse refspec. No ':'");
+	if (delim == NULL) {
+		refspec->src = git__strdup(str);
+		if (refspec->src == NULL)
+			return GIT_ENOMEM;
+
+		return GIT_SUCCESS;
+	}
 
 	refspec->src = git__strndup(str, delim - str);
 	if (refspec->src == NULL)
