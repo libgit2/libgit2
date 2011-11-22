@@ -20,7 +20,7 @@ What It Can Do
 libgit2 is already very usable.
 
 * SHA conversions, formatting and shortening
-* abstracked ODB backend system
+* abstracted ODB backend system
 * commit, tag, tree and blob parsing, editing, and write-back
 * tree traversal
 * revision walking
