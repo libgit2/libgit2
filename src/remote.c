@@ -60,8 +60,8 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url, cons
 {
 	git_remote *remote;
 
-	if (url == NULL)
-		return git__throw(GIT_EINVALIDARGS, "No URL was given");
+	/* name is optional */
+	assert(out && repo && url);
 
 	remote = git__malloc(sizeof(git_remote));
 	if (remote == NULL)
@@ -94,6 +94,8 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 	char *buf = NULL;
 	const char *val;
 	int ret, error, buf_len;
+
+	assert(out && cfg && name);
 
 	remote = git__malloc(sizeof(git_remote));
 	if (remote == NULL)
@@ -169,23 +171,27 @@ cleanup:
 	return error;
 }
 
-const char *git_remote_name(struct git_remote *remote)
+const char *git_remote_name(git_remote *remote)
 {
+	assert(remote);
 	return remote->name;
 }
 
-const char *git_remote_url(struct git_remote *remote)
+const char *git_remote_url(git_remote *remote)
 {
+	assert(remote);
 	return remote->url;
 }
 
-const git_refspec *git_remote_fetchspec(struct git_remote *remote)
+const git_refspec *git_remote_fetchspec(git_remote *remote)
 {
+	assert(remote);
 	return &remote->fetch;
 }
 
-const git_refspec *git_remote_pushspec(struct git_remote *remote)
+const git_refspec *git_remote_pushspec(git_remote *remote)
 {
+	assert(remote);
 	return &remote->push;
 }
 
@@ -193,6 +199,8 @@ int git_remote_connect(git_remote *remote, int direction)
 {
 	int error;
 	git_transport *t;
+
+	assert(remote);
 
 	error = git_transport_new(&t, remote->url);
 	if (error < GIT_SUCCESS)
@@ -215,6 +223,7 @@ cleanup:
 
 int git_remote_ls(git_remote *remote, git_headarray *refs)
 {
+	assert(remote && refs);
 	return remote->transport->ls(remote->transport, refs);
 }
 
@@ -222,13 +231,15 @@ int git_remote_download(char **filename, git_remote *remote)
 {
 	int error;
 
+	assert(filename && remote);
+
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return git__rethrow(error, "Error negotiating");
 
 	return git_fetch_download_pack(filename, remote);
 }
 
-int git_remote_update_tips(struct git_remote *remote)
+int git_remote_update_tips(git_remote *remote)
 {
 	int error = GIT_SUCCESS;
 	unsigned int i = 0;
@@ -237,6 +248,8 @@ int git_remote_update_tips(struct git_remote *remote)
 	git_remote_head *head;
 	git_reference *ref;
 	struct git_refspec *spec = &remote->fetch;
+
+	assert(remote);
 
 	memset(refname, 0x0, sizeof(refname));
 
@@ -269,11 +282,14 @@ int git_remote_update_tips(struct git_remote *remote)
 
 int git_remote_connected(git_remote *remote)
 {
+	assert(remote);
 	return remote->transport == NULL ? 0 : remote->transport->connected;
 }
 
 void git_remote_disconnect(git_remote *remote)
 {
+	assert(remote);
+
 	if (remote->transport != NULL) {
 		if (remote->transport->connected)
 			remote->transport->close(remote->transport);
