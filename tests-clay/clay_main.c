@@ -132,9 +132,14 @@ static const struct clay_func _clay_cb_core_oid[] = {
 static const struct clay_func _clay_cb_core_path[] = {
     {"0", &test_core_path__0},
 	{"1", &test_core_path__1},
+	{"10", &test_core_path__10},
+	{"11", &test_core_path__11},
 	{"2", &test_core_path__2},
 	{"5", &test_core_path__5},
-	{"6", &test_core_path__6}
+	{"6", &test_core_path__6},
+	{"7", &test_core_path__7},
+	{"8", &test_core_path__8},
+	{"9", &test_core_path__9}
 };
 static const struct clay_func _clay_cb_core_rmdir[] = {
     {"delete_recursive", &test_core_rmdir__delete_recursive},
@@ -256,7 +261,7 @@ static const struct clay_suite _clay_suites[] = {
         "core::path",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_core_path, 5
+        _clay_cb_core_path, 10
     },
 	{
         "core::rmdir",
@@ -363,7 +368,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 23;
-static size_t _clay_callback_count = 70;
+static size_t _clay_callback_count = 75;
 
 /* Core test functions */
 static void
@@ -507,9 +512,8 @@ clay_test(int argc, char **argv)
 	);
 
 	if (clay_sandbox() < 0) {
-		fprintf(stderr,
-			"Failed to sandbox the test runner.\n"
-			"Testing will proceed without sandboxing.\n");
+		clay_print_onabort("Failed to sandbox the test runner.\n");
+		exit(-1);
 	}
 
 	if (argc > 1) {
@@ -521,7 +525,7 @@ clay_test(int argc, char **argv)
 	}
 
 	clay_print_shutdown(
-		(int)_clay_callback_count,
+		_clay.test_count,
 		(int)_clay_suite_count,
 		_clay.total_errors
 	);
@@ -898,7 +902,6 @@ static void clay_print_init(int test_count, int suite_count, const char *suite_n
 	(void)suite_names;
 	(void)suite_count;
 	printf("TAP version 13\n");
-	printf("1..%d\n", test_count);
 }
 
 static void clay_print_shutdown(int test_count, int suite_count, int error_count)
@@ -907,7 +910,12 @@ static void clay_print_shutdown(int test_count, int suite_count, int error_count
 	(void)suite_count;
 	(void)error_count;
 
-	printf("\n");
+	if (!error_count)
+		printf("# passed all %d test(s)\n", test_count);
+	else
+		printf("# failed %d among %d test(s)\n", error_count,
+			test_count);
+	printf("1..%d\n", test_count);
 }
 
 static void clay_print_error(int num, const struct clay_error *error)

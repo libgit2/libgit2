@@ -86,7 +86,10 @@ void git_reference_free(git_reference *reference)
 	if (reference == NULL)
 		return;
 
-	git__free(reference->name);
+	if (reference->name) {
+		git__free(reference->name);
+		reference->name = NULL;
+	}
 
 	if (reference->flags & GIT_REF_SYMBOLIC)
 		git__free(reference->target.symbolic);
@@ -122,14 +125,20 @@ static int reference_create(
 
 static int reference_read(git_fbuffer *file_content, time_t *mtime, const char *repo_path, const char *ref_name, int *updated)
 {
-	char path[GIT_PATH_MAX];
+	git_path path = GIT_PATH_INIT;
+	int      error = GIT_SUCCESS;
 
 	assert(file_content && repo_path && ref_name);
 
 	/* Determine the full path of the file */
-	git_path_join(path, repo_path, ref_name);
+	error = git_path_join(&path, repo_path, ref_name);
 
-	return git_futils_readbuffer_updated(file_content, path, mtime, updated);
+	if (error == GIT_SUCCESS)
+		error = git_futils_readbuffer_updated(file_content, path.data, mtime, updated);
+
+	git_path_free(&path);
+
+	return error;
 }
 
 static int loose_parse_symbolic(git_reference *ref, git_fbuffer *file_content)
@@ -286,14 +295,15 @@ cleanup:
 static int loose_write(git_reference *ref)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
-	char ref_path[GIT_PATH_MAX];
-	int error;
+	git_path    ref_path = GIT_PATH_INIT;
+	int         error = GIT_SUCCESS;
 	struct stat st;
 
-	git_path_join(ref_path, ref->owner->path_repository, ref->name);
+	if ((error = git_path_join(&ref_path, ref->owner->path_repository, ref->name)) < GIT_SUCCESS)
+		goto unlock;
 
-	if ((error = git_filebuf_open(&file, ref_path, GIT_FILEBUF_FORCE)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to write loose reference");
+	if ((error = git_filebuf_open(&file, ref_path.data, GIT_FILEBUF_FORCE)) < GIT_SUCCESS)
+		goto unlock;
 
 	if (ref->flags & GIT_REF_OID) {
 		char oid[GIT_OID_HEXSZ + 1];
@@ -313,12 +323,15 @@ static int loose_write(git_reference *ref)
 		goto unlock;
 	}
 
-	if (p_stat(ref_path, &st) == GIT_SUCCESS)
+	if (p_stat(ref_path.data, &st) == GIT_SUCCESS)
 		ref->mtime = st.st_mtime;
+
+	git_path_free(&ref_path);
 
 	return git_filebuf_commit(&file, GIT_REFS_FILE_MODE);
 
 unlock:
+	git_path_free(&ref_path);
 	git_filebuf_cleanup(&file);
 	return git__rethrow(error, "Failed to write loose reference");
 }
@@ -581,21 +594,33 @@ static int _dirent_loose_load(void *data, char *full_path)
  */
 static int packed_loadloose(git_repository *repository)
 {
-	char refs_path[GIT_PATH_MAX];
+	int error = GIT_SUCCESS;
+	git_path refs_path = GIT_PATH_INIT;
 
 	/* the packfile must have been previously loaded! */
 	assert(repository->references.packfile);
 
-	git_path_join(refs_path, repository->path_repository, GIT_REFS_DIR);
+	/* preallocate buffer so direach can write into later */
+	error = git_path_realloc(&refs_path, GIT_PATH_MAX);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_path_join(&refs_path, repository->path_repository, GIT_REFS_DIR);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
 	/*
 	 * Load all the loose files from disk into the Packfile table.
 	 * This will overwrite any old packed entries with their
 	 * updated loose versions
 	 */
-	return git_futils_direach(
-		refs_path, GIT_PATH_MAX,
+	error = git_futils_direach(
+		refs_path.data, refs_path.size,
 		_dirent_loose_load, repository);
+
+cleanup:
+	git_path_free(&refs_path);
+	return error;
 }
 
 /*
@@ -703,20 +728,22 @@ static int packed_find_peel(git_repository *repo, struct packref *ref)
 static int packed_remove_loose(git_repository *repo, git_vector *packing_list)
 {
 	unsigned int i;
-	char full_path[GIT_PATH_MAX];
+	git_path full_path = GIT_PATH_INIT;
 	int error = GIT_SUCCESS;
 
 	for (i = 0; i < packing_list->length; ++i) {
+		int last_error;
 		struct packref *ref = git_vector_get(packing_list, i);
 
 		if ((ref->flags & GIT_PACKREF_WAS_LOOSE) == 0)
 			continue;
 
-		git_path_join(full_path, repo->path_repository, ref->name);
+		last_error = git_path_join(&full_path, repo->path_repository, ref->name);
 
-		if (git_futils_exists(full_path) == GIT_SUCCESS &&
-			p_unlink(full_path) < GIT_SUCCESS)
-			error = GIT_EOSERR;
+		if (!last_error &&
+			git_futils_exists(full_path.data) == GIT_SUCCESS &&
+			p_unlink(full_path.data) < GIT_SUCCESS)
+			last_error = GIT_EOSERR;
 
 		/*
 		 * if we fail to remove a single file, this is *not* good,
@@ -724,7 +751,11 @@ static int packed_remove_loose(git_repository *repo, git_vector *packing_list)
 		 * After we've removed as many files as possible, we return
 		 * the error code anyway.
 		 */
+		if (error > last_error)
+			error = last_error;
 	}
+
+	git_path_free(&full_path);
 
 	return error == GIT_SUCCESS ?
 		GIT_SUCCESS :
@@ -747,8 +778,7 @@ static int packed_write(git_repository *repo)
 	git_filebuf pack_file = GIT_FILEBUF_INIT;
 	int error;
 	unsigned int i;
-	char pack_file_path[GIT_PATH_MAX];
-
+	git_path pack_file_path = GIT_PATH_INIT;
 	git_vector packing_list;
 	size_t total_refs;
 
@@ -774,16 +804,19 @@ static int packed_write(git_repository *repo)
 	git_vector_sort(&packing_list);
 
 	/* Now we can open the file! */
-	git_path_join(pack_file_path, repo->path_repository, GIT_PACKEDREFS_FILE);
-	if ((error = git_filebuf_open(&pack_file, pack_file_path, 0)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to write open packed references file");
+	if ((error = git_path_join(&pack_file_path, repo->path_repository,
+							   GIT_PACKEDREFS_FILE)) < GIT_SUCCESS)
+		goto cleanup;
+
+	if ((error = git_filebuf_open(&pack_file, pack_file_path.data, 0)) < GIT_SUCCESS)
+		goto cleanup;
 
 	/* Packfiles have a header... apparently
 	 * This is in fact not required, but we might as well print it
 	 * just for kicks */
 	if ((error =
 		git_filebuf_printf(&pack_file, "%s\n", GIT_PACKEDREFS_HEADER)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to write packed references file header");
+		goto cleanup;
 
 	for (i = 0; i < packing_list.length; ++i) {
 		struct packref *ref = (struct packref *)git_vector_get(&packing_list, i);
@@ -811,13 +844,14 @@ cleanup:
 
 			error = packed_remove_loose(repo, &packing_list);
 
-			if (p_stat(pack_file_path, &st) == GIT_SUCCESS)
+			if (p_stat(pack_file_path.data, &st) == GIT_SUCCESS)
 				repo->references.packfile_time = st.st_mtime;
 		}
 	}
 	else git_filebuf_cleanup(&pack_file);
 
 	git_vector_free(&packing_list);
+	git_path_free(&pack_file_path);
 
 	return error == GIT_SUCCESS ?
 		GIT_SUCCESS :
@@ -872,20 +906,24 @@ static int reference_available(
 static int reference_exists(int *exists, git_repository *repo, const char *ref_name)
 {
 	int error;
-	char ref_path[GIT_PATH_MAX];
+	git_path ref_path = GIT_PATH_INIT;
 
 	error = packed_load(repo);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Cannot resolve if a reference exists");
 
-	git_path_join(ref_path, repo->path_repository, ref_name);
+	error = git_path_join(&ref_path, repo->path_repository, ref_name);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Cannot resolve if a reference exists");
 
-	if (git_futils_isfile(ref_path) == GIT_SUCCESS ||
-		git_hashtable_lookup(repo->references.packfile, ref_path) != NULL) {
+	if (git_futils_isfile(ref_path.data) == GIT_SUCCESS ||
+		git_hashtable_lookup(repo->references.packfile, ref_path.data) != NULL) {
 		*exists = 1;
 	} else {
 		*exists = 0;
 	}
+
+	git_path_free(&ref_path);
 
 	return GIT_SUCCESS;
 }
@@ -971,12 +1009,15 @@ static int reference_delete(git_reference *ref)
 	/* If the reference is loose, we can just remove the reference
 	 * from the filesystem */
 	} else {
-		char full_path[GIT_PATH_MAX];
 		git_reference *ref_in_pack;
+		git_path full_path = GIT_PATH_INIT;
 
-		git_path_join(full_path, ref->owner->path_repository, ref->name);
+		error = git_path_join(&full_path, ref->owner->path_repository, ref->name);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
 
-		error = p_unlink(full_path);
+		error = p_unlink(full_path.data);
+		git_path_free(&full_path); /* always can free at this point */
 		if (error < GIT_SUCCESS)
 			goto cleanup;
 
@@ -1253,8 +1294,7 @@ int git_reference_set_target(git_reference *ref, const char *target)
 int git_reference_rename(git_reference *ref, const char *new_name, int force)
 {
 	int error;
-
-	char aux_path[GIT_PATH_MAX];
+	git_path aux_path = GIT_PATH_INIT;
 	char normalized[GIT_REFNAME_MAX];
 
 	const char *head_target = NULL;
@@ -1301,6 +1341,21 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		return git__rethrow(error,
 			"Failed to rename reference. Reference already exists");
 
+	/* Preallocate aux_path so it path joins will not fail once we
+	 * start removing things.
+	 */
+	{
+		int ref_len = strlen(ref->name) + 6; /* space for "/logs/" */
+		int new_len = strlen(new_name);
+		int max_len = 3; /* space for separators and null byte */;
+		max_len += (new_len > ref_len) ? new_len : ref_len;
+		max_len += strlen(ref->owner->path_repository) + 3;
+
+		error = git_path_realloc(&aux_path, max_len);
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
 	/*
 	 * Now delete the old ref and remove an possibly existing directory
 	 * named `new_name`. Note that using the internal `reference_delete`
@@ -1310,10 +1365,12 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	if ((error = reference_delete(ref)) < GIT_SUCCESS)
 		goto cleanup;
 
-	git_path_join(aux_path, ref->owner->path_repository, new_name);
-	if (git_futils_exists(aux_path) == GIT_SUCCESS) {
-		if (git_futils_isdir(aux_path) == GIT_SUCCESS) {
-			if ((error = git_futils_rmdir_r(aux_path, 0)) < GIT_SUCCESS)
+	/* preallocated buffer, so cannot fail */
+	git_path_join(&aux_path, ref->owner->path_repository, new_name);
+
+	if (git_futils_exists(aux_path.data) == GIT_SUCCESS) {
+		if (git_futils_isdir(aux_path.data) == GIT_SUCCESS) {
+			if ((error = git_futils_rmdir_r(aux_path.data, 0)) < GIT_SUCCESS)
 				goto rollback;
 		} else goto rollback;
 	}
@@ -1334,9 +1391,10 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	 * TODO
 	 *
 	 */
-	git_path_join_n(aux_path, 3, ref->owner->path_repository, "logs", ref->name);
-	if (git_futils_isfile(aux_path) == GIT_SUCCESS) {
-		if ((error = p_unlink(aux_path)) < GIT_SUCCESS)
+	/* preallocated buffer, so cannot fail */
+	git_path_join_n(&aux_path, 3, ref->owner->path_repository, "logs", ref->name);
+	if (git_futils_isfile(aux_path.data) == GIT_SUCCESS) {
+		if ((error = p_unlink(aux_path.data)) < GIT_SUCCESS)
 			goto rollback;
 	}
 
@@ -1470,7 +1528,7 @@ int git_reference_foreach(
 {
 	int error;
 	struct dirent_list_data data;
-	char refs_path[GIT_PATH_MAX];
+	git_path refs_path = GIT_PATH_INIT;
 
 	/* list all the packed references first */
 	if (list_flags & GIT_REF_PACKED) {
@@ -1496,8 +1554,21 @@ int git_reference_foreach(
 	data.callback = callback;
 	data.callback_payload = payload;
 
-	git_path_join(refs_path, repo->path_repository, GIT_REFS_DIR);
-	return git_futils_direach(refs_path, GIT_PATH_MAX, _dirent_loose_listall, &data);
+	/* preallocate buffer so direach can write into later */
+	error = git_path_realloc(&refs_path, GIT_PATH_MAX);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_path_join(&refs_path, repo->path_repository, GIT_REFS_DIR);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_futils_direach(refs_path.data, refs_path.size,
+							   _dirent_loose_listall, &data);
+
+cleanup:
+	git_path_free(&refs_path);
+	return error;
 }
 
 static int cb__reflist_add(const char *ref, void *data)

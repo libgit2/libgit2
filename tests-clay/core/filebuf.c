@@ -104,3 +104,4 @@ void test_core_filebuf__5(void)
 
 	cl_must_pass(p_unlink(test));
 }
+

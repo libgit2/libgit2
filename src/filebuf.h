@@ -67,6 +67,7 @@ int git_filebuf_open(git_filebuf *lock, const char *path, int flags);
 int git_filebuf_commit(git_filebuf *lock, mode_t mode);
 int git_filebuf_commit_at(git_filebuf *lock, const char *path, mode_t mode);
 void git_filebuf_cleanup(git_filebuf *lock);
+
 int git_filebuf_hash(git_oid *oid, git_filebuf *file);
 
 #endif

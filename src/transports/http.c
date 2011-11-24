@@ -615,8 +615,9 @@ static int http_download_pack(char **out, git_transport *transport, git_reposito
 	char buffer[1024];
 	gitno_buffer buf;
 	download_pack_cbdata data;
-	git_filebuf file;
-	char path[GIT_PATH_MAX], suff[] = "/objects/pack/pack-received\0";
+	git_filebuf file = GIT_FILEBUF_INIT;
+	git_path path = GIT_PATH_INIT;
+	char suff[] = "/objects/pack/pack-received\0";
 
 	/*
 	 * This is part of the previous response, so we don't want to
@@ -632,13 +633,15 @@ static int http_download_pack(char **out, git_transport *transport, git_reposito
 
 	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
 
-	git_path_join(path, repo->path_repository, suff);
-
 	if (memcmp(oldbuf->ptr, "PACK", strlen("PACK"))) {
 		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
 	}
 
-	error = git_filebuf_open(&file, path, GIT_FILEBUF_TEMPORARY);
+	error = git_path_join(&path, repo->path_repository, suff);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_filebuf_open(&file, path.data, GIT_FILEBUF_TEMPORARY);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -678,6 +681,7 @@ static int http_download_pack(char **out, git_transport *transport, git_reposito
 cleanup:
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&file);
+	git_path_free(&path);
 
 	return error;
 }

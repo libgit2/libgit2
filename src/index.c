@@ -294,7 +294,6 @@ git_index_entry *git_index_get(git_index *index, unsigned int n)
 static int index_entry_init(git_index_entry **entry_out, git_index *index, const char *rel_path, int stage)
 {
 	git_index_entry *entry;
-	char full_path[GIT_PATH_MAX];
 	struct stat st;
 	git_oid oid;
 	int error;
@@ -302,13 +301,12 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	if (index->repository == NULL)
 		return git__throw(GIT_EBAREINDEX, "Failed to initialize entry. Repository is bare");
 
-	git_path_join(full_path, index->repository->path_workdir, rel_path);
-
-	if (p_lstat(full_path, &st) < 0)
-		return git__throw(GIT_ENOTFOUND, "Failed to initialize entry. '%s' cannot be opened", full_path);
-
 	if (stage < 0 || stage > 3)
 		return git__throw(GIT_ERROR, "Failed to initialize entry. Invalid stage %i", stage);
+
+	/* There is no need to validate the rel_path here, since it will be
+	 * immediately validated by the call to git_blob_create_fromfile.
+	 */
 
 	/* write the blob to disk and get the oid */
 	if ((error = git_blob_create_fromfile(&oid, index->repository, rel_path)) < GIT_SUCCESS)

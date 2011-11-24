@@ -151,28 +151,37 @@ cleanup:
 	return error;
 }
 
-static void index_path(char *path, git_indexer *idx)
+static int index_path(git_path* path, git_indexer *idx)
 {
+	int error;
 	char *ptr;
 	const char prefix[] = "pack-", suffix[] = ".idx";
+	char oid[GIT_OID_HEXSZ + 1];
 
-	ptr = strrchr(path, '/') + 1;
+	ptr = strrchr(path->data, '/') + 1;
+	*ptr = '\0';
 
-	memcpy(ptr, prefix, strlen(prefix));
-	ptr += strlen(prefix);
-	git_oid_fmt(ptr, &idx->hash);
-	ptr += GIT_OID_HEXSZ;
-	memcpy(ptr, suffix, strlen(suffix) + 1);
+	error = git_path_strcat(path, prefix);
+
+	if (!error) {
+		git_oid_fmt(oid, &idx->hash);
+		oid[GIT_OID_HEXSZ] = '\0';
+		error = git_path_strcat(path, oid);
+	}
+
+	if (!error)
+		git_path_strcat(path, suffix);
+
+	return error;
 }
 
 int git_indexer_write(git_indexer *idx)
 {
 	git_mwindow *w = NULL;
 	int error;
-	size_t namelen;
 	unsigned int i, long_offsets = 0, left;
 	struct git_pack_idx_header hdr;
-	char filename[GIT_PATH_MAX];
+	git_path filename = GIT_PATH_INIT;
 	struct entry *entry;
 	void *packfile_hash;
 	git_oid file_hash;
@@ -180,16 +189,22 @@ int git_indexer_write(git_indexer *idx)
 
 	git_vector_sort(&idx->objects);
 
-	namelen = strlen(idx->pack->pack_name);
-	memcpy(filename, idx->pack->pack_name, namelen);
-	memcpy(filename + namelen - strlen("pack"), "idx", strlen("idx") + 1);
+	if ((error = git_path_strcpy(&filename, idx->pack->pack_name)) < GIT_SUCCESS)
+		return error;
+	filename.data[strlen(filename.data) - strlen("pack")] = '\0';
+	if ((error = git_path_strcat(&filename, "idx")) < GIT_SUCCESS)
+		return error;
 
-	error = git_filebuf_open(&idx->file, filename, GIT_FILEBUF_HASH_CONTENTS);
+	error = git_filebuf_open(&idx->file, filename.data, GIT_FILEBUF_HASH_CONTENTS);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
 	/* Write out the header */
 	hdr.idx_signature = htonl(PACK_IDX_SIGNATURE);
 	hdr.idx_version = htonl(2);
 	error = git_filebuf_write(&idx->file, &hdr, sizeof(hdr));
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
 	/* Write out the fanout table */
 	for (i = 0; i < 256; ++i) {
@@ -270,14 +285,18 @@ int git_indexer_write(git_indexer *idx)
 		goto cleanup;
 
 	/* Figure out what the final name should be */
-	index_path(filename, idx);
+	error = index_path(&filename, idx);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
 	/* Commit file */
-	error = git_filebuf_commit_at(&idx->file, filename, GIT_PACK_FILE_MODE);
+	error = git_filebuf_commit_at(&idx->file, filename.data, GIT_PACK_FILE_MODE);
 
 cleanup:
 	git_mwindow_free_all(&idx->pack->mwf);
 	if (error < GIT_SUCCESS)
 		git_filebuf_cleanup(&idx->file);
+	git_path_free(&filename);
 
 	return error;
 }

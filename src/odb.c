@@ -343,40 +343,48 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 
 static int load_alternates(git_odb *odb, const char *objects_dir)
 {
-	char alternates_path[GIT_PATH_MAX];
+	git_path alternates_path = GIT_PATH_INIT;
 	char *buffer, *alternate;
 
 	git_fbuffer alternates_buf = GIT_FBUFFER_INIT;
 	int error;
 
-	git_path_join(alternates_path, objects_dir, GIT_ALTERNATES_FILE);
+	error = git_path_join(&alternates_path, objects_dir, GIT_ALTERNATES_FILE);
+	if (error < GIT_SUCCESS) {
+		git_path_free(&alternates_path);
+		return error;
+	}
 
-	if (git_futils_exists(alternates_path) < GIT_SUCCESS)
+	if (git_futils_exists(alternates_path.data) < GIT_SUCCESS) {
+		git_path_free(&alternates_path);
 		return GIT_SUCCESS;
+	}
 
-	if (git_futils_readbuffer(&alternates_buf, alternates_path) < GIT_SUCCESS)
+	if (git_futils_readbuffer(&alternates_buf, alternates_path.data) < GIT_SUCCESS) {
+		git_path_free(&alternates_path);
 		return git__throw(GIT_EOSERR, "Failed to add backend. Can't read alternates");
+	}
 
 	buffer = (char *)alternates_buf.data;
 	error = GIT_SUCCESS;
 
 	/* add each alternate as a new backend; one alternate per line */
 	while ((alternate = git__strtok(&buffer, "\r\n")) != NULL) {
-		char full_path[GIT_PATH_MAX];
-
 		if (*alternate == '\0' || *alternate == '#')
 			continue;
 
 		/* relative path: build based on the current `objects` folder */
 		if (*alternate == '.') {
-			git_path_join(full_path, objects_dir, alternate);
-			alternate = full_path;
+			if ((error = git_path_join(&alternates_path, objects_dir, alternate)) < GIT_SUCCESS)
+				break;
+			alternate = alternates_path.data; /* just use til bottom of loop */
 		}
 
 		if ((error = add_default_backends(odb, alternate, 1)) < GIT_SUCCESS)
 			break;
 	}
 
+	git_path_free(&alternates_path);
 	git_futils_freebuffer(&alternates_buf);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to load alternates");

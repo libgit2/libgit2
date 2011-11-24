@@ -15,8 +15,14 @@ void git_signature_free(git_signature *sig)
 	if (sig == NULL)
 		return;
 
-	git__free(sig->name);
-	git__free(sig->email);
+	if (sig->name) {
+		git__free(sig->name);
+		sig->name = NULL;
+	}
+	if (sig->email) {
+		git__free(sig->email);
+		sig->email = NULL;
+	}
 	git__free(sig);
 }
 

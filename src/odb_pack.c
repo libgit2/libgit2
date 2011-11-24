@@ -451,27 +451,31 @@ static void pack_backend__free(git_odb_backend *_backend)
 
 int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 {
-	struct pack_backend *backend;
-	char path[GIT_PATH_MAX];
+	struct pack_backend *backend = NULL;
+	git_path path = GIT_PATH_INIT;
+	int error = GIT_SUCCESS;
 
 	backend = git__calloc(1, sizeof(struct pack_backend));
 	if (backend == NULL)
 		return GIT_ENOMEM;
 
-	if (git_vector_init(&backend->packs, 8, packfile_sort__cb) < GIT_SUCCESS) {
-		git__free(backend);
-		return GIT_ENOMEM;
-	}
+	error = git_vector_init(&backend->packs, 8, packfile_sort__cb);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
-	git_path_join(path, objects_dir, "pack");
-	if (git_futils_isdir(path) == GIT_SUCCESS) {
-		backend->pack_folder = git__strdup(path);
+	error = git_path_join(&path, objects_dir, "pack");
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (git_futils_isdir(path.data) == GIT_SUCCESS) {
+		/* Path buffer is already allocated.  Transfer buffer
+		 * ownership from git_path to git_odb_backend, instead of
+		 * doing an unnecessary strdup.
+		 */
+		backend->pack_folder = path.data;
+		path.data = NULL;
+
 		backend->pack_folder_mtime = 0;
-
-		if (backend->pack_folder == NULL) {
-			git__free(backend);
-			return GIT_ENOMEM;
-		}
 	}
 
 	backend->parent.read = &pack_backend__read;
@@ -481,5 +485,11 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->parent.free = &pack_backend__free;
 
 	*backend_out = (git_odb_backend *)backend;
-	return GIT_SUCCESS;
+
+cleanup:
+	if (error < GIT_SUCCESS && backend != NULL)
+		git__free(backend);
+	git_path_free(&path);
+
+	return error;
 }
