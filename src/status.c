@@ -410,9 +410,15 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	unsigned int i;
 	git_tree *tree;
 	struct status_entry *e;
+	const char *workdir;
 
-	if ((error = git_repository_index(&index, repo)) < GIT_SUCCESS) {
-		return git__rethrow(error, "Failed to determine statuses. Index can't be opened");
+	if ((workdir = git_repository_workdir(repo)) == NULL)
+		return git__throw(GIT_ERROR,
+			"Cannot retrieve status on a bare repository");
+
+	if ((error = git_repository_index__weakptr(&index, repo)) < GIT_SUCCESS) {
+		return git__rethrow(error,
+			"Failed to determine statuses. Index can't be opened");
 	}
 
 	if ((error = retrieve_head_tree(&tree, repo)) < GIT_SUCCESS) {
@@ -422,7 +428,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 
 	git_vector_init(&entries, DEFAULT_SIZE, status_cmp);
 
-	dirent_st.workdir_path_len = strlen(repo->path_workdir);
+	dirent_st.workdir_path_len = strlen(workdir);
 	dirent_st.tree_position = 0;
 	dirent_st.index_position = 0;
 	dirent_st.tree = tree;
@@ -432,18 +438,29 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 	dirent_st.head_tree_relative_path_len = 0;
 	dirent_st.is_dir = 1;
 
-	strcpy(temp_path, repo->path_workdir);
+	strcpy(temp_path, workdir);
 
 	if (git_futils_isdir(temp_path)) {
-		error = git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path doesn't lead to a folder", temp_path);
+		error = git__throw(GIT_EINVALIDPATH,
+			"Failed to determine status of file '%s'. "
+			"The given path doesn't lead to a folder", temp_path);
 		goto exit;
 	}
 
-	if ((error = alphasorted_futils_direach(temp_path, sizeof(temp_path), dirent_cb, &dirent_st)) < GIT_SUCCESS)
-		error = git__rethrow(error, "Failed to determine statuses. An error occured while processing the working directory");
+	error = alphasorted_futils_direach(
+		temp_path, sizeof(temp_path),
+		dirent_cb, &dirent_st
+	);
+
+	if (error < GIT_SUCCESS)
+		error = git__rethrow(error,
+			"Failed to determine statuses. "
+			"An error occured while processing the working directory");
 
 	if ((error == GIT_SUCCESS) && ((error = dirent_cb(&dirent_st, NULL)) < GIT_SUCCESS))
-		error = git__rethrow(error, "Failed to determine statuses. An error occured while post-processing the HEAD tree and the index");
+		error = git__rethrow(error,
+			"Failed to determine statuses. "
+			"An error occured while post-processing the HEAD tree and the index");
 
 	for (i = 0; i < entries.length; ++i) {
 		e = (struct status_entry *)git_vector_get(&entries, i);
@@ -451,7 +468,8 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 		if (error == GIT_SUCCESS) {
 			error = callback(e->path, e->status_flags, payload);
 			if (error < GIT_SUCCESS)
-				error = git__rethrow(error, "Failed to determine statuses. User callback failed");
+				error = git__rethrow(error,
+					"Failed to determine statuses. User callback failed");
 		}
 
 		git__free(e);
@@ -460,7 +478,6 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 exit:
 	git_vector_free(&entries);
 	git_tree_close(tree);
-	git_index_free(index);
 	return error;
 }
 
@@ -506,12 +523,19 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	char temp_path[GIT_PATH_MAX];
 	int error = GIT_SUCCESS;
 	git_tree *tree = NULL;
+	const char *workdir;
 
 	assert(status_flags && repo && path);
 
-	git_path_join(temp_path, repo->path_workdir, path);
+	if ((workdir = git_repository_workdir(repo)) == NULL)
+		return git__throw(GIT_ERROR,
+			"Cannot retrieve status on a bare repository");
+
+	git_path_join(temp_path, workdir, path);
 	if (git_futils_isdir(temp_path) == GIT_SUCCESS)
-		return git__throw(GIT_EINVALIDPATH, "Failed to determine status of file '%s'. Provided path leads to a folder, not a file", path);
+		return git__throw(GIT_EINVALIDPATH,
+			"Failed to determine status of file '%s'. "
+			"Given path leads to a folder, not a file", path);
 
 	e = status_entry_new(NULL, path);
 	if (e == NULL)
@@ -524,16 +548,18 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	}
 
 	/* Find file in Index */
-	if ((error = git_repository_index(&index, repo)) < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to determine status of file '%s'. Index can't be opened", path);
+	if ((error = git_repository_index__weakptr(&index, repo)) < GIT_SUCCESS) {
+		error = git__rethrow(error,
+			"Failed to determine status of file '%s'."
+			"Index can't be opened", path);
 		goto exit;
 	}
 
 	status_entry_update_from_index(e, index);
-	git_index_free(index);
 
 	if ((error = retrieve_head_tree(&tree, repo)) < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to determine status of file '%s'", path);
+		error = git__rethrow(error,
+			"Failed to determine status of file '%s'", path);
 		goto exit;
 	}
 
@@ -543,7 +569,9 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 
 		error = recurse_tree_entry(tree, e, temp_path);
 		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to determine status of file '%s'. An error occured while processing the tree", path);
+			error = git__rethrow(error,
+				"Failed to determine status of file '%s'. "
+				"An error occured while processing the tree", path);
 			goto exit;
 		}
 	}

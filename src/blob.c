@@ -41,9 +41,14 @@ int git_blob__parse(git_blob *blob, git_odb_object *odb_obj)
 int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *buffer, size_t len)
 {
 	int error;
+	git_odb *odb;
 	git_odb_stream *stream;
 
-	if ((error = git_odb_open_wstream(&stream, repo->db, len, GIT_OBJ_BLOB)) < GIT_SUCCESS)
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if ((error = git_odb_open_wstream(&stream, odb, len, GIT_OBJ_BLOB)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create blob");
 
 	if ((error = stream->write(stream, buffer, len)) < GIT_SUCCESS) {
@@ -69,11 +74,14 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	git_off_t size;
 	git_odb_stream *stream;
 	struct stat st;
+	const char *workdir;
+	git_odb *odb;
 
-	if (repo->path_workdir == NULL)
+	workdir = git_repository_workdir(repo);
+	if (workdir == NULL)
 		return git__throw(GIT_ENOTFOUND, "Failed to create blob. (No working directory found)");
 
-	git_path_join(full_path, repo->path_workdir, path);
+	git_path_join(full_path, workdir, path);
 
 	error = p_lstat(full_path, &st);
 	if (error < 0) {
@@ -83,11 +91,16 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	islnk = S_ISLNK(st.st_mode);
 	size = st.st_size;
 
-	if (!islnk)
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (!islnk) {
 		if ((fd = p_open(full_path, O_RDONLY)) < 0)
 			return git__throw(GIT_ENOTFOUND, "Failed to create blob. Could not open '%s'", full_path);
+	}
 
-	if ((error = git_odb_open_wstream(&stream, repo->db, (size_t)size, GIT_OBJ_BLOB)) < GIT_SUCCESS) {
+	if ((error = git_odb_open_wstream(&stream, odb, (size_t)size, GIT_OBJ_BLOB)) < GIT_SUCCESS) {
 		if (!islnk)
 			p_close(fd);
 		return git__rethrow(error, "Failed to create blob");

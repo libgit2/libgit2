@@ -24,7 +24,7 @@ static int filter_wants(git_remote *remote)
 	git_headarray refs;
 	git_remote_head *head;
 	git_transport *t = remote->transport;
-	git_repository *repo = remote->repo;
+	git_odb *odb = NULL;
 	const git_refspec *spec;
 	int error;
 	unsigned int i = 0;
@@ -38,6 +38,10 @@ static int filter_wants(git_remote *remote)
 		error = git__rethrow(error, "Failed to get remote ref list");
 		goto cleanup;
 	}
+
+	error = git_repository_odb__weakptr(&odb, remote->repo);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
 	/*
 	 * The fetch refspec can be NULL, and what this means is that the
@@ -53,7 +57,7 @@ static int filter_wants(git_remote *remote)
 	 */
 	head = refs.heads[0];
 	if (refs.len > 0 && !strcmp(head->name, GIT_HEAD_FILE)) {
-		if (git_odb_exists(repo->db, &head->oid))
+		if (git_odb_exists(odb, &head->oid))
 			head->local = 1;
 		else
 			remote->need_pack = 1;
@@ -77,7 +81,7 @@ static int filter_wants(git_remote *remote)
 		}
 
 		/* If we have the object, mark it so we don't ask for it */
-		if (git_odb_exists(repo->db, &head->oid))
+		if (git_odb_exists(odb, &head->oid))
 			head->local = 1;
 		else
 			remote->need_pack = 1;

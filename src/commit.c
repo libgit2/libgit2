@@ -103,6 +103,7 @@ int git_commit_create(
 {
 	git_buf commit = GIT_BUF_INIT;
 	int error, i;
+	git_odb *odb;
 
 	if (git_object_owner((const git_object *)tree) != repo)
 		return git__throw(GIT_EINVALIDARGS, "The given tree does not belong to this repository");
@@ -132,7 +133,11 @@ int git_commit_create(
 		goto cleanup;
 	}
 
-	error = git_odb_write(oid, git_repository_database(repo), commit.ptr, commit.size, GIT_OBJ_COMMIT);
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	error = git_odb_write(oid, odb, commit.ptr, commit.size, GIT_OBJ_COMMIT);
 	git_buf_free(&commit);
 
 	if (error == GIT_SUCCESS && update_ref != NULL) {

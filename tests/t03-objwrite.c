@@ -114,7 +114,7 @@ BEGIN_TEST(write0, "write loose commit object")
     must_pass(cmp_objects(&obj->raw, &commit_obj));
 
     git_odb_object_close(obj);
-    git_odb_close(db);
+    git_odb_free(db);
     must_pass(remove_object_files(&commit));
 END_TEST
 
@@ -135,7 +135,7 @@ BEGIN_TEST(write1, "write loose tree object")
     must_pass(cmp_objects(&obj->raw, &tree_obj));
 
     git_odb_object_close(obj);
-    git_odb_close(db);
+    git_odb_free(db);
     must_pass(remove_object_files(&tree));
 END_TEST
 
@@ -156,7 +156,7 @@ BEGIN_TEST(write2, "write loose tag object")
     must_pass(cmp_objects(&obj->raw, &tag_obj));
 
     git_odb_object_close(obj);
-    git_odb_close(db);
+    git_odb_free(db);
     must_pass(remove_object_files(&tag));
 END_TEST
 
@@ -177,7 +177,7 @@ BEGIN_TEST(write3, "write zero-length object")
     must_pass(cmp_objects(&obj->raw, &zero_obj));
 
     git_odb_object_close(obj);
-    git_odb_close(db);
+    git_odb_free(db);
     must_pass(remove_object_files(&zero));
 END_TEST
 
@@ -198,7 +198,7 @@ BEGIN_TEST(write4, "write one-byte long object")
     must_pass(cmp_objects(&obj->raw, &one_obj));
 
     git_odb_object_close(obj);
-    git_odb_close(db);
+    git_odb_free(db);
     must_pass(remove_object_files(&one));
 END_TEST
 
@@ -219,7 +219,7 @@ BEGIN_TEST(write5, "write two-byte long object")
     must_pass(cmp_objects(&obj->raw, &two_obj));
 
     git_odb_object_close(obj);
-    git_odb_close(db);
+    git_odb_free(db);
     must_pass(remove_object_files(&two));
 END_TEST
 
@@ -240,7 +240,7 @@ BEGIN_TEST(write6, "write an object which is several bytes long")
     must_pass(cmp_objects(&obj->raw, &some_obj));
 
     git_odb_object_close(obj);
-    git_odb_close(db);
+    git_odb_free(db);
     must_pass(remove_object_files(&some));
 END_TEST
 

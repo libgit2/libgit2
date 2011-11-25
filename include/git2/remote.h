@@ -39,7 +39,7 @@ GIT_BEGIN_DECL
  * @param name the remote's name
  * @return GIT_SUCCESS or an error code
  */
-int git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name);
+GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name);
 
 /**
  * Get the information for a particular remote
@@ -49,7 +49,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url, cons
  * @param name the remote's name
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_remote_get(struct git_remote **out, struct git_config *cfg, const char *name);
+GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const char *name);
 
 /**
  * Get the remote's name
@@ -57,7 +57,7 @@ GIT_EXTERN(int) git_remote_get(struct git_remote **out, struct git_config *cfg, 
  * @param remote the remote
  * @return a pointer to the name
  */
-GIT_EXTERN(const char *) git_remote_name(struct git_remote *remote);
+GIT_EXTERN(const char *) git_remote_name(git_remote *remote);
 
 /**
  * Get the remote's url
@@ -65,7 +65,7 @@ GIT_EXTERN(const char *) git_remote_name(struct git_remote *remote);
  * @param remote the remote
  * @return a pointer to the url
  */
-GIT_EXTERN(const char *) git_remote_url(struct git_remote *remote);
+GIT_EXTERN(const char *) git_remote_url(git_remote *remote);
 
 /**
  * Get the fetch refspec
@@ -73,7 +73,7 @@ GIT_EXTERN(const char *) git_remote_url(struct git_remote *remote);
  * @param remote the remote
  * @return a pointer to the fetch refspec or NULL if it doesn't exist
  */
-GIT_EXTERN(const git_refspec *) git_remote_fetchspec(struct git_remote *remote);
+GIT_EXTERN(const git_refspec *) git_remote_fetchspec(git_remote *remote);
 
 /**
  * Get the push refspec
@@ -82,7 +82,7 @@ GIT_EXTERN(const git_refspec *) git_remote_fetchspec(struct git_remote *remote);
  * @return a pointer to the push refspec or NULL if it doesn't exist
  */
 
-GIT_EXTERN(const git_refspec *) git_remote_pushspec(struct git_remote *remote);
+GIT_EXTERN(const git_refspec *) git_remote_pushspec(git_remote *remote);
 
 /**
  * Open a connection to a remote
@@ -95,7 +95,7 @@ GIT_EXTERN(const git_refspec *) git_remote_pushspec(struct git_remote *remote);
  * @param direction whether you want to receive or send data
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_remote_connect(struct git_remote *remote, int direction);
+GIT_EXTERN(int) git_remote_connect(git_remote *remote, int direction);
 
 /**
  * Get a list of refs at the remote
@@ -149,7 +149,7 @@ GIT_EXTERN(void) git_remote_disconnect(git_remote *remote);
  *
  * @param remote the remote to free
  */
-GIT_EXTERN(void) git_remote_free(struct git_remote *remote);
+GIT_EXTERN(void) git_remote_free(git_remote *remote);
 
 /**
  * Update the tips to the new state
@@ -159,7 +159,7 @@ GIT_EXTERN(void) git_remote_free(struct git_remote *remote);
  *
  * @param remote the remote to update
  */
-GIT_EXTERN(int) git_remote_update_tips(struct git_remote *remote);
+GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
 
 /** @} */
 GIT_END_DECL

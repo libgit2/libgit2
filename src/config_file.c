@@ -256,6 +256,7 @@ static int config_open(git_config_file *cfg)
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	error = git_futils_readbuffer(&b->reader.buffer, b->file_path);
+
 	/* It's fine if the file doesn't exist */
 	if (error == GIT_ENOTFOUND)
 		return GIT_SUCCESS;
@@ -269,7 +270,7 @@ static int config_open(git_config_file *cfg)
 
 	git_futils_freebuffer(&b->reader.buffer);
 
-	return error;
+	return GIT_SUCCESS;
 
  cleanup:
 	cvar_list_free(&b->var_list);

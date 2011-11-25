@@ -33,7 +33,7 @@ struct git_odb_object {
 
 /* EXPORT */
 struct git_odb {
-	void *_internal;
+	git_refcount rc;
 	git_vector backends;
 	git_cache cache;
 };

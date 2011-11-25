@@ -1195,7 +1195,8 @@ cleanup:
  */
 int git_reference_set_oid(git_reference *ref, const git_oid *id)
 {
-	int error = GIT_SUCCESS;
+	int error = GIT_SUCCESS, exists;
+	git_odb *odb = NULL;
 
 	if ((ref->flags & GIT_REF_OID) == 0)
 		return git__throw(GIT_EINVALIDREFSTATE,
@@ -1203,23 +1204,29 @@ int git_reference_set_oid(git_reference *ref, const git_oid *id)
 
 	assert(ref->owner);
 
+	error = git_repository_odb__weakptr(&odb, ref->owner);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	exists = git_odb_exists(odb, id);
+
+	git_odb_free(odb);
+
 	/* Don't let the user create references to OIDs that
 	 * don't exist in the ODB */
-	if (!git_odb_exists(git_repository_database(ref->owner), id))
+	if (!exists)
 		return git__throw(GIT_ENOTFOUND,
 			"Failed to set OID target of reference. OID doesn't exist in ODB");
 
 	/* Update the OID value on `ref` */
 	git_oid_cpy(&ref->target.oid, id);
 
+	/* Write back to disk */
 	error = loose_write(ref);
 	if (error < GIT_SUCCESS)
-		goto cleanup;
+		return git__rethrow(error, "Failed to set OID target of reference");
 
 	return GIT_SUCCESS;
-
-cleanup:
-	return git__rethrow(error, "Failed to set OID target of reference");
 }
 
 /*

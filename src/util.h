@@ -129,4 +129,28 @@ extern void **git__bsearch(const void *key, void **base, size_t nmemb,
 
 extern int git__strcmp_cb(const void *a, const void *b);
 
+typedef struct {
+	short refcount;
+	void *owner;
+} git_refcount;
+
+typedef void (*git_refcount_freeptr)(void *r);
+
+#define GIT_REFCOUNT_INC(r) { \
+	((git_refcount *)(r))->refcount++; \
+}
+
+#define GIT_REFCOUNT_DEC(_r, do_free) { \
+	git_refcount *r = (git_refcount *)(_r); \
+	r->refcount--; \
+	if (r->refcount == 0 && r->owner == NULL) { do_free(_r); } \
+}
+
+#define GIT_REFCOUNT_OWN(r, o) { \
+	((git_refcount *)(r))->owner = o; \
+}
+
+#define GIT_REFCOUNT_OWNER(r) (((git_refcount *)(r))->owner)
+
+
 #endif /* INCLUDE_util_h__ */

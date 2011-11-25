@@ -1,7 +1,5 @@
 #include "clay_libgit2.h"
 
-#define REPOSITORY_FOLDER "testrepo.git"
-
 static git_repository *repo;
 const char *tree_with_subtrees_oid = "ae90f12eea699729ed24555e40b9fd669da12a12";
 static	git_tree *tree;
@@ -10,8 +8,8 @@ void test_object_tree_frompath__initialize(void)
 {
 	git_oid id;
 
-	cl_fixture_sandbox(REPOSITORY_FOLDER);
-	cl_git_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
+	cl_fixture_sandbox("testrepo.git");
+	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 	cl_assert(repo != NULL);
 
 	cl_git_pass(git_oid_fromstr(&id, tree_with_subtrees_oid));
@@ -23,6 +21,7 @@ void test_object_tree_frompath__cleanup(void)
 {
 	git_tree_close(tree);
 	git_repository_free(repo);
+	cl_fixture_cleanup("testrepo.git");
 }
 
 static void assert_tree_from_path(git_tree *root, const char *path, git_error expected_result, const char *expected_raw_oid)

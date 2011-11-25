@@ -275,6 +275,7 @@ int git_odb_new(git_odb **out)
 	}
 
 	*out = db;
+	GIT_REFCOUNT_INC(db);
 	return GIT_SUCCESS;
 }
 
@@ -405,16 +406,13 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	return GIT_SUCCESS;
 
 cleanup:
-	git_odb_close(db);
+	git_odb_free(db);
 	return error; /* error already set - pass through */
 }
 
-void git_odb_close(git_odb *db)
+static void odb_free(git_odb *db)
 {
 	unsigned int i;
-
-	if (db == NULL)
-		return;
 
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -429,6 +427,14 @@ void git_odb_close(git_odb *db)
 	git_vector_free(&db->backends);
 	git_cache_free(&db->cache);
 	git__free(db);
+}
+
+void git_odb_free(git_odb *db)
+{
+	if (db == NULL)
+		return;
+
+	GIT_REFCOUNT_DEC(db, odb_free);
 }
 
 int git_odb_exists(git_odb *db, const git_oid *id)

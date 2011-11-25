@@ -88,14 +88,19 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url, cons
 	return GIT_SUCCESS;
 }
 
-int git_remote_get(git_remote **out, git_config *cfg, const char *name)
+int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 {
 	git_remote *remote;
 	char *buf = NULL;
 	const char *val;
 	int ret, error, buf_len;
+	git_config *config;
 
-	assert(out && cfg && name);
+	assert(out && repo && name);
+
+	error = git_repository_config__weakptr(&config, repo);
+	if (error < GIT_SUCCESS)
+		return error;
 
 	remote = git__malloc(sizeof(git_remote));
 	if (remote == NULL)
@@ -122,13 +127,13 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = git_config_get_string(cfg, buf, &val);
+	error = git_config_get_string(config, buf, &val);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Remote's url doesn't exist");
 		goto cleanup;
 	}
 
-	remote->repo = cfg->repo;
+	remote->repo = repo;
 	remote->url = git__strdup(val);
 	if (remote->url == NULL) {
 		error = GIT_ENOMEM;
@@ -141,7 +146,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(cfg, &remote->fetch, buf);
+	error = parse_remote_refspec(config, &remote->fetch, buf);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to get fetch refspec");
 		goto cleanup;
@@ -153,7 +158,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(cfg, &remote->push, buf);
+	error = parse_remote_refspec(config, &remote->push, buf);
 	/* Not finding push is fine */
 	if (error == GIT_ENOTFOUND)
 		error = GIT_SUCCESS;
@@ -165,6 +170,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 
 cleanup:
 	git__free(buf);
+
 	if (error < GIT_SUCCESS)
 		git_remote_free(remote);
 
