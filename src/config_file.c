@@ -256,7 +256,11 @@ static int config_open(git_config_file *cfg)
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	error = git_futils_readbuffer(&b->reader.buffer, b->file_path);
-	if(error < GIT_SUCCESS)
+	/* It's fine if the file doesn't exist */
+	if (error == GIT_ENOTFOUND)
+		return GIT_SUCCESS;
+
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	error = config_parse(b);
@@ -714,6 +718,9 @@ static int skip_bom(diskfile_backend *cfg)
 {
 	static const char *utf8_bom = "\xef\xbb\xbf";
 
+	if (cfg->reader.buffer.len < sizeof(utf8_bom))
+		return GIT_SUCCESS;
+
 	if (memcmp(cfg->reader.read_ptr, utf8_bom, sizeof(utf8_bom)) == 0)
 		cfg->reader.read_ptr += sizeof(utf8_bom);
 
@@ -882,14 +889,23 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 
 	/* We need to read in our own config file */
 	error = git_futils_readbuffer(&cfg->reader.buffer, cfg->file_path);
-	if (error < GIT_SUCCESS) {
+	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND) {
 		return git__rethrow(error, "Failed to read existing config file %s", cfg->file_path);
 	}
 
 	/* Initialise the reading position */
-	cfg->reader.read_ptr = cfg->reader.buffer.data;
-	cfg->reader.eof = 0;
-	data_start = cfg->reader.read_ptr;
+	if (error == GIT_ENOTFOUND) {
+		error = GIT_SUCCESS;
+		cfg->reader.read_ptr = NULL;
+		cfg->reader.eof = 1;
+		data_start = NULL;
+		cfg->reader.buffer.len = 0;
+		cfg->reader.buffer.data = NULL;
+	} else {
+		cfg->reader.read_ptr = cfg->reader.buffer.data;
+		cfg->reader.eof = 0;
+		data_start = cfg->reader.read_ptr;
+	}
 
 	/* Lock the file */
 	error = git_filebuf_open(&file, cfg->file_path, 0);
