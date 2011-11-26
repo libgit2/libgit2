@@ -143,7 +143,7 @@ typedef void (*git_refcount_freeptr)(void *r);
 #define GIT_REFCOUNT_DEC(_r, do_free) { \
 	git_refcount *r = (git_refcount *)(_r); \
 	r->refcount--; \
-	if (r->refcount == 0 && r->owner == NULL) { do_free(_r); } \
+	if (r->refcount <= 0 && r->owner == NULL) { do_free(_r); } \
 }
 
 #define GIT_REFCOUNT_OWN(r, o) { \
