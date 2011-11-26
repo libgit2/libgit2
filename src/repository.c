@@ -128,6 +128,8 @@ static int load_config_data(git_repository *repo)
 	if (error == GIT_SUCCESS)
 		repo->is_bare = is_bare;
 
+	/* TODO: what else can we load/cache here? */
+
 	return GIT_SUCCESS;
 }
 
@@ -610,19 +612,6 @@ static int repo_init_createhead(const char *git_dir)
 static int repo_init_config(const char *git_dir, int is_bare)
 {
 	char cfg_path[GIT_PATH_MAX];
-	git_filebuf cfg = GIT_FILEBUF_INIT;
-
-	git_path_join(cfg_path, git_dir, GIT_CONFIG_FILENAME_INREPO);
-
-	git_filebuf_open(&cfg, cfg_path, 0);
-	git_filebuf_printf(&cfg, "[core]\n");
-	git_filebuf_printf(&cfg, "\tbare = %s\n", is_bare ? "true" : "false");
-	git_filebuf_printf(&cfg, "\trepositoryformatversion = 0\n");
-
-	return git_filebuf_commit(&cfg, GIT_REFS_FILE_MODE);
-
-	/* TODO: use the config backend to write this */
-#if 0
 	git_config *config;
 	int error = GIT_SUCCESS;
 
@@ -645,7 +634,6 @@ static int repo_init_config(const char *git_dir, int is_bare)
 cleanup:
 	git_config_free(config);
 	return error;
-#endif
 }
 
 static int repo_init_structure(const char *git_dir, int is_bare)
