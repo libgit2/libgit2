@@ -108,6 +108,9 @@ static const struct clay_func _clay_cb_buf_basic[] = {
     {"printf", &test_buf_basic__printf},
 	{"resize", &test_buf_basic__resize}
 };
+static const struct clay_func _clay_cb_config_new[] = {
+    {"write_new_config", &test_config_new__write_new_config}
+};
 static const struct clay_func _clay_cb_config_stress[] = {
     {"dont_break_on_invalid_input", &test_config_stress__dont_break_on_invalid_input}
 };
@@ -227,6 +230,12 @@ static const struct clay_suite _clay_suites[] = {
         {NULL, NULL},
         {NULL, NULL},
         _clay_cb_buf_basic, 2
+    },
+	{
+        "config::new",
+        {NULL, NULL},
+        {NULL, NULL},
+        _clay_cb_config_new, 1
     },
 	{
         "config::stress",
@@ -362,8 +371,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 23;
-static size_t _clay_callback_count = 70;
+static size_t _clay_suite_count = 24;
+static size_t _clay_callback_count = 71;
 
 /* Core test functions */
 static void
