@@ -51,6 +51,23 @@ GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
 GIT_EXTERN(int) git_reflog_write(git_reference *ref, const git_oid *oid_old, const git_signature *committer, const char *msg);
 
 /**
+ * Rename the reflog for the given reference
+ *
+ * @param ref the reference
+ * @param new_name the new name of the reference
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_reflog_rename(git_reference *ref, const char *new_name);
+
+/**
+ * Delete the reflog for the given reference
+ *
+ * @param ref the reference
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_reflog_delete(git_reference *ref);
+
+/**
  * Get the number of log entries in a reflog
  *
  * @param reflog the previously loaded reflog

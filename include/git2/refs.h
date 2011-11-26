@@ -183,6 +183,11 @@ GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
  * If the `force` flag is not enabled, and there's already
  * a reference with the given name, the renaming will fail.
  *
+ * IMPORTANT:
+ * The user needs to write a proper reflog entry if the
+ * reflog is enabled for the repository. We only rename
+ * the reflog if it exists.
+ *
  * @param ref The reference to rename
  * @param new_name The new name for the reference
  * @param force Overwrite an existing reference

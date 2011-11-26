@@ -255,6 +255,32 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 	return reflog_write(log_path, old, new, committer, msg);
 }
 
+int git_reflog_rename(git_reference *ref, const char *new_name)
+{
+	char old_path[GIT_PATH_MAX];
+	char new_path[GIT_PATH_MAX];
+
+	git_path_join_n(old_path, 3, ref->owner->path_repository,
+			GIT_REFLOG_DIR, ref->name);
+	git_path_join_n(new_path, 3, ref->owner->path_repository,
+			GIT_REFLOG_DIR, new_name);
+
+	return p_rename(old_path, new_path);
+}
+
+int git_reflog_delete(git_reference *ref)
+{
+	char path[GIT_PATH_MAX];
+
+	git_path_join_n(path, 3, ref->owner->path_repository,
+			GIT_REFLOG_DIR, ref->name);
+
+	if (git_futils_exists(path))
+		return GIT_SUCCESS;
+
+	return p_unlink(path);
+}
+
 unsigned int git_reflog_entrycount(git_reflog *reflog)
 {
 	assert(reflog);
