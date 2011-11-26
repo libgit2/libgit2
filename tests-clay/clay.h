@@ -59,6 +59,7 @@ void cl_fixture_cleanup(const char *fixture_name);
  */
 extern void test_buf_basic__printf(void);
 extern void test_buf_basic__resize(void);
+extern void test_config_new__write_new_config(void);
 extern void test_config_stress__cleanup(void);
 extern void test_config_stress__dont_break_on_invalid_input(void);
 extern void test_config_stress__initialize(void);
