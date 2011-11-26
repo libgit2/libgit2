@@ -54,7 +54,7 @@ GIT_INLINE(int) git_tag_lookup_prefix(git_tag **tag, git_repository *repo, const
 /**
  * Close an open tag
  *
- * This is a wrapper around git_object_close()
+ * This is a wrapper around git_object_free()
  *
  * IMPORTANT:
  * It *is* necessary to call this method when you stop
@@ -63,9 +63,9 @@ GIT_INLINE(int) git_tag_lookup_prefix(git_tag **tag, git_repository *repo, const
  * @param tag the tag to close
  */
 
-GIT_INLINE(void) git_tag_close(git_tag *tag)
+GIT_INLINE(void) git_tag_free(git_tag *tag)
 {
-	git_object_close((git_object *) tag);
+	git_object_free((git_object *) tag);
 }
 
 

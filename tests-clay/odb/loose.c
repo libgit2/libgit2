@@ -39,7 +39,7 @@ static void test_read_object(object_data *data)
 
     cmp_objects((git_rawobj *)&obj->raw, data);
 
-    git_odb_object_close(obj);
+    git_odb_object_free(obj);
 	git_odb_free(odb);
 }
 

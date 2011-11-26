@@ -54,7 +54,7 @@ BEGIN_TEST(readtag0, "lookup a loose tag reference")
 	git_path_join(ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object));
 	must_be_true(strcmp(ref_name_from_tag_name, loose_tag_ref_name) == 0);
 
-	git_object_close(object);
+	git_object_free(object);
 	git_repository_free(repo);
 
 	git_reference_free(reference);
@@ -99,7 +99,7 @@ BEGIN_TEST(readsym0, "lookup a symbolic reference")
 	git_oid_fromstr(&id, current_master_tip);
 	must_be_true(git_oid_cmp(&id, git_object_id(object)) == 0);
 
-	git_object_close(object);
+	git_object_free(object);
 	git_repository_free(repo);
 
 	git_reference_free(reference);
@@ -129,7 +129,7 @@ BEGIN_TEST(readsym1, "lookup a nested symbolic reference")
 	git_oid_fromstr(&id, current_master_tip);
 	must_be_true(git_oid_cmp(&id, git_object_id(object)) == 0);
 
-	git_object_close(object);
+	git_object_free(object);
 	git_repository_free(repo);
 
 	git_reference_free(reference);
@@ -200,7 +200,7 @@ BEGIN_TEST(readpacked0, "lookup a packed reference")
 	must_be_true(object != NULL);
 	must_be_true(git_object_type(object) == GIT_OBJ_COMMIT);
 
-	git_object_close(object);
+	git_object_free(object);
 	git_repository_free(repo);
 
 	git_reference_free(reference);

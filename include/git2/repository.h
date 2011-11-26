@@ -75,7 +75,7 @@ GIT_EXTERN(int) git_repository_discover(
  *
  * Note that after a repository is free'd, all the objects it has spawned
  * will still exist until they are manually closed by the user
- * with `git_object_close`, but accessing any of the attributes of
+ * with `git_object_free`, but accessing any of the attributes of
  * an object without a backing repository will result in undefined
  * behavior
  *

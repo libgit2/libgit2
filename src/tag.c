@@ -319,7 +319,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	if (tag.type != target_obj->raw.type)
 		return git__throw(error, "The type for the given target is invalid");
 
-	git_odb_object_close(target_obj);
+	git_odb_object_free(target_obj);
 
 	error = retrieve_tag_reference(&new_ref, ref_name, repo, tag.tag_name);
 

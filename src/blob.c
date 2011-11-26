@@ -26,7 +26,7 @@ size_t git_blob_rawsize(git_blob *blob)
 
 void git_blob__free(git_blob *blob)
 {
-	git_odb_object_close(blob->odb_object);
+	git_odb_object_free(blob->odb_object);
 	git__free(blob);
 }
 

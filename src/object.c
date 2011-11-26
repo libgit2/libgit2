@@ -109,7 +109,7 @@ int git_object_lookup_prefix(
 		object = git_cache_get(&repo->objects, id);
 		if (object != NULL) {
 			if (type != GIT_OBJ_ANY && type != object->type) {
-				git_object_close(object);
+				git_object_free(object);
 				return git__throw(GIT_EINVALIDTYPE,
 					"Failed to lookup object. "
 					"The given type does not match the type on the ODB");
@@ -151,7 +151,7 @@ int git_object_lookup_prefix(
 		return git__rethrow(error, "Failed to lookup object");
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
-		git_odb_object_close(odb_obj);
+		git_odb_object_free(odb_obj);
 		return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
 	}
 
@@ -185,7 +185,7 @@ int git_object_lookup_prefix(
 		break;
 	}
 
-	git_odb_object_close(odb_obj);
+	git_odb_object_free(odb_obj);
 
 	if (error < GIT_SUCCESS) {
 		git_object__free(object);
@@ -229,7 +229,7 @@ void git_object__free(void *_obj)
 	}
 }
 
-void git_object_close(git_object *object)
+void git_object_free(git_object *object)
 {
 	if (object == NULL)
 		return;

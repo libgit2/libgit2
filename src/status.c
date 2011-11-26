@@ -162,7 +162,7 @@ static int retrieve_head_tree(git_tree **tree_out, git_repository *repo)
 	*tree_out = tree;
 
 exit:
-	git_commit_close(head_commit);
+	git_commit_free(head_commit);
 	return error;
 }
 
@@ -214,7 +214,7 @@ static int process_folder(struct status_st *st, const git_tree_entry *tree_entry
 	}
 
 	if (tree_entry_type == GIT_OBJ_TREE) {
-		git_object_close(subtree);
+		git_object_free(subtree);
 		st->head_tree_relative_path_len -= 1 + tree_entry->filename_len;
 		st->tree = pushed_tree;
 		st->tree_position = pushed_tree_position;
@@ -477,7 +477,7 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 
 exit:
 	git_vector_free(&entries);
-	git_tree_close(tree);
+	git_tree_free(tree);
 	return error;
 }
 
@@ -512,7 +512,7 @@ static int recurse_tree_entry(git_tree *tree, struct status_entry *e, const char
 		return git__throw(GIT_EOBJCORRUPTED, "Can't find tree object '%s'", tree_entry->filename);
 
 	error = recurse_tree_entry(subtree, e, dir_sep+1);
-	git_tree_close(subtree);
+	git_tree_free(subtree);
 	return error;
 }
 
@@ -585,7 +585,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	*status_flags = e->status_flags;
 
 exit:
-	git_tree_close(tree);
+	git_tree_free(tree);
 	git__free(e);
 	return error;
 }

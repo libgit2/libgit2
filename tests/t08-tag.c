@@ -60,9 +60,9 @@ BEGIN_TEST(read0, "read and parse a tag from the repository")
 
 	must_be_true(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
 
-	git_tag_close(tag1);
-	git_tag_close(tag2);
-	git_commit_close(commit);
+	git_tag_free(tag1);
+	git_tag_free(tag2);
+	git_commit_free(commit);
 	git_repository_free(repo);
 END_TEST
 
@@ -133,8 +133,8 @@ BEGIN_TEST(read3, "read and parse a tag without a tagger field")
 
 	must_be_true(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
 
-	git_tag_close(bad_tag);
-	git_commit_close(commit);
+	git_tag_free(bad_tag);
+	git_commit_free(commit);
 
 	git_repository_free(repo);
 END_TEST
@@ -170,7 +170,7 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 		TAGGER_MESSAGE,
 		0));
 
-	git_object_close(target);
+	git_object_free(target);
 	git_signature_free(tagger);
 
 	must_pass(git_tag_lookup(&tag, repo, &tag_id));
@@ -195,7 +195,7 @@ BEGIN_TEST(write0, "write a tag to the repository and read it again")
 
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)tag));
 
-	git_tag_close(tag);
+	git_tag_free(tag);
 	git_repository_free(repo);
 END_TEST
 
@@ -222,7 +222,7 @@ BEGIN_TEST(write2, "Attempt to write a tag bearing the same name than an already
 		TAGGER_MESSAGE,
 		0));
 
-	git_object_close(target);
+	git_object_free(target);
 	git_signature_free(tagger);
 
 	git_repository_free(repo);
@@ -256,7 +256,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 		TAGGER_MESSAGE,
 		1));
 
-	git_object_close(target);
+	git_object_free(target);
 	git_signature_free(tagger);
 
 	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
@@ -286,7 +286,7 @@ BEGIN_TEST(write4, "write a lightweight tag to the repository and read it again"
 		target,
 		0));
 
-	git_object_close(target);
+	git_object_free(target);
 
 	must_be_true(git_oid_cmp(&object_id, &target_id) == 0);
 
@@ -320,7 +320,7 @@ BEGIN_TEST(write5, "Attempt to write a lightweight tag bearing the same name tha
 	git_oid_fromstr(&existing_object_id, tag2_id);
 	must_be_true(git_oid_cmp(&object_id, &existing_object_id) == 0);
 
-	git_object_close(target);
+	git_object_free(target);
 
 	git_repository_free(repo);
 END_TEST

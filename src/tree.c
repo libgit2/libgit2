@@ -680,7 +680,7 @@ static int tree_frompath(
 		slash_pos - treeentry_path + 1
 	);
 
-	git_tree_close(subtree);
+	git_tree_free(subtree);
 	return error;
 }
 
@@ -731,7 +731,7 @@ static int tree_walk_post(
 				payload
 			);
 
-			git_tree_close(subtree);
+			git_tree_free(subtree);
 		}
 	}
 

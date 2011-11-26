@@ -114,7 +114,7 @@ static int add_ref(const char *name, git_repository *repo, git_vector *vec)
 	git_reference_free(ref);
 	git_reference_free(resolved_ref);
 
-	git_object_close(obj);
+	git_object_free(obj);
 	if (error < GIT_SUCCESS) {
 		git__free(head->name);
 		git__free(head);

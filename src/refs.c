@@ -686,7 +686,7 @@ static int packed_find_peel(git_repository *repo, struct packref *ref)
 		 */
 	}
 
-	git_object_close(object);
+	git_object_free(object);
 	return GIT_SUCCESS;
 }
 

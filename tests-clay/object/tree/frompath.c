@@ -19,7 +19,7 @@ void test_object_tree_frompath__initialize(void)
 
 void test_object_tree_frompath__cleanup(void)
 {
-	git_tree_close(tree);
+	git_tree_free(tree);
 	git_repository_free(repo);
 	cl_fixture_cleanup("testrepo.git");
 }
@@ -37,7 +37,7 @@ static void assert_tree_from_path(git_tree *root, const char *path, git_error ex
 
 	cl_assert(git_oid_streq(git_object_id((const git_object *)containing_tree), expected_raw_oid) == GIT_SUCCESS);
 
-	git_tree_close(containing_tree);
+	git_tree_free(containing_tree);
 }
 
 void test_object_tree_frompath__retrieve_tree_from_path_to_treeentry(void)

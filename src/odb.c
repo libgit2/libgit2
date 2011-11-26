@@ -108,7 +108,7 @@ git_otype git_odb_object_type(git_odb_object *object)
 	return object->raw.type;
 }
 
-void git_odb_object_close(git_odb_object *object)
+void git_odb_object_free(git_odb_object *object)
 {
 	git_cached_obj_decref((git_cached_obj *)object, &free_odb_object);
 }
@@ -446,7 +446,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 	assert(db && id);
 
 	if ((object = git_cache_get(&db->cache, id)) != NULL) {
-		git_odb_object_close(object);
+		git_odb_object_free(object);
 		return 1;
 	}
 
@@ -472,7 +472,7 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 	if ((object = git_cache_get(&db->cache, id)) != NULL) {
 		*len_p = object->raw.len;
 		*type_p = object->raw.type;
-		git_odb_object_close(object);
+		git_odb_object_free(object);
 		return GIT_SUCCESS;
 	}
 
@@ -497,7 +497,7 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 
 		*len_p = object->raw.len;
 		*type_p = object->raw.type;
-		git_odb_object_close(object);
+		git_odb_object_free(object);
 	}
 
 	return GIT_SUCCESS;

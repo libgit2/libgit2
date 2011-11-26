@@ -230,12 +230,12 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 		return git__rethrow(error, "Failed to parse commit. Can't read object");
 
 	if (obj->raw.type != GIT_OBJ_COMMIT) {
-		git_odb_object_close(obj);
+		git_odb_object_free(obj);
 		return git__throw(GIT_EOBJTYPE, "Failed to parse commit. Object is no commit object");
 	}
 
 	error = commit_quick_parse(walk, commit, &obj->raw);
-	git_odb_object_close(obj);
+	git_odb_object_free(obj);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse commit");
 }
 

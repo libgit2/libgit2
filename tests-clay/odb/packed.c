@@ -26,7 +26,7 @@ void test_odb_packed__mass_read(void)
 		cl_assert(git_odb_exists(_odb, &id) == 1);
 		cl_git_pass(git_odb_read(&obj, _odb, &id));
 
-		git_odb_object_close(obj);
+		git_odb_object_free(obj);
 	}
 }
 
@@ -48,7 +48,7 @@ void test_odb_packed__read_header_0(void)
 		cl_assert(obj->raw.len == len);
 		cl_assert(obj->raw.type == type);
 
-		git_odb_object_close(obj);
+		git_odb_object_free(obj);
 	}
 }
 
@@ -72,6 +72,7 @@ void test_odb_packed__read_header_1(void)
 		cl_assert(obj->raw.len == len);
 		cl_assert(obj->raw.type == type);
 
-		git_odb_object_close(obj);
+		git_odb_object_free(obj);
 	}
 }
+

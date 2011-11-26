@@ -53,13 +53,13 @@ static int print_tree(git_repository *repo, const git_oid *tree_oid, int depth)
 
 		if (entry->attr == S_IFDIR) {
 			if (print_tree(repo, &entry->oid, depth + 1) < GIT_SUCCESS) {
-				git_tree_close(tree);
+				git_tree_free(tree);
 				return GIT_ERROR;
 			}
 		}
 	}
 
-	git_tree_close(tree);
+	git_tree_free(tree);
 	return GIT_SUCCESS;
 }
 #endif
@@ -83,7 +83,7 @@ BEGIN_TEST(read0, "acces randomly the entries on a loaded tree")
 	must_be_true(git_tree_entry_byindex(tree, 3) == NULL);
 	must_be_true(git_tree_entry_byindex(tree, (unsigned int)-1) == NULL);
 
-	git_tree_close(tree);
+	git_tree_free(tree);
 	git_repository_free(repo);
 END_TEST
 
@@ -105,7 +105,7 @@ BEGIN_TEST(read1, "read a tree from the repository")
 	/* GH-86: git_object_lookup() should also check the type if the object comes from the cache */
 	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_TREE) == 0);
 	must_be_true(obj != NULL);
-	git_object_close(obj);
+	git_object_free(obj);
 	obj = NULL;
 	must_be_true(git_object_lookup(&obj, repo, &id, GIT_OBJ_BLOB) == GIT_EINVALIDTYPE);
 	must_be_true(obj == NULL);
@@ -118,8 +118,8 @@ BEGIN_TEST(read1, "read a tree from the repository")
 	must_pass(git_tree_entry_2object(&obj, repo, entry));
 	must_be_true(obj != NULL);
 
-	git_object_close(obj);
-	git_tree_close(tree);
+	git_object_free(obj);
+	git_tree_free(tree);
 	git_repository_free(repo);
 END_TEST
 
@@ -164,7 +164,7 @@ BEGIN_TEST(write2, "write a tree from a memory")
 	must_be_true(git_oid_cmp(&rid, &id2) == 0);
 
 	git_treebuilder_free(builder);
-	git_tree_close(tree);
+	git_tree_free(tree);
 	close_temp_repo(repo);
 END_TEST
 
@@ -193,7 +193,7 @@ BEGIN_TEST(write3, "write a hierarchical tree from a memory")
 	must_pass(git_treebuilder_insert(NULL,builder,"new",&subtree_id,040000));
 	must_pass(git_treebuilder_write(&id_hiearar,repo,builder));
 	git_treebuilder_free(builder);
-	git_tree_close(tree);
+	git_tree_free(tree);
 
 	must_be_true(git_oid_cmp(&id_hiearar, &id3) == 0);
 
@@ -204,7 +204,7 @@ BEGIN_TEST(write3, "write a hierarchical tree from a memory")
 	must_be_true((loose_object_dir_mode(TEMP_REPO_FOLDER, (git_object *)tree) & 0777) == GIT_OBJECT_DIR_MODE);
 	must_be_true((loose_object_mode(TEMP_REPO_FOLDER, (git_object *)tree) & 0777) == GIT_OBJECT_FILE_MODE);
 #endif
-	git_tree_close(tree);
+	git_tree_free(tree);
 
 	close_temp_repo(repo);
 
