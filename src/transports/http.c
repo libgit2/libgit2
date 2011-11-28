@@ -301,28 +301,21 @@ cleanup:
 	return error;
 }
 
-static int http_ls(git_transport *transport, git_headarray *array)
+static int http_ls(git_transport *transport, git_headlist_cb list_cb, void *opaque)
 {
 	transport_http *t = (transport_http *) transport;
 	git_vector *refs = &t->refs;
 	unsigned int i;
-	int len = 0;
 	git_pkt_ref *p;
-
-	array->heads = git__calloc(refs->length, sizeof(git_remote_head*));
-	if (array->heads == NULL)
-		return GIT_ENOMEM;
 
 	git_vector_foreach(refs, i, p) {
 		if (p->type != GIT_PKT_REF)
 			continue;
 
-		array->heads[len] = &p->head;
-		len++;
+		if (list_cb(&p->head, opaque) < 0)
+			return git__throw(GIT_ERROR,
+				"The user callback returned an error code");
 	}
-
-	array->len = len;
-	t->heads = array->heads;
 
 	return GIT_SUCCESS;
 }
@@ -470,7 +463,7 @@ cleanup:
 	return error;
 }
 
-static int http_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
+static int http_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
 {
 	transport_http *t = (transport_http *) transport;
 	int error;

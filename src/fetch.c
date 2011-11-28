@@ -18,30 +18,46 @@
 #include "fetch.h"
 #include "netops.h"
 
-static int filter_wants(git_remote *remote)
-{
-	git_vector list;
-	git_headarray refs;
-	git_remote_head *head;
-	git_transport *t = remote->transport;
-	git_odb *odb = NULL;
+struct filter_payload {
+	git_remote *remote;
 	const git_refspec *spec;
+	git_odb *odb;
+	int found_head;
+};
+
+static int filter_ref__cb(git_remote_head *head, void *payload)
+{
+	struct filter_payload *p = payload;
 	int error;
-	unsigned int i = 0;
 
-	error = git_vector_init(&list, 16, NULL);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0) {
+		p->found_head = 1;
+	} else {
+		/* If it doesn't match the refpec, we don't want it */
+		error = git_refspec_src_match(p->spec, head->name);
 
-	error = t->ls(t, &refs);
-	if (error < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to get remote ref list");
-		goto cleanup;
+		if (error == GIT_ENOMATCH)
+			return GIT_SUCCESS;
+
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Error matching remote ref name");
 	}
 
-	error = git_repository_odb__weakptr(&odb, remote->repo);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	/* If we have the object, mark it so we don't ask for it */
+	if (git_odb_exists(p->odb, &head->oid))
+		head->local = 1;
+	else
+		p->remote->need_pack = 1;
+
+	return git_vector_insert(&p->remote->refs, head);
+}
+
+static int filter_wants(git_remote *remote)
+{
+	int error;
+	struct filter_payload p;
+
+	git_vector_clear(&remote->refs);
 
 	/*
 	 * The fetch refspec can be NULL, and what this means is that the
@@ -49,56 +65,15 @@ static int filter_wants(git_remote *remote)
 	 * not interested in any particular branch but just the remote's
 	 * HEAD, which will be stored in FETCH_HEAD after the fetch.
 	 */
-	spec = git_remote_fetchspec(remote);
+	p.spec = git_remote_fetchspec(remote);
+	p.found_head = 0;
+	p.remote = remote;
 
-	/*
-	 * We need to handle HEAD separately, as we always want it, but it
-	 * probably won't matcht he refspec.
-	 */
-	head = refs.heads[0];
-	if (refs.len > 0 && !strcmp(head->name, GIT_HEAD_FILE)) {
-		if (git_odb_exists(odb, &head->oid))
-			head->local = 1;
-		else
-			remote->need_pack = 1;
+	error = git_repository_odb__weakptr(&p.odb, remote->repo);
+	if (error < GIT_SUCCESS)
+		return error;
 
-		i = 1;
-		error = git_vector_insert(&list, refs.heads[0]);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-	}
-
-	for (; i < refs.len; ++i) {
-		head = refs.heads[i];
-
-		/* If it doesn't match the refpec, we don't want it */
-		error = git_refspec_src_match(spec, head->name);
-		if (error == GIT_ENOMATCH)
-			continue;
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Error matching remote ref name");
-			goto cleanup;
-		}
-
-		/* If we have the object, mark it so we don't ask for it */
-		if (git_odb_exists(odb, &head->oid))
-			head->local = 1;
-		else
-			remote->need_pack = 1;
-
-		error = git_vector_insert(&list, head);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-	}
-
-	remote->refs.len = list.length;
-	remote->refs.heads = (git_remote_head **) list.contents;
-
-	return GIT_SUCCESS;
-
-cleanup:
-	git_vector_free(&list);
-	return error;
+	return remote->transport->ls(remote->transport, &filter_ref__cb, &p);
 }
 
 /*
@@ -116,8 +91,9 @@ int git_fetch_negotiate(git_remote *remote)
 		return git__rethrow(error, "Failed to filter the reference list for wants");
 
 	/* Don't try to negotiate when we don't want anything */
-	if (remote->refs.len == 0)
+	if (remote->refs.length == 0)
 		return GIT_SUCCESS;
+
 	if (!remote->need_pack)
 		return GIT_SUCCESS;
 

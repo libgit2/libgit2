@@ -30,6 +30,7 @@ GIT_BEGIN_DECL
 #define GIT_DIR_FETCH 0
 #define GIT_DIR_PUSH 1
 
+
 /**
  * Remote head description, given out on `ls` calls.
  */
@@ -41,12 +42,9 @@ struct git_remote_head {
 };
 
 /**
- * Array of remote heads
+ * Callback for listing the remote heads
  */
-struct git_headarray {
-	unsigned int len;
-	struct git_remote_head **heads;
-};
+typedef int (*git_headlist_cb)(git_remote_head *, void *);
 
 /** @} */
 GIT_END_DECL

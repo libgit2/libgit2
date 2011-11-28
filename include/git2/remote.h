@@ -10,6 +10,8 @@
 #include "common.h"
 #include "repository.h"
 #include "refspec.h"
+#include "net.h"
+
 /**
  * @file git2/remote.h
  * @brief Git remote management functions
@@ -107,7 +109,7 @@ GIT_EXTERN(int) git_remote_connect(git_remote *remote, int direction);
  * @param remote the remote
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headarray *refs);
+GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload);
 
 /**
  * Download the packfile
@@ -160,6 +162,14 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * @param remote the remote to update
  */
 GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
+
+/**
+ * Return whether a string is a valid remote URL
+ *
+ * @param tranport the url to check
+ * @param 1 if the url is valid, 0 otherwise
+ */
+GIT_EXTERN(int) git_remote_valid_url(const char *url);
 
 /** @} */
 GIT_END_DECL

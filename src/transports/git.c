@@ -226,32 +226,30 @@ cleanup:
 	return error;
 }
 
-static int git_ls(git_transport *transport, git_headarray *array)
+static int git_ls(git_transport *transport, git_headlist_cb list_cb, void *opaque)
 {
 	transport_git *t = (transport_git *) transport;
 	git_vector *refs = &t->refs;
-	int len = 0;
 	unsigned int i;
+	git_pkt *p = NULL;
 
-	array->heads = git__calloc(refs->length, sizeof(git_remote_head *));
-	if (array->heads == NULL)
-		return GIT_ENOMEM;
+	git_vector_foreach(refs, i, p) {
+		git_pkt_ref *pkt = NULL;
 
-	for (i = 0; i < refs->length; ++i) {
-		git_pkt *p = git_vector_get(refs, i);
 		if (p->type != GIT_PKT_REF)
 			continue;
 
-		++len;
-		array->heads[i] = &(((git_pkt_ref *) p)->head);
+		pkt = (git_pkt_ref *)p;
+
+		if (list_cb(&pkt->head, opaque) < 0)
+			return git__throw(GIT_ERROR,
+				"The user callback returned an error code");
 	}
-	array->len = len;
-	t->heads = array->heads;
 
 	return GIT_SUCCESS;
 }
 
-static int git_negotiate_fetch(git_transport *transport, git_repository *repo, git_headarray *wants)
+static int git_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
 {
 	transport_git *t = (transport_git *) transport;
 	git_revwalk *walk;
@@ -290,6 +288,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, g
 
 		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
 			continue;
+
 		error = git_revwalk_push(walk, git_reference_oid(ref));
 		if (error < GIT_ERROR) {
 			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
