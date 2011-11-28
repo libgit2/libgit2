@@ -257,12 +257,9 @@ check_buf_append_abc(
 /* more variations on append tests */
 void test_core_buffer__5(void)
 {
-	check_buf_append(NULL, NULL, NULL, 0, 0);
-	check_buf_append(NULL, "", "", 0, 8);
-	check_buf_append("", NULL, "", 0, 8);
 	check_buf_append("", "", "", 0, 8);
-	check_buf_append("a", NULL, "a", 1, 8);
-	check_buf_append(NULL, "a", "a", 1, 8);
+	check_buf_append("a", "", "a", 1, 8);
+	check_buf_append("", "a", "a", 1, 8);
 	check_buf_append("", "a", "a", 1, 8);
 	check_buf_append("a", "", "a", 1, 8);
 	check_buf_append("a", "b", "ab", 2, 8);
@@ -287,7 +284,6 @@ void test_core_buffer__5(void)
 	check_buf_append(REP16("x"), REP16("o"),
 					 REP16("x") REP16("o"), 32, 40);
 
-	check_buf_append(test_4096, NULL, test_4096, 4096, 6144);
 	check_buf_append(test_4096, "", test_4096, 4096, 6144);
 	check_buf_append(test_4096, test_4096, test_8192, 8192, 9216);
 

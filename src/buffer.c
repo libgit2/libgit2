@@ -79,8 +79,8 @@ void git_buf_put(git_buf *buf, const char *data, size_t len)
 
 void git_buf_puts(git_buf *buf, const char *string)
 {
-	if (string != NULL)
-		git_buf_put(buf, string, strlen(string));
+	assert(string);
+	git_buf_put(buf, string, strlen(string));
 }
 
 void git_buf_printf(git_buf *buf, const char *format, ...)
@@ -121,12 +121,10 @@ const char *git_buf_cstr(git_buf *buf)
 
 void git_buf_free(git_buf *buf)
 {
-	assert(buf);
+	if (!buf) return;
 
-	if (buf->ptr) {
-		git__free(buf->ptr);
-		buf->ptr = NULL;
-	}
+	git__free(buf->ptr);
+	buf->ptr = NULL;
 	buf->asize = 0;
 	buf->size = 0;
 }
@@ -179,7 +177,7 @@ void git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 
 	va_list ap;
 	int i;
-	int total_size = 0;
+	size_t total_size = 0;
 	char *out;
 
 	if (buf->size > 0 && buf->ptr[buf->size - 1] != separator)
@@ -188,7 +186,7 @@ void git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	va_start(ap, nbuf);
 	for (i = 0; i < nbuf; ++i) {
 		const char* segment;
-		int segment_len;
+		size_t segment_len;
 
 		segment = va_arg(ap, const char *);
 		if (!segment)
@@ -212,7 +210,7 @@ void git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	va_start(ap, nbuf);
 	for (i = 0; i < nbuf; ++i) {
 		const char* segment;
-		int segment_len;
+		size_t segment_len;
 
 		segment = va_arg(ap, const char *);
 		if (!segment)
@@ -245,11 +243,11 @@ void git_buf_join(
 	const char *str_a,
 	const char *str_b)
 {
-	int add_size = 0;
-	int sep_a = 0;
-	int strlen_a = 0;
-	int sep_b = 0;
-	int strlen_b = 0;
+	size_t add_size = 0;
+	size_t sep_a = 0;
+	size_t strlen_a = 0;
+	size_t sep_b = 0;
+	size_t strlen_b = 0;
 	char *ptr;
 
 	/* calculate string lengths and need for added separators */
