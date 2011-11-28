@@ -70,16 +70,21 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url, cons
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->repo = repo;
 
+	if (git_vector_init(&remote->refs, 32, NULL) < 0) {
+		git_remote_free(remote);
+		return GIT_ENOMEM;
+	}
+
 	remote->url = git__strdup(url);
 	if (remote->url == NULL) {
-		git__free(remote);
+		git_remote_free(remote);
 		return GIT_ENOMEM;
 	}
 
 	if (name != NULL) {
 		remote->name = git__strdup(name);
 		if (remote->name == NULL) {
-			git__free(remote);
+			git_remote_free(remote);
 			return GIT_ENOMEM;
 		}
 	}
@@ -88,14 +93,19 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url, cons
 	return GIT_SUCCESS;
 }
 
-int git_remote_get(git_remote **out, git_config *cfg, const char *name)
+int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 {
 	git_remote *remote;
 	char *buf = NULL;
 	const char *val;
 	int ret, error, buf_len;
+	git_config *config;
 
-	assert(out && cfg && name);
+	assert(out && repo && name);
+
+	error = git_repository_config__weakptr(&config, repo);
+	if (error < GIT_SUCCESS)
+		return error;
 
 	remote = git__malloc(sizeof(git_remote));
 	if (remote == NULL)
@@ -104,6 +114,11 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->name = git__strdup(name);
 	if (remote->name == NULL) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	if (git_vector_init(&remote->refs, 32, NULL) < 0) {
 		error = GIT_ENOMEM;
 		goto cleanup;
 	}
@@ -122,13 +137,13 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = git_config_get_string(cfg, buf, &val);
+	error = git_config_get_string(config, buf, &val);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Remote's url doesn't exist");
 		goto cleanup;
 	}
 
-	remote->repo = cfg->repo;
+	remote->repo = repo;
 	remote->url = git__strdup(val);
 	if (remote->url == NULL) {
 		error = GIT_ENOMEM;
@@ -141,7 +156,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(cfg, &remote->fetch, buf);
+	error = parse_remote_refspec(config, &remote->fetch, buf);
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to get fetch refspec");
 		goto cleanup;
@@ -153,7 +168,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(cfg, &remote->push, buf);
+	error = parse_remote_refspec(config, &remote->push, buf);
 	/* Not finding push is fine */
 	if (error == GIT_ENOTFOUND)
 		error = GIT_SUCCESS;
@@ -165,6 +180,7 @@ int git_remote_get(git_remote **out, git_config *cfg, const char *name)
 
 cleanup:
 	git__free(buf);
+
 	if (error < GIT_SUCCESS)
 		git_remote_free(remote);
 
@@ -221,10 +237,14 @@ cleanup:
 	return error;
 }
 
-int git_remote_ls(git_remote *remote, git_headarray *refs)
+int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 {
-	assert(remote && refs);
-	return remote->transport->ls(remote->transport, refs);
+	assert(remote);
+
+	if (!remote->transport)
+		return git__throw(GIT_ERROR, "The remote is not connected");
+
+	return remote->transport->ls(remote->transport, list_cb, payload);
 }
 
 int git_remote_download(char **filename, git_remote *remote)
@@ -244,7 +264,7 @@ int git_remote_update_tips(git_remote *remote)
 	int error = GIT_SUCCESS;
 	unsigned int i = 0;
 	char refname[GIT_PATH_MAX];
-	git_headarray *refs = &remote->refs;
+	git_vector *refs = &remote->refs;
 	git_remote_head *head;
 	git_reference *ref;
 	struct git_refspec *spec = &remote->fetch;
@@ -253,11 +273,11 @@ int git_remote_update_tips(git_remote *remote)
 
 	memset(refname, 0x0, sizeof(refname));
 
-	if (refs->len == 0)
+	if (refs->length == 0)
 		return GIT_SUCCESS;
 
 	/* HEAD is only allowed to be the first in the list */
-	head = refs->heads[0];
+	head = refs->contents[0];
 	if (!strcmp(head->name, GIT_HEAD_FILE)) {
 		error = git_reference_create_oid(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1);
 		i = 1;
@@ -266,8 +286,8 @@ int git_remote_update_tips(git_remote *remote)
 			return git__rethrow(error, "Failed to update FETCH_HEAD");
 	}
 
-	for (; i < refs->len; ++i) {
-		head = refs->heads[i];
+	for (; i < refs->length; ++i) {
+		head = refs->contents[i];
 
 		error = git_refspec_transform(refname, sizeof(refname), spec, head->name);
 		if (error < GIT_SUCCESS)
@@ -313,6 +333,7 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->push.dst);
 	git__free(remote->url);
 	git__free(remote->name);
+	git_vector_free(&remote->refs);
 	git_remote_disconnect(remote);
 	git__free(remote);
 }

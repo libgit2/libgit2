@@ -18,7 +18,8 @@
 #define GIT_INDEX_FILE_MODE 0666
 
 struct git_index {
-	git_repository *repository;
+	git_refcount rc;
+
 	char *index_file_path;
 
 	time_t last_modified;

@@ -33,7 +33,6 @@
 
 DECLARE_SUITE(core);
 DECLARE_SUITE(rawobjects);
-DECLARE_SUITE(objread);
 DECLARE_SUITE(objwrite);
 DECLARE_SUITE(commit);
 DECLARE_SUITE(revwalk);
@@ -44,15 +43,12 @@ DECLARE_SUITE(tree);
 DECLARE_SUITE(refs);
 DECLARE_SUITE(repository);
 DECLARE_SUITE(threads);
-DECLARE_SUITE(config);
-DECLARE_SUITE(remotes);
 DECLARE_SUITE(buffers);
 DECLARE_SUITE(status);
 
 static libgit2_suite suite_methods[]= {
 	SUITE_NAME(core),
 	SUITE_NAME(rawobjects),
-	SUITE_NAME(objread),
 	SUITE_NAME(objwrite),
 	SUITE_NAME(commit),
 	SUITE_NAME(revwalk),
@@ -63,8 +59,6 @@ static libgit2_suite suite_methods[]= {
 	SUITE_NAME(refs),
 	SUITE_NAME(repository),
 	SUITE_NAME(threads),
-	SUITE_NAME(config),
-	SUITE_NAME(remotes),
 	SUITE_NAME(buffers),
 	SUITE_NAME(status),
 };

@@ -609,18 +609,18 @@ BEGIN_TEST(details0, "query the details on a parsed commit")
 		must_be_true(parents <= 2);
 		for (p = 0;p < parents;p++) {
 			if (old_parent != NULL)
-				git_commit_close(old_parent);
+				git_commit_free(old_parent);
 
 			old_parent = parent;
 			must_pass(git_commit_parent(&parent, commit, p));
 			must_be_true(parent != NULL);
 			must_be_true(git_commit_author(parent) != NULL); // is it really a commit?
 		}
-		git_commit_close(old_parent);
-		git_commit_close(parent);
+		git_commit_free(old_parent);
+		git_commit_free(parent);
 
 		must_fail(git_commit_parent(&parent, commit, parents));
-		git_commit_close(commit);
+		git_commit_free(commit);
 	}
 
 	git_repository_free(repo);
@@ -665,8 +665,8 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 		tree,
 		1, parent));
 
-	git_object_close((git_object *)parent);
-	git_object_close((git_object *)tree);
+	git_object_free((git_object *)parent);
+	git_object_free((git_object *)tree);
 
 	git_signature_free(committer);
 	git_signature_free(author);
@@ -696,7 +696,7 @@ BEGIN_TEST(write0, "write a new commit object from memory to disk")
 
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
 
-	git_commit_close(commit);
+	git_commit_free(commit);
 	git_repository_free(repo);
 END_TEST
 
@@ -742,7 +742,7 @@ BEGIN_TEST(root0, "create a root commit")
 		tree,
 		0));
 
-	git_object_close((git_object *)tree);
+	git_object_free((git_object *)tree);
 	git_signature_free(committer);
 	git_signature_free(author);
 
@@ -764,7 +764,7 @@ BEGIN_TEST(root0, "create a root commit")
 	must_pass(git_reference_delete(branch));
 	must_pass(remove_loose_object(REPOSITORY_FOLDER, (git_object *)commit));
 	git__free(head_old);
-	git_commit_close(commit);
+	git_commit_free(commit);
 	git_repository_free(repo);
 
 	git_reference_free(head);

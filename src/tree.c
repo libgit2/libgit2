@@ -300,9 +300,15 @@ static int append_entry(git_treebuilder *bld, const char *filename, const git_oi
 	return GIT_SUCCESS;
 }
 
-static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsigned int start)
+static int write_tree(
+	git_oid *oid,
+	git_repository *repo,
+	git_index *index,
+	const char *dirname,
+	unsigned int start)
 {
 	git_treebuilder *bld = NULL;
+
 	unsigned int i, entries = git_index_entrycount(index);
 	int error;
 	size_t dirname_len = strlen(dirname);
@@ -358,7 +364,7 @@ static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsig
 			}
 
 			/* Write out the subtree */
-			written = write_tree(&sub_oid, index, subdir, i);
+			written = write_tree(&sub_oid, repo, index, subdir, i);
 			if (written < 0) {
 				error = git__rethrow(written, "Failed to write subtree %s", subdir);
 			} else {
@@ -391,7 +397,7 @@ static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsig
 		}
 	}
 
-	error = git_treebuilder_write(oid, index->repository, bld);
+	error = git_treebuilder_write(oid, repo, bld);
 	if (error < GIT_SUCCESS)
 		error = git__rethrow(error, "Failed to write tree to db");
 
@@ -406,10 +412,15 @@ static int write_tree(git_oid *oid, git_index *index, const char *dirname, unsig
 
 int git_tree_create_fromindex(git_oid *oid, git_index *index)
 {
+	git_repository *repo;
 	int error;
 
-	if (index->repository == NULL)
-		return git__throw(GIT_EBAREINDEX, "Failed to create tree. The index file is not backed up by an existing repository");
+	repo = (git_repository *)GIT_REFCOUNT_OWNER(index);
+
+	if (repo == NULL)
+		return git__throw(GIT_EBAREINDEX,
+			"Failed to create tree. "
+			"The index file is not backed up by an existing repository");
 
 	if (index->tree != NULL && index->tree->entries >= 0) {
 		git_oid_cpy(oid, &index->tree->oid);
@@ -417,7 +428,7 @@ int git_tree_create_fromindex(git_oid *oid, git_index *index)
 	}
 
 	/* The tree cache didn't help us */
-	error = write_tree(oid, index, "", 0);
+	error = write_tree(oid, repo, index, "", 0);
 	return (error < GIT_SUCCESS) ? git__rethrow(error, "Failed to create tree") : GIT_SUCCESS;
 }
 
@@ -546,6 +557,7 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 	unsigned int i;
 	int error;
 	git_buf tree = GIT_BUF_INIT;
+	git_odb *odb;
 
 	assert(bld);
 
@@ -570,7 +582,13 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 		return git__throw(GIT_ENOMEM, "Not enough memory to build the tree data");
 	}
 
-	error = git_odb_write(oid, git_repository_database(repo), tree.ptr, tree.size, GIT_OBJ_TREE);
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS) {
+		git_buf_free(&tree);
+		return error;
+	}
+
+	error = git_odb_write(oid, odb, tree.ptr, tree.size, GIT_OBJ_TREE);
 	git_buf_free(&tree);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to write tree");
@@ -662,7 +680,7 @@ static int tree_frompath(
 		slash_pos - treeentry_path + 1
 	);
 
-	git_tree_close(subtree);
+	git_tree_free(subtree);
 	return error;
 }
 
@@ -713,7 +731,7 @@ static int tree_walk_post(
 				payload
 			);
 
-			git_tree_close(subtree);
+			git_tree_free(subtree);
 		}
 	}
 

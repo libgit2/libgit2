@@ -34,6 +34,7 @@ typedef struct commit_list {
 
 struct git_revwalk {
 	git_repository *repo;
+	git_odb *odb;
 
 	git_hashtable *commits;
 
@@ -225,16 +226,16 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 	if (commit->parsed)
 		return GIT_SUCCESS;
 
-	if ((error = git_odb_read(&obj, walk->repo->db, &commit->oid)) < GIT_SUCCESS)
+	if ((error = git_odb_read(&obj, walk->odb, &commit->oid)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to parse commit. Can't read object");
 
 	if (obj->raw.type != GIT_OBJ_COMMIT) {
-		git_odb_object_close(obj);
+		git_odb_object_free(obj);
 		return git__throw(GIT_EOBJTYPE, "Failed to parse commit. Object is no commit object");
 	}
 
 	error = commit_quick_parse(walk, commit, &obj->raw);
-	git_odb_object_close(obj);
+	git_odb_object_free(obj);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse commit");
 }
 
@@ -429,6 +430,7 @@ static int prepare_walk(git_revwalk *walk)
 
 int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 {
+	int error;
 	git_revwalk *walk;
 
 	walk = git__malloc(sizeof(git_revwalk));
@@ -455,6 +457,12 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 	walk->repo = repo;
 
+	error = git_repository_odb(&walk->odb, repo);
+	if (error < GIT_SUCCESS) {
+		git_revwalk_free(walk);
+		return error;
+	}
+
 	*revwalk_out = walk;
 	return GIT_SUCCESS;
 }
@@ -469,6 +477,7 @@ void git_revwalk_free(git_revwalk *walk)
 		return;
 
 	git_revwalk_reset(walk);
+	git_odb_free(walk->odb);
 
 	/* if the parent has more than PARENTS_PER_COMMIT parents,
 	 * we had to allocate a separate array for those parents.

@@ -1,5 +1,13 @@
-
-static char *odb_dir = "test-objects";
+typedef struct object_data {
+    unsigned char *bytes;  /* (compressed) bytes stored in object store */
+    size_t        blen;    /* length of data in object store            */
+    char          *id;     /* object id (sha1)                          */
+    char          *type;   /* object type                               */
+    char          *dir;    /* object store (fan-out) directory name     */
+    char          *file;   /* object store filename                     */
+    unsigned char *data;   /* (uncompressed) object data                */
+    size_t        dlen;    /* length of (uncompressed) object data      */
+} object_data;
 
 /* one == 8b137891791fe96927ad78e64b0aad7bded08bdc */
 static unsigned char one_bytes[] = {
@@ -512,4 +520,3 @@ static object_data some = {
     some_data,
     sizeof(some_data),
 };
-

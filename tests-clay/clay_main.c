@@ -108,11 +108,33 @@ static const struct clay_func _clay_cb_buf_basic[] = {
     {"printf", &test_buf_basic__printf},
 	{"resize", &test_buf_basic__resize}
 };
+static const struct clay_func _clay_cb_config_add[] = {
+    {"to_existing_section", &test_config_add__to_existing_section},
+	{"to_new_section", &test_config_add__to_new_section}
+};
 static const struct clay_func _clay_cb_config_new[] = {
     {"write_new_config", &test_config_new__write_new_config}
 };
+static const struct clay_func _clay_cb_config_read[] = {
+    {"blank_lines", &test_config_read__blank_lines},
+	{"case_sensitive", &test_config_read__case_sensitive},
+	{"empty_files", &test_config_read__empty_files},
+	{"header_in_last_line", &test_config_read__header_in_last_line},
+	{"invalid_ext_headers", &test_config_read__invalid_ext_headers},
+	{"lone_variable", &test_config_read__lone_variable},
+	{"multiline_value", &test_config_read__multiline_value},
+	{"number_suffixes", &test_config_read__number_suffixes},
+	{"prefixes", &test_config_read__prefixes},
+	{"simple_read", &test_config_read__simple_read},
+	{"subsection_header", &test_config_read__subsection_header}
+};
 static const struct clay_func _clay_cb_config_stress[] = {
     {"dont_break_on_invalid_input", &test_config_stress__dont_break_on_invalid_input}
+};
+static const struct clay_func _clay_cb_config_write[] = {
+    {"delete_inexistent", &test_config_write__delete_inexistent},
+	{"delete_value", &test_config_write__delete_value},
+	{"replace_value", &test_config_write__replace_value}
 };
 static const struct clay_func _clay_cb_core_dirent[] = {
     {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot},
@@ -216,6 +238,34 @@ static const struct clay_func _clay_cb_object_tree_frompath[] = {
 	{"fail_when_processing_an_unknown_tree_segment", &test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment},
 	{"retrieve_tree_from_path_to_treeentry", &test_object_tree_frompath__retrieve_tree_from_path_to_treeentry}
 };
+static const struct clay_func _clay_cb_odb_loose[] = {
+    {"exists", &test_odb_loose__exists},
+	{"simple_reads", &test_odb_loose__simple_reads}
+};
+static const struct clay_func _clay_cb_odb_packed[] = {
+    {"mass_read", &test_odb_packed__mass_read},
+	{"read_header_0", &test_odb_packed__read_header_0},
+	{"read_header_1", &test_odb_packed__read_header_1}
+};
+static const struct clay_func _clay_cb_odb_sorting[] = {
+    {"alternate_backends_sorting", &test_odb_sorting__alternate_backends_sorting},
+	{"basic_backends_sorting", &test_odb_sorting__basic_backends_sorting}
+};
+static const struct clay_func _clay_cb_repo_getters[] = {
+    {"empty", &test_repo_getters__empty},
+	{"head_detached", &test_repo_getters__head_detached},
+	{"head_orphan", &test_repo_getters__head_orphan}
+};
+static const struct clay_func _clay_cb_repo_init[] = {
+    {"bare_repo", &test_repo_init__bare_repo},
+	{"bare_repo_noslash", &test_repo_init__bare_repo_noslash},
+	{"standard_repo", &test_repo_init__standard_repo},
+	{"standard_repo_noslash", &test_repo_init__standard_repo_noslash}
+};
+static const struct clay_func _clay_cb_repo_open[] = {
+    {"bare_empty_repo", &test_repo_open__bare_empty_repo},
+	{"standard_empty_repo", &test_repo_open__standard_empty_repo}
+};
 static const struct clay_func _clay_cb_status_single[] = {
     {"hash_single_file", &test_status_single__hash_single_file}
 };
@@ -232,16 +282,34 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_buf_basic, 2
     },
 	{
+        "config::add",
+        {"initialize", &test_config_add__initialize},
+        {"cleanup", &test_config_add__cleanup},
+        _clay_cb_config_add, 2
+    },
+	{
         "config::new",
         {NULL, NULL},
         {NULL, NULL},
         _clay_cb_config_new, 1
     },
 	{
+        "config::read",
+        {NULL, NULL},
+        {NULL, NULL},
+        _clay_cb_config_read, 11
+    },
+	{
         "config::stress",
         {"initialize", &test_config_stress__initialize},
         {"cleanup", &test_config_stress__cleanup},
         _clay_cb_config_stress, 1
+    },
+	{
+        "config::write",
+        {"initialize", &test_config_write__initialize},
+        {"cleanup", &test_config_write__cleanup},
+        _clay_cb_config_write, 3
     },
 	{
         "core::dirent",
@@ -358,6 +426,42 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_object_tree_frompath, 3
     },
 	{
+        "odb::loose",
+        {"initialize", &test_odb_loose__initialize},
+        {"cleanup", &test_odb_loose__cleanup},
+        _clay_cb_odb_loose, 2
+    },
+	{
+        "odb::packed",
+        {"initialize", &test_odb_packed__initialize},
+        {"cleanup", &test_odb_packed__cleanup},
+        _clay_cb_odb_packed, 3
+    },
+	{
+        "odb::sorting",
+        {"initialize", &test_odb_sorting__initialize},
+        {"cleanup", &test_odb_sorting__cleanup},
+        _clay_cb_odb_sorting, 2
+    },
+	{
+        "repo::getters",
+        {"initialize", &test_repo_getters__initialize},
+        {"cleanup", &test_repo_getters__cleanup},
+        _clay_cb_repo_getters, 3
+    },
+	{
+        "repo::init",
+        {"initialize", &test_repo_init__initialize},
+        {NULL, NULL},
+        _clay_cb_repo_init, 4
+    },
+	{
+        "repo::open",
+        {NULL, NULL},
+        {NULL, NULL},
+        _clay_cb_repo_open, 2
+    },
+	{
         "status::single",
         {NULL, NULL},
         {NULL, NULL},
@@ -371,8 +475,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 24;
-static size_t _clay_callback_count = 71;
+static size_t _clay_suite_count = 33;
+static size_t _clay_callback_count = 103;
 
 /* Core test functions */
 static void

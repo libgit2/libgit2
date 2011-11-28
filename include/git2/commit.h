@@ -56,7 +56,7 @@ GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *re
 /**
  * Close an open commit
  *
- * This is a wrapper around git_object_close()
+ * This is a wrapper around git_object_free()
  *
  * IMPORTANT:
  * It *is* necessary to call this method when you stop
@@ -65,9 +65,9 @@ GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *re
  * @param commit the commit to close
  */
 
-GIT_INLINE(void) git_commit_close(git_commit *commit)
+GIT_INLINE(void) git_commit_free(git_commit *commit)
 {
-	git_object_close((git_object *) commit);
+	git_object_free((git_object *) commit);
 }
 
 /**

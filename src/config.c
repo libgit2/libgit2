@@ -22,14 +22,11 @@ typedef struct {
 	int priority;
 } file_internal;
 
-void git_config_free(git_config *cfg)
+static void config_free(git_config *cfg)
 {
 	unsigned int i;
 	git_config_file *file;
 	file_internal *internal;
-
-	if (cfg == NULL)
-		return;
 
 	for(i = 0; i < cfg->files.length; ++i){
 		internal = git_vector_get(&cfg->files, i);
@@ -40,6 +37,14 @@ void git_config_free(git_config *cfg)
 
 	git_vector_free(&cfg->files);
 	git__free(cfg);
+}
+
+void git_config_free(git_config *cfg)
+{
+	if (cfg == NULL)
+		return;
+
+	GIT_REFCOUNT_DEC(cfg, config_free);
 }
 
 static int config_backend_cmp(const void *a, const void *b)
@@ -66,7 +71,7 @@ int git_config_new(git_config **out)
 	}
 
 	*out = cfg;
-
+	GIT_REFCOUNT_INC(cfg);
 	return GIT_SUCCESS;
 }
 

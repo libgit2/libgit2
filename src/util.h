@@ -104,29 +104,34 @@ extern void git__strtolower(char *str);
 
 extern int git__fnmatch(const char *pattern, const char *name, int flags);
 
-/*
- * Realloc the buffer pointed at by variable 'x' so that it can hold
- * at least 'nr' entries; the number of entries currently allocated
- * is 'alloc', using the standard growing factor alloc_nr() macro.
- *
- * DO NOT USE any expression with side-effect for 'x' or 'alloc'.
- */
-#define alloc_nr(x) (((x)+16)*3/2)
-#define ALLOC_GROW(x, nr, alloc) \
-	do { \
-		if ((nr) > alloc) { \
-			if (alloc_nr(alloc) < (nr)) \
-				alloc = (nr); \
-			else \
-				alloc = alloc_nr(alloc); \
-			x = xrealloc((x), alloc * sizeof(*(x))); \
-		} \
-	} while (0)
-
 extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));
 extern void **git__bsearch(const void *key, void **base, size_t nmemb,
 	int (*compar)(const void *, const void *));
 
 extern int git__strcmp_cb(const void *a, const void *b);
+
+typedef struct {
+	short refcount;
+	void *owner;
+} git_refcount;
+
+typedef void (*git_refcount_freeptr)(void *r);
+
+#define GIT_REFCOUNT_INC(r) { \
+	((git_refcount *)(r))->refcount++; \
+}
+
+#define GIT_REFCOUNT_DEC(_r, do_free) { \
+	git_refcount *r = (git_refcount *)(_r); \
+	r->refcount--; \
+	if (r->refcount <= 0 && r->owner == NULL) { do_free(_r); } \
+}
+
+#define GIT_REFCOUNT_OWN(r, o) { \
+	((git_refcount *)(r))->owner = o; \
+}
+
+#define GIT_REFCOUNT_OWNER(r) (((git_refcount *)(r))->owner)
+
 
 #endif /* INCLUDE_util_h__ */

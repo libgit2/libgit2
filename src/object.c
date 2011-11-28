@@ -77,9 +77,15 @@ static int create_object(git_object **object_out, git_otype type)
 	return GIT_SUCCESS;
 }
 
-int git_object_lookup_prefix(git_object **object_out, git_repository *repo, const git_oid *id, unsigned int len, git_otype type)
+int git_object_lookup_prefix(
+	git_object **object_out,
+	git_repository *repo,
+	const git_oid *id,
+	unsigned int len,
+	git_otype type)
 {
 	git_object *object = NULL;
+	git_odb *odb = NULL;
 	git_odb_object *odb_obj;
 	int error = GIT_SUCCESS;
 
@@ -88,6 +94,10 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git__throw(GIT_EAMBIGUOUSOIDPREFIX,
 			"Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS)
+		return error;
 
 	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
@@ -98,10 +108,11 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		 */
 		object = git_cache_get(&repo->objects, id);
 		if (object != NULL) {
-			if (type != GIT_OBJ_ANY && type != object->type)
-			{
-				git_object_close(object);
-				return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
+			if (type != GIT_OBJ_ANY && type != object->type) {
+				git_object_free(object);
+				return git__throw(GIT_EINVALIDTYPE,
+					"Failed to lookup object. "
+					"The given type does not match the type on the ODB");
 			}
 
 			*object_out = object;
@@ -113,7 +124,7 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		 * it is the same cost for packed and loose object backends,
 		 * but it may be much more costly for sqlite and hiredis.
 		 */
-		error = git_odb_read(&odb_obj, repo->db, id);
+		error = git_odb_read(&odb_obj, odb, id);
 	} else {
 		git_oid short_oid;
 
@@ -133,14 +144,14 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		 * - We never explore the cache, go right to exploring the backends
 		 * We chose the latter : we explore directly the backends.
 		 */
-		error = git_odb_read_prefix(&odb_obj, repo->db, &short_oid, len);
+		error = git_odb_read_prefix(&odb_obj, odb, &short_oid, len);
 	}
 
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to lookup object");
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
-		git_odb_object_close(odb_obj);
+		git_odb_object_free(odb_obj);
 		return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
 	}
 
@@ -174,7 +185,7 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		break;
 	}
 
-	git_odb_object_close(odb_obj);
+	git_odb_object_free(odb_obj);
 
 	if (error < GIT_SUCCESS) {
 		git_object__free(object);
@@ -218,7 +229,7 @@ void git_object__free(void *_obj)
 	}
 }
 
-void git_object_close(git_object *object)
+void git_object_free(git_object *object)
 {
 	if (object == NULL)
 		return;

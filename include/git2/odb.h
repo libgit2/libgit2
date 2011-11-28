@@ -92,7 +92,7 @@ GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, in
  *
  * @param db database pointer to close. If NULL no action is taken.
  */
-GIT_EXTERN(void) git_odb_close(git_odb *db);
+GIT_EXTERN(void) git_odb_free(git_odb *db);
 
 /**
  * Read an object from the database.
@@ -282,7 +282,7 @@ GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_otype type)
  *
  * @param object object to close
  */
-GIT_EXTERN(void) git_odb_object_close(git_odb_object *object);
+GIT_EXTERN(void) git_odb_object_free(git_odb_object *object);
 
 /**
  * Return the OID of an ODB object

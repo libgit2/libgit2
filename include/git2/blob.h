@@ -54,7 +54,7 @@ GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, co
 /**
  * Close an open blob
  *
- * This is a wrapper around git_object_close()
+ * This is a wrapper around git_object_free()
  *
  * IMPORTANT:
  * It *is* necessary to call this method when you stop
@@ -63,9 +63,9 @@ GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, co
  * @param blob the blob to close
  */
 
-GIT_INLINE(void) git_blob_close(git_blob *blob)
+GIT_INLINE(void) git_blob_free(git_blob *blob)
 {
-	git_object_close((git_object *) blob);
+	git_object_free((git_object *) blob);
 }
 
 

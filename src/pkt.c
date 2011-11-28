@@ -316,30 +316,30 @@ static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, 
  * is overwrite the OID each time.
  */
 
-int git_pkt_buffer_wants(git_headarray *refs, git_transport_caps *caps, git_buf *buf)
+int git_pkt_buffer_wants(const git_vector *refs, git_transport_caps *caps, git_buf *buf)
 {
 	unsigned int i = 0;
 	int error;
 	git_remote_head *head;
 
 	if (caps->common) {
-		for (; i < refs->len; ++i) {
-			head = refs->heads[i];
+		for (; i < refs->length; ++i) {
+			head = refs->contents[i];
 			if (!head->local)
 				break;
 		}
 
-		error = buffer_want_with_caps(refs->heads[i], caps, buf);
+		error = buffer_want_with_caps(refs->contents[i], caps, buf);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to buffer want with caps");
 
 		i++;
 	}
 
-	for (; i < refs->len; ++i) {
+	for (; i < refs->length; ++i) {
 		char oid[GIT_OID_HEXSZ];
 
-		head = refs->heads[i];
+		head = refs->contents[i];
 		if (head->local)
 			continue;
 
@@ -352,7 +352,7 @@ int git_pkt_buffer_wants(git_headarray *refs, git_transport_caps *caps, git_buf 
 	return git_pkt_buffer_flush(buf);
 }
 
-int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
+int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, int fd)
 {
 	unsigned int i = 0;
 	int error = GIT_SUCCESS;
@@ -365,15 +365,15 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 
 	/* If there are common caps, find the first one */
 	if (caps->common) {
-		for (; i < refs->len; ++i) {
-			head = refs->heads[i];
+		for (; i < refs->length; ++i) {
+			head = refs->contents[i];
 			if (head->local)
 				continue;
 			else
 				break;
 		}
 
-		error = send_want_with_caps(refs->heads[i], caps, fd);
+		error = send_want_with_caps(refs->contents[i], caps, fd);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to send want pkt with caps");
 		/* Increase it here so it's correct whether we run this or not */
@@ -381,8 +381,8 @@ int git_pkt_send_wants(git_headarray *refs, git_transport_caps *caps, int fd)
 	}
 
 	/* Continue from where we left off */
-	for (; i < refs->len; ++i) {
-		head = refs->heads[i];
+	for (; i < refs->length; ++i) {
+		head = refs->contents[i];
 		if (head->local)
 			continue;
 

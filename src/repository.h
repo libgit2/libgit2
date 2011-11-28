@@ -32,15 +32,15 @@ struct git_object {
 };
 
 struct git_repository {
-	git_odb *db;
+	git_odb *_odb;
+	git_config *_config;
+	git_index *_index;
 
 	git_cache objects;
 	git_refcache references;
 
 	char *path_repository;
-	char *path_index;
-	char *path_odb;
-	char *path_workdir;
+	char *workdir;
 
 	unsigned is_bare:1;
 	unsigned int lru_counter;
@@ -52,5 +52,9 @@ void git_object__free(void *object);
 
 int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end, const char *header);
 void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid);
+
+int git_repository_config__weakptr(git_config **out, git_repository *repo);
+int git_repository_odb__weakptr(git_odb **out, git_repository *repo);
+int git_repository_index__weakptr(git_index **out, git_repository *repo);
 
 #endif
