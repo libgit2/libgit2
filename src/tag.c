@@ -175,6 +175,7 @@ static int write_tag_annotation(
 {
 	int error = GIT_SUCCESS;
 	git_buf tag = GIT_BUF_INIT;
+	git_odb *odb;
 
 	git_oid__writebuf(&tag, "object ", git_object_id(target));
 	git_buf_printf(&tag, "type %s\n", git_object_type2string(git_object_type(target)));
@@ -188,7 +189,13 @@ static int write_tag_annotation(
 		return git__throw(GIT_ENOMEM, "Not enough memory to build the tag data");
 	}
 
-	error = git_odb_write(oid, git_repository_database(repo), tag.ptr, tag.size, GIT_OBJ_TAG);
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS) {
+		git_buf_free(&tag);
+		return error;
+	}
+
+	error = git_odb_write(oid, odb, tag.ptr, tag.size, GIT_OBJ_TAG);
 	git_buf_free(&tag);
 
 	if (error < GIT_SUCCESS)
@@ -286,6 +293,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 {
 	git_tag tag;
 	int error, should_update_ref = 0;
+	git_odb *odb;
 	git_odb_stream *stream;
 	git_odb_object *target_obj;
 
@@ -296,18 +304,22 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 
 	memset(&tag, 0, sizeof(tag));
 
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
 	/* validate the buffer */
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
 
 	/* validate the target */
-	if ((error = git_odb_read(&target_obj, repo->db, &tag.target)) < GIT_SUCCESS)
+	if ((error = git_odb_read(&target_obj, odb, &tag.target)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create tag");
 
 	if (tag.type != target_obj->raw.type)
 		return git__throw(error, "The type for the given target is invalid");
 
-	git_odb_object_close(target_obj);
+	git_odb_object_free(target_obj);
 
 	error = retrieve_tag_reference(&new_ref, ref_name, repo, tag.tag_name);
 
@@ -334,7 +346,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	}
 
 	/* write the buffer */
-	if ((error = git_odb_open_wstream(&stream, repo->db, strlen(buffer), GIT_OBJ_TAG)) < GIT_SUCCESS) {
+	if ((error = git_odb_open_wstream(&stream, odb, strlen(buffer), GIT_OBJ_TAG)) < GIT_SUCCESS) {
 		git_reference_free(new_ref);
 		return git__rethrow(error, "Failed to create tag");
 	}

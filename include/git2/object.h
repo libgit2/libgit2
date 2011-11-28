@@ -24,7 +24,7 @@ GIT_BEGIN_DECL
  * Lookup a reference to one of the objects in a repostory.
  *
  * The generated reference is owned by the repository and
- * should be closed with the `git_object_close` method
+ * should be closed with the `git_object_free` method
  * instead of free'd manually.
  *
  * The 'type' parameter must match the type of the object
@@ -56,7 +56,7 @@ GIT_EXTERN(int) git_object_lookup(
  * the prefix; otherwise the method will fail.
  *
  * The generated reference is owned by the repository and
- * should be closed with the `git_object_close` method
+ * should be closed with the `git_object_free` method
  * instead of free'd manually.
  *
  * The 'type' parameter must match the type of the object
@@ -123,7 +123,7 @@ GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
  *
  * @param object the object to close
  */
-GIT_EXTERN(void) git_object_close(git_object *object);
+GIT_EXTERN(void) git_object_free(git_object *object);
 
 /**
  * Convert an object type to it's string representation.

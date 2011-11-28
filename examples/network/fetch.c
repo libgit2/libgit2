@@ -4,23 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void show_refs(git_headarray *refs)
-{
-  int i;
-  git_remote_head *head;
-
-  if(refs->len == 0)
-    puts("Everything up-to-date");
-
-  for(i = 0; i < refs->len; ++i){
-	  char oid[GIT_OID_HEXSZ + 1] = {0};
-	  char *havewant;
-	  head = refs->heads[i];
-	  git_oid_fmt(oid, &head->oid);
-	  printf("%s\t%s\n", oid, head->name);
-  }
-}
-
 static int rename_packfile(char *packname, git_indexer *idx)
 {
   char path[GIT_PATH_MAX], oid[GIT_OID_HEXSZ + 1], *slash;
@@ -50,31 +33,18 @@ static int rename_packfile(char *packname, git_indexer *idx)
 int fetch(git_repository *repo, int argc, char **argv)
 {
   git_remote *remote = NULL;
-  git_config *cfg = NULL;
   git_indexer *idx = NULL;
   git_indexer_stats stats;
   int error;
   char *packname = NULL;
 
-  // Load the repository's configuration
-  error = git_repository_config(&cfg, repo, NULL, NULL);
-  if (error < GIT_SUCCESS)
-    return error;
-
   // Get the remote and connect to it
   printf("Fetching %s\n", argv[1]);
-  error = git_remote_get(&remote, cfg, argv[1]);
+  error = git_remote_new(&remote, repo, argv[1], NULL);
   if (error < GIT_SUCCESS)
     return error;
 
   error = git_remote_connect(remote, GIT_DIR_FETCH);
-  if (error < GIT_SUCCESS)
-    return error;
-
-  // Perform the packfile negotiation. This is where the two ends
-  // figure out the minimal amount of data that should be transmitted
-  // to bring the repository up-to-date
-  error = git_remote_negotiate(remote);
   if (error < GIT_SUCCESS)
     return error;
 

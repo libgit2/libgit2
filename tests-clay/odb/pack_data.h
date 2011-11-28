@@ -149,4 +149,3 @@ static const char *loose_objects[] = {
 	"a4a7dce85cf63874e984719f4fdd239f5145052f",
 	"4a202b346bb0fb0db7eff3cffeb3c70babbd2045"
 };
-

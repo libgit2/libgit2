@@ -54,7 +54,7 @@ GIT_INLINE(int) git_tree_lookup_prefix(git_tree **tree, git_repository *repo, co
 /**
  * Close an open tree
  *
- * This is a wrapper around git_object_close()
+ * This is a wrapper around git_object_free()
  *
  * IMPORTANT:
  * It *is* necessary to call this method when you stop
@@ -63,9 +63,9 @@ GIT_INLINE(int) git_tree_lookup_prefix(git_tree **tree, git_repository *repo, co
  * @param tree the tree to close
  */
 
-GIT_INLINE(void) git_tree_close(git_tree *tree)
+GIT_INLINE(void) git_tree_free(git_tree *tree)
 {
-	git_object_close((git_object *) tree);
+	git_object_free((git_object *) tree);
 }
 
 
@@ -273,7 +273,7 @@ GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_tr
  * relative path.
  *
  * The returned tree is owned by the repository and
- * should be closed with the `git_object_close` method.
+ * should be closed with the `git_object_free` method.
  *
  * @param subtree Pointer where to store the subtree
  * @param root A previously loaded tree which will be the root of the relative path

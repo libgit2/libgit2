@@ -6,7 +6,7 @@
  */
 #include "common.h"
 #include "git2/types.h"
-#include "git2/transport.h"
+#include "git2/remote.h"
 #include "git2/net.h"
 #include "transport.h"
 
@@ -49,11 +49,6 @@ int git_transport_dummy(git_transport **GIT_UNUSED(transport))
 	return git__throw(GIT_ENOTIMPLEMENTED, "This protocol isn't implemented. Sorry");
 }
 
-int git_transport_valid_url(const char *url)
-{
-	return transport_find_fn(url) != NULL;
-}
-
 int git_transport_new(git_transport **out, const char *url)
 {
 	git_transport_cb fn;
@@ -81,3 +76,10 @@ int git_transport_new(git_transport **out, const char *url)
 
 	return GIT_SUCCESS;
 }
+
+/* from remote.h */
+int git_remote_valid_url(const char *url)
+{
+	return transport_find_fn(url) != NULL;
+}
+

@@ -60,4 +60,5 @@ extern void git___rethrow(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
 
 #include "util.h"
 
+
 #endif /* INCLUDE_common_h__ */
