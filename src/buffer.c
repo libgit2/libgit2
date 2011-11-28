@@ -121,14 +121,14 @@ const char *git_buf_cstr(git_buf *buf)
 
 void git_buf_free(git_buf *buf)
 {
-	if (buf) {
-		if (buf->ptr) {
-			git__free(buf->ptr);
-			buf->ptr = NULL;
-		}
-		buf->asize = 0;
-		buf->size = 0;
+	assert(buf);
+
+	if (buf->ptr) {
+		git__free(buf->ptr);
+		buf->ptr = NULL;
 	}
+	buf->asize = 0;
+	buf->size = 0;
 }
 
 void git_buf_clear(git_buf *buf)
@@ -173,7 +173,7 @@ char *git_buf_take_cstr(git_buf *buf)
 	return data;
 }
 
-void git_buf_join(git_buf *buf, char separator, int nbuf, ...)
+void git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 {
 	/* Make two passes to avoid multiple reallocation */
 
@@ -239,3 +239,63 @@ void git_buf_join(git_buf *buf, char separator, int nbuf, ...)
 	buf->size = out - buf->ptr;
 }
 
+void git_buf_join(
+	git_buf *buf,
+	char separator,
+	const char *str_a,
+	const char *str_b)
+{
+	int add_size = 0;
+	int sep_a = 0;
+	int strlen_a = 0;
+	int sep_b = 0;
+	int strlen_b = 0;
+	char *ptr;
+
+	/* calculate string lengths and need for added separators */
+	if (str_a) {
+		while (*str_a == separator) { sep_a = 1; str_a++; }
+		strlen_a = strlen(str_a);
+	}
+	if (str_b) {
+		while (*str_b == separator) { sep_b = 1; str_b++; }
+		strlen_b = strlen(str_b);
+	}
+	if (buf->size > 0) {
+		if (buf->ptr[buf->size - 1] == separator) {
+			sep_a = 0;
+			if (!strlen_a) sep_b = 0;
+		} else if (!strlen_a)
+			sep_b = (str_b != NULL);
+	}
+	if (strlen_a > 0) {
+		if (str_a[strlen_a - 1] == separator)
+			sep_b = 0;
+		else if (str_b)
+			sep_b = 1;
+	}
+
+	add_size = sep_a + strlen_a + sep_b + strlen_b;
+
+	if (!add_size) return;
+
+	ENSURE_SIZE(buf, buf->size + add_size);
+
+	/* concatenate strings */
+	ptr = buf->ptr + buf->size;
+	if (sep_a)
+		*ptr++ = separator;
+	if (strlen_a) {
+		memmove(ptr, str_a, strlen_a);
+		ptr += strlen_a;
+	}
+	if (sep_b)
+		*ptr++ = separator;
+	if (strlen_b) {
+		memmove(ptr, str_b, strlen_b);
+		ptr += strlen_b;
+	}
+
+	/* set size based on num characters actually written */
+	buf->size = ptr - buf->ptr;
+}

@@ -352,7 +352,32 @@ void test_core_buffer__7(void)
 
 
 static void
-check_joinbuf(
+check_joinbuf_2(
+	const char *a,
+	const char *b,
+	const char *expected)
+{
+	char sep = '/';
+	git_buf buf = GIT_BUF_INIT;
+
+	/* first validate join from nothing */
+	git_buf_join(&buf, sep, a, b);
+	cl_assert(git_buf_oom(&buf) == 0);
+	cl_assert_strequal(expected, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+
+	/* next validate join-append */
+	git_buf_sets(&buf, a);
+	cl_assert(git_buf_oom(&buf) == 0);
+	git_buf_join(&buf, sep, NULL, b);
+	cl_assert(git_buf_oom(&buf) == 0);
+	cl_assert_strequal(expected, git_buf_cstr(&buf));
+
+	git_buf_free(&buf);
+}
+
+static void
+check_joinbuf_n_2(
 	const char *a,
 	const char *b,
 	const char *expected)
@@ -363,7 +388,7 @@ check_joinbuf(
 	git_buf_sets(&buf, a);
 	cl_assert(git_buf_oom(&buf) == 0);
 
-	git_buf_join(&buf, sep, 1, b);
+	git_buf_join_n(&buf, sep, 1, b);
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_strequal(expected, git_buf_cstr(&buf));
 
@@ -371,7 +396,7 @@ check_joinbuf(
 }
 
 static void
-check_joinbuf_n(
+check_joinbuf_n_4(
 	const char *a,
 	const char *b,
 	const char *c,
@@ -380,7 +405,7 @@ check_joinbuf_n(
 {
 	char sep = ';';
 	git_buf buf = GIT_BUF_INIT;
-	git_buf_join(&buf, sep, 4, a, b, c, d);
+	git_buf_join_n(&buf, sep, 4, a, b, c, d);
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_strequal(expected, git_buf_cstr(&buf));
 	git_buf_free(&buf);
@@ -391,45 +416,63 @@ void test_core_buffer__8(void)
 {
 	git_buf a = GIT_BUF_INIT;
 
-	git_buf_join(&a, '/', 1, "foo");
+	git_buf_join_n(&a, '/', 1, "foo");
 	cl_assert(git_buf_oom(&a) == 0);
 	cl_assert_strequal("foo", git_buf_cstr(&a));
 
-	git_buf_join(&a, '/', 1, "bar");
+	git_buf_join_n(&a, '/', 1, "bar");
 	cl_assert(git_buf_oom(&a) == 0);
 	cl_assert_strequal("foo/bar", git_buf_cstr(&a));
 
-	git_buf_join(&a, '/', 1, "baz");
+	git_buf_join_n(&a, '/', 1, "baz");
 	cl_assert(git_buf_oom(&a) == 0);
 	cl_assert_strequal("foo/bar/baz", git_buf_cstr(&a));
 
 	git_buf_free(&a);
 
-	check_joinbuf("", "", "");
-	check_joinbuf("", "a", "a");
-	check_joinbuf("", "/a", "/a");
-	check_joinbuf("a", "", "a/");
-	check_joinbuf("a", "/", "a/");
-	check_joinbuf("a", "b", "a/b");
-	check_joinbuf("/", "a", "/a");
-	check_joinbuf("/", "", "/");
-	check_joinbuf("/a", "/b", "/a/b");
-	check_joinbuf("/a", "/b/", "/a/b/");
-	check_joinbuf("/a/", "b/", "/a/b/");
-	check_joinbuf("/a/", "/b/", "/a/b/");
-	check_joinbuf("/abcd", "/defg", "/abcd/defg");
-	check_joinbuf("/abcd", "/defg/", "/abcd/defg/");
-	check_joinbuf("/abcd/", "defg/", "/abcd/defg/");
-	check_joinbuf("/abcd/", "/defg/", "/abcd/defg/");
+	check_joinbuf_2("", "", "");
+	check_joinbuf_2("", "a", "a");
+	check_joinbuf_2("", "/a", "/a");
+	check_joinbuf_2("a", "", "a/");
+	check_joinbuf_2("a", "/", "a/");
+	check_joinbuf_2("a", "b", "a/b");
+	check_joinbuf_2("/", "a", "/a");
+	check_joinbuf_2("/", "", "/");
+	check_joinbuf_2("/a", "/b", "/a/b");
+	check_joinbuf_2("/a", "/b/", "/a/b/");
+	check_joinbuf_2("/a/", "b/", "/a/b/");
+	check_joinbuf_2("/a/", "/b/", "/a/b/");
+	check_joinbuf_2("/a/", "//b/", "/a/b/");
+	check_joinbuf_2("/abcd", "/defg", "/abcd/defg");
+	check_joinbuf_2("/abcd", "/defg/", "/abcd/defg/");
+	check_joinbuf_2("/abcd/", "defg/", "/abcd/defg/");
+	check_joinbuf_2("/abcd/", "/defg/", "/abcd/defg/");
 
-	check_joinbuf_n("", "", "", "", "");
-	check_joinbuf_n("", "a", "", "", "a;");
-	check_joinbuf_n("a", "", "", "", "a;");
-	check_joinbuf_n("", "", "", "a", "a");
-	check_joinbuf_n("a", "b", "", ";c;d;", "a;b;c;d;");
-	check_joinbuf_n("a", "b", "", ";c;d", "a;b;c;d");
-	check_joinbuf_n("abcd", "efgh", "ijkl", "mnop", "abcd;efgh;ijkl;mnop");
-	check_joinbuf_n("abcd;", "efgh;", "ijkl;", "mnop;", "abcd;efgh;ijkl;mnop;");
-	check_joinbuf_n(";abcd;", ";efgh;", ";ijkl;", ";mnop;", ";abcd;efgh;ijkl;mnop;");
+	check_joinbuf_n_2("", "", "");
+	check_joinbuf_n_2("", "a", "a");
+	check_joinbuf_n_2("", "/a", "/a");
+	check_joinbuf_n_2("a", "", "a/");
+	check_joinbuf_n_2("a", "/", "a/");
+	check_joinbuf_n_2("a", "b", "a/b");
+	check_joinbuf_n_2("/", "a", "/a");
+	check_joinbuf_n_2("/", "", "/");
+	check_joinbuf_n_2("/a", "/b", "/a/b");
+	check_joinbuf_n_2("/a", "/b/", "/a/b/");
+	check_joinbuf_n_2("/a/", "b/", "/a/b/");
+	check_joinbuf_n_2("/a/", "/b/", "/a/b/");
+	check_joinbuf_n_2("/abcd", "/defg", "/abcd/defg");
+	check_joinbuf_n_2("/abcd", "/defg/", "/abcd/defg/");
+	check_joinbuf_n_2("/abcd/", "defg/", "/abcd/defg/");
+	check_joinbuf_n_2("/abcd/", "/defg/", "/abcd/defg/");
+
+	check_joinbuf_n_4("", "", "", "", "");
+	check_joinbuf_n_4("", "a", "", "", "a;");
+	check_joinbuf_n_4("a", "", "", "", "a;");
+	check_joinbuf_n_4("", "", "", "a", "a");
+	check_joinbuf_n_4("a", "b", "", ";c;d;", "a;b;c;d;");
+	check_joinbuf_n_4("a", "b", "", ";c;d", "a;b;c;d");
+	check_joinbuf_n_4("abcd", "efgh", "ijkl", "mnop", "abcd;efgh;ijkl;mnop");
+	check_joinbuf_n_4("abcd;", "efgh;", "ijkl;", "mnop;", "abcd;efgh;ijkl;mnop;");
+	check_joinbuf_n_4(";abcd;", ";efgh;", ";ijkl;", ";mnop;", ";abcd;efgh;ijkl;mnop;");
 }
 
