@@ -241,7 +241,7 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 {
 	assert(remote);
 
-	if (!remote->transport)
+	if (!remote->transport || !remote->transport->connected)
 		return git__throw(GIT_ERROR, "The remote is not connected");
 
 	return remote->transport->ls(remote->transport, list_cb, payload);
