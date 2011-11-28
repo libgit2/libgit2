@@ -759,6 +759,7 @@ BEGIN_TEST(root0, "create a root commit")
 	must_be_true(!strcmp(git_commit_message(commit), ROOT_COMMIT_MESSAGE));
 
 	/* Remove the data we just added to the repo */
+	git_reference_free(head);
 	must_pass(git_reference_lookup(&head, repo, "HEAD"));
 	must_pass(git_reference_set_target(head, head_old));
 	must_pass(git_reference_delete(branch));

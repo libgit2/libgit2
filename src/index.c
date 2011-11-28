@@ -87,6 +87,8 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 static int is_index_extended(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
+static void index_entry_free(git_index_entry *entry);
+
 static int index_srch(const void *key, const void *array_member)
 {
 	const git_index_entry *entry = array_member;
@@ -157,8 +159,17 @@ int git_index_open(git_index **index_out, const char *index_path)
 
 static void index_free(git_index *index)
 {
+	git_index_entry *e;
+	unsigned int i;
+
 	git_index_clear(index);
+	git_vector_foreach(&index->entries, i, e) {
+		index_entry_free(e);
+	}
 	git_vector_free(&index->entries);
+	git_vector_foreach(&index->unmerged, i, e) {
+		index_entry_free(e);
+	}
 	git_vector_free(&index->unmerged);
 
 	git__free(index->index_file_path);

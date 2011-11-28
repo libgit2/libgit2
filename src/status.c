@@ -154,6 +154,7 @@ static int retrieve_head_tree(git_tree **tree_out, git_repository *repo)
 	if ((error = git_commit_lookup(&head_commit, repo, git_reference_oid(resolved_head_ref))) < GIT_SUCCESS)
 		return git__rethrow(error, "The tip of HEAD can't be retrieved");
 
+	git_reference_free(resolved_head_ref);
 	if ((error = git_commit_tree(&tree, head_commit)) < GIT_SUCCESS) {
 		error = git__rethrow(error, "The tree of HEAD can't be retrieved");
 		goto exit;

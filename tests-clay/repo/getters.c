@@ -37,6 +37,7 @@ void test_repo_getters__head_detached(void)
 	git_oid_fromstr(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd");
 	cl_git_pass(git_reference_create_oid(&ref, repo, "HEAD", &oid, 1));
 	cl_assert(git_repository_head_detached(repo) == 1);
+	git_reference_free(ref);
 
 	/* take the reop back to it's original state */
 	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
@@ -58,6 +59,7 @@ void test_repo_getters__head_orphan(void)
 	/* orphan HEAD */
 	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/orphan", 1));
 	cl_assert(git_repository_head_orphan(repo) == 1);
+	git_reference_free(ref);
 
 	/* take the reop back to it's original state */
 	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));

@@ -243,6 +243,7 @@ BEGIN_TEST(write3, "Replace an already existing tag")
 
 	must_pass(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));
+	git_reference_free(ref_tag);
 
 	/* create signature */
 	must_pass(git_signature_new(&tagger, TAGGER_NAME, TAGGER_EMAIL, 123456789, 60));
