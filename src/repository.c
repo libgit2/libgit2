@@ -312,7 +312,6 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		GIT_REFCOUNT_OWN(repo->_odb, repo);
 	}
 
-	GIT_REFCOUNT_INC(repo->_odb);
 	*out = repo->_odb;
 	return GIT_SUCCESS;
 }
@@ -358,7 +357,6 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 		GIT_REFCOUNT_OWN(repo->_index, repo);
 	}
 
-	GIT_REFCOUNT_INC(repo->_index);
 	*out = repo->_index;
 	return GIT_SUCCESS;
 }
