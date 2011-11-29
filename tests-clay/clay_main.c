@@ -136,6 +136,17 @@ static const struct clay_func _clay_cb_config_write[] = {
 	{"delete_value", &test_config_write__delete_value},
 	{"replace_value", &test_config_write__replace_value}
 };
+static const struct clay_func _clay_cb_core_buffer[] = {
+    {"0", &test_core_buffer__0},
+	{"1", &test_core_buffer__1},
+	{"2", &test_core_buffer__2},
+	{"3", &test_core_buffer__3},
+	{"4", &test_core_buffer__4},
+	{"5", &test_core_buffer__5},
+	{"6", &test_core_buffer__6},
+	{"7", &test_core_buffer__7},
+	{"8", &test_core_buffer__8}
+};
 static const struct clay_func _clay_cb_core_dirent[] = {
     {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot},
 	{"dont_traverse_empty_folders", &test_core_dirent__dont_traverse_empty_folders},
@@ -312,6 +323,12 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_config_write, 3
     },
 	{
+        "core::buffer",
+        {NULL, NULL},
+        {NULL, NULL},
+        _clay_cb_core_buffer, 9
+    },
+	{
         "core::dirent",
         {NULL, NULL},
         {NULL, NULL},
@@ -475,8 +492,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 33;
-static size_t _clay_callback_count = 103;
+static size_t _clay_suite_count = 34;
+static size_t _clay_callback_count = 112;
 
 /* Core test functions */
 static void
