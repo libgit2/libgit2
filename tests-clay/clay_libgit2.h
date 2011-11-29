@@ -25,4 +25,20 @@
  */
 #define cl_git_fail(expr) cl_must_fail(expr)
 
+/**
+ * Wrapper for string comparison that knows about nulls.
+ */
+#define cl_assert_strequal(a,b) \
+	cl_assert_strequal_internal(a,b,__FILE__,__LINE__)
+
+GIT_INLINE(void) cl_assert_strequal_internal(const char *a, const char *b, const char *file, int line)
+{
+	int match = (a == NULL || b == NULL) ? (a == b) : (strcmp(a, b) == 0);
+	if (!match) {
+		char buf[4096];
+		snprintf(buf, 4096, "'%s' != '%s'", a, b);
+		clay__assert(0, file, line, buf, "Strings do not match", 1);
+	}
+}
+
 #endif
