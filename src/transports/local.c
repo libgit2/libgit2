@@ -74,6 +74,7 @@ static int add_ref(transport_local *t, const char *name)
 	ret = p_snprintf(head->name, peel_len + 1, "%s%s", name, peeled);
 
 	assert(ret < peel_len + 1);
+	(void)ret;
 
 	git_oid_cpy(&head->oid, git_tag_target_oid((git_tag *) obj));
 
