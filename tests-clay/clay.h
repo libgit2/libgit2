@@ -92,6 +92,7 @@ extern void test_core_buffer__5(void);
 extern void test_core_buffer__6(void);
 extern void test_core_buffer__7(void);
 extern void test_core_buffer__8(void);
+extern void test_core_buffer__9(void);
 extern void test_core_dirent__dont_traverse_dot(void);
 extern void test_core_dirent__dont_traverse_empty_folders(void);
 extern void test_core_dirent__traverse_slash_terminated_folder(void);

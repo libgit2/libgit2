@@ -282,58 +282,24 @@ void git_buf_join(
 	const char *str_a,
 	const char *str_b)
 {
-	size_t add_size = 0;
-	size_t sep_a = 0;
-	size_t strlen_a = 0;
-	size_t sep_b = 0;
-	size_t strlen_b = 0;
-	char *ptr;
+	size_t strlen_a = strlen(str_a);
+	size_t strlen_b = strlen(str_b);
+	int need_sep = 0;
 
-	/* calculate string lengths and need for added separators */
-	if (str_a) {
-		while (*str_a == separator) { sep_a = 1; str_a++; }
-		strlen_a = strlen(str_a);
-	}
-	if (str_b) {
-		while (*str_b == separator) { sep_b = 1; str_b++; }
-		strlen_b = strlen(str_b);
-	}
-	if (buf->size > 0) {
-		if (buf->ptr[buf->size - 1] == separator) {
-			sep_a = 0;
-			if (!strlen_a) sep_b = 0;
-		} else if (!strlen_a)
-			sep_b = (str_b != NULL);
-	}
-	if (strlen_a > 0) {
-		if (str_a[strlen_a - 1] == separator)
-			sep_b = 0;
-		else if (str_b)
-			sep_b = 1;
+	/* figure out if we need to insert a separator */
+	if (separator && strlen_a) {
+		while (*str_b == separator) { str_b++; strlen_b--; }
+		if (str_a[strlen_a - 1] != separator)
+			need_sep = 1;
 	}
 
-	add_size = sep_a + strlen_a + sep_b + strlen_b;
+	ENSURE_SIZE(buf, strlen_a + strlen_b + need_sep + 1);
 
-	if (!add_size) return;
+	memmove(buf->ptr, str_a, strlen_a);
+	if (need_sep)
+		buf->ptr[strlen_a] = separator;
+	memmove(buf->ptr + strlen_a + need_sep, str_b, strlen_b);
 
-	ENSURE_SIZE(buf, buf->size + add_size + 1);
-
-	/* concatenate strings */
-	ptr = buf->ptr + buf->size;
-	if (sep_a)
-		*ptr++ = separator;
-	if (strlen_a) {
-		memmove(ptr, str_a, strlen_a);
-		ptr += strlen_a;
-	}
-	if (sep_b)
-		*ptr++ = separator;
-	if (strlen_b) {
-		memmove(ptr, str_b, strlen_b);
-		ptr += strlen_b;
-	}
-
-	/* set size based on num characters actually written */
-	buf->size = ptr - buf->ptr;
+	buf->size = strlen_a + strlen_b + need_sep;
 	buf->ptr[buf->size] = '\0';
 }

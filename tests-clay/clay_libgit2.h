@@ -29,15 +29,16 @@
  * Wrapper for string comparison that knows about nulls.
  */
 #define cl_assert_strequal(a,b) \
-	cl_assert_strequal_internal(a,b,__FILE__,__LINE__)
+	cl_assert_strequal_internal(a,b,__FILE__,__LINE__,"string mismatch: " #a " != " #b)
 
-GIT_INLINE(void) cl_assert_strequal_internal(const char *a, const char *b, const char *file, int line)
+GIT_INLINE(void) cl_assert_strequal_internal(
+	const char *a, const char *b, const char *file, int line, const char *err)
 {
 	int match = (a == NULL || b == NULL) ? (a == b) : (strcmp(a, b) == 0);
 	if (!match) {
 		char buf[4096];
 		snprintf(buf, 4096, "'%s' != '%s'", a, b);
-		clay__assert(0, file, line, buf, "Strings do not match", 1);
+		clay__assert(0, file, line, buf, err, 1);
 	}
 }
 
