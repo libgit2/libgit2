@@ -8,13 +8,29 @@
 #include "posix.h"
 #include <stdarg.h>
 
+/* Used as default value for git_buf->ptr so that people can always
+ * assume ptr is non-NULL and zero terminated even for new git_bufs.
+ */
+char git_buf_initbuf[1];
+
 #define ENSURE_SIZE(b, d) \
 	if ((ssize_t)(d) > buf->asize && git_buf_grow(b, (d)) < GIT_SUCCESS)\
 		return;
 
+void git_buf_init(git_buf *buf, size_t initial_size)
+{
+	buf->asize = 0;
+	buf->size = 0;
+	buf->ptr = git_buf_initbuf;
+
+	if (initial_size)
+		git_buf_grow(buf, initial_size);
+}
+
 int git_buf_grow(git_buf *buf, size_t target_size)
 {
 	char *new_ptr;
+	size_t new_size;
 
 	if (buf->asize < 0)
 		return GIT_ENOMEM;
@@ -22,25 +38,54 @@ int git_buf_grow(git_buf *buf, size_t target_size)
 	if (target_size <= (size_t)buf->asize)
 		return GIT_SUCCESS;
 
-	if (buf->asize == 0)
-		buf->asize = target_size;
+	if (buf->asize == 0) {
+		new_size = target_size;
+		new_ptr = NULL;
+	} else {
+		new_size = (size_t)buf->asize;
+		new_ptr = buf->ptr;
+	}
 
 	/* grow the buffer size by 1.5, until it's big enough
 	 * to fit our target size */
-	while (buf->asize < (int)target_size)
-		buf->asize = (buf->asize << 1) - (buf->asize >> 1);
+	while (new_size < target_size)
+		new_size = (new_size << 1) - (new_size >> 1);
 
 	/* round allocation up to multiple of 8 */
-	buf->asize = (buf->asize + 7) & ~7;
+	new_size = (new_size + 7) & ~7;
 
-	new_ptr = git__realloc(buf->ptr, buf->asize);
+	new_ptr = git__realloc(new_ptr, new_size);
 	if (!new_ptr) {
 		buf->asize = -1;
 		return GIT_ENOMEM;
 	}
 
-	buf->ptr = new_ptr;
+	buf->asize = new_size;
+	buf->ptr   = new_ptr;
+
+	/* truncate the existing buffer size if necessary */
+	if (buf->size >= buf->asize)
+		buf->size = buf->asize - 1;
+	buf->ptr[buf->size] = '\0';
+
 	return GIT_SUCCESS;
+}
+
+void git_buf_free(git_buf *buf)
+{
+	if (!buf) return;
+
+	if (buf->ptr != git_buf_initbuf)
+		git__free(buf->ptr);
+
+	git_buf_init(buf, 0);
+}
+
+void git_buf_clear(git_buf *buf)
+{
+	buf->size = 0;
+	if (buf->asize > 0)
+		buf->ptr[0] = '\0';
 }
 
 int git_buf_oom(const git_buf *buf)
@@ -114,7 +159,7 @@ void git_buf_printf(git_buf *buf, const char *format, ...)
 
 const char *git_buf_cstr(git_buf *buf)
 {
-	return buf->ptr ? buf->ptr : "";
+	return buf->ptr;
 }
 
 void git_buf_copy_cstr(char *data, size_t datasize, git_buf *buf)
@@ -133,23 +178,6 @@ void git_buf_copy_cstr(char *data, size_t datasize, git_buf *buf)
 		copylen = datasize - 1;
 	memmove(data, buf->ptr, copylen);
 	data[copylen] = '\0';
-}
-
-void git_buf_free(git_buf *buf)
-{
-	if (!buf) return;
-
-	git__free(buf->ptr);
-	buf->ptr = NULL;
-	buf->asize = 0;
-	buf->size = 0;
-}
-
-void git_buf_clear(git_buf *buf)
-{
-	buf->size = 0;
-	if (buf->ptr)
-		*buf->ptr = '\0';
 }
 
 void git_buf_consume(git_buf *buf, const char *end)
@@ -171,18 +199,12 @@ void git_buf_swap(git_buf *buf_a, git_buf *buf_b)
 
 char *git_buf_take_cstr(git_buf *buf)
 {
-	char *data = NULL;
+	char *data = buf->ptr;
 
-	if (buf->ptr == NULL)
+	if (buf->asize <= 0)
 		return NULL;
 
-	assert(buf->asize > buf->size);
-
-	data = buf->ptr;
-
-	buf->ptr = NULL;
-	buf->asize = 0;
-	buf->size = 0;
+	git_buf_init(buf, 0);
 
 	return data;
 }

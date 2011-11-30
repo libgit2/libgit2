@@ -224,10 +224,7 @@ check_buf_append(
 	cl_assert(git_buf_oom(&tgt) == 0);
 	git_buf_puts(&tgt, data_b);
 	cl_assert(git_buf_oom(&tgt) == 0);
-	if (expected_data == NULL)
-		cl_assert(tgt.ptr == NULL);
-	else
-		cl_assert_strequal(expected_data, git_buf_cstr(&tgt));
+	cl_assert_strequal(expected_data, git_buf_cstr(&tgt));
 	cl_assert(tgt.size == expected_size);
 	if (expected_asize > 0)
 		cl_assert(tgt.asize == expected_asize);
@@ -356,13 +353,13 @@ void test_core_buffer__7(void)
 	b = git_buf_take_cstr(&a);
 
 	cl_assert_strequal("foo", b);
-	cl_assert_strequal(NULL, a.ptr);
+	cl_assert_strequal("", a.ptr);
 	git__free(b);
 
 	b = git_buf_take_cstr(&a);
 
 	cl_assert_strequal(NULL, b);
-	cl_assert_strequal(NULL, a.ptr);
+	cl_assert_strequal("", a.ptr);
 
 	git_buf_free(&a);
 }
