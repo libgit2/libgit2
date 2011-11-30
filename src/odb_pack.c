@@ -133,7 +133,7 @@ static int pack_window_contains(git_mwindow *win, off_t offset);
 
 static int packfile_sort__cb(const void *a_, const void *b_);
 
-static int packfile_load__cb(void *_data, char *path);
+static int packfile_load__cb(void *_data, git_buf *path);
 static int packfile_refresh_all(struct pack_backend *backend);
 
 static int pack_entry_find(struct git_pack_entry *e,
@@ -207,23 +207,23 @@ static int packfile_sort__cb(const void *a_, const void *b_)
 
 
 
-static int packfile_load__cb(void *_data, char *path)
+static int packfile_load__cb(void *_data, git_buf *path)
 {
 	struct pack_backend *backend = (struct pack_backend *)_data;
 	struct git_pack_file *pack;
 	int error;
 	size_t i;
 
-	if (git__suffixcmp(path, ".idx") != 0)
+	if (git__suffixcmp(path->ptr, ".idx") != 0)
 		return GIT_SUCCESS; /* not an index */
 
 	for (i = 0; i < backend->packs.length; ++i) {
 		struct git_pack_file *p = git_vector_get(&backend->packs, i);
-		if (memcmp(p->pack_name, path, strlen(path) - strlen(".idx")) == 0)
+		if (memcmp(p->pack_name, path->ptr, path->size - strlen(".idx")) == 0)
 			return GIT_SUCCESS;
 	}
 
-	error = git_packfile_check(&pack, path);
+	error = git_packfile_check(&pack, path->ptr);
 	if (error == GIT_ENOTFOUND) {
 		/* ignore missing .pack file as git does */
 		return GIT_SUCCESS;
@@ -250,11 +250,13 @@ static int packfile_refresh_all(struct pack_backend *backend)
 		return git__throw(GIT_ENOTFOUND, "Failed to refresh packfiles. Backend not found");
 
 	if (st.st_mtime != backend->pack_folder_mtime) {
-		char path[GIT_PATH_MAX];
-		strcpy(path, backend->pack_folder);
+		git_buf path = GIT_BUF_INIT;
+		git_buf_sets(&path, backend->pack_folder);
 
 		/* reload all packs */
-		error = git_futils_direach(path, GIT_PATH_MAX, packfile_load__cb, (void *)backend);
+		error = git_futils_direach(&path, packfile_load__cb, (void *)backend);
+
+		git_buf_free(&path);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to refresh packfiles");
 
@@ -451,27 +453,25 @@ static void pack_backend__free(git_odb_backend *_backend)
 
 int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 {
-	struct pack_backend *backend;
-	char path[GIT_PATH_MAX];
+	struct pack_backend *backend = NULL;
+	git_buf path = GIT_BUF_INIT;
+	int error = GIT_SUCCESS;
 
 	backend = git__calloc(1, sizeof(struct pack_backend));
 	if (backend == NULL)
 		return GIT_ENOMEM;
 
-	if (git_vector_init(&backend->packs, 8, packfile_sort__cb) < GIT_SUCCESS) {
-		git__free(backend);
-		return GIT_ENOMEM;
-	}
+	error = git_vector_init(&backend->packs, 8, packfile_sort__cb);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
-	git_path_join(path, objects_dir, "pack");
-	if (git_futils_isdir(path) == GIT_SUCCESS) {
-		backend->pack_folder = git__strdup(path);
+	error = git_buf_joinpath(&path, objects_dir, "pack");
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (git_futils_isdir(git_buf_cstr(&path)) == GIT_SUCCESS) {
+		backend->pack_folder = git_buf_detach(&path);
 		backend->pack_folder_mtime = 0;
-
-		if (backend->pack_folder == NULL) {
-			git__free(backend);
-			return GIT_ENOMEM;
-		}
 	}
 
 	backend->parent.read = &pack_backend__read;
@@ -481,5 +481,11 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->parent.free = &pack_backend__free;
 
 	*backend_out = (git_odb_backend *)backend;
-	return GIT_SUCCESS;
+
+cleanup:
+	if (error < GIT_SUCCESS)
+		git__free(backend);
+	git_buf_free(&path);
+
+	return error;
 }

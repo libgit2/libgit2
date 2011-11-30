@@ -304,32 +304,37 @@ int p_hide_directory__w32(const char *path)
 
 char *p_realpath(const char *orig_path, char *buffer)
 {
-	int ret, alloc = 0;
+	int ret;
 	wchar_t* orig_path_w = gitwin_to_utf16(orig_path);
 	wchar_t* buffer_w = (wchar_t*)git__malloc(GIT_PATH_MAX * sizeof(wchar_t));
-
-	if (buffer == NULL) {
-		buffer = (char *)git__malloc(GIT_PATH_MAX);
-		alloc = 1;
-	}
 
 	ret = GetFullPathNameW(orig_path_w, GIT_PATH_MAX, buffer_w, NULL);
 	git__free(orig_path_w);
 
 	if (!ret || ret > GIT_PATH_MAX) {
-		git__free(buffer_w);
-		if (alloc) git__free(buffer);
-
-		return NULL;
+		buffer = NULL;
+		goto done;
 	}
 
-	if (!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL)) {
-		git__free(buffer_w);
-		if (alloc) git__free(buffer);
+	if (buffer == NULL) {
+		int buffer_sz = WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, NULL, 0, NULL, NULL);
+
+		if (!buffer_sz ||
+			!(buffer = (char *)git__malloc(buffer_sz)) ||
+			!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, buffer_sz, NULL, NULL))
+		{
+			git__free(buffer);
+			buffer = NULL;
+		}
+	} else {
+		if (!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL))
+			buffer = NULL;
 	}
-	
+
+done:
 	git__free(buffer_w);
-	git_path_mkposix(buffer);
+	if (buffer)
+		git_path_mkposix(buffer);
 	return buffer;
 }
 

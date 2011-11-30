@@ -68,7 +68,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	git_buf_put(request, url, delim - url);
 	git_buf_putc(request, '\0');
 
-	return git_buf_oom(request);
+	return git_buf_lasterror(request);
 }
 
 static int send_request(GIT_SOCKET s, const char *cmd, const char *url)

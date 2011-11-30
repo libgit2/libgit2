@@ -225,42 +225,49 @@ int cmp_files(const char *a, const char *b)
 }
 
 typedef struct {
-	size_t src_len, dst_len;
-	char *dst;
+	git_buf src;
+	size_t  src_baselen;
+	git_buf dst;
+	size_t  dst_baselen;
 } copydir_data;
 
-static int copy_filesystem_element_recurs(void *_data, char *source)
+static int copy_filesystem_element_recurs(void *_data, git_buf *source)
 {
 	copydir_data *data = (copydir_data *)_data;
 
-	data->dst[data->dst_len] = 0;
-	git_path_join(data->dst, data->dst, source + data->src_len);
+	git_buf_truncate(&data->dst, data->dst_baselen);
+	git_buf_joinpath(&data->dst, data->dst.ptr, source->ptr + data->src_baselen);
 
-	if (git_futils_isdir(source) == GIT_SUCCESS)
-		return git_futils_direach(source, GIT_PATH_MAX, copy_filesystem_element_recurs, _data);
-
-	return copy_file(source, data->dst);
+	if (git_futils_isdir(source->ptr) == GIT_SUCCESS)
+		return git_futils_direach(source, copy_filesystem_element_recurs, _data);
+	else
+		return copy_file(source->ptr, data->dst.ptr);
 }
 
-int copydir_recurs(const char *source_directory_path, const char *destination_directory_path)
+int copydir_recurs(
+	const char *source_directory_path,
+	const char *destination_directory_path)
 {
-	char source_buffer[GIT_PATH_MAX];
-	char dest_buffer[GIT_PATH_MAX];
-	copydir_data data;
+	int error;
+	copydir_data data = { GIT_BUF_INIT, 0, GIT_BUF_INIT, 0 };
 
 	/* Source has to exist, Destination hast to _not_ exist */
 	if (git_futils_isdir(source_directory_path) != GIT_SUCCESS ||
 		git_futils_isdir(destination_directory_path) == GIT_SUCCESS)
 		return GIT_EINVALIDPATH;
 
-	git_path_join(source_buffer, source_directory_path, "");
-	data.src_len = strlen(source_buffer);
+	git_buf_joinpath(&data.src, source_directory_path, "");
+	data.src_baselen = data.src.size;
 
-	git_path_join(dest_buffer, destination_directory_path, "");
-	data.dst = dest_buffer;
-	data.dst_len = strlen(dest_buffer);
+	git_buf_joinpath(&data.dst, destination_directory_path, "");
+	data.dst_baselen = data.dst.size;
 
-	return copy_filesystem_element_recurs(&data, source_buffer);
+	error = copy_filesystem_element_recurs(&data, &data.src);
+
+	git_buf_free(&data.src);
+	git_buf_free(&data.dst);
+
+	return error;
 }
 
 int open_temp_repo(git_repository **repo, const char *path)
@@ -281,30 +288,51 @@ void close_temp_repo(git_repository *repo)
 	}
 }
 
-static int remove_placeholders_recurs(void *filename, char *path)
+typedef struct {
+	const char *filename;
+	size_t filename_len;
+} remove_data;
+
+static int remove_placeholders_recurs(void *_data, git_buf *path)
 {
-	char passed_filename[GIT_PATH_MAX];
-	char *data = (char *)filename;
+	remove_data *data = (remove_data *)_data;
+	size_t pathlen;
 
-	if (!git_futils_isdir(path))
-		return git_futils_direach(path, GIT_PATH_MAX, remove_placeholders_recurs, data);
+	if (!git_futils_isdir(path->ptr))
+		return git_futils_direach(path, remove_placeholders_recurs, data);
 
-	if (git_path_basename_r(passed_filename, sizeof(passed_filename), path) < GIT_SUCCESS)
-		return GIT_EINVALIDPATH;
+	pathlen = path->size;
 
-	if (!strcmp(data, passed_filename))
-		return p_unlink(path);
+	if (pathlen < data->filename_len)
+		return GIT_SUCCESS;
+
+	/* if path ends in '/'+filename (or equals filename) */
+	if (!strcmp(data->filename, path->ptr + pathlen - data->filename_len) &&
+		(pathlen == data->filename_len ||
+		 path->ptr[pathlen - data->filename_len - 1] == '/'))
+		return p_unlink(path->ptr);
 
 	return GIT_SUCCESS;
 }
 
-int remove_placeholders(char *directory_path, char *filename)
+int remove_placeholders(const char *directory_path, const char *filename)
 {
-	char buffer[GIT_PATH_MAX];
+	int error;
+	remove_data data;
+	git_buf buffer = GIT_BUF_INIT;
 
 	if (git_futils_isdir(directory_path))
 		return GIT_EINVALIDPATH;
 
-	strcpy(buffer, directory_path);
-	return remove_placeholders_recurs(filename, buffer);
+	if ((error = git_buf_sets(&buffer, directory_path)) < GIT_SUCCESS)
+		return error;
+
+	data.filename = filename;
+	data.filename_len = strlen(filename);
+
+	error = remove_placeholders_recurs(&data, &buffer);
+
+	git_buf_free(&buffer);
+
+	return error;
 }

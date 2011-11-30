@@ -42,4 +42,13 @@ GIT_INLINE(void) cl_assert_strequal_internal(
 	}
 }
 
+/*
+ * Some utility macros for building long strings
+ */
+#define REP4(STR)	 STR STR STR STR
+#define REP15(STR)	 REP4(STR) REP4(STR) REP4(STR) STR STR STR
+#define REP16(STR)	 REP4(REP4(STR))
+#define REP256(STR)  REP16(REP16(STR))
+#define REP1024(STR) REP4(REP256(STR))
+
 #endif

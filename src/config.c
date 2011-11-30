@@ -330,9 +330,25 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 
 int git_config_find_global(char *global_config_path)
 {
-	const char *home;
+	git_buf path  = GIT_BUF_INIT;
+	int     error = git_config_find_global_r(&path);
 
-	home = getenv("HOME");
+	if (error == GIT_SUCCESS) {
+		if (path.size > GIT_PATH_MAX)
+			error = git__throw(GIT_ESHORTBUFFER, "Path is too long");
+		else
+			git_buf_copy_cstr(global_config_path, GIT_PATH_MAX, &path);
+	}
+
+	git_buf_free(&path);
+
+	return error;
+}
+
+int git_config_find_global_r(git_buf *path)
+{
+	int error;
+	const char *home = getenv("HOME");
 
 #ifdef GIT_WIN32
 	if (home == NULL)
@@ -342,10 +358,13 @@ int git_config_find_global(char *global_config_path)
 	if (home == NULL)
 		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot locate the user's home directory");
 
-	git_path_join(global_config_path, home, GIT_CONFIG_FILENAME);
+	if ((error = git_buf_joinpath(path, home, GIT_CONFIG_FILENAME)) < GIT_SUCCESS)
+		return error;
 
-	if (git_futils_exists(global_config_path) < GIT_SUCCESS)
+	if (git_futils_exists(path->ptr) < GIT_SUCCESS) {
+		git_buf_clear(path);
 		return git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");
+	}
 
 	return GIT_SUCCESS;
 }
@@ -353,7 +372,7 @@ int git_config_find_global(char *global_config_path)
 
 
 #if GIT_WIN32
-static int win32_find_system(char *system_config_path)
+static int win32_find_system(git_buf *system_config_path)
 {
 	const wchar_t *query = L"%PROGRAMFILES%\\Git\\etc\\gitconfig";
 	wchar_t *apphome_utf16;
@@ -378,31 +397,44 @@ static int win32_find_system(char *system_config_path)
 	apphome_utf8 = gitwin_from_utf16(apphome_utf16);
 	git__free(apphome_utf16);
 
-	if (strlen(apphome_utf8) >= GIT_PATH_MAX) {
-		git__free(apphome_utf8);
-		return git__throw(GIT_ESHORTBUFFER, "Path is too long");
-	}
+	git_buf_attach(system_config_path, apphome_utf8, 0);
 
-	strcpy(system_config_path, apphome_utf8);
-	git__free(apphome_utf8);
 	return GIT_SUCCESS;
 }
 #endif
 
-int git_config_find_system(char *system_config_path)
+int git_config_find_system_r(git_buf *system_config_path)
 {
-	const char *etc = "/etc/gitconfig";
+	if (git_buf_sets(system_config_path, "/etc/gitconfig") < GIT_SUCCESS)
+		return git_buf_lasterror(system_config_path);
 
-	if (git_futils_exists(etc) == GIT_SUCCESS) {
-		memcpy(system_config_path, etc, strlen(etc) + 1);
+	if (git_futils_exists(system_config_path->ptr) == GIT_SUCCESS)
 		return GIT_SUCCESS;
-	}
+
+	git_buf_clear(system_config_path);
 
 #if GIT_WIN32
 	return win32_find_system(system_config_path);
 #else
 	return GIT_ENOTFOUND;
 #endif
+}
+
+int git_config_find_system(char *system_config_path)
+{
+	git_buf path  = GIT_BUF_INIT;
+	int     error = git_config_find_system_r(&path);
+
+	if (error == GIT_SUCCESS) {
+		if (path.size > GIT_PATH_MAX)
+			error = git__throw(GIT_ESHORTBUFFER, "Path is too long");
+		else
+			git_buf_copy_cstr(system_config_path, GIT_PATH_MAX, &path);
+	}
+
+	git_buf_free(&path);
+
+	return error;
 }
 
 int git_config_open_global(git_config **out)

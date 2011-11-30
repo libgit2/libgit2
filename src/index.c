@@ -294,40 +294,30 @@ git_index_entry *git_index_get(git_index *index, unsigned int n)
 
 static int index_entry_init(git_index_entry **entry_out, git_index *index, const char *rel_path, int stage)
 {
-	git_index_entry *entry;
-	char full_path[GIT_PATH_MAX];
+	git_index_entry *entry = NULL;
 	struct stat st;
 	git_oid oid;
 	int error;
-	const char *workdir;
 
 	if (INDEX_OWNER(index) == NULL)
 		return git__throw(GIT_EBAREINDEX,
 			"Failed to initialize entry. Repository is bare");
 
-	workdir = git_repository_workdir(INDEX_OWNER(index));
-	if (workdir == NULL)
-		return git__throw(GIT_EBAREINDEX,
-			"Failed to initialize entry. Cannot resolved workdir");
-
-	git_path_join(full_path, workdir, rel_path);
-
-	if (p_lstat(full_path, &st) < 0)
-		return git__throw(GIT_ENOTFOUND,
-			"Failed to initialize entry. '%s' cannot be opened", full_path);
-
 	if (stage < 0 || stage > 3)
 		return git__throw(GIT_ERROR,
 			"Failed to initialize entry. Invalid stage %i", stage);
+
+	/* There is no need to validate the rel_path here, since it will be
+	 * immediately validated by the call to git_blob_create_fromfile.
+	 */
 
 	/* write the blob to disk and get the oid */
 	if ((error = git_blob_create_fromfile(&oid, INDEX_OWNER(index), rel_path)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to initialize index entry");
 
-	entry = git__malloc(sizeof(git_index_entry));
+	entry = git__calloc(1, sizeof(git_index_entry));
 	if (!entry)
 		return GIT_ENOMEM;
-	memset(entry, 0x0, sizeof(git_index_entry));
 
 	entry->ctime.seconds = (git_time_t)st.st_ctime;
 	entry->mtime.seconds = (git_time_t)st.st_mtime;

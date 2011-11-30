@@ -21,4 +21,7 @@ struct git_config {
 	git_vector files;
 };
 
+extern int git_config_find_global_r(git_buf *global_config_path);
+extern int git_config_find_system_r(git_buf *system_config_path);
+
 #endif

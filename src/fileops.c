@@ -10,35 +10,40 @@
 
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
-	int error = GIT_SUCCESS;
-	char target_folder_path[GIT_PATH_MAX];
+	int error;
+	git_buf target_folder = GIT_BUF_INIT;
 
-	error = git_path_dirname_r(target_folder_path, sizeof(target_folder_path), file_path);
-	if (error < GIT_SUCCESS)
+	error = git_path_dirname_r(&target_folder, file_path);
+	if (error < GIT_SUCCESS) {
+		git_buf_free(&target_folder);
 		return git__throw(GIT_EINVALIDPATH, "Failed to recursively build `%s` tree structure. Unable to parse parent folder name", file_path);
-
-	/* Does the containing folder exist? */
-	if (git_futils_isdir(target_folder_path)) {
-		git_path_join(target_folder_path, target_folder_path, ""); /* Ensure there's a trailing slash */
-
-		/* Let's create the tree structure */
-		error = git_futils_mkdir_r(target_folder_path, mode);
-		if (error < GIT_SUCCESS)
-			return error;	/* The callee already takes care of setting the correct error message. */
+	} else {
+		/* reset error */
+		error = GIT_SUCCESS;
 	}
 
-	return GIT_SUCCESS;
+	/* Does the containing folder exist? */
+	if (git_futils_isdir(target_folder.ptr) != GIT_SUCCESS)
+		/* Let's create the tree structure */
+		error = git_futils_mkdir_r(target_folder.ptr, NULL, mode);
+
+	git_buf_free(&target_folder);
+	return error;
 }
 
-int git_futils_mktmp(char *path_out, const char *filename)
+int git_futils_mktmp(git_buf *path_out, const char *filename)
 {
 	int fd;
 
-	strcpy(path_out, filename);
-	strcat(path_out, "_git2_XXXXXX");
+	git_buf_sets(path_out, filename);
+	git_buf_puts(path_out, "_git2_XXXXXX");
 
-	if ((fd = p_mkstemp(path_out)) < 0)
-		return git__throw(GIT_EOSERR, "Failed to create temporary file %s", path_out);
+	if (git_buf_oom(path_out))
+		return git__rethrow(git_buf_lasterror(path_out),
+			"Failed to create temporary file for %s", filename);
+
+	if ((fd = p_mkstemp(path_out->ptr)) < 0)
+		return git__throw(GIT_EOSERR, "Failed to create temporary file %s", path_out->ptr);
 
 	return fd;
 }
@@ -180,6 +185,14 @@ int git_futils_readbuffer(git_fbuffer *obj, const char *path)
 	return git_futils_readbuffer_updated(obj, path, NULL, NULL);
 }
 
+void git_futils_fbuffer_rtrim(git_fbuffer *obj)
+{
+	unsigned char *buff = obj->data;
+	while (obj->len > 0 && isspace(buff[obj->len - 1]))
+		obj->len--;
+	buff[obj->len] = '\0';
+}
+
 void git_futils_freebuffer(git_fbuffer *obj)
 {
 	assert(obj);
@@ -215,49 +228,38 @@ GIT_INLINE(int) is_dot_or_dotdot(const char *name)
 }
 
 int git_futils_direach(
-	char *path,
-	size_t path_sz,
-	int (*fn)(void *, char *),
+	git_buf *path,
+	int (*fn)(void *, git_buf *),
 	void *arg)
 {
-	size_t wd_len = strlen(path);
+	ssize_t wd_len;
 	DIR *dir;
 	struct dirent *de;
 
-	if (!wd_len || path_sz < wd_len + 2)
-		return git__throw(GIT_EINVALIDARGS, "Failed to process `%s` tree structure. Path is either empty or buffer size is too short", path);
+	if (git_path_to_dir(path) < GIT_SUCCESS)
+		return git_buf_lasterror(path);
 
-	while (path[wd_len - 1] == '/')
-		wd_len--;
-	path[wd_len++] = '/';
-	path[wd_len] = '\0';
-
-	dir = opendir(path);
+	wd_len = path->size;
+	dir = opendir(path->ptr);
 	if (!dir)
-		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure. An error occured while opening the directory", path);
+		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure. An error occured while opening the directory", path->ptr);
 
 	while ((de = readdir(dir)) != NULL) {
-		size_t de_len;
 		int result;
 
 		if (is_dot_or_dotdot(de->d_name))
 			continue;
 
-		de_len = strlen(de->d_name);
-		if (path_sz < wd_len + de_len + 1) {
-			closedir(dir);
-			return git__throw(GIT_ERROR, "Failed to process `%s` tree structure. Buffer size is too short", path);
-		}
+		if (git_buf_puts(path, de->d_name) < GIT_SUCCESS)
+			return git_buf_lasterror(path);
 
-		strcpy(path + wd_len, de->d_name);
 		result = fn(arg, path);
-		if (result < GIT_SUCCESS) {
+
+		git_buf_truncate(path, wd_len); /* restore path */
+
+		if (result != GIT_SUCCESS) {
 			closedir(dir);
 			return result;	/* The callee is reponsible for setting the correct error message */
-		}
-		if (result > 0) {
-			closedir(dir);
-			return result;
 		}
 	}
 
@@ -265,26 +267,33 @@ int git_futils_direach(
 	return GIT_SUCCESS;
 }
 
-int git_futils_mkdir_r(const char *path, const mode_t mode)
+int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 {
 	int error, root_path_offset;
+	git_buf make_path = GIT_BUF_INIT;
+	size_t start;
 	char *pp, *sp;
-	char *path_copy = git__strdup(path);
 
-	if (path_copy == NULL)
-		return GIT_ENOMEM;
+	if (base != NULL) {
+		start = strlen(base);
+		error = git_buf_joinpath(&make_path, base, path);
+	} else {
+		start = 0;
+		error = git_buf_puts(&make_path, path);
+	}
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to create `%s` tree structure", path);
 
-	error = GIT_SUCCESS;
-	pp = path_copy;
+	pp = make_path.ptr + start;
 
-	root_path_offset = git_path_root(pp);
+	root_path_offset = git_path_root(make_path.ptr);
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
 	while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != NULL) {
-		if (sp != pp && git_futils_isdir(path_copy) < GIT_SUCCESS) {
+		if (sp != pp && git_futils_isdir(make_path.ptr) < GIT_SUCCESS) {
 			*sp = 0;
-			error = p_mkdir(path_copy, mode);
+			error = p_mkdir(make_path.ptr, mode);
 
 			/* Do not choke while trying to recreate an existing directory */
 			if (errno == EEXIST)
@@ -297,12 +306,12 @@ int git_futils_mkdir_r(const char *path, const mode_t mode)
 	}
 
 	if (*pp != '\0' && error == GIT_SUCCESS) {
-		error = p_mkdir(path, mode);
+		error = p_mkdir(make_path.ptr, mode);
 		if (errno == EEXIST)
 			error = GIT_SUCCESS;
 	}
 
-	git__free(path_copy);
+	git_buf_free(&make_path);
 
 	if (error < GIT_SUCCESS)
 		return git__throw(error, "Failed to recursively create `%s` tree structure", path);
@@ -310,32 +319,34 @@ int git_futils_mkdir_r(const char *path, const mode_t mode)
 	return GIT_SUCCESS;
 }
 
-static int _rmdir_recurs_foreach(void *opaque, char *path)
+static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
 {
 	int error = GIT_SUCCESS;
 	int force = *(int *)opaque;
 
-	if (git_futils_isdir(path) == GIT_SUCCESS) {
-		size_t root_size = strlen(path);
-
-		if ((error = git_futils_direach(path, GIT_PATH_MAX, _rmdir_recurs_foreach, opaque)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to remove directory `%s`", path);
-
-		path[root_size] = '\0';
-		return p_rmdir(path);
+	if (git_futils_isdir(path->ptr) == GIT_SUCCESS) {
+		error = git_futils_direach(path, _rmdir_recurs_foreach, opaque);
+		if (error < GIT_SUCCESS)
+			return git__rethrow(error, "Failed to remove directory `%s`", path->ptr);
+		return p_rmdir(path->ptr);
 
 	} else if (force) {
-		return p_unlink(path);
+		return p_unlink(path->ptr);
 	}
 
-	return git__rethrow(error, "Failed to remove directory. `%s` is not empty", path);
+	return git__rethrow(error, "Failed to remove directory. `%s` is not empty", path->ptr);
 }
 
 int git_futils_rmdir_r(const char *path, int force)
 {
-	char p[GIT_PATH_MAX];
-	strncpy(p, path, GIT_PATH_MAX);
-	return _rmdir_recurs_foreach(&force, p);
+	int error;
+	git_buf p = GIT_BUF_INIT;
+
+	error = git_buf_sets(&p, path);
+	if (error == GIT_SUCCESS)
+		error = _rmdir_recurs_foreach(&force, &p);
+	git_buf_free(&p);
+	return error;
 }
 
 int git_futils_cmp_path(const char *name1, int len1, int isdir1,
@@ -354,5 +365,41 @@ int git_futils_cmp_path(const char *name1, int len1, int isdir1,
 		return ((!isdir1 && !isdir2) ? 1 :
 						(isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
 	return 0;
+}
+
+static int _check_dir_contents(
+	git_buf *dir,
+	const char *sub,
+	int append_on_success,
+	int (*predicate)(const char *))
+{
+	int error = GIT_SUCCESS;
+	size_t dir_size = dir->size;
+	size_t sub_size = strlen(sub);
+
+	/* leave base valid even if we could not make space for subdir */
+	if ((error = git_buf_try_grow(dir, dir_size + sub_size + 2)) < GIT_SUCCESS)
+		return error;
+
+	/* save excursion */
+	git_buf_joinpath(dir, dir->ptr, sub);
+
+	error = (*predicate)(dir->ptr);
+
+	/* restore excursion */
+	if (!append_on_success || error != GIT_SUCCESS)
+		git_buf_truncate(dir, dir_size);
+
+	return error;
+}
+
+int git_futils_contains_dir(git_buf *base, const char *subdir, int append_if_exists)
+{
+	return _check_dir_contents(base, subdir, append_if_exists, &git_futils_isdir);
+}
+
+int git_futils_contains_file(git_buf *base, const char *file, int append_if_exists)
+{
+	return _check_dir_contents(base, file, append_if_exists, &git_futils_isfile);
 }
 

@@ -35,7 +35,8 @@ int p_getcwd(char *buffer_out, size_t size)
 
 	git_path_mkposix(buffer_out);
 
-	git_path_join(buffer_out, buffer_out, "");	//Ensure the path ends with a trailing slash
+	git_path_string_to_dir(buffer_out, size);	//Ensure the path ends with a trailing slash
+
 	return GIT_SUCCESS;
 }
 
