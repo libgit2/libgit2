@@ -52,6 +52,7 @@ void test_core_buffer__2(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 	int i;
+	char data[100];
 
 	cl_assert(buf.size == 0);
 
@@ -129,6 +130,27 @@ void test_core_buffer__2(void)
 	cl_assert_strequal("", git_buf_cstr(&buf));
 
 	git_buf_free(&buf);
+
+	/* test extracting data into buffer */
+	git_buf_puts(&buf, REP4("0123456789"));
+	cl_assert(git_buf_oom(&buf) == 0);
+
+	git_buf_copy_cstr(data, 100, &buf);
+	cl_assert_strequal(data, REP4("0123456789"));
+	git_buf_copy_cstr(data, 11, &buf);
+	cl_assert_strequal(data, "0123456789");
+	git_buf_copy_cstr(data, 3, &buf);
+	cl_assert_strequal(data, "01");
+	git_buf_copy_cstr(data, 1, &buf);
+	cl_assert_strequal(data, "");
+
+	git_buf_copy_cstr(data, 100, &buf);
+	cl_assert_strequal(data, REP4("0123456789"));
+
+	git_buf_free(&buf);
+
+	git_buf_copy_cstr(data, 100, &buf);
+	cl_assert_strequal(data, "");
 }
 
 /* let's do some tests with larger buffers to push our limits */
