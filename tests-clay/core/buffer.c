@@ -52,19 +52,19 @@ void test_core_buffer__2(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 	int i;
+	char data[100];
 
 	cl_assert(buf.size == 0);
 
 	/* this must be safe to do */
 	git_buf_free(&buf);
-
 	cl_assert(buf.size == 0);
 	cl_assert(buf.asize == 0);
 
 	/* empty buffer should be empty string */
 	cl_assert_strequal("", git_buf_cstr(&buf));
 	cl_assert(buf.size == 0);
-	cl_assert(buf.asize > 0);
+	/* cl_assert(buf.asize == 0); -- should not assume what git_buf does */
 
 	/* free should set us back to the beginning */
 	git_buf_free(&buf);
@@ -130,6 +130,27 @@ void test_core_buffer__2(void)
 	cl_assert_strequal("", git_buf_cstr(&buf));
 
 	git_buf_free(&buf);
+
+	/* test extracting data into buffer */
+	git_buf_puts(&buf, REP4("0123456789"));
+	cl_assert(git_buf_oom(&buf) == 0);
+
+	git_buf_copy_cstr(data, 100, &buf);
+	cl_assert_strequal(data, REP4("0123456789"));
+	git_buf_copy_cstr(data, 11, &buf);
+	cl_assert_strequal(data, "0123456789");
+	git_buf_copy_cstr(data, 3, &buf);
+	cl_assert_strequal(data, "01");
+	git_buf_copy_cstr(data, 1, &buf);
+	cl_assert_strequal(data, "");
+
+	git_buf_copy_cstr(data, 100, &buf);
+	cl_assert_strequal(data, REP4("0123456789"));
+
+	git_buf_free(&buf);
+
+	git_buf_copy_cstr(data, 100, &buf);
+	cl_assert_strequal(data, "");
 }
 
 /* let's do some tests with larger buffers to push our limits */
@@ -203,10 +224,7 @@ check_buf_append(
 	cl_assert(git_buf_oom(&tgt) == 0);
 	git_buf_puts(&tgt, data_b);
 	cl_assert(git_buf_oom(&tgt) == 0);
-	if (expected_data == NULL)
-		cl_assert(tgt.ptr == NULL);
-	else
-		cl_assert_strequal(expected_data, git_buf_cstr(&tgt));
+	cl_assert_strequal(expected_data, git_buf_cstr(&tgt));
 	cl_assert(tgt.size == expected_size);
 	if (expected_asize > 0)
 		cl_assert(tgt.asize == expected_asize);
@@ -277,15 +295,15 @@ void test_core_buffer__5(void)
 	 */
 
 	check_buf_append("abcdefgh", "/", "abcdefgh/", 9, 16);
-	check_buf_append("abcdefgh", "ijklmno", "abcdefghijklmno", 15, 24);
+	check_buf_append("abcdefgh", "ijklmno", "abcdefghijklmno", 15, 16);
 	check_buf_append("abcdefgh", "ijklmnop", "abcdefghijklmnop", 16, 24);
 	check_buf_append("0123456789", "0123456789",
 					 "01234567890123456789", 20, 24);
 	check_buf_append(REP16("x"), REP16("o"),
 					 REP16("x") REP16("o"), 32, 40);
 
-	check_buf_append(test_4096, "", test_4096, 4096, 6144);
-	check_buf_append(test_4096, test_4096, test_8192, 8192, 9216);
+	check_buf_append(test_4096, "", test_4096, 4096, 4104);
+	check_buf_append(test_4096, test_4096, test_8192, 8192, 9240);
 
 	/* check sequences of appends */
 	check_buf_append_abc("a", "b", "c",
@@ -335,13 +353,13 @@ void test_core_buffer__7(void)
 	b = git_buf_take_cstr(&a);
 
 	cl_assert_strequal("foo", b);
-	cl_assert_strequal(NULL, a.ptr);
+	cl_assert_strequal("", a.ptr);
 	git__free(b);
 
 	b = git_buf_take_cstr(&a);
 
 	cl_assert_strequal(NULL, b);
-	cl_assert_strequal(NULL, a.ptr);
+	cl_assert_strequal("", a.ptr);
 
 	git_buf_free(&a);
 }

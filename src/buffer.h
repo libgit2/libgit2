@@ -14,8 +14,11 @@ typedef struct {
 	ssize_t asize, size;
 } git_buf;
 
-#define GIT_BUF_INIT {NULL, 0, 0}
+extern char git_buf_initbuf[];
 
+#define GIT_BUF_INIT { git_buf_initbuf, 0, 0 }
+
+void git_buf_init(git_buf *buf, size_t initial_size);
 int git_buf_grow(git_buf *buf, size_t target_size);
 void git_buf_free(git_buf *buf);
 void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
@@ -42,6 +45,7 @@ void git_buf_join(git_buf *buf, char separator, const char *str_a, const char *s
 
 const char *git_buf_cstr(git_buf *buf);
 char *git_buf_take_cstr(git_buf *buf);
+void git_buf_copy_cstr(char *data, size_t datasize, git_buf *buf);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 
