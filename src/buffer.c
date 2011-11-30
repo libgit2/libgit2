@@ -53,9 +53,10 @@ void git_buf_set(git_buf *buf, const char *data, size_t len)
 	if (len == 0 || data == NULL) {
 		git_buf_clear(buf);
 	} else {
-		ENSURE_SIZE(buf, len);
+		ENSURE_SIZE(buf, len + 1);
 		memmove(buf->ptr, data, len);
 		buf->size = len;
+		buf->ptr[buf->size] = '\0';
 	}
 }
 
@@ -66,15 +67,17 @@ void git_buf_sets(git_buf *buf, const char *string)
 
 void git_buf_putc(git_buf *buf, char c)
 {
-	ENSURE_SIZE(buf, buf->size + 1);
+	ENSURE_SIZE(buf, buf->size + 2);
 	buf->ptr[buf->size++] = c;
+	buf->ptr[buf->size] = '\0';
 }
 
 void git_buf_put(git_buf *buf, const char *data, size_t len)
 {
-	ENSURE_SIZE(buf, buf->size + len);
+	ENSURE_SIZE(buf, buf->size + len + 1);
 	memmove(buf->ptr + buf->size, data, len);
 	buf->size += len;
+	buf->ptr[buf->size] = '\0';
 }
 
 void git_buf_puts(git_buf *buf, const char *string)
@@ -111,12 +114,25 @@ void git_buf_printf(git_buf *buf, const char *format, ...)
 
 const char *git_buf_cstr(git_buf *buf)
 {
-	if (buf->size + 1 > buf->asize &&
-		git_buf_grow(buf, buf->size + 1) < GIT_SUCCESS)
-		return NULL;
+	return buf->ptr ? buf->ptr : "";
+}
 
-	buf->ptr[buf->size] = '\0';
-	return buf->ptr;
+void git_buf_copy_cstr(char *data, size_t datasize, git_buf *buf)
+{
+	size_t copylen;
+
+	assert(data && datasize);
+
+	data[0] = '\0';
+
+	if (buf->size == 0 || buf->asize <= 0)
+		return;
+
+	copylen = buf->size;
+	if (copylen > datasize - 1)
+		copylen = datasize - 1;
+	memmove(data, buf->ptr, copylen);
+	data[copylen] = '\0';
 }
 
 void git_buf_free(git_buf *buf)
@@ -132,6 +148,8 @@ void git_buf_free(git_buf *buf)
 void git_buf_clear(git_buf *buf)
 {
 	buf->size = 0;
+	if (buf->ptr)
+		*buf->ptr = '\0';
 }
 
 void git_buf_consume(git_buf *buf, const char *end)
@@ -140,6 +158,7 @@ void git_buf_consume(git_buf *buf, const char *end)
 		size_t consumed = end - buf->ptr;
 		memmove(buf->ptr, end, buf->size - consumed);
 		buf->size -= consumed;
+		buf->ptr[buf->size] = '\0';
 	}
 }
 
@@ -157,12 +176,9 @@ char *git_buf_take_cstr(git_buf *buf)
 	if (buf->ptr == NULL)
 		return NULL;
 
-	if (buf->size + 1 > buf->asize &&
-		git_buf_grow(buf, buf->size + 1) < GIT_SUCCESS)
-		return NULL;
+	assert(buf->asize > buf->size);
 
 	data = buf->ptr;
-	data[buf->size] = '\0';
 
 	buf->ptr = NULL;
 	buf->asize = 0;
@@ -199,7 +215,7 @@ void git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	}
 	va_end(ap);
 
-	ENSURE_SIZE(buf, buf->size + total_size);
+	ENSURE_SIZE(buf, buf->size + total_size + 1);
 
 	out = buf->ptr + buf->size;
 
@@ -235,6 +251,7 @@ void git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 
 	/* set size based on num characters actually written */
 	buf->size = out - buf->ptr;
+	buf->ptr[buf->size] = '\0';
 }
 
 void git_buf_join(
@@ -277,7 +294,7 @@ void git_buf_join(
 
 	if (!add_size) return;
 
-	ENSURE_SIZE(buf, buf->size + add_size);
+	ENSURE_SIZE(buf, buf->size + add_size + 1);
 
 	/* concatenate strings */
 	ptr = buf->ptr + buf->size;
@@ -296,4 +313,5 @@ void git_buf_join(
 
 	/* set size based on num characters actually written */
 	buf->size = ptr - buf->ptr;
+	buf->ptr[buf->size] = '\0';
 }

@@ -42,6 +42,7 @@ void git_buf_join(git_buf *buf, char separator, const char *str_a, const char *s
 
 const char *git_buf_cstr(git_buf *buf);
 char *git_buf_take_cstr(git_buf *buf);
+void git_buf_copy_cstr(char *data, size_t datasize, git_buf *buf);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 

@@ -57,14 +57,13 @@ void test_core_buffer__2(void)
 
 	/* this must be safe to do */
 	git_buf_free(&buf);
-
 	cl_assert(buf.size == 0);
 	cl_assert(buf.asize == 0);
 
 	/* empty buffer should be empty string */
 	cl_assert_strequal("", git_buf_cstr(&buf));
 	cl_assert(buf.size == 0);
-	cl_assert(buf.asize > 0);
+	/* cl_assert(buf.asize == 0); -- should not assume what git_buf does */
 
 	/* free should set us back to the beginning */
 	git_buf_free(&buf);
@@ -277,15 +276,15 @@ void test_core_buffer__5(void)
 	 */
 
 	check_buf_append("abcdefgh", "/", "abcdefgh/", 9, 16);
-	check_buf_append("abcdefgh", "ijklmno", "abcdefghijklmno", 15, 24);
+	check_buf_append("abcdefgh", "ijklmno", "abcdefghijklmno", 15, 16);
 	check_buf_append("abcdefgh", "ijklmnop", "abcdefghijklmnop", 16, 24);
 	check_buf_append("0123456789", "0123456789",
 					 "01234567890123456789", 20, 24);
 	check_buf_append(REP16("x"), REP16("o"),
 					 REP16("x") REP16("o"), 32, 40);
 
-	check_buf_append(test_4096, "", test_4096, 4096, 6144);
-	check_buf_append(test_4096, test_4096, test_8192, 8192, 9216);
+	check_buf_append(test_4096, "", test_4096, 4096, 4104);
+	check_buf_append(test_4096, test_4096, test_8192, 8192, 9240);
 
 	/* check sequences of appends */
 	check_buf_append_abc("a", "b", "c",
