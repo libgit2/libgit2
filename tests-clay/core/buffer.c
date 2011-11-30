@@ -374,19 +374,9 @@ check_joinbuf_2(
 	char sep = '/';
 	git_buf buf = GIT_BUF_INIT;
 
-	/* first validate join from nothing */
 	git_buf_join(&buf, sep, a, b);
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_strequal(expected, git_buf_cstr(&buf));
-	git_buf_free(&buf);
-
-	/* next validate join-append */
-	git_buf_sets(&buf, a);
-	cl_assert(git_buf_oom(&buf) == 0);
-	git_buf_join(&buf, sep, NULL, b);
-	cl_assert(git_buf_oom(&buf) == 0);
-	cl_assert_strequal(expected, git_buf_cstr(&buf));
-
 	git_buf_free(&buf);
 }
 
@@ -490,3 +480,45 @@ void test_core_buffer__8(void)
 	check_joinbuf_n_4(";abcd;", ";efgh;", ";ijkl;", ";mnop;", ";abcd;efgh;ijkl;mnop;");
 }
 
+void test_core_buffer__9(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	/* just some exhaustive tests of various separator placement */
+	char *a[] = { "", "-", "a-", "-a", "-a-" };
+	char *b[] = { "", "-", "b-", "-b", "-b-" };
+	char sep[] = { 0, '-', '/' };
+	char *expect_null[] = { "",    "-",     "a-",     "-a",     "-a-",
+							"-",   "--",    "a--",    "-a-",    "-a--",
+							"b-",  "-b-",   "a-b-",   "-ab-",   "-a-b-",
+							"-b",  "--b",   "a--b",   "-a-b",   "-a--b",
+							"-b-", "--b-",  "a--b-",  "-a-b-",  "-a--b-" };
+	char *expect_dash[] = { "",    "-",     "a-",     "-a-",    "-a-",
+							"-",   "-",     "a-",     "-a-",    "-a-",
+							"b-",  "-b-",   "a-b-",   "-a-b-",  "-a-b-",
+							"-b",  "-b",    "a-b",    "-a-b",   "-a-b",
+							"-b-", "-b-",   "a-b-",   "-a-b-",  "-a-b-" };
+	char *expect_slas[] = { "",    "-/",    "a-/",    "-a/",    "-a-/",
+							"-",   "-/-",   "a-/-",   "-a/-",   "-a-/-",
+							"b-",  "-/b-",  "a-/b-",  "-a/b-",  "-a-/b-",
+							"-b",  "-/-b",  "a-/-b",  "-a/-b",  "-a-/-b",
+							"-b-", "-/-b-", "a-/-b-", "-a/-b-", "-a-/-b-" };
+	char **expect_values[] = { expect_null, expect_dash, expect_slas };
+	char separator, **expect;
+	unsigned int s, i, j;
+
+	for (s = 0; s < sizeof(sep) / sizeof(char); ++s) {
+		separator = sep[s];
+		expect = expect_values[s];
+
+		for (j = 0; j < sizeof(b) / sizeof(char*); ++j) {
+			for (i = 0; i < sizeof(a) / sizeof(char*); ++i) {
+				git_buf_join(&buf, separator, a[i], b[j]);
+				cl_assert_strequal(*expect, buf.ptr);
+				expect++;
+			}
+		}
+	}
+
+	git_buf_free(&buf);
+}

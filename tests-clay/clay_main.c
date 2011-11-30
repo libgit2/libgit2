@@ -145,7 +145,8 @@ static const struct clay_func _clay_cb_core_buffer[] = {
 	{"5", &test_core_buffer__5},
 	{"6", &test_core_buffer__6},
 	{"7", &test_core_buffer__7},
-	{"8", &test_core_buffer__8}
+	{"8", &test_core_buffer__8},
+	{"9", &test_core_buffer__9}
 };
 static const struct clay_func _clay_cb_core_dirent[] = {
     {"dont_traverse_dot", &test_core_dirent__dont_traverse_dot},
@@ -326,7 +327,7 @@ static const struct clay_suite _clay_suites[] = {
         "core::buffer",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_core_buffer, 9
+        _clay_cb_core_buffer, 10
     },
 	{
         "core::dirent",
@@ -493,7 +494,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 34;
-static size_t _clay_callback_count = 112;
+static size_t _clay_callback_count = 113;
 
 /* Core test functions */
 static void
