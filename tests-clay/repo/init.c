@@ -44,7 +44,7 @@ static void ensure_repository_init(
 
 #ifdef GIT_WIN32
 	if (!is_bare) {
-		cl_assert((GetFileAttributes(_repo->path_repository) & FILE_ATTRIBUTE_HIDDEN) != 0);
+		cl_assert((GetFileAttributes(git_repository_path(_repo)) & FILE_ATTRIBUTE_HIDDEN) != 0);
 	}
 #endif
 
@@ -90,7 +90,7 @@ BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping
 	must_pass(chdir(path_repository));
 
 	must_pass(git_repository_init(&repo, "../d/e.git", 1));
-	must_pass(git__suffixcmp(repo->path_repository, "/a/b/d/e.git/"));
+	must_pass(git__suffixcmp(git_repository_path(_repo), "/a/b/d/e.git/"));
 
 	git_repository_free(repo);
 
