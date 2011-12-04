@@ -245,6 +245,9 @@ static const struct clay_func _clay_cb_object_raw_type2string[] = {
 	{"convert_string_to_type", &test_object_raw_type2string__convert_string_to_type},
 	{"convert_type_to_string", &test_object_raw_type2string__convert_type_to_string}
 };
+static const struct clay_func _clay_cb_object_tree_buildfromindex[] = {
+    {"generate_predictable_object_ids", &test_object_tree_buildfromindex__generate_predictable_object_ids}
+};
 static const struct clay_func _clay_cb_object_tree_frompath[] = {
     {"fail_when_processing_an_invalid_path", &test_object_tree_frompath__fail_when_processing_an_invalid_path},
 	{"fail_when_processing_an_unknown_tree_segment", &test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment},
@@ -438,6 +441,12 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_object_raw_type2string, 3
     },
 	{
+        "object::tree::buildfromindex",
+        {"initialize", &test_object_tree_buildfromindex__initialize},
+        {"cleanup", &test_object_tree_buildfromindex__cleanup},
+        _clay_cb_object_tree_buildfromindex, 1
+    },
+	{
         "object::tree::frompath",
         {"initialize", &test_object_tree_frompath__initialize},
         {"cleanup", &test_object_tree_frompath__cleanup},
@@ -493,8 +502,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 34;
-static size_t _clay_callback_count = 113;
+static size_t _clay_suite_count = 35;
+static size_t _clay_callback_count = 114;
 
 /* Core test functions */
 static void
