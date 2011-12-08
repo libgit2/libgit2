@@ -268,8 +268,7 @@ void git_pkt_free(git_pkt *pkt)
 
 int git_pkt_buffer_flush(git_buf *buf)
 {
-	git_buf_put(buf, pkt_flush_str, strlen(pkt_flush_str));
-	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
+	return git_buf_put(buf, pkt_flush_str, strlen(pkt_flush_str));
 }
 
 int git_pkt_send_flush(int s)
@@ -291,9 +290,7 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
 	git_buf_grow(buf, buf->size + len);
 
 	git_oid_fmt(oid, &head->oid);
-	git_buf_printf(buf, "%04xwant %s%c%s\n", len, oid, 0, capstr);
-
-	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
+	return git_buf_printf(buf, "%04xwant %s%c%s\n", len, oid, 0, capstr);
 }
 
 static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, GIT_SOCKET fd)
@@ -401,8 +398,7 @@ int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
 
 	memset(oidhex, 0x0, sizeof(oidhex));
 	git_oid_fmt(oidhex, oid);
-	git_buf_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
-	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
+	return git_buf_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
 }
 
 int git_pkt_send_have(git_oid *oid, int fd)
@@ -416,8 +412,7 @@ int git_pkt_send_have(git_oid *oid, int fd)
 
 int git_pkt_buffer_done(git_buf *buf)
 {
-	git_buf_puts(buf, pkt_done_str);
-	return git_buf_oom(buf) ? GIT_ENOMEM : GIT_SUCCESS;
+	return git_buf_puts(buf, pkt_done_str);
 }
 
 int git_pkt_send_done(int fd)

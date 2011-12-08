@@ -263,15 +263,13 @@ int git_remote_update_tips(git_remote *remote)
 {
 	int error = GIT_SUCCESS;
 	unsigned int i = 0;
-	char refname[GIT_PATH_MAX];
+	git_buf refname = GIT_BUF_INIT;
 	git_vector *refs = &remote->refs;
 	git_remote_head *head;
 	git_reference *ref;
 	struct git_refspec *spec = &remote->fetch;
 
 	assert(remote);
-
-	memset(refname, 0x0, sizeof(refname));
 
 	if (refs->length == 0)
 		return GIT_SUCCESS;
@@ -289,18 +287,20 @@ int git_remote_update_tips(git_remote *remote)
 	for (; i < refs->length; ++i) {
 		head = refs->contents[i];
 
-		error = git_refspec_transform(refname, sizeof(refname), spec, head->name);
+		error = git_refspec_transform_r(&refname, spec, head->name);
 		if (error < GIT_SUCCESS)
-			return error;
+			break;
 
-		error = git_reference_create_oid(&ref, remote->repo, refname, &head->oid, 1);
+		error = git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, 1);
 		if (error < GIT_SUCCESS)
-			return error;
+			break;
 
 		git_reference_free(ref);
 	}
 
-	return GIT_SUCCESS;
+	git_buf_free(&refname);
+
+	return error;
 }
 
 int git_remote_connected(git_remote *remote)

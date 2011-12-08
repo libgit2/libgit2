@@ -8,6 +8,7 @@
 #define INCLUDE_path_h__
 
 #include "common.h"
+#include "buffer.h"
 
 /*
  * The dirname() function shall take a pointer to a character string
@@ -22,11 +23,13 @@
  * The `git_path_dirname` implementation is thread safe. The returned
  * string must be manually free'd.
  *
- * The `git_path_dirname_r` implementation expects a string allocated
- * by the user with big enough size.
+ * The `git_path_dirname_r` implementation writes the dirname to a `git_buf`
+ * if the buffer pointer is not NULL.
+ * It returns an error code < 0 if there is an allocation error, otherwise
+ * the length of the dirname (which will be > 0).
  */
 extern char *git_path_dirname(const char *path);
-extern int git_path_dirname_r(char *buffer, size_t bufflen, const char *path);
+extern int git_path_dirname_r(git_buf *buffer, const char *path);
 
 /*
  * This function returns the basename of the file, which is the last
@@ -40,32 +43,22 @@ extern int git_path_dirname_r(char *buffer, size_t bufflen, const char *path);
  * The `git_path_basename` implementation is thread safe. The returned
  * string must be manually free'd.
  *
- * The `git_path_basename_r` implementation expects a string allocated
- * by the user with big enough size.
+ * The `git_path_basename_r` implementation writes the basename to a `git_buf`.
+ * It returns an error code < 0 if there is an allocation error, otherwise
+ * the length of the basename (which will be >= 0).
  */
 extern char *git_path_basename(const char *path);
-extern int git_path_basename_r(char *buffer, size_t bufflen, const char *path);
+extern int git_path_basename_r(git_buf *buffer, const char *path);
 
 extern const char *git_path_topdir(const char *path);
 
-/**
- * Join two paths together. Takes care of properly fixing the
- * middle slashes and everything
- *
- * The paths are joined together into buffer_out; this is expected
- * to be an user allocated buffer of `GIT_PATH_MAX` size
- */
-extern void git_path_join_n(char *buffer_out, int npath, ...);
+extern int git_path_root(const char *path);
 
-GIT_INLINE(void) git_path_join(char *buffer_out, const char *path_a, const char *path_b)
-{
-	git_path_join_n(buffer_out, 2, path_a, path_b);
-}
+extern int git_path_prettify(git_buf *path_out, const char *path, const char *base);
+extern int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base);
 
-int git_path_root(const char *path);
-
-int git_path_prettify(char *path_out, const char *path, const char *base);
-int git_path_prettify_dir(char *path_out, const char *path, const char *base);
+extern int git_path_to_dir(git_buf *path);
+extern void git_path_string_to_dir(char* path, size_t size);
 
 #ifdef GIT_WIN32
 GIT_INLINE(void) git_path_mkposix(char *path)

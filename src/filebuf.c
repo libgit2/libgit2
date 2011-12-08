@@ -196,18 +196,19 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 	/* If we are writing to a temp file */
 	if (flags & GIT_FILEBUF_TEMPORARY) {
-		char tmp_path[GIT_PATH_MAX];
+		git_buf tmp_path = GIT_BUF_INIT;
 
 		/* Open the file as temporary for locking */
-		file->fd = git_futils_mktmp(tmp_path, path);
+		file->fd = git_futils_mktmp(&tmp_path, path);
 		if (file->fd < 0) {
+			git_buf_free(&tmp_path);
 			error = GIT_EOSERR;
 			goto cleanup;
 		}
 
 		/* No original path */
 		file->path_original = NULL;
-		file->path_lock = git__strdup(tmp_path);
+		file->path_lock = git_buf_detach(&tmp_path);
 
 		if (file->path_lock == NULL) {
 			error = GIT_ENOMEM;

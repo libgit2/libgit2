@@ -5,9 +5,6 @@
 const char *test_string = TESTSTR;
 const char *test_string_x2 = TESTSTR TESTSTR;
 
-#define REP4(STR)	 STR STR STR STR
-#define REP16(STR)	 REP4(REP4(STR))
-#define REP1024(STR) REP16(REP16(REP4(STR)))
 #define TESTSTR_4096 REP1024("1234")
 #define TESTSTR_8192 REP1024("12341234")
 const char *test_4096 = TESTSTR_4096;
@@ -52,7 +49,7 @@ void test_core_buffer__2(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 	int i;
-	char data[100];
+	char data[128];
 
 	cl_assert(buf.size == 0);
 
@@ -135,22 +132,28 @@ void test_core_buffer__2(void)
 	git_buf_puts(&buf, REP4("0123456789"));
 	cl_assert(git_buf_oom(&buf) == 0);
 
-	git_buf_copy_cstr(data, 100, &buf);
-	cl_assert_strequal(data, REP4("0123456789"));
+	git_buf_copy_cstr(data, sizeof(data), &buf);
+	cl_assert_strequal(REP4("0123456789"), data);
 	git_buf_copy_cstr(data, 11, &buf);
-	cl_assert_strequal(data, "0123456789");
+	cl_assert_strequal("0123456789", data);
 	git_buf_copy_cstr(data, 3, &buf);
-	cl_assert_strequal(data, "01");
+	cl_assert_strequal("01", data);
 	git_buf_copy_cstr(data, 1, &buf);
-	cl_assert_strequal(data, "");
+	cl_assert_strequal("", data);
 
-	git_buf_copy_cstr(data, 100, &buf);
-	cl_assert_strequal(data, REP4("0123456789"));
+	git_buf_copy_cstr(data, sizeof(data), &buf);
+	cl_assert_strequal(REP4("0123456789"), data);
+
+	git_buf_sets(&buf, REP256("x"));
+	git_buf_copy_cstr(data, sizeof(data), &buf);
+	/* since sizeof(data) == 128, only 127 bytes should be copied */
+	cl_assert_strequal(REP4(REP16("x")) REP16("x") REP16("x")
+					   REP16("x") "xxxxxxxxxxxxxxx", data);
 
 	git_buf_free(&buf);
 
-	git_buf_copy_cstr(data, 100, &buf);
-	cl_assert_strequal(data, "");
+	git_buf_copy_cstr(data, sizeof(data), &buf);
+	cl_assert_strequal("", data);
 }
 
 /* let's do some tests with larger buffers to push our limits */
@@ -340,9 +343,10 @@ void test_core_buffer__6(void)
 }
 
 
-/* test take cstr data */
+/* test detach/attach data */
 void test_core_buffer__7(void)
 {
+	const char *fun = "This is fun";
 	git_buf a = GIT_BUF_INIT;
 	char *b = NULL;
 
@@ -350,16 +354,34 @@ void test_core_buffer__7(void)
 	cl_assert(git_buf_oom(&a) == 0);
 	cl_assert_strequal("foo", git_buf_cstr(&a));
 
-	b = git_buf_take_cstr(&a);
+	b = git_buf_detach(&a);
 
 	cl_assert_strequal("foo", b);
 	cl_assert_strequal("", a.ptr);
 	git__free(b);
 
-	b = git_buf_take_cstr(&a);
+	b = git_buf_detach(&a);
 
 	cl_assert_strequal(NULL, b);
 	cl_assert_strequal("", a.ptr);
+
+	git_buf_free(&a);
+
+	b = git__strdup(fun);
+	git_buf_attach(&a, b, 0);
+
+	cl_assert_strequal(fun, a.ptr);
+	cl_assert(a.size == (ssize_t)strlen(fun));
+	cl_assert(a.asize == (ssize_t)strlen(fun) + 1);
+
+	git_buf_free(&a);
+
+	b = git__strdup(fun);
+	git_buf_attach(&a, b, strlen(fun) + 1);
+
+	cl_assert_strequal(fun, a.ptr);
+	cl_assert(a.size == (ssize_t)strlen(fun));
+	cl_assert(a.asize == (ssize_t)strlen(fun) + 1);
 
 	git_buf_free(&a);
 }

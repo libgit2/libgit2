@@ -9,10 +9,10 @@ typedef struct name_data {
 typedef struct walk_data {
 	char *sub;		/* sub-directory name */
 	name_data *names; /* name state data	*/
+	git_buf path;
 } walk_data;
 
 
-static char path_buffer[GIT_PATH_MAX];
 static char *top_dir = "dir-walk";
 static walk_data *state_loc;
 
@@ -27,7 +27,8 @@ static void setup(walk_data *d)
 	if (strcmp(d->sub, ".") != 0)
 		cl_must_pass(p_mkdir(d->sub, 0777));
 
-	strcpy(path_buffer, d->sub);
+	cl_git_pass(git_buf_sets(&d->path, d->sub));
+
 	state_loc = d;
 
 	for (n = d->names; n->name; n++) {
@@ -53,6 +54,8 @@ static void dirent_cleanup__cb(void *_d)
 	cl_must_pass(p_chdir(".."));
 
 	cl_must_pass(p_rmdir(top_dir));
+
+	git_buf_free(&d->path);
 }
 
 static void check_counts(walk_data *d)
@@ -64,7 +67,7 @@ static void check_counts(walk_data *d)
 	}
 }
 
-static int one_entry(void *state, char *path)
+static int one_entry(void *state, git_buf *path)
 {
 	walk_data *d = (walk_data *) state;
 	name_data *n;
@@ -72,11 +75,11 @@ static int one_entry(void *state, char *path)
 	if (state != state_loc)
 		return GIT_ERROR;
 
-	if (path != path_buffer)
+	if (path != &d->path)
 		return GIT_ERROR;
 
 	for (n = d->names; n->name; n++) {
-		if (!strcmp(n->name, path)) {
+		if (!strcmp(n->name, path->ptr)) {
 			n->count++;
 			return 0;
 		}
@@ -85,7 +88,7 @@ static int one_entry(void *state, char *path)
 	return GIT_ERROR;
 }
 
-static int dont_call_me(void *GIT_UNUSED(state), char *GIT_UNUSED(path))
+static int dont_call_me(void *GIT_UNUSED(state), git_buf *GIT_UNUSED(path))
 {
 	GIT_UNUSED_ARG(state)
 	GIT_UNUSED_ARG(path)
@@ -102,7 +105,8 @@ static name_data dot_names[] = {
 };
 static walk_data dot = {
 	".",
-	dot_names
+	dot_names,
+	GIT_BUF_INIT
 };
 
 /* make sure that the '.' folder is not traversed */
@@ -111,8 +115,7 @@ void test_core_dirent__dont_traverse_dot(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &dot);
 	setup(&dot);
 
-	cl_git_pass(git_futils_direach(path_buffer,
-					sizeof(path_buffer),
+	cl_git_pass(git_futils_direach(&dot.path,
 					one_entry,
 					&dot));
 
@@ -128,7 +131,8 @@ static name_data sub_names[] = {
 };
 static walk_data sub = {
 	"sub",
-	sub_names
+	sub_names,
+	GIT_BUF_INIT
 };
 
 /* traverse a subfolder */
@@ -137,8 +141,7 @@ void test_core_dirent__traverse_subfolder(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &sub);
 	setup(&sub);
 
-	cl_git_pass(git_futils_direach(path_buffer,
-					sizeof(path_buffer),
+	cl_git_pass(git_futils_direach(&sub.path,
 					one_entry,
 					&sub));
 
@@ -148,7 +151,8 @@ void test_core_dirent__traverse_subfolder(void)
 
 static walk_data sub_slash = {
 	"sub/",
-	sub_names
+	sub_names,
+	GIT_BUF_INIT
 };
 
 /* traverse a slash-terminated subfolder */
@@ -157,8 +161,7 @@ void test_core_dirent__traverse_slash_terminated_folder(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &sub_slash);
 	setup(&sub_slash);
 
-	cl_git_pass(git_futils_direach(path_buffer,
-					sizeof(path_buffer),
+	cl_git_pass(git_futils_direach(&sub_slash.path,
 					one_entry,
 					&sub_slash));
 
@@ -171,7 +174,8 @@ static name_data empty_names[] = {
 };
 static walk_data empty = {
 	"empty",
-	empty_names
+	empty_names,
+	GIT_BUF_INIT
 };
 
 /* make sure that empty folders are not traversed */
@@ -180,16 +184,14 @@ void test_core_dirent__dont_traverse_empty_folders(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &empty);
 	setup(&empty);
 
-	cl_git_pass(git_futils_direach(path_buffer,
-					sizeof(path_buffer),
+	cl_git_pass(git_futils_direach(&empty.path,
 					one_entry,
 					&empty));
 
 	check_counts(&empty);
 
 	/* make sure callback not called */
-	cl_git_pass(git_futils_direach(path_buffer,
-					sizeof(path_buffer),
+	cl_git_pass(git_futils_direach(&empty.path,
 					dont_call_me,
 					&empty));
 }
@@ -204,7 +206,8 @@ static name_data odd_names[] = {
 };
 static walk_data odd = {
 	"odd",
-	odd_names
+	odd_names,
+	GIT_BUF_INIT
 };
 
 /* make sure that strange looking filenames ('..c') are traversed */
@@ -213,8 +216,7 @@ void test_core_dirent__traverse_weird_filenames(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &odd);
 	setup(&odd);
 
-	cl_git_pass(git_futils_direach(path_buffer,
-					sizeof(path_buffer),
+	cl_git_pass(git_futils_direach(&odd.path,
 					one_entry,
 					&odd));
 
