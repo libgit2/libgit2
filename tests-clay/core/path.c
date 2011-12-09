@@ -4,26 +4,30 @@
 static void
 check_dirname(const char *A, const char *B)
 {
-	char dir[64], *dir2;
+	git_buf dir = GIT_BUF_INIT;
+	char *dir2;
 
-	cl_assert(git_path_dirname_r(dir, sizeof(dir), A) >= 0);
-	cl_assert(strcmp(dir, B) == 0);
+	cl_assert(git_path_dirname_r(&dir, A) >= 0);
+	cl_assert_strequal(B, dir.ptr);
+	git_buf_free(&dir);
+
 	cl_assert((dir2 = git_path_dirname(A)) != NULL);
-	cl_assert(strcmp(dir2, B) == 0);
-
+	cl_assert_strequal(B, dir2);
 	git__free(dir2);
 }
 
 static void
 check_basename(const char *A, const char *B)
 {
-	char base[64], *base2;
+	git_buf base = GIT_BUF_INIT;
+	char *base2;
 
-	cl_assert(git_path_basename_r(base, sizeof(base), A) >= 0);
-	cl_assert(strcmp(base, B) == 0);
+	cl_assert(git_path_basename_r(&base, A) >= 0);
+	cl_assert_strequal(B, base.ptr);
+	git_buf_free(&base);
+
 	cl_assert((base2 = git_path_basename(A)) != NULL);
-	cl_assert(strcmp(base2, B) == 0);
-
+	cl_assert_strequal(B, base2);
 	git__free(base2);
 }
 
@@ -33,16 +37,18 @@ check_topdir(const char *A, const char *B)
 	const char *dir;
 
 	cl_assert((dir = git_path_topdir(A)) != NULL);
-	cl_assert(strcmp(dir, B) == 0);
+	cl_assert_strequal(B, dir);
 }
 
 static void
 check_joinpath(const char *path_a, const char *path_b, const char *expected_path)
 {
-	char joined_path[GIT_PATH_MAX];
+	git_buf joined_path = GIT_BUF_INIT;
 
-	git_path_join(joined_path, path_a, path_b);
-	cl_assert(strcmp(joined_path, expected_path) == 0);
+	cl_git_pass(git_buf_joinpath(&joined_path, path_a, path_b));
+	cl_assert_strequal(expected_path, joined_path.ptr);
+
+	git_buf_free(&joined_path);
 }
 
 static void
@@ -53,17 +59,19 @@ check_joinpath_n(
 	const char *path_d,
 	const char *expected_path)
 {
-	char joined_path[GIT_PATH_MAX];
+	git_buf joined_path = GIT_BUF_INIT;
 
-	git_path_join_n(joined_path, 4, path_a, path_b, path_c, path_d);
-	cl_assert(strcmp(joined_path, expected_path) == 0);
+	cl_git_pass(git_buf_join_n(&joined_path, '/', 4,
+							   path_a, path_b, path_c, path_d));
+	cl_assert_strequal(expected_path, joined_path.ptr);
+
+	git_buf_free(&joined_path);
 }
 
 
 /* get the dirname of a path */
 void test_core_path__0(void)
 {
-
 	check_dirname(NULL, ".");
 	check_dirname("", ".");
 	check_dirname("a", ".");
@@ -77,6 +85,8 @@ void test_core_path__0(void)
 	check_dirname("usr/lib/", "usr");
 	check_dirname("usr/lib//", "usr");
 	check_dirname(".git/", ".");
+
+	check_dirname(REP16("/abc"), REP15("/abc"));
 }
 
 /* get the base name of a path */
@@ -91,6 +101,9 @@ void test_core_path__1(void)
 	check_basename("/usr/lib", "lib");
 	check_basename("/usr/lib//", "lib");
 	check_basename("usr/lib", "lib");
+
+	check_basename(REP16("/abc"), "abc");
+	check_basename(REP1024("/abc"), "abc");
 }
 
 /* get the latest component in a path */
@@ -125,6 +138,20 @@ void test_core_path__5(void)
 	check_joinpath("/a", "/b/", "/a/b/");
 	check_joinpath("/a/", "b/", "/a/b/");
 	check_joinpath("/a/", "/b/", "/a/b/");
+
+	check_joinpath("/abcd", "/defg", "/abcd/defg");
+	check_joinpath("/abcd", "/defg/", "/abcd/defg/");
+	check_joinpath("/abcd/", "defg/", "/abcd/defg/");
+	check_joinpath("/abcd/", "/defg/", "/abcd/defg/");
+
+	check_joinpath("/abcdefgh", "/12345678", "/abcdefgh/12345678");
+	check_joinpath("/abcdefgh", "/12345678/", "/abcdefgh/12345678/");
+	check_joinpath("/abcdefgh/", "12345678/", "/abcdefgh/12345678/");
+
+	check_joinpath(REP1024("aaaa"), REP1024("bbbb"),
+				   REP1024("aaaa") "/" REP1024("bbbb"));
+	check_joinpath(REP1024("/aaaa"), REP1024("/bbbb"),
+				   REP1024("/aaaa") REP1024("/bbbb"));
 }
 
 /* properly join path components for more than one path */
@@ -136,4 +163,74 @@ void test_core_path__6(void)
 	check_joinpath_n("", "", "", "a", "a");
 	check_joinpath_n("a", "b", "", "/c/d/", "a/b/c/d/");
 	check_joinpath_n("a", "b", "", "/c/d", "a/b/c/d");
+	check_joinpath_n("abcd", "efgh", "ijkl", "mnop", "abcd/efgh/ijkl/mnop");
+	check_joinpath_n("abcd/", "efgh/", "ijkl/", "mnop/", "abcd/efgh/ijkl/mnop/");
+	check_joinpath_n("/abcd/", "/efgh/", "/ijkl/", "/mnop/", "/abcd/efgh/ijkl/mnop/");
+
+	check_joinpath_n(REP1024("a"), REP1024("b"), REP1024("c"), REP1024("d"),
+					 REP1024("a") "/" REP1024("b") "/"
+					 REP1024("c") "/" REP1024("d"));
+	check_joinpath_n(REP1024("/a"), REP1024("/b"), REP1024("/c"), REP1024("/d"),
+					 REP1024("/a") REP1024("/b")
+					 REP1024("/c") REP1024("/d"));
+}
+
+
+static void
+check_path_to_dir(
+	const char* path,
+    const char* expected)
+{
+	git_buf tgt = GIT_BUF_INIT;
+
+	git_buf_sets(&tgt, path);
+	cl_git_pass(git_path_to_dir(&tgt));
+	cl_assert_strequal(expected, tgt.ptr);
+
+	git_buf_free(&tgt);
+}
+
+static void
+check_string_to_dir(
+	const char* path,
+	int         maxlen,
+    const char* expected)
+{
+	int  len = strlen(path);
+	char *buf = git__malloc(len + 2);
+	strncpy(buf, path, len + 2);
+
+	git_path_string_to_dir(buf, maxlen);
+
+	cl_assert_strequal(expected, buf);
+
+	git__free(buf);
+}
+
+/* convert paths to dirs */
+void test_core_path__7(void)
+{
+	check_path_to_dir("", "");
+	check_path_to_dir(".", "./");
+	check_path_to_dir("./", "./");
+	check_path_to_dir("a/", "a/");
+	check_path_to_dir("ab", "ab/");
+	/* make sure we try just under and just over an expansion that will
+	 * require a realloc
+	 */
+	check_path_to_dir("abcdef", "abcdef/");
+	check_path_to_dir("abcdefg", "abcdefg/");
+	check_path_to_dir("abcdefgh", "abcdefgh/");
+	check_path_to_dir("abcdefghi", "abcdefghi/");
+	check_path_to_dir(REP1024("abcd") "/", REP1024("abcd") "/");
+	check_path_to_dir(REP1024("abcd"), REP1024("abcd") "/");
+
+	check_string_to_dir("", 1, "");
+	check_string_to_dir(".", 1, ".");
+	check_string_to_dir(".", 2, "./");
+	check_string_to_dir(".", 3, "./");
+	check_string_to_dir("abcd", 3, "abcd");
+	check_string_to_dir("abcd", 4, "abcd");
+	check_string_to_dir("abcd", 5, "abcd/");
+	check_string_to_dir("abcd", 6, "abcd/");
 }

@@ -77,17 +77,19 @@ void test_repo_init__bare_repo_noslash(void)
 
 #if 0
 BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping out of the current working directory")
-	char path_repository[GIT_PATH_MAX];
+	git_buf path_repository = GIT_BUF_INIT;
 	char current_workdir[GIT_PATH_MAX];
 	const mode_t mode = 0777;
 	git_repository* repo;
 
 	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
 
-	git_path_join(path_repository, TEMP_REPO_FOLDER, "a/b/c/");
-	must_pass(git_futils_mkdir_r(path_repository, mode));
+	must_pass(git_buf_joinpath(&path_repository, TEMP_REPO_FOLDER, "a/b/c/"));
+	must_pass(git_futils_mkdir_r(path_repository.ptr, mode));
 
-	must_pass(chdir(path_repository));
+	must_pass(chdir(path_repository.ptr));
+
+	git_buf_free(&path_repository);
 
 	must_pass(git_repository_init(&repo, "../d/e.git", 1));
 	must_pass(git__suffixcmp(git_repository_path(_repo), "/a/b/d/e.git/"));

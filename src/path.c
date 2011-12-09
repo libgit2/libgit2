@@ -16,7 +16,7 @@
  * Based on the Android implementation, BSD licensed.
  * Check http://android.git.kernel.org/
  */
-int git_path_basename_r(char *buffer, size_t bufflen, const char *path)
+int git_path_basename_r(git_buf *buffer, const char *path)
 {
 	const char *endp, *startp;
 	int len, result;
@@ -49,18 +49,13 @@ int git_path_basename_r(char *buffer, size_t bufflen, const char *path)
 
 Exit:
 	result = len;
-	if (buffer == NULL) {
-		return result;
-	}
-	if (len > (int)bufflen-1) {
-		len	= (int)bufflen-1;
-		result = GIT_ENOMEM;
+
+	if (buffer != NULL) {
+		if (git_buf_set(buffer, startp, len) < GIT_SUCCESS)
+			return git__rethrow(git_buf_lasterror(buffer),
+				"Could not get basename of '%s'", path);
 	}
 
-	if (len >= 0) {
-		memmove(buffer, startp, len);
-		buffer[len] = 0;
-	}
 	return result;
 }
 
@@ -68,7 +63,7 @@ Exit:
  * Based on the Android implementation, BSD licensed.
  * Check http://android.git.kernel.org/
  */
-int git_path_dirname_r(char *buffer, size_t bufflen, const char *path)
+int git_path_dirname_r(git_buf *buffer, const char *path)
 {
 	const char *endp;
 	int result, len;
@@ -114,59 +109,39 @@ int git_path_dirname_r(char *buffer, size_t bufflen, const char *path)
 
 Exit:
 	result = len;
-	if (len+1 > GIT_PATH_MAX) {
-		return GIT_ENOMEM;
-	}
-	if (buffer == NULL)
-		return result;
 
-	if (len > (int)bufflen-1) {
-		len	= (int)bufflen-1;
-		result = GIT_ENOMEM;
+	if (buffer != NULL) {
+		if (git_buf_set(buffer, path, len) < GIT_SUCCESS)
+			return git__rethrow(git_buf_lasterror(buffer),
+				"Could not get dirname of '%s'", path);
 	}
 
-	if (len >= 0) {
-		memmove(buffer, path, len);
-		buffer[len] = 0;
-	}
 	return result;
 }
 
 
 char *git_path_dirname(const char *path)
 {
-	char *dname = NULL;
-	int len;
+	git_buf buf = GIT_BUF_INIT;
+	char *dirname;
 
-	len = (path ? strlen(path) : 0) + 2;
-	dname = (char *)git__malloc(len);
-	if (dname == NULL)
-		return NULL;
+	git_path_dirname_r(&buf, path);
+	dirname = git_buf_detach(&buf);
+	git_buf_free(&buf); /* avoid memleak if error occurs */
 
-	if (git_path_dirname_r(dname, len, path) < GIT_SUCCESS) {
-		git__free(dname);
-		return NULL;
-	}
-
-	return dname;
+	return dirname;
 }
 
 char *git_path_basename(const char *path)
 {
-	char *bname = NULL;
-	int len;
+	git_buf buf = GIT_BUF_INIT;
+	char *basename;
 
-	len = (path ? strlen(path) : 0) + 2;
-	bname = (char *)git__malloc(len);
-	if (bname == NULL)
-		return NULL;
+	git_path_basename_r(&buf, path);
+	basename = git_buf_detach(&buf);
+	git_buf_free(&buf); /* avoid memleak if error occurs */
 
-	if (git_path_basename_r(bname, len, path) < GIT_SUCCESS) {
-		git__free(bname);
-		return NULL;
-	}
-
-	return bname;
+	return basename;
 }
 
 
@@ -188,39 +163,6 @@ const char *git_path_topdir(const char *path)
 	return &path[i + 1];
 }
 
-void git_path_join_n(char *buffer_out, int count, ...)
-{
-	va_list ap;
-	int i;
-	char *buffer_start = buffer_out;
-
-	va_start(ap, count);
-	for (i = 0; i < count; ++i) {
-		const char *path;
-		int len;
-
-		path = va_arg(ap, const char *);
-
-		assert((i == 0) || path != buffer_start);
-
-		if (i > 0 && *path == '/' && buffer_out > buffer_start && buffer_out[-1] == '/')
-			path++;
-
-		if (!*path)
-			continue;
-
-		len = strlen(path);
-		memmove(buffer_out, path, len);
-		buffer_out = buffer_out + len;
-
-		if (i < count - 1 && buffer_out[-1] != '/')
-			*buffer_out++ = '/';
-	}
-	va_end(ap);
-
-	*buffer_out = '\0';
-}
-
 int git_path_root(const char *path)
 {
 	int offset = 0;
@@ -237,34 +179,61 @@ int git_path_root(const char *path)
 	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
 }
 
-int git_path_prettify(char *path_out, const char *path, const char *base)
+int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 {
-	char *result;
+	char *result = NULL;
+	int   error = GIT_SUCCESS;
 
-	if (base == NULL || git_path_root(path) >= 0) {
-		result = p_realpath(path, path_out);
+	git_buf_clear(path_out);
+
+	/* construct path if needed */
+	if (base != NULL && git_path_root(path) < 0) {
+		if ((error = git_buf_joinpath(path_out, base, path)) < GIT_SUCCESS)
+			return error;
+		path = path_out->ptr;
+	}
+
+	/* allow realpath to allocate the buffer */
+	if (path != NULL)
+		result = p_realpath(path, NULL);
+
+	if (result) {
+		error = git_buf_sets(path_out, result);
+		git__free(result);
 	} else {
-		char aux_path[GIT_PATH_MAX];
-		git_path_join(aux_path, base, path);
-		result = p_realpath(aux_path, path_out);
+		error = GIT_EOSERR;
 	}
 
-	return result ? GIT_SUCCESS : GIT_EOSERR;
+	return error;
 }
 
-int git_path_prettify_dir(char *path_out, const char *path, const char *base)
+int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base)
 {
-	size_t end;
+	int error = git_path_prettify(path_out, path, base);
 
-	if (git_path_prettify(path_out, path, base) < GIT_SUCCESS)
-		return GIT_EOSERR;
+	if (error == GIT_SUCCESS)
+		error = git_path_to_dir(path_out);
 
-	end = strlen(path_out);
-
-	if (end && path_out[end - 1] != '/') {
-		path_out[end] = '/';
-		path_out[end + 1] = '\0';
-	}
-
-	return GIT_SUCCESS;
+	return error;
 }
+
+int git_path_to_dir(git_buf *path)
+{
+	if (path->asize > 0 &&
+		path->size > 0 &&
+		path->ptr[path->size - 1] != '/')
+		git_buf_putc(path, '/');
+
+	return git_buf_lasterror(path);
+}
+
+void git_path_string_to_dir(char* path, size_t size)
+{
+	size_t end = strlen(path);
+
+	if (end && path[end - 1] != '/' && end < size) {
+		path[end] = '/';
+		path[end + 1] = '\0';
+	}
+}
+

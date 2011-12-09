@@ -148,15 +148,22 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	return GIT_SUCCESS;
 }
 
-static int retrieve_tag_reference(git_reference **tag_reference_out, char *ref_name_out, git_repository *repo, const char *tag_name)
+static int retrieve_tag_reference(
+	git_reference **tag_reference_out,
+	git_buf *ref_name_out,
+	git_repository *repo,
+	const char *tag_name)
 {
 	git_reference *tag_ref;
 	int error;
 
 	*tag_reference_out = NULL;
 
-	git_path_join(ref_name_out, GIT_REFS_TAGS_DIR, tag_name);
-	error = git_reference_lookup(&tag_ref, repo, ref_name_out);
+	error = git_buf_joinpath(ref_name_out, GIT_REFS_TAGS_DIR, tag_name);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to retrieve tag reference");
+
+	error = git_reference_lookup(&tag_ref, repo, ref_name_out->ptr);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to retrieve tag reference");
 
@@ -184,9 +191,10 @@ static int write_tag_annotation(
 	git_buf_putc(&tag, '\n');
 	git_buf_puts(&tag, message);
 
-	if (git_buf_oom(&tag)) {
+	error = git_buf_lasterror(&tag);
+	if (error < GIT_SUCCESS) {
 		git_buf_free(&tag);
-		return git__throw(GIT_ENOMEM, "Not enough memory to build the tag data");
+		return git__rethrow(error, "Not enough memory to build the tag data");
 	}
 
 	error = git_repository_odb__weakptr(&odb, repo);
@@ -215,56 +223,54 @@ static int git_tag_create__internal(
 		int create_tag_annotation)
 {
 	git_reference *new_ref = NULL;
-	char ref_name[GIT_REFNAME_MAX];
+	git_buf ref_name = GIT_BUF_INIT;
 
 	int error, should_update_ref = 0;
+	const char *errmsg = "Failed to create tag";
 
 	assert(repo && tag_name && target);
 	assert(!create_tag_annotation || (tagger && message));
 
 	if (git_object_owner(target) != repo)
-		return git__throw(GIT_EINVALIDARGS, "The given target does not belong to this repository");
+		return git__throw(GIT_EINVALIDARGS,
+			"The given target does not belong to this repository");
 
-	error = retrieve_tag_reference(&new_ref, ref_name, repo, tag_name);
-
-	switch (error) {
-		case GIT_SUCCESS:
-		case GIT_ENOTFOUND:
-			break;
-
-		default:
-			git_reference_free(new_ref);
-			return git__rethrow(error, "Failed to create tag");
-	}
+	error = retrieve_tag_reference(&new_ref, &ref_name, repo, tag_name);
+	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+		goto cleanup;
 
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explictly been requested **/
 	if (new_ref != NULL) {
 		if (!allow_ref_overwrite) {
 			git_oid_cpy(oid, git_reference_oid(new_ref));
-			git_reference_free(new_ref);
-			return git__throw(GIT_EEXISTS, "Tag already exists");
+			error = GIT_EEXISTS;
+			errmsg = "Tag already exists";
+			goto cleanup;
 		} else {
 			should_update_ref = 1;
 		}
 	}
 
 	if (create_tag_annotation) {
-		if ((error = write_tag_annotation(oid, repo, tag_name, target, tagger, message)) < GIT_SUCCESS) {
-			git_reference_free(new_ref);
-			return error;
-		}
+		if ((error = write_tag_annotation(oid, repo, tag_name, target, tagger, message)) < GIT_SUCCESS)
+			goto cleanup;
 	} else
 		git_oid_cpy(oid, git_object_id(target));
 
 	if (!should_update_ref)
-		error = git_reference_create_oid(&new_ref, repo, ref_name, oid, 0);
+		error = git_reference_create_oid(&new_ref, repo, ref_name.ptr, oid, 0);
 	else
 		error = git_reference_set_oid(new_ref, oid);
 
+cleanup:
 	git_reference_free(new_ref);
+	git_buf_free(&ref_name);
 
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
+	if (error < GIT_SUCCESS)
+		git__rethrow(error, "%s", errmsg);
+
+	return error;
 }
 
 int git_tag_create(
@@ -293,12 +299,13 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 {
 	git_tag tag;
 	int error, should_update_ref = 0;
+	const char *errmsg = "Failed to create tag";
 	git_odb *odb;
 	git_odb_stream *stream;
 	git_odb_object *target_obj;
 
 	git_reference *new_ref = NULL;
-	char ref_name[GIT_REFNAME_MAX];
+	git_buf ref_name = GIT_BUF_INIT;
 
 	assert(oid && buffer);
 
@@ -310,78 +317,77 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 
 	/* validate the buffer */
 	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create tag");
+		goto cleanup;
 
 	/* validate the target */
 	if ((error = git_odb_read(&target_obj, odb, &tag.target)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create tag");
+		goto cleanup;
 
-	if (tag.type != target_obj->raw.type)
-		return git__throw(error, "The type for the given target is invalid");
+	if (tag.type != target_obj->raw.type) {
+		error = GIT_EINVALIDTYPE;
+		errmsg = "The type for the given target is invalid";
+		goto cleanup;
+	}
 
 	git_odb_object_free(target_obj);
 
-	error = retrieve_tag_reference(&new_ref, ref_name, repo, tag.tag_name);
-
-	switch (error) {
-		case GIT_SUCCESS:
-		case GIT_ENOTFOUND:
-			break;
-
-		default:
-			git_reference_free(new_ref);
-			return git__rethrow(error, "Failed to create tag");
-	}
+	error = retrieve_tag_reference(&new_ref, &ref_name, repo, tag.tag_name);
+	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+		goto cleanup;
 
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explictly been requested **/
 	if (new_ref != NULL) {
 		if (!allow_ref_overwrite) {
 			git_oid_cpy(oid, git_reference_oid(new_ref));
-			git_reference_free(new_ref);
-			return git__throw(GIT_EEXISTS, "Tag already exists");
+			error = GIT_EEXISTS;
+			errmsg = "Tag already exists";
+			goto cleanup;
 		} else {
 			should_update_ref = 1;
 		}
 	}
 
 	/* write the buffer */
-	if ((error = git_odb_open_wstream(&stream, odb, strlen(buffer), GIT_OBJ_TAG)) < GIT_SUCCESS) {
-		git_reference_free(new_ref);
-		return git__rethrow(error, "Failed to create tag");
-	}
+	if ((error = git_odb_open_wstream(&stream, odb, strlen(buffer), GIT_OBJ_TAG)) < GIT_SUCCESS)
+		goto cleanup;
 
 	stream->write(stream, buffer, strlen(buffer));
 
 	error = stream->finalize_write(oid, stream);
 	stream->free(stream);
 
-	if (error < GIT_SUCCESS) {
-		git_reference_free(new_ref);
-		return git__rethrow(error, "Failed to create tag");
-	}
+	if (error < GIT_SUCCESS)
+		goto cleanup;
 
 	if (!should_update_ref)
-		error = git_reference_create_oid(&new_ref, repo, ref_name, oid, 0);
+		error = git_reference_create_oid(&new_ref, repo, ref_name.ptr, oid, 0);
 	else
 		error = git_reference_set_oid(new_ref, oid);
 
+cleanup:
 	git_reference_free(new_ref);
-
 	git_signature_free(tag.tagger);
 	git__free(tag.tag_name);
 	git__free(tag.message);
+	git_buf_free(&ref_name);
 
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to create tag");
+	if (error < GIT_SUCCESS)
+		git__rethrow(error, "%s", errmsg);
+
+	return error;
 }
 
 int git_tag_delete(git_repository *repo, const char *tag_name)
 {
 	int error;
 	git_reference *tag_ref;
-	char ref_name[GIT_REFNAME_MAX];
+	git_buf ref_name = GIT_BUF_INIT;
 
-	error = retrieve_tag_reference(&tag_ref, ref_name, repo, tag_name);
+	error = retrieve_tag_reference(&tag_ref, &ref_name, repo, tag_name);
+
+	git_buf_free(&ref_name);
+
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to delete tag");
 

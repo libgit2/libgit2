@@ -16,7 +16,9 @@ void git_signature_free(git_signature *sig)
 		return;
 
 	git__free(sig->name);
+	sig->name = NULL;
 	git__free(sig->email);
+	sig->email = NULL;
 	git__free(sig);
 }
 

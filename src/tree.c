@@ -577,9 +577,9 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 		git_buf_put(&tree, (char *)entry->oid.id, GIT_OID_RAWSZ);
 	}
 
-	if (git_buf_oom(&tree)) {
+	if ((error = git_buf_lasterror(&tree)) < GIT_SUCCESS) {
 		git_buf_free(&tree);
-		return git__throw(GIT_ENOMEM, "Not enough memory to build the tree data");
+		return git__rethrow(error, "Not enough memory to build the tree data");
 	}
 
 	error = git_repository_odb__weakptr(&odb, repo);
@@ -631,7 +631,7 @@ void git_treebuilder_free(git_treebuilder *bld)
 static int tree_frompath(
 	git_tree **parent_out,
 	git_tree *root,
-	const char *treeentry_path,
+	git_buf *treeentry_path,
 	int offset)
 {
 	char *slash_pos = NULL;
@@ -639,11 +639,11 @@ static int tree_frompath(
 	int error = GIT_SUCCESS;
 	git_tree *subtree;
 
-	if (!*(treeentry_path + offset))
+	if (!*(treeentry_path->ptr + offset))
 		return git__rethrow(GIT_EINVALIDPATH,
-			"Invalid relative path to a tree entry '%s'.", treeentry_path);
+			"Invalid relative path to a tree entry '%s'.", treeentry_path->ptr);
 
-	slash_pos = (char *)strchr(treeentry_path + offset, '/');
+	slash_pos = (char *)strchr(treeentry_path->ptr + offset, '/');
 
 	if (slash_pos == NULL)
 		return git_tree_lookup(
@@ -652,13 +652,13 @@ static int tree_frompath(
 			git_object_id((const git_object *)root)
 		);
 
-	if (slash_pos == treeentry_path + offset)
+	if (slash_pos == treeentry_path->ptr + offset)
 		return git__rethrow(GIT_EINVALIDPATH,
-			"Invalid relative path to a tree entry '%s'.", treeentry_path);
+			"Invalid relative path to a tree entry '%s'.", treeentry_path->ptr);
 
 	*slash_pos = '\0';
 
-	entry = git_tree_entry_byname(root, treeentry_path + offset);
+	entry = git_tree_entry_byname(root, treeentry_path->ptr + offset);
 
 	if (slash_pos != NULL)
 		*slash_pos = '/';
@@ -666,7 +666,7 @@ static int tree_frompath(
 	if (entry == NULL)
 		return git__rethrow(GIT_ENOTFOUND,
 			"No tree entry can be found from "
-			"the given tree and relative path '%s'.", treeentry_path);
+			"the given tree and relative path '%s'.", treeentry_path->ptr);
 
 
 	error = git_tree_lookup(&subtree, root->object.repo, &entry->oid);
@@ -677,7 +677,7 @@ static int tree_frompath(
 		parent_out,
 		subtree,
 		treeentry_path,
-		slash_pos - treeentry_path + 1
+		(slash_pos - treeentry_path->ptr) + 1
 	);
 
 	git_tree_free(subtree);
@@ -689,72 +689,84 @@ int git_tree_get_subtree(
 	git_tree *root,
 	const char *subtree_path)
 {
-	char buffer[GIT_PATH_MAX];
+	int error;
+	git_buf buffer = GIT_BUF_INIT;
 
 	assert(subtree && root && subtree_path);
 
-	strncpy(buffer, subtree_path, GIT_PATH_MAX);
-	return tree_frompath(subtree, root, buffer, 0);
+	if ((error = git_buf_sets(&buffer, subtree_path)) == GIT_SUCCESS)
+		error = tree_frompath(subtree, root, &buffer, 0);
+
+	git_buf_free(&buffer);
+
+	return error;
 }
 
 static int tree_walk_post(
 	git_tree *tree,
 	git_treewalk_cb callback,
-	char *root,
-	size_t root_len,
+	git_buf *path,
 	void *payload)
 {
-	int error;
+	int error = GIT_SUCCESS;
 	unsigned int i;
 
 	for (i = 0; i < tree->entries.length; ++i) {
 		git_tree_entry *entry = tree->entries.contents[i];
 
-		root[root_len] = '\0';
-
-		if (callback(root, entry, payload) < 0)
+		if (callback(path->ptr, entry, payload) < 0)
 			continue;
 
 		if (ENTRY_IS_TREE(entry)) {
 			git_tree *subtree;
+			size_t path_len = path->size;
 
 			if ((error = git_tree_lookup(
 				&subtree, tree->object.repo, &entry->oid)) < 0)
-				return error;
+				break;
 
-			strcpy(root + root_len, entry->filename);
-			root[root_len + entry->filename_len] = '/';
+			/* append the next entry to the path */
+			git_buf_puts(path, entry->filename);
+			git_buf_putc(path, '/');
+			if ((error = git_buf_lasterror(path)) < GIT_SUCCESS)
+				break;
 
-			tree_walk_post(subtree,
-				callback, root,
-				root_len + entry->filename_len + 1,
-				payload
-			);
+			error = tree_walk_post(subtree, callback, path, payload);
+			if (error < GIT_SUCCESS)
+				break;
 
+			git_buf_truncate(path, path_len);
 			git_tree_free(subtree);
 		}
 	}
 
-	return GIT_SUCCESS;
+	return error;
 }
 
 int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)
 {
-	char root_path[GIT_PATH_MAX];
+	int error = GIT_SUCCESS;
+	git_buf root_path = GIT_BUF_INIT;
 
-	root_path[0] = '\0';
 	switch (mode) {
 		case GIT_TREEWALK_POST:
-			return tree_walk_post(tree, callback, root_path, 0, payload);
+			error = tree_walk_post(tree, callback, &root_path, payload);
+			break;
 
 		case GIT_TREEWALK_PRE:
-			return git__throw(GIT_ENOTIMPLEMENTED,
+			error = git__throw(GIT_ENOTIMPLEMENTED,
 				"Preorder tree walking is still not implemented");
+			break;
 
 		default:
-			return git__throw(GIT_EINVALIDARGS,
+			error = git__throw(GIT_EINVALIDARGS,
 				"Invalid walking mode for tree walk");
+			break;
 	}
+
+	git_buf_free(&root_path);
+
+	return error;
 }
 
 static int tree_entry_cmp(const git_tree_entry *a, const git_tree_entry *b)

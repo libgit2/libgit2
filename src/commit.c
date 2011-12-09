@@ -129,7 +129,8 @@ int git_commit_create(
 	git_buf_puts(&commit, message);
 
 	if (git_buf_oom(&commit)) {
-		error = git__throw(GIT_ENOMEM, "Not enough memory to build the commit data");
+		error = git__throw(git_buf_lasterror(&commit),
+			"Not enough memory to build the commit data");
 		goto cleanup;
 	}
 

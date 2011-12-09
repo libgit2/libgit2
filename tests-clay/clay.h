@@ -111,6 +111,7 @@ extern void test_core_path__1(void);
 extern void test_core_path__2(void);
 extern void test_core_path__5(void);
 extern void test_core_path__6(void);
+extern void test_core_path__7(void);
 extern void test_core_rmdir__delete_recursive(void);
 extern void test_core_rmdir__fail_to_delete_non_empty_dir(void);
 extern void test_core_rmdir__initialize(void);

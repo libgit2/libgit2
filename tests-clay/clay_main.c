@@ -171,7 +171,8 @@ static const struct clay_func _clay_cb_core_path[] = {
 	{"1", &test_core_path__1},
 	{"2", &test_core_path__2},
 	{"5", &test_core_path__5},
-	{"6", &test_core_path__6}
+	{"6", &test_core_path__6},
+	{"7", &test_core_path__7}
 };
 static const struct clay_func _clay_cb_core_rmdir[] = {
     {"delete_recursive", &test_core_rmdir__delete_recursive},
@@ -357,7 +358,7 @@ static const struct clay_suite _clay_suites[] = {
         "core::path",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_core_path, 5
+        _clay_cb_core_path, 6
     },
 	{
         "core::rmdir",
@@ -506,7 +507,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 35;
-static size_t _clay_callback_count = 117;
+static size_t _clay_callback_count = 118;
 
 /* Core test functions */
 static void
