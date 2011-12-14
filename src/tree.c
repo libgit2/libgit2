@@ -1031,12 +1031,12 @@ static int diff_index_cb(const char *root, git_tree_entry *tentry, void *data)
 int git_tree_diff_index_recursive(git_tree *tree, git_index *index, git_tree_diff_cb cb, void *data)
 {
 	struct diff_index_cbdata cbdata;
-	char dummy_path[GIT_PATH_MAX];
+	git_buf dummy_path = GIT_BUF_INIT;
 
 	cbdata.index = index;
 	cbdata.i = 0;
 	cbdata.cb = cb;
 	cbdata.data = data;
 
-	return tree_walk_post(tree, diff_index_cb, dummy_path, 0, &cbdata);
+	return tree_walk_post(tree, diff_index_cb, &dummy_path, &cbdata);
 }
