@@ -175,11 +175,6 @@ int git_buf_printf(git_buf *buf, const char *format, ...)
 	return GIT_SUCCESS;
 }
 
-const char *git_buf_cstr(git_buf *buf)
-{
-	return buf->ptr;
-}
-
 void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
 {
 	size_t copylen;
