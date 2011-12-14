@@ -200,6 +200,9 @@ static const struct clay_func _clay_cb_network_remotes[] = {
 	{"refspec_parsing", &test_network_remotes__refspec_parsing},
 	{"transform", &test_network_remotes__transform}
 };
+static const struct clay_func _clay_cb_object_commit_commitstagedfile[] = {
+    {"generate_predictable_object_ids", &test_object_commit_commitstagedfile__generate_predictable_object_ids}
+};
 static const struct clay_func _clay_cb_object_raw_chars[] = {
     {"build_valid_oid_from_raw_bytes", &test_object_raw_chars__build_valid_oid_from_raw_bytes},
 	{"find_invalid_chars_in_oid", &test_object_raw_chars__find_invalid_chars_in_oid}
@@ -245,9 +248,6 @@ static const struct clay_func _clay_cb_object_raw_type2string[] = {
     {"check_type_is_loose", &test_object_raw_type2string__check_type_is_loose},
 	{"convert_string_to_type", &test_object_raw_type2string__convert_string_to_type},
 	{"convert_type_to_string", &test_object_raw_type2string__convert_type_to_string}
-};
-static const struct clay_func _clay_cb_object_tree_buildfromindex[] = {
-    {"generate_predictable_object_ids", &test_object_tree_buildfromindex__generate_predictable_object_ids}
 };
 static const struct clay_func _clay_cb_object_tree_diff[] = {
     {"addition", &test_object_tree_diff__addition},
@@ -400,6 +400,12 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_network_remotes, 4
     },
 	{
+        "object::commit::commitstagedfile",
+        {"initialize", &test_object_commit_commitstagedfile__initialize},
+        {"cleanup", &test_object_commit_commitstagedfile__cleanup},
+        _clay_cb_object_commit_commitstagedfile, 1
+    },
+	{
         "object::raw::chars",
         {NULL, NULL},
         {NULL, NULL},
@@ -446,12 +452,6 @@ static const struct clay_suite _clay_suites[] = {
         {NULL, NULL},
         {NULL, NULL},
         _clay_cb_object_raw_type2string, 3
-    },
-	{
-        "object::tree::buildfromindex",
-        {"initialize", &test_object_tree_buildfromindex__initialize},
-        {"cleanup", &test_object_tree_buildfromindex__cleanup},
-        _clay_cb_object_tree_buildfromindex, 1
     },
 	{
         "object::tree::diff",
