@@ -365,7 +365,7 @@ extern int p_creat(const char *path, mode_t mode);
 int p_mkstemp(char *tmp_path)
 {
 #if defined(_MSC_VER)
-	if (_mktemp_s(tmp_path, GIT_PATH_MAX) != 0)
+	if (_mktemp_s(tmp_path, strlen(tmp_path) + 1) != 0)
 		return GIT_EOSERR;
 #else
 	if (_mktemp(tmp_path) == NULL)
