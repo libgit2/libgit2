@@ -370,6 +370,7 @@ static int dirent_cb(void *state, git_buf *a)
 			if (git_tree_entry_type(m) == GIT_OBJ_TREE)
 				git_path_to_dir(&st->head_tree_relative_path);
 
+			error = git_buf_lasterror(&st->head_tree_relative_path);
 			if (error < GIT_SUCCESS)
 				return git__rethrow(error, "An error occured while determining the status of '%s'", a->ptr);
 
