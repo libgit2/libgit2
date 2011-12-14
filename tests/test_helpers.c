@@ -236,7 +236,7 @@ static int copy_filesystem_element_recurs(void *_data, git_buf *source)
 	copydir_data *data = (copydir_data *)_data;
 
 	git_buf_truncate(&data->dst, data->dst_baselen);
-	git_buf_joinpath(&data->dst, data->dst.ptr, source->ptr + data->src_baselen);
+	git_buf_puts(&data->dst, source->ptr + data->src_baselen);
 
 	if (git_futils_isdir(source->ptr) == GIT_SUCCESS)
 		return git_futils_direach(source, copy_filesystem_element_recurs, _data);

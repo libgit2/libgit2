@@ -328,6 +328,10 @@ int git_buf_join(
 	size_t strlen_a = strlen(str_a);
 	size_t strlen_b = strlen(str_b);
 	int need_sep = 0;
+	ssize_t offset_a = -1;
+
+	/* not safe to have str_b point internally to the buffer */
+	assert(str_b < buf->ptr || str_b > buf->ptr + buf->size);
 
 	/* figure out if we need to insert a separator */
 	if (separator && strlen_a) {
@@ -336,14 +340,24 @@ int git_buf_join(
 			need_sep = 1;
 	}
 
+	/* str_a could be part of the buffer */
+	if (str_a >= buf->ptr && str_a < buf->ptr + buf->size)
+		offset_a = str_a - buf->ptr;
+
 	error = git_buf_grow(buf, strlen_a + strlen_b + need_sep + 1);
 	if (error < GIT_SUCCESS)
 		return error;
 
-	memmove(buf->ptr, str_a, strlen_a);
+	/* fix up internal pointers */
+	if (offset_a >= 0)
+		str_a = buf->ptr + offset_a;
+
+	/* do the actual copying */
+	if (offset_a != 0)
+		memmove(buf->ptr, str_a, strlen_a);
 	if (need_sep)
 		buf->ptr[strlen_a] = separator;
-	memmove(buf->ptr + strlen_a + need_sep, str_b, strlen_b);
+	memcpy(buf->ptr + strlen_a + need_sep, str_b, strlen_b);
 
 	buf->size = strlen_a + strlen_b + need_sep;
 	buf->ptr[buf->size] = '\0';

@@ -70,7 +70,7 @@ check_joinpath_n(
 
 
 /* get the dirname of a path */
-void test_core_path__0(void)
+void test_core_path__0_dirname(void)
 {
 	check_dirname(NULL, ".");
 	check_dirname("", ".");
@@ -90,7 +90,7 @@ void test_core_path__0(void)
 }
 
 /* get the base name of a path */
-void test_core_path__1(void)
+void test_core_path__1_basename(void)
 {
 	check_basename(NULL, ".");
 	check_basename("", ".");
@@ -107,7 +107,7 @@ void test_core_path__1(void)
 }
 
 /* get the latest component in a path */
-void test_core_path__2(void)
+void test_core_path__2_topdir(void)
 {
 	check_topdir(".git/", ".git/");
 	check_topdir("/.git/", ".git/");
@@ -124,7 +124,7 @@ void test_core_path__2(void)
 }
 
 /* properly join path components */
-void test_core_path__5(void)
+void test_core_path__5_joins(void)
 {
 	check_joinpath("", "", "");
 	check_joinpath("", "a", "a");
@@ -148,6 +148,10 @@ void test_core_path__5(void)
 	check_joinpath("/abcdefgh", "/12345678/", "/abcdefgh/12345678/");
 	check_joinpath("/abcdefgh/", "12345678/", "/abcdefgh/12345678/");
 
+	check_joinpath(REP1024("aaaa"), "", REP1024("aaaa") "/");
+	check_joinpath(REP1024("aaaa/"), "", REP1024("aaaa/"));
+	check_joinpath(REP1024("/aaaa"), "", REP1024("/aaaa") "/");
+
 	check_joinpath(REP1024("aaaa"), REP1024("bbbb"),
 				   REP1024("aaaa") "/" REP1024("bbbb"));
 	check_joinpath(REP1024("/aaaa"), REP1024("/bbbb"),
@@ -155,7 +159,7 @@ void test_core_path__5(void)
 }
 
 /* properly join path components for more than one path */
-void test_core_path__6(void)
+void test_core_path__6_long_joins(void)
 {
 	check_joinpath_n("", "", "", "", "");
 	check_joinpath_n("", "a", "", "", "a/");
@@ -208,7 +212,7 @@ check_string_to_dir(
 }
 
 /* convert paths to dirs */
-void test_core_path__7(void)
+void test_core_path__7_path_to_dir(void)
 {
 	check_path_to_dir("", "");
 	check_path_to_dir(".", "./");
@@ -233,4 +237,39 @@ void test_core_path__7(void)
 	check_string_to_dir("abcd", 4, "abcd");
 	check_string_to_dir("abcd", 5, "abcd/");
 	check_string_to_dir("abcd", 6, "abcd/");
+}
+
+/* join path to itself */
+void test_core_path__8_self_join(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	ssize_t asize = 0;
+
+	asize = path.asize;
+	cl_git_pass(git_buf_sets(&path, "/foo"));
+	cl_assert_strequal(path.ptr, "/foo");
+	cl_assert(asize < path.asize);
+
+	asize = path.asize;
+	cl_git_pass(git_buf_joinpath(&path, path.ptr, "this is a new string"));
+	cl_assert_strequal(path.ptr, "/foo/this is a new string");
+	cl_assert(asize < path.asize);
+
+	asize = path.asize;
+	cl_git_pass(git_buf_joinpath(&path, path.ptr, "/grow the buffer, grow the buffer, grow the buffer"));
+	cl_assert_strequal(path.ptr, "/foo/this is a new string/grow the buffer, grow the buffer, grow the buffer");
+	cl_assert(asize < path.asize);
+
+	git_buf_free(&path);
+	cl_git_pass(git_buf_sets(&path, "/foo/bar"));
+
+	cl_git_pass(git_buf_joinpath(&path, path.ptr + 4, "baz"));
+	cl_assert_strequal(path.ptr, "/bar/baz");
+
+	asize = path.asize;
+	cl_git_pass(git_buf_joinpath(&path, path.ptr + 4, "somethinglongenoughtorealloc"));
+	cl_assert_strequal(path.ptr, "/baz/somethinglongenoughtorealloc");
+	cl_assert(asize < path.asize);
+	
+	git_buf_free(&path);
 }

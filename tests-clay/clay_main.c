@@ -167,12 +167,13 @@ static const struct clay_func _clay_cb_core_oid[] = {
     {"streq", &test_core_oid__streq}
 };
 static const struct clay_func _clay_cb_core_path[] = {
-    {"0", &test_core_path__0},
-	{"1", &test_core_path__1},
-	{"2", &test_core_path__2},
-	{"5", &test_core_path__5},
-	{"6", &test_core_path__6},
-	{"7", &test_core_path__7}
+    {"0_dirname", &test_core_path__0_dirname},
+	{"1_basename", &test_core_path__1_basename},
+	{"2_topdir", &test_core_path__2_topdir},
+	{"5_joins", &test_core_path__5_joins},
+	{"6_long_joins", &test_core_path__6_long_joins},
+	{"7_path_to_dir", &test_core_path__7_path_to_dir},
+	{"8_self_join", &test_core_path__8_self_join}
 };
 static const struct clay_func _clay_cb_core_rmdir[] = {
     {"delete_recursive", &test_core_rmdir__delete_recursive},
@@ -361,7 +362,7 @@ static const struct clay_suite _clay_suites[] = {
         "core::path",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_core_path, 6
+        _clay_cb_core_path, 7
     },
 	{
         "core::rmdir",
@@ -516,7 +517,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 36;
-static size_t _clay_callback_count = 119;
+static size_t _clay_callback_count = 120;
 
 /* Core test functions */
 static void
