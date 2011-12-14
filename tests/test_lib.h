@@ -24,6 +24,23 @@
 		return _gitsuite;\
 	}
 
+#ifdef GIT_THREADS
+/**
+ * Thread-safe test initialization and cleanup
+ **/
+#define BEGIN_TEST(TNAME, DESC) \
+	static void _gittest__##TNAME(git_test *_gittest) { \
+		git_threads_init(); \
+		git_test__init(_gittest, #TNAME, DESC); \
+		git_clearerror();\
+		{\
+
+#define END_TEST } \
+	git_threads_shutdown(); }
+#else
+/**
+ * Single thread test initialization and cleanup
+ **/
 #define BEGIN_TEST(TNAME, DESC) \
 	static void _gittest__##TNAME(git_test *_gittest) { \
 		git_test__init(_gittest, #TNAME, DESC); \
@@ -31,6 +48,7 @@
 		{\
 
 #define END_TEST }}
+#endif
 
 typedef struct git_test git_test;
 typedef struct git_testsuite git_testsuite;
