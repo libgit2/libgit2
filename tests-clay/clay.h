@@ -57,6 +57,8 @@ void cl_fixture_cleanup(const char *fixture_name);
 /**
  * Test method declarations
  */
+extern void clay_on_init(void);
+extern void clay_on_shutdown(void);
 extern void test_buf_basic__printf(void);
 extern void test_buf_basic__resize(void);
 extern void test_config_add__cleanup(void);
