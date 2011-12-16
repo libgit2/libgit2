@@ -162,7 +162,16 @@ int git_config_foreach(git_config *cfg, int (*fn)(const char *, const char *, vo
 
 int git_config_delete(git_config *cfg, const char *name)
 {
-	return git_config_set_string(cfg, name, NULL);
+	file_internal *internal;
+	git_config_file *file;
+
+	if (cfg->files.length == 0)
+		return git__throw(GIT_EINVALIDARGS, "Cannot delete variable; no files open in the `git_config` instance");
+
+	internal = git_vector_get(&cfg->files, 0);
+	file = internal->file;
+
+	return file->delete(file, name);
 }
 
 /**************

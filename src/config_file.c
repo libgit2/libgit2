@@ -404,6 +404,32 @@ static int config_get(git_config_file *cfg, const char *name, const char **out)
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to get config value for %s", name);
 }
 
+static int config_delete(git_config_file *cfg, const char *name)
+{
+	cvar_t *iter, *prev;
+	diskfile_backend *b = (diskfile_backend *)cfg;
+
+	CVAR_LIST_FOREACH (&b->var_list, iter) {
+		/* This is a bit hacky because we use a singly-linked list */
+		if (cvar_match_name(iter, name)) {
+			if (CVAR_LIST_HEAD(&b->var_list) == iter)
+				CVAR_LIST_HEAD(&b->var_list) = CVAR_LIST_NEXT(iter);
+			else
+				CVAR_LIST_REMOVE_AFTER(prev);
+
+			git__free(iter->value);
+			iter->value = NULL;
+			config_write(b, iter);
+			cvar_free(iter);
+			return GIT_SUCCESS;
+		}
+		/* Store it for the next round */
+		prev = iter;
+	}
+
+	return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
+}
+
 int git_config_file__ondisk(git_config_file **out, const char *path)
 {
 	diskfile_backend *backend;
@@ -423,6 +449,7 @@ int git_config_file__ondisk(git_config_file **out, const char *path)
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
 	backend->parent.set = config_set;
+	backend->parent.delete = config_delete;
 	backend->parent.foreach = file_foreach;
 	backend->parent.free = backend_free;
 
