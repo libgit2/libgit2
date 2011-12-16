@@ -241,3 +241,17 @@ int git_hashtable_merge(git_hashtable *self, git_hashtable *other)
 	return insert_nodes(self, other->nodes, other->key_count);
 }
 
+
+/**
+ * Standard string
+ */
+uint32_t git_hash__strhash_cb(const void *key, int hash_id)
+{
+	static uint32_t hash_seeds[GIT_HASHTABLE_HASHES] = {
+		2147483647,
+		0x5d20bb23,
+		0x7daaab3c
+	};
+
+	return git__hash(key, strlen((const char *)key), hash_seeds[hash_id]);
+}

@@ -1,0 +1,311 @@
+#include "attr.h"
+#include "buffer.h"
+#include "fileops.h"
+#include "config.h"
+#include <ctype.h>
+
+#define GIT_ATTR_FILE_INREPO	"info/attributes"
+#define GIT_ATTR_FILE			".gitattributes"
+#define GIT_ATTR_FILE_SYSTEM	"/etc/gitattributes"
+#if GIT_WIN32
+#define GIT_ATTR_FILE_WIN32	L"%PROGRAMFILES%\\Git\\etc\\gitattributes"
+#endif
+
+static int collect_attr_files(
+	git_repository *repo, const char *path, git_vector *files);
+
+
+int git_attr_get(
+    git_repository *repo, const char *pathname,
+	const char *name, const char **value)
+{
+	int error;
+	git_attr_path path;
+	git_vector files = GIT_VECTOR_INIT;
+	unsigned int i, j;
+	git_attr_file *file;
+	git_attr_name attr;
+	git_attr_rule *rule;
+
+	*value = NULL;
+
+	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS ||
+		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
+		return git__rethrow(error, "Could not get attribute for %s", pathname);
+
+	attr.name = name;
+	attr.name_hash = git_attr_file__name_hash(name);
+
+	git_vector_foreach(&files, i, file) {
+
+		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
+			int pos = git_vector_bsearch(&rule->assigns, &attr);
+			git_clearerror(); /* okay if search failed */
+
+			if (pos >= 0) {
+				*value = ((git_attr_assignment *)git_vector_get(
+							  &rule->assigns, pos))->value;
+				goto found;
+			}
+		}
+	}
+
+found:
+	git_vector_free(&files);
+
+	return error;
+}
+
+
+typedef struct {
+	git_attr_name name;
+	git_attr_assignment *found;
+} attr_get_many_info;
+
+int git_attr_get_many(
+    git_repository *repo, const char *pathname,
+    size_t num_attr, const char **names, const char **values)
+{
+	int error;
+	git_attr_path path;
+	git_vector files = GIT_VECTOR_INIT;
+	unsigned int i, j, k;
+	git_attr_file *file;
+	git_attr_rule *rule;
+	attr_get_many_info *info = NULL;
+	size_t num_found = 0;
+
+	memset(values, 0, sizeof(const char *) * num_attr);
+
+	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS ||
+		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
+		return git__rethrow(error, "Could not get attributes for %s", pathname);
+
+	if ((info = git__calloc(num_attr, sizeof(attr_get_many_info))) == NULL) {
+		git__rethrow(GIT_ENOMEM, "Could not get attributes for %s", pathname);
+		goto cleanup;
+	}
+
+	git_vector_foreach(&files, i, file) {
+
+		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
+
+			for (k = 0; k < num_attr; k++) {
+				int pos;
+
+				if (info[k].found != NULL) /* already found assignment */
+					continue;
+
+				if (!info[k].name.name) {
+					info[k].name.name = names[k];
+					info[k].name.name_hash = git_attr_file__name_hash(names[k]);
+				}
+
+				pos = git_vector_bsearch(&rule->assigns, &info[k].name);
+				git_clearerror(); /* okay if search failed */
+
+				if (pos >= 0) {
+					info[k].found = (git_attr_assignment *)
+						git_vector_get(&rule->assigns, pos);
+					values[k] = info[k].found->value;
+
+					if (++num_found == num_attr)
+						goto cleanup;
+				}
+			}
+		}
+	}
+
+cleanup:
+	git_vector_free(&files);
+	git__free(info);
+
+	return error;
+}
+
+
+int git_attr_foreach(
+    git_repository *repo, const char *pathname,
+	int (*callback)(const char *name, const char *value, void *payload),
+	void *payload)
+{
+	int error;
+	git_attr_path path;
+	git_vector files = GIT_VECTOR_INIT;
+	unsigned int i, j, k;
+	git_attr_file *file;
+	git_attr_rule *rule;
+	git_attr_assignment *assign;
+	git_hashtable *seen = NULL;
+
+	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS ||
+		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
+		return git__rethrow(error, "Could not get attributes for %s", pathname);
+
+	seen = git_hashtable_alloc(8, git_hash__strhash_cb, git_hash__strcmp_cb);
+	if (!seen) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	git_vector_foreach(&files, i, file) {
+
+		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
+
+			git_vector_foreach(&rule->assigns, k, assign) {
+				/* skip if higher priority assignment was already seen */
+				if (git_hashtable_lookup(seen, assign->name))
+					continue;
+
+				error = git_hashtable_insert(seen, assign->name, assign);
+				if (error != GIT_SUCCESS)
+					goto cleanup;
+
+				error = callback(assign->name, assign->value, payload);
+				if (error != GIT_SUCCESS)
+					goto cleanup;
+			}
+		}
+	}
+
+cleanup:
+	if (seen)
+		git_hashtable_free(seen);
+	git_vector_free(&files);
+
+	if (error != GIT_SUCCESS)
+		(void)git__rethrow(error, "Could not get attributes for %s", pathname);
+
+	return error;
+}
+
+
+/* add git_attr_file to vector of files, loading if needed */
+static int push_attrs(
+	git_repository *repo,
+	git_vector     *files,
+	const char     *base,
+	const char     *filename)
+{
+	int error = GIT_SUCCESS;
+	git_attr_cache *cache = &repo->attrcache;
+	git_buf path = GIT_BUF_INIT;
+	git_attr_file *file;
+	int add_to_cache = 0;
+
+	if (cache->files == NULL) {
+		cache->files = git_hashtable_alloc(
+			8, git_hash__strhash_cb, git_hash__strcmp_cb);
+		if (!cache->files)
+			return git__throw(GIT_ENOMEM, "Could not create attribute cache");
+	}
+
+	if ((error = git_path_prettify(&path, filename, base)) < GIT_SUCCESS) {
+		if (error == GIT_EOSERR)
+			/* file was not found -- ignore error */
+			error = GIT_SUCCESS;
+		goto cleanup;
+	}
+
+	/* either get attr_file from cache or read from disk */
+	file = git_hashtable_lookup(cache->files, path.ptr);
+	if (file == NULL) {
+		error = git_attr_file__from_file(&file, path.ptr);
+		add_to_cache = (error == GIT_SUCCESS);
+	}
+
+	if (file != NULL) {
+		/* add file to vector, if we found it */
+		error = git_vector_insert(files, file);
+
+		/* add file to cache, if it is new */
+		/* do this after above step b/c it is not critical */
+		if (error == GIT_SUCCESS && add_to_cache && file->path != NULL)
+			error = git_hashtable_insert(cache->files, file->path, file);
+	}
+
+cleanup:
+	git_buf_free(&path);
+	return error;
+}
+
+
+static int collect_attr_files(
+	git_repository *repo, const char *path, git_vector *files)
+{
+	int error = GIT_SUCCESS;
+	git_buf dir = GIT_BUF_INIT;
+	git_config *cfg;
+	const char *workdir = git_repository_workdir(repo);
+
+	if ((error = git_vector_init(files, 4, NULL)) < GIT_SUCCESS)
+		goto cleanup;
+
+	if ((error = git_path_prettify(&dir, path, workdir)) < GIT_SUCCESS)
+		goto cleanup;
+
+	if (git_futils_isdir(dir.ptr) != GIT_SUCCESS) {
+		git_path_dirname_r(&dir, dir.ptr);
+		git_path_to_dir(&dir);
+		if ((error = git_buf_lasterror(&dir)) < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	/* in precendence order highest to lowest:
+	 * - $GIT_DIR/info/attributes
+	 * - path components with .gitattributes
+	 * - config core.attributesfile
+	 * - $GIT_PREFIX/etc/gitattributes
+	 */
+
+	error = push_attrs(repo, files, repo->path_repository, GIT_ATTR_FILE_INREPO);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (workdir && git__prefixcmp(dir.ptr, workdir) == 0) {
+		ssize_t rootlen = (ssize_t)strlen(workdir);
+
+		do {
+			error = push_attrs(repo, files, dir.ptr, GIT_ATTR_FILE);
+			if (error == GIT_SUCCESS) {
+				git_path_dirname_r(&dir, dir.ptr);
+				git_path_to_dir(&dir);
+				error = git_buf_lasterror(&dir);
+			}
+		} while (!error && dir.size >= rootlen);
+	} else {
+		error = push_attrs(repo, files, dir.ptr, GIT_ATTR_FILE);
+	}
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (git_repository_config(&cfg, repo) == GIT_SUCCESS) {
+		const char *core_attribs = NULL;
+		git_config_get_string(cfg, "core.attributesfile", &core_attribs);
+		git_clearerror(); /* don't care if attributesfile is not set */
+		if (core_attribs)
+			error = push_attrs(repo, files, NULL, core_attribs);
+		git_config_free(cfg);
+	}
+
+	if (error == GIT_SUCCESS)
+		error = push_attrs(repo, files, NULL, GIT_ATTR_FILE_SYSTEM);
+
+ cleanup:
+	if (error < GIT_SUCCESS) {
+		git__rethrow(error, "Could not get attributes for '%s'", path);
+		git_vector_free(files);
+	}
+	git_buf_free(&dir);
+
+	return error;
+}
+
+
+void git_repository__attr_cache_free(git_attr_cache *attrs)
+{
+	if (attrs && attrs->files) {
+		git_hashtable_free(attrs->files);
+		attrs->files = NULL;
+	}
+}

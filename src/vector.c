@@ -29,7 +29,12 @@ static int resize_vector(git_vector *v)
 void git_vector_free(git_vector *v)
 {
 	assert(v);
+
 	git__free(v->contents);
+	v->contents = NULL;
+
+	v->length = 0;
+	v->_alloc_size = 0;
 }
 
 int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp)
