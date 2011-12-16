@@ -391,15 +391,17 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 static int config_get(git_config_file *cfg, const char *name, const char **out)
 {
 	cvar_t *var;
+	int error = GIT_SUCCESS;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	var = cvar_list_find(&b->var_list, name);
 
-	if (var == NULL || var->value == NULL)
+	if (var == NULL)
 		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
 
 	*out = var->value;
-	return GIT_SUCCESS;
+
+	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to get config value for %s", name);
 }
 
 int git_config_file__ondisk(git_config_file **out, const char *path)
