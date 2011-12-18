@@ -88,6 +88,17 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	cl_assert(git_oid_cmp(&expected_blob_oid, &entry->oid) == 0);
 
 	/*
+	 * Information about index entry should match test file
+	 */
+	{
+		struct stat st;
+		cl_must_pass(p_lstat("treebuilder/test.txt", &st));
+		cl_assert(entry->file_size == st.st_size);
+		cl_assert(entry->uid == st.st_uid);
+		cl_assert(entry->gid == st.st_gid);
+	}
+
+	/*
 	 * Build the tree from the index
 	 */
 	cl_git_pass(git_tree_create_fromindex(&tree_oid, index));
