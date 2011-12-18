@@ -297,6 +297,8 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	git_index_entry *entry = NULL;
 	struct stat st;
 	git_oid oid;
+	const char *workdir;
+	git_buf full_path = GIT_BUF_INIT;
 	int error;
 
 	if (INDEX_OWNER(index) == NULL)
@@ -306,6 +308,23 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	if (stage < 0 || stage > 3)
 		return git__throw(GIT_ERROR,
 			"Failed to initialize entry. Invalid stage %i", stage);
+
+	workdir = git_repository_workdir(INDEX_OWNER(index));
+	if (workdir == NULL)
+		return git__throw(GIT_EBAREINDEX,
+			"Failed to initialize entry. Cannot resolved workdir");
+
+	error = git_buf_joinpath(&full_path, workdir, rel_path);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (p_lstat(full_path.ptr, &st) < 0) {
+		error = git__throw(GIT_ENOTFOUND, "Failed to initialize entry. '%s' cannot be opened. %s", full_path.ptr, strerror(errno));
+		git_buf_free(&full_path);
+		return error;
+	}
+
+	git_buf_free(&full_path); /* done with full path */
 
 	/* There is no need to validate the rel_path here, since it will be
 	 * immediately validated by the call to git_blob_create_fromfile.
