@@ -406,7 +406,8 @@ static int config_get(git_config_file *cfg, const char *name, const char **out)
 
 static int config_delete(git_config_file *cfg, const char *name)
 {
-	cvar_t *iter, *prev;
+	int error;
+	cvar_t *iter, *prev = NULL;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	CVAR_LIST_FOREACH (&b->var_list, iter) {
@@ -419,9 +420,11 @@ static int config_delete(git_config_file *cfg, const char *name)
 
 			git__free(iter->value);
 			iter->value = NULL;
-			config_write(b, iter);
+			error = config_write(b, iter);
 			cvar_free(iter);
-			return GIT_SUCCESS;
+			return error == GIT_SUCCESS ?
+				GIT_SUCCESS :
+				git__rethrow(error, "Failed to update config file");
 		}
 		/* Store it for the next round */
 		prev = iter;
