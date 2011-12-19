@@ -554,10 +554,22 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 
 int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld)
 {
+	git_odb *odb;
+	int error;
+
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < GIT_SUCCESS) {
+		return error;
+	}
+
+	return git_treebuilder_odb_write(oid, odb, bld);
+}
+
+int git_treebuilder_odb_write(git_oid *oid, git_odb *odb, git_treebuilder *bld)
+{
 	unsigned int i;
 	int error;
 	git_buf tree = GIT_BUF_INIT;
-	git_odb *odb;
 
 	assert(bld);
 
@@ -580,12 +592,6 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 	if ((error = git_buf_lasterror(&tree)) < GIT_SUCCESS) {
 		git_buf_free(&tree);
 		return git__rethrow(error, "Not enough memory to build the tree data");
-	}
-
-	error = git_repository_odb__weakptr(&odb, repo);
-	if (error < GIT_SUCCESS) {
-		git_buf_free(&tree);
-		return error;
 	}
 
 	error = git_odb_write(oid, odb, tree.ptr, tree.size, GIT_OBJ_TREE);

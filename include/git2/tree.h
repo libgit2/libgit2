@@ -269,6 +269,17 @@ GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, int (*filter)(cons
 GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld);
 
 /**
+ * Same as git_treebuilder_write, except writes to an object
+ * database instead of a repository.
+ *
+ * @param oid Pointer where to store the written OID
+ * @param odb Object database to store the object in
+ * @param bld Tree builder to write
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_treebuilder_odb_write(git_oid *oid, git_odb *odb, git_treebuilder *bld);
+
+/**
  * Retrieve a subtree contained in a tree, given its
  * relative path.
  *
