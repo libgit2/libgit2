@@ -46,13 +46,11 @@ static int add_ref(transport_local *t, const char *name)
 	if (error < GIT_SUCCESS)
 		goto out;
 
-	git_oid_cpy(&head->oid, git_reference_oid(ref));
+	git_oid_cpy(&head->oid, git_reference_oid(resolved_ref));
 
 	error = git_vector_insert(&t->refs, head);
 	if (error < GIT_SUCCESS)
 		goto out;
-
-	head = NULL;
 
 	/* If it's not a tag, we don't need to try to peel it */
 	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))
@@ -62,6 +60,8 @@ static int add_ref(transport_local *t, const char *name)
 	if (error < GIT_SUCCESS) {
 		git__rethrow(error, "Failed to lookup object");
 	}
+
+	head = NULL;
 
 	/* If it's not an annotated tag, just get out */
 	if (git_object_type(obj) != GIT_OBJ_TAG)
@@ -163,20 +163,30 @@ static int local_connect(git_transport *transport, int GIT_UNUSED(direction))
 	GIT_UNUSED_ARG(direction);
 
 	/* The repo layer doesn't want the prefix */
-	if (!git__prefixcmp(transport->url, file_prefix))
-		path = transport->url + strlen(file_prefix);
-	else
+	if (!git__prefixcmp(transport->url, "file://")) {
+		path = transport->url + strlen("file://");
+
+#ifdef _MSC_VER
+		/* skip the leading slash on windows before the drive letter */
+		if (*path != '/')
+			return git__throw(GIT_EINVALIDPATH, "Invalid local uri '%s'.", transport->url);
+
+		path++;
+#endif
+
+	} else
 		path = transport->url;
 
 	error = git_repository_open(&repo, path);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to open remote");
 
+	t->repo = repo;
+
 	error = store_refs(t);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to retrieve references");
 
-	t->repo = repo;
 	t->parent.connected = 1;
 
 	return GIT_SUCCESS;

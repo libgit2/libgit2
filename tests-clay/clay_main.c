@@ -199,6 +199,9 @@ static const struct clay_func _clay_cb_core_vector[] = {
 static const struct clay_func _clay_cb_index_rename[] = {
     {"single_file", &test_index_rename__single_file}
 };
+static const struct clay_func _clay_cb_network_remotelocal[] = {
+    {"retrieve_advertised_references", &test_network_remotelocal__retrieve_advertised_references}
+};
 static const struct clay_func _clay_cb_network_remotes[] = {
     {"fnmatch", &test_network_remotes__fnmatch},
 	{"parsing", &test_network_remotes__parsing},
@@ -399,6 +402,12 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_index_rename, 1
     },
 	{
+        "network::remotelocal",
+        {"initialize", &test_network_remotelocal__initialize},
+        {"cleanup", &test_network_remotelocal__cleanup},
+        _clay_cb_network_remotelocal, 1
+    },
+	{
         "network::remotes",
         {"initialize", &test_network_remotes__initialize},
         {"cleanup", &test_network_remotes__cleanup},
@@ -520,8 +529,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 36;
-static size_t _clay_callback_count = 120;
+static size_t _clay_suite_count = 37;
+static size_t _clay_callback_count = 121;
 
 /* Core test functions */
 static void
