@@ -76,5 +76,12 @@ GIT_INLINE(int) git_hashtable_insert(git_hashtable *h, const void *key, void *va
 	_node->key = NULL; _node->value = NULL; _self->key_count--;\
 }
 
+/*
+ * If you want a hashtable with standard string keys, you can
+ * just pass git_hash__strcmp_cb and git_hash__strhash_cb to
+ * git_hashtable_alloc.
+ */
+#define git_hash__strcmp_cb git__strcmp_cb
+extern uint32_t git_hash__strhash_cb(const void *key, int hash_id);
 
 #endif

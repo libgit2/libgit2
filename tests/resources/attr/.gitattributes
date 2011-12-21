@@ -1,0 +1,4 @@
+* rootattr
+root_test2 -rootattr
+root_test3 !rootattr
+
