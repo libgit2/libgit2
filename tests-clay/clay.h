@@ -192,6 +192,7 @@ extern void test_odb_sorting__alternate_backends_sorting(void);
 extern void test_odb_sorting__basic_backends_sorting(void);
 extern void test_odb_sorting__cleanup(void);
 extern void test_odb_sorting__initialize(void);
+extern void test_refs_crashes__double_free(void);
 extern void test_repo_getters__cleanup(void);
 extern void test_repo_getters__empty(void);
 extern void test_repo_getters__head_detached(void);

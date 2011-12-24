@@ -98,7 +98,7 @@ void git_reference_free(git_reference *reference)
 	git__free(reference);
 }
 
-static int reference_create(
+static int reference_alloc(
 	git_reference **ref_out,
 	git_repository *repo,
 	const char *name)
@@ -232,8 +232,10 @@ static int loose_lookup(git_reference *ref)
 	if (!updated)
 		return GIT_SUCCESS;
 
-	if (ref->flags & GIT_REF_SYMBOLIC)
+	if (ref->flags & GIT_REF_SYMBOLIC) {
 		free(ref->target.symbolic);
+		ref->target.symbolic = NULL;
+	}
 
 	ref->flags = 0;
 
@@ -939,8 +941,10 @@ static int packed_lookup(git_reference *ref)
 		ref->mtime == ref->owner->references.packfile_time)
 		return GIT_SUCCESS;
 
-	if (ref->flags & GIT_REF_SYMBOLIC)
+	if (ref->flags & GIT_REF_SYMBOLIC) {
 		free(ref->target.symbolic);
+		ref->target.symbolic = NULL;
+	}
 
 	/* Look up on the packfile */
 	pack_ref = git_hashtable_lookup(ref->owner->references.packfile, ref->name);
@@ -1059,7 +1063,7 @@ int git_reference_lookup(git_reference **ref_out,
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to lookup reference");
 
-	error = reference_create(&ref, repo, normalized_name);
+	error = reference_alloc(&ref, repo, normalized_name);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to lookup reference");
 
@@ -1147,7 +1151,7 @@ int git_reference_create_symbolic(
 		return git__throw(GIT_EEXISTS,
 			"Failed to create symbolic reference. Reference already exists");
 
-	error = reference_create(&ref, repo, normalized);
+	error = reference_alloc(&ref, repo, normalized);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -1197,7 +1201,7 @@ int git_reference_create_oid(
 	if ((error = reference_available(repo, name, NULL)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to create reference");
 
-	error = reference_create(&ref, repo, name);
+	error = reference_alloc(&ref, repo, name);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -1590,10 +1594,8 @@ int git_reference_reload(git_reference *ref)
 {
 	int error = reference_lookup(ref);
 
-	if (error < GIT_SUCCESS) {
-		git_reference_free(ref);
+	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to reload reference");
-	}
 
 	return GIT_SUCCESS;
 }

@@ -281,6 +281,9 @@ static const struct clay_func _clay_cb_odb_sorting[] = {
     {"alternate_backends_sorting", &test_odb_sorting__alternate_backends_sorting},
 	{"basic_backends_sorting", &test_odb_sorting__basic_backends_sorting}
 };
+static const struct clay_func _clay_cb_refs_crashes[] = {
+    {"double_free", &test_refs_crashes__double_free}
+};
 static const struct clay_func _clay_cb_repo_getters[] = {
     {"empty", &test_repo_getters__empty},
 	{"head_detached", &test_repo_getters__head_detached},
@@ -498,6 +501,12 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_odb_sorting, 2
     },
 	{
+        "refs::crashes",
+        {NULL, NULL},
+        {NULL, NULL},
+        _clay_cb_refs_crashes, 1
+    },
+	{
         "repo::getters",
         {"initialize", &test_repo_getters__initialize},
         {"cleanup", &test_repo_getters__cleanup},
@@ -529,8 +538,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 37;
-static size_t _clay_callback_count = 121;
+static size_t _clay_suite_count = 38;
+static size_t _clay_callback_count = 122;
 
 /* Core test functions */
 static void
