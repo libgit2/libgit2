@@ -159,7 +159,6 @@ static int local_connect(git_transport *transport, int GIT_UNUSED(direction))
 	int error;
 	transport_local *t = (transport_local *) transport;
 	const char *path;
-	const char file_prefix[] = "file://";
 	GIT_UNUSED_ARG(direction);
 
 	/* The repo layer doesn't want the prefix */
