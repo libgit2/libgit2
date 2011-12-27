@@ -174,14 +174,15 @@ static const struct clay_func _clay_cb_core_oid[] = {
     {"streq", &test_core_oid__streq}
 };
 static const struct clay_func _clay_cb_core_path[] = {
-    {"0_dirname", &test_core_path__0_dirname},
-	{"1_basename", &test_core_path__1_basename},
-	{"2_topdir", &test_core_path__2_topdir},
-	{"5_joins", &test_core_path__5_joins},
-	{"6_long_joins", &test_core_path__6_long_joins},
-	{"7_path_to_dir", &test_core_path__7_path_to_dir},
-	{"8_self_join", &test_core_path__8_self_join},
-	{"9_percent_decode", &test_core_path__9_percent_decode}
+    {"00_dirname", &test_core_path__00_dirname},
+	{"01_basename", &test_core_path__01_basename},
+	{"02_topdir", &test_core_path__02_topdir},
+	{"05_joins", &test_core_path__05_joins},
+	{"06_long_joins", &test_core_path__06_long_joins},
+	{"07_path_to_dir", &test_core_path__07_path_to_dir},
+	{"08_self_join", &test_core_path__08_self_join},
+	{"09_percent_decode", &test_core_path__09_percent_decode},
+	{"10_fromurl", &test_core_path__10_fromurl}
 };
 static const struct clay_func _clay_cb_core_rmdir[] = {
     {"delete_recursive", &test_core_rmdir__delete_recursive},
@@ -382,7 +383,7 @@ static const struct clay_suite _clay_suites[] = {
         "core::path",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_core_path, 8
+        _clay_cb_core_path, 9
     },
 	{
         "core::rmdir",
@@ -549,7 +550,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 39;
-static size_t _clay_callback_count = 124;
+static size_t _clay_callback_count = 125;
 
 /* Core test functions */
 static void

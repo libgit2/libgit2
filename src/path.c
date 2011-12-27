@@ -272,3 +272,38 @@ append:
 
 	return error;
 }
+
+int git_path_fromurl(git_buf *local_path_out, const char *file_url)
+{
+	int error = GIT_SUCCESS, offset = 0, len;
+
+	assert(local_path_out && file_url);
+
+	if (git__prefixcmp(file_url, "file://") != 0)
+		return git__throw(GIT_EINVALIDPATH, "Parsing of '%s' failed. A file Uri is expected (ie. with 'file://' scheme).", file_url);
+
+	offset += 7;
+	len = strlen(file_url);
+
+	if (offset < len && file_url[offset] == '/')
+		offset++;
+	else if (offset < len && git__prefixcmp(file_url + offset, "localhost/") == 0)
+		offset += 10;
+	else
+		return git__throw(GIT_EINVALIDPATH, "Parsing of '%s' failed. A local file Uri is expected.", file_url);
+
+	if (offset >= len || file_url[offset] == '/')
+		return git__throw(GIT_EINVALIDPATH, "Parsing of '%s' failed. Invalid file Uri format.", file_url);
+
+#ifndef _MSC_VER
+	offset--;	/* A *nix absolute path starts with a forward slash */
+#endif
+
+	git_buf_clear(local_path_out);
+
+	error = git__percent_decode(local_path_out, file_url + offset);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Parsing of '%s' failed.", file_url);
+
+	return error;
+}
