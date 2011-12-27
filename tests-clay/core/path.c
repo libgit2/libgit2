@@ -273,3 +273,27 @@ void test_core_path__8_self_join(void)
 	
 	git_buf_free(&path);
 }
+
+static void check_percent_decoding(const char *expected_result, const char *input)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git__percent_decode(&buf, input));
+	cl_assert_strequal(expected_result, git_buf_cstr(&buf));
+
+	git_buf_free(&buf);
+}
+
+void test_core_path__9_percent_decode(void)
+{
+	check_percent_decoding("abcd", "abcd");
+	check_percent_decoding("a2%", "a2%");
+	check_percent_decoding("a2%3", "a2%3");
+	check_percent_decoding("a2%%3", "a2%%3");
+	check_percent_decoding("a2%3z", "a2%3z");
+	check_percent_decoding("a,", "a%2c");
+	check_percent_decoding("a21", "a2%31");
+	check_percent_decoding("a2%1", "a2%%31");
+	check_percent_decoding("a bc ", "a%20bc%20");
+	check_percent_decoding("Vicent Mart" "\355", "Vicent%20Mart%ED");
+}

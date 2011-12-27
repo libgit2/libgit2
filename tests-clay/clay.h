@@ -116,6 +116,7 @@ extern void test_core_path__5_joins(void);
 extern void test_core_path__6_long_joins(void);
 extern void test_core_path__7_path_to_dir(void);
 extern void test_core_path__8_self_join(void);
+extern void test_core_path__9_percent_decode(void);
 extern void test_core_rmdir__delete_recursive(void);
 extern void test_core_rmdir__fail_to_delete_non_empty_dir(void);
 extern void test_core_rmdir__initialize(void);
