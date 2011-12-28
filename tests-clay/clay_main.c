@@ -167,6 +167,9 @@ static const struct clay_func _clay_cb_core_filebuf[] = {
 	{"4", &test_core_filebuf__4},
 	{"5", &test_core_filebuf__5}
 };
+static const struct clay_func _clay_cb_core_hex[] = {
+    {"fromhex", &test_core_hex__fromhex}
+};
 static const struct clay_func _clay_cb_core_oid[] = {
     {"streq", &test_core_oid__streq}
 };
@@ -363,6 +366,12 @@ static const struct clay_suite _clay_suites[] = {
         _clay_cb_core_filebuf, 6
     },
 	{
+        "core::hex",
+        {NULL, NULL},
+        {NULL, NULL},
+        _clay_cb_core_hex, 1
+    },
+	{
         "core::oid",
         {"initialize", &test_core_oid__initialize},
         {NULL, NULL},
@@ -538,8 +547,8 @@ static const struct clay_suite _clay_suites[] = {
     }
 };
 
-static size_t _clay_suite_count = 38;
-static size_t _clay_callback_count = 122;
+static size_t _clay_suite_count = 39;
+static size_t _clay_callback_count = 123;
 
 /* Core test functions */
 static void

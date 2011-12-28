@@ -106,6 +106,7 @@ extern void test_core_filebuf__2(void);
 extern void test_core_filebuf__3(void);
 extern void test_core_filebuf__4(void);
 extern void test_core_filebuf__5(void);
+extern void test_core_hex__fromhex(void);
 extern void test_core_oid__initialize(void);
 extern void test_core_oid__streq(void);
 extern void test_core_path__0_dirname(void);

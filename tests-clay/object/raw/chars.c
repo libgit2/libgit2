@@ -3,17 +3,6 @@
 
 #include "odb.h"
 
-static int from_hex(unsigned int i)
-{
-	if (i >= '0' && i <= '9')
-		return i - '0';
-	if (i >= 'a' && i <= 'f')
-		return 10 + (i - 'a');
-	if (i >= 'A' && i <= 'F')
-		return 10 + (i - 'A');
-	return -1;
-}
-
 void test_object_raw_chars__find_invalid_chars_in_oid(void)
 {
 	git_oid out;
@@ -28,8 +17,8 @@ void test_object_raw_chars__find_invalid_chars_in_oid(void)
 
 	for (i = 0; i < 256; i++) {
 		in[38] = (char)i;
-		if (from_hex(i) >= 0) {
-			exp[19] = (unsigned char)(from_hex(i) << 4);
+		if (git__fromhex(i) >= 0) {
+			exp[19] = (unsigned char)(git__fromhex(i) << 4);
 			cl_git_pass(git_oid_fromstr(&out, in));
 			cl_assert(memcmp(out.id, exp, sizeof(out.id)) == 0);
 		} else {
