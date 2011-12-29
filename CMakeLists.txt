@@ -49,6 +49,7 @@ OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (BUILD_CLAY "Build Tests using the Clay suite" OFF)
+OPTION (TAGS "Generate tags" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -167,4 +168,23 @@ IF (BUILD_CLAY)
 
 	ENABLE_TESTING()
 	ADD_TEST(libgit2_clay libgit2_clay)
+ENDIF ()
+
+IF (TAGS)
+	FIND_PROGRAM(CTAGS ctags)
+	IF (NOT CTAGS)
+		message(FATAL_ERROR "Could not find ctags command")
+	ENDIF ()
+
+	FILE(GLOB_RECURSE SRC_ALL *.[ch])
+
+	ADD_CUSTOM_COMMAND(
+		OUTPUT tags
+		COMMAND ${CTAGS} -a ${SRC_ALL}
+		DEPENDS ${SRC_ALL}
+	)
+	ADD_CUSTOM_TARGET(
+		do_tags ALL
+		DEPENDS tags
+	)
 ENDIF ()
