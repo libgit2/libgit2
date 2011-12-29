@@ -6,11 +6,14 @@ static git_repository *g_repo = NULL;
 
 void test_attr_repo__initialize(void)
 {
-	/* before each test, instantiate the attr repo from the fixtures and
+	/* Before each test, instantiate the attr repo from the fixtures and
 	 * rename the .gitted to .git so it is a repo with a working dir.
+	 * Also rename gitattributes to .gitattributes, because it contains
+	 * macro definitions which are only allowed in the root.
 	 */
 	cl_fixture_sandbox("attr");
 	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
+	cl_git_pass(p_rename("attr/gitattributes", "attr/.gitattributes"));
 	cl_git_pass(git_repository_open(&g_repo, "attr/.git"));
 }
 
@@ -137,4 +140,47 @@ void test_attr_repo__foreach(void)
 	cl_git_pass(git_attr_foreach(g_repo, "subdir/subdir_test2.txt",
 		&count_attrs, &count));
 	cl_assert(count == 5); /* repoattr, rootattr, subattr, negattr, another */
+}
+
+void test_attr_repo__manpage_example(void)
+{
+	const char *value;
+
+	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "foo", &value));
+	cl_assert(value == GIT_ATTR_TRUE);
+
+	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "bar", &value));
+	cl_assert(value == NULL);
+
+	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "baz", &value));
+	cl_assert(value == GIT_ATTR_FALSE);
+
+	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "merge", &value));
+	cl_assert_strequal("filfre", value);
+
+	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "frotz", &value));
+	cl_assert(value == NULL);
+}
+
+void test_attr_repo__macros(void)
+{
+	const char *names[5] = { "rootattr", "binary", "diff", "crlf", "frotz" };
+	const char *names2[5] = { "mymacro", "positive", "negative", "rootattr", "another" };
+	const char *values[5];
+
+	cl_git_pass(git_attr_get_many(g_repo, "binfile", 5, names, values));
+
+	cl_assert(values[0] == GIT_ATTR_TRUE);
+	cl_assert(values[1] == NULL);
+	cl_assert(values[2] == GIT_ATTR_FALSE);
+	cl_assert(values[3] == GIT_ATTR_FALSE);
+	cl_assert(values[4] == NULL);
+
+	cl_git_pass(git_attr_get_many(g_repo, "macro_test", 5, names2, values));
+
+	cl_assert(values[0] == NULL);
+	cl_assert(values[1] == GIT_ATTR_TRUE);
+	cl_assert(values[2] == GIT_ATTR_FALSE);
+	cl_assert(values[3] == NULL);
+	cl_assert_strequal("77", values[4]);
 }

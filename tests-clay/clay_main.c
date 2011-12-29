@@ -117,13 +117,16 @@ static const struct clay_func _clay_cb_attr_file[] = {
 static const struct clay_func _clay_cb_attr_lookup[] = {
     {"assign_variants", &test_attr_lookup__assign_variants},
 	{"check_attr_examples", &test_attr_lookup__check_attr_examples},
+	{"from_buffer", &test_attr_lookup__from_buffer},
 	{"match_variants", &test_attr_lookup__match_variants},
 	{"simple", &test_attr_lookup__simple}
 };
 static const struct clay_func _clay_cb_attr_repo[] = {
     {"foreach", &test_attr_repo__foreach},
 	{"get_many", &test_attr_repo__get_many},
-	{"get_one", &test_attr_repo__get_one}
+	{"get_one", &test_attr_repo__get_one},
+	{"macros", &test_attr_repo__macros},
+	{"manpage_example", &test_attr_repo__manpage_example}
 };
 static const struct clay_func _clay_cb_buf_basic[] = {
     {"printf", &test_buf_basic__printf},
@@ -329,13 +332,13 @@ static const struct clay_suite _clay_suites[] = {
         "attr::lookup",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_attr_lookup, 4
+        _clay_cb_attr_lookup, 5
     },
 	{
         "attr::repo",
         {"initialize", &test_attr_repo__initialize},
         {"cleanup", &test_attr_repo__cleanup},
-        _clay_cb_attr_repo, 3
+        _clay_cb_attr_repo, 5
     },
 	{
         "buf::basic",
@@ -556,7 +559,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 39;
-static size_t _clay_callback_count = 131;
+static size_t _clay_callback_count = 134;
 
 /* Core test functions */
 static void

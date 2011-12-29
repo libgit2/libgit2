@@ -8,7 +8,7 @@ void test_attr_file__simple_read(void)
 {
 	git_attr_file *file = NULL;
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr0")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), &file));
 	cl_assert_strequal(cl_fixture("attr/attr0"), file->path);
 	cl_assert(file->rules.length == 1);
 
@@ -16,15 +16,12 @@ void test_attr_file__simple_read(void)
 	cl_assert(rule != NULL);
 	cl_assert_strequal("*", rule->match.pattern);
 	cl_assert(rule->match.length == 1);
-	cl_assert(!rule->match.negative);
-	cl_assert(!rule->match.directory);
-	cl_assert(!rule->match.fullpath);
+	cl_assert(rule->match.flags == 0);
 
 	cl_assert(rule->assigns.length == 1);
 	git_attr_assignment *assign = get_assign(rule, 0);
 	cl_assert(assign != NULL);
 	cl_assert_strequal("binary", assign->name);
-	cl_assert(assign->name_len == 6);
 	cl_assert(assign->value == GIT_ATTR_TRUE);
 	cl_assert(!assign->is_allocated);
 
@@ -37,7 +34,7 @@ void test_attr_file__match_variants(void)
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr1")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr1"), &file));
 	cl_assert_strequal(cl_fixture("attr/attr1"), file->path);
 	cl_assert(file->rules.length == 10);
 
@@ -48,38 +45,31 @@ void test_attr_file__match_variants(void)
 	cl_assert(rule);
 	cl_assert_strequal("pat0", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat0"));
-	cl_assert(!rule->match.negative);
-	cl_assert(!rule->match.directory);
-	cl_assert(!rule->match.fullpath);
+	cl_assert(rule->match.flags == 0);
 	cl_assert(rule->assigns.length == 1);
 	assign = get_assign(rule,0);
 	cl_assert_strequal("attr0", assign->name);
 	cl_assert(assign->name_hash == git_attr_file__name_hash(assign->name));
-	cl_assert(assign->name_len == strlen("attr0"));
 	cl_assert(assign->value == GIT_ATTR_TRUE);
 	cl_assert(!assign->is_allocated);
 
 	rule = get_rule(1);
 	cl_assert_strequal("pat1", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat1"));
-	cl_assert(rule->match.negative);
+	cl_assert(rule->match.flags == GIT_ATTR_FNMATCH_NEGATIVE);
 
 	rule = get_rule(2);
 	cl_assert_strequal("pat2", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat2"));
-	cl_assert(rule->match.directory);
-	cl_assert(!rule->match.fullpath);
+	cl_assert(rule->match.flags == GIT_ATTR_FNMATCH_DIRECTORY);
 
 	rule = get_rule(3);
 	cl_assert_strequal("pat3dir/pat3file", rule->match.pattern);
-	cl_assert(!rule->match.directory);
-	cl_assert(rule->match.fullpath);
+	cl_assert(rule->match.flags == GIT_ATTR_FNMATCH_FULLPATH);
 
 	rule = get_rule(4);
 	cl_assert_strequal("pat4.*", rule->match.pattern);
-	cl_assert(!rule->match.negative);
-	cl_assert(!rule->match.directory);
-	cl_assert(!rule->match.fullpath);
+	cl_assert(rule->match.flags == 0);
 
 	rule = get_rule(5);
 	cl_assert_strequal("*.pat5", rule->match.pattern);
@@ -94,9 +84,7 @@ void test_attr_file__match_variants(void)
 	rule = get_rule(8);
 	cl_assert_strequal("pat8 with spaces", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat8 with spaces"));
-	cl_assert(!rule->match.negative);
-	cl_assert(!rule->match.directory);
-	cl_assert(!rule->match.fullpath);
+	cl_assert(rule->match.flags == 0);
 
 	rule = get_rule(9);
 	cl_assert_strequal("pat9", rule->match.pattern);
@@ -120,7 +108,6 @@ static void check_one_assign(
 	cl_assert(rule->assigns.length == 1);
 	cl_assert_strequal(name, assign->name);
 	cl_assert(assign->name_hash == git_attr_file__name_hash(assign->name));
-	cl_assert(assign->name_len == strlen(name));
 	cl_assert(assign->is_allocated == is_allocated);
 	if (is_allocated)
 		cl_assert_strequal(value, assign->value);
@@ -134,7 +121,7 @@ void test_attr_file__assign_variants(void)
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr2")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr2"), &file));
 	cl_assert_strequal(cl_fixture("attr/attr2"), file->path);
 	cl_assert(file->rules.length == 11);
 
@@ -199,7 +186,7 @@ void test_attr_file__check_attr_examples(void)
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr3")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr3"), &file));
 	cl_assert_strequal(cl_fixture("attr/attr3"), file->path);
 	cl_assert(file->rules.length == 3);
 

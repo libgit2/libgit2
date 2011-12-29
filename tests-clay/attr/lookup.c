@@ -1,5 +1,5 @@
 #include "clay_libgit2.h"
-#include "attr.h"
+#include "attr_file.h"
 
 void test_attr_lookup__simple(void)
 {
@@ -7,7 +7,7 @@ void test_attr_lookup__simple(void)
 	git_attr_path path;
 	const char *value = NULL;
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr0")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), &file));
 	cl_assert_strequal(cl_fixture("attr/attr0"), file->path);
 	cl_assert(file->rules.length == 1);
 
@@ -41,10 +41,6 @@ static void run_test_cases(git_attr_file *file, test_case *cases)
 	int error;
 
 	for (c = cases; c->path != NULL; c++) {
-		/* Put this in because I was surprised that all the tests passed */
-		/* fprintf(stderr, "checking '%s' attr %s == %s\n", */
-		/* 		c->path, c->attr, c->expected); */
-
 		cl_git_pass(git_attr_path__init(&path, c->path));
 
 		if (c->force_dir)
@@ -136,7 +132,7 @@ void test_attr_lookup__match_variants(void)
 		{ NULL, NULL, NULL, 0, 0 }
 	};
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr1")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr1"), &file));
 	cl_assert_strequal(cl_fixture("attr/attr1"), file->path);
 	cl_assert(file->rules.length == 10);
 
@@ -194,7 +190,7 @@ void test_attr_lookup__assign_variants(void)
 		{ NULL, NULL, NULL, 0, 0 }
 	};
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr2")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr2"), &file));
 	cl_assert(file->rules.length == 11);
 
 	run_test_cases(file, cases);
@@ -228,7 +224,31 @@ void test_attr_lookup__check_attr_examples(void)
 		{ NULL, NULL, NULL, 0, 0 }
 	};
 
-	cl_git_pass(git_attr_file__from_file(&file, cl_fixture("attr/attr3")));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr3"), &file));
+	cl_assert(file->rules.length == 3);
+
+	run_test_cases(file, cases);
+
+	git_attr_file__free(file);
+}
+
+void test_attr_lookup__from_buffer(void)
+{
+	git_attr_file *file = NULL;
+	test_case cases[] = {
+		{ "abc", "foo", GIT_ATTR_TRUE, 0, 0 },
+		{ "abc", "bar", GIT_ATTR_TRUE, 0, 0 },
+		{ "abc", "baz", GIT_ATTR_TRUE, 0, 0 },
+		{ "aaa", "foo", GIT_ATTR_TRUE, 0, 0 },
+		{ "aaa", "bar", NULL, 0, 0 },
+		{ "aaa", "baz", GIT_ATTR_TRUE, 0, 0 },
+		{ "qqq", "foo", NULL, 0, 0 },
+		{ "qqq", "bar", NULL, 0, 0 },
+		{ "qqq", "baz", GIT_ATTR_TRUE, 0, 0 },
+		{ NULL, NULL, NULL, 0, 0 }
+	};
+
+	cl_git_pass(git_attr_file__from_buffer(NULL, "a* foo\nabc bar\n* baz", &file));
 	cl_assert(file->rules.length == 3);
 
 	run_test_cases(file, cases);

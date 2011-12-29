@@ -403,3 +403,134 @@ int git_futils_contains_file(git_buf *base, const char *file, int append_if_exis
 	return _check_dir_contents(base, file, append_if_exists, &git_futils_isfile);
 }
 
+int git_futils_find_global_file(git_buf *path, const char *filename)
+{
+	int error;
+	const char *home = getenv("HOME");
+
+#ifdef GIT_WIN32
+	if (home == NULL)
+		home = getenv("USERPROFILE");
+#endif
+
+	if (home == NULL)
+		return git__throw(GIT_EOSERR, "Failed to open global %s file. "
+			"Cannot locate the user's home directory.", filename);
+
+	if ((error = git_buf_joinpath(path, home, filename)) < GIT_SUCCESS)
+		return error;
+
+	if (git_futils_exists(path->ptr) < GIT_SUCCESS) {
+		git_buf_clear(path);
+		return GIT_ENOTFOUND;
+	}
+
+	return GIT_SUCCESS;
+}
+
+#ifdef GIT_WIN32
+typedef struct {
+	wchar_t *path;
+	DWORD len;
+} win32_path;
+
+static const win32_path *win32_system_root(void)
+{
+	static win32_path s_root = { 0, 0 };
+
+	if (s_root.path == NULL) {
+		const wchar_t *root_tmpl = L"%PROGRAMFILES%\\Git\\etc\\";
+
+		s_root.len = ExpandEnvironmentStringsW(root_tmpl, NULL, 0);
+
+		if (s_root.len <= 0) {
+			git__throw(GIT_EOSERR, "Failed to expand environment strings");
+			return NULL;
+		}
+
+		s_root.path = git__calloc(s_root.len, sizeof(wchar_t));
+		if (s_root.path == NULL)
+			return NULL;
+
+		if (ExpandEnvironmentStringsW(root_tmpl, s_root.path, s_root.len) != s_root.len) {
+			git__throw(GIT_EOSERR, "Failed to expand environment strings");
+			git__free(s_root.path);
+			s_root.path = NULL;
+			return NULL;
+		}
+	}
+
+	return &s_root;
+}
+
+static int win32_find_system_file(git_buf *path, const char *filename)
+{
+	int error = GIT_SUCCESS;
+	const win32_path *root = win32_system_root();
+	size_t len;
+	wchar_t *file_utf16 = NULL, *scan;
+	char *file_utf8 = NULL;
+
+	if (!root || !filename || (len = strlen(filename)) == 0)
+		return GIT_ENOTFOUND;
+
+	/* allocate space for wchar_t path to file */
+	file_utf16 = git__calloc(root->len + len + 2, sizeof(wchar_t));
+	if (!file_utf16)
+		return GIT_ENOMEM;
+
+	/* append root + '\\' + filename as wchar_t */
+	memcpy(file_utf16, root->path, root->len * sizeof(wchar_t));
+
+	if (*filename == '/' || *filename == '\\')
+		filename++;
+
+	if (gitwin_append_utf16(file_utf16 + root->len - 1, filename, len + 1) !=
+		(int)len) {
+		error = git__throw(GIT_EOSERR, "Failed to build file path");
+		goto cleanup;
+	}
+
+	for (scan = file_utf16; *scan; scan++)
+		if (*scan == L'/')
+			*scan = L'\\';
+
+	/* check access */
+	if (_waccess(file_utf16, F_OK) < 0) {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
+	/* convert to utf8 */
+	if ((file_utf8 = gitwin_from_utf16(file_utf16)) == NULL)
+		error = GIT_ENOMEM;
+
+	if (file_utf8) {
+		git_path_mkposix(file_utf8);
+		git_buf_attach(path, file_utf8, 0);
+	}
+
+cleanup:
+	git__free(file_utf16);
+
+	return error;
+}
+#endif
+
+int git_futils_find_system_file(git_buf *path, const char *filename)
+{
+	if (git_buf_joinpath(path, "/etc", filename) < GIT_SUCCESS)
+		return git_buf_lasterror(path);
+
+	if (git_futils_exists(path->ptr) == GIT_SUCCESS)
+		return GIT_SUCCESS;
+
+	git_buf_clear(path);
+
+#ifdef GIT_WIN32
+	return win32_find_system_file(path, filename);
+#else
+	return GIT_ENOTFOUND;
+#endif
+}
+

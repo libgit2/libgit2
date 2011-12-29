@@ -59,7 +59,7 @@ void git_repository_free(git_repository *repo)
 
 	git_cache_free(&repo->objects);
 	git_repository__refcache_free(&repo->references);
-	git_repository__attr_cache_free(&repo->attrcache);
+	git_attr_cache_flush(repo);
 
 	git__free(repo->path_repository);
 	git__free(repo->workdir);

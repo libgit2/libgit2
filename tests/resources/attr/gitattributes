@@ -1,0 +1,7 @@
+* rootattr
+root_test2 -rootattr
+root_test3 !rootattr
+binfile	   		   binary
+abc		foo bar baz
+[attr]mymacro positive -negative !rootattr
+macro* mymacro another=77

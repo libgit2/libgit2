@@ -1,18 +1,16 @@
-#include "attr.h"
-#include "buffer.h"
+#include "repository.h"
 #include "fileops.h"
 #include "config.h"
 #include <ctype.h>
 
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
 #define GIT_ATTR_FILE			".gitattributes"
-#define GIT_ATTR_FILE_SYSTEM	"/etc/gitattributes"
-#if GIT_WIN32
-#define GIT_ATTR_FILE_WIN32	L"%PROGRAMFILES%\\Git\\etc\\gitattributes"
-#endif
+#define GIT_ATTR_FILE_SYSTEM	"gitattributes"
 
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files);
+
+static int attr_cache_init(git_repository *repo);
 
 
 int git_attr_get(
@@ -180,6 +178,44 @@ cleanup:
 }
 
 
+int git_attr_add_macro(
+	git_repository *repo,
+	const char *name,
+	const char *values)
+{
+	int error;
+	git_attr_rule *macro = NULL;
+
+	if ((error = attr_cache_init(repo)) < GIT_SUCCESS)
+		return error;
+
+	macro = git__calloc(1, sizeof(git_attr_rule));
+	if (!macro)
+		return GIT_ENOMEM;
+
+	macro->match.pattern = git__strdup(name);
+	if (!macro->match.pattern) {
+		git__free(macro);
+		return GIT_ENOMEM;
+	}
+
+	macro->match.length = strlen(macro->match.pattern);
+	macro->match.flags = GIT_ATTR_FNMATCH_MACRO;
+
+	error = git_attr_assignment__parse(repo, &macro->assigns, &values);
+
+	if (error == GIT_SUCCESS)
+		error = git_attr_cache__insert_macro(repo, macro);
+
+	if (error < GIT_SUCCESS) {
+		git_attr_rule__free(macro);
+		git__free(macro);
+	}
+
+	return error;
+}
+
+
 /* add git_attr_file to vector of files, loading if needed */
 static int push_attrs(
 	git_repository *repo,
@@ -193,13 +229,6 @@ static int push_attrs(
 	git_attr_file *file;
 	int add_to_cache = 0;
 
-	if (cache->files == NULL) {
-		cache->files = git_hashtable_alloc(
-			8, git_hash__strhash_cb, git_hash__strcmp_cb);
-		if (!cache->files)
-			return git__throw(GIT_ENOMEM, "Could not create attribute cache");
-	}
-
 	if ((error = git_path_prettify(&path, filename, base)) < GIT_SUCCESS) {
 		if (error == GIT_EOSERR)
 			/* file was not found -- ignore error */
@@ -210,7 +239,7 @@ static int push_attrs(
 	/* either get attr_file from cache or read from disk */
 	file = git_hashtable_lookup(cache->files, path.ptr);
 	if (file == NULL) {
-		error = git_attr_file__from_file(&file, path.ptr);
+		error = git_attr_file__from_file(repo, path.ptr, &file);
 		add_to_cache = (error == GIT_SUCCESS);
 	}
 
@@ -237,6 +266,9 @@ static int collect_attr_files(
 	git_buf dir = GIT_BUF_INIT;
 	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
+
+	if ((error = attr_cache_init(repo)) < GIT_SUCCESS)
+		goto cleanup;
 
 	if ((error = git_vector_init(files, 4, NULL)) < GIT_SUCCESS)
 		goto cleanup;
@@ -288,8 +320,13 @@ static int collect_attr_files(
 		git_config_free(cfg);
 	}
 
-	if (error == GIT_SUCCESS)
-		error = push_attrs(repo, files, NULL, GIT_ATTR_FILE_SYSTEM);
+	if (error == GIT_SUCCESS) {
+		error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
+		if (error == GIT_SUCCESS)
+			error = push_attrs(repo, files, NULL, dir.ptr);
+		else if (error == GIT_ENOTFOUND)
+			error = GIT_SUCCESS;
+	}
 
  cleanup:
 	if (error < GIT_SUCCESS) {
@@ -302,10 +339,64 @@ static int collect_attr_files(
 }
 
 
-void git_repository__attr_cache_free(git_attr_cache *attrs)
+static int attr_cache_init(git_repository *repo)
 {
-	if (attrs && attrs->files) {
-		git_hashtable_free(attrs->files);
-		attrs->files = NULL;
+	int error = GIT_SUCCESS;
+	git_attr_cache *cache = &repo->attrcache;
+
+	if (cache->initialized)
+		return GIT_SUCCESS;
+
+	if (cache->files == NULL) {
+		cache->files = git_hashtable_alloc(
+			8, git_hash__strhash_cb, git_hash__strcmp_cb);
+		if (!cache->files)
+			return git__throw(GIT_ENOMEM, "Could not initialize attribute cache");
 	}
+
+	if (cache->macros == NULL) {
+		cache->macros = git_hashtable_alloc(
+			8, git_hash__strhash_cb, git_hash__strcmp_cb);
+		if (!cache->macros)
+			return git__throw(GIT_ENOMEM, "Could not initialize attribute cache");
+	}
+
+	cache->initialized = 1;
+
+	/* insert default macros */
+	error = git_attr_add_macro(repo, "binary", "-diff -crlf");
+
+	return error;
+}
+
+
+void git_attr_cache_flush(
+	git_repository *repo)
+{
+	if (!repo)
+		return;
+
+	if (repo->attrcache.files) {
+		const void *GIT_UNUSED(name);
+		git_attr_file *file;
+
+		GIT_HASHTABLE_FOREACH(repo->attrcache.files, name, file,
+			git_attr_file__free(file));
+
+		git_hashtable_free(repo->attrcache.files);
+		repo->attrcache.files = NULL;
+	}
+
+	if (repo->attrcache.macros) {
+		const void *GIT_UNUSED(name);
+		git_attr_rule *rule;
+
+		GIT_HASHTABLE_FOREACH(repo->attrcache.macros, name, rule,
+			git_attr_rule__free(rule));
+
+		git_hashtable_free(repo->attrcache.macros);
+		repo->attrcache.macros = NULL;
+	}
+
+	repo->attrcache.initialized = 0;
 }
