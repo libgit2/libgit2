@@ -2,7 +2,6 @@
 #include "tree.h"
 #include "repository.h"
 
-static unsigned int expect_idx;
 static git_repository *repo;
 static git_tree *atree, *btree;
 static git_oid aoid, boid;
@@ -104,10 +103,17 @@ void test_object_tree_diff__modification(void)
 	cl_must_pass(git_tree_diff(atree, btree, diff_cb, &expect));
 }
 
+struct diff_more_data {
+	git_tree_diff_data expect[3];
+	int expect_idx;
+};
+
 static int diff_more_cb(const git_tree_diff_data *diff, void *data)
 {
-	git_tree_diff_data *expect = (git_tree_diff_data *) data;
-	diff_cmp(diff, &expect[expect_idx++]);
+	struct diff_more_data *more_data = data;
+	diff_cmp(diff, &more_data->expect[more_data->expect_idx]);
+
+	more_data->expect_idx = (more_data->expect_idx + 1) % ARRAY_SIZE(more_data->expect);
 
 	return GIT_SUCCESS;
 }
@@ -116,9 +122,10 @@ void test_object_tree_diff__more(void)
 {
 	char *astr = "814889a078c031f61ed08ab5fa863aea9314344d";
 	char *bstr = "75057dd4114e74cca1d750d0aee1647c903cb60a";
-	git_tree_diff_data expect[3];
+	struct diff_more_data more_data;
+	git_tree_diff_data *expect = more_data.expect;
 
-	memset(expect, 0x0, 3 * sizeof(git_tree_diff_data));
+	memset(&more_data, 0x0, sizeof(struct diff_more_data));
 	/* M README */
 	expect[0].old_attr = 0100644;
 	expect[0].new_attr = 0100644;
@@ -146,5 +153,5 @@ void test_object_tree_diff__more(void)
 	cl_must_pass(git_tree_lookup(&atree, repo, &aoid));
 	cl_must_pass(git_tree_lookup(&btree, repo, &boid));
 
-	cl_must_pass(git_tree_diff(atree, btree, diff_more_cb, expect));
+	cl_must_pass(git_tree_diff(atree, btree, diff_more_cb, &more_data));
 }
