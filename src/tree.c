@@ -959,15 +959,22 @@ static int cmp_tentry_ientry(git_tree_entry *tentry, git_index_entry *ientry)
 	return git_oid_cmp(&tentry->oid, &ientry->oid);
 }
 
-static void make_tentry(git_tree_entry *tentry, git_index_entry *ientry, git_buf *buf)
+static void make_tentry(git_tree_entry *tentry, git_index_entry *ientry)
 {
+	char *last_slash;
+
 	memset(tentry, 0x0, sizeof(git_tree_entry));
 	tentry->attr = ientry->mode;
+
+	last_slash = strrchr(ientry->path, '/');
+	if (last_slash)
+		last_slash++;
+	else
+		last_slash = ientry->path;
+	tentry->filename = last_slash;
+
 	git_oid_cpy(&tentry->oid, &ientry->oid);
-	if (buf != NULL) {
-		tentry->filename = buf->ptr;
-		tentry->filename_len = buf->size;
-	}
+	tentry->filename_len = strlen(tentry->filename);
 }
 
 static int diff_index_cb(const char *root, git_tree_entry *tentry, void *data)
@@ -991,25 +998,24 @@ static int diff_index_cb(const char *root, git_tree_entry *tentry, void *data)
 
 	/* Like with 'git diff-index', the index is the right side*/
 	cmp = strcmp(git_buf_cstr(&fn_buf), ientry->path);
+	git_buf_free(&fn_buf);
 	if (cmp == 0) {
 		cbdata->i++;
 		if (!cmp_tentry_ientry(tentry, ientry))
 			goto exit;
 		/* modification */
-		make_tentry(&fake_entry, ientry, &fn_buf);
+		make_tentry(&fake_entry, ientry);
 		if ((error = signal_modification(tentry, &fake_entry, cbdata->cb, cbdata->data)) < 0)
 			goto exit;
 	} else if (cmp < 0) {
 		/* deletion */
 		memcpy(&fake_entry, tentry, sizeof(git_tree_entry));
-		fake_entry.filename = fn_buf.ptr;
-		fake_entry.filename_len = fn_buf.size;
 		if ((error = signal_deletion(tentry, cbdata->cb, cbdata->data)) < 0)
 			goto exit;
 	} else {
 		/* addition */
 		cbdata->i++;
-		make_tentry(&fake_entry, ientry, &fn_buf);
+		make_tentry(&fake_entry, ientry);
 		if ((error = signal_addition(&fake_entry, cbdata->cb, cbdata->data)) < 0)
 			goto exit;
 		/*
@@ -1022,7 +1028,6 @@ static int diff_index_cb(const char *root, git_tree_entry *tentry, void *data)
 	}
 
  exit:
-	git_buf_free(&fn_buf);
 	return error;
 }
 
