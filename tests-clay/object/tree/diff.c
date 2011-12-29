@@ -3,6 +3,7 @@
 #include "repository.h"
 
 static git_repository *repo;
+static git_index *theindex;
 static git_tree *atree, *btree;
 static git_oid aoid, boid;
 
@@ -26,9 +27,18 @@ static int diff_cb(const git_tree_diff_data *diff, void *data)
 	return GIT_SUCCESS;
 }
 
+static void test_diff(git_tree *a, git_tree *b, git_tree_diff_cb cb, void *data)
+{
+	cl_must_pass(git_tree_diff(a, b, cb, data));
+
+	cl_git_pass(git_index_read_tree(theindex, b));
+	cl_git_pass(git_tree_diff_index_recursive(a, theindex, cb, data));
+}
+
 void test_object_tree_diff__initialize(void)
 {
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_index(&theindex, repo));
 }
 
 void test_object_tree_diff__cleanup(void)
@@ -57,7 +67,7 @@ void test_object_tree_diff__addition(void)
 	cl_must_pass(git_tree_lookup(&atree, repo, &aoid));
 	cl_must_pass(git_tree_lookup(&btree, repo, &boid));
 
-	cl_must_pass(git_tree_diff(atree, btree, diff_cb, &expect));
+	test_diff(atree, btree, diff_cb, &expect);
 }
 
 void test_object_tree_diff__deletion(void)
@@ -78,7 +88,7 @@ void test_object_tree_diff__deletion(void)
 	cl_must_pass(git_tree_lookup(&atree, repo, &aoid));
 	cl_must_pass(git_tree_lookup(&btree, repo, &boid));
 
-	cl_must_pass(git_tree_diff(atree, btree, diff_cb, &expect));
+	test_diff(atree, btree, diff_cb, &expect);
 }
 
 void test_object_tree_diff__modification(void)
@@ -100,7 +110,7 @@ void test_object_tree_diff__modification(void)
 	cl_must_pass(git_tree_lookup(&atree, repo, &aoid));
 	cl_must_pass(git_tree_lookup(&btree, repo, &boid));
 
-	cl_must_pass(git_tree_diff(atree, btree, diff_cb, &expect));
+	test_diff(atree, btree, diff_cb, &expect);
 }
 
 struct diff_more_data {
@@ -153,5 +163,5 @@ void test_object_tree_diff__more(void)
 	cl_must_pass(git_tree_lookup(&atree, repo, &aoid));
 	cl_must_pass(git_tree_lookup(&btree, repo, &boid));
 
-	cl_must_pass(git_tree_diff(atree, btree, diff_more_cb, &more_data));
+	test_diff(atree, btree, diff_more_cb, &more_data);
 }
