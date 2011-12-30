@@ -15,8 +15,6 @@
 #define MAX_FILEMODE 0777777
 #define MAX_FILEMODE_BYTES 6
 
-#define ENTRY_IS_TREE(e) ((e)->attr & 040000)
-
 static int valid_attributes(const int attributes)
 {
 	return attributes >= 0 && attributes <= MAX_FILEMODE;
@@ -33,8 +31,8 @@ static int entry_sort_cmp(const void *a, const void *b)
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
 
 	return git_futils_cmp_path(
-		entry_a->filename, entry_a->filename_len, ENTRY_IS_TREE(entry_a),
-		entry_b->filename, entry_b->filename_len, ENTRY_IS_TREE(entry_b));
+		entry_a->filename, entry_a->filename_len, entry_is_tree(entry_a),
+		entry_b->filename, entry_b->filename_len, entry_is_tree(entry_b));
 }
 
 
@@ -717,7 +715,7 @@ static int tree_walk_post(
 		if (callback(path->ptr, entry, payload) < 0)
 			continue;
 
-		if (ENTRY_IS_TREE(entry)) {
+		if (entry_is_tree(entry)) {
 			git_tree *subtree;
 			size_t path_len = path->size;
 
@@ -980,7 +978,7 @@ static int diff_index_cb(const char *root, git_tree_entry *tentry, void *data)
 	git_buf fn_buf = GIT_BUF_INIT;
 	int cmp, error = GIT_SUCCESS;
 
-	if (ENTRY_IS_TREE(tentry))
+	if (entry_is_tree(tentry))
 		return GIT_SUCCESS;
 
 	git_buf_puts(&fn_buf, root);
