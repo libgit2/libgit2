@@ -8,6 +8,7 @@ const char *git_attr__false = "[internal]__FALSE__";
 
 static int git_attr_fnmatch__parse(git_attr_fnmatch *spec, const char **base);
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw);
+static void git_attr_rule__clear(git_attr_rule *rule);
 
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 {
@@ -72,7 +73,7 @@ int git_attr_file__from_buffer(
 
 		/* if the rule wasn't a pattern, on to the next */
 		if (error != GIT_SUCCESS) {
-			git_attr_rule__free(rule); /* free anything partially allocated */
+			git_attr_rule__clear(rule); /* reset rule contents */
 			if (error == GIT_ENOTFOUND)
 				error = GIT_SUCCESS;
 		} else {
@@ -82,9 +83,8 @@ int git_attr_file__from_buffer(
 
 cleanup:
 	if (error != GIT_SUCCESS) {
-		git__free(rule);
+		git_attr_rule__free(rule);
 		git_attr_file__free(attrs);
-		git__free(attrs);
 	} else {
 		*out = attrs;
 	}
@@ -122,14 +122,15 @@ void git_attr_file__free(git_attr_file *file)
 	if (!file)
 		return;
 
-	git_vector_foreach(&file->rules, i, rule) {
+	git_vector_foreach(&file->rules, i, rule)
 		git_attr_rule__free(rule);
-	}
 
 	git_vector_free(&file->rules);
 
 	git__free(file->path);
 	file->path = NULL;
+
+	git__free(file);
 }
 
 unsigned long git_attr_file__name_hash(const char *name)
@@ -505,7 +506,7 @@ int git_attr_assignment__parse(
 	return error;
 }
 
-void git_attr_rule__free(git_attr_rule *rule)
+static void git_attr_rule__clear(git_attr_rule *rule)
 {
 	unsigned int i;
 	git_attr_assignment *assign;
@@ -525,3 +526,10 @@ void git_attr_rule__free(git_attr_rule *rule)
 
 	git_vector_free(&rule->assigns);
 }
+
+void git_attr_rule__free(git_attr_rule *rule)
+{
+	git_attr_rule__clear(rule);
+	git__free(rule);
+}
+

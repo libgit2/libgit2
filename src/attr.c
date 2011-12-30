@@ -207,10 +207,8 @@ int git_attr_add_macro(
 	if (error == GIT_SUCCESS)
 		error = git_attr_cache__insert_macro(repo, macro);
 
-	if (error < GIT_SUCCESS) {
+	if (error < GIT_SUCCESS)
 		git_attr_rule__free(macro);
-		git__free(macro);
-	}
 
 	return error;
 }
