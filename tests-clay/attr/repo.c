@@ -40,8 +40,11 @@ void test_attr_repo__get_one(void)
 		{ "root_test2", "repoattr", GIT_ATTR_TRUE },
 		{ "root_test2", "rootattr", GIT_ATTR_FALSE },
 		{ "root_test2", "missingattr", NULL },
+		{ "root_test2", "multiattr", GIT_ATTR_FALSE },
 		{ "root_test3", "repoattr", GIT_ATTR_TRUE },
 		{ "root_test3", "rootattr", NULL },
+		{ "root_test3", "multiattr", "3" },
+		{ "root_test3", "multi2", NULL },
 		{ "subdir/subdir_test1", "repoattr", GIT_ATTR_TRUE },
 		{ "subdir/subdir_test1", "rootattr", GIT_ATTR_TRUE },
 		{ "subdir/subdir_test1", "missingattr", NULL },
@@ -166,21 +169,68 @@ void test_attr_repo__macros(void)
 {
 	const char *names[5] = { "rootattr", "binary", "diff", "crlf", "frotz" };
 	const char *names2[5] = { "mymacro", "positive", "negative", "rootattr", "another" };
+	const char *names3[3] = { "macro2", "multi2", "multi3" };
 	const char *values[5];
 
 	cl_git_pass(git_attr_get_many(g_repo, "binfile", 5, names, values));
 
 	cl_assert(values[0] == GIT_ATTR_TRUE);
-	cl_assert(values[1] == NULL);
+	cl_assert(values[1] == GIT_ATTR_TRUE);
 	cl_assert(values[2] == GIT_ATTR_FALSE);
 	cl_assert(values[3] == GIT_ATTR_FALSE);
 	cl_assert(values[4] == NULL);
 
 	cl_git_pass(git_attr_get_many(g_repo, "macro_test", 5, names2, values));
 
-	cl_assert(values[0] == NULL);
+	cl_assert(values[0] == GIT_ATTR_TRUE);
 	cl_assert(values[1] == GIT_ATTR_TRUE);
 	cl_assert(values[2] == GIT_ATTR_FALSE);
 	cl_assert(values[3] == NULL);
 	cl_assert_strequal("77", values[4]);
+
+	cl_git_pass(git_attr_get_many(g_repo, "macro_test", 3, names3, values));
+
+	cl_assert(values[0] == GIT_ATTR_TRUE);
+	cl_assert(values[1] == GIT_ATTR_FALSE);
+	cl_assert_strequal("answer", values[2]);
+}
+
+void test_attr_repo__bad_macros(void)
+{
+	const char *names[6] = { "rootattr", "positive", "negative",
+		"firstmacro", "secondmacro", "thirdmacro" };
+	const char *values[6];
+
+	cl_git_pass(git_attr_get_many(g_repo, "macro_bad", 6, names, values));
+
+	/* these three just confirm that the "mymacro" rule ran */
+	cl_assert(values[0] == NULL);
+	cl_assert(values[1] == GIT_ATTR_TRUE);
+	cl_assert(values[2] == GIT_ATTR_FALSE);
+
+	/* file contains:
+	 *     # let's try some malicious macro defs
+	 *     [attr]firstmacro -thirdmacro -secondmacro
+	 *     [attr]secondmacro firstmacro -firstmacro
+	 *     [attr]thirdmacro secondmacro=hahaha -firstmacro
+	 *     macro_bad firstmacro secondmacro thirdmacro
+	 *
+	 * firstmacro assignment list ends up with:
+	 *     -thirdmacro -secondmacro
+	 * secondmacro assignment list expands "firstmacro" and ends up with:
+	 *     -thirdmacro -secondmacro -firstmacro
+	 * thirdmacro assignment don't expand so list ends up with:
+	 *     secondmacro="hahaha"
+	 *
+	 * macro_bad assignment list ends up with:
+	 *     -thirdmacro -secondmacro firstmacro &&
+	 *     -thirdmacro -secondmacro -firstmacro secondmacro &&
+	 *     secondmacro="hahaha" thirdmacro
+	 *
+	 * so summary results should be:
+	 *     -firstmacro secondmacro="hahaha" thirdmacro
+	 */
+	cl_assert(values[3] == GIT_ATTR_FALSE);
+	cl_assert_strequal("hahaha", values[4]);
+	cl_assert(values[5] == GIT_ATTR_TRUE);
 }

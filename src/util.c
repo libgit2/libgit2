@@ -348,22 +348,30 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
  * Copyright (c) 1990 Regents of the University of California.
  * All rights reserved.
  */
-void **git__bsearch(const void *key, void **base, size_t nmemb, int (*compar)(const void *, const void *))
+int git__bsearch(
+	void **array,
+	size_t array_len,
+	const void *key,
+	int (*compare)(const void *, const void *),
+	size_t *position)
 {
-		int lim, cmp;
-		void **p;
+	int lim, cmp;
+	void **part, **base = array;
 
-		for (lim = nmemb; lim != 0; lim >>= 1) {
-				p = base + (lim >> 1);
-				cmp = (*compar)(key, *p);
-				if (cmp > 0) { /* key > p: move right */
-						base = p + 1;
-						lim--;
-				} else if (cmp == 0) {
-						return (void **)p;
-				} /* else move left */
-		}
-		return NULL;
+	for (lim = array_len; lim != 0; lim >>= 1) {
+		part = base + (lim >> 1);
+		cmp = (*compare)(key, *part);
+		if (cmp == 0) {
+			*position = (part - array);
+			return GIT_SUCCESS;
+		} else if (cmp > 0) { /* key > p; take right partition */
+			base = part + 1;
+			lim--;
+		} /* else take left partition */
+	}
+
+	*position = (base - array);
+	return GIT_ENOTFOUND;
 }
 
 /**

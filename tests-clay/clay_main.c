@@ -122,7 +122,8 @@ static const struct clay_func _clay_cb_attr_lookup[] = {
 	{"simple", &test_attr_lookup__simple}
 };
 static const struct clay_func _clay_cb_attr_repo[] = {
-    {"foreach", &test_attr_repo__foreach},
+    {"bad_macros", &test_attr_repo__bad_macros},
+	{"foreach", &test_attr_repo__foreach},
 	{"get_many", &test_attr_repo__get_many},
 	{"get_one", &test_attr_repo__get_one},
 	{"macros", &test_attr_repo__macros},
@@ -214,7 +215,10 @@ static const struct clay_func _clay_cb_core_strtol[] = {
 static const struct clay_func _clay_cb_core_vector[] = {
     {"0", &test_core_vector__0},
 	{"1", &test_core_vector__1},
-	{"2", &test_core_vector__2}
+	{"2", &test_core_vector__2},
+	{"3", &test_core_vector__3},
+	{"4", &test_core_vector__4},
+	{"5", &test_core_vector__5}
 };
 static const struct clay_func _clay_cb_index_rename[] = {
     {"single_file", &test_index_rename__single_file}
@@ -338,7 +342,7 @@ static const struct clay_suite _clay_suites[] = {
         "attr::repo",
         {"initialize", &test_attr_repo__initialize},
         {"cleanup", &test_attr_repo__cleanup},
-        _clay_cb_attr_repo, 5
+        _clay_cb_attr_repo, 6
     },
 	{
         "buf::basic",
@@ -428,7 +432,7 @@ static const struct clay_suite _clay_suites[] = {
         "core::vector",
         {NULL, NULL},
         {NULL, NULL},
-        _clay_cb_core_vector, 3
+        _clay_cb_core_vector, 6
     },
 	{
         "index::rename",
@@ -559,7 +563,7 @@ static const struct clay_suite _clay_suites[] = {
 };
 
 static size_t _clay_suite_count = 39;
-static size_t _clay_callback_count = 134;
+static size_t _clay_callback_count = 138;
 
 /* Core test functions */
 static void

@@ -12,16 +12,8 @@ static void git_attr_rule__clear(git_attr_rule *rule);
 
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 {
-	unsigned int i;
-	git_attr_assignment *assign;
-
 	if (macro->assigns.length == 0)
 		return git__throw(GIT_EMISSINGOBJDATA, "git attribute macro with no values");
-
-	git_vector_foreach(&macro->assigns, i, assign) {
-		GIT_REFCOUNT_OWN(assign, macro);
-		GIT_REFCOUNT_INC(assign);
-	}
 
 	return git_hashtable_insert(
 		repo->attrcache.macros, macro->match.pattern, macro);
@@ -358,7 +350,7 @@ static int sort_by_hash_and_name(const void *a_raw, const void *b_raw)
 		return strcmp(b->name, a->name);
 }
 
-static void free_assign(git_attr_assignment *assign)
+static void git_attr_assignment__free(git_attr_assignment *assign)
 {
 	git__free(assign->name);
 	assign->name = NULL;
@@ -371,6 +363,16 @@ static void free_assign(git_attr_assignment *assign)
 	git__free(assign);
 }
 
+static int merge_assignments(void **old_raw, void *new_raw)
+{
+	git_attr_assignment **old = (git_attr_assignment **)old_raw;
+	git_attr_assignment *new = (git_attr_assignment *)new_raw;
+
+	GIT_REFCOUNT_DEC(*old, git_attr_assignment__free);
+	*old = new;
+	return GIT_EEXISTS;
+}
+
 int git_attr_assignment__parse(
 	git_repository *repo,
 	git_vector *assigns,
@@ -381,6 +383,8 @@ int git_attr_assignment__parse(
 	git_attr_assignment *assign = NULL;
 
 	assert(assigns && !assigns->length);
+
+	assigns->_cmp = sort_by_hash_and_name;
 
 	while (*scan && *scan != '\n' && error == GIT_SUCCESS) {
 		const char *name_start, *value_start;
@@ -395,6 +399,7 @@ int git_attr_assignment__parse(
 				error = GIT_ENOMEM;
 				break;
 			}
+			GIT_REFCOUNT_INC(assign);
 		}
 
 		assign->name_hash = 5381;
@@ -449,8 +454,8 @@ int git_attr_assignment__parse(
 			}
 		}
 
-		/* expand macros (if given a repo) */
-		if (repo != NULL) {
+		/* expand macros (if given a repo with a macro cache) */
+		if (repo != NULL && assign->value == GIT_ATTR_TRUE) {
 			git_attr_rule *macro =
 				git_hashtable_lookup(repo->attrcache.macros, assign->name);
 
@@ -458,30 +463,25 @@ int git_attr_assignment__parse(
 				unsigned int i;
 				git_attr_assignment *massign;
 
-				/* issue warning: if assign->value != GIT_ATTR_TRUE */
-
-				git__free(assign->name);
-				assign->name = NULL;
-				if (assign->is_allocated) {
-					git__free((void *)assign->value);
-					assign->value = NULL;
-				}
-
 				git_vector_foreach(&macro->assigns, i, massign) {
-					error = git_vector_insert(assigns, massign);
-					if (error != GIT_SUCCESS)
-						break;
-					GIT_REFCOUNT_INC(&massign->rc);
-				}
+					GIT_REFCOUNT_INC(massign);
 
-				/* continue to next assignment */
-				continue;
+					error = git_vector_insert_sorted(
+						assigns, massign, &merge_assignments);
+
+					if (error == GIT_EEXISTS)
+						error = GIT_SUCCESS;
+					else if (error != GIT_SUCCESS)
+						break;
+				}
 			}
 		}
 
 		/* insert allocated assign into vector */
-		error = git_vector_insert(assigns, assign);
-		if (error < GIT_SUCCESS)
+		error = git_vector_insert_sorted(assigns, assign, &merge_assignments);
+		if (error == GIT_EEXISTS)
+			error = GIT_SUCCESS;
+		else if (error < GIT_SUCCESS)
 			break;
 
 		/* clear assign since it is now "owned" by the vector */
@@ -490,13 +490,9 @@ int git_attr_assignment__parse(
 
 	if (!assigns->length)
 		error = git__throw(GIT_ENOTFOUND, "No attribute assignments found for rule");
-	else {
-		assigns->_cmp = sort_by_hash_and_name;
-		git_vector_sort(assigns);
-	}
 
 	if (assign != NULL)
-		free_assign(assign);
+		git_attr_assignment__free(assign);
 
 	while (*scan && *scan != '\n') scan++;
 	if (*scan == '\n') scan++;
@@ -518,11 +514,8 @@ static void git_attr_rule__clear(git_attr_rule *rule)
 	rule->match.pattern = NULL;
 	rule->match.length = 0;
 
-	git_vector_foreach(&rule->assigns, i, assign) {
-		if (GIT_REFCOUNT_OWNER(assign) == rule)
-			GIT_REFCOUNT_OWN(assign, NULL);
-		GIT_REFCOUNT_DEC(assign, free_assign);
-	}
+	git_vector_foreach(&rule->assigns, i, assign)
+		GIT_REFCOUNT_DEC(assign, git_attr_assignment__free);
 
 	git_vector_free(&rule->assigns);
 }
