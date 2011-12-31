@@ -452,7 +452,7 @@ int git_config_file__ondisk(git_config_file **out, const char *path)
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
 	backend->parent.set = config_set;
-	backend->parent.delete = config_delete;
+	backend->parent.del = config_delete;
 	backend->parent.foreach = file_foreach;
 	backend->parent.free = backend_free;
 

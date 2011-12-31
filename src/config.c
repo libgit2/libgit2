@@ -171,7 +171,7 @@ int git_config_delete(git_config *cfg, const char *name)
 	internal = git_vector_get(&cfg->files, 0);
 	file = internal->file;
 
-	return file->delete(file, name);
+	return file->del(file, name);
 }
 
 /**************
