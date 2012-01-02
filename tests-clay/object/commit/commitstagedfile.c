@@ -3,16 +3,6 @@
 
 static git_repository *repo;
 
-static void file_create(const char *filename, const char *content)
-{
-	int fd;
-
-	fd = p_creat(filename, 0666);
-	cl_assert(fd != 0);
-	cl_git_pass(p_write(fd, content, strlen(content)));
-	cl_git_pass(p_close(fd));
-}
-
 void test_object_commit_commitstagedfile__initialize(void)
 {
 	cl_fixture("treebuilder");
@@ -79,7 +69,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	/*
 	 * Add a new file to the index
 	 */
-	file_create("treebuilder/test.txt", "test\n");
+	cl_git_mkfile("treebuilder/test.txt", "test\n");
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_add(index, "test.txt", 0));
 

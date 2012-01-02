@@ -1,5 +1,4 @@
 #include "clay_libgit2.h"
-#include "testlib.h"
 #include "posix.h"
 
 /* Test that reading and writing a tree is a no-op */
@@ -21,9 +20,9 @@ void test_index_read_tree__read_write_involution(void)
 	p_mkdir("./read_tree/abc", 0700);
 
 	/* Sort order: '-' < '/' < '_' */
-	file_create("./read_tree/abc-d", NULL);
-	file_create("./read_tree/abc/d", NULL);
-	file_create("./read_tree/abc_d", NULL);
+	cl_git_mkfile("./read_tree/abc-d", NULL);
+	cl_git_mkfile("./read_tree/abc/d", NULL);
+	cl_git_mkfile("./read_tree/abc_d", NULL);
 
 	cl_git_pass(git_index_add(index, "abc-d", 0));
 	cl_git_pass(git_index_add(index, "abc_d", 0));

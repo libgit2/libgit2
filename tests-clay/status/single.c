@@ -7,15 +7,6 @@ cleanup__remove_file(void *_file)
 	cl_must_pass(p_unlink((char *)_file));
 }
 
-static void
-file_create(const char *filename, const char *content)
-{
-	int fd = p_creat(filename, 0666);
-	cl_assert(fd >= 0);
-	cl_must_pass(p_write(fd, content, strlen(content)));
-	cl_must_pass(p_close(fd));
-}
-
 /* test retrieving OID from a file apart from the ODB */
 void test_status_single__hash_single_file(void)
 {
@@ -27,7 +18,7 @@ void test_status_single__hash_single_file(void)
 
 	/* initialization */
 	git_oid_fromstr(&expected_id, file_hash);
-	file_create(file_name, file_contents);
+	cl_git_mkfile(file_name, file_contents);
 	cl_set_cleanup(&cleanup__remove_file, (void *)file_name);
 
 	cl_git_pass(git_odb_hashfile(&actual_id, file_name, GIT_OBJ_BLOB));

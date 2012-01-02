@@ -51,4 +51,7 @@ GIT_INLINE(void) cl_assert_strequal_internal(
 #define REP256(STR)  REP16(REP16(STR))
 #define REP1024(STR) REP4(REP256(STR))
 
+/* Write the contents of a buffer to disk */
+void cl_git_mkfile(const char *filename, const char *content);
+
 #endif
