@@ -70,7 +70,7 @@ check_joinpath_n(
 
 
 /* get the dirname of a path */
-void test_core_path__0_dirname(void)
+void test_core_path__00_dirname(void)
 {
 	check_dirname(NULL, ".");
 	check_dirname("", ".");
@@ -90,7 +90,7 @@ void test_core_path__0_dirname(void)
 }
 
 /* get the base name of a path */
-void test_core_path__1_basename(void)
+void test_core_path__01_basename(void)
 {
 	check_basename(NULL, ".");
 	check_basename("", ".");
@@ -107,7 +107,7 @@ void test_core_path__1_basename(void)
 }
 
 /* get the latest component in a path */
-void test_core_path__2_topdir(void)
+void test_core_path__02_topdir(void)
 {
 	check_topdir(".git/", ".git/");
 	check_topdir("/.git/", ".git/");
@@ -124,7 +124,7 @@ void test_core_path__2_topdir(void)
 }
 
 /* properly join path components */
-void test_core_path__5_joins(void)
+void test_core_path__05_joins(void)
 {
 	check_joinpath("", "", "");
 	check_joinpath("", "a", "a");
@@ -159,7 +159,7 @@ void test_core_path__5_joins(void)
 }
 
 /* properly join path components for more than one path */
-void test_core_path__6_long_joins(void)
+void test_core_path__06_long_joins(void)
 {
 	check_joinpath_n("", "", "", "", "");
 	check_joinpath_n("", "a", "", "", "a/");
@@ -212,7 +212,7 @@ check_string_to_dir(
 }
 
 /* convert paths to dirs */
-void test_core_path__7_path_to_dir(void)
+void test_core_path__07_path_to_dir(void)
 {
 	check_path_to_dir("", "");
 	check_path_to_dir(".", "./");
@@ -240,7 +240,7 @@ void test_core_path__7_path_to_dir(void)
 }
 
 /* join path to itself */
-void test_core_path__8_self_join(void)
+void test_core_path__08_self_join(void)
 {
 	git_buf path = GIT_BUF_INIT;
 	ssize_t asize = 0;
@@ -272,4 +272,67 @@ void test_core_path__8_self_join(void)
 	cl_assert(asize < path.asize);
 	
 	git_buf_free(&path);
+}
+
+static void check_percent_decoding(const char *expected_result, const char *input)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git__percent_decode(&buf, input));
+	cl_assert_strequal(expected_result, git_buf_cstr(&buf));
+
+	git_buf_free(&buf);
+}
+
+void test_core_path__09_percent_decode(void)
+{
+	check_percent_decoding("abcd", "abcd");
+	check_percent_decoding("a2%", "a2%");
+	check_percent_decoding("a2%3", "a2%3");
+	check_percent_decoding("a2%%3", "a2%%3");
+	check_percent_decoding("a2%3z", "a2%3z");
+	check_percent_decoding("a,", "a%2c");
+	check_percent_decoding("a21", "a2%31");
+	check_percent_decoding("a2%1", "a2%%31");
+	check_percent_decoding("a bc ", "a%20bc%20");
+	check_percent_decoding("Vicent Mart" "\355", "Vicent%20Mart%ED");
+}
+
+static void check_fromurl(const char *expected_result, const char *input, int should_fail)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	assert(should_fail || expected_result);
+
+	if (!should_fail) {
+		cl_git_pass(git_path_fromurl(&buf, input));
+		cl_assert_strequal(expected_result, git_buf_cstr(&buf));
+	} else
+		cl_git_fail(git_path_fromurl(&buf, input));
+
+	git_buf_free(&buf);
+}
+
+#ifdef _MSC_VER
+#define ABS_PATH_MARKER ""
+#else
+#define ABS_PATH_MARKER "/"
+#endif
+
+void test_core_path__10_fromurl(void)
+{
+	/* Failing cases */
+	check_fromurl(NULL, "a", 1);
+	check_fromurl(NULL, "http:///c:/Temp%20folder/note.txt", 1);
+	check_fromurl(NULL, "file://c:/Temp%20folder/note.txt", 1);
+	check_fromurl(NULL, "file:////c:/Temp%20folder/note.txt", 1);
+	check_fromurl(NULL, "file:///", 1);
+	check_fromurl(NULL, "file:////", 1);
+	check_fromurl(NULL, "file://servername/c:/Temp%20folder/note.txt", 1);
+
+	/* Passing cases */
+	check_fromurl(ABS_PATH_MARKER "c:/Temp folder/note.txt", "file:///c:/Temp%20folder/note.txt", 0);
+	check_fromurl(ABS_PATH_MARKER "c:/Temp folder/note.txt", "file://localhost/c:/Temp%20folder/note.txt", 0);
+	check_fromurl(ABS_PATH_MARKER "c:/Temp+folder/note.txt", "file:///c:/Temp+folder/note.txt", 0);
+	check_fromurl(ABS_PATH_MARKER "a", "file:///a", 0);
 }

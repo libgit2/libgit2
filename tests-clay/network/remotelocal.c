@@ -2,6 +2,7 @@
 #include "transport.h"
 #include "buffer.h"
 #include "path.h"
+#include "posix.h"
 
 static git_repository *repo;
 static git_buf file_path_buf = GIT_BUF_INIT;
@@ -9,9 +10,11 @@ static git_remote *remote;
 
 static void build_local_file_url(git_buf *out, const char *fixture)
 {
+	const char *in_buf;
+
 	git_buf path_buf = GIT_BUF_INIT;
 
-	cl_git_pass(git_path_prettify_dir(&path_buf, cl_fixture(fixture), NULL));
+	cl_git_pass(git_path_prettify_dir(&path_buf, fixture, NULL));
 	cl_git_pass(git_buf_puts(out, "file://"));
 
 #ifdef _MSC_VER
@@ -27,21 +30,27 @@ static void build_local_file_url(git_buf *out, const char *fixture)
 	cl_git_pass(git_buf_putc(out, '/'));
 #endif
 
-	cl_git_pass(git_buf_puts(out, git_buf_cstr(&path_buf)));
+	in_buf = git_buf_cstr(&path_buf);
+
+	/*
+	 * A very hacky Url encoding that only takes care of escaping the spaces
+	 */
+	while (*in_buf) {
+		if (*in_buf == ' ')
+			cl_git_pass(git_buf_puts(out, "%20"));
+		else
+			cl_git_pass(git_buf_putc(out, *in_buf));
+
+		in_buf++;
+	}
 
 	git_buf_free(&path_buf);
 }
 
 void test_network_remotelocal__initialize(void)
 {
-	cl_fixture("remotelocal");
 	cl_git_pass(git_repository_init(&repo, "remotelocal/", 0));
 	cl_assert(repo != NULL);
-
-	build_local_file_url(&file_path_buf, "testrepo.git");
-
-	cl_git_pass(git_remote_new(&remote, repo, git_buf_cstr(&file_path_buf), NULL));
-	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
 }
 
 void test_network_remotelocal__cleanup(void)
@@ -62,11 +71,38 @@ static int count_ref__cb(git_remote_head *head, void *payload)
 	return GIT_SUCCESS;
 }
 
+static void connect_to_local_repository(const char *local_repository)
+{
+	build_local_file_url(&file_path_buf, local_repository);
+
+	cl_git_pass(git_remote_new(&remote, repo, git_buf_cstr(&file_path_buf), NULL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
+
+}
+
 void test_network_remotelocal__retrieve_advertised_references(void)
 {
 	int how_many_refs = 0;
 
+	connect_to_local_repository(cl_fixture("testrepo.git"));
+
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
 	cl_assert(how_many_refs == 12); /* 1 HEAD + 9 refs + 2 peeled tags */
+}
+
+void test_network_remotelocal__retrieve_advertised_references_from_spaced_repository(void)
+{
+	int how_many_refs = 0;
+
+	cl_fixture_sandbox("testrepo.git");
+	cl_git_pass(p_rename("testrepo.git", "spaced testrepo.git"));
+
+	connect_to_local_repository("spaced testrepo.git");
+
+	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
+
+	cl_assert(how_many_refs == 12); /* 1 HEAD */
+
+	cl_fixture_cleanup("spaced testrepo.git");
 }
