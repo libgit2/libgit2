@@ -165,4 +165,28 @@ extern int git_futils_direach(
 extern int git_futils_cmp_path(const char *name1, int len1, int isdir1,
 		const char *name2, int len2, int isdir2);
 
+/**
+ * Find a "global" file (i.e. one in a user's home directory).
+ *
+ * @param pathbuf buffer to write the full path into
+ * @param filename name of file to find in the home directory
+ * @return
+ * - GIT_SUCCESS if found;
+ * - GIT_ENOTFOUND if not found;
+ * - GIT_EOSERR on an unspecified OS related error.
+ */
+extern int git_futils_find_global_file(git_buf *path, const char *filename);
+
+/**
+ * Find a "system" file (i.e. one shared for all users of the system).
+ *
+ * @param pathbuf buffer to write the full path into
+ * @param filename name of file to find in the home directory
+ * @return
+ * - GIT_SUCCESS if found;
+ * - GIT_ENOTFOUND if not found;
+ * - GIT_EOSERR on an unspecified OS related error.
+ */
+extern int git_futils_find_system_file(git_buf *path, const char *filename);
+
 #endif /* INCLUDE_fileops_h__ */

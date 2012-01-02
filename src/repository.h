@@ -19,6 +19,7 @@
 #include "refs.h"
 #include "buffer.h"
 #include "odb.h"
+#include "attr_file.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -38,6 +39,7 @@ struct git_repository {
 
 	git_cache objects;
 	git_refcache references;
+	git_attr_cache attrcache;
 
 	char *path_repository;
 	char *workdir;

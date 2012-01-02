@@ -19,6 +19,8 @@ typedef struct git_vector {
 	int sorted;
 } git_vector;
 
+#define GIT_VECTOR_INIT {0}
+
 int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
 void git_vector_clear(git_vector *v);
@@ -39,7 +41,13 @@ GIT_INLINE(void *) git_vector_get(git_vector *v, unsigned int position)
 #define git_vector_foreach(v, iter, elem)	\
 	for ((iter) = 0; (iter) < (v)->length && ((elem) = (v)->contents[(iter)], 1); (iter)++ )
 
+#define git_vector_rforeach(v, iter, elem)	\
+	for ((iter) = (v)->length; (iter) > 0 && ((elem) = (v)->contents[(iter)-1], 1); (iter)-- )
+
 int git_vector_insert(git_vector *v, void *element);
+int git_vector_insert_sorted(git_vector *v, void *element,
+	int (*on_dup)(void **old, void *new));
 int git_vector_remove(git_vector *v, unsigned int idx);
 void git_vector_uniq(git_vector *v);
+
 #endif

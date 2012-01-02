@@ -11,6 +11,7 @@
 #define INCLUDE_git_utfconv_h__
 
 wchar_t* gitwin_to_utf16(const char* str);
+int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
 char* gitwin_from_utf16(const wchar_t* str);
 
 #endif

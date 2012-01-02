@@ -31,17 +31,6 @@ struct packref {
 
 static const int default_table_size = 32;
 
-static uint32_t reftable_hash(const void *key, int hash_id)
-{
-	static uint32_t hash_seeds[GIT_HASHTABLE_HASHES] = {
-		2147483647,
-		0x5d20bb23,
-		0x7daaab3c
-	};
-
-	return git__hash(key, strlen((const char *)key), hash_seeds[hash_id]);
-}
-
 static int reference_read(
 	git_fbuffer *file_content,
 	time_t *mtime,
@@ -445,9 +434,7 @@ static int packed_load(git_repository *repo)
 	/* First we make sure we have allocated the hash table */
 	if (ref_cache->packfile == NULL) {
 		ref_cache->packfile = git_hashtable_alloc(
-			default_table_size,
-			reftable_hash,
-			(git_hash_keyeq_ptr)&git__strcmp_cb);
+			default_table_size, git_hash__strhash_cb, git_hash__strcmp_cb);
 
 		if (ref_cache->packfile == NULL) {
 			error = GIT_ENOMEM;

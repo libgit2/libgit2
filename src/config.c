@@ -337,6 +337,11 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 	return git__throw(error, "Config value '%s' not found", name);
 }
 
+int git_config_find_global_r(git_buf *path)
+{
+	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
+}
+
 int git_config_find_global(char *global_config_path)
 {
 	git_buf path  = GIT_BUF_INIT;
@@ -354,79 +359,9 @@ int git_config_find_global(char *global_config_path)
 	return error;
 }
 
-int git_config_find_global_r(git_buf *path)
+int git_config_find_system_r(git_buf *path)
 {
-	int error;
-	const char *home = getenv("HOME");
-
-#ifdef GIT_WIN32
-	if (home == NULL)
-		home = getenv("USERPROFILE");
-#endif
-
-	if (home == NULL)
-		return git__throw(GIT_EOSERR, "Failed to open global config file. Cannot locate the user's home directory");
-
-	if ((error = git_buf_joinpath(path, home, GIT_CONFIG_FILENAME)) < GIT_SUCCESS)
-		return error;
-
-	if (git_futils_exists(path->ptr) < GIT_SUCCESS) {
-		git_buf_clear(path);
-		return git__throw(GIT_EOSERR, "Failed to open global config file. The file does not exist");
-	}
-
-	return GIT_SUCCESS;
-}
-
-
-
-#if GIT_WIN32
-static int win32_find_system(git_buf *system_config_path)
-{
-	const wchar_t *query = L"%PROGRAMFILES%\\Git\\etc\\gitconfig";
-	wchar_t *apphome_utf16;
-	char *apphome_utf8;
-	DWORD size, ret;
-
-	size = ExpandEnvironmentStringsW(query, NULL, 0);
-	/* The function gave us the full size of the buffer in chars, including NUL */
-	apphome_utf16 = git__malloc(size * sizeof(wchar_t));
-	if (apphome_utf16 == NULL)
-		return GIT_ENOMEM;
-
-	ret = ExpandEnvironmentStringsW(query, apphome_utf16, size);
-	if (ret != size)
-		return git__throw(GIT_ERROR, "Failed to expand environment strings");
-
-	if (_waccess(apphome_utf16, F_OK) < 0) {
-		git__free(apphome_utf16);
-		return GIT_ENOTFOUND;
-	}
-
-	apphome_utf8 = gitwin_from_utf16(apphome_utf16);
-	git__free(apphome_utf16);
-
-	git_buf_attach(system_config_path, apphome_utf8, 0);
-
-	return GIT_SUCCESS;
-}
-#endif
-
-int git_config_find_system_r(git_buf *system_config_path)
-{
-	if (git_buf_sets(system_config_path, "/etc/gitconfig") < GIT_SUCCESS)
-		return git_buf_lasterror(system_config_path);
-
-	if (git_futils_exists(system_config_path->ptr) == GIT_SUCCESS)
-		return GIT_SUCCESS;
-
-	git_buf_clear(system_config_path);
-
-#if GIT_WIN32
-	return win32_find_system(system_config_path);
-#else
-	return GIT_ENOTFOUND;
-#endif
+	return git_futils_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
 int git_config_find_system(char *system_config_path)

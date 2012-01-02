@@ -57,6 +57,11 @@ wchar_t* gitwin_to_utf16(const char* str)
 	return ret;
 }
 
+int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
+{
+	return MultiByteToWideChar(_active_codepage, 0, str, -1, buffer, len);
+}
+
 char* gitwin_from_utf16(const wchar_t* str)
 {
 	char* ret;

@@ -105,8 +105,13 @@ extern void git__strtolower(char *str);
 extern int git__fnmatch(const char *pattern, const char *name, int flags);
 
 extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));
-extern void **git__bsearch(const void *key, void **base, size_t nmemb,
-	int (*compar)(const void *, const void *));
+
+extern int git__bsearch(
+	void **array,
+	size_t array_len,
+	const void *key,
+	int (*compare)(const void *, const void *),
+	size_t *position);
 
 extern int git__strcmp_cb(const void *a, const void *b);
 

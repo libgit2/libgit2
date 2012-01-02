@@ -64,3 +64,128 @@ void test_core_vector__2(void)
 }
 
 
+static int compare_them(const void *a, const void *b)
+{
+	return (int)((long)a - (long)b);
+}
+
+/* insert_sorted */
+void test_core_vector__3(void)
+{
+	git_vector x;
+	long i;
+	git_vector_init(&x, 1, &compare_them);
+
+	for (i = 0; i < 10; i += 2) {
+		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
+	}
+
+	for (i = 9; i > 0; i -= 2) {
+		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
+	}
+
+	cl_assert(x.length == 10);
+	for (i = 0; i < 10; ++i) {
+		cl_assert(git_vector_get(&x, i) == (void*)(i + 1));
+	}
+
+	git_vector_free(&x);
+}
+
+/* insert_sorted with duplicates */
+void test_core_vector__4(void)
+{
+	git_vector x;
+	long i;
+	git_vector_init(&x, 1, &compare_them);
+
+	for (i = 0; i < 10; i += 2) {
+		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
+	}
+
+	for (i = 9; i > 0; i -= 2) {
+		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
+	}
+
+	for (i = 0; i < 10; i += 2) {
+		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
+	}
+
+	for (i = 9; i > 0; i -= 2) {
+		git_vector_insert_sorted(&x, (void*)(i + 1), NULL);
+	}
+
+	cl_assert(x.length == 20);
+	for (i = 0; i < 20; ++i) {
+		cl_assert(git_vector_get(&x, i) == (void*)(i / 2 + 1));
+	}
+
+	git_vector_free(&x);
+}
+
+typedef struct {
+	int content;
+	int count;
+} my_struct;
+
+static int _struct_count = 0;
+
+static int compare_structs(const void *a, const void *b)
+{
+	return ((const my_struct *)a)->content -
+		((const my_struct *)b)->content;
+}
+
+static int merge_structs(void **old_raw, void *new)
+{
+	my_struct *old = *(my_struct **)old_raw;
+	cl_assert(((my_struct *)old)->content == ((my_struct *)new)->content);
+	((my_struct *)old)->count += 1;
+	git__free(new);
+	_struct_count--;
+	return GIT_EEXISTS;
+}
+
+static my_struct *alloc_struct(int value)
+{
+	my_struct *st = git__malloc(sizeof(my_struct));
+	st->content = value;
+	st->count = 0;
+	_struct_count++;
+	return st;
+}
+
+/* insert_sorted with duplicates and special handling */
+void test_core_vector__5(void)
+{
+	git_vector x;
+	int i;
+
+	git_vector_init(&x, 1, &compare_structs);
+
+	for (i = 0; i < 10; i += 2)
+		git_vector_insert_sorted(&x, alloc_struct(i), &merge_structs);
+
+	for (i = 9; i > 0; i -= 2)
+		git_vector_insert_sorted(&x, alloc_struct(i), &merge_structs);
+
+	cl_assert(x.length == 10);
+	cl_assert(_struct_count == 10);
+
+	for (i = 0; i < 10; i += 2)
+		git_vector_insert_sorted(&x, alloc_struct(i), &merge_structs);
+
+	for (i = 9; i > 0; i -= 2)
+		git_vector_insert_sorted(&x, alloc_struct(i), &merge_structs);
+
+	cl_assert(x.length == 10);
+	cl_assert(_struct_count == 10);
+
+	for (i = 0; i < 10; ++i) {
+		cl_assert(((my_struct *)git_vector_get(&x, i))->content == i);
+		git__free(git_vector_get(&x, i));
+		_struct_count--;
+	}
+
+	git_vector_free(&x);
+}

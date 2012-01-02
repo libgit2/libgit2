@@ -29,7 +29,12 @@ static int resize_vector(git_vector *v)
 void git_vector_free(git_vector *v)
 {
 	assert(v);
+
 	git__free(v->contents);
+	v->contents = NULL;
+
+	v->length = 0;
+	v->_alloc_size = 0;
 }
 
 int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp)
@@ -69,6 +74,45 @@ int git_vector_insert(git_vector *v, void *element)
 	return GIT_SUCCESS;
 }
 
+int git_vector_insert_sorted(git_vector *v, void *element, int (*on_dup)(void **old, void *new))
+{
+	int error = GIT_SUCCESS;
+	size_t pos;
+
+	assert(v && v->_cmp);
+
+	if (!v->sorted)
+		git_vector_sort(v);
+
+	if (v->length >= v->_alloc_size) {
+		if (resize_vector(v) < 0)
+			return GIT_ENOMEM;
+	}
+
+	error = git__bsearch(v->contents, v->length, element, v->_cmp, &pos);
+
+	/* If we found the element and have a duplicate handler callback,
+	 * invoke it.  If it returns an error, then cancel insert, otherwise
+	 * proceed with normal insert.
+	 */
+	if (error == GIT_SUCCESS && on_dup != NULL) {
+		error = on_dup(&v->contents[pos], element);
+		if (error != GIT_SUCCESS)
+			return error;
+	}
+
+	/* shift elements to the right */
+	if (pos < v->length) {
+		memmove(v->contents + pos + 1, v->contents + pos,
+		        (v->length - pos) * sizeof(void *));
+	}
+
+	v->contents[pos] = element;
+	v->length++;
+
+	return GIT_SUCCESS;
+}
+
 void git_vector_sort(git_vector *v)
 {
 	assert(v);
@@ -82,7 +126,7 @@ void git_vector_sort(git_vector *v)
 
 int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *key)
 {
-	void **find;
+	size_t pos;
 
 	assert(v && key && key_lookup);
 
@@ -92,9 +136,9 @@ int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *ke
 
 	git_vector_sort(v);
 
-	find = git__bsearch(key, v->contents, v->length, key_lookup);
-	if (find != NULL)
-		return (int)(find - v->contents);
+	if (git__bsearch(v->contents, v->length, key, key_lookup,
+			&pos) == GIT_SUCCESS)
+		return (int)pos;
 
 	return git__throw(GIT_ENOTFOUND, "Can't find element");
 }
