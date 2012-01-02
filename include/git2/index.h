@@ -301,6 +301,17 @@ GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged_byindex(git_
  */
 GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
 
+/**
+ * Read a tree into the index file
+ *
+ * The current index contents will be replaced by the specified tree.
+ *
+ * @param index an existing index object
+ * @param tree tree to read
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
+
 /** @} */
 GIT_END_DECL
 #endif

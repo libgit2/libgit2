@@ -49,6 +49,7 @@ OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (BUILD_TESTS "Build Tests" ON)
 OPTION (BUILD_CLAY "Build Tests using the Clay suite" OFF)
+OPTION (TAGS "Generate tags" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -91,7 +92,7 @@ FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-    ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
+	ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
 	FILE(GLOB SRC src/*.c src/transports/*.c src/win32/*.c)
 ELSE()
 	FILE(GLOB SRC src/*.c src/transports/*.c src/unix/*.c)
@@ -113,9 +114,9 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_
 
 # Install
 INSTALL(TARGETS git2
-    RUNTIME DESTINATION ${INSTALL_BIN}
-    LIBRARY DESTINATION ${INSTALL_LIB}
-    ARCHIVE DESTINATION ${INSTALL_LIB}
+	RUNTIME DESTINATION ${INSTALL_BIN}
+	LIBRARY DESTINATION ${INSTALL_LIB}
+	ARCHIVE DESTINATION ${INSTALL_LIB}
 )
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${INSTALL_LIB}/pkgconfig )
 INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
@@ -126,7 +127,7 @@ IF (BUILD_TESTS)
 	SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
 	ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
 
-    INCLUDE_DIRECTORIES(tests)
+	INCLUDE_DIRECTORIES(tests)
 	FILE(GLOB SRC_TEST tests/t??-*.c)
 
 	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
@@ -142,13 +143,22 @@ IF (BUILD_TESTS)
 ENDIF ()
 
 IF (BUILD_CLAY)
+	FIND_PACKAGE(PythonInterp REQUIRED)
+
 	SET(CLAY_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
+	SET(CLAY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests-clay")
 	ADD_DEFINITIONS(-DCLAY_FIXTURE_PATH=\"${CLAY_FIXTURES}\")
 
-    INCLUDE_DIRECTORIES(tests-clay)
-	FILE(GLOB_RECURSE SRC_TEST tests-clay/*.c)
+	INCLUDE_DIRECTORIES(${CLAY_PATH})
+	FILE(GLOB_RECURSE SRC_TEST ${CLAY_PATH}/*/*.c ${CLAY_PATH}/clay_helpers.c ${CLAY_PATH}/testlib.c)
 
-	ADD_EXECUTABLE(libgit2_clay ${SRC} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
+	ADD_CUSTOM_COMMAND(
+		OUTPUT ${CLAY_PATH}/clay_main.c ${CLAY_PATH}/clay.h
+		COMMAND ${PYTHON_EXECUTABLE} clay -vtap .
+		DEPENDS ${CLAY_PATH}/clay ${SRC_TEST}
+		WORKING_DIRECTORY ${CLAY_PATH}
+	)
+	ADD_EXECUTABLE(libgit2_clay ${SRC} ${CLAY_PATH}/clay_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
 	TARGET_LINK_LIBRARIES(libgit2_clay ${CMAKE_THREAD_LIBS_INIT})
 	IF (WIN32)
 		TARGET_LINK_LIBRARIES(libgit2_clay ws2_32)
@@ -158,4 +168,23 @@ IF (BUILD_CLAY)
 
 	ENABLE_TESTING()
 	ADD_TEST(libgit2_clay libgit2_clay)
+ENDIF ()
+
+IF (TAGS)
+	FIND_PROGRAM(CTAGS ctags)
+	IF (NOT CTAGS)
+		message(FATAL_ERROR "Could not find ctags command")
+	ENDIF ()
+
+	FILE(GLOB_RECURSE SRC_ALL *.[ch])
+
+	ADD_CUSTOM_COMMAND(
+		OUTPUT tags
+		COMMAND ${CTAGS} -a ${SRC_ALL}
+		DEPENDS ${SRC_ALL}
+	)
+	ADD_CUSTOM_TARGET(
+		do_tags ALL
+		DEPENDS tags
+	)
 ENDIF ()
