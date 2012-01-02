@@ -9,13 +9,9 @@ https://github.com/tanoku/clay
 
 * Write your modules and tests. Use good, meaningful names.
 
-* Mix the tests:
-
-        ./clay -vtap .
-
 * Make sure you actually build the tests by setting:
 
-        BUILD_CLAY=ON
+        cmake -DBUILD_CLAY=ON build/
 
 * Test:
 

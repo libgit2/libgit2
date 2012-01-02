@@ -10,6 +10,7 @@
 #include "common.h"
 #include "repository.h"
 #include "index.h"
+#include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"
 #include "git2/odb.h"
@@ -935,4 +936,45 @@ static int write_index(git_index *index, git_filebuf *file)
 int git_index_entry_stage(const git_index_entry *entry)
 {
 	return (entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT;
+}
+
+static int read_tree_cb(const char *root, git_tree_entry *tentry, void *data)
+{
+	int ret = GIT_SUCCESS;
+	git_index *index = data;
+	git_index_entry *entry = NULL;
+	git_buf path = GIT_BUF_INIT;
+
+	if (entry_is_tree(tentry))
+		goto exit;
+
+	ret = git_buf_joinpath(&path, root, tentry->filename);
+	if (ret < GIT_SUCCESS)
+		goto exit;
+
+	entry = git__calloc(1, sizeof(git_index_entry));
+	if (!entry) {
+		ret = GIT_ENOMEM;
+		goto exit;
+	}
+
+	entry->mode = tentry->attr;
+	entry->oid = tentry->oid;
+	entry->path = git_buf_detach(&path);
+
+	ret = index_insert(index, entry, 0);
+
+exit:
+	git_buf_free(&path);
+
+	if (ret < GIT_SUCCESS)
+		index_entry_free(entry);
+	return ret;
+}
+
+int git_index_read_tree(git_index *index, git_tree *tree)
+{
+	git_index_clear(index);
+
+	return git_tree_walk(tree, read_tree_cb, GIT_TREEWALK_POST, index);
 }

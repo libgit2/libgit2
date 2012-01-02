@@ -349,9 +349,6 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 {
 	assert(out && repo);
 
-	if (repo->is_bare)
-		return git__throw(GIT_EBAREINDEX, "Cannot open index in bare repository");
-
 	if (repo->_index == NULL) {
 		int error;
 		git_buf index_path = GIT_BUF_INIT;
