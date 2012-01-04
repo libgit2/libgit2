@@ -13,6 +13,8 @@
 #include "refs.h"
 #include "transport.h"
 #include "posix.h"
+#include "path.h"
+#include "buffer.h"
 
 typedef struct {
 	git_transport parent;
@@ -148,7 +150,6 @@ static int local_ls(git_transport *transport, git_headlist_cb list_cb, void *pay
 	return GIT_SUCCESS;
 }
 
-
 /*
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calulating the heads ourselves.
@@ -159,24 +160,26 @@ static int local_connect(git_transport *transport, int GIT_UNUSED(direction))
 	int error;
 	transport_local *t = (transport_local *) transport;
 	const char *path;
+	git_buf buf = GIT_BUF_INIT;
+
 	GIT_UNUSED_ARG(direction);
 
 	/* The repo layer doesn't want the prefix */
 	if (!git__prefixcmp(transport->url, "file://")) {
-		path = transport->url + strlen("file://");
+		error = git_path_fromurl(&buf, transport->url);
+		if (error < GIT_SUCCESS) {
+			git_buf_free(&buf);
+			return git__rethrow(error, "Failed to parse remote path");
+		}
+		path = git_buf_cstr(&buf);
 
-#ifdef _MSC_VER
-		/* skip the leading slash on windows before the drive letter */
-		if (*path != '/')
-			return git__throw(GIT_EINVALIDPATH, "Invalid local uri '%s'.", transport->url);
-
-		path++;
-#endif
-
-	} else
+	} else /* We assume transport->url is already a path */
 		path = transport->url;
 
 	error = git_repository_open(&repo, path);
+
+	git_buf_free(&buf);
+
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to open remote");
 

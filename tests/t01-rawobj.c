@@ -52,17 +52,6 @@ BEGIN_TEST(oid2, "fail when parsing an invalid string as oid")
 	must_fail(git_oid_fromstr(&out, "moo"));
 END_TEST
 
-static int from_hex(unsigned int i)
-{
-	if (i >= '0' && i <= '9')
-		return i - '0';
-	if (i >= 'a' && i <= 'f')
-		return 10 + (i - 'a');
-	if (i >= 'A' && i <= 'F')
-		return 10 + (i - 'A');
-	return -1;
-}
-
 BEGIN_TEST(oid3, "find all invalid characters when parsing an oid")
 	git_oid out;
 	unsigned char exp[] = {
@@ -77,8 +66,8 @@ BEGIN_TEST(oid3, "find all invalid characters when parsing an oid")
 	for (i = 0; i < 256; i++) {
 		in[38] = (char)i;
 
-		if (from_hex(i) >= 0) {
-			exp[19] = (unsigned char)(from_hex(i) << 4);
+		if (git__fromhex(i) >= 0) {
+			exp[19] = (unsigned char)(git__fromhex(i) << 4);
 			must_pass(git_oid_fromstr(&out, in));
 			must_be_true(memcmp(out.id, exp, sizeof(out.id)) == 0);
 		} else {

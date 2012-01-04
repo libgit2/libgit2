@@ -74,4 +74,7 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 #	define git_path_mkposix(p) /* blank */
 #endif
 
+extern int git__percent_decode(git_buf *decoded_out, const char *input);
+extern int git_path_fromurl(git_buf *local_path_out, const char *file_url);
+
 #endif
