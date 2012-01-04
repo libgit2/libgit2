@@ -7,19 +7,21 @@
 void test_attr_file__simple_read(void)
 {
 	git_attr_file *file = NULL;
+	git_attr_assignment *assign;
+	git_attr_rule *rule;
 
 	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), &file));
 	cl_assert_strequal(cl_fixture("attr/attr0"), file->path);
 	cl_assert(file->rules.length == 1);
 
-	git_attr_rule *rule = get_rule(0);
+	rule = get_rule(0);
 	cl_assert(rule != NULL);
 	cl_assert_strequal("*", rule->match.pattern);
 	cl_assert(rule->match.length == 1);
 	cl_assert(rule->match.flags == 0);
 
 	cl_assert(rule->assigns.length == 1);
-	git_attr_assignment *assign = get_assign(rule, 0);
+	assign = get_assign(rule, 0);
 	cl_assert(assign != NULL);
 	cl_assert_strequal("binary", assign->name);
 	cl_assert(assign->value == GIT_ATTR_TRUE);
