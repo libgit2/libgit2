@@ -73,7 +73,7 @@ int git_attr_get_many(
 	attr_get_many_info *info = NULL;
 	size_t num_found = 0;
 
-	memset(values, 0, sizeof(const char *) * num_attr);
+	memset((void *)values, 0, sizeof(const char *) * num_attr);
 
 	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS ||
 		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)

@@ -486,7 +486,7 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 		filename++;
 
 	if (gitwin_append_utf16(file_utf16 + root->len - 1, filename, len + 1) !=
-		(int)len) {
+		(int)len + 1) {
 		error = git__throw(GIT_EOSERR, "Failed to build file path");
 		goto cleanup;
 	}
