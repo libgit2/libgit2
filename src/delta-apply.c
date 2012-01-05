@@ -57,7 +57,7 @@ int git__delta_apply(
 	if (hdr_sz(&res_sz, &delta, delta_end) < 0)
 		return git__throw(GIT_ERROR, "Failed to apply delta. Base size does not match given data");
 
-	if ((res_dp = git__malloc(res_sz + 1)) == NULL)
+	if ((res_dp = git__malloc((res_sz + 16) & ~7)) == NULL)
 		return GIT_ENOMEM;
 	res_dp[res_sz] = '\0';
 	out->data = res_dp;
