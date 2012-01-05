@@ -7,7 +7,9 @@ void test_object_commit_commitstagedfile__initialize(void)
 {
 	cl_fixture("treebuilder");
 	cl_git_pass(git_repository_init(&repo, "treebuilder/", 0));
-	cl_git_pass(git_repository_open(&repo, "treebuilder/.git"));
+	/* just initialized, so open not needed...
+	 * cl_git_pass(git_repository_open(&repo, "treebuilder/.git"));
+	 */
 	cl_assert(repo != NULL);
 }
 
