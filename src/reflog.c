@@ -237,9 +237,9 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 		return error;
 	}
 
-	git_reference_free(r);
-
 	git_oid_to_string(new, GIT_OID_HEXSZ+1, oid);
+
+	git_reference_free(r);
 
 	error = git_buf_join_n(&log_path, '/', 3,
 		ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
