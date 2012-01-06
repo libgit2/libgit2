@@ -120,7 +120,7 @@ int git_config_add_file(git_config *cfg, git_config_file *file, int priority)
 	assert(cfg && file);
 
 	if ((error = file->open(file)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to open config file");
+		return git__throw(error, "Failed to open config file");
 
 	internal = git__malloc(sizeof(file_internal));
 	if (internal == NULL)
