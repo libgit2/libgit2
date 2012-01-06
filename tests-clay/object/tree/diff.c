@@ -45,6 +45,7 @@ void test_object_tree_diff__cleanup(void)
 {
 	git_tree_free(atree);
 	git_tree_free(btree);
+	git_index_free(theindex);
 	git_repository_free(repo);
 }
 
