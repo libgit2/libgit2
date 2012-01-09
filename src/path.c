@@ -181,8 +181,8 @@ int git_path_root(const char *path)
 
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 {
-	char *result = NULL;
-	int   error = GIT_SUCCESS;
+	int  error = GIT_SUCCESS;
+	char buf[GIT_PATH_MAX];
 
 	git_buf_clear(path_out);
 
@@ -193,16 +193,10 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 		path = path_out->ptr;
 	}
 
-	/* allow realpath to allocate the buffer */
-	if (path != NULL)
-		result = p_realpath(path, NULL);
-
-	if (result) {
-		error = git_buf_sets(path_out, result);
-		git__free(result);
-	} else {
+	if (path == NULL || p_realpath(path, buf) == NULL)
 		error = GIT_EOSERR;
-	}
+	else
+		error = git_buf_sets(path_out, buf);
 
 	return error;
 }
