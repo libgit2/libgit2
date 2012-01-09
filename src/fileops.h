@@ -102,6 +102,14 @@ extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 extern int git_futils_rmdir_r(const char *path, int force);
 
 /**
+ * Get the directory for a path.
+ *
+ * If the path is a directory, this does nothing (save append a '/' as needed).
+ * If path is a normal file, this gets the directory containing it.
+ */
+extern int git_futils_dir_for_path(git_buf *dir, const char *path, const char *base);
+
+/**
  * Create and open a temporary file with a `_git2_` suffix.
  * Writes the filename into path_out.
  * @return On success, an open file descriptor, else an error code < 0.

@@ -534,3 +534,15 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 #endif
 }
 
+int git_futils_dir_for_path(git_buf *dir, const char *path, const char *base)
+{
+	if (git_path_prettify(dir, path, base) == GIT_SUCCESS) {
+		/* call dirname if this is not a directory */
+		if (git_futils_isdir(dir->ptr) != GIT_SUCCESS)
+			git_path_dirname_r(dir, dir->ptr);
+
+		git_path_to_dir(dir);
+	}
+
+	return git_buf_lasterror(dir);
+}

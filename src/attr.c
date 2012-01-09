@@ -6,11 +6,10 @@
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_SYSTEM	"gitattributes"
+#define GIT_ATTR_CONFIG			"core.attributesfile"
 
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files);
-
-static int attr_cache_init(git_repository *repo);
 
 
 int git_attr_get(
@@ -186,7 +185,7 @@ int git_attr_add_macro(
 	int error;
 	git_attr_rule *macro = NULL;
 
-	if ((error = attr_cache_init(repo)) < GIT_SUCCESS)
+	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
 		return error;
 
 	macro = git__calloc(1, sizeof(git_attr_rule));
@@ -215,11 +214,12 @@ int git_attr_add_macro(
 
 
 /* add git_attr_file to vector of files, loading if needed */
-static int push_attrs(
+int git_attr_cache__push_file(
 	git_repository *repo,
-	git_vector     *files,
+	git_vector     *stack,
 	const char     *base,
-	const char     *filename)
+	const char     *filename,
+	int (*loader)(git_repository *, const char *, git_attr_file **))
 {
 	int error = GIT_SUCCESS;
 	git_attr_cache *cache = &repo->attrcache;
@@ -227,23 +227,20 @@ static int push_attrs(
 	git_attr_file *file;
 	int add_to_cache = 0;
 
-	if ((error = git_path_prettify(&path, filename, base)) < GIT_SUCCESS) {
-		if (error == GIT_EOSERR)
-			/* file was not found -- ignore error */
-			error = GIT_SUCCESS;
+	if (base != NULL &&
+		(error = git_buf_joinpath(&path, base, filename)) < GIT_SUCCESS)
 		goto cleanup;
-	}
 
 	/* either get attr_file from cache or read from disk */
 	file = git_hashtable_lookup(cache->files, path.ptr);
-	if (file == NULL) {
-		error = git_attr_file__from_file(repo, path.ptr, &file);
+	if (file == NULL && git_futils_exists(path.ptr) == GIT_SUCCESS) {
+		error = (*loader)(repo, path.ptr, &file);
 		add_to_cache = (error == GIT_SUCCESS);
 	}
 
 	if (file != NULL) {
 		/* add file to vector, if we found it */
-		error = git_vector_insert(files, file);
+		error = git_vector_insert(stack, file);
 
 		/* add file to cache, if it is new */
 		/* do this after above step b/c it is not critical */
@@ -256,6 +253,8 @@ cleanup:
 	return error;
 }
 
+#define push_attrs(R,S,B,F) \
+	git_attr_cache__push_file((R),(S),(B),(F),git_attr_file__from_file)
 
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files)
@@ -265,21 +264,14 @@ static int collect_attr_files(
 	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
 
-	if ((error = attr_cache_init(repo)) < GIT_SUCCESS)
+	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
 		goto cleanup;
 
 	if ((error = git_vector_init(files, 4, NULL)) < GIT_SUCCESS)
 		goto cleanup;
 
-	if ((error = git_path_prettify(&dir, path, workdir)) < GIT_SUCCESS)
+	if ((error = git_futils_dir_for_path(&dir, path, workdir)) < GIT_SUCCESS)
 		goto cleanup;
-
-	if (git_futils_isdir(dir.ptr) != GIT_SUCCESS) {
-		git_path_dirname_r(&dir, dir.ptr);
-		git_path_to_dir(&dir);
-		if ((error = git_buf_lasterror(&dir)) < GIT_SUCCESS)
-			goto cleanup;
-	}
 
 	/* in precendence order highest to lowest:
 	 * - $GIT_DIR/info/attributes
@@ -311,7 +303,7 @@ static int collect_attr_files(
 
 	if (git_repository_config(&cfg, repo) == GIT_SUCCESS) {
 		const char *core_attribs = NULL;
-		git_config_get_string(cfg, "core.attributesfile", &core_attribs);
+		git_config_get_string(cfg, GIT_ATTR_CONFIG, &core_attribs);
 		git_clearerror(); /* don't care if attributesfile is not set */
 		if (core_attribs)
 			error = push_attrs(repo, files, NULL, core_attribs);
@@ -337,7 +329,7 @@ static int collect_attr_files(
 }
 
 
-static int attr_cache_init(git_repository *repo)
+int git_attr_cache__init(git_repository *repo)
 {
 	int error = GIT_SUCCESS;
 	git_attr_cache *cache = &repo->attrcache;
@@ -366,7 +358,6 @@ static int attr_cache_init(git_repository *repo)
 
 	return error;
 }
-
 
 void git_attr_cache_flush(
 	git_repository *repo)
@@ -397,4 +388,13 @@ void git_attr_cache_flush(
 	}
 
 	repo->attrcache.initialized = 0;
+}
+
+int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
+{
+	if (macro->assigns.length == 0)
+		return git__throw(GIT_EMISSINGOBJDATA, "git attribute macro with no values");
+
+	return git_hashtable_insert(
+		repo->attrcache.macros, macro->match.pattern, macro);
 }

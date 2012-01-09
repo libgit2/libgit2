@@ -336,3 +336,39 @@ void test_core_path__10_fromurl(void)
 	check_fromurl(ABS_PATH_MARKER "c:/Temp+folder/note.txt", "file:///c:/Temp+folder/note.txt", 0);
 	check_fromurl(ABS_PATH_MARKER "a", "file:///a", 0);
 }
+
+void test_core_path__11_walkup(void)
+{
+	git_buf p = GIT_BUF_INIT, iter;
+	char *expect[] = {
+		"/a/b/c/d/e/", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", NULL,
+		"this is a path", NULL,
+		"///a///b///c///d///e///", "///a///b///c///d///", "///a///b///c///", "///a///b///", "///a///", "///", NULL,
+		NULL
+	};
+	char *root[] = { NULL, NULL, "/", "", "/a/b", "/a/b/", NULL, NULL, NULL };
+	int i, j;
+
+	for (i = 0, j = 0; expect[i] != NULL; i++, j++) {
+		int cb_count = 0;
+
+		git_buf_sets(&p, expect[i]);
+
+		git_path_walk_up(&p, &iter, root[j], {
+				cl_assert(expect[i + cb_count] != NULL);
+				cl_assert_strequal(expect[i + cb_count], iter.ptr);
+				cb_count++; });
+
+		cl_assert_strequal(p.ptr, expect[i]);
+
+		/* skip to next run of expectations */
+		while (expect[i] != NULL) i++;
+	}
+
+	git_buf_free(&p);
+}

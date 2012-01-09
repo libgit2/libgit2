@@ -20,18 +20,18 @@
 GIT_BEGIN_DECL
 
 #define GIT_STATUS_CURRENT		0
+
 /** Flags for index status */
 #define GIT_STATUS_INDEX_NEW		(1 << 0)
-#define GIT_STATUS_INDEX_MODIFIED (1 << 1)
-#define GIT_STATUS_INDEX_DELETED (1 << 2)
+#define GIT_STATUS_INDEX_MODIFIED	(1 << 1)
+#define GIT_STATUS_INDEX_DELETED	(1 << 2)
 
 /** Flags for worktree status */
 #define GIT_STATUS_WT_NEW			(1 << 3)
-#define GIT_STATUS_WT_MODIFIED	(1 << 4)
+#define GIT_STATUS_WT_MODIFIED		(1 << 4)
 #define GIT_STATUS_WT_DELETED		(1 << 5)
 
-// TODO Ignored files not handled yet
-#define GIT_STATUS_IGNORED		(1 << 6)
+#define GIT_STATUS_IGNORED			(1 << 6)
 
 /**
  * Gather file statuses and run a callback for each one.
