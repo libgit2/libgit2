@@ -1,5 +1,6 @@
 #include "clay_libgit2.h"
 #include "fileops.h"
+#include "ignore.h"
 #include "status_data.h"
 
 
@@ -134,4 +135,20 @@ void test_status_worktree__single_file(void)
 		);
 		cl_assert(entry_statuses0[i] == status_flags);
 	}
+}
+
+void test_status_worktree__ignores(void)
+{
+	int i, ignored;
+
+	for (i = 0; i < (int)entry_count0; i++) {
+		cl_git_pass(git_ignore_is_ignored(_repository, entry_paths0[i], &ignored));
+		cl_assert(ignored == (entry_statuses0[i] == GIT_STATUS_IGNORED));
+	}
+
+	cl_git_pass(git_ignore_is_ignored(_repository, "nonexistent_file", &ignored));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_ignore_is_ignored(_repository, "ignored_nonexistent_file", &ignored));
+	cl_assert(ignored);
 }
