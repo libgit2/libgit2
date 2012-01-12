@@ -551,7 +551,8 @@ int git_futils_dir_for_path(git_buf *dir, const char *path, const char *base)
 
 	/* call dirname if this is not a directory */
 	if (error == GIT_SUCCESS && git_futils_isdir(dir->ptr) != GIT_SUCCESS)
-		error = git_path_dirname_r(dir, dir->ptr);
+		if (git_path_dirname_r(dir, dir->ptr) < GIT_SUCCESS)
+			error = git_buf_lasterror(dir);
 
 	if (error == GIT_SUCCESS)
 		error = git_path_to_dir(dir);
