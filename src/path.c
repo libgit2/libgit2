@@ -329,6 +329,7 @@ int git_path_walk_up(
 
 	iter.ptr = path->ptr;
 	iter.size = path->size;
+	iter.asize = path->asize;
 
 	while (scan >= stop) {
 		if ((error = cb(data, &iter)) < GIT_SUCCESS)
@@ -343,7 +344,8 @@ int git_path_walk_up(
 		}
 	}
 
-	iter.ptr[scan] = oldc;
+	if (scan >= 0)
+		iter.ptr[scan] = oldc;
 
 	return error;
 }

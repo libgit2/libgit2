@@ -227,14 +227,16 @@ int git_attr_cache__push_file(
 	git_attr_file *file;
 	int add_to_cache = 0;
 
-	if (base != NULL &&
-		(error = git_buf_joinpath(&path, base, filename)) < GIT_SUCCESS)
-		goto cleanup;
+	if (base != NULL) {
+		if ((error = git_buf_joinpath(&path, base, filename)) < GIT_SUCCESS)
+			goto cleanup;
+		filename = path.ptr;
+	}
 
 	/* either get attr_file from cache or read from disk */
-	file = git_hashtable_lookup(cache->files, path.ptr);
-	if (file == NULL && git_futils_exists(path.ptr) == GIT_SUCCESS) {
-		error = (*loader)(repo, path.ptr, &file);
+	file = git_hashtable_lookup(cache->files, filename);
+	if (file == NULL && git_futils_exists(filename) == GIT_SUCCESS) {
+		error = (*loader)(repo, filename, &file);
 		add_to_cache = (error == GIT_SUCCESS);
 	}
 

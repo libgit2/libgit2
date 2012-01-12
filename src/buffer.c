@@ -181,7 +181,7 @@ void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
 {
 	size_t copylen;
 
-	assert(data && datasize);
+	assert(data && datasize && buf);
 
 	data[0] = '\0';
 

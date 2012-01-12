@@ -678,28 +678,15 @@ cleanup:
  *
  */
 
-struct alphasorted_dirent_info {
-	int is_dir;
-	char path[GIT_FLEX_ARRAY]; /* more */
-};
-
-static struct alphasorted_dirent_info *alphasorted_dirent_info_new(const git_buf *path)
+static char *alphasorted_dirent_info_new(const git_buf *path)
 {
-	int is_dir, size;
-	struct alphasorted_dirent_info *di;
+	char *di = git__malloc(path->size + 2);
+	if (!di)
+		return di;
 
-	is_dir = git_futils_isdir(path->ptr) == GIT_SUCCESS ? 1 : 0;
-	size   = sizeof(*di) + path->size + is_dir + 1;
+	git_buf_copy_cstr(di, path->size + 1, path);
 
-	di = git__calloc(size, 1);
-	if (di == NULL)
-		return NULL;
-
-	git_buf_copy_cstr(di->path, path->size + 1, path);
-
-	if (is_dir) {
-		di->is_dir = 1;
-
+	if (git_futils_isdir(path->ptr) == GIT_SUCCESS) {
 		/*
 		 * Append a forward slash to the name to force folders
 		 * to be ordered in a similar way than in a tree
@@ -707,23 +694,16 @@ static struct alphasorted_dirent_info *alphasorted_dirent_info_new(const git_buf
 		 * The file "subdir" should appear before the file "subdir.txt"
 		 * The folder "subdir" should appear after the file "subdir.txt"
 		 */
-		di->path[path->size] = '/';
+		di[path->size] = '/';
+		di[path->size + 1] = '\0';
 	}
 
 	return di;
 }
 
-static int alphasorted_dirent_info_cmp(const void *a, const void *b)
-{
-	struct alphasorted_dirent_info *stra = (struct alphasorted_dirent_info *)a;
-	struct alphasorted_dirent_info *strb = (struct alphasorted_dirent_info *)b;
-
-	return strcmp(stra->path, strb->path);
-}
-
 static int alphasorted_dirent_cb(void *state, git_buf *full_path)
 {
-	struct alphasorted_dirent_info *entry;
+	char *entry;
 	git_vector *entry_names;
 
 	entry_names = (git_vector *)state;
@@ -745,13 +725,13 @@ static int alphasorted_futils_direach(
 	int (*fn)(void *, git_buf *),
 	void *arg)
 {
-	struct alphasorted_dirent_info *entry;
+	char *entry;
 	git_vector entry_names;
 	unsigned int idx;
 	int error = GIT_SUCCESS;
 	git_buf entry_path = GIT_BUF_INIT;
 
-	if (git_vector_init(&entry_names, 16, alphasorted_dirent_info_cmp) < GIT_SUCCESS)
+	if (git_vector_init(&entry_names, 16, git__strcmp_cb) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
 	error = git_futils_direach(path, alphasorted_dirent_cb, &entry_names);
@@ -759,17 +739,18 @@ static int alphasorted_futils_direach(
 	git_vector_sort(&entry_names);
 
 	for (idx = 0; idx < entry_names.length; ++idx) {
-		entry = (struct alphasorted_dirent_info *)git_vector_get(&entry_names, idx);
+		entry = (char *)git_vector_get(&entry_names, idx);
 
 		/* We have to walk the entire vector even if there was an error,
 		 * in order to free up memory, but we stop making callbacks after
 		 * an error.
 		 */
 		if (error == GIT_SUCCESS)
-			error = git_buf_sets(&entry_path, entry->path);
+			error = git_buf_sets(&entry_path, entry);
 
 		if (error == GIT_SUCCESS) {
-			((struct status_st *)arg)->is_dir = entry->is_dir;
+			((struct status_st *)arg)->is_dir =
+				(entry[entry_path.size - 1] == '/');
 			error = fn(arg, &entry_path);
 		}
 

@@ -23,6 +23,8 @@ static int load_ignore_file(
 	if ((error = git_futils_readbuffer(&fbuf, path)) == GIT_SUCCESS)
 		error = git_attr_file__new(&ignores);
 
+	ignores->path = git__strdup(path);
+
 	scan = fbuf.data;
 
 	while (error == GIT_SUCCESS && *scan) {
@@ -49,10 +51,10 @@ static int load_ignore_file(
 	}
 
 	git_futils_freebuffer(&fbuf);
+	git__free(match);
 
 	if (error != GIT_SUCCESS) {
 		git__rethrow(error, "Could not open ignore file '%s'", path);
-		git__free(match);
 		git_attr_file__free(ignores);
 	} else {
 		*out = ignores;
