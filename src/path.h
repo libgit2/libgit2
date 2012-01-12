@@ -77,27 +77,18 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 extern int git__percent_decode(git_buf *decoded_out, const char *input);
 extern int git_path_fromurl(git_buf *local_path_out, const char *file_url);
 
-/*
- * Use as:
+/**
+ * Invoke callback directory by directory up the path until the ceiling
+ * is reached (inclusive of a final call at the root_path).
  *
- *     git_path_walk_up(
- *         git_buf *path, git_buf *iterator, const char *root_path,
- *         ... CALLBACK CODE ...)
- *
- * to invoke callback directory by directory up the path until the root_path
- * is reached (inclusive of a final call at the root_path).  If root path is
- * NULL or the path is not contained in the root_path, then the callback
- * code will be invoked just once on input path.
+ * If the ceiling is NULL, this will walk all the way up to the root.
+ * If the ceiling is not a prefix of the path, the callback will be
+ * invoked a single time on the verbatim input path.  Returning anything
+ * other than GIT_SUCCESS from the callback function will stop the
+ * iteration and propogate the error to the caller.
  */
-#define git_path_walk_up(B,IB,ROOT,CODE) do { \
-	ssize_t _stop = ((ROOT) && git__prefixcmp((B)->ptr, (ROOT))) ? (ssize_t)strlen(ROOT) : (B)->size; \
-	ssize_t _scan = (B)->size; char _oldc = '\0'; \
-	(IB)->ptr = (B)->ptr; (IB)->size = (B)->size; \
-	while (_scan >= _stop) { \
-		CODE; \
-		(IB)->ptr[_scan] = _oldc; \
-		_scan = git_buf_rfind_next((IB), '/'); \
-		if (_scan >= 0) { _scan++; _oldc = (IB)->ptr[_scan]; (IB)->size = _scan; (IB)->ptr[_scan] = '\0'; } \
-	} (IB)->ptr[_scan] = _oldc; } while (0)
+extern int git_path_walk_up(
+	git_buf *path, const char *ceiling,
+	int (*cb)(void *data, git_buf *), void *data);
 
 #endif

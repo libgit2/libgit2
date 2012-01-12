@@ -64,12 +64,24 @@ static int load_ignore_file(
 #define push_ignore(R,S,B,F) \
 	git_attr_cache__push_file((R),(S),(B),(F),load_ignore_file)
 
+typedef struct {
+	git_repository *repo;
+	git_vector *stack;
+} ignore_walk_up_info;
+
+static int push_one_ignore(void *ref, git_buf *path)
+{
+	ignore_walk_up_info *info = (ignore_walk_up_info *)ref;
+	return push_ignore(info->repo, info->stack, path->ptr, GIT_IGNORE_FILE);
+}
+
 int git_ignore__for_path(git_repository *repo, const char *path, git_vector *stack)
 {
 	int error = GIT_SUCCESS;
-	git_buf dir = GIT_BUF_INIT, scan;
+	git_buf dir = GIT_BUF_INIT;
 	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
+	ignore_walk_up_info info;
 
 	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
 		goto cleanup;
@@ -82,11 +94,9 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_vector *sta
 		goto cleanup;
 
 	/* load .gitignore up the path */
-	git_path_walk_up(&dir, &scan, workdir, {
-		error = push_ignore(repo, stack, scan.ptr, GIT_IGNORE_FILE);
-		if (error < GIT_SUCCESS) break;
-	});
-	if (error < GIT_SUCCESS)
+	info.repo = repo;
+	info.stack = stack;
+	if ((error = git_path_walk_up(&dir, workdir, push_one_ignore, &info)) < GIT_SUCCESS)
 		goto cleanup;
 
 	/* load .git/info/exclude */

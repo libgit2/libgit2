@@ -256,6 +256,17 @@ cleanup:
 #define push_attrs(R,S,B,F) \
 	git_attr_cache__push_file((R),(S),(B),(F),git_attr_file__from_file)
 
+typedef struct {
+	git_repository *repo;
+	git_vector *files;
+} attr_walk_up_info;
+
+static int push_one_attr(void *ref, git_buf *path)
+{
+	attr_walk_up_info *info = (attr_walk_up_info *)ref;
+	return push_attrs(info->repo, info->files, path->ptr, GIT_ATTR_FILE);
+}
+
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files)
 {
@@ -263,6 +274,7 @@ static int collect_attr_files(
 	git_buf dir = GIT_BUF_INIT;
 	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
+	attr_walk_up_info info;
 
 	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
 		goto cleanup;
@@ -284,20 +296,9 @@ static int collect_attr_files(
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (workdir && git__prefixcmp(dir.ptr, workdir) == 0) {
-		ssize_t rootlen = (ssize_t)strlen(workdir);
-
-		do {
-			error = push_attrs(repo, files, dir.ptr, GIT_ATTR_FILE);
-			if (error == GIT_SUCCESS) {
-				git_path_dirname_r(&dir, dir.ptr);
-				git_path_to_dir(&dir);
-				error = git_buf_lasterror(&dir);
-			}
-		} while (!error && dir.size >= rootlen);
-	} else {
-		error = push_attrs(repo, files, dir.ptr, GIT_ATTR_FILE);
-	}
+	info.repo = repo;
+	info.files = files;
+	error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
