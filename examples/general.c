@@ -74,7 +74,7 @@ int main (int argc, char** argv)
   // repository.
   // [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
   git_odb *odb;
-  odb = git_repository_database(repo);
+  git_repository_odb(&odb, repo);
 
   // #### Raw Object Reading
 
