@@ -80,7 +80,7 @@ static int do_lstat(const char *file_name, struct stat *buf)
 		buf->st_uid = 0;
 		buf->st_nlink = 1;
 		buf->st_mode = (mode_t)fMode;
-		buf->st_size = fdata.nFileSizeLow; /* Can't use nFileSizeHigh, since it's not a stat64 */
+		buf->st_size = (fdata.nFileSizeHigh << 32) + fdata.nFileSizeLow;
 		buf->st_dev = buf->st_rdev = (_getdrive() - 1);
 		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
