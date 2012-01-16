@@ -58,6 +58,22 @@ GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const c
  */
 GIT_EXTERN(int) git_status_file(unsigned int *status_flags, git_repository *repo, const char *path);
 
+/**
+ * Test if the ignore rules apply to a given file.
+ *
+ * This function simply checks the ignore rules to see if they would apply
+ * to the given file.  Unlike git_status_file(), this indicates if the file
+ * would be ignored regardless of whether the file is already in the index
+ * or in the repository.
+ *
+ * @param repo a repository object
+ * @param path the file to check ignores for, rooted at the repo's workdir
+ * @param ignored boolean returning 0 if the file is not ignored, 1 if it is
+ * @return GIT_SUCCESS if the ignore rules could be processed for the file
+ *		(regardless of whether it exists or not), or an error < 0 if they could not.
+ */
+GIT_EXTERN(int) git_status_should_ignore(git_repository *repo, const char *path, int *ignored);
+
 /** @} */
 GIT_END_DECL
 #endif

@@ -761,3 +761,18 @@ static int alphasorted_futils_direach(
 	git_vector_free(&entry_names);
 	return error;
 }
+
+
+int git_status_should_ignore(git_repository *repo, const char *path, int *ignored)
+{
+	int error;
+	git_vector ignores = GIT_VECTOR_INIT;
+
+	if ((error = git_ignore__for_path(repo, path, &ignores)) == GIT_SUCCESS)
+		error = git_ignore__lookup(&ignores, path, ignored);
+
+	git_ignore__free(&ignores);
+
+	return error;
+}
+

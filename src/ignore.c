@@ -106,7 +106,7 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_vector *sta
 		goto cleanup;
 
 	/* load core.excludesfile */
-	if (git_repository_config(&cfg, repo) == GIT_SUCCESS) {
+	if ((error = git_repository_config(&cfg, repo)) == GIT_SUCCESS) {
 		const char *core_ignore;
 		error = git_config_get_string(cfg, GIT_IGNORE_CONFIG, &core_ignore);
 		if (error == GIT_SUCCESS && core_ignore != NULL)
@@ -157,18 +157,3 @@ found:
 
 	return error;
 }
-
-
-int git_ignore_is_ignored(git_repository *repo, const char *path, int *ignored)
-{
-	int error;
-	git_vector ignores = GIT_VECTOR_INIT;
-
-	if ((error = git_ignore__for_path(repo, path, &ignores)) == GIT_SUCCESS)
-		error = git_ignore__lookup(&ignores, path, ignored);
-
-	git_ignore__free(&ignores);
-
-	return error;
-}
-

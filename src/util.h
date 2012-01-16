@@ -105,7 +105,7 @@ extern void git__strtolower(char *str);
 GIT_INLINE(const char *) git__next_line(const char *s)
 {
 	while (*s && *s != '\n') s++;
-	while (*s == '\n') s++;
+	while (*s == '\n' || *s == '\r') s++;
 	return s;
 }
 

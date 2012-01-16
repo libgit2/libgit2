@@ -3,11 +3,6 @@
 #include "config.h"
 #include <ctype.h>
 
-#define GIT_ATTR_FILE_INREPO	"info/attributes"
-#define GIT_ATTR_FILE			".gitattributes"
-#define GIT_ATTR_FILE_SYSTEM	"gitattributes"
-#define GIT_ATTR_CONFIG			"core.attributesfile"
-
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files);
 
@@ -304,7 +299,7 @@ static int collect_attr_files(
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (git_repository_config(&cfg, repo) == GIT_SUCCESS) {
+	if ((error = git_repository_config(&cfg, repo)) == GIT_SUCCESS) {
 		const char *core_attribs = NULL;
 		git_config_get_string(cfg, GIT_ATTR_CONFIG, &core_attribs);
 		git_clearerror(); /* don't care if attributesfile is not set */

@@ -14,6 +14,4 @@ extern int git_ignore__for_path(git_repository *repo, const char *path, git_vect
 extern void git_ignore__free(git_vector *stack);
 extern int git_ignore__lookup(git_vector *stack, const char *path, int *ignored);
 
-extern int git_ignore_is_ignored(git_repository *repo, const char *path, int *ignored);
-
 #endif
