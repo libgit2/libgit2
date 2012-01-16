@@ -169,6 +169,10 @@ GIT_EXTERN(void) git_index_uniq(git_index *index);
  *
  * This method will fail in bare index instances.
  *
+ * This forces the file to be added to the index, not looking
+ * at gitignore rules.  Those rules can be evaluated through
+ * the git_status APIs (in status.h) before calling this.
+ *
  * @param index an existing index object
  * @param path filename to add
  * @param stage stage for the entry

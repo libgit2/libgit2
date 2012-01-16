@@ -64,6 +64,7 @@ END_TEST
 
 static const char *entry_paths0[] = {
 	"file_deleted",
+	"ignored_file",
 	"modified_file",
 	"new_file",
 	"staged_changes",
@@ -82,6 +83,7 @@ static const char *entry_paths0[] = {
 
 static const unsigned int entry_statuses0[] = {
 	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_IGNORED,
 	GIT_STATUS_WT_MODIFIED,
 	GIT_STATUS_WT_NEW,
 	GIT_STATUS_INDEX_MODIFIED,
@@ -98,7 +100,7 @@ static const unsigned int entry_statuses0[] = {
 	GIT_STATUS_WT_NEW,
 };
 
-#define ENTRY_COUNT0 14
+#define ENTRY_COUNT0 15
 
 struct status_entry_counts {
 	int wrong_status_flags_count;
@@ -185,6 +187,7 @@ END_TEST
 static const char *entry_paths2[] = {
 	"current_file",
 	"file_deleted",
+	"ignored_file",
 	"modified_file",
 	"staged_changes",
 	"staged_changes_file_deleted",
@@ -202,6 +205,7 @@ static const char *entry_paths2[] = {
 static const unsigned int entry_statuses2[] = {
 	GIT_STATUS_WT_DELETED,
 	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_IGNORED,
 	GIT_STATUS_WT_DELETED,
 	GIT_STATUS_WT_DELETED | GIT_STATUS_INDEX_MODIFIED,
 	GIT_STATUS_WT_DELETED | GIT_STATUS_INDEX_MODIFIED,
@@ -216,7 +220,7 @@ static const unsigned int entry_statuses2[] = {
 	GIT_STATUS_WT_DELETED,
 };
 
-#define ENTRY_COUNT2 14
+#define ENTRY_COUNT2 15
 
 BEGIN_TEST(statuscb2, "test retrieving status for a purged worktree of an valid repository")
 	git_repository *repo;
@@ -261,6 +265,7 @@ static const char *entry_paths3[] = {
 	"current_file/modified_file",
 	"current_file/new_file",
 	"file_deleted",
+	"ignored_file",
 	"modified_file",
 	"new_file",
 	"staged_changes",
@@ -286,6 +291,7 @@ static const unsigned int entry_statuses3[] = {
 	GIT_STATUS_WT_NEW,
 	GIT_STATUS_WT_NEW,
 	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_IGNORED,
 	GIT_STATUS_WT_MODIFIED,
 	GIT_STATUS_WT_NEW,
 	GIT_STATUS_INDEX_MODIFIED,
@@ -302,7 +308,7 @@ static const unsigned int entry_statuses3[] = {
 	GIT_STATUS_WT_DELETED,
 };
 
-#define ENTRY_COUNT3 22
+#define ENTRY_COUNT3 23
 
 BEGIN_TEST(statuscb3, "test retrieving status for a worktree where a file and a subdir have been renamed and some files have been added")
 	git_repository *repo;

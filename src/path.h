@@ -77,4 +77,18 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 extern int git__percent_decode(git_buf *decoded_out, const char *input);
 extern int git_path_fromurl(git_buf *local_path_out, const char *file_url);
 
+/**
+ * Invoke callback directory by directory up the path until the ceiling
+ * is reached (inclusive of a final call at the root_path).
+ *
+ * If the ceiling is NULL, this will walk all the way up to the root.
+ * If the ceiling is not a prefix of the path, the callback will be
+ * invoked a single time on the verbatim input path.  Returning anything
+ * other than GIT_SUCCESS from the callback function will stop the
+ * iteration and propogate the error to the caller.
+ */
+extern int git_path_walk_up(
+	git_buf *path, const char *ceiling,
+	int (*cb)(void *data, git_buf *), void *data);
+
 #endif

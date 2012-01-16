@@ -10,6 +10,7 @@ struct status_entry_counts {
 
 static const char *entry_paths0[] = {
 	"file_deleted",
+	"ignored_file",
 	"modified_file",
 	"new_file",
 	"staged_changes",
@@ -28,6 +29,7 @@ static const char *entry_paths0[] = {
 
 static const unsigned int entry_statuses0[] = {
 	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_IGNORED,
 	GIT_STATUS_WT_MODIFIED,
 	GIT_STATUS_WT_NEW,
 	GIT_STATUS_INDEX_MODIFIED,
@@ -44,5 +46,5 @@ static const unsigned int entry_statuses0[] = {
 	GIT_STATUS_WT_NEW,
 };
 
-static const size_t entry_count0 = 14;
+static const size_t entry_count0 = 15;
 

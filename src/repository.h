@@ -19,7 +19,7 @@
 #include "refs.h"
 #include "buffer.h"
 #include "odb.h"
-#include "attr_file.h"
+#include "attr.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"

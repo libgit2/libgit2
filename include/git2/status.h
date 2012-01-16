@@ -20,18 +20,18 @@
 GIT_BEGIN_DECL
 
 #define GIT_STATUS_CURRENT		0
+
 /** Flags for index status */
 #define GIT_STATUS_INDEX_NEW		(1 << 0)
-#define GIT_STATUS_INDEX_MODIFIED (1 << 1)
-#define GIT_STATUS_INDEX_DELETED (1 << 2)
+#define GIT_STATUS_INDEX_MODIFIED	(1 << 1)
+#define GIT_STATUS_INDEX_DELETED	(1 << 2)
 
 /** Flags for worktree status */
 #define GIT_STATUS_WT_NEW			(1 << 3)
-#define GIT_STATUS_WT_MODIFIED	(1 << 4)
+#define GIT_STATUS_WT_MODIFIED		(1 << 4)
 #define GIT_STATUS_WT_DELETED		(1 << 5)
 
-// TODO Ignored files not handled yet
-#define GIT_STATUS_IGNORED		(1 << 6)
+#define GIT_STATUS_IGNORED			(1 << 6)
 
 /**
  * Gather file statuses and run a callback for each one.
@@ -57,6 +57,22 @@ GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const c
  *		GIT_SUCCESS otherwise
  */
 GIT_EXTERN(int) git_status_file(unsigned int *status_flags, git_repository *repo, const char *path);
+
+/**
+ * Test if the ignore rules apply to a given file.
+ *
+ * This function simply checks the ignore rules to see if they would apply
+ * to the given file.  Unlike git_status_file(), this indicates if the file
+ * would be ignored regardless of whether the file is already in the index
+ * or in the repository.
+ *
+ * @param repo a repository object
+ * @param path the file to check ignores for, rooted at the repo's workdir
+ * @param ignored boolean returning 0 if the file is not ignored, 1 if it is
+ * @return GIT_SUCCESS if the ignore rules could be processed for the file
+ *		(regardless of whether it exists or not), or an error < 0 if they could not.
+ */
+GIT_EXTERN(int) git_status_should_ignore(git_repository *repo, const char *path, int *ignored);
 
 /** @} */
 GIT_END_DECL

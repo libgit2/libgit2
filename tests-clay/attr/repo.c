@@ -57,6 +57,7 @@ void test_attr_repo__get_one(void)
 		{ "subdir/subdir_test2.txt", "subattr", "yes" },
 		{ "subdir/subdir_test2.txt", "negattr", GIT_ATTR_FALSE },
 		{ "subdir/subdir_test2.txt", "another", "one" },
+		{ "does-not-exist", "foo", "yes" },
 		{ NULL, NULL, NULL }
 	}, *scan;
 
