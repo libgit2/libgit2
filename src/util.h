@@ -102,6 +102,13 @@ extern char *git__strtok(char **end, const char *sep);
 extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
 
+GIT_INLINE(const char *) git__next_line(const char *s)
+{
+	while (*s && *s != '\n') s++;
+	while (*s == '\n' || *s == '\r') s++;
+	return s;
+}
+
 extern int git__fnmatch(const char *pattern, const char *name, int flags);
 
 extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));

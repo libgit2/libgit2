@@ -534,3 +534,28 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 #endif
 }
 
+int git_futils_dir_for_path(git_buf *dir, const char *path, const char *base)
+{
+	int error = GIT_SUCCESS;
+
+	if (base != NULL && git_path_root(path) < 0)
+		error = git_buf_joinpath(dir, base, path);
+	else
+		error = git_buf_sets(dir, path);
+
+	if (error == GIT_SUCCESS) {
+		char buf[GIT_PATH_MAX];
+		if (p_realpath(dir->ptr, buf) != NULL)
+			error = git_buf_sets(dir, buf);
+	}
+
+	/* call dirname if this is not a directory */
+	if (error == GIT_SUCCESS && git_futils_isdir(dir->ptr) != GIT_SUCCESS)
+		if (git_path_dirname_r(dir, dir->ptr) < GIT_SUCCESS)
+			error = git_buf_lasterror(dir);
+
+	if (error == GIT_SUCCESS)
+		error = git_path_to_dir(dir);
+
+	return error;
+}

@@ -3,6 +3,7 @@ root_test2 -rootattr
 root_test3 !rootattr
 binfile	   		   binary
 abc		foo bar baz
+does-not-exist foo=yes
 
 root_test2 multiattr
 root_test3 multi2=foo

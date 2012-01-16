@@ -111,8 +111,10 @@ int git_buf_set(git_buf *buf, const char *data, size_t len)
 	if (len == 0 || data == NULL) {
 		git_buf_clear(buf);
 	} else {
-		ENSURE_SIZE(buf, len + 1);
-		memmove(buf->ptr, data, len);
+		if (data != buf->ptr) {
+			ENSURE_SIZE(buf, len + 1);
+			memmove(buf->ptr, data, len);
+		}
 		buf->size = len;
 		buf->ptr[buf->size] = '\0';
 	}
@@ -179,7 +181,7 @@ void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
 {
 	size_t copylen;
 
-	assert(data && datasize);
+	assert(data && datasize && buf);
 
 	data[0] = '\0';
 
@@ -205,7 +207,7 @@ void git_buf_consume(git_buf *buf, const char *end)
 
 void git_buf_truncate(git_buf *buf, ssize_t len)
 {
-	if (len < buf->size) {
+	if (len >= 0 && len < buf->size) {
 		buf->size = len;
 		buf->ptr[buf->size] = '\0';
 	}

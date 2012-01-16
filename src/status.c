@@ -13,6 +13,7 @@
 #include "tree.h"
 #include "git2/status.h"
 #include "repository.h"
+#include "ignore.h"
 
 struct status_entry {
 	git_index_time mtime;
@@ -21,7 +22,7 @@ struct status_entry {
 	git_oid index_oid;
 	git_oid wt_oid;
 
-	unsigned int status_flags:6;
+	unsigned int status_flags;
 
 	char path[GIT_FLEX_ARRAY]; /* more */
 };
@@ -117,10 +118,30 @@ static int status_entry_update_flags(struct status_entry *e)
 	return GIT_SUCCESS;
 }
 
+static int status_entry_is_ignorable(struct status_entry *e)
+{
+	/* don't ignore files that exist in head or index already */
+	return (e->status_flags == GIT_STATUS_WT_NEW);
+}
+
+static int status_entry_update_ignore(struct status_entry *e, git_vector *ignores, const char *path)
+{
+	int error, ignored;
+
+	if ((error = git_ignore__lookup(ignores, path, &ignored)) == GIT_SUCCESS &&
+		ignored)
+		e->status_flags =
+			(e->status_flags & ~GIT_STATUS_WT_NEW) | GIT_STATUS_IGNORED;
+
+	return error;
+}
+
 struct status_st {
+	git_repository *repo;
 	git_vector *vector;
 	git_index *index;
 	git_tree *tree;
+	git_vector *ignores;
 
 	int workdir_path_len;
 	git_buf head_tree_relative_path;
@@ -210,9 +231,22 @@ static int process_folder(
 		}
 	}
 
-	if (full_path != NULL && path_type == GIT_STATUS_PATH_FOLDER)
-		error = alphasorted_futils_direach(full_path, dirent_cb, st);
-	else
+
+	if (full_path != NULL && path_type == GIT_STATUS_PATH_FOLDER) {
+		git_vector ignores = GIT_VECTOR_INIT, *old_ignores;
+
+		if ((error = git_ignore__for_path(st->repo,
+			full_path->ptr + st->workdir_path_len, &ignores)) == GIT_SUCCESS)
+		{
+			old_ignores = st->ignores;
+			st->ignores = &ignores;
+
+			error = alphasorted_futils_direach(full_path, dirent_cb, st);
+
+			git_ignore__free(st->ignores);
+			st->ignores = old_ignores;
+		}
+	} else
 		error = dirent_cb(st, NULL);
 
 	if (tree_entry_type == GIT_OBJ_TREE) {
@@ -232,6 +266,10 @@ static int store_if_changed(struct status_st *st, struct status_entry *e)
 	if ((error = status_entry_update_flags(e)) < GIT_SUCCESS)
 		return git__throw(error, "Failed to process the file '%s'. It doesn't exist in the workdir, in the HEAD nor in the index", e->path);
 
+	if (status_entry_is_ignorable(e) &&
+		(error = status_entry_update_ignore(e, st->ignores, e->path)) < GIT_SUCCESS)
+		return error;
+
 	if (e->status_flags == GIT_STATUS_CURRENT) {
 		git__free(e);
 		return GIT_SUCCESS;
@@ -240,7 +278,8 @@ static int store_if_changed(struct status_st *st, struct status_entry *e)
 	return git_vector_insert(st->vector, e);
 }
 
-static int determine_status(struct status_st *st,
+static int determine_status(
+	struct status_st *st,
 	int in_head, int in_index, int in_workdir,
 	const git_tree_entry *tree_entry,
 	const git_index_entry *index_entry,
@@ -274,8 +313,8 @@ static int determine_status(struct status_st *st,
 		}
 
 		if (in_workdir)
-			if ((error = status_entry_update_from_workdir(e, full_path->ptr
-)) < GIT_SUCCESS)
+			if ((error = status_entry_update_from_workdir(
+					 e, full_path->ptr)) < GIT_SUCCESS)
 				return error;	/* The callee has already set the error message */
 
 		return store_if_changed(st, e);
@@ -340,7 +379,6 @@ static int dirent_cb(void *state, git_buf *a)
 	int cmpma, cmpmi, cmpai, error;
 	const char *pm, *pa, *pi;
 	const char *m_name, *i_name, *a_name;
-
 	struct status_st *st = (struct status_st *)state;
 
 	path_type = path_type_from(a, st->is_dir);
@@ -372,7 +410,8 @@ static int dirent_cb(void *state, git_buf *a)
 
 			error = git_buf_lasterror(&st->head_tree_relative_path);
 			if (error < GIT_SUCCESS)
-				return git__rethrow(error, "An error occured while determining the status of '%s'", a->ptr);
+				return git__rethrow(error, "An error occured while "
+					"determining the status of '%s'", a->ptr);
 
 			m_name = st->head_tree_relative_path.ptr;
 		} else
@@ -388,7 +427,8 @@ static int dirent_cb(void *state, git_buf *a)
 		pa = ((cmpma >= 0) && (cmpai <= 0)) ? a_name : NULL;
 		pi = ((cmpmi >= 0) && (cmpai >= 0)) ? i_name : NULL;
 
-		if((error = determine_status(st, pm != NULL, pi != NULL, pa != NULL, m, entry, a, status_path(pm, pi, pa), path_type)) < GIT_SUCCESS)
+		if ((error = determine_status(st, pm != NULL, pi != NULL, pa != NULL,
+				m, entry, a, status_path(pm, pi, pa), path_type)) < GIT_SUCCESS)
 			return git__rethrow(error, "An error occured while determining the status of '%s'", a->ptr);
 
 		if ((pa != NULL) || (path_type == GIT_STATUS_PATH_FOLDER))
@@ -406,9 +446,12 @@ static int status_cmp(const void *a, const void *b)
 
 #define DEFAULT_SIZE 16
 
-int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload)
+int git_status_foreach(
+	git_repository *repo,
+	int (*callback)(const char *, unsigned int, void *),
+	void *payload)
 {
-	git_vector entries;
+	git_vector entries, ignores = GIT_VECTOR_INIT;
 	git_index *index = NULL;
 	git_buf temp_path = GIT_BUF_INIT;
 	struct status_st dirent_st = {0};
@@ -434,14 +477,16 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 
 	git_vector_init(&entries, DEFAULT_SIZE, status_cmp);
 
-	dirent_st.workdir_path_len = strlen(workdir);
-	dirent_st.tree_position = 0;
-	dirent_st.index_position = 0;
-	dirent_st.tree = tree;
-	dirent_st.index = index;
+	dirent_st.repo = repo;
 	dirent_st.vector = &entries;
+	dirent_st.index = index;
+	dirent_st.tree = tree;
+	dirent_st.ignores = &ignores;
+	dirent_st.workdir_path_len = strlen(workdir);
 	git_buf_init(&dirent_st.head_tree_relative_path, 0);
 	dirent_st.head_tree_relative_path_len = 0;
+	dirent_st.tree_position = 0;
+	dirent_st.index_position = 0;
 	dirent_st.is_dir = 1;
 
 	if (git_futils_isdir(workdir)) {
@@ -453,6 +498,10 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 
 	git_buf_sets(&temp_path, workdir);
 
+	error = git_ignore__for_path(repo, "", dirent_st.ignores);
+	if (error < GIT_SUCCESS)
+		goto exit;
+
 	error = alphasorted_futils_direach(
 		&temp_path, dirent_cb, &dirent_st);
 
@@ -461,7 +510,8 @@ int git_status_foreach(git_repository *repo, int (*callback)(const char *, unsig
 			"Failed to determine statuses. "
 			"An error occured while processing the working directory");
 
-	if ((error == GIT_SUCCESS) && ((error = dirent_cb(&dirent_st, NULL)) < GIT_SUCCESS))
+	if ((error == GIT_SUCCESS) &&
+		((error = dirent_cb(&dirent_st, NULL)) < GIT_SUCCESS))
 		error = git__rethrow(error,
 			"Failed to determine statuses. "
 			"An error occured while post-processing the HEAD tree and the index");
@@ -483,6 +533,7 @@ exit:
 	git_buf_free(&dirent_st.head_tree_relative_path);
 	git_buf_free(&temp_path);
 	git_vector_free(&entries);
+	git_vector_free(&ignores);
 	git_tree_free(tree);
 	return error;
 }
@@ -599,6 +650,18 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 		goto cleanup;
 	}
 
+	if (status_entry_is_ignorable(e)) {
+		git_vector ignores = GIT_VECTOR_INIT;
+
+		if ((error = git_ignore__for_path(repo, path, &ignores)) == GIT_SUCCESS)
+			error = status_entry_update_ignore(e, &ignores, path);
+
+		git_ignore__free(&ignores);
+
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
 	*status_flags = e->status_flags;
 
 cleanup:
@@ -615,28 +678,15 @@ cleanup:
  *
  */
 
-struct alphasorted_dirent_info {
-	int is_dir;
-	char path[GIT_FLEX_ARRAY]; /* more */
-};
-
-static struct alphasorted_dirent_info *alphasorted_dirent_info_new(const git_buf *path)
+static char *alphasorted_dirent_info_new(const git_buf *path)
 {
-	int is_dir, size;
-	struct alphasorted_dirent_info *di;
+	char *di = git__malloc(path->size + 2);
+	if (!di)
+		return di;
 
-	is_dir = git_futils_isdir(path->ptr) == GIT_SUCCESS ? 1 : 0;
-	size   = sizeof(*di) + path->size + is_dir + 1;
+	git_buf_copy_cstr(di, path->size + 1, path);
 
-	di = git__calloc(size, 1);
-	if (di == NULL)
-		return NULL;
-
-	git_buf_copy_cstr(di->path, path->size + 1, path);
-
-	if (is_dir) {
-		di->is_dir = 1;
-
+	if (git_futils_isdir(path->ptr) == GIT_SUCCESS) {
 		/*
 		 * Append a forward slash to the name to force folders
 		 * to be ordered in a similar way than in a tree
@@ -644,23 +694,16 @@ static struct alphasorted_dirent_info *alphasorted_dirent_info_new(const git_buf
 		 * The file "subdir" should appear before the file "subdir.txt"
 		 * The folder "subdir" should appear after the file "subdir.txt"
 		 */
-		di->path[path->size] = '/';
+		di[path->size] = '/';
+		di[path->size + 1] = '\0';
 	}
 
 	return di;
 }
 
-static int alphasorted_dirent_info_cmp(const void *a, const void *b)
-{
-	struct alphasorted_dirent_info *stra = (struct alphasorted_dirent_info *)a;
-	struct alphasorted_dirent_info *strb = (struct alphasorted_dirent_info *)b;
-
-	return strcmp(stra->path, strb->path);
-}
-
 static int alphasorted_dirent_cb(void *state, git_buf *full_path)
 {
-	struct alphasorted_dirent_info *entry;
+	char *entry;
 	git_vector *entry_names;
 
 	entry_names = (git_vector *)state;
@@ -682,13 +725,13 @@ static int alphasorted_futils_direach(
 	int (*fn)(void *, git_buf *),
 	void *arg)
 {
-	struct alphasorted_dirent_info *entry;
+	char *entry;
 	git_vector entry_names;
 	unsigned int idx;
 	int error = GIT_SUCCESS;
 	git_buf entry_path = GIT_BUF_INIT;
 
-	if (git_vector_init(&entry_names, 16, alphasorted_dirent_info_cmp) < GIT_SUCCESS)
+	if (git_vector_init(&entry_names, 16, git__strcmp_cb) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
 	error = git_futils_direach(path, alphasorted_dirent_cb, &entry_names);
@@ -696,17 +739,18 @@ static int alphasorted_futils_direach(
 	git_vector_sort(&entry_names);
 
 	for (idx = 0; idx < entry_names.length; ++idx) {
-		entry = (struct alphasorted_dirent_info *)git_vector_get(&entry_names, idx);
+		entry = (char *)git_vector_get(&entry_names, idx);
 
 		/* We have to walk the entire vector even if there was an error,
 		 * in order to free up memory, but we stop making callbacks after
 		 * an error.
 		 */
 		if (error == GIT_SUCCESS)
-			error = git_buf_sets(&entry_path, entry->path);
+			error = git_buf_sets(&entry_path, entry);
 
 		if (error == GIT_SUCCESS) {
-			((struct status_st *)arg)->is_dir = entry->is_dir;
+			((struct status_st *)arg)->is_dir =
+				(entry[entry_path.size - 1] == '/');
 			error = fn(arg, &entry_path);
 		}
 
@@ -717,3 +761,18 @@ static int alphasorted_futils_direach(
 	git_vector_free(&entry_names);
 	return error;
 }
+
+
+int git_status_should_ignore(git_repository *repo, const char *path, int *ignored)
+{
+	int error;
+	git_vector ignores = GIT_VECTOR_INIT;
+
+	if ((error = git_ignore__for_path(repo, path, &ignores)) == GIT_SUCCESS)
+		error = git_ignore__lookup(&ignores, path, ignored);
+
+	git_ignore__free(&ignores);
+
+	return error;
+}
+

@@ -336,3 +336,55 @@ void test_core_path__10_fromurl(void)
 	check_fromurl(ABS_PATH_MARKER "c:/Temp+folder/note.txt", "file:///c:/Temp+folder/note.txt", 0);
 	check_fromurl(ABS_PATH_MARKER "a", "file:///a", 0);
 }
+
+typedef struct {
+	int expect_idx;
+	char **expect;
+} check_walkup_info;
+
+static int check_one_walkup_step(void *ref, git_buf *path)
+{
+	check_walkup_info *info = (check_walkup_info *)ref;
+	cl_assert(info->expect[info->expect_idx] != NULL);
+	cl_assert_strequal(info->expect[info->expect_idx], path->ptr);
+	info->expect_idx++;
+	return GIT_SUCCESS;
+}
+
+void test_core_path__11_walkup(void)
+{
+	git_buf p = GIT_BUF_INIT;
+	char *expect[] = {
+		"/a/b/c/d/e/", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", "/a/", "/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "/a/b/c/", "/a/b/", NULL,
+		"this is a path", NULL,
+		"///a///b///c///d///e///", "///a///b///c///d///", "///a///b///c///", "///a///b///", "///a///", "///", NULL,
+		NULL
+	};
+	char *root[] = { NULL, NULL, "/", "", "/a/b", "/a/b/", NULL, NULL, NULL };
+	int i, j;
+	check_walkup_info info;
+
+	info.expect = expect;
+
+	for (i = 0, j = 0; expect[i] != NULL; i++, j++) {
+
+		git_buf_sets(&p, expect[i]);
+
+		info.expect_idx = i;
+		cl_git_pass(
+			git_path_walk_up(&p, root[j], check_one_walkup_step, &info)
+		);
+
+		cl_assert_strequal(p.ptr, expect[i]);
+
+		/* skip to next run of expectations */
+		while (expect[i] != NULL) i++;
+	}
+
+	git_buf_free(&p);
+}
