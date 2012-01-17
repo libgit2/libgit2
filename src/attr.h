@@ -25,6 +25,6 @@ extern int git_attr_cache__push_file(
 	git_vector     *stack,
 	const char     *base,
 	const char     *filename,
-	int (*loader)(git_repository *, const char *, git_attr_file **));
+	int (*loader)(git_repository *, const char *, git_attr_file *));
 
 #endif

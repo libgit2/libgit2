@@ -8,22 +8,25 @@
 #define GIT_IGNORE_CONFIG		"core.excludesfile"
 
 static int load_ignore_file(
-	git_repository *GIT_UNUSED(repo), const char *path, git_attr_file **out)
+	git_repository *repo, const char *path, git_attr_file *ignores)
 {
 	int error = GIT_SUCCESS;
 	git_fbuffer fbuf = GIT_FBUFFER_INIT;
-	git_attr_file *ignores = NULL;
 	git_attr_fnmatch *match = NULL;
 	const char *scan = NULL;
+	char *context = NULL;
 
-	GIT_UNUSED_ARG(repo);
+	if (ignores->path == NULL)
+		error = git_attr_file__set_path(repo, path, ignores);
 
-	*out = NULL;
+	if (git__suffixcmp(ignores->path, GIT_IGNORE_FILE) == 0) {
+		context = git__strndup(ignores->path,
+			strlen(ignores->path) - strlen(GIT_IGNORE_FILE));
+		if (!context) error = GIT_ENOMEM;
+	}
 
-	if ((error = git_futils_readbuffer(&fbuf, path)) == GIT_SUCCESS)
-		error = git_attr_file__new(&ignores);
-
-	ignores->path = git__strdup(path);
+	if (error == GIT_SUCCESS)
+		error = git_futils_readbuffer(&fbuf, path);
 
 	scan = fbuf.data;
 
@@ -33,7 +36,7 @@ static int load_ignore_file(
 			break;
 		}
 
-		if (!(error = git_attr_fnmatch__parse(match, &scan))) {
+		if (!(error = git_attr_fnmatch__parse(match, context, &scan))) {
 			match->flags = match->flags | GIT_ATTR_FNMATCH_IGNORE;
 			scan = git__next_line(scan);
 			error = git_vector_insert(&ignores->rules, match);
@@ -52,13 +55,10 @@ static int load_ignore_file(
 
 	git_futils_freebuffer(&fbuf);
 	git__free(match);
+	git__free(context);
 
-	if (error != GIT_SUCCESS) {
+	if (error != GIT_SUCCESS)
 		git__rethrow(error, "Could not open ignore file '%s'", path);
-		git_attr_file__free(ignores);
-	} else {
-		*out = ignores;
-	}
 
 	return error;
 }
