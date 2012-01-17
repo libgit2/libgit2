@@ -169,7 +169,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 
 	if (quickcheck_repository_dir(&path_buf) < GIT_SUCCESS) {
 		error = git__throw(GIT_ENOTAREPO,
-			"The given path is not a valid Git repository");
+			"The given path (%s) is not a valid Git repository", git_buf_cstr(&path_buf));
 		goto cleanup;
 	}
 
