@@ -214,7 +214,7 @@ int git_attr_cache__push_file(
 	git_vector     *stack,
 	const char     *base,
 	const char     *filename,
-	int (*loader)(git_repository *, const char *, git_attr_file **))
+	int (*loader)(git_repository *, const char *, git_attr_file *))
 {
 	int error = GIT_SUCCESS;
 	git_attr_cache *cache = &repo->attrcache;
@@ -231,11 +231,12 @@ int git_attr_cache__push_file(
 	/* either get attr_file from cache or read from disk */
 	file = git_hashtable_lookup(cache->files, filename);
 	if (file == NULL && git_futils_exists(filename) == GIT_SUCCESS) {
-		error = (*loader)(repo, filename, &file);
+		if ((error = git_attr_file__new(&file)) == GIT_SUCCESS)
+			error = (*loader)(repo, filename, file);
 		add_to_cache = (error == GIT_SUCCESS);
 	}
 
-	if (file != NULL) {
+	if (error == GIT_SUCCESS && file != NULL) {
 		/* add file to vector, if we found it */
 		error = git_vector_insert(stack, file);
 

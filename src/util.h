@@ -102,6 +102,8 @@ extern char *git__strtok(char **end, const char *sep);
 extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
 
+extern size_t git__removechar(char *str, char remove);
+
 GIT_INLINE(const char *) git__next_line(const char *s)
 {
 	while (*s && *s != '\n') s++;
