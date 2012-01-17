@@ -115,7 +115,7 @@ void test_core_dirent__dont_traverse_dot(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &dot);
 	setup(&dot);
 
-	cl_git_pass(git_futils_direach(&dot.path,
+	cl_git_pass(git_path_direach(&dot.path,
 					one_entry,
 					&dot));
 
@@ -141,7 +141,7 @@ void test_core_dirent__traverse_subfolder(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &sub);
 	setup(&sub);
 
-	cl_git_pass(git_futils_direach(&sub.path,
+	cl_git_pass(git_path_direach(&sub.path,
 					one_entry,
 					&sub));
 
@@ -161,7 +161,7 @@ void test_core_dirent__traverse_slash_terminated_folder(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &sub_slash);
 	setup(&sub_slash);
 
-	cl_git_pass(git_futils_direach(&sub_slash.path,
+	cl_git_pass(git_path_direach(&sub_slash.path,
 					one_entry,
 					&sub_slash));
 
@@ -184,14 +184,14 @@ void test_core_dirent__dont_traverse_empty_folders(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &empty);
 	setup(&empty);
 
-	cl_git_pass(git_futils_direach(&empty.path,
+	cl_git_pass(git_path_direach(&empty.path,
 					one_entry,
 					&empty));
 
 	check_counts(&empty);
 
 	/* make sure callback not called */
-	cl_git_pass(git_futils_direach(&empty.path,
+	cl_git_pass(git_path_direach(&empty.path,
 					dont_call_me,
 					&empty));
 }
@@ -216,7 +216,7 @@ void test_core_dirent__traverse_weird_filenames(void)
 	cl_set_cleanup(&dirent_cleanup__cb, &odd);
 	setup(&odd);
 
-	cl_git_pass(git_futils_direach(&odd.path,
+	cl_git_pass(git_path_direach(&odd.path,
 					one_entry,
 					&odd));
 

@@ -246,12 +246,12 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (git_futils_exists(log_path.ptr)) {
+	if (git_path_exists(log_path.ptr)) {
 		error = git_futils_mkpath2file(log_path.ptr, GIT_REFLOG_DIR_MODE);
 		if (error < GIT_SUCCESS)
 			git__rethrow(error,
 				"Failed to write reflog. Cannot create reflog directory");
-	} else if (git_futils_isfile(log_path.ptr)) {
+	} else if (git_path_isfile(log_path.ptr)) {
 		error = git__throw(GIT_ERROR,
 			"Failed to write reflog. `%s` is directory", log_path.ptr);
 	} else if (oid_old == NULL) {
@@ -302,7 +302,7 @@ int git_reflog_delete(git_reference *ref)
 	error = git_buf_join_n(&path, '/', 3,
 		ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
 
-	if (error == GIT_SUCCESS && git_futils_exists(path.ptr) == 0)
+	if (error == GIT_SUCCESS && git_path_exists(path.ptr) == 0)
 		error = p_unlink(path.ptr);
 
 	git_buf_free(&path);

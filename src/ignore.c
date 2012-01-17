@@ -88,7 +88,7 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_vector *sta
 	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
 		goto cleanup;
 
-	if ((error = git_futils_dir_for_path(&dir, path, workdir)) < GIT_SUCCESS)
+	if ((error = git_path_find_dir(&dir, path, workdir)) < GIT_SUCCESS)
 		goto cleanup;
 
 	/* insert internals */

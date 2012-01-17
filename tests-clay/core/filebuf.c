@@ -14,7 +14,7 @@ void test_core_filebuf__0(void)
 	cl_must_pass(p_close(fd));
 
 	cl_git_fail(git_filebuf_open(&file, test, 0));
-	cl_git_pass(git_futils_exists(testlock));
+	cl_git_pass(git_path_exists(testlock));
 
 	cl_must_pass(p_unlink(testlock));
 }

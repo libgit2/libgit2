@@ -150,7 +150,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 	git_vector_init(&index->entries, 32, index_cmp);
 
 	/* Check if index file is stored on disk already */
-	if (git_futils_exists(index->index_file_path) == 0)
+	if (git_path_exists(index->index_file_path) == 0)
 		index->on_disk = 1;
 
 	*index_out = index;
@@ -221,7 +221,7 @@ int git_index_read(git_index *index)
 
 	assert(index->index_file_path);
 
-	if (!index->on_disk || git_futils_exists(index->index_file_path) < 0) {
+	if (!index->on_disk || git_path_exists(index->index_file_path) < 0) {
 		git_index_clear(index);
 		index->on_disk = 0;
 		return GIT_SUCCESS;

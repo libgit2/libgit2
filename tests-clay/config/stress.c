@@ -27,7 +27,7 @@ void test_config_stress__dont_break_on_invalid_input(void)
 	struct git_config_file *file;
 	git_config *config;
 
-	cl_git_pass(git_futils_exists("git-test-config"));
+	cl_git_pass(git_path_exists("git-test-config"));
 	cl_git_pass(git_config_file__ondisk(&file, "git-test-config"));
 	cl_git_pass(git_config_new(&config));
 	cl_git_pass(git_config_add_file(config, file, 0));

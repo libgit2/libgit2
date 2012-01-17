@@ -525,8 +525,8 @@ static int _dirent_loose_listall(void *_data, git_buf *full_path)
 	struct dirent_list_data *data = (struct dirent_list_data *)_data;
 	const char *file_path = full_path->ptr + data->repo_path_len;
 
-	if (git_futils_isdir(full_path->ptr) == GIT_SUCCESS)
-		return git_futils_direach(full_path, _dirent_loose_listall, _data);
+	if (git_path_isdir(full_path->ptr) == GIT_SUCCESS)
+		return git_path_direach(full_path, _dirent_loose_listall, _data);
 
 	/* do not add twice a reference that exists already in the packfile */
 	if ((data->list_flags & GIT_REF_PACKED) != 0 &&
@@ -549,8 +549,8 @@ static int _dirent_loose_load(void *data, git_buf *full_path)
 	const char *file_path;
 	int error;
 
-	if (git_futils_isdir(full_path->ptr) == GIT_SUCCESS)
-		return git_futils_direach(full_path, _dirent_loose_load, repository);
+	if (git_path_isdir(full_path->ptr) == GIT_SUCCESS)
+		return git_path_direach(full_path, _dirent_loose_load, repository);
 
 	file_path = full_path->ptr + strlen(repository->path_repository);
 	error = loose_lookup_to_packfile(&ref, repository, file_path);
@@ -596,7 +596,7 @@ static int packed_loadloose(git_repository *repository)
 	 * This will overwrite any old packed entries with their
 	 * updated loose versions
 	 */
-	error = git_futils_direach(&refs_path, _dirent_loose_load, repository);
+	error = git_path_direach(&refs_path, _dirent_loose_load, repository);
 	git_buf_free(&refs_path);
 	return error;
 }
@@ -719,7 +719,7 @@ static int packed_remove_loose(git_repository *repo, git_vector *packing_list)
 		an_error = git_buf_joinpath(&full_path, repo->path_repository, ref->name);
 
 		if (an_error == GIT_SUCCESS &&
-			git_futils_exists(full_path.ptr) == GIT_SUCCESS &&
+			git_path_exists(full_path.ptr) == GIT_SUCCESS &&
 			p_unlink(full_path.ptr) < GIT_SUCCESS)
 			an_error = GIT_EOSERR;
 
@@ -902,7 +902,7 @@ static int reference_exists(int *exists, git_repository *repo, const char *ref_n
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Cannot resolve if a reference exists");
 
-	if (git_futils_isfile(ref_path.ptr) == GIT_SUCCESS ||
+	if (git_path_isfile(ref_path.ptr) == GIT_SUCCESS ||
 		git_hashtable_lookup(repo->references.packfile, ref_path.ptr) != NULL) {
 		*exists = 1;
 	} else {
@@ -1352,8 +1352,8 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	if ((error = reference_delete(ref)) < GIT_SUCCESS)
 		goto cleanup;
 
-	if (git_futils_exists(aux_path.ptr) == GIT_SUCCESS) {
-		if (git_futils_isdir(aux_path.ptr) == GIT_SUCCESS) {
+	if (git_path_exists(aux_path.ptr) == GIT_SUCCESS) {
+		if (git_path_isdir(aux_path.ptr) == GIT_SUCCESS) {
 			if ((error = git_futils_rmdir_r(aux_path.ptr, 0)) < GIT_SUCCESS)
 				goto rollback;
 		} else goto rollback;
@@ -1398,7 +1398,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (git_futils_exists(aux_path.ptr) == GIT_SUCCESS)
+	if (git_path_exists(aux_path.ptr) == GIT_SUCCESS)
 		error = git_reflog_rename(ref, new_name);
 
 	/*
@@ -1536,7 +1536,7 @@ int git_reference_foreach(
 		repo->path_repository, GIT_REFS_DIR)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to alloc space for references");
 
-	error = git_futils_direach(&refs_path, _dirent_loose_listall, &data);
+	error = git_path_direach(&refs_path, _dirent_loose_listall, &data);
 
 	git_buf_free(&refs_path);
 

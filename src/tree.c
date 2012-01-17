@@ -30,7 +30,7 @@ static int entry_sort_cmp(const void *a, const void *b)
 	const git_tree_entry *entry_a = (const git_tree_entry *)(a);
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
 
-	return git_futils_cmp_path(
+	return git_path_cmp(
 		entry_a->filename, entry_a->filename_len, entry_is_tree(entry_a),
 		entry_b->filename, entry_b->filename_len, entry_is_tree(entry_b));
 }

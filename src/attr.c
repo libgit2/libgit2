@@ -230,7 +230,7 @@ int git_attr_cache__push_file(
 
 	/* either get attr_file from cache or read from disk */
 	file = git_hashtable_lookup(cache->files, filename);
-	if (file == NULL && git_futils_exists(filename) == GIT_SUCCESS) {
+	if (file == NULL && git_path_exists(filename) == GIT_SUCCESS) {
 		error = (*loader)(repo, filename, &file);
 		add_to_cache = (error == GIT_SUCCESS);
 	}
@@ -279,7 +279,7 @@ static int collect_attr_files(
 	if ((error = git_vector_init(files, 4, NULL)) < GIT_SUCCESS)
 		goto cleanup;
 
-	if ((error = git_futils_dir_for_path(&dir, path, workdir)) < GIT_SUCCESS)
+	if ((error = git_path_find_dir(&dir, path, workdir)) < GIT_SUCCESS)
 		goto cleanup;
 
 	/* in precendence order highest to lowest:

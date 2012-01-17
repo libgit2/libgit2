@@ -44,9 +44,9 @@ static int make_odb_dir(void)
 
 static int check_object_files(object_data *d)
 {
-	if (git_futils_exists(d->dir) < 0)
+	if (git_path_exists(d->dir) < 0)
 		return -1;
-	if (git_futils_exists(d->file) < 0)
+	if (git_path_exists(d->file) < 0)
 		return -1;
 	return 0;
 }

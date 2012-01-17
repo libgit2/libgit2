@@ -254,7 +254,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 		git_buf_sets(&path, backend->pack_folder);
 
 		/* reload all packs */
-		error = git_futils_direach(&path, packfile_load__cb, (void *)backend);
+		error = git_path_direach(&path, packfile_load__cb, (void *)backend);
 
 		git_buf_free(&path);
 		if (error < GIT_SUCCESS)
@@ -469,7 +469,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (git_futils_isdir(git_buf_cstr(&path)) == GIT_SUCCESS) {
+	if (git_path_isdir(git_buf_cstr(&path)) == GIT_SUCCESS) {
 		backend->pack_folder = git_buf_detach(&path);
 		backend->pack_folder_mtime = 0;
 	}

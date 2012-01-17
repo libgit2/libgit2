@@ -354,7 +354,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 	if (error < GIT_SUCCESS)
 		return error;
 
-	if (git_futils_exists(alternates_path.ptr) < GIT_SUCCESS) {
+	if (git_path_exists(alternates_path.ptr) < GIT_SUCCESS) {
 		git_buf_free(&alternates_path);
 		return GIT_SUCCESS;
 	}

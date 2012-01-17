@@ -466,7 +466,7 @@ static int locate_object(
 	int error = object_file_name(object_location, backend->objects_dir, oid);
 
 	if (error == GIT_SUCCESS)
-		error = git_futils_exists(git_buf_cstr(object_location));
+		error = git_path_exists(git_buf_cstr(object_location));
 
 	return error;
 }
@@ -480,7 +480,7 @@ static int fn_locate_object_short_oid(void *state, git_buf *pathbuf) {
 		return GIT_SUCCESS;
 	}
 
-	if (!git_futils_exists(pathbuf->ptr) && git_futils_isdir(pathbuf->ptr)) {
+	if (!git_path_exists(pathbuf->ptr) && git_path_isdir(pathbuf->ptr)) {
 		/* We are already in the directory matching the 2 first hex characters,
 		 * compare the first ncmp characters of the oids */
 		if (!memcmp(sstate->short_oid + 2,
@@ -533,8 +533,8 @@ static int locate_object_short_oid(
 		return git__rethrow(error, "Failed to locate object from short oid");
 
 	/* Check that directory exists */
-	if (git_futils_exists(object_location->ptr) ||
-		git_futils_isdir(object_location->ptr))
+	if (git_path_exists(object_location->ptr) ||
+		git_path_isdir(object_location->ptr))
 		return git__throw(GIT_ENOTFOUND, "Failed to locate object from short oid. Object not found");
 
 	state.dir_len = object_location->size;
@@ -542,7 +542,7 @@ static int locate_object_short_oid(
 	state.found = 0;
 
 	/* Explore directory to find a unique object matching short_oid */
-	error = git_futils_direach(object_location, fn_locate_object_short_oid, &state);
+	error = git_path_direach(object_location, fn_locate_object_short_oid, &state);
 	if (error)
 		return git__rethrow(error, "Failed to locate object from short oid");
 
@@ -716,7 +716,7 @@ static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 	 * is what git does and allows us to sidestep the fact that
 	 * we're not allowed to overwrite a read-only file on Windows.
 	 */
-	if (git_futils_exists(final_path.ptr) == GIT_SUCCESS) {
+	if (git_path_exists(final_path.ptr) == GIT_SUCCESS) {
 		git_filebuf_cleanup(&stream->fbuf);
 		goto cleanup;
 	}

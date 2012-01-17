@@ -16,7 +16,7 @@ static const size_t WRITE_BUFFER_SIZE = (4096 * 2);
 
 static int lock_file(git_filebuf *file, int flags)
 {
-	if (git_futils_exists(file->path_lock) == 0) {
+	if (git_path_exists(file->path_lock) == 0) {
 		if (flags & GIT_FILEBUF_FORCE)
 			p_unlink(file->path_lock);
 		else
@@ -34,7 +34,7 @@ static int lock_file(git_filebuf *file, int flags)
 	if (file->fd < 0)
 		return git__throw(GIT_EOSERR, "Failed to create lock");
 
-	if ((flags & GIT_FILEBUF_APPEND) && git_futils_exists(file->path_original) == 0) {
+	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == 0) {
 		git_file source;
 		char buffer[2048];
 		size_t read_bytes;
@@ -60,7 +60,7 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->fd >= 0)
 		p_close(file->fd);
 
-	if (file->fd >= 0 && file->path_lock && git_futils_exists(file->path_lock) == GIT_SUCCESS)
+	if (file->fd >= 0 && file->path_lock && git_path_exists(file->path_lock) == GIT_SUCCESS)
 		p_unlink(file->path_lock);
 
 	if (file->digest)

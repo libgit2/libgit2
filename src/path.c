@@ -7,7 +7,11 @@
 #include "common.h"
 #include "path.h"
 #include "posix.h"
-
+#ifdef GIT_WIN32
+#include "win32/dir.h"
+#else
+#include <dirent.h>
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -348,4 +352,173 @@ int git_path_walk_up(
 		iter.ptr[scan] = oldc;
 
 	return error;
+}
+
+int git_path_exists(const char *path)
+{
+	assert(path);
+	return p_access(path, F_OK);
+}
+
+int git_path_isdir(const char *path)
+{
+#ifdef GIT_WIN32
+	DWORD attr = GetFileAttributes(path);
+	if (attr == INVALID_FILE_ATTRIBUTES)
+		return GIT_ERROR;
+
+	return (attr & FILE_ATTRIBUTE_DIRECTORY) ? GIT_SUCCESS : GIT_ERROR;
+
+#else
+	struct stat st;
+	if (p_stat(path, &st) < GIT_SUCCESS)
+		return GIT_ERROR;
+
+	return S_ISDIR(st.st_mode) ? GIT_SUCCESS : GIT_ERROR;
+#endif
+}
+
+int git_path_isfile(const char *path)
+{
+	struct stat st;
+	int stat_error;
+
+	assert(path);
+	stat_error = p_stat(path, &st);
+
+	if (stat_error < GIT_SUCCESS)
+		return -1;
+
+	if (!S_ISREG(st.st_mode))
+		return -1;
+
+	return 0;
+}
+
+static int _check_dir_contents(
+	git_buf *dir,
+	const char *sub,
+	int append_on_success,
+	int (*predicate)(const char *))
+{
+	int error = GIT_SUCCESS;
+	size_t dir_size = dir->size;
+	size_t sub_size = strlen(sub);
+
+	/* leave base valid even if we could not make space for subdir */
+	if ((error = git_buf_try_grow(dir, dir_size + sub_size + 2)) < GIT_SUCCESS)
+		return error;
+
+	/* save excursion */
+	git_buf_joinpath(dir, dir->ptr, sub);
+
+	error = (*predicate)(dir->ptr);
+
+	/* restore excursion */
+	if (!append_on_success || error != GIT_SUCCESS)
+		git_buf_truncate(dir, dir_size);
+
+	return error;
+}
+
+int git_path_contains_dir(git_buf *base, const char *subdir, int append_if_exists)
+{
+	return _check_dir_contents(base, subdir, append_if_exists, &git_path_isdir);
+}
+
+int git_path_contains_file(git_buf *base, const char *file, int append_if_exists)
+{
+	return _check_dir_contents(base, file, append_if_exists, &git_path_isfile);
+}
+
+int git_path_find_dir(git_buf *dir, const char *path, const char *base)
+{
+	int error = GIT_SUCCESS;
+
+	if (base != NULL && git_path_root(path) < 0)
+		error = git_buf_joinpath(dir, base, path);
+	else
+		error = git_buf_sets(dir, path);
+
+	if (error == GIT_SUCCESS) {
+		char buf[GIT_PATH_MAX];
+		if (p_realpath(dir->ptr, buf) != NULL)
+			error = git_buf_sets(dir, buf);
+	}
+
+	/* call dirname if this is not a directory */
+	if (error == GIT_SUCCESS && git_path_isdir(dir->ptr) != GIT_SUCCESS)
+		if (git_path_dirname_r(dir, dir->ptr) < GIT_SUCCESS)
+			error = git_buf_lasterror(dir);
+
+	if (error == GIT_SUCCESS)
+		error = git_path_to_dir(dir);
+
+	return error;
+}
+
+int git_path_cmp(const char *name1, int len1, int isdir1,
+		const char *name2, int len2, int isdir2)
+{
+	int len = len1 < len2 ? len1 : len2;
+	int cmp;
+
+	cmp = memcmp(name1, name2, len);
+	if (cmp)
+		return cmp;
+	if (len1 < len2)
+		return ((!isdir1 && !isdir2) ? -1 :
+						(isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
+	if (len1 > len2)
+		return ((!isdir1 && !isdir2) ? 1 :
+						(isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
+	return 0;
+}
+
+/* Taken from git.git */
+GIT_INLINE(int) is_dot_or_dotdot(const char *name)
+{
+	return (name[0] == '.' &&
+		(name[1] == '\0' ||
+		 (name[1] == '.' && name[2] == '\0')));
+}
+
+int git_path_direach(
+	git_buf *path,
+	int (*fn)(void *, git_buf *),
+	void *arg)
+{
+	ssize_t wd_len;
+	DIR *dir;
+	struct dirent *de;
+
+	if (git_path_to_dir(path) < GIT_SUCCESS)
+		return git_buf_lasterror(path);
+
+	wd_len = path->size;
+	dir = opendir(path->ptr);
+	if (!dir)
+		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure. An error occured while opening the directory", path->ptr);
+
+	while ((de = readdir(dir)) != NULL) {
+		int result;
+
+		if (is_dot_or_dotdot(de->d_name))
+			continue;
+
+		if (git_buf_puts(path, de->d_name) < GIT_SUCCESS)
+			return git_buf_lasterror(path);
+
+		result = fn(arg, path);
+
+		git_buf_truncate(path, wd_len); /* restore path */
+
+		if (result != GIT_SUCCESS) {
+			closedir(dir);
+			return result;	/* The callee is reponsible for setting the correct error message */
+		}
+	}
+
+	closedir(dir);
+	return GIT_SUCCESS;
 }

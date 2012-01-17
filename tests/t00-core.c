@@ -362,7 +362,7 @@ static walk_data dot = {
 BEGIN_TEST(dirent0, "make sure that the '.' folder is not traversed")
 	must_pass(setup(&dot));
 
-	must_pass(git_futils_direach(&dot.path,
+	must_pass(git_path_direach(&dot.path,
 			       one_entry,
 			       &dot));
 
@@ -387,7 +387,7 @@ BEGIN_TEST(dirent1, "traverse a subfolder")
 
 	must_pass(setup(&sub));
 
-	must_pass(git_futils_direach(&sub.path,
+	must_pass(git_path_direach(&sub.path,
 			       one_entry,
 			       &sub));
 
@@ -406,7 +406,7 @@ BEGIN_TEST(dirent2, "traverse a slash-terminated subfolder")
 
 	must_pass(setup(&sub_slash));
 
-	must_pass(git_futils_direach(&sub_slash.path,
+	must_pass(git_path_direach(&sub_slash.path,
 			       one_entry,
 			       &sub_slash));
 
@@ -435,14 +435,14 @@ BEGIN_TEST(dirent3, "make sure that empty folders are not traversed")
 
 	must_pass(setup(&empty));
 
-	must_pass(git_futils_direach(&empty.path,
+	must_pass(git_path_direach(&empty.path,
 			       one_entry,
 			       &empty));
 
 	must_pass(check_counts(&empty));
 
 	/* make sure callback not called */
-	must_pass(git_futils_direach(&empty.path,
+	must_pass(git_path_direach(&empty.path,
 			       dont_call_me,
 			       &empty));
 
@@ -467,7 +467,7 @@ BEGIN_TEST(dirent4, "make sure that strange looking filenames ('..c') are traver
 
 	must_pass(setup(&odd));
 
-	must_pass(git_futils_direach(&odd.path,
+	must_pass(git_path_direach(&odd.path,
 			       one_entry,
 			       &odd));
 
@@ -485,7 +485,7 @@ BEGIN_TEST(filebuf0, "make sure git_filebuf_open doesn't delete an existing lock
 	must_pass(fd);
 	must_pass(p_close(fd));
 	must_fail(git_filebuf_open(&file, test, 0));
-	must_pass(git_futils_exists(testlock));
+	must_pass(git_path_exists(testlock));
 	must_pass(p_unlink(testlock));
 END_TEST
 

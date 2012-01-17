@@ -489,7 +489,7 @@ int git_status_foreach(
 	dirent_st.index_position = 0;
 	dirent_st.is_dir = 1;
 
-	if (git_futils_isdir(workdir)) {
+	if (git_path_isdir(workdir)) {
 		error = git__throw(GIT_EINVALIDPATH,
 			"Failed to determine status of file '%s'. "
 			"The given path doesn't lead to a folder", workdir);
@@ -592,7 +592,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 		return git__rethrow(error,
 			"Failed to determine status of file '%s'", path);
 
-	if (git_futils_isdir(temp_path.ptr) == GIT_SUCCESS) {
+	if (git_path_isdir(temp_path.ptr) == GIT_SUCCESS) {
 		git_buf_free(&temp_path);
 		return git__throw(GIT_EINVALIDPATH,
 			"Failed to determine status of file '%s'. "
@@ -606,7 +606,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	}
 
 	/* Find file in Workdir */
-	if (git_futils_exists(temp_path.ptr) == GIT_SUCCESS) {
+	if (git_path_exists(temp_path.ptr) == GIT_SUCCESS) {
 		if ((error = status_entry_update_from_workdir(e, temp_path.ptr)) < GIT_SUCCESS)
 			goto cleanup;	/* The callee has already set the error message */
 	}
@@ -672,8 +672,8 @@ cleanup:
 }
 
 /*
- * git_futils_direach is not supposed to return entries in an ordered manner.
- * alphasorted_futils_direach wraps git_futils_direach and invokes the callback
+ * git_path_direach is not supposed to return entries in an ordered manner.
+ * alphasorted_futils_direach wraps git_path_direach and invokes the callback
  * function by passing it alphabeticcally sorted paths parameters.
  *
  */
@@ -686,7 +686,7 @@ static char *alphasorted_dirent_info_new(const git_buf *path)
 
 	git_buf_copy_cstr(di, path->size + 1, path);
 
-	if (git_futils_isdir(path->ptr) == GIT_SUCCESS) {
+	if (git_path_isdir(path->ptr) == GIT_SUCCESS) {
 		/*
 		 * Append a forward slash to the name to force folders
 		 * to be ordered in a similar way than in a tree
@@ -734,7 +734,7 @@ static int alphasorted_futils_direach(
 	if (git_vector_init(&entry_names, 16, git__strcmp_cb) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
-	error = git_futils_direach(path, alphasorted_dirent_cb, &entry_names);
+	error = git_path_direach(path, alphasorted_dirent_cb, &entry_names);
 
 	git_vector_sort(&entry_names);
 

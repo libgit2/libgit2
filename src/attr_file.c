@@ -223,7 +223,7 @@ int git_attr_path__init(
 		info->basename++;
 	if (!info->basename || !*info->basename)
 		info->basename = path;
-	info->is_dir = (git_futils_isdir(path) == GIT_SUCCESS);
+	info->is_dir = (git_path_isdir(path) == GIT_SUCCESS);
 	return GIT_SUCCESS;
 }
 

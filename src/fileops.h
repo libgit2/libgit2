@@ -9,7 +9,6 @@
 
 #include "common.h"
 #include "map.h"
-#include "dir.h"
 #include "posix.h"
 #include "path.h"
 
@@ -41,11 +40,6 @@ extern void git_futils_fbuffer_rtrim(git_fbuffer *obj);
  */
 
 /**
- * Check if a file exists and can be accessed.
- */
-extern int git_futils_exists(const char *path);
-
-/**
  * Create and open a file, while also
  * creating all the folders in its path
  */
@@ -63,32 +57,6 @@ extern int git_futils_creat_locked(const char *path, const mode_t mode);
 extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
 /**
- * Check if the given path points to a directory
- */
-extern int git_futils_isdir(const char *path);
-
-/**
- * Check if the given path points to a regular file
- */
-extern int git_futils_isfile(const char *path);
-
-/**
- * Check if the given path contains the given subdirectory.
- *
- * If `append_if_exists` is true, then the subdir will be appended to the
- * parent path if it does exists.
- */
-extern int git_futils_contains_dir(git_buf *parent, const char *subdir, int append_if_exists);
-
-/**
- * Check if the given path contains the given file
- *
- * If `append_if_exists` is true, then the filename will be appended to the
- * parent path if it does exists.
- */
-extern int git_futils_contains_file(git_buf *parent, const char *file, int append_if_exists);
-
-/**
  * Create a path recursively
  */
 extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode);
@@ -99,17 +67,10 @@ extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t m
  */
 extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 
-extern int git_futils_rmdir_r(const char *path, int force);
-
 /**
- * Get the directory for a path.
- *
- * If the path is a directory, this does nothing (save append a '/' as
- * needed).  If path is a normal file, this gets the directory containing
- * it.  If the path does not exist, then this treats it a filename and
- * returns the dirname of it.
+ * Remove path and any files and directories beneath it.
  */
-extern int git_futils_dir_for_path(git_buf *dir, const char *path, const char *base);
+extern int git_futils_rmdir_r(const char *path, int force);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.
@@ -156,24 +117,6 @@ extern int git_futils_mmap_ro(
  * @param map the mapping description previously configured.
  */
 extern void git_futils_mmap_free(git_map *map);
-
-/**
- * Walk each directory entry, except '.' and '..', calling fn(state).
- *
- * @param pathbuf buffer the function reads the initial directory
- * 		path from, and updates with each successive entry's name.
- * @param fn function to invoke with each entry. The first arg is
- *		the input state and the second arg is pathbuf. The function
- *		may modify the pathbuf, but only by appending new text.
- * @param state to pass to fn as the first arg.
- */
-extern int git_futils_direach(
-	git_buf *pathbuf,
-	int (*fn)(void *, git_buf *),
-	void *state);
-
-extern int git_futils_cmp_path(const char *name1, int len1, int isdir1,
-		const char *name2, int len2, int isdir2);
 
 /**
  * Find a "global" file (i.e. one in a user's home directory).

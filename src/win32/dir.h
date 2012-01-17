@@ -9,12 +9,6 @@
 
 #include "common.h"
 
-#ifndef GIT_WIN32
-# include <dirent.h>
-#endif
-
-#ifdef GIT_WIN32
-
 struct git__dirent {
 	int d_ino;
 	char d_name[261];
@@ -41,7 +35,5 @@ extern int git__closedir(git__DIR *);
 #	define rewinddir git__rewinddir
 #	define closedir git__closedir
 # endif
-
-#endif
 
 #endif /* INCLUDE_dir_h__ */

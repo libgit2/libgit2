@@ -238,8 +238,8 @@ static int copy_filesystem_element_recurs(void *_data, git_buf *source)
 	git_buf_truncate(&data->dst, data->dst_baselen);
 	git_buf_puts(&data->dst, source->ptr + data->src_baselen);
 
-	if (git_futils_isdir(source->ptr) == GIT_SUCCESS)
-		return git_futils_direach(source, copy_filesystem_element_recurs, _data);
+	if (git_path_isdir(source->ptr) == GIT_SUCCESS)
+		return git_path_direach(source, copy_filesystem_element_recurs, _data);
 	else
 		return copy_file(source->ptr, data->dst.ptr);
 }
@@ -252,8 +252,8 @@ int copydir_recurs(
 	copydir_data data = { GIT_BUF_INIT, 0, GIT_BUF_INIT, 0 };
 
 	/* Source has to exist, Destination hast to _not_ exist */
-	if (git_futils_isdir(source_directory_path) != GIT_SUCCESS ||
-		git_futils_isdir(destination_directory_path) == GIT_SUCCESS)
+	if (git_path_isdir(source_directory_path) != GIT_SUCCESS ||
+		git_path_isdir(destination_directory_path) == GIT_SUCCESS)
 		return GIT_EINVALIDPATH;
 
 	git_buf_joinpath(&data.src, source_directory_path, "");
@@ -298,8 +298,8 @@ static int remove_placeholders_recurs(void *_data, git_buf *path)
 	remove_data *data = (remove_data *)_data;
 	size_t pathlen;
 
-	if (!git_futils_isdir(path->ptr))
-		return git_futils_direach(path, remove_placeholders_recurs, data);
+	if (!git_path_isdir(path->ptr))
+		return git_path_direach(path, remove_placeholders_recurs, data);
 
 	pathlen = path->size;
 
@@ -321,7 +321,7 @@ int remove_placeholders(const char *directory_path, const char *filename)
 	remove_data data;
 	git_buf buffer = GIT_BUF_INIT;
 
-	if (git_futils_isdir(directory_path))
+	if (git_path_isdir(directory_path))
 		return GIT_EINVALIDPATH;
 
 	if ((error = git_buf_sets(&buffer, directory_path)) < GIT_SUCCESS)

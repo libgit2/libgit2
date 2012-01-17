@@ -68,7 +68,7 @@ static int write_file(const char *path, const char *content)
 	int error;
 	git_file file;
 
-	if (git_futils_exists(path) == GIT_SUCCESS) {
+	if (git_path_exists(path) == GIT_SUCCESS) {
 		error = p_unlink(path);
 
 		if (error < GIT_SUCCESS)
