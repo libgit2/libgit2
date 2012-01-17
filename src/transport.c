@@ -23,7 +23,7 @@ static struct {
 	{NULL, 0}
 };
 
-#define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0]))
+#define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0])) - 1
 
 static git_transport_cb transport_find_fn(const char *url)
 {
