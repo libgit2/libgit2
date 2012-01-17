@@ -363,8 +363,18 @@ int git_attr_fnmatch__parse(
 		*base = git__next_line(pattern);
 		return GIT_ENOMEM;
 	} else {
-		/* remove '\' that might have be used for internal whitespace */
-		spec->length = git__removechar(spec->pattern, '\\');
+		/* strip '\' that might have be used for internal whitespace */
+		char *to = spec->pattern;
+		for (scan = spec->pattern; *scan; to++, scan++) {
+			if (*scan == '\\')
+				scan++; /* skip '\' but include next char */
+			if (to != scan)
+				*to = *scan;
+		}
+		if (to != scan) {
+			*to = '\0';
+			spec->length = (to - spec->pattern);
+		}
 	}
 
 	return GIT_SUCCESS;

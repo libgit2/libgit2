@@ -232,7 +232,7 @@ int git_attr_cache__push_file(
 	file = git_hashtable_lookup(cache->files, filename);
 	if (file == NULL && git_futils_exists(filename) == GIT_SUCCESS) {
 		if ((error = git_attr_file__new(&file)) == GIT_SUCCESS)
-			error = (*loader)(repo, filename, file);
+			error = loader(repo, filename, file);
 		add_to_cache = (error == GIT_SUCCESS);
 	}
 

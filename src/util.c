@@ -156,23 +156,6 @@ void git__strtolower(char *str)
 	git__strntolower(str, strlen(str));
 }
 
-size_t git__removechar(char *str, char remove)
-{
-	char *from = str, *to = str;
-
-	while (*from) {
-		if (*from == remove)
-			from++;
-		if (to != from)
-			*to = *from;
-		to++;
-		from++;
-	}
-	*to = '\0';
-
-	return (to - str);
-}
-
 int git__prefixcmp(const char *str, const char *prefix)
 {
 	for (;;) {
