@@ -993,6 +993,7 @@ static int diff_index_cb(const char *root, git_tree_entry *tentry, void *data)
 
 	if (!ientry) {
 		error = signal_deletion(tentry, cbdata->cb, cbdata->data);
+		git_buf_free(&fn_buf);
 		goto exit;
 	}
 

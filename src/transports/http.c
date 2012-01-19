@@ -71,7 +71,7 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	if (content_length > 0) {
 		git_buf_printf(buf, "Accept: application/x-git-%s-result\r\n", service);
 		git_buf_printf(buf, "Content-Type: application/x-git-%s-request\r\n", service);
-		git_buf_printf(buf, "Content-Length: %" PRIuZ "\r\n", content_length);
+		git_buf_printf(buf, "Content-Length: %"PRIuZ "\r\n", content_length);
 	} else {
 		git_buf_puts(buf, "Accept: */*\r\n");
 	}
