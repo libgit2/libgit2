@@ -984,14 +984,16 @@ static int reference_delete(git_reference *ref)
 	 * We need to reload the packfile, remove the reference from the
 	 * packing list, and repack */
 	if (ref->flags & GIT_REF_PACKED) {
+		struct packref *packref;
 		/* load the existing packfile */
 		if ((error = packed_load(ref->owner)) < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to delete reference");
 
-		if (git_hashtable_remove(ref->owner->references.packfile,
-				ref->name) < GIT_SUCCESS)
+		if (git_hashtable_remove2(ref->owner->references.packfile,
+				ref->name, (void **) &packref) < GIT_SUCCESS)
 			return git__throw(GIT_ENOTFOUND, "Reference not found");
 
+		git__free (packref);
 		error = packed_write(ref->owner);
 
 	/* If the reference is loose, we can just remove the reference
