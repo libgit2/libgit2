@@ -213,7 +213,7 @@ void *git_hashtable_lookup(git_hashtable *self, const void *key)
 	return NULL;
 }
 
-int git_hashtable_remove(git_hashtable *self, const void *key)
+int git_hashtable_remove2(git_hashtable *self, const void *key, void **old_value)
 {
 	int hash_id;
 	git_hashtable_node *node;
@@ -223,6 +223,7 @@ int git_hashtable_remove(git_hashtable *self, const void *key)
 	for (hash_id = 0; hash_id < GIT_HASHTABLE_HASHES; ++hash_id) {
 		node = node_with_hash(self, key, hash_id);
 		if (node->key && self->key_equal(key, node->key) == 0) {
+			*old_value = node->value;
 			node->key = NULL;
 			node->value = NULL;
 			self->key_count--;
