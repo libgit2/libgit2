@@ -164,7 +164,7 @@ static int index_path(git_buf *path, git_indexer *idx)
 					 GIT_OID_HEXSZ + strlen(suffix) + 1) < GIT_SUCCESS)
 		return GIT_ENOMEM;
 
-	git_buf_truncate(path, slash + 1);
+	git_buf_truncate(path, slash);
 	git_buf_puts(path, prefix);
 	git_oid_fmt(path->ptr + path->size, &idx->hash);
 	path->size += GIT_OID_HEXSZ;
