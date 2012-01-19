@@ -279,9 +279,10 @@ int git_remote_update_tips(git_remote *remote)
 	if (!strcmp(head->name, GIT_HEAD_FILE)) {
 		error = git_reference_create_oid(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1);
 		i = 1;
-		git_reference_free(ref);
 		if (error < GIT_SUCCESS)
 			return git__rethrow(error, "Failed to update FETCH_HEAD");
+
+		git_reference_free(ref);
 	}
 
 	for (; i < refs->length; ++i) {
