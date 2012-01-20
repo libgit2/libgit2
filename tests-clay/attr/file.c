@@ -6,11 +6,12 @@
 
 void test_attr_file__simple_read(void)
 {
-	git_attr_file *file = NULL;
+	git_attr_file *file;
 	git_attr_assignment *assign;
 	git_attr_rule *rule;
 
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), &file));
+	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), file));
 	cl_assert_strequal(cl_fixture("attr/attr0"), file->path);
 	cl_assert(file->rules.length == 1);
 
@@ -32,11 +33,12 @@ void test_attr_file__simple_read(void)
 
 void test_attr_file__match_variants(void)
 {
-	git_attr_file *file = NULL;
+	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr1"), &file));
+	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr1"), file));
 	cl_assert_strequal(cl_fixture("attr/attr1"), file->path);
 	cl_assert(file->rules.length == 10);
 
@@ -119,11 +121,12 @@ static void check_one_assign(
 
 void test_attr_file__assign_variants(void)
 {
-	git_attr_file *file = NULL;
+	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr2"), &file));
+	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr2"), file));
 	cl_assert_strequal(cl_fixture("attr/attr2"), file->path);
 	cl_assert(file->rules.length == 11);
 
@@ -184,11 +187,12 @@ void test_attr_file__assign_variants(void)
 
 void test_attr_file__check_attr_examples(void)
 {
-	git_attr_file *file = NULL;
+	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr3"), &file));
+	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr3"), file));
 	cl_assert_strequal(cl_fixture("attr/attr3"), file->path);
 	cl_assert(file->rules.length == 3);
 

@@ -45,19 +45,24 @@ void test_attr_repo__get_one(void)
 		{ "root_test3", "rootattr", NULL },
 		{ "root_test3", "multiattr", "3" },
 		{ "root_test3", "multi2", NULL },
-		{ "subdir/subdir_test1", "repoattr", GIT_ATTR_TRUE },
-		{ "subdir/subdir_test1", "rootattr", GIT_ATTR_TRUE },
-		{ "subdir/subdir_test1", "missingattr", NULL },
-		{ "subdir/subdir_test1", "subattr", "yes" },
-		{ "subdir/subdir_test1", "negattr", GIT_ATTR_FALSE },
-		{ "subdir/subdir_test1", "another", NULL },
-		{ "subdir/subdir_test2.txt", "repoattr", GIT_ATTR_TRUE },
-		{ "subdir/subdir_test2.txt", "rootattr", GIT_ATTR_TRUE },
-		{ "subdir/subdir_test2.txt", "missingattr", NULL },
-		{ "subdir/subdir_test2.txt", "subattr", "yes" },
-		{ "subdir/subdir_test2.txt", "negattr", GIT_ATTR_FALSE },
-		{ "subdir/subdir_test2.txt", "another", "one" },
+		{ "sub/subdir_test1", "repoattr", GIT_ATTR_TRUE },
+		{ "sub/subdir_test1", "rootattr", GIT_ATTR_TRUE },
+		{ "sub/subdir_test1", "missingattr", NULL },
+		{ "sub/subdir_test1", "subattr", "yes" },
+		{ "sub/subdir_test1", "negattr", GIT_ATTR_FALSE },
+		{ "sub/subdir_test1", "another", NULL },
+		{ "sub/subdir_test2.txt", "repoattr", GIT_ATTR_TRUE },
+		{ "sub/subdir_test2.txt", "rootattr", GIT_ATTR_TRUE },
+		{ "sub/subdir_test2.txt", "missingattr", NULL },
+		{ "sub/subdir_test2.txt", "subattr", "yes" },
+		{ "sub/subdir_test2.txt", "negattr", GIT_ATTR_FALSE },
+		{ "sub/subdir_test2.txt", "another", "zero" },
+		{ "sub/subdir_test2.txt", "reposub", GIT_ATTR_TRUE },
+		{ "sub/sub/subdir.txt", "another", "one" },
+		{ "sub/sub/subdir.txt", "reposubsub", GIT_ATTR_TRUE },
+		{ "sub/sub/subdir.txt", "reposub", NULL },
 		{ "does-not-exist", "foo", "yes" },
+		{ "sub/deep/file", "deepdeep", GIT_ATTR_TRUE },
 		{ NULL, NULL, NULL }
 	}, *scan;
 
@@ -105,7 +110,7 @@ void test_attr_repo__get_many(void)
 	cl_assert(values[2] == NULL);
 	cl_assert(values[3] == NULL);
 
-	cl_git_pass(git_attr_get_many(g_repo, "subdir/subdir_test1", 4, names, values));
+	cl_git_pass(git_attr_get_many(g_repo, "sub/subdir_test1", 4, names, values));
 
 	cl_assert(values[0] == GIT_ATTR_TRUE);
 	cl_assert(values[1] == GIT_ATTR_TRUE);
@@ -136,33 +141,33 @@ void test_attr_repo__foreach(void)
 	cl_assert(count == 2);
 
 	count = 0;
-	cl_git_pass(git_attr_foreach(g_repo, "subdir/subdir_test1",
+	cl_git_pass(git_attr_foreach(g_repo, "sub/subdir_test1",
 		&count_attrs, &count));
 	cl_assert(count == 4); /* repoattr, rootattr, subattr, negattr */
 
 	count = 0;
-	cl_git_pass(git_attr_foreach(g_repo, "subdir/subdir_test2.txt",
+	cl_git_pass(git_attr_foreach(g_repo, "sub/subdir_test2.txt",
 		&count_attrs, &count));
-	cl_assert(count == 5); /* repoattr, rootattr, subattr, negattr, another */
+	cl_assert(count == 6); /* repoattr, rootattr, subattr, reposub, negattr, another */
 }
 
 void test_attr_repo__manpage_example(void)
 {
 	const char *value;
 
-	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "foo", &value));
+	cl_git_pass(git_attr_get(g_repo, "sub/abc", "foo", &value));
 	cl_assert(value == GIT_ATTR_TRUE);
 
-	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "bar", &value));
+	cl_git_pass(git_attr_get(g_repo, "sub/abc", "bar", &value));
 	cl_assert(value == NULL);
 
-	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "baz", &value));
+	cl_git_pass(git_attr_get(g_repo, "sub/abc", "baz", &value));
 	cl_assert(value == GIT_ATTR_FALSE);
 
-	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "merge", &value));
+	cl_git_pass(git_attr_get(g_repo, "sub/abc", "merge", &value));
 	cl_assert_strequal("filfre", value);
 
-	cl_git_pass(git_attr_get(g_repo, "subdir/abc", "frotz", &value));
+	cl_git_pass(git_attr_get(g_repo, "sub/abc", "frotz", &value));
 	cl_assert(value == NULL);
 }
 

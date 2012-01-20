@@ -62,13 +62,16 @@ typedef struct {
  * git_attr_file API
  */
 
-extern int git_attr_file__from_buffer(
-	git_repository *repo, const char *buf, git_attr_file **out);
-extern int git_attr_file__from_file(
-	git_repository *repo, const char *path, git_attr_file **out);
-
 extern int git_attr_file__new(git_attr_file **attrs_ptr);
 extern void git_attr_file__free(git_attr_file *file);
+
+extern int git_attr_file__from_buffer(
+	git_repository *repo, const char *buf, git_attr_file *file);
+extern int git_attr_file__from_file(
+	git_repository *repo, const char *path, git_attr_file *file);
+
+extern int git_attr_file__set_path(
+	git_repository *repo, const char *path, git_attr_file *file);
 
 extern int git_attr_file__lookup_one(
 	git_attr_file *file,
@@ -90,6 +93,7 @@ extern unsigned long git_attr_file__name_hash(const char *name);
 
 extern int git_attr_fnmatch__parse(
 	git_attr_fnmatch *spec,
+	const char *source,
 	const char **base);
 
 extern int git_attr_fnmatch__match(

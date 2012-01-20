@@ -31,20 +31,45 @@ int git_attr_file__new(git_attr_file **attrs_ptr)
 	return error;
 }
 
+int git_attr_file__set_path(
+	git_repository *repo, const char *path, git_attr_file *file)
+{
+	if (file->path != NULL) {
+		git__free(file->path);
+		file->path = NULL;
+	}
+
+	if (repo == NULL)
+		file->path = git__strdup(path);
+	else {
+		const char *workdir = git_repository_workdir(repo);
+
+		if (workdir && git__prefixcmp(path, workdir) == 0)
+			file->path = git__strdup(path + strlen(workdir));
+		else
+			file->path = git__strdup(path);
+	}
+
+	return (file->path == NULL) ? GIT_ENOMEM : GIT_SUCCESS;
+}
+
 int git_attr_file__from_buffer(
-	git_repository *repo, const char *buffer, git_attr_file **out)
+	git_repository *repo, const char *buffer, git_attr_file *attrs)
 {
 	int error = GIT_SUCCESS;
-	git_attr_file *attrs = NULL;
 	const char *scan = NULL;
+	char *context = NULL;
 	git_attr_rule *rule = NULL;
 
-	*out = NULL;
-
-	if ((error = git_attr_file__new(&attrs)) < GIT_SUCCESS)
-		goto cleanup;
+	assert(buffer && attrs);
 
 	scan = buffer;
+
+	if (attrs->path && git__suffixcmp(attrs->path, GIT_ATTR_FILE) == 0) {
+		context = git__strndup(attrs->path,
+			strlen(attrs->path) - strlen(GIT_ATTR_FILE));
+		if (!context) error = GIT_ENOMEM;
+	}
 
 	while (error == GIT_SUCCESS && *scan) {
 		/* allocate rule if needed */
@@ -54,7 +79,7 @@ int git_attr_file__from_buffer(
 		}
 
 		/* parse the next "pattern attr attr attr" line */
-		if (!(error = git_attr_fnmatch__parse(&rule->match, &scan)) &&
+		if (!(error = git_attr_fnmatch__parse(&rule->match, context, &scan)) &&
 			!(error = git_attr_assignment__parse(repo, &rule->assigns, &scan)))
 		{
 			if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO)
@@ -76,35 +101,30 @@ int git_attr_file__from_buffer(
 		}
 	}
 
-cleanup:
-	if (error != GIT_SUCCESS) {
-		git_attr_rule__free(rule);
-		git_attr_file__free(attrs);
-	} else {
-		*out = attrs;
-	}
+	git_attr_rule__free(rule);
+	git__free(context);
 
 	return error;
 }
 
 int git_attr_file__from_file(
-	git_repository *repo, const char *path, git_attr_file **out)
+	git_repository *repo, const char *path, git_attr_file *file)
 {
 	int error = GIT_SUCCESS;
 	git_fbuffer fbuf = GIT_FBUFFER_INIT;
 
-	*out = NULL;
+	assert(path && file);
 
-	if ((error = git_futils_readbuffer(&fbuf, path)) < GIT_SUCCESS ||
-		(error = git_attr_file__from_buffer(repo, fbuf.data, out)) < GIT_SUCCESS)
-	{
-		git__rethrow(error, "Could not open attribute file '%s'", path);
-	} else {
-		/* save path (okay to fail) */
-		(*out)->path = git__strdup(path);
-	}
+	if (file->path == NULL)
+		error = git_attr_file__set_path(repo, path, file);
+
+	if (error == GIT_SUCCESS &&
+		(error = git_futils_readbuffer(&fbuf, path)) == GIT_SUCCESS)
+		error = git_attr_file__from_buffer(repo, fbuf.data, file);
 
 	git_futils_freebuffer(&fbuf);
+	if (error != GIT_SUCCESS)
+		git__rethrow(error, "Could not open attribute file '%s'", path);
 
 	return error;
 }
@@ -267,6 +287,7 @@ int git_attr_path__init(
  */
 int git_attr_fnmatch__parse(
 	git_attr_fnmatch *spec,
+	const char *source,
 	const char **base)
 {
 	const char *pattern, *scan;
@@ -312,30 +333,48 @@ int git_attr_fnmatch__parse(
 	*base = scan;
 
 	spec->length = scan - pattern;
-	spec->pattern = git__strndup(pattern, spec->length);
+
+	if (pattern[spec->length - 1] == '/') {
+		spec->length--;
+		spec->flags = spec->flags | GIT_ATTR_FNMATCH_DIRECTORY;
+		if (--slash_count <= 0)
+			spec->flags = spec->flags & ~GIT_ATTR_FNMATCH_FULLPATH;
+	}
+
+	if ((spec->flags & GIT_ATTR_FNMATCH_FULLPATH) != 0 &&
+		source != NULL && git_path_root(pattern) < 0)
+	{
+		size_t sourcelen = strlen(source);
+		/* given an unrooted fullpath match from a file inside a repo,
+		 * prefix the pattern with the relative directory of the source file
+		 */
+		spec->pattern = git__malloc(sourcelen + spec->length + 1);
+		if (spec->pattern) {
+			memcpy(spec->pattern, source, sourcelen);
+			memcpy(spec->pattern + sourcelen, pattern, spec->length);
+			spec->length += sourcelen;
+			spec->pattern[spec->length] = '\0';
+		}
+	} else {
+		spec->pattern = git__strndup(pattern, spec->length);
+	}
 
 	if (!spec->pattern) {
 		*base = git__next_line(pattern);
 		return GIT_ENOMEM;
 	} else {
-		/* remove '\' that might have be used for internal whitespace */
-		char *from = spec->pattern, *to = spec->pattern;
-		while (*from) {
-			if (*from == '\\') {
-				from++;
-				spec->length--;
-			}
-			*to++ = *from++;
+		/* strip '\' that might have be used for internal whitespace */
+		char *to = spec->pattern;
+		for (scan = spec->pattern; *scan; to++, scan++) {
+			if (*scan == '\\')
+				scan++; /* skip '\' but include next char */
+			if (to != scan)
+				*to = *scan;
 		}
-		*to = '\0';
-	}
-
-	if (pattern[spec->length - 1] == '/') {
-		spec->length--;
-		spec->pattern[spec->length] = '\0';
-		spec->flags = spec->flags | GIT_ATTR_FNMATCH_DIRECTORY;
-		if (--slash_count <= 0)
-			spec->flags = spec->flags & ~GIT_ATTR_FNMATCH_FULLPATH;
+		if (to != scan) {
+			*to = '\0';
+			spec->length = (to - spec->pattern);
+		}
 	}
 
 	return GIT_SUCCESS;
