@@ -104,10 +104,10 @@ int git_fetch_negotiate(git_remote *remote)
 	return t->negotiate_fetch(t, remote->repo, &remote->refs);
 }
 
-int git_fetch_download_pack(char **out, git_remote *remote)
+int git_fetch_download_pack(git_buf *out, git_remote *remote)
 {
 	if(!remote->need_pack) {
-		*out = NULL;
+		git_buf_clear(out);
 		return GIT_SUCCESS;
 	}
 
@@ -116,7 +116,7 @@ int git_fetch_download_pack(char **out, git_remote *remote)
 
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
 int git_fetch__download_pack(
-	char **out,
+	git_buf *out,
 	const char *buffered,
 	size_t buffered_size,
 	GIT_SOCKET fd,
@@ -161,11 +161,8 @@ int git_fetch__download_pack(
 			break;
 	}
 
-	*out = git__strdup(file.path_lock);
-	if (*out == NULL) {
-		error = GIT_ENOMEM;
+	if ((error = git_buf_set(out, file.path_lock, strlen(file.path_lock))) < GIT_SUCCESS)
 		goto cleanup;
-	}
 
 	/* A bit dodgy, but we need to keep the pack at the temporary path */
 	error = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);

@@ -36,7 +36,7 @@ int fetch(git_repository *repo, int argc, char **argv)
   git_indexer *idx = NULL;
   git_indexer_stats stats;
   int error;
-  char *packname = NULL;
+  git_buf packname = GIT_BUF_INIT;
 
   // Get the remote and connect to it
   printf("Fetching %s\n", argv[1]);
@@ -54,12 +54,12 @@ int fetch(git_repository *repo, int argc, char **argv)
   if (error < GIT_SUCCESS)
     return error;
 
-  // No error and a NULL packname means no packfile was needed
-  if (packname != NULL) {
+  // No error and an empty packname means no packfile was needed
+  if (strlen(git_buf_cstr(packname) > 0) {
 	  printf("The packname is %s\n", packname);
 
 	  // Create a new instance indexer
-	  error = git_indexer_new(&idx, packname);
+	  error = git_indexer_new(&idx, git_buf_cstr(packname));
 	  if (error < GIT_SUCCESS)
 		  return error;
 
@@ -76,7 +76,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	  if (error < GIT_SUCCESS)
 		  return error;
 
-	  error = rename_packfile(packname, idx);
+	  error = rename_packfile(git_buf_cstr(packname), idx);
 	  if (error < GIT_SUCCESS)
 		  return error;
   }
@@ -89,7 +89,7 @@ int fetch(git_repository *repo, int argc, char **argv)
   if (error < GIT_SUCCESS)
     return error;
 
-  free(packname);
+  git_buf_free(&packname);
   git_indexer_free(idx);
   git_remote_free(remote);
 

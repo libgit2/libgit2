@@ -247,16 +247,15 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 	return remote->transport->ls(remote->transport, list_cb, payload);
 }
 
-int git_remote_download(char **filename, git_remote *remote)
+int git_remote_download(git_buf *filename_out, git_remote *remote)
 {
 	int error;
+	assert(filename_out && remote);
 
-	assert(filename && remote);
-
-	if ((error = git_fetch_negotiate(remote)) < 0)
+	if ((error = git_fetch_negotiate(remote)) < GIT_SUCCESS)
 		return git__rethrow(error, "Error negotiating");
 
-	return git_fetch_download_pack(filename, remote);
+	return git_fetch_download_pack(filename_out, remote);
 }
 
 int git_remote_update_tips(git_remote *remote)

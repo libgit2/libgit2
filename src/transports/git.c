@@ -380,7 +380,7 @@ static int git_send_done(git_transport *transport)
 	return git_pkt_send_done(t->socket);
 }
 
-static int git_download_pack(char **out, git_transport *transport, git_repository *repo)
+static int git_download_pack(git_buf *out, git_transport *transport, git_repository *repo)
 {
 	transport_git *t = (transport_git *) transport;
 	int error = GIT_SUCCESS;
