@@ -8,23 +8,16 @@
 #define INCLUDE_buffer_h__
 
 #include "common.h"
+#include "git2/buffer.h"
 
-typedef struct {
+struct git_buf {
 	char *ptr;
 	ssize_t asize, size;
-} git_buf;
+};
 
 extern char git_buf_initbuf[];
 
 #define GIT_BUF_INIT { git_buf_initbuf, 0, 0 }
-
-/**
- * Initialize a git_buf structure.
- *
- * For the cases where GIT_BUF_INIT cannot be used to do static
- * initialization.
- */
-void git_buf_init(git_buf *buf, size_t initial_size);
 
 /**
  * Grow the buffer to hold at least `target_size` bytes.
@@ -44,7 +37,6 @@ int git_buf_grow(git_buf *buf, size_t target_size);
  */
 int git_buf_try_grow(git_buf *buf, size_t target_size);
 
-void git_buf_free(git_buf *buf);
 void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 char *git_buf_detach(git_buf *buf);
 void git_buf_attach(git_buf *buf, char *ptr, ssize_t asize);
