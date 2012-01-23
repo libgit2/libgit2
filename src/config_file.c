@@ -18,8 +18,7 @@
 
 typedef struct cvar_t {
 	struct cvar_t *next;
-	char *section;
-	char *name;
+	char *key; /* TODO: we might be able to get rid of this */
 	char *value;
 } cvar_t;
 
@@ -69,7 +68,7 @@ typedef struct {
 typedef struct {
 	git_config_file parent;
 
-	cvar_t_list var_list;
+	git_hashtable *values;
 
 	struct {
 		git_fbuffer buffer;
@@ -83,167 +82,72 @@ typedef struct {
 
 static int config_parse(diskfile_backend *cfg_file);
 static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
-static int config_write(diskfile_backend *cfg, cvar_t *var);
+static int config_write(diskfile_backend *cfg, const char *key, const char *value);
 
 static void cvar_free(cvar_t *var)
 {
 	if (var == NULL)
 		return;
 
-	git__free(var->section);
-	git__free(var->name);
+	git__free(var->key);
 	git__free(var->value);
 	git__free(var);
 }
 
-static void cvar_list_free(cvar_t_list *list)
+/* Take something the user gave us and make it nice for our hash function */
+static int normalize_name(const char *in, char **out)
 {
-	cvar_t *cur;
+	char *name, *fdot, *ldot;
 
-	while (!CVAR_LIST_EMPTY(list)) {
-		cur = CVAR_LIST_HEAD(list);
-		CVAR_LIST_REMOVE_HEAD(list);
-		cvar_free(cur);
-	}
-}
+	assert(in && out);
 
-/*
- * Compare according to the git rules. Section contains the section as
- * it's stored internally. query is the full name as would be given to
- * 'git config'.
- */
-static int cvar_match_section(const char *section, const char *query)
-{
-	const char *sdot, *qdot, *qsub;
-	size_t section_len;
-
-	sdot = strchr(section, '.');
-
-	/* If the section doesn't have any dots, it's easy */
-	if (sdot == NULL)
-		return !strncasecmp(section, query, strlen(section));
-
-	/*
-	 * If it does have dots, compare the sections
-	 * case-insensitively. The comparison includes the dots.
-	 */
-	section_len = sdot - section + 1;
-	if (strncasecmp(section, query, sdot - section))
-		return 0;
-
-	qsub = query + section_len;
-	qdot = strchr(qsub, '.');
-	/* Make sure the subsections are the same length */
-	if (strlen(sdot + 1) != (size_t) (qdot - qsub))
-		return 0;
-
-	/* The subsection is case-sensitive */
-	return !strncmp(sdot + 1, qsub, strlen(sdot + 1));
-}
-
-static int cvar_match_name(const cvar_t *var, const char *str)
-{
-	const char *name_start;
-
-	if (!cvar_match_section(var->section, str)) {
-		return 0;
-	}
-	/* Early exit if the lengths are different */
-	name_start = strrchr(str, '.') + 1;
-	if (strlen(var->name) != strlen(name_start))
-		return 0;
-
-	return !strcasecmp(var->name, name_start);
-}
-
-static cvar_t *cvar_list_find(cvar_t_list *list, const char *name)
-{
-	cvar_t *iter;
-
-	CVAR_LIST_FOREACH (list, iter) {
-		if (cvar_match_name(iter, name))
-			return iter;
-	}
-
-	return NULL;
-}
-
-static int cvar_normalize_name(cvar_t *var, char **output)
-{
-	char *section_sp = strchr(var->section, ' ');
-	char *quote, *name;
-	size_t len;
-	int ret;
-
-	/*
-	 * The final string is going to be at most one char longer than
-	 * the input
-	 */
-	len = strlen(var->section) + strlen(var->name) + 1;
-	name = git__malloc(len + 1);
+	name = git__strdup(in);
 	if (name == NULL)
 		return GIT_ENOMEM;
 
-	/* If there aren't any spaces in the section, it's easy */
-	if (section_sp == NULL) {
-		ret = p_snprintf(name, len + 1, "%s.%s", var->section, var->name);
-		if (ret < 0) {
-			git__free(name);
-			return git__throw(GIT_EOSERR, "Failed to normalize name. OS err: %s", strerror(errno));
-		}
+	fdot = strchr(name, '.');
+	ldot = strrchr(name, '.');
 
-		*output = name;
-		return GIT_SUCCESS;
+	if (fdot == NULL || ldot == NULL) {
+		git__free(name);
+		return git__throw(GIT_EINVALIDARGS, "Bad format. No dot in '%s'", in);
 	}
 
-	/*
-	 * If there are spaces, we replace the space by a dot, move
-	 * section name so it overwrites the first quotation mark and
-	 * replace the last quotation mark by a dot. We then append the
-	 * variable name.
-	 */
-	strcpy(name, var->section);
-	section_sp = strchr(name, ' ');
-	*section_sp = '.';
-	/* Remove first quote */
-	quote = strchr(name, '"');
-	memmove(quote, quote+1, strlen(quote+1));
-	/* Remove second quote */
-	quote = strchr(name, '"');
-	*quote = '.';
-	strcpy(quote+1, var->name);
+	/* Downcase up to the first dot and after the last one */
+	git__strntolower(name, fdot - name);
+	git__strtolower(ldot);
 
-	*output = name;
+	*out = name;
 	return GIT_SUCCESS;
 }
 
-static char *interiorize_section(const char *orig)
+static void free_vars(git_hashtable *values)
 {
-	char *dot, *last_dot, *section, *ret;
-	size_t len;
+	const char *GIT_UNUSED(_unused) = NULL;
+	cvar_t *var = NULL;
 
-	dot = strchr(orig, '.');
-	last_dot = strrchr(orig, '.');
-	len = last_dot - orig;
+	if (values == NULL)
+		return;
 
-	/* No subsection, this is easy */
-	if (last_dot == dot)
-		return git__strndup(orig, dot - orig);
+	GIT_HASHTABLE_FOREACH(values, _unused, var,
+	      do {
+		      cvar_t *next = CVAR_LIST_NEXT(var);
+		      cvar_free(var);
+		      var = next;
+	      } while (var != NULL);
+	)
 
-	section = git__strndup(orig, len);
-	if (section == NULL)
-		return NULL;
-
-	ret = section;
-	len = dot - orig;
-	git__strntolower(section, len);
-	return ret;
+	git_hashtable_free(values);
 }
 
 static int config_open(git_config_file *cfg)
 {
 	int error;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+
+	b->values = git_hashtable_alloc (20, git_hash__strhash_cb, git_hash__strcmp_cb);
+	if (b->values == NULL)
+		return GIT_ENOMEM;
 
 	error = git_futils_readbuffer(&b->reader.buffer, b->file_path);
 
@@ -263,7 +167,8 @@ static int config_open(git_config_file *cfg)
 	return GIT_SUCCESS;
 
  cleanup:
-	cvar_list_free(&b->var_list);
+	free_vars(b->values);
+	b->values = NULL;
 	git_futils_freebuffer(&b->reader.buffer);
 
 	return git__rethrow(error, "Failed to open config");
@@ -277,7 +182,8 @@ static void backend_free(git_config_file *_backend)
 		return;
 
 	git__free(backend->file_path);
-	cvar_list_free(&backend->var_list);
+
+	free_vars(backend->values);
 
 	git__free(backend);
 }
@@ -287,19 +193,17 @@ static int file_foreach(git_config_file *backend, int (*fn)(const char *, const 
 	int ret = GIT_SUCCESS;
 	cvar_t *var;
 	diskfile_backend *b = (diskfile_backend *)backend;
+	const char *key;
 
-	CVAR_LIST_FOREACH(&b->var_list, var) {
-		char *normalized = NULL;
+	GIT_HASHTABLE_FOREACH(b->values, key, var,
+	      do {
+		      ret = fn(key, var->value, data);
+		      if (ret)
+			      break;
+		      var = CVAR_LIST_NEXT(var);
+	      } while (var != NULL);
+	)
 
-		ret = cvar_normalize_name(var, &normalized);
-		if (ret < GIT_SUCCESS)
-			return ret;
-
-		ret = fn(normalized, var->value, data);
-		git__free(normalized);
-		if (ret)
-			break;
-	}
 
 	return ret;
 }
@@ -307,38 +211,34 @@ static int file_foreach(git_config_file *backend, int (*fn)(const char *, const 
 static int config_set(git_config_file *cfg, const char *name, const char *value)
 {
 	cvar_t *var = NULL;
-	cvar_t *existing = NULL;
+	cvar_t *existing = NULL, *old_value = NULL;
 	int error = GIT_SUCCESS;
-	const char *last_dot;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+	char *key;
+
+	if ((error = normalize_name(name, &key)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to normalize variable name '%s'", name);
 
 	/*
-	 * If it already exists, we just need to update its value.
+	 * Try to find it in the existing values and update it if it
+	 * only has one value.
 	 */
-	existing = cvar_list_find(&b->var_list, name);
+	existing = git_hashtable_lookup(b->values, key);
 	if (existing != NULL) {
-		char *tmp = value ? git__strdup(value) : NULL;
+		char *tmp;
+
+		git__free(key);
+		if (existing->next != NULL)
+			return git__throw(GIT_EINVALIDARGS, "Multivar incompatible with simple set");
+
+		tmp = value ? git__strdup(value) : NULL;
 		if (tmp == NULL && value != NULL)
 			return GIT_ENOMEM;
 
 		git__free(existing->value);
 		existing->value = tmp;
 
-		return config_write(b, existing);
-	}
-
-	/*
-	 * Otherwise, create it and stick it at the end of the queue. If
-	 * value is NULL, we return an error, because you can't delete a
-	 * variable that doesn't exist.
-	 */
-
-	if (value == NULL)
-		return git__throw(GIT_ENOTFOUND, "Can't delete non-exitent variable");
-
-	last_dot = strrchr(name, '.');
-	if (last_dot == NULL) {
-		return git__throw(GIT_EINVALIDTYPE, "Variables without section aren't allowed");
+		return config_write(b, existing->key, value);
 	}
 
 	var = git__malloc(sizeof(cvar_t));
@@ -347,17 +247,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 
 	memset(var, 0x0, sizeof(cvar_t));
 
-	var->section = interiorize_section(name);
-	if (var->section == NULL) {
-		error = GIT_ENOMEM;
-		goto out;
-	}
-
-	var->name = git__strdup(last_dot + 1);
-	if (var->name == NULL) {
-		error = GIT_ENOMEM;
-		goto out;
-	}
+	var->key = key;
 
 	var->value = value ? git__strdup(value) : NULL;
 	if (var->value == NULL && value != NULL) {
@@ -365,8 +255,13 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		goto out;
 	}
 
-	CVAR_LIST_APPEND(&b->var_list, var);
-	error = config_write(b, var);
+	error = git_hashtable_insert2(b->values, key, var, (void **)&old_value);
+	if (error < GIT_SUCCESS)
+		goto out;
+
+	cvar_free(old_value);
+
+	error = config_write(b, key, value);
 
  out:
 	if (error < GIT_SUCCESS)
@@ -383,8 +278,13 @@ static int config_get(git_config_file *cfg, const char *name, const char **out)
 	cvar_t *var;
 	int error = GIT_SUCCESS;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+	char *key;
 
-	var = cvar_list_find(&b->var_list, name);
+	if ((error = normalize_name(name, &key)) < GIT_SUCCESS)
+		return error;
+
+	var = git_hashtable_lookup(b->values, key);
+	git__free(key);
 
 	if (var == NULL)
 		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
@@ -397,30 +297,31 @@ static int config_get(git_config_file *cfg, const char *name, const char **out)
 static int config_delete(git_config_file *cfg, const char *name)
 {
 	int error;
-	cvar_t *iter, *prev = NULL;
+	const cvar_t *var;
+	cvar_t *old_value;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+	char *key;
 
-	CVAR_LIST_FOREACH (&b->var_list, iter) {
-		/* This is a bit hacky because we use a singly-linked list */
-		if (cvar_match_name(iter, name)) {
-			if (CVAR_LIST_HEAD(&b->var_list) == iter)
-				CVAR_LIST_HEAD(&b->var_list) = CVAR_LIST_NEXT(iter);
-			else
-				CVAR_LIST_REMOVE_AFTER(prev);
+	if ((error = normalize_name(name, &key)) < GIT_SUCCESS)
+		return error;
 
-			git__free(iter->value);
-			iter->value = NULL;
-			error = config_write(b, iter);
-			cvar_free(iter);
-			return error == GIT_SUCCESS ?
-				GIT_SUCCESS :
-				git__rethrow(error, "Failed to update config file");
-		}
-		/* Store it for the next round */
-		prev = iter;
-	}
+	var = git_hashtable_lookup(b->values, key);
+	free(key);
 
-	return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
+	if (var == NULL)
+		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
+
+	if (var->next != NULL)
+		return git__throw(GIT_EINVALIDARGS, "Multivar incompatible with simple delete");
+
+
+	if ((error = git_hashtable_remove2(b->values, var->key, (void **)&old_value)) < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to remove %s from hashtable", key);
+
+	error = config_write(b, var->key, NULL);
+	cvar_free(old_value);
+
+	return error;
 }
 
 int git_config_file__ondisk(git_config_file **out, const char *path)
@@ -631,6 +532,7 @@ static int parse_section_header_ext(const char *line, const char *base_name, cha
 	 */
 	do {
 		if (quote_marks == 2) {
+			puts("too many marks");
 			error = git__throw(GIT_EOBJCORRUPTED, "Falied to parse ext header. Text after closing quote");
 			goto out;
 
@@ -819,6 +721,7 @@ static int config_parse(diskfile_backend *cfg_file)
 	char *var_name;
 	char *var_value;
 	cvar_t *var;
+	git_buf buf = GIT_BUF_INIT;
 
 	/* Initialize the reading position */
 	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
@@ -864,18 +767,20 @@ static int config_parse(diskfile_backend *cfg_file)
 
 			memset(var, 0x0, sizeof(cvar_t));
 
-			var->section = git__strdup(current_section);
-			if (var->section == NULL) {
+			git__strtolower(var_name);
+			git_buf_printf(&buf, "%s.%s", current_section, var_name);
+			git__free(var_name);
+
+			if (git_buf_oom(&buf)) {
 				error = GIT_ENOMEM;
-				git__free(var);
 				break;
 			}
 
-			var->name = var_name;
+			var->key = git_buf_detach(&buf);
 			var->value = var_value;
-			git__strtolower(var->name);
 
-			CVAR_LIST_APPEND(&cfg_file->var_list, var);
+			/* FIXME: Actually support multivars, don't just overwrite */
+			error = git_hashtable_insert(cfg_file->values, var->key, var);
 
 			break;
 		}
@@ -886,26 +791,44 @@ static int config_parse(diskfile_backend *cfg_file)
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse config");
 }
 
-static int write_section(git_filebuf *file, cvar_t *var)
+static int write_section(git_filebuf *file, const char *key)
 {
 	int error;
+	const char *fdot, *ldot;
+	git_buf buf = GIT_BUF_INIT;
 
-	error = git_filebuf_printf(file, "[%s]\n", var->section);
-	if (error < GIT_SUCCESS)
-		return error;
+	/* All of this just for [section "subsection"] */
+	fdot = strchr(key, '.');
+	git_buf_putc(&buf, '[');
+	if (fdot == NULL)
+		git_buf_puts(&buf, key);
+	else
+		git_buf_put(&buf, key, fdot - key);
+	ldot = strrchr(key, '.');
+	if (fdot != ldot && fdot != NULL) {
+		git_buf_putc(&buf, '"');
+		/* TODO: escape  */
+		git_buf_put(&buf, fdot + 1, ldot - fdot - 1);
+		git_buf_putc(&buf, '"');
+	}
+	git_buf_puts(&buf, "]\n");
+	if (git_buf_oom(&buf))
+		return GIT_ENOMEM;
 
-	error = git_filebuf_printf(file, "    %s = %s\n", var->name, var->value);
+	error = git_filebuf_write(file, git_buf_cstr(&buf), buf.size);
+	git_buf_free(&buf);
+
 	return error;
 }
 
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_write(diskfile_backend *cfg, cvar_t *var)
+static int config_write(diskfile_backend *cfg, const char *key, const char* value)
 {
 	int error = GIT_SUCCESS, c;
 	int section_matches = 0, last_section_matched = 0;
-	char *current_section = NULL;
+	char *current_section = NULL, *section, *name, *ldot;
 	char *var_name, *var_value, *data_start;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *pre_end = NULL, *post_start = NULL;
@@ -936,6 +859,9 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 		return git__rethrow(error, "Failed to lock config file");
 
 	skip_bom(cfg);
+	ldot = strrchr(key, '.');
+	name = ldot + 1;
+	section = git__strndup(key, ldot - key);
 
 	while (error == GIT_SUCCESS && !cfg->reader.eof) {
 		c = cfg_peek(cfg, SKIP_WHITESPACE);
@@ -961,7 +887,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 
 			/* Keep track of when it stops matching */
 			last_section_matched = section_matches;
-			section_matches = !strcmp(current_section, var->section);
+			section_matches = !strcmp(current_section, section);
 			break;
 
 		case ';':
@@ -990,7 +916,7 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 
 				pre_end = cfg->reader.read_ptr;
 				if ((error = parse_variable(cfg, &var_name, &var_value)) == GIT_SUCCESS)
-					cmp = strcasecmp(var->name, var_name);
+					cmp = strcasecmp(name, var_name);
 
 				git__free(var_name);
 				git__free(var_value);
@@ -1016,10 +942,10 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 			 * means we want to delete it, so pretend everything went
 			 * fine
 			 */
-			if (var->value == NULL)
+			if (value == NULL)
 				error = GIT_SUCCESS;
 			else
-				error = git_filebuf_printf(&file, "\t%s = %s\n", var->name, var->value);
+				error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to overwrite the variable");
 				break;
@@ -1058,16 +984,18 @@ static int config_write(diskfile_backend *cfg, cvar_t *var)
 
 	/* And now if we just need to add a variable */
 	if (section_matches) {
-		error = git_filebuf_printf(&file, "\t%s = %s\n", var->name, var->value);
+		error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
 		goto cleanup;
 	}
 
 	/* Or maybe we need to write out a whole section */
-	error = write_section(&file, var);
+	error = write_section(&file, section);
 	if (error < GIT_SUCCESS)
 		git__rethrow(error, "Failed to write new section");
 
+	error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
  cleanup:
+	git__free(section);
 	git__free(current_section);
 
 	if (error < GIT_SUCCESS)
