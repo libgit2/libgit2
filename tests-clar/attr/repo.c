@@ -29,8 +29,6 @@ void test_attr_repo__cleanup(void)
 
 void test_attr_repo__get_one(void)
 {
-	const char *value;
-
 	struct attr_expected test_cases[] = {
 		{ "root_test1", "repoattr", EXPECT_TRUE, NULL },
 		{ "root_test1", "rootattr", EXPECT_TRUE, NULL },
@@ -63,6 +61,8 @@ void test_attr_repo__get_one(void)
 		{ "sub/sub/subdir.txt", "reposub", EXPECT_UNDEFINED, NULL },
 		{ "does-not-exist", "foo", EXPECT_STRING, "yes" },
 		{ "sub/deep/file", "deepdeep", EXPECT_TRUE, NULL },
+		{ "sub/sub/d/no", "test", EXPECT_STRING, "a/b/d/*" },
+		{ "sub/sub/d/yes", "test", EXPECT_UNDEFINED, NULL },
 		{ NULL, NULL, 0, NULL }
 	}, *scan;
 
@@ -224,3 +224,4 @@ void test_attr_repo__bad_macros(void)
 	cl_assert_strequal("hahaha", values[4]);
 	cl_assert(GIT_ATTR_TRUE(values[5]));
 }
+
