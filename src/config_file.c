@@ -230,23 +230,13 @@ static char *interiorize_section(const char *orig)
 	if (last_dot == dot)
 		return git__strndup(orig, dot - orig);
 
-	section = git__malloc(len + 4);
+	section = git__strndup(orig, len);
 	if (section == NULL)
 		return NULL;
 
-	memset(section, 0x0, len + 4);
 	ret = section;
 	len = dot - orig;
-	memcpy(section, orig, len);
-	section += len;
-	len = strlen(" \"");
-	memcpy(section, " \"", len);
-	section += len;
-	len = last_dot - dot - 1;
-	memcpy(section, dot + 1, len);
-	section += len;
-	*section = '"';
-
+	git__strntolower(section, len);
 	return ret;
 }
 
