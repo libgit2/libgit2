@@ -13,8 +13,8 @@
 
 GIT_INLINE(int) p_link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
 {
-	GIT_UNUSED_ARG(old)
-	GIT_UNUSED_ARG(new)
+	GIT_UNUSED_ARG(old);
+	GIT_UNUSED_ARG(new);
 	errno = ENOSYS;
 	return -1;
 }
@@ -24,7 +24,7 @@ GIT_INLINE(int) p_mkdir(const char *path, mode_t GIT_UNUSED(mode))
 	wchar_t* buf = gitwin_to_utf16(path);
 	int ret = _wmkdir(buf);
 
-	GIT_UNUSED_ARG(mode)
+	GIT_UNUSED_ARG(mode);
 
 	git__free(buf);
 	return ret;
