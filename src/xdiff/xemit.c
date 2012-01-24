@@ -71,6 +71,8 @@ xdchange_t *xdl_get_hunk(xdchange_t *xscr, xdemitconf_t const *xecfg) {
 
 static long def_ff(const char *rec, long len, char *buf, long sz, void *priv)
 {
+	(void)priv;
+
 	if (len > 0 &&
 			(isalpha((unsigned char)*rec) || /* identifier? */
 			 *rec == '_' ||	/* also identifier? */
@@ -90,6 +92,9 @@ static int xdl_emit_common(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 	xdfile_t *xdf = &xe->xdf2;
 	const char *rchg = xdf->rchg;
 	long ix;
+
+	(void)xscr;
+	(void)xecfg;
 
 	for (ix = 0; ix < xdf->nrec; ix++) {
 		if (rchg[ix])
