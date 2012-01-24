@@ -94,7 +94,7 @@ typedef struct s_xdemitconf {
 	unsigned long flags;
 	find_func_t find_func;
 	void *find_func_priv;
-	void (*emit_func)();
+	void (*emit_func)(void);
 } xdemitconf_t;
 
 typedef struct s_bdiffparam {

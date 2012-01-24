@@ -107,9 +107,10 @@ static int cmp_recs(xpparam_t const *xpp,
 #define TABLE_HASH(index, side, line) \
 	XDL_HASHLONG((REC(index->env, side, line))->ha, index->table_bits)
 
-static int scanA(struct histindex *index, int line1, int count1)
+static int scanA(struct histindex *index, unsigned int line1, unsigned int count1)
 {
-	unsigned int ptr, tbl_idx;
+	unsigned int ptr;
+	unsigned int tbl_idx;
 	unsigned int chain_len;
 	struct record **rec_chain, *rec;
 
@@ -160,8 +161,10 @@ continue_scan:
 	return 0;
 }
 
-static int try_lcs(struct histindex *index, struct region *lcs, int b_ptr,
-	int line1, int count1, int line2, int count2)
+static int try_lcs(
+	struct histindex *index, struct region *lcs, unsigned int b_ptr,
+	unsigned int line1, unsigned int count1,
+	unsigned int line2, unsigned int count2)
 {
 	unsigned int b_next = b_ptr + 1;
 	struct record *rec = index->records[TABLE_HASH(index, 2, b_ptr)];
@@ -233,9 +236,12 @@ static int try_lcs(struct histindex *index, struct region *lcs, int b_ptr,
 	return b_next;
 }
 
-static int find_lcs(struct histindex *index, struct region *lcs,
-	int line1, int count1, int line2, int count2) {
-	int b_ptr;
+static int find_lcs(
+	struct histindex *index, struct region *lcs,
+	unsigned int line1, unsigned int count1,
+	unsigned int line2, unsigned int count2)
+{
+	unsigned int b_ptr;
 
 	if (scanA(index, line1, count1))
 		return -1;
@@ -258,12 +264,14 @@ static int fall_back_to_classic_diff(struct histindex *index,
 				  line1, count1, line2, count2);
 }
 
-static int histogram_diff(xpparam_t const *xpp, xdfenv_t *env,
-	int line1, int count1, int line2, int count2)
+static int histogram_diff(
+	xpparam_t const *xpp, xdfenv_t *env,
+	unsigned int line1, unsigned int count1,
+	unsigned int line2, unsigned int count2)
 {
 	struct histindex index;
 	struct region lcs;
-	int sz;
+	unsigned int sz;
 	int result = -1;
 
 	if (count1 <= 0 && count2 <= 0)
