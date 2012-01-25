@@ -1,5 +1,5 @@
-/tests-clay/clay.h
-/tests-clay/clay_main.c
+/tests-clar/clar.h
+/tests-clar/clar_main.c
 /apidocs
 /trash-*.exe
 /libgit2.pc
