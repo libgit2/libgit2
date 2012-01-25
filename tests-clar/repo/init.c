@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include "repository.h"
 
 enum repo_mode {
 	STANDARD_REPOSITORY = 0,
@@ -75,32 +76,32 @@ void test_repo_init__bare_repo_noslash(void)
 	ensure_repository_init("testrepo.git", 1, "testrepo.git/", NULL);
 }
 
-#if 0
-BEGIN_TEST(init2, "Initialize and open a bare repo with a relative path escaping out of the current working directory")
+void test_repo_init__bare_repo_escaping_current_workdir(void)
+{
 	git_buf path_repository = GIT_BUF_INIT;
-	char current_workdir[GIT_PATH_MAX];
-	const mode_t mode = 0777;
-	git_repository* repo;
+	git_buf path_current_workdir = GIT_BUF_INIT;
 
-	must_pass(p_getcwd(current_workdir, sizeof(current_workdir)));
+	cl_git_pass(git_path_prettify_dir(&path_current_workdir, ".", NULL));
+	
+	cl_git_pass(git_buf_joinpath(&path_repository, git_buf_cstr(&path_current_workdir), "a/b/c"));
+	cl_git_pass(git_futils_mkdir_r(git_buf_cstr(&path_repository), NULL, GIT_DIR_MODE));
 
-	must_pass(git_buf_joinpath(&path_repository, TEMP_REPO_FOLDER, "a/b/c/"));
-	must_pass(git_futils_mkdir_r(path_repository.ptr, mode));
+	/* Change the current working directory */
+	cl_git_pass(chdir(git_buf_cstr(&path_repository)));
 
-	must_pass(chdir(path_repository.ptr));
+	/* Initialize a bare repo with a relative path escaping out of the current working directory */
+	cl_git_pass(git_repository_init(&_repo, "../d/e.git", 1));
+	cl_git_pass(git__suffixcmp(git_repository_path(_repo), "/a/b/d/e.git/"));
 
+	git_repository_free(_repo);
+
+	/* Open a bare repo with a relative path escaping out of the current working directory */
+	cl_git_pass(git_repository_open(&_repo, "../d/e.git"));
+
+	cl_git_pass(chdir(git_buf_cstr(&path_current_workdir)));
+
+	git_buf_free(&path_current_workdir);
 	git_buf_free(&path_repository);
 
-	must_pass(git_repository_init(&repo, "../d/e.git", 1));
-	must_pass(git__suffixcmp(git_repository_path(_repo), "/a/b/d/e.git/"));
-
-	git_repository_free(repo);
-
-	must_pass(git_repository_open(&repo, "../d/e.git"));
-
-	git_repository_free(repo);
-
-	must_pass(chdir(current_workdir));
-	must_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, 1));
-END_TEST
-#endif
+	cleanup_repository("a");
+}
