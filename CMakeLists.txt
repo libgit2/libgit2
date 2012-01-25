@@ -48,7 +48,7 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (BUILD_TESTS "Build Tests" ON)
-OPTION (BUILD_CLAY "Build Tests using the Clay suite" OFF)
+OPTION (BUILD_CLAR "Build Tests using the Clar suite" OFF)
 OPTION (TAGS "Generate tags" OFF)
 
 # Platform specific compilation flags
@@ -142,32 +142,32 @@ IF (BUILD_TESTS)
 	ADD_TEST(libgit2_test libgit2_test)
 ENDIF ()
 
-IF (BUILD_CLAY)
+IF (BUILD_CLAR)
 	FIND_PACKAGE(PythonInterp REQUIRED)
 
-	SET(CLAY_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
-	SET(CLAY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests-clay")
-	ADD_DEFINITIONS(-DCLAY_FIXTURE_PATH=\"${CLAY_FIXTURES}\")
+	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
+	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar")
+	ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 
-	INCLUDE_DIRECTORIES(${CLAY_PATH})
-	FILE(GLOB_RECURSE SRC_TEST ${CLAY_PATH}/*/*.c ${CLAY_PATH}/clay_helpers.c ${CLAY_PATH}/testlib.c)
+	INCLUDE_DIRECTORIES(${CLAR_PATH})
+	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/clar_helpers.c ${CLAR_PATH}/testlib.c)
 
 	ADD_CUSTOM_COMMAND(
-		OUTPUT ${CLAY_PATH}/clay_main.c ${CLAY_PATH}/clay.h
-		COMMAND ${PYTHON_EXECUTABLE} clay -vtap .
-		DEPENDS ${CLAY_PATH}/clay ${SRC_TEST}
-		WORKING_DIRECTORY ${CLAY_PATH}
+		OUTPUT ${CLAR_PATH}/clar_main.c ${CLAR_PATH}/clar.h
+		COMMAND ${PYTHON_EXECUTABLE} clar -vtap .
+		DEPENDS ${CLAR_PATH}/clar ${SRC_TEST}
+		WORKING_DIRECTORY ${CLAR_PATH}
 	)
-	ADD_EXECUTABLE(libgit2_clay ${SRC} ${CLAY_PATH}/clay_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
-	TARGET_LINK_LIBRARIES(libgit2_clay ${CMAKE_THREAD_LIBS_INIT})
+	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
+	TARGET_LINK_LIBRARIES(libgit2_clar ${CMAKE_THREAD_LIBS_INIT})
 	IF (WIN32)
-		TARGET_LINK_LIBRARIES(libgit2_clay ws2_32)
+		TARGET_LINK_LIBRARIES(libgit2_clar ws2_32)
 	ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-		TARGET_LINK_LIBRARIES(libgit2_clay socket nsl)
+		TARGET_LINK_LIBRARIES(libgit2_clar socket nsl)
 	ENDIF ()
 
 	ENABLE_TESTING()
-	ADD_TEST(libgit2_clay libgit2_clay)
+	ADD_TEST(libgit2_clar libgit2_clar)
 ENDIF ()
 
 IF (TAGS)
