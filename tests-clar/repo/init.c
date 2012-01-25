@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
 #include "repository.h"
+#include "config.h"
 
 enum repo_mode {
 	STANDARD_REPOSITORY = 0,
@@ -104,4 +105,39 @@ void test_repo_init__bare_repo_escaping_current_workdir(void)
 	git_buf_free(&path_repository);
 
 	cleanup_repository("a");
+}
+
+void test_repo_init__reinit_bare_repo(void)
+{
+	cl_set_cleanup(&cleanup_repository, "reinit.git");
+
+	/* Initialize the repository */
+	cl_git_pass(git_repository_init(&_repo, "reinit.git", 1));
+	git_repository_free(_repo);
+
+	/* Reinitialize the repository */
+	cl_git_pass(git_repository_init(&_repo, "reinit.git", 1));
+}
+
+void test_repo_init__reinit_too_recent_bare_repo(void)
+{
+	git_config *config;
+
+	/* Initialize the repository */
+	cl_git_pass(git_repository_init(&_repo, "reinit.git", 1));
+	git_repository_config(&config, _repo);
+
+	/*
+	 * Hack the config of the repository to make it look like it has
+	 * been created by a recenter version of git/libgit2
+	 */
+	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 42));
+
+	git_config_free(config);
+	git_repository_free(_repo);
+
+	/* Try to reinitialize the repository */
+	cl_git_fail(git_repository_init(&_repo, "reinit.git", 1));
+
+	cl_fixture_cleanup("reinit.git");
 }

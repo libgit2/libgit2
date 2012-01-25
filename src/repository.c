@@ -24,6 +24,8 @@
 
 #define GIT_BRANCH_MASTER "master"
 
+#define GIT_CONFIG_CORE_REPOSITORYFORMATVERSION "core.repositoryformatversion"
+#define GIT_REPOSITORYFORMATVERSION 0
 
 static void drop_odb(git_repository *repo)
 {
@@ -628,12 +630,46 @@ cleanup:
 	return error;
 }
 
-static int repo_init_reinit(const char *repository_path, int is_bare)
+static int check_repositoryformatversion(git_repository *repo)
 {
-	/* TODO: reinit the repository */
-	return git__throw(GIT_ENOTIMPLEMENTED,
-		"Failed to reinitialize the %srepository at '%s'. "
-		"This feature is not yet implemented",
+	git_config *config;
+	int version, error = GIT_SUCCESS;
+
+	if ((error = git_repository_config(&config, repo)) < GIT_SUCCESS)
+		return git__throw(error, "Failed to open config file.");
+
+	error = git_config_get_int32(config, GIT_CONFIG_CORE_REPOSITORYFORMATVERSION, &version);
+
+	if (GIT_REPOSITORYFORMATVERSION < version)
+		error = git__throw(GIT_ERROR, "Unsupported git repository version (Expected version <= %d, found %d).", GIT_REPOSITORYFORMATVERSION, version);
+
+	git_config_free(config);
+
+	return error;
+}
+
+static int repo_init_reinit(git_repository **repo_out, const char *repository_path, int is_bare)
+{
+	int error;
+	git_repository *repo = NULL;
+
+	if ((error = git_repository_open(&repo, repository_path)) < GIT_SUCCESS)
+		goto error;
+
+	if ((error = check_repositoryformatversion(repo)) < GIT_SUCCESS)
+		goto error;
+
+	/* TODO: reinitialize the templates */
+
+	*repo_out = repo;
+
+	return GIT_SUCCESS;
+
+error:
+	git_repository_free(repo);
+
+	return git__rethrow(error,
+		"Failed to reinitialize the %srepository at '%s'. ",
 		is_bare ? "bare " : "", repository_path);
 }
 
@@ -673,7 +709,7 @@ static int repo_init_config(const char *git_dir, int is_bare)
 		goto cleanup;
 
 	SET_REPO_CONFIG(bool, "core.bare", is_bare);
-	SET_REPO_CONFIG(int32, "core.repositoryformatversion", 0);
+	SET_REPO_CONFIG(int32, GIT_CONFIG_CORE_REPOSITORYFORMATVERSION, GIT_REPOSITORYFORMATVERSION);
 	/* TODO: what other defaults? */
 
 cleanup:
@@ -735,7 +771,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 
 	if (git_path_isdir(repository_path.ptr) == GIT_SUCCESS) {
 		if (quickcheck_repository_dir(&repository_path) == GIT_SUCCESS) {
-			error = repo_init_reinit(repository_path.ptr, is_bare);
+			error = repo_init_reinit(repo_out, repository_path.ptr, is_bare);
 			git_buf_free(&repository_path);
 			return error;
 		}
