@@ -33,6 +33,9 @@
 #	define strcasecmp	_stricmp
 #	define strncasecmp _strnicmp
 
+/* MSVC doesn't define ssize_t at all */
+typedef SSIZE_T ssize_t;
+
 #endif
 
 #endif /* INCLUDE_msvc_compat__ */
