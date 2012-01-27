@@ -11,7 +11,7 @@
 
 /* Common operations even if threading has been disabled */
 typedef struct {
-#if defined(_MSC_VER)
+#if defined(GIT_WIN32)
 	volatile long val;
 #else
 	volatile int val;
@@ -48,10 +48,10 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 
 GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
-#ifdef __GNUC__
-	return __sync_add_and_fetch(&a->val, 1);
-#elif defined(_MSC_VER)
+#if defined(GIT_WIN32)
 	return InterlockedIncrement(&a->val);
+#elif defined(__GNUC__)
+	return __sync_add_and_fetch(&a->val, 1);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
@@ -59,10 +59,10 @@ GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 
 GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 {
-#ifdef __GNUC__
-	return __sync_sub_and_fetch(&a->val, 1);
-#elif defined(_MSC_VER)
+#if defined(GIT_WIN32)
 	return InterlockedDecrement(&a->val);
+#elif defined(__GNUC__)
+	return __sync_sub_and_fetch(&a->val, 1);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
