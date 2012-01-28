@@ -13,8 +13,6 @@
 
 int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr)
 {
-	size_t i;
-
 	if (size < 8)
 		size = 8;
 
@@ -25,20 +23,19 @@ int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_pt
 	size |= size >> 4;
 	size |= size >> 8;
 	size |= size >> 16;
+	size++;
 
-	cache->size_mask = size;
+	cache->size_mask = size - 1;
 	cache->lru_count = 0;
 	cache->free_obj = free_ptr;
 
-	cache->nodes = git__malloc((size + 1) * sizeof(cache_node));
+	git_mutex_init(&cache->lock);
+
+	cache->nodes = git__malloc(size * sizeof(git_cached_obj *));
 	if (cache->nodes == NULL)
 		return GIT_ENOMEM;
 
-	for (i = 0; i < (size + 1); ++i) {
-		git_mutex_init(&cache->nodes[i].lock);
-		cache->nodes[i].ptr = NULL;
-	}
-
+	memset(cache->nodes, 0x0, size * sizeof(git_cached_obj *));
 	return GIT_SUCCESS;
 }
 
@@ -47,10 +44,8 @@ void git_cache_free(git_cache *cache)
 	size_t i;
 
 	for (i = 0; i < (cache->size_mask + 1); ++i) {
-		if (cache->nodes[i].ptr)
-			git_cached_obj_decref(cache->nodes[i].ptr, cache->free_obj);
-
-		git_mutex_free(&cache->nodes[i].lock);
+		if (cache->nodes[i] != NULL)
+			git_cached_obj_decref(cache->nodes[i], cache->free_obj);
 	}
 
 	git__free(cache->nodes);
@@ -59,53 +54,54 @@ void git_cache_free(git_cache *cache)
 void *git_cache_get(git_cache *cache, const git_oid *oid)
 {
 	uint32_t hash;
-	cache_node *node = NULL;
-	void *result = NULL;
+	git_cached_obj *node = NULL, *result = NULL;
 
 	memcpy(&hash, oid->id, sizeof(hash));
-	node = &cache->nodes[hash & cache->size_mask];
 
-	git_mutex_lock(&node->lock);
+	git_mutex_lock(&cache->lock);
 	{
-		if (node->ptr && git_cached_obj_compare(node->ptr, oid) == 0) {
-			git_cached_obj_incref(node->ptr);
-			result = node->ptr;
+		node = cache->nodes[hash & cache->size_mask];
+
+		if (node != NULL && git_oid_cmp(&node->oid, oid) == 0) {
+			git_cached_obj_incref(node);
+			result = node;
 		}
 	}
-	git_mutex_unlock(&node->lock);
+	git_mutex_unlock(&cache->lock);
 
 	return result;
 }
 
-void *git_cache_try_store(git_cache *cache, void *entry)
+void *git_cache_try_store(git_cache *cache, void *_entry)
 {
+	git_cached_obj *entry = _entry;
 	uint32_t hash;
-	const git_oid *oid;
-	cache_node *node = NULL;
 
-	oid = &((git_cached_obj*)entry)->oid;
-	memcpy(&hash, oid->id, sizeof(hash));
-	node = &cache->nodes[hash & cache->size_mask];
+	memcpy(&hash, &entry->oid, sizeof(hash));
 
 	/* increase the refcount on this object, because
 	 * the cache now owns it */
 	git_cached_obj_incref(entry);
-	git_mutex_lock(&node->lock);
 
-	if (node->ptr == NULL) {
-		node->ptr = entry;
-	} else if (git_cached_obj_compare(node->ptr, oid) == 0) {
-		git_cached_obj_decref(entry, cache->free_obj);
-		entry = node->ptr;
-	} else {
-		git_cached_obj_decref(node->ptr, cache->free_obj);
-		node->ptr = entry;
+	git_mutex_lock(&cache->lock);
+	{
+		git_cached_obj *node = cache->nodes[hash & cache->size_mask];
+
+		if (node == NULL) {
+			cache->nodes[hash & cache->size_mask] = entry;
+		} else if (git_oid_cmp(&node->oid, &entry->oid) == 0) {
+			git_cached_obj_decref(entry, cache->free_obj);
+			entry = node;
+		} else {
+			git_cached_obj_decref(node, cache->free_obj);
+			cache->nodes[hash & cache->size_mask] = entry;
+		}
 	}
+	git_mutex_unlock(&cache->lock);
 
 	/* increase the refcount again, because we are
 	 * returning it to the user */
 	git_cached_obj_incref(entry);
-	git_mutex_unlock(&node->lock);
 
 	return entry;
 }
