@@ -77,12 +77,16 @@ main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
 	GIT_UNUSED_ARG(argc);
 	GIT_UNUSED_ARG(argv);
 
+	git_threads_init();
+
 	p_umask(0);
 
 	failures = 0;
 
 	for (i = 0; i < GIT_SUITE_COUNT; ++i)
 		failures += git_testsuite_run(suite_methods[i]());
+
+	git_threads_shutdown();
 
 	return failures ? -1 : 0;
 }
