@@ -321,8 +321,18 @@ static int determine_status(
 	}
 
 	/* Last option, we're dealing with a leftover folder tree entry */
-	assert(in_head && !in_index && !in_workdir && (tree_entry_type == GIT_OBJ_TREE));
-	return process_folder(st, tree_entry, full_path, path_type);
+	if (tree_entry_type == GIT_OBJ_TREE) {
+		assert(in_head && !in_index && !in_workdir);
+		return process_folder(st, tree_entry, full_path, path_type);
+	}
+	else {
+		/* skip anything else we found (such as a submodule) */
+		if (in_head)
+			st->tree_position++;
+		if (in_index)
+			st->index_position++;
+		return GIT_SUCCESS;
+	}
 }
 
 static int path_type_from(git_buf *full_path, int is_dir)
