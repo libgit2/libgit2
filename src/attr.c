@@ -21,7 +21,8 @@ int git_attr_get(
 
 	*value = NULL;
 
-	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS ||
+	if ((error = git_attr_path__init(
+			&path, pathname, git_repository_workdir(repo))) < GIT_SUCCESS ||
 		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
 		return git__rethrow(error, "Could not get attribute for %s", pathname);
 
@@ -69,7 +70,8 @@ int git_attr_get_many(
 
 	memset((void *)values, 0, sizeof(const char *) * num_attr);
 
-	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS ||
+	if ((error = git_attr_path__init(
+			&path, pathname, git_repository_workdir(repo))) < GIT_SUCCESS ||
 		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
 		return git__rethrow(error, "Could not get attributes for %s", pathname);
 
@@ -130,7 +132,8 @@ int git_attr_foreach(
 	git_attr_assignment *assign;
 	git_hashtable *seen = NULL;
 
-	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS ||
+	if ((error = git_attr_path__init(
+			&path, pathname, git_repository_workdir(repo))) < GIT_SUCCESS ||
 		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
 		return git__rethrow(error, "Could not get attributes for %s", pathname);
 

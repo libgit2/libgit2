@@ -110,7 +110,7 @@ extern git_attr_assignment *git_attr_rule__lookup_assignment(
 	git_attr_rule *rule, const char *name);
 
 extern int git_attr_path__init(
-	git_attr_path *info, const char *path);
+	git_attr_path *info, const char *path, const char *base);
 
 extern int git_attr_assignment__parse(
 	git_repository *repo, /* needed to expand macros */

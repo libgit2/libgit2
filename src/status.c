@@ -124,7 +124,7 @@ static int status_entry_is_ignorable(struct status_entry *e)
 	return (e->status_flags == GIT_STATUS_WT_NEW);
 }
 
-static int status_entry_update_ignore(struct status_entry *e, git_vector *ignores, const char *path)
+static int status_entry_update_ignore(struct status_entry *e, git_ignores *ignores, const char *path)
 {
 	int error, ignored;
 
@@ -141,7 +141,7 @@ struct status_st {
 	git_vector *vector;
 	git_index *index;
 	git_tree *tree;
-	git_vector *ignores;
+	git_ignores *ignores;
 
 	int workdir_path_len;
 	git_buf head_tree_relative_path;
@@ -233,7 +233,7 @@ static int process_folder(
 
 
 	if (full_path != NULL && path_type == GIT_STATUS_PATH_FOLDER) {
-		git_vector ignores = GIT_VECTOR_INIT, *old_ignores;
+		git_ignores ignores, *old_ignores;
 
 		if ((error = git_ignore__for_path(st->repo,
 			full_path->ptr + st->workdir_path_len, &ignores)) == GIT_SUCCESS)
@@ -461,7 +461,8 @@ int git_status_foreach(
 	int (*callback)(const char *, unsigned int, void *),
 	void *payload)
 {
-	git_vector entries, ignores = GIT_VECTOR_INIT;
+	git_vector entries;
+	git_ignores ignores;
 	git_index *index = NULL;
 	git_buf temp_path = GIT_BUF_INIT;
 	struct status_st dirent_st = {0};
@@ -543,7 +544,7 @@ exit:
 	git_buf_free(&dirent_st.head_tree_relative_path);
 	git_buf_free(&temp_path);
 	git_vector_free(&entries);
-	git_vector_free(&ignores);
+	git_ignore__free(&ignores);
 	git_tree_free(tree);
 	return error;
 }
@@ -661,7 +662,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	}
 
 	if (status_entry_is_ignorable(e)) {
-		git_vector ignores = GIT_VECTOR_INIT;
+		git_ignores ignores;
 
 		if ((error = git_ignore__for_path(repo, path, &ignores)) == GIT_SUCCESS)
 			error = status_entry_update_ignore(e, &ignores, path);
@@ -776,7 +777,7 @@ static int alphasorted_futils_direach(
 int git_status_should_ignore(git_repository *repo, const char *path, int *ignored)
 {
 	int error;
-	git_vector ignores = GIT_VECTOR_INIT;
+	git_ignores ignores;
 
 	if ((error = git_ignore__for_path(repo, path, &ignores)) == GIT_SUCCESS)
 		error = git_ignore__lookup(&ignores, path, ignored);
