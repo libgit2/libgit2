@@ -107,7 +107,7 @@ int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *n
 		return GIT_SUCCESS;
 
 	git_buf_truncate(out, out->size - 1); /* remove trailing '*' */
-	git_buf_puts(out, name);
+	git_buf_puts(out, name + strlen(spec->src) - 1);
 
 	return git_buf_lasterror(out);
 }

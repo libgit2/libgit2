@@ -1,4 +1,6 @@
 #include "clar_libgit2.h"
+#include "buffer.h"
+#include "refspec.h"
 
 static git_remote *_remote;
 static git_repository *_repo;
@@ -47,4 +49,12 @@ void test_network_remotes__transform(void)
 	memset(ref, 0x0, sizeof(ref));
 	cl_git_pass(git_refspec_transform(ref, sizeof(ref), _refspec, "refs/heads/master"));
 	cl_assert(!strcmp(ref, "refs/remotes/test/master"));
+}
+
+void test_network_remotes__transform_r(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_refspec_transform_r(&buf,  _refspec, "refs/heads/master"));
+	cl_assert(!strcmp(git_buf_cstr(&buf), "refs/remotes/test/master"));
 }
