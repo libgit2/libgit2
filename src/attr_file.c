@@ -200,6 +200,8 @@ int git_attr_fnmatch__match(
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH)
 		matched = p_fnmatch(match->pattern, path->path, FNM_PATHNAME);
+	else if (path->is_dir)
+		matched = p_fnmatch(match->pattern, path->basename, FNM_LEADING_DIR);
 	else
 		matched = p_fnmatch(match->pattern, path->basename, 0);
 
