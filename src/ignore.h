@@ -10,8 +10,14 @@
 #include "repository.h"
 #include "vector.h"
 
-extern int git_ignore__for_path(git_repository *repo, const char *path, git_vector *stack);
-extern void git_ignore__free(git_vector *stack);
-extern int git_ignore__lookup(git_vector *stack, const char *path, int *ignored);
+typedef struct {
+	git_repository *repo;
+	char *dir;
+	git_vector stack;
+} git_ignores;
+
+extern int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *stack);
+extern void git_ignore__free(git_ignores *stack);
+extern int git_ignore__lookup(git_ignores *stack, const char *path, int *ignored);
 
 #endif

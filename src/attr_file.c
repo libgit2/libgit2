@@ -200,6 +200,8 @@ int git_attr_fnmatch__match(
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH)
 		matched = p_fnmatch(match->pattern, path->path, FNM_PATHNAME);
+	else if (path->is_dir)
+		matched = p_fnmatch(match->pattern, path->basename, FNM_LEADING_DIR);
 	else
 		matched = p_fnmatch(match->pattern, path->basename, 0);
 
@@ -234,7 +236,7 @@ git_attr_assignment *git_attr_rule__lookup_assignment(
 }
 
 int git_attr_path__init(
-	git_attr_path *info, const char *path)
+	git_attr_path *info, const char *path, const char *base)
 {
 	assert(info && path);
 	info->path = path;
@@ -243,7 +245,17 @@ int git_attr_path__init(
 		info->basename++;
 	if (!info->basename || !*info->basename)
 		info->basename = path;
+
+	if (base != NULL && git_path_root(path) < 0) {
+		git_buf full_path = GIT_BUF_INIT;
+		int error = git_buf_joinpath(&full_path, base, path);
+		if (error == GIT_SUCCESS)
+			info->is_dir = (git_path_isdir(full_path.ptr) == GIT_SUCCESS);
+		git_buf_free(&full_path);
+		return error;
+	}
 	info->is_dir = (git_path_isdir(path) == GIT_SUCCESS);
+
 	return GIT_SUCCESS;
 }
 
