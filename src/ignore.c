@@ -66,24 +66,20 @@ static int load_ignore_file(
 #define push_ignore(R,S,B,F) \
 	git_attr_cache__push_file((R),(S),(B),(F),load_ignore_file)
 
-typedef struct {
-	git_repository *repo;
-	git_vector *stack;
-} ignore_walk_up_info;
-
 static int push_one_ignore(void *ref, git_buf *path)
 {
-	ignore_walk_up_info *info = (ignore_walk_up_info *)ref;
-	return push_ignore(info->repo, info->stack, path->ptr, GIT_IGNORE_FILE);
+	git_ignores *ign = (git_ignores *)ref;
+	return push_ignore(ign->repo, &ign->stack, path->ptr, GIT_IGNORE_FILE);
 }
 
-int git_ignore__for_path(git_repository *repo, const char *path, git_vector *stack)
+int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ignores)
 {
 	int error = GIT_SUCCESS;
 	git_buf dir = GIT_BUF_INIT;
 	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
-	ignore_walk_up_info info;
+
+	assert(ignores);
 
 	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
 		goto cleanup;
@@ -91,18 +87,20 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_vector *sta
 	if ((error = git_path_find_dir(&dir, path, workdir)) < GIT_SUCCESS)
 		goto cleanup;
 
+	ignores->repo = repo;
+	ignores->dir  = NULL;
+	git_vector_init(&ignores->stack, 2, NULL);
+
 	/* insert internals */
-	if ((error = push_ignore(repo, stack, NULL, GIT_IGNORE_INTERNAL)) < GIT_SUCCESS)
+	if ((error = push_ignore(repo, &ignores->stack, NULL, GIT_IGNORE_INTERNAL)) < GIT_SUCCESS)
 		goto cleanup;
 
 	/* load .gitignore up the path */
-	info.repo = repo;
-	info.stack = stack;
-	if ((error = git_path_walk_up(&dir, workdir, push_one_ignore, &info)) < GIT_SUCCESS)
+	if ((error = git_path_walk_up(&dir, workdir, push_one_ignore, ignores)) < GIT_SUCCESS)
 		goto cleanup;
 
 	/* load .git/info/exclude */
-	if ((error = push_ignore(repo, stack, repo->path_repository, GIT_IGNORE_FILE_INREPO)) < GIT_SUCCESS)
+	if ((error = push_ignore(repo, &ignores->stack, repo->path_repository, GIT_IGNORE_FILE_INREPO)) < GIT_SUCCESS)
 		goto cleanup;
 
 	/* load core.excludesfile */
@@ -110,7 +108,7 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_vector *sta
 		const char *core_ignore;
 		error = git_config_get_string(cfg, GIT_IGNORE_CONFIG, &core_ignore);
 		if (error == GIT_SUCCESS && core_ignore != NULL)
-			error = push_ignore(repo, stack, NULL, core_ignore);
+			error = push_ignore(repo, &ignores->stack, NULL, core_ignore);
 		else {
 			error = GIT_SUCCESS;
 			git_clearerror(); /* don't care if attributesfile is not set */
@@ -121,18 +119,22 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_vector *sta
 cleanup:
 	if (error < GIT_SUCCESS)
 		git__rethrow(error, "Could not get ignore files for '%s'", path);
+	else
+		ignores->dir = git_buf_detach(&dir);
 
 	git_buf_free(&dir);
 
 	return error;
 }
 
-void git_ignore__free(git_vector *stack)
+void git_ignore__free(git_ignores *ignores)
 {
-	git_vector_free(stack);
+	git__free(ignores->dir);
+	ignores->dir = NULL;
+	git_vector_free(&ignores->stack);
 }
 
-int git_ignore__lookup(git_vector *stack, const char *pathname, int *ignored)
+int git_ignore__lookup(git_ignores *ignores, const char *pathname, int *ignored)
 {
 	int error;
 	unsigned int i, j;
@@ -140,12 +142,13 @@ int git_ignore__lookup(git_vector *stack, const char *pathname, int *ignored)
 	git_attr_path path;
 	git_attr_fnmatch *match;
 
-	if ((error = git_attr_path__init(&path, pathname)) < GIT_SUCCESS)
+	if ((error = git_attr_path__init(
+		&path, pathname, git_repository_workdir(ignores->repo))) < GIT_SUCCESS)
 		return git__rethrow(error, "Could not get attribute for '%s'", pathname);
 
 	*ignored = 0;
 
-	git_vector_foreach(stack, i, file) {
+	git_vector_foreach(&ignores->stack, i, file) {
 		git_vector_rforeach(&file->rules, j, match) {
 			if (git_attr_fnmatch__match(match, &path) == GIT_SUCCESS) {
 				*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0);
