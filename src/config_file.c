@@ -720,7 +720,7 @@ static int config_parse(diskfile_backend *cfg_file)
 	char *current_section = NULL;
 	char *var_name;
 	char *var_value;
-	cvar_t *var;
+	cvar_t *var, *existing;
 	git_buf buf = GIT_BUF_INIT;
 
 	/* Initialize the reading position */
@@ -779,8 +779,16 @@ static int config_parse(diskfile_backend *cfg_file)
 			var->key = git_buf_detach(&buf);
 			var->value = var_value;
 
-			/* FIXME: Actually support multivars, don't just overwrite */
-			error = git_hashtable_insert(cfg_file->values, var->key, var);
+			/* Add or append the new config option */
+			existing = git_hashtable_lookup(cfg_file->values, var->key);
+			if (existing == NULL) {
+				error = git_hashtable_insert(cfg_file->values, var->key, var);
+			} else {
+				while (existing->next != NULL) {
+					existing = existing->next;
+				}
+				existing->next = var;
+			}
 
 			break;
 		}
