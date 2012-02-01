@@ -1,0 +1,3 @@
+[remote "fancy"]
+    fetch = git://github.com/libgit2/libgit2
+    fetch = git://git.example.com/libgit2
