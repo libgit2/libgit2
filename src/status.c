@@ -226,8 +226,12 @@ static int process_folder(
 			/* No op */
 			break;
 
+		case GIT_OBJ_COMMIT:
+			/* TODO: proper submodule support */
+			break;
+
 		default:
-			error = git__throw(GIT_EINVALIDTYPE, "Unexpected tree entry type");	/* TODO: How should we deal with submodules? */
+			return git__throw(GIT_EINVALIDTYPE, "Unexpected tree entry type");
 		}
 	}
 
@@ -246,8 +250,9 @@ static int process_folder(
 			git_ignore__free(st->ignores);
 			st->ignores = old_ignores;
 		}
-	} else
+	} else {
 		error = dirent_cb(st, NULL);
+	}
 
 	if (tree_entry_type == GIT_OBJ_TREE) {
 		git_object_free(subtree);
@@ -320,19 +325,19 @@ static int determine_status(
 		return store_if_changed(st, e);
 	}
 
-	/* Last option, we're dealing with a leftover folder tree entry */
+	/* Are we dealing with a subtree? */
 	if (tree_entry_type == GIT_OBJ_TREE) {
 		assert(in_head && !in_index && !in_workdir);
 		return process_folder(st, tree_entry, full_path, path_type);
 	}
-	else {
-		/* skip anything else we found (such as a submodule) */
-		if (in_head)
-			st->tree_position++;
-		if (in_index)
-			st->index_position++;
-		return GIT_SUCCESS;
-	}
+
+	/* We're dealing with something else -- most likely a submodule;
+	 * skip it for now */
+	if (in_head)
+		st->tree_position++;
+	if (in_index)
+		st->index_position++;
+	return GIT_SUCCESS;
 }
 
 static int path_type_from(git_buf *full_path, int is_dir)
