@@ -57,4 +57,5 @@ void test_network_remotes__transform_r(void)
 
 	cl_git_pass(git_refspec_transform_r(&buf,  _refspec, "refs/heads/master"));
 	cl_assert(!strcmp(git_buf_cstr(&buf), "refs/remotes/test/master"));
+	git_buf_free(&buf);
 }
