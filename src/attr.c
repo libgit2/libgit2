@@ -222,8 +222,9 @@ int git_attr_cache__push_file(
 	int error = GIT_SUCCESS;
 	git_attr_cache *cache = &repo->attrcache;
 	git_buf path = GIT_BUF_INIT;
-	git_attr_file *file;
+	git_attr_file *file = NULL;
 	int add_to_cache = 0;
+	const char *cache_key;
 
 	if (base != NULL) {
 		if ((error = git_buf_joinpath(&path, base, filename)) < GIT_SUCCESS)
@@ -232,10 +233,18 @@ int git_attr_cache__push_file(
 	}
 
 	/* either get attr_file from cache or read from disk */
-	file = git_hashtable_lookup(cache->files, filename);
+	cache_key = filename;
+	if (repo && git__prefixcmp(cache_key, git_repository_workdir(repo)) == 0)
+		cache_key += strlen(git_repository_workdir(repo));
+
+	file = git_hashtable_lookup(cache->files, cache_key);
 	if (file == NULL && git_path_exists(filename) == GIT_SUCCESS) {
-		if ((error = git_attr_file__new(&file)) == GIT_SUCCESS)
-			error = loader(repo, filename, file);
+		if ((error = git_attr_file__new(&file)) == GIT_SUCCESS) {
+			if ((error = loader(repo, filename, file)) < GIT_SUCCESS) {
+				git_attr_file__free(file);
+				file = NULL;
+			}
+		}
 		add_to_cache = (error == GIT_SUCCESS);
 	}
 
