@@ -210,6 +210,13 @@ int git_attr_add_macro(
 	return error;
 }
 
+int git_attr_cache__is_cached(git_repository *repo, const char *path)
+{
+	const char *cache_key = path;
+	if (repo && git__prefixcmp(cache_key, git_repository_workdir(repo)) == 0)
+		cache_key += strlen(git_repository_workdir(repo));
+	return (git_hashtable_lookup(repo->attrcache.files, cache_key) == NULL);
+}
 
 /* add git_attr_file to vector of files, loading if needed */
 int git_attr_cache__push_file(

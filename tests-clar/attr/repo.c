@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
 #include "git2/attr.h"
+#include "attr.h"
 
 static git_repository *g_repo = NULL;
 
@@ -89,6 +90,10 @@ void test_attr_repo__get_one(void)
 
 		git_buf_free(&b);
 	}
+
+	cl_git_pass(git_attr_cache__is_cached(g_repo, ".git/info/attributes"));
+	cl_git_pass(git_attr_cache__is_cached(g_repo, ".gitattributes"));
+	cl_git_pass(git_attr_cache__is_cached(g_repo, "sub/.gitattributes"));
 }
 
 void test_attr_repo__get_many(void)
