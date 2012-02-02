@@ -8,6 +8,7 @@
 #	include <sys/types.h>
 #	include <sys/socket.h>
 #	include <sys/select.h>
+#	include <sys/time.h>
 #	include <netdb.h>
 #else
 #	define _WIN32_WINNT 0x0501
