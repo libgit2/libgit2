@@ -316,9 +316,14 @@ GIT_EXTERN(int) git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode
 /** @} */
 
 typedef enum {
+	GIT_STATUS_UNMODIFIED = 0,
 	GIT_STATUS_ADDED = 1,
 	GIT_STATUS_DELETED = 2,
 	GIT_STATUS_MODIFIED = 3,
+    GIT_STATUS_RENAMED = 4,
+    GIT_STATUS_COPIED = 5,
+	GIT_STATUS_IGNORED = 6,
+	GIT_STATUS_UNTRACKED = 7
 } git_status_t;
 
 typedef struct {

@@ -31,6 +31,7 @@
 #include "git2/commit.h"
 #include "git2/tag.h"
 #include "git2/tree.h"
+#include "git2/diff.h"
 
 #include "git2/index.h"
 #include "git2/config.h"
