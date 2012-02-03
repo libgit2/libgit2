@@ -166,7 +166,7 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	 * of the working dir, by testing if it contains a `.git`
 	 * folder inside of it.
 	 */
-	git_path_contains_dir(&path_buf, DOT_GIT, 1); /* append on success */
+	git_path_contains_dir(&path_buf, GIT_DIR, 1); /* append on success */
 	/* ignore error, since it just means `path/.git` doesn't exist */
 
 	if (quickcheck_repository_dir(&path_buf) < GIT_SUCCESS) {
