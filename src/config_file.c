@@ -84,7 +84,7 @@ typedef struct {
 
 static int config_parse(diskfile_backend *cfg_file);
 static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
-static int config_write(diskfile_backend *cfg, const char *key, const char *value);
+static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 
 static void cvar_free(cvar_t *var)
 {
@@ -240,7 +240,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		git__free(existing->value);
 		existing->value = tmp;
 
-		return config_write(b, existing->key, value);
+		return config_write(b, existing->key, NULL, value);
 	}
 
 	var = git__malloc(sizeof(cvar_t));
@@ -263,7 +263,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 
 	cvar_free(old_value);
 
-	error = config_write(b, key, value);
+	error = config_write(b, key, NULL, value);
 
  out:
 	if (error < GIT_SUCCESS)
@@ -314,7 +314,7 @@ static int config_get_multivar(git_config_file *cfg, const char *name, const cha
 		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
 
 	if (regexp != NULL) {
-		error = regcomp(&preg, regexp, 0);
+		error = regcomp(&preg, regexp, REG_EXTENDED);
 		if (error < 0)
 			return git__throw(GIT_EINVALIDARGS, "Failed to compile regex");
 	}
@@ -332,6 +332,88 @@ static int config_get_multivar(git_config_file *cfg, const char *name, const cha
  exit:
 	if (regexp != NULL)
 		regfree(&preg);
+	return error;
+}
+
+static int config_set_multivar(git_config_file *cfg, const char *name, const char *regexp, const char *value)
+{
+	int error;
+	cvar_t *var;
+	diskfile_backend *b = (diskfile_backend *)cfg;
+	char *key;
+	regex_t preg;
+
+	if (regexp == NULL)
+		return git__throw(GIT_EINVALIDARGS, "No regex supplied");
+
+	if ((error = normalize_name(name, &key)) < GIT_SUCCESS)
+		return error;
+
+	var = git_hashtable_lookup(b->values, key);
+	free(key);
+
+	if (var == NULL)
+		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
+
+	error = regcomp(&preg, regexp, REG_EXTENDED);
+	if (error < 0)
+		return git__throw(GIT_EINVALIDARGS, "Failed to compile regex");
+
+
+	/* "^$" means we need to addd */
+	if (!regexec(&preg, "", 0, NULL, 0)) {
+		cvar_t *newvar = git__malloc(sizeof(cvar_t));
+		if (newvar == NULL) {
+			error = GIT_ENOMEM;
+			goto exit;
+		}
+
+		memset(newvar, 0x0, sizeof(cvar_t));
+		newvar->key = git__strdup(var->key);
+		if (newvar->key == NULL) {
+			error = GIT_ENOMEM;
+			goto exit;
+		}
+		newvar->value = git__strdup(value);
+		if (newvar->value == NULL) {
+			error = GIT_ENOMEM;
+			goto exit;
+		}
+
+		while (var->next != NULL) {
+			var = var->next;
+		}
+
+		var->next = newvar;
+		error = config_write(b, var->key, &preg, value);
+		if (error < GIT_SUCCESS) {
+			error = git__rethrow(error, "Failed to update value in file");
+			goto exit;
+		}
+	}
+
+	do {
+		if (!regexec(&preg, var->value, 0, NULL, 0)) {
+			char *tmp = git__strdup(value);
+			if (tmp == NULL) {
+				error = GIT_ENOMEM;
+				goto exit;
+			}
+
+			free(var->value);
+			var->value = tmp;
+			error = config_write(b, var->key, &preg, var->value);
+			if (error < GIT_SUCCESS) {
+				error = git__rethrow(error, "Failed to update value in file");
+				goto exit;
+			}
+		}
+
+		var = var->next;
+	} while (var != NULL);
+
+ exit:
+	regfree(&preg);
 	return error;
 }
 
@@ -359,7 +441,7 @@ static int config_delete(git_config_file *cfg, const char *name)
 	if ((error = git_hashtable_remove2(b->values, var->key, (void **)&old_value)) < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to remove %s from hashtable", key);
 
-	error = config_write(b, var->key, NULL);
+	error = config_write(b, var->key, NULL, NULL);
 	cvar_free(old_value);
 
 	return error;
@@ -385,6 +467,7 @@ int git_config_file__ondisk(git_config_file **out, const char *path)
 	backend->parent.get = config_get;
 	backend->parent.get_multivar = config_get_multivar;
 	backend->parent.set = config_set;
+	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;
 	backend->parent.foreach = file_foreach;
 	backend->parent.free = backend_free;
@@ -874,7 +957,7 @@ static int write_section(git_filebuf *file, const char *key)
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_write(diskfile_backend *cfg, const char *key, const char* value)
+static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char* value)
 {
 	int error = GIT_SUCCESS, c;
 	int section_matches = 0, last_section_matched = 0;
@@ -960,6 +1043,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const char* valu
 				if (!last_section_matched) {
 					cfg_consume_line(cfg);
 					break;
+				} else {
+					/* As a last attempt, if we were given "^$", we should add it */
+					if (preg != NULL && regexec(preg, "", 0, NULL, 0))
+						break;
 				}
 			} else {
 				int cmp = -1;
@@ -967,6 +1054,9 @@ static int config_write(diskfile_backend *cfg, const char *key, const char* valu
 				pre_end = cfg->reader.read_ptr;
 				if ((error = parse_variable(cfg, &var_name, &var_value)) == GIT_SUCCESS)
 					cmp = strcasecmp(name, var_name);
+
+				if (preg != NULL)
+					cmp = regexec(preg, var_value, 0, NULL, 0);
 
 				git__free(var_name);
 				git__free(var_value);
@@ -1034,8 +1124,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const char* valu
 
 	/* And now if we just need to add a variable */
 	if (section_matches) {
-		error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
-		goto cleanup;
+		if (preg == NULL || !regexec(preg, "", 0, NULL, 0)) {
+			error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+			goto cleanup;
+		}
 	}
 
 	/* Or maybe we need to write out a whole section */
@@ -1043,7 +1135,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const char* valu
 	if (error < GIT_SUCCESS)
 		git__rethrow(error, "Failed to write new section");
 
-	error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+	if (preg == NULL || !regexec(preg, "", 0, NULL, 0))
+		error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
  cleanup:
 	git__free(section);
 	git__free(current_section);

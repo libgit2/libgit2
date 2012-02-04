@@ -364,6 +364,24 @@ int git_config_get_multivar(git_config *cfg, const char *name, const char *regex
 	return GIT_SUCCESS;
 }
 
+int git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value)
+{
+	file_internal *internal;
+	git_config_file *file;
+	int error = GIT_ENOTFOUND;
+	unsigned int i;
+
+	for (i = cfg->files.length; i > 0; --i) {
+		internal = git_vector_get(&cfg->files, i - 1);
+		file = internal->file;
+		error = file->set_multivar(file, name, regexp, value);
+		if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+			git__rethrow(error, "Failed to replace multivar");
+	}
+
+	return GIT_SUCCESS;
+}
+
 int git_config_find_global_r(git_buf *path)
 {
 	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME);

@@ -31,6 +31,7 @@ struct git_config_file {
 	int (*get)(struct git_config_file *, const char *key, const char **value);
 	int (*get_multivar)(struct git_config_file *, const char *key, const char *regexp, int (*fn)(const char *, void *), void *data);
 	int (*set)(struct git_config_file *, const char *key, const char *value);
+	int (*set_multivar)(git_config_file *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_file *, const char *key);
 	int (*foreach)(struct git_config_file *, int (*fn)(const char *, const char *, void *), void *data);
 	void (*free)(struct git_config_file *);
@@ -254,6 +255,12 @@ GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const char *value);
+
+
+/**
+ * Set a multivar
+ */
+GIT_EXTERN(int) git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value);
 
 /**
  * Delete a config variable
