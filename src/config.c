@@ -337,6 +337,33 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 	return git__throw(error, "Config value '%s' not found", name);
 }
 
+int git_config_get_multivar(git_config *cfg, const char *name, const char *regexp,
+			    int (*fn)(const char *value, void *data), void *data)
+{
+	file_internal *internal;
+	git_config_file *file;
+	int error = GIT_ENOTFOUND;
+	unsigned int i;
+
+
+	if (cfg->files.length == 0)
+		return git__throw(GIT_EINVALIDARGS, "Cannot get variable value; no files open in the `git_config` instance");
+
+	/*
+	 * This loop runs the "wrong" way 'round because we need to
+	 * look at every value from the most general to most specific
+	 */
+	for (i = cfg->files.length; i > 0; --i) {
+		internal = git_vector_get(&cfg->files, i - 1);
+		file = internal->file;
+		error = file->get_multivar(file, name, regexp, fn, data);
+		if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+			git__rethrow(error, "Failed to get multivar");
+	}
+
+	return GIT_SUCCESS;
+}
+
 int git_config_find_global_r(git_buf *path)
 {
 	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME);

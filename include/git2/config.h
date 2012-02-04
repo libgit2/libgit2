@@ -29,6 +29,7 @@ struct git_config_file {
 	/* Open means open the file/database and parse if necessary */
 	int (*open)(struct git_config_file *);
 	int (*get)(struct git_config_file *, const char *key, const char **value);
+	int (*get_multivar)(struct git_config_file *, const char *key, const char *regexp, int (*fn)(const char *, void *), void *data);
 	int (*set)(struct git_config_file *, const char *key, const char *value);
 	int (*del)(struct git_config_file *, const char *key);
 	int (*foreach)(struct git_config_file *, int (*fn)(const char *, const char *, void *), void *data);
@@ -204,6 +205,12 @@ GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out)
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const char **out);
+
+/**
+ * Get each value of a multivar. The callback will be called on each
+ * variable found
+ */
+GIT_EXTERN(int) git_config_get_multivar(git_config *cfg, const char *name, const char *regexp, int (*fn)(const char *, void *), void *data);
 
 /**
  * Set the value of an integer config variable.

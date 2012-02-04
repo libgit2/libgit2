@@ -15,6 +15,8 @@
 
 
 #include <ctype.h>
+#include <sys/types.h>
+#include <regex.h>
 
 typedef struct cvar_t {
 	struct cvar_t *next;
@@ -294,6 +296,45 @@ static int config_get(git_config_file *cfg, const char *name, const char **out)
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to get config value for %s", name);
 }
 
+static int config_get_multivar(git_config_file *cfg, const char *name, const char *regexp, int (*fn)(const char *, void *), void *data)
+{
+	cvar_t *var;
+	int error = GIT_SUCCESS;
+	diskfile_backend *b = (diskfile_backend *)cfg;
+	char *key;
+	regex_t preg;
+
+	if ((error = normalize_name(name, &key)) < GIT_SUCCESS)
+		return error;
+
+	var = git_hashtable_lookup(b->values, key);
+	git__free(key);
+
+	if (var == NULL)
+		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
+
+	if (regexp != NULL) {
+		error = regcomp(&preg, regexp, 0);
+		if (error < 0)
+			return git__throw(GIT_EINVALIDARGS, "Failed to compile regex");
+	}
+
+	do {
+		if (regexp == NULL || !regexec(&preg, var->value, 0, NULL, 0)) {
+			error = fn(var->value, data);
+			if (error < GIT_SUCCESS)
+				goto exit;
+		}
+
+		var = var->next;
+	} while (var != NULL);
+
+ exit:
+	if (regexp != NULL)
+		regfree(&preg);
+	return error;
+}
+
 static int config_delete(git_config_file *cfg, const char *name)
 {
 	int error;
@@ -342,6 +383,7 @@ int git_config_file__ondisk(git_config_file **out, const char *path)
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
+	backend->parent.get_multivar = config_get_multivar;
 	backend->parent.set = config_set;
 	backend->parent.del = config_delete;
 	backend->parent.foreach = file_foreach;

@@ -22,3 +22,31 @@ void test_config_multivar__foreach(void)
 
 	git_config_free(cfg);
 }
+
+static int cb(const char *GIT_UNUSED(val), void *data)
+{
+	int *n = (int *) data;
+
+	(*n)++;
+
+	return GIT_SUCCESS;
+}
+
+void test_config_multivar__get(void)
+{
+	git_config *cfg;
+	const char *name = "remote.fancy.fetch";
+	int n;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config11")));
+
+	n = 0;
+	cl_git_pass(git_config_get_multivar(cfg, name, NULL, cb, &n));
+	cl_assert(n == 2);
+
+	n = 0;
+	cl_git_pass(git_config_get_multivar(cfg, name, "example", cb, &n));
+	cl_assert(n == 1);
+
+	git_config_free(cfg);
+}
