@@ -1,0 +1,38 @@
+#include "fileops.h"
+#include "git2/diff.h"
+
+typedef struct {
+	int files;
+	int file_adds;
+	int file_dels;
+	int file_mods;
+
+	int hunks;
+	int hunk_new_lines;
+	int hunk_old_lines;
+
+	int lines;
+	int line_ctxt;
+	int line_adds;
+	int line_dels;
+} diff_expects;
+
+extern int diff_file_fn(
+	void *cb_data,
+	git_diff_delta *delta,
+	float progress);
+
+extern int diff_hunk_fn(
+	void *cb_data,
+	git_diff_delta *delta,
+	git_diff_range *range,
+	const char *header,
+	size_t header_len);
+
+extern int diff_line_fn(
+	void *cb_data,
+	git_diff_delta *delta,
+	char line_origin,
+	const char *content,
+	size_t content_len);
+
