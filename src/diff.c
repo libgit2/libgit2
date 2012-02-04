@@ -445,7 +445,10 @@ static char pick_suffix(int mode)
 {
 	if (S_ISDIR(mode))
 		return '/';
-	else if (mode & S_IXUSR)
+	else if (mode & 0100)
+		/* modes in git are not very flexible, so if this bit is set,
+		 * we must be dealwith with a 100755 type of file.
+		 */
 		return '*';
 	else
 		return ' ';
