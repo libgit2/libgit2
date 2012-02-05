@@ -27,7 +27,6 @@ struct git_tree {
 
 struct git_treebuilder {
 	git_vector entries;
-	size_t entry_count;
 };
 
 
