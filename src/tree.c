@@ -287,8 +287,6 @@ static int append_entry(git_treebuilder *bld, const char *filename, const git_oi
 	entry->filename = git__strdup(filename);
 	entry->filename_len = strlen(entry->filename);
 
-	bld->entry_count++;
-
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
 
@@ -486,10 +484,8 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 
 	if (pos >= 0) {
 		entry = git_vector_get(&bld->entries, pos);
-		if (entry->removed) {
+		if (entry->removed)
 			entry->removed = 0;
-			bld->entry_count++;
-		}
 	} else {
 		if ((entry = git__malloc(sizeof(git_tree_entry))) == NULL)
 			return GIT_ENOMEM;
@@ -497,8 +493,6 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 		memset(entry, 0x0, sizeof(git_tree_entry));
 		entry->filename = git__strdup(filename);
 		entry->filename_len = strlen(entry->filename);
-
-		bld->entry_count++;
 	}
 
 	git_oid_cpy(&entry->oid, id);
@@ -546,7 +540,6 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 		return git__throw(GIT_ENOTFOUND, "Failed to remove entry. File isn't in the tree");
 
 	remove_ptr->removed = 1;
-	bld->entry_count--;
 	return GIT_SUCCESS;
 }
 
