@@ -208,8 +208,16 @@ GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out)
 GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const char **out);
 
 /**
- * Get each value of a multivar. The callback will be called on each
- * variable found
+ * Get each value of a multivar.
+ *
+ * The callback will be called on each variable found
+ *
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @param regexp regular expression to filter which variables we're
+ * interested in. Use NULL to indicate all
+ * @param fn the function to be called on each value of the variable
+ * @param data opaque pointer to pass to the callback
  */
 GIT_EXTERN(int) git_config_get_multivar(git_config *cfg, const char *name, const char *regexp, int (*fn)(const char *, void *), void *data);
 
@@ -259,6 +267,11 @@ GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const c
 
 /**
  * Set a multivar
+ *
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @param regexp a regular expression to indicate which values to replace
+ * @param value the new value.
  */
 GIT_EXTERN(int) git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value);
 
