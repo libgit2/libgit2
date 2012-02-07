@@ -38,3 +38,4 @@ extern int diff_line_fn(
 	char line_origin,
 	const char *content,
 	size_t content_len);
+

@@ -22,7 +22,7 @@ void test_diff_blob__0(void)
 {
 	git_blob *a, *b, *c, *d;
 	git_oid a_oid, b_oid, c_oid, d_oid;
-	git_diff_options opts;
+	git_diff_options opts = {0};
 	diff_expects exp;
 
 	/* tests/resources/attr/root_test1 */
@@ -44,8 +44,7 @@ void test_diff_blob__0(void)
 	/* Doing the equivalent of a `git diff -U1` on these files */
 
 	opts.context_lines = 1;
-	opts.interhunk_lines = 0;
-	opts.ignore_whitespace = 0;
+	opts.interhunk_lines = 1;
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(

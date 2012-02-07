@@ -18,34 +18,16 @@ void test_diff_tree__cleanup(void)
 	cl_fixture_cleanup("attr");
 }
 
-static git_tree *resolve_commit_oid_to_tree(const char *partial_oid)
-{
-	size_t len = strlen(partial_oid);
-	git_oid oid;
-	git_object *obj;
-	git_tree *tree;
-
-	if (git_oid_fromstrn(&oid, partial_oid, len) == 0)
-		git_object_lookup_prefix(&obj, g_repo, &oid, len, GIT_OBJ_ANY);
-	cl_assert(obj);
-	if (git_object_type(obj) == GIT_OBJ_TREE)
-		return (git_tree *)obj;
-	cl_assert(git_object_type(obj) == GIT_OBJ_COMMIT);
-	cl_git_pass(git_commit_tree(&tree, (git_commit *)obj));
-	git_object_free(obj);
-	return tree;
-}
-
 void test_diff_tree__0(void)
 {
 	/* grabbed a couple of commit oids from the history of the attr repo */
 	const char *a_commit = "605812a";
 	const char *b_commit = "370fe9ec22";
 	const char *c_commit = "f5b0af1fb4f5c";
-	git_tree *a = resolve_commit_oid_to_tree(a_commit);
-	git_tree *b = resolve_commit_oid_to_tree(b_commit);
-	git_tree *c = resolve_commit_oid_to_tree(c_commit);
-	git_diff_options opts;
+	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
+	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
+	git_tree *c = resolve_commit_oid_to_tree(g_repo, c_commit);
+	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
@@ -53,8 +35,7 @@ void test_diff_tree__0(void)
 	cl_assert(b);
 
 	opts.context_lines = 1;
-	opts.interhunk_lines = 0;
-	opts.ignore_whitespace = 0;
+	opts.interhunk_lines = 1;
 
 	memset(&exp, 0, sizeof(exp));
 

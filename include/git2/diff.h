@@ -29,17 +29,33 @@
  */
 GIT_BEGIN_DECL
 
+enum {
+	GIT_DIFF_NORMAL = 0,
+	GIT_DIFF_REVERSE = (1 << 0),
+	GIT_DIFF_FORCE_TEXT = (1 << 1),
+	GIT_DIFF_IGNORE_WHITESPACE = (1 << 2),
+	GIT_DIFF_IGNORE_WHITESPACE_CHANGE = (1 << 3),
+	GIT_DIFF_IGNORE_WHITESPACE_EOL = (1 << 4),
+	GIT_DIFF_IGNORE_SUBMODULES = (1 << 5),
+	GIT_DIFF_PATIENCE = (1 << 6)
+};
+
 /**
  * Structure describing options about how the diff should be executed.
+ *
+ * Setting all values of the structure to zero will yield the default
+ * values.  Similarly, passing NULL for the options structure will
+ * give the defaults.  The default values are marked below.
  *
  * @todo Most of the parameters here are not actually supported at this time.
  */
 typedef struct {
-	int context_lines;
-	int interhunk_lines;
-	int ignore_whitespace;
-	int force_text;			/**< generate text diffs even for binaries */
-	git_strarray pathspec;
+	uint32_t flags;				/**< defaults to GIT_DIFF_NORMAL */
+	uint16_t context_lines;		/**< defaults to 3 */
+	uint16_t interhunk_lines;	/**< defaults to 3 */
+	char *src_prefix;			/**< defaults to "a" */
+	char *dst_prefix;			/**< defaults to "b" */
+	git_strarray pathspec;		/**< defaults to show all paths */
 } git_diff_options;
 
 /**
@@ -158,7 +174,7 @@ typedef int (*git_diff_output_fn)(
  */
 GIT_EXTERN(int) git_diff_tree_to_tree(
 	git_repository *repo,
-	const git_diff_options *opts,
+	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_tree *old,
 	git_tree *new,
 	git_diff_list **diff);
@@ -169,7 +185,7 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
  */
 GIT_EXTERN(int) git_diff_index_to_tree(
 	git_repository *repo,
-	const git_diff_options *opts,
+	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_tree *old,
 	git_diff_list **diff);
 
@@ -179,7 +195,7 @@ GIT_EXTERN(int) git_diff_index_to_tree(
  */
 GIT_EXTERN(int) git_diff_workdir_to_tree(
 	git_repository *repo,
-	const git_diff_options *opts,
+	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_tree *old,
 	git_diff_list **diff);
 
@@ -189,7 +205,7 @@ GIT_EXTERN(int) git_diff_workdir_to_tree(
  */
 GIT_EXTERN(int) git_diff_workdir_to_index(
 	git_repository *repo,
-	const git_diff_options *opts,
+	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_diff_list **diff);
 
 /**
