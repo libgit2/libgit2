@@ -72,9 +72,11 @@ int diff_line_fn(
 		e->line_ctxt++;
 		break;
 	case GIT_DIFF_LINE_ADDITION:
+	case GIT_DIFF_LINE_ADD_EOFNL:
 		e->line_adds++;
 		break;
 	case GIT_DIFF_LINE_DELETION:
+	case GIT_DIFF_LINE_DEL_EOFNL:
 		e->line_dels++;
 		break;
 	default:
