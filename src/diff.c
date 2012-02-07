@@ -486,9 +486,11 @@ static int set_file_is_binary(
 	return GIT_SUCCESS;
 }
 
-static void setup_xdiff_config(git_diff_options *opts, xdemitconf_t *cfg)
+static void setup_xdiff_options(
+	git_diff_options *opts, xdemitconf_t *cfg, xpparam_t *param)
 {
 	memset(cfg, 0, sizeof(xdemitconf_t));
+	memset(param, 0, sizeof(xpparam_t));
 
 	cfg->ctxlen =
 		(!opts || !opts->context_lines) ? 3 : opts->context_lines;
@@ -499,11 +501,11 @@ static void setup_xdiff_config(git_diff_options *opts, xdemitconf_t *cfg)
 		return;
 
 	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE)
-		cfg->flags |= XDF_WHITESPACE_FLAGS;
+		param->flags |= XDF_WHITESPACE_FLAGS;
 	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE_CHANGE)
-		cfg->flags |= XDF_IGNORE_WHITESPACE_CHANGE;
+		param->flags |= XDF_IGNORE_WHITESPACE_CHANGE;
 	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE_EOL)
-		cfg->flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
+		param->flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
 }
 
 int git_diff_foreach(
@@ -525,8 +527,7 @@ int git_diff_foreach(
 	di.hunk_cb = hunk_cb;
 	di.line_cb = line_cb;
 
-	memset(&xdiff_params, 0, sizeof(xdiff_params));
-	setup_xdiff_config(&diff->opts, &xdiff_config);
+	setup_xdiff_options(&diff->opts, &xdiff_config, &xdiff_params);
 	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
 	xdiff_callback.outf = diff_output_cb;
 	xdiff_callback.priv = &di;
@@ -898,8 +899,7 @@ int git_diff_blobs(
 	di.hunk_cb = hunk_cb;
 	di.line_cb = line_cb;
 
-	memset(&xdiff_params, 0, sizeof(xdiff_params));
-	setup_xdiff_config(options, &xdiff_config);
+	setup_xdiff_options(options, &xdiff_config, &xdiff_params);
 	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
 	xdiff_callback.outf = diff_output_cb;
 	xdiff_callback.priv = &di;
