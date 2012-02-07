@@ -87,46 +87,123 @@ int printer(void *data, char usage, const char *line)
 	return 0;
 }
 
+int check_uint16_param(const char *arg, const char *pattern, uint16_t *val)
+{
+	size_t len = strlen(pattern);
+	uint16_t strval;
+	char *endptr = NULL;
+	if (strncmp(arg, pattern, len))
+		return 0;
+	strval = strtoul(arg + len, &endptr, 0);
+	if (endptr == arg)
+		return 0;
+	*val = strval;
+	return 1;
+}
+
+int check_str_param(const char *arg, const char *pattern, char **val)
+{
+	size_t len = strlen(pattern);
+	if (strncmp(arg, pattern, len))
+		return 0;
+	*val = (char *)(arg + len);
+	return 1;
+}
+
+void usage(const char *message, const char *arg)
+{
+	if (message && arg)
+		fprintf(stderr, "%s: %s\n", message, arg);
+	else if (message)
+		fprintf(stderr, "%s\n", message);
+	fprintf(stderr, "usage: diff <tree-oid> <tree-oid>\n");
+	exit(1);
+}
+
 int main(int argc, char *argv[])
 {
 	char path[GIT_PATH_MAX];
 	git_repository *repo = NULL;
-	git_tree *a, *b;
+	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff_options opts = {0};
 	git_diff_list *diff;
-	char *dir = ".";
-	int color = -1;
+	int i, color = -1, compact = 0;
+	char *a, *dir = ".", *treeish1 = NULL, *treeish2 = NULL;
 
-	if (argc != 3) {
-		fprintf(stderr, "usage: diff <tree-oid> <tree-oid>\n");
-		exit(1);
+	/* parse arguments as copied from git-diff */
+
+	for (i = 1; i < argc; ++i) {
+		a = argv[i];
+
+		if (a[0] != '-') {
+			if (treeish1 == NULL)
+				treeish1 = a;
+			else if (treeish2 == NULL)
+				treeish2 = a;
+			else
+				usage("Only one or two tree identifiers can be provided", NULL);
+		}
+		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
+			!strcmp(a, "--patch"))
+			compact = 0;
+		else if (!strcmp(a, "--name-status"))
+			compact = 1;
+		else if (!strcmp(a, "--color"))
+			color = 0;
+		else if (!strcmp(a, "--no-color"))
+			color = -1;
+		else if (!strcmp(a, "-R"))
+			opts.flags |= GIT_DIFF_REVERSE;
+		else if (!strcmp(a, "-a") || !strcmp(a, "--text"))
+			opts.flags |= GIT_DIFF_FORCE_TEXT;
+		else if (!strcmp(a, "--ignore-space-at-eol"))
+			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE_EOL;
+		else if (!strcmp(a, "-b") || !strcmp(a, "--ignore-space-change"))
+			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE_CHANGE;
+		else if (!strcmp(a, "-w") || !strcmp(a, "--ignore-all-space"))
+			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE;
+		else if (!check_uint16_param(a, "-U", &opts.context_lines) &&
+			!check_uint16_param(a, "--unified=", &opts.context_lines) &&
+			!check_uint16_param(a, "--inter-hunk-context=",
+				&opts.interhunk_lines) &&
+			!check_str_param(a, "--src-prefix=", &opts.src_prefix) &&
+			!check_str_param(a, "--dst-prefix=", &opts.dst_prefix))
+			usage("Unknown arg", a);
 	}
+
+	if (!treeish1)
+		usage("Must provide at least one tree identifier (for now)", NULL);
+
+	/* open repo */
 
 	check(git_repository_discover(path, sizeof(path), dir, 0, "/"),
 		"Could not discover repository");
 	check(git_repository_open(&repo, path),
 		"Could not open repository");
 
-	check(resolve_to_tree(repo, argv[1], &a), "Looking up first tree");
-	check(resolve_to_tree(repo, argv[2], &b), "Looking up second tree");
+	check(resolve_to_tree(repo, treeish1, &t1), "Looking up first tree");
+	if (treeish2)
+		check(resolve_to_tree(repo, treeish2, &t2), "Looking up second tree");
 
-	check(git_diff_tree_to_tree(repo, &opts, a, b, &diff), "Generating diff");
+	if (!treeish2)
+		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Generating diff");
+	else
+		check(git_diff_tree_to_tree(repo, &opts, t1, t2, &diff), "Generating diff");
 
-	fputs(colors[0], stdout);
+	if (color >= 0)
+		fputs(colors[0], stdout);
 
-	check(git_diff_print_compact(diff, &color, printer), "Displaying diff summary");
+	if (compact)
+		check(git_diff_print_compact(diff, &color, printer), "Displaying diff summary");
+	else
+		check(git_diff_print_patch(diff, &color, printer), "Displaying diff");
 
-	fprintf(stdout, "--\n");
-
-	color = 0;
-
-	check(git_diff_print_patch(diff, &color, printer), "Displaying diff");
-
-	fputs(colors[0], stdout);
+	if (color >= 0)
+		fputs(colors[0], stdout);
 
 	git_diff_list_free(diff);
-	git_tree_free(a);
-	git_tree_free(b);
+	git_tree_free(t1);
+	git_tree_free(t2);
 	git_repository_free(repo);
 
 	return 0;

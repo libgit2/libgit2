@@ -36,3 +36,5 @@ extern int diff_line_fn(
 	const char *content,
 	size_t content_len);
 
+extern git_tree *resolve_commit_oid_to_tree(
+	git_repository *repo, const char *partial_oid);
