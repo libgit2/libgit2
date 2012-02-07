@@ -14,8 +14,11 @@
 struct git_diff_list {
 	git_repository   *repo;
 	git_diff_options opts;
-	git_buf          pfx;
 	git_vector       files;    /* vector of git_diff_file_delta */
+
+	/* the following are just used while processing the diff list */
+	git_buf          pfx;
+	git_status_t     mode;
 };
 
 #endif

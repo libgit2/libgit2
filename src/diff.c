@@ -12,33 +12,6 @@
 #include "blob.h"
 #include <ctype.h>
 
-static git_diff_delta *file_delta_new(
-	git_diff_list *diff,
-	const git_tree_diff_data *tdiff)
-{
-	git_diff_delta *delta = git__calloc(1, sizeof(git_diff_delta));
-
-	if (!delta) {
-		git__rethrow(GIT_ENOMEM, "Could not allocate diff record");
-		return NULL;
-	}
-
-	/* copy shared fields */
-	delta->status   = tdiff->status;
-	delta->old_attr = tdiff->old_attr;
-	delta->new_attr = tdiff->new_attr;
-	delta->old_oid  = tdiff->old_oid;
-	delta->new_oid  = tdiff->new_oid;
-	delta->path     = git__strdup(diff->pfx.ptr);
-	if (delta->path == NULL) {
-		git__free(delta);
-		git__rethrow(GIT_ENOMEM, "Could not allocate diff record path");
-		return NULL;
-	}
-
-	return delta;
-}
-
 static void file_delta_free(git_diff_delta *delta)
 {
 	if (!delta)
@@ -55,77 +28,119 @@ static void file_delta_free(git_diff_delta *delta)
 	git__free(delta);
 }
 
-static int tree_add_cb(const char *root, git_tree_entry *entry, void *data)
+static int file_delta_new__from_one(
+	git_diff_list *diff,
+	git_status_t status,
+	unsigned int attr,
+	const git_oid *oid,
+	const char *path)
+{
+	int error;
+	git_diff_delta *delta = git__calloc(1, sizeof(git_diff_delta));
+
+	/* This fn is just for single-sided diffs */
+	assert(status == GIT_STATUS_ADDED || status == GIT_STATUS_DELETED);
+
+	if (!delta)
+		return git__rethrow(GIT_ENOMEM, "Could not allocate diff record");
+
+	if ((delta->path = git__strdup(path)) == NULL) {
+		git__free(delta);
+		return git__rethrow(GIT_ENOMEM, "Could not allocate diff record path");
+	}
+
+	if (diff->opts.flags & GIT_DIFF_REVERSE)
+		status = (status == GIT_STATUS_ADDED) ?
+			GIT_STATUS_DELETED : GIT_STATUS_ADDED;
+
+	delta->status = status;
+
+	if (status == GIT_STATUS_ADDED) {
+		delta->new_attr = attr;
+		git_oid_cpy(&delta->new_oid, oid);
+	} else {
+		delta->old_attr = attr;
+		git_oid_cpy(&delta->old_oid, oid);
+	}
+
+	if ((error = git_vector_insert(&diff->files, delta)) < GIT_SUCCESS)
+		file_delta_free(delta);
+
+	return error;
+}
+
+static int file_delta_new__from_tree_diff(
+	git_diff_list *diff,
+	const git_tree_diff_data *tdiff)
+{
+	int error;
+	git_diff_delta *delta = git__calloc(1, sizeof(git_diff_delta));
+
+	if (!delta)
+		return git__rethrow(GIT_ENOMEM, "Could not allocate diff record");
+
+	if ((diff->opts.flags & GIT_DIFF_REVERSE) == 0) {
+		delta->status   = tdiff->status;
+		delta->old_attr = tdiff->old_attr;
+		delta->new_attr = tdiff->new_attr;
+		delta->old_oid  = tdiff->old_oid;
+		delta->new_oid  = tdiff->new_oid;
+	} else {
+		/* reverse the polarity of the neutron flow */
+		switch (tdiff->status) {
+		case GIT_STATUS_ADDED:   delta->status = GIT_STATUS_DELETED; break;
+		case GIT_STATUS_DELETED: delta->status = GIT_STATUS_ADDED; break;
+		default:                 delta->status = tdiff->status;
+		}
+		delta->old_attr = tdiff->new_attr;
+		delta->new_attr = tdiff->old_attr;
+		delta->old_oid  = tdiff->new_oid;
+		delta->new_oid  = tdiff->old_oid;
+	}
+
+	delta->path = git__strdup(diff->pfx.ptr);
+	if (delta->path == NULL) {
+		git__free(delta);
+		return git__rethrow(GIT_ENOMEM, "Could not allocate diff record path");
+	}
+
+	if ((error = git_vector_insert(&diff->files, delta)) < GIT_SUCCESS)
+		file_delta_free(delta);
+
+	return error;
+}
+
+static int tree_walk_cb(const char *root, git_tree_entry *entry, void *data)
 {
 	int error;
 	git_diff_list *diff = data;
 	ssize_t pfx_len = diff->pfx.size;
-	git_tree_diff_data tdiff;
-	git_diff_delta *delta;
 
-	memset(&tdiff, 0, sizeof(tdiff));
-	tdiff.new_attr = git_tree_entry_attributes(entry);
-	if (S_ISDIR(tdiff.new_attr))
+	if (S_ISDIR(git_tree_entry_attributes(entry)))
 		return GIT_SUCCESS;
 
-	git_oid_cpy(&tdiff.new_oid, git_tree_entry_id(entry));
-	tdiff.status = GIT_STATUS_ADDED;
-	tdiff.path = git_tree_entry_name(entry);
-
+	/* join pfx, root, and entry->filename into one */
 	if ((error = git_buf_joinpath(&diff->pfx, diff->pfx.ptr, root)) ||
-		(error = git_buf_joinpath(&diff->pfx, diff->pfx.ptr, tdiff.path)))
+		(error = git_buf_joinpath(
+			&diff->pfx, diff->pfx.ptr, git_tree_entry_name(entry))))
 		return error;
 
-	delta = file_delta_new(diff, &tdiff);
-	if (delta  == NULL)
-		error = GIT_ENOMEM;
-	else if ((error = git_vector_insert(&diff->files, delta)) < GIT_SUCCESS)
-		file_delta_free(delta);
+	error = file_delta_new__from_one(
+		diff, diff->mode, git_tree_entry_attributes(entry),
+		git_tree_entry_id(entry), diff->pfx.ptr);
 
 	git_buf_truncate(&diff->pfx, pfx_len);
 
 	return error;
 }
 
-static int tree_del_cb(const char *root, git_tree_entry *entry, void *data)
-{
-	int error;
-	git_diff_list *diff = data;
-	ssize_t pfx_len = diff->pfx.size;
-	git_tree_diff_data tdiff;
-	git_diff_delta *delta;
-
-	memset(&tdiff, 0, sizeof(tdiff));
-	tdiff.old_attr = git_tree_entry_attributes(entry);
-	if (S_ISDIR(tdiff.old_attr))
-		return GIT_SUCCESS;
-
-	git_oid_cpy(&tdiff.old_oid, git_tree_entry_id(entry));
-	tdiff.status = GIT_STATUS_DELETED;
-	tdiff.path = git_tree_entry_name(entry);
-
-	if ((error = git_buf_joinpath(&diff->pfx, diff->pfx.ptr, root)) ||
-		(error = git_buf_joinpath(&diff->pfx, diff->pfx.ptr, tdiff.path)))
-		return error;
-
-	delta = file_delta_new(diff, &tdiff);
-	if (delta  == NULL)
-		error = GIT_ENOMEM;
-	else if ((error = git_vector_insert(&diff->files, delta)) < GIT_SUCCESS)
-		file_delta_free(delta);
-
-	git_buf_truncate(&diff->pfx, pfx_len);
-
-	return error;
-}
-
-static int tree_diff_cb(const git_tree_diff_data *ptr, void *data)
+static int tree_diff_cb(const git_tree_diff_data *tdiff, void *data)
 {
 	int error;
 	git_diff_list *diff = data;
 	ssize_t pfx_len = diff->pfx.size;
 
-	error = git_buf_joinpath(&diff->pfx, diff->pfx.ptr, ptr->path);
+	error = git_buf_joinpath(&diff->pfx, diff->pfx.ptr, tdiff->path);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -138,56 +153,83 @@ static int tree_diff_cb(const git_tree_diff_data *ptr, void *data)
 	 *   and a deletion (thank you, git_tree_diff!)
 	 * otherwise, this is a blob-to-blob diff
 	 */
-	if (S_ISDIR(ptr->old_attr) && S_ISDIR(ptr->new_attr)) {
+	if (S_ISDIR(tdiff->old_attr) && S_ISDIR(tdiff->new_attr)) {
 		git_tree *old = NULL, *new = NULL;
 
-		if (!(error = git_tree_lookup(&old, diff->repo, &ptr->old_oid)) &&
-			!(error = git_tree_lookup(&new, diff->repo, &ptr->new_oid)))
-		{
+		if (!(error = git_tree_lookup(&old, diff->repo, &tdiff->old_oid)) &&
+			!(error = git_tree_lookup(&new, diff->repo, &tdiff->new_oid)))
 			error = git_tree_diff(old, new, tree_diff_cb, diff);
-		}
 
 		git_tree_free(old);
 		git_tree_free(new);
-	} else if (S_ISDIR(ptr->old_attr) && ptr->new_attr == 0) {
-		/* deleted a whole tree */
-		git_tree *old = NULL;
-		if (!(error = git_tree_lookup(&old, diff->repo, &ptr->old_oid))) {
-			error = git_tree_walk(old, tree_del_cb, GIT_TREEWALK_POST, diff);
-			git_tree_free(old);
-		}
-	} else if (S_ISDIR(ptr->new_attr) && ptr->old_attr == 0) {
-		/* added a whole tree */
-		git_tree *new = NULL;
-		if (!(error = git_tree_lookup(&new, diff->repo, &ptr->new_oid))) {
-			error = git_tree_walk(new, tree_add_cb, GIT_TREEWALK_POST, diff);
-			git_tree_free(new);
-		}
-	} else {
-		git_diff_delta *delta = file_delta_new(diff, ptr);
-		if (delta == NULL)
-			error = GIT_ENOMEM;
-		else if ((error = git_vector_insert(&diff->files, delta)) < GIT_SUCCESS)
-			file_delta_free(delta);
-	}
+	} else if (S_ISDIR(tdiff->old_attr) || S_ISDIR(tdiff->new_attr)) {
+		git_tree *tree     = NULL;
+		int added_dir      = S_ISDIR(tdiff->new_attr);
+		const git_oid *oid = added_dir ? &tdiff->new_oid : &tdiff->old_oid;
+		diff->mode         = added_dir ? GIT_STATUS_ADDED : GIT_STATUS_DELETED;
+
+		if (!(error = git_tree_lookup(&tree, diff->repo, oid)))
+			error = git_tree_walk(tree, tree_walk_cb, GIT_TREEWALK_POST, diff);
+		git_tree_free(tree);
+	} else
+		error = file_delta_new__from_tree_diff(diff, tdiff);
 
 	git_buf_truncate(&diff->pfx, pfx_len);
 
 	return error;
 }
 
+static char *git_diff_src_prefix_default = "a/";
+static char *git_diff_dst_prefix_default = "b/";
+#define PREFIX_IS_DEFAULT(A) \
+	((A) == git_diff_src_prefix_default || (A) == git_diff_dst_prefix_default)
+
+static char *copy_prefix(const char *prefix)
+{
+	size_t len = strlen(prefix);
+	char *str = git__malloc(len + 2);
+	if (str != NULL) {
+		memcpy(str, prefix, len + 1);
+		/* append '/' at end if needed */
+		if (len > 0 && str[len - 1] != '/') {
+			str[len] = '/';
+			str[len + 1] = '\0';
+		}
+	}
+	return str;
+}
+
 static git_diff_list *git_diff_list_alloc(
 	git_repository *repo, const git_diff_options *opts)
 {
 	git_diff_list *diff = git__calloc(1, sizeof(git_diff_list));
-	if (diff != NULL) {
-		if (opts != NULL) {
-			memcpy(&diff->opts, opts, sizeof(git_diff_options));
-			/* do something safer with the pathspec strarray */
-		}
-		diff->repo = repo;
-		git_buf_init(&diff->pfx, 0);
+	if (diff == NULL)
+		return NULL;
+
+	diff->repo = repo;
+	git_buf_init(&diff->pfx, 0);
+
+	if (opts == NULL)
+		return diff;
+
+	memcpy(&diff->opts, opts, sizeof(git_diff_options));
+
+	diff->opts.src_prefix = (opts->src_prefix == NULL) ?
+		git_diff_src_prefix_default : copy_prefix(opts->src_prefix);
+	diff->opts.dst_prefix = (opts->dst_prefix == NULL) ?
+		git_diff_dst_prefix_default : copy_prefix(opts->dst_prefix);
+	if (!diff->opts.src_prefix || !diff->opts.dst_prefix) {
+		git__free(diff);
+		return NULL;
 	}
+	if (diff->opts.flags & GIT_DIFF_REVERSE) {
+		char *swap = diff->opts.src_prefix;
+		diff->opts.src_prefix = diff->opts.dst_prefix;
+		diff->opts.dst_prefix = swap;
+	}
+
+	/* do something safe with the pathspec strarray */
+
 	return diff;
 }
 
@@ -205,6 +247,14 @@ void git_diff_list_free(git_diff_list *diff)
 		diff->files.contents[i] = NULL;
 	}
 	git_vector_free(&diff->files);
+	if (!PREFIX_IS_DEFAULT(diff->opts.src_prefix)) {
+		git__free(diff->opts.src_prefix);
+		diff->opts.src_prefix = NULL;
+	}
+	if (!PREFIX_IS_DEFAULT(diff->opts.dst_prefix)) {
+		git__free(diff->opts.dst_prefix);
+		diff->opts.dst_prefix = NULL;
+	}
 	git__free(diff);
 }
 
@@ -225,6 +275,111 @@ int git_diff_tree_to_tree(
 		*diff_ptr = diff;
 	} else
 		git_diff_list_free(diff);
+
+	return error;
+}
+
+typedef struct {
+	git_diff_list *diff;
+	git_index *index;
+	unsigned int index_pos;
+} index_to_tree_info;
+
+static int add_new_index_deltas(
+	index_to_tree_info *info,
+	const char *stop_path)
+{
+	int error;
+	git_index_entry *idx_entry = git_index_get(info->index, info->index_pos);
+
+	while (idx_entry != NULL &&
+		(stop_path == NULL || strcmp(idx_entry->path, stop_path) < 0))
+	{
+		error = file_delta_new__from_one(
+			info->diff, GIT_STATUS_ADDED, idx_entry->mode,
+			&idx_entry->oid, idx_entry->path);
+		if (error < GIT_SUCCESS)
+			return error;
+
+		idx_entry = git_index_get(info->index, ++info->index_pos);
+	}
+
+	return GIT_SUCCESS;
+}
+
+static int diff_index_to_tree_cb(const char *root, git_tree_entry *tree_entry, void *data)
+{
+	int error;
+	index_to_tree_info *info = data;
+	git_index_entry *idx_entry;
+
+	/* TODO: submodule support for GIT_OBJ_COMMITs in tree */
+	if (git_tree_entry_type(tree_entry) != GIT_OBJ_BLOB)
+		return GIT_SUCCESS;
+
+	error = git_buf_joinpath(&info->diff->pfx, root, git_tree_entry_name(tree_entry));
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* create add deltas for index entries that are not in the tree */
+	error = add_new_index_deltas(info, info->diff->pfx.ptr);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* create delete delta for tree entries that are not in the index */
+	idx_entry = git_index_get(info->index, info->index_pos);
+	if (idx_entry == NULL || strcmp(idx_entry->path, info->diff->pfx.ptr) > 0) {
+		return file_delta_new__from_one(
+			info->diff, GIT_STATUS_DELETED, git_tree_entry_attributes(tree_entry),
+			git_tree_entry_id(tree_entry), info->diff->pfx.ptr);
+	}
+
+	/* create modified delta for non-matching tree & index entries */
+	info->index_pos++;
+
+	if (git_oid_cmp(&idx_entry->oid, git_tree_entry_id(tree_entry)) ||
+		idx_entry->mode != git_tree_entry_attributes(tree_entry))
+	{
+		git_tree_diff_data tdiff;
+		tdiff.old_attr = git_tree_entry_attributes(tree_entry);
+		tdiff.new_attr = idx_entry->mode;
+		tdiff.status   = GIT_STATUS_MODIFIED;
+		tdiff.path     = idx_entry->path;
+		git_oid_cpy(&tdiff.old_oid, git_tree_entry_id(tree_entry));
+		git_oid_cpy(&tdiff.new_oid, &idx_entry->oid);
+
+		error = file_delta_new__from_tree_diff(info->diff, &tdiff);
+	}
+
+	return error;
+
+}
+
+int git_diff_index_to_tree(
+	git_repository *repo,
+	const git_diff_options *opts,
+	git_tree *old,
+	git_diff_list **diff_ptr)
+{
+	int error;
+	index_to_tree_info info = {0};
+
+	if ((info.diff = git_diff_list_alloc(repo, opts)) == NULL)
+		return GIT_ENOMEM;
+
+	if ((error = git_repository_index(&info.index, repo)) == GIT_SUCCESS) {
+		error = git_tree_walk(
+			old, diff_index_to_tree_cb, GIT_TREEWALK_POST, &info);
+		if (error == GIT_SUCCESS)
+			error = add_new_index_deltas(&info, NULL);
+		git_index_free(info.index);
+	}
+	git_buf_free(&info.diff->pfx);
+
+	if (error != GIT_SUCCESS)
+		git_diff_list_free(info.diff);
+	else
+		*diff_ptr = info.diff;
 
 	return error;
 }
@@ -331,6 +486,26 @@ static int set_file_is_binary(
 	return GIT_SUCCESS;
 }
 
+static void setup_xdiff_config(git_diff_options *opts, xdemitconf_t *cfg)
+{
+	memset(cfg, 0, sizeof(xdemitconf_t));
+
+	cfg->ctxlen =
+		(!opts || !opts->context_lines) ? 3 : opts->context_lines;
+	cfg->interhunkctxlen =
+		(!opts || !opts->interhunk_lines) ? 3 : opts->interhunk_lines;
+
+	if (!opts)
+		return;
+
+	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE)
+		cfg->flags |= XDF_WHITESPACE_FLAGS;
+	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE_CHANGE)
+		cfg->flags |= XDF_IGNORE_WHITESPACE_CHANGE;
+	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE_EOL)
+		cfg->flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
+}
+
 int git_diff_foreach(
 	git_diff_list *diff,
 	void *data,
@@ -341,17 +516,23 @@ int git_diff_foreach(
 	int error = GIT_SUCCESS;
 	diff_info di;
 	git_diff_delta *delta;
+	xpparam_t    xdiff_params;
+	xdemitconf_t xdiff_config;
+	xdemitcb_t   xdiff_callback;
 
 	di.diff    = diff;
 	di.cb_data = data;
 	di.hunk_cb = hunk_cb;
 	di.line_cb = line_cb;
 
+	memset(&xdiff_params, 0, sizeof(xdiff_params));
+	setup_xdiff_config(&diff->opts, &xdiff_config);
+	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
+	xdiff_callback.outf = diff_output_cb;
+	xdiff_callback.priv = &di;
+
 	git_vector_foreach(&diff->files, di.index, delta) {
-		mmfile_t old, new;
-		xpparam_t params;
-		xdemitconf_t cfg;
-		xdemitcb_t callback;
+		mmfile_t old_data, new_data;
 
 		/* map files */
 		if (hunk_cb || line_cb) {
@@ -365,12 +546,12 @@ int git_diff_foreach(
 			{
 				error = git_blob_lookup(
 					&delta->old_blob, diff->repo, &delta->old_oid);
-				old.ptr = (char *)git_blob_rawcontent(delta->old_blob);
-				old.size = git_blob_rawsize(delta->old_blob);
+				old_data.ptr = (char *)git_blob_rawcontent(delta->old_blob);
+				old_data.size = git_blob_rawsize(delta->old_blob);
 			} else {
 				delta->old_blob = NULL;
-				old.ptr = "";
-				old.size = 0;
+				old_data.ptr = "";
+				old_data.size = 0;
 			}
 
 			if (delta->status == GIT_STATUS_ADDED ||
@@ -378,20 +559,24 @@ int git_diff_foreach(
 			{
 				error = git_blob_lookup(
 					&delta->new_blob, diff->repo, &delta->new_oid);
-				new.ptr = (char *)git_blob_rawcontent(delta->new_blob);
-				new.size = git_blob_rawsize(delta->new_blob);
+				new_data.ptr = (char *)git_blob_rawcontent(delta->new_blob);
+				new_data.size = git_blob_rawsize(delta->new_blob);
 			} else {
 				delta->new_blob = NULL;
-				new.ptr = "";
-				new.size = 0;
+				new_data.ptr = "";
+				new_data.size = 0;
 			}
 		}
 
-		if (diff->opts.force_text)
+		if (diff->opts.flags & GIT_DIFF_FORCE_TEXT)
 			delta->binary = 0;
 		else if ((error = set_file_is_binary(
-			diff->repo, delta, &old, &new)) < GIT_SUCCESS)
+			diff->repo, delta, &old_data, &new_data)) < GIT_SUCCESS)
 			break;
+
+		/* TODO: if ignore_whitespace is set, then we *must* do text
+		 * diffs to tell if a file has really been changed.
+		 */
 
 		if (file_cb != NULL) {
 			error = file_cb(data, delta, (float)di.index / diff->files.length);
@@ -411,19 +596,8 @@ int git_diff_foreach(
 
 		di.delta = delta;
 
-		memset(&params, 0, sizeof(params));
-
-		memset(&cfg, 0, sizeof(cfg));
-		cfg.ctxlen = diff->opts.context_lines || 3;
-		cfg.interhunkctxlen = diff->opts.interhunk_lines || 3;
-		if (diff->opts.ignore_whitespace)
-			cfg.flags |= XDF_WHITESPACE_FLAGS;
-
-		memset(&callback, 0, sizeof(callback));
-		callback.outf = diff_output_cb;
-		callback.priv = &di;
-
-		xdl_diff(&old, &new, &params, &cfg, &callback);
+		xdl_diff(&old_data, &new_data,
+			&xdiff_params, &xdiff_config, &xdiff_callback);
 
 		git_blob_free(delta->old_blob);
 		delta->old_blob = NULL;
@@ -436,6 +610,7 @@ int git_diff_foreach(
 }
 
 typedef struct {
+	git_diff_list *diff;
 	git_diff_output_fn print_cb;
 	void *cb_data;
 	git_buf *buf;
@@ -483,7 +658,8 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	if (delta->new_path != NULL)
 		git_buf_printf(pi->buf, "%c\t%s%c -> %s%c\n", code,
 			delta->path, old_suffix, delta->new_path, new_suffix);
-	else if (delta->old_attr != delta->new_attr)
+	else if (delta->old_attr != delta->new_attr &&
+		delta->old_attr != 0 && delta->new_attr != 0)
 		git_buf_printf(pi->buf, "%c\t%s%c (%o -> %o)\n", code,
 			delta->path, new_suffix, delta->old_attr, delta->new_attr);
 	else if (old_suffix != ' ')
@@ -506,6 +682,7 @@ int git_diff_print_compact(
 	git_buf buf = GIT_BUF_INIT;
 	print_info pi;
 
+	pi.diff     = diff;
 	pi.print_cb = print_cb;
 	pi.cb_data  = cb_data;
 	pi.buf      = &buf;
@@ -549,15 +726,15 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 {
 	int error;
 	print_info *pi = data;
-	const char *oldpfx = "a/";
+	const char *oldpfx = pi->diff->opts.src_prefix;
 	const char *oldpath = delta->path;
-	const char *newpfx = "b/";
+	const char *newpfx = pi->diff->opts.dst_prefix;
 	const char *newpath = delta->new_path ? delta->new_path : delta->path;
 
 	GIT_UNUSED_ARG(progress);
 
 	git_buf_clear(pi->buf);
-	git_buf_printf(pi->buf, "diff --git a/%s b/%s\n", delta->path, newpath);
+	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n", oldpfx, delta->path, newpfx, newpath);
 	if ((error = print_oid_range(pi, delta)) < GIT_SUCCESS)
 		return error;
 
@@ -647,6 +824,7 @@ int git_diff_print_patch(
 	git_buf buf = GIT_BUF_INIT;
 	print_info pi;
 
+	pi.diff     = diff;
 	pi.print_cb = print_cb;
 	pi.cb_data  = cb_data;
 	pi.buf      = &buf;
@@ -671,11 +849,17 @@ int git_diff_blobs(
 	diff_info di;
 	git_diff_delta delta;
 	mmfile_t old, new;
-	xpparam_t params;
-	xdemitconf_t cfg;
-	xdemitcb_t callback;
+	xpparam_t xdiff_params;
+	xdemitconf_t xdiff_config;
+	xdemitcb_t xdiff_callback;
 
-	assert(repo && options);
+	assert(repo);
+
+	if (options && (options->flags & GIT_DIFF_REVERSE)) {
+		git_blob *swap = old_blob;
+		old_blob = new_blob;
+		new_blob = swap;
+	}
 
 	if (old_blob) {
 		old.ptr  = (char *)git_blob_rawcontent(old_blob);
@@ -712,21 +896,15 @@ int git_diff_blobs(
 	di.delta   = &delta;
 	di.cb_data = cb_data;
 	di.hunk_cb = hunk_cb;
-	di.line_cb = line_cb;	
+	di.line_cb = line_cb;
 
-	memset(&params, 0, sizeof(params));
+	memset(&xdiff_params, 0, sizeof(xdiff_params));
+	setup_xdiff_config(options, &xdiff_config);
+	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
+	xdiff_callback.outf = diff_output_cb;
+	xdiff_callback.priv = &di;
 
-	memset(&cfg, 0, sizeof(cfg));
-	cfg.ctxlen = options->context_lines || 3;
-	cfg.interhunkctxlen = options->interhunk_lines || 3;
-	if (options->ignore_whitespace)
-		cfg.flags |= XDF_WHITESPACE_FLAGS;
-
-	memset(&callback, 0, sizeof(callback));
-	callback.outf = diff_output_cb;
-	callback.priv = &di;
-
-	xdl_diff(&old, &new, &params, &cfg, &callback);
+	xdl_diff(&old, &new, &xdiff_params, &xdiff_config, &xdiff_callback);
 
 	return GIT_SUCCESS;
 }
