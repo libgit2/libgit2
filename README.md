@@ -93,6 +93,7 @@ Here are the bindings to libgit2 that are currently available:
 * hgit2 (Haskell bindings) <https://github.com/norm2782/hgit2>
 * git-xs-pm (Perl bindings) <https://github.com/ingydotnet/git-xs-pm>
 * libgit2.vapi (Vala bindings) <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
+* libgit2-glib (GObject bindings) <https://github.com/nacho/libgit2-glib>
 
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
