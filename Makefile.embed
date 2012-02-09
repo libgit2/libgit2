@@ -6,7 +6,7 @@ LIBNAME=libgit2.a
 
 INCLUDES= -I. -Isrc -Iinclude -Ideps/http-parser -Ideps/zlib
 
-DEFINES= $(INCLUDES) -DNO_VIZ -DSTDC -DNO_GZIP -D_FILE_OFFSET_BITS=64
+DEFINES= $(INCLUDES) -DNO_VIZ -DSTDC -DNO_GZIP -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 CFLAGS= -g $(DEFINES) -Wall -Wextra -fPIC -O2
 
 SRCS = $(wildcard src/*.c) $(wildcard src/transports/*.c) $(wildcard src/unix/*.c) $(wildcard deps/http-parser/*.c) $(wildcard deps/zlib/*.c)
