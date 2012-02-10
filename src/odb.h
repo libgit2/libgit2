@@ -39,7 +39,32 @@ struct git_odb {
 	git_cache cache;
 };
 
+/*
+ * Hash a git_rawobj internally.
+ * The `git_rawobj` is supposed to be previously initialized
+ */
 int git_odb__hashobj(git_oid *id, git_rawobj *obj);
+
+/*
+ * Hash an open file descriptor.
+ * This is a performance call when the contents of a fd need to be hashed,
+ * but the fd is already open and we have the size of the contents.
+ *
+ * Saves us some `stat` calls.
+ *
+ * The fd is never closed, not even on error. It must be opened and closed
+ * by the caller
+ */
 int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type);
+
+/*
+ * Hash a `path`, assuming it could be a POSIX symlink: if the path is a symlink,
+ * then the raw contents of the symlink will be hashed. Otherwise, this will
+ * fallback to `git_odb__hashfd`.
+ *
+ * The hash type for this call is always `GIT_OBJ_BLOB` because symlinks may only
+ * point to blobs.
+ */
+int git_odb__hashlink(git_oid *out, const char *path);
 
 #endif

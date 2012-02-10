@@ -145,6 +145,48 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	return GIT_SUCCESS;
 }
 
+int git_odb__hashlink(git_oid *out, const char *path)
+{
+	struct stat st;
+	int error;
+	git_off_t size;
+
+	error = p_lstat(path, &st);
+	if (error < 0)
+		return git__throw(GIT_EOSERR, "Failed to stat blob. %s", strerror(errno));
+
+	size = st.st_size;
+
+	if (!git__is_sizet(size))
+		return git__throw(GIT_EOSERR, "File size overflow for 32-bit systems");
+
+	if (S_ISLNK(st.st_mode)) {
+		char *link_data;
+		ssize_t read_len;
+
+		link_data = git__malloc(size);
+		if (link_data == NULL)
+			return GIT_ENOMEM;
+
+		read_len = p_readlink(path, link_data, size + 1);
+		if (read_len != (ssize_t)size)
+			return git__throw(GIT_EOSERR, "Failed to read symlink data");
+
+		error = git_odb_hash(out, link_data, (size_t)size, GIT_OBJ_BLOB);
+		free(link_data);
+	} else { 
+		int fd;
+
+		if ((fd = p_open(path, O_RDONLY)) < 0)
+			return git__throw(GIT_ENOTFOUND, "Could not open '%s'", path);
+
+		error = git_odb__hashfd(out, fd, (size_t)size, GIT_OBJ_BLOB);
+		p_close(fd);
+	}
+
+	return error;
+}
+
 int git_odb_hashfile(git_oid *out, const char *path, git_otype type)
 {
 	int fd, error;
