@@ -345,7 +345,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		}
 
 		/* FIXME: Parse the object instead of hashing it */
-		error = git_odb__hash_obj(&oid, &obj);
+		error = git_odb__hashobj(&oid, &obj);
 		if (error < GIT_SUCCESS) {
 			error = git__rethrow(error, "Failed to hash object");
 			goto cleanup;

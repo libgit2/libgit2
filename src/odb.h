@@ -13,6 +13,7 @@
 
 #include "vector.h"
 #include "cache.h"
+#include "posix.h"
 
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_OBJECT_DIR_MODE 0777
@@ -38,6 +39,7 @@ struct git_odb {
 	git_cache cache;
 };
 
-int git_odb__hash_obj(git_oid *id, git_rawobj *obj);
+int git_odb__hashobj(git_oid *id, git_rawobj *obj);
+int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type);
 
 #endif
