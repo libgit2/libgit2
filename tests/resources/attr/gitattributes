@@ -23,3 +23,7 @@ macro* macro2 macro2 macro2
 [attr]thirdmacro secondmacro=hahaha
 
 macro_bad firstmacro secondmacro thirdmacro
+
+# another test that Peff found was failing
+[attr]notest !test
+

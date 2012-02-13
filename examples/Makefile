@@ -1,13 +1,15 @@
 .PHONY: all
 
 CC = gcc
-CFLAGS = -g -I../include
+CFLAGS = -g -I../include -I../src
 LFLAGS = -L../build -lgit2 -lz
+APPS = general showindex diff
 
-all: general showindex
+all: $(APPS)
 
 % : %.c
 	$(CC) -o $@ $(CFLAGS) $< $(LFLAGS)
 
 clean:
-	$(RM) general showindex
+	$(RM) $(APPS)
+	$(RM) -r *.dSYM
