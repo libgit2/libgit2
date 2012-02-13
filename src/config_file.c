@@ -738,7 +738,7 @@ error:
 
 static int skip_bom(diskfile_backend *cfg)
 {
-	static const char *utf8_bom = "\xef\xbb\xbf";
+	static const char utf8_bom[] = "\xef\xbb\xbf";
 
 	if (cfg->reader.buffer.len < sizeof(utf8_bom))
 		return GIT_SUCCESS;
