@@ -28,7 +28,7 @@ BEGIN
       VALUE "FileDescription",	"libgit2 - the Git linkable library\0"
       VALUE "FileVersion",	LIBGIT2_VERSION "\0"
       VALUE "InternalName",	LIBGIT2_FILENAME "\0"
-      VALUE "LegalCopyright",	"Copyright (C) 2009-2011 the libgit2 contributors\0"
+      VALUE "LegalCopyright",	"Copyright (C) 2009-2012 the libgit2 contributors\0"
       VALUE "OriginalFilename",	LIBGIT2_FILENAME "\0"
       VALUE "ProductName",	"libgit2\0"
       VALUE "ProductVersion",	LIBGIT2_VERSION "\0"
