@@ -6,7 +6,7 @@ static git_strarray ref_list;
 
 static void ensure_no_refname_starts_with_a_forward_slash(const char *path)
 {
-	int i;
+	size_t i;
 
 	cl_git_pass(git_repository_open(&repo, path));
 	cl_git_pass(git_reference_listall(&ref_list, repo, GIT_REF_LISTALL));
