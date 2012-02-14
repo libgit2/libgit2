@@ -10,6 +10,7 @@
 #include "diff.h"
 #include "xdiff/xdiff.h"
 #include "blob.h"
+#include "ignore.h"
 #include <ctype.h>
 
 static void file_delta_free(git_diff_delta *delta)
@@ -30,10 +31,10 @@ static void file_delta_free(git_diff_delta *delta)
 
 static int file_delta_new__from_one(
 	git_diff_list *diff,
-	git_status_t status,
-	unsigned int attr,
+	git_status_t   status,
+	mode_t         attr,
 	const git_oid *oid,
-	const char *path)
+	const char    *path)
 {
 	int error;
 	git_diff_delta *delta = git__calloc(1, sizeof(git_diff_delta));
@@ -57,10 +58,12 @@ static int file_delta_new__from_one(
 
 	if (status == GIT_STATUS_ADDED) {
 		delta->new_attr = attr;
-		git_oid_cpy(&delta->new_oid, oid);
+		if (oid != NULL)
+			git_oid_cpy(&delta->new_oid, oid);
 	} else {
 		delta->old_attr = attr;
-		git_oid_cpy(&delta->old_oid, oid);
+		if (oid != NULL)
+			git_oid_cpy(&delta->old_oid, oid);
 	}
 
 	if ((error = git_vector_insert(&diff->files, delta)) < GIT_SUCCESS)
@@ -110,7 +113,7 @@ static int file_delta_new__from_tree_diff(
 	return error;
 }
 
-static int tree_walk_cb(const char *root, git_tree_entry *entry, void *data)
+static int create_diff_for_tree_entry(const char *root, git_tree_entry *entry, void *data)
 {
 	int error;
 	git_diff_list *diff = data;
@@ -126,7 +129,7 @@ static int tree_walk_cb(const char *root, git_tree_entry *entry, void *data)
 		return error;
 
 	error = file_delta_new__from_one(
-		diff, diff->mode, git_tree_entry_attributes(entry),
+		diff, diff->status, git_tree_entry_attributes(entry),
 		git_tree_entry_id(entry), diff->pfx.ptr);
 
 	git_buf_truncate(&diff->pfx, pfx_len);
@@ -134,7 +137,7 @@ static int tree_walk_cb(const char *root, git_tree_entry *entry, void *data)
 	return error;
 }
 
-static int tree_diff_cb(const git_tree_diff_data *tdiff, void *data)
+static int tree_to_tree_diff_cb(const git_tree_diff_data *tdiff, void *data)
 {
 	int error;
 	git_diff_list *diff = data;
@@ -158,7 +161,7 @@ static int tree_diff_cb(const git_tree_diff_data *tdiff, void *data)
 
 		if (!(error = git_tree_lookup(&old, diff->repo, &tdiff->old_oid)) &&
 			!(error = git_tree_lookup(&new, diff->repo, &tdiff->new_oid)))
-			error = git_tree_diff(old, new, tree_diff_cb, diff);
+			error = git_tree_diff(old, new, tree_to_tree_diff_cb, diff);
 
 		git_tree_free(old);
 		git_tree_free(new);
@@ -166,10 +169,11 @@ static int tree_diff_cb(const git_tree_diff_data *tdiff, void *data)
 		git_tree *tree     = NULL;
 		int added_dir      = S_ISDIR(tdiff->new_attr);
 		const git_oid *oid = added_dir ? &tdiff->new_oid : &tdiff->old_oid;
-		diff->mode         = added_dir ? GIT_STATUS_ADDED : GIT_STATUS_DELETED;
+		diff->status       = added_dir ? GIT_STATUS_ADDED : GIT_STATUS_DELETED;
 
 		if (!(error = git_tree_lookup(&tree, diff->repo, oid)))
-			error = git_tree_walk(tree, tree_walk_cb, GIT_TREEWALK_POST, diff);
+			error = git_tree_walk(
+				tree, create_diff_for_tree_entry, GIT_TREEWALK_POST, diff);
 		git_tree_free(tree);
 	} else
 		error = file_delta_new__from_tree_diff(diff, tdiff);
@@ -270,7 +274,8 @@ int git_diff_tree_to_tree(
 	if (!diff)
 		return GIT_ENOMEM;
 
-	if ((error = git_tree_diff(old, new, tree_diff_cb, diff)) == GIT_SUCCESS) {
+	error = git_tree_diff(old, new, tree_to_tree_diff_cb, diff);
+	if (error == GIT_SUCCESS) {
 		git_buf_free(&diff->pfx);	/* don't need this anymore */
 		*diff_ptr = diff;
 	} else
@@ -281,12 +286,14 @@ int git_diff_tree_to_tree(
 
 typedef struct {
 	git_diff_list *diff;
-	git_index *index;
-	unsigned int index_pos;
-} index_to_tree_info;
+	git_index     *index;
+	unsigned int  index_pos;
+	git_ignores   *ignores;
+} diff_callback_info;
 
 static int add_new_index_deltas(
-	index_to_tree_info *info,
+	diff_callback_info *info,
+	git_status_t status,
 	const char *stop_path)
 {
 	int error;
@@ -296,7 +303,7 @@ static int add_new_index_deltas(
 		(stop_path == NULL || strcmp(idx_entry->path, stop_path) < 0))
 	{
 		error = file_delta_new__from_one(
-			info->diff, GIT_STATUS_ADDED, idx_entry->mode,
+			info->diff, status, idx_entry->mode,
 			&idx_entry->oid, idx_entry->path);
 		if (error < GIT_SUCCESS)
 			return error;
@@ -310,7 +317,7 @@ static int add_new_index_deltas(
 static int diff_index_to_tree_cb(const char *root, git_tree_entry *tree_entry, void *data)
 {
 	int error;
-	index_to_tree_info *info = data;
+	diff_callback_info *info = data;
 	git_index_entry *idx_entry;
 
 	/* TODO: submodule support for GIT_OBJ_COMMITs in tree */
@@ -322,7 +329,7 @@ static int diff_index_to_tree_cb(const char *root, git_tree_entry *tree_entry, v
 		return error;
 
 	/* create add deltas for index entries that are not in the tree */
-	error = add_new_index_deltas(info, info->diff->pfx.ptr);
+	error = add_new_index_deltas(info, GIT_STATUS_ADDED, info->diff->pfx.ptr);
 	if (error < GIT_SUCCESS)
 		return error;
 
@@ -362,7 +369,7 @@ int git_diff_index_to_tree(
 	git_diff_list **diff_ptr)
 {
 	int error;
-	index_to_tree_info info = {0};
+	diff_callback_info info = {0};
 
 	if ((info.diff = git_diff_list_alloc(repo, opts)) == NULL)
 		return GIT_ENOMEM;
@@ -371,7 +378,7 @@ int git_diff_index_to_tree(
 		error = git_tree_walk(
 			old, diff_index_to_tree_cb, GIT_TREEWALK_POST, &info);
 		if (error == GIT_SUCCESS)
-			error = add_new_index_deltas(&info, NULL);
+			error = add_new_index_deltas(&info, GIT_STATUS_ADDED, NULL);
 		git_index_free(info.index);
 	}
 	git_buf_free(&info.diff->pfx);
@@ -385,13 +392,271 @@ int git_diff_index_to_tree(
 }
 
 typedef struct {
+	struct stat st;
+	mode_t mode;
+	char path[GIT_FLEX_ARRAY];
+} workdir_entry;
+
+#define MODE_PERMS_MASK 0777
+
+/* TODO: need equiv of core git's "trust_executable_bit" flag? */
+#define CANONICAL_PERMS(MODE) (((MODE) & 0100) ? 0755 : 0644)
+#define MODE_TYPE(MODE)  ((MODE) & ~MODE_PERMS_MASK)
+
+static mode_t canonical_mode(mode_t raw_mode)
+{
+	if (S_ISREG(raw_mode))
+		return S_IFREG | CANONICAL_PERMS(raw_mode);
+	else if (S_ISLNK(raw_mode))
+		return S_IFLNK;
+	else if (S_ISDIR(raw_mode))
+		return S_IFDIR;
+	else if (S_ISGITLINK(raw_mode))
+		return S_IFGITLINK;
+	else
+		return 0;
+}
+
+static int diff_workdir_insert(void *data, git_buf *dir)
+{
+	workdir_entry *wd_entry = git__malloc(sizeof(workdir_entry) + dir->size + 2);
+	if (wd_entry == NULL)
+		return GIT_ENOMEM;
+	if (p_lstat(dir->ptr, &wd_entry->st) < 0) {
+		git__free(wd_entry);
+		return GIT_EOSERR;
+	}
+	git_buf_copy_cstr(wd_entry->path, dir->size + 1, dir);
+	wd_entry->mode = canonical_mode(wd_entry->st.st_mode);
+	/* suffix directories with / to mimic tree/index sort order */
+	if (S_ISDIR(wd_entry->st.st_mode)) {
+		wd_entry->path[dir->size] = '/';
+		wd_entry->path[dir->size+1] = '\0';
+	}
+
+	return git_vector_insert((git_vector *)data, wd_entry);
+}
+
+static int diff_workdir_walk(
+	const char *dir,
+	diff_callback_info *info,
+	int (*cb)(diff_callback_info *, workdir_entry *))
+{
+	int error = GIT_SUCCESS;
+	git_vector files = GIT_VECTOR_INIT;
+	git_buf buf = GIT_BUF_INIT;
+	unsigned int i;
+	workdir_entry *wd_entry;
+	git_ignores ignores = {0}, *old_ignores = info->ignores;
+
+	if (!dir)
+		dir = git_repository_workdir(info->diff->repo);
+
+	if ((error = git_vector_init(&files, 0, git__strcmp_cb)) < GIT_SUCCESS ||
+		(error = git_buf_sets(&buf, dir)) < GIT_SUCCESS ||
+		(error = git_path_direach(&buf, diff_workdir_insert, &files)) < GIT_SUCCESS ||
+		(error = git_ignore__for_path(info->diff->repo, dir, &ignores)) < GIT_SUCCESS)
+		goto cleanup;
+
+	git_vector_sort(&files);
+	info->ignores = old_ignores;
+
+	git_vector_foreach(&files, i, wd_entry) {
+		if ((error = cb(info, wd_entry)) < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+cleanup:
+	git_vector_foreach(&files, i, wd_entry)
+		git__free(wd_entry);
+	info->ignores = old_ignores;
+	git_ignore__free(&ignores);
+	git_vector_free(&files);
+	git_buf_free(&buf);
+
+	return error;
+}
+
+static int found_new_workdir_entry(
+	diff_callback_info *info, workdir_entry *wd_entry)
+{
+	int error;
+	int ignored = 0;
+	git_status_t status;
+
+	/* skip file types that are not trackable */
+	if (wd_entry->mode == 0)
+		return GIT_SUCCESS;
+
+	error = git_ignore__lookup(info->ignores, wd_entry->path, &ignored);
+	if (error < GIT_SUCCESS)
+		return error;
+	status = ignored ? GIT_STATUS_IGNORED : GIT_STATUS_UNTRACKED;
+
+	return file_delta_new__from_one(
+		info->diff, status, wd_entry->mode, NULL, wd_entry->path);
+}
+
+static int diff_workdir_to_index_cb(
+	diff_callback_info *info, workdir_entry *wd_entry)
+{
+	int error, modified;
+	git_index_entry *idx_entry;
+	git_oid new_oid;
+
+	/* Store index entries that precede this workdir entry */
+	error = add_new_index_deltas(info, GIT_STATUS_DELETED, wd_entry->path);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	/* Process workdir entries that are not in the index.
+	 * These might be untracked, ignored, or special (dirs, etc).
+	 */
+	idx_entry = git_index_get(info->index, info->index_pos);
+	if (idx_entry == NULL || strcmp(idx_entry->path, wd_entry->path) > 0) {
+		git_buf dotgit = GIT_BUF_INIT;
+		int contains_dotgit;
+
+		if (!S_ISDIR(wd_entry->mode))
+			return found_new_workdir_entry(info, wd_entry);
+
+		error = git_buf_joinpath(&dotgit, wd_entry->path, DOT_GIT);
+		if (error < GIT_SUCCESS)
+			return error;
+		contains_dotgit = (git_path_exists(dotgit.ptr) == GIT_SUCCESS);
+		git_buf_free(&dotgit);
+
+		if (contains_dotgit)
+			/* TODO: deal with submodule or embedded repo */
+			return GIT_SUCCESS;
+		else if (git__prefixcmp(idx_entry->path, wd_entry->path) == GIT_SUCCESS)
+			/* there are entries in the directory in the index already,
+			 * so recurse into it.
+			 */
+			return diff_workdir_walk(wd_entry->path, info, diff_workdir_to_index_cb);
+		else
+			/* TODO: this is not the same behavior as core git.
+			 *
+			 * I don't recurse into the directory once I know that no files
+			 * in it are being tracked.  But core git does and only adds an
+			 * entry if there are non-directory entries contained under the
+			 * dir (although, interestingly, it only shows the dir, not the
+			 * individual entries).
+			 */
+			return found_new_workdir_entry(info, wd_entry);
+	}
+
+	/* create modified delta for non-matching tree & index entries */
+	info->index_pos++;
+
+	/* check for symlink/blob changes and split into add/del pair */
+	if (MODE_TYPE(wd_entry->mode) != MODE_TYPE(idx_entry->mode)) {
+		error = file_delta_new__from_one(
+			info->diff, GIT_STATUS_DELETED,
+			idx_entry->mode, &idx_entry->oid, idx_entry->path);
+		if (error < GIT_SUCCESS)
+			return error;
+
+		/* because of trailing slash, cannot have non-dir to dir transform */
+		assert(!S_ISDIR(wd_entry->mode));
+
+		return file_delta_new__from_one(
+			info->diff, GIT_STATUS_ADDED,
+			wd_entry->mode, NULL, wd_entry->path);
+	}
+
+	/* mode or size changed, so git blob has definitely changed */
+	if (wd_entry->mode != idx_entry->mode ||
+		wd_entry->st.st_size != idx_entry->file_size)
+	{
+		modified = 1;
+		memset(&new_oid, 0, sizeof(new_oid));
+	}
+
+	/* all other things are indicators there might be a change, so get oid */
+	if (!modified &&
+		((git_time_t)wd_entry->st.st_ctime != idx_entry->ctime.seconds ||
+		 (git_time_t)wd_entry->st.st_mtime != idx_entry->mtime.seconds ||
+		 (unsigned int)wd_entry->st.st_dev != idx_entry->dev ||
+		 (unsigned int)wd_entry->st.st_ino != idx_entry->ino ||
+		 /* TODO: need TRUST_UID_GID configs */
+		 (unsigned int)wd_entry->st.st_uid != idx_entry->uid ||
+		 (unsigned int)wd_entry->st.st_gid != idx_entry->gid))
+	{
+		/* calculate oid to confirm change */
+		if (S_ISLNK(wd_entry->st.st_mode))
+			error = git_odb__hashlink(&new_oid, wd_entry->path);
+		else {
+			int fd;
+			if ((fd = p_open(wd_entry->path, O_RDONLY)) < 0)
+				error = git__throw(
+					GIT_EOSERR, "Could not open '%s'", wd_entry->path);
+			else {
+				error = git_odb__hashfd(
+					&new_oid, fd, wd_entry->st.st_size, GIT_OBJ_BLOB);
+				p_close(fd);
+			}
+		}
+
+		if (error < GIT_SUCCESS)
+			return error;
+
+		modified = (git_oid_cmp(&new_oid, &idx_entry->oid) != 0);
+	}
+
+	/* TODO: check index flags for forced ignore changes */
+
+	if (modified) {
+		git_tree_diff_data tdiff;
+
+		tdiff.old_attr = idx_entry->mode;
+		tdiff.new_attr = wd_entry->mode;
+		tdiff.status   = GIT_STATUS_MODIFIED;
+		tdiff.path     = wd_entry->path;
+		git_oid_cpy(&tdiff.old_oid, &idx_entry->oid);
+		git_oid_cpy(&tdiff.new_oid, &new_oid);
+
+		error = file_delta_new__from_tree_diff(info->diff, &tdiff);
+	}
+
+	return error;
+}
+
+int git_diff_workdir_to_index(
+	git_repository *repo,
+	const git_diff_options *opts,
+	git_diff_list **diff)
+{
+	int error;
+	diff_callback_info info = {0};
+
+	if ((info.diff = git_diff_list_alloc(repo, opts)) == NULL)
+		return GIT_ENOMEM;
+
+	if ((error = git_repository_index(&info.index, repo)) == GIT_SUCCESS) {
+		error = diff_workdir_walk(NULL, &info, diff_workdir_to_index_cb);
+		if (error == GIT_SUCCESS)
+			error = add_new_index_deltas(&info, GIT_STATUS_DELETED, NULL);
+		git_index_free(info.index);
+	}
+	git_buf_free(&info.diff->pfx);
+
+	if (error != GIT_SUCCESS)
+		git_diff_list_free(info.diff);
+	else
+		*diff = info.diff;
+
+	return error;
+}
+
+typedef struct {
 	git_diff_list *diff;
 	void *cb_data;
 	git_diff_hunk_fn hunk_cb;
 	git_diff_line_fn line_cb;
 	unsigned int index;
 	git_diff_delta *delta;
-} diff_info;
+} diff_output_info;
 
 static int read_next_int(const char **str, int *value)
 {
@@ -410,9 +675,9 @@ static int read_next_int(const char **str, int *value)
 static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 {
 	int err = GIT_SUCCESS;
-	diff_info *di = priv;
+	diff_output_info *info = priv;
 
-	if (len == 1 && di->hunk_cb) {
+	if (len == 1 && info->hunk_cb) {
 		git_diff_range range = { -1, 0, -1, 0 };
 
 		/* expect something of the form "@@ -%d[,%d] +%d[,%d] @@" */
@@ -424,11 +689,11 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 				!(err = read_next_int(&scan, &range.new_start)) && *scan == ',')
 				err = read_next_int(&scan, &range.new_lines);
 			if (!err && range.old_start >= 0 && range.new_start >= 0)
-				err = di->hunk_cb(
-					di->cb_data, di->delta, &range, bufs[0].ptr, bufs[0].size);
+				err = info->hunk_cb(
+					info->cb_data, info->delta, &range, bufs[0].ptr, bufs[0].size);
 		}
 	}
-	else if ((len == 2 || len == 3) && di->line_cb) {
+	else if ((len == 2 || len == 3) && info->line_cb) {
 		int origin;
 
 		/* expect " "/"-"/"+", then data, then maybe newline */
@@ -437,8 +702,8 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_DELETION :
 			GIT_DIFF_LINE_CONTEXT;
 
-		err = di->line_cb(
-			di->cb_data, di->delta, origin, bufs[1].ptr, bufs[1].size);
+		err = info->line_cb(
+			info->cb_data, info->delta, origin, bufs[1].ptr, bufs[1].size);
 
 		/* deal with adding and removing newline at EOF */
 		if (err == GIT_SUCCESS && len == 3) {
@@ -447,8 +712,8 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 			else
 				origin = GIT_DIFF_LINE_DEL_EOFNL;
 
-			err = di->line_cb(
-				di->cb_data, di->delta, origin, bufs[2].ptr, bufs[2].size);
+			err = info->line_cb(
+				info->cb_data, info->delta, origin, bufs[2].ptr, bufs[2].size);
 		}
 	}
 
@@ -516,23 +781,23 @@ int git_diff_foreach(
 	git_diff_line_fn line_cb)
 {
 	int error = GIT_SUCCESS;
-	diff_info di;
+	diff_output_info info;
 	git_diff_delta *delta;
 	xpparam_t    xdiff_params;
 	xdemitconf_t xdiff_config;
 	xdemitcb_t   xdiff_callback;
 
-	di.diff    = diff;
-	di.cb_data = data;
-	di.hunk_cb = hunk_cb;
-	di.line_cb = line_cb;
+	info.diff    = diff;
+	info.cb_data = data;
+	info.hunk_cb = hunk_cb;
+	info.line_cb = line_cb;
 
 	setup_xdiff_options(&diff->opts, &xdiff_config, &xdiff_params);
 	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
 	xdiff_callback.outf = diff_output_cb;
-	xdiff_callback.priv = &di;
+	xdiff_callback.priv = &info;
 
-	git_vector_foreach(&diff->files, di.index, delta) {
+	git_vector_foreach(&diff->files, info.index, delta) {
 		mmfile_t old_data, new_data;
 
 		/* map files */
@@ -580,7 +845,7 @@ int git_diff_foreach(
 		 */
 
 		if (file_cb != NULL) {
-			error = file_cb(data, delta, (float)di.index / diff->files.length);
+			error = file_cb(data, delta, (float)info.index / diff->files.length);
 			if (error != GIT_SUCCESS)
 				break;
 		}
@@ -595,7 +860,7 @@ int git_diff_foreach(
 
 		assert(hunk_cb || line_cb);
 
-		di.delta = delta;
+		info.delta = delta;
 
 		xdl_diff(&old_data, &new_data,
 			&xdiff_params, &xdiff_config, &xdiff_callback);
@@ -615,7 +880,7 @@ typedef struct {
 	git_diff_output_fn print_cb;
 	void *cb_data;
 	git_buf *buf;
-} print_info;
+} diff_print_info;
 
 static char pick_suffix(int mode)
 {
@@ -632,7 +897,7 @@ static char pick_suffix(int mode)
 
 static int print_compact(void *data, git_diff_delta *delta, float progress)
 {
-	print_info *pi = data;
+	diff_print_info *pi = data;
 	char code, old_suffix, new_suffix;
 
 	GIT_UNUSED_ARG(progress);
@@ -681,7 +946,7 @@ int git_diff_print_compact(
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
-	print_info pi;
+	diff_print_info pi;
 
 	pi.diff     = diff;
 	pi.print_cb = print_cb;
@@ -695,8 +960,7 @@ int git_diff_print_compact(
 	return error;
 }
 
-
-static int print_oid_range(print_info *pi, git_diff_delta *delta)
+static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 {
 	char start_oid[8], end_oid[8];
 
@@ -726,7 +990,7 @@ static int print_oid_range(print_info *pi, git_diff_delta *delta)
 static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 {
 	int error;
-	print_info *pi = data;
+	diff_print_info *pi = data;
 	const char *oldpfx = pi->diff->opts.src_prefix;
 	const char *oldpath = delta->path;
 	const char *newpfx = pi->diff->opts.dst_prefix;
@@ -777,7 +1041,7 @@ static int print_patch_hunk(
 	const char *header,
 	size_t header_len)
 {
-	print_info *pi = data;
+	diff_print_info *pi = data;
 
 	GIT_UNUSED_ARG(d);
 	GIT_UNUSED_ARG(r);
@@ -797,7 +1061,7 @@ static int print_patch_line(
 	const char *content,
 	size_t content_len)
 {
-	print_info *pi = data;
+	diff_print_info *pi = data;
 
 	GIT_UNUSED_ARG(delta);
 
@@ -823,7 +1087,7 @@ int git_diff_print_patch(
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
-	print_info pi;
+	diff_print_info pi;
 
 	pi.diff     = diff;
 	pi.print_cb = print_cb;
@@ -847,7 +1111,7 @@ int git_diff_blobs(
 	git_diff_hunk_fn hunk_cb,
 	git_diff_line_fn line_cb)
 {
-	diff_info di;
+	diff_output_info info;
 	git_diff_delta delta;
 	mmfile_t old, new;
 	xpparam_t xdiff_params;
@@ -893,16 +1157,16 @@ int git_diff_blobs(
 	delta.similarity = 0;
 	delta.binary = 0;
 
-	di.diff    = NULL;
-	di.delta   = &delta;
-	di.cb_data = cb_data;
-	di.hunk_cb = hunk_cb;
-	di.line_cb = line_cb;
+	info.diff    = NULL;
+	info.delta   = &delta;
+	info.cb_data = cb_data;
+	info.hunk_cb = hunk_cb;
+	info.line_cb = line_cb;
 
 	setup_xdiff_options(options, &xdiff_config, &xdiff_params);
 	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
 	xdiff_callback.outf = diff_output_cb;
-	xdiff_callback.priv = &di;
+	xdiff_callback.priv = &info;
 
 	xdl_diff(&old, &new, &xdiff_params, &xdiff_config, &xdiff_callback);
 

@@ -18,7 +18,7 @@ struct git_diff_list {
 
 	/* the following are just used while processing the diff list */
 	git_buf          pfx;
-	git_status_t     mode;
+	git_status_t     status;
 };
 
 #endif
