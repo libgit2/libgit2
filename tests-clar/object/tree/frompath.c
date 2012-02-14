@@ -24,7 +24,7 @@ void test_object_tree_frompath__cleanup(void)
 	cl_fixture_cleanup("testrepo.git");
 }
 
-static void assert_tree_from_path(git_tree *root, const char *path, git_error expected_result, const char *expected_raw_oid)
+static void assert_tree_from_path(git_tree *root, const char *path, int expected_result, const char *expected_raw_oid)
 {
 	git_tree *containing_tree = NULL;
 

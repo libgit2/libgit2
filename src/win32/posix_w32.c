@@ -341,8 +341,12 @@ done:
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {
 #ifdef _MSC_VER
-	int len = _vsnprintf(buffer, count, format, argptr);
-	return (len < 0) ? _vscprintf(format, argptr) : len;
+	int len;
+
+	if (count == 0 || (len = _vsnprintf(buffer, count, format, argptr)) < 0)
+		return p_vscprintf(format, argptr);
+
+	return len;
 #else /* MinGW */
 	return vsnprintf(buffer, count, format, argptr);
 #endif

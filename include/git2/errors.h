@@ -113,7 +113,22 @@ typedef enum {
 
 	/** The buffer is too short to satisfy the request */
 	GIT_ESHORTBUFFER = -32,
+} git_error_t;
+
+typedef struct {
+	char *message;
+	int klass;
 } git_error;
+
+typedef enum {
+	GITERR_NOMEMORY,
+
+} git_error_class;
+
+GIT_EXTERN(void) giterr_set(git_error **error_out, int error_class, const char *string, ...);
+GIT_EXTERN(void) giterr_set_oom(git_error **error);
+GIT_EXTERN(void) giterr_free(git_error *error);
+GIT_EXTERN(void) giterr_clear(git_error **error);
 
 /**
  * Return a detailed error string with the latest error

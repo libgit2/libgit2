@@ -6,6 +6,7 @@
  */
 #include "common.h"
 #include "global.h"
+#include "posix.h"
 #include <stdarg.h>
 
 static struct {
@@ -101,4 +102,67 @@ void git_clearerror(void)
 {
 	char *last_error = GIT_GLOBAL->error.last;
 	last_error[0] = '\0';
+}
+
+/********************************************
+ * New error handling
+ ********************************************/
+
+void giterr_set(git_error **error_out, int error_class, const char *string, ...)
+{
+	char error_str[1024];
+	va_list arglist;
+	git_error *error;
+
+	if (error_out == NULL)
+		return;
+
+	error = git__malloc(sizeof(git_error));
+	if (!error) {
+		giterr_set_oom(error_out);
+		return;
+	}
+
+	va_start(arglist, string);
+	p_vsnprintf(error_str, sizeof(error_str), string, arglist);
+	va_end(arglist);
+
+	error->message = git__strdup(error_str);
+	error->klass = error_class;
+
+	if (error->message == NULL) {
+		free(error);
+		giterr_set_oom(error_out);
+		return;
+	}
+
+	*error_out = error;
+}
+
+static git_error g_git_oom_error = {
+	"Out of memory",
+	GITERR_NOMEMORY
+};
+
+void giterr_set_oom(git_error **error)
+{
+	if (error != NULL)
+		*error = &g_git_oom_error;
+}
+
+void giterr_free(git_error *error)
+{
+	if (error == NULL || error == &g_git_oom_error)
+		return;
+
+	free(error->message);
+	free(error);
+}
+
+void giterr_clear(git_error **error)
+{
+	if (error != NULL) {
+		giterr_free(*error);
+		*error = NULL;
+	}
 }
