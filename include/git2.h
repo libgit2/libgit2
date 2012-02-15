@@ -40,4 +40,6 @@
 #include "git2/status.h"
 #include "git2/indexer.h"
 
+#include "git2/notes.h"
+
 #endif

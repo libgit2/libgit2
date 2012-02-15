@@ -169,4 +169,13 @@ GIT_INLINE(int) git__fromhex(char h)
 	return from_hex[(unsigned char) h];
 }
 
+GIT_INLINE(int) git__ishex(const char *str)
+{
+	unsigned i;
+	for (i=0; i<strlen(str); i++)
+		if (git__fromhex(str[i]) < 0)
+			return 0;
+	return 1;
+}
+
 #endif /* INCLUDE_util_h__ */
