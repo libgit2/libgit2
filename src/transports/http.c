@@ -596,7 +596,7 @@ static int on_body_download_pack(http_parser *parser, const char *str, size_t le
  * the simple downloader. Furthermore, we're using keep-alive
  * connections, so the simple downloader would just hang.
  */
-static int http_download_pack(char **out, git_transport *transport, git_repository *repo)
+static int http_download_pack(git_buf *out, git_transport *transport, git_repository *repo)
 {
 	transport_http *t = (transport_http *) transport;
 	git_buf *oldbuf = &t->buf;
@@ -659,11 +659,8 @@ static int http_download_pack(char **out, git_transport *transport, git_reposito
 		}
 	}
 
-	*out = git__strdup(file.path_lock);
-	if (*out == NULL) {
-		error = GIT_ENOMEM;
+	if ((error = git_buf_set(out, file.path_lock, strlen(file.path_lock))) < GIT_SUCCESS)
 		goto cleanup;
-	}
 
 	/* A bit dodgy, but we need to keep the pack at the temporary path */
 	error = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);

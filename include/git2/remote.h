@@ -11,6 +11,7 @@
 #include "repository.h"
 #include "refspec.h"
 #include "net.h"
+#include "buffer.h"
 
 /**
  * @file git2/remote.h
@@ -116,15 +117,18 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  *
  * Negotiate what objects should be downloaded and download the
  * packfile with those objects. The packfile is downloaded with a
- * temporary filename, as it's final name is not known yet. If there
+ * temporary filename, as its final name is not known yet. If there
  * was no packfile needed (all the objects were available locally),
- * filename will be NULL and the function will return success.
+ * filename will be empty and the function will return success.
+ *
+ * @param filename_out The user initialized buffer which will
+ * contain the temporary filename of the downloaded packfile.
  *
  * @param remote the remote to download from
- * @param filename where to store the temproray filename
+ *
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
+GIT_EXTERN(int) git_remote_download(git_buf *filename_out, git_remote *remote);
 
 /**
  * Check whether the remote is connected

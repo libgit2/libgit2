@@ -9,6 +9,7 @@
 
 #include "git2/net.h"
 #include "vector.h"
+#include "buffer.h"
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
 
@@ -81,7 +82,7 @@ struct git_transport {
 	/**
 	 * Download the packfile
 	 */
-	int (*download_pack)(char **out, struct git_transport *transport, git_repository *repo);
+	int (*download_pack)(git_buf *out, struct git_transport *transport, git_repository *repo);
 	/**
 	 * Fetch the changes
 	 */
