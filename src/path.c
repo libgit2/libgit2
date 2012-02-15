@@ -486,20 +486,23 @@ GIT_INLINE(int) is_dot_or_dotdot(const char *name)
 
 int git_path_direach(
 	git_buf *path,
-	int (*fn)(void *, git_buf *),
-	void *arg)
+	int (*fn)(void *, git_buf *, git_error **),
+	void *arg,
+	git_error **error)
 {
 	ssize_t wd_len;
 	DIR *dir;
 	struct dirent de_buf, *de;
 
-	if (git_path_to_dir(path) < GIT_SUCCESS)
-		return git_buf_lasterror(path);
+	if (git_path_to_dir(path, error) < 0)
+		return -1;
 
 	wd_len = path->size;
 	dir = opendir(path->ptr);
-	if (!dir)
-		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure. An error occured while opening the directory", path->ptr);
+	if (!dir) {
+		giterr_set(error, GITERR_OS, "Failed to `opendir` %s: %s", path->ptr, strerror(errno));
+		return -1;
+	}
 
 	while (p_readdir_r(dir, &de_buf, &de) == 0 && de != NULL) {
 		int result;
@@ -507,16 +510,18 @@ int git_path_direach(
 		if (is_dot_or_dotdot(de->d_name))
 			continue;
 
-		if (git_buf_puts(path, de->d_name) < GIT_SUCCESS)
-			return git_buf_lasterror(path);
+		if (git_buf_puts(path, de->d_name) < 0) {
+			giterr_set_oom(error);
+			return -1;
+		}
 
-		result = fn(arg, path);
+		result = fn(arg, path, error);
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
-		if (result != GIT_SUCCESS) {
+		if (result < 0) {
 			closedir(dir);
-			return result;	/* The callee is reponsible for setting the correct error message */
+			return -1;
 		}
 	}
 

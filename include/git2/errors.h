@@ -122,8 +122,11 @@ typedef struct {
 
 typedef enum {
 	GITERR_NOMEMORY,
+	GITERR_REFERENCE,
 
 } git_error_class;
+
+#define GITERR_CHECK_ALLOC(ptr, error) if (ptr == NULL) { giterr_set_oom(error); return -1 }
 
 GIT_EXTERN(void) giterr_set(git_error **error_out, int error_class, const char *string, ...);
 GIT_EXTERN(void) giterr_set_oom(git_error **error);
