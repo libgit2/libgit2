@@ -54,7 +54,7 @@ OPTION (TAGS "Generate tags" OFF)
 # Platform specific compilation flags
 IF (MSVC)
 	# Not using __stdcall with the CRT causes problems
-	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
+	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" OFF)
 
 	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
