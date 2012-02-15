@@ -53,7 +53,9 @@ OPTION (TAGS "Generate tags" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
-	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi ${CMAKE_C_FLAGS}")
+	# Always use __stdcall, so consistent with "git2/common.h" definition
+	# of GIT_EXTERN
+	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi /Gz ${CMAKE_C_FLAGS}")
 	# TODO: bring back /RTC1 /RTCc
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
