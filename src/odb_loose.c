@@ -6,7 +6,7 @@
  */
 
 #include "common.h"
-#include "git2/zlib.h"
+#include <zlib.h>
 #include "git2/object.h"
 #include "git2/oid.h"
 #include "fileops.h"

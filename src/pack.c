@@ -14,7 +14,7 @@
 #include "fileops.h"
 
 #include "git2/oid.h"
-#include "git2/zlib.h"
+#include <zlib.h>
 
 static int packfile_open(struct git_pack_file *p);
 static off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
