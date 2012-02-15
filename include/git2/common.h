@@ -31,10 +31,13 @@
 # define GIT_EXTERN(type) extern \
 			 __attribute__((visibility("default"))) \
 			 type
+# define GIT_EXTERN_DATA(type) GIT_EXTERN(type)
 #elif defined(_MSC_VER)
-# define GIT_EXTERN(type) __declspec(dllexport) type
+# define GIT_EXTERN(type) __declspec(dllexport) type __stdcall 
+# define GIT_EXTERN_DATA(type) __declspec(dllexport) type
 #else
 # define GIT_EXTERN(type) extern type
+# define GIT_EXTERN_DATA(type) GIT_EXTERN(type)
 #endif
 
 /** Declare a function as always inlined. */

@@ -23,8 +23,8 @@ GIT_BEGIN_DECL
 #define GIT_ATTR_FALSE			git_attr__false
 #define GIT_ATTR_UNSPECIFIED	NULL
 
-GIT_EXTERN(const char *)git_attr__true;
-GIT_EXTERN(const char *)git_attr__false;
+GIT_EXTERN_DATA(const char *)git_attr__true;
+GIT_EXTERN_DATA(const char *)git_attr__false;
 
 
 /**
