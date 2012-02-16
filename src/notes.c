@@ -304,7 +304,7 @@ int git_note_read(git_note **out, git_repository *repo,
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to lookup reference `%s`", notes_ref);
 
-	assert(git_ref_type(ref) == GIT_REF_OID);
+	assert(git_reference_type(ref) == GIT_REF_OID);
 
 	sha = git_reference_oid(ref);
 	error = git_commit_lookup(&commit, repo, sha);
@@ -347,7 +347,7 @@ int git_note_create(git_oid *out, git_repository *repo,
 		return git__rethrow(error, "Failed to lookup reference `%s`", notes_ref);
 
 	if (error == GIT_SUCCESS) {
-		assert(git_ref_type(ref) == GIT_REF_OID);
+		assert(git_reference_type(ref) == GIT_REF_OID);
 
 		/* lookup existing notes tree oid */
 
@@ -393,7 +393,7 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to lookup reference `%s`", notes_ref);
 
-	assert(git_ref_type(ref) == GIT_REF_OID);
+	assert(git_reference_type(ref) == GIT_REF_OID);
 
 	git_oid_cpy(&sha, git_reference_oid(ref));
 	git_reference_free(ref);
