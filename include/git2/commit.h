@@ -191,7 +191,8 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  *	will be updated to point to this commit. If the reference
  *	is not direct, it will be resolved to a direct reference.
  *	Use "HEAD" to update the HEAD of the current branch and
- *	make it point to this commit
+ *	make it point to this commit. If the reference doesn't
+ *	exist yet, it will be created.
  *
  * @param author Signature representing the author and the authory
  *	time of this commit
