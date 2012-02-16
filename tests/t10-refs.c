@@ -69,7 +69,6 @@ BEGIN_TEST(readtag1, "lookup a loose tag reference that doesn't exist")
 	must_fail(git_reference_lookup(&reference, repo, non_existing_tag_ref_name));
 
 	git_repository_free(repo);
-
 	git_reference_free(reference);
 END_TEST
 
@@ -530,7 +529,7 @@ BEGIN_TEST(pack1, "create a packfile from all the loose rn a repo")
 
 	/* Ensure the packed-refs file exists */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, GIT_PACKEDREFS_FILE));
-	must_pass(git_path_exists(temp_path.ptr));
+	must_be_true(git_path_exists(temp_path.ptr));
 
 	/* Ensure the known ref can still be looked up but is now packed */
 	must_pass(git_reference_lookup(&reference, repo, loose_tag_ref_name));
@@ -539,7 +538,7 @@ BEGIN_TEST(pack1, "create a packfile from all the loose rn a repo")
 
 	/* Ensure the known ref has been removed from the loose folder structure */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, loose_tag_ref_name));
-	must_pass(!git_path_exists(temp_path.ptr));
+	must_be_true(!git_path_exists(temp_path.ptr));
 
 	close_temp_repo(repo);
 
@@ -557,7 +556,7 @@ BEGIN_TEST(rename0, "rename a loose reference")
 
 	/* Ensure the ref doesn't exist on the file system */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, new_name));
-	must_pass(!git_path_exists(temp_path.ptr));
+	must_be_true(!git_path_exists(temp_path.ptr));
 
 	/* Retrieval of the reference to rename */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, loose_tag_ref_name));
@@ -582,7 +581,7 @@ BEGIN_TEST(rename0, "rename a loose reference")
 
 	/* ...and the ref can be found in the file system */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, new_name));
-	must_pass(git_path_exists(temp_path.ptr));
+	must_be_true(git_path_exists(temp_path.ptr));
 
 	close_temp_repo(repo);
 
@@ -601,7 +600,7 @@ BEGIN_TEST(rename1, "rename a packed reference (should make it loose)")
 
 	/* Ensure the ref doesn't exist on the file system */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, packed_head_name));
-	must_pass(!git_path_exists(temp_path.ptr));
+	must_be_true(!git_path_exists(temp_path.ptr));
 
 	/* The reference can however be looked-up... */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_head_name));
@@ -626,7 +625,7 @@ BEGIN_TEST(rename1, "rename a packed reference (should make it loose)")
 
 	/* ...and the ref now happily lives in the file system */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, brand_new_name));
-	must_pass(git_path_exists(temp_path.ptr));
+	must_be_true(git_path_exists(temp_path.ptr));
 
 	close_temp_repo(repo);
 
@@ -645,7 +644,7 @@ BEGIN_TEST(rename2, "renaming a packed reference does not pack another reference
 
 	/* Ensure the other reference exists on the file system */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, packed_test_head_name));
-	must_pass(git_path_exists(temp_path.ptr));
+	must_be_true(git_path_exists(temp_path.ptr));
 
 	/* Lookup the other reference */
 	must_pass(git_reference_lookup(&another_looked_up_ref, repo, packed_test_head_name));
@@ -670,7 +669,7 @@ BEGIN_TEST(rename2, "renaming a packed reference does not pack another reference
 	must_be_true(git_reference_is_packed(another_looked_up_ref) == 0);
 
 	/* Ensure the other ref still exists on the file system */
-	must_pass(git_path_exists(temp_path.ptr));
+	must_be_true(git_path_exists(temp_path.ptr));
 
 	close_temp_repo(repo);
 
@@ -857,6 +856,18 @@ BEGIN_TEST(rename8, "can be renamed to a new name prefixed with the old name")
 END_TEST
 
 BEGIN_TEST(rename9, "can move a reference to a upper reference hierarchy")
+	/*
+	 * I'm killing this test because it adds a shitton of complexity
+	 * to the reference renaming code for an use case which I'd consider
+	 * "clinically stupid".
+	 *
+	 * If somebody shows me a workflow which involves turning a reference
+	 * into a folder with its same name, we'll bring back the ridiculous
+	 * logic.
+	 *
+	 * -Vicent
+	 */
+#if 0
     git_reference *ref, *ref_two, *looked_up_ref;
     git_repository *repo;
     git_oid id;
@@ -888,6 +899,7 @@ BEGIN_TEST(rename9, "can move a reference to a upper reference hierarchy")
     git_reference_free(looked_up_ref);
 
     close_temp_repo(repo);
+#endif
 END_TEST
 
 BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove both tracks in the filesystem")
@@ -899,7 +911,7 @@ BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove
 
 	/* Ensure the loose reference exists on the file system */
 	must_pass(git_buf_joinpath(&temp_path, repo->path_repository, packed_test_head_name));
-	must_pass(git_path_exists(temp_path.ptr));
+	must_be_true(git_path_exists(temp_path.ptr));
 
 	/* Lookup the reference */
 	must_pass(git_reference_lookup(&looked_up_ref, repo, packed_test_head_name));
@@ -914,7 +926,7 @@ BEGIN_TEST(delete0, "deleting a ref which is both packed and loose should remove
 	must_fail(git_reference_lookup(&another_looked_up_ref, repo, packed_test_head_name));
 
 	/* Ensure the loose reference doesn't exist any longer on the file system */
-	must_pass(!git_path_exists(temp_path.ptr));
+	must_be_true(!git_path_exists(temp_path.ptr));
 
 	close_temp_repo(repo);
 

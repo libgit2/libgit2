@@ -337,8 +337,6 @@ BEGIN_TEST(delete0, "Delete an already existing tag")
 	must_fail(git_reference_lookup(&ref_tag, repo, "refs/tags/e90810b"));
 
 	close_temp_repo(repo);
-
-	git_reference_free(ref_tag);
 END_TEST
 
 BEGIN_SUITE(tag)

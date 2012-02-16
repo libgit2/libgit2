@@ -469,7 +469,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (git_path_isdir(git_buf_cstr(&path)) == GIT_SUCCESS) {
+	if (git_path_isdir(git_buf_cstr(&path)) == true) {
 		backend->pack_folder = git_buf_detach(&path);
 		backend->pack_folder_mtime = 0;
 	}

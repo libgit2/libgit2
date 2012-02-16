@@ -485,7 +485,7 @@ BEGIN_TEST(filebuf0, "make sure git_filebuf_open doesn't delete an existing lock
 	must_pass(fd);
 	must_pass(p_close(fd));
 	must_fail(git_filebuf_open(&file, test, 0));
-	must_pass(git_path_exists(testlock));
+	must_be_true(git_path_exists(testlock));
 	must_pass(p_unlink(testlock));
 END_TEST
 

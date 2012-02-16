@@ -354,80 +354,75 @@ int git_path_walk_up(
 	return error;
 }
 
-int git_path_exists(const char *path)
+bool git_path_exists(const char *path)
 {
 	assert(path);
-	return p_access(path, F_OK);
+	return p_access(path, F_OK) == 0;
 }
 
-int git_path_isdir(const char *path)
+bool git_path_isdir(const char *path)
 {
 #ifdef GIT_WIN32
 	DWORD attr = GetFileAttributes(path);
 	if (attr == INVALID_FILE_ATTRIBUTES)
-		return GIT_ERROR;
+		return false;
 
-	return (attr & FILE_ATTRIBUTE_DIRECTORY) ? GIT_SUCCESS : GIT_ERROR;
+	return (attr & FILE_ATTRIBUTE_DIRECTORY) != 0;
 
 #else
 	struct stat st;
-	if (p_stat(path, &st) < GIT_SUCCESS)
-		return GIT_ERROR;
+	if (p_stat(path, &st) < 0)
+		return false;
 
-	return S_ISDIR(st.st_mode) ? GIT_SUCCESS : GIT_ERROR;
+	return S_ISDIR(st.st_mode) != 0;
 #endif
 }
 
-int git_path_isfile(const char *path)
+bool git_path_isfile(const char *path)
 {
 	struct stat st;
-	int stat_error;
 
 	assert(path);
-	stat_error = p_stat(path, &st);
+	if (p_stat(path, &st) < 0)
+		return false;
 
-	if (stat_error < GIT_SUCCESS)
-		return -1;
-
-	if (!S_ISREG(st.st_mode))
-		return -1;
-
-	return 0;
+	return S_ISREG(st.st_mode) != 0;
 }
 
-static int _check_dir_contents(
+static bool _check_dir_contents(
 	git_buf *dir,
 	const char *sub,
-	int (*predicate)(const char *))
+	bool (*predicate)(const char *))
 {
-	int error = GIT_SUCCESS;
+	bool result;
 	size_t dir_size = dir->size;
 	size_t sub_size = strlen(sub);
 
-	/* separate allocation and join, so we can always leave git_buf valid */
-	if ((error = git_buf_try_grow(dir, dir_size + sub_size + 2)) < GIT_SUCCESS)
-		return error;
+	/* leave base valid even if we could not make space for subdir */
+	if (git_buf_try_grow(dir, dir_size + sub_size + 2) < 0)
+		return false;
+
+	/* save excursion */
 	git_buf_joinpath(dir, dir->ptr, sub);
 
-	error = (*predicate)(dir->ptr);
+	result = predicate(dir->ptr);
 
 	/* restore path */
 	git_buf_truncate(dir, dir_size);
-
-	return error;
+	return result;
 }
 
-int git_path_contains(git_buf *dir, const char *item)
+bool git_path_contains(git_buf *dir, const char *item)
 {
 	return _check_dir_contents(dir, item, &git_path_exists);
 }
 
-int git_path_contains_dir(git_buf *base, const char *subdir)
+bool git_path_contains_dir(git_buf *base, const char *subdir)
 {
 	return _check_dir_contents(base, subdir, &git_path_isdir);
 }
 
-int git_path_contains_file(git_buf *base, const char *file)
+bool git_path_contains_file(git_buf *base, const char *file)
 {
 	return _check_dir_contents(base, file, &git_path_isfile);
 }
@@ -448,7 +443,7 @@ int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 	}
 
 	/* call dirname if this is not a directory */
-	if (error == GIT_SUCCESS && git_path_isdir(dir->ptr) != GIT_SUCCESS)
+	if (error == GIT_SUCCESS && git_path_isdir(dir->ptr) == false)
 		if (git_path_dirname_r(dir, dir->ptr) < GIT_SUCCESS)
 			error = git_buf_lasterror(dir);
 
@@ -486,21 +481,20 @@ GIT_INLINE(int) is_dot_or_dotdot(const char *name)
 
 int git_path_direach(
 	git_buf *path,
-	int (*fn)(void *, git_buf *, git_error **),
-	void *arg,
-	git_error **error)
+	int (*fn)(void *, git_buf *),
+	void *arg)
 {
 	ssize_t wd_len;
 	DIR *dir;
 	struct dirent de_buf, *de;
 
-	if (git_path_to_dir(path, error) < 0)
+	if (git_path_to_dir(path) < 0)
 		return -1;
 
 	wd_len = path->size;
 	dir = opendir(path->ptr);
 	if (!dir) {
-		giterr_set(error, GITERR_OS, "Failed to `opendir` %s: %s", path->ptr, strerror(errno));
+		giterr_set(GITERR_OS, "Failed to `opendir` %s: %s", path->ptr, strerror(errno));
 		return -1;
 	}
 
@@ -510,12 +504,10 @@ int git_path_direach(
 		if (is_dot_or_dotdot(de->d_name))
 			continue;
 
-		if (git_buf_puts(path, de->d_name) < 0) {
-			giterr_set_oom(error);
+		if (git_buf_puts(path, de->d_name) < 0)
 			return -1;
-		}
 
-		result = fn(arg, path, error);
+		result = fn(arg, path);
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
@@ -526,7 +518,7 @@ int git_path_direach(
 	}
 
 	closedir(dir);
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_path_dirload(

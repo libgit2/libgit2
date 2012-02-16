@@ -600,7 +600,7 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	memcpy(p->pack_name, path, path_len);
 
 	strcpy(p->pack_name + path_len, ".keep");
-	if (git_path_exists(p->pack_name) == GIT_SUCCESS)
+	if (git_path_exists(p->pack_name) == true)
 		p->pack_keep = 1;
 
 	strcpy(p->pack_name + path_len, ".pack");

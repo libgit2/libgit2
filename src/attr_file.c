@@ -250,11 +250,12 @@ int git_attr_path__init(
 		git_buf full_path = GIT_BUF_INIT;
 		int error = git_buf_joinpath(&full_path, base, path);
 		if (error == GIT_SUCCESS)
-			info->is_dir = (git_path_isdir(full_path.ptr) == GIT_SUCCESS);
+			info->is_dir = (int)git_path_isdir(full_path.ptr);
+
 		git_buf_free(&full_path);
 		return error;
 	}
-	info->is_dir = (git_path_isdir(path) == GIT_SUCCESS);
+	info->is_dir = (int)git_path_isdir(path);
 
 	return GIT_SUCCESS;
 }

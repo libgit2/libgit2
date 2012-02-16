@@ -505,7 +505,7 @@ int git_status_foreach(
 	dirent_st.index_position = 0;
 	dirent_st.is_dir = 1;
 
-	if (git_path_isdir(workdir)) {
+	if (git_path_isdir(workdir) == false) {
 		error = git__throw(GIT_EINVALIDPATH,
 			"Failed to determine status of file '%s'. "
 			"The given path doesn't lead to a folder", workdir);
@@ -608,7 +608,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 		return git__rethrow(error,
 			"Failed to determine status of file '%s'", path);
 
-	if (git_path_isdir(temp_path.ptr) == GIT_SUCCESS) {
+	if (git_path_isdir(temp_path.ptr) == true) {
 		git_buf_free(&temp_path);
 		return git__throw(GIT_EINVALIDPATH,
 			"Failed to determine status of file '%s'. "
@@ -622,7 +622,7 @@ int git_status_file(unsigned int *status_flags, git_repository *repo, const char
 	}
 
 	/* Find file in Workdir */
-	if (git_path_exists(temp_path.ptr) == GIT_SUCCESS) {
+	if (git_path_exists(temp_path.ptr) == true) {
 		if ((error = status_entry_update_from_workdir(e, temp_path.ptr)) < GIT_SUCCESS)
 			goto cleanup;	/* The callee has already set the error message */
 	}
@@ -702,7 +702,7 @@ static char *alphasorted_dirent_info_new(const git_buf *path)
 
 	git_buf_copy_cstr(di, path->size + 1, path);
 
-	if (git_path_isdir(path->ptr) == GIT_SUCCESS) {
+	if (git_path_isdir(path->ptr) == true) {
 		/*
 		 * Append a forward slash to the name to force folders
 		 * to be ordered in a similar way than in a tree

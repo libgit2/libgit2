@@ -16,11 +16,14 @@ static const size_t WRITE_BUFFER_SIZE = (4096 * 2);
 
 static int lock_file(git_filebuf *file, int flags)
 {
-	if (git_path_exists(file->path_lock) == 0) {
+	if (git_path_exists(file->path_lock) == true) {
 		if (flags & GIT_FILEBUF_FORCE)
 			p_unlink(file->path_lock);
-		else
-			return git__throw(GIT_EOSERR, "Failed to lock file");
+		else {
+			giterr_set(GITERR_OS,
+				"Failed to lock file '%s' for writing", file->path_lock);
+			return -1;
+		}
 	}
 
 	/* create path to the file buffer is required */
@@ -32,16 +35,20 @@ static int lock_file(git_filebuf *file, int flags)
 	}
 
 	if (file->fd < 0)
-		return git__throw(GIT_EOSERR, "Failed to create lock");
+		return -1;
 
-	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == 0) {
+	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == true) {
 		git_file source;
 		char buffer[2048];
 		size_t read_bytes;
 
 		source = p_open(file->path_original, O_RDONLY);
-		if (source < 0)
-			return git__throw(GIT_EOSERR, "Failed to lock file. Could not open %s", file->path_original);
+		if (source < 0) {
+			giterr_set(GITERR_OS,
+				"Failed to open file '%s' for reading: %s",
+				file->path_original, strerror(errno));
+			return -1;
+		}
 
 		while ((read_bytes = p_read(source, buffer, 2048)) > 0) {
 			p_write(file->fd, buffer, read_bytes);
@@ -60,7 +67,7 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->fd >= 0)
 		p_close(file->fd);
 
-	if (file->fd >= 0 && file->path_lock && git_path_exists(file->path_lock) == GIT_SUCCESS)
+	if (file->fd >= 0 && file->path_lock && git_path_exists(file->path_lock) == true)
 		p_unlink(file->path_lock);
 
 	if (file->digest)
@@ -141,13 +148,13 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 {
-	int error, compression;
+	int compression;
 	size_t path_len;
 
-	assert(file && path);
-
-	if (file->buffer)
-		return git__throw(GIT_EINVALIDARGS, "Tried to reopen an open filebuf");
+	/* opening an already open buffer is a programming error;
+	 * assert that this never happens instead of returning
+	 * an error code */
+	assert(file && path && file->buffer == NULL);
 
 	memset(file, 0x0, sizeof(git_filebuf));
 
@@ -157,17 +164,12 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 	/* Allocate the main cache buffer */
 	file->buffer = git__malloc(file->buf_size);
-	if (file->buffer == NULL){
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	GITERR_CHECK_ALLOC(file->buffer);
 
 	/* If we are hashing on-write, allocate a new hash context */
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
-		if ((file->digest = git_hash_new_ctx()) == NULL) {
-			error = GIT_ENOMEM;
-			goto cleanup;
-		}
+		file->digest = git_hash_new_ctx();
+		GITERR_CHECK_ALLOC(file->digest);
 	}
 
 	compression = flags >> GIT_FILEBUF_DEFLATE_SHIFT;
@@ -176,16 +178,13 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 	if (compression != 0) {
 		/* Initialize the ZLib stream */
 		if (deflateInit(&file->zs, compression) != Z_OK) {
-			error = git__throw(GIT_EZLIB, "Failed to initialize zlib");
+			giterr_set(GITERR_ZLIB, "Failed to initialize zlib");
 			goto cleanup;
 		}
 
 		/* Allocate the Zlib cache buffer */
 		file->z_buf = git__malloc(file->buf_size);
-		if (file->z_buf == NULL){
-			error = GIT_ENOMEM;
-			goto cleanup;
-		}
+		GITERR_CHECK_ALLOC(file->z_buf);
 
 		/* Never flush */
 		file->flush_mode = Z_NO_FLUSH;
@@ -200,50 +199,40 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 		/* Open the file as temporary for locking */
 		file->fd = git_futils_mktmp(&tmp_path, path);
+
 		if (file->fd < 0) {
 			git_buf_free(&tmp_path);
-			error = GIT_EOSERR;
 			goto cleanup;
 		}
 
 		/* No original path */
 		file->path_original = NULL;
 		file->path_lock = git_buf_detach(&tmp_path);
-
-		if (file->path_lock == NULL) {
-			error = GIT_ENOMEM;
-			goto cleanup;
-		}
+		GITERR_CHECK_ALLOC(file->path_lock);
 	} else {
 		path_len = strlen(path);
 
 		/* Save the original path of the file */
 		file->path_original = git__strdup(path);
-		if (file->path_original == NULL) {
-			error = GIT_ENOMEM;
-			goto cleanup;
-		}
+		GITERR_CHECK_ALLOC(file->path_original);
 
 		/* create the locking path by appending ".lock" to the original */
 		file->path_lock = git__malloc(path_len + GIT_FILELOCK_EXTLENGTH);
-		if (file->path_lock == NULL) {
-			error = GIT_ENOMEM;
-			goto cleanup;
-		}
+		GITERR_CHECK_ALLOC(file->path_lock);
 
 		memcpy(file->path_lock, file->path_original, path_len);
 		memcpy(file->path_lock + path_len, GIT_FILELOCK_EXTENSION, GIT_FILELOCK_EXTLENGTH);
 
 		/* open the file for locking */
-		if ((error = lock_file(file, flags)) < GIT_SUCCESS)
+		if (lock_file(file, flags) < 0)
 			goto cleanup;
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 
 cleanup:
 	git_filebuf_cleanup(file);
-	return git__rethrow(error, "Failed to open file buffer for '%s'", path);
+	return -1;
 }
 
 int git_filebuf_hash(git_oid *oid, git_filebuf *file)

@@ -108,20 +108,24 @@ void git_clearerror(void)
  * New error handling
  ********************************************/
 
-void giterr_set(git_error **error_out, int error_class, const char *string, ...)
+static git_error g_git_oom_error = {
+	"Out of memory",
+	GITERR_NOMEMORY
+};
+
+void giterr_set_oom(void)
+{
+	GIT_GLOBAL->last_error = &g_git_oom_error;
+}
+
+void giterr_set(int error_class, const char *string, ...)
 {
 	char error_str[1024];
 	va_list arglist;
 	git_error *error;
 
-	if (error_out == NULL)
-		return;
-
-	error = git__malloc(sizeof(git_error));
-	if (!error) {
-		giterr_set_oom(error_out);
-		return;
-	}
+	error = &GIT_GLOBAL->error_t;
+	free(error->message);
 
 	va_start(arglist, string);
 	p_vsnprintf(error_str, sizeof(error_str), string, arglist);
@@ -131,38 +135,14 @@ void giterr_set(git_error **error_out, int error_class, const char *string, ...)
 	error->klass = error_class;
 
 	if (error->message == NULL) {
-		free(error);
-		giterr_set_oom(error_out);
+		giterr_set_oom();
 		return;
 	}
 
-	*error_out = error;
+	GIT_GLOBAL->last_error = error;
 }
 
-static git_error g_git_oom_error = {
-	"Out of memory",
-	GITERR_NOMEMORY
-};
-
-void giterr_set_oom(git_error **error)
+void giterr_clear(void)
 {
-	if (error != NULL)
-		*error = &g_git_oom_error;
-}
-
-void giterr_free(git_error *error)
-{
-	if (error == NULL || error == &g_git_oom_error)
-		return;
-
-	free(error->message);
-	free(error);
-}
-
-void giterr_clear(git_error **error)
-{
-	if (error != NULL) {
-		giterr_free(*error);
-		*error = NULL;
-	}
+	GIT_GLOBAL->last_error = NULL;
 }

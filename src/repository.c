@@ -83,14 +83,14 @@ void git_repository_free(git_repository *repo)
 static int quickcheck_repository_dir(git_buf *repository_path)
 {
 	/* Check OBJECTS_DIR first, since it will generate the longest path name */
-	if (git_path_contains_dir(repository_path, GIT_OBJECTS_DIR) < 0)
+	if (git_path_contains_dir(repository_path, GIT_OBJECTS_DIR) == false)
 		return GIT_ERROR;
 
 	/* Ensure HEAD file exists */
-	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) < 0)
+	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) == false)
 		return GIT_ERROR;
 
-	if (git_path_contains_dir(repository_path, GIT_REFS_DIR) < 0)
+	if (git_path_contains_dir(repository_path, GIT_REFS_DIR)  == false)
 		return GIT_ERROR;
 
 	return GIT_SUCCESS;
@@ -498,7 +498,7 @@ static int read_gitfile(git_buf *path_out, const char *file_path, const char *ba
 
 	git_buf_free(&file);
 
-	if (error == GIT_SUCCESS && git_path_exists(path_out->ptr) == 0)
+	if (error == GIT_SUCCESS && git_path_exists(path_out->ptr) == true)
 		return GIT_SUCCESS;
 
 	return git__throw(GIT_EOBJCORRUPTED, "The `.git` file points to a nonexistent path");
@@ -542,7 +542,7 @@ int git_repository_discover(
 		 * If the `.git` file is regular instead of
 		 * a directory, it should contain the path of the actual git repository
 		 */
-		if (git_path_isfile(normal_path.ptr) == GIT_SUCCESS) {
+		if (git_path_isfile(normal_path.ptr) == true) {
 			git_buf gitfile_path = GIT_BUF_INIT;
 
 			error = read_gitfile(&gitfile_path, normal_path.ptr, bare_path.ptr);
@@ -564,7 +564,7 @@ int git_repository_discover(
 		/**
 		 * If the `.git` file is a folder, we check inside of it
 		 */
-		if (git_path_isdir(normal_path.ptr) == GIT_SUCCESS) {
+		if (git_path_isdir(normal_path.ptr) == true) {
 			error = quickcheck_repository_dir(&normal_path);
 			if (error == GIT_SUCCESS) {
 				found_path = &normal_path;
@@ -774,7 +774,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 	if (error < GIT_SUCCESS)
 		return error;
 
-	if (git_path_isdir(repository_path.ptr) == GIT_SUCCESS) {
+	if (git_path_isdir(repository_path.ptr) == true) {
 		if (quickcheck_repository_dir(&repository_path) == GIT_SUCCESS) {
 			error = repo_init_reinit(repo_out, repository_path.ptr, is_bare);
 			git_buf_free(&repository_path);

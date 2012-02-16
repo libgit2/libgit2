@@ -50,4 +50,12 @@
 #	pragma warning ( disable : 4127 )
 #endif
 
+#if defined (_MSC_VER)
+	typedef unsigned char bool;
+#	define true 1
+#	define false 0
+#else
+#	include <stdbool.h>
+#endif
+
 #endif /* INCLUDE_compat_h__ */
