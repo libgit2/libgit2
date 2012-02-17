@@ -32,7 +32,6 @@ ELSE()
 	# Windows doesn't understand POSIX regex on its own
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
-	ADD_DEFINITIONS(-DGAWK -DNO_MBSUPPORT)
 ENDIF()
 
 IF (ZLIB_FOUND)
