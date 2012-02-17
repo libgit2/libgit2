@@ -28,6 +28,11 @@ FILE(GLOB SRC_HTTP deps/http-parser/*.c)
 
 IF (NOT WIN32)
 	FIND_PACKAGE(ZLIB)
+ELSE()
+	# Windows doesn't understand POSIX regex on its own
+	INCLUDE_DIRECTORIES(deps/regex)
+	SET(SRC_REGEX deps/regex/regex.c)
+	ADD_DEFINITIONS(-DGAWK -DNO_MBSUPPORT)
 ENDIF()
 
 IF (ZLIB_FOUND)
@@ -99,7 +104,7 @@ ELSE()
 ENDIF ()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${WIN_RC})
 
 IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
@@ -130,7 +135,7 @@ IF (BUILD_TESTS)
 	INCLUDE_DIRECTORIES(tests)
 	FILE(GLOB SRC_TEST tests/t??-*.c)
 
-	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
+	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX})
 	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
 	IF (WIN32)
 		TARGET_LINK_LIBRARIES(libgit2_test ws2_32)
@@ -158,7 +163,7 @@ IF (BUILD_CLAR)
 		DEPENDS ${CLAR_PATH}/clar ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
-	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
+	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${CMAKE_THREAD_LIBS_INIT})
 	IF (WIN32)
 		TARGET_LINK_LIBRARIES(libgit2_clar ws2_32)
