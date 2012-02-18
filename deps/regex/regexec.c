@@ -51,7 +51,7 @@ static int re_search_stub (struct re_pattern_buffer *bufp,
 			   int range, int stop, struct re_registers *regs,
 			   int ret_len);
 static unsigned re_copy_regs (struct re_registers *regs, regmatch_t *pmatch,
-			      int nregs, int regs_allocated);
+			      unsigned int nregs, int regs_allocated);
 static reg_errcode_t prune_impossible_nodes (re_match_context_t *mctx);
 static int check_matching (re_match_context_t *mctx, int fl_longest_match,
 			   int *p_match_first) internal_function;
@@ -486,11 +486,11 @@ re_search_stub (struct re_pattern_buffer *bufp,
 static unsigned
 re_copy_regs (struct re_registers *regs,
 	      regmatch_t *pmatch,
-	      int nregs, int regs_allocated)
+	      unsigned int nregs, int regs_allocated)
 {
   int rval = REGS_REALLOCATE;
-  int i;
-  int need_regs = nregs + 1;
+  unsigned int i;
+  unsigned int need_regs = nregs + 1;
   /* We need one extra element beyond `num_regs' for the `-1' marker GNU code
      uses.  */
 
@@ -624,7 +624,7 @@ re_search_internal (const regex_t *preg,
   const re_dfa_t *dfa = (const re_dfa_t *) preg->buffer;
   int left_lim, right_lim, incr;
   int fl_longest_match, match_first, match_kind, match_last = -1;
-  int extra_nmatch;
+  unsigned int extra_nmatch;
   int sb, ch;
 #if defined _LIBC || (defined __STDC_VERSION__ && __STDC_VERSION__ >= 199901L)
   re_match_context_t mctx = { .dfa = dfa };
@@ -870,7 +870,7 @@ re_search_internal (const regex_t *preg,
   /* Set pmatch[] if we need.  */
   if (nmatch > 0)
     {
-      int reg_idx;
+      unsigned int reg_idx;
 
       /* Initialize registers.  */
       for (reg_idx = 1; reg_idx < nmatch; ++reg_idx)
@@ -1446,7 +1446,7 @@ set_regs (const regex_t *preg, const re_match_context_t *mctx, size_t nmatch,
 
       if (idx == pmatch[0].rm_eo && cur_node == mctx->last_node)
 	{
-	  int reg_idx;
+	  unsigned int reg_idx;
 	  if (fs)
 	    {
 	      for (reg_idx = 0; reg_idx < nmatch; ++reg_idx)

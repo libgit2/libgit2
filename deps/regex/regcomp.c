@@ -598,7 +598,8 @@ static bitset_t utf8_sb_map;
 static void
 free_dfa_content (re_dfa_t *dfa)
 {
-  int i, j;
+  unsigned int i;
+  int j;
 
   if (dfa->nodes)
     for (i = 0; i < dfa->nodes_len; ++i)
@@ -1134,7 +1135,7 @@ analyze (regex_t *preg)
   dfa->subexp_map = re_malloc (int, preg->re_nsub);
   if (dfa->subexp_map != NULL)
     {
-      int i;
+      unsigned int i;
       for (i = 0; i < preg->re_nsub; i++)
 	dfa->subexp_map[i] = i;
       preorder (dfa->str_tree, optimize_subexps, dfa);
@@ -1583,13 +1584,15 @@ duplicate_node (re_dfa_t *dfa, int org_idx, unsigned int constraint)
 static reg_errcode_t
 calc_inveclosure (re_dfa_t *dfa)
 {
-  int src, idx, ret;
+  int ret;
+  unsigned int src, idx;
   for (idx = 0; idx < dfa->nodes_len; ++idx)
     re_node_set_init_empty (dfa->inveclosures + idx);
 
   for (src = 0; src < dfa->nodes_len; ++src)
     {
       int *elems = dfa->eclosures[src].elems;
+      int idx;
       for (idx = 0; idx < dfa->eclosures[src].nelem; ++idx)
 	{
 	  ret = re_node_set_insert_last (dfa->inveclosures + elems[idx], src);
