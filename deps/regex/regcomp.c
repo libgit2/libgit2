@@ -840,9 +840,6 @@ static reg_errcode_t
 init_dfa (re_dfa_t *dfa, size_t pat_len)
 {
   unsigned int table_size;
-#ifndef _LIBC
-  char *codeset_name;
-#endif
 
   memset (dfa, '\0', sizeof (re_dfa_t));
 
@@ -872,35 +869,7 @@ init_dfa (re_dfa_t *dfa, size_t pat_len)
   dfa->map_notascii = (_NL_CURRENT_WORD (LC_CTYPE, _NL_CTYPE_MAP_TO_NONASCII)
 		       != 0);
 #else
-# ifdef HAVE_LANGINFO_CODESET
-  codeset_name = nl_langinfo (CODESET);
-# else
-  codeset_name = getenv ("LC_ALL");
-  if (codeset_name == NULL || codeset_name[0] == '\0')
-    codeset_name = getenv ("LC_CTYPE");
-  if (codeset_name == NULL || codeset_name[0] == '\0')
-    codeset_name = getenv ("LANG");
-  if (codeset_name == NULL)
-    codeset_name = "";
-  else if (strchr (codeset_name, '.') !=  NULL)
-    codeset_name = strchr (codeset_name, '.') + 1;
-# endif
-
-  /* strcasecmp isn't a standard interface. brute force check */
-#if 0
-  if (strcasecmp (codeset_name, "UTF-8") == 0
-      || strcasecmp (codeset_name, "UTF8") == 0)
-    dfa->is_utf8 = 1;
-#else
-  if (   (codeset_name[0] == 'U' || codeset_name[0] == 'u')
-      && (codeset_name[1] == 'T' || codeset_name[1] == 't')
-      && (codeset_name[2] == 'F' || codeset_name[2] == 'f')
-      && (codeset_name[3] == '-'
-          ? codeset_name[4] == '8' && codeset_name[5] == '\0'
-          : codeset_name[3] == '8' && codeset_name[4] == '\0'))
-    dfa->is_utf8 = 1;
-#endif
-
+  dfa->is_utf8 = 1;
   /* We check exhaustively in the loop below if this charset is a
      superset of ASCII.  */
   dfa->map_notascii = 0;
