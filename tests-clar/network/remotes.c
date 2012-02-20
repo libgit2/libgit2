@@ -36,6 +36,48 @@ void test_network_remotes__refspec_parsing(void)
 	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/test/*"));
 }
 
+void test_network_remotes__set_fetchspec(void)
+{
+	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/*:refs/*"));
+	_refspec = git_remote_fetchspec(_remote);
+	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/*"));
+	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/*"));
+}
+
+void test_network_remotes__set_pushspec(void)
+{
+	cl_git_pass(git_remote_set_pushspec(_remote, "refs/*:refs/*"));
+	_refspec = git_remote_pushspec(_remote);
+	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/*"));
+	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/*"));
+}
+
+void test_network_remotes__save(void)
+{
+	git_remote_free(_remote);
+
+	/* Set up the remote and save it to config */
+	cl_git_pass(git_remote_new(&_remote, _repo, "git://github.com/libgit2/libgit2", "upstream"));
+	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/heads/*:refs/remotes/upstream/*"));
+	cl_git_pass(git_remote_set_pushspec(_remote, "refs/heads/*:refs/heads/*"));
+	cl_git_pass(git_remote_save(_remote));
+	git_remote_free(_remote);
+	_remote = NULL;
+
+	/* Load it from config and make sure everything matches */
+	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
+
+	_refspec = git_remote_fetchspec(_remote);
+	cl_assert(_refspec != NULL);
+	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/heads/*"));
+	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/upstream/*"));
+
+	_refspec = git_remote_pushspec(_remote);
+	cl_assert(_refspec != NULL);
+	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/heads/*"));
+	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/heads/*"));
+}
+
 void test_network_remotes__fnmatch(void)
 {
 	cl_git_pass(git_refspec_src_match(_refspec, "refs/heads/master"));
