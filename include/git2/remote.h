@@ -54,6 +54,14 @@ GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const cha
 GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const char *name);
 
 /**
+ * Save a remote to its repository's configuration
+ *
+ * @param remote the remote to save to config
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_remote_save(const git_remote *remote);
+
+/**
  * Get the remote's name
  *
  * @param remote the remote
@@ -70,12 +78,30 @@ GIT_EXTERN(const char *) git_remote_name(git_remote *remote);
 GIT_EXTERN(const char *) git_remote_url(git_remote *remote);
 
 /**
+ * Set the remote's fetch refspec
+ *
+ * @param remote the remote
+ * @apram spec the new fetch refspec
+ * @return GIT_SUCCESS or an error value
+ */
+GIT_EXTERN(int) git_remote_set_fetchspec(git_remote *remote, const char *spec);
+
+/**
  * Get the fetch refspec
  *
  * @param remote the remote
  * @return a pointer to the fetch refspec or NULL if it doesn't exist
  */
 GIT_EXTERN(const git_refspec *) git_remote_fetchspec(git_remote *remote);
+
+/**
+ * Set the remote's push refspec
+ *
+ * @param remote the remote
+ * @apram spec the new push refspec
+ * @return GIT_SUCCESS or an error value
+ */
+GIT_EXTERN(int) git_remote_set_pushspec(git_remote *remote, const char *spec);
 
 /**
  * Get the push refspec
