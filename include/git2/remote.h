@@ -54,6 +54,14 @@ GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const cha
 GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const char *name);
 
 /**
+ * Save a remote to its repository's configuration
+ *
+ * @param remote the remote to save to config
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_remote_save(const git_remote *remote);
+
+/**
  * Get the remote's name
  *
  * @param remote the remote

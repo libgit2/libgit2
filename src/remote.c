@@ -187,6 +187,56 @@ cleanup:
 	return error;
 }
 
+int git_remote_save(const git_remote *remote)
+{
+	int error;
+	git_config *config;
+	git_buf buf = GIT_BUF_INIT, value = GIT_BUF_INIT;
+
+	error = git_repository_config__weakptr(&config, remote->repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	git_buf_printf(&buf, "remote.%s.%s", remote->name, "url");
+	if (git_buf_oom(&buf))
+		return GIT_ENOMEM;
+
+	error = git_config_set_string(config, git_buf_cstr(&buf), remote->url);
+	if (error < GIT_SUCCESS)
+		goto cleanup;
+
+	if (remote->fetch.src != NULL && remote->fetch.src != NULL) {
+		git_buf_clear(&buf);
+		git_buf_clear(&value);
+		git_buf_printf(&buf, "remote.%s.%s", remote->name, "fetch");
+		git_buf_printf(&value, "%s:%s", remote->fetch.src, remote->fetch.dst);
+		if (git_buf_oom(&buf) || git_buf_oom(&value))
+			return GIT_ENOMEM;
+
+		error = git_config_set_string(config, git_buf_cstr(&buf), git_buf_cstr(&value));
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+	if (remote->push.src != NULL && remote->push.src != NULL) {
+		git_buf_clear(&buf);
+		git_buf_clear(&value);
+		git_buf_printf(&buf, "remote.%s.%s", remote->name, "push");
+		git_buf_printf(&value, "%s:%s", remote->push.src, remote->push.dst);
+		if (git_buf_oom(&buf) || git_buf_oom(&value))
+			return GIT_ENOMEM;
+
+		error = git_config_set_string(config, git_buf_cstr(&buf), git_buf_cstr(&value));
+		if (error < GIT_SUCCESS)
+			goto cleanup;
+	}
+
+cleanup:
+	git_buf_free(&buf);
+	git_buf_free(&value);
+	return error;
+}
+
 const char *git_remote_name(git_remote *remote)
 {
 	assert(remote);
