@@ -36,6 +36,22 @@ void test_network_remotes__refspec_parsing(void)
 	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/test/*"));
 }
 
+void test_network_remotes__set_fetchspec(void)
+{
+	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/*:refs/*"));
+	_refspec = git_remote_fetchspec(_remote);
+	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/*"));
+	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/*"));
+}
+
+void test_network_remotes__set_pushspec(void)
+{
+	cl_git_pass(git_remote_set_pushspec(_remote, "refs/*:refs/*"));
+	_refspec = git_remote_pushspec(_remote);
+	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/*"));
+	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/*"));
+}
+
 void test_network_remotes__fnmatch(void)
 {
 	cl_git_pass(git_refspec_src_match(_refspec, "refs/heads/master"));

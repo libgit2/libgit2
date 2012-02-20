@@ -199,10 +199,48 @@ const char *git_remote_url(git_remote *remote)
 	return remote->url;
 }
 
+int git_remote_set_fetchspec(git_remote *remote, const char *spec)
+{
+	int error;
+	git_refspec refspec;
+
+	assert(remote && spec);
+
+	error = refspec_parse(&refspec, spec);
+	if (error != GIT_SUCCESS)
+		return error;
+
+	git__free(remote->fetch.src);
+	git__free(remote->fetch.dst);
+	remote->fetch.src = refspec.src;
+	remote->fetch.dst = refspec.dst;
+
+	return GIT_SUCCESS;
+}
+
 const git_refspec *git_remote_fetchspec(git_remote *remote)
 {
 	assert(remote);
 	return &remote->fetch;
+}
+
+int git_remote_set_pushspec(git_remote *remote, const char *spec)
+{
+	int error;
+	git_refspec refspec;
+
+	assert(remote && spec);
+
+	error = refspec_parse(&refspec, spec);
+	if (error != GIT_SUCCESS)
+		return error;
+
+	git__free(remote->push.src);
+	git__free(remote->push.dst);
+	remote->push.src = refspec.src;
+	remote->push.dst = refspec.dst;
+
+	return GIT_SUCCESS;
 }
 
 const git_refspec *git_remote_pushspec(git_remote *remote)

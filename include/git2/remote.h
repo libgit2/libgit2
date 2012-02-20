@@ -70,12 +70,30 @@ GIT_EXTERN(const char *) git_remote_name(git_remote *remote);
 GIT_EXTERN(const char *) git_remote_url(git_remote *remote);
 
 /**
+ * Set the remote's fetch refspec
+ *
+ * @param remote the remote
+ * @apram spec the new fetch refspec
+ * @return GIT_SUCCESS or an error value
+ */
+GIT_EXTERN(int) git_remote_set_fetchspec(git_remote *remote, const char *spec);
+
+/**
  * Get the fetch refspec
  *
  * @param remote the remote
  * @return a pointer to the fetch refspec or NULL if it doesn't exist
  */
 GIT_EXTERN(const git_refspec *) git_remote_fetchspec(git_remote *remote);
+
+/**
+ * Set the remote's push refspec
+ *
+ * @param remote the remote
+ * @apram spec the new push refspec
+ * @return GIT_SUCCESS or an error value
+ */
+GIT_EXTERN(int) git_remote_set_pushspec(git_remote *remote, const char *spec);
 
 /**
  * Get the push refspec
