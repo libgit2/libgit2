@@ -199,7 +199,7 @@ int git_remote_save(const git_remote *remote)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	if (remote->fetch.src != NULL && remote->fetch.src != NULL) {
+	if (remote->fetch.src != NULL && remote->fetch.dst != NULL) {
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.%s", remote->name, "fetch");
@@ -212,7 +212,7 @@ int git_remote_save(const git_remote *remote)
 			goto cleanup;
 	}
 
-	if (remote->push.src != NULL && remote->push.src != NULL) {
+	if (remote->push.src != NULL && remote->push.dst != NULL) {
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.%s", remote->name, "push");
