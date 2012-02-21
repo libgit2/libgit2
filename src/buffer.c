@@ -213,6 +213,12 @@ void git_buf_truncate(git_buf *buf, ssize_t len)
 	}
 }
 
+void git_buf_rtruncate_at_char(git_buf *buf, char separator)
+{
+	int idx = git_buf_rfind_next(buf, separator);
+	git_buf_truncate(buf, idx < 0 ? 0 : idx);
+}
+
 void git_buf_swap(git_buf *buf_a, git_buf *buf_b)
 {
 	git_buf t = *buf_a;
@@ -327,7 +333,7 @@ int git_buf_join(
 	const char *str_b)
 {
 	int error = GIT_SUCCESS;
-	size_t strlen_a = strlen(str_a);
+	size_t strlen_a = str_a ? strlen(str_a) : 0;
 	size_t strlen_b = strlen(str_b);
 	int need_sep = 0;
 	ssize_t offset_a = -1;

@@ -25,6 +25,23 @@ static int resize_vector(git_vector *v)
 	return GIT_SUCCESS;
 }
 
+int git_vector_alloc(
+	git_vector **vptr, unsigned int initial_size, git_vector_cmp cmp)
+{
+	int error;
+	git_vector *v = git__malloc(sizeof(git_vector));
+	if (!v) {
+		*vptr = NULL;
+		return GIT_ENOMEM;
+	}
+
+	if ((error = git_vector_init(v, initial_size, cmp)) < GIT_SUCCESS) {
+		git__free(v);
+		v = NULL;
+	}
+	*vptr = v;
+	return error;
+}
 
 void git_vector_free(git_vector *v)
 {
@@ -185,6 +202,21 @@ int git_vector_remove(git_vector *v, unsigned int idx)
 		v->contents[i] = v->contents[i + 1];
 
 	v->length--;
+	return GIT_SUCCESS;
+}
+
+int git_vector_pop(git_vector *v, void **element)
+{
+	assert(v);
+
+	if (v->length == 0)
+		return git__throw(GIT_ENOTFOUND, "Can't remove element from empty list");
+
+	if (element != NULL)
+		*element = v->contents[v->length - 1];
+
+	v->length--;
+
 	return GIT_SUCCESS;
 }
 

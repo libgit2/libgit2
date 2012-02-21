@@ -20,6 +20,13 @@ extern int git_attr_cache__init(git_repository *repo);
 extern int git_attr_cache__insert_macro(
 	git_repository *repo, git_attr_rule *macro);
 
+extern int git_attr_cache__lookup_or_create_file(
+	git_repository *repo,
+	const char *key,
+	const char *filename,
+	int (*loader)(git_repository *, const char *, git_attr_file *),
+	git_attr_file **file_ptr);
+
 extern int git_attr_cache__push_file(
 	git_repository *repo,
 	git_vector     *stack,

@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "buffer.h"
+#include "vector.h"
 
 /**
  * Path manipulation utils
@@ -129,6 +130,15 @@ extern int git_path_isdir(const char *path);
 extern int git_path_isfile(const char *path);
 
 /**
+ * Check if the parent directory contains the item.
+ *
+ * @param dir Directory to check.
+ * @param item Item that might be in the directory.
+ * @return GIT_SUCCESS if item exists in directory, <0 otherwise.
+ */
+extern int git_path_contains(git_buf *dir, const char *item);
+
+/**
  * Check if the given path contains the given subdirectory.
  *
  * @param parent Directory path that might contain subdir
@@ -215,5 +225,27 @@ extern int git_path_walk_up(
 	const char *ceiling,
 	int (*fn)(void *state, git_buf *),
 	void *state);
+
+/**
+ * Load all directory entries (except '.' and '..') into a vector.
+ *
+ * For cases where `git_path_direach()` is not appropriate, this
+ * allows you to load the filenames in a directory into a vector
+ * of strings. That vector can then be sorted, iterated, or whatever.
+ * Remember to free alloc of the allocated strings when you are done.
+ *
+ * @param path The directory to read from.
+ * @param prefix_len When inserting entries, the trailing part of path
+ * 		will be prefixed after this length.  I.e. given path "/a/b" and
+ * 		prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
+ * @param alloc_extra Extra bytes to add to each string allocation in
+ * 		case you want to append anything funny.
+ * @param contents Vector to fill with directory entry names.
+ */
+extern int git_path_dirload(
+	const char *path,
+	size_t prefix_len,
+	size_t alloc_extra,
+	git_vector *contents);
 
 #endif
