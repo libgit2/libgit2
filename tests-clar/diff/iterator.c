@@ -73,8 +73,7 @@ static void tree_iterator_test(
 
 		count++;
 
-		cl_git_pass(git_iterator_advance(i));
-		cl_git_pass(git_iterator_current(i, &entry));
+		cl_git_pass(git_iterator_advance(i, &entry));
 	}
 
 	git_iterator_free(i);
@@ -201,8 +200,7 @@ static void index_iterator_test(
 		}
 
 		count++;
-		cl_git_pass(git_iterator_advance(i));
-		cl_git_pass(git_iterator_current(i, &entry));
+		cl_git_pass(git_iterator_advance(i, &entry));
 	}
 
 	git_iterator_free(i);
@@ -314,6 +312,11 @@ static void workdir_iterator_test(
 	while (entry != NULL) {
 		int ignored = git_iterator_current_is_ignored(i);
 
+		if (!ignored && S_ISDIR(entry->mode)) {
+			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+			continue;
+		}
+
 		if (expected_names != NULL)
 			cl_assert_strequal(expected_names[count_all], entry->path);
 
@@ -324,8 +327,7 @@ static void workdir_iterator_test(
 			count++;
 		count_all++;
 
-		cl_git_pass(git_iterator_advance(i));
-		cl_git_pass(git_iterator_current(i, &entry));
+		cl_git_pass(git_iterator_advance(i, &entry));
 	}
 
 	git_iterator_free(i);

@@ -80,7 +80,7 @@ static int expand_tree_if_needed(git_iterator_tree *ti)
 		te = git_tree_entry_byindex(tree, tree_idx);
 
 		if (!entry_is_tree(te))
-			return GIT_SUCCESS;
+			break;
 
 		error = git_tree_lookup(&subtree, ti->repo, &te->oid);
 		if (error != GIT_SUCCESS)
@@ -98,12 +98,17 @@ static int expand_tree_if_needed(git_iterator_tree *ti)
 	return GIT_SUCCESS;
 }
 
-static int git_iterator__tree_advance(git_iterator *self)
+static int git_iterator__tree_advance(
+	git_iterator *self, const git_index_entry **entry)
 {
+	int error = GIT_SUCCESS;
 	git_iterator_tree *ti = (git_iterator_tree *)self;
 	git_tree *tree = git_vector_last(&ti->tree_stack);
 	unsigned int tree_idx = PTR_AS_IDX(git_vector_last(&ti->idx_stack));
 	const git_tree_entry *te = git_tree_entry_byindex(tree, tree_idx);
+
+	if (entry != NULL)
+		*entry = NULL;
 
 	if (te == NULL)
 		return GIT_SUCCESS;
@@ -133,9 +138,12 @@ static int git_iterator__tree_advance(git_iterator *self)
 	}
 
 	if (te && entry_is_tree(te))
-		return expand_tree_if_needed(ti);
+		error = expand_tree_if_needed(ti);
 
-	return GIT_SUCCESS;
+	if (error == GIT_SUCCESS && entry != NULL)
+		error = git_iterator__tree_current(self, entry);
+
+	return error;
 }
 
 static void git_iterator__tree_free(git_iterator *self)
@@ -204,11 +212,14 @@ static int git_iterator__index_at_end(git_iterator *self)
 	return (ii->current >= git_index_entrycount(ii->index));
 }
 
-static int git_iterator__index_advance(git_iterator *self)
+static int git_iterator__index_advance(
+	git_iterator *self, const git_index_entry **entry)
 {
 	git_iterator_index *ii = (git_iterator_index *)self;
 	if (ii->current < git_index_entrycount(ii->index))
 		ii->current++;
+	if (entry)
+		*entry = git_index_get(ii->index, ii->current);
 	return GIT_SUCCESS;
 }
 
@@ -315,12 +326,17 @@ static int git_iterator__workdir_at_end(git_iterator *self)
 	return (wi->entry.path == NULL);
 }
 
-static int git_iterator__workdir_advance(git_iterator *self)
+static int git_iterator__workdir_advance(
+	git_iterator *self, const git_index_entry **entry)
 {
+	int error;
 	git_iterator_workdir *wi = (git_iterator_workdir *)self;
 	git_vector *dir;
 	unsigned int pos;
 	const char *next;
+
+	if (entry)
+		*entry = NULL;
 
 	if (wi->entry.path == NULL)
 		return GIT_SUCCESS;
@@ -348,26 +364,32 @@ static int git_iterator__workdir_advance(git_iterator *self)
 		git_ignore__pop_dir(&wi->ignores);
 	}
 
-	return load_workdir_entry(wi);
+	error = load_workdir_entry(wi);
+
+	if (error == GIT_SUCCESS && entry)
+		return git_iterator__workdir_current(self, entry);
+
+	return error;
 }
 
-int git_iterator_advance_into_ignored_directory(git_iterator *iter)
+int git_iterator_advance_into_directory(
+	git_iterator *iter, const git_index_entry **entry)
 {
 	git_iterator_workdir *wi = (git_iterator_workdir *)iter;
 
 	if (iter->type != GIT_ITERATOR_WORKDIR)
-		return GIT_SUCCESS;
+		return git_iterator_current(iter, entry);
 
 	/* Loop because the first entry in the ignored directory could itself be
 	 * an ignored directory, but we want to descend to find an actual entry.
 	 */
-	while (wi->entry.path && wi->is_ignored && S_ISDIR(wi->entry.mode)) {
-		int error = push_directory(wi);
-		if (error != GIT_SUCCESS)
-			return error;
+	if (wi->entry.path && S_ISDIR(wi->entry.mode)) {
+		if (push_directory(wi) < GIT_SUCCESS)
+			/* If error loading or if empty, skip the directory. */
+			return git_iterator__workdir_advance((git_iterator *)wi, entry);
 	}
 
-	return GIT_SUCCESS;
+	return git_iterator__workdir_current(iter, entry);
 }
 
 static void git_iterator__workdir_free(git_iterator *self)
@@ -404,7 +426,7 @@ static int load_workdir_entry(git_iterator_workdir *wi)
 	wi->entry.path = relpath;
 
 	if (strcmp(relpath, DOT_GIT) == 0)
-		return git_iterator__workdir_advance((git_iterator *)wi);
+		return git_iterator__workdir_advance((git_iterator *)wi, NULL);
 
 	/* if there is an error processing the entry, treat as ignored */
 	wi->is_ignored = 1;
@@ -433,19 +455,12 @@ static int load_workdir_entry(git_iterator_workdir *wi)
 		if (git_path_contains(&wi->path, DOT_GIT) == GIT_SUCCESS) {
 			/* create submodule entry */
 			wi->entry.mode = S_IFGITLINK;
-		} else if (wi->is_ignored) {
-			/* create path entry (which is otherwise impossible), but is
-			 * needed in case descent into ignore dir is required.
-			 */
+		} else {
+			/* create directory entry that can be advanced into as needed */
 			size_t pathlen = strlen(wi->entry.path);
 			wi->entry.path[pathlen] = '/';
 			wi->entry.path[pathlen + 1] = '\0';
 			wi->entry.mode = S_IFDIR;
-		} else if ((error = push_directory(wi)) < GIT_SUCCESS) {
-			/* if there is an error loading the directory or if empty
-			 * then skip over the directory completely.
-			 */
-			return git_iterator__workdir_advance((git_iterator *)wi);
 		}
 	}
 

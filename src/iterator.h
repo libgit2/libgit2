@@ -22,7 +22,7 @@ struct git_iterator {
 	git_iterator_type_t type;
 	int (*current)(git_iterator *, const git_index_entry **);
 	int (*at_end)(git_iterator *);
-	int (*advance)(git_iterator *);
+	int (*advance)(git_iterator *, const git_index_entry **);
 	void (*free)(git_iterator *);
 };
 
@@ -54,9 +54,10 @@ GIT_INLINE(int) git_iterator_at_end(git_iterator *iter)
 	return iter->at_end(iter);
 }
 
-GIT_INLINE(int) git_iterator_advance(git_iterator *iter)
+GIT_INLINE(int) git_iterator_advance(
+	git_iterator *iter, const git_index_entry **entry)
 {
-	return iter->advance(iter);
+	return iter->advance(iter, entry);
 }
 
 GIT_INLINE(void) git_iterator_free(git_iterator *iter)
@@ -76,19 +77,23 @@ extern int git_iterator_current_tree_entry(
 extern int git_iterator_current_is_ignored(git_iterator *iter);
 
 /**
- * Iterate into an ignored workdir directory.
+ * Iterate into a workdir directory.
  *
- * When a workdir iterator encounters a directory that is ignored, it will
- * just return a current entry for the directory with is_ignored returning
- * true.  If you are iterating over the index or a tree in parallel and a
- * file in the ignored directory has been added to the index/tree already,
- * then it may be necessary to iterate into the directory even though it is
- * ignored.  Call this function to do that.
+ * Workdir iterators do not automatically descend into directories (so that
+ * when comparing two iterator entries you can detect a newly created
+ * directory in the workdir).  As a result, you may get S_ISDIR items from
+ * a workdir iterator.  If you wish to iterate over the contents of the
+ * directories you encounter, then call this function when you encounter
+ * a directory.
  *
- * Note that if the tracked file in the ignored directory has been deleted,
- * this may end up acting like a full "advance" call and advance past the
- * directory completely.  You must handle that case.
+ * If there are no files in the directory, this will end up acting like a
+ * regular advance and will skip past the directory, so you should be
+ * prepared for that case.
+ *
+ * On non-workdir iterators or if not pointing at a directory, this is a
+ * no-op and will not advance the iterator.
  */
-extern int git_iterator_advance_into_ignored_directory(git_iterator *iter);
+extern int git_iterator_advance_into_directory(
+	git_iterator *iter, const git_index_entry **entry);
 
 #endif
