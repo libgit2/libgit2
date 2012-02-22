@@ -61,7 +61,7 @@ const char *git_tag_message(git_tag *t)
 	return t->message;
 }
 
-static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer_end)
+int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 {
 	static const char *tag_types[] = {
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
@@ -70,6 +70,8 @@ static int parse_tag_buffer(git_tag *tag, const char *buffer, const char *buffer
 	unsigned int i, text_len;
 	char *search;
 	int error;
+
+	const char *buffer_end = buffer + length;
 
 	if ((error = git_oid__parse(&tag->target, &buffer, buffer_end, "object ")) < 0)
 		return git__rethrow(error, "Failed to parse tag. Object field invalid");
@@ -316,7 +318,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		return error;
 
 	/* validate the buffer */
-	if ((error = parse_tag_buffer(&tag, buffer, buffer + strlen(buffer))) < GIT_SUCCESS)
+	if ((error = git_tag__parse_buffer(&tag, buffer, strlen(buffer))) < GIT_SUCCESS)
 		goto cleanup;
 
 	/* validate the target */
@@ -397,7 +399,7 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
 {
 	assert(tag);
-	return parse_tag_buffer(tag, obj->raw.data, (char *)obj->raw.data + obj->raw.len);
+	return git_tag__parse_buffer(tag, obj->raw.data, obj->raw.len);
 }
 
 typedef struct {
