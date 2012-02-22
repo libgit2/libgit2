@@ -85,11 +85,16 @@ extern int git_futils_mktmp(git_buf *path_out, const char *filename);
  */
 extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
 
-
 /**
  * Get the filesize in bytes of a file
  */
 extern git_off_t git_futils_filesize(git_file fd);
+
+/**
+ * Convert a mode_t from the OS to a legal git mode_t value.
+ */
+extern mode_t git_futils_canonical_mode(mode_t raw_mode);
+
 
 /**
  * Read-only map all or part of a file into memory.

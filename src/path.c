@@ -398,37 +398,38 @@ int git_path_isfile(const char *path)
 static int _check_dir_contents(
 	git_buf *dir,
 	const char *sub,
-	int append_on_success,
 	int (*predicate)(const char *))
 {
 	int error = GIT_SUCCESS;
 	size_t dir_size = dir->size;
 	size_t sub_size = strlen(sub);
 
-	/* leave base valid even if we could not make space for subdir */
+	/* separate allocation and join, so we can always leave git_buf valid */
 	if ((error = git_buf_try_grow(dir, dir_size + sub_size + 2)) < GIT_SUCCESS)
 		return error;
-
-	/* save excursion */
 	git_buf_joinpath(dir, dir->ptr, sub);
 
 	error = (*predicate)(dir->ptr);
 
-	/* restore excursion */
-	if (!append_on_success || error != GIT_SUCCESS)
-		git_buf_truncate(dir, dir_size);
+	/* restore path */
+	git_buf_truncate(dir, dir_size);
 
 	return error;
 }
 
-int git_path_contains_dir(git_buf *base, const char *subdir, int append_if_exists)
+int git_path_contains(git_buf *dir, const char *item)
 {
-	return _check_dir_contents(base, subdir, append_if_exists, &git_path_isdir);
+	return _check_dir_contents(dir, item, &git_path_exists);
 }
 
-int git_path_contains_file(git_buf *base, const char *file, int append_if_exists)
+int git_path_contains_dir(git_buf *base, const char *subdir)
 {
-	return _check_dir_contents(base, file, append_if_exists, &git_path_isfile);
+	return _check_dir_contents(base, subdir, &git_path_isdir);
+}
+
+int git_path_contains_file(git_buf *base, const char *file)
+{
+	return _check_dir_contents(base, file, &git_path_isfile);
 }
 
 int git_path_find_dir(git_buf *dir, const char *path, const char *base)
@@ -522,3 +523,63 @@ int git_path_direach(
 	closedir(dir);
 	return GIT_SUCCESS;
 }
+
+int git_path_dirload(
+	const char *path,
+	size_t prefix_len,
+	size_t alloc_extra,
+	git_vector *contents)
+{
+	int error, need_slash;
+	DIR *dir;
+	struct dirent de_buf, *de;
+	size_t path_len;
+
+	assert(path != NULL && contents != NULL);
+	path_len = strlen(path);
+	assert(path_len > 0 && path_len >= prefix_len);
+
+	if ((dir = opendir(path)) == NULL)
+		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure."
+			" An error occured while opening the directory", path);
+
+	path += prefix_len;
+	path_len -= prefix_len;
+	need_slash = (path_len > 0 && path[path_len-1] != '/') ? 1 : 0;
+
+	while ((error = readdir_r(dir, &de_buf, &de)) == 0 && de != NULL) {
+		char *entry_path;
+		size_t entry_len;
+
+		if (is_dot_or_dotdot(de->d_name))
+			continue;
+
+		entry_len = strlen(de->d_name);
+
+		entry_path = git__malloc(
+			path_len + need_slash + entry_len + 1 + alloc_extra);
+		if (entry_path == NULL)
+			return GIT_ENOMEM;
+
+		if (path_len)
+			memcpy(entry_path, path, path_len);
+		if (need_slash)
+			entry_path[path_len] = '/';
+		memcpy(&entry_path[path_len + need_slash], de->d_name, entry_len);
+		entry_path[path_len + need_slash + entry_len] = '\0';
+
+		if ((error = git_vector_insert(contents, entry_path)) < GIT_SUCCESS) {
+			git__free(entry_path);
+			return error;
+		}
+	}
+
+	closedir(dir);
+
+	if (error != GIT_SUCCESS)
+		return git__throw(
+			GIT_EOSERR, "Failed to process directory entry in `%s`", path);
+
+	return GIT_SUCCESS;
+}
+

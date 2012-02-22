@@ -69,38 +69,44 @@ static int load_ignore_file(
 static int push_one_ignore(void *ref, git_buf *path)
 {
 	git_ignores *ign = (git_ignores *)ref;
-	return push_ignore(ign->repo, &ign->stack, path->ptr, GIT_IGNORE_FILE);
+	return push_ignore(ign->repo, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
 }
 
 int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ignores)
 {
 	int error = GIT_SUCCESS;
-	git_buf dir = GIT_BUF_INIT;
 	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
 
 	assert(ignores);
 
+	ignores->repo = repo;
+	git_buf_init(&ignores->dir, 0);
+	ignores->ign_internal = NULL;
+	git_vector_init(&ignores->ign_path, 8, NULL);
+	git_vector_init(&ignores->ign_global, 2, NULL);
+
 	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
 		goto cleanup;
 
-	if ((error = git_path_find_dir(&dir, path, workdir)) < GIT_SUCCESS)
+	if ((error = git_path_find_dir(&ignores->dir, path, workdir)) < GIT_SUCCESS)
 		goto cleanup;
 
-	ignores->repo = repo;
-	ignores->dir  = NULL;
-	git_vector_init(&ignores->stack, 2, NULL);
-
-	/* insert internals */
-	if ((error = push_ignore(repo, &ignores->stack, NULL, GIT_IGNORE_INTERNAL)) < GIT_SUCCESS)
+	/* set up internals */
+	error = git_attr_cache__lookup_or_create_file(
+		repo, GIT_IGNORE_INTERNAL, NULL, NULL, &ignores->ign_internal);
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	/* load .gitignore up the path */
-	if ((error = git_path_walk_up(&dir, workdir, push_one_ignore, ignores)) < GIT_SUCCESS)
+	error = git_path_walk_up(&ignores->dir, workdir, push_one_ignore, ignores);
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	/* load .git/info/exclude */
-	if ((error = push_ignore(repo, &ignores->stack, repo->path_repository, GIT_IGNORE_FILE_INREPO)) < GIT_SUCCESS)
+	error = push_ignore(repo, &ignores->ign_global,
+		repo->path_repository, GIT_IGNORE_FILE_INREPO);
+	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	/* load core.excludesfile */
@@ -108,7 +114,7 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ig
 		const char *core_ignore;
 		error = git_config_get_string(cfg, GIT_IGNORE_CONFIG, &core_ignore);
 		if (error == GIT_SUCCESS && core_ignore != NULL)
-			error = push_ignore(repo, &ignores->stack, NULL, core_ignore);
+			error = push_ignore(repo, &ignores->ign_global, NULL, core_ignore);
 		else {
 			error = GIT_SUCCESS;
 			git_clearerror(); /* don't care if attributesfile is not set */
@@ -117,46 +123,92 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ig
 	}
 
 cleanup:
-	if (error < GIT_SUCCESS)
+	if (error < GIT_SUCCESS) {
+		git_ignore__free(ignores);
 		git__rethrow(error, "Could not get ignore files for '%s'", path);
-	else
-		ignores->dir = git_buf_detach(&dir);
-
-	git_buf_free(&dir);
+	}
 
 	return error;
 }
 
+int git_ignore__push_dir(git_ignores *ign, const char *dir)
+{
+	int error = git_buf_joinpath(&ign->dir, ign->dir.ptr, dir);
+
+	if (error == GIT_SUCCESS)
+		error = push_ignore(
+			ign->repo, &ign->ign_path, ign->dir.ptr, GIT_IGNORE_FILE);
+
+	return error;
+}
+
+int git_ignore__pop_dir(git_ignores *ign)
+{
+	if (ign->ign_path.length > 0) {
+		git_attr_file *file = git_vector_last(&ign->ign_path);
+		if (git__suffixcmp(ign->dir.ptr, file->path) == 0)
+			git_vector_pop(&ign->ign_path);
+		git_buf_rtruncate_at_char(&ign->dir, '/');
+	}
+	return GIT_SUCCESS;
+}
+
 void git_ignore__free(git_ignores *ignores)
 {
-	git__free(ignores->dir);
-	ignores->dir = NULL;
-	git_vector_free(&ignores->stack);
+	/* don't need to free ignores->ign_internal since it is in cache */
+	git_vector_free(&ignores->ign_path);
+	git_vector_free(&ignores->ign_global);
+	git_buf_free(&ignores->dir);
+}
+
+static int ignore_lookup_in_rules(
+	git_vector *rules, git_attr_path *path, int *ignored)
+{
+	unsigned int j;
+	git_attr_fnmatch *match;
+
+	git_vector_rforeach(rules, j, match) {
+		if (git_attr_fnmatch__match(match, path) == GIT_SUCCESS) {
+			*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0);
+			return GIT_SUCCESS;
+		}
+	}
+
+	return GIT_ENOTFOUND;
 }
 
 int git_ignore__lookup(git_ignores *ignores, const char *pathname, int *ignored)
 {
 	int error;
-	unsigned int i, j;
+	unsigned int i;
 	git_attr_file *file;
 	git_attr_path path;
-	git_attr_fnmatch *match;
 
 	if ((error = git_attr_path__init(
 		&path, pathname, git_repository_workdir(ignores->repo))) < GIT_SUCCESS)
 		return git__rethrow(error, "Could not get attribute for '%s'", pathname);
 
+	/* first process builtins */
+	error = ignore_lookup_in_rules(
+		&ignores->ign_internal->rules, &path, ignored);
+	if (error == GIT_SUCCESS)
+		return error;
+
+	/* next process files in the path */
+	git_vector_foreach(&ignores->ign_path, i, file) {
+		error = ignore_lookup_in_rules(&file->rules, &path, ignored);
+		if (error == GIT_SUCCESS)
+			return error;
+	}
+
+	/* last process global ignores */
+	git_vector_foreach(&ignores->ign_global, i, file) {
+		error = ignore_lookup_in_rules(&file->rules, &path, ignored);
+		if (error == GIT_SUCCESS)
+			return error;
+	}
+
 	*ignored = 0;
 
-	git_vector_foreach(&ignores->stack, i, file) {
-		git_vector_rforeach(&file->rules, j, match) {
-			if (git_attr_fnmatch__match(match, &path) == GIT_SUCCESS) {
-				*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0);
-				goto found;
-			}
-		}
-	}
-found:
-
-	return error;
+	return GIT_SUCCESS;
 }
