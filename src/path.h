@@ -143,20 +143,18 @@ extern int git_path_contains(git_buf *dir, const char *item);
  *
  * @param parent Directory path that might contain subdir
  * @param subdir Subdirectory name to look for in parent
- * @param append_if_exists If true, then subdir will be appended to the parent path if it does exist
  * @return GIT_SUCCESS if subdirectory exists, < 0 otherwise.
  */
-extern int git_path_contains_dir(git_buf *parent, const char *subdir, int append_if_exists);
+extern int git_path_contains_dir(git_buf *parent, const char *subdir);
 
 /**
  * Check if the given path contains the given file.
  *
  * @param dir Directory path that might contain file
  * @param file File name to look for in parent
- * @param append_if_exists If true, then file will be appended to the path if it does exist
  * @return GIT_SUCCESS if file exists, < 0 otherwise.
  */
-extern int git_path_contains_file(git_buf *dir, const char *file, int append_if_exists);
+extern int git_path_contains_file(git_buf *dir, const char *file);
 
 /**
  * Clean up path, prepending base if it is not already rooted.

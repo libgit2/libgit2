@@ -398,42 +398,38 @@ int git_path_isfile(const char *path)
 static int _check_dir_contents(
 	git_buf *dir,
 	const char *sub,
-	int append_on_success,
 	int (*predicate)(const char *))
 {
 	int error = GIT_SUCCESS;
 	size_t dir_size = dir->size;
 	size_t sub_size = strlen(sub);
 
-	/* leave base valid even if we could not make space for subdir */
+	/* separate allocation and join, so we can always leave git_buf valid */
 	if ((error = git_buf_try_grow(dir, dir_size + sub_size + 2)) < GIT_SUCCESS)
 		return error;
-
-	/* save excursion */
 	git_buf_joinpath(dir, dir->ptr, sub);
 
 	error = (*predicate)(dir->ptr);
 
-	/* restore excursion */
-	if (!append_on_success || error != GIT_SUCCESS)
-		git_buf_truncate(dir, dir_size);
+	/* restore path */
+	git_buf_truncate(dir, dir_size);
 
 	return error;
 }
 
 int git_path_contains(git_buf *dir, const char *item)
 {
-	return _check_dir_contents(dir, item, 0, &git_path_exists);
+	return _check_dir_contents(dir, item, &git_path_exists);
 }
 
-int git_path_contains_dir(git_buf *base, const char *subdir, int append_if_exists)
+int git_path_contains_dir(git_buf *base, const char *subdir)
 {
-	return _check_dir_contents(base, subdir, append_if_exists, &git_path_isdir);
+	return _check_dir_contents(base, subdir, &git_path_isdir);
 }
 
-int git_path_contains_file(git_buf *base, const char *file, int append_if_exists)
+int git_path_contains_file(git_buf *base, const char *file)
 {
-	return _check_dir_contents(base, file, append_if_exists, &git_path_isfile);
+	return _check_dir_contents(base, file, &git_path_isfile);
 }
 
 int git_path_find_dir(git_buf *dir, const char *path, const char *base)

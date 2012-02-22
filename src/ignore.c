@@ -147,7 +147,7 @@ int git_ignore__pop_dir(git_ignores *ign)
 	if (ign->ign_path.length > 0) {
 		git_attr_file *file = git_vector_last(&ign->ign_path);
 		if (git__suffixcmp(ign->dir.ptr, file->path) == 0)
-			git_vector_pop(&ign->ign_path, NULL);
+			git_vector_pop(&ign->ign_path);
 		git_buf_rtruncate_at_char(&ign->dir, '/');
 	}
 	return GIT_SUCCESS;

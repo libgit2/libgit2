@@ -22,7 +22,6 @@ typedef struct git_vector {
 #define GIT_VECTOR_INIT {0}
 
 int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp);
-int git_vector_alloc(git_vector **v, unsigned int initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
 void git_vector_clear(git_vector *v);
 
@@ -54,7 +53,7 @@ int git_vector_insert(git_vector *v, void *element);
 int git_vector_insert_sorted(git_vector *v, void *element,
 	int (*on_dup)(void **old, void *new));
 int git_vector_remove(git_vector *v, unsigned int idx);
-int git_vector_pop(git_vector *v, void **element);
+void git_vector_pop(git_vector *v);
 void git_vector_uniq(git_vector *v);
 
 #endif
