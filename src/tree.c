@@ -363,6 +363,7 @@ static int write_tree(
 			written = write_tree(&sub_oid, repo, index, subdir, i);
 			if (written < 0) {
 				error = git__rethrow(written, "Failed to write subtree %s", subdir);
+				goto cleanup;
 			} else {
 				i = written - 1; /* -1 because of the loop increment */
 			}
