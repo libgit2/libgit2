@@ -491,7 +491,7 @@ int git_path_direach(
 {
 	ssize_t wd_len;
 	DIR *dir;
-	struct dirent *de;
+	struct dirent de_buf, *de;
 
 	if (git_path_to_dir(path) < GIT_SUCCESS)
 		return git_buf_lasterror(path);
@@ -501,7 +501,7 @@ int git_path_direach(
 	if (!dir)
 		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure. An error occured while opening the directory", path->ptr);
 
-	while ((de = readdir(dir)) != NULL) {
+	while (p_readdir_r(dir, &de_buf, &de) == 0 && de != NULL) {
 		int result;
 
 		if (is_dot_or_dotdot(de->d_name))
@@ -547,7 +547,7 @@ int git_path_dirload(
 	path_len -= prefix_len;
 	need_slash = (path_len > 0 && path[path_len-1] != '/') ? 1 : 0;
 
-	while ((error = readdir_r(dir, &de_buf, &de)) == 0 && de != NULL) {
+	while ((error = p_readdir_r(dir, &de_buf, &de)) == 0 && de != NULL) {
 		char *entry_path;
 		size_t entry_len;
 
