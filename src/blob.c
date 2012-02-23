@@ -102,13 +102,13 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		char *link_data;
 		ssize_t read_len;
 
-		link_data = git__malloc(size);
+		link_data = git__malloc((size_t)size);
 		if (!link_data) {
 			error = GIT_ENOMEM;
 			goto cleanup;
 		}
 
-		read_len = p_readlink(full_path.ptr, link_data, size);
+		read_len = p_readlink(full_path.ptr, link_data, (size_t)size);
 
 		if (read_len != (ssize_t)size) {
 			error = git__throw(GIT_EOSERR, "Failed to create blob. Can't read symlink");
@@ -116,7 +116,7 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 			goto cleanup;
 		}
 
-		stream->write(stream, link_data, size);
+		stream->write(stream, link_data, (size_t)size);
 		free(link_data);
 
 	} else {
