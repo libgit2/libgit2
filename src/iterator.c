@@ -109,7 +109,7 @@ static int tree_iterator__advance(
 {
 	int error = GIT_SUCCESS;
 	tree_iterator *ti = (tree_iterator *)self;
-	const git_tree_entry *te;
+	const git_tree_entry *te = NULL;
 
 	if (entry != NULL)
 		*entry = NULL;
