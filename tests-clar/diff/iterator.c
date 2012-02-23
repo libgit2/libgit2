@@ -312,7 +312,7 @@ static void workdir_iterator_test(
 	while (entry != NULL) {
 		int ignored = git_iterator_current_is_ignored(i);
 
-		if (!ignored && S_ISDIR(entry->mode)) {
+		if (S_ISDIR(entry->mode)) {
 			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
 			continue;
 		}
@@ -338,7 +338,7 @@ static void workdir_iterator_test(
 
 void test_diff_iterator__workdir_0(void)
 {
-	workdir_iterator_test("attr", 15, 4, NULL, "ign");
+	workdir_iterator_test("attr", 24, 2, NULL, "ign");
 }
 
 static const char *status_paths[] = {
