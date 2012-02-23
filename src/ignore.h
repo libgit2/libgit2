@@ -10,14 +10,28 @@
 #include "repository.h"
 #include "vector.h"
 
+/* The git_ignores structure maintains three sets of ignores:
+ * - internal ignores
+ * - per directory ignores
+ * - global ignores (at lower priority than the others)
+ * As you traverse from one directory to another, you can push and pop
+ * directories onto git_ignores list efficiently.
+ */
 typedef struct {
 	git_repository *repo;
-	char *dir;
-	git_vector stack;
+	git_buf dir;
+	git_attr_file *ign_internal;
+	git_vector ign_path;
+	git_vector ign_global;
 } git_ignores;
 
-extern int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *stack);
-extern void git_ignore__free(git_ignores *stack);
-extern int git_ignore__lookup(git_ignores *stack, const char *path, int *ignored);
+extern int git_ignore__for_path(
+	git_repository *repo, const char *path, git_ignores *ign);
+
+extern int git_ignore__push_dir(git_ignores *ign, const char *dir);
+extern int git_ignore__pop_dir(git_ignores *ign);
+
+extern void git_ignore__free(git_ignores *ign);
+extern int git_ignore__lookup(git_ignores *ign, const char *path, int *ignored);
 
 #endif

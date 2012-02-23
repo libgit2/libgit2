@@ -81,14 +81,14 @@ void git_repository_free(git_repository *repo)
 static int quickcheck_repository_dir(git_buf *repository_path)
 {
 	/* Check OBJECTS_DIR first, since it will generate the longest path name */
-	if (git_path_contains_dir(repository_path, GIT_OBJECTS_DIR, 0) < 0)
+	if (git_path_contains_dir(repository_path, GIT_OBJECTS_DIR) < 0)
 		return GIT_ERROR;
 
 	/* Ensure HEAD file exists */
-	if (git_path_contains_file(repository_path, GIT_HEAD_FILE, 0) < 0)
+	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) < 0)
 		return GIT_ERROR;
 
-	if (git_path_contains_dir(repository_path, GIT_REFS_DIR, 0) < 0)
+	if (git_path_contains_dir(repository_path, GIT_REFS_DIR) < 0)
 		return GIT_ERROR;
 
 	return GIT_SUCCESS;
@@ -166,8 +166,8 @@ int git_repository_open(git_repository **repo_out, const char *path)
 	 * of the working dir, by testing if it contains a `.git`
 	 * folder inside of it.
 	 */
-	git_path_contains_dir(&path_buf, GIT_DIR, 1); /* append on success */
-	/* ignore error, since it just means `path/.git` doesn't exist */
+	if (git_path_contains_dir(&path_buf, GIT_DIR) == GIT_SUCCESS)
+		git_buf_joinpath(&path_buf, path_buf.ptr, GIT_DIR);
 
 	if (quickcheck_repository_dir(&path_buf) < GIT_SUCCESS) {
 		error = git__throw(GIT_ENOTAREPO,

@@ -79,6 +79,24 @@ git_off_t git_futils_filesize(git_file fd)
 	return sb.st_size;
 }
 
+#define GIT_MODE_PERMS_MASK			0777
+#define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
+#define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
+
+mode_t git_futils_canonical_mode(mode_t raw_mode)
+{
+	if (S_ISREG(raw_mode))
+		return S_IFREG | GIT_CANONICAL_PERMS(raw_mode);
+	else if (S_ISLNK(raw_mode))
+		return S_IFLNK;
+	else if (S_ISDIR(raw_mode))
+		return S_IFDIR;
+	else if (S_ISGITLINK(raw_mode))
+		return S_IFGITLINK;
+	else
+		return 0;
+}
+
 int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mtime, int *updated)
 {
 	git_file fd;

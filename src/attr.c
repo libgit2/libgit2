@@ -218,6 +218,48 @@ int git_attr_cache__is_cached(git_repository *repo, const char *path)
 	return (git_hashtable_lookup(repo->attrcache.files, cache_key) == NULL);
 }
 
+int git_attr_cache__lookup_or_create_file(
+	git_repository *repo,
+	const char *key,
+	const char *filename,
+	int (*loader)(git_repository *, const char *, git_attr_file *),
+	git_attr_file **file_ptr)
+{
+	int error;
+	git_attr_cache *cache = &repo->attrcache;
+	git_attr_file *file = NULL;
+
+	file = git_hashtable_lookup(cache->files, key);
+	if (file) {
+		*file_ptr = file;
+		return GIT_SUCCESS;
+	}
+
+	if (loader && git_path_exists(filename) != GIT_SUCCESS) {
+		*file_ptr = NULL;
+		return GIT_SUCCESS;
+	}
+
+	if ((error = git_attr_file__new(&file)) < GIT_SUCCESS)
+		return error;
+
+	if (loader)
+		error = loader(repo, filename, file);
+	else
+		error = git_attr_file__set_path(repo, key, file);
+
+	if (error == GIT_SUCCESS)
+		error = git_hashtable_insert(cache->files, file->path, file);
+
+	if (error < GIT_SUCCESS) {
+		git_attr_file__free(file);
+		file = NULL;
+	}
+
+	*file_ptr = file;
+	return error;
+}
+
 /* add git_attr_file to vector of files, loading if needed */
 int git_attr_cache__push_file(
 	git_repository *repo,
@@ -226,16 +268,14 @@ int git_attr_cache__push_file(
 	const char     *filename,
 	int (*loader)(git_repository *, const char *, git_attr_file *))
 {
-	int error = GIT_SUCCESS;
-	git_attr_cache *cache = &repo->attrcache;
+	int error;
 	git_buf path = GIT_BUF_INIT;
 	git_attr_file *file = NULL;
-	int add_to_cache = 0;
 	const char *cache_key;
 
 	if (base != NULL) {
 		if ((error = git_buf_joinpath(&path, base, filename)) < GIT_SUCCESS)
-			goto cleanup;
+			return error;
 		filename = path.ptr;
 	}
 
@@ -244,28 +284,12 @@ int git_attr_cache__push_file(
 	if (repo && git__prefixcmp(cache_key, git_repository_workdir(repo)) == 0)
 		cache_key += strlen(git_repository_workdir(repo));
 
-	file = git_hashtable_lookup(cache->files, cache_key);
-	if (file == NULL && git_path_exists(filename) == GIT_SUCCESS) {
-		if ((error = git_attr_file__new(&file)) == GIT_SUCCESS) {
-			if ((error = loader(repo, filename, file)) < GIT_SUCCESS) {
-				git_attr_file__free(file);
-				file = NULL;
-			}
-		}
-		add_to_cache = (error == GIT_SUCCESS);
-	}
+	error = git_attr_cache__lookup_or_create_file(
+		repo, cache_key, filename, loader, &file);
 
-	if (error == GIT_SUCCESS && file != NULL) {
-		/* add file to vector, if we found it */
+	if (error == GIT_SUCCESS && file != NULL)
 		error = git_vector_insert(stack, file);
 
-		/* add file to cache, if it is new */
-		/* do this after above step b/c it is not critical */
-		if (error == GIT_SUCCESS && add_to_cache && file->path != NULL)
-			error = git_hashtable_insert(cache->files, file->path, file);
-	}
-
-cleanup:
 	git_buf_free(&path);
 	return error;
 }
