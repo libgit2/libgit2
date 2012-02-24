@@ -101,3 +101,16 @@ void test_network_remotes__transform_r(void)
 	cl_assert(!strcmp(git_buf_cstr(&buf), "refs/remotes/test/master"));
 	git_buf_free(&buf);
 }
+
+void test_network_remotes__missing_refspecs(void)
+{
+	git_config *cfg;
+
+	git_remote_free(_remote);
+
+	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
+	cl_git_pass(git_remote_load(&_remote, _repo, "specless"));
+
+	git_config_free(cfg);
+}

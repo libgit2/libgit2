@@ -150,6 +150,9 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	}
 
 	error = parse_remote_refspec(config, &remote->fetch, git_buf_cstr(&buf));
+	if (error == GIT_ENOTFOUND)
+		error = GIT_SUCCESS;
+
 	if (error < GIT_SUCCESS) {
 		error = git__rethrow(error, "Failed to get fetch refspec");
 		goto cleanup;
