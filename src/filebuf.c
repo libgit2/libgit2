@@ -291,6 +291,8 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 		goto cleanup;
 	}
 
+	p_unlink(file->path_original);
+
 	error = p_rename(file->path_lock, file->path_original);
 
 cleanup:
