@@ -337,8 +337,8 @@ static int config_get_multivar(git_config_file *cfg, const char *name, const cha
 
 static int config_set_multivar(git_config_file *cfg, const char *name, const char *regexp, const char *value)
 {
-	int error;
-	cvar_t *var;
+	int error, replaced = 0;
+	cvar_t *var, *newvar;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key;
 	regex_t preg;
@@ -350,19 +350,39 @@ static int config_set_multivar(git_config_file *cfg, const char *name, const cha
 		return error;
 
 	var = git_hashtable_lookup(b->values, key);
-	free(key);
-
-	if (var == NULL)
+	if (var == NULL) {
+		free(key);
 		return git__throw(GIT_ENOTFOUND, "Variable '%s' not found", name);
+	}
 
 	error = regcomp(&preg, regexp, REG_EXTENDED);
-	if (error < 0)
+	if (error < 0) {
+		free(key);
 		return git__throw(GIT_EINVALIDARGS, "Failed to compile regex");
+	}
 
+	do {
+		if (!regexec(&preg, var->value, 0, NULL, 0)) {
+			char *tmp = git__strdup(value);
+			if (tmp == NULL) {
+				error = GIT_ENOMEM;
+				goto exit;
+			}
 
-	/* "^$" means we need to addd */
-	if (!regexec(&preg, "", 0, NULL, 0)) {
-		cvar_t *newvar = git__malloc(sizeof(cvar_t));
+			free(var->value);
+			var->value = tmp;
+			replaced = 1;
+		}
+
+		if (var->next != NULL)
+			var = var->next;
+		else
+			break;
+	} while (var != NULL);
+
+	/* If we've reached the end of the variables and we haven't found it yet, we need to append it */
+	if (!replaced) {
+		newvar = git__malloc(sizeof(cvar_t));
 		if (newvar == NULL) {
 			error = GIT_ENOMEM;
 			goto exit;
@@ -380,39 +400,17 @@ static int config_set_multivar(git_config_file *cfg, const char *name, const cha
 			goto exit;
 		}
 
-		while (var->next != NULL) {
-			var = var->next;
-		}
-
 		var->next = newvar;
-		error = config_write(b, var->key, &preg, value);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to update value in file");
-			goto exit;
-		}
 	}
 
-	do {
-		if (!regexec(&preg, var->value, 0, NULL, 0)) {
-			char *tmp = git__strdup(value);
-			if (tmp == NULL) {
-				error = GIT_ENOMEM;
-				goto exit;
-			}
-
-			free(var->value);
-			var->value = tmp;
-			error = config_write(b, var->key, &preg, var->value);
-			if (error < GIT_SUCCESS) {
-				error = git__rethrow(error, "Failed to update value in file");
-				goto exit;
-			}
-		}
-
-		var = var->next;
-	} while (var != NULL);
+	error = config_write(b, key, &preg, value);
+	if (error < GIT_SUCCESS) {
+		error = git__rethrow(error, "Failed to update value in file");
+		goto exit;
+	}
 
  exit:
+	free(key);
 	regfree(&preg);
 	return error;
 }
@@ -960,11 +958,11 @@ static int write_section(git_filebuf *file, const char *key)
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char* value)
 {
 	int error = GIT_SUCCESS, c;
-	int section_matches = 0, last_section_matched = 0;
+	int section_matches = 0, last_section_matched = 0, preg_replaced = 0;
 	char *current_section = NULL, *section, *name, *ldot;
-	char *var_name, *var_value, *data_start;
+	char *var_name, *var_value;
 	git_filebuf file = GIT_FILEBUF_INIT;
-	const char *pre_end = NULL, *post_start = NULL;
+	const char *pre_end = NULL, *post_start = NULL, *data_start;
 
 	/* We need to read in our own config file */
 	error = git_futils_readbuffer(&cfg->reader.buffer, cfg->file_path);
@@ -1043,10 +1041,6 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 				if (!last_section_matched) {
 					cfg_consume_line(cfg);
 					break;
-				} else {
-					/* As a last attempt, if we were given "^$", we should add it */
-					if (preg != NULL && regexec(preg, "", 0, NULL, 0))
-						break;
 				}
 			} else {
 				int cmp = -1;
@@ -1055,7 +1049,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 				if ((error = parse_variable(cfg, &var_name, &var_value)) == GIT_SUCCESS)
 					cmp = strcasecmp(name, var_name);
 
-				if (preg != NULL)
+				if (cmp == 0 && preg != NULL)
 					cmp = regexec(preg, var_value, 0, NULL, 0);
 
 				git__free(var_name);
@@ -1071,6 +1065,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			 * We've found the variable we wanted to change, so
 			 * write anything up to it
 			 */
+			preg_replaced = 1;
 			error = git_filebuf_write(&file, data_start, pre_end - data_start);
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to write the first part of the file");
@@ -1089,6 +1084,11 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to overwrite the variable");
 				break;
+			}
+
+			if (preg != NULL) {
+				data_start = post_start;
+				continue;
 			}
 
 			/* And then the write out rest of the file */
@@ -1113,8 +1113,20 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	 * 2) we didn't find a section for us so we need to create it
 	 * ourselves.
 	 *
-	 * Either way we need to write out the whole file.
+	 * 3) we're setting a multivar with a regex, which means we
+	 * continue to search for matching values
+	 *
+	 * In the last case, if we've already replaced a value, we
+	 * want to write the rest of the file. Otherwise we need to write
+	 * out the whole file and then the new variable.
 	 */
+	if (preg_replaced) {
+		error = git_filebuf_printf(&file, "\n%s", data_start);
+		if (error < GIT_SUCCESS)
+			error = git__rethrow(error, "Failed to write the rest of the file");
+
+		goto cleanup;
+	}
 
 	error = git_filebuf_write(&file, cfg->reader.buffer.data, cfg->reader.buffer.len);
 	if (error < GIT_SUCCESS) {
@@ -1124,10 +1136,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 
 	/* And now if we just need to add a variable */
 	if (section_matches) {
-		if (preg == NULL || !regexec(preg, "", 0, NULL, 0)) {
-			error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
-			goto cleanup;
-		}
+		error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+		goto cleanup;
 	}
 
 	/* Or maybe we need to write out a whole section */
@@ -1135,8 +1145,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	if (error < GIT_SUCCESS)
 		git__rethrow(error, "Failed to write new section");
 
-	if (preg == NULL || !regexec(preg, "", 0, NULL, 0))
-		error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+	error = git_filebuf_printf(&file, "\t%s = %s\n", name, value);
  cleanup:
 	git__free(section);
 	git__free(current_section);
