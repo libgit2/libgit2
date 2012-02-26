@@ -197,6 +197,17 @@ GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
  */
 GIT_EXTERN(int) git_remote_valid_url(const char *url);
 
+/**
+ * Get a list of the configured remotes for a repo
+ *
+ * The string array must be freed by the user.
+ *
+ * @param remotes_list a string array with the names of the remotes
+ * @param repo the repository to query
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_remote_list(git_strarray *remotes_list, git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
