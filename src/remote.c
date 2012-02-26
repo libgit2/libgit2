@@ -15,6 +15,8 @@
 #include "fetch.h"
 #include "refs.h"
 
+#include <regex.h>
+
 static int refspec_parse(git_refspec *refspec, const char *str)
 {
 	char *delim;
@@ -422,4 +424,71 @@ void git_remote_free(git_remote *remote)
 	git_vector_free(&remote->refs);
 	git_remote_disconnect(remote);
 	git__free(remote);
+}
+
+struct cb_data {
+	git_vector *list;
+	regex_t *preg;
+};
+
+static int remote_list_cb(const char *name, const char *GIT_UNUSED(value), void *data_)
+{
+	struct cb_data *data = (struct cb_data *)data_;
+	size_t nmatch = 2;
+	regmatch_t pmatch[2];
+	int error;
+	GIT_UNUSED_ARG(value);
+
+	if (!regexec(data->preg, name, nmatch, pmatch, 0)) {
+		char *remote_name = git__strndup(&name[pmatch[1].rm_so], pmatch[1].rm_eo - pmatch[1].rm_so);
+		if (remote_name == NULL)
+			return GIT_ENOMEM;
+
+		error = git_vector_insert(data->list, remote_name);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
+
+	return GIT_SUCCESS;
+}
+
+int git_remote_list(git_strarray *remotes_list, git_repository *repo)
+{
+	git_config *cfg;
+	git_vector list;
+	regex_t preg;
+	struct cb_data data;
+	int error;
+
+	error = git_repository_config__weakptr(&cfg, repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = git_vector_init(&list, 4, NULL);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = regcomp(&preg, "^remote\\.(.*)\\.url$", REG_EXTENDED);
+	if (error < 0)
+		return GIT_EOSERR;
+
+	data.list = &list;
+	data.preg = &preg;
+	error = git_config_foreach(cfg, remote_list_cb, &data);
+	regfree(&preg);
+	if (error < GIT_SUCCESS) {
+		size_t i;
+		char *elem;
+		git_vector_foreach(&list, i, elem) {
+			free(elem);
+		}
+
+		git_vector_free(&list);
+		return error;
+	}
+
+	remotes_list->strings = (char **)list.contents;
+	remotes_list->count = list.length;
+
+	return GIT_SUCCESS;
 }
