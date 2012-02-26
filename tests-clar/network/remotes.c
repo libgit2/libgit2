@@ -114,3 +114,21 @@ void test_network_remotes__missing_refspecs(void)
 
 	git_config_free(cfg);
 }
+
+void test_network_remotes__list(void)
+{
+	git_strarray list;
+	git_config *cfg;
+
+	cl_git_pass(git_remote_list(&list, _repo));
+	cl_assert(list.count == 1);
+	git_strarray_free(&list);
+
+	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
+	cl_git_pass(git_remote_list(&list, _repo));
+	cl_assert(list.count == 2);
+	git_strarray_free(&list);
+
+	git_config_free(cfg);
+}
