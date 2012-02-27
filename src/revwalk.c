@@ -13,6 +13,8 @@
 
 #include "git2/revwalk.h"
 
+#include <regex.h>
+
 typedef struct commit_object {
 	git_oid oid;
 	uint32_t time;
@@ -298,10 +300,128 @@ int git_revwalk_push(git_revwalk *walk, const git_oid *oid)
 	return push_commit(walk, oid, 0);
 }
 
+
 int git_revwalk_hide(git_revwalk *walk, const git_oid *oid)
 {
 	assert(walk && oid);
 	return push_commit(walk, oid, 1);
+}
+
+struct push_cb_data {
+	git_revwalk *walk;
+	const char *glob;
+	int hide;
+};
+
+static int push_glob_cb(const char *refname, void *data_)
+{
+	struct push_cb_data *data = (struct push_cb_data *)data_;
+
+	if (!git__fnmatch(data->glob, refname, 0)) {
+		git_reference *ref, *resolved;
+		int error;
+
+		error = git_reference_lookup(&ref, data->walk->repo, refname);
+		if (error < GIT_SUCCESS)
+			return error;
+		error = git_reference_resolve(&resolved, ref);
+		git_reference_free(ref);
+		if (error < GIT_SUCCESS)
+			return error;
+		error = push_commit(data->walk, git_reference_oid(resolved), data->hide);
+		git_reference_free(resolved);
+		return error;
+	}
+
+	return GIT_SUCCESS;
+}
+
+static int push_glob(git_revwalk *walk, const char *glob, int hide)
+{
+	git_buf buf = GIT_BUF_INIT;
+	struct push_cb_data data;
+	int error;
+	regex_t preg;
+
+	assert(walk && glob);
+
+	/* refs/ is implied if not given in the glob */
+	if (strncmp(glob, GIT_REFS_DIR, strlen(GIT_REFS_DIR))) {
+		git_buf_printf(&buf, GIT_REFS_DIR "%s", glob);
+	} else {
+		git_buf_puts(&buf, glob);
+	}
+
+	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
+	memset(&preg, 0x0, sizeof(regex_t));
+	if (regcomp(&preg, "[?*[]", REG_EXTENDED)) {
+		error = git__throw(GIT_EOSERR, "Regex failed to compile");
+		goto cleanup;
+	}
+
+	if (regexec(&preg, glob, 0, NULL, 0))
+		git_buf_puts(&buf, "/*");
+
+	if (git_buf_oom(&buf)) {
+		error = GIT_ENOMEM;
+		goto cleanup;
+	}
+
+	data.walk = walk;
+	data.glob = git_buf_cstr(&buf);
+	data.hide = hide;
+
+	error = git_reference_foreach(walk->repo, GIT_REF_LISTALL, push_glob_cb, &data);
+
+cleanup:
+	regfree(&preg);
+	git_buf_free(&buf);
+	return error;
+}
+
+int git_revwalk_push_glob(git_revwalk *walk, const char *glob)
+{
+	assert(walk && glob);
+	return push_glob(walk, glob, 0);
+}
+
+int git_revwalk_hide_glob(git_revwalk *walk, const char *glob)
+{
+	assert(walk && glob);
+	return push_glob(walk, glob, 1);
+}
+
+static int push_head(git_revwalk *walk, int hide)
+{
+	git_reference *ref, *resolved;
+	int error;
+
+	error = git_reference_lookup(&ref, walk->repo, "HEAD");
+	if (error < GIT_SUCCESS) {
+		return error;
+	}
+	error = git_reference_resolve(&resolved, ref);
+	if (error < GIT_SUCCESS) {
+		return error;
+	}
+	git_reference_free(ref);
+
+	error  = push_commit(walk, git_reference_oid(resolved), hide);
+
+	git_reference_free(resolved);
+	return error;
+}
+
+int git_revwalk_push_head(git_revwalk *walk)
+{
+	assert(walk);
+	return push_head(walk, 0);
+}
+
+int git_revwalk_hide_head(git_revwalk *walk)
+{
+	assert(walk);
+	return push_head(walk, 1);
 }
 
 static int revwalk_enqueue_timesort(git_revwalk *walk, commit_object *commit)
