@@ -117,6 +117,14 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
 GIT_EXTERN(int) git_revwalk_push_glob(git_revwalk *walk, const char *glob);
 
 /**
+ * Push the repository's HEAD
+ *
+ * @param walk the walker being used for the traversal
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_push_head(git_revwalk *walk);
+
+/**
  * Mark a commit (and its ancestors) uninteresting for the output.
  *
  * The given OID must belong to a commit on the walked
@@ -146,6 +154,14 @@ GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide_glob(git_revwalk *walk, const char *glob);
+
+/**
+ * Hide the repository's HEAD
+ *
+ * @param walk the walker being used for the traversal
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
 
 /**
  * Get the next commit from the revision walk.

@@ -132,3 +132,18 @@ void test_revwalk_basic__glob_heads(void)
 	/* git log --branches --oneline | wc -l => 13 */
 	cl_assert(i == 13);
 }
+
+void test_revwalk_basic__push_head(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	cl_git_pass(git_revwalk_push_head(_walk));
+
+	while (git_revwalk_next(&oid, _walk) == GIT_SUCCESS) {
+		i++;
+	}
+
+	/* git log HEAD --oneline | wc -l => 7 */
+	cl_assert(i == 7);
+}

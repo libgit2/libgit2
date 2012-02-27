@@ -391,6 +391,39 @@ int git_revwalk_hide_glob(git_revwalk *walk, const char *glob)
 	return push_glob(walk, glob, 1);
 }
 
+static int push_head(git_revwalk *walk, int hide)
+{
+	git_reference *ref, *resolved;
+	int error;
+
+	error = git_reference_lookup(&ref, walk->repo, "HEAD");
+	if (error < GIT_SUCCESS) {
+		return error;
+	}
+	error = git_reference_resolve(&resolved, ref);
+	if (error < GIT_SUCCESS) {
+		return error;
+	}
+	git_reference_free(ref);
+
+	error  = push_commit(walk, git_reference_oid(resolved), hide);
+
+	git_reference_free(resolved);
+	return error;
+}
+
+int git_revwalk_push_head(git_revwalk *walk)
+{
+	assert(walk);
+	return push_head(walk, 0);
+}
+
+int git_revwalk_hide_head(git_revwalk *walk)
+{
+	assert(walk);
+	return push_head(walk, 1);
+}
+
 static int revwalk_enqueue_timesort(git_revwalk *walk, commit_object *commit)
 {
 	return git_pqueue_insert(&walk->iterator_time, commit);
