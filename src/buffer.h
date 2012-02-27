@@ -11,7 +11,7 @@
 
 typedef struct {
 	char *ptr;
-	ssize_t asize, size;
+	size_t asize, size;
 } git_buf;
 
 extern char git_buf_initbuf[];
@@ -47,7 +47,7 @@ int git_buf_try_grow(git_buf *buf, size_t target_size);
 void git_buf_free(git_buf *buf);
 void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 char *git_buf_detach(git_buf *buf);
-void git_buf_attach(git_buf *buf, char *ptr, ssize_t asize);
+void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
 
 /**
  * Test if there have been any reallocation failures with this git_buf.
@@ -83,7 +83,7 @@ int git_buf_puts(git_buf *buf, const char *string);
 int git_buf_printf(git_buf *buf, const char *format, ...) GIT_FORMAT_PRINTF(2, 3);
 void git_buf_clear(git_buf *buf);
 void git_buf_consume(git_buf *buf, const char *end);
-void git_buf_truncate(git_buf *buf, ssize_t len);
+void git_buf_truncate(git_buf *buf, size_t len);
 void git_buf_rtruncate_at_char(git_buf *path, char separator);
 
 int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...);
@@ -114,5 +114,8 @@ GIT_INLINE(int) git_buf_rfind_next(git_buf *buf, char ch)
 	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
 	return idx;
 }
+
+/* Remove whitespace from the end of the buffer */
+void git_buf_rtrim(git_buf *buf);
 
 #endif

@@ -218,8 +218,8 @@ check_buf_append(
 	const char* data_a,
 	const char* data_b,
 	const char* expected_data,
-	ssize_t expected_size,
-	ssize_t expected_asize)
+	size_t expected_size,
+	size_t expected_asize)
 {
 	git_buf tgt = GIT_BUF_INIT;
 
@@ -371,8 +371,8 @@ void test_core_buffer__7(void)
 	git_buf_attach(&a, b, 0);
 
 	cl_assert_strequal(fun, a.ptr);
-	cl_assert(a.size == (ssize_t)strlen(fun));
-	cl_assert(a.asize == (ssize_t)strlen(fun) + 1);
+	cl_assert(a.size == strlen(fun));
+	cl_assert(a.asize == strlen(fun) + 1);
 
 	git_buf_free(&a);
 
@@ -380,8 +380,8 @@ void test_core_buffer__7(void)
 	git_buf_attach(&a, b, strlen(fun) + 1);
 
 	cl_assert_strequal(fun, a.ptr);
-	cl_assert(a.size == (ssize_t)strlen(fun));
-	cl_assert(a.asize == (ssize_t)strlen(fun) + 1);
+	cl_assert(a.size == strlen(fun));
+	cl_assert(a.asize == strlen(fun) + 1);
 
 	git_buf_free(&a);
 }

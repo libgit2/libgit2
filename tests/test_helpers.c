@@ -182,7 +182,7 @@ int cmp_objects(git_rawobj *o, object_data *d)
 
 int copy_file(const char *src, const char *dst)
 {
-	git_fbuffer source_buf;
+	git_buf source_buf = GIT_BUF_INIT;
 	git_file dst_fd;
 	int error = GIT_ERROR;
 
@@ -193,10 +193,10 @@ int copy_file(const char *src, const char *dst)
 	if (dst_fd < 0)
 		goto cleanup;
 
-	error = p_write(dst_fd, source_buf.data, source_buf.len);
+	error = p_write(dst_fd, source_buf.ptr, source_buf.size);
 
 cleanup:
-	git_futils_freebuffer(&source_buf);
+	git_buf_free(&source_buf);
 	p_close(dst_fd);
 
 	return error;
@@ -204,22 +204,23 @@ cleanup:
 
 int cmp_files(const char *a, const char *b)
 {
-	git_fbuffer buf_a, buf_b;
+	git_buf buf_a = GIT_BUF_INIT;
+	git_buf buf_b = GIT_BUF_INIT;
 	int error = GIT_ERROR;
 
 	if (git_futils_readbuffer(&buf_a, a) < GIT_SUCCESS)
 		return GIT_ERROR;
 
 	if (git_futils_readbuffer(&buf_b, b) < GIT_SUCCESS) {
-		git_futils_freebuffer(&buf_a);
+		git_buf_free(&buf_a);
 		return GIT_ERROR;
 	}
 
-	if (buf_a.len == buf_b.len && !memcmp(buf_a.data, buf_b.data, buf_a.len))
+	if (buf_a.size == buf_b.size && !memcmp(buf_a.ptr, buf_b.ptr, buf_a.size))
 		error = GIT_SUCCESS;
 
-	git_futils_freebuffer(&buf_a);
-	git_futils_freebuffer(&buf_b);
+	git_buf_free(&buf_a);
+	git_buf_free(&buf_b);
 
 	return error;
 }

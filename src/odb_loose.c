@@ -75,13 +75,13 @@ static int object_file_name(git_buf *name, const char *dir, const git_oid *id)
 }
 
 
-static size_t get_binary_object_header(obj_hdr *hdr, git_fbuffer *obj)
+static size_t get_binary_object_header(obj_hdr *hdr, git_buf *obj)
 {
 	unsigned char c;
-	unsigned char *data = obj->data;
+	unsigned char *data = (unsigned char *)obj->ptr;
 	size_t shift, size, used = 0;
 
-	if (obj->len == 0)
+	if (obj->size == 0)
 		return 0;
 
 	c = data[used++];
@@ -90,7 +90,7 @@ static size_t get_binary_object_header(obj_hdr *hdr, git_fbuffer *obj)
 	size = c & 15;
 	shift = 4;
 	while (c & 0x80) {
-		if (obj->len <= used)
+		if (obj->size <= used)
 			return 0;
 		if (sizeof(size_t) * 8 <= shift)
 			return 0;
@@ -177,12 +177,12 @@ static void set_stream_output(z_stream *s, void *out, size_t len)
 }
 
 
-static int start_inflate(z_stream *s, git_fbuffer *obj, void *out, size_t len)
+static int start_inflate(z_stream *s, git_buf *obj, void *out, size_t len)
 {
 	int status;
 
 	init_stream(s, out, len);
-	set_stream_input(s, obj->data, obj->len);
+	set_stream_input(s, obj->ptr, obj->size);
 
 	if ((status = inflateInit(s)) < Z_OK)
 		return status;
@@ -287,7 +287,7 @@ static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
  * of loose object data into packs. This format is no longer used, but
  * we must still read it.
  */
-static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_fbuffer *obj)
+static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 {
 	unsigned char *in, *buf;
 	obj_hdr hdr;
@@ -310,8 +310,8 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_fbuffer *obj)
 	if (!buf)
 		return GIT_ENOMEM;
 
-	in = ((unsigned char *)obj->data) + used;
-	len = obj->len - used;
+	in = ((unsigned char *)obj->ptr) + used;
+	len = obj->size - used;
 	if (inflate_buffer(in, len, buf, hdr.size)) {
 		git__free(buf);
 		return git__throw(GIT_ERROR, "Failed to inflate loose object. Could not inflate buffer");
@@ -325,7 +325,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_fbuffer *obj)
 	return GIT_SUCCESS;
 }
 
-static int inflate_disk_obj(git_rawobj *out, git_fbuffer *obj)
+static int inflate_disk_obj(git_rawobj *out, git_buf *obj)
 {
 	unsigned char head[64], *buf;
 	z_stream zs;
@@ -335,7 +335,7 @@ static int inflate_disk_obj(git_rawobj *out, git_fbuffer *obj)
 	/*
 	 * check for a pack-like loose object
 	 */
-	if (!is_zlib_compressed_data(obj->data))
+	if (!is_zlib_compressed_data((unsigned char *)obj->ptr))
 		return inflate_packlike_loose_disk_obj(out, obj);
 
 	/*
@@ -383,7 +383,7 @@ static int inflate_disk_obj(git_rawobj *out, git_fbuffer *obj)
 static int read_loose(git_rawobj *out, git_buf *loc)
 {
 	int error;
-	git_fbuffer obj = GIT_FBUFFER_INIT;
+	git_buf obj = GIT_BUF_INIT;
 
 	assert(out && loc);
 
@@ -398,7 +398,7 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 		return git__throw(GIT_ENOTFOUND, "Failed to read loose object. File not found");
 
 	error = inflate_disk_obj(out, &obj);
-	git_futils_freebuffer(&obj);
+	git_buf_free(&obj);
 
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to read loose object");
 }

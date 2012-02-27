@@ -111,7 +111,7 @@ int git_attr_file__from_file(
 	git_repository *repo, const char *path, git_attr_file *file)
 {
 	int error = GIT_SUCCESS;
-	git_fbuffer fbuf = GIT_FBUFFER_INIT;
+	git_buf fbuf = GIT_BUF_INIT;
 
 	assert(path && file);
 
@@ -120,9 +120,9 @@ int git_attr_file__from_file(
 
 	if (error == GIT_SUCCESS &&
 		(error = git_futils_readbuffer(&fbuf, path)) == GIT_SUCCESS)
-		error = git_attr_file__from_buffer(repo, fbuf.data, file);
+		error = git_attr_file__from_buffer(repo, fbuf.ptr, file);
 
-	git_futils_freebuffer(&fbuf);
+	git_buf_free(&fbuf);
 	if (error != GIT_SUCCESS)
 		git__rethrow(error, "Could not open attribute file '%s'", path);
 
