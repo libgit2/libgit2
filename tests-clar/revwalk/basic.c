@@ -147,3 +147,20 @@ void test_revwalk_basic__push_head(void)
 	/* git log HEAD --oneline | wc -l => 7 */
 	cl_assert(i == 7);
 }
+
+void test_revwalk_basic__push_head_hide_glob(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	cl_git_pass(git_revwalk_push_head(_walk));
+	/* This is a hack, as we know this will only match the packed-test branch */
+	cl_git_pass(git_revwalk_hide_glob(_walk, "heads/packed-test*"));
+
+	while (git_revwalk_next(&oid, _walk) == GIT_SUCCESS) {
+		i++;
+	}
+
+	/* git log HEAD --oneline --not refs/heads/packed-test | wc -l => 4 */
+	cl_assert(i == 4);
+}
