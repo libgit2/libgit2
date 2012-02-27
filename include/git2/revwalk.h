@@ -101,6 +101,28 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  */
 GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
 
+/**
+ * Push matching references
+ *
+ * The OIDs pinted to by the references that match the given glob
+ * pattern will be pushed to the revision walker.
+ *
+ * A leading 'refs/' is implied it not present as well as a trailing
+ * '/ *' if the glob lacks '?', '*' or '['.
+ *
+ * @param walk the walker being used for the traversal
+ * @param glob the glob pattern references should match
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_push_glob(git_revwalk *walk, const char *glob);
+
+/**
+ * Push the repository's HEAD
+ *
+ * @param walk the walker being used for the traversal
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_push_head(git_revwalk *walk);
 
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
@@ -116,6 +138,30 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
+
+/**
+ * Hide matching references.
+ *
+ * The OIDs pinted to by the references that match the given glob
+ * pattern and their ancestors will be hidden from the output on the
+ * revision walk.
+ *
+ * A leading 'refs/' is implied it not present as well as a trailing
+ * '/ *' if the glob lacks '?', '*' or '['.
+ *
+ * @param walk the walker being used for the traversal
+ * @param glob the glob pattern references should match
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_hide_glob(git_revwalk *walk, const char *glob);
+
+/**
+ * Hide the repository's HEAD
+ *
+ * @param walk the walker being used for the traversal
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
 
 /**
  * Get the next commit from the revision walk.
