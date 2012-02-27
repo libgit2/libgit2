@@ -117,3 +117,18 @@ void test_revwalk_basic__sorting_modes(void)
 	cl_git_pass(test_walk(_walk, &id, GIT_SORT_TIME | GIT_SORT_REVERSE, commit_sorting_time_reverse, 1));
 	cl_git_pass(test_walk(_walk, &id, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE, commit_sorting_topo_reverse, 2));
 }
+
+void test_revwalk_basic__glob_heads(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
+
+	while (git_revwalk_next(&oid, _walk) == GIT_SUCCESS) {
+		i++;
+	}
+
+	/* git log --branches --oneline | wc -l => 13 */
+	cl_assert(i == 13);
+}
