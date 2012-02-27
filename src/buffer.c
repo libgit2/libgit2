@@ -386,4 +386,6 @@ void git_buf_rtrim(git_buf *buf)
 
 		buf->size--;
 	}
+
+	buf->ptr[buf->size] = '\0';
 }
