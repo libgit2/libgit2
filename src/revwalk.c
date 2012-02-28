@@ -310,6 +310,23 @@ int git_revwalk_hide(git_revwalk *walk, const git_oid *oid)
 	return push_commit(walk, oid, 1);
 }
 
+static int push_ref(git_revwalk *walk, const char *refname, int hide)
+{
+	git_reference *ref, *resolved;
+	int error;
+
+	error = git_reference_lookup(&ref, walk->repo, refname);
+	if (error < GIT_SUCCESS)
+		return error;
+	error = git_reference_resolve(&resolved, ref);
+	git_reference_free(ref);
+	if (error < GIT_SUCCESS)
+		return error;
+	error = push_commit(walk, git_reference_oid(resolved), hide);
+	git_reference_free(resolved);
+	return error;
+}
+
 struct push_cb_data {
 	git_revwalk *walk;
 	const char *glob;
@@ -320,21 +337,8 @@ static int push_glob_cb(const char *refname, void *data_)
 {
 	struct push_cb_data *data = (struct push_cb_data *)data_;
 
-	if (!git__fnmatch(data->glob, refname, 0)) {
-		git_reference *ref, *resolved;
-		int error;
-
-		error = git_reference_lookup(&ref, data->walk->repo, refname);
-		if (error < GIT_SUCCESS)
-			return error;
-		error = git_reference_resolve(&resolved, ref);
-		git_reference_free(ref);
-		if (error < GIT_SUCCESS)
-			return error;
-		error = push_commit(data->walk, git_reference_oid(resolved), data->hide);
-		git_reference_free(resolved);
-		return error;
-	}
+	if (!git__fnmatch(data->glob, refname, 0))
+		return push_ref(data->walk, refname, data->hide);
 
 	return GIT_SUCCESS;
 }
@@ -394,37 +398,28 @@ int git_revwalk_hide_glob(git_revwalk *walk, const char *glob)
 	return push_glob(walk, glob, 1);
 }
 
-static int push_head(git_revwalk *walk, int hide)
-{
-	git_reference *ref, *resolved;
-	int error;
-
-	error = git_reference_lookup(&ref, walk->repo, "HEAD");
-	if (error < GIT_SUCCESS) {
-		return error;
-	}
-	error = git_reference_resolve(&resolved, ref);
-	if (error < GIT_SUCCESS) {
-		return error;
-	}
-	git_reference_free(ref);
-
-	error  = push_commit(walk, git_reference_oid(resolved), hide);
-
-	git_reference_free(resolved);
-	return error;
-}
-
 int git_revwalk_push_head(git_revwalk *walk)
 {
 	assert(walk);
-	return push_head(walk, 0);
+	return push_ref(walk, GIT_HEAD_FILE, 0);
 }
 
 int git_revwalk_hide_head(git_revwalk *walk)
 {
 	assert(walk);
-	return push_head(walk, 1);
+	return push_ref(walk, GIT_HEAD_FILE, 1);
+}
+
+int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
+{
+	assert(walk && refname);
+	return push_ref(walk, refname, 0);
+}
+
+int git_revwalk_hide_ref(git_revwalk *walk, const char *refname)
+{
+	assert(walk && refname);
+	return push_ref(walk, refname, 1);
 }
 
 static int revwalk_enqueue_timesort(git_revwalk *walk, commit_object *commit)
