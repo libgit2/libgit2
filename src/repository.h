@@ -46,6 +46,11 @@ struct git_repository {
 
 	unsigned is_bare:1;
 	unsigned int lru_counter;
+
+	struct {
+		int core_eol;
+		int auto_crlf;
+	} filter_options;
 };
 
 /* fully free the object; internal method, do not

@@ -10,6 +10,8 @@
 #include "hash.h"
 #include "filter.h"
 
+#include "git2/attr.h"
+
 /* Fresh from Core Git. I wonder what we could use this for... */
 void git_text__stat(git_text_stats *stats, git_buf *text)
 {
@@ -129,4 +131,90 @@ int git_filter__apply(git_buf *dest, git_buf *source, git_vector *filters, const
 	}
 
 	return GIT_SUCCESS;
+}
+
+
+static int check_crlf(const char *value)
+{
+	if (value == git_attr__true)
+		return GIT_CRLF_TEXT;
+
+	if (value == git_attr__false)
+		return GIT_CRLF_BINARY;
+
+	if (value == NULL)
+		return GIT_CRLF_GUESS;
+
+	if (strcmp(value, "input") == 0)
+		return GIT_CRLF_INPUT;
+
+	if (strcmp(value, "auto") == 0)
+		return GIT_CRLF_AUTO;
+
+	return GIT_CRLF_GUESS;
+}
+
+static int check_eol(const char *value)
+{
+	if (value == NULL)
+		return GIT_EOL_UNSET;
+
+	if (strcmp(value, "lf") == 0)
+		return GIT_EOL_LF;
+
+	if (strcmp(value, "crlf") == 0)
+		return GIT_EOL_CRLF;
+
+	return GIT_EOL_UNSET;
+}
+
+static int check_ident(const char *value)
+{
+	return (value == git_attr__true);
+}
+
+#if 0
+static int input_crlf_action(enum crlf_action text_attr, enum eol eol_attr)
+{
+	if (text_attr == CRLF_BINARY)
+		return CRLF_BINARY;
+	if (eol_attr == EOL_LF)
+		return CRLF_INPUT;
+	if (eol_attr == EOL_CRLF)
+		return CRLF_CRLF;
+	return text_attr;
+}
+#endif
+
+int git_filter__load_attrs(git_conv_attrs *ca, git_repository *repo, const char *path)
+{
+#define NUM_CONV_ATTRS 5
+
+	static const char *attr_names[NUM_CONV_ATTRS] = {
+		"crlf", "ident", "filter", "eol", "text",
+	};
+
+	const char *attr_vals[NUM_CONV_ATTRS];
+	int error;
+
+	error = git_attr_get_many(repo, path, NUM_CONV_ATTRS, attr_names, attr_vals);
+
+	if (error == GIT_ENOTFOUND) {
+		ca->crlf_action = GIT_CRLF_GUESS;
+		ca->eol_attr = GIT_EOL_UNSET;
+		ca->ident = 0;
+		return 0;
+	}
+
+	if (error == GIT_SUCCESS) {
+		ca->crlf_action = check_crlf(attr_vals[4]); /* text */
+		if (ca->crlf_action == GIT_CRLF_GUESS)
+			ca->crlf_action = check_crlf(attr_vals[0]); /* clrf */
+
+		ca->ident = check_ident(attr_vals[1]); /* ident */
+		ca->eol_attr = check_eol(attr_vals[3]); /* eol */
+		return 0;
+	}
+
+	return error;
 }
