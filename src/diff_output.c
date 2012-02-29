@@ -161,7 +161,7 @@ static int file_is_binary_by_content(
 	git_map *old_data,
 	git_map *new_data)
 {
-	GIT_UNUSED_ARG(diff);
+	GIT_UNUSED(diff);
 
 	if ((delta->old.flags & BINARY_DIFF_FLAGS) == 0) {
 		size_t search_len = min(old_data->len, 4000);
@@ -448,7 +448,7 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	diff_print_info *pi = data;
 	char code, old_suffix, new_suffix;
 
-	GIT_UNUSED_ARG(progress);
+	GIT_UNUSED(progress);
 
 	switch (delta->status) {
 	case GIT_STATUS_ADDED: code = 'A'; break;
@@ -546,7 +546,7 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	const char *newpfx = pi->diff->opts.dst_prefix;
 	const char *newpath = delta->new.path;
 
-	GIT_UNUSED_ARG(progress);
+	GIT_UNUSED(progress);
 
 	git_buf_clear(pi->buf);
 	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n", oldpfx, delta->old.path, newpfx, delta->new.path);
@@ -593,8 +593,8 @@ static int print_patch_hunk(
 {
 	diff_print_info *pi = data;
 
-	GIT_UNUSED_ARG(d);
-	GIT_UNUSED_ARG(r);
+	GIT_UNUSED(d);
+	GIT_UNUSED(r);
 
 	git_buf_clear(pi->buf);
 
@@ -613,7 +613,7 @@ static int print_patch_line(
 {
 	diff_print_info *pi = data;
 
-	GIT_UNUSED_ARG(delta);
+	GIT_UNUSED(delta);
 
 	git_buf_clear(pi->buf);
 

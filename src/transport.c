@@ -43,9 +43,9 @@ static git_transport_cb transport_find_fn(const char *url)
  * Public API *
  **************/
 
-int git_transport_dummy(git_transport **GIT_UNUSED(transport))
+int git_transport_dummy(git_transport **transport)
 {
-	GIT_UNUSED_ARG(transport);
+	GIT_UNUSED(transport);
 	return git__throw(GIT_ENOTIMPLEMENTED, "This protocol isn't implemented. Sorry");
 }
 

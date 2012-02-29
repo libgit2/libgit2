@@ -33,8 +33,7 @@
 #	define GIT_TYPEOF(x)
 #endif
 
-#define GIT_UNUSED(x) x
-#define GIT_UNUSED_ARG(x) ((void)(x))
+#define GIT_UNUSED(x) ((void)(x))
 
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)

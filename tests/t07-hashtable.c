@@ -154,7 +154,6 @@ BEGIN_TEST(tableit0, "iterate through all the contents of the table")
 	const int objects_n = 32;
 	int i;
 	table_item *objects, *ob;
-	const void *GIT_UNUSED(_unused);
 
 	git_hashtable *table = NULL;
 
@@ -170,9 +169,7 @@ BEGIN_TEST(tableit0, "iterate through all the contents of the table")
 		must_pass(git_hashtable_insert(table, &(objects[i].id), &(objects[i])));
 	}
 
-	GIT_HASHTABLE_FOREACH(table, _unused, ob,
-		ob->visited = 1;
-	);
+	GIT_HASHTABLE_FOREACH_VALUE(table, ob, ob->visited = 1);
 
 	/* make sure all nodes have been visited */
 	for (i = 0; i < objects_n; ++i)

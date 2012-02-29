@@ -424,10 +424,10 @@ static walk_data empty = {
 	GIT_BUF_INIT
 };
 
-static int dont_call_me(void *GIT_UNUSED(state), git_buf *GIT_UNUSED(path))
+static int dont_call_me(void *state, git_buf *path)
 {
-	GIT_UNUSED_ARG(state);
-	GIT_UNUSED_ARG(path);
+	GIT_UNUSED(state);
+	GIT_UNUSED(path);
 	return GIT_ERROR;
 }
 

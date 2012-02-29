@@ -65,20 +65,20 @@ GIT_INLINE(int) git_hashtable_insert(git_hashtable *h, const void *key, void *va
 
 #define git_hashtable_node_at(nodes, pos) ((git_hashtable_node *)(&nodes[pos]))
 
-#define GIT_HASHTABLE_FOREACH(self, pkey, pvalue, code) {\
-	git_hashtable *_self = (self);\
-	git_hashtable_node *_nodes = _self->nodes;\
-	unsigned int _i, _size = _self->size;\
-	for (_i = 0; _i < _size; _i ++) {\
-		git_hashtable_node *_node = git_hashtable_node_at(_nodes, _i);\
-		if (_node->key)\
-		{\
-			pkey = _node->key;\
-			pvalue = _node->value;\
-			code;\
-		}\
-	}\
-}
+#define GIT_HASHTABLE__FOREACH(self,block) { \
+	unsigned int _c; \
+	git_hashtable_node *_n = (self)->nodes; \
+	for (_c = (self)->size; _c > 0; _c--, _n++)	{ \
+		if (!_n->key) continue; block } }
+
+#define GIT_HASHTABLE_FOREACH(self, pkey, pvalue, code)\
+	GIT_HASHTABLE__FOREACH(self,{(pkey)=_n->key;(pvalue)=_n->value;code;})
+
+#define GIT_HASHTABLE_FOREACH_KEY(self, pkey, code)\
+	GIT_HASHTABLE__FOREACH(self,{(pkey)=_n->key;code;})
+
+#define GIT_HASHTABLE_FOREACH_VALUE(self, pvalue, code)\
+	GIT_HASHTABLE__FOREACH(self,{(pvalue)=_n->value;code;})
 
 #define GIT_HASHTABLE_FOREACH_DELETE() {\
 	_node->key = NULL; _node->value = NULL; _self->key_count--;\
