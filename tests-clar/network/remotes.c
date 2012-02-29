@@ -30,6 +30,16 @@ void test_network_remotes__parsing(void)
 	cl_assert(!strcmp(git_remote_url(_remote), "git://github.com/libgit2/libgit2"));
 }
 
+void test_network_remotes__parsing_ssh_remote(void)
+{
+	cl_assert( git_remote_valid_url("git@github.com:libgit2/libgit2.git") );
+}
+
+void test_network_remotes__parsing_local_path(void)
+{
+	cl_assert( !git_remote_valid_url("/home/git/repos/libgit2.git") );
+}
+
 void test_network_remotes__refspec_parsing(void)
 {
 	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/heads/*"));

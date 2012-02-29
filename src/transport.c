@@ -10,6 +10,8 @@
 #include "git2/net.h"
 #include "transport.h"
 
+#include <regex.h>
+
 static struct {
 	char *prefix;
 	git_transport_cb fn;
@@ -28,15 +30,35 @@ static struct {
 static git_transport_cb transport_find_fn(const char *url)
 {
 	size_t i = 0;
+	regex_t preg;
+	int error;
+	git_transport_cb output = NULL;
 
-	 /* TODO: Parse "example.com:project.git" as an SSH URL */
-
+	// First, check to see if it's an obvious URL, which a URL scheme
 	for (i = 0; i < GIT_TRANSPORT_COUNT; ++i) {
 		if (!strncasecmp(url, transports[i].prefix, strlen(transports[i].prefix)))
 			return transports[i].fn;
 	}
 
-	return NULL;
+
+	// next, see if it matches un-schemed SSH paths used by Git
+	// if it does not match, it must be a local transport method
+	// use the slightly old fashioned :alnum: instead of \w or :word:, because
+	// both are Perl extensions to the Regular Expression language (and not available here)
+	error = regcomp(&preg, "^[[:alnum:]_]+@[[:alnum:]_]+\\.[[:alnum:]_]+:.+\\.git$", REG_EXTENDED);
+	if (error < 0)
+		goto cleanup;
+
+	int rc = regexec(&preg, url, 0, NULL, 0);
+	if ( rc == REG_NOMATCH )
+		output = NULL; // a match was not found - it's probably a file system path
+	else
+		output = &git_transport_git;  		// a match was found!
+
+cleanup:
+	regfree(&preg);
+
+	return output;
 }
 
 /**************
