@@ -104,29 +104,29 @@ cleanup:
 static int write_file_filtered(
 	git_oid *oid,
 	git_odb *odb,
-	const char *path,
+	const char *full_path,
 	git_vector *filters)
 {
 	int error;
-	git_buf file_in = GIT_BUF_INIT;
-	git_buf filter_result = GIT_BUF_INIT;
+	git_buf source = GIT_BUF_INIT;
+	git_buf dest = GIT_BUF_INIT;
 
-	error = git_futils_readbuffer(&file_in, path);
+	error = git_futils_readbuffer(&source, full_path);
 	if (error < GIT_SUCCESS)
 		return error;
 
-	error = git_filter__apply(&filter_result, &file_in, filters, path);
+	error = git_filter__apply(&dest, &source, filters);
 
 	if (error < GIT_SUCCESS) {
-		git_buf_free(&file_in);
-		git_buf_free(&filter_result);
+		git_buf_free(&source);
+		git_buf_free(&dest);
 		return error;
 	}
 
-	error = git_odb_write(oid, odb, filter_result.ptr, filter_result.size, GIT_OBJ_BLOB);
+	error = git_odb_write(oid, odb, dest.ptr, dest.size, GIT_OBJ_BLOB);
 
-	git_buf_free(&file_in);
-	git_buf_free(&filter_result);
+	git_buf_free(&source);
+	git_buf_free(&dest);
 
 	return GIT_SUCCESS;
 }
@@ -188,7 +188,7 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		git_vector write_filters = GIT_VECTOR_INIT;
 
 		if ((error = git_filter__load_for_file(
-			&write_filters, repo, full_path.ptr, GIT_FILTER_TO_ODB)) < GIT_SUCCESS)
+			&write_filters, repo, path, GIT_FILTER_TO_ODB)) < GIT_SUCCESS)
 			goto cleanup;
 
 		if (write_filters.length == 0) {
@@ -196,6 +196,8 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		} else {
 			error = write_file_filtered(oid, odb, full_path.ptr, &write_filters);
 		}
+
+		git_filter__free(&write_filters);
 
 		/*
 		 * TODO: eventually support streaming filtered files, for files which are bigger

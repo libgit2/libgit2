@@ -12,7 +12,10 @@
 #include "git2/odb.h"
 #include "git2/repository.h"
 
-typedef int (*git_filter_cb)(git_buf *dest, const git_buf *source, const char *filename);
+typedef struct git_filter {
+	int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source);
+	void (*do_free)(struct git_filter *self);
+} git_filter;
 
 typedef enum {
 	GIT_FILTER_TO_WORKTREE,
@@ -47,13 +50,6 @@ typedef enum {
 #endif
 } git_eol_t;
 
-
-typedef struct {
-	int crlf_action;
-	int eol_attr;
-	int ident;
-} git_conv_attrs;
-
 typedef struct {
 	/* NUL, CR, LF and CRLF counts */
 	unsigned int nul, cr, lf, crlf;
@@ -63,14 +59,17 @@ typedef struct {
 } git_text_stats;
 
 extern int git_filter__load_for_file(git_vector *filters, git_repository *repo, const char *full_path, int mode);
-extern int git_filter__load_attrs(git_conv_attrs *ca, git_repository *repo, const char *path);
-extern int git_filter__apply(git_buf *dest, git_buf *source, git_vector *filters, const char *filename);
+extern void git_filter__free(git_vector *filters);
+extern int git_filter__apply(git_buf *dest, git_buf *source, git_vector *filters);
 
 /* Gather stats for a piece of text */
-extern void git_text__stat(git_text_stats *stats, git_buf *text);
+extern void git_text__stat(git_text_stats *stats, const git_buf *text);
 
 /* Heuristics on a set of text stats to check whether it's binary
  * text or not */
 extern int git_text__is_binary(git_text_stats *stats);
+
+/* Available filters */
+extern int git_filter__crlf_to_odb(git_filter **filter_out, git_repository *repo, const char *path);
 
 #endif
