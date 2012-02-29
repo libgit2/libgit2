@@ -2,37 +2,6 @@
 #include "diff_helpers.h"
 #include "iterator.h"
 
-static git_repository *g_repo = NULL;
-static const char *g_sandbox = NULL;
-
-static void setup_sandbox(const char *sandbox)
-{
-	cl_fixture_sandbox(sandbox);
-	g_sandbox = sandbox;
-
-	p_chdir(sandbox);
-	cl_git_pass(p_rename(".gitted", ".git"));
-	if (p_access("gitattributes", F_OK) == 0)
-		cl_git_pass(p_rename("gitattributes", ".gitattributes"));
-	if (p_access("gitignore", F_OK) == 0)
-		cl_git_pass(p_rename("gitignore", ".gitignore"));
-	p_chdir("..");
-
-	cl_git_pass(git_repository_open(&g_repo, sandbox));
-}
-
-static void cleanup_sandbox(void)
-{
-	if (g_repo) {
-		git_repository_free(g_repo);
-		g_repo = NULL;
-	}
-	if (g_sandbox) {
-		cl_fixture_cleanup(g_sandbox);
-		g_sandbox = NULL;
-	}
-}
-
 void test_diff_iterator__initialize(void)
 {
 	/* since we are doing tests with different sandboxes, defer setup
@@ -44,7 +13,7 @@ void test_diff_iterator__initialize(void)
 
 void test_diff_iterator__cleanup(void)
 {
-	cleanup_sandbox();
+	cl_git_sandbox_cleanup();
 }
 
 
@@ -60,11 +29,10 @@ static void tree_iterator_test(
 	git_iterator *i;
 	const git_index_entry *entry;
 	int count = 0;
+	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	setup_sandbox(sandbox);
-
-	cl_assert(t = resolve_commit_oid_to_tree(g_repo, treeish));
-	cl_git_pass(git_iterator_for_tree(g_repo, t, &i));
+	cl_assert(t = resolve_commit_oid_to_tree(repo, treeish));
+	cl_git_pass(git_iterator_for_tree(repo, t, &i));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {
@@ -183,10 +151,9 @@ static void index_iterator_test(
 	git_iterator *i;
 	const git_index_entry *entry;
 	int count = 0;
+	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	setup_sandbox(sandbox);
-
-	cl_git_pass(git_iterator_for_index(g_repo, &i));
+	cl_git_pass(git_iterator_for_index(repo, &i));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {
@@ -303,10 +270,9 @@ static void workdir_iterator_test(
 	git_iterator *i;
 	const git_index_entry *entry;
 	int count = 0, count_all = 0;
+	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	setup_sandbox(sandbox);
-
-	cl_git_pass(git_iterator_for_workdir(g_repo, &i));
+	cl_git_pass(git_iterator_for_workdir(repo, &i));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {

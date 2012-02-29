@@ -408,10 +408,9 @@ void git_attr_cache_flush(
 		return;
 
 	if (repo->attrcache.files) {
-		const void *GIT_UNUSED(name);
 		git_attr_file *file;
 
-		GIT_HASHTABLE_FOREACH(repo->attrcache.files, name, file,
+		GIT_HASHTABLE_FOREACH_VALUE(repo->attrcache.files, file,
 			git_attr_file__free(file));
 
 		git_hashtable_free(repo->attrcache.files);
@@ -419,10 +418,9 @@ void git_attr_cache_flush(
 	}
 
 	if (repo->attrcache.macros) {
-		const void *GIT_UNUSED(name);
 		git_attr_rule *rule;
 
-		GIT_HASHTABLE_FOREACH(repo->attrcache.macros, name, rule,
+		GIT_HASHTABLE_FOREACH_VALUE(repo->attrcache.macros, rule,
 			git_attr_rule__free(rule));
 
 		git_hashtable_free(repo->attrcache.macros);

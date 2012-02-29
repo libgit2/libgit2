@@ -125,13 +125,12 @@ static int normalize_name(const char *in, char **out)
 
 static void free_vars(git_hashtable *values)
 {
-	const char *GIT_UNUSED(_unused) = NULL;
 	cvar_t *var = NULL;
 
 	if (values == NULL)
 		return;
 
-	GIT_HASHTABLE_FOREACH(values, _unused, var,
+	GIT_HASHTABLE_FOREACH_VALUE(values, var,
 	      do {
 		      cvar_t *next = CVAR_LIST_NEXT(var);
 		      cvar_free(var);

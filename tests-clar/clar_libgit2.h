@@ -58,4 +58,9 @@ GIT_INLINE(void) cl_assert_strequal_internal(
 void cl_git_mkfile(const char *filename, const char *content);
 void cl_git_append2file(const char *filename, const char *new_content);
 
+/* Git sandbox setup helpers */
+
+git_repository *cl_git_sandbox_init(const char *sandbox);
+void cl_git_sandbox_cleanup(void);
+
 #endif

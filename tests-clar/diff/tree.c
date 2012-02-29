@@ -5,17 +5,12 @@ static git_repository *g_repo = NULL;
 
 void test_diff_tree__initialize(void)
 {
-	cl_fixture_sandbox("attr");
-	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
-	cl_git_pass(p_rename("attr/gitattributes", "attr/.gitattributes"));
-	cl_git_pass(git_repository_open(&g_repo, "attr/.git"));
+	g_repo = cl_git_sandbox_init("attr");
 }
 
 void test_diff_tree__cleanup(void)
 {
-	git_repository_free(g_repo);
-	g_repo = NULL;
-	cl_fixture_cleanup("attr");
+	cl_git_sandbox_cleanup();
 }
 
 void test_diff_tree__0(void)

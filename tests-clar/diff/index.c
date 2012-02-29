@@ -5,16 +5,12 @@ static git_repository *g_repo = NULL;
 
 void test_diff_index__initialize(void)
 {
-	cl_fixture_sandbox("status");
-	cl_git_pass(p_rename("status/.gitted", "status/.git"));
-	cl_git_pass(git_repository_open(&g_repo, "status/.git"));
+	g_repo = cl_git_sandbox_init("status");
 }
 
 void test_diff_index__cleanup(void)
 {
-	git_repository_free(g_repo);
-	g_repo = NULL;
-	cl_fixture_cleanup("status");
+	cl_git_sandbox_cleanup();
 }
 
 void test_diff_index__0(void)

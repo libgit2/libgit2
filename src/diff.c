@@ -325,7 +325,7 @@ static int maybe_modified(
 	int error = GIT_SUCCESS;
 	git_oid noid, *use_noid = NULL;
 
-	GIT_UNUSED_ARG(old);
+	GIT_UNUSED(old);
 
 	/* support "assume unchanged" & "skip worktree" bits */
 	if ((oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) != 0 ||
