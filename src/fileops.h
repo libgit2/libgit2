@@ -81,6 +81,10 @@ extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t
  */
 extern git_off_t git_futils_filesize(git_file fd);
 
+#define GIT_MODE_PERMS_MASK			0777
+#define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
+#define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
+
 /**
  * Convert a mode_t from the OS to a legal git mode_t value.
  */
@@ -107,6 +111,19 @@ extern int git_futils_mmap_ro(
 	git_file fd,
 	git_off_t begin,
 	size_t len);
+
+/**
+ * Read-only map an entire file.
+ *
+ * @param out buffer to populate with the mapping information.
+ * @param path path to file to be opened.
+ * @return
+ * - GIT_SUCCESS on success;
+ * - GIT_EOSERR on an unspecified OS related error.
+ */
+extern int git_futils_mmap_ro_file(
+	git_map *out,
+	const char *path);
 
 /**
  * Release the memory associated with a previous memory mapping.

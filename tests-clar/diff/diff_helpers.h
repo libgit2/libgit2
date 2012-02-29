@@ -9,6 +9,8 @@ typedef struct {
 	int file_adds;
 	int file_dels;
 	int file_mods;
+	int file_ignored;
+	int file_untracked;
 
 	int hunks;
 	int hunk_new_lines;

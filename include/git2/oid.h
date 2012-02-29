@@ -160,6 +160,11 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, unsigned int le
 GIT_EXTERN(int) git_oid_streq(const git_oid *a, const char *str);
 
 /**
+ * Check is an oid is all zeros.
+ */
+GIT_EXTERN(int) git_oid_iszero(const git_oid *a);
+
+/**
  * OID Shortener object
  */
 typedef struct git_oid_shorten git_oid_shorten;

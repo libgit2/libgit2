@@ -66,4 +66,6 @@ extern int p_rename(const char *from, const char *to);
 #	include "unix/posix.h"
 #endif
 
+#define p_readdir_r(d,e,r) readdir_r(d,e,r)
+
 #endif

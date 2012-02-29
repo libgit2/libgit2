@@ -10,15 +10,15 @@
 #include <stdio.h>
 #include "vector.h"
 #include "buffer.h"
+#include "iterator.h"
+#include "repository.h"
 
 struct git_diff_list {
 	git_repository   *repo;
 	git_diff_options opts;
-	git_vector       files;    /* vector of git_diff_file_delta */
-
-	/* the following are just used while processing the diff list */
-	git_buf          pfx;
-	git_status_t     status;
+	git_vector       deltas;    /* vector of git_diff_file_delta */
+	git_iterator_type_t old_src;
+	git_iterator_type_t new_src;
 };
 
 #endif

@@ -24,6 +24,7 @@ typedef struct git_vector {
 int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
 void git_vector_clear(git_vector *v);
+void git_vector_swap(git_vector *a, git_vector *b);
 
 int git_vector_search(git_vector *v, const void *entry);
 int git_vector_search2(git_vector *v, git_vector_cmp cmp, const void *key);
@@ -34,6 +35,11 @@ int git_vector_bsearch2(git_vector *v, git_vector_cmp cmp, const void *key);
 void git_vector_sort(git_vector *v);
 
 GIT_INLINE(void *) git_vector_get(git_vector *v, unsigned int position)
+{
+	return (position < v->length) ? v->contents[position] : NULL;
+}
+
+GIT_INLINE(const void *) git_vector_get_const(const git_vector *v, unsigned int position)
 {
 	return (position < v->length) ? v->contents[position] : NULL;
 }

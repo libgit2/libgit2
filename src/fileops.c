@@ -79,10 +79,6 @@ git_off_t git_futils_filesize(git_file fd)
 	return sb.st_size;
 }
 
-#define GIT_MODE_PERMS_MASK			0777
-#define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
-#define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
-
 mode_t git_futils_canonical_mode(mode_t raw_mode)
 {
 	if (S_ISREG(raw_mode))
@@ -179,6 +175,15 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
 {
 	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin);
+}
+
+int git_futils_mmap_ro_file(git_map *out, const char *path)
+{
+	git_file fd = p_open(path, O_RDONLY /* | O_NOATIME */);
+	size_t len = git_futils_filesize(fd);
+	int result = git_futils_mmap_ro(out, fd, 0, len);
+	p_close(fd);
+	return result;
 }
 
 void git_futils_mmap_free(git_map *out)
