@@ -158,6 +158,8 @@ void test_diff_workdir__to_tree(void)
 	cl_assert(exp.line_adds == 12);
 	cl_assert(exp.line_dels == 4);
 
+	git_diff_list_free(diff);
+
 	git_tree_free(a);
 	git_tree_free(b);
 }

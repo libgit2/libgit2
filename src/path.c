@@ -624,5 +624,7 @@ int git_path_dirload_with_stat(
 		}
 	}
 
+	git_buf_free(&full);
+
 	return error;
 }
