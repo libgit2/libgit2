@@ -180,8 +180,11 @@ int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
 int git_futils_mmap_ro_file(git_map *out, const char *path)
 {
 	git_file fd = p_open(path, O_RDONLY /* | O_NOATIME */);
-	size_t len = git_futils_filesize(fd);
-	int result = git_futils_mmap_ro(out, fd, 0, len);
+	git_off_t len = git_futils_filesize(fd);
+	int result;
+	if (!git__is_sizet(len))
+		return git__throw(GIT_ERROR, "File `%s` too large to mmap", path);
+	result = git_futils_mmap_ro(out, fd, 0, (size_t)len);
 	p_close(fd);
 	return result;
 }
