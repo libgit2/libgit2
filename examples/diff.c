@@ -116,7 +116,7 @@ void usage(const char *message, const char *arg)
 		fprintf(stderr, "%s: %s\n", message, arg);
 	else if (message)
 		fprintf(stderr, "%s\n", message);
-	fprintf(stderr, "usage: diff <tree-oid> <tree-oid>\n");
+	fprintf(stderr, "usage: diff [<tree-oid> [<tree-oid>]]\n");
 	exit(1);
 }
 
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff_options opts = {0};
 	git_diff_list *diff;
-	int i, color = -1, compact = 0;
+	int i, color = -1, compact = 0, cached = 0;
 	char *a, *dir = ".", *treeish1 = NULL, *treeish2 = NULL;
 
 	/* parse arguments as copied from git-diff */
@@ -146,6 +146,8 @@ int main(int argc, char *argv[])
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
 			!strcmp(a, "--patch"))
 			compact = 0;
+		else if (!strcmp(a, "--cached"))
+			cached = 1;
 		else if (!strcmp(a, "--name-status"))
 			compact = 1;
 		else if (!strcmp(a, "--color"))
@@ -162,6 +164,10 @@ int main(int argc, char *argv[])
 			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE_CHANGE;
 		else if (!strcmp(a, "-w") || !strcmp(a, "--ignore-all-space"))
 			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE;
+		else if (!strcmp(a, "--ignored"))
+			opts.flags |= GIT_DIFF_INCLUDE_IGNORED;
+		else if (!strcmp(a, "--untracked"))
+			opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 		else if (!check_uint16_param(a, "-U", &opts.context_lines) &&
 			!check_uint16_param(a, "--unified=", &opts.context_lines) &&
 			!check_uint16_param(a, "--inter-hunk-context=",
@@ -171,9 +177,6 @@ int main(int argc, char *argv[])
 			usage("Unknown arg", a);
 	}
 
-	if (!treeish1)
-		usage("Must provide at least one tree identifier (for now)", NULL);
-
 	/* open repo */
 
 	check(git_repository_discover(path, sizeof(path), dir, 0, "/"),
@@ -181,20 +184,40 @@ int main(int argc, char *argv[])
 	check(git_repository_open(&repo, path),
 		"Could not open repository");
 
-	check(resolve_to_tree(repo, treeish1, &t1), "Looking up first tree");
+	if (treeish1)
+		check(resolve_to_tree(repo, treeish1, &t1), "Looking up first tree");
 	if (treeish2)
 		check(resolve_to_tree(repo, treeish2, &t2), "Looking up second tree");
 
-	if (!treeish2)
-		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Generating diff");
+	/* <sha1> <sha2> */
+	/* <sha1> --cached */
+	/* <sha1> */
+	/* --cached */
+	/* nothing */
+
+	if (t1 && t2)
+		check(git_diff_tree_to_tree(repo, &opts, t1, t2, &diff), "Diff");
+	else if (t1 && cached)
+		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
+	else if (t1) {
+		git_diff_list *diff2;
+		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
+		check(git_diff_workdir_to_index(repo, &opts, &diff2), "Diff");
+		check(git_diff_merge(diff, diff2), "Merge diffs");
+		git_diff_list_free(diff2);
+	}
+	else if (cached) {
+		check(resolve_to_tree(repo, "HEAD", &t1), "looking up HEAD");
+		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
+	}
 	else
-		check(git_diff_tree_to_tree(repo, &opts, t1, t2, &diff), "Generating diff");
+		check(git_diff_workdir_to_index(repo, &opts, &diff), "Diff");
 
 	if (color >= 0)
 		fputs(colors[0], stdout);
 
 	if (compact)
-		check(git_diff_print_compact(diff, &color, printer), "Displaying diff summary");
+		check(git_diff_print_compact(diff, &color, printer), "Displaying diff");
 	else
 		check(git_diff_print_patch(diff, &color, printer), "Displaying diff");
 

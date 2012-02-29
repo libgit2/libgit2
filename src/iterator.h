@@ -23,6 +23,7 @@ struct git_iterator {
 	int (*current)(git_iterator *, const git_index_entry **);
 	int (*at_end)(git_iterator *);
 	int (*advance)(git_iterator *, const git_index_entry **);
+	int (*reset)(git_iterator *);
 	void (*free)(git_iterator *);
 };
 
@@ -58,6 +59,11 @@ GIT_INLINE(int) git_iterator_advance(
 	git_iterator *iter, const git_index_entry **entry)
 {
 	return iter->advance(iter, entry);
+}
+
+GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
+{
+	return iter->reset(iter);
 }
 
 GIT_INLINE(void) git_iterator_free(git_iterator *iter)

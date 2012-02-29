@@ -58,8 +58,11 @@ git__DIR *git__opendir(const char *dir)
 	return new;
 }
 
-int git__readdir_r(
-	git__DIR *d, struct git__dirent *entry, struct git__dirent **result)
+int git__readdir_ext(
+	git__DIR *d,
+	struct git__dirent *entry,
+	struct git__dirent **result,
+	int *is_dir)
 {
 	if (!d || !entry || !result || d->h == INVALID_HANDLE_VALUE)
 		return -1;
@@ -80,13 +83,16 @@ int git__readdir_r(
 		entry->d_name, GIT_PATH_MAX, NULL, NULL);
 
 	*result = entry;
+	if (is_dir != NULL)
+		*is_dir = ((d->f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+
 	return 0;
 }
 
 struct git__dirent *git__readdir(git__DIR *d)
 {
 	struct git__dirent *result;
-	if (git__readdir_r(d, &d->entry, &result) < 0)
+	if (git__readdir_ext(d, &d->entry, &result, NULL) < 0)
 		return NULL;
 	return result;
 }

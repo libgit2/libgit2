@@ -220,4 +220,14 @@ void git_vector_clear(git_vector *v)
 	v->sorted = 1;
 }
 
+void git_vector_swap(git_vector *a, git_vector *b)
+{
+	git_vector t;
 
+	if (!a || !b || a == b)
+		return;
+
+	memcpy(&t, a, sizeof(t));
+	memcpy(a, b, sizeof(t));
+	memcpy(b, &t, sizeof(t));
+}

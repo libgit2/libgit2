@@ -37,7 +37,9 @@ enum {
 	GIT_DIFF_IGNORE_WHITESPACE_CHANGE = (1 << 3),
 	GIT_DIFF_IGNORE_WHITESPACE_EOL = (1 << 4),
 	GIT_DIFF_IGNORE_SUBMODULES = (1 << 5),
-	GIT_DIFF_PATIENCE = (1 << 6)
+	GIT_DIFF_PATIENCE = (1 << 6),
+	GIT_DIFF_INCLUDE_IGNORED = (1 << 7),
+	GIT_DIFF_INCLUDE_UNTRACKED = (1 << 8)
 };
 
 /**
@@ -63,6 +65,26 @@ typedef struct {
  */
 typedef struct git_diff_list git_diff_list;
 
+enum {
+	GIT_DIFF_FILE_VALID_OID  = (1 << 0),
+	GIT_DIFF_FILE_FREE_PATH  = (1 << 1),
+	GIT_DIFF_FILE_BINARY     = (1 << 2),
+	GIT_DIFF_FILE_NOT_BINARY = (1 << 3),
+	GIT_DIFF_FILE_FREE_DATA  = (1 << 4),
+	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5)
+};
+
+/**
+ * Description of one side of a diff.
+ */
+typedef struct {
+	git_oid oid;
+	char *path;
+	uint16_t mode;
+	git_off_t size;
+	unsigned int flags;
+} git_diff_file;
+
 /**
  * Description of changes to one file.
  *
@@ -77,17 +99,11 @@ typedef struct git_diff_list git_diff_list;
  * It will just use the git attributes for those files.
  */
 typedef struct {
+	git_diff_file old;
+	git_diff_file new;
 	git_status_t status;     /**< value from tree.h */
-	unsigned int old_attr;
-	unsigned int new_attr;
-	git_oid      old_oid;
-	git_oid      new_oid;
-	git_blob     *old_blob;
-	git_blob     *new_blob;
-	const char   *path;
-	const char   *new_path;  /**< NULL unless status is RENAMED or COPIED */
-	int          similarity; /**< for RENAMED and COPIED, value from 0 to 100 */
-	int          binary;     /**< files in diff are binary? */
+	unsigned int similarity; /**< for RENAMED and COPIED, value from 0 to 100 */
+	int binary;
 } git_diff_delta;
 
 /**
@@ -170,7 +186,18 @@ typedef int (*git_diff_output_fn)(
 /**@{*/
 
 /**
+ * Deallocate a diff list.
+ */
+GIT_EXTERN(void) git_diff_list_free(git_diff_list *diff);
+
+/**
  * Compute a difference between two tree objects.
+ *
+ * @param repo The repository containing the trees.
+ * @param opts Structure with options to influence diff or NULL for defaults.
+ * @param old A git_tree object to diff from.
+ * @param new A git_tree object to diff to.
+ * @param diff A pointer to a git_diff_list pointer that will be allocated.
  */
 GIT_EXTERN(int) git_diff_tree_to_tree(
 	git_repository *repo,
@@ -181,7 +208,11 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
 
 /**
  * Compute a difference between a tree and the index.
- * @todo NOT IMPLEMENTED
+ *
+ * @param repo The repository containing the tree and index.
+ * @param opts Structure with options to influence diff or NULL for defaults.
+ * @param old A git_tree object to diff from.
+ * @param diff A pointer to a git_diff_list pointer that will be allocated.
  */
 GIT_EXTERN(int) git_diff_index_to_tree(
 	git_repository *repo,
@@ -190,8 +221,33 @@ GIT_EXTERN(int) git_diff_index_to_tree(
 	git_diff_list **diff);
 
 /**
+ * Compute a difference between the working directory and the index.
+ *
+ * @param repo The repository.
+ * @param opts Structure with options to influence diff or NULL for defaults.
+ * @param diff A pointer to a git_diff_list pointer that will be allocated.
+ */
+GIT_EXTERN(int) git_diff_workdir_to_index(
+	git_repository *repo,
+	const git_diff_options *opts, /**< can be NULL for defaults */
+	git_diff_list **diff);
+
+/**
  * Compute a difference between the working directory and a tree.
- * @todo NOT IMPLEMENTED
+ *
+ * This returns strictly the differences between the tree and the
+ * files contained in the working directory, regardless of the state
+ * of files in the index.  There is no direct equivalent in C git.
+ *
+ * This is *NOT* the same as 'git diff HEAD' or 'git diff <SHA>'.  Those
+ * commands diff the tree, the index, and the workdir.  To emulate those
+ * functions, call `git_diff_index_to_tree` and `git_diff_workdir_to_index`,
+ * then call `git_diff_merge` on the results.
+ *
+ * @param repo The repository containing the tree.
+ * @param opts Structure with options to influence diff or NULL for defaults.
+ * @param old A git_tree object to diff from.
+ * @param diff A pointer to a git_diff_list pointer that will be allocated.
  */
 GIT_EXTERN(int) git_diff_workdir_to_tree(
 	git_repository *repo,
@@ -200,18 +256,21 @@ GIT_EXTERN(int) git_diff_workdir_to_tree(
 	git_diff_list **diff);
 
 /**
- * Compute a difference between the working directory and the index.
- * @todo NOT IMPLEMENTED
+ * Merge one diff list into another.
+ *
+ * This merges items from the "from" list into the "onto" list.  The
+ * resulting diff list will have all items that appear in either list.
+ * If an item appears in both lists, then it will be "merged" to appear
+ * as if the old version was from the "onto" list and the new version
+ * is from the "from" list (with the exception that if the item has a
+ * pending DELETE in the middle, then it will show as deleted).
+ *
+ * @param onto Diff to merge into.
+ * @param from Diff to merge.
  */
-GIT_EXTERN(int) git_diff_workdir_to_index(
-	git_repository *repo,
-	const git_diff_options *opts, /**< can be NULL for defaults */
-	git_diff_list **diff);
-
-/**
- * Deallocate a diff list.
- */
-GIT_EXTERN(void) git_diff_list_free(git_diff_list *diff);
+GIT_EXTERN(int) git_diff_merge(
+	git_diff_list *onto,
+	const git_diff_list *from);
 
 /**@}*/
 

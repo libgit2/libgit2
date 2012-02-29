@@ -100,7 +100,7 @@ void test_diff_tree__options(void)
 
 	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
-	diff_expects exp;
+	diff_expects actual;
 	int test_ab_or_cd[] = { 0, 0, 0, 0, 1, 1, 1, 1, 1 };
 	git_diff_options test_options[] = {
 		/* a vs b tests */
@@ -123,25 +123,26 @@ void test_diff_tree__options(void)
 	 */
 	diff_expects test_expects[] = {
 		/* a vs b tests */
-		{ 5, 3, 0, 2, 4, 0, 0, 51, 2, 46, 3 },
-		{ 5, 3, 0, 2, 4, 0, 0, 53, 4, 46, 3 },
-		{ 5, 0, 3, 2, 4, 0, 0, 52, 3, 3, 46 },
-		{ 5, 3, 0, 2, 5, 0, 0, 54, 3, 48, 3 },
+		{ 5, 3, 0, 2, 0, 0, 4, 0, 0, 51, 2, 46, 3 },
+		{ 5, 3, 0, 2, 0, 0, 4, 0, 0, 53, 4, 46, 3 },
+		{ 5, 0, 3, 2, 0, 0, 4, 0, 0, 52, 3, 3, 46 },
+		{ 5, 3, 0, 2, 0, 0, 5, 0, 0, 54, 3, 48, 3 },
 		/* c vs d tests */
-		{ 1, 0, 0, 1, 1, 0, 0, 22, 9, 10, 3 },
-		{ 1, 0, 0, 1, 1, 0, 0, 19, 12, 7, 0 },
-		{ 1, 0, 0, 1, 1, 0, 0, 20, 11, 8, 1 },
-		{ 1, 0, 0, 1, 1, 0, 0, 20, 11, 8, 1 },
-		{ 1, 0, 0, 1, 1, 0, 0, 18, 11, 0, 7 },
+		{ 1, 0, 0, 1, 0, 0, 1, 0, 0, 22, 9, 10, 3 },
+		{ 1, 0, 0, 1, 0, 0, 1, 0, 0, 19, 12, 7, 0 },
+		{ 1, 0, 0, 1, 0, 0, 1, 0, 0, 20, 11, 8, 1 },
+		{ 1, 0, 0, 1, 0, 0, 1, 0, 0, 20, 11, 8, 1 },
+		{ 1, 0, 0, 1, 0, 0, 1, 0, 0, 18, 11, 0, 7 },
 		{ 0 },
 	};
+	diff_expects *expected;
 	int i;
 
 	cl_assert(a);
 	cl_assert(b);
 
 	for (i = 0; test_expects[i].files > 0; i++) {
-		memset(&exp, 0, sizeof(exp)); /* clear accumulator */
+		memset(&actual, 0, sizeof(actual)); /* clear accumulator */
 		opts = test_options[i];
 
 		if (test_ab_or_cd[i] == 0)
@@ -150,17 +151,18 @@ void test_diff_tree__options(void)
 			cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, c, d, &diff));
 
 		cl_git_pass(git_diff_foreach(
-			diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+			diff, &actual, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-		cl_assert(exp.files     == test_expects[i].files);
-		cl_assert(exp.file_adds == test_expects[i].file_adds);
-		cl_assert(exp.file_dels == test_expects[i].file_dels);
-		cl_assert(exp.file_mods == test_expects[i].file_mods);
-		cl_assert(exp.hunks     == test_expects[i].hunks);
-		cl_assert(exp.lines     == test_expects[i].lines);
-		cl_assert(exp.line_ctxt == test_expects[i].line_ctxt);
-		cl_assert(exp.line_adds == test_expects[i].line_adds);
-		cl_assert(exp.line_dels == test_expects[i].line_dels);
+		expected = &test_expects[i];
+		cl_assert_intequal(actual.files,     expected->files);
+		cl_assert_intequal(actual.file_adds, expected->file_adds);
+ 		cl_assert_intequal(actual.file_dels, expected->file_dels);
+		cl_assert_intequal(actual.file_mods, expected->file_mods);
+		cl_assert_intequal(actual.hunks,     expected->hunks);
+		cl_assert_intequal(actual.lines,     expected->lines);
+		cl_assert_intequal(actual.line_ctxt, expected->line_ctxt);
+		cl_assert_intequal(actual.line_adds, expected->line_adds);
+		cl_assert_intequal(actual.line_dels, expected->line_dels);
 
 		git_diff_list_free(diff);
 		diff = NULL;

@@ -29,12 +29,14 @@ int diff_file_fn(
 	diff_expects *e = cb_data;
 	(void)progress;
 	e->files++;
-	if (delta->old_attr == 0)
-		e->file_adds++;
-	else if (delta->new_attr == 0)
-		e->file_dels++;
-	else
-		e->file_mods++;
+	switch (delta->status) {
+	case GIT_STATUS_ADDED: e->file_adds++; break;
+	case GIT_STATUS_DELETED: e->file_dels++; break;
+	case GIT_STATUS_MODIFIED: e->file_mods++; break;
+	case GIT_STATUS_IGNORED: e->file_ignored++; break;
+	case GIT_STATUS_UNTRACKED: e->file_untracked++; break;
+	default: break;
+	}
 	return 0;
 }
 

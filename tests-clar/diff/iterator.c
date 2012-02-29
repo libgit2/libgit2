@@ -338,7 +338,7 @@ static void workdir_iterator_test(
 
 void test_diff_iterator__workdir_0(void)
 {
-	workdir_iterator_test("attr", 24, 2, NULL, "ign");
+	workdir_iterator_test("attr", 25, 2, NULL, "ign");
 }
 
 static const char *status_paths[] = {
@@ -351,10 +351,10 @@ static const char *status_paths[] = {
 	"staged_delete_modified_file",
 	"staged_new_file",
 	"staged_new_file_modified_file",
+	"subdir.txt",
 	"subdir/current_file",
 	"subdir/modified_file",
 	"subdir/new_file",
-	"subdir.txt",
 	NULL
 };
 
