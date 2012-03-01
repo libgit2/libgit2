@@ -9,6 +9,7 @@
 #include "commit.h"
 #include "tag.h"
 #include "signature.h"
+#include "message.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
@@ -183,8 +184,7 @@ static int write_tag_annotation(
 		const git_signature *tagger,
 		const char *message)
 {
-	int error = GIT_SUCCESS;
-	git_buf tag = GIT_BUF_INIT;
+	git_buf tag = GIT_BUF_INIT, cleaned_message = GIT_BUF_INIT;
 	git_odb *odb;
 
 	git_oid__writebuf(&tag, "object ", git_object_id(target));
@@ -192,26 +192,31 @@ static int write_tag_annotation(
 	git_buf_printf(&tag, "tag %s\n", tag_name);
 	git_signature__writebuf(&tag, "tagger ", tagger);
 	git_buf_putc(&tag, '\n');
-	git_buf_puts(&tag, message);
 
-	if (git_buf_oom(&tag)) {
-		git_buf_free(&tag);
-		return git__throw(GIT_ENOMEM, "Not enough memory to build the tag data");
-	}
+	/* Remove comments by default */
+	if (git_message_prettify(&cleaned_message, message, 1) < 0)
+		goto on_error;
 
-	error = git_repository_odb__weakptr(&odb, repo);
-	if (error < GIT_SUCCESS) {
-		git_buf_free(&tag);
-		return error;
-	}
+	if (git_buf_puts(&tag, git_buf_cstr(&cleaned_message)) < 0)
+		goto on_error;
 
-	error = git_odb_write(oid, odb, tag.ptr, tag.size, GIT_OBJ_TAG);
+	git_buf_free(&cleaned_message);
+
+	if (git_repository_odb__weakptr(&odb, repo) < 0)
+		goto on_error;
+
+	if (git_odb_write(oid, odb, tag.ptr, tag.size, GIT_OBJ_TAG) < 0)
+		goto on_error;
+
 	git_buf_free(&tag);
 
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create tag annotation");
+	return 0;
 
-	return error;
+on_error:
+	git_buf_free(&tag);
+	git_buf_free(&cleaned_message);
+	giterr_set(GITERR_OBJECT, "Failed to create tag annotation.");
+	return -1;
 }
 
 static int git_tag_create__internal(
