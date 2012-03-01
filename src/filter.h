@@ -37,6 +37,7 @@ typedef enum {
 	GIT_AUTO_CRLF_FALSE = 0,
 	GIT_AUTO_CRLF_TRUE = 1,
 	GIT_AUTO_CRLF_INPUT = -1,
+	GIT_AUTO_CRLF_DEFAULT = GIT_AUTO_CRLF_FALSE,
 } git_crlf_t;
 
 typedef enum {
@@ -44,10 +45,11 @@ typedef enum {
 	GIT_EOL_CRLF,
 	GIT_EOL_LF,
 #ifdef GIT_WIN32
-	GIT_EOL_NATIVE = GIT_EOL_CRLF
+	GIT_EOL_NATIVE = GIT_EOL_CRLF,
 #else
-	GIT_EOL_NATIVE = GIT_EOL_LF
+	GIT_EOL_NATIVE = GIT_EOL_LF,
 #endif
+	GIT_EOL_DEFAULT = GIT_EOL_NATIVE
 } git_eol_t;
 
 typedef struct {
@@ -58,6 +60,7 @@ typedef struct {
 	unsigned int printable, nonprintable;
 } git_text_stats;
 
+extern int git_filter__load_settings(git_repository *repo);
 extern int git_filter__load_for_file(git_vector *filters, git_repository *repo, const char *full_path, int mode);
 extern void git_filter__free(git_vector *filters);
 extern int git_filter__apply(git_buf *dest, git_buf *source, git_vector *filters);

@@ -48,7 +48,7 @@ struct git_repository {
 	unsigned int lru_counter;
 
 	struct {
-		int core_eol;
+		int eol;
 		int auto_crlf;
 	} filter_options;
 };

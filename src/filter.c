@@ -9,6 +9,8 @@
 #include "fileops.h"
 #include "hash.h"
 #include "filter.h"
+#include "repository.h"
+#include "git2/config.h"
 
 /* Fresh from Core Git. I wonder what we could use this for... */
 void git_text__stat(git_text_stats *stats, const git_buf *text)
@@ -163,3 +165,42 @@ int git_filter__apply(git_buf *dest, git_buf *source, git_vector *filters)
 	return GIT_SUCCESS;
 }
 
+int git_filter__load_settings(git_repository *repo)
+{
+	static git_cvar_map map_eol[] = {
+		{GIT_CVAR_FALSE, NULL, GIT_EOL_UNSET},
+		{GIT_CVAR_STRING, "lf", GIT_EOL_LF},
+		{GIT_CVAR_STRING, "crlf", GIT_EOL_CRLF},
+		{GIT_CVAR_STRING, "native", GIT_EOL_NATIVE}
+	};
+
+	static git_cvar_map map_crlf[] = {
+		{GIT_CVAR_FALSE, NULL, GIT_AUTO_CRLF_FALSE},
+		{GIT_CVAR_TRUE, NULL, GIT_AUTO_CRLF_TRUE},
+		{GIT_CVAR_STRING, "input", GIT_AUTO_CRLF_INPUT}
+	};
+
+	git_config *config;
+	int error;
+
+	repo->filter_options.eol = GIT_EOL_DEFAULT;
+	repo->filter_options.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
+
+	error = git_repository_config__weakptr(&config, repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	error = git_config_get_mapped(
+		config, "core.eol", map_eol, ARRAY_SIZE(map_eol), &repo->filter_options.eol);
+
+	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+		return error;
+
+	error = git_config_get_mapped(
+		config, "core.auto_crlf", map_crlf, ARRAY_SIZE(map_crlf), &repo->filter_options.auto_crlf);
+
+	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+		return error;
+
+	return 0;
+}
