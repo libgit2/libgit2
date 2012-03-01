@@ -88,3 +88,9 @@ int git_remote_valid_url(const char *url)
 	return transport_find_fn(url) != NULL;
 }
 
+int git_remote_supported_url(const char* url)
+{
+	git_transport_cb transport_fn = transport_find_fn(url);
+
+	return ((transport_fn != NULL) && (transport_fn != &git_transport_dummy));
+}
