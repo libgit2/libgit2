@@ -246,4 +246,26 @@ extern int git_path_dirload(
 	size_t alloc_extra,
 	git_vector *contents);
 
+
+typedef struct {
+	struct stat st;
+	size_t      path_len;
+	char        path[GIT_FLEX_ARRAY];
+} git_path_with_stat;
+
+extern int git_path_with_stat_cmp(const void *a, const void *b);
+
+/**
+ * Load all directory entries along with stat info into a vector.
+ *
+ * This is just like git_path_dirload except that each entry in the
+ * vector is a git_path_with_stat structure that contains both the
+ * path and the stat info, plus directories will have a / suffixed
+ * to their path name.
+ */
+extern int git_path_dirload_with_stat(
+	const char *path,
+	size_t prefix_len,
+	git_vector *contents);
+
 #endif

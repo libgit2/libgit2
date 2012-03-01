@@ -156,14 +156,14 @@ BEGIN_TEST(statuscb0, "test retrieving status for worktree of repository")
 	git_futils_rmdir_r(TEMP_REPO_FOLDER, 1);
 END_TEST
 
-static int status_cb1(const char *GIT_UNUSED(path), unsigned int GIT_UNUSED(status_flags), void *payload)
+static int status_cb1(const char *path, unsigned int status_flags, void *payload)
 {
 	int *count = (int *)payload;;
 
-	GIT_UNUSED_ARG(path);
-	GIT_UNUSED_ARG(status_flags);
+	GIT_UNUSED(path);
+	GIT_UNUSED(status_flags);
 
-	(void) *count++;
+	(*count)++;
 
 	return GIT_SUCCESS;
 }

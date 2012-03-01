@@ -5,12 +5,6 @@
 
 
 /**
- * Test fixtures
- */
-static git_repository *_repository = NULL;
-
-
-/**
  * Auxiliary methods
  */
 static int
@@ -37,48 +31,27 @@ exit:
 }
 
 static int
-cb_status__count(const char *GIT_UNUSED(p), unsigned int GIT_UNUSED(s), void *payload)
+cb_status__count(const char *p, unsigned int s, void *payload)
 {
 	volatile int *count = (int *)payload;
 
-	GIT_UNUSED_ARG(p);
-	GIT_UNUSED_ARG(s);
+	GIT_UNUSED(p);
+	GIT_UNUSED(s);
 
-	*count++;
+	(*count)++;
 
 	return GIT_SUCCESS;
 }
 
 
-
 /**
  * Initializer
  *
- * This method is called once before starting each
- * test, and will load the required fixtures
+ * Not all of the tests in this file use the same fixtures, so we allow each
+ * test to load their fixture at the top of the test function.
  */
 void test_status_worktree__initialize(void)
 {
-	/*
-	 * Sandbox the `status/` repository from our Fixtures.
-	 * This will copy the whole folder to our sandbox,
-	 * so now it can be accessed with `./status`
-	 */
-	cl_fixture_sandbox("status");
-
-	/*
-	 * Rename `status/.gitted` to `status/.git`
-	 * We do this because we cannot store a folder named `.git`
-	 * inside the fixtures folder in our libgit2 repo.
-	 */
-	cl_git_pass(
-		p_rename("status/.gitted", "status/.git")
-	);
-
-	/*
-	 * Open the sandboxed "status" repository
-	 */
-	cl_git_pass(git_repository_open(&_repository, "status/.git"));
 }
 
 /**
@@ -89,10 +62,7 @@ void test_status_worktree__initialize(void)
  */
 void test_status_worktree__cleanup(void)
 {
-	git_repository_free(_repository);
-	_repository = NULL;
-
-	cl_fixture_cleanup("status");
+	cl_git_sandbox_cleanup();
 }
 
 /**
@@ -101,6 +71,7 @@ void test_status_worktree__cleanup(void)
 void test_status_worktree__whole_repository(void)
 {
 	struct status_entry_counts counts;
+	git_repository *repo = cl_git_sandbox_init("status");
 
 	memset(&counts, 0x0, sizeof(struct status_entry_counts));
 	counts.expected_entry_count = entry_count0;
@@ -108,7 +79,7 @@ void test_status_worktree__whole_repository(void)
 	counts.expected_statuses = entry_statuses0;
 
 	cl_git_pass(
-		git_status_foreach(_repository, cb_status__normal, &counts)
+		git_status_foreach(repo, cb_status__normal, &counts)
 	);
 
 	cl_assert(counts.entry_count == counts.expected_entry_count);
@@ -119,8 +90,10 @@ void test_status_worktree__whole_repository(void)
 void test_status_worktree__empty_repository(void)
 {
 	int count = 0;
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
 
-	git_status_foreach(_repository, cb_status__count, &count);
+	cl_git_pass(git_status_foreach(repo, cb_status__count, &count));
+
 	cl_assert(count == 0);
 }
 
@@ -128,10 +101,11 @@ void test_status_worktree__single_file(void)
 {
 	int i;
 	unsigned int status_flags;
+	git_repository *repo = cl_git_sandbox_init("status");
 
 	for (i = 0; i < (int)entry_count0; i++) {
 		cl_git_pass(
-			git_status_file(&status_flags, _repository, entry_paths0[i])
+			git_status_file(&status_flags, repo, entry_paths0[i])
 		);
 		cl_assert(entry_statuses0[i] == status_flags);
 	}
@@ -140,15 +114,22 @@ void test_status_worktree__single_file(void)
 void test_status_worktree__ignores(void)
 {
 	int i, ignored;
+	git_repository *repo = cl_git_sandbox_init("status");
 
 	for (i = 0; i < (int)entry_count0; i++) {
-		cl_git_pass(git_status_should_ignore(_repository, entry_paths0[i], &ignored));
+		cl_git_pass(
+			git_status_should_ignore(repo, entry_paths0[i], &ignored)
+		);
 		cl_assert(ignored == (entry_statuses0[i] == GIT_STATUS_IGNORED));
 	}
 
-	cl_git_pass(git_status_should_ignore(_repository, "nonexistent_file", &ignored));
+	cl_git_pass(
+		git_status_should_ignore(repo, "nonexistent_file", &ignored)
+	);
 	cl_assert(!ignored);
 
-	cl_git_pass(git_status_should_ignore(_repository, "ignored_nonexistent_file", &ignored));
+	cl_git_pass(
+		git_status_should_ignore(repo, "ignored_nonexistent_file", &ignored)
+	);
 	cl_assert(ignored);
 }

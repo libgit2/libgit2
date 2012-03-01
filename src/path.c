@@ -583,3 +583,48 @@ int git_path_dirload(
 	return GIT_SUCCESS;
 }
 
+int git_path_with_stat_cmp(const void *a, const void *b)
+{
+	const git_path_with_stat *psa = a, *psb = b;
+	return git__strcmp_cb(psa->path, psb->path);
+}
+
+int git_path_dirload_with_stat(
+	const char *path,
+	size_t prefix_len,
+	git_vector *contents)
+{
+	int error;
+	unsigned int i;
+	git_path_with_stat *ps;
+	git_buf full = GIT_BUF_INIT;
+
+	if ((error = git_buf_set(&full, path, prefix_len)) != GIT_SUCCESS)
+		return error;
+
+	if ((error = git_path_dirload(path, prefix_len,
+		sizeof(git_path_with_stat) + 1, contents)) != GIT_SUCCESS) {
+		git_buf_free(&full);
+		return error;
+	}
+
+	git_vector_foreach(contents, i, ps) {
+		size_t path_len = strlen((char *)ps);
+
+		memmove(ps->path, ps, path_len + 1);
+		ps->path_len = path_len;
+
+		git_buf_joinpath(&full, full.ptr, ps->path);
+		p_lstat(full.ptr, &ps->st);
+		git_buf_truncate(&full, prefix_len);
+
+		if (S_ISDIR(ps->st.st_mode)) {
+			ps->path[path_len] = '/';
+			ps->path[path_len + 1] = '\0';
+		}
+	}
+
+	git_buf_free(&full);
+
+	return error;
+}

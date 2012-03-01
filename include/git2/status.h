@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
 #define GIT_STATUS_WT_MODIFIED		(1 << 4)
 #define GIT_STATUS_WT_DELETED		(1 << 5)
 
-#define GIT_STATUS_IGNORED			(1 << 6)
+#define GIT_STATUS_IGNORED		(1 << 6)
 
 /**
  * Gather file statuses and run a callback for each one.

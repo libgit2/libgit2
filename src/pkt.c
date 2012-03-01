@@ -41,11 +41,11 @@ static int flush_pkt(git_pkt **out)
 }
 
 /* the rest of the line will be useful for multi_ack */
-static int ack_pkt(git_pkt **out, const char *GIT_UNUSED(line), size_t GIT_UNUSED(len))
+static int ack_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt *pkt;
-	GIT_UNUSED_ARG(line);
-	GIT_UNUSED_ARG(len);
+	GIT_UNUSED(line);
+	GIT_UNUSED(len);
 
 	pkt = git__malloc(sizeof(git_pkt));
 	if (pkt == NULL)

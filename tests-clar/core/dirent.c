@@ -88,10 +88,10 @@ static int one_entry(void *state, git_buf *path)
 	return GIT_ERROR;
 }
 
-static int dont_call_me(void *GIT_UNUSED(state), git_buf *GIT_UNUSED(path))
+static int dont_call_me(void *state, git_buf *path)
 {
-	GIT_UNUSED_ARG(state)
-	GIT_UNUSED_ARG(path)
+	GIT_UNUSED(state);
+	GIT_UNUSED(path);
 	return GIT_ERROR;
 }
 

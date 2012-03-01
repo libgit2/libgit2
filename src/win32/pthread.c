@@ -8,10 +8,10 @@
 #include "pthread.h"
 
 int pthread_create(pthread_t *GIT_RESTRICT thread,
-					const pthread_attr_t *GIT_RESTRICT GIT_UNUSED(attr),
+					const pthread_attr_t *GIT_RESTRICT attr,
 					void *(*start_routine)(void*), void *GIT_RESTRICT arg)
 {
-	GIT_UNUSED_ARG(attr);
+	GIT_UNUSED(attr);
 	*thread = (pthread_t) CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)start_routine, arg, 0, NULL);
 	return *thread ? GIT_SUCCESS : git__throw(GIT_EOSERR, "Failed to create pthread");
 }
@@ -26,9 +26,9 @@ int pthread_join(pthread_t thread, void **value_ptr)
 }
 
 int pthread_mutex_init(pthread_mutex_t *GIT_RESTRICT mutex,
-						const pthread_mutexattr_t *GIT_RESTRICT GIT_UNUSED(mutexattr))
+						const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
 {
-	GIT_UNUSED_ARG(mutexattr);
+	GIT_UNUSED(mutexattr);
 	InitializeCriticalSection(mutex);
 	return 0;
 }

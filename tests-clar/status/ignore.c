@@ -7,21 +7,12 @@ static git_repository *g_repo = NULL;
 
 void test_status_ignore__initialize(void)
 {
-	/* Before each test, instantiate the attr repo from the fixtures and
-	 * rename the .gitted to .git so it is a repo with a working dir.  Also
-	 * rename gitignore to .gitignore.
-	 */
-	cl_fixture_sandbox("attr");
-	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
-	cl_git_pass(p_rename("attr/gitignore", "attr/.gitignore"));
-	cl_git_pass(git_repository_open(&g_repo, "attr/.git"));
+	g_repo = cl_git_sandbox_init("attr");
 }
 
 void test_status_ignore__cleanup(void)
 {
-	git_repository_free(g_repo);
-	g_repo = NULL;
-	cl_fixture_cleanup("attr");
+	cl_git_sandbox_cleanup();
 }
 
 void test_status_ignore__0(void)

@@ -33,21 +33,7 @@
 #	define GIT_TYPEOF(x)
 #endif
 
-#ifdef __cplusplus
-#	define GIT_UNUSED(x)
-#else
-#	ifdef __GNUC__
-#		define GIT_UNUSED(x) x __attribute__ ((__unused__))
-#	else
-#		define GIT_UNUSED(x) x
-#	endif
-#endif
-
-#if defined(_MSC_VER)
-#define GIT_UNUSED_ARG(x) ((void)(x)); /* note trailing ; */
-#else
-#define GIT_UNUSED_ARG(x)
-#endif
+#define GIT_UNUSED(x) ((void)(x))
 
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)

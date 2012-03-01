@@ -38,9 +38,12 @@ GIT_INLINE(void) cl_assert_strequal_internal(
 	if (!match) {
 		char buf[4096];
 		snprintf(buf, 4096, "'%s' != '%s'", a, b);
-		clar__assert(0, file, line, buf, err, 1);
+		clar__assert(0, file, line, err, buf, 1);
 	}
 }
+
+#define cl_assert_intequal(a,b) \
+	do { if ((a) != (b)) { char buf[128]; snprintf(buf,128,"%d != %d",(a),(b)); clar__assert(0,__FILE__,__LINE__,#a " != " #b,buf,1); } } while (0)
 
 /*
  * Some utility macros for building long strings
@@ -53,5 +56,10 @@ GIT_INLINE(void) cl_assert_strequal_internal(
 
 /* Write the contents of a buffer to disk */
 void cl_git_mkfile(const char *filename, const char *content);
+
+/* Git sandbox setup helpers */
+
+git_repository *cl_git_sandbox_init(const char *sandbox);
+void cl_git_sandbox_cleanup(void);
 
 #endif

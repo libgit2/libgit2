@@ -64,6 +64,8 @@ void test_attr_repo__get_one(void)
 		{ "sub/sub/subdir.txt", "reposub", NULL },
 		{ "does-not-exist", "foo", "yes" },
 		{ "sub/deep/file", "deepdeep", GIT_ATTR_TRUE },
+		{ "sub/sub/d/no", "test", "a/b/d/*" },
+		{ "sub/sub/d/yes", "test", NULL },
 		{ NULL, NULL, NULL }
 	}, *scan;
 
@@ -125,12 +127,12 @@ void test_attr_repo__get_many(void)
 }
 
 static int count_attrs(
-	const char *GIT_UNUSED(name),
-	const char *GIT_UNUSED(value),
+	const char *name,
+	const char *value,
 	void *payload)
 {
-	GIT_UNUSED_ARG(name);
-	GIT_UNUSED_ARG(value);
+	GIT_UNUSED(name);
+	GIT_UNUSED(value);
 
 	*((int *)payload) += 1;
 
@@ -245,3 +247,4 @@ void test_attr_repo__bad_macros(void)
 	cl_assert_strequal("hahaha", values[4]);
 	cl_assert(values[5] == GIT_ATTR_TRUE);
 }
+

@@ -12,9 +12,11 @@ void test_config_multivar__cleanup(void)
 	cl_fixture_cleanup("config");
 }
 
-static int mv_read_cb(const char *name, const char *GIT_UNUSED(value), void *data)
+static int mv_read_cb(const char *name, const char *value, void *data)
 {
 	int *n = (int *) data;
+
+	GIT_UNUSED(value);
 
 	if (!strcmp(name, _name))
 		(*n)++;
@@ -35,9 +37,11 @@ void test_config_multivar__foreach(void)
 	git_config_free(cfg);
 }
 
-static int cb(const char *GIT_UNUSED(val), void *data)
+static int cb(const char *val, void *data)
 {
 	int *n = (int *) data;
+
+	GIT_UNUSED(val);
 
 	(*n)++;
 
@@ -119,6 +123,8 @@ void test_config_multivar__replace(void)
 	n = 0;
 	cl_git_pass(git_config_get_multivar(cfg, _name, NULL, cb, &n));
 	cl_assert(n == 2);
+
+	git_config_free(cfg);
 }
 
 void test_config_multivar__replace_multiple(void)
@@ -141,4 +147,5 @@ void test_config_multivar__replace_multiple(void)
 	cl_git_pass(git_config_get_multivar(cfg, _name, "otherplace", cb, &n));
 	cl_assert(n == 2);
 
+	git_config_free(cfg);
 }

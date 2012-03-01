@@ -70,12 +70,12 @@ int __cdecl
 #else
 int
 #endif
-main(int GIT_UNUSED(argc), char *GIT_UNUSED(argv[]))
+main(int argc, char *argv[])
 {
 	unsigned int i, failures;
 
-	GIT_UNUSED_ARG(argc);
-	GIT_UNUSED_ARG(argv);
+	GIT_UNUSED(argc);
+	GIT_UNUSED(argv);
 
 	git_threads_init();
 
