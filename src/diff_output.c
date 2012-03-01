@@ -309,14 +309,14 @@ int git_diff_foreach(
 		git_blob *old_blob = NULL, *new_blob = NULL;
 		git_map old_data, new_data;
 
-		if (delta->status == GIT_STATUS_UNMODIFIED)
+		if (delta->status == GIT_DELTA_UNMODIFIED)
 			continue;
 
-		if (delta->status == GIT_STATUS_IGNORED &&
+		if (delta->status == GIT_DELTA_IGNORED &&
 			(diff->opts.flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
 			continue;
 
-		if (delta->status == GIT_STATUS_UNTRACKED &&
+		if (delta->status == GIT_DELTA_UNTRACKED &&
 			(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
 			continue;
 
@@ -337,8 +337,8 @@ int git_diff_foreach(
 		/* map files */
 		if (delta->binary != 1 &&
 			(hunk_cb || line_cb) &&
-			(delta->status == GIT_STATUS_DELETED ||
-			 delta->status == GIT_STATUS_MODIFIED))
+			(delta->status == GIT_DELTA_DELETED ||
+			 delta->status == GIT_DELTA_MODIFIED))
 		{
 			if (diff->old_src == GIT_ITERATOR_WORKDIR)
 				error = get_workdir_content(diff->repo, &delta->old, &old_data);
@@ -351,8 +351,8 @@ int git_diff_foreach(
 
 		if (delta->binary != 1 &&
 			(hunk_cb || line_cb || git_oid_iszero(&delta->new.oid)) &&
-			(delta->status == GIT_STATUS_ADDED ||
-			 delta->status == GIT_STATUS_MODIFIED))
+			(delta->status == GIT_DELTA_ADDED ||
+			 delta->status == GIT_DELTA_MODIFIED))
 		{
 			if (diff->new_src == GIT_ITERATOR_WORKDIR)
 				error = get_workdir_content(diff->repo, &delta->new, &new_data);
@@ -372,7 +372,7 @@ int git_diff_foreach(
 				 * incorrect status and need to skip this item.
 				 */
 				if (git_oid_cmp(&delta->old.oid, &delta->new.oid) == 0) {
-					delta->status = GIT_STATUS_UNMODIFIED;
+					delta->status = GIT_DELTA_UNMODIFIED;
 					goto cleanup;
 				}
 			}
@@ -451,13 +451,13 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	GIT_UNUSED(progress);
 
 	switch (delta->status) {
-	case GIT_STATUS_ADDED: code = 'A'; break;
-	case GIT_STATUS_DELETED: code = 'D'; break;
-	case GIT_STATUS_MODIFIED: code = 'M'; break;
-	case GIT_STATUS_RENAMED: code = 'R'; break;
-	case GIT_STATUS_COPIED: code = 'C'; break;
-	case GIT_STATUS_IGNORED: code = 'I'; break;
-	case GIT_STATUS_UNTRACKED: code = '?'; break;
+	case GIT_DELTA_ADDED: code = 'A'; break;
+	case GIT_DELTA_DELETED: code = 'D'; break;
+	case GIT_DELTA_MODIFIED: code = 'M'; break;
+	case GIT_DELTA_RENAMED: code = 'R'; break;
+	case GIT_DELTA_COPIED: code = 'C'; break;
+	case GIT_DELTA_IGNORED: code = 'I'; break;
+	case GIT_DELTA_UNTRACKED: code = '?'; break;
 	default: code = 0;
 	}
 
@@ -695,8 +695,8 @@ int git_diff_blobs(
 
 	/* populate a "fake" delta record */
 	delta.status = old.ptr ?
-		(new.ptr ? GIT_STATUS_MODIFIED : GIT_STATUS_DELETED) :
-		(new.ptr ? GIT_STATUS_ADDED : GIT_STATUS_UNTRACKED);
+		(new.ptr ? GIT_DELTA_MODIFIED : GIT_DELTA_DELETED) :
+		(new.ptr ? GIT_DELTA_ADDED : GIT_DELTA_UNTRACKED);
 	delta.old.mode = 0100644; /* can't know the truth from a blob alone */
 	delta.new.mode = 0100644;
 	git_oid_cpy(&delta.old.oid, git_object_id((const git_object *)old_blob));

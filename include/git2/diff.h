@@ -75,6 +75,20 @@ enum {
 };
 
 /**
+ * What type of change is described by a git_diff_delta?
+ */
+typedef enum {
+	GIT_DELTA_UNMODIFIED = 0,
+	GIT_DELTA_ADDED = 1,
+	GIT_DELTA_DELETED = 2,
+	GIT_DELTA_MODIFIED = 3,
+	GIT_DELTA_RENAMED = 4,
+	GIT_DELTA_COPIED = 5,
+	GIT_DELTA_IGNORED = 6,
+	GIT_DELTA_UNTRACKED = 7
+} git_delta_t;
+
+/**
  * Description of one side of a diff.
  */
 typedef struct {
@@ -101,7 +115,7 @@ typedef struct {
 typedef struct {
 	git_diff_file old;
 	git_diff_file new;
-	git_status_t status;     /**< value from tree.h */
+	git_delta_t   status;
 	unsigned int similarity; /**< for RENAMED and COPIED, value from 0 to 100 */
 	int binary;
 } git_diff_delta;

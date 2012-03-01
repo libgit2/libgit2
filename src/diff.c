@@ -29,7 +29,7 @@ static void diff_delta__free(git_diff_delta *delta)
 
 static git_diff_delta *diff_delta__alloc(
 	git_diff_list *diff,
-	git_status_t status,
+	git_delta_t status,
 	const char *path)
 {
 	git_diff_delta *delta = git__calloc(1, sizeof(git_diff_delta));
@@ -46,8 +46,8 @@ static git_diff_delta *diff_delta__alloc(
 
 	if (diff->opts.flags & GIT_DIFF_REVERSE) {
 		switch (status) {
-		case GIT_STATUS_ADDED:   status = GIT_STATUS_DELETED; break;
-		case GIT_STATUS_DELETED: status = GIT_STATUS_ADDED; break;
+		case GIT_DELTA_ADDED:   status = GIT_DELTA_DELETED; break;
+		case GIT_DELTA_DELETED: status = GIT_DELTA_ADDED; break;
 		default: break; /* leave other status values alone */
 		}
 	}
@@ -112,16 +112,16 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	 * those choices so we can emulate the type of diff.
 	 */
 	if (git_oid_cmp(&dup->old.oid, &dup->new.oid) == 0) {
-		if (dup->status == GIT_STATUS_DELETED)
+		if (dup->status == GIT_DELTA_DELETED)
 			/* preserve pending delete info */;
-		else if (b->status == GIT_STATUS_UNTRACKED ||
-				 b->status == GIT_STATUS_IGNORED)
+		else if (b->status == GIT_DELTA_UNTRACKED ||
+				 b->status == GIT_DELTA_IGNORED)
 			dup->status = b->status;
 		else
-			dup->status = GIT_STATUS_UNMODIFIED;
+			dup->status = GIT_DELTA_UNMODIFIED;
 	}
-	else if (dup->status == GIT_STATUS_UNMODIFIED ||
-			 b->status == GIT_STATUS_DELETED)
+	else if (dup->status == GIT_DELTA_UNMODIFIED ||
+			 b->status == GIT_DELTA_DELETED)
 		dup->status = b->status;
 
 	return dup;
@@ -129,7 +129,7 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 
 static int diff_delta__from_one(
 	git_diff_list *diff,
-	git_status_t   status,
+	git_delta_t   status,
 	const git_index_entry *entry)
 {
 	int error;
@@ -138,9 +138,9 @@ static int diff_delta__from_one(
 		return git__rethrow(GIT_ENOMEM, "Could not allocate diff record");
 
 	/* This fn is just for single-sided diffs */
-	assert(status != GIT_STATUS_MODIFIED);
+	assert(status != GIT_DELTA_MODIFIED);
 
-	if (delta->status == GIT_STATUS_DELETED) {
+	if (delta->status == GIT_DELTA_DELETED) {
 		delta->old.mode = entry->mode;
 		delta->old.size = entry->file_size;
 		git_oid_cpy(&delta->old.oid, &entry->oid);
@@ -161,7 +161,7 @@ static int diff_delta__from_one(
 
 static int diff_delta__from_two(
 	git_diff_list *diff,
-	git_status_t   status,
+	git_delta_t   status,
 	const git_index_entry *old,
 	const git_index_entry *new,
 	git_oid *new_oid)
@@ -333,9 +333,9 @@ static int maybe_modified(
 		return GIT_SUCCESS;
 
 	if (GIT_MODE_TYPE(oitem->mode) != GIT_MODE_TYPE(nitem->mode)) {
-		error = diff_delta__from_one(diff, GIT_STATUS_DELETED, oitem);
+		error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem);
 		if (error == GIT_SUCCESS)
-			error = diff_delta__from_one(diff, GIT_STATUS_ADDED, nitem);
+			error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
 		return error;
 	}
 
@@ -370,7 +370,7 @@ static int maybe_modified(
 	}
 
 	return diff_delta__from_two(
-		diff, GIT_STATUS_MODIFIED, oitem, nitem, use_noid);
+		diff, GIT_DELTA_MODIFIED, oitem, nitem, use_noid);
 }
 
 static int diff_from_iterators(
@@ -401,7 +401,7 @@ static int diff_from_iterators(
 
 		/* create DELETED records for old items not matched in new */
 		if (oitem && (!nitem || strcmp(oitem->path, nitem->path) < 0)) {
-			error = diff_delta__from_one(diff, GIT_STATUS_DELETED, oitem);
+			error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem);
 			if (error == GIT_SUCCESS)
 				error = git_iterator_advance(old, &oitem);
 			continue;
@@ -412,7 +412,7 @@ static int diff_from_iterators(
 		 */
 		if (nitem && (!oitem || strcmp(oitem->path, nitem->path) > 0)) {
 			int is_ignored;
-			git_status_t use_status = GIT_STATUS_ADDED;
+			git_delta_t delta_type = GIT_DELTA_ADDED;
 
 			/* contained in ignored parent directory, so this can be skipped. */
 			if (ignore_prefix != NULL &&
@@ -431,14 +431,14 @@ static int diff_from_iterators(
 					error = git_iterator_advance_into_directory(new, &nitem);
 					continue;
 				}
-				use_status = GIT_STATUS_UNTRACKED;
+				delta_type = GIT_DELTA_UNTRACKED;
 			}
 			else if (is_ignored)
-				use_status = GIT_STATUS_IGNORED;
+				delta_type = GIT_DELTA_IGNORED;
 			else if (new->type == GIT_ITERATOR_WORKDIR)
-				use_status = GIT_STATUS_UNTRACKED;
+				delta_type = GIT_DELTA_UNTRACKED;
 
-			error = diff_delta__from_one(diff, use_status, nitem);
+			error = diff_delta__from_one(diff, delta_type, nitem);
 			if (error == GIT_SUCCESS)
 				error = git_iterator_advance(new, &nitem);
 			continue;

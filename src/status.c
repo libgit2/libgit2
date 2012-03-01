@@ -131,7 +131,7 @@ static int status_entry_update_ignore(struct status_entry *e, git_ignores *ignor
 	if ((error = git_ignore__lookup(ignores, path, &ignored)) == GIT_SUCCESS &&
 		ignored)
 		e->status_flags =
-			(e->status_flags & ~GIT_STATUS_WT_NEW) | GIT_STATUS_WT_IGNORED;
+			(e->status_flags & ~GIT_STATUS_WT_NEW) | GIT_STATUS_IGNORED;
 
 	return error;
 }
