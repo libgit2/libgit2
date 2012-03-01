@@ -87,9 +87,11 @@ int git_text__is_binary(git_text_stats *stats)
 int git_filter__load_for_file(git_vector *filters, git_repository *repo, const char *path, int mode)
 {
 	int error;
-	git_filter *crlf_filter;
+	git_filter *crlf_filter = NULL;
 
-	return 0; /* TODO: not quite ready yet */
+	error = git_filter__load_settings(repo);
+	if (error < GIT_SUCCESS)
+		return error;
 
 	if (mode == GIT_FILTER_TO_ODB) {
 		error = git_filter__crlf_to_odb(&crlf_filter, repo, path);
@@ -183,6 +185,9 @@ int git_filter__load_settings(git_repository *repo)
 	git_config *config;
 	int error;
 
+	if (repo->filter_options.loaded)
+		return GIT_SUCCESS;
+
 	repo->filter_options.eol = GIT_EOL_DEFAULT;
 	repo->filter_options.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
 
@@ -202,5 +207,6 @@ int git_filter__load_settings(git_repository *repo)
 	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
 		return error;
 
+	repo->filter_options.loaded = 1;
 	return 0;
 }
