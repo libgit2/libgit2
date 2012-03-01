@@ -9,7 +9,7 @@
 #include "git2/remote.h"
 #include "git2/net.h"
 #include "transport.h"
-
+#include "path.h"
 #include <regex.h>
 
 static struct {
@@ -30,9 +30,6 @@ static struct {
 static git_transport_cb transport_find_fn(const char *url)
 {
 	size_t i = 0;
-	regex_t preg;
-	int error;
-	git_transport_cb output = NULL;
 
 	// First, check to see if it's an obvious URL, which a URL scheme
 	for (i = 0; i < GIT_TRANSPORT_COUNT; ++i) {
@@ -40,25 +37,15 @@ static git_transport_cb transport_find_fn(const char *url)
 			return transports[i].fn;
 	}
 
+	/* still here? Check to see if the path points to a file on the local file system */
+	if ((git_path_exists(url) == GIT_SUCCESS) && git_path_isdir(url))
+		return &git_transport_local;
 
-	// next, see if it matches un-schemed SSH paths used by Git
-	// if it does not match, it must be a local transport method
-	// use the slightly old fashioned :alnum: instead of \w or :word:, because
-	// both are Perl extensions to the Regular Expression language (and not available here)
-	error = regcomp(&preg, "^[[:alnum:]_]+@[[:alnum:]_]+\\.[[:alnum:]_]+:.+\\.git$", REG_EXTENDED);
-	if (error < 0)
-		goto cleanup;
+	/* It could be a SSH remote path. Check to see if there's a : */
+	if (strrchr(url, ':'))
+		return &git_transport_dummy;	/* SSH is an unsupported transport mechanism in this version of libgit2 */
 
-	int rc = regexec(&preg, url, 0, NULL, 0);
-	if ( rc == REG_NOMATCH )
-		output = NULL; // a match was not found - it's probably a file system path
-	else
-		output = &git_transport_git;  		// a match was found!
-
-cleanup:
-	regfree(&preg);
-
-	return output;
+	return NULL;
 }
 
 /**************
@@ -79,12 +66,8 @@ int git_transport_new(git_transport **out, const char *url)
 
 	fn = transport_find_fn(url);
 
-	/*
-	 * If we haven't found the transport, we assume we mean a
-	 * local file.
-	 */
 	if (fn == NULL)
-		fn = &git_transport_local;
+		return git__throw(GIT_EINVALIDARGS, "No supported transport mechanism found for URL or path. Either libgit2 has not implemented this transport protocol, or it can not find the specified path.");
 
 	error = fn(&transport);
 	if (error < GIT_SUCCESS)
