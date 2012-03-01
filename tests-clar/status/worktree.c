@@ -120,7 +120,7 @@ void test_status_worktree__ignores(void)
 		cl_git_pass(
 			git_status_should_ignore(repo, entry_paths0[i], &ignored)
 		);
-		cl_assert(ignored == (entry_statuses0[i] == GIT_STATUS_WT_IGNORED));
+		cl_assert(ignored == (entry_statuses0[i] == GIT_STATUS_IGNORED));
 	}
 
 	cl_git_pass(

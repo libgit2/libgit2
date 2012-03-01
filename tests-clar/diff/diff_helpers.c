@@ -30,11 +30,11 @@ int diff_file_fn(
 	(void)progress;
 	e->files++;
 	switch (delta->status) {
-	case GIT_STATUS_ADDED: e->file_adds++; break;
-	case GIT_STATUS_DELETED: e->file_dels++; break;
-	case GIT_STATUS_MODIFIED: e->file_mods++; break;
-	case GIT_STATUS_IGNORED: e->file_ignored++; break;
-	case GIT_STATUS_UNTRACKED: e->file_untracked++; break;
+	case GIT_DELTA_ADDED: e->file_adds++; break;
+	case GIT_DELTA_DELETED: e->file_dels++; break;
+	case GIT_DELTA_MODIFIED: e->file_mods++; break;
+	case GIT_DELTA_IGNORED: e->file_ignored++; break;
+	case GIT_DELTA_UNTRACKED: e->file_untracked++; break;
 	default: break;
 	}
 	return 0;

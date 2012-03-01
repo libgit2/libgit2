@@ -29,7 +29,7 @@ static const char *entry_paths0[] = {
 
 static const unsigned int entry_statuses0[] = {
 	GIT_STATUS_WT_DELETED,
-	GIT_STATUS_WT_IGNORED,
+	GIT_STATUS_IGNORED,
 	GIT_STATUS_WT_MODIFIED,
 	GIT_STATUS_WT_NEW,
 	GIT_STATUS_INDEX_MODIFIED,
