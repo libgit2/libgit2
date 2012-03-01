@@ -102,18 +102,74 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	return error;
 }
 
+static int drop_crlf(git_buf *dest, const git_buf *source)
+{
+	size_t psize = source->size - 1;
+	size_t i = 0;
+
+	/* Initial scan: see if we can reach the end of the document
+	 * without finding a single carriage return */
+	while (i < psize && source->ptr[i] != '\r')
+		i++;
+
+	/* Clean file? Tell the library to skip this filter */
+	if (i == psize)
+		return -1;
+
+	/* Main scan loop. Keep moving forward until we find a carriage
+	 * return, and then copy the whole chunk to the destination
+	 * buffer.
+	 *
+	 * Note that we only scan until `size - 1`, because we cannot drop a
+	 * carriage return if it's the last character in the file (what a weird
+	 * file, anyway)
+	 */
+	while (i < psize) {
+		size_t org = i;
+
+		while (i < psize && source->ptr[i] != '\r')
+			i++;
+
+		if (i > org)
+			git_buf_put(dest, source->ptr + org, i - org);
+
+		/* We found a carriage return. Is the next character a newline?
+		 * If it is, we just keep moving. The newline will be copied
+		 * to the dest in the next chunk.
+		 *
+		 * If it's not a newline, we need to insert the carriage return
+		 * into the dest buffer, because we don't drop lone CRs.
+		 */
+		if (source->ptr[i + 1] != '\n') {
+			git_buf_putc(dest, '\r');
+		}
+		
+		i++;
+	}
+
+	/* Copy the last character in the file */
+	git_buf_putc(dest, source->ptr[psize]);
+	return 0;
+}
+
 static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *source)
 {
-	size_t i = 0;
 	struct crlf_filter *filter = (struct crlf_filter *)self;
 
 	assert(self && dest && source);
 
+	/* Empty file? Nothing to do */
+	if (source->size == 0)
+		return 0;
+
+	/* Heuristics to see if we can skip the conversion.
+	 * Straight from Core Git.
+	 */
 	if (filter->attrs.crlf_action == GIT_CRLF_AUTO ||
 		filter->attrs.crlf_action == GIT_CRLF_GUESS) {
 
 		git_text_stats stats;
-		git_text__stat(&stats, source);
+		git_text_gather_stats(&stats, source);
 
 		/*
 		 * We're currently not going to even try to convert stuff
@@ -126,7 +182,7 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 		/*
 		 * And add some heuristics for binary vs text, of course...
 		 */
-		if (git_text__is_binary(&stats))
+		if (git_text_is_binary(&stats))
 			return -1;
 
 #if 0
@@ -144,50 +200,42 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 			return -1;
 	}
 
-	/* TODO: do not copy anything if there isn't a single CR */
-	while (i < source->size) {
-		size_t org = i;
-
-		while (i < source->size && source->ptr[i] != '\r')
-			i++;
-
-		if (i > org)
-			git_buf_put(dest, source->ptr + org, i - org);
-
-		i++;
-
-		if (i >= source->size || source->ptr[i] != '\n') {
-			git_buf_putc(dest, '\r');
-		}
-	}
-
-	return 0;
+	/* Actually drop the carriage returns */
+	return drop_crlf(dest, source);
 }
 
-int git_filter__crlf_to_odb(git_filter **filter_out, git_repository *repo, const char *path)
+int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)
 {
-	struct crlf_filter filter;
+	struct crlf_attrs ca;
+	struct crlf_filter *filter;
 	int error;
 
-	filter.f.apply = &crlf_apply_to_odb;
-	filter.f.do_free = NULL;
-
-	if ((error = crlf_load_attributes(&filter.attrs, repo, path)) < 0)
+	/* Load gitattributes for the path */
+	if ((error = crlf_load_attributes(&ca, repo, path)) < 0)
 		return error;
 
-	filter.attrs.crlf_action = crlf_input_action(&filter.attrs);
+	/*
+	 * Use the core Git logic to see if we should perform CRLF for this file
+	 * based on its attributes & the value of `core.auto_crlf`
+	 */
+	ca.crlf_action = crlf_input_action(&ca);
 
-	if (filter.attrs.crlf_action == GIT_CRLF_BINARY)
+	if (ca.crlf_action == GIT_CRLF_BINARY)
 		return 0;
 
-	if (filter.attrs.crlf_action == GIT_CRLF_GUESS && repo->filter_options.auto_crlf == GIT_AUTO_CRLF_FALSE)
+	if (ca.crlf_action == GIT_CRLF_GUESS && repo->filter_options.auto_crlf == GIT_AUTO_CRLF_FALSE)
 		return 0;
 
-	*filter_out = git__malloc(sizeof(struct crlf_filter));
-	if (*filter_out == NULL)
+	/* If we're good, we create a new filter object and push it
+	 * into the filters array */
+	filter = git__malloc(sizeof(struct crlf_filter));
+	if (filter == NULL)
 		return GIT_ENOMEM;
 
-	memcpy(*filter_out, &filter, sizeof(struct crlf_attrs));
-	return 0;
+	filter->f.apply = &crlf_apply_to_odb;
+	filter->f.do_free = NULL;
+	memcpy(&filter->attrs, &ca, sizeof(struct crlf_attrs));
+
+	return git_vector_insert(filters, filter);
 }
 

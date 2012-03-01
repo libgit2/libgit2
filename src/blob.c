@@ -115,19 +115,18 @@ static int write_file_filtered(
 	if (error < GIT_SUCCESS)
 		return error;
 
-	error = git_filter__apply(&dest, &source, filters);
+	error = git_filters_apply(&dest, &source, filters);
 
-	if (error < GIT_SUCCESS) {
-		git_buf_free(&source);
-		git_buf_free(&dest);
-		return error;
+	/* Free the source as soon as possible. This can be big in memory,
+	 * and we don't want to ODB write to choke */
+	git_buf_free(&source);
+
+	if (error == GIT_SUCCESS) {
+		/* Write the file to disk if it was properly filtered */
+		error = git_odb_write(oid, odb, dest.ptr, dest.size, GIT_OBJ_BLOB);
 	}
 
-	error = git_odb_write(oid, odb, dest.ptr, dest.size, GIT_OBJ_BLOB);
-
-	git_buf_free(&source);
 	git_buf_free(&dest);
-
 	return GIT_SUCCESS;
 }
 
@@ -186,18 +185,25 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		error = write_symlink(oid, odb, full_path.ptr, (size_t)size);
 	} else {
 		git_vector write_filters = GIT_VECTOR_INIT;
+		int filter_count;
 
-		if ((error = git_filter__load_for_file(
-			&write_filters, repo, path, GIT_FILTER_TO_ODB)) < GIT_SUCCESS)
+		/* Load the filters for writing this file to the ODB */
+		filter_count = git_filters_load(&write_filters, repo, path, GIT_FILTER_TO_ODB);
+
+		if (filter_count < 0) {
+			/* Negative value means there was a critical error */
+			error = filter_count;
 			goto cleanup;
-
-		if (write_filters.length == 0) {
+		} else if (filter_count == 0) {
+			/* No filters need to be applied to the document: we can stream
+			 * directly from disk */
 			error = write_file_stream(oid, odb, full_path.ptr, size);
 		} else {
+			/* We need to apply one or more filters */
 			error = write_file_filtered(oid, odb, full_path.ptr, &write_filters);
 		}
 
-		git_filter__free(&write_filters);
+		git_filters_free(&write_filters);
 
 		/*
 		 * TODO: eventually support streaming filtered files, for files which are bigger
