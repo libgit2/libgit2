@@ -67,6 +67,7 @@ void test_attr_repo__get_one(void)
 	}, *scan;
 
 	for (scan = test_cases; scan->path != NULL; scan++) {
+		const char *value;
 		cl_git_pass(git_attr_get(g_repo, scan->path, scan->attr, &value));
 		attr_check_expected(scan->expected, scan->expected_str, value);
 	}

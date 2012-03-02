@@ -93,9 +93,9 @@ static int set_file_is_binary_by_attr(git_repository *repo, git_diff_file *file)
 	int error = git_attr_get(repo, file->path, "diff", &value);
 	if (error != GIT_SUCCESS)
 		return error;
-	if (value == GIT_ATTR_FALSE)
+	if (GIT_ATTR_FALSE(value))
 		file->flags |= GIT_DIFF_FILE_BINARY;
-	else if (value == GIT_ATTR_TRUE)
+	else if (GIT_ATTR_TRUE(value))
 		file->flags |= GIT_DIFF_FILE_NOT_BINARY;
 	/* otherwise leave file->flags alone */
 	return error;
