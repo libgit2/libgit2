@@ -19,12 +19,12 @@
  */
 GIT_BEGIN_DECL
 
-#define GIT_ATTR_TRUE			git_attr__true
-#define GIT_ATTR_FALSE			git_attr__false
-#define GIT_ATTR_UNSPECIFIED	NULL
+#define GIT_ATTR_TRUE(attr)		((attr) == git_attr__true)
+#define GIT_ATTR_FALSE(attr)	((attr) == git_attr__false)
+#define GIT_ATTR_UNSPECIFIED(attr)	((attr) == NULL)
 
-GIT_EXTERN(const char *)git_attr__true;
-GIT_EXTERN(const char *)git_attr__false;
+GIT_EXTERN(const char *) git_attr__true;
+GIT_EXTERN(const char *) git_attr__false;
 
 
 /**

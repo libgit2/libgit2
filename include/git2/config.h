@@ -37,6 +37,19 @@ struct git_config_file {
 	void (*free)(struct git_config_file *);
 };
 
+typedef enum {
+	GIT_CVAR_FALSE = 0,
+	GIT_CVAR_TRUE = 1,
+	GIT_CVAR_INT32,
+	GIT_CVAR_STRING
+} git_cvar_t;
+
+typedef struct {
+	git_cvar_t cvar_type;
+	const char *str_match;
+	int map_value;
+} git_cvar_map;
+
 /**
  * Locate the path to the global configuration file
  *
@@ -300,6 +313,43 @@ GIT_EXTERN(int) git_config_foreach(
 	git_config *cfg,
 	int (*callback)(const char *var_name, const char *value, void *payload),
 	void *payload);
+
+
+/**
+ * Query the value of a config variable and return it mapped to
+ * an integer constant.
+ *
+ * This is a helper method to easily map different possible values
+ * to a variable to integer constants that easily identify them.
+ *
+ * A mapping array looks as follows:
+ *
+ *	git_cvar_map autocrlf_mapping[3] = {
+ *		{GIT_CVAR_FALSE, NULL, GIT_AUTO_CRLF_FALSE},
+ *		{GIT_CVAR_TRUE, NULL, GIT_AUTO_CRLF_TRUE},
+ *		{GIT_CVAR_STRING, "input", GIT_AUTO_CRLF_INPUT},
+ *		{GIT_CVAR_STRING, "default", GIT_AUTO_CRLF_DEFAULT}};
+ *
+ * On any "false" value for the variable (e.g. "false", "FALSE", "no"), the
+ * mapping will store `GIT_AUTO_CRLF_FALSE` in the `out` parameter.
+ *
+ * The same thing applies for any "true" value such as "true", "yes" or "1", storing
+ * the `GIT_AUTO_CRLF_TRUE` variable.
+ *
+ * Otherwise, if the value matches the string "input" (with case insensitive comparison),
+ * the given constant will be stored in `out`, and likewise for "default".
+ *
+ * If not a single match can be made to store in `out`, an error code will be
+ * returned.
+ *
+ * @param cfg config file to get the variables from
+ * @param name name of the config variable to lookup
+ * @param maps array of `git_cvar_map` objects specifying the possible mappings
+ * @param map_n number of mapping objects in `maps`
+ * @param out place to store the result of the mapping
+ * @return GIT_SUCCESS on success, error code otherwise
+ */
+GIT_EXTERN(int) git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n, int *out);
 
 /** @} */
 GIT_END_DECL

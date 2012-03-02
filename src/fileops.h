@@ -17,17 +17,8 @@
  *
  * Read whole files into an in-memory buffer for processing
  */
-#define GIT_FBUFFER_INIT {NULL, 0}
-
-typedef struct { /* file io buffer */
-	void *data; /* data bytes	*/
-	size_t len; /* data length */
-} git_fbuffer;
-
-extern int git_futils_readbuffer(git_fbuffer *obj, const char *path);
-extern int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mtime, int *updated);
-extern void git_futils_freebuffer(git_fbuffer *obj);
-extern void git_futils_fbuffer_rtrim(git_fbuffer *obj);
+extern int git_futils_readbuffer(git_buf *obj, const char *path);
+extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t *mtime, int *updated);
 
 /**
  * File utils

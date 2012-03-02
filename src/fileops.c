@@ -97,86 +97,76 @@ mode_t git_futils_canonical_mode(mode_t raw_mode)
 		return 0;
 }
 
-int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mtime, int *updated)
+int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime, int *updated)
 {
 	git_file fd;
 	size_t len;
 	struct stat st;
-	unsigned char *buff;
 
-	assert(obj && path && *path);
+	assert(buf && path && *path);
 
 	if (updated != NULL)
 		*updated = 0;
 
-	if (p_stat(path, &st) < 0)
-		return git__throw(GIT_ENOTFOUND, "Failed to stat file %s", path);
+	if ((fd = p_open(path, O_RDONLY)) < 0) {
+		return git__throw(GIT_ENOTFOUND, "Failed to read file '%s': %s", path, strerror(errno));
+	}
 
-	if (S_ISDIR(st.st_mode))
-		return git__throw(GIT_ERROR, "Can't read a dir into a buffer");
+	if (p_fstat(fd, &st) < 0 || S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
+		close(fd);
+		return git__throw(GIT_EOSERR, "Failed to stat file '%s'", path);
+	}
 
 	/*
 	 * If we were given a time, we only want to read the file if it
 	 * has been modified.
 	 */
-	if (mtime != NULL && *mtime >= st.st_mtime)
-		return GIT_SUCCESS;
+	if (mtime != NULL && *mtime >= st.st_mtime) {
+		close(fd);
+		return 0;
+	}
 
 	if (mtime != NULL)
 		*mtime = st.st_mtime;
-	if (!git__is_sizet(st.st_size+1))
-		return git__throw(GIT_ERROR, "Failed to read file `%s`. An error occured while calculating its size", path);
 
 	len = (size_t) st.st_size;
 
-	if ((fd = p_open(path, O_RDONLY)) < 0)
-		return git__throw(GIT_EOSERR, "Failed to open %s for reading", path);
+	git_buf_clear(buf);
 
-	if ((buff = git__malloc(len + 1)) == NULL) {
-		p_close(fd);
+	if (git_buf_grow(buf, len + 1) < 0) {
+		close(fd);
 		return GIT_ENOMEM;
 	}
 
-	if (p_read(fd, buff, len) < 0) {
-		p_close(fd);
-		git__free(buff);
-		return git__throw(GIT_ERROR, "Failed to read file `%s`", path);
+	buf->ptr[len] = '\0';
+
+	while (len > 0) {
+		ssize_t read_size = p_read(fd, buf->ptr, len);
+
+		if (read_size < 0) {
+			close(fd);
+			return git__throw(GIT_EOSERR, "Failed to read from FD");
+		}
+
+		len -= read_size;
+		buf->size += read_size;
 	}
-	buff[len] = '\0';
 
 	p_close(fd);
 
 	if (mtime != NULL)
 		*mtime = st.st_mtime;
+
 	if (updated != NULL)
 		*updated = 1;
 
-	obj->data = buff;
-	obj->len = len;
-
-	return GIT_SUCCESS;
+	return 0;
 }
 
-int git_futils_readbuffer(git_fbuffer *obj, const char *path)
+int git_futils_readbuffer(git_buf *buf, const char *path)
 {
-	return git_futils_readbuffer_updated(obj, path, NULL, NULL);
+	return git_futils_readbuffer_updated(buf, path, NULL, NULL);
 }
-
-void git_futils_fbuffer_rtrim(git_fbuffer *obj)
-{
-	unsigned char *buff = obj->data;
-	while (obj->len > 0 && isspace(buff[obj->len - 1]))
-		obj->len--;
-	buff[obj->len] = '\0';
-}
-
-void git_futils_freebuffer(git_fbuffer *obj)
-{
-	assert(obj);
-	git__free(obj->data);
-	obj->data = NULL;
-}
-
 
 int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode)
 {

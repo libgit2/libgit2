@@ -3,6 +3,8 @@
 #include "git2/attr.h"
 #include "attr.h"
 
+#include "attr_expect.h"
+
 static git_repository *g_repo = NULL;
 
 void test_attr_repo__initialize(void)
@@ -28,67 +30,45 @@ void test_attr_repo__cleanup(void)
 void test_attr_repo__get_one(void)
 {
 	const char *value;
-	struct {
-		const char *file;
-		const char *attr;
-		const char *expected;
-	} test_cases[] = {
-		{ "root_test1", "repoattr", GIT_ATTR_TRUE },
-		{ "root_test1", "rootattr", GIT_ATTR_TRUE },
-		{ "root_test1", "missingattr", NULL },
-		{ "root_test1", "subattr", NULL },
-		{ "root_test1", "negattr", NULL },
-		{ "root_test2", "repoattr", GIT_ATTR_TRUE },
-		{ "root_test2", "rootattr", GIT_ATTR_FALSE },
-		{ "root_test2", "missingattr", NULL },
-		{ "root_test2", "multiattr", GIT_ATTR_FALSE },
-		{ "root_test3", "repoattr", GIT_ATTR_TRUE },
-		{ "root_test3", "rootattr", NULL },
-		{ "root_test3", "multiattr", "3" },
-		{ "root_test3", "multi2", NULL },
-		{ "sub/subdir_test1", "repoattr", GIT_ATTR_TRUE },
-		{ "sub/subdir_test1", "rootattr", GIT_ATTR_TRUE },
-		{ "sub/subdir_test1", "missingattr", NULL },
-		{ "sub/subdir_test1", "subattr", "yes" },
-		{ "sub/subdir_test1", "negattr", GIT_ATTR_FALSE },
-		{ "sub/subdir_test1", "another", NULL },
-		{ "sub/subdir_test2.txt", "repoattr", GIT_ATTR_TRUE },
-		{ "sub/subdir_test2.txt", "rootattr", GIT_ATTR_TRUE },
-		{ "sub/subdir_test2.txt", "missingattr", NULL },
-		{ "sub/subdir_test2.txt", "subattr", "yes" },
-		{ "sub/subdir_test2.txt", "negattr", GIT_ATTR_FALSE },
-		{ "sub/subdir_test2.txt", "another", "zero" },
-		{ "sub/subdir_test2.txt", "reposub", GIT_ATTR_TRUE },
-		{ "sub/sub/subdir.txt", "another", "one" },
-		{ "sub/sub/subdir.txt", "reposubsub", GIT_ATTR_TRUE },
-		{ "sub/sub/subdir.txt", "reposub", NULL },
-		{ "does-not-exist", "foo", "yes" },
-		{ "sub/deep/file", "deepdeep", GIT_ATTR_TRUE },
-		{ NULL, NULL, NULL }
+
+	struct attr_expected test_cases[] = {
+		{ "root_test1", "repoattr", EXPECT_TRUE, NULL },
+		{ "root_test1", "rootattr", EXPECT_TRUE, NULL },
+		{ "root_test1", "missingattr", EXPECT_UNDEFINED, NULL },
+		{ "root_test1", "subattr", EXPECT_UNDEFINED, NULL },
+		{ "root_test1", "negattr", EXPECT_UNDEFINED, NULL },
+		{ "root_test2", "repoattr", EXPECT_TRUE, NULL },
+		{ "root_test2", "rootattr", EXPECT_FALSE, NULL },
+		{ "root_test2", "missingattr", EXPECT_UNDEFINED, NULL },
+		{ "root_test2", "multiattr", EXPECT_FALSE, NULL },
+		{ "root_test3", "repoattr", EXPECT_TRUE, NULL },
+		{ "root_test3", "rootattr", EXPECT_UNDEFINED, NULL },
+		{ "root_test3", "multiattr", EXPECT_STRING, "3" },
+		{ "root_test3", "multi2", EXPECT_UNDEFINED, NULL },
+		{ "sub/subdir_test1", "repoattr", EXPECT_TRUE, NULL },
+		{ "sub/subdir_test1", "rootattr", EXPECT_TRUE, NULL },
+		{ "sub/subdir_test1", "missingattr", EXPECT_UNDEFINED, NULL },
+		{ "sub/subdir_test1", "subattr", EXPECT_STRING, "yes" },
+		{ "sub/subdir_test1", "negattr", EXPECT_FALSE, NULL },
+		{ "sub/subdir_test1", "another", EXPECT_UNDEFINED, NULL },
+		{ "sub/subdir_test2.txt", "repoattr", EXPECT_TRUE, NULL },
+		{ "sub/subdir_test2.txt", "rootattr", EXPECT_TRUE, NULL },
+		{ "sub/subdir_test2.txt", "missingattr", EXPECT_UNDEFINED, NULL },
+		{ "sub/subdir_test2.txt", "subattr", EXPECT_STRING, "yes" },
+		{ "sub/subdir_test2.txt", "negattr", EXPECT_FALSE, NULL },
+		{ "sub/subdir_test2.txt", "another", EXPECT_STRING, "zero" },
+		{ "sub/subdir_test2.txt", "reposub", EXPECT_TRUE, NULL },
+		{ "sub/sub/subdir.txt", "another", EXPECT_STRING, "one" },
+		{ "sub/sub/subdir.txt", "reposubsub", EXPECT_TRUE, NULL },
+		{ "sub/sub/subdir.txt", "reposub", EXPECT_UNDEFINED, NULL },
+		{ "does-not-exist", "foo", EXPECT_STRING, "yes" },
+		{ "sub/deep/file", "deepdeep", EXPECT_TRUE, NULL },
+		{ NULL, NULL, 0, NULL }
 	}, *scan;
 
-	for (scan = test_cases; scan->file != NULL; scan++) {
-		git_buf b = GIT_BUF_INIT;
-
-		git_buf_printf(&b, "%s:%s == expect %s",
-					   scan->file, scan->attr, scan->expected);
-
-		cl_must_pass_(
-			git_attr_get(g_repo, scan->file, scan->attr, &value) == GIT_SUCCESS,
-			b.ptr);
-
-		git_buf_printf(&b, ", got %s", value);
-
-		if (scan->expected == NULL ||
-			scan->expected == GIT_ATTR_TRUE ||
-			scan->expected == GIT_ATTR_FALSE)
-		{
-			cl_assert_(scan->expected == value, b.ptr);
-		} else {
-			cl_assert_strequal(scan->expected, value);
-		}
-
-		git_buf_free(&b);
+	for (scan = test_cases; scan->path != NULL; scan++) {
+		cl_git_pass(git_attr_get(g_repo, scan->path, scan->attr, &value));
+		attr_check_expected(scan->expected, scan->expected_str, value);
 	}
 
 	cl_git_pass(git_attr_cache__is_cached(g_repo, ".git/info/attributes"));
@@ -103,25 +83,24 @@ void test_attr_repo__get_many(void)
 
 	cl_git_pass(git_attr_get_many(g_repo, "root_test1", 4, names, values));
 
-	cl_assert(values[0] == GIT_ATTR_TRUE);
-	cl_assert(values[1] == GIT_ATTR_TRUE);
-	cl_assert(values[2] == NULL);
-	cl_assert(values[3] == NULL);
+	cl_assert(GIT_ATTR_TRUE(values[0]));
+	cl_assert(GIT_ATTR_TRUE(values[1]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[2]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[3]));
 
 	cl_git_pass(git_attr_get_many(g_repo, "root_test2", 4, names, values));
 
-	cl_assert(values[0] == GIT_ATTR_TRUE);
-	cl_assert(values[1] == GIT_ATTR_FALSE);
-	cl_assert(values[2] == NULL);
-	cl_assert(values[3] == NULL);
+	cl_assert(GIT_ATTR_TRUE(values[0]));
+	cl_assert(GIT_ATTR_FALSE(values[1]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[2]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[3]));
 
 	cl_git_pass(git_attr_get_many(g_repo, "sub/subdir_test1", 4, names, values));
 
-	cl_assert(values[0] == GIT_ATTR_TRUE);
-	cl_assert(values[1] == GIT_ATTR_TRUE);
-	cl_assert(values[2] == NULL);
+	cl_assert(GIT_ATTR_TRUE(values[0]));
+	cl_assert(GIT_ATTR_TRUE(values[1]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[2]));
 	cl_assert_strequal("yes", values[3]);
-
 }
 
 static int count_attrs(
@@ -161,19 +140,19 @@ void test_attr_repo__manpage_example(void)
 	const char *value;
 
 	cl_git_pass(git_attr_get(g_repo, "sub/abc", "foo", &value));
-	cl_assert(value == GIT_ATTR_TRUE);
+	cl_assert(GIT_ATTR_TRUE(value));
 
 	cl_git_pass(git_attr_get(g_repo, "sub/abc", "bar", &value));
-	cl_assert(value == NULL);
+	cl_assert(GIT_ATTR_UNSPECIFIED(value));
 
 	cl_git_pass(git_attr_get(g_repo, "sub/abc", "baz", &value));
-	cl_assert(value == GIT_ATTR_FALSE);
+	cl_assert(GIT_ATTR_FALSE(value));
 
 	cl_git_pass(git_attr_get(g_repo, "sub/abc", "merge", &value));
 	cl_assert_strequal("filfre", value);
 
 	cl_git_pass(git_attr_get(g_repo, "sub/abc", "frotz", &value));
-	cl_assert(value == NULL);
+	cl_assert(GIT_ATTR_UNSPECIFIED(value));
 }
 
 void test_attr_repo__macros(void)
@@ -185,24 +164,24 @@ void test_attr_repo__macros(void)
 
 	cl_git_pass(git_attr_get_many(g_repo, "binfile", 5, names, values));
 
-	cl_assert(values[0] == GIT_ATTR_TRUE);
-	cl_assert(values[1] == GIT_ATTR_TRUE);
-	cl_assert(values[2] == GIT_ATTR_FALSE);
-	cl_assert(values[3] == GIT_ATTR_FALSE);
-	cl_assert(values[4] == NULL);
+	cl_assert(GIT_ATTR_TRUE(values[0]));
+	cl_assert(GIT_ATTR_TRUE(values[1]));
+	cl_assert(GIT_ATTR_FALSE(values[2]));
+	cl_assert(GIT_ATTR_FALSE(values[3]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[4]));
 
 	cl_git_pass(git_attr_get_many(g_repo, "macro_test", 5, names2, values));
 
-	cl_assert(values[0] == GIT_ATTR_TRUE);
-	cl_assert(values[1] == GIT_ATTR_TRUE);
-	cl_assert(values[2] == GIT_ATTR_FALSE);
-	cl_assert(values[3] == NULL);
+	cl_assert(GIT_ATTR_TRUE(values[0]));
+	cl_assert(GIT_ATTR_TRUE(values[1]));
+	cl_assert(GIT_ATTR_FALSE(values[2]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[3]));
 	cl_assert_strequal("77", values[4]);
 
 	cl_git_pass(git_attr_get_many(g_repo, "macro_test", 3, names3, values));
 
-	cl_assert(values[0] == GIT_ATTR_TRUE);
-	cl_assert(values[1] == GIT_ATTR_FALSE);
+	cl_assert(GIT_ATTR_TRUE(values[0]));
+	cl_assert(GIT_ATTR_FALSE(values[1]));
 	cl_assert_strequal("answer", values[2]);
 }
 
@@ -215,9 +194,9 @@ void test_attr_repo__bad_macros(void)
 	cl_git_pass(git_attr_get_many(g_repo, "macro_bad", 6, names, values));
 
 	/* these three just confirm that the "mymacro" rule ran */
-	cl_assert(values[0] == NULL);
-	cl_assert(values[1] == GIT_ATTR_TRUE);
-	cl_assert(values[2] == GIT_ATTR_FALSE);
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[0]));
+	cl_assert(GIT_ATTR_TRUE(values[1]));
+	cl_assert(GIT_ATTR_FALSE(values[2]));
 
 	/* file contains:
 	 *     # let's try some malicious macro defs
@@ -241,7 +220,7 @@ void test_attr_repo__bad_macros(void)
 	 * so summary results should be:
 	 *     -firstmacro secondmacro="hahaha" thirdmacro
 	 */
-	cl_assert(values[3] == GIT_ATTR_FALSE);
+	cl_assert(GIT_ATTR_FALSE(values[3]));
 	cl_assert_strequal("hahaha", values[4]);
-	cl_assert(values[5] == GIT_ATTR_TRUE);
+	cl_assert(GIT_ATTR_TRUE(values[5]));
 }

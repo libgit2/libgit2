@@ -11,7 +11,7 @@ static int load_ignore_file(
 	git_repository *repo, const char *path, git_attr_file *ignores)
 {
 	int error = GIT_SUCCESS;
-	git_fbuffer fbuf = GIT_FBUFFER_INIT;
+	git_buf fbuf = GIT_BUF_INIT;
 	git_attr_fnmatch *match = NULL;
 	const char *scan = NULL;
 	char *context = NULL;
@@ -28,7 +28,7 @@ static int load_ignore_file(
 	if (error == GIT_SUCCESS)
 		error = git_futils_readbuffer(&fbuf, path);
 
-	scan = fbuf.data;
+	scan = fbuf.ptr;
 
 	while (error == GIT_SUCCESS && *scan) {
 		if (!match && !(match = git__calloc(1, sizeof(git_attr_fnmatch)))) {
@@ -53,7 +53,7 @@ static int load_ignore_file(
 		}
 	}
 
-	git_futils_freebuffer(&fbuf);
+	git_buf_free(&fbuf);
 	git__free(match);
 	git__free(context);
 

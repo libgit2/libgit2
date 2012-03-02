@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "attr_file.h"
+#include "attr_expect.h"
 
 #define get_rule(X) ((git_attr_rule *)git_vector_get(&file->rules,(X)))
 #define get_assign(R,Y) ((git_attr_assignment *)git_vector_get(&(R)->assigns,(Y)))
@@ -25,7 +26,7 @@ void test_attr_file__simple_read(void)
 	assign = get_assign(rule, 0);
 	cl_assert(assign != NULL);
 	cl_assert_strequal("binary", assign->name);
-	cl_assert(assign->value == GIT_ATTR_TRUE);
+	cl_assert(GIT_ATTR_TRUE(assign->value));
 	cl_assert(!assign->is_allocated);
 
 	git_attr_file__free(file);
@@ -54,7 +55,7 @@ void test_attr_file__match_variants(void)
 	assign = get_assign(rule,0);
 	cl_assert_strequal("attr0", assign->name);
 	cl_assert(assign->name_hash == git_attr_file__name_hash(assign->name));
-	cl_assert(assign->value == GIT_ATTR_TRUE);
+	cl_assert(GIT_ATTR_TRUE(assign->value));
 	cl_assert(!assign->is_allocated);
 
 	rule = get_rule(1);
@@ -83,7 +84,7 @@ void test_attr_file__match_variants(void)
 	cl_assert(rule->assigns.length == 1);
 	assign = get_assign(rule,0);
 	cl_assert_strequal("attr7", assign->name);
-	cl_assert(assign->value == GIT_ATTR_TRUE);
+	cl_assert(GIT_ATTR_TRUE(assign->value));
 
 	rule = get_rule(8);
 	cl_assert_strequal("pat8 with spaces", rule->match.pattern);
@@ -102,8 +103,8 @@ static void check_one_assign(
 	int assign_idx,
 	const char *pattern,
 	const char *name,
-	const char *value,
-	int is_allocated)
+	enum attr_expect_t expected,
+	const char *expected_str)
 {
 	git_attr_rule *rule = get_rule(rule_idx);
 	git_attr_assignment *assign = get_assign(rule, assign_idx);
@@ -112,11 +113,8 @@ static void check_one_assign(
 	cl_assert(rule->assigns.length == 1);
 	cl_assert_strequal(name, assign->name);
 	cl_assert(assign->name_hash == git_attr_file__name_hash(assign->name));
-	cl_assert(assign->is_allocated == is_allocated);
-	if (is_allocated)
-		cl_assert_strequal(value, assign->value);
-	else
-		cl_assert(assign->value == value);
+
+	attr_check_expected(expected, expected_str, assign->value);
 }
 
 void test_attr_file__assign_variants(void)
@@ -130,14 +128,14 @@ void test_attr_file__assign_variants(void)
 	cl_assert_strequal(cl_fixture("attr/attr2"), file->path);
 	cl_assert(file->rules.length == 11);
 
-	check_one_assign(file, 0, 0, "pat0", "simple", GIT_ATTR_TRUE, 0);
-	check_one_assign(file, 1, 0, "pat1", "neg", GIT_ATTR_FALSE, 0);
-	check_one_assign(file, 2, 0, "*", "notundef", GIT_ATTR_TRUE, 0);
-	check_one_assign(file, 3, 0, "pat2", "notundef", NULL, 0);
-	check_one_assign(file, 4, 0, "pat3", "assigned", "test-value", 1);
-	check_one_assign(file, 5, 0, "pat4", "rule-with-more-chars", "value-with-more-chars", 1);
-	check_one_assign(file, 6, 0, "pat5", "empty", GIT_ATTR_TRUE, 0);
-	check_one_assign(file, 7, 0, "pat6", "negempty", GIT_ATTR_FALSE, 0);
+	check_one_assign(file, 0, 0, "pat0", "simple", EXPECT_TRUE, NULL);
+	check_one_assign(file, 1, 0, "pat1", "neg", EXPECT_FALSE, NULL);
+	check_one_assign(file, 2, 0, "*", "notundef", EXPECT_TRUE, NULL);
+	check_one_assign(file, 3, 0, "pat2", "notundef", EXPECT_UNDEFINED, NULL);
+	check_one_assign(file, 4, 0, "pat3", "assigned", EXPECT_STRING, "test-value");
+	check_one_assign(file, 5, 0, "pat4", "rule-with-more-chars", EXPECT_STRING, "value-with-more-chars");
+	check_one_assign(file, 6, 0, "pat5", "empty", EXPECT_TRUE, NULL);
+	check_one_assign(file, 7, 0, "pat6", "negempty", EXPECT_FALSE, NULL);
 
 	rule = get_rule(8);
 	cl_assert_strequal("pat7", rule->match.pattern);
@@ -148,11 +146,11 @@ void test_attr_file__assign_variants(void)
 	assign = git_attr_rule__lookup_assignment(rule, "multiple");
 	cl_assert(assign);
 	cl_assert_strequal("multiple", assign->name);
-	cl_assert(assign->value == GIT_ATTR_TRUE);
+	cl_assert(GIT_ATTR_TRUE(assign->value));
 	assign = git_attr_rule__lookup_assignment(rule, "single");
 	cl_assert(assign);
 	cl_assert_strequal("single", assign->name);
-	cl_assert(assign->value == GIT_ATTR_FALSE);
+	cl_assert(GIT_ATTR_FALSE(assign->value));
 	assign = git_attr_rule__lookup_assignment(rule, "values");
 	cl_assert(assign);
 	cl_assert_strequal("values", assign->name);
@@ -174,13 +172,13 @@ void test_attr_file__assign_variants(void)
 	assign = git_attr_rule__lookup_assignment(rule, "again");
 	cl_assert(assign);
 	cl_assert_strequal("again", assign->name);
-	cl_assert(assign->value == GIT_ATTR_TRUE);
+	cl_assert(GIT_ATTR_TRUE(assign->value));
 	assign = git_attr_rule__lookup_assignment(rule, "another");
 	cl_assert(assign);
 	cl_assert_strequal("another", assign->name);
 	cl_assert_strequal("12321", assign->value);
 
-	check_one_assign(file, 10, 0, "pat9", "at-eof", GIT_ATTR_FALSE, 0);
+	check_one_assign(file, 10, 0, "pat9", "at-eof", EXPECT_FALSE, NULL);
 
 	git_attr_file__free(file);
 }
@@ -204,10 +202,10 @@ void test_attr_file__check_attr_examples(void)
 	cl_assert_strequal("java", assign->value);
 	assign = git_attr_rule__lookup_assignment(rule, "crlf");
 	cl_assert_strequal("crlf", assign->name);
-	cl_assert(GIT_ATTR_FALSE == assign->value);
+	cl_assert(GIT_ATTR_FALSE(assign->value));
 	assign = git_attr_rule__lookup_assignment(rule, "myAttr");
 	cl_assert_strequal("myAttr", assign->name);
-	cl_assert(GIT_ATTR_TRUE == assign->value);
+	cl_assert(GIT_ATTR_TRUE(assign->value));
 	assign = git_attr_rule__lookup_assignment(rule, "missing");
 	cl_assert(assign == NULL);
 
