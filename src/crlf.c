@@ -25,13 +25,13 @@ struct crlf_filter {
 
 static int check_crlf(const char *value)
 {
-	if (value == git_attr__true)
+	if (GIT_ATTR_TRUE(value))
 		return GIT_CRLF_TEXT;
 
-	if (value == git_attr__false)
+	if (GIT_ATTR_FALSE(value))
 		return GIT_CRLF_BINARY;
 
-	if (value == NULL)
+	if (GIT_ATTR_UNSPECIFIED(value))
 		return GIT_CRLF_GUESS;
 
 	if (strcmp(value, "input") == 0)
@@ -45,7 +45,7 @@ static int check_crlf(const char *value)
 
 static int check_eol(const char *value)
 {
-	if (value == NULL)
+	if (GIT_ATTR_UNSPECIFIED(value))
 		return GIT_EOL_UNSET;
 
 	if (strcmp(value, "lf") == 0)
