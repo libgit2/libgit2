@@ -84,59 +84,9 @@ int git_text_is_binary(git_text_stats *stats)
 	return 0;
 }
 
-static int load_repository_settings(git_repository *repo)
-{
-	static git_cvar_map map_eol[] = {
-		{GIT_CVAR_FALSE, NULL, GIT_EOL_UNSET},
-		{GIT_CVAR_STRING, "lf", GIT_EOL_LF},
-		{GIT_CVAR_STRING, "crlf", GIT_EOL_CRLF},
-		{GIT_CVAR_STRING, "native", GIT_EOL_NATIVE}
-	};
-
-	static git_cvar_map map_crlf[] = {
-		{GIT_CVAR_FALSE, NULL, GIT_AUTO_CRLF_FALSE},
-		{GIT_CVAR_TRUE, NULL, GIT_AUTO_CRLF_TRUE},
-		{GIT_CVAR_STRING, "input", GIT_AUTO_CRLF_INPUT}
-	};
-
-	git_config *config;
-	int error;
-
-	if (repo->filter_options.loaded)
-		return GIT_SUCCESS;
-
-	repo->filter_options.eol = GIT_EOL_DEFAULT;
-	repo->filter_options.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
-
-	error = git_repository_config__weakptr(&config, repo);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	error = git_config_get_mapped(
-		config, "core.eol", map_eol, ARRAY_SIZE(map_eol), &repo->filter_options.eol);
-
-	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
-		return error;
-
-	error = git_config_get_mapped(
-		config, "core.auto_crlf", map_crlf, ARRAY_SIZE(map_crlf), &repo->filter_options.auto_crlf);
-
-	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
-		return error;
-
-	repo->filter_options.loaded = 1;
-	return 0;
-}
-
 int git_filters_load(git_vector *filters, git_repository *repo, const char *path, int mode)
 {
 	int error;
-
-	/* Make sure that the relevant settings from `gitconfig` have been
-	 * cached on the repository struct to speed things up */
-	error = load_repository_settings(repo);
-	if (error < GIT_SUCCESS)
-		return error;
 
 	if (mode == GIT_FILTER_TO_ODB) {
 		/* Load the CRLF cleanup filter when writing to the ODB */

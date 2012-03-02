@@ -43,6 +43,8 @@ static void drop_config(git_repository *repo)
 		git_config_free(repo->_config);
 		repo->_config = NULL;
 	}
+
+	git_repository__cvar_cache_clear(repo);
 }
 
 static void drop_index(git_repository *repo)
@@ -110,6 +112,9 @@ static git_repository *repository_alloc(void)
 		git__free(repo);
 		return NULL;
 	}
+
+	/* set all the entries in the cvar cache to `unset` */
+	git_repository__cvar_cache_clear(repo);
 
 	return repo;
 }

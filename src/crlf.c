@@ -223,8 +223,16 @@ int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const
 	if (ca.crlf_action == GIT_CRLF_BINARY)
 		return 0;
 
-	if (ca.crlf_action == GIT_CRLF_GUESS && repo->filter_options.auto_crlf == GIT_AUTO_CRLF_FALSE)
-		return 0;
+	if (ca.crlf_action == GIT_CRLF_GUESS) {
+		int auto_crlf;
+
+		if ((error = git_repository__cvar(
+			&auto_crlf, repo, GIT_CVAR_AUTO_CRLF)) < GIT_SUCCESS)
+			return error;
+
+		if (auto_crlf == GIT_AUTO_CRLF_FALSE)
+			return 0;
+	}
 
 	/* If we're good, we create a new filter object and push it
 	 * into the filters array */

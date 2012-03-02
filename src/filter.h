@@ -29,28 +29,7 @@ typedef enum {
 	GIT_CRLF_INPUT,
 	GIT_CRLF_CRLF,
 	GIT_CRLF_AUTO,
-
-	GIT_SAFE_CRLF_FALSE = 0,
-	GIT_SAFE_CRLF_FAIL = 1,
-	GIT_SAFE_CRLF_WARN = 2,
-
-	GIT_AUTO_CRLF_FALSE = 0,
-	GIT_AUTO_CRLF_TRUE = 1,
-	GIT_AUTO_CRLF_INPUT = -1,
-	GIT_AUTO_CRLF_DEFAULT = GIT_AUTO_CRLF_FALSE,
 } git_crlf_t;
-
-typedef enum {
-	GIT_EOL_UNSET,
-	GIT_EOL_CRLF,
-	GIT_EOL_LF,
-#ifdef GIT_WIN32
-	GIT_EOL_NATIVE = GIT_EOL_CRLF,
-#else
-	GIT_EOL_NATIVE = GIT_EOL_LF,
-#endif
-	GIT_EOL_DEFAULT = GIT_EOL_NATIVE
-} git_eol_t;
 
 typedef struct {
 	/* NUL, CR, LF and CRLF counts */
