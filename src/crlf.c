@@ -104,52 +104,32 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 
 static int drop_crlf(git_buf *dest, const git_buf *source)
 {
-	size_t psize = source->size - 1;
-	size_t i = 0;
+	const char *scan = source->ptr, *next;
+	const char *scan_end = source->ptr + source->size;
 
-	/* Initial scan: see if we can reach the end of the document
-	 * without finding a single carriage return */
-	while (i < psize && source->ptr[i] != '\r')
-		i++;
-
-	/* Clean file? Tell the library to skip this filter */
-	if (i == psize)
-		return -1;
-
-	/* Main scan loop. Keep moving forward until we find a carriage
-	 * return, and then copy the whole chunk to the destination
-	 * buffer.
-	 *
-	 * Note that we only scan until `size - 1`, because we cannot drop a
-	 * carriage return if it's the last character in the file (what a weird
-	 * file, anyway)
+	/* Main scan loop.  Find the next carriage return and copy the
+	 * whole chunk up to that point to the destination buffer.
 	 */
-	while (i < psize) {
-		size_t org = i;
+	while ((next = memchr(scan, '\r', scan_end - scan)) != NULL) {
+		/* copy input up to \r */
+		if (next > scan)
+			git_buf_put(dest, scan, next - scan);
 
-		while (i < psize && source->ptr[i] != '\r')
-			i++;
-
-		if (i > org)
-			git_buf_put(dest, source->ptr + org, i - org);
-
-		/* We found a carriage return. Is the next character a newline?
-		 * If it is, we just keep moving. The newline will be copied
-		 * to the dest in the next chunk.
-		 *
-		 * If it's not a newline, we need to insert the carriage return
-		 * into the dest buffer, because we don't drop lone CRs.
-		 */
-		if (source->ptr[i + 1] != '\n') {
+		/* Do not drop \r unless it is followed by \n */
+		if (*(next + 1) != '\n')
 			git_buf_putc(dest, '\r');
-		}
-		
-		i++;
+
+		scan = next + 1;
 	}
 
-	/* Copy the last character in the file */
-	git_buf_putc(dest, source->ptr[psize]);
-	return 0;
+	/* If there was no \r, then tell the library to skip this filter */
+	if (scan == source->ptr)
+		return -1;
+
+	/* Copy remaining input into dest */
+	git_buf_put(dest, scan, scan_end - scan);
+
+	return git_buf_lasterror(dest);
 }
 
 static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *source)

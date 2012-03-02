@@ -118,4 +118,6 @@ GIT_INLINE(int) git_buf_rfind_next(git_buf *buf, char ch)
 /* Remove whitespace from the end of the buffer */
 void git_buf_rtrim(git_buf *buf);
 
+int git_buf_cmp(const git_buf *a, const git_buf *b);
+
 #endif

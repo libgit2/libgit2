@@ -25,6 +25,12 @@ size_t git_blob_rawsize(git_blob *blob)
 	return blob->odb_object->raw.len;
 }
 
+int git_blob__getbuf(git_buf *buffer, git_blob *blob)
+{
+	return git_buf_set(
+		buffer, blob->odb_object->raw.data, blob->odb_object->raw.len);
+}
+
 void git_blob__free(git_blob *blob)
 {
 	git_odb_object_free(blob->odb_object);

@@ -389,3 +389,10 @@ void git_buf_rtrim(git_buf *buf)
 
 	buf->ptr[buf->size] = '\0';
 }
+
+int git_buf_cmp(const git_buf *a, const git_buf *b)
+{
+	int result = memcmp(a->ptr, b->ptr, min(a->size, b->size));
+	return (result != 0) ? result :
+		(a->size < b->size) ? -1 : (a->size > b->size) ? 1 : 0;
+}
