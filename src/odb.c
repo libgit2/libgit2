@@ -393,8 +393,8 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 static int load_alternates(git_odb *odb, const char *objects_dir)
 {
 	git_buf alternates_path = GIT_BUF_INIT;
+	git_buf alternates_buf = GIT_BUF_INIT;
 	char *buffer;
-	git_fbuffer alternates_buf = GIT_FBUFFER_INIT;
 	const char *alternate;
 	int error;
 
@@ -412,7 +412,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 		return git__throw(GIT_EOSERR, "Failed to add backend. Can't read alternates");
 	}
 
-	buffer = (char *)alternates_buf.data;
+	buffer = (char *)alternates_buf.ptr;
 	error = GIT_SUCCESS;
 
 	/* add each alternate as a new backend; one alternate per line */
@@ -433,7 +433,8 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 	}
 
 	git_buf_free(&alternates_path);
-	git_futils_freebuffer(&alternates_buf);
+	git_buf_free(&alternates_buf);
+
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to load alternates");
 	return error;

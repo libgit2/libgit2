@@ -73,7 +73,7 @@ typedef struct {
 	git_hashtable *values;
 
 	struct {
-		git_fbuffer buffer;
+		git_buf buffer;
 		char *read_ptr;
 		int line_number;
 		int eof;
@@ -151,6 +151,7 @@ static int config_open(git_config_file *cfg)
 	if (b->values == NULL)
 		return GIT_ENOMEM;
 
+	git_buf_init(&b->reader.buffer, 0);
 	error = git_futils_readbuffer(&b->reader.buffer, b->file_path);
 
 	/* It's fine if the file doesn't exist */
@@ -164,14 +165,14 @@ static int config_open(git_config_file *cfg)
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
-	git_futils_freebuffer(&b->reader.buffer);
+	git_buf_free(&b->reader.buffer);
 
 	return GIT_SUCCESS;
 
  cleanup:
 	free_vars(b->values);
 	b->values = NULL;
-	git_futils_freebuffer(&b->reader.buffer);
+	git_buf_free(&b->reader.buffer);
 
 	return git__rethrow(error, "Failed to open config");
 }
@@ -765,7 +766,7 @@ static int skip_bom(diskfile_backend *cfg)
 {
 	static const char utf8_bom[] = "\xef\xbb\xbf";
 
-	if (cfg->reader.buffer.len < sizeof(utf8_bom))
+	if (cfg->reader.buffer.size < sizeof(utf8_bom))
 		return GIT_SUCCESS;
 
 	if (memcmp(cfg->reader.read_ptr, utf8_bom, sizeof(utf8_bom)) == 0)
@@ -847,7 +848,7 @@ static int config_parse(diskfile_backend *cfg_file)
 	git_buf buf = GIT_BUF_INIT;
 
 	/* Initialize the reading position */
-	cfg_file->reader.read_ptr = cfg_file->reader.buffer.data;
+	cfg_file->reader.read_ptr = cfg_file->reader.buffer.ptr;
 	cfg_file->reader.eof = 0;
 
 	/* If the file is empty, there's nothing for us to do */
@@ -976,10 +977,9 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 		cfg->reader.read_ptr = NULL;
 		cfg->reader.eof = 1;
 		data_start = NULL;
-		cfg->reader.buffer.len = 0;
-		cfg->reader.buffer.data = NULL;
+		git_buf_clear(&cfg->reader.buffer);
 	} else {
-		cfg->reader.read_ptr = cfg->reader.buffer.data;
+		cfg->reader.read_ptr = cfg->reader.buffer.ptr;
 		cfg->reader.eof = 0;
 		data_start = cfg->reader.read_ptr;
 	}
@@ -1093,7 +1093,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 
 			/* And then the write out rest of the file */
 			error = git_filebuf_write(&file, post_start,
-						cfg->reader.buffer.len - (post_start - data_start));
+						cfg->reader.buffer.size - (post_start - data_start));
 
 			if (error < GIT_SUCCESS) {
 				git__rethrow(error, "Failed to write the rest of the file");
@@ -1128,7 +1128,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 		goto cleanup;
 	}
 
-	error = git_filebuf_write(&file, cfg->reader.buffer.data, cfg->reader.buffer.len);
+	error = git_filebuf_write(&file, cfg->reader.buffer.ptr, cfg->reader.buffer.size);
 	if (error < GIT_SUCCESS) {
 		git__rethrow(error, "Failed to write original config content");
 		goto cleanup;
@@ -1155,7 +1155,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	else
 		error = git_filebuf_commit(&file, GIT_CONFIG_FILE_MODE);
 
-	git_futils_freebuffer(&cfg->reader.buffer);
+	git_buf_free(&cfg->reader.buffer);
 	return error;
 }
 

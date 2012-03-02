@@ -111,7 +111,7 @@ int git_attr_file__from_file(
 	git_repository *repo, const char *path, git_attr_file *file)
 {
 	int error = GIT_SUCCESS;
-	git_fbuffer fbuf = GIT_FBUFFER_INIT;
+	git_buf fbuf = GIT_BUF_INIT;
 
 	assert(path && file);
 
@@ -120,9 +120,9 @@ int git_attr_file__from_file(
 
 	if (error == GIT_SUCCESS &&
 		(error = git_futils_readbuffer(&fbuf, path)) == GIT_SUCCESS)
-		error = git_attr_file__from_buffer(repo, fbuf.data, file);
+		error = git_attr_file__from_buffer(repo, fbuf.ptr, file);
 
-	git_futils_freebuffer(&fbuf);
+	git_buf_free(&fbuf);
 	if (error != GIT_SUCCESS)
 		git__rethrow(error, "Could not open attribute file '%s'", path);
 
@@ -458,12 +458,12 @@ int git_attr_assignment__parse(
 		}
 
 		assign->name_hash = 5381;
-		assign->value = GIT_ATTR_TRUE;
+		assign->value = git_attr__true;
 		assign->is_allocated = 0;
 
 		/* look for magic name prefixes */
 		if (*scan == '-') {
-			assign->value = GIT_ATTR_FALSE;
+			assign->value = git_attr__false;
 			scan++;
 		} else if (*scan == '!') {
 			assign->value = NULL; /* explicit unspecified state */
@@ -510,7 +510,7 @@ int git_attr_assignment__parse(
 		}
 
 		/* expand macros (if given a repo with a macro cache) */
-		if (repo != NULL && assign->value == GIT_ATTR_TRUE) {
+		if (repo != NULL && assign->value == git_attr__true) {
 			git_attr_rule *macro =
 				git_hashtable_lookup(repo->attrcache.macros, assign->name);
 

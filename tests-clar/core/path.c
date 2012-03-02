@@ -243,7 +243,7 @@ void test_core_path__07_path_to_dir(void)
 void test_core_path__08_self_join(void)
 {
 	git_buf path = GIT_BUF_INIT;
-	ssize_t asize = 0;
+	size_t asize = 0;
 
 	asize = path.asize;
 	cl_git_pass(git_buf_sets(&path, "/foo"));

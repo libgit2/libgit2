@@ -216,7 +216,7 @@ void git_index_clear(git_index *index)
 int git_index_read(git_index *index)
 {
 	int error = GIT_SUCCESS, updated;
-	git_fbuffer buffer = GIT_FBUFFER_INIT;
+	git_buf buffer = GIT_BUF_INIT;
 	time_t mtime;
 
 	assert(index->index_file_path);
@@ -235,12 +235,12 @@ int git_index_read(git_index *index)
 
 	if (updated) {
 		git_index_clear(index);
-		error = parse_index(index, buffer.data, buffer.len);
+		error = parse_index(index, buffer.ptr, buffer.size);
 
 		if (error == GIT_SUCCESS)
 			index->last_modified = mtime;
 
-		git_futils_freebuffer(&buffer);
+		git_buf_free(&buffer);
 	}
 
 	if (error < GIT_SUCCESS)

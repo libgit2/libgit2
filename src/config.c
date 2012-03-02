@@ -209,85 +209,8 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	return file->set(file, name, value);
 }
 
-/***********
- * Getters
- ***********/
-
-int git_config_get_int64(git_config *cfg, const char *name, int64_t *out)
+static int parse_bool(int *out, const char *value)
 {
-	const char *value, *num_end;
-	int ret;
-	int64_t num;
-
-	ret = git_config_get_string(cfg, name, &value);
-	if (ret < GIT_SUCCESS)
-		return git__rethrow(ret, "Failed to retrieve value for '%s'", name);
-
-	ret = git__strtol64(&num, value, &num_end, 0);
-	if (ret < GIT_SUCCESS)
-		return git__rethrow(ret, "Failed to convert value for '%s'", name);
-
-	switch (*num_end) {
-	case 'g':
-	case 'G':
-		num *= 1024;
-		/* fallthrough */
-
-	case 'm':
-	case 'M':
-		num *= 1024;
-		/* fallthrough */
-
-	case 'k':
-	case 'K':
-		num *= 1024;
-
-		/* check that that there are no more characters after the
-		 * given modifier suffix */
-		if (num_end[1] != '\0')
-			return git__throw(GIT_EINVALIDTYPE,
-				"Failed to get value for '%s'. Invalid type suffix", name);
-
-		/* fallthrough */
-
-	case '\0':
-		*out = num;
-		return GIT_SUCCESS;
-
-	default:
-		return git__throw(GIT_EINVALIDTYPE,
-			"Failed to get value for '%s'. Value is of invalid type", name);
-	}
-}
-
-int git_config_get_int32(git_config *cfg, const char *name, int32_t *out)
-{
-	int64_t tmp_long;
-	int32_t tmp_int;
-	int ret;
-
-	ret = git_config_get_int64(cfg, name, &tmp_long);
-	if (ret < GIT_SUCCESS)
-		return git__rethrow(ret, "Failed to convert value for '%s'", name);
-	
-	tmp_int = tmp_long & 0xFFFFFFFF;
-	if (tmp_int != tmp_long)
-		return git__throw(GIT_EOVERFLOW, "Value for '%s' is too large", name);
-
-	*out = tmp_int;
-
-	return ret;
-}
-
-int git_config_get_bool(git_config *cfg, const char *name, int *out)
-{
-	const char *value;
-	int error = GIT_SUCCESS;
-
-	error = git_config_get_string(cfg, name, &value);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to get value for %s", name);
-
 	/* A missing value means true */
 	if (value == NULL) {
 		*out = 1;
@@ -307,14 +230,161 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 		return GIT_SUCCESS;
 	}
 
-	/* Try to parse it as an integer */
-	error = git_config_get_int32(cfg, name, out);
-	if (error == GIT_SUCCESS)
-		*out = !!(*out);
+	return GIT_EINVALIDTYPE;
+}
 
+static int parse_int64(int64_t *out, const char *value)
+{
+	const char *num_end;
+	int64_t num;
+
+	if (git__strtol64(&num, value, &num_end, 0) < 0)
+		return GIT_EINVALIDTYPE;
+
+	switch (*num_end) {
+	case 'g':
+	case 'G':
+		num *= 1024;
+		/* fallthrough */
+
+	case 'm':
+	case 'M':
+		num *= 1024;
+		/* fallthrough */
+
+	case 'k':
+	case 'K':
+		num *= 1024;
+
+		/* check that that there are no more characters after the
+		 * given modifier suffix */
+		if (num_end[1] != '\0')
+			return GIT_EINVALIDTYPE;
+
+		/* fallthrough */
+
+	case '\0':
+		*out = num;
+		return 0;
+
+	default:
+		return GIT_EINVALIDTYPE;
+	}
+}
+
+static int parse_int32(int32_t *out, const char *value)
+{
+	int64_t tmp;
+	int32_t truncate;
+
+	if (parse_int64(&tmp, value) < 0)
+		return GIT_EINVALIDTYPE;
+
+	truncate = tmp & 0xFFFFFFFF;
+	if (truncate != tmp)
+		return GIT_EOVERFLOW;
+
+	*out = truncate;
+	return 0;
+}
+
+/***********
+ * Getters
+ ***********/
+int git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n, int *out)
+{
+	size_t i;
+	const char *value;
+	int error;
+
+	error = git_config_get_string(cfg, name, &value);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	for (i = 0; i < map_n; ++i) {
+		git_cvar_map *m = maps + i;
+
+		switch (m->cvar_type) {
+			case GIT_CVAR_FALSE:
+			case GIT_CVAR_TRUE: {
+				int bool_val;
+
+				if (parse_bool(&bool_val, value) == 0 && 
+					bool_val == (int)m->cvar_type) {
+					*out = m->map_value;
+					return 0;
+				}
+
+				break;
+			}
+
+			case GIT_CVAR_INT32:
+				if (parse_int32(out, value) == 0)
+					return 0;
+
+				break;
+
+			case GIT_CVAR_STRING:
+				if (strcasecmp(value, m->str_match) == 0) {
+					*out = m->map_value;
+					return 0;
+				}
+		}
+	}
+
+	return git__throw(GIT_ENOTFOUND,
+		"Failed to map the '%s' config variable with a valid value", name);
+}
+
+int git_config_get_int64(git_config *cfg, const char *name, int64_t *out)
+{
+	const char *value;
+	int ret;
+
+	ret = git_config_get_string(cfg, name, &value);
+	if (ret < GIT_SUCCESS)
+		return git__rethrow(ret, "Failed to retrieve value for '%s'", name);
+
+	if (parse_int64(out, value) < 0)
+		return git__throw(GIT_EINVALIDTYPE, "Failed to parse '%s' as an integer", value);
+
+	return GIT_SUCCESS;
+}
+
+int git_config_get_int32(git_config *cfg, const char *name, int32_t *out)
+{
+	const char *value;
+	int error;
+
+	error = git_config_get_string(cfg, name, &value);
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to get value for %s", name);
-	return error;
+
+	error = parse_int32(out, value);
+	if (error < GIT_SUCCESS)
+		return git__throw(GIT_EINVALIDTYPE, "Failed to parse '%s' as a 32-bit integer", value);
+	
+	return GIT_SUCCESS;
+}
+
+int git_config_get_bool(git_config *cfg, const char *name, int *out)
+{
+	const char *value;
+	int error = GIT_SUCCESS;
+
+	error = git_config_get_string(cfg, name, &value);
+	if (error < GIT_SUCCESS)
+		return git__rethrow(error, "Failed to get value for %s", name);
+
+	if (parse_bool(out, value) == 0)
+		return GIT_SUCCESS;
+
+	if (parse_int32(out, value) == 0) {
+		*out = !!(*out);
+		return GIT_SUCCESS;
+	}
+
+	return git__throw(GIT_EINVALIDTYPE, "Failed to parse '%s' as a boolean value", value);
 }
 
 int git_config_get_string(git_config *cfg, const char *name, const char **out)
