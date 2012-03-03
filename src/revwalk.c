@@ -58,6 +58,9 @@ struct git_revwalk {
 static commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
 {
 	commit_list *new_list = git__malloc(sizeof(commit_list));
+	if (new_list == NULL)
+		return NULL;
+
 	new_list->item = item;
 	new_list->next = *list_p;
 	*list_p = new_list;
@@ -490,7 +493,8 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 
 			if (--parent->in_degree == 0 && parent->topo_delay) {
 				parent->topo_delay = 0;
-				commit_list_insert(parent, &walk->iterator_topo);
+				if (commit_list_insert(parent, &walk->iterator_topo) == NULL)
+					return GIT_ENOMEM;
 			}
 		}
 
@@ -520,7 +524,8 @@ static int prepare_walk(git_revwalk *walk)
 				parent->in_degree++;
 			}
 
-			commit_list_insert(next, &walk->iterator_topo);
+			if (commit_list_insert(next, &walk->iterator_topo) == NULL)
+				return GIT_ENOMEM;
 		}
 
 		if (error != GIT_EREVWALKOVER)
@@ -532,7 +537,8 @@ static int prepare_walk(git_revwalk *walk)
 	if (walk->sorting & GIT_SORT_REVERSE) {
 
 		while ((error = walk->get_next(&next, walk)) == GIT_SUCCESS)
-			commit_list_insert(next, &walk->iterator_reverse);
+			if (commit_list_insert(next, &walk->iterator_reverse) == NULL)
+				return GIT_ENOMEM;
 
 		if (error != GIT_EREVWALKOVER)
 			return git__rethrow(error, "Failed to prepare revision walk");
