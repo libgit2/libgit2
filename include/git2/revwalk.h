@@ -232,6 +232,9 @@ GIT_EXTERN(void) git_revwalk_free(git_revwalk *walk);
  */
 GIT_EXTERN(git_repository *) git_revwalk_repository(git_revwalk *walk);
 
+GIT_EXTERN(int) git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *two);
+
+
 /** @} */
 GIT_END_DECL
 #endif
