@@ -15,13 +15,19 @@
 
 #include <regex.h>
 
+#define PARENT1  (1 << 0)
+#define PARENT2  (1 << 1)
+#define RESULT   (1 << 2)
+#define STALE    (1 << 3)
+
 typedef struct commit_object {
 	git_oid oid;
 	uint32_t time;
 	unsigned int seen:1,
 			 uninteresting:1,
 			 topo_delay:1,
-			 parsed:1;
+			 parsed:1,
+			 flags : 4;
 
 	unsigned short in_degree;
 	unsigned short out_degree;
@@ -55,6 +61,14 @@ struct git_revwalk {
 	unsigned int sorting;
 };
 
+static int commit_time_cmp(void *a, void *b)
+{
+	commit_object *commit_a = (commit_object *)a;
+	commit_object *commit_b = (commit_object *)b;
+
+	return (commit_a->time < commit_b->time);
+}
+
 static commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
 {
 	commit_list *new_list = git__malloc(sizeof(commit_list));
@@ -67,6 +81,20 @@ static commit_list *commit_list_insert(commit_object *item, commit_list **list_p
 	return new_list;
 }
 
+static commit_list *commit_list_insert_by_date(commit_object *item, commit_list **list_p)
+{
+	commit_list **pp = list_p;
+	commit_list *p;
+
+	while ((p = *pp) != NULL) {
+		if (commit_time_cmp(p->item, item) < 0)
+			break;
+
+		pp = &p->next;
+	}
+
+	return commit_list_insert(item, pp);
+}
 static void commit_list_free(commit_list **list_p)
 {
 	commit_list *list = *list_p;
@@ -90,14 +118,6 @@ static commit_object *commit_list_pop(commit_list **stack)
 		git__free(top);
 	}
 	return item;
-}
-
-static int commit_time_cmp(void *a, void *b)
-{
-	commit_object *commit_a = (commit_object *)a;
-	commit_object *commit_b = (commit_object *)b;
-
-	return (commit_a->time < commit_b->time);
 }
 
 static uint32_t object_table_hash(const void *key, int hash_id)
@@ -242,6 +262,144 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 	error = commit_quick_parse(walk, commit, &obj->raw);
 	git_odb_object_free(obj);
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse commit");
+}
+
+static commit_object *interesting(commit_list *list)
+{
+	while (list) {
+		commit_object *commit = list->item;
+		list = list->next;
+		if (commit->flags & STALE)
+			continue;
+
+		return commit;
+	}
+
+	return NULL;
+}
+
+static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object *one, git_vector *twos)
+{
+	int error;
+	unsigned int i;
+	commit_object *two;
+	commit_list *list = NULL, *result = NULL;
+
+	/* if the commit is repeated, we have a our merge base already */
+	git_vector_foreach(twos, i, two) {
+		if (one == two)
+			return commit_list_insert(one, out) ? GIT_SUCCESS : GIT_ENOMEM;
+	}
+
+	if ((error = commit_parse(walk, one)) < GIT_SUCCESS)
+	    return error;
+
+	one->flags |= PARENT1;
+	if (commit_list_insert(one, &list) == NULL)
+		return GIT_ENOMEM;
+
+	git_vector_foreach(twos, i, two) {
+		commit_parse(walk, two);
+		two->flags |= PARENT2;
+		if (commit_list_insert_by_date(two, &list) == NULL)
+			return GIT_ENOMEM;
+	}
+
+	/* as long as there are non-STALE commits */
+	while (interesting(list)) {
+		commit_object *commit = list->item;
+		commit_list *next;
+		int flags;
+
+		next = list->next;
+		git__free(list);
+		list = next;
+
+		flags = commit->flags & (PARENT1 | PARENT2 | STALE);
+		if (flags == (PARENT1 | PARENT2)) {
+			if (!(commit->flags & RESULT)) {
+				commit->flags |= RESULT;
+				if (commit_list_insert_by_date(commit, &result) == NULL)
+					return GIT_ENOMEM;
+			}
+			/* we mark the parents of a merge stale */
+			flags |= STALE;
+		}
+
+		for (i = 0; i < commit->out_degree; i++) {
+			commit_object *p = commit->parents[i];
+			if ((p->flags & flags) == flags)
+				continue;
+
+			if ((error = commit_parse(walk, p)) < GIT_SUCCESS)
+				return error;
+
+			p->flags |= flags;
+			if (commit_list_insert_by_date(p, &list) == NULL)
+				return GIT_ENOMEM;
+		}
+	}
+
+	commit_list_free(&list);
+	/* filter out any stale commits in the results */
+	list = result;
+	result = NULL;
+
+	while (list) {
+		struct commit_list *next = list->next;
+		if (!(list->item->flags & STALE))
+			if (commit_list_insert_by_date(list->item, &result) == NULL)
+				return GIT_ENOMEM;
+
+		    free(list);
+		    list = next;
+	}
+
+	*out = result;
+	return GIT_SUCCESS;
+}
+
+int git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *two)
+{
+	git_revwalk *walk;
+	git_vector list;
+	commit_list *result;
+	commit_object *commit;
+	void *contents[1];
+	int error;
+
+	error = git_revwalk_new(&walk, repo);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	commit = commit_lookup(walk, two);
+	if (commit == NULL)
+		goto cleanup;
+
+	/* This is just one value, so we can do it on the stack */
+	memset(&list, 0x0, sizeof(git_vector));
+	contents[0] = commit;
+	list.length = 1;
+	list.contents = contents;
+
+	commit = commit_lookup(walk, one);
+	if (commit == NULL)
+		goto cleanup;
+
+	error = merge_bases_many(&result, walk, commit, &list);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	if (result == NULL)
+		return GIT_ENOTFOUND;
+
+	git_oid_cpy(out, &result->item->oid);
+	commit_list_free(&result);
+
+cleanup:
+	git_revwalk_free(walk);
+
+	return GIT_SUCCESS;
 }
 
 static void mark_uninteresting(commit_object *commit)
