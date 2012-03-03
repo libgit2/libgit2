@@ -78,7 +78,7 @@ static int write_file_stream(git_oid *oid, git_odb *odb, const char *path, git_o
 	char buffer[4096];
 	git_odb_stream *stream = NULL;
 
-	if ((error = git_odb_open_wstream(&stream, odb, file_size, GIT_OBJ_BLOB)) < GIT_SUCCESS)
+	if ((error = git_odb_open_wstream(&stream, odb, (size_t)file_size, GIT_OBJ_BLOB)) < GIT_SUCCESS)
 		return error;
 
 	if ((fd = p_open(path, O_RDONLY)) < 0) {

@@ -15,7 +15,7 @@ struct attr_expected {
 	const char *expected_str;
 };
 
-static inline void attr_check_expected(
+GIT_INLINE(void) attr_check_expected(
 	enum attr_expect_t expected,
 	const char *expected_str,
 	const char *value)
