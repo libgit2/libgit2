@@ -59,6 +59,10 @@ struct git_revwalk {
 
 	unsigned walking:1;
 	unsigned int sorting;
+
+	/* merge base calculation */
+	commit_object *one;
+	git_vector twos;
 };
 
 static int commit_time_cmp(void *a, void *b)
@@ -341,6 +345,7 @@ static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object 
 	}
 
 	commit_list_free(&list);
+
 	/* filter out any stale commits in the results */
 	list = result;
 	result = NULL;
@@ -409,6 +414,10 @@ static void mark_uninteresting(commit_object *commit)
 
 	commit->uninteresting = 1;
 
+	/* This means we've reached a merge base, so there's no need to walk any more */
+	if ((commit->flags & (RESULT | STALE)) == RESULT)
+		return;
+
 	for (i = 0; i < commit->out_degree; ++i)
 		if (!commit->parents[i]->uninteresting)
 			mark_uninteresting(commit->parents[i]);
@@ -452,7 +461,15 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 	if (commit == NULL)
 		return git__throw(GIT_ENOTFOUND, "Failed to push commit. Object not found");
 
-	return process_commit(walk, commit, uninteresting);
+	commit->uninteresting = uninteresting;
+	if (walk->one == NULL && !uninteresting) {
+		walk->one = commit;
+	} else {
+		if (git_vector_insert(&walk->twos, commit) < GIT_SUCCESS)
+			return GIT_ENOMEM;
+	}
+
+	return GIT_SUCCESS;
 }
 
 int git_revwalk_push(git_revwalk *walk, const git_oid *oid)
@@ -666,7 +683,25 @@ static int revwalk_next_reverse(commit_object **object_out, git_revwalk *walk)
 static int prepare_walk(git_revwalk *walk)
 {
 	int error;
-	commit_object *next;
+	unsigned int i;
+	commit_object *next, *two;
+	commit_list *bases = NULL;
+
+	/* first figure out what the merge bases are */
+	error = merge_bases_many(&bases, walk, walk->one, &walk->twos);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	commit_list_free(&bases);
+	error = process_commit(walk, walk->one, walk->one->uninteresting);
+	if (error < GIT_SUCCESS)
+		return error;
+
+	git_vector_foreach(&walk->twos, i, two) {
+		error = process_commit(walk, two, two->uninteresting);
+		if (error < GIT_SUCCESS)
+			return error;
+	}
 
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
 		unsigned short i;
@@ -729,6 +764,7 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 	git_pqueue_init(&walk->iterator_time, 8, commit_time_cmp);
 	git_vector_init(&walk->memory_alloc, 8, NULL);
+	git_vector_init(&walk->twos, 4, NULL);
 	alloc_chunk(walk);
 
 	walk->get_next = &revwalk_next_unsorted;
@@ -772,6 +808,7 @@ void git_revwalk_free(git_revwalk *walk)
 		git__free(git_vector_get(&walk->memory_alloc, i));
 
 	git_vector_free(&walk->memory_alloc);
+	git_vector_free(&walk->twos);
 	git__free(walk);
 }
 
