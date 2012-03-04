@@ -1,0 +1,6 @@
+To build RPM pakcages for Fedora, follow these steps:
+ cp packaging/rpm/libgit2.spec ~/rpmbuild/SPECS
+ cd ~/rpmbuild/SOURCES
+ wget https://github.com/downloads/libgit2/libgit2/libgit2-0.16.0.tar.gz
+ cd ~/rpmbuild/SPECS
+ rpmbuild -ba libgit2.spec
