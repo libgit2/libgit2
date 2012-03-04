@@ -268,18 +268,16 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse commit");
 }
 
-static commit_object *interesting(commit_list *list)
+static int interesting(git_pqueue *list)
 {
-	while (list) {
-		commit_object *commit = list->item;
-		list = list->next;
-		if (commit->flags & STALE)
-			continue;
-
-		return commit;
+	unsigned int i;
+	for (i = 1; i < git_pqueue_size(list); i++) {
+		commit_object *commit = list->d[i];
+		if ((commit->flags & STALE) == 0)
+			return 1;
 	}
 
-	return NULL;
+	return 0;
 }
 
 static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object *one, git_vector *twos)
@@ -287,7 +285,8 @@ static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object 
 	int error;
 	unsigned int i;
 	commit_object *two;
-	commit_list *list = NULL, *result = NULL;
+	commit_list *result = NULL, *tmp = NULL;
+	git_pqueue list;
 
 	/* if the commit is repeated, we have a our merge base already */
 	git_vector_foreach(twos, i, two) {
@@ -295,35 +294,34 @@ static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object 
 			return commit_list_insert(one, out) ? GIT_SUCCESS : GIT_ENOMEM;
 	}
 
+	error = git_pqueue_init(&list, twos->length * 2, commit_time_cmp);
+	if (error < GIT_SUCCESS)
+	    return error;
+
 	if ((error = commit_parse(walk, one)) < GIT_SUCCESS)
 	    return error;
 
 	one->flags |= PARENT1;
-	if (commit_list_insert(one, &list) == NULL)
-		return GIT_ENOMEM;
+	git_pqueue_insert(&list, one);
 
 	git_vector_foreach(twos, i, two) {
 		commit_parse(walk, two);
 		two->flags |= PARENT2;
-		if (commit_list_insert_by_date(two, &list) == NULL)
-			return GIT_ENOMEM;
+		git_pqueue_insert(&list, two);
 	}
 
 	/* as long as there are non-STALE commits */
-	while (interesting(list)) {
-		commit_object *commit = list->item;
-		commit_list *next;
+	while (interesting(&list)) {
+		commit_object *commit;
 		int flags;
 
-		next = list->next;
-		git__free(list);
-		list = next;
+		commit = git_pqueue_pop(&list);
 
 		flags = commit->flags & (PARENT1 | PARENT2 | STALE);
 		if (flags == (PARENT1 | PARENT2)) {
 			if (!(commit->flags & RESULT)) {
 				commit->flags |= RESULT;
-				if (commit_list_insert_by_date(commit, &result) == NULL)
+				if (commit_list_insert(commit, &result) == NULL)
 					return GIT_ENOMEM;
 			}
 			/* we mark the parents of a merge stale */
@@ -339,25 +337,25 @@ static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object 
 				return error;
 
 			p->flags |= flags;
-			if (commit_list_insert_by_date(p, &list) == NULL)
-				return GIT_ENOMEM;
+			if ((error = git_pqueue_insert(&list, p)) < GIT_SUCCESS)
+				return error;
 		}
 	}
 
-	commit_list_free(&list);
+	git_pqueue_free(&list);
 
 	/* filter out any stale commits in the results */
-	list = result;
+	tmp = result;
 	result = NULL;
 
-	while (list) {
-		struct commit_list *next = list->next;
-		if (!(list->item->flags & STALE))
-			if (commit_list_insert_by_date(list->item, &result) == NULL)
+	while (tmp) {
+		struct commit_list *next = tmp->next;
+		if (!(tmp->item->flags & STALE))
+			if (commit_list_insert_by_date(tmp->item, &result) == NULL)
 				return GIT_ENOMEM;
 
-		    free(list);
-		    list = next;
+		git__free(tmp);
+		tmp = next;
 	}
 
 	*out = result;
