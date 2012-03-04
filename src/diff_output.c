@@ -23,6 +23,12 @@ typedef struct {
 	git_diff_delta *delta;
 } diff_output_info;
 
+/* satisfy strict-aliasing */
+typedef union {
+	git_map *map;
+	mmfile_t *file;
+} mmfile_u;
+
 static int read_next_int(const char **str, int *value)
 {
 	const char *scan = *str;
@@ -410,7 +416,12 @@ int git_diff_foreach(
 
 		info.delta = delta;
 
-		xdl_diff((mmfile_t *)&old_data, (mmfile_t *)&new_data,
+		/* satisfy strict-aliasing */
+		mmfile_u data_old, data_new;
+		data_old.map = &old_data;
+		data_new.map = &new_data;
+
+		xdl_diff(data_old.file, data_new.file,
 			&xdiff_params, &xdiff_config, &xdiff_callback);
 
 cleanup:
