@@ -299,8 +299,8 @@ cleanup:
 	{
 		if (error == GIT_ERROR)
 			git__rethrow(error, "Failed to commit locked file from buffer (%s)", strerror(errno));
-
-		return git__rethrow(error, "Failed to commit locked file from buffer");
+		else
+			return git__rethrow(error, "Failed to commit locked file from buffer");
 	}
 	return GIT_SUCCESS;
 }
