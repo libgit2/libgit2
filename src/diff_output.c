@@ -316,6 +316,7 @@ int git_diff_foreach(
 	git_vector_foreach(&diff->deltas, info.index, delta) {
 		git_blob *old_blob = NULL, *new_blob = NULL;
 		git_map old_data, new_data;
+		mmfile_t old_xdiff_data, new_xdiff_data;
 
 		if (delta->status == GIT_DELTA_UNMODIFIED &&
 			(diff->opts.flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
@@ -418,8 +419,12 @@ int git_diff_foreach(
 		assert(hunk_cb || line_cb);
 
 		info.delta = delta;
+		old_xdiff_data.ptr = old_data.data;
+		old_xdiff_data.size = old_data.len;
+		new_xdiff_data.ptr = new_data.data;
+		new_xdiff_data.size = new_data.len;
 
-		xdl_diff((mmfile_t *)&old_data, (mmfile_t *)&new_data,
+		xdl_diff(&old_xdiff_data, &new_xdiff_data,
 			&xdiff_params, &xdiff_config, &xdiff_callback);
 
 cleanup:
