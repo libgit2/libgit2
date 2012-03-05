@@ -102,6 +102,11 @@ int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
 int git_transport_http(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
+
+/**
+  Returns true if the passed URL is valid (a URL with a Git supported scheme,
+  or pointing to an existing path)
+*/
 int git_transport_valid_url(const char *url);
 
 typedef struct git_transport git_transport;
