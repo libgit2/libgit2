@@ -10,7 +10,6 @@
 #include "git2/net.h"
 #include "transport.h"
 #include "path.h"
-#include <regex.h>
 
 static struct {
 	char *prefix;
@@ -67,7 +66,7 @@ int git_transport_new(git_transport **out, const char *url)
 	fn = transport_find_fn(url);
 
 	if (fn == NULL)
-		return git__throw(GIT_EINVALIDARGS, "No supported transport mechanism found for URL or path. Either libgit2 has not implemented this transport protocol, or it can not find the specified path.");
+		return git__throw(GIT_EINVALIDARGS, "Unsupported URL or non-existent path");
 
 	error = fn(&transport);
 	if (error < GIT_SUCCESS)

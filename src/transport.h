@@ -109,13 +109,6 @@ int git_transport_dummy(struct git_transport **transport);
 */
 int git_transport_valid_url(const char *url);
 
-/**
-  Returns true if the passed URL is supported by this version of libgit2.
-  (or, more technically, the transport method inferred by libgit is supported
-  by this version of libgit2).
-*/
-int git_remote_supported_url(const char* url);
-
 typedef struct git_transport git_transport;
 typedef int (*git_transport_cb)(git_transport **transport);
 
