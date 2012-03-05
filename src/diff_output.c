@@ -13,6 +13,7 @@
 #include "diff.h"
 #include "map.h"
 #include "fileops.h"
+#include "filter.h"
 
 typedef struct {
 	git_diff_list *diff;
@@ -161,19 +162,30 @@ static int file_is_binary_by_content(
 	git_map *old_data,
 	git_map *new_data)
 {
+	git_buf search;
+	git_text_stats stats;
+
 	GIT_UNUSED(diff);
 
 	if ((delta->old_file.flags & BINARY_DIFF_FLAGS) == 0) {
-		size_t search_len = min(old_data->len, 4000);
-		if (strnlen(old_data->data, search_len) != search_len)
+		search.ptr  = old_data->data;
+		search.size = min(old_data->len, 4000);
+
+		git_text_gather_stats(&stats, &search);
+
+		if (git_text_is_binary(&stats))
 			delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
 			delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 	}
 
 	if ((delta->new_file.flags & BINARY_DIFF_FLAGS) == 0) {
-		size_t search_len = min(new_data->len, 4000);
-		if (strnlen(new_data->data, search_len) != search_len)
+		search.ptr  = new_data->data;
+		search.size = min(new_data->len, 4000);
+
+		git_text_gather_stats(&stats, &search);
+
+		if (git_text_is_binary(&stats))
 			delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
 			delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
