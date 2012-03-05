@@ -57,8 +57,8 @@ typedef struct {
 	uint32_t flags;				/**< defaults to GIT_DIFF_NORMAL */
 	uint16_t context_lines;		/**< defaults to 3 */
 	uint16_t interhunk_lines;	/**< defaults to 3 */
-	char *src_prefix;			/**< defaults to "a" */
-	char *dst_prefix;			/**< defaults to "b" */
+	char *old_prefix;			/**< defaults to "a" */
+	char *new_prefix;			/**< defaults to "b" */
 	git_strarray pathspec;		/**< defaults to show all paths */
 } git_diff_options;
 
@@ -115,11 +115,11 @@ typedef struct {
  * It will just use the git attributes for those files.
  */
 typedef struct {
-	git_diff_file old;
-	git_diff_file new;
+	git_diff_file old_file;
+	git_diff_file new_file;
 	git_delta_t   status;
-	unsigned int similarity; /**< for RENAMED and COPIED, value from 0 to 100 */
-	int binary;
+	unsigned int  similarity; /**< for RENAMED and COPIED, value 0-100 */
+	int           binary;
 } git_diff_delta;
 
 /**
@@ -208,15 +208,15 @@ GIT_EXTERN(void) git_diff_list_free(git_diff_list *diff);
  *
  * @param repo The repository containing the trees.
  * @param opts Structure with options to influence diff or NULL for defaults.
- * @param old A git_tree object to diff from.
- * @param new A git_tree object to diff to.
+ * @param old_tree A git_tree object to diff from.
+ * @param new_tree A git_tree object to diff to.
  * @param diff A pointer to a git_diff_list pointer that will be allocated.
  */
 GIT_EXTERN(int) git_diff_tree_to_tree(
 	git_repository *repo,
 	const git_diff_options *opts, /**< can be NULL for defaults */
-	git_tree *old,
-	git_tree *new,
+	git_tree *old_tree,
+	git_tree *new_tree,
 	git_diff_list **diff);
 
 /**
@@ -224,13 +224,13 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
  *
  * @param repo The repository containing the tree and index.
  * @param opts Structure with options to influence diff or NULL for defaults.
- * @param old A git_tree object to diff from.
+ * @param old_tree A git_tree object to diff from.
  * @param diff A pointer to a git_diff_list pointer that will be allocated.
  */
 GIT_EXTERN(int) git_diff_index_to_tree(
 	git_repository *repo,
 	const git_diff_options *opts, /**< can be NULL for defaults */
-	git_tree *old,
+	git_tree *old_tree,
 	git_diff_list **diff);
 
 /**
@@ -259,13 +259,13 @@ GIT_EXTERN(int) git_diff_workdir_to_index(
  *
  * @param repo The repository containing the tree.
  * @param opts Structure with options to influence diff or NULL for defaults.
- * @param old A git_tree object to diff from.
+ * @param old_tree A git_tree object to diff from.
  * @param diff A pointer to a git_diff_list pointer that will be allocated.
  */
 GIT_EXTERN(int) git_diff_workdir_to_tree(
 	git_repository *repo,
 	const git_diff_options *opts, /**< can be NULL for defaults */
-	git_tree *old,
+	git_tree *old_tree,
 	git_diff_list **diff);
 
 /**
@@ -340,8 +340,8 @@ GIT_EXTERN(int) git_diff_print_patch(
  */
 GIT_EXTERN(int) git_diff_blobs(
 	git_repository *repo,
-	git_blob *old,
-	git_blob *new,
+	git_blob *old_blob,
+	git_blob *new_blob,
 	git_diff_options *options,
 	void *cb_data,
 	git_diff_hunk_fn hunk_cb,

@@ -150,7 +150,7 @@ int git_status_foreach_ext(
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
 		for (i = 0; !err && i < idx2head->deltas.length; i++) {
 			i2h = GIT_VECTOR_GET(&idx2head->deltas, i);
-			err = cb(i2h->old.path, index_delta2status(i2h->status), cbdata);
+			err = cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata);
 		}
 		git_diff_list_free(idx2head);
 		idx2head = NULL;
@@ -163,16 +163,16 @@ int git_status_foreach_ext(
 		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
 		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
 
-		cmp = !w2i ? -1 : !i2h ? 1 : strcmp(i2h->old.path, w2i->old.path);
+		cmp = !w2i ? -1 : !i2h ? 1 : strcmp(i2h->old_file.path, w2i->old_file.path);
 
 		if (cmp < 0) {
-			err = cb(i2h->old.path, index_delta2status(i2h->status), cbdata);
+			err = cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata);
 			i++;
 		} else if (cmp > 0) {
-			err = cb(w2i->old.path, workdir_delta2status(w2i->status), cbdata);
+			err = cb(w2i->old_file.path, workdir_delta2status(w2i->status), cbdata);
 			j++;
 		} else {
-			err = cb(i2h->old.path, index_delta2status(i2h->status) |
+			err = cb(i2h->old_file.path, index_delta2status(i2h->status) |
 					 workdir_delta2status(w2i->status), cbdata);
 			i++; j++;
 		}

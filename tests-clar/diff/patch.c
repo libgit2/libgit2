@@ -59,8 +59,8 @@ check_range:
 	cl_assert_equal_i(0, range->new_lines);
 
 check_delta:
-	cl_assert_equal_s("subdir.txt", delta->old.path);
-	cl_assert_equal_s("subdir.txt", delta->new.path);
+	cl_assert_equal_s("subdir.txt", delta->old_file.path);
+	cl_assert_equal_s("subdir.txt", delta->new_file.path);
 	cl_assert_equal_i(GIT_DELTA_DELETED, delta->status);
 
 	return 0;
