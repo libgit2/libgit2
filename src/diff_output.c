@@ -103,11 +103,11 @@ static int set_file_is_binary_by_attr(git_repository *repo, git_diff_file *file)
 
 static void set_delta_is_binary(git_diff_delta *delta)
 {
-	if ((delta->old.flags & GIT_DIFF_FILE_BINARY) != 0 ||
-		(delta->new.flags & GIT_DIFF_FILE_BINARY) != 0)
+	if ((delta->old_file.flags & GIT_DIFF_FILE_BINARY) != 0 ||
+		(delta->new_file.flags & GIT_DIFF_FILE_BINARY) != 0)
 		delta->binary = 1;
-	else if ((delta->old.flags & GIT_DIFF_FILE_NOT_BINARY) != 0 ||
-			 (delta->new.flags & GIT_DIFF_FILE_NOT_BINARY) != 0)
+	else if ((delta->old_file.flags & GIT_DIFF_FILE_NOT_BINARY) != 0 ||
+			 (delta->new_file.flags & GIT_DIFF_FILE_NOT_BINARY) != 0)
 		delta->binary = 0;
 	/* otherwise leave delta->binary value untouched */
 }
@@ -121,34 +121,34 @@ static int file_is_binary_by_attr(
 	delta->binary = -1;
 
 	/* make sure files are conceivably mmap-able */
-	if ((git_off_t)((size_t)delta->old.size) != delta->old.size ||
-		(git_off_t)((size_t)delta->new.size) != delta->new.size)
+	if ((git_off_t)((size_t)delta->old_file.size) != delta->old_file.size ||
+		(git_off_t)((size_t)delta->new_file.size) != delta->new_file.size)
 	{
-		delta->old.flags |= GIT_DIFF_FILE_BINARY;
-		delta->new.flags |= GIT_DIFF_FILE_BINARY;
+		delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
+		delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
 		delta->binary = 1;
 		return GIT_SUCCESS;
 	}
 
 	/* check if user is forcing us to text diff these files */
 	if (diff->opts.flags & GIT_DIFF_FORCE_TEXT) {
-		delta->old.flags |= GIT_DIFF_FILE_NOT_BINARY;
-		delta->new.flags |= GIT_DIFF_FILE_NOT_BINARY;
+		delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
+		delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 		delta->binary = 0;
 		return GIT_SUCCESS;
 	}
 
 	/* check diff attribute +, -, or 0 */
-	error = set_file_is_binary_by_attr(diff->repo, &delta->old);
+	error = set_file_is_binary_by_attr(diff->repo, &delta->old_file);
 	if (error != GIT_SUCCESS)
 		return error;
 
-	mirror_new = (delta->new.path == delta->old.path ||
-				  strcmp(delta->new.path, delta->old.path) == 0);
+	mirror_new = (delta->new_file.path == delta->old_file.path ||
+				  strcmp(delta->new_file.path, delta->old_file.path) == 0);
 	if (mirror_new)
-		delta->new.flags &= (delta->old.flags & BINARY_DIFF_FLAGS);
+		delta->new_file.flags &= (delta->old_file.flags & BINARY_DIFF_FLAGS);
 	else
-		error = set_file_is_binary_by_attr(diff->repo, &delta->new);
+		error = set_file_is_binary_by_attr(diff->repo, &delta->new_file);
 
 	set_delta_is_binary(delta);
 
@@ -163,20 +163,20 @@ static int file_is_binary_by_content(
 {
 	GIT_UNUSED(diff);
 
-	if ((delta->old.flags & BINARY_DIFF_FLAGS) == 0) {
+	if ((delta->old_file.flags & BINARY_DIFF_FLAGS) == 0) {
 		size_t search_len = min(old_data->len, 4000);
 		if (strnlen(old_data->data, search_len) != search_len)
-			delta->old.flags |= GIT_DIFF_FILE_BINARY;
+			delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
-			delta->old.flags |= GIT_DIFF_FILE_NOT_BINARY;
+			delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 	}
 
-	if ((delta->new.flags & BINARY_DIFF_FLAGS) == 0) {
+	if ((delta->new_file.flags & BINARY_DIFF_FLAGS) == 0) {
 		size_t search_len = min(new_data->len, 4000);
 		if (strnlen(new_data->data, search_len) != search_len)
-			delta->new.flags |= GIT_DIFF_FILE_BINARY;
+			delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
-			delta->new.flags |= GIT_DIFF_FILE_NOT_BINARY;
+			delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 	}
 
 	set_delta_is_binary(delta);
@@ -341,37 +341,37 @@ int git_diff_foreach(
 			 delta->status == GIT_DELTA_MODIFIED))
 		{
 			if (diff->old_src == GIT_ITERATOR_WORKDIR)
-				error = get_workdir_content(diff->repo, &delta->old, &old_data);
+				error = get_workdir_content(diff->repo, &delta->old_file, &old_data);
 			else
 				error = get_blob_content(
-					diff->repo, &delta->old.oid, &old_data, &old_blob);
+					diff->repo, &delta->old_file.oid, &old_data, &old_blob);
 			if (error != GIT_SUCCESS)
 				goto cleanup;
 		}
 
 		if (delta->binary != 1 &&
-			(hunk_cb || line_cb || git_oid_iszero(&delta->new.oid)) &&
+			(hunk_cb || line_cb || git_oid_iszero(&delta->new_file.oid)) &&
 			(delta->status == GIT_DELTA_ADDED ||
 			 delta->status == GIT_DELTA_MODIFIED))
 		{
 			if (diff->new_src == GIT_ITERATOR_WORKDIR)
-				error = get_workdir_content(diff->repo, &delta->new, &new_data);
+				error = get_workdir_content(diff->repo, &delta->new_file, &new_data);
 			else
 				error = get_blob_content(
-					diff->repo, &delta->new.oid, &new_data, &new_blob);
+					diff->repo, &delta->new_file.oid, &new_data, &new_blob);
 			if (error != GIT_SUCCESS)
 				goto cleanup;
 
-			if ((delta->new.flags | GIT_DIFF_FILE_VALID_OID) == 0) {
+			if ((delta->new_file.flags | GIT_DIFF_FILE_VALID_OID) == 0) {
 				error = git_odb_hash(
-					&delta->new.oid, new_data.data, new_data.len, GIT_OBJ_BLOB);
+					&delta->new_file.oid, new_data.data, new_data.len, GIT_OBJ_BLOB);
 				if (error != GIT_SUCCESS)
 					goto cleanup;
 
 				/* since we did not have the definitive oid, we may have
 				 * incorrect status and need to skip this item.
 				 */
-				if (git_oid_cmp(&delta->old.oid, &delta->new.oid) == 0) {
+				if (git_oid_cmp(&delta->old_file.oid, &delta->new_file.oid) == 0) {
 					delta->status = GIT_DELTA_UNMODIFIED;
 					goto cleanup;
 				}
@@ -414,8 +414,8 @@ int git_diff_foreach(
 			&xdiff_params, &xdiff_config, &xdiff_callback);
 
 cleanup:
-		release_content(&delta->old, &old_data, old_blob);
-		release_content(&delta->new, &new_data, new_blob);
+		release_content(&delta->old_file, &old_data, old_blob);
+		release_content(&delta->new_file, &new_data, new_blob);
 
 		if (error != GIT_SUCCESS)
 			break;
@@ -464,23 +464,23 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	if (!code)
 		return GIT_SUCCESS;
 
-	old_suffix = pick_suffix(delta->old.mode);
-	new_suffix = pick_suffix(delta->new.mode);
+	old_suffix = pick_suffix(delta->old_file.mode);
+	new_suffix = pick_suffix(delta->new_file.mode);
 
 	git_buf_clear(pi->buf);
 
-	if (delta->old.path != delta->new.path &&
-		strcmp(delta->old.path,delta->new.path) != 0)
+	if (delta->old_file.path != delta->new_file.path &&
+		strcmp(delta->old_file.path,delta->new_file.path) != 0)
 		git_buf_printf(pi->buf, "%c\t%s%c -> %s%c\n", code,
-			delta->old.path, old_suffix, delta->new.path, new_suffix);
-	else if (delta->old.mode != delta->new.mode &&
-		delta->old.mode != 0 && delta->new.mode != 0)
+			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
+	else if (delta->old_file.mode != delta->new_file.mode &&
+		delta->old_file.mode != 0 && delta->new_file.mode != 0)
 		git_buf_printf(pi->buf, "%c\t%s%c (%o -> %o)\n", code,
-			delta->old.path, new_suffix, delta->old.mode, delta->new.mode);
+			delta->old_file.path, new_suffix, delta->old_file.mode, delta->new_file.mode);
 	else if (old_suffix != ' ')
-		git_buf_printf(pi->buf, "%c\t%s%c\n", code, delta->old.path, old_suffix);
+		git_buf_printf(pi->buf, "%c\t%s%c\n", code, delta->old_file.path, old_suffix);
 	else
-		git_buf_printf(pi->buf, "%c\t%s\n", code, delta->old.path);
+		git_buf_printf(pi->buf, "%c\t%s\n", code, delta->old_file.path);
 
 	if (git_buf_lasterror(pi->buf) != GIT_SUCCESS)
 		return git_buf_lasterror(pi->buf);
@@ -515,21 +515,21 @@ static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 	char start_oid[8], end_oid[8];
 
 	/* TODO: Determine a good actual OID range to print */
-	git_oid_to_string(start_oid, sizeof(start_oid), &delta->old.oid);
-	git_oid_to_string(end_oid, sizeof(end_oid), &delta->new.oid);
+	git_oid_to_string(start_oid, sizeof(start_oid), &delta->old_file.oid);
+	git_oid_to_string(end_oid, sizeof(end_oid), &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
-	if (delta->old.mode == delta->new.mode) {
+	if (delta->old_file.mode == delta->new_file.mode) {
 		git_buf_printf(pi->buf, "index %s..%s %o\n",
-			start_oid, end_oid, delta->old.mode);
+			start_oid, end_oid, delta->old_file.mode);
 	} else {
-		if (delta->old.mode == 0) {
-			git_buf_printf(pi->buf, "new file mode %o\n", delta->new.mode);
-		} else if (delta->new.mode == 0) {
-			git_buf_printf(pi->buf, "deleted file mode %o\n", delta->old.mode);
+		if (delta->old_file.mode == 0) {
+			git_buf_printf(pi->buf, "new file mode %o\n", delta->new_file.mode);
+		} else if (delta->new_file.mode == 0) {
+			git_buf_printf(pi->buf, "deleted file mode %o\n", delta->old_file.mode);
 		} else {
-			git_buf_printf(pi->buf, "old mode %o\n", delta->old.mode);
-			git_buf_printf(pi->buf, "new mode %o\n", delta->new.mode);
+			git_buf_printf(pi->buf, "old mode %o\n", delta->old_file.mode);
+			git_buf_printf(pi->buf, "new mode %o\n", delta->new_file.mode);
 		}
 		git_buf_printf(pi->buf, "index %s..%s\n", start_oid, end_oid);
 	}
@@ -541,23 +541,23 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 {
 	int error;
 	diff_print_info *pi = data;
-	const char *oldpfx = pi->diff->opts.src_prefix;
-	const char *oldpath = delta->old.path;
-	const char *newpfx = pi->diff->opts.dst_prefix;
-	const char *newpath = delta->new.path;
+	const char *oldpfx = pi->diff->opts.old_prefix;
+	const char *oldpath = delta->old_file.path;
+	const char *newpfx = pi->diff->opts.new_prefix;
+	const char *newpath = delta->new_file.path;
 
 	GIT_UNUSED(progress);
 
 	git_buf_clear(pi->buf);
-	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n", oldpfx, delta->old.path, newpfx, delta->new.path);
+	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n", oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
 	if ((error = print_oid_range(pi, delta)) < GIT_SUCCESS)
 		return error;
 
-	if (git_oid_iszero(&delta->old.oid)) {
+	if (git_oid_iszero(&delta->old_file.oid)) {
 		oldpfx = "";
 		oldpath = "/dev/null";
 	}
-	if (git_oid_iszero(&delta->new.oid)) {
+	if (git_oid_iszero(&delta->new_file.oid)) {
 		oldpfx = "";
 		oldpath = "/dev/null";
 	}
@@ -664,7 +664,7 @@ int git_diff_blobs(
 {
 	diff_output_info info;
 	git_diff_delta delta;
-	mmfile_t old, new;
+	mmfile_t old_data, new_data;
 	xpparam_t xdiff_params;
 	xdemitconf_t xdiff_config;
 	xdemitcb_t xdiff_callback;
@@ -678,31 +678,31 @@ int git_diff_blobs(
 	}
 
 	if (old_blob) {
-		old.ptr  = (char *)git_blob_rawcontent(old_blob);
-		old.size = git_blob_rawsize(old_blob);
+		old_data.ptr  = (char *)git_blob_rawcontent(old_blob);
+		old_data.size = git_blob_rawsize(old_blob);
 	} else {
-		old.ptr  = "";
-		old.size = 0;
+		old_data.ptr  = "";
+		old_data.size = 0;
 	}
 
 	if (new_blob) {
-		new.ptr  = (char *)git_blob_rawcontent(new_blob);
-		new.size = git_blob_rawsize(new_blob);
+		new_data.ptr  = (char *)git_blob_rawcontent(new_blob);
+		new_data.size = git_blob_rawsize(new_blob);
 	} else {
-		new.ptr  = "";
-		new.size = 0;
+		new_data.ptr  = "";
+		new_data.size = 0;
 	}
 
 	/* populate a "fake" delta record */
-	delta.status = old.ptr ?
-		(new.ptr ? GIT_DELTA_MODIFIED : GIT_DELTA_DELETED) :
-		(new.ptr ? GIT_DELTA_ADDED : GIT_DELTA_UNTRACKED);
-	delta.old.mode = 0100644; /* can't know the truth from a blob alone */
-	delta.new.mode = 0100644;
-	git_oid_cpy(&delta.old.oid, git_object_id((const git_object *)old_blob));
-	git_oid_cpy(&delta.new.oid, git_object_id((const git_object *)new_blob));
-	delta.old.path = NULL;
-	delta.new.path = NULL;
+	delta.status = old_data.ptr ?
+		(new_data.ptr ? GIT_DELTA_MODIFIED : GIT_DELTA_DELETED) :
+		(new_data.ptr ? GIT_DELTA_ADDED : GIT_DELTA_UNTRACKED);
+	delta.old_file.mode = 0100644; /* can't know the truth from a blob alone */
+	delta.new_file.mode = 0100644;
+	git_oid_cpy(&delta.old_file.oid, git_object_id((const git_object *)old_blob));
+	git_oid_cpy(&delta.new_file.oid, git_object_id((const git_object *)new_blob));
+	delta.old_file.path = NULL;
+	delta.new_file.path = NULL;
 	delta.similarity = 0;
 
 	info.diff    = NULL;
@@ -716,7 +716,7 @@ int git_diff_blobs(
 	xdiff_callback.outf = diff_output_cb;
 	xdiff_callback.priv = &info;
 
-	xdl_diff(&old, &new, &xdiff_params, &xdiff_config, &xdiff_callback);
+	xdl_diff(&old_data, &new_data, &xdiff_params, &xdiff_config, &xdiff_callback);
 
 	return GIT_SUCCESS;
 }
