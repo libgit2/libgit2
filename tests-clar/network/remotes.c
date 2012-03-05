@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "refspec.h"
+#include "transport.h"
 
 static git_remote *_remote;
 static git_repository *_repo;
@@ -28,6 +29,26 @@ void test_network_remotes__parsing(void)
 {
 	cl_assert(!strcmp(git_remote_name(_remote), "test"));
 	cl_assert(!strcmp(git_remote_url(_remote), "git://github.com/libgit2/libgit2"));
+}
+
+void test_network_remotes__parsing_ssh_remote(void)
+{
+	cl_assert( git_remote_valid_url("git@github.com:libgit2/libgit2.git") );
+}
+
+void test_network_remotes__parsing_local_path_fails_if_path_not_found(void)
+{
+	cl_assert( !git_remote_valid_url("/home/git/repos/libgit2.git") );
+}
+
+void test_network_remotes__supported_transport_methods_are_supported(void)
+{
+  cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
+}
+
+void test_network_remotes__unsupported_transport_methods_are_unsupported(void)
+{
+	cl_assert( !git_remote_supported_url("git@github.com:libgit2/libgit2.git") );
 }
 
 void test_network_remotes__refspec_parsing(void)
