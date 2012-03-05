@@ -287,7 +287,7 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 	file->fd = -1;
 
 	if (p_chmod(file->path_lock, mode)) {
-		error = git__throw(GIT_EOSERR, "Failed to chmod locked file before committing");
+		error = git__throw(GIT_EOSERR, "Failed to chmod locked file before committing (%s)", strerror(errno));
 		goto cleanup;
 	}
 
@@ -298,7 +298,12 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 cleanup:
 	git_filebuf_cleanup(file);
 	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to commit locked file from buffer");
+	{
+		if (error == GIT_ERROR)
+			return git__rethrow(error, "Failed to commit locked file from buffer (%s)", strerror(errno));
+		else
+			return git__rethrow(error, "Failed to commit locked file from buffer");
+	}
 	return GIT_SUCCESS;
 }
 
