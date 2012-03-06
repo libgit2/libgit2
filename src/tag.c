@@ -193,10 +193,9 @@ static int write_tag_annotation(
 	git_buf_putc(&tag, '\n');
 	git_buf_puts(&tag, message);
 
-	error = git_buf_lasterror(&tag);
-	if (error < GIT_SUCCESS) {
+	if (git_buf_oom(&tag)) {
 		git_buf_free(&tag);
-		return git__rethrow(error, "Not enough memory to build the tag data");
+		return git__throw(GIT_ENOMEM, "Not enough memory to build the tag data");
 	}
 
 	error = git_repository_odb__weakptr(&odb, repo);

@@ -56,7 +56,7 @@ Exit:
 
 	if (buffer != NULL) {
 		if (git_buf_set(buffer, startp, len) < GIT_SUCCESS)
-			return git__rethrow(git_buf_lasterror(buffer),
+			return git__rethrow(GIT_ENOMEM,
 				"Could not get basename of '%s'", path);
 	}
 
@@ -116,7 +116,7 @@ Exit:
 
 	if (buffer != NULL) {
 		if (git_buf_set(buffer, path, len) < GIT_SUCCESS)
-			return git__rethrow(git_buf_lasterror(buffer),
+			return git__rethrow(GIT_ENOMEM,
 				"Could not get dirname of '%s'", path);
 	}
 
@@ -185,34 +185,36 @@ int git_path_root(const char *path)
 
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 {
-	int  error = GIT_SUCCESS;
 	char buf[GIT_PATH_MAX];
 
+	assert(path && path_out);
 	git_buf_clear(path_out);
 
 	/* construct path if needed */
 	if (base != NULL && git_path_root(path) < 0) {
-		if ((error = git_buf_joinpath(path_out, base, path)) < GIT_SUCCESS)
-			return error;
+		if (git_buf_joinpath(path_out, base, path) < 0)
+			return -1;
+
 		path = path_out->ptr;
 	}
 
-	if (path == NULL || p_realpath(path, buf) == NULL)
-		error = GIT_EOSERR;
-	else
-		error = git_buf_sets(path_out, buf);
+	if (p_realpath(path, buf) == NULL) {
+		giterr_set(GITERR_OS, "Failed to resolve path '%s': %s", path, strerror(errno));
+		return (errno == ENOENT) ? GIT_ENOTFOUND : -1;
+	}
 
-	return error;
+	if (git_buf_sets(path_out, buf) < 0)
+		return -1;
+
+	return 0;
 }
 
 int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base)
 {
-	int error = git_path_prettify(path_out, path, base);
+	if (git_path_prettify(path_out, path, base) < 0)
+		return -1;
 
-	if (error == GIT_SUCCESS)
-		error = git_path_to_dir(path_out);
-
-	return error;
+	return git_path_to_dir(path_out);
 }
 
 int git_path_to_dir(git_buf *path)
@@ -222,7 +224,10 @@ int git_path_to_dir(git_buf *path)
 		path->ptr[path->size - 1] != '/')
 		git_buf_putc(path, '/');
 
-	return git_buf_lasterror(path);
+	if (git_buf_oom(path))
+		return -1;
+
+	return 0;
 }
 
 void git_path_string_to_dir(char* path, size_t size)
@@ -445,7 +450,7 @@ int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 	/* call dirname if this is not a directory */
 	if (error == GIT_SUCCESS && git_path_isdir(dir->ptr) == false)
 		if (git_path_dirname_r(dir, dir->ptr) < GIT_SUCCESS)
-			error = git_buf_lasterror(dir);
+			error = GIT_ENOMEM;
 
 	if (error == GIT_SUCCESS)
 		error = git_path_to_dir(dir);

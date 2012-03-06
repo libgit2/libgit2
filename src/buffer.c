@@ -70,7 +70,7 @@ int git_buf_try_grow(git_buf *buf, size_t target_size)
 
 	new_ptr = git__realloc(new_ptr, new_size);
 	if (!new_ptr)
-		return GIT_ENOMEM;
+		return -1;
 
 	buf->asize = new_size;
 	buf->ptr   = new_ptr;
@@ -100,14 +100,9 @@ void git_buf_clear(git_buf *buf)
 		buf->ptr[0] = '\0';
 }
 
-int git_buf_oom(const git_buf *buf)
+bool git_buf_oom(const git_buf *buf)
 {
 	return (buf->ptr == &git_buf__oom);
-}
-
-int git_buf_lasterror(const git_buf *buf)
-{
-	return (buf->ptr == &git_buf__oom) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
 int git_buf_set(git_buf *buf, const char *data, size_t len)

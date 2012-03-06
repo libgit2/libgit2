@@ -482,8 +482,8 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	else
 		git_buf_printf(pi->buf, "%c\t%s\n", code, delta->old.path);
 
-	if (git_buf_lasterror(pi->buf) != GIT_SUCCESS)
-		return git_buf_lasterror(pi->buf);
+	if (git_buf_oom(pi->buf) == true)
+		return GIT_ENOMEM;
 
 	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr);
 }
@@ -534,7 +534,10 @@ static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 		git_buf_printf(pi->buf, "index %s..%s\n", start_oid, end_oid);
 	}
 
-	return git_buf_lasterror(pi->buf);
+	if (git_buf_oom(pi->buf))
+		return GIT_ENOMEM;
+
+	return 0;
 }
 
 static int print_patch_file(void *data, git_diff_delta *delta, float progress)
@@ -567,8 +570,8 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 		git_buf_printf(pi->buf, "+++ %s%s\n", newpfx, newpath);
 	}
 
-	if (git_buf_lasterror(pi->buf) != GIT_SUCCESS)
-		return git_buf_lasterror(pi->buf);
+	if (git_buf_oom(pi->buf))
+		return GIT_ENOMEM;
 
 	error = pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr);
 	if (error != GIT_SUCCESS || delta->binary != 1)
@@ -578,8 +581,8 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	git_buf_printf(
 		pi->buf, "Binary files %s%s and %s%s differ\n",
 		oldpfx, oldpath, newpfx, newpath);
-	if (git_buf_lasterror(pi->buf) != GIT_SUCCESS)
-		return git_buf_lasterror(pi->buf);
+	if (git_buf_oom(pi->buf))
+		return GIT_ENOMEM;
 
 	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_BINARY, pi->buf->ptr);
 }
@@ -601,7 +604,7 @@ static int print_patch_hunk(
 	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) == GIT_SUCCESS)
 		return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_HUNK_HDR, pi->buf->ptr);
 	else
-		return git_buf_lasterror(pi->buf);
+		return GIT_ENOMEM;
 }
 
 static int print_patch_line(
@@ -624,8 +627,8 @@ static int print_patch_line(
 	else if (content_len > 0)
 		git_buf_printf(pi->buf, "%.*s", (int)content_len, content);
 
-	if (git_buf_lasterror(pi->buf) != GIT_SUCCESS)
-		return git_buf_lasterror(pi->buf);
+	if (git_buf_oom(pi->buf))
+		return GIT_ENOMEM;
 
 	return pi->print_cb(pi->cb_data, line_origin, pi->buf->ptr);
 }

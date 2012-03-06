@@ -97,7 +97,7 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)
 {
 	if (git_buf_sets(out, spec->dst) < GIT_SUCCESS)
-		return git_buf_lasterror(out);
+		return GIT_ENOMEM;
 
 	/*
 	 * No '*' at the end means that it's mapped to one specific local
@@ -109,5 +109,9 @@ int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *n
 	git_buf_truncate(out, out->size - 1); /* remove trailing '*' */
 	git_buf_puts(out, name + strlen(spec->src) - 1);
 
-	return git_buf_lasterror(out);
+	if (git_buf_oom(out))
+		return GIT_ENOMEM;
+
+	return 0;
 }
+

@@ -65,9 +65,9 @@ static int reflog_write(const char *log_path, const char *oid_old,
 
 	git_buf_putc(&log, '\n');
 
-	if ((error = git_buf_lasterror(&log)) < GIT_SUCCESS) {
+	if (git_buf_oom(&log)) {
 		git_buf_free(&log);
-		return git__rethrow(error, "Failed to write reflog. Memory allocation failure");
+		return git__throw(GIT_ENOMEM, "Failed to write reflog. Memory allocation failure");
 	}
 
 	if ((error = git_filebuf_open(&fbuf, log_path, GIT_FILEBUF_APPEND)) < GIT_SUCCESS) {

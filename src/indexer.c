@@ -171,7 +171,10 @@ static int index_path(git_buf *path, git_indexer *idx)
 	path->size += GIT_OID_HEXSZ;
 	git_buf_puts(path, suffix);
 
-	return git_buf_lasterror(path);
+	if (git_buf_oom(path))
+		return GIT_ENOMEM;
+
+	return 0;
 }
 
 int git_indexer_write(git_indexer *idx)
@@ -192,8 +195,8 @@ int git_indexer_write(git_indexer *idx)
 	git_buf_truncate(&filename, filename.size - strlen("pack"));
 	git_buf_puts(&filename, "idx");
 
-	if ((error = git_buf_lasterror(&filename)) < GIT_SUCCESS)
-		goto cleanup;
+	if (git_buf_oom(&filename))
+		return GIT_ENOMEM;
 
 	error = git_filebuf_open(&idx->file, filename.ptr, GIT_FILEBUF_HASH_CONTENTS);
 	if (error < GIT_SUCCESS)

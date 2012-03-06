@@ -99,11 +99,15 @@ static int append_ceiling_dir(git_buf *ceiling_dirs, const char *path)
 
 	if (ceiling_dirs->size > 0)
 		git_buf_puts(ceiling_dirs, ceiling_separator);
+
 	git_buf_puts(ceiling_dirs, pretty_path.ptr);
 
 	git_buf_free(&pretty_path);
 
-	return git_buf_lasterror(ceiling_dirs);
+	if (git_buf_oom(ceiling_dirs))
+		return GIT_ENOMEM;
+
+	return 0;
 }
 
 BEGIN_TEST(discover0, "test discover")
@@ -119,7 +123,7 @@ BEGIN_TEST(discover0, "test discover")
 	must_pass(append_ceiling_dir(&ceiling_dirs_buf, TEMP_REPO_FOLDER));
 	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
-	must_be_true(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
+	must_fail(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));
 
 	must_pass(git_repository_init(&repo, DISCOVER_FOLDER, 1));
 	must_pass(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));

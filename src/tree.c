@@ -569,9 +569,9 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 		git_buf_put(&tree, (char *)entry->oid.id, GIT_OID_RAWSZ);
 	}
 
-	if ((error = git_buf_lasterror(&tree)) < GIT_SUCCESS) {
+	if (git_buf_oom(&tree)) {
 		git_buf_free(&tree);
-		return git__rethrow(error, "Not enough memory to build the tree data");
+		return git__throw(GIT_ENOMEM, "Not enough memory to build the tree data");
 	}
 
 	error = git_repository_odb__weakptr(&odb, repo);
@@ -720,8 +720,9 @@ static int tree_walk_post(
 			/* append the next entry to the path */
 			git_buf_puts(path, entry->filename);
 			git_buf_putc(path, '/');
-			if ((error = git_buf_lasterror(path)) < GIT_SUCCESS)
-				break;
+
+			if (git_buf_oom(path))
+				return GIT_ENOMEM;
 
 			error = tree_walk_post(subtree, callback, path, payload);
 			if (error < GIT_SUCCESS)

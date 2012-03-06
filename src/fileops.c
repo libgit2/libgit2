@@ -211,20 +211,21 @@ void git_futils_mmap_free(git_map *out)
 
 int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 {
-	int error, root_path_offset;
+	int root_path_offset;
 	git_buf make_path = GIT_BUF_INIT;
 	size_t start;
 	char *pp, *sp;
+	bool failed = false;
 
 	if (base != NULL) {
 		start = strlen(base);
-		error = git_buf_joinpath(&make_path, base, path);
+		if (git_buf_joinpath(&make_path, base, path) < 0)
+			return -1;
 	} else {
 		start = 0;
-		error = git_buf_puts(&make_path, path);
+		if (git_buf_puts(&make_path, path) < 0)
+			return -1;
 	}
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create `%s` tree structure", path);
 
 	pp = make_path.ptr + start;
 
@@ -232,14 +233,13 @@ int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 	if (root_path_offset > 0)
 		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
-	while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != NULL) {
+	while (!failed && (sp = strchr(pp, '/')) != NULL) {
 		if (sp != pp && git_path_isdir(make_path.ptr) == false) {
 			*sp = 0;
-			error = p_mkdir(make_path.ptr, mode);
 
 			/* Do not choke while trying to recreate an existing directory */
-			if (errno == EEXIST)
-				error = GIT_SUCCESS;
+			if (p_mkdir(make_path.ptr, mode) < 0 && errno != EEXIST)
+				failed = true;
 
 			*sp = '/';
 		}
@@ -247,18 +247,20 @@ int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 		pp = sp + 1;
 	}
 
-	if (*pp != '\0' && error == GIT_SUCCESS) {
-		error = p_mkdir(make_path.ptr, mode);
-		if (errno == EEXIST)
-			error = GIT_SUCCESS;
+	if (*pp != '\0' && !failed) {
+		if (p_mkdir(make_path.ptr, mode) < 0 && errno != EEXIST)
+			failed = true;
 	}
 
 	git_buf_free(&make_path);
 
-	if (error < GIT_SUCCESS)
-		return git__throw(error, "Failed to recursively create `%s` tree structure", path);
+	if (failed) {
+		giterr_set(GITERR_OS,
+			"Failed to create directory structure at '%s'", path);
+		return -1;
+	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
@@ -407,8 +409,8 @@ cleanup:
 
 int git_futils_find_system_file(git_buf *path, const char *filename)
 {
-	if (git_buf_joinpath(path, "/etc", filename) < GIT_SUCCESS)
-		return git_buf_lasterror(path);
+	if (git_buf_joinpath(path, "/etc", filename) < 0)
+		return -1;
 
 	if (git_path_exists(path->ptr) == true)
 		return GIT_SUCCESS;

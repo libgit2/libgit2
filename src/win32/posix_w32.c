@@ -1,4 +1,4 @@
-/*
+/ < 0)
  * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
@@ -288,18 +288,13 @@ int p_rmdir(const char* path)
 
 int p_hide_directory__w32(const char *path)
 {
-	int error;
+	int res;
 	wchar_t* buf = gitwin_to_utf16(path);
 
-	error = SetFileAttributesW(buf, FILE_ATTRIBUTE_HIDDEN) != 0 ?
-		GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
-
+	res = SetFileAttributesW(buf, FILE_ATTRIBUTE_HIDDEN);
 	git__free(buf);
-
-	if (error < GIT_SUCCESS)
-		error = git__throw(GIT_EOSERR, "Failed to hide directory '%s'", path);
-
-	return error;
+	
+	return (res != 0) ?  GIT_SUCCESS : GIT_ERROR; /* MSDN states a "non zero" value indicates a success */
 }
 
 char *p_realpath(const char *orig_path, char *buffer)

@@ -57,15 +57,10 @@ void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
  * further calls to modify the buffer will fail.  Check git_buf_oom() at the
  * end of your sequence and it will be true if you ran out of memory at any
  * point with that buffer.
- * @return 0 if no error, 1 if allocation error.
+ *
+ * @return false if no error, true if allocation error
  */
-int git_buf_oom(const git_buf *buf);
-
-/**
- * Just like git_buf_oom, except returns appropriate error code.
- * @return GIT_ENOMEM if allocation error, GIT_SUCCESS if not.
- */
-int git_buf_lasterror(const git_buf *buf);
+bool git_buf_oom(const git_buf *buf);
 
 /*
  * The functions below that return int values, will return GIT_ENOMEM

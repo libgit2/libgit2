@@ -128,8 +128,7 @@ static int drop_crlf(git_buf *dest, const git_buf *source)
 
 	/* Copy remaining input into dest */
 	git_buf_put(dest, scan, scan_end - scan);
-
-	return git_buf_lasterror(dest);
+	return 0;
 }
 
 static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *source)

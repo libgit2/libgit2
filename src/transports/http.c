@@ -77,7 +77,10 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	}
 	git_buf_puts(buf, "\r\n");
 
-	return git_buf_lasterror(buf);
+	if (git_buf_oom(buf))
+		return GIT_ENOMEM;
+
+	return 0;
 }
 
 static int do_connect(transport_http *t, const char *host, const char *port)

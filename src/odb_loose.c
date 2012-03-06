@@ -387,8 +387,8 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 
 	assert(out && loc);
 
-	if ((error = git_buf_lasterror(loc)) < GIT_SUCCESS)
-		return error;
+	if (git_buf_oom(loc))
+		return GIT_ENOMEM;
 
 	out->data = NULL;
 	out->len = 0;
@@ -413,8 +413,8 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 
 	assert(out && loc);
 
-	if ((error = git_buf_lasterror(loc)) < GIT_SUCCESS)
-		return error;
+	if (git_buf_oom(loc))
+		return GIT_ENOMEM;
 
 	out->data = NULL;
 
@@ -704,8 +704,8 @@ static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 	if ((error = object_file_name(&final_path, backend->objects_dir, oid)) < GIT_SUCCESS)
 		goto cleanup;
 
-	if ((error = git_buf_lasterror(&final_path)) < GIT_SUCCESS)
-		goto cleanup;
+	if (git_buf_oom(&final_path))
+		return GIT_ENOMEM;
 
 	if ((error = git_futils_mkpath2file(final_path.ptr, GIT_OBJECT_DIR_MODE)) < GIT_SUCCESS)
 		goto cleanup;

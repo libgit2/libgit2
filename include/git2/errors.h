@@ -125,7 +125,7 @@ typedef enum {
 	GITERR_OS,
 	GITERR_REFERENCE,
 	GITERR_ZLIB,
-
+	GITERR_REPOSITORY,
 } git_error_class;
 
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
