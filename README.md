@@ -10,6 +10,7 @@ This basically means that you can link it (unmodified) with any kind of software
 release its source code.
 
 * Mailing list: <libgit2@librelist.org>
+    * Archives: <http://librelist.com/browser/libgit2/>
 * Website: <http://libgit2.github.com>
 * API documentation: <http://libgit2.github.com/libgit2>
 * Usage guide: <http://libgit2.github.com/api.html>
@@ -75,30 +76,47 @@ Language Bindings
 
 Here are the bindings to libgit2 that are currently available:
 
-* Rugged (Ruby bindings) <https://github.com/libgit2/rugged>
-* objective-git (Objective-C bindings) <https://github.com/libgit2/objective-git>
-* pygit2 (Python bindings) <https://github.com/libgit2/pygit2>
-* libgit2sharp (.NET bindings) <https://github.com/libgit2/libgit2sharp>
-* php-git (PHP bindings) <https://github.com/libgit2/php-git>
-* luagit2 (Lua bindings) <https://github.com/libgit2/luagit2>
-* GitForDelphi (Delphi bindings) <https://github.com/libgit2/GitForDelphi>
-* node-gitteh (Node.js bindings) <https://github.com/libgit2/node-gitteh>
-* nodegit (Node.js bindings) <https://github.com/tbranyen/nodegit>
-* go-git (Go bindings) <https://github.com/str1ngs/go-git>
-* libqgit2 (C++ Qt bindings) <https://projects.kde.org/projects/playground/libs/libqgit2/>
-* libgit2-ocaml (ocaml bindings) <https://github.com/burdges/libgit2-ocaml>
-* Geef (Erlang bindings) <https://github.com/schacon/geef>
-* libgit2net (.NET bindings, low level) <https://github.com/txdv/libgit2net>
-* parrot-libgit2 (Parrot Virtual Machine bindings) <https://github.com/letolabs/parrot-libgit2>
-* hgit2 (Haskell bindings) <https://github.com/norm2782/hgit2>
-* git-xs-pm (Perl bindings) <https://github.com/ingydotnet/git-xs-pm>
-* libgit2.vapi (Vala bindings) <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
-* libgit2-glib (GObject bindings) <https://github.com/nacho/libgit2-glib>
+* C++
+    * libqgit2, Qt bindings <https://projects.kde.org/projects/playground/libs/libqgit2/>
+* Delphi
+    * GitForDelphi <https://github.com/libgit2/GitForDelphi>
+* Erlang
+    * Geef <https://github.com/schacon/geef>
+* Go
+    * go-git <https://github.com/str1ngs/go-git>
+* GObject
+    * libgit2-glib <https://github.com/nacho/libgit2-glib>
+* Haskell
+    * hgit2 <https://github.com/norm2782/hgit2>
+* Lua
+    * luagit2 <https://github.com/libgit2/luagit2>
+* .NET
+    * libgit2net, low level bindings <https://github.com/txdv/libgit2net>
+    * libgit2sharp <https://github.com/libgit2/libgit2sharp>
+* Node.js
+    * node-gitteh <https://github.com/libgit2/node-gitteh>
+    * nodegit <https://github.com/tbranyen/nodegit>
+* Objective-C
+    * objective-git <https://github.com/libgit2/objective-git>
+* OCaml
+    * libgit2-ocaml <https://github.com/burdges/libgit2-ocaml>
+* Parrot Virtual Machine
+    * parrot-libgit2 <https://github.com/letolabs/parrot-libgit2>
+* Perl
+    * git-xs-pm <https://github.com/ingydotnet/git-xs-pm>
+* PHP
+    * php-git <https://github.com/libgit2/php-git>
+* Python
+    * pygit2 <https://github.com/libgit2/pygit2>
+* Ruby
+    * Rugged <https://github.com/libgit2/rugged>
+* Vala
+    * libgit2.vapi <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
 
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
 
-How Can I Contribute
+How Can I Contribute?
 ==================================
 
 Fork libgit2/libgit2 on GitHub, add your improvement, push it to a branch
