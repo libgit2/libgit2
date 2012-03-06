@@ -237,7 +237,7 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 		return error;
 	}
 
-	git_oid_to_string(new, GIT_OID_HEXSZ+1, oid);
+	git_oid_tostr(new, GIT_OID_HEXSZ+1, oid);
 
 	git_reference_free(r);
 
@@ -263,7 +263,7 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 		goto cleanup;
 
 	if (oid_old)
-		git_oid_to_string(old, sizeof(old), oid_old);
+		git_oid_tostr(old, sizeof(old), oid_old);
 	else
 		p_snprintf(old, sizeof(old), "%0*d", GIT_OID_HEXSZ, 0);
 
