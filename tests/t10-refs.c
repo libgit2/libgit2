@@ -1234,17 +1234,17 @@ BEGIN_TEST(reflog0, "write a reflog for a given reference and ensure it can be r
 
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 0);
 	must_pass(assert_signature(committer, entry->committer));
-	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
+	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
 	must_be_true(strcmp("0000000000000000000000000000000000000000", oid_str) == 0);
-	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
+	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
 	must_be_true(strcmp(current_master_tip, oid_str) == 0);
 	must_be_true(entry->msg == NULL);
 
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 1);
 	must_pass(assert_signature(committer, entry->committer));
-	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
+	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
 	must_be_true(strcmp(current_master_tip, oid_str) == 0);
-	git_oid_to_string(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
+	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
 	must_be_true(strcmp(current_master_tip, oid_str) == 0);
 	must_be_true(strcmp(commit_msg, entry->msg) == 0);
 

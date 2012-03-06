@@ -532,8 +532,8 @@ static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 	char start_oid[8], end_oid[8];
 
 	/* TODO: Determine a good actual OID range to print */
-	git_oid_to_string(start_oid, sizeof(start_oid), &delta->old_file.oid);
-	git_oid_to_string(end_oid, sizeof(end_oid), &delta->new_file.oid);
+	git_oid_tostr(start_oid, sizeof(start_oid), &delta->old_file.oid);
+	git_oid_tostr(end_oid, sizeof(end_oid), &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {

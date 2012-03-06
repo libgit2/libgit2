@@ -237,24 +237,24 @@ BEGIN_TEST(oid14, "convert raw oid to string")
 	must_pass(git_oid_fromstr(&in, exp));
 
 	/* NULL buffer pointer, returns static empty string */
-	str = git_oid_to_string(NULL, sizeof(out), &in);
+	str = git_oid_tostr(NULL, sizeof(out), &in);
 	must_be_true(str && *str == '\0' && str != out);
 
 	/* zero buffer size, returns static empty string */
-	str = git_oid_to_string(out, 0, &in);
+	str = git_oid_tostr(out, 0, &in);
 	must_be_true(str && *str == '\0' && str != out);
 
 	/* NULL oid pointer, returns static empty string */
-	str = git_oid_to_string(out, sizeof(out), NULL);
+	str = git_oid_tostr(out, sizeof(out), NULL);
 	must_be_true(str && *str == '\0' && str != out);
 
 	/* n == 1, returns out as an empty string */
-	str = git_oid_to_string(out, 1, &in);
+	str = git_oid_tostr(out, 1, &in);
 	must_be_true(str && *str == '\0' && str == out);
 
 	for (i = 1; i < GIT_OID_HEXSZ; i++) {
 		out[i+1] = 'Z';
-		str = git_oid_to_string(out, i+1, &in);
+		str = git_oid_tostr(out, i+1, &in);
 		/* returns out containing c-string */
 		must_be_true(str && str == out);
 		/* must be '\0' terminated */
@@ -266,7 +266,7 @@ BEGIN_TEST(oid14, "convert raw oid to string")
 	}
 
 	/* returns out as hex formatted c-string */
-	str = git_oid_to_string(out, sizeof(out), &in);
+	str = git_oid_tostr(out, sizeof(out), &in);
 	must_be_true(str && str == out && *(str+GIT_OID_HEXSZ) == '\0');
 	must_be_true(strcmp(exp, out) == 0);
 END_TEST
@@ -286,7 +286,7 @@ BEGIN_TEST(oid15, "convert raw oid to string (big)")
 	big[GIT_OID_HEXSZ+3] = 'Z'; /* ditto */
 
 	/* returns big as hex formatted c-string */
-	str = git_oid_to_string(big, sizeof(big), &in);
+	str = git_oid_tostr(big, sizeof(big), &in);
 	must_be_true(str && str == big && *(str+GIT_OID_HEXSZ) == '\0');
 	must_be_true(strcmp(exp, big) == 0);
 
