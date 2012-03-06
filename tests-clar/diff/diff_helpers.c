@@ -7,8 +7,8 @@ git_tree *resolve_commit_oid_to_tree(
 {
 	size_t len = strlen(partial_oid);
 	git_oid oid;
-	git_object *obj;
-	git_tree *tree;
+	git_object *obj = NULL;
+	git_tree *tree = NULL;
 
 	if (git_oid_fromstrn(&oid, partial_oid, len) == 0)
 		git_object_lookup_prefix(&obj, repo, &oid, len, GIT_OBJ_ANY);

@@ -235,7 +235,7 @@ int git_attr_cache__lookup_or_create_file(
 		return GIT_SUCCESS;
 	}
 
-	if (loader && git_path_exists(filename) != GIT_SUCCESS) {
+	if (loader && git_path_exists(filename) == false) {
 		*file_ptr = NULL;
 		return GIT_SUCCESS;
 	}

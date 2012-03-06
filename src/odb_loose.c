@@ -480,7 +480,7 @@ static int fn_locate_object_short_oid(void *state, git_buf *pathbuf) {
 		return GIT_SUCCESS;
 	}
 
-	if (git_path_isdir(pathbuf->ptr) == true) {
+	if (git_path_isdir(pathbuf->ptr) == false) {
 		/* We are already in the directory matching the 2 first hex characters,
 		 * compare the first ncmp characters of the oids */
 		if (!memcmp(sstate->short_oid + 2,

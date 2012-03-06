@@ -440,7 +440,7 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 
 	/* detect submodules */
 	if (S_ISDIR(wi->entry.mode) &&
-		git_path_contains(&wi->path, DOT_GIT) == GIT_SUCCESS)
+		git_path_contains(&wi->path, DOT_GIT) == true)
 		wi->entry.mode = S_IFGITLINK;
 
 	return GIT_SUCCESS;
