@@ -295,7 +295,6 @@ int git_futils_rmdir_r(const char *path, int force)
 
 int git_futils_find_global_file(git_buf *path, const char *filename)
 {
-	int error;
 	const char *home = getenv("HOME");
 
 #ifdef GIT_WIN32
@@ -303,19 +302,21 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 		home = getenv("USERPROFILE");
 #endif
 
-	if (home == NULL)
-		return git__throw(GIT_EOSERR, "Failed to open global %s file. "
-			"Cannot locate the user's home directory.", filename);
+	if (home == NULL) {
+		giterr_set(GITERR_OS, "Global file lookup failed. "
+			"Cannot locate the user's home directory");
+		return -1;
+	}
 
-	if ((error = git_buf_joinpath(path, home, filename)) < GIT_SUCCESS)
-		return error;
+	if (git_buf_joinpath(path, home, filename) < 0)
+		return -1;
 
 	if (git_path_exists(path->ptr) == false) {
 		git_buf_clear(path);
 		return GIT_ENOTFOUND;
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 #ifdef GIT_WIN32
