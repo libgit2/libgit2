@@ -1021,8 +1021,7 @@ static int reference_delete(git_reference *ref)
 		git_buf_free(&full_path); /* done with path at this point */
 
 		if (result < 0) {
-			giterr_set(GITERR_OS,
-				"Failed to unlink '%s': %s", full_path.ptr, strerror(errno));
+			giterr_set(GITERR_OS, "Failed to unlink '%s'", full_path.ptr);
 			return -1;
 		}
 

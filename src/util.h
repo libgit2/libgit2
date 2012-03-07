@@ -115,6 +115,11 @@ extern int git__fnmatch(const char *pattern, const char *name, int flags);
 
 extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));
 
+/**
+ * @param position If non-NULL, this will be set to the position where the
+ * 		element is or would be inserted if not found.
+ * @return pos (>=0) if found or -1 if not found
+ */
 extern int git__bsearch(
 	void **array,
 	size_t array_len,

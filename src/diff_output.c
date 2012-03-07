@@ -34,31 +34,39 @@ static int read_next_int(const char **str, int *value)
 		v = (v * 10) + (*scan - '0');
 	*str = scan;
 	*value = v;
-	return (digits > 0) ? GIT_SUCCESS : GIT_ENOTFOUND;
+	return (digits > 0) ? 0 : -1;
 }
 
 static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 {
-	int err = GIT_SUCCESS;
 	diff_output_info *info = priv;
 
 	if (len == 1 && info->hunk_cb) {
 		git_diff_range range = { -1, 0, -1, 0 };
+		const char *scan = bufs[0].ptr;
 
 		/* expect something of the form "@@ -%d[,%d] +%d[,%d] @@" */
-		if (bufs[0].ptr[0] == '@') {
-			const char *scan = bufs[0].ptr;
-			if (!(err = read_next_int(&scan, &range.old_start)) && *scan == ',')
-				err = read_next_int(&scan, &range.old_lines);
-			if (!err &&
-				!(err = read_next_int(&scan, &range.new_start)) && *scan == ',')
-				err = read_next_int(&scan, &range.new_lines);
-			if (!err && range.old_start >= 0 && range.new_start >= 0)
-				err = info->hunk_cb(
-					info->cb_data, info->delta, &range, bufs[0].ptr, bufs[0].size);
-		}
+		if (*scan != '@')
+			return -1;
+
+		if (read_next_int(&scan, &range.old_start) < 0)
+			return -1;
+		if (*scan == ',' && read_next_int(&scan, &range.old_lines) < 0)
+			return -1;
+
+		if (read_next_int(&scan, &range.new_start) < 0)
+			return -1;
+		if (*scan == ',' && read_next_int(&scan, &range.new_lines) < 0)
+			return -1;
+
+		if (range.old_start < 0 || range.new_start < 0)
+			return -1;
+
+		return info->hunk_cb(
+			info->cb_data, info->delta, &range, bufs[0].ptr, bufs[0].size);
 	}
-	else if ((len == 2 || len == 3) && info->line_cb) {
+
+	if ((len == 2 || len == 3) && info->line_cb) {
 		int origin;
 
 		/* expect " "/"-"/"+", then data, then maybe newline */
@@ -67,41 +75,43 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_DELETION :
 			GIT_DIFF_LINE_CONTEXT;
 
-		err = info->line_cb(
-			info->cb_data, info->delta, origin, bufs[1].ptr, bufs[1].size);
+		if (info->line_cb(
+			info->cb_data, info->delta, origin, bufs[1].ptr, bufs[1].size) < 0)
+			return -1;
 
 		/* deal with adding and removing newline at EOF */
-		if (err == GIT_SUCCESS && len == 3) {
+		if (len == 3) {
 			if (origin == GIT_DIFF_LINE_ADDITION)
 				origin = GIT_DIFF_LINE_ADD_EOFNL;
 			else
 				origin = GIT_DIFF_LINE_DEL_EOFNL;
 
-			err = info->line_cb(
+			return info->line_cb(
 				info->cb_data, info->delta, origin, bufs[2].ptr, bufs[2].size);
 		}
 	}
 
-	return err;
+	return 0;
 }
 
 #define BINARY_DIFF_FLAGS (GIT_DIFF_FILE_BINARY|GIT_DIFF_FILE_NOT_BINARY)
 
-static int set_file_is_binary_by_attr(git_repository *repo, git_diff_file *file)
+static int update_file_is_binary_by_attr(git_repository *repo, git_diff_file *file)
 {
 	const char *value;
-	int error = git_attr_get(repo, file->path, "diff", &value);
-	if (error != GIT_SUCCESS)
-		return error;
+	if (git_attr_get(repo, file->path, "diff", &value) < 0)
+		return -1;
+
 	if (GIT_ATTR_FALSE(value))
 		file->flags |= GIT_DIFF_FILE_BINARY;
 	else if (GIT_ATTR_TRUE(value))
 		file->flags |= GIT_DIFF_FILE_NOT_BINARY;
 	/* otherwise leave file->flags alone */
-	return error;
+
+	return 0;
 }
 
-static void set_delta_is_binary(git_diff_delta *delta)
+static void update_delta_is_binary(git_diff_delta *delta)
 {
 	if ((delta->old.flags & GIT_DIFF_FILE_BINARY) != 0 ||
 		(delta->new.flags & GIT_DIFF_FILE_BINARY) != 0)
@@ -116,7 +126,7 @@ static int file_is_binary_by_attr(
 	git_diff_list *diff,
 	git_diff_delta *delta)
 {
-	int error, mirror_new;
+	int error = 0, mirror_new;
 
 	delta->binary = -1;
 
@@ -127,7 +137,7 @@ static int file_is_binary_by_attr(
 		delta->old.flags |= GIT_DIFF_FILE_BINARY;
 		delta->new.flags |= GIT_DIFF_FILE_BINARY;
 		delta->binary = 1;
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	/* check if user is forcing us to text diff these files */
@@ -135,22 +145,21 @@ static int file_is_binary_by_attr(
 		delta->old.flags |= GIT_DIFF_FILE_NOT_BINARY;
 		delta->new.flags |= GIT_DIFF_FILE_NOT_BINARY;
 		delta->binary = 0;
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	/* check diff attribute +, -, or 0 */
-	error = set_file_is_binary_by_attr(diff->repo, &delta->old);
-	if (error != GIT_SUCCESS)
-		return error;
+	if (update_file_is_binary_by_attr(diff->repo, &delta->old) < 0)
+		return -1;
 
 	mirror_new = (delta->new.path == delta->old.path ||
 				  strcmp(delta->new.path, delta->old.path) == 0);
 	if (mirror_new)
 		delta->new.flags &= (delta->old.flags & BINARY_DIFF_FLAGS);
 	else
-		error = set_file_is_binary_by_attr(diff->repo, &delta->new);
+		error = update_file_is_binary_by_attr(diff->repo, &delta->new);
 
-	set_delta_is_binary(delta);
+	update_delta_is_binary(delta);
 
 	return error;
 }
@@ -179,11 +188,11 @@ static int file_is_binary_by_content(
 			delta->new.flags |= GIT_DIFF_FILE_NOT_BINARY;
 	}
 
-	set_delta_is_binary(delta);
+	update_delta_is_binary(delta);
 
 	/* TODO: if value != NULL, implement diff drivers */
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static void setup_xdiff_options(
@@ -214,17 +223,15 @@ static int get_blob_content(
 	git_map *map,
 	git_blob **blob)
 {
-	int error;
-
 	if (git_oid_iszero(oid))
-		return GIT_SUCCESS;
+		return 0;
 
-	if ((error = git_blob_lookup(blob, repo, oid)) == GIT_SUCCESS) {
-		map->data = (void *)git_blob_rawcontent(*blob);
-		map->len  = git_blob_rawsize(*blob);
-	}
+	if (git_blob_lookup(blob, repo, oid) < 0)
+		return -1;
 
-	return error;
+	map->data = (void *)git_blob_rawcontent(*blob);
+	map->len  = git_blob_rawsize(*blob);
+	return 0;
 }
 
 static int get_workdir_content(
@@ -232,35 +239,33 @@ static int get_workdir_content(
 	git_diff_file *file,
 	git_map *map)
 {
-	git_buf full_path = GIT_BUF_INIT;
-	int error = git_buf_joinpath(
-		&full_path, git_repository_workdir(repo), file->path);
-	if (error != GIT_SUCCESS)
-		return error;
+	int error = 0;
+	git_buf path = GIT_BUF_INIT;
+
+	if (git_buf_joinpath(&path, git_repository_workdir(repo), file->path) < 0)
+		return -1;
 
 	if (S_ISLNK(file->mode)) {
+		ssize_t read_len;
+
 		file->flags |= GIT_DIFF_FILE_FREE_DATA;
 		file->flags |= GIT_DIFF_FILE_BINARY;
 
 		map->data = git__malloc((size_t)file->size + 1);
-		if (map->data == NULL)
-			error = GIT_ENOMEM;
-		else {
-			ssize_t read_len =
-				p_readlink(full_path.ptr, map->data, (size_t)file->size + 1);
-			if (read_len != (ssize_t)file->size)
-				error = git__throw(
-					GIT_EOSERR, "Failed to read symlink %s", file->path);
-			else
-				map->len = read_len;
+		GITERR_CHECK_ALLOC(map->data);
 
-		}
+		read_len = p_readlink(path.ptr, map->data, (size_t)file->size + 1);
+		if (read_len != (ssize_t)file->size) {
+			giterr_set(GITERR_OS, "Failed to read symlink '%s'", file->path);
+			error = -1;
+		} else
+			map->len = read_len;
 	}
 	else {
-		error = git_futils_mmap_ro_file(map, full_path.ptr);
+		error = git_futils_mmap_ro_file(map, path.ptr);
 		file->flags |= GIT_DIFF_FILE_UNMAP_DATA;
 	}
-	git_buf_free(&full_path);
+	git_buf_free(&path);
 	return error;
 }
 
@@ -288,7 +293,7 @@ int git_diff_foreach(
 	git_diff_hunk_fn hunk_cb,
 	git_diff_line_fn line_cb)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	diff_output_info info;
 	git_diff_delta *delta;
 	xpparam_t    xdiff_params;
@@ -320,8 +325,7 @@ int git_diff_foreach(
 			(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
 			continue;
 
-		error = file_is_binary_by_attr(diff, delta);
-		if (error < GIT_SUCCESS)
+		if ((error = file_is_binary_by_attr(diff, delta)) < 0)
 			goto cleanup;
 
 		old_data.data = "";
@@ -345,7 +349,7 @@ int git_diff_foreach(
 			else
 				error = get_blob_content(
 					diff->repo, &delta->old.oid, &old_data, &old_blob);
-			if (error != GIT_SUCCESS)
+			if (error < 0)
 				goto cleanup;
 		}
 
@@ -359,13 +363,13 @@ int git_diff_foreach(
 			else
 				error = get_blob_content(
 					diff->repo, &delta->new.oid, &new_data, &new_blob);
-			if (error != GIT_SUCCESS)
+			if (error < 0)
 				goto cleanup;
 
 			if ((delta->new.flags | GIT_DIFF_FILE_VALID_OID) == 0) {
 				error = git_odb_hash(
 					&delta->new.oid, new_data.data, new_data.len, GIT_OBJ_BLOB);
-				if (error != GIT_SUCCESS)
+				if (error < 0)
 					goto cleanup;
 
 				/* since we did not have the definitive oid, we may have
@@ -384,7 +388,7 @@ int git_diff_foreach(
 		if (delta->binary == -1) {
 			error = file_is_binary_by_content(
 				diff, delta, &old_data, &new_data);
-			if (error < GIT_SUCCESS)
+			if (error < 0)
 				goto cleanup;
 		}
 
@@ -394,7 +398,7 @@ int git_diff_foreach(
 
 		if (file_cb != NULL) {
 			error = file_cb(data, delta, (float)info.index / diff->deltas.length);
-			if (error != GIT_SUCCESS)
+			if (error < 0)
 				goto cleanup;
 		}
 
@@ -417,7 +421,7 @@ cleanup:
 		release_content(&delta->old, &old_data, old_blob);
 		release_content(&delta->new, &new_data, new_blob);
 
-		if (error != GIT_SUCCESS)
+		if (error < 0)
 			break;
 	}
 
@@ -462,7 +466,7 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	}
 
 	if (!code)
-		return GIT_SUCCESS;
+		return 0;
 
 	old_suffix = pick_suffix(delta->old.mode);
 	new_suffix = pick_suffix(delta->new.mode);
@@ -482,8 +486,8 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	else
 		git_buf_printf(pi->buf, "%c\t%s\n", code, delta->old.path);
 
-	if (git_buf_oom(pi->buf) == true)
-		return GIT_ENOMEM;
+	if (git_buf_oom(pi->buf))
+		return -1;
 
 	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr);
 }
@@ -535,14 +539,13 @@ static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 	}
 
 	if (git_buf_oom(pi->buf))
-		return GIT_ENOMEM;
+		return -1;
 
 	return 0;
 }
 
 static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 {
-	int error;
 	diff_print_info *pi = data;
 	const char *oldpfx = pi->diff->opts.src_prefix;
 	const char *oldpath = delta->old.path;
@@ -553,8 +556,9 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 
 	git_buf_clear(pi->buf);
 	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n", oldpfx, delta->old.path, newpfx, delta->new.path);
-	if ((error = print_oid_range(pi, delta)) < GIT_SUCCESS)
-		return error;
+
+	if (print_oid_range(pi, delta) < 0)
+		return -1;
 
 	if (git_oid_iszero(&delta->old.oid)) {
 		oldpfx = "";
@@ -571,18 +575,18 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	}
 
 	if (git_buf_oom(pi->buf))
-		return GIT_ENOMEM;
+		return -1;
 
-	error = pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr);
-	if (error != GIT_SUCCESS || delta->binary != 1)
-		return error;
+	if (pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr) < 0 ||
+		delta->binary != 1)
+		return -1;
 
 	git_buf_clear(pi->buf);
 	git_buf_printf(
 		pi->buf, "Binary files %s%s and %s%s differ\n",
 		oldpfx, oldpath, newpfx, newpath);
 	if (git_buf_oom(pi->buf))
-		return GIT_ENOMEM;
+		return -1;
 
 	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_BINARY, pi->buf->ptr);
 }
@@ -600,11 +604,10 @@ static int print_patch_hunk(
 	GIT_UNUSED(r);
 
 	git_buf_clear(pi->buf);
+	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) < 0)
+		return -1;
 
-	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) == GIT_SUCCESS)
-		return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_HUNK_HDR, pi->buf->ptr);
-	else
-		return GIT_ENOMEM;
+	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_HUNK_HDR, pi->buf->ptr);
 }
 
 static int print_patch_line(
@@ -628,7 +631,7 @@ static int print_patch_line(
 		git_buf_printf(pi->buf, "%.*s", (int)content_len, content);
 
 	if (git_buf_oom(pi->buf))
-		return GIT_ENOMEM;
+		return -1;
 
 	return pi->print_cb(pi->cb_data, line_origin, pi->buf->ptr);
 }
@@ -721,5 +724,5 @@ int git_diff_blobs(
 
 	xdl_diff(&old, &new, &xdiff_params, &xdiff_config, &xdiff_callback);
 
-	return GIT_SUCCESS;
+	return 0;
 }
