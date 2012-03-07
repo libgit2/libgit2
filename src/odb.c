@@ -319,12 +319,8 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 
 	assert(odb && backend);
 
-	if (backend->odb != NULL && backend->odb != odb) {
-		/*
-		 * TODO: Not sure how to convert this!
-		 */
-		return git__throw(GIT_EBUSY, "The backend is already owned by another ODB");
-	}
+	/* Check if the backend is already owned by another ODB */
+	assert(!backend->odb || backend->odb == odb);
 
 	internal = git__malloc(sizeof(backend_internal));
 	GITERR_CHECK_ALLOC(internal);

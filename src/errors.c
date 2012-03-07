@@ -124,7 +124,7 @@ void giterr_set(int error_class, const char *string, ...)
 	va_list arglist;
 	git_error *error;
 	const char *oserr =
-		(error_class == GITERR_OS && errno > 0) ? strerror(errno) : NULL;
+		(error_class == GITERR_OS && errno != 0) ? strerror(errno) : NULL;
 
 	error = &GIT_GLOBAL->error_t;
 	free(error->message);
