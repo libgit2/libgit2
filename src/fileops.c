@@ -37,7 +37,7 @@ int git_futils_mktmp(git_buf *path_out, const char *filename)
 
 	if ((fd = p_mkstemp(path_out->ptr)) < 0) {
 		giterr_set(GITERR_OS,
-			"Failed to create temporary file '%s': %s", path_out->ptr, strerror(errno));
+			"Failed to create temporary file '%s'", path_out->ptr);
 		return -1;
 	}
 
@@ -53,8 +53,7 @@ int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode
 
 	fd = p_creat(path, mode);
 	if (fd < 0) {
-		giterr_set(GITERR_OS,
-			"Failed to create file '%s': %s", path, strerror(errno));
+		giterr_set(GITERR_OS, "Failed to create file '%s'", path);
 		return -1;
 	}
 
@@ -65,8 +64,7 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 {
 	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
 	if (fd < 0) {
-		giterr_set(GITERR_OS,
-			"Failed to create locked file '%s': %s", path, strerror(errno));
+		giterr_set(GITERR_OS, "Failed to create locked file '%s'", path);
 		return -1;
 	}
 
@@ -115,10 +113,8 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 	if (updated != NULL)
 		*updated = 0;
 
-	if ((fd = p_open(path, O_RDONLY)) < 0) {
-		giterr_set(GITERR_OS, "Failed to read file '%s': %s", path, strerror(errno));
-		return (errno == ENOENT) ? GIT_ENOTFOUND : -1;
-	}
+	if ((fd = git_futils_open_ro(path)) < 0)
+		return fd;
 
 	if (p_fstat(fd, &st) < 0 || S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
 		close(fd);
@@ -154,8 +150,7 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 
 		if (read_size < 0) {
 			close(fd);
-			giterr_set(GITERR_OS, "Failed to read descriptor for %s: %s",
-				path, strerror(errno));
+			giterr_set(GITERR_OS, "Failed to read descriptor for '%s'", path);
 			return -1;
 		}
 

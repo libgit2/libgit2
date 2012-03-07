@@ -132,10 +132,8 @@ static int diff_delta__from_one(
 	git_delta_t   status,
 	const git_index_entry *entry)
 {
-	int error;
 	git_diff_delta *delta = diff_delta__alloc(diff, status, entry->path);
-	if (!delta)
-		return git__rethrow(GIT_ENOMEM, "Could not allocate diff record");
+	GITERR_CHECK_ALLOC(delta);
 
 	/* This fn is just for single-sided diffs */
 	assert(status != GIT_DELTA_MODIFIED);
@@ -153,10 +151,12 @@ static int diff_delta__from_one(
 	delta->old.flags |= GIT_DIFF_FILE_VALID_OID;
 	delta->new.flags |= GIT_DIFF_FILE_VALID_OID;
 
-	if ((error = git_vector_insert(&diff->deltas, delta)) < GIT_SUCCESS)
+	if (git_vector_insert(&diff->deltas, delta) < 0) {
 		diff_delta__free(delta);
+		return -1;
+	}
 
-	return error;
+	return 0;
 }
 
 static int diff_delta__from_two(
@@ -166,7 +166,6 @@ static int diff_delta__from_two(
 	const git_index_entry *new,
 	git_oid *new_oid)
 {
-	int error;
 	git_diff_delta *delta;
 
 	if ((diff->opts.flags & GIT_DIFF_REVERSE) != 0) {
@@ -176,8 +175,7 @@ static int diff_delta__from_two(
 	}
 
 	delta = diff_delta__alloc(diff, status, old->path);
-	if (!delta)
-		return git__rethrow(GIT_ENOMEM, "Could not allocate diff record");
+	GITERR_CHECK_ALLOC(delta);
 
 	delta->old.mode = old->mode;
 	git_oid_cpy(&delta->old.oid, &old->oid);
@@ -188,10 +186,12 @@ static int diff_delta__from_two(
 	if (new_oid || !git_oid_iszero(&new->oid))
 		delta->new.flags |= GIT_DIFF_FILE_VALID_OID;
 
-	if ((error = git_vector_insert(&diff->deltas, delta)) < GIT_SUCCESS)
+	if (git_vector_insert(&diff->deltas, delta) < 0) {
 		diff_delta__free(delta);
+		return -1;
+	}
 
-	return error;
+	return 0;
 }
 
 #define DIFF_SRC_PREFIX_DEFAULT "a/"
@@ -284,27 +284,24 @@ static int oid_for_workdir_item(
 	const git_index_entry *item,
 	git_oid *oid)
 {
-	int error = GIT_SUCCESS;
+	int result;
 	git_buf full_path = GIT_BUF_INIT;
 
-	error = git_buf_joinpath(
-		&full_path, git_repository_workdir(repo), item->path);
-	if (error != GIT_SUCCESS)
-		return error;
+	if (git_buf_joinpath(&full_path, git_repository_workdir(repo), item->path) < 0)
+		return -1;
 
-	/* otherwise calculate OID for file */
+	/* calculate OID for file if possible*/
 	if (S_ISLNK(item->mode))
-		error = git_odb__hashlink(oid, full_path.ptr);
-	else if (!git__is_sizet(item->file_size))
-		error = git__throw(GIT_ERROR, "File size overflow for 32-bit systems");
-	else {
-		int fd;
-
-		if ((fd = p_open(full_path.ptr, O_RDONLY)) < 0)
-			error = git__throw(
-				GIT_EOSERR, "Could not open '%s'", item->path);
+		result = git_odb__hashlink(oid, full_path.ptr);
+	else if (!git__is_sizet(item->file_size)) {
+		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
+		result = -1;
+	} else {
+		int fd = git_futils_open_ro(full_path.ptr);
+		if (fd < 0)
+			result = fd;
 		else {
-			error = git_odb__hashfd(
+			result = git_odb__hashfd(
 				oid, fd, (size_t)item->file_size, GIT_OBJ_BLOB);
 			p_close(fd);
 		}
@@ -312,7 +309,7 @@ static int oid_for_workdir_item(
 
 	git_buf_free(&full_path);
 
-	return error;
+	return result;
 }
 
 static int maybe_modified(
@@ -322,7 +319,6 @@ static int maybe_modified(
 	const git_index_entry *nitem,
 	git_diff_list *diff)
 {
-	int error = GIT_SUCCESS;
 	git_oid noid, *use_noid = NULL;
 
 	GIT_UNUSED(old);
@@ -330,18 +326,18 @@ static int maybe_modified(
 	/* support "assume unchanged" & "skip worktree" bits */
 	if ((oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) != 0 ||
 		(oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0)
-		return GIT_SUCCESS;
+		return 0;
 
 	if (GIT_MODE_TYPE(oitem->mode) != GIT_MODE_TYPE(nitem->mode)) {
-		error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem);
-		if (error == GIT_SUCCESS)
-			error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
-		return error;
+		if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
+			diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem) < 0)
+			return -1;
+		return 0;
 	}
 
 	if (git_oid_cmp(&oitem->oid, &nitem->oid) == 0 &&
 		oitem->mode == nitem->mode)
-		return GIT_SUCCESS;
+		return 0;
 
 	if (git_oid_iszero(&nitem->oid) && new->type == GIT_ITERATOR_WORKDIR) {
 		/* if they files look exactly alike, then we'll assume the same */
@@ -352,18 +348,18 @@ static int maybe_modified(
 			oitem->ino == nitem->ino &&
 			oitem->uid == nitem->uid &&
 			oitem->gid == nitem->gid)
-			return GIT_SUCCESS;
+			return 0;
 
 		/* TODO: check git attributes so we will not have to read the file
 		 * in if it is marked binary.
 		 */
-		error = oid_for_workdir_item(diff->repo, nitem, &noid);
-		if (error != GIT_SUCCESS)
-			return error;
+
+		if (oid_for_workdir_item(diff->repo, nitem, &noid) < 0)
+			return -1;
 
 		if (git_oid_cmp(&oitem->oid, &noid) == 0 &&
 			oitem->mode == nitem->mode)
-			return GIT_SUCCESS;
+			return 0;
 
 		/* store calculated oid so we don't have to recalc later */
 		use_noid = &noid;
@@ -380,37 +376,33 @@ static int diff_from_iterators(
 	git_iterator *new,
 	git_diff_list **diff_ptr)
 {
-	int error;
 	const git_index_entry *oitem, *nitem;
 	char *ignore_prefix = NULL;
 	git_diff_list *diff = git_diff_list_alloc(repo, opts);
-	if (!diff) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	if (!diff)
+		goto fail;
 
 	diff->old_src = old->type;
 	diff->new_src = new->type;
 
-	if ((error = git_iterator_current(old, &oitem)) < GIT_SUCCESS ||
-		(error = git_iterator_current(new, &nitem)) < GIT_SUCCESS)
-		goto cleanup;
+	if (git_iterator_current(old, &oitem) < 0 ||
+		git_iterator_current(new, &nitem) < 0)
+		goto fail;
 
 	/* run iterators building diffs */
-	while (!error && (oitem || nitem)) {
+	while (oitem || nitem) {
 
 		/* create DELETED records for old items not matched in new */
 		if (oitem && (!nitem || strcmp(oitem->path, nitem->path) < 0)) {
-			error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem);
-			if (error == GIT_SUCCESS)
-				error = git_iterator_advance(old, &oitem);
-			continue;
+			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
+				git_iterator_advance(old, &oitem) < 0)
+				goto fail;
 		}
 
 		/* create ADDED, TRACKED, or IGNORED records for new items not
 		 * matched in old (and/or descend into directories as needed)
 		 */
-		if (nitem && (!oitem || strcmp(oitem->path, nitem->path) > 0)) {
+		else if (nitem && (!oitem || strcmp(oitem->path, nitem->path) > 0)) {
 			int is_ignored;
 			git_delta_t delta_type = GIT_DELTA_ADDED;
 
@@ -418,7 +410,8 @@ static int diff_from_iterators(
 			if (ignore_prefix != NULL &&
 				git__prefixcmp(nitem->path, ignore_prefix) == 0)
 			{
-				error = git_iterator_advance(new, &nitem);
+				if (git_iterator_advance(new, &nitem) < 0)
+					goto fail;
 				continue;
 			}
 
@@ -428,7 +421,8 @@ static int diff_from_iterators(
 				if (git__prefixcmp(oitem->path, nitem->path) == 0) {
 					if (is_ignored)
 						ignore_prefix = nitem->path;
-					error = git_iterator_advance_into_directory(new, &nitem);
+					if (git_iterator_advance_into_directory(new, &nitem) < 0)
+						goto fail;
 					continue;
 				}
 				delta_type = GIT_DELTA_UNTRACKED;
@@ -438,36 +432,35 @@ static int diff_from_iterators(
 			else if (new->type == GIT_ITERATOR_WORKDIR)
 				delta_type = GIT_DELTA_UNTRACKED;
 
-			error = diff_delta__from_one(diff, delta_type, nitem);
-			if (error == GIT_SUCCESS)
-				error = git_iterator_advance(new, &nitem);
-			continue;
+			if (diff_delta__from_one(diff, delta_type, nitem) < 0 ||
+				git_iterator_advance(new, &nitem) < 0)
+				goto fail;
 		}
 
 		/* otherwise item paths match, so create MODIFIED record
 		 * (or ADDED and DELETED pair if type changed)
 		 */
-		assert(oitem && nitem && strcmp(oitem->path, nitem->path) == 0);
+		else {
+			assert(oitem && nitem && strcmp(oitem->path, nitem->path) == 0);
 
-		error = maybe_modified(old, oitem, new, nitem, diff);
-		if (error == GIT_SUCCESS)
-			error = git_iterator_advance(old, &oitem);
-		if (error == GIT_SUCCESS)
-			error = git_iterator_advance(new, &nitem);
+			if (maybe_modified(old, oitem, new, nitem, diff) < 0 ||
+				git_iterator_advance(old, &oitem) < 0 ||
+				git_iterator_advance(new, &nitem) < 0)
+				goto fail;
+		}
 	}
 
-cleanup:
 	git_iterator_free(old);
 	git_iterator_free(new);
-
-	if (error != GIT_SUCCESS) {
-		git_diff_list_free(diff);
-		diff = NULL;
-	}
-
 	*diff_ptr = diff;
+	return 0;
 
-	return error;
+fail:
+	git_iterator_free(old);
+	git_iterator_free(new);
+	git_diff_list_free(diff);
+	*diff_ptr = NULL;
+	return -1;
 }
 
 
@@ -478,14 +471,13 @@ int git_diff_tree_to_tree(
 	git_tree *new,
 	git_diff_list **diff)
 {
-	int error;
 	git_iterator *a = NULL, *b = NULL;
 
 	assert(repo && old && new && diff);
 
-	if ((error = git_iterator_for_tree(repo, old, &a)) < GIT_SUCCESS ||
-		(error = git_iterator_for_tree(repo, new, &b)) < GIT_SUCCESS)
-		return error;
+	if (git_iterator_for_tree(repo, old, &a) < 0 ||
+		git_iterator_for_tree(repo, new, &b) < 0)
+		return -1;
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -496,14 +488,13 @@ int git_diff_index_to_tree(
 	git_tree *old,
 	git_diff_list **diff)
 {
-	int error;
 	git_iterator *a = NULL, *b = NULL;
 
 	assert(repo && old && diff);
 
-	if ((error = git_iterator_for_tree(repo, old, &a)) < GIT_SUCCESS ||
-		(error = git_iterator_for_index(repo, &b)) < GIT_SUCCESS)
-		return error;
+	if (git_iterator_for_tree(repo, old, &a) < 0 ||
+		git_iterator_for_index(repo, &b) < 0)
+		return -1;
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -513,14 +504,13 @@ int git_diff_workdir_to_index(
 	const git_diff_options *opts,
 	git_diff_list **diff)
 {
-	int error;
 	git_iterator *a = NULL, *b = NULL;
 
 	assert(repo && diff);
 
-	if ((error = git_iterator_for_index(repo, &a)) < GIT_SUCCESS ||
-		(error = git_iterator_for_workdir(repo, &b)) < GIT_SUCCESS)
-		return error;
+	if (git_iterator_for_index(repo, &a) < 0 ||
+		git_iterator_for_workdir(repo, &b) < 0)
+		return -1;
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -532,14 +522,13 @@ int git_diff_workdir_to_tree(
 	git_tree *old,
 	git_diff_list **diff)
 {
-	int error;
 	git_iterator *a = NULL, *b = NULL;
 
 	assert(repo && old && diff);
 
-	if ((error = git_iterator_for_tree(repo, old, &a)) < GIT_SUCCESS ||
-		(error = git_iterator_for_workdir(repo, &b)) < GIT_SUCCESS)
-		return error;
+	if (git_iterator_for_tree(repo, old, &a) < 0 ||
+		git_iterator_for_workdir(repo, &b) < 0)
+		return -1;
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -548,16 +537,15 @@ int git_diff_merge(
 	git_diff_list *onto,
 	const git_diff_list *from)
 {
-	int error;
+	int error = 0;
 	unsigned int i = 0, j = 0;
 	git_vector onto_new;
 	git_diff_delta *delta;
 
-	error = git_vector_init(&onto_new, onto->deltas.length, diff_delta__cmp);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (git_vector_init(&onto_new, onto->deltas.length, diff_delta__cmp) < 0)
+		return -1;
 
-	while (i < onto->deltas.length || j < from->deltas.length) {
+	while (!error && (i < onto->deltas.length || j < from->deltas.length)) {
 		git_diff_delta       *o = git_vector_get(&onto->deltas, i);
 		const git_diff_delta *f = git_vector_get_const(&from->deltas, j);
 		const char *opath = !o ? NULL : o->old.path ? o->old.path : o->new.path;
@@ -575,16 +563,10 @@ int git_diff_merge(
 			j++;
 		}
 
-		if (!delta)
-			error = GIT_ENOMEM;
-		else
-			error = git_vector_insert(&onto_new, delta);
-
-		if (error != GIT_SUCCESS)
-			break;
+		error = !delta ? -1 : git_vector_insert(&onto_new, delta);
 	}
 
-	if (error == GIT_SUCCESS) {
+	if (error == 0) {
 		git_vector_swap(&onto->deltas, &onto_new);
 		onto->new_src = from->new_src;
 	}

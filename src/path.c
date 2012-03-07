@@ -499,7 +499,7 @@ int git_path_direach(
 	wd_len = path->size;
 	dir = opendir(path->ptr);
 	if (!dir) {
-		giterr_set(GITERR_OS, "Failed to `opendir` %s: %s", path->ptr, strerror(errno));
+		giterr_set(GITERR_OS, "Failed to 'opendir' %s", path->ptr);
 		return -1;
 	}
 

@@ -123,6 +123,8 @@ void giterr_set(int error_class, const char *string, ...)
 	char error_str[1024];
 	va_list arglist;
 	git_error *error;
+	const char *oserr =
+		(error_class == GITERR_OS && errno > 0) ? strerror(errno) : NULL;
 
 	error = &GIT_GLOBAL->error_t;
 	free(error->message);
@@ -130,6 +132,13 @@ void giterr_set(int error_class, const char *string, ...)
 	va_start(arglist, string);
 	p_vsnprintf(error_str, sizeof(error_str), string, arglist);
 	va_end(arglist);
+
+	/* automatically suffix strerror(errno) for GITERR_OS errors */
+	if (oserr != NULL) {
+		strncat(error_str, ": ", sizeof(error_str));
+		strncat(error_str, oserr, sizeof(error_str));
+		errno = 0;
+	}
 
 	error->message = git__strdup(error_str);
 	error->klass = error_class;

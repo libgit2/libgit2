@@ -355,23 +355,26 @@ int git__bsearch(
 	int (*compare)(const void *, const void *),
 	size_t *position)
 {
-	int lim, cmp;
+	int lim, cmp = -1;
 	void **part, **base = array;
 
 	for (lim = array_len; lim != 0; lim >>= 1) {
 		part = base + (lim >> 1);
 		cmp = (*compare)(key, *part);
 		if (cmp == 0) {
-			*position = (part - array);
-			return GIT_SUCCESS;
-		} else if (cmp > 0) { /* key > p; take right partition */
+			base = part;
+			break;
+		}
+		if (cmp > 0) { /* key > p; take right partition */
 			base = part + 1;
 			lim--;
 		} /* else take left partition */
 	}
 
-	*position = (base - array);
-	return GIT_ENOTFOUND;
+	if (position)
+		*position = (base - array);
+
+	return (cmp == 0) ? 0 : -1;
 }
 
 /**

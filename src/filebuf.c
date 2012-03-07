@@ -45,8 +45,8 @@ static int lock_file(git_filebuf *file, int flags)
 		source = p_open(file->path_original, O_RDONLY);
 		if (source < 0) {
 			giterr_set(GITERR_OS,
-				"Failed to open file '%s' for reading: %s",
-				file->path_original, strerror(errno));
+				"Failed to open file '%s' for reading",
+				file->path_original);
 			return -1;
 		}
 

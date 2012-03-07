@@ -544,7 +544,7 @@ const git_index_entry_unmerged *git_index_get_unmerged_bypath(git_index *index, 
 	if (!index->unmerged.length)
 		return NULL;
 
-	if ((pos = git_vector_bsearch2(&index->unmerged, unmerged_srch, path)) < GIT_SUCCESS)
+	if ((pos = git_vector_bsearch2(&index->unmerged, unmerged_srch, path)) < 0)
 		return NULL;
 
 	return git_vector_get(&index->unmerged, pos);
