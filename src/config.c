@@ -401,13 +401,15 @@ int git_config_get_string(git_config *cfg, const char *name, const char **out)
 		if (ret == 0)
 			return 0;
 
+		/* File backend doesn't set error message on variable
+		 * not found */
 		if (ret == GIT_ENOTFOUND)
 			continue;
 
 		return ret;
 	}
 
-	giterr_set(GITERR_CONFIG, "Config value '%s' not found", name);
+	giterr_set(GITERR_CONFIG, "Config variable '%s' not found", name);
 	return GIT_ENOTFOUND;
 }
 

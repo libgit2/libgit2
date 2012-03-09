@@ -127,13 +127,8 @@ typedef enum {
 	GITERR_ZLIB,
 	GITERR_REPOSITORY,
 	GITERR_CONFIG,
+	GITERR_REGEX,
 } git_error_class;
-
-#define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
-
-GIT_EXTERN(void) giterr_set_oom(void);
-GIT_EXTERN(void) giterr_set(int error_class, const char *string, ...);
-GIT_EXTERN(void) giterr_clear(void);
 
 /**
  * Return a detailed error string with the latest error

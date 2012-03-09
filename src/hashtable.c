@@ -227,11 +227,11 @@ int git_hashtable_remove2(git_hashtable *self, const void *key, void **old_value
 			node->key = NULL;
 			node->value = NULL;
 			self->key_count--;
-			return GIT_SUCCESS;
+			return 0;
 		}
 	}
 
-	return git__throw(GIT_ENOTFOUND, "Entry not found in hash table");
+	return GIT_ENOTFOUND;
 }
 
 int git_hashtable_merge(git_hashtable *self, git_hashtable *other)

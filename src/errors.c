@@ -122,25 +122,28 @@ void giterr_set(int error_class, const char *string, ...)
 {
 	char error_str[1024];
 	va_list arglist;
-	git_error *error;
-	const char *oserr =
-		(error_class == GITERR_OS && errno != 0) ? strerror(errno) : NULL;
-
-	error = &GIT_GLOBAL->error_t;
-	free(error->message);
 
 	va_start(arglist, string);
 	p_vsnprintf(error_str, sizeof(error_str), string, arglist);
 	va_end(arglist);
 
 	/* automatically suffix strerror(errno) for GITERR_OS errors */
-	if (oserr != NULL) {
+	if (error_class == GITERR_OS) {
 		strncat(error_str, ": ", sizeof(error_str));
-		strncat(error_str, oserr, sizeof(error_str));
+		strncat(error_str, strerror(errno), sizeof(error_str));
 		errno = 0;
 	}
 
-	error->message = git__strdup(error_str);
+	giterr_set_str(error_class, error_str);
+}
+
+void giterr_set_str(int error_class, const char *string)
+{
+	git_error *error = &GIT_GLOBAL->error_t;
+
+	free(error->message);
+
+	error->message = git__strdup(string);
 	error->klass = error_class;
 
 	if (error->message == NULL) {
@@ -149,6 +152,13 @@ void giterr_set(int error_class, const char *string, ...)
 	}
 
 	GIT_GLOBAL->last_error = error;
+}
+
+void giterr_set_regex(const regex_t *regex, int error_code)
+{
+	char error_buf[1024];
+	regerror(error_code, regex, error_buf, sizeof(error_buf));
+	giterr_set_str(GITERR_REGEX, error_buf);
 }
 
 void giterr_clear(void)
