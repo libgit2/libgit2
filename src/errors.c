@@ -40,7 +40,7 @@ static struct {
 	{GIT_EEXISTS, "A reference with this name already exists"},
 	{GIT_EOVERFLOW, "The given integer literal is too large to be parsed"},
 	{GIT_ENOTNUM, "The given literal is not a valid number"},
-	{GIT_EAMBIGUOUSOIDPREFIX, "The given oid prefix is ambiguous"},
+	{GIT_EAMBIGUOUS, "The given oid prefix is ambiguous"},
 };
 
 const char *git_strerror(int num)
@@ -129,9 +129,29 @@ void giterr_set(int error_class, const char *string, ...)
 
 	/* automatically suffix strerror(errno) for GITERR_OS errors */
 	if (error_class == GITERR_OS) {
-		strncat(error_str, ": ", sizeof(error_str));
-		strncat(error_str, strerror(errno), sizeof(error_str));
-		errno = 0;
+		if (errno != 0) {
+			strncat(error_str, ": ", sizeof(error_str));
+			strncat(error_str, strerror(errno), sizeof(error_str));
+			errno = 0;
+		}
+#ifdef GIT_WIN32
+		else {
+			LPVOID lpMsgBuf;
+			DWORD dw = GetLastError();
+
+			FormatMessage(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+				FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, dw, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
+
+			if (lpMsgBuf) {
+				strncat(error_str, ": ", sizeof(error_str));
+				strncat(error_str, (const char *)lpMsgBuf, sizeof(error_str));
+				LocalFree(lpMsgBuf);
+			}
+		}
+#endif
 	}
 
 	giterr_set_str(error_class, error_str);

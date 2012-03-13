@@ -40,6 +40,7 @@ struct git_filebuf {
 
 	size_t buf_size, buf_pos;
 	git_file fd;
+	bool fd_is_open;
 	int last_error;
 };
 

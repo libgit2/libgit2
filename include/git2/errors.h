@@ -103,7 +103,7 @@ typedef enum {
 	GIT_EOBJCORRUPTED = -28,
 
 	/** The given short oid is ambiguous */
-	GIT_EAMBIGUOUSOIDPREFIX = -29,
+	GIT_EAMBIGUOUS = -29,
 
 	/** Skip and passthrough the given ODB backend */
 	GIT_EPASSTHROUGH = -30,
@@ -128,6 +128,7 @@ typedef enum {
 	GITERR_REPOSITORY,
 	GITERR_CONFIG,
 	GITERR_REGEX,
+	GITERR_ODB
 } git_error_class;
 
 /**

@@ -117,7 +117,7 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 		return fd;
 
 	if (p_fstat(fd, &st) < 0 || S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
-		close(fd);
+		p_close(fd);
 		giterr_set(GITERR_OS, "Invalid regular file stat for '%s'", path);
 		return -1;
 	}
@@ -127,7 +127,7 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 	 * has been modified.
 	 */
 	if (mtime != NULL && *mtime >= st.st_mtime) {
-		close(fd);
+		p_close(fd);
 		return 0;
 	}
 
@@ -139,8 +139,8 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 	git_buf_clear(buf);
 
 	if (git_buf_grow(buf, len + 1) < 0) {
-		close(fd);
-		return GIT_ENOMEM;
+		p_close(fd);
+		return -1;
 	}
 
 	buf->ptr[len] = '\0';
@@ -149,7 +149,7 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 		ssize_t read_size = p_read(fd, buf->ptr, len);
 
 		if (read_size < 0) {
-			close(fd);
+			p_close(fd);
 			giterr_set(GITERR_OS, "Failed to read descriptor for '%s'", path);
 			return -1;
 		}

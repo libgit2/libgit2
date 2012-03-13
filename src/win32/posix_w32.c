@@ -1,4 +1,4 @@
-/ < 0)
+/*
  * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
@@ -339,7 +339,7 @@ int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 	int len;
 
 	if (count == 0 || (len = _vsnprintf(buffer, count, format, argptr)) < 0)
-		return p_vscprintf(format, argptr);
+		return _vscprintf(format, argptr);
 
 	return len;
 #else /* MinGW */

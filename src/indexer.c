@@ -307,7 +307,7 @@ cleanup:
 int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 {
 	git_mwindow_file *mwf;
-	off_t off = sizeof(struct git_pack_header);
+	git_off_t off = sizeof(struct git_pack_header);
 	int error;
 	struct entry *entry;
 	unsigned int left, processed;
@@ -328,18 +328,18 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		struct git_pack_entry *pentry;
 		git_mwindow *w = NULL;
 		int i;
-		off_t entry_start = off;
+		git_off_t entry_start = off;
 		void *packed;
 		size_t entry_size;
 
-		entry = git__malloc(sizeof(struct entry));
-		memset(entry, 0x0, sizeof(struct entry));
+		entry = git__calloc(1, sizeof(*entry));
+		GITERR_CHECK_ALLOC(entry);
 
 		if (off > UINT31_MAX) {
 			entry->offset = UINT32_MAX;
 			entry->offset_long = off;
 		} else {
-			entry->offset = off;
+			entry->offset = (uint32_t)off;
 		}
 
 		error = git_packfile_unpack(&obj, idx->pack, &off);
@@ -369,7 +369,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		git_oid_cpy(&entry->oid, &oid);
 		entry->crc = crc32(0L, Z_NULL, 0);
 
-		entry_size = off - entry_start;
+		entry_size = (size_t)(off - entry_start);
 		packed = git_mwindow_open(mwf, &w, entry_start, entry_size, &left);
 		if (packed == NULL) {
 			error = git__rethrow(error, "Failed to open window to read packed data");
