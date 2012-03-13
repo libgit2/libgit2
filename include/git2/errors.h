@@ -134,6 +134,7 @@ typedef enum {
 /**
  * Return a detailed error string with the latest error
  * that occurred in the library.
+ * @deprecated This will be replaced in the new error handling
  * @return a string explaining the error
  */
 GIT_EXTERN(const char *) git_lasterror(void);
@@ -145,6 +146,7 @@ GIT_EXTERN(const char *) git_lasterror(void);
  * NOTE: This method will be eventually deprecated in favor
  * of the new `git_lasterror`.
  *
+ * @deprecated This will be replaced in the new error handling
  * @param num The error code to explain
  * @return a string explaining the error code
  */
@@ -152,8 +154,22 @@ GIT_EXTERN(const char *) git_strerror(int num);
 
 /**
  * Clear the latest library error
+ * @deprecated This will be replaced in the new error handling
  */
 GIT_EXTERN(void) git_clearerror(void);
+
+/**
+ * Return the last `git_error` object that was generated for the
+ * current thread or NULL if no error has occurred.
+ *
+ * @return A git_error object.
+ */
+GIT_EXTERN(const git_error *) git_error_last(void);
+
+/**
+ * Clear the last library error that occurred for this thread.
+ */
+GIT_EXTERN(void) git_error_clear(void);
 
 /** @} */
 GIT_END_DECL

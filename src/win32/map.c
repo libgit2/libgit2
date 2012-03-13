@@ -33,8 +33,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	git_off_t page_start;
 	git_off_t page_offset;
 
-	if (validate_map_args(out, len, prot, flags, fd, offset) < 0)
-		return -1;
+	GIT_MMAP_VALIDATE(out, len, prot, flags);
 
 	out->data = NULL;
 	out->len = 0;
