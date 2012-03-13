@@ -172,8 +172,8 @@ int main(int argc, char *argv[])
 			!check_uint16_param(a, "--unified=", &opts.context_lines) &&
 			!check_uint16_param(a, "--inter-hunk-context=",
 				&opts.interhunk_lines) &&
-			!check_str_param(a, "--src-prefix=", &opts.src_prefix) &&
-			!check_str_param(a, "--dst-prefix=", &opts.dst_prefix))
+			!check_str_param(a, "--src-prefix=", &opts.old_prefix) &&
+			!check_str_param(a, "--dst-prefix=", &opts.new_prefix))
 			usage("Unknown arg", a);
 	}
 
