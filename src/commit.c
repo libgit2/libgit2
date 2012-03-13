@@ -14,6 +14,7 @@
 #include "odb.h"
 #include "commit.h"
 #include "signature.h"
+#include "message.h"
 
 #include <stdarg.h>
 
@@ -101,7 +102,7 @@ int git_commit_create(
 		int parent_count,
 		const git_commit *parents[])
 {
-	git_buf commit = GIT_BUF_INIT;
+	git_buf commit = GIT_BUF_INIT, cleaned_message = GIT_BUF_INIT;
 	int error, i;
 	git_odb *odb;
 
@@ -126,7 +127,10 @@ int git_commit_create(
 		git_buf_printf(&commit, "encoding %s\n", message_encoding);
 
 	git_buf_putc(&commit, '\n');
-	git_buf_puts(&commit, message);
+
+	git_message_prettify(&cleaned_message, message, 1);	/* Remove comments by default */
+	git_buf_puts(&commit, git_buf_cstr(&cleaned_message));
+	git_buf_free(&cleaned_message);
 
 	if (git_buf_oom(&commit)) {
 		error = git__throw(git_buf_lasterror(&commit),
