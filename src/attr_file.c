@@ -180,37 +180,37 @@ int git_attr_file__lookup_one(
 		}
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 
-int git_attr_fnmatch__match(
+bool git_attr_fnmatch__match(
 	git_attr_fnmatch *match,
 	const git_attr_path *path)
 {
-	int matched = FNM_NOMATCH;
+	int fnm;
 
 	if (match->flags & GIT_ATTR_FNMATCH_DIRECTORY && !path->is_dir)
-		return matched;
+		return false;
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH)
-		matched = p_fnmatch(match->pattern, path->path, FNM_PATHNAME);
+		fnm = p_fnmatch(match->pattern, path->path, FNM_PATHNAME);
 	else if (path->is_dir)
-		matched = p_fnmatch(match->pattern, path->basename, FNM_LEADING_DIR);
+		fnm = p_fnmatch(match->pattern, path->basename, FNM_LEADING_DIR);
 	else
-		matched = p_fnmatch(match->pattern, path->basename, 0);
+		fnm = p_fnmatch(match->pattern, path->basename, 0);
 
-	return matched;
+	return (fnm == FNM_NOMATCH) ? false : true;
 }
 
-int git_attr_rule__match(
+bool git_attr_rule__match(
 	git_attr_rule *rule,
 	const git_attr_path *path)
 {
-	int matched = git_attr_fnmatch__match(&rule->match, path);
+	bool matched = git_attr_fnmatch__match(&rule->match, path);
 
 	if (rule->match.flags & GIT_ATTR_FNMATCH_NEGATIVE)
-		matched = (matched == GIT_SUCCESS) ? FNM_NOMATCH : GIT_SUCCESS;
+		matched = !matched;
 
 	return matched;
 }

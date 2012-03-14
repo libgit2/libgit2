@@ -168,9 +168,9 @@ static int ignore_lookup_in_rules(
 	git_attr_fnmatch *match;
 
 	git_vector_rforeach(rules, j, match) {
-		if (git_attr_fnmatch__match(match, path) == GIT_SUCCESS) {
+		if (git_attr_fnmatch__match(match, path)) {
 			*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0);
-			return GIT_SUCCESS;
+			return 0;
 		}
 	}
 
