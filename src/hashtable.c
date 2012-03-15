@@ -258,5 +258,10 @@ uint32_t git_hash__strhash_cb(const void *key, int hash_id)
 		0x7daaab3c
 	};
 
-	return git__hash(key, strlen((const char *)key), hash_seeds[hash_id]);
+	size_t key_len = strlen((const char *)key);
+
+	/* won't take hash of strings longer than 2^31 right now */
+	assert(key_len == (size_t)((int)key_len));
+
+	return git__hash(key, (int)key_len, hash_seeds[hash_id]);
 }

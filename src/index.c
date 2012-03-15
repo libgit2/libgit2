@@ -319,8 +319,7 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	if (error < GIT_SUCCESS)
 		return error;
 
-	if (p_lstat(full_path.ptr, &st) < 0) {
-		error = git__throw(GIT_ENOTFOUND, "Failed to initialize entry. '%s' cannot be opened. %s", full_path.ptr, strerror(errno));
+	if ((error = git_path_lstat(full_path.ptr, &st)) < 0) {
 		git_buf_free(&full_path);
 		return error;
 	}

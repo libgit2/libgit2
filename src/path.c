@@ -49,7 +49,8 @@ int git_path_basename_r(git_buf *buffer, const char *path)
 	while (startp > path && *(startp - 1) != '/')
 		startp--;
 
-	len = endp - startp +1;
+	/* Cast is safe because max path < max int */
+	len = (int)(endp - startp + 1);
 
 Exit:
 	result = len;
@@ -96,7 +97,8 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 		endp--;
 	} while (endp > path && *endp == '/');
 
-	len = endp - path +1;
+	/* Cast is safe because max path < max int */
+	len = (int)(endp - path + 1);
 
 #ifdef GIT_WIN32
 	/* Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
@@ -146,7 +148,7 @@ char *git_path_basename(const char *path)
 const char *git_path_topdir(const char *path)
 {
 	size_t len;
-	int i;
+	ssize_t i;
 
 	assert(path);
 	len = strlen(path);
@@ -154,7 +156,7 @@ const char *git_path_topdir(const char *path)
 	if (!len || path[len - 1] != '/')
 		return NULL;
 
-	for (i = len - 2; i >= 0; --i)
+	for (i = (ssize_t)len - 2; i >= 0; --i)
 		if (path[i] == '/')
 			break;
 
@@ -235,7 +237,7 @@ int git__percent_decode(git_buf *decoded_out, const char *input)
 	int len, hi, lo, i;
 	assert(decoded_out && input);
 
-	len = strlen(input);
+	len = (int)strlen(input);
 	git_buf_clear(decoded_out);
 
 	for(i = 0; i < len; i++)
@@ -281,7 +283,7 @@ int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 		return error_invalid_local_file_uri(file_url);
 
 	offset += 7;
-	len = strlen(file_url);
+	len = (int)strlen(file_url);
 
 	if (offset < len && file_url[offset] == '/')
 		offset++;
@@ -379,6 +381,18 @@ bool git_path_isfile(const char *path)
 		return false;
 
 	return S_ISREG(st.st_mode) != 0;
+}
+
+int git_path_lstat(const char *path, struct stat *st)
+{
+	int err = 0;
+
+	if (p_lstat(path, st) < 0) {
+		err = (errno == ENOENT) ? GIT_ENOTFOUND : -1;
+		giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
+	}
+
+	return err;
 }
 
 static bool _check_dir_contents(
@@ -600,16 +614,9 @@ int git_path_dirload_with_stat(
 		memmove(ps->path, ps, path_len + 1);
 		ps->path_len = path_len;
 
-		if (git_buf_joinpath(&full, full.ptr, ps->path) < 0) {
-			error = -1;
+		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
+			(error = git_path_lstat(full.ptr, &ps->st)) < 0)
 			break;
-		}
-
-		if (p_lstat(full.ptr, &ps->st) < 0) {
-			giterr_set(GITERR_OS, "Failed to stat file '%s'", full.ptr);
-			error = -1;
-			break;
-		}
 
 		git_buf_truncate(&full, prefix_len);
 

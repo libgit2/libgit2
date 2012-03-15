@@ -33,14 +33,14 @@ wchar_t* gitwin_to_utf16(const char* str)
 	wchar_t* ret;
 	int cb;
 
-	if (!str) {
+	if (!str)
 		return NULL;
-	}
 
 	cb = strlen(str) * sizeof(wchar_t);
 	if (cb == 0) {
 		ret = (wchar_t*)git__malloc(sizeof(wchar_t));
-		ret[0] = 0;
+		if (ret)
+			ret[0] = 0;
 		return ret;
 	}
 
@@ -48,8 +48,11 @@ wchar_t* gitwin_to_utf16(const char* str)
 	cb += sizeof(wchar_t);
 
 	ret = (wchar_t*)git__malloc(cb);
+	if (!ret)
+		return NULL;
 
 	if (MultiByteToWideChar(_active_codepage, 0, str, -1, ret, cb) == 0) {
+		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
 		git__free(ret);
 		ret = NULL;
 	}
@@ -59,7 +62,10 @@ wchar_t* gitwin_to_utf16(const char* str)
 
 int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
 {
-	return MultiByteToWideChar(_active_codepage, 0, str, -1, buffer, len);
+	int result = MultiByteToWideChar(_active_codepage, 0, str, -1, buffer, len);
+	if (result == 0)
+		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
+	return result;
 }
 
 char* gitwin_from_utf16(const wchar_t* str)
@@ -74,7 +80,8 @@ char* gitwin_from_utf16(const wchar_t* str)
 	cb = wcslen(str) * sizeof(char);
 	if (cb == 0) {
 		ret = (char*)git__malloc(sizeof(char));
-		ret[0] = 0;
+		if (ret)
+			ret[0] = 0;
 		return ret;
 	}
 
@@ -82,8 +89,11 @@ char* gitwin_from_utf16(const wchar_t* str)
 	cb += sizeof(char);
 
 	ret = (char*)git__malloc(cb);
+	if (!ret)
+		return NULL;
 
 	if (WideCharToMultiByte(_active_codepage, 0, str, -1, ret, cb, NULL, NULL) == 0) {
+		giterr_set(GITERR_OS, "Could not convert string to UTF-8");
 		git__free(ret);
 		ret = NULL;
 	}

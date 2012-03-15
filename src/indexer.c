@@ -133,12 +133,15 @@ int git_indexer_new(git_indexer **out, const char *packname)
 
 	idx->nr_objects = ntohl(idx->hdr.hdr_entries);
 
-	error = git_vector_init(&idx->pack->cache, idx->nr_objects, cache_cmp);
+	/* for now, limit to 2^32 objects */
+	assert(idx->nr_objects == (size_t)((unsigned int)idx->nr_objects));
+
+	error = git_vector_init(&idx->pack->cache, (unsigned int)idx->nr_objects, cache_cmp);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	idx->pack->has_cache = 1;
-	error = git_vector_init(&idx->objects, idx->nr_objects, objects_cmp);
+	error = git_vector_init(&idx->objects, (unsigned int)idx->nr_objects, objects_cmp);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -319,7 +322,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to register mwindow file");
 
-	stats->total = idx->nr_objects;
+	stats->total = (unsigned int)idx->nr_objects;
 	stats->processed = processed = 0;
 
 	while (processed < idx->nr_objects) {
@@ -375,7 +378,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 			error = git__rethrow(error, "Failed to open window to read packed data");
 			goto cleanup;
 		}
-		entry->crc = htonl(crc32(entry->crc, packed, entry_size));
+		entry->crc = htonl(crc32(entry->crc, packed, (uInt)entry_size));
 		git_mwindow_close(&w);
 
 		/* Add the object to the list */

@@ -203,7 +203,7 @@ unsigned char *git_mwindow_open(
 	git_mwindow_file *mwf,
 	git_mwindow **cursor,
 	git_off_t offset,
-	int extra,
+	size_t extra,
 	unsigned int *left)
 {
 	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;

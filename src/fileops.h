@@ -77,18 +77,9 @@ extern int git_futils_mktmp(git_buf *path_out, const char *filename);
 extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
 
 /**
- * Open a file readonly and set error if needed
+ * Open a file readonly and set error if needed.
  */
-GIT_INLINE(int) git_futils_open_ro(const char *path)
-{
-	int fd = p_open(path, O_RDONLY);
-	if (fd < 0) {
-		if (errno == ENOENT)
-			fd = GIT_ENOTFOUND;
-		giterr_set(GITERR_OS, "Failed to open '%s'", path);
-	}
-	return fd;
-}
+extern int git_futils_open_ro(const char *path);
 
 /**
  * Get the filesize in bytes of a file

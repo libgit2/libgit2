@@ -145,10 +145,8 @@ int git_odb__hashlink(git_oid *out, const char *path)
 	git_off_t size;
 	int result;
 
-	if (p_lstat(path, &st) < 0) {
-		giterr_set(GITERR_OS, "Failed to stat object '%s'", path);
+	if (git_path_lstat(path, &st) < 0)
 		return -1;
-	}
 
 	size = st.st_size;
 
