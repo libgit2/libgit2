@@ -133,12 +133,15 @@ int git_indexer_new(git_indexer **out, const char *packname)
 
 	idx->nr_objects = ntohl(idx->hdr.hdr_entries);
 
-	error = git_vector_init(&idx->pack->cache, idx->nr_objects, cache_cmp);
+	/* for now, limit to 2^32 objects */
+	assert(idx->nr_objects == (size_t)((unsigned int)idx->nr_objects));
+
+	error = git_vector_init(&idx->pack->cache, (unsigned int)idx->nr_objects, cache_cmp);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
 	idx->pack->has_cache = 1;
-	error = git_vector_init(&idx->objects, idx->nr_objects, objects_cmp);
+	error = git_vector_init(&idx->objects, (unsigned int)idx->nr_objects, objects_cmp);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
@@ -307,7 +310,7 @@ cleanup:
 int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 {
 	git_mwindow_file *mwf;
-	off_t off = sizeof(struct git_pack_header);
+	git_off_t off = sizeof(struct git_pack_header);
 	int error;
 	struct entry *entry;
 	unsigned int left, processed;
@@ -319,7 +322,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 	if (error < GIT_SUCCESS)
 		return git__rethrow(error, "Failed to register mwindow file");
 
-	stats->total = idx->nr_objects;
+	stats->total = (unsigned int)idx->nr_objects;
 	stats->processed = processed = 0;
 
 	while (processed < idx->nr_objects) {
@@ -328,18 +331,18 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		struct git_pack_entry *pentry;
 		git_mwindow *w = NULL;
 		int i;
-		off_t entry_start = off;
+		git_off_t entry_start = off;
 		void *packed;
 		size_t entry_size;
 
-		entry = git__malloc(sizeof(struct entry));
-		memset(entry, 0x0, sizeof(struct entry));
+		entry = git__calloc(1, sizeof(*entry));
+		GITERR_CHECK_ALLOC(entry);
 
 		if (off > UINT31_MAX) {
 			entry->offset = UINT32_MAX;
 			entry->offset_long = off;
 		} else {
-			entry->offset = off;
+			entry->offset = (uint32_t)off;
 		}
 
 		error = git_packfile_unpack(&obj, idx->pack, &off);
@@ -369,13 +372,13 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		git_oid_cpy(&entry->oid, &oid);
 		entry->crc = crc32(0L, Z_NULL, 0);
 
-		entry_size = off - entry_start;
+		entry_size = (size_t)(off - entry_start);
 		packed = git_mwindow_open(mwf, &w, entry_start, entry_size, &left);
 		if (packed == NULL) {
 			error = git__rethrow(error, "Failed to open window to read packed data");
 			goto cleanup;
 		}
-		entry->crc = htonl(crc32(entry->crc, packed, entry_size));
+		entry->crc = htonl(crc32(entry->crc, packed, (uInt)entry_size));
 		git_mwindow_close(&w);
 
 		/* Add the object to the list */

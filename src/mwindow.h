@@ -15,8 +15,8 @@ typedef struct git_mwindow {
 	struct git_mwindow *next;
 	git_map window_map;
 	git_off_t offset;
-	unsigned int last_used;
-	unsigned int inuse_cnt;
+	size_t last_used;
+	size_t inuse_cnt;
 } git_mwindow;
 
 typedef struct git_mwindow_file {
@@ -37,7 +37,7 @@ typedef struct git_mwindow_ctl {
 
 int git_mwindow_contains(git_mwindow *win, git_off_t offset);
 void git_mwindow_free_all(git_mwindow_file *mwf);
-unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, git_off_t offset, int extra, unsigned int *left);
+unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, git_off_t offset, size_t extra, unsigned int *left);
 void git_mwindow_scan_lru(git_mwindow_file *mwf, git_mwindow **lru_w, git_mwindow **lru_l);
 int git_mwindow_file_register(git_mwindow_file *mwf);
 void git_mwindow_close(git_mwindow **w_cursor);

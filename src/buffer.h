@@ -102,9 +102,9 @@ void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 
-GIT_INLINE(int) git_buf_rfind_next(git_buf *buf, char ch)
+GIT_INLINE(ssize_t) git_buf_rfind_next(git_buf *buf, char ch)
 {
-	int idx = buf->size - 1;
+	ssize_t idx = (ssize_t)buf->size - 1;
 	while (idx >= 0 && buf->ptr[idx] == ch) idx--;
 	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
 	return idx;

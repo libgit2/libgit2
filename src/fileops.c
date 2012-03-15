@@ -79,11 +79,25 @@ int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, con
 	return git_futils_creat_locked(path, mode);
 }
 
+int git_futils_open_ro(const char *path)
+{
+	int fd = p_open(path, O_RDONLY);
+	if (fd < 0) {
+		if (errno == ENOENT)
+			fd = GIT_ENOTFOUND;
+		giterr_set(GITERR_OS, "Failed to open '%s'", path);
+	}
+	return fd;
+}
+
 git_off_t git_futils_filesize(git_file fd)
 {
 	struct stat sb;
-	if (p_fstat(fd, &sb))
-		return GIT_ERROR;
+
+	if (p_fstat(fd, &sb)) {
+		giterr_set(GITERR_OS, "Failed to stat file descriptor");
+		return -1;
+	}
 
 	return sb.st_size;
 }
@@ -117,7 +131,7 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 		return fd;
 
 	if (p_fstat(fd, &st) < 0 || S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
-		close(fd);
+		p_close(fd);
 		giterr_set(GITERR_OS, "Invalid regular file stat for '%s'", path);
 		return -1;
 	}
@@ -127,7 +141,7 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 	 * has been modified.
 	 */
 	if (mtime != NULL && *mtime >= st.st_mtime) {
-		close(fd);
+		p_close(fd);
 		return 0;
 	}
 
@@ -139,8 +153,8 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 	git_buf_clear(buf);
 
 	if (git_buf_grow(buf, len + 1) < 0) {
-		close(fd);
-		return GIT_ENOMEM;
+		p_close(fd);
+		return -1;
 	}
 
 	buf->ptr[len] = '\0';
@@ -149,7 +163,7 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 		ssize_t read_size = p_read(fd, buf->ptr, len);
 
 		if (read_size < 0) {
-			close(fd);
+			p_close(fd);
 			giterr_set(GITERR_OS, "Failed to read descriptor for '%s'", path);
 			return -1;
 		}
@@ -176,10 +190,15 @@ int git_futils_readbuffer(git_buf *buf, const char *path)
 
 int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode)
 {
-	if (git_futils_mkpath2file(to, dirmode) < GIT_SUCCESS)
-		return GIT_EOSERR;	/* The callee already takes care of setting the correct error message. */
+	if (git_futils_mkpath2file(to, dirmode) < 0)
+		return -1;
 
-	return p_rename(from, to); /* The callee already takes care of setting the correct error message. */
+	if (p_rename(from, to) < 0) {
+		giterr_set(GITERR_OS, "Failed to rename '%s' to '%s'", from, to);
+		return -1;
+	}
+
+	return 0;
 }
 
 int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
@@ -192,8 +211,10 @@ int git_futils_mmap_ro_file(git_map *out, const char *path)
 	git_file fd = p_open(path, O_RDONLY /* | O_NOATIME */);
 	git_off_t len = git_futils_filesize(fd);
 	int result;
-	if (!git__is_sizet(len))
-		return git__throw(GIT_ERROR, "File `%s` too large to mmap", path);
+	if (!git__is_sizet(len)) {
+		giterr_set(GITERR_OS, "File `%s` too large to mmap", path);
+		return -1;
+	}
 	result = git_futils_mmap_ro(out, fd, 0, (size_t)len);
 	p_close(fd);
 	return result;
@@ -260,20 +281,31 @@ int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 
 static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
 {
-	int error = GIT_SUCCESS;
 	int force = *(int *)opaque;
 
 	if (git_path_isdir(path->ptr) == true) {
-		error = git_path_direach(path, _rmdir_recurs_foreach, opaque);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to remove directory `%s`", path->ptr);
-		return p_rmdir(path->ptr);
+		if (git_path_direach(path, _rmdir_recurs_foreach, opaque) < 0)
+			return -1;
 
-	} else if (force) {
-		return p_unlink(path->ptr);
+		if (p_rmdir(path->ptr) < 0) {
+			giterr_set(GITERR_OS, "Could not remove directory '%s'", path->ptr);
+			return -1;
+		}
+
+		return 0;
 	}
 
-	return git__rethrow(error, "Failed to remove directory. `%s` is not empty", path->ptr);
+	if (force) {
+		if (p_unlink(path->ptr) < 0) {
+			giterr_set(GITERR_OS, "Could not remove directory.  File '%s' cannot be removed", path->ptr);
+			return -1;
+		}
+
+		return 0;
+	}
+
+	giterr_set(GITERR_OS, "Could not remove directory. File '%s' still present", path->ptr);
+	return -1;
 }
 
 int git_futils_rmdir_r(const char *path, int force)
@@ -282,7 +314,7 @@ int git_futils_rmdir_r(const char *path, int force)
 	git_buf p = GIT_BUF_INIT;
 
 	error = git_buf_sets(&p, path);
-	if (error == GIT_SUCCESS)
+	if (!error)
 		error = _rmdir_recurs_foreach(&force, &p);
 	git_buf_free(&p);
 	return error;
@@ -328,9 +360,8 @@ static const win32_path *win32_system_root(void)
 		const wchar_t *root_tmpl = L"%PROGRAMFILES%\\Git\\etc\\";
 
 		s_root.len = ExpandEnvironmentStringsW(root_tmpl, NULL, 0);
-
 		if (s_root.len <= 0) {
-			git__throw(GIT_EOSERR, "Failed to expand environment strings");
+			giterr_set(GITERR_OS, "Failed to expand environment strings");
 			return NULL;
 		}
 
@@ -339,7 +370,7 @@ static const win32_path *win32_system_root(void)
 			return NULL;
 
 		if (ExpandEnvironmentStringsW(root_tmpl, s_root.path, s_root.len) != s_root.len) {
-			git__throw(GIT_EOSERR, "Failed to expand environment strings");
+			giterr_set(GITERR_OS, "Failed to expand environment strings");
 			git__free(s_root.path);
 			s_root.path = NULL;
 			return NULL;
@@ -351,7 +382,7 @@ static const win32_path *win32_system_root(void)
 
 static int win32_find_system_file(git_buf *path, const char *filename)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	const win32_path *root = win32_system_root();
 	size_t len;
 	wchar_t *file_utf16 = NULL, *scan;
@@ -362,8 +393,7 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 
 	/* allocate space for wchar_t path to file */
 	file_utf16 = git__calloc(root->len + len + 2, sizeof(wchar_t));
-	if (!file_utf16)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(file_utf16);
 
 	/* append root + '\\' + filename as wchar_t */
 	memcpy(file_utf16, root->path, root->len * sizeof(wchar_t));
@@ -373,7 +403,7 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 
 	if (gitwin_append_utf16(file_utf16 + root->len - 1, filename, len + 1) !=
 		(int)len + 1) {
-		error = git__throw(GIT_EOSERR, "Failed to build file path");
+		error = -1;
 		goto cleanup;
 	}
 
@@ -389,9 +419,8 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 
 	/* convert to utf8 */
 	if ((file_utf8 = gitwin_from_utf16(file_utf16)) == NULL)
-		error = GIT_ENOMEM;
-
-	if (file_utf8) {
+		error = -1;
+	else {
 		git_path_mkposix(file_utf8);
 		git_buf_attach(path, file_utf8, 0);
 	}
@@ -409,7 +438,7 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 		return -1;
 
 	if (git_path_exists(path->ptr) == true)
-		return GIT_SUCCESS;
+		return 0;
 
 	git_buf_clear(path);
 

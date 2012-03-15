@@ -34,9 +34,9 @@ int p_getcwd(char *buffer_out, size_t size)
 		return -1;
 
 	git_path_mkposix(buffer_out);
-	git_path_string_to_dir(buffer_out, size);	//Ensure the path ends with a trailing slash
+	git_path_string_to_dir(buffer_out, size); /* append trailing slash */
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int p_rename(const char *from, const char *to)

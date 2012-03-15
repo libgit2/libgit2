@@ -317,13 +317,12 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info;
 
-	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
-		goto cleanup;
+	if (git_attr_cache__init(repo) < 0 ||
+		git_vector_init(files, 4, NULL) < 0)
+		return -1;
 
-	if ((error = git_vector_init(files, 4, NULL)) < GIT_SUCCESS)
-		goto cleanup;
-
-	if ((error = git_path_find_dir(&dir, path, workdir)) < GIT_SUCCESS)
+	error = git_path_find_dir(&dir, path, workdir);
+	if (error < 0)
 		goto cleanup;
 
 	/* in precendence order highest to lowest:
@@ -334,13 +333,13 @@ static int collect_attr_files(
 	 */
 
 	error = push_attrs(repo, files, repo->path_repository, GIT_ATTR_FILE_INREPO);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		goto cleanup;
 
 	info.repo = repo;
 	info.files = files;
 	error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		goto cleanup;
 
 	if ((error = git_repository_config(&cfg, repo)) == GIT_SUCCESS) {
@@ -352,19 +351,17 @@ static int collect_attr_files(
 		git_config_free(cfg);
 	}
 
-	if (error == GIT_SUCCESS) {
+	if (!error) {
 		error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
-		if (error == GIT_SUCCESS)
+		if (!error)
 			error = push_attrs(repo, files, NULL, dir.ptr);
 		else if (error == GIT_ENOTFOUND)
-			error = GIT_SUCCESS;
+			error = 0;
 	}
 
  cleanup:
-	if (error < GIT_SUCCESS) {
-		git__rethrow(error, "Could not get attributes for '%s'", path);
+	if (error < 0)
 		git_vector_free(files);
-	}
 	git_buf_free(&dir);
 
 	return error;
@@ -373,32 +370,29 @@ static int collect_attr_files(
 
 int git_attr_cache__init(git_repository *repo)
 {
-	int error = GIT_SUCCESS;
 	git_attr_cache *cache = &repo->attrcache;
 
 	if (cache->initialized)
-		return GIT_SUCCESS;
+		return 0;
 
 	if (cache->files == NULL) {
 		cache->files = git_hashtable_alloc(
 			8, git_hash__strhash_cb, git_hash__strcmp_cb);
 		if (!cache->files)
-			return git__throw(GIT_ENOMEM, "Could not initialize attribute cache");
+			return -1;
 	}
 
 	if (cache->macros == NULL) {
 		cache->macros = git_hashtable_alloc(
 			8, git_hash__strhash_cb, git_hash__strcmp_cb);
 		if (!cache->macros)
-			return git__throw(GIT_ENOMEM, "Could not initialize attribute cache");
+			return -1;
 	}
 
 	cache->initialized = 1;
 
 	/* insert default macros */
-	error = git_attr_add_macro(repo, "binary", "-diff -crlf");
-
-	return error;
+	return git_attr_add_macro(repo, "binary", "-diff -crlf");
 }
 
 void git_attr_cache_flush(
@@ -432,8 +426,9 @@ void git_attr_cache_flush(
 
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 {
+	/* TODO: generate warning log if (macro->assigns.length == 0) */
 	if (macro->assigns.length == 0)
-		return git__throw(GIT_EMISSINGOBJDATA, "git attribute macro with no values");
+		return 0;
 
 	return git_hashtable_insert(
 		repo->attrcache.macros, macro->match.pattern, macro);

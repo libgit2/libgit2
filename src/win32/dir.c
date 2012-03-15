@@ -27,8 +27,8 @@ static int init_filter(char *filter, size_t n, const char *dir)
 git__DIR *git__opendir(const char *dir)
 {
 	char filter[4096];
-	wchar_t* filter_w;
-	git__DIR *new;
+	wchar_t* filter_w = NULL;
+	git__DIR *new = NULL;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
 		return NULL;
@@ -37,25 +37,29 @@ git__DIR *git__opendir(const char *dir)
 	if (!new)
 		return NULL;
 
-	new->dir = git__malloc(strlen(dir)+1);
-	if (!new->dir) {
-		git__free(new);
-		return NULL;
-	}
-	strcpy(new->dir, dir);
+	new->dir = git__strdup(dir);
+	if (!new->dir)
+		goto fail;
 
 	filter_w = gitwin_to_utf16(filter);
+	if (!filter_w)
+		goto fail;
+
 	new->h = FindFirstFileW(filter_w, &new->f);
 	git__free(filter_w);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
-		git__free(new->dir);
-		git__free(new);
-		return NULL;
+		giterr_set(GITERR_OS, "Could not open directory '%s'", dir);
+		goto fail;
 	}
-	new->first = 1;
 
+	new->first = 1;
 	return new;
+
+fail:
+	git__free(new->dir);
+	git__free(new);
+	return NULL;
 }
 
 int git__readdir_ext(
@@ -67,22 +71,32 @@ int git__readdir_ext(
 	if (!d || !entry || !result || d->h == INVALID_HANDLE_VALUE)
 		return -1;
 
+	*result = NULL;
+
 	if (d->first)
 		d->first = 0;
 	else if (!FindNextFileW(d->h, &d->f)) {
-		*result = NULL;
-		return 0;
+		if (GetLastError() == ERROR_NO_MORE_FILES)
+			return 0;
+		giterr_set(GITERR_OS, "Could not read from directory '%s'", d->dir);
+		return -1;
 	}
 
 	if (wcslen(d->f.cFileName) >= sizeof(entry->d_name))
 		return -1;
 
 	entry->d_ino = 0;
-	WideCharToMultiByte(
+
+	if (WideCharToMultiByte(
 		gitwin_get_codepage(), 0, d->f.cFileName, -1,
-		entry->d_name, GIT_PATH_MAX, NULL, NULL);
+		entry->d_name, GIT_PATH_MAX, NULL, NULL) == 0)
+	{
+		giterr_set(GITERR_OS, "Could not convert filename to UTF-8");
+		return -1;
+	}
 
 	*result = entry;
+
 	if (is_dir != NULL)
 		*is_dir = ((d->f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 
@@ -102,32 +116,40 @@ void git__rewinddir(git__DIR *d)
 	char filter[4096];
 	wchar_t* filter_w;
 
-	if (d) {
-		if (d->h != INVALID_HANDLE_VALUE)
-			FindClose(d->h);
+	if (!d)
+		return;
+
+	if (d->h != INVALID_HANDLE_VALUE) {
+		FindClose(d->h);
 		d->h = INVALID_HANDLE_VALUE;
 		d->first = 0;
-
-		if (init_filter(filter, sizeof(filter), d->dir)) {
-			filter_w = gitwin_to_utf16(filter);
-			d->h = FindFirstFileW(filter_w, &d->f);
-			git__free(filter_w);
-
-			if (d->h != INVALID_HANDLE_VALUE)
-				d->first = 1;
-		}
 	}
+
+	if (!init_filter(filter, sizeof(filter), d->dir) ||
+		(filter_w = gitwin_to_utf16(filter)) == NULL)
+		return;
+
+	d->h = FindFirstFileW(filter_w, &d->f);
+	git__free(filter_w);
+
+	if (d->h == INVALID_HANDLE_VALUE)
+		giterr_set(GITERR_OS, "Could not open directory '%s'", d->dir);
+	else
+		d->first = 1;
 }
 
 int git__closedir(git__DIR *d)
 {
-	if (d) {
-		if (d->h != INVALID_HANDLE_VALUE)
-			FindClose(d->h);
-		if (d->dir)
-			git__free(d->dir);
-		git__free(d);
+	if (!d)
+		return 0;
+
+	if (d->h != INVALID_HANDLE_VALUE) {
+		FindClose(d->h);
+		d->h = INVALID_HANDLE_VALUE;
 	}
+	git__free(d->dir);
+	d->dir = NULL;
+	git__free(d);
 	return 0;
 }
 

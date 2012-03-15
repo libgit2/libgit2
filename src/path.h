@@ -130,6 +130,11 @@ extern bool git_path_isdir(const char *path);
 extern bool git_path_isfile(const char *path);
 
 /**
+ * Stat a file and/or link and set error if needed.
+ */
+extern int git_path_lstat(const char *path, struct stat *st);
+
+/**
  * Check if the parent directory contains the item.
  *
  * @param dir Directory to check.

@@ -309,7 +309,7 @@ static int workdir_iterator__expand_dir(workdir_iterator *wi)
 
 	/* only push new ignores if this is not top level directory */
 	if (wi->stack->next != NULL) {
-		int slash_pos = git_buf_rfind_next(&wi->path, '/');
+		ssize_t slash_pos = git_buf_rfind_next(&wi->path, '/');
 		(void)git_ignore__push_dir(&wi->ignores, &wi->path.ptr[slash_pos + 1]);
 	}
 
