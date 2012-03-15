@@ -66,7 +66,7 @@ GIT_INLINE(int) git_hashtable_insert(git_hashtable *h, const void *key, void *va
 #define git_hashtable_node_at(nodes, pos) ((git_hashtable_node *)(&nodes[pos]))
 
 #define GIT_HASHTABLE__FOREACH(self,block) { \
-	unsigned int _c; \
+	size_t _c; \
 	git_hashtable_node *_n = (self)->nodes; \
 	for (_c = (self)->size; _c > 0; _c--, _n++)	{ \
 		if (!_n->key) continue; block } }

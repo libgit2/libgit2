@@ -67,6 +67,8 @@ static int lock_file(git_filebuf *file, int flags)
 	if (file->fd < 0)
 		return -1;
 
+	file->fd_is_open = true;
+
 	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == true) {
 		git_file source;
 		char buffer[2048];
@@ -94,10 +96,10 @@ static int lock_file(git_filebuf *file, int flags)
 
 void git_filebuf_cleanup(git_filebuf *file)
 {
-	if (file->fd >= 0)
+	if (file->fd_is_open && file->fd >= 0)
 		p_close(file->fd);
 
-	if (file->fd >= 0 && file->path_lock && git_path_exists(file->path_lock) == true)
+	if (file->fd_is_open && file->path_lock && git_path_exists(file->path_lock))
 		p_unlink(file->path_lock);
 
 	if (file->digest)
@@ -239,6 +241,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 			git_buf_free(&tmp_path);
 			goto cleanup;
 		}
+		file->fd_is_open = true;
 
 		/* No original path */
 		file->path_original = NULL;
@@ -308,6 +311,7 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 
 	p_close(file->fd);
 	file->fd = -1;
+	file->fd_is_open = false;
 
 	if (p_chmod(file->path_lock, mode)) {
 		giterr_set(GITERR_OS, "Failed to set attributes for file at '%s'", file->path_lock);

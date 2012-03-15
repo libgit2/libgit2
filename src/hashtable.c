@@ -31,9 +31,7 @@ static int resize_to(git_hashtable *self, size_t new_size)
 		self->size_mask = new_size - 1;
 		self->key_count = 0;
 		self->nodes = git__calloc(1, sizeof(git_hashtable_node) * self->size);
-
-		if (self->nodes == NULL)
-			return GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(self->nodes);
 
 		if (insert_nodes(self, old_nodes, old_size) == 0)
 			self->is_resizing = 0;
@@ -44,22 +42,22 @@ static int resize_to(git_hashtable *self, size_t new_size)
 	} while(self->is_resizing);
 
 	git__free(old_nodes);
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int set_size(git_hashtable *self, size_t new_size)
 {
 	self->nodes = git__realloc(self->nodes, new_size * sizeof(git_hashtable_node));
-	if (self->nodes == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(self->nodes);
 
 	if (new_size > self->size) {
-		memset(&self->nodes[self->size], 0x0, (new_size - self->size) * sizeof(git_hashtable_node));
+		memset(&self->nodes[self->size], 0x0,
+			(new_size - self->size) * sizeof(git_hashtable_node));
 	}
 
 	self->size = new_size;
 	self->size_mask = new_size - 1;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static git_hashtable_node *node_with_hash(git_hashtable *self, const void *key, int hash_id)
@@ -84,43 +82,47 @@ static int node_insert(git_hashtable *self, git_hashtable_node *new_node)
 			git_hashtable_node *node;
 			node = node_with_hash(self, new_node->key, hash_id);
 			node_swap_with(new_node, node);
-			if(new_node->key == 0x0){
+			if (new_node->key == 0x0){
 				self->key_count++;
-				return GIT_SUCCESS;
+				return 0;
 			}
 		}
 	}
 
-	if (self->is_resizing)
-		return git__throw(GIT_EBUSY, "Failed to insert node. Hashtable is currently resizing");
+	/* Failed to insert node. Hashtable is currently resizing */
+	assert(!self->is_resizing);
 
-	resize_to(self, self->size * 2);
-	git_hashtable_insert(self, new_node->key, new_node->value);
-	return GIT_SUCCESS;
+	if (resize_to(self, self->size * 2) < 0)
+		return -1;
+
+	return git_hashtable_insert(self, new_node->key, new_node->value);
 }
 
-static int insert_nodes(git_hashtable *self, git_hashtable_node *old_nodes, size_t old_size)
+static int insert_nodes(
+	git_hashtable *self, git_hashtable_node *old_nodes, size_t old_size)
 {
 	size_t i;
 
 	for (i = 0; i < old_size; ++i) {
 		git_hashtable_node *node = git_hashtable_node_at(old_nodes, i);
-		if (node->key && git_hashtable_insert(self, node->key, node->value) < GIT_SUCCESS)
-			return GIT_ENOMEM;
+		if (node->key &&
+			git_hashtable_insert(self, node->key, node->value) < 0)
+			return -1;
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
-git_hashtable *git_hashtable_alloc(size_t min_size,
-		git_hash_ptr hash,
-		git_hash_keyeq_ptr key_eq)
+git_hashtable *git_hashtable_alloc(
+	size_t min_size,
+	git_hash_ptr hash,
+	git_hash_keyeq_ptr key_eq)
 {
 	git_hashtable *table;
 
 	assert(hash && key_eq);
 
-	if ((table = git__malloc(sizeof(git_hashtable))) == NULL)
+	if ((table = git__malloc(sizeof(*table))) == NULL)
 		return NULL;
 
 	memset(table, 0x0, sizeof(git_hashtable));
@@ -161,7 +163,8 @@ void git_hashtable_free(git_hashtable *self)
 }
 
 
-int git_hashtable_insert2(git_hashtable *self, const void *key, void *value, void **old_value)
+int git_hashtable_insert2(
+	git_hashtable *self, const void *key, void *value, void **old_value)
 {
 	int hash_id;
 	git_hashtable_node *node;
@@ -177,14 +180,14 @@ int git_hashtable_insert2(git_hashtable *self, const void *key, void *value, voi
 			node->key = key;
 			node->value = value;
 			self->key_count++;
-			return GIT_SUCCESS;
+			return 0;
 		}
 
 		if (key == node->key || self->key_equal(key, node->key) == 0) {
 			*old_value = node->value;
 			node->key = key;
 			node->value = value;
-			return GIT_SUCCESS;
+			return 0;
 		}
 	}
 
@@ -213,7 +216,8 @@ void *git_hashtable_lookup(git_hashtable *self, const void *key)
 	return NULL;
 }
 
-int git_hashtable_remove2(git_hashtable *self, const void *key, void **old_value)
+int git_hashtable_remove2(
+	git_hashtable *self, const void *key, void **old_value)
 {
 	int hash_id;
 	git_hashtable_node *node;
@@ -236,8 +240,8 @@ int git_hashtable_remove2(git_hashtable *self, const void *key, void **old_value
 
 int git_hashtable_merge(git_hashtable *self, git_hashtable *other)
 {
-	if (resize_to(self, (self->size + other->size) * 2) < GIT_SUCCESS)
-		return GIT_ENOMEM;
+	if (resize_to(self, (self->size + other->size) * 2) < 0)
+		return -1;
 
 	return insert_nodes(self, other->nodes, other->key_count);
 }
@@ -254,5 +258,10 @@ uint32_t git_hash__strhash_cb(const void *key, int hash_id)
 		0x7daaab3c
 	};
 
-	return git__hash(key, strlen((const char *)key), hash_seeds[hash_id]);
+	size_t key_len = strlen((const char *)key);
+
+	/* won't take hash of strings longer than 2^31 right now */
+	assert(key_len == (size_t)((int)key_len));
+
+	return git__hash(key, (int)key_len, hash_seeds[hash_id]);
 }

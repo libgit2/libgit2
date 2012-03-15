@@ -377,17 +377,15 @@ void git_repository_set_index(git_repository *repo, git_index *index)
 
 static int retrieve_device(dev_t *device_out, const char *path)
 {
+	int error;
 	struct stat path_info;
 
 	assert(device_out);
 
-	if (p_lstat(path, &path_info)) {
-		giterr_set(GITERR_OS, "Failed to retrieve file information: %s", strerror(errno));
-		return -1;
-	}
+	if ((error = git_path_lstat(path, &path_info)) == 0)
+		*device_out = path_info.st_dev;
 
-	*device_out = path_info.st_dev;
-	return 0;
+	return error;
 }
 
 /*

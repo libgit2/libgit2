@@ -40,7 +40,7 @@ static struct {
 	{GIT_EEXISTS, "A reference with this name already exists"},
 	{GIT_EOVERFLOW, "The given integer literal is too large to be parsed"},
 	{GIT_ENOTNUM, "The given literal is not a valid number"},
-	{GIT_EAMBIGUOUSOIDPREFIX, "The given oid prefix is ambiguous"},
+	{GIT_EAMBIGUOUS, "The given oid prefix is ambiguous"},
 };
 
 const char *git_strerror(int num)
@@ -123,15 +123,43 @@ void giterr_set(int error_class, const char *string, ...)
 	char error_str[1024];
 	va_list arglist;
 
+	/* Grab errno before calling vsnprintf() so it won't be overwritten */
+	const char *os_error_msg =
+		(error_class == GITERR_OS && errno != 0) ? strerror(errno) : NULL;
+#ifdef GIT_WIN32
+	DWORD dwLastError = GetLastError();
+#endif
+
 	va_start(arglist, string);
 	p_vsnprintf(error_str, sizeof(error_str), string, arglist);
 	va_end(arglist);
 
 	/* automatically suffix strerror(errno) for GITERR_OS errors */
 	if (error_class == GITERR_OS) {
-		strncat(error_str, ": ", sizeof(error_str));
-		strncat(error_str, strerror(errno), sizeof(error_str));
-		errno = 0;
+		if (os_error_msg != NULL) {
+			strncat(error_str, ": ", sizeof(error_str));
+			strncat(error_str, os_error_msg, sizeof(error_str));
+			errno = 0; /* reset so same error won't be reported twice */
+		}
+#ifdef GIT_WIN32
+		else if (dwLastError != 0) {
+			LPVOID lpMsgBuf = NULL;
+
+			FormatMessage(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+				FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, dwLastError, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
+
+			if (lpMsgBuf) {
+				strncat(error_str, ": ", sizeof(error_str));
+				strncat(error_str, (const char *)lpMsgBuf, sizeof(error_str));
+				LocalFree(lpMsgBuf);
+			}
+
+			SetLastError(0);
+		}
+#endif
 	}
 
 	giterr_set_str(error_class, error_str);
@@ -165,3 +193,14 @@ void giterr_clear(void)
 {
 	GIT_GLOBAL->last_error = NULL;
 }
+
+const git_error *git_error_last(void)
+{
+	return GIT_GLOBAL->last_error;
+}
+
+void git_error_clear(void)
+{
+	giterr_clear();
+}
+

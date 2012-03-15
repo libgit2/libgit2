@@ -215,8 +215,8 @@ void git_buf_truncate(git_buf *buf, size_t len)
 
 void git_buf_rtruncate_at_char(git_buf *buf, char separator)
 {
-	int idx = git_buf_rfind_next(buf, separator);
-	git_buf_truncate(buf, idx < 0 ? 0 : idx);
+	ssize_t idx = git_buf_rfind_next(buf, separator);
+	git_buf_truncate(buf, idx < 0 ? 0 : (size_t)idx);
 }
 
 void git_buf_swap(git_buf *buf_a, git_buf *buf_b)

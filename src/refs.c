@@ -842,7 +842,7 @@ static int reference_path_available(
 
 	if (!data.available) {
 		giterr_set(GITERR_REFERENCE,
-			"The path to reference '%s' collides with an existing one");
+			"The path to reference '%s' collides with an existing one", ref);
 		return -1;
 	}
 
@@ -902,7 +902,7 @@ static int reference_can_write(
 		 * the rename; the existing one would be overwritten */
 		if (exists) {
 			giterr_set(GITERR_REFERENCE,
-				"A reference with that name (%s) already exists");
+				"A reference with that name (%s) already exists", refname);
 			return GIT_EEXISTS;
 		}
 	}

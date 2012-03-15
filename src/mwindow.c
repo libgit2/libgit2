@@ -178,8 +178,10 @@ static git_mwindow *new_window(
 	 * window.
 	 */
 
-	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < GIT_SUCCESS)
-		goto cleanup;
+	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
+		git__free(w);
+		return NULL;
+	}
 
 	ctl->mmap_calls++;
 	ctl->open_windows++;
@@ -191,10 +193,6 @@ static git_mwindow *new_window(
 		ctl->peak_open_windows = ctl->open_windows;
 
 	return w;
-
-cleanup:
-	git__free(w);
-	return NULL;
 }
 
 /*
@@ -205,7 +203,7 @@ unsigned char *git_mwindow_open(
 	git_mwindow_file *mwf,
 	git_mwindow **cursor,
 	git_off_t offset,
-	int extra,
+	size_t extra,
 	unsigned int *left)
 {
 	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
@@ -253,11 +251,10 @@ unsigned char *git_mwindow_open(
 int git_mwindow_file_register(git_mwindow_file *mwf)
 {
 	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
-	int error;
 
 	if (ctl->windowfiles.length == 0 &&
-		(error = git_vector_init(&ctl->windowfiles, 8, NULL)) < GIT_SUCCESS)
-		return error;
+		git_vector_init(&ctl->windowfiles, 8, NULL) < 0)
+		return -1;
 
 	return git_vector_insert(&ctl->windowfiles, mwf);
 }

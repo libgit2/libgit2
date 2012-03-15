@@ -92,7 +92,7 @@ int git_object_lookup_prefix(
 	assert(repo && object_out && id);
 
 	if (len < GIT_OID_MINPREFIXLEN)
-		return git__throw(GIT_EAMBIGUOUSOIDPREFIX,
+		return git__throw(GIT_EAMBIGUOUS,
 			"Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
 
 	error = git_repository_odb__weakptr(&odb, repo);

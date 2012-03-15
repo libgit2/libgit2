@@ -82,7 +82,7 @@ extern int git_attr_file__lookup_one(
 /* loop over rules in file from bottom to top */
 #define git_attr_file__foreach_matching_rule(file, path, iter, rule)	\
 	git_vector_rforeach(&(file)->rules, (iter), (rule)) \
-		if (git_attr_rule__match((rule), (path)) == GIT_SUCCESS)
+		if (git_attr_rule__match((rule), (path)))
 
 extern unsigned long git_attr_file__name_hash(const char *name);
 
@@ -96,13 +96,13 @@ extern int git_attr_fnmatch__parse(
 	const char *source,
 	const char **base);
 
-extern int git_attr_fnmatch__match(
+extern bool git_attr_fnmatch__match(
 	git_attr_fnmatch *rule,
 	const git_attr_path *path);
 
 extern void git_attr_rule__free(git_attr_rule *rule);
 
-extern int git_attr_rule__match(
+extern bool git_attr_rule__match(
 	git_attr_rule *rule,
 	const git_attr_path *path);
 
