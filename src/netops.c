@@ -25,6 +25,26 @@
 #include "common.h"
 #include "netops.h"
 #include "posix.h"
+#include "buffer.h"
+
+#ifdef GIT_WIN32
+static void net_set_error(const char *str)
+{
+	int size, error = WSAGetLastError();
+	LPSTR err_str = NULL;
+
+	size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+			     0, error, 0, (LPSTR)&err_str, 0, 0);
+
+	giterr_set(GITERR_NET, "%s: $s", str, err_str);
+	LocalFree(err_str);
+}
+#else
+static void net_set_error(const char *str)
+{
+	giterr_set(GITERR_NET, "%s: %s", str, strerror(errno));
+}
+#endif
 
 void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
 {
@@ -45,7 +65,7 @@ int gitno_recv(gitno_buffer *buf)
 		return 0;
 
 	if (ret < 0) {
-		giterr_set(GITERR_NET, "Error receiving data");
+		net_set_error("Error receiving data");
 		return -1;
 	}
 
@@ -100,7 +120,7 @@ int gitno_connect(const char *host, const char *port)
 #else
 		if (s < 0) {
 #endif
-			giterr_set(GITERR_OS, "Error creating socket");
+			net_set_error("Error creating socket");
 			freeaddrinfo(info);
 			return -1;
 		}
@@ -132,7 +152,7 @@ int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 
 		ret = send(s, msg + off, len - off, flags);
 		if (ret < 0) {
-			giterr_set(GITERR_OS, "Error sending data: %s", strerror(errno));
+			net_set_error("Error sending data");
 			return -1;
 		}
 
