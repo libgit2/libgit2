@@ -327,7 +327,7 @@ int git_path_walk_up(
 	assert(path && cb);
 
 	if (ceiling != NULL) {
-		if (git__prefixcmp(path->ptr, ceiling) == GIT_SUCCESS)
+		if (git__prefixcmp(path->ptr, ceiling) == 0)
 			stop = (ssize_t)strlen(ceiling);
 		else
 			stop = path->size;

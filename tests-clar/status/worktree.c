@@ -27,7 +27,7 @@ cb_status__normal( const char *path, unsigned int status_flags, void *payload)
 
 exit:
 	counts->entry_count++;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int
@@ -40,7 +40,7 @@ cb_status__count(const char *p, unsigned int s, void *payload)
 
 	(*count)++;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 

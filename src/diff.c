@@ -249,14 +249,14 @@ static git_diff_list *git_diff_list_alloc(
 		diff->opts.dst_prefix = swap;
 	}
 
-	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < GIT_SUCCESS) {
+	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0) {
 		git__free(diff->opts.src_prefix);
 		git__free(diff->opts.dst_prefix);
 		git__free(diff);
 		return NULL;
 	}
 
-	/* do something safe with the pathspec strarray */
+	/* TODO: do something safe with the pathspec strarray */
 
 	return diff;
 }

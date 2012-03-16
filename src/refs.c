@@ -186,7 +186,7 @@ static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 	if (*buffer != '\n')
 		goto corrupt;
 
-	return GIT_SUCCESS;
+	return 0;
 
 corrupt:
 	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
@@ -200,7 +200,7 @@ static git_rtype loose_guess_rtype(const git_buf *full_path)
 
 	type = GIT_REF_INVALID;
 
-	if (git_futils_readbuffer(&ref_file, full_path->ptr) == GIT_SUCCESS) {
+	if (git_futils_readbuffer(&ref_file, full_path->ptr) == 0) {
 		if (git__prefixcmp((const char *)(ref_file.ptr), GIT_SYMREF) == 0)
 			type = GIT_REF_SYMBOLIC;
 		else
@@ -335,7 +335,7 @@ static int packed_parse_peel(
 		goto corrupt;
 
 	/* Is this a valid object id? */
-	if (git_oid_fromstr(&tag_ref->peel, buffer) < GIT_SUCCESS)
+	if (git_oid_fromstr(&tag_ref->peel, buffer) < 0)
 		goto corrupt;
 
 	buffer = buffer + GIT_OID_HEXSZ;
@@ -1483,7 +1483,7 @@ int git_reference_listall(
 	array->strings = NULL;
 	array->count = 0;
 
-	if (git_vector_init(&ref_list, 8, NULL) < GIT_SUCCESS)
+	if (git_vector_init(&ref_list, 8, NULL) < 0)
 		return -1;
 
 	if (git_reference_foreach(

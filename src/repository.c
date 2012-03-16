@@ -878,7 +878,7 @@ int git_repository_set_workdir(git_repository *repo, const char *workdir)
 	GITERR_CHECK_ALLOC(repo->workdir);
 
 	repo->is_bare = 0;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_repository_is_bare(git_repository *repo)

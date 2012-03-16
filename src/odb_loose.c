@@ -582,7 +582,7 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 {
 	git_buf object_path = GIT_BUF_INIT;
 	git_rawobj raw;
-	int error = GIT_SUCCESS;
+	int error;
 
 	assert(backend && oid);
 
@@ -803,7 +803,7 @@ static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const v
 		error = -1;
 
 cleanup:
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		git_filebuf_cleanup(&fbuf);
 	git_buf_free(&final_path);
 	return error;

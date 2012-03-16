@@ -34,7 +34,7 @@ extern int git_attr_cache__push_file(
 	const char     *filename,
 	int (*loader)(git_repository *, const char *, git_attr_file *));
 
-/* returns GIT_SUCCESS if path is in cache */
-extern int git_attr_cache__is_cached(git_repository *repo, const char *path);
+/* returns true if path is in cache */
+extern bool git_attr_cache__is_cached(git_repository *repo, const char *path);
 
 #endif

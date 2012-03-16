@@ -150,7 +150,7 @@ static int write_symlink(
 
 int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path)
 {
-	int error = GIT_SUCCESS;
+	int error;
 	git_buf full_path = GIT_BUF_INIT;
 	git_off_t size;
 	struct stat st;

@@ -348,7 +348,7 @@ static int check_one_walkup_step(void *ref, git_buf *path)
 	cl_assert(info->expect[info->expect_idx] != NULL);
 	cl_assert_strequal(info->expect[info->expect_idx], path->ptr);
 	info->expect_idx++;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void test_core_path__11_walkup(void)

@@ -47,6 +47,6 @@ void test_status_ignore__0(void)
 	}
 
 	/* confirm that ignore files were cached */
-	cl_git_pass(git_attr_cache__is_cached(g_repo, ".git/info/exclude"));
-	cl_git_pass(git_attr_cache__is_cached(g_repo, ".gitignore"));
+	cl_assert(git_attr_cache__is_cached(g_repo, ".git/info/exclude"));
+	cl_assert(git_attr_cache__is_cached(g_repo, ".gitignore"));
 }

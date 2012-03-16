@@ -32,7 +32,7 @@ void git_buf_init(git_buf *buf, size_t initial_size);
  * If the allocation fails, this will return an error and the buffer
  * will be marked as invalid for future operations.  The existing
  * contents of the buffer will be preserved however.
- * @return GIT_SUCCESS or GIT_ENOMEM on failure
+ * @return 0 on success or -1 on failure
  */
 int git_buf_grow(git_buf *buf, size_t target_size);
 
@@ -63,12 +63,12 @@ void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
 bool git_buf_oom(const git_buf *buf);
 
 /*
- * The functions below that return int values, will return GIT_ENOMEM
- * if they fail to expand the git_buf when they are called, otherwise
- * GIT_SUCCESS.  Passing a git_buf that has failed an allocation will
- * automatically return GIT_ENOMEM for all further calls.  As a result,
- * you can ignore the return code of these functions and call them in a
- * series then just call git_buf_lasterror at the end.
+ * Functions below that return int value error codes will return 0 on
+ * success or -1 on failure (which generally means an allocation failed).
+ * Using a git_buf where the allocation has failed with result in -1 from
+ * all further calls using that buffer.  As a result, you can ignore the
+ * return code of these functions and call them in a series then just call
+ * git_buf_oom at the end.
  */
 int git_buf_set(git_buf *buf, const char *data, size_t len);
 int git_buf_sets(git_buf *buf, const char *string);
@@ -86,7 +86,7 @@ int git_buf_join(git_buf *buf, char separator, const char *str_a, const char *st
 
 /**
  * Join two strings as paths, inserting a slash between as needed.
- * @return error code or GIT_SUCCESS
+ * @return 0 on success, -1 on failure
  */
 GIT_INLINE(int) git_buf_joinpath(git_buf *buf, const char *a, const char *b)
 {

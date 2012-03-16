@@ -139,7 +139,7 @@ extern int git_path_lstat(const char *path, struct stat *st);
  *
  * @param dir Directory to check.
  * @param item Item that might be in the directory.
- * @return GIT_SUCCESS if item exists in directory, <0 otherwise.
+ * @return 0 if item exists in directory, <0 otherwise.
  */
 extern bool git_path_contains(git_buf *dir, const char *item);
 
@@ -211,7 +211,7 @@ extern int git_path_cmp(
  * Invoke callback up path directory by directory until the ceiling is
  * reached (inclusive of a final call at the root_path).
  *
- * Returning anything other than GIT_SUCCESS from the callback function
+ * Returning anything other than 0 from the callback function
  * will stop the iteration and propogate the error to the caller.
  *
  * @param pathbuf Buffer the function reads the directory from and

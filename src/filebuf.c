@@ -91,7 +91,7 @@ static int lock_file(git_filebuf *file, int flags)
 		p_close(source);
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_filebuf_cleanup(git_filebuf *file)

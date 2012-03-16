@@ -287,7 +287,7 @@ int git_attr_path__init(
  */
 
 /*
- * This will return GIT_SUCCESS if the spec was filled out,
+ * This will return 0 if the spec was filled out,
  * GIT_ENOTFOUND if the fnmatch does not require matching, or
  * another error code there was an actual problem.
  */

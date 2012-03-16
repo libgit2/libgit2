@@ -72,9 +72,9 @@ void test_attr_repo__get_one(void)
 		attr_check_expected(scan->expected, scan->expected_str, value);
 	}
 
-	cl_git_pass(git_attr_cache__is_cached(g_repo, ".git/info/attributes"));
-	cl_git_pass(git_attr_cache__is_cached(g_repo, ".gitattributes"));
-	cl_git_pass(git_attr_cache__is_cached(g_repo, "sub/.gitattributes"));
+	cl_assert(git_attr_cache__is_cached(g_repo, ".git/info/attributes"));
+	cl_assert(git_attr_cache__is_cached(g_repo, ".gitattributes"));
+	cl_assert(git_attr_cache__is_cached(g_repo, "sub/.gitattributes"));
 }
 
 void test_attr_repo__get_many(void)
@@ -114,7 +114,7 @@ static int count_attrs(
 
 	*((int *)payload) += 1;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void test_attr_repo__foreach(void)

@@ -26,7 +26,7 @@ extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t 
  * These are custom filesystem-related helper methods. They are
  * rather high level, and wrap the underlying POSIX methods
  *
- * All these methods return GIT_SUCCESS on success,
+ * All these methods return 0 on success,
  * or an error code on failure and an error message is set.
  */
 
@@ -108,8 +108,8 @@ extern mode_t git_futils_canonical_mode(mode_t raw_mode);
  * @param begin first byte to map, this should be page aligned.
  * @param end number of bytes to map.
  * @return
- * - GIT_SUCCESS on success;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - 0 on success;
+ * - -1 on error.
  */
 extern int git_futils_mmap_ro(
 	git_map *out,
@@ -123,8 +123,9 @@ extern int git_futils_mmap_ro(
  * @param out buffer to populate with the mapping information.
  * @param path path to file to be opened.
  * @return
- * - GIT_SUCCESS on success;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - 0 on success;
+ * - GIT_ENOTFOUND if not found;
+ * - -1 on an unspecified OS related error.
  */
 extern int git_futils_mmap_ro_file(
 	git_map *out,
@@ -142,9 +143,9 @@ extern void git_futils_mmap_free(git_map *map);
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
  * @return
- * - GIT_SUCCESS if found;
+ * - 0 if found;
  * - GIT_ENOTFOUND if not found;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - -1 on an unspecified OS related error.
  */
 extern int git_futils_find_global_file(git_buf *path, const char *filename);
 
@@ -154,9 +155,9 @@ extern int git_futils_find_global_file(git_buf *path, const char *filename);
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
  * @return
- * - GIT_SUCCESS if found;
+ * - 0 if found;
  * - GIT_ENOTFOUND if not found;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - -1 on an unspecified OS related error.
  */
 extern int git_futils_find_system_file(git_buf *path, const char *filename);
 

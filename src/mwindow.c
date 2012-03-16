@@ -115,7 +115,7 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	unsigned int i;
 	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = &mwf->windows;
 
-	/* FIMXE: Does this give us any advantage? */
+	/* FIXME: Does this give us any advantage? */
 	if(mwf->windows)
 		git_mwindow_scan_lru(mwf, &lru_w, &lru_l);
 
@@ -127,22 +127,23 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 			list = &cur->windows;
 	}
 
-	if (lru_w) {
-		ctl->mapped -= lru_w->window_map.len;
-		git_futils_mmap_free(&lru_w->window_map);
-
-		if (lru_l)
-			lru_l->next = lru_w->next;
-		else
-			*list = lru_w->next;
-
-		git__free(lru_w);
-		ctl->open_windows--;
-
-		return GIT_SUCCESS;
+	if (!lru_w) {
+		giterr_set(GITERR_OS, "Failed to close memory window. Couldn't find LRU");
+		return -1;
 	}
 
-	return git__throw(GIT_ERROR, "Failed to close memory window. Couln't find LRU");
+	ctl->mapped -= lru_w->window_map.len;
+	git_futils_mmap_free(&lru_w->window_map);
+
+	if (lru_l)
+		lru_l->next = lru_w->next;
+	else
+		*list = lru_w->next;
+
+	git__free(lru_w);
+	ctl->open_windows--;
+
+	return 0;
 }
 
 static git_mwindow *new_window(
@@ -158,7 +159,7 @@ static git_mwindow *new_window(
 
 	w = git__malloc(sizeof(*w));
 	if (w == NULL)
-		return w;
+		return NULL;
 
 	memset(w, 0x0, sizeof(*w));
 	w->offset = (offset / walign) * walign;
@@ -170,7 +171,7 @@ static git_mwindow *new_window(
 	ctl->mapped += (size_t)len;
 
 	while (_mw_options.mapped_limit < ctl->mapped &&
-			git_mwindow_close_lru(mwf) == GIT_SUCCESS) /* nop */;
+			git_mwindow_close_lru(mwf) == 0) /* nop */;
 
 	/*
 	 * We treat _mw_options.mapped_limit as a soft limit. If we can't find a

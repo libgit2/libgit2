@@ -508,7 +508,7 @@ static int packfile_open(struct git_pack_file *p)
 
 	assert(p->index_map.data);
 
-	if (!p->index_map.data && pack_index_open(p) < GIT_SUCCESS)
+	if (!p->index_map.data && pack_index_open(p) < 0)
 		return git_odb__error_notfound("failed to open packfile");
 
 	/* TODO: open with noatime */

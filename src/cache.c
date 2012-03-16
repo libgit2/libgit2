@@ -32,11 +32,10 @@ int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_pt
 	git_mutex_init(&cache->lock);
 
 	cache->nodes = git__malloc(size * sizeof(git_cached_obj *));
-	if (cache->nodes == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(cache->nodes);
 
 	memset(cache->nodes, 0x0, size * sizeof(git_cached_obj *));
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_cache_free(git_cache *cache)

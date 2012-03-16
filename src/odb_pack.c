@@ -226,7 +226,7 @@ static int packfile_load__cb(void *_data, git_buf *path)
 	error = git_packfile_check(&pack, path->ptr);
 	if (error == GIT_ENOTFOUND)
 		/* ignore missing .pack file as git does */
-		return GIT_SUCCESS;
+		return 0;
 	else if (error < 0)
 		return error;
 

@@ -432,7 +432,7 @@ BEGIN_TEST(singlestatus4, "can't determine the status for a folder")
 	must_pass(git_repository_open(&repo, TEST_STD_REPO_FOLDER));
 
 	error = git_status_file(&status_flags, repo, "subdir");
-	must_be_true(error == GIT_EINVALIDPATH);
+	must_be_true(error < 0);
 
 	git_repository_free(repo);
 
