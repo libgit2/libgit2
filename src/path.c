@@ -171,6 +171,15 @@ int git_path_root(const char *path)
 	/* Does the root of the path look like a windows drive ? */
 	if (isalpha(path[0]) && (path[1] == ':'))
 		offset += 2;
+
+	/* Are we dealing with a network path? */
+	else if (path[0] == '/' && path[1] == '/') {
+		offset += 2;
+	
+		/* Skip the computer name segment */
+		while (*(path + offset) && *(path + offset) != '/')
+			offset++;
+	}
 #endif
 
 	if (*(path + offset) == '/')

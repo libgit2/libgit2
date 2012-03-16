@@ -388,3 +388,18 @@ void test_core_path__11_walkup(void)
 
 	git_buf_free(&p);
 }
+
+void test_core_path__12_offset_to_path_root(void)
+{
+	cl_assert(git_path_root("non/rooted/path") == -1);
+	cl_assert(git_path_root("/rooted/path") == 0);
+
+#ifdef GIT_WIN32
+	/* Windows specific tests */
+	cl_assert(git_path_root("C:non/rooted/path") == -1);
+	cl_assert(git_path_root("C:/rooted/path") == 2);
+	cl_assert(git_path_root("//computername/sharefolder/resource") == 14);
+	cl_assert(git_path_root("//computername/sharefolder") == 14);
+	cl_assert(git_path_root("//computername") == -1);
+#endif
+}
