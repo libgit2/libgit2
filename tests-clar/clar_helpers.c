@@ -88,3 +88,54 @@ void cl_git_sandbox_cleanup(void)
 		_cl_sandbox = NULL;
 	}
 }
+
+void locate_loose_object(const char *repository_folder, git_object *object, char **out, char **out_folder)
+{
+	static const char *objects_folder = "objects/";
+
+	char *ptr, *full_path, *top_folder;
+	int path_length, objects_length;
+
+	assert(repository_folder && object);
+
+	objects_length = strlen(objects_folder);
+	path_length = strlen(repository_folder);
+	ptr = full_path = git__malloc(path_length + objects_length + GIT_OID_HEXSZ + 3);
+
+	strcpy(ptr, repository_folder);
+	strcpy(ptr + path_length, objects_folder);
+
+	ptr = top_folder = ptr + path_length + objects_length;
+	*ptr++ = '/';
+	git_oid_pathfmt(ptr, git_object_id(object));
+	ptr += GIT_OID_HEXSZ + 1;
+	*ptr = 0;
+
+	*out = full_path;
+
+	if (out_folder)
+		*out_folder = top_folder;
+}
+
+int remove_loose_object(const char *repository_folder, git_object *object)
+{
+	char *full_path, *top_folder;
+
+	locate_loose_object(repository_folder, object, &full_path, &top_folder);
+
+	if (p_unlink(full_path) < 0) {
+		fprintf(stderr, "can't delete object file \"%s\"\n", full_path);
+		return -1;
+	}
+
+	*top_folder = 0;
+
+	if ((p_rmdir(full_path) < 0) && (errno != ENOTEMPTY)) {
+		fprintf(stderr, "can't remove object directory \"%s\"\n", full_path);
+		return -1;
+	}
+
+	git__free(full_path);
+
+	return GIT_SUCCESS;
+}
