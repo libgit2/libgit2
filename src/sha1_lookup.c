@@ -158,7 +158,8 @@ int sha1_entry_pos(const void *table,
 #endif
 
 		if (!(lo <= mi && mi < hi)) {
-			return git__throw(GIT_ERROR, "Assertion failure. Binary search invariant is false");
+			giterr_set(GITERR_INVALID, "Assertion failure. Binary search invariant is false");
+			return -1;
 		}
 
 		mi_key = base + elem_size * mi + key_offset;

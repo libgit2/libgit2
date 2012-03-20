@@ -541,6 +541,10 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 	}
 
+	/* TODO: If no backends are configured, this returns GIT_ENOTFOUND but
+	 * will never have called giterr_set().
+	 */
+
 	if (error && error != GIT_EPASSTHROUGH)
 		return error;
 

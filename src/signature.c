@@ -38,31 +38,38 @@ static const char *skip_trailing_spaces(const char *buffer_start, const char *bu
 	return buffer_end;
 }
 
+static int signature_error(const char *msg)
+{
+	giterr_set(GITERR_INVALID, "Failed to parse signature - %s", msg);
+	return -1;
+}
+
 static int process_trimming(const char *input, char **storage, const char *input_end, int fail_when_empty)
 {
 	const char *left, *right;
 	int trimmed_input_length;
+
+	assert(storage);
 
 	left = skip_leading_spaces(input, input_end);
 	right = skip_trailing_spaces(input, input_end - 1);
 
 	if (right < left) {
 		if (fail_when_empty)
-			return git__throw(GIT_EINVALIDARGS, "Failed to trim. Input is either empty or only contains spaces");
-		else
-			right = left - 1;
+			return signature_error("input is either empty of contains only spaces");
+
+		right = left - 1;
 	}
 
 	trimmed_input_length = right - left + 1;
 
 	*storage = git__malloc(trimmed_input_length + 1);
-	if (*storage == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(*storage);
 
 	memcpy(*storage, left, trimmed_input_length);
 	(*storage)[trimmed_input_length] = 0;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset)
@@ -74,23 +81,14 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 	*sig_out = NULL;
 
-	if ((p = git__malloc(sizeof(git_signature))) == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	p = git__calloc(1, sizeof(git_signature));
+	GITERR_CHECK_ALLOC(p);
 
-	memset(p, 0x0, sizeof(git_signature));
-
-	error = process_trimming(name, &p->name, name + strlen(name), 1);
-	if (error < GIT_SUCCESS) {
-		git__rethrow(GIT_EINVALIDARGS, "Failed to create signature. 'name' argument is invalid");
-		goto cleanup;
-	}
-
-	error = process_trimming(email, &p->email, email + strlen(email), 1);
-	if (error < GIT_SUCCESS) {
-		git__rethrow(GIT_EINVALIDARGS, "Failed to create signature. 'email' argument is invalid");
-		goto cleanup;
+	if ((error = process_trimming(name, &p->name, name + strlen(name), 1)) < 0 ||
+		(error = process_trimming(email, &p->email, email + strlen(email), 1)) < 0)
+	{
+		git_signature_free(p);
+		return error;
 	}
 
 	p->when.time = time;
@@ -98,24 +96,19 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 	*sig_out = p;
 
-	return error;
-
-cleanup:
-	git_signature_free(p);
-	return error;
+	return 0;
 }
 
 git_signature *git_signature_dup(const git_signature *sig)
 {
 	git_signature *new;
-	if (git_signature_new(&new, sig->name, sig->email, sig->when.time, sig->when.offset) < GIT_SUCCESS)
+	if (git_signature_new(&new, sig->name, sig->email, sig->when.time, sig->when.offset) < 0)
 		return NULL;
 	return new;
 }
 
 int git_signature_now(git_signature **sig_out, const char *name, const char *email)
 {
-	int error;
 	time_t now;
 	time_t offset;
 	struct tm *utc_tm, *local_tm;
@@ -148,12 +141,18 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 	if (local_tm->tm_isdst)
 		offset += 60;
 
-	if ((error = git_signature_new(&sig, name, email, now, (int)offset)) < GIT_SUCCESS)
-		return error;
+	if (git_signature_new(&sig, name, email, now, (int)offset) < 0)
+		return -1;
 
 	*sig_out = sig;
 
-	return error;
+	return 0;
+}
+
+static int timezone_error(const char *msg)
+{
+	giterr_set(GITERR_INVALID, "Failed to parse TZ offset - %s", msg);
+	return -1;
 }
 
 static int parse_timezone_offset(const char *buffer, int *offset_out)
@@ -172,28 +171,28 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 	}
 
 	if (offset_start[0] != '-' && offset_start[0] != '+')
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. It doesn't start with '+' or '-'");
+		return timezone_error("does not start with '+' or '-'");
 
 	if (offset_start[1] < '0' || offset_start[1] > '9')
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset.");
+		return timezone_error("expected initial digit");
 
 	if (git__strtol32(&dec_offset, offset_start + 1, &offset_end, 10) < GIT_SUCCESS)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. It isn't a number");
+		return timezone_error("not a valid number");
 
 	if (offset_end - offset_start != 5)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Invalid length");
+		return timezone_error("invalid length");
 
 	if (dec_offset > 1400)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Value too large");
+		return timezone_error("value too large");
 
 	hours = dec_offset / 100;
 	mins = dec_offset % 100;
 
 	if (hours > 14)	// see http://www.worldtimezone.com/faq.html
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Hour value too large");
+		return timezone_error("hour value too large");
 
 	if (mins > 59)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse TZ offset. Minute value too large");
+		return timezone_error("minutes value too large");
 
 	offset = (hours * 60) + mins;
 
@@ -202,22 +201,22 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 
 	*offset_out = offset;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int process_next_token(const char **buffer_out, char **storage,
 	const char *token_end, const char *right_boundary)
 {
 	int error = process_trimming(*buffer_out, storage, token_end, 0);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		return error;
 
 	*buffer_out = token_end + 1;
 
 	if (*buffer_out > right_boundary)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
+		return signature_error("signature is too short");
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static const char *scan_for_previous_token(const char *buffer, const char *left_boundary)
@@ -241,17 +240,17 @@ static int parse_time(git_time_t *time_out, const char *buffer)
 	int time;
 	int error;
 
-	if (*buffer == '+' || *buffer == '-')
-		return git__throw(GIT_ERROR, "Failed while parsing time. '%s' rather look like a timezone offset.", buffer);
+	if (*buffer == '+' || *buffer == '-') {
+		giterr_set(GITERR_INVALID, "Failed while parsing time. '%s' actually looks like a timezone offset.", buffer);
+		return -1;
+	}
 
 	error = git__strtol32(&time, buffer, &buffer, 10);
 
-	if (error < GIT_SUCCESS)
-		return error;
+	if (!error)
+		*time_out = (git_time_t)time;
 
-	*time_out = (git_time_t)time;
-
-	return GIT_SUCCESS;
+	return error;
 }
 
 int git_signature__parse(git_signature *sig, const char **buffer_out,
@@ -264,35 +263,35 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	memset(sig, 0x0, sizeof(git_signature));
 
 	if ((line_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. No newline given");
+		return signature_error("no newline given");
 
 	if (header) {
 		const size_t header_len = strlen(header);
 
 		if (memcmp(buffer, header, header_len) != 0)
-			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Expected prefix '%s' doesn't match actual", header);
+			return signature_error("expected prefix doesn't match actual");
 
 		buffer += header_len;
 	}
 
 	if (buffer > line_end)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Signature too short");
+		return signature_error("signature too short");
 
 	if ((name_end = strchr(buffer, '<')) == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Cannot find '<' in signature");
+		return signature_error("character '<' not allowed in signature");
 
 	if ((email_end = strchr(name_end, '>')) == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Cannot find '>' in signature");
+		return signature_error("character '>' not allowed in signature");
 
 	if (email_end < name_end)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse signature. Malformed e-mail");
+		return signature_error("malformed e-mail");
 
 	error = process_next_token(&buffer, &sig->name, name_end, line_end);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		return error;
 
 	error = process_next_token(&buffer, &sig->email, email_end, line_end);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		return error;
 
 	tz_start = scan_for_previous_token(line_end - 1, buffer);
@@ -301,19 +300,19 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		goto clean_exit;	/* No timezone nor date */
 
 	time_start = scan_for_previous_token(tz_start - 1, buffer);
-	if (time_start == NULL || parse_time(&sig->when.time, time_start) < GIT_SUCCESS) {
+	if (time_start == NULL || parse_time(&sig->when.time, time_start) < 0) {
 		/* The tz_start might point at the time */
 		parse_time(&sig->when.time, tz_start);
 		goto clean_exit;
 	}
 
-	if (parse_timezone_offset(tz_start, &sig->when.offset) < GIT_SUCCESS) {
+	if (parse_timezone_offset(tz_start, &sig->when.offset) < 0) {
 		sig->when.time = 0; /* Bogus timezone, we reset the time */
 	}
 
 clean_exit:
 	*buffer_out = line_end + 1;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_signature__writebuf(git_buf *buf, const char *header, const git_signature *sig)
