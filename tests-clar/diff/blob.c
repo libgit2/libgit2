@@ -43,7 +43,7 @@ void test_diff_blob__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
-		g_repo, a, b, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		a, b, &opts, &exp, diff_hunk_fn, diff_line_fn));
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.lines == 6);
@@ -53,7 +53,7 @@ void test_diff_blob__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
-		g_repo, b, c, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		b, c, &opts, &exp, diff_hunk_fn, diff_line_fn));
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.lines == 15);
@@ -63,7 +63,7 @@ void test_diff_blob__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
-		g_repo, a, c, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		a, c, &opts, &exp, diff_hunk_fn, diff_line_fn));
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.lines == 13);
@@ -75,7 +75,7 @@ void test_diff_blob__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
-		g_repo, c, d, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		c, d, &opts, &exp, diff_hunk_fn, diff_line_fn));
 
 	cl_assert(exp.hunks == 2);
 	cl_assert(exp.lines == 14);
