@@ -62,5 +62,6 @@ void cl_git_append2file(const char *filename, const char *new_content);
 
 git_repository *cl_git_sandbox_init(const char *sandbox);
 void cl_git_sandbox_cleanup(void);
+int remove_loose_object(const char *repository_folder, git_object *object);
 
 #endif
