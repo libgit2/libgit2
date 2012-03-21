@@ -60,7 +60,7 @@ IF (MSVC)
 	# Not using __stdcall with the CRT causes problems
 	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
 
-	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
