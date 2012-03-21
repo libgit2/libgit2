@@ -10,9 +10,9 @@ void test_core_oid__initialize(void)
 
 void test_core_oid__streq(void)
 {
-	cl_assert(git_oid_streq(&id, str_oid) == GIT_SUCCESS);
-	cl_assert(git_oid_streq(&id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef") == GIT_ERROR);
+	cl_assert(git_oid_streq(&id, str_oid) == 0);
+	cl_assert(git_oid_streq(&id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef") == -1);
 
-	cl_assert(git_oid_streq(&id, "deadbeef") == GIT_ENOTOID);
-	cl_assert(git_oid_streq(&id, "I'm not an oid.... :)") == GIT_ENOTOID);
+	cl_assert(git_oid_streq(&id, "deadbeef") == -1);
+	cl_assert(git_oid_streq(&id, "I'm not an oid.... :)") == -1);
 }

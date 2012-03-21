@@ -108,10 +108,10 @@ mode_t git_futils_canonical_mode(mode_t raw_mode)
 		return S_IFREG | GIT_CANONICAL_PERMS(raw_mode);
 	else if (S_ISLNK(raw_mode))
 		return S_IFLNK;
-	else if (S_ISDIR(raw_mode))
-		return S_IFDIR;
 	else if (S_ISGITLINK(raw_mode))
 		return S_IFGITLINK;
+	else if (S_ISDIR(raw_mode))
+		return S_IFDIR;
 	else
 		return 0;
 }
