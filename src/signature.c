@@ -258,7 +258,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 {
 	const char *buffer = *buffer_out;
 	const char *line_end, *name_end, *email_end, *tz_start, *time_start;
-	int error = GIT_SUCCESS;
+	int error = 0;
 
 	memset(sig, 0x0, sizeof(git_signature));
 
