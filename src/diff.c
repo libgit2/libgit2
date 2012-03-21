@@ -538,33 +538,22 @@ int git_diff_merge(
 	const git_diff_list *from)
 {
 	int error = 0;
-	unsigned int i = 0, j = 0;
 	git_vector onto_new;
-	git_diff_delta *delta;
+	git_diff_delta *delta, *o;
+	const git_diff_delta *f;
+	unsigned int i;
 
 	if (git_vector_init(&onto_new, onto->deltas.length, diff_delta__cmp) < 0)
 		return -1;
 
-	while (!error && (i < onto->deltas.length || j < from->deltas.length)) {
-		git_diff_delta       *o = git_vector_get(&onto->deltas, i);
-		const git_diff_delta *f = git_vector_get_const(&from->deltas, j);
-		const char *opath = !o ? NULL : o->old.path ? o->old.path : o->new.path;
-		const char *fpath = !f ? NULL : f->old.path ? f->old.path : f->new.path;
-
-		if (opath && (!fpath || strcmp(opath, fpath) < 0)) {
-			delta = diff_delta__dup(o);
-			i++;
-		} else if (fpath && (!opath || strcmp(opath, fpath) > 0)) {
-			delta = diff_delta__dup(f);
-			j++;
-		} else {
-			delta = diff_delta__merge_like_cgit(o, f);
-			i++;
-			j++;
-		}
-
-		error = !delta ? -1 : git_vector_insert(&onto_new, delta);
-	}
+	GIT_DIFF_COITERATE(
+		onto, from, o, f,
+		delta = diff_delta__dup(o),
+		delta = diff_delta__dup(f),
+		delta = diff_delta__merge_like_cgit(o, f),
+		if ((error = !delta ? -1 : git_vector_insert(&onto_new, delta)) < 0)
+			break;
+		);
 
 	if (error == 0) {
 		git_vector_swap(&onto->deltas, &onto_new);
@@ -577,3 +566,4 @@ int git_diff_merge(
 
 	return error;
 }
+

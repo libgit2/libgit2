@@ -31,7 +31,8 @@ GIT_BEGIN_DECL
 #define GIT_STATUS_WT_MODIFIED		(1 << 4)
 #define GIT_STATUS_WT_DELETED		(1 << 5)
 
-#define GIT_STATUS_IGNORED		(1 << 6)
+#define GIT_STATUS_IGNORED			(1 << 6)
+#define GIT_STATUS_WT_UNTRACKED		(1 << 7)
 
 /**
  * Gather file statuses and run a callback for each one.
@@ -45,6 +46,71 @@ GIT_BEGIN_DECL
  * @return GIT_SUCCESS or the return value of the callback which did not return GIT_SUCCESS
  */
 GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload);
+
+/**
+ * Select the files on which to report status.
+ *
+ * - GIT_STATUS_SHOW_INDEX_AND_WORKDIR is the default.  This is the
+ *   rough equivalent of `git status --porcelain` where each file
+ *   will receive a callback indicating its status in the index and
+ *   in the workdir.
+ * - GIT_STATUS_SHOW_INDEX_ONLY will only make callbacks for index
+ *   side of status.  The status of the index contents relative to
+ *   the HEAD will be given.
+ * - GIT_STATUS_SHOW_WORKDIR_ONLY will only make callbacks for the
+ *   workdir side of status, reporting the status of workdir content
+ *   relative to the index.
+ * - GIT_STATUS_SHOW_INDEX_THEN_WORKDIR behaves like index-only
+ *   followed by workdir-only, causing two callbacks to be issued
+ *   per file (first index then workdir).  This is slightly more
+ *   efficient than making separate calls.  This makes it easier to
+ *   emulate the output of a plain `git status`.
+ */
+typedef enum {
+	GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
+	GIT_STATUS_SHOW_INDEX_ONLY = 1,
+	GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
+	GIT_STATUS_SHOW_INDEX_THEN_WORKDIR = 3,
+} git_status_show_t;
+
+/**
+ * Flags to control status callbacks
+ *
+ * - GIT_STATUS_OPT_INCLUDE_UNTRACKED says that callbacks should
+ *   be made on untracked files.  These will only be made if the
+ *   workdir files are included in the status "show" option.
+ * - GIT_STATUS_OPT_INCLUDE_IGNORED says that ignored files should
+ *   get callbacks.  Again, these callbacks will only be made if
+ *   the workdir files are included in the status "show" option.
+ *   Right now, there is no option to include all files in
+ *   directories that are ignored completely.
+ * - GIT_STATUS_OPT_EXCLUDE_UNMODIFIED indicates that callback
+ *   do not need to be made on unmodified files.
+ * - GIT_STATUS_OPT_EXCLUDE_SUBMODULES indicates that directories
+ *   which appear to be submodules should just be skipped over.
+ */
+#define GIT_STATUS_OPT_INCLUDE_UNTRACKED  (1 << 0)
+#define GIT_STATUS_OPT_INCLUDE_IGNORED    (1 << 1)
+#define GIT_STATUS_OPT_EXCLUDE_UNMODIFIED (1 << 2)
+#define GIT_STATUS_OPT_EXCLUDE_SUBMODULES (1 << 3)
+
+/**
+ * Options to control which callbacks will be made by
+ * `git_status_foreach_ext()`
+ */
+typedef struct {
+	git_status_show_t show;
+	unsigned int flags;
+} git_status_options;
+
+/**
+ * Gather file status information and run callbacks as requested.
+ */
+GIT_EXTERN(int) git_status_foreach_ext(
+	git_repository *repo,
+	git_status_options *opts,
+	int (*callback)(const char *, unsigned int, void *),
+	void *payload);
 
 /**
  * Get file status for a single file
