@@ -671,7 +671,6 @@ int git_diff_print_patch(
 
 
 int git_diff_blobs(
-	git_repository *repo,
 	git_blob *old_blob,
 	git_blob *new_blob,
 	git_diff_options *options,
@@ -685,8 +684,6 @@ int git_diff_blobs(
 	xpparam_t xdiff_params;
 	xdemitconf_t xdiff_config;
 	xdemitcb_t xdiff_callback;
-
-	assert(repo);
 
 	if (options && (options->flags & GIT_DIFF_REVERSE)) {
 		git_blob *swap = old_blob;
