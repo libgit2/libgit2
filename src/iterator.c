@@ -395,7 +395,6 @@ static void workdir_iterator__free(git_iterator *self)
 
 static int workdir_iterator__update_entry(workdir_iterator *wi)
 {
-	int error;
 	git_path_with_stat *ps = git_vector_get(&wi->stack->entries, wi->stack->index);
 
 	git_buf_truncate(&wi->path, wi->root_len);
@@ -412,24 +411,18 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 	/* if there is an error processing the entry, treat as ignored */
 	wi->is_ignored = 1;
 
-	/* TODO: remove shared code for struct stat conversion with index.c */
-	wi->entry.ctime.seconds = (git_time_t)ps->st.st_ctime;
-	wi->entry.mtime.seconds = (git_time_t)ps->st.st_mtime;
-	wi->entry.dev  = ps->st.st_rdev;
-	wi->entry.ino  = ps->st.st_ino;
+	git_index__init_entry_from_stat(&ps->st, &wi->entry);
+
+	/* need different mode here to keep directories during iteration */
 	wi->entry.mode = git_futils_canonical_mode(ps->st.st_mode);
-	wi->entry.uid  = ps->st.st_uid;
-	wi->entry.gid  = ps->st.st_gid;
-	wi->entry.file_size = ps->st.st_size;
 
 	/* if this is a file type we don't handle, treat as ignored */
 	if (wi->entry.mode == 0)
 		return 0;
 
 	/* okay, we are far enough along to look up real ignore rule */
-	error = git_ignore__lookup(&wi->ignores, wi->entry.path, &wi->is_ignored);
-	if (error < 0)
-		return 0;
+	if (git_ignore__lookup(&wi->ignores, wi->entry.path, &wi->is_ignored) < 0)
+		return 0; /* if error, ignore it and ignore file */
 
 	/* detect submodules */
 	if (S_ISDIR(wi->entry.mode) &&

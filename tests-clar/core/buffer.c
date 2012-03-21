@@ -544,3 +544,20 @@ void test_core_buffer__9(void)
 
 	git_buf_free(&buf);
 }
+
+void test_core_buffer__10(void)
+{
+	git_buf a = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_join_n(&a, '/', 1, "test"));
+	cl_assert_strequal(a.ptr, "test");
+	cl_git_pass(git_buf_join_n(&a, '/', 1, "string"));
+	cl_assert_strequal(a.ptr, "test/string");
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_join_n(&a, '/', 3, "test", "string", "join"));
+	cl_assert_strequal(a.ptr, "test/string/join");
+	cl_git_pass(git_buf_join_n(&a, '/', 2, a.ptr, "more"));
+	cl_assert_strequal(a.ptr, "test/string/join/test/string/join/more");
+
+	git_buf_free(&a);
+}
