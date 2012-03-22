@@ -261,9 +261,7 @@ static const char *entry_paths3[] = {
 	"42-is-not-prime.sigh",
 	"README.md",
 	"current_file",
-	"current_file/current_file",
-	"current_file/modified_file",
-	"current_file/new_file",
+	"current_file/",
 	"file_deleted",
 	"ignored_file",
 	"modified_file",
@@ -288,8 +286,6 @@ static const unsigned int entry_statuses3[] = {
 	GIT_STATUS_WT_NEW,
 	GIT_STATUS_WT_DELETED,
 	GIT_STATUS_WT_NEW,
-	GIT_STATUS_WT_NEW,
-	GIT_STATUS_WT_NEW,
 	GIT_STATUS_WT_DELETED,
 	GIT_STATUS_IGNORED,
 	GIT_STATUS_WT_MODIFIED,
@@ -308,7 +304,7 @@ static const unsigned int entry_statuses3[] = {
 	GIT_STATUS_WT_DELETED,
 };
 
-#define ENTRY_COUNT3 23
+#define ENTRY_COUNT3 21
 
 BEGIN_TEST(statuscb3, "test retrieving status for a worktree where a file and a subdir have been renamed and some files have been added")
 	git_repository *repo;

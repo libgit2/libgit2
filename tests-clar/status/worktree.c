@@ -3,6 +3,8 @@
 #include "ignore.h"
 #include "status_data.h"
 #include "posix.h"
+#include "util.h"
+#include "path.h"
 
 /**
  * Auxiliary methods
@@ -67,6 +69,7 @@ void test_status_worktree__cleanup(void)
 /**
  * Tests - Status determination on a working tree
  */
+/* this test is equivalent to t18-status.c:statuscb0 */
 void test_status_worktree__whole_repository(void)
 {
 	struct status_entry_counts counts;
@@ -86,6 +89,7 @@ void test_status_worktree__whole_repository(void)
 	cl_assert(counts.wrong_sorted_path == 0);
 }
 
+/* this test is equivalent to t18-status.c:statuscb1 */
 void test_status_worktree__empty_repository(void)
 {
 	int count = 0;
@@ -96,6 +100,81 @@ void test_status_worktree__empty_repository(void)
 	cl_assert(count == 0);
 }
 
+static int remove_file_cb(void *data, git_buf *file)
+{
+	const char *filename = git_buf_cstr(file);
+
+	GIT_UNUSED(data);
+
+	if (git__suffixcmp(filename, ".git") == 0)
+		return 0;
+
+	if (git_path_isdir(filename))
+		cl_git_pass(git_futils_rmdir_r(filename, 1));
+	else
+		cl_git_pass(p_unlink(git_buf_cstr(file)));
+
+	return 0;
+}
+
+/* this test is equivalent to t18-status.c:statuscb2 */
+void test_status_worktree__purged_worktree(void)
+{
+	struct status_entry_counts counts;
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_buf workdir = GIT_BUF_INIT;
+
+	/* first purge the contents of the worktree */
+	cl_git_pass(git_buf_sets(&workdir, git_repository_workdir(repo)));
+	cl_git_pass(git_path_direach(&workdir, remove_file_cb, NULL));
+
+	/* now get status */
+	memset(&counts, 0x0, sizeof(struct status_entry_counts));
+	counts.expected_entry_count = entry_count2;
+	counts.expected_paths = entry_paths2;
+	counts.expected_statuses = entry_statuses2;
+
+	cl_git_pass(
+		git_status_foreach(repo, cb_status__normal, &counts)
+	);
+
+	cl_assert(counts.entry_count == counts.expected_entry_count);
+	cl_assert(counts.wrong_status_flags_count == 0);
+	cl_assert(counts.wrong_sorted_path == 0);
+}
+
+/* this test is equivalent to t18-status.c:statuscb3 */
+void test_status_worktree__swap_subdir_and_file(void)
+{
+	struct status_entry_counts counts;
+	git_repository *repo = cl_git_sandbox_init("status");
+
+	/* first alter the contents of the worktree */
+	cl_git_pass(p_rename("status/current_file", "status/swap"));
+	cl_git_pass(p_rename("status/subdir", "status/current_file"));
+	cl_git_pass(p_rename("status/swap", "status/subdir"));
+
+	cl_git_mkfile("status/.HEADER", "dummy");
+	cl_git_mkfile("status/42-is-not-prime.sigh", "dummy");
+	cl_git_mkfile("status/README.md", "dummy");
+
+	/* now get status */
+	memset(&counts, 0x0, sizeof(struct status_entry_counts));
+	counts.expected_entry_count = entry_count3;
+	counts.expected_paths = entry_paths3;
+	counts.expected_statuses = entry_statuses3;
+
+	cl_git_pass(
+		git_status_foreach(repo, cb_status__normal, &counts)
+	);
+
+	cl_assert(counts.entry_count == counts.expected_entry_count);
+	cl_assert(counts.wrong_status_flags_count == 0);
+	cl_assert(counts.wrong_sorted_path == 0);
+
+}
+
+/* this test is equivalent to t18-status.c:singlestatus0 */
 void test_status_worktree__single_file(void)
 {
 	int i;
@@ -109,6 +188,19 @@ void test_status_worktree__single_file(void)
 		cl_assert(entry_statuses0[i] == status_flags);
 	}
 }
+
+/* this test is equivalent to t18-status.c:singlestatus1 */
+void test_status_worktree__single_nonexistent_file(void)
+{
+	int error;
+	unsigned int status_flags;
+	git_repository *repo = cl_git_sandbox_init("status");
+
+	error = git_status_file(&status_flags, repo, "nonexistent");
+	cl_git_fail(error);
+	cl_assert(error == GIT_ENOTFOUND);
+}
+
 
 void test_status_worktree__ignores(void)
 {
