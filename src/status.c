@@ -137,7 +137,13 @@ int git_status_foreach_ext(
 	}
 
 	memset(&diffopt, 0, sizeof(diffopt));
-	diffopt.flags = GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
+	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_UNTRACKED) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNTRACKED;
+	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_IGNORED) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_IGNORED;
+	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_UNMODIFIED) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNMODIFIED;
+	/* TODO: support EXCLUDE_SUBMODULES flag */
 
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&
 		(err = git_diff_index_to_tree(repo, &diffopt, head, &idx2head)) < 0)
@@ -180,9 +186,9 @@ int git_status_foreach(
 {
 	git_status_options opts;
 
-	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
-		GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
+		GIT_STATUS_OPT_INCLUDE_UNTRACKED;
 
 	return git_status_foreach_ext(repo, &opts, callback, payload);
 }

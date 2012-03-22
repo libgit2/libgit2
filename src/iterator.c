@@ -427,7 +427,12 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 	/* detect submodules */
 	if (S_ISDIR(wi->entry.mode) &&
 		git_path_contains(&wi->path, DOT_GIT) == true)
+	{
+		size_t len = strlen(wi->entry.path);
+		assert(wi->entry.path[len - 1] == '/');
+		wi->entry.path[len - 1] = '\0';
 		wi->entry.mode = S_IFGITLINK;
+	}
 
 	return 0;
 }

@@ -83,14 +83,14 @@ typedef enum {
  *   the workdir files are included in the status "show" option.
  *   Right now, there is no option to include all files in
  *   directories that are ignored completely.
- * - GIT_STATUS_OPT_EXCLUDE_UNMODIFIED indicates that callback
- *   do not need to be made on unmodified files.
+ * - GIT_STATUS_OPT_INCLUDE_UNMODIFIED indicates that callback
+ *   should be made even on unmodified files.
  * - GIT_STATUS_OPT_EXCLUDE_SUBMODULES indicates that directories
  *   which appear to be submodules should just be skipped over.
  */
 #define GIT_STATUS_OPT_INCLUDE_UNTRACKED  (1 << 0)
 #define GIT_STATUS_OPT_INCLUDE_IGNORED    (1 << 1)
-#define GIT_STATUS_OPT_EXCLUDE_UNMODIFIED (1 << 2)
+#define GIT_STATUS_OPT_INCLUDE_UNMODIFIED (1 << 2)
 #define GIT_STATUS_OPT_EXCLUDE_SUBMODULES (1 << 3)
 
 /**

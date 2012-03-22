@@ -314,7 +314,8 @@ int git_diff_foreach(
 		git_blob *old_blob = NULL, *new_blob = NULL;
 		git_map old_data, new_data;
 
-		if (delta->status == GIT_DELTA_UNMODIFIED)
+		if (delta->status == GIT_DELTA_UNMODIFIED &&
+			(diff->opts.flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
 			continue;
 
 		if (delta->status == GIT_DELTA_IGNORED &&
@@ -377,7 +378,8 @@ int git_diff_foreach(
 				 */
 				if (git_oid_cmp(&delta->old.oid, &delta->new.oid) == 0) {
 					delta->status = GIT_DELTA_UNMODIFIED;
-					goto cleanup;
+					if ((diff->opts.flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
+						goto cleanup;
 				}
 			}
 		}

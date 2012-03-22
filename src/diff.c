@@ -132,7 +132,17 @@ static int diff_delta__from_one(
 	git_delta_t   status,
 	const git_index_entry *entry)
 {
-	git_diff_delta *delta = diff_delta__alloc(diff, status, entry->path);
+	git_diff_delta *delta;
+
+	if (status == GIT_DELTA_IGNORED &&
+		(diff->opts.flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
+		return 0;
+
+	if (status == GIT_DELTA_UNTRACKED &&
+		(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
+		return 0;
+
+	delta = diff_delta__alloc(diff, status, entry->path);
 	GITERR_CHECK_ALLOC(delta);
 
 	/* This fn is just for single-sided diffs */
@@ -167,6 +177,10 @@ static int diff_delta__from_two(
 	git_oid *new_oid)
 {
 	git_diff_delta *delta;
+
+	if (status == GIT_DELTA_UNMODIFIED &&
+		(diff->opts.flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
+		return 0;
 
 	if ((diff->opts.flags & GIT_DIFF_REVERSE) != 0) {
 		const git_index_entry *temp = old;
@@ -320,26 +334,30 @@ static int maybe_modified(
 	git_diff_list *diff)
 {
 	git_oid noid, *use_noid = NULL;
+	git_delta_t status = GIT_DELTA_MODIFIED;
 
 	GIT_UNUSED(old);
 
 	/* support "assume unchanged" & "skip worktree" bits */
 	if ((oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) != 0 ||
 		(oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0)
-		return 0;
+		status = GIT_DELTA_UNMODIFIED;
 
-	if (GIT_MODE_TYPE(oitem->mode) != GIT_MODE_TYPE(nitem->mode)) {
+	/* if basic type of file changed, then split into delete and add */
+	else if (GIT_MODE_TYPE(oitem->mode) != GIT_MODE_TYPE(nitem->mode)) {
 		if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
 			diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem) < 0)
 			return -1;
 		return 0;
 	}
 
-	if (git_oid_cmp(&oitem->oid, &nitem->oid) == 0 &&
-		oitem->mode == nitem->mode)
-		return 0;
+	/* if oids and modes match, then file is unmodified */
+	else if (git_oid_cmp(&oitem->oid, &nitem->oid) == 0 &&
+			oitem->mode == nitem->mode)
+		status = GIT_DELTA_UNMODIFIED;
 
-	if (git_oid_iszero(&nitem->oid) && new->type == GIT_ITERATOR_WORKDIR) {
+	/* if we have a workdir item with an unknown oid, check deeper */
+	else if (git_oid_iszero(&nitem->oid) && new->type == GIT_ITERATOR_WORKDIR) {
 		/* if they files look exactly alike, then we'll assume the same */
 		if (oitem->file_size == nitem->file_size &&
 			oitem->ctime.seconds == nitem->ctime.seconds &&
@@ -348,25 +366,28 @@ static int maybe_modified(
 			oitem->ino == nitem->ino &&
 			oitem->uid == nitem->uid &&
 			oitem->gid == nitem->gid)
-			return 0;
+			status = GIT_DELTA_UNMODIFIED;
+
+		/* TODO? should we do anything special with submodules? */
+		else if (S_ISGITLINK(nitem->mode))
+			status = GIT_DELTA_UNMODIFIED;
 
 		/* TODO: check git attributes so we will not have to read the file
 		 * in if it is marked binary.
 		 */
 
-		if (oid_for_workdir_item(diff->repo, nitem, &noid) < 0)
+		else if (oid_for_workdir_item(diff->repo, nitem, &noid) < 0)
 			return -1;
 
-		if (git_oid_cmp(&oitem->oid, &noid) == 0 &&
+		else if (git_oid_cmp(&oitem->oid, &noid) == 0 &&
 			oitem->mode == nitem->mode)
-			return 0;
+			status = GIT_DELTA_UNMODIFIED;
 
 		/* store calculated oid so we don't have to recalc later */
 		use_noid = &noid;
 	}
 
-	return diff_delta__from_two(
-		diff, GIT_DELTA_MODIFIED, oitem, nitem, use_noid);
+	return diff_delta__from_two(diff, status, oitem, nitem, use_noid);
 }
 
 static int diff_from_iterators(
