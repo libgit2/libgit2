@@ -2,7 +2,7 @@
 #include "fileops.h"
 #include "ignore.h"
 #include "status_data.h"
-
+#include "posix.h"
 
 /**
  * Auxiliary methods
@@ -42,7 +42,6 @@ cb_status__count(const char *p, unsigned int s, void *payload)
 
 	return 0;
 }
-
 
 /**
  * Initializer
@@ -132,4 +131,88 @@ void test_status_worktree__ignores(void)
 		git_status_should_ignore(repo, "ignored_nonexistent_file", &ignored)
 	);
 	cl_assert(ignored);
+}
+
+static int cb_status__check_592(const char *p, unsigned int s, void *payload)
+{
+	GIT_UNUSED(payload);
+
+	if (s != GIT_STATUS_WT_DELETED || (payload != NULL && strcmp(p, (const char *)payload) != 0))
+		return -1;
+
+	return 0;
+}
+
+void test_status_worktree__issue_592(void)
+{
+	git_repository *repo;
+	git_buf path = GIT_BUF_INIT;
+
+	repo = cl_git_sandbox_init("issue_592");
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "l.txt"));
+	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+
+	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "l.txt"));
+
+	git_buf_free(&path);
+}
+
+void test_status_worktree__issue_592_2(void)
+{
+	git_repository *repo;
+	git_buf path = GIT_BUF_INIT;
+
+	repo = cl_git_sandbox_init("issue_592");
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c/a.txt"));
+	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+
+	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
+
+	git_buf_free(&path);
+}
+
+void test_status_worktree__issue_592_3(void)
+{
+	git_repository *repo;
+	git_buf path = GIT_BUF_INIT;
+
+	repo = cl_git_sandbox_init("issue_592");
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c"));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), 1));
+
+	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
+
+	git_buf_free(&path);
+}
+
+void test_status_worktree__issue_592_4(void)
+{
+	git_repository *repo;
+	git_buf path = GIT_BUF_INIT;
+
+	repo = cl_git_sandbox_init("issue_592");
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "t/b.txt"));
+	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+
+	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "t/b.txt"));
+
+	git_buf_free(&path);
+}
+
+void test_status_worktree__issue_592_5(void)
+{
+	git_repository *repo;
+	git_buf path = GIT_BUF_INIT;
+
+	repo = cl_git_sandbox_init("issue_592");
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "t"));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), 1));
+	cl_git_pass(p_mkdir(git_buf_cstr(&path), 0777));
+
+	cl_git_pass(git_status_foreach(repo, cb_status__check_592, NULL));
+
+	git_buf_free(&path);
 }
