@@ -201,6 +201,41 @@ void test_status_worktree__single_nonexistent_file(void)
 	cl_assert(error == GIT_ENOTFOUND);
 }
 
+/* this test is equivalent to t18-status.c:singlestatus2 */
+void test_status_worktree__single_nonexistent_file_empty_repo(void)
+{
+	int error;
+	unsigned int status_flags;
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+
+	error = git_status_file(&status_flags, repo, "nonexistent");
+	cl_git_fail(error);
+	cl_assert(error == GIT_ENOTFOUND);
+}
+
+/* this test is equivalent to t18-status.c:singlestatus3 */
+void test_status_worktree__single_file_empty_repo(void)
+{
+	unsigned int status_flags;
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_mkfile("empty_standard_repo/new_file", "new_file\n");
+
+	cl_git_pass(git_status_file(&status_flags, repo, "new_file"));
+	cl_assert(status_flags == GIT_STATUS_WT_NEW);
+}
+
+/* this test is equivalent to t18-status.c:singlestatus4 */
+void test_status_worktree__single_folder(void)
+{
+	int error;
+	unsigned int status_flags;
+	git_repository *repo = cl_git_sandbox_init("status");
+
+	error = git_status_file(&status_flags, repo, "subdir");
+	cl_git_fail(error);
+}
+
 
 void test_status_worktree__ignores(void)
 {
