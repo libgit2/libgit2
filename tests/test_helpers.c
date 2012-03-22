@@ -197,7 +197,8 @@ int copy_file(const char *src, const char *dst)
 
 cleanup:
 	git_buf_free(&source_buf);
-	p_close(dst_fd);
+	if (dst_fd >= 0)
+		p_close(dst_fd);
 
 	return error;
 }
