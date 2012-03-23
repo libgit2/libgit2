@@ -143,11 +143,12 @@ void test_status_worktree__purged_worktree(void)
 	cl_assert(counts.wrong_sorted_path == 0);
 }
 
-/* this test is equivalent to t18-status.c:statuscb3 */
+/* this test is similar to t18-status.c:statuscb3 */
 void test_status_worktree__swap_subdir_and_file(void)
 {
 	struct status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
+	git_status_options opts;
 
 	/* first alter the contents of the worktree */
 	cl_git_pass(p_rename("status/current_file", "status/swap"));
@@ -164,8 +165,12 @@ void test_status_worktree__swap_subdir_and_file(void)
 	counts.expected_paths = entry_paths3;
 	counts.expected_statuses = entry_statuses3;
 
+	memset(&opts, 0, sizeof(opts));
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_INCLUDE_IGNORED;
+
 	cl_git_pass(
-		git_status_foreach(repo, cb_status__normal, &counts)
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
 	);
 
 	cl_assert(counts.entry_count == counts.expected_entry_count);

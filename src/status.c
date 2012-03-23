@@ -192,7 +192,8 @@ int git_status_foreach(
 
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
-		GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 
 	return git_status_foreach_ext(repo, &opts, callback, payload);
 }
