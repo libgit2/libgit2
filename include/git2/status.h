@@ -87,19 +87,27 @@ typedef enum {
  *   should be made even on unmodified files.
  * - GIT_STATUS_OPT_EXCLUDE_SUBMODULES indicates that directories
  *   which appear to be submodules should just be skipped over.
+ * - GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS indicates that the
+ *   contents of untracked directories should be included in the
+ *   status.  Normally if an entire directory is new, then just
+ *   the top-level directory will be included (with a trailing
+ *   slash on the entry name).  Given this flag, the directory
+ *   itself will not be included, but all the files in it will.
  */
-#define GIT_STATUS_OPT_INCLUDE_UNTRACKED  (1 << 0)
-#define GIT_STATUS_OPT_INCLUDE_IGNORED    (1 << 1)
-#define GIT_STATUS_OPT_INCLUDE_UNMODIFIED (1 << 2)
-#define GIT_STATUS_OPT_EXCLUDE_SUBMODULES (1 << 3)
+#define GIT_STATUS_OPT_INCLUDE_UNTRACKED      (1 << 0)
+#define GIT_STATUS_OPT_INCLUDE_IGNORED        (1 << 1)
+#define GIT_STATUS_OPT_INCLUDE_UNMODIFIED     (1 << 2)
+#define GIT_STATUS_OPT_EXCLUDE_SUBMODULES     (1 << 3)
+#define GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS (1 << 4)
 
 /**
- * Options to control which callbacks will be made by
- * `git_status_foreach_ext()`
+ * Options to control how callbacks will be made by
+ * `git_status_foreach_ext()`.
  */
 typedef struct {
 	git_status_show_t show;
 	unsigned int flags;
+	git_strarray pathspec;
 } git_status_options;
 
 /**

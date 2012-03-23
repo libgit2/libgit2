@@ -137,12 +137,16 @@ int git_status_foreach_ext(
 	}
 
 	memset(&diffopt, 0, sizeof(diffopt));
+	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
+
 	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_UNTRACKED) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNTRACKED;
 	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_IGNORED) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_IGNORED;
 	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_UNMODIFIED) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNMODIFIED;
+	if ((opts->flags & GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_UNTRACKED_DIRS;
 	/* TODO: support EXCLUDE_SUBMODULES flag */
 
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&

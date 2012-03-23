@@ -439,7 +439,12 @@ static int diff_from_iterators(
 			is_ignored = git_iterator_current_is_ignored(new);
 
 			if (S_ISDIR(nitem->mode)) {
-				if (git__prefixcmp(oitem->path, nitem->path) == 0) {
+				/* recurse into directory if explicitly requested or
+				 * if there are tracked items inside the directory
+				 */
+				if ((diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) ||
+					(oitem && git__prefixcmp(oitem->path, nitem->path) == 0))
+				{
 					if (is_ignored)
 						ignore_prefix = nitem->path;
 					if (git_iterator_advance_into_directory(new, &nitem) < 0)
