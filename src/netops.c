@@ -26,7 +26,7 @@
 #include "netops.h"
 #include "posix.h"
 
-void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
+void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, GIT_SOCKET fd)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
@@ -40,14 +40,13 @@ int gitno_recv(gitno_buffer *buf)
 {
 	int ret;
 
-	ret = recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
-	if (ret < 0)
-		return git__throw(GIT_EOSERR, "Failed to receive data: %s", strerror(errno));
-	if (ret == 0) /* Orderly shutdown, so exit */
-		return GIT_SUCCESS;
+	ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
+	if (ret < 0) {
+		giterr_set(GITERR_OS, "Failed to receive socket data");
+		return -1;
+	}
 
 	buf->offset += ret;
-
 	return ret;
 }
 
@@ -74,52 +73,41 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
-int gitno_connect(const char *host, const char *port)
+GIT_SOCKET gitno_connect(const char *host, const char *port)
 {
-	struct addrinfo *info, *p;
+	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
-	int ret, error = GIT_SUCCESS;
-	GIT_SOCKET s;
+	GIT_SOCKET s = INVALID_SOCKET;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	ret = getaddrinfo(host, port, &hints, &info);
-	if (ret != 0) {
-		error = GIT_EOSERR;
-		info = NULL;
-		goto cleanup;
+	if (getaddrinfo(host, port, &hints, &info) != 0) {
+		giterr_set(GITERR_OS, "Failed getaddrinfo");
+		return INVALID_SOCKET;
 	}
 
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-#ifdef GIT_WIN32
-		if (s == INVALID_SOCKET) {
-#else
-		if (s < 0) {
-#endif
-			error = GIT_EOSERR;
-			goto cleanup;
-		}
+		if (s == INVALID_SOCKET)
+			break;
 
-		ret = connect(s, p->ai_addr, p->ai_addrlen);
+		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
+			break;
+
 		/* If we can't connect, try the next one */
-		if (ret < 0) {
-			continue;
-		}
-
-		/* Return the socket */
-		error = s;
-		goto cleanup;
+		gitno_close(s);
+		s = INVALID_SOCKET;
 	}
 
 	/* Oops, we couldn't connect to any address */
-	error = git__throw(GIT_EOSERR, "Failed to connect: %s", strerror(errno));
+	if (s == INVALID_SOCKET)
+		giterr_set(GITERR_OS, "Failed to create socket");
 
-cleanup:
 	freeaddrinfo(info);
-	return error;
+
+	return s;
 }
 
 int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
@@ -130,14 +118,16 @@ int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 	while (off < len) {
 		errno = 0;
 
-		ret = send(s, msg + off, len - off, flags);
-		if (ret < 0)
-			return git__throw(GIT_EOSERR, "Error sending data: %s", strerror(errno));
+		ret = p_send(s, msg + off, len - off, flags);
+		if (ret < 0) {
+			giterr_set(GITERR_OS, "Error sending data");
+			return -1;
+		}
 
 		off += ret;
 	}
 
-	return off;
+	return (int)off;
 }
 
 
@@ -165,35 +155,31 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	FD_SET(buf->fd, &fds);
 
 	/* The select(2) interface is silly */
-	return select(buf->fd + 1, &fds, NULL, NULL, &tv);
+	return select((int)buf->fd + 1, &fds, NULL, NULL, &tv);
 }
 
 int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)
 {
 	char *colon, *slash, *delim;
-	int error = GIT_SUCCESS;
 
 	colon = strchr(url, ':');
 	slash = strchr(url, '/');
 
-	if (slash == NULL)
-			return git__throw(GIT_EOBJCORRUPTED, "Malformed URL: missing /");
+	if (slash == NULL) {
+		giterr_set(GITERR_INVALID, "Malformed URL - missing '/'");
+		return -1;
+	}
 
 	if (colon == NULL) {
 		*port = git__strdup(default_port);
 	} else {
 		*port = git__strndup(colon + 1, slash - colon - 1);
 	}
-	if (*port == NULL)
-		return GIT_ENOMEM;;
-
+	GITERR_CHECK_ALLOC(*port);
 
 	delim = colon == NULL ? slash : colon;
 	*host = git__strndup(url, delim - url);
-	if (*host == NULL) {
-		git__free(*port);
-		error = GIT_ENOMEM;
-	}
+	GITERR_CHECK_ALLOC(*host);
 
-	return error;
+	return 0;
 }

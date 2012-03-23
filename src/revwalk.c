@@ -58,8 +58,10 @@ struct git_revwalk {
 static commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
 {
 	commit_list *new_list = git__malloc(sizeof(commit_list));
-	new_list->item = item;
-	new_list->next = *list_p;
+	if (new_list != NULL) {
+		new_list->item = item;
+		new_list->next = *list_p;
+	}
 	*list_p = new_list;
 	return new_list;
 }
@@ -115,8 +117,7 @@ static int alloc_chunk(git_revwalk *walk)
 	void *chunk;
 
 	chunk = git__calloc(COMMITS_PER_CHUNK, CHUNK_STEP);
-	if (chunk == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(chunk);
 
 	walk->chunk_size = 0;
 	return git_vector_insert(&walk->memory_alloc, chunk);
@@ -127,7 +128,8 @@ static commit_object *alloc_commit(git_revwalk *walk)
 	unsigned char *chunk;
 
 	if (walk->chunk_size == COMMITS_PER_CHUNK)
-		alloc_chunk(walk);
+		if (alloc_chunk(walk) < 0)
+			return NULL;
 
 	chunk = git_vector_get(&walk->memory_alloc, walk->memory_alloc.length - 1);
 	chunk += (walk->chunk_size * CHUNK_STEP);
@@ -158,7 +160,7 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 
 	git_oid_cpy(&commit->oid, oid);
 
-	if (git_hashtable_insert(walk->commits, &commit->oid, commit) < GIT_SUCCESS) {
+	if (git_hashtable_insert(walk->commits, &commit->oid, commit) < 0) {
 		git__free(commit);
 		return NULL;
 	}
@@ -168,7 +170,7 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 
 static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawobj *raw)
 {
-	const int parent_len = strlen("parent ") + GIT_OID_HEXSZ + 1;
+	const size_t parent_len = strlen("parent ") + GIT_OID_HEXSZ + 1;
 
 	unsigned char *buffer = raw->data;
 	unsigned char *buffer_end = buffer + raw->len;
@@ -186,38 +188,41 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 	}
 
 	commit->parents = alloc_parents(commit, parents);
-	if (commit->parents == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(commit->parents);
 
 	buffer = parents_start;
 	for (i = 0; i < parents; ++i) {
 		git_oid oid;
 
-		if (git_oid_fromstr(&oid, (char *)buffer + strlen("parent ")) < GIT_SUCCESS)
-			return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Parent object is corrupted");
+		if (git_oid_fromstr(&oid, (char *)buffer + strlen("parent ")) < 0)
+			return -1;
 
 		commit->parents[i] = commit_lookup(walk, &oid);
 		if (commit->parents[i] == NULL)
-			return GIT_ENOMEM;
+			return -1;
 
 		buffer += parent_len;
 	}
 
 	commit->out_degree = (unsigned short)parents;
 
-	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Object is corrupted");
+	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL) {
+		giterr_set(GITERR_INVALID, "Failed to parse commit. Object is corrupted");
+		return -1;
+	}
 
 	buffer = memchr(buffer, '>', buffer_end - buffer);
-	if (buffer == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Can't find author");
+	if (buffer == NULL) {
+		giterr_set(GITERR_INVALID, "Failed to parse commit. Can't find author");
+		return -1;
+	}
 
-	if (git__strtol32(&commit_time, (char *)buffer + 2, NULL, 10) < GIT_SUCCESS)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to parse commit. Can't parse commit time");
+	if (git__strtol32(&commit_time, (char *)buffer + 2, NULL, 10) < 0)
+		return -1;
 
 	commit->time = (time_t)commit_time;
 	commit->parsed = 1;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int commit_parse(git_revwalk *walk, commit_object *commit)
@@ -228,17 +233,18 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 	if (commit->parsed)
 		return GIT_SUCCESS;
 
-	if ((error = git_odb_read(&obj, walk->odb, &commit->oid)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to parse commit. Can't read object");
+	if ((error = git_odb_read(&obj, walk->odb, &commit->oid)) < 0)
+		return error;
 
 	if (obj->raw.type != GIT_OBJ_COMMIT) {
 		git_odb_object_free(obj);
-		return git__throw(GIT_EOBJTYPE, "Failed to parse commit. Object is no commit object");
+		giterr_set(GITERR_INVALID, "Failed to parse commit. Object is no commit object");
+		return -1;
 	}
 
 	error = commit_quick_parse(walk, commit, &obj->raw);
 	git_odb_object_free(obj);
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to parse commit");
+	return error;
 }
 
 static void mark_uninteresting(commit_object *commit)
@@ -261,12 +267,12 @@ static int process_commit(git_revwalk *walk, commit_object *commit, int hide)
 		mark_uninteresting(commit);
 
 	if (commit->seen)
-		return GIT_SUCCESS;
+		return 0;
 
 	commit->seen = 1;
 
-	if ((error = commit_parse(walk, commit)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to process commit");
+	if ((error = commit_parse(walk, commit)) < 0)
+		return error;
 
 	return walk->enqueue(walk, commit);
 }
@@ -274,13 +280,13 @@ static int process_commit(git_revwalk *walk, commit_object *commit, int hide)
 static int process_commit_parents(git_revwalk *walk, commit_object *commit)
 {
 	unsigned short i;
-	int error = GIT_SUCCESS;
+	int error = 0;
 
-	for (i = 0; i < commit->out_degree && error == GIT_SUCCESS; ++i) {
+	for (i = 0; i < commit->out_degree && !error; ++i) {
 		error = process_commit(walk, commit->parents[i], commit->uninteresting);
 	}
 
-	return error == GIT_SUCCESS ? GIT_SUCCESS : git__rethrow(error, "Failed to process commit parents");
+	return error;
 }
 
 static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
@@ -289,7 +295,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 
 	commit = commit_lookup(walk, oid);
 	if (commit == NULL)
-		return git__throw(GIT_ENOTFOUND, "Failed to push commit. Object not found");
+		return -1; /* error already reported by failed lookup */
 
 	return process_commit(walk, commit, uninteresting);
 }
@@ -322,18 +328,18 @@ static int push_glob_cb(const char *refname, void *data_)
 		int error;
 
 		error = git_reference_lookup(&ref, data->walk->repo, refname);
-		if (error < GIT_SUCCESS)
+		if (error < 0)
 			return error;
 		error = git_reference_resolve(&resolved, ref);
 		git_reference_free(ref);
-		if (error < GIT_SUCCESS)
+		if (error < 0)
 			return error;
 		error = push_commit(data->walk, git_reference_oid(resolved), data->hide);
 		git_reference_free(resolved);
 		return error;
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
@@ -355,7 +361,8 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
 	memset(&preg, 0x0, sizeof(regex_t));
 	if (regcomp(&preg, "[?*[]", REG_EXTENDED)) {
-		error = git__throw(GIT_EOSERR, "Regex failed to compile");
+		giterr_set(GITERR_OS, "Regex failed to compile");
+		error = -1;
 		goto cleanup;
 	}
 
@@ -363,7 +370,7 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 		git_buf_puts(&buf, "/*");
 
 	if (git_buf_oom(&buf)) {
-		error = GIT_ENOMEM;
+		error = -1;
 		goto cleanup;
 	}
 
@@ -371,7 +378,8 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 	data.glob = git_buf_cstr(&buf);
 	data.hide = hide;
 
-	error = git_reference_foreach(walk->repo, GIT_REF_LISTALL, push_glob_cb, &data);
+	error = git_reference_foreach(
+		walk->repo, GIT_REF_LISTALL, push_glob_cb, &data);
 
 cleanup:
 	regfree(&preg);
@@ -397,16 +405,16 @@ static int push_head(git_revwalk *walk, int hide)
 	int error;
 
 	error = git_reference_lookup(&ref, walk->repo, "HEAD");
-	if (error < GIT_SUCCESS) {
+	if (error < 0)
 		return error;
-	}
+
 	error = git_reference_resolve(&resolved, ref);
-	if (error < GIT_SUCCESS) {
+	if (error < 0)
 		return error;
-	}
+
 	git_reference_free(ref);
 
-	error  = push_commit(walk, git_reference_oid(resolved), hide);
+	error = push_commit(walk, git_reference_oid(resolved), hide);
 
 	git_reference_free(resolved);
 	return error;
@@ -431,7 +439,7 @@ static int revwalk_enqueue_timesort(git_revwalk *walk, commit_object *commit)
 
 static int revwalk_enqueue_unsorted(git_revwalk *walk, commit_object *commit)
 {
-	return commit_list_insert(commit, &walk->iterator_rand) ? GIT_SUCCESS : GIT_ENOMEM;
+	return commit_list_insert(commit, &walk->iterator_rand) ? 0 : -1;
 }
 
 static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
@@ -440,16 +448,16 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 	commit_object *next;
 
 	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
-		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to load next revision");
+		if ((error = process_commit_parents(walk, next)) < 0)
+			return error;
 
 		if (!next->uninteresting) {
 			*object_out = next;
-			return GIT_SUCCESS;
+			return 0;
 		}
 	}
 
-	return git__throw(GIT_EREVWALKOVER, "Failed to load next revision");
+	return GIT_EREVWALKOVER;
 }
 
 static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
@@ -458,16 +466,16 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 	commit_object *next;
 
 	while ((next = commit_list_pop(&walk->iterator_rand)) != NULL) {
-		if ((error = process_commit_parents(walk, next)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to load next revision");
+		if ((error = process_commit_parents(walk, next)) < 0)
+			return error;
 
 		if (!next->uninteresting) {
 			*object_out = next;
-			return GIT_SUCCESS;
+			return 0;
 		}
 	}
 
-	return git__throw(GIT_EREVWALKOVER, "Failed to load next revision");
+	return GIT_EREVWALKOVER;
 }
 
 static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
@@ -478,7 +486,7 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 	for (;;) {
 		next = commit_list_pop(&walk->iterator_topo);
 		if (next == NULL)
-			return git__throw(GIT_EREVWALKOVER, "Failed to load next revision");
+			return GIT_EREVWALKOVER;
 
 		if (next->in_degree > 0) {
 			next->topo_delay = 1;
@@ -495,14 +503,14 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 		}
 
 		*object_out = next;
-		return GIT_SUCCESS;
+		return 0;
 	}
 }
 
 static int revwalk_next_reverse(commit_object **object_out, git_revwalk *walk)
 {
 	*object_out = commit_list_pop(&walk->iterator_reverse);
-	return *object_out ? GIT_SUCCESS : GIT_EREVWALKOVER;
+	return *object_out ? 0 : GIT_EREVWALKOVER;
 }
 
 
@@ -514,7 +522,7 @@ static int prepare_walk(git_revwalk *walk)
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
 		unsigned short i;
 
-		while ((error = walk->get_next(&next, walk)) == GIT_SUCCESS) {
+		while ((error = walk->get_next(&next, walk)) == 0) {
 			for (i = 0; i < next->out_degree; ++i) {
 				commit_object *parent = next->parents[i];
 				parent->in_degree++;
@@ -524,24 +532,24 @@ static int prepare_walk(git_revwalk *walk)
 		}
 
 		if (error != GIT_EREVWALKOVER)
-			return git__rethrow(error, "Failed to prepare revision walk");
+			return error;
 
 		walk->get_next = &revwalk_next_toposort;
 	}
 
 	if (walk->sorting & GIT_SORT_REVERSE) {
 
-		while ((error = walk->get_next(&next, walk)) == GIT_SUCCESS)
+		while ((error = walk->get_next(&next, walk)) == 0)
 			commit_list_insert(next, &walk->iterator_reverse);
 
 		if (error != GIT_EREVWALKOVER)
-			return git__rethrow(error, "Failed to prepare revision walk");
+			return error;
 
 		walk->get_next = &revwalk_next_reverse;
 	}
 
 	walk->walking = 1;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 
@@ -553,24 +561,18 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	int error;
 	git_revwalk *walk;
 
-	walk = git__malloc(sizeof(git_revwalk));
-	if (walk == NULL)
-		return GIT_ENOMEM;
-
-	memset(walk, 0x0, sizeof(git_revwalk));
+	walk = git__calloc(1, sizeof(git_revwalk));
+	GITERR_CHECK_ALLOC(walk);
 
 	walk->commits = git_hashtable_alloc(64,
 			object_table_hash,
 			(git_hash_keyeq_ptr)git_oid_cmp);
+	GITERR_CHECK_ALLOC(walk->commits);
 
-	if (walk->commits == NULL) {
-		git__free(walk);
-		return GIT_ENOMEM;
-	}
-
-	git_pqueue_init(&walk->iterator_time, 8, commit_time_cmp);
-	git_vector_init(&walk->memory_alloc, 8, NULL);
-	alloc_chunk(walk);
+	if (git_pqueue_init(&walk->iterator_time, 8, commit_time_cmp) < 0 ||
+		git_vector_init(&walk->memory_alloc, 8, NULL) < 0 ||
+		alloc_chunk(walk) < 0)
+		return -1;
 
 	walk->get_next = &revwalk_next_unsorted;
 	walk->enqueue = &revwalk_enqueue_unsorted;
@@ -578,13 +580,13 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	walk->repo = repo;
 
 	error = git_repository_odb(&walk->odb, repo);
-	if (error < GIT_SUCCESS) {
+	if (error < 0) {
 		git_revwalk_free(walk);
 		return error;
 	}
 
 	*revwalk_out = walk;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_revwalk_free(git_revwalk *walk)
@@ -648,8 +650,8 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 	assert(walk && oid);
 
 	if (!walk->walking) {
-		if ((error = prepare_walk(walk)) < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to load next revision");
+		if ((error = prepare_walk(walk)) < 0)
+			return error;
 	}
 
 	error = walk->get_next(&next, walk);
@@ -659,11 +661,10 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 		return GIT_EREVWALKOVER;
 	}
 
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to load next revision");
+	if (!error)
+		git_oid_cpy(oid, &next->oid);
 
-	git_oid_cpy(oid, &next->oid);
-	return GIT_SUCCESS;
+	return error;
 }
 
 void git_revwalk_reset(git_revwalk *walk)

@@ -87,7 +87,7 @@ void locate_loose_object(const char *repository_folder, git_object *object, char
 	static const char *objects_folder = "objects/";
 
 	char *ptr, *full_path, *top_folder;
-	int path_length, objects_length;
+	size_t path_length, objects_length;
 
 	assert(repository_folder && object);
 

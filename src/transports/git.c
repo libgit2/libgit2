@@ -46,7 +46,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	char *delim, *repo;
 	char default_command[] = "git-upload-pack";
 	char host[] = "host=";
-	int len;
+	size_t len;
 
 	delim = strchr(url, '/');
 	if (delim == NULL)
@@ -64,7 +64,8 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1;
 
 	git_buf_grow(request, len);
-	git_buf_printf(request, "%04x%s %s%c%s", len, cmd, repo, 0, host);
+	git_buf_printf(request, "%04x%s %s%c%s",
+		(unsigned int)(len & 0x0FFFF), cmd, repo, 0, host);
 	git_buf_put(request, url, delim - url);
 	git_buf_putc(request, '\0');
 
@@ -118,7 +119,7 @@ static int do_connect(transport_git *t, const char *url)
 	git__free(port);
 
 	if (error < GIT_SUCCESS && s > 0)
-		close(s);
+		gitno_close(s);
 	if (!connected)
 		error = git__throw(GIT_EOSERR, "Failed to connect to any of the addresses");
 

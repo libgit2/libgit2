@@ -149,15 +149,15 @@ void test_diff_tree__options(void)
 			diff, &actual, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		expected = &test_expects[i];
-		cl_assert_intequal(actual.files,     expected->files);
-		cl_assert_intequal(actual.file_adds, expected->file_adds);
- 		cl_assert_intequal(actual.file_dels, expected->file_dels);
-		cl_assert_intequal(actual.file_mods, expected->file_mods);
-		cl_assert_intequal(actual.hunks,     expected->hunks);
-		cl_assert_intequal(actual.lines,     expected->lines);
-		cl_assert_intequal(actual.line_ctxt, expected->line_ctxt);
-		cl_assert_intequal(actual.line_adds, expected->line_adds);
-		cl_assert_intequal(actual.line_dels, expected->line_dels);
+		cl_assert_equal_i(actual.files,     expected->files);
+		cl_assert_equal_i(actual.file_adds, expected->file_adds);
+ 		cl_assert_equal_i(actual.file_dels, expected->file_dels);
+		cl_assert_equal_i(actual.file_mods, expected->file_mods);
+		cl_assert_equal_i(actual.hunks,     expected->hunks);
+		cl_assert_equal_i(actual.lines,     expected->lines);
+		cl_assert_equal_i(actual.line_ctxt, expected->line_ctxt);
+		cl_assert_equal_i(actual.line_adds, expected->line_adds);
+		cl_assert_equal_i(actual.line_dels, expected->line_dels);
 
 		git_diff_list_free(diff);
 		diff = NULL;

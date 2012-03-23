@@ -67,7 +67,8 @@ int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
 	};
 
-	unsigned int i, text_len;
+	unsigned int i;
+	size_t text_len;
 	char *search;
 	int error;
 
