@@ -42,11 +42,13 @@ void test_core_errors__new_school(void)
 	cl_assert(str_in_error != NULL);
 
 	git_error_clear();
+	cl_assert(git_error_last() == NULL);
 
-	{
+	do {
 		struct stat st;
+		memset(&st, 0, sizeof(st));
 		assert(p_lstat("this_file_does_not_exist", &st) < 0);
-	}
+	} while (false);
 	giterr_set(GITERR_OS, "stat failed"); /* internal fn */
 
 	cl_assert(git_error_last() != NULL);
