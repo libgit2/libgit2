@@ -624,7 +624,7 @@ static int tree_frompath(
 	git_tree **parent_out,
 	git_tree *root,
 	git_buf *treeentry_path,
-	int offset)
+	size_t offset)
 {
 	char *slash_pos = NULL;
 	const git_tree_entry* entry;

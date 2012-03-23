@@ -1,11 +1,11 @@
 
 struct status_entry_counts {
-	int wrong_status_flags_count;
-	int wrong_sorted_path;
-	int entry_count;
+	size_t wrong_status_flags_count;
+	size_t wrong_sorted_path;
+	size_t entry_count;
 	const unsigned int* expected_statuses;
 	const char** expected_paths;
-	int expected_entry_count;
+	size_t expected_entry_count;
 };
 
 static const char *entry_paths0[] = {

@@ -32,7 +32,7 @@ typedef struct {
 	git_protocol proto;
 	git_vector refs;
 	git_vector common;
-	int socket;
+	GIT_SOCKET socket;
 	git_buf buf;
 	git_remote_head **heads;
 	int error;
@@ -88,16 +88,16 @@ static int do_connect(transport_http *t, const char *host, const char *port)
 	GIT_SOCKET s = -1;
 
 	if (t->parent.connected && http_should_keep_alive(&t->parser))
-		return GIT_SUCCESS;
+		return 0;
 
 	s = gitno_connect(host, port);
-	if (s < GIT_SUCCESS) {
-	    return git__rethrow(s, "Failed to connect to host");
-	}
+	if (s < 0)
+		return (int)s;
+
 	t->socket = s;
 	t->parent.connected = 1;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 /*

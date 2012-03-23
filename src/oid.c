@@ -260,6 +260,8 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 {
 	git_oid_shorten *os;
 
+	assert((size_t)((int)min_length) == min_length);
+
 	os = git__calloc(1, sizeof(git_oid_shorten));
 	if (os == NULL)
 		return NULL;
@@ -270,7 +272,7 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 	}
 
 	os->node_count = 1;
-	os->min_length = min_length;
+	os->min_length = (int)min_length;
 
 	return os;
 }
@@ -328,7 +330,8 @@ void git_oid_shorten_free(git_oid_shorten *os)
  */
 int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 {
-	int i, is_leaf;
+	int i;
+	bool is_leaf;
 	node_index idx;
 
 	if (os->full)
@@ -338,7 +341,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 		return os->min_length;
 
 	idx = 0;
-	is_leaf = 0;
+	is_leaf = false;
 
 	for (i = 0; i < GIT_OID_HEXSZ; ++i) {
 		int c = git__fromhex(text_oid[i]);
@@ -368,11 +371,11 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 		}
 
 		idx = node->children[c];
-		is_leaf = 0;
+		is_leaf = false;
 
 		if (idx < 0) {
 			node->children[c] = idx = -idx;
-			is_leaf = 1;
+			is_leaf = true;
 		}
 	}
 

@@ -47,7 +47,7 @@ static int signature_error(const char *msg)
 static int process_trimming(const char *input, char **storage, const char *input_end, int fail_when_empty)
 {
 	const char *left, *right;
-	int trimmed_input_length;
+	size_t trimmed_input_length;
 
 	assert(storage);
 

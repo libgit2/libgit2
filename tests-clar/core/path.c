@@ -197,11 +197,13 @@ check_path_to_dir(
 static void
 check_string_to_dir(
 	const char* path,
-	int         maxlen,
+	size_t      maxlen,
     const char* expected)
 {
-	int  len = strlen(path);
+	size_t len = strlen(path);
 	char *buf = git__malloc(len + 2);
+	cl_assert(buf);
+
 	strncpy(buf, path, len + 2);
 
 	git_path_string_to_dir(buf, maxlen);

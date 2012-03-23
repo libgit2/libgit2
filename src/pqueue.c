@@ -17,14 +17,14 @@ int git_pqueue_init(git_pqueue *q, size_t n, git_pqueue_cmp cmppri)
 	assert(q);
 
 	/* Need to allocate n+1 elements since element 0 isn't used. */
-	if ((q->d = git__malloc((n + 1) * sizeof(void *))) == NULL)
-		return GIT_ENOMEM;
+	q->d = git__malloc((n + 1) * sizeof(void *));
+	GITERR_CHECK_ALLOC(q->d);
 
 	q->size = 1;
 	q->avail = q->step = (n + 1); /* see comment above about n+1 */
 	q->cmppri = cmppri;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 
@@ -102,8 +102,8 @@ int git_pqueue_insert(git_pqueue *q, void *d)
 	/* allocate more memory if necessary */
 	if (q->size >= q->avail) {
 		newsize = q->size + q->step;
-		if ((tmp = git__realloc(q->d, sizeof(void *) * newsize)) == NULL)
-			return GIT_ENOMEM;
+		tmp = git__realloc(q->d, sizeof(void *) * newsize);
+		GITERR_CHECK_ALLOC(tmp);
 
 		q->d = tmp;
 		q->avail = newsize;
@@ -114,7 +114,7 @@ int git_pqueue_insert(git_pqueue *q, void *d)
 	q->d[i] = d;
 	bubble_up(q, i);
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 
