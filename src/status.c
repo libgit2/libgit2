@@ -120,13 +120,14 @@ int git_status_foreach_ext(
 	int (*cb)(const char *, unsigned int, void *),
 	void *cbdata)
 {
-	int err = 0;
+	int err = 0, cmp;
 	git_diff_options diffopt;
 	git_diff_list *idx2head = NULL, *wd2idx = NULL;
 	git_tree *head = NULL;
 	git_status_show_t show =
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	git_diff_delta *i2h, *w2i;
+	unsigned int i, j, i_max, j_max;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
@@ -158,23 +159,35 @@ int git_status_foreach_ext(
 		goto cleanup;
 
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
-		git_diff_list *empty = NULL;
-		GIT_DIFF_COITERATE(
-			idx2head, empty, i2h, w2i,
-			err = cb(i2h->old.path, index_delta2status(i2h->status), cbdata),
-			/* nothing */, /* nothing */, if (err < 0) break);
-
+		for (i = 0; !err && i < idx2head->deltas.length; i++) {
+			i2h = GIT_VECTOR_GET(&idx2head->deltas, i);
+			err = cb(i2h->old.path, index_delta2status(i2h->status), cbdata);
+		}
 		git_diff_list_free(idx2head);
 		idx2head = NULL;
 	}
 
-	GIT_DIFF_COITERATE(
-		idx2head, wd2idx, i2h, w2i,
-		err = cb(i2h->old.path, index_delta2status(i2h->status), cbdata),
-		err = cb(w2i->old.path, workdir_delta2status(w2i->status), cbdata),
-		err = cb(i2h->old.path, index_delta2status(i2h->status) |
-			workdir_delta2status(w2i->status), cbdata),
-		if (err < 0) break);
+	i_max = idx2head ? idx2head->deltas.length : 0;
+	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
+
+	for (i = 0, j = 0; !err && (i < i_max || j < j_max); ) {
+		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
+		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
+
+		cmp = !w2i ? -1 : !i2h ? 1 : strcmp(i2h->old.path, w2i->old.path);
+
+		if (cmp < 0) {
+			err = cb(i2h->old.path, index_delta2status(i2h->status), cbdata);
+			i++;
+		} else if (cmp > 0) {
+			err = cb(w2i->old.path, workdir_delta2status(w2i->status), cbdata);
+			j++;
+		} else {
+			err = cb(i2h->old.path, index_delta2status(i2h->status) |
+					 workdir_delta2status(w2i->status), cbdata);
+			i++; j++;
+		}
+	}
 
 cleanup:
 	git_tree_free(head);

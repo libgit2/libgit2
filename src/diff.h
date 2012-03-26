@@ -21,19 +21,5 @@ struct git_diff_list {
 	git_iterator_type_t new_src;
 };
 
-/* macro lets you iterate over two diff lists together */
-
-#define GIT_DIFF_COITERATE(A,B,AD,BD,LEFT,RIGHT,BOTH,AFTER) do { \
-	unsigned int _i = 0, _j = 0; int _cmp; \
-	while (((A) && _i < (A)->deltas.length) || ((B) && _j < (B)->deltas.length)) { \
-		(AD) = (A) ? GIT_VECTOR_GET(&(A)->deltas,_i) : NULL; \
-		(BD) = (B) ? GIT_VECTOR_GET(&(B)->deltas,_j) : NULL; \
-		_cmp = !(BD) ? -1 : !(AD) ? 1 : strcmp((AD)->old.path,(BD)->old.path); \
-		if (_cmp < 0) { LEFT; _i++; } \
-		else if (_cmp > 0) { RIGHT; _j++; } \
-		else { BOTH; _i++; _j++; } \
-		AFTER; \
-	} } while (0)
-
 #endif
 

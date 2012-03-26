@@ -565,23 +565,39 @@ int git_diff_merge(
 {
 	int error = 0;
 	git_vector onto_new;
-	git_diff_delta *delta, *o;
-	const git_diff_delta *f;
-	unsigned int i;
+	git_diff_delta *delta;
+	unsigned int i, j;
+
+	assert(onto && from);
+
+	if (!from->deltas.length)
+		return 0;
 
 	if (git_vector_init(&onto_new, onto->deltas.length, diff_delta__cmp) < 0)
 		return -1;
 
-	GIT_DIFF_COITERATE(
-		onto, from, o, f,
-		delta = diff_delta__dup(o),
-		delta = diff_delta__dup(f),
-		delta = diff_delta__merge_like_cgit(o, f),
+	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
+		git_diff_delta *o = GIT_VECTOR_GET(&onto->deltas, i);
+		const git_diff_delta *f = GIT_VECTOR_GET(&from->deltas, j);
+		int cmp = !f ? -1 : !o ? 1 : strcmp(o->old.path, f->old.path);
+
+		if (cmp < 0) {
+			delta = diff_delta__dup(o);
+			i++;
+		} else if (cmp > 0) {
+			delta = diff_delta__dup(f);
+			j++;
+		} else {
+			delta = diff_delta__merge_like_cgit(o, f);
+			i++;
+			j++;
+		}
+
 		if ((error = !delta ? -1 : git_vector_insert(&onto_new, delta)) < 0)
 			break;
-		);
+	}
 
-	if (error == 0) {
+	if (!error) {
 		git_vector_swap(&onto->deltas, &onto_new);
 		onto->new_src = from->new_src;
 	}
