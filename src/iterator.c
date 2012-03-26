@@ -121,7 +121,6 @@ static int tree_iterator__advance(
 			break;
 
 		tree_iterator__pop_frame(ti);
-		git_buf_rtruncate_at_char(&ti->path, '/');
 	}
 
 	if (te && entry_is_tree(te))
