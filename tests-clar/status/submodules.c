@@ -29,7 +29,7 @@ void test_status_submodules__cleanup(void)
 }
 
 static int
-cb_status__count(const char *p, unsigned int s, void *payload)
+cb_status__submodule_count(const char *p, unsigned int s, void *payload)
 {
 	volatile int *count = (int *)payload;
 
@@ -50,10 +50,10 @@ void test_status_submodules__0(void)
 	cl_assert(git_path_isfile("submodules/.gitmodules"));
 
 	cl_git_pass(
-		git_status_foreach(g_repo, cb_status__count, &counts)
+		git_status_foreach(g_repo, cb_status__submodule_count, &counts)
 	);
 
-	cl_assert(counts == 7);
+	cl_assert(counts == 6);
 }
 
 static const char *expected_files[] = {
@@ -62,17 +62,15 @@ static const char *expected_files[] = {
 	"deleted",
 	"ignored",
 	"modified",
-	"testrepo",
 	"untracked"
 };
 
 static unsigned int expected_status[] = {
-	GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_MODIFIED,
 	GIT_STATUS_INDEX_NEW,
 	GIT_STATUS_INDEX_DELETED,
 	GIT_STATUS_IGNORED,
 	GIT_STATUS_WT_MODIFIED,
-	GIT_STATUS_INDEX_NEW, /* submodule added in index, but not committed */
 	GIT_STATUS_WT_NEW
 };
 
@@ -100,5 +98,5 @@ void test_status_submodules__1(void)
 		git_status_foreach(g_repo, cb_status__match, &index)
 	);
 
-	cl_assert(index == 7);
+	cl_assert(index == 6);
 }
