@@ -83,6 +83,7 @@ struct git_repository {
 	git_cache objects;
 	git_refcache references;
 	git_attr_cache attrcache;
+	git_hashtable *submodules;
 
 	char *path_repository;
 	char *workdir;
@@ -119,5 +120,10 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo);
  */
 int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar);
 void git_repository__cvar_cache_clear(git_repository *repo);
+
+/*
+ * Submodule cache
+ */
+extern void git_submodule_config_free(git_repository *repo);
 
 #endif

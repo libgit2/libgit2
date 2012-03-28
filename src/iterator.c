@@ -9,6 +9,7 @@
 #include "tree.h"
 #include "ignore.h"
 #include "buffer.h"
+#include "git2/submodule.h"
 
 typedef struct tree_iterator_frame tree_iterator_frame;
 struct tree_iterator_frame {
@@ -424,13 +425,24 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 		return 0; /* if error, ignore it and ignore file */
 
 	/* detect submodules */
-	if (S_ISDIR(wi->entry.mode) &&
-		git_path_contains(&wi->path, DOT_GIT) == true)
-	{
-		size_t len = strlen(wi->entry.path);
-		assert(wi->entry.path[len - 1] == '/');
-		wi->entry.path[len - 1] = '\0';
-		wi->entry.mode = S_IFGITLINK;
+	if (S_ISDIR(wi->entry.mode)) {
+		bool is_submodule = git_path_contains(&wi->path, DOT_GIT);
+
+		/* if there is no .git, still check submodules data */
+		if (!is_submodule) {
+			int res = git_submodule_lookup(NULL, wi->repo, wi->entry.path);
+			is_submodule = (res == 0);
+			if (res == GIT_ENOTFOUND)
+				giterr_clear();
+		}
+
+		/* if submodule, mark as GITLINK and remove trailing slash */
+		if (is_submodule) {
+			size_t len = strlen(wi->entry.path);
+			assert(wi->entry.path[len - 1] == '/');
+			wi->entry.path[len - 1] = '\0';
+			wi->entry.mode = S_IFGITLINK;
+		}
 	}
 
 	return 0;
@@ -489,7 +501,9 @@ int git_iterator_advance_into_directory(
 	workdir_iterator *wi = (workdir_iterator *)iter;
 
 	if (iter->type == GIT_ITERATOR_WORKDIR &&
-		wi->entry.path && S_ISDIR(wi->entry.mode))
+		wi->entry.path &&
+		S_ISDIR(wi->entry.mode) &&
+		!S_ISGITLINK(wi->entry.mode))
 	{
 		if (workdir_iterator__expand_dir(wi) < 0)
 			/* if error loading or if empty, skip the directory. */

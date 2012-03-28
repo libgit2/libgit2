@@ -28,6 +28,20 @@ void test_status_submodules__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+void test_status_submodules__api(void)
+{
+	git_submodule *sm;
+
+	cl_assert(git_submodule_lookup(NULL, g_repo, "nonexistent") == GIT_ENOTFOUND);
+
+	cl_assert(git_submodule_lookup(NULL, g_repo, "modified") == GIT_ENOTFOUND);
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
+	cl_assert(sm != NULL);
+	cl_assert_equal_s("testrepo", sm->name);
+	cl_assert_equal_s("testrepo", sm->path);
+}
+
 static int
 cb_status__submodule_count(const char *p, unsigned int s, void *payload)
 {
@@ -79,7 +93,7 @@ cb_status__match(const char *p, unsigned int s, void *payload)
 {
 	volatile int *index = (int *)payload;
 
-	cl_assert_strequal(expected_files[*index], p);
+	cl_assert_equal_s(expected_files[*index], p);
 	cl_assert(expected_status[*index] == s);
 	(*index)++;
 

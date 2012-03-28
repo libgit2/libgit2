@@ -201,7 +201,7 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	return file->set(file, name, value);
 }
 
-static int parse_bool(int *out, const char *value)
+int git_config_parse_bool(int *out, const char *value)
 {
 	/* A missing value means true */
 	if (value == NULL) {
@@ -301,7 +301,7 @@ int git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps,
 			case GIT_CVAR_TRUE: {
 				int bool_val;
 
-				if (parse_bool(&bool_val, value) == 0 && 
+				if (git_config_parse_bool(&bool_val, value) == 0 && 
 					bool_val == (int)m->cvar_type) {
 					*out = m->map_value;
 					return 0;
@@ -372,7 +372,7 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 	if (ret < 0)
 		return ret;
 
-	if (parse_bool(out, value) == 0)
+	if (git_config_parse_bool(out, value) == 0)
 		return 0;
 
 	if (parse_int32(out, value) == 0) {
