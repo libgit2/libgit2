@@ -130,7 +130,8 @@ typedef enum {
 	GITERR_CONFIG,
 	GITERR_REGEX,
 	GITERR_ODB,
-	GITERR_INDEX
+	GITERR_INDEX,
+	GITERR_OBJECT
 } git_error_class;
 
 /**

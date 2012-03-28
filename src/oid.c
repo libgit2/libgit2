@@ -125,13 +125,13 @@ int git_oid__parse(
 	const char *buffer = *buffer_out;
 
 	if (buffer + (header_len + sha_len + 1) > buffer_end)
-		return oid_error_invalid("input is too short");
+		return -1;
 
 	if (memcmp(buffer, header, header_len) != 0)
-		return oid_error_invalid("did not match expected header");
+		return -1;
 
 	if (buffer[header_len + sha_len] != '\n')
-		return oid_error_invalid("not terminated correctly");
+		return -1;
 
 	if (git_oid_fromstr(oid, buffer + header_len) < 0)
 		return -1;
