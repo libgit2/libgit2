@@ -210,14 +210,16 @@ unsigned char *git_mwindow_open(
 	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
 	git_mwindow *w = *cursor;
 
+
 	if (!w || !git_mwindow_contains(w, offset + extra)) {
 		if (w) {
 			w->inuse_cnt--;
 		}
 
 		for (w = mwf->windows; w; w = w->next) {
-			if (git_mwindow_contains(w, offset + extra))
+			if (git_mwindow_contains(w, offset + extra)) {
 				break;
+			}
 		}
 
 		/*

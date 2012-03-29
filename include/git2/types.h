@@ -171,6 +171,15 @@ typedef struct git_remote git_remote;
 
 typedef struct git_remote_head git_remote_head;
 
+/** Information about the progress of the indexer  */
+typedef struct git_indexer_stats {
+	unsigned int total;
+	unsigned int processed;
+} git_indexer_stats;
+
+typedef struct git_indexer git_indexer;
+typedef struct git_indexer_stream git_indexer_stream;
+
 /** @} */
 GIT_END_DECL
 

@@ -13,16 +13,22 @@
 GIT_BEGIN_DECL
 
 /**
- * This is passed as the first argument to the callback to allow the
- * user to see the progress.
+ * Create a new streaming indexer instance
+ *
+ * @param out where to store the inexer instance
+ * @param path to the gitdir (metadata directory)
  */
-typedef struct git_indexer_stats {
-	unsigned int total;
-	unsigned int processed;
-} git_indexer_stats;
+GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *gitdir);
 
-
-typedef struct git_indexer git_indexer;
+/**
+ * Add data to the indexer
+ *
+ * @param idx the indexer
+ * @param data the data to add
+ * @param size the size of the data
+ * @param stats stat storage
+ */
+GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_indexer_stats *stats);
 
 /**
  * Create a new indexer instance
