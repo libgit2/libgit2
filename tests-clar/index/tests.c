@@ -1,8 +1,8 @@
 #include "clar_libgit2.h"
 #include "index.h"
 
-#define TEST_INDEX_ENTRY_COUNT 109
-#define TEST_INDEX2_ENTRY_COUNT 1437
+static const int index_entry_count = 109;
+static const int index_entry_count_2 = 1437;
 #define TEST_INDEX_PATH cl_fixture("testrepo.git/index")
 #define TEST_INDEX2_PATH cl_fixture("gitgit.index")
 #define TEST_INDEXBIG_PATH cl_fixture("big.index")
@@ -16,7 +16,7 @@ struct test_entry {
    git_time_t mtime;
 };
 
-static struct test_entry TEST_ENTRIES[] = {
+static struct test_entry test_entries[] = {
    {4, "Makefile", 5064, 0x4C3F7F33},
    {62, "tests/Makefile", 2631, 0x4C3F7F33},
    {36, "src/index.c", 10014, 0x4C43368D},
@@ -104,17 +104,17 @@ void test_index_tests__default_test_index(void)
    cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
    cl_assert(index->on_disk);
 
-   cl_assert(git_index_entrycount(index) == TEST_INDEX_ENTRY_COUNT);
+   cl_assert(git_index_entrycount(index) == index_entry_count);
    cl_assert(index->entries.sorted);
 
    entries = (git_index_entry **)index->entries.contents;
 
-   for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
-      git_index_entry *e = entries[TEST_ENTRIES[i].index];
+   for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
+      git_index_entry *e = entries[test_entries[i].index];
 
-      cl_assert(strcmp(e->path, TEST_ENTRIES[i].path) == 0);
-      cl_assert(e->mtime.seconds == TEST_ENTRIES[i].mtime);
-      cl_assert(e->file_size == TEST_ENTRIES[i].file_size);
+      cl_assert(strcmp(e->path, test_entries[i].path) == 0);
+      cl_assert(e->mtime.seconds == test_entries[i].mtime);
+      cl_assert(e->file_size == test_entries[i].file_size);
    }
 
    git_index_free(index);
@@ -127,7 +127,7 @@ void test_index_tests__gitgit_index(void)
    cl_git_pass(git_index_open(&index, TEST_INDEX2_PATH));
    cl_assert(index->on_disk);
 
-   cl_assert(git_index_entrycount(index) == TEST_INDEX2_ENTRY_COUNT);
+   cl_assert(git_index_entrycount(index) == index_entry_count_2);
    cl_assert(index->entries.sorted);
    cl_assert(index->tree != NULL);
 
@@ -141,9 +141,9 @@ void test_index_tests__find_in_existing(void)
 
    cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
 
-   for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
-      int idx = git_index_find(index, TEST_ENTRIES[i].path);
-      cl_assert(idx == TEST_ENTRIES[i].index);
+   for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
+      int idx = git_index_find(index, test_entries[i].path);
+      cl_assert(idx == test_entries[i].index);
    }
 
    git_index_free(index);
@@ -156,8 +156,8 @@ void test_index_tests__find_in_empty(void)
 
    cl_git_pass(git_index_open(&index, "fake-index"));
 
-   for (i = 0; i < ARRAY_SIZE(TEST_ENTRIES); ++i) {
-      int idx = git_index_find(index, TEST_ENTRIES[i].path);
+   for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
+      int idx = git_index_find(index, test_entries[i].path);
       cl_assert(idx == GIT_ENOTFOUND);
    }
 
