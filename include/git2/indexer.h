@@ -23,6 +23,25 @@ typedef struct git_indexer_stats {
 
 
 typedef struct git_indexer git_indexer;
+typedef struct git_indexer_stream git_indexer_stream;
+
+/**
+ * Create a new streaming indexer instance
+ *
+ * @param out where to store the inexer instance
+ * @param path to the gitdir (metadata directory)
+ */
+GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *gitdir);
+
+/**
+ * Add data to the indexer
+ *
+ * @param idx the indexer
+ * @param data the data to add
+ * @param size the size of the data
+ * @param stats stat storage
+ */
+GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, void *data, size_t size, git_indexer_stats *stats);
 
 /**
  * Create a new indexer instance
