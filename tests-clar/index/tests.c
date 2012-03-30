@@ -104,7 +104,7 @@ void test_index_tests__default_test_index(void)
    cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
    cl_assert(index->on_disk);
 
-   cl_assert(git_index_entrycount(index) == index_entry_count);
+   cl_assert(git_index_entrycount(index) == (unsigned int)index_entry_count);
    cl_assert(index->entries.sorted);
 
    entries = (git_index_entry **)index->entries.contents;
@@ -127,7 +127,7 @@ void test_index_tests__gitgit_index(void)
    cl_git_pass(git_index_open(&index, TEST_INDEX2_PATH));
    cl_assert(index->on_disk);
 
-   cl_assert(git_index_entrycount(index) == index_entry_count_2);
+   cl_assert(git_index_entrycount(index) == (unsigned int)index_entry_count_2);
    cl_assert(index->entries.sorted);
    cl_assert(index->tree != NULL);
 
@@ -217,7 +217,7 @@ void test_index_tests__add(void)
    git_oid id1;
 
    /* Intialize a new repository */
-   cl_git_pass(git_repository_init(&repo, "./myrepo", FALSE));
+   cl_git_pass(git_repository_init(&repo, "./myrepo", 0));
 
    /* Ensure we're the only guy in the room */
    cl_git_pass(git_repository_index(&index, repo));

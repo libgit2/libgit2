@@ -11,6 +11,9 @@ typedef struct object_data {
 
 static const char *odb_dir = "test-objects";
 
+void test_body(object_data *d, git_rawobj *o);
+
+
 
 // Helpers
 static int remove_object_files(object_data *d)
