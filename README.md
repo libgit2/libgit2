@@ -69,6 +69,7 @@ The following CMake variables are declared:
 - `INSTALL_INC`: Where to install headers to.
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
 - `BUILD_TESTS`: Build the libgit2 test suite (defaults to ON)
+- `BUILD_CLAR`: Build [Clar](https://github.com/tanoku/clar)-based test suite (defaults to OFF)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to OFF)
 
 Language Bindings
