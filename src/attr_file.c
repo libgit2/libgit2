@@ -495,8 +495,8 @@ int git_attr_assignment__parse(
 
 		/* expand macros (if given a repo with a macro cache) */
 		if (repo != NULL && assign->value == git_attr__true) {
-			git_attr_rule *macro =
-				git_hashtable_lookup(repo->attrcache.macros, assign->name);
+			git_attr_rule *macro = git_hashtable_lookup(
+				git_repository_attr_cache(repo)->macros, assign->name);
 
 			if (macro != NULL) {
 				unsigned int i;

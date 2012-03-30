@@ -8,6 +8,7 @@
 #include "git2/diff.h"
 #include "diff.h"
 #include "fileops.h"
+#include "config.h"
 
 static void diff_delta__free(git_diff_delta *delta)
 {
@@ -233,14 +234,37 @@ static int diff_delta__cmp(const void *a, const void *b)
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
+static int config_bool(git_config *cfg, const char *name, int defvalue)
+{
+	int val = defvalue;
+	if (git_config_get_bool(cfg, name, &val) < 0)
+		giterr_clear();
+	return val;
+}
+
 static git_diff_list *git_diff_list_alloc(
 	git_repository *repo, const git_diff_options *opts)
 {
+	git_config *cfg;
 	git_diff_list *diff = git__calloc(1, sizeof(git_diff_list));
 	if (diff == NULL)
 		return NULL;
 
 	diff->repo = repo;
+
+	/* load config values that affect diff behavior */
+	if (git_repository_config(&cfg, repo) < 0)
+		goto fail;
+	if (config_bool(cfg, "core.symlinks", 1))
+		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
+	if (config_bool(cfg, "core.ignorestat", 0))
+		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_ASSUME_UNCHANGED;
+	if (config_bool(cfg, "core.filemode", 1))
+		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_EXEC_BIT;
+	if (config_bool(cfg, "core.trustctime", 1))
+		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_CTIME;
+	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
+	git_config_free(cfg);
 
 	if (opts == NULL)
 		return diff;
@@ -252,10 +276,8 @@ static git_diff_list *git_diff_list_alloc(
 	diff->opts.dst_prefix = diff_strdup_prefix(
 		opts->dst_prefix ? opts->dst_prefix : DIFF_DST_PREFIX_DEFAULT);
 
-	if (!diff->opts.src_prefix || !diff->opts.dst_prefix) {
-		git__free(diff);
-		return NULL;
-	}
+	if (!diff->opts.src_prefix || !diff->opts.dst_prefix)
+		goto fail;
 
 	if (diff->opts.flags & GIT_DIFF_REVERSE) {
 		char *swap = diff->opts.src_prefix;
@@ -263,16 +285,19 @@ static git_diff_list *git_diff_list_alloc(
 		diff->opts.dst_prefix = swap;
 	}
 
-	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0) {
-		git__free(diff->opts.src_prefix);
-		git__free(diff->opts.dst_prefix);
-		git__free(diff);
-		return NULL;
-	}
+	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0)
+		goto fail;
 
 	/* TODO: do something safe with the pathspec strarray */
 
 	return diff;
+
+fail:
+	git_vector_free(&diff->deltas);
+	git__free(diff->opts.src_prefix);
+	git__free(diff->opts.dst_prefix);
+	git__free(diff);
+	return NULL;
 }
 
 void git_diff_list_free(git_diff_list *diff)
@@ -326,6 +351,8 @@ static int oid_for_workdir_item(
 	return result;
 }
 
+#define EXEC_BIT_MASK 0000111
+
 static int maybe_modified(
 	git_iterator *old,
 	const git_index_entry *oitem,
@@ -335,16 +362,33 @@ static int maybe_modified(
 {
 	git_oid noid, *use_noid = NULL;
 	git_delta_t status = GIT_DELTA_MODIFIED;
+	unsigned int omode = oitem->mode;
+	unsigned int nmode = nitem->mode;
 
 	GIT_UNUSED(old);
 
-	/* support "assume unchanged" & "skip worktree" bits */
-	if ((oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) != 0 ||
-		(oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0)
+	/* on platforms with no symlinks, promote plain files to symlinks */
+	if (S_ISLNK(omode) && S_ISREG(nmode) &&
+		!(diff->diffcaps & GIT_DIFFCAPS_HAS_SYMLINKS))
+		nmode = GIT_MODE_TYPE(omode) | (nmode & GIT_MODE_PERMS_MASK);
+
+	/* on platforms with no execmode, clear exec bit from comparisons */
+	if (!(diff->diffcaps & GIT_DIFFCAPS_TRUST_EXEC_BIT)) {
+		omode = omode & ~EXEC_BIT_MASK;
+		nmode = nmode & ~EXEC_BIT_MASK;
+	}
+
+	/* support "assume unchanged" (badly, b/c we still stat everything) */
+	if ((diff->diffcaps & GIT_DIFFCAPS_ASSUME_UNCHANGED) != 0)
+		status = (oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) ?
+			GIT_DELTA_MODIFIED : GIT_DELTA_UNMODIFIED;
+
+	/* support "skip worktree" index bit */
+	else if ((oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0)
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* if basic type of file changed, then split into delete and add */
-	else if (GIT_MODE_TYPE(oitem->mode) != GIT_MODE_TYPE(nitem->mode)) {
+	else if (GIT_MODE_TYPE(omode) != GIT_MODE_TYPE(nmode)) {
 		if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
 			diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem) < 0)
 			return -1;
@@ -353,24 +397,39 @@ static int maybe_modified(
 
 	/* if oids and modes match, then file is unmodified */
 	else if (git_oid_cmp(&oitem->oid, &nitem->oid) == 0 &&
-			oitem->mode == nitem->mode)
+			 omode == nmode)
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* if we have a workdir item with an unknown oid, check deeper */
 	else if (git_oid_iszero(&nitem->oid) && new->type == GIT_ITERATOR_WORKDIR) {
+		/* TODO: add check against index file st_mtime to avoid racy-git */
+
 		/* if they files look exactly alike, then we'll assume the same */
 		if (oitem->file_size == nitem->file_size &&
-			oitem->ctime.seconds == nitem->ctime.seconds &&
+			(!(diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) ||
+			 (oitem->ctime.seconds == nitem->ctime.seconds)) &&
 			oitem->mtime.seconds == nitem->mtime.seconds &&
-			oitem->dev == nitem->dev &&
+			(!(diff->diffcaps & GIT_DIFFCAPS_USE_DEV) ||
+			 (oitem->dev == nitem->dev)) &&
 			oitem->ino == nitem->ino &&
 			oitem->uid == nitem->uid &&
 			oitem->gid == nitem->gid)
 			status = GIT_DELTA_UNMODIFIED;
 
-		/* TODO? should we do anything special with submodules? */
-		else if (S_ISGITLINK(nitem->mode))
-			status = GIT_DELTA_UNMODIFIED;
+		else if (S_ISGITLINK(nmode)) {
+			git_submodule *sub;
+
+			if ((diff->opts.flags & GIT_DIFF_IGNORE_SUBMODULES) != 0)
+				status = GIT_DELTA_UNMODIFIED;
+			else if (git_submodule_lookup(&sub, diff->repo, nitem->path) < 0)
+				return -1;
+			else if (sub->ignore == GIT_SUBMODULE_IGNORE_ALL)
+				status = GIT_DELTA_UNMODIFIED;
+			else {
+				/* TODO: support other GIT_SUBMODULE_IGNORE values */
+				status = GIT_DELTA_UNMODIFIED;
+			}
+		}
 
 		/* TODO: check git attributes so we will not have to read the file
 		 * in if it is marked binary.
@@ -380,7 +439,7 @@ static int maybe_modified(
 			return -1;
 
 		else if (git_oid_cmp(&oitem->oid, &noid) == 0 &&
-			oitem->mode == nitem->mode)
+				 omode == nmode)
 			status = GIT_DELTA_UNMODIFIED;
 
 		/* store calculated oid so we don't have to recalc later */

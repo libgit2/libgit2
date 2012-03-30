@@ -22,7 +22,7 @@ GIT_BEGIN_DECL
 
 typedef enum {
 	GIT_SUBMODULE_UPDATE_CHECKOUT = 0,
-	GIT_SUBMOUDLE_UPDATE_REBASE = 1,
+	GIT_SUBMODULE_UPDATE_REBASE = 1,
 	GIT_SUBMODULE_UPDATE_MERGE = 2
 } git_submodule_update_t;
 
@@ -79,8 +79,6 @@ GIT_EXTERN(int) git_submodule_foreach(
 	git_repository *repo,
 	int (*callback)(const char *name, void *payload),
 	void *payload);
-
-#define GIT_SUBMODULE_HEAD "[internal]HEAD"
 
 /**
  * Lookup submodule information by name or path.

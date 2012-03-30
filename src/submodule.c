@@ -19,29 +19,18 @@
 #include "config.h"
 #include "repository.h"
 
-static const char *sm_update_values[] = {
-	"checkout",
-	"rebase",
-	"merge",
-	NULL
+static git_cvar_map _sm_update_map[] = {
+	{GIT_CVAR_STRING, "checkout", GIT_SUBMODULE_UPDATE_CHECKOUT},
+	{GIT_CVAR_STRING, "rebase", GIT_SUBMODULE_UPDATE_REBASE},
+	{GIT_CVAR_STRING, "merge", GIT_SUBMODULE_UPDATE_MERGE}
 };
 
-static const char *sm_ignore_values[] = {
-	"all",
-	"dirty",
-	"untracked",
-	"none",
-	NULL
+static git_cvar_map _sm_ignore_map[] = {
+	{GIT_CVAR_STRING, "all", GIT_SUBMODULE_IGNORE_ALL},
+	{GIT_CVAR_STRING, "dirty", GIT_SUBMODULE_IGNORE_DIRTY},
+	{GIT_CVAR_STRING, "untracked", GIT_SUBMODULE_IGNORE_UNTRACKED},
+	{GIT_CVAR_STRING, "none", GIT_SUBMODULE_IGNORE_NONE}
 };
-
-static int lookup_enum(const char **values, const char *str)
-{
-	int i;
-	for (i = 0; values[i]; ++i)
-		if (strcasecmp(str, values[i]) == 0)
-			return i;
-	return -1;
-}
 
 static uint32_t strhash_no_trailing_slash(const void *key, int hash_id)
 {
@@ -212,8 +201,9 @@ static int submodule_from_config(
 			goto fail;
 	}
 	else if (strcmp(property, "update") == 0) {
-		int val = lookup_enum(sm_update_values, value);
-		if (val < 0) {
+		int val;
+		if (git_config_lookup_map_value(
+			_sm_update_map, ARRAY_SIZE(_sm_update_map), value, &val) < 0) {
 			giterr_set(GITERR_INVALID,
 				"Invalid value for submodule update property: '%s'", value);
 			goto fail;
@@ -225,8 +215,9 @@ static int submodule_from_config(
 			goto fail;
 	}
 	else if (strcmp(property, "ignore") == 0) {
-		int val = lookup_enum(sm_ignore_values, value);
-		if (val < 0) {
+		int val;
+		if (git_config_lookup_map_value(
+			_sm_ignore_map, ARRAY_SIZE(_sm_ignore_map), value, &val) < 0) {
 			giterr_set(GITERR_INVALID,
 				"Invalid value for submodule ignore property: '%s'", value);
 			goto fail;

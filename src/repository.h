@@ -101,6 +101,11 @@ void git_object__free(void *object);
 int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end, const char *header);
 void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid);
 
+GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
+{
+	return &repo->attrcache;
+}
+
 /*
  * Weak pointers to repository internals.
  *
