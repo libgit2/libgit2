@@ -25,4 +25,9 @@ struct git_config {
 extern int git_config_find_global_r(git_buf *global_config_path);
 extern int git_config_find_system_r(git_buf *system_config_path);
 
+extern int git_config_parse_bool(int *out, const char *bool_string);
+
+extern int git_config_lookup_map_value(
+	git_cvar_map *maps, size_t map_n, const char *value, int *out);
+
 #endif
