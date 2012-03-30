@@ -59,19 +59,19 @@ static int loose_object_mode(const char *repository_folder, git_object *object)
 
 
 // Fixture setup and teardown
-void test_tag_write__initialize(void)
+void test_object_tag_write__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
 
-void test_tag_write__cleanup(void)
+void test_object_tag_write__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
 
 
 
-void test_tag_write__basic(void)
+void test_object_tag_write__basic(void)
 {
    // write a tag to the repository and read it again
 	git_tag *tag;
@@ -123,7 +123,7 @@ void test_tag_write__basic(void)
 	git_tag_free(tag);
 }
 
-void test_tag_write__overwrite(void)
+void test_object_tag_write__overwrite(void)
 {
    // Attempt to write a tag bearing the same name than an already existing tag
 	git_oid target_id, tag_id;
@@ -150,7 +150,7 @@ void test_tag_write__overwrite(void)
 
 }
 
-void test_tag_write__replace(void)
+void test_object_tag_write__replace(void)
 {
    // Replace an already existing tag
 	git_oid target_id, tag_id, old_tag_id;
@@ -187,7 +187,7 @@ void test_tag_write__replace(void)
 	git_reference_free(ref_tag);
 }
 
-void test_tag_write__lightweight(void)
+void test_object_tag_write__lightweight(void)
 {
    // write a lightweight tag to the repository and read it again
 	git_oid target_id, object_id;
@@ -216,7 +216,7 @@ void test_tag_write__lightweight(void)
 	git_reference_free(ref_tag);
 }
 
-void test_tag_write__lightweight_over_existing(void)
+void test_object_tag_write__lightweight_over_existing(void)
 {
    // Attempt to write a lightweight tag bearing the same name than an already existing tag
 	git_oid target_id, object_id, existing_object_id;
@@ -238,7 +238,7 @@ void test_tag_write__lightweight_over_existing(void)
 	git_object_free(target);
 }
 
-void test_tag_write__delete(void)
+void test_object_tag_write__delete(void)
 {
    // Delete an already existing tag
 	git_reference *ref_tag;

@@ -30,18 +30,18 @@ exit:
 
 
 // Fixture setup and teardown
-void test_tag_read__initialize(void)
+void test_object_tag_read__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
 
-void test_tag_read__cleanup(void)
+void test_object_tag_read__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
 
 
-void test_tag_read__parse(void)
+void test_object_tag_read__parse(void)
 {
    // read and parse a tag from the repository
    git_tag *tag1, *tag2;
@@ -72,7 +72,7 @@ void test_tag_read__parse(void)
    git_commit_free(commit);
 }
 
-void test_tag_read__list(void)
+void test_object_tag_read__list(void)
 {
    // list all tag names from the repository
    git_strarray tag_list;
@@ -84,7 +84,7 @@ void test_tag_read__list(void)
    git_strarray_free(&tag_list);
 }
 
-void test_tag_read__list_pattern(void)
+void test_object_tag_read__list_pattern(void)
 {
    // list all tag names from the repository matching a specified pattern
    cl_git_pass(ensure_tag_pattern_match(g_repo, "", 3));
@@ -96,7 +96,7 @@ void test_tag_read__list_pattern(void)
    cl_git_pass(ensure_tag_pattern_match(g_repo, "e90810[ab]", 1));
 }
 
-void test_tag_read__parse_without_tagger(void)
+void test_object_tag_read__parse_without_tagger(void)
 {
    // read and parse a tag without a tagger field
    git_repository *bad_tag_repo;
