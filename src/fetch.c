@@ -28,19 +28,21 @@ struct filter_payload {
 static int filter_ref__cb(git_remote_head *head, void *payload)
 {
 	struct filter_payload *p = payload;
-	int error;
+	int ret;
 
 	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0) {
 		p->found_head = 1;
 	} else {
 		/* If it doesn't match the refpec, we don't want it */
-		error = git_refspec_src_match(p->spec, head->name);
+		ret = git_refspec_src_match(p->spec, head->name);
 
-		if (error == GIT_ENOMATCH)
-			return GIT_SUCCESS;
+		if (ret == GIT_ENOMATCH)
+			return 0;
 
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Error matching remote ref name");
+		if (ret < GIT_SUCCESS) {
+			giterr_set(GITERR_NET, "Error matching remote ref name");
+			return -1;
+		}
 	}
 
 	/* If we have the object, mark it so we don't ask for it */
@@ -54,7 +56,6 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 
 static int filter_wants(git_remote *remote)
 {
-	int error;
 	struct filter_payload p;
 
 	git_vector_clear(&remote->refs);
@@ -69,9 +70,8 @@ static int filter_wants(git_remote *remote)
 	p.found_head = 0;
 	p.remote = remote;
 
-	error = git_repository_odb__weakptr(&p.odb, remote->repo);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (git_repository_odb__weakptr(&p.odb, remote->repo) < 0)
+		return -1;
 
 	return remote->transport->ls(remote->transport, &filter_ref__cb, &p);
 }
@@ -83,19 +83,16 @@ static int filter_wants(git_remote *remote)
  */
 int git_fetch_negotiate(git_remote *remote)
 {
-	int error;
 	git_transport *t = remote->transport;
 
-	error = filter_wants(remote);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to filter the reference list for wants");
+	if (filter_wants(remote) < 0) {
+		giterr_set(GITERR_NET, "Failed to filter the reference list for wants");
+		return -1;
+	}
 
 	/* Don't try to negotiate when we don't want anything */
-	if (remote->refs.length == 0)
-		return GIT_SUCCESS;
-
-	if (!remote->need_pack)
-		return GIT_SUCCESS;
+	if (remote->refs.length == 0 || !remote->need_pack)
+		return 0;
 
 	/*
 	 * Now we have everything set up so we can start tell the server
@@ -108,7 +105,7 @@ int git_fetch_download_pack(char **out, git_remote *remote)
 {
 	if(!remote->need_pack) {
 		*out = NULL;
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	return remote->transport->download_pack(out, remote->transport, remote->repo);
@@ -132,47 +129,45 @@ int git_fetch__download_pack(
 	gitno_buffer_setup(&buf, buff, sizeof(buff), fd);
 
 	if (memcmp(buffered, "PACK", strlen("PACK"))) {
-		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
+		giterr_set(GITERR_NET, "The pack doesn't start with the signature");
+		return -1;
 	}
 
-	error = git_buf_joinpath(&path, repo->path_repository, suff);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	if (git_buf_joinpath(&path, repo->path_repository, suff) < 0)
+		goto on_error;
 
-	error = git_filebuf_open(&file, path.ptr, GIT_FILEBUF_TEMPORARY);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	if (git_filebuf_open(&file, path.ptr, GIT_FILEBUF_TEMPORARY) < 0)
+		goto on_error;
 
 	/* Part of the packfile has been received, don't loose it */
-	error = git_filebuf_write(&file, buffered, buffered_size);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	if (git_filebuf_write(&file, buffered, buffered_size) < 0)
+		goto on_error;
 
 	while (1) {
-		error = git_filebuf_write(&file, buf.data, buf.offset);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
+		if (git_filebuf_write(&file, buf.data, buf.offset) < 0)
+			goto on_error;
 
 		gitno_consume_n(&buf, buf.offset);
 		error = gitno_recv(&buf);
 		if (error < GIT_SUCCESS)
-			goto cleanup;
+			goto on_error;
 		if (error == 0) /* Orderly shutdown */
 			break;
 	}
 
 	*out = git__strdup(file.path_lock);
-	if (*out == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	if (*out == NULL)
+		goto on_error;
 
 	/* A bit dodgy, but we need to keep the pack at the temporary path */
-	error = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);
-cleanup:
-	if (error < GIT_SUCCESS)
-		git_filebuf_cleanup(&file);
-    git_buf_free(&path);
+	if (git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE) < 0)
+		goto on_error;
 
-	return error;
+	git_buf_free(&path);
+
+	return 0;
+on_error:
+	git_buf_free(&path);
+	git_filebuf_cleanup(&file);
+	return -1;
 }
