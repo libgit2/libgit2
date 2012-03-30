@@ -64,10 +64,11 @@ IF (MSVC)
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
-	# TODO: bring back /RTC1 /RTCc
-	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
+	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd /RTC1 /RTCs /RTCu")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 	SET(WIN_RC "src/win32/git2.rc")
+
+   # Precompiled headers
 ELSE ()
 	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
