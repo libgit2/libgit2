@@ -256,8 +256,8 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 {
 	va_list ap;
 	int i;
-	size_t total_size = 0;
-	char *out;
+	size_t total_size = 0, original_size = buf->size;
+	char *out, *original = buf->ptr;
 
 	if (buf->size > 0 && buf->ptr[buf->size - 1] != separator)
 		++total_size; /* space for initial separator */
@@ -281,8 +281,9 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	va_end(ap);
 
 	/* expand buffer if needed */
-	if (total_size > 0 &&
-		git_buf_grow(buf, buf->size + total_size + 1) < 0)
+	if (total_size == 0)
+		return 0;
+	if (git_buf_grow(buf, buf->size + total_size + 1) < 0)
 		return -1;
 
 	out = buf->ptr + buf->size;
@@ -300,12 +301,23 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 		if (!segment)
 			continue;
 
+		/* deal with join that references buffer's original content */
+		if (segment >= original && segment < original + original_size) {
+			size_t offset = (segment - original);
+			segment = buf->ptr + offset;
+			segment_len = original_size - offset;
+		} else {
+			segment_len = strlen(segment);
+		}
+
 		/* skip leading separators */
 		if (out > buf->ptr && out[-1] == separator)
-			while (*segment == separator) segment++;
+			while (segment_len > 0 && *segment == separator) {
+				segment++;
+				segment_len--;
+			}
 
 		/* copy over next buffer */
-		segment_len = strlen(segment);
 		if (segment_len > 0) {
 			memmove(out, segment, segment_len);
 			out += segment_len;

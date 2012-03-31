@@ -40,7 +40,7 @@
 #include "git2/net.h"
 #include "git2/status.h"
 #include "git2/indexer.h"
-
+#include "git2/submodule.h"
 #include "git2/notes.h"
 
 #endif
