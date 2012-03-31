@@ -13,24 +13,13 @@ static git_repository *g_repo;
 
 
 // helpers
-static int assert_signature(git_signature *expected, git_signature *actual)
+static void assert_signature(git_signature *expected, git_signature *actual)
 {
-	if (actual == NULL)
-		return GIT_ERROR;
-
-	if (strcmp(expected->name, actual->name) != 0)
-		return GIT_ERROR;
-
-	if (strcmp(expected->email, actual->email) != 0)
-		return GIT_ERROR;
-
-	if (expected->when.offset != actual->when.offset)
-		return GIT_ERROR;
-
-	if (expected->when.time != actual->when.time)
-		return GIT_ERROR;
-
-	return GIT_SUCCESS;
+	cl_assert(actual);
+	cl_assert(0 == strcmp(expected->name, actual->name));
+	cl_assert(0 == strcmp(expected->email, actual->email));
+	cl_assert(expected->when.offset == actual->when.offset);
+	cl_assert(expected->when.time == actual->when.time);
 }
 
 
@@ -82,7 +71,7 @@ void test_refs_reflog__write_then_read(void)
 	cl_assert(reflog->entries.length == 2);
 
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 0);
-	cl_git_pass(assert_signature(committer, entry->committer));
+	assert_signature(committer, entry->committer);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
 	cl_assert(strcmp("0000000000000000000000000000000000000000", oid_str) == 0);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
@@ -90,7 +79,7 @@ void test_refs_reflog__write_then_read(void)
 	cl_assert(entry->msg == NULL);
 
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 1);
-	cl_git_pass(assert_signature(committer, entry->committer));
+	assert_signature(committer, entry->committer);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
 	cl_assert(strcmp(current_master_tip, oid_str) == 0);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);

@@ -12,7 +12,7 @@ static git_repository *g_repo;
 
 
 // Helpers
-static int ensure_tag_pattern_match(git_repository *repo, const char *pattern, const size_t expected_matches)
+static void ensure_tag_pattern_match(git_repository *repo, const char *pattern, const size_t expected_matches)
 {
    git_strarray tag_list;
    int error = GIT_SUCCESS;
@@ -25,7 +25,7 @@ static int ensure_tag_pattern_match(git_repository *repo, const char *pattern, c
 
 exit:
    git_strarray_free(&tag_list);
-   return error;
+   cl_git_pass(error);
 }
 
 
@@ -87,13 +87,13 @@ void test_object_tag_read__list(void)
 void test_object_tag_read__list_pattern(void)
 {
    // list all tag names from the repository matching a specified pattern
-   cl_git_pass(ensure_tag_pattern_match(g_repo, "", 3));
-   cl_git_pass(ensure_tag_pattern_match(g_repo, "*", 3));
-   cl_git_pass(ensure_tag_pattern_match(g_repo, "t*", 1));
-   cl_git_pass(ensure_tag_pattern_match(g_repo, "*b", 2));
-   cl_git_pass(ensure_tag_pattern_match(g_repo, "e", 0));
-   cl_git_pass(ensure_tag_pattern_match(g_repo, "e90810b", 1));
-   cl_git_pass(ensure_tag_pattern_match(g_repo, "e90810[ab]", 1));
+   ensure_tag_pattern_match(g_repo, "", 3);
+   ensure_tag_pattern_match(g_repo, "*", 3);
+   ensure_tag_pattern_match(g_repo, "t*", 1);
+   ensure_tag_pattern_match(g_repo, "*b", 2);
+   ensure_tag_pattern_match(g_repo, "e", 0);
+   ensure_tag_pattern_match(g_repo, "e90810b", 1);
+   ensure_tag_pattern_match(g_repo, "e90810[ab]", 1);
 }
 
 void test_object_tag_read__parse_without_tagger(void)

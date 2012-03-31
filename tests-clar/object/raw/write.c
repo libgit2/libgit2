@@ -16,73 +16,43 @@ void test_body(object_data *d, git_rawobj *o);
 
 
 // Helpers
-static int remove_object_files(object_data *d)
+static void remove_object_files(object_data *d)
 {
-   if (p_unlink(d->file) < 0) {
-      fprintf(stderr, "can't delete object file \"%s\"\n", d->file);
-      return -1;
-   }
-
-   if ((p_rmdir(d->dir) < 0) && (errno != ENOTEMPTY)) {
-      fprintf(stderr, "can't remove directory \"%s\"\n", d->dir);
-      return -1;
-   }
-
-   if (p_rmdir(odb_dir) < 0) {
-      fprintf(stderr, "can't remove directory \"%s\"\n", odb_dir);
-      return -1;
-   }
-
-   return 0;
+   cl_git_pass(p_unlink(d->file));
+   cl_git_pass(p_rmdir(d->dir));
+   cl_assert(errno != ENOTEMPTY);
+   cl_git_pass(p_rmdir(odb_dir) < 0);
 }
 
-static int streaming_write(git_oid *oid, git_odb *odb, git_rawobj *raw)
+static void streaming_write(git_oid *oid, git_odb *odb, git_rawobj *raw)
 {
    git_odb_stream *stream;
    int error;
 
-   if ((error = git_odb_open_wstream(&stream, odb, raw->len, raw->type)) < GIT_SUCCESS)
-      return error;
-
+   cl_git_pass(git_odb_open_wstream(&stream, odb, raw->len, raw->type));
    stream->write(stream, raw->data, raw->len);
-
    error = stream->finalize_write(oid, stream);
    stream->free(stream);
-
-   return error;
+   cl_git_pass(error);
 }
 
-static int check_object_files(object_data *d)
+static void check_object_files(object_data *d)
 {
-   if (git_path_exists(d->dir) < 0)
-      return -1;
-   if (git_path_exists(d->file) < 0)
-      return -1;
-   return 0;
+   cl_git_pass(git_path_exists(d->dir));
+   cl_git_pass(git_path_exists(d->file));
 }
 
-static int cmp_objects(git_rawobj *o1, git_rawobj *o2)
+static void cmp_objects(git_rawobj *o1, git_rawobj *o2)
 {
-   if (o1->type != o2->type)
-      return -1;
-   if (o1->len != o2->len)
-      return -1;
-   if ((o1->len > 0) && (memcmp(o1->data, o2->data, o1->len) != 0))
-      return -1;
-   return 0;
+   cl_assert(o1->type == o2->type);
+   cl_assert(o1->len == o2->len);
+   if (o1->len > 0)
+      cl_assert(memcmp(o1->data, o2->data, o1->len) == 0);
 }
 
-static int make_odb_dir(void)
+static void make_odb_dir(void)
 {
-	if (p_mkdir(odb_dir, GIT_OBJECT_DIR_MODE) < 0) {
-		int err = errno;
-		fprintf(stderr, "can't make directory \"%s\"", odb_dir);
-		if (err == EEXIST)
-			fprintf(stderr, " (already exists)");
-		fprintf(stderr, "\n");
-		return -1;
-	}
-	return 0;
+	cl_git_pass(p_mkdir(odb_dir, GIT_OBJECT_DIR_MODE));
 }
 
 
@@ -93,20 +63,20 @@ void test_body(object_data *d, git_rawobj *o)
    git_oid id1, id2;
    git_odb_object *obj;
 
-   cl_git_pass(make_odb_dir());
+   make_odb_dir();
    cl_git_pass(git_odb_open(&db, odb_dir));
    cl_git_pass(git_oid_fromstr(&id1, d->id));
 
-   cl_git_pass(streaming_write(&id2, db, o));
+   streaming_write(&id2, db, o);
    cl_assert(git_oid_cmp(&id1, &id2) == 0);
-   cl_git_pass(check_object_files(d));
+   check_object_files(d);
 
    cl_git_pass(git_odb_read(&obj, db, &id1));
-   cl_git_pass(cmp_objects(&obj->raw, o));
+   cmp_objects(&obj->raw, o);
 
    git_odb_object_free(obj);
    git_odb_free(db);
-   cl_git_pass(remove_object_files(d));
+   remove_object_files(d);
 }
 
 

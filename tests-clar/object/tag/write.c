@@ -42,17 +42,15 @@ static void locate_loose_object(const char *repository_folder, git_object *objec
 		*out_folder = top_folder;
 }
 
-static int loose_object_mode(const char *repository_folder, git_object *object)
+static void loose_object_mode(const char *repository_folder, git_object *object)
 {
 	char *object_path;
 	struct stat st;
 
 	locate_loose_object(repository_folder, object, &object_path, NULL);
-	if (p_stat(object_path, &st) < 0)
-		return 0;
+	cl_git_pass(p_stat(object_path, &st));
 	free(object_path);
-
-	return st.st_mode;
+	cl_assert((st.st_mode & 0777) == GIT_OBJECT_FILE_MODE);
 }
 #endif
 
@@ -117,7 +115,7 @@ void test_object_tag_write__basic(void)
 	cl_git_pass(git_reference_delete(ref_tag));
 #ifndef GIT_WIN32
 	// TODO: Get this to work on Linux
-	// cl_assert((loose_object_mode("testrepo", (git_object *)tag) & 0777) == GIT_OBJECT_FILE_MODE);
+	//loose_object_mode("testrepo/", (git_object *)tag);
 #endif
 
 	git_tag_free(tag);

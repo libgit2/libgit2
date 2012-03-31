@@ -26,49 +26,43 @@ static struct test_entry test_entries[] = {
 
 
 // Helpers
-static int copy_file(const char *src, const char *dst)
+static void copy_file(const char *src, const char *dst)
 {
 	git_buf source_buf = GIT_BUF_INIT;
 	git_file dst_fd;
 	int error = GIT_ERROR;
 
-	if (git_futils_readbuffer(&source_buf, src) < GIT_SUCCESS)
-		return GIT_ENOTFOUND;
+	cl_git_pass(git_futils_readbuffer(&source_buf, src));
 
 	dst_fd = git_futils_creat_withpath(dst, 0777, 0666);
 	if (dst_fd < 0)
 		goto cleanup;
 
-	error = p_write(dst_fd, source_buf.ptr, source_buf.size);
+	cl_git_pass(p_write(dst_fd, source_buf.ptr, source_buf.size));
 
 cleanup:
 	git_buf_free(&source_buf);
 	p_close(dst_fd);
-
-	return error;
 }
 
-static int cmp_files(const char *a, const char *b)
+static void files_are_equal(const char *a, const char *b)
 {
 	git_buf buf_a = GIT_BUF_INIT;
 	git_buf buf_b = GIT_BUF_INIT;
-	int error = GIT_ERROR;
+	int pass;
 
 	if (git_futils_readbuffer(&buf_a, a) < GIT_SUCCESS)
-		return GIT_ERROR;
+		cl_assert(0);
 
 	if (git_futils_readbuffer(&buf_b, b) < GIT_SUCCESS) {
 		git_buf_free(&buf_a);
-		return GIT_ERROR;
+		cl_assert(0);
 	}
 
-	if (buf_a.size == buf_b.size && !memcmp(buf_a.ptr, buf_b.ptr, buf_a.size))
-		error = GIT_SUCCESS;
+	pass = (buf_a.size == buf_b.size && !memcmp(buf_a.ptr, buf_b.ptr, buf_a.size));
 
 	git_buf_free(&buf_a);
 	git_buf_free(&buf_b);
-
-	return error;
 }
 
 
@@ -168,13 +162,13 @@ void test_index_tests__write(void)
 {
    git_index *index;
 
-   cl_git_pass(copy_file(TEST_INDEXBIG_PATH, "index_rewrite"));
+   copy_file(TEST_INDEXBIG_PATH, "index_rewrite");
 
    cl_git_pass(git_index_open(&index, "index_rewrite"));
    cl_assert(index->on_disk);
 
    cl_git_pass(git_index_write(index));
-   cl_git_pass(cmp_files(TEST_INDEXBIG_PATH, "index_rewrite"));
+   files_are_equal(TEST_INDEXBIG_PATH, "index_rewrite");
 
    git_index_free(index);
 
