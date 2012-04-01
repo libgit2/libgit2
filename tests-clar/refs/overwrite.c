@@ -38,7 +38,7 @@ void test_ref_overwrite__symbolic(void)
 	/* Ensure it points to the right place*/
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_name));
 	cl_assert(git_reference_type(ref) & GIT_REF_SYMBOLIC);
-	cl_assert(!strcmp(git_reference_target(ref), ref_branch_name));
+	cl_assert_strequal(git_reference_target(ref), ref_branch_name);
 	git_reference_free(ref);
 
 	/* Ensure we can't create it unless we force it to */
@@ -49,7 +49,7 @@ void test_ref_overwrite__symbolic(void)
 	/* Ensure it points to the right place */
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_name));
 	cl_assert(git_reference_type(ref) & GIT_REF_SYMBOLIC);
-	cl_assert(!strcmp(git_reference_target(ref), ref_master_name));
+	cl_assert_strequal(git_reference_target(ref), ref_master_name);
 
 	git_reference_free(ref);
 	git_reference_free(branch_ref);
@@ -107,7 +107,7 @@ void test_ref_overwrite__object_id_with_symbolic(void)
 	/* Ensure it points to the right place */
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_name));
 	cl_assert(git_reference_type(ref) & GIT_REF_SYMBOLIC);
-	cl_assert(!strcmp(git_reference_target(ref), ref_master_name));
+	cl_assert_strequal(git_reference_target(ref), ref_master_name);
 
 	git_reference_free(ref);
 }

@@ -54,7 +54,7 @@ void test_object_tag_read__parse(void)
 
    cl_git_pass(git_tag_lookup(&tag1, g_repo, &id1));
 
-   cl_assert(strcmp(git_tag_name(tag1), "test") == 0);
+   cl_assert_strequal(git_tag_name(tag1), "test");
    cl_assert(git_tag_type(tag1) == GIT_OBJ_TAG);
 
    cl_git_pass(git_tag_target((git_object **)&tag2, tag1));
@@ -113,7 +113,7 @@ void test_object_tag_read__parse_without_tagger(void)
    cl_git_pass(git_tag_lookup(&bad_tag, bad_tag_repo, &id));
    cl_assert(bad_tag != NULL);
 
-   cl_assert(strcmp(git_tag_name(bad_tag), "e90810b") == 0);
+   cl_assert_strequal(git_tag_name(bad_tag), "e90810b");
    cl_assert(git_oid_cmp(&id, git_tag_id(bad_tag)) == 0);
    cl_assert(bad_tag->tagger == NULL);
 

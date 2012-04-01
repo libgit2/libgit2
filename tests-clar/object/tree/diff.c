@@ -18,7 +18,7 @@ static void diff_cmp(const git_tree_diff_data *a, const git_tree_diff_data *b)
 
 	cl_assert(a->status - b->status == 0);
 
-	cl_assert(strcmp(a->path, b->path) == 0);
+	cl_assert_strequal(a->path, b->path);
 }
 
 static int diff_cb(const git_tree_diff_data *diff, void *data)

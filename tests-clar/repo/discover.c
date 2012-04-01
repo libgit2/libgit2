@@ -28,7 +28,7 @@ static void ensure_repository_discover(const char *start_path, const char *ceili
 	char found_path[GIT_PATH_MAX];
 	cl_git_pass(git_repository_discover(found_path, sizeof(found_path), start_path, 0, ceiling_dirs));
 	//across_fs is always 0 as we can't automate the filesystem change tests
-	cl_assert(0 == strcmp(found_path, expected_path));
+	cl_assert_strequal(found_path, expected_path);
 }
 
 static void write_file(const char *path, const char *content)

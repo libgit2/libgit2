@@ -46,7 +46,7 @@ void test_ref_create__symbolic(void)
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
 	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
-	cl_assert(strcmp(looked_up_ref->name, new_head_tracker) == 0);
+	cl_assert_strequal(looked_up_ref->name, new_head_tracker);
 
 	/* ...peeled.. */
 	cl_git_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
@@ -116,7 +116,7 @@ void test_ref_create__oid(void)
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_OID);
 	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
-	cl_assert(strcmp(looked_up_ref->name, new_head) == 0);
+	cl_assert_strequal(looked_up_ref->name, new_head);
 
 	/* ...and that it points to the current master tip */
 	cl_assert(git_oid_cmp(&id, git_reference_oid(looked_up_ref)) == 0);

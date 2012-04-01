@@ -106,7 +106,7 @@ void test_index_tests__default_test_index(void)
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
       git_index_entry *e = entries[test_entries[i].index];
 
-      cl_assert(strcmp(e->path, test_entries[i].path) == 0);
+      cl_assert_strequal(e->path, test_entries[i].path);
       cl_assert(e->mtime.seconds == test_entries[i].mtime);
       cl_assert(e->file_size == test_entries[i].file_size);
    }

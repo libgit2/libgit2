@@ -87,7 +87,7 @@ void test_object_raw_compare__compare_fmt_oids(void)
 
 	/* Format produced the right result */
 	out[GIT_OID_HEXSZ] = '\0';
-	cl_assert(strcmp(exp, out) == 0);
+	cl_assert_strequal(exp, out);
 }
 
 void test_object_raw_compare__compare_allocfmt_oids(void)
@@ -100,7 +100,7 @@ void test_object_raw_compare__compare_allocfmt_oids(void)
 
 	out = git_oid_allocfmt(&in);
 	cl_assert(out);
-	cl_assert(strcmp(exp, out) == 0);
+	cl_assert_strequal(exp, out);
 	git__free(out);
 }
 
@@ -120,5 +120,5 @@ void test_object_raw_compare__compare_pathfmt_oids(void)
 
 	/* Format produced the right result */
 	out[GIT_OID_HEXSZ + 1] = '\0';
-	cl_assert(strcmp(exp2, out) == 0);
+	cl_assert_strequal(exp2, out);
 }

@@ -48,14 +48,14 @@ void test_refs_rename__loose(void)
 
 	/* Now that the reference is renamed... */
 	cl_git_pass(git_reference_rename(looked_up_ref, new_name, 0));
-	cl_assert(!strcmp(looked_up_ref->name, new_name));
+	cl_assert_strequal(looked_up_ref->name, new_name);
 
 	/* ...It can't be looked-up with the old name... */
 	cl_git_fail(git_reference_lookup(&another_looked_up_ref, g_repo, loose_tag_ref_name));
 
 	/* ...but the new name works ok... */
 	cl_git_pass(git_reference_lookup(&another_looked_up_ref, g_repo, new_name));
-	cl_assert(!strcmp(another_looked_up_ref->name, new_name));
+	cl_assert_strequal(another_looked_up_ref->name, new_name);
 
 	/* .. the ref is still loose... */
 	cl_assert(git_reference_is_packed(another_looked_up_ref) == 0);
@@ -89,14 +89,14 @@ void test_refs_rename__packed(void)
 
 	/* Now that the reference is renamed... */
 	cl_git_pass(git_reference_rename(looked_up_ref, brand_new_name, 0));
-	cl_assert(!strcmp(looked_up_ref->name, brand_new_name));
+	cl_assert_strequal(looked_up_ref->name, brand_new_name);
 
 	/* ...It can't be looked-up with the old name... */
 	cl_git_fail(git_reference_lookup(&another_looked_up_ref, g_repo, packed_head_name));
 
 	/* ...but the new name works ok... */
 	cl_git_pass(git_reference_lookup(&another_looked_up_ref, g_repo, brand_new_name));
-	cl_assert(!strcmp(another_looked_up_ref->name, brand_new_name));
+	cl_assert_strequal(another_looked_up_ref->name, brand_new_name);
 
 	/* .. the ref is no longer packed... */
 	cl_assert(git_reference_is_packed(another_looked_up_ref) == 0);
@@ -166,7 +166,7 @@ void test_refs_rename__name_collision(void)
 
 	/* Failure to rename it hasn't corrupted its state */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_head_name));
-	cl_assert(!strcmp(looked_up_ref->name, packed_head_name));
+	cl_assert_strequal(looked_up_ref->name, packed_head_name);
 
 	git_reference_free(looked_up_ref);
 }
@@ -188,7 +188,7 @@ void test_refs_rename__invalid_name(void)
 	/* Failure to rename it hasn't corrupted its state */
 	git_reference_free(looked_up_ref);
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_test_head_name));
-	cl_assert(!strcmp(looked_up_ref->name, packed_test_head_name));
+	cl_assert_strequal(looked_up_ref->name, packed_test_head_name);
 
 	git_reference_free(looked_up_ref);
 }
@@ -209,7 +209,7 @@ void test_refs_rename__force_loose_packed(void)
 
 	/* Check we actually renamed it */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_test_head_name));
-	cl_assert(!strcmp(looked_up_ref->name, packed_test_head_name));
+	cl_assert_strequal(looked_up_ref->name, packed_test_head_name);
 	cl_assert(!git_oid_cmp(&oid, git_reference_oid(looked_up_ref)));
 	git_reference_free(looked_up_ref);
 
@@ -233,7 +233,7 @@ void test_refs_rename__force_loose(void)
 
 	/* Check we actually renamed it */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, "refs/heads/test"));
-	cl_assert(!strcmp(looked_up_ref->name,  "refs/heads/test"));
+	cl_assert_strequal(looked_up_ref->name,  "refs/heads/test");
 	cl_assert(!git_oid_cmp(&oid, git_reference_oid(looked_up_ref)));
 	git_reference_free(looked_up_ref);
 
@@ -298,7 +298,7 @@ void test_refs_rename__prefix(void)
 
 	/* Check we actually renamed it */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name_new));
-	cl_assert(!strcmp(looked_up_ref->name, ref_two_name_new));
+	cl_assert_strequal(looked_up_ref->name, ref_two_name_new);
 	git_reference_free(looked_up_ref);
 	cl_git_fail(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name));
 
@@ -331,7 +331,7 @@ void test_refs_rename__move_up(void)
 
     /* Check we actually renamed it */
     cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name));
-    cl_assert(!strcmp(looked_up_ref->name, ref_two_name));
+    cl_assert_strequal(looked_up_ref->name, ref_two_name);
     git_reference_free(looked_up_ref);
     cl_git_fail(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name_new));
     git_reference_free(ref);

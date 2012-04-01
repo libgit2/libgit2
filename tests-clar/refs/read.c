@@ -39,7 +39,7 @@ void test_ref_read__loose_tag(void)
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
 	cl_assert(git_reference_type(reference) & GIT_REF_OID);
 	cl_assert(git_reference_is_packed(reference) == 0);
-	cl_assert(strcmp(reference->name, loose_tag_ref_name) == 0);
+	cl_assert_strequal(reference->name, loose_tag_ref_name);
 
 	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_oid(reference), GIT_OBJ_ANY));
 	cl_assert(object != NULL);
@@ -47,7 +47,7 @@ void test_ref_read__loose_tag(void)
 
 	/* Ensure the name of the tag matches the name of the reference */
 	cl_git_pass(git_buf_joinpath(&ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object)));
-	cl_assert(strcmp(ref_name_from_tag_name.ptr, loose_tag_ref_name) == 0);
+	cl_assert_strequal(ref_name_from_tag_name.ptr, loose_tag_ref_name);
 	git_buf_free(&ref_name_from_tag_name);
 
 	git_object_free(object);
@@ -76,7 +76,7 @@ void test_ref_read__symbolic(void)
 	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_FILE));
 	cl_assert(git_reference_type(reference) & GIT_REF_SYMBOLIC);
 	cl_assert(git_reference_is_packed(reference) == 0);
-	cl_assert(strcmp(reference->name, GIT_HEAD_FILE) == 0);
+	cl_assert_strequal(reference->name, GIT_HEAD_FILE);
 
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
@@ -104,7 +104,7 @@ void test_ref_read__nested_symbolic(void)
 	cl_git_pass(git_reference_lookup(&reference, g_repo, head_tracker_sym_ref_name));
 	cl_assert(git_reference_type(reference) & GIT_REF_SYMBOLIC);
 	cl_assert(git_reference_is_packed(reference) == 0);
-	cl_assert(strcmp(reference->name, head_tracker_sym_ref_name) == 0);
+	cl_assert_strequal(reference->name, head_tracker_sym_ref_name);
 
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
@@ -172,7 +172,7 @@ void test_ref_read__packed(void)
 	cl_git_pass(git_reference_lookup(&reference, g_repo, packed_head_name));
 	cl_assert(git_reference_type(reference) & GIT_REF_OID);
 	cl_assert(git_reference_is_packed(reference));
-	cl_assert(strcmp(reference->name, packed_head_name) == 0);
+	cl_assert_strequal(reference->name, packed_head_name);
 
 	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_oid(reference), GIT_OBJ_ANY));
 	cl_assert(object != NULL);
@@ -193,7 +193,7 @@ void test_ref_read__loose_first(void)
 	cl_git_pass(git_reference_lookup(&reference, g_repo, packed_test_head_name));
 	cl_assert(git_reference_type(reference) & GIT_REF_OID);
 	cl_assert(git_reference_is_packed(reference) == 0);
-	cl_assert(strcmp(reference->name, packed_test_head_name) == 0);
+	cl_assert_strequal(reference->name, packed_test_head_name);
 
 	git_reference_free(reference);
 }
