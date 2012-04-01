@@ -12,7 +12,9 @@ static git_repository *g_repo;
 
 
 // Helpers
-static void ensure_tag_pattern_match(git_repository *repo, const char *pattern, const size_t expected_matches)
+static void ensure_tag_pattern_match(git_repository *repo,
+                                     const char *pattern,
+                                     const size_t expected_matches)
 {
    git_strarray tag_list;
    int error = GIT_SUCCESS;

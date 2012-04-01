@@ -23,7 +23,9 @@
 #define ALTERNATE_MALFORMED_FOLDER3 DISCOVER_FOLDER "/alternate_malformed_repo3"
 #define ALTERNATE_NOT_FOUND_FOLDER DISCOVER_FOLDER "/alternate_not_found_repo"
 
-static void ensure_repository_discover(const char *start_path, const char *ceiling_dirs, const char *expected_path)
+static void ensure_repository_discover(const char *start_path,
+                                       const char *ceiling_dirs,
+                                       const char *expected_path)
 {
 	char found_path[GIT_PATH_MAX];
 	cl_git_pass(git_repository_discover(found_path, sizeof(found_path), start_path, 0, ceiling_dirs));

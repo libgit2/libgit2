@@ -39,7 +39,10 @@ static int print_tree(git_repository *repo, const git_oid *tree_oid, int depth)
 	return GIT_SUCCESS;
 }
 
-static void locate_loose_object(const char *repository_folder, git_object *object, char **out, char **out_folder)
+static void locate_loose_object(const char *repository_folder,
+                                git_object *object,
+                                char **out,
+                                char **out_folder)
 {
 	static const char *objects_folder = "objects/";
 

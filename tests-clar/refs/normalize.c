@@ -6,7 +6,9 @@
 
 
 // Helpers
-static void ensure_refname_normalized(int is_oid_ref, const char *input_refname, const char *expected_refname)
+static void ensure_refname_normalized(int is_oid_ref,
+                                      const char *input_refname,
+                                      const char *expected_refname)
 {
 	char buffer_out[GIT_REFNAME_MAX];
 

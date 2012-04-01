@@ -14,7 +14,10 @@ static git_repository *g_repo;
 #ifndef GIT_WIN32
 #include "odb.h"
 
-static void locate_loose_object(const char *repository_folder, git_object *object, char **out, char **out_folder)
+static void locate_loose_object(const char *repository_folder,
+                                git_object *object,
+                                char **out,
+                                char **out_folder)
 {
 	static const char *objects_folder = "objects/";
 
