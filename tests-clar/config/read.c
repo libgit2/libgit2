@@ -28,9 +28,9 @@ void test_config_read__case_sensitive(void)
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config1")));
 
 	cl_git_pass(git_config_get_string(cfg, "this.that.other", &str));
-	cl_assert(!strcmp(str, "true"));
+	cl_assert_strequal(str, "true");
 	cl_git_pass(git_config_get_string(cfg, "this.That.other", &str));
-	cl_assert(!strcmp(str, "yes"));
+	cl_assert_strequal(str, "yes");
 
 	cl_git_pass(git_config_get_bool(cfg, "this.that.other", &i));
 	cl_assert(i == 1);
@@ -55,7 +55,7 @@ void test_config_read__multiline_value(void)
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config2")));
 
 	cl_git_pass(git_config_get_string(cfg, "this.That.and", &str));
-	cl_assert(!strcmp(str, "one one one two two three three"));
+	cl_assert_strequal(str, "one one one two two three three");
 
 	git_config_free(cfg);
 }
@@ -71,7 +71,7 @@ void test_config_read__subsection_header(void)
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config3")));
 
 	cl_git_pass(git_config_get_string(cfg, "section.subsection.var", &str));
-	cl_assert(!strcmp(str, "hello"));
+	cl_assert_strequal(str, "hello");
 
 	/* The subsection is transformed to lower-case */
 	cl_must_fail(git_config_get_string(cfg, "section.subSectIon.var", &str));
@@ -171,10 +171,10 @@ void test_config_read__prefixes(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config9")));
 	cl_git_pass(git_config_get_string(cfg, "remote.ab.url", &str));
-	cl_assert(strcmp(str, "http://example.com/git/ab") == 0);
+	cl_assert_strequal(str, "http://example.com/git/ab");
 
 	cl_git_pass(git_config_get_string(cfg, "remote.abba.url", &str));
-	cl_assert(strcmp(str, "http://example.com/git/abba") == 0);
+	cl_assert_strequal(str, "http://example.com/git/abba");
 
 	git_config_free(cfg);
 }

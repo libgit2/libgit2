@@ -6,9 +6,13 @@
 
 #include "data.h"
 
-static int hash_object(git_oid *oid, git_rawobj *obj)
+static void hash_object_pass(git_oid *oid, git_rawobj *obj)
 {
-	return git_odb_hash(oid, obj->data, obj->len, obj->type);
+   cl_git_pass(git_odb_hash(oid, obj->data, obj->len, obj->type));
+}
+static void hash_object_fail(git_oid *oid, git_rawobj *obj)
+{
+   cl_git_fail(git_odb_hash(oid, obj->data, obj->len, obj->type));
 }
 
 static char *hello_id = "22596363b3de40b06f981fb85d82312e8c0ed511";
@@ -74,28 +78,28 @@ void test_object_raw_hash__hash_junk_data(void)
 
     /* invalid types: */
     junk_obj.data = some_data;
-    cl_git_fail(hash_object(&id, &junk_obj));
+    hash_object_fail(&id, &junk_obj);
 
     junk_obj.type = GIT_OBJ__EXT1;
-    cl_git_fail(hash_object(&id, &junk_obj));
+    hash_object_fail(&id, &junk_obj);
 
     junk_obj.type = GIT_OBJ__EXT2;
-    cl_git_fail(hash_object(&id, &junk_obj));
+    hash_object_fail(&id, &junk_obj);
 
     junk_obj.type = GIT_OBJ_OFS_DELTA;
-    cl_git_fail(hash_object(&id, &junk_obj));
+    hash_object_fail(&id, &junk_obj);
 
     junk_obj.type = GIT_OBJ_REF_DELTA;
-    cl_git_fail(hash_object(&id, &junk_obj));
+    hash_object_fail(&id, &junk_obj);
 
     /* data can be NULL only if len is zero: */
     junk_obj.type = GIT_OBJ_BLOB;
     junk_obj.data = NULL;
-    cl_git_pass(hash_object(&id, &junk_obj));
+    hash_object_pass(&id, &junk_obj);
     cl_assert(git_oid_cmp(&id, &id_zero) == 0);
 
     junk_obj.len = 1;
-    cl_git_fail(hash_object(&id, &junk_obj));
+    hash_object_fail(&id, &junk_obj);
 }
 
 void test_object_raw_hash__hash_commit_object(void)
@@ -103,7 +107,7 @@ void test_object_raw_hash__hash_commit_object(void)
     git_oid id1, id2;
 
     cl_git_pass(git_oid_fromstr(&id1, commit_id));
-    cl_git_pass(hash_object(&id2, &commit_obj));
+    hash_object_pass(&id2, &commit_obj);
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 
@@ -112,7 +116,7 @@ void test_object_raw_hash__hash_tree_object(void)
     git_oid id1, id2;
 
     cl_git_pass(git_oid_fromstr(&id1, tree_id));
-    cl_git_pass(hash_object(&id2, &tree_obj));
+    hash_object_pass(&id2, &tree_obj);
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 
@@ -121,7 +125,7 @@ void test_object_raw_hash__hash_tag_object(void)
     git_oid id1, id2;
 
     cl_git_pass(git_oid_fromstr(&id1, tag_id));
-    cl_git_pass(hash_object(&id2, &tag_obj));
+    hash_object_pass(&id2, &tag_obj);
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 
@@ -130,7 +134,7 @@ void test_object_raw_hash__hash_zero_length_object(void)
     git_oid id1, id2;
 
     cl_git_pass(git_oid_fromstr(&id1, zero_id));
-    cl_git_pass(hash_object(&id2, &zero_obj));
+    hash_object_pass(&id2, &zero_obj);
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 
@@ -139,7 +143,7 @@ void test_object_raw_hash__hash_one_byte_object(void)
     git_oid id1, id2;
 
     cl_git_pass(git_oid_fromstr(&id1, one_id));
-    cl_git_pass(hash_object(&id2, &one_obj));
+    hash_object_pass(&id2, &one_obj);
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 
@@ -148,7 +152,7 @@ void test_object_raw_hash__hash_two_byte_object(void)
     git_oid id1, id2;
 
     cl_git_pass(git_oid_fromstr(&id1, two_id));
-    cl_git_pass(hash_object(&id2, &two_obj));
+    hash_object_pass(&id2, &two_obj);
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 
@@ -157,6 +161,6 @@ void test_object_raw_hash__hash_multi_byte_object(void)
     git_oid id1, id2;
 
     cl_git_pass(git_oid_fromstr(&id1, some_id));
-    cl_git_pass(hash_object(&id2, &some_obj));
+    hash_object_pass(&id2, &some_obj);
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }

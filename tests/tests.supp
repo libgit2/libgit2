@@ -1,6 +1,0 @@
-{
-	ignore-zlib-cond
-	Memcheck:Cond
-	obj:*libz.so*
-}
-

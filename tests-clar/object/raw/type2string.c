@@ -6,19 +6,19 @@
 
 void test_object_raw_type2string__convert_type_to_string(void)
 {
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ_BAD), ""));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ__EXT1), ""));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ_COMMIT), "commit"));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ_TREE), "tree"));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ_BLOB), "blob"));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ_TAG), "tag"));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ__EXT2), ""));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ_OFS_DELTA), "OFS_DELTA"));
-	cl_assert(!strcmp(git_object_type2string(GIT_OBJ_REF_DELTA), "REF_DELTA"));
+	cl_assert_strequal(git_object_type2string(GIT_OBJ_BAD), "");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ__EXT1), "");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ_COMMIT), "commit");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ_TREE), "tree");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ_BLOB), "blob");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ_TAG), "tag");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ__EXT2), "");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ_OFS_DELTA), "OFS_DELTA");
+	cl_assert_strequal(git_object_type2string(GIT_OBJ_REF_DELTA), "REF_DELTA");
 
-	cl_assert(!strcmp(git_object_type2string(-2), ""));
-	cl_assert(!strcmp(git_object_type2string(8), ""));
-	cl_assert(!strcmp(git_object_type2string(1234), ""));
+	cl_assert_strequal(git_object_type2string(-2), "");
+	cl_assert_strequal(git_object_type2string(8), "");
+	cl_assert_strequal(git_object_type2string(1234), "");
 }
 
 void test_object_raw_type2string__convert_string_to_type(void)

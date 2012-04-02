@@ -24,7 +24,10 @@ void test_object_tree_frompath__cleanup(void)
 	cl_fixture_cleanup("testrepo.git");
 }
 
-static void assert_tree_from_path(git_tree *root, const char *path, git_error expected_result, const char *expected_raw_oid)
+static void assert_tree_from_path(git_tree *root,
+                                  const char *path,
+                                  git_error expected_result,
+                                  const char *expected_raw_oid)
 {
 	git_tree *containing_tree = NULL;
 
@@ -35,7 +38,7 @@ static void assert_tree_from_path(git_tree *root, const char *path, git_error ex
 	
 	cl_assert(containing_tree != NULL && expected_result == GIT_SUCCESS);
 
-	cl_assert(git_oid_streq(git_object_id((const git_object *)containing_tree), expected_raw_oid) == GIT_SUCCESS);
+	cl_git_pass(git_oid_streq(git_object_id((const git_object *)containing_tree), expected_raw_oid));
 
 	git_tree_free(containing_tree);
 }
