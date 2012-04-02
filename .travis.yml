@@ -32,7 +32,7 @@ branches:
 # Notify development list when needed
 notifications:
  recipients:
-   - drahosp@gmail.com # CHANGE!
+   - vicent@github.com 
  email:
    on_success: change
    on_failure: always
