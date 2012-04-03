@@ -9,36 +9,6 @@ static const char *third_tree = "eb86d8b81d6adbd5290a935d6c9976882de98488";
 
 static git_repository *g_repo;
 
-
-// Helpers
-static int print_tree(git_repository *repo, const git_oid *tree_oid, int depth)
-{
-	static const char *indent = "                              ";
-	git_tree *tree;
-	unsigned int i;
-
-	if (git_tree_lookup(&tree, repo, tree_oid) < GIT_SUCCESS)
-		return GIT_ERROR;
-
-	for (i = 0; i < git_tree_entrycount(tree); ++i) {
-		const git_tree_entry *entry = git_tree_entry_byindex(tree, i);
-		char entry_oid[40];
-
-		git_oid_fmt(entry_oid, &entry->oid);
-		printf("%.*s%o [%.*s] %s\n", depth*2, indent, entry->attr, 40, entry_oid, entry->filename);
-
-		if (entry->attr == S_IFDIR) {
-			if (print_tree(repo, &entry->oid, depth + 1) < GIT_SUCCESS) {
-				git_tree_free(tree);
-				return GIT_ERROR;
-			}
-		}
-	}
-
-	git_tree_free(tree);
-	return GIT_SUCCESS;
-}
-
 // Fixture setup and teardown
 void test_object_tree_write__initialize(void)
 {
