@@ -28,6 +28,6 @@ void test_network_createremotethenload__cleanup(void)
 
 void test_network_createremotethenload__parsing(void)
 {
-	cl_assert(!strcmp(git_remote_name(_remote), "origin"));
-	cl_assert(!strcmp(git_remote_url(_remote), url));
+	cl_assert_strequal(git_remote_name(_remote), "origin");
+	cl_assert_strequal(git_remote_url(_remote), url);
 }

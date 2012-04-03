@@ -21,7 +21,7 @@ static int mv_read_cb(const char *name, const char *value, void *data)
 	if (!strcmp(name, _name))
 		(*n)++;
 
-	return 0;
+	return GIT_SUCCESS;
 }
 
 void test_config_multivar__foreach(void)

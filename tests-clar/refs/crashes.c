@@ -11,7 +11,7 @@ void test_refs_crashes__double_free(void)
 	cl_git_pass(git_reference_lookup(&ref2, repo, REFNAME));
 	cl_git_pass(git_reference_delete(ref));
 	/* reference is gone from disk, so reloading it will fail */
-	cl_must_fail(git_reference_reload(ref2));
+	cl_git_fail(git_reference_reload(ref2));
 
 	git_repository_free(repo);
 }
