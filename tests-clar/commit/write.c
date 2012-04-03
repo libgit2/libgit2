@@ -6,8 +6,10 @@ static const char *commit_message = "This commit has been created in memory\n\
    This is a commit created in memory and it will be written back to disk\n";
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 static const char *root_commit_message = "This is a root commit\n\
-This is a root commit and should be the only one in this branch\n";
-
+   This is a root commit and should be the only one in this branch\n";
+static char *head_old;
+static git_reference *head, *branch;
+static git_commit *commit;
 
 // Fixture setup
 static git_repository *g_repo;
@@ -17,6 +19,13 @@ void test_commit_write__initialize(void)
 }
 void test_commit_write__cleanup(void)
 {
+   git_reference_free(head);
+   git_reference_free(branch);
+
+   git_commit_free(commit);
+
+   git__free(head_old);
+
    cl_git_sandbox_cleanup();
 }
 
@@ -24,7 +33,6 @@ void test_commit_write__cleanup(void)
 // write a new commit object from memory to disk
 void test_commit_write__from_memory(void)
 {
-   git_commit *commit;
    git_oid tree_id, parent_id, commit_id;
    git_signature *author, *committer;
    const git_signature *author1, *committer1;
@@ -79,18 +87,13 @@ void test_commit_write__from_memory(void)
    cl_assert(strcmp(git_commit_message(commit), commit_message) == 0);
 }
 
-
-
 // create a root commit
 void test_commit_write__root(void)
 {
-	git_commit *commit;
 	git_oid tree_id, commit_id;
 	const git_oid *branch_oid;
 	git_signature *author, *committer;
 	const char *branch_name = "refs/heads/root-commit-branch";
-	git_reference *head, *branch;
-	char *head_old;
 	git_tree *tree;
 
 	git_oid_fromstr(&tree_id, tree_oid);

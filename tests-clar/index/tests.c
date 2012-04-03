@@ -62,6 +62,8 @@ static void files_are_equal(const char *a, const char *b)
 
 	git_buf_free(&buf_a);
 	git_buf_free(&buf_b);
+
+	cl_assert(pass);
 }
 
 
