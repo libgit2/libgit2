@@ -39,74 +39,6 @@ static int print_tree(git_repository *repo, const git_oid *tree_oid, int depth)
 	return GIT_SUCCESS;
 }
 
-static void locate_loose_object(const char *repository_folder,
-                                git_object *object,
-                                char **out,
-                                char **out_folder)
-{
-	static const char *objects_folder = "objects/";
-
-	char *ptr, *full_path, *top_folder;
-	int path_length, objects_length;
-
-	assert(repository_folder && object);
-
-	objects_length = strlen(objects_folder);
-	path_length = strlen(repository_folder);
-	ptr = full_path = git__malloc(path_length + objects_length + GIT_OID_HEXSZ + 3);
-
-	strcpy(ptr, repository_folder);
-	strcpy(ptr + path_length, objects_folder);
-
-	ptr = top_folder = ptr + path_length + objects_length;
-	*ptr++ = '/';
-	git_oid_pathfmt(ptr, git_object_id(object));
-	ptr += GIT_OID_HEXSZ + 1;
-	*ptr = 0;
-
-	*out = full_path;
-
-	if (out_folder)
-		*out_folder = top_folder;
-}
-
-static int loose_object_mode(const char *repository_folder, git_object *object)
-{
-	char *object_path;
-	struct stat st;
-
-	locate_loose_object(repository_folder, object, &object_path, NULL);
-	if (p_stat(object_path, &st) < 0)
-		return 0;
-	free(object_path);
-
-	return st.st_mode;
-}
-
-static int loose_object_dir_mode(const char *repository_folder, git_object *object)
-{
-	char *object_path;
-	size_t pos;
-	struct stat st;
-
-	locate_loose_object(repository_folder, object, &object_path, NULL);
-
-	pos = strlen(object_path);
-	while (pos--) {
-		if (object_path[pos] == '/') {
-			object_path[pos] = 0;
-			break;
-		}
-	}
-
-	if (p_stat(object_path, &st) < 0)
-		return 0;
-	free(object_path);
-
-	return st.st_mode;
-}
-
-
 // Fixture setup and teardown
 void test_object_tree_write__initialize(void)
 {
@@ -117,21 +49,6 @@ void test_object_tree_write__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
-
-
-#if 0
-void xtest_object_tree_write__print(void)
-{
-   // write a tree from an index
-	git_index *index;
-	git_oid tree_oid;
-
-	cl_git_pass(git_repository_index(&index, g_repo));
-
-	cl_git_pass(git_tree_create_fromindex(&tree_oid, index));
-	cl_git_pass(print_tree(g_repo, &tree_oid, 0));
-}
-#endif
 
 void test_object_tree_write__from_memory(void)
 {
@@ -193,10 +110,5 @@ void test_object_tree_write__subtree(void)
 	// check data is correct
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id_hiearar));
 	cl_assert(2 == git_tree_entrycount(tree));
-#ifndef GIT_WIN32
-   // TODO: fix these
-	//cl_assert((loose_object_dir_mode("testrepo", (git_object *)tree) & 0777) == GIT_OBJECT_DIR_MODE);
-	//cl_assert((loose_object_mode("testrespo", (git_object *)tree) & 0777) == GIT_OBJECT_FILE_MODE);
-#endif
 	git_tree_free(tree);
 }

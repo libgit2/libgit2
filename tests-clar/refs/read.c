@@ -4,7 +4,6 @@
 #include "git2/reflog.h"
 #include "reflog.h"
 
-
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
 static const char *non_existing_tag_ref_name = "refs/tags/i-do-not-exist";
 static const char *head_tracker_sym_ref_name = "head-tracker";
@@ -15,21 +14,17 @@ static const char *packed_test_head_name = "refs/heads/packed-test";
 
 static git_repository *g_repo;
 
-
-
-void test_ref_read__initialize(void)
+void test_refs_read__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
 
-void test_ref_read__cleanup(void)
+void test_refs_read__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
 
-
-
-void test_ref_read__loose_tag(void)
+void test_refs_read__loose_tag(void)
 {
    // lookup a loose tag reference
 	git_reference *reference;
@@ -55,7 +50,7 @@ void test_ref_read__loose_tag(void)
 	git_reference_free(reference);
 }
 
-void test_ref_read__nonexisting_tag(void)
+void test_refs_read__nonexisting_tag(void)
 {
    // lookup a loose tag reference that doesn't exist
 	git_reference *reference;
@@ -66,7 +61,7 @@ void test_ref_read__nonexisting_tag(void)
 }
 
 
-void test_ref_read__symbolic(void)
+void test_refs_read__symbolic(void)
 {
    // lookup a symbolic reference
 	git_reference *reference, *resolved_ref;
@@ -94,7 +89,7 @@ void test_ref_read__symbolic(void)
 	git_reference_free(resolved_ref);
 }
 
-void test_ref_read__nested_symbolic(void)
+void test_refs_read__nested_symbolic(void)
 {
    // lookup a nested symbolic reference
 	git_reference *reference, *resolved_ref;
@@ -122,7 +117,7 @@ void test_ref_read__nested_symbolic(void)
 	git_reference_free(resolved_ref);
 }
 
-void test_ref_read__head_then_master(void)
+void test_refs_read__head_then_master(void)
 {
    // lookup the HEAD and resolve the master branch
 	git_reference *reference, *resolved_ref, *comp_base_ref;
@@ -146,7 +141,7 @@ void test_ref_read__head_then_master(void)
 	git_reference_free(comp_base_ref);
 }
 
-void test_ref_read__master_then_head(void)
+void test_refs_read__master_then_head(void)
 {
    // lookup the master branch and then the HEAD
 	git_reference *reference, *master_ref, *resolved_ref;
@@ -163,7 +158,7 @@ void test_ref_read__master_then_head(void)
 }
 
 
-void test_ref_read__packed(void)
+void test_refs_read__packed(void)
 {
    // lookup a packed reference
 	git_reference *reference;
@@ -183,7 +178,7 @@ void test_ref_read__packed(void)
 	git_reference_free(reference);
 }
 
-void test_ref_read__loose_first(void)
+void test_refs_read__loose_first(void)
 {
    // assure that a loose reference is looked up before a packed reference
 	git_reference *reference;

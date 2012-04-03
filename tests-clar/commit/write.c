@@ -77,10 +77,6 @@ void test_commit_write__from_memory(void)
    cl_assert(committer1->when.offset == 60);
 
    cl_assert(strcmp(git_commit_message(commit), commit_message) == 0);
-
-#ifndef GIT_WIN32
-   cl_assert((loose_object_mode(REPOSITORY_FOLDER, (git_object *)commit) & 0777) == GIT_OBJECT_FILE_MODE);
-#endif
 }
 
 

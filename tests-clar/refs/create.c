@@ -9,21 +9,17 @@ static const char *current_head_target = "refs/heads/master";
 
 static git_repository *g_repo;
 
-
-
-void test_ref_create__initialize(void)
+void test_refs_create__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
 
-void test_ref_create__cleanup(void)
+void test_refs_create__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
 
-
-
-void test_ref_create__symbolic(void)
+void test_refs_create__symbolic(void)
 {
    // create a new symbolic reference
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
@@ -71,7 +67,7 @@ void test_ref_create__symbolic(void)
 	git_reference_free(resolved_ref);
 }
 
-void test_ref_create__deep_symbolic(void)
+void test_refs_create__deep_symbolic(void)
 {
    // create a deep symbolic reference
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
@@ -94,7 +90,7 @@ void test_ref_create__deep_symbolic(void)
 	git_buf_free(&ref_path);
 }
 
-void test_ref_create__oid(void)
+void test_refs_create__oid(void)
 {
    // create a new OID reference
 	git_reference *new_reference, *looked_up_ref;
@@ -135,7 +131,7 @@ void test_ref_create__oid(void)
 	git_buf_free(&ref_path);
 }
 
-void test_ref_create__oid_unknown(void)
+void test_refs_create__oid_unknown(void)
 {
    // Can not create a new OID reference which targets at an unknown id
 	git_reference *new_reference, *looked_up_ref;

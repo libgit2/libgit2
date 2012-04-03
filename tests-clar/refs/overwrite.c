@@ -11,21 +11,17 @@ static const char *ref_test_name = "refs/heads/test";
 
 static git_repository *g_repo;
 
-
-
-void test_ref_overwrite__initialize(void)
+void test_refs_overwrite__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
 
-void test_ref_overwrite__cleanup(void)
+void test_refs_overwrite__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
 
-
-
-void test_ref_overwrite__symbolic(void)
+void test_refs_overwrite__symbolic(void)
 {
    // Overwrite an existing symbolic reference
 	git_reference *ref, *branch_ref;
@@ -55,7 +51,7 @@ void test_ref_overwrite__symbolic(void)
 	git_reference_free(branch_ref);
 }
 
-void test_ref_overwrite__object_id(void)
+void test_refs_overwrite__object_id(void)
 {
    // Overwrite an existing object id reference
 	git_reference *ref;
@@ -87,7 +83,7 @@ void test_ref_overwrite__object_id(void)
 	git_reference_free(ref);
 }
 
-void test_ref_overwrite__object_id_with_symbolic(void)
+void test_refs_overwrite__object_id_with_symbolic(void)
 {
    // Overwrite an existing object id reference with a symbolic one
 	git_reference *ref;
@@ -112,7 +108,7 @@ void test_ref_overwrite__object_id_with_symbolic(void)
 	git_reference_free(ref);
 }
 
-void test_ref_overwrite__symbolic_with_object_id(void)
+void test_refs_overwrite__symbolic_with_object_id(void)
 {
    // Overwrite an existing symbolic reference with an object id one
 	git_reference *ref;

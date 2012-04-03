@@ -30,7 +30,6 @@ static void copy_file(const char *src, const char *dst)
 {
 	git_buf source_buf = GIT_BUF_INIT;
 	git_file dst_fd;
-	int error = GIT_ERROR;
 
 	cl_git_pass(git_futils_readbuffer(&source_buf, src));
 

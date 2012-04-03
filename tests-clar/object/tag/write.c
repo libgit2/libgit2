@@ -9,56 +9,6 @@ static const char *tagged_commit = "e90810b8df3e80c413d903f631643c716887138d";
 
 static git_repository *g_repo;
 
-
-// Helpers
-#ifndef GIT_WIN32
-#include "odb.h"
-
-static void locate_loose_object(const char *repository_folder,
-                                git_object *object,
-                                char **out,
-                                char **out_folder)
-{
-	static const char *objects_folder = "objects/";
-
-	char *ptr, *full_path, *top_folder;
-	int path_length, objects_length;
-
-	assert(repository_folder && object);
-
-	objects_length = strlen(objects_folder);
-	path_length = strlen(repository_folder);
-	ptr = full_path = git__malloc(path_length + objects_length + GIT_OID_HEXSZ + 3);
-
-	strcpy(ptr, repository_folder);
-	strcpy(ptr + path_length, objects_folder);
-
-	ptr = top_folder = ptr + path_length + objects_length;
-	*ptr++ = '/';
-	git_oid_pathfmt(ptr, git_object_id(object));
-	ptr += GIT_OID_HEXSZ + 1;
-	*ptr = 0;
-
-	*out = full_path;
-
-	if (out_folder)
-		*out_folder = top_folder;
-}
-
-static void loose_object_mode(const char *repository_folder, git_object *object)
-{
-	char *object_path;
-	struct stat st;
-
-	locate_loose_object(repository_folder, object, &object_path, NULL);
-	cl_git_pass(p_stat(object_path, &st));
-	free(object_path);
-	cl_assert((st.st_mode & 0777) == GIT_OBJECT_FILE_MODE);
-}
-#endif
-
-
-
 // Fixture setup and teardown
 void test_object_tag_write__initialize(void)
 {
@@ -69,8 +19,6 @@ void test_object_tag_write__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
-
-
 
 void test_object_tag_write__basic(void)
 {
@@ -88,14 +36,10 @@ void test_object_tag_write__basic(void)
 	/* create signature */
 	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
 
-	cl_git_pass(git_tag_create(
-                              &tag_id, /* out id */
-                              g_repo,
-                              "the-tag",
-                              target,
-                              tagger,
-                              tagger_message,
-                              0));
+	cl_git_pass(
+		git_tag_create(&tag_id, g_repo,
+		  "the-tag", target, tagger, tagger_message, 0)
+	);
 
 	git_object_free(target);
 	git_signature_free(tagger);
@@ -116,10 +60,6 @@ void test_object_tag_write__basic(void)
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/the-tag"));
 	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
 	cl_git_pass(git_reference_delete(ref_tag));
-#ifndef GIT_WIN32
-	// TODO: Get this to work on Linux
-	//loose_object_mode("testrepo/", (git_object *)tag);
-#endif
 
 	git_tag_free(tag);
 }

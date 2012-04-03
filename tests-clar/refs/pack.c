@@ -8,21 +8,17 @@ static const char *loose_tag_ref_name = "refs/tags/e90810b";
 
 static git_repository *g_repo;
 
-
-
-void test_ref_pack__initialize(void)
+void test_refs_pack__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
 
-void test_ref_pack__cleanup(void)
+void test_refs_pack__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
 
-
-
-void test_ref_pack__empty(void)
+void test_refs_pack__empty(void)
 {
    // create a packfile for an empty folder
 	git_buf temp_path = GIT_BUF_INIT;
@@ -34,7 +30,7 @@ void test_ref_pack__empty(void)
 	cl_git_pass(git_reference_packall(g_repo));
 }
 
-void test_ref_pack__loose(void)
+void test_refs_pack__loose(void)
 {
    // create a packfile from all the loose rn a repo
 	git_reference *reference;
