@@ -46,6 +46,7 @@ void test_core_errors__new_school(void)
 	{
 		struct stat st;
 		assert(p_lstat("this_file_does_not_exist", &st) < 0);
+		GIT_UNUSED(st);
 	}
 	giterr_set(GITERR_OS, "stat failed"); /* internal fn */
 
