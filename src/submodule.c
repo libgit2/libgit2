@@ -182,6 +182,7 @@ static int submodule_from_config(
 			goto fail;
 		sm->refcount++;
 	}
+	git_buf_free(&name);
 
 	if (old_sm && ((git_submodule *)old_sm) != sm) {
 		/* TODO: log entry about multiple submodules with same path */
@@ -255,7 +256,7 @@ static int load_submodule_config(git_repository *repo)
 	GITERR_CHECK_ALLOC(smcfg);
 
 	/* scan index for gitmodules (and .gitmodules entry) */
-	if ((error = git_repository_index(&index, repo)) < 0)
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
 		goto cleanup;
 	memset(&gitmodules_oid, 0, sizeof(gitmodules_oid));
 	max_i = git_index_entrycount(index);

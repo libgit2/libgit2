@@ -19,6 +19,7 @@ void test_status_submodules__initialize(void)
 
 	p_rename("submodules/gitmodules", "submodules/.gitmodules");
 	cl_git_append2file("submodules/.gitmodules", modpath.ptr);
+	git_buf_free(&modpath);
 
 	p_rename("submodules/testrepo/.gitted", "submodules/testrepo/.git");
 }

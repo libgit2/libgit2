@@ -43,6 +43,8 @@ static int resolve_head_to_tree(git_tree **tree, git_repository *repo)
 	if (git_object_lookup(&obj, repo, git_reference_oid(head), GIT_OBJ_ANY) < 0)
 		goto fail;
 
+	git_reference_free(head);
+
 	switch (git_object_type(obj)) {
 	case GIT_OBJ_TREE:
 		*tree = (git_tree *)obj;

@@ -334,6 +334,7 @@ static int config_get_multivar(
 
 			var = var->next;
 		} while (var != NULL);
+		regfree(&regex);
 	} else {
 		/* no regex; go through all the variables */
 		do {
