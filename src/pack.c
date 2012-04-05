@@ -200,7 +200,8 @@ static unsigned char *pack_window_open(
 	return git_mwindow_open(&p->mwf, w_cursor, offset, 20, left);
  }
 
-static unsigned long packfile_unpack_header1(
+static int packfile_unpack_header1(
+		unsigned long *usedp,
 		size_t *sizep,
 		git_otype *type,
 		const unsigned char *buf,
@@ -215,8 +216,13 @@ static unsigned long packfile_unpack_header1(
 	size = c & 15;
 	shift = 4;
 	while (c & 0x80) {
-		if (len <= used || bitsizeof(long) <= shift)
-			return 0;
+		if (len <= used)
+			return GIT_ESHORTBUFFER;
+
+		if (bitsizeof(long) <= shift) {
+			*usedp = 0;
+			return -1;
+		}
 
 		c = buf[used++];
 		size += (c & 0x7f) << shift;
@@ -224,7 +230,8 @@ static unsigned long packfile_unpack_header1(
 	}
 
 	*sizep = (size_t)size;
-	return used;
+	*usedp = used;
+	return 0;
 }
 
 int git_packfile_unpack_header(
@@ -237,6 +244,7 @@ int git_packfile_unpack_header(
 	unsigned char *base;
 	unsigned int left;
 	unsigned long used;
+	int ret;
 
 	/* pack_window_open() assures us we have [base, base + 20) available
 	 * as a range that we can look at at. (Its actually the hash
@@ -247,10 +255,13 @@ int git_packfile_unpack_header(
 //	base = pack_window_open(p, w_curs, *curpos, &left);
 	base = git_mwindow_open(mwf, w_curs, *curpos, 20, &left);
 	if (base == NULL)
-		return -1;
+		return GIT_ESHORTBUFFER;
 
-	used = packfile_unpack_header1(size_p, type_p, base, left);
-	if (used == 0)
+	ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
+	git_mwindow_close(w_curs);
+	if (ret == GIT_ESHORTBUFFER)
+		return ret;
+	else if (ret < 0)
 		return packfile_error("header length is zero");
 
 	*curpos += used;
@@ -271,12 +282,12 @@ static int packfile_unpack_delta(
 	int error;
 
 	base_offset = get_delta_base(p, w_curs, curpos, delta_type, obj_offset);
+	git_mwindow_close(w_curs);
 	if (base_offset == 0)
 		return packfile_error("delta offset is zero");
 	if (base_offset < 0) /* must actually be an error code */
 		return (int)base_offset;
 
-	git_mwindow_close(w_curs);
 	error = git_packfile_unpack(&base, p, &base_offset);
 
 	/*
@@ -289,6 +300,7 @@ static int packfile_unpack_delta(
 		return error;
 
 	error = packfile_unpack_compressed(&delta, p, w_curs, curpos, delta_size, delta_type);
+	git_mwindow_close(w_curs);
 	if (error < 0) {
 		git__free(base.data);
 		return error;
@@ -327,6 +339,8 @@ int git_packfile_unpack(
 	obj->type = GIT_OBJ_BAD;
 
 	error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
+	git_mwindow_close(&w_curs);
+
 	if (error < 0)
 		return error;
 
@@ -351,8 +365,6 @@ int git_packfile_unpack(
 		error = packfile_error("invalid packfile type in header");;
 		break;
 	}
-
-	git_mwindow_close(&w_curs);
 
 	*obj_offset = curpos;
 	return error;
@@ -381,6 +393,7 @@ int packfile_unpack_compressed(
 	if (st != Z_OK) {
 		git__free(buffer);
 		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+
 		return -1;
 	}
 
@@ -388,9 +401,16 @@ int packfile_unpack_compressed(
 		in = pack_window_open(p, w_curs, *curpos, &stream.avail_in);
 		stream.next_in = in;
 		st = inflate(&stream, Z_FINISH);
+		git_mwindow_close(w_curs);
 
 		if (!stream.avail_out)
 			break; /* the payload is larger than it should be */
+
+		if (st == Z_BUF_ERROR && in == NULL) {
+			inflateEnd(&stream);
+			git__free(buffer);
+			return GIT_ESHORTBUFFER;
+		}
 
 		*curpos += stream.next_in - in;
 	} while (st == Z_OK || st == Z_BUF_ERROR);
@@ -420,10 +440,15 @@ git_off_t get_delta_base(
 	git_otype type,
 	git_off_t delta_obj_offset)
 {
-	unsigned char *base_info = pack_window_open(p, w_curs, *curpos, NULL);
+	unsigned int left = 0;
+	unsigned char *base_info;
 	git_off_t base_offset;
 	git_oid unused;
 
+	base_info = pack_window_open(p, w_curs, *curpos, &left);
+	/* Assumption: the only reason this would fail is because the file is too small */
+	if (base_info == NULL)
+		return GIT_ESHORTBUFFER;
 	/* pack_window_open() assured us we have [base_info, base_info + 20)
 	 * as a range that we can look at without walking off the
 	 * end of the mapped window. Its actually the hash size
@@ -435,6 +460,8 @@ git_off_t get_delta_base(
 		unsigned char c = base_info[used++];
 		base_offset = c & 127;
 		while (c & 128) {
+			if (left <= used)
+				return GIT_ESHORTBUFFER;
 			base_offset += 1;
 			if (!base_offset || MSB(base_offset, 7))
 				return 0; /* overflow */
