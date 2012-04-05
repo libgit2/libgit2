@@ -194,14 +194,19 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 	memset(file, 0x0, sizeof(git_filebuf));
 
+	if (flags & GIT_FILEBUF_DO_NOT_BUFFER)
+		file->do_not_buffer = true;
+
 	file->buf_size = WRITE_BUFFER_SIZE;
 	file->buf_pos = 0;
 	file->fd = -1;
 	file->last_error = BUFERR_OK;
 
 	/* Allocate the main cache buffer */
-	file->buffer = git__malloc(file->buf_size);
-	GITERR_CHECK_ALLOC(file->buffer);
+	if (!file->do_not_buffer) {
+		file->buffer = git__malloc(file->buf_size);
+		GITERR_CHECK_ALLOC(file->buffer);
+	}
 
 	/* If we are hashing on-write, allocate a new hash context */
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
@@ -344,6 +349,9 @@ int git_filebuf_write(git_filebuf *file, const void *buff, size_t len)
 	const unsigned char *buf = buff;
 
 	ENSURE_BUF_OK(file);
+
+	if (file->do_not_buffer)
+		return file->write(file, (void *)buff, len);
 
 	for (;;) {
 		size_t space_left = file->buf_size - file->buf_pos;
