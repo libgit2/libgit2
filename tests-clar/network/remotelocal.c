@@ -88,7 +88,7 @@ void test_network_remotelocal__retrieve_advertised_references(void)
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert(how_many_refs == 12); /* 1 HEAD + 9 refs + 2 peeled tags */
+	cl_assert(how_many_refs == 14); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target */
 }
 
 void test_network_remotelocal__retrieve_advertised_references_from_spaced_repository(void)
@@ -102,7 +102,7 @@ void test_network_remotelocal__retrieve_advertised_references_from_spaced_reposi
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert(how_many_refs == 12); /* 1 HEAD */
+	cl_assert(how_many_refs == 14); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target */
 
 	cl_fixture_cleanup("spaced testrepo.git");
 }
