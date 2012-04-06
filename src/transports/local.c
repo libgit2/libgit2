@@ -27,7 +27,7 @@ static int add_ref(transport_local *t, const char *name)
 	const char peeled[] = "^{}";
 	git_remote_head *head;
 	git_reference *ref, *resolved_ref;
-	git_object *obj = NULL;
+	git_object *obj = NULL, *peeled_tag_target = NULL;
 	int error = GIT_SUCCESS, peel_len, ret;
 
 	head = git__malloc(sizeof(git_remote_head));
@@ -78,7 +78,11 @@ static int add_ref(transport_local *t, const char *name)
 	assert(ret < peel_len + 1);
 	(void)ret;
 
-	git_oid_cpy(&head->oid, git_tag_target_oid((git_tag *) obj));
+	error = git_tag_peel(&peeled_tag_target, (git_tag *) obj);
+	if (error < 0)
+		goto out;
+
+	git_oid_cpy(&head->oid, git_object_id(peeled_tag_target));
 
 	error = git_vector_insert(&t->refs, head);
 	if (error < GIT_SUCCESS)
@@ -89,6 +93,7 @@ static int add_ref(transport_local *t, const char *name)
 	git_reference_free(resolved_ref);
 
 	git_object_free(obj);
+	git_object_free(peeled_tag_target);
 	if (head && error < GIT_SUCCESS) {
 		git__free(head->name);
 		git__free(head);
