@@ -12,6 +12,7 @@
 #include "pqueue.h"
 
 #include "git2/revwalk.h"
+#include "git2/merge.h"
 
 #include <regex.h>
 
