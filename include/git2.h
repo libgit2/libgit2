@@ -22,6 +22,7 @@
 
 #include "git2/repository.h"
 #include "git2/revwalk.h"
+#include "git2/merge.h"
 #include "git2/refs.h"
 #include "git2/reflog.h"
 
