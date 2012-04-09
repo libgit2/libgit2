@@ -178,3 +178,21 @@ int git_branch_list(git_strarray *branch_names, git_repository *repo, unsigned i
 	branch_names->count = branchlist.length;
 	return 0;
 }
+
+int git_branch_move(git_repository *repo, const char *old_branch_name, const char *new_branch_name, int force)
+{
+	git_reference *reference;
+	git_buf old_reference_name = GIT_BUF_INIT, new_reference_name = GIT_BUF_INIT;
+	int error;
+
+	if (git_buf_joinpath(&old_reference_name, GIT_REFS_HEADS_DIR, old_branch_name) < 0)
+		return -1;
+
+	if (git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name) < 0)
+		return -1;
+
+	if ((error = git_reference_lookup(&reference, repo, git_buf_cstr(&old_reference_name))) < 0)
+		return error;
+
+	return git_reference_rename(reference, git_buf_cstr(&new_reference_name), force);
+}
