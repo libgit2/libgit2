@@ -871,11 +871,20 @@ const char *git_repository_workdir(git_repository *repo)
 
 int git_repository_set_workdir(git_repository *repo, const char *workdir)
 {
+	git_buf path = GIT_BUF_INIT;
+
 	assert(repo && workdir);
+
+	if (git_path_prettify_dir(&path, workdir, NULL) < 0)
+		return -1;
+
+	/* TODO: Should we check that the directory actually exists? */
 
 	free(repo->workdir);
 
-	repo->workdir = git__strdup(workdir);
+	repo->workdir = git__strdup(git_buf_cstr(&path));
+	git_buf_free(&path);
+
 	GITERR_CHECK_ALLOC(repo->workdir);
 
 	repo->is_bare = 0;
