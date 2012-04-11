@@ -95,13 +95,13 @@ static int update_reference(git_repository *repo, git_oid *oid, const char *ref_
 	git_reference *ref;
 	int res;
 
-	res = git_reference_lookup(&ref, repo, update_ref);
+	res = git_reference_lookup(&ref, repo, ref_name);
 
 	/* If we haven't found the reference at all, we assume we need to create
 	 * a new reference and that's it */
 	if (res == GIT_ENOTFOUND) {
 		giterr_clear();
-		return git_reference_create_oid(NULL, repo, update_ref, oid, 1);
+		return git_reference_create_oid(NULL, repo, ref_name, oid, 1);
 	}
 
 	if (res < 0)
@@ -147,10 +147,6 @@ static int update_reference(git_repository *repo, git_oid *oid, const char *ref_
 	res = git_reference_set_oid(ref, oid);
 	git_reference_free(ref);
 	return res;
-
-on_error:
-	git_reference_free(ref);
-	return -1;
 }
 
 int git_commit_create(
@@ -169,7 +165,7 @@ int git_commit_create(
 	int i;
 	git_odb *odb;
 
-	assert(git_object_owner((const git_object *)tree) == repo)
+	assert(git_object_owner((const git_object *)tree) == repo);
 
 	git_oid__writebuf(&commit, "tree ", git_object_id((const git_object *)tree));
 
@@ -214,11 +210,10 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 	const char *buffer_end = (const char *)data + len;
 
 	git_oid parent_oid;
-	int error;
 
 	git_vector_init(&commit->parent_oids, 4, NULL);
 
-	if (git_oid__parse(&commit->tree_oid, &buffer, buffer_end, "tree ")) < 0)
+	if (git_oid__parse(&commit->tree_oid, &buffer, buffer_end, "tree ") < 0)
 		goto bad_buffer;
 
 	/*
