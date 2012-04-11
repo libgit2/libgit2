@@ -110,7 +110,7 @@ static int remove_file_cb(void *data, git_buf *file)
 		return 0;
 
 	if (git_path_isdir(filename))
-		cl_git_pass(git_futils_rmdir_r(filename, 1));
+		cl_git_pass(git_futils_rmdir_r(filename, GIT_DIRREMOVAL_FILES_AND_DIRS));
 	else
 		cl_git_pass(p_unlink(git_buf_cstr(file)));
 
@@ -347,7 +347,7 @@ void test_status_worktree__issue_592_3(void)
 	repo = cl_git_sandbox_init("issue_592");
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), 1));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), GIT_DIRREMOVAL_FILES_AND_DIRS));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
@@ -377,7 +377,7 @@ void test_status_worktree__issue_592_5(void)
 	repo = cl_git_sandbox_init("issue_592");
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "t"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), 1));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), GIT_DIRREMOVAL_FILES_AND_DIRS));
 	cl_git_pass(p_mkdir(git_buf_cstr(&path), 0777));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, NULL));

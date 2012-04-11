@@ -58,10 +58,25 @@ extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t m
  */
 extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 
+typedef enum {
+	GIT_DIRREMOVAL_EMPTY_HIERARCHY = 0,
+	GIT_DIRREMOVAL_FILES_AND_DIRS = 1,
+	GIT_DIRREMOVAL_ONLY_EMPTY_DIRS = 2,
+} git_directory_removal_type;
+
 /**
  * Remove path and any files and directories beneath it.
+ *
+ * @param path Path to to top level directory to process.
+ *
+ * @param removal_type GIT_DIRREMOVAL_EMPTY_HIERARCHY to remove a hierarchy
+ * of empty directories (will fail if any file is found), GIT_DIRREMOVAL_FILES_AND_DIRS
+ * to remove a hierarchy of files and folders, GIT_DIRREMOVAL_ONLY_EMPTY_DIRS to only remove
+ * empty directories (no failure on file encounter).
+ *
+ * @return 0 on success; -1 on error.
  */
-extern int git_futils_rmdir_r(const char *path, int force);
+extern int git_futils_rmdir_r(const char *path, enum git_directory_removal_type removal_type);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.
