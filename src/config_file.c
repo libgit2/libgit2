@@ -192,6 +192,9 @@ static int file_foreach(git_config_file *backend, int (*fn)(const char *, const 
 	cvar_t *var;
 	const char *key;
 
+	if (!b->values)
+		return 0;
+
 	GIT_HASHTABLE_FOREACH(b->values, key, var,
 		do {
 			if (fn(key, var->value, data) < 0)
@@ -331,6 +334,7 @@ static int config_get_multivar(
 
 			var = var->next;
 		} while (var != NULL);
+		regfree(&regex);
 	} else {
 		/* no regex; go through all the variables */
 		do {

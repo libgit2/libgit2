@@ -47,6 +47,79 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_status_foreach(git_repository *repo, int (*callback)(const char *, unsigned int, void *), void *payload);
 
 /**
+ * Select the files on which to report status.
+ *
+ * - GIT_STATUS_SHOW_INDEX_AND_WORKDIR is the default.  This is the
+ *   rough equivalent of `git status --porcelain` where each file
+ *   will receive a callback indicating its status in the index and
+ *   in the workdir.
+ * - GIT_STATUS_SHOW_INDEX_ONLY will only make callbacks for index
+ *   side of status.  The status of the index contents relative to
+ *   the HEAD will be given.
+ * - GIT_STATUS_SHOW_WORKDIR_ONLY will only make callbacks for the
+ *   workdir side of status, reporting the status of workdir content
+ *   relative to the index.
+ * - GIT_STATUS_SHOW_INDEX_THEN_WORKDIR behaves like index-only
+ *   followed by workdir-only, causing two callbacks to be issued
+ *   per file (first index then workdir).  This is slightly more
+ *   efficient than making separate calls.  This makes it easier to
+ *   emulate the output of a plain `git status`.
+ */
+typedef enum {
+	GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
+	GIT_STATUS_SHOW_INDEX_ONLY = 1,
+	GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
+	GIT_STATUS_SHOW_INDEX_THEN_WORKDIR = 3,
+} git_status_show_t;
+
+/**
+ * Flags to control status callbacks
+ *
+ * - GIT_STATUS_OPT_INCLUDE_UNTRACKED says that callbacks should
+ *   be made on untracked files.  These will only be made if the
+ *   workdir files are included in the status "show" option.
+ * - GIT_STATUS_OPT_INCLUDE_IGNORED says that ignored files should
+ *   get callbacks.  Again, these callbacks will only be made if
+ *   the workdir files are included in the status "show" option.
+ *   Right now, there is no option to include all files in
+ *   directories that are ignored completely.
+ * - GIT_STATUS_OPT_INCLUDE_UNMODIFIED indicates that callback
+ *   should be made even on unmodified files.
+ * - GIT_STATUS_OPT_EXCLUDE_SUBMODULES indicates that directories
+ *   which appear to be submodules should just be skipped over.
+ * - GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS indicates that the
+ *   contents of untracked directories should be included in the
+ *   status.  Normally if an entire directory is new, then just
+ *   the top-level directory will be included (with a trailing
+ *   slash on the entry name).  Given this flag, the directory
+ *   itself will not be included, but all the files in it will.
+ */
+#define GIT_STATUS_OPT_INCLUDE_UNTRACKED      (1 << 0)
+#define GIT_STATUS_OPT_INCLUDE_IGNORED        (1 << 1)
+#define GIT_STATUS_OPT_INCLUDE_UNMODIFIED     (1 << 2)
+#define GIT_STATUS_OPT_EXCLUDE_SUBMODULES     (1 << 3)
+#define GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS (1 << 4)
+
+/**
+ * Options to control how callbacks will be made by
+ * `git_status_foreach_ext()`.
+ */
+typedef struct {
+	git_status_show_t show;
+	unsigned int flags;
+	git_strarray pathspec;
+} git_status_options;
+
+/**
+ * Gather file status information and run callbacks as requested.
+ */
+GIT_EXTERN(int) git_status_foreach_ext(
+	git_repository *repo,
+	git_status_options *opts,
+	int (*callback)(const char *, unsigned int, void *),
+	void *payload);
+
+/**
  * Get file status for a single file
  *
  * @param status_flags the status value

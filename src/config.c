@@ -140,7 +140,7 @@ int git_config_add_file(git_config *cfg, git_config_file *file, int priority)
 
 int git_config_foreach(git_config *cfg, int (*fn)(const char *, const char *, void *), void *data)
 {
-	int ret = GIT_SUCCESS;
+	int ret = 0;
 	unsigned int i;
 	file_internal *internal;
 	git_config_file *file;
@@ -201,25 +201,25 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	return file->set(file, name, value);
 }
 
-static int parse_bool(int *out, const char *value)
+int git_config_parse_bool(int *out, const char *value)
 {
 	/* A missing value means true */
 	if (value == NULL) {
 		*out = 1;
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	if (!strcasecmp(value, "true") ||
 		!strcasecmp(value, "yes") ||
 		!strcasecmp(value, "on")) {
 		*out = 1;
-		return GIT_SUCCESS;
+		return 0;
 	}
 	if (!strcasecmp(value, "false") ||
 		!strcasecmp(value, "no") ||
 		!strcasecmp(value, "off")) {
 		*out = 0;
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	return GIT_EINVALIDTYPE;
@@ -283,46 +283,58 @@ static int parse_int32(int32_t *out, const char *value)
 /***********
  * Getters
  ***********/
-int git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n, int *out)
+int git_config_lookup_map_value(
+	git_cvar_map *maps, size_t map_n, const char *value, int *out)
 {
 	size_t i;
-	const char *value;
-	int error;
 
-	error = git_config_get_string(cfg, name, &value);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (!value)
+		return GIT_ENOTFOUND;
 
 	for (i = 0; i < map_n; ++i) {
 		git_cvar_map *m = maps + i;
 
 		switch (m->cvar_type) {
-			case GIT_CVAR_FALSE:
-			case GIT_CVAR_TRUE: {
-				int bool_val;
+		case GIT_CVAR_FALSE:
+		case GIT_CVAR_TRUE: {
+			int bool_val;
 
-				if (parse_bool(&bool_val, value) == 0 && 
-					bool_val == (int)m->cvar_type) {
-					*out = m->map_value;
-					return 0;
-				}
-
-				break;
+			if (git_config_parse_bool(&bool_val, value) == 0 && 
+				bool_val == (int)m->cvar_type) {
+				*out = m->map_value;
+				return 0;
 			}
+			break;
+		}
 
-			case GIT_CVAR_INT32:
-				if (parse_int32(out, value) == 0)
-					return 0;
+		case GIT_CVAR_INT32:
+			if (parse_int32(out, value) == 0)
+				return 0;
+			break;
 
-				break;
-
-			case GIT_CVAR_STRING:
-				if (strcasecmp(value, m->str_match) == 0) {
-					*out = m->map_value;
-					return 0;
-				}
+		case GIT_CVAR_STRING:
+			if (strcasecmp(value, m->str_match) == 0) {
+				*out = m->map_value;
+				return 0;
+			}
+			break;
 		}
 	}
+
+	return GIT_ENOTFOUND;
+}
+
+int git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n, int *out)
+{
+	const char *value;
+	int error;
+
+	error = git_config_get_string(cfg, name, &value);
+	if (error < 0)
+		return error;
+
+	if (!git_config_lookup_map_value(maps, map_n, value, out))
+		return 0;
 
 	giterr_set(GITERR_CONFIG,
 		"Failed to map the '%s' config variable with a valid value", name);
@@ -372,7 +384,7 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 	if (ret < 0)
 		return ret;
 
-	if (parse_bool(out, value) == 0)
+	if (git_config_parse_bool(out, value) == 0)
 		return 0;
 
 	if (parse_int32(out, value) == 0) {
@@ -449,7 +461,7 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 		internal = git_vector_get(&cfg->files, i - 1);
 		file = internal->file;
 		ret = file->set_multivar(file, name, regexp, value);
-		if (ret < GIT_SUCCESS && ret != GIT_ENOTFOUND)
+		if (ret < 0 && ret != GIT_ENOTFOUND)
 			return ret;
 	}
 

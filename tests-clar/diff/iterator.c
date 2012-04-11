@@ -139,6 +139,40 @@ void test_diff_iterator__tree_3(void)
 	tree_iterator_test("status", "0017bd4ab1e", 8, expected_tree_3);
 }
 
+/* $ git ls-tree -r --name-only 24fa9a9fc4e202313e24b648087495441dab432b */
+const char *expected_tree_4[] = {
+	"attr0",
+	"attr1",
+	"attr2",
+	"attr3",
+	"binfile",
+	"gitattributes",
+	"macro_bad",
+	"macro_test",
+	"root_test1",
+	"root_test2",
+	"root_test3",
+	"root_test4.txt",
+	"sub/abc",
+	"sub/file",
+	"sub/sub/file",
+	"sub/sub/subsub.txt",
+	"sub/subdir_test1",
+	"sub/subdir_test2.txt",
+	"subdir/.gitattributes",
+	"subdir/abc",
+	"subdir/subdir_test1",
+	"subdir/subdir_test2.txt",
+	"subdir2/subdir2_test1",
+	NULL
+};
+
+void test_diff_iterator__tree_4(void)
+{
+	tree_iterator_test(
+		"attr", "24fa9a9fc4e202313e24b648087495441dab432b",
+		23, expected_tree_4);
+}
 
 /* -- INDEX ITERATOR TESTS -- */
 
@@ -188,6 +222,12 @@ static const char *expected_index_0[] = {
 	"root_test2",
 	"root_test3",
 	"root_test4.txt",
+	"sub/abc",
+	"sub/file",
+	"sub/sub/file",
+	"sub/sub/subsub.txt",
+	"sub/subdir_test1",
+	"sub/subdir_test2.txt",
 	"subdir/.gitattributes",
 	"subdir/abc",
 	"subdir/subdir_test1",
@@ -208,6 +248,12 @@ static const char *expected_index_oids_0[] = {
 	"4d713dc48e6b1bd75b0d61ad078ba9ca3a56745d",
 	"108bb4e7fd7b16490dc33ff7d972151e73d7166e",
 	"fe773770c5a6cc7185580c9204b1ff18a33ff3fc",
+	"3e42ffc54a663f9401cc25843d6c0e71a33e4249",
+	"45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
+	"45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
+	"9e5bdc47d6a80f2be0ea3049ad74231b94609242",
+	"e563cf4758f0d646f1b14b76016aa17fa9e549a4",
+	"fb5067b1aef3ac1ada4b379dbcb7d17255df7d78",
 	"99eae476896f4907224978b88e5ecaa6c5bb67a9",
 	"3e42ffc54a663f9401cc25843d6c0e71a33e4249",
 	"e563cf4758f0d646f1b14b76016aa17fa9e549a4",
@@ -217,7 +263,7 @@ static const char *expected_index_oids_0[] = {
 
 void test_diff_iterator__index_0(void)
 {
-	index_iterator_test("attr", 17, expected_index_0, expected_index_oids_0);
+	index_iterator_test("attr", 23, expected_index_0, expected_index_oids_0);
 }
 
 static const char *expected_index_1[] = {

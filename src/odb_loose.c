@@ -772,7 +772,7 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 
 static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const void *data, size_t len, git_otype type)
 {
-	int error, header_len;
+	int error = 0, header_len;
 	git_buf final_path = GIT_BUF_INIT;
 	char header[64];
 	git_filebuf fbuf = GIT_FILEBUF_INIT;

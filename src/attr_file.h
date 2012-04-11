@@ -14,7 +14,6 @@
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
 #define GIT_ATTR_FILE_SYSTEM	"gitattributes"
-#define GIT_ATTR_CONFIG			"core.attributesfile"
 
 #define GIT_ATTR_FNMATCH_NEGATIVE	(1U << 0)
 #define GIT_ATTR_FNMATCH_DIRECTORY	(1U << 1)

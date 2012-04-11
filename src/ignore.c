@@ -1,11 +1,9 @@
 #include "ignore.h"
 #include "path.h"
-#include "git2/config.h"
 
 #define GIT_IGNORE_INTERNAL		"[internal]exclude"
 #define GIT_IGNORE_FILE_INREPO	"info/exclude"
 #define GIT_IGNORE_FILE			".gitignore"
-#define GIT_IGNORE_CONFIG		"core.excludesfile"
 
 static int load_ignore_file(
 	git_repository *repo, const char *path, git_attr_file *ignores)
@@ -73,7 +71,6 @@ static int push_one_ignore(void *ref, git_buf *path)
 int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ignores)
 {
 	int error = 0;
-	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
 
 	assert(ignores);
@@ -104,26 +101,19 @@ int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ig
 
 	/* load .git/info/exclude */
 	error = push_ignore(repo, &ignores->ign_global,
-		repo->path_repository, GIT_IGNORE_FILE_INREPO);
+		git_repository_path(repo), GIT_IGNORE_FILE_INREPO);
 	if (error < 0)
 		goto cleanup;
 
 	/* load core.excludesfile */
-	if ((error = git_repository_config(&cfg, repo)) == 0) {
-		const char *core_ignore;
-		error = git_config_get_string(cfg, GIT_IGNORE_CONFIG, &core_ignore);
-		if (error == 0 && core_ignore != NULL)
-			error = push_ignore(repo, &ignores->ign_global, NULL, core_ignore);
-		else {
-			error = 0;
-			giterr_clear(); /* don't care if attributesfile is not set */
-		}
-		git_config_free(cfg);
-	}
+	if (git_repository_attr_cache(repo)->cfg_excl_file != NULL)
+		error = push_ignore(repo, &ignores->ign_global, NULL,
+			git_repository_attr_cache(repo)->cfg_excl_file);
 
 cleanup:
 	if (error < 0)
 		git_ignore__free(ignores);
+
 	return error;
 }
 
