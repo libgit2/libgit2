@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include <stdarg.h>
+#include <ctype.h>
 
 #include "git2/object.h"
 
@@ -20,7 +21,7 @@
 #define GIT_OBJECTS_INFO_DIR GIT_OBJECTS_DIR "info/"
 #define GIT_OBJECTS_PACK_DIR GIT_OBJECTS_DIR "pack/"
 
-#define GIT_FILE_CONTENT_PREFIX "gitdir: "
+#define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
 #define GIT_BRANCH_MASTER "master"
 
@@ -132,76 +133,294 @@ static int load_config_data(git_repository *repo)
 	return 0;
 }
 
-static int load_workdir(git_repository *repo)
+static int load_workdir(git_repository *repo, git_buf *parent_path)
 {
-	git_buf workdir_buf = GIT_BUF_INIT;
+	int         error;
+	git_config *config;
+	const char *worktree;
+	git_buf     worktree_buf = GIT_BUF_INIT;
 
 	if (repo->is_bare)
 		return 0;
 
-	git_path_dirname_r(&workdir_buf, repo->path_repository);
-	git_path_to_dir(&workdir_buf);
-
-	if (git_buf_oom(&workdir_buf))
+	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
-	repo->workdir = git_buf_detach(&workdir_buf);
-	git_buf_free(&workdir_buf);
+	error = git_config_get_string(config, "core.worktree", &worktree);
+	if (!error && worktree != NULL)
+		repo->workdir = git__strdup(worktree);
+	else if (error != GIT_ENOTFOUND)
+		return error;
+	else {
+		giterr_clear();
 
+		if (parent_path && git_path_isdir(parent_path->ptr))
+			repo->workdir = git_buf_detach(parent_path);
+		else {
+			git_path_dirname_r(&worktree_buf, repo->path_repository);
+			git_path_to_dir(&worktree_buf);
+			repo->workdir = git_buf_detach(&worktree_buf);
+		}
+	}
+
+	GITERR_CHECK_ALLOC(repo->workdir);
+
+	return 0;
+}
+
+/*
+ * This function returns furthest offset into path where a ceiling dir
+ * is found, so we can stop processing the path at that point.
+ *
+ * Note: converting this to use git_bufs instead of GIT_PATH_MAX buffers on
+ * the stack could remove directories name limits, but at the cost of doing
+ * repeated malloc/frees inside the loop below, so let's not do it now.
+ */
+static int find_ceiling_dir_offset(
+	const char *path,
+	const char *ceiling_directories)
+{
+	char buf[GIT_PATH_MAX + 1];
+	char buf2[GIT_PATH_MAX + 1];
+	const char *ceil, *sep;
+	int len, max_len = -1;
+	int min_len;
+
+	assert(path);
+
+	min_len = git_path_root(path) + 1;
+
+	if (ceiling_directories == NULL || min_len == 0)
+		return min_len;
+
+	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
+		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
+		len = sep - ceil;
+
+		if (len == 0 || len >= (int)sizeof(buf) || git_path_root(ceil) == -1)
+			continue;
+
+		strncpy(buf, ceil, len);
+		buf[len] = '\0';
+
+		if (p_realpath(buf, buf2) == NULL)
+			continue;
+
+		len = strlen(buf2);
+		if (len > 0 && buf2[len-1] == '/')
+			buf[--len] = '\0';
+
+		if (!strncmp(path, buf2, len) &&
+			path[len] == '/' &&
+			len > max_len)
+		{
+			max_len = len;
+		}
+	}
+
+	return max_len <= min_len ? min_len : max_len;
+}
+
+/*
+ * Read the contents of `file_path` and set `path_out` to the repo dir that
+ * it points to.  Before calling, set `path_out` to the base directory that
+ * should be used if the contents of `file_path` are a relative path.
+ */
+static int read_gitfile(git_buf *path_out, const char *file_path)
+{
+	int     error = 0;
+	git_buf file = GIT_BUF_INIT;
+	size_t  prefix_len = strlen(GIT_FILE_CONTENT_PREFIX);
+
+	assert(path_out && file_path);
+
+	if (git_futils_readbuffer(&file, file_path) < 0)
+		return -1;
+
+	git_buf_rtrim(&file);
+
+	if (file.size <= prefix_len ||
+		memcmp(file.ptr, GIT_FILE_CONTENT_PREFIX, prefix_len) != 0)
+	{
+		giterr_set(GITERR_REPOSITORY, "The `.git` file at '%s' is malformed", file_path);
+		error = -1;
+	}
+	else if ((error = git_path_dirname_r(path_out, file_path)) >= 0) {
+		const char *gitlink = ((const char *)file.ptr) + prefix_len;
+		while (*gitlink && isspace(*gitlink)) gitlink++;
+		error = git_path_prettify_dir(path_out, gitlink, path_out->ptr);
+	}
+
+	git_buf_free(&file);
+	return error;
+}
+
+static int find_repo(
+	git_buf *repo_path,
+	git_buf *parent_path,
+	const char *start_path,
+	uint32_t flags,
+	const char *ceiling_dirs)
+{
+	int error;
+	git_buf path = GIT_BUF_INIT;
+	struct stat st;
+	dev_t initial_device = 0;
+	bool try_with_dot_git = false;
+	int ceiling_offset;
+
+	git_buf_free(repo_path);
+
+	if ((error = git_path_prettify_dir(&path, start_path, NULL)) < 0)
+		return error;
+
+	ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
+
+	if ((error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
+		return error;
+
+	while (!error && !repo_path->size) {
+		if (p_stat(path.ptr, &st) == 0) {
+			/* check that we have not crossed device boundaries */
+			if (initial_device == 0)
+				initial_device = st.st_dev;
+			else if (st.st_dev != initial_device &&
+				(flags & GIT_REPOSITORY_OPEN_CROSS_FS) == 0)
+				break;
+
+			if (S_ISDIR(st.st_mode)) {
+				if (valid_repository_path(&path)) {
+					git_path_to_dir(&path);
+					git_buf_set(repo_path, path.ptr, path.size);
+					break;
+				}
+			}
+			else if (S_ISREG(st.st_mode)) {
+				git_buf repo_link = GIT_BUF_INIT;
+
+				if (!(error = read_gitfile(&repo_link, path.ptr))) {
+					if (valid_repository_path(&repo_link))
+						git_buf_swap(repo_path, &repo_link);
+					break;
+				}
+				git_buf_free(&repo_link);
+			}
+		}
+
+		/* move up one directory level */
+		if (git_path_dirname_r(&path, path.ptr) < 0) {
+			error = -1;
+			break;
+		}
+
+		if (try_with_dot_git) {
+			/* if we tried original dir with and without .git AND either hit
+			 * directory ceiling or NO_SEARCH was requested, then be done.
+			 */
+			if (path.ptr[ceiling_offset] == '\0' ||
+				(flags & GIT_REPOSITORY_OPEN_NO_SEARCH) != 0)
+				break;
+			/* otherwise look first for .git item */
+			error = git_buf_joinpath(&path, path.ptr, DOT_GIT);
+		}
+		try_with_dot_git = !try_with_dot_git;
+	}
+
+	if (!error && parent_path != NULL) {
+		if (!repo_path->size)
+			git_buf_clear(parent_path);
+		else {
+			git_path_dirname_r(parent_path, path.ptr);
+			git_path_to_dir(parent_path);
+		}
+		if (git_buf_oom(parent_path))
+			return -1;
+	}
+
+	git_buf_free(&path);
+
+	if (!repo_path->size && !error) {
+		giterr_set(GITERR_REPOSITORY,
+			"Could not find repository from '%s'", start_path);
+		error = GIT_ENOTFOUND;
+	}
+
+	return error;
+}
+
+int git_repository_open_ext(
+	git_repository **repo_ptr,
+	const char *start_path,
+	uint32_t flags,
+	const char *ceiling_dirs)
+{
+	int error;
+	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT;
+	git_repository *repo;
+
+	*repo_ptr = NULL;
+
+	if ((error = find_repo(&path, &parent, start_path, flags, ceiling_dirs)) < 0)
+		return error;
+
+	repo = repository_alloc();
+	GITERR_CHECK_ALLOC(repo);
+
+	repo->path_repository = git_buf_detach(&path);
+	GITERR_CHECK_ALLOC(repo->path_repository);
+
+	if ((error = load_config_data(repo)) < 0 ||
+		(error = load_workdir(repo, &parent)) < 0)
+	{
+		git_repository_free(repo);
+		return error;
+	}
+
+	*repo_ptr = repo;
 	return 0;
 }
 
 int git_repository_open(git_repository **repo_out, const char *path)
 {
-	git_buf path_buf = GIT_BUF_INIT;
-	git_repository *repo = NULL;
-	int res;
+	return git_repository_open_ext(
+		repo_out, path, GIT_REPOSITORY_OPEN_NO_SEARCH, NULL);
+}
 
-	res = git_path_prettify_dir(&path_buf, path, NULL);
-	if (res < 0)
-		return res;
+int git_repository_discover(
+	char *repository_path,
+	size_t size,
+	const char *start_path,
+	int across_fs,
+	const char *ceiling_dirs)
+{
+	git_buf path = GIT_BUF_INIT;
+	uint32_t flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
 
-	/**
-	 * Check if the path we've been given is actually the path
-	 * of the working dir, by testing if it contains a `.git`
-	 * folder inside of it.
-	 */
-	if (git_path_contains_dir(&path_buf, GIT_DIR) == true)
-		git_buf_joinpath(&path_buf, path_buf.ptr, GIT_DIR);
+	assert(start_path && repository_path && size > 0);
 
-	if (valid_repository_path(&path_buf) == false) {
+	*repository_path = '\0';
+
+	if (find_repo(&path, NULL, start_path, flags, ceiling_dirs) < 0)
+		return -1;
+
+	if (size < (size_t)(path.size + 1)) {
 		giterr_set(GITERR_REPOSITORY,
-			"The given path (%s) is not a valid Git repository", git_buf_cstr(&path_buf));
-		git_buf_free(&path_buf);
-		return GIT_ENOTFOUND;
+			"The given buffer is too long to store the discovered path");
+		git_buf_free(&path);
+		return -1;
 	}
 
-	repo = repository_alloc();
-	GITERR_CHECK_ALLOC(repo);
-
-	repo->path_repository = git_buf_detach(&path_buf);
-	GITERR_CHECK_ALLOC(repo->path_repository);
-
-	if (load_config_data(repo) < 0)
-		goto cleanup;
-
-	if (load_workdir(repo) < 0)
-		goto cleanup;
-
-	*repo_out = repo;
+	/* success: we discovered a repository */
+	git_buf_copy_cstr(repository_path, size, &path);
+	git_buf_free(&path);
 	return 0;
-
- cleanup:
-	git_repository_free(repo);
-	git_buf_free(&path_buf);
-	return -1;
 }
 
 static int load_config(
-		git_config **out,
-		git_repository *repo,
-		const char *global_config_path,
-		const char *system_config_path)
+	git_config **out,
+	git_repository *repo,
+	const char *global_config_path,
+	const char *system_config_path)
 {
 	git_buf config_path = GIT_BUF_INIT;
 	git_config *cfg = NULL;
@@ -373,240 +592,6 @@ void git_repository_set_index(git_repository *repo, git_index *index)
 
 	repo->_index = index;
 	GIT_REFCOUNT_OWN(repo->_index, repo);
-}
-
-
-static int retrieve_device(dev_t *device_out, const char *path)
-{
-	int error;
-	struct stat path_info;
-
-	assert(device_out);
-
-	if ((error = git_path_lstat(path, &path_info)) == 0)
-		*device_out = path_info.st_dev;
-
-	return error;
-}
-
-/*
- * This function returns furthest offset into path where a ceiling dir
- * is found, so we can stop processing the path at that point.
- *
- * Note: converting this to use git_bufs instead of GIT_PATH_MAX buffers on
- * the stack could remove directories name limits, but at the cost of doing
- * repeated malloc/frees inside the loop below, so let's not do it now.
- */
-static int retrieve_ceiling_directories_offset(
-	const char *path,
-	const char *ceiling_directories)
-{
-	char buf[GIT_PATH_MAX + 1];
-	char buf2[GIT_PATH_MAX + 1];
-	const char *ceil, *sep;
-	int len, max_len = -1;
-	int min_len;
-
-	assert(path);
-
-	min_len = git_path_root(path) + 1;
-
-	if (ceiling_directories == NULL || min_len == 0)
-		return min_len;
-
-	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
-		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
-		len = sep - ceil;
-
-		if (len == 0 || len >= (int)sizeof(buf) || git_path_root(ceil) == -1)
-			continue;
-
-		strncpy(buf, ceil, len);
-		buf[len] = '\0';
-
-		if (p_realpath(buf, buf2) == NULL)
-			continue;
-
-		len = strlen(buf2);
-		if (len > 0 && buf2[len-1] == '/')
-			buf[--len] = '\0';
-
-		if (!strncmp(path, buf2, len) &&
-			path[len] == '/' &&
-			len > max_len)
-		{
-			max_len = len;
-		}
-	}
-
-	return max_len <= min_len ? min_len : max_len;
-}
-
-/*
- * Read the contents of `file_path` and set `path_out` to the repo dir that
- * it points to.  Before calling, set `path_out` to the base directory that
- * should be used if the contents of `file_path` are a relative path.
- */
-static int read_gitfile(git_buf *path_out, const char *file_path, const char *base_path)
-{
-	git_buf file = GIT_BUF_INIT;
-
-	assert(path_out && file_path);
-
-	if (git_futils_readbuffer(&file, file_path) < 0)
-		return -1;
-
-	git_buf_rtrim(&file);
-
-	if (git__prefixcmp((char *)file.ptr, GIT_FILE_CONTENT_PREFIX) != 0 ||
-		strlen(GIT_FILE_CONTENT_PREFIX) == file.size) {
-		git_buf_free(&file);
-		giterr_set(GITERR_REPOSITORY, "The `.git` file at '%s' is corrupted", file_path);
-		return -1;
-	}
-
-	if (git_path_prettify_dir(path_out,
-		((char *)file.ptr) + strlen(GIT_FILE_CONTENT_PREFIX), base_path) < 0) {
-		git_buf_free(&file);
-		giterr_set(GITERR_REPOSITORY,
-			"The `.git` file at '%s' points to an invalid path.", file_path);
-		return -1;
-	}
-
-	git_buf_free(&file);
-	return 0;
-}
-
-int git_repository_discover(
-	char *repository_path,
-	size_t size,
-	const char *start_path,
-	int across_fs,
-	const char *ceiling_dirs)
-{
-	int res, ceiling_offset;
-	git_buf bare_path = GIT_BUF_INIT;
-	git_buf normal_path = GIT_BUF_INIT;
-	git_buf *found_path = NULL;
-	dev_t current_device = 0;
-
-	assert(start_path && repository_path);
-
-	*repository_path = '\0';
-
-	res = git_path_prettify_dir(&bare_path, start_path, NULL);
-	if (res < 0)
-		return res;
-
-	if (!across_fs) {
-		if (retrieve_device(&current_device, bare_path.ptr) < 0)
-			goto on_error;
-	}
-
-	ceiling_offset = retrieve_ceiling_directories_offset(bare_path.ptr, ceiling_dirs);
-
-	while(1) {
-		if (git_buf_joinpath(&normal_path, bare_path.ptr, DOT_GIT) < 0)
-			goto on_error;
-
-		/**
-		 * If the `.git` file is regular instead of
-		 * a directory, it should contain the path of the actual git repository
-		 */
-		if (git_path_isfile(normal_path.ptr) == true) {
-			git_buf gitfile_path = GIT_BUF_INIT;
-
-			if (read_gitfile(&gitfile_path, normal_path.ptr, bare_path.ptr) < 0) {
-				git_buf_free(&gitfile_path);
-				goto on_error;
-			}
-
-			if (valid_repository_path(&gitfile_path) == false) {
-				git_buf_free(&gitfile_path);
-				giterr_set(GITERR_REPOSITORY,
-					"The `.git` file found at '%s' points to an invalid git folder", normal_path.ptr);
-				goto on_error;
-			}
-
-			git_buf_swap(&normal_path, &gitfile_path);
-			found_path = &normal_path;
-
-			git_buf_free(&gitfile_path);
-			break;
-		}
-
-		/**
-		 * If the `.git` file is a folder, we check inside of it
-		 */
-		if (git_path_isdir(normal_path.ptr) == true) {
-			if (valid_repository_path(&normal_path) == true) {
-				found_path = &normal_path;
-				break;
-			}
-		}
-
-		/**
-		 * Otherwise, the repository may be bare, let's check
-		 * the root anyway
-		 */
-		if (valid_repository_path(&bare_path) == true) {
-			found_path = &bare_path;
-			break;
-		}
-
-		/**
-		 * If we didn't find it, walk up the tree
-		 */
-		if (git_path_dirname_r(&normal_path, bare_path.ptr) < 0)
-			goto on_error;
-
-		git_buf_swap(&bare_path, &normal_path);
-
-		if (!across_fs) {
-			dev_t new_device;
-			if (retrieve_device(&new_device, bare_path.ptr) < 0)
-				goto on_error;
-
-			if (current_device != new_device)
-				goto on_not_found;
-
-			current_device = new_device;
-		}
-
-		/* nothing has been found, lets try the parent directory
-		 * but stop if we hit one of the ceiling directories
-		 */
-		if (bare_path.ptr[ceiling_offset] == '\0')
-			goto on_not_found;
-	}
-
-	assert(found_path);
-
-	if (git_path_to_dir(found_path) < 0)
-		goto on_error;
-
-	if (size < (size_t)(found_path->size + 1)) {
-		giterr_set(GITERR_REPOSITORY,
-			"The given buffer is too long to store the discovered path");
-		goto on_error;
-	}
-
-	/* success: we discovered a repository */
-	git_buf_copy_cstr(repository_path, size, found_path);
-
-	git_buf_free(&bare_path);
-	git_buf_free(&normal_path);
-	return 0;
-
-on_error: /* unrecoverable error */
-	git_buf_free(&bare_path);
-	git_buf_free(&normal_path);
-	return -1;
-
-on_not_found: /* failed to discover the repository */
-	git_buf_free(&bare_path);
-	git_buf_free(&normal_path);
-	return GIT_ENOTFOUND;
 }
 
 static int check_repositoryformatversion(git_repository *repo)

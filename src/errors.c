@@ -92,8 +92,12 @@ const char *git_lasterror(void)
 {
 	char *last_error = GIT_GLOBAL->error.last;
 
-	if (!last_error[0])
+	if (!last_error[0]) {
+		const git_error *err = git_error_last();
+		if (err != NULL)
+			return err->message;
 		return NULL;
+	}
 
 	return last_error;
 }

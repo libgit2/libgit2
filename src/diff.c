@@ -253,7 +253,7 @@ static git_diff_list *git_diff_list_alloc(
 	diff->repo = repo;
 
 	/* load config values that affect diff behavior */
-	if (git_repository_config(&cfg, repo) < 0)
+	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		goto fail;
 	if (config_bool(cfg, "core.symlinks", 1))
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
@@ -264,7 +264,6 @@ static git_diff_list *git_diff_list_alloc(
 	if (config_bool(cfg, "core.trustctime", 1))
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_CTIME;
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
-	git_config_free(cfg);
 
 	if (opts == NULL)
 		return diff;
