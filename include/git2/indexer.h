@@ -31,6 +31,15 @@ GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *git
 GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_indexer_stats *stats);
 
 /**
+ * Finalize the pack and index
+ *
+ * Resolve any pending deltas and write out the index file
+ *
+ * @param idx the indexer
+ */
+GIT_EXTERN(int) git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stats);
+
+/**
  * Create a new indexer instance
  *
  * @param out where to store the indexer instance
