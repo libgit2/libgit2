@@ -76,7 +76,7 @@ typedef enum {
  *
  * @return 0 on success; -1 on error.
  */
-extern int git_futils_rmdir_r(const char *path, enum git_directory_removal_type removal_type);
+extern int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.

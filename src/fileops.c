@@ -298,7 +298,7 @@ int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 
 static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
 {
-	enum git_directory_removal_type removal_type = *(enum git_directory_removal_type *)opaque;
+	git_directory_removal_type removal_type = *(git_directory_removal_type *)opaque;
 
 	assert(removal_type == GIT_DIRREMOVAL_EMPTY_HIERARCHY
 		|| removal_type == GIT_DIRREMOVAL_FILES_AND_DIRS
@@ -336,7 +336,7 @@ static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
 	return 0;
 }
 
-int git_futils_rmdir_r(const char *path, enum git_directory_removal_type removal_type)
+int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type)
 {
 	int error;
 	git_buf p = GIT_BUF_INIT;

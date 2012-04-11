@@ -105,7 +105,7 @@ cleanup:
 	return error;
 }
 
-int git_branch_delete(git_repository *repo, const char *branch_name, enum git_branch_type branch_type)
+int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_type branch_type)
 {
 	git_reference *branch = NULL;
 	git_reference *head = NULL;
