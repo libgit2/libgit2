@@ -3,7 +3,6 @@
 #include "branch.h"
 
 static git_repository *repo;
-static git_reference *fake_remote;
 static git_oid branch_target_oid;
 static git_object *target;
 
