@@ -185,32 +185,24 @@ int git_branch_move(git_repository *repo, const char *old_branch_name, const cha
 {
 	git_reference *reference = NULL;
 	git_buf old_reference_name = GIT_BUF_INIT, new_reference_name = GIT_BUF_INIT;
-	int error;
+	int error = 0;
 
-	if (git_buf_joinpath(&old_reference_name, GIT_REFS_HEADS_DIR, old_branch_name) < 0)
-		goto on_error;
+	if ((error = git_buf_joinpath(&old_reference_name, GIT_REFS_HEADS_DIR, old_branch_name)) < 0)
+		goto cleanup;
 
 	/* We need to be able to return GIT_ENOTFOUND */
-	if ((error = git_reference_lookup(&reference, repo, git_buf_cstr(&old_reference_name))) < 0) {
-		git_buf_free(&old_reference_name);
-		return error;
-	}
+	if ((error = git_reference_lookup(&reference, repo, git_buf_cstr(&old_reference_name))) < 0)
+		goto cleanup;
 
-	if (git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name) < 0)
-		goto on_error;
+	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
+		goto cleanup;
 
-	if (git_reference_rename(reference, git_buf_cstr(&new_reference_name), force) < 0)
-		goto on_error;
+	error = git_reference_rename(reference, git_buf_cstr(&new_reference_name), force);
 
+cleanup:
 	git_reference_free(reference);
 	git_buf_free(&old_reference_name);
 	git_buf_free(&new_reference_name);
 
-	return 0;
-
-on_error:
-	git_reference_free(reference);
-	git_buf_free(&old_reference_name);
-	git_buf_free(&new_reference_name);
-	return -1;
+	return error;
 }
