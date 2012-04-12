@@ -118,6 +118,7 @@ static int store_refs(transport_local *t)
 			goto on_error;
 	}
 
+	git_strarray_free(&ref_names);
 	return 0;
 
 on_error:
