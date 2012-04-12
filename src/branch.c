@@ -114,28 +114,30 @@ int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_
 	assert((branch_type == GIT_BRANCH_LOCAL) || (branch_type == GIT_BRANCH_REMOTE));
 
 	if ((error = retrieve_branch_reference(&branch, repo, branch_name, branch_type == GIT_BRANCH_REMOTE)) < 0)
-		goto cleanup;
+		goto on_error;
 
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0) {
 		giterr_set(GITERR_REFERENCE, "Cannot locate HEAD.");
-		error = -1;
-		goto cleanup;
+		goto on_error;
 	}
 
 	if ((git_reference_type(head) == GIT_REF_SYMBOLIC)
 		&& (strcmp(git_reference_target(head), git_reference_name(branch)) == 0)) {
 			giterr_set(GITERR_REFERENCE,
 					"Cannot delete branch '%s' as it is the current HEAD of the repository.", branch_name);
-			error = -1;
-			goto cleanup;
+			goto on_error;
 	}
 
-	return git_reference_delete(branch);
+	if (git_reference_delete(branch) < 0)
+		goto on_error;
 
-cleanup:
+	git_reference_free(head);
+	return 0;
+
+on_error:
 	git_reference_free(head);
 	git_reference_free(branch);
-	return error;
+	return -1;
 }
 
 typedef struct {
@@ -181,18 +183,34 @@ int git_branch_list(git_strarray *branch_names, git_repository *repo, unsigned i
 
 int git_branch_move(git_repository *repo, const char *old_branch_name, const char *new_branch_name, int force)
 {
-	git_reference *reference;
+	git_reference *reference = NULL;
 	git_buf old_reference_name = GIT_BUF_INIT, new_reference_name = GIT_BUF_INIT;
 	int error;
 
 	if (git_buf_joinpath(&old_reference_name, GIT_REFS_HEADS_DIR, old_branch_name) < 0)
-		return -1;
+		goto on_error;
+
+	/* We need to be able to return GIT_ENOTFOUND */
+	if ((error = git_reference_lookup(&reference, repo, git_buf_cstr(&old_reference_name))) < 0) {
+		git_buf_free(&old_reference_name);
+		return error;
+	}
 
 	if (git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name) < 0)
-		return -1;
+		goto on_error;
 
-	if ((error = git_reference_lookup(&reference, repo, git_buf_cstr(&old_reference_name))) < 0)
-		return error;
+	if (git_reference_rename(reference, git_buf_cstr(&new_reference_name), force) < 0)
+		goto on_error;
 
-	return git_reference_rename(reference, git_buf_cstr(&new_reference_name), force);
+	git_reference_free(reference);
+	git_buf_free(&old_reference_name);
+	git_buf_free(&new_reference_name);
+
+	return 0;
+
+on_error:
+	git_reference_free(reference);
+	git_buf_free(&old_reference_name);
+	git_buf_free(&new_reference_name);
+	return -1;
 }
