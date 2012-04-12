@@ -327,11 +327,11 @@ int git_config_lookup_map_value(
 int git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n, int *out)
 {
 	const char *value;
-	int error;
+	int ret;
 
-	error = git_config_get_string(cfg, name, &value);
-	if (error < 0)
-		return error;
+	ret = git_config_get_string(cfg, name, &value);
+	if (ret < 0)
+		return ret;
 
 	if (!git_config_lookup_map_value(maps, map_n, value, out))
 		return 0;
@@ -371,7 +371,7 @@ int git_config_get_int32(git_config *cfg, const char *name, int32_t *out)
 		giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value);
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -399,26 +399,17 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 int git_config_get_string(git_config *cfg, const char *name, const char **out)
 {
 	file_internal *internal;
-	git_config_file *file;
-	int ret = GIT_ENOTFOUND;
 	unsigned int i;
 
 	assert(cfg->files.length);
 
-	for (i = 0; i < cfg->files.length; ++i) {
-		internal = git_vector_get(&cfg->files, i);
-		file = internal->file;
+	*out = NULL;
 
-		ret = file->get(file, name, out);
-		if (ret == 0)
-			return 0;
-
-		/* File backend doesn't set error message on variable
-		 * not found */
-		if (ret == GIT_ENOTFOUND)
-			continue;
-
-		return ret;
+	git_vector_foreach(&cfg->files, i, internal) {
+		git_config_file *file = internal->file;
+		int ret = file->get(file, name, out);
+		if (ret != GIT_ENOTFOUND)
+			return ret;
 	}
 
 	giterr_set(GITERR_CONFIG, "Config variable '%s' not found", name);

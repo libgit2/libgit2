@@ -70,6 +70,20 @@ GIT_EXTERN(int) git_repository_discover(
 		int across_fs,
 		const char *ceiling_dirs);
 
+enum {
+	GIT_REPOSITORY_OPEN_NO_SEARCH = (1 << 0),
+	GIT_REPOSITORY_OPEN_CROSS_FS  = (1 << 1),
+};
+
+/**
+ * Find and open a repository with extended controls.
+ */
+GIT_EXTERN(int) git_repository_open_ext(
+	git_repository **repo,
+	const char *start_path,
+	uint32_t flags,
+	const char *ceiling_dirs);
+
 /**
  * Free a previously allocated repository
  *

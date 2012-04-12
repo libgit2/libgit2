@@ -172,20 +172,22 @@ int git_path_root(const char *path)
 	if (isalpha(path[0]) && (path[1] == ':'))
 		offset += 2;
 
-	/* Are we dealing with a network path? */
-	else if (path[0] == '/' && path[1] == '/') {
+	/* Are we dealing with a windows network path? */
+	else if ((path[0] == '/' && path[1] == '/') ||
+		(path[0] == '\\' && path[1] == '\\'))
+	{
 		offset += 2;
-	
+
 		/* Skip the computer name segment */
-		while (*(path + offset) && *(path + offset) != '/')
+		while (path[offset] && path[offset] != '/' && path[offset] != '\\')
 			offset++;
 	}
 #endif
 
-	if (*(path + offset) == '/')
+	if (path[offset] == '/' || path[offset] == '\\')
 		return offset;
 
-	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
+	return -1;	/* Not a real error - signals that path is not rooted */
 }
 
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
@@ -193,26 +195,21 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 	char buf[GIT_PATH_MAX];
 
 	assert(path && path_out);
-	git_buf_clear(path_out);
 
 	/* construct path if needed */
 	if (base != NULL && git_path_root(path) < 0) {
 		if (git_buf_joinpath(path_out, base, path) < 0)
 			return -1;
-
 		path = path_out->ptr;
 	}
 
 	if (p_realpath(path, buf) == NULL) {
-		giterr_set(GITERR_OS, "Failed to resolve path '%s': %s",
-			path, strerror(errno));
+		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
+		git_buf_clear(path_out);
 		return (errno == ENOENT) ? GIT_ENOTFOUND : -1;
 	}
 
-	if (git_buf_sets(path_out, buf) < 0)
-		return -1;
-
-	return 0;
+	return git_buf_sets(path_out, buf);
 }
 
 int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base)

@@ -347,6 +347,7 @@ static int collect_attr_files(
 
 int git_attr_cache__init(git_repository *repo)
 {
+	int ret;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_config *cfg;
 
@@ -354,17 +355,18 @@ int git_attr_cache__init(git_repository *repo)
 		return 0;
 
 	/* cache config settings for attributes and ignores */
-	if (git_repository_config(&cfg, repo) < 0)
+	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
-	if (git_config_get_string(cfg, GIT_ATTR_CONFIG, &cache->cfg_attr_file)) {
-		giterr_clear();
-		cache->cfg_attr_file = NULL;
-	}
-	if (git_config_get_string(cfg, GIT_IGNORE_CONFIG, &cache->cfg_excl_file)) {
-		giterr_clear();
-		cache->cfg_excl_file = NULL;
-	}
-	git_config_free(cfg);
+
+	ret = git_config_get_string(cfg, GIT_ATTR_CONFIG, &cache->cfg_attr_file);
+	if (ret < 0 && ret != GIT_ENOTFOUND)
+		return ret;
+
+	ret = git_config_get_string(cfg, GIT_IGNORE_CONFIG, &cache->cfg_excl_file);
+	if (ret < 0 && ret != GIT_ENOTFOUND)
+		return ret;
+
+	giterr_clear();
 
 	/* allocate hashtable for attribute and ignore file contents */
 	if (cache->files == NULL) {
