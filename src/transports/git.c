@@ -381,7 +381,7 @@ static int git_send_done(git_transport *transport)
 	return git_pkt_send_done(t->socket);
 }
 
-static int git_download_pack(char **out, git_transport *transport, git_repository *repo)
+static int git_download_pack(git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats)
 {
 	transport_git *t = (transport_git *) transport;
 	int error = 0, read_bytes;
@@ -409,7 +409,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 
 			if (pkt->type == GIT_PKT_PACK) {
 				git__free(pkt);
-				return git_fetch__download_pack(out, buf->data, buf->offset, t->socket, repo);
+				return git_fetch__download_pack(buf->data, buf->offset, t->socket, repo, bytes, stats);
 			}
 
 			/* For now we don't care about anything */
