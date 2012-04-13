@@ -40,6 +40,23 @@ GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, const void *data
 GIT_EXTERN(int) git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stats);
 
 /**
+ * Get the packfile's hash
+ *
+ * A packfile's name is derived from the sorted hashing of all object
+ * names. This is only correct after the index has been finalized.
+ *
+ * @param idx the indexer instance
+ */
+GIT_EXTERN(const git_oid *) git_indexer_stream_hash(git_indexer_stream *idx);
+
+/**
+ * Free the indexer and its resources
+ *
+ * @param idx the indexer to free
+ */
+GIT_EXTERN(void) git_indexer_stream_free(git_indexer_stream *idx);
+
+/**
  * Create a new indexer instance
  *
  * @param out where to store the indexer instance
