@@ -204,8 +204,8 @@ extern int git_path_direach(
  * Sort function to order two paths.
  */
 extern int git_path_cmp(
-	const char *name1, int len1, int isdir1,
-	const char *name2, int len2, int isdir2);
+	const char *name1, size_t len1, int isdir1,
+	const char *name2, size_t len2, int isdir2);
 
 /**
  * Invoke callback up path directory by directory until the ceiling is

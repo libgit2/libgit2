@@ -133,13 +133,13 @@ static int reference_read(
 
 static int loose_parse_symbolic(git_reference *ref, git_buf *file_content)
 {
-	const unsigned int header_len = strlen(GIT_SYMREF);
+	const unsigned int header_len = (unsigned int)strlen(GIT_SYMREF);
 	const char *refname_start;
 	char *eol;
 
 	refname_start = (const char *)file_content->ptr;
 
-	if (file_content->size < (header_len + 1))
+	if (file_content->size < header_len + 1)
 		goto corrupt;
 
 	/*
@@ -730,11 +730,11 @@ static int packed_write(git_repository *repo)
 	unsigned int i;
 	git_buf pack_file_path = GIT_BUF_INIT;
 	git_vector packing_list;
-	size_t total_refs;
+	unsigned int total_refs;
 
 	assert(repo && repo->references.packfile);
 
-	total_refs = repo->references.packfile->key_count;
+	total_refs = (unsigned int)repo->references.packfile->key_count;
 
 	if (git_vector_init(&packing_list, total_refs, packed_sort) < 0)
 		return -1;
@@ -821,9 +821,9 @@ static int _reference_available_cb(const char *ref, void *data)
 	d = (struct reference_available_t *)data;
 
 	if (!d->old_ref || strcmp(d->old_ref, ref)) {
-		int reflen = strlen(ref);
-		int newlen = strlen(d->new_ref);
-		int cmplen = reflen < newlen ? reflen : newlen;
+		size_t reflen = strlen(ref);
+		size_t newlen = strlen(d->new_ref);
+		size_t cmplen = reflen < newlen ? reflen : newlen;
 		const char *lead = reflen < newlen ? d->new_ref : ref;
 
 		if (!strncmp(d->new_ref, ref, cmplen) && lead[cmplen] == '/') {

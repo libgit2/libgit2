@@ -112,7 +112,7 @@ BEGIN_TEST(table2, "make sure the table resizes automatically")
 
 	const int objects_n = 64;
 	int i;
-	unsigned int old_size;
+	size_t old_size;
 	table_item *objects;
 	git_hashtable *table = NULL;
 

@@ -102,6 +102,7 @@ static int comment_pkt(git_pkt **out, const char *line, size_t len)
  */
 static int ref_pkt(git_pkt **out, const char *line, size_t len)
 {
+	int error;
 	git_pkt_ref *pkt;
 
 	pkt = git__malloc(sizeof(git_pkt_ref));
@@ -109,14 +110,13 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 
 	memset(pkt, 0x0, sizeof(git_pkt_ref));
 	pkt->type = GIT_PKT_REF;
-	if (git_oid_fromstr(&pkt->head.oid, line) < 0) {
-		giterr_set(GITERR_NET, "Error parsing pkt-line");
+	if ((error = git_oid_fromstr(&pkt->head.oid, line)) < 0)
 		goto error_out;
-	}
 
 	/* Check for a bit of consistency */
 	if (line[GIT_OID_HEXSZ] != ' ') {
 		giterr_set(GITERR_NET, "Error parsing pkt-line");
+		error = -1;
 		goto error_out;
 	}
 
@@ -138,30 +138,32 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	}
 
 	*out = (git_pkt *)pkt;
-
 	return 0;
 
 error_out:
 	git__free(pkt);
-	return -1;
+	return error;
 }
 
-static int parse_len(const char *line)
+static int32_t parse_len(const char *line)
 {
 	char num[PKT_LEN_SIZE + 1];
-	int i, len;
+	int i, error;
+	int32_t len;
 	const char *num_end;
 
 	memcpy(num, line, PKT_LEN_SIZE);
 	num[PKT_LEN_SIZE] = '\0';
 
 	for (i = 0; i < PKT_LEN_SIZE; ++i) {
-		if (!isxdigit(num[i]))
-			return GIT_ENOTNUM;
+		if (!isxdigit(num[i])) {
+			giterr_set(GITERR_NET, "Found invalid hex digit in length");
+			return -1;
+		}
 	}
 
-	if (git__strtol32(&len, num, &num_end, 16) < 0)
-		return -1;
+	if ((error = git__strtol32(&len, num, &num_end, 16)) < 0)
+		return error;
 
 	return len;
 }
@@ -179,16 +181,20 @@ static int parse_len(const char *line)
  * in ASCII hexadecimal (including itself)
  */
 
-int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t bufflen)
+int git_pkt_parse_line(
+	git_pkt **head, const char *line, const char **out, size_t bufflen)
 {
-	int ret = 0;
-	size_t len;
+	int ret;
+	int32_t len;
 
 	/* Not even enough for the length */
-	if (bufflen > 0 && bufflen < PKT_LEN_SIZE)
-		return GIT_ESHORTBUFFER;
+	if (bufflen > 0 && bufflen < PKT_LEN_SIZE) {
+		giterr_set(GITERR_NET, "Insufficient buffer data");
+		return -1;
+	}
 
-	if ((ret = parse_len(line)) < 0) {
+	len = parse_len(line);
+	if (len < 0) {
 		/*
 		 * If we fail to parse the length, it might be because the
 		 * server is trying to send us the packfile already.
@@ -198,18 +204,17 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 			return pack_pkt(head);
 		}
 
-		giterr_set(GITERR_NET, "Error parsing pkt-line");
-		return -1;
+		return (int)len;
 	}
-
-	len = ret;
 
 	/*
 	 * If we were given a buffer length, then make sure there is
 	 * enough in the buffer to satisfy this line
 	 */
-	if (bufflen > 0 && bufflen < len)
-		return GIT_ESHORTBUFFER;
+	if (bufflen > 0 && bufflen < (size_t)len) {
+		giterr_set(GITERR_NET, "Insufficient buffer data for packet length");
+		return -1;
+	}
 
 	line += PKT_LEN_SIZE;
 	/*
@@ -245,7 +250,7 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 
 void git_pkt_free(git_pkt *pkt)
 {
-	if(pkt->type == GIT_PKT_REF) {
+	if (pkt->type == GIT_PKT_REF) {
 		git_pkt_ref *p = (git_pkt_ref *) pkt;
 		git__free(p->head.name);
 	}
@@ -258,7 +263,7 @@ int git_pkt_buffer_flush(git_buf *buf)
 	return git_buf_put(buf, pkt_flush_str, strlen(pkt_flush_str));
 }
 
-int git_pkt_send_flush(int s)
+int git_pkt_send_flush(GIT_SOCKET s)
 {
 
 	return gitno_send(s, pkt_flush_str, strlen(pkt_flush_str), 0);
@@ -268,12 +273,14 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
 {
 	char capstr[20];
 	char oid[GIT_OID_HEXSZ +1] = {0};
-	int len;
+	unsigned int len;
 
 	if (caps->ofs_delta)
-		strcpy(capstr, GIT_CAP_OFS_DELTA);
+		strncpy(capstr, GIT_CAP_OFS_DELTA, sizeof(capstr));
 
-	len = strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ + strlen(capstr) + 1 /* LF */;
+	len = (unsigned int)
+		(strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
+		 strlen(capstr) + 1 /* LF */);
 	git_buf_grow(buf, buf->size + len);
 
 	git_oid_fmt(oid, &head->oid);
@@ -283,15 +290,14 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
 static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, GIT_SOCKET fd)
 {
 	git_buf buf = GIT_BUF_INIT;
-	int error;
+	int ret;
 
 	if (buffer_want_with_caps(head, caps, &buf) < 0)
 		return -1;
 
-	error = gitno_send(fd, buf.ptr, buf.size, 0);
+	ret = gitno_send(fd, buf.ptr, buf.size, 0);
 	git_buf_free(&buf);
-
-	return error;
+	return ret;
 }
 
 /*
@@ -335,7 +341,7 @@ int git_pkt_buffer_wants(const git_vector *refs, git_transport_caps *caps, git_b
 	return git_pkt_buffer_flush(buf);
 }
 
-int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, int fd)
+int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, GIT_SOCKET fd)
 {
 	unsigned int i = 0;
 	char buf[sizeof(pkt_want_prefix) + GIT_OID_HEXSZ + 1];
@@ -357,6 +363,7 @@ int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, int fd)
 
 		if (send_want_with_caps(refs->contents[i], caps, fd) < 0)
 			return -1;
+
 		/* Increase it here so it's correct whether we run this or not */
 		i++;
 	}
@@ -384,7 +391,7 @@ int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
 	return git_buf_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
 }
 
-int git_pkt_send_have(git_oid *oid, int fd)
+int git_pkt_send_have(git_oid *oid, GIT_SOCKET fd)
 {
 	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
 
@@ -398,7 +405,7 @@ int git_pkt_buffer_done(git_buf *buf)
 	return git_buf_puts(buf, pkt_done_str);
 }
 
-int git_pkt_send_done(int fd)
+int git_pkt_send_done(GIT_SOCKET fd)
 {
 	return gitno_send(fd, pkt_done_str, strlen(pkt_done_str), 0);
 }

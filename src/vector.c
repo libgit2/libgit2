@@ -10,7 +10,7 @@
 #include "vector.h"
 
 static const double resize_factor = 1.75;
-static const size_t minimum_size = 8;
+static const unsigned int minimum_size = 8;
 
 static int resize_vector(git_vector *v)
 {

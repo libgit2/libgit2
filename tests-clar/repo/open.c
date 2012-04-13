@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include <ctype.h>
 
 void test_repo_open__cleanup(void)
 {
@@ -234,7 +235,6 @@ void test_repo_open__win32_path(void)
 #ifdef GIT_WIN32
 	git_repository *repo = cl_git_sandbox_init("empty_standard_repo"), *repo2;
 	git_buf winpath = GIT_BUF_INIT;
-	char *src, *tgt;
 	static const char *repo_path = "empty_standard_repo/.git/";
 	static const char *repo_wd   = "empty_standard_repo/";
 
