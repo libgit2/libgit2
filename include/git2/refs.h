@@ -131,6 +131,34 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
 GIT_EXTERN(int) git_reference_resolve(git_reference **resolved_ref, git_reference *ref);
 
 /**
+ * Lookup a reference by name and try to resolve to an OID.
+ *
+ * This method combines `git_reference_lookup` and `git_reference_resolve`
+ * into a single utility since those methods are frequently used together.
+ * Given the name of a reference, this will look it up and then iteratively
+ * dereference it, attempting to resolve it to an OID.
+ *
+ * You can control how many dereferences this will attempt to resolve the
+ * reference with the `max_deref` parameter, or pass -1 to use a sane
+ * default.  If you pass 0 for `max_deref`, this will not attempt to resolve
+ * the reference.  For any value of `max_deref` other than 0, not
+ * successfully resolving the reference will be reported as an error.
+ *
+ * The generated reference must be freed by the user.
+ *
+ * @param reference_out Pointer to the looked-up reference
+ * @param repo The repository to look up the reference
+ * @param name The long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
+ * @param max_deref Maximum number of dereferences to make of symbolic refs, 0 means simple lookup, < 0 means use default reasonable value
+ * @return 0 on success or < 0 on error; not being able to resolve the reference is an error unless 0 was passed for max_deref
+ */
+GIT_EXTERN(int) git_reference_lookup_resolved(
+	git_reference **reference_out,
+	git_repository *repo,
+	const char *name,
+	int max_deref);
+
+/**
  * Get the repository where a reference resides
  *
  * @param ref The reference
@@ -303,6 +331,15 @@ GIT_EXTERN(int) git_reference_reload(git_reference *ref);
  * @param ref git_reference
  */
 GIT_EXTERN(void) git_reference_free(git_reference *ref);
+
+/**
+ * Compare two references.
+ *
+ * @param ref1 The first git_reference
+ * @param ref2 The second git_reference
+ * @return GIT_SUCCESS if the same, else a stable but meaningless ordering.
+ */
+GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
 
 /** @} */
 GIT_END_DECL
