@@ -183,21 +183,20 @@ static int find_ceiling_dir_offset(
 	char buf[GIT_PATH_MAX + 1];
 	char buf2[GIT_PATH_MAX + 1];
 	const char *ceil, *sep;
-	int len, max_len = -1;
-	int min_len;
+	size_t len, max_len = 0, min_len;
 
 	assert(path);
 
-	min_len = git_path_root(path) + 1;
+	min_len = (size_t)(git_path_root(path) + 1);
 
 	if (ceiling_directories == NULL || min_len == 0)
-		return min_len;
+		return (int)min_len;
 
 	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
 		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
 		len = sep - ceil;
 
-		if (len == 0 || len >= (int)sizeof(buf) || git_path_root(ceil) == -1)
+		if (len == 0 || len >= sizeof(buf) || git_path_root(ceil) == -1)
 			continue;
 
 		strncpy(buf, ceil, len);
@@ -218,7 +217,7 @@ static int find_ceiling_dir_offset(
 		}
 	}
 
-	return max_len <= min_len ? min_len : max_len;
+	return (int)(max_len <= min_len ? min_len : max_len);
 }
 
 /*
@@ -769,24 +768,7 @@ int git_repository_head_detached(git_repository *repo)
 
 int git_repository_head(git_reference **head_out, git_repository *repo)
 {
-	git_reference *ref, *resolved_ref;
-	int error;
-
-	*head_out = NULL;
-
-	error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
-	if (error < 0)
-		return error;
-
-	error = git_reference_resolve(&resolved_ref, ref);
-	if (error < 0) {
-		git_reference_free(ref);
-		return error;
-	}
-
-	git_reference_free(ref);
-	*head_out = resolved_ref;
-	return 0;
+	return git_reference_lookup_resolved(head_out, repo, GIT_HEAD_FILE, -1);
 }
 
 int git_repository_head_orphan(git_repository *repo)

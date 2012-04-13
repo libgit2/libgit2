@@ -15,7 +15,8 @@
 #include <git2/tag.h>
 #include <git2/object.h>
 
-#define MAX_NESTING_LEVEL 5
+#define DEFAULT_NESTING_LEVEL	5
+#define MAX_NESTING_LEVEL		10
 
 enum {
 	GIT_PACKREF_HAS_PEEL = 1,
@@ -132,13 +133,13 @@ static int reference_read(
 
 static int loose_parse_symbolic(git_reference *ref, git_buf *file_content)
 {
-	const unsigned int header_len = strlen(GIT_SYMREF);
+	const unsigned int header_len = (unsigned int)strlen(GIT_SYMREF);
 	const char *refname_start;
 	char *eol;
 
 	refname_start = (const char *)file_content->ptr;
 
-	if (file_content->size < (header_len + 1))
+	if (file_content->size < header_len + 1)
 		goto corrupt;
 
 	/*
@@ -729,11 +730,11 @@ static int packed_write(git_repository *repo)
 	unsigned int i;
 	git_buf pack_file_path = GIT_BUF_INIT;
 	git_vector packing_list;
-	size_t total_refs;
+	unsigned int total_refs;
 
 	assert(repo && repo->references.packfile);
 
-	total_refs = repo->references.packfile->key_count;
+	total_refs = (unsigned int)repo->references.packfile->key_count;
 
 	if (git_vector_init(&packing_list, total_refs, packed_sort) < 0)
 		return -1;
@@ -820,9 +821,9 @@ static int _reference_available_cb(const char *ref, void *data)
 	d = (struct reference_available_t *)data;
 
 	if (!d->old_ref || strcmp(d->old_ref, ref)) {
-		int reflen = strlen(ref);
-		int newlen = strlen(d->new_ref);
-		int cmplen = reflen < newlen ? reflen : newlen;
+		size_t reflen = strlen(ref);
+		size_t newlen = strlen(d->new_ref);
+		size_t cmplen = reflen < newlen ? reflen : newlen;
 		const char *lead = reflen < newlen ? d->new_ref : ref;
 
 		if (!strncmp(d->new_ref, ref, cmplen) && lead[cmplen] == '/') {
@@ -1057,24 +1058,80 @@ int git_reference_delete(git_reference *ref)
 int git_reference_lookup(git_reference **ref_out,
 	git_repository *repo, const char *name)
 {
-	char normalized_name[GIT_REFNAME_MAX];
-	git_reference *ref = NULL;
-	int result;
+	return git_reference_lookup_resolved(ref_out, repo, name, 0);
+}
+
+int git_reference_lookup_oid(
+	git_oid *out, git_repository *repo, const char *name)
+{
+	int error;
+	git_reference *ref;
+
+	if ((error = git_reference_lookup_resolved(&ref, repo, name, -1)) < 0)
+		return error;
+
+	git_oid_cpy(out, git_reference_oid(ref));
+	git_reference_free(ref);
+	return 0;
+}
+
+int git_reference_lookup_resolved(
+	git_reference **ref_out,
+	git_repository *repo,
+	const char *name,
+	int max_nesting)
+{
+	git_reference *scan;
+	int result, nesting;
 
 	assert(ref_out && repo && name);
+
 	*ref_out = NULL;
 
-	if (normalize_name(normalized_name, sizeof(normalized_name), name, 0) < 0)
+	if (max_nesting > MAX_NESTING_LEVEL)
+		max_nesting = MAX_NESTING_LEVEL;
+	else if (max_nesting < 0)
+		max_nesting = DEFAULT_NESTING_LEVEL;
+
+	scan = git__calloc(1, sizeof(git_reference));
+	GITERR_CHECK_ALLOC(scan);
+
+	scan->name = git__calloc(GIT_REFNAME_MAX + 1, sizeof(char));
+	GITERR_CHECK_ALLOC(scan->name);
+
+	if ((result = normalize_name(scan->name, GIT_REFNAME_MAX, name, 0)) < 0) {
+		git_reference_free(scan);
+		return result;
+	}
+
+	scan->target.symbolic = git__strdup(scan->name);
+	GITERR_CHECK_ALLOC(scan->target.symbolic);
+
+	scan->owner = repo;
+	scan->flags = GIT_REF_SYMBOLIC;
+
+	for (nesting = max_nesting;
+		 nesting >= 0 && (scan->flags & GIT_REF_SYMBOLIC) != 0;
+		 nesting--)
+	{
+		if (nesting != max_nesting)
+			strncpy(scan->name, scan->target.symbolic, GIT_REFNAME_MAX);
+
+		scan->mtime = 0;
+
+		if ((result = reference_lookup(scan)) < 0)
+			return result; /* lookup git_reference_free on scan already */
+	}
+
+	if ((scan->flags & GIT_REF_OID) == 0 && max_nesting != 0) {
+		giterr_set(GITERR_REFERENCE,
+			"Cannot resolve reference (>%u levels deep)", max_nesting);
+		git_reference_free(scan);
 		return -1;
+	}
 
-	if (reference_alloc(&ref, repo, normalized_name) < 0)
-		return -1;
-
-	result = reference_lookup(ref);
-	if (result == 0)
-		*ref_out = ref;
-
-	return result;
+	*ref_out = scan;
+	return 0;
 }
 
 /**
@@ -1381,47 +1438,10 @@ rollback:
 
 int git_reference_resolve(git_reference **ref_out, git_reference *ref)
 {
-	int result, i = 0;
-	git_repository *repo;
-
-	assert(ref);
-
-	*ref_out = NULL;
-	repo = ref->owner;
-
-	/* If the reference is already resolved, we need to return a
-	 * copy. Instead of duplicating `ref`, we look it up again to
-	 * ensure the copy is out to date */
 	if (ref->flags & GIT_REF_OID)
 		return git_reference_lookup(ref_out, ref->owner, ref->name);
-
-	/* Otherwise, keep iterating until the reference is resolved */
-	for (i = 0; i < MAX_NESTING_LEVEL; ++i) {
-		git_reference *new_ref;
-
-		result = git_reference_lookup(&new_ref, repo, ref->target.symbolic);
-		if (result < 0)
-			return result;
-
-		/* Free intermediate references, except for the original one
-		 * we've received */
-		if (i > 0)
-			git_reference_free(ref);
-
-		ref = new_ref;
-
-		/* When the reference we've just looked up is an OID, we've
-		 * successfully resolved the symbolic ref */
-		if (ref->flags & GIT_REF_OID) {
-			*ref_out = ref;
-			return 0;
-		}
-	}
-
-	giterr_set(GITERR_REFERENCE,
-		"Symbolic reference too nested (%d levels deep)", MAX_NESTING_LEVEL);
-
-	return -1;
+	else
+		return git_reference_lookup_resolved(ref_out, ref->owner, ref->target.symbolic, -1);
 }
 
 int git_reference_packall(git_repository *repo)
@@ -1649,3 +1669,20 @@ int git_reference__normalize_name_oid(
 {
 	return normalize_name(buffer_out, out_size, name, 1);
 }
+
+#define GIT_REF_TYPEMASK (GIT_REF_OID | GIT_REF_SYMBOLIC)
+
+int git_reference_cmp(git_reference *ref1, git_reference *ref2)
+{
+	assert(ref1 && ref2);
+
+	/* let's put symbolic refs before OIDs */
+	if ((ref1->flags & GIT_REF_TYPEMASK) != (ref2->flags & GIT_REF_TYPEMASK))
+		return (ref1->flags & GIT_REF_SYMBOLIC) ? -1 : 1;
+
+	if (ref1->flags & GIT_REF_SYMBOLIC)
+		return strcmp(ref1->target.symbolic, ref2->target.symbolic);
+
+	return git_oid_cmp(&ref1->target.oid, &ref2->target.oid);
+}
+

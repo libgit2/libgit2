@@ -37,7 +37,7 @@ static void tree_iterator_test(
 
 	while (entry != NULL) {
 		if (expected_values != NULL)
-			cl_assert_strequal(expected_values[count], entry->path);
+			cl_assert_equal_s(expected_values[count], entry->path);
 
 		count++;
 
@@ -192,7 +192,7 @@ static void index_iterator_test(
 
 	while (entry != NULL) {
 		if (expected_names != NULL)
-			cl_assert_strequal(expected_names[count], entry->path);
+			cl_assert_equal_s(expected_names[count], entry->path);
 
 		if (expected_oids != NULL) {
 			git_oid oid;
@@ -330,7 +330,7 @@ static void workdir_iterator_test(
 		}
 
 		if (expected_names != NULL)
-			cl_assert_strequal(expected_names[count_all], entry->path);
+			cl_assert_equal_s(expected_names[count_all], entry->path);
 
 		if (an_ignored_name && strcmp(an_ignored_name,entry->path)==0)
 			cl_assert(ignored);

@@ -4,7 +4,7 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "posix.h"
+#include "../posix.h"
 #include "path.h"
 #include "utf-conv.h"
 #include <errno.h>
@@ -179,11 +179,11 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	target_w = (wchar_t*)git__malloc(target_len * sizeof(wchar_t));
 	GITERR_CHECK_ALLOC(target_w);
 
-	dwRet = pGetFinalPath(hFile, target_w, target_len, 0x0);
+	dwRet = pGetFinalPath(hFile, target_w, (DWORD)target_len, 0x0);
 	if (dwRet == 0 ||
 		dwRet >= target_len ||
 		!WideCharToMultiByte(CP_UTF8, 0, target_w, -1, target,
-			target_len * sizeof(char), NULL, NULL))
+			(int)(target_len * sizeof(char)), NULL, NULL))
 		error = -1;
 
 	git__free(target_w);
@@ -241,13 +241,19 @@ int p_creat(const char *path, mode_t mode)
 
 int p_getcwd(char *buffer_out, size_t size)
 {
-	wchar_t* buf = (wchar_t*)git__malloc(sizeof(wchar_t) * (int)size);
 	int ret;
+	wchar_t* buf;
+
+	if ((size_t)((int)size) != size)
+		return -1;
+
+	buf = (wchar_t*)git__malloc(sizeof(wchar_t) * (int)size);
+	GITERR_CHECK_ALLOC(buf);
 
 	_wgetcwd(buf, (int)size);
 
 	ret = WideCharToMultiByte(
-		CP_UTF8, 0, buf, -1, buffer_out, size, NULL, NULL);
+		CP_UTF8, 0, buf, -1, buffer_out, (int)size, NULL, NULL);
 
 	git__free(buf);
 	return !ret ? -1 : 0;
@@ -420,4 +426,20 @@ int p_rename(const char *from, const char *to)
 	git__free(wto);
 
 	return ret;
+}
+
+int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
+{
+	if ((size_t)((int)length) != length)
+		return -1; /* giterr_set will be done by caller */
+
+	return recv(socket, buffer, (int)length, flags);
+}
+
+int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags)
+{
+	if ((size_t)((int)length) != length)
+		return -1; /* giterr_set will be done by caller */
+
+	return send(socket, buffer, (int)length, flags);
 }
