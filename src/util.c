@@ -362,10 +362,11 @@ int git__bsearch(
 	int (*compare)(const void *, const void *),
 	size_t *position)
 {
-	int lim, cmp = -1;
+	unsigned int lim;
+	int cmp = -1;
 	void **part, **base = array;
 
-	for (lim = array_len; lim != 0; lim >>= 1) {
+	for (lim = (unsigned int)array_len; lim != 0; lim >>= 1) {
 		part = base + (lim >> 1);
 		cmp = (*compare)(key, *part);
 		if (cmp == 0) {

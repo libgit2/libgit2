@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include <ctype.h>
 
 void test_repo_open__cleanup(void)
 {
@@ -205,6 +206,7 @@ void test_repo_open__bad_gitlinks(void)
 	git_futils_rmdir_r("invalid2", 1);
 }
 
+#ifdef GIT_WIN32
 static void unposix_path(git_buf *path)
 {
 	char *src, *tgt;
@@ -226,13 +228,13 @@ static void unposix_path(git_buf *path)
 
 	*tgt = '\0';
 }
+#endif
 
 void test_repo_open__win32_path(void)
 {
 #ifdef GIT_WIN32
 	git_repository *repo = cl_git_sandbox_init("empty_standard_repo"), *repo2;
 	git_buf winpath = GIT_BUF_INIT;
-	char *src, *tgt;
 	static const char *repo_path = "empty_standard_repo/.git/";
 	static const char *repo_wd   = "empty_standard_repo/";
 

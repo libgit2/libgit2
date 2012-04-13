@@ -183,21 +183,20 @@ static int find_ceiling_dir_offset(
 	char buf[GIT_PATH_MAX + 1];
 	char buf2[GIT_PATH_MAX + 1];
 	const char *ceil, *sep;
-	int len, max_len = -1;
-	int min_len;
+	size_t len, max_len = 0, min_len;
 
 	assert(path);
 
-	min_len = git_path_root(path) + 1;
+	min_len = (size_t)(git_path_root(path) + 1);
 
 	if (ceiling_directories == NULL || min_len == 0)
-		return min_len;
+		return (int)min_len;
 
 	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
 		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
 		len = sep - ceil;
 
-		if (len == 0 || len >= (int)sizeof(buf) || git_path_root(ceil) == -1)
+		if (len == 0 || len >= sizeof(buf) || git_path_root(ceil) == -1)
 			continue;
 
 		strncpy(buf, ceil, len);
@@ -218,7 +217,7 @@ static int find_ceiling_dir_offset(
 		}
 	}
 
-	return max_len <= min_len ? min_len : max_len;
+	return (int)(max_len <= min_len ? min_len : max_len);
 }
 
 /*

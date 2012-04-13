@@ -31,27 +31,23 @@ void gitwin_set_utf8(void)
 wchar_t* gitwin_to_utf16(const char* str)
 {
 	wchar_t* ret;
-	int cb;
+	size_t cb;
 
 	if (!str)
 		return NULL;
 
 	cb = strlen(str) * sizeof(wchar_t);
-	if (cb == 0) {
-		ret = (wchar_t*)git__malloc(sizeof(wchar_t));
-		if (ret)
-			ret[0] = 0;
-		return ret;
-	}
+	if (cb == 0)
+		return (wchar_t *)git__calloc(1, sizeof(wchar_t));
 
 	/* Add space for null terminator */
 	cb += sizeof(wchar_t);
 
-	ret = (wchar_t*)git__malloc(cb);
+	ret = (wchar_t *)git__malloc(cb);
 	if (!ret)
 		return NULL;
 
-	if (MultiByteToWideChar(_active_codepage, 0, str, -1, ret, cb) == 0) {
+	if (MultiByteToWideChar(_active_codepage, 0, str, -1, ret, (int)cb) == 0) {
 		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
 		git__free(ret);
 		ret = NULL;
@@ -62,7 +58,7 @@ wchar_t* gitwin_to_utf16(const char* str)
 
 int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
 {
-	int result = MultiByteToWideChar(_active_codepage, 0, str, -1, buffer, len);
+	int result = MultiByteToWideChar(_active_codepage, 0, str, -1, buffer, (int)len);
 	if (result == 0)
 		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
 	return result;
@@ -71,19 +67,14 @@ int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
 char* gitwin_from_utf16(const wchar_t* str)
 {
 	char* ret;
-	int cb;
+	size_t cb;
 
-	if (!str) {
+	if (!str)
 		return NULL;
-	}
 
 	cb = wcslen(str) * sizeof(char);
-	if (cb == 0) {
-		ret = (char*)git__malloc(sizeof(char));
-		if (ret)
-			ret[0] = 0;
-		return ret;
-	}
+	if (cb == 0)
+		return (char *)git__calloc(1, sizeof(char));
 
 	/* Add space for null terminator */
 	cb += sizeof(char);
@@ -92,7 +83,7 @@ char* gitwin_from_utf16(const wchar_t* str)
 	if (!ret)
 		return NULL;
 
-	if (WideCharToMultiByte(_active_codepage, 0, str, -1, ret, cb, NULL, NULL) == 0) {
+	if (WideCharToMultiByte(_active_codepage, 0, str, -1, ret, (int)cb, NULL, NULL) == 0) {
 		giterr_set(GITERR_OS, "Could not convert string to UTF-8");
 		git__free(ret);
 		ret = NULL;
