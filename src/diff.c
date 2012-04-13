@@ -9,6 +9,50 @@
 #include "diff.h"
 #include "fileops.h"
 #include "config.h"
+#include "attr_file.h"
+
+static bool diff_pathspec_is_interesting(const git_strarray *pathspec)
+{
+	const char *str;
+
+	if (pathspec == NULL || pathspec->count == 0)
+		return false;
+	if (pathspec->count > 1)
+		return true;
+
+	str = pathspec->strings[0];
+	if (!str || !str[0] || (!str[1] && (str[0] == '*' || str[0] == '.')))
+		return false;
+	return true;
+}
+
+static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
+{
+	unsigned int i;
+	git_attr_fnmatch *match;
+
+	if (!diff->pathspec.length)
+		return true;
+
+	git_vector_foreach(&diff->pathspec, i, match) {
+		int result = git__fnmatch(match->pattern, path, 0);
+
+		/* if we didn't match, look for exact dirname prefix match */
+		if (result == GIT_ENOMATCH &&
+			(match->flags & GIT_ATTR_FNMATCH_HASWILD) == 0 &&
+			strncmp(path, match->pattern, match->length) == 0 &&
+			path[match->length] == '/')
+			result = 0;
+
+		if (result == 0)
+			return (match->flags & GIT_ATTR_FNMATCH_NEGATIVE) ? false : true;
+
+		if (result != GIT_ENOMATCH)
+			giterr_clear();
+	}
+
+	return false;
+}
 
 static void diff_delta__free(git_diff_delta *delta)
 {
@@ -143,6 +187,9 @@ static int diff_delta__from_one(
 		(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
 		return 0;
 
+	if (!diff_path_matches_pathspec(diff, entry->path))
+		return 0;
+
 	delta = diff_delta__alloc(diff, status, entry->path);
 	GITERR_CHECK_ALLOC(delta);
 
@@ -246,6 +293,7 @@ static git_diff_list *git_diff_list_alloc(
 	git_repository *repo, const git_diff_options *opts)
 {
 	git_config *cfg;
+	size_t i;
 	git_diff_list *diff = git__calloc(1, sizeof(git_diff_list));
 	if (diff == NULL)
 		return NULL;
@@ -269,6 +317,7 @@ static git_diff_list *git_diff_list_alloc(
 		return diff;
 
 	memcpy(&diff->opts, opts, sizeof(git_diff_options));
+	memset(&diff->opts.pathspec, 0, sizeof(diff->opts.pathspec));
 
 	diff->opts.src_prefix = diff_strdup_prefix(
 		opts->src_prefix ? opts->src_prefix : DIFF_SRC_PREFIX_DEFAULT);
@@ -287,21 +336,45 @@ static git_diff_list *git_diff_list_alloc(
 	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0)
 		goto fail;
 
-	/* TODO: do something safe with the pathspec strarray */
+	/* only copy pathspec if it is "interesting" so we can test
+	 * diff->pathspec.length > 0 to know if it is worth calling
+	 * fnmatch as we iterate.
+	 */
+	if (!diff_pathspec_is_interesting(&opts->pathspec))
+		return diff;
+
+	if (git_vector_init(&diff->pathspec, opts->pathspec.count, NULL) < 0)
+		goto fail;
+
+	for (i = 0; i < opts->pathspec.count; ++i) {
+		int ret;
+		const char *pattern = opts->pathspec.strings[i];
+		git_attr_fnmatch *match =
+			git__calloc(1, sizeof(git_attr_fnmatch));
+		if (!match)
+			goto fail;
+		ret = git_attr_fnmatch__parse(match, NULL, &pattern);
+		if (ret == GIT_ENOTFOUND) {
+			git__free(match);
+			continue;
+		} else if (ret < 0)
+			goto fail;
+
+		if (git_vector_insert(&diff->pathspec, match) < 0)
+			goto fail;
+	}
 
 	return diff;
 
 fail:
-	git_vector_free(&diff->deltas);
-	git__free(diff->opts.src_prefix);
-	git__free(diff->opts.dst_prefix);
-	git__free(diff);
+	git_diff_list_free(diff);
 	return NULL;
 }
 
 void git_diff_list_free(git_diff_list *diff)
 {
 	git_diff_delta *delta;
+	git_attr_fnmatch *match;
 	unsigned int i;
 
 	if (!diff)
@@ -312,6 +385,17 @@ void git_diff_list_free(git_diff_list *diff)
 		diff->deltas.contents[i] = NULL;
 	}
 	git_vector_free(&diff->deltas);
+
+	git_vector_foreach(&diff->pathspec, i, match) {
+		if (match != NULL) {
+			git__free(match->pattern);
+			match->pattern = NULL;
+			git__free(match);
+			diff->pathspec.contents[i] = NULL;
+		}
+	}
+	git_vector_free(&diff->pathspec);
+
 	git__free(diff->opts.src_prefix);
 	git__free(diff->opts.dst_prefix);
 	git__free(diff);
@@ -365,6 +449,9 @@ static int maybe_modified(
 	unsigned int nmode = nitem->mode;
 
 	GIT_UNUSED(old);
+
+	if (!diff_path_matches_pathspec(diff, oitem->path))
+		return 0;
 
 	/* on platforms with no symlinks, promote plain files to symlinks */
 	if (S_ISLNK(omode) && S_ISREG(nmode) &&

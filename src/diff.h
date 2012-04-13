@@ -24,6 +24,7 @@ enum {
 struct git_diff_list {
 	git_repository   *repo;
 	git_diff_options opts;
+	git_vector       pathspec;
 	git_vector       deltas;    /* vector of git_diff_file_delta */
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
