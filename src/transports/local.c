@@ -26,26 +26,22 @@ static int add_ref(transport_local *t, const char *name)
 {
 	const char peeled[] = "^{}";
 	git_remote_head *head;
-	git_reference *ref = NULL;
 	git_object *obj = NULL, *target = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
 	head = git__malloc(sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
 
-	if (git_reference_lookup_resolved(&ref, t->repo, name, -1) < 0) {
-		git__free(head);
-		return -1;
-	}
-
-	git_oid_cpy(&head->oid, git_reference_oid(ref));
-	git_reference_free(ref);
-
 	head->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(head->name);
 
-	if (git_vector_insert(&t->refs, head) < 0)
+	if (git_reference_lookup_oid(&head->oid, t->repo, name) < 0 ||
+		git_vector_insert(&t->refs, head) < 0)
+	{
+		git__free(head->name);
+		git__free(head);
 		return -1;
+	}
 
 	/* If it's not a tag, we don't need to try to peel it */
 	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))

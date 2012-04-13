@@ -20,20 +20,18 @@
 
 static int resolve_head_to_tree(git_tree **tree, git_repository *repo)
 {
-	git_reference *head = NULL;
+	git_oid head_oid;
 	git_object *obj = NULL;
 
-	if (git_reference_lookup_resolved(&head, repo, GIT_HEAD_FILE, -1) < 0) {
+	if (git_reference_lookup_oid(&head_oid, repo, GIT_HEAD_FILE) < 0) {
 		/* cannot resolve HEAD - probably brand new repo */
 		giterr_clear();
 		*tree = NULL;
 		return 0;
 	}
 
-	if (git_object_lookup(&obj, repo, git_reference_oid(head), GIT_OBJ_ANY) < 0)
+	if (git_object_lookup(&obj, repo, &head_oid, GIT_OBJ_ANY) < 0)
 		goto fail;
-
-	git_reference_free(head);
 
 	switch (git_object_type(obj)) {
 	case GIT_OBJ_TREE:

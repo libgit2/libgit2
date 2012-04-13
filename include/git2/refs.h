@@ -33,6 +33,16 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
 
 /**
+ * Lookup a reference by name and resolve immediately to OID.
+ *
+ * @param oid Pointer to oid to be filled in
+ * @param repo The repository in which to look up the reference
+ * @param name The long name for the reference
+ * @return 0 on success, -1 if name could not be resolved
+ */
+GIT_EXTERN(int) git_reference_lookup_oid(git_oid *out, git_repository *repo, const char *name);
+
+/**
  * Create a new symbolic reference.
  *
  * The reference will be created in the repository and written
@@ -129,34 +139,6 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_reference_resolve(git_reference **resolved_ref, git_reference *ref);
-
-/**
- * Lookup a reference by name and try to resolve to an OID.
- *
- * This method combines `git_reference_lookup` and `git_reference_resolve`
- * into a single utility since those methods are frequently used together.
- * Given the name of a reference, this will look it up and then iteratively
- * dereference it, attempting to resolve it to an OID.
- *
- * You can control how many dereferences this will attempt to resolve the
- * reference with the `max_deref` parameter, or pass -1 to use a sane
- * default.  If you pass 0 for `max_deref`, this will not attempt to resolve
- * the reference.  For any value of `max_deref` other than 0, not
- * successfully resolving the reference will be reported as an error.
- *
- * The generated reference must be freed by the user.
- *
- * @param reference_out Pointer to the looked-up reference
- * @param repo The repository to look up the reference
- * @param name The long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
- * @param max_deref Maximum number of dereferences to make of symbolic refs, 0 means simple lookup, < 0 means use default reasonable value
- * @return 0 on success or < 0 on error; not being able to resolve the reference is an error unless 0 was passed for max_deref
- */
-GIT_EXTERN(int) git_reference_lookup_resolved(
-	git_reference **reference_out,
-	git_repository *repo,
-	const char *name,
-	int max_deref);
 
 /**
  * Get the repository where a reference resides
