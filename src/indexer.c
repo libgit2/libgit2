@@ -60,6 +60,11 @@ const git_oid *git_indexer_hash(git_indexer *idx)
 	return &idx->hash;
 }
 
+const git_oid *git_indexer_stream_hash(git_indexer_stream *idx)
+{
+	return &idx->hash;
+}
+
 static int open_pack(struct git_pack_file **out, const char *filename)
 {
 	size_t namelen;
@@ -542,6 +547,30 @@ on_error:
 	git_filebuf_cleanup(&idx->index_file);
 	git_buf_free(&filename);
 	return -1;
+}
+
+void git_indexer_stream_free(git_indexer_stream *idx)
+{
+	unsigned int i;
+	struct entry *e;
+	struct git_pack_entry *pe;
+	struct delta_info *delta;
+
+	if (idx == NULL)
+		return;
+
+	p_close(idx->pack->mwf.fd);
+	git_vector_foreach(&idx->objects, i, e)
+		git__free(e);
+	git_vector_free(&idx->objects);
+	git_vector_foreach(&idx->pack->cache, i, pe)
+		git__free(pe);
+	git_vector_free(&idx->pack->cache);
+	git_vector_foreach(&idx->deltas, i, delta)
+		git__free(delta);
+	git_vector_free(&idx->deltas);
+	git__free(idx->pack);
+	git__free(idx);
 }
 
 int git_indexer_new(git_indexer **out, const char *packname)
