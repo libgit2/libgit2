@@ -205,6 +205,7 @@ int git_status_foreach(
 {
 	git_status_options opts;
 
+	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |

@@ -31,6 +31,35 @@ void git_strarray_free(git_strarray *array)
 	git__free(array->strings);
 }
 
+int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
+{
+	size_t i;
+
+	assert(tgt && src);
+
+	memset(tgt, 0, sizeof(*tgt));
+
+	if (!src->count)
+		return 0;
+
+	tgt->strings = git__calloc(src->count, sizeof(char *));
+	GITERR_CHECK_ALLOC(tgt->strings);
+
+	for (i = 0; i < src->count; ++i) {
+		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
+
+		if (!tgt->strings[tgt->count]) {
+			git_strarray_free(tgt);
+			memset(tgt, 0, sizeof(*tgt));
+			return -1;
+		}
+
+		tgt->count++;
+	}
+
+	return 0;
+}
+
 int git__fnmatch(const char *pattern, const char *name, int flags)
 {
 	int ret;
