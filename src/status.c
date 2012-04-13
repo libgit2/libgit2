@@ -20,30 +20,18 @@
 
 static int resolve_head_to_tree(git_tree **tree, git_repository *repo)
 {
-	git_reference *head = NULL;
+	git_oid head_oid;
 	git_object *obj = NULL;
 
-	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
-		return -1;
-
-	if (git_reference_oid(head) == NULL) {
-		git_reference *resolved;
-
-		if (git_reference_resolve(&resolved, head) < 0) {
-			/* cannot resolve HEAD - probably brand new repo */
-			giterr_clear();
-			git_reference_free(head);
-			return GIT_ENOTFOUND;
-		}
-
-		git_reference_free(head);
-		head = resolved;
+	if (git_reference_lookup_oid(&head_oid, repo, GIT_HEAD_FILE) < 0) {
+		/* cannot resolve HEAD - probably brand new repo */
+		giterr_clear();
+		*tree = NULL;
+		return 0;
 	}
 
-	if (git_object_lookup(&obj, repo, git_reference_oid(head), GIT_OBJ_ANY) < 0)
+	if (git_object_lookup(&obj, repo, &head_oid, GIT_OBJ_ANY) < 0)
 		goto fail;
-
-	git_reference_free(head);
 
 	switch (git_object_type(obj)) {
 	case GIT_OBJ_TREE:
@@ -62,7 +50,6 @@ static int resolve_head_to_tree(git_tree **tree, git_repository *repo)
 
 fail:
 	git_object_free(obj);
-	git_reference_free(head);
 	return -1;
 }
 
@@ -152,7 +139,7 @@ int git_status_foreach_ext(
 		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_UNTRACKED_DIRS;
 	/* TODO: support EXCLUDE_SUBMODULES flag */
 
-	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&
+	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY && head != NULL &&
 		(err = git_diff_index_to_tree(repo, &diffopt, head, &idx2head)) < 0)
 		goto cleanup;
 

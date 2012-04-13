@@ -492,21 +492,12 @@ int git_revwalk_hide(git_revwalk *walk, const git_oid *oid)
 
 static int push_ref(git_revwalk *walk, const char *refname, int hide)
 {
-	git_reference *ref, *resolved;
-	int error;
+	git_oid oid;
 
-	if (git_reference_lookup(&ref, walk->repo, refname) < 0)
+	if (git_reference_lookup_oid(&oid, walk->repo, refname) < 0)
 		return -1;
 
-	error = git_reference_resolve(&resolved, ref);
-	git_reference_free(ref);
-	if (error < 0)
-		return -1;
-
-	error = push_commit(walk, git_reference_oid(resolved), hide);
-	git_reference_free(resolved);
-
-	return error;
+	return push_commit(walk, &oid, hide);
 }
 
 struct push_cb_data {

@@ -33,6 +33,16 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
 
 /**
+ * Lookup a reference by name and resolve immediately to OID.
+ *
+ * @param oid Pointer to oid to be filled in
+ * @param repo The repository in which to look up the reference
+ * @param name The long name for the reference
+ * @return 0 on success, -1 if name could not be resolved
+ */
+GIT_EXTERN(int) git_reference_lookup_oid(git_oid *out, git_repository *repo, const char *name);
+
+/**
  * Create a new symbolic reference.
  *
  * The reference will be created in the repository and written
@@ -303,6 +313,15 @@ GIT_EXTERN(int) git_reference_reload(git_reference *ref);
  * @param ref git_reference
  */
 GIT_EXTERN(void) git_reference_free(git_reference *ref);
+
+/**
+ * Compare two references.
+ *
+ * @param ref1 The first git_reference
+ * @param ref2 The second git_reference
+ * @return GIT_SUCCESS if the same, else a stable but meaningless ordering.
+ */
+GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
 
 /** @} */
 GIT_END_DECL

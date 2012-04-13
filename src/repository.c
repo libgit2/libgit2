@@ -772,24 +772,7 @@ int git_repository_head_detached(git_repository *repo)
 
 int git_repository_head(git_reference **head_out, git_repository *repo)
 {
-	git_reference *ref, *resolved_ref;
-	int error;
-
-	*head_out = NULL;
-
-	error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
-	if (error < 0)
-		return error;
-
-	error = git_reference_resolve(&resolved_ref, ref);
-	if (error < 0) {
-		git_reference_free(ref);
-		return error;
-	}
-
-	git_reference_free(ref);
-	*head_out = resolved_ref;
-	return 0;
+	return git_reference_lookup_resolved(head_out, repo, GIT_HEAD_FILE, -1);
 }
 
 int git_repository_head_orphan(git_repository *repo)
