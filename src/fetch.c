@@ -9,6 +9,7 @@
 #include "git2/oid.h"
 #include "git2/refs.h"
 #include "git2/revwalk.h"
+#include "git2/indexer.h"
 
 #include "common.h"
 #include "transport.h"
@@ -101,30 +102,27 @@ int git_fetch_negotiate(git_remote *remote)
 	return t->negotiate_fetch(t, remote->repo, &remote->refs);
 }
 
-int git_fetch_download_pack(char **out, git_remote *remote)
+int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
 {
-	if(!remote->need_pack) {
-		*out = NULL;
+	if(!remote->need_pack)
 		return 0;
-	}
 
-	return remote->transport->download_pack(out, remote->transport, remote->repo);
+	return remote->transport->download_pack(remote->transport, remote->repo, bytes, stats);
 }
 
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
 int git_fetch__download_pack(
-	char **out,
 	const char *buffered,
 	size_t buffered_size,
 	GIT_SOCKET fd,
-	git_repository *repo)
+	git_repository *repo,
+	git_off_t *bytes,
+	git_indexer_stats *stats)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
-	int error;
+	int recvd;
 	char buff[1024];
-	git_buf path = GIT_BUF_INIT;
-	static const char suff[] = "/objects/pack/pack-received";
 	gitno_buffer buf;
+	git_indexer_stream *idx;
 
 	gitno_buffer_setup(&buf, buff, sizeof(buff), fd);
 
@@ -133,41 +131,33 @@ int git_fetch__download_pack(
 		return -1;
 	}
 
-	if (git_buf_joinpath(&path, repo->path_repository, suff) < 0)
+	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
+		return -1;
+
+	memset(stats, 0, sizeof(git_indexer_stats));
+	if (git_indexer_stream_add(idx, buffered, buffered_size, stats) < 0)
 		goto on_error;
 
-	if (git_filebuf_open(&file, path.ptr, GIT_FILEBUF_TEMPORARY) < 0)
-		goto on_error;
+	*bytes = buffered_size;
 
-	/* Part of the packfile has been received, don't loose it */
-	if (git_filebuf_write(&file, buffered, buffered_size) < 0)
-		goto on_error;
-
-	while (1) {
-		if (git_filebuf_write(&file, buf.data, buf.offset) < 0)
+	do {
+		if (git_indexer_stream_add(idx, buf.data, buf.offset, stats) < 0)
 			goto on_error;
 
 		gitno_consume_n(&buf, buf.offset);
-		error = gitno_recv(&buf);
-		if (error < GIT_SUCCESS)
+		if ((recvd = gitno_recv(&buf)) < 0)
 			goto on_error;
-		if (error == 0) /* Orderly shutdown */
-			break;
-	}
 
-	*out = git__strdup(file.path_lock);
-	if (*out == NULL)
+		*bytes += recvd;
+	} while(recvd > 0);
+
+	if (git_indexer_stream_finalize(idx, stats))
 		goto on_error;
 
-	/* A bit dodgy, but we need to keep the pack at the temporary path */
-	if (git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE) < 0)
-		goto on_error;
-
-	git_buf_free(&path);
-
+	git_indexer_stream_free(idx);
 	return 0;
+
 on_error:
-	git_buf_free(&path);
-	git_filebuf_cleanup(&file);
+	git_indexer_stream_free(idx);
 	return -1;
 }
