@@ -25,26 +25,6 @@
  */
 #define cl_git_fail(expr) cl_must_fail(expr)
 
-/**
- * Wrapper for string comparison that knows about nulls.
- */
-#define cl_assert_strequal(a,b) \
-	cl_assert_strequal_internal(a,b,__FILE__,__LINE__,"string mismatch: " #a " != " #b)
-
-GIT_INLINE(void) cl_assert_strequal_internal(
-	const char *a, const char *b, const char *file, int line, const char *err)
-{
-	int match = (a == NULL || b == NULL) ? (a == b) : (strcmp(a, b) == 0);
-	if (!match) {
-		char buf[4096];
-		snprintf(buf, 4096, "'%s' != '%s'", a, b);
-		clar__assert(0, file, line, err, buf, 1);
-	}
-}
-
-#define cl_assert_intequal(a,b) \
-	do { if ((a) != (b)) { char buf[128]; snprintf(buf,128,"%d != %d",(a),(b)); clar__assert(0,__FILE__,__LINE__,#a " != " #b,buf,1); } } while (0)
-
 /*
  * Some utility macros for building long strings
  */

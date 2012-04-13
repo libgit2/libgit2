@@ -101,7 +101,7 @@ void test_attr_repo__get_many(void)
 	cl_assert(GIT_ATTR_TRUE(values[0]));
 	cl_assert(GIT_ATTR_TRUE(values[1]));
 	cl_assert(GIT_ATTR_UNSPECIFIED(values[2]));
-	cl_assert_strequal("yes", values[3]);
+	cl_assert_equal_s("yes", values[3]);
 }
 
 static int count_attrs(
@@ -150,7 +150,7 @@ void test_attr_repo__manpage_example(void)
 	cl_assert(GIT_ATTR_FALSE(value));
 
 	cl_git_pass(git_attr_get(g_repo, "sub/abc", "merge", &value));
-	cl_assert_strequal("filfre", value);
+	cl_assert_equal_s("filfre", value);
 
 	cl_git_pass(git_attr_get(g_repo, "sub/abc", "frotz", &value));
 	cl_assert(GIT_ATTR_UNSPECIFIED(value));
@@ -177,13 +177,13 @@ void test_attr_repo__macros(void)
 	cl_assert(GIT_ATTR_TRUE(values[1]));
 	cl_assert(GIT_ATTR_FALSE(values[2]));
 	cl_assert(GIT_ATTR_UNSPECIFIED(values[3]));
-	cl_assert_strequal("77", values[4]);
+	cl_assert_equal_s("77", values[4]);
 
 	cl_git_pass(git_attr_get_many(g_repo, "macro_test", 3, names3, values));
 
 	cl_assert(GIT_ATTR_TRUE(values[0]));
 	cl_assert(GIT_ATTR_FALSE(values[1]));
-	cl_assert_strequal("answer", values[2]);
+	cl_assert_equal_s("answer", values[2]);
 }
 
 void test_attr_repo__bad_macros(void)
@@ -222,7 +222,7 @@ void test_attr_repo__bad_macros(void)
 	 *     -firstmacro secondmacro="hahaha" thirdmacro
 	 */
 	cl_assert(GIT_ATTR_FALSE(values[3]));
-	cl_assert_strequal("hahaha", values[4]);
+	cl_assert_equal_s("hahaha", values[4]);
 	cl_assert(GIT_ATTR_TRUE(values[5]));
 }
 
