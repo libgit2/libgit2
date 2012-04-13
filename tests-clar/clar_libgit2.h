@@ -57,6 +57,8 @@ GIT_INLINE(void) cl_assert_strequal_internal(
 /* Write the contents of a buffer to disk */
 void cl_git_mkfile(const char *filename, const char *content);
 void cl_git_append2file(const char *filename, const char *new_content);
+void cl_git_rewritefile(const char *filename, const char *new_content);
+void cl_git_write2file(const char *filename, const char *new_content, int mode);
 
 /* Git sandbox setup helpers */
 
