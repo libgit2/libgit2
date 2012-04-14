@@ -287,19 +287,6 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
 	return git_buf_printf(buf, "%04xwant %s%c%s\n", len, oid, 0, capstr);
 }
 
-static int send_want_with_caps(git_remote_head *head, git_transport_caps *caps, GIT_SOCKET fd)
-{
-	git_buf buf = GIT_BUF_INIT;
-	int ret;
-
-	if (buffer_want_with_caps(head, caps, &buf) < 0)
-		return -1;
-
-	ret = gitno_send(fd, buf.ptr, buf.size, 0);
-	git_buf_free(&buf);
-	return ret;
-}
-
 /*
  * All "want" packets have the same length and format, so what we do
  * is overwrite the OID each time.
@@ -341,47 +328,6 @@ int git_pkt_buffer_wants(const git_vector *refs, git_transport_caps *caps, git_b
 	return git_pkt_buffer_flush(buf);
 }
 
-int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, GIT_SOCKET fd)
-{
-	unsigned int i = 0;
-	char buf[sizeof(pkt_want_prefix) + GIT_OID_HEXSZ + 1];
-	git_remote_head *head;
-
-	memcpy(buf, pkt_want_prefix, strlen(pkt_want_prefix));
-	buf[sizeof(buf) - 2] = '\n';
-	buf[sizeof(buf) - 1] = '\0';
-
-	/* If there are common caps, find the first one */
-	if (caps->common) {
-		for (; i < refs->length; ++i) {
-			head = refs->contents[i];
-			if (head->local)
-				continue;
-			else
-				break;
-		}
-
-		if (send_want_with_caps(refs->contents[i], caps, fd) < 0)
-			return -1;
-
-		/* Increase it here so it's correct whether we run this or not */
-		i++;
-	}
-
-	/* Continue from where we left off */
-	for (; i < refs->length; ++i) {
-		head = refs->contents[i];
-		if (head->local)
-			continue;
-
-		git_oid_fmt(buf + strlen(pkt_want_prefix), &head->oid);
-		if (gitno_send(fd, buf, strlen(buf), 0) < 0)
-			return -1;
-	}
-
-	return git_pkt_send_flush(fd);
-}
-
 int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
 {
 	char oidhex[GIT_OID_HEXSZ + 1];
@@ -391,21 +337,7 @@ int git_pkt_buffer_have(git_oid *oid, git_buf *buf)
 	return git_buf_printf(buf, "%s%s\n", pkt_have_prefix, oidhex);
 }
 
-int git_pkt_send_have(git_oid *oid, GIT_SOCKET fd)
-{
-	char buf[] = "0032have 0000000000000000000000000000000000000000\n";
-
-	git_oid_fmt(buf + strlen(pkt_have_prefix), oid);
-	return gitno_send(fd, buf, strlen(buf), 0);
-}
-
-
 int git_pkt_buffer_done(git_buf *buf)
 {
 	return git_buf_puts(buf, pkt_done_str);
-}
-
-int git_pkt_send_done(GIT_SOCKET fd)
-{
-	return gitno_send(fd, pkt_done_str, strlen(pkt_done_str), 0);
 }

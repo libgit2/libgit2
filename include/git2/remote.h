@@ -11,6 +11,7 @@
 #include "repository.h"
 #include "refspec.h"
 #include "net.h"
+#include "indexer.h"
 
 /**
  * @file git2/remote.h
