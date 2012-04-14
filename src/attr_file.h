@@ -20,6 +20,7 @@
 #define GIT_ATTR_FNMATCH_FULLPATH	(1U << 2)
 #define GIT_ATTR_FNMATCH_MACRO		(1U << 3)
 #define GIT_ATTR_FNMATCH_IGNORE		(1U << 4)
+#define GIT_ATTR_FNMATCH_HASWILD	(1U << 5)
 
 typedef struct {
 	char *pattern;

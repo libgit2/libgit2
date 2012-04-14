@@ -20,7 +20,7 @@ void test_attr_file__simple_read(void)
 	cl_assert(rule != NULL);
 	cl_assert_strequal("*", rule->match.pattern);
 	cl_assert(rule->match.length == 1);
-	cl_assert(rule->match.flags == 0);
+	cl_assert((rule->match.flags & GIT_ATTR_FNMATCH_HASWILD) != 0);
 
 	cl_assert(rule->assigns.length == 1);
 	assign = get_assign(rule, 0);
@@ -74,14 +74,16 @@ void test_attr_file__match_variants(void)
 
 	rule = get_rule(4);
 	cl_assert_strequal("pat4.*", rule->match.pattern);
-	cl_assert(rule->match.flags == 0);
+	cl_assert((rule->match.flags & GIT_ATTR_FNMATCH_HASWILD) != 0);
 
 	rule = get_rule(5);
 	cl_assert_strequal("*.pat5", rule->match.pattern);
+	cl_assert((rule->match.flags & GIT_ATTR_FNMATCH_HASWILD) != 0);
 
 	rule = get_rule(7);
 	cl_assert_strequal("pat7[a-e]??[xyz]", rule->match.pattern);
 	cl_assert(rule->assigns.length == 1);
+	cl_assert((rule->match.flags & GIT_ATTR_FNMATCH_HASWILD) != 0);
 	assign = get_assign(rule,0);
 	cl_assert_strequal("attr7", assign->name);
 	cl_assert(GIT_ATTR_TRUE(assign->value));
