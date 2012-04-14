@@ -301,6 +301,8 @@ static int find_repo(
 				if (!(error = read_gitfile(&repo_link, path.ptr))) {
 					if (valid_repository_path(&repo_link))
 						git_buf_swap(repo_path, &repo_link);
+
+					git_buf_free(&repo_link);
 					break;
 				}
 				git_buf_free(&repo_link);
@@ -376,6 +378,7 @@ int git_repository_open_ext(
 		return error;
 	}
 
+	git_buf_free(&parent);
 	*repo_ptr = repo;
 	return 0;
 }
