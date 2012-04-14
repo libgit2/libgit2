@@ -410,44 +410,6 @@ static int parse_response(transport_http *t)
 	return ret;
 }
 
-static int setup_walk(git_revwalk **out, git_repository *repo)
-{
-	git_revwalk *walk;
-	git_strarray refs;
-	unsigned int i;
-	git_reference *ref;
-
-	if (git_reference_listall(&refs, repo, GIT_REF_LISTALL) < 0)
-		return -1;
-
-	if (git_revwalk_new(&walk, repo) < 0)
-		return -1;
-
-	git_revwalk_sorting(walk, GIT_SORT_TIME);
-
-	for (i = 0; i < refs.count; ++i) {
-		/* No tags */
-		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
-			continue;
-
-		if (git_reference_lookup(&ref, repo, refs.strings[i]) < 0)
-			goto on_error;
-
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
-			continue;
-		if (git_revwalk_push(walk, git_reference_oid(ref)) < 0)
-			goto on_error;
-	}
-
-	git_strarray_free(&refs);
-	*out = walk;
-	return 0;
-
-on_error:
-	git_strarray_free(&refs);
-	return -1;
-}
-
 static int http_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
 {
 	transport_http *t = (transport_http *) transport;
@@ -470,7 +432,7 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	if (git_vector_init(common, 16, NULL) < 0)
 		return -1;
 
-	if (setup_walk(&walk, repo) < 0)
+	if (git_fetch_setup_walk(&walk, repo) < 0)
 		return -1;
 
 	do {

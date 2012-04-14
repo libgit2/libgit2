@@ -66,18 +66,10 @@ struct git_transport {
 	 */
 	int (*push)(struct git_transport *transport);
 	/**
-	 * Send a 'done' message
-	 */
-	int (*send_done)(struct git_transport *transport);
-	/**
 	 * Negotiate the minimal amount of objects that need to be
 	 * retrieved
 	 */
 	int (*negotiate_fetch)(struct git_transport *transport, git_repository *repo, const git_vector *wants);
-	/**
-	 * Send a flush
-	 */
-	int (*send_flush)(struct git_transport *transport);
 	/**
 	 * Download the packfile
 	 */
