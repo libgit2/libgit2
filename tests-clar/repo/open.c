@@ -205,6 +205,7 @@ void test_repo_open__bad_gitlinks(void)
 	git_futils_rmdir_r("invalid2", 1);
 }
 
+#ifdef GIT_WIN32
 static void unposix_path(git_buf *path)
 {
 	char *src, *tgt;
@@ -226,6 +227,7 @@ static void unposix_path(git_buf *path)
 
 	*tgt = '\0';
 }
+#endif
 
 void test_repo_open__win32_path(void)
 {
