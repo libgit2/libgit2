@@ -343,6 +343,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 			pkt_type = recv_pkt(buf);
 
 			if (pkt_type == GIT_PKT_ACK) {
+				error = 0;
 				break;
 			} else if (pkt_type == GIT_PKT_NAK) {
 				continue;
@@ -353,7 +354,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 		}
 	}
-	if (error != GIT_EREVWALKOVER)
+	if (error != GIT_SUCCESS && error != GIT_EREVWALKOVER)
 		goto on_error;
 
 	git_pkt_send_flush(t->socket);
