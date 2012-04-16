@@ -595,6 +595,7 @@ void git_repository_set_index(git_repository *repo, git_index *index)
 
 	repo->_index = index;
 	GIT_REFCOUNT_OWN(repo->_index, repo);
+	GIT_REFCOUNT_INC(index);
 }
 
 static int check_repositoryformatversion(git_repository *repo)
