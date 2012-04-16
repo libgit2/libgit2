@@ -545,7 +545,7 @@ static int cfg_peek(diskfile_backend *cfg, int flags)
 /*
  * Read and consume a line, returning it in newly-allocated memory.
  */
-static char *cfg_readline(diskfile_backend *cfg)
+static char *cfg_readline(diskfile_backend *cfg, bool skip_whitespace)
 {
 	char *line = NULL;
 	char *line_src, *line_end;
@@ -553,9 +553,11 @@ static char *cfg_readline(diskfile_backend *cfg)
 
 	line_src = cfg->reader.read_ptr;
 
-	/* Skip empty empty lines */
-	while (isspace(*line_src))
-		++line_src;
+	if (skip_whitespace) {
+		/* Skip empty empty lines */
+		while (isspace(*line_src))
+			++line_src;
+	}
 
 	line_end = strchr(line_src, '\n');
 
@@ -692,7 +694,7 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	int result;
 	char *line;
 
-	line = cfg_readline(cfg);
+	line = cfg_readline(cfg, true);
 	if (line == NULL)
 		return -1;
 
@@ -808,9 +810,9 @@ static int skip_bom(diskfile_backend *cfg)
 	boolean_false = "no" | "0" | "false" | "off"
 */
 
-static void strip_comments(char *line)
+static int strip_comments(char *line, int in_quotes)
 {
-	int quote_count = 0;
+	int quote_count = in_quotes;
 	char *ptr;
 
 	for (ptr = line; *ptr; ++ptr) {
@@ -823,9 +825,13 @@ static void strip_comments(char *line)
 		}
 	}
 
+	/* skip any space at the end */
 	if (isspace(ptr[-1])) {
-		/* TODO skip whitespace */
+		ptr--;
 	}
+	ptr[0] = '\0';
+
+	return quote_count;
 }
 
 static int config_parse(diskfile_backend *cfg_file)
@@ -1127,18 +1133,66 @@ rewrite_fail:
 	return -1;
 }
 
+/* '\"' -> '"' etc */
+static char *fixup_line(const char *ptr, int quote_count)
+{
+	char *str = git__malloc(strlen(ptr) + 1);
+	char *out = str, *esc;
+	const char *escapes = "ntb\"\\";
+	const char *escaped = "\n\t\b\"\\";
+
+	if (str == NULL)
+		return NULL;
+
+	while (*ptr != '\0') {
+		if (*ptr == '"') {
+			quote_count++;
+		} else if (*ptr != '\\') {
+			*out++ = *ptr;
+		} else {
+			/* backslash, check the next char */
+			ptr++;
+			/* if we're at the end, it's a multiline, so keep the backslash */
+			if (*ptr == '\0') {
+				*out++ = '\\';
+				goto out;
+			}
+			/* otherwise, the backslash must be inside quotes */
+			if ((quote_count % 2) == 0) {
+				git__free(str);
+				giterr_set(GITERR_CONFIG, "Invalid escape at %s", ptr);
+				return NULL;
+			}
+			if ((esc = strchr(escapes, *ptr)) != NULL) {
+				*out++ = escaped[esc - escapes];
+			} else {
+				git__free(str);
+				giterr_set(GITERR_CONFIG, "Invalid escape at %s", ptr);
+				return NULL;
+			}
+		}
+		ptr++;
+	}
+
+out:
+	*out = '\0';
+
+	return str;
+}
+
 static int is_multiline_var(const char *str)
 {
 	const char *end = str + strlen(str);
 	return (end > str) && (end[-1] == '\\');
 }
 
-static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value)
+static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value, int in_quotes)
 {
-	char *line = NULL;
+	char *line = NULL, *proc_line = NULL;
+	int quote_count;
 
 	/* Check that the next line exists */
-	line = cfg_readline(cfg);
+	line = cfg_readline(cfg, false);
 	if (line == NULL)
 		return -1;
 
@@ -1149,12 +1203,12 @@ static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value)
 		return -1;
 	}
 
-	strip_comments(line);
+	quote_count = strip_comments(line, !!in_quotes);
 
 	/* If it was just a comment, pretend it didn't exist */
 	if (line[0] == '\0') {
 		git__free(line);
-		return parse_multiline_variable(cfg, value);
+		return parse_multiline_variable(cfg, value, quote_count);
 		/* TODO: unbounded recursion. This **could** be exploitable */
 	}
 
@@ -1164,16 +1218,22 @@ static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value)
 	assert(is_multiline_var(value->ptr));
 	git_buf_truncate(value, value->size - 1);
 
+	proc_line = fixup_line(line, in_quotes);
+	if (proc_line == NULL) {
+		git__free(line);
+		return -1;
+	}
 	/* add this line to the multiline var */
-	git_buf_puts(value, line);
+	git_buf_puts(value, proc_line);
 	git__free(line);
+	git__free(proc_line);
 
 	/*
 	 * If we need to continue reading the next line, let's just
 	 * keep putting stuff in the buffer
 	 */
 	if (is_multiline_var(value->ptr))
-		return parse_multiline_variable(cfg, value);
+		return parse_multiline_variable(cfg, value, quote_count);
 
 	return 0;
 }
@@ -1183,12 +1243,13 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 	const char *var_end = NULL;
 	const char *value_start = NULL;
 	char *line;
+	int quote_count;
 
-	line = cfg_readline(cfg);
+	line = cfg_readline(cfg, true);
 	if (line == NULL)
 		return -1;
 
-	strip_comments(line);
+	quote_count = strip_comments(line, 0);
 
 	var_end = strchr(line, '=');
 
@@ -1217,9 +1278,11 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 
 		if (is_multiline_var(value_start)) {
 			git_buf multi_value = GIT_BUF_INIT;
-			git_buf_puts(&multi_value, value_start);
-
-			if (parse_multiline_variable(cfg, &multi_value) < 0 || git_buf_oom(&multi_value)) {
+			char *proc_line = fixup_line(value_start, 0);
+			GITERR_CHECK_ALLOC(proc_line);
+			git_buf_puts(&multi_value, proc_line);
+			free(proc_line);
+			if (parse_multiline_variable(cfg, &multi_value, quote_count) < 0 || git_buf_oom(&multi_value)) {
 				git__free(*var_name);
 				git__free(line);
 				git_buf_free(&multi_value);
@@ -1227,9 +1290,10 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 			}
 
 			*var_value = git_buf_detach(&multi_value);
+
 		}
 		else if (value_start[0] != '\0') {
-			*var_value = git__strdup(value_start);
+			*var_value = fixup_line(value_start, 0);
 			GITERR_CHECK_ALLOC(*var_value);
 		}
 
