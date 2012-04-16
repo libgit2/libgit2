@@ -689,6 +689,13 @@ static int prepare_walk(git_revwalk *walk)
 	commit_object *next, *two;
 	commit_list *bases = NULL;
 
+	/*
+	 * If walk->one is NULL, there were no positive references,
+	 * so we know that the walk is already over.
+	 */
+	if (walk->one == NULL)
+		return GIT_EREVWALKOVER;
+
 	/* first figure out what the merge bases are */
 	if (merge_bases_many(&bases, walk, walk->one, &walk->twos) < 0)
 		return -1;
