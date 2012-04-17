@@ -268,7 +268,7 @@ static int loose_lookup_to_packfile(
 
 	if (loose_parse_oid(&ref->oid, &ref_file) < 0) {
 		git_buf_free(&ref_file);
-		free(ref);
+		git__free(ref);
 		return -1;
 	}
 

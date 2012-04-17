@@ -159,7 +159,7 @@ int git_buf_printf(git_buf *buf, const char *format, ...)
 		va_end(arglist);
 
 		if (len < 0) {
-			free(buf->ptr);
+			git__free(buf->ptr);
 			buf->ptr = &git_buf__oom;
 			return -1;
 		}

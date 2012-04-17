@@ -850,7 +850,7 @@ int git_repository_set_workdir(git_repository *repo, const char *workdir)
 	if (git_path_prettify_dir(&path, workdir, NULL) < 0)
 		return -1;
 
-	free(repo->workdir);
+	git__free(repo->workdir);
 
 	repo->workdir = git_buf_detach(&path);
 	repo->is_bare = 0;

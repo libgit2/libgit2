@@ -370,7 +370,7 @@ static int config_set_multivar(git_config_file *cfg, const char *name, const cha
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result < 0) {
-		free(key);
+		git__free(key);
 		giterr_set_regex(&preg, result);
 		return -1;
 	}
@@ -380,7 +380,7 @@ static int config_set_multivar(git_config_file *cfg, const char *name, const cha
 			char *tmp = git__strdup(value);
 			GITERR_CHECK_ALLOC(tmp);
 
-			free(var->value);
+			git__free(var->value);
 			var->value = tmp;
 			replaced = 1;
 		}
@@ -409,7 +409,7 @@ static int config_set_multivar(git_config_file *cfg, const char *name, const cha
 
 	result = config_write(b, key, &preg, value);
 
-	free(key);
+	git__free(key);
 	regfree(&preg);
 
 	return result;
@@ -426,7 +426,7 @@ static int config_delete(git_config_file *cfg, const char *name)
 		return -1;
 
 	var = git_hashtable_lookup(b->values, key);
-	free(key);
+	git__free(key);
 
 	if (var == NULL)
 		return GIT_ENOTFOUND;
@@ -1275,7 +1275,7 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 			char *proc_line = fixup_line(value_start, 0);
 			GITERR_CHECK_ALLOC(proc_line);
 			git_buf_puts(&multi_value, proc_line);
-			free(proc_line);
+			git__free(proc_line);
 			if (parse_multiline_variable(cfg, &multi_value, quote_count) < 0 || git_buf_oom(&multi_value)) {
 				git__free(*var_name);
 				git__free(line);

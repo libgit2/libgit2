@@ -169,7 +169,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		}
 
 		result = git_odb_hash(out, link_data, (size_t)size, GIT_OBJ_BLOB);
-		free(link_data);
+		git__free(link_data);
 	} else { 
 		int fd = git_futils_open_ro(path);
 		if (fd < 0)
