@@ -318,7 +318,12 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 		goto on_error;
 	}
 
+#ifdef GIT_WIN32
+	/* Apparently MoveFileExW ignores MOVEFILE_REPLACE_EXISTING,
+	 * so we need to unlink the file to make p_rename work on
+	 * WIN32 (see 1db9d2c3). */
 	p_unlink(file->path_original);
+#endif
 
 	if (p_rename(file->path_lock, file->path_original) < 0) {
 		giterr_set(GITERR_OS, "Failed to rename lockfile to '%s'", file->path_original);
