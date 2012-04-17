@@ -167,6 +167,7 @@ int git_attr_add_macro(
 {
 	int error;
 	git_attr_rule *macro = NULL;
+	git_pool *pool;
 
 	if (git_attr_cache__init(repo) < 0)
 		return -1;
@@ -174,13 +175,15 @@ int git_attr_add_macro(
 	macro = git__calloc(1, sizeof(git_attr_rule));
 	GITERR_CHECK_ALLOC(macro);
 
-	macro->match.pattern = git__strdup(name);
+	pool = &git_repository_attr_cache(repo)->pool;
+
+	macro->match.pattern = git_pool_strdup(pool, name);
 	GITERR_CHECK_ALLOC(macro->match.pattern);
 
 	macro->match.length = strlen(macro->match.pattern);
 	macro->match.flags = GIT_ATTR_FNMATCH_MACRO;
 
-	error = git_attr_assignment__parse(repo, &macro->assigns, &values);
+	error = git_attr_assignment__parse(repo, pool, &macro->assigns, &values);
 
 	if (!error)
 		error = git_attr_cache__insert_macro(repo, macro);
@@ -221,7 +224,7 @@ int git_attr_cache__lookup_or_create_file(
 		return 0;
 	}
 
-	if (git_attr_file__new(&file) < 0)
+	if (git_attr_file__new(&file, &cache->pool) < 0)
 		return -1;
 
 	if (loader)
@@ -384,6 +387,10 @@ int git_attr_cache__init(git_repository *repo)
 			return -1;
 	}
 
+	/* allocate string pool */
+	if (git_pool_init(&cache->pool, 1, 0) < 0)
+		return -1;
+
 	cache->initialized = 1;
 
 	/* insert default macros */
@@ -393,30 +400,33 @@ int git_attr_cache__init(git_repository *repo)
 void git_attr_cache_flush(
 	git_repository *repo)
 {
-	git_hashtable *table;
+	git_attr_cache *cache;
 
 	if (!repo)
 		return;
 
-	if ((table = git_repository_attr_cache(repo)->files) != NULL) {
+	cache = git_repository_attr_cache(repo);
+
+	if (cache->files != NULL) {
 		git_attr_file *file;
-
-		GIT_HASHTABLE_FOREACH_VALUE(table, file, git_attr_file__free(file));
-		git_hashtable_free(table);
-
-		git_repository_attr_cache(repo)->files = NULL;
+		GIT_HASHTABLE_FOREACH_VALUE(
+			cache->files, file, git_attr_file__free(file));
+		git_hashtable_free(cache->files);
+		cache->files = NULL;
 	}
 
-	if ((table = git_repository_attr_cache(repo)->macros) != NULL) {
+	if (cache->macros != NULL) {
 		git_attr_rule *rule;
 
-		GIT_HASHTABLE_FOREACH_VALUE(table, rule, git_attr_rule__free(rule));
-		git_hashtable_free(table);
-
-		git_repository_attr_cache(repo)->macros = NULL;
+		GIT_HASHTABLE_FOREACH_VALUE(
+			cache->macros, rule, git_attr_rule__free(rule));
+		git_hashtable_free(cache->macros);
+		cache->macros = NULL;
 	}
 
-	git_repository_attr_cache(repo)->initialized = 0;
+	git_pool_clear(&cache->pool);
+
+	cache->initialized = 0;
 }
 
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)

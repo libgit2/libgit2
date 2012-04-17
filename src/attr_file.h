@@ -10,6 +10,7 @@
 #include "git2/attr.h"
 #include "vector.h"
 #include "hashtable.h"
+#include "pool.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
@@ -36,20 +37,21 @@ typedef struct {
 typedef struct {
 	git_refcount unused;
 	const char *name;
-    unsigned long name_hash;
+    uint32_t name_hash;
 } git_attr_name;
 
 typedef struct {
 	git_refcount rc;		/* for macros */
 	char *name;
-    unsigned long name_hash;
+    uint32_t name_hash;
     const char *value;
-	int is_allocated;
 } git_attr_assignment;
 
 typedef struct {
 	char *path;				/* cache the path this was loaded from */
 	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
+	git_pool *pool;
+	bool pool_is_allocated;
 } git_attr_file;
 
 typedef struct {
@@ -62,7 +64,7 @@ typedef struct {
  * git_attr_file API
  */
 
-extern int git_attr_file__new(git_attr_file **attrs_ptr);
+extern int git_attr_file__new(git_attr_file **attrs_ptr, git_pool *pool);
 extern void git_attr_file__free(git_attr_file *file);
 
 extern int git_attr_file__from_buffer(
@@ -84,7 +86,7 @@ extern int git_attr_file__lookup_one(
 	git_vector_rforeach(&(file)->rules, (iter), (rule)) \
 		if (git_attr_rule__match((rule), (path)))
 
-extern unsigned long git_attr_file__name_hash(const char *name);
+extern uint32_t git_attr_file__name_hash(const char *name);
 
 
 /*
@@ -93,6 +95,7 @@ extern unsigned long git_attr_file__name_hash(const char *name);
 
 extern int git_attr_fnmatch__parse(
 	git_attr_fnmatch *spec,
+	git_pool *pool,
 	const char *source,
 	const char **base);
 
@@ -114,6 +117,7 @@ extern int git_attr_path__init(
 
 extern int git_attr_assignment__parse(
 	git_repository *repo, /* needed to expand macros */
+	git_pool *pool,
 	git_vector *assigns,
 	const char **scan);
 

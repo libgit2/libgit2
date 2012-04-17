@@ -11,9 +11,8 @@ void test_core_pool__0(void)
 	cl_git_pass(git_pool_init(&p, 1, 4000));
 
 	for (i = 1; i < 10000; i *= 2) {
-		cl_git_pass(git_pool_malloc(&p, i, &ptr));
+		ptr = git_pool_malloc(&p, i);
 		cl_assert(ptr != NULL);
-
 		cl_assert(git_pool__ptr_in_pool(&p, ptr));
 		cl_assert(!git_pool__ptr_in_pool(&p, &i));
 	}
@@ -32,12 +31,11 @@ void test_core_pool__1(void)
 {
 	int i;
 	git_pool p;
-	void *ptr;
 
 	cl_git_pass(git_pool_init(&p, 1, 4000));
 
 	for (i = 2010; i > 0; i--)
-		cl_git_pass(git_pool_malloc(&p, i, &ptr));
+		cl_assert(git_pool_malloc(&p, i) != NULL);
 
 	/* with fixed page size, allocation must end up with these values */
 	cl_assert(git_pool__open_pages(&p) == 1);
@@ -48,7 +46,7 @@ void test_core_pool__1(void)
 	cl_git_pass(git_pool_init(&p, 1, 4100));
 
 	for (i = 2010; i > 0; i--)
-		cl_git_pass(git_pool_malloc(&p, i, &ptr));
+		cl_assert(git_pool_malloc(&p, i) != NULL);
 
 	/* with fixed page size, allocation must end up with these values */
 	cl_assert(git_pool__open_pages(&p) == 1);
@@ -71,7 +69,9 @@ void test_core_pool__2(void)
 	cl_git_pass(git_pool_init(&p, sizeof(git_oid), 100));
 
 	for (i = 1000; i < 10000; i++) {
-		cl_git_pass(git_pool_malloc(&p, 1, (void **)&oid));
+		oid = git_pool_malloc(&p, 1);
+		cl_assert(oid != NULL);
+
 		for (j = 0; j < 8; j++)
 			oid_hex[j] = to_hex[(i >> (4 * j)) & 0x0f];
 		cl_git_pass(git_oid_fromstr(oid, oid_hex));

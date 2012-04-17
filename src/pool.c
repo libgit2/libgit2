@@ -13,7 +13,7 @@ struct git_pool_page {
 #define GIT_POOL_MIN_USABLE	4
 #define GIT_POOL_MIN_PAGESZ	2 * sizeof(void*)
 
-static int pool_alloc_page(git_pool *pool, uint32_t size, void **ptr);
+static void *pool_alloc_page(git_pool *pool, uint32_t size);
 static void pool_insert_page(git_pool *pool, git_pool_page *page);
 
 int git_pool_init(
@@ -62,9 +62,23 @@ void git_pool_clear(git_pool *pool)
 
 	pool->free_list = NULL;
 
+	pool->items = 0;
+
 	pool->has_string_alloc     = 0;
 	pool->has_multi_item_alloc = 0;
 	pool->has_large_page_alloc = 0;
+}
+
+void git_pool_swap(git_pool *a, git_pool *b)
+{
+	git_pool temp;
+
+	if (a == b)
+		return;
+
+	memcpy(&temp, a, sizeof(temp));
+	memcpy(a, b, sizeof(temp));
+	memcpy(b, &temp, sizeof(temp));
 }
 
 static void pool_insert_page(git_pool *pool, git_pool_page *page)
@@ -88,8 +102,7 @@ static void pool_insert_page(git_pool *pool, git_pool_page *page)
 	scan->next = page;
 }
 
-static int pool_alloc_page(
-	git_pool *pool, uint32_t size, void **ptr)
+static void *pool_alloc_page(git_pool *pool, uint32_t size)
 {
 	git_pool_page *page;
 	uint32_t alloc_size;
@@ -103,7 +116,7 @@ static int pool_alloc_page(
 
 	page = git__calloc(1, alloc_size + sizeof(git_pool_page));
 	if (!page)
-		return -1;
+		return NULL;
 
 	page->size  = alloc_size;
 	page->avail = alloc_size - size;
@@ -115,9 +128,9 @@ static int pool_alloc_page(
 		pool->full = page;
 	}
 
-	*ptr = page->data;
+	pool->items++;
 
-	return 0;
+	return page->data;
 }
 
 GIT_INLINE(void) pool_remove_page(
@@ -129,22 +142,26 @@ GIT_INLINE(void) pool_remove_page(
 		prev->next = page->next;
 }
 
-int git_pool_malloc(git_pool *pool, uint32_t items, void **ptr)
+void *git_pool_malloc(git_pool *pool, uint32_t items)
 {
 	git_pool_page *scan = pool->open, *prev;
 	uint32_t size = items * pool->item_size;
+	void *ptr = NULL;
 
 	pool->has_string_alloc = 0;
 	if (items > 1)
 		pool->has_multi_item_alloc = 1;
 	else if (pool->free_list != NULL) {
-		*ptr = pool->free_list;
+		ptr = pool->free_list;
 		pool->free_list = *((void **)pool->free_list);
+		return ptr;
 	}
 
 	/* just add a block if there is no open one to accomodate this */
 	if (size >= pool->page_size || !scan || scan->avail < size)
-		return pool_alloc_page(pool, size, ptr);
+		return pool_alloc_page(pool, size);
+
+	pool->items++;
 
 	/* find smallest block in free list with space */
 	for (scan = pool->open, prev = NULL;
@@ -152,7 +169,7 @@ int git_pool_malloc(git_pool *pool, uint32_t items, void **ptr)
 		 prev = scan, scan = scan->next);
 
 	/* allocate space from the block */
-	*ptr = &scan->data[scan->size - scan->avail];
+	ptr = &scan->data[scan->size - scan->avail];
 	scan->avail -= size;
 
 	/* move to full list if there is almost no space left */
@@ -167,7 +184,7 @@ int git_pool_malloc(git_pool *pool, uint32_t items, void **ptr)
 		pool_insert_page(pool, scan);
 	}
 
-	return 0;
+	return ptr;
 }
 
 char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
@@ -176,8 +193,10 @@ char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
 
 	assert(pool && str && pool->item_size == sizeof(char));
 
-	if (!git_pool_malloc(pool, n, &ptr))
+	if ((ptr = git_pool_malloc(pool, n + 1)) != NULL) {
 		memcpy(ptr, str, n);
+		*(((char *)ptr) + n) = '\0';
+	}
 	pool->has_string_alloc = 1;
 
 	return ptr;
@@ -187,7 +206,29 @@ char *git_pool_strdup(git_pool *pool, const char *str)
 {
 	assert(pool && str && pool->item_size == sizeof(char));
 
-	return git_pool_strndup(pool, str, strlen(str) + 1);
+	return git_pool_strndup(pool, str, strlen(str));
+}
+
+char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
+{
+	void *ptr;
+	size_t len_a, len_b;
+
+	assert(pool && a && b && pool->item_size == sizeof(char));
+
+	len_a = a ? strlen(a) : 0;
+	len_b = b ? strlen(b) : 0;
+
+	if ((ptr = git_pool_malloc(pool, len_a + len_b + 1)) != NULL) {
+		if (len_a)
+			memcpy(ptr, a, len_a);
+		if (len_b)
+			memcpy(((char *)ptr) + len_a, b, len_b);
+		*(((char *)ptr) + len_a + len_b) = '\0';
+	}
+	pool->has_string_alloc = 1;
+
+	return ptr;
 }
 
 void git_pool_free(git_pool *pool, void *ptr)

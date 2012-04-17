@@ -54,24 +54,6 @@ static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
 	return false;
 }
 
-static void diff_delta__free(git_diff_delta *delta)
-{
-	if (!delta)
-		return;
-
-	if (delta->new.flags & GIT_DIFF_FILE_FREE_PATH) {
-		git__free((char *)delta->new.path);
-		delta->new.path = NULL;
-	}
-
-	if (delta->old.flags & GIT_DIFF_FILE_FREE_PATH) {
-		git__free((char *)delta->old.path);
-		delta->old.path = NULL;
-	}
-
-	git__free(delta);
-}
-
 static git_diff_delta *diff_delta__alloc(
 	git_diff_list *diff,
 	git_delta_t status,
@@ -81,12 +63,11 @@ static git_diff_delta *diff_delta__alloc(
 	if (!delta)
 		return NULL;
 
-	delta->old.path = git__strdup(path);
+	delta->old.path = git_pool_strdup(&diff->pool, path);
 	if (delta->old.path == NULL) {
 		git__free(delta);
 		return NULL;
 	}
-	delta->old.flags |= GIT_DIFF_FILE_FREE_PATH;
 	delta->new.path = delta->old.path;
 
 	if (diff->opts.flags & GIT_DIFF_REVERSE) {
@@ -101,7 +82,8 @@ static git_diff_delta *diff_delta__alloc(
 	return delta;
 }
 
-static git_diff_delta *diff_delta__dup(const git_diff_delta *d)
+static git_diff_delta *diff_delta__dup(
+	const git_diff_delta *d, git_pool *pool)
 {
 	git_diff_delta *delta = git__malloc(sizeof(git_diff_delta));
 	if (!delta)
@@ -109,33 +91,29 @@ static git_diff_delta *diff_delta__dup(const git_diff_delta *d)
 
 	memcpy(delta, d, sizeof(git_diff_delta));
 
-	delta->old.path = git__strdup(d->old.path);
-	if (delta->old.path == NULL) {
-		git__free(delta);
-		return NULL;
-	}
-	delta->old.flags |= GIT_DIFF_FILE_FREE_PATH;
+	delta->old.path = git_pool_strdup(pool, d->old.path);
+	if (delta->old.path == NULL)
+		goto fail;
 
 	if (d->new.path != d->old.path) {
-		delta->new.path = git__strdup(d->new.path);
-		if (delta->new.path == NULL) {
-			git__free(delta->old.path);
-			git__free(delta);
-			return NULL;
-		}
-		delta->new.flags |= GIT_DIFF_FILE_FREE_PATH;
+		delta->new.path = git_pool_strdup(pool, d->new.path);
+		if (delta->new.path == NULL)
+			goto fail;
 	} else {
 		delta->new.path = delta->old.path;
-		delta->new.flags &= ~GIT_DIFF_FILE_FREE_PATH;
 	}
 
 	return delta;
+
+fail:
+	git__free(delta);
+	return NULL;
 }
 
 static git_diff_delta *diff_delta__merge_like_cgit(
-	const git_diff_delta *a, const git_diff_delta *b)
+	const git_diff_delta *a, const git_diff_delta *b, git_pool *pool)
 {
-	git_diff_delta *dup = diff_delta__dup(a);
+	git_diff_delta *dup = diff_delta__dup(a, pool);
 	if (!dup)
 		return NULL;
 
@@ -146,9 +124,7 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 
 	dup->new.mode = b->new.mode;
 	dup->new.size = b->new.size;
-	dup->new.flags =
-		(dup->new.flags & GIT_DIFF_FILE_FREE_PATH) |
-		(b->new.flags & ~GIT_DIFF_FILE_FREE_PATH);
+	dup->new.flags = b->new.flags;
 
 	/* Emulate C git for merging two diffs (a la 'git diff <sha>').
 	 *
@@ -210,7 +186,7 @@ static int diff_delta__from_one(
 	delta->new.flags |= GIT_DIFF_FILE_VALID_OID;
 
 	if (git_vector_insert(&diff->deltas, delta) < 0) {
-		diff_delta__free(delta);
+		git__free(delta);
 		return -1;
 	}
 
@@ -249,7 +225,7 @@ static int diff_delta__from_two(
 		delta->new.flags |= GIT_DIFF_FILE_VALID_OID;
 
 	if (git_vector_insert(&diff->deltas, delta) < 0) {
-		diff_delta__free(delta);
+		git__free(delta);
 		return -1;
 	}
 
@@ -259,19 +235,15 @@ static int diff_delta__from_two(
 #define DIFF_SRC_PREFIX_DEFAULT "a/"
 #define DIFF_DST_PREFIX_DEFAULT "b/"
 
-static char *diff_strdup_prefix(const char *prefix)
+static char *diff_strdup_prefix(git_pool *pool, const char *prefix)
 {
 	size_t len = strlen(prefix);
-	char *str = git__malloc(len + 2);
-	if (str != NULL) {
-		memcpy(str, prefix, len + 1);
-		/* append '/' at end if needed */
-		if (len > 0 && str[len - 1] != '/') {
-			str[len] = '/';
-			str[len + 1] = '\0';
-		}
-	}
-	return str;
+
+	/* append '/' at end if needed */
+	if (len > 0 && prefix[len - 1] != '/')
+		return git_pool_strcat(pool, prefix, "/");
+	else
+		return git_pool_strndup(pool, prefix, len + 1);
 }
 
 static int diff_delta__cmp(const void *a, const void *b)
@@ -300,6 +272,10 @@ static git_diff_list *git_diff_list_alloc(
 
 	diff->repo = repo;
 
+	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0 ||
+		git_pool_init(&diff->pool, 1, 0) < 0)
+		goto fail;
+
 	/* load config values that affect diff behavior */
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		goto fail;
@@ -319,9 +295,9 @@ static git_diff_list *git_diff_list_alloc(
 	memcpy(&diff->opts, opts, sizeof(git_diff_options));
 	memset(&diff->opts.pathspec, 0, sizeof(diff->opts.pathspec));
 
-	diff->opts.src_prefix = diff_strdup_prefix(
+	diff->opts.src_prefix = diff_strdup_prefix(&diff->pool,
 		opts->src_prefix ? opts->src_prefix : DIFF_SRC_PREFIX_DEFAULT);
-	diff->opts.dst_prefix = diff_strdup_prefix(
+	diff->opts.dst_prefix = diff_strdup_prefix(&diff->pool,
 		opts->dst_prefix ? opts->dst_prefix : DIFF_DST_PREFIX_DEFAULT);
 
 	if (!diff->opts.src_prefix || !diff->opts.dst_prefix)
@@ -332,9 +308,6 @@ static git_diff_list *git_diff_list_alloc(
 		diff->opts.src_prefix = diff->opts.dst_prefix;
 		diff->opts.dst_prefix = swap;
 	}
-
-	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0)
-		goto fail;
 
 	/* only copy pathspec if it is "interesting" so we can test
 	 * diff->pathspec.length > 0 to know if it is worth calling
@@ -349,11 +322,10 @@ static git_diff_list *git_diff_list_alloc(
 	for (i = 0; i < opts->pathspec.count; ++i) {
 		int ret;
 		const char *pattern = opts->pathspec.strings[i];
-		git_attr_fnmatch *match =
-			git__calloc(1, sizeof(git_attr_fnmatch));
+		git_attr_fnmatch *match = git__calloc(1, sizeof(git_attr_fnmatch));
 		if (!match)
 			goto fail;
-		ret = git_attr_fnmatch__parse(match, NULL, &pattern);
+		ret = git_attr_fnmatch__parse(match, &diff->pool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {
 			git__free(match);
 			continue;
@@ -381,23 +353,18 @@ void git_diff_list_free(git_diff_list *diff)
 		return;
 
 	git_vector_foreach(&diff->deltas, i, delta) {
-		diff_delta__free(delta);
+		git__free(delta);
 		diff->deltas.contents[i] = NULL;
 	}
 	git_vector_free(&diff->deltas);
 
 	git_vector_foreach(&diff->pathspec, i, match) {
-		if (match != NULL) {
-			git__free(match->pattern);
-			match->pattern = NULL;
-			git__free(match);
-			diff->pathspec.contents[i] = NULL;
-		}
+		git__free(match);
+		diff->pathspec.contents[i] = NULL;
 	}
 	git_vector_free(&diff->pathspec);
 
-	git__free(diff->opts.src_prefix);
-	git__free(diff->opts.dst_prefix);
+	git_pool_clear(&diff->pool);
 	git__free(diff);
 }
 
@@ -709,6 +676,7 @@ int git_diff_merge(
 	const git_diff_list *from)
 {
 	int error = 0;
+	git_pool onto_pool;
 	git_vector onto_new;
 	git_diff_delta *delta;
 	unsigned int i, j;
@@ -718,7 +686,8 @@ int git_diff_merge(
 	if (!from->deltas.length)
 		return 0;
 
-	if (git_vector_init(&onto_new, onto->deltas.length, diff_delta__cmp) < 0)
+	if (git_vector_init(&onto_new, onto->deltas.length, diff_delta__cmp) < 0 ||
+		git_pool_init(&onto_pool, 1, 0) < 0)
 		return -1;
 
 	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
@@ -727,13 +696,13 @@ int git_diff_merge(
 		int cmp = !f ? -1 : !o ? 1 : strcmp(o->old.path, f->old.path);
 
 		if (cmp < 0) {
-			delta = diff_delta__dup(o);
+			delta = diff_delta__dup(o, &onto_pool);
 			i++;
 		} else if (cmp > 0) {
-			delta = diff_delta__dup(f);
+			delta = diff_delta__dup(f, &onto_pool);
 			j++;
 		} else {
-			delta = diff_delta__merge_like_cgit(o, f);
+			delta = diff_delta__merge_like_cgit(o, f, &onto_pool);
 			i++;
 			j++;
 		}
@@ -744,12 +713,14 @@ int git_diff_merge(
 
 	if (!error) {
 		git_vector_swap(&onto->deltas, &onto_new);
+		git_pool_swap(&onto->pool, &onto_pool);
 		onto->new_src = from->new_src;
 	}
 
 	git_vector_foreach(&onto_new, i, delta)
-		diff_delta__free(delta);
+		git__free(delta);
 	git_vector_free(&onto_new);
+	git_pool_clear(&onto_pool);
 
 	return error;
 }

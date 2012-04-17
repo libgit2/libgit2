@@ -9,21 +9,32 @@ const char *git_attr__false = "[internal]__FALSE__";
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw);
 static void git_attr_rule__clear(git_attr_rule *rule);
 
-int git_attr_file__new(git_attr_file **attrs_ptr)
+int git_attr_file__new(git_attr_file **attrs_ptr, git_pool *pool)
 {
 	git_attr_file *attrs = NULL;
 
 	attrs = git__calloc(1, sizeof(git_attr_file));
 	GITERR_CHECK_ALLOC(attrs);
 
-	if (git_vector_init(&attrs->rules, 4, NULL) < 0) {
-		git__free(attrs);
-		attrs = NULL;
+	if (pool)
+		attrs->pool = pool;
+	else {
+		attrs->pool = git__calloc(1, sizeof(git_pool));
+		if (!attrs->pool || git_pool_init(attrs->pool, 1, 0) < 0)
+			goto fail;
+		attrs->pool_is_allocated = true;
 	}
 
-	*attrs_ptr = attrs;
+	if (git_vector_init(&attrs->rules, 4, NULL) < 0)
+		goto fail;
 
-	return attrs ? 0 : -1;
+	*attrs_ptr = attrs;
+	return 0;
+
+fail:
+	git_attr_file__free(attrs);
+	attrs_ptr = NULL;
+	return -1;
 }
 
 int git_attr_file__set_path(
@@ -76,8 +87,10 @@ int git_attr_file__from_buffer(
 		}
 
 		/* parse the next "pattern attr attr attr" line */
-		if (!(error = git_attr_fnmatch__parse(&rule->match, context, &scan)) &&
-			!(error = git_attr_assignment__parse(repo, &rule->assigns, &scan)))
+		if (!(error = git_attr_fnmatch__parse(
+				&rule->match, attrs->pool, context, &scan)) &&
+			!(error = git_attr_assignment__parse(
+				repo, attrs->pool, &rule->assigns, &scan)))
 		{
 			if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO)
 				/* should generate error/warning if this is coming from any
@@ -141,12 +154,18 @@ void git_attr_file__free(git_attr_file *file)
 	git__free(file->path);
 	file->path = NULL;
 
+	if (file->pool_is_allocated) {
+		git_pool_clear(file->pool);
+		git__free(file->pool);
+	}
+	file->pool = NULL;
+
 	git__free(file);
 }
 
-unsigned long git_attr_file__name_hash(const char *name)
+uint32_t git_attr_file__name_hash(const char *name)
 {
-	unsigned long h = 5381;
+	uint32_t h = 5381;
 	int c;
 	assert(name);
 	while ((c = (int)*name++) != 0)
@@ -293,6 +312,7 @@ int git_attr_path__init(
  */
 int git_attr_fnmatch__parse(
 	git_attr_fnmatch *spec,
+	git_pool *pool,
 	const char *source,
 	const char **base)
 {
@@ -358,7 +378,7 @@ int git_attr_fnmatch__parse(
 		/* given an unrooted fullpath match from a file inside a repo,
 		 * prefix the pattern with the relative directory of the source file
 		 */
-		spec->pattern = git__malloc(sourcelen + spec->length + 1);
+		spec->pattern = git_pool_malloc(pool, sourcelen + spec->length + 1);
 		if (spec->pattern) {
 			memcpy(spec->pattern, source, sourcelen);
 			memcpy(spec->pattern + sourcelen, pattern, spec->length);
@@ -366,7 +386,7 @@ int git_attr_fnmatch__parse(
 			spec->pattern[spec->length] = '\0';
 		}
 	} else {
-		spec->pattern = git__strndup(pattern, spec->length);
+		spec->pattern = git_pool_strndup(pool, pattern, spec->length);
 	}
 
 	if (!spec->pattern) {
@@ -405,14 +425,11 @@ static int sort_by_hash_and_name(const void *a_raw, const void *b_raw)
 
 static void git_attr_assignment__free(git_attr_assignment *assign)
 {
-	git__free(assign->name);
+	/* name and value are stored in a git_pool associated with the
+	 * git_attr_file, so they do not need to be freed here
+	 */
 	assign->name = NULL;
-
-	if (assign->is_allocated) {
-		git__free((void *)assign->value);
-		assign->value = NULL;
-	}
-
+	assign->value = NULL;
 	git__free(assign);
 }
 
@@ -428,6 +445,7 @@ static int merge_assignments(void **old_raw, void *new_raw)
 
 int git_attr_assignment__parse(
 	git_repository *repo,
+	git_pool *pool,
 	git_vector *assigns,
 	const char **base)
 {
@@ -454,7 +472,6 @@ int git_attr_assignment__parse(
 
 		assign->name_hash = 5381;
 		assign->value = git_attr__true;
-		assign->is_allocated = 0;
 
 		/* look for magic name prefixes */
 		if (*scan == '-') {
@@ -482,7 +499,7 @@ int git_attr_assignment__parse(
 		}
 
 		/* allocate permanent storage for name */
-		assign->name = git__strndup(name_start, scan - name_start);
+		assign->name = git_pool_strndup(pool, name_start, scan - name_start);
 		GITERR_CHECK_ALLOC(assign->name);
 
 		/* if there is an equals sign, find the value */
@@ -491,9 +508,8 @@ int git_attr_assignment__parse(
 
 			/* if we found a value, allocate permanent storage for it */
 			if (scan > value_start) {
-				assign->value = git__strndup(value_start, scan - value_start);
+				assign->value = git_pool_strndup(pool, value_start, scan - value_start);
 				GITERR_CHECK_ALLOC(assign->value);
-				assign->is_allocated = 1;
 			}
 		}
 
@@ -548,7 +564,7 @@ static void git_attr_rule__clear(git_attr_rule *rule)
 		git_vector_free(&rule->assigns);
 	}
 
-	git__free(rule->match.pattern);
+	/* match.pattern is stored in a git_pool, so no need to free */
 	rule->match.pattern = NULL;
 	rule->match.length = 0;
 }

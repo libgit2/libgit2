@@ -14,6 +14,7 @@
 
 typedef struct {
 	int initialized;
+	git_pool pool;
 	git_hashtable *files;	/* hash path to git_attr_file of rules */
 	git_hashtable *macros;	/* hash name to vector<git_attr_assignment> */
 	const char *cfg_attr_file; /* cached value of core.attributesfile */
