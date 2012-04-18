@@ -29,11 +29,8 @@ int git_pool_init(
 	else if (item_size == 3)
 		item_size = 4;
 
-	if (!items_per_page) {
-		uint32_t page_bytes =
-			git_pool__system_page_size() - sizeof(git_pool_page);
-		items_per_page = page_bytes / item_size;
-	}
+	if (!items_per_page)
+		items_per_page = git_pool__suggest_items_per_page(item_size);
 	if (item_size * items_per_page < GIT_POOL_MIN_PAGESZ)
 		items_per_page = (GIT_POOL_MIN_PAGESZ + item_size - 1) / item_size;
 
@@ -286,5 +283,12 @@ uint32_t git_pool__system_page_size(void)
 	}
 
 	return size;
+}
+
+uint32_t git_pool__suggest_items_per_page(uint32_t item_size)
+{
+	uint32_t page_bytes =
+		git_pool__system_page_size() - sizeof(git_pool_page);
+	return page_bytes / item_size;
 }
 

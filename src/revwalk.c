@@ -10,6 +10,7 @@
 #include "odb.h"
 #include "hashtable.h"
 #include "pqueue.h"
+#include "pool.h"
 
 #include "git2/revwalk.h"
 #include "git2/merge.h"
@@ -46,6 +47,7 @@ struct git_revwalk {
 	git_odb *odb;
 
 	git_hashtable *commits;
+	git_pool commit_pool;
 
 	commit_list *iterator_topo;
 	commit_list *iterator_rand;
@@ -54,9 +56,6 @@ struct git_revwalk {
 
 	int (*get_next)(commit_object **, git_revwalk *);
 	int (*enqueue)(git_revwalk *, commit_object *);
-
-	git_vector memory_alloc;
-	size_t chunk_size;
 
 	unsigned walking:1;
 	unsigned int sorting;
@@ -133,42 +132,23 @@ static uint32_t object_table_hash(const void *key, int hash_id)
 	return r;
 }
 
-#define COMMITS_PER_CHUNK 128
-#define CHUNK_STEP 64
-#define PARENTS_PER_COMMIT ((CHUNK_STEP - sizeof(commit_object)) / sizeof(commit_object *))
-
-static int alloc_chunk(git_revwalk *walk)
-{
-	void *chunk;
-
-	chunk = git__calloc(COMMITS_PER_CHUNK, CHUNK_STEP);
-	GITERR_CHECK_ALLOC(chunk);
-
-	walk->chunk_size = 0;
-	return git_vector_insert(&walk->memory_alloc, chunk);
-}
+#define PARENTS_PER_COMMIT	2
+#define COMMIT_ALLOC \
+	(sizeof(commit_object) + PARENTS_PER_COMMIT * sizeof(commit_object *))
 
 static commit_object *alloc_commit(git_revwalk *walk)
 {
-	unsigned char *chunk;
-
-	if (walk->chunk_size == COMMITS_PER_CHUNK)
-		if (alloc_chunk(walk) < 0)
-			return NULL;
-
-	chunk = git_vector_get(&walk->memory_alloc, walk->memory_alloc.length - 1);
-	chunk += (walk->chunk_size * CHUNK_STEP);
-	walk->chunk_size++;
-
-	return (commit_object *)chunk;
+	return (commit_object *)git_pool_malloc(&walk->commit_pool, COMMIT_ALLOC);
 }
 
-static commit_object **alloc_parents(commit_object *commit, size_t n_parents)
+static commit_object **alloc_parents(
+	git_revwalk *walk, commit_object *commit, size_t n_parents)
 {
 	if (n_parents <= PARENTS_PER_COMMIT)
-		return (commit_object **)((unsigned char *)commit + sizeof(commit_object));
+		return (commit_object **)((char *)commit + sizeof(commit_object));
 
-	return git__malloc(n_parents * sizeof(commit_object *));
+	return (commit_object **)git_pool_malloc(
+		&walk->commit_pool, n_parents * sizeof(commit_object *));
 }
 
 
@@ -185,10 +165,8 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 
 	git_oid_cpy(&commit->oid, oid);
 
-	if (git_hashtable_insert(walk->commits, &commit->oid, commit) < 0) {
-		git__free(commit);
+	if (git_hashtable_insert(walk->commits, &commit->oid, commit) < 0)
 		return NULL;
-	}
 
 	return commit;
 }
@@ -212,7 +190,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 		buffer += parent_len;
 	}
 
-	commit->parents = alloc_parents(commit, parents);
+	commit->parents = alloc_parents(walk, commit, parents);
 	GITERR_CHECK_ALLOC(commit->parents);
 
 	buffer = parents_start;
@@ -756,9 +734,9 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	GITERR_CHECK_ALLOC(walk->commits);
 
 	if (git_pqueue_init(&walk->iterator_time, 8, commit_time_cmp) < 0 ||
-		git_vector_init(&walk->memory_alloc, 8, NULL) < 0 ||
 		git_vector_init(&walk->twos, 4, NULL) < 0 ||
-		alloc_chunk(walk) < 0)
+		git_pool_init(&walk->commit_pool, 1,
+			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0)
 		return -1;
 
 	walk->get_next = &revwalk_next_unsorted;
@@ -777,30 +755,15 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 void git_revwalk_free(git_revwalk *walk)
 {
-	unsigned int i;
-	commit_object *commit;
-
 	if (walk == NULL)
 		return;
 
 	git_revwalk_reset(walk);
 	git_odb_free(walk->odb);
 
-	/* if the parent has more than PARENTS_PER_COMMIT parents,
-	 * we had to allocate a separate array for those parents.
-	 * make sure it's being free'd */
-	GIT_HASHTABLE_FOREACH_VALUE(walk->commits, commit, {
-		if (commit->out_degree > PARENTS_PER_COMMIT)
-			git__free(commit->parents);
-	});
-
 	git_hashtable_free(walk->commits);
+	git_pool_clear(&walk->commit_pool);
 	git_pqueue_free(&walk->iterator_time);
-
-	for (i = 0; i < walk->memory_alloc.length; ++i)
-		git__free(git_vector_get(&walk->memory_alloc, i));
-
-	git_vector_free(&walk->memory_alloc);
 	git_vector_free(&walk->twos);
 	git__free(walk);
 }
