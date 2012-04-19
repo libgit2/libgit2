@@ -67,11 +67,8 @@ int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_
 int git_pkt_buffer_flush(git_buf *buf);
 int git_pkt_send_flush(int s);
 int git_pkt_buffer_done(git_buf *buf);
-int git_pkt_send_done(int s);
 int git_pkt_buffer_wants(const git_vector *refs, git_transport_caps *caps, git_buf *buf);
-int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, int fd);
 int git_pkt_buffer_have(git_oid *oid, git_buf *buf);
-int git_pkt_send_have(git_oid *oid, int fd);
 void git_pkt_free(git_pkt *pkt);
 
 #endif
