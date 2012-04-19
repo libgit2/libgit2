@@ -83,6 +83,13 @@ int git_packfile_unpack_header(
 		git_off_t *curpos);
 
 int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, git_off_t *obj_offset);
+int packfile_unpack_compressed(
+	git_rawobj *obj,
+	struct git_pack_file *p,
+	git_mwindow **w_curs,
+	git_off_t *curpos,
+	size_t size,
+	git_otype type);
 
 git_off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
 		git_off_t *curpos, git_otype type,
