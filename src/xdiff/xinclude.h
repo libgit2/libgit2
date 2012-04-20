@@ -29,7 +29,7 @@
 #include <string.h>
 #include <limits.h>
 
-#ifdef WIN32
+#ifdef GIT_WIN32
 #else
 #include <unistd.h>
 #endif
