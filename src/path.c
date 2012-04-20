@@ -9,6 +9,7 @@
 #include "posix.h"
 #ifdef GIT_WIN32
 #include "win32/dir.h"
+#include "win32/posix.h"
 #else
 #include <dirent.h>
 #endif
@@ -362,20 +363,11 @@ int git_path_exists(const char *path)
 
 int git_path_isdir(const char *path)
 {
-#ifdef GIT_WIN32
-	DWORD attr = GetFileAttributes(path);
-	if (attr == INVALID_FILE_ATTRIBUTES)
-		return GIT_ERROR;
-
-	return (attr & FILE_ATTRIBUTE_DIRECTORY) ? GIT_SUCCESS : GIT_ERROR;
-
-#else
 	struct stat st;
 	if (p_stat(path, &st) < GIT_SUCCESS)
 		return GIT_ERROR;
 
 	return S_ISDIR(st.st_mode) ? GIT_SUCCESS : GIT_ERROR;
-#endif
 }
 
 int git_path_isfile(const char *path)
