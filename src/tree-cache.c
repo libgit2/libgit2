@@ -130,7 +130,7 @@ static int read_tree_internal(git_tree_cache **out,
 
 	tree->children_count = count;
 
-	if (*buffer != '\n' || ++buffer >= buffer_end) {
+	if (*buffer != '\n' || ++buffer > buffer_end) {
 		error = GIT_EOBJCORRUPTED;
 		goto cleanup;
 	}
