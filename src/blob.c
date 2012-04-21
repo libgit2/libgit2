@@ -75,7 +75,12 @@ int git_blob__writeback(git_blob *blob, git_odb_source *src)
 	if (blob->content.data == NULL)
 		return GIT_EMISSINGOBJDATA;
 
-	return git__source_write(src, blob->content.data, blob->content.len);
+	int result = git__source_write(src, blob->content.data, blob->content.len);
+
+        gitfo_free_buf(&blob->content);
+        blob->content.len = 0;
+
+        return result;
 }
 
 int git_blob_set_rawcontent(git_blob *blob, const void *buffer, size_t len)
