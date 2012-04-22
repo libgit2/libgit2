@@ -51,7 +51,7 @@
 # define GIT_FORMAT_PRINTF(a,b) /* empty */
 #endif
 
-#if (defined(_WIN32) || defined(_WIN64)) && !defined(__CYGWIN__)
+#if (defined(_WIN32)) && !defined(__CYGWIN__)
 #define GIT_WIN32 1
 #endif
 
