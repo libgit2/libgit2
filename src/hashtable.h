@@ -22,12 +22,17 @@ struct git_hashtable_node {
 	void *value;
 };
 
+#define GIT_HASHTABLE_STASH_SIZE 3
+
 struct git_hashtable {
 	struct git_hashtable_node *nodes;
 
 	size_t size_mask;
 	size_t size;
 	size_t key_count;
+
+	struct git_hashtable_node stash[GIT_HASHTABLE_STASH_SIZE];
+	int stash_count;
 
 	int is_resizing;
 
@@ -38,9 +43,11 @@ struct git_hashtable {
 typedef struct git_hashtable_node git_hashtable_node;
 typedef struct git_hashtable git_hashtable;
 
-git_hashtable *git_hashtable_alloc(size_t min_size,
-		git_hash_ptr hash,
-		git_hash_keyeq_ptr key_eq);
+git_hashtable *git_hashtable_alloc(
+	size_t min_size,
+	git_hash_ptr hash,
+	git_hash_keyeq_ptr key_eq);
+
 void *git_hashtable_lookup(git_hashtable *h, const void *key);
 int git_hashtable_remove2(git_hashtable *table, const void *key, void **old_value);
 
