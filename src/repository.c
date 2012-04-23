@@ -552,6 +552,7 @@ void git_repository_set_odb(git_repository *repo, git_odb *odb)
 
 	repo->_odb = odb;
 	GIT_REFCOUNT_OWN(repo->_odb, repo);
+	GIT_REFCOUNT_INC(odb);
 }
 
 int git_repository_index__weakptr(git_index **out, git_repository *repo)
