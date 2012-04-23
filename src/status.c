@@ -23,7 +23,7 @@ static int resolve_head_to_tree(git_tree **tree, git_repository *repo)
 	git_oid head_oid;
 	git_object *obj = NULL;
 
-	if (git_reference_lookup_oid(&head_oid, repo, GIT_HEAD_FILE) < 0) {
+	if (git_reference_name_to_oid(&head_oid, repo, GIT_HEAD_FILE) < 0) {
 		/* cannot resolve HEAD - probably brand new repo */
 		giterr_clear();
 		*tree = NULL;

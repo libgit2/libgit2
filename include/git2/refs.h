@@ -40,7 +40,8 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_reposito
  * @param name The long name for the reference
  * @return 0 on success, -1 if name could not be resolved
  */
-GIT_EXTERN(int) git_reference_lookup_oid(git_oid *out, git_repository *repo, const char *name);
+GIT_EXTERN(int) git_reference_name_to_oid(
+	git_oid *out, git_repository *repo, const char *name);
 
 /**
  * Create a new symbolic reference.

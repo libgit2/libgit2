@@ -35,7 +35,7 @@ static int add_ref(transport_local *t, const char *name)
 	head->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(head->name);
 
-	if (git_reference_lookup_oid(&head->oid, t->repo, name) < 0 ||
+	if (git_reference_name_to_oid(&head->oid, t->repo, name) < 0 ||
 		git_vector_insert(&t->refs, head) < 0)
 	{
 		git__free(head->name);

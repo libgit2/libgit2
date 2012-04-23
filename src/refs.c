@@ -1061,7 +1061,7 @@ int git_reference_lookup(git_reference **ref_out,
 	return git_reference_lookup_resolved(ref_out, repo, name, 0);
 }
 
-int git_reference_lookup_oid(
+int git_reference_name_to_oid(
 	git_oid *out, git_repository *repo, const char *name)
 {
 	int error;
