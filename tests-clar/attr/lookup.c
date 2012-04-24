@@ -11,12 +11,12 @@ void test_attr_lookup__simple(void)
 
 	cl_git_pass(git_attr_file__new(&file));
 	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), file));
-	cl_assert_strequal(cl_fixture("attr/attr0"), file->path);
+	cl_assert_equal_s(cl_fixture("attr/attr0"), file->path);
 	cl_assert(file->rules.length == 1);
 
 	cl_git_pass(git_attr_path__init(&path, "test", NULL));
-	cl_assert_strequal("test", path.path);
-	cl_assert_strequal("test", path.basename);
+	cl_assert_equal_s("test", path.path);
+	cl_assert_equal_s("test", path.basename);
 	cl_assert(!path.is_dir);
 
 	cl_git_pass(git_attr_file__lookup_one(file,&path,"binary",&value));
@@ -129,11 +129,11 @@ void test_attr_lookup__match_variants(void)
 
 	cl_git_pass(git_attr_file__new(&file));
 	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr1"), file));
-	cl_assert_strequal(cl_fixture("attr/attr1"), file->path);
+	cl_assert_equal_s(cl_fixture("attr/attr1"), file->path);
 	cl_assert(file->rules.length == 10);
 
 	cl_git_pass(git_attr_path__init(&path, "/testing/for/pat0", NULL));
-	cl_assert_strequal("pat0", path.basename);
+	cl_assert_equal_s("pat0", path.basename);
 
 	run_test_cases(file, cases, 0);
 	run_test_cases(file, dir_cases, 1);

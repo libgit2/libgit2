@@ -11,6 +11,7 @@
 #include "common.h"
 #include "transport.h"
 #include "buffer.h"
+#include "posix.h"
 #include "git2/net.h"
 
 enum git_pkt_type {
@@ -65,13 +66,13 @@ typedef struct {
 
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 int git_pkt_buffer_flush(git_buf *buf);
-int git_pkt_send_flush(int s);
+int git_pkt_send_flush(GIT_SOCKET s);
 int git_pkt_buffer_done(git_buf *buf);
-int git_pkt_send_done(int s);
+int git_pkt_send_done(GIT_SOCKET s);
 int git_pkt_buffer_wants(const git_vector *refs, git_transport_caps *caps, git_buf *buf);
-int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, int fd);
+int git_pkt_send_wants(const git_vector *refs, git_transport_caps *caps, GIT_SOCKET fd);
 int git_pkt_buffer_have(git_oid *oid, git_buf *buf);
-int git_pkt_send_have(git_oid *oid, int fd);
+int git_pkt_send_have(git_oid *oid, GIT_SOCKET fd);
 void git_pkt_free(git_pkt *pkt);
 
 #endif

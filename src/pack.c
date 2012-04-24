@@ -165,6 +165,7 @@ static int pack_index_open(struct git_pack_file *p)
 {
 	char *idx_name;
 	int error;
+	size_t name_len, offset;
 
 	if (p->index_map.data)
 		return 0;
@@ -172,7 +173,11 @@ static int pack_index_open(struct git_pack_file *p)
 	idx_name = git__strdup(p->pack_name);
 	GITERR_CHECK_ALLOC(idx_name);
 
-	strcpy(idx_name + strlen(idx_name) - strlen(".pack"), ".idx");
+	name_len = strlen(idx_name);
+	offset = name_len - strlen(".pack");
+	assert(offset < name_len); /* make sure no underflow */
+
+	strncpy(idx_name + offset, ".idx", name_len - offset);
 
 	error = pack_index_check(idx_name, p);
 	git__free(idx_name);
@@ -501,7 +506,7 @@ git_off_t get_delta_base(
  *
  ***********************************************************/
 
-static struct git_pack_file *packfile_alloc(int extra)
+static struct git_pack_file *packfile_alloc(size_t extra)
 {
 	struct git_pack_file *p = git__calloc(1, sizeof(*p) + extra);
 	if (p != NULL)

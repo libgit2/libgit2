@@ -58,7 +58,13 @@ int p_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
 	while (cnt) {
-		ssize_t r = read(fd, b, cnt);
+		ssize_t r;
+#ifdef GIT_WIN32
+		assert((size_t)((unsigned int)cnt) == cnt);
+		r = read(fd, b, (unsigned int)cnt);
+#else
+		r = read(fd, b, cnt);
+#endif
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
@@ -76,7 +82,13 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 {
 	const char *b = buf;
 	while (cnt) {
-		ssize_t r = write(fd, b, cnt);
+		ssize_t r;
+#ifdef GIT_WIN32
+		assert((size_t)((unsigned int)cnt) == cnt);
+		r = write(fd, b, (unsigned int)cnt);
+#else
+		r = write(fd, b, cnt);
+#endif
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;

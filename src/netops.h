@@ -7,11 +7,7 @@
 #ifndef INCLUDE_netops_h__
 #define INCLUDE_netops_h__
 
-#ifndef GIT_WIN32
-typedef int GIT_SOCKET;
-#else
-typedef SOCKET GIT_SOCKET;
-#endif
+#include "posix.h"
 
 typedef struct gitno_buffer {
 	char *data;
@@ -20,12 +16,12 @@ typedef struct gitno_buffer {
 	GIT_SOCKET fd;
 } gitno_buffer;
 
-void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd);
+void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, GIT_SOCKET fd);
 int gitno_recv(gitno_buffer *buf);
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
 
-int gitno_connect(const char *host, const char *port);
+GIT_SOCKET gitno_connect(const char *host, const char *port);
 int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags);
 int gitno_close(GIT_SOCKET s);
 int gitno_send_chunk_size(int s, size_t len);

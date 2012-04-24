@@ -26,17 +26,8 @@ static int add_ref(transport_local *t, const char *name)
 {
 	const char peeled[] = "^{}";
 	git_remote_head *head;
-	git_reference *ref = NULL, *resolved_ref = NULL;
 	git_object *obj = NULL, *target = NULL;
 	git_buf buf = GIT_BUF_INIT;
-
-	if (git_reference_lookup(&ref, t->repo, name) < 0)
-		return -1;
-
-	if (git_reference_resolve(&resolved_ref, ref) < 0) {
-		git_reference_free(ref);
-		return -1;
-	}
 
 	head = git__malloc(sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
@@ -44,13 +35,13 @@ static int add_ref(transport_local *t, const char *name)
 	head->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(head->name);
 
-	git_oid_cpy(&head->oid, git_reference_oid(resolved_ref));
-
-	if (git_vector_insert(&t->refs, head) < 0)
+	if (git_reference_name_to_oid(&head->oid, t->repo, name) < 0 ||
+		git_vector_insert(&t->refs, head) < 0)
+	{
+		git__free(head->name);
+		git__free(head);
 		return -1;
-
-	git_reference_free(ref);
-	git_reference_free(resolved_ref);
+	}
 
 	/* If it's not a tag, we don't need to try to peel it */
 	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))
@@ -100,10 +91,8 @@ static int store_refs(transport_local *t)
 
 	assert(t);
 
-	if (git_vector_init(&t->refs, ref_names.count, NULL) < 0)
-		return -1;
-
-	if (git_reference_listall(&ref_names, t->repo, GIT_REF_LISTALL) < 0)
+	if (git_reference_listall(&ref_names, t->repo, GIT_REF_LISTALL) < 0 ||
+		git_vector_init(&t->refs, (unsigned int)ref_names.count, NULL) < 0)
 		goto on_error;
 
 	/* Sort the references first */
