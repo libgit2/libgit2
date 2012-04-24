@@ -212,7 +212,7 @@ static int packfile_load__cb(void *_data, git_buf *path)
 	struct pack_backend *backend = (struct pack_backend *)_data;
 	struct git_pack_file *pack;
 	int error;
-	size_t i;
+	unsigned int i;
 
 	if (git__suffixcmp(path->ptr, ".idx") != 0)
 		return 0; /* not an index */
@@ -266,7 +266,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backend, const git_oid *oid)
 {
 	int error;
-	size_t i;
+	unsigned int i;
 
 	if ((error = packfile_refresh_all(backend)) < 0)
 		return error;
@@ -298,7 +298,7 @@ static int pack_entry_find_prefix(
 	unsigned int len)
 {
 	int error;
-	size_t i;
+	unsigned int i;
 	unsigned found = 0;
 
 	if ((error = packfile_refresh_all(backend)) < 0)
@@ -423,7 +423,7 @@ static int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
 static void pack_backend__free(git_odb_backend *_backend)
 {
 	struct pack_backend *backend;
-	size_t i;
+	unsigned int i;
 
 	assert(_backend);
 

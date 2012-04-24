@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include <ctype.h>
 
 void test_repo_open__cleanup(void)
 {

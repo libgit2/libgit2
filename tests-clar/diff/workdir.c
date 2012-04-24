@@ -37,19 +37,19 @@ void test_diff_workdir__to_index(void)
 	 * - git diff
 	 * - mv .git .gitted
 	 */
-	cl_assert_intequal(12, exp.files);
-	cl_assert_intequal(0, exp.file_adds);
-	cl_assert_intequal(4, exp.file_dels);
-	cl_assert_intequal(4, exp.file_mods);
-	cl_assert_intequal(1, exp.file_ignored);
-	cl_assert_intequal(3, exp.file_untracked);
+	cl_assert_equal_i(12, exp.files);
+	cl_assert_equal_i(0, exp.file_adds);
+	cl_assert_equal_i(4, exp.file_dels);
+	cl_assert_equal_i(4, exp.file_mods);
+	cl_assert_equal_i(1, exp.file_ignored);
+	cl_assert_equal_i(3, exp.file_untracked);
 
-	cl_assert_intequal(8, exp.hunks);
+	cl_assert_equal_i(8, exp.hunks);
 
-	cl_assert_intequal(14, exp.lines);
-	cl_assert_intequal(5, exp.line_ctxt);
-	cl_assert_intequal(4, exp.line_adds);
-	cl_assert_intequal(5, exp.line_dels);
+	cl_assert_equal_i(14, exp.lines);
+	cl_assert_equal_i(5, exp.line_ctxt);
+	cl_assert_equal_i(4, exp.line_adds);
+	cl_assert_equal_i(5, exp.line_dels);
 
 	git_diff_list_free(diff);
 }

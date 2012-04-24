@@ -46,7 +46,7 @@ static void net_set_error(const char *str)
 }
 #endif
 
-void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
+void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, GIT_SOCKET fd)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
@@ -60,17 +60,13 @@ int gitno_recv(gitno_buffer *buf)
 {
 	int ret;
 
-	ret = recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
-	if (ret == 0) /* Orderly shutdown, so exit */
-		return 0;
-
+	ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
 	if (ret < 0) {
-		net_set_error("Error receiving data");
+		net_set_error("Error receiving socket data");
 		return -1;
 	}
 
 	buf->offset += ret;
-
 	return ret;
 }
 
@@ -97,12 +93,12 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
-int gitno_connect(const char *host, const char *port)
+GIT_SOCKET gitno_connect(const char *host, const char *port)
 {
-	struct addrinfo *info, *p;
+	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
 	int ret;
-	GIT_SOCKET s;
+	GIT_SOCKET s = INVALID_SOCKET;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
@@ -110,36 +106,30 @@ int gitno_connect(const char *host, const char *port)
 
 	if ((ret = getaddrinfo(host, port, &hints, &info)) < 0) {
 		giterr_set(GITERR_NET, "Failed to resolve address for %s: %s", host, gai_strerror(ret));
-		return -1;
+		return INVALID_SOCKET;
 	}
 
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-#ifdef GIT_WIN32
 		if (s == INVALID_SOCKET) {
-#else
-		if (s < 0) {
-#endif
-			net_set_error("Error creating socket");
-			freeaddrinfo(info);
-			return -1;
+			net_set_error("error creating socket");
+			break;
 		}
 
-		ret = connect(s, p->ai_addr, p->ai_addrlen);
+		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
+			break;
+
 		/* If we can't connect, try the next one */
-		if (ret < 0) {
-			close(s);
-			continue;
-		}
-
-		/* Return the socket */
-		freeaddrinfo(info);
-		return s;
+		gitno_close(s);
+		s = INVALID_SOCKET;
 	}
 
 	/* Oops, we couldn't connect to any address */
-	giterr_set(GITERR_OS, "Failed to connect to %s", host);
-	return -1;
+	if (s == INVALID_SOCKET && p == NULL)
+		giterr_set(GITERR_OS, "Failed to connect to %s", host);
+
+	freeaddrinfo(info);
+	return s;
 }
 
 int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
@@ -150,7 +140,7 @@ int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 	while (off < len) {
 		errno = 0;
 
-		ret = send(s, msg + off, len - off, flags);
+		ret = p_send(s, msg + off, len - off, flags);
 		if (ret < 0) {
 			net_set_error("Error sending data");
 			return -1;
@@ -159,7 +149,7 @@ int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 		off += ret;
 	}
 
-	return off;
+	return (int)off;
 }
 
 
@@ -187,7 +177,7 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	FD_SET(buf->fd, &fds);
 
 	/* The select(2) interface is silly */
-	return select(buf->fd + 1, &fds, NULL, NULL, &tv);
+	return select((int)buf->fd + 1, &fds, NULL, NULL, &tv);
 }
 
 int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)
@@ -198,8 +188,8 @@ int gitno_extract_host_and_port(char **host, char **port, const char *url, const
 	slash = strchr(url, '/');
 
 	if (slash == NULL) {
-			giterr_set(GITERR_NET, "Malformed URL: missing /");
-			return -1;
+		giterr_set(GITERR_NET, "Malformed URL: missing /");
+		return -1;
 	}
 
 	if (colon == NULL) {
