@@ -456,7 +456,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 		size_t i;
 		char *elem;
 		git_vector_foreach(&list, i, elem) {
-			free(elem);
+			git__free(elem);
 		}
 
 		git_vector_free(&list);

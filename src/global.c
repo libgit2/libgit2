@@ -62,7 +62,7 @@ git_global_st *git__global_state(void)
 	if ((ptr = TlsGetValue(_tls_index)) != NULL)
 		return ptr;
 
-	ptr = malloc(sizeof(git_global_st));
+	ptr = git__malloc(sizeof(git_global_st));
 	if (!ptr)
 		return NULL;
 
@@ -78,7 +78,7 @@ static int _tls_init = 0;
 
 static void cb__free_status(void *st)
 {
-	free(st);
+	git__free(st);
 }
 
 void git_threads_init(void)
@@ -103,7 +103,7 @@ git_global_st *git__global_state(void)
 	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
 		return ptr;
 
-	ptr = malloc(sizeof(git_global_st));
+	ptr = git__malloc(sizeof(git_global_st));
 	if (!ptr)
 		return NULL;
 
