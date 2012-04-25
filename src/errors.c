@@ -173,7 +173,7 @@ void giterr_set_str(int error_class, const char *string)
 {
 	git_error *error = &GIT_GLOBAL->error_t;
 
-	free(error->message);
+	git__free(error->message);
 
 	error->message = git__strdup(string);
 	error->klass = error_class;

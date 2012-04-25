@@ -139,12 +139,12 @@ static int write_symlink(
 	read_len = p_readlink(path, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
 		giterr_set(GITERR_OS, "Failed to create blob.  Can't read symlink '%s'", path);
-		free(link_data);
+		git__free(link_data);
 		return -1;
 	}
 
 	error = git_odb_write(oid, odb, (void *)link_data, link_size, GIT_OBJ_BLOB);
-	free(link_data);
+	git__free(link_data);
 	return error;
 }
 

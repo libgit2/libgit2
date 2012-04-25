@@ -11,7 +11,7 @@ void test_attr_file__simple_read(void)
 	git_attr_assignment *assign;
 	git_attr_rule *rule;
 
-	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__new(&file, NULL));
 	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), file));
 	cl_assert_equal_s(cl_fixture("attr/attr0"), file->path);
 	cl_assert(file->rules.length == 1);
@@ -27,7 +27,6 @@ void test_attr_file__simple_read(void)
 	cl_assert(assign != NULL);
 	cl_assert_equal_s("binary", assign->name);
 	cl_assert(GIT_ATTR_TRUE(assign->value));
-	cl_assert(!assign->is_allocated);
 
 	git_attr_file__free(file);
 }
@@ -38,7 +37,7 @@ void test_attr_file__match_variants(void)
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__new(&file, NULL));
 	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr1"), file));
 	cl_assert_equal_s(cl_fixture("attr/attr1"), file->path);
 	cl_assert(file->rules.length == 10);
@@ -56,7 +55,6 @@ void test_attr_file__match_variants(void)
 	cl_assert_equal_s("attr0", assign->name);
 	cl_assert(assign->name_hash == git_attr_file__name_hash(assign->name));
 	cl_assert(GIT_ATTR_TRUE(assign->value));
-	cl_assert(!assign->is_allocated);
 
 	rule = get_rule(1);
 	cl_assert_equal_s("pat1", rule->match.pattern);
@@ -125,7 +123,7 @@ void test_attr_file__assign_variants(void)
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__new(&file, NULL));
 	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr2"), file));
 	cl_assert_equal_s(cl_fixture("attr/attr2"), file->path);
 	cl_assert(file->rules.length == 11);
@@ -191,7 +189,7 @@ void test_attr_file__check_attr_examples(void)
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 
-	cl_git_pass(git_attr_file__new(&file));
+	cl_git_pass(git_attr_file__new(&file, NULL));
 	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr3"), file));
 	cl_assert_equal_s(cl_fixture("attr/attr3"), file->path);
 	cl_assert(file->rules.length == 3);

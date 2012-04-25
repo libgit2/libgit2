@@ -12,6 +12,7 @@
 #include "buffer.h"
 #include "iterator.h"
 #include "repository.h"
+#include "pool.h"
 
 enum {
 	GIT_DIFFCAPS_HAS_SYMLINKS     = (1 << 0), /* symlinks on platform? */
@@ -26,6 +27,7 @@ struct git_diff_list {
 	git_diff_options opts;
 	git_vector       pathspec;
 	git_vector       deltas;    /* vector of git_diff_file_delta */
+	git_pool pool;
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;

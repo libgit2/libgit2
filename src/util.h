@@ -179,4 +179,21 @@ GIT_INLINE(int) git__ishex(const char *str)
 	return 1;
 }
 
+GIT_INLINE(size_t) git__size_t_bitmask(size_t v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+
+	return v;
+}
+
+GIT_INLINE(size_t) git__size_t_powerof2(size_t v)
+{
+	return git__size_t_bitmask(v) + 1;
+}
+
 #endif /* INCLUDE_util_h__ */

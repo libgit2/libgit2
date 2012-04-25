@@ -35,7 +35,9 @@ static int load_ignore_file(
 			GITERR_CHECK_ALLOC(match);
 		}
 
-		if (!(error = git_attr_fnmatch__parse(match, context, &scan))) {
+		if (!(error = git_attr_fnmatch__parse(
+			match, ignores->pool, context, &scan)))
+		{
 			match->flags = match->flags | GIT_ATTR_FNMATCH_IGNORE;
 			scan = git__next_line(scan);
 			error = git_vector_insert(&ignores->rules, match);

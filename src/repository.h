@@ -13,13 +13,13 @@
 #include "git2/repository.h"
 #include "git2/object.h"
 
-#include "hashtable.h"
 #include "index.h"
 #include "cache.h"
 #include "refs.h"
 #include "buffer.h"
 #include "odb.h"
 #include "attr.h"
+#include "strmap.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -83,7 +83,7 @@ struct git_repository {
 	git_cache objects;
 	git_refcache references;
 	git_attr_cache attrcache;
-	git_hashtable *submodules;
+	git_strmap *submodules;
 
 	char *path_repository;
 	char *workdir;

@@ -10,7 +10,7 @@
 #include "common.h"
 #include "git2/oid.h"
 #include "git2/refs.h"
-#include "hashtable.h"
+#include "strmap.h"
 
 #define GIT_REFS_DIR "refs/"
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
@@ -46,7 +46,7 @@ struct git_reference {
 };
 
 typedef struct {
-	git_hashtable *packfile;
+	git_strmap *packfile;
 	time_t packfile_time;
 } git_refcache;
 

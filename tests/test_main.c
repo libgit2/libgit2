@@ -37,7 +37,6 @@ DECLARE_SUITE(objwrite);
 DECLARE_SUITE(commit);
 DECLARE_SUITE(revwalk);
 DECLARE_SUITE(index);
-DECLARE_SUITE(hashtable);
 DECLARE_SUITE(tag);
 DECLARE_SUITE(tree);
 DECLARE_SUITE(refs);
@@ -53,7 +52,6 @@ static libgit2_suite suite_methods[]= {
 	SUITE_NAME(commit),
 	SUITE_NAME(revwalk),
 	SUITE_NAME(index),
-	SUITE_NAME(hashtable),
 	SUITE_NAME(tag),
 	SUITE_NAME(tree),
 	SUITE_NAME(refs),
