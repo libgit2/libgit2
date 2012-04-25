@@ -3,6 +3,8 @@
 #include "config.h"
 #include <ctype.h>
 
+GIT_KHASH_STR__IMPLEMENTATION;
+
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files);
 
@@ -124,14 +126,14 @@ int git_attr_foreach(
 	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
-	git_hashtable *seen = NULL;
+	git_khash_str *seen = NULL;
 
 	if ((error = git_attr_path__init(
 			&path, pathname, git_repository_workdir(repo))) < 0 ||
 		(error = collect_attr_files(repo, pathname, &files)) < 0)
 		return error;
 
-	seen = git_hashtable_alloc(8, git_hash__strhash_cb, git_hash__strcmp_cb);
+	seen = git_khash_str_alloc();
 	GITERR_CHECK_ALLOC(seen);
 
 	git_vector_foreach(&files, i, file) {
@@ -140,10 +142,11 @@ int git_attr_foreach(
 
 			git_vector_foreach(&rule->assigns, k, assign) {
 				/* skip if higher priority assignment was already seen */
-				if (git_hashtable_lookup(seen, assign->name))
+				if (git_khash_str_exists(seen, assign->name))
 					continue;
 
-				if (!(error = git_hashtable_insert(seen, assign->name, assign)))
+				git_khash_str_insert(seen, assign->name, assign, error);
+				if (error >= 0)
 					error = callback(assign->name, assign->value, payload);
 
 				if (error != 0)
@@ -153,7 +156,7 @@ int git_attr_foreach(
 	}
 
 cleanup:
-	git_hashtable_free(seen);
+	git_khash_str_free(seen);
 	git_vector_free(&files);
 
 	return error;
@@ -197,10 +200,12 @@ int git_attr_add_macro(
 bool git_attr_cache__is_cached(git_repository *repo, const char *path)
 {
 	const char *cache_key = path;
+	git_khash_str *files = git_repository_attr_cache(repo)->files;
+
 	if (repo && git__prefixcmp(cache_key, git_repository_workdir(repo)) == 0)
 		cache_key += strlen(git_repository_workdir(repo));
-	return (git_hashtable_lookup(
-		git_repository_attr_cache(repo)->files, cache_key) != NULL);
+
+	return git_khash_str_exists(files, cache_key);
 }
 
 int git_attr_cache__lookup_or_create_file(
@@ -213,9 +218,11 @@ int git_attr_cache__lookup_or_create_file(
 	int error;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file *file = NULL;
+	khiter_t pos;
 
-	if ((file = git_hashtable_lookup(cache->files, key)) != NULL) {
-		*file_ptr = file;
+	pos = git_khash_str_lookup_index(cache->files, key);
+	if (git_khash_str_valid_index(cache->files, pos)) {
+		*file_ptr = git_khash_str_value_at(cache->files, pos);
 		return 0;
 	}
 
@@ -232,8 +239,11 @@ int git_attr_cache__lookup_or_create_file(
 	else
 		error = git_attr_file__set_path(repo, key, file);
 
-	if (!error)
-		error = git_hashtable_insert(cache->files, file->path, file);
+	if (!error) {
+		git_khash_str_insert(cache->files, file->path, file, error);
+		if (error > 0)
+			error = 0;
+	}
 
 	if (error < 0) {
 		git_attr_file__free(file);
@@ -373,18 +383,14 @@ int git_attr_cache__init(git_repository *repo)
 
 	/* allocate hashtable for attribute and ignore file contents */
 	if (cache->files == NULL) {
-		cache->files = git_hashtable_alloc(
-			8, git_hash__strhash_cb, git_hash__strcmp_cb);
-		if (!cache->files)
-			return -1;
+		cache->files = git_khash_str_alloc();
+		GITERR_CHECK_ALLOC(cache->files);
 	}
 
 	/* allocate hashtable for attribute macros */
 	if (cache->macros == NULL) {
-		cache->macros = git_hashtable_alloc(
-			8, git_hash__strhash_cb, git_hash__strcmp_cb);
-		if (!cache->macros)
-			return -1;
+		cache->macros = git_khash_str_alloc();
+		GITERR_CHECK_ALLOC(cache->macros);
 	}
 
 	/* allocate string pool */
@@ -409,19 +415,22 @@ void git_attr_cache_flush(
 
 	if (cache->files != NULL) {
 		git_attr_file *file;
-		GIT_HASHTABLE_FOREACH_VALUE(
-			cache->files, file, git_attr_file__free(file));
-		git_hashtable_free(cache->files);
-		cache->files = NULL;
+
+		git_khash_str_foreach_value(cache->files, file, {
+			git_attr_file__free(file);
+		});
+
+		git_khash_str_free(cache->files);
 	}
 
 	if (cache->macros != NULL) {
 		git_attr_rule *rule;
 
-		GIT_HASHTABLE_FOREACH_VALUE(
-			cache->macros, rule, git_attr_rule__free(rule));
-		git_hashtable_free(cache->macros);
-		cache->macros = NULL;
+		git_khash_str_foreach_value(cache->macros, rule, {
+			git_attr_rule__free(rule);
+		});
+
+		git_khash_str_free(cache->macros);
 	}
 
 	git_pool_clear(&cache->pool);
@@ -431,10 +440,28 @@ void git_attr_cache_flush(
 
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 {
+	git_khash_str *macros = git_repository_attr_cache(repo)->macros;
+	int error;
+
 	/* TODO: generate warning log if (macro->assigns.length == 0) */
 	if (macro->assigns.length == 0)
 		return 0;
 
-	return git_hashtable_insert(
-		git_repository_attr_cache(repo)->macros, macro->match.pattern, macro);
+	git_khash_str_insert(macros, macro->match.pattern, macro, error);
+	return (error < 0) ? -1 : 0;
 }
+
+git_attr_rule *git_attr_cache__lookup_macro(
+	git_repository *repo, const char *name)
+{
+	git_khash_str *macros = git_repository_attr_cache(repo)->macros;
+	khiter_t pos;
+
+	pos = git_khash_str_lookup_index(macros, name);
+
+	if (!git_khash_str_valid_index(macros, pos))
+		return NULL;
+
+	return (git_attr_rule *)git_khash_str_value_at(macros, pos);
+}
+

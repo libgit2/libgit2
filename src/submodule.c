@@ -12,7 +12,6 @@
 #include "git2/index.h"
 #include "git2/submodule.h"
 #include "buffer.h"
-#include "hashtable.h"
 #include "vector.h"
 #include "posix.h"
 #include "config_file.h"
@@ -32,40 +31,31 @@ static git_cvar_map _sm_ignore_map[] = {
 	{GIT_CVAR_STRING, "none", GIT_SUBMODULE_IGNORE_NONE}
 };
 
-static uint32_t strhash_no_trailing_slash(const void *key, int hash_id)
+static inline khint_t str_hash_no_trailing_slash(const char *s)
 {
-	static uint32_t hash_seeds[GIT_HASHTABLE_HASHES] = {
-		0x01010101,
-		0x12345678,
-		0xFEDCBA98
-	};
+	khint_t h;
 
-	size_t key_len = key ? strlen((const char *)key) : 0;
-	if (key_len > 0 && ((const char *)key)[key_len - 1] == '/')
-		key_len--;
+	for (h = 0; *s; ++s)
+		if (s[1] || *s != '/')
+			h = (h << 5) - h + *s;
 
-	return git__hash(key, (int)key_len, hash_seeds[hash_id]);
+	return h;
 }
 
-static int strcmp_no_trailing_slash(const void *a, const void *b)
+static inline int str_equal_no_trailing_slash(const char *a, const char *b)
 {
-	const char *astr = (const char *)a;
-	const char *bstr = (const char *)b;
-	size_t alen = a ? strlen(astr) : 0;
-	size_t blen = b ? strlen(bstr) : 0;
-	int cmp;
+	size_t alen = a ? strlen(a) : 0;
+	size_t blen = b ? strlen(b) : 0;
 
-	if (alen > 0 && astr[alen - 1] == '/')
+	if (alen && a[alen] == '/')
 		alen--;
-	if (blen > 0 && bstr[blen - 1] == '/')
+	if (blen && b[blen] == '/')
 		blen--;
 
-	cmp = strncmp(astr, bstr, min(alen, blen));
-	if (cmp == 0)
-		cmp = (alen < blen) ? -1 : (alen > blen) ? 1 : 0;
-
-	return cmp;
+	return (alen == blen && strncmp(a, b, alen) == 0);
 }
+
+__KHASH_IMPL(str, static inline, const char *, void *, 1, str_hash_no_trailing_slash, str_equal_no_trailing_slash);
 
 static git_submodule *submodule_alloc(const char *name)
 {
@@ -99,13 +89,18 @@ static void submodule_release(git_submodule *sm, int decr)
 }
 
 static int submodule_from_entry(
-	git_hashtable *smcfg, git_index_entry *entry)
+	git_khash_str *smcfg, git_index_entry *entry)
 {
 	git_submodule *sm;
 	void *old_sm;
+	khiter_t pos;
+	int error;
 
-	sm = git_hashtable_lookup(smcfg, entry->path);
-	if (!sm)
+	pos = git_khash_str_lookup_index(smcfg, entry->path);
+
+	if (git_khash_str_valid_index(smcfg, pos))
+		sm = git_khash_str_value_at(smcfg, pos);
+	else
 		sm = submodule_alloc(entry->path);
 
 	git_oid_cpy(&sm->oid, &entry->oid);
@@ -120,7 +115,8 @@ static int submodule_from_entry(
 			goto fail;
 	}
 
-	if (git_hashtable_insert2(smcfg, sm->path, sm, &old_sm) < 0)
+	git_khash_str_insert2(smcfg, sm->path, sm, old_sm, error);
+	if (error < 0)
 		goto fail;
 	sm->refcount++;
 
@@ -139,13 +135,15 @@ fail:
 static int submodule_from_config(
 	const char *key, const char *value, void *data)
 {
-	git_hashtable *smcfg = data;
+	git_khash_str *smcfg = data;
 	const char *namestart;
 	const char *property;
 	git_buf name = GIT_BUF_INIT;
 	git_submodule *sm;
 	void *old_sm = NULL;
 	bool is_path;
+	khiter_t pos;
+	int error;
 
 	if (git__prefixcmp(key, "submodule.") != 0)
 		return 0;
@@ -160,32 +158,40 @@ static int submodule_from_config(
 	if (git_buf_set(&name, namestart, property - namestart - 1) < 0)
 		return -1;
 
-	sm = git_hashtable_lookup(smcfg, name.ptr);
-	if (!sm && is_path)
-		sm = git_hashtable_lookup(smcfg, value);
-	if (!sm)
+	pos = git_khash_str_lookup_index(smcfg, name.ptr);
+	if (!git_khash_str_valid_index(smcfg, pos) && is_path)
+		pos = git_khash_str_lookup_index(smcfg, value);
+	if (!git_khash_str_valid_index(smcfg, pos))
 		sm = submodule_alloc(name.ptr);
+	else
+		sm = git_khash_str_value_at(smcfg, pos);
 	if (!sm)
 		goto fail;
 
 	if (strcmp(sm->name, name.ptr) != 0) {
 		assert(sm->path == sm->name);
 		sm->name = git_buf_detach(&name);
-		if (git_hashtable_insert2(smcfg, sm->name, sm, &old_sm) < 0)
+
+		git_khash_str_insert2(smcfg, sm->name, sm, old_sm, error);
+		if (error < 0)
 			goto fail;
 		sm->refcount++;
 	}
 	else if (is_path && strcmp(sm->path, value) != 0) {
 		assert(sm->path == sm->name);
-		if ((sm->path = git__strdup(value)) == NULL ||
-			git_hashtable_insert2(smcfg, sm->path, sm, &old_sm) < 0)
+		sm->path = git__strdup(value);
+		if (sm->path == NULL)
+			goto fail;
+
+		git_khash_str_insert2(smcfg, sm->path, sm, old_sm, error);
+		if (error < 0)
 			goto fail;
 		sm->refcount++;
 	}
 	git_buf_free(&name);
 
 	if (old_sm && ((git_submodule *)old_sm) != sm) {
-		/* TODO: log entry about multiple submodules with same path */
+		/* TODO: log warning about multiple submodules with same path */
 		submodule_release(old_sm, 1);
 	}
 
@@ -241,7 +247,7 @@ static int load_submodule_config(git_repository *repo)
 	git_index *index;
 	unsigned int i, max_i;
 	git_oid gitmodules_oid;
-	git_hashtable *smcfg;
+	git_khash_str *smcfg;
 	struct git_config_file *mods = NULL;
 
 	if (repo->submodules)
@@ -251,8 +257,7 @@ static int load_submodule_config(git_repository *repo)
 	 * under both its name and its path.  These are usually the same, but
 	 * that is not guaranteed.
 	 */
-	smcfg = git_hashtable_alloc(
-		4, strhash_no_trailing_slash, strcmp_no_trailing_slash);
+	smcfg = git_khash_str_alloc();
 	GITERR_CHECK_ALLOC(smcfg);
 
 	/* scan index for gitmodules (and .gitmodules entry) */
@@ -302,13 +307,13 @@ cleanup:
 	if (mods != NULL)
 		git_config_file_free(mods);
 	if (error)
-		git_hashtable_free(smcfg);
+		git_khash_str_free(smcfg);
 	return error;
 }
 
 void git_submodule_config_free(git_repository *repo)
 {
-	git_hashtable *smcfg = repo->submodules;
+	git_khash_str *smcfg = repo->submodules;
 	git_submodule *sm;
 
 	repo->submodules = NULL;
@@ -316,8 +321,10 @@ void git_submodule_config_free(git_repository *repo)
 	if (smcfg == NULL)
 		return;
 
-	GIT_HASHTABLE_FOREACH_VALUE(smcfg, sm, { submodule_release(sm,1); });
-	git_hashtable_free(smcfg);
+	git_khash_str_foreach_value(smcfg, sm, {
+		submodule_release(sm,1);
+	});
+	git_khash_str_free(smcfg);
 }
 
 static int submodule_cmp(const void *a, const void *b)
@@ -338,19 +345,18 @@ int git_submodule_foreach(
 	if ((error = load_submodule_config(repo)) < 0)
 		return error;
 
-	GIT_HASHTABLE_FOREACH_VALUE(
-		repo->submodules, sm, {
-			/* usually the following will not come into play */
-			if (sm->refcount > 1) {
-				if (git_vector_bsearch(&seen, sm) != GIT_ENOTFOUND)
-					continue;
-				if ((error = git_vector_insert(&seen, sm)) < 0)
-					break;
-			}
-
-			if ((error = callback(sm->name, payload)) < 0)
+	git_khash_str_foreach_value(repo->submodules, sm, {
+		/* usually the following will not come into play */
+		if (sm->refcount > 1) {
+			if (git_vector_bsearch(&seen, sm) != GIT_ENOTFOUND)
+				continue;
+			if ((error = git_vector_insert(&seen, sm)) < 0)
 				break;
-		});
+		}
+
+		if ((error = callback(sm->name, payload)) < 0)
+			break;
+	});
 
 	git_vector_free(&seen);
 
@@ -362,15 +368,17 @@ int git_submodule_lookup(
 	git_repository *repo,
 	const char *name)       /* trailing slash is allowed */
 {
-	git_submodule *sm;
+	khiter_t pos;
 
 	if (load_submodule_config(repo) < 0)
 		return -1;
 
-	sm = git_hashtable_lookup(repo->submodules, name);
+	pos = git_khash_str_lookup_index(repo->submodules, name);
+	if (!git_khash_str_valid_index(repo->submodules, pos))
+		return GIT_ENOTFOUND;
 
 	if (sm_ptr)
-		*sm_ptr = sm;
+		*sm_ptr = git_khash_str_value_at(repo->submodules, pos);
 
-	return sm ? 0 : GIT_ENOTFOUND;
+	return 0;
 }

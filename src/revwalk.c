@@ -8,14 +8,16 @@
 #include "common.h"
 #include "commit.h"
 #include "odb.h"
-#include "hashtable.h"
 #include "pqueue.h"
 #include "pool.h"
+#include "khash_oid.h"
 
 #include "git2/revwalk.h"
 #include "git2/merge.h"
 
 #include <regex.h>
+
+GIT_KHASH_OID__IMPLEMENTATION;
 
 #define PARENT1  (1 << 0)
 #define PARENT2  (1 << 1)
@@ -46,7 +48,7 @@ struct git_revwalk {
 	git_repository *repo;
 	git_odb *odb;
 
-	git_hashtable *commits;
+	git_khash_oid *commits;
 	git_pool commit_pool;
 
 	commit_list *iterator_topo;
@@ -123,15 +125,6 @@ static commit_object *commit_list_pop(commit_list **stack)
 	return item;
 }
 
-static uint32_t object_table_hash(const void *key, int hash_id)
-{
-	uint32_t r;
-	const git_oid *id = key;
-
-	memcpy(&r, id->id + (hash_id * sizeof(uint32_t)), sizeof(r));
-	return r;
-}
-
 #define PARENTS_PER_COMMIT	2
 #define COMMIT_ALLOC \
 	(sizeof(commit_object) + PARENTS_PER_COMMIT * sizeof(commit_object *))
@@ -155,9 +148,13 @@ static commit_object **alloc_parents(
 static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 {
 	commit_object *commit;
+	khiter_t pos;
+	int ret;
 
-	if ((commit = git_hashtable_lookup(walk->commits, oid)) != NULL)
-		return commit;
+	/* lookup and reserve space if not already present */
+	pos = kh_get(oid, walk->commits, oid);
+	if (pos != kh_end(walk->commits))
+		return kh_value(walk->commits, pos);
 
 	commit = alloc_commit(walk);
 	if (commit == NULL)
@@ -165,8 +162,9 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 
 	git_oid_cpy(&commit->oid, oid);
 
-	if (git_hashtable_insert(walk->commits, &commit->oid, commit) < 0)
-		return NULL;
+	pos = kh_put(oid, walk->commits, &commit->oid, &ret);
+	assert(ret != 0);
+	kh_value(walk->commits, pos) = commit;
 
 	return commit;
 }
@@ -728,9 +726,7 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 	memset(walk, 0x0, sizeof(git_revwalk));
 
-	walk->commits = git_hashtable_alloc(64,
-			object_table_hash,
-			(git_hash_keyeq_ptr)git_oid_cmp);
+	walk->commits = git_khash_oid_alloc();
 	GITERR_CHECK_ALLOC(walk->commits);
 
 	if (git_pqueue_init(&walk->iterator_time, 8, commit_time_cmp) < 0 ||
@@ -761,7 +757,7 @@ void git_revwalk_free(git_revwalk *walk)
 	git_revwalk_reset(walk);
 	git_odb_free(walk->odb);
 
-	git_hashtable_free(walk->commits);
+	git_khash_oid_free(walk->commits);
 	git_pool_clear(&walk->commit_pool);
 	git_pqueue_free(&walk->iterator_time);
 	git_vector_free(&walk->twos);
@@ -823,12 +819,12 @@ void git_revwalk_reset(git_revwalk *walk)
 
 	assert(walk);
 
-	GIT_HASHTABLE_FOREACH_VALUE(walk->commits, commit,
+	kh_foreach_value(walk->commits, commit, {
 		commit->seen = 0;
 		commit->in_degree = 0;
 		commit->topo_delay = 0;
 		commit->uninteresting = 0;
-	);
+		});
 
 	git_pqueue_clear(&walk->iterator_time);
 	commit_list_free(&walk->iterator_topo);
