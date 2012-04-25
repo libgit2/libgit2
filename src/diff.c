@@ -256,9 +256,6 @@ static int diff_delta__from_two(
 	return 0;
 }
 
-#define DIFF_SRC_PREFIX_DEFAULT "a/"
-#define DIFF_DST_PREFIX_DEFAULT "b/"
-
 static char *diff_strdup_prefix(const char *prefix)
 {
 	size_t len = strlen(prefix);

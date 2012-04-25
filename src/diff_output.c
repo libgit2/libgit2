@@ -553,8 +553,15 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	const char *oldpath = delta->old.path;
 	const char *newpfx = pi->diff->opts.dst_prefix;
 	const char *newpath = delta->new.path;
+	int result;
 
 	GIT_UNUSED(progress);
+
+	if (!oldpfx)
+		oldpfx = DIFF_SRC_PREFIX_DEFAULT;
+
+	if (!newpfx)
+		newpfx = DIFF_DST_PREFIX_DEFAULT;
 
 	git_buf_clear(pi->buf);
 	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n", oldpfx, delta->old.path, newpfx, delta->new.path);
@@ -567,8 +574,8 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 		oldpath = "/dev/null";
 	}
 	if (git_oid_iszero(&delta->new.oid)) {
-		oldpfx = "";
-		oldpath = "/dev/null";
+		newpfx = "";
+		newpath = "/dev/null";
 	}
 
 	if (delta->binary != 1) {
@@ -579,9 +586,12 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-	if (pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr) < 0 ||
-		delta->binary != 1)
-		return -1;
+    result = pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr);
+    if (result < 0)
+        return result;
+
+    if (delta->binary != 1)
+        return 0;
 
 	git_buf_clear(pi->buf);
 	git_buf_printf(
