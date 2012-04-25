@@ -179,6 +179,18 @@ void test_config_read__prefixes(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__escaping_quotes(void)
+{
+	git_config *cfg;
+	const char *str;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config13")));
+	cl_git_pass(git_config_get_string(cfg, "core.editor", &str));
+	cl_assert(strcmp(str, "\"C:/Program Files/Nonsense/bah.exe\" \"--some option\"") == 0);
+
+	git_config_free(cfg);
+}
+
 #if 0
 
 BEGIN_TEST(config10, "a repo's config overrides the global config")

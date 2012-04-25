@@ -1157,12 +1157,6 @@ static char *fixup_line(const char *ptr, int quote_count)
 				*out++ = '\\';
 				goto out;
 			}
-			/* otherwise, the backslash must be inside quotes */
-			if ((quote_count % 2) == 0) {
-				git__free(str);
-				giterr_set(GITERR_CONFIG, "Invalid escape at %s", ptr);
-				return NULL;
-			}
 			if ((esc = strchr(escapes, *ptr)) != NULL) {
 				*out++ = escaped[esc - escapes];
 			} else {
