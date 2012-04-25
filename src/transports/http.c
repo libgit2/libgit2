@@ -410,44 +410,6 @@ static int parse_response(transport_http *t)
 	return ret;
 }
 
-static int setup_walk(git_revwalk **out, git_repository *repo)
-{
-	git_revwalk *walk;
-	git_strarray refs;
-	unsigned int i;
-	git_reference *ref;
-
-	if (git_reference_listall(&refs, repo, GIT_REF_LISTALL) < 0)
-		return -1;
-
-	if (git_revwalk_new(&walk, repo) < 0)
-		return -1;
-
-	git_revwalk_sorting(walk, GIT_SORT_TIME);
-
-	for (i = 0; i < refs.count; ++i) {
-		/* No tags */
-		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
-			continue;
-
-		if (git_reference_lookup(&ref, repo, refs.strings[i]) < 0)
-			goto on_error;
-
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
-			continue;
-		if (git_revwalk_push(walk, git_reference_oid(ref)) < 0)
-			goto on_error;
-	}
-
-	git_strarray_free(&refs);
-	*out = walk;
-	return 0;
-
-on_error:
-	git_strarray_free(&refs);
-	return -1;
-}
-
 static int http_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
 {
 	transport_http *t = (transport_http *) transport;
@@ -470,7 +432,7 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	if (git_vector_init(common, 16, NULL) < 0)
 		return -1;
 
-	if (setup_walk(&walk, repo) < 0)
+	if (git_fetch_setup_walk(&walk, repo) < 0)
 		return -1;
 
 	do {
@@ -529,7 +491,8 @@ cleanup:
 }
 
 typedef struct {
-	git_filebuf *file;
+	git_indexer_stream *idx;
+	git_indexer_stats *stats;
 	transport_http *transport;
 } download_pack_cbdata;
 
@@ -545,10 +508,10 @@ static int on_body_download_pack(http_parser *parser, const char *str, size_t le
 {
 	download_pack_cbdata *data = (download_pack_cbdata *) parser->data;
 	transport_http *t = data->transport;
-	git_filebuf *file = data->file;
+	git_indexer_stream *idx = data->idx;
+	git_indexer_stats *stats = data->stats;
 
-
-	return t->error = git_filebuf_write(file, str, len);
+	return t->error = git_indexer_stream_add(idx, str, len, stats);
 }
 
 /*
@@ -557,30 +520,16 @@ static int on_body_download_pack(http_parser *parser, const char *str, size_t le
  * the simple downloader. Furthermore, we're using keep-alive
  * connections, so the simple downloader would just hang.
  */
-static int http_download_pack(char **out, git_transport *transport, git_repository *repo)
+static int http_download_pack(git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats)
 {
 	transport_http *t = (transport_http *) transport;
 	git_buf *oldbuf = &t->buf;
-	int ret = 0;
+	int recvd;
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
+	git_indexer_stream *idx = NULL;
 	download_pack_cbdata data;
-	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf path = GIT_BUF_INIT;
-	char suff[] = "/objects/pack/pack-received\0";
-
-	/*
-	 * This is part of the previous response, so we don't want to
-	 * re-init the parser, just set these two callbacks.
-	 */
-	data.file = &file;
-	data.transport = t;
-	t->parser.data = &data;
-	t->transfer_finished = 0;
-	memset(&settings, 0x0, sizeof(settings));
-	settings.on_message_complete = on_message_complete_download_pack;
-	settings.on_body = on_body_download_pack;
 
 	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
 
@@ -589,48 +538,50 @@ static int http_download_pack(char **out, git_transport *transport, git_reposito
 		return -1;
 	}
 
-	if (git_buf_joinpath(&path, repo->path_repository, suff) < 0)
+	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
+		return -1;
+
+
+	/*
+	 * This is part of the previous response, so we don't want to
+	 * re-init the parser, just set these two callbacks.
+	 */
+	memset(stats, 0, sizeof(git_indexer_stats));
+	data.stats = stats;
+	data.idx = idx;
+	data.transport = t;
+	t->parser.data = &data;
+	t->transfer_finished = 0;
+	memset(&settings, 0x0, sizeof(settings));
+	settings.on_message_complete = on_message_complete_download_pack;
+	settings.on_body = on_body_download_pack;
+	*bytes = oldbuf->size;
+
+	if (git_indexer_stream_add(idx, oldbuf->ptr, oldbuf->size, stats) < 0)
 		goto on_error;
 
-	if (git_filebuf_open(&file, path.ptr, GIT_FILEBUF_TEMPORARY) < 0)
-		goto on_error;
-
-	/* Part of the packfile has been received, don't loose it */
-	if (git_filebuf_write(&file, oldbuf->ptr, oldbuf->size) < 0)
-		goto on_error;
-
-	while(1) {
+	do {
 		size_t parsed;
 
-		ret = gitno_recv(&buf);
-		if (ret < 0)
+		if ((recvd = gitno_recv(&buf)) < 0)
 			goto on_error;
 
 		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
-		/* Both should happen at the same time */
 		if (parsed != buf.offset || t->error < 0)
-			return t->error;
+			goto on_error;
 
+		*bytes += recvd;
 		gitno_consume_n(&buf, parsed);
+	} while (recvd > 0 && !t->transfer_finished);
 
-		if (ret == 0 || t->transfer_finished) {
-			break;
-		}
-	}
+	if (git_indexer_stream_finalize(idx, stats) < 0)
+		goto on_error;
 
-	*out = git__strdup(file.path_lock);
-	GITERR_CHECK_ALLOC(*out);
-
-	/* A bit dodgy, but we need to keep the pack at the temporary path */
-	ret = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);
-
-	git_buf_free(&path);
-
+	git_indexer_stream_free(idx);
 	return 0;
 
 on_error:
-	git_filebuf_cleanup(&file);
-	git_buf_free(&path);
+	git_indexer_stream_free(idx);
 	return -1;
 }
 

@@ -41,7 +41,7 @@ GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *git
  * @param size the size of the data
  * @param stats stat storage
  */
-GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, void *data, size_t size, git_indexer_stats *stats);
+GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_indexer_stats *stats);
 
 /**
  * Finalize the pack and index

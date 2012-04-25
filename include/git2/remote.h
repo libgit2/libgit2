@@ -11,6 +11,7 @@
 #include "repository.h"
 #include "refspec.h"
 #include "net.h"
+#include "indexer.h"
 
 /**
  * @file git2/remote.h
@@ -150,7 +151,7 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  * @param filename where to store the temproray filename
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_remote_download(char **filename, git_remote *remote);
+GIT_EXTERN(int) git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats);
 
 /**
  * Check whether the remote is connected
@@ -182,12 +183,10 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
 /**
  * Update the tips to the new state
  *
- * Make sure that you only call this once you've successfully indexed
- * or expanded the packfile.
- *
  * @param remote the remote to update
+ * @param cb callback to run on each ref update. 'a' is the old value, 'b' is then new value
  */
-GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
+GIT_EXTERN(int) git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, const git_oid *a, const git_oid *b));
 
 /**
  * Return whether a string is a valid remote URL

@@ -297,23 +297,24 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 	return remote->transport->ls(remote->transport, list_cb, payload);
 }
 
-int git_remote_download(char **filename, git_remote *remote)
+int git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
 {
 	int error;
 
-	assert(filename && remote);
+	assert(remote && bytes && stats);
 
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return error;
 
-	return git_fetch_download_pack(filename, remote);
+	return git_fetch_download_pack(remote, bytes, stats);
 }
 
-int git_remote_update_tips(git_remote *remote)
+int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, const git_oid *a, const git_oid *b))
 {
 	int error = 0;
 	unsigned int i = 0;
 	git_buf refname = GIT_BUF_INIT;
+	git_oid old;
 	git_vector *refs = &remote->refs;
 	git_remote_head *head;
 	git_reference *ref;
@@ -338,17 +339,36 @@ int git_remote_update_tips(git_remote *remote)
 		head = refs->contents[i];
 
 		if (git_refspec_transform_r(&refname, spec, head->name) < 0)
-			break;
+			goto on_error;
+
+		error = git_reference_name_to_oid(&old, remote->repo, refname.ptr);
+		if (error < 0 && error != GIT_ENOTFOUND)
+			goto on_error;
+
+		if (error == GIT_ENOTFOUND)
+			memset(&old, 0, GIT_OID_RAWSZ);
+
+		if (!git_oid_cmp(&old, &head->oid))
+			continue;
 
 		if (git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, 1) < 0)
 			break;
 
 		git_reference_free(ref);
+
+		if (cb != NULL) {
+			if (cb(refname.ptr, &old, &head->oid) < 0)
+				goto on_error;
+		}
 	}
 
 	git_buf_free(&refname);
+	return 0;
 
-	return error;
+on_error:
+	git_buf_free(&refname);
+	return -1;
+
 }
 
 int git_remote_connected(git_remote *remote)
