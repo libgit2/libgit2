@@ -39,6 +39,25 @@ exit:
 	pthread_exit(&data->ret);
 }
 
+int update_cb(const char *refname, const git_oid *a, const git_oid *b)
+{
+	const char *action;
+	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
+
+	git_oid_fmt(b_str, b);
+	b_str[GIT_OID_HEXSZ] = '\0';
+
+	if (git_oid_iszero(a)) {
+		printf("[new]     %.20s %s\n", b_str, refname);
+	} else {
+		git_oid_fmt(a_str, a);
+		a_str[GIT_OID_HEXSZ] = '\0';
+		printf("[updated] %.10s..%.10s %s\n", a_str, b_str, refname);
+	}
+
+	return 0;
+}
+
 int fetch(git_repository *repo, int argc, char **argv)
 {
   git_remote *remote = NULL;
@@ -78,7 +97,7 @@ int fetch(git_repository *repo, int argc, char **argv)
   // right commits. This may be needed even if there was no packfile
   // to download, which can happen e.g. when the branches have been
   // changed but all the neede objects are available locally.
-  if (git_remote_update_tips(remote) < 0)
+  if (git_remote_update_tips(remote, update_cb) < 0)
 	  return -1;
 
   git_remote_free(remote);
