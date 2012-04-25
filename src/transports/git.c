@@ -293,41 +293,22 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 {
 	transport_git *t = (transport_git *) transport;
 	git_revwalk *walk;
-	git_reference *ref;
-	git_strarray refs;
 	git_oid oid;
 	int error;
 	unsigned int i;
+	git_buf data = GIT_BUF_INIT;
 	gitno_buffer *buf = &t->buf;
 
-	if (git_pkt_send_wants(wants, &t->caps, t->socket) < 0)
+	if (git_pkt_buffer_wants(wants, &t->caps, &data) < 0)
 		return -1;
 
-	if (git_reference_listall(&refs, repo, GIT_REF_LISTALL) < 0)
-		return -1;
+	if (git_fetch_setup_walk(&walk, repo) < 0)
+		goto on_error;
 
-	if (git_revwalk_new(&walk, repo) < 0)
-		return -1;
+	if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+		goto on_error;
 
-	git_revwalk_sorting(walk, GIT_SORT_TIME);
-
-	for (i = 0; i < refs.count; ++i) {
-		/* No tags */
-		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
-			continue;
-
-		if (git_reference_lookup(&ref, repo, refs.strings[i]) < 0)
-			goto on_error;
-
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
-			continue;
-
-		if ((error = git_revwalk_push(walk, git_reference_oid(ref))) < 0)
-			goto on_error;
-
-	}
-	git_strarray_free(&refs);
-
+	git_buf_clear(&data);
 	/*
 	 * We don't support any kind of ACK extensions, so the negotiation
 	 * boils down to sending what we have and listening for an ACK
@@ -335,12 +316,18 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 	 */
 	i = 0;
 	while ((error = git_revwalk_next(&oid, walk)) == 0) {
-		error = git_pkt_send_have(&oid, t->socket);
+		git_pkt_buffer_have(&oid, &data);
 		i++;
 		if (i % 20 == 0) {
 			int pkt_type;
 
-			git_pkt_send_flush(t->socket);
+			git_pkt_buffer_flush(&data);
+			if (git_buf_oom(&data))
+				goto on_error;
+
+			if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+				goto on_error;
+
 			pkt_type = recv_pkt(buf);
 
 			if (pkt_type == GIT_PKT_ACK) {
@@ -354,35 +341,27 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 		}
 	}
-	if (error != GIT_EREVWALKOVER)
+	if (error < 0 && error != GIT_EREVWALKOVER)
 		goto on_error;
 
-	git_pkt_send_flush(t->socket);
-	git_pkt_send_done(t->socket);
+	/* Tell the other end that we're done negotiating */
+	git_buf_clear(&data);
+	git_pkt_buffer_flush(&data);
+	git_pkt_buffer_done(&data);
+	if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+		goto on_error;
 
+	git_buf_free(&data);
 	git_revwalk_free(walk);
 	return 0;
 
 on_error:
+	git_buf_free(&data);
 	git_revwalk_free(walk);
 	return -1;
 }
 
-static int git_send_flush(git_transport *transport)
-{
-	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_flush(t->socket);
-}
-
-static int git_send_done(git_transport *transport)
-{
-	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_done(t->socket);
-}
-
-static int git_download_pack(char **out, git_transport *transport, git_repository *repo)
+static int git_download_pack(git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats)
 {
 	transport_git *t = (transport_git *) transport;
 	int error = 0, read_bytes;
@@ -410,7 +389,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 
 			if (pkt->type == GIT_PKT_PACK) {
 				git__free(pkt);
-				return git_fetch__download_pack(out, buf->data, buf->offset, t->socket, repo);
+				return git_fetch__download_pack(buf->data, buf->offset, t->socket, repo, bytes, stats);
 			}
 
 			/* For now we don't care about anything */
@@ -423,7 +402,6 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 
 	return read_bytes;
 }
-
 
 static int git_close(git_transport *transport)
 {
@@ -476,8 +454,6 @@ int git_transport_git(git_transport **out)
 	t->parent.connect = git_connect;
 	t->parent.ls = git_ls;
 	t->parent.negotiate_fetch = git_negotiate_fetch;
-	t->parent.send_flush = git_send_flush;
-	t->parent.send_done = git_send_done;
 	t->parent.download_pack = git_download_pack;
 	t->parent.close = git_close;
 	t->parent.free = git_free;

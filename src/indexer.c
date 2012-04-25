@@ -288,7 +288,7 @@ on_error:
 	return -1;
 }
 
-int git_indexer_stream_add(git_indexer_stream *idx, void *data, size_t size, git_indexer_stats *stats)
+int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_indexer_stats *stats)
 {
 	int error;
 	struct git_pack_header hdr;
