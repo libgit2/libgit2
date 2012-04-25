@@ -14,6 +14,9 @@
 #include "repository.h"
 #include "pool.h"
 
+#define DIFF_SRC_PREFIX_DEFAULT "a/"
+#define DIFF_DST_PREFIX_DEFAULT "b/"
+
 enum {
 	GIT_DIFFCAPS_HAS_SYMLINKS     = (1 << 0), /* symlinks on platform? */
 	GIT_DIFFCAPS_ASSUME_UNCHANGED = (1 << 1), /* use stat? */
