@@ -10,14 +10,14 @@
 #include "odb.h"
 #include "pqueue.h"
 #include "pool.h"
-#include "khash_oid.h"
+#include "oidmap.h"
 
 #include "git2/revwalk.h"
 #include "git2/merge.h"
 
 #include <regex.h>
 
-GIT_KHASH_OID__IMPLEMENTATION;
+GIT__USE_OIDMAP;
 
 #define PARENT1  (1 << 0)
 #define PARENT2  (1 << 1)
@@ -48,7 +48,7 @@ struct git_revwalk {
 	git_repository *repo;
 	git_odb *odb;
 
-	git_khash_oid *commits;
+	git_oidmap *commits;
 	git_pool commit_pool;
 
 	commit_list *iterator_topo;
@@ -726,7 +726,7 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 	memset(walk, 0x0, sizeof(git_revwalk));
 
-	walk->commits = git_khash_oid_alloc();
+	walk->commits = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(walk->commits);
 
 	if (git_pqueue_init(&walk->iterator_time, 8, commit_time_cmp) < 0 ||
@@ -757,7 +757,7 @@ void git_revwalk_free(git_revwalk *walk)
 	git_revwalk_reset(walk);
 	git_odb_free(walk->odb);
 
-	git_khash_oid_free(walk->commits);
+	git_oidmap_free(walk->commits);
 	git_pool_clear(&walk->commit_pool);
 	git_pqueue_free(&walk->iterator_time);
 	git_vector_free(&walk->twos);

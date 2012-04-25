@@ -12,13 +12,13 @@
 #include "buffer.h"
 #include "git2/config.h"
 #include "git2/types.h"
-#include "khash_str.h"
+#include "strmap.h"
 
 #include <ctype.h>
 #include <sys/types.h>
 #include <regex.h>
 
-GIT_KHASH_STR__IMPLEMENTATION;
+GIT__USE_STRMAP;
 
 typedef struct cvar_t {
 	struct cvar_t *next;
@@ -72,7 +72,7 @@ typedef struct {
 typedef struct {
 	git_config_file parent;
 
-	git_khash_str *values;
+	git_strmap *values;
 
 	struct {
 		git_buf buffer;
@@ -132,21 +132,21 @@ static int normalize_name(const char *in, char **out)
 	return 0;
 }
 
-static void free_vars(git_khash_str *values)
+static void free_vars(git_strmap *values)
 {
 	cvar_t *var = NULL;
 
 	if (values == NULL)
 		return;
 
-	git_khash_str_foreach_value(values, var,
+	git_strmap_foreach_value(values, var,
 		while (var != NULL) {
 			cvar_t *next = CVAR_LIST_NEXT(var);
 			cvar_free(var);
 			var = next;
 		});
 
-	git_khash_str_free(values);
+	git_strmap_free(values);
 }
 
 static int config_open(git_config_file *cfg)
@@ -154,7 +154,7 @@ static int config_open(git_config_file *cfg)
 	int res;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
-	b->values = git_khash_str_alloc();
+	b->values = git_strmap_alloc();
 	GITERR_CHECK_ALLOC(b->values);
 
 	git_buf_init(&b->reader.buffer, 0);
@@ -196,7 +196,7 @@ static int file_foreach(git_config_file *backend, int (*fn)(const char *, const 
 	if (!b->values)
 		return 0;
 
-	git_khash_str_foreach(b->values, key, var,
+	git_strmap_foreach(b->values, key, var,
 		do {
 			if (fn(key, var->value, data) < 0)
 				break;
@@ -223,9 +223,9 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 	 * Try to find it in the existing values and update it if it
 	 * only has one value.
 	 */
-	pos = git_khash_str_lookup_index(b->values, key);
-	if (git_khash_str_valid_index(b->values, pos)) {
-		cvar_t *existing = git_khash_str_value_at(b->values, pos);
+	pos = git_strmap_lookup_index(b->values, key);
+	if (git_strmap_valid_index(b->values, pos)) {
+		cvar_t *existing = git_strmap_value_at(b->values, pos);
 		char *tmp = NULL;
 
 		git__free(key);
@@ -258,7 +258,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		GITERR_CHECK_ALLOC(var->value);
 	}
 
-	git_khash_str_insert2(b->values, key, var, old_var, rval);
+	git_strmap_insert2(b->values, key, var, old_var, rval);
 	if (rval < 0)
 		return -1;
 	if (old_var != NULL)
@@ -284,14 +284,14 @@ static int config_get(git_config_file *cfg, const char *name, const char **out)
 	if (normalize_name(name, &key) < 0)
 		return -1;
 
-	pos = git_khash_str_lookup_index(b->values, key);
+	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
 
 	/* no error message; the config system will write one */
-	if (!git_khash_str_valid_index(b->values, pos))
+	if (!git_strmap_valid_index(b->values, pos))
 		return GIT_ENOTFOUND;
 
-	*out = ((cvar_t *)git_khash_str_value_at(b->values, pos))->value;
+	*out = ((cvar_t *)git_strmap_value_at(b->values, pos))->value;
 
 	return 0;
 }
@@ -311,13 +311,13 @@ static int config_get_multivar(
 	if (normalize_name(name, &key) < 0)
 		return -1;
 
-	pos = git_khash_str_lookup_index(b->values, key);
+	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
 
-	if (!git_khash_str_valid_index(b->values, pos))
+	if (!git_strmap_valid_index(b->values, pos))
 		return GIT_ENOTFOUND;
 
-	var = git_khash_str_value_at(b->values, pos);
+	var = git_strmap_value_at(b->values, pos);
 
 	if (regex_str != NULL) {
 		regex_t regex;
@@ -374,13 +374,13 @@ static int config_set_multivar(
 	if (normalize_name(name, &key) < 0)
 		return -1;
 
-	pos = git_khash_str_lookup_index(b->values, key);
-	if (!git_khash_str_valid_index(b->values, pos)) {
+	pos = git_strmap_lookup_index(b->values, key);
+	if (!git_strmap_valid_index(b->values, pos)) {
 		git__free(key);
 		return GIT_ENOTFOUND;
 	}
 
-	var = git_khash_str_value_at(b->values, pos);
+	var = git_strmap_value_at(b->values, pos);
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result < 0) {
@@ -440,20 +440,20 @@ static int config_delete(git_config_file *cfg, const char *name)
 	if (normalize_name(name, &key) < 0)
 		return -1;
 
-	pos = git_khash_str_lookup_index(b->values, key);
+	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
 
-	if (!git_khash_str_valid_index(b->values, pos))
+	if (!git_strmap_valid_index(b->values, pos))
 		return GIT_ENOTFOUND;
 
-	var = git_khash_str_value_at(b->values, pos);
+	var = git_strmap_value_at(b->values, pos);
 
 	if (var->next != NULL) {
 		giterr_set(GITERR_CONFIG, "Cannot delete multivar with a single delete");
 		return -1;
 	}
 
-	git_khash_str_delete_at(b->values, pos);
+	git_strmap_delete_at(b->values, pos);
 
 	result = config_write(b, var->key, NULL, NULL);
 
@@ -914,14 +914,14 @@ static int config_parse(diskfile_backend *cfg_file)
 			var->value = var_value;
 
 			/* Add or append the new config option */
-			pos = git_khash_str_lookup_index(cfg_file->values, var->key);
-			if (!git_khash_str_valid_index(cfg_file->values, pos)) {
-				git_khash_str_insert(cfg_file->values, var->key, var, result);
+			pos = git_strmap_lookup_index(cfg_file->values, var->key);
+			if (!git_strmap_valid_index(cfg_file->values, pos)) {
+				git_strmap_insert(cfg_file->values, var->key, var, result);
 				if (result < 0)
 					break;
 				result = 0;
 			} else {
-				existing = git_khash_str_value_at(cfg_file->values, pos);
+				existing = git_strmap_value_at(cfg_file->values, pos);
 				while (existing->next != NULL) {
 					existing = existing->next;
 				}

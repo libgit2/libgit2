@@ -9,7 +9,6 @@
 
 #include "git2/attr.h"
 #include "vector.h"
-#include "hashtable.h"
 #include "pool.h"
 
 #define GIT_ATTR_FILE			".gitattributes"

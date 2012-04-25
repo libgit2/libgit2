@@ -8,7 +8,7 @@
 #define INCLUDE_attr_h__
 
 #include "attr_file.h"
-#include "khash_str.h"
+#include "strmap.h"
 
 #define GIT_ATTR_CONFIG   "core.attributesfile"
 #define GIT_IGNORE_CONFIG "core.excludesfile"
@@ -16,8 +16,8 @@
 typedef struct {
 	int initialized;
 	git_pool pool;
-	git_khash_str *files;	/* hash path to git_attr_file of rules */
-	git_khash_str *macros;	/* hash name to vector<git_attr_assignment> */
+	git_strmap *files;	/* hash path to git_attr_file of rules */
+	git_strmap *macros;	/* hash name to vector<git_attr_assignment> */
 	const char *cfg_attr_file; /* cached value of core.attributesfile */
 	const char *cfg_excl_file; /* cached value of core.excludesfile */
 } git_attr_cache;

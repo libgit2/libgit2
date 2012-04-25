@@ -89,17 +89,17 @@ static void submodule_release(git_submodule *sm, int decr)
 }
 
 static int submodule_from_entry(
-	git_khash_str *smcfg, git_index_entry *entry)
+	git_strmap *smcfg, git_index_entry *entry)
 {
 	git_submodule *sm;
 	void *old_sm;
 	khiter_t pos;
 	int error;
 
-	pos = git_khash_str_lookup_index(smcfg, entry->path);
+	pos = git_strmap_lookup_index(smcfg, entry->path);
 
-	if (git_khash_str_valid_index(smcfg, pos))
-		sm = git_khash_str_value_at(smcfg, pos);
+	if (git_strmap_valid_index(smcfg, pos))
+		sm = git_strmap_value_at(smcfg, pos);
 	else
 		sm = submodule_alloc(entry->path);
 
@@ -115,7 +115,7 @@ static int submodule_from_entry(
 			goto fail;
 	}
 
-	git_khash_str_insert2(smcfg, sm->path, sm, old_sm, error);
+	git_strmap_insert2(smcfg, sm->path, sm, old_sm, error);
 	if (error < 0)
 		goto fail;
 	sm->refcount++;
@@ -135,7 +135,7 @@ fail:
 static int submodule_from_config(
 	const char *key, const char *value, void *data)
 {
-	git_khash_str *smcfg = data;
+	git_strmap *smcfg = data;
 	const char *namestart;
 	const char *property;
 	git_buf name = GIT_BUF_INIT;
@@ -158,13 +158,13 @@ static int submodule_from_config(
 	if (git_buf_set(&name, namestart, property - namestart - 1) < 0)
 		return -1;
 
-	pos = git_khash_str_lookup_index(smcfg, name.ptr);
-	if (!git_khash_str_valid_index(smcfg, pos) && is_path)
-		pos = git_khash_str_lookup_index(smcfg, value);
-	if (!git_khash_str_valid_index(smcfg, pos))
+	pos = git_strmap_lookup_index(smcfg, name.ptr);
+	if (!git_strmap_valid_index(smcfg, pos) && is_path)
+		pos = git_strmap_lookup_index(smcfg, value);
+	if (!git_strmap_valid_index(smcfg, pos))
 		sm = submodule_alloc(name.ptr);
 	else
-		sm = git_khash_str_value_at(smcfg, pos);
+		sm = git_strmap_value_at(smcfg, pos);
 	if (!sm)
 		goto fail;
 
@@ -172,7 +172,7 @@ static int submodule_from_config(
 		assert(sm->path == sm->name);
 		sm->name = git_buf_detach(&name);
 
-		git_khash_str_insert2(smcfg, sm->name, sm, old_sm, error);
+		git_strmap_insert2(smcfg, sm->name, sm, old_sm, error);
 		if (error < 0)
 			goto fail;
 		sm->refcount++;
@@ -183,7 +183,7 @@ static int submodule_from_config(
 		if (sm->path == NULL)
 			goto fail;
 
-		git_khash_str_insert2(smcfg, sm->path, sm, old_sm, error);
+		git_strmap_insert2(smcfg, sm->path, sm, old_sm, error);
 		if (error < 0)
 			goto fail;
 		sm->refcount++;
@@ -247,7 +247,7 @@ static int load_submodule_config(git_repository *repo)
 	git_index *index;
 	unsigned int i, max_i;
 	git_oid gitmodules_oid;
-	git_khash_str *smcfg;
+	git_strmap *smcfg;
 	struct git_config_file *mods = NULL;
 
 	if (repo->submodules)
@@ -257,7 +257,7 @@ static int load_submodule_config(git_repository *repo)
 	 * under both its name and its path.  These are usually the same, but
 	 * that is not guaranteed.
 	 */
-	smcfg = git_khash_str_alloc();
+	smcfg = git_strmap_alloc();
 	GITERR_CHECK_ALLOC(smcfg);
 
 	/* scan index for gitmodules (and .gitmodules entry) */
@@ -307,13 +307,13 @@ cleanup:
 	if (mods != NULL)
 		git_config_file_free(mods);
 	if (error)
-		git_khash_str_free(smcfg);
+		git_strmap_free(smcfg);
 	return error;
 }
 
 void git_submodule_config_free(git_repository *repo)
 {
-	git_khash_str *smcfg = repo->submodules;
+	git_strmap *smcfg = repo->submodules;
 	git_submodule *sm;
 
 	repo->submodules = NULL;
@@ -321,10 +321,10 @@ void git_submodule_config_free(git_repository *repo)
 	if (smcfg == NULL)
 		return;
 
-	git_khash_str_foreach_value(smcfg, sm, {
+	git_strmap_foreach_value(smcfg, sm, {
 		submodule_release(sm,1);
 	});
-	git_khash_str_free(smcfg);
+	git_strmap_free(smcfg);
 }
 
 static int submodule_cmp(const void *a, const void *b)
@@ -345,7 +345,7 @@ int git_submodule_foreach(
 	if ((error = load_submodule_config(repo)) < 0)
 		return error;
 
-	git_khash_str_foreach_value(repo->submodules, sm, {
+	git_strmap_foreach_value(repo->submodules, sm, {
 		/* usually the following will not come into play */
 		if (sm->refcount > 1) {
 			if (git_vector_bsearch(&seen, sm) != GIT_ENOTFOUND)
@@ -373,12 +373,12 @@ int git_submodule_lookup(
 	if (load_submodule_config(repo) < 0)
 		return -1;
 
-	pos = git_khash_str_lookup_index(repo->submodules, name);
-	if (!git_khash_str_valid_index(repo->submodules, pos))
+	pos = git_strmap_lookup_index(repo->submodules, name);
+	if (!git_strmap_valid_index(repo->submodules, pos))
 		return GIT_ENOTFOUND;
 
 	if (sm_ptr)
-		*sm_ptr = git_khash_str_value_at(repo->submodules, pos);
+		*sm_ptr = git_strmap_value_at(repo->submodules, pos);
 
 	return 0;
 }

@@ -7,7 +7,6 @@
 
 #include "common.h"
 #include "fileops.h"
-#include "hashtable.h"
 #include "config.h"
 #include "git2/config.h"
 #include "vector.h"

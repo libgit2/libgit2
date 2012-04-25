@@ -15,7 +15,7 @@
 #include <git2/tag.h>
 #include <git2/object.h>
 
-GIT_KHASH_STR__IMPLEMENTATION;
+GIT__USE_STRMAP;
 
 #define DEFAULT_NESTING_LEVEL	5
 #define MAX_NESTING_LEVEL		10
@@ -423,7 +423,7 @@ static int packed_load(git_repository *repo)
 
 	/* First we make sure we have allocated the hash table */
 	if (ref_cache->packfile == NULL) {
-		ref_cache->packfile = git_khash_str_alloc();
+		ref_cache->packfile = git_strmap_alloc();
 		GITERR_CHECK_ALLOC(ref_cache->packfile);
 	}
 
@@ -438,7 +438,7 @@ static int packed_load(git_repository *repo)
 	 * refresh the packed refs.
 	 */
 	if (result == GIT_ENOTFOUND) {
-		git_khash_str_clear(ref_cache->packfile);
+		git_strmap_clear(ref_cache->packfile);
 		return 0;
 	}
 
@@ -452,7 +452,7 @@ static int packed_load(git_repository *repo)
 	 * At this point, we want to refresh the packed refs. We already
 	 * have the contents in our buffer.
 	 */
-	git_khash_str_clear(ref_cache->packfile);
+	git_strmap_clear(ref_cache->packfile);
 
 	buffer_start = (const char *)packfile.ptr;
 	buffer_end = (const char *)(buffer_start) + packfile.size;
@@ -477,7 +477,7 @@ static int packed_load(git_repository *repo)
 				goto parse_failed;
 		}
 
-		git_khash_str_insert(ref_cache->packfile, ref->name, ref, err);
+		git_strmap_insert(ref_cache->packfile, ref->name, ref, err);
 		if (err < 0)
 			goto parse_failed;
 	}
@@ -486,7 +486,7 @@ static int packed_load(git_repository *repo)
 	return 0;
 
 parse_failed:
-	git_khash_str_free(ref_cache->packfile);
+	git_strmap_free(ref_cache->packfile);
 	ref_cache->packfile = NULL;
 	git_buf_free(&packfile);
 	return -1;
@@ -512,7 +512,7 @@ static int _dirent_loose_listall(void *_data, git_buf *full_path)
 
 	/* do not add twice a reference that exists already in the packfile */
 	if ((data->list_flags & GIT_REF_PACKED) != 0 &&
-		git_khash_str_exists(data->repo->references.packfile, file_path))
+		git_strmap_exists(data->repo->references.packfile, file_path))
 		return 0;
 
 	if (data->list_flags != GIT_REF_LISTALL) {
@@ -539,7 +539,7 @@ static int _dirent_loose_load(void *data, git_buf *full_path)
 	if (loose_lookup_to_packfile(&ref, repository, file_path) < 0)
 		return -1;
 
-	git_khash_str_insert2(
+	git_strmap_insert2(
 		repository->references.packfile, ref->name, ref, old_ref, err);
 	if (err < 0) {
 		git__free(ref);
@@ -737,7 +737,7 @@ static int packed_write(git_repository *repo)
 	assert(repo && repo->references.packfile);
 
 	total_refs =
-		(unsigned int)git_khash_str_num_entries(repo->references.packfile);
+		(unsigned int)git_strmap_num_entries(repo->references.packfile);
 
 	if (git_vector_init(&packing_list, total_refs, packed_sort) < 0)
 		return -1;
@@ -747,7 +747,7 @@ static int packed_write(git_repository *repo)
 		struct packref *reference;
 
 		/* cannot fail: vector already has the right size */
-		git_khash_str_foreach_value(repo->references.packfile, reference, {
+		git_strmap_foreach_value(repo->references.packfile, reference, {
 			git_vector_insert(&packing_list, reference);
 		});
 	}
@@ -873,7 +873,7 @@ static int reference_exists(int *exists, git_repository *repo, const char *ref_n
 		return -1;
 
 	if (git_path_isfile(ref_path.ptr) == true ||
-		git_khash_str_exists(repo->references.packfile, ref_path.ptr))
+		git_strmap_exists(repo->references.packfile, ref_path.ptr))
 	{
 		*exists = 1;
 	} else {
@@ -940,7 +940,7 @@ static int reference_can_write(
 static int packed_lookup(git_reference *ref)
 {
 	struct packref *pack_ref = NULL;
-	git_khash_str *packfile_refs;
+	git_strmap *packfile_refs;
 	khiter_t pos;
 
 	if (packed_load(ref->owner) < 0)
@@ -959,13 +959,13 @@ static int packed_lookup(git_reference *ref)
 
 	/* Look up on the packfile */
 	packfile_refs = ref->owner->references.packfile;
-	pos = git_khash_str_lookup_index(packfile_refs, ref->name);
-	if (!git_khash_str_valid_index(packfile_refs, pos)) {
+	pos = git_strmap_lookup_index(packfile_refs, ref->name);
+	if (!git_strmap_valid_index(packfile_refs, pos)) {
 		giterr_set(GITERR_REFERENCE, "Reference '%s' not found", ref->name);
 		return GIT_ENOTFOUND;
 	}
 
-	pack_ref = git_khash_str_value_at(packfile_refs, pos);
+	pack_ref = git_strmap_value_at(packfile_refs, pos);
 
 	ref->flags = GIT_REF_OID | GIT_REF_PACKED;
 	ref->mtime = ref->owner->references.packfile_time;
@@ -1011,7 +1011,7 @@ static int reference_delete(git_reference *ref)
 	 * We need to reload the packfile, remove the reference from the
 	 * packing list, and repack */
 	if (ref->flags & GIT_REF_PACKED) {
-		git_khash_str *packfile_refs;
+		git_strmap *packfile_refs;
 		struct packref *packref;
 		khiter_t pos;
 
@@ -1020,15 +1020,15 @@ static int reference_delete(git_reference *ref)
 			return -1;
 
 		packfile_refs = ref->owner->references.packfile;
-		pos = git_khash_str_lookup_index(packfile_refs, ref->name);
-		if (!git_khash_str_valid_index(packfile_refs, pos)) {
+		pos = git_strmap_lookup_index(packfile_refs, ref->name);
+		if (!git_strmap_valid_index(packfile_refs, pos)) {
 			giterr_set(GITERR_REFERENCE,
 				"Reference %s stopped existing in the packfile", ref->name);
 			return -1;
 		}
 
-		packref = git_khash_str_value_at(packfile_refs, pos);
-		git_khash_str_delete_at(packfile_refs, pos);
+		packref = git_strmap_value_at(packfile_refs, pos);
+		git_strmap_delete_at(packfile_refs, pos);
 
 		git__free(packref);
 		if (packed_write(ref->owner) < 0)
@@ -1488,7 +1488,7 @@ int git_reference_foreach(
 		if (packed_load(repo) < 0)
 			return -1;
 
-		git_khash_str_foreach(repo->references.packfile, ref_name, ref, {
+		git_strmap_foreach(repo->references.packfile, ref_name, ref, {
 			if (callback(ref_name, payload) < 0)
 				return 0;
 		});
@@ -1555,11 +1555,11 @@ void git_repository__refcache_free(git_refcache *refs)
 	if (refs->packfile) {
 		struct packref *reference;
 
-		git_khash_str_foreach_value(refs->packfile, reference, {
+		git_strmap_foreach_value(refs->packfile, reference, {
 			git__free(reference);
 		});
 
-		git_khash_str_free(refs->packfile);
+		git_strmap_free(refs->packfile);
 	}
 }
 
