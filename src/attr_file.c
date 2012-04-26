@@ -403,7 +403,8 @@ int git_attr_fnmatch__parse(
 		/* given an unrooted fullpath match from a file inside a repo,
 		 * prefix the pattern with the relative directory of the source file
 		 */
-		spec->pattern = git_pool_malloc(pool, sourcelen + spec->length + 1);
+		spec->pattern = git_pool_malloc(
+			pool, (uint32_t)(sourcelen + spec->length + 1));
 		if (spec->pattern) {
 			memcpy(spec->pattern, source, sourcelen);
 			memcpy(spec->pattern + sourcelen, pattern, spec->length);

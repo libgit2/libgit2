@@ -196,8 +196,8 @@ static const double __ac_HASH_UPPER = 0.77;
 	SCOPE void kh_destroy_##name(kh_##name##_t *h)						\
 	{																	\
 		if (h) {														\
-			kfree(h->keys); kfree(h->flags);								\
-			kfree(h->vals);												\
+			kfree((void *)h->keys); kfree(h->flags);					\
+			kfree((void *)h->vals);										\
 			kfree(h);													\
 		}																\
 	}																	\
@@ -235,11 +235,11 @@ static const double __ac_HASH_UPPER = 0.77;
 				if (!new_flags) return -1;								\
 				memset(new_flags, 0xaa, __ac_fsize(new_n_buckets) * sizeof(khint32_t)); \
 				if (h->n_buckets < new_n_buckets) {	/* expand */		\
-					khkey_t *new_keys = (khkey_t*)krealloc(h->keys, new_n_buckets * sizeof(khkey_t)); \
+					khkey_t *new_keys = (khkey_t*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
 					if (!new_keys) return -1;							\
 					h->keys = new_keys;									\
 					if (kh_is_map) {									\
-						khval_t *new_vals = (khval_t*)krealloc(h->vals, new_n_buckets * sizeof(khval_t)); \
+						khval_t *new_vals = (khval_t*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
 						if (!new_vals) return -1;						\
 						h->vals = new_vals;								\
 					}													\
@@ -275,8 +275,8 @@ static const double __ac_HASH_UPPER = 0.77;
 				}														\
 			}															\
 			if (h->n_buckets > new_n_buckets) { /* shrink the hash table */ \
-				h->keys = (khkey_t*)krealloc(h->keys, new_n_buckets * sizeof(khkey_t)); \
-				if (kh_is_map) h->vals = (khval_t*)krealloc(h->vals, new_n_buckets * sizeof(khval_t)); \
+				h->keys = (khkey_t*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
+				if (kh_is_map) h->vals = (khval_t*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
 			}															\
 			kfree(h->flags); /* free the working space */				\
 			h->flags = new_flags;										\
@@ -376,8 +376,8 @@ static const double __ac_HASH_UPPER = 0.77;
  */
 static inline khint_t __ac_X31_hash_string(const char *s)
 {
-	khint_t h = *s;
-	if (h) for (++s ; *s; ++s) h = (h << 5) - h + *s;
+	khint_t h = (khint_t)*s;
+	if (h) for (++s ; *s; ++s) h = (h << 5) - h + (khint_t)*s;
 	return h;
 }
 /*! @function

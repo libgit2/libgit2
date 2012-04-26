@@ -376,7 +376,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		git__free(obj.data);
 
-		stats->processed = ++processed;
+		stats->processed = (unsigned int)++processed;
 	}
 
 	return 0;

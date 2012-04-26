@@ -141,7 +141,7 @@ static commit_object **alloc_parents(
 		return (commit_object **)((char *)commit + sizeof(commit_object));
 
 	return (commit_object **)git_pool_malloc(
-		&walk->commit_pool, n_parents * sizeof(commit_object *));
+		&walk->commit_pool, (uint32_t)(n_parents * sizeof(commit_object *)));
 }
 
 

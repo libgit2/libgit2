@@ -190,7 +190,7 @@ char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
 
 	assert(pool && str && pool->item_size == sizeof(char));
 
-	if ((ptr = git_pool_malloc(pool, n + 1)) != NULL) {
+	if ((ptr = git_pool_malloc(pool, (uint32_t)(n + 1))) != NULL) {
 		memcpy(ptr, str, n);
 		*(((char *)ptr) + n) = '\0';
 	}
@@ -216,7 +216,7 @@ char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
 	len_a = a ? strlen(a) : 0;
 	len_b = b ? strlen(b) : 0;
 
-	if ((ptr = git_pool_malloc(pool, len_a + len_b + 1)) != NULL) {
+	if ((ptr = git_pool_malloc(pool, (uint32_t)(len_a + len_b + 1))) != NULL) {
 		if (len_a)
 			memcpy(ptr, a, len_a);
 		if (len_b)
@@ -256,12 +256,12 @@ bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
 {
 	git_pool_page *scan;
 	for (scan = pool->open; scan != NULL; scan = scan->next)
-		if ( ((void *)scan->data) <= ptr &&
-			(((void *)scan->data) + scan->size) > ptr)
+		if ((void *)scan->data <= ptr &&
+			(void *)(((char *)scan->data) + scan->size) > ptr)
 			return true;
 	for (scan = pool->full; scan != NULL; scan = scan->next)
-		if ( ((void *)scan->data) <= ptr &&
-			(((void *)scan->data) + scan->size) > ptr)
+		if ((void *)scan->data <= ptr &&
+			(void *)(((char *)scan->data) + scan->size) > ptr)
 			return true;
 	return false;
 }

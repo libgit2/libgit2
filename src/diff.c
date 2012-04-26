@@ -313,7 +313,8 @@ static git_diff_list *git_diff_list_alloc(
 	if (!diff_pathspec_is_interesting(&opts->pathspec))
 		return diff;
 
-	if (git_vector_init(&diff->pathspec, opts->pathspec.count, NULL) < 0)
+	if (git_vector_init(
+		&diff->pathspec, (unsigned int)opts->pathspec.count, NULL) < 0)
 		goto fail;
 
 	for (i = 0; i < opts->pathspec.count; ++i) {
