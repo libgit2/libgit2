@@ -25,6 +25,7 @@ void test_attr_lookup__simple(void)
 	cl_git_pass(git_attr_file__lookup_one(file,&path,"missing",&value));
 	cl_assert(!value);
 
+	git_attr_path__free(&path);
 	git_attr_file__free(file);
 }
 
@@ -45,6 +46,8 @@ static void run_test_cases(git_attr_file *file, struct attr_expected *cases, int
 		cl_git_pass(error);
 
 		attr_check_expected(c->expected, c->expected_str, value);
+
+		git_attr_path__free(&path);
 	}
 }
 
@@ -83,7 +86,7 @@ void test_attr_lookup__match_variants(void)
 		{ "/not/pat2/yousee", "attr2", EXPECT_UNDEFINED, NULL },
 		/* path match */
 		{ "pat3file", "attr3", EXPECT_UNDEFINED, NULL },
-		{ "/pat3dir/pat3file", "attr3", EXPECT_UNDEFINED, NULL },
+		{ "/pat3dir/pat3file", "attr3", EXPECT_TRUE, NULL },
 		{ "pat3dir/pat3file", "attr3", EXPECT_TRUE, NULL },
 		/* pattern* match */
 		{ "pat4.txt", "attr4", EXPECT_TRUE, NULL },
@@ -101,7 +104,7 @@ void test_attr_lookup__match_variants(void)
 		{ "pat6/pat6/.pat6", "attr6", EXPECT_TRUE, NULL },
 		{ "pat6/pat6/extra/foobar.pat6", "attr6", EXPECT_UNDEFINED, NULL },
 		{ "/prefix/pat6/pat6/foobar.pat6", "attr6", EXPECT_UNDEFINED, NULL },
-		{ "/pat6/pat6/foobar.pat6", "attr6", EXPECT_UNDEFINED, NULL },
+		{ "/pat6/pat6/foobar.pat6", "attr6", EXPECT_TRUE, NULL },
 		/* complex pattern */
 		{ "pat7a12z", "attr7", EXPECT_TRUE, NULL },
 		{ "pat7e__x", "attr7", EXPECT_TRUE, NULL },
@@ -139,6 +142,7 @@ void test_attr_lookup__match_variants(void)
 	run_test_cases(file, dir_cases, 1);
 
 	git_attr_file__free(file);
+	git_attr_path__free(&path);
 }
 
 void test_attr_lookup__assign_variants(void)

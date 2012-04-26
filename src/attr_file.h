@@ -10,6 +10,7 @@
 #include "git2/attr.h"
 #include "vector.h"
 #include "pool.h"
+#include "buffer.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
@@ -54,9 +55,10 @@ typedef struct {
 } git_attr_file;
 
 typedef struct {
+	git_buf     full;
 	const char *path;
 	const char *basename;
-	int is_dir;
+	int         is_dir;
 } git_attr_path;
 
 /*
@@ -113,6 +115,8 @@ extern git_attr_assignment *git_attr_rule__lookup_assignment(
 
 extern int git_attr_path__init(
 	git_attr_path *info, const char *path, const char *base);
+
+extern void git_attr_path__free(git_attr_path *info);
 
 extern int git_attr_assignment__parse(
 	git_repository *repo, /* needed to expand macros */

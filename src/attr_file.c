@@ -251,25 +251,48 @@ git_attr_assignment *git_attr_rule__lookup_assignment(
 int git_attr_path__init(
 	git_attr_path *info, const char *path, const char *base)
 {
-	assert(info && path);
-	info->path = path;
-	info->basename = strrchr(path, '/');
+	/* build full path as best we can */
+	git_buf_init(&info->full, 0);
+
+	if (base != NULL && git_path_root(path) < 0) {
+		if (git_buf_joinpath(&info->full, base, path) < 0)
+			return -1;
+		info->path = info->full.ptr + strlen(base);
+	} else {
+		if (git_buf_sets(&info->full, path) < 0)
+			return -1;
+		info->path = info->full.ptr;
+	}
+
+	/* remove trailing slashes */
+	while (info->full.size > 0) {
+		if (info->full.ptr[info->full.size - 1] != '/')
+			break;
+		info->full.size--;
+	}
+	info->full.ptr[info->full.size] = '\0';
+
+	/* skip leading slashes in path */
+	while (*info->path == '/')
+		info->path++;
+
+	/* find trailing basename component */
+	info->basename = strrchr(info->path, '/');
 	if (info->basename)
 		info->basename++;
 	if (!info->basename || !*info->basename)
-		info->basename = path;
+		info->basename = info->path;
 
-	if (base != NULL && git_path_root(path) < 0) {
-		git_buf full_path = GIT_BUF_INIT;
-		if (git_buf_joinpath(&full_path, base, path) < 0)
-			return -1;
-		info->is_dir = (int)git_path_isdir(full_path.ptr);
-		git_buf_free(&full_path);
-		return 0;
-	}
-	info->is_dir = (int)git_path_isdir(path);
+	info->is_dir = (int)git_path_isdir(info->full.ptr);
 
 	return 0;
+}
+
+void git_attr_path__free(git_attr_path *info)
+{
+	git_buf_free(&info->full);
+	info->path = NULL;
+	info->basename = NULL;
 }
 
 
@@ -353,6 +376,8 @@ int git_attr_fnmatch__parse(
 		if (*scan == '/') {
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_FULLPATH;
 			slash_count++;
+			if (pattern == scan)
+				pattern++;
 		}
 		/* remember if we see an unescaped wildcard in pattern */
 		else if ((*scan == '*' || *scan == '.' || *scan == '[') &&
