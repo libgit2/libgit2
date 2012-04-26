@@ -14,6 +14,8 @@
 #include "git2/object.h"
 #include "git2/oid.h"
 #include "git2/refs.h"
+#include "git2/tag.h"
+#include "git2/commit.h"
 
 GIT_BEGIN_DECL
 
@@ -146,7 +148,14 @@ static git_object* dereference_object(git_object *obj)
       break;
    case GIT_OBJ_REF_DELTA:
       break;
-   }}
+
+   default:
+      break;
+   }
+
+   /* Can't dereference some types */
+   return NULL;
+}
 
 static int dereference_to_type(git_object **out, git_object *obj, git_otype target_type)
 {
@@ -158,6 +167,11 @@ static int dereference_to_type(git_object **out, git_object *obj, git_otype targ
          return 0;
       }
 
+      if (this_type == GIT_OBJ_TAG) {
+         git_tag_peel(&obj, (git_tag*)obj);
+         continue;
+      }
+
       /* Dereference once, if possible. */
       obj = dereference_object(obj);
 
@@ -167,8 +181,8 @@ static int dereference_to_type(git_object **out, git_object *obj, git_otype targ
 static int handle_caret_syntax(git_object **out, git_object *start, const char *movement)
 {
    git_object *obj;
-
-   printf("Moving by '%s'\n", movement);
+   git_commit *commit;
+   int n;
 
    if (*movement == '{') {
       if (movement[strlen(movement)-1] != '}') {
@@ -184,10 +198,29 @@ static int handle_caret_syntax(git_object **out, git_object *start, const char *
 
    /* Dereference until we reach a commit. */
    if (dereference_to_type(&obj, start, GIT_OBJ_COMMIT) < 0) {
+      /* Can't dereference to a commit; fail */
+      return GIT_ERROR;
    }
 
-   /* Move to the Nth parent. */
+   /* "^" is the same as "^1" */
+   if (strlen(movement) == 0) {
+      n = 1;
+   } else {
+      git__strtol32(&n, movement, NULL, 0);
+   }
+   commit = (git_commit*)obj;
 
+   /* "^0" just returns the input */
+   if (n == 0) {
+      *out = (git_object*)commit;
+      return 0;
+   }
+
+   if (git_commit_parent(&commit, commit, n-1) < 0) {
+      return GIT_ERROR;
+   }
+
+   *out = (git_object*)commit;
    return 0;
 }
 
@@ -197,6 +230,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
    revparse_state next_state = REVPARSE_STATE_INIT;
    const char *spec_cur = spec;
    git_object *cur_obj = NULL;
+   git_object *next_obj = NULL;
    git_buf specbuffer = GIT_BUF_INIT;
    git_buf stepbuffer = GIT_BUF_INIT;
    int retcode = 0;
@@ -210,6 +244,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
             /* No operators, just a name. Find it and return. */
             return revparse_lookup_object(out, repo, spec);
          } else if (*spec_cur == '@') {
+            /* '@' syntax doesn't allow chaining */
             git_buf_puts(&stepbuffer, spec_cur);
             retcode = walk_ref_history(out, git_buf_cstr(&specbuffer), git_buf_cstr(&stepbuffer));
             goto cleanup;
@@ -224,7 +259,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
          if (current_state != next_state) {
             /* Leaving INIT state, find the object specified, in case that state needs it */
-            assert(!revparse_lookup_object(&cur_obj, repo, git_buf_cstr(&specbuffer)));
+            assert(!revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer)));
          }
          break;
 
@@ -237,15 +272,17 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
                                           git_buf_cstr(&stepbuffer));
             goto cleanup;
          } else if (*spec_cur == '~') {
-            retcode = handle_caret_syntax(&cur_obj,
+            retcode = handle_caret_syntax(&next_obj,
                                           cur_obj,
                                           git_buf_cstr(&stepbuffer));
+            git_buf_clear(&stepbuffer);
             if (retcode < 0) goto cleanup;
             next_state = REVPARSE_STATE_LINEAR;
          } else if (*spec_cur == '^') {
-            retcode = handle_caret_syntax(&cur_obj,
+            retcode = handle_caret_syntax(&next_obj,
                                           cur_obj,
                                           git_buf_cstr(&stepbuffer));
+            git_buf_clear(&stepbuffer);
             if (retcode < 0) goto cleanup;
             next_state = REVPARSE_STATE_CARET;
          } else {
@@ -259,6 +296,10 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
       }
 
       current_state = next_state;
+      if (cur_obj != next_obj) {
+         git_object_free(cur_obj);
+         cur_obj = next_obj;
+      }
    }
 
 cleanup:
