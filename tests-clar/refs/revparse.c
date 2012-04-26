@@ -72,3 +72,19 @@ void test_refs_revparse__describe_output(void)
    oid_str_cmp(git_object_id(g_obj), "c47800c7266a2be04c571c04d5a6614691ea99bd");
 }
 
+void test_refs_revparse__nth_parent(void)
+{
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "be3563a^1"));
+   oid_str_cmp(git_object_id(g_obj), "9fd738e8f7967c078dceed8190330fc8648ee56a");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "be3563a^2"));
+   oid_str_cmp(git_object_id(g_obj), "c47800c7266a2be04c571c04d5a6614691ea99bd");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "be3563a^1^1"));
+   oid_str_cmp(git_object_id(g_obj), "4a202b346bb0fb0db7eff3cffeb3c70babbd2045");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "be3563a^2^1"));
+   oid_str_cmp(git_object_id(g_obj), "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+}
+
+void test_refs_revparse__reflog(void)
+{
+   // TODO: how to create a fixture for this? git_reflog_write?
+}
