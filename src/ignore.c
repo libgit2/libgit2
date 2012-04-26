@@ -176,20 +176,23 @@ int git_ignore__lookup(git_ignores *ignores, const char *pathname, int *ignored)
 	/* first process builtins - success means path was found */
 	if (ignore_lookup_in_rules(
 			&ignores->ign_internal->rules, &path, ignored))
-		return 0;
+		goto cleanup;
 
 	/* next process files in the path */
 	git_vector_foreach(&ignores->ign_path, i, file) {
 		if (ignore_lookup_in_rules(&file->rules, &path, ignored))
-			return 0;
+			goto cleanup;
 	}
 
 	/* last process global ignores */
 	git_vector_foreach(&ignores->ign_global, i, file) {
 		if (ignore_lookup_in_rules(&file->rules, &path, ignored))
-			return 0;
+			goto cleanup;
 	}
 
 	*ignored = 0;
+
+cleanup:
+	git_attr_path__free(&path);
 	return 0;
 }

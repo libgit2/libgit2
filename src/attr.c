@@ -23,10 +23,11 @@ int git_attr_get(
 
 	*value = NULL;
 
-	if ((error = git_attr_path__init(
-			&path, pathname, git_repository_workdir(repo))) < 0 ||
-		(error = collect_attr_files(repo, pathname, &files)) < 0)
-		return error;
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
+		return -1;
+
+	if ((error = collect_attr_files(repo, pathname, &files)) < 0)
+		goto cleanup;
 
 	attr.name = name;
 	attr.name_hash = git_attr_file__name_hash(name);
@@ -38,13 +39,14 @@ int git_attr_get(
 			if (pos >= 0) {
 				*value = ((git_attr_assignment *)git_vector_get(
 							  &rule->assigns, pos))->value;
-				goto found;
+				goto cleanup;
 			}
 		}
 	}
 
-found:
+cleanup:
 	git_vector_free(&files);
+	git_attr_path__free(&path);
 
 	return error;
 }
@@ -70,10 +72,11 @@ int git_attr_get_many(
 
 	memset((void *)values, 0, sizeof(const char *) * num_attr);
 
-	if ((error = git_attr_path__init(
-			&path, pathname, git_repository_workdir(repo))) < 0 ||
-		(error = collect_attr_files(repo, pathname, &files)) < 0)
-		return error;
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
+		return -1;
+
+	if ((error = collect_attr_files(repo, pathname, &files)) < 0)
+		goto cleanup;
 
 	info = git__calloc(num_attr, sizeof(attr_get_many_info));
 	GITERR_CHECK_ALLOC(info);
@@ -108,6 +111,7 @@ int git_attr_get_many(
 
 cleanup:
 	git_vector_free(&files);
+	git_attr_path__free(&path);
 	git__free(info);
 
 	return error;
@@ -128,10 +132,11 @@ int git_attr_foreach(
 	git_attr_assignment *assign;
 	git_strmap *seen = NULL;
 
-	if ((error = git_attr_path__init(
-			&path, pathname, git_repository_workdir(repo))) < 0 ||
-		(error = collect_attr_files(repo, pathname, &files)) < 0)
-		return error;
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
+		return -1;
+
+	if ((error = collect_attr_files(repo, pathname, &files)) < 0)
+		goto cleanup;
 
 	seen = git_strmap_alloc();
 	GITERR_CHECK_ALLOC(seen);
@@ -158,6 +163,7 @@ int git_attr_foreach(
 cleanup:
 	git_strmap_free(seen);
 	git_vector_free(&files);
+	git_attr_path__free(&path);
 
 	return error;
 }
