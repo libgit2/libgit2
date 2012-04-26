@@ -20,20 +20,17 @@ GIT_BEGIN_DECL
 typedef enum {
    REVPARSE_STATE_INIT,
    
-   /* for parsing "@{...}" */
-   REVPARSE_STATE_REF_A,
-   REVPARSE_STATE_REF_B,
-
    /* for "^{...}" and ^... */
-   REVPARSE_STATE_PARENTS_A,
-   REVPARSE_STATE_PARENTS_B,
+   REVPARSE_STATE_CARET,
 
    /* For "~..." */
-   REVPARSE_STATE_LIINEAR,
-
-   /* For joining parents and linear, as in "master^2~3^2" */
-   REVPARSE_STATE_JOIN,
+   REVPARSE_STATE_LINEAR,
 } revparse_state;
+
+static void set_invalid_syntax_err(const char *spec)
+{
+   giterr_set(GITERR_INVALID, "Refspec '%s' is not valid.", spec);
+}
 
 static int revparse_lookup_fully_qualifed_ref(git_object **out, git_repository *repo, const char*spec)
 {
@@ -115,20 +112,94 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 }
 
 
-static void set_invalid_syntax_err(const char *spec)
+static int walk_ref_history(git_object **out, const char *refspec, const char *reflogspec)
 {
-   giterr_set(GITERR_INVALID, "Refspec '%s' is not valid.", spec);
+   // TODO
+
+   /* Empty refspec means current branch */
+
+   /* Possible syntaxes for reflogspec:
+    * "8" -> 8th prior value for the ref
+    * "-2" -> nth branch checked out before the current one (refspec must be empty)
+    * "yesterday", "1 month 2 weeks 3 days 4 hours 5 seconds ago", "1979-02-26 18:30:00"
+    *   -> value of ref at given point in time
+    * "upstream" or "u" -> branch the ref is set to build on top of
+    * */
+   return 0;
 }
 
+static git_object* dereference_object(git_object *obj)
+{
+   git_otype type = git_object_type(obj);
+   git_object *newobj = NULL;
+
+   switch (type) {
+   case GIT_OBJ_COMMIT:
+      break;
+   case GIT_OBJ_TREE:
+      break;
+   case GIT_OBJ_BLOB:
+      break;
+   case GIT_OBJ_TAG:
+      break;
+   case GIT_OBJ_OFS_DELTA:
+      break;
+   case GIT_OBJ_REF_DELTA:
+      break;
+   }}
+
+static int dereference_to_type(git_object **out, git_object *obj, git_otype target_type)
+{
+   git_otype this_type = git_object_type(obj);
+
+   while (1) {
+      if (this_type == target_type) {
+         *out = obj;
+         return 0;
+      }
+
+      /* Dereference once, if possible. */
+      obj = dereference_object(obj);
+
+   }
+}
+
+static int handle_caret_syntax(git_object **out, git_object *start, const char *movement)
+{
+   git_object *obj;
+
+   printf("Moving by '%s'\n", movement);
+
+   if (*movement == '{') {
+      if (movement[strlen(movement)-1] != '}') {
+         set_invalid_syntax_err(movement);
+         return GIT_ERROR;
+      }
+      
+      // TODO
+      /* {/...} -> Walk all commits until we see a commit msg that matches the phrase. */
+      /* {} -> Dereference until we reach an object that isn't a tag. */
+      /* {...} -> Dereference until we reach an object of a certain type. */
+   }
+
+   /* Dereference until we reach a commit. */
+   if (dereference_to_type(&obj, start, GIT_OBJ_COMMIT) < 0) {
+   }
+
+   /* Move to the Nth parent. */
+
+   return 0;
+}
 
 int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
    revparse_state current_state = REVPARSE_STATE_INIT;
    revparse_state next_state = REVPARSE_STATE_INIT;
    const char *spec_cur = spec;
-   git_object *obj = NULL;
+   git_object *cur_obj = NULL;
    git_buf specbuffer = GIT_BUF_INIT;
    git_buf stepbuffer = GIT_BUF_INIT;
+   int retcode = 0;
 
    assert(out && repo && spec);
 
@@ -139,36 +210,61 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
             /* No operators, just a name. Find it and return. */
             return revparse_lookup_object(out, repo, spec);
          } else if (*spec_cur == '@') {
-            next_state = REVPARSE_STATE_REF_A;
+            git_buf_puts(&stepbuffer, spec_cur);
+            retcode = walk_ref_history(out, git_buf_cstr(&specbuffer), git_buf_cstr(&stepbuffer));
+            goto cleanup;
+         } else if (*spec_cur == '^') {
+            next_state = REVPARSE_STATE_CARET;
+         } else if (*spec_cur == '~') {
+            next_state = REVPARSE_STATE_LINEAR;
+         } else {
+            git_buf_putc(&specbuffer, *spec_cur);
          }
          spec_cur++;
 
          if (current_state != next_state) {
-            /* Leaving INIT state, find the object specified and carry on */
-            assert(!git_buf_set(&specbuffer, spec, spec_cur - spec));
-            assert(!revparse_lookup_object(&obj, repo, git_buf_cstr(&specbuffer)));
+            /* Leaving INIT state, find the object specified, in case that state needs it */
+            assert(!revparse_lookup_object(&cur_obj, repo, git_buf_cstr(&specbuffer)));
          }
          break;
 
-      case REVPARSE_STATE_REF_A:
-         /* Found '@', look for '{', fail otherwise */
-         if (*spec_cur != '{') {
-            set_invalid_syntax_err(spec);
-            return GIT_ERROR;
+
+      case REVPARSE_STATE_CARET:
+         /* Gather characters until NULL, '~', or '^' */
+         if (!*spec_cur) {
+            retcode = handle_caret_syntax(out,
+                                          cur_obj,
+                                          git_buf_cstr(&stepbuffer));
+            goto cleanup;
+         } else if (*spec_cur == '~') {
+            retcode = handle_caret_syntax(&cur_obj,
+                                          cur_obj,
+                                          git_buf_cstr(&stepbuffer));
+            if (retcode < 0) goto cleanup;
+            next_state = REVPARSE_STATE_LINEAR;
+         } else if (*spec_cur == '^') {
+            retcode = handle_caret_syntax(&cur_obj,
+                                          cur_obj,
+                                          git_buf_cstr(&stepbuffer));
+            if (retcode < 0) goto cleanup;
+            next_state = REVPARSE_STATE_CARET;
+         } else {
+            git_buf_putc(&stepbuffer, *spec_cur);
          }
          spec_cur++;
-         next_state = REVPARSE_STATE_REF_B;
          break;
 
-      case REVPARSE_STATE_REF_B:
-         /* Found "@{", gather things until a '}' */
+      case REVPARSE_STATE_LINEAR:
          break;
       }
 
       current_state = next_state;
    }
-   
-   return 0;
+
+cleanup:
+   git_buf_free(&specbuffer);
+   git_buf_free(&stepbuffer);
+   return retcode;
 }
 
 
