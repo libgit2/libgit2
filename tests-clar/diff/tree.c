@@ -168,3 +168,36 @@ void test_diff_tree__options(void)
 	git_tree_free(c);
 	git_tree_free(d);
 }
+
+void test_diff_tree__can_perform_a_tree_to_tree_diff_in_a_bare_repo(void)
+{
+   git_repository *repo;
+
+   const char *head = "a65fedf";
+   const char *parent = "be3563a";
+   git_tree *head_tree, *parent_tree;
+   git_diff_list *diff = NULL;
+   diff_expects actual;
+
+   cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+
+   head_tree = resolve_commit_oid_to_tree(repo, head);
+   parent_tree = resolve_commit_oid_to_tree(repo, parent);
+
+   cl_git_pass(git_diff_tree_to_tree(repo, NULL, parent_tree, head_tree, &diff));
+
+   memset(&actual, 0, sizeof(actual));
+
+   cl_git_pass(git_diff_foreach(diff, &actual, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+   cl_assert_equal_i(actual.files,     1);
+   cl_assert_equal_i(actual.file_adds, 0);
+   cl_assert_equal_i(actual.file_dels, 0);
+   cl_assert_equal_i(actual.file_mods, 1);
+
+   git_diff_list_free(diff);
+
+   git_tree_free(head_tree);
+   git_tree_free(parent_tree);
+   git_repository_free(repo);
+}
