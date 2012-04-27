@@ -21,12 +21,9 @@ GIT_BEGIN_DECL
 
 typedef enum {
    REVPARSE_STATE_INIT,
-   
-   /* for "^{...}" and ^... */
    REVPARSE_STATE_CARET,
-
-   /* For "~..." */
    REVPARSE_STATE_LINEAR,
+   REVPARSE_STATE_DONE,
 } revparse_state;
 
 static void set_invalid_syntax_err(const char *spec)
@@ -272,11 +269,12 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
    git_object *next_obj = NULL;
    git_buf specbuffer = GIT_BUF_INIT;
    git_buf stepbuffer = GIT_BUF_INIT;
+   int keep_looping = 1;
    int retcode = 0;
 
    assert(out && repo && spec);
 
-   while (1) {
+   while (keep_looping) {
       switch (current_state) {
       case REVPARSE_STATE_INIT:
          if (!*spec_cur) {
@@ -286,7 +284,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
             /* '@' syntax doesn't allow chaining */
             git_buf_puts(&stepbuffer, spec_cur);
             retcode = walk_ref_history(out, git_buf_cstr(&specbuffer), git_buf_cstr(&stepbuffer));
-            goto cleanup;
+            next_state = REVPARSE_STATE_DONE;
          } else if (*spec_cur == '^') {
             next_state = REVPARSE_STATE_CARET;
          } else if (*spec_cur == '~') {
@@ -300,7 +298,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
             /* Leaving INIT state, find the object specified, in case that state needs it */
             retcode = revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer));
             if (retcode < 0) {
-               goto cleanup;
+               next_state = REVPARSE_STATE_DONE;
             }
          }
          break;
@@ -309,24 +307,18 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
       case REVPARSE_STATE_CARET:
          /* Gather characters until NULL, '~', or '^' */
          if (!*spec_cur) {
-            retcode = handle_caret_syntax(out,
-                                          cur_obj,
-                                          git_buf_cstr(&stepbuffer));
-            goto cleanup;
+            retcode = handle_caret_syntax(out, cur_obj, git_buf_cstr(&stepbuffer));
+            next_state = REVPARSE_STATE_DONE;
          } else if (*spec_cur == '~') {
-            retcode = handle_caret_syntax(&next_obj,
-                                          cur_obj,
-                                          git_buf_cstr(&stepbuffer));
+            retcode = handle_caret_syntax(&next_obj, cur_obj, git_buf_cstr(&stepbuffer));
             git_buf_clear(&stepbuffer);
-            if (retcode < 0) goto cleanup;
-            next_state = REVPARSE_STATE_LINEAR;
+            next_state = !retcode ? REVPARSE_STATE_LINEAR : REVPARSE_STATE_DONE;
          } else if (*spec_cur == '^') {
-            retcode = handle_caret_syntax(&next_obj,
-                                          cur_obj,
-                                          git_buf_cstr(&stepbuffer));
+            retcode = handle_caret_syntax(&next_obj, cur_obj, git_buf_cstr(&stepbuffer));
             git_buf_clear(&stepbuffer);
-            if (retcode < 0) goto cleanup;
-            next_state = REVPARSE_STATE_CARET;
+            if (retcode < 0) {
+               next_state = REVPARSE_STATE_DONE;
+            }
          } else {
             git_buf_putc(&stepbuffer, *spec_cur);
          }
@@ -342,6 +334,10 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
          }
          spec_cur++;
          break;
+
+      case REVPARSE_STATE_DONE:
+         keep_looping = 0;
+         break;
       }
 
       current_state = next_state;
@@ -351,7 +347,6 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
       }
    }
 
-cleanup:
    git_buf_free(&specbuffer);
    git_buf_free(&stepbuffer);
    return retcode;
