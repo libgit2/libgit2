@@ -174,6 +174,10 @@ static int dereference_to_type(git_object **out, git_object *obj, git_otype targ
 
       /* Dereference once, if possible. */
       obj2 = dereference_object(obj1);
+      if (!obj2) {
+         giterr_set(GITERR_REFERENCE, "Can't dereference to type");
+         return GIT_ERROR;
+      }
       if (obj1 != obj) {
          git_object_free(obj1);
       }
@@ -226,7 +230,6 @@ static int handle_caret_syntax(git_object **out, git_object *obj, const char *mo
 
       /* {...} -> Dereference until we reach an object of a certain type. */
       if (dereference_to_type(out, obj, parse_obj_type(movement)) < 0) {
-         giterr_set(GITERR_REFERENCE, "Can't dereference to type");
          return GIT_ERROR;
       }
       return 0;
