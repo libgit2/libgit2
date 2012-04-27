@@ -7,7 +7,7 @@ static git_object *g_obj;
 
 
 
-// Hepers
+/* Helpers */
 static void oid_str_cmp(const git_object *obj, const char *expected)
 {
    char objstr[64] = {0};
@@ -35,7 +35,6 @@ void test_refs_revparse__nonexistant_object(void)
 
 void test_refs_revparse__shas(void)
 {
-   // Full SHA should return a valid object
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
    oid_str_cmp(g_obj, "c47800c7266a2be04c571c04d5a6614691ea99bd");
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "c47800c"));
@@ -44,14 +43,12 @@ void test_refs_revparse__shas(void)
 
 void test_refs_revparse__head(void)
 {
-   // Named head should return a valid object
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "HEAD"));
    oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 }
 
 void test_refs_revparse__full_refs(void)
 {
-   // Fully-qualified refs should return valid objects
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "refs/heads/master"));
    oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "refs/heads/test"));
@@ -62,7 +59,6 @@ void test_refs_revparse__full_refs(void)
 
 void test_refs_revparse__partial_refs(void)
 {
-   // Partially-qualified refs should return valid objects
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "point_to_blob"));
    oid_str_cmp(g_obj, "1385f264afb75a56a5bec74243be9b367ba4ca08");
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "packed-test"));
@@ -103,9 +99,15 @@ void test_refs_revparse__not_tag(void)
 
 void test_refs_revparse__to_type(void)
 {
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "wrapped_tag^{commit}"));
+   oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "wrapped_tag^{tree}"));
+   oid_str_cmp(g_obj, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "point_to_blob^{blob}"));
+   oid_str_cmp(g_obj, "1385f264afb75a56a5bec74243be9b367ba4ca08");
 }
 
 void test_refs_revparse__reflog(void)
 {
-   // TODO: how to create a fixture for this? git_reflog_write?
+   /* TODO: how to create a fixture for this? git_reflog_write? */
 }
