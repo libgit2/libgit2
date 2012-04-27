@@ -1484,6 +1484,7 @@ int git_reference_foreach(
 	if (list_flags & GIT_REF_PACKED) {
 		const char *ref_name;
 		void *ref;
+		GIT_UNUSED(ref);
 
 		if (packed_load(repo) < 0)
 			return -1;
