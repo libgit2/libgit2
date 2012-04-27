@@ -116,7 +116,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 
 static int walk_ref_history(git_object **out, const char *refspec, const char *reflogspec)
 {
-   // TODO
+   /* TODO */
 
    /* Empty refspec means current branch */
 
@@ -134,25 +134,25 @@ static git_object* dereference_object(git_object *obj)
 {
    git_otype type = git_object_type(obj);
    git_object *newobj = NULL;
+   git_tree *tree = NULL;
 
    switch (type) {
    case GIT_OBJ_COMMIT:
-      break;
-   case GIT_OBJ_TREE:
-      break;
-   case GIT_OBJ_BLOB:
+      if (0 == git_commit_tree(&tree, (git_commit*)obj)) {
+         return (git_object*)tree;
+      }
       break;
    case GIT_OBJ_TAG:
       if (0 == git_tag_target(&newobj, (git_tag*)obj)) {
          return newobj;
       }
       break;
-   case GIT_OBJ_OFS_DELTA:
-      break;
-   case GIT_OBJ_REF_DELTA:
-      break;
 
    default:
+   case GIT_OBJ_TREE:
+   case GIT_OBJ_BLOB:
+   case GIT_OBJ_OFS_DELTA:
+   case GIT_OBJ_REF_DELTA:
       break;
    }
 
@@ -168,14 +168,14 @@ static int dereference_to_type(git_object **out, git_object *obj, git_otype targ
       git_otype this_type = git_object_type(obj1);
 
       if (this_type == target_type) {
-         *out = obj;
+         *out = obj1;
          return 0;
       }
 
       /* Dereference once, if possible. */
       obj2 = dereference_object(obj1);
-      if (obj2 != obj) {
-         git_object_free(obj2);
+      if (obj1 != obj) {
+         git_object_free(obj1);
       }
       obj1 = obj2;
    }
@@ -212,7 +212,7 @@ static int handle_caret_syntax(git_object **out, git_object *obj, const char *mo
                giterr_set(GITERR_REFERENCE, "Couldn't find object of target type.");
                return GIT_ERROR;
             }
-            newobj = newobj;
+            newobj = newobj2;
          }
          *out = newobj2;
          return 0;
@@ -220,7 +220,7 @@ static int handle_caret_syntax(git_object **out, git_object *obj, const char *mo
       
       /* {/...} -> Walk all commits until we see a commit msg that matches the phrase. */
       if (movement[1] == '/') {
-         // TODO
+         /* TODO */
          return GIT_ERROR;
       }
 
