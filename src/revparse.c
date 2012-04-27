@@ -143,6 +143,9 @@ static git_object* dereference_object(git_object *obj)
    case GIT_OBJ_BLOB:
       break;
    case GIT_OBJ_TAG:
+      if (0 == git_tag_target(&newobj, (git_tag*)obj)) {
+         return newobj;
+      }
       break;
    case GIT_OBJ_OFS_DELTA:
       break;
@@ -159,28 +162,36 @@ static git_object* dereference_object(git_object *obj)
 
 static int dereference_to_type(git_object **out, git_object *obj, git_otype target_type)
 {
-   git_otype this_type = git_object_type(obj);
+   git_object *obj1 = obj, *obj2 = obj;
 
    while (1) {
+      git_otype this_type = git_object_type(obj1);
+
       if (this_type == target_type) {
          *out = obj;
          return 0;
       }
 
-      if (this_type == GIT_OBJ_TAG) {
-         git_tag_peel(&obj, (git_tag*)obj);
-         continue;
-      }
-
       /* Dereference once, if possible. */
-      obj = dereference_object(obj);
-
+      obj2 = dereference_object(obj1);
+      if (obj2 != obj) {
+         git_object_free(obj2);
+      }
+      obj1 = obj2;
    }
 }
 
-static int handle_caret_syntax(git_object **out, git_object *start, const char *movement)
+static git_otype parse_obj_type(const char *str)
 {
-   git_object *obj;
+   if (!strcmp(str, "{commit}")) return GIT_OBJ_COMMIT;
+   if (!strcmp(str, "{tree}")) return GIT_OBJ_TREE;
+   if (!strcmp(str, "{blob}")) return GIT_OBJ_BLOB;
+   if (!strcmp(str, "{tag}")) return GIT_OBJ_TAG;
+   return GIT_OBJ_BAD;
+}
+
+static int handle_caret_syntax(git_object **out, git_object *obj, const char *movement)
+{
    git_commit *commit;
    int n;
 
@@ -189,15 +200,40 @@ static int handle_caret_syntax(git_object **out, git_object *start, const char *
          set_invalid_syntax_err(movement);
          return GIT_ERROR;
       }
-      
-      // TODO
-      /* {/...} -> Walk all commits until we see a commit msg that matches the phrase. */
+
       /* {} -> Dereference until we reach an object that isn't a tag. */
+      if (strlen(movement) == 2) {
+         git_object *newobj = obj;
+         git_object *newobj2 = newobj;
+         while (git_object_type(newobj2) == GIT_OBJ_TAG) {
+            newobj2 = dereference_object(newobj);
+            if (newobj != obj) git_object_free(newobj);
+            if (!newobj2) {
+               giterr_set(GITERR_REFERENCE, "Couldn't find object of target type.");
+               return GIT_ERROR;
+            }
+            newobj = newobj;
+         }
+         *out = newobj2;
+         return 0;
+      }
+      
+      /* {/...} -> Walk all commits until we see a commit msg that matches the phrase. */
+      if (movement[1] == '/') {
+         // TODO
+         return GIT_ERROR;
+      }
+
       /* {...} -> Dereference until we reach an object of a certain type. */
+      if (dereference_to_type(out, obj, parse_obj_type(movement)) < 0) {
+         giterr_set(GITERR_REFERENCE, "Can't dereference to type");
+         return GIT_ERROR;
+      }
+      return 0;
    }
 
    /* Dereference until we reach a commit. */
-   if (dereference_to_type(&obj, start, GIT_OBJ_COMMIT) < 0) {
+   if (dereference_to_type(&obj, obj, GIT_OBJ_COMMIT) < 0) {
       /* Can't dereference to a commit; fail */
       return GIT_ERROR;
    }
@@ -212,7 +248,7 @@ static int handle_caret_syntax(git_object **out, git_object *start, const char *
 
    /* "^0" just returns the input */
    if (n == 0) {
-      *out = (git_object*)commit;
+      *out = obj;
       return 0;
    }
 
@@ -259,7 +295,10 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
          if (current_state != next_state) {
             /* Leaving INIT state, find the object specified, in case that state needs it */
-            assert(!revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer)));
+            retcode = revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer));
+            if (retcode < 0) {
+               goto cleanup;
+            }
          }
          break;
 
@@ -292,6 +331,13 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
          break;
 
       case REVPARSE_STATE_LINEAR:
+         if (!*spec_cur) {
+         } else if (*spec_cur == '~') {
+         } else if (*spec_cur == '^') {
+         } else {
+            git_buf_putc(&stepbuffer, *spec_cur);
+         }
+         spec_cur++;
          break;
       }
 
