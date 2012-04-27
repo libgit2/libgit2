@@ -260,6 +260,45 @@ static int handle_caret_syntax(git_object **out, git_object *obj, const char *mo
    return 0;
 }
 
+static int handle_linear_syntax(git_object **out, git_object *obj, const char *movement)
+{
+   git_commit *commit1, *commit2;
+   int i, n;
+
+   /* Dereference until we reach a commit. */
+   if (dereference_to_type(&obj, obj, GIT_OBJ_COMMIT) < 0) {
+      /* Can't dereference to a commit; fail */
+      return GIT_ERROR;
+   }
+
+   /* "~" is the same as "~1" */
+   if (strlen(movement) == 0) {
+      n = 1;
+   } else {
+      git__strtol32(&n, movement, NULL, 0);
+   }
+   commit1 = (git_commit*)obj;
+
+   /* "~0" just returns the input */
+   if (n == 0) {
+      *out = obj;
+      return 0;
+   }
+
+   for (i=0; i<n; i++) {
+      if (git_commit_parent(&commit2, commit1, 0) < 0) {
+         return GIT_ERROR;
+      }
+      if (commit1 != (git_commit*)obj) {
+         git_commit_free(commit1);
+      }
+      commit1 = commit2;
+   }
+
+   *out = (git_object*)commit1;
+   return 0;
+}
+
 int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
    revparse_state current_state = REVPARSE_STATE_INIT;
@@ -327,8 +366,18 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
       case REVPARSE_STATE_LINEAR:
          if (!*spec_cur) {
+            retcode = handle_linear_syntax(out, cur_obj, git_buf_cstr(&stepbuffer));
+            next_state = REVPARSE_STATE_DONE;
          } else if (*spec_cur == '~') {
+            retcode = handle_linear_syntax(&next_obj, cur_obj, git_buf_cstr(&stepbuffer));
+            git_buf_clear(&stepbuffer);
+            if (retcode < 0) {
+               next_state = REVPARSE_STATE_DONE;
+            }
          } else if (*spec_cur == '^') {
+            retcode = handle_linear_syntax(&next_obj, cur_obj, git_buf_cstr(&stepbuffer));
+            git_buf_clear(&stepbuffer);
+            next_state = !retcode ? REVPARSE_STATE_CARET : REVPARSE_STATE_DONE;
          } else {
             git_buf_putc(&stepbuffer, *spec_cur);
          }
