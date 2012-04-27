@@ -109,6 +109,28 @@ void test_refs_revparse__to_type(void)
    cl_git_fail(git_revparse_single(&g_obj, g_repo, "wrapped_tag^{blob}"));
 }
 
+void test_refs_revparse__linear_history(void)
+{
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master~0"));
+   oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master~1"));
+   oid_str_cmp(g_obj, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master~2"));
+   oid_str_cmp(g_obj, "9fd738e8f7967c078dceed8190330fc8648ee56a");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master~1~1"));
+   oid_str_cmp(g_obj, "9fd738e8f7967c078dceed8190330fc8648ee56a");
+}
+
+void test_refs_revparse__chaining(void)
+{
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master~1^1"));
+   oid_str_cmp(g_obj, "9fd738e8f7967c078dceed8190330fc8648ee56a");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master~1^2"));
+   oid_str_cmp(g_obj, "c47800c7266a2be04c571c04d5a6614691ea99bd");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master^1^2~1"));
+   oid_str_cmp(g_obj, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+}
+
 void test_refs_revparse__reflog(void)
 {
    /* TODO: how to create a fixture for this? git_reflog_write? */
