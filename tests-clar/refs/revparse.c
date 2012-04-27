@@ -105,6 +105,8 @@ void test_refs_revparse__to_type(void)
    oid_str_cmp(g_obj, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "point_to_blob^{blob}"));
    oid_str_cmp(g_obj, "1385f264afb75a56a5bec74243be9b367ba4ca08");
+
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "wrapped_tag^{blob}"));
 }
 
 void test_refs_revparse__reflog(void)
