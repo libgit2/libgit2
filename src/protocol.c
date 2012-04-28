@@ -34,8 +34,6 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 			return 0;
 
 		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
-		if (error == GIT_ESHORTBUFFER)
-			return 0; /* Ask for more */
 		if (error < 0)
 			return p->error = -1;
 

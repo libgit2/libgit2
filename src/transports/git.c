@@ -144,11 +144,6 @@ static int store_refs(transport_git *t)
 			return 0;
 
 		ret = git_protocol_store_refs(&t->proto, buf->data, buf->offset);
-		if (ret == GIT_ESHORTBUFFER) {
-			gitno_consume_n(buf, buf->len);
-			continue;
-		}
-
 		if (ret < 0)
 			return ret;
 
@@ -276,8 +271,6 @@ static int recv_pkt(gitno_buffer *buf)
 			return -1;
 
 		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-		if (error == GIT_ESHORTBUFFER)
-			continue;
 		if (error < 0)
 			return -1;
 	} while (error);
@@ -381,9 +374,6 @@ static int git_download_pack(git_transport *transport, git_repository *repo, git
 			}
 
 			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-			if (error == GIT_ESHORTBUFFER)
-				break;
-
 			if (error < GIT_SUCCESS)
 				return error;
 
