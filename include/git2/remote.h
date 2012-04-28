@@ -176,6 +176,9 @@ GIT_EXTERN(void) git_remote_disconnect(git_remote *remote);
 /**
  * Free the memory associated with a remote
  *
+ * This also disconnects from the remote, if the connection
+ * has not been closed yet (using git_remote_disconnect).
+ *
  * @param remote the remote to free
  */
 GIT_EXTERN(void) git_remote_free(git_remote *remote);
