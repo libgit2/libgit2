@@ -188,10 +188,8 @@ int git_pkt_parse_line(
 	int32_t len;
 
 	/* Not even enough for the length */
-	if (bufflen > 0 && bufflen < PKT_LEN_SIZE) {
-		giterr_set(GITERR_NET, "Insufficient buffer data");
-		return -1;
-	}
+	if (bufflen > 0 && bufflen < PKT_LEN_SIZE)
+		return GIT_ESHORTBUFFER;
 
 	len = parse_len(line);
 	if (len < 0) {
@@ -211,10 +209,8 @@ int git_pkt_parse_line(
 	 * If we were given a buffer length, then make sure there is
 	 * enough in the buffer to satisfy this line
 	 */
-	if (bufflen > 0 && bufflen < (size_t)len) {
-		giterr_set(GITERR_NET, "Insufficient buffer data for packet length");
-		return -1;
-	}
+	if (bufflen > 0 && bufflen < (size_t)len)
+		return GIT_ESHORTBUFFER;
 
 	line += PKT_LEN_SIZE;
 	/*
