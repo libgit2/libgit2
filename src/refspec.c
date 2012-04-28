@@ -25,24 +25,21 @@ int git_refspec_parse(git_refspec *refspec, const char *str)
 	delim = strchr(str, ':');
 	if (delim == NULL) {
 		refspec->src = git__strdup(str);
-		if (refspec->src == NULL)
-			return GIT_ENOMEM;
-
-		return GIT_SUCCESS;
+		GITERR_CHECK_ALLOC(refspec->src);
+		return 0;
 	}
 
 	refspec->src = git__strndup(str, delim - str);
-	if (refspec->src == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(refspec->src);
 
 	refspec->dst = git__strdup(delim + 1);
 	if (refspec->dst == NULL) {
 		git__free(refspec->src);
 		refspec->src = NULL;
-		return GIT_ENOMEM;
+		return -1;
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 const char *git_refspec_src(const git_refspec *refspec)
@@ -65,8 +62,10 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 	size_t baselen, namelen;
 
 	baselen = strlen(spec->dst);
-	if (outlen <= baselen)
-		return git__throw(GIT_EINVALIDREFNAME, "Reference name too long");
+	if (outlen <= baselen) {
+		giterr_set(GITERR_INVALID, "Reference name too long");
+		return GIT_ESHORTBUFFER;
+	}
 
 	/*
 	 * No '*' at the end means that it's mapped to one specific local
@@ -74,7 +73,7 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 	 */
 	if (spec->dst[baselen - 1] != '*') {
 		memcpy(out, spec->dst, baselen + 1); /* include '\0' */
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	/* There's a '*' at the end, so remove its length */
@@ -85,32 +84,34 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 
 	namelen = strlen(name);
 
-	if (outlen <= baselen + namelen)
-		return git__throw(GIT_EINVALIDREFNAME, "Reference name too long");
+	if (outlen <= baselen + namelen) {
+		giterr_set(GITERR_INVALID, "Reference name too long");
+		return GIT_ESHORTBUFFER;
+	}
 
 	memcpy(out, spec->dst, baselen);
 	memcpy(out + baselen, name, namelen + 1);
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)
 {
-	if (git_buf_sets(out, spec->dst) < GIT_SUCCESS)
-		return GIT_ENOMEM;
+	if (git_buf_sets(out, spec->dst) < 0)
+		return -1;
 
 	/*
 	 * No '*' at the end means that it's mapped to one specific local
 	 * branch, so no actual transformation is needed.
 	 */
 	if (out->size > 0 && out->ptr[out->size - 1] != '*')
-		return GIT_SUCCESS;
+		return 0;
 
 	git_buf_truncate(out, out->size - 1); /* remove trailing '*' */
 	git_buf_puts(out, name + strlen(spec->src) - 1);
 
 	if (git_buf_oom(out))
-		return GIT_ENOMEM;
+		return -1;
 
 	return 0;
 }
