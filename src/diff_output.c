@@ -18,9 +18,10 @@ typedef struct {
 	git_diff_list *diff;
 	void *cb_data;
 	git_diff_hunk_fn hunk_cb;
-	git_diff_line_fn line_cb;
+	git_diff_data_fn line_cb;
 	unsigned int index;
 	git_diff_delta *delta;
+	git_diff_range range;
 } diff_output_info;
 
 static int read_next_int(const char **str, int *value)
@@ -62,6 +63,8 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 		if (range.old_start < 0 || range.new_start < 0)
 			return -1;
 
+		memcpy(&info->range, &range, sizeof(git_diff_range));
+
 		return info->hunk_cb(
 			info->cb_data, info->delta, &range, bufs[0].ptr, bufs[0].size);
 	}
@@ -76,7 +79,7 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 			GIT_DIFF_LINE_CONTEXT;
 
 		if (info->line_cb(
-			info->cb_data, info->delta, origin, bufs[1].ptr, bufs[1].size) < 0)
+			info->cb_data, info->delta, &info->range, origin, bufs[1].ptr, bufs[1].size) < 0)
 			return -1;
 
 		/* deal with adding and removing newline at EOF */
@@ -87,7 +90,7 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 				origin = GIT_DIFF_LINE_DEL_EOFNL;
 
 			return info->line_cb(
-				info->cb_data, info->delta, origin, bufs[2].ptr, bufs[2].size);
+				info->cb_data, info->delta, &info->range, origin, bufs[2].ptr, bufs[2].size);
 		}
 	}
 
@@ -291,7 +294,7 @@ int git_diff_foreach(
 	void *data,
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
-	git_diff_line_fn line_cb)
+	git_diff_data_fn line_cb)
 {
 	int error = 0;
 	diff_output_info info;
@@ -433,7 +436,7 @@ cleanup:
 
 typedef struct {
 	git_diff_list *diff;
-	git_diff_output_fn print_cb;
+	git_diff_data_fn print_cb;
 	void *cb_data;
 	git_buf *buf;
 } diff_print_info;
@@ -491,13 +494,13 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr);
+	return pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
 }
 
 int git_diff_print_compact(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_output_fn print_cb)
+	git_diff_data_fn print_cb)
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
@@ -586,7 +589,7 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-    result = pi->print_cb(pi->cb_data, GIT_DIFF_LINE_FILE_HDR, pi->buf->ptr);
+    result = pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
     if (result < 0)
         return result;
 
@@ -600,7 +603,7 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_BINARY, pi->buf->ptr);
+	return pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_BINARY, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
 }
 
 static int print_patch_hunk(
@@ -612,26 +615,22 @@ static int print_patch_hunk(
 {
 	diff_print_info *pi = data;
 
-	GIT_UNUSED(d);
-	GIT_UNUSED(r);
-
 	git_buf_clear(pi->buf);
 	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) < 0)
 		return -1;
 
-	return pi->print_cb(pi->cb_data, GIT_DIFF_LINE_HUNK_HDR, pi->buf->ptr);
+	return pi->print_cb(pi->cb_data, d, r, GIT_DIFF_LINE_HUNK_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
 }
 
 static int print_patch_line(
 	void *data,
 	git_diff_delta *delta,
+	git_diff_range *range,
 	char line_origin, /* GIT_DIFF_LINE value from above */
 	const char *content,
 	size_t content_len)
 {
 	diff_print_info *pi = data;
-
-	GIT_UNUSED(delta);
 
 	git_buf_clear(pi->buf);
 
@@ -645,13 +644,13 @@ static int print_patch_line(
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-	return pi->print_cb(pi->cb_data, line_origin, pi->buf->ptr);
+	return pi->print_cb(pi->cb_data, delta, range, line_origin, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
 }
 
 int git_diff_print_patch(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_output_fn print_cb)
+	git_diff_data_fn print_cb)
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
@@ -678,7 +677,7 @@ int git_diff_blobs(
 	git_diff_options *options,
 	void *cb_data,
 	git_diff_hunk_fn hunk_cb,
-	git_diff_line_fn line_cb)
+	git_diff_data_fn line_cb)
 {
 	diff_output_info info;
 	git_diff_delta delta;
