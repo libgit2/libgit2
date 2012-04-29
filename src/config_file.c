@@ -1233,7 +1233,7 @@ static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value, int i
 	 * standard, this character **has** to be last one in the buf, with
 	 * no whitespace after it */
 	assert(is_multiline_var(value->ptr));
-	git_buf_truncate(value, value->size - 1);
+	git_buf_truncate(value, git_buf_len(value) - 1);
 
 	proc_line = fixup_line(line, in_quotes);
 	if (proc_line == NULL) {
