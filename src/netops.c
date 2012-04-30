@@ -18,6 +18,11 @@
 #	endif
 #endif
 
+#ifdef GIT_GNUTLS
+# include <gnutls/openssl.h>
+# include <gnutls/gnutls.h>
+# include <gnutls/x509.h>
+#endif
 
 #include "git2/errors.h"
 
@@ -25,6 +30,7 @@
 #include "netops.h"
 #include "posix.h"
 #include "buffer.h"
+#include "transport.h"
 
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
@@ -45,25 +51,66 @@ static void net_set_error(const char *str)
 }
 #endif
 
-void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, GIT_SOCKET fd)
+#ifdef GIT_GNUTLS
+static int ssl_set_error(int error)
+{
+	giterr_set(GITERR_NET, "SSL error: (%s) %s", gnutls_strerror_name(error), gnutls_strerror(error));
+	return -1;
+}
+#endif
+
+void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
 	buf->data = data;
 	buf->len = len;
 	buf->offset = 0;
-	buf->fd = fd;
+	buf->fd = t->socket;
+#ifdef GIT__GNUTLS
+	if (t->encrypt)
+		buf->ssl = t->ssl;
+#endif
+}
+
+static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
+{
+	int ret;
+
+	do {
+		ret = gnutls_record_recv(ssl->session, data, len);
+	} while(ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN);
+
+	if (ret < 0) {
+		ssl_set_error(ret);
+		return -1;
+	}
+
+	return ret;
 }
 
 int gitno_recv(gitno_buffer *buf)
 {
 	int ret;
 
+#ifdef GIT_GNUTLS
+	if (buf->ssl != NULL) {
+		if ((ret = ssl_recv(buf->ssl, buf->data + buf->offset, buf->len - buf->offset)) < 0)
+			return -1;
+	} else {
+		ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
+		if (ret < 0) {
+			net_set_error("Error receiving socket data");
+			return -1;
+		}
+	}
+#else
 	ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
 	if (ret < 0) {
 		net_set_error("Error receiving socket data");
 		return -1;
 	}
+#endif
 
 	buf->offset += ret;
 	return ret;
@@ -92,7 +139,44 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
-int gitno_connect(GIT_SOCKET *sock, const char *host, const char *port)
+#ifdef GIT_GNUTLS
+static int ssl_setup(git_transport *t)
+{
+	int ret;
+
+	if ((ret = gnutls_global_init()) < 0)
+		return ssl_set_error(ret);
+
+	if ((ret = gnutls_certificate_allocate_credentials(&t->ssl.cred)) < 0)
+		return ssl_set_error(ret);
+
+	gnutls_init(&t->ssl.session, GNUTLS_CLIENT);
+	//gnutls_certificate_set_verify_function(ssl->cred, SSL_VERIFY_NONE);
+	gnutls_credentials_set(t->ssl.session, GNUTLS_CRD_CERTIFICATE, t->ssl.cred);
+
+	if ((ret = gnutls_priority_set_direct (t->ssl.session, "NORMAL", NULL)) < 0)
+		return ssl_set_error(ret);
+
+	gnutls_transport_set_ptr(t->ssl.session, (gnutls_transport_ptr_t) t->socket);
+
+	do {
+		ret = gnutls_handshake(t->ssl.session);
+	} while (ret < 0 && !gnutls_error_is_fatal(ret));
+
+	if (ret < 0) {
+		ssl_set_error(ret);
+		goto on_error;
+	}
+
+	return 0;
+
+on_error:
+	gnutls_deinit(t->ssl.session);
+	return -1;
+}
+#endif
+
+int gitno_connect(git_transport *t, const char *host, const char *port)
 {
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
@@ -129,20 +213,51 @@ int gitno_connect(GIT_SOCKET *sock, const char *host, const char *port)
 		return -1;
 	}
 
+	t->socket = s;
 	freeaddrinfo(info);
-	*sock = s;
+
+#ifdef GIT_GNUTLS
+	if (t->encrypt && ssl_setup(t) < 0)
+		return -1;
+#endif
+
 	return 0;
 }
 
-int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
+#ifdef GIT_GNUTLS
+static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
 {
 	int ret;
 	size_t off = 0;
 
 	while (off < len) {
-		errno = 0;
+		ret = gnutls_record_send(ssl->session, msg + off, len - off);
+		if (ret < 0) {
+			if (gnutls_error_is_fatal(ret))
+				return ssl_set_error(ret);
 
-		ret = p_send(s, msg + off, len - off, flags);
+			ret = 0;
+		}
+		off += ret;
+	}
+
+	return off;
+}
+#endif
+
+int gitno_send(git_transport *t, const char *msg, size_t len, int flags)
+{
+	int ret;
+	size_t off = 0;
+
+#ifdef GIT_GNUTLS
+	if (t->encrypt)
+		return send_ssl(&t->ssl, msg, len);
+#endif
+
+	while (off < len) {
+		errno = 0;
+		ret = p_send(t->socket, msg + off, len - off, flags);
 		if (ret < 0) {
 			net_set_error("Error sending data");
 			return -1;
