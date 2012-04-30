@@ -97,6 +97,25 @@ static int comment_pkt(git_pkt **out, const char *line, size_t len)
 	return 0;
 }
 
+static int err_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_err *pkt;
+
+	/* Remove "ERR " from the line */
+	line += 4;
+	len -= 4;
+	pkt = git__malloc(sizeof(git_pkt_err) + len + 1);
+	GITERR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_ERR;
+	memcpy(pkt->error, line, len);
+	pkt->error[len] = '\0';
+
+	*out = (git_pkt *) pkt;
+
+	return 0;
+}
+
 /*
  * Parse an other-ref line.
  */
@@ -234,6 +253,8 @@ int git_pkt_parse_line(
 		ret = ack_pkt(head, line, len);
 	else if (!git__prefixcmp(line, "NAK"))
 		ret = nak_pkt(head);
+	else if (!git__prefixcmp(line, "ERR "))
+		ret = err_pkt(head, line, len);
 	else if (*line == '#')
 		ret = comment_pkt(head, line, len);
 	else
