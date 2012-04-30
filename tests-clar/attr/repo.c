@@ -14,17 +14,13 @@ void test_attr_repo__initialize(void)
 	 * Also rename gitattributes to .gitattributes, because it contains
 	 * macro definitions which are only allowed in the root.
 	 */
-	cl_fixture_sandbox("attr");
-	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
-	cl_git_pass(p_rename("attr/gitattributes", "attr/.gitattributes"));
-	cl_git_pass(git_repository_open(&g_repo, "attr/.git"));
+	g_repo = cl_git_sandbox_init("attr");
 }
 
 void test_attr_repo__cleanup(void)
 {
-	git_repository_free(g_repo);
+	cl_git_sandbox_cleanup();
 	g_repo = NULL;
-	cl_fixture_cleanup("attr");
 }
 
 void test_attr_repo__get_one(void)
@@ -226,3 +222,51 @@ void test_attr_repo__bad_macros(void)
 	cl_assert(GIT_ATTR_TRUE(values[5]));
 }
 
+#define CONTENT "I'm going to be dynamically processed\r\n" \
+	"And my line endings...\r\n" \
+	"...are going to be\n" \
+	"normalized!\r\n"
+
+#define GITATTR "* text=auto\n" \
+	"*.txt text\n" \
+	"*.data binary\n"
+
+static void add_to_workdir(const char *filename, const char *content)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_joinpath(&buf, "attr", filename));
+	cl_git_rewritefile(git_buf_cstr(&buf), content);
+
+	git_buf_free(&buf);
+}
+
+static void assert_proper_normalization(git_index *index, const char *filename, const char *expected_sha)
+{
+	int index_pos;
+	git_index_entry *entry;
+
+	add_to_workdir(filename, CONTENT);
+	cl_git_pass(git_index_add(index, filename, 0));
+
+	index_pos = git_index_find(index, filename);
+	cl_assert(index_pos >= 0);
+
+	entry = git_index_get(index, index_pos);
+	cl_assert_equal_i(0, git_oid_streq(&entry->oid, expected_sha));
+}
+
+void test_attr_repo__staging_properly_normalizes_line_endings_according_to_gitattributes_directives(void)
+{
+	git_index* index;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	add_to_workdir(".gitattributes", GITATTR);
+
+	assert_proper_normalization(index, "text.txt", "22c74203bace3c2e950278c7ab08da0fca9f4e9b");
+	assert_proper_normalization(index, "huh.dunno", "22c74203bace3c2e950278c7ab08da0fca9f4e9b");
+	assert_proper_normalization(index, "binary.data", "66eeff1fcbacf589e6d70aa70edd3fce5be2b37c");
+
+	git_index_free(index);
+}
