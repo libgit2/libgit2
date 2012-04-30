@@ -578,7 +578,6 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 
 	gitno_buffer_setup(transport, &buf, buffer, sizeof(buffer));
 
-
 	do {
 		size_t parsed;
 
@@ -684,7 +683,7 @@ int git_transport_http(git_transport **out)
 
 int git_transport_https(git_transport **out)
 {
-#ifdef GIT_GNUTLS
+#ifdef GIT_SSL
 	transport_http *t;
 	if (git_transport_http((git_transport **)&t) < 0)
 		return -1;

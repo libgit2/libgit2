@@ -57,7 +57,7 @@ struct git_transport {
 	int direction : 1, /* 0 fetch, 1 push */
 		connected : 1,
 		encrypt : 1;
-#ifdef GIT_GNUTLS
+#ifdef GIT_SSL
 	struct gitno_ssl ssl;
 #endif
 	GIT_SOCKET socket;

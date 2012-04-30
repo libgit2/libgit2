@@ -9,16 +9,14 @@
 
 #include "posix.h"
 #include "transport.h"
-#ifdef GIT_GNUTLS
-# include <gnutls/gnutls.h>
-#endif
+#include "common.h"
 
 typedef struct gitno_buffer {
 	char *data;
 	size_t len;
 	size_t offset;
 	GIT_SOCKET fd;
-#ifdef GIT_GNUTLS
+#ifdef GIT_SSL
 	struct gitno_ssl *ssl;
 #endif
 } gitno_buffer;
@@ -29,7 +27,7 @@ int gitno_recv(gitno_buffer *buf);
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
 
-GIT_SOCKET gitno_connect(git_transport *t, const char *host, const char *port);
+int gitno_connect(git_transport *t, const char *host, const char *port);
 int gitno_send(git_transport *t, const char *msg, size_t len, int flags);
 int gitno_close(GIT_SOCKET s);
 int gitno_send_chunk_size(int s, size_t len);
