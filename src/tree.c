@@ -711,7 +711,7 @@ static int tree_walk_post(
 
 		if (entry_is_tree(entry)) {
 			git_tree *subtree;
-			size_t path_len = path->size;
+			size_t path_len = git_buf_len(path);
 
 			if ((error = git_tree_lookup(
 				&subtree, tree->object.repo, &entry->oid)) < 0)

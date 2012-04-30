@@ -103,10 +103,10 @@ int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *n
 	 * No '*' at the end means that it's mapped to one specific local
 	 * branch, so no actual transformation is needed.
 	 */
-	if (out->size > 0 && out->ptr[out->size - 1] != '*')
+	if (git_buf_len(out) > 0 && out->ptr[git_buf_len(out) - 1] != '*')
 		return GIT_SUCCESS;
 
-	git_buf_truncate(out, out->size - 1); /* remove trailing '*' */
+	git_buf_truncate(out, git_buf_len(out) - 1); /* remove trailing '*' */
 	git_buf_puts(out, name + strlen(spec->src) - 1);
 
 	if (git_buf_oom(out))

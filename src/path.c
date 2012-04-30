@@ -221,8 +221,8 @@ int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base)
 int git_path_to_dir(git_buf *path)
 {
 	if (path->asize > 0 &&
-		path->size > 0 &&
-		path->ptr[path->size - 1] != '/')
+		git_buf_len(path) > 0 &&
+		path->ptr[git_buf_len(path) - 1] != '/')
 		git_buf_putc(path, '/');
 
 	return git_buf_oom(path) ? -1 : 0;
@@ -327,12 +327,12 @@ int git_path_walk_up(
 		if (git__prefixcmp(path->ptr, ceiling) == 0)
 			stop = (ssize_t)strlen(ceiling);
 		else
-			stop = path->size;
+			stop = git_buf_len(path);
 	}
-	scan = path->size;
+	scan = git_buf_len(path);
 
 	iter.ptr = path->ptr;
-	iter.size = path->size;
+	iter.size = git_buf_len(path);
 	iter.asize = path->asize;
 
 	while (scan >= stop) {
@@ -407,7 +407,7 @@ static bool _check_dir_contents(
 	bool (*predicate)(const char *))
 {
 	bool result;
-	size_t dir_size = dir->size;
+	size_t dir_size = git_buf_len(dir);
 	size_t sub_size = strlen(sub);
 
 	/* leave base valid even if we could not make space for subdir */
@@ -503,7 +503,7 @@ int git_path_direach(
 	if (git_path_to_dir(path) < 0)
 		return -1;
 
-	wd_len = path->size;
+	wd_len = git_buf_len(path);
 
 	if ((dir = opendir(path->ptr)) == NULL) {
 		giterr_set(GITERR_OS, "Failed to open directory '%s'", path->ptr);

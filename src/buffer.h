@@ -93,9 +93,14 @@ GIT_INLINE(int) git_buf_joinpath(git_buf *buf, const char *a, const char *b)
 	return git_buf_join(buf, '/', a, b);
 }
 
-GIT_INLINE(const char *) git_buf_cstr(git_buf *buf)
+GIT_INLINE(const char *) git_buf_cstr(const git_buf *buf)
 {
 	return buf->ptr;
+}
+
+GIT_INLINE(size_t) git_buf_len(const git_buf *buf)
+{
+	return buf->size;
 }
 
 void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);

@@ -278,7 +278,7 @@ static int find_repo(
 	if ((error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
 		return error;
 
-	while (!error && !repo_path->size) {
+	while (!error && !git_buf_len(repo_path)) {
 		if (p_stat(path.ptr, &st) == 0) {
 			/* check that we have not crossed device boundaries */
 			if (initial_device == 0)
@@ -328,7 +328,7 @@ static int find_repo(
 	}
 
 	if (!error && parent_path != NULL) {
-		if (!repo_path->size)
+		if (!git_buf_len(repo_path))
 			git_buf_clear(parent_path);
 		else {
 			git_path_dirname_r(parent_path, path.ptr);
@@ -340,7 +340,7 @@ static int find_repo(
 
 	git_buf_free(&path);
 
-	if (!repo_path->size && !error) {
+	if (!git_buf_len(repo_path) && !error) {
 		giterr_set(GITERR_REPOSITORY,
 			"Could not find repository from '%s'", start_path);
 		error = GIT_ENOTFOUND;
