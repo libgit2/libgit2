@@ -417,6 +417,12 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	return error;
 }
 
+int git_note_default_ref(const char **out, git_repository *repo)
+{
+	assert(repo);
+	return note_get_default_ref(out, repo);
+}
+
 const char * git_note_message(git_note *note)
 {
 	assert(note);
