@@ -23,6 +23,7 @@ enum git_pkt_type {
 	GIT_PKT_NAK,
 	GIT_PKT_PACK,
 	GIT_PKT_COMMENT,
+	GIT_PKT_ERR,
 };
 
 /* Used for multi-ack */
@@ -63,6 +64,11 @@ typedef struct {
 	enum git_pkt_type type;
 	char comment[GIT_FLEX_ARRAY];
 } git_pkt_comment;
+
+typedef struct {
+	enum git_pkt_type type;
+	char error[GIT_FLEX_ARRAY];
+} git_pkt_err;
 
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
 int git_pkt_buffer_flush(git_buf *buf);

@@ -40,6 +40,13 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 			return p->error = -1;
 
 		git_buf_consume(buf, line_end);
+
+		if (pkt->type == GIT_PKT_ERR) {
+			giterr_set(GITERR_NET, "Remote error: %s", ((git_pkt_err *)pkt)->error);
+			git__free(pkt);
+			return -1;
+		}
+
 		if (git_vector_insert(refs, pkt) < 0)
 			return p->error = -1;
 
