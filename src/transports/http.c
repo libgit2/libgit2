@@ -82,8 +82,6 @@ static int gen_request(git_buf *buf, const char *path, const char *host, const c
 
 static int do_connect(transport_http *t, const char *host, const char *port)
 {
-	GIT_SOCKET s = -1;
-
 	if (t->parent.connected && http_should_keep_alive(&t->parser))
 		return 0;
 
@@ -580,7 +578,6 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 
 	gitno_buffer_setup(transport, &buf, buffer, sizeof(buffer));
 
-
 	do {
 		size_t parsed;
 
@@ -686,7 +683,7 @@ int git_transport_http(git_transport **out)
 
 int git_transport_https(git_transport **out)
 {
-#ifdef GIT_GNUTLS
+#ifdef GIT_SSL
 	transport_http *t;
 	if (git_transport_http((git_transport **)&t) < 0)
 		return -1;

@@ -22,6 +22,9 @@
 
 #ifdef GIT_GNUTLS
 # include <gnutls/gnutls.h>
+#elif defined(GIT_OPENSSL)
+# include <openssl/ssl.h>
+# include <openssl/err.h>
 #endif
 
 #ifdef GIT_WIN32
@@ -73,6 +76,11 @@ void giterr_set_regex(const regex_t *regex, int error_code);
 typedef struct gitno_ssl {
 	gnutls_session_t session;
 	gnutls_certificate_credentials_t cred;
+} gitno_ssl;
+#elif defined(GIT_OPENSSL)
+typedef struct gitno_ssl {
+	SSL_CTX *ctx;
+	SSL *ssl;
 } gitno_ssl;
 #endif
 
