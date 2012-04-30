@@ -57,6 +57,14 @@ static int ssl_set_error(int error)
 	giterr_set(GITERR_NET, "SSL error: (%s) %s", gnutls_strerror_name(error), gnutls_strerror(error));
 	return -1;
 }
+#elif GIT_OPENSSL
+static int ssl_set_error(gitno_ssl *ssl, int error)
+{
+	int err;
+	err = SSL_get_error(ssl->ssl, error);
+	giterr_set(GITERR_NET, "SSL error: %s", ERR_error_string(err, NULL));
+	return -1;
+}
 #endif
 
 void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
@@ -67,12 +75,13 @@ void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigne
 	buf->len = len;
 	buf->offset = 0;
 	buf->fd = t->socket;
-#ifdef GIT__GNUTLS
+#ifdef GIT_SSL
 	if (t->encrypt)
-		buf->ssl = t->ssl;
+		buf->ssl = &t->ssl;
 #endif
 }
 
+#ifdef GIT_GNUTLS
 static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
 {
 	int ret;
@@ -88,12 +97,27 @@ static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
 
 	return ret;
 }
+#elif defined(GIT_OPENSSL)
+static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
+{
+	int ret;
+
+	do {
+		ret = SSL_read(ssl->ssl, data, len);
+	} while (SSL_get_error(ssl->ssl, ret) == SSL_ERROR_WANT_READ);
+
+	if (ret < 0)
+		return ssl_set_error(ssl, ret);
+
+	return ret;
+}
+#endif
 
 int gitno_recv(gitno_buffer *buf)
 {
 	int ret;
 
-#ifdef GIT_GNUTLS
+#ifdef GIT_SSL
 	if (buf->ssl != NULL) {
 		if ((ret = ssl_recv(buf->ssl, buf->data + buf->offset, buf->len - buf->offset)) < 0)
 			return -1;
@@ -174,6 +198,31 @@ on_error:
 	gnutls_deinit(t->ssl.session);
 	return -1;
 }
+#elif defined(GIT_OPENSSL)
+static int ssl_setup(git_transport *t)
+{
+	int ret;
+
+	SSL_library_init();
+	SSL_load_error_strings();
+	t->ssl.ctx = SSL_CTX_new(SSLv23_method());
+	if (t->ssl.ctx == NULL)
+		return ssl_set_error(&t->ssl, 0);
+
+	SSL_CTX_set_mode(t->ssl.ctx, SSL_MODE_AUTO_RETRY);
+
+	t->ssl.ssl = SSL_new(t->ssl.ctx);
+	if (t->ssl.ssl == NULL)
+		return ssl_set_error(&t->ssl, 0);
+
+	if((ret = SSL_set_fd(t->ssl.ssl, t->socket)) == 0)
+		return ssl_set_error(&t->ssl, ret);
+
+	if ((ret = SSL_connect(t->ssl.ssl)) <= 0)
+		return ssl_set_error(&t->ssl, ret);
+
+	return 0;
+}
 #endif
 
 int gitno_connect(git_transport *t, const char *host, const char *port)
@@ -215,7 +264,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 
 	t->socket = s;
 	freeaddrinfo(info);
-#ifdef GIT_GNUTLS
+#ifdef GIT_SSL
 	if (t->encrypt && ssl_setup(t) < 0)
 		return -1;
 #endif
@@ -242,6 +291,22 @@ static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
 
 	return off;
 }
+#elif defined(GIT_OPENSSL)
+static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
+{
+	int ret;
+	size_t off = 0;
+
+	while (off < len) {
+		ret = SSL_write(ssl->ssl, msg + off, len - off);
+		if (ret <= 0)
+			return ssl_set_error(ssl, ret);
+
+		off += ret;
+	}
+
+	return off;
+}
 #endif
 
 int gitno_send(git_transport *t, const char *msg, size_t len, int flags)
@@ -249,7 +314,7 @@ int gitno_send(git_transport *t, const char *msg, size_t len, int flags)
 	int ret;
 	size_t off = 0;
 
-#ifdef GIT_GNUTLS
+#ifdef GIT_SSL
 	if (t->encrypt)
 		return send_ssl(&t->ssl, msg, len);
 #endif
