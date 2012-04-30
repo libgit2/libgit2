@@ -165,6 +165,12 @@ static int on_headers_complete(http_parser *parser)
 	transport_http *t = (transport_http *) parser->data;
 	git_buf *buf = &t->buf;
 
+	/* The content-type is text/plain for 404, so don't validate */
+	if (parser->status_code == 404) {
+		git_buf_clear(buf);
+		return 0;
+	}
+
 	if (t->content_type == NULL) {
 		t->content_type = git__strdup(git_buf_cstr(buf));
 		if (t->content_type == NULL)
@@ -187,6 +193,10 @@ static int on_body_store_refs(http_parser *parser, const char *str, size_t len)
 {
 	transport_http *t = (transport_http *) parser->data;
 
+	if (parser->status_code == 404) {
+		return git_buf_put(&t->buf, str, len);
+	}
+
 	return git_protocol_store_refs(&t->proto, str, len);
 }
 
@@ -195,6 +205,12 @@ static int on_message_complete(http_parser *parser)
 	transport_http *t = (transport_http *) parser->data;
 
 	t->transfer_finished = 1;
+
+	if (parser->status_code == 404) {
+		giterr_set(GITERR_NET, "Remote error: %s", git_buf_cstr(&t->buf));
+		t->error = -1;
+	}
+
 	return 0;
 }
 
