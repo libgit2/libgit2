@@ -17,7 +17,7 @@ static struct {
 } transports[] = {
 	{"git://", git_transport_git},
 	{"http://", git_transport_http},
-	{"https://", git_transport_dummy},
+	{"https://", git_transport_https},
 	{"file://", git_transport_local},
 	{"git+ssh://", git_transport_dummy},
 	{"ssh+git://", git_transport_dummy},

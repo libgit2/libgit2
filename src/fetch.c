@@ -110,7 +110,7 @@ int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_st
 int git_fetch__download_pack(
 	const char *buffered,
 	size_t buffered_size,
-	GIT_SOCKET fd,
+	git_transport *t,
 	git_repository *repo,
 	git_off_t *bytes,
 	git_indexer_stats *stats)
@@ -120,7 +120,7 @@ int git_fetch__download_pack(
 	gitno_buffer buf;
 	git_indexer_stream *idx;
 
-	gitno_buffer_setup(&buf, buff, sizeof(buff), fd);
+	gitno_buffer_setup(t, &buf, buff, sizeof(buff));
 
 	if (memcmp(buffered, "PACK", strlen("PACK"))) {
 		giterr_set(GITERR_NET, "The pack doesn't start with the signature");

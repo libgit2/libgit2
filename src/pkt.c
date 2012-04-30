@@ -281,12 +281,6 @@ int git_pkt_buffer_flush(git_buf *buf)
 	return git_buf_put(buf, pkt_flush_str, strlen(pkt_flush_str));
 }
 
-int git_pkt_send_flush(GIT_SOCKET s)
-{
-
-	return gitno_send(s, pkt_flush_str, strlen(pkt_flush_str), 0);
-}
-
 static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps, git_buf *buf)
 {
 	char capstr[20];

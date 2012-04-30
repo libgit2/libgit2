@@ -10,6 +10,8 @@
 #include "git2/net.h"
 #include "git2/indexer.h"
 #include "vector.h"
+#include "posix.h"
+#include "common.h"
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
 
@@ -53,7 +55,12 @@ struct git_transport {
 	 * Whether we want to push or fetch
 	 */
 	int direction : 1, /* 0 fetch, 1 push */
-		connected : 1;
+		connected : 1,
+		encrypt : 1;
+#ifdef GIT_GNUTLS
+	struct gitno_ssl ssl;
+#endif
+	GIT_SOCKET socket;
 	/**
 	 * Connect and store the remote heads
 	 */
@@ -94,6 +101,7 @@ int git_transport_new(struct git_transport **transport, const char *url);
 int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
 int git_transport_http(struct git_transport **transport);
+int git_transport_https(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
 
 /**
