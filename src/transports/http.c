@@ -321,7 +321,7 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 	const char *line_end, *ptr;
 
 	if (len == 0) { /* EOF */
-		if (buf->size != 0) {
+		if (git_buf_len(buf) != 0) {
 			giterr_set(GITERR_NET, "Unexpected EOF");
 			return t->error = -1;
 		} else {
@@ -334,10 +334,10 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 	while (1) {
 		git_pkt *pkt;
 
-		if (buf->size == 0)
+		if (git_buf_len(buf) == 0)
 			return 0;
 
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
+		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
 		if (error == GIT_ESHORTBUFFER) {
 			return 0; /* Ask for more */
 		}
@@ -555,9 +555,9 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 	memset(&settings, 0x0, sizeof(settings));
 	settings.on_message_complete = on_message_complete_download_pack;
 	settings.on_body = on_body_download_pack;
-	*bytes = oldbuf->size;
+	*bytes = git_buf_len(oldbuf);
 
-	if (git_indexer_stream_add(idx, oldbuf->ptr, oldbuf->size, stats) < 0)
+	if (git_indexer_stream_add(idx, git_buf_cstr(oldbuf), git_buf_len(oldbuf), stats) < 0)
 		goto on_error;
 
 	do {

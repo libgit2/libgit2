@@ -277,7 +277,7 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
 	len = (unsigned int)
 		(strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
 		 strlen(capstr) + 1 /* LF */);
-	git_buf_grow(buf, buf->size + len);
+	git_buf_grow(buf, git_buf_len(buf) + len);
 
 	git_oid_fmt(oid, &head->oid);
 	return git_buf_printf(buf, "%04xwant %s%c%s\n", len, oid, 0, capstr);

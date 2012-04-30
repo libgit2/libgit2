@@ -401,7 +401,7 @@ static int index_path_stream(git_buf *path, git_indexer_stream *idx, const char 
 
 	git_buf_truncate(path, slash);
 	git_buf_puts(path, prefix);
-	git_oid_fmt(path->ptr + path->size, &idx->hash);
+	git_oid_fmt(path->ptr + git_buf_len(path), &idx->hash);
 	path->size += GIT_OID_HEXSZ;
 	git_buf_puts(path, suffix);
 
@@ -633,7 +633,7 @@ static int index_path(git_buf *path, git_indexer *idx)
 
 	git_buf_truncate(path, slash);
 	git_buf_puts(path, prefix);
-	git_oid_fmt(path->ptr + path->size, &idx->hash);
+	git_oid_fmt(path->ptr + git_buf_len(path), &idx->hash);
 	path->size += GIT_OID_HEXSZ;
 	git_buf_puts(path, suffix);
 

@@ -139,7 +139,7 @@ static int loose_parse_symbolic(git_reference *ref, git_buf *file_content)
 
 	refname_start = (const char *)file_content->ptr;
 
-	if (file_content->size < header_len + 1)
+	if (git_buf_len(file_content) < header_len + 1)
 		goto corrupt;
 
 	/*
@@ -174,7 +174,7 @@ static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 	buffer = (char *)file_content->ptr;
 
 	/* File format: 40 chars (OID) + newline */
-	if (file_content->size < GIT_OID_HEXSZ + 1)
+	if (git_buf_len(file_content) < GIT_OID_HEXSZ + 1)
 		goto corrupt;
 
 	if (git_oid_fromstr(oid, buffer) < 0)

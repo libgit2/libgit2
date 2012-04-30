@@ -17,7 +17,7 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 	const char *line_end, *ptr;
 
 	if (len == 0) { /* EOF */
-		if (buf->size != 0) {
+		if (git_buf_len(buf) != 0) {
 			giterr_set(GITERR_NET, "Unexpected EOF");
 			return p->error = -1;
 		} else {
@@ -30,10 +30,10 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 	while (1) {
 		git_pkt *pkt;
 
-		if (buf->size == 0)
+		if (git_buf_len(buf) == 0)
 			return 0;
 
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
+		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
 		if (error == GIT_ESHORTBUFFER)
 			return 0; /* Ask for more */
 		if (error < 0)

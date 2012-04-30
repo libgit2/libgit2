@@ -61,13 +61,13 @@ static int object_file_name(git_buf *name, const char *dir, const git_oid *id)
 	git_buf_sets(name, dir);
 
 	/* expand length for 40 hex sha1 chars + 2 * '/' + '\0' */
-	if (git_buf_grow(name, name->size + GIT_OID_HEXSZ + 3) < 0)
+	if (git_buf_grow(name, git_buf_len(name) + GIT_OID_HEXSZ + 3) < 0)
 		return -1;
 
 	git_path_to_dir(name);
 
 	/* loose object filename: aa/aaa... (41 bytes) */
-	git_oid_pathfmt(name->ptr + name->size, id);
+	git_oid_pathfmt(name->ptr + git_buf_len(name), id);
 	name->size += GIT_OID_HEXSZ + 1;
 	name->ptr[name->size] = '\0';
 
@@ -81,7 +81,7 @@ static size_t get_binary_object_header(obj_hdr *hdr, git_buf *obj)
 	unsigned char *data = (unsigned char *)obj->ptr;
 	size_t shift, size, used = 0;
 
-	if (obj->size == 0)
+	if (git_buf_len(obj) == 0)
 		return 0;
 
 	c = data[used++];
@@ -90,7 +90,7 @@ static size_t get_binary_object_header(obj_hdr *hdr, git_buf *obj)
 	size = c & 15;
 	shift = 4;
 	while (c & 0x80) {
-		if (obj->size <= used)
+		if (git_buf_len(obj) <= used)
 			return 0;
 		if (sizeof(size_t) * 8 <= shift)
 			return 0;
@@ -182,7 +182,7 @@ static int start_inflate(z_stream *s, git_buf *obj, void *out, size_t len)
 	int status;
 
 	init_stream(s, out, len);
-	set_stream_input(s, obj->ptr, obj->size);
+	set_stream_input(s, obj->ptr, git_buf_len(obj));
 
 	if ((status = inflateInit(s)) < Z_OK)
 		return status;
@@ -469,7 +469,7 @@ static int locate_object(
 static int fn_locate_object_short_oid(void *state, git_buf *pathbuf) {
 	loose_locate_object_state *sstate = (loose_locate_object_state *)state;
 
-	if (pathbuf->size - sstate->dir_len != GIT_OID_HEXSZ - 2) {
+	if (git_buf_len(pathbuf) - sstate->dir_len != GIT_OID_HEXSZ - 2) {
 		/* Entry cannot be an object. Continue to next entry */
 		return 0;
 	}
@@ -517,7 +517,7 @@ static int locate_object_short_oid(
 	git_path_to_dir(object_location);
 
 	/* save adjusted position at end of dir so it can be restored later */
-	dir_len = object_location->size;
+	dir_len = git_buf_len(object_location);
 
 	/* Convert raw oid to hex formatted oid */
 	git_oid_fmt((char *)state.short_oid, short_oid);
@@ -530,7 +530,7 @@ static int locate_object_short_oid(
 	if (git_path_isdir(object_location->ptr) == false)
 		return git_odb__error_notfound("failed to locate from short oid");
 
-	state.dir_len = object_location->size;
+	state.dir_len = git_buf_len(object_location);
 	state.short_oid_len = len;
 	state.found = 0;
 
