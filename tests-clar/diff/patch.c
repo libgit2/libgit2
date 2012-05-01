@@ -30,6 +30,7 @@ static int check_removal_cb(
 	size_t output_len)
 {
 	GIT_UNUSED(cb_data);
+	GIT_UNUSED(output_len);
 
 	switch (line_origin) {
 	case GIT_DIFF_LINE_FILE_HDR:
