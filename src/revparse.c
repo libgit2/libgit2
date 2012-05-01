@@ -121,6 +121,8 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
    size_t i, refloglen;
    const git_reflog_entry *entry;
    git_buf buf = GIT_BUF_INIT;
+   size_t refspeclen = strlen(refspec);
+   size_t reflogspeclen = strlen(reflogspec);
 
    if (git__prefixcmp(reflogspec, "@{") != 0 ||
        git__suffixcmp(reflogspec, "}") != 0) {
@@ -129,7 +131,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
    }
 
    /* "@{-N}" form means walk back N checkouts. That means the HEAD log. */
-   if (strlen(refspec) == 0 && !git__prefixcmp(reflogspec, "@{-")) {
+   if (refspeclen == 0 && !git__prefixcmp(reflogspec, "@{-")) {
       if (git__strtol32(&n, reflogspec+3, NULL, 0) < 0 ||
           n < 1) {
          giterr_set(GITERR_INVALID, "Invalid reflogspec %s", reflogspec);
@@ -156,7 +158,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
          }
       }
    } else {
-      if (!strlen(refspec)) {
+      if (!refspeclen) {
          /* Empty refspec means current branch */
          /* Get the target of HEAD */
          git_reference_lookup(&ref, repo, "HEAD");
@@ -273,16 +275,17 @@ static git_otype parse_obj_type(const char *str)
 static int handle_caret_syntax(git_object **out, git_object *obj, const char *movement)
 {
    git_commit *commit;
+   size_t movementlen = strlen(movement);
    int n;
 
    if (*movement == '{') {
-      if (movement[strlen(movement)-1] != '}') {
+      if (movement[movementlen-1] != '}') {
          set_invalid_syntax_err(movement);
          return GIT_ERROR;
       }
 
       /* {} -> Dereference until we reach an object that isn't a tag. */
-      if (strlen(movement) == 2) {
+      if (movementlen == 2) {
          git_object *newobj = obj;
          git_object *newobj2 = newobj;
          while (git_object_type(newobj2) == GIT_OBJ_TAG) {
@@ -318,7 +321,7 @@ static int handle_caret_syntax(git_object **out, git_object *obj, const char *mo
    }
 
    /* "^" is the same as "^1" */
-   if (strlen(movement) == 0) {
+   if (movementlen == 0) {
       n = 1;
    } else {
       git__strtol32(&n, movement, NULL, 0);
@@ -387,12 +390,11 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
    git_object *next_obj = NULL;
    git_buf specbuffer = GIT_BUF_INIT;
    git_buf stepbuffer = GIT_BUF_INIT;
-   int keep_looping = 1;
    int retcode = 0;
 
    assert(out && repo && spec);
 
-   while (keep_looping) {
+   while (current_state != REVPARSE_STATE_DONE) {
       switch (current_state) {
       case REVPARSE_STATE_INIT:
          if (!*spec_cur) {
@@ -461,7 +463,6 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
          break;
 
       case REVPARSE_STATE_DONE:
-         keep_looping = 0;
          break;
       }
 
