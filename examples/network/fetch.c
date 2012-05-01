@@ -93,6 +93,9 @@ int fetch(git_repository *repo, int argc, char **argv)
   } while (!data.finished);
   printf("\rReceived %d/%d objects in %d bytes\n", stats.processed, stats.total, bytes);
 
+  // Disconnect the underlying connection to prevent from idling.
+  git_remote_disconnect(remote);
+
   // Update the references in the remote's namespace to point to the
   // right commits. This may be needed even if there was no packfile
   // to download, which can happen e.g. when the branches have been
