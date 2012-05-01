@@ -16,6 +16,8 @@
 #include "git2/refs.h"
 #include "git2/tag.h"
 #include "git2/commit.h"
+#include "git2/reflog.h"
+#include "git2/refs.h"
 
 GIT_BEGIN_DECL
 
@@ -111,20 +113,97 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 }
 
 
-static int walk_ref_history(git_object **out, const char *refspec, const char *reflogspec)
+static int walk_ref_history(git_object **out, git_repository *repo, const char *refspec, const char *reflogspec)
 {
-   /* TODO */
+   git_reference *ref;
+   git_reflog *reflog = NULL;
+   int n, retcode = GIT_ERROR;
+   size_t i, refloglen;
+   const git_reflog_entry *entry;
+   git_buf buf = GIT_BUF_INIT;
 
-   /* Empty refspec means current branch */
+   if (git__prefixcmp(reflogspec, "@{") != 0 ||
+       git__suffixcmp(reflogspec, "}") != 0) {
+      giterr_set(GITERR_INVALID, "Bad reflogspec '%s'", reflogspec);
+      return GIT_ERROR;
+   }
 
-   /* Possible syntaxes for reflogspec:
-    * "8" -> 8th prior value for the ref
-    * "-2" -> nth branch checked out before the current one (refspec must be empty)
-    * "yesterday", "1 month 2 weeks 3 days 4 hours 5 seconds ago", "1979-02-26 18:30:00"
-    *   -> value of ref at given point in time
-    * "upstream" or "u" -> branch the ref is set to build on top of
-    * */
-   return 0;
+   /* "@{-N}" form means walk back N checkouts. That means the HEAD log. */
+   if (strlen(refspec) == 0 && !git__prefixcmp(reflogspec, "@{-")) {
+      if (git__strtol32(&n, reflogspec+3, NULL, 0) < 0 ||
+          n < 1) {
+         giterr_set(GITERR_INVALID, "Invalid reflogspec %s", reflogspec);
+         return GIT_ERROR;
+      }
+      git_reference_lookup(&ref, repo, "HEAD");
+      git_reflog_read(&reflog, ref);
+      git_reference_free(ref);
+
+      refloglen = git_reflog_entrycount(reflog);
+      for (i=0; i < refloglen; i++) {
+         const char *msg;
+         entry = git_reflog_entry_byindex(reflog, i);
+
+         msg = git_reflog_entry_msg(entry);
+         if (!git__prefixcmp(msg, "checkout: moving")) {
+            n--;
+            if (!n) {
+               char *branchname = strrchr(msg, ' ') + 1;
+               git_buf_printf(&buf, "refs/heads/%s", branchname);
+               retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
+               break;
+            }
+         }
+      }
+   } else {
+      if (!strlen(refspec)) {
+         /* Empty refspec means current branch */
+         /* Get the target of HEAD */
+         git_reference_lookup(&ref, repo, "HEAD");
+         git_buf_puts(&buf, git_reference_target(ref));
+         git_reference_free(ref);
+
+         /* Get the reflog for that ref */
+         git_reference_lookup(&ref, repo, git_buf_cstr(&buf));
+         git_reflog_read(&reflog, ref);
+         git_reference_free(ref);
+      } else {
+         if (git__prefixcmp(refspec, "refs/heads/") != 0) {
+            git_buf_printf(&buf, "refs/heads/%s", refspec);
+         } else {
+            git_buf_puts(&buf, refspec);
+         }
+      }
+
+      /* @{u} or @{upstream} -> upstream branch, for a tracking branch. This is stored in the config. */
+      if (!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}")) {
+         /* TODO */
+      }
+
+      /* @{N} -> Nth prior value for the ref (from reflog) */
+      else if (!git__strtol32(&n, reflogspec+2, NULL, 0)) {
+         if (n == 0) {
+            retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
+         } else if (!git_reference_lookup(&ref, repo, git_buf_cstr(&buf))) {
+            if (!git_reflog_read(&reflog, ref)) {
+               const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, n);
+               const git_oid *oid = git_reflog_entry_oidold(entry);
+               retcode = git_object_lookup(out, repo, oid, GIT_OBJ_ANY);
+            }
+            git_reference_free(ref);
+         }
+      }
+
+      /* @{Anything else} -> try to parse the expression into a date, and get the value of the ref as it
+         was then. */
+      else {
+         /* TODO */
+      }
+   }
+
+   if (reflog) git_reflog_free(reflog);
+   git_buf_free(&buf);
+   return retcode;
 }
 
 static git_object* dereference_object(git_object *obj)
@@ -322,7 +401,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
          } else if (*spec_cur == '@') {
             /* '@' syntax doesn't allow chaining */
             git_buf_puts(&stepbuffer, spec_cur);
-            retcode = walk_ref_history(out, git_buf_cstr(&specbuffer), git_buf_cstr(&stepbuffer));
+            retcode = walk_ref_history(out, repo, git_buf_cstr(&specbuffer), git_buf_cstr(&stepbuffer));
             next_state = REVPARSE_STATE_DONE;
          } else if (*spec_cur == '^') {
             next_state = REVPARSE_STATE_CARET;
@@ -335,10 +414,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
          if (current_state != next_state) {
             /* Leaving INIT state, find the object specified, in case that state needs it */
-            retcode = revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer));
-            if (retcode < 0) {
-               next_state = REVPARSE_STATE_DONE;
-            }
+            revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer));
          }
          break;
 

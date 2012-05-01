@@ -133,5 +133,29 @@ void test_refs_revparse__chaining(void)
 
 void test_refs_revparse__reflog(void)
 {
-   /* TODO: how to create a fixture for this? git_reflog_write? */
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-xyz}"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-0}"));
+
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "@{-2}"));
+   oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "@{-1}"));
+   oid_str_cmp(g_obj, "a4a7dce85cf63874e984719f4fdd239f5145052f");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master@{0}"));
+   oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master@{1}"));
+   oid_str_cmp(g_obj, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "@{0}"));
+   oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "@{1}"));
+   oid_str_cmp(g_obj, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   /* Not ready yet
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "HEAD@{100 years ago}"));
+   oid_str_cmp(g_obj, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master@{2012-4-30 10:23:20}"));
+   oid_str_cmp(g_obj, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master@{upstream}"));
+   oid_str_cmp(g_obj, "???");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master@{u}"));
+   oid_str_cmp(g_obj, "???");
+   */
 }
