@@ -129,6 +129,8 @@ void test_refs_revparse__chaining(void)
    oid_str_cmp(g_obj, "c47800c7266a2be04c571c04d5a6614691ea99bd");
    cl_git_pass(git_revparse_single(&g_obj, g_repo, "master^1^2~1"));
    oid_str_cmp(g_obj, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+   cl_git_pass(git_revparse_single(&g_obj, g_repo, "master^1^1^1^1^1"));
+   oid_str_cmp(g_obj, "8496071c1b46c854b31185ea97743be6a8774479");
 }
 
 void test_refs_revparse__reflog(void)
