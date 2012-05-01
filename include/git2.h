@@ -43,5 +43,6 @@
 #include "git2/indexer.h"
 #include "git2/submodule.h"
 #include "git2/notes.h"
+#include "git2/reset.h"
 
 #endif
