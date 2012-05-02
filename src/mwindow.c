@@ -218,9 +218,8 @@ unsigned char *git_mwindow_open(
 
 		for (w = mwf->windows; w; w = w->next) {
 			if (git_mwindow_contains(w, offset) &&
-			    git_mwindow_contains(w, offset + extra))
+				git_mwindow_contains(w, offset + extra))
 				break;
-			}
 		}
 
 		/*

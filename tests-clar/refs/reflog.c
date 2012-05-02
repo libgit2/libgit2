@@ -16,8 +16,8 @@ static git_repository *g_repo;
 static void assert_signature(git_signature *expected, git_signature *actual)
 {
 	cl_assert(actual);
-	cl_assert_strequal(expected->name, actual->name);
-	cl_assert_strequal(expected->email, actual->email);
+	cl_assert_equal_s(expected->name, actual->name);
+	cl_assert_equal_s(expected->email, actual->email);
 	cl_assert(expected->when.offset == actual->when.offset);
 	cl_assert(expected->when.time == actual->when.time);
 }
@@ -73,18 +73,18 @@ void test_refs_reflog__write_then_read(void)
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 0);
 	assert_signature(committer, entry->committer);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
-	cl_assert_strequal("0000000000000000000000000000000000000000", oid_str);
+	cl_assert_equal_s("0000000000000000000000000000000000000000", oid_str);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
-	cl_assert_strequal(current_master_tip, oid_str);
+	cl_assert_equal_s(current_master_tip, oid_str);
 	cl_assert(entry->msg == NULL);
 
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 1);
 	assert_signature(committer, entry->committer);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
-	cl_assert_strequal(current_master_tip, oid_str);
+	cl_assert_equal_s(current_master_tip, oid_str);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
-	cl_assert_strequal(current_master_tip, oid_str);
-	cl_assert_strequal(commit_msg, entry->msg);
+	cl_assert_equal_s(current_master_tip, oid_str);
+	cl_assert_equal_s(commit_msg, entry->msg);
 
 	git_signature_free(committer);
 	git_reflog_free(reflog);
