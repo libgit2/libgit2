@@ -106,7 +106,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 		signature,
 		signature,
 		NULL,
-		"Initial commit\n",		// Note: the trailing linefeed is mandatory to replicate git behavior
+		"Initial commit",
 		tree,
 		0));
 
