@@ -274,6 +274,21 @@ GIT_EXTERN(int) git_tag_list_match(
 		const char *pattern,
 		git_repository *repo);
 
+/**
+ * Recursively peel a tag until a non tag git_object
+ * is met
+ *
+ * The retrieved `tag_target` object is owned by the repository
+ * and should be closed with the `git_object_free` method.
+ *
+ * @param tag_target Pointer to the peeled git_object
+ * @param tag The tag to be processed
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_tag_peel(
+		git_object **tag_target,
+		git_tag *tag);
+
 /** @} */
 GIT_END_DECL
 #endif

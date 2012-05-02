@@ -31,6 +31,35 @@ void git_strarray_free(git_strarray *array)
 	git__free(array->strings);
 }
 
+int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
+{
+	size_t i;
+
+	assert(tgt && src);
+
+	memset(tgt, 0, sizeof(*tgt));
+
+	if (!src->count)
+		return 0;
+
+	tgt->strings = git__calloc(src->count, sizeof(char *));
+	GITERR_CHECK_ALLOC(tgt->strings);
+
+	for (i = 0; i < src->count; ++i) {
+		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
+
+		if (!tgt->strings[tgt->count]) {
+			git_strarray_free(tgt);
+			memset(tgt, 0, sizeof(*tgt));
+			return -1;
+		}
+
+		tgt->count++;
+	}
+
+	return 0;
+}
+
 int git__fnmatch(const char *pattern, const char *name, int flags)
 {
 	int ret;
@@ -38,11 +67,12 @@ int git__fnmatch(const char *pattern, const char *name, int flags)
 	ret = p_fnmatch(pattern, name, flags);
 	switch (ret) {
 	case 0:
-		return GIT_SUCCESS;
+		return 0;
 	case FNM_NOMATCH:
 		return GIT_ENOMATCH;
 	default:
-		return git__throw(GIT_EOSERR, "Error trying to match path");
+		giterr_set(GITERR_OS, "Error trying to match path");
+		return -1;
 	}
 }
 
@@ -111,34 +141,40 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 	}
 
 Return:
-	if (ndig == 0)
-		return git__throw(GIT_ENOTNUM, "Failed to convert string to long. Not a number");
+	if (ndig == 0) {
+		giterr_set(GITERR_INVALID, "Failed to convert string to long. Not a number");
+		return -1;
+	}
 
 	if (endptr)
 		*endptr = p;
 
-	if (ovfl)
-		return git__throw(GIT_EOVERFLOW, "Failed to convert string to long. Overflow error");
+	if (ovfl) {
+		giterr_set(GITERR_INVALID, "Failed to convert string to long. Overflow error");
+		return -1;
+	}
 
 	*result = neg ? -n : n;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int base)
 {
-	int error = GIT_SUCCESS;
+	int error;
 	int32_t tmp_int;
 	int64_t tmp_long;
 
-	if ((error = git__strtol64(&tmp_long, nptr, endptr, base)) < GIT_SUCCESS)
+	if ((error = git__strtol64(&tmp_long, nptr, endptr, base)) < 0)
 		return error;
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
-	if (tmp_int != tmp_long)
-		return git__throw(GIT_EOVERFLOW, "Failed to convert. '%s' is too large", nptr);
+	if (tmp_int != tmp_long) {
+		giterr_set(GITERR_INVALID, "Failed to convert. '%s' is too large", nptr);
+		return -1;
+	}
 
 	*result = tmp_int;
-	
+
 	return error;
 }
 
@@ -355,23 +391,27 @@ int git__bsearch(
 	int (*compare)(const void *, const void *),
 	size_t *position)
 {
-	int lim, cmp;
+	unsigned int lim;
+	int cmp = -1;
 	void **part, **base = array;
 
-	for (lim = array_len; lim != 0; lim >>= 1) {
+	for (lim = (unsigned int)array_len; lim != 0; lim >>= 1) {
 		part = base + (lim >> 1);
 		cmp = (*compare)(key, *part);
 		if (cmp == 0) {
-			*position = (part - array);
-			return GIT_SUCCESS;
-		} else if (cmp > 0) { /* key > p; take right partition */
+			base = part;
+			break;
+		}
+		if (cmp > 0) { /* key > p; take right partition */
 			base = part + 1;
 			lim--;
 		} /* else take left partition */
 	}
 
-	*position = (base - array);
-	return GIT_ENOTFOUND;
+	if (position)
+		*position = (base - array);
+
+	return (cmp == 0) ? 0 : -1;
 }
 
 /**

@@ -87,6 +87,7 @@ typedef struct {
 } git_strarray;
 
 GIT_EXTERN(void) git_strarray_free(git_strarray *array);
+GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
 
 /**
  * Return the version of the libgit2 library

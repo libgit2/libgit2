@@ -46,11 +46,13 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	char *delim, *repo;
 	char default_command[] = "git-upload-pack";
 	char host[] = "host=";
-	int len;
+	size_t len;
 
 	delim = strchr(url, '/');
-	if (delim == NULL)
-		return git__throw(GIT_EOBJCORRUPTED, "Failed to create proto-request: malformed URL");
+	if (delim == NULL) {
+		giterr_set(GITERR_NET, "Malformed URL");
+		return -1;
+	}
 
 	repo = delim;
 
@@ -64,11 +66,15 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1;
 
 	git_buf_grow(request, len);
-	git_buf_printf(request, "%04x%s %s%c%s", len, cmd, repo, 0, host);
+	git_buf_printf(request, "%04x%s %s%c%s",
+		(unsigned int)(len & 0x0FFFF), cmd, repo, 0, host);
 	git_buf_put(request, url, delim - url);
 	git_buf_putc(request, '\0');
 
-	return git_buf_lasterror(request);
+	if (git_buf_oom(request))
+		return GIT_ENOMEM;
+
+	return 0;
 }
 
 static int send_request(GIT_SOCKET s, const char *cmd, const char *url)
@@ -77,7 +83,7 @@ static int send_request(GIT_SOCKET s, const char *cmd, const char *url)
 	git_buf request = GIT_BUF_INIT;
 
 	error = gen_proto(&request, cmd, url);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		goto cleanup;
 
 	error = gitno_send(s, request.ptr, request.size, 0);
@@ -102,9 +108,8 @@ static int do_connect(transport_git *t, const char *url)
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
 
-	error = gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
+		return -1;
 
 	s = gitno_connect(host, port);
 	connected = 1;
@@ -115,9 +120,11 @@ static int do_connect(transport_git *t, const char *url)
 	git__free(port);
 
 	if (error < GIT_SUCCESS && s > 0)
-		close(s);
-	if (!connected)
-		error = git__throw(GIT_EOSERR, "Failed to connect to any of the addresses");
+		gitno_close(s);
+	if (!connected) {
+		giterr_set(GITERR_NET, "Failed to connect to the host");
+		return -1;
+	}
 
 	return error;
 }
@@ -128,33 +135,30 @@ static int do_connect(transport_git *t, const char *url)
 static int store_refs(transport_git *t)
 {
 	gitno_buffer *buf = &t->buf;
-	int error = GIT_SUCCESS;
+	int ret = 0;
 
 	while (1) {
-		error = gitno_recv(buf);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(GIT_EOSERR, "Failed to receive data");
-		if (error == GIT_SUCCESS) /* Orderly shutdown, so exit */
-			return GIT_SUCCESS;
+		if ((ret = gitno_recv(buf)) < 0)
+			return -1;
+		if (ret == 0) /* Orderly shutdown, so exit */
+			return 0;
 
-		error = git_protocol_store_refs(&t->proto, buf->data, buf->offset);
-		if (error == GIT_ESHORTBUFFER) {
+		ret = git_protocol_store_refs(&t->proto, buf->data, buf->offset);
+		if (ret == GIT_ESHORTBUFFER) {
 			gitno_consume_n(buf, buf->len);
 			continue;
 		}
 
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to store refs");
+		if (ret < 0)
+			return ret;
 
 		gitno_consume_n(buf, buf->offset);
 
 		if (t->proto.flush) { /* No more refs */
 			t->proto.flush = 0;
-			return GIT_SUCCESS;
+			return 0;
 		}
 	}
-
-	return error;
 }
 
 static int detect_caps(transport_git *t)
@@ -167,7 +171,7 @@ static int detect_caps(transport_git *t)
 	pkt = git_vector_get(refs, 0);
 	/* No refs or capabilites, odd but not a problem */
 	if (pkt == NULL || pkt->capabilities == NULL)
-		return GIT_SUCCESS;
+		return 0;
 
 	ptr = pkt->capabilities;
 	while (ptr != NULL && *ptr != '\0') {
@@ -184,7 +188,7 @@ static int detect_caps(transport_git *t)
 		ptr = strchr(ptr, ' ');
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 /*
@@ -194,36 +198,33 @@ static int detect_caps(transport_git *t)
 static int git_connect(git_transport *transport, int direction)
 {
 	transport_git *t = (transport_git *) transport;
-	int error = GIT_SUCCESS;
 
-	if (direction == GIT_DIR_PUSH)
-		return git__throw(GIT_EINVALIDARGS, "Pushing is not supported with the git protocol");
+	if (direction == GIT_DIR_PUSH) {
+		giterr_set(GITERR_NET, "Pushing over git:// is not supported");
+		return -1;
+	}
 
 	t->parent.direction = direction;
-	error = git_vector_init(&t->refs, 16, NULL);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	if (git_vector_init(&t->refs, 16, NULL) < 0)
+		return -1;
 
 	/* Connect and ask for the refs */
-	error = do_connect(t, transport->url);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (do_connect(t, transport->url) < 0)
+		goto cleanup;
 
 	gitno_buffer_setup(&t->buf, t->buff, sizeof(t->buff), t->socket);
 
 	t->parent.connected = 1;
-	error = store_refs(t);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (store_refs(t) < 0)
+		goto cleanup;
 
-	error = detect_caps(t);
+	if (detect_caps(t) < 0)
+		goto cleanup;
 
+	return 0;
 cleanup:
-	if (error < GIT_SUCCESS) {
-		git_vector_free(&t->refs);
-	}
-
-	return error;
+	git_vector_free(&t->refs);
+	return -1;
 }
 
 static int git_ls(git_transport *transport, git_headlist_cb list_cb, void *opaque)
@@ -241,149 +242,129 @@ static int git_ls(git_transport *transport, git_headlist_cb list_cb, void *opaqu
 
 		pkt = (git_pkt_ref *)p;
 
-		if (list_cb(&pkt->head, opaque) < 0)
-			return git__throw(GIT_ERROR,
-				"The user callback returned an error code");
+		if (list_cb(&pkt->head, opaque) < 0) {
+			giterr_set(GITERR_NET, "User callback returned error");
+			return -1;
+		}
 	}
 
-	return GIT_SUCCESS;
+	return 0;
+}
+
+/* Wait until we get an ack from the */
+static int recv_pkt(gitno_buffer *buf)
+{
+	const char *ptr = buf->data, *line_end;
+	git_pkt *pkt;
+	int pkt_type, error;
+
+	do {
+		/* Wait for max. 1 second */
+		if ((error = gitno_select_in(buf, 1, 0)) < 0) {
+			return -1;
+		} else if (error == 0) {
+			/*
+			 * Some servers don't respond immediately, so if this
+			 * happens, we keep sending information until it
+			 * answers. Pretend we received a NAK to convince higher
+			 * layers to do so.
+			 */
+			return GIT_PKT_NAK;
+		}
+
+		if ((error = gitno_recv(buf)) < 0)
+			return -1;
+
+		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
+		if (error == GIT_ESHORTBUFFER)
+			continue;
+		if (error < 0)
+			return -1;
+	} while (error);
+
+	gitno_consume(buf, line_end);
+	pkt_type = pkt->type;
+	git__free(pkt);
+
+	return pkt_type;
 }
 
 static int git_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
 {
 	transport_git *t = (transport_git *) transport;
 	git_revwalk *walk;
-	git_reference *ref;
-	git_strarray refs;
 	git_oid oid;
 	int error;
 	unsigned int i;
+	git_buf data = GIT_BUF_INIT;
 	gitno_buffer *buf = &t->buf;
 
-	error = git_pkt_send_wants(wants, &t->caps, t->socket);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to send wants list");
+	if (git_pkt_buffer_wants(wants, &t->caps, &data) < 0)
+		return -1;
 
-	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
-	if (error < GIT_ERROR)
-		return git__rethrow(error, "Failed to list all references");
+	if (git_fetch_setup_walk(&walk, repo) < 0)
+		goto on_error;
 
-	error = git_revwalk_new(&walk, repo);
-	if (error < GIT_ERROR) {
-		error = git__rethrow(error, "Failed to list all references");
-		goto cleanup;
-	}
-	git_revwalk_sorting(walk, GIT_SORT_TIME);
+	if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+		goto on_error;
 
-	for (i = 0; i < refs.count; ++i) {
-		/* No tags */
-		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
-			continue;
-
-		error = git_reference_lookup(&ref, repo, refs.strings[i]);
-		if (error < GIT_ERROR) {
-			error = git__rethrow(error, "Failed to lookup %s", refs.strings[i]);
-			goto cleanup;
-		}
-
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
-			continue;
-
-		error = git_revwalk_push(walk, git_reference_oid(ref));
-		if (error < GIT_ERROR) {
-			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
-			goto cleanup;
-		}
-	}
-	git_strarray_free(&refs);
-
+	git_buf_clear(&data);
 	/*
 	 * We don't support any kind of ACK extensions, so the negotiation
 	 * boils down to sending what we have and listening for an ACK
 	 * every once in a while.
 	 */
 	i = 0;
-	while ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
-		error = git_pkt_send_have(&oid, t->socket);
+	while ((error = git_revwalk_next(&oid, walk)) == 0) {
+		git_pkt_buffer_have(&oid, &data);
 		i++;
 		if (i % 20 == 0) {
-			const char *ptr = buf->data, *line_end;
-			git_pkt *pkt;
-			git_pkt_send_flush(t->socket);
-			while (1) {
-				/* Wait for max. 1 second */
-				error = gitno_select_in(buf, 1, 0);
-				if (error < GIT_SUCCESS) {
-					error = git__throw(GIT_EOSERR, "Error in select");
-				} else if (error == 0) {
-				/*
-				 * Some servers don't respond immediately, so if this
-				 * happens, we keep sending information until it
-				 * answers.
-				 */
-					break;
-				}
+			int pkt_type;
 
-				error = gitno_recv(buf);
-				if (error < GIT_SUCCESS) {
-				 error = git__rethrow(error, "Error receiving data");
-				 goto cleanup;
-				}
-				error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-				if (error == GIT_ESHORTBUFFER)
-					continue;
-				if (error < GIT_SUCCESS) {
-					error = git__rethrow(error, "Failed to get answer");
-					goto cleanup;
-				}
+			git_pkt_buffer_flush(&data);
+			if (git_buf_oom(&data))
+				goto on_error;
 
-				gitno_consume(buf, line_end);
+			if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+				goto on_error;
 
-				if (pkt->type == GIT_PKT_ACK) {
-					git__free(pkt);
-					error = GIT_SUCCESS;
-					goto done;
-				} else if (pkt->type == GIT_PKT_NAK) {
-					git__free(pkt);
-					break;
-				} else {
-					error = git__throw(GIT_ERROR, "Got unexpected pkt type");
-					goto cleanup;
-				}
+			pkt_type = recv_pkt(buf);
+
+			if (pkt_type == GIT_PKT_ACK) {
+				break;
+			} else if (pkt_type == GIT_PKT_NAK) {
+				continue;
+			} else {
+				giterr_set(GITERR_NET, "Unexpected pkt type");
+				goto on_error;
 			}
+
 		}
 	}
-	if (error == GIT_EREVWALKOVER)
-		error = GIT_SUCCESS;
+	if (error < 0 && error != GIT_EREVWALKOVER)
+		goto on_error;
 
-done:
-	git_pkt_send_flush(t->socket);
-	git_pkt_send_done(t->socket);
+	/* Tell the other end that we're done negotiating */
+	git_buf_clear(&data);
+	git_pkt_buffer_flush(&data);
+	git_pkt_buffer_done(&data);
+	if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+		goto on_error;
 
-cleanup:
+	git_buf_free(&data);
 	git_revwalk_free(walk);
+	return 0;
 
-	return error;
+on_error:
+	git_buf_free(&data);
+	git_revwalk_free(walk);
+	return -1;
 }
 
-static int git_send_flush(git_transport *transport)
+static int git_download_pack(git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats)
 {
 	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_flush(t->socket);
-}
-
-static int git_send_done(git_transport *transport)
-{
-	transport_git *t = (transport_git *) transport;
-
-	return git_pkt_send_done(t->socket);
-}
-
-static int git_download_pack(char **out, git_transport *transport, git_repository *repo)
-{
-	transport_git *t = (transport_git *) transport;
-	int error = GIT_SUCCESS;
+	int error = 0, read_bytes;
 	gitno_buffer *buf = &t->buf;
 	git_pkt *pkt;
 	const char *line_end, *ptr;
@@ -391,7 +372,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 	/*
 	 * For now, we ignore everything and wait for the pack
 	 */
-	while (1) {
+	do {
 		ptr = buf->data;
 		/* Whilst we're searching for the pack */
 		while (1) {
@@ -408,7 +389,7 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 
 			if (pkt->type == GIT_PKT_PACK) {
 				git__free(pkt);
-				return git_fetch__download_pack(out, buf->data, buf->offset, t->socket, repo);
+				return git_fetch__download_pack(buf->data, buf->offset, t->socket, repo, bytes, stats);
 			}
 
 			/* For now we don't care about anything */
@@ -416,34 +397,28 @@ static int git_download_pack(char **out, git_transport *transport, git_repositor
 			gitno_consume(buf, line_end);
 		}
 
-		error = gitno_recv(buf);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(GIT_EOSERR, "Failed to receive data");
-		if (error == 0) { /* Orderly shutdown */
-			return GIT_SUCCESS;
-		}
+		read_bytes = gitno_recv(buf);
+	} while (read_bytes);
 
-	}
+	return read_bytes;
 }
-
 
 static int git_close(git_transport *transport)
 {
 	transport_git *t = (transport_git*) transport;
-	int error;
 
 	/* Can't do anything if there's an error, so don't bother checking  */
 	git_pkt_send_flush(t->socket);
-	error = gitno_close(t->socket);
-
-	if (error < 0)
-		error = git__throw(GIT_EOSERR, "Failed to close socket");
+	if (gitno_close(t->socket) < 0) {
+		giterr_set(GITERR_NET, "Failed to close socket");
+		return -1;
+	}
 
 #ifdef GIT_WIN32
 	WSACleanup();
 #endif
 
-	return error;
+	return 0;
 }
 
 static void git_free(git_transport *transport)
@@ -472,16 +447,13 @@ int git_transport_git(git_transport **out)
 #endif
 
 	t = git__malloc(sizeof(transport_git));
-	if (t == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(t);
 
 	memset(t, 0x0, sizeof(transport_git));
 
 	t->parent.connect = git_connect;
 	t->parent.ls = git_ls;
 	t->parent.negotiate_fetch = git_negotiate_fetch;
-	t->parent.send_flush = git_send_flush;
-	t->parent.send_done = git_send_done;
 	t->parent.download_pack = git_download_pack;
 	t->parent.close = git_close;
 	t->parent.free = git_free;
@@ -494,9 +466,10 @@ int git_transport_git(git_transport **out)
 	ret = WSAStartup(MAKEWORD(2,2), &t->wsd);
 	if (ret != 0) {
 		git_free(*out);
-		return git__throw(GIT_EOSERR, "Winsock init failed");
+		giterr_set(GITERR_NET, "Winsock init failed");
+		return -1;
 	}
 #endif
 
-	return GIT_SUCCESS;
+	return 0;
 }

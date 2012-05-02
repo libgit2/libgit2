@@ -14,6 +14,9 @@ typedef struct {
 		char last[1024];
 	} error;
 
+	git_error *last_error;
+	git_error error_t;
+
 	git_mwindow_ctl mem_ctl;
 } git_global_st;
 

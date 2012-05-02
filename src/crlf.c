@@ -105,7 +105,7 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 static int drop_crlf(git_buf *dest, const git_buf *source)
 {
 	const char *scan = source->ptr, *next;
-	const char *scan_end = source->ptr + source->size;
+	const char *scan_end = git_buf_cstr(source) + git_buf_len(source);
 
 	/* Main scan loop.  Find the next carriage return and copy the
 	 * whole chunk up to that point to the destination buffer.
@@ -128,8 +128,7 @@ static int drop_crlf(git_buf *dest, const git_buf *source)
 
 	/* Copy remaining input into dest */
 	git_buf_put(dest, scan, scan_end - scan);
-
-	return git_buf_lasterror(dest);
+	return 0;
 }
 
 static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *source)
@@ -139,7 +138,7 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 	assert(self && dest && source);
 
 	/* Empty file? Nothing to do */
-	if (source->size == 0)
+	if (git_buf_len(source) == 0)
 		return 0;
 
 	/* Heuristics to see if we can skip the conversion.

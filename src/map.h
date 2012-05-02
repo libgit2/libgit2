@@ -31,6 +31,11 @@ typedef struct { /* memory mapped buffer	*/
 #endif
 } git_map;
 
+#define GIT_MMAP_VALIDATE(out, len, prot, flags) do { \
+	assert(out != NULL && len > 0); \
+	assert((prot & GIT_PROT_WRITE) || (prot & GIT_PROT_READ)); \
+	assert((flags & GIT_MAP_FIXED) == 0); } while (0)
+
 extern int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset);
 extern int p_munmap(git_map *map);
 

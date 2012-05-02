@@ -37,6 +37,7 @@ extern int diff_hunk_fn(
 extern int diff_line_fn(
 	void *cb_data,
 	git_diff_delta *delta,
+	git_diff_range *range,
 	char line_origin,
 	const char *content,
 	size_t content_len);

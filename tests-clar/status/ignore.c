@@ -47,6 +47,34 @@ void test_status_ignore__0(void)
 	}
 
 	/* confirm that ignore files were cached */
-	cl_git_pass(git_attr_cache__is_cached(g_repo, ".git/info/exclude"));
-	cl_git_pass(git_attr_cache__is_cached(g_repo, ".gitignore"));
+	cl_assert(git_attr_cache__is_cached(g_repo, ".git/info/exclude"));
+	cl_assert(git_attr_cache__is_cached(g_repo, ".gitignore"));
 }
+
+
+void test_status_ignore__1(void)
+{
+	int ignored;
+
+	cl_git_rewritefile("attr/.gitignore", "/*.txt\n/dir/\n");
+	git_attr_cache_flush(g_repo);
+
+	cl_git_pass(git_status_should_ignore(g_repo, "root_test4.txt", &ignored));
+	cl_assert(ignored);
+
+	cl_git_pass(git_status_should_ignore(g_repo, "sub/subdir_test2.txt", &ignored));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_status_should_ignore(g_repo, "dir", &ignored));
+	cl_assert(ignored);
+
+	cl_git_pass(git_status_should_ignore(g_repo, "dir/", &ignored));
+	cl_assert(ignored);
+
+	cl_git_pass(git_status_should_ignore(g_repo, "sub/dir", &ignored));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_status_should_ignore(g_repo, "sub/dir/", &ignored));
+	cl_assert(!ignored);
+}
+

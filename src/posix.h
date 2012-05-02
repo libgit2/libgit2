@@ -54,6 +54,14 @@ extern int p_rename(const char *from, const char *to);
 #define p_rmdir(p) rmdir(p)
 #define p_chmod(p,m) chmod(p, m)
 #define p_access(p,m) access(p,m)
+#define p_recv(s,b,l,f) recv(s,b,l,f)
+#define p_send(s,b,l,f) send(s,b,l,f)
+typedef int GIT_SOCKET;
+#define INVALID_SOCKET -1
+
+#else
+
+typedef SOCKET GIT_SOCKET;
 
 #endif
 

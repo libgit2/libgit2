@@ -68,3 +68,19 @@ void test_repo_getters__head_orphan(void)
 	git_reference_free(ref);
 	git_repository_free(repo);
 }
+
+void test_repo_getters__retrieving_the_odb_honors_the_refcount(void)
+{
+	git_odb *odb;
+	git_repository *repo;
+
+	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+
+	cl_git_pass(git_repository_odb(&odb, repo));
+	cl_assert(((git_refcount *)odb)->refcount == 2);
+
+	git_repository_free(repo);
+	cl_assert(((git_refcount *)odb)->refcount == 1);
+
+	git_odb_free(odb);
+}

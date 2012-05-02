@@ -44,6 +44,8 @@ GIT_INLINE(const void *) git_vector_get_const(const git_vector *v, unsigned int 
 	return (position < v->length) ? v->contents[position] : NULL;
 }
 
+#define GIT_VECTOR_GET(V,I) ((I) < (V)->length ? (V)->contents[(I)] : NULL)
+
 GIT_INLINE(void *) git_vector_last(git_vector *v)
 {
 	return (v->length > 0) ? git_vector_get(v, v->length - 1) : NULL;

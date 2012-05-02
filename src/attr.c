@@ -3,6 +3,8 @@
 #include "config.h"
 #include <ctype.h>
 
+GIT__USE_STRMAP;
+
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files);
 
@@ -21,10 +23,11 @@ int git_attr_get(
 
 	*value = NULL;
 
-	if ((error = git_attr_path__init(
-			&path, pathname, git_repository_workdir(repo))) < GIT_SUCCESS ||
-		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
-		return git__rethrow(error, "Could not get attribute for %s", pathname);
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
+		return -1;
+
+	if ((error = collect_attr_files(repo, pathname, &files)) < 0)
+		goto cleanup;
 
 	attr.name = name;
 	attr.name_hash = git_attr_file__name_hash(name);
@@ -33,18 +36,17 @@ int git_attr_get(
 
 		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
 			int pos = git_vector_bsearch(&rule->assigns, &attr);
-			git_clearerror(); /* okay if search failed */
-
 			if (pos >= 0) {
 				*value = ((git_attr_assignment *)git_vector_get(
 							  &rule->assigns, pos))->value;
-				goto found;
+				goto cleanup;
 			}
 		}
 	}
 
-found:
+cleanup:
 	git_vector_free(&files);
+	git_attr_path__free(&path);
 
 	return error;
 }
@@ -70,15 +72,14 @@ int git_attr_get_many(
 
 	memset((void *)values, 0, sizeof(const char *) * num_attr);
 
-	if ((error = git_attr_path__init(
-			&path, pathname, git_repository_workdir(repo))) < GIT_SUCCESS ||
-		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
-		return git__rethrow(error, "Could not get attributes for %s", pathname);
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
+		return -1;
 
-	if ((info = git__calloc(num_attr, sizeof(attr_get_many_info))) == NULL) {
-		git__rethrow(GIT_ENOMEM, "Could not get attributes for %s", pathname);
+	if ((error = collect_attr_files(repo, pathname, &files)) < 0)
 		goto cleanup;
-	}
+
+	info = git__calloc(num_attr, sizeof(attr_get_many_info));
+	GITERR_CHECK_ALLOC(info);
 
 	git_vector_foreach(&files, i, file) {
 
@@ -96,8 +97,6 @@ int git_attr_get_many(
 				}
 
 				pos = git_vector_bsearch(&rule->assigns, &info[k].name);
-				git_clearerror(); /* okay if search failed */
-
 				if (pos >= 0) {
 					info[k].found = (git_attr_assignment *)
 						git_vector_get(&rule->assigns, pos);
@@ -112,6 +111,7 @@ int git_attr_get_many(
 
 cleanup:
 	git_vector_free(&files);
+	git_attr_path__free(&path);
 	git__free(info);
 
 	return error;
@@ -130,18 +130,16 @@ int git_attr_foreach(
 	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
-	git_hashtable *seen = NULL;
+	git_strmap *seen = NULL;
 
-	if ((error = git_attr_path__init(
-			&path, pathname, git_repository_workdir(repo))) < GIT_SUCCESS ||
-		(error = collect_attr_files(repo, pathname, &files)) < GIT_SUCCESS)
-		return git__rethrow(error, "Could not get attributes for %s", pathname);
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
+		return -1;
 
-	seen = git_hashtable_alloc(8, git_hash__strhash_cb, git_hash__strcmp_cb);
-	if (!seen) {
-		error = GIT_ENOMEM;
+	if ((error = collect_attr_files(repo, pathname, &files)) < 0)
 		goto cleanup;
-	}
+
+	seen = git_strmap_alloc();
+	GITERR_CHECK_ALLOC(seen);
 
 	git_vector_foreach(&files, i, file) {
 
@@ -149,27 +147,23 @@ int git_attr_foreach(
 
 			git_vector_foreach(&rule->assigns, k, assign) {
 				/* skip if higher priority assignment was already seen */
-				if (git_hashtable_lookup(seen, assign->name))
+				if (git_strmap_exists(seen, assign->name))
 					continue;
 
-				error = git_hashtable_insert(seen, assign->name, assign);
-				if (error != GIT_SUCCESS)
-					goto cleanup;
+				git_strmap_insert(seen, assign->name, assign, error);
+				if (error >= 0)
+					error = callback(assign->name, assign->value, payload);
 
-				error = callback(assign->name, assign->value, payload);
-				if (error != GIT_SUCCESS)
+				if (error != 0)
 					goto cleanup;
 			}
 		}
 	}
 
 cleanup:
-	if (seen)
-		git_hashtable_free(seen);
+	git_strmap_free(seen);
 	git_vector_free(&files);
-
-	if (error != GIT_SUCCESS)
-		(void)git__rethrow(error, "Could not get attributes for %s", pathname);
+	git_attr_path__free(&path);
 
 	return error;
 }
@@ -182,40 +176,42 @@ int git_attr_add_macro(
 {
 	int error;
 	git_attr_rule *macro = NULL;
+	git_pool *pool;
 
-	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
-		return error;
+	if (git_attr_cache__init(repo) < 0)
+		return -1;
 
 	macro = git__calloc(1, sizeof(git_attr_rule));
-	if (!macro)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(macro);
 
-	macro->match.pattern = git__strdup(name);
-	if (!macro->match.pattern) {
-		git__free(macro);
-		return GIT_ENOMEM;
-	}
+	pool = &git_repository_attr_cache(repo)->pool;
+
+	macro->match.pattern = git_pool_strdup(pool, name);
+	GITERR_CHECK_ALLOC(macro->match.pattern);
 
 	macro->match.length = strlen(macro->match.pattern);
 	macro->match.flags = GIT_ATTR_FNMATCH_MACRO;
 
-	error = git_attr_assignment__parse(repo, &macro->assigns, &values);
+	error = git_attr_assignment__parse(repo, pool, &macro->assigns, &values);
 
-	if (error == GIT_SUCCESS)
+	if (!error)
 		error = git_attr_cache__insert_macro(repo, macro);
 
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		git_attr_rule__free(macro);
 
 	return error;
 }
 
-int git_attr_cache__is_cached(git_repository *repo, const char *path)
+bool git_attr_cache__is_cached(git_repository *repo, const char *path)
 {
 	const char *cache_key = path;
+	git_strmap *files = git_repository_attr_cache(repo)->files;
+
 	if (repo && git__prefixcmp(cache_key, git_repository_workdir(repo)) == 0)
 		cache_key += strlen(git_repository_workdir(repo));
-	return (git_hashtable_lookup(repo->attrcache.files, cache_key) == NULL);
+
+	return git_strmap_exists(files, cache_key);
 }
 
 int git_attr_cache__lookup_or_create_file(
@@ -226,32 +222,36 @@ int git_attr_cache__lookup_or_create_file(
 	git_attr_file **file_ptr)
 {
 	int error;
-	git_attr_cache *cache = &repo->attrcache;
+	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file *file = NULL;
+	khiter_t pos;
 
-	file = git_hashtable_lookup(cache->files, key);
-	if (file) {
-		*file_ptr = file;
-		return GIT_SUCCESS;
+	pos = git_strmap_lookup_index(cache->files, key);
+	if (git_strmap_valid_index(cache->files, pos)) {
+		*file_ptr = git_strmap_value_at(cache->files, pos);
+		return 0;
 	}
 
-	if (loader && git_path_exists(filename) != GIT_SUCCESS) {
+	if (loader && git_path_exists(filename) == false) {
 		*file_ptr = NULL;
-		return GIT_SUCCESS;
+		return 0;
 	}
 
-	if ((error = git_attr_file__new(&file)) < GIT_SUCCESS)
-		return error;
+	if (git_attr_file__new(&file, &cache->pool) < 0)
+		return -1;
 
 	if (loader)
 		error = loader(repo, filename, file);
 	else
 		error = git_attr_file__set_path(repo, key, file);
 
-	if (error == GIT_SUCCESS)
-		error = git_hashtable_insert(cache->files, file->path, file);
+	if (!error) {
+		git_strmap_insert(cache->files, file->path, file, error);
+		if (error > 0)
+			error = 0;
+	}
 
-	if (error < GIT_SUCCESS) {
+	if (error < 0) {
 		git_attr_file__free(file);
 		file = NULL;
 	}
@@ -274,8 +274,8 @@ int git_attr_cache__push_file(
 	const char *cache_key;
 
 	if (base != NULL) {
-		if ((error = git_buf_joinpath(&path, base, filename)) < GIT_SUCCESS)
-			return error;
+		if (git_buf_joinpath(&path, base, filename) < 0)
+			return -1;
 		filename = path.ptr;
 	}
 
@@ -287,7 +287,7 @@ int git_attr_cache__push_file(
 	error = git_attr_cache__lookup_or_create_file(
 		repo, cache_key, filename, loader, &file);
 
-	if (error == GIT_SUCCESS && file != NULL)
+	if (!error && file != NULL)
 		error = git_vector_insert(stack, file);
 
 	git_buf_free(&path);
@@ -311,19 +311,17 @@ static int push_one_attr(void *ref, git_buf *path)
 static int collect_attr_files(
 	git_repository *repo, const char *path, git_vector *files)
 {
-	int error = GIT_SUCCESS;
+	int error;
 	git_buf dir = GIT_BUF_INIT;
-	git_config *cfg;
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info;
 
-	if ((error = git_attr_cache__init(repo)) < GIT_SUCCESS)
-		goto cleanup;
+	if (git_attr_cache__init(repo) < 0 ||
+		git_vector_init(files, 4, NULL) < 0)
+		return -1;
 
-	if ((error = git_vector_init(files, 4, NULL)) < GIT_SUCCESS)
-		goto cleanup;
-
-	if ((error = git_path_find_dir(&dir, path, workdir)) < GIT_SUCCESS)
+	error = git_path_find_dir(&dir, path, workdir);
+	if (error < 0)
 		goto cleanup;
 
 	/* in precendence order highest to lowest:
@@ -333,38 +331,33 @@ static int collect_attr_files(
 	 * - $GIT_PREFIX/etc/gitattributes
 	 */
 
-	error = push_attrs(repo, files, repo->path_repository, GIT_ATTR_FILE_INREPO);
-	if (error < GIT_SUCCESS)
+	error = push_attrs(
+		repo, files, git_repository_path(repo), GIT_ATTR_FILE_INREPO);
+	if (error < 0)
 		goto cleanup;
 
 	info.repo = repo;
 	info.files = files;
 	error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		goto cleanup;
 
-	if ((error = git_repository_config(&cfg, repo)) == GIT_SUCCESS) {
-		const char *core_attribs = NULL;
-		git_config_get_string(cfg, GIT_ATTR_CONFIG, &core_attribs);
-		git_clearerror(); /* don't care if attributesfile is not set */
-		if (core_attribs)
-			error = push_attrs(repo, files, NULL, core_attribs);
-		git_config_free(cfg);
+	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
+		error = push_attrs(
+			repo, files, NULL, git_repository_attr_cache(repo)->cfg_attr_file);
+		if (error < 0)
+			goto cleanup;
 	}
 
-	if (error == GIT_SUCCESS) {
-		error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
-		if (error == GIT_SUCCESS)
-			error = push_attrs(repo, files, NULL, dir.ptr);
-		else if (error == GIT_ENOTFOUND)
-			error = GIT_SUCCESS;
-	}
+	error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
+	if (!error)
+		error = push_attrs(repo, files, NULL, dir.ptr);
+	else if (error == GIT_ENOTFOUND)
+		error = 0;
 
  cleanup:
-	if (error < GIT_SUCCESS) {
-		git__rethrow(error, "Could not get attributes for '%s'", path);
+	if (error < 0)
 		git_vector_free(files);
-	}
 	git_buf_free(&dir);
 
 	return error;
@@ -373,68 +366,108 @@ static int collect_attr_files(
 
 int git_attr_cache__init(git_repository *repo)
 {
-	int error = GIT_SUCCESS;
-	git_attr_cache *cache = &repo->attrcache;
+	int ret;
+	git_attr_cache *cache = git_repository_attr_cache(repo);
+	git_config *cfg;
 
 	if (cache->initialized)
-		return GIT_SUCCESS;
+		return 0;
 
+	/* cache config settings for attributes and ignores */
+	if (git_repository_config__weakptr(&cfg, repo) < 0)
+		return -1;
+
+	ret = git_config_get_string(cfg, GIT_ATTR_CONFIG, &cache->cfg_attr_file);
+	if (ret < 0 && ret != GIT_ENOTFOUND)
+		return ret;
+
+	ret = git_config_get_string(cfg, GIT_IGNORE_CONFIG, &cache->cfg_excl_file);
+	if (ret < 0 && ret != GIT_ENOTFOUND)
+		return ret;
+
+	giterr_clear();
+
+	/* allocate hashtable for attribute and ignore file contents */
 	if (cache->files == NULL) {
-		cache->files = git_hashtable_alloc(
-			8, git_hash__strhash_cb, git_hash__strcmp_cb);
-		if (!cache->files)
-			return git__throw(GIT_ENOMEM, "Could not initialize attribute cache");
+		cache->files = git_strmap_alloc();
+		GITERR_CHECK_ALLOC(cache->files);
 	}
 
+	/* allocate hashtable for attribute macros */
 	if (cache->macros == NULL) {
-		cache->macros = git_hashtable_alloc(
-			8, git_hash__strhash_cb, git_hash__strcmp_cb);
-		if (!cache->macros)
-			return git__throw(GIT_ENOMEM, "Could not initialize attribute cache");
+		cache->macros = git_strmap_alloc();
+		GITERR_CHECK_ALLOC(cache->macros);
 	}
+
+	/* allocate string pool */
+	if (git_pool_init(&cache->pool, 1, 0) < 0)
+		return -1;
 
 	cache->initialized = 1;
 
 	/* insert default macros */
-	error = git_attr_add_macro(repo, "binary", "-diff -crlf");
-
-	return error;
+	return git_attr_add_macro(repo, "binary", "-diff -crlf -text");
 }
 
 void git_attr_cache_flush(
 	git_repository *repo)
 {
+	git_attr_cache *cache;
+
 	if (!repo)
 		return;
 
-	if (repo->attrcache.files) {
+	cache = git_repository_attr_cache(repo);
+
+	if (cache->files != NULL) {
 		git_attr_file *file;
 
-		GIT_HASHTABLE_FOREACH_VALUE(repo->attrcache.files, file,
-			git_attr_file__free(file));
+		git_strmap_foreach_value(cache->files, file, {
+			git_attr_file__free(file);
+		});
 
-		git_hashtable_free(repo->attrcache.files);
-		repo->attrcache.files = NULL;
+		git_strmap_free(cache->files);
 	}
 
-	if (repo->attrcache.macros) {
+	if (cache->macros != NULL) {
 		git_attr_rule *rule;
 
-		GIT_HASHTABLE_FOREACH_VALUE(repo->attrcache.macros, rule,
-			git_attr_rule__free(rule));
+		git_strmap_foreach_value(cache->macros, rule, {
+			git_attr_rule__free(rule);
+		});
 
-		git_hashtable_free(repo->attrcache.macros);
-		repo->attrcache.macros = NULL;
+		git_strmap_free(cache->macros);
 	}
 
-	repo->attrcache.initialized = 0;
+	git_pool_clear(&cache->pool);
+
+	cache->initialized = 0;
 }
 
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 {
-	if (macro->assigns.length == 0)
-		return git__throw(GIT_EMISSINGOBJDATA, "git attribute macro with no values");
+	git_strmap *macros = git_repository_attr_cache(repo)->macros;
+	int error;
 
-	return git_hashtable_insert(
-		repo->attrcache.macros, macro->match.pattern, macro);
+	/* TODO: generate warning log if (macro->assigns.length == 0) */
+	if (macro->assigns.length == 0)
+		return 0;
+
+	git_strmap_insert(macros, macro->match.pattern, macro, error);
+	return (error < 0) ? -1 : 0;
 }
+
+git_attr_rule *git_attr_cache__lookup_macro(
+	git_repository *repo, const char *name)
+{
+	git_strmap *macros = git_repository_attr_cache(repo)->macros;
+	khiter_t pos;
+
+	pos = git_strmap_lookup_index(macros, name);
+
+	if (!git_strmap_valid_index(macros, pos))
+		return NULL;
+
+	return (git_attr_rule *)git_strmap_value_at(macros, pos);
+}
+

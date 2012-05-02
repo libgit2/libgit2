@@ -17,10 +17,12 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 	const char *line_end, *ptr;
 
 	if (len == 0) { /* EOF */
-		if (buf->size != 0)
-			return p->error = git__throw(GIT_ERROR, "EOF and unprocessed data");
-		else
+		if (git_buf_len(buf) != 0) {
+			giterr_set(GITERR_NET, "Unexpected EOF");
+			return p->error = -1;
+		} else {
 			return 0;
+		}
 	}
 
 	git_buf_put(buf, data, len);
@@ -28,23 +30,29 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 	while (1) {
 		git_pkt *pkt;
 
-		if (buf->size == 0)
+		if (git_buf_len(buf) == 0)
 			return 0;
 
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
+		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
 		if (error == GIT_ESHORTBUFFER)
 			return 0; /* Ask for more */
-		if (error < GIT_SUCCESS)
-			return p->error = git__rethrow(error, "Failed to parse pkt-line");
+		if (error < 0)
+			return p->error = -1;
 
 		git_buf_consume(buf, line_end);
-		error = git_vector_insert(refs, pkt);
-		if (error < GIT_SUCCESS)
-			return p->error = git__rethrow(error, "Failed to add pkt to list");
+
+		if (pkt->type == GIT_PKT_ERR) {
+			giterr_set(GITERR_NET, "Remote error: %s", ((git_pkt_err *)pkt)->error);
+			git__free(pkt);
+			return -1;
+		}
+
+		if (git_vector_insert(refs, pkt) < 0)
+			return p->error = -1;
 
 		if (pkt->type == GIT_PKT_FLUSH)
 			p->flush = 1;
 	}
 
-	return error;
+	return 0;
 }

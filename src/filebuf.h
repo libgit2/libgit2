@@ -19,7 +19,8 @@
 #define GIT_FILEBUF_APPEND				(1 << 2)
 #define GIT_FILEBUF_FORCE				(1 << 3)
 #define GIT_FILEBUF_TEMPORARY			(1 << 4)
-#define GIT_FILEBUF_DEFLATE_SHIFT		(5)
+#define GIT_FILEBUF_DO_NOT_BUFFER		(1 << 5)
+#define GIT_FILEBUF_DEFLATE_SHIFT		(6)
 
 #define GIT_FILELOCK_EXTENSION ".lock\0"
 #define GIT_FILELOCK_EXTLENGTH 6
@@ -40,25 +41,37 @@ struct git_filebuf {
 
 	size_t buf_size, buf_pos;
 	git_file fd;
+	bool fd_is_open;
+	bool do_not_buffer;
+	int last_error;
 };
 
 typedef struct git_filebuf git_filebuf;
 
 #define GIT_FILEBUF_INIT {0}
 
-/* The git_filebuf object lifecycle is:
+/*
+ * The git_filebuf object lifecycle is:
  * - Allocate git_filebuf, preferably using GIT_FILEBUF_INIT.
+ *
  * - Call git_filebuf_open() to initialize the filebuf for use.
+ *
  * - Make as many calls to git_filebuf_write(), git_filebuf_printf(),
- *   git_filebuf_reserve() as you like.
+ *   git_filebuf_reserve() as you like. The error codes for these
+ *   functions don't need to be checked. They are stored internally
+ *   by the file buffer.
+ *
  * - While you are writing, you may call git_filebuf_hash() to get
- *   the hash of all you have written so far.
+ *   the hash of all you have written so far. This function will
+ *   fail if any of the previous writes to the buffer failed.
+ *
  * - To close the git_filebuf, you may call git_filebuf_commit() or
  *   git_filebuf_commit_at() to save the file, or
  *   git_filebuf_cleanup() to abandon the file.  All of these will
- *   clear the git_filebuf object.
+ *   free the git_filebuf object. Likewise, all of these will fail
+ *   if any of the previous writes to the buffer failed, and set
+ *   an error code accordingly.
  */
-
 int git_filebuf_write(git_filebuf *lock, const void *buff, size_t len);
 int git_filebuf_reserve(git_filebuf *file, void **buff, size_t len);
 int git_filebuf_printf(git_filebuf *file, const char *format, ...) GIT_FORMAT_PRINTF(2, 3);

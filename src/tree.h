@@ -32,7 +32,7 @@ struct git_treebuilder {
 
 GIT_INLINE(unsigned int) entry_is_tree(const struct git_tree_entry *e)
 {
-	return e->attr & 040000;
+	return (S_ISDIR(e->attr) && !S_ISGITLINK(e->attr));
 }
 
 void git_tree__free(git_tree *tree);
