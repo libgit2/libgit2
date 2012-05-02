@@ -38,7 +38,7 @@ static void write_file(const char *path, const char *content)
 	git_file file;
    int error;
 
-	if (git_path_exists(path) == GIT_SUCCESS) {
+	if (git_path_exists(path)) {
 		cl_git_pass(p_unlink(path));
 	}
 
@@ -82,7 +82,7 @@ void test_repo_discover__0(void)
 	append_ceiling_dir(&ceiling_dirs_buf, TEMP_REPO_FOLDER);
 	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
-	cl_assert(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
+	cl_git_fail(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));
 
 	cl_git_pass(git_repository_init(&repo, DISCOVER_FOLDER, 1));
 	cl_git_pass(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));
