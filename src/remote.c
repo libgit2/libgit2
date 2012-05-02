@@ -381,13 +381,8 @@ void git_remote_disconnect(git_remote *remote)
 {
 	assert(remote);
 
-	if (remote->transport != NULL) {
-		if (remote->transport->connected)
+	if (remote->transport != NULL && remote->transport->connected)
 			remote->transport->close(remote->transport);
-
-		remote->transport->free(remote->transport);
-		remote->transport = NULL;
-	}
 }
 
 void git_remote_free(git_remote *remote)
@@ -395,14 +390,21 @@ void git_remote_free(git_remote *remote)
 	if (remote == NULL)
 		return;
 
+	if (remote->transport != NULL) {
+		git_remote_disconnect(remote);
+
+		remote->transport->free(remote->transport);
+		remote->transport = NULL;
+	}
+
+	git_vector_free(&remote->refs);
+
 	git__free(remote->fetch.src);
 	git__free(remote->fetch.dst);
 	git__free(remote->push.src);
 	git__free(remote->push.dst);
 	git__free(remote->url);
 	git__free(remote->name);
-	git_vector_free(&remote->refs);
-	git_remote_disconnect(remote);
 	git__free(remote);
 }
 
