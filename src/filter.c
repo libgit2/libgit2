@@ -95,8 +95,8 @@ int git_filters_load(git_vector *filters, git_repository *repo, const char *path
 		if (error < GIT_SUCCESS)
 			return error;
 	} else {
-		return git__throw(GIT_ENOTIMPLEMENTED,
-			"Worktree filters are not implemented yet");
+		giterr_set(GITERR_INVALID, "Worktree filters are not implemented yet");
+		return GIT_ENOTIMPLEMENTED;
 	}
 
 	return (int)filters->length;

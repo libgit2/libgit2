@@ -310,8 +310,10 @@ int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 	assert(commit);
 
 	parent_oid = git_vector_get(&commit->parent_oids, n);
-	if (parent_oid == NULL)
-		return git__throw(GIT_ENOTFOUND, "Parent %u does not exist", n);
+	if (parent_oid == NULL) {
+		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
+		return GIT_ENOTFOUND;
+	}
 
 	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
