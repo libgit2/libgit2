@@ -122,7 +122,6 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
    const git_reflog_entry *entry;
    git_buf buf = GIT_BUF_INIT;
    size_t refspeclen = strlen(refspec);
-   size_t reflogspeclen = strlen(reflogspec);
 
    if (git__prefixcmp(reflogspec, "@{") != 0 ||
        git__suffixcmp(reflogspec, "}") != 0) {
@@ -163,11 +162,6 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
          /* Get the target of HEAD */
          git_reference_lookup(&ref, repo, "HEAD");
          git_buf_puts(&buf, git_reference_target(ref));
-         git_reference_free(ref);
-
-         /* Get the reflog for that ref */
-         git_reference_lookup(&ref, repo, git_buf_cstr(&buf));
-         git_reflog_read(&reflog, ref);
          git_reference_free(ref);
       } else {
          if (git__prefixcmp(refspec, "refs/heads/") != 0) {
@@ -211,18 +205,22 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 static git_object* dereference_object(git_object *obj)
 {
    git_otype type = git_object_type(obj);
-   git_object *newobj = NULL;
-   git_tree *tree = NULL;
 
    switch (type) {
    case GIT_OBJ_COMMIT:
-      if (0 == git_commit_tree(&tree, (git_commit*)obj)) {
-         return (git_object*)tree;
+      {
+         git_tree *tree = NULL;
+         if (0 == git_commit_tree(&tree, (git_commit*)obj)) {
+            return (git_object*)tree;
+         }
       }
       break;
    case GIT_OBJ_TAG:
-      if (0 == git_tag_target(&newobj, (git_tag*)obj)) {
-         return newobj;
+      {
+            git_object *newobj = NULL;
+            if (0 == git_tag_target(&newobj, (git_tag*)obj)) {
+               return newobj;
+            }
       }
       break;
 
@@ -383,13 +381,10 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
 
 int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
-   revparse_state current_state = REVPARSE_STATE_INIT;
-   revparse_state next_state = REVPARSE_STATE_INIT;
+   revparse_state current_state = REVPARSE_STATE_INIT,  next_state = REVPARSE_STATE_INIT;
    const char *spec_cur = spec;
-   git_object *cur_obj = NULL;
-   git_object *next_obj = NULL;
-   git_buf specbuffer = GIT_BUF_INIT;
-   git_buf stepbuffer = GIT_BUF_INIT;
+   git_object *cur_obj = NULL,  *next_obj = NULL;
+   git_buf specbuffer = GIT_BUF_INIT,  stepbuffer = GIT_BUF_INIT;
    int retcode = 0;
 
    assert(out && repo && spec);
@@ -399,7 +394,8 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
       case REVPARSE_STATE_INIT:
          if (!*spec_cur) {
             /* No operators, just a name. Find it and return. */
-            return revparse_lookup_object(out, repo, spec);
+            retcode = revparse_lookup_object(out, repo, spec);
+            next_state = REVPARSE_STATE_DONE;
          } else if (*spec_cur == '@') {
             /* '@' syntax doesn't allow chaining */
             git_buf_puts(&stepbuffer, spec_cur);
@@ -414,7 +410,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
          }
          spec_cur++;
 
-         if (current_state != next_state) {
+         if (current_state != next_state && next_state != REVPARSE_STATE_DONE) {
             /* Leaving INIT state, find the object specified, in case that state needs it */
             revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer));
          }
@@ -463,14 +459,21 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
          break;
 
       case REVPARSE_STATE_DONE:
+         if (cur_obj && *out != cur_obj) git_object_free(cur_obj);
+         if (next_obj && *out != next_obj) git_object_free(next_obj);
          break;
       }
 
       current_state = next_state;
       if (cur_obj != next_obj) {
-         git_object_free(cur_obj);
+         if (cur_obj) git_object_free(cur_obj);
          cur_obj = next_obj;
       }
+   }
+
+   if (!retcode) {
+      if (*out != cur_obj) git_object_free(cur_obj);
+      if (*out != next_obj && next_obj != cur_obj) git_object_free(next_obj);
    }
 
    git_buf_free(&specbuffer);
