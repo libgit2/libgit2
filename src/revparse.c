@@ -18,6 +18,8 @@
 #include "git2/commit.h"
 #include "git2/reflog.h"
 #include "git2/refs.h"
+#include "git2/repository.h"
+#include "git2/config.h"
 
 GIT_BEGIN_DECL
 
@@ -173,7 +175,27 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 
       /* @{u} or @{upstream} -> upstream branch, for a tracking branch. This is stored in the config. */
       if (!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}")) {
-         /* TODO */
+         git_config *cfg;
+         if (!git_repository_config(&cfg, repo)) {
+            /* Is the ref a tracking branch? */
+            const char *remote;
+            git_buf_clear(&buf);
+            git_buf_printf(&buf, "branch.%s.remote", refspec);
+            if (!git_config_get_string(cfg, git_buf_cstr(&buf), &remote)) {
+               /* Yes. Find the first merge target name. */
+               const char *mergetarget;
+               git_buf_clear(&buf);
+               git_buf_printf(&buf, "branch.%s.merge", refspec);
+               if (!git_config_get_string(cfg, git_buf_cstr(&buf), &mergetarget) &&
+                   !git__prefixcmp(mergetarget, "refs/heads/")) {
+                  /* Success. Look up the target and fetch the object. */
+                  git_buf_clear(&buf);
+                  git_buf_printf(&buf, "refs/remotes/%s/%s", remote, mergetarget+11);
+                  retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
+               }
+            }
+            git_config_free(cfg);
+         }
       }
 
       /* @{N} -> Nth prior value for the ref (from reflog) */
