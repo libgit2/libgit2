@@ -101,8 +101,8 @@ void test_network_remotes__save(void)
 
 void test_network_remotes__fnmatch(void)
 {
-	cl_git_pass(git_refspec_src_match(_refspec, "refs/heads/master"));
-	cl_git_pass(git_refspec_src_match(_refspec, "refs/heads/multi/level/branch"));
+	cl_assert(git_refspec_src_matches(_refspec, "refs/heads/master"));
+	cl_assert(git_refspec_src_matches(_refspec, "refs/heads/multi/level/branch"));
 }
 
 void test_network_remotes__transform(void)

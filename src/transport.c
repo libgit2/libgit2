@@ -66,8 +66,10 @@ int git_transport_new(git_transport **out, const char *url)
 
 	fn = transport_find_fn(url);
 
-	if (fn == NULL)
-		return git__throw(GIT_EINVALIDARGS, "Unsupported URL or non-existent path");
+	if (fn == NULL) {
+		giterr_set(GITERR_NET, "Unsupported URL protocol");
+		return -1;
+	}
 
 	error = fn(&transport);
 	if (error < GIT_SUCCESS)

@@ -78,7 +78,7 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	git_buf_puts(buf, "\r\n");
 
 	if (git_buf_oom(buf))
-		return GIT_ENOMEM;
+		return -1;
 
 	return 0;
 }
@@ -174,13 +174,13 @@ static int on_headers_complete(http_parser *parser)
 	if (t->content_type == NULL) {
 		t->content_type = git__strdup(git_buf_cstr(buf));
 		if (t->content_type == NULL)
-			return t->error = GIT_ENOMEM;
+			return t->error = -1;
 	}
 
 	git_buf_clear(buf);
 	git_buf_printf(buf, "application/x-git-%s-advertisement", t->service);
 	if (git_buf_oom(buf))
-		return t->error = GIT_ENOMEM;
+		return t->error = -1;
 
 	if (strcmp(t->content_type, git_buf_cstr(buf)))
 		return t->error = -1;

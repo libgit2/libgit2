@@ -420,7 +420,7 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 	assert(tag_names && repo && pattern);
 
 	if (git_vector_init(&taglist, 8, NULL) < GIT_SUCCESS)
-		return GIT_ENOMEM;
+		return -1;
 
 	filter.taglist = &taglist;
 	filter.pattern = pattern;

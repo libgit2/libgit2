@@ -62,8 +62,7 @@ static int create_object(git_object **object_out, git_otype type)
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TREE:
 		object = git__malloc(git_object__size(type));
-		if (object == NULL)
-			return GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(object);
 		memset(object, 0x0, git_object__size(type));
 		break;
 

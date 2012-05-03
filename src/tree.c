@@ -741,7 +741,7 @@ int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payl
 
 		case GIT_TREEWALK_PRE:
 			tree_error("Preorder tree walking is still not implemented");
-			return GIT_ENOTIMPLEMENTED;
+			return -1;
 
 		default:
 			giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");

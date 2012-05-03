@@ -29,21 +29,13 @@ struct filter_payload {
 static int filter_ref__cb(git_remote_head *head, void *payload)
 {
 	struct filter_payload *p = payload;
-	int ret;
 
 	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0) {
 		p->found_head = 1;
 	} else {
 		/* If it doesn't match the refpec, we don't want it */
-		ret = git_refspec_src_match(p->spec, head->name);
-
-		if (ret == GIT_ENOMATCH)
+		if (!git_refspec_src_matches(p->spec, head->name))
 			return 0;
-
-		if (ret < GIT_SUCCESS) {
-			giterr_set(GITERR_NET, "Error matching remote ref name");
-			return -1;
-		}
 	}
 
 	/* If we have the object, mark it so we don't ask for it */

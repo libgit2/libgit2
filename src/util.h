@@ -105,8 +105,6 @@ GIT_INLINE(const char *) git__next_line(const char *s)
 	return s;
 }
 
-extern int git__fnmatch(const char *pattern, const char *name, int flags);
-
 extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));
 
 /**
