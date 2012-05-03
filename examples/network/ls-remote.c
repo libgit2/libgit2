@@ -19,7 +19,7 @@ int use_unnamed(git_repository *repo, const char *url)
 
 	// Create an instance of a remote from the URL. The transport to use
 	// is detected from the URL
-	error = git_remote_new(&remote, repo, url, NULL);
+	error = git_remote_new(&remote, repo, NULL, url, NULL);
 	if (error < GIT_SUCCESS)
 		goto cleanup;
 
