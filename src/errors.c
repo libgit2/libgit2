@@ -42,8 +42,8 @@ void giterr_set(int error_class, const char *string, ...)
 	/* automatically suffix strerror(errno) for GITERR_OS errors */
 	if (error_class == GITERR_OS) {
 		if (os_error_msg != NULL) {
-			strncat(error_str, ": ", sizeof(error_str));
-			strncat(error_str, os_error_msg, sizeof(error_str));
+			strncat(error_str, ": ", sizeof(error_str) - strlen(error_str) - 1);
+			strncat(error_str, os_error_msg, sizeof(error_str) - strlen(error_str) - 1);
 			errno = 0; /* reset so same error won't be reported twice */
 		}
 #ifdef GIT_WIN32
@@ -57,8 +57,8 @@ void giterr_set(int error_class, const char *string, ...)
 				NULL, dwLastError, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
 
 			if (lpMsgBuf) {
-				strncat(error_str, ": ", sizeof(error_str));
-				strncat(error_str, (const char *)lpMsgBuf, sizeof(error_str));
+				strncat(error_str, ": ", sizeof(error_str) - strlen(error_str) - 1);
+				strncat(error_str, (const char *)lpMsgBuf, sizeof(error_str) - strlen(error_str) - 1);
 				LocalFree(lpMsgBuf);
 			}
 
