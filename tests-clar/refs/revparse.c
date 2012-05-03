@@ -120,10 +120,10 @@ void test_refs_revparse__reflog(void)
    test_object("master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
    test_object("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
    test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   test_object("master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
    /* Not ready yet
    test_object("HEAD@{100 years ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
    test_object("master@{2012-4-30 10:23:20}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-   test_object("master@{upstream}", "???");
-   test_object("master@{u}", "???");
    */
 }
