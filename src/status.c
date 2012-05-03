@@ -18,41 +18,6 @@
 #include "git2/diff.h"
 #include "diff.h"
 
-static int resolve_head_to_tree(git_tree **tree, git_repository *repo)
-{
-	git_oid head_oid;
-	git_object *obj = NULL;
-
-	if (git_reference_name_to_oid(&head_oid, repo, GIT_HEAD_FILE) < 0) {
-		/* cannot resolve HEAD - probably brand new repo */
-		giterr_clear();
-		*tree = NULL;
-		return 0;
-	}
-
-	if (git_object_lookup(&obj, repo, &head_oid, GIT_OBJ_ANY) < 0)
-		goto fail;
-
-	switch (git_object_type(obj)) {
-	case GIT_OBJ_TREE:
-		*tree = (git_tree *)obj;
-		break;
-	case GIT_OBJ_COMMIT:
-		if (git_commit_tree(tree, (git_commit *)obj) < 0)
-			goto fail;
-		git_object_free(obj);
-		break;
-	default:
-		goto fail;
-	}
-
-	return 0;
-
-fail:
-	git_object_free(obj);
-	return -1;
-}
-
 static unsigned int index_delta2status(git_delta_t index_status)
 {
 	unsigned int st = GIT_STATUS_CURRENT;
@@ -120,11 +85,8 @@ int git_status_foreach_ext(
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
-	switch (resolve_head_to_tree(&head, repo)) {
-	case 0: break;
-	case GIT_ENOTFOUND: return 0;
-	default: return -1;
-	}
+	if ((err = git_repository_head_tree(&head, repo)) < 0)
+		return err;
 
 	memset(&diffopt, 0, sizeof(diffopt));
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
@@ -405,7 +367,7 @@ int git_status_file(
 	status_entry_update_from_index(e, index);
 
 	/* Try to find file in HEAD */
-	if ((error = resolve_head_to_tree(&tree, repo)) < 0)
+	if ((error = git_repository_head_tree(&tree, repo)) < 0)
 		goto cleanup;
 
 	if (tree != NULL) {

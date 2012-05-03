@@ -5,7 +5,6 @@ static git_repository *g_repo = NULL;
 
 void test_diff_tree__initialize(void)
 {
-	g_repo = cl_git_sandbox_init("attr");
 }
 
 void test_diff_tree__cleanup(void)
@@ -19,15 +18,16 @@ void test_diff_tree__0(void)
 	const char *a_commit = "605812a";
 	const char *b_commit = "370fe9ec22";
 	const char *c_commit = "f5b0af1fb4f5c";
-	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
-	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
-	git_tree *c = resolve_commit_oid_to_tree(g_repo, c_commit);
+	git_tree *a, *b, *c;
 	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
-	cl_assert(a);
-	cl_assert(b);
+	g_repo = cl_git_sandbox_init("attr");
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
+	cl_assert((c = resolve_commit_oid_to_tree(g_repo, c_commit)) != NULL);
 
 	opts.context_lines = 1;
 	opts.interhunk_lines = 1;
@@ -87,12 +87,7 @@ void test_diff_tree__options(void)
 	const char *b_commit = "605812ab7fe421fdd";
 	const char *c_commit = "f5b0af1fb4f5";
 	const char *d_commit = "a97cc019851";
-
-	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
-	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
-	git_tree *c = resolve_commit_oid_to_tree(g_repo, c_commit);
-	git_tree *d = resolve_commit_oid_to_tree(g_repo, d_commit);
-
+	git_tree *a, *b, *c, *d;
 	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
 	diff_expects actual;
@@ -133,8 +128,12 @@ void test_diff_tree__options(void)
 	diff_expects *expected;
 	int i;
 
-	cl_assert(a);
-	cl_assert(b);
+	g_repo = cl_git_sandbox_init("attr");
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
+	cl_assert((c = resolve_commit_oid_to_tree(g_repo, c_commit)) != NULL);
+	cl_assert((d = resolve_commit_oid_to_tree(g_repo, d_commit)) != NULL);
 
 	for (i = 0; test_expects[i].files > 0; i++) {
 		memset(&actual, 0, sizeof(actual)); /* clear accumulator */
@@ -167,4 +166,43 @@ void test_diff_tree__options(void)
 	git_tree_free(b);
 	git_tree_free(c);
 	git_tree_free(d);
+}
+
+void test_diff_tree__bare(void)
+{
+	const char *a_commit = "8496071c1b46c85";
+	const char *b_commit = "be3563ae3f79";
+	git_tree *a, *b;
+	git_diff_options opts = {0};
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
+
+	opts.context_lines = 1;
+	opts.interhunk_lines = 1;
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, a, b, &diff));
+
+	cl_git_pass(git_diff_foreach(
+		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 3);
+	cl_assert(exp.file_adds == 2);
+	cl_assert(exp.file_dels == 0);
+	cl_assert(exp.file_mods == 1);
+
+	cl_assert(exp.hunks == 3);
+
+	cl_assert(exp.lines == 4);
+	cl_assert(exp.line_ctxt == 0);
+	cl_assert(exp.line_adds == 3);
+	cl_assert(exp.line_dels == 1);
+
+	git_diff_list_free(diff);
 }

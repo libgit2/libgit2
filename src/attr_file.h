@@ -48,7 +48,7 @@ typedef struct {
 } git_attr_assignment;
 
 typedef struct {
-	char *path;				/* cache the path this was loaded from */
+	char *key;				/* cache "source#path" this was loaded from */
 	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
 	git_pool *pool;
 	bool pool_is_allocated;
@@ -61,20 +61,25 @@ typedef struct {
 	int         is_dir;
 } git_attr_path;
 
+typedef enum {
+	GIT_ATTR_FILE_FROM_FILE = 0,
+	GIT_ATTR_FILE_FROM_INDEX = 1
+} git_attr_file_source;
+
 /*
  * git_attr_file API
  */
 
-extern int git_attr_file__new(git_attr_file **attrs_ptr, git_pool *pool);
+extern int git_attr_file__new(
+	git_attr_file **attrs_ptr, git_attr_file_source src, const char *path, git_pool *pool);
+
+extern int git_attr_file__new_and_load(
+	git_attr_file **attrs_ptr, const char *path);
+
 extern void git_attr_file__free(git_attr_file *file);
 
-extern int git_attr_file__from_buffer(
+extern int git_attr_file__parse_buffer(
 	git_repository *repo, const char *buf, git_attr_file *file);
-extern int git_attr_file__from_file(
-	git_repository *repo, const char *path, git_attr_file *file);
-
-extern int git_attr_file__set_path(
-	git_repository *repo, const char *path, git_attr_file *file);
 
 extern int git_attr_file__lookup_one(
 	git_attr_file *file,

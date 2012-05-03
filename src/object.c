@@ -292,3 +292,42 @@ size_t git_object__size(git_otype type)
 	return git_objects_table[type].size;
 }
 
+int git_object__resolve_to_type(git_object **obj, git_otype type)
+{
+	int error = 0;
+	git_object *scan, *next;
+
+	if (type == GIT_OBJ_ANY)
+		return 0;
+
+	scan = *obj;
+
+	while (!error && scan && git_object_type(scan) != type) {
+
+		switch (git_object_type(scan)) {
+		case GIT_OBJ_COMMIT:
+		{
+			git_tree *tree = NULL;
+			error = git_commit_tree(&tree, (git_commit *)scan);
+			next = (git_object *)tree;
+			break;
+		}
+
+		case GIT_OBJ_TAG:
+			error = git_tag_target(&next, (git_tag *)scan);
+			break;
+
+		default:
+			giterr_set(GITERR_REFERENCE, "Object does not resolve to type");
+			error = -1;
+			next = NULL;
+			break;
+		}
+
+		git_object_free(scan);
+		scan = next;
+	}
+
+	*obj = scan;
+	return error;
+}
