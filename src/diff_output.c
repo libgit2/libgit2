@@ -298,6 +298,16 @@ static void release_content(git_diff_file *file, git_map *map, git_blob *blob)
 	}
 }
 
+static void fill_map_from_mmfile(git_map *dst, mmfile_t *src) {
+	assert(dst && src);
+
+	dst->data = src->ptr;
+	dst->len = src->size;
+#ifdef GIT_WIN32
+	dst->fmh = NULL;
+#endif
+}
+
 int git_diff_foreach(
 	git_diff_list *diff,
 	void *data,
@@ -691,12 +701,14 @@ int git_diff_blobs(
 	git_blob *new_blob,
 	git_diff_options *options,
 	void *cb_data,
+	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
 	git_diff_data_fn line_cb)
 {
 	diff_output_info info;
 	git_diff_delta delta;
 	mmfile_t old_data, new_data;
+	git_map old_map, new_map;
 	xpparam_t xdiff_params;
 	xdemitconf_t xdiff_config;
 	xdemitcb_t xdiff_callback;
@@ -737,6 +749,22 @@ int git_diff_blobs(
 		(old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 	delta.old_file.size = old_data.size;
 	delta.new_file.size = new_data.size;
+
+	fill_map_from_mmfile(&old_map, &old_data);
+	fill_map_from_mmfile(&new_map, &new_data);
+
+	if (file_is_binary_by_content(&delta, &old_map, &new_map) < 0)
+		return -1;
+
+	if (file_cb != NULL) {
+		int error = file_cb(cb_data, &delta, 1);
+		if (error < 0)
+			return error;
+	}
+
+	/* don't do hunk and line diffs if file is binary */
+	if (delta.binary == 1)
+		return 0;
 
 	info.diff    = NULL;
 	info.delta   = &delta;

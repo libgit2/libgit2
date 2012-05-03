@@ -4,11 +4,11 @@
 static git_repository *g_repo = NULL;
 static diff_expects exp;
 static git_diff_options opts;
-static git_blob *d;
+static git_blob *d, *alien;
 
 void test_diff_blob__initialize(void)
 {
-	git_oid d_oid;
+	git_oid oid;
 
 	g_repo = cl_git_sandbox_init("attr");
 
@@ -19,13 +19,18 @@ void test_diff_blob__initialize(void)
 	memset(&exp, 0, sizeof(exp));
 
 	/* tests/resources/attr/root_test4.txt */
-	cl_git_pass(git_oid_fromstrn(&d_oid, "fe773770c5a6", 12));
-	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &d_oid, 6));
+	cl_git_pass(git_oid_fromstrn(&oid, "fe773770c5a6", 12));
+	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &oid, 6));
+
+	/* alien.png */
+	cl_git_pass(git_oid_fromstrn(&oid, "edf3dcee", 8));
+	cl_git_pass(git_blob_lookup_prefix(&alien, g_repo, &oid, 4));
 }
 
 void test_diff_blob__cleanup(void)
 {
 	git_blob_free(d);
+	git_blob_free(alien);
 
 	cl_git_sandbox_cleanup();
 }
@@ -50,7 +55,11 @@ void test_diff_blob__can_compare_text_blobs(void)
 	/* Doing the equivalent of a `git diff -U1` on these files */
 
 	cl_git_pass(git_diff_blobs(
-		a, b, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		a, b, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_mods == 1);
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.lines == 6);
@@ -60,7 +69,11 @@ void test_diff_blob__can_compare_text_blobs(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
-		b, c, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		b, c, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_mods == 1);
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.lines == 15);
@@ -70,7 +83,11 @@ void test_diff_blob__can_compare_text_blobs(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
-		a, c, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		a, c, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_mods == 1);
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.lines == 13);
@@ -82,7 +99,11 @@ void test_diff_blob__can_compare_text_blobs(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
-		c, d, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		c, d, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_mods == 1);
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
 
 	cl_assert(exp.hunks == 2);
 	cl_assert(exp.lines == 14);
@@ -100,7 +121,11 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	git_blob *e = NULL;
 
 	cl_git_pass(git_diff_blobs(
-		d, e, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		d, e, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_dels == 1);
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.hunk_old_lines == 14);
@@ -111,10 +136,88 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_blobs(
-		d, e, &opts, &exp, diff_hunk_fn, diff_line_fn));
+		d, e, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_adds == 1);
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
 
 	cl_assert(exp.hunks == 1);
 	cl_assert(exp.hunk_new_lines == 14);
 	cl_assert(exp.lines == 14);
 	cl_assert(exp.line_adds == 14);
+
+	opts.flags ^= GIT_DIFF_REVERSE;
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_blobs(
+		alien, NULL, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.at_least_one_of_them_is_binary == true);
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_dels == 1);
+	cl_assert(exp.hunks == 0);
+	cl_assert(exp.lines == 0);
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_blobs(
+		NULL, alien, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.at_least_one_of_them_is_binary == true);
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_adds == 1);
+	cl_assert(exp.hunks == 0);
+	cl_assert(exp.lines == 0);
+}
+
+void assert_binary_blobs_comparison(diff_expects exp)
+{
+	cl_assert(exp.at_least_one_of_them_is_binary == true);
+
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_mods == 1);
+	cl_assert(exp.hunks == 0);
+	cl_assert(exp.lines == 0);
+}
+
+void test_diff_blob__can_compare_two_binary_blobs(void)
+{
+	git_blob *heart;
+	git_oid h_oid;
+
+	/* heart.png */
+	cl_git_pass(git_oid_fromstrn(&h_oid, "de863bff", 8));
+	cl_git_pass(git_blob_lookup_prefix(&heart, g_repo, &h_oid, 4));
+
+	cl_git_pass(git_diff_blobs(
+		alien, heart, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	assert_binary_blobs_comparison(exp);
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_blobs(
+		heart, alien, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	assert_binary_blobs_comparison(exp);
+
+	git_blob_free(heart);
+}
+
+void test_diff_blob__can_compare_a_binary_blob_and_a_text_blob(void)
+{
+	cl_git_pass(git_diff_blobs(
+		alien, d, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	assert_binary_blobs_comparison(exp);
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_blobs(
+		d, alien, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	assert_binary_blobs_comparison(exp);
 }

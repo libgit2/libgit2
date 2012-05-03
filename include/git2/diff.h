@@ -343,6 +343,7 @@ GIT_EXTERN(int) git_diff_blobs(
 	git_blob *new_blob,
 	git_diff_options *options,
 	void *cb_data,
+	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
 	git_diff_data_fn line_cb);
 

@@ -30,6 +30,8 @@ int diff_file_fn(
 
 	GIT_UNUSED(progress);
 
+	e->	at_least_one_of_them_is_binary = delta->binary;
+
 	e->files++;
 	switch (delta->status) {
 	case GIT_DELTA_ADDED: e->file_adds++; break;

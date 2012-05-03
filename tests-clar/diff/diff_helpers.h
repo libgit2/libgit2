@@ -20,6 +20,8 @@ typedef struct {
 	int line_ctxt;
 	int line_adds;
 	int line_dels;
+
+	bool at_least_one_of_them_is_binary;
 } diff_expects;
 
 extern int diff_file_fn(
