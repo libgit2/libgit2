@@ -7,6 +7,7 @@
 #include "common.h"
 #include "global.h"
 #include "posix.h"
+#include "buffer.h"
 #include <stdarg.h>
 
 /********************************************
@@ -18,6 +19,18 @@ static git_error g_git_oom_error = {
 	GITERR_NOMEMORY
 };
 
+static void set_error(int error_class, char *string)
+{
+	git_error *error = &GIT_GLOBAL->error_t;
+
+	git__free(error->message);
+
+	error->message = string;
+	error->klass = error_class;
+
+	GIT_GLOBAL->last_error = error;
+}
+
 void giterr_set_oom(void)
 {
 	GIT_GLOBAL->last_error = &g_git_oom_error;
@@ -25,66 +38,66 @@ void giterr_set_oom(void)
 
 void giterr_set(int error_class, const char *string, ...)
 {
-	char error_str[1024];
+	git_buf buf = GIT_BUF_INIT;
 	va_list arglist;
 
-	/* Grab errno before calling vsnprintf() so it won't be overwritten */
-	const char *os_error_msg =
-		(error_class == GITERR_OS && errno != 0) ? strerror(errno) : NULL;
+	int unix_error_code = 0;
+
 #ifdef GIT_WIN32
-	DWORD dwLastError = GetLastError();
+	DWORD win32_error_code = 0;
 #endif
 
+	if (error_class == GITERR_OS) {
+		unix_error_code = errno;
+		errno = 0;
+
+#ifdef GIT_WIN32
+		win32_error_code = GetLastError();
+		SetLastError(0);
+#endif
+	}
+
 	va_start(arglist, string);
-	p_vsnprintf(error_str, sizeof(error_str), string, arglist);
+	git_buf_vprintf(&buf, string, arglist);
 	va_end(arglist);
 
 	/* automatically suffix strerror(errno) for GITERR_OS errors */
 	if (error_class == GITERR_OS) {
-		if (os_error_msg != NULL) {
-			strncat(error_str, ": ", sizeof(error_str));
-			strncat(error_str, os_error_msg, sizeof(error_str));
-			errno = 0; /* reset so same error won't be reported twice */
+
+		if (unix_error_code != 0) {
+			git_buf_PUTS(&buf, ": ");
+			git_buf_puts(&buf, strerror(unix_error_code));
 		}
+
 #ifdef GIT_WIN32
-		else if (dwLastError != 0) {
+		else if (win32_error_code != 0) {
 			LPVOID lpMsgBuf = NULL;
 
 			FormatMessage(
 				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
 				FORMAT_MESSAGE_FROM_SYSTEM |
 				FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL, dwLastError, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
+				NULL, win32_error_code, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
 
 			if (lpMsgBuf) {
-				strncat(error_str, ": ", sizeof(error_str));
-				strncat(error_str, (const char *)lpMsgBuf, sizeof(error_str));
+				git_buf_PUTS(&buf, ": ");
+				git_buf_puts(&buf, lpMsgBuf);
 				LocalFree(lpMsgBuf);
 			}
-
-			SetLastError(0);
 		}
 #endif
 	}
 
-	giterr_set_str(error_class, error_str);
+	if (!git_buf_oom(&buf))
+		set_error(error_class, git_buf_detach(&buf));
 }
 
 void giterr_set_str(int error_class, const char *string)
 {
-	git_error *error = &GIT_GLOBAL->error_t;
+	char *message = git__strdup(string);
 
-	git__free(error->message);
-
-	error->message = git__strdup(string);
-	error->klass = error_class;
-
-	if (error->message == NULL) {
-		giterr_set_oom();
-		return;
-	}
-
-	GIT_GLOBAL->last_error = error;
+	if (message)
+		set_error(error_class, message);
 }
 
 void giterr_set_regex(const regex_t *regex, int error_code)
