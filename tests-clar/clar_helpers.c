@@ -80,7 +80,7 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	if (p_access("gitignore", F_OK) == 0)
 		cl_git_pass(p_rename("gitignore", ".gitignore"));
 
-	p_chdir("..");
+	cl_git_pass(p_chdir(".."));
 
 	/* Now open the sandbox repository and make it available for tests */
 	cl_git_pass(git_repository_open(&_cl_repo, sandbox));
