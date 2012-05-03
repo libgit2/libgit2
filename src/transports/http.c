@@ -605,6 +605,9 @@ on_error:
 
 static int http_close(git_transport *transport)
 {
+	if (gitno_ssl_teardown(transport) < 0)
+		return -1;
+
 	if (gitno_close(transport->socket) < 0) {
 		giterr_set(GITERR_OS, "Failed to close the socket: %s", strerror(errno));
 		return -1;
