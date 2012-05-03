@@ -158,3 +158,15 @@ void test_network_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
 {
 	cl_assert_equal_i(GIT_ENOTFOUND, git_remote_load(&_remote, _repo, "just-left-few-minutes-ago"));
 }
+
+void test_network_remotes__add(void)
+{
+	git_remote_free(_remote);
+	cl_git_pass(git_remote_add(&_remote, _repo, "addtest", "http://github.com/libgit2/libgit2"));
+	git_remote_free(_remote);
+
+	cl_git_pass(git_remote_load(&_remote, _repo, "addtest"));
+	_refspec = git_remote_fetchspec(_remote);
+	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/heads/*"));
+	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/addtest/*"));
+}

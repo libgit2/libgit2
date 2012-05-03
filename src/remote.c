@@ -476,3 +476,28 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 
 	return 0;
 }
+
+int git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url)
+{
+	git_buf buf = GIT_BUF_INIT;
+	if (git_remote_new(out, repo, url, name) < 0)
+		return -1;
+
+	if (git_buf_printf(&buf, "refs/heads/*:refs/remotes/%s/*", name) < 0)
+		goto on_error;
+
+	if (git_remote_set_fetchspec(*out, git_buf_cstr(&buf)) < 0)
+		goto on_error;
+
+	git_buf_free(&buf);
+
+	if (git_remote_save(*out) < 0)
+		return -1;
+
+	return 0;
+
+on_error:
+	git_buf_free(&buf);
+	git_remote_free(*out);
+	return -1;
+}
