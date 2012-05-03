@@ -78,7 +78,7 @@ void test_network_remotes__save(void)
 	git_remote_free(_remote);
 
 	/* Set up the remote and save it to config */
-	cl_git_pass(git_remote_new(&_remote, _repo, "git://github.com/libgit2/libgit2", "upstream"));
+	cl_git_pass(git_remote_new(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2", NULL));
 	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/heads/*:refs/remotes/upstream/*"));
 	cl_git_pass(git_remote_set_pushspec(_remote, "refs/heads/*:refs/heads/*"));
 	cl_git_pass(git_remote_save(_remote));

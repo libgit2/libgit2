@@ -54,7 +54,7 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	return refspec_parse(refspec, val);
 }
 
-int git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name)
+int git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
 
@@ -78,8 +78,17 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *url, cons
 		GITERR_CHECK_ALLOC(remote->name);
 	}
 
+	if (fetch != NULL) {
+		if (refspec_parse(&remote->fetch, fetch) < 0)
+			goto on_error;
+	}
+
 	*out = remote;
 	return 0;
+
+on_error:
+	git_remote_free(remote);
+	return -1;
 }
 
 int git_remote_load(git_remote **out, git_repository *repo, const char *name)
@@ -480,19 +489,17 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 int git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url)
 {
 	git_buf buf = GIT_BUF_INIT;
-	if (git_remote_new(out, repo, url, name) < 0)
-		return -1;
 
 	if (git_buf_printf(&buf, "refs/heads/*:refs/remotes/%s/*", name) < 0)
-		goto on_error;
+		return -1;
 
-	if (git_remote_set_fetchspec(*out, git_buf_cstr(&buf)) < 0)
+	if (git_remote_new(out, repo, name, url, git_buf_cstr(&buf)) < 0)
 		goto on_error;
 
 	git_buf_free(&buf);
 
 	if (git_remote_save(*out) < 0)
-		return -1;
+		goto on_error;
 
 	return 0;
 
