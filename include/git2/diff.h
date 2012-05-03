@@ -337,6 +337,14 @@ GIT_EXTERN(int) git_diff_print_patch(
 
 /**
  * Directly run a text diff on two blobs.
+ *
+ * Compared to a file, a blob lacks some contextual information. As such, the
+ * `git_diff_file` parameters of the callbacks will be filled accordingly to the following:
+ * `mode` will be set to 0, `path` will be set to NULL. When dealing with a NULL blob, `oid`
+ * will be set to 0.
+ *
+ * When at least one of the blobs being dealt with is binary, the `git_diff_delta` binary
+ * attribute will be set to 1 and no call to the hunk_cb nor line_cb will be made.
  */
 GIT_EXTERN(int) git_diff_blobs(
 	git_blob *old_blob,
