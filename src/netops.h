@@ -30,6 +30,7 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons);
 int gitno_connect(git_transport *t, const char *host, const char *port);
 int gitno_send(git_transport *t, const char *msg, size_t len, int flags);
 int gitno_close(GIT_SOCKET s);
+int gitno_ssl_teardown(git_transport *t);
 int gitno_send_chunk_size(int s, size_t len);
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec);
 
