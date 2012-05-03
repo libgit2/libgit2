@@ -238,27 +238,29 @@ static git_object* dereference_object(git_object *obj)
 
 static int dereference_to_type(git_object **out, git_object *obj, git_otype target_type)
 {
+   int retcode = 1;
    git_object *obj1 = obj, *obj2 = obj;
 
-   while (1) {
+   while (retcode > 0) {
       git_otype this_type = git_object_type(obj1);
 
       if (this_type == target_type) {
          *out = obj1;
-         return 0;
-      }
-
-      /* Dereference once, if possible. */
-      obj2 = dereference_object(obj1);
-      if (!obj2) {
-         giterr_set(GITERR_REFERENCE, "Can't dereference to type");
-         return GIT_ERROR;
+         retcode = 0;
+      } else {
+         /* Dereference once, if possible. */
+         obj2 = dereference_object(obj1);
+         if (!obj2) {
+            giterr_set(GITERR_REFERENCE, "Can't dereference to type");
+            retcode = GIT_ERROR;
+         }
       }
       if (obj1 != obj) {
          git_object_free(obj1);
       }
       obj1 = obj2;
    }
+   return retcode;
 }
 
 static git_otype parse_obj_type(const char *str)
@@ -471,10 +473,8 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
       }
    }
 
-   if (!retcode) {
-      if (*out != cur_obj) git_object_free(cur_obj);
-      if (*out != next_obj && next_obj != cur_obj) git_object_free(next_obj);
-   }
+   if (*out != cur_obj) git_object_free(cur_obj);
+   if (*out != next_obj && next_obj != cur_obj) git_object_free(next_obj);
 
    git_buf_free(&specbuffer);
    git_buf_free(&stepbuffer);
