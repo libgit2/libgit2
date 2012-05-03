@@ -169,15 +169,12 @@ static int file_is_binary_by_attr(
 }
 
 static int file_is_binary_by_content(
-	git_diff_list *diff,
 	git_diff_delta *delta,
 	git_map *old_data,
 	git_map *new_data)
 {
 	git_buf search;
 	git_text_stats stats;
-
-	GIT_UNUSED(diff);
 
 	if ((delta->old_file.flags & BINARY_DIFF_FLAGS) == 0) {
 		search.ptr  = old_data->data;
@@ -408,7 +405,7 @@ int git_diff_foreach(
 		 */
 		if (delta->binary == -1) {
 			error = file_is_binary_by_content(
-				diff, delta, &old_data, &new_data);
+				delta, &old_data, &new_data);
 			if (error < 0)
 				goto cleanup;
 		}
