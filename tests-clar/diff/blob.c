@@ -2,23 +2,38 @@
 #include "diff_helpers.h"
 
 static git_repository *g_repo = NULL;
+static diff_expects exp;
+static git_diff_options opts;
+static git_blob *d;
 
 void test_diff_blob__initialize(void)
 {
+	git_oid d_oid;
+
 	g_repo = cl_git_sandbox_init("attr");
+
+	memset(&opts, 0, sizeof(opts));
+	opts.context_lines = 1;
+	opts.interhunk_lines = 1;
+
+	memset(&exp, 0, sizeof(exp));
+
+	/* tests/resources/attr/root_test4.txt */
+	cl_git_pass(git_oid_fromstrn(&d_oid, "fe773770c5a6", 12));
+	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &d_oid, 6));
 }
 
 void test_diff_blob__cleanup(void)
 {
+	git_blob_free(d);
+
 	cl_git_sandbox_cleanup();
 }
 
 void test_diff_blob__can_compare_text_blobs(void)
 {
-	git_blob *a, *b, *c, *d;
-	git_oid a_oid, b_oid, c_oid, d_oid;
-	git_diff_options opts = {0};
-	diff_expects exp;
+	git_blob *a, *b, *c;
+	git_oid a_oid, b_oid, c_oid;
 
 	/* tests/resources/attr/root_test1 */
 	cl_git_pass(git_oid_fromstrn(&a_oid, "45141a79", 8));
@@ -32,16 +47,8 @@ void test_diff_blob__can_compare_text_blobs(void)
 	cl_git_pass(git_oid_fromstrn(&c_oid, "c96bbb2c2557a832", 16));
 	cl_git_pass(git_blob_lookup_prefix(&c, g_repo, &c_oid, 8));
 
-	/* tests/resources/attr/root_test4.txt */
-	cl_git_pass(git_oid_fromstrn(&d_oid, "fe773770c5a6", 12));
-	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &d_oid, 6));
-
 	/* Doing the equivalent of a `git diff -U1` on these files */
 
-	opts.context_lines = 1;
-	opts.interhunk_lines = 1;
-
-	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_blobs(
 		a, b, &opts, &exp, diff_hunk_fn, diff_line_fn));
 
@@ -86,6 +93,28 @@ void test_diff_blob__can_compare_text_blobs(void)
 	git_blob_free(a);
 	git_blob_free(b);
 	git_blob_free(c);
-	git_blob_free(d);
 }
 
+void test_diff_blob__can_compare_against_null_blobs(void)
+{
+	git_blob *e = NULL;
+
+	cl_git_pass(git_diff_blobs(
+		d, e, &opts, &exp, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.hunks == 1);
+	cl_assert(exp.hunk_old_lines == 14);
+	cl_assert(exp.lines == 14);
+	cl_assert(exp.line_dels == 14);
+
+	opts.flags |= GIT_DIFF_REVERSE;
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_blobs(
+		d, e, &opts, &exp, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.hunks == 1);
+	cl_assert(exp.hunk_new_lines == 14);
+	cl_assert(exp.lines == 14);
+	cl_assert(exp.line_adds == 14);
+}

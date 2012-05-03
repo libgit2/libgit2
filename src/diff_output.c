@@ -686,7 +686,6 @@ int git_diff_print_patch(
 	return error;
 }
 
-
 int git_diff_blobs(
 	git_blob *old_blob,
 	git_blob *new_blob,
@@ -701,44 +700,43 @@ int git_diff_blobs(
 	xpparam_t xdiff_params;
 	xdemitconf_t xdiff_config;
 	xdemitcb_t xdiff_callback;
+	git_blob *new, *old;
+
+	memset(&delta, 0, sizeof(delta));
+
+	new = new_blob;
+	old = old_blob;
 
 	if (options && (options->flags & GIT_DIFF_REVERSE)) {
-		git_blob *swap = old_blob;
-		old_blob = new_blob;
-		new_blob = swap;
+		git_blob *swap = old;
+		old = new;
+		new = swap;
 	}
 
-	if (old_blob) {
-		old_data.ptr  = (char *)git_blob_rawcontent(old_blob);
-		old_data.size = git_blob_rawsize(old_blob);
+	if (old) {
+		old_data.ptr  = (char *)git_blob_rawcontent(old);
+		old_data.size = git_blob_rawsize(old);
+		git_oid_cpy(&delta.old_file.oid, git_object_id((const git_object *)old));
 	} else {
 		old_data.ptr  = "";
 		old_data.size = 0;
 	}
 
-	if (new_blob) {
-		new_data.ptr  = (char *)git_blob_rawcontent(new_blob);
-		new_data.size = git_blob_rawsize(new_blob);
+	if (new) {
+		new_data.ptr  = (char *)git_blob_rawcontent(new);
+		new_data.size = git_blob_rawsize(new);
+		git_oid_cpy(&delta.new_file.oid, git_object_id((const git_object *)new));
 	} else {
 		new_data.ptr  = "";
 		new_data.size = 0;
 	}
 
 	/* populate a "fake" delta record */
-	delta.status = old_data.ptr ?
-		(new_data.ptr ? GIT_DELTA_MODIFIED : GIT_DELTA_DELETED) :
-		(new_data.ptr ? GIT_DELTA_ADDED : GIT_DELTA_UNTRACKED);
-	delta.old_file.mode = 0000000; /* can't know the truth from a blob alone */
-	delta.new_file.mode = 0000000;
-	git_oid_cpy(&delta.old_file.oid, git_object_id((const git_object *)old_blob));
-	git_oid_cpy(&delta.new_file.oid, git_object_id((const git_object *)new_blob));
-	delta.old_file.path = NULL;
-	delta.new_file.path = NULL;
+	delta.status = new ?
+		(old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
+		(old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 	delta.old_file.size = old_data.size;
 	delta.new_file.size = new_data.size;
-	delta.old_file.flags = 0;
-	delta.new_file.flags = 0;
-	delta.similarity = 0;
 
 	info.diff    = NULL;
 	info.delta   = &delta;
