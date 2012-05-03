@@ -728,12 +728,16 @@ int git_diff_blobs(
 	delta.status = old_data.ptr ?
 		(new_data.ptr ? GIT_DELTA_MODIFIED : GIT_DELTA_DELETED) :
 		(new_data.ptr ? GIT_DELTA_ADDED : GIT_DELTA_UNTRACKED);
-	delta.old_file.mode = 0100644; /* can't know the truth from a blob alone */
-	delta.new_file.mode = 0100644;
+	delta.old_file.mode = 0000000; /* can't know the truth from a blob alone */
+	delta.new_file.mode = 0000000;
 	git_oid_cpy(&delta.old_file.oid, git_object_id((const git_object *)old_blob));
 	git_oid_cpy(&delta.new_file.oid, git_object_id((const git_object *)new_blob));
 	delta.old_file.path = NULL;
 	delta.new_file.path = NULL;
+	delta.old_file.size = old_data.size;
+	delta.new_file.size = new_data.size;
+	delta.old_file.flags = 0;
+	delta.new_file.flags = 0;
 	delta.similarity = 0;
 
 	info.diff    = NULL;

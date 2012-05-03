@@ -13,7 +13,7 @@ void test_diff_blob__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_diff_blob__0(void)
+void test_diff_blob__can_compare_text_blobs(void)
 {
 	git_blob *a, *b, *c, *d;
 	git_oid a_oid, b_oid, c_oid, d_oid;
