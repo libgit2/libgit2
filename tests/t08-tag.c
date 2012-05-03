@@ -73,7 +73,7 @@ BEGIN_TEST(read1, "list all tag names from the repository")
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
 	must_pass(git_tag_list(&tag_list, repo));
 
-	must_be_true(tag_list.count == 4);
+	must_be_true(tag_list.count == 6);
 
 	git_strarray_free(&tag_list);
 	git_repository_free(repo);
@@ -98,8 +98,8 @@ exit:
 BEGIN_TEST(read2, "list all tag names from the repository matching a specified pattern")
 	git_repository *repo;
 	must_pass(git_repository_open(&repo, REPOSITORY_FOLDER));
-	must_pass(ensure_tag_pattern_match(repo, "", 4));
-	must_pass(ensure_tag_pattern_match(repo, "*", 4));
+	must_pass(ensure_tag_pattern_match(repo, "", 6));
+	must_pass(ensure_tag_pattern_match(repo, "*", 6));
 	must_pass(ensure_tag_pattern_match(repo, "t*", 1));
 	must_pass(ensure_tag_pattern_match(repo, "*b", 3));
 	must_pass(ensure_tag_pattern_match(repo, "e", 0));

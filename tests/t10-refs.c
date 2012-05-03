@@ -1167,7 +1167,7 @@ BEGIN_TEST(list0, "try to list all the references in our test repo")
 	/* We have exactly 10 refs in total if we include the packed ones:
 	 * there is a reference that exists both in the packfile and as
 	 * loose, but we only list it once */
-	must_be_true(ref_list.count == 10);
+	must_be_true(ref_list.count == 13);
 
 	git_strarray_free(&ref_list);
 	git_repository_free(repo);
