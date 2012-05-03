@@ -210,6 +210,16 @@ GIT_EXTERN(int) git_remote_valid_url(const char *url);
  */
 GIT_EXTERN(int) git_remote_list(git_strarray *remotes_list, git_repository *repo);
 
+/**
+ * Add a remote with the default fetch refspec to the repository's configuration
+ *
+ * @param out the resulting remote
+ * @param repo the repository in which to create the remote
+ * @param name the remote's name
+ * @param url the remote's url
+ */
+GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url);
+
 /** @} */
 GIT_END_DECL
 #endif
