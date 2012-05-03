@@ -166,9 +166,35 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
+int gitno_ssl_teardown(git_transport *t)
+{
+	int ret = ret;
+
+	if (!t->encrypt)
+		return 0;
+
 #ifdef GIT_GNUTLS
+	gnutls_deinit(t->ssl.session);
+	gnutls_certificate_free_credentials(t->ssl.cred);
+	gnutls_global_deinit();
+#elif defined(GIT_OPENSSL)
+
+	do {
+		ret = SSL_shutdown(t->ssl.ssl);
+	} while (ret == 0);
+	if (ret < 0)
+		return ssl_set_error(&t->ssl, ret);
+
+	SSL_free(t->ssl.ssl);
+	SSL_CTX_free(t->ssl.ctx);
+#endif
+	return 0;
+}
+
+
 static int ssl_setup(git_transport *t)
 {
+#ifdef GIT_GNUTLS
 	int ret;
 
 	if ((ret = gnutls_global_init()) < 0)
@@ -199,11 +225,9 @@ static int ssl_setup(git_transport *t)
 
 on_error:
 	gnutls_deinit(t->ssl.session);
+	gnutls_global_deinit();
 	return -1;
-}
 #elif defined(GIT_OPENSSL)
-static int ssl_setup(git_transport *t)
-{
 	int ret;
 
 	SSL_library_init();
@@ -225,9 +249,11 @@ static int ssl_setup(git_transport *t)
 		return ssl_set_error(&t->ssl, ret);
 
 	return 0;
-}
+#else
+	GIT_UNUSED(t);
+	return 0;
 #endif
-
+}
 int gitno_connect(git_transport *t, const char *host, const char *port)
 {
 	struct addrinfo *info = NULL, *p;
@@ -268,10 +294,8 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	t->socket = s;
 	freeaddrinfo(info);
 
-#ifdef GIT_SSL
 	if (t->encrypt && ssl_setup(t) < 0)
 		return -1;
-#endif
 
 	return 0;
 }
