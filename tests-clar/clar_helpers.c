@@ -30,18 +30,17 @@ void cl_git_mkfile(const char *filename, const char *content)
 
 void cl_git_write2file(const char *filename, const char *new_content, int flags)
 {
-	int fd = p_open(filename, flags);
+	int fd = open(filename, flags, 0644);
 	cl_assert(fd >= 0);
 	if (!new_content)
 		new_content = "\n";
 	cl_must_pass(p_write(fd, new_content, strlen(new_content)));
 	cl_must_pass(p_close(fd));
-	cl_must_pass(p_chmod(filename, 0644));
 }
 
 void cl_git_append2file(const char *filename, const char *new_content)
 {
-	cl_git_write2file(filename, new_content, O_WRONLY | O_APPEND | O_CREAT);
+	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_APPEND);
 }
 
 void cl_git_rewritefile(const char *filename, const char *new_content)
