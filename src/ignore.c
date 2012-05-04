@@ -8,7 +8,7 @@
 static int parse_ignore_file(
 	git_repository *repo, const char *buffer, git_attr_file *ignores)
 {
-	int error;
+	int error = 0;
 	git_attr_fnmatch *match = NULL;
 	const char *scan = NULL;
 	char *context = NULL;

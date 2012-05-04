@@ -205,4 +205,6 @@ void test_diff_tree__bare(void)
 	cl_assert(exp.line_dels == 1);
 
 	git_diff_list_free(diff);
+	git_tree_free(a);
+	git_tree_free(b);
 }

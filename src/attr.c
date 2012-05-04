@@ -334,8 +334,6 @@ int git_attr_cache__push_file(
 	}
 
 	/* if not in cache, load data, parse, and cache */
-	if (git_attr_file__new(&file, source, relfile, &cache->pool) < 0)
-		return -1;
 
 	if (source == GIT_ATTR_FILE_FROM_FILE)
 		error = load_attr_file(filename, &content);
@@ -353,6 +351,9 @@ int git_attr_cache__push_file(
 
 	if (blob)
 		content = git_blob_rawcontent(blob);
+
+	if ((error = git_attr_file__new(&file, source, relfile, &cache->pool)) < 0)
+		goto finish;
 
 	if (parse && (error = parse(repo, content, file)) < 0)
 		goto finish;

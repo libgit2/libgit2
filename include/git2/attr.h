@@ -160,10 +160,10 @@ GIT_EXTERN(int) git_attr_get(
  *             array itself if you allocated it).
  */
 GIT_EXTERN(int) git_attr_get_many(
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *path,
-    size_t num_attr,
+	size_t num_attr,
 	const char **names,
 	const char **values);
 
@@ -186,7 +186,7 @@ GIT_EXTERN(int) git_attr_get_many(
  * @param payload Passed on as extra parameter to callback function.
  */
 GIT_EXTERN(int) git_attr_foreach(
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *path,
 	int (*callback)(const char *name, const char *value, void *payload),

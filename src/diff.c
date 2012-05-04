@@ -506,7 +506,7 @@ static int diff_from_iterators(
 	git_diff_list **diff_ptr)
 {
 	const git_index_entry *oitem, *nitem;
-	char *ignore_prefix = NULL;
+	git_buf ignore_prefix = GIT_BUF_INIT;
 	git_diff_list *diff = git_diff_list_alloc(repo, opts);
 	if (!diff)
 		goto fail;
@@ -536,8 +536,8 @@ static int diff_from_iterators(
 			git_delta_t delta_type = GIT_DELTA_ADDED;
 
 			/* contained in ignored parent directory, so this can be skipped. */
-			if (ignore_prefix != NULL &&
-				git__prefixcmp(nitem->path, ignore_prefix) == 0)
+			if (git_buf_len(&ignore_prefix) &&
+				git__prefixcmp(nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
 			{
 				if (git_iterator_advance(new_iter, &nitem) < 0)
 					goto fail;
@@ -555,7 +555,7 @@ static int diff_from_iterators(
 					(oitem && git__prefixcmp(oitem->path, nitem->path) == 0))
 				{
 					if (is_ignored)
-						ignore_prefix = nitem->path;
+						git_buf_sets(&ignore_prefix, nitem->path);
 
 					if (git_iterator_advance_into_directory(new_iter, &nitem) < 0)
 						goto fail;
@@ -589,12 +589,16 @@ static int diff_from_iterators(
 
 	git_iterator_free(old_iter);
 	git_iterator_free(new_iter);
+	git_buf_free(&ignore_prefix);
+
 	*diff_ptr = diff;
 	return 0;
 
 fail:
 	git_iterator_free(old_iter);
 	git_iterator_free(new_iter);
+	git_buf_free(&ignore_prefix);
+
 	git_diff_list_free(diff);
 	*diff_ptr = NULL;
 	return -1;
