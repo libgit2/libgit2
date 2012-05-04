@@ -1,1 +1,1 @@
-This is contains tests for when the index and workdir differ
+This is contains tests for when the index and work dir differ
