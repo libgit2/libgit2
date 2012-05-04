@@ -89,66 +89,6 @@ int git_commit_create_v(
 	return res;
 }
 
-/* Update the reference named `ref_name` so it points to `oid` */
-static int update_reference(git_repository *repo, git_oid *oid, const char *ref_name)
-{
-	git_reference *ref;
-	int res;
-
-	res = git_reference_lookup(&ref, repo, ref_name);
-
-	/* If we haven't found the reference at all, we assume we need to create
-	 * a new reference and that's it */
-	if (res == GIT_ENOTFOUND) {
-		giterr_clear();
-		return git_reference_create_oid(NULL, repo, ref_name, oid, 1);
-	}
-
-	if (res < 0)
-		return -1;
-
-	/* If we have found a reference, but it's symbolic, we need to update
-	 * the direct reference it points to */
-	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
-		git_reference *aux;
-		const char *sym_target;
-
-		/* The target pointed at by this reference */
-		sym_target = git_reference_target(ref);
-
-		/* resolve the reference to the target it points to */
-		res = git_reference_resolve(&aux, ref);
-
-		/*
-		 * if the symbolic reference pointed to an inexisting ref,
-		 * this is means we're creating a new branch, for example.
-		 * We need to create a new direct reference with that name
-		 */
-		if (res == GIT_ENOTFOUND) {
-			giterr_clear();
-			res = git_reference_create_oid(NULL, repo, sym_target, oid, 1);
-			git_reference_free(ref);
-			return res;
-		}
-
-		/* free the original symbolic reference now; not before because
-		 * we're using the `sym_target` pointer */
-		git_reference_free(ref);
-
-		if (res < 0)
-			return -1;
-
-		/* store the newly found direct reference in its place */
-		ref = aux;
-	}
-
-	/* ref is made to point to `oid`: ref is either the original reference,
-	 * or the target of the symbolic reference we've looked up */
-	res = git_reference_set_oid(ref, oid);
-	git_reference_free(ref);
-	return res;
-}
-
 int git_commit_create(
 		git_oid *oid,
 		git_repository *repo,
@@ -195,7 +135,7 @@ int git_commit_create(
 	git_buf_free(&commit);
 
 	if (update_ref != NULL)
-		return update_reference(repo, oid, update_ref);
+		return git_reference__update(repo, oid, update_ref);
 
 	return 0;
 
