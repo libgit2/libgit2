@@ -39,6 +39,7 @@ int diff_file_fn(
 	case GIT_DELTA_MODIFIED: e->file_mods++; break;
 	case GIT_DELTA_IGNORED: e->file_ignored++; break;
 	case GIT_DELTA_UNTRACKED: e->file_untracked++; break;
+	case GIT_DELTA_UNMODIFIED: e->file_unmodified++; break;
 	default: break;
 	}
 	return 0;

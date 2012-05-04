@@ -173,6 +173,37 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	cl_assert(exp.lines == 0);
 }
 
+void assert_identical_blobs_comparison(diff_expects exp)
+{
+	cl_assert(exp.files == 1);
+	cl_assert(exp.file_unmodified == 1);
+	cl_assert(exp.hunks == 0);
+	cl_assert(exp.lines == 0);
+}
+
+void test_diff_blob__can_compare_identical_blobs(void)
+{
+	cl_git_pass(git_diff_blobs(
+		d, d, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
+	assert_identical_blobs_comparison(exp);
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_blobs(
+		NULL, NULL, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.at_least_one_of_them_is_binary == false);
+	assert_identical_blobs_comparison(exp);
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_blobs(
+		alien, alien, &opts, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.at_least_one_of_them_is_binary == true);
+	assert_identical_blobs_comparison(exp);
+}
+
 void assert_binary_blobs_comparison(diff_expects exp)
 {
 	cl_assert(exp.at_least_one_of_them_is_binary == true);

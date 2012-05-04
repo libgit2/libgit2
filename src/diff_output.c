@@ -747,6 +747,10 @@ int git_diff_blobs(
 	delta.status = new ?
 		(old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
+
+	if (git_oid_cmp(&delta.new_file.oid, &delta.old_file.oid) == 0)
+		delta.status = GIT_DELTA_UNMODIFIED;
+
 	delta.old_file.size = old_data.size;
 	delta.new_file.size = new_data.size;
 
@@ -761,6 +765,10 @@ int git_diff_blobs(
 		if (error < 0)
 			return error;
 	}
+
+	/* don't do hunk and line diffs if the two blobs are identical */
+	if (delta.status == GIT_DELTA_UNMODIFIED)
+		return 0;
 
 	/* don't do hunk and line diffs if file is binary */
 	if (delta.binary == 1)

@@ -11,6 +11,7 @@ typedef struct {
 	int file_mods;
 	int file_ignored;
 	int file_untracked;
+	int file_unmodified;
 
 	int hunks;
 	int hunk_new_lines;
