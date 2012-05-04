@@ -58,4 +58,12 @@
 #	include <stdbool.h>
 #endif
 
+#ifndef va_copy
+#	ifdef __va_copy
+#		define va_copy(dst, src) __va_copy(dst, src)
+#	else
+#		define va_copy(dst, src) ((dst) = (src))
+#	endif
+#endif
+
 #endif /* INCLUDE_compat_h__ */
