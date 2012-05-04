@@ -146,7 +146,7 @@ int git_object_lookup_prefix(
 	}
 
 	if (error < 0)
-		return -1;
+		return error;
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
 		git_odb_object_free(odb_obj);

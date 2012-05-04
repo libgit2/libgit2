@@ -375,6 +375,18 @@ int git_packfile_unpack(
 	return error;
 }
 
+static void *use_git_alloc(void *opaq, unsigned int count, unsigned int size)
+{
+	GIT_UNUSED(opaq);
+	return git__calloc(count, size);
+}
+
+static void use_git_free(void *opaq, void *ptr)
+{
+	GIT_UNUSED(opaq);
+	git__free(ptr);
+}
+
 int packfile_unpack_compressed(
 	git_rawobj *obj,
 	struct git_pack_file *p,
@@ -393,6 +405,8 @@ int packfile_unpack_compressed(
 	memset(&stream, 0, sizeof(stream));
 	stream.next_out = buffer;
 	stream.avail_out = (uInt)size + 1;
+	stream.zalloc = use_git_alloc;
+	stream.zfree = use_git_free;
 
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
@@ -541,7 +555,7 @@ static int packfile_open(struct git_pack_file *p)
 	assert(p->index_map.data);
 
 	if (!p->index_map.data && pack_index_open(p) < 0)
-		return git_odb__error_notfound("failed to open packfile");
+		return git_odb__error_notfound("failed to open packfile", NULL);
 
 	/* TODO: open with noatime */
 	p->mwf.fd = git_futils_open_ro(p->pack_name);
@@ -615,7 +629,7 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	path_len -= strlen(".idx");
 	if (path_len < 1) {
 		git__free(p);
-		return git_odb__error_notfound("invalid packfile path");
+		return git_odb__error_notfound("invalid packfile path", NULL);
 	}
 
 	memcpy(p->pack_name, path, path_len);
@@ -627,7 +641,7 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	strcpy(p->pack_name + path_len, ".pack");
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {
 		git__free(p);
-		return git_odb__error_notfound("packfile not found");
+		return git_odb__error_notfound("packfile not found", NULL);
 	}
 
 	/* ok, it looks sane as far as we can check without
@@ -733,9 +747,8 @@ static int pack_entry_find_offset(
 		if (pos < (int)p->num_objects) {
 			current = index + pos * stride;
 
-			if (!git_oid_ncmp(short_oid, (const git_oid *)current, len)) {
+			if (!git_oid_ncmp(short_oid, (const git_oid *)current, len))
 				found = 1;
-			}
 		}
 	}
 
@@ -749,7 +762,7 @@ static int pack_entry_find_offset(
 	}
 
 	if (!found)
-		return git_odb__error_notfound("failed to find offset for pack entry");
+		return git_odb__error_notfound("failed to find offset for pack entry", short_oid);
 	if (found > 1)
 		return git_odb__error_ambiguous("found multiple offsets for pack entry");
 	*offset_out = nth_packed_object_offset(p, pos);

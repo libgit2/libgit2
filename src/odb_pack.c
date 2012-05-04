@@ -242,7 +242,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 		return 0;
 
 	if (p_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
-		return git_odb__error_notfound("failed to refresh packfiles");
+		return git_odb__error_notfound("failed to refresh packfiles", NULL);
 
 	if (st.st_mtime != backend->pack_folder_mtime) {
 		git_buf path = GIT_BUF_INIT;
@@ -288,7 +288,7 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 		}
 	}
 
-	return git_odb__error_notfound("failed to find pack entry");
+	return git_odb__error_notfound("failed to find pack entry", oid);
 }
 
 static int pack_entry_find_prefix(
@@ -330,7 +330,7 @@ static int pack_entry_find_prefix(
 	}
 
 	if (!found)
-		return git_odb__error_notfound("failed to find pack entry");
+		return git_odb__error_notfound("no matching pack entry for prefix", short_oid);
 	else if (found > 1)
 		return git_odb__error_ambiguous("found multiple pack entries");
 	else
