@@ -277,7 +277,7 @@ static int dereference_to_type(git_object **out, git_object *obj, git_otype targ
             retcode = GIT_ERROR;
          }
       }
-      if (obj1 != obj) {
+      if (obj1 != obj && obj1 != obj2) {
          git_object_free(obj1);
       }
       obj1 = obj2;
