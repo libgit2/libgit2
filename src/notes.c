@@ -265,7 +265,7 @@ static int note_remove(git_repository *repo,
 
 static int note_get_default_ref(const char **out, git_repository *repo)
 {
-	int error;
+	int ret;
 	git_config *cfg;
 
 	*out = NULL;
@@ -273,13 +273,13 @@ static int note_get_default_ref(const char **out, git_repository *repo)
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	error = git_config_get_string(cfg, "core.notesRef", out);
-	if (error == GIT_ENOTFOUND) {
+	ret = git_config_get_string(cfg, "core.notesRef", out);
+	if (ret == GIT_ENOTFOUND) {
 		*out = GIT_NOTES_DEFAULT_REF;
 		return 0;
 	}
 
-	return error;
+	return ret;
 }
 
 int git_note_read(git_note **out, git_repository *repo,
@@ -293,11 +293,8 @@ int git_note_read(git_note **out, git_repository *repo,
 
 	*out = NULL;
 
-	if (!notes_ref) {
-		error = note_get_default_ref(&notes_ref, repo);
-		if (error < 0)
-			return error;
-	}
+	if (!notes_ref && note_get_default_ref(&notes_ref, repo) < 0)
+		return -1;
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
 	if (error < 0)
@@ -337,11 +334,8 @@ int git_note_create(
 	git_commit *commit = NULL;
 	git_reference *ref;
 
-	if (!notes_ref) {
-		error = note_get_default_ref(&notes_ref, repo);
-		if (error < 0)
-			return error;
-	}
+	if (!notes_ref && note_get_default_ref(&notes_ref, repo) < 0)
+		return -1;
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
 	if (error < 0 && error != GIT_ENOTFOUND)
@@ -385,11 +379,9 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	git_commit *commit;
 	git_reference *ref;
 
-	if (!notes_ref) {
-		error = note_get_default_ref(&notes_ref, repo);
-		if (error < 0)
-			return error;
-	}
+
+	if (!notes_ref && note_get_default_ref(&notes_ref, repo) < 0)
+		return -1;
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
 	if (error < 0)
