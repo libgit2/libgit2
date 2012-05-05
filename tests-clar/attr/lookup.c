@@ -9,9 +9,8 @@ void test_attr_lookup__simple(void)
 	git_attr_path path;
 	const char *value = NULL;
 
-	cl_git_pass(git_attr_file__new(&file, NULL));
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr0"), file));
-	cl_assert_equal_s(cl_fixture("attr/attr0"), file->path);
+	cl_git_pass(git_attr_file__new_and_load(&file, cl_fixture("attr/attr0")));
+	cl_assert_equal_s(cl_fixture("attr/attr0"), file->key + 2);
 	cl_assert(file->rules.length == 1);
 
 	cl_git_pass(git_attr_path__init(&path, "test", NULL));
@@ -130,9 +129,8 @@ void test_attr_lookup__match_variants(void)
 		{ NULL, NULL, 0, NULL }
 	};
 
-	cl_git_pass(git_attr_file__new(&file, NULL));
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr1"), file));
-	cl_assert_equal_s(cl_fixture("attr/attr1"), file->path);
+	cl_git_pass(git_attr_file__new_and_load(&file, cl_fixture("attr/attr1")));
+	cl_assert_equal_s(cl_fixture("attr/attr1"), file->key + 2);
 	cl_assert(file->rules.length == 10);
 
 	cl_git_pass(git_attr_path__init(&path, "/testing/for/pat0", NULL));
@@ -192,8 +190,7 @@ void test_attr_lookup__assign_variants(void)
 		{ NULL, NULL, 0, NULL }
 	};
 
-	cl_git_pass(git_attr_file__new(&file, NULL));
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr2"), file));
+	cl_git_pass(git_attr_file__new_and_load(&file, cl_fixture("attr/attr2")));
 	cl_assert(file->rules.length == 11);
 
 	run_test_cases(file, cases, 0);
@@ -228,8 +225,7 @@ void test_attr_lookup__check_attr_examples(void)
 		{ NULL, NULL, 0, NULL }
 	};
 
-	cl_git_pass(git_attr_file__new(&file, NULL));
-	cl_git_pass(git_attr_file__from_file(NULL, cl_fixture("attr/attr3"), file));
+	cl_git_pass(git_attr_file__new_and_load(&file, cl_fixture("attr/attr3")));
 	cl_assert(file->rules.length == 3);
 
 	run_test_cases(file, cases, 0);
@@ -254,8 +250,10 @@ void test_attr_lookup__from_buffer(void)
 		{ NULL, NULL, 0, NULL }
 	};
 
-	cl_git_pass(git_attr_file__new(&file, NULL));
-	cl_git_pass(git_attr_file__from_buffer(NULL, "a* foo\nabc bar\n* baz", file));
+	cl_git_pass(git_attr_file__new(&file, 0, NULL, NULL));
+
+	cl_git_pass(git_attr_file__parse_buffer(NULL, "a* foo\nabc bar\n* baz", file));
+
 	cl_assert(file->rules.length == 3);
 
 	run_test_cases(file, cases, 0);

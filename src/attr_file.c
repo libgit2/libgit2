@@ -1,15 +1,22 @@
 #include "common.h"
 #include "repository.h"
 #include "filebuf.h"
+#include "git2/blob.h"
+#include "git2/tree.h"
 #include <ctype.h>
 
 const char *git_attr__true  = "[internal]__TRUE__";
 const char *git_attr__false = "[internal]__FALSE__";
+const char *git_attr__unset = "[internal]__UNSET__";
 
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw);
 static void git_attr_rule__clear(git_attr_rule *rule);
 
-int git_attr_file__new(git_attr_file **attrs_ptr, git_pool *pool)
+int git_attr_file__new(
+	git_attr_file **attrs_ptr,
+	git_attr_file_source from,
+	const char *path,
+	git_pool *pool)
 {
 	git_attr_file *attrs = NULL;
 
@@ -25,6 +32,18 @@ int git_attr_file__new(git_attr_file **attrs_ptr, git_pool *pool)
 		attrs->pool_is_allocated = true;
 	}
 
+	if (path) {
+		size_t len = strlen(path);
+
+		attrs->key = git_pool_malloc(attrs->pool, len + 3);
+		GITERR_CHECK_ALLOC(attrs->key);
+
+		attrs->key[0] = '0' + from;
+		attrs->key[1] = '#';
+		memcpy(&attrs->key[2], path, len);
+		attrs->key[len + 2] = '\0';
+	}
+
 	if (git_vector_init(&attrs->rules, 4, NULL) < 0)
 		goto fail;
 
@@ -37,31 +56,7 @@ fail:
 	return -1;
 }
 
-int git_attr_file__set_path(
-	git_repository *repo, const char *path, git_attr_file *file)
-{
-	if (file->path != NULL) {
-		git__free(file->path);
-		file->path = NULL;
-	}
-
-	if (repo == NULL)
-		file->path = git__strdup(path);
-	else {
-		const char *workdir = git_repository_workdir(repo);
-
-		if (workdir && git__prefixcmp(path, workdir) == 0)
-			file->path = git__strdup(path + strlen(workdir));
-		else
-			file->path = git__strdup(path);
-	}
-
-	GITERR_CHECK_ALLOC(file->path);
-
-	return 0;
-}
-
-int git_attr_file__from_buffer(
+int git_attr_file__parse_buffer(
 	git_repository *repo, const char *buffer, git_attr_file *attrs)
 {
 	int error = 0;
@@ -73,10 +68,10 @@ int git_attr_file__from_buffer(
 
 	scan = buffer;
 
-	if (attrs->path && git__suffixcmp(attrs->path, GIT_ATTR_FILE) == 0) {
-		context = git__strndup(attrs->path,
-			strlen(attrs->path) - strlen(GIT_ATTR_FILE));
-		GITERR_CHECK_ALLOC(context);
+	/* if subdir file path, convert context for file paths */
+	if (attrs->key && git__suffixcmp(attrs->key, "/" GIT_ATTR_FILE) == 0) {
+		context = attrs->key + 2;
+		context[strlen(context) - strlen(GIT_ATTR_FILE)] = '\0';
 	}
 
 	while (!error && *scan) {
@@ -112,28 +107,34 @@ int git_attr_file__from_buffer(
 	}
 
 	git_attr_rule__free(rule);
-	git__free(context);
+
+	/* restore file path used for context */
+	if (context)
+		context[strlen(context)] = '.'; /* first char of GIT_ATTR_FILE */
 
 	return error;
 }
 
-int git_attr_file__from_file(
-	git_repository *repo, const char *path, git_attr_file *file)
+int git_attr_file__new_and_load(
+	git_attr_file **attrs_ptr,
+	const char *path)
 {
 	int error;
-	git_buf fbuf = GIT_BUF_INIT;
+	git_buf content = GIT_BUF_INIT;
 
-	assert(path && file);
+	if ((error = git_attr_file__new(attrs_ptr, 0, path, NULL)) < 0)
+		return error;
 
-	if (file->path == NULL && git_attr_file__set_path(repo, path, file) < 0)
-		return -1;
+	if (!(error = git_futils_readbuffer(&content, path)))
+		error = git_attr_file__parse_buffer(
+			NULL, git_buf_cstr(&content), *attrs_ptr);
 
-	if (git_futils_readbuffer(&fbuf, path) < 0)
-		return -1;
+	git_buf_free(&content);
 
-	error = git_attr_file__from_buffer(repo, fbuf.ptr, file);
-
-	git_buf_free(&fbuf);
+	if (error) {
+		git_attr_file__free(*attrs_ptr);
+		*attrs_ptr = NULL;
+	}
 
 	return error;
 }
@@ -150,9 +151,6 @@ void git_attr_file__free(git_attr_file *file)
 		git_attr_rule__free(rule);
 
 	git_vector_free(&file->rules);
-
-	git__free(file->path);
-	file->path = NULL;
 
 	if (file->pool_is_allocated) {
 		git_pool_clear(file->pool);
@@ -504,7 +502,7 @@ int git_attr_assignment__parse(
 			assign->value = git_attr__false;
 			scan++;
 		} else if (*scan == '!') {
-			assign->value = NULL; /* explicit unspecified state */
+			assign->value = git_attr__unset; /* explicit unspecified state */
 			scan++;
 		} else if (*scan == '#') /* comment rest of line */
 			break;

@@ -82,7 +82,8 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	const char *attr_vals[NUM_CONV_ATTRS];
 	int error;
 
-	error = git_attr_get_many(repo, path, NUM_CONV_ATTRS, attr_names, attr_vals);
+	error = git_attr_get_many(
+		repo, 0, path, NUM_CONV_ATTRS, attr_names, attr_vals);
 
 	if (error == GIT_ENOTFOUND) {
 		ca->crlf_action = GIT_CRLF_GUESS;

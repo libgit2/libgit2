@@ -589,7 +589,7 @@ int git_odb_read_prefix(
 	}
 
 	if (found == 0)
-		return git_odb__error_notfound("no match for prefix");
+		return git_odb__error_notfound("no match for prefix", short_id);
 	if (found > 1)
 		return git_odb__error_ambiguous("multiple matches for prefix");
 
@@ -684,9 +684,15 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 	return error;
 }
 
-int git_odb__error_notfound(const char *message)
+int git_odb__error_notfound(const char *message, const git_oid *oid)
 {
-	giterr_set(GITERR_ODB, "Object not found - %s", message);
+	if (oid != NULL) {
+		char oid_str[GIT_OID_HEXSZ + 1];
+		git_oid_tostr(oid_str, sizeof(oid_str), oid);
+		giterr_set(GITERR_ODB, "Object not found - %s (%s)", message, oid_str);
+	} else
+		giterr_set(GITERR_ODB, "Object not found - %s", message);
+
 	return GIT_ENOTFOUND;
 }
 
