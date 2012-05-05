@@ -100,10 +100,11 @@ cleanup:
  */
 static int do_connect(transport_git *t, const char *url)
 {
-	GIT_SOCKET s;
 	char *host, *port;
 	const char prefix[] = "git://";
-	int error, connected = 0;
+	int error;
+
+	t->socket = INVALID_SOCKET;
 
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
@@ -111,22 +112,24 @@ static int do_connect(transport_git *t, const char *url)
 	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
 		return -1;
 
-	s = gitno_connect(host, port);
-	connected = 1;
-	error = send_request(s, NULL, url);
-	t->socket = s;
+	if (gitno_connect(&t->socket, host, port) == 0) {
+		error = send_request(t->socket, NULL, url);
+	}
 
 	git__free(host);
 	git__free(port);
 
-	if (error < GIT_SUCCESS && s > 0)
-		gitno_close(s);
-	if (!connected) {
+	if (error < 0 && t->socket != INVALID_SOCKET) {
+		gitno_close(t->socket);
+		t->socket = INVALID_SOCKET;
+	}
+
+	if (t->socket == INVALID_SOCKET) {
 		giterr_set(GITERR_NET, "Failed to connect to the host");
 		return -1;
 	}
 
-	return error;
+	return 0;
 }
 
 /*

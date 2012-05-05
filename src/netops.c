@@ -93,7 +93,7 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
-GIT_SOCKET gitno_connect(const char *host, const char *port)
+int gitno_connect(GIT_SOCKET *sock, const char *host, const char *port)
 {
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
@@ -106,7 +106,7 @@ GIT_SOCKET gitno_connect(const char *host, const char *port)
 
 	if ((ret = getaddrinfo(host, port, &hints, &info)) < 0) {
 		giterr_set(GITERR_NET, "Failed to resolve address for %s: %s", host, gai_strerror(ret));
-		return INVALID_SOCKET;
+		return -1;
 	}
 
 	for (p = info; p != NULL; p = p->ai_next) {
@@ -125,11 +125,14 @@ GIT_SOCKET gitno_connect(const char *host, const char *port)
 	}
 
 	/* Oops, we couldn't connect to any address */
-	if (s == INVALID_SOCKET && p == NULL)
+	if (s == INVALID_SOCKET && p == NULL) {
 		giterr_set(GITERR_OS, "Failed to connect to %s", host);
+		return -1;
+	}
 
 	freeaddrinfo(info);
-	return s;
+	*sock = s;
+	return 0;
 }
 
 int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)

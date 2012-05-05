@@ -21,7 +21,7 @@ int gitno_recv(gitno_buffer *buf);
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
 
-GIT_SOCKET gitno_connect(const char *host, const char *port);
+int gitno_connect(GIT_SOCKET *s, const char *host, const char *port);
 int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags);
 int gitno_close(GIT_SOCKET s);
 int gitno_send_chunk_size(int s, size_t len);

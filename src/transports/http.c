@@ -85,12 +85,12 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 
 static int do_connect(transport_http *t, const char *host, const char *port)
 {
-	GIT_SOCKET s = -1;
+	GIT_SOCKET s;
 
 	if (t->parent.connected && http_should_keep_alive(&t->parser))
 		return 0;
 
-	if ((s = gitno_connect(host, port)) < 0)
+	if (gitno_connect(&s, host, port) < 0)
 		return -1;
 
 	t->socket = s;
