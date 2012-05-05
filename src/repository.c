@@ -862,3 +862,23 @@ int git_repository_is_bare(git_repository *repo)
 	assert(repo);
 	return repo->is_bare;
 }
+
+int git_repository_head_tree(git_tree **tree, git_repository *repo)
+{
+	git_oid head_oid;
+	git_object *obj = NULL;
+
+	if (git_reference_name_to_oid(&head_oid, repo, GIT_HEAD_FILE) < 0) {
+		/* cannot resolve HEAD - probably brand new repo */
+		giterr_clear();
+		*tree = NULL;
+		return 0;
+	}
+
+	if (git_object_lookup(&obj, repo, &head_oid, GIT_OBJ_ANY) < 0 ||
+		git_object__resolve_to_type(&obj, GIT_OBJ_TREE) < 0)
+		return -1;
+
+	*tree = (git_tree *)obj;
+	return 0;
+}

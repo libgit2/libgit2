@@ -103,7 +103,7 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 static int update_file_is_binary_by_attr(git_repository *repo, git_diff_file *file)
 {
 	const char *value;
-	if (git_attr_get(repo, file->path, "diff", &value) < 0)
+	if (git_attr_get(repo, 0, file->path, "diff", &value) < 0)
 		return -1;
 
 	if (GIT_ATTR_FALSE(value))

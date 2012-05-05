@@ -36,17 +36,27 @@ typedef khash_t(str) git_strmap;
 #define git_strmap_set_value_at(h, idx, v) kh_val(h, idx) = v
 #define git_strmap_delete_at(h, idx)       kh_del(str, h, idx)
 
-#define git_strmap_insert(h, key, val, err) do { \
-	khiter_t __pos = kh_put(str, h, key, &err); \
-	if (err >= 0) kh_val(h, __pos) = val; \
-	} while (0)
-
-#define git_strmap_insert2(h, key, val, old, err) do { \
-	khiter_t __pos = kh_put(str, h, key, &err); \
-	if (err >= 0) { \
-		old = (err == 0) ? kh_val(h, __pos) : NULL; \
+#define git_strmap_insert(h, key, val, rval) do { \
+	khiter_t __pos = kh_put(str, h, key, &rval); \
+	if (rval >= 0) { \
+		if (rval == 0) kh_key(h, __pos) = key; \
 		kh_val(h, __pos) = val; \
 	} } while (0)
+
+#define git_strmap_insert2(h, key, val, oldv, rval) do { \
+	khiter_t __pos = kh_put(str, h, key, &rval); \
+	if (rval >= 0) { \
+		if (rval == 0) { \
+			oldv = kh_val(h, __pos); \
+			kh_key(h, __pos) = key; \
+		} else { oldv = NULL; } \
+		kh_val(h, __pos) = val; \
+	} } while (0)
+
+#define git_strmap_delete(h, key) do { \
+	khiter_t __pos = git_strmap_lookup_index(h, key); \
+	if (git_strmap_valid_index(h, __pos)) \
+		git_strmap_delete_at(h, __pos); } while (0)
 
 #define git_strmap_foreach		kh_foreach
 #define git_strmap_foreach_value	kh_foreach_value

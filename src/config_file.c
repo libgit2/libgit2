@@ -265,6 +265,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		cvar_free(old_var);
 
 	if (config_write(b, key, NULL, value) < 0) {
+		git_strmap_delete(b->values, var->key);
 		cvar_free(var);
 		return -1;
 	}
