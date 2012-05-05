@@ -82,14 +82,15 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 
 static int do_connect(transport_http *t, const char *host, const char *port)
 {
-	GIT_SOCKET s = -1;
+	int error = GIT_SUCCESS;
+	GIT_SOCKET s;
 
 	if (t->parent.connected && http_should_keep_alive(&t->parser))
 		return GIT_SUCCESS;
 
-	s = gitno_connect(host, port);
-	if (s < GIT_SUCCESS) {
-	    return git__rethrow(s, "Failed to connect to host");
+	error = gitno_connect(host, port, &s);
+	if (error != GIT_SUCCESS) {
+	    return git__rethrow(error, "Failed to connect to host");
 	}
 	t->socket = s;
 	t->parent.connected = 1;

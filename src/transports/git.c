@@ -106,10 +106,12 @@ static int do_connect(transport_git *t, const char *url)
 	if (error < GIT_SUCCESS)
 		return error;
 
-	s = gitno_connect(host, port);
-	connected = 1;
-	error = send_request(s, NULL, url);
-	t->socket = s;
+	error = gitno_connect(host, port, &s);
+	if (error == GIT_SUCCESS) {
+		connected = 1;
+		error = send_request(s, NULL, url);
+		t->socket = s;
+	}
 
 	git__free(host);
 	git__free(port);

@@ -74,12 +74,11 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
-int gitno_connect(const char *host, const char *port)
+int gitno_connect(const char *host, const char *port, GIT_SOCKET *s)
 {
 	struct addrinfo *info, *p;
 	struct addrinfo hints;
 	int ret, error = GIT_SUCCESS;
-	GIT_SOCKET s;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
@@ -93,24 +92,25 @@ int gitno_connect(const char *host, const char *port)
 	}
 
 	for (p = info; p != NULL; p = p->ai_next) {
-		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		*s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 #ifdef GIT_WIN32
-		if (s == INVALID_SOCKET) {
+		if (*s == INVALID_SOCKET) {
 #else
-		if (s < 0) {
+		if (*s < 0) {
 #endif
 			error = GIT_EOSERR;
 			goto cleanup;
 		}
 
-		ret = connect(s, p->ai_addr, p->ai_addrlen);
+		ret = connect(*s, p->ai_addr, p->ai_addrlen);
 		/* If we can't connect, try the next one */
 		if (ret < 0) {
+			close(*s);
 			continue;
 		}
 
 		/* Return the socket */
-		error = s;
+		error = GIT_SUCCESS;
 		goto cleanup;
 	}
 
