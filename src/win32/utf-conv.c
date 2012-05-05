@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "utf-conv.h"
+#include "git2/windows.h"
 
 /*
  * Default codepage value
