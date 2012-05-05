@@ -18,13 +18,13 @@ static void diff_cmp(const git_tree_diff_data *a, const git_tree_diff_data *b)
 
 	cl_assert(a->status - b->status == 0);
 
-	cl_assert_strequal(a->path, b->path);
+	cl_assert_equal_s(a->path, b->path);
 }
 
 static int diff_cb(const git_tree_diff_data *diff, void *data)
 {
 	diff_cmp(diff, data);
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static void test_diff(git_tree *a, git_tree *b, git_tree_diff_cb cb, void *data)
@@ -126,7 +126,7 @@ static int diff_more_cb(const git_tree_diff_data *diff, void *data)
 
 	more_data->expect_idx = (more_data->expect_idx + 1) % ARRAY_SIZE(more_data->expect);
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void test_object_tree_diff__more(void)

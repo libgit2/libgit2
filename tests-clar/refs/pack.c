@@ -39,7 +39,7 @@ void test_refs_pack__loose(void)
 	/* Ensure a known loose ref can be looked up */
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
 	cl_assert(git_reference_is_packed(reference) == 0);
-	cl_assert_strequal(reference->name, loose_tag_ref_name);
+	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 	git_reference_free(reference);
 
 	/*
@@ -51,16 +51,16 @@ void test_refs_pack__loose(void)
 
 	/* Ensure the packed-refs file exists */
 	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, GIT_PACKEDREFS_FILE));
-	cl_git_pass(git_path_exists(temp_path.ptr));
+	cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Ensure the known ref can still be looked up but is now packed */
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
 	cl_assert(git_reference_is_packed(reference));
-	cl_assert_strequal(reference->name, loose_tag_ref_name);
+	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 
 	/* Ensure the known ref has been removed from the loose folder structure */
 	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, loose_tag_ref_name));
-	cl_git_pass(!git_path_exists(temp_path.ptr));
+	cl_assert(!git_path_exists(temp_path.ptr));
 
 	git_reference_free(reference);
 	git_buf_free(&temp_path);

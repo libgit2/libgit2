@@ -232,7 +232,7 @@ void git__blk_SHA1_Init(blk_SHA_CTX *ctx)
 	ctx->H[4] = 0xc3d2e1f0;
 }
 
-void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, unsigned long len)
+void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, size_t len)
 {
 	unsigned int lenW = ctx->size & 63;
 
@@ -242,7 +242,7 @@ void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, unsigned long len)
 	if (lenW) {
 		unsigned int left = 64 - lenW;
 		if (len < left)
-			left = len;
+			left = (unsigned int)len;
 		memcpy(lenW + (char *)ctx->W, data, left);
 		lenW = (lenW + left) & 63;
 		len -= left;

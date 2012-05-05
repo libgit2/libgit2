@@ -9,21 +9,14 @@
 #include "repository.h"
 #include "commit.h"
 #include "thread-utils.h"
+#include "util.h"
 #include "cache.h"
 
 int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr)
 {
 	if (size < 8)
 		size = 8;
-
-	/* round up size to closest power of 2 */
-	size--;
-	size |= size >> 1;
-	size |= size >> 2;
-	size |= size >> 4;
-	size |= size >> 8;
-	size |= size >> 16;
-	size++;
+	size = git__size_t_powerof2(size);
 
 	cache->size_mask = size - 1;
 	cache->lru_count = 0;
@@ -32,11 +25,10 @@ int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_pt
 	git_mutex_init(&cache->lock);
 
 	cache->nodes = git__malloc(size * sizeof(git_cached_obj *));
-	if (cache->nodes == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(cache->nodes);
 
 	memset(cache->nodes, 0x0, size * sizeof(git_cached_obj *));
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_cache_free(git_cache *cache)

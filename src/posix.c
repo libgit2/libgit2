@@ -31,27 +31,25 @@ int p_getcwd(char *buffer_out, size_t size)
 	cwd_buffer = getcwd(buffer_out, size);
 
 	if (cwd_buffer == NULL)
-		return git__throw(GIT_EOSERR, "Failed to retrieve current working directory");
+		return -1;
 
 	git_path_mkposix(buffer_out);
+	git_path_string_to_dir(buffer_out, size); /* append trailing slash */
 
-	git_path_string_to_dir(buffer_out, size);	//Ensure the path ends with a trailing slash
-
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int p_rename(const char *from, const char *to)
 {
 	if (!link(from, to)) {
 		p_unlink(from);
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	if (!rename(from, to))
-		return GIT_SUCCESS;
+		return 0;
 
-	return GIT_ERROR;
-
+	return -1;
 }
 
 #endif
@@ -60,11 +58,17 @@ int p_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
 	while (cnt) {
-		ssize_t r = read(fd, b, cnt);
+		ssize_t r;
+#ifdef GIT_WIN32
+		assert((size_t)((unsigned int)cnt) == cnt);
+		r = read(fd, b, (unsigned int)cnt);
+#else
+		r = read(fd, b, cnt);
+#endif
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return GIT_EOSERR;
+			return -1;
 		}
 		if (!r)
 			break;
@@ -78,18 +82,24 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 {
 	const char *b = buf;
 	while (cnt) {
-		ssize_t r = write(fd, b, cnt);
+		ssize_t r;
+#ifdef GIT_WIN32
+		assert((size_t)((unsigned int)cnt) == cnt);
+		r = write(fd, b, (unsigned int)cnt);
+#else
+		r = write(fd, b, cnt);
+#endif
 		if (r < 0) {
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
-			return GIT_EOSERR;
+			return -1;
 		}
 		if (!r) {
 			errno = EPIPE;
-			return GIT_EOSERR;
+			return -1;
 		}
 		cnt -= r;
 		b += r;
 	}
-	return GIT_SUCCESS;
+	return 0;
 }

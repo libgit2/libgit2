@@ -50,4 +50,20 @@
 #	pragma warning ( disable : 4127 )
 #endif
 
+#if defined (_MSC_VER)
+	typedef unsigned char bool;
+#	define true 1
+#	define false 0
+#else
+#	include <stdbool.h>
+#endif
+
+#ifndef va_copy
+#	ifdef __va_copy
+#		define va_copy(dst, src) __va_copy(dst, src)
+#	else
+#		define va_copy(dst, src) ((dst) = (src))
+#	endif
+#endif
+
 #endif /* INCLUDE_compat_h__ */

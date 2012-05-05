@@ -45,7 +45,7 @@ void test_object_raw_convert__succeed_on_oid_to_string_conversion(void)
 	/* returns out as hex formatted c-string */
 	str = git_oid_tostr(out, sizeof(out), &in);
 	cl_assert(str && str == out && *(str+GIT_OID_HEXSZ) == '\0');
-	cl_assert_strequal(exp, out);
+	cl_assert_equal_s(exp, out);
 }
 
 void test_object_raw_convert__succeed_on_oid_to_string_conversion_big(void)
@@ -66,7 +66,7 @@ void test_object_raw_convert__succeed_on_oid_to_string_conversion_big(void)
 	/* returns big as hex formatted c-string */
 	str = git_oid_tostr(big, sizeof(big), &in);
 	cl_assert(str && str == big && *(str+GIT_OID_HEXSZ) == '\0');
-	cl_assert_strequal(exp, big);
+	cl_assert_equal_s(exp, big);
 
 	/* check tail material is untouched */
 	cl_assert(str && str == big && *(str+GIT_OID_HEXSZ+1) == 'X');

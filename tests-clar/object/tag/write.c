@@ -50,12 +50,12 @@ void test_object_tag_write__basic(void)
 	/* Check attributes were set correctly */
 	tagger1 = git_tag_tagger(tag);
 	cl_assert(tagger1 != NULL);
-	cl_assert_strequal(tagger1->name, tagger_name);
-	cl_assert_strequal(tagger1->email, tagger_email);
+	cl_assert_equal_s(tagger1->name, tagger_name);
+	cl_assert_equal_s(tagger1->email, tagger_email);
 	cl_assert(tagger1->when.time == 123456789);
 	cl_assert(tagger1->when.offset == 60);
 
-	cl_assert_strequal(git_tag_message(tag), tagger_message);
+	cl_assert_equal_s(git_tag_message(tag), tagger_message);
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/the-tag"));
 	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);

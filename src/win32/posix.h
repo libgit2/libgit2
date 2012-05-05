@@ -49,5 +49,7 @@ extern int p_open(const char *path, int flags);
 extern int p_creat(const char *path, mode_t mode);
 extern int p_getcwd(char *buffer_out, size_t size);
 extern int p_rename(const char *from, const char *to);
+extern int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags);
+extern int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags);
 
 #endif

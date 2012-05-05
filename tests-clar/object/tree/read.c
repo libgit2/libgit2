@@ -59,13 +59,13 @@ void test_object_tree_read__two(void)
 	cl_assert(obj != NULL);
 	git_object_free(obj);
 	obj = NULL;
-	cl_assert(git_object_lookup(&obj, g_repo, &id, GIT_OBJ_BLOB) == GIT_EINVALIDTYPE);
+	cl_git_fail(git_object_lookup(&obj, g_repo, &id, GIT_OBJ_BLOB));
 	cl_assert(obj == NULL);
 
 	entry = git_tree_entry_byname(tree, "README");
 	cl_assert(entry != NULL);
 
-	cl_assert_strequal(git_tree_entry_name(entry), "README");
+	cl_assert_equal_s(git_tree_entry_name(entry), "README");
 
 	cl_git_pass(git_tree_entry_2object(&obj, g_repo, entry));
 	cl_assert(obj != NULL);

@@ -69,24 +69,84 @@ int git_commit_create_v(
 		...)
 {
 	va_list ap;
-	int i, error;
+	int i, res;
 	const git_commit **parents;
 
 	parents = git__malloc(parent_count * sizeof(git_commit *));
+	GITERR_CHECK_ALLOC(parents);
 
 	va_start(ap, parent_count);
 	for (i = 0; i < parent_count; ++i)
 		parents[i] = va_arg(ap, const git_commit *);
 	va_end(ap);
 
-	error = git_commit_create(
+	res = git_commit_create(
 		oid, repo, update_ref, author, committer,
 		message_encoding, message,
 		tree, parent_count, parents);
 
 	git__free((void *)parents);
+	return res;
+}
 
-	return error;
+/* Update the reference named `ref_name` so it points to `oid` */
+static int update_reference(git_repository *repo, git_oid *oid, const char *ref_name)
+{
+	git_reference *ref;
+	int res;
+
+	res = git_reference_lookup(&ref, repo, ref_name);
+
+	/* If we haven't found the reference at all, we assume we need to create
+	 * a new reference and that's it */
+	if (res == GIT_ENOTFOUND) {
+		giterr_clear();
+		return git_reference_create_oid(NULL, repo, ref_name, oid, 1);
+	}
+
+	if (res < 0)
+		return -1;
+
+	/* If we have found a reference, but it's symbolic, we need to update
+	 * the direct reference it points to */
+	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+		git_reference *aux;
+		const char *sym_target;
+
+		/* The target pointed at by this reference */
+		sym_target = git_reference_target(ref);
+
+		/* resolve the reference to the target it points to */
+		res = git_reference_resolve(&aux, ref);
+
+		/*
+		 * if the symbolic reference pointed to an inexisting ref,
+		 * this is means we're creating a new branch, for example.
+		 * We need to create a new direct reference with that name
+		 */
+		if (res == GIT_ENOTFOUND) {
+			giterr_clear();
+			res = git_reference_create_oid(NULL, repo, sym_target, oid, 1);
+			git_reference_free(ref);
+			return res;
+		}
+
+		/* free the original symbolic reference now; not before because
+		 * we're using the `sym_target` pointer */
+		git_reference_free(ref);
+
+		if (res < 0)
+			return -1;
+
+		/* store the newly found direct reference in its place */
+		ref = aux;
+	}
+
+	/* ref is made to point to `oid`: ref is either the original reference,
+	 * or the target of the symbolic reference we've looked up */
+	res = git_reference_set_oid(ref, oid);
+	git_reference_free(ref);
+	return res;
 }
 
 int git_commit_create(
@@ -102,20 +162,15 @@ int git_commit_create(
 		const git_commit *parents[])
 {
 	git_buf commit = GIT_BUF_INIT;
-	int error, i;
+	int i;
 	git_odb *odb;
 
-	if (git_object_owner((const git_object *)tree) != repo)
-		return git__throw(GIT_EINVALIDARGS, "The given tree does not belong to this repository");
+	assert(git_object_owner((const git_object *)tree) == repo);
 
 	git_oid__writebuf(&commit, "tree ", git_object_id((const git_object *)tree));
 
 	for (i = 0; i < parent_count; ++i) {
-		if (git_object_owner((const git_object *)parents[i]) != repo) {
-			error = git__throw(GIT_EINVALIDARGS, "The given parent does not belong to this repository");
-			goto cleanup;
-		}
-
+		assert(git_object_owner((const git_object *)parents[i]) == repo);
 		git_oid__writebuf(&commit, "parent ", git_object_id((const git_object *)parents[i]));
 	}
 
@@ -128,67 +183,25 @@ int git_commit_create(
 	git_buf_putc(&commit, '\n');
 	git_buf_puts(&commit, message);
 
-	if (git_buf_oom(&commit)) {
-		error = git__throw(git_buf_lasterror(&commit),
-			"Not enough memory to build the commit data");
-		goto cleanup;
-	}
+	if (git_buf_oom(&commit))
+		goto on_error;
 
-	error = git_repository_odb__weakptr(&odb, repo);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	if (git_repository_odb__weakptr(&odb, repo) < 0)
+		goto on_error;
 
-	error = git_odb_write(oid, odb, commit.ptr, commit.size, GIT_OBJ_COMMIT);
+	if (git_odb_write(oid, odb, commit.ptr, commit.size, GIT_OBJ_COMMIT) < 0)
+		goto on_error;
+
 	git_buf_free(&commit);
 
-	if (error == GIT_SUCCESS && update_ref != NULL) {
-		git_reference *head;
-		git_reference *target;
+	if (update_ref != NULL)
+		return update_reference(repo, oid, update_ref);
 
-		error = git_reference_lookup(&head, repo, update_ref);
-		if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
-			return git__rethrow(error, "Failed to create commit");
+	return 0;
 
-		if (error != GIT_ENOTFOUND) {
-			update_ref = git_reference_target(head);
-			error = git_reference_resolve(&target, head);
-		}
-
-		if (error < GIT_SUCCESS) {
-			if (error != GIT_ENOTFOUND) {
-				git_reference_free(head);
-				return git__rethrow(error, "Failed to create commit");
-			}
-		/*
-		 * The target of the reference was not found. This can happen
-		 * just after a repository has been initialized (the master
-		 * branch doesn't exist yet, as it doesn't have anything to
-		 * point to) or after an orphan checkout, so if the target
-		 * branch doesn't exist yet, create it and return.
-		 */
-			error = git_reference_create_oid(&target, repo, update_ref, oid, 1);
-
-			git_reference_free(head);
-			if (error == GIT_SUCCESS)
-				git_reference_free(target);
-
-			return error;
-		}
-
-		error = git_reference_set_oid(target, oid);
-
-		git_reference_free(head);
-		git_reference_free(target);
-	}
-
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to create commit");
-
-	return GIT_SUCCESS;
-
-cleanup:
+on_error:
 	git_buf_free(&commit);
-	return error;
+	return -1;
 }
 
 int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
@@ -197,35 +210,40 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 	const char *buffer_end = (const char *)data + len;
 
 	git_oid parent_oid;
-	int error;
 
 	git_vector_init(&commit->parent_oids, 4, NULL);
 
-	if ((error = git_oid__parse(&commit->tree_oid, &buffer, buffer_end, "tree ")) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to parse buffer");
+	if (git_oid__parse(&commit->tree_oid, &buffer, buffer_end, "tree ") < 0)
+		goto bad_buffer;
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
-	while (git_oid__parse(&parent_oid, &buffer, buffer_end, "parent ") == GIT_SUCCESS) {
+	while (git_oid__parse(&parent_oid, &buffer, buffer_end, "parent ") == 0) {
 		git_oid *new_oid;
 
 		new_oid = git__malloc(sizeof(git_oid));
+		GITERR_CHECK_ALLOC(new_oid);
+
 		git_oid_cpy(new_oid, &parent_oid);
 
-		if (git_vector_insert(&commit->parent_oids, new_oid) < GIT_SUCCESS)
-			return GIT_ENOMEM;
+		if (git_vector_insert(&commit->parent_oids, new_oid) < 0)
+			return -1;
 	}
 
 	commit->author = git__malloc(sizeof(git_signature));
-	if ((error = git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n')) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to parse commit");
+	GITERR_CHECK_ALLOC(commit->author);
+
+	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
+		return -1;
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
-	if ((error = git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n')) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to parse commit");
+	GITERR_CHECK_ALLOC(commit->committer);
+
+	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
+		return -1;
 
 	if (git__prefixcmp(buffer, "encoding ") == 0) {
 		const char *encoding_end;
@@ -236,8 +254,7 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 			encoding_end++;
 
 		commit->message_encoding = git__strndup(buffer, encoding_end - buffer);
-		if (!commit->message_encoding)
-			return GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(commit->message_encoding);
 
 		buffer = encoding_end;
 	}
@@ -248,11 +265,14 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 
 	if (buffer <= buffer_end) {
 		commit->message = git__strndup(buffer, buffer_end - buffer);
-		if (!commit->message)
-			return GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(commit->message);
 	}
 
-	return GIT_SUCCESS;
+	return 0;
+
+bad_buffer:
+	giterr_set(GITERR_OBJECT, "Failed to parse bad commit object");
+	return -1;
 }
 
 int git_commit__parse(git_commit *commit, git_odb_object *obj)
@@ -290,8 +310,10 @@ int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 	assert(commit);
 
 	parent_oid = git_vector_get(&commit->parent_oids, n);
-	if (parent_oid == NULL)
-		return git__throw(GIT_ENOTFOUND, "Parent %u does not exist", n);
+	if (parent_oid == NULL) {
+		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
+		return GIT_ENOTFOUND;
+	}
 
 	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }

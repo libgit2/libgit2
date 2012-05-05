@@ -19,13 +19,13 @@ void git_text_gather_stats(git_text_stats *stats, const git_buf *text)
 
 	memset(stats, 0, sizeof(*stats));
 
-	for (i = 0; i < text->size; i++) {
+	for (i = 0; i < git_buf_len(text); i++) {
 		unsigned char c = text->ptr[i];
 
 		if (c == '\r') {
 			stats->cr++;
 
-			if (i + 1 < text->size && text->ptr[i + 1] == '\n')
+			if (i + 1 < git_buf_len(text) && text->ptr[i + 1] == '\n')
 				stats->crlf++;
 		}
 
@@ -59,7 +59,7 @@ void git_text_gather_stats(git_text_stats *stats, const git_buf *text)
 	}
 
 	/* If file ends with EOF then don't count this EOF as non-printable. */
-	if (text->size >= 1 && text->ptr[text->size - 1] == '\032')
+	if (git_buf_len(text) >= 1 && text->ptr[text->size - 1] == '\032')
 		stats->nonprintable--;
 }
 
@@ -92,11 +92,11 @@ int git_filters_load(git_vector *filters, git_repository *repo, const char *path
 	if (mode == GIT_FILTER_TO_ODB) {
 		/* Load the CRLF cleanup filter when writing to the ODB */
 		error = git_filter_add__crlf_to_odb(filters, repo, path);
-		if (error < GIT_SUCCESS)
+		if (error < 0)
 			return error;
 	} else {
-		return git__throw(GIT_ENOTIMPLEMENTED,
-			"Worktree filters are not implemented yet");
+		giterr_set(GITERR_INVALID, "Worktree filters are not implemented yet");
+		return -1;
 	}
 
 	return (int)filters->length;
@@ -111,7 +111,7 @@ void git_filters_free(git_vector *filters)
 		if (filter->do_free != NULL)
 			filter->do_free(filter);
 		else
-			free(filter);
+			git__free(filter);
 	}
 
 	git_vector_free(filters);
@@ -127,15 +127,15 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 
 	src = 0;
 
-	if (source->size == 0) {
+	if (git_buf_len(source) == 0) {
 		git_buf_clear(dest);
 		return GIT_SUCCESS;
 	}
 
 	/* Pre-grow the destination buffer to more or less the size
 	 * we expect it to have */
-	if (git_buf_grow(dest, source->size) < 0)
-		return GIT_ENOMEM;
+	if (git_buf_grow(dest, git_buf_len(source)) < 0)
+		return -1;
 
 	for (i = 0; i < filters->length; ++i) {
 		git_filter *filter = git_vector_get(filters, i);
@@ -153,7 +153,7 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 			src = dst;
 
 		if (git_buf_oom(dbuffer[dst]))
-			return GIT_ENOMEM;
+			return -1;
 	}
 
 	/* Ensure that the output ends up in dbuffer[1] (i.e. the dest) */

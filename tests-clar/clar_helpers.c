@@ -28,14 +28,24 @@ void cl_git_mkfile(const char *filename, const char *content)
 	cl_must_pass(p_close(fd));
 }
 
-void cl_git_append2file(const char *filename, const char *new_content)
+void cl_git_write2file(const char *filename, const char *new_content, int flags)
 {
-	int fd = p_creat(filename, 0644);
-	cl_assert(fd != 0);
+	int fd = open(filename, flags, 0644);
+	cl_assert(fd >= 0);
 	if (!new_content)
 		new_content = "\n";
 	cl_must_pass(p_write(fd, new_content, strlen(new_content)));
 	cl_must_pass(p_close(fd));
+}
+
+void cl_git_append2file(const char *filename, const char *new_content)
+{
+	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_APPEND);
+}
+
+void cl_git_rewritefile(const char *filename, const char *new_content)
+{
+	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_TRUNC);
 }
 
 static const char *_cl_sandbox = NULL;
@@ -49,13 +59,14 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	cl_fixture_sandbox(sandbox);
 	_cl_sandbox = sandbox;
 
-	p_chdir(sandbox);
+	cl_git_pass(p_chdir(sandbox));
 
-	/* Rename `sandbox/.gitted` to `sandbox/.git` which must be done since
-	 * we cannot store a folder named `.git` inside the fixtures folder of
-	 * our libgit2 repo.
+	/* If this is not a bare repo, then rename `sandbox/.gitted` to
+	 * `sandbox/.git` which must be done since we cannot store a folder
+	 * named `.git` inside the fixtures folder of our libgit2 repo.
 	 */
-	cl_git_pass(p_rename(".gitted", ".git"));
+	if (p_access(".gitted", F_OK) == 0)
+		cl_git_pass(p_rename(".gitted", ".git"));
 
 	/* If we have `gitattributes`, rename to `.gitattributes`.  This may
 	 * be necessary if we don't want the attributes to be applied in the
@@ -68,7 +79,7 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	if (p_access("gitignore", F_OK) == 0)
 		cl_git_pass(p_rename("gitignore", ".gitignore"));
 
-	p_chdir("..");
+	cl_git_pass(p_chdir(".."));
 
 	/* Now open the sandbox repository and make it available for tests */
 	cl_git_pass(git_repository_open(&_cl_repo, sandbox));

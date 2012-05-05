@@ -34,7 +34,7 @@ GIT_INLINE(void) attr_check_expected(
 		break;
 
 	case EXPECT_STRING:
-		cl_assert_strequal(expected_str, value);
+		cl_assert_equal_s(expected_str, value);
 		break;
 	}
 }
