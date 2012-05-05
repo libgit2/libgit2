@@ -82,7 +82,8 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	const char *attr_vals[NUM_CONV_ATTRS];
 	int error;
 
-	error = git_attr_get_many(repo, path, NUM_CONV_ATTRS, attr_names, attr_vals);
+	error = git_attr_get_many(
+		repo, 0, path, NUM_CONV_ATTRS, attr_names, attr_vals);
 
 	if (error == GIT_ENOTFOUND) {
 		ca->crlf_action = GIT_CRLF_GUESS;
@@ -105,7 +106,7 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 static int drop_crlf(git_buf *dest, const git_buf *source)
 {
 	const char *scan = source->ptr, *next;
-	const char *scan_end = source->ptr + source->size;
+	const char *scan_end = git_buf_cstr(source) + git_buf_len(source);
 
 	/* Main scan loop.  Find the next carriage return and copy the
 	 * whole chunk up to that point to the destination buffer.
@@ -128,8 +129,7 @@ static int drop_crlf(git_buf *dest, const git_buf *source)
 
 	/* Copy remaining input into dest */
 	git_buf_put(dest, scan, scan_end - scan);
-
-	return git_buf_lasterror(dest);
+	return 0;
 }
 
 static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *source)
@@ -139,7 +139,7 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 	assert(self && dest && source);
 
 	/* Empty file? Nothing to do */
-	if (source->size == 0)
+	if (git_buf_len(source) == 0)
 		return 0;
 
 	/* Heuristics to see if we can skip the conversion.
@@ -217,8 +217,7 @@ int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const
 	/* If we're good, we create a new filter object and push it
 	 * into the filters array */
 	filter = git__malloc(sizeof(struct crlf_filter));
-	if (filter == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(filter);
 
 	filter->f.apply = &crlf_apply_to_odb;
 	filter->f.do_free = NULL;

@@ -50,16 +50,14 @@ int git_path_basename_r(git_buf *buffer, const char *path)
 	while (startp > path && *(startp - 1) != '/')
 		startp--;
 
-	len = endp - startp +1;
+	/* Cast is safe because max path < max int */
+	len = (int)(endp - startp + 1);
 
 Exit:
 	result = len;
 
-	if (buffer != NULL) {
-		if (git_buf_set(buffer, startp, len) < GIT_SUCCESS)
-			return git__rethrow(git_buf_lasterror(buffer),
-				"Could not get basename of '%s'", path);
-	}
+	if (buffer != NULL && git_buf_set(buffer, startp, len) < 0)
+		return -1;
 
 	return result;
 }
@@ -100,7 +98,8 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 		endp--;
 	} while (endp > path && *endp == '/');
 
-	len = endp - path +1;
+	/* Cast is safe because max path < max int */
+	len = (int)(endp - path + 1);
 
 #ifdef GIT_WIN32
 	/* Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
@@ -115,11 +114,8 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 Exit:
 	result = len;
 
-	if (buffer != NULL) {
-		if (git_buf_set(buffer, path, len) < GIT_SUCCESS)
-			return git__rethrow(git_buf_lasterror(buffer),
-				"Could not get dirname of '%s'", path);
-	}
+	if (buffer != NULL && git_buf_set(buffer, path, len) < 0)
+		return -1;
 
 	return result;
 }
@@ -153,7 +149,7 @@ char *git_path_basename(const char *path)
 const char *git_path_topdir(const char *path)
 {
 	size_t len;
-	int i;
+	ssize_t i;
 
 	assert(path);
 	len = strlen(path);
@@ -161,7 +157,7 @@ const char *git_path_topdir(const char *path)
 	if (!len || path[len - 1] != '/')
 		return NULL;
 
-	for (i = len - 2; i >= 0; --i)
+	for (i = (ssize_t)len - 2; i >= 0; --i)
 		if (path[i] == '/')
 			break;
 
@@ -176,54 +172,61 @@ int git_path_root(const char *path)
 	/* Does the root of the path look like a windows drive ? */
 	if (isalpha(path[0]) && (path[1] == ':'))
 		offset += 2;
+
+	/* Are we dealing with a windows network path? */
+	else if ((path[0] == '/' && path[1] == '/') ||
+		(path[0] == '\\' && path[1] == '\\'))
+	{
+		offset += 2;
+
+		/* Skip the computer name segment */
+		while (path[offset] && path[offset] != '/' && path[offset] != '\\')
+			offset++;
+	}
 #endif
 
-	if (*(path + offset) == '/')
+	if (path[offset] == '/' || path[offset] == '\\')
 		return offset;
 
-	return -1;	/* Not a real error. Rather a signal than the path is not rooted */
+	return -1;	/* Not a real error - signals that path is not rooted */
 }
 
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 {
-	int  error = GIT_SUCCESS;
 	char buf[GIT_PATH_MAX];
 
-	git_buf_clear(path_out);
+	assert(path && path_out);
 
 	/* construct path if needed */
 	if (base != NULL && git_path_root(path) < 0) {
-		if ((error = git_buf_joinpath(path_out, base, path)) < GIT_SUCCESS)
-			return error;
+		if (git_buf_joinpath(path_out, base, path) < 0)
+			return -1;
 		path = path_out->ptr;
 	}
 
-	if (path == NULL || p_realpath(path, buf) == NULL)
-		error = GIT_EOSERR;
-	else
-		error = git_buf_sets(path_out, buf);
+	if (p_realpath(path, buf) == NULL) {
+		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
+		git_buf_clear(path_out);
+		return (errno == ENOENT) ? GIT_ENOTFOUND : -1;
+	}
 
-	return error;
+	return git_buf_sets(path_out, buf);
 }
 
 int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base)
 {
 	int error = git_path_prettify(path_out, path, base);
-
-	if (error == GIT_SUCCESS)
-		error = git_path_to_dir(path_out);
-
-	return error;
+	return (error < 0) ? error : git_path_to_dir(path_out);
 }
 
 int git_path_to_dir(git_buf *path)
 {
 	if (path->asize > 0 &&
-		path->size > 0 &&
-		path->ptr[path->size - 1] != '/')
+		git_buf_len(path) > 0 &&
+		path->ptr[git_buf_len(path) - 1] != '/')
 		git_buf_putc(path, '/');
 
-	return git_buf_lasterror(path);
+	return git_buf_oom(path) ? -1 : 0;
 }
 
 void git_path_string_to_dir(char* path, size_t size)
@@ -238,10 +241,10 @@ void git_path_string_to_dir(char* path, size_t size)
 
 int git__percent_decode(git_buf *decoded_out, const char *input)
 {
-	int len, hi, lo, i, error = GIT_SUCCESS;
+	int len, hi, lo, i;
 	assert(decoded_out && input);
 
-	len = strlen(input);
+	len = (int)strlen(input);
 	git_buf_clear(decoded_out);
 
 	for(i = 0; i < len; i++)
@@ -264,39 +267,40 @@ int git__percent_decode(git_buf *decoded_out, const char *input)
 		i += 2;
 
 append:
-		error = git_buf_putc(decoded_out, c);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Failed to percent decode '%s'.", input);
+		if (git_buf_putc(decoded_out, c) < 0)
+			return -1;
 	}
 
-	return error;
+	return 0;
+}
+
+static int error_invalid_local_file_uri(const char *uri)
+{
+	giterr_set(GITERR_CONFIG, "'%s' is not a valid local file URI", uri);
+	return -1;
 }
 
 int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 {
-	int error = GIT_SUCCESS, offset = 0, len;
+	int offset = 0, len;
 
 	assert(local_path_out && file_url);
 
 	if (git__prefixcmp(file_url, "file://") != 0)
-		return git__throw(GIT_EINVALIDPATH,
-			"Parsing of '%s' failed. A file Uri is expected (ie. with 'file://' scheme).",
-			file_url);
+		return error_invalid_local_file_uri(file_url);
 
 	offset += 7;
-	len = strlen(file_url);
+	len = (int)strlen(file_url);
 
 	if (offset < len && file_url[offset] == '/')
 		offset++;
 	else if (offset < len && git__prefixcmp(file_url + offset, "localhost/") == 0)
 		offset += 10;
 	else
-		return git__throw(GIT_EINVALIDPATH,
-			"Parsing of '%s' failed. A local file Uri is expected.", file_url);
+		return error_invalid_local_file_uri(file_url);
 
 	if (offset >= len || file_url[offset] == '/')
-		return git__throw(GIT_EINVALIDPATH, 
-			"Parsing of '%s' failed. Invalid file Uri format.", file_url);
+		return error_invalid_local_file_uri(file_url);
 
 #ifndef _MSC_VER
 	offset--;	/* A *nix absolute path starts with a forward slash */
@@ -304,11 +308,7 @@ int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 
 	git_buf_clear(local_path_out);
 
-	error = git__percent_decode(local_path_out, file_url + offset);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Parsing of '%s' failed.", file_url);
-
-	return error;
+	return git__percent_decode(local_path_out, file_url + offset);
 }
 
 int git_path_walk_up(
@@ -317,7 +317,7 @@ int git_path_walk_up(
 	int (*cb)(void *data, git_buf *),
 	void *data)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	git_buf iter;
 	ssize_t stop = 0, scan;
 	char oldc = '\0';
@@ -325,19 +325,19 @@ int git_path_walk_up(
 	assert(path && cb);
 
 	if (ceiling != NULL) {
-		if (git__prefixcmp(path->ptr, ceiling) == GIT_SUCCESS)
+		if (git__prefixcmp(path->ptr, ceiling) == 0)
 			stop = (ssize_t)strlen(ceiling);
 		else
-			stop = path->size;
+			stop = git_buf_len(path);
 	}
-	scan = path->size;
+	scan = git_buf_len(path);
 
 	iter.ptr = path->ptr;
-	iter.size = path->size;
+	iter.size = git_buf_len(path);
 	iter.asize = path->asize;
 
 	while (scan >= stop) {
-		if ((error = cb(data, &iter)) < GIT_SUCCESS)
+		if ((error = cb(data, &iter)) < 0)
 			break;
 		iter.ptr[scan] = oldc;
 		scan = git_buf_rfind_next(&iter, '/');
@@ -355,116 +355,123 @@ int git_path_walk_up(
 	return error;
 }
 
-int git_path_exists(const char *path)
+bool git_path_exists(const char *path)
 {
 	assert(path);
-	return p_access(path, F_OK);
+	return p_access(path, F_OK) == 0;
 }
 
-int git_path_isdir(const char *path)
+bool git_path_isdir(const char *path)
 {
 	struct stat st;
-	if (p_stat(path, &st) < GIT_SUCCESS)
-		return GIT_ERROR;
+	if (p_stat(path, &st) < 0)
+		return false;
 
-	return S_ISDIR(st.st_mode) ? GIT_SUCCESS : GIT_ERROR;
+	return S_ISDIR(st.st_mode) != 0;
 }
 
-int git_path_isfile(const char *path)
+bool git_path_isfile(const char *path)
 {
 	struct stat st;
-	int stat_error;
 
 	assert(path);
-	stat_error = p_stat(path, &st);
+	if (p_stat(path, &st) < 0)
+		return false;
 
-	if (stat_error < GIT_SUCCESS)
-		return -1;
-
-	if (!S_ISREG(st.st_mode))
-		return -1;
-
-	return 0;
+	return S_ISREG(st.st_mode) != 0;
 }
 
-static int _check_dir_contents(
+int git_path_lstat(const char *path, struct stat *st)
+{
+	int err = 0;
+
+	if (p_lstat(path, st) < 0) {
+		err = (errno == ENOENT) ? GIT_ENOTFOUND : -1;
+		giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
+	}
+
+	return err;
+}
+
+static bool _check_dir_contents(
 	git_buf *dir,
 	const char *sub,
-	int (*predicate)(const char *))
+	bool (*predicate)(const char *))
 {
-	int error = GIT_SUCCESS;
-	size_t dir_size = dir->size;
+	bool result;
+	size_t dir_size = git_buf_len(dir);
 	size_t sub_size = strlen(sub);
 
-	/* separate allocation and join, so we can always leave git_buf valid */
-	if ((error = git_buf_try_grow(dir, dir_size + sub_size + 2)) < GIT_SUCCESS)
-		return error;
+	/* leave base valid even if we could not make space for subdir */
+	if (git_buf_try_grow(dir, dir_size + sub_size + 2) < 0)
+		return false;
+
+	/* save excursion */
 	git_buf_joinpath(dir, dir->ptr, sub);
 
-	error = (*predicate)(dir->ptr);
+	result = predicate(dir->ptr);
 
 	/* restore path */
 	git_buf_truncate(dir, dir_size);
-
-	return error;
+	return result;
 }
 
-int git_path_contains(git_buf *dir, const char *item)
+bool git_path_contains(git_buf *dir, const char *item)
 {
 	return _check_dir_contents(dir, item, &git_path_exists);
 }
 
-int git_path_contains_dir(git_buf *base, const char *subdir)
+bool git_path_contains_dir(git_buf *base, const char *subdir)
 {
 	return _check_dir_contents(base, subdir, &git_path_isdir);
 }
 
-int git_path_contains_file(git_buf *base, const char *file)
+bool git_path_contains_file(git_buf *base, const char *file)
 {
 	return _check_dir_contents(base, file, &git_path_isfile);
 }
 
 int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 {
-	int error = GIT_SUCCESS;
+	int error;
 
 	if (base != NULL && git_path_root(path) < 0)
 		error = git_buf_joinpath(dir, base, path);
 	else
 		error = git_buf_sets(dir, path);
 
-	if (error == GIT_SUCCESS) {
+	if (!error) {
 		char buf[GIT_PATH_MAX];
 		if (p_realpath(dir->ptr, buf) != NULL)
 			error = git_buf_sets(dir, buf);
 	}
 
 	/* call dirname if this is not a directory */
-	if (error == GIT_SUCCESS && git_path_isdir(dir->ptr) != GIT_SUCCESS)
-		if (git_path_dirname_r(dir, dir->ptr) < GIT_SUCCESS)
-			error = git_buf_lasterror(dir);
+	if (!error && git_path_isdir(dir->ptr) == false)
+		error = git_path_dirname_r(dir, dir->ptr);
 
-	if (error == GIT_SUCCESS)
+	if (!error)
 		error = git_path_to_dir(dir);
 
 	return error;
 }
 
-int git_path_cmp(const char *name1, int len1, int isdir1,
-		const char *name2, int len2, int isdir2)
+int git_path_cmp(
+	const char *name1, size_t len1, int isdir1,
+	const char *name2, size_t len2, int isdir2)
 {
-	int len = len1 < len2 ? len1 : len2;
+	size_t len = len1 < len2 ? len1 : len2;
 	int cmp;
 
 	cmp = memcmp(name1, name2, len);
 	if (cmp)
 		return cmp;
 	if (len1 < len2)
-		return ((!isdir1 && !isdir2) ? -1 :
-						(isdir1 ? '/' - name2[len1] : name2[len1] - '/'));
+		return (!isdir1 && !isdir2) ? -1 :
+			(isdir1 ? '/' - name2[len1] : name2[len1] - '/');
 	if (len1 > len2)
-		return ((!isdir1 && !isdir2) ? 1 :
-						(isdir2 ? name1[len2] - '/' : '/' - name1[len2]));
+		return (!isdir1 && !isdir2) ? 1 :
+			(isdir2 ? name1[len2] - '/' : '/' - name1[len2]);
 	return 0;
 }
 
@@ -485,13 +492,15 @@ int git_path_direach(
 	DIR *dir;
 	struct dirent de_buf, *de;
 
-	if (git_path_to_dir(path) < GIT_SUCCESS)
-		return git_buf_lasterror(path);
+	if (git_path_to_dir(path) < 0)
+		return -1;
 
-	wd_len = path->size;
-	dir = opendir(path->ptr);
-	if (!dir)
-		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure. An error occured while opening the directory", path->ptr);
+	wd_len = git_buf_len(path);
+
+	if ((dir = opendir(path->ptr)) == NULL) {
+		giterr_set(GITERR_OS, "Failed to open directory '%s'", path->ptr);
+		return -1;
+	}
 
 	while (p_readdir_r(dir, &de_buf, &de) == 0 && de != NULL) {
 		int result;
@@ -499,21 +508,21 @@ int git_path_direach(
 		if (is_dot_or_dotdot(de->d_name))
 			continue;
 
-		if (git_buf_puts(path, de->d_name) < GIT_SUCCESS)
-			return git_buf_lasterror(path);
+		if (git_buf_puts(path, de->d_name) < 0)
+			return -1;
 
 		result = fn(arg, path);
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
-		if (result != GIT_SUCCESS) {
+		if (result < 0) {
 			closedir(dir);
-			return result;	/* The callee is reponsible for setting the correct error message */
+			return -1;
 		}
 	}
 
 	closedir(dir);
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_path_dirload(
@@ -531,9 +540,10 @@ int git_path_dirload(
 	path_len = strlen(path);
 	assert(path_len > 0 && path_len >= prefix_len);
 
-	if ((dir = opendir(path)) == NULL)
-		return git__throw(GIT_EOSERR, "Failed to process `%s` tree structure."
-			" An error occured while opening the directory", path);
+	if ((dir = opendir(path)) == NULL) {
+		giterr_set(GITERR_OS, "Failed to open directory '%s'", path);
+		return -1;
+	}
 
 	path += prefix_len;
 	path_len -= prefix_len;
@@ -550,8 +560,7 @@ int git_path_dirload(
 
 		entry_path = git__malloc(
 			path_len + need_slash + entry_len + 1 + alloc_extra);
-		if (entry_path == NULL)
-			return GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(entry_path);
 
 		if (path_len)
 			memcpy(entry_path, path, path_len);
@@ -560,19 +569,16 @@ int git_path_dirload(
 		memcpy(&entry_path[path_len + need_slash], de->d_name, entry_len);
 		entry_path[path_len + need_slash + entry_len] = '\0';
 
-		if ((error = git_vector_insert(contents, entry_path)) < GIT_SUCCESS) {
-			git__free(entry_path);
-			return error;
-		}
+		if (git_vector_insert(contents, entry_path) < 0)
+			return -1;
 	}
 
 	closedir(dir);
 
-	if (error != GIT_SUCCESS)
-		return git__throw(
-			GIT_EOSERR, "Failed to process directory entry in `%s`", path);
+	if (error != 0)
+		giterr_set(GITERR_OS, "Failed to process directory entry in '%s'", path);
 
-	return GIT_SUCCESS;
+	return error;
 }
 
 int git_path_with_stat_cmp(const void *a, const void *b)
@@ -591,11 +597,12 @@ int git_path_dirload_with_stat(
 	git_path_with_stat *ps;
 	git_buf full = GIT_BUF_INIT;
 
-	if ((error = git_buf_set(&full, path, prefix_len)) != GIT_SUCCESS)
-		return error;
+	if (git_buf_set(&full, path, prefix_len) < 0)
+		return -1;
 
-	if ((error = git_path_dirload(path, prefix_len,
-		sizeof(git_path_with_stat) + 1, contents)) != GIT_SUCCESS) {
+	error = git_path_dirload(
+		path, prefix_len, sizeof(git_path_with_stat) + 1, contents);
+	if (error < 0) {
 		git_buf_free(&full);
 		return error;
 	}
@@ -606,8 +613,10 @@ int git_path_dirload_with_stat(
 		memmove(ps->path, ps, path_len + 1);
 		ps->path_len = path_len;
 
-		git_buf_joinpath(&full, full.ptr, ps->path);
-		p_lstat(full.ptr, &ps->st);
+		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
+			(error = git_path_lstat(full.ptr, &ps->st)) < 0)
+			break;
+
 		git_buf_truncate(&full, prefix_len);
 
 		if (S_ISDIR(ps->st.st_mode)) {

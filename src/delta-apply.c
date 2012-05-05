@@ -51,14 +51,19 @@ int git__delta_apply(
 	 * if not we would underflow while accessing data from the
 	 * base object, resulting in data corruption or segfault.
 	 */
-	if ((hdr_sz(&base_sz, &delta, delta_end) < 0) || (base_sz != base_len))
-		return git__throw(GIT_ERROR, "Failed to apply delta. Base size does not match given data");
+	if ((hdr_sz(&base_sz, &delta, delta_end) < 0) || (base_sz != base_len)) {
+		giterr_set(GITERR_INVALID, "Failed to apply delta. Base size does not match given data");
+		return -1;
+	}
 
-	if (hdr_sz(&res_sz, &delta, delta_end) < 0)
-		return git__throw(GIT_ERROR, "Failed to apply delta. Base size does not match given data");
+	if (hdr_sz(&res_sz, &delta, delta_end) < 0) {
+		giterr_set(GITERR_INVALID, "Failed to apply delta. Base size does not match given data");
+		return -1;
+	}
 
-	if ((res_dp = git__malloc(res_sz + 1)) == NULL)
-		return GIT_ENOMEM;
+	res_dp = git__malloc(res_sz + 1);
+	GITERR_CHECK_ALLOC(res_dp);
+
 	res_dp[res_sz] = '\0';
 	out->data = res_dp;
 	out->len = res_sz;
@@ -111,5 +116,6 @@ int git__delta_apply(
 fail:
 	git__free(out->data);
 	out->data = NULL;
-	return git__throw(GIT_ERROR, "Failed to apply delta");
+	giterr_set(GITERR_INVALID, "Failed to apply delta");
+	return -1;
 }

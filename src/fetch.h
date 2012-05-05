@@ -10,9 +10,10 @@
 #include "netops.h"
 
 int git_fetch_negotiate(git_remote *remote);
-int git_fetch_download_pack(char **out, git_remote *remote);
+int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats);
 
-int git_fetch__download_pack(char **out, const char *buffered, size_t buffered_size,
-                             GIT_SOCKET fd, git_repository *repo);
+int git_fetch__download_pack(const char *buffered, size_t buffered_size, GIT_SOCKET fd,
+			     git_repository *repo, git_off_t *bytes, git_indexer_stats *stats);
+int git_fetch_setup_walk(git_revwalk **out, git_repository *repo);
 
 #endif

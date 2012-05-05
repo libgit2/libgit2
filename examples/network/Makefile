@@ -2,7 +2,7 @@ default: all
 
 CC = gcc
 CFLAGS += -g
-CFLAGS += -I../../include -L../../ -lgit2
+CFLAGS += -I../../include -L../../ -lgit2 -lpthread
 
 OBJECTS = \
   git2.o \

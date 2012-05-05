@@ -25,13 +25,14 @@ typedef struct {
 	git_vector ign_global;
 } git_ignores;
 
-extern int git_ignore__for_path(
-	git_repository *repo, const char *path, git_ignores *ign);
+extern int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ign);
 
 extern int git_ignore__push_dir(git_ignores *ign, const char *dir);
+
 extern int git_ignore__pop_dir(git_ignores *ign);
 
 extern void git_ignore__free(git_ignores *ign);
+
 extern int git_ignore__lookup(git_ignores *ign, const char *path, int *ignored);
 
 #endif

@@ -70,7 +70,7 @@ struct git_pack_file {
 };
 
 struct git_pack_entry {
-	off_t offset;
+	git_off_t offset;
 	git_oid sha1;
 	struct git_pack_file *p;
 };
@@ -80,13 +80,20 @@ int git_packfile_unpack_header(
 		git_otype *type_p,
 		git_mwindow_file *mwf,
 		git_mwindow **w_curs,
-		off_t *curpos);
+		git_off_t *curpos);
 
-int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, off_t *obj_offset);
+int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, git_off_t *obj_offset);
+int packfile_unpack_compressed(
+	git_rawobj *obj,
+	struct git_pack_file *p,
+	git_mwindow **w_curs,
+	git_off_t *curpos,
+	size_t size,
+	git_otype type);
 
-off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
-		off_t *curpos, git_otype type,
-		off_t delta_obj_offset);
+git_off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
+		git_off_t *curpos, git_otype type,
+		git_off_t delta_obj_offset);
 
 void packfile_free(struct git_pack_file *p);
 int git_packfile_check(struct git_pack_file **pack_out, const char *path);

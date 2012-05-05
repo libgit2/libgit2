@@ -89,6 +89,7 @@ void git_mwindow_scan_lru(
 {
 	git_mwindow *w, *w_l;
 
+	puts("LRU");
 	for (w_l = NULL, w = mwf->windows; w; w = w->next) {
 		if (!w->inuse_cnt) {
 			/*
@@ -115,7 +116,7 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	unsigned int i;
 	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = &mwf->windows;
 
-	/* FIMXE: Does this give us any advantage? */
+	/* FIXME: Does this give us any advantage? */
 	if(mwf->windows)
 		git_mwindow_scan_lru(mwf, &lru_w, &lru_l);
 
@@ -127,22 +128,23 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 			list = &cur->windows;
 	}
 
-	if (lru_w) {
-		ctl->mapped -= lru_w->window_map.len;
-		git_futils_mmap_free(&lru_w->window_map);
-
-		if (lru_l)
-			lru_l->next = lru_w->next;
-		else
-			*list = lru_w->next;
-
-		git__free(lru_w);
-		ctl->open_windows--;
-
-		return GIT_SUCCESS;
+	if (!lru_w) {
+		giterr_set(GITERR_OS, "Failed to close memory window. Couldn't find LRU");
+		return -1;
 	}
 
-	return git__throw(GIT_ERROR, "Failed to close memory window. Couln't find LRU");
+	ctl->mapped -= lru_w->window_map.len;
+	git_futils_mmap_free(&lru_w->window_map);
+
+	if (lru_l)
+		lru_l->next = lru_w->next;
+	else
+		*list = lru_w->next;
+
+	git__free(lru_w);
+	ctl->open_windows--;
+
+	return 0;
 }
 
 static git_mwindow *new_window(
@@ -158,7 +160,7 @@ static git_mwindow *new_window(
 
 	w = git__malloc(sizeof(*w));
 	if (w == NULL)
-		return w;
+		return NULL;
 
 	memset(w, 0x0, sizeof(*w));
 	w->offset = (offset / walign) * walign;
@@ -170,7 +172,7 @@ static git_mwindow *new_window(
 	ctl->mapped += (size_t)len;
 
 	while (_mw_options.mapped_limit < ctl->mapped &&
-			git_mwindow_close_lru(mwf) == GIT_SUCCESS) /* nop */;
+			git_mwindow_close_lru(mwf) == 0) /* nop */;
 
 	/*
 	 * We treat _mw_options.mapped_limit as a soft limit. If we can't find a
@@ -178,8 +180,10 @@ static git_mwindow *new_window(
 	 * window.
 	 */
 
-	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < GIT_SUCCESS)
-		goto cleanup;
+	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
+		git__free(w);
+		return NULL;
+	}
 
 	ctl->mmap_calls++;
 	ctl->open_windows++;
@@ -191,10 +195,6 @@ static git_mwindow *new_window(
 		ctl->peak_open_windows = ctl->open_windows;
 
 	return w;
-
-cleanup:
-	git__free(w);
-	return NULL;
 }
 
 /*
@@ -205,21 +205,20 @@ unsigned char *git_mwindow_open(
 	git_mwindow_file *mwf,
 	git_mwindow **cursor,
 	git_off_t offset,
-	int extra,
+	size_t extra,
 	unsigned int *left)
 {
 	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
 	git_mwindow *w = *cursor;
 
-	if (!w || !(git_mwindow_contains(w, offset) &&
-		    git_mwindow_contains(w, offset + extra))) {
+	if (!w || !(git_mwindow_contains(w, offset) && git_mwindow_contains(w, offset + extra))) {
 		if (w) {
 			w->inuse_cnt--;
 		}
 
 		for (w = mwf->windows; w; w = w->next) {
 			if (git_mwindow_contains(w, offset) &&
-			    git_mwindow_contains(w, offset + extra))
+				git_mwindow_contains(w, offset + extra))
 				break;
 		}
 
@@ -248,17 +247,17 @@ unsigned char *git_mwindow_open(
 	if (left)
 		*left = (unsigned int)(w->window_map.len - offset);
 
+	fflush(stdout);
 	return (unsigned char *) w->window_map.data + offset;
 }
 
 int git_mwindow_file_register(git_mwindow_file *mwf)
 {
 	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
-	int error;
 
 	if (ctl->windowfiles.length == 0 &&
-		(error = git_vector_init(&ctl->windowfiles, 8, NULL)) < GIT_SUCCESS)
-		return error;
+		git_vector_init(&ctl->windowfiles, 8, NULL) < 0)
+		return -1;
 
 	return git_vector_insert(&ctl->windowfiles, mwf);
 }

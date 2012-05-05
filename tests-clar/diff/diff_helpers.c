@@ -5,10 +5,10 @@ git_tree *resolve_commit_oid_to_tree(
 	git_repository *repo,
 	const char *partial_oid)
 {
-	size_t len = strlen(partial_oid);
+	unsigned int len = (unsigned int)strlen(partial_oid);
 	git_oid oid;
-	git_object *obj;
-	git_tree *tree;
+	git_object *obj = NULL;
+	git_tree *tree = NULL;
 
 	if (git_oid_fromstrn(&oid, partial_oid, len) == 0)
 		git_object_lookup_prefix(&obj, repo, &oid, len, GIT_OBJ_ANY);
@@ -27,7 +27,9 @@ int diff_file_fn(
 	float progress)
 {
 	diff_expects *e = cb_data;
-	(void)progress;
+
+	GIT_UNUSED(progress);
+
 	e->files++;
 	switch (delta->status) {
 	case GIT_DELTA_ADDED: e->file_adds++; break;
@@ -48,9 +50,11 @@ int diff_hunk_fn(
 	size_t header_len)
 {
 	diff_expects *e = cb_data;
-	(void)delta;
-	(void)header;
-	(void)header_len;
+
+	GIT_UNUSED(delta);
+	GIT_UNUSED(header);
+	GIT_UNUSED(header_len);
+
 	e->hunks++;
 	e->hunk_old_lines += range->old_lines;
 	e->hunk_new_lines += range->new_lines;
@@ -60,14 +64,18 @@ int diff_hunk_fn(
 int diff_line_fn(
 	void *cb_data,
 	git_diff_delta *delta,
+	git_diff_range *range,
 	char line_origin,
 	const char *content,
 	size_t content_len)
 {
 	diff_expects *e = cb_data;
-	(void)delta;
-	(void)content;
-	(void)content_len;
+
+	GIT_UNUSED(delta);
+	GIT_UNUSED(range);
+	GIT_UNUSED(content);
+	GIT_UNUSED(content_len);
+
 	e->lines++;
 	switch (line_origin) {
 	case GIT_DIFF_LINE_CONTEXT:

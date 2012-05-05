@@ -30,7 +30,7 @@ static void ensure_repository_discover(const char *start_path,
 	char found_path[GIT_PATH_MAX];
 	cl_git_pass(git_repository_discover(found_path, sizeof(found_path), start_path, 0, ceiling_dirs));
 	//across_fs is always 0 as we can't automate the filesystem change tests
-	cl_assert_strequal(found_path, expected_path);
+	cl_assert_equal_s(found_path, expected_path);
 }
 
 static void write_file(const char *path, const char *content)
@@ -38,7 +38,7 @@ static void write_file(const char *path, const char *content)
 	git_file file;
    int error;
 
-	if (git_path_exists(path) == GIT_SUCCESS) {
+	if (git_path_exists(path)) {
 		cl_git_pass(p_unlink(path));
 	}
 
@@ -60,10 +60,11 @@ static void append_ceiling_dir(git_buf *ceiling_dirs, const char *path)
 
 	if (ceiling_dirs->size > 0)
 		git_buf_puts(ceiling_dirs, ceiling_separator);
+
 	git_buf_puts(ceiling_dirs, pretty_path.ptr);
-	
-   git_buf_free(&pretty_path);
-	cl_git_pass(git_buf_lasterror(ceiling_dirs));
+
+	git_buf_free(&pretty_path);
+	cl_assert(git_buf_oom(ceiling_dirs) == 0);
 }
 
 void test_repo_discover__0(void)
@@ -81,7 +82,7 @@ void test_repo_discover__0(void)
 	append_ceiling_dir(&ceiling_dirs_buf, TEMP_REPO_FOLDER);
 	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
-	cl_assert(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs) == GIT_ENOTAREPO);
+	cl_git_fail(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));
 
 	cl_git_pass(git_repository_init(&repo, DISCOVER_FOLDER, 1));
 	cl_git_pass(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));

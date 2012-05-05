@@ -8,6 +8,7 @@
 #define INCLUDE_transport_h__
 
 #include "git2/net.h"
+#include "git2/indexer.h"
 #include "vector.h"
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
@@ -66,22 +67,14 @@ struct git_transport {
 	 */
 	int (*push)(struct git_transport *transport);
 	/**
-	 * Send a 'done' message
-	 */
-	int (*send_done)(struct git_transport *transport);
-	/**
 	 * Negotiate the minimal amount of objects that need to be
 	 * retrieved
 	 */
 	int (*negotiate_fetch)(struct git_transport *transport, git_repository *repo, const git_vector *wants);
 	/**
-	 * Send a flush
-	 */
-	int (*send_flush)(struct git_transport *transport);
-	/**
 	 * Download the packfile
 	 */
-	int (*download_pack)(char **out, struct git_transport *transport, git_repository *repo);
+	int (*download_pack)(struct git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats);
 	/**
 	 * Fetch the changes
 	 */

@@ -32,7 +32,7 @@ typedef struct {
 	git_protocol proto;
 	git_vector refs;
 	git_vector common;
-	int socket;
+	GIT_SOCKET socket;
 	git_buf buf;
 	git_remote_head **heads;
 	int error;
@@ -77,7 +77,10 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 	}
 	git_buf_puts(buf, "\r\n");
 
-	return git_buf_lasterror(buf);
+	if (git_buf_oom(buf))
+		return -1;
+
+	return 0;
 }
 
 static int do_connect(transport_http *t, const char *host, const char *port)
@@ -85,16 +88,15 @@ static int do_connect(transport_http *t, const char *host, const char *port)
 	GIT_SOCKET s = -1;
 
 	if (t->parent.connected && http_should_keep_alive(&t->parser))
-		return GIT_SUCCESS;
+		return 0;
 
-	s = gitno_connect(host, port);
-	if (s < GIT_SUCCESS) {
-	    return git__rethrow(s, "Failed to connect to host");
-	}
+	if ((s = gitno_connect(host, port)) < 0)
+		return -1;
+
 	t->socket = s;
 	t->parent.connected = 1;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 /*
@@ -116,8 +118,7 @@ static int on_header_field(http_parser *parser, const char *str, size_t len)
 		t->ct_finished = 1;
 		t->ct_found = 0;
 		t->content_type = git__strdup(git_buf_cstr(buf));
-		if (t->content_type == NULL)
-			return t->error = GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(t->content_type);
 		git_buf_clear(buf);
 	}
 
@@ -164,19 +165,25 @@ static int on_headers_complete(http_parser *parser)
 	transport_http *t = (transport_http *) parser->data;
 	git_buf *buf = &t->buf;
 
+	/* The content-type is text/plain for 404, so don't validate */
+	if (parser->status_code == 404) {
+		git_buf_clear(buf);
+		return 0;
+	}
+
 	if (t->content_type == NULL) {
 		t->content_type = git__strdup(git_buf_cstr(buf));
 		if (t->content_type == NULL)
-			return t->error = GIT_ENOMEM;
+			return t->error = -1;
 	}
 
 	git_buf_clear(buf);
 	git_buf_printf(buf, "application/x-git-%s-advertisement", t->service);
 	if (git_buf_oom(buf))
-		return GIT_ENOMEM;
+		return t->error = -1;
 
 	if (strcmp(t->content_type, git_buf_cstr(buf)))
-		return t->error = git__throw(GIT_EOBJCORRUPTED, "Content-Type '%s' is wrong", t->content_type);
+		return t->error = -1;
 
 	git_buf_clear(buf);
 	return 0;
@@ -186,6 +193,10 @@ static int on_body_store_refs(http_parser *parser, const char *str, size_t len)
 {
 	transport_http *t = (transport_http *) parser->data;
 
+	if (parser->status_code == 404) {
+		return git_buf_put(&t->buf, str, len);
+	}
+
 	return git_protocol_store_refs(&t->proto, str, len);
 }
 
@@ -194,16 +205,22 @@ static int on_message_complete(http_parser *parser)
 	transport_http *t = (transport_http *) parser->data;
 
 	t->transfer_finished = 1;
+
+	if (parser->status_code == 404) {
+		giterr_set(GITERR_NET, "Remote error: %s", git_buf_cstr(&t->buf));
+		t->error = -1;
+	}
+
 	return 0;
 }
 
 static int store_refs(transport_http *t)
 {
-	int error = GIT_SUCCESS;
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
 	git_pkt *pkt;
+	int ret;
 
 	http_parser_init(&t->parser, HTTP_RESPONSE);
 	t->parser.data = t;
@@ -219,83 +236,76 @@ static int store_refs(transport_http *t)
 	while(1) {
 		size_t parsed;
 
-		error = gitno_recv(&buf);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Error receiving data from network");
+		if ((ret = gitno_recv(&buf)) < 0)
+			return -1;
 
 		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
 		/* Both should happen at the same time */
-		if (parsed != buf.offset || t->error < GIT_SUCCESS)
-			return git__rethrow(t->error, "Error parsing HTTP data");
+		if (parsed != buf.offset || t->error < 0)
+			return t->error;
 
 		gitno_consume_n(&buf, parsed);
 
-		if (error == 0 || t->transfer_finished)
-			return GIT_SUCCESS;
+		if (ret == 0 || t->transfer_finished)
+			return 0;
 	}
 
 	pkt = git_vector_get(&t->refs, 0);
-	if (pkt == NULL || pkt->type != GIT_PKT_COMMENT)
-		return t->error = git__throw(GIT_EOBJCORRUPTED, "Not a valid smart HTTP response");
-	else
+	if (pkt == NULL || pkt->type != GIT_PKT_COMMENT) {
+		giterr_set(GITERR_NET, "Invalid HTTP response");
+		return t->error = -1;
+	} else {
 		git_vector_remove(&t->refs, 0);
+	}
 
-	return error;
+	return 0;
 }
 
 static int http_connect(git_transport *transport, int direction)
 {
 	transport_http *t = (transport_http *) transport;
-	int error;
+	int ret;
 	git_buf request = GIT_BUF_INIT;
 	const char *service = "upload-pack";
 	const char *url = t->parent.url, *prefix = "http://";
 
-	if (direction == GIT_DIR_PUSH)
-		return git__throw(GIT_EINVALIDARGS, "Pushing over HTTP is not supported");
+	if (direction == GIT_DIR_PUSH) {
+		giterr_set(GITERR_NET, "Pushing over HTTP is not implemented");
+		return -1;
+	}
 
 	t->parent.direction = direction;
-	error = git_vector_init(&t->refs, 16, NULL);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to init refs vector");
+	if (git_vector_init(&t->refs, 16, NULL) < 0)
+		return -1;
 
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
 
-	error = gitno_extract_host_and_port(&t->host, &t->port, url, "80");
-	if (error < GIT_SUCCESS)
+	if ((ret = gitno_extract_host_and_port(&t->host, &t->port, url, "80")) < 0)
 		goto cleanup;
 
 	t->service = git__strdup(service);
-	if (t->service == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	GITERR_CHECK_ALLOC(t->service);
 
-	error = do_connect(t, t->host, t->port);
-	if (error < GIT_SUCCESS) {
-		error = git__rethrow(error, "Failed to connect to host");
+	if ((ret = do_connect(t, t->host, t->port)) < 0)
 		goto cleanup;
-	}
 
 	/* Generate and send the HTTP request */
-	error = gen_request(&request, url, t->host, "GET", service, 0, 1);
-	if (error < GIT_SUCCESS) {
-		error = git__throw(error, "Failed to generate request");
+	if ((ret = gen_request(&request, url, t->host, "GET", service, 0, 1)) < 0) {
+		giterr_set(GITERR_NET, "Failed to generate request");
 		goto cleanup;
 	}
 
-	error = gitno_send(t->socket, request.ptr, request.size, 0);
-	if (error < GIT_SUCCESS)
-		error = git__rethrow(error, "Failed to send the HTTP request");
+	if ((ret = gitno_send(t->socket, request.ptr, request.size, 0)) < 0)
+		goto cleanup;
 
-	error = store_refs(t);
+	ret = store_refs(t);
 
 cleanup:
 	git_buf_free(&request);
 	git_buf_clear(&t->buf);
 
-	return error;
+	return ret;
 }
 
 static int http_ls(git_transport *transport, git_headlist_cb list_cb, void *opaque)
@@ -309,12 +319,13 @@ static int http_ls(git_transport *transport, git_headlist_cb list_cb, void *opaq
 		if (p->type != GIT_PKT_REF)
 			continue;
 
-		if (list_cb(&p->head, opaque) < 0)
-			return git__throw(GIT_ERROR,
-				"The user callback returned an error code");
+		if (list_cb(&p->head, opaque) < 0) {
+			giterr_set(GITERR_NET, "The user callback returned error");
+			return -1;
+		}
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int on_body_parse_response(http_parser *parser, const char *str, size_t len)
@@ -326,10 +337,12 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 	const char *line_end, *ptr;
 
 	if (len == 0) { /* EOF */
-		if (buf->size != 0)
-			return t->error = git__throw(GIT_ERROR, "EOF and unprocessed data");
-		else
+		if (git_buf_len(buf) != 0) {
+			giterr_set(GITERR_NET, "Unexpected EOF");
+			return t->error = -1;
+		} else {
 			return 0;
+		}
 	}
 
 	git_buf_put(buf, str, len);
@@ -337,15 +350,15 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 	while (1) {
 		git_pkt *pkt;
 
-		if (buf->size == 0)
+		if (git_buf_len(buf) == 0)
 			return 0;
 
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->size);
+		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
 		if (error == GIT_ESHORTBUFFER) {
 			return 0; /* Ask for more */
 		}
 		if (error < GIT_SUCCESS)
-			return t->error = git__rethrow(error, "Failed to parse pkt-line");
+			return t->error = -1;
 
 		git_buf_consume(buf, line_end);
 
@@ -365,9 +378,8 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 			continue;
 		}
 
-		error = git_vector_insert(common, pkt);
-		if (error < GIT_SUCCESS)
-			return t->error = git__rethrow(error, "Failed to add pkt to list");
+		if (git_vector_insert(common, pkt) < 0)
+			return -1;
 	}
 
 	return error;
@@ -376,7 +388,7 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 
 static int parse_response(transport_http *t)
 {
-	int error = GIT_SUCCESS;
+	int ret = 0;
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
@@ -396,74 +408,28 @@ static int parse_response(transport_http *t)
 	while(1) {
 		size_t parsed;
 
-		error = gitno_recv(&buf);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Error receiving data from network");
+		if ((ret = gitno_recv(&buf)) < 0)
+			return -1;
 
 		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
 		/* Both should happen at the same time */
-		if (parsed != buf.offset || t->error < GIT_SUCCESS)
-			return git__rethrow(t->error, "Error parsing HTTP data");
+		if (parsed != buf.offset || t->error < 0)
+			return t->error;
 
 		gitno_consume_n(&buf, parsed);
 
-		if (error == 0 || t->transfer_finished || t->pack_ready) {
-			return GIT_SUCCESS;
+		if (ret == 0 || t->transfer_finished || t->pack_ready) {
+			return 0;
 		}
 	}
 
-	return error;
-}
-
-static int setup_walk(git_revwalk **out, git_repository *repo)
-{
-	git_revwalk *walk;
-	git_strarray refs;
-	unsigned int i;
-	git_reference *ref;
-	int error;
-
-	error = git_reference_listall(&refs, repo, GIT_REF_LISTALL);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to list references");
-
-	error = git_revwalk_new(&walk, repo);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to setup walk");
-
-	git_revwalk_sorting(walk, GIT_SORT_TIME);
-
-	for (i = 0; i < refs.count; ++i) {
-		/* No tags */
-		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
-			continue;
-
-		error = git_reference_lookup(&ref, repo, refs.strings[i]);
-		if (error < GIT_ERROR) {
-			error = git__rethrow(error, "Failed to lookup %s", refs.strings[i]);
-			goto cleanup;
-		}
-
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
-			continue;
-		error = git_revwalk_push(walk, git_reference_oid(ref));
-		if (error < GIT_ERROR) {
-			error = git__rethrow(error, "Failed to push %s", refs.strings[i]);
-			goto cleanup;
-		}
-	}
-
-	*out = walk;
-cleanup:
-	git_strarray_free(&refs);
-
-	return error;
+	return ret;
 }
 
 static int http_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
 {
 	transport_http *t = (transport_http *) transport;
-	int error;
+	int ret;
 	unsigned int i;
 	char buff[128];
 	gitno_buffer buf;
@@ -479,82 +445,55 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
 
-	error = git_vector_init(common, 16, NULL);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to init common vector");
+	if (git_vector_init(common, 16, NULL) < 0)
+		return -1;
 
-	error = setup_walk(&walk, repo);
-	if (error < GIT_SUCCESS) {
-		error =  git__rethrow(error, "Failed to setup walk");
-		goto cleanup;
-	}
+	if (git_fetch_setup_walk(&walk, repo) < 0)
+		return -1;
 
 	do {
-		error = do_connect(t, t->host, t->port);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to connect to host");
+		if ((ret = do_connect(t, t->host, t->port)) < 0)
 			goto cleanup;
-		}
 
-		error =  git_pkt_buffer_wants(wants, &t->caps, &data);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to send wants");
+		if ((ret = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
 			goto cleanup;
-		}
 
 		/* We need to send these on each connection */
 		git_vector_foreach (common, i, pkt) {
-			error = git_pkt_buffer_have(&pkt->oid, &data);
-			if (error < GIT_SUCCESS) {
-				error = git__rethrow(error, "Failed to buffer common have");
+			if ((ret = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
 				goto cleanup;
-			}
 		}
 
 		i = 0;
-		while ((i < 20) && ((error = git_revwalk_next(&oid, walk)) == GIT_SUCCESS)) {
-			error = git_pkt_buffer_have(&oid, &data);
-			if (error < GIT_SUCCESS) {
-				error = git__rethrow(error, "Failed to buffer have");
+		while ((i < 20) && ((ret = git_revwalk_next(&oid, walk)) == 0)) {
+			if ((ret = git_pkt_buffer_have(&oid, &data)) < 0)
 				goto cleanup;
-			}
+
 			i++;
 		}
 
 		git_pkt_buffer_done(&data);
 
-		error = gen_request(&request, url, t->host, "POST", "upload-pack", data.size, 0);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to generate request");
+		if ((ret = gen_request(&request, url, t->host, "POST", "upload-pack", data.size, 0)) < 0)
 			goto cleanup;
-		}
 
-		error =  gitno_send(t->socket, request.ptr, request.size, 0);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to send request");
+		if ((ret = gitno_send(t->socket, request.ptr, request.size, 0)) < 0)
 			goto cleanup;
-		}
 
-		error =  gitno_send(t->socket, data.ptr, data.size, 0);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Failed to send data");
+		if ((ret = gitno_send(t->socket, data.ptr, data.size, 0)) < 0)
 			goto cleanup;
-		}
 
 		git_buf_clear(&request);
 		git_buf_clear(&data);
 
-		if (error < GIT_SUCCESS || i >= 256)
+		if (ret < GIT_SUCCESS || i >= 256)
 			break;
 
-		error = parse_response(t);
-		if (error < GIT_SUCCESS) {
-			error = git__rethrow(error, "Error parsing the response");
+		if ((ret = parse_response(t)) < 0)
 			goto cleanup;
-		}
 
 		if (t->pack_ready) {
-			error = GIT_SUCCESS;
+			ret = 0;
 			goto cleanup;
 		}
 
@@ -564,11 +503,12 @@ cleanup:
 	git_buf_free(&request);
 	git_buf_free(&data);
 	git_revwalk_free(walk);
-	return error;
+	return ret;
 }
 
 typedef struct {
-	git_filebuf *file;
+	git_indexer_stream *idx;
+	git_indexer_stats *stats;
 	transport_http *transport;
 } download_pack_cbdata;
 
@@ -584,10 +524,10 @@ static int on_body_download_pack(http_parser *parser, const char *str, size_t le
 {
 	download_pack_cbdata *data = (download_pack_cbdata *) parser->data;
 	transport_http *t = data->transport;
-	git_filebuf *file = data->file;
+	git_indexer_stream *idx = data->idx;
+	git_indexer_stats *stats = data->stats;
 
-
-	return t->error = git_filebuf_write(file, str, len);
+	return t->error = git_indexer_stream_add(idx, str, len, stats);
 }
 
 /*
@@ -596,96 +536,81 @@ static int on_body_download_pack(http_parser *parser, const char *str, size_t le
  * the simple downloader. Furthermore, we're using keep-alive
  * connections, so the simple downloader would just hang.
  */
-static int http_download_pack(char **out, git_transport *transport, git_repository *repo)
+static int http_download_pack(git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats)
 {
 	transport_http *t = (transport_http *) transport;
 	git_buf *oldbuf = &t->buf;
-	int error = GIT_SUCCESS;
+	int recvd;
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
+	git_indexer_stream *idx = NULL;
 	download_pack_cbdata data;
-	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf path = GIT_BUF_INIT;
-	char suff[] = "/objects/pack/pack-received\0";
+
+	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
+
+	if (memcmp(oldbuf->ptr, "PACK", strlen("PACK"))) {
+		giterr_set(GITERR_NET, "The pack doesn't start with a pack signature");
+		return -1;
+	}
+
+	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
+		return -1;
+
 
 	/*
 	 * This is part of the previous response, so we don't want to
 	 * re-init the parser, just set these two callbacks.
 	 */
-	data.file = &file;
+	memset(stats, 0, sizeof(git_indexer_stats));
+	data.stats = stats;
+	data.idx = idx;
 	data.transport = t;
 	t->parser.data = &data;
 	t->transfer_finished = 0;
 	memset(&settings, 0x0, sizeof(settings));
 	settings.on_message_complete = on_message_complete_download_pack;
 	settings.on_body = on_body_download_pack;
+	*bytes = git_buf_len(oldbuf);
 
-	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
+	if (git_indexer_stream_add(idx, git_buf_cstr(oldbuf), git_buf_len(oldbuf), stats) < 0)
+		goto on_error;
 
-	if (memcmp(oldbuf->ptr, "PACK", strlen("PACK"))) {
-		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
-	}
-
-	error = git_buf_joinpath(&path, repo->path_repository, suff);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	error = git_filebuf_open(&file, path.ptr, GIT_FILEBUF_TEMPORARY);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	/* Part of the packfile has been received, don't loose it */
-	error = git_filebuf_write(&file, oldbuf->ptr, oldbuf->size);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
-
-	while(1) {
+	do {
 		size_t parsed;
 
-		error = gitno_recv(&buf);
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Error receiving data from network");
+		if ((recvd = gitno_recv(&buf)) < 0)
+			goto on_error;
 
 		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
-		/* Both should happen at the same time */
-		if (parsed != buf.offset || t->error < GIT_SUCCESS)
-			return git__rethrow(t->error, "Error parsing HTTP data");
+		if (parsed != buf.offset || t->error < 0)
+			goto on_error;
 
+		*bytes += recvd;
 		gitno_consume_n(&buf, parsed);
+	} while (recvd > 0 && !t->transfer_finished);
 
-		if (error == 0 || t->transfer_finished) {
-			break;
-		}
-	}
+	if (git_indexer_stream_finalize(idx, stats) < 0)
+		goto on_error;
 
-	*out = git__strdup(file.path_lock);
-	if (*out == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	git_indexer_stream_free(idx);
+	return 0;
 
-	/* A bit dodgy, but we need to keep the pack at the temporary path */
-	error = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);
-
-cleanup:
-	if (error < GIT_SUCCESS)
-		git_filebuf_cleanup(&file);
-	git_buf_free(&path);
-
-	return error;
+on_error:
+	git_indexer_stream_free(idx);
+	return -1;
 }
 
 static int http_close(git_transport *transport)
 {
 	transport_http *t = (transport_http *) transport;
-	int error;
 
-	error = gitno_close(t->socket);
-	if (error < 0)
-		return git__throw(GIT_EOSERR, "Failed to close the socket: %s", strerror(errno));
+	if (gitno_close(t->socket) < 0) {
+		giterr_set(GITERR_OS, "Failed to close the socket: %s", strerror(errno));
+		return -1;
+	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 
@@ -729,8 +654,7 @@ int git_transport_http(git_transport **out)
 	transport_http *t;
 
 	t = git__malloc(sizeof(transport_http));
-	if (t == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(t);
 
 	memset(t, 0x0, sizeof(transport_http));
 
@@ -748,10 +672,11 @@ int git_transport_http(git_transport **out)
 	 * before any socket calls can be performed */
 	if (WSAStartup(MAKEWORD(2,2), &t->wsd) != 0) {
 		http_free((git_transport *) t);
-		return git__throw(GIT_EOSERR, "Winsock init failed");
+		giterr_set(GITERR_OS, "Winsock init failed");
+		return -1;
 	}
 #endif
 
 	*out = (git_transport *) t;
-	return GIT_SUCCESS;
+	return 0;
 }

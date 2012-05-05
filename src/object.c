@@ -62,13 +62,13 @@ static int create_object(git_object **object_out, git_otype type)
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TREE:
 		object = git__malloc(git_object__size(type));
-		if (object == NULL)
-			return GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(object);
 		memset(object, 0x0, git_object__size(type));
 		break;
 
 	default:
-		return git__throw(GIT_EINVALIDTYPE, "The given type is invalid");
+		giterr_set(GITERR_INVALID, "The given type is invalid");
+		return -1;
 	}
 
 	object->type = type;
@@ -92,8 +92,7 @@ int git_object_lookup_prefix(
 	assert(repo && object_out && id);
 
 	if (len < GIT_OID_MINPREFIXLEN)
-		return git__throw(GIT_EAMBIGUOUSOIDPREFIX,
-			"Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+		return GIT_EAMBIGUOUS;
 
 	error = git_repository_odb__weakptr(&odb, repo);
 	if (error < GIT_SUCCESS)
@@ -110,13 +109,12 @@ int git_object_lookup_prefix(
 		if (object != NULL) {
 			if (type != GIT_OBJ_ANY && type != object->type) {
 				git_object_free(object);
-				return git__throw(GIT_EINVALIDTYPE,
-					"Failed to lookup object. "
-					"The given type does not match the type on the ODB");
+				giterr_set(GITERR_INVALID, "The given type does not match the type in ODB");
+				return -1;
 			}
 
 			*object_out = object;
-			return GIT_SUCCESS;
+			return 0;
 		}
 
 		/* Object was not found in the cache, let's explore the backends.
@@ -147,18 +145,19 @@ int git_object_lookup_prefix(
 		error = git_odb_read_prefix(&odb_obj, odb, &short_oid, len);
 	}
 
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to lookup object");
+	if (error < 0)
+		return error;
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
 		git_odb_object_free(odb_obj);
-		return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
+		giterr_set(GITERR_INVALID, "The given type does not match the type on the ODB");
+		return -1;
 	}
 
 	type = odb_obj->raw.type;
 
-	if ((error = create_object(&object, type)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to lookup object");
+	if (create_object(&object, type) < 0)
+		return -1;
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
@@ -187,13 +186,13 @@ int git_object_lookup_prefix(
 
 	git_odb_object_free(odb_obj);
 
-	if (error < GIT_SUCCESS) {
+	if (error < 0) {
 		git_object__free(object);
-		return git__rethrow(error, "Failed to lookup object");
+		return -1;
 	}
 
 	*object_out = git_cache_try_store(&repo->objects, object);
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_otype type) {
@@ -293,3 +292,42 @@ size_t git_object__size(git_otype type)
 	return git_objects_table[type].size;
 }
 
+int git_object__resolve_to_type(git_object **obj, git_otype type)
+{
+	int error = 0;
+	git_object *scan, *next;
+
+	if (type == GIT_OBJ_ANY)
+		return 0;
+
+	scan = *obj;
+
+	while (!error && scan && git_object_type(scan) != type) {
+
+		switch (git_object_type(scan)) {
+		case GIT_OBJ_COMMIT:
+		{
+			git_tree *tree = NULL;
+			error = git_commit_tree(&tree, (git_commit *)scan);
+			next = (git_object *)tree;
+			break;
+		}
+
+		case GIT_OBJ_TAG:
+			error = git_tag_target(&next, (git_tag *)scan);
+			break;
+
+		default:
+			giterr_set(GITERR_REFERENCE, "Object does not resolve to type");
+			error = -1;
+			next = NULL;
+			break;
+		}
+
+		git_object_free(scan);
+		scan = next;
+	}
+
+	*obj = scan;
+	return error;
+}

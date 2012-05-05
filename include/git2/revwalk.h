@@ -164,6 +164,28 @@ GIT_EXTERN(int) git_revwalk_hide_glob(git_revwalk *walk, const char *glob);
 GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
 
 /**
+ * Push the OID pointed to by a reference
+ *
+ * The reference must point to a commit.
+ *
+ * @param walk the walker being used for the traversal
+ * @param refname the referece to push
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_push_ref(git_revwalk *walk, const char *refname);
+
+/**
+ * Hide the OID pointed to by a reference
+ *
+ * The reference must point to a commit.
+ *
+ * @param walk the walker being used for the traversal
+ * @param refname the referece to hide
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_revwalk_hide_ref(git_revwalk *walk, const char *refname);
+
+/**
  * Get the next commit from the revision walk.
  *
  * The initial call to this method is *not* blocking when

@@ -7,13 +7,16 @@
 
 #include "pthread.h"
 
-int pthread_create(pthread_t *GIT_RESTRICT thread,
-					const pthread_attr_t *GIT_RESTRICT attr,
-					void *(*start_routine)(void*), void *GIT_RESTRICT arg)
+int pthread_create(
+	pthread_t *GIT_RESTRICT thread,
+	const pthread_attr_t *GIT_RESTRICT attr,
+	void *(*start_routine)(void*),
+	void *GIT_RESTRICT arg)
 {
 	GIT_UNUSED(attr);
-	*thread = (pthread_t) CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)start_routine, arg, 0, NULL);
-	return *thread ? GIT_SUCCESS : git__throw(GIT_EOSERR, "Failed to create pthread");
+	*thread = (pthread_t) CreateThread(
+		NULL, 0, (LPTHREAD_START_ROUTINE)start_routine, arg, 0, NULL);
+	return *thread ? 0 : -1;
 }
 
 int pthread_join(pthread_t thread, void **value_ptr)

@@ -30,8 +30,10 @@ static int binsearch(void **dst, const void *x, size_t size, cmp_ptr_t cmp)
 	int l, c, r;
 	void *lx, *cx;
 
+	assert(size > 0);
+
 	l = 0;
-	r = size - 1;
+	r = (int)size - 1;
 	c = r >> 1;
 	lx = dst[l];
 
@@ -84,7 +86,7 @@ static void bisort(void **dst, size_t start, size_t size, cmp_ptr_t cmp)
 		/* Else we need to find the right place, shift everything over, and squeeze in */
 		x = dst[i];
 		location = binsearch(dst, x, i, cmp);
-		for (j = i - 1; j >= location; j--) {
+		for (j = (int)i - 1; j >= location; j--) {
 			dst[j + 1] = dst[j];
 		}
 		dst[location] = x;
@@ -104,7 +106,7 @@ struct tsort_store {
 	void **storage;
 };
 
-static void reverse_elements(void **dst, int start, int end)
+static void reverse_elements(void **dst, ssize_t start, ssize_t end)
 {
 	while (start < end) {
 		void *tmp = dst[start];
@@ -116,7 +118,7 @@ static void reverse_elements(void **dst, int start, int end)
 	}
 }
 
-static int count_run(void **dst, ssize_t start, ssize_t size, struct tsort_store *store)
+static ssize_t count_run(void **dst, ssize_t start, ssize_t size, struct tsort_store *store)
 {
 	ssize_t curr = start + 2;
 
@@ -148,7 +150,7 @@ static int count_run(void **dst, ssize_t start, ssize_t size, struct tsort_store
 	}
 }
 
-static int compute_minrun(size_t n)
+static size_t compute_minrun(size_t n)
 {
 	int r = 0;
 	while (n >= 64) {
@@ -158,19 +160,19 @@ static int compute_minrun(size_t n)
 	return n + r;
 }
 
-static int check_invariant(struct tsort_run *stack, int stack_curr)
+static int check_invariant(struct tsort_run *stack, ssize_t stack_curr)
 {
 	if (stack_curr < 2)
 		return 1;
 
 	else if (stack_curr == 2) {
-		const int A = stack[stack_curr - 2].length;
-		const int B = stack[stack_curr - 1].length;
+		const ssize_t A = stack[stack_curr - 2].length;
+		const ssize_t B = stack[stack_curr - 1].length;
 		return (A > B);
 	} else {
-		const int A = stack[stack_curr - 3].length;
-		const int B = stack[stack_curr - 2].length;
-		const int C = stack[stack_curr - 1].length;
+		const ssize_t A = stack[stack_curr - 3].length;
+		const ssize_t B = stack[stack_curr - 2].length;
+		const ssize_t C = stack[stack_curr - 1].length;
 		return !((A <= B + C) || (B <= C));
 	}
 }
@@ -195,7 +197,7 @@ static int resize(struct tsort_store *store, size_t new_size)
 	return 0;
 }
 
-static void merge(void **dst, const struct tsort_run *stack, int stack_curr, struct tsort_store *store)
+static void merge(void **dst, const struct tsort_run *stack, ssize_t stack_curr, struct tsort_store *store)
 {
 	const ssize_t A = stack[stack_curr - 2].length;
 	const ssize_t B = stack[stack_curr - 1].length;
@@ -343,7 +345,7 @@ void git__tsort(void **dst, size_t size, cmp_ptr_t cmp)
 	}
 
 	/* compute the minimum run length */
-	minrun = compute_minrun(size);
+	minrun = (ssize_t)compute_minrun(size);
 
 	/* temporary storage for merges */
 	store->alloc = 0;

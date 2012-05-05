@@ -14,7 +14,7 @@ void test_core_filebuf__0(void)
 	cl_must_pass(p_close(fd));
 
 	cl_git_fail(git_filebuf_open(&file, test, 0));
-	cl_git_pass(git_path_exists(testlock));
+	cl_assert(git_path_exists(testlock));
 
 	cl_must_pass(p_unlink(testlock));
 }
@@ -55,20 +55,6 @@ void test_core_filebuf__2(void)
 
 	cl_must_pass(p_unlink(test));
 }
-
-
-/* make sure git_filebuf_open won't reopen an open buffer */
-void test_core_filebuf__3(void)
-{
-	git_filebuf file = GIT_FILEBUF_INIT;
-	char test[] = "test";
-
-	cl_git_pass(git_filebuf_open(&file, test, 0));
-	cl_git_fail(git_filebuf_open(&file, test, 0));
-
-	git_filebuf_cleanup(&file);
-}
-
 
 /* make sure git_filebuf_cleanup clears the buffer */
 void test_core_filebuf__4(void)

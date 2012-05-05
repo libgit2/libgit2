@@ -113,48 +113,55 @@ extern int git_path_fromurl(git_buf *local_path_out, const char *file_url);
 
 /**
  * Check if a file exists and can be accessed.
- * @return GIT_SUCCESS if file exists, < 0 otherwise.
+ * @return true or false
  */
-extern int git_path_exists(const char *path);
+extern bool git_path_exists(const char *path);
 
 /**
  * Check if the given path points to a directory.
- * @return GIT_SUCCESS if it is a directory, < 0 otherwise.
+ * @return true or false
  */
-extern int git_path_isdir(const char *path);
+extern bool git_path_isdir(const char *path);
 
 /**
  * Check if the given path points to a regular file.
- * @return GIT_SUCCESS if it is a regular file, < 0 otherwise.
+ * @return true or false
  */
-extern int git_path_isfile(const char *path);
+extern bool git_path_isfile(const char *path);
+
+/**
+ * Stat a file and/or link and set error if needed.
+ */
+extern int git_path_lstat(const char *path, struct stat *st);
 
 /**
  * Check if the parent directory contains the item.
  *
  * @param dir Directory to check.
  * @param item Item that might be in the directory.
- * @return GIT_SUCCESS if item exists in directory, <0 otherwise.
+ * @return 0 if item exists in directory, <0 otherwise.
  */
-extern int git_path_contains(git_buf *dir, const char *item);
+extern bool git_path_contains(git_buf *dir, const char *item);
 
 /**
  * Check if the given path contains the given subdirectory.
  *
  * @param parent Directory path that might contain subdir
  * @param subdir Subdirectory name to look for in parent
- * @return GIT_SUCCESS if subdirectory exists, < 0 otherwise.
+ * @param append_if_exists If true, then subdir will be appended to the parent path if it does exist
+ * @return true if subdirectory exists, false otherwise.
  */
-extern int git_path_contains_dir(git_buf *parent, const char *subdir);
+extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
 
 /**
  * Check if the given path contains the given file.
  *
  * @param dir Directory path that might contain file
  * @param file File name to look for in parent
- * @return GIT_SUCCESS if file exists, < 0 otherwise.
+ * @param append_if_exists If true, then file will be appended to the path if it does exist
+ * @return true if file exists, false otherwise.
  */
-extern int git_path_contains_file(git_buf *dir, const char *file);
+extern bool git_path_contains_file(git_buf *dir, const char *file);
 
 /**
  * Clean up path, prepending base if it is not already rooted.
@@ -197,14 +204,14 @@ extern int git_path_direach(
  * Sort function to order two paths.
  */
 extern int git_path_cmp(
-	const char *name1, int len1, int isdir1,
-	const char *name2, int len2, int isdir2);
+	const char *name1, size_t len1, int isdir1,
+	const char *name2, size_t len2, int isdir2);
 
 /**
  * Invoke callback up path directory by directory until the ceiling is
  * reached (inclusive of a final call at the root_path).
  *
- * Returning anything other than GIT_SUCCESS from the callback function
+ * Returning anything other than 0 from the callback function
  * will stop the iteration and propogate the error to the caller.
  *
  * @param pathbuf Buffer the function reads the directory from and
