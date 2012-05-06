@@ -8,6 +8,7 @@
 #define INCLUDE_buffer_h__
 
 #include "common.h"
+#include <stdarg.h>
 
 typedef struct {
 	char *ptr;
