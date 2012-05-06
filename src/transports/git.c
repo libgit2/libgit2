@@ -112,7 +112,7 @@ static int do_connect(transport_git *t, const char *url)
 	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
 		return -1;
 
-	if (gitno_connect(&t->socket, host, port) == 0) {
+	if ((error = gitno_connect(&t->socket, host, port)) == 0) {
 		error = send_request(t->socket, NULL, url);
 	}
 
