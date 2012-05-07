@@ -12,9 +12,20 @@
 
 #ifndef GIT_WIN32
 
-int p_open(const char *path, int flags)
+int p_open(const char *path, int flags, ...)
 {
-	return open(path, flags | O_BINARY);
+	mode_t mode = 0;
+
+	if (flags & O_CREAT)
+	{
+		va_list arg_list;
+
+		va_start(arg_list, flags);
+		mode = va_arg(arg_list, mode_t);
+		va_end(arg_list);
+	}
+
+	return open(path, flags | O_BINARY, mode);
 }
 
 int p_creat(const char *path, mode_t mode)
