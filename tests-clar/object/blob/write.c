@@ -15,6 +15,11 @@ typedef int (*blob_creator_fn)(
 	git_repository *,
 	const char *);
 
+void test_object_blob_write__cleanup(void)
+{
+	cl_git_sandbox_cleanup();
+}
+
 static void assert_blob_creation(const char *path_to_file, const char *blob_from_path, blob_creator_fn creator)
 {
 	git_oid oid;
@@ -29,8 +34,6 @@ void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_file_lo
 	repo = cl_git_sandbox_init(WORKDIR);
 
 	assert_blob_creation(WORKDIR "/test.txt", "test.txt", &git_blob_create_fromfile);
-
-	cl_git_sandbox_cleanup();
 }
 
 void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_absolute_filepath_pointing_outside_of_the_working_directory(void)
@@ -47,7 +50,6 @@ void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_absolut
 
 	git_buf_free(&full_path);
 	cl_must_pass(git_futils_rmdir_r(ELSEWHERE, GIT_DIRREMOVAL_FILES_AND_DIRS));
-	cl_git_sandbox_cleanup();
 }
 
 void test_object_blob_write__can_create_a_blob_in_a_bare_repo_from_a_absolute_filepath(void)
@@ -64,5 +66,4 @@ void test_object_blob_write__can_create_a_blob_in_a_bare_repo_from_a_absolute_fi
 
 	git_buf_free(&full_path);
 	cl_must_pass(git_futils_rmdir_r(ELSEWHERE, GIT_DIRREMOVAL_FILES_AND_DIRS));
-	cl_git_sandbox_cleanup();
 }
