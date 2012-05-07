@@ -122,6 +122,21 @@ void test_refs_revparse__reflog(void)
    test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
    test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
    test_object("master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+}
+
+void test_refs_revparse__revwalk(void)
+{
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "master^{/not found in any commit}"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "master^{/merge}"));
+
+   test_object("master^{/anoth}", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+   test_object("master^{/Merge}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   test_object("br2^{/Merge}", "a4a7dce85cf63874e984719f4fdd239f5145052f");
+   test_object("master^{/fo.rth}", "9fd738e8f7967c078dceed8190330fc8648ee56a");
+}
+
+void test_refs_revparse__date(void)
+{
    /* Not ready yet
    test_object("HEAD@{100 years ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
    test_object("master@{2012-4-30 10:23:20}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");

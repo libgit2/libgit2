@@ -20,6 +20,7 @@
 #include "git2/refs.h"
 #include "git2/repository.h"
 #include "git2/config.h"
+#include "git2/revwalk.h"
 
 GIT_BEGIN_DECL
 
@@ -294,7 +295,7 @@ static git_otype parse_obj_type(const char *str)
    return GIT_OBJ_BAD;
 }
 
-static int handle_caret_syntax(git_object **out, git_object *obj, const char *movement)
+static int handle_caret_syntax(git_object **out, git_repository *repo, git_object *obj, const char *movement)
 {
    git_commit *commit;
    size_t movementlen = strlen(movement);
@@ -325,8 +326,48 @@ static int handle_caret_syntax(git_object **out, git_object *obj, const char *mo
       
       /* {/...} -> Walk all commits until we see a commit msg that matches the phrase. */
       if (movement[1] == '/') {
-         /* TODO */
-         return GIT_ERROR;
+         int retcode = GIT_ERROR;
+         git_revwalk *walk;
+         if (!git_revwalk_new(&walk, repo)) {
+            git_oid oid;
+            regex_t preg;
+            git_buf buf = GIT_BUF_INIT;
+
+            git_revwalk_sorting(walk, GIT_SORT_TIME);
+            git_revwalk_push(walk, git_object_id(obj));
+
+            /* Extract the regex from the movement string */
+            git_buf_put(&buf, movement+2, strlen(movement)-3);
+
+            if (!regcomp(&preg, git_buf_cstr(&buf), REG_EXTENDED)) {
+               while(!git_revwalk_next(&oid, walk)) {
+                  git_object *walkobj;
+                  char str[41];
+                  git_oid_fmt(str, &oid);
+                  str[40] = 0;
+
+                  /* Fetch the commit object, and check for matches in the message */
+                  if (!git_object_lookup(&walkobj, repo, &oid, GIT_OBJ_COMMIT)) {
+                     if (!regexec(&preg, git_commit_message((git_commit*)walkobj), 0, NULL, 0)) {
+                        /* Found it! */
+                        retcode = 0;
+                        *out = walkobj;
+                        if (obj == walkobj) {
+                           /* Avoid leaking an object */
+                           git_object_free(walkobj);
+                        }
+                        break;
+                     }
+                     git_object_free(walkobj);
+                  }
+               }
+               regfree(&preg);
+            }
+
+            git_buf_free(&buf);
+            git_revwalk_free(walk);
+         }
+         return retcode;
       }
 
       /* {...} -> Dereference until we reach an object of a certain type. */
@@ -444,14 +485,14 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
       case REVPARSE_STATE_CARET:
          /* Gather characters until NULL, '~', or '^' */
          if (!*spec_cur) {
-            retcode = handle_caret_syntax(out, cur_obj, git_buf_cstr(&stepbuffer));
+            retcode = handle_caret_syntax(out, repo, cur_obj, git_buf_cstr(&stepbuffer));
             next_state = REVPARSE_STATE_DONE;
          } else if (*spec_cur == '~') {
-            retcode = handle_caret_syntax(&next_obj, cur_obj, git_buf_cstr(&stepbuffer));
+            retcode = handle_caret_syntax(&next_obj, repo, cur_obj, git_buf_cstr(&stepbuffer));
             git_buf_clear(&stepbuffer);
             next_state = !retcode ? REVPARSE_STATE_LINEAR : REVPARSE_STATE_DONE;
          } else if (*spec_cur == '^') {
-            retcode = handle_caret_syntax(&next_obj, cur_obj, git_buf_cstr(&stepbuffer));
+            retcode = handle_caret_syntax(&next_obj, repo, cur_obj, git_buf_cstr(&stepbuffer));
             git_buf_clear(&stepbuffer);
             if (retcode < 0) {
                next_state = REVPARSE_STATE_DONE;
