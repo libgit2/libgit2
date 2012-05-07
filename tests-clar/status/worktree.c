@@ -275,6 +275,7 @@ void test_status_worktree__single_folder(void)
 
 	error = git_status_file(&status_flags, repo, "subdir");
 	cl_git_fail(error);
+	cl_assert(error != GIT_ENOTFOUND);
 }
 
 
@@ -383,4 +384,19 @@ void test_status_worktree__issue_592_5(void)
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, NULL));
 
 	git_buf_free(&path);
+}
+
+void test_status_worktree__cannot_retrieve_the_status_of_a_bare_repository(void)
+{
+	git_repository *repo;
+	int error, status = 0;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+
+	error = git_status_file(&status, repo, "dummy");
+
+	cl_git_fail(error);
+	cl_assert(error != GIT_ENOTFOUND);
+
+	git_repository_free(repo);
 }
