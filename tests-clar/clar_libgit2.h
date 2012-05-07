@@ -15,7 +15,7 @@
 #define cl_git_pass(expr) do { \
 	giterr_clear(); \
 	if ((expr) != 0) \
-		clar__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, giterr_last()->message, 1); \
+		clar__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, giterr_last() ? giterr_last()->message : NULL, 1); \
 	} while(0)
 
 /**
