@@ -112,10 +112,8 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	if (git_config_get_string(config, git_buf_cstr(&buf), &val) < 0) {
-		error = -1;
+	if ((error = git_config_get_string(config, git_buf_cstr(&buf), &val)) < 0)
 		goto cleanup;
-	}
 
 	remote->repo = repo;
 	remote->url = git__strdup(val);
