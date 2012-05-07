@@ -96,7 +96,7 @@ FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-	ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
+	ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_WIN32_WINNT=0x0501)
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/win32/*.c)
 ELSE()
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c)
