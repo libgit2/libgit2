@@ -450,11 +450,11 @@ static int collect_attr_files(
 		git_vector_init(files, 4, NULL) < 0)
 		return -1;
 
-	/* given a unrooted path in a non-bare repo, resolve it */
-	if (workdir && git_path_root(path) < 0)
+	/* Resolve path in a non-bare repo */
+	if (workdir != NULL)
 		error = git_path_find_dir(&dir, path, workdir);
 	else
-		error = git_buf_sets(&dir, path);
+		error = git_path_dirname_r(&dir, path);
 	if (error < 0)
 		goto cleanup;
 
