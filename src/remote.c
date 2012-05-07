@@ -102,11 +102,15 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
 
-	if (git_vector_init(&remote->refs, 32, NULL) < 0)
-		return -1;
+	if (git_vector_init(&remote->refs, 32, NULL) < 0) {
+		error = -1;
+		goto cleanup;
+	}
 
-	if (git_buf_printf(&buf, "remote.%s.url", name) < 0)
-		return -1;
+	if (git_buf_printf(&buf, "remote.%s.url", name) < 0) {
+		error = -1;
+		goto cleanup;
+	}
 
 	if (git_config_get_string(config, git_buf_cstr(&buf), &val) < 0) {
 		error = -1;
@@ -118,8 +122,10 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote->url);
 
 	git_buf_clear(&buf);
-	if (git_buf_printf(&buf, "remote.%s.fetch", name) < 0)
-		return -1;
+	if (git_buf_printf(&buf, "remote.%s.fetch", name) < 0) {
+		error = -1;
+		goto cleanup;
+	}
 
 	error = parse_remote_refspec(config, &remote->fetch, git_buf_cstr(&buf));
 	if (error == GIT_ENOTFOUND)
@@ -131,8 +137,10 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	}
 
 	git_buf_clear(&buf);
-	if (git_buf_printf(&buf, "remote.%s.push", name) < 0)
-		return -1;
+	if (git_buf_printf(&buf, "remote.%s.push", name) < 0) {
+		error = -1;
+		goto cleanup;
+	}
 
 	error = parse_remote_refspec(config, &remote->push, git_buf_cstr(&buf));
 	if (error == GIT_ENOTFOUND)
