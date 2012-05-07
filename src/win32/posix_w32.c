@@ -217,13 +217,27 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	return dwRet;
 }
 
-int p_open(const char *path, int flags)
+int p_open(const char *path, int flags, ...)
 {
 	int fd;
-	wchar_t* buf = gitwin_to_utf16(path);
+	wchar_t* buf;
+	mode_t mode = 0;
+
+	buf = gitwin_to_utf16(path);
 	if (!buf)
 		return -1;
-	fd = _wopen(buf, flags | _O_BINARY);
+
+	if (flags & O_CREAT)
+	{
+		va_list arg_list;
+
+		va_start(arg_list, flags);
+		mode = va_arg(arg_list, mode_t);
+		va_end(arg_list);
+	}
+
+	fd = _wopen(buf, flags | _O_BINARY, mode);
+
 	git__free(buf);
 	return fd;
 }
