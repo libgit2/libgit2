@@ -274,3 +274,9 @@ void test_repo_open__win32_path(void)
 	git_buf_free(&winpath);
 #endif
 }
+
+void test_repo_open__opening_a_non_existing_repository_returns_ENOTFOUND(void)
+{
+	git_repository *repo;
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_open(&repo, "i-do-not/exist"));
+}
