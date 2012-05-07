@@ -22,7 +22,7 @@ script:
 
 # Run Tests
 after_script:
- - ctest .
+ - ctest -V .
 
 # Only watch the development branch
 branches:
