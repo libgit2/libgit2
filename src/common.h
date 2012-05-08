@@ -20,6 +20,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#ifdef GIT_GNUTLS
+# include <gnutls/gnutls.h>
+#elif defined(GIT_OPENSSL)
+# include <openssl/ssl.h>
+# include <openssl/err.h>
+#endif
+
 #ifdef GIT_WIN32
 
 # include <io.h>
@@ -65,6 +72,17 @@ void giterr_clear(void);
 void giterr_set_str(int error_class, const char *string);
 void giterr_set_regex(const regex_t *regex, int error_code);
 
+#ifdef GIT_GNUTLS
+typedef struct gitno_ssl {
+	gnutls_session_t session;
+	gnutls_certificate_credentials_t cred;
+} gitno_ssl;
+#elif defined(GIT_OPENSSL)
+typedef struct gitno_ssl {
+	SSL_CTX *ctx;
+	SSL *ssl;
+} gitno_ssl;
+#endif
 
 #include "util.h"
 
