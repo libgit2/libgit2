@@ -11,6 +11,48 @@
 #include "buffer.h"
 #include "git2/submodule.h"
 
+static int empty_iterator__no_item(
+	git_iterator *iter, const git_index_entry **entry)
+{
+	GIT_UNUSED(iter);
+	*entry = NULL;
+	return 0;
+}
+
+static int empty_iterator__at_end(git_iterator *iter)
+{
+	GIT_UNUSED(iter);
+	return 1;
+}
+
+static int empty_iterator__noop(git_iterator *iter)
+{
+	GIT_UNUSED(iter);
+	return 0;
+}
+
+static void empty_iterator__free(git_iterator *iter)
+{
+	GIT_UNUSED(iter);
+}
+
+int git_iterator_for_nothing(git_iterator **iter)
+{
+	git_iterator *i = git__calloc(1, sizeof(git_iterator));
+	GITERR_CHECK_ALLOC(i);
+
+	i->type    = GIT_ITERATOR_EMPTY;
+	i->current = empty_iterator__no_item;
+	i->at_end  = empty_iterator__at_end;
+	i->advance = empty_iterator__no_item;
+	i->reset   = empty_iterator__noop;
+	i->free    = empty_iterator__free;
+
+	*iter = i;
+
+	return 0;
+}
+
 typedef struct tree_iterator_frame tree_iterator_frame;
 struct tree_iterator_frame {
 	tree_iterator_frame *next;
@@ -155,7 +197,12 @@ int git_iterator_for_tree(
 	git_repository *repo, git_tree *tree, git_iterator **iter)
 {
 	int error;
-	tree_iterator *ti = git__calloc(1, sizeof(tree_iterator));
+	tree_iterator *ti;
+
+	if (tree == NULL)
+		return git_iterator_for_nothing(iter);
+
+	ti = git__calloc(1, sizeof(tree_iterator));
 	GITERR_CHECK_ALLOC(ti);
 
 	ti->base.type    = GIT_ITERATOR_TREE;
