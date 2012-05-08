@@ -6,6 +6,7 @@
  */
 
 #include "message.h"
+#include <ctype.h>
 
 static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 {
@@ -23,13 +24,20 @@ static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 /* see https://github.com/git/git/blob/497215d8811ac7b8955693ceaad0899ecd894ed2/builtin/stripspace.c#L4-67 */
 int git_message_prettify(git_buf *message_out, const char *message, int strip_comments)
 {
+	const size_t message_len = strlen(message);
+
 	int consecutive_empty_lines = 0;
 	size_t i, line_length, rtrimmed_line_length;
 	char *next_newline;
 
 	for (i = 0; i < strlen(message); i += line_length) {
-		next_newline = memchr(message + i, '\n', strlen(message) - i);
-		line_length = next_newline ? next_newline - (message + i) + 1 : strlen(message) - i;
+		next_newline = memchr(message + i, '\n', message_len - i);
+
+		if (next_newline != NULL) {
+			line_length = next_newline - (message + i) + 1;
+		} else {
+			line_length = message_len - i;
+		}
 
 		if (strip_comments && line_length && message[i] == '#')
 			continue;
