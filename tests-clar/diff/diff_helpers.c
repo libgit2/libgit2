@@ -30,6 +30,8 @@ int diff_file_fn(
 
 	GIT_UNUSED(progress);
 
+	e->	at_least_one_of_them_is_binary = delta->binary;
+
 	e->files++;
 	switch (delta->status) {
 	case GIT_DELTA_ADDED: e->file_adds++; break;
@@ -37,6 +39,7 @@ int diff_file_fn(
 	case GIT_DELTA_MODIFIED: e->file_mods++; break;
 	case GIT_DELTA_IGNORED: e->file_ignored++; break;
 	case GIT_DELTA_UNTRACKED: e->file_untracked++; break;
+	case GIT_DELTA_UNMODIFIED: e->file_unmodified++; break;
 	default: break;
 	}
 	return 0;
