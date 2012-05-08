@@ -631,7 +631,7 @@ int git_diff_index_to_tree(
 {
 	git_iterator *a = NULL, *b = NULL;
 
-	assert(repo && old_tree && diff);
+	assert(repo && diff);
 
 	if (git_iterator_for_tree(repo, old_tree, &a) < 0 ||
 		git_iterator_for_index(repo, &b) < 0)

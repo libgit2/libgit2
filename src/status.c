@@ -101,7 +101,7 @@ int git_status_foreach_ext(
 		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_UNTRACKED_DIRS;
 	/* TODO: support EXCLUDE_SUBMODULES flag */
 
-	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY && head != NULL &&
+	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&
 		(err = git_diff_index_to_tree(repo, &diffopt, head, &idx2head)) < 0)
 		goto cleanup;
 

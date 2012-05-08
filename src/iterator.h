@@ -13,6 +13,7 @@
 typedef struct git_iterator git_iterator;
 
 typedef enum {
+	GIT_ITERATOR_EMPTY = 0,
 	GIT_ITERATOR_TREE = 1,
 	GIT_ITERATOR_INDEX = 2,
 	GIT_ITERATOR_WORKDIR = 3
@@ -26,6 +27,8 @@ struct git_iterator {
 	int (*reset)(git_iterator *);
 	void (*free)(git_iterator *);
 };
+
+int git_iterator_for_nothing(git_iterator **iter);
 
 int git_iterator_for_tree(
 	git_repository *repo, git_tree *tree, git_iterator **iter);
