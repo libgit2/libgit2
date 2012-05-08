@@ -35,7 +35,7 @@ static void net_set_error(const char *str)
 	size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
 			     0, error, 0, (LPSTR)&err_str, 0, 0);
 
-	giterr_set(GITERR_NET, "%s: $s", str, err_str);
+	giterr_set(GITERR_NET, "%s: %s", str, err_str);
 	LocalFree(err_str);
 }
 #else

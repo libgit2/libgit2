@@ -217,6 +217,7 @@ int git_pkt_parse_line(
 		 * server is trying to send us the packfile already.
 		 */
 		if (bufflen >= 4 && !git__prefixcmp(line, "PACK")) {
+			giterr_clear();
 			*out = line;
 			return pack_pkt(head);
 		}
