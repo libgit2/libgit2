@@ -401,3 +401,48 @@ void test_status_worktree__cannot_retrieve_the_status_of_a_bare_repository(void)
 
 	git_repository_free(repo);
 }
+
+typedef struct {
+	int count;
+	unsigned int status;
+} status_entry_single;
+
+static int
+cb_status__single(const char *p, unsigned int s, void *payload)
+{
+	status_entry_single *data = (status_entry_single *)payload;
+
+	GIT_UNUSED(p);
+
+	data->count++;
+	data->status = s;
+
+	return 0;
+}
+
+void test_status_worktree__first_commit_in_progress(void)
+{
+	git_repository *repo;
+	git_index *index;
+	status_entry_single result;
+
+	cl_git_pass(git_repository_init(&repo, "getting_started", 0));
+	cl_git_mkfile("getting_started/testfile.txt", "content\n");
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert(result.count == 1);
+	cl_assert(result.status == GIT_STATUS_WT_NEW);
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add(index, "testfile.txt", 0));
+	cl_git_pass(git_index_write(index));
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert(result.count == 1);
+	cl_assert(result.status == GIT_STATUS_INDEX_NEW);
+
+	git_index_free(index);
+	git_repository_free(repo);
+}
