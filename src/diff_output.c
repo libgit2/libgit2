@@ -169,15 +169,12 @@ static int file_is_binary_by_attr(
 }
 
 static int file_is_binary_by_content(
-	git_diff_list *diff,
 	git_diff_delta *delta,
 	git_map *old_data,
 	git_map *new_data)
 {
 	git_buf search;
 	git_text_stats stats;
-
-	GIT_UNUSED(diff);
 
 	if ((delta->old_file.flags & BINARY_DIFF_FLAGS) == 0) {
 		search.ptr  = old_data->data;
@@ -301,6 +298,16 @@ static void release_content(git_diff_file *file, git_map *map, git_blob *blob)
 	}
 }
 
+static void fill_map_from_mmfile(git_map *dst, mmfile_t *src) {
+	assert(dst && src);
+
+	dst->data = src->ptr;
+	dst->len = src->size;
+#ifdef GIT_WIN32
+	dst->fmh = NULL;
+#endif
+}
+
 int git_diff_foreach(
 	git_diff_list *diff,
 	void *data,
@@ -408,7 +415,7 @@ int git_diff_foreach(
 		 */
 		if (delta->binary == -1) {
 			error = file_is_binary_by_content(
-				diff, delta, &old_data, &new_data);
+				delta, &old_data, &new_data);
 			if (error < 0)
 				goto cleanup;
 		}
@@ -689,55 +696,83 @@ int git_diff_print_patch(
 	return error;
 }
 
-
 int git_diff_blobs(
 	git_blob *old_blob,
 	git_blob *new_blob,
 	git_diff_options *options,
 	void *cb_data,
+	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
 	git_diff_data_fn line_cb)
 {
 	diff_output_info info;
 	git_diff_delta delta;
 	mmfile_t old_data, new_data;
+	git_map old_map, new_map;
 	xpparam_t xdiff_params;
 	xdemitconf_t xdiff_config;
 	xdemitcb_t xdiff_callback;
+	git_blob *new, *old;
+
+	memset(&delta, 0, sizeof(delta));
+
+	new = new_blob;
+	old = old_blob;
 
 	if (options && (options->flags & GIT_DIFF_REVERSE)) {
-		git_blob *swap = old_blob;
-		old_blob = new_blob;
-		new_blob = swap;
+		git_blob *swap = old;
+		old = new;
+		new = swap;
 	}
 
-	if (old_blob) {
-		old_data.ptr  = (char *)git_blob_rawcontent(old_blob);
-		old_data.size = git_blob_rawsize(old_blob);
+	if (old) {
+		old_data.ptr  = (char *)git_blob_rawcontent(old);
+		old_data.size = git_blob_rawsize(old);
+		git_oid_cpy(&delta.old_file.oid, git_object_id((const git_object *)old));
 	} else {
 		old_data.ptr  = "";
 		old_data.size = 0;
 	}
 
-	if (new_blob) {
-		new_data.ptr  = (char *)git_blob_rawcontent(new_blob);
-		new_data.size = git_blob_rawsize(new_blob);
+	if (new) {
+		new_data.ptr  = (char *)git_blob_rawcontent(new);
+		new_data.size = git_blob_rawsize(new);
+		git_oid_cpy(&delta.new_file.oid, git_object_id((const git_object *)new));
 	} else {
 		new_data.ptr  = "";
 		new_data.size = 0;
 	}
 
 	/* populate a "fake" delta record */
-	delta.status = old_data.ptr ?
-		(new_data.ptr ? GIT_DELTA_MODIFIED : GIT_DELTA_DELETED) :
-		(new_data.ptr ? GIT_DELTA_ADDED : GIT_DELTA_UNTRACKED);
-	delta.old_file.mode = 0100644; /* can't know the truth from a blob alone */
-	delta.new_file.mode = 0100644;
-	git_oid_cpy(&delta.old_file.oid, git_object_id((const git_object *)old_blob));
-	git_oid_cpy(&delta.new_file.oid, git_object_id((const git_object *)new_blob));
-	delta.old_file.path = NULL;
-	delta.new_file.path = NULL;
-	delta.similarity = 0;
+	delta.status = new ?
+		(old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
+		(old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
+
+	if (git_oid_cmp(&delta.new_file.oid, &delta.old_file.oid) == 0)
+		delta.status = GIT_DELTA_UNMODIFIED;
+
+	delta.old_file.size = old_data.size;
+	delta.new_file.size = new_data.size;
+
+	fill_map_from_mmfile(&old_map, &old_data);
+	fill_map_from_mmfile(&new_map, &new_data);
+
+	if (file_is_binary_by_content(&delta, &old_map, &new_map) < 0)
+		return -1;
+
+	if (file_cb != NULL) {
+		int error = file_cb(cb_data, &delta, 1);
+		if (error < 0)
+			return error;
+	}
+
+	/* don't do hunk and line diffs if the two blobs are identical */
+	if (delta.status == GIT_DELTA_UNMODIFIED)
+		return 0;
+
+	/* don't do hunk and line diffs if file is binary */
+	if (delta.binary == 1)
+		return 0;
 
 	info.diff    = NULL;
 	info.delta   = &delta;
