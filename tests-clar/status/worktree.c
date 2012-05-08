@@ -389,7 +389,8 @@ void test_status_worktree__issue_592_5(void)
 void test_status_worktree__cannot_retrieve_the_status_of_a_bare_repository(void)
 {
 	git_repository *repo;
-	int error, status = 0;
+	int error;
+	unsigned int status = 0;
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
