@@ -38,11 +38,12 @@ GIT_BEGIN_DECL
  *
  * @param out pointer to the new remote object
  * @param repo the associtated repository
- * @param url the remote repository's URL
  * @param name the remote's name
+ * @param url the remote repository's URL
+ * @param fetch the fetch refspec to use for this remote
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *url, const char *name);
+GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch);
 
 /**
  * Get the information for a particular remote
@@ -217,6 +218,16 @@ GIT_EXTERN(int) git_remote_supported_url(const char* url);
  * @return GIT_SUCCESS or an error code
  */
 GIT_EXTERN(int) git_remote_list(git_strarray *remotes_list, git_repository *repo);
+
+/**
+ * Add a remote with the default fetch refspec to the repository's configuration
+ *
+ * @param out the resulting remote
+ * @param repo the repository in which to create the remote
+ * @param name the remote's name
+ * @param url the remote's url
+ */
+GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url);
 
 /** @} */
 GIT_END_DECL

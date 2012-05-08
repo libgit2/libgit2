@@ -258,17 +258,16 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		GITERR_CHECK_ALLOC(var->value);
 	}
 
+	if (config_write(b, key, NULL, value) < 0) {
+		cvar_free(var);
+		return -1;
+	}
+
 	git_strmap_insert2(b->values, key, var, old_var, rval);
 	if (rval < 0)
 		return -1;
 	if (old_var != NULL)
 		cvar_free(old_var);
-
-	if (config_write(b, key, NULL, value) < 0) {
-		git_strmap_delete(b->values, var->key);
-		cvar_free(var);
-		return -1;
-	}
 
 	return 0;
 }
@@ -1018,6 +1017,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			pre_end = post_start = cfg->reader.read_ptr;
 
 			git__free(current_section);
+			current_section = NULL;
 			if (parse_section_header(cfg, &current_section) < 0)
 				goto rewrite_fail;
 
