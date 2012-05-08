@@ -14,6 +14,7 @@
 #include "odb.h"
 #include "commit.h"
 #include "signature.h"
+#include "message.h"
 
 #include <stdarg.h>
 
@@ -161,7 +162,7 @@ int git_commit_create(
 		int parent_count,
 		const git_commit *parents[])
 {
-	git_buf commit = GIT_BUF_INIT;
+	git_buf commit = GIT_BUF_INIT, cleaned_message = GIT_BUF_INIT;
 	int i;
 	git_odb *odb;
 
@@ -181,10 +182,15 @@ int git_commit_create(
 		git_buf_printf(&commit, "encoding %s\n", message_encoding);
 
 	git_buf_putc(&commit, '\n');
-	git_buf_puts(&commit, message);
 
-	if (git_buf_oom(&commit))
+	/* Remove comments by default */
+	if (git_message_prettify(&cleaned_message, message, 1) < 0)
 		goto on_error;
+
+	if (git_buf_puts(&commit, git_buf_cstr(&cleaned_message)) < 0)
+		goto on_error;
+
+	git_buf_free(&cleaned_message);
 
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
 		goto on_error;
@@ -201,6 +207,8 @@ int git_commit_create(
 
 on_error:
 	git_buf_free(&commit);
+	git_buf_free(&cleaned_message);
+	giterr_set(GITERR_OBJECT, "Failed to create commit.");
 	return -1;
 }
 
