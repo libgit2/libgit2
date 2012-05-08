@@ -42,13 +42,12 @@ int git_message_prettify(git_buf *message_out, const char *message, int strip_co
 		}
 
 		if (consecutive_empty_lines > 0 && message_out->size > 0)
-			if (git_buf_putc(message_out, '\n') < 0)
-				return -1;
+			git_buf_putc(message_out, '\n');
 
 		consecutive_empty_lines = 0;
 		git_buf_put(message_out, message + i, rtrimmed_line_length);
 		git_buf_putc(message_out, '\n');
 	}
 
-	return 0;
+	return git_buf_oom(message_out) ? -1 : 0;
 }
