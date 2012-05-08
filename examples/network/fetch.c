@@ -69,7 +69,7 @@ int fetch(git_repository *repo, int argc, char **argv)
   // Figure out whether it's a named remote or a URL
   printf("Fetching %s\n", argv[1]);
   if (git_remote_load(&remote, repo, argv[1]) < 0) {
-	  if (git_remote_new(&remote, repo, argv[1], NULL) < 0)
+	  if (git_remote_new(&remote, repo, NULL, argv[1], NULL) < 0)
 		  return -1;
   }
 
