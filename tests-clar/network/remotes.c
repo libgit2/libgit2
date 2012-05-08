@@ -153,3 +153,8 @@ void test_network_remotes__list(void)
 
 	git_config_free(cfg);
 }
+
+void test_network_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
+{
+	cl_assert_equal_i(GIT_ENOTFOUND, git_remote_load(&_remote, _repo, "just-left-few-minutes-ago"));
+}

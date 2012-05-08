@@ -205,9 +205,13 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 	}
 
 	if (p_realpath(path, buf) == NULL) {
+		/* giterr_set resets the errno when dealing with a GITERR_OS kind of error */
+		int error = (errno == ENOENT || errno == ENOTDIR) ? GIT_ENOTFOUND : -1;
 		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
+
 		git_buf_clear(path_out);
-		return (errno == ENOENT) ? GIT_ENOTFOUND : -1;
+		
+		return error;
 	}
 
 	return git_buf_sets(path_out, buf);

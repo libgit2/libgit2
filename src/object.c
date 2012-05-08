@@ -150,8 +150,8 @@ int git_object_lookup_prefix(
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
 		git_odb_object_free(odb_obj);
-		giterr_set(GITERR_INVALID, "The given type does not match the type on the ODB");
-		return -1;
+		giterr_set(GITERR_ODB, "The given type does not match the type on the ODB");
+		return GIT_ENOTFOUND;
 	}
 
 	type = odb_obj->raw.type;

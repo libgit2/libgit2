@@ -397,13 +397,14 @@ int git_repository_discover(
 {
 	git_buf path = GIT_BUF_INIT;
 	uint32_t flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
+	int error;
 
 	assert(start_path && repository_path && size > 0);
 
 	*repository_path = '\0';
 
-	if (find_repo(&path, NULL, start_path, flags, ceiling_dirs) < 0)
-		return -1;
+	if ((error = find_repo(&path, NULL, start_path, flags, ceiling_dirs)) < 0)
+		return error != GIT_ENOTFOUND ? -1 : error;
 
 	if (size < (size_t)(path.size + 1)) {
 		giterr_set(GITERR_REPOSITORY,
