@@ -182,6 +182,9 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  * Create a new commit in the repository using `git_object`
  * instances as parameters.
  *
+ * The message will be cleaned up from excess whitespace
+ * it will be made sure that the last line ends with a '\n'.
+ *
  * @param oid Pointer where to store the OID of the
  *	newly created commit
  *
@@ -237,6 +240,9 @@ GIT_EXTERN(int) git_commit_create(
 /**
  * Create a new commit in the repository using a variable
  * argument list.
+ *
+ * The message will be cleaned up from excess whitespace
+ * it will be made sure that the last line ends with a '\n'.
  *
  * The parents for the commit are specified as a variable
  * list of pointers to `const git_commit *`. Note that this

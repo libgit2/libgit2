@@ -137,6 +137,9 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  * this tag object. If `force` is true and a reference
  * already exists with the given name, it'll be replaced.
  *
+ * The message will be cleaned up from excess whitespace
+ * it will be made sure that the last line ends with a '\n'.
+ *
  * @param oid Pointer where to store the OID of the
  * newly created tag. If the tag already exists, this parameter
  * will be the oid of the existing tag, and the function will
