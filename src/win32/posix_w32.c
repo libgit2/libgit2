@@ -326,7 +326,7 @@ int p_hide_directory__w32(const char *path)
 
 char *p_realpath(const char *orig_path, char *buffer)
 {
-	int ret;
+	int ret, buffer_sz = 0;
 	wchar_t* orig_path_w = gitwin_to_utf16(orig_path);
 	wchar_t* buffer_w = (wchar_t*)git__malloc(GIT_PATH_MAX * sizeof(wchar_t));
 
@@ -336,13 +336,14 @@ char *p_realpath(const char *orig_path, char *buffer)
 	ret = GetFullPathNameW(orig_path_w, GIT_PATH_MAX, buffer_w, NULL);
 	git__free(orig_path_w);
 
-	if (!ret || ret > GIT_PATH_MAX) {
+	/* According to MSDN, a return value equals to zero means a failure. */
+	if (ret == 0 || ret > GIT_PATH_MAX) {
 		buffer = NULL;
 		goto done;
 	}
 
 	if (buffer == NULL) {
-		int buffer_sz = WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, NULL, 0, NULL, NULL);
+		buffer_sz = WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, NULL, 0, NULL, NULL);
 
 		if (!buffer_sz ||
 			!(buffer = (char *)git__malloc(buffer_sz)) ||
@@ -350,10 +351,22 @@ char *p_realpath(const char *orig_path, char *buffer)
 		{
 			git__free(buffer);
 			buffer = NULL;
+			goto done;
 		}
 	} else {
-		if (!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL))
+		if (!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL)) {
 			buffer = NULL;
+			goto done;
+		}
+	}
+
+	if (!git_path_exists(buffer))
+	{
+		if (buffer_sz > 0)
+			git__free(buffer);
+
+		buffer = NULL;
+		errno = ENOENT;
 	}
 
 done:

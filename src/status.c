@@ -340,17 +340,17 @@ int git_status_file(
 	assert(status_flags && repo && path);
 
 	if ((workdir = git_repository_workdir(repo)) == NULL) {
-		giterr_set(GITERR_OS, "Cannot get file status from bare repo");
-		return GIT_ENOTFOUND;
+		giterr_set(GITERR_INVALID, "Cannot get file status from bare repo");
+		return -1;
 	}
 
 	if (git_buf_joinpath(&temp_path, workdir, path) < 0)
 		return -1;
 
 	if (git_path_isdir(temp_path.ptr)) {
-		giterr_set(GITERR_OS, "Cannot get file status for directory '%s'", temp_path.ptr);
+		giterr_set(GITERR_INVALID, "Cannot get file status for directory '%s'", temp_path.ptr);
 		git_buf_free(&temp_path);
-		return GIT_ENOTFOUND;
+		return -1;
 	}
 
 	e = status_entry_new(NULL, path);
