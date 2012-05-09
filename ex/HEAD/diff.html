@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>diff.c</title>
+  <link rel="stylesheet" href="http://jashkenas.github.com/docco/resources/docco.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#HEAD">API Docs</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="network/fetch.html">fetch.c</a>
+          <a class="source" href="network/git2.html">git2.c</a>
+          <a class="source" href="network/index-pack.html">index-pack.c</a>
+          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="showindex.html">showindex.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>diff.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;git2.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+
+<span class="kt">void</span> <span class="nf">check</span><span class="p">(</span><span class="kt">int</span> <span class="n">error</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s (%d)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">resolve_to_tree</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">identifier</span><span class="p">,</span> <span class="n">git_tree</span> <span class="o">**</span><span class="n">tree</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="kt">size_t</span> <span class="n">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">identifier</span><span class="p">);</span>
+  <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
+  <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+  <span class="cm">/* try to resolve as OID */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_fromstrn-3" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstrn">git_oid_fromstrn</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="n">identifier</span><span class="p">,</span> <span class="n">len</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n"><a name="git_object_lookup_prefix-2" class="fnlink" href="../../#HEAD/group/object/git_object_lookup_prefix">git_object_lookup_prefix</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="n">len</span><span class="p">,</span> <span class="n">GIT_OBJ_ANY</span><span class="p">);</span>
+
+  <span class="cm">/* try to resolve as reference */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">obj</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">git_reference</span> <span class="o">*</span><span class="n">ref</span><span class="p">,</span> <span class="o">*</span><span class="n">resolved</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_reference_lookup-15" class="fnlink" href="../../#HEAD/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n"><a name="git_reference_resolve-4" class="fnlink" href="../../#HEAD/group/reference/git_reference_resolve">git_reference_resolve</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">resolved</span><span class="p">,</span> <span class="n">ref</span><span class="p">);</span>
+      <span class="n"><a name="git_reference_free-10" class="fnlink" href="../../#HEAD/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">ref</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">resolved</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n"><a name="git_object_lookup-1" class="fnlink" href="../../#HEAD/group/object/git_object_lookup">git_object_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_reference_oid-8" class="fnlink" href="../../#HEAD/group/reference/git_reference_oid">git_reference_oid</a></span><span class="p">(</span><span class="n">resolved</span><span class="p">),</span> <span class="n">GIT_OBJ_ANY</span><span class="p">);</span>
+        <span class="n"><a name="git_reference_free-11" class="fnlink" href="../../#HEAD/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">resolved</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">obj</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">GIT_ENOTFOUND</span><span class="p">;</span>
+
+  <span class="k">switch</span> <span class="p">(</span><span class="n"><a name="git_object_type-9" class="fnlink" href="../../#HEAD/group/object/git_object_type">git_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="p">{</span>
+  <span class="k">case</span> <span class="n">GIT_OBJ_TREE</span>:
+    <span class="o">*</span><span class="n">tree</span> <span class="o">=</span> <span class="p">(</span><span class="n">git_tree</span> <span class="o">*</span><span class="p">)</span><span class="n">obj</span><span class="p">;</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="k">case</span> <span class="n">GIT_OBJ_COMMIT</span>:
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_commit_tree-7" class="fnlink" href="../../#HEAD/group/commit/git_commit_tree">git_commit_tree</a></span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="p">)</span><span class="n">obj</span><span class="p">);</span>
+    <span class="n"><a name="git_object_free-13" class="fnlink" href="../../#HEAD/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="nl">default:</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">GIT_ENOTFOUND</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">char</span> <span class="o">*</span><span class="n">colors</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s">&quot;</span><span class="se">\033</span><span class="s">[m&quot;</span><span class="p">,</span> <span class="cm">/* reset */</span>
+  <span class="s">&quot;</span><span class="se">\033</span><span class="s">[1m&quot;</span><span class="p">,</span> <span class="cm">/* bold */</span>
+  <span class="s">&quot;</span><span class="se">\033</span><span class="s">[31m&quot;</span><span class="p">,</span> <span class="cm">/* red */</span>
+  <span class="s">&quot;</span><span class="se">\033</span><span class="s">[32m&quot;</span><span class="p">,</span> <span class="cm">/* green */</span>
+  <span class="s">&quot;</span><span class="se">\033</span><span class="s">[36m&quot;</span> <span class="cm">/* cyan */</span>
+<span class="p">};</span>
+
+<span class="kt">int</span> <span class="nf">printer</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">,</span> <span class="kt">char</span> <span class="n">usage</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">line</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="o">*</span><span class="n">last_color</span> <span class="o">=</span> <span class="n">data</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="n">last_color</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">switch</span> <span class="p">(</span><span class="n">usage</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="n">GIT_DIFF_LINE_ADDITION</span>: <span class="n">color</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">GIT_DIFF_LINE_DELETION</span>: <span class="n">color</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">GIT_DIFF_LINE_ADD_EOFNL</span>: <span class="n">color</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">GIT_DIFF_LINE_DEL_EOFNL</span>: <span class="n">color</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">GIT_DIFF_LINE_FILE_HDR</span>: <span class="n">color</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">GIT_DIFF_LINE_HUNK_HDR</span>: <span class="n">color</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+    <span class="nl">default:</span> <span class="n">color</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">color</span> <span class="o">!=</span> <span class="o">*</span><span class="n">last_color</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="n">last_color</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">||</span> <span class="n">color</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">fputs</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stdout</span><span class="p">);</span>
+      <span class="n">fputs</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="n">color</span><span class="p">],</span> <span class="n">stdout</span><span class="p">);</span>
+      <span class="o">*</span><span class="n">last_color</span> <span class="o">=</span> <span class="n">color</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="n">fputs</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">check_uint16_param</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pattern</span><span class="p">,</span> <span class="kt">uint16_t</span> <span class="o">*</span><span class="n">val</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">pattern</span><span class="p">);</span>
+  <span class="kt">uint16_t</span> <span class="n">strval</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">endptr</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">strncmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">len</span><span class="p">))</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">strval</span> <span class="o">=</span> <span class="n">strtoul</span><span class="p">(</span><span class="n">arg</span> <span class="o">+</span> <span class="n">len</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">endptr</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">endptr</span> <span class="o">==</span> <span class="n">arg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="o">*</span><span class="n">val</span> <span class="o">=</span> <span class="n">strval</span><span class="p">;</span>
+  <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">check_str_param</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pattern</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">val</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">pattern</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">strncmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">len</span><span class="p">))</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="o">*</span><span class="n">val</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)(</span><span class="n">arg</span> <span class="o">+</span> <span class="n">len</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">message</span> <span class="o">&amp;&amp;</span> <span class="n">arg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: diff [&lt;tree-oid&gt; [&lt;tree-oid&gt;]]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">path</span><span class="p">[</span><span class="n">GIT_PATH_MAX</span><span class="p">];</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_tree</span> <span class="o">*</span><span class="n">t1</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">t2</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_diff_options</span> <span class="n">opts</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="n">git_diff_list</span> <span class="o">*</span><span class="n">diff</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">compact</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cached</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">dir</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish1</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish2</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+  <span class="cm">/* parse arguments as copied from git-diff */</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">treeish1</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+        <span class="n">treeish1</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+      <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">treeish2</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+        <span class="n">treeish2</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+      <span class="k">else</span>
+        <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Only one or two tree identifiers can be provided&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-p&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-u&quot;</span><span class="p">)</span> <span class="o">||</span>
+      <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--patch&quot;</span><span class="p">))</span>
+      <span class="n">compact</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--cached&quot;</span><span class="p">))</span>
+      <span class="n">cached</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--name-status&quot;</span><span class="p">))</span>
+      <span class="n">compact</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--color&quot;</span><span class="p">))</span>
+      <span class="n">color</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--no-color&quot;</span><span class="p">))</span>
+      <span class="n">color</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-R&quot;</span><span class="p">))</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_DIFF_REVERSE</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-a&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--text&quot;</span><span class="p">))</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_DIFF_FORCE_TEXT</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--ignore-space-at-eol&quot;</span><span class="p">))</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_DIFF_IGNORE_WHITESPACE_EOL</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-b&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--ignore-space-change&quot;</span><span class="p">))</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_DIFF_IGNORE_WHITESPACE_CHANGE</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-w&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--ignore-all-space&quot;</span><span class="p">))</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_DIFF_IGNORE_WHITESPACE</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--ignored&quot;</span><span class="p">))</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_DIFF_INCLUDE_IGNORED</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--untracked&quot;</span><span class="p">))</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_DIFF_INCLUDE_UNTRACKED</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">check_uint16_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-U&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">context_lines</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+      <span class="o">!</span><span class="n">check_uint16_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--unified=&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">context_lines</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+      <span class="o">!</span><span class="n">check_uint16_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--inter-hunk-context=&quot;</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">interhunk_lines</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+      <span class="o">!</span><span class="n">check_str_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--src-prefix=&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">old_prefix</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+      <span class="o">!</span><span class="n">check_str_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--dst-prefix=&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">new_prefix</span><span class="p">))</span>
+      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Unknown arg&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* open repo */</span>
+
+  <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_repository_discover-14" class="fnlink" href="../../#HEAD/group/repository/git_repository_discover">git_repository_discover</a></span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;/&quot;</span><span class="p">),</span>
+    <span class="s">&quot;Could not discover repository&quot;</span><span class="p">);</span>
+  <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_repository_open-21" class="fnlink" href="../../#HEAD/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">path</span><span class="p">),</span>
+    <span class="s">&quot;Could not open repository&quot;</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">treeish1</span><span class="p">)</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">resolve_to_tree</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">treeish1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">t1</span><span class="p">),</span> <span class="s">&quot;Looking up first tree&quot;</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">treeish2</span><span class="p">)</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">resolve_to_tree</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">treeish2</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">t2</span><span class="p">),</span> <span class="s">&quot;Looking up second tree&quot;</span><span class="p">);</span>
+
+  <span class="cm">/* &lt;sha1&gt; &lt;sha2&gt; */</span>
+  <span class="cm">/* &lt;sha1&gt; --cached */</span>
+  <span class="cm">/* &lt;sha1&gt; */</span>
+  <span class="cm">/* --cached */</span>
+  <span class="cm">/* nothing */</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&amp;&amp;</span> <span class="n">t2</span><span class="p">)</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">git_diff_tree_to_tree</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="n">t2</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diff</span><span class="p">),</span> <span class="s">&quot;Diff&quot;</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&amp;&amp;</span> <span class="n">cached</span><span class="p">)</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">git_diff_index_to_tree</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diff</span><span class="p">),</span> <span class="s">&quot;Diff&quot;</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">t1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">git_diff_list</span> <span class="o">*</span><span class="n">diff2</span><span class="p">;</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">git_diff_index_to_tree</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diff</span><span class="p">),</span> <span class="s">&quot;Diff&quot;</span><span class="p">);</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">git_diff_workdir_to_index</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diff2</span><span class="p">),</span> <span class="s">&quot;Diff&quot;</span><span class="p">);</span>
+    <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_diff_merge-12" class="fnlink" href="../../#HEAD/group/diff/git_diff_merge">git_diff_merge</a></span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">diff2</span><span class="p">),</span> <span class="s">&quot;Merge diffs&quot;</span><span class="p">);</span>
+    <span class="n"><a name="git_diff_list_free-5" class="fnlink" href="../../#HEAD/group/diff/git_diff_list_free">git_diff_list_free</a></span><span class="p">(</span><span class="n">diff2</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">cached</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">resolve_to_tree</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">t1</span><span class="p">),</span> <span class="s">&quot;looking up HEAD&quot;</span><span class="p">);</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">git_diff_index_to_tree</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diff</span><span class="p">),</span> <span class="s">&quot;Diff&quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">else</span>
+    <span class="n">check</span><span class="p">(</span><span class="n">git_diff_workdir_to_index</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diff</span><span class="p">),</span> <span class="s">&quot;Diff&quot;</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">color</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fputs</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stdout</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">compact</span><span class="p">)</span>
+    <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_diff_print_compact-20" class="fnlink" href="../../#HEAD/group/diff/git_diff_print_compact">git_diff_print_compact</a></span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">color</span><span class="p">,</span> <span class="n">printer</span><span class="p">),</span> <span class="s">&quot;Displaying diff&quot;</span><span class="p">);</span>
+  <span class="k">else</span>
+    <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_diff_print_patch-16" class="fnlink" href="../../#HEAD/group/diff/git_diff_print_patch">git_diff_print_patch</a></span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">color</span><span class="p">,</span> <span class="n">printer</span><span class="p">),</span> <span class="s">&quot;Displaying diff&quot;</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">color</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fputs</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stdout</span><span class="p">);</span>
+
+  <span class="n"><a name="git_diff_list_free-6" class="fnlink" href="../../#HEAD/group/diff/git_diff_list_free">git_diff_list_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-18" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t1</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-19" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t2</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-17" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
