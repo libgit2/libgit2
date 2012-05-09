@@ -532,6 +532,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stat
 		goto on_error;
 
 	git_mwindow_free_all(&idx->pack->mwf);
+	p_close(idx->pack->mwf.fd);
 
 	if (index_path_stream(&filename, idx, ".pack") < 0)
 		goto on_error;
@@ -544,6 +545,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stat
 
 on_error:
 	git_mwindow_free_all(&idx->pack->mwf);
+	p_close(idx->pack->mwf.fd);
 	git_filebuf_cleanup(&idx->index_file);
 	git_buf_free(&filename);
 	return -1;
@@ -559,7 +561,6 @@ void git_indexer_stream_free(git_indexer_stream *idx)
 	if (idx == NULL)
 		return;
 
-	p_close(idx->pack->mwf.fd);
 	git_vector_foreach(&idx->objects, i, e)
 		git__free(e);
 	git_vector_free(&idx->objects);
