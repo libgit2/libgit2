@@ -353,6 +353,10 @@ int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, co
 	for (; i < refs->length; ++i) {
 		head = refs->contents[i];
 
+		/* Skip tag annotations */
+		if (!git__suffixcmp(head->name, "^{}"))
+			continue;
+
 		if (git_refspec_transform_r(&refname, spec, head->name) < 0)
 			goto on_error;
 
