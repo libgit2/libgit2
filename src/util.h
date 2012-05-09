@@ -194,4 +194,19 @@ GIT_INLINE(size_t) git__size_t_powerof2(size_t v)
 	return git__size_t_bitmask(v) + 1;
 }
 
+GIT_INLINE(bool) git__isupper(int c)
+{
+    return (c >= 'A' && c <= 'Z');
+}
+
+GIT_INLINE(bool) git__isalpha(int c)
+{
+    return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+}
+
+GIT_INLINE(bool) git__isspace(int c)
+{
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\12');
+}
+
 #endif /* INCLUDE_util_h__ */

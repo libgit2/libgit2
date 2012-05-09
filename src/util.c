@@ -75,7 +75,7 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 	/*
 	 * White space
 	 */
-	while (isspace(*p))
+	while (git__isspace(*p))
 		p++;
 
 	/*

@@ -525,7 +525,7 @@ static int cfg_getchar(diskfile_backend *cfg_file, int flags)
 	assert(cfg_file->reader.read_ptr);
 
 	do c = cfg_getchar_raw(cfg_file);
-	while (skip_whitespace && isspace(c) &&
+	while (skip_whitespace && git__isspace(c) &&
 	       !cfg_file->reader.eof);
 
 	if (skip_comments && (c == '#' || c == ';')) {
@@ -573,7 +573,7 @@ static char *cfg_readline(diskfile_backend *cfg, bool skip_whitespace)
 
 	if (skip_whitespace) {
 		/* Skip empty empty lines */
-		while (isspace(*line_src))
+		while (git__isspace(*line_src))
 			++line_src;
 	}
 
@@ -592,7 +592,7 @@ static char *cfg_readline(diskfile_backend *cfg, bool skip_whitespace)
 	memcpy(line, line_src, line_len);
 
 	do line[line_len] = '\0';
-	while (line_len-- > 0 && isspace(line[line_len]));
+	while (line_len-- > 0 && git__isspace(line[line_len]));
 
 	if (*line_end == '\n')
 		line_end++;
@@ -737,7 +737,7 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	c = line[pos++];
 
 	do {
-		if (isspace(c)){
+		if (git__isspace(c)){
 			name[name_length] = '\0';
 			result = parse_section_header_ext(cfg, line, name, section_out);
 			git__free(line);
@@ -844,7 +844,7 @@ static int strip_comments(char *line, int in_quotes)
 	}
 
 	/* skip any space at the end */
-	if (isspace(ptr[-1])) {
+	if (git__isspace(ptr[-1])) {
 		ptr--;
 	}
 	ptr[0] = '\0';
@@ -1272,9 +1272,9 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 	else
 		value_start = var_end + 1;
 
-	if (isspace(var_end[-1])) {
+	if (git__isspace(var_end[-1])) {
 		do var_end--;
-		while (isspace(var_end[0]));
+		while (git__isspace(var_end[0]));
 	}
 
 	*var_name = git__strndup(line, var_end - line + 1);
@@ -1287,7 +1287,7 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 	 * Now, let's try to parse the value
 	 */
 	if (value_start != NULL) {
-		while (isspace(value_start[0]))
+		while (git__isspace(value_start[0]))
 			value_start++;
 
 		if (is_multiline_var(value_start)) {

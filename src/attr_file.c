@@ -344,7 +344,7 @@ int git_attr_fnmatch__parse(
 
 	pattern = *base;
 
-	while (isspace(*pattern)) pattern++;
+	while (git__isspace(*pattern)) pattern++;
 	if (!*pattern || *pattern == '#') {
 		*base = git__next_line(pattern);
 		return GIT_ENOTFOUND;
@@ -368,7 +368,7 @@ int git_attr_fnmatch__parse(
 	slash_count = 0;
 	for (scan = pattern; *scan != '\0'; ++scan) {
 		/* scan until (non-escaped) white space */
-		if (isspace(*scan) && *(scan - 1) != '\\')
+		if (git__isspace(*scan) && *(scan - 1) != '\\')
 			break;
 
 		if (*scan == '/') {
@@ -485,7 +485,7 @@ int git_attr_assignment__parse(
 		const char *name_start, *value_start;
 
 		/* skip leading blanks */
-		while (isspace(*scan) && *scan != '\n') scan++;
+		while (git__isspace(*scan) && *scan != '\n') scan++;
 
 		/* allocate assign if needed */
 		if (!assign) {
@@ -509,7 +509,7 @@ int git_attr_assignment__parse(
 
 		/* find the name */
 		name_start = scan;
-		while (*scan && !isspace(*scan) && *scan != '=') {
+		while (*scan && !git__isspace(*scan) && *scan != '=') {
 			assign->name_hash =
 				((assign->name_hash << 5) + assign->name_hash) + *scan;
 			scan++;
@@ -518,7 +518,7 @@ int git_attr_assignment__parse(
 			/* must have found lone prefix (" - ") or leading = ("=foo")
 			 * or end of buffer -- advance until whitespace and continue
 			 */
-			while (*scan && !isspace(*scan)) scan++;
+			while (*scan && !git__isspace(*scan)) scan++;
 			continue;
 		}
 
@@ -528,7 +528,7 @@ int git_attr_assignment__parse(
 
 		/* if there is an equals sign, find the value */
 		if (*scan == '=') {
-			for (value_start = ++scan; *scan && !isspace(*scan); ++scan);
+			for (value_start = ++scan; *scan && !git__isspace(*scan); ++scan);
 
 			/* if we found a value, allocate permanent storage for it */
 			if (scan > value_start) {

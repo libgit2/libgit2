@@ -246,7 +246,7 @@ static int read_gitfile(git_buf *path_out, const char *file_path)
 	}
 	else if ((error = git_path_dirname_r(path_out, file_path)) >= 0) {
 		const char *gitlink = ((const char *)file.ptr) + prefix_len;
-		while (*gitlink && isspace(*gitlink)) gitlink++;
+		while (*gitlink && git__isspace(*gitlink)) gitlink++;
 		error = git_path_prettify_dir(path_out, gitlink, path_out->ptr);
 	}
 

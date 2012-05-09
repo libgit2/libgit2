@@ -12,7 +12,7 @@ static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 {
 	while (len) {
 		unsigned char c = line[len - 1];
-		if (!isspace(c))
+		if (!git__isspace(c))
 			break;
 		len--;
 	}

@@ -400,7 +400,7 @@ int git_buf_join(
 void git_buf_rtrim(git_buf *buf)
 {
 	while (buf->size > 0) {
-		if (!isspace(buf->ptr[buf->size - 1]))
+		if (!git__isspace(buf->ptr[buf->size - 1]))
 			break;
 
 		buf->size--;
