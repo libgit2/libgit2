@@ -206,7 +206,7 @@ GIT_INLINE(bool) git__isalpha(int c)
 
 GIT_INLINE(bool) git__isspace(int c)
 {
-    return (c == ' ' || c == '\t' || c == '\n' || c == '\12');
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
 }
 
 #endif /* INCLUDE_util_h__ */
