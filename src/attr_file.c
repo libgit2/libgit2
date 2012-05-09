@@ -35,7 +35,7 @@ int git_attr_file__new(
 	if (path) {
 		size_t len = strlen(path);
 
-		attrs->key = git_pool_malloc(attrs->pool, len + 3);
+		attrs->key = git_pool_malloc(attrs->pool, (uint32_t)len + 3);
 		GITERR_CHECK_ALLOC(attrs->key);
 
 		attrs->key[0] = '0' + from;
