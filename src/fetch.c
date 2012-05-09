@@ -36,6 +36,10 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 		/* If it doesn't match the refpec, we don't want it */
 		if (!git_refspec_src_matches(p->spec, head->name))
 			return 0;
+
+		/* Don't even try to ask for the annotation target */
+		if (!git__suffixcmp(head->name, "^{}"))
+			return 0;
 	}
 
 	/* If we have the object, mark it so we don't ask for it */
