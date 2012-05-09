@@ -173,7 +173,7 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	cl_assert(exp.lines == 0);
 }
 
-void assert_identical_blobs_comparison(diff_expects exp)
+static void assert_identical_blobs_comparison(diff_expects exp)
 {
 	cl_assert(exp.files == 1);
 	cl_assert(exp.file_unmodified == 1);
@@ -204,7 +204,7 @@ void test_diff_blob__can_compare_identical_blobs(void)
 	assert_identical_blobs_comparison(exp);
 }
 
-void assert_binary_blobs_comparison(diff_expects exp)
+static void assert_binary_blobs_comparison(diff_expects exp)
 {
 	cl_assert(exp.at_least_one_of_them_is_binary == true);
 
