@@ -130,7 +130,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
    git_reference *ref;
    git_reflog *reflog = NULL;
    int n, retcode = GIT_ERROR;
-   size_t i, refloglen;
+   int i, refloglen;
    const git_reflog_entry *entry;
    git_buf buf = GIT_BUF_INIT;
    size_t refspeclen = strlen(refspec);
@@ -144,6 +144,8 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 
    /* "@{-N}" form means walk back N checkouts. That means the HEAD log. */
    if (refspeclen == 0 && !git__prefixcmp(reflogspec, "@{-")) {
+      regex_t regex;
+
       if (git__strtol32(&n, reflogspec+3, NULL, 0) < 0 ||
           n < 1) {
          giterr_set(GITERR_INVALID, "Invalid reflogspec %s", reflogspec);
@@ -153,18 +155,22 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
       git_reflog_read(&reflog, ref);
       git_reference_free(ref);
 
-      refloglen = git_reflog_entrycount(reflog);
-      for (i=0; i < refloglen; i++) {
-         const char *msg;
-         entry = git_reflog_entry_byindex(reflog, i);
+      if (!regcomp(&regex, "checkout: moving from (.*) to .*", REG_EXTENDED)) {
+         regmatch_t regexmatches[2];
 
-         msg = git_reflog_entry_msg(entry);
-         if (!git__prefixcmp(msg, "checkout: moving")) {
-            n--;
-            if (!n) {
-               char *branchname = strrchr(msg, ' ') + 1;
-               retcode = revparse_lookup_object(out, repo, branchname);
-               break;
+         refloglen = git_reflog_entrycount(reflog);
+         for (i=refloglen-1; i >= 0; i--) {
+            const char *msg;
+            entry = git_reflog_entry_byindex(reflog, i);
+
+            msg = git_reflog_entry_msg(entry);
+            if (!regexec(&regex, msg, 2, regexmatches, 0)) {
+               n--;
+               if (!n) {
+                  git_buf_put(&buf, msg+regexmatches[1].rm_so, regexmatches[1].rm_eo - regexmatches[1].rm_so);
+                  retcode = revparse_lookup_object(out, repo, git_buf_cstr(&buf));
+                  break;
+               }
             }
          }
       }
