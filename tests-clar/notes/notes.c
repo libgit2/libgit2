@@ -131,3 +131,51 @@ void test_notes_notes__retrieving_a_list_of_notes_for_an_unknown_namespace_retur
 
 	cl_assert_equal_i(0, retrieved_notes);
 }
+
+static char *messages[] = {
+	"08c041783f40edfe12bb406c9c9a8a040177c125",
+	"96c45fbe09ab7445fc7c60fd8d17f32494399343",
+	"48cc7e38dcfc1ec87e70ec03e08c3e83d7a16aa1",
+	"24c3eaafb681c3df668f9df96f58e7b8c756eb04",
+	"96ca1b6ccc7858ae94684777f85ac0e7447f7040",
+	"7ac2db4378a08bb244a427c357e0082ee0d57ac6",
+	"e6cba23dbf4ef84fe35e884f017f4e24dc228572",
+	"c8cf3462c7d8feba716deeb2ebe6583bd54589e2",
+	"39c16b9834c2d665ac5f68ad91dc5b933bad8549",
+	"f3c582b1397df6a664224ebbaf9d4cc952706597",
+	"29cec67037fe8e89977474988219016ae7f342a6",
+	"36c4cd238bf8e82e27b740e0741b025f2e8c79ab",
+	"f1c45a47c02e01d5a9a326f1d9f7f756373387f8",
+	"4aca84406f5daee34ab513a60717c8d7b1763ead",
+	"84ce167da452552f63ed8407b55d5ece4901845f",
+	NULL
+};
+
+#define MESSAGES_COUNT (sizeof(messages)/sizeof(messages[0])) - 1
+
+/*
+ * $ git ls-tree refs/notes/fanout
+ * 040000 tree 4b22b35d44b5a4f589edf3dc89196399771796ea    84
+ *
+ * $ git ls-tree 4b22b35
+ * 040000 tree d71aab4f9b04b45ce09bcaa636a9be6231474759    96
+ *
+ * $ git ls-tree d71aab4
+ * 100644 blob 08b041783f40edfe12bb406c9c9a8a040177c125    071c1b46c854b31185ea97743be6a8774479
+ */
+void test_notes_notes__can_correctly_insert_a_note_in_an_existing_fanout(void)
+{
+	int i;
+	git_oid note_oid, target_oid;
+	git_note *_note;
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	
+	for (i = 0; i <  MESSAGES_COUNT; i++) {
+		cl_git_pass(git_note_create(&note_oid, _repo, _sig, _sig, "refs/notes/fanout", &target_oid, messages[i]));
+		cl_git_pass(git_note_read(&_note, _repo, "refs/notes/fanout", &target_oid));
+		git_note_free(_note);
+
+		git_oid_cpy(&target_oid, &note_oid);
+	}
+}
