@@ -29,24 +29,12 @@ static void set_invalid_syntax_err(const char *spec)
 
 static int revparse_lookup_fully_qualifed_ref(git_object **out, git_repository *repo, const char*spec)
 {
-   git_reference *ref;
-   git_object *obj = NULL;
+   git_oid resolved;
 
-   if (!git_reference_lookup(&ref, repo, spec)) {
-      git_reference *resolved_ref;
-      if (!git_reference_resolve(&resolved_ref, ref)) {
-         if (!git_object_lookup(&obj, repo, git_reference_oid(resolved_ref), GIT_OBJ_ANY)) {
-            *out = obj;
-         }
-         git_reference_free(resolved_ref);
-      }
-      git_reference_free(ref);
-   }
-   if (obj) {
-      return 0;
-   }
+   if (git_reference_name_to_oid(&resolved, repo, spec) < 0)
+      return GIT_ERROR;
 
-   return GIT_ERROR;
+   return git_object_lookup(out, repo, &resolved, GIT_OBJ_ANY);
 }
 
 static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
