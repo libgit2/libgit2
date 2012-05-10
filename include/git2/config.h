@@ -65,7 +65,7 @@ typedef struct {
  * @return GIT_SUCCESS if a global configuration file has been
  *	found. Its path will be stored in `buffer`.
  */
-GIT_EXTERN(int) git_config_find_global(char *global_config_path);
+GIT_EXTERN(int) git_config_find_global(char *global_config_path, size_t length);
 
 /**
  * Locate the path to the system configuration file
@@ -77,7 +77,7 @@ GIT_EXTERN(int) git_config_find_global(char *global_config_path);
  * @return GIT_SUCCESS if a system configuration file has been
  *	found. Its path will be stored in `buffer`.
  */
-GIT_EXTERN(int) git_config_find_system(char *system_config_path);
+GIT_EXTERN(int) git_config_find_system(char *system_config_path, size_t length);
 
 /**
  * Open the global configuration file
@@ -177,22 +177,22 @@ GIT_EXTERN(void) git_config_free(git_config *cfg);
 /**
  * Get the value of an integer config variable.
  *
+ * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_config_get_int32(git_config *cfg, const char *name, int32_t *out);
+GIT_EXTERN(int) git_config_get_int32(int32_t *out, git_config *cfg, const char *name);
 
 /**
  * Get the value of a long integer config variable.
  *
+ * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_config_get_int64(git_config *cfg, const char *name, int64_t *out);
+GIT_EXTERN(int) git_config_get_int64(int64_t *out, git_config *cfg, const char *name);
 
 /**
  * Get the value of a boolean config variable.
@@ -200,12 +200,12 @@ GIT_EXTERN(int) git_config_get_int64(git_config *cfg, const char *name, int64_t 
  * This function uses the usual C convention of 0 being false and
  * anything else true.
  *
+ * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out);
+GIT_EXTERN(int) git_config_get_bool(int *out, git_config *cfg, const char *name);
 
 /**
  * Get the value of a string config variable.
@@ -213,12 +213,12 @@ GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out)
  * The string is owned by the variable and should not be freed by the
  * user.
  *
+ * @param out pointer to the variable's value
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable's value
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const char **out);
+GIT_EXTERN(int) git_config_get_string(const char **out, git_config *cfg, const char *name);
 
 /**
  * Get each value of a multivar.
@@ -342,14 +342,14 @@ GIT_EXTERN(int) git_config_foreach(
  * If not a single match can be made to store in `out`, an error code will be
  * returned.
  *
+ * @param out place to store the result of the mapping
  * @param cfg config file to get the variables from
  * @param name name of the config variable to lookup
  * @param maps array of `git_cvar_map` objects specifying the possible mappings
  * @param map_n number of mapping objects in `maps`
- * @param out place to store the result of the mapping
  * @return GIT_SUCCESS on success, error code otherwise
  */
-GIT_EXTERN(int) git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n, int *out);
+GIT_EXTERN(int) git_config_get_mapped(int *out, git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n);
 
 /** @} */
 GIT_END_DECL

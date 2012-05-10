@@ -48,7 +48,7 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	int error;
 	const char *val;
 
-	if ((error = git_config_get_string(cfg, var, &val)) < 0)
+	if ((error = git_config_get_string(&val, cfg, var)) < 0)
 		return error;
 
 	return refspec_parse(refspec, val);
@@ -121,7 +121,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	if ((error = git_config_get_string(config, git_buf_cstr(&buf), &val)) < 0)
+	if ((error = git_config_get_string(&val, config, git_buf_cstr(&buf))) < 0)
 		goto cleanup;
 
 	remote->repo = repo;

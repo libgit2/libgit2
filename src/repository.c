@@ -25,8 +25,7 @@
 
 #define GIT_BRANCH_MASTER "master"
 
-#define GIT_CONFIG_CORE_REPOSITORYFORMATVERSION "core.repositoryformatversion"
-#define GIT_REPOSITORYFORMATVERSION 0
+#define GIT_REPO_VERSION 0
 
 static void drop_odb(git_repository *repo)
 {
@@ -125,7 +124,7 @@ static int load_config_data(git_repository *repo)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
-	if (git_config_get_bool(config, "core.bare", &is_bare) < 0)
+	if (git_config_get_bool(&is_bare, config, "core.bare") < 0)
 		return -1; /* FIXME: We assume that a missing core.bare
 					  variable is an error. Is this right? */
 
@@ -146,7 +145,7 @@ static int load_workdir(git_repository *repo, git_buf *parent_path)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
-	error = git_config_get_string(config, "core.worktree", &worktree);
+	error = git_config_get_string(&worktree, config, "core.worktree");
 	if (!error && worktree != NULL)
 		repo->workdir = git__strdup(worktree);
 	else if (error != GIT_ENOTFOUND)
@@ -607,13 +606,13 @@ static int check_repositoryformatversion(git_repository *repo)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
-	if (git_config_get_int32(config, GIT_CONFIG_CORE_REPOSITORYFORMATVERSION, &version) < 0)
+	if (git_config_get_int32(&version, config, "core.repositoryformatversion") < 0)
 		return -1;
 
-	if (GIT_REPOSITORYFORMATVERSION < version) {
+	if (GIT_REPO_VERSION < version) {
 		giterr_set(GITERR_REPOSITORY,
 			"Unsupported repository version %d. Only versions up to %d are supported.",
-			version, GIT_REPOSITORYFORMATVERSION);
+			version, GIT_REPO_VERSION);
 		return -1;
 	}
 
@@ -676,7 +675,7 @@ static int repo_init_config(const char *git_dir, int is_bare)
 	}
 
 	SET_REPO_CONFIG(bool, "core.bare", is_bare);
-	SET_REPO_CONFIG(int32, GIT_CONFIG_CORE_REPOSITORYFORMATVERSION, GIT_REPOSITORYFORMATVERSION);
+	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
 	/* TODO: what other defaults? */
 
 	git_buf_free(&cfg_path);
