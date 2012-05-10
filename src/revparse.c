@@ -37,6 +37,22 @@ static int revparse_lookup_fully_qualifed_ref(git_object **out, git_repository *
    return git_object_lookup(out, repo, &resolved, GIT_OBJ_ANY);
 }
 
+/* Returns non-zero if yes */
+static int spec_looks_like_describe_output(const char *spec)
+{
+   regex_t regex;
+   int regex_error, retcode;
+
+   regex_error = regcomp(&regex, ".+-[0-9]+-g[0-9a-fA-F]+", REG_EXTENDED);
+   if (regex_error != 0) {
+      giterr_set_regex(&regex, regex_error);
+      return 1; /* To be safe */
+   }
+   retcode = regexec(&regex, spec, 0, NULL, 0);
+   regfree(&regex);
+   return retcode == 0;
+}
+
 static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
 {
    size_t speclen = strlen(spec);
@@ -57,6 +73,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
    /* "git describe" output; snip everything before/including "-g" */
    substr = strstr(spec, "-g");
    if (substr &&
+       spec_looks_like_describe_output(spec) &&
        !revparse_lookup_object(out, repo, substr+2)) {
       return 0;
    }
