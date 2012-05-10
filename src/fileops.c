@@ -309,7 +309,7 @@ static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
 			return -1;
 
 		if (p_rmdir(path->ptr) < 0) {
-			if (removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS && errno == ENOTEMPTY)
+			if (removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS && (errno == ENOTEMPTY || errno == EEXIST))
 				return 0;
 
 			giterr_set(GITERR_OS, "Could not remove directory '%s'", path->ptr);
