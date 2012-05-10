@@ -270,6 +270,8 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
                   const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, 0);
                   retcode = git_object_lookup(out, repo, git_reflog_entry_oidnew(entry), GIT_OBJ_ANY);
                }
+
+               git_reflog_free(reflog);
             }
 
             git_reference_free(ref);
