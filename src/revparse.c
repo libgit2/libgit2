@@ -145,6 +145,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
    /* "@{-N}" form means walk back N checkouts. That means the HEAD log. */
    if (refspeclen == 0 && !git__prefixcmp(reflogspec, "@{-")) {
       regex_t regex;
+      int regex_error;
 
       if (git__strtol32(&n, reflogspec+3, NULL, 0) < 0 ||
           n < 1) {
@@ -155,7 +156,10 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
       git_reflog_read(&reflog, ref);
       git_reference_free(ref);
 
-      if (!regcomp(&regex, "checkout: moving from (.*) to .*", REG_EXTENDED)) {
+      regex_error = regcomp(&regex, "checkout: moving from (.*) to .*", REG_EXTENDED);
+      if (regex_error != 0) {
+         giterr_set_regex(&regex, regex_error);
+      } else {
          regmatch_t regexmatches[2];
 
          refloglen = git_reflog_entrycount(reflog);
@@ -173,6 +177,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
                }
             }
          }
+         regfree(&regex);
       }
    } else {
       git_buf datebuf = GIT_BUF_INIT;
@@ -385,6 +390,7 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
          if (!git_revwalk_new(&walk, repo)) {
             git_oid oid;
             regex_t preg;
+            int reg_error;
             git_buf buf = GIT_BUF_INIT;
 
             git_revwalk_sorting(walk, GIT_SORT_TIME);
@@ -393,7 +399,10 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
             /* Extract the regex from the movement string */
             git_buf_put(&buf, movement+2, strlen(movement)-3);
 
-            if (!regcomp(&preg, git_buf_cstr(&buf), REG_EXTENDED)) {
+            reg_error = regcomp(&preg, git_buf_cstr(&buf), REG_EXTENDED);
+            if (reg_error != 0) {
+               giterr_set_regex(&preg, reg_error);
+            } else {
                while(!git_revwalk_next(&oid, walk)) {
                   git_object *walkobj;
                   char str[41];
@@ -415,14 +424,14 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
                      git_object_free(walkobj);
                   }
                }
+               if (retcode < 0) {
+                  giterr_set(GITERR_REFERENCE, "Couldn't find a match for %s", movement);
+               }
                regfree(&preg);
             }
 
             git_buf_free(&buf);
             git_revwalk_free(walk);
-         }
-         if (retcode < 0) {
-            giterr_set(GITERR_REFERENCE, "Couldn't find a match for %s", movement);
          }
          return retcode;
       }
