@@ -113,6 +113,7 @@ void test_refs_revparse__reflog(void)
 {
    cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-xyz}"));
    cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-0}"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{1000}"));
 
    test_object("@{-2}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
    test_object("@{-1}", "a4a7dce85cf63874e984719f4fdd239f5145052f");
@@ -137,8 +138,14 @@ void test_refs_revparse__revwalk(void)
 
 void test_refs_revparse__date(void)
 {
-   /* Not ready yet
-   test_object("HEAD@{100 years ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
-   test_object("master@{2012-4-30 10:23:20}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-   */
+   test_object("HEAD@{10 years ago}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   test_object("HEAD@{1 second}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   test_object("master@{2012-4-30 10:23:20 -0800}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   test_object("master@{2012-4-30 10:24 -0800}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   test_object("master@{2012-4-30 16:24 -0200}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   test_object("master@{1335806600}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+   test_object("master@{1335816640}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+
+   /* Core git gives a65fedf, because they don't take time zones into account. */
+   test_object("master@{1335806640}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 }
