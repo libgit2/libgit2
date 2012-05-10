@@ -14,6 +14,8 @@
 #	include "compat/fnmatch.h"
 #endif
 
+#include <stdio.h>
+
 #define p_lstat(p,b) lstat(p,b)
 #define p_readlink(a, b, c) readlink(a, b, c)
 #define p_link(o,n) link(o, n)
