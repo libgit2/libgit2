@@ -400,7 +400,8 @@ cleanup:
 	return error;
 }
 
-int git_status_should_ignore(git_repository *repo, const char *path, int *ignored)
+int git_status_should_ignore(
+	int *ignored, git_repository *repo, const char *path)
 {
 	int error;
 	git_ignores ignores;

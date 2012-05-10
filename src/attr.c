@@ -235,31 +235,91 @@ bool git_attr_cache__is_cached(
 	return rval;
 }
 
-static int load_attr_file(const char *filename, const char **data)
+static int load_attr_file(
+	const char **data,
+	git_attr_file_stat_sig *sig,
+	const char *filename)
 {
 	int error;
 	git_buf content = GIT_BUF_INIT;
+	struct stat st;
 
-	error = git_futils_readbuffer(&content, filename);
-	*data = error ? NULL : git_buf_detach(&content);
+	if (p_stat(filename, &st) < 0)
+		return GIT_ENOTFOUND;
 
-	return error;
+	if (sig != NULL &&
+		(git_time_t)st.st_mtime == sig->seconds &&
+		(git_off_t)st.st_size == sig->size &&
+		(unsigned int)st.st_ino == sig->ino)
+		return GIT_ENOTFOUND;
+
+	error = git_futils_readbuffer_updated(&content, filename, NULL, NULL);
+	if (error < 0)
+		return error;
+
+	if (sig != NULL) {
+		sig->seconds = (git_time_t)st.st_mtime;
+		sig->size    = (git_off_t)st.st_size;
+		sig->ino     = (unsigned int)st.st_ino;
+	}
+
+	*data = git_buf_detach(&content);
+
+	return 0;
 }
 
 static int load_attr_blob_from_index(
-	git_repository *repo, const char *filename, git_blob **blob)
+	const char **content,
+	git_blob **blob,
+	git_repository *repo,
+	const git_oid *old_oid,
+	const char *relfile)
 {
 	int error;
 	git_index *index;
 	git_index_entry *entry;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0 ||
-		(error = git_index_find(index, filename)) < 0)
+		(error = git_index_find(index, relfile)) < 0)
 		return error;
 
 	entry = git_index_get(index, error);
 
-	return git_blob_lookup(blob, repo, &entry->oid);
+	if (old_oid && git_oid_cmp(old_oid, &entry->oid) == 0)
+		return GIT_ENOTFOUND;
+
+	if ((error = git_blob_lookup(blob, repo, &entry->oid)) < 0)
+		return error;
+
+	*content = git_blob_rawcontent(*blob);
+	return 0;
+}
+
+static int load_attr_from_cache(
+	git_attr_file **file,
+	git_attr_cache *cache,
+	git_attr_file_source source,
+	const char *relative_path)
+{
+	git_buf  cache_key = GIT_BUF_INIT;
+	khiter_t cache_pos;
+
+	*file = NULL;
+
+	if (!cache || !cache->files)
+		return 0;
+
+	if (git_buf_printf(&cache_key, "%d#%s", (int)source, relative_path) < 0)
+		return -1;
+
+	cache_pos = git_strmap_lookup_index(cache->files, cache_key.ptr);
+
+	git_buf_free(&cache_key);
+
+	if (git_strmap_valid_index(cache->files, cache_pos))
+		*file = git_strmap_value_at(cache->files, cache_pos);
+
+	return 0;
 }
 
 int git_attr_cache__internal_file(
@@ -301,6 +361,7 @@ int git_attr_cache__push_file(
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file *file = NULL;
 	git_blob *blob = NULL;
+	git_attr_file_stat_sig st;
 
 	assert(filename && stack);
 
@@ -316,29 +377,22 @@ int git_attr_cache__push_file(
 		relfile += strlen(workdir);
 
 	/* check cache */
-	if (cache && cache->files) {
-		git_buf  cache_key = GIT_BUF_INIT;
-		khiter_t cache_pos;
-
-		if (git_buf_printf(&cache_key, "%d#%s", (int)source, relfile) < 0)
-			return -1;
-
-		cache_pos = git_strmap_lookup_index(cache->files, cache_key.ptr);
-
-		git_buf_free(&cache_key);
-
-		if (git_strmap_valid_index(cache->files, cache_pos)) {
-			file = git_strmap_value_at(cache->files, cache_pos);
-			goto finish;
-		}
-	}
+	if (load_attr_from_cache(&file, cache, source, relfile) < 0)
+		return -1;
 
 	/* if not in cache, load data, parse, and cache */
 
-	if (source == GIT_ATTR_FILE_FROM_FILE)
-		error = load_attr_file(filename, &content);
-	else
-		error = load_attr_blob_from_index(repo, relfile, &blob);
+	if (source == GIT_ATTR_FILE_FROM_FILE) {
+		if (file)
+			memcpy(&st, &file->cache_data.st, sizeof(st));
+		else
+			memset(&st, 0, sizeof(st));
+
+		error = load_attr_file(&content, &st, filename);
+	} else {
+		error = load_attr_blob_from_index(&content, &blob,
+			repo, file ? &file->cache_data.oid : NULL, relfile);
+	}
 
 	if (error) {
 		/* not finding a file is not an error for this function */
@@ -349,10 +403,8 @@ int git_attr_cache__push_file(
 		goto finish;
 	}
 
-	if (blob)
-		content = git_blob_rawcontent(blob);
-
-	if ((error = git_attr_file__new(&file, source, relfile, &cache->pool)) < 0)
+	if (!file &&
+		(error = git_attr_file__new(&file, source, relfile, &cache->pool)) < 0)
 		goto finish;
 
 	if (parse && (error = parse(repo, content, file)) < 0)
@@ -361,6 +413,12 @@ int git_attr_cache__push_file(
 	git_strmap_insert(cache->files, file->key, file, error);
 	if (error > 0)
 		error = 0;
+
+	/* remember "cache buster" file signature */
+	if (blob)
+		git_oid_cpy(&file->cache_data.oid, git_object_id((git_object *)blob));
+	else
+		memcpy(&file->cache_data.st, &st, sizeof(st));
 
 finish:
 	/* push file onto vector if we found one*/

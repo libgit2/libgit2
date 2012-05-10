@@ -185,9 +185,6 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 
 	p_close(fd);
 
-	if (mtime != NULL)
-		*mtime = st.st_mtime;
-
 	if (updated != NULL)
 		*updated = 1;
 
