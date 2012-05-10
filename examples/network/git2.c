@@ -30,8 +30,11 @@ int run_command(git_cb fn, int argc, char **argv)
 
 	// Run the command. If something goes wrong, print the error message to stderr
 	error = fn(repo, argc, argv);
-	if (error < GIT_SUCCESS)
-		fprintf(stderr, "Bad news:\n %s\n", git_error_last()->message);
+	if (error < GIT_SUCCESS) {
+		if (giterr_last() == NULL)
+			fprintf(stderr, "Error without message");
+		else
+			fprintf(stderr, "Bad news:\n %s\n", giterr_last()->message);
 
 	if(repo)
 		git_repository_free(repo);
