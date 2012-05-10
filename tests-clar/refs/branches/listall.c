@@ -30,17 +30,17 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 {
 	cl_git_pass(git_branch_list(&branch_list, repo, flags));
 
-	cl_assert(branch_list.count == expected_count);
+	cl_assert_equal_i(branch_list.count, expected_count);
 }
 
 void test_refs_branches_listall__retrieve_all_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 6 + 1);
+	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 8);
 }
 
 void test_refs_branches_listall__retrieve_remote_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_REMOTE, 1);
+	assert_retrieval(GIT_BRANCH_REMOTE, 2);
 }
 
 void test_refs_branches_listall__retrieve_local_branches(void)

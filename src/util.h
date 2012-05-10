@@ -196,4 +196,11 @@ GIT_INLINE(size_t) git__size_t_powerof2(size_t v)
 	return git__size_t_bitmask(v) + 1;
 }
 
+GIT_INLINE(int) git__time_cmp(const git_time *a, const git_time *b)
+{
+   /* Adjust for time zones. Times are in seconds, offsets are in minutes. */
+   git_time_t adjusted_a = a->time + ((b->offset - a->offset) * 60);
+   return adjusted_a - b->time;
+}
+
 #endif /* INCLUDE_util_h__ */
