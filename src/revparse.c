@@ -9,18 +9,9 @@
 
 #include "common.h"
 #include "buffer.h"
+#include "date.h"
 
-#include "git2/revparse.h"
-#include "git2/object.h"
-#include "git2/oid.h"
-#include "git2/refs.h"
-#include "git2/tag.h"
-#include "git2/commit.h"
-#include "git2/reflog.h"
-#include "git2/refs.h"
-#include "git2/repository.h"
-#include "git2/config.h"
-#include "git2/revwalk.h"
+#include "git2.h"
 
 GIT_BEGIN_DECL
 
@@ -116,6 +107,36 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 }
 
 
+static int all_chars_are_digits(const char *str, size_t len)
+{
+   size_t i=0;
+   for (i=0; i<len; i++) {
+      if (str[i] < '0' || str[i] > '9') return 0;
+   }
+   return 1;
+}
+
+static void normalize_maybe_empty_refname(git_buf *buf, git_repository *repo, const char *refspec, size_t refspeclen)
+{
+   git_reference *ref;
+
+   if (!refspeclen) {
+      /* Empty refspec means current branch (target of HEAD) */
+      git_reference_lookup(&ref, repo, "HEAD");
+      git_buf_puts(buf, git_reference_target(ref));
+      git_reference_free(ref);
+   } else if (strstr(refspec, "HEAD")) {
+      /* Explicit head */
+      git_buf_puts(buf, refspec);
+   }else {
+      if (git__prefixcmp(refspec, "refs/heads/") != 0) {
+         git_buf_printf(buf, "refs/heads/%s", refspec);
+      } else {
+         git_buf_puts(buf, refspec);
+      }
+   }
+}
+
 static int walk_ref_history(git_object **out, git_repository *repo, const char *refspec, const char *reflogspec)
 {
    git_reference *ref;
@@ -125,6 +146,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
    const git_reflog_entry *entry;
    git_buf buf = GIT_BUF_INIT;
    size_t refspeclen = strlen(refspec);
+   size_t reflogspeclen = strlen(reflogspec);
 
    if (git__prefixcmp(reflogspec, "@{") != 0 ||
        git__suffixcmp(reflogspec, "}") != 0) {
@@ -153,26 +175,16 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
             n--;
             if (!n) {
                char *branchname = strrchr(msg, ' ') + 1;
-               git_buf_printf(&buf, "refs/heads/%s", branchname);
-               retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
+               retcode = revparse_lookup_object(out, repo, branchname);
                break;
             }
          }
       }
    } else {
-      if (!refspeclen) {
-         /* Empty refspec means current branch */
-         /* Get the target of HEAD */
-         git_reference_lookup(&ref, repo, "HEAD");
-         git_buf_puts(&buf, git_reference_target(ref));
-         git_reference_free(ref);
-      } else {
-         if (git__prefixcmp(refspec, "refs/heads/") != 0) {
-            git_buf_printf(&buf, "refs/heads/%s", refspec);
-         } else {
-            git_buf_puts(&buf, refspec);
-         }
-      }
+      git_buf datebuf = GIT_BUF_INIT;
+      git_buf_put(&datebuf, reflogspec+2, reflogspeclen-3);
+      int date_error = 0;
+      time_t timestamp = approxidate_careful(git_buf_cstr(&datebuf), &date_error);
 
       /* @{u} or @{upstream} -> upstream branch, for a tracking branch. This is stored in the config. */
       if (!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}")) {
@@ -200,24 +212,72 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
       }
 
       /* @{N} -> Nth prior value for the ref (from reflog) */
-      else if (!git__strtol32(&n, reflogspec+2, NULL, 0)) {
+      else if (all_chars_are_digits(reflogspec+2, reflogspeclen-3) &&
+               !git__strtol32(&n, reflogspec+2, NULL, 0) &&
+               n <= 100000000) { /* Allow integer time */
+         normalize_maybe_empty_refname(&buf, repo, refspec, refspeclen);
+
          if (n == 0) {
             retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
          } else if (!git_reference_lookup(&ref, repo, git_buf_cstr(&buf))) {
             if (!git_reflog_read(&reflog, ref)) {
-               const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, n);
-               const git_oid *oid = git_reflog_entry_oidold(entry);
-               retcode = git_object_lookup(out, repo, oid, GIT_OBJ_ANY);
+               int numentries = git_reflog_entrycount(reflog);
+               if (numentries < n) {
+                  giterr_set(GITERR_REFERENCE, "Reflog for '%s' has only %d entries, asked for %d",
+                             git_buf_cstr(&buf), numentries, n);
+                  retcode = GIT_ERROR;
+               } else {
+                  const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, n);
+                  const git_oid *oid = git_reflog_entry_oidold(entry);
+                  retcode = git_object_lookup(out, repo, oid, GIT_OBJ_ANY);
+               }
             }
             git_reference_free(ref);
          }
       }
 
-      /* @{Anything else} -> try to parse the expression into a date, and get the value of the ref as it
-         was then. */
-      else {
-         /* TODO */
+      else if (!date_error) {
+         /* Ref as it was on a certain date */
+         normalize_maybe_empty_refname(&buf, repo, refspec, refspeclen);
+
+         if (!git_reference_lookup(&ref, repo, git_buf_cstr(&buf))) {
+            git_reflog *reflog;
+            if (!git_reflog_read(&reflog, ref)) {
+               /* Keep walking until we find an entry older than the given date */
+               int numentries = git_reflog_entrycount(reflog);
+               int i;
+
+               /* TODO: clunky. Factor "now" into a utility */
+               git_signature *sig;
+               git_signature_now(&sig, "blah", "blah");
+               git_time as_of = sig->when;
+               git_signature_free(sig);
+
+               as_of.time = (timestamp > 0)
+                  ? timestamp
+                  : sig->when.time + timestamp;
+
+               for (i=numentries-1; i>0; i--) {
+                  const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, i);
+                  git_time commit_time = git_reflog_entry_committer(entry)->when;
+                  if (git__time_cmp(&commit_time, &as_of) <= 0 ) {
+                     retcode = git_object_lookup(out, repo, git_reflog_entry_oidnew(entry), GIT_OBJ_ANY);
+                     break;
+                  }
+               }
+
+               if (!i) {
+                  /* Didn't find a match. Use the oldest revision in the reflog. */
+                  const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, 0);
+                  retcode = git_object_lookup(out, repo, git_reflog_entry_oidnew(entry), GIT_OBJ_ANY);
+               }
+            }
+
+            git_reference_free(ref);
+         }
       }
+
+      git_buf_free(&datebuf);
    }
 
    if (reflog) git_reflog_free(reflog);
@@ -366,6 +426,9 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
 
             git_buf_free(&buf);
             git_revwalk_free(walk);
+         }
+         if (retcode < 0) {
+            giterr_set(GITERR_REFERENCE, "Couldn't find a match for %s", movement);
          }
          return retcode;
       }
