@@ -169,32 +169,34 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
          giterr_set(GITERR_INVALID, "Invalid reflogspec %s", reflogspec);
          return GIT_ERROR;
       }
-      git_reference_lookup(&ref, repo, "HEAD");
-      git_reflog_read(&reflog, ref);
-      git_reference_free(ref);
 
-      regex_error = regcomp(&regex, "checkout: moving from (.*) to .*", REG_EXTENDED);
-      if (regex_error != 0) {
-         giterr_set_regex(&regex, regex_error);
-      } else {
-         regmatch_t regexmatches[2];
+      if (!git_reference_lookup(&ref, repo, "HEAD")) {
+         if (!git_reflog_read(&reflog, ref)) {
+            regex_error = regcomp(&regex, "checkout: moving from (.*) to .*", REG_EXTENDED);
+            if (regex_error != 0) {
+               giterr_set_regex(&regex, regex_error);
+            } else {
+               regmatch_t regexmatches[2];
 
-         refloglen = git_reflog_entrycount(reflog);
-         for (i=refloglen-1; i >= 0; i--) {
-            const char *msg;
-            entry = git_reflog_entry_byindex(reflog, i);
+               refloglen = git_reflog_entrycount(reflog);
+               for (i=refloglen-1; i >= 0; i--) {
+                  const char *msg;
+                  entry = git_reflog_entry_byindex(reflog, i);
 
-            msg = git_reflog_entry_msg(entry);
-            if (!regexec(&regex, msg, 2, regexmatches, 0)) {
-               n--;
-               if (!n) {
-                  git_buf_put(&buf, msg+regexmatches[1].rm_so, regexmatches[1].rm_eo - regexmatches[1].rm_so);
-                  retcode = revparse_lookup_object(out, repo, git_buf_cstr(&buf));
-                  break;
+                  msg = git_reflog_entry_msg(entry);
+                  if (!regexec(&regex, msg, 2, regexmatches, 0)) {
+                     n--;
+                     if (!n) {
+                        git_buf_put(&buf, msg+regexmatches[1].rm_so, regexmatches[1].rm_eo - regexmatches[1].rm_so);
+                        retcode = revparse_lookup_object(out, repo, git_buf_cstr(&buf));
+                        break;
+                     }
+                  }
                }
+               regfree(&regex);
             }
          }
-         regfree(&regex);
+         git_reference_free(ref);
       }
    } else {
       git_buf datebuf = GIT_BUF_INIT;
