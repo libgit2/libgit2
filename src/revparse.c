@@ -56,9 +56,9 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 
    /* "git describe" output; snip everything before/including "-g" */
    substr = strstr(spec, "-g");
-   if (substr) {
-      spec = substr + 2;
-      speclen = strlen(spec);
+   if (substr &&
+       !revparse_lookup_object(out, repo, substr+2)) {
+      return 0;
    }
 
    /* SHA or prefix */
