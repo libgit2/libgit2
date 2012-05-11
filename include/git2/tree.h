@@ -343,9 +343,9 @@ typedef int (*git_tree_diff_cb)(const git_tree_diff_data *ptr, void *data);
  * @param data data to give to the callback
  * @return GIT_SUCCESS or an error code
  */
-int git_tree_diff(git_tree *old, git_tree *newer, git_tree_diff_cb cb, void *data);
+GIT_EXTERN(int) git_tree_diff(git_tree *old, git_tree *newer, git_tree_diff_cb cb, void *data);
 
-int git_tree_diff_index_recursive(git_tree *tree, git_index *index, git_tree_diff_cb cb, void *data);
+GIT_EXTERN(int) git_tree_diff_index_recursive(git_tree *tree, git_index *index, git_tree_diff_cb cb, void *data);
 
 /** @} */
 

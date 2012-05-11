@@ -183,7 +183,7 @@ typedef struct git_oid_shorten git_oid_shorten;
  *		be unique.
  *	@return a `git_oid_shorten` instance, NULL if OOM
  */
-git_oid_shorten *git_oid_shorten_new(size_t min_length);
+GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
 
 /**
  * Add a new OID to set of shortened OIDs and calculate
@@ -209,14 +209,14 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length);
  *		added so far to the set; or an error code (<0) if an
  *		error occurs.
  */
-int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
+GIT_EXTERN(int) git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
 
 /**
  * Free an OID shortener instance
  *
  * @param os a `git_oid_shorten` instance
  */
-void git_oid_shorten_free(git_oid_shorten *os);
+GIT_EXTERN(void) git_oid_shorten_free(git_oid_shorten *os);
 
 /** @} */
 GIT_END_DECL
