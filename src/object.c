@@ -109,8 +109,8 @@ int git_object_lookup_prefix(
 		if (object != NULL) {
 			if (type != GIT_OBJ_ANY && type != object->type) {
 				git_object_free(object);
-				giterr_set(GITERR_INVALID, "The given type does not match the type in ODB");
-				return -1;
+				giterr_set(GITERR_ODB, "The given type does not match the type in ODB");
+				return GIT_ENOTFOUND;
 			}
 
 			*object_out = object;
