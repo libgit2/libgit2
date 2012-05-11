@@ -713,31 +713,28 @@ static int repo_write_template(
 	const char *git_dir, const char *file, mode_t mode, const char *content)
 {
 	git_buf path = GIT_BUF_INIT;
-	int fd;
+	int fd, error = 0;
 
 	if (git_buf_joinpath(&path, git_dir, file) < 0)
 		return -1;
 
 	fd = p_open(git_buf_cstr(&path), O_WRONLY | O_CREAT | O_EXCL, mode);
-	if (fd < 0) {
-		git_buf_free(&path);
-		if (errno == EEXIST)
-			return 0;
-		goto fail;
+
+	if (fd >= 0) {
+		error = p_write(fd, content, strlen(content));
+
+		p_close(fd);
 	}
+	else if (errno != EEXIST)
+		error = fd;
 
-	if (p_write(fd, content, strlen(content)) < 0)
-		goto fail;
-
-	p_close(fd);
-
-	return 0;
-
-fail:
 	git_buf_free(&path);
-	giterr_set(GITERR_OS,
-		"Failed to initialize repository with template '%s'", file);
-	return -1;
+
+	if (error)
+		giterr_set(GITERR_OS,
+			"Failed to initialize repository with template '%s'", file);
+
+	return error;
 }
 
 static int repo_init_structure(const char *git_dir, int is_bare)
