@@ -35,6 +35,7 @@ int run_command(git_cb fn, int argc, char **argv)
 			fprintf(stderr, "Error without message");
 		else
 			fprintf(stderr, "Bad news:\n %s\n", giterr_last()->message);
+	}
 
 	if(repo)
 		git_repository_free(repo);
