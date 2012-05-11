@@ -35,7 +35,7 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 
 void test_refs_branches_listall__retrieve_all_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 8);
+	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 9);
 }
 
 void test_refs_branches_listall__retrieve_remote_branches(void)
@@ -45,5 +45,5 @@ void test_refs_branches_listall__retrieve_remote_branches(void)
 
 void test_refs_branches_listall__retrieve_local_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL, 6);
+	assert_retrieval(GIT_BRANCH_LOCAL, 7);
 }

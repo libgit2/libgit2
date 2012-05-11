@@ -13,7 +13,7 @@ static void test_object(const char *spec, const char *expected_oid)
    char objstr[64] = {0};
 
    cl_git_pass(git_revparse_single(&g_obj, g_repo, spec));
-   git_oid_to_string(objstr, 64, git_object_id(g_obj));
+   git_oid_fmt(objstr, git_object_id(g_obj));
    cl_assert_equal_s(objstr, expected_oid);
 
    git_object_free(g_obj);
@@ -131,7 +131,7 @@ void test_refs_revparse__revwalk(void)
    cl_git_fail(git_revparse_single(&g_obj, g_repo, "master^{/not found in any commit}"));
    cl_git_fail(git_revparse_single(&g_obj, g_repo, "master^{/merge}"));
    cl_git_fail(git_revparse_single(&g_obj, g_repo, "master^{/((}"));
-   cl_assert(strstr(git_lasterror(), "parentheses not balanced") != NULL);
+   cl_assert(strstr(giterr_last()->message, "parentheses not balanced") != NULL);
 
    test_object("master^{/anoth}", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
    test_object("master^{/Merge}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
