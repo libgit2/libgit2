@@ -170,7 +170,7 @@ int git_branch_list(git_strarray *branch_names, git_repository *repo, unsigned i
 	filter.branchlist = &branchlist;
 	filter.branch_type = list_flags;
 
-	error = git_reference_foreach(repo, GIT_REF_OID|GIT_REF_PACKED, &branch_list_cb, (void *)&filter);
+	error = git_reference_foreach(repo, GIT_REF_LISTALL, &branch_list_cb, (void *)&filter);
 	if (error < 0) {
 		git_vector_free(&branchlist);
 		return -1;
