@@ -20,25 +20,12 @@ GIT_BEGIN_DECL
 typedef enum {
 	GIT_SUCCESS = 0,
 	GIT_ERROR = -1,
-
-	/** Input does not exist in the scope searched. */
 	GIT_ENOTFOUND = -3,
-
-	/** A reference with this name already exists */
 	GIT_EEXISTS = -23,
-
-	/** The given integer literal is too large to be parsed */
 	GIT_EOVERFLOW = -24,
-
-	/** The given short oid is ambiguous */
 	GIT_EAMBIGUOUS = -29,
-
-	/** Skip and passthrough the given ODB backend */
 	GIT_EPASSTHROUGH = -30,
-
-	/** The buffer is too short to satisfy the request */
 	GIT_ESHORTBUFFER = -32,
-
 	GIT_EREVWALKOVER = -33,
 } git_error_t;
 
