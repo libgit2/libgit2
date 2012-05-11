@@ -564,7 +564,10 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
          if (current_state != next_state && next_state != REVPARSE_STATE_DONE) {
             /* Leaving INIT state, find the object specified, in case that state needs it */
-            revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer));
+            if (revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer)) < 0) {
+               retcode = GIT_ERROR;
+               next_state = REVPARSE_STATE_DONE;
+            }
          }
          break;
 

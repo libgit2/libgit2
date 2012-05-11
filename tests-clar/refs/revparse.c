@@ -36,6 +36,8 @@ void test_refs_revparse__cleanup(void)
 void test_refs_revparse__nonexistant_object(void)
 {
    cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist^1"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist~2"));
 }
 
 void test_refs_revparse__shas(void)
