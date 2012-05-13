@@ -71,6 +71,9 @@ GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
 
 GIT_INLINE(void) git_iterator_free(git_iterator *iter)
 {
+	if (iter == NULL)
+		return;
+
 	iter->free(iter);
 	git__free(iter);
 }
