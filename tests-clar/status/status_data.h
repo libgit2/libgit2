@@ -1,12 +1,4 @@
-
-struct status_entry_counts {
-	size_t wrong_status_flags_count;
-	size_t wrong_sorted_path;
-	size_t entry_count;
-	const unsigned int* expected_statuses;
-	const char** expected_paths;
-	size_t expected_entry_count;
-};
+#include "status_helpers.h"
 
 /* entries for a plain copy of tests/resources/status */
 

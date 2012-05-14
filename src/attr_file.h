@@ -48,10 +48,20 @@ typedef struct {
 } git_attr_assignment;
 
 typedef struct {
+	git_time_t seconds;
+	git_off_t  size;
+	unsigned int ino;
+} git_attr_file_stat_sig;
+
+typedef struct {
 	char *key;				/* cache "source#path" this was loaded from */
 	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
 	git_pool *pool;
 	bool pool_is_allocated;
+	union {
+		git_oid oid;
+		git_attr_file_stat_sig st;
+	} cache_data;
 } git_attr_file;
 
 typedef struct {
