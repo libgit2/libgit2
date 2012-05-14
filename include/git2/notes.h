@@ -102,6 +102,27 @@ GIT_EXTERN(void) git_note_free(git_note *note);
  */
 GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
 
+/**
+ * Loop over all the notes within a specified namespace
+ * and issue a callback for each one.
+ *
+ * @param repo Repository where to find the notes.
+ *
+ * @param notes_ref OID reference to read from (optional); defaults to "refs/notes/commits".
+ *
+ * @param note_cb Callback to invoke per found annotation.
+ *
+ * @param payload Extra parameter to callback function.
+ *
+ * @return GIT_SUCCESS or an error code.
+ */
+GIT_EXTERN(int) git_note_foreach(
+		git_repository *repo,
+		const char *notes_ref,
+		int (*note_cb)(const git_oid *note_oid, const git_oid *annotated_object_oid, void *payload),
+		void *payload
+);
+
 /** @} */
 GIT_END_DECL
 #endif
