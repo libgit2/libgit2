@@ -557,9 +557,9 @@ int git_odb_read_prefix(
 {
 	unsigned int i;
 	int error = GIT_ENOTFOUND;
-	git_oid full_oid;
+	git_oid found_full_oid = {{0}};
 	git_rawobj raw;
-	int found = 0;
+	bool found = false;
 
 	assert(out && db);
 
@@ -575,25 +575,30 @@ int git_odb_read_prefix(
 			return 0;
 	}
 
-	for (i = 0; i < db->backends.length && found < 2; ++i) {
+	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
 		if (b->read != NULL) {
+			git_oid full_oid;
 			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
-			if (!error)
-				found++;
-			else if (error != GIT_ENOTFOUND && error != GIT_EPASSTHROUGH)
+			if (error == GIT_ENOTFOUND || error == GIT_EPASSTHROUGH)
+				continue;
+
+			if (error)
 				return error;
+
+			if (found && git_oid_cmp(&full_oid, &found_full_oid))
+				return git_odb__error_ambiguous("multiple matches for prefix");
+			found_full_oid = full_oid;
+			found = true;
 		}
 	}
 
-	if (found == 0)
+	if (!found)
 		return git_odb__error_notfound("no match for prefix", short_id);
-	if (found > 1)
-		return git_odb__error_ambiguous("multiple matches for prefix");
 
-	*out = git_cache_try_store(&db->cache, new_odb_object(&full_oid, &raw));
+	*out = git_cache_try_store(&db->cache, new_odb_object(&found_full_oid, &raw));
 	return 0;
 }
 
