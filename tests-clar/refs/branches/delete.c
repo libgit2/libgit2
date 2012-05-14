@@ -74,3 +74,18 @@ void test_refs_branches_delete__can_delete_a_remote_branch(void)
 {
 	cl_git_pass(git_branch_delete(repo, "nulltoken/master", GIT_BRANCH_REMOTE));
 }
+
+static void assert_non_exisitng_branch_removal(const char *branch_name, git_branch_type branch_type)
+{
+	int error; 
+	error = git_branch_delete(repo, branch_name, branch_type);
+
+	cl_git_fail(error);
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
+}
+
+void test_refs_branches_delete__deleting_a_non_existing_branch_returns_ENOTFOUND(void)
+{
+	assert_non_exisitng_branch_removal("i-do-not-locally-exist", GIT_BRANCH_LOCAL);
+	assert_non_exisitng_branch_removal("neither/remotely", GIT_BRANCH_REMOTE);
+}
