@@ -77,7 +77,7 @@ GIT_BEGIN_DECL
 #endif
 
 /**
- * The maximum length of a git valid git path.
+ * The maximum length of a valid git path.
  */
 #define GIT_PATH_MAX 4096
 
