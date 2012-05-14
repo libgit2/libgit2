@@ -7,45 +7,6 @@
 #include "path.h"
 
 /**
- * Auxiliary methods
- */
-static int
-cb_status__normal( const char *path, unsigned int status_flags, void *payload)
-{
-	struct status_entry_counts *counts = payload;
-
-	if (counts->entry_count >= counts->expected_entry_count) {
-		counts->wrong_status_flags_count++;
-		goto exit;
-	}
-
-	if (strcmp(path, counts->expected_paths[counts->entry_count])) {
-		counts->wrong_sorted_path++;
-		goto exit;
-	}
-
-	if (status_flags != counts->expected_statuses[counts->entry_count])
-		counts->wrong_status_flags_count++;
-
-exit:
-	counts->entry_count++;
-	return 0;
-}
-
-static int
-cb_status__count(const char *p, unsigned int s, void *payload)
-{
-	volatile int *count = (int *)payload;
-
-	GIT_UNUSED(p);
-	GIT_UNUSED(s);
-
-	(*count)++;
-
-	return 0;
-}
-
-/**
  * Initializer
  *
  * Not all of the tests in this file use the same fixtures, so we allow each
@@ -72,10 +33,10 @@ void test_status_worktree__cleanup(void)
 /* this test is equivalent to t18-status.c:statuscb0 */
 void test_status_worktree__whole_repository(void)
 {
-	struct status_entry_counts counts;
+	status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
 
-	memset(&counts, 0x0, sizeof(struct status_entry_counts));
+	memset(&counts, 0x0, sizeof(status_entry_counts));
 	counts.expected_entry_count = entry_count0;
 	counts.expected_paths = entry_paths0;
 	counts.expected_statuses = entry_statuses0;
@@ -120,7 +81,7 @@ static int remove_file_cb(void *data, git_buf *file)
 /* this test is equivalent to t18-status.c:statuscb2 */
 void test_status_worktree__purged_worktree(void)
 {
-	struct status_entry_counts counts;
+	status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
 	git_buf workdir = GIT_BUF_INIT;
 
@@ -130,7 +91,7 @@ void test_status_worktree__purged_worktree(void)
 	git_buf_free(&workdir);
 
 	/* now get status */
-	memset(&counts, 0x0, sizeof(struct status_entry_counts));
+	memset(&counts, 0x0, sizeof(status_entry_counts));
 	counts.expected_entry_count = entry_count2;
 	counts.expected_paths = entry_paths2;
 	counts.expected_statuses = entry_statuses2;
@@ -147,7 +108,7 @@ void test_status_worktree__purged_worktree(void)
 /* this test is similar to t18-status.c:statuscb3 */
 void test_status_worktree__swap_subdir_and_file(void)
 {
-	struct status_entry_counts counts;
+	status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
 	git_status_options opts;
 
@@ -161,7 +122,7 @@ void test_status_worktree__swap_subdir_and_file(void)
 	cl_git_mkfile("status/README.md", "dummy");
 
 	/* now get status */
-	memset(&counts, 0x0, sizeof(struct status_entry_counts));
+	memset(&counts, 0x0, sizeof(status_entry_counts));
 	counts.expected_entry_count = entry_count3;
 	counts.expected_paths = entry_paths3;
 	counts.expected_statuses = entry_statuses3;
@@ -182,7 +143,7 @@ void test_status_worktree__swap_subdir_and_file(void)
 
 void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 {
-	struct status_entry_counts counts;
+	status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
 	git_status_options opts;
 
@@ -196,7 +157,7 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 	cl_git_mkfile("status/zzz_new_file", "dummy");
 
 	/* now get status */
-	memset(&counts, 0x0, sizeof(struct status_entry_counts));
+	memset(&counts, 0x0, sizeof(status_entry_counts));
 	counts.expected_entry_count = entry_count4;
 	counts.expected_paths = entry_paths4;
 	counts.expected_statuses = entry_statuses4;
@@ -286,18 +247,18 @@ void test_status_worktree__ignores(void)
 
 	for (i = 0; i < (int)entry_count0; i++) {
 		cl_git_pass(
-			git_status_should_ignore(repo, entry_paths0[i], &ignored)
+			git_status_should_ignore(&ignored, repo, entry_paths0[i])
 		);
 		cl_assert(ignored == (entry_statuses0[i] == GIT_STATUS_IGNORED));
 	}
 
 	cl_git_pass(
-		git_status_should_ignore(repo, "nonexistent_file", &ignored)
+		git_status_should_ignore(&ignored, repo, "nonexistent_file")
 	);
 	cl_assert(!ignored);
 
 	cl_git_pass(
-		git_status_should_ignore(repo, "ignored_nonexistent_file", &ignored)
+		git_status_should_ignore(&ignored, repo, "ignored_nonexistent_file")
 	);
 	cl_assert(ignored);
 }
@@ -400,24 +361,6 @@ void test_status_worktree__cannot_retrieve_the_status_of_a_bare_repository(void)
 	cl_assert(error != GIT_ENOTFOUND);
 
 	git_repository_free(repo);
-}
-
-typedef struct {
-	int count;
-	unsigned int status;
-} status_entry_single;
-
-static int
-cb_status__single(const char *p, unsigned int s, void *payload)
-{
-	status_entry_single *data = (status_entry_single *)payload;
-
-	GIT_UNUSED(p);
-
-	data->count++;
-	data->status = s;
-
-	return 0;
 }
 
 void test_status_worktree__first_commit_in_progress(void)
