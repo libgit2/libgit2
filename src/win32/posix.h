@@ -8,7 +8,7 @@
 #define INCLUDE_posix__w32_h__
 
 #include "common.h"
-#include "fnmatch.h"
+#include "compat/fnmatch.h"
 #include "utf-conv.h"
 
 GIT_INLINE(int) p_link(const char *old, const char *new)
