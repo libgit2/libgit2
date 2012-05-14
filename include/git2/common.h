@@ -32,7 +32,11 @@
 			 __attribute__((visibility("default"))) \
 			 type
 #elif defined(_MSC_VER)
-# define GIT_EXTERN(type) __declspec(dllexport) type
+# ifdef git2_EXPORTS /* defined by cmake */ 
+#   define GIT_EXTERN(type) __declspec(dllexport) type
+# else
+#   define GIT_EXTERN(type) __declspec(dllimport) type
+# endif
 #else
 # define GIT_EXTERN(type) extern type
 #endif
