@@ -60,3 +60,13 @@ void test_refs_branches_move__can_not_move_a_branch_through_its_canonical_name(v
 {
 	cl_git_fail(git_branch_move(repo, "refs/heads/br2", NEW_BRANCH_NAME, 1));
 }
+
+void test_refs_branches_move__moving_a_non_exisiting_branch_returns_ENOTFOUND(void)
+{
+	int error;
+
+	error = git_branch_move(repo, "where/am/I", NEW_BRANCH_NAME, 0);
+	cl_git_fail(error);
+
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
+}
