@@ -292,6 +292,31 @@ int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_st
 
 }
 
+static int no_sideband(git_indexer_stream *idx, gitno_buffer *buf, git_off_t *bytes, git_indexer_stats *stats)
+{
+	int recvd;
+
+	do {
+		if (git_indexer_stream_add(idx, buf->data, buf->offset, stats) < 0)
+			return -1;
+
+		gitno_consume_n(buf, buf->offset);
+
+		if ((recvd = gitno_recv(buf)) < 0)
+			return -1;
+
+		*bytes += recvd;
+	} while(recvd > 0 && stats->data_received);
+
+	if (!stats->data_received)
+		giterr_set(GITERR_NET, "Early EOF while downloading packfile");
+
+	if (git_indexer_stream_finalize(idx, stats))
+		return -1;
+
+	return 0;
+}
+
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
 int git_fetch__download_pack(
 	git_transport *t,
@@ -299,7 +324,6 @@ int git_fetch__download_pack(
 	git_off_t *bytes,
 	git_indexer_stats *stats)
 {
-	int recvd;
 	git_buf path = GIT_BUF_INIT;
 	gitno_buffer *buf = &t->buffer;
 	git_indexer_stream *idx = NULL;
@@ -314,23 +338,49 @@ int git_fetch__download_pack(
 	memset(stats, 0, sizeof(git_indexer_stats));
 	*bytes = 0;
 
+	/*
+	 * If the remote doesn't support the side-band, we can feed
+	 * the data directly to the indexer. Otherwise, we need to
+	 * check which one belongs there.
+	 */
+	if (!t->caps.side_band && !t->caps.side_band_64k) {
+		if (no_sideband(idx, buf, bytes, stats) < 0)
+			goto on_error;
+
+		git_indexer_stream_free(idx);
+		return 0;
+	}
+
 	do {
-		if (git_indexer_stream_add(idx, buf->data, buf->offset, stats) < 0)
+		git_pkt *pkt;
+		if (recv_pkt(&pkt, buf) < 0)
 			goto on_error;
 
-		gitno_consume_n(buf, buf->offset);
+		if (pkt->type == GIT_PKT_PROGRESS) {
+			if (t->progress_cb) {
+				git_pkt_progress *p = (git_pkt_progress *) pkt;
+				t->progress_cb(p->data, p->len, t->cb_data);
+			}
+			git__free(pkt);
+		} else if (pkt->type == GIT_PKT_DATA) {
+			git_pkt_data *p = (git_pkt_data *) pkt;
+			*bytes += p->len;
+			if (git_indexer_stream_add(idx, p->data, p->len, stats) < 0)
+				goto on_error;
 
-		if ((recvd = gitno_recv(buf)) < 0)
-			goto on_error;
-
-		*bytes += recvd;
-	} while(recvd > 0 && !stats->data_received);
+			git__free(pkt);
+		} else if (pkt->type == GIT_PKT_FLUSH) {
+			/* A flush indicates the end of the packfile */
+			git__free(pkt);
+			break;
+		}
+	} while (!stats->data_received);
 
 	if (!stats->data_received)
 		giterr_set(GITERR_NET, "Early EOF while downloading packfile");
 
 	if (git_indexer_stream_finalize(idx, stats))
-		goto on_error;
+		return -1;
 
 	git_indexer_stream_free(idx);
 	return 0;

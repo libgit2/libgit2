@@ -21,11 +21,15 @@
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
 #define GIT_CAP_MULTI_ACK "multi_ack"
+#define GIT_CAP_SIDE_BAND "side-band"
+#define GIT_CAP_SIDE_BAND_64K "side-band-64k"
 
 typedef struct git_transport_caps {
 	int common:1,
 		ofs_delta:1,
-		multi_ack: 1;
+		multi_ack: 1,
+		side_band:1,
+		side_band_64k:1;
 } git_transport_caps;
 
 #ifdef GIT_SSL
@@ -84,6 +88,7 @@ struct git_transport {
 	gitno_buffer buffer;
 	GIT_SOCKET socket;
 	git_transport_caps caps;
+	void *cb_data;
 	/**
 	 * Connect and store the remote heads
 	 */
@@ -113,6 +118,11 @@ struct git_transport {
 	 * Free the associated resources
 	 */
 	void (*free)(struct git_transport *transport);
+	/**
+	 * Callbacks for the progress and error output
+	 */
+	void (*progress_cb)(const char *str, int len, void *data);
+	void (*error_cb)(const char *str, int len, void *data);
 };
 
 
