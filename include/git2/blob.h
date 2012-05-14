@@ -103,6 +103,18 @@ GIT_EXTERN(size_t) git_blob_rawsize(git_blob *blob);
  */
 GIT_EXTERN(int) git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path);
 
+/**
+ * Read a file from the filesystem and write its content
+ * to the Object Database as a loose blob
+ *
+ * @param oid return the id of the written blob
+ * @param repo repository where the blob will be written.
+ *	this repository can be bare or not
+ * @param path file from which the blob will be created
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *oid, git_repository *repo, const char *path);
+
 
 /**
  * Write an in-memory buffer to the ODB as a blob

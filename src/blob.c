@@ -148,30 +148,20 @@ static int write_symlink(
 	return error;
 }
 
-int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path)
+static int blob_create_internal(git_oid *oid, git_repository *repo, const char *path)
 {
 	int error;
-	git_buf full_path = GIT_BUF_INIT;
-	git_off_t size;
 	struct stat st;
-	const char *workdir;
 	git_odb *odb = NULL;
+	git_off_t size;
 
-	workdir = git_repository_workdir(repo);
-	assert(workdir); /* error to call this on bare repo */
-
-	if ((error = git_buf_joinpath(&full_path, workdir, path)) < 0 ||
-		(error = git_path_lstat(full_path.ptr, &st)) < 0 ||
-		(error = git_repository_odb__weakptr(&odb, repo)) < 0)
-	{
-		git_buf_free(&full_path);
+	if ((error = git_path_lstat(path, &st)) < 0 || (error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		return error;
-	}
 
 	size = st.st_size;
 
 	if (S_ISLNK(st.st_mode)) {
-		error = write_symlink(oid, odb, full_path.ptr, (size_t)size);
+		error = write_symlink(oid, odb, path, (size_t)size);
 	} else {
 		git_vector write_filters = GIT_VECTOR_INIT;
 		int filter_count;
@@ -186,10 +176,10 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		} else if (filter_count == 0) {
 			/* No filters need to be applied to the document: we can stream
 			 * directly from disk */
-			error = write_file_stream(oid, odb, full_path.ptr, size);
+			error = write_file_stream(oid, odb, path, size);
 		} else {
 			/* We need to apply one or more filters */
-			error = write_file_filtered(oid, odb, full_path.ptr, &write_filters);
+			error = write_file_filtered(oid, odb, path, &write_filters);
 		}
 
 		git_filters_free(&write_filters);
@@ -209,7 +199,41 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		 */
 	}
 
+	return error;
+}
+
+int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path)
+{
+	git_buf full_path = GIT_BUF_INIT;
+	const char *workdir;
+	int error;
+
+	workdir = git_repository_workdir(repo);
+	assert(workdir); /* error to call this on bare repo */
+
+	if (git_buf_joinpath(&full_path, workdir, path) < 0) {
+		git_buf_free(&full_path);
+		return -1;
+	}
+
+	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path));
+
 	git_buf_free(&full_path);
 	return error;
 }
 
+int git_blob_create_fromdisk(git_oid *oid, git_repository *repo, const char *path)
+{
+	int error;
+	git_buf full_path = GIT_BUF_INIT;
+
+	if ((error = git_path_prettify(&full_path, path, NULL)) < 0) {
+		git_buf_free(&full_path);
+		return error;
+	}
+
+	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path));
+
+	git_buf_free(&full_path);
+	return error;
+}
