@@ -72,7 +72,7 @@ static int note_list_cb(const git_oid *note_oid, const git_oid *annotated_object
 {
 	git_oid expected_note_oid, expected_target_oid;
 
-	int *count = (int *)payload;
+	unsigned int *count = (unsigned int *)payload;
 
 	cl_assert(*count < EXPECTATIONS_COUNT);
 
@@ -108,7 +108,7 @@ static int note_list_cb(const git_oid *note_oid, const git_oid *annotated_object
 void test_notes_notes__can_retrieve_a_list_of_notes_for_a_given_namespace(void)
 {
 	git_oid note_oid1, note_oid2, note_oid3, note_oid4;
-	int retrieved_notes = 0;
+	unsigned int retrieved_notes = 0;
 
 	create_note(&note_oid1, "refs/notes/i-can-see-dead-notes", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", "I decorate a65f\n");
 	create_note(&note_oid2, "refs/notes/i-can-see-dead-notes", "c47800c7266a2be04c571c04d5a6614691ea99bd", "I decorate c478\n");
@@ -122,7 +122,8 @@ void test_notes_notes__can_retrieve_a_list_of_notes_for_a_given_namespace(void)
 
 void test_notes_notes__retrieving_a_list_of_notes_for_an_unknown_namespace_returns_ENOTFOUND(void)
 {
-	int error,	retrieved_notes = 0;
+	int error;
+	unsigned int retrieved_notes = 0;
 
 	error = git_note_foreach(_repo, "refs/notes/i-am-not", note_list_cb, &retrieved_notes);
 	cl_git_fail(error);

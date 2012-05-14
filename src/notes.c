@@ -456,7 +456,6 @@ static int process_entry_path(
 	void *payload)
 {
 	int i = 0, j = 0, error = -1, len;
-	bool is_hex_only = true;
 	git_oid target_oid;
 	git_buf buf = GIT_BUF_INIT;
 
@@ -510,12 +509,10 @@ int git_note_foreach(
 	void *payload)
 {
 	int error = -1;
-	unsigned int i;
-	char *note;
 	git_oid tree_oid;
 	git_iterator *iter = NULL;
 	git_tree *tree = NULL;
-	git_index_entry *item;
+	const git_index_entry *item;
 
 	if (normalize_namespace(&notes_ref, repo) < 0)
 		return -1;
