@@ -10,6 +10,7 @@
 #include "git2.h"
 #include "refs.h"
 #include "config.h"
+#include "iterator.h"
 
 static int find_subtree(git_tree **subtree, const git_oid *root,
 			git_repository *repo, const char *target, int *fanout)
@@ -282,41 +283,54 @@ static int note_get_default_ref(const char **out, git_repository *repo)
 	return ret;
 }
 
+static int normalize_namespace(const char **notes_ref, git_repository *repo)
+{
+	if (*notes_ref)
+		return 0;
+
+	return note_get_default_ref(notes_ref, repo);
+}
+
+static int retrieve_note_tree_oid(git_oid *tree_oid_out, git_repository *repo, const char *notes_ref)
+{
+	int error = -1;
+	git_commit *commit = NULL;
+	git_oid oid;
+
+	if ((error = git_reference_name_to_oid(&oid, repo, notes_ref)) < 0)
+		goto cleanup;
+
+	if (git_commit_lookup(&commit, repo, &oid) < 0)
+		goto cleanup;
+
+	git_oid_cpy(tree_oid_out, git_commit_tree_oid(commit));
+
+	error = 0;
+
+cleanup:
+	git_commit_free(commit);
+	return error;
+}
+
 int git_note_read(git_note **out, git_repository *repo,
 		  const char *notes_ref, const git_oid *oid)
 {
 	int error;
 	char *target;
-	git_reference *ref;
-	git_commit *commit;
-	const git_oid *sha;
+	git_oid sha;
 
 	*out = NULL;
 
-	if (!notes_ref && note_get_default_ref(&notes_ref, repo) < 0)
+	if (normalize_namespace(&notes_ref, repo) < 0)
 		return -1;
 
-	error = git_reference_lookup(&ref, repo, notes_ref);
-	if (error < 0)
+	if ((error = retrieve_note_tree_oid(&sha, repo, notes_ref)) < 0)
 		return error;
-
-	assert(git_reference_type(ref) == GIT_REF_OID);
-
-	sha = git_reference_oid(ref);
-	error = git_commit_lookup(&commit, repo, sha);
-
-	git_reference_free(ref);
-
-	if (error < 0)
-		return error;
-
-	sha = git_commit_tree_oid(commit);
-	git_commit_free(commit);
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);
 
-	error = note_lookup(out, repo, sha, target);
+	error = note_lookup(out, repo, &sha, target);
 
 	git__free(target);
 	return error;
@@ -334,7 +348,7 @@ int git_note_create(
 	git_commit *commit = NULL;
 	git_reference *ref;
 
-	if (!notes_ref && note_get_default_ref(&notes_ref, repo) < 0)
+	if (normalize_namespace(&notes_ref, repo) < 0)
 		return -1;
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
@@ -379,8 +393,7 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	git_commit *commit;
 	git_reference *ref;
 
-
-	if (!notes_ref && note_get_default_ref(&notes_ref, repo) < 0)
+	if (normalize_namespace(&notes_ref, repo) < 0)
 		return -1;
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
@@ -434,4 +447,103 @@ void git_note_free(git_note *note)
 
 	git__free(note->message);
 	git__free(note);
+}
+
+static int process_entry_path(
+	const char* entry_path,
+	git_oid note_oid,
+	int (*note_cb)(const git_oid *note_oid, const git_oid *annotated_object_oid, void *payload),
+	void *payload)
+{
+	int i = 0, j = 0, error = -1, len;
+	bool is_hex_only = true;
+	git_oid target_oid;
+	git_buf buf = GIT_BUF_INIT;
+
+	if (git_buf_puts(&buf, entry_path) < 0)
+		goto cleanup;
+	
+	len = git_buf_len(&buf);
+
+	while (i < len) {
+		if (buf.ptr[i] == '/') {
+			i++;
+			continue;
+		}
+		
+		if (git__fromhex(buf.ptr[i]) < 0) {
+			/* This is not a note entry */
+			error = 0;
+			goto cleanup;
+		}
+
+		if (i != j)
+			buf.ptr[j] = buf.ptr[i];
+
+		i++;
+		j++;
+	}
+
+	buf.ptr[j] = '\0';
+	buf.size = j;
+
+	if (j != GIT_OID_HEXSZ) {
+		/* This is not a note entry */
+		error = 0;
+		goto cleanup;
+	}
+
+	if (git_oid_fromstr(&target_oid, buf.ptr) < 0)
+		return -1;
+
+	error = note_cb(&note_oid, &target_oid, payload);
+
+cleanup:
+	git_buf_free(&buf);
+	return error;
+}
+
+int git_note_foreach(
+	git_repository *repo,
+	const char *notes_ref,
+	int (*note_cb)(const git_oid *note_oid, const git_oid *annotated_object_oid, void *payload),
+	void *payload)
+{
+	int error = -1;
+	unsigned int i;
+	char *note;
+	git_oid tree_oid;
+	git_iterator *iter = NULL;
+	git_tree *tree = NULL;
+	git_index_entry *item;
+
+	if (normalize_namespace(&notes_ref, repo) < 0)
+		return -1;
+
+	if ((error = retrieve_note_tree_oid(&tree_oid, repo, notes_ref)) < 0)
+		goto cleanup;
+
+	if (git_tree_lookup(&tree, repo, &tree_oid) < 0)
+		goto cleanup;
+
+	if (git_iterator_for_tree(repo, tree, &iter) < 0)
+		goto cleanup;
+
+	if (git_iterator_current(iter, &item) < 0)
+		goto cleanup;
+
+	while (item) {
+		if (process_entry_path(item->path, item->oid, note_cb, payload) < 0)
+			goto cleanup;
+
+		if (git_iterator_advance(iter, &item) < 0)
+			goto cleanup;
+	}
+
+	error = 0;
+
+cleanup:
+	git_iterator_free(iter);
+	git_tree_free(tree);
+	return error;
 }
