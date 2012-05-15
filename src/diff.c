@@ -11,6 +11,25 @@
 #include "config.h"
 #include "attr_file.h"
 
+static char *diff_prefix_from_pathspec(const git_strarray *pathspec)
+{
+	git_buf prefix = GIT_BUF_INIT;
+	const char *scan;
+
+	if (git_buf_common_prefix(&prefix, pathspec) < 0)
+		return NULL;
+
+	/* diff prefix will only be leading non-wildcards */
+	for (scan = prefix.ptr; *scan && !git__iswildcard(*scan); ++scan);
+	git_buf_truncate(&prefix, scan - prefix.ptr);
+
+	if (prefix.size > 0)
+		return git_buf_detach(&prefix);
+
+	git_buf_free(&prefix);
+	return NULL;
+}
+
 static bool diff_pathspec_is_interesting(const git_strarray *pathspec)
 {
 	const char *str;
@@ -613,12 +632,15 @@ int git_diff_tree_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && old_tree && new_tree && diff);
 
-	if (git_iterator_for_tree(repo, old_tree, &a) < 0 ||
-		git_iterator_for_tree(repo, new_tree, &b) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
+		git_iterator_for_tree_range(&b, repo, new_tree, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -630,12 +652,15 @@ int git_diff_index_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && diff);
 
-	if (git_iterator_for_tree(repo, old_tree, &a) < 0 ||
-		git_iterator_for_index(repo, &b) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
+		git_iterator_for_index_range(&b, repo, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -646,12 +671,15 @@ int git_diff_workdir_to_index(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && diff);
 
-	if (git_iterator_for_index(repo, &a) < 0 ||
-		git_iterator_for_workdir(repo, &b) < 0)
+	if (git_iterator_for_index_range(&a, repo, prefix, prefix) < 0 ||
+		git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -664,12 +692,15 @@ int git_diff_workdir_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && old_tree && diff);
 
-	if (git_iterator_for_tree(repo, old_tree, &a) < 0 ||
-		git_iterator_for_workdir(repo, &b) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
+		git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }

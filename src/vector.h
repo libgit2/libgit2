@@ -26,13 +26,24 @@ void git_vector_free(git_vector *v);
 void git_vector_clear(git_vector *v);
 void git_vector_swap(git_vector *a, git_vector *b);
 
+void git_vector_sort(git_vector *v);
+
 int git_vector_search(git_vector *v, const void *entry);
 int git_vector_search2(git_vector *v, git_vector_cmp cmp, const void *key);
 
-int git_vector_bsearch(git_vector *v, const void *entry);
-int git_vector_bsearch2(git_vector *v, git_vector_cmp cmp, const void *key);
+int git_vector_bsearch3(
+	unsigned int *at_pos, git_vector *v, git_vector_cmp cmp, const void *key);
 
-void git_vector_sort(git_vector *v);
+GIT_INLINE(int) git_vector_bsearch(git_vector *v, const void *key)
+{
+	return git_vector_bsearch3(NULL, v, v->_cmp, key);
+}
+
+GIT_INLINE(int) git_vector_bsearch2(
+	git_vector *v, git_vector_cmp cmp, const void *key)
+{
+	return git_vector_bsearch3(NULL, v, cmp, key);
+}
 
 GIT_INLINE(void *) git_vector_get(git_vector *v, unsigned int position)
 {
