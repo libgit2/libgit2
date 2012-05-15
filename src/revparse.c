@@ -199,10 +199,12 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
          git_reference_free(ref);
       }
    } else {
-      git_buf datebuf = GIT_BUF_INIT;
-      git_buf_put(&datebuf, reflogspec+2, reflogspeclen-3);
       int date_error = 0;
-      time_t timestamp = approxidate_careful(git_buf_cstr(&datebuf), &date_error);
+      time_t timestamp;
+      git_buf datebuf = GIT_BUF_INIT;
+
+      git_buf_put(&datebuf, reflogspec+2, reflogspeclen-3);
+	  timestamp = approxidate_careful(git_buf_cstr(&datebuf), &date_error);
 
       /* @{u} or @{upstream} -> upstream branch, for a tracking branch. This is stored in the config. */
       if (!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}")) {
@@ -267,8 +269,10 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 
                /* TODO: clunky. Factor "now" into a utility */
                git_signature *sig;
+               git_time as_of;
+
                git_signature_now(&sig, "blah", "blah");
-               git_time as_of = sig->when;
+               as_of = sig->when;
                git_signature_free(sig);
 
                as_of.time = (timestamp > 0)

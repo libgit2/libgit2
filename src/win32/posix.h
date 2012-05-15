@@ -52,4 +52,8 @@ extern int p_rename(const char *from, const char *to);
 extern int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags);
 extern int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags);
 
+extern struct tm * localtime_r (const time_t *timer, struct tm *result);
+extern struct tm * gmtime_r (const time_t *timer, struct tm *result);
+extern int gettimeofday(struct timeval *tv, struct timezone *tz);
+
 #endif

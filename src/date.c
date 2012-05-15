@@ -4,11 +4,18 @@
  * Copyright (C) Linus Torvalds, 2005
  */
 
+#include "common.h"
+
+#ifndef GIT_WIN32
+#include <sys/time.h>
+#endif
+
 #include "date.h"
 #include "cache.h"
+#include "posix.h"
 
 #include <ctype.h>
-#include <sys/time.h>
+#include <time.h>
 
 typedef enum {
 	DATE_NORMAL = 0,
@@ -299,7 +306,7 @@ static int match_multi_number(unsigned long num, char c, const char *date, char 
  * We just do a binary 'and' to see if the sign bit
  * is set in all the values.
  */
-static inline int nodate(struct tm *tm)
+static int nodate(struct tm *tm)
 {
 	return (tm->tm_year &
 		tm->tm_mon &
@@ -599,9 +606,9 @@ static void date_tea(struct tm *tm, struct tm *now, int *num)
 
 static void date_pm(struct tm *tm, struct tm *now, int *num)
 {
-   GIT_UNUSED(now);
 	int hour, n = *num;
 	*num = 0;
+   GIT_UNUSED(now);
 
 	hour = tm->tm_hour;
 	if (n) {
@@ -614,9 +621,9 @@ static void date_pm(struct tm *tm, struct tm *now, int *num)
 
 static void date_am(struct tm *tm, struct tm *now, int *num)
 {
-   GIT_UNUSED(now);
 	int hour, n = *num;
 	*num = 0;
+   GIT_UNUSED(now);
 
 	hour = tm->tm_hour;
 	if (n) {
@@ -629,9 +636,9 @@ static void date_am(struct tm *tm, struct tm *now, int *num)
 
 static void date_never(struct tm *tm, struct tm *now, int *num)
 {
+	time_t n = 0;
    GIT_UNUSED(now);
    GIT_UNUSED(num);
-	time_t n = 0;
 	localtime_r(&n, tm);
 }
 
@@ -821,7 +828,7 @@ static unsigned long approxidate_str(const char *date,
 {
 	int number = 0;
 	int touched = 0;
-	struct tm tm, now;
+	struct tm tm = {0}, now;
 	time_t time_sec;
 
 	time_sec = tv->tv_sec;
