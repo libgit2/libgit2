@@ -110,12 +110,12 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 	}
 
 	if (hdr->hdr_signature != ntohl(PACK_SIGNATURE)) {
-		giterr_set(GITERR_INVALID, "Wrong pack signature");
+		giterr_set(GITERR_INDEXER, "Wrong pack signature");
 		return -1;
 	}
 
 	if (!pack_version_ok(hdr->hdr_version)) {
-		giterr_set(GITERR_INVALID, "Wrong pack version");
+		giterr_set(GITERR_INDEXER, "Wrong pack version");
 		return -1;
 	}
 
@@ -248,7 +248,7 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 
 	/* FIXME: Parse the object instead of hashing it */
 	if (git_odb__hashobj(&oid, obj) < 0) {
-		giterr_set(GITERR_INVALID, "Failed to hash object");
+		giterr_set(GITERR_INDEXER, "Failed to hash object");
 		return -1;
 	}
 
@@ -583,7 +583,7 @@ int git_indexer_new(git_indexer **out, const char *packname)
 	assert(out && packname);
 
 	if (git_path_root(packname) < 0) {
-		giterr_set(GITERR_INVALID, "Path is not absolute");
+		giterr_set(GITERR_INDEXER, "Path is not absolute");
 		return -1;
 	}
 
@@ -815,7 +815,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		/* FIXME: Parse the object instead of hashing it */
 		error = git_odb__hashobj(&oid, &obj);
 		if (error < 0) {
-			giterr_set(GITERR_INVALID, "Failed to hash object");
+			giterr_set(GITERR_INDEXER, "Failed to hash object");
 			goto cleanup;
 		}
 
