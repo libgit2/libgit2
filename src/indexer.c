@@ -441,9 +441,20 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stat
 	git_oid file_hash;
 	SHA_CTX ctx;
 
+	/* Test for this before resolve_deltas(), as it plays with idx->off */
+	if (idx->off < idx->pack->mwf.size - GIT_OID_RAWSZ) {
+		giterr_set(GITERR_INDEXER, "Indexing error: junk at the end of the pack");
+		return -1;
+	}
+
 	if (idx->deltas.length > 0)
 		if (resolve_deltas(idx, stats) < 0)
 			return -1;
+
+	if (stats->processed != stats->total) {
+		giterr_set(GITERR_INDEXER, "Indexing error: early EOF");
+		return -1;
+	}
 
 	git_vector_sort(&idx->objects);
 
