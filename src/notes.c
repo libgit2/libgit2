@@ -523,7 +523,7 @@ int git_note_foreach(
 	if (git_tree_lookup(&tree, repo, &tree_oid) < 0)
 		goto cleanup;
 
-	if (git_iterator_for_tree(repo, tree, &iter) < 0)
+	if (git_iterator_for_tree(&iter, repo, tree) < 0)
 		goto cleanup;
 
 	if (git_iterator_current(iter, &item) < 0)
