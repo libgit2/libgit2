@@ -838,5 +838,8 @@ void git_revwalk_reset(git_revwalk *walk)
 	commit_list_free(&walk->iterator_rand);
 	commit_list_free(&walk->iterator_reverse);
 	walk->walking = 0;
+
+	walk->one = NULL;
+	git_vector_clear(&walk->twos);
 }
 
