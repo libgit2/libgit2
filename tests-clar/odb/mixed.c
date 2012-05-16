@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "odb.h"
-#include "pack_data.h"
 
 static git_odb *_odb;
 
