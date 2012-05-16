@@ -116,8 +116,13 @@ void git_vector_sort(git_vector *v)
 	v->sorted = 1;
 }
 
-int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *key)
+int git_vector_bsearch3(
+	unsigned int *at_pos,
+	git_vector *v,
+	git_vector_cmp key_lookup,
+	const void *key)
 {
+	int rval;
 	size_t pos;
 
 	assert(v && key && key_lookup);
@@ -127,13 +132,16 @@ int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *ke
 
 	git_vector_sort(v);
 
-	if (git__bsearch(v->contents, v->length, key, key_lookup, &pos) >= 0)
-		return (int)pos;
+	rval = git__bsearch(v->contents, v->length, key, key_lookup, &pos);
 
-	return GIT_ENOTFOUND;
+	if (at_pos != NULL)
+		*at_pos = (unsigned int)pos;
+
+	return (rval >= 0) ? (int)pos : GIT_ENOTFOUND;
 }
 
-int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key)
+int git_vector_search2(
+	git_vector *v, git_vector_cmp key_lookup, const void *key)
 {
 	unsigned int i;
 
@@ -155,11 +163,6 @@ static int strict_comparison(const void *a, const void *b)
 int git_vector_search(git_vector *v, const void *entry)
 {
 	return git_vector_search2(v, v->_cmp ? v->_cmp : strict_comparison, entry);
-}
-
-int git_vector_bsearch(git_vector *v, const void *key)
-{
-	return git_vector_bsearch2(v, v->_cmp, key);
 }
 
 int git_vector_remove(git_vector *v, unsigned int idx)

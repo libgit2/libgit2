@@ -21,23 +21,48 @@ typedef enum {
 
 struct git_iterator {
 	git_iterator_type_t type;
+	char *start;
+	char *end;
 	int (*current)(git_iterator *, const git_index_entry **);
 	int (*at_end)(git_iterator *);
 	int (*advance)(git_iterator *, const git_index_entry **);
+	int (*seek)(git_iterator *, const char *prefix);
 	int (*reset)(git_iterator *);
 	void (*free)(git_iterator *);
 };
 
-int git_iterator_for_nothing(git_iterator **iter);
+extern int git_iterator_for_nothing(git_iterator **iter);
 
-int git_iterator_for_tree(
-	git_repository *repo, git_tree *tree, git_iterator **iter);
+extern int git_iterator_for_tree_range(
+	git_iterator **iter, git_repository *repo, git_tree *tree,
+	const char *start, const char *end);
 
-int git_iterator_for_index(
-	git_repository *repo, git_iterator **iter);
+GIT_INLINE(int) git_iterator_for_tree(
+	git_iterator **iter, git_repository *repo, git_tree *tree)
+{
+	return git_iterator_for_tree_range(iter, repo, tree, NULL, NULL);
+}
 
-int git_iterator_for_workdir(
-	git_repository *repo, git_iterator **iter);
+extern int git_iterator_for_index_range(
+	git_iterator **iter, git_repository *repo,
+	const char *start, const char *end);
+
+GIT_INLINE(int) git_iterator_for_index(
+	git_iterator **iter, git_repository *repo)
+{
+	return git_iterator_for_index_range(iter, repo, NULL, NULL);
+}
+
+extern int git_iterator_for_workdir_range(
+	git_iterator **iter, git_repository *repo,
+	const char *start, const char *end);
+
+GIT_INLINE(int) git_iterator_for_workdir(
+	git_iterator **iter, git_repository *repo)
+{
+	return git_iterator_for_workdir_range(iter, repo, NULL, NULL);
+}
+
 
 /* Entry is not guaranteed to be fully populated.  For a tree iterator,
  * we will only populate the mode, oid and path, for example.  For a workdir
@@ -64,6 +89,12 @@ GIT_INLINE(int) git_iterator_advance(
 	return iter->advance(iter, entry);
 }
 
+GIT_INLINE(int) git_iterator_seek(
+	git_iterator *iter, const char *prefix)
+{
+	return iter->seek(iter, prefix);
+}
+
 GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
 {
 	return iter->reset(iter);
@@ -75,6 +106,12 @@ GIT_INLINE(void) git_iterator_free(git_iterator *iter)
 		return;
 
 	iter->free(iter);
+
+	git__free(iter->start);
+	git__free(iter->end);
+
+	memset(iter, 0, sizeof(*iter));
+
 	git__free(iter);
 }
 
@@ -107,5 +144,8 @@ extern int git_iterator_current_is_ignored(git_iterator *iter);
  */
 extern int git_iterator_advance_into_directory(
 	git_iterator *iter, const git_index_entry **entry);
+
+extern int git_iterator_cmp(
+	git_iterator *iter, const char *path_prefix);
 
 #endif

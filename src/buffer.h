@@ -122,4 +122,7 @@ void git_buf_rtrim(git_buf *buf);
 
 int git_buf_cmp(const git_buf *a, const git_buf *b);
 
+/* Fill buf with the common prefix of a array of strings */
+int git_buf_common_prefix(git_buf *buf, const git_strarray *strings);
+
 #endif

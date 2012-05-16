@@ -415,3 +415,33 @@ int git_buf_cmp(const git_buf *a, const git_buf *b)
 	return (result != 0) ? result :
 		(a->size < b->size) ? -1 : (a->size > b->size) ? 1 : 0;
 }
+
+int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
+{
+	size_t i;
+	const char *str, *pfx;
+
+	git_buf_clear(buf);
+
+	if (!strings || !strings->count)
+		return 0;
+
+	/* initialize common prefix to first string */
+	if (git_buf_sets(buf, strings->strings[0]) < 0)
+		return -1;
+
+	/* go through the rest of the strings, truncating to shared prefix */
+	for (i = 1; i < strings->count; ++i) {
+
+		for (str = strings->strings[i], pfx = buf->ptr;
+			 *str && *str == *pfx; str++, pfx++)
+			/* scanning */;
+
+		git_buf_truncate(buf, pfx - buf->ptr);
+
+		if (!buf->size)
+			break;
+	}
+
+	return 0;
+}

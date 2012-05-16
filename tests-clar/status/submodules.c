@@ -103,3 +103,10 @@ void test_status_submodules__1(void)
 
 	cl_assert(index == 6);
 }
+
+void test_status_submodules__single_file(void)
+{
+	unsigned int status;
+	cl_git_pass( git_status_file(&status, g_repo, "testrepo") );
+	cl_assert(status == 0);
+}
