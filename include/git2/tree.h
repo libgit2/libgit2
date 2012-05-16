@@ -313,40 +313,6 @@ enum git_treewalk_mode {
  */
 GIT_EXTERN(int) git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload);
 
-typedef enum {
-	GIT_STATUS_ADDED = 1,
-	GIT_STATUS_DELETED = 2,
-	GIT_STATUS_MODIFIED = 3,
-} git_status_t;
-
-typedef struct {
-	unsigned int old_attr;
-	unsigned int new_attr;
-	git_oid old_oid;
-	git_oid new_oid;
-	git_status_t status;
-	const char *path;
-} git_tree_diff_data;
-
-typedef int (*git_tree_diff_cb)(const git_tree_diff_data *ptr, void *data);
-
-/**
- * Diff two trees
- *
- * Compare two trees. For each difference in the trees, the callback
- * will be called with a git_tree_diff_data filled with the relevant
- * information.
- *
- * @param old the "old" tree
- * @param newer the "newer" tree
- * @param cb callback
- * @param data data to give to the callback
- * @return GIT_SUCCESS or an error code
- */
-GIT_EXTERN(int) git_tree_diff(git_tree *old, git_tree *newer, git_tree_diff_cb cb, void *data);
-
-GIT_EXTERN(int) git_tree_diff_index_recursive(git_tree *tree, git_index *index, git_tree_diff_cb cb, void *data);
-
 /** @} */
 
 GIT_END_DECL
