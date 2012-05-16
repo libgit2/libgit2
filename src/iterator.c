@@ -178,7 +178,7 @@ static tree_iterator_frame *tree_iterator__alloc_frame(
 
 	if (start && *start) {
 		tf->start = start;
-		tf->index = git_tree_entry_prefix_position(tree, start);
+		tf->index = git_tree__prefix_position(tree, start);
 	}
 
 	return tf;
@@ -192,7 +192,7 @@ static int tree_iterator__expand_tree(tree_iterator *ti)
 	tree_iterator_frame *tf;
 	char *relpath;
 
-	while (te != NULL && entry_is_tree(te)) {
+	while (te != NULL && git_tree_entry__is_tree(te)) {
 		if (git_buf_joinpath(&ti->path, ti->path.ptr, te->filename) < 0)
 			return -1;
 
@@ -252,7 +252,7 @@ static int tree_iterator__advance(
 		git_buf_rtruncate_at_char(&ti->path, '/');
 	}
 
-	if (te && entry_is_tree(te))
+	if (te && git_tree_entry__is_tree(te))
 		error = tree_iterator__expand_tree(ti);
 
 	if (!error)
@@ -288,7 +288,7 @@ static int tree_iterator__reset(git_iterator *self)
 
 	if (ti->stack)
 		ti->stack->index =
-			git_tree_entry_prefix_position(ti->stack->tree, ti->base.start);
+			git_tree__prefix_position(ti->stack->tree, ti->base.start);
 
 	git_buf_clear(&ti->path);
 

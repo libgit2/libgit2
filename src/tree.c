@@ -31,8 +31,8 @@ static int entry_sort_cmp(const void *a, const void *b)
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
 
 	return git_path_cmp(
-		entry_a->filename, entry_a->filename_len, entry_is_tree(entry_a),
-		entry_b->filename, entry_b->filename_len, entry_is_tree(entry_b));
+		entry_a->filename, entry_a->filename_len, git_tree_entry__is_tree(entry_a),
+		entry_b->filename, entry_b->filename_len, git_tree_entry__is_tree(entry_b));
 }
 
 
@@ -170,7 +170,10 @@ git_otype git_tree_entry_type(const git_tree_entry *entry)
 		return GIT_OBJ_BLOB;
 }
 
-int git_tree_entry_2object(git_object **object_out, git_repository *repo, const git_tree_entry *entry)
+int git_tree_entry_to_object(
+	git_object **object_out,
+	git_repository *repo,
+	const git_tree_entry *entry)
 {
 	assert(entry && object_out);
 	return git_object_lookup(object_out, repo, &entry->oid, GIT_OBJ_ANY);
@@ -195,7 +198,7 @@ const git_tree_entry *git_tree_entry_byindex(git_tree *tree, unsigned int idx)
 	return git_vector_get(&tree->entries, idx);
 }
 
-int git_tree_entry_prefix_position(git_tree *tree, const char *path)
+int git_tree__prefix_position(git_tree *tree, const char *path)
 {
 	git_vector *entries = &tree->entries;
 	struct tree_key_search ksearch;
@@ -730,7 +733,7 @@ static int tree_walk_post(
 		if (callback(path->ptr, entry, payload) < 0)
 			continue;
 
-		if (entry_is_tree(entry)) {
+		if (git_tree_entry__is_tree(entry)) {
 			git_tree *subtree;
 			size_t path_len = git_buf_len(path);
 

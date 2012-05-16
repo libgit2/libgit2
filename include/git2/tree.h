@@ -143,7 +143,7 @@ GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
  * @param entry a tree entry
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_tree_entry_2object(git_object **object_out, git_repository *repo, const git_tree_entry *entry);
+GIT_EXTERN(int) git_tree_entry_to_object(git_object **object_out, git_repository *repo, const git_tree_entry *entry);
 
 /**
  * Write a tree to the ODB from the index file

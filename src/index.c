@@ -939,7 +939,7 @@ static int read_tree_cb(const char *root, git_tree_entry *tentry, void *data)
 	git_index_entry *entry = NULL;
 	git_buf path = GIT_BUF_INIT;
 
-	if (entry_is_tree(tentry))
+	if (git_tree_entry__is_tree(tentry))
 		return 0;
 
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
