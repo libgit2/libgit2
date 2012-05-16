@@ -378,7 +378,7 @@ int git_attr_fnmatch__parse(
 				pattern++;
 		}
 		/* remember if we see an unescaped wildcard in pattern */
-		else if ((*scan == '*' || *scan == '.' || *scan == '[') &&
+		else if (git__iswildcard(*scan) &&
 			(scan == pattern || (*(scan - 1) != '\\')))
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_HASWILD;
 	}

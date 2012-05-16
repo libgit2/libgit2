@@ -195,6 +195,33 @@ const git_tree_entry *git_tree_entry_byindex(git_tree *tree, unsigned int idx)
 	return git_vector_get(&tree->entries, idx);
 }
 
+int git_tree_entry_prefix_position(git_tree *tree, const char *path)
+{
+	git_vector *entries = &tree->entries;
+	struct tree_key_search ksearch;
+	unsigned int at_pos;
+
+	ksearch.filename = path;
+	ksearch.filename_len = strlen(path);
+
+	/* Find tree entry with appropriate prefix */
+	git_vector_bsearch3(&at_pos, entries, &homing_search_cmp, &ksearch);
+
+	for (; at_pos < entries->length; ++at_pos) {
+		const git_tree_entry *entry = entries->contents[at_pos];
+		if (homing_search_cmp(&ksearch, entry) < 0)
+			break;
+	}
+
+	for (; at_pos > 0; --at_pos) {
+		const git_tree_entry *entry = entries->contents[at_pos - 1];
+		if (homing_search_cmp(&ksearch, entry) > 0)
+			break;
+	}
+
+	return at_pos;
+}
+
 unsigned int git_tree_entrycount(git_tree *tree)
 {
 	assert(tree);

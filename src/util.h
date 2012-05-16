@@ -209,4 +209,9 @@ GIT_INLINE(bool) git__isspace(int c)
     return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
 }
 
+GIT_INLINE(bool) git__iswildcard(int c)
+{
+	return (c == '*' || c == '?' || c == '[');
+}
+
 #endif /* INCLUDE_util_h__ */

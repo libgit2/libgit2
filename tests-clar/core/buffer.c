@@ -561,3 +561,53 @@ void test_core_buffer__10(void)
 
 	git_buf_free(&a);
 }
+
+void test_core_buffer__11(void)
+{
+	git_buf a = GIT_BUF_INIT;
+	git_strarray t;
+	char *t1[] = { "nothing", "in", "common" };
+	char *t2[] = { "something", "something else", "some other" };
+	char *t3[] = { "something", "some fun", "no fun" };
+	char *t4[] = { "happy", "happier", "happiest" };
+	char *t5[] = { "happiest", "happier", "happy" };
+	char *t6[] = { "no", "nope", "" };
+	char *t7[] = { "", "doesn't matter" };
+
+	t.strings = t1;
+	t.count = 3;
+	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_assert_equal_s(a.ptr, "");
+
+	t.strings = t2;
+	t.count = 3;
+	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_assert_equal_s(a.ptr, "some");
+
+	t.strings = t3;
+	t.count = 3;
+	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_assert_equal_s(a.ptr, "");
+
+	t.strings = t4;
+	t.count = 3;
+	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_assert_equal_s(a.ptr, "happ");
+
+	t.strings = t5;
+	t.count = 3;
+	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_assert_equal_s(a.ptr, "happ");
+
+	t.strings = t6;
+	t.count = 3;
+	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_assert_equal_s(a.ptr, "");
+
+	t.strings = t7;
+	t.count = 3;
+	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_assert_equal_s(a.ptr, "");
+
+	git_buf_free(&a);
+}
