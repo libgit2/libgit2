@@ -451,13 +451,13 @@ void git_note_free(git_note *note)
 
 static int process_entry_path(
 	const char* entry_path,
-	git_oid note_oid,
-	int (*note_cb)(const git_oid *note_oid, const git_oid *annotated_object_oid, void *payload),
+	const git_oid *note_oid,
+	int (*note_cb)(git_note_data *note_data, void *payload),
 	void *payload)
 {
 	int i = 0, j = 0, error = -1, len;
-	git_oid target_oid;
 	git_buf buf = GIT_BUF_INIT;
+	git_note_data note_data;
 
 	if (git_buf_puts(&buf, entry_path) < 0)
 		goto cleanup;
@@ -492,10 +492,12 @@ static int process_entry_path(
 		goto cleanup;
 	}
 
-	if (git_oid_fromstr(&target_oid, buf.ptr) < 0)
+	if (git_oid_fromstr(&note_data.annotated_object_oid, buf.ptr) < 0)
 		return -1;
 
-	error = note_cb(&note_oid, &target_oid, payload);
+	git_oid_cpy(&note_data.blob_oid, note_oid);
+
+	error = note_cb(&note_data, payload);
 
 cleanup:
 	git_buf_free(&buf);
@@ -505,7 +507,7 @@ cleanup:
 int git_note_foreach(
 	git_repository *repo,
 	const char *notes_ref,
-	int (*note_cb)(const git_oid *note_oid, const git_oid *annotated_object_oid, void *payload),
+	int (*note_cb)(git_note_data *note_data, void *payload),
 	void *payload)
 {
 	int error = -1;
@@ -530,7 +532,7 @@ int git_note_foreach(
 		goto cleanup;
 
 	while (item) {
-		if (process_entry_path(item->path, item->oid, note_cb, payload) < 0)
+		if (process_entry_path(item->path, &item->oid, note_cb, payload) < 0)
 			goto cleanup;
 
 		if (git_iterator_advance(iter, &item) < 0)
