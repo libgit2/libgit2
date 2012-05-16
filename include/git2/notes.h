@@ -103,6 +103,17 @@ GIT_EXTERN(void) git_note_free(git_note *note);
 GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
 
 /**
+ * Basic components of a note
+ *
+ *  - Oid of the blob containing the message
+ *  - Oid of the git object being annotated
+ */
+typedef struct {
+	git_oid blob_oid;
+	git_oid annotated_object_oid;
+} git_note_data;
+
+/**
  * Loop over all the notes within a specified namespace
  * and issue a callback for each one.
  *
@@ -119,7 +130,7 @@ GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
 GIT_EXTERN(int) git_note_foreach(
 		git_repository *repo,
 		const char *notes_ref,
-		int (*note_cb)(const git_oid *note_oid, const git_oid *annotated_object_oid, void *payload),
+		int (*note_cb)(git_note_data *note_data, void *payload),
 		void *payload
 );
 
