@@ -51,7 +51,7 @@ GIT_EXTERN(int) git_refspec_src_matches(const git_refspec *refspec, const char *
  * @param outlen the size ouf the `out` buffer
  * @param spec the refspec
  * @param name the name of the reference to transform
- * @return GIT_SUCCESS, GIT_ESHORTBUFFER or another error
+ * @return 0, GIT_SHORTBUFFER or another error
  */
 GIT_EXTERN(int) git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name);
 

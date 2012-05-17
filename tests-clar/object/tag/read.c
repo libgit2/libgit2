@@ -17,9 +17,9 @@ static void ensure_tag_pattern_match(git_repository *repo,
                                      const size_t expected_matches)
 {
    git_strarray tag_list;
-   int error = GIT_SUCCESS;
+   int error = 0;
 
-   if ((error = git_tag_list_match(&tag_list, pattern, repo)) < GIT_SUCCESS)
+   if ((error = git_tag_list_match(&tag_list, pattern, repo)) < 0)
       goto exit;
 
    if (tag_list.count != expected_matches)

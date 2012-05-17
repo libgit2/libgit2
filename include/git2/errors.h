@@ -17,17 +17,54 @@
  */
 GIT_BEGIN_DECL
 
-typedef enum {
+#ifdef GIT_OLD_ERRORS
+enum {
 	GIT_SUCCESS = 0,
-	GIT_ERROR = -1,
+	GIT_ENOTOID = -2,
 	GIT_ENOTFOUND = -3,
+	GIT_ENOMEM = -4,
+	GIT_EOSERR = -5,
+	GIT_EOBJTYPE = -6,
+	GIT_ENOTAREPO = -7,
+	GIT_EINVALIDTYPE = -8,
+	GIT_EMISSINGOBJDATA = -9,
+	GIT_EPACKCORRUPTED = -10,
+	GIT_EFLOCKFAIL = -11,
+	GIT_EZLIB = -12,
+	GIT_EBUSY = -13,
+	GIT_EBAREINDEX = -14,
+	GIT_EINVALIDREFNAME = -15,
+	GIT_EREFCORRUPTED = -16,
+	GIT_ETOONESTEDSYMREF = -17,
+	GIT_EPACKEDREFSCORRUPTED = -18,
+	GIT_EINVALIDPATH = -19,
+	GIT_EREVWALKOVER = -20,
+	GIT_EINVALIDREFSTATE = -21,
+	GIT_ENOTIMPLEMENTED = -22,
 	GIT_EEXISTS = -23,
 	GIT_EOVERFLOW = -24,
+	GIT_ENOTNUM = -25,
+	GIT_ESTREAM = -26,
+	GIT_EINVALIDARGS = -27,
+	GIT_EOBJCORRUPTED = -28,
 	GIT_EAMBIGUOUS = -29,
 	GIT_EPASSTHROUGH = -30,
+	GIT_ENOMATCH = -31,
 	GIT_ESHORTBUFFER = -32,
-	GIT_EREVWALKOVER = -33,
-} git_error_t;
+};
+#endif
+
+/** Generic return codes */
+enum {
+	GIT_OK = 0,
+	GIT_ERROR = -1,
+	GIT_NOTFOUND = -3,
+	GIT_EXISTS = -23,
+	GIT_AMBIGUOUS = -29,
+	GIT_PASSTHROUGH = -30,
+	GIT_SHORTBUFFER = -32,
+	GIT_REVWALKOVER = -33,
+};
 
 typedef struct {
 	char *message;
@@ -50,7 +87,7 @@ typedef enum {
 	GITERR_TAG,
 	GITERR_TREE,
 	GITERR_INDEXER,
-} git_error_class;
+} git_error_t;
 
 /**
  * Return the last `git_error` object that was generated for the

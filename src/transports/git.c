@@ -147,7 +147,7 @@ static int store_refs(transport_git *t)
 			return 0;
 
 		ret = git_protocol_store_refs(&t->proto, buf->data, buf->offset);
-		if (ret == GIT_ESHORTBUFFER) {
+		if (ret == GIT_SHORTBUFFER) {
 			gitno_consume_n(buf, buf->len);
 			continue;
 		}
@@ -279,7 +279,7 @@ static int recv_pkt(gitno_buffer *buf)
 			return -1;
 
 		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-		if (error == GIT_ESHORTBUFFER)
+		if (error == GIT_SHORTBUFFER)
 			continue;
 		if (error < 0)
 			return -1;
@@ -344,7 +344,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 		}
 	}
-	if (error < 0 && error != GIT_EREVWALKOVER)
+	if (error < 0 && error != GIT_REVWALKOVER)
 		goto on_error;
 
 	/* Tell the other end that we're done negotiating */
@@ -384,10 +384,10 @@ static int git_download_pack(git_transport *transport, git_repository *repo, git
 			}
 
 			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-			if (error == GIT_ESHORTBUFFER)
+			if (error == GIT_SHORTBUFFER)
 				break;
 
-			if (error < GIT_SUCCESS)
+			if (error < 0)
 				return error;
 
 			if (pkt->type == GIT_PKT_PACK) {

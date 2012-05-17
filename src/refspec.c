@@ -68,7 +68,7 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 	baselen = strlen(spec->dst);
 	if (outlen <= baselen) {
 		giterr_set(GITERR_INVALID, "Reference name too long");
-		return GIT_ESHORTBUFFER;
+		return GIT_SHORTBUFFER;
 	}
 
 	/*
@@ -90,7 +90,7 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 
 	if (outlen <= baselen + namelen) {
 		giterr_set(GITERR_INVALID, "Reference name too long");
-		return GIT_ESHORTBUFFER;
+		return GIT_SHORTBUFFER;
 	}
 
 	memcpy(out, spec->dst, baselen);

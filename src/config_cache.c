@@ -66,22 +66,22 @@ int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar)
 		int error;
 
 		error = git_repository_config__weakptr(&config, repo);
-		if (error < GIT_SUCCESS)
+		if (error < 0)
 			return error;
 
 		error = git_config_get_mapped(out,
 			config, data->cvar_name, data->maps, data->map_count);
 
-		if (error == GIT_ENOTFOUND)
+		if (error == GIT_NOTFOUND)
 			*out = data->default_value;
 
-		else if (error < GIT_SUCCESS)
+		else if (error < 0)
 			return error;
 
 		repo->cvar_cache[(int)cvar] = *out;
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_repository__cvar_cache_clear(git_repository *repo)

@@ -41,7 +41,7 @@ GIT_BEGIN_DECL
  *
  * @param force Overwrite existing branch.
  *
- * @return GIT_SUCCESS or an error code.
+ * @return 0 or an error code.
  * A proper reference is written in the refs/heads namespace
  * pointing to the provided target commit.
  */
@@ -63,7 +63,7 @@ GIT_EXTERN(int) git_branch_create(
  * @param branch_type Type of the considered branch. This should
  * be valued with either GIT_BRANCH_LOCAL or GIT_BRANCH_REMOTE.
  *
- * @return GIT_SUCCESS on success, GIT_ENOTFOUND if the branch
+ * @return 0 on success, GIT_NOTFOUND if the branch
  * doesn't exist or an error code.
  */
 GIT_EXTERN(int) git_branch_delete(
@@ -88,7 +88,7 @@ GIT_EXTERN(int) git_branch_delete(
  * listing. Valid values are GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE
  * or a combination of the two.
  *
- * @return GIT_SUCCESS or an error code.
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_branch_list(
 		git_strarray *branch_names,
@@ -108,7 +108,7 @@ GIT_EXTERN(int) git_branch_list(
  *
  * @param force Overwrite existing branch.
  *
- * @return GIT_SUCCESS on success, GIT_ENOTFOUND if the branch
+ * @return 0 on success, GIT_NOTFOUND if the branch
  * doesn't exist or an error code.
  */
 GIT_EXTERN(int) git_branch_move(

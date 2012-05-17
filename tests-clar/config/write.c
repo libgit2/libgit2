@@ -62,7 +62,7 @@ void test_config_write__delete_value(void)
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_assert(git_config_get_int32(&i, cfg, "core.dummy") == GIT_ENOTFOUND);
+	cl_assert(git_config_get_int32(&i, cfg, "core.dummy") == GIT_NOTFOUND);
 	cl_git_pass(git_config_set_int32(cfg, "core.dummy", 1));
 	git_config_free(cfg);
 }
@@ -87,6 +87,6 @@ void test_config_write__delete_inexistent(void)
 	git_config *cfg;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_assert(git_config_delete(cfg, "core.imaginary") == GIT_ENOTFOUND);
+	cl_assert(git_config_delete(cfg, "core.imaginary") == GIT_NOTFOUND);
 	git_config_free(cfg);
 }

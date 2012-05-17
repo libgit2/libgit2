@@ -111,7 +111,7 @@ int git__delta_apply(
 
 	if (delta != delta_end || res_sz)
 		goto fail;
-	return GIT_SUCCESS;
+	return 0;
 
 fail:
 	git__free(out->data);

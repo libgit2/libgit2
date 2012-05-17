@@ -37,7 +37,7 @@ static git_transport_cb transport_find_fn(const char *url)
 	}
 
 	/* still here? Check to see if the path points to a file on the local file system */
-	if ((git_path_exists(url) == GIT_SUCCESS) && git_path_isdir(url))
+	if ((git_path_exists(url) == 0) && git_path_isdir(url))
 		return &git_transport_local;
 
 	/* It could be a SSH remote path. Check to see if there's a : */
@@ -72,7 +72,7 @@ int git_transport_new(git_transport **out, const char *url)
 	}
 
 	error = fn(&transport);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		return error;
 
 	transport->url = git__strdup(url);
@@ -80,7 +80,7 @@ int git_transport_new(git_transport **out, const char *url)
 
 	*out = transport;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 /* from remote.h */

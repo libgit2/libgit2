@@ -73,7 +73,7 @@ static int test_walk(git_revwalk *walk, const git_oid *root,
 
 	i = 0;
 
-	while (git_revwalk_next(&oid, walk) == GIT_SUCCESS) {
+	while (git_revwalk_next(&oid, walk) == 0) {
 		result_array[i++] = get_commit_index(&oid);
 		/*{
 			char str[41];
@@ -86,7 +86,7 @@ static int test_walk(git_revwalk *walk, const git_oid *root,
 	for (i = 0; i < results_count; ++i)
 		if (memcmp(possible_results[i],
 				result_array, result_bytes) == 0)
-			return GIT_SUCCESS;
+			return 0;
 
 	return GIT_ERROR;
 }
@@ -125,7 +125,7 @@ void test_revwalk_basic__glob_heads(void)
 
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
-	while (git_revwalk_next(&oid, _walk) == GIT_SUCCESS) {
+	while (git_revwalk_next(&oid, _walk) == 0) {
 		i++;
 	}
 
@@ -140,7 +140,7 @@ void test_revwalk_basic__push_head(void)
 
 	cl_git_pass(git_revwalk_push_head(_walk));
 
-	while (git_revwalk_next(&oid, _walk) == GIT_SUCCESS) {
+	while (git_revwalk_next(&oid, _walk) == 0) {
 		i++;
 	}
 
@@ -156,7 +156,7 @@ void test_revwalk_basic__push_head_hide_ref(void)
 	cl_git_pass(git_revwalk_push_head(_walk));
 	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed-test"));
 
-	while (git_revwalk_next(&oid, _walk) == GIT_SUCCESS) {
+	while (git_revwalk_next(&oid, _walk) == 0) {
 		i++;
 	}
 
@@ -172,7 +172,7 @@ void test_revwalk_basic__push_head_hide_ref_nobase(void)
 	cl_git_pass(git_revwalk_push_head(_walk));
 	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed"));
 
-	while (git_revwalk_next(&oid, _walk) == GIT_SUCCESS) {
+	while (git_revwalk_next(&oid, _walk) == 0) {
 		i++;
 	}
 

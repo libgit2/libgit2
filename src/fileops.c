@@ -95,7 +95,7 @@ int git_futils_open_ro(const char *path)
 	int fd = p_open(path, O_RDONLY);
 	if (fd < 0) {
 		if (errno == ENOENT)
-			fd = GIT_ENOTFOUND;
+			fd = GIT_NOTFOUND;
 		giterr_set(GITERR_OS, "Failed to open '%s'", path);
 	}
 	return fd;
@@ -365,7 +365,7 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 
 	if (git_path_exists(path->ptr) == false) {
 		git_buf_clear(path);
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 	}
 
 	return 0;
@@ -414,7 +414,7 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 	char *file_utf8 = NULL;
 
 	if (!root || !filename || (len = strlen(filename)) == 0)
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 
 	/* allocate space for wchar_t path to file */
 	file_utf16 = git__calloc(root->len + len + 2, sizeof(wchar_t));
@@ -438,7 +438,7 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 
 	/* check access */
 	if (_waccess(file_utf16, F_OK) < 0) {
-		error = GIT_ENOTFOUND;
+		error = GIT_NOTFOUND;
 		goto cleanup;
 	}
 
@@ -470,6 +470,6 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 #ifdef GIT_WIN32
 	return win32_find_system_file(path, filename);
 #else
-	return GIT_ENOTFOUND;
+	return GIT_NOTFOUND;
 #endif
 }

@@ -214,7 +214,7 @@ int git_status_file(
 	if (!error && !sfi.count) {
 		giterr_set(GITERR_INVALID,
 			"Attempt to get status of nonexistent file '%s'", path);
-		error = GIT_ENOTFOUND;
+		error = GIT_NOTFOUND;
 	}
 
 	*status_flags = sfi.status;

@@ -81,7 +81,7 @@ static void assert_non_exisitng_branch_removal(const char *branch_name, git_bran
 	error = git_branch_delete(repo, branch_name, branch_type);
 
 	cl_git_fail(error);
-	cl_assert_equal_i(GIT_ENOTFOUND, error);
+	cl_assert_equal_i(GIT_NOTFOUND, error);
 }
 
 void test_refs_branches_delete__deleting_a_non_existing_branch_returns_ENOTFOUND(void)

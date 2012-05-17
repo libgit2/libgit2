@@ -100,7 +100,7 @@ static int update_reference(git_repository *repo, git_oid *oid, const char *ref_
 
 	/* If we haven't found the reference at all, we assume we need to create
 	 * a new reference and that's it */
-	if (res == GIT_ENOTFOUND) {
+	if (res == GIT_NOTFOUND) {
 		giterr_clear();
 		return git_reference_create_oid(NULL, repo, ref_name, oid, 1);
 	}
@@ -125,7 +125,7 @@ static int update_reference(git_repository *repo, git_oid *oid, const char *ref_
 		 * this is means we're creating a new branch, for example.
 		 * We need to create a new direct reference with that name
 		 */
-		if (res == GIT_ENOTFOUND) {
+		if (res == GIT_NOTFOUND) {
 			giterr_clear();
 			res = git_reference_create_oid(NULL, repo, sym_target, oid, 1);
 			git_reference_free(ref);
@@ -320,7 +320,7 @@ int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 	parent_oid = git_vector_get(&commit->parent_oids, n);
 	if (parent_oid == NULL) {
 		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 	}
 
 	return git_commit_lookup(parent, commit->object.repo, parent_oid);

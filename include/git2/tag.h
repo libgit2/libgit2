@@ -27,7 +27,7 @@ GIT_BEGIN_DECL
  * @param tag pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id)
 {
@@ -44,7 +44,7 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
  * @param len the length of the short identifier
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_INLINE(int) git_tag_lookup_prefix(git_tag **tag, git_repository *repo, const git_oid *id, unsigned int len)
 {
@@ -85,7 +85,7 @@ GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
  *
  * @param target pointer where to store the target
  * @param tag a previously loaded tag.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *tag);
 
@@ -143,7 +143,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  * @param oid Pointer where to store the OID of the
  * newly created tag. If the tag already exists, this parameter
  * will be the oid of the existing tag, and the function will
- * return a GIT_EEXISTS error code.
+ * return a GIT_EXISTS error code.
  *
  * @param repo Repository where to store the tag
  *
@@ -161,7 +161,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  *
  * @param force Overwrite existing references
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  *	A tag object is written to the ODB, and a proper reference
  *	is written in the /refs/tags folder, pointing to it
  */
@@ -199,7 +199,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  * @param oid Pointer where to store the OID of the provided
  * target object. If the tag already exists, this parameter
  * will be filled with the oid of the existing pointed object
- * and the function will return a GIT_EEXISTS error code.
+ * and the function will return a GIT_EXISTS error code.
  *
  * @param repo Repository where to store the lightweight tag
  *
@@ -212,7 +212,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  *
  * @param force Overwrite existing references
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  *	A proper reference is written in the /refs/tags folder,
  * pointing to the provided target object
  */
@@ -231,7 +231,7 @@ GIT_EXTERN(int) git_tag_create_lightweight(
  * @param tag_name Name of the tag to be deleted;
  * this name is validated for consistency.
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_delete(
 		git_repository *repo,
@@ -248,7 +248,7 @@ GIT_EXTERN(int) git_tag_delete(
  * @param tag_names Pointer to a git_strarray structure where
  *		the tag names will be stored
  * @param repo Repository where to find the tags
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_list(
 		git_strarray *tag_names,
@@ -270,7 +270,7 @@ GIT_EXTERN(int) git_tag_list(
  *		the tag names will be stored
  * @param pattern Standard fnmatch pattern
  * @param repo Repository where to find the tags
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_list_match(
 		git_strarray *tag_names,
@@ -286,7 +286,7 @@ GIT_EXTERN(int) git_tag_list_match(
  *
  * @param tag_target Pointer to the peeled git_object
  * @param tag The tag to be processed
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_peel(
 		git_object **tag_target,

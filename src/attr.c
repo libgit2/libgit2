@@ -245,13 +245,13 @@ static int load_attr_file(
 	struct stat st;
 
 	if (p_stat(filename, &st) < 0)
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 
 	if (sig != NULL &&
 		(git_time_t)st.st_mtime == sig->seconds &&
 		(git_off_t)st.st_size == sig->size &&
 		(unsigned int)st.st_ino == sig->ino)
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 
 	error = git_futils_readbuffer_updated(&content, filename, NULL, NULL);
 	if (error < 0)
@@ -286,7 +286,7 @@ static int load_attr_blob_from_index(
 	entry = git_index_get(index, error);
 
 	if (old_oid && git_oid_cmp(old_oid, &entry->oid) == 0)
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 
 	if ((error = git_blob_lookup(blob, repo, &entry->oid)) < 0)
 		return error;
@@ -396,7 +396,7 @@ int git_attr_cache__push_file(
 
 	if (error) {
 		/* not finding a file is not an error for this function */
-		if (error == GIT_ENOTFOUND) {
+		if (error == GIT_NOTFOUND) {
 			giterr_clear();
 			error = 0;
 		}
@@ -550,7 +550,7 @@ static int collect_attr_files(
 		error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
 		if (!error)
 			error = push_attr_file(repo, files, NULL, dir.ptr);
-		else if (error == GIT_ENOTFOUND)
+		else if (error == GIT_NOTFOUND)
 			error = 0;
 	}
 
@@ -577,11 +577,11 @@ int git_attr_cache__init(git_repository *repo)
 		return -1;
 
 	ret = git_config_get_string(&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG);
-	if (ret < 0 && ret != GIT_ENOTFOUND)
+	if (ret < 0 && ret != GIT_NOTFOUND)
 		return ret;
 
 	ret = git_config_get_string(&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG);
-	if (ret < 0 && ret != GIT_ENOTFOUND)
+	if (ret < 0 && ret != GIT_NOTFOUND)
 		return ret;
 
 	giterr_clear();

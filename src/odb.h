@@ -68,12 +68,12 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type);
 int git_odb__hashlink(git_oid *out, const char *path);
 
 /*
- * Generate a GIT_ENOTFOUND error for the ODB.
+ * Generate a GIT_NOTFOUND error for the ODB.
  */
 int git_odb__error_notfound(const char *message, const git_oid *oid);
 
 /*
- * Generate a GIT_EAMBIGUOUS error for the ODB.
+ * Generate a GIT_AMBIGUOUS error for the ODB.
  */
 int git_odb__error_ambiguous(const char *message);
 

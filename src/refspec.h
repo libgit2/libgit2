@@ -28,7 +28,7 @@ int git_refspec_parse(struct git_refspec *refspec, const char *str);
  * @param out where to store the target name
  * @param spec the refspec
  * @param name the name of the reference to transform
- * @return GIT_SUCCESS or error if buffer allocation fails
+ * @return 0 or error if buffer allocation fails
  */
 int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name);
 

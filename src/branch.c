@@ -190,7 +190,7 @@ int git_branch_move(git_repository *repo, const char *old_branch_name, const cha
 	if ((error = git_buf_joinpath(&old_reference_name, GIT_REFS_HEADS_DIR, old_branch_name)) < 0)
 		goto cleanup;
 
-	/* We need to be able to return GIT_ENOTFOUND */
+	/* We need to be able to return GIT_NOTFOUND */
 	if ((error = git_reference_lookup(&reference, repo, git_buf_cstr(&old_reference_name))) < 0)
 		goto cleanup;
 

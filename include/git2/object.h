@@ -69,7 +69,7 @@ GIT_EXTERN(int) git_object_lookup(
  * @param id a short identifier for the object
  * @param len the length of the short identifier
  * @param type the type of the object
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_lookup_prefix(
 		git_object **object_out,

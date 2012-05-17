@@ -34,9 +34,9 @@ void test_status_submodules__api(void)
 {
 	git_submodule *sm;
 
-	cl_assert(git_submodule_lookup(NULL, g_repo, "nonexistent") == GIT_ENOTFOUND);
+	cl_assert(git_submodule_lookup(NULL, g_repo, "nonexistent") == GIT_NOTFOUND);
 
-	cl_assert(git_submodule_lookup(NULL, g_repo, "modified") == GIT_ENOTFOUND);
+	cl_assert(git_submodule_lookup(NULL, g_repo, "modified") == GIT_NOTFOUND);
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
 	cl_assert(sm != NULL);

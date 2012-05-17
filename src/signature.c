@@ -167,7 +167,7 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 
 	if (*offset_start == '\n') {
 		*offset_out = 0;
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	if (offset_start[0] != '-' && offset_start[0] != '+')
@@ -176,7 +176,7 @@ static int parse_timezone_offset(const char *buffer, int *offset_out)
 	if (offset_start[1] < '0' || offset_start[1] > '9')
 		return timezone_error("expected initial digit");
 
-	if (git__strtol32(&dec_offset, offset_start + 1, &offset_end, 10) < GIT_SUCCESS)
+	if (git__strtol32(&dec_offset, offset_start + 1, &offset_end, 10) < 0)
 		return timezone_error("not a valid number");
 
 	if (offset_end - offset_start != 5)

@@ -139,7 +139,7 @@ extern int git_futils_mmap_ro(
  * @param path path to file to be opened.
  * @return
  * - 0 on success;
- * - GIT_ENOTFOUND if not found;
+ * - GIT_NOTFOUND if not found;
  * - -1 on an unspecified OS related error.
  */
 extern int git_futils_mmap_ro_file(
@@ -159,7 +159,7 @@ extern void git_futils_mmap_free(git_map *map);
  * @param filename name of file to find in the home directory
  * @return
  * - 0 if found;
- * - GIT_ENOTFOUND if not found;
+ * - GIT_NOTFOUND if not found;
  * - -1 on an unspecified OS related error.
  */
 extern int git_futils_find_global_file(git_buf *path, const char *filename);
@@ -171,7 +171,7 @@ extern int git_futils_find_global_file(git_buf *path, const char *filename);
  * @param filename name of file to find in the home directory
  * @return
  * - 0 if found;
- * - GIT_ENOTFOUND if not found;
+ * - GIT_NOTFOUND if not found;
  * - -1 on an unspecified OS related error.
  */
 extern int git_futils_find_system_file(git_buf *path, const char *filename);

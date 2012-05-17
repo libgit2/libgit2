@@ -68,5 +68,5 @@ void test_refs_branches_move__moving_a_non_exisiting_branch_returns_ENOTFOUND(vo
 	error = git_branch_move(repo, "where/am/I", NEW_BRANCH_NAME, 0);
 	cl_git_fail(error);
 
-	cl_assert_equal_i(GIT_ENOTFOUND, error);
+	cl_assert_equal_i(GIT_NOTFOUND, error);
 }

@@ -85,13 +85,13 @@ GIT_EXTERN(int) git_submodule_foreach(
  *
  * Given either the submodule name or path (they are ususally the same),
  * this returns a structure describing the submodule.  If the submodule
- * does not exist, this will return GIT_ENOTFOUND and set the submodule
+ * does not exist, this will return GIT_NOTFOUND and set the submodule
  * pointer to NULL.
  *
  * @param submodule Pointer to submodule description object pointer..
  * @param repo The repository.
  * @param name The name of the submodule.  Trailing slashes will be ignored.
- * @return 0 on success, GIT_ENOTFOUND if submodule does not exist, -1 on error
+ * @return 0 on success, GIT_NOTFOUND if submodule does not exist, -1 on error
  */
 GIT_EXTERN(int) git_submodule_lookup(
 	git_submodule **submodule,

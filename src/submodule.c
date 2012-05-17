@@ -351,7 +351,7 @@ int git_submodule_foreach(
 	git_strmap_foreach_value(repo->submodules, sm, {
 		/* usually the following will not come into play */
 		if (sm->refcount > 1) {
-			if (git_vector_bsearch(&seen, sm) != GIT_ENOTFOUND)
+			if (git_vector_bsearch(&seen, sm) != GIT_NOTFOUND)
 				continue;
 			if ((error = git_vector_insert(&seen, sm)) < 0)
 				break;
@@ -378,7 +378,7 @@ int git_submodule_lookup(
 
 	pos = git_strmap_lookup_index(repo->submodules, name);
 	if (!git_strmap_valid_index(repo->submodules, pos))
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 
 	if (sm_ptr)
 		*sm_ptr = git_strmap_value_at(repo->submodules, pos);

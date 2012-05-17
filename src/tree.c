@@ -117,7 +117,7 @@ static int tree_key_search(git_vector *entries, const char *filename)
 	}
 
 	/* The filename doesn't exist at all */
-	return GIT_ENOTFOUND;
+	return GIT_NOTFOUND;
 }
 
 void git_tree__free(git_tree *tree)
@@ -186,7 +186,7 @@ const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename
 	assert(tree && filename);
 
 	idx = tree_key_search(&tree->entries, filename);
-	if (idx == GIT_ENOTFOUND)
+	if (idx == GIT_NOTFOUND)
 		return NULL;
 
 	return git_vector_get(&tree->entries, idx);
@@ -518,7 +518,7 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
 
-	if (pos == GIT_ENOTFOUND) {
+	if (pos == GIT_NOTFOUND) {
 		if (git_vector_insert(&bld->entries, entry) < 0)
 			return -1;
 	}
@@ -647,7 +647,7 @@ static int tree_frompath(
 {
 	char *slash_pos = NULL;
 	const git_tree_entry* entry;
-	int error = GIT_SUCCESS;
+	int error = 0;
 	git_tree *subtree;
 
 	if (!*(treeentry_path->ptr + offset)) {
@@ -682,7 +682,7 @@ static int tree_frompath(
 		giterr_set(GITERR_TREE,
 			"No tree entry can be found from "
 			"the given tree and relative path '%s'.", treeentry_path->ptr);
-		return GIT_ENOTFOUND;
+		return GIT_NOTFOUND;
 	}
 
 
@@ -724,7 +724,7 @@ static int tree_walk_post(
 	git_buf *path,
 	void *payload)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	unsigned int i;
 
 	for (i = 0; i < tree->entries.length; ++i) {
@@ -761,7 +761,7 @@ static int tree_walk_post(
 
 int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	git_buf root_path = GIT_BUF_INIT;
 
 	switch (mode) {
