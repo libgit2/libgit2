@@ -273,7 +273,7 @@ int main (int argc, char** argv)
 
   // Once you have the entry object, you can access the content or subtree (or commit, in the case
   // of submodules) that it points to.  You can also get the mode if you want.
-  git_tree_entry_2object(&objt, repo, entry); // blob
+  git_tree_entry_to_object(&objt, repo, entry); // blob
 
   // Remember to close the looked-up object once you are done using it
   git_object_free(objt);

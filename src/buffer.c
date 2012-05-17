@@ -12,9 +12,9 @@
 /* Used as default value for git_buf->ptr so that people can always
  * assume ptr is non-NULL and zero terminated even for new git_bufs.
  */
-char git_buf_initbuf[1];
+char git_buf__initbuf[1];
 
-static char git_buf__oom;
+char git_buf__oom[1];
 
 #define ENSURE_SIZE(b, d) \
 	if ((d) > buf->asize && git_buf_grow(b, (d)) < 0)\
@@ -25,7 +25,7 @@ void git_buf_init(git_buf *buf, size_t initial_size)
 {
 	buf->asize = 0;
 	buf->size = 0;
-	buf->ptr = git_buf_initbuf;
+	buf->ptr = git_buf__initbuf;
 
 	if (initial_size)
 		git_buf_grow(buf, initial_size);
@@ -35,7 +35,7 @@ int git_buf_grow(git_buf *buf, size_t target_size)
 {
 	int error = git_buf_try_grow(buf, target_size);
 	if (error != 0)
-		buf->ptr = &git_buf__oom;
+		buf->ptr = git_buf__oom;
 	return error;
 }
 
@@ -44,7 +44,7 @@ int git_buf_try_grow(git_buf *buf, size_t target_size)
 	char *new_ptr;
 	size_t new_size;
 
-	if (buf->ptr == &git_buf__oom)
+	if (buf->ptr == git_buf__oom)
 		return -1;
 
 	if (target_size <= buf->asize)
@@ -85,7 +85,7 @@ void git_buf_free(git_buf *buf)
 {
 	if (!buf) return;
 
-	if (buf->ptr != git_buf_initbuf && buf->ptr != &git_buf__oom)
+	if (buf->ptr != git_buf__initbuf && buf->ptr != git_buf__oom)
 		git__free(buf->ptr);
 
 	git_buf_init(buf, 0);
@@ -96,11 +96,6 @@ void git_buf_clear(git_buf *buf)
 	buf->size = 0;
 	if (buf->asize > 0)
 		buf->ptr[0] = '\0';
-}
-
-bool git_buf_oom(const git_buf *buf)
-{
-	return (buf->ptr == &git_buf__oom);
 }
 
 int git_buf_set(git_buf *buf, const char *data, size_t len)
@@ -164,7 +159,7 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 
 		if (len < 0) {
 			git__free(buf->ptr);
-			buf->ptr = &git_buf__oom;
+			buf->ptr = git_buf__oom;
 			return -1;
 		}
 
@@ -244,7 +239,7 @@ char *git_buf_detach(git_buf *buf)
 {
 	char *data = buf->ptr;
 
-	if (buf->asize == 0 || buf->ptr == &git_buf__oom)
+	if (buf->asize == 0 || buf->ptr == git_buf__oom)
 		return NULL;
 
 	git_buf_init(buf, 0);
@@ -445,3 +440,22 @@ int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
 
 	return 0;
 }
+
+bool git_buf_is_binary(const git_buf *buf)
+{
+	size_t i;
+	int printable = 0, nonprintable = 0;
+
+	for (i = 0; i < buf->size; i++) {
+		unsigned char c = buf->ptr[i];
+		if (c > 0x1F && c < 0x7F)
+			printable++;
+		else if (c == '\0')
+			return true;
+		else if (!git__isspace(c))
+			nonprintable++;
+	}
+
+	return ((printable >> 7) < nonprintable);
+}
+
