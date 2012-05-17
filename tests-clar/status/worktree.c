@@ -447,3 +447,72 @@ void test_status_worktree__first_commit_in_progress(void)
 	git_index_free(index);
 	git_repository_free(repo);
 }
+
+
+
+void test_status_worktree__status_file_without_index_or_workdir(void)
+{
+	git_repository *repo;
+	unsigned int status = 0;
+	git_index *index;
+
+	cl_git_pass(p_mkdir("wd", 0777));
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_set_workdir(repo, "wd"));
+
+	cl_git_pass(git_index_open(&index, "empty-index"));
+	cl_assert_equal_i(0, git_index_entrycount(index));
+	git_repository_set_index(repo, index);
+
+	cl_git_pass(git_status_file(&status, repo, "branch_file.txt"));
+
+	cl_assert_equal_i(GIT_STATUS_INDEX_DELETED, status);
+
+	git_repository_free(repo);
+	git_index_free(index);
+	cl_git_pass(p_rmdir("wd"));
+}
+
+static void fill_index_wth_head_entries(git_repository *repo, git_index *index)
+{
+	git_oid oid;
+	git_commit *commit;
+	git_tree *tree;
+
+	cl_git_pass(git_reference_name_to_oid(&oid, repo, "HEAD"));
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+	cl_git_pass(git_commit_tree(&tree, commit));
+
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_write(index));
+
+	git_tree_free(tree);
+	git_commit_free(commit);
+}
+
+void test_status_worktree__status_file_with_clean_index_and_empty_workdir(void)
+{
+	git_repository *repo;
+	unsigned int status = 0;
+	git_index *index;
+
+	cl_git_pass(p_mkdir("wd", 0777));
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_set_workdir(repo, "wd"));
+
+	cl_git_pass(git_index_open(&index, "my-index"));
+	fill_index_wth_head_entries(repo, index);
+
+	git_repository_set_index(repo, index);
+
+	cl_git_pass(git_status_file(&status, repo, "branch_file.txt"));
+
+	cl_assert_equal_i(GIT_STATUS_WT_DELETED, status);
+
+	git_repository_free(repo);
+	git_index_free(index);
+	cl_git_pass(p_rmdir("wd"));
+	cl_git_pass(p_unlink("my-index"));
+}

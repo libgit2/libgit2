@@ -660,6 +660,8 @@ int git_iterator_for_workdir_range(
 	int error;
 	workdir_iterator *wi;
 
+	assert(iter && repo);
+
 	if (git_repository_is_bare(repo)) {
 		giterr_set(GITERR_INVALID,
 			"Cannot scan working directory for bare repo");
@@ -680,10 +682,16 @@ int git_iterator_for_workdir_range(
 
 	wi->root_len = wi->path.size;
 
-	if ((error = workdir_iterator__expand_dir(wi)) < 0)
-		git_iterator_free((git_iterator *)wi);
-	else
-		*iter = (git_iterator *)wi;
+	if ((error = workdir_iterator__expand_dir(wi)) < 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+		else {
+			git_iterator_free((git_iterator *)wi);
+			wi = NULL;
+		}
+	}
+
+	*iter = (git_iterator *)wi;
 
 	return error;
 }
