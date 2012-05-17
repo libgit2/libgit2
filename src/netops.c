@@ -194,13 +194,11 @@ int gitno_ssl_teardown(git_transport *t)
 
 
 #ifdef GIT_OPENSSL
-/*
- * This function is based on the one from the cURL project
- */
+/* Match host names according to RFC 2818 rules */
 static int match_host(const char *pattern, const char *host)
 {
 	for (;;) {
-		char c = *pattern++;
+		char c = tolower(*pattern++);
 
 		if (c == '\0')
 			return *host ? -1 : 0;
@@ -211,14 +209,24 @@ static int match_host(const char *pattern, const char *host)
 			if (c == '\0')
 				return 0;
 
-			while (*host) {
-				if (match_host(pattern, host++) == 0)
-					return 0;
+	/*
+	 * We've found a pattern, so move towards the next matching
+	 * char. The '.' is handled specially because wildcards aren't
+	 * allowed to cross subdomains.
+	 */
+
+			while(*host) {
+				char h = tolower(*host);
+				if (c == h)
+					return match_host(pattern, host++);
+				if (h == '.')
+					return match_host(pattern, host);
+				host++;
 			}
-			break;
+			return -1;
 		}
 
-		if (tolower(c) != tolower(*host++))
+		if (c != tolower(*host++))
 			return -1;
 	}
 
