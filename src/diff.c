@@ -551,29 +551,27 @@ static int diff_from_iterators(
 		 * matched in old (and/or descend into directories as needed)
 		 */
 		else if (nitem && (!oitem || strcmp(oitem->path, nitem->path) > 0)) {
-			int is_ignored;
-			git_delta_t delta_type = GIT_DELTA_ADDED;
+			git_delta_t delta_type = GIT_DELTA_UNTRACKED;
 
-			/* contained in ignored parent directory, so this can be skipped. */
+			/* check if contained in ignored parent directory */
 			if (git_buf_len(&ignore_prefix) &&
 				git__prefixcmp(nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
-			{
-				if (git_iterator_advance(new_iter, &nitem) < 0)
-					goto fail;
-
-				continue;
-			}
-
-			is_ignored = git_iterator_current_is_ignored(new_iter);
+				delta_type = GIT_DELTA_IGNORED;
 
 			if (S_ISDIR(nitem->mode)) {
-				/* recurse into directory if explicitly requested or
-				 * if there are tracked items inside the directory
+				/* recurse into directory only if there are tracked items in
+				 * it or if the user requested the contents of untracked
+				 * directories and it is not under an ignored directory.
 				 */
-				if ((diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) ||
-					(oitem && git__prefixcmp(oitem->path, nitem->path) == 0))
+				if ((oitem && git__prefixcmp(oitem->path, nitem->path) == 0) ||
+					(delta_type == GIT_DELTA_UNTRACKED &&
+					 (diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) != 0))
 				{
-					if (is_ignored)
+					/* if this directory is ignored, remember it as the
+					 * "ignore_prefix" for processing contained items
+					 */
+					if (delta_type == GIT_DELTA_UNTRACKED &&
+						git_iterator_current_is_ignored(new_iter))
 						git_buf_sets(&ignore_prefix, nitem->path);
 
 					if (git_iterator_advance_into_directory(new_iter, &nitem) < 0)
@@ -581,12 +579,34 @@ static int diff_from_iterators(
 
 					continue;
 				}
-				delta_type = GIT_DELTA_UNTRACKED;
 			}
-			else if (is_ignored)
+
+			/* In core git, the next two "else if" clauses are effectively
+			 * reversed -- i.e. when an untracked file contained in an
+			 * ignored directory is individually ignored, it shows up as an
+			 * ignored file in the diff list, even though other untracked
+			 * files in the same directory are skipped completely.
+			 *
+			 * To me, this is odd.  If the directory is ignored and the file
+			 * is untracked, we should skip it consistently, regardless of
+			 * whether it happens to match a pattern in the ignore file.
+			 *
+			 * To match the core git behavior, just reverse the following
+			 * two "else if" cases so that individual file ignores are
+			 * checked before container directory exclusions are used to
+			 * skip the file.
+			 */
+			else if (delta_type == GIT_DELTA_IGNORED) {
+				if (git_iterator_advance(new_iter, &nitem) < 0)
+					goto fail;
+				continue; /* ignored parent directory, so skip completely */
+			}
+
+			else if (git_iterator_current_is_ignored(new_iter))
 				delta_type = GIT_DELTA_IGNORED;
-			else if (new_iter->type == GIT_ITERATOR_WORKDIR)
-				delta_type = GIT_DELTA_UNTRACKED;
+
+			else if (new_iter->type != GIT_ITERATOR_WORKDIR)
+				delta_type = GIT_DELTA_ADDED;
 
 			if (diff_delta__from_one(diff, delta_type, nitem) < 0 ||
 				git_iterator_advance(new_iter, &nitem) < 0)
