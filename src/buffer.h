@@ -15,9 +15,10 @@ typedef struct {
 	size_t asize, size;
 } git_buf;
 
-extern char git_buf_initbuf[];
+extern char git_buf__initbuf[];
+extern char git_buf__oom[];
 
-#define GIT_BUF_INIT { git_buf_initbuf, 0, 0 }
+#define GIT_BUF_INIT { git_buf__initbuf, 0, 0 }
 
 /**
  * Initialize a git_buf structure.
@@ -61,7 +62,10 @@ void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
  *
  * @return false if no error, true if allocation error
  */
-bool git_buf_oom(const git_buf *buf);
+GIT_INLINE(bool) git_buf_oom(const git_buf *buf)
+{
+	return (buf->ptr == git_buf__oom);
+}
 
 /*
  * Functions below that return int value error codes will return 0 on
