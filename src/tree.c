@@ -117,7 +117,7 @@ static int tree_key_search(git_vector *entries, const char *filename)
 	}
 
 	/* The filename doesn't exist at all */
-	return GIT_NOTFOUND;
+	return GIT_ENOTFOUND;
 }
 
 void git_tree__free(git_tree *tree)
@@ -186,7 +186,7 @@ const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename
 	assert(tree && filename);
 
 	idx = tree_key_search(&tree->entries, filename);
-	if (idx == GIT_NOTFOUND)
+	if (idx == GIT_ENOTFOUND)
 		return NULL;
 
 	return git_vector_get(&tree->entries, idx);
@@ -518,7 +518,7 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
 
-	if (pos == GIT_NOTFOUND) {
+	if (pos == GIT_ENOTFOUND) {
 		if (git_vector_insert(&bld->entries, entry) < 0)
 			return -1;
 	}
@@ -682,7 +682,7 @@ static int tree_frompath(
 		giterr_set(GITERR_TREE,
 			"No tree entry can be found from "
 			"the given tree and relative path '%s'.", treeentry_path->ptr);
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 	}
 
 

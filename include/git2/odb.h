@@ -109,7 +109,7 @@ GIT_EXTERN(void) git_odb_free(git_odb *db);
  * @param id identity of the object to read.
  * @return
  * - 0 if the object was read;
- * - GIT_NOTFOUND if the object is not in the database.
+ * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id);
 
@@ -136,8 +136,8 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * @param short_id a prefix of the id of the object to read.
  * @param len the length of the prefix
  * @return 0 if the object was read;
- *	GIT_NOTFOUND if the object is not in the database.
- *	GIT_AMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
+ *	GIT_ENOTFOUND if the object is not in the database.
+ *	GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
  */
 GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len);
 
@@ -157,7 +157,7 @@ GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git
  * @param id identity of the object to read.
  * @return
  * - 0 if the object was read;
- * - GIT_NOTFOUND if the object is not in the database.
+ * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(int) git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id);
 

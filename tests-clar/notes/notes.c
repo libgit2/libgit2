@@ -127,7 +127,7 @@ void test_notes_notes__retrieving_a_list_of_notes_for_an_unknown_namespace_retur
 
 	error = git_note_foreach(_repo, "refs/notes/i-am-not", note_list_cb, &retrieved_notes);
 	cl_git_fail(error);
-	cl_assert_equal_i(GIT_NOTFOUND, error);
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
 
 	cl_assert_equal_i(0, retrieved_notes);
 }

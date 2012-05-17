@@ -141,7 +141,7 @@ static int pack_entry_find(struct git_pack_entry *e,
 
 /* Can find the offset of an object given
  * a prefix of an identifier.
- * Sets GIT_AMBIGUOUS if short oid is ambiguous.
+ * Sets GIT_EAMBIGUOUS if short oid is ambiguous.
  * This method assumes that len is between
  * GIT_OID_MINPREFIXLEN and GIT_OID_HEXSZ.
  */
@@ -224,7 +224,7 @@ static int packfile_load__cb(void *_data, git_buf *path)
 	}
 
 	error = git_packfile_check(&pack, path->ptr);
-	if (error == GIT_NOTFOUND)
+	if (error == GIT_ENOTFOUND)
 		/* ignore missing .pack file as git does */
 		return 0;
 	else if (error < 0)
@@ -306,7 +306,7 @@ static int pack_entry_find_prefix(
 
 	if (backend->last_found) {
 		error = git_pack_entry_find(e, backend->last_found, short_oid, len);
-		if (error == GIT_AMBIGUOUS)
+		if (error == GIT_EAMBIGUOUS)
 			return error;
 		if (!error)
 			found = 1;
@@ -320,7 +320,7 @@ static int pack_entry_find_prefix(
 			continue;
 
 		error = git_pack_entry_find(e, p, short_oid, len);
-		if (error == GIT_AMBIGUOUS)
+		if (error == GIT_EAMBIGUOUS)
 			return error;
 		if (!error) {
 			if (++found > 1)
@@ -354,7 +354,7 @@ int pack_backend__read_header(git_rawobj *obj, git_odb_backend *backend, const g
 	assert(obj && backend && oid);
 
 	if (locate_packfile(&location, (struct pack_backend *)backend, oid) < 0)
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	return read_header_packed(obj, &location);
 }

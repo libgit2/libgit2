@@ -36,7 +36,7 @@ int resolve_to_tree(git_repository *repo, const char *identifier, git_tree **tre
 	}
 
 	if (obj == NULL)
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	switch (git_object_type(obj)) {
 	case GIT_OBJ_TREE:
@@ -47,7 +47,7 @@ int resolve_to_tree(git_repository *repo, const char *identifier, git_tree **tre
 		git_object_free(obj);
 		break;
 	default:
-		err = GIT_NOTFOUND;
+		err = GIT_ENOTFOUND;
 	}
 
 	return err;

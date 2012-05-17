@@ -143,7 +143,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  * @param oid Pointer where to store the OID of the
  * newly created tag. If the tag already exists, this parameter
  * will be the oid of the existing tag, and the function will
- * return a GIT_EXISTS error code.
+ * return a GIT_EEXISTS error code.
  *
  * @param repo Repository where to store the tag
  *
@@ -199,7 +199,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  * @param oid Pointer where to store the OID of the provided
  * target object. If the tag already exists, this parameter
  * will be filled with the oid of the existing pointed object
- * and the function will return a GIT_EXISTS error code.
+ * and the function will return a GIT_EEXISTS error code.
  *
  * @param repo Repository where to store the lightweight tag
  *

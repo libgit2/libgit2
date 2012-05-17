@@ -40,7 +40,7 @@ static int parse_ignore_file(
 			git__free(match->pattern);
 			match->pattern = NULL;
 
-			if (error == GIT_NOTFOUND)
+			if (error == GIT_ENOTFOUND)
 				error = 0;
 		} else {
 			match = NULL; /* vector now "owns" the match */

@@ -437,7 +437,7 @@ static int packed_load(git_repository *repo)
 	 * for us here, so just return. Anything else means we need to
 	 * refresh the packed refs.
 	 */
-	if (result == GIT_NOTFOUND) {
+	if (result == GIT_ENOTFOUND) {
 		git_strmap_clear(ref_cache->packfile);
 		return 0;
 	}
@@ -917,7 +917,7 @@ static int reference_can_write(
 		if (exists) {
 			giterr_set(GITERR_REFERENCE,
 				"A reference with that name (%s) already exists", refname);
-			return GIT_EXISTS;
+			return GIT_EEXISTS;
 		}
 	}
 
@@ -962,7 +962,7 @@ static int packed_lookup(git_reference *ref)
 	pos = git_strmap_lookup_index(packfile_refs, ref->name);
 	if (!git_strmap_valid_index(packfile_refs, pos)) {
 		giterr_set(GITERR_REFERENCE, "Reference '%s' not found", ref->name);
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 	}
 
 	pack_ref = git_strmap_value_at(packfile_refs, pos);
@@ -984,7 +984,7 @@ static int reference_lookup(git_reference *ref)
 
 	/* only try to lookup this reference on the packfile if it
 	 * wasn't found on the loose refs; not if there was a critical error */
-	if (result == GIT_NOTFOUND) {
+	if (result == GIT_ENOTFOUND) {
 		giterr_clear();
 		result = packed_lookup(ref);
 		if (result == 0)

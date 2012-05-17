@@ -143,7 +143,7 @@ static int merge_structs(void **old_raw, void *new)
 	((my_struct *)old)->count += 1;
 	git__free(new);
 	_struct_count--;
-	return GIT_EXISTS;
+	return GIT_EEXISTS;
 }
 
 static my_struct *alloc_struct(int value)

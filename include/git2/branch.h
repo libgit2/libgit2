@@ -63,7 +63,7 @@ GIT_EXTERN(int) git_branch_create(
  * @param branch_type Type of the considered branch. This should
  * be valued with either GIT_BRANCH_LOCAL or GIT_BRANCH_REMOTE.
  *
- * @return 0 on success, GIT_NOTFOUND if the branch
+ * @return 0 on success, GIT_ENOTFOUND if the branch
  * doesn't exist or an error code.
  */
 GIT_EXTERN(int) git_branch_delete(
@@ -108,7 +108,7 @@ GIT_EXTERN(int) git_branch_list(
  *
  * @param force Overwrite existing branch.
  *
- * @return 0 on success, GIT_NOTFOUND if the branch
+ * @return 0 on success, GIT_ENOTFOUND if the branch
  * doesn't exist or an error code.
  */
 GIT_EXTERN(int) git_branch_move(

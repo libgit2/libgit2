@@ -85,7 +85,7 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	error = git_attr_get_many(attr_vals,
 		repo, 0, path, NUM_CONV_ATTRS, attr_names);
 
-	if (error == GIT_NOTFOUND) {
+	if (error == GIT_ENOTFOUND) {
 		ca->crlf_action = GIT_CRLF_GUESS;
 		ca->eol = GIT_EOL_UNSET;
 		return 0;

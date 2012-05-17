@@ -278,7 +278,7 @@ GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_tr
  * @param subtree Pointer where to store the subtree
  * @param root A previously loaded tree which will be the root of the relative path
  * @param subtree_path Path to the contained subtree
- * @return 0 on success; GIT_NOTFOUND if the path does not lead to a subtree
+ * @return 0 on success; GIT_ENOTFOUND if the path does not lead to a subtree
  */
 GIT_EXTERN(int) git_tree_get_subtree(git_tree **subtree, git_tree *root, const char *subtree_path);
 

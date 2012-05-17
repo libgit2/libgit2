@@ -63,7 +63,7 @@ void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
 	error = git_merge_base(&result, _repo, &one, &two);
 	cl_git_fail(error);
 
-	cl_assert_equal_i(GIT_NOTFOUND, error);
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
 }
 
 /*

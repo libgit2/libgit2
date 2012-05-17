@@ -411,7 +411,7 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 	 * if no entry exists add the entry at the end;
 	 * the index is no longer sorted
 	 */
-	if (position == GIT_NOTFOUND)
+	if (position == GIT_ENOTFOUND)
 		return git_vector_insert(&index->entries, entry);
 
 	/* exists, replace it */

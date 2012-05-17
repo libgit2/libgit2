@@ -148,7 +148,7 @@ static int load_workdir(git_repository *repo, git_buf *parent_path)
 	error = git_config_get_string(&worktree, config, "core.worktree");
 	if (!error && worktree != NULL)
 		repo->workdir = git__strdup(worktree);
-	else if (error != GIT_NOTFOUND)
+	else if (error != GIT_ENOTFOUND)
 		return error;
 	else {
 		giterr_clear();
@@ -342,7 +342,7 @@ static int find_repo(
 	if (!git_buf_len(repo_path) && !error) {
 		giterr_set(GITERR_REPOSITORY,
 			"Could not find repository from '%s'", start_path);
-		error = GIT_NOTFOUND;
+		error = GIT_ENOTFOUND;
 	}
 
 	return error;
@@ -403,7 +403,7 @@ int git_repository_discover(
 	*repository_path = '\0';
 
 	if ((error = find_repo(&path, NULL, start_path, flags, ceiling_dirs)) < 0)
-		return error != GIT_NOTFOUND ? -1 : error;
+		return error != GIT_ENOTFOUND ? -1 : error;
 
 	if (size < (size_t)(path.size + 1)) {
 		giterr_set(GITERR_REPOSITORY,
@@ -851,7 +851,7 @@ int git_repository_head_orphan(git_repository *repo)
 	error = git_repository_head(&ref, repo);
 	git_reference_free(ref);
 
-	if (error == GIT_NOTFOUND)
+	if (error == GIT_ENOTFOUND)
 		return 1;
 
 	if (error < 0)
@@ -883,7 +883,7 @@ int git_repository_is_empty(git_repository *repo)
 	git_reference_free(head);
 	git_reference_free(branch);
 
-	if (error == GIT_NOTFOUND)
+	if (error == GIT_ENOTFOUND)
 		return 1;
 
 	if (error < 0)

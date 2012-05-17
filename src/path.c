@@ -206,7 +206,7 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 
 	if (p_realpath(path, buf) == NULL) {
 		/* giterr_set resets the errno when dealing with a GITERR_OS kind of error */
-		int error = (errno == ENOENT || errno == ENOTDIR) ? GIT_NOTFOUND : -1;
+		int error = (errno == ENOENT || errno == ENOTDIR) ? GIT_ENOTFOUND : -1;
 		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
 
 		git_buf_clear(path_out);
@@ -390,7 +390,7 @@ int git_path_lstat(const char *path, struct stat *st)
 	int err = 0;
 
 	if (p_lstat(path, st) < 0) {
-		err = (errno == ENOENT) ? GIT_NOTFOUND : -1;
+		err = (errno == ENOENT) ? GIT_ENOTFOUND : -1;
 		giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
 	}
 

@@ -153,7 +153,7 @@ void test_index_tests__find_in_empty(void)
 
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
       int idx = git_index_find(index, test_entries[i].path);
-      cl_assert(idx == GIT_NOTFOUND);
+      cl_assert(idx == GIT_ENOTFOUND);
    }
 
    git_index_free(index);

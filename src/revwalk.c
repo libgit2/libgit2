@@ -375,7 +375,7 @@ int git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *tw
 
 	if (!result) {
 		git_revwalk_free(walk);
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 	}
 
 	git_oid_cpy(out, &result->item->oid);

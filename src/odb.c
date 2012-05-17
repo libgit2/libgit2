@@ -485,7 +485,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
 {
 	unsigned int i;
-	int error = GIT_NOTFOUND;
+	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
 	assert(db && id);
@@ -524,7 +524,7 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 {
 	unsigned int i;
-	int error = GIT_NOTFOUND;
+	int error = GIT_ENOTFOUND;
 	git_rawobj raw;
 
 	assert(out && db && id);
@@ -541,7 +541,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 	}
 
-	/* TODO: If no backends are configured, this returns GIT_NOTFOUND but
+	/* TODO: If no backends are configured, this returns GIT_ENOTFOUND but
 	 * will never have called giterr_set().
 	 */
 
@@ -556,7 +556,7 @@ int git_odb_read_prefix(
 	git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
 {
 	unsigned int i;
-	int error = GIT_NOTFOUND;
+	int error = GIT_ENOTFOUND;
 	git_oid found_full_oid = {{0}};
 	git_rawobj raw;
 	bool found = false;
@@ -582,7 +582,7 @@ int git_odb_read_prefix(
 		if (b->read != NULL) {
 			git_oid full_oid;
 			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
-			if (error == GIT_NOTFOUND || error == GIT_PASSTHROUGH)
+			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
 				continue;
 
 			if (error)
@@ -698,12 +698,12 @@ int git_odb__error_notfound(const char *message, const git_oid *oid)
 	} else
 		giterr_set(GITERR_ODB, "Object not found - %s", message);
 
-	return GIT_NOTFOUND;
+	return GIT_ENOTFOUND;
 }
 
 int git_odb__error_ambiguous(const char *message)
 {
 	giterr_set(GITERR_ODB, "Ambiguous SHA1 prefix - %s", message);
-	return GIT_AMBIGUOUS;
+	return GIT_EAMBIGUOUS;
 }
 

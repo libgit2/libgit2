@@ -354,7 +354,7 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 			return 0;
 
 		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
-		if (error == GIT_SHORTBUFFER) {
+		if (error == GIT_EBUFS) {
 			return 0; /* Ask for more */
 		}
 		if (error < 0)

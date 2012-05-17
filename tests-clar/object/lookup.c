@@ -22,7 +22,7 @@ void test_object_lookup__lookup_wrong_type_returns_enotfound(void)
 
 	cl_git_pass(git_oid_fromstr(&oid, commit));
 	cl_assert_equal_i(
-		GIT_NOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
+		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
 }
 
 void test_object_lookup__lookup_nonexisting_returns_enotfound(void)
@@ -33,7 +33,7 @@ void test_object_lookup__lookup_nonexisting_returns_enotfound(void)
 
 	cl_git_pass(git_oid_fromstr(&oid, unknown));
 	cl_assert_equal_i(
-		GIT_NOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_ANY));
+		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_ANY));
 }
 
 void test_object_lookup__lookup_wrong_type_by_abbreviated_id_returns_enotfound(void)
@@ -44,7 +44,7 @@ void test_object_lookup__lookup_wrong_type_by_abbreviated_id_returns_enotfound(v
 
 	cl_git_pass(git_oid_fromstrn(&oid, commit, strlen(commit)));
 	cl_assert_equal_i(
-		GIT_NOTFOUND, git_object_lookup_prefix(&object, g_repo, &oid, strlen(commit), GIT_OBJ_TAG));
+		GIT_ENOTFOUND, git_object_lookup_prefix(&object, g_repo, &oid, strlen(commit), GIT_OBJ_TAG));
 }
 
 void test_object_lookup__lookup_wrong_type_eventually_returns_enotfound(void)
@@ -59,5 +59,5 @@ void test_object_lookup__lookup_wrong_type_eventually_returns_enotfound(void)
 	git_object_free(object);
 
 	cl_assert_equal_i(
-		GIT_NOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
+		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
 }

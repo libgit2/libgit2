@@ -66,8 +66,8 @@ void test_object_tree_frompath__retrieve_tree_from_path_to_treeentry(void)
 
 void test_object_tree_frompath__fail_when_processing_an_unknown_tree_segment(void)
 {
-	assert_tree_from_path(tree, "nope/de/fgh/1.txt", GIT_NOTFOUND, NULL);
-	assert_tree_from_path(tree, "ab/me-neither/fgh/2.txt", GIT_NOTFOUND, NULL);
+	assert_tree_from_path(tree, "nope/de/fgh/1.txt", GIT_ENOTFOUND, NULL);
+	assert_tree_from_path(tree, "ab/me-neither/fgh/2.txt", GIT_ENOTFOUND, NULL);
 }
 
 void test_object_tree_frompath__fail_when_processing_an_invalid_path(void)

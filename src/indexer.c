@@ -205,9 +205,9 @@ static int store_delta(git_indexer_stream *idx)
 	}
 
 	error = packfile_unpack_compressed(&obj, idx->pack, &w, &idx->off, entry_size, type);
-	if (error == GIT_SHORTBUFFER) {
+	if (error == GIT_EBUFS) {
 		idx->off = entry_start;
-		return GIT_SHORTBUFFER;
+		return GIT_EBUFS;
 	} else if (error < 0){
 		return -1;
 	}
@@ -355,7 +355,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 			return 0;
 
 		error = git_packfile_unpack(&obj, idx->pack, &idx->off);
-		if (error == GIT_SHORTBUFFER) {
+		if (error == GIT_EBUFS) {
 			idx->off = entry_start;
 			return 0;
 		}
@@ -363,7 +363,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (error < 0) {
 			idx->off = entry_start;
 			error = store_delta(idx);
-			if (error == GIT_SHORTBUFFER)
+			if (error == GIT_EBUFS)
 				return 0;
 			if (error < 0)
 				return error;

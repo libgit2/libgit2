@@ -161,7 +161,7 @@ static int config_open(git_config_file *cfg)
 	res = git_futils_readbuffer(&b->reader.buffer, b->file_path);
 
 	/* It's fine if the file doesn't exist */
-	if (res == GIT_NOTFOUND)
+	if (res == GIT_ENOTFOUND)
 		return 0;
 
 	if (res < 0 || config_parse(b) <  0) {
@@ -289,7 +289,7 @@ static int config_get(git_config_file *cfg, const char *name, const char **out)
 
 	/* no error message; the config system will write one */
 	if (!git_strmap_valid_index(b->values, pos))
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	*out = ((cvar_t *)git_strmap_value_at(b->values, pos))->value;
 
@@ -315,7 +315,7 @@ static int config_get_multivar(
 	git__free(key);
 
 	if (!git_strmap_valid_index(b->values, pos))
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	var = git_strmap_value_at(b->values, pos);
 
@@ -377,7 +377,7 @@ static int config_set_multivar(
 	pos = git_strmap_lookup_index(b->values, key);
 	if (!git_strmap_valid_index(b->values, pos)) {
 		git__free(key);
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 	}
 
 	var = git_strmap_value_at(b->values, pos);
@@ -444,7 +444,7 @@ static int config_delete(git_config_file *cfg, const char *name)
 	git__free(key);
 
 	if (!git_strmap_valid_index(b->values, pos))
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	var = git_strmap_value_at(b->values, pos);
 
@@ -978,7 +978,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	result = git_futils_readbuffer(&cfg->reader.buffer, cfg->file_path);
 
 	/* Initialise the reading position */
-	if (result == GIT_NOTFOUND) {
+	if (result == GIT_ENOTFOUND) {
 		cfg->reader.read_ptr = NULL;
 		cfg->reader.eof = 1;
 		data_start = NULL;

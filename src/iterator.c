@@ -468,7 +468,7 @@ static int workdir_iterator__expand_dir(workdir_iterator *wi)
 	error = git_path_dirload_with_stat(wi->path.ptr, wi->root_len, &wf->entries);
 	if (error < 0 || wf->entries.length == 0) {
 		workdir_iterator__free_frame(wf);
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 	}
 
 	git_vector_sort(&wf->entries);
@@ -635,7 +635,7 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 		if (!is_submodule) {
 			int res = git_submodule_lookup(NULL, wi->repo, wi->entry.path);
 			is_submodule = (res == 0);
-			if (res == GIT_NOTFOUND)
+			if (res == GIT_ENOTFOUND)
 				giterr_clear();
 		}
 
@@ -683,7 +683,7 @@ int git_iterator_for_workdir_range(
 	wi->root_len = wi->path.size;
 
 	if ((error = workdir_iterator__expand_dir(wi)) < 0) {
-		if (error == GIT_NOTFOUND)
+		if (error == GIT_ENOTFOUND)
 			error = 0;
 		else {
 			git_iterator_free((git_iterator *)wi);

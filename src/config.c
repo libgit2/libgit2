@@ -263,7 +263,7 @@ int git_config_lookup_map_value(
 	size_t i;
 
 	if (!value)
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	for (i = 0; i < map_n; ++i) {
 		git_cvar_map *m = maps + i;
@@ -295,7 +295,7 @@ int git_config_lookup_map_value(
 		}
 	}
 
-	return GIT_NOTFOUND;
+	return GIT_ENOTFOUND;
 }
 
 int git_config_get_mapped(
@@ -387,12 +387,12 @@ int git_config_get_string(const char **out, git_config *cfg, const char *name)
 	git_vector_foreach(&cfg->files, i, internal) {
 		git_config_file *file = internal->file;
 		int ret = file->get(file, name, out);
-		if (ret != GIT_NOTFOUND)
+		if (ret != GIT_ENOTFOUND)
 			return ret;
 	}
 
 	giterr_set(GITERR_CONFIG, "Config variable '%s' not found", name);
-	return GIT_NOTFOUND;
+	return GIT_ENOTFOUND;
 }
 
 int git_config_get_multivar(git_config *cfg, const char *name, const char *regexp,
@@ -400,7 +400,7 @@ int git_config_get_multivar(git_config *cfg, const char *name, const char *regex
 {
 	file_internal *internal;
 	git_config_file *file;
-	int ret = GIT_NOTFOUND;
+	int ret = GIT_ENOTFOUND;
 	unsigned int i;
 
 	assert(cfg->files.length);
@@ -413,7 +413,7 @@ int git_config_get_multivar(git_config *cfg, const char *name, const char *regex
 		internal = git_vector_get(&cfg->files, i - 1);
 		file = internal->file;
 		ret = file->get_multivar(file, name, regexp, fn, data);
-		if (ret < 0 && ret != GIT_NOTFOUND)
+		if (ret < 0 && ret != GIT_ENOTFOUND)
 			return ret;
 	}
 
@@ -424,14 +424,14 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 {
 	file_internal *internal;
 	git_config_file *file;
-	int ret = GIT_NOTFOUND;
+	int ret = GIT_ENOTFOUND;
 	unsigned int i;
 
 	for (i = cfg->files.length; i > 0; --i) {
 		internal = git_vector_get(&cfg->files, i - 1);
 		file = internal->file;
 		ret = file->set_multivar(file, name, regexp, value);
-		if (ret < 0 && ret != GIT_NOTFOUND)
+		if (ret < 0 && ret != GIT_ENOTFOUND)
 			return ret;
 	}
 

@@ -199,7 +199,7 @@ void test_status_worktree__single_nonexistent_file(void)
 
 	error = git_status_file(&status_flags, repo, "nonexistent");
 	cl_git_fail(error);
-	cl_assert(error == GIT_NOTFOUND);
+	cl_assert(error == GIT_ENOTFOUND);
 }
 
 /* this test is equivalent to t18-status.c:singlestatus2 */
@@ -211,7 +211,7 @@ void test_status_worktree__single_nonexistent_file_empty_repo(void)
 
 	error = git_status_file(&status_flags, repo, "nonexistent");
 	cl_git_fail(error);
-	cl_assert(error == GIT_NOTFOUND);
+	cl_assert(error == GIT_ENOTFOUND);
 }
 
 /* this test is equivalent to t18-status.c:singlestatus3 */
@@ -235,7 +235,7 @@ void test_status_worktree__single_folder(void)
 
 	error = git_status_file(&status_flags, repo, "subdir");
 	cl_git_fail(error);
-	cl_assert(error != GIT_NOTFOUND);
+	cl_assert(error != GIT_ENOTFOUND);
 }
 
 
@@ -416,7 +416,7 @@ void test_status_worktree__cannot_retrieve_the_status_of_a_bare_repository(void)
 	error = git_status_file(&status, repo, "dummy");
 
 	cl_git_fail(error);
-	cl_assert(error != GIT_NOTFOUND);
+	cl_assert(error != GIT_ENOTFOUND);
 
 	git_repository_free(repo);
 }

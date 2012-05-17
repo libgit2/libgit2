@@ -343,7 +343,7 @@ static git_diff_list *git_diff_list_alloc(
 		if (!match)
 			goto fail;
 		ret = git_attr_fnmatch__parse(match, &diff->pool, NULL, &pattern);
-		if (ret == GIT_NOTFOUND) {
+		if (ret == GIT_ENOTFOUND) {
 			git__free(match);
 			continue;
 		} else if (ret < 0)

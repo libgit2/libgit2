@@ -72,7 +72,7 @@ int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar)
 		error = git_config_get_mapped(out,
 			config, data->cvar_name, data->maps, data->map_count);
 
-		if (error == GIT_NOTFOUND)
+		if (error == GIT_ENOTFOUND)
 			*out = data->default_value;
 
 		else if (error < 0)

@@ -254,7 +254,7 @@ static int git_tag_create__internal(
 	}
 
 	error = retrieve_tag_reference_oid(oid, &ref_name, repo, tag_name);
-	if (error < 0 && error != GIT_NOTFOUND)
+	if (error < 0 && error != GIT_ENOTFOUND)
 		return -1;
 
 	/** Ensure the tag name doesn't conflict with an already existing
@@ -262,7 +262,7 @@ static int git_tag_create__internal(
 	if (error == 0 && !allow_ref_overwrite) {
 		git_buf_free(&ref_name);
 		giterr_set(GITERR_TAG, "Tag already exists");
-		return GIT_EXISTS;
+		return GIT_EEXISTS;
 	}
 
 	if (create_tag_annotation) {
@@ -332,7 +332,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	}
 
 	error = retrieve_tag_reference_oid(oid, &ref_name, repo, tag.tag_name);
-	if (error < 0 && error != GIT_NOTFOUND)
+	if (error < 0 && error != GIT_ENOTFOUND)
 		goto on_error;
 
 	/* We don't need these objects after this */
@@ -345,7 +345,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	 *	reference unless overwriting has explictly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
 		giterr_set(GITERR_TAG, "Tag already exists");
-		return GIT_EXISTS;
+		return GIT_EEXISTS;
 	}
 
 	/* write the buffer */

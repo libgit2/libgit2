@@ -92,7 +92,7 @@ int git_object_lookup_prefix(
 	assert(repo && object_out && id);
 
 	if (len < GIT_OID_MINPREFIXLEN)
-		return GIT_AMBIGUOUS;
+		return GIT_EAMBIGUOUS;
 
 	error = git_repository_odb__weakptr(&odb, repo);
 	if (error < 0)
@@ -110,7 +110,7 @@ int git_object_lookup_prefix(
 			if (type != GIT_OBJ_ANY && type != object->type) {
 				git_object_free(object);
 				giterr_set(GITERR_ODB, "The given type does not match the type in ODB");
-				return GIT_NOTFOUND;
+				return GIT_ENOTFOUND;
 			}
 
 			*object_out = object;
@@ -151,7 +151,7 @@ int git_object_lookup_prefix(
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
 		git_odb_object_free(odb_obj);
 		giterr_set(GITERR_ODB, "The given type does not match the type on the ODB");
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 	}
 
 	type = odb_obj->raw.type;

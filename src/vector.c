@@ -137,7 +137,7 @@ int git_vector_bsearch3(
 	if (at_pos != NULL)
 		*at_pos = (unsigned int)pos;
 
-	return (rval >= 0) ? (int)pos : GIT_NOTFOUND;
+	return (rval >= 0) ? (int)pos : GIT_ENOTFOUND;
 }
 
 int git_vector_search2(
@@ -152,7 +152,7 @@ int git_vector_search2(
 			return i;
 	}
 
-	return GIT_NOTFOUND;
+	return GIT_ENOTFOUND;
 }
 
 static int strict_comparison(const void *a, const void *b)
@@ -172,7 +172,7 @@ int git_vector_remove(git_vector *v, unsigned int idx)
 	assert(v);
 
 	if (idx >= v->length || v->length == 0)
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	for (i = idx; i < v->length - 1; ++i)
 		v->contents[i] = v->contents[i + 1];

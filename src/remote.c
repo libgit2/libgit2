@@ -135,7 +135,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	}
 
 	error = parse_remote_refspec(config, &remote->fetch, git_buf_cstr(&buf));
-	if (error == GIT_NOTFOUND)
+	if (error == GIT_ENOTFOUND)
 		error = 0;
 
 	if (error < 0) {
@@ -150,7 +150,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	}
 
 	error = parse_remote_refspec(config, &remote->push, git_buf_cstr(&buf));
-	if (error == GIT_NOTFOUND)
+	if (error == GIT_ENOTFOUND)
 		error = 0;
 
 	if (error < 0) {
@@ -357,10 +357,10 @@ int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, co
 			goto on_error;
 
 		error = git_reference_name_to_oid(&old, remote->repo, refname.ptr);
-		if (error < 0 && error != GIT_NOTFOUND)
+		if (error < 0 && error != GIT_ENOTFOUND)
 			goto on_error;
 
-		if (error == GIT_NOTFOUND)
+		if (error == GIT_ENOTFOUND)
 			memset(&old, 0, GIT_OID_RAWSZ);
 
 		if (!git_oid_cmp(&old, &head->oid))

@@ -99,7 +99,7 @@ int git_attr_file__parse_buffer(
 		/* if the rule wasn't a pattern, on to the next */
 		if (error < 0) {
 			git_attr_rule__clear(rule); /* reset rule contents */
-			if (error == GIT_NOTFOUND)
+			if (error == GIT_ENOTFOUND)
 				error = 0;
 		} else {
 			rule = NULL; /* vector now "owns" the rule */
@@ -328,7 +328,7 @@ void git_attr_path__free(git_attr_path *info)
 
 /*
  * This will return 0 if the spec was filled out,
- * GIT_NOTFOUND if the fnmatch does not require matching, or
+ * GIT_ENOTFOUND if the fnmatch does not require matching, or
  * another error code there was an actual problem.
  */
 int git_attr_fnmatch__parse(
@@ -347,7 +347,7 @@ int git_attr_fnmatch__parse(
 	while (git__isspace(*pattern)) pattern++;
 	if (!*pattern || *pattern == '#') {
 		*base = git__next_line(pattern);
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 	}
 
 	spec->flags = 0;
@@ -464,7 +464,7 @@ static int merge_assignments(void **old_raw, void *new_raw)
 
 	GIT_REFCOUNT_DEC(*old, git_attr_assignment__free);
 	*old = new;
-	return GIT_EXISTS;
+	return GIT_EEXISTS;
 }
 
 int git_attr_assignment__parse(
@@ -551,7 +551,7 @@ int git_attr_assignment__parse(
 
 					error = git_vector_insert_sorted(
 						assigns, massign, &merge_assignments);
-					if (error < 0 && error != GIT_EXISTS)
+					if (error < 0 && error != GIT_EEXISTS)
 						return error;
 				}
 			}
@@ -559,7 +559,7 @@ int git_attr_assignment__parse(
 
 		/* insert allocated assign into vector */
 		error = git_vector_insert_sorted(assigns, assign, &merge_assignments);
-		if (error < 0 && error != GIT_EXISTS)
+		if (error < 0 && error != GIT_EEXISTS)
 			return error;
 
 		/* clear assign since it is now "owned" by the vector */
@@ -571,7 +571,7 @@ int git_attr_assignment__parse(
 
 	*base = git__next_line(scan);
 
-	return (assigns->length == 0) ? GIT_NOTFOUND : 0;
+	return (assigns->length == 0) ? GIT_ENOTFOUND : 0;
 }
 
 static void git_attr_rule__clear(git_attr_rule *rule)

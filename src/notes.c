@@ -73,7 +73,7 @@ static int find_blob(git_oid *blob, git_tree *tree, const char *target)
 			return 0;
 		}
 	}
-	return GIT_NOTFOUND;
+	return GIT_ENOTFOUND;
 }
 
 static int note_write(git_oid *out, git_repository *repo,
@@ -96,11 +96,11 @@ static int note_write(git_oid *out, git_repository *repo,
 			return error;
 
 		error = find_blob(&oid, tree, target + fanout);
-		if (error != GIT_NOTFOUND) {
+		if (error != GIT_ENOTFOUND) {
 			git_tree_free(tree);
 			if (!error) {
 				giterr_set(GITERR_REPOSITORY, "Note for '%s' exists already", target);
-				error = GIT_EXISTS;
+				error = GIT_EEXISTS;
 			}
 			return error;
 		}
@@ -275,7 +275,7 @@ static int note_get_default_ref(const char **out, git_repository *repo)
 		return -1;
 
 	ret = git_config_get_string(out, cfg, "core.notesRef");
-	if (ret == GIT_NOTFOUND) {
+	if (ret == GIT_ENOTFOUND) {
 		*out = GIT_NOTES_DEFAULT_REF;
 		return 0;
 	}
@@ -352,7 +352,7 @@ int git_note_create(
 		return -1;
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
-	if (error < 0 && error != GIT_NOTFOUND)
+	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
 	if (!error) {

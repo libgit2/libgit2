@@ -460,7 +460,7 @@ static int locate_object(
 	int error = object_file_name(object_location, backend->objects_dir, oid);
 
 	if (!error && !git_path_exists(object_location->ptr))
-		return GIT_NOTFOUND;
+		return GIT_ENOTFOUND;
 
 	return error;
 }
