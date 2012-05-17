@@ -445,3 +445,21 @@ int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
 
 	return 0;
 }
+
+bool git_buf_is_binary(const git_buf *buf)
+{
+	int i, printable = 0, nonprintable = 0;
+
+	for (i = 0; i < buf->size; i++) {
+		unsigned char c = buf->ptr[i];
+		if (c > 0x1F && c < 0x7f)
+			printable++;
+		else if (c == '\0')
+			return true;
+		else if (!git__isspace(c))
+			nonprintable++;
+	}
+
+	return ((printable >> 7) < nonprintable);
+}
+

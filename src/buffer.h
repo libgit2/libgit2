@@ -125,4 +125,7 @@ int git_buf_cmp(const git_buf *a, const git_buf *b);
 /* Fill buf with the common prefix of a array of strings */
 int git_buf_common_prefix(git_buf *buf, const git_strarray *strings);
 
+/* Check if buffer looks like it contains binary data */
+bool git_buf_is_binary(const git_buf *buf);
+
 #endif

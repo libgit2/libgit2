@@ -174,15 +174,12 @@ static int file_is_binary_by_content(
 	git_map *new_data)
 {
 	git_buf search;
-	git_text_stats stats;
 
 	if ((delta->old_file.flags & BINARY_DIFF_FLAGS) == 0) {
 		search.ptr  = old_data->data;
 		search.size = min(old_data->len, 4000);
 
-		git_text_gather_stats(&stats, &search);
-
-		if (git_text_is_binary(&stats))
+		if (git_buf_is_binary(&search))
 			delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
 			delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
@@ -192,9 +189,7 @@ static int file_is_binary_by_content(
 		search.ptr  = new_data->data;
 		search.size = min(new_data->len, 4000);
 
-		git_text_gather_stats(&stats, &search);
-
-		if (git_text_is_binary(&stats))
+		if (git_buf_is_binary(&search))
 			delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
 			delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
