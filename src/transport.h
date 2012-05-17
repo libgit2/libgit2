@@ -12,6 +12,11 @@
 #include "vector.h"
 #include "posix.h"
 #include "common.h"
+#ifdef GIT_SSL
+# include <openssl/ssl.h>
+# include <openssl/err.h>
+#endif
+
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
 
@@ -19,6 +24,14 @@ typedef struct git_transport_caps {
 	int common:1,
 		ofs_delta:1;
 } git_transport_caps;
+
+#ifdef GIT_SSL
+typedef struct gitno_ssl {
+	SSL_CTX *ctx;
+	SSL *ssl;
+} gitno_ssl;
+#endif
+
 
 /*
  * A day in the life of a network operation

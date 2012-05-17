@@ -18,11 +18,7 @@
 #	endif
 #endif
 
-#ifdef GIT_GNUTLS
-# include <gnutls/openssl.h>
-# include <gnutls/gnutls.h>
-# include <gnutls/x509.h>
-#elif defined(GIT_OPENSSL)
+#ifdef GIT_SSL
 # include <openssl/ssl.h>
 # include <openssl/x509v3.h>
 #endif
@@ -55,13 +51,7 @@ static void net_set_error(const char *str)
 }
 #endif
 
-#ifdef GIT_GNUTLS
-static int ssl_set_error(int error)
-{
-	giterr_set(GITERR_NET, "SSL error: (%s) %s", gnutls_strerror_name(error), gnutls_strerror(error));
-	return -1;
-}
-#elif GIT_OPENSSL
+#ifdef GIT_SSL
 static int ssl_set_error(gitno_ssl *ssl, int error)
 {
 	int err;
@@ -85,23 +75,7 @@ void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigne
 #endif
 }
 
-#ifdef GIT_GNUTLS
-static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
-{
-	int ret;
-
-	do {
-		ret = gnutls_record_recv(ssl->session, data, len);
-	} while(ret == GNUTLS_E_INTERRUPTED || ret == GNUTLS_E_AGAIN);
-
-	if (ret < 0) {
-		ssl_set_error(ret);
-		return -1;
-	}
-
-	return ret;
-}
-#elif defined(GIT_OPENSSL)
+#ifdef GIT_SSL
 static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
 {
 	int ret;
@@ -174,11 +148,7 @@ int gitno_ssl_teardown(git_transport *t)
 	if (!t->encrypt)
 		return 0;
 
-#ifdef GIT_GNUTLS
-	gnutls_deinit(t->ssl.session);
-	gnutls_certificate_free_credentials(t->ssl.cred);
-	gnutls_global_deinit();
-#elif defined(GIT_OPENSSL)
+#ifdef GIT_SSL
 
 	do {
 		ret = SSL_shutdown(t->ssl.ssl);
@@ -193,7 +163,7 @@ int gitno_ssl_teardown(git_transport *t)
 }
 
 
-#ifdef GIT_OPENSSL
+#ifdef GIT_SSL
 /* Match host names according to RFC 2818 rules */
 static int match_host(const char *pattern, const char *host)
 {
@@ -294,44 +264,9 @@ static int verify_server_cert(git_transport *t, const char *host)
 
 	return 0;
 }
-#endif
 
 static int ssl_setup(git_transport *t, const char *host)
 {
-#ifdef GIT_GNUTLS
-	int ret;
-
-	if ((ret = gnutls_global_init()) < 0)
-		return ssl_set_error(ret);
-
-	if ((ret = gnutls_certificate_allocate_credentials(&t->ssl.cred)) < 0)
-		return ssl_set_error(ret);
-
-	gnutls_init(&t->ssl.session, GNUTLS_CLIENT);
-	//gnutls_certificate_set_verify_function(ssl->cred, SSL_VERIFY_NONE);
-	gnutls_credentials_set(t->ssl.session, GNUTLS_CRD_CERTIFICATE, t->ssl.cred);
-
-	if ((ret = gnutls_priority_set_direct (t->ssl.session, "NORMAL", NULL)) < 0)
-		return ssl_set_error(ret);
-
-	gnutls_transport_set_ptr(t->ssl.session, (gnutls_transport_ptr_t) t->socket);
-
-	do {
-		ret = gnutls_handshake(t->ssl.session);
-	} while (ret < 0 && !gnutls_error_is_fatal(ret));
-
-	if (ret < 0) {
-		ssl_set_error(ret);
-		goto on_error;
-	}
-
-	return 0;
-
-on_error:
-	gnutls_deinit(t->ssl.session);
-	gnutls_global_deinit();
-	return -1;
-#elif defined(GIT_OPENSSL)
 	int ret;
 
 	SSL_library_init();
@@ -359,11 +294,16 @@ on_error:
 		return -1;
 
 	return 0;
-#else
-	GIT_UNUSED(t);
-	return 0;
-#endif
 }
+#else
+static int ssl_setup(git_transport *t, const char *host)
+{
+	GIT_UNUSED(t);
+	GIT_UNUSED(host);
+	return 0;
+}
+#endif
+
 int gitno_connect(git_transport *t, const char *host, const char *port)
 {
 	struct addrinfo *info = NULL, *p;
@@ -410,26 +350,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	return 0;
 }
 
-#ifdef GIT_GNUTLS
-static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
-{
-	int ret;
-	size_t off = 0;
-
-	while (off < len) {
-		ret = gnutls_record_send(ssl->session, msg + off, len - off);
-		if (ret < 0) {
-			if (gnutls_error_is_fatal(ret))
-				return ssl_set_error(ret);
-
-			ret = 0;
-		}
-		off += ret;
-	}
-
-	return off;
-}
-#elif defined(GIT_OPENSSL)
+#ifdef GIT_SSL
 static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
 {
 	int ret;
