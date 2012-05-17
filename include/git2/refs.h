@@ -111,7 +111,7 @@ GIT_EXTERN(const char *) git_reference_target(git_reference *ref);
  * @param ref The reference
  * @return the type
  */
-GIT_EXTERN(git_rtype) git_reference_type(git_reference *ref);
+GIT_EXTERN(git_ref_t) git_reference_type(git_reference *ref);
 
 /**
  * Get the full name of a reference

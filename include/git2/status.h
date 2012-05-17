@@ -19,19 +19,19 @@
  */
 GIT_BEGIN_DECL
 
-#define GIT_STATUS_CURRENT		0
+enum {
+	GIT_STATUS_CURRENT	= 0,
 
-/** Flags for index status */
-#define GIT_STATUS_INDEX_NEW		(1 << 0)
-#define GIT_STATUS_INDEX_MODIFIED	(1 << 1)
-#define GIT_STATUS_INDEX_DELETED	(1 << 2)
+	GIT_STATUS_INDEX_NEW = (1 << 0),
+	GIT_STATUS_INDEX_MODIFIED = (1 << 1),
+	GIT_STATUS_INDEX_DELETED = (1 << 2),
 
-/** Flags for worktree status */
-#define GIT_STATUS_WT_NEW			(1 << 3)
-#define GIT_STATUS_WT_MODIFIED		(1 << 4)
-#define GIT_STATUS_WT_DELETED		(1 << 5)
+	GIT_STATUS_WT_NEW = (1 << 3),
+	GIT_STATUS_WT_MODIFIED = (1 << 4),
+	GIT_STATUS_WT_DELETED = (1 << 5),
 
-#define GIT_STATUS_IGNORED		(1 << 6)
+	GIT_STATUS_IGNORED = (1 << 6),
+};
 
 /**
  * Gather file statuses and run a callback for each one.
@@ -97,11 +97,14 @@ typedef enum {
  *   slash on the entry name).  Given this flag, the directory
  *   itself will not be included, but all the files in it will.
  */
-#define GIT_STATUS_OPT_INCLUDE_UNTRACKED      (1 << 0)
-#define GIT_STATUS_OPT_INCLUDE_IGNORED        (1 << 1)
-#define GIT_STATUS_OPT_INCLUDE_UNMODIFIED     (1 << 2)
-#define GIT_STATUS_OPT_EXCLUDE_SUBMODULES     (1 << 3)
-#define GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS (1 << 4)
+
+enum {
+	GIT_STATUS_OPT_INCLUDE_UNTRACKED = (1 << 0),
+	GIT_STATUS_OPT_INCLUDE_IGNORED = (1 << 1),
+	GIT_STATUS_OPT_INCLUDE_UNMODIFIED = (1 << 2),
+	GIT_STATUS_OPT_EXCLUDE_SUBMODULED = (1 << 3),
+	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = (1 << 4),
+};
 
 /**
  * Options to control how callbacks will be made by

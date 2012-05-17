@@ -69,7 +69,7 @@ GIT_EXTERN(int) git_branch_create(
 GIT_EXTERN(int) git_branch_delete(
 		git_repository *repo,
 		const char *branch_name,
-		git_branch_type branch_type);
+		git_branch_t branch_type);
 
 /**
  * Fill a list with all the branches in the Repository
