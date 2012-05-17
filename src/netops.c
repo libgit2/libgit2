@@ -24,6 +24,7 @@
 #endif
 
 #include <ctype.h>
+#include <arpa/inet.h>
 #include "git2/errors.h"
 
 #include "common.h"
@@ -219,8 +220,23 @@ static int verify_server_cert(git_transport *t, const char *host)
 	X509 *cert;
 	X509_NAME *peer_name;
 	char buf[1024];
-	int matched = -1;
+	int matched = -1, type = GEN_DNS;
 	GENERAL_NAMES *alts;
+	struct in6_addr addr6;
+	struct in_addr addr4;
+	void *addr;
+
+	/* Try to parse the host as an IP address to see if it is */
+	if (inet_pton(AF_INET, host, &addr4)) {
+		type = GEN_IPADD;
+		addr = &addr4;
+	} else {
+		if(inet_pton(AF_INET6, host, &addr6)) {
+			type = GEN_IPADD;
+			addr = &addr6;
+		}
+	}
+
 
 	cert = SSL_get_peer_certificate(t->ssl.ssl);
 
@@ -235,14 +251,23 @@ static int verify_server_cert(git_transport *t, const char *host)
 			const char *name = (char *) ASN1_STRING_data(gn->d.ia5);
 			size_t namelen = (size_t) ASN1_STRING_length(gn->d.ia5);
 
-			/* If it contains embedded NULs, don't even try */
-			if (namelen != strnlen(name, namelen))
+			/* Skip any names of a type we're not looking for */
+			if (gn->type != type)
 				continue;
 
-			if (check_host_name(name, host) < 0)
-				matched = 0;
-			else
-				matched = 1;
+			if (type == GEN_DNS) {
+				/* If it contains embedded NULs, don't even try */
+				if (namelen != strnlen(name, namelen))
+					continue;
+
+				if (check_host_name(name, host) < 0)
+					matched = 0;
+				else
+					matched = 1;
+			} else if (type == GEN_IPADD) {
+				/* Here name isn't so much a name but a binary representation of the IP */
+				matched = !!memcmp(name, addr, namelen);
+			}
 		}
 	}
 	GENERAL_NAMES_free(alts);
