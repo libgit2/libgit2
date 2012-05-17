@@ -98,15 +98,6 @@ void git_buf_clear(git_buf *buf)
 		buf->ptr[0] = '\0';
 }
 
-/* Moved to inline function:
-
-bool git_buf_oom(const git_buf *buf)
-{
-	return (buf->ptr == git_buf__oom);
-}
-
-*/
-
 int git_buf_set(git_buf *buf, const char *data, size_t len)
 {
 	if (len == 0 || data == NULL) {
