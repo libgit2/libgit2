@@ -53,6 +53,7 @@ OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
 OPTION (TAGS "Generate tags" OFF)
+OPTION (PROFILE "Generate profiling information" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -73,6 +74,10 @@ ELSE ()
 	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	ENDIF ()
+	IF (PROFILE)
+		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
+		SET(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
 	ENDIF ()
 ENDIF()
 
