@@ -45,9 +45,9 @@ void test_status_worktree__whole_repository(void)
 		git_status_foreach(repo, cb_status__normal, &counts)
 	);
 
-	cl_assert(counts.entry_count == counts.expected_entry_count);
-	cl_assert(counts.wrong_status_flags_count == 0);
-	cl_assert(counts.wrong_sorted_path == 0);
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
 /* this test is equivalent to t18-status.c:statuscb1 */
@@ -58,7 +58,7 @@ void test_status_worktree__empty_repository(void)
 
 	cl_git_pass(git_status_foreach(repo, cb_status__count, &count));
 
-	cl_assert(count == 0);
+	cl_assert_equal_i(0, count);
 }
 
 static int remove_file_cb(void *data, git_buf *file)
@@ -100,9 +100,9 @@ void test_status_worktree__purged_worktree(void)
 		git_status_foreach(repo, cb_status__normal, &counts)
 	);
 
-	cl_assert(counts.entry_count == counts.expected_entry_count);
-	cl_assert(counts.wrong_status_flags_count == 0);
-	cl_assert(counts.wrong_sorted_path == 0);
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
 /* this test is similar to t18-status.c:statuscb3 */
@@ -135,10 +135,9 @@ void test_status_worktree__swap_subdir_and_file(void)
 		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
 	);
 
-	cl_assert(counts.entry_count == counts.expected_entry_count);
-	cl_assert(counts.wrong_status_flags_count == 0);
-	cl_assert(counts.wrong_sorted_path == 0);
-
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
 void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
@@ -171,9 +170,9 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
 	);
 
-	cl_assert(counts.entry_count == counts.expected_entry_count);
-	cl_assert(counts.wrong_status_flags_count == 0);
-	cl_assert(counts.wrong_sorted_path == 0);
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
 /* this test is equivalent to t18-status.c:singlestatus0 */
@@ -347,6 +346,65 @@ void test_status_worktree__issue_592_5(void)
 	git_buf_free(&path);
 }
 
+void test_status_worktree__issue_592_ignores_0(void)
+{
+	int count = 0;
+	status_entry_single st;
+	git_repository *repo = cl_git_sandbox_init("issue_592");
+
+	cl_git_pass(git_status_foreach(repo, cb_status__count, &count));
+	cl_assert_equal_i(0, count);
+
+	cl_git_rewritefile("issue_592/.gitignore",
+		".gitignore\n*.txt\nc/\n[tT]*/\n");
+
+	cl_git_pass(git_status_foreach(repo, cb_status__count, &count));
+	cl_assert_equal_i(1, count);
+
+	/* This is a situation where the behavior of libgit2 is
+	 * different from core git.  Core git will show ignored.txt
+	 * in the list of ignored files, even though the directory
+	 * "t" is ignored and the file is untracked because we have
+	 * the explicit "*.txt" ignore rule.  Libgit2 just excludes
+	 * all untracked files that are contained within ignored
+	 * directories without explicitly listing them.
+	 */
+	cl_git_rewritefile("issue_592/t/ignored.txt", "ping");
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &st));
+	cl_assert_equal_i(1, st.count);
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_rewritefile("issue_592/c/ignored_by_dir", "ping");
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &st));
+	cl_assert_equal_i(1, st.count);
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_rewritefile("issue_592/t/ignored_by_dir_pattern", "ping");
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &st));
+	cl_assert_equal_i(1, st.count);
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+}
+
+void test_status_worktree__issue_592_ignored_dirs_with_tracked_content(void)
+{
+	int count = 0;
+	git_repository *repo = cl_git_sandbox_init("issue_592b");
+
+	cl_git_pass(git_status_foreach(repo, cb_status__count, &count));
+	cl_assert_equal_i(1, count);
+
+	/* if we are really mimicking core git, then only ignored1.txt
+	 * at the top level will show up in the ignores list here.
+	 * everything else will be unmodified or skipped completely.
+	 */
+}
+
 void test_status_worktree__cannot_retrieve_the_status_of_a_bare_repository(void)
 {
 	git_repository *repo;
@@ -374,7 +432,7 @@ void test_status_worktree__first_commit_in_progress(void)
 
 	memset(&result, 0, sizeof(result));
 	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
-	cl_assert(result.count == 1);
+	cl_assert_equal_i(1, result.count);
 	cl_assert(result.status == GIT_STATUS_WT_NEW);
 
 	cl_git_pass(git_repository_index(&index, repo));
@@ -383,7 +441,7 @@ void test_status_worktree__first_commit_in_progress(void)
 
 	memset(&result, 0, sizeof(result));
 	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
-	cl_assert(result.count == 1);
+	cl_assert_equal_i(1, result.count);
 	cl_assert(result.status == GIT_STATUS_INDEX_NEW);
 
 	git_index_free(index);
