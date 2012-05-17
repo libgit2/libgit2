@@ -256,7 +256,7 @@ GIT_EXTERN(int) git_reference_packall(git_repository *repo);
  *		listing.
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_reference_listall(git_strarray *array, git_repository *repo, unsigned int list_flags);
+GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, unsigned int list_flags);
 
 
 /**

@@ -1518,7 +1518,7 @@ static int cb__reflist_add(const char *ref, void *data)
 	return git_vector_insert((git_vector *)data, git__strdup(ref));
 }
 
-int git_reference_listall(
+int git_reference_list(
 	git_strarray *array,
 	git_repository *repo,
 	unsigned int list_flags)
