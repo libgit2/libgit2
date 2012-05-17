@@ -24,9 +24,10 @@
 # include <gnutls/x509.h>
 #elif defined(GIT_OPENSSL)
 # include <openssl/ssl.h>
+# include <openssl/x509v3.h>
 #endif
 
-
+#include <ctype.h>
 #include "git2/errors.h"
 
 #include "common.h"
@@ -192,7 +193,102 @@ int gitno_ssl_teardown(git_transport *t)
 }
 
 
-static int ssl_setup(git_transport *t)
+#ifdef GIT_OPENSSL
+/*
+ * This function is based on the one from the cURL project
+ */
+static int match_host(const char *pattern, const char *host)
+{
+	for (;;) {
+		char c = *pattern++;
+
+		if (c == '\0')
+			return *host ? -1 : 0;
+
+		if (c == '*') {
+			c = *pattern;
+			/* '*' at the end matches everything left */
+			if (c == '\0')
+				return 0;
+
+			while (*host) {
+				if (match_host(pattern, host++) == 0)
+					return 0;
+			}
+			break;
+		}
+
+		if (tolower(c) != tolower(*host++))
+			return -1;
+	}
+
+	return -1;
+}
+
+static int check_host_name(const char *name, const char *host)
+{
+	if (!strcasecmp(name, host))
+		return 0;
+
+	if (match_host(name, host) < 0)
+		return -1;
+
+	return 0;
+}
+
+static int verify_server_cert(git_transport *t, const char *host)
+{
+	X509 *cert;
+	X509_NAME *peer_name;
+	char buf[1024];
+	int matched = -1;
+	GENERAL_NAMES *alts;
+
+	cert = SSL_get_peer_certificate(t->ssl.ssl);
+
+	/* Check the alternative names */
+	alts = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+	if (alts) {
+		int num, i;
+
+		num = sk_GENERAL_NAME_num(alts);
+		for (i = 0; i < num && matched != 1; i++) {
+			const GENERAL_NAME *gn = sk_GENERAL_NAME_value(alts, i);
+			const char *name = (char *) ASN1_STRING_data(gn->d.ia5);
+			size_t namelen = (size_t) ASN1_STRING_length(gn->d.ia5);
+
+			/* If it contains embedded NULs, don't even try */
+			if (namelen != strnlen(name, namelen))
+				continue;
+
+			if (check_host_name(name, host) < 0)
+				matched = 0;
+			else
+				matched = 1;
+		}
+	}
+	GENERAL_NAMES_free(alts);
+
+	if (matched == 0) {
+		giterr_set(GITERR_SSL, "Certificate host name check failed");
+		return -1;
+	}
+	if (matched == 1)
+		return 0;
+
+	/* If no alternative names are available, check the common name */
+	peer_name = X509_get_subject_name(cert);
+	X509_NAME_get_text_by_NID(peer_name, NID_commonName, buf, sizeof(buf));
+	if (strcasecmp(host, buf)) {
+		giterr_set(GITERR_NET, "CN %s doesn't match host %s\n", buf, host);
+		return -1;
+	}
+
+	return 0;
+}
+#endif
+
+static int ssl_setup(git_transport *t, const char *host)
 {
 #ifdef GIT_GNUTLS
 	int ret;
@@ -237,6 +333,9 @@ on_error:
 		return ssl_set_error(&t->ssl, 0);
 
 	SSL_CTX_set_mode(t->ssl.ctx, SSL_MODE_AUTO_RETRY);
+	SSL_CTX_set_verify(t->ssl.ctx, SSL_VERIFY_PEER, NULL);
+	if (!SSL_CTX_set_default_verify_paths(t->ssl.ctx))
+		return ssl_set_error(&t->ssl, 0);
 
 	t->ssl.ssl = SSL_new(t->ssl.ctx);
 	if (t->ssl.ssl == NULL)
@@ -247,6 +346,9 @@ on_error:
 
 	if ((ret = SSL_connect(t->ssl.ssl)) <= 0)
 		return ssl_set_error(&t->ssl, ret);
+
+	if (verify_server_cert(t, host) < 0)
+		return -1;
 
 	return 0;
 #else
@@ -294,7 +396,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	t->socket = s;
 	freeaddrinfo(info);
 
-	if (t->encrypt && ssl_setup(t) < 0)
+	if (t->encrypt && ssl_setup(t, host) < 0)
 		return -1;
 
 	return 0;
