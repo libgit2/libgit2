@@ -335,7 +335,7 @@ int main (int argc, char** argv)
   // We can then lookup and parse the commited pointed at by the returned OID;
   // note that this operation is specially fast since the raw contents of the commit object will
   // be cached in memory
-  while ((git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+  while ((git_revwalk_next(&oid, walk)) == 0) {
     error = git_commit_lookup(&wcommit, repo, &oid);
     cmsg  = git_commit_message(wcommit);
     cauth = git_commit_author(wcommit);

@@ -74,6 +74,13 @@ struct git_odb_backend {
 	void (* free)(struct git_odb_backend *);
 };
 
+/** Streaming mode */
+enum {
+	GIT_STREAM_RDONLY = (1 << 1),
+	GIT_STREAM_WRONLY = (1 << 2),
+	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
+};
+
 /** A stream to read/write from a backend */
 struct git_odb_stream {
 	struct git_odb_backend *backend;
@@ -84,13 +91,6 @@ struct git_odb_stream {
 	int (*finalize_write)(git_oid *oid_p, struct git_odb_stream *stream);
 	void (*free)(struct git_odb_stream *stream);
 };
-
-/** Streaming mode */
-typedef enum {
-	GIT_STREAM_RDONLY = (1 << 1),
-	GIT_STREAM_WRONLY = (1 << 2),
-	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
-} git_odb_streammode;
 
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
 GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir, int compression_level, int do_fsync);

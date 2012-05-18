@@ -274,7 +274,7 @@ static int note_get_default_ref(const char **out, git_repository *repo)
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	ret = git_config_get_string(cfg, "core.notesRef", out);
+	ret = git_config_get_string(out, cfg, "core.notesRef");
 	if (ret == GIT_ENOTFOUND) {
 		*out = GIT_NOTES_DEFAULT_REF;
 		return 0;

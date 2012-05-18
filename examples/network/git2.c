@@ -25,12 +25,12 @@ int run_command(git_cb fn, int argc, char **argv)
 // repository and pass it to the function.
 
 	error = git_repository_open(&repo, ".git");
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		repo = NULL;
 
 	// Run the command. If something goes wrong, print the error message to stderr
 	error = fn(repo, argc, argv);
-	if (error < GIT_SUCCESS) {
+	if (error < 0) {
 		if (giterr_last() == NULL)
 			fprintf(stderr, "Error without message");
 		else

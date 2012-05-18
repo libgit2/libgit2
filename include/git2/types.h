@@ -158,13 +158,13 @@ typedef enum {
 	GIT_REF_PACKED = 4,
 	GIT_REF_HAS_PEEL = 8,
 	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
-} git_rtype;
+} git_ref_t;
 
 /** Basic type of any Git branch. */
 typedef enum {
 	GIT_BRANCH_LOCAL = 1,
 	GIT_BRANCH_REMOTE = 2,
-} git_branch_type;
+} git_branch_t;
 
 typedef struct git_refspec git_refspec;
 typedef struct git_remote git_remote;

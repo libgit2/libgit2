@@ -75,7 +75,7 @@ void test_refs_branches_delete__can_delete_a_remote_branch(void)
 	cl_git_pass(git_branch_delete(repo, "nulltoken/master", GIT_BRANCH_REMOTE));
 }
 
-static void assert_non_exisitng_branch_removal(const char *branch_name, git_branch_type branch_type)
+static void assert_non_exisitng_branch_removal(const char *branch_name, git_branch_t branch_type)
 {
 	int error; 
 	error = git_branch_delete(repo, branch_name, branch_type);

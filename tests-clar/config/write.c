@@ -22,7 +22,7 @@ void test_config_write__replace_value(void)
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_get_int32(cfg, "core.dummy", &i));
+	cl_git_pass(git_config_get_int32(&i, cfg, "core.dummy"));
 	cl_assert(i == 5);
 	git_config_free(cfg);
 
@@ -35,12 +35,12 @@ void test_config_write__replace_value(void)
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_get_int64(cfg, "core.verylong", &l));
+	cl_git_pass(git_config_get_int64(&l, cfg, "core.verylong"));
 	cl_assert(l == expected);
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_must_fail(git_config_get_int32(cfg, "core.verylong", &i));
+	cl_must_fail(git_config_get_int32(&i, cfg, "core.verylong"));
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
@@ -62,7 +62,7 @@ void test_config_write__delete_value(void)
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_assert(git_config_get_int32(cfg, "core.dummy", &i) == GIT_ENOTFOUND);
+	cl_assert(git_config_get_int32(&i, cfg, "core.dummy") == GIT_ENOTFOUND);
 	cl_git_pass(git_config_set_int32(cfg, "core.dummy", 1));
 	git_config_free(cfg);
 }
@@ -77,7 +77,7 @@ void test_config_write__write_subsection(void)
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_get_string(cfg, "my.own.var", &str));
+	cl_git_pass(git_config_get_string(&str, cfg, "my.own.var"));
 	cl_git_pass(strcmp(str, "works"));
 	git_config_free(cfg);
 }

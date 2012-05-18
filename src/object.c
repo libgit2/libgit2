@@ -74,7 +74,7 @@ static int create_object(git_object **object_out, git_otype type)
 	object->type = type;
 
 	*object_out = object;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_object_lookup_prefix(
@@ -87,7 +87,7 @@ int git_object_lookup_prefix(
 	git_object *object = NULL;
 	git_odb *odb = NULL;
 	git_odb_object *odb_obj;
-	int error = GIT_SUCCESS;
+	int error = 0;
 
 	assert(repo && object_out && id);
 
@@ -95,7 +95,7 @@ int git_object_lookup_prefix(
 		return GIT_EAMBIGUOUS;
 
 	error = git_repository_odb__weakptr(&odb, repo);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		return error;
 
 	if (len > GIT_OID_HEXSZ)

@@ -270,8 +270,10 @@ static int diff_delta__cmp(const void *a, const void *b)
 static int config_bool(git_config *cfg, const char *name, int defvalue)
 {
 	int val = defvalue;
-	if (git_config_get_bool(cfg, name, &val) < 0)
+
+	if (git_config_get_bool(&val, cfg, name) < 0)
 		giterr_clear();
+
 	return val;
 }
 

@@ -222,7 +222,7 @@ static int packfile_unpack_header1(
 	shift = 4;
 	while (c & 0x80) {
 		if (len <= used)
-			return GIT_ESHORTBUFFER;
+			return GIT_EBUFS;
 
 		if (bitsizeof(long) <= shift) {
 			*usedp = 0;
@@ -260,11 +260,11 @@ int git_packfile_unpack_header(
 //	base = pack_window_open(p, w_curs, *curpos, &left);
 	base = git_mwindow_open(mwf, w_curs, *curpos, 20, &left);
 	if (base == NULL)
-		return GIT_ESHORTBUFFER;
+		return GIT_EBUFS;
 
 	ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
 	git_mwindow_close(w_curs);
-	if (ret == GIT_ESHORTBUFFER)
+	if (ret == GIT_EBUFS)
 		return ret;
 	else if (ret < 0)
 		return packfile_error("header length is zero");
@@ -428,7 +428,7 @@ int packfile_unpack_compressed(
 		if (st == Z_BUF_ERROR && in == NULL) {
 			inflateEnd(&stream);
 			git__free(buffer);
-			return GIT_ESHORTBUFFER;
+			return GIT_EBUFS;
 		}
 
 		*curpos += stream.next_in - in;
@@ -467,7 +467,7 @@ git_off_t get_delta_base(
 	base_info = pack_window_open(p, w_curs, *curpos, &left);
 	/* Assumption: the only reason this would fail is because the file is too small */
 	if (base_info == NULL)
-		return GIT_ESHORTBUFFER;
+		return GIT_EBUFS;
 	/* pack_window_open() assured us we have [base_info, base_info + 20)
 	 * as a range that we can look at without walking off the
 	 * end of the mapped window. Its actually the hash size
@@ -480,7 +480,7 @@ git_off_t get_delta_base(
 		base_offset = c & 127;
 		while (c & 128) {
 			if (left <= used)
-				return GIT_ESHORTBUFFER;
+				return GIT_EBUFS;
 			base_offset += 1;
 			if (!base_offset || MSB(base_offset, 7))
 				return 0; /* overflow */

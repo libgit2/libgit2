@@ -316,7 +316,7 @@ static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object 
 			if ((p->flags & flags) == flags)
 				continue;
 
-			if ((error = commit_parse(walk, p)) < GIT_SUCCESS)
+			if ((error = commit_parse(walk, p)) < 0)
 				return error;
 
 			p->flags |= flags;
@@ -600,7 +600,7 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_EREVWALKOVER;
+	return GIT_REVWALKOVER;
 }
 
 static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
@@ -618,7 +618,7 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_EREVWALKOVER;
+	return GIT_REVWALKOVER;
 }
 
 static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
@@ -629,7 +629,7 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 	for (;;) {
 		next = commit_list_pop(&walk->iterator_topo);
 		if (next == NULL)
-			return GIT_EREVWALKOVER;
+			return GIT_REVWALKOVER;
 
 		if (next->in_degree > 0) {
 			next->topo_delay = 1;
@@ -654,7 +654,7 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 static int revwalk_next_reverse(commit_object **object_out, git_revwalk *walk)
 {
 	*object_out = commit_list_pop(&walk->iterator_reverse);
-	return *object_out ? 0 : GIT_EREVWALKOVER;
+	return *object_out ? 0 : GIT_REVWALKOVER;
 }
 
 
@@ -670,7 +670,7 @@ static int prepare_walk(git_revwalk *walk)
 	 * so we know that the walk is already over.
 	 */
 	if (walk->one == NULL)
-		return GIT_EREVWALKOVER;
+		return GIT_REVWALKOVER;
 
 	/* first figure out what the merge bases are */
 	if (merge_bases_many(&bases, walk, walk->one, &walk->twos) < 0)
@@ -698,7 +698,7 @@ static int prepare_walk(git_revwalk *walk)
 				return -1;
 		}
 
-		if (error != GIT_EREVWALKOVER)
+		if (error != GIT_REVWALKOVER)
 			return error;
 
 		walk->get_next = &revwalk_next_toposort;
@@ -710,7 +710,7 @@ static int prepare_walk(git_revwalk *walk)
 			if (commit_list_insert(next, &walk->iterator_reverse) == NULL)
 				return -1;
 
-		if (error != GIT_EREVWALKOVER)
+		if (error != GIT_REVWALKOVER)
 			return error;
 
 		walk->get_next = &revwalk_next_reverse;
@@ -809,9 +809,9 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 
 	error = walk->get_next(&next, walk);
 
-	if (error == GIT_EREVWALKOVER) {
+	if (error == GIT_REVWALKOVER) {
 		git_revwalk_reset(walk);
-		return GIT_EREVWALKOVER;
+		return GIT_REVWALKOVER;
 	}
 
 	if (!error)

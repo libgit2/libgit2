@@ -91,7 +91,7 @@ static int store_refs(transport_local *t)
 
 	assert(t);
 
-	if (git_reference_listall(&ref_names, t->repo, GIT_REF_LISTALL) < 0 ||
+	if (git_reference_list(&ref_names, t->repo, GIT_REF_LISTALL) < 0 ||
 		git_vector_init(&t->refs, (unsigned int)ref_names.count, NULL) < 0)
 		goto on_error;
 

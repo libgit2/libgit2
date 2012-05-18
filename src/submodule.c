@@ -218,8 +218,11 @@ static int submodule_from_config(
 		sm->update = (git_submodule_update_t)val;
 	}
 	else if (strcmp(property, "fetchRecurseSubmodules") == 0) {
-		if (git_config_parse_bool(&sm->fetch_recurse, value) < 0)
+		if (git__parse_bool(&sm->fetch_recurse, value) < 0) {
+			giterr_set(GITERR_INVALID,
+				"Invalid value for submodule 'fetchRecurseSubmodules' property: '%s'", value);
 			goto fail;
+		}
 	}
 	else if (strcmp(property, "ignore") == 0) {
 		int val;

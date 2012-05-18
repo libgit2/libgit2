@@ -25,7 +25,7 @@ void test_refs_list__all(void)
    // try to list all the references in our test repo
 	git_strarray ref_list;
 
-	cl_git_pass(git_reference_listall(&ref_list, g_repo, GIT_REF_LISTALL));
+	cl_git_pass(git_reference_list(&ref_list, g_repo, GIT_REF_LISTALL));
 
 	/*{
 		unsigned short i;
@@ -46,7 +46,7 @@ void test_refs_list__symbolic_only(void)
    // try to list only the symbolic references
 	git_strarray ref_list;
 
-	cl_git_pass(git_reference_listall(&ref_list, g_repo, GIT_REF_SYMBOLIC));
+	cl_git_pass(git_reference_list(&ref_list, g_repo, GIT_REF_SYMBOLIC));
 	cl_assert(ref_list.count == 0); /* no symrefs in the test repo */
 
 	git_strarray_free(&ref_list);

@@ -65,7 +65,7 @@ GIT_BEGIN_DECL
  *
  * @param walker pointer to the new revision walker
  * @param repo the repo to walk through
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_new(git_revwalk **walker, git_repository *repo);
 
@@ -97,7 +97,7 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  *
  * @param walk the walker being used for the traversal.
  * @param oid the oid of the commit to start from.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
 
@@ -112,7 +112,7 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
  *
  * @param walk the walker being used for the traversal
  * @param glob the glob pattern references should match
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_push_glob(git_revwalk *walk, const char *glob);
 
@@ -120,7 +120,7 @@ GIT_EXTERN(int) git_revwalk_push_glob(git_revwalk *walk, const char *glob);
  * Push the repository's HEAD
  *
  * @param walk the walker being used for the traversal
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_push_head(git_revwalk *walk);
 
@@ -135,7 +135,7 @@ GIT_EXTERN(int) git_revwalk_push_head(git_revwalk *walk);
  *
  * @param walk the walker being used for the traversal.
  * @param oid the oid of commit that will be ignored during the traversal
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
 
@@ -151,7 +151,7 @@ GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
  *
  * @param walk the walker being used for the traversal
  * @param glob the glob pattern references should match
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide_glob(git_revwalk *walk, const char *glob);
 
@@ -159,7 +159,7 @@ GIT_EXTERN(int) git_revwalk_hide_glob(git_revwalk *walk, const char *glob);
  * Hide the repository's HEAD
  *
  * @param walk the walker being used for the traversal
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
 
@@ -170,7 +170,7 @@ GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
  *
  * @param walk the walker being used for the traversal
  * @param refname the referece to push
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_push_ref(git_revwalk *walk, const char *refname);
 
@@ -181,7 +181,7 @@ GIT_EXTERN(int) git_revwalk_push_ref(git_revwalk *walk, const char *refname);
  *
  * @param walk the walker being used for the traversal
  * @param refname the referece to hide
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide_ref(git_revwalk *walk, const char *refname);
 
@@ -200,8 +200,8 @@ GIT_EXTERN(int) git_revwalk_hide_ref(git_revwalk *walk, const char *refname);
  *
  * @param oid Pointer where to store the oid of the next commit
  * @param walk the walker to pop the commit from.
- * @return GIT_SUCCESS if the next commit was found;
- *	GIT_EREVWALKOVER if there are no commits left to iterate
+ * @return 0 if the next commit was found;
+ *	GIT_REVWALKOVER if there are no commits left to iterate
  */
 GIT_EXTERN(int) git_revwalk_next(git_oid *oid, git_revwalk *walk);
 

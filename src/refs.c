@@ -194,10 +194,10 @@ corrupt:
 	return -1;
 }
 
-static git_rtype loose_guess_rtype(const git_buf *full_path)
+static git_ref_t loose_guess_rtype(const git_buf *full_path)
 {
 	git_buf ref_file = GIT_BUF_INIT;
-	git_rtype type;
+	git_ref_t type;
 
 	type = GIT_REF_INVALID;
 
@@ -1153,7 +1153,7 @@ int git_reference_lookup_resolved(
 /**
  * Getters
  */
-git_rtype git_reference_type(git_reference *ref)
+git_ref_t git_reference_type(git_reference *ref)
 {
 	assert(ref);
 
@@ -1518,7 +1518,7 @@ static int cb__reflist_add(const char *ref, void *data)
 	return git_vector_insert((git_vector *)data, git__strdup(ref));
 }
 
-int git_reference_listall(
+int git_reference_list(
 	git_strarray *array,
 	git_repository *repo,
 	unsigned int list_flags)
