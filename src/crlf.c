@@ -82,8 +82,8 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	const char *attr_vals[NUM_CONV_ATTRS];
 	int error;
 
-	error = git_attr_get_many(
-		repo, 0, path, NUM_CONV_ATTRS, attr_names, attr_vals);
+	error = git_attr_get_many(attr_vals,
+		repo, 0, path, NUM_CONV_ATTRS, attr_names);
 
 	if (error == GIT_ENOTFOUND) {
 		ca->crlf_action = GIT_CRLF_GUESS;
@@ -91,7 +91,7 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 		return 0;
 	}
 
-	if (error == GIT_SUCCESS) {
+	if (error == 0) {
 		ca->crlf_action = check_crlf(attr_vals[2]); /* text */
 		if (ca->crlf_action == GIT_CRLF_GUESS)
 			ca->crlf_action = check_crlf(attr_vals[0]); /* clrf */
@@ -100,7 +100,7 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 		return 0;
 	}
 
-	return error;
+	return -1;
 }
 
 static int drop_crlf(git_buf *dest, const git_buf *source)
@@ -207,7 +207,7 @@ int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const
 		int auto_crlf;
 
 		if ((error = git_repository__cvar(
-			&auto_crlf, repo, GIT_CVAR_AUTO_CRLF)) < GIT_SUCCESS)
+			&auto_crlf, repo, GIT_CVAR_AUTO_CRLF)) < 0)
 			return error;
 
 		if (auto_crlf == GIT_AUTO_CRLF_FALSE)

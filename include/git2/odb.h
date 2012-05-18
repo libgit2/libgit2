@@ -29,7 +29,7 @@ GIT_BEGIN_DECL
  *
  * @param out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_new(git_odb **out);
 
@@ -47,7 +47,7 @@ GIT_EXTERN(int) git_odb_new(git_odb **out);
  * @param out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
  * @param objects_dir path of the backends' "objects" directory.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
 
@@ -108,7 +108,7 @@ GIT_EXTERN(void) git_odb_free(git_odb *db);
  * @param db database to search for the object in.
  * @param id identity of the object to read.
  * @return
- * - GIT_SUCCESS if the object was read;
+ * - 0 if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id);
@@ -135,7 +135,7 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * @param db database to search for the object in.
  * @param short_id a prefix of the id of the object to read.
  * @param len the length of the prefix
- * @return GIT_SUCCESS if the object was read;
+ * @return 0 if the object was read;
  *	GIT_ENOTFOUND if the object is not in the database.
  *	GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
  */
@@ -156,7 +156,7 @@ GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git
  * @param db database to search for the object in.
  * @param id identity of the object to read.
  * @return
- * - GIT_SUCCESS if the object was read;
+ * - 0 if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(int) git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id);
@@ -188,7 +188,7 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  * @param data buffer with the data to storr
  * @param len size of the buffer
  * @param type type of the data to store
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_write(git_oid *oid, git_odb *odb, const void *data, size_t len, git_otype type);
 
@@ -257,7 +257,7 @@ GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const
  * @param data data to hash
  * @param len size of the data
  * @param type of the data to hash
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type);
 
@@ -270,7 +270,7 @@ GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otyp
  * @param out oid structure the result is written into.
  * @param path file to read and determine object id for
  * @param type the type of the object that will be hashed
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_otype type);
 

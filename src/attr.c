@@ -13,11 +13,11 @@ static int collect_attr_files(
 
 
 int git_attr_get(
+	const char **value,
     git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
-	const char *name,
-	const char **value)
+	const char *name)
 {
 	int error;
 	git_attr_path path;
@@ -64,12 +64,12 @@ typedef struct {
 } attr_get_many_info;
 
 int git_attr_get_many(
+	const char **values,
     git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
     size_t num_attr,
-	const char **names,
-	const char **values)
+	const char **names)
 {
 	int error;
 	git_attr_path path;
@@ -576,11 +576,11 @@ int git_attr_cache__init(git_repository *repo)
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	ret = git_config_get_string(cfg, GIT_ATTR_CONFIG, &cache->cfg_attr_file);
+	ret = git_config_get_string(&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG);
 	if (ret < 0 && ret != GIT_ENOTFOUND)
 		return ret;
 
-	ret = git_config_get_string(cfg, GIT_IGNORE_CONFIG, &cache->cfg_excl_file);
+	ret = git_config_get_string(&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG);
 	if (ret < 0 && ret != GIT_ENOTFOUND)
 		return ret;
 

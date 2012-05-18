@@ -68,7 +68,7 @@ static int count_ref__cb(git_remote_head *head, void *payload)
 	(void)head;
 	(*count)++;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int ensure_peeled__cb(git_remote_head *head, void *payload)

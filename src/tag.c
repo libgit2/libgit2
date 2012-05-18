@@ -168,7 +168,7 @@ static int retrieve_tag_reference(
 		return -1;
 
 	error = git_reference_lookup(&tag_ref, repo, ref_name_out->ptr);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		return error; /* Be it not foundo or corrupted */
 
 	*tag_reference_out = tag_ref;
@@ -254,7 +254,7 @@ static int git_tag_create__internal(
 	}
 
 	error = retrieve_tag_reference_oid(oid, &ref_name, repo, tag_name);
-	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+	if (error < 0 && error != GIT_ENOTFOUND)
 		return -1;
 
 	/** Ensure the tag name doesn't conflict with an already existing
@@ -332,7 +332,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	}
 
 	error = retrieve_tag_reference_oid(oid, &ref_name, repo, tag.tag_name);
-	if (error < GIT_SUCCESS && error != GIT_ENOTFOUND)
+	if (error < 0 && error != GIT_ENOTFOUND)
 		goto on_error;
 
 	/* We don't need these objects after this */
@@ -414,7 +414,7 @@ static int tag_list_cb(const char *tag_name, void *payload)
 		return 0;
 
 	filter = (tag_filter_data *)payload;
-	if (!*filter->pattern || p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == GIT_SUCCESS)
+	if (!*filter->pattern || p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 		return git_vector_insert(filter->taglist, git__strdup(tag_name));
 
 	return 0;
@@ -428,7 +428,7 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 
 	assert(tag_names && repo && pattern);
 
-	if (git_vector_init(&taglist, 8, NULL) < GIT_SUCCESS)
+	if (git_vector_init(&taglist, 8, NULL) < 0)
 		return -1;
 
 	filter.taglist = &taglist;

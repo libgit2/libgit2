@@ -129,7 +129,7 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 
 	if (git_buf_len(source) == 0) {
 		git_buf_clear(dest);
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	/* Pre-grow the destination buffer to more or less the size
@@ -160,6 +160,6 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 	if (src != 1)
 		git_buf_swap(dest, source);
 
-	return GIT_SUCCESS;
+	return 0;
 }
 

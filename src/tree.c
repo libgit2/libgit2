@@ -647,7 +647,7 @@ static int tree_frompath(
 {
 	char *slash_pos = NULL;
 	const git_tree_entry* entry;
-	int error = GIT_SUCCESS;
+	int error = 0;
 	git_tree *subtree;
 
 	if (!*(treeentry_path->ptr + offset)) {
@@ -724,7 +724,7 @@ static int tree_walk_post(
 	git_buf *path,
 	void *payload)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	unsigned int i;
 
 	for (i = 0; i < tree->entries.length; ++i) {
@@ -761,7 +761,7 @@ static int tree_walk_post(
 
 int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	git_buf root_path = GIT_BUF_INIT;
 
 	switch (mode) {

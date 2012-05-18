@@ -9,7 +9,7 @@ static void ensure_no_refname_starts_with_a_forward_slash(const char *path)
 	size_t i;
 
 	cl_git_pass(git_repository_open(&repo, path));
-	cl_git_pass(git_reference_listall(&ref_list, repo, GIT_REF_LISTALL));
+	cl_git_pass(git_reference_list(&ref_list, repo, GIT_REF_LISTALL));
 
 	cl_assert(ref_list.count > 0);
 

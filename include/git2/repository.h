@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  *
  * @param repository pointer to the repo which will be opened
  * @param path the path to the repository
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
 
@@ -61,7 +61,7 @@ GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *pat
  * start_path no matter start_path appears in ceiling_dirs ceiling_dirs
  * might be NULL (which is equivalent to an empty string)
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_discover(
 		char *repository_path,
@@ -109,7 +109,7 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  *		at the pointed path. If false, provided path will be considered as the working
  *		directory into which the .git directory will be created.
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
@@ -194,7 +194,7 @@ GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
  *
  * @param repo A repository object
  * @param workdir The path to a working directory
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_set_workdir(git_repository *repo, const char *workdir);
 
@@ -218,7 +218,7 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  *
  * @param out Pointer to store the loaded config file
  * @param repo A repository object
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
 
@@ -249,7 +249,7 @@ GIT_EXTERN(void) git_repository_set_config(git_repository *repo, git_config *con
  *
  * @param out Pointer to store the loaded ODB
  * @param repo A repository object
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_odb(git_odb **out, git_repository *repo);
 
@@ -280,7 +280,7 @@ GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
  *
  * @param out Pointer to store the loaded index
  * @param repo A repository object
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
 

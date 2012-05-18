@@ -80,13 +80,13 @@ int index_pack_old(git_repository *repo, int argc, char **argv)
 
   // Create a new indexer
   error = git_indexer_new(&indexer, argv[1]);
-  if (error < GIT_SUCCESS)
+  if (error < 0)
     return error;
 
   // Index the packfile. This function can take a very long time and
   // should be run in a worker thread.
   error = git_indexer_run(indexer, &stats);
-  if (error < GIT_SUCCESS)
+  if (error < 0)
     return error;
 
   // Write the information out to an index file
@@ -98,5 +98,5 @@ int index_pack_old(git_repository *repo, int argc, char **argv)
 
   git_indexer_free(indexer);
 
-  return GIT_SUCCESS;
+  return 0;
 }
