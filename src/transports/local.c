@@ -176,6 +176,16 @@ static int local_connect(git_transport *transport, int direction)
 	return 0;
 }
 
+static int local_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
+{
+	GIT_UNUSED(transport);
+	GIT_UNUSED(repo);
+	GIT_UNUSED(wants);
+
+	giterr_set(GITERR_NET, "Fetch via local transport isn't implemented. Sorry");
+	return -1;
+}
+
 static int local_close(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
@@ -220,6 +230,7 @@ int git_transport_local(git_transport **out)
 
 	t->parent.connect = local_connect;
 	t->parent.ls = local_ls;
+	t->parent.negotiate_fetch = local_negotiate_fetch;
 	t->parent.close = local_close;
 	t->parent.free = local_free;
 
