@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -19,5 +19,6 @@ struct git_blob {
 
 void git_blob__free(git_blob *blob);
 int git_blob__parse(git_blob *blob, git_odb_object *obj);
+int git_blob__getbuf(git_buf *buffer, git_blob *blob);
 
 #endif

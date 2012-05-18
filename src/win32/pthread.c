@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -7,13 +7,16 @@
 
 #include "pthread.h"
 
-int pthread_create(pthread_t *GIT_RESTRICT thread,
-					const pthread_attr_t *GIT_RESTRICT GIT_UNUSED(attr),
-					void *(*start_routine)(void*), void *GIT_RESTRICT arg)
+int pthread_create(
+	pthread_t *GIT_RESTRICT thread,
+	const pthread_attr_t *GIT_RESTRICT attr,
+	void *(*start_routine)(void*),
+	void *GIT_RESTRICT arg)
 {
-	GIT_UNUSED_ARG(attr);
-	*thread = (pthread_t) CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)start_routine, arg, 0, NULL);
-	return *thread ? GIT_SUCCESS : git__throw(GIT_EOSERR, "Failed to create pthread");
+	GIT_UNUSED(attr);
+	*thread = (pthread_t) CreateThread(
+		NULL, 0, (LPTHREAD_START_ROUTINE)start_routine, arg, 0, NULL);
+	return *thread ? 0 : -1;
 }
 
 int pthread_join(pthread_t thread, void **value_ptr)
@@ -26,9 +29,9 @@ int pthread_join(pthread_t thread, void **value_ptr)
 }
 
 int pthread_mutex_init(pthread_mutex_t *GIT_RESTRICT mutex,
-						const pthread_mutexattr_t *GIT_RESTRICT GIT_UNUSED(mutexattr))
+						const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
 {
-	GIT_UNUSED_ARG(mutexattr);
+	GIT_UNUSED(mutexattr);
 	InitializeCriticalSection(mutex);
 	return 0;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -20,7 +20,7 @@
  * @param delta the delta to execute copy/insert instructions from.
  * @param delta_len total number of bytes in the delta.
  * @return
- * - GIT_SUCCESS on a successful delta unpack.
+ * - 0 on a successful delta unpack.
  * - GIT_ERROR if the delta is corrupt or doesn't match the base.
  */
 extern int git__delta_apply(

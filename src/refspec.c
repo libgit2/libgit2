@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -10,6 +10,7 @@
 #include "common.h"
 #include "refspec.h"
 #include "util.h"
+#include "posix.h"
 
 int git_refspec_parse(git_refspec *refspec, const char *str)
 {
@@ -25,24 +26,21 @@ int git_refspec_parse(git_refspec *refspec, const char *str)
 	delim = strchr(str, ':');
 	if (delim == NULL) {
 		refspec->src = git__strdup(str);
-		if (refspec->src == NULL)
-			return GIT_ENOMEM;
-
-		return GIT_SUCCESS;
+		GITERR_CHECK_ALLOC(refspec->src);
+		return 0;
 	}
 
 	refspec->src = git__strndup(str, delim - str);
-	if (refspec->src == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(refspec->src);
 
 	refspec->dst = git__strdup(delim + 1);
 	if (refspec->dst == NULL) {
 		git__free(refspec->src);
 		refspec->src = NULL;
-		return GIT_ENOMEM;
+		return -1;
 	}
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 const char *git_refspec_src(const git_refspec *refspec)
@@ -55,9 +53,12 @@ const char *git_refspec_dst(const git_refspec *refspec)
 	return refspec == NULL ? NULL : refspec->dst;
 }
 
-int git_refspec_src_match(const git_refspec *refspec, const char *refname)
+int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 {
-	return (refspec == NULL || refspec->src == NULL) ? GIT_ENOMATCH : git__fnmatch(refspec->src, refname, 0);
+	if (refspec == NULL || refspec->src == NULL)
+		return false;
+
+	return (p_fnmatch(refspec->src, refname, 0) == 0);
 }
 
 int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name)
@@ -65,8 +66,10 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 	size_t baselen, namelen;
 
 	baselen = strlen(spec->dst);
-	if (outlen <= baselen)
-		return git__throw(GIT_EINVALIDREFNAME, "Reference name too long");
+	if (outlen <= baselen) {
+		giterr_set(GITERR_INVALID, "Reference name too long");
+		return GIT_EBUFS;
+	}
 
 	/*
 	 * No '*' at the end means that it's mapped to one specific local
@@ -74,7 +77,7 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 	 */
 	if (spec->dst[baselen - 1] != '*') {
 		memcpy(out, spec->dst, baselen + 1); /* include '\0' */
-		return GIT_SUCCESS;
+		return 0;
 	}
 
 	/* There's a '*' at the end, so remove its length */
@@ -85,29 +88,35 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 
 	namelen = strlen(name);
 
-	if (outlen <= baselen + namelen)
-		return git__throw(GIT_EINVALIDREFNAME, "Reference name too long");
+	if (outlen <= baselen + namelen) {
+		giterr_set(GITERR_INVALID, "Reference name too long");
+		return GIT_EBUFS;
+	}
 
 	memcpy(out, spec->dst, baselen);
 	memcpy(out + baselen, name, namelen + 1);
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)
 {
-	if (git_buf_sets(out, spec->dst) < GIT_SUCCESS)
-		return git_buf_lasterror(out);
+	if (git_buf_sets(out, spec->dst) < 0)
+		return -1;
 
 	/*
 	 * No '*' at the end means that it's mapped to one specific local
 	 * branch, so no actual transformation is needed.
 	 */
-	if (out->size > 0 && out->ptr[out->size - 1] != '*')
-		return GIT_SUCCESS;
+	if (git_buf_len(out) > 0 && out->ptr[git_buf_len(out) - 1] != '*')
+		return 0;
 
-	git_buf_truncate(out, out->size - 1); /* remove trailing '*' */
+	git_buf_truncate(out, git_buf_len(out) - 1); /* remove trailing '*' */
 	git_buf_puts(out, name + strlen(spec->src) - 1);
 
-	return git_buf_lasterror(out);
+	if (git_buf_oom(out))
+		return -1;
+
+	return 0;
 }
+

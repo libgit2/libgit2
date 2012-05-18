@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -27,7 +27,7 @@ GIT_BEGIN_DECL
  * @param tag pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oid *id)
 {
@@ -44,7 +44,7 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
  * @param len the length of the short identifier
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_INLINE(int) git_tag_lookup_prefix(git_tag **tag, git_repository *repo, const git_oid *id, unsigned int len)
 {
@@ -85,7 +85,7 @@ GIT_EXTERN(const git_oid *) git_tag_id(git_tag *tag);
  *
  * @param target pointer where to store the target
  * @param tag a previously loaded tag.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_target(git_object **target, git_tag *tag);
 
@@ -137,6 +137,9 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  * this tag object. If `force` is true and a reference
  * already exists with the given name, it'll be replaced.
  *
+ * The message will be cleaned up from excess whitespace
+ * it will be made sure that the last line ends with a '\n'.
+ *
  * @param oid Pointer where to store the OID of the
  * newly created tag. If the tag already exists, this parameter
  * will be the oid of the existing tag, and the function will
@@ -158,7 +161,7 @@ GIT_EXTERN(const char *) git_tag_message(git_tag *tag);
  *
  * @param force Overwrite existing references
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  *	A tag object is written to the ODB, and a proper reference
  *	is written in the /refs/tags folder, pointing to it
  */
@@ -209,7 +212,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  *
  * @param force Overwrite existing references
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  *	A proper reference is written in the /refs/tags folder,
  * pointing to the provided target object
  */
@@ -228,7 +231,7 @@ GIT_EXTERN(int) git_tag_create_lightweight(
  * @param tag_name Name of the tag to be deleted;
  * this name is validated for consistency.
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_delete(
 		git_repository *repo,
@@ -245,7 +248,7 @@ GIT_EXTERN(int) git_tag_delete(
  * @param tag_names Pointer to a git_strarray structure where
  *		the tag names will be stored
  * @param repo Repository where to find the tags
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_list(
 		git_strarray *tag_names,
@@ -267,12 +270,27 @@ GIT_EXTERN(int) git_tag_list(
  *		the tag names will be stored
  * @param pattern Standard fnmatch pattern
  * @param repo Repository where to find the tags
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tag_list_match(
 		git_strarray *tag_names,
 		const char *pattern,
 		git_repository *repo);
+
+/**
+ * Recursively peel a tag until a non tag git_object
+ * is met
+ *
+ * The retrieved `tag_target` object is owned by the repository
+ * and should be closed with the `git_object_free` method.
+ *
+ * @param tag_target Pointer to the peeled git_object
+ * @param tag The tag to be processed
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_tag_peel(
+		git_object **tag_target,
+		git_tag *tag);
 
 /** @} */
 GIT_END_DECL

@@ -88,10 +88,10 @@ static int one_entry(void *state, git_buf *path)
 	return GIT_ERROR;
 }
 
-static int dont_call_me(void *GIT_UNUSED(state), git_buf *GIT_UNUSED(path))
+static int dont_call_me(void *state, git_buf *path)
 {
-	GIT_UNUSED_ARG(state)
-	GIT_UNUSED_ARG(path)
+	GIT_UNUSED(state);
+	GIT_UNUSED(path);
 	return GIT_ERROR;
 }
 
@@ -221,4 +221,15 @@ void test_core_dirent__traverse_weird_filenames(void)
 					&odd));
 
 	check_counts(&odd);
+}
+
+/* test filename length limits */
+void test_core_dirent__length_limits(void)
+{
+	char *big_filename = (char *)git__malloc(FILENAME_MAX + 1);
+	memset(big_filename, 'a', FILENAME_MAX + 1);
+	big_filename[FILENAME_MAX] = 0;
+
+	cl_must_fail(p_creat(big_filename, 0666));
+	git__free(big_filename);
 }

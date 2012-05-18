@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -11,7 +11,6 @@
 #	include <sys/time.h>
 #	include <netdb.h>
 #else
-#	define _WIN32_WINNT 0x0501
 #	include <winsock2.h>
 #	include <Ws2tcpip.h>
 #	ifdef _MSC_VER
@@ -25,8 +24,28 @@
 #include "common.h"
 #include "netops.h"
 #include "posix.h"
+#include "buffer.h"
 
-void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, int fd)
+#ifdef GIT_WIN32
+static void net_set_error(const char *str)
+{
+	int size, error = WSAGetLastError();
+	LPSTR err_str = NULL;
+
+	size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+			     0, error, 0, (LPSTR)&err_str, 0, 0);
+
+	giterr_set(GITERR_NET, "%s: %s", str, err_str);
+	LocalFree(err_str);
+}
+#else
+static void net_set_error(const char *str)
+{
+	giterr_set(GITERR_NET, "%s: %s", str, strerror(errno));
+}
+#endif
+
+void gitno_buffer_setup(gitno_buffer *buf, char *data, unsigned int len, GIT_SOCKET fd)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
@@ -40,14 +59,13 @@ int gitno_recv(gitno_buffer *buf)
 {
 	int ret;
 
-	ret = recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
-	if (ret < 0)
-		return git__throw(GIT_EOSERR, "Failed to receive data: %s", strerror(errno));
-	if (ret == 0) /* Orderly shutdown, so exit */
-		return GIT_SUCCESS;
+	ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
+	if (ret < 0) {
+		net_set_error("Error receiving socket data");
+		return -1;
+	}
 
 	buf->offset += ret;
-
 	return ret;
 }
 
@@ -74,52 +92,46 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
-int gitno_connect(const char *host, const char *port)
+int gitno_connect(GIT_SOCKET *sock, const char *host, const char *port)
 {
-	struct addrinfo *info, *p;
+	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
-	int ret, error = GIT_SUCCESS;
-	GIT_SOCKET s;
+	int ret;
+	GIT_SOCKET s = INVALID_SOCKET;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	ret = getaddrinfo(host, port, &hints, &info);
-	if (ret != 0) {
-		error = GIT_EOSERR;
-		info = NULL;
-		goto cleanup;
+	if ((ret = getaddrinfo(host, port, &hints, &info)) < 0) {
+		giterr_set(GITERR_NET, "Failed to resolve address for %s: %s", host, gai_strerror(ret));
+		return -1;
 	}
 
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-#ifdef GIT_WIN32
 		if (s == INVALID_SOCKET) {
-#else
-		if (s < 0) {
-#endif
-			error = GIT_EOSERR;
-			goto cleanup;
+			net_set_error("error creating socket");
+			break;
 		}
 
-		ret = connect(s, p->ai_addr, p->ai_addrlen);
+		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
+			break;
+
 		/* If we can't connect, try the next one */
-		if (ret < 0) {
-			continue;
-		}
-
-		/* Return the socket */
-		error = s;
-		goto cleanup;
+		gitno_close(s);
+		s = INVALID_SOCKET;
 	}
 
 	/* Oops, we couldn't connect to any address */
-	error = git__throw(GIT_EOSERR, "Failed to connect: %s", strerror(errno));
+	if (s == INVALID_SOCKET && p == NULL) {
+		giterr_set(GITERR_OS, "Failed to connect to %s", host);
+		return -1;
+	}
 
-cleanup:
 	freeaddrinfo(info);
-	return error;
+	*sock = s;
+	return 0;
 }
 
 int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
@@ -130,14 +142,16 @@ int gitno_send(GIT_SOCKET s, const char *msg, size_t len, int flags)
 	while (off < len) {
 		errno = 0;
 
-		ret = send(s, msg + off, len - off, flags);
-		if (ret < 0)
-			return git__throw(GIT_EOSERR, "Error sending data: %s", strerror(errno));
+		ret = p_send(s, msg + off, len - off, flags);
+		if (ret < 0) {
+			net_set_error("Error sending data");
+			return -1;
+		}
 
 		off += ret;
 	}
 
-	return off;
+	return (int)off;
 }
 
 
@@ -165,35 +179,31 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	FD_SET(buf->fd, &fds);
 
 	/* The select(2) interface is silly */
-	return select(buf->fd + 1, &fds, NULL, NULL, &tv);
+	return select((int)buf->fd + 1, &fds, NULL, NULL, &tv);
 }
 
 int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)
 {
 	char *colon, *slash, *delim;
-	int error = GIT_SUCCESS;
 
 	colon = strchr(url, ':');
 	slash = strchr(url, '/');
 
-	if (slash == NULL)
-			return git__throw(GIT_EOBJCORRUPTED, "Malformed URL: missing /");
+	if (slash == NULL) {
+		giterr_set(GITERR_NET, "Malformed URL: missing /");
+		return -1;
+	}
 
 	if (colon == NULL) {
 		*port = git__strdup(default_port);
 	} else {
 		*port = git__strndup(colon + 1, slash - colon - 1);
 	}
-	if (*port == NULL)
-		return GIT_ENOMEM;;
-
+	GITERR_CHECK_ALLOC(*port);
 
 	delim = colon == NULL ? slash : colon;
 	*host = git__strndup(url, delim - url);
-	if (*host == NULL) {
-		git__free(*port);
-		error = GIT_ENOMEM;
-	}
+	GITERR_CHECK_ALLOC(*host);
 
-	return error;
+	return 0;
 }

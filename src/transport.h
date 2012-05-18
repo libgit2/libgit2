@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -8,6 +8,7 @@
 #define INCLUDE_transport_h__
 
 #include "git2/net.h"
+#include "git2/indexer.h"
 #include "vector.h"
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
@@ -66,22 +67,14 @@ struct git_transport {
 	 */
 	int (*push)(struct git_transport *transport);
 	/**
-	 * Send a 'done' message
-	 */
-	int (*send_done)(struct git_transport *transport);
-	/**
 	 * Negotiate the minimal amount of objects that need to be
 	 * retrieved
 	 */
 	int (*negotiate_fetch)(struct git_transport *transport, git_repository *repo, const git_vector *wants);
 	/**
-	 * Send a flush
-	 */
-	int (*send_flush)(struct git_transport *transport);
-	/**
 	 * Download the packfile
 	 */
-	int (*download_pack)(char **out, struct git_transport *transport, git_repository *repo);
+	int (*download_pack)(struct git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats);
 	/**
 	 * Fetch the changes
 	 */
@@ -102,6 +95,11 @@ int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
 int git_transport_http(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
+
+/**
+  Returns true if the passed URL is valid (a URL with a Git supported scheme,
+  or pointing to an existing path)
+*/
 int git_transport_valid_url(const char *url);
 
 typedef struct git_transport git_transport;

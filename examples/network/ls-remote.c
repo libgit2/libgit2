@@ -9,7 +9,7 @@ static int show_ref__cb(git_remote_head *head, void *payload)
 	char oid[GIT_OID_HEXSZ + 1] = {0};
 	git_oid_fmt(oid, &head->oid);
 	printf("%s\t%s\n", oid, head->name);
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int use_unnamed(git_repository *repo, const char *url)
@@ -19,14 +19,14 @@ int use_unnamed(git_repository *repo, const char *url)
 
 	// Create an instance of a remote from the URL. The transport to use
 	// is detected from the URL
-	error = git_remote_new(&remote, repo, url, NULL);
-	if (error < GIT_SUCCESS)
+	error = git_remote_new(&remote, repo, NULL, url, NULL);
+	if (error < 0)
 		goto cleanup;
 
 	// When connecting, the underlying code needs to know wether we
 	// want to push or fetch
 	error = git_remote_connect(remote, GIT_DIR_FETCH);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		goto cleanup;
 
 	// With git_remote_ls we can retrieve the advertised heads
@@ -44,11 +44,11 @@ int use_remote(git_repository *repo, char *name)
 
 	// Find the remote by name
 	error = git_remote_load(&remote, repo, name);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		goto cleanup;
 
 	error = git_remote_connect(remote, GIT_DIR_FETCH);
-	if (error < GIT_SUCCESS)
+	if (error < 0)
 		goto cleanup;
 
 	error = git_remote_ls(remote, &show_ref__cb, NULL);

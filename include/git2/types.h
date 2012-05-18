@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -131,6 +131,9 @@ typedef struct git_reflog_entry git_reflog_entry;
 /** Representation of a reference log */
 typedef struct git_reflog git_reflog;
 
+/** Representation of a git note */
+typedef struct git_note git_note;
+
 /** Time in a signature */
 typedef struct git_time {
 	git_time_t time; /** time in seconds from epoch */
@@ -155,8 +158,13 @@ typedef enum {
 	GIT_REF_PACKED = 4,
 	GIT_REF_HAS_PEEL = 8,
 	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
-} git_rtype;
+} git_ref_t;
 
+/** Basic type of any Git branch. */
+typedef enum {
+	GIT_BRANCH_LOCAL = 1,
+	GIT_BRANCH_REMOTE = 2,
+} git_branch_t;
 
 typedef struct git_refspec git_refspec;
 typedef struct git_remote git_remote;

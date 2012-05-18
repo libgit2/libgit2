@@ -3,95 +3,111 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
-static int rename_packfile(char *packname, git_indexer *idx)
+struct dl_data {
+	git_remote *remote;
+	git_off_t *bytes;
+	git_indexer_stats *stats;
+	int ret;
+	int finished;
+};
+
+static void *download(void *ptr)
 {
-  char path[GIT_PATH_MAX], oid[GIT_OID_HEXSZ + 1], *slash;
-  int ret;
+	struct dl_data *data = (struct dl_data *)ptr;
 
-  strcpy(path, packname);
-  slash = strrchr(path, '/');
+	// Connect to the remote end specifying that we want to fetch
+	// information from it.
+	if (git_remote_connect(data->remote, GIT_DIR_FETCH) < 0) {
+		data->ret = -1;
+		goto exit;
+	}
 
-  if (!slash)
-	  return GIT_EINVALIDARGS;
+	// Download the packfile and index it. This function updates the
+	// amount of received data and the indexer stats which lets you
+	// inform the user about progress.
+	if (git_remote_download(data->remote, data->bytes, data->stats) < 0) {
+		data->ret = -1;
+		goto exit;
+	}
 
-  memset(oid, 0x0, sizeof(oid));
-  // The name of the packfile is given by it's hash which you can get
-  // with git_indexer_hash after the index has been written out to
-  // disk. Rename the packfile to its "real" name in the same
-  // directory as it was originally (libgit2 stores it in the folder
-  // where the packs go, so a rename in place is the right thing to do here
-  git_oid_fmt(oid, git_indexer_hash(idx));
-  ret = sprintf(slash + 1, "pack-%s.pack", oid);
-  if(ret < 0)
-	  return GIT_EOSERR;
+	data->ret = 0;
 
-  printf("Renaming pack to %s\n", path);
-  return rename(packname, path);
+exit:
+	data->finished = 1;
+	pthread_exit(&data->ret);
+}
+
+int update_cb(const char *refname, const git_oid *a, const git_oid *b)
+{
+	const char *action;
+	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
+
+	git_oid_fmt(b_str, b);
+	b_str[GIT_OID_HEXSZ] = '\0';
+
+	if (git_oid_iszero(a)) {
+		printf("[new]     %.20s %s\n", b_str, refname);
+	} else {
+		git_oid_fmt(a_str, a);
+		a_str[GIT_OID_HEXSZ] = '\0';
+		printf("[updated] %.10s..%.10s %s\n", a_str, b_str, refname);
+	}
+
+	return 0;
 }
 
 int fetch(git_repository *repo, int argc, char **argv)
 {
   git_remote *remote = NULL;
-  git_indexer *idx = NULL;
+  git_off_t bytes = 0;
   git_indexer_stats stats;
-  int error;
-  char *packname = NULL;
+  pthread_t worker;
+  struct dl_data data;
 
-  // Get the remote and connect to it
+  // Figure out whether it's a named remote or a URL
   printf("Fetching %s\n", argv[1]);
-  error = git_remote_new(&remote, repo, argv[1], NULL);
-  if (error < GIT_SUCCESS)
-    return error;
-
-  error = git_remote_connect(remote, GIT_DIR_FETCH);
-  if (error < GIT_SUCCESS)
-    return error;
-
-  // Download the packfile from the server. As we don't know its hash
-  // yet, it will get a temporary filename
-  error = git_remote_download(&packname, remote);
-  if (error < GIT_SUCCESS)
-    return error;
-
-  // No error and a NULL packname means no packfile was needed
-  if (packname != NULL) {
-	  printf("The packname is %s\n", packname);
-
-	  // Create a new instance indexer
-	  error = git_indexer_new(&idx, packname);
-	  if (error < GIT_SUCCESS)
-		  return error;
-
-	  // This should be run in paralel, but it'd be too complicated for the example
-	  error = git_indexer_run(idx, &stats);
-	  if (error < GIT_SUCCESS)
-		  return error;
-
-	  printf("Received %d objects\n", stats.total);
-
-	  // Write the index file. The index will be stored with the
-	  // correct filename
-	  error = git_indexer_write(idx);
-	  if (error < GIT_SUCCESS)
-		  return error;
-
-	  error = rename_packfile(packname, idx);
-	  if (error < GIT_SUCCESS)
-		  return error;
+  if (git_remote_load(&remote, repo, argv[1]) < 0) {
+	  if (git_remote_new(&remote, repo, NULL, argv[1], NULL) < 0)
+		  return -1;
   }
+
+  // Set up the information for the background worker thread
+  data.remote = remote;
+  data.bytes = &bytes;
+  data.stats = &stats;
+  data.ret = 0;
+  data.finished = 0;
+  memset(&stats, 0, sizeof(stats));
+
+  pthread_create(&worker, NULL, download, &data);
+
+  // Loop while the worker thread is still running. Here we show processed
+  // and total objects in the pack and the amount of received
+  // data. Most frontends will probably want to show a percentage and
+  // the download rate.
+  do {
+	usleep(10000);
+	printf("\rReceived %d/%d objects in %d bytes", stats.processed, stats.total, bytes);
+  } while (!data.finished);
+  printf("\rReceived %d/%d objects in %d bytes\n", stats.processed, stats.total, bytes);
+
+  // Disconnect the underlying connection to prevent from idling.
+  git_remote_disconnect(remote);
 
   // Update the references in the remote's namespace to point to the
   // right commits. This may be needed even if there was no packfile
   // to download, which can happen e.g. when the branches have been
   // changed but all the neede objects are available locally.
-  error = git_remote_update_tips(remote);
-  if (error < GIT_SUCCESS)
-    return error;
+  if (git_remote_update_tips(remote, update_cb) < 0)
+	  return -1;
 
-  free(packname);
-  git_indexer_free(idx);
   git_remote_free(remote);
 
-  return GIT_SUCCESS;
+  return 0;
+
+on_error:
+  git_remote_free(remote);
+  return -1;
 }

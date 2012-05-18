@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -7,22 +7,25 @@
 #include "buffer.h"
 #include "posix.h"
 #include <stdarg.h>
+#include <ctype.h>
 
 /* Used as default value for git_buf->ptr so that people can always
  * assume ptr is non-NULL and zero terminated even for new git_bufs.
  */
-char git_buf_initbuf[1];
+char git_buf__initbuf[1];
+
+char git_buf__oom[1];
 
 #define ENSURE_SIZE(b, d) \
-	if ((ssize_t)(d) > buf->asize && git_buf_grow(b, (d)) < GIT_SUCCESS)\
-		return GIT_ENOMEM;
+	if ((d) > buf->asize && git_buf_grow(b, (d)) < 0)\
+		return -1;
 
 
 void git_buf_init(git_buf *buf, size_t initial_size)
 {
 	buf->asize = 0;
 	buf->size = 0;
-	buf->ptr = git_buf_initbuf;
+	buf->ptr = git_buf__initbuf;
 
 	if (initial_size)
 		git_buf_grow(buf, initial_size);
@@ -31,8 +34,8 @@ void git_buf_init(git_buf *buf, size_t initial_size)
 int git_buf_grow(git_buf *buf, size_t target_size)
 {
 	int error = git_buf_try_grow(buf, target_size);
-	if (error != GIT_SUCCESS)
-		buf->asize = -1;
+	if (error != 0)
+		buf->ptr = git_buf__oom;
 	return error;
 }
 
@@ -41,17 +44,17 @@ int git_buf_try_grow(git_buf *buf, size_t target_size)
 	char *new_ptr;
 	size_t new_size;
 
-	if (buf->asize < 0)
-		return GIT_ENOMEM;
+	if (buf->ptr == git_buf__oom)
+		return -1;
 
-	if (target_size <= (size_t)buf->asize)
-		return GIT_SUCCESS;
+	if (target_size <= buf->asize)
+		return 0;
 
 	if (buf->asize == 0) {
 		new_size = target_size;
 		new_ptr = NULL;
 	} else {
-		new_size = (size_t)buf->asize;
+		new_size = buf->asize;
 		new_ptr = buf->ptr;
 	}
 
@@ -64,9 +67,8 @@ int git_buf_try_grow(git_buf *buf, size_t target_size)
 	new_size = (new_size + 7) & ~7;
 
 	new_ptr = git__realloc(new_ptr, new_size);
-	/* if realloc fails, return without modifying the git_buf */
 	if (!new_ptr)
-		return GIT_ENOMEM;
+		return -1;
 
 	buf->asize = new_size;
 	buf->ptr   = new_ptr;
@@ -76,14 +78,14 @@ int git_buf_try_grow(git_buf *buf, size_t target_size)
 		buf->size = buf->asize - 1;
 	buf->ptr[buf->size] = '\0';
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_buf_free(git_buf *buf)
 {
 	if (!buf) return;
 
-	if (buf->ptr != git_buf_initbuf)
+	if (buf->ptr != git_buf__initbuf && buf->ptr != git_buf__oom)
 		git__free(buf->ptr);
 
 	git_buf_init(buf, 0);
@@ -94,16 +96,6 @@ void git_buf_clear(git_buf *buf)
 	buf->size = 0;
 	if (buf->asize > 0)
 		buf->ptr[0] = '\0';
-}
-
-int git_buf_oom(const git_buf *buf)
-{
-	return (buf->asize < 0);
-}
-
-int git_buf_lasterror(const git_buf *buf)
-{
-	return (buf->asize < 0) ? GIT_ENOMEM : GIT_SUCCESS;
 }
 
 int git_buf_set(git_buf *buf, const char *data, size_t len)
@@ -118,7 +110,7 @@ int git_buf_set(git_buf *buf, const char *data, size_t len)
 		buf->size = len;
 		buf->ptr[buf->size] = '\0';
 	}
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_buf_sets(git_buf *buf, const char *string)
@@ -131,7 +123,7 @@ int git_buf_putc(git_buf *buf, char c)
 	ENSURE_SIZE(buf, buf->size + 2);
 	buf->ptr[buf->size++] = c;
 	buf->ptr[buf->size] = '\0';
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_buf_put(git_buf *buf, const char *data, size_t len)
@@ -140,7 +132,7 @@ int git_buf_put(git_buf *buf, const char *data, size_t len)
 	memmove(buf->ptr + buf->size, data, len);
 	buf->size += len;
 	buf->ptr[buf->size] = '\0';
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_buf_puts(git_buf *buf, const char *string)
@@ -149,24 +141,29 @@ int git_buf_puts(git_buf *buf, const char *string)
 	return git_buf_put(buf, string, strlen(string));
 }
 
-int git_buf_printf(git_buf *buf, const char *format, ...)
+int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 {
 	int len;
-	va_list arglist;
 
-	ENSURE_SIZE(buf, buf->size + 1);
+	ENSURE_SIZE(buf, buf->size + (strlen(format) * 2));
 
 	while (1) {
-		va_start(arglist, format);
-		len = p_vsnprintf(buf->ptr + buf->size, buf->asize - buf->size, format, arglist);
-		va_end(arglist);
+		va_list args;
+		va_copy(args, ap);
+
+		len = p_vsnprintf(
+			buf->ptr + buf->size,
+			buf->asize - buf->size,
+			format, args
+		);
 
 		if (len < 0) {
-			buf->asize = -1;
-			return GIT_ENOMEM;
+			git__free(buf->ptr);
+			buf->ptr = git_buf__oom;
+			return -1;
 		}
 
-		if (len + 1 <= buf->asize - buf->size) {
+		if ((size_t)len + 1 <= buf->asize - buf->size) {
 			buf->size += len;
 			break;
 		}
@@ -174,7 +171,19 @@ int git_buf_printf(git_buf *buf, const char *format, ...)
 		ENSURE_SIZE(buf, buf->size + len + 1);
 	}
 
-	return GIT_SUCCESS;
+	return 0;
+}
+
+int git_buf_printf(git_buf *buf, const char *format, ...)
+{
+	int r;
+	va_list ap;
+
+	va_start(ap, format);
+	r = git_buf_vprintf(buf, format, ap);
+	va_end(ap);
+
+	return r;
 }
 
 void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)
@@ -205,12 +214,18 @@ void git_buf_consume(git_buf *buf, const char *end)
 	}
 }
 
-void git_buf_truncate(git_buf *buf, ssize_t len)
+void git_buf_truncate(git_buf *buf, size_t len)
 {
-	if (len >= 0 && len < buf->size) {
+	if (len < buf->size) {
 		buf->size = len;
 		buf->ptr[buf->size] = '\0';
 	}
+}
+
+void git_buf_rtruncate_at_char(git_buf *buf, char separator)
+{
+	ssize_t idx = git_buf_rfind_next(buf, separator);
+	git_buf_truncate(buf, idx < 0 ? 0 : (size_t)idx);
 }
 
 void git_buf_swap(git_buf *buf_a, git_buf *buf_b)
@@ -224,7 +239,7 @@ char *git_buf_detach(git_buf *buf)
 {
 	char *data = buf->ptr;
 
-	if (buf->asize <= 0)
+	if (buf->asize == 0 || buf->ptr == git_buf__oom)
 		return NULL;
 
 	git_buf_init(buf, 0);
@@ -232,7 +247,7 @@ char *git_buf_detach(git_buf *buf)
 	return data;
 }
 
-void git_buf_attach(git_buf *buf, char *ptr, ssize_t asize)
+void git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 {
 	git_buf_free(buf);
 
@@ -251,9 +266,9 @@ void git_buf_attach(git_buf *buf, char *ptr, ssize_t asize)
 int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 {
 	va_list ap;
-	int i, error = GIT_SUCCESS;
-	size_t total_size = 0;
-	char *out;
+	int i;
+	size_t total_size = 0, original_size = buf->size;
+	char *out, *original = buf->ptr;
 
 	if (buf->size > 0 && buf->ptr[buf->size - 1] != separator)
 		++total_size; /* space for initial separator */
@@ -277,9 +292,10 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	va_end(ap);
 
 	/* expand buffer if needed */
-	if (total_size > 0 &&
-		(error = git_buf_grow(buf, buf->size + total_size + 1)) < GIT_SUCCESS)
-		return error;
+	if (total_size == 0)
+		return 0;
+	if (git_buf_grow(buf, buf->size + total_size + 1) < 0)
+		return -1;
 
 	out = buf->ptr + buf->size;
 
@@ -296,12 +312,23 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 		if (!segment)
 			continue;
 
+		/* deal with join that references buffer's original content */
+		if (segment >= original && segment < original + original_size) {
+			size_t offset = (segment - original);
+			segment = buf->ptr + offset;
+			segment_len = original_size - offset;
+		} else {
+			segment_len = strlen(segment);
+		}
+
 		/* skip leading separators */
 		if (out > buf->ptr && out[-1] == separator)
-			while (*segment == separator) segment++;
+			while (segment_len > 0 && *segment == separator) {
+				segment++;
+				segment_len--;
+			}
 
 		/* copy over next buffer */
-		segment_len = strlen(segment);
 		if (segment_len > 0) {
 			memmove(out, segment, segment_len);
 			out += segment_len;
@@ -317,7 +344,7 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	buf->size = out - buf->ptr;
 	buf->ptr[buf->size] = '\0';
 
-	return error;
+	return 0;
 }
 
 int git_buf_join(
@@ -326,8 +353,7 @@ int git_buf_join(
 	const char *str_a,
 	const char *str_b)
 {
-	int error = GIT_SUCCESS;
-	size_t strlen_a = strlen(str_a);
+	size_t strlen_a = str_a ? strlen(str_a) : 0;
 	size_t strlen_b = strlen(str_b);
 	int need_sep = 0;
 	ssize_t offset_a = -1;
@@ -346,9 +372,8 @@ int git_buf_join(
 	if (str_a >= buf->ptr && str_a < buf->ptr + buf->size)
 		offset_a = str_a - buf->ptr;
 
-	error = git_buf_grow(buf, strlen_a + strlen_b + need_sep + 1);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (git_buf_grow(buf, strlen_a + strlen_b + need_sep + 1) < 0)
+		return -1;
 
 	/* fix up internal pointers */
 	if (offset_a >= 0)
@@ -364,5 +389,73 @@ int git_buf_join(
 	buf->size = strlen_a + strlen_b + need_sep;
 	buf->ptr[buf->size] = '\0';
 
-	return error;
+	return 0;
 }
+
+void git_buf_rtrim(git_buf *buf)
+{
+	while (buf->size > 0) {
+		if (!git__isspace(buf->ptr[buf->size - 1]))
+			break;
+
+		buf->size--;
+	}
+
+	buf->ptr[buf->size] = '\0';
+}
+
+int git_buf_cmp(const git_buf *a, const git_buf *b)
+{
+	int result = memcmp(a->ptr, b->ptr, min(a->size, b->size));
+	return (result != 0) ? result :
+		(a->size < b->size) ? -1 : (a->size > b->size) ? 1 : 0;
+}
+
+int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
+{
+	size_t i;
+	const char *str, *pfx;
+
+	git_buf_clear(buf);
+
+	if (!strings || !strings->count)
+		return 0;
+
+	/* initialize common prefix to first string */
+	if (git_buf_sets(buf, strings->strings[0]) < 0)
+		return -1;
+
+	/* go through the rest of the strings, truncating to shared prefix */
+	for (i = 1; i < strings->count; ++i) {
+
+		for (str = strings->strings[i], pfx = buf->ptr;
+			 *str && *str == *pfx; str++, pfx++)
+			/* scanning */;
+
+		git_buf_truncate(buf, pfx - buf->ptr);
+
+		if (!buf->size)
+			break;
+	}
+
+	return 0;
+}
+
+bool git_buf_is_binary(const git_buf *buf)
+{
+	size_t i;
+	int printable = 0, nonprintable = 0;
+
+	for (i = 0; i < buf->size; i++) {
+		unsigned char c = buf->ptr[i];
+		if (c > 0x1F && c < 0x7F)
+			printable++;
+		else if (c == '\0')
+			return true;
+		else if (!git__isspace(c))
+			nonprintable++;
+	}
+
+	return ((printable >> 7) < nonprintable);
+}
+

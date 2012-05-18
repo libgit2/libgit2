@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -12,7 +12,7 @@ typedef struct {
 } blk_SHA_CTX;
 
 void git__blk_SHA1_Init(blk_SHA_CTX *ctx);
-void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *dataIn, unsigned long len);
+void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *dataIn, size_t len);
 void git__blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx);
 
 #define SHA_CTX		blk_SHA_CTX

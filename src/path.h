@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "buffer.h"
+#include "vector.h"
 
 /**
  * Path manipulation utils
@@ -112,21 +113,35 @@ extern int git_path_fromurl(git_buf *local_path_out, const char *file_url);
 
 /**
  * Check if a file exists and can be accessed.
- * @return GIT_SUCCESS if file exists, < 0 otherwise.
+ * @return true or false
  */
-extern int git_path_exists(const char *path);
+extern bool git_path_exists(const char *path);
 
 /**
  * Check if the given path points to a directory.
- * @return GIT_SUCCESS if it is a directory, < 0 otherwise.
+ * @return true or false
  */
-extern int git_path_isdir(const char *path);
+extern bool git_path_isdir(const char *path);
 
 /**
  * Check if the given path points to a regular file.
- * @return GIT_SUCCESS if it is a regular file, < 0 otherwise.
+ * @return true or false
  */
-extern int git_path_isfile(const char *path);
+extern bool git_path_isfile(const char *path);
+
+/**
+ * Stat a file and/or link and set error if needed.
+ */
+extern int git_path_lstat(const char *path, struct stat *st);
+
+/**
+ * Check if the parent directory contains the item.
+ *
+ * @param dir Directory to check.
+ * @param item Item that might be in the directory.
+ * @return 0 if item exists in directory, <0 otherwise.
+ */
+extern bool git_path_contains(git_buf *dir, const char *item);
 
 /**
  * Check if the given path contains the given subdirectory.
@@ -134,9 +149,9 @@ extern int git_path_isfile(const char *path);
  * @param parent Directory path that might contain subdir
  * @param subdir Subdirectory name to look for in parent
  * @param append_if_exists If true, then subdir will be appended to the parent path if it does exist
- * @return GIT_SUCCESS if subdirectory exists, < 0 otherwise.
+ * @return true if subdirectory exists, false otherwise.
  */
-extern int git_path_contains_dir(git_buf *parent, const char *subdir, int append_if_exists);
+extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
 
 /**
  * Check if the given path contains the given file.
@@ -144,9 +159,9 @@ extern int git_path_contains_dir(git_buf *parent, const char *subdir, int append
  * @param dir Directory path that might contain file
  * @param file File name to look for in parent
  * @param append_if_exists If true, then file will be appended to the path if it does exist
- * @return GIT_SUCCESS if file exists, < 0 otherwise.
+ * @return true if file exists, false otherwise.
  */
-extern int git_path_contains_file(git_buf *dir, const char *file, int append_if_exists);
+extern bool git_path_contains_file(git_buf *dir, const char *file);
 
 /**
  * Clean up path, prepending base if it is not already rooted.
@@ -189,14 +204,14 @@ extern int git_path_direach(
  * Sort function to order two paths.
  */
 extern int git_path_cmp(
-	const char *name1, int len1, int isdir1,
-	const char *name2, int len2, int isdir2);
+	const char *name1, size_t len1, int isdir1,
+	const char *name2, size_t len2, int isdir2);
 
 /**
  * Invoke callback up path directory by directory until the ceiling is
  * reached (inclusive of a final call at the root_path).
  *
- * Returning anything other than GIT_SUCCESS from the callback function
+ * Returning anything other than 0 from the callback function
  * will stop the iteration and propogate the error to the caller.
  *
  * @param pathbuf Buffer the function reads the directory from and
@@ -215,5 +230,49 @@ extern int git_path_walk_up(
 	const char *ceiling,
 	int (*fn)(void *state, git_buf *),
 	void *state);
+
+/**
+ * Load all directory entries (except '.' and '..') into a vector.
+ *
+ * For cases where `git_path_direach()` is not appropriate, this
+ * allows you to load the filenames in a directory into a vector
+ * of strings. That vector can then be sorted, iterated, or whatever.
+ * Remember to free alloc of the allocated strings when you are done.
+ *
+ * @param path The directory to read from.
+ * @param prefix_len When inserting entries, the trailing part of path
+ * 		will be prefixed after this length.  I.e. given path "/a/b" and
+ * 		prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
+ * @param alloc_extra Extra bytes to add to each string allocation in
+ * 		case you want to append anything funny.
+ * @param contents Vector to fill with directory entry names.
+ */
+extern int git_path_dirload(
+	const char *path,
+	size_t prefix_len,
+	size_t alloc_extra,
+	git_vector *contents);
+
+
+typedef struct {
+	struct stat st;
+	size_t      path_len;
+	char        path[GIT_FLEX_ARRAY];
+} git_path_with_stat;
+
+extern int git_path_with_stat_cmp(const void *a, const void *b);
+
+/**
+ * Load all directory entries along with stat info into a vector.
+ *
+ * This is just like git_path_dirload except that each entry in the
+ * vector is a git_path_with_stat structure that contains both the
+ * path and the stat info, plus directories will have a / suffixed
+ * to their path name.
+ */
+extern int git_path_dirload_with_stat(
+	const char *path,
+	size_t prefix_len,
+	git_vector *contents);
 
 #endif

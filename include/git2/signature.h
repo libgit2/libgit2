@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -28,7 +28,7 @@ GIT_BEGIN_DECL
  * @param email email of the person
  * @param time time when the action happened
  * @param offset timezone offset in minutes for the time
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset);
 
@@ -39,7 +39,7 @@ GIT_EXTERN(int) git_signature_new(git_signature **sig_out, const char *name, con
  * @param sig_out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_signature_now(git_signature **sig_out, const char *name, const char *email);
 

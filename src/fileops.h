@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -17,17 +17,8 @@
  *
  * Read whole files into an in-memory buffer for processing
  */
-#define GIT_FBUFFER_INIT {NULL, 0}
-
-typedef struct { /* file io buffer */
-	void *data; /* data bytes	*/
-	size_t len; /* data length */
-} git_fbuffer;
-
-extern int git_futils_readbuffer(git_fbuffer *obj, const char *path);
-extern int git_futils_readbuffer_updated(git_fbuffer *obj, const char *path, time_t *mtime, int *updated);
-extern void git_futils_freebuffer(git_fbuffer *obj);
-extern void git_futils_fbuffer_rtrim(git_fbuffer *obj);
+extern int git_futils_readbuffer(git_buf *obj, const char *path);
+extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t *mtime, int *updated);
 
 /**
  * File utils
@@ -35,7 +26,7 @@ extern void git_futils_fbuffer_rtrim(git_fbuffer *obj);
  * These are custom filesystem-related helper methods. They are
  * rather high level, and wrap the underlying POSIX methods
  *
- * All these methods return GIT_SUCCESS on success,
+ * All these methods return 0 on success,
  * or an error code on failure and an error message is set.
  */
 
@@ -67,10 +58,25 @@ extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t m
  */
 extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 
+typedef enum {
+	GIT_DIRREMOVAL_EMPTY_HIERARCHY = 0,
+	GIT_DIRREMOVAL_FILES_AND_DIRS = 1,
+	GIT_DIRREMOVAL_ONLY_EMPTY_DIRS = 2,
+} git_directory_removal_type;
+
 /**
  * Remove path and any files and directories beneath it.
+ *
+ * @param path Path to to top level directory to process.
+ *
+ * @param removal_type GIT_DIRREMOVAL_EMPTY_HIERARCHY to remove a hierarchy
+ * of empty directories (will fail if any file is found), GIT_DIRREMOVAL_FILES_AND_DIRS
+ * to remove a hierarchy of files and folders, GIT_DIRREMOVAL_ONLY_EMPTY_DIRS to only remove
+ * empty directories (no failure on file encounter).
+ *
+ * @return 0 on success; -1 on error.
  */
-extern int git_futils_rmdir_r(const char *path, int force);
+extern int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.
@@ -85,11 +91,25 @@ extern int git_futils_mktmp(git_buf *path_out, const char *filename);
  */
 extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
 
+/**
+ * Open a file readonly and set error if needed.
+ */
+extern int git_futils_open_ro(const char *path);
 
 /**
  * Get the filesize in bytes of a file
  */
 extern git_off_t git_futils_filesize(git_file fd);
+
+#define GIT_MODE_PERMS_MASK			0777
+#define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
+#define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
+
+/**
+ * Convert a mode_t from the OS to a legal git mode_t value.
+ */
+extern mode_t git_futils_canonical_mode(mode_t raw_mode);
+
 
 /**
  * Read-only map all or part of a file into memory.
@@ -103,14 +123,28 @@ extern git_off_t git_futils_filesize(git_file fd);
  * @param begin first byte to map, this should be page aligned.
  * @param end number of bytes to map.
  * @return
- * - GIT_SUCCESS on success;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - 0 on success;
+ * - -1 on error.
  */
 extern int git_futils_mmap_ro(
 	git_map *out,
 	git_file fd,
 	git_off_t begin,
 	size_t len);
+
+/**
+ * Read-only map an entire file.
+ *
+ * @param out buffer to populate with the mapping information.
+ * @param path path to file to be opened.
+ * @return
+ * - 0 on success;
+ * - GIT_ENOTFOUND if not found;
+ * - -1 on an unspecified OS related error.
+ */
+extern int git_futils_mmap_ro_file(
+	git_map *out,
+	const char *path);
 
 /**
  * Release the memory associated with a previous memory mapping.
@@ -124,9 +158,9 @@ extern void git_futils_mmap_free(git_map *map);
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
  * @return
- * - GIT_SUCCESS if found;
+ * - 0 if found;
  * - GIT_ENOTFOUND if not found;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - -1 on an unspecified OS related error.
  */
 extern int git_futils_find_global_file(git_buf *path, const char *filename);
 
@@ -136,9 +170,9 @@ extern int git_futils_find_global_file(git_buf *path, const char *filename);
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
  * @return
- * - GIT_SUCCESS if found;
+ * - 0 if found;
  * - GIT_ENOTFOUND if not found;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - -1 on an unspecified OS related error.
  */
 extern int git_futils_find_system_file(git_buf *path, const char *filename);
 

@@ -13,9 +13,9 @@
  * return error codes!
  */
 #define cl_git_pass(expr) do { \
-	git_clearerror(); \
-	if ((expr) != GIT_SUCCESS) \
-		clar__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, git_lasterror(), 1); \
+	giterr_clear(); \
+	if ((expr) != 0) \
+		clar__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, giterr_last() ? giterr_last()->message : NULL, 1); \
 	} while(0)
 
 /**
@@ -24,23 +24,6 @@
  * calls that are supposed to fail!
  */
 #define cl_git_fail(expr) cl_must_fail(expr)
-
-/**
- * Wrapper for string comparison that knows about nulls.
- */
-#define cl_assert_strequal(a,b) \
-	cl_assert_strequal_internal(a,b,__FILE__,__LINE__,"string mismatch: " #a " != " #b)
-
-GIT_INLINE(void) cl_assert_strequal_internal(
-	const char *a, const char *b, const char *file, int line, const char *err)
-{
-	int match = (a == NULL || b == NULL) ? (a == b) : (strcmp(a, b) == 0);
-	if (!match) {
-		char buf[4096];
-		snprintf(buf, 4096, "'%s' != '%s'", a, b);
-		clar__assert(0, file, line, buf, err, 1);
-	}
-}
 
 /*
  * Some utility macros for building long strings
@@ -53,5 +36,13 @@ GIT_INLINE(void) cl_assert_strequal_internal(
 
 /* Write the contents of a buffer to disk */
 void cl_git_mkfile(const char *filename, const char *content);
+void cl_git_append2file(const char *filename, const char *new_content);
+void cl_git_rewritefile(const char *filename, const char *new_content);
+void cl_git_write2file(const char *filename, const char *new_content, int mode);
+
+/* Git sandbox setup helpers */
+
+git_repository *cl_git_sandbox_init(const char *sandbox);
+void cl_git_sandbox_cleanup(void);
 
 #endif

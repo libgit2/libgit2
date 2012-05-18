@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -10,7 +10,7 @@
 #include "vector.h"
 
 static const double resize_factor = 1.75;
-static const size_t minimum_size = 8;
+static const unsigned int minimum_size = 8;
 
 static int resize_vector(git_vector *v)
 {
@@ -19,12 +19,10 @@ static int resize_vector(git_vector *v)
 		v->_alloc_size = minimum_size;
 
 	v->contents = git__realloc(v->contents, v->_alloc_size * sizeof(void *));
-	if (v->contents == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(v->contents);
 
-	return GIT_SUCCESS;
+	return 0;
 }
-
 
 void git_vector_free(git_vector *v)
 {
@@ -53,30 +51,29 @@ int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp
 	v->sorted = 1;
 
 	v->contents = git__malloc(v->_alloc_size * sizeof(void *));
-	if (v->contents == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(v->contents);
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_vector_insert(git_vector *v, void *element)
 {
 	assert(v);
 
-	if (v->length >= v->_alloc_size) {
-		if (resize_vector(v) < 0)
-			return GIT_ENOMEM;
-	}
+	if (v->length >= v->_alloc_size &&
+		resize_vector(v) < 0)
+		return -1;
 
 	v->contents[v->length++] = element;
 	v->sorted = 0;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
-int git_vector_insert_sorted(git_vector *v, void *element, int (*on_dup)(void **old, void *new))
+int git_vector_insert_sorted(
+	git_vector *v, void *element, int (*on_dup)(void **old, void *new))
 {
-	int error = GIT_SUCCESS;
+	int result;
 	size_t pos;
 
 	assert(v && v->_cmp);
@@ -84,22 +81,18 @@ int git_vector_insert_sorted(git_vector *v, void *element, int (*on_dup)(void **
 	if (!v->sorted)
 		git_vector_sort(v);
 
-	if (v->length >= v->_alloc_size) {
-		if (resize_vector(v) < 0)
-			return GIT_ENOMEM;
-	}
+	if (v->length >= v->_alloc_size &&
+		resize_vector(v) < 0)
+		return -1;
 
-	error = git__bsearch(v->contents, v->length, element, v->_cmp, &pos);
-
-	/* If we found the element and have a duplicate handler callback,
-	 * invoke it.  If it returns an error, then cancel insert, otherwise
+	/* If we find the element and have a duplicate handler callback,
+	 * invoke it.  If it returns non-zero, then cancel insert, otherwise
 	 * proceed with normal insert.
 	 */
-	if (error == GIT_SUCCESS && on_dup != NULL) {
-		error = on_dup(&v->contents[pos], element);
-		if (error != GIT_SUCCESS)
-			return error;
-	}
+	if (git__bsearch(v->contents, v->length, element, v->_cmp, &pos) >= 0 &&
+		on_dup != NULL &&
+		(result = on_dup(&v->contents[pos], element)) < 0)
+		return result;
 
 	/* shift elements to the right */
 	if (pos < v->length) {
@@ -109,8 +102,7 @@ int git_vector_insert_sorted(git_vector *v, void *element, int (*on_dup)(void **
 
 	v->contents[pos] = element;
 	v->length++;
-
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void git_vector_sort(git_vector *v)
@@ -124,26 +116,32 @@ void git_vector_sort(git_vector *v)
 	v->sorted = 1;
 }
 
-int git_vector_bsearch2(git_vector *v, git_vector_cmp key_lookup, const void *key)
+int git_vector_bsearch3(
+	unsigned int *at_pos,
+	git_vector *v,
+	git_vector_cmp key_lookup,
+	const void *key)
 {
+	int rval;
 	size_t pos;
 
 	assert(v && key && key_lookup);
 
 	/* need comparison function to sort the vector */
-	if (v->_cmp == NULL)
-		return git__throw(GIT_ENOTFOUND, "Can't sort vector. No comparison function set");
+	assert(v->_cmp != NULL);
 
 	git_vector_sort(v);
 
-	if (git__bsearch(v->contents, v->length, key, key_lookup,
-			&pos) == GIT_SUCCESS)
-		return (int)pos;
+	rval = git__bsearch(v->contents, v->length, key, key_lookup, &pos);
 
-	return git__throw(GIT_ENOTFOUND, "Can't find element");
+	if (at_pos != NULL)
+		*at_pos = (unsigned int)pos;
+
+	return (rval >= 0) ? (int)pos : GIT_ENOTFOUND;
 }
 
-int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key)
+int git_vector_search2(
+	git_vector *v, git_vector_cmp key_lookup, const void *key)
 {
 	unsigned int i;
 
@@ -154,7 +152,7 @@ int git_vector_search2(git_vector *v, git_vector_cmp key_lookup, const void *key
 			return i;
 	}
 
-	return git__throw(GIT_ENOTFOUND, "Can't find element");
+	return GIT_ENOTFOUND;
 }
 
 static int strict_comparison(const void *a, const void *b)
@@ -167,11 +165,6 @@ int git_vector_search(git_vector *v, const void *entry)
 	return git_vector_search2(v, v->_cmp ? v->_cmp : strict_comparison, entry);
 }
 
-int git_vector_bsearch(git_vector *v, const void *key)
-{
-	return git_vector_bsearch2(v, v->_cmp, key);
-}
-
 int git_vector_remove(git_vector *v, unsigned int idx)
 {
 	unsigned int i;
@@ -179,13 +172,19 @@ int git_vector_remove(git_vector *v, unsigned int idx)
 	assert(v);
 
 	if (idx >= v->length || v->length == 0)
-		return git__throw(GIT_ENOTFOUND, "Can't remove element. Index out of bounds");
+		return GIT_ENOTFOUND;
 
 	for (i = idx; i < v->length - 1; ++i)
 		v->contents[i] = v->contents[i + 1];
 
 	v->length--;
-	return GIT_SUCCESS;
+	return 0;
+}
+
+void git_vector_pop(git_vector *v)
+{
+	if (v->length > 0)
+		v->length--;
 }
 
 void git_vector_uniq(git_vector *v)
@@ -215,4 +214,14 @@ void git_vector_clear(git_vector *v)
 	v->sorted = 1;
 }
 
+void git_vector_swap(git_vector *a, git_vector *b)
+{
+	git_vector t;
 
+	if (!a || !b || a == b)
+		return;
+
+	memcpy(&t, a, sizeof(t));
+	memcpy(a, b, sizeof(t));
+	memcpy(b, &t, sizeof(t));
+}

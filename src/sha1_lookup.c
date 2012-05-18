@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -158,7 +158,8 @@ int sha1_entry_pos(const void *table,
 #endif
 
 		if (!(lo <= mi && mi < hi)) {
-			return git__throw(GIT_ERROR, "Assertion failure. Binary search invariant is false");
+			giterr_set(GITERR_INVALID, "Assertion failure. Binary search invariant is false");
+			return -1;
 		}
 
 		mi_key = base + elem_size * mi + key_offset;

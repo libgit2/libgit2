@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -43,7 +43,7 @@ struct _git_oid {
  * @param str input hex string; must be pointing at the start of
  *		the hex sequence and have at least the number of bytes
  *		needed for an oid encoded in hex (40 bytes).
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
 
@@ -56,7 +56,7 @@ GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
  * @param out oid structure the result is written into.
  * @param str input hex string of at least size `length`
  * @param length length of the input string
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
 
@@ -119,7 +119,7 @@ GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
  * @return the out buffer pointer, assuming no input parameter
  *			errors, otherwise a pointer to an empty string.
  */
-GIT_EXTERN(char *) git_oid_to_string(char *out, size_t n, const git_oid *oid);
+GIT_EXTERN(char *) git_oid_tostr(char *out, size_t n, const git_oid *oid);
 
 /**
  * Copy an oid from one structure to another.
@@ -155,9 +155,14 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, unsigned int le
  * @param a oid structure.
  * @param str input hex string of an object id.
  * @return GIT_ENOTOID if str is not a valid hex string,
- * GIT_SUCCESS in case of a match, GIT_ERROR otherwise.
+ * 0 in case of a match, GIT_ERROR otherwise.
  */
 GIT_EXTERN(int) git_oid_streq(const git_oid *a, const char *str);
+
+/**
+ * Check is an oid is all zeros.
+ */
+GIT_EXTERN(int) git_oid_iszero(const git_oid *a);
 
 /**
  * OID Shortener object
@@ -178,7 +183,7 @@ typedef struct git_oid_shorten git_oid_shorten;
  *		be unique.
  *	@return a `git_oid_shorten` instance, NULL if OOM
  */
-git_oid_shorten *git_oid_shorten_new(size_t min_length);
+GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
 
 /**
  * Add a new OID to set of shortened OIDs and calculate
@@ -204,14 +209,14 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length);
  *		added so far to the set; or an error code (<0) if an
  *		error occurs.
  */
-int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
+GIT_EXTERN(int) git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
 
 /**
  * Free an OID shortener instance
  *
  * @param os a `git_oid_shorten` instance
  */
-void git_oid_shorten_free(git_oid_shorten *os);
+GIT_EXTERN(void) git_oid_shorten_free(git_oid_shorten *os);
 
 /** @} */
 GIT_END_DECL

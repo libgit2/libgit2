@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -24,5 +24,6 @@ struct git_tag {
 
 void git_tag__free(git_tag *tag);
 int git_tag__parse(git_tag *tag, git_odb_object *obj);
+int git_tag__parse_buffer(git_tag *tag, const char *data, size_t len);
 
 #endif

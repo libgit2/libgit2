@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -22,24 +22,21 @@
 GIT_INLINE(void *) git__malloc(size_t len)
 {
 	void *ptr = malloc(len);
-	if (!ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)len);
+	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 {
 	void *ptr = calloc(nelem, elsize);
-	if (!ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)elsize);
+	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(char *) git__strdup(const char *str)
 {
 	char *ptr = strdup(str);
-	if (!ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
@@ -54,7 +51,7 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 
 	ptr = (char*)malloc(length + 1);
 	if (!ptr) {
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+		giterr_set_oom();
 		return NULL;
 	}
 
@@ -67,8 +64,7 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 {
 	void *new_ptr = realloc(ptr, size);
-	if (!new_ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)size);
+	if (!new_ptr) giterr_set_oom();
 	return new_ptr;
 }
 
@@ -109,10 +105,13 @@ GIT_INLINE(const char *) git__next_line(const char *s)
 	return s;
 }
 
-extern int git__fnmatch(const char *pattern, const char *name, int flags);
-
 extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));
 
+/**
+ * @param position If non-NULL, this will be set to the position where the
+ * 		element is or would be inserted if not found.
+ * @return pos (>=0) if found or -1 if not found
+ */
 extern int git__bsearch(
 	void **array,
 	size_t array_len,
@@ -168,5 +167,60 @@ GIT_INLINE(int) git__fromhex(char h)
 {
 	return from_hex[(unsigned char) h];
 }
+
+GIT_INLINE(int) git__ishex(const char *str)
+{
+	unsigned i;
+	for (i=0; i<strlen(str); i++)
+		if (git__fromhex(str[i]) < 0)
+			return 0;
+	return 1;
+}
+
+GIT_INLINE(size_t) git__size_t_bitmask(size_t v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+
+	return v;
+}
+
+GIT_INLINE(size_t) git__size_t_powerof2(size_t v)
+{
+	return git__size_t_bitmask(v) + 1;
+}
+
+GIT_INLINE(bool) git__isupper(int c)
+{
+    return (c >= 'A' && c <= 'Z');
+}
+
+GIT_INLINE(bool) git__isalpha(int c)
+{
+    return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+}
+
+GIT_INLINE(bool) git__isspace(int c)
+{
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
+}
+
+GIT_INLINE(bool) git__iswildcard(int c)
+{
+	return (c == '*' || c == '?' || c == '[');
+}
+
+/*
+ * Parse a string value as a boolean, just like Core Git
+ * does.
+ *
+ * Valid values for true are: 'true', 'yes', 'on'
+ * Valid values for false are: 'false', 'no', 'off'
+ */
+extern int git__parse_bool(int *out, const char *value);
 
 #endif /* INCLUDE_util_h__ */

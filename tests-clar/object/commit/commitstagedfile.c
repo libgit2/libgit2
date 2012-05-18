@@ -83,8 +83,16 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 		struct stat st;
 		cl_must_pass(p_lstat("treebuilder/test.txt", &st));
 		cl_assert(entry->file_size == st.st_size);
+#ifndef _WIN32
+		/*
+		 * Windows doesn't populate these fields, and the signage is
+		 * wrong in the Windows version of the struct, so lets avoid
+		 * the "comparing signed and unsigned" compilation warning in
+		 * that case.
+		 */
 		cl_assert(entry->uid == st.st_uid);
 		cl_assert(entry->gid == st.st_gid);
+#endif
 	}
 
 	/*
@@ -106,7 +114,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 		signature,
 		signature,
 		NULL,
-		"Initial commit\n",		// Note: the trailing linefeed is mandatory to replicate git behavior
+		"Initial commit",
 		tree,
 		0));
 

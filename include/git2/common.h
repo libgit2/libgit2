@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -51,7 +51,7 @@
 # define GIT_FORMAT_PRINTF(a,b) /* empty */
 #endif
 
-#if (defined(_WIN32) || defined(_WIN64)) && !defined(__CYGWIN__)
+#if (defined(_WIN32)) && !defined(__CYGWIN__)
 #define GIT_WIN32 1
 #endif
 
@@ -77,7 +77,7 @@ GIT_BEGIN_DECL
 #endif
 
 /**
- * The maximum length of a git valid git path.
+ * The maximum length of a valid git path.
  */
 #define GIT_PATH_MAX 4096
 
@@ -87,6 +87,7 @@ typedef struct {
 } git_strarray;
 
 GIT_EXTERN(void) git_strarray_free(git_strarray *array);
+GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
 
 /**
  * Return the version of the libgit2 library

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -65,7 +65,7 @@ GIT_BEGIN_DECL
  *
  * @param walker pointer to the new revision walker
  * @param repo the repo to walk through
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_new(git_revwalk **walker, git_repository *repo);
 
@@ -97,10 +97,32 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  *
  * @param walk the walker being used for the traversal.
  * @param oid the oid of the commit to start from.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
 
+/**
+ * Push matching references
+ *
+ * The OIDs pinted to by the references that match the given glob
+ * pattern will be pushed to the revision walker.
+ *
+ * A leading 'refs/' is implied it not present as well as a trailing
+ * '/ *' if the glob lacks '?', '*' or '['.
+ *
+ * @param walk the walker being used for the traversal
+ * @param glob the glob pattern references should match
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_revwalk_push_glob(git_revwalk *walk, const char *glob);
+
+/**
+ * Push the repository's HEAD
+ *
+ * @param walk the walker being used for the traversal
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_revwalk_push_head(git_revwalk *walk);
 
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
@@ -113,9 +135,55 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
  *
  * @param walk the walker being used for the traversal.
  * @param oid the oid of commit that will be ignored during the traversal
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
+
+/**
+ * Hide matching references.
+ *
+ * The OIDs pinted to by the references that match the given glob
+ * pattern and their ancestors will be hidden from the output on the
+ * revision walk.
+ *
+ * A leading 'refs/' is implied it not present as well as a trailing
+ * '/ *' if the glob lacks '?', '*' or '['.
+ *
+ * @param walk the walker being used for the traversal
+ * @param glob the glob pattern references should match
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_revwalk_hide_glob(git_revwalk *walk, const char *glob);
+
+/**
+ * Hide the repository's HEAD
+ *
+ * @param walk the walker being used for the traversal
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
+
+/**
+ * Push the OID pointed to by a reference
+ *
+ * The reference must point to a commit.
+ *
+ * @param walk the walker being used for the traversal
+ * @param refname the referece to push
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_revwalk_push_ref(git_revwalk *walk, const char *refname);
+
+/**
+ * Hide the OID pointed to by a reference
+ *
+ * The reference must point to a commit.
+ *
+ * @param walk the walker being used for the traversal
+ * @param refname the referece to hide
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_revwalk_hide_ref(git_revwalk *walk, const char *refname);
 
 /**
  * Get the next commit from the revision walk.
@@ -132,8 +200,8 @@ GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
  *
  * @param oid Pointer where to store the oid of the next commit
  * @param walk the walker to pop the commit from.
- * @return GIT_SUCCESS if the next commit was found;
- *	GIT_EREVWALKOVER if there are no commits left to iterate
+ * @return 0 if the next commit was found;
+ *	GIT_REVWALKOVER if there are no commits left to iterate
  */
 GIT_EXTERN(int) git_revwalk_next(git_oid *oid, git_revwalk *walk);
 

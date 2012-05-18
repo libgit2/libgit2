@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -29,11 +29,26 @@ struct git_config_file {
 	/* Open means open the file/database and parse if necessary */
 	int (*open)(struct git_config_file *);
 	int (*get)(struct git_config_file *, const char *key, const char **value);
+	int (*get_multivar)(struct git_config_file *, const char *key, const char *regexp, int (*fn)(const char *, void *), void *data);
 	int (*set)(struct git_config_file *, const char *key, const char *value);
+	int (*set_multivar)(git_config_file *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_file *, const char *key);
 	int (*foreach)(struct git_config_file *, int (*fn)(const char *, const char *, void *), void *data);
 	void (*free)(struct git_config_file *);
 };
+
+typedef enum {
+	GIT_CVAR_FALSE = 0,
+	GIT_CVAR_TRUE = 1,
+	GIT_CVAR_INT32,
+	GIT_CVAR_STRING
+} git_cvar_t;
+
+typedef struct {
+	git_cvar_t cvar_type;
+	const char *str_match;
+	int map_value;
+} git_cvar_map;
 
 /**
  * Locate the path to the global configuration file
@@ -47,10 +62,10 @@ struct git_config_file {
  * global configuration file.
  *
  * @param global_config_path Buffer of GIT_PATH_MAX length to store the path
- * @return GIT_SUCCESS if a global configuration file has been
+ * @return 0 if a global configuration file has been
  *	found. Its path will be stored in `buffer`.
  */
-GIT_EXTERN(int) git_config_find_global(char *global_config_path);
+GIT_EXTERN(int) git_config_find_global(char *global_config_path, size_t length);
 
 /**
  * Locate the path to the system configuration file
@@ -59,10 +74,10 @@ GIT_EXTERN(int) git_config_find_global(char *global_config_path);
  * %PROGRAMFILES%\Git\etc\gitconfig.
 
  * @param system_config_path Buffer of GIT_PATH_MAX length to store the path
- * @return GIT_SUCCESS if a system configuration file has been
+ * @return 0 if a system configuration file has been
  *	found. Its path will be stored in `buffer`.
  */
-GIT_EXTERN(int) git_config_find_system(char *system_config_path);
+GIT_EXTERN(int) git_config_find_system(char *system_config_path, size_t length);
 
 /**
  * Open the global configuration file
@@ -71,7 +86,7 @@ GIT_EXTERN(int) git_config_find_system(char *system_config_path);
  * and opens the located file, if it exists.
  *
  * @param out Pointer to store the config instance
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_open_global(git_config **out);
 
@@ -95,7 +110,7 @@ GIT_EXTERN(int) git_config_file__ondisk(struct git_config_file **out, const char
  * can do anything with it.
  *
  * @param out pointer to the new configuration
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_new(git_config **out);
 
@@ -112,7 +127,7 @@ GIT_EXTERN(int) git_config_new(git_config **out);
  * @param cfg the configuration to add the file to
  * @param file the configuration file (backend) to add
  * @param priority the priority the backend should have
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int priority);
 
@@ -133,7 +148,7 @@ GIT_EXTERN(int) git_config_add_file(git_config *cfg, git_config_file *file, int 
  * @param cfg the configuration to add the file to
  * @param path path to the configuration file (backend) to add
  * @param priority the priority the backend should have
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_add_file_ondisk(git_config *cfg, const char *path, int priority);
 
@@ -148,7 +163,7 @@ GIT_EXTERN(int) git_config_add_file_ondisk(git_config *cfg, const char *path, in
  *
  * @param cfg The configuration instance to create
  * @param path Path to the on-disk file to open
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_open_ondisk(git_config **cfg, const char *path);
 
@@ -162,22 +177,22 @@ GIT_EXTERN(void) git_config_free(git_config *cfg);
 /**
  * Get the value of an integer config variable.
  *
+ * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_int32(git_config *cfg, const char *name, int32_t *out);
+GIT_EXTERN(int) git_config_get_int32(int32_t *out, git_config *cfg, const char *name);
 
 /**
  * Get the value of a long integer config variable.
  *
+ * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_int64(git_config *cfg, const char *name, int64_t *out);
+GIT_EXTERN(int) git_config_get_int64(int64_t *out, git_config *cfg, const char *name);
 
 /**
  * Get the value of a boolean config variable.
@@ -185,12 +200,12 @@ GIT_EXTERN(int) git_config_get_int64(git_config *cfg, const char *name, int64_t 
  * This function uses the usual C convention of 0 being false and
  * anything else true.
  *
+ * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable where the value should be stored
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out);
+GIT_EXTERN(int) git_config_get_bool(int *out, git_config *cfg, const char *name);
 
 /**
  * Get the value of a string config variable.
@@ -198,12 +213,26 @@ GIT_EXTERN(int) git_config_get_bool(git_config *cfg, const char *name, int *out)
  * The string is owned by the variable and should not be freed by the
  * user.
  *
+ * @param out pointer to the variable's value
  * @param cfg where to look for the variable
  * @param name the variable's name
- * @param out pointer to the variable's value
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const char **out);
+GIT_EXTERN(int) git_config_get_string(const char **out, git_config *cfg, const char *name);
+
+/**
+ * Get each value of a multivar.
+ *
+ * The callback will be called on each variable found
+ *
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @param regexp regular expression to filter which variables we're
+ * interested in. Use NULL to indicate all
+ * @param fn the function to be called on each value of the variable
+ * @param data opaque pointer to pass to the callback
+ */
+GIT_EXTERN(int) git_config_get_multivar(git_config *cfg, const char *name, const char *regexp, int (*fn)(const char *, void *), void *data);
 
 /**
  * Set the value of an integer config variable.
@@ -211,7 +240,7 @@ GIT_EXTERN(int) git_config_get_string(git_config *cfg, const char *name, const c
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value Integer value for the variable
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_set_int32(git_config *cfg, const char *name, int32_t value);
 
@@ -221,7 +250,7 @@ GIT_EXTERN(int) git_config_set_int32(git_config *cfg, const char *name, int32_t 
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value Long integer value for the variable
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_set_int64(git_config *cfg, const char *name, int64_t value);
 
@@ -231,7 +260,7 @@ GIT_EXTERN(int) git_config_set_int64(git_config *cfg, const char *name, int64_t 
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value the value to store
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value);
 
@@ -244,9 +273,20 @@ GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param value the string to store.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const char *value);
+
+
+/**
+ * Set a multivar
+ *
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @param regexp a regular expression to indicate which values to replace
+ * @param value the new value.
+ */
+GIT_EXTERN(int) git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value);
 
 /**
  * Delete a config variable
@@ -267,12 +307,49 @@ GIT_EXTERN(int) git_config_delete(git_config *cfg, const char *name);
  * @param cfg where to get the variables from
  * @param callback the function to call on each variable
  * @param payload the data to pass to the callback
- * @return GIT_SUCCESS or the return value of the callback which didn't return 0
+ * @return 0 or the return value of the callback which didn't return 0
  */
 GIT_EXTERN(int) git_config_foreach(
 	git_config *cfg,
 	int (*callback)(const char *var_name, const char *value, void *payload),
 	void *payload);
+
+
+/**
+ * Query the value of a config variable and return it mapped to
+ * an integer constant.
+ *
+ * This is a helper method to easily map different possible values
+ * to a variable to integer constants that easily identify them.
+ *
+ * A mapping array looks as follows:
+ *
+ *	git_cvar_map autocrlf_mapping[3] = {
+ *		{GIT_CVAR_FALSE, NULL, GIT_AUTO_CRLF_FALSE},
+ *		{GIT_CVAR_TRUE, NULL, GIT_AUTO_CRLF_TRUE},
+ *		{GIT_CVAR_STRING, "input", GIT_AUTO_CRLF_INPUT},
+ *		{GIT_CVAR_STRING, "default", GIT_AUTO_CRLF_DEFAULT}};
+ *
+ * On any "false" value for the variable (e.g. "false", "FALSE", "no"), the
+ * mapping will store `GIT_AUTO_CRLF_FALSE` in the `out` parameter.
+ *
+ * The same thing applies for any "true" value such as "true", "yes" or "1", storing
+ * the `GIT_AUTO_CRLF_TRUE` variable.
+ *
+ * Otherwise, if the value matches the string "input" (with case insensitive comparison),
+ * the given constant will be stored in `out`, and likewise for "default".
+ *
+ * If not a single match can be made to store in `out`, an error code will be
+ * returned.
+ *
+ * @param out place to store the result of the mapping
+ * @param cfg config file to get the variables from
+ * @param name name of the config variable to lookup
+ * @param maps array of `git_cvar_map` objects specifying the possible mappings
+ * @param map_n number of mapping objects in `maps`
+ * @return 0 on success, error code otherwise
+ */
+GIT_EXTERN(int) git_config_get_mapped(int *out, git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n);
 
 /** @} */
 GIT_END_DECL

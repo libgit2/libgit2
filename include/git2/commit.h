@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -28,7 +28,7 @@ GIT_BEGIN_DECL
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate. If the object is
  *		an annotated tag it will be peeled back to the commit.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id)
 {
@@ -46,7 +46,7 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param id identity of the commit to locate. If the object is
  *		an annotated tag it will be peeled back to the commit.
  * @param len the length of the short identifier
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, unsigned len)
 {
@@ -135,7 +135,7 @@ GIT_EXTERN(const git_signature *) git_commit_author(git_commit *commit);
  *
  * @param tree_out pointer where to store the tree object
  * @param commit a previously loaded commit.
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_commit_tree(git_tree **tree_out, git_commit *commit);
 
@@ -163,7 +163,7 @@ GIT_EXTERN(unsigned int) git_commit_parentcount(git_commit *commit);
  * @param parent Pointer where to store the parent commit
  * @param commit a previously loaded commit.
  * @param n the position of the parent (from 0 to `parentcount`)
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n);
 
@@ -182,6 +182,9 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  * Create a new commit in the repository using `git_object`
  * instances as parameters.
  *
+ * The message will be cleaned up from excess whitespace
+ * it will be made sure that the last line ends with a '\n'.
+ *
  * @param oid Pointer where to store the OID of the
  *	newly created commit
  *
@@ -191,7 +194,8 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  *	will be updated to point to this commit. If the reference
  *	is not direct, it will be resolved to a direct reference.
  *	Use "HEAD" to update the HEAD of the current branch and
- *	make it point to this commit
+ *	make it point to this commit. If the reference doesn't
+ *	exist yet, it will be created.
  *
  * @param author Signature representing the author and the authory
  *	time of this commit
@@ -217,7 +221,7 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  * array may be NULL if `parent_count` is 0 (root commit). All the
  * given commits must be owned by the `repo`.
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  *	The created commit will be written to the Object Database and
  *	the given reference will be updated to point to it
  */
@@ -236,6 +240,9 @@ GIT_EXTERN(int) git_commit_create(
 /**
  * Create a new commit in the repository using a variable
  * argument list.
+ *
+ * The message will be cleaned up from excess whitespace
+ * it will be made sure that the last line ends with a '\n'.
  *
  * The parents for the commit are specified as a variable
  * list of pointers to `const git_commit *`. Note that this

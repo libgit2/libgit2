@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -9,6 +9,7 @@
 #include "git2/oid.h"
 #include "git2/refs.h"
 #include "git2/revwalk.h"
+#include "git2/indexer.h"
 
 #include "common.h"
 #include "transport.h"
@@ -28,19 +29,17 @@ struct filter_payload {
 static int filter_ref__cb(git_remote_head *head, void *payload)
 {
 	struct filter_payload *p = payload;
-	int error;
 
 	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0) {
 		p->found_head = 1;
 	} else {
 		/* If it doesn't match the refpec, we don't want it */
-		error = git_refspec_src_match(p->spec, head->name);
+		if (!git_refspec_src_matches(p->spec, head->name))
+			return 0;
 
-		if (error == GIT_ENOMATCH)
-			return GIT_SUCCESS;
-
-		if (error < GIT_SUCCESS)
-			return git__rethrow(error, "Error matching remote ref name");
+		/* Don't even try to ask for the annotation target */
+		if (!git__suffixcmp(head->name, "^{}"))
+			return 0;
 	}
 
 	/* If we have the object, mark it so we don't ask for it */
@@ -54,7 +53,6 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 
 static int filter_wants(git_remote *remote)
 {
-	int error;
 	struct filter_payload p;
 
 	git_vector_clear(&remote->refs);
@@ -69,9 +67,8 @@ static int filter_wants(git_remote *remote)
 	p.found_head = 0;
 	p.remote = remote;
 
-	error = git_repository_odb__weakptr(&p.odb, remote->repo);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (git_repository_odb__weakptr(&p.odb, remote->repo) < 0)
+		return -1;
 
 	return remote->transport->ls(remote->transport, &filter_ref__cb, &p);
 }
@@ -83,19 +80,16 @@ static int filter_wants(git_remote *remote)
  */
 int git_fetch_negotiate(git_remote *remote)
 {
-	int error;
 	git_transport *t = remote->transport;
 
-	error = filter_wants(remote);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to filter the reference list for wants");
+	if (filter_wants(remote) < 0) {
+		giterr_set(GITERR_NET, "Failed to filter the reference list for wants");
+		return -1;
+	}
 
 	/* Don't try to negotiate when we don't want anything */
-	if (remote->refs.length == 0)
-		return GIT_SUCCESS;
-
-	if (!remote->need_pack)
-		return GIT_SUCCESS;
+	if (remote->refs.length == 0 || !remote->need_pack)
+		return 0;
 
 	/*
 	 * Now we have everything set up so we can start tell the server
@@ -104,75 +98,103 @@ int git_fetch_negotiate(git_remote *remote)
 	return t->negotiate_fetch(t, remote->repo, &remote->refs);
 }
 
-int git_fetch_download_pack(char **out, git_remote *remote)
+int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
 {
-	if(!remote->need_pack) {
-		*out = NULL;
-		return GIT_SUCCESS;
-	}
+	if(!remote->need_pack)
+		return 0;
 
-	return remote->transport->download_pack(out, remote->transport, remote->repo);
+	return remote->transport->download_pack(remote->transport, remote->repo, bytes, stats);
 }
 
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
 int git_fetch__download_pack(
-	char **out,
 	const char *buffered,
 	size_t buffered_size,
 	GIT_SOCKET fd,
-	git_repository *repo)
+	git_repository *repo,
+	git_off_t *bytes,
+	git_indexer_stats *stats)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
-	int error;
+	int recvd;
 	char buff[1024];
-	git_buf path = GIT_BUF_INIT;
-	static const char suff[] = "/objects/pack/pack-received";
 	gitno_buffer buf;
+	git_indexer_stream *idx;
 
 	gitno_buffer_setup(&buf, buff, sizeof(buff), fd);
 
 	if (memcmp(buffered, "PACK", strlen("PACK"))) {
-		return git__throw(GIT_ERROR, "The pack doesn't start with the signature");
+		giterr_set(GITERR_NET, "The pack doesn't start with the signature");
+		return -1;
 	}
 
-	error = git_buf_joinpath(&path, repo->path_repository, suff);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
+		return -1;
 
-	error = git_filebuf_open(&file, path.ptr, GIT_FILEBUF_TEMPORARY);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	memset(stats, 0, sizeof(git_indexer_stats));
+	if (git_indexer_stream_add(idx, buffered, buffered_size, stats) < 0)
+		goto on_error;
 
-	/* Part of the packfile has been received, don't loose it */
-	error = git_filebuf_write(&file, buffered, buffered_size);
-	if (error < GIT_SUCCESS)
-		goto cleanup;
+	*bytes = buffered_size;
 
-	while (1) {
-		error = git_filebuf_write(&file, buf.data, buf.offset);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
+	do {
+		if (git_indexer_stream_add(idx, buf.data, buf.offset, stats) < 0)
+			goto on_error;
 
 		gitno_consume_n(&buf, buf.offset);
-		error = gitno_recv(&buf);
-		if (error < GIT_SUCCESS)
-			goto cleanup;
-		if (error == 0) /* Orderly shutdown */
-			break;
+		if ((recvd = gitno_recv(&buf)) < 0)
+			goto on_error;
+
+		*bytes += recvd;
+	} while(recvd > 0);
+
+	if (git_indexer_stream_finalize(idx, stats))
+		goto on_error;
+
+	git_indexer_stream_free(idx);
+	return 0;
+
+on_error:
+	git_indexer_stream_free(idx);
+	return -1;
+}
+
+int git_fetch_setup_walk(git_revwalk **out, git_repository *repo)
+{
+	git_revwalk *walk;
+	git_strarray refs;
+	unsigned int i;
+	git_reference *ref;
+
+	if (git_reference_list(&refs, repo, GIT_REF_LISTALL) < 0)
+		return -1;
+
+	if (git_revwalk_new(&walk, repo) < 0)
+		return -1;
+
+	git_revwalk_sorting(walk, GIT_SORT_TIME);
+
+	for (i = 0; i < refs.count; ++i) {
+		/* No tags */
+		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
+			continue;
+
+		if (git_reference_lookup(&ref, repo, refs.strings[i]) < 0)
+			goto on_error;
+
+		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+			continue;
+		if (git_revwalk_push(walk, git_reference_oid(ref)) < 0)
+			goto on_error;
+
+		git_reference_free(ref);
 	}
 
-	*out = git__strdup(file.path_lock);
-	if (*out == NULL) {
-		error = GIT_ENOMEM;
-		goto cleanup;
-	}
+	git_strarray_free(&refs);
+	*out = walk;
+	return 0;
 
-	/* A bit dodgy, but we need to keep the pack at the temporary path */
-	error = git_filebuf_commit_at(&file, file.path_lock, GIT_PACK_FILE_MODE);
-cleanup:
-	if (error < GIT_SUCCESS)
-		git_filebuf_cleanup(&file);
-    git_buf_free(&path);
-
-	return error;
+on_error:
+	git_reference_free(ref);
+	git_strarray_free(&refs);
+	return -1;
 }

@@ -68,14 +68,24 @@ static int count_ref__cb(git_remote_head *head, void *payload)
 	(void)head;
 	(*count)++;
 
-	return GIT_SUCCESS;
+	return 0;
+}
+
+static int ensure_peeled__cb(git_remote_head *head, void *payload)
+{
+	GIT_UNUSED(payload);
+
+	if(strcmp(head->name, "refs/tags/test^{}") != 0)
+		return 0;
+
+	return git_oid_streq(&head->oid, "e90810b8df3e80c413d903f631643c716887138d");
 }
 
 static void connect_to_local_repository(const char *local_repository)
 {
 	build_local_file_url(&file_path_buf, local_repository);
 
-	cl_git_pass(git_remote_new(&remote, repo, git_buf_cstr(&file_path_buf), NULL));
+	cl_git_pass(git_remote_new(&remote, repo, NULL, git_buf_cstr(&file_path_buf), NULL));
 	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
 
 }
@@ -88,7 +98,7 @@ void test_network_remotelocal__retrieve_advertised_references(void)
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert(how_many_refs == 12); /* 1 HEAD + 9 refs + 2 peeled tags */
+	cl_assert(how_many_refs == 14); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target */
 }
 
 void test_network_remotelocal__retrieve_advertised_references_from_spaced_repository(void)
@@ -102,7 +112,17 @@ void test_network_remotelocal__retrieve_advertised_references_from_spaced_reposi
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert(how_many_refs == 12); /* 1 HEAD */
+	cl_assert(how_many_refs == 14); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target */
+
+	git_remote_free(remote);	/* Disconnect from the "spaced repo" before the cleanup */
+	remote = NULL;
 
 	cl_fixture_cleanup("spaced testrepo.git");
+}
+
+void test_network_remotelocal__nested_tags_are_completely_peeled(void)
+{
+	connect_to_local_repository(cl_fixture("testrepo.git"));
+
+	cl_git_pass(git_remote_ls(remote, &ensure_peeled__cb, NULL));
 }

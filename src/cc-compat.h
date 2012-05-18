@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -33,21 +33,7 @@
 #	define GIT_TYPEOF(x)
 #endif
 
-#ifdef __cplusplus
-#	define GIT_UNUSED(x)
-#else
-#	ifdef __GNUC__
-#		define GIT_UNUSED(x) x __attribute__ ((__unused__))
-#	else
-#		define GIT_UNUSED(x) x
-#	endif
-#endif
-
-#if defined(_MSC_VER)
-#define GIT_UNUSED_ARG(x) ((void)(x)); /* note trailing ; */
-#else
-#define GIT_UNUSED_ARG(x)
-#endif
+#define GIT_UNUSED(x) ((void)(x))
 
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -62,6 +48,22 @@
 #	pragma warning ( disable : 4996 )
 /* disable "conditional expression is constant" level 4 warnings */
 #	pragma warning ( disable : 4127 )
+#endif
+
+#if defined (_MSC_VER)
+	typedef unsigned char bool;
+#	define true 1
+#	define false 0
+#else
+#	include <stdbool.h>
+#endif
+
+#ifndef va_copy
+#	ifdef __va_copy
+#		define va_copy(dst, src) __va_copy(dst, src)
+#	else
+#		define va_copy(dst, src) ((dst) = (src))
+#	endif
 #endif
 
 #endif /* INCLUDE_compat_h__ */

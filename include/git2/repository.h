@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  *
  * @param repository pointer to the repo which will be opened
  * @param path the path to the repository
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
 
@@ -61,7 +61,7 @@ GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *pat
  * start_path no matter start_path appears in ceiling_dirs ceiling_dirs
  * might be NULL (which is equivalent to an empty string)
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_discover(
 		char *repository_path,
@@ -69,6 +69,20 @@ GIT_EXTERN(int) git_repository_discover(
 		const char *start_path,
 		int across_fs,
 		const char *ceiling_dirs);
+
+enum {
+	GIT_REPOSITORY_OPEN_NO_SEARCH = (1 << 0),
+	GIT_REPOSITORY_OPEN_CROSS_FS  = (1 << 1),
+};
+
+/**
+ * Find and open a repository with extended controls.
+ */
+GIT_EXTERN(int) git_repository_open_ext(
+	git_repository **repo,
+	const char *start_path,
+	uint32_t flags,
+	const char *ceiling_dirs);
 
 /**
  * Free a previously allocated repository
@@ -95,7 +109,7 @@ GIT_EXTERN(void) git_repository_free(git_repository *repo);
  *		at the pointed path. If false, provided path will be considered as the working
  *		directory into which the .git directory will be created.
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare);
 
@@ -180,7 +194,7 @@ GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
  *
  * @param repo A repository object
  * @param workdir The path to a working directory
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_set_workdir(git_repository *repo, const char *workdir);
 
@@ -204,7 +218,7 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  *
  * @param out Pointer to store the loaded config file
  * @param repo A repository object
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
 
@@ -235,7 +249,7 @@ GIT_EXTERN(void) git_repository_set_config(git_repository *repo, git_config *con
  *
  * @param out Pointer to store the loaded ODB
  * @param repo A repository object
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_odb(git_odb **out, git_repository *repo);
 
@@ -266,7 +280,7 @@ GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
  *
  * @param out Pointer to store the loaded index
  * @param repo A repository object
- * @return GIT_SUCCESS, or an error code
+ * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
 

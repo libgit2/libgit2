@@ -28,6 +28,10 @@ FILE(GLOB SRC_HTTP deps/http-parser/*.c)
 
 IF (NOT WIN32)
 	FIND_PACKAGE(ZLIB)
+ELSE()
+	# Windows doesn't understand POSIX regex on its own
+	INCLUDE_DIRECTORIES(deps/regex)
+	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
 
 IF (ZLIB_FOUND)
@@ -47,28 +51,33 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
-OPTION (BUILD_TESTS "Build Tests" ON)
-OPTION (BUILD_CLAR "Build Tests using the Clar suite" OFF)
+OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
 OPTION (TAGS "Generate tags" OFF)
+OPTION (PROFILE "Generate profiling information" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
 	# Not using __stdcall with the CRT causes problems
 	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
 
-	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
-	# TODO: bring back /RTC1 /RTCc
-	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
+	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd /RTC1 /RTCs /RTCu")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 	SET(WIN_RC "src/win32/git2.rc")
+
+   # Precompiled headers
 ELSE ()
-	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -fvisibility=hidden -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	ENDIF ()
+	IF (PROFILE)
+		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
+		SET(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
 	ENDIF ()
 ENDIF()
 
@@ -92,14 +101,16 @@ FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-	ADD_DEFINITIONS(-DWIN32 -D_DEBUG)
-	FILE(GLOB SRC src/*.c src/transports/*.c src/win32/*.c)
+	ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_WIN32_WINNT=0x0501)
+	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/win32/*.c src/compat/*.c)
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c src/compat/*.c)
 ELSE()
-	FILE(GLOB SRC src/*.c src/transports/*.c src/unix/*.c)
+	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c)
 ENDIF ()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${WIN_RC})
 
 IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
@@ -123,31 +134,15 @@ INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 
 # Tests
-IF (BUILD_TESTS)
-	SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
-	ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
-
-	INCLUDE_DIRECTORIES(tests)
-	FILE(GLOB SRC_TEST tests/t??-*.c)
-
-	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
-	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
-	IF (WIN32)
-		TARGET_LINK_LIBRARIES(libgit2_test ws2_32)
-	ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-		TARGET_LINK_LIBRARIES(libgit2_test socket nsl)
-	ENDIF ()
-
-	ENABLE_TESTING()
-	ADD_TEST(libgit2_test libgit2_test)
-ENDIF ()
-
 IF (BUILD_CLAR)
+
 	FIND_PACKAGE(PythonInterp REQUIRED)
 
-	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
+	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources/")
 	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar")
+	SET(CLAR_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources" CACHE PATH "Path to test resources.")
 	ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
+	ADD_DEFINITIONS(-DCLAR_RESOURCES=\"${TEST_RESOURCES}\")
 
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
 	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/clar_helpers.c ${CLAR_PATH}/testlib.c)
@@ -158,7 +153,7 @@ IF (BUILD_CLAR)
 		DEPENDS ${CLAR_PATH}/clar ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
-	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP})
+	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${CMAKE_THREAD_LIBS_INIT})
 	IF (WIN32)
 		TARGET_LINK_LIBRARIES(libgit2_clar ws2_32)

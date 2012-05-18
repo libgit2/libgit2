@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 the libgit2 contributors
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -23,6 +23,51 @@ typedef struct git_indexer_stats {
 
 
 typedef struct git_indexer git_indexer;
+typedef struct git_indexer_stream git_indexer_stream;
+
+/**
+ * Create a new streaming indexer instance
+ *
+ * @param out where to store the inexer instance
+ * @param path to the gitdir (metadata directory)
+ */
+GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *gitdir);
+
+/**
+ * Add data to the indexer
+ *
+ * @param idx the indexer
+ * @param data the data to add
+ * @param size the size of the data
+ * @param stats stat storage
+ */
+GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_indexer_stats *stats);
+
+/**
+ * Finalize the pack and index
+ *
+ * Resolve any pending deltas and write out the index file
+ *
+ * @param idx the indexer
+ */
+GIT_EXTERN(int) git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stats);
+
+/**
+ * Get the packfile's hash
+ *
+ * A packfile's name is derived from the sorted hashing of all object
+ * names. This is only correct after the index has been finalized.
+ *
+ * @param idx the indexer instance
+ */
+GIT_EXTERN(const git_oid *) git_indexer_stream_hash(git_indexer_stream *idx);
+
+/**
+ * Free the indexer and its resources
+ *
+ * @param idx the indexer to free
+ */
+GIT_EXTERN(void) git_indexer_stream_free(git_indexer_stream *idx);
 
 /**
  * Create a new indexer instance
