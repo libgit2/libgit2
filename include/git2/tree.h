@@ -178,7 +178,7 @@ GIT_EXTERN(int) git_tree_create_fromindex(git_oid *oid, git_index *index);
  *
  * @param builder_p Pointer where to store the tree builder
  * @param source Source tree to initialize the builder (optional)
- * @return 0 on sucess; error code otherwise
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source);
 
@@ -302,7 +302,7 @@ enum git_treewalk_mode {
  * data itself.
  *
  * If the callback returns a negative value, the passed entry
- * will be skiped on the traversal.
+ * will be skipped on the traversal.
  *
  * @param tree The tree to walk
  * @param callback Function to call on each tree entry

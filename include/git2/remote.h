@@ -37,7 +37,7 @@ GIT_BEGIN_DECL
  * this when you have a URL instead of a remote's name.
  *
  * @param out pointer to the new remote object
- * @param repo the associtated repository
+ * @param repo the associated repository
  * @param name the remote's name
  * @param url the remote repository's URL
  * @param fetch the fetch refspec to use for this remote
@@ -100,7 +100,7 @@ GIT_EXTERN(const git_refspec *) git_remote_fetchspec(git_remote *remote);
  * Set the remote's push refspec
  *
  * @param remote the remote
- * @apram spec the new push refspec
+ * @param spec the new push refspec
  * @return 0 or an error value
  */
 GIT_EXTERN(int) git_remote_set_pushspec(git_remote *remote, const char *spec);
@@ -149,7 +149,7 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  * filename will be NULL and the function will return success.
  *
  * @param remote the remote to download from
- * @param filename where to store the temproray filename
+ * @param filename where to store the temporary filename
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats);
@@ -195,7 +195,7 @@ GIT_EXTERN(int) git_remote_update_tips(git_remote *remote, int (*cb)(const char 
 /**
  * Return whether a string is a valid remote URL
  *
- * @param tranport the url to check
+ * @param url the url to check
  * @param 1 if the url is valid, 0 otherwise
  */
 GIT_EXTERN(int) git_remote_valid_url(const char *url);

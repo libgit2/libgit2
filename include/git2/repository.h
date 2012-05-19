@@ -130,7 +130,7 @@ GIT_EXTERN(int) git_repository_head(git_reference **head_out, git_repository *re
  * instead of a branch.
  *
  * @param repo Repo to test
- * @return 1 if HEAD is detached, 0 if i'ts not; error code if there
+ * @return 1 if HEAD is detached, 0 if it's not; error code if there
  * was an error.
  */
 GIT_EXTERN(int) git_repository_head_detached(git_repository *repo);
@@ -143,7 +143,7 @@ GIT_EXTERN(int) git_repository_head_detached(git_repository *repo);
  *
  * @param repo Repo to test
  * @return 1 if the current branch is an orphan, 0 if it's not; error
- * code if therewas an error
+ * code if there was an error
  */
 GIT_EXTERN(int) git_repository_head_orphan(git_repository *repo);
 

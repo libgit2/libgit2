@@ -155,7 +155,7 @@ typedef int (*git_diff_hunk_fn)(
  *
  * These values describe where a line came from and will be passed to
  * the git_diff_data_fn when iterating over a diff.  There are some
- * special origin contants at the end that are used for the text
+ * special origin constants at the end that are used for the text
  * output callbacks to demarcate lines that are actually part of
  * the file or hunk headers.
  */

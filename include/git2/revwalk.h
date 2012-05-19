@@ -104,7 +104,7 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *oid);
 /**
  * Push matching references
  *
- * The OIDs pinted to by the references that match the given glob
+ * The OIDs pointed to by the references that match the given glob
  * pattern will be pushed to the revision walker.
  *
  * A leading 'refs/' is implied it not present as well as a trailing
@@ -142,7 +142,7 @@ GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *oid);
 /**
  * Hide matching references.
  *
- * The OIDs pinted to by the references that match the given glob
+ * The OIDs pointed to by the references that match the given glob
  * pattern and their ancestors will be hidden from the output on the
  * revision walk.
  *
@@ -169,7 +169,7 @@ GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
  * The reference must point to a commit.
  *
  * @param walk the walker being used for the traversal
- * @param refname the referece to push
+ * @param refname the reference to push
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_push_ref(git_revwalk *walk, const char *refname);
@@ -180,7 +180,7 @@ GIT_EXTERN(int) git_revwalk_push_ref(git_revwalk *walk, const char *refname);
  * The reference must point to a commit.
  *
  * @param walk the walker being used for the traversal
- * @param refname the referece to hide
+ * @param refname the reference to hide
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_hide_ref(git_revwalk *walk, const char *refname);
