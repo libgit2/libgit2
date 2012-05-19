@@ -181,7 +181,7 @@ GIT_EXTERN(int) git_tag_create(
  * @param repo Repository where to store the tag
  * @param buffer Raw tag data
  * @param force Overwrite existing tags
- * @return 0 on sucess; error code otherwise
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_tag_create_frombuffer(
 		git_oid *oid,
