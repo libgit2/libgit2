@@ -839,7 +839,6 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		git_oid_cpy(&pentry->sha1, &oid);
 		pentry->offset = entry_start;
 		git_oid_fmt(fmt, &oid);
-		printf("adding %s to cache\n", fmt);
 		error = git_vector_insert(&idx->pack->cache, pentry);
 		if (error < 0)
 			goto cleanup;
