@@ -295,7 +295,7 @@ GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged_byindex(git_
 /**
  * Return the stage number from a git index entry
  *
- * This entry is calculated from the entrie's flag
+ * This entry is calculated from the entry's flag
  * attribute like this:
  *
  *	(entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT

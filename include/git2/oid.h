@@ -84,7 +84,7 @@ GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
  * Format a git_oid into a loose-object path string.
  *
  * The resulting string is "aa/...", where "aa" is the first two
- * hex digitis of the oid and "..." is the remaining 38 digits.
+ * hex digits of the oid and "..." is the remaining 38 digits.
  *
  * @param str output hex string; must be pointing at the start of
  *		the hex sequence and have at least the number of bytes
