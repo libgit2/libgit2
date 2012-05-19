@@ -16,7 +16,7 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v0.17.0">API Docs</a>
           <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../general.html">general.c</a>
           <a class="source" href="fetch.html">fetch.c</a>
@@ -52,7 +52,7 @@
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">show_ref__cb</span><span class="p">(</span><span class="n">git_remote_head</span> <span class="o">*</span><span class="n">head</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">char</span> <span class="n">oid</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-  <span class="n"><a name="git_oid_fmt-3" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">head</span><span class="o">-&gt;</span><span class="n">oid</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fmt-3" class="fnlink" href="../../#v0.17.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">head</span><span class="o">-&gt;</span><span class="n">oid</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oid</span><span class="p">,</span> <span class="n">head</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
@@ -72,7 +72,7 @@
 is detected from the URL</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_new-7" class="fnlink" href="../../#HEAD/group/remote/git_remote_new">git_remote_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_new-7" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_new">git_remote_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span></pre></div>
       </td>
@@ -86,7 +86,7 @@ is detected from the URL</p>
 want to push or fetch</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-5" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIR_FETCH</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-5" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIR_FETCH</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span></pre></div>
       </td>
@@ -96,13 +96,13 @@ want to push or fetch</p>
         <div class="pilwrap">
           <a class="pilcrow" href="#section-4">&#182;</a>
         </div>
-        <p>With <a name="git_remote_ls-8" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a> we can retrieve the advertised heads</p>
+        <p>With <a name="git_remote_ls-8" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_ls">git_remote_ls</a> we can retrieve the advertised heads</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-9" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">show_ref__cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-9" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">show_ref__cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
 <span class="nl">cleanup:</span>
-  <span class="n"><a name="git_remote_free-1" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="n"><a name="git_remote_free-1" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span>
 
@@ -120,18 +120,18 @@ want to push or fetch</p>
         <p>Find the remote by name</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_load-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_load">git_remote_load</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_load-4" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_load">git_remote_load</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-6" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIR_FETCH</span><span class="p">);</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-6" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIR_FETCH</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-10" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">show_ref__cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-10" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">show_ref__cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
 <span class="nl">cleanup:</span>
-  <span class="n"><a name="git_remote_free-2" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="n"><a name="git_remote_free-2" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>

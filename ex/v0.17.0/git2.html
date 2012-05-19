@@ -16,7 +16,8 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#v0.16.0">API Docs</a>
+        <a class="source" href="../../#v0.17.0">API Docs</a>
+          <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../general.html">general.c</a>
           <a class="source" href="fetch.html">fetch.c</a>
           <a class="source" href="git2.html">git2.c</a>
@@ -82,8 +83,8 @@ as a starting point for a git-like tool</p>
 repository and pass it to the function.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_open-2" class="fnlink" href="../../#v0.16.0/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.git&quot;</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_open-1" class="fnlink" href="../../#v0.17.0/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.git&quot;</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span></pre></div>
       </td>
     </tr>
@@ -97,11 +98,15 @@ repository and pass it to the function.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Bad news:</span><span class="se">\n</span><span class="s"> %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_lasterror-1" class="fnlink" href="../../#v0.16.0/group/errors/git_lasterror">git_lasterror</a></span><span class="p">());</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="giterr_last-2" class="fnlink" href="../../#v0.17.0/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Error without message&quot;</span><span class="p">);</span>
+    <span class="k">else</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Bad news:</span><span class="se">\n</span><span class="s"> %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="giterr_last-3" class="fnlink" href="../../#v0.17.0/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+  <span class="p">}</span>
 
   <span class="k">if</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
-    <span class="n"><a name="git_repository_free-3" class="fnlink" href="../../#v0.16.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+    <span class="n"><a name="git_repository_free-4" class="fnlink" href="../../#v0.17.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="o">!!</span><span class="n">error</span><span class="p">;</span>
 <span class="p">}</span>
