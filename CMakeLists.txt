@@ -52,6 +52,7 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
+OPTION (BUILD_EXAMPLES "Build library usage example apps" OFF)
 OPTION (TAGS "Generate tags" OFF)
 OPTION (PROFILE "Generate profiling information" OFF)
 
@@ -182,4 +183,19 @@ IF (TAGS)
 		do_tags ALL
 		DEPENDS tags
 	)
+ENDIF ()
+
+IF (BUILD_EXAMPLES)
+	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c)
+	ADD_EXECUTABLE(cgit2 ${EXAMPLE_SRC})
+	TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
+
+	ADD_EXECUTABLE(git-diff examples/diff.c)
+	TARGET_LINK_LIBRARIES(git-diff git2)
+
+	ADD_EXECUTABLE(git-general examples/general.c)
+	TARGET_LINK_LIBRARIES(git-general git2)
+
+	ADD_EXECUTABLE(git-showindex examples/showindex.c)
+	TARGET_LINK_LIBRARIES(git-showindex git2)
 ENDIF ()
