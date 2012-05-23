@@ -49,6 +49,9 @@ extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmo
 
 /**
  * Create a path recursively
+ *
+ * If a base parameter is being passed, it's expected to be valued with a path pointing to an already
+ * exisiting directory.
  */
 extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode);
 

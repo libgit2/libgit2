@@ -241,27 +241,35 @@ void git_futils_mmap_free(git_map *out)
 
 int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 {
-	int root_path_offset;
 	git_buf make_path = GIT_BUF_INIT;
-	size_t start;
+	size_t start = 0;
 	char *pp, *sp;
 	bool failed = false;
 
 	if (base != NULL) {
+		/*
+		 * when a base is being provided, it is supposed to already exist.
+		 * Therefore, no attempt is being made to recursively create this leading path
+		 * segment. It's just skipped. */
 		start = strlen(base);
 		if (git_buf_joinpath(&make_path, base, path) < 0)
 			return -1;
 	} else {
-		start = 0;
+		int root_path_offset;
+
 		if (git_buf_puts(&make_path, path) < 0)
 			return -1;
+
+		root_path_offset = git_path_root(make_path.ptr);
+		if (root_path_offset > 0) {
+			 /*
+			  * On Windows, will skip the drive name (eg. C: or D:)
+			  * or the leading part of a network path (eg. //computer_name ) */
+			start = root_path_offset;
+		}
 	}
 
 	pp = make_path.ptr + start;
-
-	root_path_offset = git_path_root(make_path.ptr);
-	if (root_path_offset > 0)
-		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
 	while (!failed && (sp = strchr(pp, '/')) != NULL) {
 		if (sp != pp && git_path_isdir(make_path.ptr) == false) {
