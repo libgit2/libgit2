@@ -7,7 +7,7 @@ language: erlang
 # Settings to try
 env:
   - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
-  - OPTIONS="-DBUILD_CLAR=ON"
+  - OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
       
 # Make sure CMake is installed
 install:
