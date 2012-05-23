@@ -49,7 +49,7 @@ Functions should prefer to return a 'int' to indicate success or
 failure and supply any output through the first argument (or first
 few arguments if multiple outputs are supplied).
 
-int status codes are 0 for GIT_SUCCESS and < 0 for an error.
+int status codes are 0 for GIT_OK and < 0 for an error.
 This permits common POSIX result testing:
 
 ----
@@ -58,7 +58,7 @@ This permits common POSIX result testing:
 ----
 
 Functions returning a pointer may return NULL instead of an int
-if there is only one type of failure (ENOMEM).
+if there is only one type of failure (GIT_ENOMEM).
 
 Functions returning a pointer may also return NULL if the common
 case needed by the application is strictly success/failure and a
