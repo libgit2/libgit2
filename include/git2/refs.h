@@ -258,6 +258,9 @@ GIT_EXTERN(int) git_reference_packall(git_repository *repo);
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, unsigned int list_flags);
 
+/* The macro is for backward compatibility */
+#define git_reference_listall git_reference_list
+
 
 /**
  * Perform an operation on each reference in the repository
