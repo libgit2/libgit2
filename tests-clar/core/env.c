@@ -53,26 +53,24 @@ static int cl_setenv(const char *name, const char *value)
 #endif
 
 static char *env_home = NULL;
-#ifdef GIT_WIN32
 static char *env_userprofile = NULL;
-#endif
 
 void test_core_env__initialize(void)
 {
-	env_home = cl_getenv("HOME");
 #ifdef GIT_WIN32
 	env_userprofile = cl_getenv("USERPROFILE");
+#else
+	env_home = cl_getenv("HOME");
 #endif
 }
 
 void test_core_env__cleanup(void)
 {
-	cl_setenv("HOME", env_home);
 #ifdef GIT_WIN32
 	cl_setenv("USERPROFILE", env_userprofile);
-
-	git__free(env_home);
 	git__free(env_userprofile);
+#else
+	cl_setenv("HOME", env_home);
 #endif
 }
 
@@ -102,32 +100,25 @@ void test_core_env__0(void)
 			 */
 			cl_git_pass(git_path_prettify(&path, *val, NULL));
 
-			cl_git_pass(cl_setenv("HOME", path.ptr));
-
-			/* do a quick check that it was set correctly */
-			check = cl_getenv("HOME");
-			cl_assert_equal_s(path.ptr, check);
 #ifdef GIT_WIN32
-			git__free(check);
-
 			cl_git_pass(cl_setenv("USERPROFILE", path.ptr));
 
 			/* do a quick check that it was set correctly */
 			check = cl_getenv("USERPROFILE");
 			cl_assert_equal_s(path.ptr, check);
 			git__free(check);
+#else
+			cl_git_pass(cl_setenv("HOME", path.ptr));
+
+			/* do a quick check that it was set correctly */
+			check = cl_getenv("HOME");
+			cl_assert_equal_s(path.ptr, check);
 #endif
 
 			cl_git_pass(git_buf_puts(&path, "/testfile"));
 			cl_git_mkfile(path.ptr, "find me");
 
 			cl_git_pass(git_futils_find_global_file(&found, "testfile"));
-
-#ifdef GIT_WIN32
-			/* do another check with HOME unset */
-			cl_git_pass(cl_setenv("HOME", NULL));
-			cl_git_pass(git_futils_find_global_file(&found, "testfile"));
-#endif
 		}
 	}
 
