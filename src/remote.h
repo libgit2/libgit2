@@ -20,6 +20,8 @@ struct git_remote {
 	git_transport *transport;
 	git_repository *repo;
 	unsigned int need_pack:1;
+	git_update_tips_cb update_tips;
+	void *update_tips_data;
 };
 
 #endif
