@@ -124,11 +124,12 @@ static int load_config_data(git_repository *repo)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
+	/* Try to figure out if it's bare, default to non-bare if it's not set */
 	if (git_config_get_bool(&is_bare, config, "core.bare") < 0)
-		return -1; /* FIXME: We assume that a missing core.bare
-					  variable is an error. Is this right? */
+		repo->is_bare = 0;
+	else
+		repo->is_bare = is_bare;
 
-	repo->is_bare = is_bare;
 	return 0;
 }
 
