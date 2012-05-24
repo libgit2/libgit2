@@ -345,13 +345,48 @@ int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type
 	return error;
 }
 
+#ifdef GIT_WIN32
+static char *win32_getenv(const wchar_t *name)
+{
+	char *val_utf8;
+	wchar_t *val_utf16;
+	DWORD len = GetEnvironmentVariableW(name, NULL, 0);
+
+	if (len <= 0)
+		return NULL;
+
+	val_utf16 = git__calloc(len, sizeof(wchar_t));
+	if (!val_utf16)
+		return NULL;
+
+	if (GetEnvironmentVariableW(name, val_utf16, len) != len - 1) {
+		giterr_set(GITERR_OS, "Could not read environment variable");
+		git__free(val_utf16);
+		return NULL;
+	}
+
+	val_utf8 = gitwin_from_utf16(val_utf16);
+
+	git__free(val_utf16);
+
+	return val_utf8;
+}
+#endif
+
 int git_futils_find_global_file(git_buf *path, const char *filename)
 {
-	const char *home = getenv("HOME");
+	char *home;
 
 #ifdef GIT_WIN32
-	if (home == NULL)
-		home = getenv("USERPROFILE");
+	home = win32_getenv(L"HOME");
+
+	if (!home)
+		home = win32_getenv(L"USERPROFILE");
+
+	if (home)
+		git_path_mkposix(home);
+#else
+	home = getenv("HOME");
 #endif
 
 	if (home == NULL) {
@@ -362,6 +397,10 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 
 	if (git_buf_joinpath(path, home, filename) < 0)
 		return -1;
+
+#ifdef GIT_WIN32
+	git__free(home);
+#endif
 
 	if (git_path_exists(path->ptr) == false) {
 		git_buf_clear(path);
