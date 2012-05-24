@@ -415,7 +415,7 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 {
 #ifdef GIT_WIN32
 	struct win32_path root;
-	
+
 	if (win32_expand_path(&root, L"%PROGRAMFILES%\\Git\\etc\\") < 0 ||
 		win32_find_file(path, &root, filename) < 0) {
 		giterr_set(GITERR_OS, "Cannot find the system's Program Files directory");
