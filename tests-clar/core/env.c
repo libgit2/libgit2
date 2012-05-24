@@ -15,12 +15,16 @@ static char *cl_getenv(const char *name)
 
 	cl_assert(name_utf16);
 	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
-	if (alloc_len < 0)
+	if (alloc_len <= 0)
 		return NULL;
+
 	cl_assert(value_utf16 = git__calloc(alloc_len, sizeof(wchar_t)));
+
 	value_len = GetEnvironmentVariableW(name_utf16, value_utf16, alloc_len);
 	cl_assert_equal_i(value_len, alloc_len - 1);
+
 	cl_assert(value_utf8 = gitwin_from_utf16(value_utf16));
+
 	git__free(value_utf16);
 
 	return value_utf8;
