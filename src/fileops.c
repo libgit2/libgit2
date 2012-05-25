@@ -417,9 +417,15 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 	struct win32_path root;
 
 	if (win32_expand_path(&root, L"%PROGRAMFILES%\\Git\\etc\\") < 0 ||
-		win32_find_file(path, &root, filename) < 0) {
-		giterr_set(GITERR_OS, "Cannot find the system's Program Files directory");
+		root.path[0] == L'%') /* i.e. no expansion happened */
+	{
+		giterr_set(GITERR_OS, "Cannot locate the system's Program Files directory");
 		return -1;
+	}
+
+	if (win32_find_file(path, &root, filename) < 0) {
+		git_buf_clear(path);
+		return GIT_ENOTFOUND;
 	}
 
 	return 0;
@@ -442,9 +448,15 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 	struct win32_path root;
 
 	if (win32_expand_path(&root, L"%USERPROFILE%\\") < 0 ||
-		win32_find_file(path, &root, filename) < 0) {
-		giterr_set(GITERR_OS, "Failed to lookup the current user's Windows profile");
+		root.path[0] == L'%') /* i.e. no expansion happened */
+	{
+		giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
 		return -1;
+	}
+
+	if (win32_find_file(path, &root, filename) < 0) {
+		git_buf_clear(path);
+		return GIT_ENOTFOUND;
 	}
 
 	return 0;
