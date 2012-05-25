@@ -65,7 +65,7 @@ void test_attr_repo__get_one(void)
 	for (scan = test_cases; scan->path != NULL; scan++) {
 		const char *value;
 		cl_git_pass(git_attr_get(&value, g_repo, 0, scan->path, scan->attr));
-		attr_check_expected(scan->expected, scan->expected_str, value);
+		attr_check_expected(scan->expected, scan->expected_str, scan->attr, value);
 	}
 
 	cl_assert(git_attr_cache__is_cached(g_repo, 0, ".git/info/attributes"));

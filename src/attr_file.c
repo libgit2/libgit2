@@ -139,18 +139,23 @@ int git_attr_file__new_and_load(
 	return error;
 }
 
-void git_attr_file__free(git_attr_file *file)
+void git_attr_file__clear_rules(git_attr_file *file)
 {
 	unsigned int i;
 	git_attr_rule *rule;
-
-	if (!file)
-		return;
 
 	git_vector_foreach(&file->rules, i, rule)
 		git_attr_rule__free(rule);
 
 	git_vector_free(&file->rules);
+}
+
+void git_attr_file__free(git_attr_file *file)
+{
+	if (!file)
+		return;
+
+	git_attr_file__clear_rules(file);
 
 	if (file->pool_is_allocated) {
 		git_pool_clear(file->pool);
@@ -338,9 +343,12 @@ int git_attr_fnmatch__parse(
 	const char **base)
 {
 	const char *pattern, *scan;
-	int slash_count;
+	int slash_count, allow_space;
 
 	assert(spec && base && *base);
+
+	spec->flags = (spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE);
+	allow_space = (spec->flags != 0);
 
 	pattern = *base;
 
@@ -349,8 +357,6 @@ int git_attr_fnmatch__parse(
 		*base = git__next_line(pattern);
 		return GIT_ENOTFOUND;
 	}
-
-	spec->flags = 0;
 
 	if (*pattern == '[') {
 		if (strncmp(pattern, "[attr]", 6) == 0) {
@@ -368,8 +374,10 @@ int git_attr_fnmatch__parse(
 	slash_count = 0;
 	for (scan = pattern; *scan != '\0'; ++scan) {
 		/* scan until (non-escaped) white space */
-		if (git__isspace(*scan) && *(scan - 1) != '\\')
-			break;
+		if (git__isspace(*scan) && *(scan - 1) != '\\') {
+			if (!allow_space || (*scan != ' ' && *scan != '\t'))
+				break;
+		}
 
 		if (*scan == '/') {
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_FULLPATH;
