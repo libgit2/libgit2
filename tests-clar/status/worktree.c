@@ -516,3 +516,68 @@ void test_status_worktree__status_file_with_clean_index_and_empty_workdir(void)
 	cl_git_pass(p_rmdir("wd"));
 	cl_git_pass(p_unlink("my-index"));
 }
+
+
+void test_status_worktree__space_in_filename(void)
+{
+	git_repository *repo;
+	git_index *index;
+	status_entry_single result;
+	unsigned int status_flags;
+
+#define FILE_WITH_SPACE "LICENSE - copy.md"
+
+	cl_git_pass(git_repository_init(&repo, "with_space", 0));
+	cl_git_mkfile("with_space/" FILE_WITH_SPACE, "I have a space in my name\n");
+
+	/* file is new to working directory */
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(1, result.count);
+	cl_assert(result.status == GIT_STATUS_WT_NEW);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_SPACE));
+	cl_assert(status_flags == GIT_STATUS_WT_NEW);
+
+	/* ignore the file */
+
+	cl_git_rewritefile("with_space/.gitignore", "*.md\n.gitignore\n");
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(2, result.count);
+	cl_assert(result.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_SPACE));
+	cl_assert(status_flags == GIT_STATUS_IGNORED);
+
+	/* don't ignore the file */
+
+	cl_git_rewritefile("with_space/.gitignore", ".gitignore\n");
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(2, result.count);
+	cl_assert(result.status == GIT_STATUS_WT_NEW);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_SPACE));
+	cl_assert(status_flags == GIT_STATUS_WT_NEW);
+
+	/* add the file to the index */
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add(index, FILE_WITH_SPACE, 0));
+	cl_git_pass(git_index_write(index));
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(2, result.count);
+	cl_assert(result.status == GIT_STATUS_INDEX_NEW);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_SPACE));
+	cl_assert(status_flags == GIT_STATUS_INDEX_NEW);
+
+	git_index_free(index);
+	git_repository_free(repo);
+}

@@ -44,7 +44,7 @@ static void run_test_cases(git_attr_file *file, struct attr_expected *cases, int
 		error = git_attr_file__lookup_one(file,&path,c->attr,&value);
 		cl_git_pass(error);
 
-		attr_check_expected(c->expected, c->expected_str, value);
+		attr_check_expected(c->expected, c->expected_str, c->attr, value);
 
 		git_attr_path__free(&path);
 	}

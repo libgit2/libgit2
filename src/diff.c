@@ -342,6 +342,7 @@ static git_diff_list *git_diff_list_alloc(
 		git_attr_fnmatch *match = git__calloc(1, sizeof(git_attr_fnmatch));
 		if (!match)
 			goto fail;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
 		ret = git_attr_fnmatch__parse(match, &diff->pool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {
 			git__free(match);

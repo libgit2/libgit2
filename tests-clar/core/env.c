@@ -52,8 +52,11 @@ static int cl_setenv(const char *name, const char *value)
 
 #endif
 
-static char *env_home = NULL;
+#ifdef GIT_WIN32
 static char *env_userprofile = NULL;
+#else
+static char *env_home = NULL;
+#endif
 
 void test_core_env__initialize(void)
 {
