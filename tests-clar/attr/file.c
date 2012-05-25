@@ -114,7 +114,7 @@ static void check_one_assign(
 	cl_assert_equal_s(name, assign->name);
 	cl_assert(assign->name_hash == git_attr_file__name_hash(assign->name));
 
-	attr_check_expected(expected, expected_str, assign->value);
+	attr_check_expected(expected, expected_str, assign->name, assign->value);
 }
 
 void test_attr_file__assign_variants(void)
