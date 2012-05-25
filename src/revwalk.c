@@ -104,6 +104,9 @@ static void commit_list_free(commit_list **list_p)
 {
 	commit_list *list = *list_p;
 
+	if (list == NULL)
+		return;
+
 	while (list) {
 		commit_list *temp = list;
 		list = temp->next;
@@ -343,6 +346,59 @@ static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object 
 
 	*out = result;
 	return 0;
+}
+
+int git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_array[], size_t length)
+{
+	git_revwalk *walk;
+	git_vector list;
+	commit_list *result = NULL;
+	int error = -1;
+	unsigned int i;
+	commit_object *commit;
+
+	assert(out && repo && input_array);
+
+	if (length < 2) {
+		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
+		return -1;
+	}
+
+	if (git_vector_init(&list, length - 1, NULL) < 0)
+		return -1;
+
+	if (git_revwalk_new(&walk, repo) < 0)
+		goto cleanup;
+
+	for (i = 1; i < length; i++) {
+		commit = commit_lookup(walk, &input_array[i]);
+		if (commit == NULL)
+			goto cleanup;
+
+		git_vector_insert(&list, commit);
+	}
+
+	commit = commit_lookup(walk, &input_array[0]);
+	if (commit == NULL)
+		goto cleanup;
+
+	if (merge_bases_many(&result, walk, commit, &list) < 0)
+		goto cleanup;
+
+	if (!result) {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
+	git_oid_cpy(out, &result->item->oid);
+
+	error = 0;
+
+cleanup:
+	commit_list_free(&result);
+	git_revwalk_free(walk);
+	git_vector_free(&list);
+	return error;
 }
 
 int git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *two)
