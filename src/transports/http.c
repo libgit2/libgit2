@@ -692,6 +692,7 @@ int git_transport_https(git_transport **out)
 		return -1;
 
 	t->parent.encrypt = 1;
+	t->parent.check_cert = 1;
 	*out = (git_transport *) t;
 
 	return 0;

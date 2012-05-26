@@ -229,6 +229,15 @@ GIT_EXTERN(int) git_remote_list(git_strarray *remotes_list, git_repository *repo
  */
 GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url);
 
+/**
+ * Choose whether to check the server's certificate (applies to HTTPS only)
+ *
+ * @param remote the remote to configure
+ * @param check whether to check the server's certificate (defaults to yes)
+ */
+
+GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
+
 /** @} */
 GIT_END_DECL
 #endif

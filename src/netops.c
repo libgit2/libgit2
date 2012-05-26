@@ -358,7 +358,7 @@ static int ssl_setup(git_transport *t, const char *host)
 	if ((ret = SSL_connect(t->ssl.ssl)) <= 0)
 		return ssl_set_error(&t->ssl, ret);
 
-	if (verify_server_cert(t, host) < 0)
+	if (t->check_cert && verify_server_cert(t, host) < 0)
 		return -1;
 
 	return 0;
