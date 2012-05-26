@@ -48,8 +48,11 @@ static int cl_setenv(const char *name, const char *value)
 
 #include <stdlib.h>
 #define cl_getenv(n)   getenv(n)
-#define cl_setenv(n,v) (v) ? setenv((n),(v),1) : unsetenv(n)
 
+static int cl_setenv(const char *name, const char *value)
+{
+	return (value == NULL) ? unsetenv(name) : setenv(name, value, 1);
+}
 #endif
 
 #ifdef GIT_WIN32
