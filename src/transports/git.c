@@ -21,6 +21,7 @@
 #include "repository.h"
 #include "fetch.h"
 #include "protocol.h"
+#include "transports/util.h"
 
 typedef struct {
 	git_transport parent;
@@ -158,36 +159,6 @@ static int store_refs(transport_git *t)
 	}
 }
 
-static int detect_caps(transport_git *t)
-{
-	git_vector *refs = &t->refs;
-	git_pkt_ref *pkt;
-	git_transport_caps *caps = &t->caps;
-	const char *ptr;
-
-	pkt = git_vector_get(refs, 0);
-	/* No refs or capabilites, odd but not a problem */
-	if (pkt == NULL || pkt->capabilities == NULL)
-		return 0;
-
-	ptr = pkt->capabilities;
-	while (ptr != NULL && *ptr != '\0') {
-		if (*ptr == ' ')
-			ptr++;
-
-		if(!git__prefixcmp(ptr, GIT_CAP_OFS_DELTA)) {
-			caps->common = caps->ofs_delta = 1;
-			ptr += strlen(GIT_CAP_OFS_DELTA);
-			continue;
-		}
-
-		/* We don't know this capability, so skip it */
-		ptr = strchr(ptr, ' ');
-	}
-
-	return 0;
-}
-
 /*
  * Since this is a network connection, we need to parse and store the
  * pkt-lines at this stage and keep them there.
@@ -215,7 +186,7 @@ static int git_connect(git_transport *transport, int direction)
 	if (store_refs(t) < 0)
 		goto cleanup;
 
-	if (detect_caps(t) < 0)
+	if (detect_caps(&t->caps, &t->refs) < 0)
 		goto cleanup;
 
 	return 0;
