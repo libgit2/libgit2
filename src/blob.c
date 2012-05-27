@@ -148,27 +148,31 @@ static int write_symlink(
 	return error;
 }
 
-static int blob_create_internal(git_oid *oid, git_repository *repo, const char *path)
+static int blob_create_internal(git_oid *oid, git_repository *repo, const char *content_path, const char *hint_path, bool try_load_filters)
 {
 	int error;
 	struct stat st;
 	git_odb *odb = NULL;
 	git_off_t size;
 
-	if ((error = git_path_lstat(path, &st)) < 0 || (error = git_repository_odb__weakptr(&odb, repo)) < 0)
+	assert(hint_path || !try_load_filters);
+
+	if ((error = git_path_lstat(content_path, &st)) < 0 || (error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		return error;
 
 	size = st.st_size;
 
 	if (S_ISLNK(st.st_mode)) {
-		error = write_symlink(oid, odb, path, (size_t)size);
+		error = write_symlink(oid, odb, content_path, (size_t)size);
 	} else {
 		git_vector write_filters = GIT_VECTOR_INIT;
-		int filter_count;
+		int filter_count = 0;
 
-		/* Load the filters for writing this file to the ODB */
-		filter_count = git_filters_load(
-			&write_filters, repo, path, GIT_FILTER_TO_ODB);
+		if (try_load_filters) {
+			/* Load the filters for writing this file to the ODB */
+			filter_count = git_filters_load(
+				&write_filters, repo, hint_path, GIT_FILTER_TO_ODB);
+		}
 
 		if (filter_count < 0) {
 			/* Negative value means there was a critical error */
@@ -176,10 +180,10 @@ static int blob_create_internal(git_oid *oid, git_repository *repo, const char *
 		} else if (filter_count == 0) {
 			/* No filters need to be applied to the document: we can stream
 			 * directly from disk */
-			error = write_file_stream(oid, odb, path, size);
+			error = write_file_stream(oid, odb, content_path, size);
 		} else {
 			/* We need to apply one or more filters */
-			error = write_file_filtered(oid, odb, path, &write_filters);
+			error = write_file_filtered(oid, odb, content_path, &write_filters);
 		}
 
 		git_filters_free(&write_filters);
@@ -216,7 +220,7 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 		return -1;
 	}
 
-	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path));
+	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path), git_buf_cstr(&full_path), true);
 
 	git_buf_free(&full_path);
 	return error;
@@ -232,8 +236,53 @@ int git_blob_create_fromdisk(git_oid *oid, git_repository *repo, const char *pat
 		return error;
 	}
 
-	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path));
+	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path), git_buf_cstr(&full_path), true);
 
 	git_buf_free(&full_path);
+	return error;
+}
+
+#define BUFFER_SIZE 4096
+
+int git_blob_create_fromchunks(
+	git_oid *oid,
+	git_repository *repo,
+	const char *hintpath,
+	int (*source_cb)(char *content, size_t max_length, void *payload),
+	void *payload)
+{
+	int error = -1, read_bytes;
+	char *content = NULL;
+	git_filebuf file = GIT_FILEBUF_INIT;
+
+	content = git__malloc(BUFFER_SIZE);
+	GITERR_CHECK_ALLOC(content);
+
+	if (git_filebuf_open(&file, hintpath == NULL ? "streamed" : hintpath, GIT_FILEBUF_TEMPORARY) < 0)
+		goto cleanup;
+
+	while (1) {
+		read_bytes = source_cb(content, BUFFER_SIZE, payload);
+
+		assert(read_bytes <= BUFFER_SIZE);
+
+		if (read_bytes <= 0)
+			break;
+
+		if (git_filebuf_write(&file, content, read_bytes) < 0)
+			goto cleanup;
+	}
+
+	if (read_bytes < 0)
+		goto cleanup;
+
+	if (git_filebuf_flush(&file) < 0)
+		goto cleanup;
+
+	error = blob_create_internal(oid, repo, file.path_lock, hintpath, hintpath != NULL);
+
+cleanup:
+	git_filebuf_cleanup(&file);
+	git__free(content);
 	return error;
 }
