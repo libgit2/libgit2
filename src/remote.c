@@ -331,7 +331,7 @@ int git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats 
 	return git_fetch_download_pack(remote, bytes, stats);
 }
 
-int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, const git_oid *a, const git_oid *b))
+int git_remote_update_tips(git_remote *remote)
 {
 	int error = 0;
 	unsigned int i = 0;
@@ -381,8 +381,8 @@ int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, co
 
 		git_reference_free(ref);
 
-		if (cb != NULL) {
-			if (cb(refname.ptr, &old, &head->oid) < 0)
+		if (remote->update_tips != NULL) {
+			if (remote->update_tips(refname.ptr, &old, &head->oid, remote->update_tips_data) < 0)
 				goto on_error;
 		}
 	}
@@ -394,6 +394,22 @@ on_error:
 	git_buf_free(&refname);
 	return -1;
 
+}
+
+int git_remote_callback(git_remote *remote, git_callback_t opt, void *fn, void *data)
+{
+	switch (opt) {
+	case GIT_CALLBACK_UPDATE_TIPS:
+		remote->update_tips = (git_update_tips_cb)fn;
+		remote->update_tips_data = data;
+		break;
+	default:
+		/* Set an error when we do this for real */
+		return -1;
+		break;
+	}
+
+	return 0;
 }
 
 int git_remote_connected(git_remote *remote)
