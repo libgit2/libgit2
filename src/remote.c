@@ -494,7 +494,7 @@ int git_remote_add(git_remote **out, git_repository *repo, const char *name, con
 {
 	git_buf buf = GIT_BUF_INIT;
 
-	if (git_buf_printf(&buf, "refs/heads/*:refs/remotes/%s/*", name) < 0)
+	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
 		return -1;
 
 	if (git_remote_new(out, repo, name, url, git_buf_cstr(&buf)) < 0)
