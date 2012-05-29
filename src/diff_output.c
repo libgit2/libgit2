@@ -387,7 +387,7 @@ int git_diff_foreach(
 			if (error < 0)
 				goto cleanup;
 
-			if ((delta->new_file.flags | GIT_DIFF_FILE_VALID_OID) == 0) {
+			if ((delta->new_file.flags & GIT_DIFF_FILE_VALID_OID) == 0) {
 				error = git_odb_hash(
 					&delta->new_file.oid, new_data.data, new_data.len, GIT_OBJ_BLOB);
 
