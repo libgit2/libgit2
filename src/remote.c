@@ -189,6 +189,8 @@ int git_remote_save(const git_remote *remote)
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.fetch", remote->name);
+		if (remote->fetch.force)
+			git_buf_putc(&value, '+');
 		git_buf_printf(&value, "%s:%s", remote->fetch.src, remote->fetch.dst);
 		if (git_buf_oom(&buf) || git_buf_oom(&value))
 			return -1;
@@ -201,6 +203,8 @@ int git_remote_save(const git_remote *remote)
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.push", remote->name);
+		if (remote->push.force)
+			git_buf_putc(&value, '+');
 		git_buf_printf(&value, "%s:%s", remote->push.src, remote->push.dst);
 		if (git_buf_oom(&buf) || git_buf_oom(&value))
 			return -1;

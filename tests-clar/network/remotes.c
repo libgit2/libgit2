@@ -92,6 +92,7 @@ void test_network_remotes__save(void)
 	cl_assert(_refspec != NULL);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/remotes/upstream/*");
+	cl_assert(git_refspec_force(_refspec) == 0);
 
 	_refspec = git_remote_pushspec(_remote);
 	cl_assert(_refspec != NULL);
