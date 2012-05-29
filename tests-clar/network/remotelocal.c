@@ -98,7 +98,7 @@ void test_network_remotelocal__retrieve_advertised_references(void)
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert(how_many_refs == 14); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target */
+	cl_assert(how_many_refs == 15); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target + 1 note ref */
 }
 
 void test_network_remotelocal__retrieve_advertised_references_from_spaced_repository(void)
@@ -112,7 +112,7 @@ void test_network_remotelocal__retrieve_advertised_references_from_spaced_reposi
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert(how_many_refs == 14); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target */
+	cl_assert(how_many_refs == 15); /* 1 HEAD + 6 heads + 1 lightweight tag + 3 annotated tags + 3 peeled target + 1 note ref */
 
 	git_remote_free(remote);	/* Disconnect from the "spaced repo" before the cleanup */
 	remote = NULL;
