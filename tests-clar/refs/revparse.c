@@ -153,3 +153,13 @@ void test_refs_revparse__date(void)
    /* Core git gives a65fedf, because they don't take time zones into account. */
    test_object("master@{1335806640}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 }
+
+void test_refs_revparse__colon(void)
+{
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/foo"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
+
+   test_object("subtrees:ab/4.txt", "d6c93164c249c8000205dd4ec5cbca1b516d487f");
+   test_object("master:README", "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
+   test_object("master:new.txt", "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
+}

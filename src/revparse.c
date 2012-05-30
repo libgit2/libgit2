@@ -10,6 +10,7 @@
 #include "common.h"
 #include "buffer.h"
 #include "date.h"
+#include "tree.h"
 
 #include "git2.h"
 
@@ -19,6 +20,7 @@ typedef enum {
    REVPARSE_STATE_INIT,
    REVPARSE_STATE_CARET,
    REVPARSE_STATE_LINEAR,
+   REVPARSE_STATE_COLON,
    REVPARSE_STATE_DONE,
 } revparse_state;
 
@@ -535,6 +537,45 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
    return 0;
 }
 
+static const git_tree_entry* git_tree_entry_bypath(git_tree *tree, git_repository *repo, const char *path)
+{
+   char *str = git__strdup(path);
+   char *tok;
+   git_tree *tree2 = tree;
+   const git_tree_entry *entry;
+
+   while ((tok = git__strtok(&str, "/\\")) != NULL) {
+      entry = git_tree_entry_byname(tree2, tok);
+      if (tree2 != tree) git_tree_free(tree2);
+      if (entry_is_tree(entry)) {
+         if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
+            return NULL;
+         }
+      }
+   }
+
+   return entry;
+}
+
+static int handle_colon_syntax(git_object **out,
+                               git_repository *repo,
+                               git_object *obj,
+                               const char *path)
+{
+   git_tree *tree;
+   const git_tree_entry *entry;
+
+   /* Dereference until we reach a tree. */
+   if (dereference_to_type(&obj, obj, GIT_OBJ_TREE) < 0) {
+      return GIT_ERROR;
+   }
+   tree = (git_tree*)obj;
+
+   /* Find the blob at the given path. */
+   entry = git_tree_entry_bypath(tree, repo, path);
+   return git_tree_entry_2object(out, repo, entry);
+}
+
 int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
    revparse_state current_state = REVPARSE_STATE_INIT,  next_state = REVPARSE_STATE_INIT;
@@ -544,6 +585,13 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
    int retcode = 0;
 
    assert(out && repo && spec);
+
+   if (spec[0] == ':') {
+      /* Either a global grep (":/foo") or a merge-stage path lookup (":2:Makefile").
+         Neither of these are handled just yet. */
+      giterr_set(GITERR_INVALID, "Unimplemented");
+      return GIT_ERROR;
+   }
 
    while (current_state != REVPARSE_STATE_DONE) {
       switch (current_state) {
@@ -561,6 +609,8 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
             next_state = REVPARSE_STATE_CARET;
          } else if (*spec_cur == '~') {
             next_state = REVPARSE_STATE_LINEAR;
+         } else if (*spec_cur == ':') {
+            next_state = REVPARSE_STATE_COLON;
          } else {
             git_buf_putc(&specbuffer, *spec_cur);
          }
@@ -613,6 +663,16 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
             next_state = !retcode ? REVPARSE_STATE_CARET : REVPARSE_STATE_DONE;
          } else {
             git_buf_putc(&stepbuffer, *spec_cur);
+         }
+         spec_cur++;
+         break;
+
+      case REVPARSE_STATE_COLON:
+         if (*spec_cur) {
+            git_buf_putc(&stepbuffer, *spec_cur);
+         } else {
+            retcode = handle_colon_syntax(out, repo, cur_obj, git_buf_cstr(&stepbuffer));
+            next_state = REVPARSE_STATE_DONE;
          }
          spec_cur++;
          break;
