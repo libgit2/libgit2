@@ -7,6 +7,8 @@
 #ifndef INCLUDE_date_h__
 #define INCLUDE_date_h__
 
-unsigned long approxidate_careful(const char *date, int *error_ret);
+#include "git2/types.h"
+
+int git__date_parse(git_time_t *out, const char *date);
 
 #endif

@@ -200,11 +200,11 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
       }
    } else {
       int date_error = 0;
-      time_t timestamp;
+      git_time_t timestamp;
       git_buf datebuf = GIT_BUF_INIT;
 
       git_buf_put(&datebuf, reflogspec+2, reflogspeclen-3);
-	  timestamp = approxidate_careful(git_buf_cstr(&datebuf), &date_error);
+      date_error = git__date_parse(&timestamp, git_buf_cstr(&datebuf));
 
       /* @{u} or @{upstream} -> upstream branch, for a tracking branch. This is stored in the config. */
       if (!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}")) {

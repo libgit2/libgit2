@@ -30,7 +30,7 @@ typedef enum {
 /*
  * This is like mktime, but without normalization of tm_wday and tm_yday.
  */
-static time_t tm_to_time_t(const struct tm *tm)
+static git_time_t tm_to_time_t(const struct tm *tm)
 {
 	static const int mdays[] = {
 	    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
@@ -454,7 +454,7 @@ static int match_tz(const char *date, int *offp)
  * Parse a string like "0 +0000" as ancient timestamp near epoch, but
  * only when it appears not as part of any other string.
  */
-static int match_object_header_date(const char *date, unsigned long *timestamp, int *offset)
+static int match_object_header_date(const char *date, git_time_t *timestamp, int *offset)
 {
 	char *end;
 	unsigned long stamp;
@@ -479,11 +479,11 @@ static int match_object_header_date(const char *date, unsigned long *timestamp, 
 
 /* Gr. strptime is crap for this; it doesn't have a way to require RFC2822
    (i.e. English) day/month names, and it doesn't work correctly with %z. */
-static int parse_date_basic(const char *date, unsigned long *timestamp, int *offset)
+static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset)
 {
 	struct tm tm;
 	int tm_gmt;
-	unsigned long dummy_timestamp;
+	git_time_t dummy_timestamp;
 	int dummy_offset;
 
 	if (!timestamp)
@@ -533,7 +533,7 @@ static int parse_date_basic(const char *date, unsigned long *timestamp, int *off
 	if (*offset == -1)
 		*offset = ((time_t)*timestamp - mktime(&tm)) / 60;
 
-	if (*timestamp == (unsigned long)-1)
+	if (*timestamp == (git_time_t)-1)
 		return -1;
 
 	if (!tm_gmt)
@@ -546,7 +546,7 @@ static int parse_date_basic(const char *date, unsigned long *timestamp, int *off
  * Relative time update (eg "2 days ago").  If we haven't set the time
  * yet, we need to set it from current time.
  */
-static unsigned long update_tm(struct tm *tm, struct tm *now, unsigned long sec)
+static git_time_t update_tm(struct tm *tm, struct tm *now, unsigned long sec)
 {
 	time_t n;
 
@@ -822,9 +822,9 @@ static void pending_number(struct tm *tm, int *num)
 	}
 }
 
-static unsigned long approxidate_str(const char *date,
-				     const struct timeval *tv,
-				     int *error_ret)
+static git_time_t approxidate_str(const char *date,
+                                  const struct timeval *tv,
+                                  int *error_ret)
 {
 	int number = 0;
 	int touched = 0;
@@ -859,20 +859,18 @@ static unsigned long approxidate_str(const char *date,
 	return update_tm(&tm, &now, 0);
 }
 
-unsigned long approxidate_careful(const char *date, int *error_ret)
+int git__date_parse(git_time_t *out, const char *date)
 {
 	struct timeval tv;
-	unsigned long timestamp;
-	int offset;
-	int dummy = 0;
-	if (!error_ret)
-		error_ret = &dummy;
+	git_time_t timestamp;
+	int offset, error_ret=0;
 
 	if (!parse_date_basic(date, &timestamp, &offset)) {
-		*error_ret = 0;
-		return timestamp;
+      *out = timestamp;
+		return 0;
 	}
 
 	gettimeofday(&tv, NULL);
-	return approxidate_str(date, &tv, error_ret);
+	*out = approxidate_str(date, &tv, &error_ret);
+   return error_ret;
 }
