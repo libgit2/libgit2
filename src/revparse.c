@@ -541,6 +541,7 @@ static const git_tree_entry* git_tree_entry_bypath(git_tree *tree, git_repositor
 {
    char *str = git__strdup(path);
    char *tok;
+   void *alloc = str;
    git_tree *tree2 = tree;
    const git_tree_entry *entry;
 
@@ -549,11 +550,13 @@ static const git_tree_entry* git_tree_entry_bypath(git_tree *tree, git_repositor
       if (tree2 != tree) git_tree_free(tree2);
       if (entry_is_tree(entry)) {
          if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
+            free(alloc);
             return NULL;
          }
       }
    }
 
+   free(alloc);
    return entry;
 }
 
@@ -573,6 +576,7 @@ static int handle_colon_syntax(git_object **out,
 
    /* Find the blob at the given path. */
    entry = git_tree_entry_bypath(tree, repo, path);
+   git_tree_free(tree);
    return git_tree_entry_2object(out, repo, entry);
 }
 
