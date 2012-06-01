@@ -160,6 +160,7 @@ void test_refs_revparse__colon(void)
    cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
 
    test_object("subtrees:ab/4.txt", "d6c93164c249c8000205dd4ec5cbca1b516d487f");
+   test_object("subtrees:ab/de/fgh/1.txt", "1f67fc4386b2d171e0d21be1c447e12660561f9b");
    test_object("master:README", "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
    test_object("master:new.txt", "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
 }
