@@ -432,9 +432,6 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
             } else {
                while(!git_revwalk_next(&oid, walk)) {
                   git_object *walkobj;
-                  char str[41];
-                  git_oid_fmt(str, &oid);
-                  str[40] = 0;
 
                   /* Fetch the commit object, and check for matches in the message */
                   if (!git_object_lookup(&walkobj, repo, &oid, GIT_OBJ_COMMIT)) {
@@ -580,6 +577,49 @@ static int handle_colon_syntax(git_object **out,
    return git_tree_entry_2object(out, repo, entry);
 }
 
+static int git__revparse_global_grep(git_object **out, git_repository *repo, const char *pattern)
+{
+   git_revwalk *walk;
+   int retcode = GIT_ERROR;
+
+   if (!git_revwalk_new(&walk, repo)) {
+      regex_t preg;
+      int reg_error;
+      git_oid oid;
+
+      git_revwalk_sorting(walk, GIT_SORT_TIME);
+      git_revwalk_push_glob(walk, "refs/heads/*");
+
+      reg_error = regcomp(&preg, pattern, REG_EXTENDED);
+      if (reg_error != 0) {
+         giterr_set_regex(&preg, reg_error);
+      } else {
+         git_object *walkobj = NULL, *resultobj = NULL;
+         while(!git_revwalk_next(&oid, walk)) {
+            /* Fetch the commit object, and check for matches in the message */
+            if (walkobj != resultobj) git_object_free(walkobj);
+            if (!git_object_lookup(&walkobj, repo, &oid, GIT_OBJ_COMMIT)) {
+               if (!regexec(&preg, git_commit_message((git_commit*)walkobj), 0, NULL, 0)) {
+                  /* Match! */
+                  resultobj = walkobj;
+                  retcode = 0;
+                  break;
+               }
+            }
+         }
+         if (!resultobj) {
+            giterr_set(GITERR_REFERENCE, "Couldn't find a match for %s", pattern);
+         } else {
+            *out = resultobj;
+         }
+         regfree(&preg);
+         git_revwalk_free(walk);
+      }
+   }
+
+   return retcode;
+}
+
 int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
    revparse_state current_state = REVPARSE_STATE_INIT,  next_state = REVPARSE_STATE_INIT;
@@ -591,8 +631,10 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
    assert(out && repo && spec);
 
    if (spec[0] == ':') {
-      /* Either a global grep (":/foo") or a merge-stage path lookup (":2:Makefile").
-         Neither of these are handled just yet. */
+      if (spec[1] == '/') {
+         return git__revparse_global_grep(out, repo, spec+2);
+      }
+      /* TODO: support merge-stage path lookup (":2:Makefile"). */
       giterr_set(GITERR_INVALID, "Unimplemented");
       return GIT_ERROR;
    }

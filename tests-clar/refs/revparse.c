@@ -156,11 +156,15 @@ void test_refs_revparse__date(void)
 
 void test_refs_revparse__colon(void)
 {
-   cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/foo"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/not found in any commit"));
    cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
 
    test_object("subtrees:ab/4.txt", "d6c93164c249c8000205dd4ec5cbca1b516d487f");
    test_object("subtrees:ab/de/fgh/1.txt", "1f67fc4386b2d171e0d21be1c447e12660561f9b");
    test_object("master:README", "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
    test_object("master:new.txt", "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
+   test_object(":/Merge", "a4a7dce85cf63874e984719f4fdd239f5145052f");
+   test_object(":/one", "c47800c7266a2be04c571c04d5a6614691ea99bd");
+   test_object(":/packed commit t", "41bc8c69075bbdb46c5c6f0566cc8cc5b46e8bd9");
 }
