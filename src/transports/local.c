@@ -190,6 +190,7 @@ static int local_close(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
 
+	t->parent.connected = 0;
 	git_repository_free(t->repo);
 	t->repo = NULL;
 
