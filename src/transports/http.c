@@ -610,6 +610,8 @@ static int http_close(git_transport *transport)
 		return -1;
 	}
 
+	t->parent.connected = 0;
+
 	return 0;
 }
 

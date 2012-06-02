@@ -90,6 +90,15 @@ static void connect_to_local_repository(const char *local_repository)
 
 }
 
+void test_network_remotelocal__connected(void)
+{
+	connect_to_local_repository(cl_fixture("testrepo.git"));
+	cl_assert(git_remote_connected(remote));
+
+	git_remote_disconnect(remote);
+	cl_assert(!git_remote_connected(remote));
+}
+
 void test_network_remotelocal__retrieve_advertised_references(void)
 {
 	int how_many_refs = 0;
