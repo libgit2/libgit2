@@ -41,23 +41,18 @@ static int find_subtree_in_current_level(git_tree **out, git_repository *repo, g
 	return GIT_ENOTFOUND;
 }
 
-static int find_subtree_r(git_tree **out, const git_oid *root,
+static int find_subtree_r(git_tree **out, git_tree *root,
 			git_repository *repo, const char *target, int *fanout)
 {
 	int error;
-	git_tree *tree, *subtree;
+	git_tree *subtree = NULL;
 
 	*out = NULL;
 
-	error = git_tree_lookup(&tree, repo, root);
-	if (error < 0)
-		goto cleanup;
-
-	error = find_subtree_in_current_level(&subtree, repo, tree, target, *fanout);
+	error = find_subtree_in_current_level(&subtree, repo, root, target, *fanout);
 	if (error == GIT_EEXISTS)
 	{
-		*out = tree;
-		error = 0;
+		error = git_tree_lookup(out, repo, git_object_id((const git_object *)root));
 		goto cleanup;
 	}
 
@@ -65,11 +60,13 @@ static int find_subtree_r(git_tree **out, const git_oid *root,
 		goto cleanup;
 
 	*fanout += 2;
-	error = find_subtree_r(out, git_object_id((const git_object *)subtree), repo, target, fanout);
-	git_tree_free(tree);
+	error = find_subtree_r(out, subtree, repo, target, fanout);
+
+	// *root is not ours to free, and the last subtree is the one being returned => we only need to free the subtrees in-between
+	if (*out != subtree)
+		git_tree_free(subtree);
 
 cleanup:
-	git_tree_free(subtree);
 	return error;
 }
 
@@ -117,22 +114,23 @@ cleanup:
 	return error;
 }
 
-static int insert_note_in_tree(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout)
+static int manipulate_note_in_tree_r(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, 
+	int (*note_exists_cb)(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, int current_error),
+	int (*note_notfound_cb)(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, int current_error))
 {
 	int error = -1;	
-	git_tree *subtree;
+	git_tree *subtree = NULL;
 	char subtree_name[3];
 
 	error = find_subtree_in_current_level(&subtree, repo, parent, annotated_object_sha, fanout);
 
 	if (error == GIT_EEXISTS) {
-		giterr_set(GITERR_REPOSITORY, "Note for '%s' exists already", annotated_object_sha);
+		error = note_exists_cb(out, repo, parent, note_oid, annotated_object_sha, fanout, error);
 		goto cleanup;
 	}
 
 	if (error == GIT_ENOTFOUND) {
-		/* No existing fanout at this level, insert in place */
-		error = tree_write(out, repo, parent, note_oid, annotated_object_sha + fanout, 0100644);
+		error = note_notfound_cb(out, repo, parent, note_oid, annotated_object_sha, fanout, error);
 		goto cleanup;
 	}
 
@@ -140,7 +138,7 @@ static int insert_note_in_tree(git_tree **out, git_repository *repo, git_tree *p
 		goto cleanup;
 
 	/* An existing fanout has been found, let's dig deeper */
-	error = insert_note_in_tree(out, repo, subtree, note_oid, annotated_object_sha, fanout + 2);
+	error = manipulate_note_in_tree_r(out, repo, subtree, note_oid, annotated_object_sha, fanout + 2, note_exists_cb, note_notfound_cb);
 	if (error < 0)
 		goto cleanup;
 
@@ -152,6 +150,16 @@ static int insert_note_in_tree(git_tree **out, git_repository *repo, git_tree *p
 cleanup:
 	git_tree_free(subtree);
 	return error;
+}
+
+static int insert_note_in_tree_eexists_cb(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, int current_error) {
+	giterr_set(GITERR_REPOSITORY, "Note for '%s' exists already", annotated_object_sha);
+	return current_error;
+}
+
+static int insert_note_in_tree_enotfound_cb(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, int current_error) {
+	/* No existing fanout at this level, insert in place */
+	return tree_write(out, repo, parent, note_oid, annotated_object_sha + fanout, 0100644);
 }
 
 static int note_write(git_oid *out, git_repository *repo,
@@ -184,39 +192,48 @@ cleanup:
 	return error;
 }
 
-static int note_lookup(git_note **out, git_repository *repo,
-		       const git_oid *tree_sha, const char *target)
+static int note_new(git_note **out, git_oid *note_oid, git_blob *blob)
 {
-	int error, fanout = 0;
-	git_oid oid;
-	git_blob *blob;
-	git_tree *tree;
-	git_note *note;
+	git_note *note = NULL;
 
-	error = find_subtree_r(&tree, tree_sha, repo, target, &fanout);
-	if (error < 0)
-		return error;
-
-	error = find_blob(&oid, tree, target + fanout);
-	git_tree_free(tree);
-	if (error < 0)
-		return error;
-
-	error = git_blob_lookup(&blob, repo, &oid);
-	if (error < 0)
-		return error;
-
-	note = git__malloc(sizeof(git_note));
+	note = (git_note *)git__malloc(sizeof(git_note));
 	GITERR_CHECK_ALLOC(note);
 
-	git_oid_cpy(&note->oid, &oid);
-	note->message = git__strdup(git_blob_rawcontent(blob));
+	git_oid_cpy(&note->oid, note_oid);
+	note->message = git__strdup((char *)git_blob_rawcontent(blob));
 	GITERR_CHECK_ALLOC(note->message);
 
 	*out = note;
 
-	git_blob_free(blob);
+	return 0;
+}
 
+static int note_lookup(git_note **out, git_repository *repo,
+		       git_tree *tree, const char *target)
+{
+	int error, fanout = 0;
+	git_oid oid;
+	git_blob *blob = NULL;
+	git_note *note = NULL;
+	git_tree *subtree = NULL;
+
+	if ((error = find_subtree_r(&subtree, tree, repo, target, &fanout)) < 0)
+		goto cleanup;
+
+	if ((error = find_blob(&oid, subtree, target + fanout)) < 0)
+		goto cleanup;
+
+	if ((error = git_blob_lookup(&blob, repo, &oid)) < 0)
+		goto cleanup;
+
+	if ((error = note_new(&note, &oid, blob)) < 0)
+		goto cleanup;
+
+	*out = note;
+
+cleanup:
+	git_tree_free(subtree);
+	git_blob_free(blob);
 	return error;
 }
 
@@ -227,10 +244,14 @@ static int note_remove(git_repository *repo,
 {
 	int error, fanout = 0;
 	git_oid oid;
-	git_tree *tree;
+	git_tree *tree, *root;
 	git_treebuilder *tb;
 
-	error = find_subtree_r(&tree, tree_sha, repo, target, &fanout);
+	error = git_tree_lookup(&root, repo, tree_sha);
+	if (error < 0)
+		return error;
+
+	error = find_subtree_r(&tree, root, repo, target, &fanout);
 	if (error < 0)
 		return error;
 
@@ -292,6 +313,23 @@ static int normalize_namespace(const char **notes_ref, git_repository *repo)
 	return note_get_default_ref(notes_ref, repo);
 }
 
+static int retrieve_note_tree_and_commit(git_tree **tree_out, git_commit **commit_out, git_repository *repo, const char *notes_ref)
+{
+	int error;
+	git_oid oid;
+
+	if ((error = git_reference_name_to_oid(&oid, repo, notes_ref)) < 0)
+		return error;
+
+	if (git_commit_lookup(commit_out, repo, &oid) < 0)
+		return error;
+
+	if ((error = git_commit_tree(tree_out, *commit_out)) < 0)
+		return error;
+
+	return 0;
+}
+
 static int retrieve_note_tree_oid(git_oid *tree_oid_out, git_repository *repo, const char *notes_ref)
 {
 	int error = -1;
@@ -317,23 +355,25 @@ int git_note_read(git_note **out, git_repository *repo,
 		  const char *notes_ref, const git_oid *oid)
 {
 	int error;
-	char *target;
-	git_oid sha;
-
-	*out = NULL;
-
-	if (normalize_namespace(&notes_ref, repo) < 0)
-		return -1;
-
-	if ((error = retrieve_note_tree_oid(&sha, repo, notes_ref)) < 0)
-		return error;
+	char *target = NULL;
+	git_tree *tree = NULL;
+	git_commit *commit = NULL;
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);
 
-	error = note_lookup(out, repo, &sha, target);
+	if (normalize_namespace(&notes_ref, repo) < 0)
+		return -1;
 
+	if ((error = retrieve_note_tree_and_commit(&tree, &commit, repo, notes_ref)) < 0)
+		goto cleanup;
+
+	error = note_lookup(out, repo, tree, target);
+
+cleanup:
 	git__free(target);
+	git_tree_free(tree);
+	git_commit_free(commit);
 	return error;
 }
 
@@ -346,7 +386,7 @@ int git_note_create(
 	int error;
 	char *target = NULL;
 	git_commit *commit = NULL;
-	git_reference *ref;
+	git_reference *ref = NULL;
 	git_tree *tree = NULL;
 
 	target = git_oid_allocfmt(oid);
