@@ -53,6 +53,13 @@ const char *git_refspec_dst(const git_refspec *refspec)
 	return refspec == NULL ? NULL : refspec->dst;
 }
 
+int git_refspec_force(const git_refspec *refspec)
+{
+	assert(refspec);
+
+	return refspec->force;
+}
+
 int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 {
 	if (refspec == NULL || refspec->src == NULL)
