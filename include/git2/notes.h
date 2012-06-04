@@ -50,41 +50,6 @@ GIT_EXTERN(const char *) git_note_message(git_note *note);
  */
 GIT_EXTERN(const git_oid *) git_note_oid(git_note *note);
 
-
-/**
- * Add a note for an object
- *
- * @param oid pointer to store the OID (optional); NULL in case of error
- * @param repo the Git repository
- * @param author signature of the notes commit author
- * @param committer signature of the notes commit committer
- * @param notes_ref OID reference to update (optional); defaults to "refs/notes/commits"
- * @param oid The OID of the object
- * @param oid The note to add for object oid
- *
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_note_create(git_oid *out, git_repository *repo,
-				git_signature *author, git_signature *committer,
-				const char *notes_ref, const git_oid *oid,
-				 const char *note);
-
-
-/**
- * Remove the note for an object
- *
- * @param repo the Git repository
- * @param notes_ref OID reference to use (optional); defaults to "refs/notes/commits"
- * @param author signature of the notes commit author
- * @param committer signature of the notes commit committer
- * @param oid the oid which note's to be removed
- *
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_note_remove(git_repository *repo, const char *notes_ref,
-				git_signature *author, git_signature *committer,
-				const git_oid *oid);
-
 /**
  * Free a git_note object
  *
