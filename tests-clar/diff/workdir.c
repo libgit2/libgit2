@@ -5,7 +5,6 @@ static git_repository *g_repo = NULL;
 
 void test_diff_workdir__initialize(void)
 {
-	g_repo = cl_git_sandbox_init("status");
 }
 
 void test_diff_workdir__cleanup(void)
@@ -18,6 +17,8 @@ void test_diff_workdir__to_index(void)
 	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
 	diff_expects exp;
+
+	g_repo = cl_git_sandbox_init("status");
 
 	opts.context_lines = 3;
 	opts.interhunk_lines = 1;
@@ -59,12 +60,16 @@ void test_diff_workdir__to_tree(void)
 	/* grabbed a couple of commit oids from the history of the attr repo */
 	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
 	const char *b_commit = "0017bd4ab1ec3"; /* the start */
-	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
-	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
+	git_tree *a, *b;
 	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
 	git_diff_list *diff2 = NULL;
 	diff_expects exp;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	a = resolve_commit_oid_to_tree(g_repo, a_commit);
+	b = resolve_commit_oid_to_tree(g_repo, b_commit);
 
 	opts.context_lines = 3;
 	opts.interhunk_lines = 1;
@@ -171,6 +176,8 @@ void test_diff_workdir__to_index_with_pathspec(void)
 	diff_expects exp;
 	char *pathspec = NULL;
 
+	g_repo = cl_git_sandbox_init("status");
+
 	opts.context_lines = 3;
 	opts.interhunk_lines = 1;
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
@@ -235,6 +242,102 @@ void test_diff_workdir__to_index_with_pathspec(void)
 	cl_assert_equal_i(0, exp.file_untracked);
 
 	git_diff_list_free(diff);
+}
+
+void test_diff_workdir__filemode_changes(void)
+{
+	git_config *cfg;
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+
+	if (!cl_is_chmod_supported())
+		return;
+
+	g_repo = cl_git_sandbox_init("issue_592");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.filemode", true));
+
+	/* test once with no mods */
+
+	cl_git_pass(git_diff_workdir_to_index(g_repo, NULL, &diff));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert_equal_i(0, exp.files);
+	cl_assert_equal_i(0, exp.file_mods);
+	cl_assert_equal_i(0, exp.hunks);
+
+	git_diff_list_free(diff);
+
+	/* chmod file and test again */
+
+	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
+
+	cl_git_pass(git_diff_workdir_to_index(g_repo, NULL, &diff));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(1, exp.file_mods);
+	cl_assert_equal_i(0, exp.hunks);
+
+	git_diff_list_free(diff);
+
+	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
+	git_config_free(cfg);
+}
+
+void test_diff_workdir__filemode_changes_with_filemode_false(void)
+{
+	git_config *cfg;
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+
+	if (!cl_is_chmod_supported())
+		return;
+
+	g_repo = cl_git_sandbox_init("issue_592");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.filemode", false));
+
+	/* test once with no mods */
+
+	cl_git_pass(git_diff_workdir_to_index(g_repo, NULL, &diff));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert_equal_i(0, exp.files);
+	cl_assert_equal_i(0, exp.file_mods);
+	cl_assert_equal_i(0, exp.hunks);
+
+	git_diff_list_free(diff);
+
+	/* chmod file and test again */
+
+	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
+
+	cl_git_pass(git_diff_workdir_to_index(g_repo, NULL, &diff));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert_equal_i(0, exp.files);
+	cl_assert_equal_i(0, exp.file_mods);
+	cl_assert_equal_i(0, exp.hunks);
+
+	git_diff_list_free(diff);
+
+	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
+	git_config_free(cfg);
 }
 
 /* PREPARATION OF TEST DATA

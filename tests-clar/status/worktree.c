@@ -581,3 +581,69 @@ void test_status_worktree__space_in_filename(void)
 	git_index_free(index);
 	git_repository_free(repo);
 }
+
+static const char *filemode_paths[] = {
+	"exec_off",
+	"exec_off2on_staged",
+	"exec_off2on_workdir",
+	"exec_off_untracked",
+	"exec_on",
+	"exec_on2off_staged",
+	"exec_on2off_workdir",
+	"exec_on_untracked",
+};
+
+static unsigned int filemode_statuses[] = {
+	GIT_STATUS_CURRENT,
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_CURRENT,
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW
+};
+
+static const size_t filemode_count = 8;
+
+void test_status_worktree__filemode_changes(void)
+{
+	git_repository *repo = cl_git_sandbox_init("filemodes");
+	status_entry_counts counts;
+	git_status_options opts;
+	git_config *cfg;
+
+	/* overwrite stored filemode with platform appropriate value */
+	cl_git_pass(git_repository_config(&cfg, repo));
+	if (cl_is_chmod_supported())
+		cl_git_pass(git_config_set_bool(cfg, "core.filemode", true));
+	else {
+		unsigned int i;
+		cl_git_pass(git_config_set_bool(cfg, "core.filemode", false));
+
+		/* won't trust filesystem mode diffs, so these will appear unchanged */
+		for (i = 0; i < filemode_count; ++i)
+			if (filemode_statuses[i] == GIT_STATUS_WT_MODIFIED)
+				filemode_statuses[i] = GIT_STATUS_CURRENT;
+	}
+
+	memset(&opts, 0, sizeof(opts));
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_INCLUDE_IGNORED |
+		GIT_STATUS_OPT_INCLUDE_UNMODIFIED;
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = filemode_count;
+	counts.expected_paths = filemode_paths;
+	counts.expected_statuses = filemode_statuses;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
+	);
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	git_config_free(cfg);
+}
