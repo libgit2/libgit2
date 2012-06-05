@@ -65,7 +65,6 @@ void giterr_clear(void);
 void giterr_set_str(int error_class, const char *string);
 void giterr_set_regex(const regex_t *regex, int error_code);
 
-
 #include "util.h"
 
 
