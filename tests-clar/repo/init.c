@@ -166,23 +166,70 @@ void test_repo_init__additional_templates(void)
 	git_buf_free(&path);
 }
 
-void test_repo_init__detect_filemode(void)
+static void assert_config_entry_on_init(const char *config_key, int expected_value)
 {
 	git_config *config;
-	int filemode;
+	int current_value;
 
-	cl_set_cleanup(&cleanup_repository, "filemode");
+	cl_set_cleanup(&cleanup_repository, "config_entry");
 	
-	cl_git_pass(git_repository_init(&_repo, "filemode/filemode.git", 1));
+	cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
 	git_repository_config(&config, _repo);
 
-	cl_git_pass(git_config_get_bool(&filemode, config, "core.filemode"));
+	if (expected_value >= 0) {
+		cl_git_pass(git_config_get_bool(&current_value, config, config_key));
 
+		cl_assert_equal_i(expected_value, current_value);
+	} else {
+		int error = git_config_get_bool(&current_value, config, config_key);
+
+		cl_assert_equal_i(expected_value, error);
+	}
+
+	git_config_free(config);
+}
+
+void test_repo_init__detect_filemode(void)
+{
 #ifdef GIT_WIN32
-	cl_assert_equal_i(false, filemode);
+	assert_config_entry_on_init("core.filemode", false);
 #else
-	cl_assert_equal_i(true, filemode);
+	assert_config_entry_on_init("core.filemode", true);
 #endif
+}
+
+#define CASE_INSENSITIVE_FILESYSTEM (defined GIT_WIN32 || defined __APPLE__)
+
+void test_repo_init__detect_ignorecase(void)
+{
+#if CASE_INSENSITIVE_FILESYSTEM
+	assert_config_entry_on_init("core.ignorecase", true);
+#else
+	assert_config_entry_on_init("core.ignorecase", GIT_ENOTFOUND);
+#endif
+}
+
+void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
+{
+	git_config *config;
+	int current_value;
+
+	/* Init a new repo */
+	test_repo_init__detect_ignorecase();
+
+	/* Change the "core.ignorecase" config value to something unlikely */
+	git_repository_config(&config, _repo);
+	git_config_set_int32(config, "core.ignorecase", 42);
+	git_config_free(config);
+	git_repository_free(_repo);
+
+	/* Reinit the repository */
+	cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
+	git_repository_config(&config, _repo);
+
+	/* Ensure the "core.ignorecase" config value hasn't been updated */
+	cl_git_pass(git_config_get_int32(&current_value, config, "core.ignorecase"));
+	cl_assert_equal_i(42, current_value);
 
 	git_config_free(config);
 }
