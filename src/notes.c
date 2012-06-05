@@ -301,6 +301,9 @@ static int retrieve_note_tree_and_commit(git_tree **tree_out, git_commit **commi
 	int error;
 	git_oid oid;
 
+	if ((error = normalize_namespace(&notes_ref, repo) )< 0)
+		return error;
+
 	if ((error = git_reference_name_to_oid(&oid, repo, notes_ref)) < 0)
 		return error;
 
@@ -313,27 +316,6 @@ static int retrieve_note_tree_and_commit(git_tree **tree_out, git_commit **commi
 	return 0;
 }
 
-static int retrieve_note_tree_oid(git_oid *tree_oid_out, git_repository *repo, const char *notes_ref)
-{
-	int error = -1;
-	git_commit *commit = NULL;
-	git_oid oid;
-
-	if ((error = git_reference_name_to_oid(&oid, repo, notes_ref)) < 0)
-		goto cleanup;
-
-	if (git_commit_lookup(&commit, repo, &oid) < 0)
-		goto cleanup;
-
-	git_oid_cpy(tree_oid_out, git_commit_tree_oid(commit));
-
-	error = 0;
-
-cleanup:
-	git_commit_free(commit);
-	return error;
-}
-
 int git_note_read(git_note **out, git_repository *repo,
 		  const char *notes_ref, const git_oid *oid)
 {
@@ -344,9 +326,6 @@ int git_note_read(git_note **out, git_repository *repo,
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);
-
-	if (normalize_namespace(&notes_ref, repo) < 0)
-		return -1;
 
 	if ((error = retrieve_note_tree_and_commit(&tree, &commit, repo, notes_ref)) < 0)
 		goto cleanup;
@@ -416,9 +395,6 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);
-
-	if (normalize_namespace(&notes_ref, repo) < 0)
-		return -1;
 
 	if ((error = retrieve_note_tree_and_commit(&tree, &commit, repo, notes_ref)) < 0)
 		goto cleanup;
@@ -522,18 +498,12 @@ int git_note_foreach(
 	void *payload)
 {
 	int error = -1;
-	git_oid tree_oid;
 	git_iterator *iter = NULL;
 	git_tree *tree = NULL;
+	git_commit *commit = NULL;
 	const git_index_entry *item;
 
-	if (normalize_namespace(&notes_ref, repo) < 0)
-		return -1;
-
-	if ((error = retrieve_note_tree_oid(&tree_oid, repo, notes_ref)) < 0)
-		goto cleanup;
-
-	if (git_tree_lookup(&tree, repo, &tree_oid) < 0)
+	if ((error = retrieve_note_tree_and_commit(&tree, &commit, repo, notes_ref)) < 0)
 		goto cleanup;
 
 	if (git_iterator_for_tree(&iter, repo, tree) < 0)
@@ -555,5 +525,6 @@ int git_note_foreach(
 cleanup:
 	git_iterator_free(iter);
 	git_tree_free(tree);
+	git_commit_free(commit);
 	return error;
 }
