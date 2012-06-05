@@ -88,6 +88,7 @@ typedef enum {
 	GITERR_TAG,
 	GITERR_TREE,
 	GITERR_INDEXER,
+	GITERR_SSL,
 } git_error_t;
 
 /**

@@ -66,6 +66,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->repo = repo;
+	remote->check_cert = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
 		return -1;
@@ -108,6 +109,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote);
 
 	memset(remote, 0x0, sizeof(git_remote));
+	remote->check_cert = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
 
@@ -291,6 +293,7 @@ int git_remote_connect(git_remote *remote, int direction)
 	if (git_transport_new(&t, remote->url) < 0)
 		return -1;
 
+	t->check_cert = remote->check_cert;
 	if (t->connect(t, direction) < 0) {
 		goto on_error;
 	}
@@ -511,4 +514,11 @@ on_error:
 	git_buf_free(&buf);
 	git_remote_free(*out);
 	return -1;
+}
+
+void git_remote_check_cert(git_remote *remote, int check)
+{
+	assert(remote);
+
+	remote->check_cert = check;
 }
