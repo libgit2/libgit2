@@ -1,11 +1,14 @@
 
 #include "map.h"
+#ifndef __amigaos4__
 #include <sys/mman.h>
+#endif
 #include <errno.h>
 
 
 int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
+#ifndef __amigaos4__
 	int mprot = 0;
 	int mflag = 0;
 
@@ -42,19 +45,20 @@ int git__mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t o
 	if (!out->data || out->data == MAP_FAILED)
 		return git__throw(GIT_EOSERR, "Failed to mmap. Could not write data");
 	out->len = len;
-
+#endif
 	return GIT_SUCCESS;
 }
 
 int git__munmap(git_map *map)
 {
+#ifndef __amigaos4__
 	assert(map != NULL);
 
 	if (!map)
 		return git__throw(GIT_ERROR, "Failed to munmap. Map does not exist");
 
 	munmap(map->data, map->len);
-
+#endif
 	return GIT_SUCCESS;
 }
 
