@@ -11,6 +11,8 @@
 # Install:
 # > cmake --build . --target install
 
+SET(CMAKE_SYSTEM_NAME "Generic")
+
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
@@ -25,7 +27,7 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 INCLUDE_DIRECTORIES(deps/zlib src include)
 
 # Try finding openssl
-FIND_PACKAGE(OpenSSL)
+#FIND_PACKAGE(OpenSSL)
 IF (OPENSSL_CRYPTO_LIBRARIES)
     SET(SHA1_TYPE "openssl" CACHE STRING "Which SHA1 implementation to use: builtin, ppc, openssl")
 ELSEIF ()
