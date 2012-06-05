@@ -21,6 +21,7 @@
 /* stat: file mode type testing macros */
 #	define _S_IFLNK 0120000
 #	define S_IFLNK _S_IFLNK
+#	define S_IXUSR 00100
 
 #	define S_ISDIR(m)	(((m) & _S_IFMT) == _S_IFDIR)
 #	define S_ISREG(m)	(((m) & _S_IFMT) == _S_IFREG)
