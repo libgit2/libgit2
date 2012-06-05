@@ -39,7 +39,7 @@ exit:
 	pthread_exit(&data->ret);
 }
 
-int update_cb(const char *refname, const git_oid *a, const git_oid *b)
+int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
 	const char *action;
 	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
@@ -58,6 +58,19 @@ int update_cb(const char *refname, const git_oid *a, const git_oid *b)
 	return 0;
 }
 
+int progress_cb(const char *str, void *data)
+{
+	fputs(str, stderr);
+	return 0;
+}
+
+int error_cb(const char *str, void *data)
+{
+	fputs("The world is ending!", stderr);
+	fputs(str, stderr);
+	return 0;
+}
+
 int fetch(git_repository *repo, int argc, char **argv)
 {
 	git_remote *remote = NULL;
@@ -72,6 +85,10 @@ int fetch(git_repository *repo, int argc, char **argv)
 		if (git_remote_new(&remote, repo, NULL, argv[1], NULL) < 0)
 			return -1;
 	}
+
+	git_remote_callback(remote, GIT_CALLBACK_PROGRESS, progress_cb, NULL);
+	git_remote_callback(remote, GIT_CALLBACK_ERROR, error_cb, NULL);
+	git_remote_callback(remote, GIT_CALLBACK_UPDATE_TIPS, update_cb, NULL);
 
 	// Set up the information for the background worker thread
 	data.remote = remote;
@@ -100,7 +117,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// right commits. This may be needed even if there was no packfile
 	// to download, which can happen e.g. when the branches have been
 	// changed but all the neede objects are available locally.
-	if (git_remote_update_tips(remote, update_cb) < 0)
+	if (git_remote_update_tips(remote) < 0)
 		return -1;
 
 	git_remote_free(remote);
