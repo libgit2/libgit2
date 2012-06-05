@@ -31,7 +31,7 @@ INCLUDE_DIRECTORIES(deps/zlib src include)
 IF (OPENSSL_CRYPTO_LIBRARIES)
     SET(SHA1_TYPE "openssl" CACHE STRING "Which SHA1 implementation to use: builtin, ppc, openssl")
 ELSEIF ()
-    SET(SHA1_TYPE "builtin" CACHE STRING "Which SHA1 implementation to use: builtin, ppc")
+    SET(SHA1_TYPE "ppc" CACHE STRING "Which SHA1 implementation to use: builtin, ppc")
 ENDIF ()
 
 INCLUDE(FindPkgConfig)
