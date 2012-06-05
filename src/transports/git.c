@@ -414,7 +414,7 @@ static int git_close(git_transport *t)
 		return -1;
 	}
 
-	t->parent.connected = 0;
+	t->connected = 0;
 
 #ifdef GIT_WIN32
 	WSACleanup();
