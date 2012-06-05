@@ -655,6 +655,27 @@ static int repo_init_createhead(const char *git_dir)
 	return 0;
 }
 
+static bool is_chmod_supported(const char *file_path)
+{
+	struct stat st1, st2;
+	static int _is_supported = -1;
+
+	if (_is_supported > -1)
+		return _is_supported;
+
+	if (p_stat(file_path, &st1) < 0)
+		return false;
+
+	if (p_chmod(file_path, st1.st_mode ^ S_IXUSR) < 0)
+		return false;
+
+	if (p_stat(file_path, &st2) < 0)
+		return false;
+
+	_is_supported = (st1.st_mode != st2.st_mode);
+	return _is_supported;
+}
+
 static int repo_init_config(const char *git_dir, int is_bare)
 {
 	git_buf cfg_path = GIT_BUF_INIT;
@@ -670,13 +691,14 @@ static int repo_init_config(const char *git_dir, int is_bare)
 	if (git_buf_joinpath(&cfg_path, git_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
 		return -1;
 
-	if (git_config_open_ondisk(&config, cfg_path.ptr) < 0) {
+	if (git_config_open_ondisk(&config, git_buf_cstr(&cfg_path)) < 0) {
 		git_buf_free(&cfg_path);
 		return -1;
 	}
 
 	SET_REPO_CONFIG(bool, "core.bare", is_bare);
 	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
+	SET_REPO_CONFIG(bool, "core.filemode", is_chmod_supported(git_buf_cstr(&cfg_path)));
 	/* TODO: what other defaults? */
 
 	git_buf_free(&cfg_path);

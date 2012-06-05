@@ -165,3 +165,24 @@ void test_repo_init__additional_templates(void)
 
 	git_buf_free(&path);
 }
+
+void test_repo_init__detect_filemode(void)
+{
+	git_config *config;
+	int filemode;
+
+	cl_set_cleanup(&cleanup_repository, "filemode");
+	
+	cl_git_pass(git_repository_init(&_repo, "filemode/filemode.git", 1));
+	git_repository_config(&config, _repo);
+
+	cl_git_pass(git_config_get_bool(&filemode, config, "core.filemode"));
+
+#ifdef GIT_WIN32
+	cl_assert_equal_i(false, filemode);
+#else
+	cl_assert_equal_i(true, filemode);
+#endif
+
+	git_config_free(config);
+}
