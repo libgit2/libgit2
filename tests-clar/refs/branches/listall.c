@@ -47,3 +47,32 @@ void test_refs_branches_listall__retrieve_local_branches(void)
 {
 	assert_retrieval(GIT_BRANCH_LOCAL, 7);
 }
+
+static void assert_branch_list_contains(git_strarray *branches, const char* expected_branch_name)
+{
+	unsigned int i;
+
+	for (i = 0; i < branches->count; i++) {
+		if (strcmp(expected_branch_name, branches->strings[i]) == 0)
+			return;
+	}
+
+	cl_fail("expected branch not found in list.");
+}
+
+/*
+ * $ git branch -r
+ *  nulltoken/HEAD -> nulltoken/master
+ *  nulltoken/master
+ */
+void test_refs_branches_listall__retrieve_remote_symbolic_HEAD_when_present(void)
+{
+	git_reference_free(fake_remote);
+	cl_git_pass(git_reference_create_symbolic(&fake_remote, repo, "refs/remotes/nulltoken/HEAD", "refs/remotes/nulltoken/master", 0));
+
+	cl_git_pass(git_branch_list(&branch_list, repo, GIT_BRANCH_REMOTE));
+	
+	cl_assert_equal_i(2, branch_list.count);
+	assert_branch_list_contains(&branch_list, "refs/remotes/nulltoken/HEAD");
+	assert_branch_list_contains(&branch_list, "refs/remotes/nulltoken/master");
+}

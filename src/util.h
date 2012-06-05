@@ -216,4 +216,18 @@ GIT_INLINE(int) git__time_cmp(const git_time *a, const git_time *b)
    return (int)(adjusted_a - b->time);
 }
 
+GIT_INLINE(bool) git__iswildcard(int c)
+{
+	return (c == '*' || c == '?' || c == '[');
+}
+
+/*
+ * Parse a string value as a boolean, just like Core Git
+ * does.
+ *
+ * Valid values for true are: 'true', 'yes', 'on'
+ * Valid values for false are: 'false', 'no', 'off'
+ */
+extern int git__parse_bool(int *out, const char *value);
+
 #endif /* INCLUDE_util_h__ */

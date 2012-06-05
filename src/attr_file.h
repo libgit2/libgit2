@@ -22,6 +22,7 @@
 #define GIT_ATTR_FNMATCH_MACRO		(1U << 3)
 #define GIT_ATTR_FNMATCH_IGNORE		(1U << 4)
 #define GIT_ATTR_FNMATCH_HASWILD	(1U << 5)
+#define GIT_ATTR_FNMATCH_ALLOWSPACE	(1U << 6)
 
 typedef struct {
 	char *pattern;
@@ -48,10 +49,20 @@ typedef struct {
 } git_attr_assignment;
 
 typedef struct {
+	git_time_t seconds;
+	git_off_t  size;
+	unsigned int ino;
+} git_attr_file_stat_sig;
+
+typedef struct {
 	char *key;				/* cache "source#path" this was loaded from */
 	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
 	git_pool *pool;
 	bool pool_is_allocated;
+	union {
+		git_oid oid;
+		git_attr_file_stat_sig st;
+	} cache_data;
 } git_attr_file;
 
 typedef struct {
@@ -77,6 +88,8 @@ extern int git_attr_file__new_and_load(
 	git_attr_file **attrs_ptr, const char *path);
 
 extern void git_attr_file__free(git_attr_file *file);
+
+extern void git_attr_file__clear_rules(git_attr_file *file);
 
 extern int git_attr_file__parse_buffer(
 	git_repository *repo, const char *buf, git_attr_file *file);

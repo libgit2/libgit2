@@ -32,8 +32,8 @@ void test_config_stress__dont_break_on_invalid_input(void)
 	cl_git_pass(git_config_new(&config));
 	cl_git_pass(git_config_add_file(config, file, 0));
 
-	cl_git_pass(git_config_get_string(config, "color.ui", &color));
-	cl_git_pass(git_config_get_string(config, "core.editor", &editor));
+	cl_git_pass(git_config_get_string(&color, config, "color.ui"));
+	cl_git_pass(git_config_get_string(&editor, config, "core.editor"));
 
 	git_config_free(config);
 }
@@ -48,13 +48,13 @@ void test_config_stress__comments(void)
 	cl_git_pass(git_config_new(&config));
 	cl_git_pass(git_config_add_file(config, file, 0));
 
-	cl_git_pass(git_config_get_string(config, "some.section.other", &str));
+	cl_git_pass(git_config_get_string(&str, config, "some.section.other"));
 	cl_assert(!strcmp(str, "hello! \" ; ; ; "));
 
-	cl_git_pass(git_config_get_string(config, "some.section.multi", &str));
+	cl_git_pass(git_config_get_string(&str, config, "some.section.multi"));
 	cl_assert(!strcmp(str, "hi, this is a ; multiline comment # with ;\n special chars and other stuff !@#"));
 
-	cl_git_pass(git_config_get_string(config, "some.section.back", &str));
+	cl_git_pass(git_config_get_string(&str, config, "some.section.back"));
 	cl_assert(!strcmp(str, "this is \ba phrase"));
 
 	git_config_free(config);

@@ -199,30 +199,6 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	return file->set(file, name, value);
 }
 
-int git_config_parse_bool(int *out, const char *value)
-{
-	/* A missing value means true */
-	if (value == NULL) {
-		*out = 1;
-		return 0;
-	}
-
-	if (!strcasecmp(value, "true") ||
-		!strcasecmp(value, "yes") ||
-		!strcasecmp(value, "on")) {
-		*out = 1;
-		return 0;
-	}
-	if (!strcasecmp(value, "false") ||
-		!strcasecmp(value, "no") ||
-		!strcasecmp(value, "off")) {
-		*out = 0;
-		return 0;
-	}
-
-	return -1;
-}
-
 static int parse_int64(int64_t *out, const char *value)
 {
 	const char *num_end;
@@ -297,7 +273,7 @@ int git_config_lookup_map_value(
 		case GIT_CVAR_TRUE: {
 			int bool_val;
 
-			if (git_config_parse_bool(&bool_val, value) == 0 && 
+			if (git__parse_bool(&bool_val, value) == 0 &&
 				bool_val == (int)m->cvar_type) {
 				*out = m->map_value;
 				return 0;
@@ -322,12 +298,17 @@ int git_config_lookup_map_value(
 	return GIT_ENOTFOUND;
 }
 
-int git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps, size_t map_n, int *out)
+int git_config_get_mapped(
+	int *out,
+	git_config *cfg,
+	const char *name,
+	git_cvar_map *maps,
+	size_t map_n)
 {
 	const char *value;
 	int ret;
 
-	ret = git_config_get_string(cfg, name, &value);
+	ret = git_config_get_string(&value, cfg, name);
 	if (ret < 0)
 		return ret;
 
@@ -339,12 +320,12 @@ int git_config_get_mapped(git_config *cfg, const char *name, git_cvar_map *maps,
 	return -1;
 }
 
-int git_config_get_int64(git_config *cfg, const char *name, int64_t *out)
+int git_config_get_int64(int64_t *out, git_config *cfg, const char *name)
 {
 	const char *value;
 	int ret;
 
-	ret = git_config_get_string(cfg, name, &value);
+	ret = git_config_get_string(&value, cfg, name);
 	if (ret < 0)
 		return ret;
 
@@ -356,12 +337,12 @@ int git_config_get_int64(git_config *cfg, const char *name, int64_t *out)
 	return 0;
 }
 
-int git_config_get_int32(git_config *cfg, const char *name, int32_t *out)
+int git_config_get_int32(int32_t *out, git_config *cfg, const char *name)
 {
 	const char *value;
 	int ret;
 
-	ret = git_config_get_string(cfg, name, &value);
+	ret = git_config_get_string(&value, cfg, name);
 	if (ret < 0)
 		return ret;
 
@@ -373,16 +354,16 @@ int git_config_get_int32(git_config *cfg, const char *name, int32_t *out)
 	return 0;
 }
 
-int git_config_get_bool(git_config *cfg, const char *name, int *out)
+int git_config_get_bool(int *out, git_config *cfg, const char *name)
 {
 	const char *value;
 	int ret;
 
-	ret = git_config_get_string(cfg, name, &value);
+	ret = git_config_get_string(&value, cfg, name);
 	if (ret < 0)
 		return ret;
 
-	if (git_config_parse_bool(out, value) == 0)
+	if (git__parse_bool(out, value) == 0)
 		return 0;
 
 	if (parse_int32(out, value) == 0) {
@@ -394,7 +375,7 @@ int git_config_get_bool(git_config *cfg, const char *name, int *out)
 	return -1;
 }
 
-int git_config_get_string(git_config *cfg, const char *name, const char **out)
+int git_config_get_string(const char **out, git_config *cfg, const char *name)
 {
 	file_internal *internal;
 	unsigned int i;
@@ -462,7 +443,7 @@ int git_config_find_global_r(git_buf *path)
 	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
 }
 
-int git_config_find_global(char *global_config_path)
+int git_config_find_global(char *global_config_path, size_t length)
 {
 	git_buf path  = GIT_BUF_INIT;
 	int     ret = git_config_find_global_r(&path);
@@ -472,14 +453,14 @@ int git_config_find_global(char *global_config_path)
 		return ret;
 	}
 
-	if (path.size > GIT_PATH_MAX) {
+	if (path.size >= length) {
 		git_buf_free(&path);
 		giterr_set(GITERR_NOMEMORY,
 			"Path is to long to fit on the given buffer");
 		return -1;
 	}
 
-	git_buf_copy_cstr(global_config_path, GIT_PATH_MAX, &path);
+	git_buf_copy_cstr(global_config_path, length, &path);
 	git_buf_free(&path);
 	return 0;
 }
@@ -489,7 +470,7 @@ int git_config_find_system_r(git_buf *path)
 	return git_futils_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
-int git_config_find_system(char *system_config_path)
+int git_config_find_system(char *system_config_path, size_t length)
 {
 	git_buf path  = GIT_BUF_INIT;
 	int     ret = git_config_find_system_r(&path);
@@ -499,14 +480,14 @@ int git_config_find_system(char *system_config_path)
 		return ret;
 	}
 
-	if (path.size > GIT_PATH_MAX) {
+	if (path.size >= length) {
 		git_buf_free(&path);
 		giterr_set(GITERR_NOMEMORY,
 			"Path is to long to fit on the given buffer");
 		return -1;
 	}
 
-	git_buf_copy_cstr(system_config_path, GIT_PATH_MAX, &path);
+	git_buf_copy_cstr(system_config_path, length, &path);
 	git_buf_free(&path);
 	return 0;
 }
@@ -514,11 +495,14 @@ int git_config_find_system(char *system_config_path)
 int git_config_open_global(git_config **out)
 {
 	int error;
-	char global_path[GIT_PATH_MAX];
+	git_buf path = GIT_BUF_INIT;
 
-	if ((error = git_config_find_global(global_path)) < 0)
+	if ((error = git_config_find_global_r(&path)) < 0)
 		return error;
 
-	return git_config_open_ondisk(out, global_path);
+	error = git_config_open_ondisk(out, git_buf_cstr(&path));
+	git_buf_free(&path);
+
+	return error;
 }
 

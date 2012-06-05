@@ -67,7 +67,7 @@ void test_object_tree_read__two(void)
 
 	cl_assert_equal_s(git_tree_entry_name(entry), "README");
 
-	cl_git_pass(git_tree_entry_2object(&obj, g_repo, entry));
+	cl_git_pass(git_tree_entry_to_object(&obj, g_repo, entry));
 	cl_assert(obj != NULL);
 
 	git_object_free(obj);

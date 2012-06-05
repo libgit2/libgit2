@@ -354,10 +354,10 @@ static int on_body_parse_response(http_parser *parser, const char *str, size_t l
 			return 0;
 
 		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
-		if (error == GIT_ESHORTBUFFER) {
+		if (error == GIT_EBUFS) {
 			return 0; /* Ask for more */
 		}
-		if (error < GIT_SUCCESS)
+		if (error < 0)
 			return t->error = -1;
 
 		git_buf_consume(buf, line_end);
@@ -486,7 +486,7 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 		git_buf_clear(&request);
 		git_buf_clear(&data);
 
-		if (ret < GIT_SUCCESS || i >= 256)
+		if (ret < 0 || i >= 256)
 			break;
 
 		if ((ret = parse_response(t)) < 0)
@@ -609,6 +609,8 @@ static int http_close(git_transport *transport)
 		giterr_set(GITERR_OS, "Failed to close the socket: %s", strerror(errno));
 		return -1;
 	}
+
+	t->parent.connected = 0;
 
 	return 0;
 }

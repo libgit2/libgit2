@@ -502,6 +502,15 @@ int git_index_find(git_index *index, const char *path)
 	return git_vector_bsearch2(&index->entries, index_srch, path);
 }
 
+unsigned int git_index__prefix_position(git_index *index, const char *path)
+{
+	unsigned int pos;
+
+	git_vector_bsearch3(&pos, &index->entries, index_srch, path);
+
+	return pos;
+}
+
 void git_index_uniq(git_index *index)
 {
 	git_vector_uniq(&index->entries);
@@ -930,7 +939,7 @@ static int read_tree_cb(const char *root, git_tree_entry *tentry, void *data)
 	git_index_entry *entry = NULL;
 	git_buf path = GIT_BUF_INIT;
 
-	if (entry_is_tree(tentry))
+	if (git_tree_entry__is_tree(tentry))
 		return 0;
 
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)

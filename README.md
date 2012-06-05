@@ -124,7 +124,9 @@ How Can I Contribute?
 ==================================
 
 Fork libgit2/libgit2 on GitHub, add your improvement, push it to a branch
-in your fork named for the topic, send a pull request.
+in your fork named for the topic, send a pull request. If you change the
+API or make other large changes, make a note of it in docs/rel-notes/ in a
+file named after the next release.
 
 You can also file bugs or feature requests under the libgit2 project on
 GitHub, or join us on the mailing list by sending an email to:

@@ -25,9 +25,9 @@ void test_config_new__write_new_config(void)
 	cl_git_pass(git_config_new(&config));
 	cl_git_pass(git_config_add_file(config, file, 0));
 
-	cl_git_pass(git_config_get_string(config, "color.ui", &out));
+	cl_git_pass(git_config_get_string(&out, config, "color.ui"));
 	cl_assert_equal_s(out, "auto");
-	cl_git_pass(git_config_get_string(config, "core.editor", &out));
+	cl_git_pass(git_config_get_string(&out, config, "core.editor"));
 	cl_assert_equal_s(out, "ed");
 
 	git_config_free(config);

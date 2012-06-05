@@ -61,7 +61,13 @@ char *colors[] = {
 	"\033[36m" /* cyan */
 };
 
-int printer(void *data, char usage, const char *line)
+int printer(
+	void *data,
+	git_diff_delta *delta,
+	git_diff_range *range,
+	char usage,
+	const char *line,
+	size_t line_len)
 {
 	int *last_color = data, color = 0;
 

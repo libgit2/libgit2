@@ -443,8 +443,10 @@ static int config_delete(git_config_file *cfg, const char *name)
 	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
 
-	if (!git_strmap_valid_index(b->values, pos))
+	if (!git_strmap_valid_index(b->values, pos)) {
+		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
+	}
 
 	var = git_strmap_value_at(b->values, pos);
 

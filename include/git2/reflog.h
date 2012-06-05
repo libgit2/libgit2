@@ -28,7 +28,7 @@ GIT_BEGIN_DECL
  *
  * @param reflog pointer to reflog
  * @param ref reference to read the reflog for
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
 
@@ -46,7 +46,7 @@ GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
  * @param oid_old the OID the reference was pointing to
  * @param committer the signature of the committer
  * @param msg the reflog message
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reflog_write(git_reference *ref, const git_oid *oid_old, const git_signature *committer, const char *msg);
 
@@ -55,7 +55,7 @@ GIT_EXTERN(int) git_reflog_write(git_reference *ref, const git_oid *oid_old, con
  *
  * @param ref the reference
  * @param new_name the new name of the reference
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reflog_rename(git_reference *ref, const char *new_name);
 
@@ -63,7 +63,7 @@ GIT_EXTERN(int) git_reflog_rename(git_reference *ref, const char *new_name);
  * Delete the reflog for the given reference
  *
  * @param ref the reference
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reflog_delete(git_reference *ref);
 

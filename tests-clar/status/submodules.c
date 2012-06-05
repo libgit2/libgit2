@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include "path.h"
 #include "posix.h"
+#include "status_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -43,19 +44,6 @@ void test_status_submodules__api(void)
 	cl_assert_equal_s("testrepo", sm->path);
 }
 
-static int
-cb_status__submodule_count(const char *p, unsigned int s, void *payload)
-{
-	volatile int *count = (int *)payload;
-
-	GIT_UNUSED(p);
-	GIT_UNUSED(s);
-
-	(*count)++;
-
-	return 0;
-}
-
 void test_status_submodules__0(void)
 {
 	int counts = 0;
@@ -65,7 +53,7 @@ void test_status_submodules__0(void)
 	cl_assert(git_path_isfile("submodules/.gitmodules"));
 
 	cl_git_pass(
-		git_status_foreach(g_repo, cb_status__submodule_count, &counts)
+		git_status_foreach(g_repo, cb_status__count, &counts)
 	);
 
 	cl_assert(counts == 6);
@@ -114,4 +102,11 @@ void test_status_submodules__1(void)
 	);
 
 	cl_assert(index == 6);
+}
+
+void test_status_submodules__single_file(void)
+{
+	unsigned int status;
+	cl_git_pass( git_status_file(&status, g_repo, "testrepo") );
+	cl_assert(status == 0);
 }

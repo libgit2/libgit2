@@ -50,10 +50,10 @@ static void files_are_equal(const char *a, const char *b)
 	git_buf buf_b = GIT_BUF_INIT;
 	int pass;
 
-	if (git_futils_readbuffer(&buf_a, a) < GIT_SUCCESS)
+	if (git_futils_readbuffer(&buf_a, a) < 0)
 		cl_assert(0);
 
-	if (git_futils_readbuffer(&buf_b, b) < GIT_SUCCESS) {
+	if (git_futils_readbuffer(&buf_b, b) < 0) {
 		git_buf_free(&buf_a);
 		cl_assert(0);
 	}

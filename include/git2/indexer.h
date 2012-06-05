@@ -28,7 +28,7 @@ typedef struct git_indexer_stream git_indexer_stream;
 /**
  * Create a new streaming indexer instance
  *
- * @param out where to store the inexer instance
+ * @param out where to store the indexer instance
  * @param path to the gitdir (metadata directory)
  */
 GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *gitdir);

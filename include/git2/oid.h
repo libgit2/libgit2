@@ -43,7 +43,7 @@ struct _git_oid {
  * @param str input hex string; must be pointing at the start of
  *		the hex sequence and have at least the number of bytes
  *		needed for an oid encoded in hex (40 bytes).
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
 
@@ -56,7 +56,7 @@ GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
  * @param out oid structure the result is written into.
  * @param str input hex string of at least size `length`
  * @param length length of the input string
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
 
@@ -84,7 +84,7 @@ GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
  * Format a git_oid into a loose-object path string.
  *
  * The resulting string is "aa/...", where "aa" is the first two
- * hex digitis of the oid and "..." is the remaining 38 digits.
+ * hex digits of the oid and "..." is the remaining 38 digits.
  *
  * @param str output hex string; must be pointing at the start of
  *		the hex sequence and have at least the number of bytes
@@ -155,7 +155,7 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, unsigned int le
  * @param a oid structure.
  * @param str input hex string of an object id.
  * @return GIT_ENOTOID if str is not a valid hex string,
- * GIT_SUCCESS in case of a match, GIT_ERROR otherwise.
+ * 0 in case of a match, GIT_ERROR otherwise.
  */
 GIT_EXTERN(int) git_oid_streq(const git_oid *a, const char *str);
 
@@ -183,7 +183,7 @@ typedef struct git_oid_shorten git_oid_shorten;
  *		be unique.
  *	@return a `git_oid_shorten` instance, NULL if OOM
  */
-git_oid_shorten *git_oid_shorten_new(size_t min_length);
+GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
 
 /**
  * Add a new OID to set of shortened OIDs and calculate
@@ -209,14 +209,14 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length);
  *		added so far to the set; or an error code (<0) if an
  *		error occurs.
  */
-int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
+GIT_EXTERN(int) git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
 
 /**
  * Free an OID shortener instance
  *
  * @param os a `git_oid_shorten` instance
  */
-void git_oid_shorten_free(git_oid_shorten *os);
+GIT_EXTERN(void) git_oid_shorten_free(git_oid_shorten *os);
 
 /** @} */
 GIT_END_DECL

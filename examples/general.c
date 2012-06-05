@@ -273,7 +273,7 @@ int main (int argc, char** argv)
 
   // Once you have the entry object, you can access the content or subtree (or commit, in the case
   // of submodules) that it points to.  You can also get the mode if you want.
-  git_tree_entry_2object(&objt, repo, entry); // blob
+  git_tree_entry_to_object(&objt, repo, entry); // blob
 
   // Remember to close the looked-up object once you are done using it
   git_object_free(objt);
@@ -335,7 +335,7 @@ int main (int argc, char** argv)
   // We can then lookup and parse the commited pointed at by the returned OID;
   // note that this operation is specially fast since the raw contents of the commit object will
   // be cached in memory
-  while ((git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+  while ((git_revwalk_next(&oid, walk)) == 0) {
     error = git_commit_lookup(&wcommit, repo, &oid);
     cmsg  = git_commit_message(wcommit);
     cauth = git_commit_author(wcommit);
@@ -392,7 +392,7 @@ int main (int argc, char** argv)
   // Here we will implement something like `git for-each-ref` simply listing out all available
   // references and the object SHA they resolve to.
   git_strarray ref_list;
-  git_reference_listall(&ref_list, repo, GIT_REF_LISTALL);
+  git_reference_list(&ref_list, repo, GIT_REF_LISTALL);
 
   const char *refname;
   git_reference *ref;

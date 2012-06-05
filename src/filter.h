@@ -75,7 +75,7 @@ extern int git_filters_load(git_vector *filters, git_repository *repo, const cha
  * @param dest Buffer to store the result of the filtering
  * @param source Buffer containing the document to filter
  * @param filters A non-empty vector of filters as supplied by `git_filters_load`
- * @return GIT_SUCCESS on success, an error code otherwise
+ * @return 0 on success, an error code otherwise
  */
 extern int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters);
 

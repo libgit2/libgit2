@@ -411,3 +411,27 @@ int git__strcmp_cb(const void *a, const void *b)
 
 	return strcmp(stra, strb);
 }
+
+int git__parse_bool(int *out, const char *value)
+{
+	/* A missing value means true */
+	if (value == NULL) {
+		*out = 1;
+		return 0;
+	}
+
+	if (!strcasecmp(value, "true") ||
+		!strcasecmp(value, "yes") ||
+		!strcasecmp(value, "on")) {
+		*out = 1;
+		return 0;
+	}
+	if (!strcasecmp(value, "false") ||
+		!strcasecmp(value, "no") ||
+		!strcasecmp(value, "off")) {
+		*out = 0;
+		return 0;
+	}
+
+	return -1;
+}

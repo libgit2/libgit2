@@ -68,7 +68,7 @@ static int count_ref__cb(git_remote_head *head, void *payload)
 	(void)head;
 	(*count)++;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int ensure_peeled__cb(git_remote_head *head, void *payload)
@@ -88,6 +88,15 @@ static void connect_to_local_repository(const char *local_repository)
 	cl_git_pass(git_remote_new(&remote, repo, NULL, git_buf_cstr(&file_path_buf), NULL));
 	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
 
+}
+
+void test_network_remotelocal__connected(void)
+{
+	connect_to_local_repository(cl_fixture("testrepo.git"));
+	cl_assert(git_remote_connected(remote));
+
+	git_remote_disconnect(remote);
+	cl_assert(!git_remote_connected(remote));
 }
 
 void test_network_remotelocal__retrieve_advertised_references(void)

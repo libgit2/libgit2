@@ -103,7 +103,7 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 static int update_file_is_binary_by_attr(git_repository *repo, git_diff_file *file)
 {
 	const char *value;
-	if (git_attr_get(repo, 0, file->path, "diff", &value) < 0)
+	if (git_attr_get(&value, repo, 0, file->path, "diff") < 0)
 		return -1;
 
 	if (GIT_ATTR_FALSE(value))
@@ -174,15 +174,12 @@ static int file_is_binary_by_content(
 	git_map *new_data)
 {
 	git_buf search;
-	git_text_stats stats;
 
 	if ((delta->old_file.flags & BINARY_DIFF_FLAGS) == 0) {
 		search.ptr  = old_data->data;
 		search.size = min(old_data->len, 4000);
 
-		git_text_gather_stats(&stats, &search);
-
-		if (git_text_is_binary(&stats))
+		if (git_buf_is_binary(&search))
 			delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
 			delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
@@ -192,9 +189,7 @@ static int file_is_binary_by_content(
 		search.ptr  = new_data->data;
 		search.size = min(new_data->len, 4000);
 
-		git_text_gather_stats(&stats, &search);
-
-		if (git_text_is_binary(&stats))
+		if (git_buf_is_binary(&search))
 			delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
 		else
 			delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
@@ -392,7 +387,7 @@ int git_diff_foreach(
 			if (error < 0)
 				goto cleanup;
 
-			if ((delta->new_file.flags | GIT_DIFF_FILE_VALID_OID) == 0) {
+			if ((delta->new_file.flags & GIT_DIFF_FILE_VALID_OID) == 0) {
 				error = git_odb_hash(
 					&delta->new_file.oid, new_data.data, new_data.len, GIT_OBJ_BLOB);
 

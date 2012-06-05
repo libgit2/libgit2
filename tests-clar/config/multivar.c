@@ -21,7 +21,7 @@ static int mv_read_cb(const char *name, const char *value, void *data)
 	if (!strcmp(name, _name))
 		(*n)++;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void test_config_multivar__foreach(void)
@@ -45,7 +45,7 @@ static int cb(const char *val, void *data)
 
 	(*n)++;
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 void test_config_multivar__get(void)

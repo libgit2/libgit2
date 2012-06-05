@@ -28,7 +28,7 @@ GIT_BEGIN_DECL
  * @param email email of the person
  * @param time time when the action happened
  * @param offset timezone offset in minutes for the time
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset);
 
@@ -39,7 +39,7 @@ GIT_EXTERN(int) git_signature_new(git_signature **sig_out, const char *name, con
  * @param sig_out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_signature_now(git_signature **sig_out, const char *name, const char *email);
 

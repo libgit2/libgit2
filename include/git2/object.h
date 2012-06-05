@@ -21,7 +21,7 @@
 GIT_BEGIN_DECL
 
 /**
- * Lookup a reference to one of the objects in a repostory.
+ * Lookup a reference to one of the objects in a repository.
  *
  * The generated reference is owned by the repository and
  * should be closed with the `git_object_free` method
@@ -45,7 +45,7 @@ GIT_EXTERN(int) git_object_lookup(
 		git_otype type);
 
 /**
- * Lookup a reference to one of the objects in a repostory,
+ * Lookup a reference to one of the objects in a repository,
  * given a prefix of its identifier (short id).
  *
  * The object obtained will be so that its identifier
@@ -69,7 +69,7 @@ GIT_EXTERN(int) git_object_lookup(
  * @param id a short identifier for the object
  * @param len the length of the short identifier
  * @param type the type of the object
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_lookup_prefix(
 		git_object **object_out,
@@ -114,7 +114,7 @@ GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
  * This method instructs the library to close an existing
  * object; note that git_objects are owned and cached by the repository
  * so the object may or may not be freed after this library call,
- * depending on how agressive is the caching mechanism used
+ * depending on how aggressive is the caching mechanism used
  * by the repository.
  *
  * IMPORTANT:

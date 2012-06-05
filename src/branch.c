@@ -105,7 +105,7 @@ cleanup:
 	return error;
 }
 
-int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_type branch_type)
+int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_t branch_type)
 {
 	git_reference *branch = NULL;
 	git_reference *head = NULL;
@@ -114,7 +114,7 @@ int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_
 	assert((branch_type == GIT_BRANCH_LOCAL) || (branch_type == GIT_BRANCH_REMOTE));
 
 	if ((error = retrieve_branch_reference(&branch, repo, branch_name, branch_type == GIT_BRANCH_REMOTE)) < 0)
-		goto on_error;
+		return error;
 
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0) {
 		giterr_set(GITERR_REFERENCE, "Cannot locate HEAD.");
@@ -170,7 +170,7 @@ int git_branch_list(git_strarray *branch_names, git_repository *repo, unsigned i
 	filter.branchlist = &branchlist;
 	filter.branch_type = list_flags;
 
-	error = git_reference_foreach(repo, GIT_REF_OID|GIT_REF_PACKED, &branch_list_cb, (void *)&filter);
+	error = git_reference_foreach(repo, GIT_REF_LISTALL, &branch_list_cb, (void *)&filter);
 	if (error < 0) {
 		git_vector_free(&branchlist);
 		return -1;

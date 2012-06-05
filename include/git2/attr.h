@@ -65,8 +65,8 @@ GIT_BEGIN_DECL
 #define GIT_ATTR_UNSPECIFIED(attr)	(!(attr) || (attr) == git_attr__unset)
 
 /**
- * GIT_ATTR_SET_TO_VALUE checks if an attribute is set to a value (as
- * opposied to TRUE, FALSE or UNSPECIFIED).  This would be the case if
+ * GIT_ATTR_HAS_VALUE checks if an attribute is set to a value (as
+ * opposed to TRUE, FALSE or UNSPECIFIED).  This would be the case if
  * for a file with something like:
  *
  *    *.txt eol=lf
@@ -74,7 +74,7 @@ GIT_BEGIN_DECL
  * Given this, looking up "eol" for `onefile.txt` will give back the
  * string "lf" and `GIT_ATTR_SET_TO_VALUE(attr)` will return true.
  */
-#define GIT_ATTR_SET_TO_VALUE(attr) \
+#define GIT_ATTR_HAS_VALUE(attr) \
 	((attr) && (attr) != git_attr__unset && \
 	 (attr) != git_attr__true && (attr) != git_attr__false)
 
@@ -111,6 +111,10 @@ GIT_EXTERN(const char *) git_attr__unset;
 /**
  * Look up the value of one git attribute for path.
  *
+ * @param value_out Output of the value of the attribute.  Use the GIT_ATTR_...
+ *             macros to test for TRUE, FALSE, UNSPECIFIED, etc. or just
+ *             use the string value for attributes set to a value.  You
+ *             should NOT modify or free this value.
  * @param repo The repository containing the path.
  * @param flags A combination of GIT_ATTR_CHECK... flags.
  * @param path The path to check for attributes.  Relative paths are
@@ -118,17 +122,13 @@ GIT_EXTERN(const char *) git_attr__unset;
  *             not have to exist, but if it does not, then it will be
  *             treated as a plain file (not a directory).
  * @param name The name of the attribute to look up.
- * @param value Output of the value of the attribute.  Use the GIT_ATTR_...
- *             macros to test for TRUE, FALSE, UNSPECIFIED, etc. or just
- *             use the string value for attributes set to a value.  You
- *             should NOT modify or free this value.
  */
 GIT_EXTERN(int) git_attr_get(
+	const char **value_out,
     git_repository *repo,
 	uint32_t flags,
 	const char *path,
-	const char *name,
-	const char **value);
+	const char *name);
 
 /**
  * Look up a list of git attributes for path.
@@ -141,11 +141,16 @@ GIT_EXTERN(int) git_attr_get(
  *
  *     const char *attrs[] = { "crlf", "diff", "foo" };
  *     const char **values[3];
- *     git_attr_get_many(repo, 0, "my/fun/file.c", 3, attrs, values);
+ *     git_attr_get_many(values, repo, 0, "my/fun/file.c", 3, attrs);
  *
  * Then you could loop through the 3 values to get the settings for
  * the three attributes you asked about.
  *
+ * @param values An array of num_attr entries that will have string
+ *             pointers written into it for the values of the attributes.
+ *             You should not modify or free the values that are written
+ *             into this array (although of course, you should free the
+ *             array itself if you allocated it).
  * @param repo The repository containing the path.
  * @param flags A combination of GIT_ATTR_CHECK... flags.
  * @param path The path inside the repo to check attributes.  This
@@ -153,19 +158,14 @@ GIT_EXTERN(int) git_attr_get(
  *             it will be treated as a plain file (i.e. not a directory).
  * @param num_attr The number of attributes being looked up
  * @param names An array of num_attr strings containing attribute names.
- * @param values An array of num_attr entries that will have string
- *             pointers written into it for the values of the attributes.
- *             You should not modify or free the values that are written
- *             into this array (although of course, you should free the
- *             array itself if you allocated it).
  */
 GIT_EXTERN(int) git_attr_get_many(
+	const char **values_out,
 	git_repository *repo,
 	uint32_t flags,
 	const char *path,
 	size_t num_attr,
-	const char **names,
-	const char **values);
+	const char **names);
 
 /**
  * Loop over all the git attributes for a path.

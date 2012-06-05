@@ -494,7 +494,7 @@ int git_path_direach(
 {
 	ssize_t wd_len;
 	DIR *dir;
-	struct dirent de_buf, *de;
+	struct dirent *de, *de_buf;
 
 	if (git_path_to_dir(path) < 0)
 		return -1;
@@ -506,14 +506,23 @@ int git_path_direach(
 		return -1;
 	}
 
-	while (p_readdir_r(dir, &de_buf, &de) == 0 && de != NULL) {
+#ifdef __sun
+	de_buf = git__malloc(sizeof(struct dirent) + FILENAME_MAX + 1);
+#else
+	de_buf = git__malloc(sizeof(struct dirent));
+#endif
+
+	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
 		int result;
 
 		if (is_dot_or_dotdot(de->d_name))
 			continue;
 
-		if (git_buf_puts(path, de->d_name) < 0)
+		if (git_buf_puts(path, de->d_name) < 0) {
+			closedir(dir);
+			git__free(de_buf);
 			return -1;
+		}
 
 		result = fn(arg, path);
 
@@ -521,11 +530,13 @@ int git_path_direach(
 
 		if (result < 0) {
 			closedir(dir);
+			git__free(de_buf);
 			return -1;
 		}
 	}
 
 	closedir(dir);
+	git__free(de_buf);
 	return 0;
 }
 
@@ -537,7 +548,7 @@ int git_path_dirload(
 {
 	int error, need_slash;
 	DIR *dir;
-	struct dirent de_buf, *de;
+	struct dirent *de, *de_buf;
 	size_t path_len;
 
 	assert(path != NULL && contents != NULL);
@@ -549,11 +560,17 @@ int git_path_dirload(
 		return -1;
 	}
 
+#ifdef __sun
+	de_buf = git__malloc(sizeof(struct dirent) + FILENAME_MAX + 1);
+#else
+	de_buf = git__malloc(sizeof(struct dirent));
+#endif
+
 	path += prefix_len;
 	path_len -= prefix_len;
 	need_slash = (path_len > 0 && path[path_len-1] != '/') ? 1 : 0;
 
-	while ((error = p_readdir_r(dir, &de_buf, &de)) == 0 && de != NULL) {
+	while ((error = p_readdir_r(dir, de_buf, &de)) == 0 && de != NULL) {
 		char *entry_path;
 		size_t entry_len;
 
@@ -573,11 +590,15 @@ int git_path_dirload(
 		memcpy(&entry_path[path_len + need_slash], de->d_name, entry_len);
 		entry_path[path_len + need_slash + entry_len] = '\0';
 
-		if (git_vector_insert(contents, entry_path) < 0)
+		if (git_vector_insert(contents, entry_path) < 0) {
+			closedir(dir);
+			git__free(de_buf);
 			return -1;
+		}
 	}
 
 	closedir(dir);
+	git__free(de_buf);
 
 	if (error != 0)
 		giterr_set(GITERR_OS, "Failed to process directory entry in '%s'", path);

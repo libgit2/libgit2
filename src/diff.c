@@ -11,6 +11,25 @@
 #include "config.h"
 #include "attr_file.h"
 
+static char *diff_prefix_from_pathspec(const git_strarray *pathspec)
+{
+	git_buf prefix = GIT_BUF_INIT;
+	const char *scan;
+
+	if (git_buf_common_prefix(&prefix, pathspec) < 0)
+		return NULL;
+
+	/* diff prefix will only be leading non-wildcards */
+	for (scan = prefix.ptr; *scan && !git__iswildcard(*scan); ++scan);
+	git_buf_truncate(&prefix, scan - prefix.ptr);
+
+	if (prefix.size > 0)
+		return git_buf_detach(&prefix);
+
+	git_buf_free(&prefix);
+	return NULL;
+}
+
 static bool diff_pathspec_is_interesting(const git_strarray *pathspec)
 {
 	const char *str;
@@ -251,8 +270,10 @@ static int diff_delta__cmp(const void *a, const void *b)
 static int config_bool(git_config *cfg, const char *name, int defvalue)
 {
 	int val = defvalue;
-	if (git_config_get_bool(cfg, name, &val) < 0)
+
+	if (git_config_get_bool(&val, cfg, name) < 0)
 		giterr_clear();
+
 	return val;
 }
 
@@ -321,6 +342,7 @@ static git_diff_list *git_diff_list_alloc(
 		git_attr_fnmatch *match = git__calloc(1, sizeof(git_attr_fnmatch));
 		if (!match)
 			goto fail;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
 		ret = git_attr_fnmatch__parse(match, &diff->pool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {
 			git__free(match);
@@ -532,29 +554,27 @@ static int diff_from_iterators(
 		 * matched in old (and/or descend into directories as needed)
 		 */
 		else if (nitem && (!oitem || strcmp(oitem->path, nitem->path) > 0)) {
-			int is_ignored;
-			git_delta_t delta_type = GIT_DELTA_ADDED;
+			git_delta_t delta_type = GIT_DELTA_UNTRACKED;
 
-			/* contained in ignored parent directory, so this can be skipped. */
+			/* check if contained in ignored parent directory */
 			if (git_buf_len(&ignore_prefix) &&
 				git__prefixcmp(nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
-			{
-				if (git_iterator_advance(new_iter, &nitem) < 0)
-					goto fail;
-
-				continue;
-			}
-
-			is_ignored = git_iterator_current_is_ignored(new_iter);
+				delta_type = GIT_DELTA_IGNORED;
 
 			if (S_ISDIR(nitem->mode)) {
-				/* recurse into directory if explicitly requested or
-				 * if there are tracked items inside the directory
+				/* recurse into directory only if there are tracked items in
+				 * it or if the user requested the contents of untracked
+				 * directories and it is not under an ignored directory.
 				 */
-				if ((diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) ||
-					(oitem && git__prefixcmp(oitem->path, nitem->path) == 0))
+				if ((oitem && git__prefixcmp(oitem->path, nitem->path) == 0) ||
+					(delta_type == GIT_DELTA_UNTRACKED &&
+					 (diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) != 0))
 				{
-					if (is_ignored)
+					/* if this directory is ignored, remember it as the
+					 * "ignore_prefix" for processing contained items
+					 */
+					if (delta_type == GIT_DELTA_UNTRACKED &&
+						git_iterator_current_is_ignored(new_iter))
 						git_buf_sets(&ignore_prefix, nitem->path);
 
 					if (git_iterator_advance_into_directory(new_iter, &nitem) < 0)
@@ -562,12 +582,34 @@ static int diff_from_iterators(
 
 					continue;
 				}
-				delta_type = GIT_DELTA_UNTRACKED;
 			}
-			else if (is_ignored)
+
+			/* In core git, the next two "else if" clauses are effectively
+			 * reversed -- i.e. when an untracked file contained in an
+			 * ignored directory is individually ignored, it shows up as an
+			 * ignored file in the diff list, even though other untracked
+			 * files in the same directory are skipped completely.
+			 *
+			 * To me, this is odd.  If the directory is ignored and the file
+			 * is untracked, we should skip it consistently, regardless of
+			 * whether it happens to match a pattern in the ignore file.
+			 *
+			 * To match the core git behavior, just reverse the following
+			 * two "else if" cases so that individual file ignores are
+			 * checked before container directory exclusions are used to
+			 * skip the file.
+			 */
+			else if (delta_type == GIT_DELTA_IGNORED) {
+				if (git_iterator_advance(new_iter, &nitem) < 0)
+					goto fail;
+				continue; /* ignored parent directory, so skip completely */
+			}
+
+			else if (git_iterator_current_is_ignored(new_iter))
 				delta_type = GIT_DELTA_IGNORED;
-			else if (new_iter->type == GIT_ITERATOR_WORKDIR)
-				delta_type = GIT_DELTA_UNTRACKED;
+
+			else if (new_iter->type != GIT_ITERATOR_WORKDIR)
+				delta_type = GIT_DELTA_ADDED;
 
 			if (diff_delta__from_one(diff, delta_type, nitem) < 0 ||
 				git_iterator_advance(new_iter, &nitem) < 0)
@@ -613,12 +655,15 @@ int git_diff_tree_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && old_tree && new_tree && diff);
 
-	if (git_iterator_for_tree(repo, old_tree, &a) < 0 ||
-		git_iterator_for_tree(repo, new_tree, &b) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
+		git_iterator_for_tree_range(&b, repo, new_tree, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -630,12 +675,15 @@ int git_diff_index_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && diff);
 
-	if (git_iterator_for_tree(repo, old_tree, &a) < 0 ||
-		git_iterator_for_index(repo, &b) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
+		git_iterator_for_index_range(&b, repo, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -646,12 +694,15 @@ int git_diff_workdir_to_index(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && diff);
 
-	if (git_iterator_for_index(repo, &a) < 0 ||
-		git_iterator_for_workdir(repo, &b) < 0)
+	if (git_iterator_for_index_range(&a, repo, prefix, prefix) < 0 ||
+		git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -664,12 +715,15 @@ int git_diff_workdir_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && old_tree && diff);
 
-	if (git_iterator_for_tree(repo, old_tree, &a) < 0 ||
-		git_iterator_for_workdir(repo, &b) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
+		git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
 		return -1;
+
+	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }

@@ -48,7 +48,7 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	int error;
 	const char *val;
 
-	if ((error = git_config_get_string(cfg, var, &val)) < 0)
+	if ((error = git_config_get_string(&val, cfg, var)) < 0)
 		return error;
 
 	return refspec_parse(refspec, val);
@@ -121,7 +121,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	if ((error = git_config_get_string(config, git_buf_cstr(&buf), &val)) < 0)
+	if ((error = git_config_get_string(&val, config, git_buf_cstr(&buf))) < 0)
 		goto cleanup;
 
 	remote->repo = repo;
@@ -189,6 +189,8 @@ int git_remote_save(const git_remote *remote)
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.fetch", remote->name);
+		if (remote->fetch.force)
+			git_buf_putc(&value, '+');
 		git_buf_printf(&value, "%s:%s", remote->fetch.src, remote->fetch.dst);
 		if (git_buf_oom(&buf) || git_buf_oom(&value))
 			return -1;
@@ -201,6 +203,8 @@ int git_remote_save(const git_remote *remote)
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.push", remote->name);
+		if (remote->push.force)
+			git_buf_putc(&value, '+');
 		git_buf_printf(&value, "%s:%s", remote->push.src, remote->push.dst);
 		if (git_buf_oom(&buf) || git_buf_oom(&value))
 			return -1;
@@ -338,7 +342,7 @@ int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, co
 	assert(remote);
 
 	if (refs->length == 0)
-		return GIT_SUCCESS;
+		return 0;
 
 	/* HEAD is only allowed to be the first in the list */
 	head = refs->contents[0];
@@ -490,7 +494,7 @@ int git_remote_add(git_remote **out, git_repository *repo, const char *name, con
 {
 	git_buf buf = GIT_BUF_INIT;
 
-	if (git_buf_printf(&buf, "refs/heads/*:refs/remotes/%s/*", name) < 0)
+	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
 		return -1;
 
 	if (git_remote_new(out, repo, name, url, git_buf_cstr(&buf)) < 0)

@@ -208,7 +208,7 @@ int git_pkt_parse_line(
 
 	/* Not even enough for the length */
 	if (bufflen > 0 && bufflen < PKT_LEN_SIZE)
-		return GIT_ESHORTBUFFER;
+		return GIT_EBUFS;
 
 	len = parse_len(line);
 	if (len < 0) {
@@ -230,7 +230,7 @@ int git_pkt_parse_line(
 	 * enough in the buffer to satisfy this line
 	 */
 	if (bufflen > 0 && bufflen < (size_t)len)
-		return GIT_ESHORTBUFFER;
+		return GIT_EBUFS;
 
 	line += PKT_LEN_SIZE;
 	/*

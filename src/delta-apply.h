@@ -20,7 +20,7 @@
  * @param delta the delta to execute copy/insert instructions from.
  * @param delta_len total number of bytes in the delta.
  * @return
- * - GIT_SUCCESS on a successful delta unpack.
+ * - 0 on a successful delta unpack.
  * - GIT_ERROR if the delta is corrupt or doesn't match the base.
  */
 extern int git__delta_apply(

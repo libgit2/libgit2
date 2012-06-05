@@ -25,8 +25,7 @@
 
 #define GIT_BRANCH_MASTER "master"
 
-#define GIT_CONFIG_CORE_REPOSITORYFORMATVERSION "core.repositoryformatversion"
-#define GIT_REPOSITORYFORMATVERSION 0
+#define GIT_REPO_VERSION 0
 
 static void drop_odb(git_repository *repo)
 {
@@ -125,11 +124,12 @@ static int load_config_data(git_repository *repo)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
-	if (git_config_get_bool(config, "core.bare", &is_bare) < 0)
-		return -1; /* FIXME: We assume that a missing core.bare
-					  variable is an error. Is this right? */
+	/* Try to figure out if it's bare, default to non-bare if it's not set */
+	if (git_config_get_bool(&is_bare, config, "core.bare") < 0)
+		repo->is_bare = 0;
+	else
+		repo->is_bare = is_bare;
 
-	repo->is_bare = is_bare;
 	return 0;
 }
 
@@ -146,7 +146,7 @@ static int load_workdir(git_repository *repo, git_buf *parent_path)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
-	error = git_config_get_string(config, "core.worktree", &worktree);
+	error = git_config_get_string(&worktree, config, "core.worktree");
 	if (!error && worktree != NULL)
 		repo->workdir = git__strdup(worktree);
 	else if (error != GIT_ENOTFOUND)
@@ -607,13 +607,13 @@ static int check_repositoryformatversion(git_repository *repo)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
-	if (git_config_get_int32(config, GIT_CONFIG_CORE_REPOSITORYFORMATVERSION, &version) < 0)
+	if (git_config_get_int32(&version, config, "core.repositoryformatversion") < 0)
 		return -1;
 
-	if (GIT_REPOSITORYFORMATVERSION < version) {
+	if (GIT_REPO_VERSION < version) {
 		giterr_set(GITERR_REPOSITORY,
 			"Unsupported repository version %d. Only versions up to %d are supported.",
-			version, GIT_REPOSITORYFORMATVERSION);
+			version, GIT_REPO_VERSION);
 		return -1;
 	}
 
@@ -676,12 +676,65 @@ static int repo_init_config(const char *git_dir, int is_bare)
 	}
 
 	SET_REPO_CONFIG(bool, "core.bare", is_bare);
-	SET_REPO_CONFIG(int32, GIT_CONFIG_CORE_REPOSITORYFORMATVERSION, GIT_REPOSITORYFORMATVERSION);
+	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
 	/* TODO: what other defaults? */
 
 	git_buf_free(&cfg_path);
 	git_config_free(config);
 	return 0;
+}
+
+#define GIT_HOOKS_DIR "hooks/"
+#define GIT_HOOKS_DIR_MODE 0755
+
+#define GIT_HOOKS_README_FILE GIT_HOOKS_DIR "README.sample"
+#define GIT_HOOKS_README_MODE 0755
+#define GIT_HOOKS_README_CONTENT \
+"#!/bin/sh\n"\
+"#\n"\
+"# Place appropriately named executable hook scripts into this directory\n"\
+"# to intercept various actions that git takes.  See `git help hooks` for\n"\
+"# more information.\n"
+
+#define GIT_INFO_DIR "info/"
+#define GIT_INFO_DIR_MODE 0755
+
+#define GIT_INFO_EXCLUDE_FILE GIT_INFO_DIR "exclude"
+#define GIT_INFO_EXCLUDE_MODE 0644
+#define GIT_INFO_EXCLUDE_CONTENT \
+"# File patterns to ignore; see `git help ignore` for more information.\n"\
+"# Lines that start with '#' are comments.\n"
+
+#define GIT_DESC_FILE "description"
+#define GIT_DESC_MODE 0644
+#define GIT_DESC_CONTENT "Unnamed repository; edit this file 'description' to name the repository.\n"
+
+static int repo_write_template(
+	const char *git_dir, const char *file, mode_t mode, const char *content)
+{
+	git_buf path = GIT_BUF_INIT;
+	int fd, error = 0;
+
+	if (git_buf_joinpath(&path, git_dir, file) < 0)
+		return -1;
+
+	fd = p_open(git_buf_cstr(&path), O_WRONLY | O_CREAT | O_EXCL, mode);
+
+	if (fd >= 0) {
+		error = p_write(fd, content, strlen(content));
+
+		p_close(fd);
+	}
+	else if (errno != EEXIST)
+		error = fd;
+
+	git_buf_free(&path);
+
+	if (error)
+		giterr_set(GITERR_OS,
+			"Failed to initialize repository with template '%s'", file);
+
+	return error;
 }
 
 static int repo_init_structure(const char *git_dir, int is_bare)
@@ -692,7 +745,15 @@ static int repo_init_structure(const char *git_dir, int is_bare)
 		{ GIT_OBJECTS_PACK_DIR, GIT_OBJECT_DIR_MODE }, /* '/objects/pack/' */
 		{ GIT_REFS_HEADS_DIR, GIT_REFS_DIR_MODE },     /* '/refs/heads/' */
 		{ GIT_REFS_TAGS_DIR, GIT_REFS_DIR_MODE },      /* '/refs/tags/' */
+		{ GIT_HOOKS_DIR, GIT_HOOKS_DIR_MODE },         /* '/hooks/' */
+		{ GIT_INFO_DIR, GIT_INFO_DIR_MODE },           /* '/info/' */
 		{ NULL, 0 }
+	};
+	struct { const char *file; mode_t mode; const char *content; } tmpl[] = {
+		{ GIT_DESC_FILE, GIT_DESC_MODE, GIT_DESC_CONTENT },
+		{ GIT_HOOKS_README_FILE, GIT_HOOKS_README_MODE, GIT_HOOKS_README_CONTENT },
+		{ GIT_INFO_EXCLUDE_FILE, GIT_INFO_EXCLUDE_MODE, GIT_INFO_EXCLUDE_CONTENT },
+		{ NULL, 0, NULL }
 	};
 
 	/* Make the base directory */
@@ -716,7 +777,13 @@ static int repo_init_structure(const char *git_dir, int is_bare)
 			return -1;
 	}
 
-	/* TODO: what's left? templates? */
+	/* Make template files as needed */
+	for (i = 0; tmpl[i].file != NULL; ++i) {
+		if (repo_write_template(
+				git_dir, tmpl[i].file, tmpl[i].mode, tmpl[i].content) < 0)
+			return -1;
+	}
+
 	return 0;
 }
 

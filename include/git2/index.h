@@ -106,7 +106,7 @@ typedef struct git_index_entry_unmerged {
  *
  * @param index the pointer for the new index
  * @param index_path the path to the index file in disk
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_open(git_index **index, const char *index_path);
 
@@ -131,7 +131,7 @@ GIT_EXTERN(void) git_index_free(git_index *index);
  * by reading from the hard disk.
  *
  * @param index an existing index object
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_read(git_index *index);
 
@@ -140,7 +140,7 @@ GIT_EXTERN(int) git_index_read(git_index *index);
  * using an atomic file lock.
  *
  * @param index an existing index object
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_write(git_index *index);
 
@@ -176,7 +176,7 @@ GIT_EXTERN(void) git_index_uniq(git_index *index);
  * @param index an existing index object
  * @param path filename to add
  * @param stage stage for the entry
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_add(git_index *index, const char *path, int stage);
 
@@ -188,7 +188,7 @@ GIT_EXTERN(int) git_index_add(git_index *index, const char *path, int stage);
  *
  * @param index an existing index object
  * @param source_entry new entry object
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_add2(git_index *index, const git_index_entry *source_entry);
 
@@ -207,7 +207,7 @@ GIT_EXTERN(int) git_index_add2(git_index *index, const git_index_entry *source_e
  * @param index an existing index object
  * @param path filename to add
  * @param stage stage for the entry
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_append(git_index *index, const char *path, int stage);
 
@@ -224,7 +224,7 @@ GIT_EXTERN(int) git_index_append(git_index *index, const char *path, int stage);
  *
  * @param index an existing index object
  * @param source_entry new entry object
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_append2(git_index *index, const git_index_entry *source_entry);
 
@@ -233,7 +233,7 @@ GIT_EXTERN(int) git_index_append2(git_index *index, const git_index_entry *sourc
  *
  * @param index an existing index object
  * @param position position of the entry to remove
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_remove(git_index *index, int position);
 
@@ -295,7 +295,7 @@ GIT_EXTERN(const git_index_entry_unmerged *) git_index_get_unmerged_byindex(git_
 /**
  * Return the stage number from a git index entry
  *
- * This entry is calculated from the entrie's flag
+ * This entry is calculated from the entry's flag
  * attribute like this:
  *
  *	(entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT
@@ -312,7 +312,7 @@ GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
  *
  * @param index an existing index object
  * @param tree tree to read
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
 

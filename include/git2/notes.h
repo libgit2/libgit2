@@ -28,7 +28,7 @@ GIT_BEGIN_DECL
  * @param notes_ref OID reference to use (optional); defaults to "refs/notes/commits"
  * @param oid OID of the object
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_note_read(git_note **note, git_repository *repo,
 			      const char *notes_ref, const git_oid *oid);
@@ -62,7 +62,7 @@ GIT_EXTERN(const git_oid *) git_note_oid(git_note *note);
  * @param oid The OID of the object
  * @param oid The note to add for object oid
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_note_create(git_oid *out, git_repository *repo,
 				git_signature *author, git_signature *committer,
@@ -79,7 +79,7 @@ GIT_EXTERN(int) git_note_create(git_oid *out, git_repository *repo,
  * @param committer signature of the notes commit committer
  * @param oid the oid which note's to be removed
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_note_remove(git_repository *repo, const char *notes_ref,
 				git_signature *author, git_signature *committer,
@@ -98,9 +98,41 @@ GIT_EXTERN(void) git_note_free(git_note *note);
  * @param out Pointer to the default notes reference
  * @param repo The Git repository
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
+
+/**
+ * Basic components of a note
+ *
+ *  - Oid of the blob containing the message
+ *  - Oid of the git object being annotated
+ */
+typedef struct {
+	git_oid blob_oid;
+	git_oid annotated_object_oid;
+} git_note_data;
+
+/**
+ * Loop over all the notes within a specified namespace
+ * and issue a callback for each one.
+ *
+ * @param repo Repository where to find the notes.
+ *
+ * @param notes_ref OID reference to read from (optional); defaults to "refs/notes/commits".
+ *
+ * @param note_cb Callback to invoke per found annotation.
+ *
+ * @param payload Extra parameter to callback function.
+ *
+ * @return 0 or an error code.
+ */
+GIT_EXTERN(int) git_note_foreach(
+		git_repository *repo,
+		const char *notes_ref,
+		int (*note_cb)(git_note_data *note_data, void *payload),
+		void *payload
+);
 
 /** @} */
 GIT_END_DECL

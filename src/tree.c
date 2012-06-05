@@ -31,8 +31,8 @@ static int entry_sort_cmp(const void *a, const void *b)
 	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
 
 	return git_path_cmp(
-		entry_a->filename, entry_a->filename_len, entry_is_tree(entry_a),
-		entry_b->filename, entry_b->filename_len, entry_is_tree(entry_b));
+		entry_a->filename, entry_a->filename_len, git_tree_entry__is_tree(entry_a),
+		entry_b->filename, entry_b->filename_len, git_tree_entry__is_tree(entry_b));
 }
 
 
@@ -170,7 +170,10 @@ git_otype git_tree_entry_type(const git_tree_entry *entry)
 		return GIT_OBJ_BLOB;
 }
 
-int git_tree_entry_2object(git_object **object_out, git_repository *repo, const git_tree_entry *entry)
+int git_tree_entry_to_object(
+	git_object **object_out,
+	git_repository *repo,
+	const git_tree_entry *entry)
 {
 	assert(entry && object_out);
 	return git_object_lookup(object_out, repo, &entry->oid, GIT_OBJ_ANY);
@@ -193,6 +196,33 @@ const git_tree_entry *git_tree_entry_byindex(git_tree *tree, unsigned int idx)
 {
 	assert(tree);
 	return git_vector_get(&tree->entries, idx);
+}
+
+int git_tree__prefix_position(git_tree *tree, const char *path)
+{
+	git_vector *entries = &tree->entries;
+	struct tree_key_search ksearch;
+	unsigned int at_pos;
+
+	ksearch.filename = path;
+	ksearch.filename_len = strlen(path);
+
+	/* Find tree entry with appropriate prefix */
+	git_vector_bsearch3(&at_pos, entries, &homing_search_cmp, &ksearch);
+
+	for (; at_pos < entries->length; ++at_pos) {
+		const git_tree_entry *entry = entries->contents[at_pos];
+		if (homing_search_cmp(&ksearch, entry) < 0)
+			break;
+	}
+
+	for (; at_pos > 0; --at_pos) {
+		const git_tree_entry *entry = entries->contents[at_pos - 1];
+		if (homing_search_cmp(&ksearch, entry) > 0)
+			break;
+	}
+
+	return at_pos;
 }
 
 unsigned int git_tree_entrycount(git_tree *tree)
@@ -617,7 +647,7 @@ static int tree_frompath(
 {
 	char *slash_pos = NULL;
 	const git_tree_entry* entry;
-	int error = GIT_SUCCESS;
+	int error = 0;
 	git_tree *subtree;
 
 	if (!*(treeentry_path->ptr + offset)) {
@@ -694,7 +724,7 @@ static int tree_walk_post(
 	git_buf *path,
 	void *payload)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	unsigned int i;
 
 	for (i = 0; i < tree->entries.length; ++i) {
@@ -703,7 +733,7 @@ static int tree_walk_post(
 		if (callback(path->ptr, entry, payload) < 0)
 			continue;
 
-		if (entry_is_tree(entry)) {
+		if (git_tree_entry__is_tree(entry)) {
 			git_tree *subtree;
 			size_t path_len = git_buf_len(path);
 
@@ -731,7 +761,7 @@ static int tree_walk_post(
 
 int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)
 {
-	int error = GIT_SUCCESS;
+	int error = 0;
 	git_buf root_path = GIT_BUF_INIT;
 
 	switch (mode) {
@@ -753,273 +783,3 @@ int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payl
 	return error;
 }
 
-static int tree_entry_cmp(const git_tree_entry *a, const git_tree_entry *b)
-{
-	int ret;
-
-	ret = a->attr - b->attr;
-	if (ret != 0)
-		return ret;
-
-	return git_oid_cmp(&a->oid, &b->oid);
-}
-
-static void mark_del(git_tree_diff_data *diff, git_tree_entry *entry)
-{
-	diff->old_attr = entry->attr;
-	git_oid_cpy(&diff->old_oid, &entry->oid);
-	diff->path = entry->filename;
-	diff->status |= GIT_STATUS_DELETED;
-}
-
-static void mark_add(git_tree_diff_data *diff, git_tree_entry *entry)
-{
-	diff->new_attr = entry->attr;
-	git_oid_cpy(&diff->new_oid, &entry->oid);
-	diff->path = entry->filename;
-	diff->status |= GIT_STATUS_ADDED;
-}
-
-static int signal_additions(git_tree *tree, int start, int end, git_tree_diff_cb cb, void *data)
-{
-	git_tree_diff_data diff;
-	git_tree_entry *entry;
-	int i;
-
-	if (end < 0)
-		end = git_tree_entrycount(tree);
-
-	for (i = start; i < end; ++i) {
-		memset(&diff, 0x0, sizeof(git_tree_diff_data));
-		entry = git_vector_get(&tree->entries, i);
-		mark_add(&diff, entry);
-
-		if (cb(&diff, data) < 0)
-			return -1;
-	}
-
-	return 0;
-}
-
-static int signal_addition(git_tree_entry *entry, git_tree_diff_cb cb, void *data)
-{
-	git_tree_diff_data diff;
-
-	memset(&diff, 0x0, sizeof(git_tree_diff_data));
-
-	mark_add(&diff, entry);
-
-	return cb(&diff, data);
-}
-
-static int signal_deletions(git_tree *tree, int start, int end, git_tree_diff_cb cb, void *data)
-{
-	git_tree_diff_data diff;
-	git_tree_entry *entry;
-	int i;
-
-	if (end < 0)
-		end = git_tree_entrycount(tree);
-
-	for (i = start; i < end; ++i) {
-		memset(&diff, 0x0, sizeof(git_tree_diff_data));
-		entry = git_vector_get(&tree->entries, i);
-		mark_del(&diff, entry);
-
-		if (cb(&diff, data) < 0)
-			return -1;
-	}
-
-	return 0;
-}
-
-static int signal_deletion(git_tree_entry *entry, git_tree_diff_cb cb, void *data)
-{
-	git_tree_diff_data diff;
-
-	memset(&diff, 0x0, sizeof(git_tree_diff_data));
-
-	mark_del(&diff, entry);
-
-	return cb(&diff, data);
-}
-
-static int signal_modification(git_tree_entry *a, git_tree_entry *b,
-							   git_tree_diff_cb cb, void *data)
-{
-	git_tree_diff_data diff;
-
-	memset(&diff, 0x0, sizeof(git_tree_diff_data));
-
-	mark_del(&diff, a);
-	mark_add(&diff, b);
-
-	return cb(&diff, data);
-}
-
-int git_tree_diff(git_tree *a, git_tree *b, git_tree_diff_cb cb, void *data)
-{
-	unsigned int i_a = 0, i_b = 0; /* Counters for trees a and b */
-	git_tree_entry *entry_a = NULL, *entry_b = NULL;
-	git_tree_diff_data diff;
-	int cmp;
-
-	while (1) {
-		entry_a = a == NULL ? NULL : git_vector_get(&a->entries, i_a);
-		entry_b = b == NULL ? NULL : git_vector_get(&b->entries, i_b);
-
-		if (!entry_a && !entry_b)
-			return 0;
-
-		memset(&diff, 0x0, sizeof(git_tree_diff_data));
-
-		/*
-		 * We've run out of tree on one side so the rest of the
-		 * entries on the tree with remaining entries are all
-		 * deletions or additions.
-		 */
-		if (entry_a && !entry_b)
-			return signal_deletions(a, i_a, -1, cb, data);
-		if (!entry_a && entry_b)
-			return signal_additions(b, i_b, -1, cb, data);
-
-		/*
-		 * Both trees are sorted with git's almost-alphabetical
-		 * sorting, so a comparison value < 0 means the entry was
-		 * deleted in the right tree. > 0 means the entry was added.
-		 */
-		cmp = entry_sort_cmp(entry_a, entry_b);
-
-		if (cmp == 0) {
-			i_a++;
-			i_b++;
-
-			/* If everything's the same, jump to next pair */
-			if (!tree_entry_cmp(entry_a, entry_b))
-				continue;
-
-			/* If they're not both dirs or both files, it's add + del */
-			if (S_ISDIR(entry_a->attr) != S_ISDIR(entry_b->attr)) {
-				if (signal_addition(entry_a, cb, data) < 0)
-					return -1;
-				if (signal_deletion(entry_b, cb, data) < 0)
-					return -1;
-			}
-
-			/* Otherwise consider it a modification */
-			if (signal_modification(entry_a, entry_b, cb, data) < 0)
-				return -1;
-
-		} else if (cmp < 0) {
-			i_a++;
-			if (signal_deletion(entry_a, cb, data) < 0)
-				return -1;
-		} else if (cmp > 0) {
-			i_b++;
-			if (signal_addition(entry_b, cb, data) < 0)
-				return -1;
-		}
-	}
-
-	return 0;
-}
-
-struct diff_index_cbdata {
-	git_index *index;
-	unsigned int i;
-	git_tree_diff_cb cb;
-	void *data;
-};
-
-static int cmp_tentry_ientry(git_tree_entry *tentry, git_index_entry *ientry)
-{
-	int cmp;
-
-	cmp = tentry->attr - ientry->mode;
-	if (cmp != 0)
-		return cmp;
-
-	return git_oid_cmp(&tentry->oid, &ientry->oid);
-}
-
-static void make_tentry(git_tree_entry *tentry, git_index_entry *ientry)
-{
-	char *last_slash;
-
-	memset(tentry, 0x0, sizeof(git_tree_entry));
-	tentry->attr = ientry->mode;
-
-	last_slash = strrchr(ientry->path, '/');
-	if (last_slash)
-		last_slash++;
-	else
-		last_slash = ientry->path;
-	tentry->filename = last_slash;
-
-	git_oid_cpy(&tentry->oid, &ientry->oid);
-	tentry->filename_len = strlen(tentry->filename);
-}
-
-static int diff_index_cb(const char *root, git_tree_entry *tentry, void *data)
-{
-	struct diff_index_cbdata *cbdata = (struct diff_index_cbdata *) data;
-	git_index_entry *ientry = git_index_get(cbdata->index, cbdata->i);
-	git_tree_entry fake_entry;
-	git_buf fn_buf = GIT_BUF_INIT;
-	int cmp;
-
-	if (entry_is_tree(tentry))
-		return 0;
-
-	if (!ientry)
-		return signal_deletion(tentry, cbdata->cb, cbdata->data);
-
-	git_buf_puts(&fn_buf, root);
-	git_buf_puts(&fn_buf, tentry->filename);
-
-	/* Like with 'git diff-index', the index is the right side*/
-	cmp = strcmp(git_buf_cstr(&fn_buf), ientry->path);
-	git_buf_free(&fn_buf);
-	if (cmp == 0) {
-		cbdata->i++;
-		if (!cmp_tentry_ientry(tentry, ientry))
-			return 0;
-		/* modification */
-		make_tentry(&fake_entry, ientry);
-		if (signal_modification(tentry, &fake_entry, cbdata->cb, cbdata->data) < 0)
-			return -1;
-	} else if (cmp < 0) {
-		/* deletion */
-		memcpy(&fake_entry, tentry, sizeof(git_tree_entry));
-		if (signal_deletion(tentry, cbdata->cb, cbdata->data) < 0)
-			return -1;
-	} else {
-		/* addition */
-		cbdata->i++;
-		make_tentry(&fake_entry, ientry);
-		if (signal_addition(&fake_entry, cbdata->cb, cbdata->data) < 0)
-			return -1;
-		/*
-		 * The index has an addition. This means that we need to use
-		 * the next entry in the index without advancing the tree
-		 * walker, so call ourselves with the same tree state.
-		 */
-		if (diff_index_cb(root, tentry, data) < 0)
-			return -1;;
-	}
-
-	return 0;
-}
-
-int git_tree_diff_index_recursive(git_tree *tree, git_index *index, git_tree_diff_cb cb, void *data)
-{
-	struct diff_index_cbdata cbdata;
-	git_buf dummy_path = GIT_BUF_INIT;
-
-	cbdata.index = index;
-	cbdata.i = 0;
-	cbdata.cb = cb;
-	cbdata.data = data;
-
-	return tree_walk_post(tree, diff_index_cb, &dummy_path, &cbdata);
-}
