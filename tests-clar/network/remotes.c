@@ -167,7 +167,7 @@ void test_network_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
  * [...]
  * [remote "addtest"]
  *         url = http://github.com/libgit2/libgit2
- *         fetch = +refs/heads/*:refs/remotes/addtest/*
+ *         fetch = +refs/heads/\*:refs/remotes/addtest/\*
  */
 void test_network_remotes__add(void)
 {
