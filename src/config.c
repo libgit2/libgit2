@@ -391,7 +391,6 @@ int git_config_get_string(const char **out, git_config *cfg, const char *name)
 			return ret;
 	}
 
-	giterr_set(GITERR_CONFIG, "Config variable '%s' not found", name);
 	return GIT_ENOTFOUND;
 }
 
