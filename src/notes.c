@@ -95,16 +95,18 @@ static int tree_write(git_tree **out, git_repository *repo, git_tree *source_tre
 	git_tree_entry *entry;
 	git_oid tree_oid;
 
-	error = git_treebuilder_create(&tb, source_tree);
-	if (error < 0)
+	if ((error = git_treebuilder_create(&tb, source_tree)) < 0)
 		goto cleanup;
 
-	error = git_treebuilder_insert(&entry, tb, treeentry_name, object_oid, attributes);
-	if (error < 0)
-		goto cleanup;
+	if (object_oid) {
+		if ((error = git_treebuilder_insert(&entry, tb, treeentry_name, object_oid, attributes)) < 0)
+			goto cleanup;
+	} else {
+		if ((error = git_treebuilder_remove(tb, treeentry_name)) < 0)
+			goto cleanup;
+	}
 
-	error = git_treebuilder_write(&tree_oid, repo, tb);
-	if (error < 0)
+	if ((error = git_treebuilder_write(&tree_oid, repo, tb)) < 0)
 		goto cleanup;
 
 	error = git_tree_lookup(out, repo, &tree_oid);
@@ -150,6 +152,15 @@ static int manipulate_note_in_tree_r(git_tree **out, git_repository *repo, git_t
 cleanup:
 	git_tree_free(subtree);
 	return error;
+}
+
+static int remove_note_in_tree_eexists_cb(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, int current_error) {
+	return tree_write(out, repo, parent, NULL, annotated_object_sha + fanout, 0);
+}
+
+static int remove_note_in_tree_enotfound_cb(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, int current_error) {
+	giterr_set(GITERR_REPOSITORY, "Object '%s' has no note", annotated_object_sha);
+	return current_error;
 }
 
 static int insert_note_in_tree_eexists_cb(git_tree **out, git_repository *repo, git_tree *parent, git_oid *note_oid, const char *annotated_object_sha, int fanout, int current_error) {
@@ -239,50 +250,22 @@ cleanup:
 
 static int note_remove(git_repository *repo,
 		       git_signature *author, git_signature *committer,
-		       const char *notes_ref, const git_oid *tree_sha,
-		       const char *target, int nparents, git_commit **parents)
+		       const char *notes_ref, git_tree *tree,
+		       const char *target, git_commit **parents)
 {
-	int error, fanout = 0;
+	int error;
+	git_tree *tree_after_removal = NULL;
 	git_oid oid;
-	git_tree *tree, *root;
-	git_treebuilder *tb;
-
-	error = git_tree_lookup(&root, repo, tree_sha);
-	if (error < 0)
-		return error;
-
-	error = find_subtree_r(&tree, root, repo, target, &fanout);
-	if (error < 0)
-		return error;
-
-	error = find_blob(&oid, tree, target + fanout);
-	if (!error)
-		error = git_treebuilder_create(&tb, tree);
-
-	git_tree_free(tree);
-	if (error < 0)
-		return error;
-
-	error = git_treebuilder_remove(tb, target + fanout);
-	if (!error)
-		error = git_treebuilder_write(&oid, repo, tb);
-
-	git_treebuilder_free(tb);
-	if (error < 0)
-		return error;
-
-	/* create new notes commit */
-
-	error = git_tree_lookup(&tree, repo, &oid);
-	if (error < 0)
-		return error;
+		
+	if ((error = manipulate_note_in_tree_r(&tree_after_removal, repo, tree, NULL, target, 0, remove_note_in_tree_eexists_cb, remove_note_in_tree_enotfound_cb)) < 0)
+		goto cleanup;
 
 	error = git_commit_create(&oid, repo, notes_ref, author, committer,
 				  NULL, GIT_NOTES_DEFAULT_MSG_RM,
-				  tree, nparents, (const git_commit **) parents);
+				  tree_after_removal, *parents == NULL ? 0 : 1, (const git_commit **) parents);
 
-	git_tree_free(tree);
-
+cleanup:
+	git_tree_free(tree_after_removal);
 	return error;
 }
 
@@ -427,37 +410,26 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 		    const git_oid *oid)
 {
 	int error;
-	char *target;
-	git_oid sha;
-	git_commit *commit;
-	git_reference *ref;
-
-	if (normalize_namespace(&notes_ref, repo) < 0)
-		return -1;
-
-	error = git_reference_lookup(&ref, repo, notes_ref);
-	if (error < 0)
-		return error;
-
-	assert(git_reference_type(ref) == GIT_REF_OID);
-
-	git_oid_cpy(&sha, git_reference_oid(ref));
-	git_reference_free(ref);
-
-	error = git_commit_lookup(&commit, repo, &sha);
-	if (error < 0)
-		return error;
-
-	git_oid_cpy(&sha, git_commit_tree_oid(commit));
+	char *target = NULL;
+	git_commit *commit = NULL;
+	git_tree *tree = NULL;
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);
 
-	error = note_remove(repo, author, committer, notes_ref,
-			    &sha, target, 1, &commit);
+	if (normalize_namespace(&notes_ref, repo) < 0)
+		return -1;
 
+	if ((error = retrieve_note_tree_and_commit(&tree, &commit, repo, notes_ref)) < 0)
+		goto cleanup;
+
+	error = note_remove(repo, author, committer, notes_ref,
+			    tree, target, &commit);
+
+cleanup:
 	git__free(target);
 	git_commit_free(commit);
+	git_tree_free(tree);
 	return error;
 }
 
