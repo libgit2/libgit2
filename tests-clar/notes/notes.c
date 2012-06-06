@@ -15,44 +15,22 @@ void test_notes_notes__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+static void assert_note_equal(git_note *note, char *message, git_oid *note_oid) {
+	git_blob *blob;
+
+	cl_assert_equal_s(git_note_message(note), message);
+	cl_assert(!git_oid_cmp(git_note_oid(note), note_oid));
+
+	cl_git_pass(git_blob_lookup(&blob, _repo, note_oid));
+	cl_assert_equal_s(git_note_message(note), (const char *)git_blob_rawcontent(blob));
+}
+
 static void create_note(git_oid *note_oid, const char *canonical_namespace, const char *target_sha, const char *message)
 {
 	git_oid oid;
 
 	cl_git_pass(git_oid_fromstr(&oid, target_sha));
 	cl_git_pass(git_note_create(note_oid, _repo, _sig, _sig, canonical_namespace, &oid, message));
-}
-
-void test_notes_notes__1(void)
-{
-	git_oid oid, note_oid;
-	static git_note *note;
-	static git_blob *blob;
-
-	cl_git_pass(git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479"));
-
-	cl_git_pass(git_note_create(&note_oid, _repo, _sig, _sig, "refs/notes/some/namespace", &oid, "hello world\n"));
-	cl_git_pass(git_note_create(&note_oid, _repo, _sig, _sig, NULL, &oid, "hello world\n"));
-
-	cl_git_pass(git_note_read(&note, _repo, NULL, &oid));
-
-	cl_assert_equal_s(git_note_message(note), "hello world\n");
-	cl_assert(!git_oid_cmp(git_note_oid(note), &note_oid));
-
-	cl_git_pass(git_blob_lookup(&blob, _repo, &note_oid));
-	cl_assert_equal_s(git_note_message(note), git_blob_rawcontent(blob));
-
-	cl_git_fail(git_note_create(&note_oid, _repo, _sig, _sig, NULL, &oid, "hello world\n"));
-	cl_git_fail(git_note_create(&note_oid, _repo, _sig, _sig, "refs/notes/some/namespace", &oid, "hello world\n"));
-
-	cl_git_pass(git_note_remove(_repo, NULL, _sig, _sig, &oid));
-	cl_git_pass(git_note_remove(_repo, "refs/notes/some/namespace", _sig, _sig, &oid));
-
-	cl_git_fail(git_note_remove(_repo, NULL, _sig, _sig, &note_oid));
-	cl_git_fail(git_note_remove(_repo, "refs/notes/some/namespace", _sig, _sig, &oid));
-
-	git_note_free(note);
-	git_blob_free(blob);
 }
 
 static struct {
@@ -132,6 +110,65 @@ void test_notes_notes__retrieving_a_list_of_notes_for_an_unknown_namespace_retur
 	cl_assert_equal_i(0, retrieved_notes);
 }
 
+void test_notes_notes__inserting_a_note_without_passing_a_namespace_uses_the_default_namespace(void)
+{
+	git_oid note_oid, target_oid;
+	git_note *note, *default_namespace_note;
+	const char *default_ref;
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+	cl_git_pass(git_note_default_ref(&default_ref, _repo));
+
+	create_note(&note_oid, NULL, "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world\n");
+
+	cl_git_pass(git_note_read(&note, _repo, NULL, &target_oid));
+	cl_git_pass(git_note_read(&default_namespace_note, _repo, default_ref, &target_oid));
+
+	assert_note_equal(note, "hello world\n", &note_oid);
+	assert_note_equal(default_namespace_note, "hello world\n", &note_oid);
+
+	git_note_free(note);
+	git_note_free(default_namespace_note);
+}
+
+void test_notes_notes__can_insert_a_note_with_a_custom_namespace(void)
+{
+	git_oid note_oid, target_oid;
+	git_note *note;
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+
+	create_note(&note_oid, "refs/notes/some/namespace", "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world on a custom namespace\n");
+
+	cl_git_pass(git_note_read(&note, _repo, "refs/notes/some/namespace", &target_oid));
+
+	assert_note_equal(note, "hello world on a custom namespace\n", &note_oid);
+
+	git_note_free(note);
+}
+
+/*
+ * $ git notes --ref fanout list 8496071c1b46c854b31185ea97743be6a8774479
+ * 08b041783f40edfe12bb406c9c9a8a040177c125
+ */
+void test_notes_notes__creating_a_note_on_a_target_which_already_has_one_returns_EEXISTS(void)
+{
+	int error;
+	git_oid note_oid, target_oid;
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
+
+	create_note(&note_oid, NULL, "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world\n");
+	error = git_note_create(&note_oid, _repo, _sig, _sig, NULL, &target_oid, "hello world\n");
+	cl_git_fail(error);
+	cl_assert_equal_i(GIT_EEXISTS, error);
+
+	create_note(&note_oid, "refs/notes/some/namespace", "08b041783f40edfe12bb406c9c9a8a040177c125", "hello world\n");
+	error = git_note_create(&note_oid, _repo, _sig, _sig, "refs/notes/some/namespace", &target_oid, "hello world\n");
+	cl_git_fail(error);
+	cl_assert_equal_i(GIT_EEXISTS, error);
+}
+
 static char *messages[] = {
 	"08c041783f40edfe12bb406c9c9a8a040177c125",
 	"96c45fbe09ab7445fc7c60fd8d17f32494399343",
@@ -163,7 +200,7 @@ static char *messages[] = {
  * $ git ls-tree d71aab4
  * 100644 blob 08b041783f40edfe12bb406c9c9a8a040177c125    071c1b46c854b31185ea97743be6a8774479
  */
-void test_notes_notes__can_correctly_insert_a_note_in_an_existing_fanout(void)
+void test_notes_notes__can_insert_a_note_in_an_existing_fanout(void)
 {
 	size_t i;
 	git_oid note_oid, target_oid;
@@ -198,10 +235,6 @@ void test_notes_notes__can_read_a_note_in_an_existing_fanout(void)
 	git_note_free(note);
 }
 
-/*
- * $ git notes --ref fanout list 8496071c1b46c854b31185ea97743be6a8774479
- * 08b041783f40edfe12bb406c9c9a8a040177c125
- */
 void test_notes_notes__can_remove_a_note_in_an_existing_fanout(void)
 {
 	git_oid target_oid;
@@ -211,4 +244,17 @@ void test_notes_notes__can_remove_a_note_in_an_existing_fanout(void)
 	cl_git_pass(git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid));
 
 	cl_git_fail(git_note_read(&note, _repo, "refs/notes/fanout", &target_oid));
+}
+
+void test_notes_notes__removing_a_note_which_doesnt_exists_returns_ENOTFOUND(void)
+{
+	int error;
+	git_oid target_oid;
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "8496071c1b46c854b31185ea97743be6a8774479"));
+	cl_git_pass(git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid));
+	
+	error = git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid);
+	cl_git_fail(error);
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
 }
