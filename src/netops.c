@@ -10,6 +10,7 @@
 #	include <sys/select.h>
 #	include <sys/time.h>
 #	include <netdb.h>
+#       include <arpa/inet.h>
 #else
 #	include <winsock2.h>
 #	include <ws2tcpip.h>
@@ -24,7 +25,6 @@
 #endif
 
 #include <ctype.h>
-#include <arpa/inet.h>
 #include "git2/errors.h"
 
 #include "common.h"
