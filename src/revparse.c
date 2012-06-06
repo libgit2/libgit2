@@ -577,7 +577,7 @@ static int handle_colon_syntax(git_object **out,
    return git_object_lookup(out, repo, &oid, GIT_OBJ_ANY);
 }
 
-static int git__revparse_global_grep(git_object **out, git_repository *repo, const char *pattern)
+static int revparse_global_grep(git_object **out, git_repository *repo, const char *pattern)
 {
    git_revwalk *walk;
    int retcode = GIT_ERROR;
@@ -632,7 +632,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
    if (spec[0] == ':') {
       if (spec[1] == '/') {
-         return git__revparse_global_grep(out, repo, spec+2);
+         return revparse_global_grep(out, repo, spec+2);
       }
       /* TODO: support merge-stage path lookup (":2:Makefile"). */
       giterr_set(GITERR_INVALID, "Unimplemented");
