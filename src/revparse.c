@@ -9,7 +9,6 @@
 
 #include "common.h"
 #include "buffer.h"
-#include "date.h"
 #include "tree.h"
 
 #include "git2.h"

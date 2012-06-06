@@ -230,4 +230,14 @@ GIT_INLINE(bool) git__iswildcard(int c)
  */
 extern int git__parse_bool(int *out, const char *value);
 
+/*
+ * Parse a string into a value as a git_time_t.
+ *
+ * Sample valid input:
+ * - "yesterday"
+ * - "July 17, 2003"
+ * - "2003-7-17 08:23"
+ */
+int git__date_parse(git_time_t *out, const char *date);
+
 #endif /* INCLUDE_util_h__ */

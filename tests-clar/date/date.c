@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "date.h"
+#include "util.h"
 
 void test_date_date__overflow(void)
 {
