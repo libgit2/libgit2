@@ -216,12 +216,12 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
             const char *remote;
             git_buf_clear(&buf);
             git_buf_printf(&buf, "branch.%s.remote", refspec);
-            if (!git_config_get_string(cfg, git_buf_cstr(&buf), &remote)) {
+            if (!git_config_get_string(&remote, cfg, git_buf_cstr(&buf))) {
                /* Yes. Find the first merge target name. */
                const char *mergetarget;
                git_buf_clear(&buf);
                git_buf_printf(&buf, "branch.%s.merge", refspec);
-               if (!git_config_get_string(cfg, git_buf_cstr(&buf), &mergetarget) &&
+               if (!git_config_get_string(&mergetarget, cfg, git_buf_cstr(&buf)) &&
                    !git__prefixcmp(mergetarget, "refs/heads/")) {
                   /* Success. Look up the target and fetch the object. */
                   git_buf_clear(&buf);
@@ -545,7 +545,7 @@ static const git_tree_entry* git_tree_entry_bypath(git_tree *tree, git_repositor
    while ((tok = git__strtok(&str, "/\\")) != NULL) {
       entry = git_tree_entry_byname(tree2, tok);
       if (tree2 != tree) git_tree_free(tree2);
-      if (entry_is_tree(entry)) {
+      if (git_tree_entry__is_tree(entry)) {
          if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
             free(alloc);
             return NULL;
@@ -574,7 +574,7 @@ static int handle_colon_syntax(git_object **out,
    /* Find the blob at the given path. */
    entry = git_tree_entry_bypath(tree, repo, path);
    git_tree_free(tree);
-   return git_tree_entry_2object(out, repo, entry);
+   return git_tree_entry_to_object(out, repo, entry);
 }
 
 static int git__revparse_global_grep(git_object **out, git_repository *repo, const char *pattern)
