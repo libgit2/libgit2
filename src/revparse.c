@@ -533,7 +533,7 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
    return 0;
 }
 
-static const git_tree_entry* git_tree_entry_bypath(git_tree *tree, git_repository *repo, const char *path)
+static int tree_entry_bypath(git_oid *out, git_tree *tree, git_repository *repo, const char *path)
 {
    char *str = git__strdup(path);
    char *tok;
@@ -547,13 +547,14 @@ static const git_tree_entry* git_tree_entry_bypath(git_tree *tree, git_repositor
       if (git_tree_entry__is_tree(entry)) {
          if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
             free(alloc);
-            return NULL;
+            return GIT_ERROR;
          }
       }
    }
 
+   git_oid_cpy(out, git_tree_entry_id(entry));
    git__free(alloc);
-   return entry;
+   return 0;
 }
 
 static int handle_colon_syntax(git_object **out,
@@ -562,7 +563,7 @@ static int handle_colon_syntax(git_object **out,
                                const char *path)
 {
    git_tree *tree;
-   const git_tree_entry *entry;
+   git_oid oid;
 
    /* Dereference until we reach a tree. */
    if (dereference_to_type(&obj, obj, GIT_OBJ_TREE) < 0) {
@@ -571,9 +572,9 @@ static int handle_colon_syntax(git_object **out,
    tree = (git_tree*)obj;
 
    /* Find the blob at the given path. */
-   entry = git_tree_entry_bypath(tree, repo, path);
+   tree_entry_bypath(&oid, tree, repo, path);
    git_tree_free(tree);
-   return git_tree_entry_to_object(out, repo, entry);
+   return git_object_lookup(out, repo, &oid, GIT_OBJ_ANY);
 }
 
 static int git__revparse_global_grep(git_object **out, git_repository *repo, const char *pattern)
