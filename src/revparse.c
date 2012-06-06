@@ -552,7 +552,7 @@ static const git_tree_entry* git_tree_entry_bypath(git_tree *tree, git_repositor
       }
    }
 
-   free(alloc);
+   git__free(alloc);
    return entry;
 }
 
