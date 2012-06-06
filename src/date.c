@@ -271,7 +271,7 @@ static int match_multi_number(unsigned long num, char c, const char *date, char 
 	case '.':
 		now = time(NULL);
 		refuse_future = NULL;
-		if (gmtime_r(&now, &now_tm))
+		if (p_gmtime_r(&now, &now_tm))
 			refuse_future = &now_tm;
 
 		if (num > 70) {
@@ -334,7 +334,7 @@ static int match_digit(const char *date, struct tm *tm, int *offset, int *tm_gmt
 	 */
 	if (num >= 100000000 && nodate(tm)) {
 		time_t time = num;
-		if (gmtime_r(&time, tm)) {
+		if (p_gmtime_r(&time, tm)) {
 			*tm_gmt = 1;
 			return end - date;
 		}
@@ -561,7 +561,7 @@ static git_time_t update_tm(struct tm *tm, struct tm *now, unsigned long sec)
 	}
 
 	n = mktime(tm) - sec;
-	localtime_r(&n, tm);
+	p_localtime_r(&n, tm);
 	return n;
 }
 
@@ -639,7 +639,7 @@ static void date_never(struct tm *tm, struct tm *now, int *num)
 	time_t n = 0;
    GIT_UNUSED(now);
    GIT_UNUSED(num);
-	localtime_r(&n, tm);
+	p_localtime_r(&n, tm);
 }
 
 static const struct special {
@@ -832,7 +832,7 @@ static git_time_t approxidate_str(const char *date,
 	time_t time_sec;
 
 	time_sec = tv->tv_sec;
-	localtime_r(&time_sec, &tm);
+	p_localtime_r(&time_sec, &tm);
 	now = tm;
 
 	tm.tm_year = -1;
@@ -870,7 +870,7 @@ int git__date_parse(git_time_t *out, const char *date)
 		return 0;
 	}
 
-	gettimeofday(&tv, NULL);
+	p_gettimeofday(&tv, NULL);
 	*out = approxidate_str(date, &tv, &error_ret);
    return error_ret;
 }

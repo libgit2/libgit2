@@ -476,7 +476,7 @@ int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags)
  * On Win32, `gmtime_r` doesn't exist but `gmtime` is threadsafe, so we can use that
  */
 struct tm * 
-localtime_r (const time_t *timer, struct tm *result) 
+p_localtime_r (const time_t *timer, struct tm *result) 
 { 
    struct tm *local_result; 
    local_result = localtime (timer); 
@@ -488,7 +488,7 @@ localtime_r (const time_t *timer, struct tm *result)
    return result; 
 } 
 struct tm * 
-gmtime_r (const time_t *timer, struct tm *result) 
+p_gmtime_r (const time_t *timer, struct tm *result) 
 { 
    struct tm *local_result; 
    local_result = gmtime (timer); 
@@ -512,7 +512,7 @@ struct timezone
    int  tz_dsttime;     /* type of dst correction */
 };
  
-int gettimeofday(struct timeval *tv, struct timezone *tz)
+int p_gettimeofday(struct timeval *tv, struct timezone *tz)
 {
    FILETIME ft;
    unsigned __int64 tmpres = 0;

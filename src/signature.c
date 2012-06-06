@@ -119,8 +119,8 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 
 	time(&now);
 
-	utc_tm = gmtime_r(&now, &_utc);
-	local_tm = localtime_r(&now, &_local);
+	utc_tm = p_gmtime_r(&now, &_utc);
+	local_tm = p_localtime_r(&now, &_local);
 
 	offset = mktime(local_tm) - mktime(utc_tm);
 	offset /= 60;
