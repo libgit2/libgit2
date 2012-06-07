@@ -59,9 +59,17 @@ extern int p_rename(const char *from, const char *to);
 typedef int GIT_SOCKET;
 #define INVALID_SOCKET -1
 
+#define p_localtime_r localtime_r
+#define p_gmtime_r gmtime_r
+#define p_gettimeofday gettimeofday
+
 #else
 
 typedef SOCKET GIT_SOCKET;
+extern struct tm * p_localtime_r (const time_t *timer, struct tm *result);
+extern struct tm * p_gmtime_r (const time_t *timer, struct tm *result);
+extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
+
 
 #endif
 

@@ -113,26 +113,14 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 	time_t offset;
 	struct tm *utc_tm, *local_tm;
 	git_signature *sig;
-
-#ifndef GIT_WIN32
 	struct tm _utc, _local;
-#endif
 
 	*sig_out = NULL;
 
 	time(&now);
 
-	/**
-	 * On Win32, `gmtime_r` doesn't exist but
-	 * `gmtime` is threadsafe, so we can use that
-	 */
-#ifdef GIT_WIN32
-	utc_tm = gmtime(&now);
-	local_tm = localtime(&now);
-#else
-	utc_tm = gmtime_r(&now, &_utc);
-	local_tm = localtime_r(&now, &_local);
-#endif
+	utc_tm = p_gmtime_r(&now, &_utc);
+	local_tm = p_localtime_r(&now, &_local);
 
 	offset = mktime(local_tm) - mktime(utc_tm);
 	offset /= 60;

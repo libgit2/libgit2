@@ -25,6 +25,7 @@
 #include "git2/merge.h"
 #include "git2/refs.h"
 #include "git2/reflog.h"
+#include "git2/revparse.h"
 
 #include "git2/object.h"
 #include "git2/blob.h"
