@@ -546,7 +546,7 @@ static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo,
       if (tree2 != tree) git_tree_free(tree2);
       if (git_tree_entry__is_tree(entry)) {
          if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
-            free(alloc);
+            git__free(alloc);
             return GIT_ERROR;
          }
       }
