@@ -54,6 +54,7 @@ void git_repository__refcache_free(git_refcache *refs);
 
 int git_reference__normalize_name(char *buffer_out, size_t out_size, const char *name);
 int git_reference__normalize_name_oid(char *buffer_out, size_t out_size, const char *name);
+int git_reference__update(git_repository *repo, const git_oid *oid, const char *ref_name);
 
 /**
  * Lookup a reference by name and try to resolve to an OID.
