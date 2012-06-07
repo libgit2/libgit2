@@ -533,7 +533,7 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
    return 0;
 }
 
-static int tree_entry_bypath(git_oid *out, git_tree *tree, git_repository *repo, const char *path)
+static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo, const char *path)
 {
    char *str = git__strdup(path);
    char *tok;
@@ -572,7 +572,7 @@ static int handle_colon_syntax(git_object **out,
    tree = (git_tree*)obj;
 
    /* Find the blob at the given path. */
-   tree_entry_bypath(&oid, tree, repo, path);
+   oid_for_tree_path(&oid, tree, repo, path);
    git_tree_free(tree);
    return git_object_lookup(out, repo, &oid, GIT_OBJ_ANY);
 }
