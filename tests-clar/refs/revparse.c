@@ -4,6 +4,7 @@
 
 static git_repository *g_repo;
 static git_object *g_obj;
+static char g_orig_tz[16] = {0};
 
 
 
@@ -23,6 +24,10 @@ static void test_object(const char *spec, const char *expected_oid)
 
 void test_refs_revparse__initialize(void)
 {
+   char *tz = getenv("TZ");
+   if (tz)
+      strcpy(g_orig_tz, tz);
+   setenv("TZ", "UTC", 1);
    g_repo = cl_git_sandbox_init("testrepo.git");
 }
 
@@ -30,6 +35,7 @@ void test_refs_revparse__cleanup(void)
 {
    cl_git_sandbox_cleanup();
    g_obj = NULL;
+   setenv("TZ", g_orig_tz, 1);
 }
 
 
@@ -145,10 +151,8 @@ void test_refs_revparse__date(void)
    test_object("HEAD@{10 years ago}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
    test_object("HEAD@{1 second}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
    test_object("master@{2012-4-30 10:23:20 -0800}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-   test_object("master@{2012-4-30 10:24 -0800}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
-   test_object("master@{2012-4-30 16:24 -0200}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
-   test_object("master@{1335806600}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-   test_object("master@{1335816640}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   test_object("master@{2012-4-30 18:24 -0800}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+   test_object("master@{2012-4-30 23:24 -0300}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 
    /* Core git gives a65fedf, because they don't take time zones into account. */
    test_object("master@{1335806640}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");

@@ -582,6 +582,11 @@ static int revparse_global_grep(git_object **out, git_repository *repo, const ch
    git_revwalk *walk;
    int retcode = GIT_ERROR;
 
+   if (!pattern[0]) {
+      giterr_set(GITERR_REGEX, "Empty pattern");
+      return GIT_ERROR;
+   }
+
    if (!git_revwalk_new(&walk, repo)) {
       regex_t preg;
       int reg_error;
