@@ -37,12 +37,12 @@ void test_diff_workdir__to_index(void)
 	 * - git diff
 	 * - mv .git .gitted
 	 */
-	cl_assert_equal_i(12, exp.files);
+	cl_assert_equal_i(13, exp.files);
 	cl_assert_equal_i(0, exp.file_adds);
 	cl_assert_equal_i(4, exp.file_dels);
 	cl_assert_equal_i(4, exp.file_mods);
 	cl_assert_equal_i(1, exp.file_ignored);
-	cl_assert_equal_i(3, exp.file_untracked);
+	cl_assert_equal_i(4, exp.file_untracked);
 
 	cl_assert_equal_i(8, exp.hunks);
 
@@ -87,12 +87,12 @@ void test_diff_workdir__to_tree(void)
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(exp.files == 13);
+	cl_assert(exp.files == 14);
 	cl_assert(exp.file_adds == 0);
 	cl_assert(exp.file_dels == 4);
 	cl_assert(exp.file_mods == 4);
 	cl_assert(exp.file_ignored == 1);
-	cl_assert(exp.file_untracked == 4);
+	cl_assert(exp.file_untracked == 5);
 
 	/* Since there is no git diff equivalent, let's just assume that the
 	 * text diffs produced by git_diff_foreach are accurate here.  We will
@@ -115,12 +115,12 @@ void test_diff_workdir__to_tree(void)
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(exp.files == 14);
+	cl_assert(exp.files == 15);
 	cl_assert(exp.file_adds == 2);
 	cl_assert(exp.file_dels == 5);
 	cl_assert(exp.file_mods == 4);
 	cl_assert(exp.file_ignored == 1);
-	cl_assert(exp.file_untracked == 2);
+	cl_assert(exp.file_untracked == 3);
 
 	cl_assert(exp.hunks == 11);
 
@@ -144,12 +144,12 @@ void test_diff_workdir__to_tree(void)
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(exp.files == 15);
+	cl_assert(exp.files == 16);
 	cl_assert(exp.file_adds == 5);
 	cl_assert(exp.file_dels == 4);
 	cl_assert(exp.file_mods == 3);
 	cl_assert(exp.file_ignored == 1);
-	cl_assert(exp.file_untracked == 2);
+	cl_assert(exp.file_untracked == 3);
 
 	cl_assert(exp.hunks == 12);
 
@@ -182,12 +182,12 @@ void test_diff_workdir__to_index_with_pathspec(void)
 	cl_git_pass(git_diff_workdir_to_index(g_repo, &opts, &diff));
 	cl_git_pass(git_diff_foreach(diff, &exp, diff_file_fn, NULL, NULL));
 
-	cl_assert_equal_i(12, exp.files);
+	cl_assert_equal_i(13, exp.files);
 	cl_assert_equal_i(0, exp.file_adds);
 	cl_assert_equal_i(4, exp.file_dels);
 	cl_assert_equal_i(4, exp.file_mods);
 	cl_assert_equal_i(1, exp.file_ignored);
-	cl_assert_equal_i(3, exp.file_untracked);
+	cl_assert_equal_i(4, exp.file_untracked);
 
 	git_diff_list_free(diff);
 

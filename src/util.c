@@ -179,7 +179,7 @@ void git__strtolower(char *str)
 int git__prefixcmp(const char *str, const char *prefix)
 {
 	for (;;) {
-		char p = *(prefix++), s;
+		unsigned char p = *(prefix++), s;
 		if (!p)
 			return 0;
 		if ((s = *(str++)) != p)
