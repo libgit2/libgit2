@@ -241,27 +241,35 @@ void git_futils_mmap_free(git_map *out)
 
 int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 {
-	int root_path_offset;
 	git_buf make_path = GIT_BUF_INIT;
-	size_t start;
+	size_t start = 0;
 	char *pp, *sp;
 	bool failed = false;
 
 	if (base != NULL) {
+		/*
+		 * when a base is being provided, it is supposed to already exist.
+		 * Therefore, no attempt is being made to recursively create this leading path
+		 * segment. It's just skipped. */
 		start = strlen(base);
 		if (git_buf_joinpath(&make_path, base, path) < 0)
 			return -1;
 	} else {
-		start = 0;
+		int root_path_offset;
+
 		if (git_buf_puts(&make_path, path) < 0)
 			return -1;
+
+		root_path_offset = git_path_root(make_path.ptr);
+		if (root_path_offset > 0) {
+			 /*
+			  * On Windows, will skip the drive name (eg. C: or D:)
+			  * or the leading part of a network path (eg. //computer_name ) */
+			start = root_path_offset;
+		}
 	}
 
 	pp = make_path.ptr + start;
-
-	root_path_offset = git_path_root(make_path.ptr);
-	if (root_path_offset > 0)
-		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
 	while (!failed && (sp = strchr(pp, '/')) != NULL) {
 		if (sp != pp && git_path_isdir(make_path.ptr) == false) {
@@ -345,72 +353,23 @@ int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type
 	return error;
 }
 
-int git_futils_find_global_file(git_buf *path, const char *filename)
-{
-	const char *home = getenv("HOME");
-
 #ifdef GIT_WIN32
-	if (home == NULL)
-		home = getenv("USERPROFILE");
-#endif
-
-	if (home == NULL) {
-		giterr_set(GITERR_OS, "Global file lookup failed. "
-			"Cannot locate the user's home directory");
-		return -1;
-	}
-
-	if (git_buf_joinpath(path, home, filename) < 0)
-		return -1;
-
-	if (git_path_exists(path->ptr) == false) {
-		git_buf_clear(path);
-		return GIT_ENOTFOUND;
-	}
-
-	return 0;
-}
-
-#ifdef GIT_WIN32
-typedef struct {
-	wchar_t *path;
+struct win32_path {
+	wchar_t path[MAX_PATH];
 	DWORD len;
-} win32_path;
+};
 
-static const win32_path *win32_system_root(void)
+static int win32_expand_path(struct win32_path *s_root, const wchar_t *templ)
 {
-	static win32_path s_root = { 0, 0 };
-
-	if (s_root.path == NULL) {
-		const wchar_t *root_tmpl = L"%PROGRAMFILES%\\Git\\etc\\";
-
-		s_root.len = ExpandEnvironmentStringsW(root_tmpl, NULL, 0);
-		if (s_root.len <= 0) {
-			giterr_set(GITERR_OS, "Failed to expand environment strings");
-			return NULL;
-		}
-
-		s_root.path = git__calloc(s_root.len, sizeof(wchar_t));
-		if (s_root.path == NULL)
-			return NULL;
-
-		if (ExpandEnvironmentStringsW(root_tmpl, s_root.path, s_root.len) != s_root.len) {
-			giterr_set(GITERR_OS, "Failed to expand environment strings");
-			git__free(s_root.path);
-			s_root.path = NULL;
-			return NULL;
-		}
-	}
-
-	return &s_root;
+	s_root->len = ExpandEnvironmentStringsW(templ, s_root->path, MAX_PATH);
+	return s_root->len ? 0 : -1;
 }
 
-static int win32_find_system_file(git_buf *path, const char *filename)
+static int win32_find_file(git_buf *path, const struct win32_path *root, const char *filename)
 {
 	int error = 0;
-	const win32_path *root = win32_system_root();
 	size_t len;
-	wchar_t *file_utf16 = NULL, *scan;
+	wchar_t *file_utf16 = NULL;
 	char *file_utf8 = NULL;
 
 	if (!root || !filename || (len = strlen(filename)) == 0)
@@ -432,10 +391,6 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 		goto cleanup;
 	}
 
-	for (scan = file_utf16; *scan; scan++)
-		if (*scan == L'/')
-			*scan = L'\\';
-
 	/* check access */
 	if (_waccess(file_utf16, F_OK) < 0) {
 		error = GIT_ENOTFOUND;
@@ -452,13 +407,30 @@ static int win32_find_system_file(git_buf *path, const char *filename)
 
 cleanup:
 	git__free(file_utf16);
-
 	return error;
 }
 #endif
 
 int git_futils_find_system_file(git_buf *path, const char *filename)
 {
+#ifdef GIT_WIN32
+	struct win32_path root;
+
+	if (win32_expand_path(&root, L"%PROGRAMFILES%\\Git\\etc\\") < 0 ||
+		root.path[0] == L'%') /* i.e. no expansion happened */
+	{
+		giterr_set(GITERR_OS, "Cannot locate the system's Program Files directory");
+		return -1;
+	}
+
+	if (win32_find_file(path, &root, filename) < 0) {
+		git_buf_clear(path);
+		return GIT_ENOTFOUND;
+	}
+
+	return 0;
+
+#else
 	if (git_buf_joinpath(path, "/etc", filename) < 0)
 		return -1;
 
@@ -466,10 +438,45 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 		return 0;
 
 	git_buf_clear(path);
-
-#ifdef GIT_WIN32
-	return win32_find_system_file(path, filename);
-#else
 	return GIT_ENOTFOUND;
+#endif
+}
+
+int git_futils_find_global_file(git_buf *path, const char *filename)
+{
+#ifdef GIT_WIN32
+	struct win32_path root;
+
+	if (win32_expand_path(&root, L"%USERPROFILE%\\") < 0 ||
+		root.path[0] == L'%') /* i.e. no expansion happened */
+	{
+		giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
+		return -1;
+	}
+
+	if (win32_find_file(path, &root, filename) < 0) {
+		git_buf_clear(path);
+		return GIT_ENOTFOUND;
+	}
+
+	return 0;
+#else
+	const char *home = getenv("HOME");
+
+	if (home == NULL) {
+		giterr_set(GITERR_OS, "Global file lookup failed. "
+			"Cannot locate the user's home directory");
+		return -1;
+	}
+
+	if (git_buf_joinpath(path, home, filename) < 0)
+		return -1;
+
+	if (git_path_exists(path->ptr) == false) {
+		git_buf_clear(path);
+		return GIT_ENOTFOUND;
+	}
+
+	return 0;
 #endif
 }

@@ -29,7 +29,7 @@ The simple error API
 - `void giterr_set(git_error **, int, const char *, ...)`: the main function used to set an error. It allocates a new error object and stores it in the passed error pointer. It has no return value. The arguments for `giterr_set` are as follows:
 
 	- `git_error **error_ptr`: the pointer where the error will be created.
-	- `int error_class`: the class for the error. This is **not** an error code: this is an speficic enum that specifies the error family. The point is to map these families 1-1 with Exception types on higher level languages (e.g. GitRepositoryException)
+	- `int error_class`: the class for the error. This is **not** an error code: this is an specific enum that specifies the error family. The point is to map these families 1-1 with Exception types on higher level languages (e.g. GitRepositoryException)
 	- `const char *error_str, ...`: the error string, with optional formatting arguments
 
 - `void giterr_free(git_error *)`: takes an error and frees it. This function is available in the external API.
@@ -56,7 +56,7 @@ Here are some guidelines when writing error messages:
 
 - Use short, direct and objective messages. **One line, max**. libgit2 is a low level library: think that all the messages reported will be thrown as Ruby or Python exceptions. Think how long are common exception messages in those languages.
 
-- **Do not add redundant information to the error message**, specially information that can be infered from the context.
+- **Do not add redundant information to the error message**, specially information that can be inferred from the context.
 
 	E.g. in `git_repository_open`, do not report a message like "Failed to open repository: path not found". Somebody is
 	calling that function. If it fails, he already knows that the repository failed to open!

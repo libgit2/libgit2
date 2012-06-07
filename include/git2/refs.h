@@ -124,7 +124,7 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
 /**
  * Resolve a symbolic reference
  *
- * Thie method iteratively peels a symbolic reference
+ * This method iteratively peels a symbolic reference
  * until it resolves to a direct reference to an OID.
  *
  * The peeled reference is returned in the `resolved_ref`
@@ -293,7 +293,7 @@ GIT_EXTERN(int) git_reference_is_packed(git_reference *ref);
  *
  * Reference pointers may become outdated if the Git
  * repository is accessed simultaneously by other clients
- * whilt the library is open.
+ * while the library is open.
  *
  * This method forces a reload of the reference from disk,
  * to ensure that the provided information is still

@@ -18,15 +18,6 @@
 
 #include <stdarg.h>
 
-#define COMMIT_BASIC_PARSE 0x0
-#define COMMIT_FULL_PARSE 0x1
-
-#define COMMIT_PRINT(commit) {\
-	char oid[41]; oid[40] = 0;\
-	git_oid_fmt(oid, &commit->object.id);\
-	printf("Oid: %s | In degree: %d | Time: %u\n", oid, commit->in_degree, commit->commit_time);\
-}
-
 static void clear_parents(git_commit *commit)
 {
 	unsigned int i;

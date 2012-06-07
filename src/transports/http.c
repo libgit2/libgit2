@@ -32,7 +32,6 @@ typedef struct {
 	git_protocol proto;
 	git_vector refs;
 	git_vector common;
-	GIT_SOCKET socket;
 	git_buf buf;
 	git_remote_head **heads;
 	int error;
@@ -43,6 +42,7 @@ typedef struct {
 	enum last_cb last_cb;
 	http_parser parser;
 	char *content_type;
+	char *path;
 	char *host;
 	char *port;
 	char *service;
@@ -52,12 +52,9 @@ typedef struct {
 #endif
 } transport_http;
 
-static int gen_request(git_buf *buf, const char *url, const char *host, const char *op,
+static int gen_request(git_buf *buf, const char *path, const char *host, const char *op,
                        const char *service, ssize_t content_length, int ls)
 {
-	const char *path = url;
-
-	path = strchr(path, '/');
 	if (path == NULL) /* Is 'git fetch http://host.com/' valid? */
 		path = "/";
 
@@ -85,15 +82,12 @@ static int gen_request(git_buf *buf, const char *url, const char *host, const ch
 
 static int do_connect(transport_http *t, const char *host, const char *port)
 {
-	GIT_SOCKET s;
-
 	if (t->parent.connected && http_should_keep_alive(&t->parser))
 		return 0;
 
-	if (gitno_connect(&s, host, port) < 0)
+	if (gitno_connect((git_transport *) t, host, port) < 0)
 		return -1;
 
-	t->socket = s;
 	t->parent.connected = 1;
 
 	return 0;
@@ -231,7 +225,7 @@ static int store_refs(transport_http *t)
 	settings.on_body = on_body_store_refs;
 	settings.on_message_complete = on_message_complete;
 
-	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
+	gitno_buffer_setup((git_transport *)t, &buf, buffer, sizeof(buffer));
 
 	while(1) {
 		size_t parsed;
@@ -267,7 +261,8 @@ static int http_connect(git_transport *transport, int direction)
 	int ret;
 	git_buf request = GIT_BUF_INIT;
 	const char *service = "upload-pack";
-	const char *url = t->parent.url, *prefix = "http://";
+	const char *url = t->parent.url, *prefix_http = "http://", *prefix_https = "https://";
+	const char *default_port;
 
 	if (direction == GIT_DIR_PUSH) {
 		giterr_set(GITERR_NET, "Pushing over HTTP is not implemented");
@@ -278,10 +273,19 @@ static int http_connect(git_transport *transport, int direction)
 	if (git_vector_init(&t->refs, 16, NULL) < 0)
 		return -1;
 
-	if (!git__prefixcmp(url, prefix))
-		url += strlen(prefix);
+	if (!git__prefixcmp(url, prefix_http)) {
+		url = t->parent.url + strlen(prefix_http);
+		default_port = "80";
+	}
 
-	if ((ret = gitno_extract_host_and_port(&t->host, &t->port, url, "80")) < 0)
+	if (!git__prefixcmp(url, prefix_https)) {
+		url += strlen(prefix_https);
+		default_port = "443";
+	}
+
+	t->path = strchr(url, '/');
+
+	if ((ret = gitno_extract_host_and_port(&t->host, &t->port, url, default_port)) < 0)
 		goto cleanup;
 
 	t->service = git__strdup(service);
@@ -291,12 +295,13 @@ static int http_connect(git_transport *transport, int direction)
 		goto cleanup;
 
 	/* Generate and send the HTTP request */
-	if ((ret = gen_request(&request, url, t->host, "GET", service, 0, 1)) < 0) {
+	if ((ret = gen_request(&request, t->path, t->host, "GET", service, 0, 1)) < 0) {
 		giterr_set(GITERR_NET, "Failed to generate request");
 		goto cleanup;
 	}
 
-	if ((ret = gitno_send(t->socket, request.ptr, request.size, 0)) < 0)
+
+	if (gitno_send(transport, request.ptr, request.size, 0) < 0)
 		goto cleanup;
 
 	ret = store_refs(t);
@@ -403,7 +408,7 @@ static int parse_response(transport_http *t)
 	settings.on_body = on_body_parse_response;
 	settings.on_message_complete = on_message_complete;
 
-	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
+	gitno_buffer_setup((git_transport *)t, &buf, buffer, sizeof(buffer));
 
 	while(1) {
 		size_t parsed;
@@ -437,13 +442,9 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 	git_oid oid;
 	git_pkt_ack *pkt;
 	git_vector *common = &t->common;
-	const char *prefix = "http://", *url = t->parent.url;
 	git_buf request = GIT_BUF_INIT, data = GIT_BUF_INIT;
-	gitno_buffer_setup(&buf, buff, sizeof(buff), t->socket);
 
-	/* TODO: Store url in the transport */
-	if (!git__prefixcmp(url, prefix))
-		url += strlen(prefix);
+	gitno_buffer_setup(transport, &buf, buff, sizeof(buff));
 
 	if (git_vector_init(common, 16, NULL) < 0)
 		return -1;
@@ -474,13 +475,13 @@ static int http_negotiate_fetch(git_transport *transport, git_repository *repo, 
 
 		git_pkt_buffer_done(&data);
 
-		if ((ret = gen_request(&request, url, t->host, "POST", "upload-pack", data.size, 0)) < 0)
+		if ((ret = gen_request(&request, t->path, t->host, "POST", "upload-pack", data.size, 0)) < 0)
 			goto cleanup;
 
-		if ((ret = gitno_send(t->socket, request.ptr, request.size, 0)) < 0)
+		if ((ret = gitno_send(transport, request.ptr, request.size, 0)) < 0)
 			goto cleanup;
 
-		if ((ret = gitno_send(t->socket, data.ptr, data.size, 0)) < 0)
+		if ((ret = gitno_send(transport, data.ptr, data.size, 0)) < 0)
 			goto cleanup;
 
 		git_buf_clear(&request);
@@ -547,7 +548,7 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 	git_indexer_stream *idx = NULL;
 	download_pack_cbdata data;
 
-	gitno_buffer_setup(&buf, buffer, sizeof(buffer), t->socket);
+	gitno_buffer_setup(transport, &buf, buffer, sizeof(buffer));
 
 	if (memcmp(oldbuf->ptr, "PACK", strlen("PACK"))) {
 		giterr_set(GITERR_NET, "The pack doesn't start with a pack signature");
@@ -556,7 +557,6 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 
 	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
 		return -1;
-
 
 	/*
 	 * This is part of the previous response, so we don't want to
@@ -575,6 +575,8 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 
 	if (git_indexer_stream_add(idx, git_buf_cstr(oldbuf), git_buf_len(oldbuf), stats) < 0)
 		goto on_error;
+
+	gitno_buffer_setup(transport, &buf, buffer, sizeof(buffer));
 
 	do {
 		size_t parsed;
@@ -603,12 +605,15 @@ on_error:
 
 static int http_close(git_transport *transport)
 {
-	transport_http *t = (transport_http *) transport;
+	if (gitno_ssl_teardown(transport) < 0)
+		return -1;
 
-	if (gitno_close(t->socket) < 0) {
+	if (gitno_close(transport->socket) < 0) {
 		giterr_set(GITERR_OS, "Failed to close the socket: %s", strerror(errno));
 		return -1;
 	}
+
+	transport->connected = 0;
 
 	return 0;
 }
@@ -679,4 +684,24 @@ int git_transport_http(git_transport **out)
 
 	*out = (git_transport *) t;
 	return 0;
+}
+
+int git_transport_https(git_transport **out)
+{
+#ifdef GIT_SSL
+	transport_http *t;
+	if (git_transport_http((git_transport **)&t) < 0)
+		return -1;
+
+	t->parent.encrypt = 1;
+	t->parent.check_cert = 1;
+	*out = (git_transport *) t;
+
+	return 0;
+#else
+	GIT_UNUSED(out);
+
+	giterr_set(GITERR_NET, "HTTPS support not available");
+	return -1;
+#endif
 }

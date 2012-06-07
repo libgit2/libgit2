@@ -52,6 +52,7 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
 OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
+OPTION (BUILD_EXAMPLES "Build library usage example apps" OFF)
 OPTION (TAGS "Generate tags" OFF)
 OPTION (PROFILE "Generate profiling information" OFF)
 
@@ -70,10 +71,12 @@ IF (MSVC)
 
    # Precompiled headers
 ELSE ()
-	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -fvisibility=hidden -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
-	IF (NOT MINGW) # MinGW always does PIC and complains if we tell it to
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	IF (MINGW) # MinGW always does PIC and complains if we tell it to
+		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
+	ELSE ()
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
 	ENDIF ()
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
@@ -85,6 +88,13 @@ ENDIF()
 IF (NOT CMAKE_BUILD_TYPE)
 	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
+
+FIND_PACKAGE(OpenSSL)
+IF (OPENSSL_FOUND)
+  ADD_DEFINITIONS(-DGIT_SSL)
+  INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
+  SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
+ENDIF()
 
 IF (THREADSAFE)
 	IF (NOT WIN32)
@@ -118,7 +128,7 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	TARGET_LINK_LIBRARIES(git2 socket nsl)
 ENDIF ()
 
-TARGET_LINK_LIBRARIES(git2 ${CMAKE_THREAD_LIBS_INIT})
+TARGET_LINK_LIBRARIES(git2 ${CMAKE_THREAD_LIBS_INIT} ${SSL_LIBRARIES})
 SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
@@ -154,7 +164,7 @@ IF (BUILD_CLAR)
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
 	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${CMAKE_THREAD_LIBS_INIT})
+	TARGET_LINK_LIBRARIES(libgit2_clar ${CMAKE_THREAD_LIBS_INIT} ${SSL_LIBRARIES})
 	IF (WIN32)
 		TARGET_LINK_LIBRARIES(libgit2_clar ws2_32)
 	ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
@@ -182,4 +192,19 @@ IF (TAGS)
 		do_tags ALL
 		DEPENDS tags
 	)
+ENDIF ()
+
+IF (BUILD_EXAMPLES)
+	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c)
+	ADD_EXECUTABLE(cgit2 ${EXAMPLE_SRC})
+	TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
+
+	ADD_EXECUTABLE(git-diff examples/diff.c)
+	TARGET_LINK_LIBRARIES(git-diff git2)
+
+	ADD_EXECUTABLE(git-general examples/general.c)
+	TARGET_LINK_LIBRARIES(git-general git2)
+
+	ADD_EXECUTABLE(git-showindex examples/showindex.c)
+	TARGET_LINK_LIBRARIES(git-showindex git2)
 ENDIF ()

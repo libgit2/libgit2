@@ -66,6 +66,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->repo = repo;
+	remote->check_cert = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
 		return -1;
@@ -108,6 +109,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote);
 
 	memset(remote, 0x0, sizeof(git_remote));
+	remote->check_cert = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
 
@@ -189,6 +191,8 @@ int git_remote_save(const git_remote *remote)
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.fetch", remote->name);
+		if (remote->fetch.force)
+			git_buf_putc(&value, '+');
 		git_buf_printf(&value, "%s:%s", remote->fetch.src, remote->fetch.dst);
 		if (git_buf_oom(&buf) || git_buf_oom(&value))
 			return -1;
@@ -201,6 +205,8 @@ int git_remote_save(const git_remote *remote)
 		git_buf_clear(&buf);
 		git_buf_clear(&value);
 		git_buf_printf(&buf, "remote.%s.push", remote->name);
+		if (remote->push.force)
+			git_buf_putc(&value, '+');
 		git_buf_printf(&value, "%s:%s", remote->push.src, remote->push.dst);
 		if (git_buf_oom(&buf) || git_buf_oom(&value))
 			return -1;
@@ -287,6 +293,7 @@ int git_remote_connect(git_remote *remote, int direction)
 	if (git_transport_new(&t, remote->url) < 0)
 		return -1;
 
+	t->check_cert = remote->check_cert;
 	if (t->connect(t, direction) < 0) {
 		goto on_error;
 	}
@@ -490,7 +497,7 @@ int git_remote_add(git_remote **out, git_repository *repo, const char *name, con
 {
 	git_buf buf = GIT_BUF_INIT;
 
-	if (git_buf_printf(&buf, "refs/heads/*:refs/remotes/%s/*", name) < 0)
+	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
 		return -1;
 
 	if (git_remote_new(out, repo, name, url, git_buf_cstr(&buf)) < 0)
@@ -507,4 +514,11 @@ on_error:
 	git_buf_free(&buf);
 	git_remote_free(*out);
 	return -1;
+}
+
+void git_remote_check_cert(git_remote *remote, int check)
+{
+	assert(remote);
+
+	remote->check_cert = check;
 }

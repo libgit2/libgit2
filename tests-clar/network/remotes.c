@@ -92,6 +92,7 @@ void test_network_remotes__save(void)
 	cl_assert(_refspec != NULL);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/remotes/upstream/*");
+	cl_assert(git_refspec_force(_refspec) == 0);
 
 	_refspec = git_remote_pushspec(_remote);
 	cl_assert(_refspec != NULL);
@@ -159,6 +160,15 @@ void test_network_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_remote_load(&_remote, _repo, "just-left-few-minutes-ago"));
 }
 
+/*
+ * $ git remote add addtest http://github.com/libgit2/libgit2
+ *
+ * $ cat .git/config
+ * [...]
+ * [remote "addtest"]
+ *         url = http://github.com/libgit2/libgit2
+ *         fetch = +refs/heads/\*:refs/remotes/addtest/\*
+ */
 void test_network_remotes__add(void)
 {
 	git_remote_free(_remote);
@@ -168,5 +178,6 @@ void test_network_remotes__add(void)
 	cl_git_pass(git_remote_load(&_remote, _repo, "addtest"));
 	_refspec = git_remote_fetchspec(_remote);
 	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/heads/*"));
+	cl_assert(git_refspec_force(_refspec) == 1);
 	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/addtest/*"));
 }

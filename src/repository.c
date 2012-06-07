@@ -124,11 +124,12 @@ static int load_config_data(git_repository *repo)
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
+	/* Try to figure out if it's bare, default to non-bare if it's not set */
 	if (git_config_get_bool(&is_bare, config, "core.bare") < 0)
-		return -1; /* FIXME: We assume that a missing core.bare
-					  variable is an error. Is this right? */
+		repo->is_bare = 0;
+	else
+		repo->is_bare = is_bare;
 
-	repo->is_bare = is_bare;
 	return 0;
 }
 
@@ -654,7 +655,46 @@ static int repo_init_createhead(const char *git_dir)
 	return 0;
 }
 
-static int repo_init_config(const char *git_dir, int is_bare)
+static bool is_chmod_supported(const char *file_path)
+{
+	struct stat st1, st2;
+	static int _is_supported = -1;
+
+	if (_is_supported > -1)
+		return _is_supported;
+
+	if (p_stat(file_path, &st1) < 0)
+		return false;
+
+	if (p_chmod(file_path, st1.st_mode ^ S_IXUSR) < 0)
+		return false;
+
+	if (p_stat(file_path, &st2) < 0)
+		return false;
+
+	_is_supported = (st1.st_mode != st2.st_mode);
+	return _is_supported;
+}
+
+static bool is_filesystem_case_insensitive(const char *gitdir_path)
+{
+	git_buf path = GIT_BUF_INIT;
+	static int _is_insensitive = -1;
+
+	if (_is_insensitive > -1)
+		return _is_insensitive;
+
+	if (git_buf_joinpath(&path, gitdir_path, "CoNfIg") < 0)
+		goto cleanup;
+
+	_is_insensitive = git_path_exists(git_buf_cstr(&path));
+
+cleanup:
+	git_buf_free(&path);
+	return _is_insensitive;
+}
+
+static int repo_init_config(const char *git_dir, bool is_bare, bool is_reinit)
 {
 	git_buf cfg_path = GIT_BUF_INIT;
 	git_config *config = NULL;
@@ -669,13 +709,17 @@ static int repo_init_config(const char *git_dir, int is_bare)
 	if (git_buf_joinpath(&cfg_path, git_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
 		return -1;
 
-	if (git_config_open_ondisk(&config, cfg_path.ptr) < 0) {
+	if (git_config_open_ondisk(&config, git_buf_cstr(&cfg_path)) < 0) {
 		git_buf_free(&cfg_path);
 		return -1;
 	}
 
 	SET_REPO_CONFIG(bool, "core.bare", is_bare);
 	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
+	SET_REPO_CONFIG(bool, "core.filemode", is_chmod_supported(git_buf_cstr(&cfg_path)));
+	
+	if (!is_reinit && is_filesystem_case_insensitive(git_dir))
+		SET_REPO_CONFIG(bool, "core.ignorecase", true);
 	/* TODO: what other defaults? */
 
 	git_buf_free(&cfg_path);
@@ -789,30 +833,35 @@ static int repo_init_structure(const char *git_dir, int is_bare)
 int git_repository_init(git_repository **repo_out, const char *path, unsigned is_bare)
 {
 	git_buf repository_path = GIT_BUF_INIT;
+	bool is_reinit;
+	int result = -1;
 
 	assert(repo_out && path);
 
 	if (git_buf_joinpath(&repository_path, path, is_bare ? "" : GIT_DIR) < 0)
-		return -1;
+		goto cleanup;
 
-	if (git_path_isdir(repository_path.ptr) == true) {
-		if (valid_repository_path(&repository_path) == true) {
-			int res = repo_init_reinit(repo_out, repository_path.ptr, is_bare);
-			git_buf_free(&repository_path);
-			return res;
-		}
+	is_reinit = git_path_isdir(repository_path.ptr) && valid_repository_path(&repository_path);
+
+	if (is_reinit) {
+		if (repo_init_reinit(repo_out, repository_path.ptr, is_bare) < 0)
+			goto cleanup;
+
+		result = repo_init_config(repository_path.ptr, is_bare, is_reinit);
 	}
 
 	if (repo_init_structure(repository_path.ptr, is_bare) < 0 ||
-		repo_init_config(repository_path.ptr, is_bare) < 0 || 
+		repo_init_config(repository_path.ptr, is_bare, is_reinit) < 0 || 
 		repo_init_createhead(repository_path.ptr) < 0 ||
 		git_repository_open(repo_out, repository_path.ptr) < 0) {
-		git_buf_free(&repository_path);
-		return -1;
+		goto cleanup;
 	}
 
+	result = 0;
+
+cleanup:
 	git_buf_free(&repository_path);
-	return 0;
+	return result;
 }
 
 int git_repository_head_detached(git_repository *repo)

@@ -89,7 +89,6 @@ void git_mwindow_scan_lru(
 {
 	git_mwindow *w, *w_l;
 
-	puts("LRU");
 	for (w_l = NULL, w = mwf->windows; w; w = w->next) {
 		if (!w->inuse_cnt) {
 			/*
@@ -247,7 +246,6 @@ unsigned char *git_mwindow_open(
 	if (left)
 		*left = (unsigned int)(w->window_map.len - offset);
 
-	fflush(stdout);
 	return (unsigned char *) w->window_map.data + offset;
 }
 

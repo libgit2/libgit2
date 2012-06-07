@@ -7,7 +7,8 @@ language: erlang
 # Settings to try
 env:
   - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
-  - OPTIONS="-DBUILD_CLAR=ON"
+  - OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
+  - CC=i586-mingw32msvc-gcc OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON"
       
 # Make sure CMake is installed
 install:

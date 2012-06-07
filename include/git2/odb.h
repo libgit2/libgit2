@@ -62,7 +62,7 @@ GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
  * @param odb database to add the backend to
  * @param backend pointer to a git_odb_backend instance
  * @param priority Value for ordering the backends queue
- * @return 0 on sucess; error code otherwise
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
 
@@ -83,7 +83,7 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
  * @param odb database to add the backend to
  * @param backend pointer to a git_odb_backend instance
  * @param priority Value for ordering the backends queue
- * @return 0 on sucess; error code otherwise
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
 
@@ -185,7 +185,7 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  *
  * @param oid pointer to store the OID result of the write
  * @param odb object database where to store the object
- * @param data buffer with the data to storr
+ * @param data buffer with the data to store
  * @param len size of the buffer
  * @param type type of the data to store
  * @return 0 or an error code
@@ -250,7 +250,7 @@ GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const
 /**
  * Determine the object-ID (sha1 hash) of a data buffer
  *
- * The resulting SHA-1 OID will the itentifier for the data
+ * The resulting SHA-1 OID will be the identifier for the data
  * buffer as if the data buffer it were to written to the ODB.
  *
  * @param id the resulting object-ID.

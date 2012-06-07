@@ -66,7 +66,7 @@ GIT_BEGIN_DECL
 
 /**
  * GIT_ATTR_HAS_VALUE checks if an attribute is set to a value (as
- * opposied to TRUE, FALSE or UNSPECIFIED).  This would be the case if
+ * opposed to TRUE, FALSE or UNSPECIFIED).  This would be the case if
  * for a file with something like:
  *
  *    *.txt eol=lf

@@ -403,9 +403,14 @@ int git_attr_cache__push_file(
 		goto finish;
 	}
 
-	if (!file &&
-		(error = git_attr_file__new(&file, source, relfile, &cache->pool)) < 0)
-		goto finish;
+	/* if we got here, we have to parse and/or reparse the file */
+	if (file)
+		git_attr_file__clear_rules(file);
+	else {
+		error = git_attr_file__new(&file, source, relfile, &cache->pool);
+		if (error < 0)
+			goto finish;
+	}
 
 	if (parse && (error = parse(repo, content, file)) < 0)
 		goto finish;

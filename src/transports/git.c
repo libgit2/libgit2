@@ -25,7 +25,6 @@
 typedef struct {
 	git_transport parent;
 	git_protocol proto;
-	GIT_SOCKET socket;
 	git_vector refs;
 	git_remote_head **heads;
 	git_transport_caps caps;
@@ -77,7 +76,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	return 0;
 }
 
-static int send_request(GIT_SOCKET s, const char *cmd, const char *url)
+static int send_request(git_transport *t, const char *cmd, const char *url)
 {
 	int error;
 	git_buf request = GIT_BUF_INIT;
@@ -86,7 +85,7 @@ static int send_request(GIT_SOCKET s, const char *cmd, const char *url)
 	if (error < 0)
 		goto cleanup;
 
-	error = gitno_send(s, request.ptr, request.size, 0);
+	error = gitno_send(t, request.ptr, request.size, 0);
 
 cleanup:
 	git_buf_free(&request);
@@ -102,9 +101,6 @@ static int do_connect(transport_git *t, const char *url)
 {
 	char *host, *port;
 	const char prefix[] = "git://";
-	int error;
-
-	t->socket = INVALID_SOCKET;
 
 	if (!git__prefixcmp(url, prefix))
 		url += strlen(prefix);
@@ -112,24 +108,22 @@ static int do_connect(transport_git *t, const char *url)
 	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
 		return -1;
 
-	if ((error = gitno_connect(&t->socket, host, port)) == 0) {
-		error = send_request(t->socket, NULL, url);
-	}
+	if (gitno_connect((git_transport *)t, host, port) < 0)
+		goto on_error;
+
+	if (send_request((git_transport *)t, NULL, url) < 0)
+		goto on_error;
 
 	git__free(host);
 	git__free(port);
 
-	if (error < 0 && t->socket != INVALID_SOCKET) {
-		gitno_close(t->socket);
-		t->socket = INVALID_SOCKET;
-	}
-
-	if (t->socket == INVALID_SOCKET) {
-		giterr_set(GITERR_NET, "Failed to connect to the host");
-		return -1;
-	}
-
 	return 0;
+
+on_error:
+	git__free(host);
+	git__free(port);
+	gitno_close(t->parent.socket);
+	return -1;
 }
 
 /*
@@ -215,7 +209,7 @@ static int git_connect(git_transport *transport, int direction)
 	if (do_connect(t, transport->url) < 0)
 		goto cleanup;
 
-	gitno_buffer_setup(&t->buf, t->buff, sizeof(t->buff), t->socket);
+	gitno_buffer_setup(transport, &t->buf, t->buff, sizeof(t->buff));
 
 	t->parent.connected = 1;
 	if (store_refs(t) < 0)
@@ -308,7 +302,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 	if (git_fetch_setup_walk(&walk, repo) < 0)
 		goto on_error;
 
-	if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+	if (gitno_send(transport, data.ptr, data.size, 0) < 0)
 		goto on_error;
 
 	git_buf_clear(&data);
@@ -328,7 +322,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 			if (git_buf_oom(&data))
 				goto on_error;
 
-			if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+			if (gitno_send(transport, data.ptr, data.size, 0) < 0)
 				goto on_error;
 
 			pkt_type = recv_pkt(buf);
@@ -351,7 +345,7 @@ static int git_negotiate_fetch(git_transport *transport, git_repository *repo, c
 	git_buf_clear(&data);
 	git_pkt_buffer_flush(&data);
 	git_pkt_buffer_done(&data);
-	if (gitno_send(t->socket, data.ptr, data.size, 0) < 0)
+	if (gitno_send(transport, data.ptr, data.size, 0) < 0)
 		goto on_error;
 
 	git_buf_free(&data);
@@ -392,7 +386,7 @@ static int git_download_pack(git_transport *transport, git_repository *repo, git
 
 			if (pkt->type == GIT_PKT_PACK) {
 				git__free(pkt);
-				return git_fetch__download_pack(buf->data, buf->offset, t->socket, repo, bytes, stats);
+				return git_fetch__download_pack(buf->data, buf->offset, transport, repo, bytes, stats);
 			}
 
 			/* For now we don't care about anything */
@@ -406,16 +400,21 @@ static int git_download_pack(git_transport *transport, git_repository *repo, git
 	return read_bytes;
 }
 
-static int git_close(git_transport *transport)
+static int git_close(git_transport *t)
 {
-	transport_git *t = (transport_git*) transport;
+	git_buf buf = GIT_BUF_INIT;
 
+	if (git_pkt_buffer_flush(&buf) < 0)
+		return -1;
 	/* Can't do anything if there's an error, so don't bother checking  */
-	git_pkt_send_flush(t->socket);
+	gitno_send(t, buf.ptr, buf.size, 0);
+
 	if (gitno_close(t->socket) < 0) {
 		giterr_set(GITERR_NET, "Failed to close socket");
 		return -1;
 	}
+
+	t->connected = 0;
 
 #ifdef GIT_WIN32
 	WSACleanup();
