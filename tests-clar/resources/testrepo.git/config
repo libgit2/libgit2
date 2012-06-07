@@ -6,3 +6,7 @@
 [remote "test"]
 	url = git://github.com/libgit2/libgit2
 	fetch = +refs/heads/*:refs/remotes/test/*
+
+[branch "master"]
+   remote = test
+   merge = refs/heads/master
