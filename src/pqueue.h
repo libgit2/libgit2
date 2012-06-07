@@ -1,24 +1,8 @@
 /*
- *	BORING COPYRIGHT NOTICE:
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- *	This file is a heavily modified version of the priority queue found
- *	in the Apache project and the libpqueue library.
- *
- *		https://github.com/vy/libpqueue
- *
- *	These are the original authors:
- *
- *		Copyright 2010 Volkan Yazıcı <volkan.yazici@gmail.com>
- *		Copyright 2006-2010 The Apache Software Foundation
- *
- *  This file is licensed under the Apache 2.0 license, which 
- *  supposedly makes it compatible with the GPLv2 that libgit2 uses.
- *
- *  Check the Apache license at:
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  So much licensing trouble for a binary heap. Oh well.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 
 #ifndef INCLUDE_pqueue_h__
@@ -29,9 +13,9 @@ typedef int (*git_pqueue_cmp)(void *a, void *b);
 
 /** the priority queue handle */
 typedef struct {
-    size_t size, avail, step;
-    git_pqueue_cmp cmppri;
-    void **d;
+	size_t size, avail, step;
+	git_pqueue_cmp cmppri;
+	void **d;
 } git_pqueue;
 
 
@@ -39,7 +23,7 @@ typedef struct {
  * initialize the queue
  *
  * @param n the initial estimate of the number of queue items for which memory
- *          should be preallocated
+ *			should be preallocated
  * @param cmppri the callback function to compare two nodes of the queue
  *
  * @Return the handle or NULL for insufficent memory

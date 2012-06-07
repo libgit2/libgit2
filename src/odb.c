@@ -1,30 +1,12 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 
 #include "common.h"
-#include "git2/zlib.h"
+#include <zlib.h>
 #include "git2/object.h"
 #include "fileops.h"
 #include "hash.h"
@@ -46,45 +28,37 @@ typedef struct
 	int is_alternate;
 } backend_internal;
 
-static int format_object_header(char *hdr, size_t n, git_rawobj *obj)
+static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
 {
-	const char *type_str = git_object_type2string(obj->type);
-	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj->len);
-
-	assert(len > 0);             /* otherwise snprintf() is broken  */
-	assert(((size_t) len) < n);  /* otherwise the caller is broken! */
-
-	if (len < 0 || ((size_t) len) >= n)
-		return git__throw(GIT_ERROR, "Cannot format object header. Length is out of bounds");
+	const char *type_str = git_object_type2string(obj_type);
+	int len = p_snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
+	assert(len > 0 && len <= (int)n);
 	return len+1;
 }
 
-int git_odb__hash_obj(git_oid *id, char *hdr, size_t n, int *len, git_rawobj *obj)
+int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 {
 	git_buf_vec vec[2];
-	int  hdrlen;
+	char header[64];
+	int hdrlen;
 
-	assert(id && hdr && len && obj);
+	assert(id && obj);
 
 	if (!git_object_typeisloose(obj->type))
-		return git__throw(GIT_ERROR, "Failed to hash object. Wrong object type");
-
+		return -1;
 	if (!obj->data && obj->len != 0)
-		return git__throw(GIT_ERROR, "Failed to hash object. No data given");
+		return -1;
 
-	if ((hdrlen = format_object_header(hdr, n, obj)) < 0)
-		return git__rethrow(hdrlen, "Failed to hash object");
+	hdrlen = format_object_header(header, sizeof(header), obj->len, obj->type);
 
-	*len = hdrlen;
-
-	vec[0].data = hdr;
-	vec[0].len  = hdrlen;
+	vec[0].data = header;
+	vec[0].len = hdrlen;
 	vec[1].data = obj->data;
-	vec[1].len  = obj->len;
+	vec[1].len = obj->len;
 
 	git_hash_vec(id, vec, 2);
 
-	return GIT_SUCCESS;
+	return 0;
 }
 
 
@@ -104,8 +78,8 @@ static void free_odb_object(void *o)
 	git_odb_object *object = (git_odb_object *)o;
 
 	if (object != NULL) {
-		free(object->raw.data);
-		free(object);
+		git__free(object->raw.data);
+		git__free(object);
 	}
 }
 
@@ -129,15 +103,104 @@ git_otype git_odb_object_type(git_odb_object *object)
 	return object->raw.type;
 }
 
-void git_odb_object_close(git_odb_object *object)
+void git_odb_object_free(git_odb_object *object)
 {
 	git_cached_obj_decref((git_cached_obj *)object, &free_odb_object);
 }
 
+int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
+{
+	int hdr_len;
+	char hdr[64], buffer[2048];
+	git_hash_ctx *ctx;
+
+	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
+
+	ctx = git_hash_new_ctx();
+
+	git_hash_update(ctx, hdr, hdr_len);
+
+	while (size > 0) {
+		ssize_t read_len = read(fd, buffer, sizeof(buffer));
+
+		if (read_len < 0) {
+			git_hash_free_ctx(ctx);
+			giterr_set(GITERR_OS, "Error reading file");
+			return -1;
+		}
+
+		git_hash_update(ctx, buffer, read_len);
+		size -= read_len;
+	}
+
+	git_hash_final(out, ctx);
+	git_hash_free_ctx(ctx);
+
+	return 0;
+}
+
+int git_odb__hashlink(git_oid *out, const char *path)
+{
+	struct stat st;
+	git_off_t size;
+	int result;
+
+	if (git_path_lstat(path, &st) < 0)
+		return -1;
+
+	size = st.st_size;
+
+	if (!git__is_sizet(size)) {
+		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
+		return -1;
+	}
+
+	if (S_ISLNK(st.st_mode)) {
+		char *link_data;
+		ssize_t read_len;
+
+		link_data = git__malloc((size_t)size);
+		GITERR_CHECK_ALLOC(link_data);
+
+		read_len = p_readlink(path, link_data, (size_t)(size + 1));
+		if (read_len != (ssize_t)size) {
+			giterr_set(GITERR_OS, "Failed to read symlink data for '%s'", path);
+			return -1;
+		}
+
+		result = git_odb_hash(out, link_data, (size_t)size, GIT_OBJ_BLOB);
+		git__free(link_data);
+	} else { 
+		int fd = git_futils_open_ro(path);
+		if (fd < 0)
+			return -1;
+		result = git_odb__hashfd(out, fd, (size_t)size, GIT_OBJ_BLOB);
+		p_close(fd);
+	}
+
+	return result;
+}
+
+int git_odb_hashfile(git_oid *out, const char *path, git_otype type)
+{
+	git_off_t size;
+	int result, fd = git_futils_open_ro(path);
+	if (fd < 0)
+		return fd;
+
+	if ((size = git_futils_filesize(fd)) < 0 || !git__is_sizet(size)) {
+		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
+		p_close(fd);
+		return -1;
+	}
+
+	result = git_odb__hashfd(out, fd, (size_t)size, type);
+	p_close(fd);
+	return result;
+}
+
 int git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type)
 {
-	char hdr[64];
-	int  hdrlen;
 	git_rawobj raw;
 
 	assert(id);
@@ -146,7 +209,7 @@ int git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type)
 	raw.len = len;
 	raw.type = type;
 
-	return git_odb__hash_obj(id, hdr, sizeof(hdr), &hdrlen, &raw);
+	return git_odb__hashobj(id, &raw);
 }
 
 /**
@@ -171,19 +234,19 @@ static int fake_wstream__write(git_odb_stream *_stream, const char *data, size_t
 	fake_wstream *stream = (fake_wstream *)_stream;
 
 	if (stream->written + len > stream->size)
-		return GIT_ENOMEM;
+		return -1;
 
 	memcpy(stream->buffer + stream->written, data, len);
 	stream->written += len;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static void fake_wstream__free(git_odb_stream *_stream)
 {
 	fake_wstream *stream = (fake_wstream *)_stream;
 
-	free(stream->buffer);
-	free(stream);
+	git__free(stream->buffer);
+	git__free(stream);
 }
 
 static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, size_t size, git_otype type)
@@ -191,15 +254,14 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 	fake_wstream *stream;
 
 	stream = git__calloc(1, sizeof(fake_wstream));
-	if (stream == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(stream);
 
 	stream->size = size;
 	stream->type = type;
 	stream->buffer = git__malloc(size);
 	if (stream->buffer == NULL) {
-		free(stream);
-		return GIT_ENOMEM;
+		git__free(stream);
+		return -1;
 	}
 
 	stream->stream.backend = backend;
@@ -210,7 +272,7 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 	stream->stream.mode = GIT_STREAM_WRONLY;
 
 	*stream_p = (git_odb_stream *)stream;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 /***********************************************************
@@ -223,8 +285,8 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 
 static int backend_sort_cmp(const void *a, const void *b)
 {
-	const backend_internal *backend_a = *(const backend_internal **)(a);
-	const backend_internal *backend_b = *(const backend_internal **)(b);
+	const backend_internal *backend_a = (const backend_internal *)(a);
+	const backend_internal *backend_b = (const backend_internal *)(b);
 
 	if (backend_a->is_alternate == backend_b->is_alternate)
 		return (backend_b->priority - backend_a->priority);
@@ -234,25 +296,19 @@ static int backend_sort_cmp(const void *a, const void *b)
 
 int git_odb_new(git_odb **out)
 {
-	int error;
-
 	git_odb *db = git__calloc(1, sizeof(*db));
-	if (!db)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(db);
 
-	error = git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object);
-	if (error < GIT_SUCCESS) {
-		free(db);
-		return git__rethrow(error, "Failed to create object database");
-	}
-
-	if ((error = git_vector_init(&db->backends, 4, backend_sort_cmp)) < GIT_SUCCESS) {
-		free(db);
-		return git__rethrow(error, "Failed to create object database");
+	if (git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object) < 0 ||
+		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0)
+	{
+		git__free(db);
+		return -1;
 	}
 
 	*out = db;
-	return GIT_SUCCESS;
+	GIT_REFCOUNT_INC(db);
+	return 0;
 }
 
 static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int priority, int is_alternate)
@@ -261,25 +317,24 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 
 	assert(odb && backend);
 
-	if (backend->odb != NULL && backend->odb != odb)
-		return git__throw(GIT_EBUSY, "The backend is already owned by another ODB");
+	/* Check if the backend is already owned by another ODB */
+	assert(!backend->odb || backend->odb == odb);
 
 	internal = git__malloc(sizeof(backend_internal));
-	if (internal == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(internal);
 
 	internal->backend = backend;
 	internal->priority = priority;
 	internal->is_alternate = is_alternate;
 
 	if (git_vector_insert(&odb->backends, internal) < 0) {
-		free(internal);
-		return GIT_ENOMEM;
+		git__free(internal);
+		return -1;
 	}
 
 	git_vector_sort(&odb->backends);
 	internal->backend->odb = odb;
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority)
@@ -295,130 +350,125 @@ int git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority)
 static int add_default_backends(git_odb *db, const char *objects_dir, int as_alternates)
 {
 	git_odb_backend *loose, *packed;
-	int error;
 
 	/* add the loose object backend */
-	error = git_odb_backend_loose(&loose, objects_dir);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	error = add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to add backend");
+	if (git_odb_backend_loose(&loose, objects_dir, -1, 0) < 0 ||
+		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates) < 0)
+		return -1;
 
 	/* add the packed file backend */
-	error = git_odb_backend_pack(&packed, objects_dir);
-	if (error < GIT_SUCCESS)
-		return error;
+	if (git_odb_backend_pack(&packed, objects_dir) < 0 ||
+		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates) < 0)
+		return -1;
 
-	error = add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to add backend");
-
-	return GIT_SUCCESS;
+	return 0;
 }
 
 static int load_alternates(git_odb *odb, const char *objects_dir)
 {
-	char alternates_path[GIT_PATH_MAX];
-	char *buffer, *alternate;
+	git_buf alternates_path = GIT_BUF_INIT;
+	git_buf alternates_buf = GIT_BUF_INIT;
+	char *buffer;
+	const char *alternate;
+	int result = 0;
 
-	gitfo_buf alternates_buf = GITFO_BUF_INIT;
-	int error;
+	if (git_buf_joinpath(&alternates_path, objects_dir, GIT_ALTERNATES_FILE) < 0)
+		return -1;
 
-	git__joinpath(alternates_path, objects_dir, GIT_ALTERNATES_FILE);
+	if (git_path_exists(alternates_path.ptr) == false) {
+		git_buf_free(&alternates_path);
+		return 0;
+	}
 
-	if (gitfo_exists(alternates_path) < GIT_SUCCESS)
-		return GIT_SUCCESS;
+	if (git_futils_readbuffer(&alternates_buf, alternates_path.ptr) < 0) {
+		git_buf_free(&alternates_path);
+		return -1;
+	}
 
-	if (gitfo_read_file(&alternates_buf, alternates_path) < GIT_SUCCESS)
-		return git__throw(GIT_EOSERR, "Failed to add backend. Can't read alternates");
-
-	buffer = (char *)alternates_buf.data;
-	error = GIT_SUCCESS;
+	buffer = (char *)alternates_buf.ptr;
 
 	/* add each alternate as a new backend; one alternate per line */
 	while ((alternate = git__strtok(&buffer, "\r\n")) != NULL) {
-		char full_path[GIT_PATH_MAX];
-
 		if (*alternate == '\0' || *alternate == '#')
 			continue;
 
 		/* relative path: build based on the current `objects` folder */
 		if (*alternate == '.') {
-			git__joinpath(full_path, objects_dir, alternate);
-			alternate = full_path;
+			if ((result = git_buf_joinpath(&alternates_path, objects_dir, alternate)) < 0)
+				break;
+			alternate = git_buf_cstr(&alternates_path);
 		}
 
-		if ((error = add_default_backends(odb, alternate, 1)) < GIT_SUCCESS)
+		if ((result = add_default_backends(odb, alternate, 1)) < 0)
 			break;
 	}
 
-	gitfo_free_buf(&alternates_buf);
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to load alternates");
-	return error;
+	git_buf_free(&alternates_path);
+	git_buf_free(&alternates_buf);
+
+	return result;
 }
 
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
 	git_odb *db;
-	int error;
 
 	assert(out && objects_dir);
 
 	*out = NULL;
 
-	if ((error = git_odb_new(&db)) < 0)
-		return git__rethrow(error, "Failed to open ODB");
+	if (git_odb_new(&db) < 0)
+		return -1;
 
-	if ((error = add_default_backends(db, objects_dir, 0)) < GIT_SUCCESS)
-		goto cleanup;
-
-	if ((error = load_alternates(db, objects_dir)) < GIT_SUCCESS)
-		goto cleanup;
+	if (add_default_backends(db, objects_dir, 0) < 0 ||
+		load_alternates(db, objects_dir) < 0)
+	{
+		git_odb_free(db);
+		return -1;
+	}
 
 	*out = db;
-	return GIT_SUCCESS;
-
-cleanup:
-	git_odb_close(db);
-	return error; /* error already set - pass through */
+	return 0;
 }
 
-void git_odb_close(git_odb *db)
+static void odb_free(git_odb *db)
 {
 	unsigned int i;
-
-	if (db == NULL)
-		return;
 
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *backend = internal->backend;
 
 		if (backend->free) backend->free(backend);
-		else free(backend);
+		else git__free(backend);
 
-		free(internal);
+		git__free(internal);
 	}
 
 	git_vector_free(&db->backends);
 	git_cache_free(&db->cache);
-	free(db);
+	git__free(db);
+}
+
+void git_odb_free(git_odb *db)
+{
+	if (db == NULL)
+		return;
+
+	GIT_REFCOUNT_DEC(db, odb_free);
 }
 
 int git_odb_exists(git_odb *db, const git_oid *id)
 {
 	git_odb_object *object;
 	unsigned int i;
-	int found = 0;
+	bool found = false;
 
 	assert(db && id);
 
 	if ((object = git_cache_get(&db->cache, id)) != NULL) {
-		git_odb_object_close(object);
-		return 1;
+		git_odb_object_free(object);
+		return (int)true;
 	}
 
 	for (i = 0; i < db->backends.length && !found; ++i) {
@@ -429,7 +479,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 			found = b->exists(b, id);
 	}
 
-	return found;
+	return (int)found;
 }
 
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
@@ -443,8 +493,8 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 	if ((object = git_cache_get(&db->cache, id)) != NULL) {
 		*len_p = object->raw.len;
 		*type_p = object->raw.type;
-		git_odb_object_close(object);
-		return GIT_SUCCESS;
+		git_odb_object_free(object);
+		return 0;
 	}
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
@@ -455,20 +505,20 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 			error = b->read_header(len_p, type_p, b, id);
 	}
 
+	if (!error || error == GIT_PASSTHROUGH)
+		return 0;
+
 	/*
 	 * no backend could read only the header.
 	 * try reading the whole object and freeing the contents
 	 */
-	if (error < 0) {
-		if ((error = git_odb_read(&object, db, id)) < GIT_SUCCESS)
-			return error; /* error already set - pass through */
+	if ((error = git_odb_read(&object, db, id)) < 0)
+		return error; /* error already set - pass along */
 
-		*len_p = object->raw.len;
-		*type_p = object->raw.type;
-		git_odb_object_close(object);
-	}
-
-	return GIT_SUCCESS;
+	*len_p = object->raw.len;
+	*type_p = object->raw.type;
+	git_odb_object_free(object);
+	return 0;
 }
 
 int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
@@ -481,7 +531,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 
 	*out = git_cache_get(&db->cache, id);
 	if (*out != NULL)
-		return GIT_SUCCESS;
+		return 0;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -491,27 +541,30 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 	}
 
-	if (error == GIT_SUCCESS) {
-		*out = git_cache_try_store(&db->cache, new_odb_object(id, &raw));
-	}
+	/* TODO: If no backends are configured, this returns GIT_ENOTFOUND but
+	 * will never have called giterr_set().
+	 */
 
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to read object");
-	return error;
+	if (error && error != GIT_PASSTHROUGH)
+		return error;
+
+	*out = git_cache_try_store(&db->cache, new_odb_object(id, &raw));
+	return 0;
 }
 
-int git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
+int git_odb_read_prefix(
+	git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
 {
 	unsigned int i;
 	int error = GIT_ENOTFOUND;
-	git_oid full_oid;
+	git_oid found_full_oid = {{0}};
 	git_rawobj raw;
-	int found = 0;
+	bool found = false;
 
 	assert(out && db);
 
 	if (len < GIT_OID_MINPREFIXLEN)
-		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+		return git_odb__error_ambiguous("prefix length too short");
 
 	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
@@ -519,44 +572,42 @@ int git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_
 	if (len == GIT_OID_HEXSZ) {
 		*out = git_cache_get(&db->cache, short_id);
 		if (*out != NULL)
-			return GIT_SUCCESS;
+			return 0;
 	}
 
-	for (i = 0; i < db->backends.length && found < 2; ++i) {
+	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
 		if (b->read != NULL) {
+			git_oid full_oid;
 			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
-			switch (error) {
-			case GIT_SUCCESS:
-				found++;
-				break;
-			case GIT_ENOTFOUND:
-				break;
-			case GIT_EAMBIGUOUSOIDPREFIX:
-				return git__rethrow(error, "Failed to read object. Ambiguous sha1 prefix");
-			default:
-				return git__rethrow(error, "Failed to read object");
-			}
+			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
+				continue;
+
+			if (error)
+				return error;
+
+			if (found && git_oid_cmp(&full_oid, &found_full_oid))
+				return git_odb__error_ambiguous("multiple matches for prefix");
+			found_full_oid = full_oid;
+			found = true;
 		}
 	}
 
-	if (found == 1) {
-		*out = git_cache_try_store(&db->cache, new_odb_object(&full_oid, &raw));
-	} else if (found > 1) {
-		return git__throw(GIT_EAMBIGUOUSOIDPREFIX, "Failed to read object. Ambiguous sha1 prefix");
-	} else {
-		return git__throw(GIT_ENOTFOUND, "Failed to read object. Object not found");
-	}
+	if (!found)
+		return git_odb__error_notfound("no match for prefix", short_id);
 
-	return GIT_SUCCESS;
+	*out = git_cache_try_store(&db->cache, new_odb_object(&found_full_oid, &raw));
+	return 0;
 }
 
-int git_odb_write(git_oid *oid, git_odb *db, const void *data, size_t len, git_otype type)
+int git_odb_write(
+	git_oid *oid, git_odb *db, const void *data, size_t len, git_otype type)
 {
 	unsigned int i;
 	int error = GIT_ERROR;
+	git_odb_stream *stream;
 
 	assert(oid && db);
 
@@ -572,24 +623,25 @@ int git_odb_write(git_oid *oid, git_odb *db, const void *data, size_t len, git_o
 			error = b->write(oid, b, data, len, type);
 	}
 
+	if (!error || error == GIT_PASSTHROUGH)
+		return 0;
+
 	/* if no backends were able to write the object directly, we try a streaming
 	 * write to the backends; just write the whole object into the stream in one
 	 * push */
-	if (error < GIT_SUCCESS) {
-		git_odb_stream *stream;
 
-		if ((error = git_odb_open_wstream(&stream, db, len, type)) == GIT_SUCCESS) {
-			stream->write(stream, data, len);
-			error = stream->finalize_write(oid, stream);
-			stream->free(stream);
-		}
-	}
+	if ((error = git_odb_open_wstream(&stream, db, len, type)) != 0)
+		return error;
 
-	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Failed to write object");
+	stream->write(stream, data, len);
+	error = stream->finalize_write(oid, stream);
+	stream->free(stream);
+
+	return error;
 }
 
-int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_otype type)
+int git_odb_open_wstream(
+	git_odb_stream **stream, git_odb *db, size_t size, git_otype type)
 {
 	unsigned int i;
 	int error = GIT_ERROR;
@@ -610,11 +662,13 @@ int git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_t size, git_
 			error = init_fake_wstream(stream, b, size, type);
 	}
 
-	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Failed to open write stream");
+	if (error == GIT_PASSTHROUGH)
+		error = 0;
+
+	return error;
 }
 
-int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid) 
+int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)
 {
 	unsigned int i;
 	int error = GIT_ERROR;
@@ -629,7 +683,27 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 			error = b->readstream(stream, b, oid);
 	}
 
-	return (error == GIT_SUCCESS) ? GIT_SUCCESS :
-		git__rethrow(error, "Failed to open read stream");
+	if (error == GIT_PASSTHROUGH)
+		error = 0;
+
+	return error;
+}
+
+int git_odb__error_notfound(const char *message, const git_oid *oid)
+{
+	if (oid != NULL) {
+		char oid_str[GIT_OID_HEXSZ + 1];
+		git_oid_tostr(oid_str, sizeof(oid_str), oid);
+		giterr_set(GITERR_ODB, "Object not found - %s (%s)", message, oid_str);
+	} else
+		giterr_set(GITERR_ODB, "Object not found - %s", message);
+
+	return GIT_ENOTFOUND;
+}
+
+int git_odb__error_ambiguous(const char *message)
+{
+	giterr_set(GITERR_ODB, "Ambiguous SHA1 prefix - %s", message);
+	return GIT_EAMBIGUOUS;
 }
 

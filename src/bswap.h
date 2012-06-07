@@ -1,8 +1,8 @@
 /*
- * Let's make sure we always have a sane definition for ntohl()/htonl().
- * Some libraries define those as a function call, just to perform byte
- * shifting, bringing significant overhead to what should be a simple
- * operation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 
 #include "common.h"
@@ -14,8 +14,8 @@
 GIT_INLINE(uint32_t) default_swab32(uint32_t val)
 {
 	return (((val & 0xff000000) >> 24) |
-		((val & 0x00ff0000) >>  8) |
-		((val & 0x0000ff00) <<  8) |
+		((val & 0x00ff0000) >> 8) |
+		((val & 0x0000ff00) << 8) |
 		((val & 0x000000ff) << 24));
 }
 

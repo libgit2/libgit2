@@ -1,26 +1,8 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #ifndef INCLUDE_git_odb_h__
 #define INCLUDE_git_odb_h__
@@ -46,9 +28,8 @@ GIT_BEGIN_DECL
  * backend must be manually added using `git_odb_add_backend()`
  *
  * @param out location to store the database pointer, if opened.
- *            Set to NULL if the open failed.
- * @return GIT_SUCCESS if the database was created; otherwise an error
- *         code describing why the open was not possible.
+ *			Set to NULL if the open failed.
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_new(git_odb **out);
 
@@ -64,21 +45,24 @@ GIT_EXTERN(int) git_odb_new(git_odb **out);
  *		contains a 'pack/' folder with the corresponding data
  *
  * @param out location to store the database pointer, if opened.
- *            Set to NULL if the open failed.
+ *			Set to NULL if the open failed.
  * @param objects_dir path of the backends' "objects" directory.
- * @return GIT_SUCCESS if the database opened; otherwise an error
- *         code describing why the open was not possible.
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
 
 /**
  * Add a custom backend to an existing Object DB
  *
+ * The backends are checked in relative ordering, based on the
+ * value of the `priority` parameter.
+ *
  * Read <odb_backends.h> for more information.
  *
  * @param odb database to add the backend to
- * @paramm backend pointer to a git_odb_backend instance
- * @return 0 on sucess; error code otherwise
+ * @param backend pointer to a git_odb_backend instance
+ * @param priority Value for ordering the backends queue
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
 
@@ -89,22 +73,26 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
  * Alternate backends are always checked for objects *after*
  * all the main backends have been exhausted.
  *
+ * The backends are checked in relative ordering, based on the
+ * value of the `priority` parameter.
+ *
  * Writing is disabled on alternate backends.
  *
  * Read <odb_backends.h> for more information.
  *
  * @param odb database to add the backend to
- * @paramm backend pointer to a git_odb_backend instance
- * @return 0 on sucess; error code otherwise
+ * @param backend pointer to a git_odb_backend instance
+ * @param priority Value for ordering the backends queue
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
 
 /**
  * Close an open object database.
  *
- * @param db database pointer to close.  If NULL no action is taken.
+ * @param db database pointer to close. If NULL no action is taken.
  */
-GIT_EXTERN(void) git_odb_close(git_odb *db);
+GIT_EXTERN(void) git_odb_free(git_odb *db);
 
 /**
  * Read an object from the database.
@@ -120,7 +108,7 @@ GIT_EXTERN(void) git_odb_close(git_odb *db);
  * @param db database to search for the object in.
  * @param id identity of the object to read.
  * @return
- * - GIT_SUCCESS if the object was read;
+ * - 0 if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id);
@@ -143,16 +131,13 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * internally cached, so it should be closed
  * by the user once it's no longer in use.
  *
- * @param out_oid the oid of the unique object matching
- * the short id
  * @param out pointer where to store the read object
  * @param db database to search for the object in.
  * @param short_id a prefix of the id of the object to read.
  * @param len the length of the prefix
- * @return
- * - GIT_SUCCESS if the object was read;
- * - GIT_ENOTFOUND if the object is not in the database.
- * - GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
+ * @return 0 if the object was read;
+ *	GIT_ENOTFOUND if the object is not in the database.
+ *	GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
  */
 GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len);
 
@@ -171,7 +156,7 @@ GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **out, git_odb *db, const git
  * @param db database to search for the object in.
  * @param id identity of the object to read.
  * @return
- * - GIT_SUCCESS if the object was read;
+ * - 0 if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  */
 GIT_EXTERN(int) git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id);
@@ -200,10 +185,10 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  *
  * @param oid pointer to store the OID result of the write
  * @param odb object database where to store the object
- * @param data buffer with the data to storr
+ * @param data buffer with the data to store
  * @param len size of the buffer
  * @param type type of the data to store
- * @return 0 on success; error code otherwise
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_write(git_oid *oid, git_odb *odb, const void *data, size_t len, git_otype type);
 
@@ -215,12 +200,12 @@ GIT_EXTERN(int) git_odb_write(git_oid *oid, git_odb *odb, const void *data, size
  *
  * The returned stream will be of type `GIT_STREAM_WRONLY` and
  * will have the following methods:
- *	
+ *
  *		- stream->write: write `n` bytes into the stream
  *		- stream->finalize_write: close the stream and store the object in
  *			the odb
  *		- stream->free: free the stream
- * 
+ *
  * The streaming write won't be effective until `stream->finalize_write`
  * is called and returns without an error
  *
@@ -247,7 +232,7 @@ GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **stream, git_odb *db, size_
  *
  * The returned stream will be of type `GIT_STREAM_RDONLY` and
  * will have the following methods:
- *	
+ *
  *		- stream->read: read `n` bytes from the stream
  *		- stream->free: free the stream
  *
@@ -265,16 +250,29 @@ GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const
 /**
  * Determine the object-ID (sha1 hash) of a data buffer
  *
- * The resulting SHA-1 OID will the itentifier for the data
+ * The resulting SHA-1 OID will be the identifier for the data
  * buffer as if the data buffer it were to written to the ODB.
  *
  * @param id the resulting object-ID.
  * @param data data to hash
  * @param len size of the data
  * @param type of the data to hash
- * @return 0 on success; error code otherwise
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otype type);
+
+/**
+ * Read a file from disk and fill a git_oid with the object id
+ * that the file would have if it were written to the Object
+ * Database as an object of the given type. Similar functionality
+ * to git.git's `git hash-object` without the `-w` flag.
+ *
+ * @param out oid structure the result is written into.
+ * @param path file to read and determine object id for
+ * @param type the type of the object that will be hashed
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_otype type);
 
 /**
  * Close an ODB object
@@ -284,7 +282,7 @@ GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otyp
  *
  * @param object object to close
  */
-GIT_EXTERN(void) git_odb_object_close(git_odb_object *object);
+GIT_EXTERN(void) git_odb_object_free(git_odb_object *object);
 
 /**
  * Return the OID of an ODB object

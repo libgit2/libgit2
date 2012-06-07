@@ -10,9 +10,6 @@
 
 #include "../../src/common.h"
 
-#define NO_GZIP
-#define STDC
-
 /* Jeez, don't complain about non-prototype
  * forms, we didn't write zlib */
 #if defined(_MSC_VER)

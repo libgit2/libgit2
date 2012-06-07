@@ -1,36 +1,38 @@
+/*
+ * Copyright (C) 2009-2012 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 #ifndef INCLUDE_index_h__
 #define INCLUDE_index_h__
 
 #include "fileops.h"
 #include "filebuf.h"
 #include "vector.h"
+#include "tree-cache.h"
 #include "git2/odb.h"
 #include "git2/index.h"
 
-struct git_index_tree {
-	char *name;
-
-	struct git_index_tree *parent;
-	struct git_index_tree **children;
-	size_t children_count;
-
-	size_t entries;
-	git_oid oid;
-};
-
-typedef struct git_index_tree git_index_tree;
+#define GIT_INDEX_FILE "index"
+#define GIT_INDEX_FILE_MODE 0666
 
 struct git_index {
-	git_repository *repository;
+	git_refcount rc;
+
 	char *index_file_path;
 
 	time_t last_modified;
 	git_vector entries;
 
 	unsigned int on_disk:1;
-	git_index_tree *tree;
+	git_tree_cache *tree;
 
 	git_vector unmerged;
 };
+
+extern void git_index__init_entry_from_stat(struct stat *st, git_index_entry *entry);
+
+extern unsigned int git_index__prefix_position(git_index *index, const char *path);
 
 #endif

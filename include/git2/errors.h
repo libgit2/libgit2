@@ -1,26 +1,8 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #ifndef INCLUDE_git_errors_h__
 #define INCLUDE_git_errors_h__
@@ -35,113 +17,92 @@
  */
 GIT_BEGIN_DECL
 
-typedef enum {
+#ifdef GIT_OLD_ERRORS
+enum {
 	GIT_SUCCESS = 0,
-	GIT_ERROR = -1,
-
-	/** Input was not a properly formatted Git object id. */
 	GIT_ENOTOID = -2,
-
-	/** Input does not exist in the scope searched. */
 	GIT_ENOTFOUND = -3,
-
-	/** Not enough space available. */
 	GIT_ENOMEM = -4,
-
-	/** Consult the OS error information. */
 	GIT_EOSERR = -5,
-
-	/** The specified object is of invalid type */
 	GIT_EOBJTYPE = -6,
-
-	/** The specified repository is invalid */
 	GIT_ENOTAREPO = -7,
-
-	/** The object type is invalid or doesn't match */
 	GIT_EINVALIDTYPE = -8,
-
-	/** The object cannot be written because it's missing internal data */
 	GIT_EMISSINGOBJDATA = -9,
-
-	/** The packfile for the ODB is corrupted */
 	GIT_EPACKCORRUPTED = -10,
-
-	/** Failed to acquire or release a file lock */
 	GIT_EFLOCKFAIL = -11,
-
-	/** The Z library failed to inflate/deflate an object's data */
 	GIT_EZLIB = -12,
-
-	/** The queried object is currently busy */
 	GIT_EBUSY = -13,
-
-	/** The index file is not backed up by an existing repository */
 	GIT_EBAREINDEX = -14,
-
-	/** The name of the reference is not valid */
 	GIT_EINVALIDREFNAME = -15,
-
-	/** The specified reference has its data corrupted */
-	GIT_EREFCORRUPTED  = -16,
-
-	/** The specified symbolic reference is too deeply nested */
+	GIT_EREFCORRUPTED = -16,
 	GIT_ETOONESTEDSYMREF = -17,
-
-	/** The pack-refs file is either corrupted or its format is not currently supported */
 	GIT_EPACKEDREFSCORRUPTED = -18,
-
-	/** The path is invalid */
 	GIT_EINVALIDPATH = -19,
-
-	/** The revision walker is empty; there are no more commits left to iterate */
 	GIT_EREVWALKOVER = -20,
-
-	/** The state of the reference is not valid */
 	GIT_EINVALIDREFSTATE = -21,
-
-	/** This feature has not been implemented yet */
 	GIT_ENOTIMPLEMENTED = -22,
-
-	/** A reference with this name already exists */
 	GIT_EEXISTS = -23,
-
-	/** The given integer literal is too large to be parsed */
 	GIT_EOVERFLOW = -24,
-
-	/** The given literal is not a valid number */
 	GIT_ENOTNUM = -25,
-
-	/** Streaming error */
 	GIT_ESTREAM = -26,
-
-	/** invalid arguments to function */
 	GIT_EINVALIDARGS = -27,
-
-	/** The specified object has its data corrupted */
 	GIT_EOBJCORRUPTED = -28,
+	GIT_EAMBIGUOUS = -29,
+	GIT_EPASSTHROUGH = -30,
+	GIT_ENOMATCH = -31,
+	GIT_ESHORTBUFFER = -32,
+};
+#endif
 
-	/** The given short oid is ambiguous */
-	GIT_EAMBIGUOUSOIDPREFIX = -29,
+/** Generic return codes */
+enum {
+	GIT_OK = 0,
+	GIT_ERROR = -1,
+	GIT_ENOTFOUND = -3,
+	GIT_EEXISTS = -4,
+	GIT_EAMBIGUOUS = -5,
+	GIT_EBUFS = -6,
+
+	GIT_PASSTHROUGH = -30,
+	GIT_REVWALKOVER = -31,
+};
+
+typedef struct {
+	char *message;
+	int klass;
 } git_error;
 
-/**
- * Return a detailed error string with the latest error
- * that occurred in the library.
- * @return a string explaining the error
- */
-GIT_EXTERN(const char *) git_lasterror(void);
+typedef enum {
+	GITERR_NOMEMORY,
+	GITERR_OS,
+	GITERR_INVALID,
+	GITERR_REFERENCE,
+	GITERR_ZLIB,
+	GITERR_REPOSITORY,
+	GITERR_CONFIG,
+	GITERR_REGEX,
+	GITERR_ODB,
+	GITERR_INDEX,
+	GITERR_OBJECT,
+	GITERR_NET,
+	GITERR_TAG,
+	GITERR_TREE,
+	GITERR_INDEXER,
+	GITERR_SSL,
+} git_error_t;
 
 /**
- * strerror() for the Git library
+ * Return the last `git_error` object that was generated for the
+ * current thread or NULL if no error has occurred.
  *
- * Get a string description for a given error code.
- * NOTE: This method will be eventually deprecated in favor
- * of the new `git_lasterror`.
- *
- * @param num The error code to explain
- * @return a string explaining the error code
+ * @return A git_error object.
  */
-GIT_EXTERN(const char *) git_strerror(int num);
+GIT_EXTERN(const git_error *) giterr_last(void);
+
+/**
+ * Clear the last library error that occurred for this thread.
+ */
+GIT_EXTERN(void) giterr_clear(void);
 
 /** @} */
 GIT_END_DECL

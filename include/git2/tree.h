@@ -1,26 +1,8 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #ifndef INCLUDE_git_tree_h__
 #define INCLUDE_git_tree_h__
@@ -45,7 +27,7 @@ GIT_BEGIN_DECL
  * @param tree pointer to the looked up tree
  * @param repo the repo to use when locating the tree.
  * @param id identity of the tree to locate.
- * @return 0 on success; error code otherwise
+ * @return 0 or an error code
  */
 GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git_oid *id)
 {
@@ -53,9 +35,26 @@ GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
 }
 
 /**
+ * Lookup a tree object from the repository,
+ * given a prefix of its identifier (short id).
+ *
+ * @see git_object_lookup_prefix
+ *
+ * @param tree pointer to the looked up tree
+ * @param repo the repo to use when locating the tree.
+ * @param id identity of the tree to locate.
+ * @param len the length of the short identifier
+ * @return 0 or an error code
+ */
+GIT_INLINE(int) git_tree_lookup_prefix(git_tree **tree, git_repository *repo, const git_oid *id, unsigned int len)
+{
+	return git_object_lookup_prefix((git_object **)tree, repo, id, len, GIT_OBJ_TREE);
+}
+
+/**
  * Close an open tree
  *
- * This is a wrapper around git_object_close()
+ * This is a wrapper around git_object_free()
  *
  * IMPORTANT:
  * It *is* necessary to call this method when you stop
@@ -64,9 +63,9 @@ GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
  * @param tree the tree to close
  */
 
-GIT_INLINE(void) git_tree_close(git_tree *tree)
+GIT_INLINE(void) git_tree_free(git_tree *tree)
 {
-	git_object_close((git_object *) tree);
+	git_object_free((git_object *) tree);
 }
 
 
@@ -84,7 +83,7 @@ GIT_EXTERN(const git_oid *) git_tree_id(git_tree *tree);
  * @param tree a previously loaded tree.
  * @return the number of entries in the tree
  */
-GIT_EXTERN(size_t) git_tree_entrycount(git_tree *tree);
+GIT_EXTERN(unsigned int) git_tree_entrycount(git_tree *tree);
 
 /**
  * Lookup a tree entry by its filename
@@ -102,7 +101,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byname(git_tree *tree, const c
  * @param idx the position in the entry list
  * @return the tree entry; NULL if not found
  */
-GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, int idx);
+GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, unsigned int idx);
 
 /**
  * Get the UNIX file attributes of a tree entry
@@ -129,14 +128,22 @@ GIT_EXTERN(const char *) git_tree_entry_name(const git_tree_entry *entry);
 GIT_EXTERN(const git_oid *) git_tree_entry_id(const git_tree_entry *entry);
 
 /**
+ * Get the type of the object pointed by the entry
+ *
+ * @param entry a tree entry
+ * @return the type of the pointed object
+ */
+GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
+
+/**
  * Convert a tree entry to the git_object it points too.
  *
  * @param object pointer to the converted object
  * @param repo repository where to lookup the pointed object
  * @param entry a tree entry
- * @return 0 on success; error code otherwise
+ * @return 0 or an error code
  */
-GIT_EXTERN(int) git_tree_entry_2object(git_object **object_out, git_repository *repo, const git_tree_entry *entry);
+GIT_EXTERN(int) git_tree_entry_to_object(git_object **object_out, git_repository *repo, const git_tree_entry *entry);
 
 /**
  * Write a tree to the ODB from the index file
@@ -152,7 +159,7 @@ GIT_EXTERN(int) git_tree_entry_2object(git_object **object_out, git_repository *
  *
  * @param oid Pointer where to store the written tree
  * @param index Index to write
- * @return 0 on success; error code otherwise
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tree_create_fromindex(git_oid *oid, git_index *index);
 
@@ -165,13 +172,13 @@ GIT_EXTERN(int) git_tree_create_fromindex(git_oid *oid, git_index *index);
  *
  * If the `source` parameter is not NULL, the tree builder
  * will be initialized with the entries of the given tree.
- * 
+ *
  * If the `source` parameter is NULL, the tree builder will
  * have no entries and will have to be filled manually.
  *
  * @param builder_p Pointer where to store the tree builder
  * @param source Source tree to initialize the builder (optional)
- * @return 0 on sucess; error code otherwise
+ * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source);
 
@@ -222,7 +229,7 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(git_treebuilder *bld, con
  * @param filename Filename of the entry
  * @param id SHA1 oid of the entry
  * @param attributes Folder attributes of the entry
- * @return 0 on success; error code otherwise
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, const char *filename, const git_oid *id, unsigned int attributes);
 
@@ -257,10 +264,55 @@ GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, int (*filter)(cons
  * @param oid Pointer where to store the written OID
  * @param repo Repository where to store the object
  * @param bld Tree builder to write
- * @return 0 on success; error code otherwise
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld);
 
+/**
+ * Retrieve a subtree contained in a tree, given its
+ * relative path.
+ *
+ * The returned tree is owned by the repository and
+ * should be closed with the `git_object_free` method.
+ *
+ * @param subtree Pointer where to store the subtree
+ * @param root A previously loaded tree which will be the root of the relative path
+ * @param subtree_path Path to the contained subtree
+ * @return 0 on success; GIT_ENOTFOUND if the path does not lead to a subtree
+ */
+GIT_EXTERN(int) git_tree_get_subtree(git_tree **subtree, git_tree *root, const char *subtree_path);
+
+/** Callback for the tree traversal method */
+typedef int (*git_treewalk_cb)(const char *root, git_tree_entry *entry, void *payload);
+
+/** Tree traversal modes */
+enum git_treewalk_mode {
+	GIT_TREEWALK_PRE = 0, /* Pre-order */
+	GIT_TREEWALK_POST = 1, /* Post-order */
+};
+
+/**
+ * Traverse the entries in a tree and its subtrees in
+ * post or pre order
+ *
+ * The entries will be traversed in the specified order,
+ * children subtrees will be automatically loaded as required,
+ * and the `callback` will be called once per entry with
+ * the current (relative) root for the entry and the entry
+ * data itself.
+ *
+ * If the callback returns a negative value, the passed entry
+ * will be skipped on the traversal.
+ *
+ * @param tree The tree to walk
+ * @param callback Function to call on each tree entry
+ * @param mode Traversal mode (pre or post-order)
+ * @param payload Opaque pointer to be passed on each callback
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload);
+
 /** @} */
+
 GIT_END_DECL
 #endif

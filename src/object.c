@@ -1,26 +1,8 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #include <stdarg.h>
 
@@ -37,8 +19,8 @@
 static const int OBJECT_BASE_SIZE = 4096;
 
 static struct {
-	const char	*str;   /* type name string */
-	int			loose;  /* valid loose object type flag */
+	const char	*str;	/* type name string */
+	int			loose; /* valid loose object type flag */
 	size_t		size;	/* size in bytes of the object structure */
 } git_objects_table[] = {
 	/* 0 = GIT_OBJ__EXT1 */
@@ -80,47 +62,59 @@ static int create_object(git_object **object_out, git_otype type)
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TREE:
 		object = git__malloc(git_object__size(type));
-		if (object == NULL)
-			return GIT_ENOMEM;
+		GITERR_CHECK_ALLOC(object);
 		memset(object, 0x0, git_object__size(type));
 		break;
 
 	default:
-		return git__throw(GIT_EINVALIDTYPE, "The given type is invalid");
+		giterr_set(GITERR_INVALID, "The given type is invalid");
+		return -1;
 	}
 
 	object->type = type;
 
 	*object_out = object;
-	return GIT_SUCCESS;
+	return 0;
 }
 
-int git_object_lookup_prefix(git_object **object_out, git_repository *repo, const git_oid *id, unsigned int len, git_otype type)
+int git_object_lookup_prefix(
+	git_object **object_out,
+	git_repository *repo,
+	const git_oid *id,
+	unsigned int len,
+	git_otype type)
 {
 	git_object *object = NULL;
+	git_odb *odb = NULL;
 	git_odb_object *odb_obj;
-	int error = GIT_SUCCESS;
+	int error = 0;
 
 	assert(repo && object_out && id);
 
 	if (len < GIT_OID_MINPREFIXLEN)
-		return git__throw(GIT_EAMBIGUOUSOIDPREFIX,
-			"Failed to lookup object. Prefix length is lower than %d.", GIT_OID_MINPREFIXLEN);
+		return GIT_EAMBIGUOUS;
+
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < 0)
+		return error;
 
 	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
 
-	if (len == GIT_OID_HEXSZ)  {
+	if (len == GIT_OID_HEXSZ) {
 		/* We want to match the full id : we can first look up in the cache,
 		 * since there is no need to check for non ambiguousity
 		 */
 		object = git_cache_get(&repo->objects, id);
 		if (object != NULL) {
-			if (type != GIT_OBJ_ANY && type != object->type)
-				return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
+			if (type != GIT_OBJ_ANY && type != object->type) {
+				git_object_free(object);
+				giterr_set(GITERR_ODB, "The given type does not match the type in ODB");
+				return GIT_ENOTFOUND;
+			}
 
 			*object_out = object;
-			return GIT_SUCCESS;
+			return 0;
 		}
 
 		/* Object was not found in the cache, let's explore the backends.
@@ -128,7 +122,7 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		 * it is the same cost for packed and loose object backends,
 		 * but it may be much more costly for sqlite and hiredis.
 		 */
-		error = git_odb_read(&odb_obj, repo->db, id);
+		error = git_odb_read(&odb_obj, odb, id);
 	} else {
 		git_oid short_oid;
 
@@ -141,28 +135,29 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
 		 * 2 options :
 		 * - We always search in the cache first. If we find that short oid is
-		 *   ambiguous, we can stop. But in all the other cases, we must then
-		 *   explore all the backends (to find an object if there was match,
-		 *   or to check that oid is not ambiguous if we have found 1 match in
-		 *   the cache)
+		 *	ambiguous, we can stop. But in all the other cases, we must then
+		 *	explore all the backends (to find an object if there was match,
+		 *	or to check that oid is not ambiguous if we have found 1 match in
+		 *	the cache)
 		 * - We never explore the cache, go right to exploring the backends
 		 * We chose the latter : we explore directly the backends.
 		 */
-		error = git_odb_read_prefix(&odb_obj, repo->db, &short_oid, len);
+		error = git_odb_read_prefix(&odb_obj, odb, &short_oid, len);
 	}
 
-	if (error < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to lookup object");
+	if (error < 0)
+		return error;
 
 	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
-		git_odb_object_close(odb_obj);
-		return git__throw(GIT_EINVALIDTYPE, "Failed to lookup object. The given type does not match the type on the ODB");
+		git_odb_object_free(odb_obj);
+		giterr_set(GITERR_ODB, "The given type does not match the type on the ODB");
+		return GIT_ENOTFOUND;
 	}
 
 	type = odb_obj->raw.type;
 
-	if ((error = create_object(&object, type)) < GIT_SUCCESS)
-		return git__rethrow(error, "Failed to lookup object");
+	if (create_object(&object, type) < 0)
+		return -1;
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
@@ -189,15 +184,15 @@ int git_object_lookup_prefix(git_object **object_out, git_repository *repo, cons
 		break;
 	}
 
-	git_odb_object_close(odb_obj);
+	git_odb_object_free(odb_obj);
 
-	if (error < GIT_SUCCESS) {
+	if (error < 0) {
 		git_object__free(object);
-		return git__rethrow(error, "Failed to lookup object");
+		return -1;
 	}
 
 	*object_out = git_cache_try_store(&repo->objects, object);
-	return GIT_SUCCESS;
+	return 0;
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_otype type) {
@@ -228,12 +223,12 @@ void git_object__free(void *_obj)
 		break;
 
 	default:
-		free(object);
+		git__free(object);
 		break;
 	}
 }
 
-void git_object_close(git_object *object)
+void git_object_free(git_object *object)
 {
 	if (object == NULL)
 		return;
@@ -297,3 +292,42 @@ size_t git_object__size(git_otype type)
 	return git_objects_table[type].size;
 }
 
+int git_object__resolve_to_type(git_object **obj, git_otype type)
+{
+	int error = 0;
+	git_object *scan, *next;
+
+	if (type == GIT_OBJ_ANY)
+		return 0;
+
+	scan = *obj;
+
+	while (!error && scan && git_object_type(scan) != type) {
+
+		switch (git_object_type(scan)) {
+		case GIT_OBJ_COMMIT:
+		{
+			git_tree *tree = NULL;
+			error = git_commit_tree(&tree, (git_commit *)scan);
+			next = (git_object *)tree;
+			break;
+		}
+
+		case GIT_OBJ_TAG:
+			error = git_tag_target(&next, (git_tag *)scan);
+			break;
+
+		default:
+			giterr_set(GITERR_REFERENCE, "Object does not resolve to type");
+			error = -1;
+			next = NULL;
+			break;
+		}
+
+		git_object_free(scan);
+		scan = next;
+	}
+
+	*obj = scan;
+	return error;
+}

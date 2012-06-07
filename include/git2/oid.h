@@ -1,26 +1,8 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #ifndef INCLUDE_git_oid_h__
 #define INCLUDE_git_oid_h__
@@ -48,65 +30,83 @@ GIT_BEGIN_DECL
 #define GIT_OID_MINPREFIXLEN 4
 
 /** Unique identity of any object (commit, tree, blob, tag). */
-typedef struct {
+typedef struct _git_oid git_oid;
+struct _git_oid {
 	/** raw binary formatted id */
 	unsigned char id[GIT_OID_RAWSZ];
-} git_oid;
+};
 
 /**
  * Parse a hex formatted object id into a git_oid.
+ *
  * @param out oid structure the result is written into.
  * @param str input hex string; must be pointing at the start of
- *        the hex sequence and have at least the number of bytes
- *        needed for an oid encoded in hex (40 bytes).
- * @return GIT_SUCCESS if valid; GIT_ENOTOID on failure.
+ *		the hex sequence and have at least the number of bytes
+ *		needed for an oid encoded in hex (40 bytes).
+ * @return 0 or an error code
  */
-GIT_EXTERN(int) git_oid_mkstr(git_oid *out, const char *str);
+GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
+
+/**
+ * Parse N characters of a hex formatted object id into a git_oid
+ *
+ * If N is odd, N-1 characters will be parsed instead.
+ * The remaining space in the git_oid will be set to zero.
+ *
+ * @param out oid structure the result is written into.
+ * @param str input hex string of at least size `length`
+ * @param length length of the input string
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
 
 /**
  * Copy an already raw oid into a git_oid structure.
+ *
  * @param out oid structure the result is written into.
  * @param raw the raw input bytes to be copied.
  */
-GIT_EXTERN(void) git_oid_mkraw(git_oid *out, const unsigned char *raw);
+GIT_EXTERN(void) git_oid_fromraw(git_oid *out, const unsigned char *raw);
 
 /**
  * Format a git_oid into a hex string.
+ *
  * @param str output hex string; must be pointing at the start of
- *        the hex sequence and have at least the number of bytes
- *        needed for an oid encoded in hex (40 bytes).  Only the
- *        oid digits are written; a '\\0' terminator must be added
- *        by the caller if it is required.
+ *		the hex sequence and have at least the number of bytes
+ *		needed for an oid encoded in hex (40 bytes). Only the
+ *		oid digits are written; a '\\0' terminator must be added
+ *		by the caller if it is required.
  * @param oid oid structure to format.
  */
 GIT_EXTERN(void) git_oid_fmt(char *str, const git_oid *oid);
 
 /**
  * Format a git_oid into a loose-object path string.
- * <p>
+ *
  * The resulting string is "aa/...", where "aa" is the first two
- * hex digitis of the oid and "..." is the remaining 38 digits.
+ * hex digits of the oid and "..." is the remaining 38 digits.
  *
  * @param str output hex string; must be pointing at the start of
- *        the hex sequence and have at least the number of bytes
- *        needed for an oid encoded in hex (41 bytes).  Only the
- *        oid digits are written; a '\\0' terminator must be added
- *        by the caller if it is required.
+ *		the hex sequence and have at least the number of bytes
+ *		needed for an oid encoded in hex (41 bytes). Only the
+ *		oid digits are written; a '\\0' terminator must be added
+ *		by the caller if it is required.
  * @param oid oid structure to format.
  */
 GIT_EXTERN(void) git_oid_pathfmt(char *str, const git_oid *oid);
 
 /**
- * Format a gid_oid into a newly allocated c-string.
+ * Format a git_oid into a newly allocated c-string.
+ *
  * @param oid the oid structure to format
- * @return the c-string; NULL if memory is exhausted.  Caller must
- *         deallocate the string with free().
+ * @return the c-string; NULL if memory is exhausted. Caller must
+ *			deallocate the string with git__free().
  */
 GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
 
 /**
  * Format a git_oid into a buffer as a hex format c-string.
- * <p>
+ *
  * If the buffer is smaller than GIT_OID_HEXSZ+1, then the resulting
  * oid c-string will be truncated to n-1 characters. If there are
  * any input parameter errors (out == NULL, n == 0, oid == NULL),
@@ -117,12 +117,13 @@ GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *oid);
  * @param n the size of the out buffer.
  * @param oid the oid structure to format.
  * @return the out buffer pointer, assuming no input parameter
- *         errors, otherwise a pointer to an empty string.
+ *			errors, otherwise a pointer to an empty string.
  */
-GIT_EXTERN(char *) git_oid_to_string(char *out, size_t n, const git_oid *oid);
+GIT_EXTERN(char *) git_oid_tostr(char *out, size_t n, const git_oid *oid);
 
 /**
  * Copy an oid from one structure to another.
+ *
  * @param out oid structure the result is written into.
  * @param src oid structure to copy from.
  */
@@ -130,6 +131,7 @@ GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
 
 /**
  * Compare two oid structures.
+ *
  * @param a first oid structure.
  * @param b second oid structure.
  * @return <0, 0, >0 if a < b, a == b, a > b.
@@ -139,12 +141,28 @@ GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
 /**
  * Compare the first 'len' hexadecimal characters (packets of 4 bits)
  * of two oid structures.
- * @param len the number of hex chars to compare
+ *
  * @param a first oid structure.
  * @param b second oid structure.
+ * @param len the number of hex chars to compare
  * @return 0 in case of a match
  */
-GIT_EXTERN(int) gid_oid_match(unsigned int len, git_oid *a, git_oid *b);
+GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, unsigned int len);
+
+/**
+ * Check if an oid equals an hex formatted object id.
+ *
+ * @param a oid structure.
+ * @param str input hex string of an object id.
+ * @return GIT_ENOTOID if str is not a valid hex string,
+ * 0 in case of a match, GIT_ERROR otherwise.
+ */
+GIT_EXTERN(int) git_oid_streq(const git_oid *a, const char *str);
+
+/**
+ * Check is an oid is all zeros.
+ */
+GIT_EXTERN(int) git_oid_iszero(const git_oid *a);
 
 /**
  * OID Shortener object
@@ -165,7 +183,7 @@ typedef struct git_oid_shorten git_oid_shorten;
  *		be unique.
  *	@return a `git_oid_shorten` instance, NULL if OOM
  */
-git_oid_shorten *git_oid_shorten_new(size_t min_length);
+GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
 
 /**
  * Add a new OID to set of shortened OIDs and calculate
@@ -191,14 +209,14 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length);
  *		added so far to the set; or an error code (<0) if an
  *		error occurs.
  */
-int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
+GIT_EXTERN(int) git_oid_shorten_add(git_oid_shorten *os, const char *text_oid);
 
 /**
  * Free an OID shortener instance
- * 
+ *
  * @param os a `git_oid_shorten` instance
  */
-void git_oid_shorten_free(git_oid_shorten *os);
+GIT_EXTERN(void) git_oid_shorten_free(git_oid_shorten *os);
 
 /** @} */
 GIT_END_DECL

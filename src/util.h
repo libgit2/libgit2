@@ -1,11 +1,20 @@
+/*
+ * Copyright (C) 2009-2012 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
-#define bitsizeof(x)  (CHAR_BIT * sizeof(x))
+#define bitsizeof(x) (CHAR_BIT * sizeof(x))
 #define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
+#ifndef min
+# define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
-/* 
+/*
  * Custom memory allocation wrappers
  * that set error code and error message
  * on allocation failure
@@ -13,24 +22,21 @@
 GIT_INLINE(void *) git__malloc(size_t len)
 {
 	void *ptr = malloc(len);
-	if (!ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)len);
+	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 {
 	void *ptr = calloc(nelem, elsize);
-	if (!ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)elsize);
+	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(char *) git__strdup(const char *str)
 {
 	char *ptr = strdup(str);
-	if (!ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
@@ -43,12 +49,14 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 	if (n < length)
 		length = n;
 
-	ptr = malloc(length + 1);
-	if (!ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to duplicate string");
+	ptr = (char*)malloc(length + 1);
+	if (!ptr) {
+		giterr_set_oom();
+		return NULL;
+	}
 
 	memcpy(ptr, str, length);
-	ptr[length] = 0;
+	ptr[length] = '\0';
 
 	return ptr;
 }
@@ -56,74 +64,20 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 {
 	void *new_ptr = realloc(ptr, size);
-	if (!new_ptr)
-		git__throw(GIT_ENOMEM, "Out of memory. Failed to allocate %d bytes.", (int)size);
+	if (!new_ptr) giterr_set_oom();
 	return new_ptr;
 }
 
-extern int git__fmt(char *, size_t, const char *, ...)
-	GIT_FORMAT_PRINTF(3, 4);
+#define git__free(ptr) free(ptr)
+
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
-extern int git__strtol32(long *n, const char *buff, const char **end_buf, int base);
-
-/*
- * The dirname() function shall take a pointer to a character string
- * that contains a pathname, and return a pointer to a string that is a
- * pathname of the parent directory of that file. Trailing '/' characters
- * in the path are not counted as part of the path.
- *
- * If path does not contain a '/', then dirname() shall return a pointer to
- * the string ".". If path is a null pointer or points to an empty string,
- * dirname() shall return a pointer to the string "." .
- *
- * The `git__dirname` implementation is thread safe. The returned 
- * string must be manually free'd.
- *
- * The `git__dirname_r` implementation expects a string allocated
- * by the user with big enough size.
- */
-extern char *git__dirname(const char *path);
-extern int git__dirname_r(char *buffer, size_t bufflen, const char *path);
-
-/*
- * This function returns the basename of the file, which is the last
- * part of its full name given by fname, with the drive letter and
- * leading directories stripped off. For example, the basename of
- * c:/foo/bar/file.ext is file.ext, and the basename of a:foo is foo.
- *
- * Trailing slashes and backslashes are significant: the basename of
- * c:/foo/bar/ is an empty string after the rightmost slash.
- *
- * The `git__basename` implementation is thread safe. The returned 
- * string must be manually free'd.
- *
- * The `git__basename_r` implementation expects a string allocated
- * by the user with big enough size.
- */
-extern char *git__basename(const char *path);
-extern int git__basename_r(char *buffer, size_t bufflen, const char *path);
-
-extern const char *git__topdir(const char *path);
-
-/**
- * Join two paths together. Takes care of properly fixing the
- * middle slashes and everything
- *
- * The paths are joined together into buffer_out; this is expected
- * to be an user allocated buffer of `GIT_PATH_MAX` size 
- */
-extern void git__joinpath_n(char *buffer_out, int npath, ...);
-
-GIT_INLINE(void) git__joinpath(char *buffer_out, const char *path_a, const char *path_b)
-{
-	git__joinpath_n(buffer_out, 2, path_a, path_b);
-}
+extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
+extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
 
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
-
 
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(git_off_t p)
@@ -141,30 +95,132 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 
 extern char *git__strtok(char **end, const char *sep);
 
-extern void git__strntolower(char *str, int len);
+extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
 
-#define STRLEN(str) (sizeof(str) - 1)
+GIT_INLINE(const char *) git__next_line(const char *s)
+{
+	while (*s && *s != '\n') s++;
+	while (*s == '\n' || *s == '\r') s++;
+	return s;
+}
 
-#define GIT_OID_LINE_LENGTH(header) (STRLEN(header) + 1 + GIT_OID_HEXSZ + 1)
+extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));
+
+/**
+ * @param position If non-NULL, this will be set to the position where the
+ * 		element is or would be inserted if not found.
+ * @return pos (>=0) if found or -1 if not found
+ */
+extern int git__bsearch(
+	void **array,
+	size_t array_len,
+	const void *key,
+	int (*compare)(const void *, const void *),
+	size_t *position);
+
+extern int git__strcmp_cb(const void *a, const void *b);
+
+typedef struct {
+	short refcount;
+	void *owner;
+} git_refcount;
+
+typedef void (*git_refcount_freeptr)(void *r);
+
+#define GIT_REFCOUNT_INC(r) { \
+	((git_refcount *)(r))->refcount++; \
+}
+
+#define GIT_REFCOUNT_DEC(_r, do_free) { \
+	git_refcount *r = (git_refcount *)(_r); \
+	r->refcount--; \
+	if (r->refcount <= 0 && r->owner == NULL) { do_free(_r); } \
+}
+
+#define GIT_REFCOUNT_OWN(r, o) { \
+	((git_refcount *)(r))->owner = o; \
+}
+
+#define GIT_REFCOUNT_OWNER(r) (((git_refcount *)(r))->owner)
+
+static signed char from_hex[] = {
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 00 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 10 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 20 */
+ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1, /* 30 */
+-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 40 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 50 */
+-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 60 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 70 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 80 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 90 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* a0 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* b0 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* c0 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* d0 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* e0 */
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* f0 */
+};
+
+GIT_INLINE(int) git__fromhex(char h)
+{
+	return from_hex[(unsigned char) h];
+}
+
+GIT_INLINE(int) git__ishex(const char *str)
+{
+	unsigned i;
+	for (i=0; i<strlen(str); i++)
+		if (git__fromhex(str[i]) < 0)
+			return 0;
+	return 1;
+}
+
+GIT_INLINE(size_t) git__size_t_bitmask(size_t v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+
+	return v;
+}
+
+GIT_INLINE(size_t) git__size_t_powerof2(size_t v)
+{
+	return git__size_t_bitmask(v) + 1;
+}
+
+GIT_INLINE(bool) git__isupper(int c)
+{
+    return (c >= 'A' && c <= 'Z');
+}
+
+GIT_INLINE(bool) git__isalpha(int c)
+{
+    return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+}
+
+GIT_INLINE(bool) git__isspace(int c)
+{
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
+}
+
+GIT_INLINE(bool) git__iswildcard(int c)
+{
+	return (c == '*' || c == '?' || c == '[');
+}
 
 /*
- * Realloc the buffer pointed at by variable 'x' so that it can hold
- * at least 'nr' entries; the number of entries currently allocated
- * is 'alloc', using the standard growing factor alloc_nr() macro.
+ * Parse a string value as a boolean, just like Core Git
+ * does.
  *
- * DO NOT USE any expression with side-effect for 'x' or 'alloc'.
+ * Valid values for true are: 'true', 'yes', 'on'
+ * Valid values for false are: 'false', 'no', 'off'
  */
-#define alloc_nr(x) (((x)+16)*3/2)
-#define ALLOC_GROW(x, nr, alloc) \
-	do { \
-		if ((nr) > alloc) { \
-			if (alloc_nr(alloc) < (nr)) \
-				alloc = (nr); \
-			else \
-				alloc = alloc_nr(alloc); \
-			x = xrealloc((x), alloc * sizeof(*(x))); \
-		} \
-	} while (0)
+extern int git__parse_bool(int *out, const char *value);
 
 #endif /* INCLUDE_util_h__ */

@@ -1,0 +1,42 @@
+#include <winver.h>
+#include "../../include/git2/version.h"
+
+#ifndef INCLUDE_LIB
+#define LIBGIT2_FILENAME "git2.dll"
+#else
+#define LIBGIT2_FILENAME "libgit2.dll"
+#endif
+
+VS_VERSION_INFO		VERSIONINFO	MOVEABLE IMPURE LOADONCALL DISCARDABLE
+  FILEVERSION		LIBGIT2_VER_MAJOR,LIBGIT2_VER_MINOR,LIBGIT2_VER_REVISION,0
+  PRODUCTVERSION	LIBGIT2_VER_MAJOR,LIBGIT2_VER_MINOR,LIBGIT2_VER_REVISION,0
+  FILEFLAGSMASK		VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+  FILEFLAGS		1
+#else
+  FILEFLAGS		0
+#endif
+  FILEOS		VOS__WINDOWS32
+  FILETYPE		VFT_DLL
+  FILESUBTYPE		0	// not used
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904E4"
+    //language ID = U.S. English, char set = Windows, Multilingual
+    BEGIN
+      VALUE "FileDescription",	"libgit2 - the Git linkable library\0"
+      VALUE "FileVersion",	LIBGIT2_VERSION "\0"
+      VALUE "InternalName",	LIBGIT2_FILENAME "\0"
+      VALUE "LegalCopyright",	"Copyright (C) 2009-2012 the libgit2 contributors\0"
+      VALUE "OriginalFilename",	LIBGIT2_FILENAME "\0"
+      VALUE "ProductName",	"libgit2\0"
+      VALUE "ProductVersion",	LIBGIT2_VERSION "\0"
+      VALUE "Comments",		"For more information visit http://libgit2.github.com/\0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1252
+  END
+END

@@ -1,113 +1,119 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
-#include "git2/thread-utils.h" /* for GIT_TLS */
-#include "thread-utils.h" /* for GIT_TLS */
-
+#include "global.h"
+#include "posix.h"
+#include "buffer.h"
 #include <stdarg.h>
 
-static GIT_TLS char g_last_error[1024];
+/********************************************
+ * New error handling
+ ********************************************/
 
-static struct {
-	int num;
-	const char *str;
-} error_codes[] = {
-	{GIT_ERROR, "Unspecified error"},
-	{GIT_ENOTOID, "Input was not a properly formatted Git object id."},
-	{GIT_ENOTFOUND, "Object does not exist in the scope searched."},
-	{GIT_ENOMEM, "Not enough space available."},
-	{GIT_EOSERR, "Consult the OS error information."},
-	{GIT_EOBJTYPE, "The specified object is of invalid type"},
-	{GIT_EOBJCORRUPTED, "The specified object has its data corrupted"},
-	{GIT_ENOTAREPO, "The specified repository is invalid"},
-	{GIT_EINVALIDTYPE, "The object or config variable type is invalid or doesn't match"},
-	{GIT_EMISSINGOBJDATA, "The object cannot be written that because it's missing internal data"},
-	{GIT_EPACKCORRUPTED, "The packfile for the ODB is corrupted"},
-	{GIT_EFLOCKFAIL, "Failed to adquire or release a file lock"},
-	{GIT_EZLIB, "The Z library failed to inflate/deflate an object's data"},
-	{GIT_EBUSY, "The queried object is currently busy"},
-	{GIT_EINVALIDPATH, "The path is invalid"},
-	{GIT_EBAREINDEX, "The index file is not backed up by an existing repository"},
-	{GIT_EINVALIDREFNAME, "The name of the reference is not valid"},
-	{GIT_EREFCORRUPTED, "The specified reference has its data corrupted"},
-	{GIT_ETOONESTEDSYMREF, "The specified symbolic reference is too deeply nested"},
-	{GIT_EPACKEDREFSCORRUPTED, "The pack-refs file is either corrupted of its format is not currently supported"},
-	{GIT_EINVALIDPATH, "The path is invalid" },
-	{GIT_EREVWALKOVER, "The revision walker is empty; there are no more commits left to iterate"},
-	{GIT_EINVALIDREFSTATE, "The state of the reference is not valid"},
-	{GIT_ENOTIMPLEMENTED, "This feature has not been implemented yet"},
-	{GIT_EEXISTS, "A reference with this name already exists"},
-	{GIT_EOVERFLOW, "The given integer literal is too large to be parsed"},
-	{GIT_ENOTNUM, "The given literal is not a valid number"},
-	{GIT_EAMBIGUOUSOIDPREFIX, "The given oid prefix is ambiguous"},
+static git_error g_git_oom_error = {
+	"Out of memory",
+	GITERR_NOMEMORY
 };
 
-const char *git_strerror(int num)
+static void set_error(int error_class, char *string)
 {
-	size_t i;
+	git_error *error = &GIT_GLOBAL->error_t;
 
-	if (num == GIT_EOSERR)
-		return strerror(errno);
-	for (i = 0; i < ARRAY_SIZE(error_codes); i++)
-		if (num == error_codes[i].num)
-			return error_codes[i].str;
+	git__free(error->message);
 
-	return "Unknown error";
+	error->message = string;
+	error->klass = error_class;
+
+	GIT_GLOBAL->last_error = error;
 }
 
-int git__rethrow(int error, const char *msg, ...)
+void giterr_set_oom(void)
 {
-	char new_error[1024];
-	char *old_error = NULL;
-
-	va_list va;
-
-	va_start(va, msg);
-	vsnprintf(new_error, sizeof(new_error), msg, va);
-	va_end(va);
-
-	old_error = strdup(g_last_error);
-	snprintf(g_last_error, sizeof(g_last_error), "%s \n    - %s", new_error, old_error);
-	free(old_error);
-
-	return error;
+	GIT_GLOBAL->last_error = &g_git_oom_error;
 }
 
-int git__throw(int error, const char *msg, ...)
+void giterr_set(int error_class, const char *string, ...)
 {
-	va_list va;
+	git_buf buf = GIT_BUF_INIT;
+	va_list arglist;
 
-	va_start(va, msg);
-	vsnprintf(g_last_error, sizeof(g_last_error), msg, va);
-	va_end(va);
+	int unix_error_code = 0;
 
-	return error;
+#ifdef GIT_WIN32
+	DWORD win32_error_code = 0;
+#endif
+
+	if (error_class == GITERR_OS) {
+		unix_error_code = errno;
+		errno = 0;
+
+#ifdef GIT_WIN32
+		win32_error_code = GetLastError();
+		SetLastError(0);
+#endif
+	}
+
+	va_start(arglist, string);
+	git_buf_vprintf(&buf, string, arglist);
+	va_end(arglist);
+
+	/* automatically suffix strerror(errno) for GITERR_OS errors */
+	if (error_class == GITERR_OS) {
+
+		if (unix_error_code != 0) {
+			git_buf_PUTS(&buf, ": ");
+			git_buf_puts(&buf, strerror(unix_error_code));
+		}
+
+#ifdef GIT_WIN32
+		else if (win32_error_code != 0) {
+			LPVOID lpMsgBuf = NULL;
+
+			FormatMessage(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+				FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, win32_error_code, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
+
+			if (lpMsgBuf) {
+				git_buf_PUTS(&buf, ": ");
+				git_buf_puts(&buf, lpMsgBuf);
+				LocalFree(lpMsgBuf);
+			}
+		}
+#endif
+	}
+
+	if (!git_buf_oom(&buf))
+		set_error(error_class, git_buf_detach(&buf));
 }
 
-const char *git_lasterror(void)
+void giterr_set_str(int error_class, const char *string)
 {
-	return g_last_error;
+	char *message = git__strdup(string);
+
+	if (message)
+		set_error(error_class, message);
+}
+
+void giterr_set_regex(const regex_t *regex, int error_code)
+{
+	char error_buf[1024];
+	regerror(error_code, regex, error_buf, sizeof(error_buf));
+	giterr_set_str(GITERR_REGEX, error_buf);
+}
+
+void giterr_clear(void)
+{
+	GIT_GLOBAL->last_error = NULL;
+}
+
+const git_error *giterr_last(void)
+{
+	return GIT_GLOBAL->last_error;
 }
 

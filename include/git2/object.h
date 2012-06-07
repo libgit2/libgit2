@@ -1,26 +1,8 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #ifndef INCLUDE_git_object_h__
 #define INCLUDE_git_object_h__
@@ -39,10 +21,10 @@
 GIT_BEGIN_DECL
 
 /**
- * Lookup a reference to one of the objects in a repostory.
+ * Lookup a reference to one of the objects in a repository.
  *
  * The generated reference is owned by the repository and
- * should be closed with the `git_object_close` method
+ * should be closed with the `git_object_free` method
  * instead of free'd manually.
  *
  * The 'type' parameter must match the type of the object
@@ -63,7 +45,7 @@ GIT_EXTERN(int) git_object_lookup(
 		git_otype type);
 
 /**
- * Lookup a reference to one of the objects in a repostory,
+ * Lookup a reference to one of the objects in a repository,
  * given a prefix of its identifier (short id).
  *
  * The object obtained will be so that its identifier
@@ -74,7 +56,7 @@ GIT_EXTERN(int) git_object_lookup(
  * the prefix; otherwise the method will fail.
  *
  * The generated reference is owned by the repository and
- * should be closed with the `git_object_close` method
+ * should be closed with the `git_object_free` method
  * instead of free'd manually.
  *
  * The 'type' parameter must match the type of the object
@@ -82,12 +64,12 @@ GIT_EXTERN(int) git_object_lookup(
  * The special value 'GIT_OBJ_ANY' may be passed to let
  * the method guess the object's type.
  *
- * @param object pointer to the looked-up object
+ * @param object_out pointer where to store the looked-up object
  * @param repo the repository to look up the object
  * @param id a short identifier for the object
  * @param len the length of the short identifier
  * @param type the type of the object
- * @return a reference to the object
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_lookup_prefix(
 		git_object **object_out,
@@ -132,7 +114,7 @@ GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
  * This method instructs the library to close an existing
  * object; note that git_objects are owned and cached by the repository
  * so the object may or may not be freed after this library call,
- * depending on how agressive is the caching mechanism used
+ * depending on how aggressive is the caching mechanism used
  * by the repository.
  *
  * IMPORTANT:
@@ -141,7 +123,7 @@ GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
  *
  * @param object the object to close
  */
-GIT_EXTERN(void) git_object_close(git_object *object);
+GIT_EXTERN(void) git_object_free(git_object *object);
 
 /**
  * Convert an object type to it's string representation.
