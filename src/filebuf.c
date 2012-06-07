@@ -130,6 +130,11 @@ GIT_INLINE(int) flush_buffer(git_filebuf *file)
 	return result;
 }
 
+int git_filebuf_flush(git_filebuf *file)
+{
+	return flush_buffer(file);
+}
+
 static int write_normal(git_filebuf *file, void *source, size_t len)
 {
 	if (len > 0) {
