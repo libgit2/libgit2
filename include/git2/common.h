@@ -55,6 +55,14 @@
 #define GIT_WIN32 1
 #endif
 
+#ifdef __amigaos4__
+/* Network byte order is big-endian... so is PPC, so these functions are NOP */
+#define htonl(x) x
+#define ntohl(x) x
+#define htons(x) x
+#define ntohs(x) x
+#endif
+
 /**
  * @file git2/common.h
  * @brief Git common platform definitions
