@@ -144,7 +144,9 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 
 int gitno_ssl_teardown(git_transport *t)
 {
-	int ret = ret;
+#ifdef GIT_SSL
+	int ret;
+#endif
 
 	if (!t->encrypt)
 		return 0;
