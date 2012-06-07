@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #ifdef _MSC_VER
-#	include "libgit2_config.h"
+#	include "windows_config.h"
 #	include "inttypes.h"
 #else
 #	include <inttypes.h>

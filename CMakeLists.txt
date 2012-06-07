@@ -61,7 +61,7 @@ IF (MSVC)
 	# Not using __stdcall with the CRT causes problems
 	OPTION (GIT_STDCALL "Build libgit2 with the __stdcall convention" ON)
         # Users of the library need to be aware whether __stdcall is used or not
-	CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2_config.h @ONLY)
+	CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/windows_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/windows_config.h @ONLY)
 
 	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (GIT_STDCALL)
@@ -138,7 +138,7 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${INSTALL_LIB}/
 INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 IF (MSVC)
-	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2_config.h DESTINATION ${INSTALL_INC}/git2 )
+	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/windows_config.h DESTINATION ${INSTALL_INC}/git2 )
 ENDIF ()
 
 # Tests
