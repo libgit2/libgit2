@@ -69,7 +69,7 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 			return NULL;
 		}
 
-		if (end == NULL || end + 1 == '\0')
+		if (end == NULL || *end + 1 == '\0')
 			return tree;
 
 		ptr = end + 1;

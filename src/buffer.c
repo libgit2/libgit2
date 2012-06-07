@@ -144,8 +144,9 @@ int git_buf_puts(git_buf *buf, const char *string)
 int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 {
 	int len;
+	const size_t expected_size = buf->size + (strlen(format) * 2);
 
-	ENSURE_SIZE(buf, buf->size + (strlen(format) * 2));
+	ENSURE_SIZE(buf, expected_size);
 
 	while (1) {
 		va_list args;

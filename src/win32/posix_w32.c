@@ -414,7 +414,7 @@ int p_mkstemp(char *tmp_path)
 		return -1;
 #endif
 
-	return p_creat(tmp_path, 0744);
+	return p_creat(tmp_path, 0744); //-V536
 }
 
 int p_setenv(const char* name, const char* value, int overwrite)

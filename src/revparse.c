@@ -506,7 +506,7 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
    }
 
    /* "~" is the same as "~1" */
-   if (strlen(movement) == 0) {
+   if (*movement == '\0') {
       n = 1;
    } else {
       git__strtol32(&n, movement, NULL, 0);

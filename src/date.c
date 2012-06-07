@@ -531,7 +531,7 @@ static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset
 	/* mktime uses local timezone */
 	*timestamp = tm_to_time_t(&tm);
 	if (*offset == -1)
-		*offset = ((time_t)*timestamp - mktime(&tm)) / 60;
+		*offset = (int)((time_t)*timestamp - mktime(&tm)) / 60;
 
 	if (*timestamp == (git_time_t)-1)
 		return -1;

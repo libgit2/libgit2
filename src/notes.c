@@ -125,7 +125,7 @@ static int note_write(git_oid *out, git_repository *repo,
 		return error;
 	}
 
-	error = git_treebuilder_insert(&entry, tb, target + fanout, &oid, 0100644);
+	error = git_treebuilder_insert(&entry, tb, target + fanout, &oid, 0100644); //-V536
 	if (error < 0) {
 		/* libgit2 doesn't support object removal (gc) yet */
 		/* we leave an orphaned blob object behind - TODO */
@@ -154,7 +154,7 @@ static int note_write(git_oid *out, git_repository *repo,
 		if (error < 0)
 			return error;
 
-		error = git_treebuilder_insert(NULL, tb, subtree, &oid, 0040000);
+		error = git_treebuilder_insert(NULL, tb, subtree, &oid, 0040000); //-V536
 		if (error < 0) {
 			git_treebuilder_free(tb);
 			return error;

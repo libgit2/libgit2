@@ -96,9 +96,9 @@ typedef enum {
 typedef struct {
 	git_oid oid;
 	char *path;
-	uint16_t mode;
 	git_off_t size;
 	unsigned int flags;
+	uint16_t mode;
 } git_diff_file;
 
 /**

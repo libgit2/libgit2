@@ -467,7 +467,7 @@ static char pick_suffix(int mode)
 {
 	if (S_ISDIR(mode))
 		return '/';
-	else if (mode & 0100)
+	else if (mode & 0100) //-V536
 		/* in git, modes are very regular, so we must have 0100755 mode */
 		return '*';
 	else
