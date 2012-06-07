@@ -376,11 +376,17 @@ static int ssl_setup(git_transport *t, const char *host)
 
 int gitno_connect(git_transport *t, const char *host, const char *port)
 {
+#ifndef __amigaos4__
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
+#else
+	int p;
+	struct hostent *hent;
+	struct sockaddr_in saddr;
+#endif
 	int ret;
 	GIT_SOCKET s = INVALID_SOCKET;
-
+#ifndef __amigaos4__
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -389,15 +395,29 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 		giterr_set(GITERR_NET, "Failed to resolve address for %s: %s", host, gai_strerror(ret));
 		return -1;
 	}
+#else
+	hent = gethostbyname(host);
+#endif
 
+#ifndef __amigaos4__
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+#else
+	for (p = 0; hent->h_addr_list[p] != NULL; p++) {
+		s = socket(hent->h_addrtype, SOCK_STREAM, 0);
+#endif
 		if (s == INVALID_SOCKET) {
 			net_set_error("error creating socket");
 			break;
 		}
-
+#ifndef __amigaos4__
 		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
+#else
+		saddr.sin_addr.s_addr = *hent->h_addr_list[p];
+		saddr.sin_family = hent->h_addrtype;
+		saddr.sin_port = port;
+		if (connect(s, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in)) == 0)
+#endif
 			break;
 
 		/* If we can't connect, try the next one */
@@ -406,14 +426,20 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	}
 
 	/* Oops, we couldn't connect to any address */
-	if (s == INVALID_SOCKET && p == NULL) {
+	if (s == INVALID_SOCKET &&
+#ifndef __amigaos4__
+		p == NULL) {
+#else
+		hent->h_addr_list[p] == NULL) {
+#endif
 		giterr_set(GITERR_OS, "Failed to connect to %s", host);
 		return -1;
 	}
 
 	t->socket = s;
+#ifndef __amigaos4__
 	freeaddrinfo(info);
-
+#endif
 	if (t->encrypt && ssl_setup(t, host) < 0)
 		return -1;
 
