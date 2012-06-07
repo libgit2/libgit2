@@ -474,13 +474,14 @@ static const char *status_paths[] = {
 	"subdir/current_file",
 	"subdir/modified_file",
 	"subdir/new_file",
+	"\xe8\xbf\x99",
 	NULL
 };
 
 void test_diff_iterator__workdir_1(void)
 {
 	workdir_iterator_test(
-		"status", NULL, NULL, 12, 1, status_paths, "ignored_file");
+		"status", NULL, NULL, 13, 1, status_paths, "ignored_file");
 }
 
 static const char *status_paths_range_0[] = {
@@ -527,13 +528,14 @@ static const char *status_paths_range_4[] = {
 	"subdir/current_file",
 	"subdir/modified_file",
 	"subdir/new_file",
+	"\xe8\xbf\x99",
 	NULL
 };
 
 void test_diff_iterator__workdir_1_ranged_4(void)
 {
 	workdir_iterator_test(
-		"status", "subdir/", NULL, 3, 0, status_paths_range_4, NULL);
+		"status", "subdir/", NULL, 4, 0, status_paths_range_4, NULL);
 }
 
 static const char *status_paths_range_5[] = {
@@ -551,7 +553,7 @@ void test_diff_iterator__workdir_1_ranged_5(void)
 void test_diff_iterator__workdir_1_ranged_empty_0(void)
 {
 	workdir_iterator_test(
-		"status", "z_does_not_exist", NULL,
+		"status", "\xff_does_not_exist", NULL,
 		0, 0, NULL, NULL);
 }
 
