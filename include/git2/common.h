@@ -7,12 +7,11 @@
 #ifndef INCLUDE_git_common_h__
 #define INCLUDE_git_common_h__
 
-#include "libgit2_config.h"
-
 #include <time.h>
 #include <stdlib.h>
 
 #ifdef _MSC_VER
+#	include "libgit2_config.h"
 #	include "inttypes.h"
 #else
 #	include <inttypes.h>
