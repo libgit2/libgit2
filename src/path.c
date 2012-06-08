@@ -170,7 +170,8 @@ int git_path_root(const char *path)
 
 #ifdef GIT_WIN32
 	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(path[0]) && (path[1] == ':'))
+	if (((path[0] >= 'a' && path[0] <= 'z') ||
+		 (path[0] >= 'A' && path[0] <= 'Z')) && path[1] == ':')
 		offset += 2;
 
 	/* Are we dealing with a windows network path? */
