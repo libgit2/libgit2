@@ -83,12 +83,13 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 			info->cb_data, info->delta, &info->range, origin, bufs[1].ptr, bufs[1].size) < 0)
 			return -1;
 
-		/* deal with adding and removing newline at EOF */
+		/* This should only happen if we are adding a line that does not
+		 * have a newline at the end and the old code did.  In that case,
+		 * we have a ADD with a DEL_EOFNL as a pair.
+		 */
 		if (len == 3) {
-			if (origin == GIT_DIFF_LINE_ADDITION)
-				origin = GIT_DIFF_LINE_ADD_EOFNL;
-			else
-				origin = GIT_DIFF_LINE_DEL_EOFNL;
+			origin = (origin == GIT_DIFF_LINE_ADDITION) ?
+				GIT_DIFF_LINE_DEL_EOFNL : GIT_DIFF_LINE_ADD_EOFNL;
 
 			return info->line_cb(
 				info->cb_data, info->delta, &info->range, origin, bufs[2].ptr, bufs[2].size);
@@ -359,7 +360,7 @@ int git_diff_foreach(
 
 		/* map files */
 		if (delta->binary != 1 &&
-			(hunk_cb || line_cb) &&
+			(hunk_cb || line_cb || git_oid_iszero(&delta->old_file.oid)) &&
 			(delta->status == GIT_DELTA_DELETED ||
 			 delta->status == GIT_DELTA_MODIFIED))
 		{
@@ -397,7 +398,9 @@ int git_diff_foreach(
 				/* since we did not have the definitive oid, we may have
 				 * incorrect status and need to skip this item.
 				 */
-				if (git_oid_cmp(&delta->old_file.oid, &delta->new_file.oid) == 0) {
+				if (delta->old_file.mode == delta->new_file.mode &&
+					!git_oid_cmp(&delta->old_file.oid, &delta->new_file.oid))
+				{
 					delta->status = GIT_DELTA_UNMODIFIED;
 					if ((diff->opts.flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
 						goto cleanup;
@@ -420,7 +423,8 @@ int git_diff_foreach(
 		 */
 
 		if (file_cb != NULL) {
-			error = file_cb(data, delta, (float)info.index / diff->deltas.length);
+			error = file_cb(
+				data, delta, (float)info.index / diff->deltas.length);
 			if (error < 0)
 				goto cleanup;
 		}
@@ -431,6 +435,10 @@ int git_diff_foreach(
 
 		/* nothing to do if we did not get data */
 		if (!old_data.len && !new_data.len)
+			goto cleanup;
+
+		/* nothing to do if only diff was a mode change */
+		if (!git_oid_cmp(&delta->old_file.oid, &delta->new_file.oid))
 			goto cleanup;
 
 		assert(hunk_cb || line_cb);
