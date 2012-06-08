@@ -23,10 +23,21 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_V
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_VERSION_REV "${GIT2_HEADER}")
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
+# Comment out the line below to use OpenSSL SHA1
+SET(SHA1_TYPE "ppc")
+
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include deps/http-parser)
 
 FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+
+# Specify sha1 implementation
+IF (SHA1_TYPE STREQUAL "ppc")
+    ADD_DEFINITIONS(-DPPC_SHA1)
+    FILE(GLOB SRC_SHA1 src/ppc/*.c)
+ELSE ()
+	SET (SRC_SHA1)
+ENDIF()
 
 IF (NOT WIN32)
 	FIND_PACKAGE(ZLIB)
@@ -122,7 +133,7 @@ ELSE()
 ENDIF ()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 
 IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
