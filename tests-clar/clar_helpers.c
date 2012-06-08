@@ -155,3 +155,27 @@ void cl_git_sandbox_cleanup(void)
 	}
 }
 
+bool cl_toggle_filemode(const char *filename)
+{
+	struct stat st1, st2;
+
+	cl_must_pass(p_stat(filename, &st1));
+	cl_must_pass(p_chmod(filename, st1.st_mode ^ 0100));
+	cl_must_pass(p_stat(filename, &st2));
+
+	return (st1.st_mode != st2.st_mode);
+}
+
+bool cl_is_chmod_supported(void)
+{
+	static int _is_supported = -1;
+
+	if (_is_supported < 0) {
+		cl_git_mkfile("filemode.t", "Test if filemode can be modified");
+		_is_supported = cl_toggle_filemode("filemode.t");
+		cl_must_pass(p_unlink("filemode.t"));
+	}
+
+	return _is_supported;
+}
+

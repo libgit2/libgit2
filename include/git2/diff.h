@@ -29,6 +29,10 @@
  */
 GIT_BEGIN_DECL
 
+/**
+ * Flags for diff options.  A combination of these flags can be passed
+ * in via the `flags` value in the `git_diff_options`.
+ */
 enum {
 	GIT_DIFF_NORMAL = 0,
 	GIT_DIFF_REVERSE = (1 << 0),
@@ -160,15 +164,16 @@ typedef int (*git_diff_hunk_fn)(
  * the file or hunk headers.
  */
 enum {
-	/* these values will be sent to `git_diff_data_fn` along with the line */
+	/* These values will be sent to `git_diff_data_fn` along with the line */
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
-	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< LF was added at end of file */
+	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< DEPRECATED */
 	GIT_DIFF_LINE_DEL_EOFNL = '\0', /**< LF was removed at end of file */
-	/* these values will only be sent to a `git_diff_data_fn` when the content
-	 * of a diff is being formatted (eg. through git_diff_print_patch() or
-	 * git_diff_print_compact(), for instance).
+
+	/* The following values will only be sent to a `git_diff_data_fn` when
+	 * the content of a diff is being formatted (eg. through
+	 * git_diff_print_patch() or git_diff_print_compact(), for instance).
 	 */
 	GIT_DIFF_LINE_FILE_HDR  = 'F',
 	GIT_DIFF_LINE_HUNK_HDR  = 'H',
@@ -206,6 +211,8 @@ GIT_EXTERN(void) git_diff_list_free(git_diff_list *diff);
 /**
  * Compute a difference between two tree objects.
  *
+ * This is equivalent to `git diff <treeish> <treeish>`
+ *
  * @param repo The repository containing the trees.
  * @param opts Structure with options to influence diff or NULL for defaults.
  * @param old_tree A git_tree object to diff from.
@@ -222,6 +229,9 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
 /**
  * Compute a difference between a tree and the index.
  *
+ * This is equivalent to `git diff --cached <treeish>` or if you pass
+ * the HEAD tree, then like `git diff --cached`.
+ *
  * @param repo The repository containing the tree and index.
  * @param opts Structure with options to influence diff or NULL for defaults.
  * @param old_tree A git_tree object to diff from.
@@ -236,6 +246,11 @@ GIT_EXTERN(int) git_diff_index_to_tree(
 /**
  * Compute a difference between the working directory and the index.
  *
+ * This matches the `git diff` command.  See the note below on
+ * `git_diff_workdir_to_tree` for a discussion of the difference between
+ * `git diff` and `git diff HEAD` and how to emulate a `git diff <treeish>`
+ * using libgit2.
+ *
  * @param repo The repository.
  * @param opts Structure with options to influence diff or NULL for defaults.
  * @param diff A pointer to a git_diff_list pointer that will be allocated.
@@ -248,14 +263,24 @@ GIT_EXTERN(int) git_diff_workdir_to_index(
 /**
  * Compute a difference between the working directory and a tree.
  *
- * This returns strictly the differences between the tree and the
- * files contained in the working directory, regardless of the state
- * of files in the index.  There is no direct equivalent in C git.
+ * This is *NOT* the same as `git diff <treeish>`.  Running `git diff HEAD`
+ * or the like actually uses information from the index, along with the tree
+ * and workdir dir info.
  *
- * This is *NOT* the same as 'git diff HEAD' or 'git diff <SHA>'.  Those
- * commands diff the tree, the index, and the workdir.  To emulate those
- * functions, call `git_diff_index_to_tree` and `git_diff_workdir_to_index`,
- * then call `git_diff_merge` on the results.
+ * This function returns strictly the differences between the tree and the
+ * files contained in the working directory, regardless of the state of
+ * files in the index.  It may come as a surprise, but there is no direct
+ * equivalent in core git.
+ *
+ * To emulate `git diff <treeish>`, you should call both
+ * `git_diff_index_to_tree` and `git_diff_workdir_to_index`, then call
+ * `git_diff_merge` on the results.  That will yield a `git_diff_list` that
+ * matches the git output.
+ *
+ * If this seems confusing, take the case of a file with a staged deletion
+ * where the file has then been put back into the working dir and modified.
+ * The tree-to-workdir diff for that file is 'modified', but core git would
+ * show status 'deleted' since there is a pending deletion in the index.
  *
  * @param repo The repository containing the tree.
  * @param opts Structure with options to influence diff or NULL for defaults.
@@ -298,10 +323,23 @@ GIT_EXTERN(int) git_diff_merge(
 /**
  * Iterate over a diff list issuing callbacks.
  *
- * If the hunk and/or line callbacks are not NULL, then this will calculate
- * text diffs for all files it thinks are not binary.  If those are both
- * NULL, then this will not bother with the text diffs, so it can be
- * efficient.
+ * This will iterate through all of the files described in a diff.  You
+ * should provide a file callback to learn about each file.
+ *
+ * The "hunk" and "line" callbacks are optional, and the text diff of the
+ * files will only be calculated if they are not NULL.  Of course, these
+ * callbacks will not be invoked for binary files on the diff list or for
+ * files whose only changed is a file mode change.
+ *
+ * @param diff A git_diff_list generated by one of the above functions.
+ * @param cb_data Reference pointer that will be passed to your callbacks.
+ * @param file_cb Callback function to make per file in the diff.
+ * @param hunk_cb Optional callback to make per hunk of text diff.  This
+ *                callback is called to describe a range of lines in the
+ *                diff.  It will not be issued for binary files.
+ * @param line_cb Optional callback to make per line of diff text.  This
+ *                same callback will be made for context lines, added, and
+ *                removed lines, and even for a deleted trailing newline.
  */
 GIT_EXTERN(int) git_diff_foreach(
 	git_diff_list *diff,
@@ -322,6 +360,14 @@ GIT_EXTERN(int) git_diff_print_compact(
  * Iterate over a diff generating text output like "git diff".
  *
  * This is a super easy way to generate a patch from a diff.
+ *
+ * @param diff A git_diff_list generated by one of the above functions.
+ * @param cb_data Reference pointer that will be passed to your callbacks.
+ * @param print_cb Callback function to output lines of the diff.  This
+ *                 same function will be called for file headers, hunk
+ *                 headers, and diff lines.  Fortunately, you can probably
+ *                 use various GIT_DIFF_LINE constants to determine what
+ *                 text you are given.
  */
 GIT_EXTERN(int) git_diff_print_patch(
 	git_diff_list *diff,
@@ -338,13 +384,14 @@ GIT_EXTERN(int) git_diff_print_patch(
 /**
  * Directly run a text diff on two blobs.
  *
- * Compared to a file, a blob lacks some contextual information. As such, the
- * `git_diff_file` parameters of the callbacks will be filled accordingly to the following:
- * `mode` will be set to 0, `path` will be set to NULL. When dealing with a NULL blob, `oid`
- * will be set to 0.
+ * Compared to a file, a blob lacks some contextual information. As such,
+ * the `git_diff_file` parameters of the callbacks will be filled
+ * accordingly to the following: `mode` will be set to 0, `path` will be set
+ * to NULL. When dealing with a NULL blob, `oid` will be set to 0.
  *
- * When at least one of the blobs being dealt with is binary, the `git_diff_delta` binary
- * attribute will be set to 1 and no call to the hunk_cb nor line_cb will be made.
+ * When at least one of the blobs being dealt with is binary, the
+ * `git_diff_delta` binary attribute will be set to 1 and no call to the
+ * hunk_cb nor line_cb will be made.
  */
 GIT_EXTERN(int) git_diff_blobs(
 	git_blob *old_blob,

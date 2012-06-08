@@ -130,37 +130,50 @@ fail:
 static git_diff_delta *diff_delta__merge_like_cgit(
 	const git_diff_delta *a, const git_diff_delta *b, git_pool *pool)
 {
-	git_diff_delta *dup = diff_delta__dup(a, pool);
-	if (!dup)
-		return NULL;
-
-	if (git_oid_cmp(&dup->new_file.oid, &b->new_file.oid) == 0)
-		return dup;
-
-	git_oid_cpy(&dup->new_file.oid, &b->new_file.oid);
-
-	dup->new_file.mode = b->new_file.mode;
-	dup->new_file.size = b->new_file.size;
-	dup->new_file.flags = b->new_file.flags;
+	git_diff_delta *dup;
 
 	/* Emulate C git for merging two diffs (a la 'git diff <sha>').
 	 *
 	 * When C git does a diff between the work dir and a tree, it actually
 	 * diffs with the index but uses the workdir contents.  This emulates
 	 * those choices so we can emulate the type of diff.
+	 *
+	 * We have three file descriptions here, let's call them:
+	 *  f1 = a->old_file
+	 *  f2 = a->new_file AND b->old_file
+	 *  f3 = b->new_file
 	 */
-	if (git_oid_cmp(&dup->old_file.oid, &dup->new_file.oid) == 0) {
-		if (dup->status == GIT_DELTA_DELETED)
-			/* preserve pending delete info */;
-		else if (b->status == GIT_DELTA_UNTRACKED ||
-				 b->status == GIT_DELTA_IGNORED)
-			dup->status = b->status;
-		else
+
+	/* if f2 == f3 or f2 is deleted, then just dup the 'a' diff */
+	if (b->status == GIT_DELTA_UNMODIFIED || a->status == GIT_DELTA_DELETED)
+		return diff_delta__dup(a, pool);
+
+	/* otherwise, base this diff on the 'b' diff */
+	if ((dup = diff_delta__dup(b, pool)) == NULL)
+		return NULL;
+
+	/* If 'a' status is uninteresting, then we're done */
+	if (a->status == GIT_DELTA_UNMODIFIED)
+		return dup;
+
+	assert(a->status != GIT_DELTA_UNMODIFIED);
+	assert(b->status != GIT_DELTA_UNMODIFIED);
+
+	/* A cgit exception is that the diff of a file that is only in the
+	 * index (i.e. not in HEAD nor workdir) is given as empty.
+	 */
+	if (dup->status == GIT_DELTA_DELETED) {
+		if (a->status == GIT_DELTA_ADDED)
 			dup->status = GIT_DELTA_UNMODIFIED;
+		/* else don't overwrite DELETE status */
+	} else {
+		dup->status = a->status;
 	}
-	else if (dup->status == GIT_DELTA_UNMODIFIED ||
-			 b->status == GIT_DELTA_DELETED)
-		dup->status = b->status;
+
+	git_oid_cpy(&dup->old_file.oid, &a->old_file.oid);
+	dup->old_file.mode  = a->old_file.mode;
+	dup->old_file.size  = a->old_file.size;
+	dup->old_file.flags = a->old_file.flags;
 
 	return dup;
 }
@@ -214,7 +227,9 @@ static int diff_delta__from_two(
 	git_diff_list *diff,
 	git_delta_t   status,
 	const git_index_entry *old_entry,
+	uint32_t old_mode,
 	const git_index_entry *new_entry,
+	uint32_t new_mode,
 	git_oid *new_oid)
 {
 	git_diff_delta *delta;
@@ -224,19 +239,22 @@ static int diff_delta__from_two(
 		return 0;
 
 	if ((diff->opts.flags & GIT_DIFF_REVERSE) != 0) {
-		const git_index_entry *temp = old_entry;
+		uint32_t temp_mode = old_mode;
+		const git_index_entry *temp_entry = old_entry;
 		old_entry = new_entry;
-		new_entry = temp;
+		new_entry = temp_entry;
+		old_mode = new_mode;
+		new_mode = temp_mode;
 	}
 
 	delta = diff_delta__alloc(diff, status, old_entry->path);
 	GITERR_CHECK_ALLOC(delta);
 
-	delta->old_file.mode = old_entry->mode;
+	delta->old_file.mode = old_mode;
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
 	delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
-	delta->new_file.mode = new_entry->mode;
+	delta->new_file.mode = new_mode;
 	git_oid_cpy(&delta->new_file.oid, new_oid ? new_oid : &new_entry->oid);
 	if (new_oid || !git_oid_iszero(&new_entry->oid))
 		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
@@ -300,7 +318,7 @@ static git_diff_list *git_diff_list_alloc(
 	if (config_bool(cfg, "core.ignorestat", 0))
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_ASSUME_UNCHANGED;
 	if (config_bool(cfg, "core.filemode", 1))
-		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_EXEC_BIT;
+		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_MODE_BITS;
 	if (config_bool(cfg, "core.trustctime", 1))
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_CTIME;
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
@@ -419,7 +437,7 @@ static int oid_for_workdir_item(
 	return result;
 }
 
-#define EXEC_BIT_MASK 0000111
+#define MODE_BITS_MASK 0000777
 
 static int maybe_modified(
 	git_iterator *old_iter,
@@ -443,13 +461,13 @@ static int maybe_modified(
 		!(diff->diffcaps & GIT_DIFFCAPS_HAS_SYMLINKS))
 		nmode = GIT_MODE_TYPE(omode) | (nmode & GIT_MODE_PERMS_MASK);
 
-	/* on platforms with no execmode, clear exec bit from comparisons */
-	if (!(diff->diffcaps & GIT_DIFFCAPS_TRUST_EXEC_BIT)) {
-		omode = omode & ~EXEC_BIT_MASK;
-		nmode = nmode & ~EXEC_BIT_MASK;
-	}
+	/* on platforms with no execmode, just preserve old mode */
+	if (!(diff->diffcaps & GIT_DIFFCAPS_TRUST_MODE_BITS) &&
+		(nmode & MODE_BITS_MASK) != (omode & MODE_BITS_MASK) &&
+		new_iter->type == GIT_ITERATOR_WORKDIR)
+		nmode = (nmode & ~MODE_BITS_MASK) | (omode & MODE_BITS_MASK);
 
-	/* support "assume unchanged" (badly, b/c we still stat everything) */
+	/* support "assume unchanged" (poorly, b/c we still stat everything) */
 	if ((diff->diffcaps & GIT_DIFFCAPS_ASSUME_UNCHANGED) != 0)
 		status = (oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) ?
 			GIT_DELTA_MODIFIED : GIT_DELTA_UNMODIFIED;
@@ -471,8 +489,13 @@ static int maybe_modified(
 			 omode == nmode)
 		status = GIT_DELTA_UNMODIFIED;
 
-	/* if we have a workdir item with an unknown oid, check deeper */
-	else if (git_oid_iszero(&nitem->oid) && new_iter->type == GIT_ITERATOR_WORKDIR) {
+	/* if modes match and we have an unknown OID and a workdir iterator,
+	 * then check deeper for matching
+	 */
+	else if (omode == nmode &&
+		git_oid_iszero(&nitem->oid) &&
+		new_iter->type == GIT_ITERATOR_WORKDIR)
+	{
 		/* TODO: add check against index file st_mtime to avoid racy-git */
 
 		/* if they files look exactly alike, then we'll assume the same */
@@ -517,7 +540,8 @@ static int maybe_modified(
 		use_noid = &noid;
 	}
 
-	return diff_delta__from_two(diff, status, oitem, nitem, use_noid);
+	return diff_delta__from_two(
+		diff, status, oitem, omode, nitem, nmode, use_noid);
 }
 
 static int diff_from_iterators(
@@ -772,6 +796,12 @@ int git_diff_merge(
 		git_vector_swap(&onto->deltas, &onto_new);
 		git_pool_swap(&onto->pool, &onto_pool);
 		onto->new_src = from->new_src;
+
+		/* prefix strings also come from old pool, so recreate those.*/
+		onto->opts.old_prefix =
+			git_pool_strdup(&onto->pool, onto->opts.old_prefix);
+		onto->opts.new_prefix =
+			git_pool_strdup(&onto->pool, onto->opts.new_prefix);
 	}
 
 	git_vector_foreach(&onto_new, i, delta)

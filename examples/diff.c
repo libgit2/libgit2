@@ -185,9 +185,7 @@ int main(int argc, char *argv[])
 
 	/* open repo */
 
-	check(git_repository_discover(path, sizeof(path), dir, 0, "/"),
-		"Could not discover repository");
-	check(git_repository_open(&repo, path),
+	check(git_repository_open_ext(&repo, dir, 0, NULL),
 		"Could not open repository");
 
 	if (treeish1)
