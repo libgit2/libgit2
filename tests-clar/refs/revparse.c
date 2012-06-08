@@ -24,10 +24,10 @@ static void test_object(const char *spec, const char *expected_oid)
 
 void test_refs_revparse__initialize(void)
 {
-   char *tz = getenv("TZ");
+   char *tz = cl_getenv("TZ");
    if (tz)
       strcpy(g_orig_tz, tz);
-   setenv("TZ", "UTC", 1);
+   cl_setenv("TZ", "UTC");
    g_repo = cl_git_sandbox_init("testrepo.git");
 }
 
@@ -35,7 +35,7 @@ void test_refs_revparse__cleanup(void)
 {
    cl_git_sandbox_cleanup();
    g_obj = NULL;
-   setenv("TZ", g_orig_tz, 1);
+   cl_setenv("TZ", g_orig_tz);
 }
 
 
