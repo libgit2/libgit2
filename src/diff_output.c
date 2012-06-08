@@ -83,12 +83,13 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 			info->cb_data, info->delta, &info->range, origin, bufs[1].ptr, bufs[1].size) < 0)
 			return -1;
 
-		/* deal with adding and removing newline at EOF */
+		/* This should only happen if we are adding a line that does not
+		 * have a newline at the end and the old code did.  In that case,
+		 * we have a ADD with a DEL_EOFNL as a pair.
+		 */
 		if (len == 3) {
-			if (origin == GIT_DIFF_LINE_ADDITION)
-				origin = GIT_DIFF_LINE_ADD_EOFNL;
-			else
-				origin = GIT_DIFF_LINE_DEL_EOFNL;
+			origin = (origin == GIT_DIFF_LINE_ADDITION) ?
+				GIT_DIFF_LINE_DEL_EOFNL : GIT_DIFF_LINE_ADD_EOFNL;
 
 			return info->line_cb(
 				info->cb_data, info->delta, &info->range, origin, bufs[2].ptr, bufs[2].size);

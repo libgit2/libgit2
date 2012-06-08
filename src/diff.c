@@ -130,37 +130,50 @@ fail:
 static git_diff_delta *diff_delta__merge_like_cgit(
 	const git_diff_delta *a, const git_diff_delta *b, git_pool *pool)
 {
-	git_diff_delta *dup = diff_delta__dup(a, pool);
-	if (!dup)
-		return NULL;
-
-	if (git_oid_cmp(&dup->new_file.oid, &b->new_file.oid) == 0)
-		return dup;
-
-	git_oid_cpy(&dup->new_file.oid, &b->new_file.oid);
-
-	dup->new_file.mode = b->new_file.mode;
-	dup->new_file.size = b->new_file.size;
-	dup->new_file.flags = b->new_file.flags;
+	git_diff_delta *dup;
 
 	/* Emulate C git for merging two diffs (a la 'git diff <sha>').
 	 *
 	 * When C git does a diff between the work dir and a tree, it actually
 	 * diffs with the index but uses the workdir contents.  This emulates
 	 * those choices so we can emulate the type of diff.
+	 *
+	 * We have three file descriptions here, let's call them:
+	 *  f1 = a->old_file
+	 *  f2 = a->new_file AND b->old_file
+	 *  f3 = b->new_file
 	 */
-	if (git_oid_cmp(&dup->old_file.oid, &dup->new_file.oid) == 0) {
-		if (dup->status == GIT_DELTA_DELETED)
-			/* preserve pending delete info */;
-		else if (b->status == GIT_DELTA_UNTRACKED ||
-				 b->status == GIT_DELTA_IGNORED)
-			dup->status = b->status;
-		else
+
+	/* if f2 == f3 or f2 is deleted, then just dup the 'a' diff */
+	if (b->status == GIT_DELTA_UNMODIFIED || a->status == GIT_DELTA_DELETED)
+		return diff_delta__dup(a, pool);
+
+	/* otherwise, base this diff on the 'b' diff */
+	if ((dup = diff_delta__dup(b, pool)) == NULL)
+		return NULL;
+
+	/* If 'a' status is uninteresting, then we're done */
+	if (a->status == GIT_DELTA_UNMODIFIED)
+		return dup;
+
+	assert(a->status != GIT_DELTA_UNMODIFIED);
+	assert(b->status != GIT_DELTA_UNMODIFIED);
+
+	/* A cgit exception is that the diff of a file that is only in the
+	 * index (i.e. not in HEAD nor workdir) is given as empty.
+	 */
+	if (dup->status == GIT_DELTA_DELETED) {
+		if (a->status == GIT_DELTA_ADDED)
 			dup->status = GIT_DELTA_UNMODIFIED;
+		/* else don't overwrite DELETE status */
+	} else {
+		dup->status = a->status;
 	}
-	else if (dup->status == GIT_DELTA_UNMODIFIED ||
-			 b->status == GIT_DELTA_DELETED)
-		dup->status = b->status;
+
+	git_oid_cpy(&dup->old_file.oid, &a->old_file.oid);
+	dup->old_file.mode  = a->old_file.mode;
+	dup->old_file.size  = a->old_file.size;
+	dup->old_file.flags = a->old_file.flags;
 
 	return dup;
 }
@@ -783,6 +796,12 @@ int git_diff_merge(
 		git_vector_swap(&onto->deltas, &onto_new);
 		git_pool_swap(&onto->pool, &onto_pool);
 		onto->new_src = from->new_src;
+
+		/* prefix strings also come from old pool, so recreate those.*/
+		onto->opts.old_prefix =
+			git_pool_strdup(&onto->pool, onto->opts.old_prefix);
+		onto->opts.new_prefix =
+			git_pool_strdup(&onto->pool, onto->opts.new_prefix);
 	}
 
 	git_vector_foreach(&onto_new, i, delta)
