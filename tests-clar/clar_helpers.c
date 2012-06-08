@@ -48,6 +48,62 @@ void cl_git_rewritefile(const char *filename, const char *new_content)
 	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_TRUNC);
 }
 
+#ifdef GIT_WIN32
+
+#include "win32/utf-conv.h"
+
+char *cl_getenv(const char *name)
+{
+	wchar_t *name_utf16 = gitwin_to_utf16(name);
+	DWORD value_len, alloc_len;
+	wchar_t *value_utf16;
+	char *value_utf8;
+
+	cl_assert(name_utf16);
+	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
+	if (alloc_len <= 0)
+		return NULL;
+
+	cl_assert(value_utf16 = git__calloc(alloc_len, sizeof(wchar_t)));
+
+	value_len = GetEnvironmentVariableW(name_utf16, value_utf16, alloc_len);
+	cl_assert_equal_i(value_len, alloc_len - 1);
+
+	cl_assert(value_utf8 = gitwin_from_utf16(value_utf16));
+
+	git__free(value_utf16);
+
+	return value_utf8;
+}
+
+int cl_setenv(const char *name, const char *value)
+{
+	wchar_t *name_utf16 = gitwin_to_utf16(name);
+	wchar_t *value_utf16 = value ? gitwin_to_utf16(value) : NULL;
+
+	cl_assert(name_utf16);
+	cl_assert(SetEnvironmentVariableW(name_utf16, value_utf16));
+
+	git__free(name_utf16);
+	git__free(value_utf16);
+
+	return 0;
+
+}
+#else
+
+#include <stdlib.h>
+char *cl_getenv(const char *name)
+{
+   return getenv(name);
+}
+
+int cl_setenv(const char *name, const char *value)
+{
+	return (value == NULL) ? unsetenv(name) : setenv(name, value, 1);
+}
+#endif
+
 static const char *_cl_sandbox = NULL;
 static git_repository *_cl_repo = NULL;
 
@@ -98,3 +154,4 @@ void cl_git_sandbox_cleanup(void)
 		_cl_sandbox = NULL;
 	}
 }
+
