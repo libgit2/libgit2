@@ -382,7 +382,9 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 #else
 	int p;
 	struct hostent *hent;
+	struct servent *sent;
 	struct sockaddr_in saddr;
+	long port_num = 0;
 #endif
 	int ret;
 	GIT_SOCKET s = INVALID_SOCKET;
@@ -397,6 +399,12 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	}
 #else
 	hent = gethostbyname(host);
+	sent = getservbyname(port, 0);
+	
+	if(sent)
+		port_num = sent->s_port;
+	else
+		port_num = atol(port);
 #endif
 
 #ifndef __amigaos4__
@@ -413,9 +421,9 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 #ifndef __amigaos4__
 		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
 #else
-		saddr.sin_addr.s_addr = *hent->h_addr_list[p];
+		memcpy(&saddr.sin_addr, hent->h_addr_list[p], hent->h_length);
 		saddr.sin_family = hent->h_addrtype;
-		saddr.sin_port = port;
+		saddr.sin_port = port_num;
 		if (connect(s, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in)) == 0)
 #endif
 			break;
