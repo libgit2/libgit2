@@ -58,7 +58,7 @@ ELSE (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
-#ENDIF()
+ENDIF()
 
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
