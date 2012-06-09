@@ -1,8 +1,9 @@
 default: all
 
-CC = gcc
+CC = ppc-amigaos-gcc
 CFLAGS += -g
-CFLAGS += -I../../include -L../../ -lgit2 -lpthread
+CFLAGS += -I../../include -L../../build
+LIBS += -lgit2 -lpthread -lregex
 
 OBJECTS = \
   git2.o \
@@ -11,4 +12,4 @@ OBJECTS = \
   index-pack.o
 
 all: $(OBJECTS)
-	$(CC) $(CFLAGS) -o git2 $(OBJECTS)
+	$(CC) $(CFLAGS) -o git2 $(OBJECTS) $(LIBS)
