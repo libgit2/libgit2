@@ -1,9 +1,9 @@
 default: all
 
-CC = ppc-amigaos-gcc
+CC = gcc
 CFLAGS += -g
 CFLAGS += -I../../include -L../../build
-LIBS += -lgit2 -lpthread -lregex
+LIBS += -lgit2 -lpthread #-lregex
 
 OBJECTS = \
   git2.o \
