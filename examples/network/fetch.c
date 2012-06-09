@@ -36,7 +36,9 @@ static void *download(void *ptr)
 
 exit:
 	data->finished = 1;
+#ifndef NO_PTHREADS
 	pthread_exit(&data->ret);
+#endif
 }
 
 int update_cb(const char *refname, const git_oid *a, const git_oid *b)
@@ -81,6 +83,9 @@ int fetch(git_repository *repo, int argc, char **argv)
 	data.finished = 0;
 	memset(&stats, 0, sizeof(stats));
 
+#ifdef NO_PTHREADS
+	download(&data);
+#else
 	pthread_create(&worker, NULL, download, &data);
 
 	// Loop while the worker thread is still running. Here we show processed
@@ -91,6 +96,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 		usleep(10000);
 		printf("\rReceived %d/%d objects in %d bytes", stats.processed, stats.total, bytes);
 	} while (!data.finished);
+#endif
 	printf("\rReceived %d/%d objects in %d bytes\n", stats.processed, stats.total, bytes);
 
 	// Disconnect the underlying connection to prevent from idling.
