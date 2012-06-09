@@ -24,7 +24,7 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" 
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
 # Uncomment out the line below to use PowerPC SHA1
-#SET(SHA1_TYPE "ppc")
+SET(SHA1_TYPE "ppc")
 
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include deps/http-parser)
