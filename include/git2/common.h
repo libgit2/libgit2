@@ -56,11 +56,7 @@
 #endif
 
 #ifdef __amigaos4__
-/* Network byte order is big-endian... so is PPC, so these functions are NOP */
-#define htonl(x) x
-#define ntohl(x) x
-#define htons(x) x
-#define ntohs(x) x
+#include <netinet/in.h>
 #endif
 
 /**
