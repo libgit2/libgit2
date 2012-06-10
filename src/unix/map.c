@@ -16,7 +16,6 @@
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
-#ifndef __amigaos4__
 	int mprot = 0;
 	int mflag = 0;
 
@@ -25,6 +24,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->data = NULL;
 	out->len = 0;
 
+#ifndef __amigaos4__
 	if (prot & GIT_PROT_WRITE)
 		mprot = PROT_WRITE;
 	else if (prot & GIT_PROT_READ)
@@ -36,21 +36,34 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		mflag = MAP_PRIVATE;
 
 	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
+#else
+	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
+		printf("Trying to map shared-writeable file!!!\n");
+
+		if(out->data = malloc(len)) {
+			lseek(fd, offset, SEEK_SET);
+			p_read(fd, out->data, len);
+		}
+	}
+#endif
+
 	if (!out->data || out->data == MAP_FAILED) {
 		giterr_set(GITERR_OS, "Failed to mmap. Could not write data");
 		return -1;
 	}
 
 	out->len = len;
-#endif
+
 	return 0;
 }
 
 int p_munmap(git_map *map)
 {
-#ifndef __amigaos4__
 	assert(map != NULL);
+#ifndef __amigaos4__
 	munmap(map->data, map->len);
+#else
+	free(map->data);
 #endif
 	return 0;
 }

@@ -215,7 +215,7 @@ static int packfile_unpack_header1(
 	unsigned shift;
 	unsigned long size, c;
 	unsigned long used = 0;
-
+printf("[pack 218] buf = %lx, used = %ld, len = %ld\n", buf, used, len);
 	c = buf[used++];
 	*type = (c >> 4) & 7;
 	size = c & 15;
@@ -261,7 +261,7 @@ int git_packfile_unpack_header(
 	base = git_mwindow_open(mwf, w_curs, *curpos, 20, &left);
 	if (base == NULL)
 		return GIT_EBUFS;
-
+printf("[pack 264] base = %lx, mwf = %lx\n", base, mwf);
 	ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
 	git_mwindow_close(w_curs);
 	if (ret == GIT_EBUFS)
