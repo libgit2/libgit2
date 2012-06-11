@@ -718,6 +718,9 @@ static int repo_init_config(const char *git_dir, bool is_bare, bool is_reinit)
 	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
 	SET_REPO_CONFIG(bool, "core.filemode", is_chmod_supported(git_buf_cstr(&cfg_path)));
 	
+	if (!is_bare)
+		SET_REPO_CONFIG(bool, "core.logallrefupdates", true);
+
 	if (!is_reinit && is_filesystem_case_insensitive(git_dir))
 		SET_REPO_CONFIG(bool, "core.ignorecase", true);
 	/* TODO: what other defaults? */
