@@ -66,6 +66,7 @@ typedef int GIT_SOCKET;
 #else
 
 typedef SOCKET GIT_SOCKET;
+struct timezone;
 extern struct tm * p_localtime_r (const time_t *timer, struct tm *result);
 extern struct tm * p_gmtime_r (const time_t *timer, struct tm *result);
 extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
