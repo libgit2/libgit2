@@ -28,6 +28,8 @@ static int parse_ignore_file(
 			GITERR_CHECK_ALLOC(match);
 		}
 
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
+
 		if (!(error = git_attr_fnmatch__parse(
 			match, ignores->pool, context, &scan)))
 		{
