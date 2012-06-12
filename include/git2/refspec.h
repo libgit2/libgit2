@@ -20,6 +20,14 @@
 GIT_BEGIN_DECL
 
 /**
+ * Parse a refspec string and create a refspec object
+ *
+ * @param refspec pointer to the refspec structure to be used
+ * @param str the refspec as a string
+ */
+GIT_EXTERN(int) git_refspec_parse(git_refspec *refspec, const char *str);
+
+/**
  * Get the source specifier
  *
  * @param refspec the refspec
