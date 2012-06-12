@@ -13,8 +13,6 @@
 
 #include "git2.h"
 
-GIT_BEGIN_DECL
-
 typedef enum {
    REVPARSE_STATE_INIT,
    REVPARSE_STATE_CARET,
@@ -748,6 +746,3 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
    git_buf_free(&stepbuffer);
    return retcode;
 }
-
-
-GIT_END_DECL
