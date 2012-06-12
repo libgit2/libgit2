@@ -23,6 +23,10 @@
 # include <openssl/x509v3.h>
 #endif
 
+#ifdef GIT_SSH
+#	include <libssh2.h>
+#endif
+
 #include <ctype.h>
 #include "git2/errors.h"
 
@@ -60,6 +64,129 @@ static int ssl_set_error(gitno_ssl *ssl, int error)
 	return -1;
 }
 #endif
+
+#ifdef GIT_SSH
+static int ssh_set_error(LIBSSH2_SESSION *session)
+{
+	char *error;
+
+	libssh2_session_last_error(session, &error, NULL, 0);
+	giterr_set(GITERR_NET, "SSH error: %s", error);
+
+	return -1;
+}
+
+static int ssh_init(git_transport *t)
+{
+	if (libssh2_init(0) < 0)
+		return ssh_set_error(t->ssh.session);
+
+	t->ssh.session = libssh2_session_init();
+	if (t->ssh.session == NULL)
+		return ssh_set_error(t->ssh.session);
+
+	libssh2_session_set_blocking(t->ssh.session, 1);
+
+	if (libssh2_session_handshake(t->ssh.session, (libssh2_socket_t)(t->socket)) < 0)
+		return ssh_set_error(t->ssh.session);
+
+	return 0;
+}
+
+static int ssh_userauth(git_transport *t)
+{
+	if (t->auth == NULL) {
+		giterr_set(GITERR_NET, "No authentication handler given");
+		return -1;
+	}
+
+	if (t->auth(t->auth_data) < 0) {
+		giterr_set(GITERR_NET, "Authentication handler failed");
+		return -1;
+	}
+
+	if (libssh2_userauth_password(t->ssh.session,
+				      t->auth_data->username,
+				      t->auth_data->password) < 0)
+		return ssh_set_error(t->ssh.session);
+	return 0;
+}
+
+static int ssh_open_session(git_transport *t)
+{
+	t->ssh.channel = libssh2_channel_open_session(t->ssh.session);
+	if (t->ssh.channel == NULL)
+		return ssh_set_error(t->ssh.session);
+
+	return 0;
+}
+
+int gitno_ssh_connect(git_transport *t, const char *host, const char *port)
+{
+	int error;
+
+	error = gitno_connect(t, host, port);
+
+	if (error < 0 && t->socket != INVALID_SOCKET) {
+		gitno_close(t->socket);
+		t->socket = INVALID_SOCKET;
+	}
+
+	if (t->socket == INVALID_SOCKET) {
+		giterr_set(GITERR_NET, "Failed to connect to host");
+		return -1;
+	}
+
+	if (ssh_init(t) < 0 ||
+		ssh_userauth(t) < 0 ||
+		ssh_open_session(t) < 0)
+		return -1;
+
+	return 0;
+}
+
+int gitno_ssh_exec(git_transport *t, const char *cmd)
+{
+	if (libssh2_channel_exec(t->ssh.channel, cmd) < 0)
+		return ssh_set_error(t->ssh.session);
+	return 0;
+}
+
+int gitno_ssh_send(git_transport *t, const char *msg, size_t len)
+{
+	return libssh2_channel_write(t->ssh.channel, msg, len);
+}
+
+int gitno_ssh_recv(git_transport *t, gitno_buffer *buf)
+{
+	int ret = 0;
+
+	ret = libssh2_channel_read(t->ssh.channel,
+				   buf->data + buf->offset,
+				   buf->len - buf->offset);
+
+	if (ret < 0)
+		return ssh_set_error(t->ssh.session);
+
+	buf->offset += ret;
+	return ret;
+}
+
+int gitno_ssh_teardown(git_transport *t)
+{
+	if (libssh2_channel_close(t->ssh.channel) < 0)
+		return ssh_set_error(t->ssh.session);
+
+	libssh2_channel_free(t->ssh.channel);
+	t->ssh.channel = NULL;
+
+	libssh2_session_disconnect(t->ssh.session, NULL);
+	libssh2_session_free(t->ssh.session);
+	libssh2_exit();
+
+	return 0;
+}
+#endif /* GIT_SSH */
 
 void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
 {

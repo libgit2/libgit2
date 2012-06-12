@@ -294,6 +294,12 @@ int git_remote_connect(git_remote *remote, int direction)
 		return -1;
 
 	t->check_cert = remote->check_cert;
+
+	if (remote->auth != NULL) {
+		t->auth = remote->auth;
+		t->auth_data = remote->auth_data;
+	}
+
 	if (t->connect(t, direction) < 0) {
 		goto on_error;
 	}
@@ -402,6 +408,10 @@ int git_remote_callback(git_remote *remote, git_callback_t opt, void *fn, void *
 	case GIT_CALLBACK_UPDATE_TIPS:
 		remote->update_tips = (git_update_tips_cb)fn;
 		remote->update_tips_data = data;
+		break;
+	case GIT_CALLBACK_AUTH:
+		remote->auth = (git_auth_cb)fn;
+		remote->auth_data = data;
 		break;
 	default:
 		/* Set an error when we do this for real */

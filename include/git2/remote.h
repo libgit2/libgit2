@@ -248,6 +248,14 @@ typedef enum {
 
 typedef int (*git_update_tips_cb)(const char *refname, const git_oid *a, const git_oid *b, void *data);
 
+typedef struct git_auth_cb_data {
+	char *username;
+	char *password;
+	char *pubkey;
+	char *known_hosts;
+} git_auth_cb_data;
+typedef int (*git_auth_cb)(git_auth_cb_data *data);
+
 /**
  * Set a callback for a particular event
  *
