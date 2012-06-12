@@ -39,11 +39,11 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 #else
 	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
 		printf("Trying to map shared-writeable file!!!\n");
+	}
 
-		if(out->data = malloc(len)) {
-			lseek(fd, offset, SEEK_SET);
-			p_read(fd, out->data, len);
-		}
+	if(out->data = malloc(len)) {
+		lseek(fd, offset, SEEK_SET);
+		p_read(fd, out->data, len);
 	}
 #endif
 

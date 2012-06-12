@@ -158,6 +158,7 @@ static git_mwindow *new_window(
 	git_mwindow *w;
 
 	w = git__malloc(sizeof(*w));
+	
 	if (w == NULL)
 		return NULL;
 
