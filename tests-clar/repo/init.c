@@ -166,14 +166,14 @@ void test_repo_init__additional_templates(void)
 	git_buf_free(&path);
 }
 
-static void assert_config_entry_on_init(const char *config_key, int expected_value)
+static void assert_config_entry_on_init_bytype(const char *config_key, int expected_value, bool is_bare)
 {
 	git_config *config;
 	int current_value;
 
 	cl_set_cleanup(&cleanup_repository, "config_entry");
 	
-	cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
+	cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", is_bare));
 	git_repository_config(&config, _repo);
 
 	if (expected_value >= 0) {
@@ -187,6 +187,14 @@ static void assert_config_entry_on_init(const char *config_key, int expected_val
 	}
 
 	git_config_free(config);
+}
+
+static void assert_config_entry_on_init(const char *config_key, int expected_value)
+{
+	assert_config_entry_on_init_bytype(config_key, expected_value, true);
+	git_repository_free(_repo);
+
+	assert_config_entry_on_init_bytype(config_key, expected_value, false);
 }
 
 void test_repo_init__detect_filemode(void)
@@ -232,4 +240,10 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 	cl_assert_equal_i(42, current_value);
 
 	git_config_free(config);
+}
+
+void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
+{
+	assert_config_entry_on_init_bytype("core.logallrefupdates", GIT_ENOTFOUND, true);
+	assert_config_entry_on_init_bytype("core.logallrefupdates", true, false);
 }
