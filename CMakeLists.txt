@@ -11,8 +11,6 @@
 # Install:
 # > cmake --build . --target install
 
-SET(CMAKE_SYSTEM_NAME "AmigaOS")
-
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
