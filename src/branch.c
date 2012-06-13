@@ -149,9 +149,11 @@ static int branch_list_cb(const char *branch_name, void *payload)
 {
 	branch_filter_data *filter = (branch_filter_data *)payload;
 
-	if ((filter->branch_type & GIT_BRANCH_LOCAL && git__prefixcmp(branch_name, GIT_REFS_HEADS_DIR) == 0)
-		|| (filter->branch_type & GIT_BRANCH_REMOTE && git__prefixcmp(branch_name, GIT_REFS_REMOTES_DIR) == 0))
-		return git_vector_insert(filter->branchlist, git__strdup(branch_name));
+	if (filter->branch_type & GIT_BRANCH_LOCAL && git__prefixcmp(branch_name, GIT_REFS_HEADS_DIR) == 0) {
+		return git_vector_insert(filter->branchlist, git__strdup(branch_name +strlen(GIT_REFS_HEADS_DIR)));
+  } else if (filter->branch_type & GIT_BRANCH_REMOTE && git__prefixcmp(branch_name, GIT_REFS_REMOTES_DIR) == 0) {
+		return git_vector_insert(filter->branchlist, git__strdup(branch_name+strlen(GIT_REFS_DIR)));
+  }
 
 	return 0;
 }
