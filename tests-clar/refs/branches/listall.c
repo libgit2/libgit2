@@ -73,6 +73,6 @@ void test_refs_branches_listall__retrieve_remote_symbolic_HEAD_when_present(void
 	cl_git_pass(git_branch_list(&branch_list, repo, GIT_BRANCH_REMOTE));
 	
 	cl_assert_equal_i(3, branch_list.count);
-	assert_branch_list_contains(&branch_list, "refs/remotes/nulltoken/HEAD");
-	assert_branch_list_contains(&branch_list, "refs/remotes/nulltoken/master");
+	assert_branch_list_contains(&branch_list, "remotes/nulltoken/HEAD");
+	assert_branch_list_contains(&branch_list, "remotes/nulltoken/master");
 }
