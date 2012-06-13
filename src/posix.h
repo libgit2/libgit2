@@ -74,7 +74,7 @@ typedef SOCKET GIT_SOCKET;
 #	include "unix/posix.h"
 #endif
 
-#ifndef __amigaos4__
+#ifndef NO_READDIR_R
 #define p_readdir_r(d,e,r) readdir_r(d,e,&r)
 #else
 #define p_readdir_r(d,e,r) r = readdir(d)

@@ -11,7 +11,7 @@
 # Install:
 # > cmake --build . --target install
 
-SET(CMAKE_SYSTEM_NAME "Generic")
+SET(CMAKE_SYSTEM_NAME "AmigaOS")
 
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
@@ -23,8 +23,10 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_V
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_VERSION_REV "${GIT2_HEADER}")
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
-# Uncomment out the line below to use PowerPC SHA1
-SET(SHA1_TYPE "ppc")
+IF (AMIGA)
+	# Default AmigaOS to use the PowerPC SHA1
+	SET(SHA1_TYPE "ppc")
+ENDIF()
 
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include deps/http-parser)
@@ -33,15 +35,15 @@ FILE(GLOB SRC_HTTP deps/http-parser/*.c)
 
 # Specify sha1 implementation
 IF (SHA1_TYPE STREQUAL "ppc")
-    ADD_DEFINITIONS(-DPPC_SHA1)
-    FILE(GLOB SRC_SHA1 src/ppc/*.c src/ppc/*.S)
+	ADD_DEFINITIONS(-DPPC_SHA1)
+	FILE(GLOB SRC_SHA1 src/ppc/*.c src/ppc/*.S)
 ELSE ()
 	SET (SRC_SHA1)
 ENDIF()
 
 IF (NOT WIN32)
 	FIND_PACKAGE(ZLIB)
-	IF (CMAKE_SYSTEM_NAME MATCHES "Generic")
+	IF (CMAKE_SYSTEM_NAME STREQUAL "AmigaOS")
 		INCLUDE_DIRECTORIES(deps/regex)
 		SET(SRC_REGEX deps/regex/regex.c)
 	ENDIF()
@@ -68,7 +70,7 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" OFF)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
-OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
+OPTION (BUILD_CLAR "Build Tests using the Clar suite" OFF)
 OPTION (BUILD_EXAMPLES "Build library usage example apps" OFF)
 OPTION (TAGS "Generate tags" OFF)
 OPTION (PROFILE "Generate profiling information" OFF)
@@ -106,14 +108,11 @@ IF (NOT CMAKE_BUILD_TYPE)
 	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
 
-IF (CMAKE_SYSTEM_NAME MATCHES "Generic")
-ELSE ()
-	FIND_PACKAGE(OpenSSL)
-	IF (OPENSSL_FOUND)
-	  ADD_DEFINITIONS(-DGIT_SSL)
-	  INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
-	  SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
-	ENDIF()
+FIND_PACKAGE(OpenSSL)
+IF (OPENSSL_FOUND)
+  ADD_DEFINITIONS(-DGIT_SSL)
+  INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
+  SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
 ENDIF()
 
 IF (THREADSAFE)
@@ -133,8 +132,11 @@ FILE(GLOB SRC_H include/git2/*.h)
 IF (WIN32 AND NOT CYGWIN)
 	ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_WIN32_WINNT=0x0501)
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/win32/*.c src/compat/*.c)
-ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS|Generic)")
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c src/compat/*.c)
+ELSEIF (AMIGA)
+	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
+	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/amiga/*.c src/compat/*.c)
 ELSE()
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c)
 ENDIF ()

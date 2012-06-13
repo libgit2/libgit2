@@ -8,8 +8,8 @@
 
 #ifndef GIT_WIN32
 
+#include "posix.h"
 #include "map.h"
-#include <sys/mman.h>
 #include <errno.h>
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
@@ -22,17 +22,14 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->data = NULL;
 	out->len = 0;
 
-	if (prot & GIT_PROT_WRITE)
-		mprot = PROT_WRITE;
-	else if (prot & GIT_PROT_READ)
-		mprot = PROT_READ;
+	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
+		printf("Trying to map shared-writeable file!!!\n");
+	}
 
-	if ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)
-		mflag = MAP_SHARED;
-	else if ((flags & GIT_MAP_TYPE) == GIT_MAP_PRIVATE)
-		mflag = MAP_PRIVATE;
-
-	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
+	if(out->data = malloc(len)) {
+		p_lseek(fd, offset, SEEK_SET);
+		p_read(fd, out->data, len);
+	}
 
 	if (!out->data || out->data == MAP_FAILED) {
 		giterr_set(GITERR_OS, "Failed to mmap. Could not write data");
@@ -47,7 +44,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 int p_munmap(git_map *map)
 {
 	assert(map != NULL);
-	munmap(map->data, map->len);
+	free(map->data);
 
 	return 0;
 }

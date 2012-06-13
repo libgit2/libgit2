@@ -376,7 +376,7 @@ static int ssl_setup(git_transport *t, const char *host)
 
 int gitno_connect(git_transport *t, const char *host, const char *port)
 {
-#ifndef __amigaos4__
+#ifndef NO_ADDRINFO
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
 #else
@@ -388,7 +388,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 #endif
 	int ret;
 	GIT_SOCKET s = INVALID_SOCKET;
-#ifndef __amigaos4__
+#ifndef NO_ADDRINFO
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -407,7 +407,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 		port_num = atol(port);
 #endif
 
-#ifndef __amigaos4__
+#ifndef NO_ADDRINFO
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 #else
@@ -418,7 +418,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 			net_set_error("error creating socket");
 			break;
 		}
-#ifndef __amigaos4__
+#ifndef NO_ADDRINFO
 		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
 #else
 		memcpy(&saddr.sin_addr, hent->h_addr_list[p], hent->h_length);
@@ -435,7 +435,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 
 	/* Oops, we couldn't connect to any address */
 	if (s == INVALID_SOCKET &&
-#ifndef __amigaos4__
+#ifndef NO_ADDRINFO
 		p == NULL) {
 #else
 		hent->h_addr_list[p] == NULL) {
@@ -445,7 +445,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	}
 
 	t->socket = s;
-#ifndef __amigaos4__
+#ifndef NO_ADDRINFO
 	freeaddrinfo(info);
 #endif
 	if (t->encrypt && ssl_setup(t, host) < 0)

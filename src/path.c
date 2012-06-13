@@ -517,7 +517,7 @@ int git_path_direach(
 	de_buf = git__malloc(sizeof(struct dirent));
 #endif
 
-#ifdef __amigaos4__
+#ifdef NO_READDIR_R
 	while (de = readdir(dir)) {
 #else
 	while (p_readdir_r(dir, de_buf, de) == 0 && de != NULL) {
