@@ -415,7 +415,7 @@ int git_attr_cache__push_file(
 	if (parse && (error = parse(repo, content, file)) < 0)
 		goto finish;
 
-	git_strmap_insert(cache->files, file->key, file, error);
+	git_strmap_insert(cache->files, file->key, file, error); //-V595
 	if (error > 0)
 		error = 0;
 

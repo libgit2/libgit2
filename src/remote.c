@@ -337,12 +337,15 @@ int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, co
 	unsigned int i = 0;
 	git_buf refname = GIT_BUF_INIT;
 	git_oid old;
-	git_vector *refs = &remote->refs;
+	git_vector *refs;
 	git_remote_head *head;
 	git_reference *ref;
-	struct git_refspec *spec = &remote->fetch;
+	struct git_refspec *spec;
 
 	assert(remote);
+
+	refs = &remote->refs;
+	spec = &remote->fetch;
 
 	if (refs->length == 0)
 		return 0;

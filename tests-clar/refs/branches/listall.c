@@ -30,22 +30,22 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 {
 	cl_git_pass(git_branch_list(&branch_list, repo, flags));
 
-	cl_assert_equal_i(expected_count, branch_list.count);
+	cl_assert_equal_i(branch_list.count, expected_count);
 }
 
 void test_refs_branches_listall__retrieve_all_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 6 + 1);
+	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 9);
 }
 
 void test_refs_branches_listall__retrieve_remote_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_REMOTE, 1);
+	assert_retrieval(GIT_BRANCH_REMOTE, 2);
 }
 
 void test_refs_branches_listall__retrieve_local_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL, 6);
+	assert_retrieval(GIT_BRANCH_LOCAL, 7);
 }
 
 static void assert_branch_list_contains(git_strarray *branches, const char* expected_branch_name)
@@ -72,7 +72,7 @@ void test_refs_branches_listall__retrieve_remote_symbolic_HEAD_when_present(void
 
 	cl_git_pass(git_branch_list(&branch_list, repo, GIT_BRANCH_REMOTE));
 	
-	cl_assert_equal_i(2, branch_list.count);
-	assert_branch_list_contains(&branch_list, "refs/remotes/nulltoken/HEAD");
-	assert_branch_list_contains(&branch_list, "refs/remotes/nulltoken/master");
+	cl_assert_equal_i(3, branch_list.count);
+	assert_branch_list_contains(&branch_list, "remotes/nulltoken/HEAD");
+	assert_branch_list_contains(&branch_list, "remotes/nulltoken/master");
 }

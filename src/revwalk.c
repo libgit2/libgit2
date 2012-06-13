@@ -169,14 +169,23 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 	return commit;
 }
 
+static int commit_error(commit_object *commit, const char *msg)
+{
+	char commit_oid[GIT_OID_HEXSZ + 1];
+	git_oid_fmt(commit_oid, &commit->oid);
+	commit_oid[GIT_OID_HEXSZ] = '\0';
+
+	giterr_set(GITERR_ODB, "Failed to parse commit %s - %s", commit_oid, msg);
+
+	return -1;
+}
+
 static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawobj *raw)
 {
 	const size_t parent_len = strlen("parent ") + GIT_OID_HEXSZ + 1;
-
 	unsigned char *buffer = raw->data;
 	unsigned char *buffer_end = buffer + raw->len;
 	unsigned char *parents_start;
-
 	int i, parents = 0;
 	int commit_time;
 
@@ -207,21 +216,18 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 
 	commit->out_degree = (unsigned short)parents;
 
-	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL) {
-		giterr_set(GITERR_ODB, "Failed to parse commit. Object is corrupted");
-		return -1;
-	}
+	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
+		return commit_error(commit, "object is corrupted");
 
-	buffer = memchr(buffer, '>', buffer_end - buffer);
-	if (buffer == NULL) {
-		giterr_set(GITERR_ODB, "Failed to parse commit. Can't find author");
-		return -1;
-	}
+	if ((buffer = memchr(buffer, '<', buffer_end - buffer)) == NULL ||
+		(buffer = memchr(buffer, '>', buffer_end - buffer)) == NULL)
+		return commit_error(commit, "malformed author information");
 
-	if (git__strtol32(&commit_time, (char *)buffer + 2, NULL, 10) < 0) {
-		giterr_set(GITERR_ODB, "Failed to parse commit. Can't parse commit time");
-		return -1;
-	}
+	while (*buffer == '>' || git__isspace(*buffer))
+		buffer++;
+
+	if (git__strtol32(&commit_time, (char *)buffer, NULL, 10) < 0)
+		return commit_error(commit, "cannot parse commit time");
 
 	commit->time = (time_t)commit_time;
 	commit->parsed = 1;

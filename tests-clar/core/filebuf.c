@@ -8,7 +8,7 @@ void test_core_filebuf__0(void)
 	int fd;
 	char test[] = "test", testlock[] = "test.lock";
 
-	fd = p_creat(testlock, 0744);
+	fd = p_creat(testlock, 0744); //-V536
 
 	cl_must_pass(fd);
 	cl_must_pass(p_close(fd));
@@ -27,7 +27,7 @@ void test_core_filebuf__1(void)
 	int fd;
 	char test[] = "test";
 
-	fd = p_creat(test, 0666);
+	fd = p_creat(test, 0666); //-V536
 	cl_must_pass(fd);
 	cl_must_pass(p_write(fd, "libgit2 rocks\n", 14));
 	cl_must_pass(p_close(fd));

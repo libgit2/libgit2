@@ -22,7 +22,7 @@ static int valid_attributes(const int attributes)
 
 static int valid_entry_name(const char *filename)
 {
-	return strlen(filename) > 0 && strchr(filename, '/') == NULL;
+	return *filename != '\0' && strchr(filename, '/') == NULL;
 }
 
 static int entry_sort_cmp(const void *a, const void *b)

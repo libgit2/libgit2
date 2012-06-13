@@ -69,7 +69,7 @@ void *git_cache_try_store(git_cache *cache, void *_entry)
 	git_cached_obj *entry = _entry;
 	uint32_t hash;
 
-	memcpy(&hash, &entry->oid, sizeof(hash));
+	memcpy(&hash, &entry->oid, sizeof(uint32_t));
 
 	/* increase the refcount on this object, because
 	 * the cache now owns it */

@@ -3,59 +3,6 @@
 #include "path.h"
 
 #ifdef GIT_WIN32
-
-#include "win32/utf-conv.h"
-
-static char *cl_getenv(const char *name)
-{
-	wchar_t *name_utf16 = gitwin_to_utf16(name);
-	DWORD value_len, alloc_len;
-	wchar_t *value_utf16;
-	char *value_utf8;
-
-	cl_assert(name_utf16);
-	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
-	if (alloc_len <= 0)
-		return NULL;
-
-	cl_assert(value_utf16 = git__calloc(alloc_len, sizeof(wchar_t)));
-
-	value_len = GetEnvironmentVariableW(name_utf16, value_utf16, alloc_len);
-	cl_assert_equal_i(value_len, alloc_len - 1);
-
-	cl_assert(value_utf8 = gitwin_from_utf16(value_utf16));
-
-	git__free(value_utf16);
-
-	return value_utf8;
-}
-
-static int cl_setenv(const char *name, const char *value)
-{
-	wchar_t *name_utf16 = gitwin_to_utf16(name);
-	wchar_t *value_utf16 = value ? gitwin_to_utf16(value) : NULL;
-
-	cl_assert(name_utf16);
-	cl_assert(SetEnvironmentVariableW(name_utf16, value_utf16));
-
-	git__free(name_utf16);
-	git__free(value_utf16);
-
-	return 0;
-
-}
-#else
-
-#include <stdlib.h>
-#define cl_getenv(n)   getenv(n)
-
-static int cl_setenv(const char *name, const char *value)
-{
-	return (value == NULL) ? unsetenv(name) : setenv(name, value, 1);
-}
-#endif
-
-#ifdef GIT_WIN32
 static char *env_userprofile = NULL;
 static char *env_programfiles = NULL;
 #else

@@ -33,7 +33,7 @@ static void copy_file(const char *src, const char *dst)
 
 	cl_git_pass(git_futils_readbuffer(&source_buf, src));
 
-	dst_fd = git_futils_creat_withpath(dst, 0777, 0666);
+	dst_fd = git_futils_creat_withpath(dst, 0777, 0666); //-V536
 	if (dst_fd < 0)
 		goto cleanup;
 

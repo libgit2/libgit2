@@ -292,10 +292,12 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 {
 	int error;
 	struct git_pack_header hdr;
-	size_t processed = stats->processed;
+	size_t processed; 
 	git_mwindow_file *mwf = &idx->pack->mwf;
 
 	assert(idx && data && stats);
+
+	processed = stats->processed;
 
 	if (git_filebuf_write(&idx->pack_file, data, size) < 0)
 		return -1;

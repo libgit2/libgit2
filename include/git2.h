@@ -25,6 +25,7 @@
 #include "git2/merge.h"
 #include "git2/refs.h"
 #include "git2/reflog.h"
+#include "git2/revparse.h"
 
 #include "git2/object.h"
 #include "git2/blob.h"
@@ -43,5 +44,6 @@
 #include "git2/indexer.h"
 #include "git2/submodule.h"
 #include "git2/notes.h"
+#include "git2/reset.h"
 
 #endif

@@ -63,14 +63,14 @@ void test_object_tree_write__subtree(void)
 
 	//create subtree
 	cl_git_pass(git_treebuilder_create(&builder, NULL));
-	cl_git_pass(git_treebuilder_insert(NULL,builder,"new.txt",&bid,0100644));
+	cl_git_pass(git_treebuilder_insert(NULL,builder,"new.txt",&bid,0100644)); //-V536
 	cl_git_pass(git_treebuilder_write(&subtree_id, g_repo, builder));
 	git_treebuilder_free(builder);
 
 	// create parent tree
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_treebuilder_create(&builder, tree));
-	cl_git_pass(git_treebuilder_insert(NULL,builder,"new",&subtree_id,040000));
+	cl_git_pass(git_treebuilder_insert(NULL,builder,"new",&subtree_id,040000)); //-V536
 	cl_git_pass(git_treebuilder_write(&id_hiearar, g_repo, builder));
 	git_treebuilder_free(builder);
 	git_tree_free(tree);

@@ -131,3 +131,17 @@ void test_status_ignore__empty_repo_with_gitignore_rewrite(void)
 	cl_assert(ignored);
 }
 
+void test_status_ignore__ignore_pattern_contains_space(void)
+{
+	unsigned int flags;
+	const mode_t mode = 0777;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "foo bar.txt\n");
+
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/foo", NULL, mode));
+	cl_git_mkfile("empty_standard_repo/foo/look-ma.txt", "I'm not going to be ignored!");
+
+	cl_git_pass(git_status_file(&flags, g_repo, "foo/look-ma.txt"));
+	cl_assert(flags == GIT_STATUS_WT_NEW);
+}

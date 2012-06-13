@@ -17,6 +17,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#ifdef GIT_WIN32
+#define LOOKS_LIKE_DRIVE_PREFIX(S) (git__isalpha((S)[0]) && (S)[1] == ':')
+#endif
+
 /*
  * Based on the Android implementation, BSD licensed.
  * Check http://android.git.kernel.org/
@@ -105,7 +109,7 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 	/* Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
 		'C:/' here */
 
-	if (len == 2 && isalpha(path[0]) && path[1] == ':') {
+	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path)) {
 		len = 3;
 		goto Exit;
 	}
@@ -170,7 +174,7 @@ int git_path_root(const char *path)
 
 #ifdef GIT_WIN32
 	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(path[0]) && (path[1] == ':'))
+	if (LOOKS_LIKE_DRIVE_PREFIX(path))
 		offset += 2;
 
 	/* Are we dealing with a windows network path? */
@@ -210,7 +214,7 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
 
 		git_buf_clear(path_out);
-		
+
 		return error;
 	}
 
