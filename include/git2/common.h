@@ -103,8 +103,6 @@ GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
  */
 GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
 
-/* GIT_EXTERN(int) p_fnmatch(const char *pattern, const char *string, int flags); */
-
 /** @} */
 GIT_END_DECL
 #endif

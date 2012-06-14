@@ -1,4 +1,0 @@
-Nasty build hack:
-When setting SHA1 to ppc in CMakeLists.txt, after running initial CMake,
-copy src/ppc/sha1ppc.S.obj to build/CMakeFiles/git2.dir/src/ppc/
-Add CMakeFiles/git2.dir/src/ppc/sha1ppc.S.obj to the list in build/CMakeFiles/git2.dir/link.txt

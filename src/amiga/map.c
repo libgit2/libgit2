@@ -14,24 +14,22 @@
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
-	int mprot = 0;
-	int mflag = 0;
-
 	GIT_MMAP_VALIDATE(out, len, prot, flags);
 
 	out->data = NULL;
 	out->len = 0;
 
 	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
-		printf("Trying to map shared-writeable file!!!\n");
+		giterr_set(GITERR_OS, "Trying to map shared-writeable");
+		return -1;
 	}
 
-	if(out->data = malloc(len)) {
+	if((out->data = malloc(len))) {
 		p_lseek(fd, offset, SEEK_SET);
 		p_read(fd, out->data, len);
 	}
 
-	if (!out->data || out->data == MAP_FAILED) {
+	if (!out->data || (out->data == MAP_FAILED)) {
 		giterr_set(GITERR_OS, "Failed to mmap. Could not write data");
 		return -1;
 	}
