@@ -430,7 +430,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 #else
 		memcpy(&hints.ai_addr.sin_addr, hints.ai_hostent->h_addr_list[p], hints.ai_hostent->h_length);
 		hints.ai_addr.sin_family = hints.ai_hostent->h_addrtype;
-		hints.ai_addr.sin_port = honts.ai_port;
+		hints.ai_addr.sin_port = hints.ai_port;
 		if (connect(s, (struct sockaddr *)&hints.ai_addr, sizeof(struct sockaddr_in)) == 0)
 #endif
 			break;
