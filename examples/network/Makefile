@@ -3,7 +3,6 @@ default: all
 CC = gcc
 CFLAGS += -g
 CFLAGS += -I../../include -L../../build
-LIBS += -lgit2 -lpthread #-lregex
 
 OBJECTS = \
   git2.o \
@@ -12,4 +11,4 @@ OBJECTS = \
   index-pack.o
 
 all: $(OBJECTS)
-	$(CC) $(CFLAGS) -o git2 $(OBJECTS) $(LIBS)
+	$(CC) $(CFLAGS) -o git2 $(OBJECTS)

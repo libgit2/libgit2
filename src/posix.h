@@ -86,7 +86,12 @@ extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
 #ifndef NO_READDIR_R
 #define p_readdir_r(d,e,r) readdir_r(d,e,&r)
 #else
-#define p_readdir_r(d,e,r) r = readdir(d)
+GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct direct **result)
+{
+	GIT_UNUSED(entry);
+	*result = readdir(dirp);
+	return 0;
+}
 #endif
 
 #endif

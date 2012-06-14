@@ -486,14 +486,9 @@ int git_path_cmp(
 /* Taken from git.git */
 GIT_INLINE(int) is_dot_or_dotdot(const char *name)
 {
-#ifdef __amigaos4__
-	/* This is irrelevant on AmigaOS */
-	return 0;
-#else
 	return (name[0] == '.' &&
 		(name[1] == '\0' ||
 		 (name[1] == '.' && name[2] == '\0')));
-#endif
 }
 
 int git_path_direach(
@@ -521,11 +516,7 @@ int git_path_direach(
 	de_buf = git__malloc(sizeof(struct dirent));
 #endif
 
-#ifdef NO_READDIR_R
-	while (de = readdir(dir)) {
-#else
 	while (p_readdir_r(dir, de_buf, de) == 0 && de != NULL) {
-#endif
 		int result;
 
 		if (is_dot_or_dotdot(de->d_name))
