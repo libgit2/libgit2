@@ -70,6 +70,7 @@ enum {
 typedef struct {
 	char *message;
 	int klass;
+	int error_code;
 } git_error;
 
 typedef enum {

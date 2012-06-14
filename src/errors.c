@@ -19,7 +19,7 @@ static git_error g_git_oom_error = {
 	GITERR_NOMEMORY
 };
 
-static void set_error(int error_class, char *string)
+static void set_error(int error_class, char *string, int code)
 {
 	git_error *error = &GIT_GLOBAL->error_t;
 
@@ -27,6 +27,7 @@ static void set_error(int error_class, char *string)
 
 	error->message = string;
 	error->klass = error_class;
+	error->error_code = code;
 
 	GIT_GLOBAL->last_error = error;
 }
@@ -89,7 +90,7 @@ void giterr_set(int error_class, const char *string, ...)
 	}
 
 	if (!git_buf_oom(&buf))
-		set_error(error_class, git_buf_detach(&buf));
+		set_error(error_class, git_buf_detach(&buf), unix_error_code);
 }
 
 void giterr_set_str(int error_class, const char *string)
@@ -97,7 +98,7 @@ void giterr_set_str(int error_class, const char *string)
 	char *message = git__strdup(string);
 
 	if (message)
-		set_error(error_class, message);
+		set_error(error_class, message, 0);
 }
 
 void giterr_set_regex(const regex_t *regex, int error_code)
