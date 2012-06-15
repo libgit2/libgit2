@@ -45,5 +45,6 @@
 #include "git2/submodule.h"
 #include "git2/notes.h"
 #include "git2/reset.h"
+#include "git2/message.h"
 
 #endif

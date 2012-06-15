@@ -182,8 +182,8 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  * Create a new commit in the repository using `git_object`
  * instances as parameters.
  *
- * The message will be cleaned up from excess whitespace
- * it will be made sure that the last line ends with a '\n'.
+ * The message will not be cleaned up. This can be achieved
+ * through `git_message_prettify()`.
  *
  * @param oid Pointer where to store the OID of the
  *	newly created commit
