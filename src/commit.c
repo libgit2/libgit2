@@ -115,7 +115,7 @@ int git_commit_create(
 	git_buf_putc(&commit, '\n');
 
 	/* Remove comments by default */
-	if (git_message_prettify(&cleaned_message, message, 1) < 0)
+	if (git_message_prettify(&cleaned_message, message, 0) < 0)
 		goto on_error;
 
 	if (git_buf_puts(&commit, git_buf_cstr(&cleaned_message)) < 0)
