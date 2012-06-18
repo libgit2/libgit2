@@ -19,7 +19,7 @@ static git_error g_git_oom_error = {
 	GITERR_NOMEMORY
 };
 
-static void set_error(int error_class, char *string, int code)
+static void set_error(int error_class, char *string)
 {
 	git_error *error = &GIT_GLOBAL->error_t;
 
@@ -27,10 +27,26 @@ static void set_error(int error_class, char *string, int code)
 
 	error->message = string;
 	error->klass = error_class;
-	error->error_code = code;
+	error->os_error = 0;
 
 	GIT_GLOBAL->last_error = error;
 }
+
+static void set_os_error(int os_error)
+{
+	git_error *error = GIT_GLOBAL->last_error;
+
+	error->os_error = os_error;
+}
+
+#ifdef GIT_WIN32
+static void set_win32_os_error(DWORD os_error)
+{
+	git_error *error = GIT_GLOBAL->last_error;
+
+	error->win32_os_error = os_error;
+}
+#endif
 
 void giterr_set_oom(void)
 {
@@ -89,8 +105,13 @@ void giterr_set(int error_class, const char *string, ...)
 #endif
 	}
 
-	if (!git_buf_oom(&buf))
-		set_error(error_class, git_buf_detach(&buf), unix_error_code);
+	if (!git_buf_oom(&buf)) {
+		set_error(error_class, git_buf_detach(&buf));
+		set_os_error(unix_error_code);
+#ifdef GIT_WIN32
+		set_win32_os_error(win32_error_code);
+#endif
+	}
 }
 
 void giterr_set_str(int error_class, const char *string)
@@ -98,7 +119,7 @@ void giterr_set_str(int error_class, const char *string)
 	char *message = git__strdup(string);
 
 	if (message)
-		set_error(error_class, message, 0);
+		set_error(error_class, message);
 }
 
 void giterr_set_regex(const regex_t *regex, int error_code)
