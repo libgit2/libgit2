@@ -87,6 +87,7 @@ typedef struct {
 static int config_parse(diskfile_backend *cfg_file);
 static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
+static char *escape_value(const char *ptr);
 
 static void set_parse_error(diskfile_backend *backend, int col, const char *error_str)
 {
@@ -212,9 +213,9 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 {
 	cvar_t *var = NULL, *old_var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	char *key;
+	char *key, *esc_value = NULL;
 	khiter_t pos;
-	int rval;
+	int rval, ret;
 
 	if (normalize_name(name, &key) < 0)
 		return -1;
@@ -237,12 +238,17 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		if (value) {
 			tmp = git__strdup(value);
 			GITERR_CHECK_ALLOC(tmp);
+			esc_value = escape_value(value);
+			GITERR_CHECK_ALLOC(esc_value);
 		}
 
 		git__free(existing->value);
 		existing->value = tmp;
 
-		return config_write(b, existing->key, NULL, value);
+		ret = config_write(b, existing->key, NULL, esc_value);
+
+		git__free(esc_value);
+		return ret;
 	}
 
 	var = git__malloc(sizeof(cvar_t));
@@ -256,13 +262,17 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 	if (value) {
 		var->value = git__strdup(value);
 		GITERR_CHECK_ALLOC(var->value);
+		esc_value = escape_value(value);
+		GITERR_CHECK_ALLOC(esc_value);
 	}
 
-	if (config_write(b, key, NULL, value) < 0) {
+	if (config_write(b, key, NULL, esc_value) < 0) {
+		git__free(esc_value);
 		cvar_free(var);
 		return -1;
 	}
 
+	git__free(esc_value);
 	git_strmap_insert2(b->values, key, var, old_var, rval);
 	if (rval < 0)
 		return -1;
@@ -1155,13 +1165,44 @@ rewrite_fail:
 	return -1;
 }
 
+static const char *escapes = "ntb\"\\";
+static const char *escaped = "\n\t\b\"\\";
+
+/* Escape the values to write them to the file */
+static char *escape_value(const char *ptr)
+{
+	git_buf buf = GIT_BUF_INIT;
+	size_t len;
+	const char *esc;
+
+	assert(ptr);
+
+	len = strlen(ptr);
+	git_buf_grow(&buf, len);
+
+	while (*ptr != '\0') {
+		if ((esc = strchr(escaped, *ptr)) != NULL) {
+			git_buf_putc(&buf, '\\');
+			git_buf_putc(&buf, escapes[esc - escaped]);
+		} else {
+			git_buf_putc(&buf, *ptr);
+		}
+		ptr++;
+	}
+
+	if (git_buf_oom(&buf)) {
+		git_buf_free(&buf);
+		return NULL;
+	}
+
+	return git_buf_detach(&buf);
+}
+
 /* '\"' -> '"' etc */
 static char *fixup_line(const char *ptr, int quote_count)
 {
 	char *str = git__malloc(strlen(ptr) + 1);
 	char *out = str, *esc;
-	const char *escapes = "ntb\"\\";
-	const char *escaped = "\n\t\b\"\\";
 
 	if (str == NULL)
 		return NULL;
