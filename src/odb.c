@@ -559,6 +559,7 @@ int git_odb_read_prefix(
 	int error = GIT_ENOTFOUND;
 	git_oid found_full_oid = {{0}};
 	git_rawobj raw;
+	void *data = NULL;
 	bool found = false;
 
 	assert(out && db);
@@ -588,6 +589,8 @@ int git_odb_read_prefix(
 			if (error)
 				return error;
 
+			git__free(data);
+			data = raw.data;
 			if (found && git_oid_cmp(&full_oid, &found_full_oid))
 				return git_odb__error_ambiguous("multiple matches for prefix");
 			found_full_oid = full_oid;
