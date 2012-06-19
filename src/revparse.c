@@ -567,6 +567,7 @@ static int handle_colon_syntax(git_object **out,
 {
    git_tree *tree;
    git_oid oid;
+   int error;
 
    /* Dereference until we reach a tree. */
    if (dereference_to_type(&obj, obj, GIT_OBJ_TREE) < 0) {
@@ -575,8 +576,12 @@ static int handle_colon_syntax(git_object **out,
    tree = (git_tree*)obj;
 
    /* Find the blob at the given path. */
-   oid_for_tree_path(&oid, tree, repo, path);
+   error = oid_for_tree_path(&oid, tree, repo, path);
    git_tree_free(tree);
+
+   if (error < 0)
+	   return error;
+
    return git_object_lookup(out, repo, &oid, GIT_OBJ_ANY);
 }
 
