@@ -573,6 +573,9 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 			return -1;
 
 		GIT_REFCOUNT_OWN(repo->_index, repo);
+
+		if (git_index_set_caps(repo->_index, GIT_INDEXCAP_FROM_OWNER) < 0)
+			return -1;
 	}
 
 	*out = repo->_index;

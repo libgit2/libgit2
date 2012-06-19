@@ -28,9 +28,10 @@ void cl_git_mkfile(const char *filename, const char *content)
 	cl_must_pass(p_close(fd));
 }
 
-void cl_git_write2file(const char *filename, const char *new_content, int flags)
+void cl_git_write2file(
+	const char *filename, const char *new_content, int flags, unsigned int mode)
 {
-	int fd = p_open(filename, flags, 0644);
+	int fd = p_open(filename, flags, mode);
 	cl_assert(fd >= 0);
 	if (!new_content)
 		new_content = "\n";
@@ -40,12 +41,12 @@ void cl_git_write2file(const char *filename, const char *new_content, int flags)
 
 void cl_git_append2file(const char *filename, const char *new_content)
 {
-	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_APPEND);
+	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_APPEND, 0644);
 }
 
 void cl_git_rewritefile(const char *filename, const char *new_content)
 {
-	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_TRUNC);
+	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }
 
 #ifdef GIT_WIN32

@@ -15,6 +15,7 @@
 #include "hash.h"
 #include "git2/odb.h"
 #include "git2/blob.h"
+#include "git2/config.h"
 
 #define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
 #define short_entry_size(len) entry_size(struct entry_short, len)
@@ -124,9 +125,25 @@ static unsigned int index_create_mode(unsigned int mode)
 {
 	if (S_ISLNK(mode))
 		return S_IFLNK;
+
 	if (S_ISDIR(mode) || (mode & S_IFMT) == (S_IFLNK | S_IFDIR))
 		return (S_IFLNK | S_IFDIR);
+
 	return S_IFREG | ((mode & 0100) ? 0755 : 0644);
+}
+
+static unsigned int index_merge_mode(
+	git_index *index, git_index_entry *existing, unsigned int mode)
+{
+	if (index->no_symlinks && S_ISREG(mode) &&
+		existing && S_ISLNK(existing->mode))
+		return existing->mode;
+
+	if (index->distrust_filemode && S_ISREG(mode))
+		return (existing && S_ISREG(existing->mode)) ?
+			existing->mode : index_create_mode(0666);
+
+	return index_create_mode(mode);
 }
 
 int git_index_open(git_index **index_out, const char *index_path)
@@ -206,6 +223,45 @@ void git_index_clear(git_index *index)
 
 	git_tree_cache_free(index->tree);
 	index->tree = NULL;
+}
+
+int git_index_set_caps(git_index *index, unsigned int caps)
+{
+	assert(index);
+
+	if (caps == GIT_INDEXCAP_FROM_OWNER) {
+		git_config *cfg;
+		int val;
+
+		if (INDEX_OWNER(index) == NULL ||
+			git_repository_config__weakptr(&cfg, INDEX_OWNER(index)) < 0)
+		{
+			giterr_set(GITERR_INDEX,
+				"Cannot get repository config to set index caps");
+			return -1;
+		}
+
+		if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
+			index->ignore_case = (val != 0);
+		if (git_config_get_bool(&val, cfg, "core.filemode") == 0)
+			index->distrust_filemode = (val == 0);
+		if (git_config_get_bool(&val, cfg, "core.symlinks") == 0)
+			index->no_symlinks = (val != 0);
+	}
+	else {
+		index->ignore_case = ((caps & GIT_INDEXCAP_IGNORE_CASE) != 0);
+		index->distrust_filemode = ((caps & GIT_INDEXCAP_NO_FILEMODE) != 0);
+		index->no_symlinks = ((caps & GIT_INDEXCAP_NO_SYMLINKS) != 0);
+	}
+
+	return 0;
+}
+
+unsigned int git_index_caps(const git_index *index)
+{
+	return ((index->ignore_case ? GIT_INDEXCAP_IGNORE_CASE : 0) |
+			(index->distrust_filemode ? GIT_INDEXCAP_NO_FILEMODE : 0) |
+			(index->no_symlinks ? GIT_INDEXCAP_NO_SYMLINKS : 0));
 }
 
 int git_index_read(git_index *index)
@@ -383,7 +439,7 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 {
 	size_t path_length;
 	int position;
-	git_index_entry **entry_array;
+	git_index_entry **existing = NULL;
 
 	assert(index && entry && entry->path != NULL);
 
@@ -397,28 +453,24 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 	else
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;;
 
-	/*
-	 * replacing is not requested: just insert entry at the end;
-	 * the index is no longer sorted
-	 */
-	if (!replace)
-		return git_vector_insert(&index->entries, entry);
-
 	/* look if an entry with this path already exists */
-	position = git_index_find(index, entry->path);
+	if ((position = git_index_find(index, entry->path)) >= 0) {
+		existing = (git_index_entry **)&index->entries.contents[position];
 
-	/*
-	 * if no entry exists add the entry at the end;
-	 * the index is no longer sorted
+		/* update filemode to existing values if stat is not trusted */
+		entry->mode = index_merge_mode(index, *existing, entry->mode);
+	}
+
+	/* if replacing is not requested or no existing entry exists, just
+	 * insert entry at the end; the index is no longer sorted
 	 */
-	if (position == GIT_ENOTFOUND)
+	if (!replace || !existing)
 		return git_vector_insert(&index->entries, entry);
 
 	/* exists, replace it */
-	entry_array = (git_index_entry **) index->entries.contents;
-	git__free(entry_array[position]->path);
-	git__free(entry_array[position]);
-	entry_array[position] = entry;
+	git__free((*existing)->path);
+	git__free(*existing);
+	*existing = entry;
 
 	return 0;
 }
@@ -475,7 +527,7 @@ int git_index_add2(git_index *index, const git_index_entry *source_entry)
 
 int git_index_append2(git_index *index, const git_index_entry *source_entry)
 {
-	return index_add2(index, source_entry, 1);
+	return index_add2(index, source_entry, 0);
 }
 
 int git_index_remove(git_index *index, int position)
