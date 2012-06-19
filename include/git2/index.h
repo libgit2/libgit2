@@ -90,6 +90,14 @@ typedef struct git_index_entry_unmerged {
 	char *path;
 } git_index_entry_unmerged;
 
+/** Capabilities of system that affect index actions. */
+enum {
+	GIT_INDEXCAP_IGNORE_CASE = 1,
+	GIT_INDEXCAP_NO_FILEMODE = 2,
+	GIT_INDEXCAP_NO_SYMLINKS = 4,
+	GIT_INDEXCAP_FROM_OWNER  = ~0u
+};
+
 /**
  * Create a new bare Git index object as a memory representation
  * of the Git index file in 'index_path', without a repository
@@ -125,6 +133,27 @@ GIT_EXTERN(void) git_index_clear(git_index *index);
  * @param index an existing index object
  */
 GIT_EXTERN(void) git_index_free(git_index *index);
+
+/**
+ * Read index capabilities flags.
+ *
+ * @param index An existing index object
+ * @return A combination of GIT_INDEXCAP values
+ */
+GIT_EXTERN(unsigned int) git_index_caps(const git_index *index);
+
+/**
+ * Set index capabilities flags.
+ *
+ * If you pass `GIT_INDEXCAP_FROM_OWNER` for the caps, then the
+ * capabilities will be read from the config of the owner object,
+ * looking at `core.ignorecase`, `core.filemode`, `core.symlinks`.
+ *
+ * @param index An existing index object
+ * @param caps A combination of GIT_INDEXCAP values
+ * @return 0 on success, -1 on failure
+ */
+GIT_EXTERN(int) git_index_set_caps(git_index *index, unsigned int caps);
 
 /**
  * Update the contents of an existing index object in memory

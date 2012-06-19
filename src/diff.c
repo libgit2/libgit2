@@ -456,10 +456,10 @@ static int maybe_modified(
 	if (!diff_path_matches_pathspec(diff, oitem->path))
 		return 0;
 
-	/* on platforms with no symlinks, promote plain files to symlinks */
+	/* on platforms with no symlinks, preserve mode of existing symlinks */
 	if (S_ISLNK(omode) && S_ISREG(nmode) &&
 		!(diff->diffcaps & GIT_DIFFCAPS_HAS_SYMLINKS))
-		nmode = GIT_MODE_TYPE(omode) | (nmode & GIT_MODE_PERMS_MASK);
+		nmode = omode;
 
 	/* on platforms with no execmode, just preserve old mode */
 	if (!(diff->diffcaps & GIT_DIFFCAPS_TRUST_MODE_BITS) &&

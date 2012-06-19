@@ -26,6 +26,11 @@ struct git_index {
 	git_vector entries;
 
 	unsigned int on_disk:1;
+
+	unsigned int ignore_case:1;
+	unsigned int distrust_filemode:1;
+	unsigned int no_symlinks:1;
+
 	git_tree_cache *tree;
 
 	git_vector unmerged;
