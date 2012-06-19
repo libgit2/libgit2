@@ -30,6 +30,16 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *two);
 
+/**
+ * Find a merge base given a list of commits
+ *
+ * @param out the OID of a merge base considering all the commits
+ * @param repo the repository where the commits exist
+ * @param input_array oids of the commits
+ * @param length The number of commits in the provided `input_array`
+ */
+GIT_EXTERN(int) git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_array[], size_t length);
+
 /** @} */
 GIT_END_DECL
 #endif
