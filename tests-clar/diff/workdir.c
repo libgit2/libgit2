@@ -409,6 +409,8 @@ void test_diff_workdir__head_index_and_workdir_all_differ(void)
 
 	git_diff_list_free(diff_i2t);
 	git_diff_list_free(diff_w2i);
+
+	git_tree_free(tree);
 }
 
 void test_diff_workdir__eof_newline_changes(void)

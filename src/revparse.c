@@ -552,6 +552,7 @@ static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo,
 
    if (!entry) {
       giterr_set(GITERR_INVALID, "Invalid tree path '%s'", path);
+      git__free(alloc);
       return GIT_ERROR;
    }
 
@@ -622,6 +623,7 @@ static int revparse_global_grep(git_object **out, git_repository *repo, const ch
          }
          if (!resultobj) {
             giterr_set(GITERR_REFERENCE, "Couldn't find a match for %s", pattern);
+	    git_object_free(walkobj);
          } else {
             *out = resultobj;
          }

@@ -112,4 +112,6 @@ void test_core_env__1(void)
 
 	cl_assert(git_futils_find_system_file(&path, "nonexistentfile") == -1);
 #endif
+
+	git_buf_free(&path);
 }
