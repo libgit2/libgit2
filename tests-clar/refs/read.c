@@ -67,8 +67,11 @@ void test_refs_read__symbolic(void)
 	git_reference *reference, *resolved_ref;
 	git_object *object;
 	git_oid id;
+	git_otype type;
 
 	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_target_type(&type, reference));
+	cl_assert(type == GIT_OBJ_COMMIT);
 	cl_assert(git_reference_type(reference) & GIT_REF_SYMBOLIC);
 	cl_assert(git_reference_is_packed(reference) == 0);
 	cl_assert_equal_s(reference->name, GIT_HEAD_FILE);

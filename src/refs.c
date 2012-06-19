@@ -1764,3 +1764,28 @@ int git_reference__update(git_repository *repo, const git_oid *oid, const char *
 	git_reference_free(ref);
 	return res;
 }
+
+int git_reference_target_type(git_otype *type, git_reference *ref)
+{
+	int error;
+	git_object *o;
+	git_reference *r;
+	const git_oid *oid;
+
+	error = git_reference_resolve(&r, ref);
+	if (error < 0)
+		return error;
+
+	oid = git_reference_oid(r);
+
+	error = git_object_lookup(&o, r->owner, oid, GIT_OBJ_ANY);
+	git_reference_free(r);
+
+	if (error < 0)
+		return error;
+
+	*type = git_object_type(o);
+	git_object_free(o);
+
+	return 0;
+}

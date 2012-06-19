@@ -104,6 +104,17 @@ GIT_EXTERN(const git_oid *) git_reference_oid(git_reference *ref);
 GIT_EXTERN(const char *) git_reference_target(git_reference *ref);
 
 /**
+ * Get type of the object this reference points to
+ *
+ * Works for both symbolic and direct references.
+ *
+ * @param type Pointer to type
+ * @param ref The reference
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_target_type(git_otype *type, git_reference *ref);
+
+/**
  * Get the type of a reference
  *
  * Either direct (GIT_REF_OID) or symbolic (GIT_REF_SYMBOLIC)
