@@ -90,3 +90,49 @@ void test_config_write__delete_inexistent(void)
 	cl_assert(git_config_delete(cfg, "core.imaginary") == GIT_ENOTFOUND);
 	git_config_free(cfg);
 }
+
+void test_config_write__value_containing_quotes(void)
+{
+	git_config *cfg;
+	const char* str;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
+	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this \"has\" quotes"));
+	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
+	cl_assert_equal_s(str, "this \"has\" quotes");
+	git_config_free(cfg);
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
+	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
+	cl_assert_equal_s(str, "this \"has\" quotes");
+	git_config_free(cfg);
+
+	/* The code path for values that already exist is different, check that one as well */
+	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
+	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this also \"has\" quotes"));
+	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
+	cl_assert_equal_s(str, "this also \"has\" quotes");
+	git_config_free(cfg);
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
+	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
+	cl_assert_equal_s(str, "this also \"has\" quotes");
+	git_config_free(cfg);
+}
+
+void test_config_write__escape_value(void)
+{
+	git_config *cfg;
+	const char* str;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
+	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this \"has\" quotes and \t"));
+	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
+	cl_assert_equal_s(str, "this \"has\" quotes and \t");
+	git_config_free(cfg);
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
+	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
+	cl_assert_equal_s(str, "this \"has\" quotes and \t");
+	git_config_free(cfg);
+}
