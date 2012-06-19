@@ -6,7 +6,6 @@
  */
 
 #include "message.h"
-#include <ctype.h>
 
 static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 {
@@ -22,7 +21,7 @@ static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 
 /* Greatly inspired from git.git "stripspace" */
 /* see https://github.com/git/git/blob/497215d8811ac7b8955693ceaad0899ecd894ed2/builtin/stripspace.c#L4-67 */
-int git_message_prettify(git_buf *message_out, const char *message, int strip_comments)
+int git_message__prettify(git_buf *message_out, const char *message, int strip_comments)
 {
 	const size_t message_len = strlen(message);
 
@@ -58,4 +57,26 @@ int git_message_prettify(git_buf *message_out, const char *message, int strip_co
 	}
 
 	return git_buf_oom(message_out) ? -1 : 0;
+}
+
+int git_message_prettify(char *message_out, size_t buffer_size, const char *message, int strip_comments)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	if (strlen(message) + 1 > buffer_size) {	/* We have to account for a potentially missing \n */
+		giterr_set(GITERR_INVALID, "Buffer too short to hold the cleaned message");
+		return -1;
+	}
+
+	*message_out = '\0';
+
+	if (git_message__prettify(&buf, message, strip_comments) < 0) {
+		git_buf_free(&buf);
+		return -1;
+	}
+
+	git_buf_copy_cstr(message_out, buffer_size, &buf);
+	git_buf_free(&buf);
+
+	return 0;
 }
