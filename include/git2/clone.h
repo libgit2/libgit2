@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "indexer.h"
 
 
 /**
@@ -25,10 +26,11 @@ GIT_BEGIN_DECL
  *
  * @param out pointer that will receive the resulting repository object
  * @param origin_url repository to clone from
- * @param dest_path local directory to clone to
+ * @param workdir_path local directory to clone to
+ * @param stats pointer to structure that receives progress information (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
  */
-GIT_EXTERN(int) git_clone(git_repository **out, const char *origin_url, const char *dest_path);
+GIT_EXTERN(int) git_clone(git_repository **out, const char *origin_url, const char *workdir_path, git_indexer_stats *stats);
 
 /**
  * TODO
@@ -36,9 +38,10 @@ GIT_EXTERN(int) git_clone(git_repository **out, const char *origin_url, const ch
  * @param out pointer that will receive the resulting repository object
  * @param origin_url repository to clone from
  * @param dest_path local directory to clone to
+ * @param stats pointer to structure that receives progress information (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
  */
-GIT_EXTERN(int) git_clone_bare(git_repository **out, const char *origin_url, const char *dest_path);
+GIT_EXTERN(int) git_clone_bare(git_repository **out, const char *origin_url, const char *dest_path, git_indexer_stats *stats);
 
 /** @} */
 GIT_END_DECL

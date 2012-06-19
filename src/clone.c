@@ -9,6 +9,7 @@
 
 #include "git2/clone.h"
 #include "git2/remote.h"
+#include "git2/revparse.h"
 
 #include "common.h"
 #include "remote.h"
@@ -17,95 +18,99 @@
 
 GIT_BEGIN_DECL
 
+
+static int git_checkout(git_repository *repo, git_commit *commit, git_indexer_stats *stats)
+{
+  return 0;
+}
+
 /*
  * submodules?
  * filemodes?
  */
 
-static int setup_remotes_and_fetch(git_repository *repo, const char *origin_url)
+
+
+static int setup_remotes_and_fetch(git_repository *repo, const char *origin_url, git_indexer_stats *stats)
 {
   int retcode = GIT_ERROR;
   git_remote *origin = NULL;
   git_off_t bytes = 0;
-  git_indexer_stats stats = {0};
+  git_indexer_stats dummy_stats;
 
-  if (!git_remote_new(&origin, repo, "origin", origin_url, NULL)) {
-    if (!git_remote_save(origin)) {
-      if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
-        if (!git_remote_download(origin, &bytes, &stats)) {
-          if (!git_remote_update_tips(origin, NULL)) {
-            // TODO
-            // if (!git_checkout(...)) {
-            retcode = 0;
-            // }
-          }
+  if (!stats) stats = &dummy_stats;
+
+  if (!git_remote_add(&origin, repo, "origin", origin_url)) {
+    if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
+      if (!git_remote_download(origin, &bytes, stats)) {
+        if (!git_remote_update_tips(origin, NULL)) {
+          retcode = 0;
         }
-        git_remote_disconnect(origin);
       }
+      git_remote_disconnect(origin);
     }
     git_remote_free(origin);
- }
+  }
 
   return retcode;
 }
 
-int git_clone(git_repository **out, const char *origin_url, const char *dest_path)
+static int clone_internal(git_repository **out, const char *origin_url, const char *fullpath, git_indexer_stats *stats, int is_bare)
 {
   int retcode = GIT_ERROR;
   git_repository *repo = NULL;
-  char fullpath[512] = {0};
+  
+  if (!(retcode = git_repository_init(&repo, fullpath, is_bare))) {
+    if ((retcode = setup_remotes_and_fetch(repo, origin_url, stats)) < 0) {
+      /* Failed to fetch; clean up */
+      git_repository_free(repo);
+      git_futils_rmdir_r(fullpath, GIT_DIRREMOVAL_FILES_AND_DIRS);
+    } else {
+      *out = repo;
+      retcode = 0;
+    }
+  }
+  
+  return retcode;
+}
 
+int git_clone_bare(git_repository **out, const char *origin_url, const char *dest_path, git_indexer_stats *stats)
+{
+  char fullpath[512] = {0};
+  
   p_realpath(dest_path, fullpath);
   if (git_path_exists(fullpath)) {
     giterr_set(GITERR_INVALID, "Destination already exists: %s", fullpath);
     return GIT_ERROR;
   }
+  
+  return clone_internal(out, origin_url, fullpath, stats, 1);
+}
 
-  /* Initialize the dest/.git directory */
-  if (!(retcode = git_repository_init(&repo, fullpath, 0))) {
-    if ((retcode = setup_remotes_and_fetch(repo, origin_url)) < 0) {
-      /* Failed to fetch; clean up */
-      git_repository_free(repo);
-      git_futils_rmdir_r(fullpath, GIT_DIRREMOVAL_FILES_AND_DIRS);
-    } else {
-      /* Fetched successfully, do a checkout */
-      /* if (!(retcode = git_checkout(...))) {} */
-      *out = repo;
-      retcode = 0;
+
+int git_clone(git_repository **out, const char *origin_url, const char *workdir_path, git_indexer_stats *stats)
+{
+  int retcode = GIT_ERROR;
+  char fullpath[512] = {0};
+
+  p_realpath(workdir_path, fullpath);
+  if (git_path_exists(fullpath)) {
+    giterr_set(GITERR_INVALID, "Destination already exists: %s", fullpath);
+    return GIT_ERROR;
+  }
+
+  if (!clone_internal(out, origin_url, workdir_path, stats, 0)) {
+    git_object *commit_to_checkout = NULL;
+    if (!git_revparse_single(&commit_to_checkout, *out, "master")) {
+      if (git_object_type(commit_to_checkout) == GIT_OBJ_COMMIT) {
+        retcode = git_checkout(*out, (git_commit*)commit_to_checkout, stats);
+      }
     }
   }
 
   return retcode;
 }
 
-
-int git_clone_bare(git_repository **out, const char *origin_url, const char *dest_path)
-{
-  int retcode = GIT_ERROR;
-  git_repository *repo = NULL;
-  char fullpath[512] = {0};
-
-  p_realpath(dest_path, fullpath);
-  if (git_path_exists(fullpath)) {
-    giterr_set(GITERR_INVALID, "Destination already exists: %s", fullpath);
-    return GIT_ERROR;
-  }
-
-  if (!(retcode = git_repository_init(&repo, fullpath, 1))) {
-    if ((retcode = setup_remotes_and_fetch(repo, origin_url)) < 0) {
-      /* Failed to fetch; clean up */
-      git_repository_free(repo);
-      git_futils_rmdir_r(fullpath, GIT_DIRREMOVAL_FILES_AND_DIRS);
-    } else {
-      /* Fetched successfully, do a checkout */
-      /* if (!(retcode = git_checkout(...))) {} */
-      *out = repo;
-      retcode = 0;
-    }
-  }
-
-  return retcode;
-}
 
 
 
