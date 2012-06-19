@@ -196,7 +196,7 @@ static int write_tag_annotation(
 		const git_signature *tagger,
 		const char *message)
 {
-	git_buf tag = GIT_BUF_INIT, cleaned_message = GIT_BUF_INIT;
+	git_buf tag = GIT_BUF_INIT;
 	git_odb *odb;
 
 	git_oid__writebuf(&tag, "object ", git_object_id(target));
@@ -205,14 +205,8 @@ static int write_tag_annotation(
 	git_signature__writebuf(&tag, "tagger ", tagger);
 	git_buf_putc(&tag, '\n');
 
-	/* Remove comments by default */
-	if (git_message_prettify(&cleaned_message, message, 1) < 0)
+	if (git_buf_puts(&tag, message) < 0)
 		goto on_error;
-
-	if (git_buf_puts(&tag, git_buf_cstr(&cleaned_message)) < 0)
-		goto on_error;
-
-	git_buf_free(&cleaned_message);
 
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
 		goto on_error;
@@ -225,7 +219,6 @@ static int write_tag_annotation(
 
 on_error:
 	git_buf_free(&tag);
-	git_buf_free(&cleaned_message);
 	giterr_set(GITERR_OBJECT, "Failed to create tag annotation.");
 	return -1;
 }

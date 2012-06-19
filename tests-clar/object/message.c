@@ -6,7 +6,7 @@ static void assert_message_prettifying(char *expected_output, char *input, int s
 {
 	git_buf prettified_message = GIT_BUF_INIT;
 
-	git_message_prettify(&prettified_message, input, strip_comments);
+	git_message__prettify(&prettified_message, input, strip_comments);
 	cl_assert_equal_s(expected_output, git_buf_cstr(&prettified_message));
 
 	git_buf_free(&prettified_message);
