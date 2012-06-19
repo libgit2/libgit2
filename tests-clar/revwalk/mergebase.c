@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "vector.h"
+#include <stdarg.h>
 
 static git_repository *_repo;
 

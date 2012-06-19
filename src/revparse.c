@@ -537,7 +537,7 @@ static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo,
    char *tok;
    void *alloc = str;
    git_tree *tree2 = tree;
-   const git_tree_entry *entry;
+   const git_tree_entry *entry = NULL;
 
    while ((tok = git__strtok(&str, "/\\")) != NULL) {
       entry = git_tree_entry_byname(tree2, tok);

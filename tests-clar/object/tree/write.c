@@ -89,7 +89,8 @@ void test_object_tree_write__subtree(void)
 void test_object_tree_write__sorted_subtrees(void)
 {
 	git_treebuilder *builder;
-	unsigned int i, position_c, position_cake, position_config;
+	unsigned int i;
+	int position_c = -1, position_cake = -1, position_config = -1;
 
 	struct {
 		unsigned int attr;
@@ -139,6 +140,10 @@ void test_object_tree_write__sorted_subtrees(void)
 		if (strcmp(entry->filename, "config") == 0)
 			position_config = i;
 	}
+
+	cl_assert(position_c != -1);
+	cl_assert(position_cake != -1);
+	cl_assert(position_config != -1);
 
 	cl_assert(position_c < position_cake);
 	cl_assert(position_cake < position_config);
