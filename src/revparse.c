@@ -406,7 +406,7 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
          *out = newobj2;
          return 0;
       }
-      
+
       /* {/...} -> Walk all commits until we see a commit msg that matches the phrase. */
       if (movement[1] == '/') {
          int retcode = GIT_ERROR;
@@ -548,6 +548,11 @@ static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo,
             return GIT_ERROR;
          }
       }
+   }
+
+   if (!entry) {
+      giterr_set(GITERR_INVALID, "Invalid tree path '%s'", path);
+      return GIT_ERROR;
    }
 
    git_oid_cpy(out, git_tree_entry_id(entry));

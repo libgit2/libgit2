@@ -163,6 +163,7 @@ void test_refs_revparse__colon(void)
    cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/"));
    cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/not found in any commit"));
    cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "master:"));
 
    test_object("subtrees:ab/4.txt", "d6c93164c249c8000205dd4ec5cbca1b516d487f");
    test_object("subtrees:ab/de/fgh/1.txt", "1f67fc4386b2d171e0d21be1c447e12660561f9b");
