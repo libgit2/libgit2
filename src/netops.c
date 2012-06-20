@@ -66,13 +66,16 @@ static int getaddrinfo(const char *host, const char *port, struct addrinfo *hint
 	else
 		ainfo->ai_port = atol(port);
 
-	ainfo->ai_addrlen = ainfo->ai_hostent->h_length;
 
 	memcpy(&ainfo->ai_addr_in.sin_addr, ainfo->ai_hostent->h_addr_list[0], ainfo->ai_hostent->h_length);
-	ainfo->ai_addr_in.sin_family = ainfo->ai_hostent->h_addrtype;
+	ainfo->ai_protocol = 0;
+	ainfo->ai_socktype = hints->ai_socktype;
+	ainfo->ai_family = ainfo->ai_hostent->h_addrtype;
+	ainfo->ai_addr_in.sin_family = ainfo->ai_family;
 	ainfo->ai_addr_in.sin_port = ainfo->ai_port;
 	ainfo->ai_addr = (struct addrinfo *)&ainfo->ai_addr_in;
-	
+	ainfo->ai_addrlen = sizeof(struct sockaddr_in);
+
 	*info = ainfo;
 	
 	if(ainfo->ai_hostent->h_addr_list[1] == NULL) {
@@ -87,7 +90,6 @@ static int getaddrinfo(const char *host, const char *port, struct addrinfo *hint
 		memcpy(&ai->ai_next, ainfo, sizeof(struct addrinfo));
 		memcpy(&ai->ai_next->ai_addr_in.sin_addr, ainfo->ai_hostent->h_addr_list[p], ainfo->ai_hostent->h_length);
 		ai->ai_next->ai_addr = (struct addrinfo *)&ai->ai_next->ai_addr_in;
-		ainfo->ai_addrlen = ainfo->ai_hostent->h_length;
 		ai = ai->ai_next;
 	}
 	
