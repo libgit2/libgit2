@@ -37,10 +37,93 @@
 struct addrinfo {
 	struct hostent *ai_hostent;
 	struct servent *ai_servent;
-	struct sockaddr_in ai_addr;
+	struct sockaddr_in ai_addr_in;
+	struct sockaddr *ai_addr;
+	size_t ai_addrlen;
+	int ai_family;
 	int ai_socktype;
+	int ai_protocol;
 	long ai_port;
+	struct addrinfo *ai_next;
 };
+
+static int getaddrinfo(const char *host, const char *port, struct addrinfo *hints, struct addrinfo **info) {
+	GIT_UNUSED(hints);
+	
+	struct addrinfo *ainfo, *ai;
+	int p = 0;
+	
+	if((ainfo = malloc(sizeof(struct addrinfo))) == NULL)
+		return -1;
+		
+	if((ainfo->ai_hostent = gethostbyname(host)) == NULL)
+		return -2;
+		
+	ainfo->ai_servent = getservbyname(port, 0);
+	
+	if(ainfo->ai_servent)
+		ainfo->ai_port = ainfo->ai_servent->s_port;
+	else
+		ainfo->ai_port = atol(port);
+
+
+	memcpy(&ainfo->ai_addr_in.sin_addr, ainfo->ai_hostent->h_addr_list[0], ainfo->ai_hostent->h_length);
+	ainfo->ai_protocol = 0;
+	ainfo->ai_socktype = hints->ai_socktype;
+	ainfo->ai_family = ainfo->ai_hostent->h_addrtype;
+	ainfo->ai_addr_in.sin_family = ainfo->ai_family;
+	ainfo->ai_addr_in.sin_port = ainfo->ai_port;
+	ainfo->ai_addr = (struct addrinfo *)&ainfo->ai_addr_in;
+	ainfo->ai_addrlen = sizeof(struct sockaddr_in);
+
+	*info = ainfo;
+	
+	if(ainfo->ai_hostent->h_addr_list[1] == NULL) {
+		ainfo->ai_next = NULL;
+		return 0;
+	}
+	
+	ai = ainfo;
+	
+	for (p = 1; ainfo->ai_hostent->h_addr_list[p] != NULL; p++) {
+		ai->ai_next = malloc(sizeof(struct addrinfo));
+		memcpy(&ai->ai_next, ainfo, sizeof(struct addrinfo));
+		memcpy(&ai->ai_next->ai_addr_in.sin_addr, ainfo->ai_hostent->h_addr_list[p], ainfo->ai_hostent->h_length);
+		ai->ai_next->ai_addr = (struct addrinfo *)&ai->ai_next->ai_addr_in;
+		ai = ai->ai_next;
+	}
+	
+	ai->ai_next = NULL;
+	return 0;
+}
+
+static void freeaddrinfo(struct addrinfo *info) {
+	struct addrinfo *p, *next;
+	
+	p = info;
+	
+	while(p != NULL) {
+		next = p->ai_next;
+		free(p);
+		p = next;
+	}
+}
+
+static const char *gai_strerror(int ret) {
+	switch(ret) {
+		case -1:
+			return "Out of memory";
+		break;
+		
+		case -2:
+			return "Address lookup failed";
+		break;
+		
+		default:
+			return "Unknown error";
+		break;
+	}
+}
 #endif
 
 #ifdef GIT_WIN32
@@ -386,53 +469,29 @@ static int ssl_setup(git_transport *t, const char *host)
 
 int gitno_connect(git_transport *t, const char *host, const char *port)
 {
-#ifndef NO_ADDRINFO
 	struct addrinfo *info = NULL, *p;
-#else
-	int p;
-#endif
 	struct addrinfo hints;
 	int ret;
 	GIT_SOCKET s = INVALID_SOCKET;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_socktype = SOCK_STREAM;
-#ifndef NO_ADDRINFO
 	hints.ai_family = AF_UNSPEC;
 
 	if ((ret = getaddrinfo(host, port, &hints, &info)) < 0) {
 		giterr_set(GITERR_NET, "Failed to resolve address for %s: %s", host, gai_strerror(ret));
 		return -1;
 	}
-#else
-	hints.ai_hostent = gethostbyname(host);
-	hints.ai_servent = getservbyname(port, 0);
-	
-	if(hints.ai_servent)
-		hints.ai_port = hints.ai_servent->s_port;
-	else
-		hints.ai_port = atol(port);
-#endif
 
-#ifndef NO_ADDRINFO
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-#else
-	for (p = 0; hints.ai_hostent->h_addr_list[p] != NULL; p++) {
-		s = socket(hints.ai_hostent->h_addrtype, hints.ai_socktype, 0);
-#endif
+
 		if (s == INVALID_SOCKET) {
 			net_set_error("error creating socket");
 			break;
 		}
-#ifndef NO_ADDRINFO
+
 		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
-#else
-		memcpy(&hints.ai_addr.sin_addr, hints.ai_hostent->h_addr_list[p], hints.ai_hostent->h_length);
-		hints.ai_addr.sin_family = hints.ai_hostent->h_addrtype;
-		hints.ai_addr.sin_port = hints.ai_port;
-		if (connect(s, (struct sockaddr *)&hints.ai_addr, sizeof(struct sockaddr_in)) == 0)
-#endif
 			break;
 
 		/* If we can't connect, try the next one */
@@ -441,20 +500,14 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	}
 
 	/* Oops, we couldn't connect to any address */
-	if (s == INVALID_SOCKET &&
-#ifndef NO_ADDRINFO
-		p == NULL) {
-#else
-		hints.ai_hostent->h_addr_list[p] == NULL) {
-#endif
+	if (s == INVALID_SOCKET && p == NULL) {
 		giterr_set(GITERR_OS, "Failed to connect to %s", host);
 		return -1;
 	}
 
 	t->socket = s;
-#ifndef NO_ADDRINFO
 	freeaddrinfo(info);
-#endif
+
 	if (t->encrypt && ssl_setup(t, host) < 0)
 		return -1;
 
