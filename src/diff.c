@@ -704,12 +704,17 @@ int git_diff_index_to_tree(
 	assert(repo && diff);
 
 	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
-		git_iterator_for_index_range(&b, repo, prefix, prefix) < 0)
-		return -1;
+	    git_iterator_for_index_range(&b, repo, prefix, prefix) < 0)
+		goto on_error;
 
 	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
+
+on_error:
+	git__free(prefix);
+	git_iterator_free(a);
+	return -1;
 }
 
 int git_diff_workdir_to_index(
@@ -723,12 +728,17 @@ int git_diff_workdir_to_index(
 	assert(repo && diff);
 
 	if (git_iterator_for_index_range(&a, repo, prefix, prefix) < 0 ||
-		git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
-		return -1;
+	    git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
+		goto on_error;
 
 	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
+
+on_error:
+	git__free(prefix);
+	git_iterator_free(a);
+	return -1;
 }
 
 
@@ -744,12 +754,17 @@ int git_diff_workdir_to_tree(
 	assert(repo && old_tree && diff);
 
 	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
-		git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
-		return -1;
+	    git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
+		goto on_error;
 
 	git__free(prefix);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
+
+on_error:
+	git__free(prefix);
+	git_iterator_free(a);
+	return -1;
 }
 
 int git_diff_merge(
