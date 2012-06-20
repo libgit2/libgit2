@@ -506,8 +506,8 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
    /* "~" is the same as "~1" */
    if (*movement == '\0') {
       n = 1;
-   } else {
-      git__strtol32(&n, movement, NULL, 0);
+   } else if (git__strtol32(&n, movement, NULL, 0) < 0) {
+      return GIT_ERROR;
    }
    commit1 = (git_commit*)obj;
 

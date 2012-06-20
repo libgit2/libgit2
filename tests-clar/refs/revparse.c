@@ -104,6 +104,9 @@ void test_refs_revparse__to_type(void)
 
 void test_refs_revparse__linear_history(void)
 {
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "foo~bar"));
+   cl_git_fail(git_revparse_single(&g_obj, g_repo, "master~bar"));
+
    test_object("master~0", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
    test_object("master~1", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
    test_object("master~2", "9fd738e8f7967c078dceed8190330fc8648ee56a");
