@@ -88,6 +88,7 @@ void test_clone_clone__local(void)
 
 void test_clone_clone__network(void)
 {
+#if 0
   cl_git_pass(git_clone(&g_repo,
                         "https://github.com/libgit2/libgit2.git",
                         "./libgit2", NULL));
@@ -96,6 +97,7 @@ void test_clone_clone__network(void)
                              "./libgit2.git", NULL));
   git_futils_rmdir_r("./libgit2", GIT_DIRREMOVAL_FILES_AND_DIRS);
   git_futils_rmdir_r("./libgit2.git", GIT_DIRREMOVAL_FILES_AND_DIRS);
+#endif
 }
 
 
