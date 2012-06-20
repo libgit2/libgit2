@@ -74,11 +74,13 @@ void test_clone_clone__local(void)
   git_buf src = GIT_BUF_INIT;
   build_local_file_url(&src, cl_fixture("testrepo.git"));
 
+#if 0
   cl_git_pass(git_clone(&g_repo, git_buf_cstr(&src), "./local", NULL));
   git_repository_free(g_repo);
   git_futils_rmdir_r("./local", GIT_DIRREMOVAL_FILES_AND_DIRS);
   cl_git_pass(git_clone_bare(&g_repo, git_buf_cstr(&src), "./local.git", NULL));
   git_futils_rmdir_r("./local.git", GIT_DIRREMOVAL_FILES_AND_DIRS);
+#endif
 
   git_buf_free(&src);
 }
