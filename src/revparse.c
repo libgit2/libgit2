@@ -323,10 +323,10 @@ static git_object* dereference_object(git_object *obj)
       break;
    case GIT_OBJ_TAG:
       {
-            git_object *newobj = NULL;
-            if (0 == git_tag_target(&newobj, (git_tag*)obj)) {
-               return newobj;
-            }
+         git_object *newobj = NULL;
+         if (0 == git_tag_target(&newobj, (git_tag*)obj)) {
+            return newobj;
+         }
       }
       break;
 
@@ -506,8 +506,8 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
    /* "~" is the same as "~1" */
    if (*movement == '\0') {
       n = 1;
-   } else {
-      git__strtol32(&n, movement, NULL, 0);
+   } else if (git__strtol32(&n, movement, NULL, 0) < 0) {
+      return GIT_ERROR;
    }
    commit1 = (git_commit*)obj;
 
@@ -581,7 +581,7 @@ static int handle_colon_syntax(git_object **out,
    git_tree_free(tree);
 
    if (error < 0)
-	   return error;
+      return error;
 
    return git_object_lookup(out, repo, &oid, GIT_OBJ_ANY);
 }
@@ -623,7 +623,7 @@ static int revparse_global_grep(git_object **out, git_repository *repo, const ch
          }
          if (!resultobj) {
             giterr_set(GITERR_REFERENCE, "Couldn't find a match for %s", pattern);
-	    git_object_free(walkobj);
+            git_object_free(walkobj);
          } else {
             *out = resultobj;
          }
