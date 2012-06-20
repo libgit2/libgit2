@@ -86,16 +86,22 @@ void test_clone_clone__local(void)
 }
 
 
-void test_clone_clone__network(void)
+void test_clone_clone__network_full(void)
 {
 #if 0
   cl_git_pass(git_clone(&g_repo,
                         "https://github.com/libgit2/libgit2.git",
                         "./libgit2", NULL));
+  git_futils_rmdir_r("./libgit2", GIT_DIRREMOVAL_FILES_AND_DIRS);
+#endif
+}
+
+void test_clone_clone__network_bare(void)
+{
+#if 0
   cl_git_pass(git_clone_bare(&g_repo,
                              "https://github.com/libgit2/libgit2.git",
                              "./libgit2.git", NULL));
-  git_futils_rmdir_r("./libgit2", GIT_DIRREMOVAL_FILES_AND_DIRS);
   git_futils_rmdir_r("./libgit2.git", GIT_DIRREMOVAL_FILES_AND_DIRS);
 #endif
 }
