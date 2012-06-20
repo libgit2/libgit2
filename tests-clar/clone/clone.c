@@ -65,7 +65,7 @@ void test_clone_clone__bad_url(void)
   cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", NULL));
   cl_assert(!git_path_exists("./foo"));
   cl_git_fail(git_clone_bare(&g_repo, "not_a_repo", "./foo.git", NULL));
-  cl_assert(!git_path_exists("./foo"));
+  cl_assert(!git_path_exists("./foo.git"));
 }
 
 
@@ -89,7 +89,11 @@ void test_clone_clone__network(void)
   cl_git_pass(git_clone(&g_repo,
                         "https://github.com/libgit2/libgit2.git",
                         "./libgit2", NULL));
+  cl_git_pass(git_clone_bare(&g_repo,
+                             "https://github.com/libgit2/libgit2.git",
+                             "./libgit2.git", NULL));
   git_futils_rmdir_r("./libgit2", GIT_DIRREMOVAL_FILES_AND_DIRS);
+  git_futils_rmdir_r("./libgit2.git", GIT_DIRREMOVAL_FILES_AND_DIRS);
 }
 
 

@@ -19,8 +19,9 @@
 GIT_BEGIN_DECL
 
 
-static int git_checkout(git_repository *repo, git_commit *commit, git_indexer_stats *stats)
+static int git_checkout_branch(git_repository *repo, const char *branchname)
 {
+  /* TODO */
   return 0;
 }
 
@@ -31,7 +32,9 @@ static int git_checkout(git_repository *repo, git_commit *commit, git_indexer_st
 
 
 
-static int setup_remotes_and_fetch(git_repository *repo, const char *origin_url, git_indexer_stats *stats)
+static int setup_remotes_and_fetch(git_repository *repo,
+                                   const char *origin_url,
+                                   git_indexer_stats *stats)
 {
   int retcode = GIT_ERROR;
   git_remote *origin = NULL;
@@ -55,11 +58,15 @@ static int setup_remotes_and_fetch(git_repository *repo, const char *origin_url,
   return retcode;
 }
 
-static int clone_internal(git_repository **out, const char *origin_url, const char *fullpath, git_indexer_stats *stats, int is_bare)
+static int clone_internal(git_repository **out,
+                          const char *origin_url,
+                          const char *fullpath,
+                          git_indexer_stats *stats,
+                          int is_bare)
 {
   int retcode = GIT_ERROR;
   git_repository *repo = NULL;
-  
+
   if (!(retcode = git_repository_init(&repo, fullpath, is_bare))) {
     if ((retcode = setup_remotes_and_fetch(repo, origin_url, stats)) < 0) {
       /* Failed to fetch; clean up */
@@ -70,25 +77,31 @@ static int clone_internal(git_repository **out, const char *origin_url, const ch
       retcode = 0;
     }
   }
-  
+
   return retcode;
 }
 
-int git_clone_bare(git_repository **out, const char *origin_url, const char *dest_path, git_indexer_stats *stats)
+int git_clone_bare(git_repository **out,
+                   const char *origin_url,
+                   const char *dest_path,
+                   git_indexer_stats *stats)
 {
   char fullpath[512] = {0};
-  
+
   p_realpath(dest_path, fullpath);
   if (git_path_exists(fullpath)) {
     giterr_set(GITERR_INVALID, "Destination already exists: %s", fullpath);
     return GIT_ERROR;
   }
-  
+
   return clone_internal(out, origin_url, fullpath, stats, 1);
 }
 
 
-int git_clone(git_repository **out, const char *origin_url, const char *workdir_path, git_indexer_stats *stats)
+int git_clone(git_repository **out,
+              const char *origin_url,
+              const char *workdir_path,
+              git_indexer_stats *stats)
 {
   int retcode = GIT_ERROR;
   char fullpath[512] = {0};
@@ -100,12 +113,9 @@ int git_clone(git_repository **out, const char *origin_url, const char *workdir_
   }
 
   if (!clone_internal(out, origin_url, workdir_path, stats, 0)) {
-    git_object *commit_to_checkout = NULL;
-    if (!git_revparse_single(&commit_to_checkout, *out, "master")) {
-      if (git_object_type(commit_to_checkout) == GIT_OBJ_COMMIT) {
-        retcode = git_checkout(*out, (git_commit*)commit_to_checkout, stats);
-      }
-    }
+    char default_branch_name[256] = "master";
+    /* TODO */
+    retcode = git_checkout_branch(*out, default_branch_name);
   }
 
   return retcode;
