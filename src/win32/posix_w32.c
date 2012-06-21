@@ -232,7 +232,7 @@ int p_open(const char *path, int flags, ...)
 		va_list arg_list;
 
 		va_start(arg_list, flags);
-		mode = va_arg(arg_list, mode_t);
+		mode = (mode_t)va_arg(arg_list, int);
 		va_end(arg_list);
 	}
 
