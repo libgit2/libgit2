@@ -854,6 +854,7 @@ int git_repository_init(git_repository **repo_out, const char *path, unsigned is
 			goto cleanup;
 
 		result = repo_init_config(repository_path.ptr, is_bare, is_reinit);
+		goto cleanup;
 	}
 
 	if (repo_init_structure(repository_path.ptr, is_bare) < 0 ||
