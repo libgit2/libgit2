@@ -183,6 +183,49 @@ int git_branch_list(git_strarray *branch_names, git_repository *repo, unsigned i
 	return 0;
 }
 
+typedef struct {
+	int (*branch_cb)(
+			const char *branch_name,
+			git_branch_t branch_type,
+			void *payload);
+	void *callback_payload;
+	unsigned int branch_type;
+} branch_foreach_filter;
+
+static int branch_foreach_cb(const char *branch_name, void *payload)
+{
+	branch_foreach_filter *filter = (branch_foreach_filter *)payload;
+
+	if (filter->branch_type & GIT_BRANCH_LOCAL &&
+		git__prefixcmp(branch_name, GIT_REFS_HEADS_DIR) == 0)
+		return filter->branch_cb(branch_name + strlen(GIT_REFS_HEADS_DIR), GIT_BRANCH_LOCAL, filter->callback_payload);
+
+	if (filter->branch_type & GIT_BRANCH_REMOTE &&
+		git__prefixcmp(branch_name, GIT_REFS_REMOTES_DIR) == 0)
+		return filter->branch_cb(branch_name + strlen(GIT_REFS_REMOTES_DIR), GIT_BRANCH_REMOTE, filter->callback_payload);
+
+	return 0;
+}
+
+int git_branch_foreach(
+		git_repository *repo,
+		unsigned int list_flags,
+		int (*branch_cb)(
+			const char *branch_name,
+			git_branch_t branch_type,
+			void *payload),
+		void *payload
+)
+{
+	branch_foreach_filter filter;
+
+	filter.branch_cb = branch_cb;
+	filter.branch_type = list_flags;
+	filter.callback_payload = payload;
+
+	return git_reference_foreach(repo, GIT_REF_LISTALL, &branch_foreach_cb, (void *)&filter);
+}
+
 int git_branch_move(git_repository *repo, const char *old_branch_name, const char *new_branch_name, int force)
 {
 	git_reference *reference = NULL;

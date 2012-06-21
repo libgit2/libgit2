@@ -96,6 +96,31 @@ GIT_EXTERN(int) git_branch_list(
 		unsigned int list_flags);
 
 /**
+ * Loop over all the branches and issue a callback for each one.
+ *
+ * @param repo Repository where to find the branches.
+ *
+ * @param list_flags Filtering flags for the branch
+ * listing. Valid values are GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE
+ * or a combination of the two.
+ *
+ * @param branch_cb Callback to invoke per found branch.
+ *
+ * @param payload Extra parameter to callback function.
+ *
+ * @return 0 or an error code.
+ */
+GIT_EXTERN(int) git_branch_foreach(
+		git_repository *repo,
+		unsigned int list_flags,
+		int (*branch_cb)(
+			const char *branch_name,
+			git_branch_t branch_type,
+			void *payload),
+		void *payload
+);
+
+/**
  * Move/rename an existing branch reference.
  *
  * @param repo Repository where lives the branch.
