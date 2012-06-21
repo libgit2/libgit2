@@ -117,7 +117,7 @@ void test_clone_clone__network_bare(void)
 
 void test_clone_clone__already_exists(void)
 {
-   mkdir("./foo", GIT_DIR_MODE);
+   p_mkdir("./foo", GIT_DIR_MODE);
    cl_git_fail(git_clone(&g_repo,
                          "https://github.com/libgit2/libgit2.git",
                          "./foo", NULL));
