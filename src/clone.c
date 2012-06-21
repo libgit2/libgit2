@@ -12,12 +12,12 @@
 #include "git2/revparse.h"
 #include "git2/branch.h"
 #include "git2/config.h"
+#include "git2/checkout.h"
 
 #include "common.h"
 #include "remote.h"
 #include "fileops.h"
 #include "refs.h"
-// TODO #include "checkout.h"
 
 GIT_BEGIN_DECL
 
@@ -26,14 +26,6 @@ struct HeadInfo {
    git_oid remote_head_oid;
    git_buf branchname;
 };
-
-static int git_checkout_force(git_repository *repo)
-{
-   /* TODO
-    * -> Line endings
-    */
-   return 0;
-}
 
 static int create_tracking_branch(git_repository *repo, git_oid *target, const char *name)
 {
@@ -214,6 +206,7 @@ int git_clone_bare(git_repository **out,
                    const char *dest_path,
                    git_indexer_stats *stats)
 {
+   assert(out && origin_url && dest_path);
    return clone_internal(out, origin_url, dest_path, stats, 1);
 }
 
@@ -225,8 +218,11 @@ int git_clone(git_repository **out,
 {
    int retcode = GIT_ERROR;
 
+   assert(out && origin_url && workdir_path);
+
    if (!(retcode = clone_internal(out, origin_url, workdir_path, stats, 0))) {
-      retcode = git_checkout_force(*out);
+      git_indexer_stats checkout_stats;
+      retcode = git_checkout_force(*out, &checkout_stats);
    }
 
    return retcode;
