@@ -245,5 +245,6 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
 {
 	assert_config_entry_on_init_bytype("core.logallrefupdates", GIT_ENOTFOUND, true);
+	git_repository_free(_repo);
 	assert_config_entry_on_init_bytype("core.logallrefupdates", true, false);
 }
