@@ -73,8 +73,8 @@ static int reference_matches_remote_head(const char *head_name, void *payload)
 
    if (!git_reference_name_to_oid(&oid, head_info->repo, head_name) &&
        !git_oid_cmp(&head_info->remote_head_oid, &oid)) {
-      /* strlen("refs/remotes/origin/") == 20 */
-      git_buf_puts(&head_info->branchname, head_name+20);
+      git_buf_puts(&head_info->branchname,
+                   head_name+strlen("refs/remotes/origin/"));
    }
    return 0;
 }
