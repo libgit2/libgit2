@@ -141,49 +141,6 @@ on_error:
 }
 
 typedef struct {
-	git_vector *branchlist;
-	unsigned int branch_type;
-} branch_filter_data;
-
-static int branch_list_cb(const char *branch_name, void *payload)
-{
-	branch_filter_data *filter = (branch_filter_data *)payload;
-
-	if (filter->branch_type & GIT_BRANCH_LOCAL && git__prefixcmp(branch_name, GIT_REFS_HEADS_DIR) == 0) {
-		return git_vector_insert(filter->branchlist, git__strdup(branch_name +strlen(GIT_REFS_HEADS_DIR)));
-  } else if (filter->branch_type & GIT_BRANCH_REMOTE && git__prefixcmp(branch_name, GIT_REFS_REMOTES_DIR) == 0) {
-		return git_vector_insert(filter->branchlist, git__strdup(branch_name+strlen(GIT_REFS_DIR)));
-  }
-
-	return 0;
-}
-
-int git_branch_list(git_strarray *branch_names, git_repository *repo, unsigned int list_flags)
-{
-	int error;
-	branch_filter_data filter;
-	git_vector branchlist;
-
-	assert(branch_names && repo);
-
-	if (git_vector_init(&branchlist, 8, NULL) < 0)
-		return -1;
-
-	filter.branchlist = &branchlist;
-	filter.branch_type = list_flags;
-
-	error = git_reference_foreach(repo, GIT_REF_LISTALL, &branch_list_cb, (void *)&filter);
-	if (error < 0) {
-		git_vector_free(&branchlist);
-		return -1;
-	}
-
-	branch_names->strings = (char **)branchlist.contents;
-	branch_names->count = branchlist.length;
-	return 0;
-}
-
-typedef struct {
 	int (*branch_cb)(
 			const char *branch_name,
 			git_branch_t branch_type,
