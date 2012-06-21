@@ -93,7 +93,7 @@ static int update_head_to_new_branch(git_repository *repo, git_oid *target, cons
 
    if (!create_tracking_branch(repo, target, name)) {
       git_reference *head;
-      if (!git_reference_lookup(&head, repo, "HEAD")) {
+      if (!git_repository_head(&head, repo)) {
          git_buf target = GIT_BUF_INIT;
          if (!git_buf_printf(&target, "refs/heads/%s", name) &&
              !git_reference_set_target(head, git_buf_cstr(&target))) {
