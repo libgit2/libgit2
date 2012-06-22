@@ -6,7 +6,10 @@
  */
 
 #include <assert.h>
+
+#ifndef GIT_WIN32
 #include <dirent.h>
+#endif
 
 #include "git2/clone.h"
 #include "git2/remote.h"
@@ -184,8 +187,15 @@ static bool is_dot_or_dotdot(const char *name)
 /* TODO: p_opendir, p_closedir */
 static bool path_is_okay(const char *path)
 {
-   DIR *dir;
+#ifdef GIT_WIN32
+   HANDLE hFind = INVALID_HANDLE_VALUE;
+   wchar_t *wbuf;
+   WIN32_FIND_DATAW ffd;
+#else
+   DIR *dir = NULL;
    struct dirent *e;
+#endif
+
    bool retval = true;
 
    /* The path must either not exist, or be an empty directory */
@@ -197,6 +207,16 @@ static bool path_is_okay(const char *path)
       return false;
    }
 
+#ifdef GIT_WIN32
+   wbuf = gitwin_to_utf16(path);
+   gitwin_append_utf16(wbuf, "\\*", 2);
+   hFind = FindFirstFileW(wbuf, &ffd);
+   if (INVALID_HANDLE_VALUE != hFind) {
+      retval = false;
+      FindClose(hFind);
+   }
+   git__free(wbuf);
+#else
    dir = opendir(path);
    if (!dir) {
       giterr_set(GITERR_OS, "Couldn't open '%s'", path);
@@ -211,8 +231,9 @@ static bool path_is_okay(const char *path)
          break;
       }
    }
-
    closedir(dir);
+#endif
+
    return retval;
 }
 
