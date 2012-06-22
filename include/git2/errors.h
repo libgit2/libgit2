@@ -20,6 +20,7 @@ GIT_BEGIN_DECL
 #ifdef GIT_OLD_ERRORS
 enum {
 	GIT_SUCCESS = 0,
+	GIT_ERROR = -1,
 	GIT_ENOTOID = -2,
 	GIT_ENOTFOUND = -3,
 	GIT_ENOMEM = -4,
@@ -52,7 +53,7 @@ enum {
 	GIT_ENOMATCH = -31,
 	GIT_ESHORTBUFFER = -32,
 };
-#endif
+#else
 
 /** Generic return codes */
 enum {
@@ -66,6 +67,7 @@ enum {
 	GIT_PASSTHROUGH = -30,
 	GIT_REVWALKOVER = -31,
 };
+#endif
 
 typedef struct {
 	char *message;

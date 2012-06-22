@@ -32,6 +32,99 @@
 #include "buffer.h"
 #include "transport.h"
 
+#ifdef NO_ADDRINFO
+struct addrinfo {
+	struct hostent *ai_hostent;
+	struct servent *ai_servent;
+	struct sockaddr_in ai_addr_in;
+	struct sockaddr *ai_addr;
+	size_t ai_addrlen;
+	int ai_family;
+	int ai_socktype;
+	int ai_protocol;
+	long ai_port;
+	struct addrinfo *ai_next;
+};
+
+static int getaddrinfo(const char *host, const char *port, struct addrinfo *hints, struct addrinfo **info) {
+	GIT_UNUSED(hints);
+	
+	struct addrinfo *ainfo, *ai;
+	int p = 0;
+	
+	if((ainfo = malloc(sizeof(struct addrinfo))) == NULL)
+		return -1;
+		
+	if((ainfo->ai_hostent = gethostbyname(host)) == NULL)
+		return -2;
+		
+	ainfo->ai_servent = getservbyname(port, 0);
+	
+	if(ainfo->ai_servent)
+		ainfo->ai_port = ainfo->ai_servent->s_port;
+	else
+		ainfo->ai_port = atol(port);
+
+
+	memcpy(&ainfo->ai_addr_in.sin_addr, ainfo->ai_hostent->h_addr_list[0], ainfo->ai_hostent->h_length);
+	ainfo->ai_protocol = 0;
+	ainfo->ai_socktype = hints->ai_socktype;
+	ainfo->ai_family = ainfo->ai_hostent->h_addrtype;
+	ainfo->ai_addr_in.sin_family = ainfo->ai_family;
+	ainfo->ai_addr_in.sin_port = ainfo->ai_port;
+	ainfo->ai_addr = (struct addrinfo *)&ainfo->ai_addr_in;
+	ainfo->ai_addrlen = sizeof(struct sockaddr_in);
+
+	*info = ainfo;
+	
+	if(ainfo->ai_hostent->h_addr_list[1] == NULL) {
+		ainfo->ai_next = NULL;
+		return 0;
+	}
+	
+	ai = ainfo;
+	
+	for (p = 1; ainfo->ai_hostent->h_addr_list[p] != NULL; p++) {
+		ai->ai_next = malloc(sizeof(struct addrinfo));
+		memcpy(&ai->ai_next, ainfo, sizeof(struct addrinfo));
+		memcpy(&ai->ai_next->ai_addr_in.sin_addr, ainfo->ai_hostent->h_addr_list[p], ainfo->ai_hostent->h_length);
+		ai->ai_next->ai_addr = (struct addrinfo *)&ai->ai_next->ai_addr_in;
+		ai = ai->ai_next;
+	}
+	
+	ai->ai_next = NULL;
+	return 0;
+}
+
+static void freeaddrinfo(struct addrinfo *info) {
+	struct addrinfo *p, *next;
+	
+	p = info;
+	
+	while(p != NULL) {
+		next = p->ai_next;
+		free(p);
+		p = next;
+	}
+}
+
+static const char *gai_strerror(int ret) {
+	switch(ret) {
+		case -1:
+			return "Out of memory";
+		break;
+		
+		case -2:
+			return "Address lookup failed";
+		break;
+		
+		default:
+			return "Unknown error";
+		break;
+	}
+}
+#endif
+
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
@@ -381,8 +474,8 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	GIT_SOCKET s = INVALID_SOCKET;
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_family = AF_UNSPEC;
 
 	if ((ret = getaddrinfo(host, port, &hints, &info)) < 0) {
 		giterr_set(GITERR_NET, "Failed to resolve address for %s: %s", host, gai_strerror(ret));
@@ -391,6 +484,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+
 		if (s == INVALID_SOCKET) {
 			net_set_error("error creating socket");
 			break;

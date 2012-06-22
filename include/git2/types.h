@@ -32,6 +32,9 @@ GIT_BEGIN_DECL
  * stat() functions, for all platforms.
  */
 #include <sys/types.h>
+#ifdef __amigaos4__
+#include <stdint.h>
+#endif
 
 #if defined(_MSC_VER)
 

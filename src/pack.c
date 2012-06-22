@@ -262,7 +262,7 @@ int git_packfile_unpack_header(
 	if (base == NULL)
 		return GIT_EBUFS;
 
-	ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
+		ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
 	git_mwindow_close(w_curs);
 	if (ret == GIT_EBUFS)
 		return ret;

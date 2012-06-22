@@ -55,6 +55,10 @@
 #define GIT_WIN32 1
 #endif
 
+#ifdef __amigaos4__
+#include <netinet/in.h>
+#endif
+
 /**
  * @file git2/common.h
  * @brief Git common platform definitions

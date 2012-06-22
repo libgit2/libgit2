@@ -275,6 +275,8 @@ uint32_t git_pool__system_page_size(void)
 		SYSTEM_INFO info;
 		GetSystemInfo(&info);
 		size = (uint32_t)info.dwPageSize;
+#elif defined(__amigaos4__)
+		size = (uint32_t)4096; /* 4K as there is no global value we can query */
 #else
 		size = (uint32_t)sysconf(_SC_PAGE_SIZE);
 #endif

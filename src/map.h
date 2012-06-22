@@ -23,6 +23,10 @@
 #define GIT_MAP_TYPE	0xf
 #define GIT_MAP_FIXED	0x10
 
+#ifdef __amigaos4__
+#define MAP_FAILED 0
+#endif
+
 typedef struct { /* memory mapped buffer	*/
 	void *data; /* data bytes			*/
 	size_t len; /* data length			*/
