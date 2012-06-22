@@ -26,11 +26,12 @@ void test_refs_branches_foreach__cleanup(void)
 
 static int count_branch_list_cb(const char *branch_name, git_branch_t branch_type, void *payload)
 {
-	int *count = (int *)payload;
+	int *count;
 
 	GIT_UNUSED(branch_type);
 	GIT_UNUSED(branch_name);
 
+	count = (int *)payload;
 	(*count)++;
 
 	return 0;
@@ -85,10 +86,11 @@ static void assert_branch_has_been_found(struct expectations *findings, const ch
 static int contains_branch_list_cb(const char *branch_name, git_branch_t branch_type, void *payload)
 {
 	int pos = 0;
+	struct expectations *exp;
 
 	GIT_UNUSED(branch_type);
 
-	struct expectations *exp = (struct expectations *)payload;
+	exp = (struct expectations *)payload;
 
 	while (exp[pos].branch_name)
 	{
