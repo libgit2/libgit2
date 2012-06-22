@@ -72,15 +72,7 @@ GIT_EXTERN(int) git_branch_delete(
 		git_branch_t branch_type);
 
 /**
- * Fill a list with all the branches in the Repository
- *
- * The string array will be filled with the names of the
- * matching branches; these values are owned by the user and
- * should be free'd manually when no longer needed, using
- * `git_strarray_free`.
- *
- * @param branch_names Pointer to a git_strarray structure
- * where the branch names will be stored.
+ * Loop over all the branches and issue a callback for each one.
  *
  * @param repo Repository where to find the branches.
  *
@@ -88,12 +80,21 @@ GIT_EXTERN(int) git_branch_delete(
  * listing. Valid values are GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE
  * or a combination of the two.
  *
+ * @param branch_cb Callback to invoke per found branch.
+ *
+ * @param payload Extra parameter to callback function.
+ *
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_branch_list(
-		git_strarray *branch_names,
+GIT_EXTERN(int) git_branch_foreach(
 		git_repository *repo,
-		unsigned int list_flags);
+		unsigned int list_flags,
+		int (*branch_cb)(
+			const char *branch_name,
+			git_branch_t branch_type,
+			void *payload),
+		void *payload
+);
 
 /**
  * Move/rename an existing branch reference.
