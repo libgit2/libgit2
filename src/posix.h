@@ -83,16 +83,40 @@ extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
 #	include "unix/posix.h"
 #endif
 
-#ifndef NO_READDIR_R
-#define p_readdir_r(d,e,r) readdir_r(d,e,r)
-#else
-#include <dirent.h>
+#ifdef NO_READDIR_R
+#	include <dirent.h>
 GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 {
 	GIT_UNUSED(entry);
 	*result = readdir(dirp);
 	return 0;
 }
+#else /* NO_READDIR_R */
+#	define p_readdir_r(d,e,r) readdir_r(d,e,r)
 #endif
+
+#ifdef NO_ADDRINFO
+struct addrinfo {
+	struct hostent *ai_hostent;
+	struct servent *ai_servent;
+	struct sockaddr_in ai_addr_in;
+	struct sockaddr *ai_addr;
+	size_t ai_addrlen;
+	int ai_family;
+	int ai_socktype;
+	int ai_protocol;
+	long ai_port;
+	struct addrinfo *ai_next;
+};
+
+extern int p_getaddrinfo(const char *host, const char *port,
+	struct addrinfo *hints, struct addrinfo **info);
+extern void p_freeaddrinfo(struct addrinfo *info);
+extern const char *p_gai_strerror(int ret);
+#else
+#	define p_getaddrinfo(a, b, c, d) getaddrinfo(a, b, c, d)
+#	define p_freeaddrinfo(a) freeaddrinfo(a)
+#	define p_gai_strerror(c) gai_strerror(c)
+#endif /* NO_ADDRINFO */
 
 #endif
