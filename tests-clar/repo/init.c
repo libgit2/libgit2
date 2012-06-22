@@ -170,10 +170,21 @@ static void assert_config_entry_on_init_bytype(const char *config_key, int expec
 {
 	git_config *config;
 	int current_value;
+	git_buf repo_path = GIT_BUF_INIT;
 
 	cl_set_cleanup(&cleanup_repository, "config_entry");
-	
-	cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", is_bare));
+
+	cl_git_pass(git_buf_puts(&repo_path, "config_entry/test."));
+
+	if (!is_bare)
+		cl_git_pass(git_buf_puts(&repo_path, "non."));
+
+	cl_git_pass(git_buf_puts(&repo_path, "bare.git"));
+
+	cl_git_pass(git_repository_init(&_repo, git_buf_cstr(&repo_path), is_bare));
+
+	git_buf_free(&repo_path);
+
 	git_repository_config(&config, _repo);
 
 	if (expected_value >= 0) {
@@ -223,7 +234,7 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 	int current_value;
 
 	/* Init a new repo */
-	test_repo_init__detect_ignorecase();
+	cl_git_pass(git_repository_init(&_repo, "not.overwrite.git", 1));
 
 	/* Change the "core.ignorecase" config value to something unlikely */
 	git_repository_config(&config, _repo);
@@ -232,7 +243,7 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 	git_repository_free(_repo);
 
 	/* Reinit the repository */
-	cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
+	cl_git_pass(git_repository_init(&_repo, "not.overwrite.git", 1));
 	git_repository_config(&config, _repo);
 
 	/* Ensure the "core.ignorecase" config value hasn't been updated */
@@ -254,7 +265,7 @@ void test_repo_init__reinit_overwrites_filemode(void)
 #endif
 
     /* Init a new repo */
-    cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
+    cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
 
     /* Change the "core.filemode" config value to something unlikely */
     git_repository_config(&config, _repo);
@@ -263,7 +274,7 @@ void test_repo_init__reinit_overwrites_filemode(void)
     git_repository_free(_repo);
 
     /* Reinit the repository */
-    cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
+    cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
     git_repository_config(&config, _repo);
 
     /* Ensure the "core.filemode" config value has been reset */
