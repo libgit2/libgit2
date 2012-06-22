@@ -6,6 +6,7 @@
  */
 
 #include <assert.h>
+#include <dirent.h>
 
 #include "git2/clone.h"
 #include "git2/remote.h"
@@ -85,7 +86,7 @@ static int update_head_to_new_branch(git_repository *repo, git_oid *target, cons
 
    if (!create_tracking_branch(repo, target, name)) {
       git_reference *head;
-      if (!git_repository_head(&head, repo)) {
+      if (!git_reference_lookup(&head, repo, GIT_HEAD_FILE)) {
          git_buf target = GIT_BUF_INIT;
          if (!git_buf_printf(&target, "refs/heads/%s", name) &&
              !git_reference_set_target(head, git_buf_cstr(&target))) {
@@ -101,7 +102,7 @@ static int update_head_to_new_branch(git_repository *repo, git_oid *target, cons
 
 static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
-   int retcode = 0;
+   int retcode = GIT_ERROR;
    git_remote_head *remote_head;
    git_oid oid;
    struct HeadInfo head_info;
@@ -115,16 +116,15 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
    /* Check to see if "master" matches the remote head */
    if (!git_reference_name_to_oid(&oid, repo, "refs/remotes/origin/master") &&
        !git_oid_cmp(&remote_head->oid, &oid)) {
-      update_head_to_new_branch(repo, &oid, "master");
+      retcode = update_head_to_new_branch(repo, &oid, "master");
    }
    /* Not master. Check all the other refs. */
    else if (!git_reference_foreach(repo, GIT_REF_LISTALL,
                                      reference_matches_remote_head,
                                      &head_info) &&
-            git_buf_len(&head_info.branchname) > 0 &&
-            update_head_to_new_branch(repo, &head_info.remote_head_oid,
-                                      git_buf_cstr(&head_info.branchname))) {
-      retcode = 0;
+            git_buf_len(&head_info.branchname) > 0) {
+      retcode = update_head_to_new_branch(repo, &head_info.remote_head_oid,
+                                          git_buf_cstr(&head_info.branchname));
    }
 
    git_buf_free(&head_info.branchname);
@@ -173,6 +173,50 @@ static int setup_remotes_and_fetch(git_repository *repo,
    return retcode;
 }
 
+
+static bool is_dot_or_dotdot(const char *name)
+{
+   return (name[0] == '.' &&
+           (name[1] == '\0' ||
+            (name[1] == '.' && name[2] == '\0')));
+}
+
+/* TODO: p_opendir, p_closedir */
+static bool path_is_okay(const char *path)
+{
+   DIR *dir;
+   struct dirent *e;
+   bool retval = true;
+
+   /* The path must either not exist, or be an empty directory */
+   if (!git_path_exists(path)) return true;
+
+   if (!git_path_isdir(path)) {
+      giterr_set(GITERR_INVALID,
+                 "'%s' exists and is not an empty directory", path);
+      return false;
+   }
+
+   dir = opendir(path);
+   if (!dir) {
+      giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+      return false;
+   }
+
+   while ((e = readdir(dir)) != NULL) {
+      if (!is_dot_or_dotdot(e->d_name)) {
+         giterr_set(GITERR_INVALID,
+                    "'%s' exists and is not an empty directory", path);
+         retval = false;
+         break;
+      }
+   }
+
+   closedir(dir);
+   return retval;
+}
+
+
 static int clone_internal(git_repository **out,
                           const char *origin_url,
                           const char *path,
@@ -182,8 +226,7 @@ static int clone_internal(git_repository **out,
    int retcode = GIT_ERROR;
    git_repository *repo = NULL;
 
-   if (git_path_exists(path)) {
-      giterr_set(GITERR_INVALID, "Path '%s' already exists.", path);
+   if (!path_is_okay(path)) {
       return GIT_ERROR;
    }
 

@@ -117,7 +117,28 @@ void test_clone_clone__network_bare(void)
 
 void test_clone_clone__already_exists(void)
 {
+#if 0
+   int bar;
+
+   /* Should pass with existing-but-empty dir */
    p_mkdir("./foo", GIT_DIR_MODE);
+   cl_git_pass(git_clone(&g_repo,
+                         "http://github.com/libgit2/libgit2.git",
+                         "./foo", NULL));
+   git_repository_free(g_repo); g_repo = NULL;
+   git_futils_rmdir_r("./foo", GIT_DIRREMOVAL_FILES_AND_DIRS);
+#endif
+
+   /* Should fail with a file */
+   cl_git_mkfile("./foo", "Bar!");
+   cl_git_fail(git_clone(&g_repo,
+                         "http://github.com/libgit2/libgit2.git",
+                         "./foo", NULL));
+   git_futils_rmdir_r("./foo", GIT_DIRREMOVAL_FILES_AND_DIRS);
+
+   /* Should fail with existing-and-nonempty dir */
+   p_mkdir("./foo", GIT_DIR_MODE);
+   cl_git_mkfile("./foo/bar", "Baz!");
    cl_git_fail(git_clone(&g_repo,
                          "https://github.com/libgit2/libgit2.git",
                          "./foo", NULL));
