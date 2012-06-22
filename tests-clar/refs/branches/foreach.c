@@ -28,6 +28,9 @@ static int count_branch_list_cb(const char *branch_name, git_branch_t branch_typ
 {
 	int *count = (int *)payload;
 
+	GIT_UNUSED(branch_type);
+	GIT_UNUSED(branch_name);
+
 	(*count)++;
 
 	return 0;
@@ -82,6 +85,8 @@ static void assert_branch_has_been_found(struct expectations *findings, const ch
 static int contains_branch_list_cb(const char *branch_name, git_branch_t branch_type, void *payload)
 {
 	int pos = 0;
+
+	GIT_UNUSED(branch_type);
 
 	struct expectations *exp = (struct expectations *)payload;
 
