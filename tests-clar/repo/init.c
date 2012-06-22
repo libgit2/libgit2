@@ -242,6 +242,37 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 	git_config_free(config);
 }
 
+void test_repo_init__reinit_overwrites_filemode(void)
+{
+    git_config *config;
+    int expected, current_value;
+
+#ifdef GIT_WIN32
+    expected = false;
+#else
+    expected = true;
+#endif
+
+    /* Init a new repo */
+    cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
+
+    /* Change the "core.filemode" config value to something unlikely */
+    git_repository_config(&config, _repo);
+    git_config_set_bool(config, "core.filemode", !expected);
+    git_config_free(config);
+    git_repository_free(_repo);
+
+    /* Reinit the repository */
+    cl_git_pass(git_repository_init(&_repo, "config_entry/test.git", 1));
+    git_repository_config(&config, _repo);
+
+    /* Ensure the "core.filemode" config value has been reset */
+    cl_git_pass(git_config_get_bool(&current_value, config, "core.filemode"));
+    cl_assert_equal_i(expected, current_value);
+
+    git_config_free(config);
+}
+
 void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
 {
 	assert_config_entry_on_init_bytype("core.logallrefupdates", GIT_ENOTFOUND, true);
