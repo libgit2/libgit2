@@ -91,6 +91,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 		usleep(10000);
 		printf("\rReceived %d/%d objects in %d bytes", stats.processed, stats.total, bytes);
 	} while (!data.finished);
+
 	printf("\rReceived %d/%d objects in %d bytes\n", stats.processed, stats.total, bytes);
 
 	// Disconnect the underlying connection to prevent from idling.

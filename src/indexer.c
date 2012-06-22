@@ -365,11 +365,11 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (error < 0) {
 			idx->off = entry_start;
 			error = store_delta(idx);
+
 			if (error == GIT_EBUFS)
 				return 0;
 			if (error < 0)
 				return error;
-
 			continue;
 		}
 
