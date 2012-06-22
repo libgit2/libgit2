@@ -540,7 +540,6 @@ static int push_ref(git_revwalk *walk, const char *refname, int hide)
 
 struct push_cb_data {
 	git_revwalk *walk;
-	const char *glob;
 	int hide;
 };
 
@@ -548,10 +547,7 @@ static int push_glob_cb(const char *refname, void *data_)
 {
 	struct push_cb_data *data = (struct push_cb_data *)data_;
 
-	if (!p_fnmatch(data->glob, refname, 0))
-		return push_ref(data->walk, refname, data->hide);
-
-	return 0;
+	return push_ref(data->walk, refname, data->hide);
 }
 
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
@@ -584,11 +580,10 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 		goto on_error;
 
 	data.walk = walk;
-	data.glob = git_buf_cstr(&buf);
 	data.hide = hide;
 
-	if (git_reference_foreach(
-			walk->repo, GIT_REF_LISTALL, push_glob_cb, &data) < 0)
+	if (git_reference_foreach_glob(
+		walk->repo, git_buf_cstr(&buf), GIT_REF_LISTALL, push_glob_cb, &data) < 0)
 		goto on_error;
 
 	regfree(&preg);
