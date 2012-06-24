@@ -96,6 +96,7 @@ GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **res
 #endif
 
 #ifdef NO_ADDRINFO
+#	include <netdb.h>
 struct addrinfo {
 	struct hostent *ai_hostent;
 	struct servent *ai_servent;
