@@ -17,6 +17,8 @@
 #include "git2/branch.h"
 #include "git2/config.h"
 #include "git2/checkout.h"
+#include "git2/commit.h"
+#include "git2/tree.h"
 
 #include "common.h"
 #include "remote.h"
@@ -31,7 +33,7 @@ struct HeadInfo {
    git_buf branchname;
 };
 
-static int create_tracking_branch(git_repository *repo, git_oid *target, const char *name)
+static int create_tracking_branch(git_repository *repo, const git_oid *target, const char *name)
 {
    git_object *head_obj = NULL;
    git_oid branch_oid;
@@ -83,19 +85,35 @@ static int reference_matches_remote_head(const char *head_name, void *payload)
    return 0;
 }
 
-static int update_head_to_new_branch(git_repository *repo, git_oid *target, const char *name)
+static int update_head_to_new_branch(git_repository *repo, const git_oid *target, const char *name)
 {
    int retcode = GIT_ERROR;
 
    if (!create_tracking_branch(repo, target, name)) {
       git_reference *head;
       if (!git_reference_lookup(&head, repo, GIT_HEAD_FILE)) {
-         git_buf target = GIT_BUF_INIT;
-         if (!git_buf_printf(&target, "refs/heads/%s", name) &&
-             !git_reference_set_target(head, git_buf_cstr(&target))) {
-            retcode = 0;
+         git_buf targetbuf = GIT_BUF_INIT;
+         if (!git_buf_printf(&targetbuf, "refs/heads/%s", name) &&
+             !git_reference_set_target(head, git_buf_cstr(&targetbuf))) {
+            /* Read the tree into the index */
+            git_commit *commit;
+            if (!git_commit_lookup(&commit, repo, target)) {
+               git_tree *tree;
+               if (!git_commit_tree(&tree, commit)) {
+                  git_index *index;
+                  if (!git_repository_index(&index, repo)) {
+                     if (!git_index_read_tree(index, tree)) {
+                        git_index_write(index);
+                        retcode = 0;
+                     }
+                     git_index_free(index);
+                  }
+                  git_tree_free(tree);
+               }
+               git_commit_free(commit);
+            }
          }
-         git_buf_free(&target);
+         git_buf_free(&targetbuf);
          git_reference_free(head);
       }
    }
@@ -144,8 +162,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 
 static int setup_remotes_and_fetch(git_repository *repo,
                                    const char *origin_url,
-                                   git_indexer_stats *stats,
-                                   int update_head)
+                                   git_indexer_stats *stats)
 {
    int retcode = GIT_ERROR;
    git_remote *origin = NULL;
@@ -162,8 +179,7 @@ static int setup_remotes_and_fetch(git_repository *repo,
             /* Create "origin/foo" branches for all remote branches */
             if (!git_remote_update_tips(origin, NULL)) {
                /* Point HEAD to the same ref as the remote's head */
-               if (!update_head) retcode = 0;
-               else if (!update_head_to_remote(repo, origin)) {
+               if (!update_head_to_remote(repo, origin)) {
                   retcode = 0;
                }
             }
@@ -252,7 +268,7 @@ static int clone_internal(git_repository **out,
    }
 
    if (!(retcode = git_repository_init(&repo, path, is_bare))) {
-      if ((retcode = setup_remotes_and_fetch(repo, origin_url, stats, !is_bare)) < 0) {
+      if ((retcode = setup_remotes_and_fetch(repo, origin_url, stats)) < 0) {
          /* Failed to fetch; clean up */
          git_repository_free(repo);
          git_futils_rmdir_r(path, GIT_DIRREMOVAL_FILES_AND_DIRS);
