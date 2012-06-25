@@ -313,8 +313,6 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		mwf = &idx->pack->mwf;
 		if (git_mwindow_file_register(&idx->pack->mwf) < 0)
 			return -1;
-
-		return 0;
 	}
 
 	if (!idx->parsed_header) {
