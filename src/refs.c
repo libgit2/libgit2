@@ -1764,3 +1764,40 @@ int git_reference__update(git_repository *repo, const git_oid *oid, const char *
 	git_reference_free(ref);
 	return res;
 }
+
+struct glob_cb_data {
+	const char *glob;
+	int (*callback)(const char *, void *);
+	void *payload;
+};
+
+static int fromglob_cb(const char *reference_name, void *payload)
+{
+	struct glob_cb_data *data = (struct glob_cb_data *)payload;
+
+	if (!p_fnmatch(data->glob, reference_name, 0))
+		return data->callback(reference_name, data->payload);
+
+	return 0;
+}
+
+int git_reference_foreach_glob(
+	git_repository *repo,
+	const char *glob,
+	unsigned int list_flags,
+	int (*callback)(
+		const char *reference_name,
+		void *payload),
+	void *payload)
+{
+	struct glob_cb_data data;
+
+	assert(repo && glob && callback);
+
+	data.glob = glob;
+	data.callback = callback;
+	data.payload = payload;
+
+	return git_reference_foreach(
+			repo, list_flags, fromglob_cb, &data);
+}
