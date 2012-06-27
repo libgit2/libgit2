@@ -533,16 +533,24 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
 
 static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo, const char *path)
 {
-	char *str = git__strdup(path);
-	char *tok;
-	void *alloc = str;
+	char *str, *tok;
+	void *alloc;
 	git_tree *tree2 = tree;
 	const git_tree_entry *entry = NULL;
+
+	if (*path == '\0') {
+		git_oid_cpy(out, git_object_id((git_object *)tree));
+		return 0;
+	}
+
+	alloc = str = git__strdup(path);
 
 	while ((tok = git__strtok(&str, "/\\")) != NULL) {
 		entry = git_tree_entry_byname(tree2, tok);
 		if (tree2 != tree) git_tree_free(tree2);
 		if (git_tree_entry__is_tree(entry)) {
+			if (str == '\0')
+				break;
 			if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
 				git__free(alloc);
 				return GIT_ERROR;
@@ -576,7 +584,7 @@ static int handle_colon_syntax(git_object **out,
 	}
 	tree = (git_tree*)obj;
 
-	/* Find the blob at the given path. */
+	/* Find the blob or tree at the given path. */
 	error = oid_for_tree_path(&oid, tree, repo, path);
 	git_tree_free(tree);
 

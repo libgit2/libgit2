@@ -166,8 +166,13 @@ void test_refs_revparse__colon(void)
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/not found in any commit"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "master:"));
 
+	/* Trees */
+	test_object("master:", "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	test_object("subtrees:", "ae90f12eea699729ed24555e40b9fd669da12a12");
+	test_object("subtrees:ab", "f1425cef211cc08caa31e7b545ffb232acb098c3");
+
+	/* Blobs */
 	test_object("subtrees:ab/4.txt", "d6c93164c249c8000205dd4ec5cbca1b516d487f");
 	test_object("subtrees:ab/de/fgh/1.txt", "1f67fc4386b2d171e0d21be1c447e12660561f9b");
 	test_object("master:README", "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
