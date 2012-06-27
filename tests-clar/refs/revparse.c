@@ -164,8 +164,12 @@ void test_refs_revparse__date(void)
 void test_refs_revparse__colon(void)
 {
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/"));
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/not found in any commit"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, ":/not found in any commit"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/42.txt"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/4.txt/nope"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:nope"));
 
 	/* Trees */
 	test_object("master:", "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");

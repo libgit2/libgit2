@@ -537,6 +537,7 @@ static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo,
 	void *alloc;
 	git_tree *tree2 = tree;
 	const git_tree_entry *entry = NULL;
+	git_otype type;
 
 	if (*path == '\0') {
 		git_oid_cpy(out, git_object_id((git_object *)tree));
@@ -548,20 +549,40 @@ static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo,
 	while ((tok = git__strtok(&str, "/\\")) != NULL) {
 		entry = git_tree_entry_byname(tree2, tok);
 		if (tree2 != tree) git_tree_free(tree2);
-		if (git_tree_entry__is_tree(entry)) {
-			if (str == '\0')
+
+		if (entry == NULL)
+			break;
+
+		type = git_tree_entry_type(entry);
+
+		switch (type) {
+		case GIT_OBJ_TREE:
+			if (*str == '\0')
 				break;
 			if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
 				git__free(alloc);
 				return GIT_ERROR;
 			}
+			break;
+		case GIT_OBJ_BLOB:
+			if (*str != '\0') {
+				entry = NULL;
+				goto out;
+			}
+			break;
+		default:
+			/* TODO: support submodules? */
+			giterr_set(GITERR_INVALID, "Unimplemented");
+			git__free(alloc);
+			return GIT_ERROR;
 		}
 	}
 
+out:
 	if (!entry) {
 		giterr_set(GITERR_INVALID, "Invalid tree path '%s'", path);
 		git__free(alloc);
-		return GIT_ERROR;
+		return GIT_ENOTFOUND;
 	}
 
 	git_oid_cpy(out, git_tree_entry_id(entry));
@@ -631,6 +652,7 @@ static int revparse_global_grep(git_object **out, git_repository *repo, const ch
 			}
 			if (!resultobj) {
 				giterr_set(GITERR_REFERENCE, "Couldn't find a match for %s", pattern);
+				retcode = GIT_ENOTFOUND;
 				git_object_free(walkobj);
 			} else {
 				*out = resultobj;
