@@ -118,7 +118,8 @@ int git_fetch__download_pack(
 	int recvd;
 	char buff[1024];
 	gitno_buffer buf;
-	git_indexer_stream *idx;
+	git_buf path = GIT_BUF_INIT;
+	git_indexer_stream *idx = NULL;
 
 	gitno_buffer_setup(t, &buf, buff, sizeof(buff));
 
@@ -127,8 +128,11 @@ int git_fetch__download_pack(
 		return -1;
 	}
 
-	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
+	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
 		return -1;
+
+	if (git_indexer_stream_new(&idx, git_buf_cstr(&path)) < 0)
+		goto on_error;
 
 	memset(stats, 0, sizeof(git_indexer_stats));
 	if (git_indexer_stream_add(idx, buffered, buffered_size, stats) < 0)
@@ -154,6 +158,7 @@ int git_fetch__download_pack(
 	return 0;
 
 on_error:
+	git_buf_free(&path);
 	git_indexer_stream_free(idx);
 	return -1;
 }
