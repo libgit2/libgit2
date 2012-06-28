@@ -732,6 +732,10 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 				if (retcode < 0) {
 					next_state = REVPARSE_STATE_DONE;
 				}
+			} else if (*spec_cur == ':') {
+				retcode = handle_caret_syntax(&next_obj, repo, cur_obj, git_buf_cstr(&stepbuffer));
+				git_buf_clear(&stepbuffer);
+				next_state = !retcode ? REVPARSE_STATE_COLON : REVPARSE_STATE_DONE;
 			} else {
 				git_buf_putc(&stepbuffer, *spec_cur);
 			}

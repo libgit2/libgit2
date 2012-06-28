@@ -170,6 +170,7 @@ void test_refs_revparse__colon(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/42.txt"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/4.txt/nope"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:nope"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "test/master^1:branch_file.txt"));
 
 	/* Trees */
 	test_object("master:", "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
@@ -184,4 +185,5 @@ void test_refs_revparse__colon(void)
 	test_object(":/Merge", "a4a7dce85cf63874e984719f4fdd239f5145052f");
 	test_object(":/one", "c47800c7266a2be04c571c04d5a6614691ea99bd");
 	test_object(":/packed commit t", "41bc8c69075bbdb46c5c6f0566cc8cc5b46e8bd9");
+	test_object("test/master^2:branch_file.txt", "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
 }
