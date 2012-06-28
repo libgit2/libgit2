@@ -142,7 +142,7 @@ int git_indexer_stream_new(git_indexer_stream **out, const char *prefix)
 {
 	git_indexer_stream *idx;
 	git_buf path = GIT_BUF_INIT;
-	static const char suff[] = "/objects/pack/pack-received";
+	static const char suff[] = "/pack";
 	int error;
 
 	idx = git__calloc(1, sizeof(git_indexer_stream));
