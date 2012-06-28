@@ -535,6 +535,7 @@ void packfile_free(struct git_pack_file *p)
 
 	/* clear_delta_base_cache(); */
 	git_mwindow_free_all(&p->mwf);
+	git_mwindow_file_deregister(&p->mwf);
 
 	if (p->mwf.fd != -1)
 		p_close(p->mwf.fd);

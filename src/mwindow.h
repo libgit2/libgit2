@@ -40,6 +40,7 @@ void git_mwindow_free_all(git_mwindow_file *mwf);
 unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, git_off_t offset, size_t extra, unsigned int *left);
 void git_mwindow_scan_lru(git_mwindow_file *mwf, git_mwindow **lru_w, git_mwindow **lru_l);
 int git_mwindow_file_register(git_mwindow_file *mwf);
+int git_mwindow_file_deregister(git_mwindow_file *mwf);
 void git_mwindow_close(git_mwindow **w_cursor);
 
 #endif

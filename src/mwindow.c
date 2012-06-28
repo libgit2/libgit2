@@ -261,6 +261,23 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	return git_vector_insert(&ctl->windowfiles, mwf);
 }
 
+int git_mwindow_file_deregister(git_mwindow_file *mwf)
+{
+	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	git_mwindow_file *cur;
+	unsigned int i;
+
+	git_vector_foreach(&ctl->windowfiles, i, cur) {
+		if (cur == mwf) {
+			git_vector_remove(&ctl->windowfiles, i);
+			return 0;
+		}
+	}
+
+	giterr_set(GITERR_ODB, "Failed to find the memory window file to deregister");
+	return -1;
+}
+
 void git_mwindow_close(git_mwindow **window)
 {
 	git_mwindow *w = *window;
