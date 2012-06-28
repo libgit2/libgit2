@@ -25,7 +25,7 @@ int index_pack(git_repository *repo, int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	if (git_indexer_stream_new(&idx, ".git") < 0) {
+	if (git_indexer_stream_new(&idx, ".") < 0) {
 		puts("bad idx");
 		return -1;
 	}
