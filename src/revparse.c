@@ -485,7 +485,7 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
 	}
 
 	if (git_commit_parent(&commit, commit, n-1) < 0) {
-		return GIT_ERROR;
+		return GIT_ENOTFOUND;
 	}
 
 	*out = (git_object*)commit;

@@ -85,6 +85,8 @@ void test_refs_revparse__nth_parent(void)
 	test_object("be3563a^1^1", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045");
 	test_object("be3563a^2^1", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 	test_object("be3563a^0", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "be3563a^42"));
 }
 
 void test_refs_revparse__not_tag(void)
