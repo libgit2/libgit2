@@ -29,9 +29,10 @@ static void set_invalid_syntax_err(const char *spec)
 static int revparse_lookup_fully_qualifed_ref(git_object **out, git_repository *repo, const char*spec)
 {
 	git_oid resolved;
+	int error;
 
-	if (git_reference_name_to_oid(&resolved, repo, spec) < 0)
-		return GIT_ERROR;
+	if ((error = git_reference_name_to_oid(&resolved, repo, spec)) < 0)
+		return error;
 
 	return git_object_lookup(out, repo, &resolved, GIT_OBJ_ANY);
 }
@@ -107,7 +108,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 	git_buf_free(&refnamebuf);
 
 	giterr_set(GITERR_REFERENCE, "Refspec '%s' not found.", spec);
-	return GIT_ERROR;
+	return GIT_ENOTFOUND;
 }
 
 
@@ -244,7 +245,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 						if (numentries < n) {
 							giterr_set(GITERR_REFERENCE, "Reflog for '%s' has only %d entries, asked for %d",
 								git_buf_cstr(&buf), numentries, n);
-							retcode = GIT_ERROR;
+							retcode = GIT_ENOTFOUND;
 						} else {
 							const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, n);
 							const git_oid *oid = git_reflog_entry_oidold(entry);

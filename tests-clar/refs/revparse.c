@@ -38,10 +38,9 @@ void test_refs_revparse__cleanup(void)
 	cl_setenv("TZ", g_orig_tz);
 }
 
-
 void test_refs_revparse__nonexistant_object(void)
 {
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "this doesn't exist"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist^1"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist~2"));
 }
@@ -128,6 +127,9 @@ void test_refs_revparse__reflog(void)
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-xyz}"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-0}"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{1000}"));
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "nope@{0}"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "master@{31415}"));
 
 	test_object("@{-2}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("@{-1}", "a4a7dce85cf63874e984719f4fdd239f5145052f");
