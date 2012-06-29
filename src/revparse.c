@@ -245,7 +245,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 						if (numentries < n) {
 							giterr_set(GITERR_REFERENCE, "Reflog for '%s' has only %d entries, asked for %d",
 								git_buf_cstr(&buf), numentries, n);
-							retcode = GIT_ERROR;
+							retcode = GIT_ENOTFOUND;
 						} else {
 							const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, n);
 							const git_oid *oid = git_reflog_entry_oidold(entry);
