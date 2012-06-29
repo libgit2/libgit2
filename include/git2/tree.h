@@ -76,7 +76,7 @@ GIT_INLINE(void) git_tree_free(git_tree *tree)
  *
  * IMPORTANT: This function is only needed for tree
  * entries owned by the user, such as the ones returned
- * by `git_tree_entry_copy`.
+ * by `git_tree_entry_dup`.
  *
  * @param entry The entry to free
  */
@@ -92,7 +92,7 @@ GIT_EXTERN(void) git_tree_entry_free(git_tree_entry *entry);
  * @param entry A tree entry to duplicate
  * @return a copy of the original entry
  */
-GIT_EXTERN(git_tree_entry *) git_tree_entry_copy(const git_tree_entry *entry);
+GIT_EXTERN(git_tree_entry *) git_tree_entry_dup(const git_tree_entry *entry);
 
 /**
  * Get the id of a tree.

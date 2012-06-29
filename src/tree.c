@@ -143,7 +143,7 @@ void git_tree_entry_free(git_tree_entry *entry)
 	git__free(entry);
 }
 
-git_tree_entry *git_tree_entry_copy(const git_tree_entry *entry)
+git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
 {
 	size_t total_size;
 	git_tree_entry *copy;
@@ -739,7 +739,7 @@ int git_tree_entry_bypath(
 	case '\0':
 		/* If there are no more components in the path, return
 		 * this entry */
-		*entry_out = git_tree_entry_copy(entry);
+		*entry_out = git_tree_entry_dup(entry);
 		return 0;
 	}
 
