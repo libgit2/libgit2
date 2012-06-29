@@ -20,7 +20,6 @@ void test_object_tree_frompath__cleanup(void)
 {
 	git_tree_free(tree);
 	git_repository_free(repo);
-	cl_fixture_cleanup("testrepo.git");
 }
 
 static void assert_tree_from_path(
