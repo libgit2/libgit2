@@ -107,7 +107,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 	git_buf_free(&refnamebuf);
 
 	giterr_set(GITERR_REFERENCE, "Refspec '%s' not found.", spec);
-	return GIT_ERROR;
+	return GIT_ENOTFOUND;
 }
 
 

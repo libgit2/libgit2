@@ -38,10 +38,9 @@ void test_refs_revparse__cleanup(void)
 	cl_setenv("TZ", g_orig_tz);
 }
 
-
 void test_refs_revparse__nonexistant_object(void)
 {
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "this doesn't exist"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist^1"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist~2"));
 }
