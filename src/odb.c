@@ -107,6 +107,9 @@ git_otype git_odb_object_type(git_odb_object *object)
 
 void git_odb_object_free(git_odb_object *object)
 {
+	if (object == NULL)
+		return;
+
 	git_cached_obj_decref((git_cached_obj *)object, &free_odb_object);
 }
 
