@@ -1,6 +1,9 @@
 #include "clar_libgit2.h"
 
 #include "git2/revparse.h"
+#include "buffer.h"
+#include "refs.h"
+#include "path.h"
 
 static git_repository *g_repo;
 static git_object *g_obj;
@@ -9,13 +12,13 @@ static char g_orig_tz[16] = {0};
 
 
 /* Helpers */
-static void test_object(const char *spec, const char *expected_oid)
+static void test_object_inrepo(const char *spec, const char *expected_oid, git_repository *repo)
 {
 	char objstr[64] = {0};
 	git_object *obj = NULL;
 	int error;
 
-	error = git_revparse_single(&obj, g_repo, spec);
+	error = git_revparse_single(&obj, repo, spec);
 
 	if (expected_oid != NULL) {
 		cl_assert_equal_i(0, error);
@@ -25,6 +28,11 @@ static void test_object(const char *spec, const char *expected_oid)
 		cl_assert_equal_i(GIT_ENOTFOUND, error);
 
 	git_object_free(obj);
+}
+
+static void test_object(const char *spec, const char *expected_oid)
+{
+	test_object_inrepo(spec, expected_oid, g_repo);
 }
 
 void test_refs_revparse__initialize(void)
@@ -147,6 +155,53 @@ void test_refs_revparse__reflog(void)
 	test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 	test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 	test_object("master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+}
+
+static void create_fake_stash_reference_and_reflog(git_repository *repo)
+{
+	git_reference *master;
+	git_buf log_path = GIT_BUF_INIT;
+
+	git_buf_joinpath(&log_path, git_repository_path(repo), "logs/refs/fakestash");
+
+	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&log_path)));
+
+	cl_git_pass(git_reference_lookup(&master, repo, "refs/heads/master"));
+	cl_git_pass(git_reference_rename(master, "refs/fakestash", 0));
+
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&log_path)));
+
+	git_buf_free(&log_path);
+	git_reference_free(master);
+}
+
+void test_refs_revparse__reflog_of_a_ref_under_refs(void)
+{
+	git_repository *repo = cl_git_sandbox_init("testrepo.git");
+
+	test_object_inrepo("refs/fakestash", NULL, repo);
+
+	create_fake_stash_reference_and_reflog(repo);
+
+	/*
+	 * $ git reflog -1 refs/fakestash
+	 * a65fedf refs/fakestash@{0}: commit: checking in
+	 *
+	 * $ git reflog -1 refs/fakestash@{0}
+	 * a65fedf refs/fakestash@{0}: commit: checking in
+	 *
+	 * $ git reflog -1 fakestash
+	 * a65fedf fakestash@{0}: commit: checking in
+	 *
+	 * $ git reflog -1 fakestash@{0}
+	 * a65fedf fakestash@{0}: commit: checking in
+	 */
+	test_object_inrepo("refs/fakestash", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+	test_object_inrepo("refs/fakestash@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+	test_object_inrepo("fakestash", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+	test_object_inrepo("fakestash@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+
+	cl_git_sandbox_cleanup();
 }
 
 void test_refs_revparse__revwalk(void)
