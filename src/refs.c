@@ -1406,6 +1406,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	/*
 	 * Rename the reflog file.
 	 */
+	git_buf_clear(&aux_path);
 	if (git_buf_join_n(&aux_path, '/', 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name) < 0)
 		goto cleanup;
 
