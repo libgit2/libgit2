@@ -12,15 +12,20 @@ static char g_orig_tz[16] = {0};
 static void test_object(const char *spec, const char *expected_oid)
 {
 	char objstr[64] = {0};
+	git_object *obj = NULL;
+	int error;
 
-	cl_git_pass(git_revparse_single(&g_obj, g_repo, spec));
-	git_oid_fmt(objstr, git_object_id(g_obj));
-	cl_assert_equal_s(objstr, expected_oid);
+	error = git_revparse_single(&obj, g_repo, spec);
 
-	git_object_free(g_obj);
-	g_obj = NULL;
+	if (expected_oid != NULL) {
+		cl_assert_equal_i(0, error);
+		git_oid_fmt(objstr, git_object_id(obj));
+		cl_assert_equal_s(objstr, expected_oid);
+	} else
+		cl_assert_equal_i(GIT_ENOTFOUND, error);
+
+	git_object_free(obj);
 }
-
 
 void test_refs_revparse__initialize(void)
 {
@@ -41,7 +46,8 @@ void test_refs_revparse__cleanup(void)
 
 void test_refs_revparse__nonexistant_object(void)
 {
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "this doesn't exist"));
+	test_object("this doesn't exist", NULL);
+
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist^1"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist~2"));
 }
@@ -86,7 +92,7 @@ void test_refs_revparse__nth_parent(void)
 	test_object("be3563a^2^1", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 	test_object("be3563a^0", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "be3563a^42"));
+	test_object("be3563a^42", NULL);
 }
 
 void test_refs_revparse__not_tag(void)
@@ -129,8 +135,8 @@ void test_refs_revparse__reflog(void)
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-0}"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{1000}"));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "nope@{0}"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "master@{31415}"));
+	test_object("nope@{0}", NULL);
+	test_object("master@{31415}", NULL);
 
 	test_object("@{-2}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("@{-1}", "a4a7dce85cf63874e984719f4fdd239f5145052f");
@@ -171,7 +177,7 @@ void test_refs_revparse__date(void)
 	 * a65fedf HEAD@{1335806603 -0900}: commit:
 	 * be3563a HEAD@{1335806563 -0700}: clone: from /Users/ben/src/libgit2/tests/resour
 	 */
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "HEAD@{10 years ago}"));
+	test_object("HEAD@{10 years ago}", NULL);
 
 	test_object("HEAD@{1 second}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD@{1 second ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
@@ -192,8 +198,8 @@ void test_refs_revparse__date(void)
 	 * $ git reflog -1 "master@{2012-04-30 17:22:42 +0000}"
 	 * warning: Log for 'master' only goes back to Mon, 30 Apr 2012 09:22:43 -0800.
 	 */
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "master@{2012-04-30 17:22:42 +0000}"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "master@{2012-04-30 09:22:42 -0800}"));
+	test_object("master@{2012-04-30 17:22:42 +0000}", NULL);
+	test_object("master@{2012-04-30 09:22:42 -0800}", NULL);
 
 	/*
 	 * $ git reflog -1 "master@{2012-04-30 17:22:43 +0000}"
@@ -230,11 +236,11 @@ void test_refs_revparse__colon(void)
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, ":/not found in any commit"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/42.txt"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/4.txt/nope"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:nope"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "test/master^1:branch_file.txt"));
+	test_object(":/not found in any commit", NULL);
+	test_object("subtrees:ab/42.txt", NULL);
+	test_object("subtrees:ab/4.txt/nope", NULL);
+	test_object("subtrees:nope", NULL);
+	test_object("test/master^1:branch_file.txt", NULL);
 
 	/* Trees */
 	test_object("master:", "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
