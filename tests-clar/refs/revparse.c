@@ -28,12 +28,13 @@ void test_refs_revparse__initialize(void)
 	if (tz)
 		strcpy(g_orig_tz, tz);
 	cl_setenv("TZ", "UTC");
-	g_repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 }
 
 void test_refs_revparse__cleanup(void)
 {
-	cl_git_sandbox_cleanup();
+	git_repository_free(g_repo);
 	g_obj = NULL;
 	cl_setenv("TZ", g_orig_tz);
 }
