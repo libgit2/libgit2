@@ -209,13 +209,6 @@ GIT_INLINE(bool) git__isspace(int c)
     return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
 }
 
-GIT_INLINE(int) git__time_cmp(const git_time *a, const git_time *b)
-{
-   /* Adjust for time zones. Times are in seconds, offsets are in minutes. */
-   git_time_t adjusted_a = a->time + ((b->offset - a->offset) * 60);
-   return (int)(adjusted_a - b->time);
-}
-
 GIT_INLINE(bool) git__iswildcard(int c)
 {
 	return (c == '*' || c == '?' || c == '[');

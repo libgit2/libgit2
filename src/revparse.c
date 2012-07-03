@@ -267,31 +267,18 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 					int numentries = git_reflog_entrycount(reflog);
 					int i;
 
-					/* TODO: clunky. Factor "now" into a utility */
-					git_signature *sig;
-					git_time as_of;
-
-					git_signature_now(&sig, "blah", "blah");
-					as_of = sig->when;
-					git_signature_free(sig);
-
-					as_of.time = (timestamp > 0)
-						? timestamp
-						: sig->when.time + timestamp;
-
-					for (i=numentries-1; i>0; i--) {
+					for (i = numentries - 1; i >= 0; i--) {
 						const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, i);
 						git_time commit_time = git_reflog_entry_committer(entry)->when;
-						if (git__time_cmp(&commit_time, &as_of) <= 0 ) {
+						if (commit_time.time - timestamp <= 0) {
 							retcode = git_object_lookup(out, repo, git_reflog_entry_oidnew(entry), GIT_OBJ_ANY);
 							break;
 						}
 					}
 
-					if (!i) {
-						/* Didn't find a match. Use the oldest revision in the reflog. */
-						const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, 0);
-						retcode = git_object_lookup(out, repo, git_reflog_entry_oidnew(entry), GIT_OBJ_ANY);
+					if (i ==  -1) {
+						/* Didn't find a match */
+						retcode = GIT_ENOTFOUND;
 					}
 
 					git_reflog_free(reflog);
