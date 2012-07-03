@@ -234,6 +234,7 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 	int current_value;
 
 	/* Init a new repo */
+	cl_set_cleanup(&cleanup_repository, "not.overwrite.git");
 	cl_git_pass(git_repository_init(&_repo, "not.overwrite.git", 1));
 
 	/* Change the "core.ignorecase" config value to something unlikely */
@@ -241,6 +242,7 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 	git_config_set_int32(config, "core.ignorecase", 42);
 	git_config_free(config);
 	git_repository_free(_repo);
+	_repo = NULL;
 
 	/* Reinit the repository */
 	cl_git_pass(git_repository_init(&_repo, "not.overwrite.git", 1));
@@ -265,13 +267,16 @@ void test_repo_init__reinit_overwrites_filemode(void)
 #endif
 
     /* Init a new repo */
+    cl_set_cleanup(&cleanup_repository, "overwrite.git");
     cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
+
 
     /* Change the "core.filemode" config value to something unlikely */
     git_repository_config(&config, _repo);
     git_config_set_bool(config, "core.filemode", !expected);
     git_config_free(config);
     git_repository_free(_repo);
+    _repo = NULL;
 
     /* Reinit the repository */
     cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
