@@ -1409,8 +1409,6 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	if ((git_reference_has_log(ref)) && (git_reflog_rename(ref, new_name) < 0))
 		goto cleanup;
 
-	giterr_clear();
-
 	/*
 	 * Change the name of the reference given by the user.
 	 */
