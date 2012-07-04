@@ -204,6 +204,11 @@ GIT_INLINE(bool) git__isalpha(int c)
     return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
 }
 
+GIT_INLINE(bool) git__isdigit(int c)
+{
+    return (c >= '0' && c <= '9');
+}
+
 GIT_INLINE(bool) git__isspace(int c)
 {
     return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
