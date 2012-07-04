@@ -53,6 +53,8 @@ GIT_EXTERN(int) git_reflog_write(git_reference *ref, const git_oid *oid_old, con
 /**
  * Rename the reflog for the given reference
  *
+ * The reflog to be renamed is expected to already exist
+ *
  * @param ref the reference
  * @param new_name the new name of the reference
  * @return 0 or an error code

@@ -1404,18 +1404,12 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	}
 
 	/*
-	 * Rename the reflog file.
+	 * Rename the reflog file, if it exists.
 	 */
-	git_buf_clear(&aux_path);
-	if (git_buf_join_n(&aux_path, '/', 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name) < 0)
+	if ((git_reference_has_log(ref)) && (git_reflog_rename(ref, new_name) < 0))
 		goto cleanup;
 
-	if (git_path_exists(aux_path.ptr) == true) {
-		if (git_reflog_rename(ref, new_name) < 0)
-			goto cleanup;
-	} else {
-		giterr_clear();
-	}
+	giterr_clear();
 
 	/*
 	 * Change the name of the reference given by the user.
