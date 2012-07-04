@@ -115,10 +115,11 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 
 static int all_chars_are_digits(const char *str, size_t len)
 {
-	size_t i=0;
-	for (i=0; i<len; i++) {
-		if (str[i] < '0' || str[i] > '9') return 0;
-	}
+	size_t i = 0;
+
+	for (i = 0; i < len; i++)
+		if (!git__isdigit(str[i])) return 0;
+
 	return 1;
 }
 
