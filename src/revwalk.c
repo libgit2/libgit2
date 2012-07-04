@@ -188,7 +188,7 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 	const size_t parent_len = strlen("parent ") + GIT_OID_HEXSZ + 1;
 	unsigned char *buffer = raw->data;
 	unsigned char *buffer_end = buffer + raw->len;
-	unsigned char *parents_start;
+	unsigned char *parents_start, *committer_start;
 	int i, parents = 0;
 	int commit_time;
 
@@ -219,17 +219,34 @@ static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawo
 
 	commit->out_degree = (unsigned short)parents;
 
+	if ((committer_start = buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
+		return commit_error(commit, "object is corrupted");
+
+	buffer++;
+
 	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
 		return commit_error(commit, "object is corrupted");
 
-	if ((buffer = memchr(buffer, '<', buffer_end - buffer)) == NULL ||
-		(buffer = memchr(buffer, '>', buffer_end - buffer)) == NULL)
-		return commit_error(commit, "malformed author information");
+	/* Skip trailing spaces */
+	while (buffer > committer_start && git__isspace(*buffer))
+		buffer--;
 
-	while (*buffer == '>' || git__isspace(*buffer))
-		buffer++;
+	/* Seek for the begining of the pack of digits */
+	while (buffer > committer_start && git__isdigit(*buffer))
+		buffer--;
 
-	if (git__strtol32(&commit_time, (char *)buffer, NULL, 10) < 0)
+	/* Skip potential timezone offset */
+	if ((buffer > committer_start) && (*buffer == '+' || *buffer == '-')) {
+		buffer--;
+
+		while (buffer > committer_start && git__isspace(*buffer))
+			buffer--;
+
+		while (buffer > committer_start && git__isdigit(*buffer))
+			buffer--;
+	}
+
+	if ((buffer == committer_start) || (git__strtol32(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
 		return commit_error(commit, "cannot parse commit time");
 
 	commit->time = (time_t)commit_time;
