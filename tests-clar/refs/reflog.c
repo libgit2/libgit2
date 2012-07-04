@@ -145,3 +145,20 @@ void test_refs_reflog__renaming_the_reference_moves_the_reflog(void)
 	git_buf_free(&moved_log_path);
 	git_buf_free(&master_log_path);
 }
+static void assert_has_reflog(bool expected_result, const char *name)
+{
+	git_reference *ref;
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, name));
+
+	cl_assert_equal_i(expected_result, git_reference_has_log(ref));
+
+	git_reference_free(ref);
+}
+
+void test_refs_reflog__reference_has_reflog(void)
+{
+	assert_has_reflog(true, "HEAD");
+	assert_has_reflog(true, "refs/heads/master");
+	assert_has_reflog(false, "refs/heads/subtrees");
+}
