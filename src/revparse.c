@@ -21,9 +21,10 @@ typedef enum {
 	REVPARSE_STATE_DONE,
 } revparse_state;
 
-static void set_invalid_syntax_err(const char *spec)
+static int revspec_error(const char *revspec)
 {
-	giterr_set(GITERR_INVALID, "Refspec '%s' is not valid.", spec);
+	giterr_set(GITERR_INVALID, "Failed to parse revision specifier - Invalid pattern '%s'", revspec);
+	return -1;
 }
 
 static int revparse_lookup_fully_qualifed_ref(git_object **out, git_repository *repo, const char*spec)
@@ -154,21 +155,19 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 	size_t reflogspeclen = strlen(reflogspec);
 
 	if (git__prefixcmp(reflogspec, "@{") != 0 ||
-		git__suffixcmp(reflogspec, "}") != 0) {
-			giterr_set(GITERR_INVALID, "Bad reflogspec '%s'", reflogspec);
-			return GIT_ERROR;
-	}
+		git__suffixcmp(reflogspec, "}") != 0)
+		return revspec_error(reflogspec);
 
 	/* "@{-N}" form means walk back N checkouts. That means the HEAD log. */
-	if (refspeclen == 0 && !git__prefixcmp(reflogspec, "@{-")) {
+	if (!git__prefixcmp(reflogspec, "@{-")) {
 		regex_t regex;
 		int regex_error;
 
-		if (git__strtol32(&n, reflogspec+3, NULL, 0) < 0 ||
-			n < 1) {
-				giterr_set(GITERR_INVALID, "Invalid reflogspec %s", reflogspec);
-				return GIT_ERROR;
-		}
+		if (refspeclen > 0)
+			return revspec_error(reflogspec);
+
+		if (git__strtol32(&n, reflogspec+3, NULL, 0) < 0 ||	n < 1)
+			return revspec_error(reflogspec);
 
 		if (!git_reference_lookup(&ref, repo, "HEAD")) {
 			if (!git_reflog_read(&reflog, ref)) {
@@ -373,10 +372,8 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
 	int n;
 
 	if (*movement == '{') {
-		if (movement[movementlen-1] != '}') {
-			set_invalid_syntax_err(movement);
-			return GIT_ERROR;
-		}
+		if (movement[movementlen-1] != '}')
+			return revspec_error(movement);
 
 		/* {} -> Dereference until we reach an object that isn't a tag. */
 		if (movementlen == 2) {

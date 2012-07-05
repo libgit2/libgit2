@@ -133,6 +133,7 @@ void test_refs_revparse__reflog(void)
 {
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-xyz}"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-0}"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "master@{-2}"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{1000}"));
 
 	test_object("nope@{0}", NULL);
