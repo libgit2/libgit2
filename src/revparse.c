@@ -178,6 +178,8 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 				} else {
 					regmatch_t regexmatches[2];
 
+					retcode = GIT_ENOTFOUND;
+
 					refloglen = git_reflog_entrycount(reflog);
 					for (i=refloglen-1; i >= 0; i--) {
 						const char *msg;
