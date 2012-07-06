@@ -137,6 +137,18 @@ void test_refs_revparse__chaining(void)
 	test_object("master^1^1^1^1^1", "8496071c1b46c854b31185ea97743be6a8774479");
 }
 
+void test_refs_revparse__upstream(void)
+{
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "e90810b@{u}"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "refs/tags/e90810b@{u}"));
+
+	test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("heads/master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("refs/heads/master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+}
+
 void test_refs_revparse__reflog(void)
 {
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-xyz}"));
@@ -153,8 +165,6 @@ void test_refs_revparse__reflog(void)
 	test_object("master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 	test_object("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-	test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-	test_object("master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 }
 
 static void create_fake_stash_reference_and_reflog(git_repository *repo)
