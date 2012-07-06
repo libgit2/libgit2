@@ -18,6 +18,7 @@
 #include "refs.h"
 #include "buffer.h"
 #include "repository.h"
+#include "filter.h"
 
 GIT_BEGIN_DECL
 
@@ -60,6 +61,29 @@ static int count_walker(const char *path, git_tree_entry *entry, void *payload)
    return 0;
 }
 
+static int apply_filters(git_buf *out,
+                         git_vector *filters,
+                         const void *data,
+                         size_t len)
+{
+   int retcode = GIT_ERROR;
+
+   git_buf_clear(out);
+
+   if (!filters->length) {
+      /* No filters to apply; just copy the result */
+      git_buf_put(out, data, len);
+      return 0;
+   }
+
+   git_buf origblob;
+   git_buf_attach(&origblob, (char*)data, len);
+   retcode = git_filters_apply(out, &origblob, filters);
+   git_buf_detach(&origblob);
+
+   return retcode;
+}
+
 static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf, const git_oid *id, int mode)
 {
    int retcode = GIT_ERROR;
@@ -68,14 +92,24 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf, const git
    if (!git_blob_lookup(&blob, repo, id)) {
       const void *contents = git_blob_rawcontent(blob);
       size_t len = git_blob_rawsize(blob);
+      git_vector filters = GIT_VECTOR_INIT;
+      int filter_count;
 
       /* TODO: line-ending smudging */
-
-      int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
-                                         GIT_DIR_MODE, mode);
-      if (fd >= 0) {
-         retcode = (!p_write(fd, contents, len)) ? 0 : GIT_ERROR;
-         p_close(fd);
+      filter_count = git_filters_load(&filters, repo,
+                                      git_buf_cstr(fnbuf),
+                                      GIT_FILTER_TO_WORKTREE);
+      printf("Got %d filters\n", filter_count);
+      if (filter_count >= 0) {
+         git_buf filteredblob = GIT_BUF_INIT;
+         if (!apply_filters(&filteredblob, &filters, contents, len)) {
+            int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
+                                               GIT_DIR_MODE, mode);
+            if (fd >= 0) {
+               retcode = (!p_write(fd, contents, len)) ? 0 : GIT_ERROR;
+               p_close(fd);
+            }
+         }
       }
 
       git_blob_free(blob);
