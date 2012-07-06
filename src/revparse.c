@@ -167,7 +167,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 		if (refspeclen > 0)
 			return revspec_error(reflogspec);
 
-		if (git__strtol32(&n, reflogspec+3, NULL, 0) < 0 ||	n < 1)
+		if (git__strtol32(&n, reflogspec+3, NULL, 10) < 0 || n < 1)
 			return revspec_error(reflogspec);
 
 		if (!git_reference_lookup(&ref, repo, "HEAD")) {
@@ -233,7 +233,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 
 		/* @{N} -> Nth prior value for the ref (from reflog) */
 		else if (all_chars_are_digits(reflogspec+2, reflogspeclen-3) &&
-			!git__strtol32(&n, reflogspec+2, NULL, 0) &&
+			!git__strtol32(&n, reflogspec+2, NULL, 10) &&
 			n <= 100000000) { /* Allow integer time */
 				normalize_maybe_empty_refname(&buf, repo, refspec, refspeclen);
 
