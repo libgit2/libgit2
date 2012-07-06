@@ -54,13 +54,15 @@ static int spec_looks_like_describe_output(const char *spec)
 	return retcode == 0;
 }
 
-static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+static int disambiguate_refname(git_reference **out, git_repository *repo, const char *refname)
 {
-	size_t speclen = strlen(spec);
-	git_object *obj = NULL;
-	git_oid oid;
-	git_buf refnamebuf = GIT_BUF_INIT;
+	int error, i;
+	bool fallbackmode = true;
+	git_reference *ref;
+	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
+
 	static const char* formatters[] = {
+		"%s",
 		"refs/%s",
 		"refs/tags/%s",
 		"refs/heads/%s",
@@ -68,7 +70,46 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 		"refs/remotes/%s/HEAD",
 		NULL
 	};
-	unsigned int i;
+
+	if (*refname)
+		git_buf_puts(&name, refname);
+	else {
+		git_buf_puts(&name, "HEAD");
+		fallbackmode = false;
+	}
+
+	for (i = 0; formatters[i] && (fallbackmode || i == 0); i++) {
+
+		git_buf_clear(&refnamebuf);
+
+		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0)
+			goto cleanup;
+
+		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1);
+
+		if (!error) {
+			*out = ref;
+			error = 0;
+			goto cleanup;
+		}
+
+		if (error != GIT_ENOTFOUND)
+			goto cleanup;
+	}
+
+cleanup:
+	git_buf_free(&name);
+	git_buf_free(&refnamebuf);
+	return error;
+}
+
+static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+{
+	size_t speclen = strlen(spec);
+	git_object *obj = NULL;
+	git_oid oid;
+	int error;
+	git_reference *ref;
 	const char *substr;
 
 	/* "git describe" output; snip everything before/including "-g" */
@@ -87,31 +128,19 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 		}
 	}
 
-	/* Fully-named ref */
-	if (!revparse_lookup_fully_qualifed_ref(&obj, repo, spec)) {
-		*out = obj;
-		return 0;
+	error = disambiguate_refname(&ref, repo, spec);
+	if (!error) {
+		error = git_object_lookup(out, repo, git_reference_oid(ref), GIT_OBJ_ANY);
+		git_reference_free(ref);
+		return error;
 	}
 
-	/* Partially-named ref; match in this order: */
-	for (i=0; formatters[i]; i++) {
-		git_buf_clear(&refnamebuf);
-		if (git_buf_printf(&refnamebuf, formatters[i], spec) < 0) {
-			return GIT_ERROR;
-		}
-
-		if (!revparse_lookup_fully_qualifed_ref(&obj, repo, git_buf_cstr(&refnamebuf))) {
-			git_buf_free(&refnamebuf);
-			*out = obj;
-			return 0;
-		}
-	}
-	git_buf_free(&refnamebuf);
+	if (error < 0)
+		return error;
 
 	giterr_set(GITERR_REFERENCE, "Refspec '%s' not found.", spec);
 	return GIT_ENOTFOUND;
 }
-
 
 static int all_chars_are_digits(const char *str, size_t len)
 {
@@ -123,30 +152,9 @@ static int all_chars_are_digits(const char *str, size_t len)
 	return 1;
 }
 
-static void normalize_maybe_empty_refname(git_buf *buf, git_repository *repo, const char *refspec, size_t refspeclen)
-{
-	git_reference *ref;
-
-	if (!refspeclen) {
-		/* Empty refspec means current branch (target of HEAD) */
-		git_reference_lookup(&ref, repo, "HEAD");
-		git_buf_puts(buf, git_reference_target(ref));
-		git_reference_free(ref);
-	} else if (strstr(refspec, "HEAD")) {
-		/* Explicit head */
-		git_buf_puts(buf, refspec);
-	}else {
-		if (git__prefixcmp(refspec, "refs/heads/") != 0) {
-			git_buf_printf(buf, "refs/heads/%s", refspec);
-		} else {
-			git_buf_puts(buf, refspec);
-		}
-	}
-}
-
 static int walk_ref_history(git_object **out, git_repository *repo, const char *refspec, const char *reflogspec)
 {
-	git_reference *ref;
+	git_reference *disambiguated = NULL;
 	git_reflog *reflog = NULL;
 	int n, retcode = GIT_ERROR;
 	int i, refloglen;
@@ -170,8 +178,8 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 		if (git__strtol32(&n, reflogspec+3, NULL, 10) < 0 || n < 1)
 			return revspec_error(reflogspec);
 
-		if (!git_reference_lookup(&ref, repo, "HEAD")) {
-			if (!git_reflog_read(&reflog, ref)) {
+		if (!git_reference_lookup(&disambiguated, repo, "HEAD")) {
+			if (!git_reflog_read(&reflog, disambiguated)) {
 				regex_error = regcomp(&regex, "checkout: moving from (.*) to .*", REG_EXTENDED);
 				if (regex_error != 0) {
 					giterr_set_regex(&regex, regex_error);
@@ -198,29 +206,40 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 					regfree(&regex);
 				}
 			}
-			git_reference_free(ref);
 		}
 	} else {
-		int date_error = 0;
+		int date_error = 0, result;
 		git_time_t timestamp;
 		git_buf datebuf = GIT_BUF_INIT;
+
+		result = disambiguate_refname(&disambiguated, repo, refspec);
+
+		if (result < 0) {
+			retcode = result;
+			goto cleanup;
+		}
 
 		git_buf_put(&datebuf, reflogspec+2, reflogspeclen-3);
 		date_error = git__date_parse(&timestamp, git_buf_cstr(&datebuf));
 
 		/* @{u} or @{upstream} -> upstream branch, for a tracking branch. This is stored in the config. */
-		if (!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}")) {
+		if (!git__prefixcmp(git_reference_name(disambiguated), GIT_REFS_HEADS_DIR) &&
+			(!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}"))) {
 			git_config *cfg;
 			if (!git_repository_config(&cfg, repo)) {
 				/* Is the ref a tracking branch? */
 				const char *remote;
 				git_buf_clear(&buf);
-				git_buf_printf(&buf, "branch.%s.remote", refspec);
+				git_buf_printf(&buf, "branch.%s.remote",
+					git_reference_name(disambiguated) + strlen(GIT_REFS_HEADS_DIR));
+
 				if (!git_config_get_string(&remote, cfg, git_buf_cstr(&buf))) {
 					/* Yes. Find the first merge target name. */
 					const char *mergetarget;
 					git_buf_clear(&buf);
-					git_buf_printf(&buf, "branch.%s.merge", refspec);
+					git_buf_printf(&buf, "branch.%s.merge",
+						git_reference_name(disambiguated) + strlen(GIT_REFS_HEADS_DIR));
+
 					if (!git_config_get_string(&mergetarget, cfg, git_buf_cstr(&buf)) &&
 						!git__prefixcmp(mergetarget, "refs/heads/")) {
 							/* Success. Look up the target and fetch the object. */
@@ -237,12 +256,12 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 		else if (all_chars_are_digits(reflogspec+2, reflogspeclen-3) &&
 			!git__strtol32(&n, reflogspec+2, NULL, 10) &&
 			n <= 100000000) { /* Allow integer time */
-				normalize_maybe_empty_refname(&buf, repo, refspec, refspeclen);
 
-				if (n == 0) {
+				git_buf_puts(&buf, git_reference_name(disambiguated));
+
+				if (n == 0)
 					retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
-				} else if (!git_reference_lookup(&ref, repo, git_buf_cstr(&buf))) {
-					if (!git_reflog_read(&reflog, ref)) {
+				else if (!git_reflog_read(&reflog, disambiguated)) {
 						int numentries = git_reflog_entrycount(reflog);
 						if (numentries < n) {
 							giterr_set(GITERR_REFERENCE, "Reflog for '%s' has only %d entries, asked for %d",
@@ -253,48 +272,43 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 							const git_oid *oid = git_reflog_entry_oidold(entry);
 							retcode = git_object_lookup(out, repo, oid, GIT_OBJ_ANY);
 						}
-					}
-					git_reference_free(ref);
 				}
 		}
 
 		else if (!date_error) {
 			/* Ref as it was on a certain date */
-			normalize_maybe_empty_refname(&buf, repo, refspec, refspeclen);
+			git_reflog *reflog;
+			if (!git_reflog_read(&reflog, disambiguated)) {
+				/* Keep walking until we find an entry older than the given date */
+				int numentries = git_reflog_entrycount(reflog);
+				int i;
 
-			if (!git_reference_lookup(&ref, repo, git_buf_cstr(&buf))) {
-				git_reflog *reflog;
-				if (!git_reflog_read(&reflog, ref)) {
-					/* Keep walking until we find an entry older than the given date */
-					int numentries = git_reflog_entrycount(reflog);
-					int i;
-
-					for (i = numentries - 1; i >= 0; i--) {
-						const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, i);
-						git_time commit_time = git_reflog_entry_committer(entry)->when;
-						if (commit_time.time - timestamp <= 0) {
-							retcode = git_object_lookup(out, repo, git_reflog_entry_oidnew(entry), GIT_OBJ_ANY);
-							break;
-						}
+				for (i = numentries - 1; i >= 0; i--) {
+					const git_reflog_entry *entry = git_reflog_entry_byindex(reflog, i);
+					git_time commit_time = git_reflog_entry_committer(entry)->when;
+					if (commit_time.time - timestamp <= 0) {
+						retcode = git_object_lookup(out, repo, git_reflog_entry_oidnew(entry), GIT_OBJ_ANY);
+						break;
 					}
-
-					if (i ==  -1) {
-						/* Didn't find a match */
-						retcode = GIT_ENOTFOUND;
-					}
-
-					git_reflog_free(reflog);
 				}
 
-				git_reference_free(ref);
+				if (i ==  -1) {
+					/* Didn't find a match */
+					retcode = GIT_ENOTFOUND;
+				}
+
+				git_reflog_free(reflog);
 			}
 		}
 
 		git_buf_free(&datebuf);
 	}
 
-	if (reflog) git_reflog_free(reflog);
+cleanup:
+	if (reflog)
+		git_reflog_free(reflog);
 	git_buf_free(&buf);
+	git_reference_free(disambiguated);
 	return retcode;
 }
 
