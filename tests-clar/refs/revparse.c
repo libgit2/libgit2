@@ -156,6 +156,7 @@ void test_refs_revparse__ordinal(void)
 	test_object("nope@{0}", NULL);
 	test_object("master@{31415}", NULL);
 	test_object("@{1000}", NULL);
+	test_object("@{2}", NULL);
 
 	test_object("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");

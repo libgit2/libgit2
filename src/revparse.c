@@ -263,7 +263,7 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 					retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
 				else if (!git_reflog_read(&reflog, disambiguated)) {
 						int numentries = git_reflog_entrycount(reflog);
-						if (numentries < n) {
+						if (numentries < n + 1) {
 							giterr_set(GITERR_REFERENCE, "Reflog for '%s' has only %d entries, asked for %d",
 								git_buf_cstr(&buf), numentries, n);
 							retcode = GIT_ENOTFOUND;
