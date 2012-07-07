@@ -47,8 +47,9 @@ static int spec_looks_like_describe_output(const char *spec)
 	regex_error = regcomp(&regex, ".+-[0-9]+-g[0-9a-fA-F]+", REG_EXTENDED);
 	if (regex_error != 0) {
 		giterr_set_regex(&regex, regex_error);
-		return 1; /* To be safe */
+		return regex_error;
 	}
+
 	retcode = regexec(&regex, spec, 0, NULL, 0);
 	regfree(&regex);
 	return retcode == 0;
@@ -103,39 +104,66 @@ cleanup:
 	return error;
 }
 
-static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+extern int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec);
+
+static int maybe_describe(git_object**out, git_repository *repo, const char *spec)
 {
-	size_t speclen = strlen(spec);
-	git_object *obj = NULL;
-	git_oid oid;
-	int error;
-	git_reference *ref;
 	const char *substr;
+	int match;
 
 	/* "git describe" output; snip everything before/including "-g" */
 	substr = strstr(spec, "-g");
-	if (substr &&
-		spec_looks_like_describe_output(spec) &&
-		!revparse_lookup_object(out, repo, substr+2)) {
-			return 0;
-	}
 
-	/* SHA or prefix */
-	if (!git_oid_fromstrn(&oid, spec, speclen)) {
-		if (!git_object_lookup_prefix(&obj, repo, &oid, speclen, GIT_OBJ_ANY)) {
-			*out = obj;
-			return 0;
-		}
-	}
+	if (substr == NULL)
+		return GIT_ENOTFOUND;
+	
+	if ((match = spec_looks_like_describe_output(spec)) < 0)
+		return match;
+
+	if (!match)
+		return GIT_ENOTFOUND;
+
+	return revparse_lookup_object(out, repo, substr+2);
+}
+
+static int maybe_sha_or_abbrev(git_object**out, git_repository *repo, const char *spec)
+{
+	git_oid oid;
+	size_t speclen = strlen(spec);
+
+	if (git_oid_fromstrn(&oid, spec, speclen) < 0)
+		return GIT_ENOTFOUND;
+
+	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJ_ANY);
+}
+
+int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+{
+	int error;
+	git_reference *ref;
+
+	error = maybe_describe(out, repo, spec);
+	if (!error)
+		return 0;
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	error = maybe_sha_or_abbrev(out, repo, spec);
+	if (!error)
+		return 0;
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
 
 	error = disambiguate_refname(&ref, repo, spec);
 	if (!error) {
 		error = git_object_lookup(out, repo, git_reference_oid(ref), GIT_OBJ_ANY);
 		git_reference_free(ref);
-		return error;
+		return 0;
 	}
 
-	if (error < 0)
+	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
 	giterr_set(GITERR_REFERENCE, "Refspec '%s' not found.", spec);
@@ -711,10 +739,8 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
 			if (current_state != next_state && next_state != REVPARSE_STATE_DONE) {
 				/* Leaving INIT state, find the object specified, in case that state needs it */
-				if (revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer)) < 0) {
-					retcode = GIT_ERROR;
+				if ((retcode = revparse_lookup_object(&next_obj, repo, git_buf_cstr(&specbuffer))) < 0)
 					next_state = REVPARSE_STATE_DONE;
-				}
 			}
 			break;
 

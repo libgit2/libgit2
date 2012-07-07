@@ -55,6 +55,8 @@ void test_refs_revparse__cleanup(void)
 void test_refs_revparse__nonexistant_object(void)
 {
 	test_object("this-does-not-exist", NULL);
+	test_object("this-does-not-exist^1", NULL);
+	test_object("this-does-not-exist~2", NULL);
 }
 
 void test_refs_revparse__invalid_reference_name(void)
