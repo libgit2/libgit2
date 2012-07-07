@@ -54,10 +54,14 @@ void test_refs_revparse__cleanup(void)
 
 void test_refs_revparse__nonexistant_object(void)
 {
-	test_object("this doesn't exist", NULL);
+	test_object("this-does-not-exist", NULL);
+}
 
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist^1"));
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist~2"));
+void test_refs_revparse__invalid_reference_name(void)
+{
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense^1"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense~2"));
 }
 
 void test_refs_revparse__shas(void)
