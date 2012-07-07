@@ -12,7 +12,7 @@ env:
       
 # Make sure CMake is installed
 install:
- - sudo apt-get install cmake
+ - sudo apt-get -y install cmake libssh2-1-dev
 
 # Run the Build script
 script:
