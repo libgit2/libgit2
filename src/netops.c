@@ -70,7 +70,7 @@ void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigne
 	buf->offset = 0;
 	buf->fd = t->socket;
 #ifdef GIT_SSL
-	if (t->encrypt)
+	if (t->ssl_conn)
 		buf->ssl = &t->ssl;
 #endif
 }
@@ -147,7 +147,7 @@ int gitno_ssl_teardown(git_transport *t)
 	int ret;
 #endif
 
-	if (!t->encrypt)
+	if (!t->ssl_conn)
 		return 0;
 
 #ifdef GIT_SSL
@@ -415,7 +415,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 	t->socket = s;
 	p_freeaddrinfo(info);
 
-	if (t->encrypt && ssl_setup(t, host) < 0)
+	if (t->ssl_conn && ssl_setup(t, host) < 0)
 		return -1;
 
 	return 0;
@@ -445,7 +445,7 @@ int gitno_send(git_transport *t, const char *msg, size_t len, int flags)
 	size_t off = 0;
 
 #ifdef GIT_SSL
-	if (t->encrypt)
+	if (t->ssl_conn)
 		return send_ssl(&t->ssl, msg, len);
 #endif
 
