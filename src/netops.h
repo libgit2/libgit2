@@ -19,6 +19,9 @@ typedef struct gitno_buffer {
 #ifdef GIT_SSL
 	struct gitno_ssl *ssl;
 #endif
+#ifdef GIT_SSH
+	struct gitno_ssh *ssh;
+#endif
 } gitno_buffer;
 
 void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len);
@@ -40,7 +43,7 @@ int gitno_extract_host_and_port(char **host, char **port, const char *url, const
 int gitno_ssh_connect(git_transport *t, const char *host, const char *port);
 int gitno_ssh_exec(git_transport *t, const char *cmd);
 int gitno_ssh_send(git_transport *t, const char *buf, size_t len);
-int gitno_ssh_recv(git_transport *t, gitno_buffer *buf);
+int gitno_ssh_recv(gitno_ssh *ssh, void *buf, size_t len);
 int gitno_ssh_teardown(git_transport *t);
 #endif
 

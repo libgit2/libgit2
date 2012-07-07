@@ -87,7 +87,7 @@ static int store_refs(transport_ssh *t)
 	gitno_buffer *buf = &t->buf;
 
 	while (1) {
-		ret = gitno_ssh_recv(&t->parent, buf);
+		ret = gitno_recv(buf);
 		if (ret < 0)
 			return -1;
 
@@ -144,7 +144,7 @@ static int do_connect(transport_ssh *t, const char *url)
 	if (gitno_ssh_connect(&t->parent, host, port))
 		return -1;
 
-	if (send_request((git_transport *) t, NULL, at+1) < 0)
+	if (send_request((git_transport *) t, NULL, url) < 0)
 		return -1;
 
 	t->parent.connected = 1;
@@ -208,14 +208,14 @@ static int ssh_ls(
 	return 0;
 }
 
-static int recv_pkt(git_transport *t, gitno_buffer *buf)
+static int recv_pkt(gitno_buffer *buf)
 {
 	int ret, pkt_type;
 	const char *ptr = buf->data, *line_end;
 	git_pkt *pkt;
 
 	do {
-		if ((ret = gitno_ssh_recv(t, buf)) < 0)
+		if ((ret = gitno_recv(buf)) < 0)
 			return -1;
 
 		ret = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
@@ -274,7 +274,7 @@ static int ssh_negotiate_fetch(
 			if (gitno_ssh_send(&t->parent, data.ptr, data.size) < 0)
 				goto on_error;
 
-			pkt_type = recv_pkt(&t->parent, buf);
+			pkt_type = recv_pkt(buf);
 
 			if (pkt_type == GIT_PKT_ACK) {
 				break;
@@ -307,57 +307,6 @@ on_error:
 	return -1;
 }
 
-static int download_pack(
-	git_transport *t,
-	const char *buffered,
-	size_t buffered_size,
-	git_repository *repo,
-	git_off_t *bytes,
-	git_indexer_stats *stats)
-{
-	int recvd;
-	char buff[1024];
-	gitno_buffer buf;
-	git_indexer_stream *idx;
-
-	gitno_buffer_setup(t, &buf, buff, sizeof(buff));
-
-	if (memcmp(buffered, "PACK", strlen("PACK"))) {
-		giterr_set(GITERR_NET, "The pack doesn't start with the signature");
-		return -1;
-	}
-
-	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
-		return -1;
-
-	memset(stats, 0, sizeof(git_indexer_stats));
-	if (git_indexer_stream_add(idx, buffered, buffered_size, stats) < 0)
-		goto on_error;
-
-	*bytes = buffered_size;
-
-	do {
-		if (git_indexer_stream_add(idx, buf.data, buf.offset, stats) < 0)
-			goto on_error;
-
-		gitno_consume_n(&buf, buf.offset);
-		if ((recvd = gitno_ssh_recv(t, &buf)) < 0)
-			goto on_error;
-
-		*bytes += recvd;
-	} while(recvd > 0);
-
-	if (git_indexer_stream_finalize(idx, stats))
-		goto on_error;
-
-	git_indexer_stream_free(idx);
-	return 0;
-
-on_error:
-	git_indexer_stream_free(idx);
-	return -1;
-}
-
 static int ssh_download_pack(
 	git_transport *transport,
 	git_repository *repo,
@@ -377,9 +326,8 @@ static int ssh_download_pack(
 		ptr = buf->data;
 		/* Whilst we're searching for the pack */
 		while (1) {
-			if (buf->offset == 0) {
+			if (buf->offset == 0)
 				break;
-			}
 
 			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
 			if (error == GIT_EBUFS)
@@ -390,8 +338,10 @@ static int ssh_download_pack(
 
 			if (pkt->type == GIT_PKT_PACK) {
 				git__free(pkt);
-				return download_pack(transport, buf->data, buf->offset,
-						     repo, bytes, stats);
+				return git_fetch__download_pack(
+						buf->data, buf->offset,
+						transport, repo, bytes,
+						stats);
 			}
 
 			/* For now we don't care about anything */
@@ -399,7 +349,7 @@ static int ssh_download_pack(
 			gitno_consume(buf, line_end);
 		}
 
-		read_bytes = gitno_ssh_recv(transport, buf);
+		read_bytes = gitno_recv(buf);
 	} while (read_bytes);
 
 	return read_bytes;
@@ -459,6 +409,7 @@ int git_transport_ssh(git_transport **out)
 	memset(t, 0x0, sizeof(transport_ssh));
 
 	t->parent.socket = -1;
+	t->parent.ssh_conn = 1;
 
 	t->parent.ssh.session = NULL;
 	t->parent.ssh.channel = NULL;

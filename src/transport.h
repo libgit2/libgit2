@@ -37,6 +37,13 @@ typedef struct gitno_ssl {
 } gitno_ssl;
 #endif
 
+#ifdef GIT_SSH
+typedef struct gitno_ssh {
+	LIBSSH2_SESSION *session;
+	LIBSSH2_CHANNEL *channel;
+} gitno_ssh;
+#endif
+
 
 /*
  * A day in the life of a network operation
@@ -64,25 +71,17 @@ typedef struct gitno_ssl {
  * connection. ->free() takes care of freeing all the resources.
  */
 
-#ifdef GIT_SSH
-typedef struct gitno_ssh {
-	LIBSSH2_SESSION *session;
-	LIBSSH2_CHANNEL *channel;
-} gitno_ssh;
-#endif
-
 struct git_transport {
 	/**
 	 * Where the repo lives
 	 */
 	char *url;
-	/**
-	 * Whether we want to push or fetch
-	 */
+
 	int direction : 1, /* 0 fetch, 1 push */
 		connected : 1,
 		check_cert: 1,
-		ssl_conn: 1;
+		ssl_conn: 1,
+		ssh_conn: 1;
 #ifdef GIT_SSL
 	struct gitno_ssl ssl;
 #endif

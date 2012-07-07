@@ -157,18 +157,14 @@ int gitno_ssh_send(git_transport *t, const char *msg, size_t len)
 	return libssh2_channel_write(t->ssh.channel, msg, len);
 }
 
-int gitno_ssh_recv(git_transport *t, gitno_buffer *buf)
+int gitno_ssh_recv(gitno_ssh *ssh, void *buf, size_t len)
 {
 	int ret = 0;
 
-	ret = libssh2_channel_read(t->ssh.channel,
-				   buf->data + buf->offset,
-				   buf->len - buf->offset);
-
+	ret = libssh2_channel_read(ssh->channel, buf, len);
 	if (ret < 0)
-		return ssh_set_error(t->ssh.session);
+		return ssh_set_error(ssh->session);
 
-	buf->offset += ret;
 	return ret;
 }
 
@@ -192,10 +188,16 @@ void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigne
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
+
 	buf->data = data;
 	buf->len = len;
 	buf->offset = 0;
 	buf->fd = t->socket;
+
+#ifdef GIT_SSH
+	if (t->ssh_conn)
+		buf->ssh = &t->ssh;
+#endif
 #ifdef GIT_SSL
 	if (t->ssl_conn)
 		buf->ssl = &t->ssl;
@@ -222,19 +224,36 @@ int gitno_recv(gitno_buffer *buf)
 {
 	int ret;
 
+#ifdef GIT_SSH
+	if (buf->ssh != NULL) {
+		if ((ret = gitno_ssh_recv(buf->ssh,
+					  buf->data + buf->offset,
+					  buf->len - buf->offset)) < 0)
+				return -1;
+
+		buf->offset += ret;
+		return ret;
+	}
+#endif
 #ifdef GIT_SSL
 	if (buf->ssl != NULL) {
-		if ((ret = ssl_recv(buf->ssl, buf->data + buf->offset, buf->len - buf->offset)) < 0)
+		if ((ret = ssl_recv(buf->ssl,
+				    buf->data + buf->offset,
+				    buf->len - buf->offset)) < 0)
 			return -1;
 	} else {
-		ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
+		ret = p_recv(buf->fd,
+			     buf->data + buf->offset,
+			     buf->len - buf->offset, 0);
 		if (ret < 0) {
 			net_set_error("Error receiving socket data");
 			return -1;
 		}
 	}
 #else
-	ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
+	ret = p_recv(buf->fd,
+		     buf->data + buf->offset,
+		     buf->len - buf->offset, 0);
 	if (ret < 0) {
 		net_set_error("Error receiving socket data");
 		return -1;
