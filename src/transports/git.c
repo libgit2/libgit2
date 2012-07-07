@@ -128,38 +128,6 @@ on_error:
 }
 
 /*
- * Read from the socket and store the references in the vector
- */
-static int store_refs(transport_git *t)
-{
-	gitno_buffer *buf = &t->buf;
-	int ret = 0;
-
-	while (1) {
-		if ((ret = gitno_recv(buf)) < 0)
-			return -1;
-		if (ret == 0) /* Orderly shutdown, so exit */
-			return 0;
-
-		ret = git_protocol_store_refs(&t->proto, buf->data, buf->offset);
-		if (ret == GIT_EBUFS) {
-			gitno_consume_n(buf, buf->len);
-			continue;
-		}
-
-		if (ret < 0)
-			return ret;
-
-		gitno_consume_n(buf, buf->offset);
-
-		if (t->proto.flush) { /* No more refs */
-			t->proto.flush = 0;
-			return 0;
-		}
-	}
-}
-
-/*
  * Since this is a network connection, we need to parse and store the
  * pkt-lines at this stage and keep them there.
  */
@@ -183,7 +151,7 @@ static int git_connect(git_transport *transport, int direction)
 	gitno_buffer_setup(transport, &t->buf, t->buff, sizeof(t->buff));
 
 	t->parent.connected = 1;
-	if (store_refs(t) < 0)
+	if (store_refs(&t->proto, &t->buf) < 0)
 		goto cleanup;
 
 	if (detect_caps(&t->caps, &t->refs) < 0)

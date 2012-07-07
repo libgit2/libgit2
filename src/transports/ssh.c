@@ -81,38 +81,6 @@ on_error:
 	return error;
 }
 
-static int store_refs(transport_ssh *t)
-{
-	int ret = 0;
-	gitno_buffer *buf = &t->buf;
-
-	while (1) {
-		ret = gitno_recv(buf);
-		if (ret < 0)
-			return -1;
-
-		if (ret == 0)
-			return 0;
-
-		ret = git_protocol_store_refs(&t->proto, buf->data, ret);
-		if (ret == GIT_EBUFS) {
-			gitno_consume_n(buf, buf->len);
-			continue;
-		}
-
-		if (ret < 0)
-			return ret;
-
-		gitno_consume_n(buf, buf->offset);
-
-		if (t->proto.flush) {
-			t->proto.flush = 0;
-			return 0;
-		}
-
-	}
-}
-
 static const char *prefixes[] = {
 	"ssh://",
 	"ssh+git://",
@@ -151,7 +119,7 @@ static int do_connect(transport_ssh *t, const char *url)
 
 	gitno_buffer_setup(&t->parent, &t->buf, t->buff, sizeof(t->buff));
 
-	if (store_refs(t) < 0)
+	if (store_refs(&t->proto, &t->buf) < 0)
 		return -1;
 
 	if (detect_caps(&t->caps, &t->refs) < 0)

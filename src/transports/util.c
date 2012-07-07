@@ -36,3 +36,30 @@ int detect_caps(git_transport_caps *caps, git_vector *refs)
 	return 0;
 }
 
+int store_refs(git_protocol *proto, gitno_buffer *buf)
+{
+	int ret = 0;
+
+	while (1) {
+		if ((ret = gitno_recv(buf)) < 0)
+			return -1;
+		if (ret == 0) /* orderly shutdown, so exit */
+			return 0;
+
+		ret = git_protocol_store_refs(proto,
+					      buf->data, buf->offset);
+		if (ret == GIT_EBUFS) {
+			gitno_consume_n(buf, buf->len);
+			continue;
+		}
+		if (ret < 0)
+			return ret;
+
+		gitno_consume_n(buf, buf->offset);
+
+		if (proto->flush) { /* no more refs */
+			proto->flush = 0;
+			return 0;
+		}
+	}
+}

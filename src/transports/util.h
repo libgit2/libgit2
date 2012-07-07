@@ -9,7 +9,10 @@
 
 #include "vector.h"
 #include "transport.h"
+#include "netops.h"
+#include "protocol.h"
 
 int detect_caps(git_transport_caps *caps, git_vector *refs);
+int store_refs(git_protocol *proto, gitno_buffer *buf);
 
 #endif
