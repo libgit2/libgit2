@@ -154,8 +154,6 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 
 /*
  * submodules?
- * filemodes?
- * Line endings
  */
 
 
