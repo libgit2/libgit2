@@ -104,7 +104,16 @@ cleanup:
 	return error;
 }
 
-extern int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec);
+static int maybe_sha_or_abbrev(git_object**out, git_repository *repo, const char *spec)
+{
+	git_oid oid;
+	size_t speclen = strlen(spec);
+
+	if (git_oid_fromstrn(&oid, spec, speclen) < 0)
+		return GIT_ENOTFOUND;
+
+	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJ_ANY);
+}
 
 static int maybe_describe(git_object**out, git_repository *repo, const char *spec)
 {
@@ -123,21 +132,10 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 	if (!match)
 		return GIT_ENOTFOUND;
 
-	return revparse_lookup_object(out, repo, substr+2);
+	return maybe_sha_or_abbrev(out, repo, substr+2);
 }
 
-static int maybe_sha_or_abbrev(git_object**out, git_repository *repo, const char *spec)
-{
-	git_oid oid;
-	size_t speclen = strlen(spec);
-
-	if (git_oid_fromstrn(&oid, spec, speclen) < 0)
-		return GIT_ENOTFOUND;
-
-	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJ_ANY);
-}
-
-int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
 {
 	int error;
 	git_reference *ref;
