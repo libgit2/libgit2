@@ -53,15 +53,6 @@ typedef struct tree_walk_data
 } tree_walk_data;
 
 
-/* TODO: murder this */
-static int count_walker(const char *path, git_tree_entry *entry, void *payload)
-{
-	GIT_UNUSED(path);
-	GIT_UNUSED(entry);
-	((tree_walk_data*)payload)->stats->total++;
-	return 0;
-}
-
 static int apply_filters(git_buf *out,
 								 git_vector *filters,
 								 const void *data,
@@ -166,13 +157,12 @@ int git_checkout_force(git_repository *repo, git_indexer_stats *stats)
 	payload.stats = stats;
 	payload.repo = repo;
 
+	/* TODO: stats->total is never calculated. */
+
 	if (!get_head_tree(&tree, repo)) {
-		/* Count all the tree nodes for progress information */
-		if (!git_tree_walk(tree, count_walker, GIT_TREEWALK_POST, &payload)) {
-			/* Checkout the files */
-			if (!git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload)) {
-				retcode = 0;
-			}
+		/* Checkout the files */
+		if (!git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload)) {
+			retcode = 0;
 		}
 		git_tree_free(tree);
 	}
