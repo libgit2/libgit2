@@ -515,7 +515,7 @@ int git_path_direach(
 		return -1;
 	}
 
-#ifdef __sun
+#if defined(__sun) || defined(__GNU__)
 	de_buf = git__malloc(sizeof(struct dirent) + FILENAME_MAX + 1);
 #else
 	de_buf = git__malloc(sizeof(struct dirent));
@@ -569,7 +569,7 @@ int git_path_dirload(
 		return -1;
 	}
 
-#ifdef __sun
+#if defined(__sun) || defined(__GNU__)
 	de_buf = git__malloc(sizeof(struct dirent) + FILENAME_MAX + 1);
 #else
 	de_buf = git__malloc(sizeof(struct dirent));
