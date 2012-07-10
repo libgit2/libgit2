@@ -102,6 +102,7 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf, const git
 				}
 			}
 			git_buf_free(&filteredblob);
+			git_filters_free(&filters);
 		}
 
 		git_blob_free(blob);
