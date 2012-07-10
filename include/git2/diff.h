@@ -60,7 +60,7 @@ enum {
 typedef struct {
 	uint32_t flags;				/**< defaults to GIT_DIFF_NORMAL */
 	uint16_t context_lines;		/**< defaults to 3 */
-	uint16_t interhunk_lines;	/**< defaults to 3 */
+	uint16_t interhunk_lines;	/**< defaults to 0 */
 	char *old_prefix;			/**< defaults to "a" */
 	char *new_prefix;			/**< defaults to "b" */
 	git_strarray pathspec;		/**< defaults to show all paths */
