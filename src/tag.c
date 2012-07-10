@@ -393,21 +393,53 @@ int git_tag__parse(git_tag *tag, git_odb_object *obj)
 }
 
 typedef struct {
- git_vector *taglist;
- const char *pattern;
+	git_repository *repo;
+	tag_foreach_cb *cb;
+	void *cb_data;
+} tag_cb_data;
+
+static int tags_cb(const char *ref, void *data)
+{
+	git_oid oid;
+	tag_cb_data *d = (tag_cb_data *)data;
+
+	if (git__prefixcmp(ref, GIT_REFS_TAGS_DIR) != 0)
+		return 0; /* no tag */
+
+	if (git_reference_name_to_oid(&oid, d->repo, ref) < 0)
+		return -1;
+
+	return d->cb(ref, &oid, d->cb_data);
+}
+
+int git_tag_foreach(git_repository *repo, tag_foreach_cb *cb, void *cb_data)
+{
+	tag_cb_data data;
+
+	assert(repo && cb);
+
+	data.cb = cb;
+	data.cb_data = cb_data;
+	data.repo = repo;
+
+	return git_reference_foreach(repo, GIT_REF_OID | GIT_REF_PACKED,
+				     &tags_cb, &data);
+}
+
+typedef struct {
+	git_vector *taglist;
+	const char *pattern;
 } tag_filter_data;
 
 #define GIT_REFS_TAGS_DIR_LEN strlen(GIT_REFS_TAGS_DIR)
 
-static int tag_list_cb(const char *tag_name, void *payload)
+static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 {
-	tag_filter_data *filter;
+	tag_filter_data *filter = (tag_filter_data *)data;
+	GIT_UNUSED(oid);
 
-	if (git__prefixcmp(tag_name, GIT_REFS_TAGS_DIR) != 0)
-		return 0;
-
-	filter = (tag_filter_data *)payload;
-	if (!*filter->pattern || p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
+	if (!*filter->pattern ||
+		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 		return git_vector_insert(filter->taglist, git__strdup(tag_name));
 
 	return 0;
@@ -427,7 +459,7 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 	filter.taglist = &taglist;
 	filter.pattern = pattern;
 
-	error = git_reference_foreach(repo, GIT_REF_OID|GIT_REF_PACKED, &tag_list_cb, (void *)&filter);
+	error = git_tag_foreach(repo, &tag_list_cb, (void *)&filter);
 	if (error < 0) {
 		git_vector_free(&taglist);
 		return -1;
