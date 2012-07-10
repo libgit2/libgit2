@@ -95,8 +95,9 @@ int git_filters_load(git_vector *filters, git_repository *repo, const char *path
 		if (error < 0)
 			return error;
 	} else {
-		giterr_set(GITERR_INVALID, "Worktree filters are not implemented yet");
-		return -1;
+		error = git_filter_add__crlf_to_workdir(filters, repo, path);
+		if (error < 0)
+			return error;
 	}
 
 	return (int)filters->length;
@@ -162,4 +163,3 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 
 	return 0;
 }
-

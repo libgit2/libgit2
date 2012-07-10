@@ -184,7 +184,8 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 	return drop_crlf(dest, source);
 }
 
-int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)
+static int find_and_add_filter(git_vector *filters, git_repository *repo, const char *path,
+										 int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source))
 {
 	struct crlf_attrs ca;
 	struct crlf_filter *filter;
@@ -219,10 +220,25 @@ int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const
 	filter = git__malloc(sizeof(struct crlf_filter));
 	GITERR_CHECK_ALLOC(filter);
 
-	filter->f.apply = &crlf_apply_to_odb;
+	filter->f.apply = apply;
 	filter->f.do_free = NULL;
 	memcpy(&filter->attrs, &ca, sizeof(struct crlf_attrs));
 
 	return git_vector_insert(filters, filter);
 }
 
+static int crlf_apply_to_workdir(git_filter *self, git_buf *dest, const git_buf *source)
+{
+	/* TODO */
+	return 0;
+}
+
+int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)
+{
+	return find_and_add_filter(filters, repo, path, &crlf_apply_to_odb);
+}
+
+int git_filter_add__crlf_to_workdir(git_vector *filters, git_repository *repo, const char *path)
+{
+	return find_and_add_filter(filters, repo, path, &crlf_apply_to_workdir);
+}

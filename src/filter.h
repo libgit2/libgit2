@@ -96,6 +96,9 @@ extern void git_filters_free(git_vector *filters);
 /* Strip CRLF, from Worktree to ODB */
 extern int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path);
 
+/* Add CRLF, from ODB to worktree */
+extern int git_filter_add__crlf_to_workdir(git_vector *filters, git_repository *repo, const char *path);
+
 
 /*
  * PLAINTEXT API
