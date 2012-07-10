@@ -89,7 +89,7 @@ Here are the bindings to libgit2 that are currently available:
 * Go
     * go-git <https://github.com/str1ngs/go-git>
 * GObject
-    * libgit2-glib <http://git.gnome.org/browse/libgit2-glib>
+    * libgit2-glib <https://live.gnome.org/Libgit2-glib>
 * Haskell
     * hgit2 <https://github.com/norm2782/hgit2>
 * Lua
