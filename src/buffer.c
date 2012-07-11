@@ -172,6 +172,8 @@ int git_buf_puts_escaped(
 		}
 	}
 
+	buf->ptr[buf->size] = '\0';
+
 	return 0;
 }
 
