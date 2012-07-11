@@ -136,17 +136,27 @@ int git_config_add_file(git_config *cfg, git_config_file *file, int priority)
  * Loop over all the variables
  */
 
-int git_config_foreach(git_config *cfg, int (*fn)(const char *, const char *, void *), void *data)
+int git_config_foreach(
+	git_config *cfg, int (*fn)(const char *, const char *, void *), void *data)
+{
+	return git_config_foreach_match(cfg, NULL, fn, data);
+}
+
+int git_config_foreach_match(
+	git_config *cfg,
+	const char *regexp,
+	int (*fn)(const char *, const char *, void *),
+	void *data)
 {
 	int ret = 0;
 	unsigned int i;
 	file_internal *internal;
 	git_config_file *file;
 
-	for(i = 0; i < cfg->files.length && ret == 0; ++i) {
+	for (i = 0; i < cfg->files.length && ret == 0; ++i) {
 		internal = git_vector_get(&cfg->files, i);
 		file = internal->file;
-		ret = file->foreach(file, fn, data);
+		ret = file->foreach(file, regexp, fn, data);
 	}
 
 	return ret;

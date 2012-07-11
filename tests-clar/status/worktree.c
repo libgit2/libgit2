@@ -459,7 +459,7 @@ void test_status_worktree__status_file_without_index_or_workdir(void)
 	cl_git_pass(p_mkdir("wd", 0777));
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
-	cl_git_pass(git_repository_set_workdir(repo, "wd"));
+	cl_git_pass(git_repository_set_workdir(repo, "wd", false));
 
 	cl_git_pass(git_index_open(&index, "empty-index"));
 	cl_assert_equal_i(0, git_index_entrycount(index));
@@ -500,7 +500,7 @@ void test_status_worktree__status_file_with_clean_index_and_empty_workdir(void)
 	cl_git_pass(p_mkdir("wd", 0777));
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
-	cl_git_pass(git_repository_set_workdir(repo, "wd"));
+	cl_git_pass(git_repository_set_workdir(repo, "wd", false));
 
 	cl_git_pass(git_index_open(&index, "my-index"));
 	fill_index_wth_head_entries(repo, index);
