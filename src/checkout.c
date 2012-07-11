@@ -36,16 +36,16 @@ static int apply_filters(git_buf *out,
 								 size_t len)
 {
 	int retcode = GIT_ERROR;
+	git_buf origblob = GIT_BUF_INIT;
 
 	git_buf_clear(out);
 
 	if (!filters->length) {
 		/* No filters to apply; just copy the result */
-		git_buf_put(out, data, len);
+		git_buf_put(out, (const char *)data, len);
 		return 0;
 	}
 
-	git_buf origblob = GIT_BUF_INIT;
 	git_buf_attach(&origblob, (char*)data, len);
 	retcode = git_filters_apply(out, &origblob, filters);
 	git_buf_detach(&origblob);

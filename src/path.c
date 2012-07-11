@@ -391,8 +391,16 @@ bool git_path_isfile(const char *path)
 
 #ifdef GIT_WIN32
 
+static bool is_dot_or_dotdotW(const wchar_t *name)
+{
+	return (name[0] == L'.' &&
+			(name[1] == L'\0' ||
+			 (name[1] == L'.' && name[2] == L'\0')));
+}
+
 bool git_path_is_empty_dir(const char *path)
 {
+	git_buf pathbuf = GIT_BUF_INIT;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	wchar_t *wbuf;
 	WIN32_FIND_DATAW ffd;
@@ -400,13 +408,23 @@ bool git_path_is_empty_dir(const char *path)
 
 	if (!git_path_isdir(path)) return false;
 
-	wbuf = gitwin_to_utf16(path);
-	gitwin_append_utf16(wbuf, "\\*", 2);
+	git_buf_printf(&pathbuf, "%s\\*", path);
+	wbuf = gitwin_to_utf16(git_buf_cstr(&pathbuf));
+
 	hFind = FindFirstFileW(wbuf, &ffd);
-	if (INVALID_HANDLE_VALUE != hFind) {
-		retval = false;
-		FindClose(hFind);
+	if (INVALID_HANDLE_VALUE == hFind) {
+		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		return false;
 	}
+
+	do {
+		if (!is_dot_or_dotdotW(ffd.cFileName)) {
+			retval = false;
+		}
+	} while (FindNextFileW(hFind, &ffd) != 0);
+
+	FindClose(hFind);
+	git_buf_free(&pathbuf);
 	git__free(wbuf);
 	return retval;
 }

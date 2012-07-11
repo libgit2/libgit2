@@ -96,10 +96,10 @@ void test_clone_clone__network_full(void)
 #if DO_LIVE_NETWORK_TESTS
 	git_remote *origin;
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./test", NULL));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./test2", NULL));
 	cl_assert(!git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
-	git_futils_rmdir_r("./test", GIT_DIRREMOVAL_FILES_AND_DIRS);
+	git_futils_rmdir_r("./test2", GIT_DIRREMOVAL_FILES_AND_DIRS);
 #endif
 }
 
