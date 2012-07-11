@@ -80,7 +80,9 @@ extern int git_path_to_dir(git_buf *path);
  */
 extern void git_path_string_to_dir(char* path, size_t size);
 
-/* Taken from git.git */
+/**
+ * Taken from git.git; returns nonzero if the given path is "." or "..".
+ */
 GIT_INLINE(int) git_path_is_dot_or_dotdot(const char *name)
 {
 	return (name[0] == '.' &&
@@ -136,6 +138,11 @@ extern bool git_path_isdir(const char *path);
  * @return true or false
  */
 extern bool git_path_isfile(const char *path);
+
+/**
+ * Check if the given path is a directory, and is empty.
+ */
+extern bool git_path_is_empty_dir(const char *path);
 
 /**
  * Stat a file and/or link and set error if needed.

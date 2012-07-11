@@ -195,54 +195,14 @@ static int setup_remotes_and_fetch(git_repository *repo,
 /* TODO: p_opendir, p_closedir */
 static bool path_is_okay(const char *path)
 {
-#ifdef GIT_WIN32
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-	wchar_t *wbuf;
-	WIN32_FIND_DATAW ffd;
-#else
-	DIR *dir = NULL;
-	struct dirent *e;
-#endif
-
-	bool retval = true;
-
 	/* The path must either not exist, or be an empty directory */
 	if (!git_path_exists(path)) return true;
-
-	if (!git_path_isdir(path)) {
+	if (!git_path_is_empty_dir(path)) {
 		giterr_set(GITERR_INVALID,
 					  "'%s' exists and is not an empty directory", path);
 		return false;
 	}
-
-#ifdef GIT_WIN32
-	wbuf = gitwin_to_utf16(path);
-	gitwin_append_utf16(wbuf, "\\*", 2);
-	hFind = FindFirstFileW(wbuf, &ffd);
-	if (INVALID_HANDLE_VALUE != hFind) {
-		retval = false;
-		FindClose(hFind);
-	}
-	git__free(wbuf);
-#else
-	dir = opendir(path);
-	if (!dir) {
-		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
-		return false;
-	}
-
-	while ((e = readdir(dir)) != NULL) {
-		if (!git_path_is_dot_or_dotdot(e->d_name)) {
-			giterr_set(GITERR_INVALID,
-						  "'%s' exists and is not an empty directory", path);
-			retval = false;
-			break;
-		}
-	}
-	closedir(dir);
-#endif
-
-	return retval;
+	return true;
 }
 
 

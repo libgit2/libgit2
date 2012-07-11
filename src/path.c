@@ -389,6 +389,58 @@ bool git_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+#ifdef GIT_WIN32
+
+bool git_path_is_empty_dir(const char *path)
+{
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	wchar_t *wbuf;
+	WIN32_FIND_DATAW ffd;
+	bool retval = true;
+
+	if (!git_path_isdir(path)) return false;
+
+	wbuf = gitwin_to_utf16(path);
+	gitwin_append_utf16(wbuf, "\\*", 2);
+	hFind = FindFirstFileW(wbuf, &ffd);
+	if (INVALID_HANDLE_VALUE != hFind) {
+		retval = false;
+		FindClose(hFind);
+	}
+	git__free(wbuf);
+	return retval;
+}
+
+#else
+
+bool git_path_is_empty_dir(const char *path)
+{
+	DIR *dir = NULL;
+	struct dirent *e;
+	bool retval = true;
+
+	if (!git_path_isdir(path)) return false;
+
+	dir = opendir(path);
+	if (!dir) {
+		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		return false;
+	}
+
+	while ((e = readdir(dir)) != NULL) {
+		if (!git_path_is_dot_or_dotdot(e->d_name)) {
+			giterr_set(GITERR_INVALID,
+						  "'%s' exists and is not an empty directory", path);
+			retval = false;
+			break;
+		}
+	}
+	closedir(dir);
+
+	return retval;
+}
+#endif
+
 int git_path_lstat(const char *path, struct stat *st)
 {
 	int err = 0;
