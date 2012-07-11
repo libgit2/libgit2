@@ -26,7 +26,7 @@ static void assert_signature(git_signature *expected, git_signature *actual)
 // Fixture setup and teardown
 void test_refs_reflog__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+   g_repo = cl_git_sandbox_init("testrepo.git");
 }
 
 void test_refs_reflog__cleanup(void)
@@ -61,7 +61,7 @@ void test_refs_reflog__write_then_read(void)
 	cl_git_pass(git_reflog_write(ref, &oid, committer, commit_msg));
 
 	/* Reopen a new instance of the repository */
-	cl_git_pass(git_repository_open(&repo2, "testrepo"));
+	cl_git_pass(git_repository_open(&repo2, "testrepo.git"));
 
 	/* Lookup the preivously created branch */
 	cl_git_pass(git_reference_lookup(&lookedup_ref, repo2, new_ref));
@@ -120,4 +120,45 @@ void test_refs_reflog__dont_write_bad(void)
 	git_signature_free(committer);
 
 	git_reference_free(ref);
+}
+
+void test_refs_reflog__renaming_the_reference_moves_the_reflog(void)
+{
+	git_reference *master;
+	git_buf master_log_path = GIT_BUF_INIT, moved_log_path = GIT_BUF_INIT;
+
+	git_buf_joinpath(&master_log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
+	git_buf_puts(&moved_log_path, git_buf_cstr(&master_log_path));
+	git_buf_joinpath(&master_log_path, git_buf_cstr(&master_log_path), "refs/heads/master");
+	git_buf_joinpath(&moved_log_path, git_buf_cstr(&moved_log_path), "refs/moved");
+
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&master_log_path)));
+	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&moved_log_path)));
+
+	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
+	cl_git_pass(git_reference_rename(master, "refs/moved", 0));
+
+	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&master_log_path)));
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&moved_log_path)));
+
+	git_reference_free(master);
+	git_buf_free(&moved_log_path);
+	git_buf_free(&master_log_path);
+}
+static void assert_has_reflog(bool expected_result, const char *name)
+{
+	git_reference *ref;
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, name));
+
+	cl_assert_equal_i(expected_result, git_reference_has_log(ref));
+
+	git_reference_free(ref);
+}
+
+void test_refs_reflog__reference_has_reflog(void)
+{
+	assert_has_reflog(true, "HEAD");
+	assert_has_reflog(true, "refs/heads/master");
+	assert_has_reflog(false, "refs/heads/subtrees");
 }

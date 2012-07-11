@@ -1,6 +1,9 @@
 #include "clar_libgit2.h"
 
 #include "git2/revparse.h"
+#include "buffer.h"
+#include "refs.h"
+#include "path.h"
 
 static git_repository *g_repo;
 static git_object *g_obj;
@@ -9,18 +12,28 @@ static char g_orig_tz[16] = {0};
 
 
 /* Helpers */
-static void test_object(const char *spec, const char *expected_oid)
+static void test_object_inrepo(const char *spec, const char *expected_oid, git_repository *repo)
 {
 	char objstr[64] = {0};
+	git_object *obj = NULL;
+	int error;
 
-	cl_git_pass(git_revparse_single(&g_obj, g_repo, spec));
-	git_oid_fmt(objstr, git_object_id(g_obj));
-	cl_assert_equal_s(objstr, expected_oid);
+	error = git_revparse_single(&obj, repo, spec);
 
-	git_object_free(g_obj);
-	g_obj = NULL;
+	if (expected_oid != NULL) {
+		cl_assert_equal_i(0, error);
+		git_oid_fmt(objstr, git_object_id(obj));
+		cl_assert_equal_s(objstr, expected_oid);
+	} else
+		cl_assert_equal_i(GIT_ENOTFOUND, error);
+
+	git_object_free(obj);
 }
 
+static void test_object(const char *spec, const char *expected_oid)
+{
+	test_object_inrepo(spec, expected_oid, g_repo);
+}
 
 void test_refs_revparse__initialize(void)
 {
@@ -28,21 +41,29 @@ void test_refs_revparse__initialize(void)
 	if (tz)
 		strcpy(g_orig_tz, tz);
 	cl_setenv("TZ", "UTC");
-	g_repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 }
 
 void test_refs_revparse__cleanup(void)
 {
-	cl_git_sandbox_cleanup();
+	git_repository_free(g_repo);
 	g_obj = NULL;
 	cl_setenv("TZ", g_orig_tz);
 }
 
 void test_refs_revparse__nonexistant_object(void)
 {
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "this doesn't exist"));
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist^1"));
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't exist~2"));
+	test_object("this-does-not-exist", NULL);
+	test_object("this-does-not-exist^1", NULL);
+	test_object("this-does-not-exist~2", NULL);
+}
+
+void test_refs_revparse__invalid_reference_name(void)
+{
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense^1"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense~2"));
 }
 
 void test_refs_revparse__shas(void)
@@ -85,7 +106,7 @@ void test_refs_revparse__nth_parent(void)
 	test_object("be3563a^2^1", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 	test_object("be3563a^0", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "be3563a^42"));
+	test_object("be3563a^42", NULL);
 }
 
 void test_refs_revparse__not_tag(void)
@@ -122,23 +143,92 @@ void test_refs_revparse__chaining(void)
 	test_object("master^1^1^1^1^1", "8496071c1b46c854b31185ea97743be6a8774479");
 }
 
-void test_refs_revparse__reflog(void)
+void test_refs_revparse__upstream(void)
+{
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "e90810b@{u}"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "refs/tags/e90810b@{u}"));
+
+	test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("heads/master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("refs/heads/master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+}
+
+void test_refs_revparse__ordinal(void)
+{
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, "master@{-2}"));
+
+	test_object("nope@{0}", NULL);
+	test_object("master@{31415}", NULL);
+	test_object("@{1000}", NULL);
+	test_object("@{2}", NULL);
+
+	test_object("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+
+	test_object("master@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	test_object("master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("heads/master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	test_object("refs/heads/master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+}
+
+void test_refs_revparse__previous_head(void)
 {
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-xyz}"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{-0}"));
-	cl_git_fail(git_revparse_single(&g_obj, g_repo, "@{1000}"));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "nope@{0}"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "master@{31415}"));
+	test_object("@{-42}", NULL);
 
 	test_object("@{-2}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("@{-1}", "a4a7dce85cf63874e984719f4fdd239f5145052f");
-	test_object("master@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
-	test_object("master@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-	test_object("@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
-	test_object("@{1}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-	test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
-	test_object("master@{u}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+}
+
+static void create_fake_stash_reference_and_reflog(git_repository *repo)
+{
+	git_reference *master;
+	git_buf log_path = GIT_BUF_INIT;
+
+	git_buf_joinpath(&log_path, git_repository_path(repo), "logs/refs/fakestash");
+
+	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&log_path)));
+
+	cl_git_pass(git_reference_lookup(&master, repo, "refs/heads/master"));
+	cl_git_pass(git_reference_rename(master, "refs/fakestash", 0));
+
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&log_path)));
+
+	git_buf_free(&log_path);
+	git_reference_free(master);
+}
+
+void test_refs_revparse__reflog_of_a_ref_under_refs(void)
+{
+	git_repository *repo = cl_git_sandbox_init("testrepo.git");
+
+	test_object_inrepo("refs/fakestash", NULL, repo);
+
+	create_fake_stash_reference_and_reflog(repo);
+
+	/*
+	 * $ git reflog -1 refs/fakestash
+	 * a65fedf refs/fakestash@{0}: commit: checking in
+	 *
+	 * $ git reflog -1 refs/fakestash@{0}
+	 * a65fedf refs/fakestash@{0}: commit: checking in
+	 *
+	 * $ git reflog -1 fakestash
+	 * a65fedf fakestash@{0}: commit: checking in
+	 *
+	 * $ git reflog -1 fakestash@{0}
+	 * a65fedf fakestash@{0}: commit: checking in
+	 */
+	test_object_inrepo("refs/fakestash", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+	test_object_inrepo("refs/fakestash@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+	test_object_inrepo("fakestash", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+	test_object_inrepo("fakestash@{0}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+
+	cl_git_sandbox_cleanup();
 }
 
 void test_refs_revparse__revwalk(void)
@@ -170,7 +260,7 @@ void test_refs_revparse__date(void)
 	 * a65fedf HEAD@{1335806603 -0900}: commit:
 	 * be3563a HEAD@{1335806563 -0700}: clone: from /Users/ben/src/libgit2/tests/resour
 	 */
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "HEAD@{10 years ago}"));
+	test_object("HEAD@{10 years ago}", NULL);
 
 	test_object("HEAD@{1 second}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD@{1 second ago}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
@@ -191,8 +281,8 @@ void test_refs_revparse__date(void)
 	 * $ git reflog -1 "master@{2012-04-30 17:22:42 +0000}"
 	 * warning: Log for 'master' only goes back to Mon, 30 Apr 2012 09:22:43 -0800.
 	 */
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "master@{2012-04-30 17:22:42 +0000}"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "master@{2012-04-30 09:22:42 -0800}"));
+	test_object("master@{2012-04-30 17:22:42 +0000}", NULL);
+	test_object("master@{2012-04-30 09:22:42 -0800}", NULL);
 
 	/*
 	 * $ git reflog -1 "master@{2012-04-30 17:22:43 +0000}"
@@ -229,11 +319,11 @@ void test_refs_revparse__colon(void)
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":/"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README"));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, ":/not found in any commit"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/42.txt"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:ab/4.txt/nope"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "subtrees:nope"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_revparse_single(&g_obj, g_repo, "test/master^1:branch_file.txt"));
+	test_object(":/not found in any commit", NULL);
+	test_object("subtrees:ab/42.txt", NULL);
+	test_object("subtrees:ab/4.txt/nope", NULL);
+	test_object("subtrees:nope", NULL);
+	test_object("test/master^1:branch_file.txt", NULL);
 
 	/* Trees */
 	test_object("master:", "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");

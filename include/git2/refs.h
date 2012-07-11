@@ -353,6 +353,16 @@ GIT_EXTERN(int) git_reference_foreach_glob(
 		void *payload
 );
 
+/**
+ * Check if a reflog exists for the specified reference.
+ *
+ * @param ref A git reference
+ *
+ * @return 0 when no reflog can be found, 1 when it exists;
+ * otherwise an error code.
+ */
+GIT_EXTERN(int) git_reference_has_log(git_reference *ref);
+
 /** @} */
 GIT_END_DECL
 #endif
