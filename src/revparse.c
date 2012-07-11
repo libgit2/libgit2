@@ -522,8 +522,7 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
 
 static int handle_linear_syntax(git_object **out, git_object *obj, const char *movement)
 {
-	git_commit *commit1, *commit2;
-	int i, n;
+	int n;
 
 	/* Dereference until we reach a commit. */
 	if (dereference_to_type(&obj, obj, GIT_OBJ_COMMIT) < 0) {
@@ -537,26 +536,8 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
 	} else if (git__strtol32(&n, movement, NULL, 0) < 0) {
 		return GIT_ERROR;
 	}
-	commit1 = (git_commit*)obj;
 
-	/* "~0" just returns the input */
-	if (n == 0) {
-		*out = obj;
-		return 0;
-	}
-
-	for (i=0; i<n; i++) {
-		if (git_commit_parent(&commit2, commit1, 0) < 0) {
-			return GIT_ERROR;
-		}
-		if (commit1 != (git_commit*)obj) {
-			git_commit_free(commit1);
-		}
-		commit1 = commit2;
-	}
-
-	*out = (git_object*)commit1;
-	return 0;
+	return git_commit_nth_gen_ancestor((git_commit **)out, (git_commit*)obj, n);
 }
 
 static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo, const char *path)
