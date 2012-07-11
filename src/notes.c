@@ -97,7 +97,7 @@ static int tree_write(
 {
 	int error;
 	git_treebuilder *tb = NULL;
-	git_tree_entry *entry;
+	const git_tree_entry *entry;
 	git_oid tree_oid;
 
 	if ((error = git_treebuilder_create(&tb, source_tree)) < 0)

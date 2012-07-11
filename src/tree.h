@@ -13,11 +13,11 @@
 #include "vector.h"
 
 struct git_tree_entry {
-	unsigned int attr;
-	char *filename;
+	uint16_t removed;
+	uint16_t attr;
 	git_oid oid;
 	size_t filename_len;
-	int removed;
+	char filename[1];
 };
 
 struct git_tree {
