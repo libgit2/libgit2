@@ -1404,17 +1404,10 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	}
 
 	/*
-	 * Rename the reflog file.
+	 * Rename the reflog file, if it exists.
 	 */
-	if (git_buf_join_n(&aux_path, '/', 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name) < 0)
+	if ((git_reference_has_log(ref)) && (git_reflog_rename(ref, new_name) < 0))
 		goto cleanup;
-
-	if (git_path_exists(aux_path.ptr) == true) {
-		if (git_reflog_rename(ref, new_name) < 0)
-			goto cleanup;
-	} else {
-		giterr_clear();
-	}
 
 	/*
 	 * Change the name of the reference given by the user.
@@ -1800,4 +1793,21 @@ int git_reference_foreach_glob(
 
 	return git_reference_foreach(
 			repo, list_flags, fromglob_cb, &data);
+}
+
+int git_reference_has_log(
+	git_reference *ref)
+{
+	git_buf path = GIT_BUF_INIT;
+	int result;
+
+	assert(ref);
+
+	if (git_buf_join_n(&path, '/', 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name) < 0)
+		return -1;
+
+	result = git_path_isfile(git_buf_cstr(&path));
+	git_buf_free(&path);
+
+	return result;
 }

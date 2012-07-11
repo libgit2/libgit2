@@ -192,3 +192,13 @@ void test_refs_read__loose_first(void)
 
 	git_reference_free(reference);
 }
+
+void test_refs_read__unfound_return_ENOTFOUND(void)
+{
+	git_reference *reference;
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/farther/master"));
+}

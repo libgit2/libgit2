@@ -269,18 +269,50 @@ cleanup:
 
 int git_reflog_rename(git_reference *ref, const char *new_name)
 {
-	int error;
+	int error = -1, fd;
 	git_buf old_path = GIT_BUF_INIT;
 	git_buf new_path = GIT_BUF_INIT;
+	git_buf temp_path = GIT_BUF_INIT;
 
-	if (!git_buf_join_n(&old_path, '/', 3, ref->owner->path_repository,
-			GIT_REFLOG_DIR, ref->name) &&
-		!git_buf_join_n(&new_path, '/', 3, ref->owner->path_repository,
-			GIT_REFLOG_DIR, new_name))
-		error = p_rename(git_buf_cstr(&old_path), git_buf_cstr(&new_path));
-	else
-		error = -1;
+	assert(ref && new_name);
 
+	if (git_buf_joinpath(&temp_path, ref->owner->path_repository, GIT_REFLOG_DIR) < 0)
+		return -1;
+
+	if (git_buf_joinpath(&old_path, git_buf_cstr(&temp_path), ref->name) < 0)
+		goto cleanup;
+
+	if (git_buf_joinpath(&new_path, git_buf_cstr(&temp_path), new_name) < 0)
+		goto cleanup;
+
+	/*
+	 * Move the reflog to a temporary place. This two-phase renaming is required
+	 * in order to cope with funny renaming use cases when one tries to move a reference
+	 * to a partially colliding namespace:
+	 *  - a/b -> a/b/c
+	 *  - a/b/c/d -> a/b/c
+	 */
+	if (git_buf_joinpath(&temp_path, git_buf_cstr(&temp_path), "temp_reflog") < 0)
+		goto cleanup;
+
+	if ((fd = git_futils_mktmp(&temp_path, git_buf_cstr(&temp_path))) < 0)
+		goto cleanup;
+	p_close(fd);
+
+	if (p_rename(git_buf_cstr(&old_path), git_buf_cstr(&temp_path)) < 0)
+		goto cleanup;
+
+	if (git_path_isdir(git_buf_cstr(&new_path)) && 
+		(git_futils_rmdir_r(git_buf_cstr(&new_path), GIT_DIRREMOVAL_ONLY_EMPTY_DIRS) < 0))
+		goto cleanup;
+
+	if (git_futils_mkpath2file(git_buf_cstr(&new_path), GIT_REFLOG_DIR_MODE) < 0)
+		goto cleanup;
+
+	error = p_rename(git_buf_cstr(&temp_path), git_buf_cstr(&new_path));
+
+cleanup:
+	git_buf_free(&temp_path);
 	git_buf_free(&old_path);
 	git_buf_free(&new_path);
 
