@@ -255,3 +255,37 @@ int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 
 	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
+
+int git_commit_nth_gen_ancestor(
+	git_commit **ancestor,
+	const git_commit *commit,
+	unsigned int n)
+{
+	git_commit *current, *parent;
+	int error;
+
+	assert(ancestor && commit);
+
+	current = (git_commit *)commit;
+
+	if (n == 0)
+		return git_commit_lookup(
+			ancestor,
+			commit->object.repo,
+			git_object_id((const git_object *)commit));
+
+	while (n--) {
+		error = git_commit_parent(&parent, (git_commit *)current, 0);
+
+		if (current != commit)
+			git_commit_free(current);
+
+		if (error < 0)
+			return error;
+
+		current = parent;
+	}
+
+	*ancestor = parent;
+	return 0;
+}
