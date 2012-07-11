@@ -229,25 +229,10 @@ GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
 GIT_COMMIT_GETTER(unsigned int, parentcount, commit->parent_oids.length)
 GIT_COMMIT_GETTER(const git_oid *, tree_oid, &commit->tree_oid);
 
-
 int git_commit_tree(git_tree **tree_out, git_commit *commit)
 {
 	assert(commit);
 	return git_tree_lookup(tree_out, commit->object.repo, &commit->tree_oid);
-}
-
-int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
-{
-	git_oid *parent_oid;
-	assert(commit);
-
-	parent_oid = git_vector_get(&commit->parent_oids, n);
-	if (parent_oid == NULL) {
-		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
-		return GIT_ENOTFOUND;
-	}
-
-	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
 
 const git_oid *git_commit_parent_oid(git_commit *commit, unsigned int n)
@@ -255,4 +240,18 @@ const git_oid *git_commit_parent_oid(git_commit *commit, unsigned int n)
 	assert(commit);
 
 	return git_vector_get(&commit->parent_oids, n);
+}
+
+int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
+{
+	const git_oid *parent_oid;
+	assert(commit);
+
+	parent_oid = git_commit_parent_oid(commit, n);
+	if (parent_oid == NULL) {
+		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
+		return GIT_ENOTFOUND;
+	}
+
+	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
