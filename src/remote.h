@@ -21,6 +21,13 @@ struct git_remote {
 	git_repository *repo;
 	unsigned int need_pack:1,
 		check_cert;
+
+	/* Callbacks */
+	git_update_tips_cb update_tips;
+	void *update_tips_data;
+
+	git_auth_cb auth;
+	void *auth_data;
 };
 
 #endif

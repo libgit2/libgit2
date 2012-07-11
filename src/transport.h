@@ -7,8 +7,13 @@
 #ifndef INCLUDE_transport_h__
 #define INCLUDE_transport_h__
 
+#ifdef GIT_SSH
+#	include <libssh2.h>
+#endif
+
 #include "git2/net.h"
 #include "git2/indexer.h"
+#include "git2/remote.h"
 #include "vector.h"
 #include "posix.h"
 #include "common.h"
@@ -30,6 +35,13 @@ typedef struct gitno_ssl {
 	SSL_CTX *ctx;
 	SSL *ssl;
 } gitno_ssl;
+#endif
+
+#ifdef GIT_SSH
+typedef struct gitno_ssh {
+	LIBSSH2_SESSION *session;
+	LIBSSH2_CHANNEL *channel;
+} gitno_ssh;
 #endif
 
 
@@ -64,17 +76,23 @@ struct git_transport {
 	 * Where the repo lives
 	 */
 	char *url;
-	/**
-	 * Whether we want to push or fetch
-	 */
+
 	int direction : 1, /* 0 fetch, 1 push */
 		connected : 1,
 		check_cert: 1,
-		encrypt : 1;
+		ssl_conn: 1,
+		ssh_conn: 1;
 #ifdef GIT_SSL
 	struct gitno_ssl ssl;
 #endif
 	GIT_SOCKET socket;
+
+#ifdef GIT_SSH
+	gitno_ssh ssh;
+#endif
+	git_auth_cb auth;
+	git_auth_cb_data *auth_data;
+
 	/**
 	 * Connect and store the remote heads
 	 */
@@ -111,12 +129,16 @@ struct git_transport {
 };
 
 
+int git_transport_dummy(struct git_transport **transport);
 int git_transport_new(struct git_transport **transport, const char *url);
 int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
 int git_transport_http(struct git_transport **transport);
 int git_transport_https(struct git_transport **transport);
 int git_transport_dummy(struct git_transport **transport);
+#ifdef GIT_SSH
+int git_transport_ssh(struct git_transport **transport);
+#endif
 
 /**
   Returns true if the passed URL is valid (a URL with a Git supported scheme,

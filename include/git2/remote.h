@@ -190,7 +190,7 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * @param remote the remote to update
  * @param cb callback to run on each ref update. 'a' is the old value, 'b' is then new value
  */
-GIT_EXTERN(int) git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, const git_oid *a, const git_oid *b));
+GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
 
 /**
  * Return whether a string is a valid remote URL
@@ -237,6 +237,34 @@ GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const cha
  */
 
 GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
+
+typedef enum {
+	GIT_CALLBACK_PROGRESS,
+	GIT_CALLBACK_ERROR,
+	GIT_CALLBACK_AUTH,
+	GIT_CALLBACK_UPDATE_TIPS,
+	GIT_CALLBACK_DONE,
+} git_callback_t;
+
+typedef int (*git_update_tips_cb)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+
+typedef struct git_auth_cb_data {
+	char *username;
+	char *password;
+	char *pubkey;
+	char *known_hosts;
+} git_auth_cb_data;
+typedef int (*git_auth_cb)(git_auth_cb_data *data);
+
+/**
+ * Set a callback for a particular event
+ *
+ * @param remote The remote to act on
+ * @param opt Which callback to set
+ * @param callback function pointer to the callback
+ * @param data user-supplied data to pass to the callback
+ */
+GIT_EXTERN(int) git_remote_callback(git_remote *remote, git_callback_t opt, void *callback, void *data);
 
 /** @} */
 GIT_END_DECL
