@@ -488,14 +488,6 @@ int git_path_cmp(
 	return (c1 < c2) ? -1 : (c1 > c2) ? 1 : 0;
 }
 
-/* Taken from git.git */
-GIT_INLINE(int) is_dot_or_dotdot(const char *name)
-{
-	return (name[0] == '.' &&
-		(name[1] == '\0' ||
-		 (name[1] == '.' && name[2] == '\0')));
-}
-
 int git_path_direach(
 	git_buf *path,
 	int (*fn)(void *, git_buf *),
@@ -524,7 +516,7 @@ int git_path_direach(
 	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
 		int result;
 
-		if (is_dot_or_dotdot(de->d_name))
+		if (git_path_is_dot_or_dotdot(de->d_name))
 			continue;
 
 		if (git_buf_puts(path, de->d_name) < 0) {
@@ -583,7 +575,7 @@ int git_path_dirload(
 		char *entry_path;
 		size_t entry_len;
 
-		if (is_dot_or_dotdot(de->d_name))
+		if (git_path_is_dot_or_dotdot(de->d_name))
 			continue;
 
 		entry_len = strlen(de->d_name);

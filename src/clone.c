@@ -24,6 +24,7 @@
 #include "remote.h"
 #include "fileops.h"
 #include "refs.h"
+#include "path.h"
 
 GIT_BEGIN_DECL
 
@@ -191,13 +192,6 @@ static int setup_remotes_and_fetch(git_repository *repo,
 }
 
 
-static bool is_dot_or_dotdot(const char *name)
-{
-	return (name[0] == '.' &&
-			  (name[1] == '\0' ||
-				(name[1] == '.' && name[2] == '\0')));
-}
-
 /* TODO: p_opendir, p_closedir */
 static bool path_is_okay(const char *path)
 {
@@ -238,7 +232,7 @@ static bool path_is_okay(const char *path)
 	}
 
 	while ((e = readdir(dir)) != NULL) {
-		if (!is_dot_or_dotdot(e->d_name)) {
+		if (!git_path_is_dot_or_dotdot(e->d_name)) {
 			giterr_set(GITERR_INVALID,
 						  "'%s' exists and is not an empty directory", path);
 			retval = false;

@@ -80,6 +80,14 @@ extern int git_path_to_dir(git_buf *path);
  */
 extern void git_path_string_to_dir(char* path, size_t size);
 
+/* Taken from git.git */
+GIT_INLINE(int) git_path_is_dot_or_dotdot(const char *name)
+{
+	return (name[0] == '.' &&
+			  (name[1] == '\0' ||
+				(name[1] == '.' && name[2] == '\0')));
+}
+
 #ifdef GIT_WIN32
 /**
  * Convert backslashes in path to forward slashes.
