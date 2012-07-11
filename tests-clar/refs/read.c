@@ -16,12 +16,12 @@ static git_repository *g_repo;
 
 void test_refs_read__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 }
 
 void test_refs_read__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	git_repository_free(g_repo);
 }
 
 void test_refs_read__loose_tag(void)
