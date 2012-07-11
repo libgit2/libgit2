@@ -3,6 +3,9 @@
 #include "git2/clone.h"
 #include "repository.h"
 
+#define DO_LIVE_NETWORK_TESTS 0
+
+
 static git_repository *g_repo;
 
 void test_clone_clone__initialize(void)
@@ -74,7 +77,7 @@ void test_clone_clone__local(void)
 	git_buf src = GIT_BUF_INIT;
 	build_local_file_url(&src, cl_fixture("testrepo.git"));
 
-#if 0
+#if DO_LIVE_NETWORK_TESTS
 	cl_git_pass(git_clone(&g_repo, git_buf_cstr(&src), "./local", NULL));
 	git_repository_free(g_repo);
 	git_futils_rmdir_r("./local", GIT_DIRREMOVAL_FILES_AND_DIRS);
@@ -88,7 +91,7 @@ void test_clone_clone__local(void)
 
 void test_clone_clone__network_full(void)
 {
-#if 0
+#if DO_LIVE_NETWORK_TESTS
 	git_remote *origin;
 
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/node-gitteh", "./attr", NULL));
@@ -100,7 +103,7 @@ void test_clone_clone__network_full(void)
 
 void test_clone_clone__network_bare(void)
 {
-#if 0
+#if DO_LIVE_NETWORK_TESTS
 	git_remote *origin;
 
 	cl_git_pass(git_clone_bare(&g_repo, "http://github.com/libgit2/node-gitteh", "attr", NULL));
@@ -113,9 +116,7 @@ void test_clone_clone__network_bare(void)
 
 void test_clone_clone__already_exists(void)
 {
-#if 0
-	int bar;
-
+#if DO_LIVE_NETWORK_TESTS
 	/* Should pass with existing-but-empty dir */
 	p_mkdir("./foo", GIT_DIR_MODE);
 	cl_git_pass(git_clone(&g_repo,

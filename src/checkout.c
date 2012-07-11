@@ -23,29 +23,6 @@
 GIT_BEGIN_DECL
 
 
-static int get_head_tree(git_tree **out, git_repository *repo)
-{
-	int retcode = GIT_ERROR;
-	git_reference *head = NULL;
-
-	/* Dereference HEAD all the way to an OID ref */
-	if (!git_reference_lookup_resolved(&head, repo, GIT_HEAD_FILE, -1)) {
-		/* The OID should be a commit */
-		git_object *commit;
-		if (!git_object_lookup(&commit, repo,
-									  git_reference_oid(head), GIT_OBJ_COMMIT)) {
-			/* Get the tree */
-			if (!git_commit_tree(out, (git_commit*)commit)) {
-				retcode = 0;
-			}
-			git_object_free(commit);
-		}
-		git_reference_free(head);
-	}
-
-	return retcode;
-}
-
 typedef struct tree_walk_data
 {
 	git_indexer_stats *stats;
@@ -160,7 +137,7 @@ int git_checkout_force(git_repository *repo, git_indexer_stats *stats)
 
 	/* TODO: stats->total is never calculated. */
 
-	if (!get_head_tree(&tree, repo)) {
+	if (!git_repository_head_tree(&tree, repo)) {
 		/* Checkout the files */
 		if (!git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload)) {
 			retcode = 0;
