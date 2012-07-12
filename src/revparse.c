@@ -147,19 +147,19 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_sha_or_abbrev(out, repo, spec);
-	if (!error)
-		return 0;
-
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
-
 	error = disambiguate_refname(&ref, repo, spec);
 	if (!error) {
 		error = git_object_lookup(out, repo, git_reference_oid(ref), GIT_OBJ_ANY);
 		git_reference_free(ref);
 		return 0;
 	}
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	error = maybe_sha_or_abbrev(out, repo, spec);
+	if (!error)
+		return 0;
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
