@@ -46,7 +46,7 @@ static void assert_retrieval(const char *glob, unsigned int flags, int expected_
 void test_refs_foreachglob__retrieve_all_refs(void)
 {
 	/* 7 heads (including one packed head) + 1 note + 2 remotes + 6 tags */
-	assert_retrieval("*", GIT_REF_LISTALL, 16);
+	assert_retrieval("*", GIT_REF_LISTALL, 17);
 }
 
 void test_refs_foreachglob__retrieve_remote_branches(void)
@@ -56,7 +56,7 @@ void test_refs_foreachglob__retrieve_remote_branches(void)
 
 void test_refs_foreachglob__retrieve_local_branches(void)
 {
-	assert_retrieval("refs/heads/*", GIT_REF_LISTALL, 7);
+	assert_retrieval("refs/heads/*", GIT_REF_LISTALL, 8);
 }
 
 void test_refs_foreachglob__retrieve_partially_named_references(void)
