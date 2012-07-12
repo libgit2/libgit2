@@ -151,7 +151,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 	if (!error) {
 		error = git_object_lookup(out, repo, git_reference_oid(ref), GIT_OBJ_ANY);
 		git_reference_free(ref);
-		return 0;
+		return error;
 	}
 
 	if (error < 0 && error != GIT_ENOTFOUND)
