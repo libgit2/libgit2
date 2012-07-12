@@ -686,6 +686,49 @@ static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_
 	}
 }
 
+int git_pack_foreach_entry(
+		struct git_pack_file *p,
+		int (*cb)(git_oid *oid, void *data),
+		void *data)
+
+{
+	const unsigned char *index = p->index_map.data, *current;
+	unsigned stride;
+	uint32_t i;
+
+	if (index == NULL) {
+		int error;
+
+		if ((error = pack_index_open(p)) < 0)
+			return error;
+
+		assert(p->index_map.data);
+
+		index = p->index_map.data;
+	}
+
+	if (p->index_version > 1) {
+		index += 8;
+	}
+
+	index += 4 * 256;
+
+	if (p->index_version > 1) {
+		stride = 20;
+	} else {
+		stride = 24;
+		index += 4;
+	}
+
+	current = index;
+	for (i = 0; i < p->num_objects; i++) {
+		cb((git_oid *)current, data);
+		current += stride;
+	}
+
+	return 0;
+}
+
 static int pack_entry_find_offset(
 	git_off_t *offset_out,
 	git_oid *found_oid,
