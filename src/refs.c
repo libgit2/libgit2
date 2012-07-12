@@ -1397,6 +1397,9 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	head_target = git_reference_target(head);
 
 	if (head_target && !strcmp(head_target, ref->name)) {
+		git_reference_free(head);
+		head = NULL;
+
 		if (git_reference_create_symbolic(&head, ref->owner, "HEAD", new_name, 1) < 0) {
 			giterr_set(GITERR_REFERENCE,
 				"Failed to update HEAD after renaming reference");
