@@ -46,12 +46,12 @@ void test_object_tree_frompath__retrieve_tree_from_path_to_treeentry(void)
 	assert_tree_from_path(tree, "ab/", "ab");
 	assert_tree_from_path(tree, "ab/de/", "de");
 
-	cl_must_fail(git_tree_entry_bypath(&e, tree, "i-do-not-exist.txt"));
-	cl_must_fail(git_tree_entry_bypath(&e, tree, "README/"));
-	cl_must_fail(git_tree_entry_bypath(&e, tree, "ab/de/fgh/i-do-not-exist.txt"));
-	cl_must_fail(git_tree_entry_bypath(&e, tree, "nope/de/fgh/1.txt"));
-	cl_must_fail(git_tree_entry_bypath(&e, tree, "ab/me-neither/fgh/2.txt"));
-	cl_must_fail(git_tree_entry_bypath(&e, tree, "ab/me-neither/fgh/2.txt/"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_tree_entry_bypath(&e, tree, "i-do-not-exist.txt"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_tree_entry_bypath(&e, tree, "README/"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_tree_entry_bypath(&e, tree, "ab/de/fgh/i-do-not-exist.txt"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_tree_entry_bypath(&e, tree, "nope/de/fgh/1.txt"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_tree_entry_bypath(&e, tree, "ab/me-neither/fgh/2.txt"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_tree_entry_bypath(&e, tree, "ab/me-neither/fgh/2.txt/"));
 }
 
 void test_object_tree_frompath__fail_when_processing_an_invalid_path(void)

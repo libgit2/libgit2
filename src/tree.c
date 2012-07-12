@@ -730,7 +730,7 @@ int git_tree_entry_bypath(
 		if (!git_tree_entry__is_tree(entry)) {
 			giterr_set(GITERR_TREE,
 				"The path '%s' does not exist in the given tree", path);
-			return -1;
+			return GIT_ENOTFOUND;
 		}
 
 		/* If there's only a slash left in the path, we 
