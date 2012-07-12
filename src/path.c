@@ -391,13 +391,6 @@ bool git_path_isfile(const char *path)
 
 #ifdef GIT_WIN32
 
-static bool is_dot_or_dotdotW(const wchar_t *name)
-{
-	return (name[0] == L'.' &&
-			(name[1] == L'\0' ||
-			 (name[1] == L'.' && name[2] == L'\0')));
-}
-
 bool git_path_is_empty_dir(const char *path)
 {
 	git_buf pathbuf = GIT_BUF_INIT;
@@ -418,7 +411,7 @@ bool git_path_is_empty_dir(const char *path)
 	}
 
 	do {
-		if (!is_dot_or_dotdotW(ffd.cFileName)) {
+		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
 			retval = false;
 		}
 	} while (FindNextFileW(hFind, &ffd) != 0);

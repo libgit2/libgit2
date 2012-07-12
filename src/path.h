@@ -91,6 +91,13 @@ GIT_INLINE(int) git_path_is_dot_or_dotdot(const char *name)
 }
 
 #ifdef GIT_WIN32
+GIT_INLINE(int) git_path_is_dot_or_dotdotW(const wchar_t *name)
+{
+	return (name[0] == L'.' &&
+			  (name[1] == L'\0' ||
+				(name[1] == L'.' && name[2] == L'\0')));
+}
+
 /**
  * Convert backslashes in path to forward slashes.
  */
