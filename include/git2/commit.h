@@ -192,7 +192,7 @@ GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned i
  * @return 0 on success; GIT_ENOTFOUND if no matching ancestor exists
  * or an error code
  */
-int git_commit_nth_gen_ancestor(
+GIT_EXTERN(int) git_commit_nth_gen_ancestor(
 	git_commit **ancestor,
 	const git_commit *commit,
 	unsigned int n);
