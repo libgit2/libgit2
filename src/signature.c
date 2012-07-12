@@ -40,7 +40,7 @@ static const char *skip_trailing_spaces(const char *buffer_start, const char *bu
 
 static int signature_error(const char *msg)
 {
-	giterr_set(GITERR_INVALID, "Failed to parse signature - %s", msg);
+	giterr_set(GITERR_INVALID, "Failed to process signature - %s", msg);
 	return -1;
 }
 
@@ -72,9 +72,16 @@ static int process_trimming(const char *input, char **storage, const char *input
 	return 0;
 }
 
+static bool contains_angle_brackets(const char *input)
+{
+	if (strchr(input, '<') != NULL)
+		return true;
+
+	return strchr(input, '>') != NULL;
+}
+
 int git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset)
 {
-	int error;
 	git_signature *p = NULL;
 
 	assert(name && email);
@@ -84,11 +91,18 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	p = git__calloc(1, sizeof(git_signature));
 	GITERR_CHECK_ALLOC(p);
 
-	if ((error = process_trimming(name, &p->name, name + strlen(name), 1)) < 0 ||
-		(error = process_trimming(email, &p->email, email + strlen(email), 1)) < 0)
+	if (process_trimming(name, &p->name, name + strlen(name), 1) < 0 ||
+		process_trimming(email, &p->email, email + strlen(email), 1) < 0)
 	{
 		git_signature_free(p);
-		return error;
+		return -1;
+	}
+		
+	if (contains_angle_brackets(p->email) ||
+		contains_angle_brackets(p->name))
+	{
+		git_signature_free(p);
+		return signature_error("Neither `name` nor `email` should contain angle brackets chars.");
 	}
 
 	p->when.time = time;
