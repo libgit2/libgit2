@@ -605,6 +605,18 @@ int git_odb_read_prefix(
 	return 0;
 }
 
+int git_odb_foreach(git_odb *db, int (*cb)(git_oid *oid, void *data), void *data)
+{
+	unsigned int i;
+	backend_internal *internal;
+	git_vector_foreach(&db->backends, i, internal) {
+		git_odb_backend *b = internal->backend;
+		b->foreach(b, cb, data);
+	}
+
+	return 0;
+}
+
 int git_odb_write(
 	git_oid *oid, git_odb *db, const void *data, size_t len, git_otype type)
 {
