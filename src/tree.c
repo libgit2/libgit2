@@ -140,6 +140,9 @@ static int tree_key_search(git_vector *entries, const char *filename, size_t fil
 
 void git_tree_entry_free(git_tree_entry *entry)
 {
+	if (entry == NULL)
+		return;
+
 	git__free(entry);
 }
 
