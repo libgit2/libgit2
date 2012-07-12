@@ -186,6 +186,29 @@ extern int git_path_prettify_dir(git_buf *path_out, const char *path, const char
 extern int git_path_find_dir(git_buf *dir, const char *path, const char *base);
 
 /**
+ * Resolve relative references within a path.
+ *
+ * This eliminates "./" and "../" relative references inside a path,
+ * as well as condensing multiple slashes into single ones.  It will
+ * not touch the path before the "ceiling" length.
+ *
+ * Additionally, this will recognize an "c:/" drive prefix or a "xyz://" URL
+ * prefix and not touch that part of the path.
+ */
+extern int git_path_resolve_relative(git_buf *path, size_t ceiling);
+
+/**
+ * Apply a relative path to base path.
+ *
+ * Note that the base path could be a filename or a URL and this
+ * should still work.  The relative path is walked segment by segment
+ * with three rules: series of slashes will be condensed to a single
+ * slash, "." will be eaten with no change, and ".." will remove a
+ * segment from the base path.
+ */
+extern int git_path_apply_relative(git_buf *target, const char *relpath);
+
+/**
  * Walk each directory entry, except '.' and '..', calling fn(state).
  *
  * @param pathbuf buffer the function reads the initial directory

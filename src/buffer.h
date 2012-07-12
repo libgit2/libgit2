@@ -91,6 +91,18 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...);
 int git_buf_join(git_buf *buf, char separator, const char *str_a, const char *str_b);
 
 /**
+ * Copy string into buf prefixing every character that is contained in the
+ * esc_chars string with the esc_with string.
+ */
+int git_buf_puts_escaped(
+	git_buf *buf, const char *string, const char *esc_chars, const char *esc_with);
+
+GIT_INLINE(int) git_buf_puts_escape_regex(git_buf *buf, const char *string)
+{
+	return git_buf_puts_escaped(buf, string, "^.[]$()|*+?{}\\", "\\");
+}
+
+/**
  * Join two strings as paths, inserting a slash between as needed.
  * @return 0 on success, -1 on failure
  */
@@ -117,6 +129,13 @@ GIT_INLINE(ssize_t) git_buf_rfind_next(git_buf *buf, char ch)
 {
 	ssize_t idx = (ssize_t)buf->size - 1;
 	while (idx >= 0 && buf->ptr[idx] == ch) idx--;
+	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
+	return idx;
+}
+
+GIT_INLINE(ssize_t) git_buf_rfind(git_buf *buf, char ch)
+{
+	ssize_t idx = (ssize_t)buf->size - 1;
 	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
 	return idx;
 }

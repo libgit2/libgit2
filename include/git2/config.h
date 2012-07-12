@@ -33,7 +33,7 @@ struct git_config_file {
 	int (*set)(struct git_config_file *, const char *key, const char *value);
 	int (*set_multivar)(git_config_file *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_file *, const char *key);
-	int (*foreach)(struct git_config_file *, int (*fn)(const char *, const char *, void *), void *data);
+	int (*foreach)(struct git_config_file *, const char *, int (*fn)(const char *, const char *, void *), void *data);
 	void (*free)(struct git_config_file *);
 };
 
@@ -314,6 +314,24 @@ GIT_EXTERN(int) git_config_foreach(
 	int (*callback)(const char *var_name, const char *value, void *payload),
 	void *payload);
 
+/**
+ * Perform an operation on each config variable matching a regular expression.
+ *
+ * This behaviors like `git_config_foreach` with an additional filter of a
+ * regular expression that filters which config keys are passed to the
+ * callback.
+ *
+ * @param cfg where to get the variables from
+ * @param regexp regular expression to match against config names
+ * @param callback the function to call on each variable
+ * @param payload the data to pass to the callback
+ * @return 0 or the return value of the callback which didn't return 0
+ */
+GIT_EXTERN(int) git_config_foreach_match(
+	git_config *cfg,
+	const char *regexp,
+	int (*callback)(const char *var_name, const char *value, void *payload),
+	void *payload);
 
 /**
  * Query the value of a config variable and return it mapped to

@@ -191,6 +191,81 @@ void test_config_read__escaping_quotes(void)
 	git_config_free(cfg);
 }
 
+static int count_cfg_entries(
+	const char *var_name, const char *value, void *payload)
+{
+	int *count = payload;
+	GIT_UNUSED(var_name);
+	GIT_UNUSED(value);
+	(*count)++;
+	return 0;
+}
+
+static int cfg_callback_countdown(
+	const char *var_name, const char *value, void *payload)
+{
+	int *count = payload;
+	GIT_UNUSED(var_name);
+	GIT_UNUSED(value);
+	(*count)--;
+	if (*count == 0)
+		return -100;
+	return 0;
+}
+
+void test_config_read__foreach(void)
+{
+	git_config *cfg;
+	int count, ret;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config9")));
+
+	count = 0;
+	cl_git_pass(git_config_foreach(cfg, count_cfg_entries, &count));
+	cl_assert_equal_i(5, count);
+
+	count = 3;
+	cl_git_fail(ret = git_config_foreach(cfg, cfg_callback_countdown, &count));
+	cl_assert_equal_i(-100, ret);
+
+	git_config_free(cfg);
+}
+
+void test_config_read__foreach_match(void)
+{
+	git_config *cfg;
+	int count;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config9")));
+
+	count = 0;
+	cl_git_pass(
+		git_config_foreach_match(cfg, "core.*", count_cfg_entries, &count));
+	cl_assert_equal_i(3, count);
+
+	count = 0;
+	cl_git_pass(
+		git_config_foreach_match(cfg, "remote\\.ab.*", count_cfg_entries, &count));
+	cl_assert_equal_i(2, count);
+
+	count = 0;
+	cl_git_pass(
+		git_config_foreach_match(cfg, ".*url$", count_cfg_entries, &count));
+	cl_assert_equal_i(2, count);
+
+	count = 0;
+	cl_git_pass(
+		git_config_foreach_match(cfg, ".*dummy.*", count_cfg_entries, &count));
+	cl_assert_equal_i(2, count);
+
+	count = 0;
+	cl_git_pass(
+		git_config_foreach_match(cfg, ".*nomatch.*", count_cfg_entries, &count));
+	cl_assert_equal_i(0, count);
+
+	git_config_free(cfg);
+}
+
 #if 0
 
 BEGIN_TEST(config10, "a repo's config overrides the global config")
