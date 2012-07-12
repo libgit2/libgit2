@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #ifdef _MSC_VER
+#	include "windows_config.h"
 #	include "inttypes.h"
 #else
 #	include <inttypes.h>
@@ -32,9 +33,17 @@
 			 __attribute__((visibility("default"))) \
 			 type
 #elif defined(_MSC_VER)
-# define GIT_EXTERN(type) __declspec(dllexport) type
+# ifdef GIT_STDCALL
+#  define GIT_EXTERN(type) __declspec(dllexport) type __stdcall
+#  define GIT_EXTERN_DATA(type) __declspec(dllexport) type
+# else
+#  define GIT_EXTERN(type) __declspec(dllexport) type
+# endif
 #else
 # define GIT_EXTERN(type) extern type
+#endif
+#ifndef GIT_EXTERN_DATA
+# define GIT_EXTERN_DATA(type) GIT_EXTERN(type)
 #endif
 
 /** Declare a function as always inlined. */

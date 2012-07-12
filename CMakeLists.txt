@@ -27,7 +27,7 @@ IF (AMIGA)
 ENDIF()
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(src include deps/http-parser)
+INCLUDE_DIRECTORIES(src include ${CMAKE_CURRENT_BINARY_DIR} deps/http-parser)
 
 FILE(GLOB SRC_HTTP deps/http-parser/*.c)
 
@@ -76,10 +76,12 @@ OPTION (PROFILE "Generate profiling information" OFF)
 # Platform specific compilation flags
 IF (MSVC)
 	# Not using __stdcall with the CRT causes problems
-	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
+	OPTION (GIT_STDCALL "Build libgit2 with the __stdcall convention" ON)
+        # Users of the library need to be aware whether __stdcall is used or not
+	CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/windows_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/windows_config.h @ONLY)
 
 	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
-	IF (STDCALL)
+	IF (GIT_STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
 	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd /RTC1 /RTCs /RTCu")
@@ -168,6 +170,9 @@ INSTALL(TARGETS git2
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${INSTALL_LIB}/pkgconfig )
 INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
+IF (MSVC)
+	INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/windows_config.h DESTINATION ${INSTALL_INC}/git2 )
+ENDIF ()
 
 # Tests
 IF (BUILD_CLAR)

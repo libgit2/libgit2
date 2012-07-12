@@ -78,9 +78,9 @@ GIT_BEGIN_DECL
 	((attr) && (attr) != git_attr__unset && \
 	 (attr) != git_attr__true && (attr) != git_attr__false)
 
-GIT_EXTERN(const char *) git_attr__true;
-GIT_EXTERN(const char *) git_attr__false;
-GIT_EXTERN(const char *) git_attr__unset;
+GIT_EXTERN_DATA(const char *) git_attr__true;
+GIT_EXTERN_DATA(const char *) git_attr__false;
+GIT_EXTERN_DATA(const char *) git_attr__unset;
 
 /**
  * Check attribute flags: Reading values from index and working directory.
