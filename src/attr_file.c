@@ -426,17 +426,7 @@ int git_attr_fnmatch__parse(
 		return -1;
 	} else {
 		/* strip '\' that might have be used for internal whitespace */
-		char *to = spec->pattern;
-		for (scan = spec->pattern; *scan; to++, scan++) {
-			if (*scan == '\\')
-				scan++; /* skip '\' but include next char */
-			if (to != scan)
-				*to = *scan;
-		}
-		if (to != scan) {
-			*to = '\0';
-			spec->length = (to - spec->pattern);
-		}
+		spec->length = git__unescape(spec->pattern);
 	}
 
 	return 0;
