@@ -32,5 +32,5 @@ static int foreach_cb(git_oid *oid, void *data)
 void test_odb_foreach__foreach(void)
 {
 	cl_git_pass(git_odb_foreach(_odb, foreach_cb, NULL));
-	cl_assert(nobj == 1681);
+	cl_assert(nobj == 1683);
 }
