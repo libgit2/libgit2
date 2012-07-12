@@ -104,7 +104,16 @@ cleanup:
 	return error;
 }
 
-extern int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec);
+static int maybe_sha_or_abbrev(git_object**out, git_repository *repo, const char *spec)
+{
+	git_oid oid;
+	size_t speclen = strlen(spec);
+
+	if (git_oid_fromstrn(&oid, spec, speclen) < 0)
+		return GIT_ENOTFOUND;
+
+	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJ_ANY);
+}
 
 static int maybe_describe(git_object**out, git_repository *repo, const char *spec)
 {
@@ -123,21 +132,10 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 	if (!match)
 		return GIT_ENOTFOUND;
 
-	return revparse_lookup_object(out, repo, substr+2);
+	return maybe_sha_or_abbrev(out, repo, substr+2);
 }
 
-static int maybe_sha_or_abbrev(git_object**out, git_repository *repo, const char *spec)
-{
-	git_oid oid;
-	size_t speclen = strlen(spec);
-
-	if (git_oid_fromstrn(&oid, spec, speclen) < 0)
-		return GIT_ENOTFOUND;
-
-	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJ_ANY);
-}
-
-int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
 {
 	int error;
 	git_reference *ref;
@@ -251,32 +249,12 @@ static int walk_ref_history(git_object **out, git_repository *repo, const char *
 		date_error = git__date_parse(&timestamp, git_buf_cstr(&datebuf));
 
 		/* @{u} or @{upstream} -> upstream branch, for a tracking branch. This is stored in the config. */
-		if (!git__prefixcmp(git_reference_name(disambiguated), GIT_REFS_HEADS_DIR) &&
-			(!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}"))) {
-			git_config *cfg;
-			if (!git_repository_config(&cfg, repo)) {
-				/* Is the ref a tracking branch? */
-				const char *remote;
-				git_buf_clear(&buf);
-				git_buf_printf(&buf, "branch.%s.remote",
-					git_reference_name(disambiguated) + strlen(GIT_REFS_HEADS_DIR));
-
-				if (!git_config_get_string(&remote, cfg, git_buf_cstr(&buf))) {
-					/* Yes. Find the first merge target name. */
-					const char *mergetarget;
-					git_buf_clear(&buf);
-					git_buf_printf(&buf, "branch.%s.merge",
-						git_reference_name(disambiguated) + strlen(GIT_REFS_HEADS_DIR));
-
-					if (!git_config_get_string(&mergetarget, cfg, git_buf_cstr(&buf)) &&
-						!git__prefixcmp(mergetarget, "refs/heads/")) {
-							/* Success. Look up the target and fetch the object. */
-							git_buf_clear(&buf);
-							git_buf_printf(&buf, "refs/remotes/%s/%s", remote, mergetarget+11);
-							retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_buf_cstr(&buf));
-					}
-				}
-				git_config_free(cfg);
+		if (!strcmp(reflogspec, "@{u}") || !strcmp(reflogspec, "@{upstream}")) {
+			git_reference *tracking;
+			
+			if (!(retcode = git_reference_remote_tracking_from_branch(&tracking, disambiguated))) {
+				retcode = revparse_lookup_fully_qualifed_ref(out, repo, git_reference_name(tracking));
+				git_reference_free(tracking);
 			}
 		}
 
@@ -524,8 +502,7 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
 
 static int handle_linear_syntax(git_object **out, git_object *obj, const char *movement)
 {
-	git_commit *commit1, *commit2;
-	int i, n;
+	int n;
 
 	/* Dereference until we reach a commit. */
 	if (dereference_to_type(&obj, obj, GIT_OBJ_COMMIT) < 0) {
@@ -539,26 +516,8 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
 	} else if (git__strtol32(&n, movement, NULL, 0) < 0) {
 		return GIT_ERROR;
 	}
-	commit1 = (git_commit*)obj;
 
-	/* "~0" just returns the input */
-	if (n == 0) {
-		*out = obj;
-		return 0;
-	}
-
-	for (i=0; i<n; i++) {
-		if (git_commit_parent(&commit2, commit1, 0) < 0) {
-			return GIT_ERROR;
-		}
-		if (commit1 != (git_commit*)obj) {
-			git_commit_free(commit1);
-		}
-		commit1 = commit2;
-	}
-
-	*out = (git_object*)commit1;
-	return 0;
+	return git_commit_nth_gen_ancestor((git_commit **)out, (git_commit*)obj, n);
 }
 
 static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo, const char *path)
