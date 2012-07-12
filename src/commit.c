@@ -229,19 +229,25 @@ GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
 GIT_COMMIT_GETTER(unsigned int, parentcount, commit->parent_oids.length)
 GIT_COMMIT_GETTER(const git_oid *, tree_oid, &commit->tree_oid);
 
-
 int git_commit_tree(git_tree **tree_out, git_commit *commit)
 {
 	assert(commit);
 	return git_tree_lookup(tree_out, commit->object.repo, &commit->tree_oid);
 }
 
-int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
+const git_oid *git_commit_parent_oid(git_commit *commit, unsigned int n)
 {
-	git_oid *parent_oid;
 	assert(commit);
 
-	parent_oid = git_vector_get(&commit->parent_oids, n);
+	return git_vector_get(&commit->parent_oids, n);
+}
+
+int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
+{
+	const git_oid *parent_oid;
+	assert(commit);
+
+	parent_oid = git_commit_parent_oid(commit, n);
 	if (parent_oid == NULL) {
 		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
 		return GIT_ENOTFOUND;
@@ -250,9 +256,36 @@ int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 	return git_commit_lookup(parent, commit->object.repo, parent_oid);
 }
 
-const git_oid *git_commit_parent_oid(git_commit *commit, unsigned int n)
+int git_commit_nth_gen_ancestor(
+	git_commit **ancestor,
+	const git_commit *commit,
+	unsigned int n)
 {
-	assert(commit);
+	git_commit *current, *parent;
+	int error;
 
-	return git_vector_get(&commit->parent_oids, n);
+	assert(ancestor && commit);
+
+	current = (git_commit *)commit;
+
+	if (n == 0)
+		return git_commit_lookup(
+			ancestor,
+			commit->object.repo,
+			git_object_id((const git_object *)commit));
+
+	while (n--) {
+		error = git_commit_parent(&parent, (git_commit *)current, 0);
+
+		if (current != commit)
+			git_commit_free(current);
+
+		if (error < 0)
+			return error;
+
+		current = parent;
+	}
+
+	*ancestor = parent;
+	return 0;
 }
