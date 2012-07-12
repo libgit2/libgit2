@@ -633,7 +633,7 @@ void test_core_buffer__rfind_variants(void)
 	cl_assert(git_buf_rfind(&a, 'q') == -1);
 	cl_assert(git_buf_rfind_next(&a, 'q') == -1);
 
-	git_buf_clear(&a);
+	git_buf_free(&a);
 }
 
 void test_core_buffer__puts_escaped(void)
