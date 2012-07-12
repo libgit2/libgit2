@@ -12,7 +12,7 @@ env:
       
 # Make sure CMake is installed
 install:
- - sudo apt-get install cmake
+ - sudo apt-get install cmake valgrind
 
 # Run the Build script
 script:
@@ -24,6 +24,7 @@ script:
 # Run Tests
 after_script:
  - ctest -V .
+ - if [ -f ./libgit2_clar ]; then valgrind --leak-check=full --show-reachable=yes ./libgit2_clar; else echo "Skipping valgrind"; fi
 
 # Only watch the development branch
 branches:
