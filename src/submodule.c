@@ -31,7 +31,7 @@ static git_cvar_map _sm_ignore_map[] = {
 	{GIT_CVAR_STRING, "none", GIT_SUBMODULE_IGNORE_NONE}
 };
 
-static inline khint_t str_hash_no_trailing_slash(const char *s)
+static kh_inline khint_t str_hash_no_trailing_slash(const char *s)
 {
 	khint_t h;
 
@@ -42,7 +42,7 @@ static inline khint_t str_hash_no_trailing_slash(const char *s)
 	return h;
 }
 
-static inline int str_equal_no_trailing_slash(const char *a, const char *b)
+static kh_inline int str_equal_no_trailing_slash(const char *a, const char *b)
 {
 	size_t alen = a ? strlen(a) : 0;
 	size_t blen = b ? strlen(b) : 0;
@@ -55,7 +55,7 @@ static inline int str_equal_no_trailing_slash(const char *a, const char *b)
 	return (alen == blen && strncmp(a, b, alen) == 0);
 }
 
-__KHASH_IMPL(str, static inline, const char *, void *, 1, str_hash_no_trailing_slash, str_equal_no_trailing_slash);
+__KHASH_IMPL(str, static kh_inline, const char *, void *, 1, str_hash_no_trailing_slash, str_equal_no_trailing_slash);
 
 static git_submodule *submodule_alloc(const char *name)
 {
