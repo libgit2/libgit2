@@ -682,7 +682,7 @@ struct foreach_state {
 	void *data;
 };
 
-static inline int filename_to_oid(git_oid *oid, const char *ptr)
+GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
 {
 	int v, i = 0;
 	if (strlen(ptr) != 41)
