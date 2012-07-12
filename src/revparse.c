@@ -482,7 +482,7 @@ static int handle_caret_syntax(git_object **out, git_repository *repo, git_objec
 	if (movementlen == 0) {
 		n = 1;
 	} else {
-		git__strtol32(&n, movement, NULL, 0);
+		git__strtol32(&n, movement, NULL, 10);
 	}
 	commit = (git_commit*)obj;
 
@@ -513,7 +513,7 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
 	/* "~" is the same as "~1" */
 	if (*movement == '\0') {
 		n = 1;
-	} else if (git__strtol32(&n, movement, NULL, 0) < 0) {
+	} else if (git__strtol32(&n, movement, NULL, 10) < 0) {
 		return GIT_ERROR;
 	}
 
