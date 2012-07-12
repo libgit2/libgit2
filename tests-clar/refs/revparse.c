@@ -325,12 +325,26 @@ void test_refs_revparse__colon(void)
 	test_object("subtrees:nope", NULL);
 	test_object("test/master^1:branch_file.txt", NULL);
 
-	/* Trees */
+	/* From tags */
+	test_object("test:readme.txt", "0266163a49e280c4f5ed1e08facd36a2bd716bcf");
+	test_object("tags/test:readme.txt", "0266163a49e280c4f5ed1e08facd36a2bd716bcf");
+	test_object("e90810b:readme.txt", "0266163a49e280c4f5ed1e08facd36a2bd716bcf");
+	test_object("tags/e90810b:readme.txt", "0266163a49e280c4f5ed1e08facd36a2bd716bcf");
+
+	/* From commits */
+	test_object("a65f:branch_file.txt", "3697d64be941a53d4ae8f6a271e4e3fa56b022cc");
+
+	/* From trees */
+	test_object("a65f^{tree}:branch_file.txt", "3697d64be941a53d4ae8f6a271e4e3fa56b022cc");
+	test_object("944c:branch_file.txt", "3697d64be941a53d4ae8f6a271e4e3fa56b022cc");
+
+	/* Retrieving trees */
 	test_object("master:", "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
 	test_object("subtrees:", "ae90f12eea699729ed24555e40b9fd669da12a12");
 	test_object("subtrees:ab", "f1425cef211cc08caa31e7b545ffb232acb098c3");
+	test_object("subtrees:ab/", "f1425cef211cc08caa31e7b545ffb232acb098c3");
 
-	/* Blobs */
+	/* Retrieving blobs */
 	test_object("subtrees:ab/4.txt", "d6c93164c249c8000205dd4ec5cbca1b516d487f");
 	test_object("subtrees:ab/de/fgh/1.txt", "1f67fc4386b2d171e0d21be1c447e12660561f9b");
 	test_object("master:README", "a8233120f6ad708f843d861ce2b7228ec4e3dec6");

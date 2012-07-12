@@ -520,88 +520,37 @@ static int handle_linear_syntax(git_object **out, git_object *obj, const char *m
 	return git_commit_nth_gen_ancestor((git_commit **)out, (git_commit*)obj, n);
 }
 
-static int oid_for_tree_path(git_oid *out, git_tree *tree, git_repository *repo, const char *path)
-{
-	char *str, *tok;
-	void *alloc;
-	git_tree *tree2 = tree;
-	const git_tree_entry *entry = NULL;
-	git_otype type;
-
-	if (*path == '\0') {
-		git_oid_cpy(out, git_object_id((git_object *)tree));
-		return 0;
-	}
-
-	alloc = str = git__strdup(path);
-
-	while ((tok = git__strtok(&str, "/\\")) != NULL) {
-		entry = git_tree_entry_byname(tree2, tok);
-		if (tree2 != tree) git_tree_free(tree2);
-
-		if (entry == NULL)
-			break;
-
-		type = git_tree_entry_type(entry);
-
-		switch (type) {
-		case GIT_OBJ_TREE:
-			if (*str == '\0')
-				break;
-			if (git_tree_lookup(&tree2, repo, &entry->oid) < 0) {
-				git__free(alloc);
-				return GIT_ERROR;
-			}
-			break;
-		case GIT_OBJ_BLOB:
-			if (*str != '\0') {
-				entry = NULL;
-				goto out;
-			}
-			break;
-		default:
-			/* TODO: support submodules? */
-			giterr_set(GITERR_INVALID, "Unimplemented");
-			git__free(alloc);
-			return GIT_ERROR;
-		}
-	}
-
-out:
-	if (!entry) {
-		giterr_set(GITERR_INVALID, "Invalid tree path '%s'", path);
-		git__free(alloc);
-		return GIT_ENOTFOUND;
-	}
-
-	git_oid_cpy(out, git_tree_entry_id(entry));
-	git__free(alloc);
-	return 0;
-}
-
 static int handle_colon_syntax(git_object **out,
 	git_repository *repo,
 	git_object *obj,
 	const char *path)
 {
-	git_tree *tree;
-	git_oid oid;
-	int error;
+	git_object *tree = obj;
+	int error = -1;
+	git_tree_entry *entry = NULL;
 
 	/* Dereference until we reach a tree. */
-	if (dereference_to_type(&obj, obj, GIT_OBJ_TREE) < 0) {
+	if (dereference_to_type(&tree, obj, GIT_OBJ_TREE) < 0)
 		return GIT_ERROR;
-	}
-	tree = (git_tree*)obj;
 
-	/* Find the blob or tree at the given path. */
-	error = oid_for_tree_path(&oid, tree, repo, path);
-	git_tree_free(tree);
+	if (*path == '\0')
+		return git_object_lookup(out, repo, git_object_id(tree), GIT_OBJ_TREE);
 
-	if (error < 0)
-		return error;
+	/*
+	 * TODO: Handle the relative path syntax
+	 * (:./relative/path and :../relative/path)
+	 */
+	if ((error = git_tree_entry_bypath(&entry, (git_tree *)tree, path)) < 0)
+		goto cleanup;
 
-	return git_object_lookup(out, repo, &oid, GIT_OBJ_ANY);
+	error = git_tree_entry_to_object(out, repo, entry);
+
+cleanup:
+	git_tree_entry_free(entry);
+	if (tree != obj)
+		git_object_free(tree);
+
+	return error;
 }
 
 static int revparse_global_grep(git_object **out, git_repository *repo, const char *pattern)
