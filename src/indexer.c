@@ -169,29 +169,14 @@ cleanup:
 }
 
 /* Try to store the delta so we can try to resolve it later */
-static int store_delta(git_indexer_stream *idx)
+static int store_delta(git_indexer_stream *idx, git_off_t entry_start, size_t entry_size, git_otype type)
 {
-	git_otype type;
 	git_mwindow *w = NULL;
-	git_mwindow_file *mwf = &idx->pack->mwf;
-	git_off_t entry_start = idx->off;
 	struct delta_info *delta;
-	size_t entry_size;
 	git_rawobj obj;
 	int error;
 
-	/*
-	 * ref-delta objects can refer to object that we haven't
-	 * found yet, so give it another opportunity
-	 */
-	if (git_packfile_unpack_header(&entry_size, &type, mwf, &w, &idx->off) < 0)
-		return -1;
-
-	git_mwindow_close(&w);
-
-	/* If it's not a delta, mark it as failure, we can't do anything with it */
-	if (type != GIT_OBJ_REF_DELTA && type != GIT_OBJ_OFS_DELTA)
-		return -1;
+	assert(type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA);
 
 	if (type == GIT_OBJ_REF_DELTA) {
 		idx->off += GIT_OID_RAWSZ;
@@ -350,26 +335,43 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 	while (processed < idx->nr_objects) {
 		git_rawobj obj;
 		git_off_t entry_start = idx->off;
+		size_t entry_size;
+		git_otype type;
+		git_mwindow *w = NULL;
 
 		if (idx->pack->mwf.size <= idx->off + 20)
 			return 0;
 
+		error = git_packfile_unpack_header(&entry_size, &type, mwf, &w, &idx->off);
+		if (error == GIT_EBUFS) {
+			idx->off = entry_start;
+			return 0;
+		}
+		if (error < 0)
+			return -1;
+
+		git_mwindow_close(&w);
+
+		if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
+			error = store_delta(idx, entry_start, entry_size, type);
+			if (error == GIT_EBUFS) {
+				idx->off = entry_start;
+				return 0;
+			}
+			if (error < 0)
+				return error;
+
+			continue;
+		}
+
+		idx->off = entry_start;
 		error = git_packfile_unpack(&obj, idx->pack, &idx->off);
 		if (error == GIT_EBUFS) {
 			idx->off = entry_start;
 			return 0;
 		}
-
-		if (error < 0) {
-			idx->off = entry_start;
-			error = store_delta(idx);
-
-			if (error == GIT_EBUFS)
-				return 0;
-			if (error < 0)
-				return error;
-			continue;
-		}
+		if (error < 0)
+			return -1;
 
 		if (hash_and_save(idx, &obj, entry_start) < 0)
 			goto on_error;
