@@ -324,7 +324,10 @@ int git_fetch__download_pack(
 			goto on_error;
 
 		*bytes += recvd;
-	} while(recvd > 0);
+	} while(recvd > 0 && !stats->data_received);
+
+	if (!stats->data_received)
+		giterr_set(GITERR_NET, "Early EOF while downloading packfile");
 
 	if (git_indexer_stream_finalize(idx, stats))
 		goto on_error;

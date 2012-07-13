@@ -96,7 +96,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// the download rate.
 	do {
 		usleep(10000);
-		printf("\rReceived %d/%d objects in %zu bytes", stats.processed, stats.total, bytes);
+		printf("\rReceived %d/%d objects (%d) in %d bytes", stats.received, stats.total, stats.processed, bytes);
 	} while (!data.finished);
 
 	if (data.ret < 0)

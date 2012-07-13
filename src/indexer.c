@@ -324,8 +324,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (git_vector_init(&idx->deltas, (unsigned int)(idx->nr_objects / 2), NULL) < 0)
 			return -1;
 
+		memset(stats, 0, sizeof(git_indexer_stats));
 		stats->total = (unsigned int)idx->nr_objects;
-		stats->processed = 0;
 	}
 
 	/* Now that we have data in the pack, let's try to parse it */
@@ -361,6 +361,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 			if (error < 0)
 				return error;
 
+			stats->received++;
 			continue;
 		}
 
@@ -379,7 +380,16 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		git__free(obj.data);
 
 		stats->processed = (unsigned int)++processed;
+		stats->received++;
 	}
+
+	/*
+	 * If we've received all of the objects and our packfile is
+	 * one hash beyond the end of the last object, all of the
+	 * packfile is here.
+	 */
+	if (stats->received == idx->nr_objects && idx->pack->mwf.size >= idx->off + 20)
+		stats->data_received = 1;
 
 	return 0;
 
