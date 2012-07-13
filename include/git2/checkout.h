@@ -22,12 +22,9 @@
 GIT_BEGIN_DECL
 
 /**
- * Updates files in the working tree to match the version in the index
- * or HEAD.
+ * Updates files in the working tree to match the version in the index.
  *
  * @param repo repository to check out (must be non-bare)
- * @param origin_url repository to clone from
- * @param workdir_path local directory to clone to
  * @param stats pointer to structure that receives progress information (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
  */
