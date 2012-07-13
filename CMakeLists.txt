@@ -62,7 +62,7 @@ ENDIF()
 
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
-SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
+SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
 SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 
 # Build options
@@ -159,13 +159,18 @@ IF (MSVC)
    SET_SOURCE_FILES_PROPERTIES(src/win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()
 
+# Backward compatibility with INSTALL_LIB variable
+if (INSTALL_LIB)
+	set(LIB_INSTALL_DIR "${INSTALL_LIB}")
+ENDIF()
+
 # Install
 INSTALL(TARGETS git2
 	RUNTIME DESTINATION ${INSTALL_BIN}
-	LIBRARY DESTINATION ${INSTALL_LIB}
-	ARCHIVE DESTINATION ${INSTALL_LIB}
+	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 )
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${INSTALL_LIB}/pkgconfig )
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig )
 INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 
