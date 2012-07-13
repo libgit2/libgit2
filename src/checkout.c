@@ -27,29 +27,49 @@ typedef struct tree_walk_data
 {
 	git_indexer_stats *stats;
 	git_repository *repo;
+	git_odb *odb;
 } tree_walk_data;
 
 
-static int apply_filters(git_buf *out,
-								 git_vector *filters,
-								 const void *data,
-								 size_t len)
+static int unfiltered_blob_contents(git_buf *out, git_repository *repo, const git_oid *blob_id)
 {
 	int retcode = GIT_ERROR;
-	git_buf origblob = GIT_BUF_INIT;
 
-	git_buf_clear(out);
+	git_blob *blob;
+	if (!git_blob_lookup(&blob, repo, blob_id)) {
+		const void *contents = git_blob_rawcontent(blob);
+		size_t len = git_blob_rawsize(blob);
+		git_buf_clear(out);
+		git_buf_set(out, (const char*)contents, len);
+		git_blob_free(blob);
+		retcode = 0;
+	}
+	return retcode;
+}
 
-	if (!filters->length) {
-		/* No filters to apply; just copy the result */
-		git_buf_put(out, (const char *)data, len);
-		return 0;
+static int filtered_blob_contents(git_buf *out, git_repository *repo, const git_oid *oid, const char *path)
+{
+	int retcode = GIT_ERROR;
+
+	git_buf unfiltered = GIT_BUF_INIT;
+	if (!unfiltered_blob_contents(&unfiltered, repo, oid)) {
+		git_vector filters = GIT_VECTOR_INIT;
+		int filter_count = git_filters_load(&filters, repo,
+														path, GIT_FILTER_TO_WORKTREE);
+		if (filter_count >= 0) {
+			git_buf_clear(out);
+			if (!filter_count) {
+				git_buf_put(out, git_buf_cstr(&unfiltered), git_buf_len(&unfiltered));
+				retcode = 0;
+			} else {
+				retcode = git_filters_apply(out, &unfiltered, &filters);
+			}
+		}
+
+		git_filters_free(&filters);
 	}
 
-	git_buf_attach(&origblob, (char*)data, len);
-	retcode = git_filters_apply(out, &origblob, filters);
-	git_buf_detach(&origblob);
-
+	git_buf_free(&unfiltered);
 	return retcode;
 }
 
@@ -57,33 +77,20 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf, const git
 {
 	int retcode = GIT_ERROR;
 
-	git_blob *blob;
-	if (!git_blob_lookup(&blob, repo, id)) {
-		const void *contents = git_blob_rawcontent(blob);
-		size_t len = git_blob_rawsize(blob);
-		git_vector filters = GIT_VECTOR_INIT;
-		int filter_count;
-
-		/* TODO: line-ending smudging */
-		filter_count = git_filters_load(&filters, repo,
-												  git_buf_cstr(fnbuf),
-												  GIT_FILTER_TO_WORKTREE);
-		if (filter_count >= 0) {
-			git_buf filteredblob = GIT_BUF_INIT;
-			if (!apply_filters(&filteredblob, &filters, contents, len)) {
-				int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
-															  GIT_DIR_MODE, mode);
-				if (fd >= 0) {
-					retcode = (!p_write(fd, contents, len)) ? 0 : GIT_ERROR;
-					p_close(fd);
-				}
-			}
-			git_buf_free(&filteredblob);
-			git_filters_free(&filters);
+	git_buf filteredcontents = GIT_BUF_INIT;
+	if (!filtered_blob_contents(&filteredcontents, repo, id, git_buf_cstr(fnbuf))) {
+		int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
+													  GIT_DIR_MODE, mode);
+		if (fd >= 0) {
+			if (!p_write(fd, git_buf_cstr(&filteredcontents),
+							 git_buf_len(&filteredcontents)))
+				retcode = 0;
+			else
+				retcode = GIT_ERROR;
+			p_close(fd);
 		}
-
-		git_blob_free(blob);
 	}
+	git_buf_free(&filteredcontents);
 
 	return retcode;
 }
@@ -94,26 +101,32 @@ static int checkout_walker(const char *path, git_tree_entry *entry, void *payloa
 	tree_walk_data *data = (tree_walk_data*)payload;
 	int attr = git_tree_entry_attributes(entry);
 
-	switch(git_tree_entry_type(entry)) {
-	case GIT_OBJ_TREE:
-		/* TODO: mkdir? */
-		break;
+	/* TODO: handle submodules  */
 
-	case GIT_OBJ_BLOB:
-		{
-			git_buf fnbuf = GIT_BUF_INIT;
-			git_buf_join_n(&fnbuf, '/', 3,
-								git_repository_workdir(data->repo),
-								path,
-								git_tree_entry_name(entry));
-			retcode = blob_contents_to_file(data->repo, &fnbuf, git_tree_entry_id(entry), attr);
-			git_buf_free(&fnbuf);
+	if (S_ISLNK(attr)) {
+		printf("It's a link!\n'");
+	} else {
+		switch(git_tree_entry_type(entry)) {
+		case GIT_OBJ_TREE:
+			/* Nothing to do; the blob handling creates necessary directories. */
+			break;
+
+		case GIT_OBJ_BLOB:
+			{
+				git_buf fnbuf = GIT_BUF_INIT;
+				git_buf_join_n(&fnbuf, '/', 3,
+									git_repository_workdir(data->repo),
+									path,
+									git_tree_entry_name(entry));
+				retcode = blob_contents_to_file(data->repo, &fnbuf, git_tree_entry_id(entry), attr);
+				git_buf_free(&fnbuf);
+			}
+			break;
+
+		default:
+			retcode = -1;
+			break;
 		}
-		break;
-
-	default:
-		retcode = -1;
-		break;
 	}
 
 	data->stats->processed++;
@@ -131,9 +144,15 @@ int git_checkout_force(git_repository *repo, git_indexer_stats *stats)
 	assert(repo);
 	if (!stats) stats = &dummy_stats;
 
+	if (git_repository_is_bare(repo)) {
+		giterr_set(GITERR_INVALID, "Checkout is not allowed for bare repositories");
+		return GIT_ERROR;
+	}
+
 	stats->total = stats->processed = 0;
 	payload.stats = stats;
 	payload.repo = repo;
+	if (git_repository_odb(&payload.odb, repo) < 0) return GIT_ERROR;
 
 	/* TODO: stats->total is never calculated. */
 
@@ -145,6 +164,7 @@ int git_checkout_force(git_repository *repo, git_indexer_stats *stats)
 		git_tree_free(tree);
 	}
 
+	git_odb_free(payload.odb);
 	return retcode;
 }
 
