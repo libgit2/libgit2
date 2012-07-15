@@ -5,9 +5,9 @@
 #include "git2/tree.h"
 #include <ctype.h>
 
-const char *git_attr__true  = "[internal]__TRUE__";
-const char *git_attr__false = "[internal]__FALSE__";
-const char *git_attr__unset = "[internal]__UNSET__";
+const char *git_l_attr__true  = "[internal]__TRUE__";
+const char *git_l_attr__false = "[internal]__FALSE__";
+const char *git_l_attr__unset = "[internal]__UNSET__";
 
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw);
 static void git_attr_rule__clear(git_attr_rule *rule);
@@ -503,14 +503,14 @@ int git_attr_assignment__parse(
 		}
 
 		assign->name_hash = 5381;
-		assign->value = git_attr__true;
+		assign->value = git_l_attr__true;
 
 		/* look for magic name prefixes */
 		if (*scan == '-') {
-			assign->value = git_attr__false;
+			assign->value = git_l_attr__false;
 			scan++;
 		} else if (*scan == '!') {
-			assign->value = git_attr__unset; /* explicit unspecified state */
+			assign->value = git_l_attr__unset; /* explicit unspecified state */
 			scan++;
 		} else if (*scan == '#') /* comment rest of line */
 			break;
@@ -546,7 +546,7 @@ int git_attr_assignment__parse(
 		}
 
 		/* expand macros (if given a repo with a macro cache) */
-		if (repo != NULL && assign->value == git_attr__true) {
+		if (repo != NULL && assign->value == git_l_attr__true) {
 			git_attr_rule *macro =
 				git_attr_cache__lookup_macro(repo, assign->name);
 
