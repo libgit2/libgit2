@@ -382,57 +382,6 @@ cleanup:
 	return error;
 }
 
-static int dereference_object(git_object **dereferenced, git_object *obj)
-{
-	git_otype type = git_object_type(obj);
-
-	switch (type) {
-	case GIT_OBJ_COMMIT:
-		return git_commit_tree((git_tree **)dereferenced, (git_commit*)obj);
-		break;
-
-	case GIT_OBJ_TAG:
-		return git_tag_target(dereferenced, (git_tag*)obj);
-		break;
-
-	default:
-		return GIT_ENOTFOUND;
-		break;
-	}
-}
-
-static int dereference_to_type(git_object **out, git_object *obj, git_otype target_type)
-{
-	git_object *source, *deref = NULL;
-
-	if (git_object_type(obj) == target_type)
-		return git_object_lookup(out, git_object_owner(obj), git_object_id(obj), target_type);
-
-	source = obj;
-
-	while (true) {
-		if (dereference_object(&deref, source) < 0)
-			goto cleanup;
-
-		if (source != obj)
-			git_object_free(source);
-
-		if (git_object_type(deref) == target_type) {
-			*out = deref;
-			return 0;
-		}
-
-		source = deref;
-		deref = NULL;
-	}
-
-cleanup:
-	if (source != obj)
-		git_object_free(source);
-	git_object_free(deref);
-	return -1;
-}
-
 static git_otype parse_obj_type(const char *str)
 {
 	if (!strcmp(str, "commit"))
@@ -463,7 +412,7 @@ static int handle_caret_parent_syntax(git_object **out, git_object *obj, int n)
 	git_object *temp_commit = NULL;
 	int error;
 
-	if (dereference_to_type(&temp_commit, obj, GIT_OBJ_COMMIT) < 0)
+	if (git_object_peel(&temp_commit, obj, GIT_OBJ_COMMIT) < 0)
 		return -1;
 
 	if (n == 0) {
@@ -482,7 +431,7 @@ static int handle_linear_syntax(git_object **out, git_object *obj, int n)
 	git_object *temp_commit = NULL;
 	int error;
 
-	if (dereference_to_type(&temp_commit, obj, GIT_OBJ_COMMIT) < 0)
+	if (git_object_peel(&temp_commit, obj, GIT_OBJ_COMMIT) < 0)
 		return -1;
 
 	error = git_commit_nth_gen_ancestor((git_commit **)out, (git_commit*)temp_commit, n);
@@ -500,7 +449,7 @@ static int handle_colon_syntax(
 	int error = -1;
 	git_tree_entry *entry = NULL;
 
-	if (dereference_to_type(&tree, obj, GIT_OBJ_TREE) < 0)
+	if (git_object_peel(&tree, obj, GIT_OBJ_TREE) < 0)
 		return -1;
 
 	if (*path == '\0') {
@@ -595,7 +544,7 @@ static int handle_caret_curly_syntax(git_object **out, git_object *obj, const ch
 	if (expected_type == GIT_OBJ_BAD)
 		return -1;
 
-	return dereference_to_type(out, obj, expected_type);
+	return git_object_peel(out, obj, expected_type);
 }
 
 static int extract_curly_braces_content(git_buf *buf, const char *spec, int *pos)
