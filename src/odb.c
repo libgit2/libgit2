@@ -505,7 +505,7 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 			error = b->read_header(len_p, type_p, b, id);
 	}
 
-	if (!error || error == GIT_PASSTHROUGH)
+	if (!error)
 		return 0;
 
 	/*
@@ -541,11 +541,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 	}
 
-	/* TODO: If no backends are configured, this returns GIT_ENOTFOUND but
-	 * will never have called giterr_set().
-	 */
-
-	if (error && error != GIT_PASSTHROUGH)
+	if (error)
 		return error;
 
 	*out = git_cache_try_store(&db->cache, new_odb_object(id, &raw));
@@ -583,7 +579,7 @@ int git_odb_read_prefix(
 		if (b->read != NULL) {
 			git_oid full_oid;
 			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
-			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
+			if (error == GIT_ENOTFOUND)
 				continue;
 
 			if (error)
@@ -638,7 +634,7 @@ int git_odb_write(
 			error = b->write(oid, b, data, len, type);
 	}
 
-	if (!error || error == GIT_PASSTHROUGH)
+	if (!error)
 		return 0;
 
 	/* if no backends were able to write the object directly, we try a streaming
@@ -676,10 +672,6 @@ int git_odb_open_wstream(
 		else if (b->write != NULL)
 			error = init_fake_wstream(stream, b, size, type);
 	}
-
-	if (error == GIT_PASSTHROUGH)
-		error = 0;
-
 	return error;
 }
 
@@ -697,10 +689,6 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 		if (b->readstream != NULL)
 			error = b->readstream(stream, b, oid);
 	}
-
-	if (error == GIT_PASSTHROUGH)
-		error = 0;
-
 	return error;
 }
 
@@ -721,4 +709,3 @@ int git_odb__error_ambiguous(const char *message)
 	giterr_set(GITERR_ODB, "Ambiguous SHA1 prefix - %s", message);
 	return GIT_EAMBIGUOUS;
 }
-
