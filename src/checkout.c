@@ -32,49 +32,12 @@ typedef struct tree_walk_data
 } tree_walk_data;
 
 
-static int unfiltered_blob_contents(git_buf *out, git_repository *repo, const git_oid *blob_id)
-{
-	int retcode = GIT_ERROR;
-	git_blob *blob;
-
-	if (!(retcode = git_blob_lookup(&blob, repo, blob_id)))
-		retcode = git_blob__getbuf(out, blob);
-
-	return retcode;
-}
-
-static int filtered_blob_contents(git_buf *out, git_repository *repo, const git_oid *oid, const char *path)
-{
-	int retcode = GIT_ERROR;
-
-	git_buf unfiltered = GIT_BUF_INIT;
-	if (!unfiltered_blob_contents(&unfiltered, repo, oid)) {
-		git_vector filters = GIT_VECTOR_INIT;
-		int filter_count = git_filters_load(&filters, repo,
-														path, GIT_FILTER_TO_WORKTREE);
-		if (filter_count >= 0) {
-			git_buf_clear(out);
-			if (!filter_count) {
-				git_buf_put(out, git_buf_cstr(&unfiltered), git_buf_len(&unfiltered));
-				retcode = 0;
-			} else {
-				retcode = git_filters_apply(out, &unfiltered, &filters);
-			}
-		}
-
-		git_filters_free(&filters);
-	}
-
-	git_buf_free(&unfiltered);
-	return retcode;
-}
-
 static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf, const git_oid *id, int mode)
 {
 	int retcode = GIT_ERROR;
 
 	git_buf filteredcontents = GIT_BUF_INIT;
-	if (!filtered_blob_contents(&filteredcontents, repo, id, git_buf_cstr(fnbuf))) {
+	if (!git_filter_blob_contents(&filteredcontents, repo, id, git_buf_cstr(fnbuf))) {
 		int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
 													  GIT_DIR_MODE, mode);
 		if (fd >= 0) {
