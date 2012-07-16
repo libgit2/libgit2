@@ -65,7 +65,7 @@ to compile and develop applications that use libgit2.
 cmake . \
     -DCMAKE_C_FLAGS:STRING="%{optflags}" \
     -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} \
-    -DINSTALL_LIB:PATH=%{_libdir}
+    -DLIB_INSTALL_DIR:PATH=%{_libdir}S
 make %{?_smp_mflags}
 
 %install
