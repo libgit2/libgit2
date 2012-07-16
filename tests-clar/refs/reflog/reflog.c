@@ -36,7 +36,7 @@ void test_refs_reflog_reflog__cleanup(void)
 
 
 
-void test_refs_reflog_reflog__write_then_read(void)
+void test_refs_reflog_reflog__append_then_read(void)
 {
    // write a reflog for a given reference and ensure it can be read back
 	git_repository *repo2;
@@ -55,10 +55,10 @@ void test_refs_reflog_reflog__write_then_read(void)
 
 	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
-	cl_git_pass(git_reflog_write(ref, NULL, committer, NULL));
-	cl_git_fail(git_reflog_write(ref, NULL, committer, "no ancestor NULL for an existing reflog"));
-	cl_git_fail(git_reflog_write(ref, NULL, committer, "no\nnewline"));
-	cl_git_pass(git_reflog_write(ref, &oid, committer, commit_msg));
+	cl_git_pass(git_reflog_append(ref, NULL, committer, NULL));
+	cl_git_fail(git_reflog_append(ref, NULL, committer, "no ancestor NULL for an existing reflog"));
+	cl_git_fail(git_reflog_append(ref, NULL, committer, "no\nnewline"));
+	cl_git_pass(git_reflog_append(ref, &oid, committer, commit_msg));
 
 	/* Reopen a new instance of the repository */
 	cl_git_pass(git_repository_open(&repo2, "testrepo.git"));
@@ -94,7 +94,7 @@ void test_refs_reflog_reflog__write_then_read(void)
 	git_reference_free(lookedup_ref);
 }
 
-void test_refs_reflog_reflog__dont_write_bad(void)
+void test_refs_reflog_reflog__dont_append_bad(void)
 {
    // avoid writing an obviously wrong reflog
 	git_reference *ref;
@@ -110,12 +110,12 @@ void test_refs_reflog_reflog__dont_write_bad(void)
 	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
 	/* Write the reflog for the new branch */
-	cl_git_pass(git_reflog_write(ref, NULL, committer, NULL));
+	cl_git_pass(git_reflog_append(ref, NULL, committer, NULL));
 
 	/* Try to update the reflog with wrong information:
 	 * It's no new reference, so the ancestor OID cannot
 	 * be NULL. */
-	cl_git_fail(git_reflog_write(ref, NULL, committer, NULL));
+	cl_git_fail(git_reflog_append(ref, NULL, committer, NULL));
 
 	git_signature_free(committer);
 

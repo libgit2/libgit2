@@ -33,7 +33,7 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
 
 /**
- * Write a new reflog for the given reference
+ * Add a new entry to the reflog for the given reference
  *
  * If there is no reflog file for the given
  * reference yet, it will be created.
@@ -48,7 +48,7 @@ GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
  * @param msg the reflog message
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reflog_write(git_reference *ref, const git_oid *oid_old, const git_signature *committer, const char *msg);
+GIT_EXTERN(int) git_reflog_append(git_reference *ref, const git_oid *oid_old, const git_signature *committer, const char *msg);
 
 /**
  * Rename the reflog for the given reference
