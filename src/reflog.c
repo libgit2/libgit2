@@ -160,6 +160,14 @@ fail:
 	return -1;
 }
 
+static void reflog_entry_free(git_reflog_entry *entry)
+{
+	git_signature_free(entry->committer);
+
+	git__free(entry->msg);
+	git__free(entry);
+}
+
 void git_reflog_free(git_reflog *reflog)
 {
 	unsigned int i;
@@ -168,10 +176,7 @@ void git_reflog_free(git_reflog *reflog)
 	for (i=0; i < reflog->entries.length; i++) {
 		entry = git_vector_get(&reflog->entries, i);
 
-		git_signature_free(entry->committer);
-
-		git__free(entry->msg);
-		git__free(entry);
+		reflog_entry_free(entry);
 	}
 
 	git_vector_free(&reflog->entries);
@@ -369,4 +374,53 @@ char * git_reflog_entry_msg(const git_reflog_entry *entry)
 {
 	assert(entry);
 	return entry->msg;
+}
+
+int git_reflog_entry_drop(
+	git_reflog *reflog,
+	unsigned int idx,
+	int rewrite_previous_entry)
+{
+	unsigned int entrycount;
+	git_reflog_entry *entry, *previous;
+
+	assert(reflog);
+
+	entrycount = git_reflog_entrycount(reflog);
+
+	if (idx >= entrycount)
+		return GIT_ENOTFOUND;
+
+	entry = git_vector_get(&reflog->entries, idx);
+	reflog_entry_free(entry);
+
+	if (git_vector_remove(&reflog->entries, idx) < 0)
+		return -1;
+
+	if (!rewrite_previous_entry)
+		return 0;
+
+	/* No need to rewrite anything when removing the first entry */
+	if (idx == 0)
+		return 0;
+
+	/* There are no more entries in the log */
+	if (entrycount == 1)
+		return 0;
+
+	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx - 1);
+
+	/* If the last entry has just been removed... */
+	if (idx == entrycount - 1) {
+		/* ...clear the oid_old member of the "new" last entry */
+		if (git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO) < 0)
+			return -1;
+		
+		return 0;
+	}
+
+	previous = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
+	git_oid_cpy(&entry->oid_old, &previous->oid_cur);
+
+	return 0;
 }

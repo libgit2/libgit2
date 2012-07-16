@@ -87,6 +87,26 @@ GIT_EXTERN(unsigned int) git_reflog_entrycount(git_reflog *reflog);
 GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog, unsigned int idx);
 
 /**
+ * Remove an entry from the reflog by its index
+ *
+ * To ensure there's no gap in the log history, set the `rewrite_previosu_entry` to 1.
+ * When deleting entry `n`, member old_oid of entry `n-1` (if any) will be updated with
+ * the value of memeber new_oid of entry `n+1`.
+ *
+ * @param reflog a previously loaded reflog.
+ *
+ * @param idx the position of the entry to remove.
+ *
+ * @param rewrite_previous_entry 1 to rewrite the history; 0 otherwise.
+ *
+ * @return 0 on success or an error code.
+ */
+GIT_EXTERN(int) git_reflog_entry_drop(
+	git_reflog *reflog,
+	unsigned int idx,
+	int rewrite_previous_entry);
+
+/**
  * Get the old oid
  *
  * @param entry a reflog entry
