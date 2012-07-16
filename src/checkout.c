@@ -19,6 +19,7 @@
 #include "buffer.h"
 #include "repository.h"
 #include "filter.h"
+#include "blob.h"
 
 GIT_BEGIN_DECL
 
@@ -34,16 +35,11 @@ typedef struct tree_walk_data
 static int unfiltered_blob_contents(git_buf *out, git_repository *repo, const git_oid *blob_id)
 {
 	int retcode = GIT_ERROR;
-
 	git_blob *blob;
-	if (!git_blob_lookup(&blob, repo, blob_id)) {
-		const void *contents = git_blob_rawcontent(blob);
-		size_t len = git_blob_rawsize(blob);
-		git_buf_clear(out);
-		git_buf_set(out, (const char*)contents, len);
-		git_blob_free(blob);
-		retcode = 0;
-	}
+
+	if (!(retcode = git_blob_lookup(&blob, repo, blob_id)))
+		retcode = git_blob__getbuf(out, blob);
+
 	return retcode;
 }
 
