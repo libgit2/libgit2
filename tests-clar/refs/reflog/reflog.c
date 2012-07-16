@@ -24,22 +24,22 @@ static void assert_signature(git_signature *expected, git_signature *actual)
 
 
 // Fixture setup and teardown
-void test_refs_reflog__initialize(void)
+void test_refs_reflog_reflog__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo.git");
 }
 
-void test_refs_reflog__cleanup(void)
+void test_refs_reflog_reflog__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 }
 
 
 
-void test_refs_reflog__write_then_read(void)
+void test_refs_reflog_reflog__write_then_read(void)
 {
    // write a reflog for a given reference and ensure it can be read back
-   git_repository *repo2;
+	git_repository *repo2;
 	git_reference *ref, *lookedup_ref;
 	git_oid oid;
 	git_signature *committer;
@@ -94,7 +94,7 @@ void test_refs_reflog__write_then_read(void)
 	git_reference_free(lookedup_ref);
 }
 
-void test_refs_reflog__dont_write_bad(void)
+void test_refs_reflog_reflog__dont_write_bad(void)
 {
    // avoid writing an obviously wrong reflog
 	git_reference *ref;
@@ -122,7 +122,7 @@ void test_refs_reflog__dont_write_bad(void)
 	git_reference_free(ref);
 }
 
-void test_refs_reflog__renaming_the_reference_moves_the_reflog(void)
+void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 {
 	git_reference *master;
 	git_buf master_log_path = GIT_BUF_INIT, moved_log_path = GIT_BUF_INIT;
@@ -145,6 +145,7 @@ void test_refs_reflog__renaming_the_reference_moves_the_reflog(void)
 	git_buf_free(&moved_log_path);
 	git_buf_free(&master_log_path);
 }
+
 static void assert_has_reflog(bool expected_result, const char *name)
 {
 	git_reference *ref;
@@ -156,7 +157,7 @@ static void assert_has_reflog(bool expected_result, const char *name)
 	git_reference_free(ref);
 }
 
-void test_refs_reflog__reference_has_reflog(void)
+void test_refs_reflog_reflog__reference_has_reflog(void)
 {
 	assert_has_reflog(true, "HEAD");
 	assert_has_reflog(true, "refs/heads/master");
