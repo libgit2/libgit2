@@ -217,6 +217,12 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	return dwRet;
 }
 
+int p_symlink(const char *old, const char *new)
+{
+	/* TODO */
+	return -1;
+}
+
 int p_open(const char *path, int flags, ...)
 {
 	int fd;

@@ -66,3 +66,16 @@ void test_checkout_checkout__stats(void)
 {
 	/* TODO */
 }
+
+void test_checkout_checkout__links(void)
+{
+	char link_data[1024];
+	size_t link_size = 1024;
+
+	cl_git_pass(git_checkout_force(g_repo, NULL));
+	link_size = p_readlink("./testrepo/link_to_new.txt", link_data, link_size);
+	cl_assert_equal_i(link_size, strlen("new.txt"));
+	link_data[link_size] = '\0';
+	cl_assert_equal_s(link_data, "new.txt");
+	test_file_contents("./testrepo/link_to_new.txt", "my new file\n");
+}

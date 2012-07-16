@@ -32,7 +32,30 @@ typedef struct tree_walk_data
 } tree_walk_data;
 
 
-static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf, const git_oid *id, int mode)
+static int blob_contents_to_link(git_repository *repo, git_buf *fnbuf,
+											const git_oid *id)
+{
+	int retcode = GIT_ERROR;
+	git_blob *blob;
+
+	/* Get the link target */
+	if (!(retcode = git_blob_lookup(&blob, repo, id))) {
+		git_buf linktarget = GIT_BUF_INIT;
+		if (!(retcode = git_blob__getbuf(&linktarget, blob))) {
+			/* Create the link */
+			retcode = p_symlink(git_buf_cstr(&linktarget),
+									  git_buf_cstr(fnbuf));
+		}
+		git_buf_free(&linktarget);
+		git_blob_free(blob);
+	}
+
+	return retcode;
+}
+
+
+static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
+											const git_oid *id, int mode)
 {
 	int retcode = GIT_ERROR;
 
@@ -62,30 +85,33 @@ static int checkout_walker(const char *path, git_tree_entry *entry, void *payloa
 
 	/* TODO: handle submodules  */
 
-	if (S_ISLNK(attr)) {
-		printf("It's a link!\n'");
-	} else {
-		switch(git_tree_entry_type(entry)) {
-		case GIT_OBJ_TREE:
-			/* Nothing to do; the blob handling creates necessary directories. */
-			break;
+	switch(git_tree_entry_type(entry))
+	{
+	case GIT_OBJ_TREE:
+		/* Nothing to do; the blob handling creates necessary directories. */
+		break;
 
-		case GIT_OBJ_BLOB:
-			{
-				git_buf fnbuf = GIT_BUF_INIT;
-				git_buf_join_n(&fnbuf, '/', 3,
-									git_repository_workdir(data->repo),
-									path,
-									git_tree_entry_name(entry));
-				retcode = blob_contents_to_file(data->repo, &fnbuf, git_tree_entry_id(entry), attr);
-				git_buf_free(&fnbuf);
+	case GIT_OBJ_BLOB:
+		{
+			git_buf fnbuf = GIT_BUF_INIT;
+			git_buf_join_n(&fnbuf, '/', 3,
+								git_repository_workdir(data->repo),
+								path,
+								git_tree_entry_name(entry));
+			if (S_ISLNK(attr)) {
+				retcode = blob_contents_to_link(data->repo, &fnbuf,
+														  git_tree_entry_id(entry));
+			} else {
+				retcode = blob_contents_to_file(data->repo, &fnbuf,
+														  git_tree_entry_id(entry), attr);
 			}
-			break;
-
-		default:
-			retcode = -1;
-			break;
+			git_buf_free(&fnbuf);
 		}
+		break;
+
+	default:
+		retcode = -1;
+		break;
 	}
 
 	data->stats->processed++;
