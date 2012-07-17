@@ -156,8 +156,10 @@ int git_object_lookup_prefix(
 
 	type = odb_obj->raw.type;
 
-	if (create_object(&object, type) < 0)
+	if (create_object(&object, type) < 0) {
+		git_odb_object_free(odb_obj);
 		return -1;
+	}
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);

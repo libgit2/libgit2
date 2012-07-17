@@ -16,12 +16,12 @@ static git_repository *g_repo;
 
 void test_refs_read__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 }
 
 void test_refs_read__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	git_repository_free(g_repo);
 }
 
 void test_refs_read__loose_tag(void)
@@ -191,4 +191,14 @@ void test_refs_read__loose_first(void)
 	cl_assert_equal_s(reference->name, packed_test_head_name);
 
 	git_reference_free(reference);
+}
+
+void test_refs_read__unfound_return_ENOTFOUND(void)
+{
+	git_reference *reference;
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/farther/master"));
 }

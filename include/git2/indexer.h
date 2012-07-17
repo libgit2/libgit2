@@ -29,9 +29,9 @@ typedef struct git_indexer_stream git_indexer_stream;
  * Create a new streaming indexer instance
  *
  * @param out where to store the indexer instance
- * @param path to the gitdir (metadata directory)
+ * @param path to the directory where the packfile should be stored
  */
-GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *gitdir);
+GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *path);
 
 /**
  * Add data to the indexer

@@ -129,8 +129,8 @@ void test_revwalk_basic__glob_heads(void)
 		i++;
 	}
 
-	/* git log --branches --oneline | wc -l => 13 */
-	cl_assert(i == 13);
+	/* git log --branches --oneline | wc -l => 14 */
+	cl_assert(i == 14);
 }
 
 void test_revwalk_basic__push_head(void)

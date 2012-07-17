@@ -141,46 +141,46 @@ on_error:
 }
 
 typedef struct {
-	git_vector *branchlist;
+	int (*branch_cb)(
+			const char *branch_name,
+			git_branch_t branch_type,
+			void *payload);
+	void *callback_payload;
 	unsigned int branch_type;
-} branch_filter_data;
+} branch_foreach_filter;
 
-static int branch_list_cb(const char *branch_name, void *payload)
+static int branch_foreach_cb(const char *branch_name, void *payload)
 {
-	branch_filter_data *filter = (branch_filter_data *)payload;
+	branch_foreach_filter *filter = (branch_foreach_filter *)payload;
 
-	if (filter->branch_type & GIT_BRANCH_LOCAL && git__prefixcmp(branch_name, GIT_REFS_HEADS_DIR) == 0) {
-		return git_vector_insert(filter->branchlist, git__strdup(branch_name +strlen(GIT_REFS_HEADS_DIR)));
-  } else if (filter->branch_type & GIT_BRANCH_REMOTE && git__prefixcmp(branch_name, GIT_REFS_REMOTES_DIR) == 0) {
-		return git_vector_insert(filter->branchlist, git__strdup(branch_name+strlen(GIT_REFS_DIR)));
-  }
+	if (filter->branch_type & GIT_BRANCH_LOCAL &&
+		git__prefixcmp(branch_name, GIT_REFS_HEADS_DIR) == 0)
+		return filter->branch_cb(branch_name + strlen(GIT_REFS_HEADS_DIR), GIT_BRANCH_LOCAL, filter->callback_payload);
+
+	if (filter->branch_type & GIT_BRANCH_REMOTE &&
+		git__prefixcmp(branch_name, GIT_REFS_REMOTES_DIR) == 0)
+		return filter->branch_cb(branch_name + strlen(GIT_REFS_REMOTES_DIR), GIT_BRANCH_REMOTE, filter->callback_payload);
 
 	return 0;
 }
 
-int git_branch_list(git_strarray *branch_names, git_repository *repo, unsigned int list_flags)
+int git_branch_foreach(
+		git_repository *repo,
+		unsigned int list_flags,
+		int (*branch_cb)(
+			const char *branch_name,
+			git_branch_t branch_type,
+			void *payload),
+		void *payload
+)
 {
-	int error;
-	branch_filter_data filter;
-	git_vector branchlist;
+	branch_foreach_filter filter;
 
-	assert(branch_names && repo);
-
-	if (git_vector_init(&branchlist, 8, NULL) < 0)
-		return -1;
-
-	filter.branchlist = &branchlist;
+	filter.branch_cb = branch_cb;
 	filter.branch_type = list_flags;
+	filter.callback_payload = payload;
 
-	error = git_reference_foreach(repo, GIT_REF_LISTALL, &branch_list_cb, (void *)&filter);
-	if (error < 0) {
-		git_vector_free(&branchlist);
-		return -1;
-	}
-
-	branch_names->strings = (char **)branchlist.contents;
-	branch_names->count = branchlist.length;
-	return 0;
+	return git_reference_foreach(repo, GIT_REF_LISTALL, &branch_foreach_cb, (void *)&filter);
 }
 
 int git_branch_move(git_repository *repo, const char *old_branch_name, const char *new_branch_name, int force)

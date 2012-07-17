@@ -21,13 +21,30 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_V
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_VERSION_REV "${GIT2_HEADER}")
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
+IF (AMIGA)
+	# Default AmigaOS to use the PowerPC SHA1
+	SET(SHA1_TYPE "ppc")
+ENDIF()
+
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include deps/http-parser)
 
 FILE(GLOB SRC_HTTP deps/http-parser/*.c)
 
+# Specify sha1 implementation
+IF (SHA1_TYPE STREQUAL "ppc")
+	ADD_DEFINITIONS(-DPPC_SHA1)
+	FILE(GLOB SRC_SHA1 src/ppc/*.c src/ppc/*.S)
+ELSE ()
+	SET (SRC_SHA1)
+ENDIF()
+
 IF (NOT WIN32)
 	FIND_PACKAGE(ZLIB)
+	IF (CMAKE_SYSTEM_NAME STREQUAL "AmigaOS")
+		INCLUDE_DIRECTORIES(deps/regex)
+		SET(SRC_REGEX deps/regex/regex.c)
+	ENDIF()
 ELSE()
 	# Windows doesn't understand POSIX regex on its own
 	INCLUDE_DIRECTORIES(deps/regex)
@@ -45,7 +62,7 @@ ENDIF()
 
 # Installation paths
 SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
-SET(INSTALL_LIB lib CACHE PATH "Where to install libraries to.")
+SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
 SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 
 # Build options
@@ -115,12 +132,15 @@ IF (WIN32 AND NOT CYGWIN)
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/win32/*.c src/compat/*.c)
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c src/compat/*.c)
+ELSEIF (AMIGA)
+	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
+	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/amiga/*.c src/compat/*.c)
 ELSE()
 	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c)
 ENDIF ()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 
 IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
@@ -139,13 +159,18 @@ IF (MSVC)
    SET_SOURCE_FILES_PROPERTIES(src/win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()
 
+# Backward compatibility with INSTALL_LIB variable
+if (INSTALL_LIB)
+	set(LIB_INSTALL_DIR "${INSTALL_LIB}")
+ENDIF()
+
 # Install
 INSTALL(TARGETS git2
 	RUNTIME DESTINATION ${INSTALL_BIN}
-	LIBRARY DESTINATION ${INSTALL_LIB}
-	ARCHIVE DESTINATION ${INSTALL_LIB}
+	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 )
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${INSTALL_LIB}/pkgconfig )
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig )
 INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 

@@ -212,7 +212,7 @@ static void setup_xdiff_options(
 	cfg->ctxlen =
 		(!opts || !opts->context_lines) ? 3 : opts->context_lines;
 	cfg->interhunkctxlen =
-		(!opts || !opts->interhunk_lines) ? 3 : opts->interhunk_lines;
+		(!opts) ? 0 : opts->interhunk_lines;
 
 	if (!opts)
 		return;

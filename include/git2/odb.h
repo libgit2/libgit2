@@ -173,6 +173,20 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *d
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
 /**
+ * List all objects available in the database
+ *
+ * The callback will be called for each object available in the
+ * database. Note that the objects are likely to be returned in the
+ * index order, which would make accessing the objects in that order
+ * inefficient.
+ *
+ * @param db database to use
+ * @param cb the callback to call for each object
+ * @param data data to pass to the callback
+ */
+GIT_EXTERN(int) git_odb_foreach(git_odb *db, int (*cb)(git_oid *oid, void *data), void *data);
+
+/**
  * Write an object directly into the ODB
  *
  * This method writes a full object straight into the ODB.

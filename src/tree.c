@@ -35,6 +35,22 @@ static int entry_sort_cmp(const void *a, const void *b)
 		entry_b->filename, entry_b->filename_len, git_tree_entry__is_tree(entry_b));
 }
 
+static git_tree_entry *alloc_entry(const char *filename)
+{
+	git_tree_entry *entry = NULL;
+	size_t filename_len = strlen(filename);
+
+	entry = git__malloc(sizeof(git_tree_entry) + filename_len + 1);
+	if (!entry)
+		return NULL;
+
+	memset(entry, 0x0, sizeof(git_tree_entry));
+	memcpy(entry->filename, filename, filename_len);
+	entry->filename[filename_len] = 0;
+	entry->filename_len = filename_len;
+
+	return entry;
+}
 
 struct tree_key_search {
 	const char *filename;
@@ -76,7 +92,7 @@ static int homing_search_cmp(const void *key, const void *array_member)
  * ambiguous because of folder vs file sorting, we look linearly
  * around the area for our target file.
  */
-static int tree_key_search(git_vector *entries, const char *filename)
+static int tree_key_search(git_vector *entries, const char *filename, size_t filename_len)
 {
 	struct tree_key_search ksearch;
 	const git_tree_entry *entry;
@@ -84,7 +100,7 @@ static int tree_key_search(git_vector *entries, const char *filename)
 	int homing, i;
 
 	ksearch.filename = filename;
-	ksearch.filename_len = strlen(filename);
+	ksearch.filename_len = filename_len;
 
 	/* Initial homing search; find an entry on the tree with
 	 * the same prefix as the filename we're looking for */
@@ -100,7 +116,8 @@ static int tree_key_search(git_vector *entries, const char *filename)
 		if (homing_search_cmp(&ksearch, entry) < 0)
 			break;
 
-		if (strcmp(filename, entry->filename) == 0)
+		if (entry->filename_len == filename_len &&
+			memcmp(filename, entry->filename, filename_len) == 0)
 			return i;
 	}
 
@@ -112,7 +129,8 @@ static int tree_key_search(git_vector *entries, const char *filename)
 		if (homing_search_cmp(&ksearch, entry) > 0)
 			break;
 
-		if (strcmp(filename, entry->filename) == 0)
+		if (entry->filename_len == filename_len &&
+			memcmp(filename, entry->filename, filename_len) == 0)
 			return i;
 	}
 
@@ -120,16 +138,38 @@ static int tree_key_search(git_vector *entries, const char *filename)
 	return GIT_ENOTFOUND;
 }
 
+void git_tree_entry_free(git_tree_entry *entry)
+{
+	if (entry == NULL)
+		return;
+
+	git__free(entry);
+}
+
+git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
+{
+	size_t total_size;
+	git_tree_entry *copy;
+
+	assert(entry);
+
+	total_size = sizeof(git_tree_entry) + entry->filename_len + 1;
+
+	copy = git__malloc(total_size);
+	if (!copy)
+		return NULL;
+
+	memcpy(copy, entry, total_size);
+	return copy;
+}
+
 void git_tree__free(git_tree *tree)
 {
 	unsigned int i;
 
 	for (i = 0; i < tree->entries.length; ++i) {
-		git_tree_entry *e;
-		e = git_vector_get(&tree->entries, i);
-
-		git__free(e->filename);
-		git__free(e);
+		git_tree_entry *e = git_vector_get(&tree->entries, i);
+		git_tree_entry_free(e);
 	}
 
 	git_vector_free(&tree->entries);
@@ -179,17 +219,19 @@ int git_tree_entry_to_object(
 	return git_object_lookup(object_out, repo, &entry->oid, GIT_OBJ_ANY);
 }
 
-const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
+static git_tree_entry *entry_fromname(git_tree *tree, const char *name, size_t name_len)
 {
-	int idx;
-
-	assert(tree && filename);
-
-	idx = tree_key_search(&tree->entries, filename);
-	if (idx == GIT_ENOTFOUND)
+	int idx = tree_key_search(&tree->entries, name, name_len);
+	if (idx < 0)
 		return NULL;
 
 	return git_vector_get(&tree->entries, idx);
+}
+
+const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
+{
+	assert(tree && filename);
+	return entry_fromname(tree, filename, strlen(filename));
 }
 
 const git_tree_entry *git_tree_entry_byindex(git_tree *tree, unsigned int idx)
@@ -244,19 +286,11 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
-		int tmp;
+		int attr;
 
-		entry = git__calloc(1, sizeof(git_tree_entry));
-		GITERR_CHECK_ALLOC(entry);
-
-		if (git_vector_insert(&tree->entries, entry) < 0)
-			return -1;
-
-		if (git__strtol32(&tmp, buffer, &buffer, 8) < 0 ||
-			!buffer || !valid_attributes(tmp))
+		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 ||
+			!buffer || !valid_attributes(attr))
 			return tree_error("Failed to parse tree. Can't parse attributes");
-
-		entry->attr = tmp;
 
 		if (*buffer++ != ' ')
 			return tree_error("Failed to parse tree. Object is corrupted");
@@ -264,8 +298,16 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		if (memchr(buffer, 0, buffer_end - buffer) == NULL)
 			return tree_error("Failed to parse tree. Object is corrupted");
 
-		entry->filename = git__strdup(buffer);
-		entry->filename_len = strlen(buffer);
+		/** Allocate the entry and store it in the entries vector */
+		{
+			entry = alloc_entry(buffer);
+			GITERR_CHECK_ALLOC(entry);
+
+			if (git_vector_insert(&tree->entries, entry) < 0)
+				return -1;
+
+			entry->attr = attr;
+		}
 
 		while (buffer < buffer_end && *buffer != 0)
 			buffer++;
@@ -303,15 +345,16 @@ static unsigned int find_next_dir(const char *dirname, git_index *index, unsigne
 	return i;
 }
 
-static int append_entry(git_treebuilder *bld, const char *filename, const git_oid *id, unsigned int attributes)
+static int append_entry(
+	git_treebuilder *bld,
+	const char *filename,
+	const git_oid *id,
+	unsigned int attributes)
 {
 	git_tree_entry *entry;
 
-	entry = git__calloc(1, sizeof(git_tree_entry));
+	entry = alloc_entry(filename);
 	GITERR_CHECK_ALLOC(entry);
-
-	entry->filename = git__strdup(filename);
-	entry->filename_len = strlen(entry->filename);
 
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
@@ -488,7 +531,12 @@ on_error:
 	return -1;
 }
 
-int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, const char *filename, const git_oid *id, unsigned int attributes)
+int git_treebuilder_insert(
+	const git_tree_entry **entry_out,
+	git_treebuilder *bld,
+	const char *filename,
+	const git_oid *id,
+	unsigned int attributes)
 {
 	git_tree_entry *entry;
 	int pos;
@@ -501,30 +549,28 @@ int git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, con
 	if (!valid_entry_name(filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry");
 
-	pos = tree_key_search(&bld->entries, filename);
+	pos = tree_key_search(&bld->entries, filename, strlen(filename));
 
 	if (pos >= 0) {
 		entry = git_vector_get(&bld->entries, pos);
 		if (entry->removed)
 			entry->removed = 0;
 	} else {
-		entry = git__calloc(1, sizeof(git_tree_entry));
+		entry = alloc_entry(filename);
 		GITERR_CHECK_ALLOC(entry);
-
-		entry->filename = git__strdup(filename);
-		entry->filename_len = strlen(entry->filename);
 	}
 
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = attributes;
 
-	if (pos == GIT_ENOTFOUND) {
+	if (pos < 0) {
 		if (git_vector_insert(&bld->entries, entry) < 0)
 			return -1;
 	}
 
-	if (entry_out != NULL)
+	if (entry_out != NULL) {
 		*entry_out = entry;
+	}
 
 	return 0;
 }
@@ -536,7 +582,7 @@ static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filenam
 
 	assert(bld && filename);
 
-	idx = tree_key_search(&bld->entries, filename);
+	idx = tree_key_search(&bld->entries, filename, strlen(filename));
 	if (idx < 0)
 		return NULL;
 
@@ -625,8 +671,7 @@ void git_treebuilder_clear(git_treebuilder *bld)
 
 	for (i = 0; i < bld->entries.length; ++i) {
 		git_tree_entry *e = bld->entries.contents[i];
-		git__free(e->filename);
-		git__free(e);
+		git_tree_entry_free(e);
 	}
 
 	git_vector_clear(&bld->entries);
@@ -642,82 +687,75 @@ void git_treebuilder_free(git_treebuilder *bld)
 	git__free(bld);
 }
 
-static int tree_frompath(
-	git_tree **parent_out,
-	git_tree *root,
-	git_buf *treeentry_path,
-	size_t offset)
+static size_t subpath_len(const char *path)
 {
-	char *slash_pos = NULL;
-	const git_tree_entry* entry;
+	const char *slash_pos = strchr(path, '/');
+	if (slash_pos == NULL)
+		return strlen(path);
+
+	return slash_pos - path;
+}
+
+int git_tree_entry_bypath(
+	git_tree_entry **entry_out,
+	git_tree *root,
+	const char *path)
+{
 	int error = 0;
 	git_tree *subtree;
+	const git_tree_entry *entry;
+	size_t filename_len;
 
-	if (!*(treeentry_path->ptr + offset)) {
-		giterr_set(GITERR_INVALID,
-			"Invalid relative path to a tree entry '%s'.", treeentry_path->ptr);
-		return -1;
-	}
+	/* Find how long is the current path component (i.e.
+	 * the filename between two slashes */
+	filename_len = subpath_len(path);
 
-	slash_pos = (char *)strchr(treeentry_path->ptr + offset, '/');
-
-	if (slash_pos == NULL)
-		return git_tree_lookup(
-			parent_out,
-			root->object.repo,
-			git_object_id((const git_object *)root)
-		);
-
-	if (slash_pos == treeentry_path->ptr + offset) {
-		giterr_set(GITERR_INVALID,
-			"Invalid relative path to a tree entry '%s'.", treeentry_path->ptr);
-		return -1;
-	}
-
-	*slash_pos = '\0';
-
-	entry = git_tree_entry_byname(root, treeentry_path->ptr + offset);
-
-	if (slash_pos != NULL)
-		*slash_pos = '/';
-
-	if (entry == NULL) {
-		giterr_set(GITERR_TREE,
-			"No tree entry can be found from "
-			"the given tree and relative path '%s'.", treeentry_path->ptr);
+	if (filename_len == 0) {
+		giterr_set(GITERR_TREE, "Invalid tree path given");
 		return GIT_ENOTFOUND;
 	}
 
+	entry = entry_fromname(root, path, filename_len);
+
+	if (entry == NULL) {
+		giterr_set(GITERR_TREE,
+			"The path '%s' does not exist in the given tree", path);
+		return GIT_ENOTFOUND;
+	}
+
+	switch (path[filename_len]) {
+	case '/': 
+		/* If there are more components in the path...
+		 * then this entry *must* be a tree */
+		if (!git_tree_entry__is_tree(entry)) {
+			giterr_set(GITERR_TREE,
+				"The path '%s' does not exist in the given tree", path);
+			return GIT_ENOTFOUND;
+		}
+
+		/* If there's only a slash left in the path, we 
+		 * return the current entry; otherwise, we keep
+		 * walking down the path */
+		if (path[filename_len + 1] != '\0')
+			break;
+
+	case '\0':
+		/* If there are no more components in the path, return
+		 * this entry */
+		*entry_out = git_tree_entry_dup(entry);
+		return 0;
+	}
 
 	if (git_tree_lookup(&subtree, root->object.repo, &entry->oid) < 0)
-		return error;
+		return -1;
 
-	error = tree_frompath(
-		parent_out,
+	error = git_tree_entry_bypath(
+		entry_out,
 		subtree,
-		treeentry_path,
-		(slash_pos - treeentry_path->ptr) + 1
+		path + filename_len + 1
 	);
 
 	git_tree_free(subtree);
-	return error;
-}
-
-int git_tree_get_subtree(
-	git_tree **subtree,
-	git_tree *root,
-	const char *subtree_path)
-{
-	int error;
-	git_buf buffer = GIT_BUF_INIT;
-
-	assert(subtree && root && subtree_path);
-
-	if ((error = git_buf_sets(&buffer, subtree_path)) == 0)
-		error = tree_frompath(subtree, root, &buffer, 0);
-
-	git_buf_free(&buffer);
-
 	return error;
 }
 

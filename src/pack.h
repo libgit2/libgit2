@@ -102,5 +102,9 @@ int git_pack_entry_find(
 		struct git_pack_file *p,
 		const git_oid *short_oid,
 		unsigned int len);
+int git_pack_foreach_entry(
+		struct git_pack_file *p,
+		int (*cb)(git_oid *oid, void *data),
+		void *data);
 
 #endif

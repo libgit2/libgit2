@@ -985,7 +985,7 @@ int git_index_entry_stage(const git_index_entry *entry)
 	return (entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT;
 }
 
-static int read_tree_cb(const char *root, git_tree_entry *tentry, void *data)
+static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *data)
 {
 	git_index *index = data;
 	git_index_entry *entry = NULL;

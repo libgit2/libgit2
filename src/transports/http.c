@@ -545,6 +545,7 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
+	git_buf path = GIT_BUF_INIT;
 	git_indexer_stream *idx = NULL;
 	download_pack_cbdata data;
 
@@ -555,7 +556,10 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 		return -1;
 	}
 
-	if (git_indexer_stream_new(&idx, git_repository_path(repo)) < 0)
+	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
+		return -1;
+
+	if (git_indexer_stream_new(&idx, git_buf_cstr(&path)) < 0)
 		return -1;
 
 	/*
@@ -600,6 +604,7 @@ static int http_download_pack(git_transport *transport, git_repository *repo, gi
 
 on_error:
 	git_indexer_stream_free(idx);
+	git_buf_free(&path);
 	return -1;
 }
 

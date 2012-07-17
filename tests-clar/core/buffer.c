@@ -611,3 +611,50 @@ void test_core_buffer__11(void)
 
 	git_buf_free(&a);
 }
+
+void test_core_buffer__rfind_variants(void)
+{
+	git_buf a = GIT_BUF_INIT;
+	ssize_t len;
+
+	cl_git_pass(git_buf_sets(&a, "/this/is/it/"));
+
+	len = (ssize_t)git_buf_len(&a);
+
+	cl_assert(git_buf_rfind(&a, '/') == len - 1);
+	cl_assert(git_buf_rfind_next(&a, '/') == len - 4);
+
+	cl_assert(git_buf_rfind(&a, 'i') == len - 3);
+	cl_assert(git_buf_rfind_next(&a, 'i') == len - 3);
+
+	cl_assert(git_buf_rfind(&a, 'h') == 2);
+	cl_assert(git_buf_rfind_next(&a, 'h') == 2);
+
+	cl_assert(git_buf_rfind(&a, 'q') == -1);
+	cl_assert(git_buf_rfind_next(&a, 'q') == -1);
+
+	git_buf_free(&a);
+}
+
+void test_core_buffer__puts_escaped(void)
+{
+	git_buf a = GIT_BUF_INIT;
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_puts_escaped(&a, "this is a test", "", ""));
+	cl_assert_equal_s("this is a test", a.ptr);
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_puts_escaped(&a, "this is a test", "t", "\\"));
+	cl_assert_equal_s("\\this is a \\tes\\t", a.ptr);
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_puts_escaped(&a, "this is a test", "i ", "__"));
+	cl_assert_equal_s("th__is__ __is__ a__ test", a.ptr);
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_puts_escape_regex(&a, "^match\\s*[A-Z]+.*"));
+	cl_assert_equal_s("\\^match\\\\s\\*\\[A-Z\\]\\+\\.\\*", a.ptr);
+
+	git_buf_free(&a);
+}

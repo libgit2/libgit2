@@ -33,6 +33,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		mflag = MAP_PRIVATE;
 
 	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
+
 	if (!out->data || out->data == MAP_FAILED) {
 		giterr_set(GITERR_OS, "Failed to mmap. Could not write data");
 		return -1;
@@ -47,6 +48,7 @@ int p_munmap(git_map *map)
 {
 	assert(map != NULL);
 	munmap(map->data, map->len);
+
 	return 0;
 }
 

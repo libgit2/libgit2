@@ -179,6 +179,25 @@ GIT_EXTERN(int) git_commit_parent(git_commit **parent, git_commit *commit, unsig
 GIT_EXTERN(const git_oid *) git_commit_parent_oid(git_commit *commit, unsigned int n);
 
 /**
+ * Get the commit object that is the <n>th generation ancestor
+ * of the named commit object, following only the first parents.
+ * The returned commit has to be freed by the caller.
+ *
+ * Passing `0` as the generation number returns another instance of the
+ * base commit itself.
+ *
+ * @param ancestor Pointer where to store the ancestor commit
+ * @param commit a previously loaded commit.
+ * @param n the requested generation
+ * @return 0 on success; GIT_ENOTFOUND if no matching ancestor exists
+ * or an error code
+ */
+GIT_EXTERN(int) git_commit_nth_gen_ancestor(
+	git_commit **ancestor,
+	const git_commit *commit,
+	unsigned int n);
+
+/**
  * Create a new commit in the repository using `git_object`
  * instances as parameters.
  *

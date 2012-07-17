@@ -7,7 +7,7 @@
 #ifndef INCLUDE_posix__w32_h__
 #define INCLUDE_posix__w32_h__
 
-#ifndef __sun
+#if !defined(__sun) && !defined(__amigaos4__)
 #	include <fnmatch.h>
 #	define p_fnmatch(p, s, f) fnmatch(p, s, f)
 #else

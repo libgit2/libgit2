@@ -67,7 +67,7 @@ For more advanced use or questions about CMake please read <http://www.cmake.org
 The following CMake variables are declared:
 
 - `INSTALL_BIN`: Where to install binaries to.
-- `INSTALL_LIB`: Where to install libraries to.
+- `LIB_INSTALL_DIR`: Where to install libraries to.
 - `INSTALL_INC`: Where to install headers to.
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
 - `BUILD_CLAR`: Build [Clar](https://github.com/tanoku/clar)-based test suite (defaults to ON)
@@ -89,7 +89,7 @@ Here are the bindings to libgit2 that are currently available:
 * Go
     * go-git <https://github.com/str1ngs/go-git>
 * GObject
-    * libgit2-glib <http://git.gnome.org/browse/libgit2-glib>
+    * libgit2-glib <https://live.gnome.org/Libgit2-glib>
 * Haskell
     * hgit2 <https://github.com/norm2782/hgit2>
 * Lua

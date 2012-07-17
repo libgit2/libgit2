@@ -23,6 +23,8 @@ static void assert_note_equal(git_note *note, char *message, git_oid *note_oid) 
 
 	cl_git_pass(git_blob_lookup(&blob, _repo, note_oid));
 	cl_assert_equal_s(git_note_message(note), (const char *)git_blob_rawcontent(blob));
+
+	git_blob_free(blob);
 }
 
 static void create_note(git_oid *note_oid, const char *canonical_namespace, const char *target_sha, const char *message)

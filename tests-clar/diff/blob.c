@@ -14,13 +14,13 @@ void test_diff_blob__initialize(void)
 
 	memset(&opts, 0, sizeof(opts));
 	opts.context_lines = 1;
-	opts.interhunk_lines = 1;
+	opts.interhunk_lines = 0;
 
 	memset(&expected, 0, sizeof(expected));
 
 	/* tests/resources/attr/root_test4.txt */
-	cl_git_pass(git_oid_fromstrn(&oid, "fe773770c5a6", 12));
-	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &oid, 6));
+	cl_git_pass(git_oid_fromstrn(&oid, "a0f7217a", 8));
+	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &oid, 4));
 
 	/* alien.png */
 	cl_git_pass(git_oid_fromstrn(&oid, "edf3dcee", 8));
@@ -54,6 +54,7 @@ void test_diff_blob__can_compare_text_blobs(void)
 
 	/* Doing the equivalent of a `git diff -U1` on these files */
 
+	/* diff on tests/resources/attr/root_test1 */
 	cl_git_pass(git_diff_blobs(
 		a, b, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
@@ -67,6 +68,7 @@ void test_diff_blob__can_compare_text_blobs(void)
 	cl_assert(expected.line_adds == 5);
 	cl_assert(expected.line_dels == 0);
 
+	/* diff on tests/resources/attr/root_test2 */
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
 		b, c, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -81,6 +83,7 @@ void test_diff_blob__can_compare_text_blobs(void)
 	cl_assert(expected.line_adds == 9);
 	cl_assert(expected.line_dels == 3);
 
+	/* diff on tests/resources/attr/root_test3 */
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
 		a, c, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -94,8 +97,6 @@ void test_diff_blob__can_compare_text_blobs(void)
 	cl_assert(expected.line_ctxt == 0);
 	cl_assert(expected.line_adds == 12);
 	cl_assert(expected.line_dels == 1);
-
-	opts.context_lines = 1;
 
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
@@ -251,4 +252,63 @@ void test_diff_blob__can_compare_a_binary_blob_and_a_text_blob(void)
 		d, alien, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 	assert_binary_blobs_comparison(expected);
+}
+
+/*
+ * $ git diff fe773770 a0f7217
+ * diff --git a/fe773770 b/a0f7217
+ * index fe77377..a0f7217 100644
+ * --- a/fe773770
+ * +++ b/a0f7217
+ * @@ -1,6 +1,6 @@
+ *  Here is some stuff at the start
+ * 
+ * -This should go in one hunk
+ * +This should go in one hunk (first)
+ * 
+ *  Some additional lines
+ * 
+ * @@ -8,7 +8,7 @@ Down here below the other lines
+ * 
+ *  With even more at the end
+ * 
+ * -Followed by a second hunk of stuff
+ * +Followed by a second hunk of stuff (second)
+ * 
+ *  That happens down here
+ */
+void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
+{
+	git_blob *old_d;
+	git_oid old_d_oid;
+
+	opts.context_lines = 3;
+
+	/* tests/resources/attr/root_test1 from commit f5b0af1 */
+	cl_git_pass(git_oid_fromstrn(&old_d_oid, "fe773770", 8));
+	cl_git_pass(git_blob_lookup_prefix(&old_d, g_repo, &old_d_oid, 4));
+
+	/* Test with default inter-hunk-context (not set) => default is 0 */
+	cl_git_pass(git_diff_blobs(
+		old_d, d, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(expected.hunks == 2);
+
+	/* Test with inter-hunk-context explicitly set to 0 */
+	opts.interhunk_lines = 0;
+	memset(&expected, 0, sizeof(expected));
+	cl_git_pass(git_diff_blobs(
+		old_d, d, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(expected.hunks == 2);
+
+	/* Test with inter-hunk-context explicitly set to 1 */
+	opts.interhunk_lines = 1;
+	memset(&expected, 0, sizeof(expected));
+	cl_git_pass(git_diff_blobs(
+		old_d, d, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(expected.hunks == 1);
+
+	git_blob_free(old_d);
 }

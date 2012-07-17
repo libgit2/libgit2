@@ -204,16 +204,14 @@ GIT_INLINE(bool) git__isalpha(int c)
     return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
 }
 
-GIT_INLINE(bool) git__isspace(int c)
+GIT_INLINE(bool) git__isdigit(int c)
 {
-    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
+    return (c >= '0' && c <= '9');
 }
 
-GIT_INLINE(int) git__time_cmp(const git_time *a, const git_time *b)
+GIT_INLINE(bool) git__isspace(int c)
 {
-   /* Adjust for time zones. Times are in seconds, offsets are in minutes. */
-   git_time_t adjusted_a = a->time + ((b->offset - a->offset) * 60);
-   return (int)(adjusted_a - b->time);
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
 }
 
 GIT_INLINE(bool) git__iswildcard(int c)

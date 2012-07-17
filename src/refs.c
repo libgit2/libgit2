@@ -11,6 +11,7 @@
 #include "fileops.h"
 #include "pack.h"
 #include "reflog.h"
+#include "config.h"
 
 #include <git2/tag.h>
 #include <git2/object.h>
@@ -1396,6 +1397,9 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	head_target = git_reference_target(head);
 
 	if (head_target && !strcmp(head_target, ref->name)) {
+		git_reference_free(head);
+		head = NULL;
+
 		if (git_reference_create_symbolic(&head, ref->owner, "HEAD", new_name, 1) < 0) {
 			giterr_set(GITERR_REFERENCE,
 				"Failed to update HEAD after renaming reference");
@@ -1404,17 +1408,10 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	}
 
 	/*
-	 * Rename the reflog file.
+	 * Rename the reflog file, if it exists.
 	 */
-	if (git_buf_join_n(&aux_path, '/', 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name) < 0)
+	if ((git_reference_has_log(ref)) && (git_reflog_rename(ref, new_name) < 0))
 		goto cleanup;
-
-	if (git_path_exists(aux_path.ptr) == true) {
-		if (git_reflog_rename(ref, new_name) < 0)
-			goto cleanup;
-	} else {
-		giterr_clear();
-	}
 
 	/*
 	 * Change the name of the reference given by the user.
@@ -1763,4 +1760,131 @@ int git_reference__update(git_repository *repo, const git_oid *oid, const char *
 	res = git_reference_set_oid(ref, oid);
 	git_reference_free(ref);
 	return res;
+}
+
+struct glob_cb_data {
+	const char *glob;
+	int (*callback)(const char *, void *);
+	void *payload;
+};
+
+static int fromglob_cb(const char *reference_name, void *payload)
+{
+	struct glob_cb_data *data = (struct glob_cb_data *)payload;
+
+	if (!p_fnmatch(data->glob, reference_name, 0))
+		return data->callback(reference_name, data->payload);
+
+	return 0;
+}
+
+int git_reference_foreach_glob(
+	git_repository *repo,
+	const char *glob,
+	unsigned int list_flags,
+	int (*callback)(
+		const char *reference_name,
+		void *payload),
+	void *payload)
+{
+	struct glob_cb_data data;
+
+	assert(repo && glob && callback);
+
+	data.glob = glob;
+	data.callback = callback;
+	data.payload = payload;
+
+	return git_reference_foreach(
+			repo, list_flags, fromglob_cb, &data);
+}
+
+int git_reference_has_log(
+	git_reference *ref)
+{
+	git_buf path = GIT_BUF_INIT;
+	int result;
+
+	assert(ref);
+
+	if (git_buf_join_n(&path, '/', 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name) < 0)
+		return -1;
+
+	result = git_path_isfile(git_buf_cstr(&path));
+	git_buf_free(&path);
+
+	return result;
+}
+
+//TODO: How about also taking care of local tracking branches?
+//cf. http://alblue.bandlem.com/2011/07/git-tip-of-week-tracking-branches.html
+int git_reference_remote_tracking_from_branch(
+	git_reference **tracking_ref,
+	git_reference *branch_ref)
+{
+	git_config *config = NULL;
+	const char *name, *remote, *merge;
+	git_buf buf = GIT_BUF_INIT;
+	int error = -1;
+
+	assert(tracking_ref && branch_ref);
+
+	name = git_reference_name(branch_ref);
+
+	if (git__prefixcmp(name, GIT_REFS_HEADS_DIR)) {
+		giterr_set(
+			GITERR_INVALID,
+			"Failed to retrieve tracking reference - '%s' is not a branch.",
+			name);
+		return -1;
+	}
+
+	if (git_repository_config(&config, branch_ref->owner) < 0)
+		return -1;
+
+	if (git_buf_printf(
+		&buf,
+		"branch.%s.remote",
+		name + strlen(GIT_REFS_HEADS_DIR)) < 0)
+			goto cleanup;
+
+	if ((error = git_config_get_string(&remote, config, git_buf_cstr(&buf))) < 0)
+		goto cleanup;
+
+	error = -1;
+
+	git_buf_clear(&buf);
+
+	//TODO: Is it ok to fail when no merge target is found?
+	if (git_buf_printf(
+		&buf,
+		"branch.%s.merge",
+		name + strlen(GIT_REFS_HEADS_DIR)) < 0)
+			goto cleanup;
+
+	if (git_config_get_string(&merge, config, git_buf_cstr(&buf)) < 0)
+		goto cleanup;
+
+	//TODO: Should we test this?
+	if (git__prefixcmp(merge, GIT_REFS_HEADS_DIR))
+		goto cleanup;
+
+	git_buf_clear(&buf);
+
+	if (git_buf_printf(
+		&buf,
+		"refs/remotes/%s/%s",
+		remote,
+		merge + strlen(GIT_REFS_HEADS_DIR)) < 0)
+			goto cleanup;
+
+	error = git_reference_lookup(
+		tracking_ref,
+		branch_ref->owner,
+		git_buf_cstr(&buf));
+
+cleanup:
+	git_config_free(config);
+	git_buf_free(&buf);
+	return error;
 }

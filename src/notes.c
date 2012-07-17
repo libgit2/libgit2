@@ -56,7 +56,7 @@ static int find_subtree_r(git_tree **out, git_tree *root,
 
 	error = find_subtree_in_current_level(&subtree, repo, root, target, *fanout);
 	if (error == GIT_EEXISTS) {
-		return git_tree_lookup(out, repo, git_object_id((const git_object *)root));
+		return git_tree_lookup(out, repo, git_tree_id(root));
 	}
 
 	if (error < 0)
@@ -64,13 +64,7 @@ static int find_subtree_r(git_tree **out, git_tree *root,
 
 	*fanout += 2;
 	error = find_subtree_r(out, subtree, repo, target, fanout);
-
-	/*
-	 * root is not ours to free, and the last subtree is the
-	 * one being returned => we only need to free the subtrees in-between
-	 */
-	if (*out != subtree)
-		git_tree_free(subtree);
+	git_tree_free(subtree);
 
 	return error;
 }
@@ -103,7 +97,7 @@ static int tree_write(
 {
 	int error;
 	git_treebuilder *tb = NULL;
-	git_tree_entry *entry;
+	const git_tree_entry *entry;
 	git_oid tree_oid;
 
 	if ((error = git_treebuilder_create(&tb, source_tree)) < 0)
@@ -153,7 +147,7 @@ static int manipulate_note_in_tree_r(
 		int current_error))
 {
 	int error = -1;	
-	git_tree *subtree = NULL;
+	git_tree *subtree = NULL, *new = NULL;
 	char subtree_name[3];
 
 	error = find_subtree_in_current_level(
@@ -176,7 +170,7 @@ static int manipulate_note_in_tree_r(
 
 	/* An existing fanout has been found, let's dig deeper */
 	error = manipulate_note_in_tree_r(
-		out, repo, subtree, note_oid, annotated_object_sha,
+		&new, repo, subtree, note_oid, annotated_object_sha,
 		fanout + 2, note_exists_cb, note_notfound_cb);
 
 	if (error < 0)
@@ -185,10 +179,12 @@ static int manipulate_note_in_tree_r(
 	strncpy(subtree_name, annotated_object_sha + fanout, 2);
 	subtree_name[2] = '\0';
 
-	error = tree_write(out, repo, parent,
-		git_object_id((const git_object *)(*out)), subtree_name, 0040000);
+	error = tree_write(out, repo, parent, git_tree_id(new),
+			   subtree_name, 0040000);
+
 
 cleanup:
+	git_tree_free(new);
 	git_tree_free(subtree);
 	return error;
 }

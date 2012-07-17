@@ -258,7 +258,6 @@ GIT_EXTERN(int) git_reference_packall(git_repository *repo);
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, unsigned int list_flags);
 
-
 /**
  * Perform an operation on each reference in the repository
  *
@@ -323,6 +322,67 @@ GIT_EXTERN(void) git_reference_free(git_reference *ref);
  * @return 0 if the same, else a stable but meaningless ordering.
  */
 GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
+
+/**
+ * Loop over all the references and issue a callback for each one
+ * which name matches the given glob pattern.
+ *
+ * The processed references may be filtered by type, or using
+ * a bitwise OR of several types. Use the magic value
+ * `GIT_REF_LISTALL` to obtain all references, including
+ * packed ones.
+ *
+ * @param repo Repository where to find the references.
+ *
+ * @param list_flags Filtering flags for the reference
+ * listing.
+ *
+ * @param callback Callback to invoke per found reference.
+ *
+ * @param payload Extra parameter to callback function.
+ *
+ * @return 0 or an error code.
+ */
+GIT_EXTERN(int) git_reference_foreach_glob(
+		git_repository *repo,
+		const char *glob,
+		unsigned int list_flags,
+		int (*callback)(
+			const char *reference_name,
+			void *payload),
+		void *payload
+);
+
+/**
+ * Check if a reflog exists for the specified reference.
+ *
+ * @param ref A git reference
+ *
+ * @return 0 when no reflog can be found, 1 when it exists;
+ * otherwise an error code.
+ */
+GIT_EXTERN(int) git_reference_has_log(git_reference *ref);
+
+
+/**
+ * Return the reference supporting the remote tracking branch,
+ * given a reference branch.
+ *
+ * The input reference has to be located in the `refs/heads`
+ * namespace.
+ *
+ * @param tracking_ref Pointer where to store the retrieved
+ * reference.
+ *
+ * @param branch_ref A git local branch reference. 
+ *
+ * @return 0 on success; GIT_ENOTFOUND when no remote tracking
+ * reference exists, otherwise an error code.
+ */
+GIT_EXTERN(int) git_reference_remote_tracking_from_branch(
+	git_reference **tracking_ref,
+	git_reference *branch_ref
+);
 
 /** @} */
 GIT_END_DECL

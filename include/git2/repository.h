@@ -194,9 +194,12 @@ GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
  *
  * @param repo A repository object
  * @param workdir The path to a working directory
+ * @param update_gitlink Create/update gitlink in workdir and set config
+ *        "core.worktree" (if workdir is not the parent of the .git directory)
  * @return 0, or an error code
  */
-GIT_EXTERN(int) git_repository_set_workdir(git_repository *repo, const char *workdir);
+GIT_EXTERN(int) git_repository_set_workdir(
+	git_repository *repo, const char *workdir, int update_gitlink);
 
 /**
  * Check if a repository is bare

@@ -262,7 +262,7 @@ int git_packfile_unpack_header(
 	if (base == NULL)
 		return GIT_EBUFS;
 
-	ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
+		ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
 	git_mwindow_close(w_curs);
 	if (ret == GIT_EBUFS)
 		return ret;
@@ -535,6 +535,7 @@ void packfile_free(struct git_pack_file *p)
 
 	/* clear_delta_base_cache(); */
 	git_mwindow_free_all(&p->mwf);
+	git_mwindow_file_deregister(&p->mwf);
 
 	if (p->mwf.fd != -1)
 		p_close(p->mwf.fd);
@@ -683,6 +684,49 @@ static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_
 		return (((uint64_t)ntohl(*((uint32_t *)(index + 0)))) << 32) |
 					ntohl(*((uint32_t *)(index + 4)));
 	}
+}
+
+int git_pack_foreach_entry(
+		struct git_pack_file *p,
+		int (*cb)(git_oid *oid, void *data),
+		void *data)
+
+{
+	const unsigned char *index = p->index_map.data, *current;
+	unsigned stride;
+	uint32_t i;
+
+	if (index == NULL) {
+		int error;
+
+		if ((error = pack_index_open(p)) < 0)
+			return error;
+
+		assert(p->index_map.data);
+
+		index = p->index_map.data;
+	}
+
+	if (p->index_version > 1) {
+		index += 8;
+	}
+
+	index += 4 * 256;
+
+	if (p->index_version > 1) {
+		stride = 20;
+	} else {
+		stride = 24;
+		index += 4;
+	}
+
+	current = index;
+	for (i = 0; i < p->num_objects; i++) {
+		cb((git_oid *)current, data);
+		current += stride;
+	}
+
+	return 0;
 }
 
 static int pack_entry_find_offset(

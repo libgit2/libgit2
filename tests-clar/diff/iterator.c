@@ -312,7 +312,7 @@ static const char *expected_index_oids_0[] = {
 	"45141a79a77842c59a63229403220a4e4be74e3d",
 	"4d713dc48e6b1bd75b0d61ad078ba9ca3a56745d",
 	"108bb4e7fd7b16490dc33ff7d972151e73d7166e",
-	"fe773770c5a6cc7185580c9204b1ff18a33ff3fc",
+	"a0f7217ae99f5ac3e88534f5cea267febc5fa85b",
 	"3e42ffc54a663f9401cc25843d6c0e71a33e4249",
 	"45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
 	"45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
@@ -343,7 +343,7 @@ static const char *expected_index_oids_range[] = {
 	"45141a79a77842c59a63229403220a4e4be74e3d",
 	"4d713dc48e6b1bd75b0d61ad078ba9ca3a56745d",
 	"108bb4e7fd7b16490dc33ff7d972151e73d7166e",
-	"fe773770c5a6cc7185580c9204b1ff18a33ff3fc",
+	"a0f7217ae99f5ac3e88534f5cea267febc5fa85b",
 };
 
 void test_diff_iterator__index_range(void)

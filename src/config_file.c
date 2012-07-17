@@ -188,25 +188,46 @@ static void backend_free(git_config_file *_backend)
 	git__free(backend);
 }
 
-static int file_foreach(git_config_file *backend, int (*fn)(const char *, const char *, void *), void *data)
+static int file_foreach(
+	git_config_file *backend,
+	const char *regexp,
+	int (*fn)(const char *, const char *, void *),
+	void *data)
 {
 	diskfile_backend *b = (diskfile_backend *)backend;
 	cvar_t *var;
 	const char *key;
+	regex_t regex;
+	int result = 0;
 
 	if (!b->values)
 		return 0;
 
-	git_strmap_foreach(b->values, key, var,
-		do {
-			if (fn(key, var->value, data) < 0)
-				break;
+	if (regexp != NULL) {
+		if ((result = regcomp(&regex, regexp, REG_EXTENDED)) < 0) {
+			giterr_set_regex(&regex, result);
+			regfree(&regex);
+			return -1;
+		}
+	}
 
-			var = CVAR_LIST_NEXT(var);
-		} while (var != NULL);
+	git_strmap_foreach(b->values, key, var,
+		for (; var != NULL; var = CVAR_LIST_NEXT(var)) {
+			/* skip non-matching keys if regexp was provided */
+			if (regexp && regexec(&regex, key, 0, NULL, 0) != 0)
+				continue;
+
+			/* abort iterator on non-zero return value */
+			if ((result = fn(key, var->value, data)) != 0)
+				goto cleanup;
+		}
 	);
 
-	return 0;
+cleanup:
+	if (regexp != NULL)
+		regfree(&regex);
+
+	return result;
 }
 
 static int config_set(git_config_file *cfg, const char *name, const char *value)
@@ -337,6 +358,7 @@ static int config_get_multivar(
 		result = regcomp(&regex, regex_str, REG_EXTENDED);
 		if (result < 0) {
 			giterr_set_regex(&regex, result);
+			regfree(&regex);
 			return -1;
 		}
 
@@ -396,6 +418,7 @@ static int config_set_multivar(
 	if (result < 0) {
 		git__free(key);
 		giterr_set_regex(&preg, result);
+		regfree(&preg);
 		return -1;
 	}
 

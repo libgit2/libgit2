@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
  * Then for file `xyz.c` looking up attribute "foo" gives a value for
  * which `GIT_ATTR_TRUE(value)` is true.
  */
-#define GIT_ATTR_TRUE(attr)		((attr) == git_attr__true)
+#define GIT_ATTR_TRUE(attr)		((attr) == git_l_attr__true)
 
 /**
  * GIT_ATTR_FALSE checks if an attribute is set off.  In core git
@@ -44,7 +44,7 @@ GIT_BEGIN_DECL
  * Then for file `zyx.h` looking up attribute "foo" gives a value for
  * which `GIT_ATTR_FALSE(value)` is true.
  */
-#define GIT_ATTR_FALSE(attr)	((attr) == git_attr__false)
+#define GIT_ATTR_FALSE(attr)	((attr) == git_l_attr__false)
 
 /**
  * GIT_ATTR_UNSPECIFIED checks if an attribute is unspecified.  This
@@ -62,7 +62,7 @@ GIT_BEGIN_DECL
  * file `onefile.rb` or looking up "bar" on any file will all give
  * `GIT_ATTR_UNSPECIFIED(value)` of true.
  */
-#define GIT_ATTR_UNSPECIFIED(attr)	(!(attr) || (attr) == git_attr__unset)
+#define GIT_ATTR_UNSPECIFIED(attr)	(!(attr) || (attr) == git_l_attr__unset)
 
 /**
  * GIT_ATTR_HAS_VALUE checks if an attribute is set to a value (as
@@ -75,12 +75,12 @@ GIT_BEGIN_DECL
  * string "lf" and `GIT_ATTR_SET_TO_VALUE(attr)` will return true.
  */
 #define GIT_ATTR_HAS_VALUE(attr) \
-	((attr) && (attr) != git_attr__unset && \
-	 (attr) != git_attr__true && (attr) != git_attr__false)
+	((attr) && (attr) != git_l_attr__unset && \
+	 (attr) != git_l_attr__true && (attr) != git_attr__false)
 
-GIT_EXTERN(const char *) git_attr__true;
-GIT_EXTERN(const char *) git_attr__false;
-GIT_EXTERN(const char *) git_attr__unset;
+GIT_EXTERN(const char *) git_l_attr__true;
+GIT_EXTERN(const char *) git_l_attr__false;
+GIT_EXTERN(const char *) git_l_attr__unset;
 
 /**
  * Check attribute flags: Reading values from index and working directory.

@@ -46,7 +46,11 @@ GIT_INLINE(int) git_tree_lookup(git_tree **tree, git_repository *repo, const git
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_tree_lookup_prefix(git_tree **tree, git_repository *repo, const git_oid *id, unsigned int len)
+GIT_INLINE(int) git_tree_lookup_prefix(
+	git_tree **tree,
+	git_repository *repo,
+	const git_oid *id,
+	unsigned int len)
 {
 	return git_object_lookup_prefix((git_object **)tree, repo, id, len, GIT_OBJ_TREE);
 }
@@ -62,12 +66,33 @@ GIT_INLINE(int) git_tree_lookup_prefix(git_tree **tree, git_repository *repo, co
  *
  * @param tree the tree to close
  */
-
 GIT_INLINE(void) git_tree_free(git_tree *tree)
 {
 	git_object_free((git_object *) tree);
 }
 
+/**
+ * Free a tree entry
+ *
+ * IMPORTANT: This function is only needed for tree
+ * entries owned by the user, such as the ones returned
+ * by `git_tree_entry_dup`.
+ *
+ * @param entry The entry to free
+ */
+GIT_EXTERN(void) git_tree_entry_free(git_tree_entry *entry);
+
+/**
+ * Duplicate a tree entry
+ *
+ * Create a copy of a tree entry. The returned copy is owned
+ * by the user, and must be freed manually with
+ * `git_tree_entry_free`.
+ *
+ * @param entry A tree entry to duplicate
+ * @return a copy of the original entry
+ */
+GIT_EXTERN(git_tree_entry *) git_tree_entry_dup(const git_tree_entry *entry);
 
 /**
  * Get the id of a tree.
@@ -143,7 +168,10 @@ GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
  * @param entry a tree entry
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_tree_entry_to_object(git_object **object_out, git_repository *repo, const git_tree_entry *entry);
+GIT_EXTERN(int) git_tree_entry_to_object(
+	git_object **object_out,
+	git_repository *repo,
+	const git_tree_entry *entry);
 
 /**
  * Write a tree to the ODB from the index file
@@ -231,7 +259,12 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(git_treebuilder *bld, con
  * @param attributes Folder attributes of the entry
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_treebuilder_insert(git_tree_entry **entry_out, git_treebuilder *bld, const char *filename, const git_oid *id, unsigned int attributes);
+GIT_EXTERN(int) git_treebuilder_insert(
+	const git_tree_entry **entry_out,
+	git_treebuilder *bld,
+	const char *filename,
+	const git_oid *id,
+	unsigned int attributes);
 
 /**
  * Remove an entry from the builder by its filename
@@ -252,7 +285,10 @@ GIT_EXTERN(int) git_treebuilder_remove(git_treebuilder *bld, const char *filenam
  * @param bld Tree builder
  * @param filter Callback to filter entries
  */
-GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_entry *, void *), void *payload);
+GIT_EXTERN(void) git_treebuilder_filter(
+	git_treebuilder *bld,
+	int (*filter)(const git_tree_entry *, void *),
+	void *payload);
 
 /**
  * Write the contents of the tree builder as a tree object
@@ -269,21 +305,24 @@ GIT_EXTERN(void) git_treebuilder_filter(git_treebuilder *bld, int (*filter)(cons
 GIT_EXTERN(int) git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld);
 
 /**
- * Retrieve a subtree contained in a tree, given its
- * relative path.
+ * Retrieve a tree entry contained in a tree or in any
+ * of its subtrees, given its relative path.
  *
- * The returned tree is owned by the repository and
- * should be closed with the `git_object_free` method.
+ * The returned tree entry is owned by the user and must
+ * be freed manually with `git_tree_entry_free`.
  *
- * @param subtree Pointer where to store the subtree
+ * @param entry Pointer where to store the tree entry
  * @param root A previously loaded tree which will be the root of the relative path
- * @param subtree_path Path to the contained subtree
- * @return 0 on success; GIT_ENOTFOUND if the path does not lead to a subtree
+ * @param subtree_path Path to the contained entry
+ * @return 0 on success; GIT_ENOTFOUND if the path does not exist
  */
-GIT_EXTERN(int) git_tree_get_subtree(git_tree **subtree, git_tree *root, const char *subtree_path);
+GIT_EXTERN(int) git_tree_entry_bypath(
+	git_tree_entry **entry,
+	git_tree *root,
+	const char *path);
 
 /** Callback for the tree traversal method */
-typedef int (*git_treewalk_cb)(const char *root, git_tree_entry *entry, void *payload);
+typedef int (*git_treewalk_cb)(const char *root, const git_tree_entry *entry, void *payload);
 
 /** Tree traversal modes */
 enum git_treewalk_mode {
