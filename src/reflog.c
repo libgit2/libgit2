@@ -258,7 +258,7 @@ int git_reflog_write(git_reference *ref, const git_oid *oid_old,
 	if (oid_old)
 		git_oid_tostr(old, sizeof(old), oid_old);
 	else
-		p_snprintf(old, sizeof(old), "%0*d", GIT_OID_HEXSZ, 0);
+		memmove(old, GIT_OID_HEX_ZERO, sizeof(old));
 
 	error = reflog_write(log_path.ptr, old, new, committer, msg);
 

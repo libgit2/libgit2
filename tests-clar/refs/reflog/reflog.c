@@ -73,7 +73,7 @@ void test_refs_reflog_reflog__write_then_read(void)
 	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 0);
 	assert_signature(committer, entry->committer);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
-	cl_assert_equal_s("0000000000000000000000000000000000000000", oid_str);
+	cl_assert_equal_s(GIT_OID_HEX_ZERO, oid_str);
 	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
 	cl_assert_equal_s(current_master_tip, oid_str);
 	cl_assert(entry->msg == NULL);
