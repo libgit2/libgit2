@@ -10,10 +10,6 @@
 #include "mwindow.h"
 
 typedef struct {
-	struct {
-		char last[1024];
-	} error;
-
 	git_error *last_error;
 	git_error error_t;
 
