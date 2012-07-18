@@ -12,7 +12,10 @@ static git_repository *g_repo;
 
 void test_checkout_checkout__initialize(void)
 {
+	const char *attributes = "*.txt text eol=cr\n";
+
 	g_repo = cl_git_sandbox_init("testrepo");
+	cl_git_mkfile("./testrepo/.gitattributes", attributes);
 }
 
 void test_checkout_checkout__cleanup(void)
@@ -26,7 +29,7 @@ static void test_file_contents(const char *path, const char *expectedcontents)
 	int fd;
 	char buffer[1024] = {0};
 	fd = p_open(path, O_RDONLY);
-	cl_assert(fd);
+	cl_assert(fd >= 0);
 	cl_assert_equal_i(p_read(fd, buffer, 1024), strlen(expectedcontents));
 	cl_assert_equal_s(expectedcontents, buffer);
 	cl_git_pass(p_close(fd));
@@ -67,15 +70,34 @@ void test_checkout_checkout__stats(void)
 	/* TODO */
 }
 
-void test_checkout_checkout__links(void)
+void test_checkout_checkout__symlinks(void)
 {
-	char link_data[1024];
-	size_t link_size = 1024;
+	git_config *cfg;
 
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+
+	/* First try with symlinks forced on */
+	cl_git_pass(git_config_set_bool(cfg, "core.symlinks", true));
 	cl_git_pass(git_checkout_force(g_repo, NULL));
-	link_size = p_readlink("./testrepo/link_to_new.txt", link_data, link_size);
-	cl_assert_equal_i(link_size, strlen("new.txt"));
-	link_data[link_size] = '\0';
-	cl_assert_equal_s(link_data, "new.txt");
-	test_file_contents("./testrepo/link_to_new.txt", "my new file\n");
+
+#ifdef GIT_WIN32
+	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
+#else
+	{
+		char link_data[1024];
+		size_t link_size = 1024;
+
+		link_size = p_readlink("./testrepo/link_to_new.txt", link_data, link_size);
+		link_data[link_size] = '\0';
+		cl_assert_equal_i(link_size, strlen("new.txt"));
+		cl_assert_equal_s(link_data, "new.txt");
+		test_file_contents("./testrepo/link_to_new.txt", "my new file\n");
+	}
+#endif
+
+	/* Now with symlinks forced off */
+	cl_git_pass(git_config_set_bool(cfg, "core.symlinks", false));
+	cl_git_pass(git_checkout_force(g_repo, NULL));
+
+	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
 }

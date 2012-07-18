@@ -230,7 +230,7 @@ static int find_and_add_filter(git_vector *filters, git_repository *repo, const 
 static int crlf_apply_to_workdir(git_filter *self, git_buf *dest, const git_buf *source)
 {
 	/* TODO */
-	return 0;
+	return -1;
 }
 
 int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)

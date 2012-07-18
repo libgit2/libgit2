@@ -13,6 +13,7 @@
 #include "git2/tree.h"
 #include "git2/commit.h"
 #include "git2/blob.h"
+#include "git2/config.h"
 
 #include "common.h"
 #include "refs.h"
@@ -29,22 +30,26 @@ typedef struct tree_walk_data
 	git_indexer_stats *stats;
 	git_repository *repo;
 	git_odb *odb;
+	bool do_symlinks;
 } tree_walk_data;
 
 
-static int blob_contents_to_link(git_repository *repo, git_buf *fnbuf,
+static int blob_contents_to_link(tree_walk_data *data, git_buf *fnbuf,
 											const git_oid *id)
 {
 	int retcode = GIT_ERROR;
 	git_blob *blob;
 
 	/* Get the link target */
-	if (!(retcode = git_blob_lookup(&blob, repo, id))) {
+	if (!(retcode = git_blob_lookup(&blob, data->repo, id))) {
 		git_buf linktarget = GIT_BUF_INIT;
 		if (!(retcode = git_blob__getbuf(&linktarget, blob))) {
 			/* Create the link */
-			retcode = p_symlink(git_buf_cstr(&linktarget),
-									  git_buf_cstr(fnbuf));
+			const char *new = git_buf_cstr(&linktarget),
+						  *old = git_buf_cstr(fnbuf);
+			retcode = data->do_symlinks
+				? p_symlink(new, old)
+				: git_futils_fake_symlink(new, old);
 		}
 		git_buf_free(&linktarget);
 		git_blob_free(blob);
@@ -77,7 +82,7 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
 	return retcode;
 }
 
-static int checkout_walker(const char *path, git_tree_entry *entry, void *payload)
+static int checkout_walker(const char *path, const git_tree_entry *entry, void *payload)
 {
 	int retcode = 0;
 	tree_walk_data *data = (tree_walk_data*)payload;
@@ -99,7 +104,7 @@ static int checkout_walker(const char *path, git_tree_entry *entry, void *payloa
 								path,
 								git_tree_entry_name(entry));
 			if (S_ISLNK(attr)) {
-				retcode = blob_contents_to_link(data->repo, &fnbuf,
+				retcode = blob_contents_to_link(data, &fnbuf,
 														  git_tree_entry_id(entry));
 			} else {
 				retcode = blob_contents_to_file(data->repo, &fnbuf,
@@ -125,6 +130,7 @@ int git_checkout_force(git_repository *repo, git_indexer_stats *stats)
 	git_indexer_stats dummy_stats;
 	git_tree *tree;
 	tree_walk_data payload;
+	git_config *cfg;
 
 	assert(repo);
 	if (!stats) stats = &dummy_stats;
@@ -132,6 +138,15 @@ int git_checkout_force(git_repository *repo, git_indexer_stats *stats)
 	if (git_repository_is_bare(repo)) {
 		giterr_set(GITERR_INVALID, "Checkout is not allowed for bare repositories");
 		return GIT_ERROR;
+	}
+
+	/* Determine if symlinks should be handled */
+	if (!git_repository_config(&cfg, repo)) {
+		int temp = true;
+		if (!git_config_get_bool(&temp, cfg, "core.symlinks")) {
+			payload.do_symlinks = !!temp;
+		}
+		git_config_free(cfg);
 	}
 
 	stats->total = stats->processed = 0;
