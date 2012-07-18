@@ -28,8 +28,10 @@ static void test_file_contents(const char *path, const char *expectedcontents)
 {
 	int fd;
 	char buffer[1024] = {0};
+
 	fd = p_open(path, O_RDONLY);
 	cl_assert(fd >= 0);
+
 	cl_assert_equal_i(p_read(fd, buffer, 1024), strlen(expectedcontents));
 	cl_assert_equal_s(expectedcontents, buffer);
 	cl_git_pass(p_close(fd));
@@ -70,14 +72,18 @@ void test_checkout_checkout__stats(void)
 	/* TODO */
 }
 
-void test_checkout_checkout__symlinks(void)
+static void enable_symlinks(bool enable)
 {
 	git_config *cfg;
-
 	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.symlinks", enable));
+	git_config_free(cfg);
+}
 
+void test_checkout_checkout__symlinks(void)
+{
 	/* First try with symlinks forced on */
-	cl_git_pass(git_config_set_bool(cfg, "core.symlinks", true));
+	enable_symlinks(true);
 	cl_git_pass(git_checkout_force(g_repo, NULL));
 
 #ifdef GIT_WIN32
@@ -96,7 +102,9 @@ void test_checkout_checkout__symlinks(void)
 #endif
 
 	/* Now with symlinks forced off */
-	cl_git_pass(git_config_set_bool(cfg, "core.symlinks", false));
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("testrepo");
+	enable_symlinks(false);
 	cl_git_pass(git_checkout_force(g_repo, NULL));
 
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
