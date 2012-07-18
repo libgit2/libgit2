@@ -7,7 +7,7 @@
 
 static const char *new_ref = "refs/heads/test-reflog";
 static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
-static const char *commit_msg = "commit: bla bla";
+#define commit_msg "commit: bla bla"
 
 static git_repository *g_repo;
 
@@ -57,13 +57,13 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 	cl_git_pass(git_reflog_append(ref, NULL, committer, NULL));
 	cl_git_fail(git_reflog_append(ref, NULL, committer, "no ancestor NULL for an existing reflog"));
-	cl_git_fail(git_reflog_append(ref, NULL, committer, "no\nnewline"));
-	cl_git_pass(git_reflog_append(ref, &oid, committer, commit_msg));
+	cl_git_fail(git_reflog_append(ref, NULL, committer, "no inner\nnewline"));
+	cl_git_pass(git_reflog_append(ref, &oid, committer, commit_msg "\n"));
 
 	/* Reopen a new instance of the repository */
 	cl_git_pass(git_repository_open(&repo2, "testrepo.git"));
 
-	/* Lookup the preivously created branch */
+	/* Lookup the previously created branch */
 	cl_git_pass(git_reference_lookup(&lookedup_ref, repo2, new_ref));
 
 	/* Read and parse the reflog for this branch */

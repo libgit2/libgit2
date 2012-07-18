@@ -30,6 +30,7 @@ struct git_reflog_entry {
 
 struct git_reflog {
 	char *ref_name;
+	git_repository *owner;
 	git_vector entries;
 };
 

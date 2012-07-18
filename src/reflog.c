@@ -28,65 +28,83 @@ static int reflog_init(git_reflog **reflog, git_reference *ref)
 		return -1;
 	}
 
+	log->owner = git_reference_owner(ref);
 	*reflog = log;
 
 	return 0;
 }
 
-static int reflog_write(const char *log_path, const char *oid_old,
-			const char *oid_new, const git_signature *committer,
-			const char *msg)
+static int serialize_reflog_entry(
+	git_buf *buf,
+	const git_oid *oid_old,
+	const git_oid *oid_new,
+	const git_signature *committer,
+	const char *msg)
 {
-	int error;
-	git_buf log = GIT_BUF_INIT;
-	git_filebuf fbuf = GIT_FILEBUF_INIT;
-	bool trailing_newline = false;
+	char raw_old[GIT_OID_HEXSZ+1];
+	char raw_new[GIT_OID_HEXSZ+1];
 
-	assert(log_path && oid_old && oid_new && committer);
+	git_oid_tostr(raw_old, GIT_OID_HEXSZ+1, oid_old);
+	git_oid_tostr(raw_new, GIT_OID_HEXSZ+1, oid_new);
+
+	git_buf_clear(buf);
+
+	git_buf_puts(buf, raw_old);
+	git_buf_putc(buf, ' ');
+	git_buf_puts(buf, raw_new);
+
+	git_signature__writebuf(buf, " ", committer);
+
+	/* drop trailing LF */
+	git_buf_rtrim(buf);
 
 	if (msg) {
 		const char *newline = strchr(msg, '\n');
-		if (newline) {
-			if (*(newline + 1) == '\0')
-				trailing_newline = true;
-			else {
-				giterr_set(GITERR_INVALID, "Reflog message cannot contain newline");
-				return -1;
-			}
+
+		if (newline && newline[1] != '\0') {
+			giterr_set(GITERR_INVALID, "Reflog message cannot contain newline");
+			return -1;
 		}
+
+		git_buf_putc(buf, '\t');
+		git_buf_puts(buf, msg);
+
+		/* drop potential trailing LF */
+		git_buf_rtrim(buf);
 	}
 
-	git_buf_puts(&log, oid_old);
-	git_buf_putc(&log, ' ');
+	git_buf_putc(buf, '\n');
 
-	git_buf_puts(&log, oid_new);
+	return git_buf_oom(buf);
+}
 
-	git_signature__writebuf(&log, " ", committer);
-	git_buf_truncate(&log, log.size - 1); /* drop LF */
+static int reflog_write(const char *log_path, const git_oid *oid_old,
+			const git_oid *oid_new, const git_signature *committer,
+			const char *msg)
+{
+	int error = -1;
+	git_buf log = GIT_BUF_INIT;
+	git_filebuf fbuf = GIT_FILEBUF_INIT;
 
-	if (msg) {
-		git_buf_putc(&log, '\t');
-		git_buf_puts(&log, msg);
-	}
+	assert(log_path && oid_old && oid_new && committer);
 
-	if (!trailing_newline)
-		git_buf_putc(&log, '\n');
+	if (serialize_reflog_entry(&log, oid_old, oid_new, committer, msg) < 0)
+		goto cleanup;
 
-	if (git_buf_oom(&log)) {
-		git_buf_free(&log);
-		return -1;
-	}
+	if ((error = git_filebuf_open(&fbuf, log_path, GIT_FILEBUF_APPEND)) < 0)
+		goto cleanup;
 
-	error = git_filebuf_open(&fbuf, log_path, GIT_FILEBUF_APPEND);
-	if (!error) {
-		if ((error = git_filebuf_write(&fbuf, log.ptr, log.size)) < 0)
-			git_filebuf_cleanup(&fbuf);
-		else
-			error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
-	}
+	if ((error = git_filebuf_write(&fbuf, log.ptr, log.size)) < 0)
+		goto cleanup;
 
+	error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
+	goto success;
+
+cleanup:
+	git_filebuf_cleanup(&fbuf);
+
+success:
 	git_buf_free(&log);
-
 	return error;
 }
 
@@ -184,6 +202,12 @@ void git_reflog_free(git_reflog *reflog)
 	git__free(reflog);
 }
 
+static int retrieve_reflog_path(git_buf *path, git_reference *ref)
+{
+	return git_buf_join_n(path, '/', 3,
+		git_reference_owner(ref)->path_repository, GIT_REFLOG_DIR, ref->name);
+}
+
 int git_reflog_read(git_reflog **reflog, git_reference *ref)
 {
 	int error;
@@ -196,8 +220,7 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 	if (reflog_init(&log, ref) < 0)
 		return -1;
 
-	error = git_buf_join_n(&log_path, '/', 3,
-		ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
+	error = retrieve_reflog_path(&log_path, ref);
 
 	if (!error)
 		error = git_futils_readbuffer(&log_file, log_path.ptr);
@@ -216,14 +239,53 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 	return error;
 }
 
+int git_reflog_write(git_reflog *reflog)
+{
+	int error = -1;
+	unsigned int i;
+	git_reflog_entry *entry;
+	git_buf log_path = GIT_BUF_INIT;
+	git_buf log = GIT_BUF_INIT;
+	git_filebuf fbuf = GIT_FILEBUF_INIT;
+
+	assert(reflog);
+
+
+	if (git_buf_join_n(&log_path, '/', 3,
+		git_repository_path(reflog->owner), GIT_REFLOG_DIR, reflog->ref_name) < 0)
+		return -1;
+
+	if ((error = git_filebuf_open(&fbuf, git_buf_cstr(&log_path), 0)) < 0)
+		goto cleanup;
+
+	git_vector_foreach(&reflog->entries, i, entry) {
+		if (serialize_reflog_entry(&log, &(entry->oid_old), &(entry->oid_cur), entry->committer, entry->msg) < 0)
+			goto cleanup;
+
+		if ((error = git_filebuf_write(&fbuf, log.ptr, log.size)) < 0)
+			goto cleanup;
+	}
+	
+	error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
+	goto success;
+
+cleanup:
+	git_filebuf_cleanup(&fbuf);
+
+success:
+	git_buf_free(&log);
+	git_buf_free(&log_path);
+	return error;
+}
+
 int git_reflog_append(git_reference *ref, const git_oid *oid_old,
 				const git_signature *committer, const char *msg)
 {
 	int error;
-	char old[GIT_OID_HEXSZ+1];
-	char new[GIT_OID_HEXSZ+1];
+
 	git_buf log_path = GIT_BUF_INIT;
 	git_reference *r;
+	git_oid zero_oid;
 	const git_oid *oid;
 
 	if ((error = git_reference_resolve(&r, ref)) < 0)
@@ -237,12 +299,7 @@ int git_reflog_append(git_reference *ref, const git_oid *oid_old,
 		return -1;
 	}
 
-	git_oid_tostr(new, GIT_OID_HEXSZ+1, oid);
-
-	git_reference_free(r);
-
-	error = git_buf_join_n(&log_path, '/', 3,
-		ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
+	error = retrieve_reflog_path(&log_path, ref);
 	if (error < 0)
 		goto cleanup;
 
@@ -260,14 +317,14 @@ int git_reflog_append(git_reference *ref, const git_oid *oid_old,
 	if (error < 0)
 		goto cleanup;
 
-	if (oid_old)
-		git_oid_tostr(old, sizeof(old), oid_old);
-	else
-		memmove(old, GIT_OID_HEX_ZERO, sizeof(old));
-
-	error = reflog_write(log_path.ptr, old, new, committer, msg);
+	if (!oid_old) {
+		git_oid_fromstr(&zero_oid, GIT_OID_HEX_ZERO);
+		error = reflog_write(log_path.ptr, &zero_oid, oid, committer, msg);
+	} else
+		error = reflog_write(log_path.ptr, oid_old, oid, committer, msg);
 
 cleanup:
+	git_reference_free(r);
 	git_buf_free(&log_path);
 	return error;
 }
@@ -281,7 +338,7 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 
 	assert(ref && new_name);
 
-	if (git_buf_joinpath(&temp_path, ref->owner->path_repository, GIT_REFLOG_DIR) < 0)
+	if (git_buf_joinpath(&temp_path, git_reference_owner(ref)->path_repository, GIT_REFLOG_DIR) < 0)
 		return -1;
 
 	if (git_buf_joinpath(&old_path, git_buf_cstr(&temp_path), ref->name) < 0)
@@ -329,8 +386,7 @@ int git_reflog_delete(git_reference *ref)
 	int error;
 	git_buf path = GIT_BUF_INIT;
 
-	error = git_buf_join_n(
-		&path, '/', 3, ref->owner->path_repository, GIT_REFLOG_DIR, ref->name);
+	error = retrieve_reflog_path(&path, ref);
 
 	if (!error && git_path_exists(path.ptr))
 		error = p_unlink(path.ptr);

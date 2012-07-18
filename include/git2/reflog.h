@@ -33,6 +33,15 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
 
 /**
+ * Write an existing in-memory reflog object back to disk
+ * using an atomic file lock.
+ *
+ * @param reflog an existing reflog object
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reflog_write(git_reflog *reflog);
+
+/**
  * Add a new entry to the reflog for the given reference
  *
  * If there is no reflog file for the given

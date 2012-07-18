@@ -109,3 +109,22 @@ void test_refs_reflog_drop__can_drop_all_the_entries(void)
 
 	cl_assert_equal_i(0, git_reflog_entrycount(g_reflog));
 }
+
+void test_refs_reflog_drop__can_persist_deletion_on_disk(void)
+{
+	git_reference *ref;
+
+	cl_assert(entrycount > 2);
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, g_reflog->ref_name));
+	cl_git_pass(git_reflog_entry_drop(g_reflog, entrycount - 1, 1));
+	cl_assert_equal_i(entrycount - 1, git_reflog_entrycount(g_reflog));
+	cl_git_pass(git_reflog_write(g_reflog));
+
+	git_reflog_free(g_reflog);
+
+	git_reflog_read(&g_reflog, ref);
+	git_reference_free(ref);
+
+	cl_assert_equal_i(entrycount - 1, git_reflog_entrycount(g_reflog));
+}
