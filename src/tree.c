@@ -759,11 +759,12 @@ int git_tree_entry_bypath(
 	return error;
 }
 
-static int tree_walk_post(
+static int tree_walk(
 	git_tree *tree,
 	git_treewalk_cb callback,
 	git_buf *path,
-	void *payload)
+	void *payload,
+	bool preorder)
 {
 	int error = 0;
 	unsigned int i;
@@ -771,8 +772,8 @@ static int tree_walk_post(
 	for (i = 0; i < tree->entries.length; ++i) {
 		git_tree_entry *entry = tree->entries.contents[i];
 
-		if (callback(path->ptr, entry, payload) < 0)
-			continue;
+		if (preorder && callback(path->ptr, entry, payload) < 0)
+			return -1;
 
 		if (git_tree_entry__is_tree(entry)) {
 			git_tree *subtree;
@@ -789,12 +790,15 @@ static int tree_walk_post(
 			if (git_buf_oom(path))
 				return -1;
 
-			if (tree_walk_post(subtree, callback, path, payload) < 0)
+			if (tree_walk(subtree, callback, path, payload, preorder) < 0)
 				return -1;
 
 			git_buf_truncate(path, path_len);
 			git_tree_free(subtree);
 		}
+
+		if (!preorder && callback(path->ptr, entry, payload) < 0)
+			return -1;
 	}
 
 	return 0;
@@ -807,12 +811,12 @@ int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payl
 
 	switch (mode) {
 		case GIT_TREEWALK_POST:
-			error = tree_walk_post(tree, callback, &root_path, payload);
+			error = tree_walk(tree, callback, &root_path, payload, false);
 			break;
 
 		case GIT_TREEWALK_PRE:
-			tree_error("Preorder tree walking is still not implemented");
-			return -1;
+			error = tree_walk(tree, callback, &root_path, payload, true);
+			break;
 
 		default:
 			giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");
