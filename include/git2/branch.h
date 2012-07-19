@@ -26,9 +26,9 @@ GIT_BEGIN_DECL
  * this target commit. If `force` is true and a reference
  * already exists with the given name, it'll be replaced.
  *
- * @param oid_out Pointer where to store the OID of the target commit.
+ * The returned reference must be freed by the user.
  *
- * @param repo Repository where to store the branch.
+ * @param ref_out Pointer where to store the underlying reference.
  *
  * @param branch_name Name for the branch; this name is
  * validated for consistency. It should also not conflict with
@@ -46,8 +46,7 @@ GIT_BEGIN_DECL
  * pointing to the provided target commit.
  */
 GIT_EXTERN(int) git_branch_create(
-		git_oid *oid_out,
-		git_repository *repo,
+		git_reference **ref_out,
 		const char *branch_name,
 		const git_object *target,
 		int force);

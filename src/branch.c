@@ -49,8 +49,7 @@ static int create_error_invalid(const char *msg)
 }
 
 int git_branch_create(
-		git_oid *oid_out,
-		git_repository *repo,
+		git_reference **ref_out,
 		const char *branch_name,
 		const git_object *target,
 		int force)
@@ -61,10 +60,7 @@ int git_branch_create(
 	git_buf canonical_branch_name = GIT_BUF_INIT;
 	int error = -1;
 
-	assert(repo && branch_name && target && oid_out);
-
-	if (git_object_owner(target) != repo)
-		return create_error_invalid("The given target does not belong to this repository");
+	assert(branch_name && target && ref_out);
 
 	target_type = git_object_type(target);
 
@@ -91,17 +87,17 @@ int git_branch_create(
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
-	if (git_reference_create_oid(&branch, repo, git_buf_cstr(&canonical_branch_name), git_object_id(commit), force) < 0)
+	if (git_reference_create_oid(&branch, git_object_owner(commit),
+		git_buf_cstr(&canonical_branch_name), git_object_id(commit), force) < 0)
 		goto cleanup;
 
-	git_oid_cpy(oid_out, git_reference_oid(branch));
+	*ref_out = branch;
 	error = 0;
 
 cleanup:
 	if (target_type == GIT_OBJ_TAG)
 		git_object_free(commit);
 
-	git_reference_free(branch);
 	git_buf_free(&canonical_branch_name);
 	return error;
 }
