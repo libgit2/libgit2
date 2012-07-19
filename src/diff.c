@@ -814,9 +814,9 @@ int git_diff_merge(
 
 		/* prefix strings also come from old pool, so recreate those.*/
 		onto->opts.old_prefix =
-			git_pool_strdup(&onto->pool, onto->opts.old_prefix);
+			git_pool_strdup_safe(&onto->pool, onto->opts.old_prefix);
 		onto->opts.new_prefix =
-			git_pool_strdup(&onto->pool, onto->opts.new_prefix);
+			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
 	}
 
 	git_vector_foreach(&onto_new, i, delta)

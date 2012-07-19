@@ -90,6 +90,13 @@ extern char *git_pool_strndup(git_pool *pool, const char *str, size_t n);
 extern char *git_pool_strdup(git_pool *pool, const char *str);
 
 /**
+ * Allocate space and duplicate a string into it, NULL is no error.
+ *
+ * This is allowed only for pools with item_size == sizeof(char)
+ */
+extern char *git_pool_strdup_safe(git_pool *pool, const char *str);
+
+/**
  * Allocate space for the concatenation of two strings.
  *
  * This is allowed only for pools with item_size == sizeof(char)
