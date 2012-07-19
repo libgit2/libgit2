@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "refs.h"
-#include "branch.h"
 
 static git_repository *repo;
 static git_reference *fake_remote;

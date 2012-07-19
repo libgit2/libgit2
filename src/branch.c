@@ -7,8 +7,9 @@
 
 #include "common.h"
 #include "commit.h"
-#include "branch.h"
 #include "tag.h"
+
+#include "git2/branch.h"
 
 static int retrieve_branch_reference(
 	git_reference **branch_reference_out,

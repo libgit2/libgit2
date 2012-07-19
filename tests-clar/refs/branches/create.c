@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "refs.h"
-#include "branch.h"
 
 static git_repository *repo;
 static git_oid branch_target_oid;
