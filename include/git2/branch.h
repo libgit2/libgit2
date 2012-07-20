@@ -117,6 +117,30 @@ GIT_EXTERN(int) git_branch_move(
 		const char *new_branch_name,
 		int force);
 
+/**
+ * Lookup a branch by its name in a repository.
+ *
+ * The generated reference must be freed by the user.
+ *
+ * @param branch_out pointer to the looked-up branch reference
+ *
+ * @param repo the repository to look up the branch
+ *
+ * @param branch_name Name of the branch to be looked-up;
+ * this name is validated for consistency.
+ *
+ * @param branch_type Type of the considered branch. This should
+ * be valued with either GIT_BRANCH_LOCAL or GIT_BRANCH_REMOTE.
+ *
+ * @return 0 on success; GIT_ENOTFOUND when no matching branch
+ * exists, otherwise an error code.
+ */
+GIT_EXTERN(int) git_branch_lookup(
+		git_reference **branch_out,
+		git_repository *repo,
+		const char *branch_name,
+		git_branch_t branch_type);
+
 /** @} */
 GIT_END_DECL
 #endif

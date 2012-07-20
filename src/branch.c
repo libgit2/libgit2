@@ -205,3 +205,14 @@ cleanup:
 
 	return error;
 }
+
+int git_branch_lookup(
+		git_reference **ref_out,
+		git_repository *repo,
+		const char *branch_name,
+		git_branch_t branch_type)
+{
+	assert(ref_out && repo && branch_name);
+
+	return retrieve_branch_reference(ref_out, repo, branch_name, branch_type == GIT_BRANCH_REMOTE);
+}
