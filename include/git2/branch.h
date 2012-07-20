@@ -136,6 +136,22 @@ GIT_EXTERN(int) git_branch_lookup(
 		const char *branch_name,
 		git_branch_t branch_type);
 
+/**
+ * Return the reference supporting the remote tracking branch,
+ * given a local branch reference.
+ *
+ * @param tracking_out Pointer where to store the retrieved
+ * reference.
+ *
+ * @param branch Current underlying reference of the branch.
+ *
+ * @return 0 on success; GIT_ENOTFOUND when no remote tracking
+ * reference exists, otherwise an error code.
+ */
+GIT_EXTERN(int) git_branch_tracking(
+		git_reference **tracking_out,
+		git_reference *branch);
+
 /** @} */
 GIT_END_DECL
 #endif

@@ -8,6 +8,8 @@
 #include "common.h"
 #include "commit.h"
 #include "tag.h"
+#include "config.h"
+#include "refspec.h"
 
 #include "git2/branch.h"
 
@@ -219,4 +221,70 @@ int git_branch_lookup(
 	assert(ref_out && repo && branch_name);
 
 	return retrieve_branch_reference(ref_out, repo, branch_name, branch_type == GIT_BRANCH_REMOTE);
+}
+
+int retrieve_tracking_configuration(const char **out, git_reference *branch, const char *format)
+{
+	git_config *config;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if (git_repository_config__weakptr(&config, git_reference_owner(branch)) < 0)
+		return -1;
+
+	if (git_buf_printf(&buf, format,
+		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+			return -1;
+
+	error = git_config_get_string(out, config, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+	return error;
+}
+
+int git_branch_tracking(
+		git_reference **tracking_out,
+		git_reference *branch)
+{
+	const char *remote_name, *merge_name;
+	git_buf buf = GIT_BUF_INIT;
+	int error = -1;
+	git_remote *remote = NULL;
+	const git_refspec *refspec;
+
+	assert(tracking_out && branch);
+
+	if (!git_reference_is_branch(branch))
+		return not_a_local_branch(branch);
+
+	if ((error = retrieve_tracking_configuration(&remote_name, branch, "branch.%s.remote")) < 0)
+		goto cleanup;
+
+	if ((error = retrieve_tracking_configuration(&merge_name, branch, "branch.%s.merge")) < 0)
+		goto cleanup;
+
+	if (strcmp(".", remote_name) != 0) {
+		if ((error = git_remote_load(&remote, git_reference_owner(branch), remote_name)) < 0)
+			goto cleanup;
+
+		refspec = git_remote_fetchspec(remote);
+		if (refspec == NULL) {
+			error = GIT_ENOTFOUND;
+			goto cleanup;
+		}
+
+		if (git_refspec_transform_r(&buf, refspec, merge_name) < 0)
+			goto cleanup;
+	} else
+		if (git_buf_sets(&buf, merge_name) < 0)
+			goto cleanup;
+
+	error = git_reference_lookup(
+		tracking_out,
+		git_reference_owner(branch),
+		git_buf_cstr(&buf));
+
+cleanup:
+	git_remote_free(remote);
+	git_buf_free(&buf);
+	return error;
 }

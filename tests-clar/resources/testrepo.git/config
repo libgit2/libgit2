@@ -10,3 +10,6 @@
 [branch "master"]
    remote = test
    merge = refs/heads/master
+[branch "track-local"]
+   remote = .
+   merge = refs/heads/master
