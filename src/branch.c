@@ -110,6 +110,7 @@ int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_
 	git_reference *head = NULL;
 	int error;
 
+	assert(repo && branch_name);
 	assert((branch_type == GIT_BRANCH_LOCAL) || (branch_type == GIT_BRANCH_REMOTE));
 
 	if ((error = retrieve_branch_reference(&branch, repo, branch_name, branch_type == GIT_BRANCH_REMOTE)) < 0)
