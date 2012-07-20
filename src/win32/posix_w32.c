@@ -7,6 +7,7 @@
 #include "../posix.h"
 #include "path.h"
 #include "utf-conv.h"
+#include "git2/windows.h"
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
@@ -182,8 +183,8 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	dwRet = pGetFinalPath(hFile, target_w, (DWORD)target_len, 0x0);
 	if (dwRet == 0 ||
 		dwRet >= target_len ||
-		!WideCharToMultiByte(CP_UTF8, 0, target_w, -1, target,
-			(int)(target_len * sizeof(char)), NULL, NULL))
+		!WideCharToMultiByte(gitwin_get_codepage(), 0, target_w, -1,
+			target, (int)(target_len * sizeof(char)), NULL, NULL))
 		error = -1;
 
 	git__free(target_w);
@@ -267,7 +268,7 @@ int p_getcwd(char *buffer_out, size_t size)
 	_wgetcwd(buf, (int)size);
 
 	ret = WideCharToMultiByte(
-		CP_UTF8, 0, buf, -1, buffer_out, (int)size, NULL, NULL);
+		gitwin_get_codepage(), 0, buf, -1, buffer_out, (int)size, NULL, NULL);
 
 	git__free(buf);
 	return !ret ? -1 : 0;
@@ -343,18 +344,22 @@ char *p_realpath(const char *orig_path, char *buffer)
 	}
 
 	if (buffer == NULL) {
-		buffer_sz = WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, NULL, 0, NULL, NULL);
+		buffer_sz = WideCharToMultiByte(
+			gitwin_get_codepage(), 0, buffer_w, -1, NULL, 0, NULL, NULL);
 
 		if (!buffer_sz ||
 			!(buffer = (char *)git__malloc(buffer_sz)) ||
-			!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, buffer_sz, NULL, NULL))
+			!WideCharToMultiByte(gitwin_get_codepage(), 0, buffer_w, -1,
+				buffer, buffer_sz, NULL, NULL))
 		{
 			git__free(buffer);
 			buffer = NULL;
 			goto done;
 		}
 	} else {
-		if (!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL)) {
+		if (!WideCharToMultiByte(gitwin_get_codepage(), 0, buffer_w, -1,
+			buffer, GIT_PATH_MAX, NULL, NULL))
+		{
 			buffer = NULL;
 			goto done;
 		}
