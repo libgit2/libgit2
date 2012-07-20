@@ -1888,3 +1888,10 @@ cleanup:
 	git_buf_free(&buf);
 	return error;
 }
+
+int git_reference_is_branch(git_reference *ref)
+{
+	assert(ref);
+
+	return git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) == 0;
+}

@@ -384,6 +384,16 @@ GIT_EXTERN(int) git_reference_remote_tracking_from_branch(
 	git_reference *branch_ref
 );
 
+/**
+ * Check if a reference is a local branch.
+ *
+ * @param ref A git reference
+ *
+ * @return 1 when the reference lives in the refs/heads
+ * namespace; 0 otherwise.
+ */
+GIT_EXTERN(int) git_reference_is_branch(git_reference *ref);
+
 /** @} */
 GIT_END_DECL
 #endif
