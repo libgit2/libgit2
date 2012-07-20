@@ -96,24 +96,19 @@ GIT_EXTERN(int) git_branch_foreach(
 );
 
 /**
- * Move/rename an existing branch reference.
+ * Move/rename an existing local branch reference.
  *
- * @param repo Repository where lives the branch.
- *
- * @param old_branch_name Current name of the branch to be moved;
- * this name is validated for consistency.
+ * @param branch Current underlying reference of the branch.
  *
  * @param new_branch_name Target name of the branch once the move
  * is performed; this name is validated for consistency.
  *
  * @param force Overwrite existing branch.
  *
- * @return 0 on success, GIT_ENOTFOUND if the branch
- * doesn't exist or an error code.
+ * @return 0 on success, or an error code.
  */
 GIT_EXTERN(int) git_branch_move(
-		git_repository *repo,
-		const char *old_branch_name,
+		git_reference *branch,
 		const char *new_branch_name,
 		int force);
 

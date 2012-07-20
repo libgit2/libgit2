@@ -180,27 +180,31 @@ int git_branch_foreach(
 	return git_reference_foreach(repo, GIT_REF_LISTALL, &branch_foreach_cb, (void *)&filter);
 }
 
-int git_branch_move(git_repository *repo, const char *old_branch_name, const char *new_branch_name, int force)
+static int not_a_local_branch(git_reference *ref)
 {
-	git_reference *reference = NULL;
-	git_buf old_reference_name = GIT_BUF_INIT, new_reference_name = GIT_BUF_INIT;
-	int error = 0;
+	giterr_set(GITERR_INVALID, "Reference '%s' is not a local branch.", git_reference_name(ref));
+	return -1;
+}
 
-	if ((error = git_buf_joinpath(&old_reference_name, GIT_REFS_HEADS_DIR, old_branch_name)) < 0)
-		goto cleanup;
+int git_branch_move(
+	git_reference *branch,
+	const char *new_branch_name,
+	int force)
+{
+	git_buf new_reference_name = GIT_BUF_INIT;
+	int error;
 
-	/* We need to be able to return GIT_ENOTFOUND */
-	if ((error = git_reference_lookup(&reference, repo, git_buf_cstr(&old_reference_name))) < 0)
-		goto cleanup;
+	assert(branch && new_branch_name);
+
+	if (!git_reference_is_branch(branch))
+		return not_a_local_branch(branch);
 
 	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
 		goto cleanup;
 
-	error = git_reference_rename(reference, git_buf_cstr(&new_reference_name), force);
+	error = git_reference_rename(branch, git_buf_cstr(&new_reference_name), force);
 
 cleanup:
-	git_reference_free(reference);
-	git_buf_free(&old_reference_name);
 	git_buf_free(&new_reference_name);
 
 	return error;
