@@ -28,7 +28,7 @@ GIT_BEGIN_DECL
  *
  * The returned reference must be freed by the user.
  *
- * @param ref_out Pointer where to store the underlying reference.
+ * @param branch_out Pointer where to store the underlying reference.
  *
  * @param branch_name Name for the branch; this name is
  * validated for consistency. It should also not conflict with
@@ -46,7 +46,7 @@ GIT_BEGIN_DECL
  * pointing to the provided target commit.
  */
 GIT_EXTERN(int) git_branch_create(
-		git_reference **ref_out,
+		git_reference **branch_out,
 		const char *branch_name,
 		const git_object *target,
 		int force);
