@@ -19,6 +19,7 @@ struct git_remote {
 	struct git_refspec push;
 	git_transport *transport;
 	git_repository *repo;
+	git_remote_callbacks callbacks;
 	unsigned int need_pack:1,
 		check_cert;
 };
