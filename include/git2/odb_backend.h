@@ -100,6 +100,7 @@ struct git_odb_stream {
 
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
 GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir, int compression_level, int do_fsync);
+GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **backend_out, const char *index_file);
 
 GIT_END_DECL
 
