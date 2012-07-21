@@ -98,6 +98,13 @@ struct git_repository {
  * export */
 void git_object__free(void *object);
 
+GIT_INLINE(int) git_object__dup(git_object **dest, git_object *source)
+{
+	git_cached_obj_incref(source);
+	*dest = source;
+	return 0;
+}
+
 int git_object__resolve_to_type(git_object **obj, git_otype type);
 
 int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end, const char *header);

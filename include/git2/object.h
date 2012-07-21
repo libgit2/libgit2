@@ -167,6 +167,23 @@ GIT_EXTERN(int) git_object_typeisloose(git_otype type);
  */
 GIT_EXTERN(size_t) git_object__size(git_otype type);
 
+/**
+ * Recursively peel an object until an object of the specified
+ * type is met
+ *
+ * The retrieved `peeled` object is owned by the repository
+ * and should be closed with the `git_object_free` method.
+ *
+ * @param peeled Pointer to the peeled git_object
+ * @param object The object to be processed
+ * @param target_type The type of the requested object
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_object_peel(
+		git_object **peeled,
+		git_object *object,
+		git_otype target_type);
+
 /** @} */
 GIT_END_DECL
 
