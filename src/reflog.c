@@ -217,22 +217,29 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 
 	*reflog = NULL;
 
+	assert(reflog && ref);
+
 	if (reflog_init(&log, ref) < 0)
 		return -1;
 
-	error = retrieve_reflog_path(&log_path, ref);
+	if (retrieve_reflog_path(&log_path, ref) < 0)
+		goto cleanup;
 
-	if (!error)
-		error = git_futils_readbuffer(&log_file, log_path.ptr);
+	error = git_futils_readbuffer(&log_file, git_buf_cstr(&log_path));
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
 
-	if (!error)
-		error = reflog_parse(log, log_file.ptr, log_file.size);
+	if ((error = reflog_parse(log,
+		git_buf_cstr(&log_file), git_buf_len(&log_file))) < 0)
+		goto cleanup;
 
-	if (!error)
-		*reflog = log;
-	else
-		git_reflog_free(log);
+	*reflog = log;
+	goto success;
 
+cleanup:
+	git_reflog_free(log);
+
+success:
 	git_buf_free(&log_file);
 	git_buf_free(&log_path);
 

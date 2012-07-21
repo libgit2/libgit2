@@ -23,6 +23,10 @@ GIT_BEGIN_DECL
 /**
  * Read the reflog for the given reference
  *
+ * If there is no reflog file for the given
+ * reference yet, an empty reflog object will
+ * be returned.
+ *
  * The reflog must be freed manually by using
  * git_reflog_free().
  *
