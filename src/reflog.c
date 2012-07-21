@@ -183,6 +183,18 @@ static int retrieve_reflog_path(git_buf *path, git_reference *ref)
 		git_reference_owner(ref)->path_repository, GIT_REFLOG_DIR, ref->name);
 }
 
+int create_new_reflog_file(const char *filepath)
+{
+	int fd;
+
+	if ((fd = p_open(filepath,
+			O_WRONLY | O_CREAT | O_TRUNC,
+			GIT_REFLOG_FILE_MODE)) < 0)
+		return -1;
+
+	return p_close(fd);
+}
+
 int git_reflog_read(git_reflog **reflog, git_reference *ref)
 {
 	int error;
@@ -202,6 +214,10 @@ int git_reflog_read(git_reflog **reflog, git_reference *ref)
 
 	error = git_futils_readbuffer(&log_file, git_buf_cstr(&log_path));
 	if (error < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
+
+	if ((error == GIT_ENOTFOUND) &&
+		((error = create_new_reflog_file(git_buf_cstr(&log_path))) < 0))
 		goto cleanup;
 
 	if ((error = reflog_parse(log,
@@ -236,6 +252,12 @@ int git_reflog_write(git_reflog *reflog)
 	if (git_buf_join_n(&log_path, '/', 3,
 		git_repository_path(reflog->owner), GIT_REFLOG_DIR, reflog->ref_name) < 0)
 		return -1;
+
+	if (!git_path_isfile(git_buf_cstr(&log_path))) {
+		giterr_set(GITERR_INVALID,
+			"Log file for reference '%s' doesn't exist.", reflog->ref_name);
+		goto cleanup;
+	}
 
 	if ((error = git_filebuf_open(&fbuf, git_buf_cstr(&log_path), 0)) < 0)
 		goto cleanup;

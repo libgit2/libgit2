@@ -149,3 +149,24 @@ void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_re
 	git_reference_free(subtrees);
 	git_buf_free(&subtrees_log_path);
 }
+
+void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
+{
+	git_reference *master;
+	git_buf master_log_path = GIT_BUF_INIT, moved_log_path = GIT_BUF_INIT;
+	git_reflog *reflog;
+
+	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
+	cl_git_pass(git_reflog_read(&reflog, master));
+
+	cl_git_pass(git_reflog_write(reflog));
+	
+	cl_git_pass(git_reference_rename(master, "refs/moved", 0));
+
+	cl_git_fail(git_reflog_write(reflog));
+
+	git_reflog_free(reflog);
+	git_reference_free(master);
+	git_buf_free(&moved_log_path);
+	git_buf_free(&master_log_path);
+}
