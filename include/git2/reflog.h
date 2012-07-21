@@ -46,22 +46,17 @@ GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
 GIT_EXTERN(int) git_reflog_write(git_reflog *reflog);
 
 /**
- * Add a new entry to the reflog for the given reference
- *
- * If there is no reflog file for the given
- * reference yet, it will be created.
- *
- * `oid_old` may be NULL in case it's a new reference.
+ * Add a new entry to the reflog.
  *
  * `msg` is optional and can be NULL.
  *
- * @param ref the changed reference
- * @param oid_old the OID the reference was pointing to
+ * @param reflog an existing reflog object
+ * @param new_oid the OID the reference is now pointing to
  * @param committer the signature of the committer
  * @param msg the reflog message
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reflog_append(git_reference *ref, const git_oid *oid_old, const git_signature *committer, const char *msg);
+GIT_EXTERN(int) git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_signature *committer, const char *msg);
 
 /**
  * Rename the reflog for the given reference

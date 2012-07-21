@@ -34,8 +34,6 @@ void test_refs_reflog_reflog__cleanup(void)
    cl_git_sandbox_cleanup();
 }
 
-
-
 void test_refs_reflog_reflog__append_then_read(void)
 {
    // write a reflog for a given reference and ensure it can be read back
@@ -44,21 +42,21 @@ void test_refs_reflog_reflog__append_then_read(void)
 	git_oid oid;
 	git_signature *committer;
 	git_reflog *reflog;
-	git_reflog_entry *entry;
-	char oid_str[GIT_OID_HEXSZ+1];
+	const git_reflog_entry *entry;
 
 	/* Create a new branch pointing at the HEAD */
 	git_oid_fromstr(&oid, current_master_tip);
 	cl_git_pass(git_reference_create_oid(&ref, g_repo, new_ref, &oid, 0));
-	git_reference_free(ref);
-	cl_git_pass(git_reference_lookup(&ref, g_repo, new_ref));
 
 	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
-	cl_git_pass(git_reflog_append(ref, NULL, committer, NULL));
-	cl_git_fail(git_reflog_append(ref, NULL, committer, "no ancestor NULL for an existing reflog"));
-	cl_git_fail(git_reflog_append(ref, NULL, committer, "no inner\nnewline"));
-	cl_git_pass(git_reflog_append(ref, &oid, committer, commit_msg "\n"));
+	cl_git_pass(git_reflog_read(&reflog, ref));
+
+	cl_git_fail(git_reflog_append(reflog, &oid, committer, "no inner\nnewline"));
+	cl_git_pass(git_reflog_append(reflog, &oid, committer, NULL));
+	cl_git_pass(git_reflog_append(reflog, &oid, committer, commit_msg "\n"));
+	cl_git_pass(git_reflog_write(reflog));
+	git_reflog_free(reflog);
 
 	/* Reopen a new instance of the repository */
 	cl_git_pass(git_repository_open(&repo2, "testrepo.git"));
@@ -68,22 +66,18 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 	/* Read and parse the reflog for this branch */
 	cl_git_pass(git_reflog_read(&reflog, lookedup_ref));
-	cl_assert(reflog->entries.length == 2);
+	cl_assert_equal_i(2, git_reflog_entrycount(reflog));
 
-	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 0);
+	entry = git_reflog_entry_byindex(reflog, 0);
 	assert_signature(committer, entry->committer);
-	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
-	cl_assert_equal_s(GIT_OID_HEX_ZERO, oid_str);
-	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
-	cl_assert_equal_s(current_master_tip, oid_str);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
+	cl_assert(git_oid_cmp(&oid, &entry->oid_cur) == 0);
 	cl_assert(entry->msg == NULL);
 
-	entry = (git_reflog_entry *)git_vector_get(&reflog->entries, 1);
+	entry = git_reflog_entry_byindex(reflog, 1);
 	assert_signature(committer, entry->committer);
-	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_old);
-	cl_assert_equal_s(current_master_tip, oid_str);
-	git_oid_tostr(oid_str, GIT_OID_HEXSZ+1, &entry->oid_cur);
-	cl_assert_equal_s(current_master_tip, oid_str);
+	cl_assert(git_oid_cmp(&oid, &entry->oid_old) == 0);
+	cl_assert(git_oid_cmp(&oid, &entry->oid_cur) == 0);
 	cl_assert_equal_s(commit_msg, entry->msg);
 
 	git_signature_free(committer);
@@ -92,34 +86,6 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 	git_reference_free(ref);
 	git_reference_free(lookedup_ref);
-}
-
-void test_refs_reflog_reflog__dont_append_bad(void)
-{
-   // avoid writing an obviously wrong reflog
-	git_reference *ref;
-	git_oid oid;
-	git_signature *committer;
-
-	/* Create a new branch pointing at the HEAD */
-	git_oid_fromstr(&oid, current_master_tip);
-	cl_git_pass(git_reference_create_oid(&ref, g_repo, new_ref, &oid, 0));
-	git_reference_free(ref);
-	cl_git_pass(git_reference_lookup(&ref, g_repo, new_ref));
-
-	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
-
-	/* Write the reflog for the new branch */
-	cl_git_pass(git_reflog_append(ref, NULL, committer, NULL));
-
-	/* Try to update the reflog with wrong information:
-	 * It's no new reference, so the ancestor OID cannot
-	 * be NULL. */
-	cl_git_fail(git_reflog_append(ref, NULL, committer, NULL));
-
-	git_signature_free(committer);
-
-	git_reference_free(ref);
 }
 
 void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
@@ -162,4 +128,24 @@ void test_refs_reflog_reflog__reference_has_reflog(void)
 	assert_has_reflog(true, "HEAD");
 	assert_has_reflog(true, "refs/heads/master");
 	assert_has_reflog(false, "refs/heads/subtrees");
+}
+
+void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_returns_an_empty_one(void)
+{
+	git_reference *subtrees;
+	git_reflog *reflog;
+	git_buf subtrees_log_path = GIT_BUF_INIT;
+
+	cl_git_pass(git_reference_lookup(&subtrees, g_repo, "refs/heads/subtrees"));
+
+	git_buf_join_n(&subtrees_log_path, '/', 3, git_repository_path(g_repo), GIT_REFLOG_DIR, git_reference_name(subtrees));
+	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&subtrees_log_path)));
+
+	cl_git_pass(git_reflog_read(&reflog, subtrees));
+
+	cl_assert_equal_i(0, git_reflog_entrycount(reflog));
+
+	git_reflog_free(reflog);
+	git_reference_free(subtrees);
+	git_buf_free(&subtrees_log_path);
 }

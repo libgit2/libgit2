@@ -59,18 +59,8 @@ static int serialize_reflog_entry(
 	git_buf_rtrim(buf);
 
 	if (msg) {
-		const char *newline = strchr(msg, '\n');
-
-		if (newline && newline[1] != '\0') {
-			giterr_set(GITERR_INVALID, "Reflog message cannot contain newline");
-			return -1;
-		}
-
 		git_buf_putc(buf, '\t');
 		git_buf_puts(buf, msg);
-
-		/* drop potential trailing LF */
-		git_buf_rtrim(buf);
 	}
 
 	git_buf_putc(buf, '\n');
@@ -78,34 +68,28 @@ static int serialize_reflog_entry(
 	return git_buf_oom(buf);
 }
 
-static int reflog_write(const char *log_path, const git_oid *oid_old,
-			const git_oid *oid_new, const git_signature *committer,
-			const char *msg)
+static int reflog_entry_new(git_reflog_entry **entry)
 {
-	int error = -1;
-	git_buf log = GIT_BUF_INIT;
-	git_filebuf fbuf = GIT_FILEBUF_INIT;
+	git_reflog_entry *e;
 
-	assert(log_path && oid_old && oid_new && committer);
+	assert(entry);
 
-	if (serialize_reflog_entry(&log, oid_old, oid_new, committer, msg) < 0)
-		goto cleanup;
+	e = git__malloc(sizeof(git_reflog_entry));
+	GITERR_CHECK_ALLOC(e);
 
-	if ((error = git_filebuf_open(&fbuf, log_path, GIT_FILEBUF_APPEND)) < 0)
-		goto cleanup;
+	memset(e, 0, sizeof(git_reflog_entry));
 
-	if ((error = git_filebuf_write(&fbuf, log.ptr, log.size)) < 0)
-		goto cleanup;
+	*entry = e;
 
-	error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
-	goto success;
+	return 0;
+}
 
-cleanup:
-	git_filebuf_cleanup(&fbuf);
+static void reflog_entry_free(git_reflog_entry *entry)
+{
+	git_signature_free(entry->committer);
 
-success:
-	git_buf_free(&log);
-	return error;
+	git__free(entry->msg);
+	git__free(entry);
 }
 
 static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
@@ -123,8 +107,8 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 	} while (0)
 
 	while (buf_size > GIT_REFLOG_SIZE_MIN) {
-		entry = git__malloc(sizeof(git_reflog_entry));
-		GITERR_CHECK_ALLOC(entry);
+		if (reflog_entry_new(&entry) < 0)
+			return -1;
 
 		entry->committer = git__malloc(sizeof(git_signature));
 		GITERR_CHECK_ALLOC(entry->committer);
@@ -171,19 +155,10 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 #undef seek_forward
 
 fail:
-	if (entry) {
-		git__free(entry->committer);
-		git__free(entry);
-	}
+	if (entry)
+		reflog_entry_free(entry);
+
 	return -1;
-}
-
-static void reflog_entry_free(git_reflog_entry *entry)
-{
-	git_signature_free(entry->committer);
-
-	git__free(entry->msg);
-	git__free(entry);
 }
 
 void git_reflog_free(git_reflog *reflog)
@@ -285,55 +260,58 @@ success:
 	return error;
 }
 
-int git_reflog_append(git_reference *ref, const git_oid *oid_old,
+int git_reflog_append(git_reflog *reflog, const git_oid *new_oid,
 				const git_signature *committer, const char *msg)
 {
-	int error;
+	int count;
+	git_reflog_entry *entry;
+	const char *newline;
 
-	git_buf log_path = GIT_BUF_INIT;
-	git_reference *r;
-	git_oid zero_oid;
-	const git_oid *oid;
+	assert(reflog && new_oid && committer);
 
-	if ((error = git_reference_resolve(&r, ref)) < 0)
-		return error;
-
-	oid = git_reference_oid(r);
-	if (oid == NULL) {
-		giterr_set(GITERR_REFERENCE,
-			"Failed to write reflog. Cannot resolve reference `%s`", r->name);
-		git_reference_free(r);
+	if (reflog_entry_new(&entry) < 0)
 		return -1;
-	}
 
-	error = retrieve_reflog_path(&log_path, ref);
-	if (error < 0)
+	if ((entry->committer = git_signature_dup(committer)) == NULL)
 		goto cleanup;
 
-	if (git_path_exists(log_path.ptr) == false) {
-		error = git_futils_mkpath2file(log_path.ptr, GIT_REFLOG_DIR_MODE);
-	} else if (git_path_isfile(log_path.ptr) == false) {
-		giterr_set(GITERR_REFERENCE,
-			"Failed to write reflog. `%s` is directory", log_path.ptr);
-		error = -1;
-	} else if (oid_old == NULL) {
-		giterr_set(GITERR_REFERENCE,
-			"Failed to write reflog. Old OID cannot be NULL for existing reference");
-		error = -1;
+	if (msg != NULL) {
+		if ((entry->msg = git__strdup(msg)) == NULL)
+			goto cleanup;
+
+		newline = strchr(msg, '\n');
+
+		if (newline) {
+			if (newline[1] != '\0') {
+				giterr_set(GITERR_INVALID, "Reflog message cannot contain newline");
+				goto cleanup;
+			}
+
+			entry->msg[newline - msg] = '\0';
+		}
 	}
-	if (error < 0)
+
+	count = git_reflog_entrycount(reflog);
+
+	if (count == 0)
+		git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO);
+	else {
+		const git_reflog_entry *previous;
+
+		previous = git_reflog_entry_byindex(reflog, count -1);
+		git_oid_cpy(&entry->oid_old, &previous->oid_cur);
+	}
+
+	git_oid_cpy(&entry->oid_cur, new_oid);
+
+	if (git_vector_insert(&reflog->entries, entry) < 0)
 		goto cleanup;
 
-	if (!oid_old) {
-		git_oid_fromstr(&zero_oid, GIT_OID_HEX_ZERO);
-		error = reflog_write(log_path.ptr, &zero_oid, oid, committer, msg);
-	} else
-		error = reflog_write(log_path.ptr, oid_old, oid, committer, msg);
+	return 0;
 
 cleanup:
-	git_reference_free(r);
-	git_buf_free(&log_path);
-	return error;
+	reflog_entry_free(entry);
+	return -1;
 }
 
 int git_reflog_rename(git_reference *ref, const char *new_name)
