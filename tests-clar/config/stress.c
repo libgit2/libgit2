@@ -80,4 +80,5 @@ void test_config_stress__escape_subsection_names(void)
 
 	cl_git_pass(git_config_get_string(&str, config, "some.sec\\tion.other"));
 	cl_assert(!strcmp("foo", str));
+	git_config_free(config);
 }
