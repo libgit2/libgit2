@@ -87,8 +87,11 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 	int retcode = 0;
 	tree_walk_data *data = (tree_walk_data*)payload;
 	int attr = git_tree_entry_attributes(entry);
-
-	/* TODO: handle submodules  */
+	git_buf fnbuf = GIT_BUF_INIT;
+	git_buf_join_n(&fnbuf, '/', 3,
+						git_repository_workdir(data->repo),
+						path,
+						git_tree_entry_name(entry));
 
 	switch(git_tree_entry_type(entry))
 	{
@@ -96,21 +99,18 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 		/* Nothing to do; the blob handling creates necessary directories. */
 		break;
 
+	case GIT_OBJ_COMMIT:
+		/* Submodule */
+		retcode = p_mkdir(git_buf_cstr(&fnbuf), 0644);
+		break;
+
 	case GIT_OBJ_BLOB:
-		{
-			git_buf fnbuf = GIT_BUF_INIT;
-			git_buf_join_n(&fnbuf, '/', 3,
-								git_repository_workdir(data->repo),
-								path,
-								git_tree_entry_name(entry));
-			if (S_ISLNK(attr)) {
-				retcode = blob_contents_to_link(data, &fnbuf,
-														  git_tree_entry_id(entry));
-			} else {
-				retcode = blob_contents_to_file(data->repo, &fnbuf,
-														  git_tree_entry_id(entry), attr);
-			}
-			git_buf_free(&fnbuf);
+		if (S_ISLNK(attr)) {
+			retcode = blob_contents_to_link(data, &fnbuf,
+													  git_tree_entry_id(entry));
+		} else {
+			retcode = blob_contents_to_file(data->repo, &fnbuf,
+													  git_tree_entry_id(entry), attr);
 		}
 		break;
 
@@ -119,6 +119,7 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 		break;
 	}
 
+	git_buf_free(&fnbuf);
 	data->stats->processed++;
 	return retcode;
 }
