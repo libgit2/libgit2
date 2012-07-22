@@ -171,7 +171,10 @@ static int unfiltered_blob_contents(git_buf *out, git_repository *repo, const gi
 	git_blob *blob;
 
 	if (!(retcode = git_blob_lookup(&blob, repo, blob_id)))
+	{
 		retcode = git_blob__getbuf(out, blob);
+		git_blob_free(blob);
+	}
 
 	return retcode;
 }
