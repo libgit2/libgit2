@@ -99,6 +99,8 @@ int git_status_foreach_ext(
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNMODIFIED;
 	if ((opts->flags & GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_UNTRACKED_DIRS;
+	if ((opts->flags & GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	/* TODO: support EXCLUDE_SUBMODULES flag */
 
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&

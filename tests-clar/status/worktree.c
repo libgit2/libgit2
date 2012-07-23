@@ -726,3 +726,49 @@ void test_status_worktree__filemode_changes(void)
 
 	git_config_free(cfg);
 }
+
+int cb_status__expected_path(const char *p, unsigned int s, void *payload)
+{
+	const char *expected_path = (const char *)payload;
+
+	GIT_UNUSED(s);
+
+	if (payload == NULL)
+		cl_fail("Unexpected path");
+
+	cl_assert_equal_s(expected_path, p);
+
+	return 0;
+}
+
+void test_status_worktree__disable_pathspec_match(void)
+{
+	git_repository *repo;
+	git_status_options opts;
+	char *file_with_bracket = "LICENSE[1].md", 
+		*imaginary_file_with_bracket = "LICENSE[1-2].md";
+
+	cl_git_pass(git_repository_init(&repo, "pathspec", 0));
+	cl_git_mkfile("pathspec/LICENSE[1].md", "screaming bracket\n");
+	cl_git_mkfile("pathspec/LICENSE1.md", "no bracket\n");
+
+	memset(&opts, 0, sizeof(opts));
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | 
+		GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH;
+	opts.pathspec.count = 1;
+	opts.pathspec.strings = &file_with_bracket;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__expected_path, 
+		file_with_bracket)
+	);
+
+	/* Test passing a pathspec matching files in the workdir. */
+	/* Must not match because pathspecs are disabled. */ 
+	opts.pathspec.strings = &imaginary_file_with_bracket;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__expected_path, NULL)
+	);
+	
+	git_repository_free(repo);
+}

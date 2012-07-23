@@ -61,9 +61,10 @@ static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
 		return true;
 
 	git_vector_foreach(&diff->pathspec, i, match) {
-		int result = strcmp(match->pattern, path);
+		int result = strcmp(match->pattern, path) ? FNM_NOMATCH : 0;
 		
-		if (result != 0)
+		if (((diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) == 0) && 
+			result == FNM_NOMATCH)
 			result = p_fnmatch(match->pattern, path, 0);
 
 		/* if we didn't match, look for exact dirname prefix match */
