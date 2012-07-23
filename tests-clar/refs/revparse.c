@@ -64,6 +64,8 @@ void test_refs_revparse__invalid_reference_name(void)
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense^1"));
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, "this doesn't make sense~2"));
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, ""));
+
 }
 
 void test_refs_revparse__shas(void)
@@ -74,7 +76,6 @@ void test_refs_revparse__shas(void)
 
 void test_refs_revparse__head(void)
 {
-	test_object("", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD^0", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("HEAD~0", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");

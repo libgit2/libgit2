@@ -705,7 +705,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
 	*out = NULL;
 
-	do {
+	while (spec[pos]) {
 		switch (spec[pos]) {
 		case '^':
 			if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
@@ -813,9 +813,9 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 			pos++;
 			identifier_len++;
 		}
-	} while (spec[pos]);
+	}
 
-	if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, true)) < 0)
+	if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 		goto cleanup;
 
 	*out = base_rev;
