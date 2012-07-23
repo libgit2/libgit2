@@ -341,7 +341,7 @@ cleanup:
 static int handle_at_syntax(git_object **out, git_reference **ref, const char *spec, int identifier_len, git_repository* repo, const char *curly_braces_content)
 {
 	bool is_numeric;
-	int parsed, error = -1;
+	int parsed = 0, error = -1;
 	git_buf identifier = GIT_BUF_INIT;
 	git_time_t timestamp;
 
