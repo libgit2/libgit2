@@ -179,6 +179,12 @@ static int detect_caps(transport_git *t)
 			continue;
 		}
 
+		if(!git__prefixcmp(ptr, GIT_CAP_MULTI_ACK)) {
+			caps->common = caps->multi_ack = 1;
+			ptr += strlen(GIT_CAP_MULTI_ACK);
+			continue;
+		}
+
 		/* We don't know this capability, so skip it */
 		ptr = strchr(ptr, ' ');
 	}
@@ -303,6 +309,10 @@ int git_transport_git(git_transport **out)
 	GITERR_CHECK_ALLOC(t);
 
 	memset(t, 0x0, sizeof(transport_git));
+	if (git_vector_init(&t->parent.common, 8, NULL)) {
+		git__free(t);
+		return -1;
+	}
 
 	t->parent.connect = git_connect;
 	t->parent.negotiation_step = git_negotiation_step;

@@ -20,10 +20,12 @@
 
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
+#define GIT_CAP_MULTI_ACK "multi_ack"
 
 typedef struct git_transport_caps {
 	int common:1,
-		ofs_delta:1;
+		ofs_delta:1,
+		multi_ack: 1;
 } git_transport_caps;
 
 #ifdef GIT_SSL
@@ -76,6 +78,7 @@ struct git_transport {
 #ifdef GIT_SSL
 	struct gitno_ssl ssl;
 #endif
+	git_vector common;
 	gitno_buffer buffer;
 	GIT_SOCKET socket;
 	git_transport_caps caps;

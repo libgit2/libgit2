@@ -75,13 +75,24 @@ static int filter_wants(git_remote *remote)
 }
 
 /* Wait until we get an ack from the */
-static int recv_pkt(gitno_buffer *buf)
+static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 {
-	const char *ptr = buf->data, *line_end;
+	const char *ptr = buf->data, *line_end = ptr;
 	git_pkt *pkt;
-	int pkt_type, error;
+	int pkt_type, error = 0;
 
 	do {
+		if (buf->offset > 0)
+			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
+		else
+			error = GIT_EBUFS;
+
+		if (error == 0)
+			break; /* return the pkt */
+
+		if (error < 0 && error != GIT_EBUFS)
+			return -1;
+
 		/* Wait for max. 1 second */
 		if ((error = gitno_select_in(buf, 1, 0)) < 0) {
 			return -1;
@@ -97,19 +108,39 @@ static int recv_pkt(gitno_buffer *buf)
 
 		if ((error = gitno_recv(buf)) < 0)
 			return -1;
-
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-		if (error == GIT_EBUFS)
-			continue;
-		if (error < 0)
-			return -1;
 	} while (error);
 
 	gitno_consume(buf, line_end);
 	pkt_type = pkt->type;
-	git__free(pkt);
+	if (out != NULL)
+		*out = pkt;
+	else
+		git__free(pkt);
 
 	return pkt_type;
+}
+
+static int store_common(git_transport *t)
+{
+	int done = 0;
+	git_pkt *pkt = NULL;
+	gitno_buffer *buf = &t->buffer;
+
+	do {
+		if (recv_pkt(&pkt, buf) < 0)
+			return -1;
+
+		if (pkt->type == GIT_PKT_ACK) {
+			if (git_vector_insert(&t->common, pkt) < 0)
+				return -1;
+		} else {
+			git__free(pkt);
+			return 0;
+		}
+
+	} while (1);
+
+	return 0;
 }
 
 /*
@@ -169,18 +200,25 @@ int git_fetch_negotiate(git_remote *remote)
 				goto on_error;
 
 			git_buf_clear(&data);
-			pkt_type = recv_pkt(buf);
-
-			if (pkt_type == GIT_PKT_ACK) {
-				break;
-			} else if (pkt_type == GIT_PKT_NAK) {
-				continue;
+			if (t->caps.multi_ack) {
+				if (store_common(t) < 0)
+					goto on_error;
 			} else {
-				giterr_set(GITERR_NET, "Unexpected pkt type");
-				goto on_error;
-			}
+				pkt_type = recv_pkt(NULL, buf);
 
+				if (pkt_type == GIT_PKT_ACK) {
+					break;
+				} else if (pkt_type == GIT_PKT_NAK) {
+					continue;
+				} else {
+					giterr_set(GITERR_NET, "Unexpected pkt type");
+					goto on_error;
+				}
+			}
 		}
+
+		if (t->common.length > 0)
+			break;
 	}
 
 	if (error < 0 && error != GIT_REVWALKOVER)
@@ -195,7 +233,7 @@ int git_fetch_negotiate(git_remote *remote)
 	git_revwalk_free(walk);
 
 	/* Now let's eat up whatever the server gives us */
-	pkt_type = recv_pkt(buf);
+	pkt_type = recv_pkt(NULL, buf);
 	if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
 		giterr_set(GITERR_NET, "Unexpected pkt type");
 		return -1;
