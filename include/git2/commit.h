@@ -48,7 +48,7 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, unsigned len)
+GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, size_t len)
 {
 	return git_object_lookup_prefix((git_object **)commit, repo, id, len, GIT_OBJ_COMMIT);
 }

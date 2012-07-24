@@ -21,7 +21,7 @@ typedef struct gitno_buffer {
 #endif
 } gitno_buffer;
 
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len);
+void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, size_t len);
 int gitno_recv(gitno_buffer *buf);
 
 void gitno_consume(gitno_buffer *buf, const char *ptr);

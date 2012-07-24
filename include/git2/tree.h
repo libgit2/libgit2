@@ -50,7 +50,7 @@ GIT_INLINE(int) git_tree_lookup_prefix(
 	git_tree **tree,
 	git_repository *repo,
 	const git_oid *id,
-	unsigned int len)
+	size_t len)
 {
 	return git_object_lookup_prefix((git_object **)tree, repo, id, len, GIT_OBJ_TREE);
 }
@@ -126,7 +126,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byname(git_tree *tree, const c
  * @param idx the position in the entry list
  * @return the tree entry; NULL if not found
  */
-GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, unsigned int idx);
+GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, size_t idx);
 
 /**
  * Get the UNIX file attributes of a tree entry

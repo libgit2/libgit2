@@ -38,7 +38,7 @@ static int pack_entry_find_offset(
 		git_oid *found_oid,
 		struct git_pack_file *p,
 		const git_oid *short_oid,
-		unsigned int len);
+		size_t len);
 
 static int packfile_error(const char *message)
 {
@@ -734,7 +734,7 @@ static int pack_entry_find_offset(
 	git_oid *found_oid,
 	struct git_pack_file *p,
 	const git_oid *short_oid,
-	unsigned int len)
+	size_t len)
 {
 	const uint32_t *level1_ofs = p->index_map.data;
 	const unsigned char *index = p->index_map.data;
@@ -827,7 +827,7 @@ int git_pack_entry_find(
 		struct git_pack_entry *e,
 		struct git_pack_file *p,
 		const git_oid *short_oid,
-		unsigned int len)
+		size_t len)
 {
 	git_off_t offset;
 	git_oid found_oid;

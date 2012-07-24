@@ -149,7 +149,7 @@ static int pack_entry_find_prefix(
 	struct git_pack_entry *e,
 	struct pack_backend *backend,
 	const git_oid *short_oid,
-	unsigned int len);
+	size_t len);
 
 
 
@@ -295,7 +295,7 @@ static int pack_entry_find_prefix(
 	struct git_pack_entry *e,
 	struct pack_backend *backend,
 	const git_oid *short_oid,
-	unsigned int len)
+	size_t len)
 {
 	int error;
 	unsigned int i;
@@ -384,7 +384,7 @@ static int pack_backend__read_prefix(
 	git_otype *type_p,
 	git_odb_backend *backend,
 	const git_oid *short_oid,
-	unsigned int len)
+	size_t len)
 {
 	int error = 0;
 

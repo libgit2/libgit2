@@ -226,7 +226,7 @@ GIT_COMMIT_GETTER(const char *, message, commit->message)
 GIT_COMMIT_GETTER(const char *, message_encoding, commit->message_encoding)
 GIT_COMMIT_GETTER(git_time_t, time, commit->committer->when.time)
 GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
-GIT_COMMIT_GETTER(unsigned int, parentcount, commit->parent_oids.length)
+GIT_COMMIT_GETTER(unsigned int, parentcount, (unsigned int)commit->parent_oids.length)
 GIT_COMMIT_GETTER(const git_oid *, tree_oid, &commit->tree_oid);
 
 int git_commit_tree(git_tree **tree_out, git_commit *commit)

@@ -156,7 +156,7 @@ void git_ignore__free(git_ignores *ignores)
 static bool ignore_lookup_in_rules(
 	git_vector *rules, git_attr_path *path, int *ignored)
 {
-	unsigned int j;
+	size_t j;
 	git_attr_fnmatch *match;
 
 	git_vector_rforeach(rules, j, match) {

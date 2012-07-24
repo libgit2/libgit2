@@ -338,10 +338,10 @@ int git_reflog_delete(git_reference *ref)
 unsigned int git_reflog_entrycount(git_reflog *reflog)
 {
 	assert(reflog);
-	return reflog->entries.length;
+	return (unsigned int)reflog->entries.length;
 }
 
-const git_reflog_entry * git_reflog_entry_byindex(git_reflog *reflog, unsigned int idx)
+const git_reflog_entry * git_reflog_entry_byindex(git_reflog *reflog, size_t idx)
 {
 	assert(reflog);
 	return git_vector_get(&reflog->entries, idx);

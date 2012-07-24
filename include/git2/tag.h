@@ -46,7 +46,7 @@ GIT_INLINE(int) git_tag_lookup(git_tag **tag, git_repository *repo, const git_oi
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_tag_lookup_prefix(git_tag **tag, git_repository *repo, const git_oid *id, unsigned int len)
+GIT_INLINE(int) git_tag_lookup_prefix(git_tag **tag, git_repository *repo, const git_oid *id, size_t len)
 {
 	return git_object_lookup_prefix((git_object **)tag, repo, id, len, (git_otype)GIT_OBJ_TAG);
 }

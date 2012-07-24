@@ -61,7 +61,7 @@ static int ssl_set_error(gitno_ssl *ssl, int error)
 }
 #endif
 
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
+void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, size_t len)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);

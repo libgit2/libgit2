@@ -42,7 +42,7 @@ struct git_odb_backend {
 			void **, size_t *, git_otype *,
 			struct git_odb_backend *,
 			const git_oid *,
-			unsigned int);
+			size_t);
 
 	int (* read_header)(
 			size_t *, git_otype *,
