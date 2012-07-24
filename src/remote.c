@@ -131,6 +131,26 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote->url);
 
 	git_buf_clear(&buf);
+	if (git_buf_printf(&buf, "remote.%s.pushurl", name) < 0) {
+		error = -1;
+		goto cleanup;
+	}
+
+	error = git_config_get_string(&val, config, git_buf_cstr(&buf));
+	if (error == GIT_ENOTFOUND)
+		error = 0;
+
+	if (error < 0) {
+		error = -1;
+		goto cleanup;
+	}
+
+	if (val) {
+		remote->pushurl = git__strdup(val);
+		GITERR_CHECK_ALLOC(remote->pushurl);
+	}
+
+	git_buf_clear(&buf);
 	if (git_buf_printf(&buf, "remote.%s.fetch", name) < 0) {
 		error = -1;
 		goto cleanup;
@@ -185,6 +205,17 @@ int git_remote_save(const git_remote *remote)
 	if (git_config_set_string(config, git_buf_cstr(&buf), remote->url) < 0) {
 		git_buf_free(&buf);
 		return -1;
+	}
+
+	if (remote->pushurl) {
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf, "remote.%s.pushurl", remote->name) < 0)
+			return -1;
+
+		if (git_config_set_string(config, git_buf_cstr(&buf), remote->pushurl) < 0) {
+			git_buf_free(&buf);
+			return -1;
+		}
 	}
 
 	if (remote->fetch.src != NULL && remote->fetch.dst != NULL) {
@@ -429,6 +460,7 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->push.src);
 	git__free(remote->push.dst);
 	git__free(remote->url);
+	git__free(remote->pushurl);
 	git__free(remote->name);
 	git__free(remote);
 }
