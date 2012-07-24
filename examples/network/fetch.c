@@ -99,6 +99,9 @@ int fetch(git_repository *repo, int argc, char **argv)
 		printf("\rReceived %d/%d objects in %d bytes", stats.processed, stats.total, bytes);
 	} while (!data.finished);
 
+	if (data.ret < 0)
+		goto on_error;
+
 	printf("\rReceived %d/%d objects in %d bytes\n", stats.processed, stats.total, bytes);
 
 	// Disconnect the underlying connection to prevent from idling.

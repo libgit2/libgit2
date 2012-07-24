@@ -668,6 +668,7 @@ int git_transport_http(git_transport **out)
 
 	memset(t, 0x0, sizeof(transport_http));
 
+	t->parent.own_logic = 1;
 	t->parent.connect = http_connect;
 	t->parent.ls = http_ls;
 	t->parent.negotiate_fetch = http_negotiate_fetch;

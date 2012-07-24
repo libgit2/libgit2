@@ -12,6 +12,7 @@
 #include "vector.h"
 #include "posix.h"
 #include "common.h"
+#include "netops.h"
 #ifdef GIT_SSL
 # include <openssl/ssl.h>
 # include <openssl/err.h>
@@ -70,15 +71,22 @@ struct git_transport {
 	int direction : 1, /* 0 fetch, 1 push */
 		connected : 1,
 		check_cert: 1,
-		encrypt : 1;
+		encrypt : 1,
+		own_logic: 1; /* transitional */
 #ifdef GIT_SSL
 	struct gitno_ssl ssl;
 #endif
+	gitno_buffer buffer;
 	GIT_SOCKET socket;
+	git_transport_caps caps;
 	/**
 	 * Connect and store the remote heads
 	 */
 	int (*connect)(struct git_transport *transport, int dir);
+	/**
+	 * Send our side of a negotiation
+	 */
+	int (*negotiation_step)(struct git_transport *transport, void *data, size_t len);
 	/**
 	 * Give a list of references, useful for ls-remote
 	 */
@@ -124,7 +132,6 @@ int git_transport_dummy(struct git_transport **transport);
 */
 int git_transport_valid_url(const char *url);
 
-typedef struct git_transport git_transport;
 typedef int (*git_transport_cb)(git_transport **transport);
 
 #endif

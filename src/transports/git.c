@@ -27,9 +27,7 @@ typedef struct {
 	git_protocol proto;
 	git_vector refs;
 	git_remote_head **heads;
-	git_transport_caps caps;
 	char buff[1024];
-	gitno_buffer buf;
 #ifdef GIT_WIN32
 	WSADATA wsd;
 #endif
@@ -131,7 +129,7 @@ on_error:
  */
 static int store_refs(transport_git *t)
 {
-	gitno_buffer *buf = &t->buf;
+	gitno_buffer *buf = &t->parent.buffer;
 	int ret = 0;
 
 	while (1) {
@@ -162,7 +160,7 @@ static int detect_caps(transport_git *t)
 {
 	git_vector *refs = &t->refs;
 	git_pkt_ref *pkt;
-	git_transport_caps *caps = &t->caps;
+	git_transport_caps *caps = &t->parent.caps;
 	const char *ptr;
 
 	pkt = git_vector_get(refs, 0);
@@ -209,7 +207,7 @@ static int git_connect(git_transport *transport, int direction)
 	if (do_connect(t, transport->url) < 0)
 		goto cleanup;
 
-	gitno_buffer_setup(transport, &t->buf, t->buff, sizeof(t->buff));
+	gitno_buffer_setup(transport, &transport->buffer, t->buff, sizeof(t->buff));
 
 	t->parent.connected = 1;
 	if (store_refs(t) < 0)
@@ -248,156 +246,9 @@ static int git_ls(git_transport *transport, git_headlist_cb list_cb, void *opaqu
 	return 0;
 }
 
-/* Wait until we get an ack from the */
-static int recv_pkt(gitno_buffer *buf)
+static int git_negotiation_step(struct git_transport *transport, void *data, size_t len)
 {
-	const char *ptr = buf->data, *line_end;
-	git_pkt *pkt;
-	int pkt_type, error;
-
-	do {
-		/* Wait for max. 1 second */
-		if ((error = gitno_select_in(buf, 1, 0)) < 0) {
-			return -1;
-		} else if (error == 0) {
-			/*
-			 * Some servers don't respond immediately, so if this
-			 * happens, we keep sending information until it
-			 * answers. Pretend we received a NAK to convince higher
-			 * layers to do so.
-			 */
-			return GIT_PKT_NAK;
-		}
-
-		if ((error = gitno_recv(buf)) < 0)
-			return -1;
-
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-		if (error == GIT_EBUFS)
-			continue;
-		if (error < 0)
-			return -1;
-	} while (error);
-
-	gitno_consume(buf, line_end);
-	pkt_type = pkt->type;
-	git__free(pkt);
-
-	return pkt_type;
-}
-
-static int git_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
-{
-	transport_git *t = (transport_git *) transport;
-	git_revwalk *walk;
-	git_oid oid;
-	int error;
-	unsigned int i;
-	git_buf data = GIT_BUF_INIT;
-	gitno_buffer *buf = &t->buf;
-
-	if (git_pkt_buffer_wants(wants, &t->caps, &data) < 0)
-		return -1;
-
-	if (git_fetch_setup_walk(&walk, repo) < 0)
-		goto on_error;
-
-	if (gitno_send(transport, data.ptr, data.size, 0) < 0)
-		goto on_error;
-
-	git_buf_clear(&data);
-	/*
-	 * We don't support any kind of ACK extensions, so the negotiation
-	 * boils down to sending what we have and listening for an ACK
-	 * every once in a while.
-	 */
-	i = 0;
-	while ((error = git_revwalk_next(&oid, walk)) == 0) {
-		git_pkt_buffer_have(&oid, &data);
-		i++;
-		if (i % 20 == 0) {
-			int pkt_type;
-
-			git_pkt_buffer_flush(&data);
-			if (git_buf_oom(&data))
-				goto on_error;
-
-			if (gitno_send(transport, data.ptr, data.size, 0) < 0)
-				goto on_error;
-
-			pkt_type = recv_pkt(buf);
-
-			if (pkt_type == GIT_PKT_ACK) {
-				break;
-			} else if (pkt_type == GIT_PKT_NAK) {
-				continue;
-			} else {
-				giterr_set(GITERR_NET, "Unexpected pkt type");
-				goto on_error;
-			}
-
-		}
-	}
-	if (error < 0 && error != GIT_REVWALKOVER)
-		goto on_error;
-
-	/* Tell the other end that we're done negotiating */
-	git_buf_clear(&data);
-	git_pkt_buffer_flush(&data);
-	git_pkt_buffer_done(&data);
-	if (gitno_send(transport, data.ptr, data.size, 0) < 0)
-		goto on_error;
-
-	git_buf_free(&data);
-	git_revwalk_free(walk);
-	return 0;
-
-on_error:
-	git_buf_free(&data);
-	git_revwalk_free(walk);
-	return -1;
-}
-
-static int git_download_pack(git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats)
-{
-	transport_git *t = (transport_git *) transport;
-	int error = 0, read_bytes;
-	gitno_buffer *buf = &t->buf;
-	git_pkt *pkt;
-	const char *line_end, *ptr;
-
-	/*
-	 * For now, we ignore everything and wait for the pack
-	 */
-	do {
-		ptr = buf->data;
-		/* Whilst we're searching for the pack */
-		while (1) {
-			if (buf->offset == 0) {
-				break;
-			}
-
-			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
-			if (error == GIT_EBUFS)
-				break;
-
-			if (error < 0)
-				return error;
-
-			if (pkt->type == GIT_PKT_PACK) {
-				git__free(pkt);
-				return git_fetch__download_pack(buf->data, buf->offset, transport, repo, bytes, stats);
-			}
-
-			/* For now we don't care about anything */
-			git__free(pkt);
-			gitno_consume(buf, line_end);
-		}
-
-		read_bytes = gitno_recv(buf);
-	} while (read_bytes);
-
-	return read_bytes;
+	return gitno_send(transport, data, len, 0);
 }
 
 static int git_close(git_transport *t)
@@ -454,9 +305,8 @@ int git_transport_git(git_transport **out)
 	memset(t, 0x0, sizeof(transport_git));
 
 	t->parent.connect = git_connect;
+	t->parent.negotiation_step = git_negotiation_step;
 	t->parent.ls = git_ls;
-	t->parent.negotiate_fetch = git_negotiate_fetch;
-	t->parent.download_pack = git_download_pack;
 	t->parent.close = git_close;
 	t->parent.free = git_free;
 	t->proto.refs = &t->refs;

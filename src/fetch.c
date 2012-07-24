@@ -18,6 +18,7 @@
 #include "pack.h"
 #include "fetch.h"
 #include "netops.h"
+#include "pkt.h"
 
 struct filter_payload {
 	git_remote *remote;
@@ -73,6 +74,44 @@ static int filter_wants(git_remote *remote)
 	return remote->transport->ls(remote->transport, &filter_ref__cb, &p);
 }
 
+/* Wait until we get an ack from the */
+static int recv_pkt(gitno_buffer *buf)
+{
+	const char *ptr = buf->data, *line_end;
+	git_pkt *pkt;
+	int pkt_type, error;
+
+	do {
+		/* Wait for max. 1 second */
+		if ((error = gitno_select_in(buf, 1, 0)) < 0) {
+			return -1;
+		} else if (error == 0) {
+			/*
+			 * Some servers don't respond immediately, so if this
+			 * happens, we keep sending information until it
+			 * answers. Pretend we received a NAK to convince higher
+			 * layers to do so.
+			 */
+			return GIT_PKT_NAK;
+		}
+
+		if ((error = gitno_recv(buf)) < 0)
+			return -1;
+
+		error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
+		if (error == GIT_EBUFS)
+			continue;
+		if (error < 0)
+			return -1;
+	} while (error);
+
+	gitno_consume(buf, line_end);
+	pkt_type = pkt->type;
+	git__free(pkt);
+
+	return pkt_type;
+}
+
 /*
  * In this first version, we push all our refs in and start sending
  * them out. When we get an ACK we hide that commit and continue
@@ -81,6 +120,12 @@ static int filter_wants(git_remote *remote)
 int git_fetch_negotiate(git_remote *remote)
 {
 	git_transport *t = remote->transport;
+	gitno_buffer *buf = &t->buffer;
+	git_buf data = GIT_BUF_INIT;
+	git_revwalk *walk = NULL;
+	int error, pkt_type;
+	unsigned int i;
+	git_oid oid;
 
 	if (filter_wants(remote) < 0) {
 		giterr_set(GITERR_NET, "Failed to filter the reference list for wants");
@@ -92,18 +137,90 @@ int git_fetch_negotiate(git_remote *remote)
 		return 0;
 
 	/*
-	 * Now we have everything set up so we can start tell the server
-	 * what we want and what we have.
+	 * Now we have everything set up so we can start tell the
+	 * server what we want and what we have. Call the function if
+	 * the transport has its own logic. This is transitional and
+	 * will be removed once this function can support git and http.
 	 */
-	return t->negotiate_fetch(t, remote->repo, &remote->refs);
+	if (t->own_logic)
+		return t->negotiate_fetch(t, remote->repo, &remote->refs);
+
+	/* No own logic, do our thing */
+	if (git_pkt_buffer_wants(&remote->refs, &t->caps, &data) < 0)
+		return -1;
+
+	if (git_fetch_setup_walk(&walk, remote->repo) < 0)
+		goto on_error;
+	/*
+	 * We don't support any kind of ACK extensions, so the negotiation
+	 * boils down to sending what we have and listening for an ACK
+	 * every once in a while.
+	 */
+	i = 0;
+	while ((error = git_revwalk_next(&oid, walk)) == 0) {
+		git_pkt_buffer_have(&oid, &data);
+		i++;
+		if (i % 20 == 0) {
+			git_pkt_buffer_flush(&data);
+			if (git_buf_oom(&data))
+				goto on_error;
+
+			if (t->negotiation_step(t, data.ptr, data.size) < 0)
+				goto on_error;
+
+			git_buf_clear(&data);
+			pkt_type = recv_pkt(buf);
+
+			if (pkt_type == GIT_PKT_ACK) {
+				break;
+			} else if (pkt_type == GIT_PKT_NAK) {
+				continue;
+			} else {
+				giterr_set(GITERR_NET, "Unexpected pkt type");
+				goto on_error;
+			}
+
+		}
+	}
+
+	if (error < 0 && error != GIT_REVWALKOVER)
+		goto on_error;
+
+	/* Tell the other end that we're done negotiating */
+	git_pkt_buffer_done(&data);
+	if (t->negotiation_step(t, data.ptr, data.size) < 0)
+		goto on_error;
+
+	git_buf_free(&data);
+	git_revwalk_free(walk);
+
+	/* Now let's eat up whatever the server gives us */
+	pkt_type = recv_pkt(buf);
+	if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
+		giterr_set(GITERR_NET, "Unexpected pkt type");
+		return -1;
+	}
+
+	return 0;
+
+on_error:
+	git_revwalk_free(walk);
+	git_buf_free(&data);
+	return -1;
 }
 
 int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
 {
+	git_transport *t = remote->transport;
+
 	if(!remote->need_pack)
 		return 0;
 
-	return remote->transport->download_pack(remote->transport, remote->repo, bytes, stats);
+	if (t->own_logic)
+		return t->download_pack(t, remote->repo, bytes, stats);
+
+	return git_fetch__download_pack(NULL, 0, t, remote->repo, bytes, stats);
+
 }
 
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
@@ -123,7 +240,7 @@ int git_fetch__download_pack(
 
 	gitno_buffer_setup(t, &buf, buff, sizeof(buff));
 
-	if (memcmp(buffered, "PACK", strlen("PACK"))) {
+	if (buffered && memcmp(buffered, "PACK", strlen("PACK"))) {
 		giterr_set(GITERR_NET, "The pack doesn't start with the signature");
 		return -1;
 	}
@@ -135,7 +252,7 @@ int git_fetch__download_pack(
 		goto on_error;
 
 	memset(stats, 0, sizeof(git_indexer_stats));
-	if (git_indexer_stream_add(idx, buffered, buffered_size, stats) < 0)
+	if (buffered && git_indexer_stream_add(idx, buffered, buffered_size, stats) < 0)
 		goto on_error;
 
 	*bytes = buffered_size;
