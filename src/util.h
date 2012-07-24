@@ -238,4 +238,13 @@ extern int git__parse_bool(int *out, const char *value);
  */
 int git__date_parse(git_time_t *out, const char *date);
 
+/*
+ * Unescapes a string in-place.
+ * 
+ * Edge cases behavior:
+ * - "jackie\" -> "jacky\"
+ * - "chan\\" -> "chan\"
+ */
+extern size_t git__unescape(char *str);
+
 #endif /* INCLUDE_util_h__ */

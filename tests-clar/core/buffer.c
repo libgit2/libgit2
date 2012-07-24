@@ -658,3 +658,23 @@ void test_core_buffer__puts_escaped(void)
 
 	git_buf_free(&a);
 }
+
+static void assert_unescape(char *expected, char *to_unescape) {
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_sets(&buf, to_unescape));
+	git_buf_unescape(&buf);
+	cl_assert_equal_s(expected, buf.ptr);
+	cl_assert_equal_i(strlen(expected), buf.size);
+
+	git_buf_free(&buf);
+}
+
+void test_core_buffer__unescape(void)
+{
+	assert_unescape("Escaped\\", "Es\\ca\\ped\\");
+	assert_unescape("Es\\caped\\", "Es\\\\ca\\ped\\\\");
+	assert_unescape("\\", "\\");
+	assert_unescape("\\", "\\\\");
+	assert_unescape("", "");
+}

@@ -517,6 +517,85 @@ void test_status_worktree__status_file_with_clean_index_and_empty_workdir(void)
 	cl_git_pass(p_unlink("my-index"));
 }
 
+void test_status_worktree__bracket_in_filename(void)
+{
+	git_repository *repo;
+	git_index *index;
+	status_entry_single result;
+	unsigned int status_flags;
+	int error;
+
+	#define FILE_WITH_BRACKET "LICENSE[1].md"
+	#define FILE_WITHOUT_BRACKET "LICENSE1.md"
+
+	cl_git_pass(git_repository_init(&repo, "with_bracket", 0));
+	cl_git_mkfile("with_bracket/" FILE_WITH_BRACKET, "I have a bracket in my name\n");
+	
+	/* file is new to working directory */
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(1, result.count);
+	cl_assert(result.status == GIT_STATUS_WT_NEW);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_BRACKET));
+	cl_assert(status_flags == GIT_STATUS_WT_NEW);
+
+	/* ignore the file */
+
+	cl_git_rewritefile("with_bracket/.gitignore", "*.md\n.gitignore\n");
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(2, result.count);
+	cl_assert(result.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_BRACKET));
+	cl_assert(status_flags == GIT_STATUS_IGNORED);
+
+	/* don't ignore the file */
+
+	cl_git_rewritefile("with_bracket/.gitignore", ".gitignore\n");
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(2, result.count);
+	cl_assert(result.status == GIT_STATUS_WT_NEW);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_BRACKET));
+	cl_assert(status_flags == GIT_STATUS_WT_NEW);
+
+	/* add the file to the index */
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add(index, FILE_WITH_BRACKET, 0));
+	cl_git_pass(git_index_write(index));
+
+	memset(&result, 0, sizeof(result));
+	cl_git_pass(git_status_foreach(repo, cb_status__single, &result));
+	cl_assert_equal_i(2, result.count);
+	cl_assert(result.status == GIT_STATUS_INDEX_NEW);
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_BRACKET));
+	cl_assert(status_flags == GIT_STATUS_INDEX_NEW);
+	
+	/* Create file without bracket */
+
+	cl_git_mkfile("with_bracket/" FILE_WITHOUT_BRACKET, "I have no bracket in my name!\n");
+
+	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITHOUT_BRACKET));
+	cl_assert(status_flags == GIT_STATUS_WT_NEW);
+
+	cl_git_pass(git_status_file(&status_flags, repo, "LICENSE\\[1\\].md"));
+	cl_assert(status_flags == GIT_STATUS_INDEX_NEW);
+
+	error = git_status_file(&status_flags, repo, FILE_WITH_BRACKET);
+	cl_git_fail(error);
+	cl_assert(error == GIT_EAMBIGUOUS);
+
+	git_index_free(index);
+	git_repository_free(repo);
+}
 
 void test_status_worktree__space_in_filename(void)
 {
@@ -646,4 +725,50 @@ void test_status_worktree__filemode_changes(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 
 	git_config_free(cfg);
+}
+
+int cb_status__expected_path(const char *p, unsigned int s, void *payload)
+{
+	const char *expected_path = (const char *)payload;
+
+	GIT_UNUSED(s);
+
+	if (payload == NULL)
+		cl_fail("Unexpected path");
+
+	cl_assert_equal_s(expected_path, p);
+
+	return 0;
+}
+
+void test_status_worktree__disable_pathspec_match(void)
+{
+	git_repository *repo;
+	git_status_options opts;
+	char *file_with_bracket = "LICENSE[1].md", 
+		*imaginary_file_with_bracket = "LICENSE[1-2].md";
+
+	cl_git_pass(git_repository_init(&repo, "pathspec", 0));
+	cl_git_mkfile("pathspec/LICENSE[1].md", "screaming bracket\n");
+	cl_git_mkfile("pathspec/LICENSE1.md", "no bracket\n");
+
+	memset(&opts, 0, sizeof(opts));
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | 
+		GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH;
+	opts.pathspec.count = 1;
+	opts.pathspec.strings = &file_with_bracket;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__expected_path, 
+		file_with_bracket)
+	);
+
+	/* Test passing a pathspec matching files in the workdir. */
+	/* Must not match because pathspecs are disabled. */ 
+	opts.pathspec.strings = &imaginary_file_with_bracket;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__expected_path, NULL)
+	);
+	
+	git_repository_free(repo);
 }
