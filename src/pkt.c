@@ -42,15 +42,29 @@ static int flush_pkt(git_pkt **out)
 /* the rest of the line will be useful for multi_ack */
 static int ack_pkt(git_pkt **out, const char *line, size_t len)
 {
-	git_pkt *pkt;
+	git_pkt_ack *pkt;
 	GIT_UNUSED(line);
 	GIT_UNUSED(len);
 
-	pkt = git__malloc(sizeof(git_pkt));
+	pkt = git__calloc(1, sizeof(git_pkt_ack));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_ACK;
-	*out = pkt;
+	line += 3;
+	len -= 3;
+
+	if (len >= GIT_OID_HEXSZ) {
+		git_oid_fromstr(&pkt->oid, line + 1);
+		line += GIT_OID_HEXSZ + 1;
+		len -= GIT_OID_HEXSZ + 1;
+	}
+
+	if (len >= 7) {
+		if (!git__prefixcmp(line + 1, "continue"))
+			pkt->status = GIT_ACK_CONTINUE;
+	}
+
+	*out = (git_pkt *) pkt;
 
 	return 0;
 }

@@ -9,6 +9,7 @@
 
 #include "transport.h"
 #include "buffer.h"
+#include "pkt.h"
 
 typedef struct {
 	git_transport *transport;
@@ -19,5 +20,6 @@ typedef struct {
 } git_protocol;
 
 int git_protocol_store_refs(git_protocol *p, const char *data, size_t len);
+int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps);
 
 #endif

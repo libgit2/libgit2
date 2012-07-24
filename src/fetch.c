@@ -79,7 +79,7 @@ static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 {
 	const char *ptr = buf->data, *line_end = ptr;
 	git_pkt *pkt;
-	int pkt_type, error = 0;
+	int pkt_type, error = 0, ret;
 
 	do {
 		if (buf->offset > 0)
@@ -106,7 +106,7 @@ static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 			return GIT_PKT_NAK;
 		}
 
-		if ((error = gitno_recv(buf)) < 0)
+		if ((ret = gitno_recv(buf)) < 0)
 			return -1;
 	} while (error);
 
@@ -122,7 +122,6 @@ static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 
 static int store_common(git_transport *t)
 {
-	int done = 0;
 	git_pkt *pkt = NULL;
 	gitno_buffer *buf = &t->buffer;
 
@@ -219,12 +218,42 @@ int git_fetch_negotiate(git_remote *remote)
 
 		if (t->common.length > 0)
 			break;
+
+		if (i % 20 == 0 && t->rpc) {
+			git_pkt_ack *pkt;
+			unsigned int i;
+
+			if (git_pkt_buffer_wants(&remote->refs, &t->caps, &data) < 0)
+				goto on_error;
+
+			git_vector_foreach(&t->common, i, pkt) {
+				git_pkt_buffer_have(&pkt->oid, &data);
+			}
+
+			if (git_buf_oom(&data))
+				goto on_error;
+		}
 	}
 
 	if (error < 0 && error != GIT_REVWALKOVER)
 		goto on_error;
 
 	/* Tell the other end that we're done negotiating */
+	if (t->rpc && t->common.length > 0) {
+		git_pkt_ack *pkt;
+		unsigned int i;
+
+		if (git_pkt_buffer_wants(&remote->refs, &t->caps, &data) < 0)
+			goto on_error;
+
+		git_vector_foreach(&t->common, i, pkt) {
+			git_pkt_buffer_have(&pkt->oid, &data);
+		}
+
+		if (git_buf_oom(&data))
+			goto on_error;
+	}
+
 	git_pkt_buffer_done(&data);
 	if (t->negotiation_step(t, data.ptr, data.size) < 0)
 		goto on_error;
@@ -233,10 +262,26 @@ int git_fetch_negotiate(git_remote *remote)
 	git_revwalk_free(walk);
 
 	/* Now let's eat up whatever the server gives us */
-	pkt_type = recv_pkt(NULL, buf);
-	if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
-		giterr_set(GITERR_NET, "Unexpected pkt type");
-		return -1;
+	if (!t->caps.multi_ack) {
+		pkt_type = recv_pkt(NULL, buf);
+		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
+			giterr_set(GITERR_NET, "Unexpected pkt type");
+			return -1;
+		}
+	} else {
+		git_pkt_ack *pkt;
+		do {
+			if (recv_pkt((git_pkt **)&pkt, buf) < 0)
+				return -1;
+
+			if (pkt->type == GIT_PKT_NAK ||
+			    (pkt->type == GIT_PKT_ACK && pkt->status != GIT_ACK_CONTINUE)) {
+				git__free(pkt);
+				break;
+			}
+
+			git__free(pkt);
+		} while (1);
 	}
 
 	return 0;
@@ -257,31 +302,21 @@ int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_st
 	if (t->own_logic)
 		return t->download_pack(t, remote->repo, bytes, stats);
 
-	return git_fetch__download_pack(NULL, 0, t, remote->repo, bytes, stats);
+	return git_fetch__download_pack(t, remote->repo, bytes, stats);
 
 }
 
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
 int git_fetch__download_pack(
-	const char *buffered,
-	size_t buffered_size,
 	git_transport *t,
 	git_repository *repo,
 	git_off_t *bytes,
 	git_indexer_stats *stats)
 {
 	int recvd;
-	char buff[1024];
-	gitno_buffer buf;
 	git_buf path = GIT_BUF_INIT;
+	gitno_buffer *buf = &t->buffer;
 	git_indexer_stream *idx = NULL;
-
-	gitno_buffer_setup(t, &buf, buff, sizeof(buff));
-
-	if (buffered && memcmp(buffered, "PACK", strlen("PACK"))) {
-		giterr_set(GITERR_NET, "The pack doesn't start with the signature");
-		return -1;
-	}
 
 	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
 		return -1;
@@ -289,18 +324,17 @@ int git_fetch__download_pack(
 	if (git_indexer_stream_new(&idx, git_buf_cstr(&path)) < 0)
 		goto on_error;
 
+	git_buf_free(&path);
 	memset(stats, 0, sizeof(git_indexer_stats));
-	if (buffered && git_indexer_stream_add(idx, buffered, buffered_size, stats) < 0)
-		goto on_error;
-
-	*bytes = buffered_size;
+	*bytes = 0;
 
 	do {
-		if (git_indexer_stream_add(idx, buf.data, buf.offset, stats) < 0)
+		if (git_indexer_stream_add(idx, buf->data, buf->offset, stats) < 0)
 			goto on_error;
 
-		gitno_consume_n(&buf, buf.offset);
-		if ((recvd = gitno_recv(&buf)) < 0)
+		gitno_consume_n(buf, buf->offset);
+
+		if ((recvd = gitno_recv(buf)) < 0)
 			goto on_error;
 
 		*bytes += recvd;

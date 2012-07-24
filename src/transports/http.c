@@ -31,7 +31,7 @@ typedef struct {
 	git_transport parent;
 	git_protocol proto;
 	git_vector refs;
-	git_vector common;
+	http_parser_settings settings;
 	git_buf buf;
 	git_remote_head **heads;
 	int error;
@@ -46,7 +46,7 @@ typedef struct {
 	char *host;
 	char *port;
 	char *service;
-	git_transport_caps caps;
+	char buffer[4096];
 #ifdef GIT_WIN32
 	WSADATA wsd;
 #endif
@@ -210,6 +210,7 @@ static int on_message_complete(http_parser *parser)
 
 static int store_refs(transport_http *t)
 {
+	git_transport *transport = (git_transport *) t;
 	http_parser_settings settings;
 	char buffer[1024];
 	gitno_buffer buf;
@@ -241,7 +242,7 @@ static int store_refs(transport_http *t)
 		gitno_consume_n(&buf, parsed);
 
 		if (ret == 0 || t->transfer_finished)
-			return 0;
+			break;
 	}
 
 	pkt = git_vector_get(&t->refs, 0);
@@ -249,8 +250,13 @@ static int store_refs(transport_http *t)
 		giterr_set(GITERR_NET, "Invalid HTTP response");
 		return t->error = -1;
 	} else {
+		/* Remove the comment and flush pkts */
+		git_vector_remove(&t->refs, 0);
 		git_vector_remove(&t->refs, 0);
 	}
+
+	if (git_protocol_detect_caps(git_vector_get(&t->refs, 0), &transport->caps) < 0)
+		return t->error = -1;
 
 	return 0;
 }
@@ -333,278 +339,86 @@ static int http_ls(git_transport *transport, git_headlist_cb list_cb, void *opaq
 	return 0;
 }
 
-static int on_body_parse_response(http_parser *parser, const char *str, size_t len)
+static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 {
+	git_transport *transport = (git_transport *) parser->data;
 	transport_http *t = (transport_http *) parser->data;
-	git_buf *buf = &t->buf;
-	git_vector *common = &t->common;
-	int error;
-	const char *line_end, *ptr;
+	gitno_buffer *buf = &transport->buffer;
 
-	if (len == 0) { /* EOF */
-		if (git_buf_len(buf) != 0) {
-			giterr_set(GITERR_NET, "Unexpected EOF");
-			return t->error = -1;
-		} else {
-			return 0;
-		}
+	if (buf->len - buf->offset < len) {
+		giterr_set(GITERR_NET, "Can't fit data in the buffer");
+		return t->error = -1;
 	}
 
-	git_buf_put(buf, str, len);
-	ptr = buf->ptr;
-	while (1) {
-		git_pkt *pkt;
+	memcpy(buf->data + buf->offset, str, len);
+	buf->offset += len;
 
-		if (git_buf_len(buf) == 0)
-			return 0;
-
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
-		if (error == GIT_EBUFS) {
-			return 0; /* Ask for more */
-		}
-		if (error < 0)
-			return t->error = -1;
-
-		git_buf_consume(buf, line_end);
-
-		if (pkt->type == GIT_PKT_PACK) {
-			git__free(pkt);
-			t->pack_ready = 1;
-			return 0;
-		}
-
-		if (pkt->type == GIT_PKT_NAK) {
-			git__free(pkt);
-			return 0;
-		}
-
-		if (pkt->type != GIT_PKT_ACK) {
-			git__free(pkt);
-			continue;
-		}
-
-		if (git_vector_insert(common, pkt) < 0)
-			return -1;
-	}
-
-	return error;
-
+	return 0;
 }
 
-static int parse_response(transport_http *t)
+static int http_recv_cb(gitno_buffer *buf)
 {
-	int ret = 0;
-	http_parser_settings settings;
-	char buffer[1024];
-	gitno_buffer buf;
+	git_transport *transport = (git_transport *) buf->cb_data;
+	transport_http *t = (transport_http *) transport;
+	size_t parsed, old_len;
+	gitno_buffer inner;
+	char buffer[2048];
+	int error;
 
+	if (t->transfer_finished)
+		return 0;
+
+	gitno_buffer_setup(transport, &inner, buffer, sizeof(buffer));
+
+	if ((error = gitno_recv(&inner)) < 0)
+		return -1;
+
+	old_len = buf->offset;
+	parsed = http_parser_execute(&t->parser, &t->settings, inner.data, inner.offset);
+	if (t->error < 0)
+		return t->error;
+
+	return buf->offset - old_len;
+}
+
+static int http_negotiation_step(struct git_transport *transport, void *data, size_t len)
+{
+	transport_http *t = (transport_http *) transport;
+	git_buf request = GIT_BUF_INIT;
+	int ret;
+
+	/* First, send the data as a HTTP POST request */
+	if ((ret = do_connect(t, t->host, t->port)) < 0)
+		return -1;
+
+	if ((ret = gen_request(&request, t->path, t->host, "POST", "upload-pack", len, 0)) < 0)
+		goto on_error;
+
+	if ((ret = gitno_send(transport, request.ptr, request.size, 0)) < 0)
+		goto on_error;
+
+	if ((ret = gitno_send(transport, data, len, 0)) < 0)
+		goto on_error;
+
+	git_buf_free(&request);
+
+	/* Then we need to set up the buffer to grab data from the HTTP response */
 	http_parser_init(&t->parser, HTTP_RESPONSE);
 	t->parser.data = t;
 	t->transfer_finished = 0;
-	memset(&settings, 0x0, sizeof(http_parser_settings));
-	settings.on_header_field = on_header_field;
-	settings.on_header_value = on_header_value;
-	settings.on_headers_complete = on_headers_complete;
-	settings.on_body = on_body_parse_response;
-	settings.on_message_complete = on_message_complete;
+	memset(&t->settings, 0x0, sizeof(http_parser_settings));
+	t->settings.on_header_field = on_header_field;
+	t->settings.on_header_value = on_header_value;
+	t->settings.on_headers_complete = on_headers_complete;
+	t->settings.on_body = on_body_fill_buffer;
+	t->settings.on_message_complete = on_message_complete;
 
-	gitno_buffer_setup((git_transport *)t, &buf, buffer, sizeof(buffer));
+	gitno_buffer_setup_callback(transport, &transport->buffer, t->buffer, sizeof(t->buffer), http_recv_cb, t);
 
-	while(1) {
-		size_t parsed;
-
-		if ((ret = gitno_recv(&buf)) < 0)
-			return -1;
-
-		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
-		/* Both should happen at the same time */
-		if (parsed != buf.offset || t->error < 0)
-			return t->error;
-
-		gitno_consume_n(&buf, parsed);
-
-		if (ret == 0 || t->transfer_finished || t->pack_ready) {
-			return 0;
-		}
-	}
-
-	return ret;
-}
-
-static int http_negotiate_fetch(git_transport *transport, git_repository *repo, const git_vector *wants)
-{
-	transport_http *t = (transport_http *) transport;
-	int ret;
-	unsigned int i;
-	char buff[128];
-	gitno_buffer buf;
-	git_revwalk *walk = NULL;
-	git_oid oid;
-	git_pkt_ack *pkt;
-	git_vector *common = &t->common;
-	git_buf request = GIT_BUF_INIT, data = GIT_BUF_INIT;
-
-	gitno_buffer_setup(transport, &buf, buff, sizeof(buff));
-
-	if (git_vector_init(common, 16, NULL) < 0)
-		return -1;
-
-	if (git_fetch_setup_walk(&walk, repo) < 0)
-		return -1;
-
-	do {
-		if ((ret = do_connect(t, t->host, t->port)) < 0)
-			goto cleanup;
-
-		if ((ret = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
-			goto cleanup;
-
-		/* We need to send these on each connection */
-		git_vector_foreach (common, i, pkt) {
-			if ((ret = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
-				goto cleanup;
-		}
-
-		i = 0;
-		while ((i < 20) && ((ret = git_revwalk_next(&oid, walk)) == 0)) {
-			if ((ret = git_pkt_buffer_have(&oid, &data)) < 0)
-				goto cleanup;
-
-			i++;
-		}
-
-		git_pkt_buffer_done(&data);
-
-		if ((ret = gen_request(&request, t->path, t->host, "POST", "upload-pack", data.size, 0)) < 0)
-			goto cleanup;
-
-		if ((ret = gitno_send(transport, request.ptr, request.size, 0)) < 0)
-			goto cleanup;
-
-		if ((ret = gitno_send(transport, data.ptr, data.size, 0)) < 0)
-			goto cleanup;
-
-		git_buf_clear(&request);
-		git_buf_clear(&data);
-
-		if (ret < 0 || i >= 256)
-			break;
-
-		if ((ret = parse_response(t)) < 0)
-			goto cleanup;
-
-		if (t->pack_ready) {
-			ret = 0;
-			goto cleanup;
-		}
-
-	} while(1);
-
-cleanup:
-	git_buf_free(&request);
-	git_buf_free(&data);
-	git_revwalk_free(walk);
-	return ret;
-}
-
-typedef struct {
-	git_indexer_stream *idx;
-	git_indexer_stats *stats;
-	transport_http *transport;
-} download_pack_cbdata;
-
-static int on_message_complete_download_pack(http_parser *parser)
-{
-	download_pack_cbdata *data = (download_pack_cbdata *) parser->data;
-
-	data->transport->transfer_finished = 1;
-
-	return 0;
-}
-static int on_body_download_pack(http_parser *parser, const char *str, size_t len)
-{
-	download_pack_cbdata *data = (download_pack_cbdata *) parser->data;
-	transport_http *t = data->transport;
-	git_indexer_stream *idx = data->idx;
-	git_indexer_stats *stats = data->stats;
-
-	return t->error = git_indexer_stream_add(idx, str, len, stats);
-}
-
-/*
- * As the server is probably using Transfer-Encoding: chunked, we have
- * to use the HTTP parser to download the pack instead of giving it to
- * the simple downloader. Furthermore, we're using keep-alive
- * connections, so the simple downloader would just hang.
- */
-static int http_download_pack(git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats)
-{
-	transport_http *t = (transport_http *) transport;
-	git_buf *oldbuf = &t->buf;
-	int recvd;
-	http_parser_settings settings;
-	char buffer[1024];
-	gitno_buffer buf;
-	git_buf path = GIT_BUF_INIT;
-	git_indexer_stream *idx = NULL;
-	download_pack_cbdata data;
-
-	gitno_buffer_setup(transport, &buf, buffer, sizeof(buffer));
-
-	if (memcmp(oldbuf->ptr, "PACK", strlen("PACK"))) {
-		giterr_set(GITERR_NET, "The pack doesn't start with a pack signature");
-		return -1;
-	}
-
-	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
-		return -1;
-
-	if (git_indexer_stream_new(&idx, git_buf_cstr(&path)) < 0)
-		return -1;
-
-	/*
-	 * This is part of the previous response, so we don't want to
-	 * re-init the parser, just set these two callbacks.
-	 */
-	memset(stats, 0, sizeof(git_indexer_stats));
-	data.stats = stats;
-	data.idx = idx;
-	data.transport = t;
-	t->parser.data = &data;
-	t->transfer_finished = 0;
-	memset(&settings, 0x0, sizeof(settings));
-	settings.on_message_complete = on_message_complete_download_pack;
-	settings.on_body = on_body_download_pack;
-	*bytes = git_buf_len(oldbuf);
-
-	if (git_indexer_stream_add(idx, git_buf_cstr(oldbuf), git_buf_len(oldbuf), stats) < 0)
-		goto on_error;
-
-	gitno_buffer_setup(transport, &buf, buffer, sizeof(buffer));
-
-	do {
-		size_t parsed;
-
-		if ((recvd = gitno_recv(&buf)) < 0)
-			goto on_error;
-
-		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
-		if (parsed != buf.offset || t->error < 0)
-			goto on_error;
-
-		*bytes += recvd;
-		gitno_consume_n(&buf, parsed);
-	} while (recvd > 0 && !t->transfer_finished);
-
-	if (git_indexer_stream_finalize(idx, stats) < 0)
-		goto on_error;
-
-	git_indexer_stream_free(idx);
 	return 0;
 
 on_error:
-	git_indexer_stream_free(idx);
-	git_buf_free(&path);
+	git_buf_free(&request);
 	return -1;
 }
 
@@ -628,7 +442,7 @@ static void http_free(git_transport *transport)
 {
 	transport_http *t = (transport_http *) transport;
 	git_vector *refs = &t->refs;
-	git_vector *common = &t->common;
+	git_vector *common = &transport->common;
 	unsigned int i;
 	git_pkt *p;
 
@@ -668,13 +482,12 @@ int git_transport_http(git_transport **out)
 
 	memset(t, 0x0, sizeof(transport_http));
 
-	t->parent.own_logic = 1;
 	t->parent.connect = http_connect;
 	t->parent.ls = http_ls;
-	t->parent.negotiate_fetch = http_negotiate_fetch;
-	t->parent.download_pack = http_download_pack;
+	t->parent.negotiation_step = http_negotiation_step;
 	t->parent.close = http_close;
 	t->parent.free = http_free;
+	t->parent.rpc = 1;
 	t->proto.refs = &t->refs;
 	t->proto.transport = (git_transport *) t;
 

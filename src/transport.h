@@ -74,7 +74,8 @@ struct git_transport {
 		connected : 1,
 		check_cert: 1,
 		encrypt : 1,
-		own_logic: 1; /* transitional */
+		own_logic: 1, /* transitional */
+		rpc: 1; /* git-speak for the HTTP transport */
 #ifdef GIT_SSL
 	struct gitno_ssl ssl;
 #endif

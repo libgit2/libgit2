@@ -56,3 +56,35 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 
 	return 0;
 }
+
+int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps)
+{
+	const char *ptr;
+
+	/* No refs or capabilites, odd but not a problem */
+	if (pkt == NULL || pkt->capabilities == NULL)
+		return 0;
+
+	ptr = pkt->capabilities;
+	while (ptr != NULL && *ptr != '\0') {
+		if (*ptr == ' ')
+			ptr++;
+
+		if(!git__prefixcmp(ptr, GIT_CAP_OFS_DELTA)) {
+			caps->common = caps->ofs_delta = 1;
+			ptr += strlen(GIT_CAP_OFS_DELTA);
+			continue;
+		}
+
+		if(!git__prefixcmp(ptr, GIT_CAP_MULTI_ACK)) {
+			caps->common = caps->multi_ack = 1;
+			ptr += strlen(GIT_CAP_MULTI_ACK);
+			continue;
+		}
+
+		/* We don't know this capability, so skip it */
+		ptr = strchr(ptr, ' ');
+	}
+
+	return 0;
+}

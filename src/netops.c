@@ -61,7 +61,7 @@ static int ssl_set_error(gitno_ssl *ssl, int error)
 }
 #endif
 
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
+void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, unsigned int len, int (*recv)(gitno_buffer *buf), void *cb_data)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
@@ -73,6 +73,19 @@ void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigne
 	if (t->encrypt)
 		buf->ssl = &t->ssl;
 #endif
+
+	buf->recv = recv;
+	buf->cb_data = cb_data;
+}
+
+void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
+{
+	gitno_buffer_setup_callback(t, buf, data, len, gitno__recv, NULL);
+}
+
+int gitno_recv(gitno_buffer *buf)
+{
+	return buf->recv(buf);
 }
 
 #ifdef GIT_SSL
@@ -91,7 +104,7 @@ static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
 }
 #endif
 
-int gitno_recv(gitno_buffer *buf)
+int gitno__recv(gitno_buffer *buf)
 {
 	int ret;
 
