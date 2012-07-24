@@ -179,7 +179,7 @@ int git_remote_save(const git_remote *remote)
 	if (git_repository_config__weakptr(&config, remote->repo) < 0)
 		return -1;
 
-	if (git_buf_printf(&buf, "remote.%s.%s", remote->name, "url") < 0)
+	if (git_buf_printf(&buf, "remote.%s.url", remote->name) < 0)
 		return -1;
 
 	if (git_config_set_string(config, git_buf_cstr(&buf), remote->url) < 0) {
