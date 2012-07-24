@@ -377,7 +377,7 @@ int git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, co
 			continue;
 
 		if (git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, 1) < 0)
-			break;
+			goto on_error;
 
 		git_reference_free(ref);
 
