@@ -269,6 +269,38 @@ const char *git_remote_url(git_remote *remote)
 	return remote->url;
 }
 
+int git_remote_set_url(git_remote *remote, const char* url)
+{
+	assert(remote);
+	assert(url);
+
+	git__free(remote->url);
+	remote->url = git__strdup(url);
+	GITERR_CHECK_ALLOC(remote->url);
+
+	return 0;
+}
+
+const char *git_remote_pushurl(git_remote *remote)
+{
+	assert(remote);
+	return remote->pushurl;
+}
+
+int git_remote_set_pushurl(git_remote *remote, const char* url)
+{
+	assert(remote);
+
+	git__free(remote->pushurl);
+	if (url) {
+		remote->pushurl = git__strdup(url);
+		GITERR_CHECK_ALLOC(remote->pushurl);
+	} else {
+		remote->pushurl = NULL;
+	}
+	return 0;
+}
+
 int git_remote_set_fetchspec(git_remote *remote, const char *spec)
 {
 	git_refspec refspec;
