@@ -496,3 +496,7 @@ bool git_buf_is_binary(const git_buf *buf)
 	return ((printable >> 7) < nonprintable);
 }
 
+void git_buf_unescape(git_buf *buf)
+{
+	buf->size = git__unescape(buf->ptr);
+}

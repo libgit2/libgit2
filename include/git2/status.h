@@ -96,6 +96,8 @@ typedef enum {
  *   the top-level directory will be included (with a trailing
  *   slash on the entry name).  Given this flag, the directory
  *   itself will not be included, but all the files in it will.
+ * - GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH indicates that the given
+ *   path will be treated as a literal path, and not as a pathspec.
  */
 
 enum {
@@ -104,6 +106,7 @@ enum {
 	GIT_STATUS_OPT_INCLUDE_UNMODIFIED = (1 << 2),
 	GIT_STATUS_OPT_EXCLUDE_SUBMODULES = (1 << 3),
 	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = (1 << 4),
+	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = (1 << 5),
 };
 
 /**

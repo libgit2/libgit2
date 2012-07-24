@@ -20,14 +20,21 @@ static char *diff_prefix_from_pathspec(const git_strarray *pathspec)
 		return NULL;
 
 	/* diff prefix will only be leading non-wildcards */
-	for (scan = prefix.ptr; *scan && !git__iswildcard(*scan); ++scan);
+	for (scan = prefix.ptr; *scan; ++scan) {
+		if (git__iswildcard(*scan) &&
+			(scan == prefix.ptr || (*(scan - 1) != '\\')))
+			break;
+	}
 	git_buf_truncate(&prefix, scan - prefix.ptr);
 
-	if (prefix.size > 0)
-		return git_buf_detach(&prefix);
+	if (prefix.size <= 0) {
+		git_buf_free(&prefix);
+		return NULL;
+	}
 
-	git_buf_free(&prefix);
-	return NULL;
+	git_buf_unescape(&prefix);
+
+	return git_buf_detach(&prefix);
 }
 
 static bool diff_pathspec_is_interesting(const git_strarray *pathspec)
@@ -54,7 +61,11 @@ static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
 		return true;
 
 	git_vector_foreach(&diff->pathspec, i, match) {
-		int result = p_fnmatch(match->pattern, path, 0);
+		int result = strcmp(match->pattern, path) ? FNM_NOMATCH : 0;
+		
+		if (((diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) == 0) && 
+			result == FNM_NOMATCH)
+			result = p_fnmatch(match->pattern, path, 0);
 
 		/* if we didn't match, look for exact dirname prefix match */
 		if (result == FNM_NOMATCH &&
@@ -826,4 +837,3 @@ int git_diff_merge(
 
 	return error;
 }
-
