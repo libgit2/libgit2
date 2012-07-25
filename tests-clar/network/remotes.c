@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include "refspec.h"
 #include "transport.h"
+#include "remote.h"
 
 static git_remote *_remote;
 static git_repository *_repo;
@@ -33,10 +34,21 @@ void test_network_remotes__parsing(void)
 	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 
+	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIR_FETCH),
+					  "git://github.com/libgit2/libgit2");
+	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIR_PUSH),
+					  "git://github.com/libgit2/libgit2");
+
 	cl_git_pass(git_remote_load(&_remote2, _repo, "test_with_pushurl"));
 	cl_assert_equal_s(git_remote_name(_remote2), "test_with_pushurl");
 	cl_assert_equal_s(git_remote_url(_remote2), "git://github.com/libgit2/fetchlibgit2");
 	cl_assert_equal_s(git_remote_pushurl(_remote2), "git://github.com/libgit2/pushlibgit2");
+
+	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIR_FETCH),
+					  "git://github.com/libgit2/fetchlibgit2");
+	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIR_PUSH),
+					  "git://github.com/libgit2/pushlibgit2");
+
 	git_remote_free(_remote2);
 }
 

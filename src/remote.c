@@ -356,13 +356,32 @@ const git_refspec *git_remote_pushspec(git_remote *remote)
 	return &remote->push;
 }
 
+const char* git_remote__urlfordirection(git_remote *remote, int direction)
+{
+	assert(remote);
+
+	if (direction == GIT_DIR_FETCH) {
+		return remote->url;
+	}
+
+	if (direction == GIT_DIR_PUSH) {
+		return remote->pushurl ? remote->pushurl : remote->url;
+	}
+
+	return NULL;
+}
+
 int git_remote_connect(git_remote *remote, int direction)
 {
 	git_transport *t;
 
 	assert(remote);
 
-	if (git_transport_new(&t, remote->url) < 0)
+	const char* url = git_remote__urlfordirection(remote, direction);
+	if (url == NULL )
+		return -1;
+
+	if (git_transport_new(&t, url) < 0)
 		return -1;
 
 	t->check_cert = remote->check_cert;

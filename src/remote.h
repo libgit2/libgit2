@@ -24,4 +24,6 @@ struct git_remote {
 		check_cert;
 };
 
+const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
+
 #endif
