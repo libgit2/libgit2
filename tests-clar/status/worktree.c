@@ -727,7 +727,7 @@ void test_status_worktree__filemode_changes(void)
 	git_config_free(cfg);
 }
 
-int cb_status__expected_path(const char *p, unsigned int s, void *payload)
+static int cb_status__expected_path(const char *p, unsigned int s, void *payload)
 {
 	const char *expected_path = (const char *)payload;
 
