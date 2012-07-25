@@ -79,6 +79,7 @@ struct git_transport {
 #ifdef GIT_SSL
 	struct gitno_ssl ssl;
 #endif
+	git_vector refs;
 	git_vector common;
 	gitno_buffer buffer;
 	GIT_SOCKET socket;
@@ -92,10 +93,6 @@ struct git_transport {
 	 */
 	int (*negotiation_step)(struct git_transport *transport, void *data, size_t len);
 	/**
-	 * Give a list of references, useful for ls-remote
-	 */
-	int (*ls)(struct git_transport *transport, git_headlist_cb list_cb, void *opaque);
-	/**
 	 * Push the changes over
 	 */
 	int (*push)(struct git_transport *transport);
@@ -108,10 +105,6 @@ struct git_transport {
 	 * Download the packfile
 	 */
 	int (*download_pack)(struct git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats);
-	/**
-	 * Fetch the changes
-	 */
-	int (*fetch)(struct git_transport *transport);
 	/**
 	 * Close the connection
 	 */

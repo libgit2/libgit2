@@ -9,38 +9,36 @@
 #include "pkt.h"
 #include "buffer.h"
 
-int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
+int git_protocol_store_refs(git_transport *t, int flushes)
 {
-	git_buf *buf = &p->buf;
-	git_vector *refs = p->refs;
-	int error;
-	const char *line_end, *ptr;
+	gitno_buffer *buf = &t->buffer;
+	git_vector *refs = &t->refs;
+	int error, flush = 0, recvd;
+	const char *line_end;
+	git_pkt *pkt;
 
-	if (len == 0) { /* EOF */
-		if (git_buf_len(buf) != 0) {
-			giterr_set(GITERR_NET, "Unexpected EOF");
-			return p->error = -1;
-		} else {
-			return 0;
+	do {
+		if (buf->offset > 0)
+			error = git_pkt_parse_line(&pkt, buf->data, &line_end, buf->offset);
+		else
+			error = GIT_EBUFS;
+
+		if (error < 0 && error != GIT_EBUFS)
+			return -1;
+
+		if (error == GIT_EBUFS) {
+			if ((recvd = gitno_recv(buf)) < 0)
+				return -1;
+
+			if (recvd == 0 && !flush) {
+				giterr_set(GITERR_NET, "Early EOF");
+				return -1;
+			}
+
+			continue;
 		}
-	}
 
-	git_buf_put(buf, data, len);
-	ptr = buf->ptr;
-	while (1) {
-		git_pkt *pkt;
-
-		if (git_buf_len(buf) == 0)
-			return 0;
-
-		error = git_pkt_parse_line(&pkt, ptr, &line_end, git_buf_len(buf));
-		if (error == GIT_EBUFS)
-			return 0; /* Ask for more */
-		if (error < 0)
-			return p->error = -1;
-
-		git_buf_consume(buf, line_end);
-
+		gitno_consume(buf, line_end);
 		if (pkt->type == GIT_PKT_ERR) {
 			giterr_set(GITERR_NET, "Remote error: %s", ((git_pkt_err *)pkt)->error);
 			git__free(pkt);
@@ -48,13 +46,13 @@ int git_protocol_store_refs(git_protocol *p, const char *data, size_t len)
 		}
 
 		if (git_vector_insert(refs, pkt) < 0)
-			return p->error = -1;
+			return -1;
 
 		if (pkt->type == GIT_PKT_FLUSH)
-			p->flush = 1;
-	}
+			flush++;
+	} while (flush < flushes);
 
-	return 0;
+	return flush;
 }
 
 int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps)

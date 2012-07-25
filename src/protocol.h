@@ -11,15 +11,7 @@
 #include "buffer.h"
 #include "pkt.h"
 
-typedef struct {
-	git_transport *transport;
-	git_vector *refs;
-	git_buf buf;
-	int error;
-	unsigned int flush :1;
-} git_protocol;
-
-int git_protocol_store_refs(git_protocol *p, const char *data, size_t len);
+int git_protocol_store_refs(git_transport *t, int flushes);
 int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps);
 
 #endif

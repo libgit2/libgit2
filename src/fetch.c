@@ -71,7 +71,7 @@ static int filter_wants(git_remote *remote)
 	if (git_repository_odb__weakptr(&p.odb, remote->repo) < 0)
 		return -1;
 
-	return remote->transport->ls(remote->transport, &filter_ref__cb, &p);
+	return git_remote_ls(remote, filter_ref__cb, &p);
 }
 
 /* Wait until we get an ack from the */

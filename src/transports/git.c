@@ -24,9 +24,6 @@
 
 typedef struct {
 	git_transport parent;
-	git_protocol proto;
-	git_vector refs;
-	git_remote_head **heads;
 	char buff[1024];
 #ifdef GIT_WIN32
 	WSADATA wsd;
@@ -125,38 +122,6 @@ on_error:
 }
 
 /*
- * Read from the socket and store the references in the vector
- */
-static int store_refs(transport_git *t)
-{
-	gitno_buffer *buf = &t->parent.buffer;
-	int ret = 0;
-
-	while (1) {
-		if ((ret = gitno_recv(buf)) < 0)
-			return -1;
-		if (ret == 0) /* Orderly shutdown, so exit */
-			return 0;
-
-		ret = git_protocol_store_refs(&t->proto, buf->data, buf->offset);
-		if (ret == GIT_EBUFS) {
-			gitno_consume_n(buf, buf->len);
-			continue;
-		}
-
-		if (ret < 0)
-			return ret;
-
-		gitno_consume_n(buf, buf->offset);
-
-		if (t->proto.flush) { /* No more refs */
-			t->proto.flush = 0;
-			return 0;
-		}
-	}
-}
-
-/*
  * Since this is a network connection, we need to parse and store the
  * pkt-lines at this stage and keep them there.
  */
@@ -170,48 +135,19 @@ static int git_connect(git_transport *transport, int direction)
 	}
 
 	t->parent.direction = direction;
-	if (git_vector_init(&t->refs, 16, NULL) < 0)
-		return -1;
 
 	/* Connect and ask for the refs */
 	if (do_connect(t, transport->url) < 0)
-		goto cleanup;
+		return -1;
 
 	gitno_buffer_setup(transport, &transport->buffer, t->buff, sizeof(t->buff));
 
 	t->parent.connected = 1;
-	if (store_refs(t) < 0)
-		goto cleanup;
+	if (git_protocol_store_refs(transport, 1) < 0)
+		return -1;
 
-	if (git_protocol_detect_caps(git_vector_get(&t->refs, 0), &transport->caps) < 0)
-		goto cleanup;
-
-	return 0;
-cleanup:
-	git_vector_free(&t->refs);
-	return -1;
-}
-
-static int git_ls(git_transport *transport, git_headlist_cb list_cb, void *opaque)
-{
-	transport_git *t = (transport_git *) transport;
-	git_vector *refs = &t->refs;
-	unsigned int i;
-	git_pkt *p = NULL;
-
-	git_vector_foreach(refs, i, p) {
-		git_pkt_ref *pkt = NULL;
-
-		if (p->type != GIT_PKT_REF)
-			continue;
-
-		pkt = (git_pkt_ref *)p;
-
-		if (list_cb(&pkt->head, opaque) < 0) {
-			giterr_set(GITERR_NET, "User callback returned error");
-			return -1;
-		}
-	}
+	if (git_protocol_detect_caps(git_vector_get(&transport->refs, 0), &transport->caps) < 0)
+		return -1;
 
 	return 0;
 }
@@ -229,6 +165,7 @@ static int git_close(git_transport *t)
 		return -1;
 	/* Can't do anything if there's an error, so don't bother checking  */
 	gitno_send(t, buf.ptr, buf.size, 0);
+	git_buf_free(&buf);
 
 	if (gitno_close(t->socket) < 0) {
 		giterr_set(GITERR_NET, "Failed to close socket");
@@ -247,17 +184,22 @@ static int git_close(git_transport *t)
 static void git_free(git_transport *transport)
 {
 	transport_git *t = (transport_git *) transport;
-	git_vector *refs = &t->refs;
+	git_vector *refs = &transport->refs;
 	unsigned int i;
 
 	for (i = 0; i < refs->length; ++i) {
 		git_pkt *p = git_vector_get(refs, i);
 		git_pkt_free(p);
 	}
-
 	git_vector_free(refs);
-	git__free(t->heads);
-	git_buf_free(&t->proto.buf);
+
+	refs = &transport->common;
+	for (i = 0; i < refs->length; ++i) {
+		git_pkt *p = git_vector_get(refs, i);
+		git_pkt_free(p);
+	}
+	git_vector_free(refs);
+
 	git__free(t->parent.url);
 	git__free(t);
 }
@@ -273,18 +215,16 @@ int git_transport_git(git_transport **out)
 	GITERR_CHECK_ALLOC(t);
 
 	memset(t, 0x0, sizeof(transport_git));
-	if (git_vector_init(&t->parent.common, 8, NULL)) {
-		git__free(t);
-		return -1;
-	}
+	if (git_vector_init(&t->parent.common, 8, NULL))
+		goto on_error;
+
+	if (git_vector_init(&t->parent.refs, 16, NULL) < 0)
+		goto on_error;
 
 	t->parent.connect = git_connect;
 	t->parent.negotiation_step = git_negotiation_step;
-	t->parent.ls = git_ls;
 	t->parent.close = git_close;
 	t->parent.free = git_free;
-	t->proto.refs = &t->refs;
-	t->proto.transport = (git_transport *) t;
 
 	*out = (git_transport *) t;
 
@@ -298,4 +238,8 @@ int git_transport_git(git_transport **out)
 #endif
 
 	return 0;
+
+on_error:
+	git__free(t);
+	return -1;
 }

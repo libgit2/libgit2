@@ -29,11 +29,8 @@ enum last_cb {
 
 typedef struct {
 	git_transport parent;
-	git_protocol proto;
-	git_vector refs;
 	http_parser_settings settings;
 	git_buf buf;
-	git_remote_head **heads;
 	int error;
 	int transfer_finished :1,
 		ct_found :1,
@@ -183,17 +180,6 @@ static int on_headers_complete(http_parser *parser)
 	return 0;
 }
 
-static int on_body_store_refs(http_parser *parser, const char *str, size_t len)
-{
-	transport_http *t = (transport_http *) parser->data;
-
-	if (parser->status_code == 404) {
-		return git_buf_put(&t->buf, str, len);
-	}
-
-	return git_protocol_store_refs(&t->proto, str, len);
-}
-
 static int on_message_complete(http_parser *parser)
 {
 	transport_http *t = (transport_http *) parser->data;
@@ -208,57 +194,64 @@ static int on_message_complete(http_parser *parser)
 	return 0;
 }
 
-static int store_refs(transport_http *t)
+static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 {
-	git_transport *transport = (git_transport *) t;
-	http_parser_settings settings;
-	char buffer[1024];
-	gitno_buffer buf;
-	git_pkt *pkt;
-	int ret;
+	git_transport *transport = (git_transport *) parser->data;
+	transport_http *t = (transport_http *) parser->data;
+	gitno_buffer *buf = &transport->buffer;
+
+	if (buf->len - buf->offset < len) {
+		giterr_set(GITERR_NET, "Can't fit data in the buffer");
+		return t->error = -1;
+	}
+
+	memcpy(buf->data + buf->offset, str, len);
+	buf->offset += len;
+
+	return 0;
+}
+
+static int http_recv_cb(gitno_buffer *buf)
+{
+	git_transport *transport = (git_transport *) buf->cb_data;
+	transport_http *t = (transport_http *) transport;
+	size_t old_len;
+	gitno_buffer inner;
+	char buffer[2048];
+	int error;
+
+	if (t->transfer_finished)
+		return 0;
+
+	gitno_buffer_setup(transport, &inner, buffer, sizeof(buffer));
+
+	if ((error = gitno_recv(&inner)) < 0)
+		return -1;
+
+	old_len = buf->offset;
+	http_parser_execute(&t->parser, &t->settings, inner.data, inner.offset);
+	if (t->error < 0)
+		return t->error;
+
+	return buf->offset - old_len;
+}
+
+/* Set up the gitno_buffer so calling gitno_recv() grabs data from the HTTP response */
+static void setup_gitno_buffer(git_transport *transport)
+{
+	transport_http *t = (transport_http *) transport;
 
 	http_parser_init(&t->parser, HTTP_RESPONSE);
 	t->parser.data = t;
-	memset(&settings, 0x0, sizeof(http_parser_settings));
-	settings.on_header_field = on_header_field;
-	settings.on_header_value = on_header_value;
-	settings.on_headers_complete = on_headers_complete;
-	settings.on_body = on_body_store_refs;
-	settings.on_message_complete = on_message_complete;
+	t->transfer_finished = 0;
+	memset(&t->settings, 0x0, sizeof(http_parser_settings));
+	t->settings.on_header_field = on_header_field;
+	t->settings.on_header_value = on_header_value;
+	t->settings.on_headers_complete = on_headers_complete;
+	t->settings.on_body = on_body_fill_buffer;
+	t->settings.on_message_complete = on_message_complete;
 
-	gitno_buffer_setup((git_transport *)t, &buf, buffer, sizeof(buffer));
-
-	while(1) {
-		size_t parsed;
-
-		if ((ret = gitno_recv(&buf)) < 0)
-			return -1;
-
-		parsed = http_parser_execute(&t->parser, &settings, buf.data, buf.offset);
-		/* Both should happen at the same time */
-		if (parsed != buf.offset || t->error < 0)
-			return t->error;
-
-		gitno_consume_n(&buf, parsed);
-
-		if (ret == 0 || t->transfer_finished)
-			break;
-	}
-
-	pkt = git_vector_get(&t->refs, 0);
-	if (pkt == NULL || pkt->type != GIT_PKT_COMMENT) {
-		giterr_set(GITERR_NET, "Invalid HTTP response");
-		return t->error = -1;
-	} else {
-		/* Remove the comment and flush pkts */
-		git_vector_remove(&t->refs, 0);
-		git_vector_remove(&t->refs, 0);
-	}
-
-	if (git_protocol_detect_caps(git_vector_get(&t->refs, 0), &transport->caps) < 0)
-		return t->error = -1;
-
-	return 0;
+	gitno_buffer_setup_callback(transport, &transport->buffer, t->buffer, sizeof(t->buffer), http_recv_cb, t);
 }
 
 static int http_connect(git_transport *transport, int direction)
@@ -269,6 +262,7 @@ static int http_connect(git_transport *transport, int direction)
 	const char *service = "upload-pack";
 	const char *url = t->parent.url, *prefix_http = "http://", *prefix_https = "https://";
 	const char *default_port;
+	git_pkt *pkt;
 
 	if (direction == GIT_DIR_PUSH) {
 		giterr_set(GITERR_NET, "Pushing over HTTP is not implemented");
@@ -276,8 +270,6 @@ static int http_connect(git_transport *transport, int direction)
 	}
 
 	t->parent.direction = direction;
-	if (git_vector_init(&t->refs, 16, NULL) < 0)
-		return -1;
 
 	if (!git__prefixcmp(url, prefix_http)) {
 		url = t->parent.url + strlen(prefix_http);
@@ -310,75 +302,31 @@ static int http_connect(git_transport *transport, int direction)
 	if (gitno_send(transport, request.ptr, request.size, 0) < 0)
 		goto cleanup;
 
-	ret = store_refs(t);
+	setup_gitno_buffer(transport);
+	if ((ret = git_protocol_store_refs(transport, 2)) < 0)
+		goto cleanup;
+
+	pkt = git_vector_get(&transport->refs, 0);
+	if (pkt == NULL || pkt->type != GIT_PKT_COMMENT) {
+		giterr_set(GITERR_NET, "Invalid HTTP response");
+		return t->error = -1;
+	} else {
+		/* Remove the comment and flush pkts */
+		git_vector_remove(&transport->refs, 0);
+		git__free(pkt);
+		pkt = git_vector_get(&transport->refs, 0);
+		git_vector_remove(&transport->refs, 0);
+		git__free(pkt);
+	}
+
+	if (git_protocol_detect_caps(git_vector_get(&transport->refs, 0), &transport->caps) < 0)
+		return t->error = -1;
 
 cleanup:
 	git_buf_free(&request);
 	git_buf_clear(&t->buf);
 
 	return ret;
-}
-
-static int http_ls(git_transport *transport, git_headlist_cb list_cb, void *opaque)
-{
-	transport_http *t = (transport_http *) transport;
-	git_vector *refs = &t->refs;
-	unsigned int i;
-	git_pkt_ref *p;
-
-	git_vector_foreach(refs, i, p) {
-		if (p->type != GIT_PKT_REF)
-			continue;
-
-		if (list_cb(&p->head, opaque) < 0) {
-			giterr_set(GITERR_NET, "The user callback returned error");
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
-{
-	git_transport *transport = (git_transport *) parser->data;
-	transport_http *t = (transport_http *) parser->data;
-	gitno_buffer *buf = &transport->buffer;
-
-	if (buf->len - buf->offset < len) {
-		giterr_set(GITERR_NET, "Can't fit data in the buffer");
-		return t->error = -1;
-	}
-
-	memcpy(buf->data + buf->offset, str, len);
-	buf->offset += len;
-
-	return 0;
-}
-
-static int http_recv_cb(gitno_buffer *buf)
-{
-	git_transport *transport = (git_transport *) buf->cb_data;
-	transport_http *t = (transport_http *) transport;
-	size_t parsed, old_len;
-	gitno_buffer inner;
-	char buffer[2048];
-	int error;
-
-	if (t->transfer_finished)
-		return 0;
-
-	gitno_buffer_setup(transport, &inner, buffer, sizeof(buffer));
-
-	if ((error = gitno_recv(&inner)) < 0)
-		return -1;
-
-	old_len = buf->offset;
-	parsed = http_parser_execute(&t->parser, &t->settings, inner.data, inner.offset);
-	if (t->error < 0)
-		return t->error;
-
-	return buf->offset - old_len;
 }
 
 static int http_negotiation_step(struct git_transport *transport, void *data, size_t len)
@@ -403,17 +351,7 @@ static int http_negotiation_step(struct git_transport *transport, void *data, si
 	git_buf_free(&request);
 
 	/* Then we need to set up the buffer to grab data from the HTTP response */
-	http_parser_init(&t->parser, HTTP_RESPONSE);
-	t->parser.data = t;
-	t->transfer_finished = 0;
-	memset(&t->settings, 0x0, sizeof(http_parser_settings));
-	t->settings.on_header_field = on_header_field;
-	t->settings.on_header_value = on_header_value;
-	t->settings.on_headers_complete = on_headers_complete;
-	t->settings.on_body = on_body_fill_buffer;
-	t->settings.on_message_complete = on_message_complete;
-
-	gitno_buffer_setup_callback(transport, &transport->buffer, t->buffer, sizeof(t->buffer), http_recv_cb, t);
+	setup_gitno_buffer(transport);
 
 	return 0;
 
@@ -441,7 +379,7 @@ static int http_close(git_transport *transport)
 static void http_free(git_transport *transport)
 {
 	transport_http *t = (transport_http *) transport;
-	git_vector *refs = &t->refs;
+	git_vector *refs = &transport->refs;
 	git_vector *common = &transport->common;
 	unsigned int i;
 	git_pkt *p;
@@ -463,8 +401,6 @@ static void http_free(git_transport *transport)
 	}
 	git_vector_free(common);
 	git_buf_free(&t->buf);
-	git_buf_free(&t->proto.buf);
-	git__free(t->heads);
 	git__free(t->content_type);
 	git__free(t->host);
 	git__free(t->port);
@@ -483,13 +419,15 @@ int git_transport_http(git_transport **out)
 	memset(t, 0x0, sizeof(transport_http));
 
 	t->parent.connect = http_connect;
-	t->parent.ls = http_ls;
 	t->parent.negotiation_step = http_negotiation_step;
 	t->parent.close = http_close;
 	t->parent.free = http_free;
 	t->parent.rpc = 1;
-	t->proto.refs = &t->refs;
-	t->proto.transport = (git_transport *) t;
+
+	if (git_vector_init(&t->parent.refs, 16, NULL) < 0) {
+		git__free(t);
+		return -1;
+	}
 
 #ifdef GIT_WIN32
 	/* on win32, the WSA context needs to be initialized
