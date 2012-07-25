@@ -61,45 +61,26 @@ static int ssl_set_error(gitno_ssl *ssl, int error)
 }
 #endif
 
-void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, unsigned int len, int (*recv)(gitno_buffer *buf), void *cb_data)
-{
-	memset(buf, 0x0, sizeof(gitno_buffer));
-	memset(data, 0x0, len);
-	buf->data = data;
-	buf->len = len;
-	buf->offset = 0;
-	buf->fd = t->socket;
-#ifdef GIT_SSL
-	if (t->encrypt)
-		buf->ssl = &t->ssl;
-#endif
-
-	buf->recv = recv;
-	buf->cb_data = cb_data;
-}
-
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
-{
-	gitno_buffer_setup_callback(t, buf, data, len, gitno__recv, NULL);
-}
-
 int gitno_recv(gitno_buffer *buf)
 {
 	return buf->recv(buf);
 }
 
 #ifdef GIT_SSL
-static int ssl_recv(gitno_ssl *ssl, void *data, size_t len)
+static int gitno__recv_ssl(gitno_buffer *buf)
 {
 	int ret;
 
 	do {
-		ret = SSL_read(ssl->ssl, data, len);
-	} while (SSL_get_error(ssl->ssl, ret) == SSL_ERROR_WANT_READ);
+		ret = SSL_read(buf->ssl->ssl, buf->data + buf->offset, buf->len - buf->offset);
+	} while (SSL_get_error(buf->ssl->ssl, ret) == SSL_ERROR_WANT_READ);
 
-	if (ret < 0)
-		return ssl_set_error(ssl, ret);
+	if (ret < 0) {
+		net_set_error("Error receiving socket data");
+		return -1;
+	}
 
+	buf->offset += ret;
 	return ret;
 }
 #endif
@@ -108,27 +89,37 @@ int gitno__recv(gitno_buffer *buf)
 {
 	int ret;
 
-#ifdef GIT_SSL
-	if (buf->ssl != NULL) {
-		if ((ret = ssl_recv(buf->ssl, buf->data + buf->offset, buf->len - buf->offset)) < 0)
-			return -1;
-	} else {
-		ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
-		if (ret < 0) {
-			net_set_error("Error receiving socket data");
-			return -1;
-		}
-	}
-#else
 	ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
 	if (ret < 0) {
 		net_set_error("Error receiving socket data");
 		return -1;
 	}
-#endif
 
 	buf->offset += ret;
 	return ret;
+}
+
+void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, unsigned int len, int (*recv)(gitno_buffer *buf), void *cb_data)
+{
+	memset(buf, 0x0, sizeof(gitno_buffer));
+	memset(data, 0x0, len);
+	buf->data = data;
+	buf->len = len;
+	buf->offset = 0;
+	buf->fd = t->socket;
+	buf->recv = recv;
+	buf->cb_data = cb_data;
+}
+
+void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
+{
+#ifdef GIT_SSL
+	if (t->encrypt) {
+		gitno_buffer_setup_callback(t, buf, data, len, gitno__recv_ssl, NULL);
+		buf->ssl = &t->ssl;
+	} else
+#endif
+		gitno_buffer_setup_callback(t, buf, data, len, gitno__recv, NULL);
 }
 
 /* Consume up to ptr and move the rest of the buffer to the beginning */
