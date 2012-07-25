@@ -93,19 +93,6 @@ static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 		if (error < 0 && error != GIT_EBUFS)
 			return -1;
 
-		/* Wait for max. 1 second */
-		if ((error = gitno_select_in(buf, 1, 0)) < 0) {
-			return -1;
-		} else if (error == 0) {
-			/*
-			 * Some servers don't respond immediately, so if this
-			 * happens, we keep sending information until it
-			 * answers. Pretend we received a NAK to convince higher
-			 * layers to do so.
-			 */
-			return GIT_PKT_NAK;
-		}
-
 		if ((ret = gitno_recv(buf)) < 0)
 			return -1;
 	} while (error);
