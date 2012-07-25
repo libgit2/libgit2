@@ -120,6 +120,15 @@ void test_network_remotes__save(void)
 
 	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
 	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/libgit2_push");
+
+	/* remove the pushurl again and see if we can save that too */
+	cl_git_pass(git_remote_set_pushurl(_remote, NULL));
+	cl_git_pass(git_remote_save(_remote));
+	git_remote_free(_remote);
+	_remote = NULL;
+
+	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
+	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
 void test_network_remotes__fnmatch(void)

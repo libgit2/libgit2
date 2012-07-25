@@ -207,12 +207,21 @@ int git_remote_save(const git_remote *remote)
 		return -1;
 	}
 
-	if (remote->pushurl) {
-		git_buf_clear(&buf);
-		if (git_buf_printf(&buf, "remote.%s.pushurl", remote->name) < 0)
-			return -1;
+	git_buf_clear(&buf);
+	if (git_buf_printf(&buf, "remote.%s.pushurl", remote->name) < 0)
+		return -1;
 
+	if (remote->pushurl) {
 		if (git_config_set_string(config, git_buf_cstr(&buf), remote->pushurl) < 0) {
+			git_buf_free(&buf);
+			return -1;
+		}
+	} else {
+		int error = git_config_delete(config, git_buf_cstr(&buf));
+		if (error == GIT_ENOTFOUND) {
+			error = 0;
+		}
+		if (error < 0) {
 			git_buf_free(&buf);
 			return -1;
 		}
