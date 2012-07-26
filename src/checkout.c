@@ -61,25 +61,43 @@ static int blob_contents_to_link(tree_walk_data *data, git_buf *fnbuf,
 
 
 static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
-											const git_oid *id, int mode)
+											const git_oid *id, tree_walk_data *data)
 {
 	int retcode = GIT_ERROR;
+	git_buf contents = GIT_BUF_INIT;
 
-	git_buf filteredcontents = GIT_BUF_INIT;
-	if (!git_filter_blob_contents(&filteredcontents, repo, id, git_buf_cstr(fnbuf))) {
-		int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
-													  GIT_DIR_MODE, mode);
-		if (fd >= 0) {
-			if (!p_write(fd, git_buf_cstr(&filteredcontents),
-							 git_buf_len(&filteredcontents)))
-				retcode = 0;
-			else
-				retcode = GIT_ERROR;
-			p_close(fd);
+	/* Allow disabling of filters */
+	if (data->opts->disable_filters) {
+		git_blob *blob;
+		if (!(retcode = git_blob_lookup(&blob, repo, id))) {
+			retcode = git_blob__getbuf(&contents, blob);
+			git_blob_free(blob);
 		}
+	} else {
+		retcode = git_filter_blob_contents(&contents, repo, id, git_buf_cstr(fnbuf));
 	}
-	git_buf_free(&filteredcontents);
+	if (retcode < 0) goto bctf_cleanup;
 
+	/* Deal with pre-existing files */
+	if (git_path_exists(git_buf_cstr(fnbuf)) &&
+		 data->opts->existing_file_action == GIT_CHECKOUT_SKIP_EXISTING)
+		goto bctf_cleanup;
+
+	/* TODO: use p_open with flags */
+	int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
+												  data->opts->dir_mode,
+												  data->opts->file_mode);
+	if (fd >= 0) {
+		if (!p_write(fd, git_buf_cstr(&contents),
+						 git_buf_len(&contents)))
+			retcode = 0;
+		else
+			retcode = GIT_ERROR;
+		p_close(fd);
+	}
+
+bctf_cleanup:
+	git_buf_free(&contents);
 	return retcode;
 }
 
@@ -111,7 +129,7 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 													  git_tree_entry_id(entry));
 		} else {
 			retcode = blob_contents_to_file(data->repo, &fnbuf,
-													  git_tree_entry_id(entry), attr);
+													  git_tree_entry_id(entry), data);
 		}
 		break;
 
@@ -139,6 +157,16 @@ int git_checkout_index(git_repository *repo, git_checkout_opts *opts, git_indexe
 	if (!opts) opts = &default_opts;
 	if (!stats) stats = &dummy_stats;
 
+	/* Default options */
+	if (!opts->existing_file_action)
+		opts->existing_file_action = GIT_CHECKOUT_OVERWRITE_EXISTING;
+	/* opts->disable_filters is false by default */
+	if (!opts->dir_mode) opts->dir_mode = GIT_DIR_MODE;
+	if (!opts->file_mode)
+		opts->file_mode = 0644; 
+	if (!opts->file_open_flags)
+		opts->file_open_flags = O_CREAT | O_TRUNC | O_WRONLY;
+
 	if (git_repository_is_bare(repo)) {
 		giterr_set(GITERR_INVALID, "Checkout is not allowed for bare repositories");
 		return GIT_ERROR;
@@ -159,7 +187,7 @@ int git_checkout_index(git_repository *repo, git_checkout_opts *opts, git_indexe
 	payload.repo = repo;
 	if (git_repository_odb(&payload.odb, repo) < 0) return GIT_ERROR;
 
-	/* TODO: stats.total is never calculated. */
+	/* TODO: stats->total is never calculated. */
 
 	if (!git_repository_head_tree(&tree, repo)) {
 		/* Checkout the files */
@@ -176,8 +204,9 @@ int git_checkout_index(git_repository *repo, git_checkout_opts *opts, git_indexe
 
 int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer_stats *stats)
 {
-	/* TODO */
-	return -1;
+	/* TODO: read HEAD into index */
+
+	return git_checkout_index(repo, opts, stats);
 }
 
 

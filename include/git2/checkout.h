@@ -30,7 +30,8 @@ typedef struct git_checkout_opts {
 	int existing_file_action; /* default: GIT_CHECKOUT_OVERWRITE_EXISTING */
 	int disable_filters;
 	int dir_mode; /* default is 0755 */
-	int file_open_mode; /* default is O_CREAT | O_TRUNC | O_WRONLY */
+	int file_mode; /* default is 0644 */
+	int file_open_flags; /* default is O_CREAT | O_TRUNC | O_WRONLY */
 } git_checkout_opts;
 
 /**
