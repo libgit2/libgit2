@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include "refspec.h"
 #include "transport.h"
+#include "remote.h"
 
 static git_remote *_remote;
 static git_repository *_repo;
@@ -27,8 +28,37 @@ void test_network_remotes__cleanup(void)
 
 void test_network_remotes__parsing(void)
 {
+	git_remote *_remote2 = NULL;
+
 	cl_assert_equal_s(git_remote_name(_remote), "test");
 	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
+	cl_assert(git_remote_pushurl(_remote) == NULL);
+
+	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIR_FETCH),
+					  "git://github.com/libgit2/libgit2");
+	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIR_PUSH),
+					  "git://github.com/libgit2/libgit2");
+
+	cl_git_pass(git_remote_load(&_remote2, _repo, "test_with_pushurl"));
+	cl_assert_equal_s(git_remote_name(_remote2), "test_with_pushurl");
+	cl_assert_equal_s(git_remote_url(_remote2), "git://github.com/libgit2/fetchlibgit2");
+	cl_assert_equal_s(git_remote_pushurl(_remote2), "git://github.com/libgit2/pushlibgit2");
+
+	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIR_FETCH),
+					  "git://github.com/libgit2/fetchlibgit2");
+	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIR_PUSH),
+					  "git://github.com/libgit2/pushlibgit2");
+
+	git_remote_free(_remote2);
+}
+
+void test_network_remotes__pushurl(void)
+{
+	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/notlibgit2"));
+	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/notlibgit2");
+
+	cl_git_pass(git_remote_set_pushurl(_remote, NULL));
+	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
 void test_network_remotes__parsing_ssh_remote(void)
@@ -81,6 +111,7 @@ void test_network_remotes__save(void)
 	cl_git_pass(git_remote_new(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2", NULL));
 	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/heads/*:refs/remotes/upstream/*"));
 	cl_git_pass(git_remote_set_pushspec(_remote, "refs/heads/*:refs/heads/*"));
+	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/libgit2_push"));
 	cl_git_pass(git_remote_save(_remote));
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -98,6 +129,18 @@ void test_network_remotes__save(void)
 	cl_assert(_refspec != NULL);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/heads/*");
+
+	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
+	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/libgit2_push");
+
+	/* remove the pushurl again and see if we can save that too */
+	cl_git_pass(git_remote_set_pushurl(_remote, NULL));
+	cl_git_pass(git_remote_save(_remote));
+	git_remote_free(_remote);
+	_remote = NULL;
+
+	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
+	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
 void test_network_remotes__fnmatch(void)
@@ -143,13 +186,13 @@ void test_network_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 1);
+	cl_assert(list.count == 2);
 	git_strarray_free(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 2);
+	cl_assert(list.count == 3);
 	git_strarray_free(&list);
 
 	git_config_free(cfg);
@@ -180,4 +223,5 @@ void test_network_remotes__add(void)
 	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/heads/*"));
 	cl_assert(git_refspec_force(_refspec) == 1);
 	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/addtest/*"));
+	cl_assert_equal_s(git_remote_url(_remote), "http://github.com/libgit2/libgit2");
 }

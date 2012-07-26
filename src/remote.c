@@ -131,6 +131,26 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote->url);
 
 	git_buf_clear(&buf);
+	if (git_buf_printf(&buf, "remote.%s.pushurl", name) < 0) {
+		error = -1;
+		goto cleanup;
+	}
+
+	error = git_config_get_string(&val, config, git_buf_cstr(&buf));
+	if (error == GIT_ENOTFOUND)
+		error = 0;
+
+	if (error < 0) {
+		error = -1;
+		goto cleanup;
+	}
+
+	if (val) {
+		remote->pushurl = git__strdup(val);
+		GITERR_CHECK_ALLOC(remote->pushurl);
+	}
+
+	git_buf_clear(&buf);
 	if (git_buf_printf(&buf, "remote.%s.fetch", name) < 0) {
 		error = -1;
 		goto cleanup;
@@ -179,12 +199,32 @@ int git_remote_save(const git_remote *remote)
 	if (git_repository_config__weakptr(&config, remote->repo) < 0)
 		return -1;
 
-	if (git_buf_printf(&buf, "remote.%s.%s", remote->name, "url") < 0)
+	if (git_buf_printf(&buf, "remote.%s.url", remote->name) < 0)
 		return -1;
 
 	if (git_config_set_string(config, git_buf_cstr(&buf), remote->url) < 0) {
 		git_buf_free(&buf);
 		return -1;
+	}
+
+	git_buf_clear(&buf);
+	if (git_buf_printf(&buf, "remote.%s.pushurl", remote->name) < 0)
+		return -1;
+
+	if (remote->pushurl) {
+		if (git_config_set_string(config, git_buf_cstr(&buf), remote->pushurl) < 0) {
+			git_buf_free(&buf);
+			return -1;
+		}
+	} else {
+		int error = git_config_delete(config, git_buf_cstr(&buf));
+		if (error == GIT_ENOTFOUND) {
+			error = 0;
+		}
+		if (error < 0) {
+			git_buf_free(&buf);
+			return -1;
+		}
 	}
 
 	if (remote->fetch.src != NULL && remote->fetch.dst != NULL) {
@@ -238,6 +278,38 @@ const char *git_remote_url(git_remote *remote)
 	return remote->url;
 }
 
+int git_remote_set_url(git_remote *remote, const char* url)
+{
+	assert(remote);
+	assert(url);
+
+	git__free(remote->url);
+	remote->url = git__strdup(url);
+	GITERR_CHECK_ALLOC(remote->url);
+
+	return 0;
+}
+
+const char *git_remote_pushurl(git_remote *remote)
+{
+	assert(remote);
+	return remote->pushurl;
+}
+
+int git_remote_set_pushurl(git_remote *remote, const char* url)
+{
+	assert(remote);
+
+	git__free(remote->pushurl);
+	if (url) {
+		remote->pushurl = git__strdup(url);
+		GITERR_CHECK_ALLOC(remote->pushurl);
+	} else {
+		remote->pushurl = NULL;
+	}
+	return 0;
+}
+
 int git_remote_set_fetchspec(git_remote *remote, const char *spec)
 {
 	git_refspec refspec;
@@ -284,13 +356,32 @@ const git_refspec *git_remote_pushspec(git_remote *remote)
 	return &remote->push;
 }
 
+const char* git_remote__urlfordirection(git_remote *remote, int direction)
+{
+	assert(remote);
+
+	if (direction == GIT_DIR_FETCH) {
+		return remote->url;
+	}
+
+	if (direction == GIT_DIR_PUSH) {
+		return remote->pushurl ? remote->pushurl : remote->url;
+	}
+
+	return NULL;
+}
+
 int git_remote_connect(git_remote *remote, int direction)
 {
 	git_transport *t;
 
 	assert(remote);
 
-	if (git_transport_new(&t, remote->url) < 0)
+	const char* url = git_remote__urlfordirection(remote, direction);
+	if (url == NULL )
+		return -1;
+
+	if (git_transport_new(&t, url) < 0)
 		return -1;
 
 	t->check_cert = remote->check_cert;
@@ -429,6 +520,7 @@ void git_remote_free(git_remote *remote)
 	git__free(remote->push.src);
 	git__free(remote->push.dst);
 	git__free(remote->url);
+	git__free(remote->pushurl);
 	git__free(remote->name);
 	git__free(remote);
 }
