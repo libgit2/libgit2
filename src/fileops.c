@@ -239,6 +239,16 @@ void git_futils_mmap_free(git_map *out)
 	p_munmap(out);
 }
 
+int git_futils_mkdir_q(const char *path, const mode_t mode)
+{
+	if (p_mkdir(path, mode) < 0 && errno != EEXIST) {
+		giterr_set(GITERR_OS, "Failed to create directory at '%s'", path);
+		return -1;
+	}
+
+	return 0;
+}
+
 int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 {
 	git_buf make_path = GIT_BUF_INIT;
