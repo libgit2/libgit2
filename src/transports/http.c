@@ -450,7 +450,7 @@ int git_transport_https(git_transport **out)
 	if (git_transport_http((git_transport **)&t) < 0)
 		return -1;
 
-	t->parent.encrypt = 1;
+	t->parent.use_ssl = 1;
 	t->parent.check_cert = 1;
 	*out = (git_transport *) t;
 

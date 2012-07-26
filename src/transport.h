@@ -73,7 +73,7 @@ struct git_transport {
 	int direction : 1, /* 0 fetch, 1 push */
 		connected : 1,
 		check_cert: 1,
-		encrypt : 1,
+		use_ssl : 1,
 		own_logic: 1, /* transitional */
 		rpc: 1; /* git-speak for the HTTP transport */
 #ifdef GIT_SSL
