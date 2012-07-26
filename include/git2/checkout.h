@@ -21,14 +21,44 @@
  */
 GIT_BEGIN_DECL
 
+
+#define GIT_CHECKOUT_OVERWRITE_EXISTING 0
+#define GIT_CHECKOUT_SKIP_EXISTING 1
+
+
+typedef struct git_checkout_opts {
+	git_indexer_stats stats;
+	int existing_file_action;
+	int apply_filters;
+	int dir_mode;
+	int file_open_mode;
+} git_checkout_opts;
+
+#define GIT_CHECKOUT_DEFAULT_OPTS {  \
+	{0},                              \
+	GIT_CHECKOUT_OVERWRITE_EXISTING,  \
+	true,                             \
+	GIT_DIR_MODE,                     \
+	O_CREAT|O_TRUNC|O_WRONLY          \
+}
+
 /**
- * Updates files in the working tree to match the version in the index.
+ * Updates files in the working tree to match the index.
  *
  * @param repo repository to check out (must be non-bare)
- * @param stats pointer to structure that receives progress information (may be NULL)
+ * @param opts specifies checkout options (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
  */
-GIT_EXTERN(int) git_checkout_force(git_repository *repo, git_indexer_stats *stats);
+GIT_EXTERN(int) git_checkout_index(git_repository *repo, git_checkout_opts *opts);
+
+/**
+ * Updates files in the working tree to match the commit pointed to by HEAD.
+ *
+ * @param repo repository to check out (must be non-bare)
+ * @param opts specifies checkout options (may be NULL)
+ * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
+ */
+GIT_EXTERN(int) git_checkout_head(git_repository *repo, git_checkout_opts *opts);
 
 /** @} */
 GIT_END_DECL
