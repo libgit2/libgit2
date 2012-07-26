@@ -22,25 +22,16 @@
 GIT_BEGIN_DECL
 
 
-#define GIT_CHECKOUT_OVERWRITE_EXISTING 0
+#define GIT_CHECKOUT_OVERWRITE_EXISTING 0 /* default */
 #define GIT_CHECKOUT_SKIP_EXISTING 1
 
-
+/* Use zeros to indicate default settings */
 typedef struct git_checkout_opts {
-	git_indexer_stats stats;
-	int existing_file_action;
-	int apply_filters;
-	int dir_mode;
-	int file_open_mode;
+	int existing_file_action; /* default: GIT_CHECKOUT_OVERWRITE_EXISTING */
+	int disable_filters;
+	int dir_mode; /* default is 0755 */
+	int file_open_mode; /* default is O_CREAT | O_TRUNC | O_WRONLY */
 } git_checkout_opts;
-
-#define GIT_CHECKOUT_DEFAULT_OPTS {  \
-	{0},                              \
-	GIT_CHECKOUT_OVERWRITE_EXISTING,  \
-	true,                             \
-	GIT_DIR_MODE,                     \
-	O_CREAT|O_TRUNC|O_WRONLY          \
-}
 
 /**
  * Updates files in the working tree to match the index.
@@ -49,7 +40,9 @@ typedef struct git_checkout_opts {
  * @param opts specifies checkout options (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
  */
-GIT_EXTERN(int) git_checkout_index(git_repository *repo, git_checkout_opts *opts);
+GIT_EXTERN(int) git_checkout_index(git_repository *repo,
+											  git_checkout_opts *opts,
+											  git_indexer_stats *stats);
 
 /**
  * Updates files in the working tree to match the commit pointed to by HEAD.
@@ -58,7 +51,9 @@ GIT_EXTERN(int) git_checkout_index(git_repository *repo, git_checkout_opts *opts
  * @param opts specifies checkout options (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
  */
-GIT_EXTERN(int) git_checkout_head(git_repository *repo, git_checkout_opts *opts);
+GIT_EXTERN(int) git_checkout_head(git_repository *repo,
+											 git_checkout_opts *opts,
+											 git_indexer_stats *stats);
 
 /** @} */
 GIT_END_DECL

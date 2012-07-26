@@ -27,6 +27,7 @@ GIT_BEGIN_DECL
 
 typedef struct tree_walk_data
 {
+	git_indexer_stats *stats;
 	git_checkout_opts *opts;
 	git_repository *repo;
 	git_odb *odb;
@@ -120,21 +121,23 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 	}
 
 	git_buf_free(&fnbuf);
-	data->opts->stats.processed++;
+	data->stats->processed++;
 	return retcode;
 }
 
 
-int git_checkout_index(git_repository *repo, git_checkout_opts *opts)
+int git_checkout_index(git_repository *repo, git_checkout_opts *opts, git_indexer_stats *stats)
 {
 	int retcode = GIT_ERROR;
-	git_checkout_opts default_opts = GIT_CHECKOUT_DEFAULT_OPTS;
+	git_indexer_stats dummy_stats;
+	git_checkout_opts default_opts = {0};
 	git_tree *tree;
 	tree_walk_data payload;
 	git_config *cfg;
 
 	assert(repo);
 	if (!opts) opts = &default_opts;
+	if (!stats) stats = &dummy_stats;
 
 	if (git_repository_is_bare(repo)) {
 		giterr_set(GITERR_INVALID, "Checkout is not allowed for bare repositories");
@@ -150,12 +153,13 @@ int git_checkout_index(git_repository *repo, git_checkout_opts *opts)
 		git_config_free(cfg);
 	}
 
-	opts->stats.total = opts->stats.processed = 0;
+	stats->total = stats->processed = 0;
+	payload.stats = stats;
 	payload.opts = opts;
 	payload.repo = repo;
 	if (git_repository_odb(&payload.odb, repo) < 0) return GIT_ERROR;
 
-	/* TODO: opts->stats.total is never calculated. */
+	/* TODO: stats.total is never calculated. */
 
 	if (!git_repository_head_tree(&tree, repo)) {
 		/* Checkout the files */
@@ -170,7 +174,7 @@ int git_checkout_index(git_repository *repo, git_checkout_opts *opts)
 }
 
 
-int git_checkout_head(git_repository *repo, git_checkout_opts *opts)
+int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer_stats *stats)
 {
 	/* TODO */
 	return -1;
