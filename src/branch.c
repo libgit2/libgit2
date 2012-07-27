@@ -52,6 +52,7 @@ static int create_error_invalid(const char *msg)
 
 int git_branch_create(
 		git_reference **ref_out,
+		git_repository *repository,
 		const char *branch_name,
 		const git_object *target,
 		int force)
@@ -63,6 +64,7 @@ int git_branch_create(
 	int error = -1;
 
 	assert(branch_name && target && ref_out);
+	assert(git_object_owner(target) == repository);
 
 	target_type = git_object_type(target);
 
@@ -89,7 +91,7 @@ int git_branch_create(
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
-	if (git_reference_create_oid(&branch, git_object_owner(commit),
+	if (git_reference_create_oid(&branch, repository,
 		git_buf_cstr(&canonical_branch_name), git_object_id(commit), force) < 0)
 		goto cleanup;
 
@@ -224,7 +226,8 @@ int git_branch_lookup(
 	return retrieve_branch_reference(ref_out, repo, branch_name, branch_type == GIT_BRANCH_REMOTE);
 }
 
-int retrieve_tracking_configuration(const char **out, git_reference *branch, const char *format)
+static int retrieve_tracking_configuration(
+	const char **out, git_reference *branch, const char *format)
 {
 	git_config *config;
 	git_buf buf = GIT_BUF_INIT;

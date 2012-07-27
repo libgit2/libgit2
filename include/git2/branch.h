@@ -47,6 +47,7 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_branch_create(
 		git_reference **branch_out,
+		git_repository *repo,
 		const char *branch_name,
 		const git_object *target,
 		int force);

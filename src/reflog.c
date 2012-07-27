@@ -183,7 +183,7 @@ static int retrieve_reflog_path(git_buf *path, git_reference *ref)
 		git_reference_owner(ref)->path_repository, GIT_REFLOG_DIR, ref->name);
 }
 
-int create_new_reflog_file(const char *filepath)
+static int create_new_reflog_file(const char *filepath)
 {
 	int fd;
 
