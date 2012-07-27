@@ -983,9 +983,12 @@ static int write_section(git_filebuf *file, const char *key)
 	if (dot == NULL) {
 		git_buf_puts(&buf, key);
 	} else {
+		char *escaped;
 		git_buf_put(&buf, key, dot - key);
-		/* TODO: escape  */
-		git_buf_printf(&buf, " \"%s\"", dot + 1);
+		escaped = escape_value(dot + 1);
+		GITERR_CHECK_ALLOC(escaped);
+		git_buf_printf(&buf, " \"%s\"", escaped);
+		git__free(escaped);
 	}
 	git_buf_puts(&buf, "]\n");
 

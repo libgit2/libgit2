@@ -7,6 +7,14 @@
 	url = git://github.com/libgit2/libgit2
 	fetch = +refs/heads/*:refs/remotes/test/*
 
+[remote "test_with_pushurl"]
+	url = git://github.com/libgit2/fetchlibgit2
+	pushurl = git://github.com/libgit2/pushlibgit2
+	fetch = +refs/heads/*:refs/remotes/test_with_pushurl/*
+
 [branch "master"]
    remote = test
+   merge = refs/heads/master
+[branch "track-local"]
+   remote = .
    merge = refs/heads/master

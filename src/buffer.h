@@ -151,4 +151,7 @@ int git_buf_common_prefix(git_buf *buf, const git_strarray *strings);
 /* Check if buffer looks like it contains binary data */
 bool git_buf_is_binary(const git_buf *buf);
 
+/* Unescape all characters in a buffer */
+void git_buf_unescape(git_buf *buf);
+
 #endif

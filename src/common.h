@@ -49,15 +49,6 @@
 
 #include <regex.h>
 
-extern void git___throw(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
-#define git__throw(error, ...) \
-	(git___throw(__VA_ARGS__), error)
-
-extern void git___rethrow(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
-#define git__rethrow(error, ...) \
-	(git___rethrow(__VA_ARGS__), error)
-
-
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
 
 void giterr_set_oom(void);
@@ -67,6 +58,5 @@ void giterr_set_str(int error_class, const char *string);
 void giterr_set_regex(const regex_t *regex, int error_code);
 
 #include "util.h"
-
 
 #endif /* INCLUDE_common_h__ */

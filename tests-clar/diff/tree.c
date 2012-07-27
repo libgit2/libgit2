@@ -208,3 +208,51 @@ void test_diff_tree__bare(void)
 	git_tree_free(a);
 	git_tree_free(b);
 }
+
+void test_diff_tree__merge(void)
+{
+	/* grabbed a couple of commit oids from the history of the attr repo */
+	const char *a_commit = "605812a";
+	const char *b_commit = "370fe9ec22";
+	const char *c_commit = "f5b0af1fb4f5c";
+	git_tree *a, *b, *c;
+	git_diff_list *diff1 = NULL, *diff2 = NULL;
+	diff_expects exp;
+
+	g_repo = cl_git_sandbox_init("attr");
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
+	cl_assert((c = resolve_commit_oid_to_tree(g_repo, c_commit)) != NULL);
+
+	cl_git_pass(git_diff_tree_to_tree(g_repo, NULL, a, b, &diff1));
+
+	cl_git_pass(git_diff_tree_to_tree(g_repo, NULL, c, b, &diff2));
+
+	git_tree_free(a);
+	git_tree_free(b);
+	git_tree_free(c);
+
+	cl_git_pass(git_diff_merge(diff1, diff2));
+
+	git_diff_list_free(diff2);
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_foreach(
+		diff1, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+
+	cl_assert(exp.files == 6);
+	cl_assert(exp.file_adds == 2);
+	cl_assert(exp.file_dels == 1);
+	cl_assert(exp.file_mods == 3);
+
+	cl_assert(exp.hunks == 6);
+
+	cl_assert(exp.lines == 59);
+	cl_assert(exp.line_ctxt == 1);
+	cl_assert(exp.line_adds == 36);
+	cl_assert(exp.line_dels == 22);
+
+	git_diff_list_free(diff1);
+}

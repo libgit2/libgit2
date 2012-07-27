@@ -80,6 +80,36 @@ GIT_EXTERN(const char *) git_remote_name(git_remote *remote);
 GIT_EXTERN(const char *) git_remote_url(git_remote *remote);
 
 /**
+ * Get the remote's url for pushing
+ *
+ * @param remote the remote
+ * @return a pointer to the url or NULL if no special url for pushing is set
+ */
+GIT_EXTERN(const char *) git_remote_pushurl(git_remote *remote);
+
+/**
+ * Set the remote's url
+ *
+ * Existing connections will not be updated.
+ *
+ * @param remote the remote
+ * @param url the url to set
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_url(git_remote *remote, const char* url);
+
+/**
+ * Set the remote's url for pushing
+ *
+ * Existing connections will not be updated.
+ *
+ * @param remote the remote
+ * @param url the url to set or NULL to clear the pushurl
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_pushurl(git_remote *remote, const char* url);
+
+/**
  * Set the remote's fetch refspec
  *
  * @param remote the remote
@@ -190,7 +220,7 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * @param remote the remote to update
  * @param cb callback to run on each ref update. 'a' is the old value, 'b' is then new value
  */
-GIT_EXTERN(int) git_remote_update_tips(git_remote *remote, int (*cb)(const char *refname, const git_oid *a, const git_oid *b));
+GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
 
 /**
  * Return whether a string is a valid remote URL
@@ -237,6 +267,39 @@ GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const cha
  */
 
 GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
+
+/**
+ * Argument to the completion callback which tells it which operation
+ * finished.
+ */
+typedef enum git_remote_completion_type {
+	GIT_REMOTE_COMPLETION_DOWNLOAD,
+	GIT_REMOTE_COMPLETION_INDEXING,
+	GIT_REMOTE_COMPLETION_ERROR,
+} git_remote_completion_type;
+
+/**
+ * The callback settings structure
+ *
+ * Set the calbacks to be called by the remote.
+ */
+struct git_remote_callbacks {
+	int (*progress)(const char *str, void *data);
+	int (*completion)(git_remote_completion_type type, void *data);
+	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+	void *data;
+};
+
+/**
+ * Set the callbacks for a remote
+ *
+ * Note that the remote keeps its own copy of the data and you need to
+ * call this function again if you want to change the callbacks.
+ *
+ * @param remote the remote to configure
+ * @param callbacks a pointer to the user's callback settings
+ */
+GIT_EXTERN(void) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
 
 /** @} */
 GIT_END_DECL

@@ -1,6 +1,5 @@
 #include "clar_libgit2.h"
 #include "refs.h"
-#include "branch.h"
 
 static git_repository *repo;
 static git_reference *fake_remote;
@@ -48,7 +47,7 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 
 void test_refs_branches_foreach__retrieve_all_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 10);
+	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 11);
 }
 
 void test_refs_branches_foreach__retrieve_remote_branches(void)
@@ -58,7 +57,7 @@ void test_refs_branches_foreach__retrieve_remote_branches(void)
 
 void test_refs_branches_foreach__retrieve_local_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL, 8);
+	assert_retrieval(GIT_BRANCH_LOCAL, 9);
 }
 
 struct expectations {

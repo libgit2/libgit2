@@ -59,3 +59,26 @@ void test_config_stress__comments(void)
 
 	git_config_free(config);
 }
+
+void test_config_stress__escape_subsection_names(void)
+{
+	struct git_config_file *file;
+	git_config *config;
+	const char *str;
+
+	cl_assert(git_path_exists("git-test-config"));
+	cl_git_pass(git_config_file__ondisk(&file, "git-test-config"));
+	cl_git_pass(git_config_new(&config));
+	cl_git_pass(git_config_add_file(config, file, 0));
+
+	cl_git_pass(git_config_set_string(config, "some.sec\\tion.other", "foo"));
+	git_config_free(config);
+
+	cl_git_pass(git_config_file__ondisk(&file, "git-test-config"));
+	cl_git_pass(git_config_new(&config));
+	cl_git_pass(git_config_add_file(config, file, 0));
+
+	cl_git_pass(git_config_get_string(&str, config, "some.sec\\tion.other"));
+	cl_assert(!strcmp("foo", str));
+	git_config_free(config);
+}
