@@ -109,7 +109,7 @@ GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog
  *
  * @return 0 on success or an error code.
  */
-GIT_EXTERN(int) git_reflog_entry_drop(
+GIT_EXTERN(int) git_reflog_drop(
 	git_reflog *reflog,
 	unsigned int idx,
 	int rewrite_previous_entry);

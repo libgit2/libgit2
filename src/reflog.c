@@ -439,7 +439,7 @@ char * git_reflog_entry_msg(const git_reflog_entry *entry)
 	return entry->msg;
 }
 
-int git_reflog_entry_drop(
+int git_reflog_drop(
 	git_reflog *reflog,
 	unsigned int idx,
 	int rewrite_previous_entry)
