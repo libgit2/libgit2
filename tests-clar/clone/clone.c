@@ -4,7 +4,7 @@
 #include "repository.h"
 
 #define DO_LOCAL_TEST 0
-#define DO_LIVE_NETWORK_TESTS 1
+#define DO_LIVE_NETWORK_TESTS 0
 #define LIVE_REPO_URL "http://github.com/libgit2/node-gitteh"
 
 
