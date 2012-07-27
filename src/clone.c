@@ -176,7 +176,7 @@ static int setup_remotes_and_fetch(git_repository *repo,
 		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
 			if (!git_remote_download(origin, &bytes, fetch_stats)) {
 				/* Create "origin/foo" branches for all remote branches */
-				if (!git_remote_update_tips(origin, NULL)) {
+				if (!git_remote_update_tips(origin)) {
 					/* Point HEAD to the same ref as the remote's head */
 					if (!update_head_to_remote(repo, origin)) {
 						retcode = 0;
