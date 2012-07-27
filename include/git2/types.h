@@ -179,6 +179,7 @@ typedef struct git_refspec git_refspec;
 typedef struct git_remote git_remote;
 
 typedef struct git_remote_head git_remote_head;
+typedef struct git_remote_callbacks git_remote_callbacks;
 
 /** @} */
 GIT_END_DECL
