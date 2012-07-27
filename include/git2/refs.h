@@ -363,26 +363,15 @@ GIT_EXTERN(int) git_reference_foreach_glob(
  */
 GIT_EXTERN(int) git_reference_has_log(git_reference *ref);
 
-
 /**
- * Return the reference supporting the remote tracking branch,
- * given a reference branch.
+ * Check if a reference is a local branch.
  *
- * The input reference has to be located in the `refs/heads`
- * namespace.
+ * @param ref A git reference
  *
- * @param tracking_ref Pointer where to store the retrieved
- * reference.
- *
- * @param branch_ref A git local branch reference. 
- *
- * @return 0 on success; GIT_ENOTFOUND when no remote tracking
- * reference exists, otherwise an error code.
+ * @return 1 when the reference lives in the refs/heads
+ * namespace; 0 otherwise.
  */
-GIT_EXTERN(int) git_reference_remote_tracking_from_branch(
-	git_reference **tracking_ref,
-	git_reference *branch_ref
-);
+GIT_EXTERN(int) git_reference_is_branch(git_reference *ref);
 
 /** @} */
 GIT_END_DECL

@@ -11,7 +11,6 @@
 #include "fileops.h"
 #include "pack.h"
 #include "reflog.h"
-#include "config.h"
 
 #include <git2/tag.h>
 #include <git2/object.h>
@@ -1816,75 +1815,9 @@ int git_reference_has_log(
 	return result;
 }
 
-//TODO: How about also taking care of local tracking branches?
-//cf. http://alblue.bandlem.com/2011/07/git-tip-of-week-tracking-branches.html
-int git_reference_remote_tracking_from_branch(
-	git_reference **tracking_ref,
-	git_reference *branch_ref)
+int git_reference_is_branch(git_reference *ref)
 {
-	git_config *config = NULL;
-	const char *name, *remote, *merge;
-	git_buf buf = GIT_BUF_INIT;
-	int error = -1;
+	assert(ref);
 
-	assert(tracking_ref && branch_ref);
-
-	name = git_reference_name(branch_ref);
-
-	if (git__prefixcmp(name, GIT_REFS_HEADS_DIR)) {
-		giterr_set(
-			GITERR_INVALID,
-			"Failed to retrieve tracking reference - '%s' is not a branch.",
-			name);
-		return -1;
-	}
-
-	if (git_repository_config(&config, branch_ref->owner) < 0)
-		return -1;
-
-	if (git_buf_printf(
-		&buf,
-		"branch.%s.remote",
-		name + strlen(GIT_REFS_HEADS_DIR)) < 0)
-			goto cleanup;
-
-	if ((error = git_config_get_string(&remote, config, git_buf_cstr(&buf))) < 0)
-		goto cleanup;
-
-	error = -1;
-
-	git_buf_clear(&buf);
-
-	//TODO: Is it ok to fail when no merge target is found?
-	if (git_buf_printf(
-		&buf,
-		"branch.%s.merge",
-		name + strlen(GIT_REFS_HEADS_DIR)) < 0)
-			goto cleanup;
-
-	if (git_config_get_string(&merge, config, git_buf_cstr(&buf)) < 0)
-		goto cleanup;
-
-	//TODO: Should we test this?
-	if (git__prefixcmp(merge, GIT_REFS_HEADS_DIR))
-		goto cleanup;
-
-	git_buf_clear(&buf);
-
-	if (git_buf_printf(
-		&buf,
-		"refs/remotes/%s/%s",
-		remote,
-		merge + strlen(GIT_REFS_HEADS_DIR)) < 0)
-			goto cleanup;
-
-	error = git_reference_lookup(
-		tracking_ref,
-		branch_ref->owner,
-		git_buf_cstr(&buf));
-
-cleanup:
-	git_config_free(config);
-	git_buf_free(&buf);
-	return error;
+	return git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) == 0;
 }
