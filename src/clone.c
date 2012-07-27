@@ -37,7 +37,7 @@ struct HeadInfo {
 static int create_tracking_branch(git_repository *repo, const git_oid *target, const char *name)
 {
 	git_object *head_obj = NULL;
-	git_oid branch_oid;
+	git_reference *branch_ref;
 	int retcode = GIT_ERROR;
 
 	/* Find the target commit */
@@ -45,7 +45,8 @@ static int create_tracking_branch(git_repository *repo, const git_oid *target, c
 		return GIT_ERROR;
 
 	/* Create the new branch */
-	if (!git_branch_create(&branch_oid, repo, name, head_obj, 0)) {
+	if (!git_branch_create(&branch_ref, repo, name, head_obj, 0)) {
+		git_reference_free(branch_ref);
 		/* Set up tracking */
 		git_config *cfg;
 		if (!git_repository_config(&cfg, repo)) {
@@ -94,7 +95,7 @@ static int update_head_to_new_branch(git_repository *repo, const git_oid *target
 		git_reference *head;
 		if (!git_reference_lookup(&head, repo, GIT_HEAD_FILE)) {
 			git_buf targetbuf = GIT_BUF_INIT;
-			if (!git_buf_printf(&targetbuf, "refs/heads/%s", name) &&
+			if (!git_buf_printf(&targetbuf, "refs/heads/%s", name) && /* TODO: "refs/heads" constant? */
 				 !git_reference_set_target(head, git_buf_cstr(&targetbuf))) {
 				/* Read the tree into the index */
 				git_commit *commit;
