@@ -14,6 +14,7 @@
 struct git_remote {
 	char *name;
 	char *url;
+	char *pushurl;
 	git_vector refs;
 	struct git_refspec fetch;
 	struct git_refspec push;
@@ -22,5 +23,7 @@ struct git_remote {
 	unsigned int need_pack:1,
 		check_cert;
 };
+
+const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
 
 #endif

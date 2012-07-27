@@ -80,6 +80,36 @@ GIT_EXTERN(const char *) git_remote_name(git_remote *remote);
 GIT_EXTERN(const char *) git_remote_url(git_remote *remote);
 
 /**
+ * Get the remote's url for pushing
+ *
+ * @param remote the remote
+ * @return a pointer to the url or NULL if no special url for pushing is set
+ */
+GIT_EXTERN(const char *) git_remote_pushurl(git_remote *remote);
+
+/**
+ * Set the remote's url
+ *
+ * Existing connections will not be updated.
+ *
+ * @param remote the remote
+ * @param url the url to set
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_url(git_remote *remote, const char* url);
+
+/**
+ * Set the remote's url for pushing
+ *
+ * Existing connections will not be updated.
+ *
+ * @param remote the remote
+ * @param url the url to set or NULL to clear the pushurl
+ * @return 0 or an error value
+ */
+GIT_EXTERN(int) git_remote_set_pushurl(git_remote *remote, const char* url);
+
+/**
  * Set the remote's fetch refspec
  *
  * @param remote the remote
