@@ -46,9 +46,10 @@ static int create_tracking_branch(git_repository *repo, const git_oid *target, c
 
 	/* Create the new branch */
 	if (!git_branch_create(&branch_ref, repo, name, head_obj, 0)) {
+		git_config *cfg;
+
 		git_reference_free(branch_ref);
 		/* Set up tracking */
-		git_config *cfg;
 		if (!git_repository_config(&cfg, repo)) {
 			git_buf remote = GIT_BUF_INIT;
 			git_buf merge = GIT_BUF_INIT;
