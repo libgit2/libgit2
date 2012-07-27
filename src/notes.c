@@ -522,7 +522,8 @@ static int process_entry_path(
 	int (*note_cb)(git_note_data *note_data, void *payload),
 	void *payload)
 {
-	int i = 0, j = 0, error = -1, len;
+	int error = -1;
+	size_t i = 0, j = 0, len;
 	git_buf buf = GIT_BUF_INIT;
 	git_note_data note_data;
 

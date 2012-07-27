@@ -553,7 +553,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 }
 
 int git_odb_read_prefix(
-	git_odb_object **out, git_odb *db, const git_oid *short_id, unsigned int len)
+	git_odb_object **out, git_odb *db, const git_oid *short_id, size_t len)
 {
 	unsigned int i;
 	int error = GIT_ENOTFOUND;

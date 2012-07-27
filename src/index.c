@@ -329,16 +329,16 @@ int git_index_write(git_index *index)
 unsigned int git_index_entrycount(git_index *index)
 {
 	assert(index);
-	return index->entries.length;
+	return (unsigned int)index->entries.length;
 }
 
 unsigned int git_index_entrycount_unmerged(git_index *index)
 {
 	assert(index);
-	return index->unmerged.length;
+	return (unsigned int)index->unmerged.length;
 }
 
-git_index_entry *git_index_get(git_index *index, unsigned int n)
+git_index_entry *git_index_get(git_index *index, size_t n)
 {
 	git_vector_sort(&index->entries);
 	return git_vector_get(&index->entries, n);
@@ -584,7 +584,7 @@ const git_index_entry_unmerged *git_index_get_unmerged_bypath(
 }
 
 const git_index_entry_unmerged *git_index_get_unmerged_byindex(
-	git_index *index, unsigned int n)
+	git_index *index, size_t n)
 {
 	assert(index);
 	return git_vector_get(&index->unmerged, n);
@@ -963,7 +963,7 @@ static int write_index(git_index *index, git_filebuf *file)
 
 	header.signature = htonl(INDEX_HEADER_SIG);
 	header.version = htonl(is_extended ? INDEX_VERSION_NUMBER_EXT : INDEX_VERSION_NUMBER);
-	header.entry_count = htonl(index->entries.length);
+	header.entry_count = htonl((uint32_t)index->entries.length);
 
 	if (git_filebuf_write(file, &header, sizeof(struct index_header)) < 0)
 		return -1;

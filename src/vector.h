@@ -12,16 +12,16 @@
 typedef int (*git_vector_cmp)(const void *, const void *);
 
 typedef struct git_vector {
-	unsigned int _alloc_size;
+	size_t _alloc_size;
 	git_vector_cmp _cmp;
 	void **contents;
-	unsigned int length;
+	size_t length;
 	int sorted;
 } git_vector;
 
 #define GIT_VECTOR_INIT {0}
 
-int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp);
+int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
 void git_vector_clear(git_vector *v);
 void git_vector_swap(git_vector *a, git_vector *b);
@@ -45,12 +45,12 @@ GIT_INLINE(int) git_vector_bsearch2(
 	return git_vector_bsearch3(NULL, v, cmp, key);
 }
 
-GIT_INLINE(void *) git_vector_get(git_vector *v, unsigned int position)
+GIT_INLINE(void *) git_vector_get(git_vector *v, size_t position)
 {
 	return (position < v->length) ? v->contents[position] : NULL;
 }
 
-GIT_INLINE(const void *) git_vector_get_const(const git_vector *v, unsigned int position)
+GIT_INLINE(const void *) git_vector_get_const(const git_vector *v, size_t position)
 {
 	return (position < v->length) ? v->contents[position] : NULL;
 }

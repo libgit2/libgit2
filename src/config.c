@@ -410,7 +410,7 @@ int git_config_get_multivar(git_config *cfg, const char *name, const char *regex
 	file_internal *internal;
 	git_config_file *file;
 	int ret = GIT_ENOTFOUND;
-	unsigned int i;
+	size_t i;
 
 	assert(cfg->files.length);
 
@@ -434,7 +434,7 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 	file_internal *internal;
 	git_config_file *file;
 	int ret = GIT_ENOTFOUND;
-	unsigned int i;
+	size_t i;
 
 	for (i = cfg->files.length; i > 0; --i) {
 		internal = git_vector_get(&cfg->files, i - 1);

@@ -234,7 +234,7 @@ const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename
 	return entry_fromname(tree, filename, strlen(filename));
 }
 
-const git_tree_entry *git_tree_entry_byindex(git_tree *tree, unsigned int idx)
+const git_tree_entry *git_tree_entry_byindex(git_tree *tree, size_t idx)
 {
 	assert(tree);
 	return git_vector_get(&tree->entries, idx);
@@ -270,7 +270,7 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 unsigned int git_tree_entrycount(git_tree *tree)
 {
 	assert(tree);
-	return tree->entries.length;
+	return (unsigned int)tree->entries.length;
 }
 
 static int tree_error(const char *str)
@@ -501,7 +501,7 @@ static void sort_entries(git_treebuilder *bld)
 int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 {
 	git_treebuilder *bld;
-	unsigned int i, source_entries = DEFAULT_TREE_SIZE;
+	size_t i, source_entries = DEFAULT_TREE_SIZE;
 
 	assert(builder_p);
 

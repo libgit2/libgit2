@@ -46,7 +46,7 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, const git_oid *id, unsigned int len)
+GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, const git_oid *id, size_t len)
 {
 	return git_object_lookup_prefix((git_object **)blob, repo, id, len, GIT_OBJ_BLOB);
 }

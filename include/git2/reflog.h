@@ -92,7 +92,7 @@ GIT_EXTERN(unsigned int) git_reflog_entrycount(git_reflog *reflog);
  * @param idx the position to lookup
  * @return the entry; NULL if not found
  */
-GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog, unsigned int idx);
+GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog, size_t idx);
 
 /**
  * Remove an entry from the reflog by its index

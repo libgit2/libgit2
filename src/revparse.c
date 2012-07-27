@@ -338,7 +338,7 @@ cleanup:
 	return error;
 }
 
-static int handle_at_syntax(git_object **out, git_reference **ref, const char *spec, int identifier_len, git_repository* repo, const char *curly_braces_content)
+static int handle_at_syntax(git_object **out, git_reference **ref, const char *spec, size_t identifier_len, git_repository* repo, const char *curly_braces_content)
 {
 	bool is_numeric;
 	int parsed = 0, error = -1;
@@ -547,7 +547,7 @@ static int handle_caret_curly_syntax(git_object **out, git_object *obj, const ch
 	return git_object_peel(out, obj, expected_type);
 }
 
-static int extract_curly_braces_content(git_buf *buf, const char *spec, int *pos)
+static int extract_curly_braces_content(git_buf *buf, const char *spec, size_t *pos)
 {
 	git_buf_clear(buf);
 
@@ -572,7 +572,7 @@ static int extract_curly_braces_content(git_buf *buf, const char *spec, int *pos
 	return 0;
 }
 
-static int extract_path(git_buf *buf, const char *spec, int *pos)
+static int extract_path(git_buf *buf, const char *spec, size_t *pos)
 {
 	git_buf_clear(buf);
 
@@ -588,7 +588,7 @@ static int extract_path(git_buf *buf, const char *spec, int *pos)
 	return 0;
 }
 
-static int extract_how_many(int *n, const char *spec, int *pos)
+static int extract_how_many(int *n, const char *spec, size_t *pos)
 {
 	const char *end_ptr;
 	int parsed, accumulated;
@@ -633,7 +633,7 @@ static int object_from_reference(git_object **object, git_reference *reference)
 	return error;
 }
 
-static int ensure_base_rev_loaded(git_object **object, git_reference **reference, const char *spec, int identifier_len, git_repository *repo, bool allow_empty_identifier)
+static int ensure_base_rev_loaded(git_object **object, git_reference **reference, const char *spec, size_t identifier_len, git_repository *repo, bool allow_empty_identifier)
 {
 	int error;
 	git_buf identifier = GIT_BUF_INIT;
@@ -670,7 +670,7 @@ static int ensure_base_rev_is_not_known_yet(git_object *object, const char *spec
 	return revspec_error(spec);
 }
 
-static bool any_left_hand_identifier(git_object *object, git_reference *reference, int identifier_len)
+static bool any_left_hand_identifier(git_object *object, git_reference *reference, size_t identifier_len)
 {
 	if (object != NULL)
 		return true;
@@ -694,7 +694,7 @@ static int ensure_left_hand_identifier_is_not_known_yet(git_object *object, git_
 
 int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
-	int pos = 0, identifier_len = 0;
+	size_t pos = 0, identifier_len = 0;
 	int error = -1, n;
 	git_buf buf = GIT_BUF_INIT;
 

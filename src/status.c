@@ -81,7 +81,7 @@ int git_status_foreach_ext(
 	git_status_show_t show =
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	git_diff_delta *i2h, *w2i;
-	unsigned int i, j, i_max, j_max;
+	size_t i, j, i_max, j_max;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 

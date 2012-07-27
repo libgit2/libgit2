@@ -147,7 +147,7 @@ GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
  * @param len the number of hex chars to compare
  * @return 0 in case of a match
  */
-GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, unsigned int len);
+GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, size_t len);
 
 /**
  * Check if an oid equals an hex formatted object id.

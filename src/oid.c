@@ -166,7 +166,7 @@ int git_oid_cmp(const git_oid *a, const git_oid *b)
 	return memcmp(a->id, b->id, sizeof(a->id));
 }
 
-int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, unsigned int len)
+int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 {
 	const unsigned char *a = oid_a->id;
 	const unsigned char *b = oid_b->id;
