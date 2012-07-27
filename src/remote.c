@@ -374,10 +374,11 @@ const char* git_remote__urlfordirection(git_remote *remote, int direction)
 int git_remote_connect(git_remote *remote, int direction)
 {
 	git_transport *t;
+	const char *url;
 
 	assert(remote);
 
-	const char* url = git_remote__urlfordirection(remote, direction);
+	url = git_remote__urlfordirection(remote, direction);
 	if (url == NULL )
 		return -1;
 
