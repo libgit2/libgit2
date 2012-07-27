@@ -120,7 +120,8 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 
 	case GIT_OBJ_COMMIT:
 		/* Submodule */
-		retcode = p_mkdir(git_buf_cstr(&fnbuf), 0644);
+		git_futils_mkpath2file(git_buf_cstr(&fnbuf), data->opts->dir_mode);
+		retcode = p_mkdir(git_buf_cstr(&fnbuf), data->opts->dir_mode);
 		break;
 
 	case GIT_OBJ_BLOB:
