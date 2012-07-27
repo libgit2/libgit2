@@ -64,7 +64,13 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
 											const git_oid *id, tree_walk_data *data)
 {
 	int retcode = GIT_ERROR;
+	int fd = -1;
 	git_buf contents = GIT_BUF_INIT;
+
+	/* Deal with pre-existing files */
+	if (git_path_exists(git_buf_cstr(fnbuf)) &&
+		 data->opts->existing_file_action == GIT_CHECKOUT_SKIP_EXISTING)
+		return 0;
 
 	/* Allow disabling of filters */
 	if (data->opts->disable_filters) {
@@ -78,23 +84,17 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
 	}
 	if (retcode < 0) goto bctf_cleanup;
 
-	/* Deal with pre-existing files */
-	if (git_path_exists(git_buf_cstr(fnbuf)) &&
-		 data->opts->existing_file_action == GIT_CHECKOUT_SKIP_EXISTING)
+	if ((retcode = git_futils_mkpath2file(git_buf_cstr(fnbuf), data->opts->dir_mode)) < 0)
 		goto bctf_cleanup;
 
-	/* TODO: use p_open with flags */
-	int fd = git_futils_creat_withpath(git_buf_cstr(fnbuf),
-												  data->opts->dir_mode,
-												  data->opts->file_mode);
-	if (fd >= 0) {
-		if (!p_write(fd, git_buf_cstr(&contents),
-						 git_buf_len(&contents)))
-			retcode = 0;
-		else
-			retcode = GIT_ERROR;
-		p_close(fd);
-	}
+	fd = p_open(git_buf_cstr(fnbuf), data->opts->file_open_flags, data->opts->file_mode);
+	if (fd < 0) goto bctf_cleanup;
+
+	if (!p_write(fd, git_buf_cstr(&contents), git_buf_len(&contents)))
+		retcode = 0;
+	else
+		retcode = GIT_ERROR;
+	p_close(fd);
 
 bctf_cleanup:
 	git_buf_free(&contents);
