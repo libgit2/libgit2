@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <unistd.h>
 
 struct dl_data {
 	git_remote *remote;
@@ -39,7 +40,7 @@ exit:
 	pthread_exit(&data->ret);
 }
 
-int update_cb(const char *refname, const git_oid *a, const git_oid *b)
+int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
 	const char *action;
 	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
@@ -65,6 +66,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	git_indexer_stats stats;
 	pthread_t worker;
 	struct dl_data data;
+	git_remote_callbacks callbacks;
 
 	// Figure out whether it's a named remote or a URL
 	printf("Fetching %s\n", argv[1]);
@@ -72,6 +74,11 @@ int fetch(git_repository *repo, int argc, char **argv)
 		if (git_remote_new(&remote, repo, NULL, argv[1], NULL) < 0)
 			return -1;
 	}
+
+	// Set up the callbacks (only update_tips for now)
+	memset(&callbacks, 0, sizeof(callbacks));
+	callbacks.update_tips = &update_cb;
+	git_remote_set_callbacks(remote, &callbacks);
 
 	// Set up the information for the background worker thread
 	data.remote = remote;
@@ -101,7 +108,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// right commits. This may be needed even if there was no packfile
 	// to download, which can happen e.g. when the branches have been
 	// changed but all the neede objects are available locally.
-	if (git_remote_update_tips(remote, update_cb) < 0)
+	if (git_remote_update_tips(remote) < 0)
 		return -1;
 
 	git_remote_free(remote);
