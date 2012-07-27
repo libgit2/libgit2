@@ -17,6 +17,8 @@
 
 #define GIT_REFLOG_SIZE_MIN (2*GIT_OID_HEXSZ+2+17)
 
+#define GIT_OID_HEX_ZERO "0000000000000000000000000000000000000000"
+
 struct git_reflog_entry {
 	git_oid oid_old;
 	git_oid oid_cur;
@@ -28,6 +30,7 @@ struct git_reflog_entry {
 
 struct git_reflog {
 	char *ref_name;
+	git_repository *owner;
 	git_vector entries;
 };
 
