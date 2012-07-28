@@ -58,6 +58,7 @@ void test_checkout_checkout__crlf(void)
 		"new.txt text eol=lf\n";
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
 	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
+	/* TODO: enable these when crlf is ready */
 	/* test_file_contents("./testrepo/README", "hey there\n"); */
 	/* test_file_contents("./testrepo/new.txt", "my new file\n"); */
 	/* test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); */
@@ -147,6 +148,7 @@ void test_checkout_checkout__dir_modes(void)
 
 void test_checkout_checkout__file_modes(void)
 {
+#ifndef GIT_WIN32
 	git_checkout_opts opts = {0};
 	struct stat st;
 
@@ -154,6 +156,7 @@ void test_checkout_checkout__file_modes(void)
 	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
 	cl_git_pass(p_stat("./testrepo/new.txt", &st));
 	cl_assert_equal_i(st.st_mode & 0777, 0700);
+#endif
 }
 
 void test_checkout_checkout__open_flags(void)
