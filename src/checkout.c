@@ -145,7 +145,7 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 }
 
 
-int git_checkout_index(git_repository *repo, git_checkout_opts *opts, git_indexer_stats *stats)
+int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer_stats *stats)
 {
 	int retcode = GIT_ERROR;
 	git_indexer_stats dummy_stats;
@@ -188,12 +188,14 @@ int git_checkout_index(git_repository *repo, git_checkout_opts *opts, git_indexe
 	payload.repo = repo;
 	if (git_repository_odb(&payload.odb, repo) < 0) return GIT_ERROR;
 
-	/* TODO: stats->total is never calculated. */
-
 	if (!git_repository_head_tree(&tree, repo)) {
-		/* Checkout the files */
-		if (!git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload)) {
-			retcode = 0;
+		git_index *idx;
+		if (!(retcode = git_repository_index(&idx, repo))) {
+			/* TODO: Make git_index_read_tree fill in stats->total */
+			if (!(retcode = git_index_read_tree(idx, tree))) {
+				retcode = git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload);
+			}
+			git_index_free(idx);
 		}
 		git_tree_free(tree);
 	}
@@ -203,11 +205,25 @@ int git_checkout_index(git_repository *repo, git_checkout_opts *opts, git_indexe
 }
 
 
-int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer_stats *stats)
+int git_checkout_reference(git_reference *ref,
+									git_checkout_opts *opts,
+									git_indexer_stats *stats)
 {
-	/* TODO: read HEAD into index */
+	git_repository *repo= git_reference_owner(ref);
+	git_reference *head = NULL;
+	int retcode = GIT_ERROR;
 
-	return git_checkout_index(repo, opts, stats);
+	if ((retcode = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+		return retcode;
+
+	if ((retcode = git_reference_set_target(head, git_reference_name(ref))) < 0)
+		goto gcr_cleanup;
+
+	retcode = git_checkout_head(git_reference_owner(ref), opts, stats);
+
+gcr_cleanup:
+	git_reference_free(head);
+	return retcode;
 }
 
 

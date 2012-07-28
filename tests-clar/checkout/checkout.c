@@ -38,12 +38,12 @@ void test_checkout_checkout__bare(void)
 {
 	cl_git_sandbox_cleanup();
 	g_repo = cl_git_sandbox_init("testrepo.git");
-	cl_git_fail(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_fail(git_checkout_head(g_repo, NULL, NULL));
 }
 
 void test_checkout_checkout__default(void)
 {
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
 	test_file_contents("./testrepo/README", "hey there\n");
 	test_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
 	test_file_contents("./testrepo/new.txt", "my new file\n");
@@ -57,7 +57,7 @@ void test_checkout_checkout__crlf(void)
 		"README text eol=cr\n"
 		"new.txt text eol=lf\n";
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
 	/* test_file_contents("./testrepo/README", "hey there\n"); */
 	/* test_file_contents("./testrepo/new.txt", "my new file\n"); */
 	/* test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); */
@@ -80,7 +80,7 @@ void test_checkout_checkout__symlinks(void)
 {
 	/* First try with symlinks forced on */
 	enable_symlinks(true);
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
 
 #ifdef GIT_WIN32
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
@@ -101,7 +101,67 @@ void test_checkout_checkout__symlinks(void)
 	cl_git_sandbox_cleanup();
 	g_repo = cl_git_sandbox_init("testrepo");
 	enable_symlinks(false);
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
 
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
+}
+
+void test_checkout_checkout__existing_file_options(void)
+{
+	git_checkout_opts opts = {0};
+	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
+	opts.existing_file_action = GIT_CHECKOUT_SKIP_EXISTING;
+	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
+	test_file_contents("./testrepo/new.txt", "This isn't what's stored!");
+	opts.existing_file_action = GIT_CHECKOUT_OVERWRITE_EXISTING;
+	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
+	test_file_contents("./testrepo/new.txt", "my new file\n");
+}
+
+void test_checkout_checkout__disable_filters(void)
+{
+	git_checkout_opts opts = {0};
+	cl_git_mkfile("./testrepo/.gitattributes", "*.txt text eol=crlf\n");
+	/* TODO cl_git_pass(git_checkout_head(g_repo, &opts, NULL));*/
+	/* TODO test_file_contents("./testrepo/new.txt", "my new file\r\n");*/
+	opts.disable_filters = true;
+	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
+	test_file_contents("./testrepo/new.txt", "my new file\n");
+}
+
+void test_checkout_checkout__dir_modes(void)
+{
+#ifndef GIT_WIN32
+	git_checkout_opts opts = {0};
+	struct stat st;
+	git_reference *ref;
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/dir"));
+
+	opts.dir_mode = 0600;
+	cl_git_pass(git_checkout_reference(ref, &opts, NULL));
+	cl_git_pass(p_stat("./testrepo/a", &st));
+	cl_assert_equal_i(st.st_mode & 0777, 0600);
+#endif
+}
+
+void test_checkout_checkout__file_modes(void)
+{
+	git_checkout_opts opts = {0};
+	struct stat st;
+
+	opts.file_mode = 0700;
+	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
+	cl_git_pass(p_stat("./testrepo/new.txt", &st));
+	cl_assert_equal_i(st.st_mode & 0777, 0700);
+}
+
+void test_checkout_checkout__open_flags(void)
+{
+	git_checkout_opts opts = {0};
+
+	cl_git_mkfile("./testrepo/new.txt", "hi\n");
+	opts.file_open_flags = O_CREAT | O_RDWR | O_APPEND;
+	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
+	test_file_contents("./testrepo/new.txt", "hi\nmy new file\n");
 }

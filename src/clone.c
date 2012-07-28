@@ -96,25 +96,8 @@ static int update_head_to_new_branch(git_repository *repo, const git_oid *target
 		git_reference *head;
 		if (!git_reference_lookup(&head, repo, GIT_HEAD_FILE)) {
 			git_buf targetbuf = GIT_BUF_INIT;
-			if (!git_buf_printf(&targetbuf, "refs/heads/%s", name) && /* TODO: "refs/heads" constant? */
-				 !git_reference_set_target(head, git_buf_cstr(&targetbuf))) {
-				/* Read the tree into the index */
-				git_commit *commit;
-				if (!git_commit_lookup(&commit, repo, target)) {
-					git_tree *tree;
-					if (!git_commit_tree(&tree, commit)) {
-						git_index *index;
-						if (!git_repository_index(&index, repo)) {
-							if (!git_index_read_tree(index, tree)) {
-								git_index_write(index);
-								retcode = 0;
-							}
-							git_index_free(index);
-						}
-						git_tree_free(tree);
-					}
-					git_commit_free(commit);
-				}
+			if (!git_buf_printf(&targetbuf, "refs/heads/%s", name)) {
+				retcode = git_reference_set_target(head, git_buf_cstr(&targetbuf));
 			}
 			git_buf_free(&targetbuf);
 			git_reference_free(head);
