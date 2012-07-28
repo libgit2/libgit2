@@ -1090,3 +1090,67 @@ int git_repository_state(git_repository *repo)
 	git_buf_free(&path);
 	return GIT_REPOSITORY_STATE_NONE;
 }
+
+static ssize_t state_revert(char *buffer, size_t len, git_repository *repo)
+{
+	git_buf message = GIT_BUF_INIT;
+	git_reference *ref = NULL;
+	git_commit *commit = NULL;
+	const char *commit_msg, *subj_end;
+	char oid[GIT_OID_HEXSZ+1];
+	size_t ret_len;
+
+	if (git_reference_lookup(&ref, repo, GIT_REVERT_HEAD_FILE) < 0)
+		return -1;
+
+	if (git_commit_lookup(&commit, repo, git_reference_oid(ref)) < 0)
+		goto on_error;
+
+	/* Try to find the subject, if \n\n isn't there, take the whole message */
+	commit_msg = git_commit_message(commit);
+	subj_end = strstr(commit_msg, "\n\n");
+
+	git_buf_puts(&message, "Revert \"");
+	if (subj_end)
+		git_buf_put(&message, commit_msg, subj_end - commit_msg);
+	else
+		git_buf_puts(&message, commit_msg);
+
+	git_buf_rtrim(&message);
+	git_oid_fmt(oid, git_reference_oid(ref));
+	oid[GIT_OID_HEXSZ] = '\0';
+	git_buf_printf(&message, "\"\n\nThis reverts commit %s.\n", oid);
+
+	if (git_buf_oom(&message))
+		goto on_error;
+
+	git_reference_free(ref);
+	git_commit_free(commit);
+
+	if (buffer)
+		memcpy(buffer, git_buf_cstr(&message), len);
+
+	ret_len = git_buf_len(&message);
+	git_buf_free(&message);
+	return ret_len;
+
+on_error:
+	git_buf_free(&message);
+	git_commit_free(commit);
+	git_reference_free(ref);
+	return -1;
+}
+
+ssize_t git_repository_message(char *buffer, size_t len, git_repository *repo)
+{
+	int state;
+
+	state = git_repository_state(repo);
+	switch (state) {
+	case GIT_REPOSITORY_STATE_REVERT:
+		return state_revert(buffer, len, repo);
+	default:
+		giterr_set(GITERR_REPOSITORY, "I don't know about this state, sorry");
+		return -1;
+	}
+}

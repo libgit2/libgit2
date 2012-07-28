@@ -311,6 +311,8 @@ typedef enum {
 
 GIT_EXTERN(int) git_repository_state(git_repository *repo);
 
+GIT_EXTERN(ssize_t) git_repository_message(char *buffer, size_t len, git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
