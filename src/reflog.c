@@ -197,7 +197,7 @@ static int create_new_reflog_file(const char *filepath)
 
 int git_reflog_read(git_reflog **reflog, git_reference *ref)
 {
-	int error;
+	int error = -1;
 	git_buf log_path = GIT_BUF_INIT;
 	git_buf log_file = GIT_BUF_INIT;
 	git_reflog *log = NULL;
