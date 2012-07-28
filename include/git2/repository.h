@@ -302,6 +302,15 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
  */
 GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index);
 
+typedef enum {
+	GIT_REPOSITORY_STATE_NONE,
+	GIT_REPOSITORY_STATE_MERGE,
+	GIT_REPOSITORY_STATE_REVERT,
+	GIT_REPOSITORY_STATE_CHERRY_PICK,
+} git_repository_state_t;
+
+GIT_EXTERN(int) git_repository_state(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif

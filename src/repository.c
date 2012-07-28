@@ -1058,3 +1058,35 @@ int git_repository_head_tree(git_tree **tree, git_repository *repo)
 	*tree = (git_tree *)obj;
 	return 0;
 }
+
+int git_repository_state(git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_HEAD_FILE) < 0)
+		return -1;
+
+	if (git_path_exists(git_buf_cstr(&path))) {
+		git_buf_free(&path);
+		return GIT_REPOSITORY_STATE_MERGE;
+	}
+
+	if (git_buf_joinpath(&path, repo->path_repository, GIT_REVERT_HEAD_FILE) < 0)
+		return -1;
+
+	if (git_path_exists(git_buf_cstr(&path))) {
+		git_buf_free(&path);
+		return GIT_REPOSITORY_STATE_REVERT;
+	}
+
+	if (git_buf_joinpath(&path, repo->path_repository, GIT_CHERRY_PICK_HEAD_FILE) < 0)
+		return -1;
+
+	if (git_path_exists(git_buf_cstr(&path))) {
+		git_buf_free(&path);
+		return GIT_REPOSITORY_STATE_CHERRY_PICK;
+	}
+
+	git_buf_free(&path);
+	return GIT_REPOSITORY_STATE_NONE;
+}
