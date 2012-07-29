@@ -136,7 +136,31 @@ GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
  * @param b second oid structure.
  * @return <0, 0, >0 if a < b, a == b, a > b.
  */
-GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
+GIT_INLINE(int) git_oid_cmp(const git_oid *a, const git_oid *b)
+{
+	const unsigned char *sha1 = a->id;
+	const unsigned char *sha2 = b->id;
+	int i;
+
+	for (i = 0; i < GIT_OID_RAWSZ; i++, sha1++, sha2++) {
+		if (*sha1 != *sha2)
+			return *sha1 - *sha2;
+	}
+
+	return 0;
+}
+
+/**
+ * Compare two oid structures for equality
+ *
+ * @param a first oid structure.
+ * @param b second oid structure.
+ * @return true if equal, false otherwise
+ */
+GIT_INLINE(int) git_oid_equal(const git_oid *a, const git_oid *b)
+{
+	return !git_oid_cmp(a, b);
+}
 
 /**
  * Compare the first 'len' hexadecimal characters (packets of 4 bits)

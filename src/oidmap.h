@@ -28,13 +28,8 @@ GIT_INLINE(khint_t) hash_git_oid(const git_oid *oid)
 	return h;
 }
 
-GIT_INLINE(int) hash_git_oid_equal(const git_oid *a, const git_oid *b)
-{
-	return (memcmp(a->id, b->id, sizeof(a->id)) == 0);
-}
-
 #define GIT__USE_OIDMAP \
-	__KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, hash_git_oid, hash_git_oid_equal)
+	__KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, hash_git_oid, git_oid_equal)
 
 #define git_oidmap_alloc() kh_init(oid)
 #define git_oidmap_free(h) kh_destroy(oid,h), h = NULL
