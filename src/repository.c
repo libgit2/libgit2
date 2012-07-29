@@ -1141,6 +1141,43 @@ on_error:
 	return -1;
 }
 
+static ssize_t state_none(char *buffer, size_t len, git_repository *repo)
+{
+	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	struct stat st;
+	ssize_t size;
+	int error;
+
+	/* FIXME: use a #define for this */
+	if (git_buf_joinpath(&path, repo->path_repository, "COMMIT_EDITMSG") < 0)
+		return -1;
+
+	error = p_stat(git_buf_cstr(&path), &st);
+	if (error < 0) {
+		git_buf_free(&path);
+		return error; 	/* save GIT_ENOTFOUND */
+	}
+
+	if (buffer == NULL) {
+		git_buf_free(&path);
+		return st.st_size;
+	}
+
+	if (git_futils_readbuffer(&buf, git_buf_cstr(&path)) < 0)
+		goto on_error;
+
+	memcpy(buffer, git_buf_cstr(&buf), len);
+	size = git_buf_len(&buf);
+
+	git_buf_free(&path);
+	git_buf_free(&buf);
+	return size;
+
+on_error:
+	git_buf_free(&path);
+	return -1;
+}
+
 ssize_t git_repository_message(char *buffer, size_t len, git_repository *repo)
 {
 	int state;
@@ -1149,6 +1186,9 @@ ssize_t git_repository_message(char *buffer, size_t len, git_repository *repo)
 	switch (state) {
 	case GIT_REPOSITORY_STATE_REVERT:
 		return state_revert(buffer, len, repo);
+	case GIT_REPOSITORY_STATE_CHERRY_PICK:
+	case GIT_REPOSITORY_STATE_NONE:
+		return state_none(buffer, len, repo);
 	default:
 		giterr_set(GITERR_REPOSITORY, "I don't know about this state, sorry");
 		return -1;
