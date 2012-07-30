@@ -15,11 +15,11 @@
 #include "posix.h"
 #include "path.h"
 #include "buffer.h"
+#include "pkt.h"
 
 typedef struct {
 	git_transport parent;
 	git_repository *repo;
-	git_vector refs;
 } transport_local;
 
 static int add_ref(transport_local *t, const char *name)
@@ -27,19 +27,32 @@ static int add_ref(transport_local *t, const char *name)
 	const char peeled[] = "^{}";
 	git_remote_head *head;
 	git_object *obj = NULL, *target = NULL;
+	git_transport *transport = (git_transport *) t;
 	git_buf buf = GIT_BUF_INIT;
+	git_pkt_ref *pkt;
 
 	head = git__malloc(sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
+	pkt = git__malloc(sizeof(git_pkt_ref));
+	GITERR_CHECK_ALLOC(pkt);
 
 	head->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(head->name);
 
-	if (git_reference_name_to_oid(&head->oid, t->repo, name) < 0 ||
-		git_vector_insert(&t->refs, head) < 0)
-	{
-		git__free(head->name);
+	if (git_reference_name_to_oid(&head->oid, t->repo, name) < 0) {
 		git__free(head);
+		git__free(pkt->head.name);
+		git__free(pkt);
+	}
+
+	pkt->type = GIT_PKT_REF;
+	memcpy(&pkt->head, head, sizeof(git_remote_head));
+	git__free(head);
+
+	if (git_vector_insert(&transport->refs, pkt) < 0)
+	{
+		git__free(pkt->head.name);
+		git__free(pkt);
 		return -1;
 	}
 
@@ -47,7 +60,7 @@ static int add_ref(transport_local *t, const char *name)
 	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))
 		return 0;
 
-	if (git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJ_ANY) < 0)
+	if (git_object_lookup(&obj, t->repo, &pkt->head.oid, GIT_OBJ_ANY) < 0)
 		return -1;
 
 	head = NULL;
@@ -66,14 +79,20 @@ static int add_ref(transport_local *t, const char *name)
 
 	head->name = git_buf_detach(&buf);
 
+	pkt = git__malloc(sizeof(git_pkt_ref));
+	GITERR_CHECK_ALLOC(pkt);
+	pkt->type = GIT_PKT_REF;
+
 	if (git_tag_peel(&target, (git_tag *) obj) < 0)
 		goto on_error;
 
 	git_oid_cpy(&head->oid, git_object_id(target));
 	git_object_free(obj);
 	git_object_free(target);
+	memcpy(&pkt->head, head, sizeof(git_remote_head));
+	git__free(head);
 
-	if (git_vector_insert(&t->refs, head) < 0)
+	if (git_vector_insert(&transport->refs, pkt) < 0)
 		return -1;
 
 	return 0;
@@ -88,11 +107,12 @@ static int store_refs(transport_local *t)
 {
 	unsigned int i;
 	git_strarray ref_names = {0};
+	git_transport *transport = (git_transport *) t;
 
 	assert(t);
 
 	if (git_reference_list(&ref_names, t->repo, GIT_REF_LISTALL) < 0 ||
-		git_vector_init(&t->refs, (unsigned int)ref_names.count, NULL) < 0)
+		git_vector_init(&transport->refs, (unsigned int)ref_names.count, NULL) < 0)
 		goto on_error;
 
 	/* Sort the references first */
@@ -111,26 +131,9 @@ static int store_refs(transport_local *t)
 	return 0;
 
 on_error:
-	git_vector_free(&t->refs);
+	git_vector_free(&transport->refs);
 	git_strarray_free(&ref_names);
 	return -1;
-}
-
-static int local_ls(git_transport *transport, git_headlist_cb list_cb, void *payload)
-{
-	transport_local  *t = (transport_local *) transport;
-	git_vector *refs = &t->refs;
-	unsigned int i;
-	git_remote_head *h;
-
-	assert(transport && transport->connected);
-
-	git_vector_foreach(refs, i, h) {
-		if (list_cb(h, payload) < 0)
-			return -1;
-	}
-
-	return 0;
 }
 
 /*
@@ -201,14 +204,14 @@ static void local_free(git_transport *transport)
 {
 	unsigned int i;
 	transport_local *t = (transport_local *) transport;
-	git_vector *vec = &t->refs;
-	git_remote_head *h;
+	git_vector *vec = &transport->refs;
+	git_pkt_ref *pkt;
 
 	assert(transport);
 
-	git_vector_foreach (vec, i, h) {
-		git__free(h->name);
-		git__free(h);
+	git_vector_foreach (vec, i, pkt) {
+		git__free(pkt->head.name);
+		git__free(pkt);
 	}
 	git_vector_free(vec);
 
@@ -229,8 +232,8 @@ int git_transport_local(git_transport **out)
 
 	memset(t, 0x0, sizeof(transport_local));
 
+	t->parent.own_logic = 1;
 	t->parent.connect = local_connect;
-	t->parent.ls = local_ls;
 	t->parent.negotiate_fetch = local_negotiate_fetch;
 	t->parent.close = local_close;
 	t->parent.free = local_free;

@@ -14,6 +14,7 @@
 #include "remote.h"
 #include "fetch.h"
 #include "refs.h"
+#include "pkt.h"
 
 #include <regex.h>
 
@@ -401,6 +402,10 @@ on_error:
 
 int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 {
+	git_vector *refs = &remote->transport->refs;
+	unsigned int i;
+	git_pkt *p = NULL;
+
 	assert(remote);
 
 	if (!remote->transport || !remote->transport->connected) {
@@ -408,7 +413,21 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 		return -1;
 	}
 
-	return remote->transport->ls(remote->transport, list_cb, payload);
+	git_vector_foreach(refs, i, p) {
+		git_pkt_ref *pkt = NULL;
+
+		if (p->type != GIT_PKT_REF)
+			continue;
+
+		pkt = (git_pkt_ref *)p;
+
+		if (list_cb(&pkt->head, payload) < 0) {
+			giterr_set(GITERR_NET, "User callback returned error");
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 int git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
