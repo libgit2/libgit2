@@ -12,6 +12,7 @@ struct {
 } commands[] = {
 	{"ls-remote", ls_remote},
 	{"fetch", fetch},
+	{"clone", clone},
 	{"index-pack", index_pack},
 	{ NULL, NULL}
 };
