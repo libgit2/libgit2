@@ -1020,7 +1020,7 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	return 0;
 }
 
-int git_index_read_tree_with_stats(git_index *index, git_tree *tree, git_indexer_stats *stats)
+int git_index_read_tree(git_index *index, git_tree *tree, git_indexer_stats *stats)
 {
 	git_indexer_stats dummy_stats;
 	read_tree_data rtd = {index, NULL};
@@ -1032,9 +1032,4 @@ int git_index_read_tree_with_stats(git_index *index, git_tree *tree, git_indexer
 	git_index_clear(index);
 
 	return git_tree_walk(tree, read_tree_cb, GIT_TREEWALK_POST, &rtd);
-}
-
-int git_index_read_tree(git_index *index, git_tree *tree)
-{
-	return git_index_read_tree_with_stats(index, tree, NULL);
 }

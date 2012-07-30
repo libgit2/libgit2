@@ -191,7 +191,7 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer
 	if (!git_repository_head_tree(&tree, repo)) {
 		git_index *idx;
 		if (!(retcode = git_repository_index(&idx, repo))) {
-			if (!(retcode = git_index_read_tree_with_stats(idx, tree, stats))) {
+			if (!(retcode = git_index_read_tree(idx, tree, stats))) {
 				retcode = git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload);
 			}
 			git_index_free(idx);
