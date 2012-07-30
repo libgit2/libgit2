@@ -985,11 +985,18 @@ int git_index_entry_stage(const git_index_entry *entry)
 	return (entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT;
 }
 
+typedef struct read_tree_data {
+	git_index *index;
+	git_indexer_stats *stats;
+} read_tree_data;
+
 static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *data)
 {
-	git_index *index = data;
+	read_tree_data *rtd = data;
 	git_index_entry *entry = NULL;
 	git_buf path = GIT_BUF_INIT;
+
+	rtd->stats->total++;
 
 	if (git_tree_entry__is_tree(tentry))
 		return 0;
@@ -1005,7 +1012,7 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	entry->path = git_buf_detach(&path);
 	git_buf_free(&path);
 
-	if (index_insert(index, entry, 0) < 0) {
+	if (index_insert(rtd->index, entry, 0) < 0) {
 		index_entry_free(entry);
 		return -1;
 	}
@@ -1013,9 +1020,21 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	return 0;
 }
 
-int git_index_read_tree(git_index *index, git_tree *tree)
+int git_index_read_tree_with_stats(git_index *index, git_tree *tree, git_indexer_stats *stats)
 {
+	git_indexer_stats dummy_stats;
+	read_tree_data rtd = {index, NULL};
+
+	if (!stats) stats = &dummy_stats;
+	stats->total = 0;
+	rtd.stats = stats;
+
 	git_index_clear(index);
 
-	return git_tree_walk(tree, read_tree_cb, GIT_TREEWALK_POST, index);
+	return git_tree_walk(tree, read_tree_cb, GIT_TREEWALK_POST, &rtd);
+}
+
+int git_index_read_tree(git_index *index, git_tree *tree)
+{
+	return git_index_read_tree_with_stats(index, tree, NULL);
 }

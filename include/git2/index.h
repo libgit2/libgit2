@@ -8,6 +8,7 @@
 #define INCLUDE_git_index_h__
 
 #include "common.h"
+#include "indexer.h"
 #include "types.h"
 #include "oid.h"
 
@@ -344,6 +345,20 @@ GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
+
+
+/**
+ * Read a tree into the index file with stats
+ *
+ * The current index contents will be replaced by the specified tree. The total
+ * node count is collected in stats.
+ *
+ * @param index an existing index object
+ * @param tree tree to read
+ * @param stats structure that receives the total node count
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_read_tree_with_stats(git_index *index, git_tree *tree, git_indexer_stats *stats);
 
 /** @} */
 GIT_END_DECL
