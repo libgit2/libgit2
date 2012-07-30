@@ -59,4 +59,7 @@ void giterr_set_regex(const regex_t *regex, int error_code);
 
 #include "util.h"
 
+typedef struct git_transport git_transport;
+typedef struct gitno_buffer gitno_buffer;
+
 #endif /* INCLUDE_common_h__ */

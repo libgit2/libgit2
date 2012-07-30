@@ -40,9 +40,8 @@ exit:
 	pthread_exit(&data->ret);
 }
 
-int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
+static int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
-	const char *action;
 	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
 
 	git_oid_fmt(b_str, b);
@@ -68,6 +67,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	struct dl_data data;
 	git_remote_callbacks callbacks;
 
+	argc = argc;
 	// Figure out whether it's a named remote or a URL
 	printf("Fetching %s\n", argv[1]);
 	if (git_remote_load(&remote, repo, argv[1]) < 0) {
@@ -96,10 +96,14 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// the download rate.
 	do {
 		usleep(10000);
-		printf("\rReceived %d/%d objects in %d bytes", stats.processed, stats.total, bytes);
+		printf("\rReceived %d/%d objects in %zu bytes", stats.processed, stats.total, bytes);
 	} while (!data.finished);
 
-	printf("\rReceived %d/%d objects in %d bytes\n", stats.processed, stats.total, bytes);
+	if (data.ret < 0)
+		goto on_error;
+
+	pthread_join(worker, NULL);
+	printf("\rReceived %d/%d objects in %zu bytes\n", stats.processed, stats.total, bytes);
 
 	// Disconnect the underlying connection to prevent from idling.
 	git_remote_disconnect(remote);

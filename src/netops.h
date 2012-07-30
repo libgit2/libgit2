@@ -8,10 +8,9 @@
 #define INCLUDE_netops_h__
 
 #include "posix.h"
-#include "transport.h"
 #include "common.h"
 
-typedef struct gitno_buffer {
+struct gitno_buffer {
 	char *data;
 	size_t len;
 	size_t offset;
@@ -19,10 +18,14 @@ typedef struct gitno_buffer {
 #ifdef GIT_SSL
 	struct gitno_ssl *ssl;
 #endif
-} gitno_buffer;
+	int (*recv)(gitno_buffer *buffer);
+	void *cb_data;
+};
 
 void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len);
+void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, unsigned int len, int (*recv)(gitno_buffer *buf), void *cb_data);
 int gitno_recv(gitno_buffer *buf);
+int gitno__recv(gitno_buffer *buf);
 
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);

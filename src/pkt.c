@@ -42,15 +42,29 @@ static int flush_pkt(git_pkt **out)
 /* the rest of the line will be useful for multi_ack */
 static int ack_pkt(git_pkt **out, const char *line, size_t len)
 {
-	git_pkt *pkt;
+	git_pkt_ack *pkt;
 	GIT_UNUSED(line);
 	GIT_UNUSED(len);
 
-	pkt = git__malloc(sizeof(git_pkt));
+	pkt = git__calloc(1, sizeof(git_pkt_ack));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_ACK;
-	*out = pkt;
+	line += 3;
+	len -= 3;
+
+	if (len >= GIT_OID_HEXSZ) {
+		git_oid_fromstr(&pkt->oid, line + 1);
+		line += GIT_OID_HEXSZ + 1;
+		len -= GIT_OID_HEXSZ + 1;
+	}
+
+	if (len >= 7) {
+		if (!git__prefixcmp(line + 1, "continue"))
+			pkt->status = GIT_ACK_CONTINUE;
+	}
+
+	*out = (git_pkt *) pkt;
 
 	return 0;
 }
@@ -283,20 +297,28 @@ int git_pkt_buffer_flush(git_buf *buf)
 
 static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps, git_buf *buf)
 {
-	char capstr[20];
+	git_buf str = GIT_BUF_INIT;
 	char oid[GIT_OID_HEXSZ +1] = {0};
 	unsigned int len;
 
 	if (caps->ofs_delta)
-		strncpy(capstr, GIT_CAP_OFS_DELTA, sizeof(capstr));
+		git_buf_puts(&str, GIT_CAP_OFS_DELTA " ");
+
+	if (caps->multi_ack)
+		git_buf_puts(&str, GIT_CAP_MULTI_ACK " ");
+
+	if (git_buf_oom(&str))
+		return -1;
 
 	len = (unsigned int)
 		(strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
-		 strlen(capstr) + 1 /* LF */);
+		 git_buf_len(&str) + 1 /* LF */);
 	git_buf_grow(buf, git_buf_len(buf) + len);
-
 	git_oid_fmt(oid, &head->oid);
-	return git_buf_printf(buf, "%04xwant %s %s\n", len, oid, capstr);
+	git_buf_printf(buf, "%04xwant %s %s\n", len, oid, git_buf_cstr(&str));
+	git_buf_free(&str);
+
+	return git_buf_oom(buf);
 }
 
 /*
