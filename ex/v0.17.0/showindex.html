@@ -58,17 +58,17 @@
   <span class="kt">char</span> <span class="n">out</span><span class="p">[</span><span class="mi">41</span><span class="p">];</span>
   <span class="n">out</span><span class="p">[</span><span class="mi">40</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
 
-  <span class="n"><a name="git_repository_open-3" class="fnlink" href="../../#v0.17.0/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;/opt/libgit2-test/.git&quot;</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_open-5" class="fnlink" href="../../#v0.17.0/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;/opt/libgit2-test/.git&quot;</span><span class="p">);</span>
 
-  <span class="n"><a name="git_repository_index-5" class="fnlink" href="../../#v0.17.0/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span>
-  <span class="n"><a name="git_index_read-1" class="fnlink" href="../../#v0.17.0/group/index/git_index_read">git_index_read</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_index-7" class="fnlink" href="../../#v0.17.0/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_index_read-2" class="fnlink" href="../../#v0.17.0/group/index/git_index_read">git_index_read</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
 
-  <span class="n">ecount</span> <span class="o">=</span> <span class="n"><a name="git_index_entrycount-8" class="fnlink" href="../../#v0.17.0/group/index/git_index_entrycount">git_index_entrycount</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n">ecount</span> <span class="o">=</span> <span class="n"><a name="git_index_entrycount-4" class="fnlink" href="../../#v0.17.0/group/index/git_index_entrycount">git_index_entrycount</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">ecount</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">git_index_entry</span> <span class="o">*</span><span class="n">e</span> <span class="o">=</span> <span class="n"><a name="git_index_get-7" class="fnlink" href="../../#v0.17.0/group/index/git_index_get">git_index_get</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+    <span class="n">git_index_entry</span> <span class="o">*</span><span class="n">e</span> <span class="o">=</span> <span class="n"><a name="git_index_get-3" class="fnlink" href="../../#v0.17.0/group/index/git_index_get">git_index_get</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
 
     <span class="n">oid</span> <span class="o">=</span> <span class="n">e</span><span class="o">-&gt;</span><span class="n">oid</span><span class="p">;</span>
-    <span class="n"><a name="git_oid_fmt-4" class="fnlink" href="../../#v0.17.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
+    <span class="n"><a name="git_oid_fmt-8" class="fnlink" href="../../#v0.17.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
 
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;File Path: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="o">-&gt;</span><span class="n">path</span><span class="p">);</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot; Blob SHA: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">out</span><span class="p">);</span>
@@ -82,7 +82,7 @@
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n"><a name="git_index_free-2" class="fnlink" href="../../#v0.17.0/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_index_free-1" class="fnlink" href="../../#v0.17.0/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
 
   <span class="n"><a name="git_repository_free-6" class="fnlink" href="../../#v0.17.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 <span class="p">}</span></pre></div>

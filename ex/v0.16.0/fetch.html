@@ -68,13 +68,13 @@
           <a class="pilcrow" href="#section-2">&#182;</a>
         </div>
         <p>The name of the packfile is given by it&rsquo;s hash which you can get
-with <a name="git_indexer_hash-11" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_hash">git_indexer_hash</a> after the index has been written out to
+with <a name="git_indexer_hash-4" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_hash">git_indexer_hash</a> after the index has been written out to
 disk. Rename the packfile to its &ldquo;real&rdquo; name in the same
 directory as it was originally (libgit2 stores it in the folder
 where the packs go, so a rename in place is the right thing to do here</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fmt-3" class="fnlink" href="../../#v0.16.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-12" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fmt-12" class="fnlink" href="../../#v0.16.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-5" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
   <span class="n">ret</span> <span class="o">=</span> <span class="n">sprintf</span><span class="p">(</span><span class="n">slash</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&quot;pack-%s.pack&quot;</span><span class="p">,</span> <span class="n">oid</span><span class="p">);</span>
   <span class="k">if</span><span class="p">(</span><span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">GIT_EOSERR</span><span class="p">;</span>
@@ -101,7 +101,7 @@ where the packs go, so a rename in place is the right thing to do here</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetching %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_new-9" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_new">git_remote_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_new-7" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_new">git_remote_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">NULL</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 
@@ -119,7 +119,7 @@ where the packs go, so a rename in place is the right thing to do here</p>
 yet, it will get a temporary filename</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_download-1" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">packname</span><span class="p">,</span> <span class="n">remote</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_download-9" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">packname</span><span class="p">,</span> <span class="n">remote</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
       </td>
@@ -144,7 +144,7 @@ yet, it will get a temporary filename</p>
         <p>Create a new instance indexer</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_new-10" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">idx</span><span class="p">,</span> <span class="n">packname</span><span class="p">);</span>
+        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_new-1" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">idx</span><span class="p">,</span> <span class="n">packname</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
       <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
       </td>
@@ -157,7 +157,7 @@ yet, it will get a temporary filename</p>
         <p>This should be run in paralel, but it&rsquo;d be too complicated for the example</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_run-6" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_run">git_indexer_run</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">);</span>
+        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_run-2" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_run">git_indexer_run</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
       <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 
@@ -173,7 +173,7 @@ yet, it will get a temporary filename</p>
 correct filename</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_write-7" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_write">git_indexer_write</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+        <div class='highlight'><pre>    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_write-3" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_write">git_indexer_write</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
       <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 
@@ -195,13 +195,13 @@ changed but all the neede objects are available locally.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_update_tips-4" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_update_tips">git_remote_update_tips</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_update_tips-11" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_update_tips">git_remote_update_tips</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 
   <span class="n">free</span><span class="p">(</span><span class="n">packname</span><span class="p">);</span>
-  <span class="n"><a name="git_indexer_free-5" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
-  <span class="n"><a name="git_remote_free-2" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="n"><a name="git_indexer_free-6" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+  <span class="n"><a name="git_remote_free-10" class="fnlink" href="../../#v0.16.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">GIT_SUCCESS</span><span class="p">;</span>
 <span class="p">}</span></pre></div>

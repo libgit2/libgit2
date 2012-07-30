@@ -382,7 +382,10 @@ $(function() {
         argsText = '( ' + fdata[f]['argline'] + ' )'
         link = $('<a>').attr('href', '#' + groupLink(gname, f)).append(f)
         $('.content').append($('<h2>').append(link).append($('<small>').append(argsText)))
-        $('.content').append($('<pre>').append(fdata[f]['rawComments']))
+        description = fdata[f]['description']
+	if(fdata[f]['comments'])
+		description += "\n\n" + fdata[f]['comments']
+	$('.content').append($('<pre>').append(description))
       }
       return false
     },
