@@ -107,13 +107,19 @@ void test_checkout_checkout__symlinks(void)
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
 }
 
-void test_checkout_checkout__existing_file_options(void)
+void test_checkout_checkout__existing_file_skip(void)
 {
 	git_checkout_opts opts = {0};
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 	opts.existing_file_action = GIT_CHECKOUT_SKIP_EXISTING;
 	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
 	test_file_contents("./testrepo/new.txt", "This isn't what's stored!");
+}
+
+void test_checkout_checkout__existing_file_overwrite(void)
+{
+	git_checkout_opts opts = {0};
+	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 	opts.existing_file_action = GIT_CHECKOUT_OVERWRITE_EXISTING;
 	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
 	test_file_contents("./testrepo/new.txt", "my new file\n");
