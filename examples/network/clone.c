@@ -32,7 +32,7 @@ static void *clone_thread(void *ptr)
 	pthread_exit(&data->ret);
 }
 
-int clone(git_repository *repo, int argc, char **argv)
+int do_clone(git_repository *repo, int argc, char **argv)
 {
 	struct dl_data data = {0};
 	pthread_t worker;
