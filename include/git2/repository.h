@@ -36,6 +36,19 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_repository_open(git_repository **repository, const char *path);
 
 /**
+ * Create a "fake" repository to wrap an object database
+ *
+ * Create a repository object to wrap an object database to be used
+ * with the API when all you have is an object database. This doesn't
+ * have any paths associated with it, so use with care.
+ *
+ * @param repository pointer to the repo
+ * @param odb the object database to wrap
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_repository_wrap_odb(git_repository **repository, git_odb *odb);
+
+/**
  * Look for a git repository and copy its path in the given buffer.
  * The lookup start from base_path and walk across parent directories
  * if nothing has been found. The lookup ends when the first repository
