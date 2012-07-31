@@ -2,16 +2,22 @@
 # see travis-ci.org for details
 
 # As CMake is not officially supported we use erlang VMs
-language: erlang
+language: c
+
+compiler:
+  - gcc
+  - clang
 
 # Settings to try
 env:
-  - CC=gcc OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
-  - CC=clang OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
-  - CC=gcc OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
-  - CC=clang OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
-  - CC=i586-mingw32msvc-gcc OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON"
-      
+  - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
+  - OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
+
+matrix:
+ include:
+   - compiler: i586-mingw32msvc-gcc
+     env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON"
+
 # Make sure CMake is installed
 install:
  - sudo apt-get install cmake valgrind
@@ -35,6 +41,11 @@ branches:
    
 # Notify development list when needed
 notifications:
+ irc:
+  channels:
+    - irc.freenode.net#libgit2
+  on_success: change
+  on_failure: always
  recipients:
    - vicent@github.com 
  email:
