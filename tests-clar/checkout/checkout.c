@@ -58,15 +58,9 @@ void test_checkout_checkout__crlf(void)
 		"new.txt text eol=lf\n";
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
 	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
-	/* TODO: enable these when crlf is ready */
-	/* test_file_contents("./testrepo/README", "hey there\n"); */
-	/* test_file_contents("./testrepo/new.txt", "my new file\n"); */
-	/* test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); */
-}
-
-void test_checkout_checkout__stats(void)
-{
-	/* TODO */
+	 test_file_contents("./testrepo/README", "hey there\n"); 
+	 test_file_contents("./testrepo/new.txt", "my new file\n"); 
+	 test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); 
 }
 
 static void enable_symlinks(bool enable)
