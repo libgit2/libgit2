@@ -38,7 +38,6 @@ int clone(git_repository *repo, int argc, char **argv)
 	pthread_t worker;
 
 	// Validate args
-	printf("argc %d\n");
 	if (argc < 3) {
 		printf("USAGE: %s <url> <path>\n", argv[0]);
 		return -1;
