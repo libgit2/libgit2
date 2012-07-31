@@ -8,7 +8,7 @@ static git_repository *g_repo;
 
 void test_checkout_checkout__initialize(void)
 {
-	const char *attributes = "*.txt text eol=cr\n";
+	const char *attributes = "* text eol=lf\n";
 
 	g_repo = cl_git_sandbox_init("testrepo");
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
@@ -54,11 +54,16 @@ void test_checkout_checkout__crlf(void)
 {
 	const char *attributes =
 		"branch_file.txt text eol=crlf\n"
-		"README text eol=cr\n"
 		"new.txt text eol=lf\n";
+	const char *expected_readme_text =
+#ifdef GIT_WIN32
+		"hey there\r\n";
+#else
+		"hey there\n";
+#endif
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
 	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
-	 test_file_contents("./testrepo/README", "hey there\n"); 
+	 test_file_contents("./testrepo/README", expected_readme_text); 
 	 test_file_contents("./testrepo/new.txt", "my new file\n"); 
 	 test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); 
 }
