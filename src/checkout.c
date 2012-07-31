@@ -61,11 +61,13 @@ static int blob_contents_to_link(tree_walk_data *data, git_buf *fnbuf,
 
 
 static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
-											const git_oid *id, tree_walk_data *data)
+											const git_tree_entry *entry, tree_walk_data *data)
 {
 	int retcode = GIT_ERROR;
 	int fd = -1;
 	git_buf contents = GIT_BUF_INIT;
+	const git_oid *id = git_tree_entry_id(entry);
+	int file_mode = data->opts->file_mode;
 
 	/* Deal with pre-existing files */
 	if (git_path_exists(git_buf_cstr(fnbuf)) &&
@@ -84,10 +86,14 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
 	}
 	if (retcode < 0) goto bctf_cleanup;
 
+	/* Allow overriding of file mode */
+	if (!file_mode)
+		file_mode = git_tree_entry_attributes(entry);
+
 	if ((retcode = git_futils_mkpath2file(git_buf_cstr(fnbuf), data->opts->dir_mode)) < 0)
 		goto bctf_cleanup;
 
-	fd = p_open(git_buf_cstr(fnbuf), data->opts->file_open_flags, data->opts->file_mode);
+	fd = p_open(git_buf_cstr(fnbuf), data->opts->file_open_flags, file_mode);
 	if (fd < 0) goto bctf_cleanup;
 
 	if (!p_write(fd, git_buf_cstr(&contents), git_buf_len(&contents)))
@@ -129,8 +135,7 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 			retcode = blob_contents_to_link(data, &fnbuf,
 													  git_tree_entry_id(entry));
 		} else {
-			retcode = blob_contents_to_file(data->repo, &fnbuf,
-													  git_tree_entry_id(entry), data);
+			retcode = blob_contents_to_file(data->repo, &fnbuf, entry, data);
 		}
 		break;
 
@@ -163,8 +168,6 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer
 		opts->existing_file_action = GIT_CHECKOUT_OVERWRITE_EXISTING;
 	/* opts->disable_filters is false by default */
 	if (!opts->dir_mode) opts->dir_mode = GIT_DIR_MODE;
-	if (!opts->file_mode)
-		opts->file_mode = 0644; 
 	if (!opts->file_open_flags)
 		opts->file_open_flags = O_CREAT | O_TRUNC | O_WRONLY;
 

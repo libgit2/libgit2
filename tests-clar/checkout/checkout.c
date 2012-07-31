@@ -145,14 +145,18 @@ void test_checkout_checkout__dir_modes(void)
 
 	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/dir"));
 
-	opts.dir_mode = 0600;
+	opts.dir_mode = 0701;
 	cl_git_pass(git_checkout_reference(ref, &opts, NULL));
 	cl_git_pass(p_stat("./testrepo/a", &st));
-	cl_assert_equal_i(st.st_mode & 0777, 0600);
+	cl_assert_equal_i(st.st_mode & 0777, 0701);
+
+	/* File-mode test, since we're on the 'dir' branch */
+	cl_git_pass(p_stat("./testrepo/a/b.txt", &st));
+	cl_assert_equal_i(st.st_mode & 0777, 0755);
 #endif
 }
 
-void test_checkout_checkout__file_modes(void)
+void test_checkout_checkout__override_file_modes(void)
 {
 #ifndef GIT_WIN32
 	git_checkout_opts opts = {0};
