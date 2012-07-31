@@ -388,6 +388,19 @@ int git_repository_open(git_repository **repo_out, const char *path)
 		repo_out, path, GIT_REPOSITORY_OPEN_NO_SEARCH, NULL);
 }
 
+int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
+{
+	git_repository *repo;
+
+	repo = repository_alloc();
+	GITERR_CHECK_ALLOC(repo);
+
+	git_repository_set_odb(repo, odb);
+	*repo_out = repo;
+
+	return 0;
+}
+
 int git_repository_discover(
 	char *repository_path,
 	size_t size,
