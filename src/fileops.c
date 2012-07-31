@@ -424,6 +424,7 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 	}
 
 	if (win32_find_file(path, &root, filename) < 0) {
+		giterr_set(GITERR_OS, "The system file '%s' doesn't exist", filename);
 		git_buf_clear(path);
 		return GIT_ENOTFOUND;
 	}
@@ -438,6 +439,7 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 		return 0;
 
 	git_buf_clear(path);
+	giterr_set(GITERR_OS, "The system file '%s' doesn't exist", filename);
 	return GIT_ENOTFOUND;
 #endif
 }
@@ -455,6 +457,7 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 	}
 
 	if (win32_find_file(path, &root, filename) < 0) {
+		giterr_set(GITERR_OS, "The global file '%s' doesn't exist", filename);
 		git_buf_clear(path);
 		return GIT_ENOTFOUND;
 	}
@@ -473,6 +476,7 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 		return -1;
 
 	if (git_path_exists(path->ptr) == false) {
+		giterr_set(GITERR_OS, "The global file '%s' doesn't exist", filename);
 		git_buf_clear(path);
 		return GIT_ENOTFOUND;
 	}
