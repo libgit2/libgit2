@@ -264,6 +264,8 @@ int git_futils_mkdir(
 	/* clip root to make_path length */
 	if (root >= (ssize_t)make_path.size)
 		root = (ssize_t)make_path.size - 1;
+	if (root < 0)
+		root = 0;
 
 	tail = & make_path.ptr[root];
 
@@ -666,7 +668,8 @@ static int _cp_r_callback(void *ref, git_buf *from)
 
 	/* make symlink or regular file */
 	if (S_ISLNK(from_st.st_mode))
-		return git_futils_cplink(from->ptr, from_st.st_size, info->to.ptr);
+		return git_futils_cplink(
+			from->ptr, (size_t)from_st.st_size, info->to.ptr);
 	else
 		return git_futils_cp_withpath(
 			from->ptr, info->to.ptr, from_st.st_mode, info->dirmode);
