@@ -177,3 +177,8 @@ void test_checkout_checkout__open_flags(void)
 	cl_git_pass(git_checkout_head(g_repo, &opts, NULL));
 	test_file_contents("./testrepo/new.txt", "hi\nmy new file\n");
 }
+
+void test_checkout_checkout__detached_head(void)
+{
+	/* TODO: write this when git_checkout_commit is implemented. */
+}

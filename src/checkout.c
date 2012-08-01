@@ -216,15 +216,12 @@ int git_checkout_reference(git_reference *ref,
 	git_reference *head = NULL;
 	int retcode = GIT_ERROR;
 
-	if ((retcode = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+	if ((retcode = git_reference_create_symbolic(&head, repo, GIT_HEAD_FILE,
+																git_reference_name(ref), true)) < 0)
 		return retcode;
-
-	if ((retcode = git_reference_set_target(head, git_reference_name(ref))) < 0)
-		goto gcr_cleanup;
 
 	retcode = git_checkout_head(git_reference_owner(ref), opts, stats);
 
-gcr_cleanup:
 	git_reference_free(head);
 	return retcode;
 }
