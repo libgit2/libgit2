@@ -60,6 +60,7 @@ GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 static int do_lstat(const char *file_name, struct stat *buf)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
+	DWORD last_error;
 	wchar_t* fbuf = gitwin_to_utf16(file_name);
 	if (!fbuf)
 		return -1;
@@ -92,6 +93,12 @@ static int do_lstat(const char *file_name, struct stat *buf)
 		git__free(fbuf);
 		return 0;
 	}
+
+	last_error = GetLastError();
+	if (last_error == ERROR_FILE_NOT_FOUND)
+		errno = ENOENT;
+	else if (last_error == ERROR_PATH_NOT_FOUND)
+		errno = ENOTDIR;
 
 	git__free(fbuf);
 	return -1;
