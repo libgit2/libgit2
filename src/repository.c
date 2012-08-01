@@ -1071,3 +1071,59 @@ int git_repository_head_tree(git_tree **tree, git_repository *repo)
 	*tree = (git_tree *)obj;
 	return 0;
 }
+
+#define MERGE_MSG_FILE "MERGE_MSG"
+
+int git_repository_message(char *buffer, size_t len, git_repository *repo)
+{
+        git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+        struct stat st;
+        ssize_t size;
+        int error;
+
+        if (git_buf_joinpath(&path, repo->path_repository, MERGE_MSG_FILE) < 0)
+                return -1;
+
+        error = p_stat(git_buf_cstr(&path), &st);
+        if (error < 0) {
+		if (errno == ENOENT)
+			error = GIT_ENOTFOUND;
+
+                git_buf_free(&path);
+                return error;
+        }
+
+        if (buffer == NULL) {
+                git_buf_free(&path);
+                return st.st_size;
+        }
+
+        if (git_futils_readbuffer(&buf, git_buf_cstr(&path)) < 0)
+                goto on_error;
+
+        memcpy(buffer, git_buf_cstr(&buf), len);
+        size = git_buf_len(&buf);
+
+        git_buf_free(&path);
+        git_buf_free(&buf);
+        return size;
+
+on_error:
+        git_buf_free(&path);
+        return -1;
+
+}
+
+int git_repository_message_remove(git_repository *repo)
+{
+        git_buf path = GIT_BUF_INIT;
+        int error;
+
+        if (git_buf_joinpath(&path, repo->path_repository, MERGE_MSG_FILE) < 0)
+                return -1;
+
+	error = p_unlink(git_buf_cstr(&path));
+	git_buf_free(&path);
+
+	return error;
+}
