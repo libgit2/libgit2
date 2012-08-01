@@ -315,6 +315,28 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
  */
 GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index);
 
+/**
+ * Retrive git's prepared message
+ *
+ * Operations such as git revert/cherry-pick/merge with the -n option
+ * stop just short of creating a commit with the changes and save
+ * their prepared message in .git/MERGE_MSG so the next git-commit
+ * execution can present it to the user for them to amend if they
+ * wish.
+ *
+ * Use this function to get the contents of this file. Don't forget to
+ * remove the file after you create the commit.
+ */
+GIT_EXTERN(int) git_repository_message(char *buffer, size_t len, git_repository *repo);
+
+/**
+ * Remove git's prepared message.
+ *
+ * Remove the message that `git_repository_message` retrieves.
+ */
+GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
+
+
 /** @} */
 GIT_END_DECL
 #endif
