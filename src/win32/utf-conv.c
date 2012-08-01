@@ -32,9 +32,20 @@ void gitwin_set_utf8(void)
 #define U16_LEAD(c) (wchar_t)(((c)>>10)+0xd7c0)
 #define U16_TRAIL(c) (wchar_t)(((c)&0x3ff)|0xdc00)
 
-void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
+/**
+ * Convert an utf-8 encoded string into an utf-16 encoded string.
+ *
+ * @param dest the destination buffer
+ * @param destLength length of the destination buffer
+ * @param src the source string
+ * @param srcLength the length of the source string. May not be zero.
+ * @return the number of wchar_ts written to the buffer (excluding the trailing 0) or
+ *		-1 in case the buffer is too small.
+ */
+int git__utf8_to_16(wchar_t *dest, size_t destLength, const char *src, size_t srcLength)
 {
 	wchar_t *pDest = dest;
+	wchar_t *pDestLimit = dest + destLength - 1;
 	uint32_t ch;
 	const uint8_t* pSrc = (uint8_t*) src;
 	const uint8_t *pSrcLimit = pSrc + srcLength;
@@ -46,6 +57,10 @@ void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
 
 		/* in this loop, we can always access at least 4 bytes, up to pSrc+3 */
 		do {
+			/* check buffer size, before we append. Saves us when it is exactly fitting */
+			if (pDest == pDestLimit) {
+				goto too_long_path;
+			}
 			ch = *pSrc++;
 			if(ch < 0xc0) {
 				/*
@@ -68,6 +83,9 @@ void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
 				ch += *pSrc++ << 6;
 				ch += *pSrc++ - 0x3c82080;
 				*(pDest++) = U16_LEAD(ch);
+				if (pDest == pDestLimit) {
+					goto too_long_path;
+				}
 				*(pDest++) = U16_TRAIL(ch);
 			}
 		} while(pSrc < pSrcLimit);
@@ -76,6 +94,10 @@ void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
 	}
 
 	while(pSrc < pSrcLimit) {
+		/* check buffer size, before we append. Saves us when it is exactly fitting */
+		if (pDest == pDestLimit) {
+			goto too_long_path;
+		}
 		ch = *pSrc++;
 		if(ch < 0xc0) {
 			/*
@@ -107,6 +129,9 @@ void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
 				ch += *pSrc++ << 6;
 				ch += *pSrc++ - 0x3c82080;
 				*(pDest++) = U16_LEAD(ch);
+				if (pDest == pDestLimit) {
+					goto too_long_path;
+				}
 				*(pDest++) = U16_TRAIL(ch);
 				pSrc += 4;
 				continue;
@@ -114,11 +139,19 @@ void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
 		}
 
 		/* truncated character at the end */
+		if (pDest == pDestLimit) {
+			goto too_long_path;
+		}
 		*pDest++ = 0xfffd;
 		break;
 	}
 
-	*pDest++ = 0x0;
+	*pDest = 0x0;
+	return pDest - dest;
+
+too_long_path:
+	giterr_set_str(GITERR_NOMEMORY, "Path is too long");
+	return -1;
 }
 
 wchar_t* gitwin_to_utf16(const char* str)
