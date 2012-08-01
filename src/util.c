@@ -22,6 +22,18 @@ void git_libgit2_version(int *major, int *minor, int *rev)
 	*rev = LIBGIT2_VER_REVISION;
 }
 
+int git_libgit2_capabilities()
+{
+	return 0
+#ifdef GIT_THREADS
+		| GIT_CAP_THREADS
+#endif
+#ifdef GIT_SSL
+		| GIT_CAP_HTTPS
+#endif
+	;
+}
+
 void git_strarray_free(git_strarray *array)
 {
 	size_t i;
