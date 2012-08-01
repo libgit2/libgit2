@@ -177,7 +177,6 @@ static int setup_remotes_and_fetch(git_repository *repo,
 }
 
 
-/* TODO: p_opendir, p_closedir */
 static bool path_is_okay(const char *path)
 {
 	/* The path must either not exist, or be an empty directory */
