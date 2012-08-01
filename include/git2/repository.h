@@ -89,8 +89,11 @@ GIT_EXTERN(int) git_repository_discover(
  * * GIT_REPOSITORY_OPEN_NO_SEARCH - Only open the repository if it can be
  *   immediately found in the start_path.  Do not walk up from the
  *   start_path looking at parent directories.
- * * GIT_REPOSITORY_OPEN_CROSS_FS - Do not continue search across
- *   filesystem boundaries (as reported by the `stat` system call).
+ * * GIT_REPOSITORY_OPEN_CROSS_FS - Unless this flag is set, open will not
+ *   continue searching across filesystem boundaries (i.e. when `st_dev`
+ *   changes from the `stat` system call).  (E.g. Searching in a user's home
+ *   directory "/home/user/source/" will not return "/.git/" as the found
+ *   repo if "/" is a different filesystem than "/home".)
  */
 enum {
 	GIT_REPOSITORY_OPEN_NO_SEARCH = (1 << 0),
@@ -178,11 +181,6 @@ GIT_EXTERN(int) git_repository_init(
  *        looking the "template_path" from the options if set, or the
  *        `init.templatedir` global config if not, or falling back on
  *        "/usr/share/git-core/templates" if it exists.
- * * SHARED_UMASK - Use permissions reported by umask - this is default
- * * SHARED_GROUP - Use "--shared=group" behavior, chmod'ing the new repo
- *        to be group writable and "g+sx" for sticky group assignment.
- * * SHARED_ALL - Use "--shared=all" behavior, adding world readability.
- * * SHARED_CUSTOM - Use the `mode` value from the init options struct.
  */
 enum {
 	GIT_REPOSITORY_INIT_BARE              = (1u << 0),
@@ -191,10 +189,25 @@ enum {
 	GIT_REPOSITORY_INIT_MKDIR             = (1u << 3),
 	GIT_REPOSITORY_INIT_MKPATH            = (1u << 4),
 	GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE = (1u << 5),
-	GIT_REPOSITORY_INIT_SHARED_UMASK      = (0u << 6),
-	GIT_REPOSITORY_INIT_SHARED_GROUP      = (1u << 6),
-	GIT_REPOSITORY_INIT_SHARED_ALL        = (2u << 6),
-	GIT_REPOSITORY_INIT_SHARED_CUSTOM     = (3u << 6),
+};
+
+/**
+ * Mode options for `git_repository_init_ext`.
+ *
+ * Set the mode field of the `git_repository_init_options` structure
+ * either to the custom mode that you would like, or to one of the
+ * following modes:
+ *
+ * * SHARED_UMASK - Use permissions configured by umask - the default.
+ * * SHARED_GROUP - Use "--shared=group" behavior, chmod'ing the new repo
+ *        to be group writable and "g+sx" for sticky group assignment.
+ * * SHARED_ALL - Use "--shared=all" behavior, adding world readability.
+ * * Anything else - Set to custom value.
+ */
+enum {
+	GIT_REPOSITORY_INIT_SHARED_UMASK = 0,
+	GIT_REPOSITORY_INIT_SHARED_GROUP = 0002775,
+	GIT_REPOSITORY_INIT_SHARED_ALL   = 0002777,
 };
 
 /**
@@ -204,13 +217,13 @@ enum {
  * additional initialization features.  The fields are:
  *
  * * flags - Combination of GIT_REPOSITORY_INIT flags above.
- * * mode  - When GIT_REPOSITORY_INIT_SHARED_CUSTOM is set, this contains
- *        the mode bits that should be used for directories in the repo.
+ * * mode  - Set to one of the standard GIT_REPOSITORY_INIT_SHARED_...
+ *        constants above, or to a custom value that you would like.
  * * workdir_path - The path to the working dir or NULL for default (i.e.
- *        repo_path parent on non-bare repos).  If a relative path, this
- *        will be evaluated relative to the repo_path.  If this is not the
- *        "natural" working directory, a .git gitlink file will be created
- *        here linking to the repo_path.
+ *        repo_path parent on non-bare repos).  IF THIS IS RELATIVE PATH,
+ *        IT WILL BE EVALUATED RELATIVE TO THE REPO_PATH.  If this is not
+ *        the "natural" working directory, a .git gitlink file will be
+ *        created here linking to the repo_path.
  * * description - If set, this will be used to initialize the "description"
  *        file in the repository, instead of using the template content.
  * * template_path - When GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE is set,

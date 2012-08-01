@@ -515,3 +515,28 @@ int git_config_open_global(git_config **out)
 	return error;
 }
 
+int git_config_open_outside_repo(git_config **out)
+{
+	int error;
+	git_config *cfg = NULL;
+	git_buf buf = GIT_BUF_INIT;
+
+	error = git_config_new(&cfg);
+
+	if (!error && !git_config_find_global_r(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr, 2);
+
+	if (!error && !git_config_find_system_r(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr, 1);
+
+	git_buf_free(&buf);
+
+	if (error && cfg) {
+		git_config_free(cfg);
+		cfg = NULL;
+	}
+
+	*out = cfg;
+
+	return error;
+}

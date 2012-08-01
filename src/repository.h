@@ -75,7 +75,6 @@ enum {
 	GIT_REPOSITORY_INIT__IS_REINIT  = (1u << 18),
 };
 
-
 /** Base git object for inheritance */
 struct git_object {
 	git_cached_obj cached;

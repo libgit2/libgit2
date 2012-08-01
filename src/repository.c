@@ -24,6 +24,8 @@
 
 #define GIT_REPO_VERSION 0
 
+#define GIT_TEMPLATE_DIR "/usr/share/git-core/templates"
+
 static void drop_odb(git_repository *repo)
 {
 	if (repo->_odb != NULL) {
@@ -681,6 +683,7 @@ static bool is_chmod_supported(const char *file_path)
 		return false;
 
 	_is_supported = (st1.st_mode != st2.st_mode);
+
 	return _is_supported;
 }
 
@@ -702,20 +705,45 @@ cleanup:
 	return _is_insensitive;
 }
 
-static int repo_init_config(
-	const char *git_dir, git_repository_init_options *opts)
+static bool are_symlinks_supported(const char *wd_path)
 {
+	git_buf path = GIT_BUF_INIT;
+	int fd;
+	struct stat st;
+	static int _symlinks_supported = -1;
+
+	if (_symlinks_supported > -1)
+		return _symlinks_supported;
+
+	if ((fd = git_futils_mktmp(&path, wd_path)) < 0 ||
+		p_close(fd) < 0 ||
+		p_unlink(path.ptr) < 0 ||
+		p_symlink("testing", path.ptr) < 0 ||
+		p_lstat(path.ptr, &st) < 0)
+		_symlinks_supported = false;
+	else
+		_symlinks_supported = (S_ISLNK(st.st_mode) != 0);
+
+	(void)p_unlink(path.ptr);
+	git_buf_free(&path);
+
+	return _symlinks_supported;
+}
+
+static int repo_init_config(
+	const char *repo_dir,
+	const char *work_dir,
+	git_repository_init_options *opts)
+{
+	int error = 0;
 	git_buf cfg_path = GIT_BUF_INIT;
 	git_config *config = NULL;
 
-#define SET_REPO_CONFIG(type, name, val) {\
-	if (git_config_set_##type(config, name, val) < 0) { \
-		git_buf_free(&cfg_path); \
-		git_config_free(config); \
-		return -1; } \
-}
+#define SET_REPO_CONFIG(TYPE, NAME, VAL) do {\
+	if ((error = git_config_set_##TYPE(config, NAME, VAL)) < 0) \
+		goto cleanup; } while (0)
 
-	if (git_buf_joinpath(&cfg_path, git_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
+	if (git_buf_joinpath(&cfg_path, repo_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
 		return -1;
 
 	if (git_config_open_ondisk(&config, git_buf_cstr(&cfg_path)) < 0) {
@@ -724,12 +752,8 @@ static int repo_init_config(
 	}
 
 	if ((opts->flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0 &&
-		check_repositoryformatversion(config) < 0)
-	{
-		git_buf_free(&cfg_path);
-		git_config_free(config);
-		return -1;
-	}
+		(error = check_repositoryformatversion(config)) < 0)
+		goto cleanup;
 
 	SET_REPO_CONFIG(
 		bool, "core.bare", (opts->flags & GIT_REPOSITORY_INIT_BARE) != 0);
@@ -738,25 +762,42 @@ static int repo_init_config(
 	SET_REPO_CONFIG(
 		bool, "core.filemode", is_chmod_supported(git_buf_cstr(&cfg_path)));
 
-	if (!(opts->flags & GIT_REPOSITORY_INIT_BARE))
+	if (!(opts->flags & GIT_REPOSITORY_INIT_BARE)) {
 		SET_REPO_CONFIG(bool, "core.logallrefupdates", true);
 
+		if (!are_symlinks_supported(work_dir))
+			SET_REPO_CONFIG(bool, "core.symlinks", false);
+
+		if (!(opts->flags & GIT_REPOSITORY_INIT__NATURAL_WD)) {
+			SET_REPO_CONFIG(string, "core.worktree", work_dir);
+		}
+		else if ((opts->flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0) {
+			if ((error = git_config_delete(config, "core.worktree")) < 0)
+				goto cleanup;
+		}
+	} else {
+		if (!are_symlinks_supported(repo_dir))
+			SET_REPO_CONFIG(bool, "core.symlinks", false);
+	}
+
 	if (!(opts->flags & GIT_REPOSITORY_INIT__IS_REINIT) &&
-		is_filesystem_case_insensitive(git_dir))
+		is_filesystem_case_insensitive(repo_dir))
 		SET_REPO_CONFIG(bool, "core.ignorecase", true);
 
-	if (opts->flags & GIT_REPOSITORY_INIT_SHARED_GROUP) {
+	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_GROUP) {
 		SET_REPO_CONFIG(int32, "core.sharedrepository", 1);
 		SET_REPO_CONFIG(bool, "receive.denyNonFastforwards", true);
-	} else if (opts->flags & GIT_REPOSITORY_INIT_SHARED_ALL) {
+	}
+	else if (opts->mode == GIT_REPOSITORY_INIT_SHARED_ALL) {
 		SET_REPO_CONFIG(int32, "core.sharedrepository", 2);
 		SET_REPO_CONFIG(bool, "receive.denyNonFastforwards", true);
 	}
 
+cleanup:
 	git_buf_free(&cfg_path);
 	git_config_free(config);
 
-	return 0;
+	return error;
 }
 
 static int repo_write_template(
@@ -848,6 +889,17 @@ cleanup:
 	return error;
 }
 
+static mode_t pick_dir_mode(git_repository_init_options *opts)
+{
+	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_UMASK)
+		return 0755;
+	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_GROUP)
+		return (0775 | S_ISGID);
+	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_ALL)
+		return (0777 | S_ISGID);
+	return opts->mode;
+}
+
 #include "repo_template.h"
 
 static int repo_init_structure(
@@ -855,8 +907,11 @@ static int repo_init_structure(
 	const char *work_dir,
 	git_repository_init_options *opts)
 {
+	int error = 0;
 	repo_template_item *tpl;
-	mode_t gid = 0;
+	bool external_tpl =
+		((opts->flags & GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE) != 0);
+	mode_t dmode = pick_dir_mode(opts);
 
 	/* Hide the ".git" directory */
 	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) != 0) {
@@ -874,32 +929,60 @@ static int repo_init_structure(
 			return -1;
 	}
 
-	if ((opts->flags & GIT_REPOSITORY_INIT_SHARED_GROUP) != 0 ||
-		(opts->flags & GIT_REPOSITORY_INIT_SHARED_ALL) != 0)
-		gid = S_ISGID;
+	/* Copy external template if requested */
+	if (external_tpl) {
+		git_config *cfg;
+		const char *tdir;
 
-	/* TODO: honor GIT_REPOSITORY_INIT_USE_EXTERNAL_TEMPLATE if set */
-
-	/* Copy internal template as needed */
-
-	for (tpl = repo_template; tpl->path; ++tpl) {
-		if (!tpl->content) {
-			if (git_futils_mkdir_r(tpl->path, repo_dir, tpl->mode | gid) < 0)
-				return -1;
-		}
+		if (opts->template_path)
+			tdir = opts->template_path;
+		else if ((error = git_config_open_outside_repo(&cfg)) < 0)
+			return error;
 		else {
+			error = git_config_get_string(&tdir, cfg, "init.templatedir");
+
+			git_config_free(cfg);
+
+			if (error && error != GIT_ENOTFOUND)
+				return error;
+
+			giterr_clear();
+			tdir = GIT_TEMPLATE_DIR;
+		}
+
+		error = git_futils_cp_r(tdir, repo_dir,
+			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD, dmode);
+
+		if (error < 0) {
+			if (strcmp(tdir, GIT_TEMPLATE_DIR) != 0)
+				return error;
+
+			/* if template was default, ignore error and use internal */
+			giterr_clear();
+			external_tpl = false;
+		}
+	}
+
+	/* Copy internal template
+	 * - always ensure existence of dirs
+	 * - only create files if no external template was specified
+	 */
+	for (tpl = repo_template; !error && tpl->path; ++tpl) {
+		if (!tpl->content)
+			error = git_futils_mkdir(
+				tpl->path, repo_dir, dmode, GIT_MKDIR_PATH | GIT_MKDIR_CHMOD);
+		else if (!external_tpl) {
 			const char *content = tpl->content;
 
 			if (opts->description && strcmp(tpl->path, GIT_DESC_FILE) == 0)
 				content = opts->description;
 
-			if (repo_write_template(
-					repo_dir, false, tpl->path, tpl->mode, false, content) < 0)
-				return -1;
+			error = repo_write_template(
+				repo_dir, false, tpl->path, tpl->mode, false, content);
 		}
 	}
 
-	return 0;
+	return error;
 }
 
 static int repo_init_directories(
@@ -910,6 +993,7 @@ static int repo_init_directories(
 {
 	int error = 0;
 	bool add_dotgit, has_dotgit, natural_wd;
+	mode_t dirmode;
 
 	/* set up repo path */
 
@@ -930,15 +1014,9 @@ static int repo_init_directories(
 
 	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) == 0) {
 		if (opts->workdir_path) {
-			if (git_path_root(opts->workdir_path) < 0) {
-				if (git_path_dirname_r(wd_path, repo_path->ptr) < 0 ||
-					git_buf_putc(wd_path, '/') < 0 ||
-					git_buf_puts(wd_path, opts->workdir_path) < 0)
-					return -1;
-			} else {
-				if (git_buf_sets(wd_path, opts->workdir_path) < 0)
-					return -1;
-			}
+			if (git_path_join_unrooted(
+					wd_path, opts->workdir_path, repo_path->ptr, NULL) < 0)
+				return -1;
 		} else if (has_dotgit) {
 			if (git_path_dirname_r(wd_path, repo_path->ptr) < 0)
 				return -1;
@@ -962,43 +1040,33 @@ static int repo_init_directories(
 	if (natural_wd)
 		opts->flags |= GIT_REPOSITORY_INIT__NATURAL_WD;
 
-	/* pick mode */
-
-	if ((opts->flags & GIT_REPOSITORY_INIT_SHARED_CUSTOM) != 0)
-		/* leave mode as is */;
-	else if ((opts->flags & GIT_REPOSITORY_INIT_SHARED_GROUP) != 0)
-		opts->mode = 0775 | S_ISGID;
-	else if ((opts->flags & GIT_REPOSITORY_INIT_SHARED_ALL) != 0)
-		opts->mode = 0777 | S_ISGID;
-	else if ((opts->flags & GIT_REPOSITORY_INIT_BARE) != 0)
-		opts->mode = 0755;
-	else
-		opts->mode = 0755;
-
 	/* create directories as needed / requested */
 
-	if ((opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0) {
-		error = git_futils_mkdir_r(repo_path->ptr, NULL, opts->mode);
+	dirmode = pick_dir_mode(opts);
 
-		if (!error && !natural_wd && wd_path->size > 0)
-			error = git_futils_mkdir_r(wd_path->ptr, NULL, opts->mode);
+	if ((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0 && has_dotgit) {
+		git_buf p = GIT_BUF_INIT;
+		if ((error = git_path_dirname_r(&p, repo_path->ptr)) >= 0)
+			error = git_futils_mkdir(p.ptr, NULL, dirmode, 0);
+		git_buf_free(&p);
 	}
-	else if ((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0) {
-		if (has_dotgit) {
-			git_buf p = GIT_BUF_INIT;
-			if ((error = git_path_dirname_r(&p, repo_path->ptr)) >= 0)
-				error = git_futils_mkdir_q(p.ptr, opts->mode);
-			git_buf_free(&p);
-		}
 
-		if (!error)
-			error = git_futils_mkdir_q(repo_path->ptr, opts->mode);
-
-		if (!error && !natural_wd && wd_path->size > 0)
-			error = git_futils_mkdir_q(wd_path->ptr, opts->mode);
+	if ((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0 ||
+		(opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0 ||
+		has_dotgit)
+	{
+		uint32_t mkflag = GIT_MKDIR_CHMOD;
+		if ((opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0)
+			mkflag |= GIT_MKDIR_PATH;
+		error = git_futils_mkdir(repo_path->ptr, NULL, dirmode, mkflag);
 	}
-	else if (has_dotgit)
-		error = git_futils_mkdir_q(repo_path->ptr, opts->mode);
+
+	if (wd_path->size > 0 &&
+		!natural_wd &&
+		((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0 ||
+		 (opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0))
+		error = git_futils_mkdir(wd_path->ptr, NULL, dirmode & ~S_ISGID,
+			(opts->flags & GIT_REPOSITORY_INIT_MKPATH) ? GIT_MKDIR_PATH : 0);
 
 	/* prettify both directories now that they are created */
 
@@ -1063,14 +1131,16 @@ int git_repository_init_ext(
 
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
-		error = repo_init_config(git_buf_cstr(&repo_path), opts);
+		error = repo_init_config(
+			git_buf_cstr(&repo_path), git_buf_cstr(&wd_path), opts);
 
 		/* TODO: reinitialize the templates */
 	}
 	else {
 		if (!(error = repo_init_structure(
 				git_buf_cstr(&repo_path), git_buf_cstr(&wd_path), opts)) &&
-			!(error = repo_init_config(git_buf_cstr(&repo_path), opts)))
+			!(error = repo_init_config(
+				git_buf_cstr(&repo_path), git_buf_cstr(&wd_path), opts)))
 			error = repo_init_create_head(
 				git_buf_cstr(&repo_path), opts->initial_head);
 	}

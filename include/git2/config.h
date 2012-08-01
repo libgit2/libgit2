@@ -91,6 +91,18 @@ GIT_EXTERN(int) git_config_find_system(char *system_config_path, size_t length);
 GIT_EXTERN(int) git_config_open_global(git_config **out);
 
 /**
+ * Open the global and system configuration files
+ *
+ * Utility wrapper that finds the global and system configuration files
+ * and opens them into a single prioritized config object that can be
+ * used when accessing config data outside a repository.
+ *
+ * @param out Pointer to store the config instance
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_config_open_outside_repo(git_config **out);
+
+/**
  * Create a configuration file backend for ondisk files
  *
  * These are the normal `.gitconfig` files that Core Git
