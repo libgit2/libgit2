@@ -102,8 +102,11 @@ void test_core_mkdir__with_base(void)
 static void cleanup_chmod_root(void *ref)
 {
 	mode_t *mode = ref;
-	if (*mode != 0)
+
+	if (*mode != 0) {
 		(void)p_umask(*mode);
+		git__free(mode);
+	}
 
 	git_futils_rmdir_r("r", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
 }
@@ -111,12 +114,12 @@ static void cleanup_chmod_root(void *ref)
 void test_core_mkdir__chmods(void)
 {
 	struct stat st;
-	mode_t old = 0;
+	mode_t *old = git__malloc(sizeof(mode_t));
+	*old = p_umask(022);
 
-	cl_set_cleanup(cleanup_chmod_root, &old);
+	cl_set_cleanup(cleanup_chmod_root, old);
 
 	cl_git_pass(git_futils_mkdir("r", NULL, 0777, 0));
-	old = p_umask(022);
 
 	cl_git_pass(git_futils_mkdir("mode/is/important", "r", 0777, GIT_MKDIR_PATH));
 
