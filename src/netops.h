@@ -22,8 +22,8 @@ struct gitno_buffer {
 	void *cb_data;
 };
 
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len);
-void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, unsigned int len, int (*recv)(gitno_buffer *buf), void *cb_data);
+void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, size_t len);
+void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
 int gitno_recv(gitno_buffer *buf);
 int gitno__recv(gitno_buffer *buf);
 

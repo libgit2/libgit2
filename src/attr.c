@@ -41,7 +41,7 @@ int git_attr_get(
 	int error;
 	git_attr_path path;
 	git_vector files = GIT_VECTOR_INIT;
-	unsigned int i, j;
+	size_t i, j;
 	git_attr_file *file;
 	git_attr_name attr;
 	git_attr_rule *rule;
@@ -93,7 +93,7 @@ int git_attr_get_many(
 	int error;
 	git_attr_path path;
 	git_vector files = GIT_VECTOR_INIT;
-	unsigned int i, j, k;
+	size_t i, j, k;
 	git_attr_file *file;
 	git_attr_rule *rule;
 	attr_get_many_info *info = NULL;
@@ -157,7 +157,7 @@ int git_attr_foreach(
 	int error;
 	git_attr_path path;
 	git_vector files = GIT_VECTOR_INIT;
-	unsigned int i, j, k;
+	size_t i, j, k;
 	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;

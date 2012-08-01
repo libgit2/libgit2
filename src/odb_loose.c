@@ -42,7 +42,7 @@ typedef struct loose_backend {
 typedef struct {
 	size_t dir_len;
 	unsigned char short_oid[GIT_OID_HEXSZ]; /* hex formatted oid to match */
-	unsigned int short_oid_len;
+	size_t short_oid_len;
 	int found;				/* number of matching
 						 * objects already found */
 	unsigned char res_oid[GIT_OID_HEXSZ];	/* hex formatted oid of
@@ -502,7 +502,7 @@ static int locate_object_short_oid(
 	git_oid *res_oid,
 	loose_backend *backend,
 	const git_oid *short_oid,
-	unsigned int len)
+	size_t len)
 {
 	char *objects_dir = backend->objects_dir;
 	size_t dir_len = strlen(objects_dir);
@@ -629,7 +629,7 @@ static int loose_backend__read_prefix(
 	git_otype *type_p,
 	git_odb_backend *backend,
 	const git_oid *short_oid,
-	unsigned int len)
+	size_t len)
 {
 	int error = 0;
 

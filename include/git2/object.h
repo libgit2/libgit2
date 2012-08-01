@@ -75,7 +75,7 @@ GIT_EXTERN(int) git_object_lookup_prefix(
 		git_object **object_out,
 		git_repository *repo,
 		const git_oid *id,
-		unsigned int len,
+		size_t len,
 		git_otype type);
 
 /**

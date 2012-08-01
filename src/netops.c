@@ -99,7 +99,12 @@ int gitno__recv(gitno_buffer *buf)
 	return ret;
 }
 
-void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, unsigned int len, int (*recv)(gitno_buffer *buf), void *cb_data)
+void gitno_buffer_setup_callback(
+	git_transport *t,
+	gitno_buffer *buf,
+	char *data,
+	size_t len,
+	int (*recv)(gitno_buffer *buf), void *cb_data)
 {
 	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
@@ -111,7 +116,7 @@ void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data
 	buf->cb_data = cb_data;
 }
 
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, unsigned int len)
+void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, size_t len)
 {
 #ifdef GIT_SSL
 	if (t->use_ssl) {

@@ -179,7 +179,7 @@ int git_attr_file__lookup_one(
 	const char *attr,
 	const char **value)
 {
-	unsigned int i;
+	size_t i;
 	git_attr_name name;
 	git_attr_rule *rule;
 

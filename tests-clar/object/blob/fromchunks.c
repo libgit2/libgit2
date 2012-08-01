@@ -30,7 +30,7 @@ static int text_chunked_source_cb(char *content, size_t max_length, void *payloa
 		return 0;
 
 	strcpy(content, textual_content);
-	return strlen(textual_content);
+	return (int)strlen(textual_content);
 }
 
 void test_object_blob_fromchunks__can_create_a_blob_from_a_in_memory_chunk_provider(void)

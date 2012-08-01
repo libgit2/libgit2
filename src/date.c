@@ -121,9 +121,9 @@ static const struct {
 	{ "IDLE", +12, 0, },	/* International Date Line East */
 };
 
-static int match_string(const char *date, const char *str)
+static size_t match_string(const char *date, const char *str)
 {
-	int i = 0;
+	size_t i = 0;
 
 	for (i = 0; *date; date++, str++, i++) {
 		if (*date == *str)
@@ -149,12 +149,12 @@ static int skip_alpha(const char *date)
 /*
 * Parse month, weekday, or timezone name
 */
-static int match_alpha(const char *date, struct tm *tm, int *offset)
+static size_t match_alpha(const char *date, struct tm *tm, int *offset)
 {
 	unsigned int i;
 
 	for (i = 0; i < 12; i++) {
-		int match = match_string(date, month_names[i]);
+		size_t match = match_string(date, month_names[i]);
 		if (match >= 3) {
 			tm->tm_mon = i;
 			return match;
@@ -162,7 +162,7 @@ static int match_alpha(const char *date, struct tm *tm, int *offset)
 	}
 
 	for (i = 0; i < 7; i++) {
-		int match = match_string(date, weekday_names[i]);
+		size_t match = match_string(date, weekday_names[i]);
 		if (match >= 3) {
 			tm->tm_wday = i;
 			return match;
@@ -170,8 +170,8 @@ static int match_alpha(const char *date, struct tm *tm, int *offset)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(timezone_names); i++) {
-		int match = match_string(date, timezone_names[i].name);
-		if (match >= 3 || match == (int)strlen(timezone_names[i].name)) {
+		size_t match = match_string(date, timezone_names[i].name);
+		if (match >= 3 || match == strlen(timezone_names[i].name)) {
 			int off = timezone_names[i].offset;
 
 			/* This is bogus, but we like summer */
@@ -241,7 +241,7 @@ static int is_date(int year, int month, int day, struct tm *now_tm, time_t now, 
 	return 0;
 }
 
-static int match_multi_number(unsigned long num, char c, const char *date, char *end, struct tm *tm)
+static size_t match_multi_number(unsigned long num, char c, const char *date, char *end, struct tm *tm)
 {
 	time_t now;
 	struct tm now_tm;
@@ -319,9 +319,9 @@ static int nodate(struct tm *tm)
 /*
  * We've seen a digit. Time? Year? Date?
  */
-static int match_digit(const char *date, struct tm *tm, int *offset, int *tm_gmt)
+static size_t match_digit(const char *date, struct tm *tm, int *offset, int *tm_gmt)
 {
-	int n;
+	size_t n;
 	char *end;
 	unsigned long num;
 
@@ -349,7 +349,7 @@ static int match_digit(const char *date, struct tm *tm, int *offset, int *tm_gmt
 	case '/':
 	case '-':
 		if (isdigit(end[1])) {
-			int match = match_multi_number(num, *end, date, end, tm);
+			size_t match = match_multi_number(num, *end, date, end, tm);
 			if (match)
 				return match;
 		}
@@ -413,11 +413,11 @@ static int match_digit(const char *date, struct tm *tm, int *offset, int *tm_gmt
 	return n;
 }
 
-static int match_tz(const char *date, int *offp)
+static size_t match_tz(const char *date, int *offp)
 {
 	char *end;
 	int hour = strtoul(date + 1, &end, 10);
-	int n = end - (date + 1);
+	size_t n = end - (date + 1);
 	int min = 0;
 
 	if (n == 4) {
@@ -506,7 +506,7 @@ static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset
 	    !match_object_header_date(date + 1, timestamp, offset))
 		return 0; /* success */
 	for (;;) {
-		int match = 0;
+		size_t match = 0;
 		unsigned char c = *date;
 
 		/* Stop at end of string or newline */
@@ -685,7 +685,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 		;
 
 	for (i = 0; i < 12; i++) {
-		int match = match_string(date, month_names[i]);
+		size_t match = match_string(date, month_names[i]);
 		if (match >= 3) {
 			tm->tm_mon = i;
 			*touched = 1;
@@ -694,7 +694,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	}
 
 	for (s = special; s->name; s++) {
-		int len = strlen(s->name);
+		size_t len = strlen(s->name);
 		if (match_string(date, s->name) == len) {
 			s->fn(tm, now, num);
 			*touched = 1;
@@ -704,7 +704,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 
 	if (!*num) {
 		for (i = 1; i < 11; i++) {
-			int len = strlen(number_name[i]);
+			size_t len = strlen(number_name[i]);
 			if (match_string(date, number_name[i]) == len) {
 				*num = i;
 				*touched = 1;
@@ -720,7 +720,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 
 	tl = typelen;
 	while (tl->type) {
-		int len = strlen(tl->type);
+		size_t len = strlen(tl->type);
 		if (match_string(date, tl->type) >= len-1) {
 			update_tm(tm, now, tl->length * *num);
 			*num = 0;
@@ -731,7 +731,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	}
 
 	for (i = 0; i < 7; i++) {
-		int match = match_string(date, weekday_names[i]);
+		size_t match = match_string(date, weekday_names[i]);
 		if (match >= 3) {
 			int diff, n = *num -1;
 			*num = 0;
@@ -783,7 +783,7 @@ static const char *approxidate_digit(const char *date, struct tm *tm, int *num)
 	case '/':
 	case '-':
 		if (isdigit(end[1])) {
-			int match = match_multi_number(number, *end, date, end, tm);
+			size_t match = match_multi_number(number, *end, date, end, tm);
 			if (match)
 				return date + match;
 		}

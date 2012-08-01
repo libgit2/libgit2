@@ -35,7 +35,7 @@ void git_vector_free(git_vector *v)
 	v->_alloc_size = 0;
 }
 
-int git_vector_init(git_vector *v, unsigned int initial_size, git_vector_cmp cmp)
+int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 {
 	assert(v);
 
