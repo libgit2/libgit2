@@ -23,7 +23,8 @@
 GIT_BEGIN_DECL
 
 /**
- * TODO
+ * Clone a remote repository, and checkout the branch pointed to by the remote
+ * HEAD.
  *
  * @param out pointer that will receive the resulting repository object
  * @param origin_url repository to clone from
@@ -40,7 +41,7 @@ GIT_EXTERN(int) git_clone(git_repository **out,
 								  git_checkout_opts *checkout_opts);
 
 /**
- * TODO
+ * Create a bare clone of a remote repository.
  *
  * @param out pointer that will receive the resulting repository object
  * @param origin_url repository to clone from
