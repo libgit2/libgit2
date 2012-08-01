@@ -40,7 +40,7 @@ typedef struct git_checkout_opts {
  * @param repo repository to check out (must be non-bare)
  * @param opts specifies checkout options (may be NULL)
  * @param stats structure through which progress information is reported
- * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
+ * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information about the error)
  */
 GIT_EXTERN(int) git_checkout_head(git_repository *repo,
 											 git_checkout_opts *opts,
@@ -54,7 +54,7 @@ GIT_EXTERN(int) git_checkout_head(git_repository *repo,
  * @param ref reference to follow to a commit
  * @param opts specifies checkout options (may be NULL)
  * @param stats structure through which progress information is reported
- * @return 0 on success, GIT_ERROR otherwise (use git_error_last for information about the error)
+ * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information about the error)
  */
 GIT_EXTERN(int) git_checkout_reference(git_reference *ref,
 													git_checkout_opts *opts,
