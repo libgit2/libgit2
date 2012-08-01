@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
  * Then for file `xyz.c` looking up attribute "foo" gives a value for
  * which `GIT_ATTR_TRUE(value)` is true.
  */
-#define GIT_ATTR_TRUE(attr)		((attr) == git_l_attr__true)
+#define GIT_ATTR_TRUE(attr)	(git_attr_value(attr) == GIT_ATTR_TRUE_T)
 
 /**
  * GIT_ATTR_FALSE checks if an attribute is set off.  In core git
@@ -44,7 +44,7 @@ GIT_BEGIN_DECL
  * Then for file `zyx.h` looking up attribute "foo" gives a value for
  * which `GIT_ATTR_FALSE(value)` is true.
  */
-#define GIT_ATTR_FALSE(attr)	((attr) == git_l_attr__false)
+#define GIT_ATTR_FALSE(attr) (git_attr_value(attr) == GIT_ATTR_FALSE_T)
 
 /**
  * GIT_ATTR_UNSPECIFIED checks if an attribute is unspecified.  This
@@ -62,7 +62,7 @@ GIT_BEGIN_DECL
  * file `onefile.rb` or looking up "bar" on any file will all give
  * `GIT_ATTR_UNSPECIFIED(value)` of true.
  */
-#define GIT_ATTR_UNSPECIFIED(attr)	(!(attr) || (attr) == git_l_attr__unset)
+#define GIT_ATTR_UNSPECIFIED(attr) (git_attr_value(attr) == GIT_ATTR_UNSPECIFIED_T)
 
 /**
  * GIT_ATTR_HAS_VALUE checks if an attribute is set to a value (as
@@ -74,13 +74,29 @@ GIT_BEGIN_DECL
  * Given this, looking up "eol" for `onefile.txt` will give back the
  * string "lf" and `GIT_ATTR_SET_TO_VALUE(attr)` will return true.
  */
-#define GIT_ATTR_HAS_VALUE(attr) \
-	((attr) && (attr) != git_l_attr__unset && \
-	 (attr) != git_l_attr__true && (attr) != git_attr__false)
+#define GIT_ATTR_HAS_VALUE(attr) (git_attr_value(attr) == GIT_ATTR_VALUE_T)
 
-GIT_EXTERN(const char *) git_l_attr__true;
-GIT_EXTERN(const char *) git_l_attr__false;
-GIT_EXTERN(const char *) git_l_attr__unset;
+typedef enum {
+	GIT_ATTR_UNSPECIFIED_T = 0,
+	GIT_ATTR_TRUE_T,
+	GIT_ATTR_FALSE_T,
+	GIT_ATTR_VALUE_T,
+} git_attr_t;
+
+/*
+ *	Return the value type for a given attribute.
+ *
+ *	This can be either `TRUE`, `FALSE`, `UNSPECIFIED` (if the attribute
+ *	was not set at all), or `VALUE`, if the attribute was set to
+ *	an actual string.
+ *
+ *	If the attribute has a `VALUE` string, it can be accessed normally
+ *	as a NULL-terminated C string.
+ *
+ *	@param attr The attribute
+ *	@return the value type for the attribute
+ */
+git_attr_t git_attr_value(const char *attr);
 
 /**
  * Check attribute flags: Reading values from index and working directory.

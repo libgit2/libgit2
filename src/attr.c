@@ -5,6 +5,25 @@
 
 GIT__USE_STRMAP;
 
+const char *git_attr__true  = "[internal]__TRUE__";
+const char *git_attr__false = "[internal]__FALSE__";
+const char *git_attr__unset = "[internal]__UNSET__";
+
+git_attr_t git_attr_value(const char *attr)
+{
+	if (attr == NULL || attr == git_attr__unset)
+		return GIT_ATTR_UNSPECIFIED_T;
+
+	if (attr == git_attr__true)
+		return GIT_ATTR_TRUE_T;
+
+	if (attr == git_attr__false)
+		return GIT_ATTR_FALSE_T;
+
+	return GIT_ATTR_VALUE_T;
+}
+
+
 static int collect_attr_files(
 	git_repository *repo,
 	uint32_t flags,

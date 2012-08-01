@@ -24,6 +24,10 @@
 #define GIT_ATTR_FNMATCH_HASWILD	(1U << 5)
 #define GIT_ATTR_FNMATCH_ALLOWSPACE	(1U << 6)
 
+extern const char *git_attr__true;
+extern const char *git_attr__false;
+extern const char *git_attr__unset;
+
 typedef struct {
 	char *pattern;
 	size_t length;
