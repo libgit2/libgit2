@@ -27,7 +27,7 @@ static int init_filter(char *filter, size_t n, const char *dir)
 git__DIR *git__opendir(const char *dir)
 {
 	char filter[4096];
-	wchar_t* filter_w = NULL;
+	gitwin_utf16_path* filter_w;
 	git__DIR *new = NULL;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
@@ -41,12 +41,11 @@ git__DIR *git__opendir(const char *dir)
 	if (!new->dir)
 		goto fail;
 
-	filter_w = gitwin_to_utf16(filter);
-	if (!filter_w)
+	if (gitwin_path_create(&filter_w, filter, strlen(filter)) < 0)
 		goto fail;
 
-	new->h = FindFirstFileW(filter_w, &new->f);
-	git__free(filter_w);
+	new->h = FindFirstFileW(gitwin_path_ptr(filter_w), &new->f);
+	gitwin_path_free(filter_w);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "Could not open directory '%s'", dir);
@@ -114,7 +113,7 @@ struct git__dirent *git__readdir(git__DIR *d)
 void git__rewinddir(git__DIR *d)
 {
 	char filter[4096];
-	wchar_t* filter_w;
+	gitwin_utf16_path* filter_w;
 
 	if (!d)
 		return;
@@ -126,11 +125,11 @@ void git__rewinddir(git__DIR *d)
 	}
 
 	if (!init_filter(filter, sizeof(filter), d->dir) ||
-		(filter_w = gitwin_to_utf16(filter)) == NULL)
+		(gitwin_path_create(&filter_w,filter,strlen(filter)) < 0))
 		return;
 
-	d->h = FindFirstFileW(filter_w, &d->f);
-	git__free(filter_w);
+	d->h = FindFirstFileW(gitwin_path_ptr(filter_w), &d->f);
+	gitwin_path_free(filter_w);
 
 	if (d->h == INVALID_HANDLE_VALUE)
 		giterr_set(GITERR_OS, "Could not open directory '%s'", d->dir);
