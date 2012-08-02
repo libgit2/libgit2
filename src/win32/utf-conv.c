@@ -154,6 +154,40 @@ too_long_path:
 	return -1;
 }
 
+int gitwin_path_create(gitwin_utf16_path **utf16_path, const char *str, size_t len)
+{
+	gitwin_utf16_path* path;
+	int rc;
+
+	assert(utf16_path && str);
+
+	*utf16_path = NULL;
+	if (len == 0) {
+		return -1;
+	}
+
+	path = git__malloc(sizeof(*path));
+	GITERR_CHECK_ALLOC(path);
+
+	rc = git__utf8_to_16(gitwin_path_ptr(path), MAX_PATH, str, len);
+	if (rc<0) {
+		git__free(path);
+		return rc;
+	}
+
+	path->length = rc;
+	*utf16_path = path;
+	return 0;
+}
+
+void gitwin_path_free(gitwin_utf16_path *utf16_path)
+{
+	if (!utf16_path)
+		return;
+
+	git__free(utf16_path);
+}
+
 wchar_t* gitwin_to_utf16(const char* str)
 {
 	wchar_t* ret;
