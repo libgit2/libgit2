@@ -20,7 +20,7 @@ void test_refs_unicode__create_and_lookup(void)
 	git_reference *ref0, *ref1, *ref2;
 	git_repository *repo2;
 
-	const char *REFNAME = "refs/heads/" "\305" "ngstr" "\366" "m";
+	const char *REFNAME = "refs/heads/" "\303\205" "ngstr" "\303\266" "m";
 	const char *master = "refs/heads/master";
 
 	/* Create the reference */
