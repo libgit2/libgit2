@@ -55,19 +55,25 @@ void cl_git_rewritefile(const char *filename, const char *new_content)
 
 char *cl_getenv(const char *name)
 {
-	wchar_t *name_utf16 = gitwin_to_utf16(name);
+	gitwin_utf16_path* name_utf16;
 	DWORD value_len, alloc_len;
 	wchar_t *value_utf16;
 	char *value_utf8;
 
-	cl_assert(name_utf16);
-	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
+	/*
+	 * Is it really safe to assume the name of an environment variable
+	 * isn't longer than MAX_PATH (260)?
+	 */
+	cl_assert(gitwin_path_create(&name_utf16,name,strlen(name)) != -1);
+	alloc_len = GetEnvironmentVariableW(gitwin_path_ptr(name_utf16), NULL, 0);
 	if (alloc_len <= 0)
 		return NULL;
 
 	cl_assert(value_utf16 = git__calloc(alloc_len, sizeof(wchar_t)));
 
-	value_len = GetEnvironmentVariableW(name_utf16, value_utf16, alloc_len);
+	value_len = GetEnvironmentVariableW(gitwin_path_ptr(name_utf16),
+		value_utf16, alloc_len);
+	gitwin_path_free(name_utf16);
 	cl_assert_equal_i(value_len, alloc_len - 1);
 
 	cl_assert(value_utf8 = gitwin_from_utf16(value_utf16));
@@ -79,13 +85,18 @@ char *cl_getenv(const char *name)
 
 int cl_setenv(const char *name, const char *value)
 {
-	wchar_t *name_utf16 = gitwin_to_utf16(name);
+	gitwin_utf16_path *name_utf16;
 	wchar_t *value_utf16 = value ? gitwin_to_utf16(value) : NULL;
 
+	/*
+	 * Is it really safe to assume the name of an environment variable
+	 * isn't longer than MAX_PATH (260)?
+	 */
+	cl_assert(gitwin_path_create(&name_utf16,name,strlen(name)) != -1);
 	cl_assert(name_utf16);
-	cl_assert(SetEnvironmentVariableW(name_utf16, value_utf16));
+	cl_assert(SetEnvironmentVariableW(gitwin_path_ptr(name_utf16), value_utf16));
 
-	git__free(name_utf16);
+	gitwin_path_free(name_utf16);
 	git__free(value_utf16);
 
 	return 0;
