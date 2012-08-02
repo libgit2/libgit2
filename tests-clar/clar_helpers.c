@@ -85,8 +85,14 @@ char *cl_getenv(const char *name)
 
 int cl_setenv(const char *name, const char *value)
 {
+	int len = value ? strlen(value) : 0;
 	gitwin_utf16_path *name_utf16;
-	wchar_t *value_utf16 = value ? gitwin_to_utf16(value) : NULL;
+	gitwin_utf16_path *value_utf16;
+
+	if (value) {
+		cl_assert(len < MAX_PATH - 1);
+		cl_assert(gitwin_path_create(&value_utf16,value,len) != -1);
+	}
 
 	/*
 	 * Is it really safe to assume the name of an environment variable
@@ -94,10 +100,13 @@ int cl_setenv(const char *name, const char *value)
 	 */
 	cl_assert(gitwin_path_create(&name_utf16,name,strlen(name)) != -1);
 	cl_assert(name_utf16);
-	cl_assert(SetEnvironmentVariableW(gitwin_path_ptr(name_utf16), value_utf16));
+	cl_assert(SetEnvironmentVariableW(gitwin_path_ptr(name_utf16),
+		len ? gitwin_path_ptr(value_utf16) : NULL));
 
 	gitwin_path_free(name_utf16);
-	git__free(value_utf16);
+	if (len) {
+		gitwin_path_free(value_utf16);
+	}
 
 	return 0;
 

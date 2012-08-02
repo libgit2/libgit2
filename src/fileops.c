@@ -65,11 +65,12 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 	int fd;
 
 #ifdef GIT_WIN32
-	wchar_t* buf;
+	gitwin_utf16_path *buf;
 
-	buf = gitwin_to_utf16(path);
-	fd = _wopen(buf, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
-	git__free(buf);
+	if (gitwin_path_create(&buf, path, strlen(path)) < 0)
+		return -1;
+	fd = _wopen(gitwin_path_ptr(buf), O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
+	gitwin_path_free(buf);
 #else
 	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
 #endif
