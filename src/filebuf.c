@@ -319,7 +319,9 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 	if (verify_last_error(file) < 0)
 		goto on_error;
 
-	p_close(file->fd);
+	if (p_close(file->fd) != 0)
+		goto on_error;
+
 	file->fd = -1;
 	file->fd_is_open = false;
 
@@ -454,4 +456,3 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 	return res;
 }
-
