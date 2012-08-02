@@ -21,12 +21,18 @@ GIT_INLINE(int) p_link(const char *old, const char *new)
 
 GIT_INLINE(int) p_mkdir(const char *path, mode_t mode)
 {
-	wchar_t* buf = gitwin_to_utf16(path);
-	int ret = _wmkdir(buf);
+	int ret;
+	gitwin_utf16_path * buf;
+
+	if (gitwin_path_create(&buf, path, strlen(path)) < 0 ) {
+		return -1;
+	}
+
+	ret = _wmkdir(gitwin_path_ptr(buf));
 
 	GIT_UNUSED(mode);
 
-	git__free(buf);
+	gitwin_path_free(buf);
 	return ret;
 }
 
