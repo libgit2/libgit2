@@ -89,7 +89,7 @@ int cl_setenv(const char *name, const char *value)
 	gitwin_utf16_path *name_utf16;
 	gitwin_utf16_path *value_utf16;
 
-	if (value) {
+	if (value && *value) {
 		cl_assert(len < MAX_PATH - 1);
 		cl_assert(gitwin_path_create(&value_utf16,value,len) != -1);
 	}
