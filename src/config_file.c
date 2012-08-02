@@ -253,10 +253,16 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 		char *tmp = NULL;
 
 		git__free(key);
+
 		if (existing->next != NULL) {
 			giterr_set(GITERR_CONFIG, "Multivar incompatible with simple set");
 			return -1;
 		}
+
+		/* don't update if old and new values already match */
+		if ((!existing->value && !value) ||
+			(existing->value && value && !strcmp(existing->value, value)))
+			return 0;
 
 		if (value) {
 			tmp = git__strdup(value);
