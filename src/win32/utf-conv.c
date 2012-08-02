@@ -188,31 +188,6 @@ void gitwin_path_free(gitwin_utf16_path *utf16_path)
 	git__free(utf16_path);
 }
 
-wchar_t* gitwin_to_utf16(const char* str)
-{
-	wchar_t* ret;
-	int cb;
-
-	if (!str)
-		return NULL;
-
-	cb = MultiByteToWideChar(_active_codepage, 0, str, -1, NULL, 0);
-	if (cb == 0)
-		return (wchar_t *)git__calloc(1, sizeof(wchar_t));
-
-	ret = (wchar_t *)git__malloc(cb * sizeof(wchar_t));
-	if (!ret)
-		return NULL;
-
-	if (MultiByteToWideChar(_active_codepage, 0, str, -1, ret, (int)cb) == 0) {
-		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
-		git__free(ret);
-		ret = NULL;
-	}
-
-	return ret;
-}
-
 int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
 {
 	int result = MultiByteToWideChar(
