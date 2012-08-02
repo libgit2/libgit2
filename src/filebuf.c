@@ -319,9 +319,14 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 	if (verify_last_error(file) < 0)
 		goto on_error;
 
-	p_close(file->fd);
-	file->fd = -1;
 	file->fd_is_open = false;
+
+	if (p_close(file->fd) < 0) {
+		giterr_set(GITERR_OS, "Failed to close file at '%s'", file->path_lock);
+		goto on_error;
+	}
+
+	file->fd = -1;
 
 	if (p_chmod(file->path_lock, mode)) {
 		giterr_set(GITERR_OS, "Failed to set attributes for file at '%s'", file->path_lock);
