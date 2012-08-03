@@ -129,6 +129,17 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byname(git_tree *tree, const c
 GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(git_tree *tree, size_t idx);
 
 /**
+ * Lookup a tree entry by SHA value.
+ *
+ * Warning: this must examine every entry in the tree, so it is not fast.
+ *
+ * @param tree a previously loaded tree.
+ * @param oid the sha being looked for
+ * @return the tree entry; NULL if not found
+ */
+GIT_EXTERN(const git_tree_entry *) git_tree_entry_byoid(git_tree *tree, const git_oid *oid);
+
+/**
  * Get the UNIX file attributes of a tree entry
  *
  * @param entry a tree entry
