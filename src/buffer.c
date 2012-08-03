@@ -144,31 +144,40 @@ int git_buf_puts(git_buf *buf, const char *string)
 int git_buf_puts_escaped(
 	git_buf *buf, const char *string, const char *esc_chars, const char *esc_with)
 {
-	const char *scan = string;
-	size_t total = 0, esc_with_len = strlen(esc_with);
+	const char *scan;
+	size_t total = 0, esc_len = strlen(esc_with), count;
 
-	while (*scan) {
-		size_t count = strcspn(scan, esc_chars);
-		total += count + 1 + esc_with_len;
-		scan += count + 1;
+	if (!string)
+		return 0;
+
+	for (scan = string; *scan; ) {
+		/* count run of non-escaped characters */
+		count = strcspn(scan, esc_chars);
+		total += count;
+		scan += count;
+		/* count run of escaped characters */
+		count = strspn(scan, esc_chars);
+		total += count * (esc_len + 1);
+		scan += count;
 	}
 
 	ENSURE_SIZE(buf, buf->size + total + 1);
 
 	for (scan = string; *scan; ) {
-		size_t count = strcspn(scan, esc_chars);
+		count = strcspn(scan, esc_chars);
 
 		memmove(buf->ptr + buf->size, scan, count);
 		scan += count;
 		buf->size += count;
 
-		if (*scan) {
-			memmove(buf->ptr + buf->size, esc_with, esc_with_len);
-			buf->size += esc_with_len;
-
-			memmove(buf->ptr + buf->size, scan, 1);
-			scan += 1;
-			buf->size += 1;
+		for (count = strspn(scan, esc_chars); count > 0; --count) {
+			/* copy escape sequence */
+			memmove(buf->ptr + buf->size, esc_with, esc_len);
+			buf->size += esc_len;
+			/* copy character to be escaped */
+			buf->ptr[buf->size] = *scan;
+			buf->size++;
+			scan++;
 		}
 	}
 

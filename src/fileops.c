@@ -700,6 +700,7 @@ int git_futils_cp_r(
 	error = _cp_r_callback(&info, &path);
 
 	git_buf_free(&path);
+	git_buf_free(&info.to);
 
 	return error;
 }

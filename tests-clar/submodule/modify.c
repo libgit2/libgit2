@@ -253,4 +253,5 @@ void test_submodule_modify__edit_and_save(void)
 		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm2));
 
 	git_repository_free(r2);
+	git__free(old_url);
 }

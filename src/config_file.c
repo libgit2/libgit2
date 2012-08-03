@@ -195,7 +195,7 @@ static int file_foreach(
 	void *data)
 {
 	diskfile_backend *b = (diskfile_backend *)backend;
-	cvar_t *var;
+	cvar_t *var, *next_var;
 	const char *key;
 	regex_t regex;
 	int result = 0;
@@ -212,7 +212,9 @@ static int file_foreach(
 	}
 
 	git_strmap_foreach(b->values, key, var,
-		for (; var != NULL; var = CVAR_LIST_NEXT(var)) {
+		for (; var != NULL; var = next_var) {
+			next_var = CVAR_LIST_NEXT(var);
+
 			/* skip non-matching keys if regexp was provided */
 			if (regexp && regexec(&regex, key, 0, NULL, 0) != 0)
 				continue;
