@@ -324,10 +324,8 @@ static int http_ls(git_transport *transport, git_headlist_cb list_cb, void *opaq
 		if (p->type != GIT_PKT_REF)
 			continue;
 
-		if (list_cb(&p->head, opaque) < 0) {
-			giterr_set(GITERR_NET, "The user callback returned error");
-			return -1;
-		}
+		if (list_cb(&p->head, opaque))
+			return GIT_EUSER;
 	}
 
 	return 0;

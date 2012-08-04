@@ -31,6 +31,24 @@ static int foreach_cb(git_oid *oid, void *data)
 
 void test_odb_foreach__foreach(void)
 {
+	nobj = 0;
 	cl_git_pass(git_odb_foreach(_odb, foreach_cb, NULL));
 	cl_assert(nobj == 1683);
+}
+
+static int foreach_stop_cb(git_oid *oid, void *data)
+{
+	GIT_UNUSED(data);
+	GIT_UNUSED(oid);
+
+	nobj++;
+
+	return (nobj == 1000);
+}
+
+void test_odb_foreach__interrupt_foreach(void)
+{
+	nobj = 0;
+	cl_assert_equal_i(GIT_EUSER, git_odb_foreach(_odb, foreach_stop_cb, NULL));
+	cl_assert(nobj == 1000);
 }

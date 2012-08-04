@@ -680,6 +680,7 @@ struct foreach_state {
 	size_t dir_len;
 	int (*cb)(git_oid *oid, void *data);
 	void *data;
+	int cb_error;
 };
 
 GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
@@ -718,8 +719,10 @@ static int foreach_object_dir_cb(void *_state, git_buf *path)
 	if (filename_to_oid(&oid, path->ptr + state->dir_len) < 0)
 		return 0;
 
-	if (state->cb(&oid, state->data) < 0)
+	if (state->cb(&oid, state->data)) {
+		state->cb_error = GIT_EUSER;
 		return -1;
+	}
 
 	return 0;
 }
@@ -728,10 +731,7 @@ static int foreach_cb(void *_state, git_buf *path)
 {
 	struct foreach_state *state = (struct foreach_state *) _state;
 
-	if (git_path_direach(path, foreach_object_dir_cb, state) < 0)
-		return -1;
-
-	return 0;
+	return git_path_direach(path, foreach_object_dir_cb, state);
 }
 
 static int loose_backend__foreach(git_odb_backend *_backend, int (*cb)(git_oid *oid, void *data), void *data)
@@ -749,14 +749,16 @@ static int loose_backend__foreach(git_odb_backend *_backend, int (*cb)(git_oid *
 	git_buf_sets(&buf, objects_dir);
 	git_path_to_dir(&buf);
 
+	memset(&state, 0, sizeof(state));
 	state.cb = cb;
 	state.data = data;
 	state.dir_len = git_buf_len(&buf);
 
 	error = git_path_direach(&buf, foreach_cb, &state);
+
 	git_buf_free(&buf);
 
-	return error;
+	return state.cb_error ? state.cb_error : error;
 }
 
 static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)

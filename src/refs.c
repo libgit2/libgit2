@@ -501,6 +501,7 @@ struct dirent_list_data {
 
 	int (*callback)(const char *, void *);
 	void *callback_payload;
+	int callback_error;
 };
 
 static int _dirent_loose_listall(void *_data, git_buf *full_path)
@@ -521,7 +522,10 @@ static int _dirent_loose_listall(void *_data, git_buf *full_path)
 			return 0; /* we are filtering out this reference */
 	}
 
-	return data->callback(file_path, data->callback_payload);
+	if (data->callback(file_path, data->callback_payload))
+		data->callback_error = GIT_EUSER;
+
+	return data->callback_error;
 }
 
 static int _dirent_loose_load(void *data, git_buf *full_path)
@@ -844,15 +848,17 @@ static int reference_path_available(
 	const char *ref,
 	const char* old_ref)
 {
+	int error;
 	struct reference_available_t data;
 
 	data.new_ref = ref;
 	data.old_ref = old_ref;
 	data.available = 1;
 
-	if (git_reference_foreach(repo, GIT_REF_LISTALL,
-		_reference_available_cb, (void *)&data) < 0)
-		return -1;
+	error = git_reference_foreach(
+		repo, GIT_REF_LISTALL, _reference_available_cb, (void *)&data);
+	if (error < 0)
+		return error;
 
 	if (!data.available) {
 		giterr_set(GITERR_REFERENCE,
@@ -1487,8 +1493,8 @@ int git_reference_foreach(
 			return -1;
 
 		git_strmap_foreach(repo->references.packfile, ref_name, ref, {
-			if (callback(ref_name, payload) < 0)
-				return 0;
+			if (callback(ref_name, payload))
+				return GIT_EUSER;
 		});
 	}
 
@@ -1500,14 +1506,16 @@ int git_reference_foreach(
 	data.repo = repo;
 	data.callback = callback;
 	data.callback_payload = payload;
+	data.callback_error = 0;
 
 	if (git_buf_joinpath(&refs_path, repo->path_repository, GIT_REFS_DIR) < 0)
 		return -1;
 
 	result = git_path_direach(&refs_path, _dirent_loose_listall, &data);
+
 	git_buf_free(&refs_path);
 
-	return result;
+	return data.callback_error ? GIT_EUSER : result;
 }
 
 static int cb__reflist_add(const char *ref, void *data)

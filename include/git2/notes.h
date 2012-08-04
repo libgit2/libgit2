@@ -119,19 +119,21 @@ typedef struct {
  *
  * @param repo Repository where to find the notes.
  *
- * @param notes_ref OID reference to read from (optional); defaults to "refs/notes/commits".
+ * @param notes_ref OID reference to read from (optional); defaults to
+ *        "refs/notes/commits".
  *
- * @param note_cb Callback to invoke per found annotation.
+ * @param note_cb Callback to invoke per found annotation.  Return non-zero
+ *        to stop looping.
  *
  * @param payload Extra parameter to callback function.
  *
- * @return 0 or an error code.
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_note_foreach(
-		git_repository *repo,
-		const char *notes_ref,
-		int (*note_cb)(git_note_data *note_data, void *payload),
-		void *payload
+	git_repository *repo,
+	const char *notes_ref,
+	int (*note_cb)(git_note_data *note_data, void *payload),
+	void *payload
 );
 
 /** @} */

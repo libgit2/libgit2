@@ -163,11 +163,14 @@ int git_attr_foreach(
 					continue;
 
 				git_strmap_insert(seen, assign->name, assign, error);
-				if (error >= 0)
-					error = callback(assign->name, assign->value, payload);
-
-				if (error != 0)
+				if (error < 0)
 					goto cleanup;
+
+				error = callback(assign->name, assign->value, payload);
+				if (error) {
+					error = GIT_EUSER;
+					goto cleanup;
+				}
 			}
 		}
 	}

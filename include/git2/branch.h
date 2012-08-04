@@ -74,6 +74,8 @@ GIT_EXTERN(int) git_branch_delete(
 /**
  * Loop over all the branches and issue a callback for each one.
  *
+ * If the callback returns a non-zero value, this will stop looping.
+ *
  * @param repo Repository where to find the branches.
  *
  * @param list_flags Filtering flags for the branch
@@ -84,7 +86,7 @@ GIT_EXTERN(int) git_branch_delete(
  *
  * @param payload Extra parameter to callback function.
  *
- * @return 0 or an error code.
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_branch_foreach(
 		git_repository *repo,

@@ -23,6 +23,7 @@ typedef struct {
 	unsigned int index;
 	git_diff_delta *delta;
 	git_diff_range range;
+	int error;
 } diff_output_info;
 
 static int read_next_int(const char **str, int *value)
@@ -49,25 +50,24 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 
 		/* expect something of the form "@@ -%d[,%d] +%d[,%d] @@" */
 		if (*scan != '@')
-			return -1;
+			info->error = -1;
+		else if (read_next_int(&scan, &range.old_start) < 0)
+			info->error = -1;
+		else if (*scan == ',' && read_next_int(&scan, &range.old_lines) < 0)
+			info->error = -1;
+		else if (read_next_int(&scan, &range.new_start) < 0)
+			info->error = -1;
+		else if (*scan == ',' && read_next_int(&scan, &range.new_lines) < 0)
+			info->error = -1;
+		else if (range.old_start < 0 || range.new_start < 0)
+			info->error = -1;
+		else {
+			memcpy(&info->range, &range, sizeof(git_diff_range));
 
-		if (read_next_int(&scan, &range.old_start) < 0)
-			return -1;
-		if (*scan == ',' && read_next_int(&scan, &range.old_lines) < 0)
-			return -1;
-
-		if (read_next_int(&scan, &range.new_start) < 0)
-			return -1;
-		if (*scan == ',' && read_next_int(&scan, &range.new_lines) < 0)
-			return -1;
-
-		if (range.old_start < 0 || range.new_start < 0)
-			return -1;
-
-		memcpy(&info->range, &range, sizeof(git_diff_range));
-
-		return info->hunk_cb(
-			info->cb_data, info->delta, &range, bufs[0].ptr, bufs[0].size);
+			if (info->hunk_cb(
+					info->cb_data, info->delta, &range, bufs[0].ptr, bufs[0].size))
+				info->error = GIT_EUSER;
+		}
 	}
 
 	if ((len == 2 || len == 3) && info->line_cb) {
@@ -80,23 +80,24 @@ static int diff_output_cb(void *priv, mmbuffer_t *bufs, int len)
 			GIT_DIFF_LINE_CONTEXT;
 
 		if (info->line_cb(
-			info->cb_data, info->delta, &info->range, origin, bufs[1].ptr, bufs[1].size) < 0)
-			return -1;
+				info->cb_data, info->delta, &info->range, origin, bufs[1].ptr, bufs[1].size))
+			info->error = GIT_EUSER;
 
 		/* This should only happen if we are adding a line that does not
 		 * have a newline at the end and the old code did.  In that case,
 		 * we have a ADD with a DEL_EOFNL as a pair.
 		 */
-		if (len == 3) {
+		else if (len == 3) {
 			origin = (origin == GIT_DIFF_LINE_ADDITION) ?
 				GIT_DIFF_LINE_DEL_EOFNL : GIT_DIFF_LINE_ADD_EOFNL;
 
-			return info->line_cb(
-				info->cb_data, info->delta, &info->range, origin, bufs[2].ptr, bufs[2].size);
+			if (info->line_cb(
+					info->cb_data, info->delta, &info->range, origin, bufs[2].ptr, bufs[2].size))
+				info->error = GIT_EUSER;
 		}
 	}
 
-	return 0;
+	return info->error;
 }
 
 #define BINARY_DIFF_FLAGS (GIT_DIFF_FILE_BINARY|GIT_DIFF_FILE_NOT_BINARY)
@@ -318,6 +319,7 @@ int git_diff_foreach(
 	xdemitconf_t xdiff_config;
 	xdemitcb_t   xdiff_callback;
 
+	memset(&info, 0, sizeof(info));
 	info.diff    = diff;
 	info.cb_data = data;
 	info.hunk_cb = hunk_cb;
@@ -422,11 +424,11 @@ int git_diff_foreach(
 		 * diffs to tell if a file has really been changed.
 		 */
 
-		if (file_cb != NULL) {
-			error = file_cb(
-				data, delta, (float)info.index / diff->deltas.length);
-			if (error < 0)
-				goto cleanup;
+		if (file_cb != NULL &&
+			file_cb(data, delta, (float)info.index / diff->deltas.length))
+		{
+			error = GIT_EUSER;
+			goto cleanup;
 		}
 
 		/* don't do hunk and line diffs if file is binary */
@@ -451,6 +453,7 @@ int git_diff_foreach(
 
 		xdl_diff(&old_xdiff_data, &new_xdiff_data,
 			&xdiff_params, &xdiff_config, &xdiff_callback);
+		error = info.error;
 
 cleanup:
 		release_content(&delta->old_file, &old_data, old_blob);
@@ -524,7 +527,11 @@ static int print_compact(void *data, git_diff_delta *delta, float progress)
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-	return pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
+	if (pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR,
+			git_buf_cstr(pi->buf), git_buf_len(pi->buf)))
+		return GIT_EUSER;
+
+	return 0;
 }
 
 int git_diff_print_compact(
@@ -586,7 +593,6 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	const char *oldpath = delta->old_file.path;
 	const char *newpfx = pi->diff->opts.new_prefix;
 	const char *newpath = delta->new_file.path;
-	int result;
 
 	GIT_UNUSED(progress);
 
@@ -619,9 +625,8 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-    result = pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
-    if (result < 0)
-        return result;
+    if (pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf)))
+		return GIT_EUSER;
 
     if (delta->binary != 1)
         return 0;
@@ -633,7 +638,11 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-	return pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_BINARY, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
+	if (pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_BINARY,
+			git_buf_cstr(pi->buf), git_buf_len(pi->buf)))
+		return GIT_EUSER;
+
+	return 0;
 }
 
 static int print_patch_hunk(
@@ -649,7 +658,11 @@ static int print_patch_hunk(
 	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) < 0)
 		return -1;
 
-	return pi->print_cb(pi->cb_data, d, r, GIT_DIFF_LINE_HUNK_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
+	if (pi->print_cb(pi->cb_data, d, r, GIT_DIFF_LINE_HUNK_HDR,
+			git_buf_cstr(pi->buf), git_buf_len(pi->buf)))
+		return GIT_EUSER;
+
+	return 0;
 }
 
 static int print_patch_line(
@@ -674,7 +687,11 @@ static int print_patch_line(
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-	return pi->print_cb(pi->cb_data, delta, range, line_origin, git_buf_cstr(pi->buf), git_buf_len(pi->buf));
+	if (pi->print_cb(pi->cb_data, delta, range, line_origin,
+			git_buf_cstr(pi->buf), git_buf_len(pi->buf)))
+		return GIT_EUSER;
+
+	return 0;
 }
 
 int git_diff_print_patch(
@@ -763,11 +780,8 @@ int git_diff_blobs(
 	if (file_is_binary_by_content(&delta, &old_map, &new_map) < 0)
 		return -1;
 
-	if (file_cb != NULL) {
-		int error = file_cb(cb_data, &delta, 1);
-		if (error < 0)
-			return error;
-	}
+	if (file_cb != NULL && file_cb(cb_data, &delta, 1))
+		return GIT_EUSER;
 
 	/* don't do hunk and line diffs if the two blobs are identical */
 	if (delta.status == GIT_DELTA_UNMODIFIED)
@@ -777,6 +791,7 @@ int git_diff_blobs(
 	if (delta.binary == 1)
 		return 0;
 
+	memset(&info, 0, sizeof(info));
 	info.diff    = NULL;
 	info.delta   = &delta;
 	info.cb_data = cb_data;
@@ -790,5 +805,5 @@ int git_diff_blobs(
 
 	xdl_diff(&old_data, &new_data, &xdiff_params, &xdiff_config, &xdiff_callback);
 
-	return 0;
+	return info.error;
 }

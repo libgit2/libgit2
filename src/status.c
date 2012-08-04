@@ -114,7 +114,8 @@ int git_status_foreach_ext(
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
 		for (i = 0; !err && i < idx2head->deltas.length; i++) {
 			i2h = GIT_VECTOR_GET(&idx2head->deltas, i);
-			err = cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata);
+			if (cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata))
+				err = GIT_EUSER;
 		}
 		git_diff_list_free(idx2head);
 		idx2head = NULL;
@@ -130,14 +131,17 @@ int git_status_foreach_ext(
 		cmp = !w2i ? -1 : !i2h ? 1 : strcmp(i2h->old_file.path, w2i->old_file.path);
 
 		if (cmp < 0) {
-			err = cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata);
+			if (cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata))
+				err = GIT_EUSER;
 			i++;
 		} else if (cmp > 0) {
-			err = cb(w2i->old_file.path, workdir_delta2status(w2i->status), cbdata);
+			if (cb(w2i->old_file.path, workdir_delta2status(w2i->status), cbdata))
+				err = GIT_EUSER;
 			j++;
 		} else {
-			err = cb(i2h->old_file.path, index_delta2status(i2h->status) |
-					 workdir_delta2status(w2i->status), cbdata);
+			if (cb(i2h->old_file.path, index_delta2status(i2h->status) |
+				   workdir_delta2status(w2i->status), cbdata))
+				err = GIT_EUSER;
 			i++; j++;
 		}
 	}
@@ -146,6 +150,7 @@ cleanup:
 	git_tree_free(head);
 	git_diff_list_free(idx2head);
 	git_diff_list_free(wd2idx);
+
 	return err;
 }
 
@@ -166,9 +171,10 @@ int git_status_foreach(
 }
 
 struct status_file_info {
+	char *expected;
 	unsigned int count;
 	unsigned int status;
-	char *expected;
+	int ambiguous;
 };
 
 static int get_one_status(const char *path, unsigned int status, void *data)
@@ -183,6 +189,7 @@ static int get_one_status(const char *path, unsigned int status, void *data)
 		p_fnmatch(sfi->expected, path, 0) != 0)) {
 		giterr_set(GITERR_INVALID,
 			"Ambiguous path '%s' given to git_status_file", sfi->expected);
+		sfi->ambiguous = true;
 		return GIT_EAMBIGUOUS;
 	}
 
@@ -214,6 +221,9 @@ int git_status_file(
 	opts.pathspec.strings = &sfi.expected;
 
 	error = git_status_foreach_ext(repo, &opts, get_one_status, &sfi);
+
+	if (error < 0 && sfi.ambiguous)
+		error = GIT_EAMBIGUOUS;
 
 	if (!error && !sfi.count) {
 		giterr_set(GITERR_INVALID,

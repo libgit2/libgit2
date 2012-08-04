@@ -113,6 +113,22 @@ static int count_attrs(
 	return 0;
 }
 
+static int cancel_iteration(
+	const char *name,
+	const char *value,
+	void *payload)
+{
+	GIT_UNUSED(name);
+	GIT_UNUSED(value);
+
+	*((int *)payload) -= 1;
+
+	if (*((int *)payload) < 0)
+		return -1;
+
+	return 0;
+}
+
 void test_attr_repo__foreach(void)
 {
 	int count;
@@ -131,6 +147,12 @@ void test_attr_repo__foreach(void)
 	cl_git_pass(git_attr_foreach(g_repo, 0, "sub/subdir_test2.txt",
 		&count_attrs, &count));
 	cl_assert(count == 6); /* repoattr, rootattr, subattr, reposub, negattr, another */
+
+	count = 2;
+	cl_assert_equal_i(
+		GIT_EUSER, git_attr_foreach(
+			g_repo, 0, "sub/subdir_test1", &cancel_iteration, &count)
+	);
 }
 
 void test_attr_repo__manpage_example(void)

@@ -217,6 +217,7 @@ extern int git_path_apply_relative(git_buf *target, const char *relpath);
  *		the input state and the second arg is pathbuf. The function
  *		may modify the pathbuf, but only by appending new text.
  * @param state to pass to fn as the first arg.
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 extern int git_path_direach(
 	git_buf *pathbuf,

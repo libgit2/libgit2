@@ -126,8 +126,8 @@ static int local_ls(git_transport *transport, git_headlist_cb list_cb, void *pay
 	assert(transport && transport->connected);
 
 	git_vector_foreach(refs, i, h) {
-		if (list_cb(h, payload) < 0)
-			return -1;
+		if (list_cb(h, payload))
+			return GIT_EUSER;
 	}
 
 	return 0;

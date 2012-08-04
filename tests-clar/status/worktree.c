@@ -530,7 +530,7 @@ void test_status_worktree__bracket_in_filename(void)
 
 	cl_git_pass(git_repository_init(&repo, "with_bracket", 0));
 	cl_git_mkfile("with_bracket/" FILE_WITH_BRACKET, "I have a bracket in my name\n");
-	
+
 	/* file is new to working directory */
 
 	memset(&result, 0, sizeof(result));
@@ -578,7 +578,7 @@ void test_status_worktree__bracket_in_filename(void)
 
 	cl_git_pass(git_status_file(&status_flags, repo, FILE_WITH_BRACKET));
 	cl_assert(status_flags == GIT_STATUS_INDEX_NEW);
-	
+
 	/* Create file without bracket */
 
 	cl_git_mkfile("with_bracket/" FILE_WITHOUT_BRACKET, "I have no bracket in my name!\n");
@@ -591,7 +591,7 @@ void test_status_worktree__bracket_in_filename(void)
 
 	error = git_status_file(&status_flags, repo, FILE_WITH_BRACKET);
 	cl_git_fail(error);
-	cl_assert(error == GIT_EAMBIGUOUS);
+	cl_assert_equal_i(GIT_EAMBIGUOUS, error);
 
 	git_index_free(index);
 	git_repository_free(repo);
@@ -769,6 +769,31 @@ void test_status_worktree__disable_pathspec_match(void)
 	cl_git_pass(
 		git_status_foreach_ext(repo, &opts, cb_status__expected_path, NULL)
 	);
-	
+
 	git_repository_free(repo);
+}
+
+
+static int cb_status__interrupt(const char *p, unsigned int s, void *payload)
+{
+	volatile int *count = (int *)payload;
+
+	GIT_UNUSED(p);
+	GIT_UNUSED(s);
+
+	(*count)++;
+
+	return (*count == 8);
+}
+
+void test_status_worktree__interruptable_foreach(void)
+{
+	int count = 0;
+	git_repository *repo = cl_git_sandbox_init("status");
+
+	cl_assert_equal_i(
+		GIT_EUSER, git_status_foreach(repo, cb_status__interrupt, &count)
+	);
+
+	cl_assert_equal_i(8, count);
 }

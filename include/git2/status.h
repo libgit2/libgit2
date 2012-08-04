@@ -38,11 +38,11 @@ enum {
  *
  * The callback is passed the path of the file, the status and the data
  * pointer passed to this function. If the callback returns something other
- * than 0, this function will return that value.
+ * than 0, this function will stop looping and return GIT_EUSER.
  *
  * @param repo a repository object
  * @param callback the function to call on each file
- * @return 0 on success or the return value of the callback that was non-zero
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_status_foreach(
 	git_repository *repo,

@@ -239,10 +239,8 @@ static int git_ls(git_transport *transport, git_headlist_cb list_cb, void *opaqu
 
 		pkt = (git_pkt_ref *)p;
 
-		if (list_cb(&pkt->head, opaque) < 0) {
-			giterr_set(GITERR_NET, "User callback returned error");
-			return -1;
-		}
+		if (list_cb(&pkt->head, opaque))
+			return GIT_EUSER;
 	}
 
 	return 0;

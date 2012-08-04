@@ -268,14 +268,15 @@ GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, un
  *
  * The `callback` function will be called for each of the references
  * in the repository, and will receive the name of the reference and
- * the `payload` value passed to this method.
+ * the `payload` value passed to this method.  Returning a non-zero
+ * value from the callback will terminate the iteration.
  *
  * @param repo Repository where to find the refs
  * @param list_flags Filtering flags for the reference
  *		listing.
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
- * @return 0 or an error code
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
 

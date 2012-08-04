@@ -90,3 +90,53 @@ void test_diff_index__0(void)
 	git_tree_free(a);
 	git_tree_free(b);
 }
+
+static int diff_stop_after_2_files(
+	void *cb_data,
+	git_diff_delta *delta,
+	float progress)
+{
+	diff_expects *e = cb_data;
+
+	GIT_UNUSED(progress);
+	GIT_UNUSED(delta);
+
+	e->files++;
+
+	return (e->files == 2);
+}
+
+void test_diff_index__1(void)
+{
+	/* grabbed a couple of commit oids from the history of the attr repo */
+	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
+	const char *b_commit = "0017bd4ab1ec3"; /* the start */
+	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
+	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
+	git_diff_options opts = {0};
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+
+	cl_assert(a);
+	cl_assert(b);
+
+	opts.context_lines = 1;
+	opts.interhunk_lines = 1;
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_index_to_tree(g_repo, &opts, a, &diff));
+
+	cl_assert_equal_i(
+		GIT_EUSER,
+		git_diff_foreach(diff, &exp, diff_stop_after_2_files, NULL, NULL)
+	);
+
+	cl_assert(exp.files == 2);
+
+	git_diff_list_free(diff);
+	diff = NULL;
+
+	git_tree_free(a);
+	git_tree_free(b);
+}

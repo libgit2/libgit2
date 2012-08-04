@@ -133,9 +133,12 @@ GIT_EXTERN(int) git_remote_connect(git_remote *remote, int direction);
  * The remote (or more exactly its transport) must be connected. The
  * memory belongs to the remote.
  *
+ * If you a return a non-zero value from the callback, this will stop
+ * looping over the refs.
+ *
  * @param refs where to store the refs
  * @param remote the remote
- * @return 0 or an error code
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload);
 

@@ -68,3 +68,25 @@ void test_refs_foreachglob__retrieve_partially_named_references(void)
 
 	assert_retrieval("*test*", GIT_REF_LISTALL, 4);
 }
+
+
+static int interrupt_cb(const char *reference_name, void *payload)
+{
+	int *count = (int *)payload;
+
+	GIT_UNUSED(reference_name);
+
+	(*count)++;
+
+	return (*count == 11);
+}
+
+void test_refs_foreachglob__can_cancel(void)
+{
+	int count = 0;
+
+	cl_assert_equal_i(GIT_EUSER, git_reference_foreach_glob(
+		repo, "*", GIT_REF_LISTALL, interrupt_cb, &count) );
+
+	cl_assert_equal_i(11, count);
+}
