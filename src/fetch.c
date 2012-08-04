@@ -5,7 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2/remote.h"
 #include "git2/oid.h"
 #include "git2/refs.h"
 #include "git2/revwalk.h"

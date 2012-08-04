@@ -7,6 +7,8 @@
 #ifndef INCLUDE_remote_h__
 #define INCLUDE_remote_h__
 
+#include "git2/remote.h"
+
 #include "refspec.h"
 #include "transport.h"
 #include "repository.h"
