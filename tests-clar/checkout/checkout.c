@@ -152,6 +152,8 @@ void test_checkout_checkout__dir_modes(void)
 	/* File-mode test, since we're on the 'dir' branch */
 	cl_git_pass(p_stat("./testrepo/a/b.txt", &st));
 	cl_assert_equal_i(st.st_mode & 0777, 0755);
+
+	git_reference_free(ref);
 #endif
 }
 
