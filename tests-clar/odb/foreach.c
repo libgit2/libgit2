@@ -11,6 +11,9 @@ void test_odb_foreach__cleanup(void)
 {
 	git_odb_free(_odb);
 	git_repository_free(_repo);
+
+	_odb = NULL;
+	_repo = NULL;
 }
 
 static int foreach_cb(git_oid *oid, void *data)
@@ -69,6 +72,9 @@ static int foreach_stop_cb(git_oid *oid, void *data)
 void test_odb_foreach__interrupt_foreach(void)
 {
 	nobj = 0;
+	cl_git_pass(git_repository_open(&_repo, cl_fixture("testrepo.git")));
+	git_repository_odb(&_odb, _repo);
+
 	cl_assert_equal_i(GIT_EUSER, git_odb_foreach(_odb, foreach_stop_cb, NULL));
 	cl_assert(nobj == 1000);
 }
