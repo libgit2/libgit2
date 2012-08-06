@@ -7,39 +7,18 @@
 
 #include "common.h"
 #include "utf-conv.h"
-#include "git2/windows.h"
-
-/*
- * Default codepage value
- */
-static int _active_codepage = CP_UTF8;
-
-void gitwin_set_codepage(unsigned int codepage)
-{
-	_active_codepage = codepage;
-}
-
-unsigned int gitwin_get_codepage(void)
-{
-	return _active_codepage;
-}
-
-void gitwin_set_utf8(void)
-{
-	_active_codepage = CP_UTF8;
-}
 
 #define U16_LEAD(c) (wchar_t)(((c)>>10)+0xd7c0)
 #define U16_TRAIL(c) (wchar_t)(((c)&0x3ff)|0xdc00)
 
-void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
+void git__utf8_to_16(wchar_t *dest, const char *src)
 {
 	wchar_t *pDest = dest;
 	uint32_t ch;
 	const uint8_t* pSrc = (uint8_t*) src;
-	const uint8_t *pSrcLimit = pSrc + srcLength;
+	const uint8_t *pSrcLimit = pSrc + strlen(src);
 
-	assert(dest && src && srcLength > 0);
+	assert(dest && src);
 
 	if ((pSrcLimit - pSrc) >= 4) {
 		pSrcLimit -= 3; /* temporarily reduce pSrcLimit */
@@ -121,64 +100,7 @@ void git__utf8_to_16(wchar_t *dest, const char *src, size_t srcLength)
 	*pDest++ = 0x0;
 }
 
-wchar_t* gitwin_to_utf16(const char* str)
+void git__utf16_to_8(char *out, const wchar_t *input)
 {
-	wchar_t* ret;
-	int cb;
-
-	if (!str)
-		return NULL;
-
-	cb = MultiByteToWideChar(_active_codepage, 0, str, -1, NULL, 0);
-	if (cb == 0)
-		return (wchar_t *)git__calloc(1, sizeof(wchar_t));
-
-	ret = (wchar_t *)git__malloc(cb * sizeof(wchar_t));
-	if (!ret)
-		return NULL;
-
-	if (MultiByteToWideChar(_active_codepage, 0, str, -1, ret, (int)cb) == 0) {
-		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
-		git__free(ret);
-		ret = NULL;
-	}
-
-	return ret;
-}
-
-int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
-{
-	int result = MultiByteToWideChar(
-		_active_codepage, 0, str, -1, buffer, (int)len);
-	if (result == 0)
-		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
-	return result;
-}
-
-char* gitwin_from_utf16(const wchar_t* str)
-{
-	char* ret;
-	int cb;
-
-	if (!str)
-		return NULL;
-
-	cb = WideCharToMultiByte(_active_codepage, 0, str, -1, NULL, 0, NULL, NULL);
-	if (cb == 0)
-		return (char *)git__calloc(1, sizeof(char));
-
-	ret = (char*)git__malloc(cb);
-	if (!ret)
-		return NULL;
-
-	if (WideCharToMultiByte(
-		_active_codepage, 0, str, -1, ret, (int)cb, NULL, NULL) == 0)
-	{
-		giterr_set(GITERR_OS, "Could not convert string to UTF-8");
-		git__free(ret);
-		ret = NULL;
-	}
-
-	return ret;
-
+	WideCharToMultiByte(CP_UTF8, 0, input, -1, out, GIT_WIN_PATH, NULL, NULL);
 }

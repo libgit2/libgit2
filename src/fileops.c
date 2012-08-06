@@ -54,11 +54,10 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 	int fd;
 
 #ifdef GIT_WIN32
-	wchar_t* buf;
+	wchar_t buf[GIT_WIN_PATH];
 
-	buf = gitwin_to_utf16(path);
+	git__utf8_to_16(buf, path);
 	fd = _wopen(buf, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
-	git__free(buf);
 #else
 	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
 #endif
@@ -382,10 +381,9 @@ static int win32_expand_path(struct win32_path *s_root, const wchar_t *templ)
 
 static int win32_find_file(git_buf *path, const struct win32_path *root, const char *filename)
 {
-	int error = 0;
 	size_t len;
 	wchar_t *file_utf16 = NULL;
-	char *file_utf8 = NULL;
+	char file_utf8[GIT_PATH_MAX];
 
 	if (!root || !filename || (len = strlen(filename)) == 0)
 		return GIT_ENOTFOUND;
@@ -400,29 +398,20 @@ static int win32_find_file(git_buf *path, const struct win32_path *root, const c
 	if (*filename == '/' || *filename == '\\')
 		filename++;
 
-	if (gitwin_append_utf16(file_utf16 + root->len - 1, filename, len + 1) !=
-		(int)len + 1) {
-		error = -1;
-		goto cleanup;
-	}
+	git__utf8_to_16(file_utf16 + root->len - 1, filename);
 
 	/* check access */
 	if (_waccess(file_utf16, F_OK) < 0) {
-		error = GIT_ENOTFOUND;
-		goto cleanup;
+		git__free(file_utf16);
+		return GIT_ENOTFOUND;
 	}
 
-	/* convert to utf8 */
-	if ((file_utf8 = gitwin_from_utf16(file_utf16)) == NULL)
-		error = -1;
-	else {
-		git_path_mkposix(file_utf8);
-		git_buf_attach(path, file_utf8, 0);
-	}
+	git__utf16_to_8(file_utf8, file_utf16);
+	git_path_mkposix(file_utf8);
+	git_buf_sets(path, file_utf8);
 
-cleanup:
 	git__free(file_utf16);
-	return error;
+	return 0;
 }
 #endif
 
