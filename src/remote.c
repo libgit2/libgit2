@@ -420,10 +420,8 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 
 		pkt = (git_pkt_ref *)p;
 
-		if (list_cb(&pkt->head, payload) < 0) {
-			giterr_set(GITERR_NET, "User callback returned error");
-			return -1;
-		}
+		if (list_cb(&pkt->head, payload) < 0)
+			return GIT_EUSER;
 	}
 
 	return 0;
