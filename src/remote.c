@@ -420,7 +420,7 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 
 		pkt = (git_pkt_ref *)p;
 
-		if (list_cb(&pkt->head, payload) < 0)
+		if (list_cb(&pkt->head, payload))
 			return GIT_EUSER;
 	}
 
@@ -596,6 +596,11 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 		}
 
 		git_vector_free(&list);
+
+		/* cb error is converted to GIT_EUSER by git_config_foreach */
+		if (error == GIT_EUSER)
+			error = -1;
+
 		return error;
 	}
 
