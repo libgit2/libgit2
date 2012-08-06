@@ -218,8 +218,10 @@ static int file_foreach(
 				continue;
 
 			/* abort iterator on non-zero return value */
-			if ((result = fn(key, var->value, data)) != 0)
+			if (fn(key, var->value, data)) {
+				result = GIT_EUSER;
 				goto cleanup;
+			}
 		}
 	);
 

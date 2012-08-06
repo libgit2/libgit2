@@ -125,3 +125,28 @@ void test_refs_branches_foreach__retrieve_remote_symbolic_HEAD_when_present(void
 	assert_branch_has_been_found(exp, "nulltoken/HEAD");
 	assert_branch_has_been_found(exp, "nulltoken/HEAD");
 }
+
+static int branch_list_interrupt_cb(
+	const char *branch_name, git_branch_t branch_type, void *payload)
+{
+	int *count;
+
+	GIT_UNUSED(branch_type);
+	GIT_UNUSED(branch_name);
+
+	count = (int *)payload;
+	(*count)++;
+
+	return (*count == 5);
+}
+
+void test_refs_branches_foreach__can_cancel(void)
+{
+	int count = 0;
+
+	cl_assert_equal_i(GIT_EUSER,
+		git_branch_foreach(repo, GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE,
+			branch_list_interrupt_cb, &count));
+
+	cl_assert_equal_i(5, count);
+}

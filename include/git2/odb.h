@@ -176,13 +176,14 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  * List all objects available in the database
  *
  * The callback will be called for each object available in the
- * database. Note that the objects are likely to be returned in the
- * index order, which would make accessing the objects in that order
- * inefficient.
+ * database. Note that the objects are likely to be returned in the index
+ * order, which would make accessing the objects in that order inefficient.
+ * Return a non-zero value from the callback to stop looping.
  *
  * @param db database to use
  * @param cb the callback to call for each object
  * @param data data to pass to the callback
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_odb_foreach(git_odb *db, int (*cb)(git_oid *oid, void *data), void *data);
 

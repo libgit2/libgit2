@@ -188,18 +188,17 @@ GIT_EXTERN(int) git_attr_get_many(
  *
  * @param repo The repository containing the path.
  * @param flags A combination of GIT_ATTR_CHECK... flags.
- * @param path The path inside the repo to check attributes.  This
- *             does not have to exist, but if it does not, then
- *             it will be treated as a plain file (i.e. not a directory).
- * @param callback The function that will be invoked on each attribute
- *             and attribute value.  The name parameter will be the name
- *             of the attribute and the value will be the value it is
- *             set to, including possibly NULL if the attribute is
- *             explicitly set to UNSPECIFIED using the ! sign.  This
- *             will be invoked only once per attribute name, even if
- *             there are multiple rules for a given file.  The highest
- *             priority rule will be used.
+ * @param path Path inside the repo to check attributes.  This does not have
+ *             to exist, but if it does not, then it will be treated as a
+ *             plain file (i.e. not a directory).
+ * @param callback Function to invoke on each attribute name and value.  The
+ *             value may be NULL is the attribute is explicitly set to
+ *             UNSPECIFIED using the '!' sign.  Callback will be invoked
+ *             only once per attribute name, even if there are multiple
+ *             rules for a given file.  The highest priority rule will be
+ *             used.  Return a non-zero value from this to stop looping.
  * @param payload Passed on as extra parameter to callback function.
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_attr_foreach(
 	git_repository *repo,

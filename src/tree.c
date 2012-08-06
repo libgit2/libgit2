@@ -240,6 +240,21 @@ const git_tree_entry *git_tree_entry_byindex(git_tree *tree, size_t idx)
 	return git_vector_get(&tree->entries, idx);
 }
 
+const git_tree_entry *git_tree_entry_byoid(git_tree *tree, const git_oid *oid)
+{
+	unsigned int i;
+	git_tree_entry *e;
+
+	assert(tree);
+
+	git_vector_foreach(&tree->entries, i, e) {
+		if (memcmp(&e->oid.id, &oid->id, sizeof(oid->id)) == 0)
+			return e;
+	}
+
+	return NULL;
+}
+
 int git_tree__prefix_position(git_tree *tree, const char *path)
 {
 	git_vector *entries = &tree->entries;
@@ -724,7 +739,7 @@ int git_tree_entry_bypath(
 	}
 
 	switch (path[filename_len]) {
-	case '/': 
+	case '/':
 		/* If there are more components in the path...
 		 * then this entry *must* be a tree */
 		if (!git_tree_entry__is_tree(entry)) {
@@ -772,8 +787,10 @@ static int tree_walk(
 	for (i = 0; i < tree->entries.length; ++i) {
 		git_tree_entry *entry = tree->entries.contents[i];
 
-		if (preorder && callback(path->ptr, entry, payload) < 0)
-			return -1;
+		if (preorder && callback(path->ptr, entry, payload)) {
+			error = GIT_EUSER;
+			break;
+		}
 
 		if (git_tree_entry__is_tree(entry)) {
 			git_tree *subtree;
@@ -790,18 +807,21 @@ static int tree_walk(
 			if (git_buf_oom(path))
 				return -1;
 
-			if (tree_walk(subtree, callback, path, payload, preorder) < 0)
-				return -1;
+			error = tree_walk(subtree, callback, path, payload, preorder);
+			if (error != 0)
+				break;
 
 			git_buf_truncate(path, path_len);
 			git_tree_free(subtree);
 		}
 
-		if (!preorder && callback(path->ptr, entry, payload) < 0)
-			return -1;
+		if (!preorder && callback(path->ptr, entry, payload)) {
+			error = GIT_EUSER;
+			break;
+		}
 	}
 
-	return 0;
+	return error;
 }
 
 int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)

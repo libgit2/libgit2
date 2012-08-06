@@ -687,10 +687,9 @@ static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_
 }
 
 int git_pack_foreach_entry(
-		struct git_pack_file *p,
-		int (*cb)(git_oid *oid, void *data),
-		void *data)
-
+	struct git_pack_file *p,
+	int (*cb)(git_oid *oid, void *data),
+	void *data)
 {
 	const unsigned char *index = p->index_map.data, *current;
 	unsigned stride;
@@ -722,7 +721,9 @@ int git_pack_foreach_entry(
 
 	current = index;
 	for (i = 0; i < p->num_objects; i++) {
-		cb((git_oid *)current, data);
+		if (cb((git_oid *)current, data))
+			return GIT_EUSER;
+
 		current += stride;
 	}
 
