@@ -45,6 +45,7 @@
       <td class=code>
         <div class='highlight'><pre><span class="cp">#include &lt;stdlib.h&gt;</span>
 <span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
 
 <span class="cp">#include &quot;common.h&quot;</span></pre></div>
       </td>
@@ -68,7 +69,7 @@ as a starting point for a git-like tool</p>
   <span class="p">{</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">}</span>
 <span class="p">};</span>
 
-<span class="kt">int</span> <span class="nf">run_command</span><span class="p">(</span><span class="n">git_cb</span> <span class="n">fn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">run_command</span><span class="p">(</span><span class="n">git_cb</span> <span class="n">fn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span></pre></div>
@@ -113,7 +114,7 @@ repository and pass it to the function.</p>
 
 <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">error</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: %s &lt;cmd&gt; [repo]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
