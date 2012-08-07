@@ -37,7 +37,7 @@ GIT_EXTERN(int) git_clone(git_repository **out,
 								  const char *origin_url,
 								  const char *workdir_path,
 								  git_indexer_stats *fetch_stats,
-								  git_indexer_stats *checkout_stats,
+								  git_progress *progress,
 								  git_checkout_opts *checkout_opts);
 
 /**

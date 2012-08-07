@@ -27,7 +27,7 @@ GIT_BEGIN_DECL
 
 typedef struct tree_walk_data
 {
-	git_indexer_stats *stats;
+	git_progress *progress;
 	git_checkout_opts *opts;
 	git_repository *repo;
 	git_odb *odb;
@@ -145,15 +145,15 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 	}
 
 	git_buf_free(&fnbuf);
-	data->stats->processed++;
+	data->progress->current++;
 	return retcode;
 }
 
 
-int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer_stats *stats)
+int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_progress *progress)
 {
 	int retcode = GIT_ERROR;
-	git_indexer_stats dummy_stats;
+	git_progress dummy_progress;
 	git_checkout_opts default_opts = {0};
 	git_tree *tree;
 	tree_walk_data payload;
@@ -161,7 +161,7 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer
 
 	assert(repo);
 	if (!opts) opts = &default_opts;
-	if (!stats) stats = &dummy_stats;
+	if (!progress) progress = &dummy_progress;
 
 	/* Default options */
 	if (!opts->existing_file_action)
@@ -186,8 +186,8 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer
 		}
 	}
 
-	stats->total = stats->processed = 0;
-	payload.stats = stats;
+	progress->total = progress->current = 0;
+	payload.progress = progress;
 	payload.opts = opts;
 	payload.repo = repo;
 	if (git_repository_odb(&payload.odb, repo) < 0) return GIT_ERROR;
@@ -195,7 +195,7 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer
 	if (!git_repository_head_tree(&tree, repo)) {
 		git_index *idx;
 		if (!(retcode = git_repository_index(&idx, repo))) {
-			if (!(retcode = git_index_read_tree(idx, tree, stats))) {
+			if (!(retcode = git_index_read_tree(idx, tree, progress))) {
 				git_index_write(idx);
 				retcode = git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload);
 			}
@@ -211,7 +211,7 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer
 
 int git_checkout_reference(git_reference *ref,
 									git_checkout_opts *opts,
-									git_indexer_stats *stats)
+									git_progress *progress)
 {
 	git_repository *repo= git_reference_owner(ref);
 	git_reference *head = NULL;
@@ -221,7 +221,7 @@ int git_checkout_reference(git_reference *ref,
 																git_reference_name(ref), true)) < 0)
 		return retcode;
 
-	retcode = git_checkout_head(git_reference_owner(ref), opts, stats);
+	retcode = git_checkout_head(git_reference_owner(ref), opts, progress);
 
 	git_reference_free(head);
 	return retcode;

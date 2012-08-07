@@ -234,7 +234,7 @@ int git_clone(git_repository **out,
 				  const char *origin_url,
 				  const char *workdir_path,
 				  git_indexer_stats *fetch_stats,
-				  git_indexer_stats *checkout_stats,
+				  git_progress *checkout_progress,
 				  git_checkout_opts *checkout_opts)
 {
 	int retcode = GIT_ERROR;
@@ -242,7 +242,7 @@ int git_clone(git_repository **out,
 	assert(out && origin_url && workdir_path);
 
 	if (!(retcode = clone_internal(out, origin_url, workdir_path, fetch_stats, 0))) {
-		retcode = git_checkout_head(*out, checkout_opts, checkout_stats);
+		retcode = git_checkout_head(*out, checkout_opts, checkout_progress);
 	}
 
 	return retcode;

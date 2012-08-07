@@ -90,6 +90,11 @@ typedef struct {
 	size_t count;
 } git_strarray;
 
+typedef struct git_progress {
+	size_t total;
+	size_t current;
+} git_progress;
+
 GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
 

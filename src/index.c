@@ -988,7 +988,7 @@ int git_index_entry_stage(const git_index_entry *entry)
 
 typedef struct read_tree_data {
 	git_index *index;
-	git_indexer_stats *stats;
+	git_progress *progress;
 } read_tree_data;
 
 static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *data)
@@ -997,7 +997,7 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	git_index_entry *entry = NULL;
 	git_buf path = GIT_BUF_INIT;
 
-	rtd->stats->total++;
+	rtd->progress->total++;
 
 	if (git_tree_entry__is_tree(tentry))
 		return 0;
@@ -1021,14 +1021,14 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	return 0;
 }
 
-int git_index_read_tree(git_index *index, git_tree *tree, git_indexer_stats *stats)
+int git_index_read_tree(git_index *index, git_tree *tree, git_progress *progress)
 {
-	git_indexer_stats dummy_stats;
+	git_progress dummy_progress;
 	read_tree_data rtd = {index, NULL};
 
-	if (!stats) stats = &dummy_stats;
-	stats->total = 0;
-	rtd.stats = stats;
+	if (!progress) progress = &dummy_progress;
+	progress->total = 0;
+	rtd.progress = progress;
 
 	git_index_clear(index);
 

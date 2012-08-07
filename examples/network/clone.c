@@ -9,7 +9,7 @@
 
 struct dl_data {
 	git_indexer_stats fetch_stats;
-	git_indexer_stats checkout_stats;
+	git_progress checkout_progress;
 	git_checkout_opts opts;
 	int ret;
 	int finished;
@@ -24,7 +24,7 @@ static void *clone_thread(void *ptr)
 
 	// Kick off the clone
 	data->ret = git_clone(&repo, data->url, data->path,
-								 &data->fetch_stats, &data->checkout_stats, 
+								 &data->fetch_stats, &data->checkout_progress,
 								 &data->opts);
 	if (repo) git_repository_free(repo);
 	data->finished = 1;
@@ -57,11 +57,11 @@ int do_clone(git_repository *repo, int argc, char **argv)
 		usleep(10000);
 		printf("Fetch %d/%d  –  Checkout %d/%d\n",
 				 data.fetch_stats.processed, data.fetch_stats.total,
-				 data.checkout_stats.processed, data.checkout_stats.total);
+				 data.checkout_progress.current, data.checkout_progress.total);
 	} while (!data.finished);
 	printf("Fetch %d/%d  –  Checkout %d/%d\n",
 			 data.fetch_stats.processed, data.fetch_stats.total,
-			 data.checkout_stats.processed, data.checkout_stats.total);
+			 data.checkout_progress.current, data.checkout_progress.total);
 
 	return data.ret;
 }
