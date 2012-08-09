@@ -193,6 +193,18 @@ void test_refs_read__loose_first(void)
 	git_reference_free(reference);
 }
 
+void test_refs_read__chomped(void)
+{
+	git_reference *test, *chomped;
+
+	cl_git_pass(git_reference_lookup(&test, g_repo, "refs/heads/test"));
+	cl_git_pass(git_reference_lookup(&chomped, g_repo, "refs/heads/chomped"));
+	cl_git_pass(git_oid_cmp(git_reference_oid(test), git_reference_oid(chomped)));
+
+	git_reference_free(test);
+	git_reference_free(chomped);
+}
+
 void test_refs_read__unfound_return_ENOTFOUND(void)
 {
 	git_reference *reference;
