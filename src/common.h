@@ -49,6 +49,7 @@
 
 #include <regex.h>
 
+#define GIT_OID_HEX_ZERO "0000000000000000000000000000000000000000"
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
 
 void giterr_set_oom(void);
