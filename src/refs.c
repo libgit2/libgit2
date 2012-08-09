@@ -128,6 +128,7 @@ static int reference_read(
 
 	result = git_futils_readbuffer_updated(file_content, path.ptr, mtime, updated);
 	git_buf_free(&path);
+
 	return result;
 }
 
@@ -135,12 +136,13 @@ static int loose_parse_symbolic(git_reference *ref, git_buf *file_content)
 {
 	const unsigned int header_len = (unsigned int)strlen(GIT_SYMREF);
 	const char *refname_start;
-	char *eol;
 
 	refname_start = (const char *)file_content->ptr;
 
-	if (git_buf_len(file_content) < header_len + 1)
-		goto corrupt;
+	if (git_buf_len(file_content) < header_len + 1) {
+		giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
+		return -1;
+	}
 
 	/*
 	 * Assume we have already checked for the header
@@ -151,45 +153,16 @@ static int loose_parse_symbolic(git_reference *ref, git_buf *file_content)
 	ref->target.symbolic = git__strdup(refname_start);
 	GITERR_CHECK_ALLOC(ref->target.symbolic);
 
-	/* remove newline at the end of file */
-	eol = strchr(ref->target.symbolic, '\n');
-	if (eol == NULL)
-		goto corrupt;
-
-	*eol = '\0';
-	if (eol[-1] == '\r')
-		eol[-1] = '\0';
-
 	return 0;
-
-corrupt:
-	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
-	return -1;
 }
 
 static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 {
-	char *buffer;
+	/* File format: 40 chars (OID) */
+	if (git_buf_len(file_content) == GIT_OID_HEXSZ &&
+		git_oid_fromstr(oid, git_buf_cstr(file_content)) == 0)
+		return 0;
 
-	buffer = (char *)file_content->ptr;
-
-	/* File format: 40 chars (OID) + newline */
-	if (git_buf_len(file_content) < GIT_OID_HEXSZ + 1)
-		goto corrupt;
-
-	if (git_oid_fromstr(oid, buffer) < 0)
-		goto corrupt;
-
-	buffer = buffer + GIT_OID_HEXSZ;
-	if (*buffer == '\r')
-		buffer++;
-
-	if (*buffer != '\n')
-		goto corrupt;
-
-	return 0;
-
-corrupt:
 	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
 	return -1;
 }
@@ -226,6 +199,8 @@ static int loose_lookup(git_reference *ref)
 	if (!updated)
 		return 0;
 
+	git_buf_rtrim(&ref_file);
+
 	if (ref->flags & GIT_REF_SYMBOLIC) {
 		git__free(ref->target.symbolic);
 		ref->target.symbolic = NULL;
@@ -258,6 +233,8 @@ static int loose_lookup_to_packfile(
 
 	if (reference_read(&ref_file, NULL, repo->path_repository, name, NULL) < 0)
 		return -1;
+
+	git_buf_rtrim(&ref_file);
 
 	name_len = strlen(name);
 	ref = git__malloc(sizeof(struct packref) + name_len + 1);
