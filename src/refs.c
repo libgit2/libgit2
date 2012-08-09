@@ -180,16 +180,6 @@ static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 	if (git_oid_fromstr(oid, buffer) < 0)
 		goto corrupt;
 
-	buffer = buffer + GIT_OID_HEXSZ;
-	if (*buffer == '\r')
-		buffer++;
-
-	if (*buffer == '\n')
-		buffer++;
-
-	if (*buffer != '\0')
-		goto corrupt;
-
 	return 0;
 
 corrupt:
