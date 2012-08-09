@@ -173,11 +173,18 @@ static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 
 	buffer = (char *)file_content->ptr;
 
-	/* File format: 40 chars (OID) */
-	if (git_buf_len(file_content) < GIT_OID_HEXSZ)
+	/* File format: 40 chars (OID) + newline */
+	if (git_buf_len(file_content) < GIT_OID_HEXSZ + 1)
 		goto corrupt;
 
 	if (git_oid_fromstr(oid, buffer) < 0)
+		goto corrupt;
+
+	buffer = buffer + GIT_OID_HEXSZ;
+	if (*buffer == '\r')
+		buffer++;
+
+	if (*buffer != '\n')
 		goto corrupt;
 
 	return 0;
