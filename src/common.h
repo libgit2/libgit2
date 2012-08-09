@@ -49,6 +49,8 @@
 
 #include <regex.h>
 
+#define GIT_OID_HEX_ZERO "0000000000000000000000000000000000000000"
+
 /**
  * Check a pointer allocation result, returning -1 if it failed.
  */
