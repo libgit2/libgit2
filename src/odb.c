@@ -14,6 +14,7 @@
 #include "delta-apply.h"
 
 #include "git2/odb_backend.h"
+#include "git2/oid.h"
 
 #define GIT_ALTERNATES_FILE "info/alternates"
 

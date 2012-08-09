@@ -1,6 +1,7 @@
 #include "repository.h"
 #include "fileops.h"
 #include "config.h"
+#include "git2/oid.h"
 #include <ctype.h>
 
 GIT__USE_STRMAP;

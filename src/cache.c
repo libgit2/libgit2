@@ -11,6 +11,7 @@
 #include "thread-utils.h"
 #include "util.h"
 #include "cache.h"
+#include "git2/oid.h"
 
 int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr)
 {

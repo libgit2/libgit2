@@ -14,6 +14,7 @@
 #include "tree-cache.h"
 #include "hash.h"
 #include "git2/odb.h"
+#include "git2/oid.h"
 #include "git2/blob.h"
 #include "git2/config.h"
 

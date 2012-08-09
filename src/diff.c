@@ -6,6 +6,7 @@
  */
 #include "common.h"
 #include "git2/diff.h"
+#include "git2/oid.h"
 #include "diff.h"
 #include "fileops.h"
 #include "config.h"

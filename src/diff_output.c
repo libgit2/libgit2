@@ -8,6 +8,7 @@
 #include "git2/diff.h"
 #include "git2/attr.h"
 #include "git2/blob.h"
+#include "git2/oid.h"
 #include "xdiff/xdiff.h"
 #include <ctype.h>
 #include "diff.h"

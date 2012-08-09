@@ -7,6 +7,7 @@
 
 #include "git2/config.h"
 #include "git2/types.h"
+#include "git2/oid.h"
 
 #include "config.h"
 #include "repository.h"

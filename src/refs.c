@@ -14,6 +14,7 @@
 
 #include <git2/tag.h>
 #include <git2/object.h>
+#include <git2/oid.h>
 
 GIT__USE_STRMAP;
 
