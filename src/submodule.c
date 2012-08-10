@@ -42,7 +42,7 @@ static kh_inline khint_t str_hash_no_trailing_slash(const char *s)
 	khint_t h;
 
 	for (h = 0; *s; ++s)
-		if (s[1] || *s != '/')
+		if (s[1] != '\0' || *s != '/')
 			h = (h << 5) - h + *s;
 
 	return h;
@@ -53,9 +53,9 @@ static kh_inline int str_equal_no_trailing_slash(const char *a, const char *b)
 	size_t alen = a ? strlen(a) : 0;
 	size_t blen = b ? strlen(b) : 0;
 
-	if (alen && a[alen] == '/')
+	if (alen > 0 && a[alen - 1] == '/')
 		alen--;
-	if (blen && b[blen] == '/')
+	if (blen > 0 && b[blen - 1] == '/')
 		blen--;
 
 	return (alen == blen && strncmp(a, b, alen) == 0);
@@ -65,24 +65,19 @@ __KHASH_IMPL(
 	str, static kh_inline, const char *, void *, 1,
 	str_hash_no_trailing_slash, str_equal_no_trailing_slash);
 
-static int load_submodule_config(
-	git_repository *repo, bool force);
-static git_config_file *open_gitmodules(
-	git_repository *, bool, const git_oid *);
-static int lookup_head_remote(
-	git_buf *url, git_repository *repo);
-static int submodule_get(
-	git_submodule **, git_repository *, const char *, const char *);
-static void submodule_release(
-	git_submodule *sm, int decr);
-static int submodule_load_from_index(
-	git_repository *, const git_index_entry *);
-static int submodule_load_from_head(
-	git_repository *, const char *, const git_oid *);
-static int submodule_load_from_config(
-	const char *, const char *, void *);
-static int submodule_update_config(
-	git_submodule *, const char *, const char *, bool,	bool);
+static int load_submodule_config(git_repository *repo, bool force);
+static git_config_file *open_gitmodules(git_repository *, bool, const git_oid *);
+static int lookup_head_remote(git_buf *url, git_repository *repo);
+static int submodule_get(git_submodule **, git_repository *, const char *, const char *);
+static void submodule_release(git_submodule *sm, int decr);
+static int submodule_load_from_index(git_repository *, const git_index_entry *);
+static int submodule_load_from_head(git_repository*, const char*, const git_oid*);
+static int submodule_load_from_config(const char *, const char *, void *);
+static int submodule_load_from_wd_lite(git_submodule *, const char *, void *);
+static int submodule_update_config(git_submodule *, const char *, const char *, bool, bool);
+static void submodule_mode_mismatch(git_repository *, const char *, unsigned int);
+static int submodule_index_status(unsigned int *status, git_submodule *sm);
+static int submodule_wd_status(unsigned int *status, git_submodule *sm);
 
 static int submodule_cmp(const void *a, const void *b)
 {
@@ -167,8 +162,10 @@ int git_submodule_foreach(
 				break;
 		}
 
-		if ((error = callback(sm, sm->name, payload)) < 0)
+		if (callback(sm, sm->name, payload)) {
+			error = GIT_EUSER;
 			break;
+		}
 	});
 
 	git_vector_free(&seen);
@@ -337,10 +334,10 @@ int git_submodule_add_finalize(git_submodule *sm)
 		(error = git_index_add(index, GIT_MODULES_FILE, 0)) < 0)
 		return error;
 
-	return git_submodule_add_to_index(sm);
+	return git_submodule_add_to_index(sm, true);
 }
 
-int git_submodule_add_to_index(git_submodule *sm)
+int git_submodule_add_to_index(git_submodule *sm, int write_index)
 {
 	int error;
 	git_repository *repo, *sm_repo;
@@ -353,6 +350,9 @@ int git_submodule_add_to_index(git_submodule *sm)
 	assert(sm);
 
 	repo = sm->owner;
+
+	/* force reload of wd OID by git_submodule_open */
+	sm->flags = sm->flags & ~GIT_SUBMODULE_STATUS__WD_OID_VALID;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0 ||
 		(error = git_buf_joinpath(
@@ -367,6 +367,7 @@ int git_submodule_add_to_index(git_submodule *sm)
 		error = -1;
 		goto cleanup;
 	}
+	entry.path = sm->path;
 	git_index__init_entry_from_stat(&st, &entry);
 
 	/* calling git_submodule_open will have set sm->wd_oid if possible */
@@ -388,8 +389,16 @@ int git_submodule_add_to_index(git_submodule *sm)
 
 	git_commit_free(head);
 
-	/* now add it */
+	/* add it */
 	error = git_index_add2(index, &entry);
+
+	/* write it, if requested */
+	if (!error && write_index) {
+		error = git_index_write(index);
+
+		if (!error)
+			git_oid_cpy(&sm->index_oid, &sm->wd_oid);
+	}
 
 cleanup:
 	git_repository_free(sm_repo);
@@ -501,7 +510,7 @@ int git_submodule_set_url(git_submodule *submodule, const char *url)
 	return 0;
 }
 
- const git_oid *git_submodule_index_oid(git_submodule *submodule)
+const git_oid *git_submodule_index_oid(git_submodule *submodule)
 {
 	assert(submodule);
 
@@ -531,6 +540,8 @@ const git_oid *git_submodule_wd_oid(git_submodule *submodule)
 		/* calling submodule open grabs the HEAD OID if possible */
 		if (!git_submodule_open(&subrepo, submodule))
 			git_repository_free(subrepo);
+		else
+			giterr_clear();
 	}
 
 	if (submodule->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID)
@@ -693,16 +704,21 @@ int git_submodule_reload(git_submodule *submodule)
 	if (git_repository_index__weakptr(&index, repo) < 0)
 		return -1;
 
+	submodule->flags = submodule->flags &
+		~(GIT_SUBMODULE_STATUS_IN_INDEX |
+		  GIT_SUBMODULE_STATUS__INDEX_OID_VALID);
+
 	pos = git_index_find(index, submodule->path);
 	if (pos >= 0) {
 		git_index_entry *entry = git_index_get(index, pos);
 
-		submodule->flags = submodule->flags &
-			~(GIT_SUBMODULE_STATUS_IN_INDEX |
-			  GIT_SUBMODULE_STATUS__INDEX_OID_VALID);
-
-		if ((error = submodule_load_from_index(repo, entry)) < 0)
-			return error;
+		if (S_ISGITLINK(entry->mode)) {
+			if ((error = submodule_load_from_index(repo, entry)) < 0)
+				return error;
+		} else {
+			submodule_mode_mismatch(
+				repo, entry->path, GIT_SUBMODULE_STATUS__INDEX_NOT_SUBMODULE);
+		}
 	}
 
 	/* refresh HEAD tree data */
@@ -715,7 +731,14 @@ int git_submodule_reload(git_submodule *submodule)
 			  GIT_SUBMODULE_STATUS__HEAD_OID_VALID);
 
 		if (!(error = git_tree_entry_bypath(&te, head, submodule->path))) {
-			error = submodule_load_from_head(repo, submodule->path, &te->oid);
+
+			if (S_ISGITLINK(te->attr)) {
+				error = submodule_load_from_head(repo, submodule->path, &te->oid);
+			} else {
+				submodule_mode_mismatch(
+					repo, submodule->path,
+					GIT_SUBMODULE_STATUS__HEAD_NOT_SUBMODULE);
+			}
 
 			git_tree_entry_free(te);
 		}
@@ -749,6 +772,16 @@ int git_submodule_reload(git_submodule *submodule)
 		git_config_file_free(mods);
 	}
 
+	if (error < 0)
+		return error;
+
+	/* refresh wd data */
+
+	submodule->flags = submodule->flags &
+		~(GIT_SUBMODULE_STATUS_IN_WD | GIT_SUBMODULE_STATUS__WD_OID_VALID);
+
+	error = submodule_load_from_wd_lite(submodule, submodule->path, NULL);
+
 	return error;
 }
 
@@ -756,16 +789,21 @@ int git_submodule_status(
 	unsigned int *status,
 	git_submodule *submodule)
 {
+	int error = 0;
+	unsigned int status_val;
+
 	assert(status && submodule);
 
-	GIT_UNUSED(status);
-	GIT_UNUSED(submodule);
+	status_val = GIT_SUBMODULE_STATUS__CLEAR_INTERNAL(submodule->flags);
 
-	/* TODO: move status code from below and update */
+	if (submodule->ignore != GIT_SUBMODULE_IGNORE_ALL) {
+		if (!(error = submodule_index_status(&status_val, submodule)))
+			error = submodule_wd_status(&status_val, submodule);
+	}
 
-	*status = 0;
+	*status = status_val;
 
-	return 0;
+	return error;
 }
 
 /*
@@ -848,7 +886,7 @@ static int submodule_get(
 		/* insert value at name - if another thread beats us to it, then use
 		 * their record and release our own.
 		 */
-		pos = kh_put(str, smcfg, name, &error);
+		pos = kh_put(str, smcfg, sm->name, &error);
 
 		if (error < 0) {
 			submodule_release(sm, 1);
@@ -1037,6 +1075,18 @@ static int submodule_load_from_wd_lite(
 	return 0;
 }
 
+static void submodule_mode_mismatch(
+	git_repository *repo, const char *path, unsigned int flag)
+{
+	khiter_t pos = git_strmap_lookup_index(repo->submodules, path);
+
+	if (git_strmap_valid_index(repo->submodules, pos)) {
+		git_submodule *sm = git_strmap_value_at(repo->submodules, pos);
+
+		sm->flags |= flag;
+	}
+}
+
 static int load_submodule_config_from_index(
 	git_repository *repo, git_oid *gitmodules_oid)
 {
@@ -1055,8 +1105,13 @@ static int load_submodule_config_from_index(
 			error = submodule_load_from_index(repo, entry);
 			if (error < 0)
 				break;
-		} else if (strcmp(entry->path, GIT_MODULES_FILE) == 0)
-			git_oid_cpy(gitmodules_oid, &entry->oid);
+		} else {
+			submodule_mode_mismatch(
+				repo, entry->path, GIT_SUBMODULE_STATUS__INDEX_NOT_SUBMODULE);
+
+			if (strcmp(entry->path, GIT_MODULES_FILE) == 0)
+				git_oid_cpy(gitmodules_oid, &entry->oid);
+		}
 
 		error = git_iterator_advance(i, &entry);
 	}
@@ -1090,9 +1145,14 @@ static int load_submodule_config_from_head(
 			error = submodule_load_from_head(repo, entry->path, &entry->oid);
 			if (error < 0)
 				break;
-		} else if (strcmp(entry->path, GIT_MODULES_FILE) == 0 &&
-				   git_oid_iszero(gitmodules_oid))
-			git_oid_cpy(gitmodules_oid, &entry->oid);
+		} else {
+			submodule_mode_mismatch(
+				repo, entry->path, GIT_SUBMODULE_STATUS__HEAD_NOT_SUBMODULE);
+
+			if (strcmp(entry->path, GIT_MODULES_FILE) == 0 &&
+				git_oid_iszero(gitmodules_oid))
+				git_oid_cpy(gitmodules_oid, &entry->oid);
+		}
 
 		error = git_iterator_advance(i, &entry);
 	}
@@ -1303,183 +1363,108 @@ cleanup:
 	return error;
 }
 
-#if 0
+static int submodule_index_status(unsigned int *status, git_submodule *sm)
+{
+	const git_oid *head_oid  = git_submodule_head_oid(sm);
+	const git_oid *index_oid = git_submodule_index_oid(sm);
 
-static int head_oid_for_submodule(
-	git_oid *oid,
-	git_repository *owner,
-	const char *path)
+	if (!head_oid) {
+		if (index_oid)
+			*status |= GIT_SUBMODULE_STATUS_INDEX_ADDED;
+	}
+	else if (!index_oid)
+		*status |= GIT_SUBMODULE_STATUS_INDEX_DELETED;
+	else if (!git_oid_equal(head_oid, index_oid))
+		*status |= GIT_SUBMODULE_STATUS_INDEX_MODIFIED;
+
+	return 0;
+}
+
+static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 {
 	int error = 0;
-	git_oid head_oid;
-	git_tree *head_tree = NULL, *container_tree = NULL;
-	unsigned int pos;
-	const git_tree_entry *entry;
+	const git_oid *wd_oid, *index_oid;
+	git_repository *sm_repo = NULL;
 
-	if (git_reference_name_to_oid(&head_oid, owner, GIT_HEAD_FILE) < 0 ||
-		git_tree_lookup(&head_tree, owner, &head_oid) < 0 ||
-		git_tree_resolve_path(&container_tree, &pos, head_tree, path) < 0 ||
-		(entry = git_tree_entry_byindex(container_tree, pos)) == NULL)
+	/* open repo now if we need it (so wd_oid() call won't reopen) */
+	if ((sm->ignore == GIT_SUBMODULE_IGNORE_NONE ||
+		 sm->ignore == GIT_SUBMODULE_IGNORE_UNTRACKED) &&
+		(sm->flags & GIT_SUBMODULE_STATUS_IN_WD) != 0)
 	{
-		memset(oid, 0, sizeof(*oid));
-		error = GIT_ENOTFOUND;
-	}
-	else {
-		git_oid_cpy(oid, &entry->oid);
+		if ((error = git_submodule_open(&sm_repo, sm)) < 0)
+			return error;
 	}
 
-	git_tree_free(head_tree);
-	git_tree_free(container_tree);
+	index_oid = git_submodule_index_oid(sm);
+	wd_oid    = git_submodule_wd_oid(sm);
 
-	return error;
-}
-
-int git_submodule_status(
-	unsigned int *status,
-	git_oid *head,
-	git_submodule *sm,
-	git_submodule_ignore_t ignore)
-{
-	int error;
-	const char *workdir;
-	git_repository *owner, *sm_repo = NULL;
-	git_oid owner_head, sm_head;
-
-	assert(submodule && status);
-
-	if (head == NULL)
-		head = &sm_head;
-
-	owner   = submodule->owner;
-	workdir = git_repository_workdir(owner);
-
-	if (ignore == GIT_SUBMODULE_IGNORE_DEFAULT)
-		ignore = sm->ignore;
-
-	/* if this is a bare repo or the submodule dir has no .git yet,
-	 * then it is not checked out and we'll just return index data.
-	 */
-	if (!workdir || (sm->flags & GIT_SUBMODULE_FLAG__HAS_DOTGIT) == 0) {
-		*status = GIT_SUBMODULE_STATUS_NOT_CHECKED_OUT;
-
-		if (sm->index_oid_valid)
-			git_oid_cpy(head, &sm->index_oid);
+	if (!index_oid) {
+		if (wd_oid)
+			*status |= GIT_SUBMODULE_STATUS_WD_ADDED;
+	}
+	else if (!wd_oid) {
+		if ((sm->flags & GIT_SUBMODULE_STATUS__WD_SCANNED) != 0 &&
+			(sm->flags & GIT_SUBMODULE_STATUS_IN_WD) == 0)
+			*status |= GIT_SUBMODULE_STATUS_WD_UNINITIALIZED;
 		else
-			memset(head, 0, sizeof(git_oid));
+			*status |= GIT_SUBMODULE_STATUS_WD_DELETED;
+	}
+	else if (!git_oid_equal(index_oid, wd_oid))
+		*status |= GIT_SUBMODULE_STATUS_WD_MODIFIED;
 
-		if (git_oid_iszero(head)) {
-			if (sm->url)
-				*status = GIT_SUBMODULE_STATUS_NEW_SUBMODULE;
-		} else if (!sm->url) {
-			*status = GIT_SUBMODULE_STATUS_DELETED_SUBMODULE;
+	if (sm_repo != NULL) {
+		git_tree *sm_head;
+		git_diff_options opt;
+		git_diff_list *diff;
+
+		/* the diffs below could be optimized with an early termination
+		 * option to the git_diff functions, but for now this is sufficient
+		 * (and certainly no worse that what core git does).
+		 */
+
+		/* perform head-to-index diff on submodule */
+
+		if ((error = git_repository_head_tree(&sm_head, sm_repo)) < 0)
+			return error;
+
+		memset(&opt, 0, sizeof(opt));
+		if (sm->ignore == GIT_SUBMODULE_IGNORE_NONE)
+			opt.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+
+		error = git_diff_index_to_tree(sm_repo, &opt, sm_head, &diff);
+
+		if (!error) {
+			if (git_diff_entrycount(diff, -1) > 0)
+				*status |= GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED;
+
+			git_diff_list_free(diff);
+			diff = NULL;
 		}
 
-		return 0;
+		git_tree_free(sm_head);
+
+		if (error < 0)
+			return error;
+
+		/* perform index-to-workdir diff on submodule */
+
+		error = git_diff_workdir_to_index(sm_repo, &opt, &diff);
+
+		if (!error) {
+			int untracked = git_diff_entrycount(diff, GIT_DELTA_UNTRACKED);
+
+			if (untracked > 0)
+				*status |= GIT_SUBMODULE_STATUS_WD_UNTRACKED;
+
+			if (git_diff_entrycount(diff, -1) - untracked > 0)
+				*status |= GIT_SUBMODULE_STATUS_WD_WD_MODIFIED;
+
+			git_diff_list_free(diff);
+			diff = NULL;
+		}
+
+		git_repository_free(sm_repo);
 	}
-
-	/* look up submodule path in repo head to find if new or deleted */
-	if ((error = head_oid_for_submodule(&owner_head, owner, sm->path)) < 0) {
-		*status = GIT_SUBMODULE_STATUS_NEW_SUBMODULE;
-		/* ??? */
-	}
-
-	if (ignore == GIT_SUBMODULE_IGNORE_ALL) {
-		*status = GIT_SUBMODULE_STATUS_CLEAN;
-		git_oid_cpy(head, &sm->oid);
-		return 0;
-	}
-
-	if ((error = git_submodule_open(&sm_repo, sm)) < 0)
-		return error;
-
-	if ((error = git_reference_name_to_oid(head, sm_repo, GIT_HEAD_FILE)) < 0)
-		goto cleanup;
-
-	if (ignore == GIT_SUBMODULE_IGNORE_DIRTY &&
-		git_oid_cmp(head, &sm->oid) == 0)
-	{
-		*status = GIT_SUBMODULE_STATUS_CLEAN;
-		return 0;
-	}
-
-	/* look up submodule oid from index in repo to find if new commits or missing commits */
-
-	/* run a short status to find if modified or untracked content */
-
-#define GIT_SUBMODULE_STATUS_NEW_SUBMODULE       (1u << 2)
-#define GIT_SUBMODULE_STATUS_DELETED_SUBMODULE   (1u << 3)
-#define GIT_SUBMODULE_STATUS_NOT_CHECKED_OUT     (1u << 4)
-#define GIT_SUBMODULE_STATUS_NEW_COMMITS         (1u << 5)
-#define GIT_SUBMODULE_STATUS_MISSING_COMMITS     (1u << 6)
-#define GIT_SUBMODULE_STATUS_MODIFIED_CONTENT    (1u << 7)
-#define GIT_SUBMODULE_STATUS_UNTRACKED_CONTENT   (1u << 8)
-
-cleanup:
-	git_repository_free(sm_repo);
-	git_tree_free(owner_tree);
 
 	return error;
 }
-
-int git_submodule_status_for_path(
-	unsigned int *status,
-	git_oid *head,
-	git_repository *repo,
-	const char *submodule_path,
-	git_submodule_ignore_t ignore)
-{
-	int error;
-	git_submodule *sm;
-	const char *workdir;
-	git_buf path = GIT_BUF_INIT;
-	git_oid owner_head;
-
-	assert(repo && submodule_path && status);
-
-	if ((error = git_submodule_lookup(&sm, repo, submodule_path)) == 0)
-		return git_submodule_status(status, head, sm, ignore);
-
-	/* if submodule still exists in HEAD, then it is DELETED */
-	if (!(error = head_oid_for_submodule(&owner_head, repo, submodule_path))) {
-		*status = GIT_SUBMODULE_STATUS_DELETED_SUBMODULE;
-		if (head)
-			git_oid_cmp(head, &owner_head);
-		return 0;
-	}
-
-	/* submodule was not found - let's see what we can determine about it */
-	workdir = git_repository_workdir(repo);
-
-	if (error != GIT_ENOTFOUND || !workdir) {
-		*status = GIT_SUBMODULE_STATUS_NOT_A_SUBMODULE;
-		return error;
-	}
-
-	giterr_clear();
-	error = 0;
-
-	/* figure out if this is NEW, NOT_CHECKED_OUT, or what */
-	if (git_buf_joinpath(&path, workdir, submodule_path) < 0)
-		return -1;
-
-	if (git_path_contains(&path, DOT_GIT)) {
-		git_repository *sm_repo;
-
-		*status = GIT_SUBMODULE_STATUS_UNTRACKED_SUBMODULE;
-
-		/* only bother look up head if it was non-NULL */
-		if (head != NULL &&
-			!(error = git_repository_open(&sm_repo, path.ptr)))
-		{
-			error = git_reference_name_to_oid(head, sm_repo, GIT_HEAD_FILE);
-			git_repository_free(sm_repo);
-		}
-	} else
-		*status = GIT_SUBMODULE_STATUS_NOT_A_SUBMODULE;
-
-	git_buf_free(&path);
-
-	return error;
-}
-
-#endif

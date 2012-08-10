@@ -185,6 +185,8 @@ GIT_EXTERN(int) git_oid_streq(const git_oid *a, const char *str);
 
 /**
  * Check is an oid is all zeros.
+ *
+ * @return 1 if all zeros, 0 otherwise.
  */
 GIT_EXTERN(int) git_oid_iszero(const git_oid *a);
 

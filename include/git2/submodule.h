@@ -61,83 +61,67 @@ typedef enum {
 } git_submodule_ignore_t;
 
 /**
- * Status values for submodules.
- *
- * One of these values will be returned for the submodule in the index
- * relative to the HEAD tree, and one will be returned for the submodule in
- * the working directory relative to the index.  The value can be extracted
- * from the actual submodule status return value using one of the macros
- * below (see GIT_SUBMODULE_INDEX_STATUS and GIT_SUBMODULE_WD_STATUS).
- */
-enum {
-	GIT_SUBMODULE_STATUS_CLEAN = 0,
-	GIT_SUBMODULE_STATUS_ADDED = 1,
-	GIT_SUBMODULE_STATUS_REMOVED = 2,
-	GIT_SUBMODULE_STATUS_REMOVED_TYPE_CHANGE = 3,
-	GIT_SUBMODULE_STATUS_MODIFIED = 4,
-	GIT_SUBMODULE_STATUS_MODIFIED_AHEAD = 5,
-	GIT_SUBMODULE_STATUS_MODIFIED_BEHIND = 6
-};
-
-/**
  * Return codes for submodule status.
  *
- * A combination of these flags (and shifted values of the
- * GIT_SUBMODULE_STATUS codes above) will be returned to describe the status
- * of a submodule.
+ * A combination of these flags will be returned to describe the status of a
+ * submodule.  Depending on the "ignore" property of the submodule, some of
+ * the flags may never be returned because they indicate changes that are
+ * supposed to be ignored.
  *
  * Submodule info is contained in 4 places: the HEAD tree, the index, config
  * files (both .git/config and .gitmodules), and the working directory.  Any
  * or all of those places might be missing information about the submodule
- * depending on what state the repo is in.
+ * depending on what state the repo is in.  We consider all four places to
+ * build the combination of status flags.
  *
- * When you ask for submodule status, we consider all four places and return
- * a combination of the flags below.  Also, we also compare HEAD to index to
- * workdir, and return a relative status code (see above) for the
- * comparisons.  Use the GIT_SUBMODULE_INDEX_STATUS() and
- * GIT_SUBMODULE_WD_STATUS() macros to extract these status codes from the
- * results.  As an example, if the submodule exists in the HEAD and does not
- * exist in the index, then using GIT_SUBMODULE_INDEX_STATUS(st) will return
- * GIT_SUBMODULE_STATUS_REMOVED.
+ * There are four values that are not really status, but give basic info
+ * about what sources of submodule data are available.  These will be
+ * returned even if ignore is set to "ALL".
  *
- * The ignore settings for the submodule will control how much status info
- * you get about the working directory.  For example, with ignore ALL, the
- * workdir will always show as clean.  With any ignore level below NONE,
- * you will never get the WD_HAS_UNTRACKED value back.
+ * * IN_HEAD   - superproject head contains submodule
+ * * IN_INDEX  - superproject index contains submodule
+ * * IN_CONFIG - superproject gitmodules has submodule
+ * * IN_WD     - superproject workdir has submodule
  *
- * The other SUBMODULE_STATUS values you might see are:
+ * The following values will be returned so long as ignore is not "ALL".
  *
- * - IN_HEAD means submodule exists in HEAD tree
- * - IN_INDEX means submodule exists in index
- * - IN_CONFIG means submodule exists in config
- * - IN_WD means submodule exists in workdir and looks like a submodule
- * - WD_CHECKED_OUT means submodule in workdir has .git content
- * - WD_HAS_UNTRACKED means workdir contains untracked files.  This would
- *   only ever be returned for ignore value GIT_SUBMODULE_IGNORE_NONE.
- * - WD_MISSING_COMMITS means workdir repo is out of date and does not
- *   contain the SHAs from either the index or the HEAD tree
+ * * INDEX_ADDED       - in index, not in head
+ * * INDEX_DELETED     - in head, not in index
+ * * INDEX_MODIFIED    - index and head don't match
+ * * WD_UNINITIALIZED  - workdir contains empty directory
+ * * WD_ADDED          - in workdir, not index
+ * * WD_DELETED        - in index, not workdir
+ * * WD_MODIFIED       - index and workdir head don't match
+ *
+ * The following can only be returned if ignore is "NONE" or "UNTRACKED".
+ *
+ * * WD_INDEX_MODIFIED - submodule workdir index is dirty
+ * * WD_WD_MODIFIED    - submodule workdir has modified files
+ *
+ * Lastly, the following will only be returned for ignore "NONE".
+ *
+ * * WD_UNTRACKED      - wd contains untracked files
  */
-#define GIT_SUBMODULE_STATUS_IN_HEAD             (1u << 0)
-#define GIT_SUBMODULE_STATUS_IN_INDEX            (1u << 1)
-#define GIT_SUBMODULE_STATUS_IN_CONFIG           (1u << 2)
-#define GIT_SUBMODULE_STATUS_IN_WD               (1u << 3)
-#define GIT_SUBMODULE_STATUS_INDEX_DATA_OFFSET         (4)
-#define GIT_SUBMODULE_STATUS_WD_DATA_OFFSET            (7)
-#define GIT_SUBMODULE_STATUS_WD_CHECKED_OUT     (1u << 10)
-#define GIT_SUBMODULE_STATUS_WD_HAS_UNTRACKED   (1u << 11)
-#define GIT_SUBMODULE_STATUS_WD_MISSING_COMMITS (1u << 12)
+typedef enum {
+	 GIT_SUBMODULE_STATUS_IN_HEAD           = (1u << 0),
+	 GIT_SUBMODULE_STATUS_IN_INDEX          = (1u << 1),
+	 GIT_SUBMODULE_STATUS_IN_CONFIG         = (1u << 2),
+	 GIT_SUBMODULE_STATUS_IN_WD             = (1u << 3),
+	 GIT_SUBMODULE_STATUS_INDEX_ADDED       = (1u << 4),
+	 GIT_SUBMODULE_STATUS_INDEX_DELETED     = (1u << 5),
+	 GIT_SUBMODULE_STATUS_INDEX_MODIFIED    = (1u << 6),
+	 GIT_SUBMODULE_STATUS_WD_UNINITIALIZED  = (1u << 7),
+	 GIT_SUBMODULE_STATUS_WD_ADDED          = (1u << 8),
+	 GIT_SUBMODULE_STATUS_WD_DELETED        = (1u << 9),
+	 GIT_SUBMODULE_STATUS_WD_MODIFIED       = (1u << 10),
+	 GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED = (1u << 11),
+	 GIT_SUBMODULE_STATUS_WD_WD_MODIFIED    = (1u << 12),
+	 GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13),
+} git_submodule_status_t;
 
-/**
- * Extract submodule status value for index from status mask.
- */
-#define GIT_SUBMODULE_INDEX_STATUS(s)  \
-	(((s) >> GIT_SUBMODULE_STATUS_INDEX_DATA_OFFSET) & 0x07)
-
-/**
- * Extract submodule status value for working directory from status mask.
- */
-#define GIT_SUBMODULE_WD_STATUS(s)     \
-	(((s) >> GIT_SUBMODULE_STATUS_WD_DATA_OFFSET) & 0x07)
+#define GIT_SUBMODULE_STATUS_IS_UNMODIFIED(S) \
+	(((S) & ~(GIT_SUBMODULE_STATUS_IN_HEAD | GIT_SUBMODULE_STATUS_IN_INDEX | \
+	GIT_SUBMODULE_STATUS_IN_CONFIG | GIT_SUBMODULE_STATUS_IN_WD)) == 0)
 
 /**
  * Lookup submodule information by name or path.
@@ -206,7 +190,7 @@ GIT_EXTERN(int) git_submodule_foreach(
  *
  * To fully emulate "git submodule add" call this function, then open the
  * submodule repo and perform the clone step as needed.  Lastly, call
- * `git_submodule_add_finalize` to wrap up adding the new submodule and
+ * `git_submodule_add_finalize()` to wrap up adding the new submodule and
  * .gitmodules to the index to be ready to commit.
  *
  * @param submodule The newly created submodule ready to open for clone
@@ -232,22 +216,33 @@ GIT_EXTERN(int) git_submodule_add_setup(
  * and done the clone of the submodule.  This adds the .gitmodules file
  * and the newly cloned submodule to the index to be ready to be committed
  * (but doesn't actually do the commit).
+ *
+ * @param submodule The submodule to finish adding.
  */
 GIT_EXTERN(int) git_submodule_add_finalize(git_submodule *submodule);
 
 /**
  * Add current submodule HEAD commit to index of superproject.
+ *
+ * @param submodule The submodule to add to the index
+ * @param write_index Boolean if this should immediately write the index
+ *            file.  If you pass this as false, you will have to get the
+ *            git_index and explicitly call `git_index_write()` on it to
+ *            save the change.
+ * @return 0 on success, <0 on failure
  */
-GIT_EXTERN(int) git_submodule_add_to_index(git_submodule *submodule);
+GIT_EXTERN(int) git_submodule_add_to_index(
+	git_submodule *submodule,
+	int write_index);
 
 /**
  * Write submodule settings to .gitmodules file.
  *
  * This commits any in-memory changes to the submodule to the gitmodules
- * file on disk.  You may also be interested in `git_submodule_init` which
+ * file on disk.  You may also be interested in `git_submodule_init()` which
  * writes submodule info to ".git/config" (which is better for local changes
- * to submodule settings) and/or `git_submodule_sync` which writes settings
- * about remotes to the actual submodule repository.
+ * to submodule settings) and/or `git_submodule_sync()` which writes
+ * settings about remotes to the actual submodule repository.
  *
  * @param submodule The submodule to write.
  * @return 0 on success, <0 on failure.
@@ -259,7 +254,7 @@ GIT_EXTERN(int) git_submodule_save(git_submodule *submodule);
  *
  * This returns a pointer to the repository that contains the submodule.
  * This is a just a reference to the repository that was passed to the
- * original `git_submodule_lookup` call, so if that repository has been
+ * original `git_submodule_lookup()` call, so if that repository has been
  * freed, then this may be a dangling reference.
  *
  * @param submodule Pointer to submodule object
@@ -300,8 +295,8 @@ GIT_EXTERN(const char *) git_submodule_url(git_submodule *submodule);
  * This sets the URL in memory for the submodule. This will be used for
  * any following submodule actions while this submodule data is in memory.
  *
- * After calling this, you may wish to call `git_submodule_save` to write
- * the changes back to the ".gitmodules" file and `git_submodule_sync` to
+ * After calling this, you may wish to call `git_submodule_save()` to write
+ * the changes back to the ".gitmodules" file and `git_submodule_sync()` to
  * write the changes to the checked out submodule repository.
  *
  * @param submodule Pointer to the submodule object
@@ -331,8 +326,8 @@ GIT_EXTERN(const git_oid *) git_submodule_head_oid(git_submodule *submodule);
  *
  * This returns the OID that corresponds to looking up 'HEAD' in the checked
  * out submodule.  If there are pending changes in the index or anything
- * else, this won't notice that.  You should call `git_submodule_status` for
- * a more complete picture about the state of the working directory.
+ * else, this won't notice that.  You should call `git_submodule_status()`
+ * for a more complete picture about the state of the working directory.
  *
  * @param submodule Pointer to submodule object
  * @return Pointer to git_oid or NULL if submodule is not checked out.
@@ -348,7 +343,7 @@ GIT_EXTERN(const git_oid *) git_submodule_wd_oid(git_submodule *submodule);
  *    of the submodule from a clean checkout to be dirty, including the
  *    addition of untracked files.  This is the default if unspecified.
  *  - **GIT_SUBMODULE_IGNORE_UNTRACKED** examines the contents of the
- *    working tree (i.e. call `git_status_foreach` on the submodule) but
+ *    working tree (i.e. call `git_status_foreach()` on the submodule) but
  *    UNTRACKED files will not count as making the submodule dirty.
  *  - **GIT_SUBMODULE_IGNORE_DIRTY** means to only check if the HEAD of the
  *    submodule has moved for status.  This is fast since it does not need to
@@ -364,12 +359,12 @@ GIT_EXTERN(git_submodule_ignore_t) git_submodule_ignore(
  * Set the ignore rule for the submodule.
  *
  * This sets the ignore rule in memory for the submodule.  This will be used
- * for any following actions (such as `git_submodule_status`) while the
- * submodule is in memory.  You should call `git_submodule_save` if you want
- * to persist the new ignore role.
+ * for any following actions (such as `git_submodule_status()`) while the
+ * submodule is in memory.  You should call `git_submodule_save()` if you
+ * want to persist the new ignore role.
  *
  * Calling this again with GIT_SUBMODULE_IGNORE_DEFAULT or calling
- * `git_submodule_reload` will revert the rule to the value that was in the
+ * `git_submodule_reload()` will revert the rule to the value that was in the
  * original config.
  *
  * @return old value for ignore
@@ -388,10 +383,10 @@ GIT_EXTERN(git_submodule_update_t) git_submodule_update(
  * Set the update rule for the submodule.
  *
  * This sets the update rule in memory for the submodule.  You should call
- * `git_submodule_save` if you want to persist the new update rule.
+ * `git_submodule_save()` if you want to persist the new update rule.
  *
  * Calling this again with GIT_SUBMODULE_UPDATE_DEFAULT or calling
- * `git_submodule_reload` will revert the rule to the value that was in the
+ * `git_submodule_reload()` will revert the rule to the value that was in the
  * original config.
  *
  * @return old value for update
@@ -429,7 +424,7 @@ GIT_EXTERN(int) git_submodule_sync(git_submodule *submodule);
  * Open the repository for a submodule.
  *
  * This is a newly opened repository object.  The caller is responsible for
- * calling `git_repository_free` on it when done.  Multiple calls to this
+ * calling `git_repository_free()` on it when done.  Multiple calls to this
  * function will return distinct `git_repository` objects.  This will only
  * work if the submodule is checked out into the working directory.
  *
@@ -462,10 +457,10 @@ GIT_EXTERN(int) git_submodule_reload_all(git_repository *repo);
  * This looks at a submodule and tries to determine the status.  It
  * will return a combination of the `GIT_SUBMODULE_STATUS` values above.
  * How deeply it examines the working directory to do this will depend
- * on the `git_submodule_ignore_t` value for the submodule (which can be
- * overridden with `git_submodule_set_ignore()`).
+ * on the `git_submodule_ignore_t` value for the submodule - which can be
+ * set either temporarily or permanently with `git_submodule_set_ignore()`.
  *
- * @param status Combination of GIT_SUBMODULE_STATUS values from above.
+ * @param status Combination of `GIT_SUBMODULE_STATUS` flags
  * @param submodule Submodule for which to get status
  * @return 0 on success, <0 on error
  */

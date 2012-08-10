@@ -50,7 +50,7 @@ void test_status_submodules__0(void)
 		git_status_foreach(g_repo, cb_status__count, &counts)
 	);
 
-	cl_assert(counts == 6);
+	cl_assert_equal_i(6, counts);
 }
 
 static const char *expected_files[] = {
@@ -95,12 +95,12 @@ void test_status_submodules__1(void)
 		git_status_foreach(g_repo, cb_status__match, &index)
 	);
 
-	cl_assert(index == 6);
+	cl_assert_equal_i(6, index);
 }
 
 void test_status_submodules__single_file(void)
 {
-	unsigned int status;
+	unsigned int status = 0;
 	cl_git_pass( git_status_file(&status, g_repo, "testrepo") );
-	cl_assert(status == 0);
+	cl_assert(!status);
 }
