@@ -63,7 +63,7 @@ int git_message_prettify(char *message_out, size_t buffer_size, const char *mess
 {
 	git_buf buf = GIT_BUF_INIT;
 
-	if (strlen(message) + 1 > buffer_size) {	/* We have to account for a potentially missing \n */
+	if (strlen(message) + 2 > buffer_size) {	/* We have to account for a potentially missing \n */
 		giterr_set(GITERR_INVALID, "Buffer too short to hold the cleaned message");
 		return -1;
 	}
