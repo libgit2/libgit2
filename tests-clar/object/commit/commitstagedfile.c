@@ -128,3 +128,63 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	git_tree_free(tree);
 	git_index_free(index);
 }
+
+void test_object_commit_commitstagedfile__message_prettify(void)
+{
+	char buffer[100];
+
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "", 0));
+	cl_assert_equal_s(buffer, "");
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "", 1));
+	cl_assert_equal_s(buffer, "");
+
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "Short", 0));
+	cl_assert_equal_s(buffer, "Short\n");
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "Short", 1));
+	cl_assert_equal_s(buffer, "Short\n");
+
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 0));
+	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n# with some comments still in\n");
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 1));
+	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n");
+
+	/* try out overflow */
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678",
+		0));
+	cl_assert_equal_s(buffer,
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
+
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n",
+		0));
+	cl_assert_equal_s(buffer,
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
+
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "123456789",
+		0));
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "123456789\n",
+		0));
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890",
+		0));
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890""x",
+		0));
+
+	cl_git_pass(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
+		"# 1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
+		"1234567890",
+		1));
+}
