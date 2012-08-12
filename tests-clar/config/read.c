@@ -266,6 +266,22 @@ void test_config_read__foreach_match(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__whitespace_not_required_around_assignment(void)
+{
+	git_config *cfg;
+	const char *str;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config14")));
+
+	cl_git_pass(git_config_get_string(&str, cfg, "a.b"));
+	cl_assert_equal_s(str, "c");
+
+	cl_git_pass(git_config_get_string(&str, cfg, "d.e"));
+	cl_assert_equal_s(str, "f");
+
+	git_config_free(cfg);
+}
+
 #if 0
 
 BEGIN_TEST(config10, "a repo's config overrides the global config")
