@@ -342,7 +342,7 @@ GIT_EXTERN(int) git_config_foreach_match(
  *
  * A mapping array looks as follows:
  *
- *	git_cvar_map autocrlf_mapping[3] = {
+ *	git_cvar_map autocrlf_mapping[] = {
  *		{GIT_CVAR_FALSE, NULL, GIT_AUTO_CRLF_FALSE},
  *		{GIT_CVAR_TRUE, NULL, GIT_AUTO_CRLF_TRUE},
  *		{GIT_CVAR_STRING, "input", GIT_AUTO_CRLF_INPUT},
