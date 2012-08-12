@@ -1343,9 +1343,8 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 	else
 		value_start = var_end + 1;
 
-	var_end--;
-	while (git__isspace(*var_end))
-		var_end--;
+	do var_end--;
+	while (git__isspace(*var_end));
 
 	*var_name = git__strndup(line, var_end - line + 1);
 	GITERR_CHECK_ALLOC(*var_name);
