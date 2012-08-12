@@ -96,7 +96,7 @@ typedef enum {
  *	@param attr The attribute
  *	@return the value type for the attribute
  */
-git_attr_t git_attr_value(const char *attr);
+GIT_EXTERN(git_attr_t) git_attr_value(const char *attr);
 
 /**
  * Check attribute flags: Reading values from index and working directory.
