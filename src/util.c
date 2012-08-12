@@ -15,7 +15,7 @@
 # include <Shlwapi.h>
 #endif
 
-void git_libgit2_version(int *major, int *minor, int *rev)
+void git_libgit2_version(unsigned *major, unsigned *minor, unsigned *rev)
 {
 	*major = LIBGIT2_VER_MAJOR;
 	*minor = LIBGIT2_VER_MINOR;

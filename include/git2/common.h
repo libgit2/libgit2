@@ -101,7 +101,7 @@ GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
  * @param minor Store the minor version number
  * @param rev Store the revision (patch) number
  */
-GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
+GIT_EXTERN(void) git_libgit2_version(unsigned *major, unsigned *minor, unsigned *rev);
 
 /**
  * Combinations of these values describe the capabilities of libgit2.
