@@ -763,9 +763,10 @@ static git_cond progress_cond;
 #define progress_unlock()	(void)0;
 #endif
 
-static int try_delta(git_packbuilder *pb, struct unpacked *trg,
-		     struct unpacked *src, unsigned int max_depth,
-		     unsigned long *mem_usage, int *ret)
+static int try_delta(git_packbuilder *pb, git_odb *odb,
+		     struct unpacked *trg, struct unpacked *src,
+		     unsigned int max_depth, unsigned long *mem_usage,
+		     int *ret)
 {
 	git_pobject *trg_object = trg->object;
 	git_pobject *src_object = src->object;
@@ -813,7 +814,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 	/* Load data if not already done */
 	if (!trg->data) {
-		if (git_odb_read(&obj, pb->odb, &trg_object->id) < 0)
+		if (git_odb_read(&obj, odb, &trg_object->id) < 0)
 			return -1;
 
 		sz = git_odb_object_size(obj);
@@ -832,7 +833,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		*mem_usage += sz;
 	}
 	if (!src->data) {
-		if (git_odb_read(&obj, pb->odb, &src_object->id) < 0)
+		if (git_odb_read(&obj, odb, &src_object->id) < 0)
 			return -1;
 
 		sz = git_odb_object_size(obj);
@@ -928,7 +929,7 @@ static unsigned long free_unpacked(struct unpacked *n)
 }
 
 /* TODO: respect mem usage limits */
-static int find_deltas(git_packbuilder *pb, git_pobject **list,
+static int find_deltas(git_packbuilder *pb, git_odb *odb, git_pobject **list,
 		       unsigned int *list_size, unsigned int window,
 		       unsigned int depth)
 {
@@ -986,7 +987,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 			if (!m->object)
 				break;
 
-			if (try_delta(pb, n, m, max_depth, &mem_usage, &ret) < 0)
+			if (try_delta(pb, odb, n, m, max_depth, &mem_usage, &ret) < 0)
 				goto on_error;
 			if (ret < 0)
 				break;
@@ -1076,6 +1077,7 @@ on_error:
 struct thread_params {
 	git_thread thread;
 	git_packbuilder *pb;
+	git_odb *odb;
 
 	git_pobject **list;
 
@@ -1089,6 +1091,8 @@ struct thread_params {
 	int depth;
 	int working;
 	int data_ready;
+
+	int error;
 };
 
 static void init_threaded_search(void)
@@ -1112,9 +1116,10 @@ static void *threaded_find_deltas(void *arg)
 	struct thread_params *me = arg;
 
 	while (me->remaining) {
-		if (find_deltas(me->pb, me->list, &me->remaining,
+		if (find_deltas(me->pb, me->odb, me->list, &me->remaining,
 				me->window, me->depth) < 0) {
-			; /* TODO */
+			me->error = -1;
+			/* TODO */
 		}
 
 		progress_lock();
@@ -1152,7 +1157,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 	if (!pb->nr_threads)
 		pb->nr_threads = git_online_cpus();
 	if (pb->nr_threads <= 1) {
-		find_deltas(pb, list, &list_size, window, depth);
+		find_deltas(pb, pb->odb, list, &list_size, window, depth);
 		cleanup_threaded_search();
 		return 0;
 	}
@@ -1186,6 +1191,9 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 
 		list += sub_size;
 		list_size -= sub_size;
+
+		if (git_repository_odb(&p[i].odb, pb->repo) < 0)
+			goto on_error;
 	}
 
 	/* Start work threads */
@@ -1200,7 +1208,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 					threaded_find_deltas, &p[i]);
 		if (ret) {
 			giterr_set(GITERR_THREAD, "unable to create thread");
-			return -1;
+			goto on_error;
 		}
 		active_threads++;
 	}
@@ -1268,6 +1276,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 			git_thread_join(target->thread, NULL);
 			git_cond_free(&target->cond);
 			git_mutex_free(&target->mutex);
+			git_odb_free(target->odb);
 			active_threads--;
 		}
 	}
@@ -1275,10 +1284,15 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 	cleanup_threaded_search();
 	git__free(p);
 	return 0;
+
+on_error:
+	cleanup_threaded_search();
+	git__free(p);
+	return -1;
 }
 
 #else
-#define ll_find_deltas(pb, l, ls, w, d) find_deltas(pb, l, &ls, w, d)
+#define ll_find_deltas(pb, l, ls, w, d) find_deltas(pb, pb->odb, l, &ls, w, d)
 #endif
 
 static void get_object_details(git_packbuilder *pb)
