@@ -351,8 +351,9 @@ enum git_treewalk_mode {
  * the current (relative) root for the entry and the entry
  * data itself.
  *
- * If the callback returns a negative value, the passed entry
- * will be skipped on the traversal.
+ * If the callback returns a positive value, the passed entry will be
+ * skipped on the traversal (in pre mode). A negative value stops the
+ * walk.
  *
  * @param tree The tree to walk
  * @param callback Function to call on each tree entry
