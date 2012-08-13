@@ -787,10 +787,8 @@ static int tree_walk(
 	for (i = 0; i < tree->entries.length; ++i) {
 		git_tree_entry *entry = tree->entries.contents[i];
 
-		if (preorder && callback(path->ptr, entry, payload)) {
-			error = GIT_EUSER;
-			break;
-		}
+		if (preorder && callback(path->ptr, entry, payload) < 0)
+			continue
 
 		if (git_tree_entry__is_tree(entry)) {
 			git_tree *subtree;
