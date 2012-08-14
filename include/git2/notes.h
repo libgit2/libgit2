@@ -77,7 +77,7 @@ GIT_EXTERN(int) git_note_create(git_oid *out, git_repository *repo,
  * @param notes_ref OID reference to use (optional); defaults to "refs/notes/commits"
  * @param author signature of the notes commit author
  * @param committer signature of the notes commit committer
- * @param oid the oid which note's to be removed
+ * @param oid The OID of the git object to remove the note from
  *
  * @return 0 or an error code
  */
