@@ -109,7 +109,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
 
-	cl_git_pass(git_message_prettify(buffer, 128, "Initial commit", 0));
+	cl_assert_equal_i(16, git_message_prettify(buffer, 128, "Initial commit", 0));
 
 	cl_git_pass(git_commit_create_v(
 		&commit_oid,
@@ -133,34 +133,35 @@ void test_object_commit_commitstagedfile__message_prettify(void)
 {
 	char buffer[100];
 
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "", 0));
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "", 0) == 1);
 	cl_assert_equal_s(buffer, "");
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "", 1));
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "", 1) == 1);
 	cl_assert_equal_s(buffer, "");
 
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "Short", 0));
-	cl_assert_equal_s(buffer, "Short\n");
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "Short", 1));
-	cl_assert_equal_s(buffer, "Short\n");
+	cl_assert_equal_i(7, git_message_prettify(buffer, sizeof(buffer), "Short", 0));
+	cl_assert_equal_s("Short\n", buffer);
+	cl_assert_equal_i(7, git_message_prettify(buffer, sizeof(buffer), "Short", 1));
+	cl_assert_equal_s("Short\n", buffer);
 
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 0));
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 0) > 0);
 	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n# with some comments still in\n");
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 1));
+
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 1) > 0);
 	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n");
 
 	/* try out overflow */
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer),
+	cl_assert(git_message_prettify(buffer, sizeof(buffer),
 		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
 		"1234567890" "1234567890" "1234567890" "1234567890" "12345678",
-		0));
+		0) > 0);
 	cl_assert_equal_s(buffer,
 		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
 		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
 
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer),
+	cl_assert(git_message_prettify(buffer, sizeof(buffer),
 		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
 		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n",
-		0));
+		0) > 0);
 	cl_assert_equal_s(buffer,
 		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
 		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
@@ -182,9 +183,13 @@ void test_object_commit_commitstagedfile__message_prettify(void)
 		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890""x",
 		0));
 
-	cl_git_pass(git_message_prettify(buffer, sizeof(buffer),
+	cl_assert(git_message_prettify(buffer, sizeof(buffer),
 		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
 		"# 1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
 		"1234567890",
-		1));
+		1) > 0);
+
+	cl_assert(git_message_prettify(NULL, 0, "", 0) == 1);
+	cl_assert(git_message_prettify(NULL, 0, "Short test", 0) == 12);
+	cl_assert(git_message_prettify(NULL, 0, "Test\n# with\nComments", 1) == 15);
 }

@@ -62,23 +62,25 @@ int git_message__prettify(git_buf *message_out, const char *message, int strip_c
 int git_message_prettify(char *message_out, size_t buffer_size, const char *message, int strip_comments)
 {
 	git_buf buf = GIT_BUF_INIT;
+	ssize_t out_size = -1;
 
-	assert(message_out && buffer_size);
+	if (message_out && buffer_size)
+		*message_out = '\0';
 
-	*message_out = '\0';
+	if (git_message__prettify(&buf, message, strip_comments) < 0)
+		goto done;
 
-	if (git_message__prettify(&buf, message, strip_comments) < 0) {
-		git_buf_free(&buf);
-		return -1;
-	}
-
-	if (buf.size + 1 > buffer_size) { /* +1 for NUL byte */
+	if (message_out && buf.size + 1 > buffer_size) { /* +1 for NUL byte */
 		giterr_set(GITERR_INVALID, "Buffer too short to hold the cleaned message");
-		return -1;
+		goto done;
 	}
 
-	git_buf_copy_cstr(message_out, buffer_size, &buf);
-	git_buf_free(&buf);
+	if (message_out)
+		git_buf_copy_cstr(message_out, buffer_size, &buf);
 
-	return 0;
+	out_size = buf.size + 1;
+
+done:
+	git_buf_free(&buf);
+	return out_size;
 }
