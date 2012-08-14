@@ -54,13 +54,13 @@ GIT_EXTERN(const git_oid *) git_note_oid(git_note *note);
 /**
  * Add a note for an object
  *
- * @param oid pointer to store the OID (optional); NULL in case of error
+ * @param out pointer to store the OID (optional); NULL in case of error
  * @param repo the Git repository
  * @param author signature of the notes commit author
  * @param committer signature of the notes commit committer
  * @param notes_ref OID reference to update (optional); defaults to "refs/notes/commits"
  * @param oid The OID of the object
- * @param oid The note to add for object oid
+ * @param note The note to add for object oid
  *
  * @return 0 or an error code
  */
