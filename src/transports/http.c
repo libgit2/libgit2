@@ -41,7 +41,7 @@ typedef struct {
 	int transfer_finished :1,
 		ct_found :1,
 		ct_finished :1,
-		pack_ready :1;
+		auth :1;
 	enum last_cb last_cb;
 	http_parser parser;
 	char *content_type;
@@ -49,6 +49,9 @@ typedef struct {
 	char *host;
 	char *port;
 	char *service;
+	char *user;
+	char *pass;
+	int (*auth_cb)(http_auth_data *auth_data, void *data);
 	char buffer[65536];
 #ifdef GIT_WIN32
 	WSADATA wsd;
@@ -60,9 +63,33 @@ typedef struct {
 #endif
 } transport_http;
 
-static int gen_request(git_buf *buf, const char *path, const char *host, const char *op,
-                       const char *service, ssize_t content_length, int ls)
+static void setup_gitno_buffer(git_transport *transport);
+
+
+static int base64_cred(git_buf *b64, const char *username, const char *password)
 {
+	char *raw;
+	int error;
+
+	raw = git__malloc(strlen(username) + strlen(password) + 2);
+	GITERR_CHECK_ALLOC(raw);
+
+	strcpy(raw, username);
+	strcat(raw, ":");
+	strcat(raw, password);
+
+	error = git_buf_put_base64(b64, raw, strlen(raw));
+	git__free(raw);
+
+	return error;
+}
+
+static int gen_request(git_buf *buf, const char *path, const char *host, const char *op,
+                       const char *service, ssize_t content_length, int ls,
+		       const char *username, const char *password)
+{
+	git_buf_clear(buf);
+
 	if (path == NULL) /* Is 'git fetch http://host.com/' valid? */
 		path = "/";
 
@@ -73,6 +100,14 @@ static int gen_request(git_buf *buf, const char *path, const char *host, const c
 	}
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", host);
+
+	if (username) {
+		git_buf_puts(buf, "Authorization: Basic ");
+		if (base64_cred(buf, username, password) < 0)
+			return -1;
+		git_buf_puts(buf, "\r\n");
+	}
+
 	if (content_length > 0) {
 		git_buf_printf(buf, "Accept: application/x-git-%s-result\r\n", service);
 		git_buf_printf(buf, "Content-Type: application/x-git-%s-request\r\n", service);
@@ -88,19 +123,85 @@ static int gen_request(git_buf *buf, const char *path, const char *host, const c
 	return 0;
 }
 
+static void reset_transport(transport_http *t)
+{
+	git__free(t->content_type);
+	t->parent.buffer.offset = 0;
+	t->error = 0;
+	t->ct_found = 0;
+	t->ct_finished = 0;
+	t->transfer_finished = 0;
+}
+
+/* Start reading the response and check if we need to authenticate */
+static int http_authenticate(git_transport *transport)
+{
+	transport_http *t = (transport_http *) transport;
+	gitno_buffer *buf = &transport->buffer;
+
+	if (gitno_recv(buf) < 0) {
+		if (t->auth)
+			return 1;
+	}
+
+	return 0;
+}
+
 static int send_request(transport_http *t, const char *service, void *data, ssize_t content_length, int ls)
 {
 #ifndef GIT_WINHTTP
+	git_transport *transport = (git_transport *)t;
 	git_buf request = GIT_BUF_INIT;
 	const char *verb;
+	int do_auth;
 
 	verb = ls ? "GET" : "POST";
-	/* Generate and send the HTTP request */
-	if (gen_request(&request, t->path, t->host, verb, service, content_length, ls) < 0) {
-		giterr_set(GITERR_NET, "Failed to generate request");
-		return -1;
-	}
 
+	setup_gitno_buffer(transport);
+
+	do {
+		/*
+		 * Generate and send the HTTP request; repeat in
+		 * case the server requires authorization.
+		 */
+		do_auth = 0;
+
+		if (gen_request(&request, t->path, t->host, verb, service,
+				content_length, ls, t->user, t->pass) < 0) {
+			giterr_set(GITERR_NET, "Failed to generate request");
+			return -1;
+		}
+
+		if (gitno_send(transport, request.ptr, request.size, 0) < 0) {
+			git_buf_free(&request);
+			return -1;
+		}
+		git_buf_free(&request);
+
+		if (content_length) {
+			if (gitno_send(transport, data, content_length, 0) < 0)
+				return -1;
+		}
+
+		if (!t->user && http_authenticate(transport)) {
+			http_auth_data auth_data;
+
+			do_auth = 1;
+			if (t->auth_cb) {
+				if (t->auth_cb(&auth_data, NULL) < 0)
+					return -1;
+
+				t->user = auth_data.username;
+				t->pass = auth_data.password;
+				reset_transport(t);
+			} else {
+				giterr_set(GITERR_NET, "Authorization required\n");
+				return -1;
+			}
+
+		}
+
+	} while (do_auth);
 
 	if (gitno_send((git_transport *) t, request.ptr, request.size, 0) < 0) {
 		git_buf_free(&request);
@@ -303,7 +404,7 @@ static int on_headers_complete(http_parser *parser)
 	git_buf *buf = &t->buf;
 
 	/* The content-type is text/plain for 404, so don't validate */
-	if (parser->status_code == 404) {
+	if (parser->status_code == 404 || parser->status_code == 401) {
 		git_buf_clear(buf);
 		return 0;
 	}
@@ -335,6 +436,12 @@ static int on_message_complete(http_parser *parser)
 	if (parser->status_code == 404) {
 		giterr_set(GITERR_NET, "Remote error: %s", git_buf_cstr(&t->buf));
 		t->error = -1;
+	}
+
+	if (parser->status_code == 401) {
+		giterr_set(GITERR_NET, "Authentication required");
+		t->error = -1;
+		t->auth = 1;
 	}
 
 	return 0;
@@ -464,7 +571,6 @@ static int http_connect(git_transport *transport, int direction)
 	if ((ret = send_request(t, "upload-pack", NULL, 0, 1)) < 0)
 		goto cleanup;
 
-	setup_gitno_buffer(transport);
 	if ((ret = git_protocol_store_refs(transport, 2)) < 0)
 		goto cleanup;
 
@@ -472,6 +578,7 @@ static int http_connect(git_transport *transport, int direction)
 	if (pkt == NULL || pkt->type != GIT_PKT_COMMENT) {
 		giterr_set(GITERR_NET, "Invalid HTTP response");
 		return t->error = -1;
+
 	} else {
 		/* Remove the comment pkt from the list */
 		git_vector_remove(&transport->refs, 0);
@@ -561,9 +668,19 @@ static void http_free(git_transport *transport)
 	git__free(t->content_type);
 	git__free(t->host);
 	git__free(t->port);
+	git__free(t->user);
+	git__free(t->pass);
 	git__free(t->service);
 	git__free(t->parent.url);
 	git__free(t);
+}
+
+void git_transport_http_set_authcb(git_transport *transport,
+				   int (*auth_cb)(http_auth_data *auth_data, void *data))
+{
+	assert(transport);
+	transport_http *t = (transport_http *) transport;
+	t->auth_cb = auth_cb;
 }
 
 int git_transport_http(git_transport **out)

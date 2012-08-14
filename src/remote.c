@@ -391,6 +391,11 @@ int git_remote_connect(git_remote *remote, int direction)
 	t->progress_cb = remote->callbacks.progress;
 	t->cb_data = remote->callbacks.data;
 
+	if (t->rpc) {
+		if (remote->callbacks.http_auth)
+			git_transport_http_set_authcb(t, remote->callbacks.http_auth);
+	}
+
 	t->check_cert = remote->check_cert;
 	if (t->connect(t, direction) < 0) {
 		goto on_error;

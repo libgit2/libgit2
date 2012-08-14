@@ -9,6 +9,8 @@
 
 #include "git2/net.h"
 #include "git2/indexer.h"
+#include "git2/remote.h"
+
 #include "vector.h"
 #include "posix.h"
 #include "common.h"
@@ -133,6 +135,8 @@ int git_transport_local(struct git_transport **transport);
 int git_transport_git(struct git_transport **transport);
 int git_transport_http(struct git_transport **transport);
 int git_transport_https(struct git_transport **transport);
+void git_transport_http_set_authcb(struct git_transport *transport,
+		int (*auth_cb)(http_auth_data *auth_data, void *data));
 int git_transport_dummy(struct git_transport **transport);
 
 /**
