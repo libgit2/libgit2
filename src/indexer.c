@@ -599,11 +599,6 @@ int git_indexer_new(git_indexer **out, const char *packname)
 
 	assert(out && packname);
 
-	if (git_path_root(packname) < 0) {
-		giterr_set(GITERR_INDEXER, "Path is not absolute");
-		return -1;
-	}
-
 	idx = git__calloc(1, sizeof(git_indexer));
 	GITERR_CHECK_ALLOC(idx);
 
