@@ -59,7 +59,7 @@ static int treewalk_stop_cb(
 
 	(*count) += 1;
 
-	return (*count == 2);
+	return (*count == 2) ? -1 : 0;
 }
 
 static int treewalk_stop_immediately_cb(
