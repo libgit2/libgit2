@@ -23,8 +23,9 @@ GIT_BEGIN_DECL
  *
  * Optionally, can remove lines starting with a "#".
  *
- * @param message_out The user allocated buffer which will be filled with 
- * the cleaned up message.
+ * @param message_out The user allocated buffer which will be filled with
+ * the cleaned up message. Pass NULL if you just want to get the size of the
+ * prettified message as the output value.
  *
  * @param size The size of the allocated buffer message_out.
  *
@@ -32,7 +33,8 @@ GIT_BEGIN_DECL
  *
  * @param strip_comments 1 to remove lines starting with a "#", 0 otherwise.
  *
- * @return GIT_SUCCESS or an error code
+ * @return -1 on error, else number of characters in prettified message
+ * including the trailing NUL byte
  */
 GIT_EXTERN(int) git_message_prettify(char *message_out, size_t buffer_size, const char *message, int strip_comments);
 
