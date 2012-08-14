@@ -119,7 +119,7 @@ typedef struct {
  *
  * @param repo Repository where to find the notes.
  *
- * @param notes_ref OID reference to read from (optional); defaults to
+ * @param notes_ref Reference to read from (optional); defaults to
  *        "refs/notes/commits".
  *
  * @param note_cb Callback to invoke per found annotation.  Return non-zero
