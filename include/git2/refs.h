@@ -335,6 +335,8 @@ GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
  *
  * @param repo Repository where to find the references.
  *
+ * @param glob Glob pattern references should match.
+ *
  * @param list_flags Filtering flags for the reference
  * listing.
  *

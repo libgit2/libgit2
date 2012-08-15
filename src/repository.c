@@ -1095,7 +1095,7 @@ int git_repository_message(char *buffer, size_t len, git_repository *repo)
 
 	if (buffer == NULL) {
 		git_buf_free(&path);
-		return st.st_size;
+		return (int)st.st_size;
 	}
 
 	if (git_futils_readbuffer(&buf, git_buf_cstr(&path)) < 0)
