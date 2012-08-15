@@ -23,10 +23,11 @@ GIT_BEGIN_DECL
  *
  * The note must be freed manually by the user.
  *
- * @param note the note; NULL in case of error
- * @param repo the Git repository
- * @param notes_ref OID reference to use (optional); defaults to "refs/notes/commits"
- * @param oid OID of the object
+ * @param note pointer to the read note; NULL in case of error
+ * @param repo repository where to look up the note
+ * @param notes_ref canonical name of the reference to use (optional);
+ *					defaults to "refs/notes/commits"
+ * @param oid OID of the git object to read the note from
  *
  * @return 0 or an error code
  */
@@ -50,17 +51,17 @@ GIT_EXTERN(const char *) git_note_message(git_note *note);
  */
 GIT_EXTERN(const git_oid *) git_note_oid(git_note *note);
 
-
 /**
  * Add a note for an object
  *
  * @param out pointer to store the OID (optional); NULL in case of error
- * @param repo the Git repository
+ * @param repo repository where to store the note
  * @param author signature of the notes commit author
  * @param committer signature of the notes commit committer
- * @param notes_ref OID reference to update (optional); defaults to "refs/notes/commits"
- * @param oid The OID of the object
- * @param note The note to add for object oid
+ * @param notes_ref canonical name of the reference to use (optional);
+ *					defaults to "refs/notes/commits"
+ * @param oid OID of the git object to decorate
+ * @param note Content of the note to add for object oid
  *
  * @return 0 or an error code
  */
@@ -73,11 +74,12 @@ GIT_EXTERN(int) git_note_create(git_oid *out, git_repository *repo,
 /**
  * Remove the note for an object
  *
- * @param repo the Git repository
- * @param notes_ref OID reference to use (optional); defaults to "refs/notes/commits"
+ * @param repo repository where the note lives
+ * @param notes_ref canonical name of the reference to use (optional);
+ *					defaults to "refs/notes/commits"
  * @param author signature of the notes commit author
  * @param committer signature of the notes commit committer
- * @param oid The OID of the git object to remove the note from
+ * @param oid OID of the git object to remove the note from
  *
  * @return 0 or an error code
  */
