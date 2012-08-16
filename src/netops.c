@@ -542,10 +542,11 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 
 int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)
 {
-	char *colon, *slash, *delim;
+	char *colon, *slash, *delim, *at;
 
 	colon = strchr(url, ':');
 	slash = strchr(url, '/');
+	at = strchr(url, '@');
 
 	if (slash == NULL) {
 		giterr_set(GITERR_NET, "Malformed URL: missing /");
@@ -560,6 +561,7 @@ int gitno_extract_host_and_port(char **host, char **port, const char *url, const
 	GITERR_CHECK_ALLOC(*port);
 
 	delim = colon == NULL ? slash : colon;
+	url = at ? at + 1 : url;
 	*host = git__strndup(url, delim - url);
 	GITERR_CHECK_ALLOC(*host);
 
