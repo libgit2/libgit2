@@ -8,6 +8,7 @@ OBJECTS = \
   git2.o \
   ls-remote.o \
   fetch.o \
+  clone.o \
   index-pack.o
 
 all: $(OBJECTS)

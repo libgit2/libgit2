@@ -184,7 +184,87 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 	return drop_crlf(dest, source);
 }
 
-int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)
+static int convert_line_endings(git_buf *dest, const git_buf *source, const char *ending)
+{
+	const char *scan = git_buf_cstr(source),
+				  *next,
+				  *scan_end = git_buf_cstr(source) + git_buf_len(source);
+
+	while ((next = memchr(scan, '\n', scan_end - scan)) != NULL) {
+		if (next > scan)
+			git_buf_put(dest, scan, next-scan);
+		git_buf_puts(dest, ending);
+		scan = next + 1;
+	}
+
+	git_buf_put(dest, scan, scan_end - scan);
+	return 0;
+}
+
+static const char *line_ending(struct crlf_filter *filter)
+{
+	switch (filter->attrs.crlf_action) {
+	case GIT_CRLF_BINARY:
+	case GIT_CRLF_INPUT:
+		return "\n";
+
+	case GIT_CRLF_CRLF:
+		return "\r\n";
+
+	case GIT_CRLF_AUTO:
+	case GIT_CRLF_TEXT:
+	case GIT_CRLF_GUESS:
+		break;
+
+	default:
+		goto line_ending_error;
+	}
+
+	switch (filter->attrs.eol) {
+	case GIT_EOL_UNSET:
+		return GIT_EOL_NATIVE == GIT_EOL_CRLF
+			? "\r\n"
+			: "\n";
+
+	case GIT_EOL_CRLF:
+		return "\r\n";
+
+	case GIT_EOL_LF:
+		return "\n";
+
+	default:
+		goto line_ending_error;
+	}
+
+line_ending_error:
+	giterr_set(GITERR_INVALID, "Invalid input to line ending filter");
+	return NULL;
+}
+
+static int crlf_apply_to_workdir(git_filter *self, git_buf *dest, const git_buf *source)
+{
+	struct crlf_filter *filter = (struct crlf_filter *)self;
+	const char *workdir_ending = NULL;
+
+	assert (self && dest && source);
+
+	/* Empty file? Nothing to do. */
+	if (git_buf_len(source) == 0)
+		return 0;
+
+	/* Determine proper line ending */
+	workdir_ending = line_ending(filter);
+	if (!workdir_ending) return -1;
+
+	/* If the line ending is '\n', just copy the input */
+	if (!strcmp(workdir_ending, "\n"))
+		return git_buf_puts(dest, git_buf_cstr(source));
+
+	return convert_line_endings(dest, source, workdir_ending);
+}
+
+static int find_and_add_filter(git_vector *filters, git_repository *repo, const char *path,
+										 int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source))
 {
 	struct crlf_attrs ca;
 	struct crlf_filter *filter;
@@ -206,8 +286,7 @@ int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const
 	if (ca.crlf_action == GIT_CRLF_GUESS) {
 		int auto_crlf;
 
-		if ((error = git_repository__cvar(
-			&auto_crlf, repo, GIT_CVAR_AUTO_CRLF)) < 0)
+		if ((error = git_repository__cvar(&auto_crlf, repo, GIT_CVAR_AUTO_CRLF)) < 0)
 			return error;
 
 		if (auto_crlf == GIT_AUTO_CRLF_FALSE)
@@ -219,10 +298,19 @@ int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const
 	filter = git__malloc(sizeof(struct crlf_filter));
 	GITERR_CHECK_ALLOC(filter);
 
-	filter->f.apply = &crlf_apply_to_odb;
+	filter->f.apply = apply;
 	filter->f.do_free = NULL;
 	memcpy(&filter->attrs, &ca, sizeof(struct crlf_attrs));
 
 	return git_vector_insert(filters, filter);
 }
 
+int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)
+{
+	return find_and_add_filter(filters, repo, path, &crlf_apply_to_odb);
+}
+
+int git_filter_add__crlf_to_workdir(git_vector *filters, git_repository *repo, const char *path)
+{
+	return find_and_add_filter(filters, repo, path, &crlf_apply_to_workdir);
+}

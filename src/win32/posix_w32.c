@@ -7,6 +7,7 @@
 #include "../posix.h"
 #include "path.h"
 #include "utf-conv.h"
+#include "repository.h"
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
@@ -222,6 +223,14 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	target[dwRet] = '\0';
 
 	return dwRet;
+}
+
+int p_symlink(const char *old, const char *new)
+{
+	/* Real symlinks on NTFS require admin privileges. Until this changes,
+	 * libgit2 just creates a text file with the link target in the contents.
+	 */
+	return git_futils_fake_symlink(old, new);
 }
 
 int p_open(const char *path, int flags, ...)

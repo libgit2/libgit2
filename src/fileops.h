@@ -179,4 +179,14 @@ extern int git_futils_find_global_file(git_buf *path, const char *filename);
  */
 extern int git_futils_find_system_file(git_buf *path, const char *filename);
 
+
+/**
+ * Create a "fake" symlink (text file containing the target path).
+ *
+ * @param new symlink file to be created
+ * @param old original symlink target
+ * @return 0 on success, -1 on error
+ */
+extern int git_futils_fake_symlink(const char *new, const char *old);
+
 #endif /* INCLUDE_fileops_h__ */

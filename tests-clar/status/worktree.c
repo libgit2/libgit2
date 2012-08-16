@@ -484,7 +484,7 @@ static void fill_index_wth_head_entries(git_repository *repo, git_index *index)
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_commit_tree(&tree, commit));
 
-	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_read_tree(index, tree, NULL));
 	cl_git_pass(git_index_write(index));
 
 	git_tree_free(tree);

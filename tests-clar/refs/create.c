@@ -4,7 +4,7 @@
 #include "git2/reflog.h"
 #include "reflog.h"
 
-static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
+static const char *current_master_tip = "099fabac3a9ea935598528c27f866e34089c2eff";
 static const char *current_head_target = "refs/heads/master";
 
 static git_repository *g_repo;
