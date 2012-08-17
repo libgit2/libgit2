@@ -180,7 +180,7 @@ static int manipulate_note_in_tree_r(
 	subtree_name[2] = '\0';
 
 	error = tree_write(out, repo, parent, git_tree_id(new),
-			   subtree_name, 0040000);
+			   subtree_name, GIT_FILEMODE_TREE);
 
 
 cleanup:
@@ -252,7 +252,13 @@ static int insert_note_in_tree_enotfound_cb(git_tree **out,
 	GIT_UNUSED(current_error);
 
 	/* No existing fanout at this level, insert in place */
-	return tree_write(out, repo, parent, note_oid, annotated_object_sha + fanout, 0100644);
+	return tree_write(
+		out,
+		repo,
+		parent,
+		note_oid,
+		annotated_object_sha + fanout,
+		GIT_FILEMODE_BLOB);
 }
 
 static int note_write(git_oid *out,

@@ -4,9 +4,6 @@
 static const char *blob_oid = "3d0970ec547fc41ef8a5882dde99c6adce65b021";
 static const char *tree_oid  = "1b05fdaa881ee45b48cbaa5e9b037d667a47745e";
 
-#define GROUP_WRITABLE_FILE 0100664
-#define REGULAR_FILE 0100644
-
 void test_object_tree_attributes__ensure_correctness_of_attributes_on_insertion(void)
 {
 	git_treebuilder *builder;
@@ -16,9 +13,9 @@ void test_object_tree_attributes__ensure_correctness_of_attributes_on_insertion(
 
 	cl_git_pass(git_treebuilder_create(&builder, NULL));
 
-	cl_git_fail(git_treebuilder_insert(NULL, builder, "one.txt", &oid, 0777777));
-	cl_git_fail(git_treebuilder_insert(NULL, builder, "one.txt", &oid, 0100666));
-	cl_git_fail(git_treebuilder_insert(NULL, builder, "one.txt", &oid, 0000001));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "one.txt", &oid, (git_filemode_t)0777777));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "one.txt", &oid, (git_filemode_t)0100666));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "one.txt", &oid, (git_filemode_t)0000001));
 
 	git_treebuilder_free(builder);
 }
@@ -37,7 +34,7 @@ void test_object_tree_attributes__group_writable_tree_entries_created_with_an_an
 
 	entry = git_tree_entry_byname(tree, "old_mode.txt");
 	cl_assert_equal_i(
-		GROUP_WRITABLE_FILE,
+		GIT_FILEMODE_BLOB_GROUP_WRITABLE,
 		git_tree_entry_attributes(entry));
 
 	git_tree_free(tree);
@@ -63,10 +60,10 @@ void test_object_tree_attributes__normalize_attributes_when_inserting_in_a_new_t
 		builder,
 		"normalized.txt",
 		&bid,
-		GROUP_WRITABLE_FILE));
+		GIT_FILEMODE_BLOB_GROUP_WRITABLE));
 
 	cl_assert_equal_i(
-		REGULAR_FILE,
+		GIT_FILEMODE_BLOB,
 		git_tree_entry_attributes(entry));
 	
 	cl_git_pass(git_treebuilder_write(&tid, repo, builder));
@@ -76,7 +73,7 @@ void test_object_tree_attributes__normalize_attributes_when_inserting_in_a_new_t
 
 	entry = git_tree_entry_byname(tree, "normalized.txt");
 	cl_assert_equal_i(
-		REGULAR_FILE,
+		GIT_FILEMODE_BLOB,
 		git_tree_entry_attributes(entry));
 
 	git_tree_free(tree);
@@ -100,7 +97,7 @@ void test_object_tree_attributes__normalize_attributes_when_creating_a_tree_from
 	
 	entry = git_treebuilder_get(builder, "old_mode.txt");
 	cl_assert_equal_i(
-		REGULAR_FILE,
+		GIT_FILEMODE_BLOB,
 		git_tree_entry_attributes(entry));
 
 	cl_git_pass(git_treebuilder_write(&tid2, repo, builder));
@@ -110,7 +107,7 @@ void test_object_tree_attributes__normalize_attributes_when_creating_a_tree_from
 	cl_git_pass(git_tree_lookup(&tree, repo, &tid2));
 	entry = git_tree_entry_byname(tree, "old_mode.txt");
 	cl_assert_equal_i(
-		REGULAR_FILE,
+		GIT_FILEMODE_BLOB,
 		git_tree_entry_attributes(entry));
 
 	git_tree_free(tree);

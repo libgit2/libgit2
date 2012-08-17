@@ -271,7 +271,7 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(git_treebuilder *bld, con
  * @param bld Tree builder
  * @param filename Filename of the entry
  * @param id SHA1 oid of the entry
- * @param attributes Folder attributes of the entry. This parameter must
+ * @param filemode Folder attributes of the entry. This parameter must
  *			be valued with one of the following entries: 0040000, 0100644,
  *			0100755, 0120000 or 0160000.
  * @return 0 or an error code
@@ -281,7 +281,7 @@ GIT_EXTERN(int) git_treebuilder_insert(
 	git_treebuilder *bld,
 	const char *filename,
 	const git_oid *id,
-	unsigned int attributes);
+	git_filemode_t filemode);
 
 /**
  * Remove an entry from the builder by its filename

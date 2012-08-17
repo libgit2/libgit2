@@ -35,11 +35,16 @@ void test_object_tree_write__from_memory(void)
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_treebuilder_create(&builder, tree));
 
-	cl_git_fail(git_treebuilder_insert(NULL, builder, "", &bid, 0100644));
-	cl_git_fail(git_treebuilder_insert(NULL, builder, "/", &bid, 0100644));
-	cl_git_fail(git_treebuilder_insert(NULL, builder, "folder/new.txt", &bid, 0100644));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "",
+		&bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "/",
+		&bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "folder/new.txt",
+		&bid, GIT_FILEMODE_BLOB));
 
-	cl_git_pass(git_treebuilder_insert(NULL,builder,"new.txt",&bid,0100644));
+	cl_git_pass(git_treebuilder_insert(
+		NULL, builder, "new.txt", &bid, GIT_FILEMODE_BLOB));
+
 	cl_git_pass(git_treebuilder_write(&rid, g_repo, builder));
 
 	cl_assert(git_oid_cmp(&rid, &id2) == 0);
@@ -63,14 +68,16 @@ void test_object_tree_write__subtree(void)
 
 	//create subtree
 	cl_git_pass(git_treebuilder_create(&builder, NULL));
-	cl_git_pass(git_treebuilder_insert(NULL,builder,"new.txt",&bid,0100644)); //-V536
+	cl_git_pass(git_treebuilder_insert(
+		NULL, builder, "new.txt", &bid, GIT_FILEMODE_BLOB)); //-V536
 	cl_git_pass(git_treebuilder_write(&subtree_id, g_repo, builder));
 	git_treebuilder_free(builder);
 
 	// create parent tree
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_treebuilder_create(&builder, tree));
-	cl_git_pass(git_treebuilder_insert(NULL,builder,"new",&subtree_id,040000)); //-V536
+	cl_git_pass(git_treebuilder_insert(
+		NULL, builder, "new", &subtree_id, GIT_FILEMODE_TREE)); //-V536
 	cl_git_pass(git_treebuilder_write(&id_hiearar, g_repo, builder));
 	git_treebuilder_free(builder);
 	git_tree_free(tree);
@@ -96,23 +103,23 @@ void test_object_tree_write__sorted_subtrees(void)
 		unsigned int attr;
 		const char *filename;
 	} entries[] = {
-		{ 0100644, ".gitattributes" },
-	  	{ 0100644, ".gitignore" },
-	  	{ 0100644, ".htaccess" },
-	  	{ 0100644, "Capfile" },
-	  	{ 0100644, "Makefile"},
-	  	{ 0100644, "README"},
-	  	{ 0040000, "app"},
-	  	{ 0040000, "cake"},
-	  	{ 0040000, "config"},
-	  	{ 0100644, "c"},
-	  	{ 0100644, "git_test.txt"},
-	  	{ 0100644, "htaccess.htaccess"},
-	  	{ 0100644, "index.php"},
-	  	{ 0040000, "plugins"},
-	  	{ 0040000, "schemas"},
-	  	{ 0040000, "ssl-certs"},
-	  	{ 0040000, "vendors"}
+		{ GIT_FILEMODE_BLOB, ".gitattributes" },
+	  	{ GIT_FILEMODE_BLOB, ".gitignore" },
+	  	{ GIT_FILEMODE_BLOB, ".htaccess" },
+	  	{ GIT_FILEMODE_BLOB, "Capfile" },
+	  	{ GIT_FILEMODE_BLOB, "Makefile"},
+	  	{ GIT_FILEMODE_BLOB, "README"},
+	  	{ GIT_FILEMODE_TREE, "app"},
+	  	{ GIT_FILEMODE_TREE, "cake"},
+	  	{ GIT_FILEMODE_TREE, "config"},
+	  	{ GIT_FILEMODE_BLOB, "c"},
+	  	{ GIT_FILEMODE_BLOB, "git_test.txt"},
+	  	{ GIT_FILEMODE_BLOB, "htaccess.htaccess"},
+	  	{ GIT_FILEMODE_BLOB, "index.php"},
+	  	{ GIT_FILEMODE_TREE, "plugins"},
+	  	{ GIT_FILEMODE_TREE, "schemas"},
+	  	{ GIT_FILEMODE_TREE, "ssl-certs"},
+	  	{ GIT_FILEMODE_TREE, "vendors"}
 	};
 
 	git_oid blank_oid, tree_oid;
