@@ -377,8 +377,11 @@ int git_submodule_lookup(
 		return -1;
 
 	pos = git_strmap_lookup_index(repo->submodules, name);
-	if (!git_strmap_valid_index(repo->submodules, pos))
+	if (!git_strmap_valid_index(repo->submodules, pos)) {
+		if (sm_ptr)
+			*sm_ptr = NULL;
 		return GIT_ENOTFOUND;
+        }
 
 	if (sm_ptr)
 		*sm_ptr = git_strmap_value_at(repo->submodules, pos);
