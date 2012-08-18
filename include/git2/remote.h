@@ -188,6 +188,12 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
 GIT_EXTERN(int) git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats);
 
 /**
+ *
+ *
+ */
+GIT_EXTERN(int) git_remote_push(git_remote *remote);
+
+/**
  * Check whether the remote is connected
  *
  * Check whether the remote's underlying transport is connected to the
