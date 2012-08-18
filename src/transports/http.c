@@ -540,10 +540,8 @@ static int http_connect(git_transport *transport, int direction)
 	const char *default_port;
 	git_pkt *pkt;
 
-	if (direction == GIT_DIR_PUSH) {
-		giterr_set(GITERR_NET, "Pushing over HTTP is not implemented");
-		return -1;
-	}
+	if (direction == GIT_DIR_PUSH)
+		service = "receive-pack";
 
 	t->parent.direction = direction;
 
@@ -568,7 +566,7 @@ static int http_connect(git_transport *transport, int direction)
 	if ((ret = do_connect(t)) < 0)
 		goto cleanup;
 
-	if ((ret = send_request(t, "upload-pack", NULL, 0, 1)) < 0)
+	if ((ret = send_request(t, t->service, NULL, 0, 1)) < 0)
 		goto cleanup;
 
 	if ((ret = git_protocol_store_refs(transport, 2)) < 0)
@@ -592,6 +590,38 @@ cleanup:
 	git_buf_free(&request);
 	git_buf_clear(&t->buf);
 
+	return ret;
+}
+
+static int http_push(struct git_transport *transport, git_buf *pktline, git_buf *pack)
+{
+	transport_http *t = (transport_http *) transport;
+	gitno_buffer *buf = &transport->buffer;
+	git_buf request = GIT_BUF_INIT;
+	int ret;
+
+	if ((ret = do_connect(t)) < 0)
+		return -1;
+
+	if ((ret = gen_request(&request, t->path, t->host, "POST", "receive-pack",
+			       pktline->size + pack->size, 0, t->user, t->pass)) < 0)
+		goto cleanup;
+
+	if ((ret = gitno_send(transport, request.ptr, request.size, 0)) < 0)
+		goto cleanup;
+
+	if ((ret = gitno_send(transport, pktline->ptr, pktline->size, 0)) < 0)
+		goto cleanup;
+
+	if ((ret = gitno_send(transport, pack->ptr, pack->size, 0)) < 0)
+		goto cleanup;
+
+	setup_gitno_buffer(transport);
+
+	ret = gitno_recv(buf);
+
+cleanup:
+	git_buf_free(&request);
 	return ret;
 }
 
@@ -693,6 +723,7 @@ int git_transport_http(git_transport **out)
 	memset(t, 0x0, sizeof(transport_http));
 
 	t->parent.connect = http_connect;
+	t->parent.push = http_push;
 	t->parent.negotiation_step = http_negotiation_step;
 	t->parent.close = http_close;
 	t->parent.free = http_free;

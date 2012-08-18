@@ -11,6 +11,7 @@
 #include "git2/indexer.h"
 #include "git2/remote.h"
 
+#include "buffer.h"
 #include "vector.h"
 #include "posix.h"
 #include "common.h"
@@ -26,6 +27,7 @@
 #define GIT_CAP_SIDE_BAND "side-band"
 #define GIT_CAP_SIDE_BAND_64K "side-band-64k"
 #define GIT_CAP_INCLUDE_TAG "include-tag"
+#define GIT_CAP_DELETE_REFS "delete-refs"
 
 typedef struct git_transport_caps {
 	int common:1,
@@ -33,7 +35,8 @@ typedef struct git_transport_caps {
 		multi_ack: 1,
 		side_band:1,
 		side_band_64k:1,
-		include_tag:1;
+		include_tag:1,
+		delete_refs:1;
 } git_transport_caps;
 
 #ifdef GIT_SSL
@@ -104,7 +107,7 @@ struct git_transport {
 	/**
 	 * Push the changes over
 	 */
-	int (*push)(struct git_transport *transport);
+	int (*push)(struct git_transport *transport, git_buf *pktline, git_buf *pack);
 	/**
 	 * Negotiate the minimal amount of objects that need to be
 	 * retrieved

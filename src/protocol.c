@@ -101,6 +101,11 @@ int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps)
 			continue;
 		}
 
+		if(!git__prefixcmp(ptr, GIT_CAP_DELETE_REFS)) {
+			caps->common = caps->delete_refs = 1;
+			ptr += strlen(GIT_CAP_DELETE_REFS);
+			continue;
+		}
 
 		/* We don't know this capability, so skip it */
 		ptr = strchr(ptr, ' ');
