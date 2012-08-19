@@ -263,11 +263,17 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(git_treebuilder *bld, con
  * The optional pointer `entry_out` can be used to retrieve a
  * pointer to the newly created/updated entry.
  *
+ * No attempt is being made to ensure that the provided oid points
+ * to an existing git object in the object database, nor that the
+ * attributes make sense regarding the type of the pointed at object.
+ *
  * @param entry_out Pointer to store the entry (optional)
  * @param bld Tree builder
  * @param filename Filename of the entry
  * @param id SHA1 oid of the entry
- * @param attributes Folder attributes of the entry
+ * @param attributes Folder attributes of the entry. This parameter must
+ *			be valued with one of the following entries: 0040000, 0100644,
+ *			0100755, 0120000 or 0160000.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_treebuilder_insert(
