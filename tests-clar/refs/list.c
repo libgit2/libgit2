@@ -36,7 +36,7 @@ void test_refs_list__all(void)
 	/* We have exactly 9 refs in total if we include the packed ones:
 	 * there is a reference that exists both in the packfile and as
 	 * loose, but we only list it once */
-	cl_assert(ref_list.count == 9);
+	cl_assert_equal_i(ref_list.count, 10);
 
 	git_strarray_free(&ref_list);
 }

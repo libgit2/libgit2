@@ -387,6 +387,69 @@ bool git_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+#ifdef GIT_WIN32
+
+bool git_path_is_empty_dir(const char *path)
+{
+	git_buf pathbuf = GIT_BUF_INIT;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	wchar_t *wbuf;
+	WIN32_FIND_DATAW ffd;
+	bool retval = true;
+
+	if (!git_path_isdir(path)) return false;
+
+	git_buf_printf(&pathbuf, "%s\\*", path);
+	wbuf = gitwin_to_utf16(git_buf_cstr(&pathbuf));
+
+	hFind = FindFirstFileW(wbuf, &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) {
+		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		return false;
+	}
+
+	do {
+		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
+			retval = false;
+		}
+	} while (FindNextFileW(hFind, &ffd) != 0);
+
+	FindClose(hFind);
+	git_buf_free(&pathbuf);
+	git__free(wbuf);
+	return retval;
+}
+
+#else
+
+bool git_path_is_empty_dir(const char *path)
+{
+	DIR *dir = NULL;
+	struct dirent *e;
+	bool retval = true;
+
+	if (!git_path_isdir(path)) return false;
+
+	dir = opendir(path);
+	if (!dir) {
+		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		return false;
+	}
+
+	while ((e = readdir(dir)) != NULL) {
+		if (!git_path_is_dot_or_dotdot(e->d_name)) {
+			giterr_set(GITERR_INVALID,
+						  "'%s' exists and is not an empty directory", path);
+			retval = false;
+			break;
+		}
+	}
+	closedir(dir);
+
+	return retval;
+}
+#endif
+
 int git_path_lstat(const char *path, struct stat *st)
 {
 	int err = 0;
@@ -551,14 +614,6 @@ int git_path_cmp(
 	return (c1 < c2) ? -1 : (c1 > c2) ? 1 : 0;
 }
 
-/* Taken from git.git */
-GIT_INLINE(int) is_dot_or_dotdot(const char *name)
-{
-	return (name[0] == '.' &&
-		(name[1] == '\0' ||
-		 (name[1] == '.' && name[2] == '\0')));
-}
-
 int git_path_direach(
 	git_buf *path,
 	int (*fn)(void *, git_buf *),
@@ -587,7 +642,7 @@ int git_path_direach(
 	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
 		int result;
 
-		if (is_dot_or_dotdot(de->d_name))
+		if (git_path_is_dot_or_dotdot(de->d_name))
 			continue;
 
 		if (git_buf_puts(path, de->d_name) < 0) {
@@ -646,7 +701,7 @@ int git_path_dirload(
 		char *entry_path;
 		size_t entry_len;
 
-		if (is_dot_or_dotdot(de->d_name))
+		if (git_path_is_dot_or_dotdot(de->d_name))
 			continue;
 
 		entry_len = strlen(de->d_name);

@@ -11,6 +11,7 @@
 #include "filter.h"
 #include "repository.h"
 #include "git2/config.h"
+#include "blob.h"
 
 /* Tweaked from Core Git. I wonder what we could use this for... */
 void git_text_gather_stats(git_text_stats *stats, const git_buf *text)
@@ -95,8 +96,9 @@ int git_filters_load(git_vector *filters, git_repository *repo, const char *path
 		if (error < 0)
 			return error;
 	} else {
-		giterr_set(GITERR_INVALID, "Worktree filters are not implemented yet");
-		return -1;
+		error = git_filter_add__crlf_to_workdir(filters, repo, path);
+		if (error < 0)
+			return error;
 	}
 
 	return (int)filters->length;
@@ -161,5 +163,39 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 		git_buf_swap(dest, source);
 
 	return 0;
+}
+
+static int unfiltered_blob_contents(git_buf *out, git_repository *repo, const git_oid *blob_id)
+{
+	int retcode = GIT_ERROR;
+	git_blob *blob;
+
+	if (!(retcode = git_blob_lookup(&blob, repo, blob_id)))
+	{
+		retcode = git_blob__getbuf(out, blob);
+		git_blob_free(blob);
+	}
+
+	return retcode;
+}
+
+int git_filter_blob_contents(git_buf *out, git_repository *repo, const git_oid *oid, const char *path)
+{
+	int retcode = GIT_ERROR;
+
+	git_buf unfiltered = GIT_BUF_INIT;
+	if (!unfiltered_blob_contents(&unfiltered, repo, oid)) {
+		git_vector filters = GIT_VECTOR_INIT;
+		if (git_filters_load(&filters,
+									repo, path, GIT_FILTER_TO_WORKTREE) >= 0) {
+			git_buf_clear(out);
+			retcode = git_filters_apply(out, &unfiltered, &filters);
+		}
+
+		git_filters_free(&filters);
+	}
+
+	git_buf_free(&unfiltered);
+	return retcode;
 }
 

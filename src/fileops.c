@@ -484,3 +484,14 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 	return 0;
 #endif
 }
+
+int git_futils_fake_symlink(const char *old, const char *new)
+{
+	int retcode = GIT_ERROR;
+	int fd = git_futils_creat_withpath(new, 0755, 0644);
+	if (fd >= 0) {
+		retcode = p_write(fd, old, strlen(old));
+		p_close(fd);
+	}
+	return retcode;
+}
