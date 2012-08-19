@@ -12,12 +12,16 @@
 #include "git2/object.h"
 
 #define DEFAULT_TREE_SIZE 16
-#define MAX_FILEMODE 0777777
 #define MAX_FILEMODE_BYTES 6
 
-static int valid_attributes(const int attributes)
+static bool valid_attributes(const int attributes)
 {
-	return attributes >= 0 && attributes <= MAX_FILEMODE;
+	return (attributes == 0040000	/* Directory */
+		|| attributes == 0100644 /* Non executable file */
+		|| attributes == 0100664 /* Non executable group writable file */
+		|| attributes == 0100755 /* Executable file */
+		|| attributes == 0120000 /* Symbolic link */
+		|| attributes == 0160000); /* Git link */
 }
 
 static int valid_entry_name(const char *filename)
@@ -513,6 +517,19 @@ static void sort_entries(git_treebuilder *bld)
 	git_vector_sort(&bld->entries);
 }
 
+GIT_INLINE(int) normalize_attributes(const int attributes)
+{
+	/* 100664 mode is an early design mistake. Tree entries may bear
+	 * this mode in some old git repositories, but it's now deprecated.
+	 * We silently normalize while inserting new entries in a tree 
+	 * being built.
+	 */
+	if (attributes == 0100664)
+		return 0100644;
+
+	return attributes;
+}
+
 int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 {
 	git_treebuilder *bld;
@@ -533,7 +550,10 @@ int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 		for (i = 0; i < source->entries.length; ++i) {
 			git_tree_entry *entry_src = source->entries.contents[i];
 
-			if (append_entry(bld, entry_src->filename, &entry_src->oid, entry_src->attr) < 0)
+			if (append_entry(
+				bld, entry_src->filename,
+				&entry_src->oid,
+				normalize_attributes(entry_src->attr)) < 0)
 				goto on_error;
 		}
 	}
@@ -560,6 +580,8 @@ int git_treebuilder_insert(
 
 	if (!valid_attributes(attributes))
 		return tree_error("Failed to insert entry. Invalid attributes");
+
+	attributes = normalize_attributes(attributes);
 
 	if (!valid_entry_name(filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry");
