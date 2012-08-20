@@ -32,14 +32,20 @@ static struct {
 	DEFAULT_MAPPED_LIMIT,
 };
 
+/* Whenever you want to read or modify this, grab git__mwindow_mutex */
+static git_mwindow_ctl mem_ctl;
+
 /*
  * Free all the windows in a sequence, typically because we're done
  * with the file
  */
 void git_mwindow_free_all(git_mwindow_file *mwf)
 {
-	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	git_mwindow_ctl *ctl = &mem_ctl;
 	unsigned int i;
+
+	git_mutex_lock(&git__mwindow_mutex);
+
 	/*
 	 * Remove these windows from the global list
 	 */
@@ -67,6 +73,8 @@ void git_mwindow_free_all(git_mwindow_file *mwf)
 		mwf->windows = w->next;
 		git__free(w);
 	}
+
+	git_mutex_unlock(&git__mwindow_mutex);
 }
 
 /*
@@ -82,7 +90,7 @@ int git_mwindow_contains(git_mwindow *win, git_off_t offset)
 /*
  * Find the least-recently-used window in a file
  */
-void git_mwindow_scan_lru(
+static void git_mwindow_scan_lru(
 	git_mwindow_file *mwf,
 	git_mwindow **lru_w,
 	git_mwindow **lru_l)
@@ -107,11 +115,12 @@ void git_mwindow_scan_lru(
 
 /*
  * Close the least recently used window. You should check to see if
- * the file descriptors need closing from time to time.
+ * the file descriptors need closing from time to time. Called under
+ * lock from new_window.
  */
 static int git_mwindow_close_lru(git_mwindow_file *mwf)
 {
-	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	git_mwindow_ctl *ctl = &mem_ctl;
 	unsigned int i;
 	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = &mwf->windows;
 
@@ -146,13 +155,14 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	return 0;
 }
 
+/* This gets called under lock from git_mwindow_open */
 static git_mwindow *new_window(
 	git_mwindow_file *mwf,
 	git_file fd,
 	git_off_t size,
 	git_off_t offset)
 {
-	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	git_mwindow_ctl *ctl = &mem_ctl;
 	size_t walign = _mw_options.window_size / 2;
 	git_off_t len;
 	git_mwindow *w;
@@ -208,9 +218,10 @@ unsigned char *git_mwindow_open(
 	size_t extra,
 	unsigned int *left)
 {
-	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	git_mwindow_ctl *ctl = &mem_ctl;
 	git_mwindow *w = *cursor;
 
+	git_mutex_lock(&git__mwindow_mutex);
 	if (!w || !(git_mwindow_contains(w, offset) && git_mwindow_contains(w, offset + extra))) {
 		if (w) {
 			w->inuse_cnt--;
@@ -228,8 +239,10 @@ unsigned char *git_mwindow_open(
 		 */
 		if (!w) {
 			w = new_window(mwf, mwf->fd, mwf->size, offset);
-			if (w == NULL)
+			if (w == NULL) {
+				git_mutex_unlock(&git__mwindow_mutex);
 				return NULL;
+			}
 			w->next = mwf->windows;
 			mwf->windows = w;
 		}
@@ -247,32 +260,43 @@ unsigned char *git_mwindow_open(
 	if (left)
 		*left = (unsigned int)(w->window_map.len - offset);
 
+	git_mutex_unlock(&git__mwindow_mutex);
 	return (unsigned char *) w->window_map.data + offset;
 }
 
 int git_mwindow_file_register(git_mwindow_file *mwf)
 {
-	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	git_mwindow_ctl *ctl = &mem_ctl;
+	int ret;
 
+	git_mutex_lock(&git__mwindow_mutex);
 	if (ctl->windowfiles.length == 0 &&
-		git_vector_init(&ctl->windowfiles, 8, NULL) < 0)
+	    git_vector_init(&ctl->windowfiles, 8, NULL) < 0) {
+		git_mutex_unlock(&git__mwindow_mutex);
 		return -1;
+	}
 
-	return git_vector_insert(&ctl->windowfiles, mwf);
+	ret = git_vector_insert(&ctl->windowfiles, mwf);
+	git_mutex_unlock(&git__mwindow_mutex);
+
+	return ret;
 }
 
 int git_mwindow_file_deregister(git_mwindow_file *mwf)
 {
-	git_mwindow_ctl *ctl = &GIT_GLOBAL->mem_ctl;
+	git_mwindow_ctl *ctl = &mem_ctl;
 	git_mwindow_file *cur;
 	unsigned int i;
 
+	git_mutex_lock(&git__mwindow_mutex);
 	git_vector_foreach(&ctl->windowfiles, i, cur) {
 		if (cur == mwf) {
 			git_vector_remove(&ctl->windowfiles, i);
+			git_mutex_unlock(&git__mwindow_mutex);
 			return 0;
 		}
 	}
+	git_mutex_unlock(&git__mwindow_mutex);
 
 	giterr_set(GITERR_ODB, "Failed to find the memory window file to deregister");
 	return -1;
@@ -282,7 +306,9 @@ void git_mwindow_close(git_mwindow **window)
 {
 	git_mwindow *w = *window;
 	if (w) {
+		git_mutex_lock(&git__mwindow_mutex);
 		w->inuse_cnt--;
+		git_mutex_unlock(&git__mwindow_mutex);
 		*window = NULL;
 	}
 }

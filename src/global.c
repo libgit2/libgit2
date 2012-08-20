@@ -9,6 +9,9 @@
 #include "git2/threads.h" 
 #include "thread-utils.h"
 
+
+git_mutex git__mwindow_mutex;
+
 /**
  * Handle the global state with TLS
  *
@@ -47,12 +50,14 @@ void git_threads_init(void)
 
 	_tls_index = TlsAlloc();
 	_tls_init = 1;
+	git_mutex_init(&git__mwindow_mutex);
 }
 
 void git_threads_shutdown(void)
 {
 	TlsFree(_tls_index);
 	_tls_init = 0;
+	git_mutex_free(&git__mwindow_mutex);
 }
 
 git_global_st *git__global_state(void)
