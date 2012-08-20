@@ -26,8 +26,6 @@
 #include "refs.h"
 #include "path.h"
 
-GIT_BEGIN_DECL
-
 struct HeadInfo {
 	git_repository *repo;
 	git_oid remote_head_oid;
@@ -247,8 +245,3 @@ int git_clone(git_repository **out,
 
 	return retcode;
 }
-
-
-
-
-GIT_END_DECL
