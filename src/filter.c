@@ -165,37 +165,21 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 	return 0;
 }
 
-static int unfiltered_blob_contents(git_buf *out, git_repository *repo, const git_oid *blob_id)
+int git_filter_blob_content(git_buf *out, git_blob *blob, const char *hintpath)
 {
-	int retcode = GIT_ERROR;
-	git_blob *blob;
-
-	if (!(retcode = git_blob_lookup(&blob, repo, blob_id)))
-	{
-		retcode = git_blob__getbuf(out, blob);
-		git_blob_free(blob);
-	}
-
-	return retcode;
-}
-
-int git_filter_blob_contents(git_buf *out, git_repository *repo, const git_oid *oid, const char *path)
-{
-	int retcode = GIT_ERROR;
-
 	git_buf unfiltered = GIT_BUF_INIT;
-	if (!unfiltered_blob_contents(&unfiltered, repo, oid)) {
-		git_vector filters = GIT_VECTOR_INIT;
-		if (git_filters_load(&filters,
-									repo, path, GIT_FILTER_TO_WORKTREE) >= 0) {
-			git_buf_clear(out);
+	git_vector filters = GIT_VECTOR_INIT;
+	int retcode;
+
+	retcode = git_blob__getbuf(&unfiltered, blob);
+
+	git_buf_clear(out);
+
+	if (git_filters_load(&filters, git_object_owner((git_object *)blob), hintpath, GIT_FILTER_TO_WORKTREE) >= 0)
 			retcode = git_filters_apply(out, &unfiltered, &filters);
-		}
 
-		git_filters_free(&filters);
-	}
-
+	git_filters_free(&filters);
 	git_buf_free(&unfiltered);
+
 	return retcode;
 }
-

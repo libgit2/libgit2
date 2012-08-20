@@ -235,9 +235,8 @@ int git_clone(git_repository **out,
 
 	assert(out && origin_url && workdir_path);
 
-	if (!(retcode = clone_internal(out, origin_url, workdir_path, fetch_stats, 0))) {
+	if (!(retcode = clone_internal(out, origin_url, workdir_path, fetch_stats, 0)))
 		retcode = git_checkout_head(*out, checkout_opts, checkout_stats);
-	}
 
 	return retcode;
 }
