@@ -59,18 +59,34 @@ void test_checkout_checkout__crlf(void)
 	const char *attributes =
 		"branch_file.txt text eol=crlf\n"
 		"new.txt text eol=lf\n";
-	const char *expected_readme_text =
-#ifdef GIT_WIN32
-		"hey there\r\n";
-#else
-		"hey there\n";
-#endif
+	git_config *cfg;
+
+	cl_git_pass(git_repository_config__weakptr(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", false));
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
+
 	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
-	test_file_contents("./testrepo/README", expected_readme_text); 
+	test_file_contents("./testrepo/README", "hey there\n"); 
 	test_file_contents("./testrepo/new.txt", "my new file\n"); 
 	test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); 
 }
+
+
+void test_checkout_checkout__win32_autocrlf(void)
+{
+#ifdef GIT_WIN32
+	git_config *cfg;
+	const char *expected_readme_text = "hey there\r\n";
+
+	cl_must_pass(p_unlink("./testrepo/.gitattributes"));
+	cl_git_pass(git_repository_config__weakptr(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", true));
+
+	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
+	test_file_contents("./testrepo/README", expected_readme_text); 
+#endif
+}
+
 
 static void enable_symlinks(bool enable)
 {
