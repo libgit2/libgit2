@@ -88,7 +88,7 @@ static int blob_contents_to_file(git_repository *repo, git_buf *fnbuf,
 
 	/* Allow overriding of file mode */
 	if (!file_mode)
-		file_mode = git_tree_entry_attributes(entry);
+		file_mode = git_tree_entry_filemode(entry);
 
 	if ((retcode = git_futils_mkpath2file(git_buf_cstr(fnbuf), data->opts->dir_mode)) < 0)
 		goto bctf_cleanup;
@@ -111,7 +111,7 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 {
 	int retcode = 0;
 	tree_walk_data *data = (tree_walk_data*)payload;
-	int attr = git_tree_entry_attributes(entry);
+	int attr = git_tree_entry_filemode(entry);
 	git_buf fnbuf = GIT_BUF_INIT;
 	git_buf_join_n(&fnbuf, '/', 3,
 						git_repository_workdir(data->repo),

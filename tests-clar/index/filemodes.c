@@ -100,40 +100,40 @@ void test_index_filemodes__untrusted(void)
 
 	/* 1 - add 0644 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.0", 0644);
-	add_and_check_mode(index, "exec_off", 0100644);
+	add_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
 
 	/* 2 - add 0644 over existing 0755 -> expect 0755 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.0", 0644);
-	add_and_check_mode(index, "exec_on", 0100755);
+	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/* 3 - add 0755 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.1", 0755);
-	add_and_check_mode(index, "exec_off", 0100644);
+	add_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
 
 	/* 4 - add 0755 over existing 0755 -> expect 0755 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.1", 0755);
-	add_and_check_mode(index, "exec_on", 0100755);
+	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/* 5 - append 0644 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.2", 0644);
-	append_and_check_mode(index, "exec_off", 0100644);
+	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
 
 	/* 6 - append 0644 over existing 0755 -> expect 0755 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.2", 0644);
-	append_and_check_mode(index, "exec_on", 0100755);
+	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/* 7 - append 0755 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.3", 0755);
-	append_and_check_mode(index, "exec_off", 0100644);
+	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
 
 	/* 8 - append 0755 over existing 0755 -> expect 0755 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.3", 0755);
-	append_and_check_mode(index, "exec_on", 0100755);
+	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/*  9 - add new 0644 -> expect 0644 */
 	cl_git_write2file("filemodes/new_off", "blah",
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	add_and_check_mode(index, "new_off", 0100644);
+	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
 
 	/* this test won't give predictable results on a platform
 	 * that doesn't support filemodes correctly, so skip it.
@@ -142,7 +142,7 @@ void test_index_filemodes__untrusted(void)
 		/* 10 - add 0755 -> expect 0755 */
 		cl_git_write2file("filemodes/new_on", "blah",
 			O_WRONLY | O_CREAT | O_TRUNC, 0755);
-		add_and_check_mode(index, "new_on", 0100755);
+		add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 	}
 
 	git_index_free(index);
@@ -168,45 +168,45 @@ void test_index_filemodes__trusted(void)
 
 	/* 1 - add 0644 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.0", 0644);
-	add_and_check_mode(index, "exec_off", 0100644);
+	add_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
 
 	/* 2 - add 0644 over existing 0755 -> expect 0644 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.0", 0644);
-	add_and_check_mode(index, "exec_on", 0100644);
+	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB);
 
 	/* 3 - add 0755 over existing 0644 -> expect 0755 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.1", 0755);
-	add_and_check_mode(index, "exec_off", 0100755);
+	add_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/* 4 - add 0755 over existing 0755 -> expect 0755 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.1", 0755);
-	add_and_check_mode(index, "exec_on", 0100755);
+	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/* 5 - append 0644 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.2", 0644);
-	append_and_check_mode(index, "exec_off", 0100644);
+	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
 
 	/* 6 - append 0644 over existing 0755 -> expect 0644 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.2", 0644);
-	append_and_check_mode(index, "exec_on", 0100644);
+	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB);
 
 	/* 7 - append 0755 over existing 0644 -> expect 0755 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.3", 0755);
-	append_and_check_mode(index, "exec_off", 0100755);
+	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/* 8 - append 0755 over existing 0755 -> expect 0755 */
 	replace_file_with_mode("exec_on", "filemodes/exec_on.3", 0755);
-	append_and_check_mode(index, "exec_on", 0100755);
+	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/*  9 - add new 0644 -> expect 0644 */
 	cl_git_write2file("filemodes/new_off", "blah",
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	add_and_check_mode(index, "new_off", 0100644);
+	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
 
 	/* 10 - add 0755 -> expect 0755 */
 	cl_git_write2file("filemodes/new_on", "blah",
 		O_WRONLY | O_CREAT | O_TRUNC, 0755);
-	add_and_check_mode(index, "new_on", 0100755);
+	add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	git_index_free(index);
 }
