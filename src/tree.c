@@ -185,9 +185,9 @@ const git_oid *git_tree_id(git_tree *c)
 	return git_object_id((git_object *)c);
 }
 
-unsigned int git_tree_entry_attributes(const git_tree_entry *entry)
+git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)
 {
-	return entry->attr;
+	return (git_filemode_t)entry->attr;
 }
 
 const char *git_tree_entry_name(const git_tree_entry *entry)

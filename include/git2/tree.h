@@ -143,9 +143,9 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byoid(git_tree *tree, const gi
  * Get the UNIX file attributes of a tree entry
  *
  * @param entry a tree entry
- * @return attributes as an integer
+ * @return filemode as an integer
  */
-GIT_EXTERN(unsigned int) git_tree_entry_attributes(const git_tree_entry *entry);
+GIT_EXTERN(git_filemode_t) git_tree_entry_filemode(const git_tree_entry *entry);
 
 /**
  * Get the filename of a tree entry

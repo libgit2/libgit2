@@ -33,7 +33,7 @@ static int find_subtree_in_current_level(
 		if (!git__ishex(git_tree_entry_name(entry)))
 			continue;
 
-		if (S_ISDIR(git_tree_entry_attributes(entry))
+		if (S_ISDIR(git_tree_entry_filemode(entry))
 			&& strlen(git_tree_entry_name(entry)) == 2 
 			&& !strncmp(git_tree_entry_name(entry), annotated_object_sha + fanout, 2))
 			return git_tree_lookup(out, repo, git_tree_entry_id(entry));
