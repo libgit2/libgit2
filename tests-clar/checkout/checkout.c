@@ -24,13 +24,17 @@ static void test_file_contents(const char *path, const char *expectedcontents)
 {
 	int fd;
 	char buffer[1024] = {0};
+	size_t expectedlen, actuallen;
 
 	fd = p_open(path, O_RDONLY);
 	cl_assert(fd >= 0);
 
-	cl_assert_equal_i(p_read(fd, buffer, 1024), strlen(expectedcontents));
-	cl_assert_equal_s(expectedcontents, buffer);
+	expectedlen = strlen(expectedcontents);
+	actuallen = p_read(fd, buffer, 1024);
 	cl_git_pass(p_close(fd));
+
+	cl_assert_equal_i(actuallen, expectedlen);
+	cl_assert_equal_s(buffer, expectedcontents);
 }
 
 
@@ -63,9 +67,9 @@ void test_checkout_checkout__crlf(void)
 #endif
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
 	cl_git_pass(git_checkout_head(g_repo, NULL, NULL));
-	 test_file_contents("./testrepo/README", expected_readme_text); 
-	 test_file_contents("./testrepo/new.txt", "my new file\n"); 
-	 test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); 
+	test_file_contents("./testrepo/README", expected_readme_text); 
+	test_file_contents("./testrepo/new.txt", "my new file\n"); 
+	test_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n"); 
 }
 
 static void enable_symlinks(bool enable)
