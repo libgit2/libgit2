@@ -14,14 +14,14 @@
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6
 
-static bool valid_attributes(const int attributes)
+static bool valid_filemode(const int filemode)
 {
-	return (attributes == 0040000	/* Directory */
-		|| attributes == 0100644 /* Non executable file */
-		|| attributes == 0100664 /* Non executable group writable file */
-		|| attributes == 0100755 /* Executable file */
-		|| attributes == 0120000 /* Symbolic link */
-		|| attributes == 0160000); /* Git link */
+	return (filemode == GIT_FILEMODE_TREE
+		|| filemode == GIT_FILEMODE_BLOB
+		|| filemode == GIT_FILEMODE_BLOB_GROUP_WRITABLE
+		|| filemode == GIT_FILEMODE_BLOB_EXECUTABLE
+		|| filemode == GIT_FILEMODE_LINK
+		|| filemode == GIT_FILEMODE_COMMIT);
 }
 
 static int valid_entry_name(const char *filename)
@@ -185,9 +185,9 @@ const git_oid *git_tree_id(git_tree *c)
 	return git_object_id((git_object *)c);
 }
 
-unsigned int git_tree_entry_attributes(const git_tree_entry *entry)
+git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)
 {
-	return entry->attr;
+	return (git_filemode_t)entry->attr;
 }
 
 const char *git_tree_entry_name(const git_tree_entry *entry)
@@ -308,8 +308,8 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		int attr;
 
 		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 ||
-			!buffer || !valid_attributes(attr))
-			return tree_error("Failed to parse tree. Can't parse attributes");
+			!buffer || !valid_filemode(attr))
+			return tree_error("Failed to parse tree. Can't parse filemode");
 
 		if (*buffer++ != ' ')
 			return tree_error("Failed to parse tree. Object is corrupted");
@@ -368,7 +368,7 @@ static int append_entry(
 	git_treebuilder *bld,
 	const char *filename,
 	const git_oid *id,
-	unsigned int attributes)
+	git_filemode_t filemode)
 {
 	git_tree_entry *entry;
 
@@ -376,7 +376,7 @@ static int append_entry(
 	GITERR_CHECK_ALLOC(entry);
 
 	git_oid_cpy(&entry->oid, id);
-	entry->attr = attributes;
+	entry->attr = (uint16_t)filemode;
 
 	if (git_vector_insert(&bld->entries, entry) < 0)
 		return -1;
@@ -517,17 +517,17 @@ static void sort_entries(git_treebuilder *bld)
 	git_vector_sort(&bld->entries);
 }
 
-GIT_INLINE(int) normalize_attributes(const int attributes)
+GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
 {
 	/* 100664 mode is an early design mistake. Tree entries may bear
 	 * this mode in some old git repositories, but it's now deprecated.
 	 * We silently normalize while inserting new entries in a tree 
 	 * being built.
 	 */
-	if (attributes == 0100664)
-		return 0100644;
+	if (filemode == GIT_FILEMODE_BLOB_GROUP_WRITABLE)
+		return GIT_FILEMODE_BLOB;
 
-	return attributes;
+	return filemode;
 }
 
 int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
@@ -553,7 +553,7 @@ int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 			if (append_entry(
 				bld, entry_src->filename,
 				&entry_src->oid,
-				normalize_attributes(entry_src->attr)) < 0)
+				normalize_filemode((git_filemode_t)entry_src->attr)) < 0)
 				goto on_error;
 		}
 	}
@@ -571,17 +571,17 @@ int git_treebuilder_insert(
 	git_treebuilder *bld,
 	const char *filename,
 	const git_oid *id,
-	unsigned int attributes)
+	git_filemode_t filemode)
 {
 	git_tree_entry *entry;
 	int pos;
 
 	assert(bld && id && filename);
 
-	if (!valid_attributes(attributes))
-		return tree_error("Failed to insert entry. Invalid attributes");
+	if (!valid_filemode(filemode))
+		return tree_error("Failed to insert entry. Invalid filemode");
 
-	attributes = normalize_attributes(attributes);
+	filemode = normalize_filemode(filemode);
 
 	if (!valid_entry_name(filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry");
@@ -598,7 +598,7 @@ int git_treebuilder_insert(
 	}
 
 	git_oid_cpy(&entry->oid, id);
-	entry->attr = attributes;
+	entry->attr = filemode;
 
 	if (pos < 0) {
 		if (git_vector_insert(&bld->entries, entry) < 0)

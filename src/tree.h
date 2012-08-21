@@ -47,5 +47,9 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj);
  */
 int git_tree__prefix_position(git_tree *tree, const char *prefix);
 
+/**
+ * Obsolete mode kept for compatibility reasons
+ */
+#define GIT_FILEMODE_BLOB_GROUP_WRITABLE 0100664
 
 #endif
