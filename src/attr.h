@@ -12,6 +12,7 @@
 
 #define GIT_ATTR_CONFIG   "core.attributesfile"
 #define GIT_IGNORE_CONFIG "core.excludesfile"
+#define GIT_IGNORE_CONFIG_DEFAULT ".config/git/ignore"
 
 typedef struct {
 	int initialized;

@@ -612,6 +612,16 @@ int git_attr_cache__init(git_repository *repo)
 	if (ret < 0 && ret != GIT_ENOTFOUND)
 		return ret;
 
+	if (ret == GIT_ENOTFOUND) {
+		git_buf dflt = GIT_BUF_INIT;
+
+		ret = git_futils_find_global_file(&dflt, GIT_IGNORE_CONFIG_DEFAULT);
+		if (!ret)
+			cache->cfg_excl_file = git_buf_detach(&dflt);
+
+		git_buf_free(&dflt);
+	}
+
 	giterr_clear();
 
 	/* allocate hashtable for attribute and ignore file contents */

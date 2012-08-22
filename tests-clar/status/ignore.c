@@ -139,9 +139,63 @@ void test_status_ignore__ignore_pattern_contains_space(void)
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 	cl_git_rewritefile("empty_standard_repo/.gitignore", "foo bar.txt\n");
 
+	cl_git_mkfile(
+		"empty_standard_repo/foo bar.txt", "I'm going to be ignored!");
+
+	cl_git_pass(git_status_file(&flags, g_repo, "foo bar.txt"));
+	cl_assert(flags == GIT_STATUS_IGNORED);
+
 	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/foo", NULL, mode));
 	cl_git_mkfile("empty_standard_repo/foo/look-ma.txt", "I'm not going to be ignored!");
 
 	cl_git_pass(git_status_file(&flags, g_repo, "foo/look-ma.txt"));
 	cl_assert(flags == GIT_STATUS_WT_NEW);
+}
+
+void test_status_ignore__adding_internal_ignores(void)
+{
+	int ignored;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_ignore_add_rule(g_repo, "*.nomatch\n"));
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_ignore_add_rule(g_repo, "*.txt\n"));
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
+	cl_assert(ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_ignore_add_rule(g_repo, "*.bar\n"));
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
+	cl_assert(ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(ignored);
+
+	cl_git_pass(git_ignore_clear_internal_rules(g_repo));
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_ignore_add_rule(
+		g_repo, "multiple\n*.rules\n# comment line\n*.bar\n"));
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(ignored);
 }
