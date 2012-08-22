@@ -235,3 +235,20 @@ int git_ignore_clear_internal_rules(
 
 	return error;
 }
+
+int git_ignore_path_is_ignored(
+	int *ignored,
+	git_repository *repo,
+	const char *path)
+{
+	int error;
+	git_ignores ignores;
+
+	if (git_ignore__for_path(repo, path, &ignores) < 0)
+		return -1;
+
+	error = git_ignore__lookup(&ignores, path, ignored);
+	git_ignore__free(&ignores);
+	return error;
+}
+
