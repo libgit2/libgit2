@@ -20,7 +20,6 @@
 #define p_readlink(a, b, c) readlink(a, b, c)
 #define p_symlink(o,n) symlink(o, n)
 #define p_link(o,n) link(o, n)
-#define p_symlink(o,n) symlink(o,n)
 #define p_unlink(p) unlink(p)
 #define p_mkdir(p,m) mkdir(p, m)
 #define p_fsync(fd) fsync(fd)

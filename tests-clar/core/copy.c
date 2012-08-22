@@ -10,7 +10,7 @@ void test_core_copy__file(void)
 
 	cl_git_mkfile("copy_me", content);
 
-	cl_git_pass(git_futils_cp_withpath("copy_me", "copy_me_two", 0664, 0775));
+	cl_git_pass(git_futils_cp("copy_me", "copy_me_two", 0664));
 
 	cl_git_pass(git_path_lstat("copy_me_two", &st));
 	cl_assert(S_ISREG(st.st_mode));
@@ -29,10 +29,13 @@ void test_core_copy__file_in_dir(void)
 	cl_git_mkfile("an_dir/in_a_dir/copy_me", content);
 	cl_assert(git_path_isdir("an_dir"));
 
-	cl_git_pass(git_futils_cp_withpath
+	cl_git_pass(git_futils_mkpath2file
+		("an_dir/second_dir/and_more/copy_me_two", 0775));
+
+	cl_git_pass(git_futils_cp
 		("an_dir/in_a_dir/copy_me",
 		 "an_dir/second_dir/and_more/copy_me_two",
-		 0664, 0775));
+		 0664));
 
 	cl_git_pass(git_path_lstat("an_dir/second_dir/and_more/copy_me_two", &st));
 	cl_assert(S_ISREG(st.st_mode));

@@ -130,16 +130,14 @@ extern int git_futils_mktmp(git_buf *path_out, const char *filename);
 extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
 
 /**
- * Copy a file, creating the destination path if needed.
+ * Copy a file
  *
- * The filemode will be used for the file and the dirmode will be used for
- * any intervening directories if necessary.
+ * The filemode will be used for the newly created file.
  */
-extern int git_futils_cp_withpath(
+extern int git_futils_cp(
 	const char *from,
 	const char *to,
-	mode_t filemode,
-	mode_t dirmode);
+	mode_t filemode);
 
 /**
  * Flags that can be passed to `git_futils_cp_r`.

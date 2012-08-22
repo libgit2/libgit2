@@ -511,7 +511,7 @@ int git_futils_fake_symlink(const char *old, const char *new)
 	return retcode;
 }
 
-static int git_futils_cp_fd(int ifd, int ofd, bool close_fd)
+static int cp_by_fd(int ifd, int ofd, bool close_fd_when_done)
 {
 	int error = 0;
 	char buffer[4096];
@@ -528,7 +528,7 @@ static int git_futils_cp_fd(int ifd, int ofd, bool close_fd)
 		error = (int)len;
 	}
 
-	if (close_fd) {
+	if (close_fd_when_done) {
 		p_close(ifd);
 		p_close(ofd);
 	}
@@ -536,13 +536,9 @@ static int git_futils_cp_fd(int ifd, int ofd, bool close_fd)
 	return error;
 }
 
-int git_futils_cp_withpath(
-	const char *from, const char *to, mode_t filemode, mode_t dirmode)
+int git_futils_cp(const char *from, const char *to, mode_t filemode)
 {
 	int ifd, ofd;
-
-	if (git_futils_mkpath2file(to, dirmode) < 0)
-		return -1;
 
 	if ((ifd = git_futils_open_ro(from)) < 0)
 		return ifd;
@@ -555,19 +551,18 @@ int git_futils_cp_withpath(
 		return ofd;
 	}
 
-	return git_futils_cp_fd(ifd, ofd, true);
+	return cp_by_fd(ifd, ofd, true);
 }
 
-static int git_futils_cplink(
-	const char *from, size_t from_filesize, const char *to)
+static int cp_link(const char *from, const char *to, size_t link_size)
 {
 	int error = 0;
 	ssize_t read_len;
-	char *link_data = git__malloc(from_filesize + 1);
+	char *link_data = git__malloc(link_size + 1);
 	GITERR_CHECK_ALLOC(link_data);
 
-	read_len = p_readlink(from, link_data, from_filesize);
-	if (read_len != (ssize_t)from_filesize) {
+	read_len = p_readlink(from, link_data, link_size);
+	if (read_len != (ssize_t)link_size) {
 		giterr_set(GITERR_OS, "Failed to read symlink data for '%s'", from);
 		error = -1;
 	}
@@ -668,11 +663,9 @@ static int _cp_r_callback(void *ref, git_buf *from)
 
 	/* make symlink or regular file */
 	if (S_ISLNK(from_st.st_mode))
-		return git_futils_cplink(
-			from->ptr, (size_t)from_st.st_size, info->to.ptr);
+		return cp_link(from->ptr, info->to.ptr, (size_t)from_st.st_size);
 	else
-		return git_futils_cp_withpath(
-			from->ptr, info->to.ptr, from_st.st_mode, info->dirmode);
+		return git_futils_cp(from->ptr, info->to.ptr, from_st.st_mode);
 }
 
 int git_futils_cp_r(

@@ -936,7 +936,7 @@ static int repo_init_structure(
 
 		if (opts->template_path)
 			tdir = opts->template_path;
-		else if ((error = git_config_open_outside_repo(&cfg)) < 0)
+		else if ((error = git_config_open_default(&cfg)) < 0)
 			return error;
 		else {
 			error = git_config_get_string(&tdir, cfg, "init.templatedir");

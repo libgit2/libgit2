@@ -501,21 +501,7 @@ int git_config_find_system(char *system_config_path, size_t length)
 	return 0;
 }
 
-int git_config_open_global(git_config **out)
-{
-	int error;
-	git_buf path = GIT_BUF_INIT;
-
-	if ((error = git_config_find_global_r(&path)) < 0)
-		return error;
-
-	error = git_config_open_ondisk(out, git_buf_cstr(&path));
-	git_buf_free(&path);
-
-	return error;
-}
-
-int git_config_open_outside_repo(git_config **out)
+int git_config_open_default(git_config **out)
 {
 	int error;
 	git_config *cfg = NULL;
