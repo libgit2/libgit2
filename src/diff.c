@@ -470,7 +470,8 @@ static int maybe_modified(
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
 	if (S_ISLNK(omode) && S_ISREG(nmode) &&
-		!(diff->diffcaps & GIT_DIFFCAPS_HAS_SYMLINKS))
+		!(diff->diffcaps & GIT_DIFFCAPS_HAS_SYMLINKS) &&
+		new_iter->type == GIT_ITERATOR_WORKDIR)
 		nmode = omode;
 
 	/* on platforms with no execmode, just preserve old mode */

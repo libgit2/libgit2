@@ -162,7 +162,7 @@ static int file_is_binary_by_attr(
 	mirror_new = (delta->new_file.path == delta->old_file.path ||
 				  strcmp(delta->new_file.path, delta->old_file.path) == 0);
 	if (mirror_new)
-		delta->new_file.flags &= (delta->old_file.flags & BINARY_DIFF_FLAGS);
+		delta->new_file.flags |= (delta->old_file.flags & BINARY_DIFF_FLAGS);
 	else
 		error = update_file_is_binary_by_attr(diff->repo, &delta->new_file);
 
@@ -397,6 +397,7 @@ int git_diff_foreach(
 
 				if (error < 0)
 					goto cleanup;
+				delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
 				/* since we did not have the definitive oid, we may have
 				 * incorrect status and need to skip this item.
