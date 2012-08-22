@@ -1,3 +1,4 @@
+#include "git2/ignore.h"
 #include "ignore.h"
 #include "path.h"
 
@@ -202,4 +203,35 @@ int git_ignore__lookup(
 cleanup:
 	git_attr_path__free(&path);
 	return 0;
+}
+
+int git_ignore_add_rule(
+	git_repository *repo,
+	const char *rules)
+{
+	int error;
+	git_attr_file *ign_internal;
+
+	error = git_attr_cache__internal_file(
+		repo, GIT_IGNORE_INTERNAL, &ign_internal);
+
+	if (!error && ign_internal != NULL)
+		error = parse_ignore_file(repo, rules, ign_internal);
+
+	return error;
+}
+
+int git_ignore_clear_internal_rules(
+	git_repository *repo)
+{
+	int error;
+	git_attr_file *ign_internal;
+
+	error = git_attr_cache__internal_file(
+		repo, GIT_IGNORE_INTERNAL, &ign_internal);
+
+	if (!error && ign_internal != NULL)
+		git_attr_file__clear_rules(ign_internal);
+
+	return error;
 }
