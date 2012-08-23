@@ -31,6 +31,8 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		mflag = MAP_SHARED;
 	else if ((flags & GIT_MAP_TYPE) == GIT_MAP_PRIVATE)
 		mflag = MAP_PRIVATE;
+	else
+		mflag = MAP_SHARED;
 
 	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
 
