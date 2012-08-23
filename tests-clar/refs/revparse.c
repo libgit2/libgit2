@@ -442,3 +442,12 @@ void test_refs_revparse__disambiguation(void)
 	 */
 	test_object("e90810", "e90810b8df3e80c413d903f631643c716887138d");
 }
+
+void test_refs_revparse__a_too_short_objectid_returns_EAMBIGUOUS(void)
+{
+	int result;
+	
+	result = git_revparse_single(&g_obj, g_repo, "e90");
+	
+	cl_assert_equal_i(GIT_EAMBIGUOUS, result);
+}
