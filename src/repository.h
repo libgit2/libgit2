@@ -68,6 +68,13 @@ typedef enum {
 	GIT_EOL_DEFAULT = GIT_EOL_NATIVE
 } git_cvar_value;
 
+/* internal repository init flags */
+enum {
+	GIT_REPOSITORY_INIT__HAS_DOTGIT = (1u << 16),
+	GIT_REPOSITORY_INIT__NATURAL_WD = (1u << 17),
+	GIT_REPOSITORY_INIT__IS_REINIT  = (1u << 18),
+};
+
 /** Base git object for inheritance */
 struct git_object {
 	git_cached_obj cached;
@@ -75,6 +82,7 @@ struct git_object {
 	git_otype type;
 };
 
+/** Internal structure for repository object */
 struct git_repository {
 	git_odb *_odb;
 	git_config *_config;
@@ -94,8 +102,7 @@ struct git_repository {
 	git_cvar_value cvar_cache[GIT_CVAR_CACHE_MAX];
 };
 
-/* fully free the object; internal method, do not
- * export */
+/* fully free the object; internal method, DO NOT EXPORT */
 void git_object__free(void *object);
 
 GIT_INLINE(int) git_object__dup(git_object **dest, git_object *source)

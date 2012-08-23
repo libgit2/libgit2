@@ -50,10 +50,45 @@ extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmo
 /**
  * Create a path recursively
  *
- * If a base parameter is being passed, it's expected to be valued with a path pointing to an already
- * exisiting directory.
+ * If a base parameter is being passed, it's expected to be valued with a
+ * path pointing to an already existing directory.
  */
 extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode);
+
+/**
+ * Flags to pass to `git_futils_mkdir`.
+ *
+ * * GIT_MKDIR_EXCL is "exclusive" - i.e. generate an error if dir exists.
+ * * GIT_MKDIR_PATH says to make all components in the path.
+ * * GIT_MKDIR_CHMOD says to chmod the final directory entry after creation
+ * * GIT_MKDIR_CHMOD_PATH says to chmod each directory component in the path
+ * * GIT_MKDIR_SKIP_LAST says to leave off the last element of the path
+ *
+ * Note that the chmod options will be executed even if the directory already
+ * exists, unless GIT_MKDIR_EXCL is given.
+ */
+typedef enum {
+	GIT_MKDIR_EXCL = 1,
+	GIT_MKDIR_PATH = 2,
+	GIT_MKDIR_CHMOD = 4,
+	GIT_MKDIR_CHMOD_PATH = 8,
+	GIT_MKDIR_SKIP_LAST = 16
+} git_futils_mkdir_flags;
+
+/**
+ * Create a directory or entire path.
+ *
+ * This makes a directory (and the entire path leading up to it if requested),
+ * and optionally chmods the directory immediately after (or each part of the
+ * path if requested).
+ *
+ * @param path The path to create.
+ * @param base Root for relative path.  These directories will never be made.
+ * @param mode The mode to use for created directories.
+ * @param flags Combination of the mkdir flags above.
+ * @return 0 on success, else error code
+ */
+extern int git_futils_mkdir(const char *path, const char *base, mode_t mode, uint32_t flags);
 
 /**
  * Create all the folders required to contain
@@ -93,6 +128,45 @@ extern int git_futils_mktmp(git_buf *path_out, const char *filename);
  * destination path if it doesn't exist
  */
 extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
+
+/**
+ * Copy a file
+ *
+ * The filemode will be used for the newly created file.
+ */
+extern int git_futils_cp(
+	const char *from,
+	const char *to,
+	mode_t filemode);
+
+/**
+ * Flags that can be passed to `git_futils_cp_r`.
+ */
+typedef enum {
+	GIT_CPDIR_CREATE_EMPTY_DIRS = 1,
+	GIT_CPDIR_COPY_SYMLINKS = 2,
+	GIT_CPDIR_COPY_DOTFILES = 4,
+	GIT_CPDIR_OVERWRITE = 8,
+	GIT_CPDIR_CHMOD = 16
+} git_futils_cpdir_flags;
+
+/**
+ * Copy a directory tree.
+ *
+ * This copies directories and files from one root to another.  You can
+ * pass a combinationof GIT_CPDIR flags as defined above.
+ *
+ * If you pass the CHMOD flag, then the dirmode will be applied to all
+ * directories that are created during the copy, overiding the natural
+ * permissions.  If you do not pass the CHMOD flag, then the dirmode
+ * will actually be copied from the source files and the `dirmode` arg
+ * will be ignored.
+ */
+extern int git_futils_cp_r(
+	const char *from,
+	const char *to,
+	uint32_t flags,
+	mode_t dirmode);
 
 /**
  * Open a file readonly and set error if needed.

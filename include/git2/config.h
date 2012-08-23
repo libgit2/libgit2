@@ -80,15 +80,16 @@ GIT_EXTERN(int) git_config_find_global(char *global_config_path, size_t length);
 GIT_EXTERN(int) git_config_find_system(char *system_config_path, size_t length);
 
 /**
- * Open the global configuration file
+ * Open the global and system configuration files
  *
- * Utility wrapper that calls `git_config_find_global`
- * and opens the located file, if it exists.
+ * Utility wrapper that finds the global and system configuration files
+ * and opens them into a single prioritized config object that can be
+ * used when accessing default config data outside a repository.
  *
  * @param out Pointer to store the config instance
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_open_global(git_config **out);
+GIT_EXTERN(int) git_config_open_default(git_config **out);
 
 /**
  * Create a configuration file backend for ondisk files

@@ -250,18 +250,15 @@ git_attr_assignment *git_attr_rule__lookup_assignment(
 int git_attr_path__init(
 	git_attr_path *info, const char *path, const char *base)
 {
+	ssize_t root;
+
 	/* build full path as best we can */
 	git_buf_init(&info->full, 0);
 
-	if (base != NULL && git_path_root(path) < 0) {
-		if (git_buf_joinpath(&info->full, base, path) < 0)
-			return -1;
-		info->path = info->full.ptr + strlen(base);
-	} else {
-		if (git_buf_sets(&info->full, path) < 0)
-			return -1;
-		info->path = info->full.ptr;
-	}
+	if (git_path_join_unrooted(&info->full, path, base, &root) < 0)
+		return -1;
+
+	info->path = info->full.ptr + root;
 
 	/* remove trailing slashes */
 	while (info->full.size > 0) {
