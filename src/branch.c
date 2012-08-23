@@ -50,6 +50,12 @@ static int create_error_invalid(const char *msg)
 	return -1;
 }
 
+static int not_a_local_branch(git_reference *ref)
+{
+	giterr_set(GITERR_INVALID, "Reference '%s' is not a local branch.", git_reference_name(ref));
+	return -1;
+}
+
 int git_branch_create(
 		git_reference **ref_out,
 		git_repository *repository,
@@ -106,19 +112,19 @@ cleanup:
 	return error;
 }
 
-int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_t branch_type)
+int git_branch_delete(git_reference *branch)
 {
-	git_reference *branch = NULL;
 	git_reference *head = NULL;
-	int error;
 
-	assert(repo && branch_name);
-	assert((branch_type == GIT_BRANCH_LOCAL) || (branch_type == GIT_BRANCH_REMOTE));
+	assert(branch);
 
-	if ((error = retrieve_branch_reference(&branch, repo, branch_name, branch_type == GIT_BRANCH_REMOTE)) < 0)
-		return error;
+	if (!git_reference_is_branch(branch) &&
+		!git_reference_is_remote(branch)) {
+		giterr_set(GITERR_INVALID, "Reference '%s' is not a valid branch.", git_reference_name(branch));
+		return -1;
+	}
 
-	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0) {
+	if (git_reference_lookup(&head, git_reference_owner(branch), GIT_HEAD_FILE) < 0) {
 		giterr_set(GITERR_REFERENCE, "Cannot locate HEAD.");
 		goto on_error;
 	}
@@ -126,7 +132,7 @@ int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_
 	if ((git_reference_type(head) == GIT_REF_SYMBOLIC)
 		&& (strcmp(git_reference_target(head), git_reference_name(branch)) == 0)) {
 			giterr_set(GITERR_REFERENCE,
-					"Cannot delete branch '%s' as it is the current HEAD of the repository.", branch_name);
+					"Cannot delete branch '%s' as it is the current HEAD of the repository.", git_reference_name(branch));
 			goto on_error;
 	}
 
@@ -138,7 +144,6 @@ int git_branch_delete(git_repository *repo, const char *branch_name, git_branch_
 
 on_error:
 	git_reference_free(head);
-	git_reference_free(branch);
 	return -1;
 }
 
@@ -183,12 +188,6 @@ int git_branch_foreach(
 	filter.callback_payload = payload;
 
 	return git_reference_foreach(repo, GIT_REF_LISTALL, &branch_foreach_cb, (void *)&filter);
-}
-
-static int not_a_local_branch(git_reference *ref)
-{
-	giterr_set(GITERR_INVALID, "Reference '%s' is not a local branch.", git_reference_name(ref));
-	return -1;
 }
 
 int git_branch_move(
