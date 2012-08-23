@@ -44,7 +44,7 @@ static const unsigned int entry_statuses0[] = {
 	GIT_STATUS_WT_NEW,
 };
 
-static const size_t entry_count0 = 16;
+static const int entry_count0 = 16;
 
 /* entries for a copy of tests/resources/status with all content
  * deleted from the working directory
@@ -86,7 +86,7 @@ static const unsigned int entry_statuses2[] = {
 	GIT_STATUS_WT_DELETED,
 };
 
-static const size_t entry_count2 = 15;
+static const int entry_count2 = 15;
 
 /* entries for a copy of tests/resources/status with some mods */
 
@@ -140,7 +140,7 @@ static const unsigned int entry_statuses3[] = {
 	GIT_STATUS_WT_NEW,
 };
 
-static const size_t entry_count3 = 22;
+static const int entry_count3 = 22;
 
 
 /* entries for a copy of tests/resources/status with some mods
@@ -199,4 +199,4 @@ static const unsigned int entry_statuses4[] = {
 	GIT_STATUS_WT_NEW,
 };
 
-static const size_t entry_count4 = 23;
+static const int entry_count4 = 23;

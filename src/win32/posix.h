@@ -19,14 +19,6 @@ GIT_INLINE(int) p_link(const char *old, const char *new)
 	return -1;
 }
 
-GIT_INLINE(int) p_symlink(const char *old, const char *new)
-{
-	GIT_UNUSED(old);
-	GIT_UNUSED(new);
-	errno = ENOSYS;
-	return -1;
-}
-
 GIT_INLINE(int) p_mkdir(const char *path, mode_t mode)
 {
 	wchar_t* buf = gitwin_to_utf16(path);

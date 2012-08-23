@@ -33,7 +33,7 @@ static void test_file_contents(const char *path, const char *expectedcontents)
 	actuallen = p_read(fd, buffer, 1024);
 	cl_git_pass(p_close(fd));
 
-	cl_assert_equal_i(actuallen, expectedlen);
+	cl_assert_equal_sz(actuallen, expectedlen);
 	cl_assert_equal_s(buffer, expectedcontents);
 }
 

@@ -233,7 +233,7 @@ static int http_recv_cb(gitno_buffer *buf)
 	if (t->error < 0)
 		return t->error;
 
-	return buf->offset - old_len;
+	return (int)(buf->offset - old_len);
 }
 
 /* Set up the gitno_buffer so calling gitno_recv() grabs data from the HTTP response */

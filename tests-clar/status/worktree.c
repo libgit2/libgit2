@@ -683,7 +683,7 @@ static unsigned int filemode_statuses[] = {
 	GIT_STATUS_WT_NEW
 };
 
-static const size_t filemode_count = 8;
+static const int filemode_count = 8;
 
 void test_status_worktree__filemode_changes(void)
 {
@@ -697,7 +697,7 @@ void test_status_worktree__filemode_changes(void)
 	if (cl_is_chmod_supported())
 		cl_git_pass(git_config_set_bool(cfg, "core.filemode", true));
 	else {
-		unsigned int i;
+		int i;
 		cl_git_pass(git_config_set_bool(cfg, "core.filemode", false));
 
 		/* won't trust filesystem mode diffs, so these will appear unchanged */

@@ -466,6 +466,11 @@ GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index
  *
  * Use this function to get the contents of this file. Don't forget to
  * remove the file after you create the commit.
+ *
+ * @param buffer Buffer to write data into or NULL to just read required size
+ * @param len Length of buffer in bytes
+ * @param repo Repository to read prepared message from
+ * @return Bytes written to buffer, GIT_ENOTFOUND if no message, or -1 on error
  */
 GIT_EXTERN(int) git_repository_message(char *buffer, size_t len, git_repository *repo);
 

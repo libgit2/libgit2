@@ -25,6 +25,8 @@
  */
 #define cl_git_fail(expr) cl_must_fail(expr)
 
+#define cl_assert_equal_sz(sz1,sz2) cl_assert((sz1) == (sz2))
+
 /*
  * Some utility macros for building long strings
  */
