@@ -2,6 +2,7 @@
 #include "fileops.h"
 #include "repository.h"
 #include "config.h"
+#include "path.h"
 
 enum repo_mode {
 	STANDARD_REPOSITORY = 0,
@@ -83,7 +84,7 @@ void test_repo_init__bare_repo_escaping_current_workdir(void)
 	git_buf path_current_workdir = GIT_BUF_INIT;
 
 	cl_git_pass(git_path_prettify_dir(&path_current_workdir, ".", NULL));
-	
+
 	cl_git_pass(git_buf_joinpath(&path_repository, git_buf_cstr(&path_current_workdir), "a/b/c"));
 	cl_git_pass(git_futils_mkdir_r(git_buf_cstr(&path_repository), NULL, GIT_DIR_MODE));
 
@@ -294,4 +295,83 @@ void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
 	assert_config_entry_on_init_bytype("core.logallrefupdates", GIT_ENOTFOUND, true);
 	git_repository_free(_repo);
 	assert_config_entry_on_init_bytype("core.logallrefupdates", true, false);
+}
+
+void test_repo_init__extended_0(void)
+{
+	git_repository_init_options opts;
+	memset(&opts, 0, sizeof(opts));
+
+	/* without MKDIR this should fail */
+	cl_git_fail(git_repository_init_ext(&_repo, "extended", &opts));
+
+	/* make the directory first, then it should succeed */
+	cl_git_pass(git_futils_mkdir("extended", NULL, 0775, 0));
+	cl_git_pass(git_repository_init_ext(&_repo, "extended", &opts));
+
+	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "/extended/"));
+	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/extended/.git/"));
+	cl_assert(!git_repository_is_bare(_repo));
+	cl_assert(git_repository_is_empty(_repo));
+
+	cleanup_repository("extended");
+}
+
+void test_repo_init__extended_1(void)
+{
+	git_reference *ref;
+	git_remote *remote;
+	struct stat st;
+	git_repository_init_options opts;
+	memset(&opts, 0, sizeof(opts));
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH |
+		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
+	opts.mode = GIT_REPOSITORY_INIT_SHARED_GROUP;
+	opts.workdir_path = "../c_wd";
+	opts.description = "Awesomest test repository evah";
+	opts.initial_head = "development";
+	opts.origin_url = "https://github.com/libgit2/libgit2.git";
+
+	cl_git_pass(git_repository_init_ext(&_repo, "root/b/c.git", &opts));
+
+	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "/c_wd/"));
+	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/c.git/"));
+	cl_assert(git_path_isfile("root/b/c_wd/.git"));
+	cl_assert(!git_repository_is_bare(_repo));
+	/* repo will not be counted as empty because we set head to "development" */
+	cl_assert(!git_repository_is_empty(_repo));
+
+	cl_git_pass(git_path_lstat(git_repository_path(_repo), &st));
+	cl_assert(S_ISDIR(st.st_mode));
+	cl_assert((S_ISGID & st.st_mode) == S_ISGID);
+
+	cl_git_pass(git_reference_lookup(&ref, _repo, "HEAD"));
+	cl_assert(git_reference_type(ref) == GIT_REF_SYMBOLIC);
+	cl_assert_equal_s("refs/heads/development", git_reference_target(ref));
+	git_reference_free(ref);
+
+	cl_git_pass(git_remote_load(&remote, _repo, "origin"));
+	cl_assert_equal_s("origin", git_remote_name(remote));
+	cl_assert_equal_s(opts.origin_url, git_remote_url(remote));
+	git_remote_free(remote);
+
+	git_repository_free(_repo);
+	cl_fixture_cleanup("root");
+}
+
+void test_repo_init__extended_with_template(void)
+{
+	git_repository_init_options opts;
+	memset(&opts, 0, sizeof(opts));
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE;
+	opts.template_path = cl_fixture("template");
+
+	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
+
+	cl_assert(git_repository_is_bare(_repo));
+	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/templated.git/"));
+
+	cleanup_repository("templated.git");
 }

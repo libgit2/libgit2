@@ -501,17 +501,28 @@ int git_config_find_system(char *system_config_path, size_t length)
 	return 0;
 }
 
-int git_config_open_global(git_config **out)
+int git_config_open_default(git_config **out)
 {
 	int error;
-	git_buf path = GIT_BUF_INIT;
+	git_config *cfg = NULL;
+	git_buf buf = GIT_BUF_INIT;
 
-	if ((error = git_config_find_global_r(&path)) < 0)
-		return error;
+	error = git_config_new(&cfg);
 
-	error = git_config_open_ondisk(out, git_buf_cstr(&path));
-	git_buf_free(&path);
+	if (!error && !git_config_find_global_r(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr, 2);
+
+	if (!error && !git_config_find_system_r(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr, 1);
+
+	git_buf_free(&buf);
+
+	if (error && cfg) {
+		git_config_free(cfg);
+		cfg = NULL;
+	}
+
+	*out = cfg;
 
 	return error;
 }
-

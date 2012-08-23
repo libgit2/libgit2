@@ -82,5 +82,5 @@ int git_message_prettify(char *message_out, size_t buffer_size, const char *mess
 
 done:
 	git_buf_free(&buf);
-	return out_size;
+	return (int)out_size;
 }

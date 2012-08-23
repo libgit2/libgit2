@@ -11,8 +11,15 @@
 #include <fcntl.h>
 #include <time.h>
 
+#ifndef S_IFGITLINK
 #define S_IFGITLINK 0160000
 #define S_ISGITLINK(m) (((m) & S_IFMT) == S_IFGITLINK)
+#endif
+
+/* if S_ISGID is not defined, then don't try to set it */
+#ifndef S_ISGID
+#define S_ISGID 0
+#endif
 
 #if !defined(O_BINARY)
 #define O_BINARY 0
