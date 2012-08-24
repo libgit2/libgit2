@@ -111,6 +111,16 @@ static void cleanup_chmod_root(void *ref)
 	git_futils_rmdir_r("r", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
 }
 
+static void check_mode(mode_t expected, mode_t actual)
+{
+#ifdef GIT_WIN32
+	/* chmod on Win32 doesn't support exec bit, not group/world bits */
+	cl_assert((expected & 0600) == (actual & 0777));
+#else
+	cl_assert(expected == (actual & 0777));
+#endif
+}
+
 void test_core_mkdir__chmods(void)
 {
 	struct stat st;
@@ -124,49 +134,49 @@ void test_core_mkdir__chmods(void)
 	cl_git_pass(git_futils_mkdir("mode/is/important", "r", 0777, GIT_MKDIR_PATH));
 
 	cl_git_pass(git_path_lstat("r/mode", &st));
-	cl_assert((st.st_mode & 0777) == 0755);
+	check_mode(0755, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode/is", &st));
-	cl_assert((st.st_mode & 0777) == 0755);
+	check_mode(0755, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode/is/important", &st));
-	cl_assert((st.st_mode & 0777) == 0755);
+	check_mode(0755, st.st_mode);
 
 	cl_git_pass(git_futils_mkdir("mode2/is2/important2", "r", 0777, GIT_MKDIR_PATH | GIT_MKDIR_CHMOD));
 
 	cl_git_pass(git_path_lstat("r/mode2", &st));
-	cl_assert((st.st_mode & 0777) == 0755);
+	check_mode(0755, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode2/is2", &st));
-	cl_assert((st.st_mode & 0777) == 0755);
+	check_mode(0755, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode2/is2/important2", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 
 	cl_git_pass(git_futils_mkdir("mode3/is3/important3", "r", 0777, GIT_MKDIR_PATH | GIT_MKDIR_CHMOD_PATH));
 
 	cl_git_pass(git_path_lstat("r/mode3", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode3/is3", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode3/is3/important3", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 
 	/* test that we chmod existing dir */
 
 	cl_git_pass(git_futils_mkdir("mode/is/important", "r", 0777, GIT_MKDIR_PATH | GIT_MKDIR_CHMOD));
 
 	cl_git_pass(git_path_lstat("r/mode", &st));
-	cl_assert((st.st_mode & 0777) == 0755);
+	check_mode(0755, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode/is", &st));
-	cl_assert((st.st_mode & 0777) == 0755);
+	check_mode(0755, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode/is/important", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 
 	/* test that we chmod even existing dirs if CHMOD_PATH is set */
 
 	cl_git_pass(git_futils_mkdir("mode2/is2/important2.1", "r", 0777, GIT_MKDIR_PATH | GIT_MKDIR_CHMOD_PATH));
 
 	cl_git_pass(git_path_lstat("r/mode2", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode2/is2", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 	cl_git_pass(git_path_lstat("r/mode2/is2/important2.1", &st));
-	cl_assert((st.st_mode & 0777) == 0777);
+	check_mode(0777, st.st_mode);
 }

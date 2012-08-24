@@ -914,17 +914,20 @@ static int repo_init_structure(
 	mode_t dmode = pick_dir_mode(opts);
 
 	/* Hide the ".git" directory */
-	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) != 0) {
 #ifdef GIT_WIN32
+	if ((opts->flags & GIT_REPOSITORY_INIT__HAS_DOTGIT) != 0) {
 		if (p_hide_directory__w32(repo_dir) < 0) {
 			giterr_set(GITERR_REPOSITORY,
 				"Failed to mark Git repository folder as hidden");
 			return -1;
 		}
-#endif
 	}
-	/* Create .git gitlink if appropriate */
-	else if ((opts->flags & GIT_REPOSITORY_INIT__NATURAL_WD) == 0) {
+#endif
+
+	/* Create the .git gitlink if appropriate */
+	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) == 0 &&
+		(opts->flags & GIT_REPOSITORY_INIT__NATURAL_WD) == 0)
+	{
 		if (repo_write_gitlink(work_dir, repo_dir) < 0)
 			return -1;
 	}

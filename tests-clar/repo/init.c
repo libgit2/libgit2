@@ -30,6 +30,8 @@ static void ensure_repository_init(
 {
 	const char *workdir;
 
+	cl_assert(!git_path_isdir(working_directory));
+
 	cl_git_pass(git_repository_init(&_repo, working_directory, is_bare));
 
 	workdir = git_repository_workdir(_repo);
@@ -47,7 +49,8 @@ static void ensure_repository_init(
 
 #ifdef GIT_WIN32
 	if (!is_bare) {
-		cl_assert((GetFileAttributes(git_repository_path(_repo)) & FILE_ATTRIBUTE_HIDDEN) != 0);
+		DWORD fattrs = GetFileAttributes(git_repository_path(_repo));
+		cl_assert((fattrs & FILE_ATTRIBUTE_HIDDEN) != 0);
 	}
 #endif
 

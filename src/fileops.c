@@ -604,7 +604,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		return -1;
 
 	if (p_lstat(info->to.ptr, &to_st) < 0) {
-		if (errno != ENOENT) {
+		if (errno != ENOENT && errno != ENOTDIR) {
 			giterr_set(GITERR_OS,
 				"Could not access %s while copying files", info->to.ptr);
 			return -1;
