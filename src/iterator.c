@@ -525,7 +525,9 @@ static int workdir_iterator__advance(
 	while ((wf = wi->stack) != NULL) {
 		next = git_vector_get(&wf->entries, ++wf->index);
 		if (next != NULL) {
-			if (strcmp(next->path, DOT_GIT "/") == 0)
+			/* match git's behavior of ignoring anything named ".git" */
+			if (strcmp(next->path, DOT_GIT "/") == 0 ||
+				strcmp(next->path, DOT_GIT) == 0)
 				continue;
 			/* else found a good entry */
 			break;
@@ -607,8 +609,8 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 
 	wi->entry.path = ps->path;
 
-	/* skip over .git directory */
-	if (strcmp(ps->path, DOT_GIT "/") == 0)
+	/* skip over .git entry */
+	if (strcmp(ps->path, DOT_GIT "/") == 0 || strcmp(ps->path, DOT_GIT) == 0)
 		return workdir_iterator__advance((git_iterator *)wi, NULL);
 
 	/* if there is an error processing the entry, treat as ignored */
@@ -629,15 +631,10 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 
 	/* detect submodules */
 	if (S_ISDIR(wi->entry.mode)) {
-		bool is_submodule = git_path_contains(&wi->path, DOT_GIT);
-
-		/* if there is no .git, still check submodules data */
-		if (!is_submodule) {
-			int res = git_submodule_lookup(NULL, wi->repo, wi->entry.path);
-			is_submodule = (res == 0);
-			if (res == GIT_ENOTFOUND)
-				giterr_clear();
-		}
+		int res = git_submodule_lookup(NULL, wi->repo, wi->entry.path);
+		bool is_submodule = (res == 0);
+		if (res == GIT_ENOTFOUND)
+			giterr_clear();
 
 		/* if submodule, mark as GITLINK and remove trailing slash */
 		if (is_submodule) {

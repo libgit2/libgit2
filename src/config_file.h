@@ -19,10 +19,22 @@ GIT_INLINE(void) git_config_file_free(git_config_file *cfg)
 	cfg->free(cfg);
 }
 
+GIT_INLINE(int) git_config_file_get_string(
+	const char **out, git_config_file *cfg, const char *name)
+{
+	return cfg->get(cfg, name, out);
+}
+
 GIT_INLINE(int) git_config_file_set_string(
 	git_config_file *cfg, const char *name, const char *value)
 {
 	return cfg->set(cfg, name, value);
+}
+
+GIT_INLINE(int) git_config_file_delete(
+	git_config_file *cfg, const char *name)
+{
+	return cfg->del(cfg, name);
 }
 
 GIT_INLINE(int) git_config_file_foreach(

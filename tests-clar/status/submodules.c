@@ -3,24 +3,17 @@
 #include "path.h"
 #include "posix.h"
 #include "status_helpers.h"
+#include "../submodule/submodule_helpers.h"
 
 static git_repository *g_repo = NULL;
 
 void test_status_submodules__initialize(void)
 {
-	git_buf modpath = GIT_BUF_INIT;
-
 	g_repo = cl_git_sandbox_init("submodules");
 
 	cl_fixture_sandbox("testrepo.git");
 
-	cl_git_pass(git_buf_sets(&modpath, git_repository_workdir(g_repo)));
-	cl_assert(git_path_dirname_r(&modpath, modpath.ptr) >= 0);
-	cl_git_pass(git_buf_joinpath(&modpath, modpath.ptr, "testrepo.git\n"));
-
-	p_rename("submodules/gitmodules", "submodules/.gitmodules");
-	cl_git_append2file("submodules/.gitmodules", modpath.ptr);
-	git_buf_free(&modpath);
+	rewrite_gitmodules(git_repository_workdir(g_repo));
 
 	p_rename("submodules/testrepo/.gitted", "submodules/testrepo/.git");
 }
@@ -28,6 +21,7 @@ void test_status_submodules__initialize(void)
 void test_status_submodules__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+	cl_fixture_cleanup("testrepo.git");
 }
 
 void test_status_submodules__api(void)
@@ -40,8 +34,8 @@ void test_status_submodules__api(void)
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
 	cl_assert(sm != NULL);
-	cl_assert_equal_s("testrepo", sm->name);
-	cl_assert_equal_s("testrepo", sm->path);
+	cl_assert_equal_s("testrepo", git_submodule_name(sm));
+	cl_assert_equal_s("testrepo", git_submodule_path(sm));
 }
 
 void test_status_submodules__0(void)
@@ -56,7 +50,7 @@ void test_status_submodules__0(void)
 		git_status_foreach(g_repo, cb_status__count, &counts)
 	);
 
-	cl_assert(counts == 6);
+	cl_assert_equal_i(6, counts);
 }
 
 static const char *expected_files[] = {
@@ -101,12 +95,12 @@ void test_status_submodules__1(void)
 		git_status_foreach(g_repo, cb_status__match, &index)
 	);
 
-	cl_assert(index == 6);
+	cl_assert_equal_i(6, index);
 }
 
 void test_status_submodules__single_file(void)
 {
-	unsigned int status;
+	unsigned int status = 0;
 	cl_git_pass( git_status_file(&status, g_repo, "testrepo") );
-	cl_assert(status == 0);
+	cl_assert(!status);
 }
