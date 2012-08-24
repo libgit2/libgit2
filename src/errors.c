@@ -110,6 +110,11 @@ void giterr_set_regex(const regex_t *regex, int error_code)
 void giterr_clear(void)
 {
 	GIT_GLOBAL->last_error = NULL;
+
+	errno = 0;
+#ifdef GIT_WIN32
+	SetLastError(0);
+#endif
 }
 
 const git_error *giterr_last(void)

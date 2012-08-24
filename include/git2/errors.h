@@ -54,6 +54,7 @@ typedef enum {
 	GITERR_TREE,
 	GITERR_INDEXER,
 	GITERR_SSL,
+	GITERR_SUBMODULE,
 } git_error_t;
 
 /**

@@ -530,7 +530,7 @@ static int maybe_modified(
 				status = GIT_DELTA_UNMODIFIED;
 			else if (git_submodule_lookup(&sub, diff->repo, nitem->path) < 0)
 				return -1;
-			else if (sub->ignore == GIT_SUBMODULE_IGNORE_ALL)
+			else if (git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
 				status = GIT_DELTA_UNMODIFIED;
 			else {
 				/* TODO: support other GIT_SUBMODULE_IGNORE values */

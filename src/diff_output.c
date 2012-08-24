@@ -718,6 +718,25 @@ int git_diff_print_patch(
 	return error;
 }
 
+int git_diff_entrycount(git_diff_list *diff, int delta_t)
+{
+	int count = 0;
+	unsigned int i;
+	git_diff_delta *delta;
+
+	assert(diff);
+
+	if (delta_t < 0)
+		return diff->deltas.length;
+
+	git_vector_foreach(&diff->deltas, i, delta) {
+		if (delta->status == (git_delta_t)delta_t)
+			count++;
+	}
+
+	return count;
+}
+
 int git_diff_blobs(
 	git_blob *old_blob,
 	git_blob *new_blob,

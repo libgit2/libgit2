@@ -146,8 +146,13 @@ static int load_workdir(git_repository *repo, git_buf *parent_path)
 		return -1;
 
 	error = git_config_get_string(&worktree, config, "core.worktree");
-	if (!error && worktree != NULL)
-		repo->workdir = git__strdup(worktree);
+	if (!error && worktree != NULL) {
+		error = git_path_prettify_dir(
+			&worktree_buf, worktree, repo->path_repository);
+		if (error < 0)
+			return error;
+		repo->workdir = git_buf_detach(&worktree_buf);
+	}
 	else if (error != GIT_ENOTFOUND)
 		return error;
 	else {
