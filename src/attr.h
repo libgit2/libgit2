@@ -11,6 +11,7 @@
 #include "strmap.h"
 
 #define GIT_ATTR_CONFIG   "core.attributesfile"
+#define GIT_ATTR_CONFIG_DEFAULT ".config/git/attributes"
 #define GIT_IGNORE_CONFIG "core.excludesfile"
 #define GIT_IGNORE_CONFIG_DEFAULT ".config/git/ignore"
 
