@@ -367,6 +367,8 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 		error = -1;
 		goto cleanup;
 	}
+
+	memset(&entry, 0, sizeof(entry));
 	entry.path = sm->path;
 	git_index__init_entry_from_stat(&st, &entry);
 

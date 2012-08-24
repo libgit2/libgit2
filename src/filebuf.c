@@ -50,6 +50,7 @@ static int lock_file(git_filebuf *file, int flags)
 		if (flags & GIT_FILEBUF_FORCE)
 			p_unlink(file->path_lock);
 		else {
+			giterr_clear(); /* actual OS error code just confuses */
 			giterr_set(GITERR_OS,
 				"Failed to lock file '%s' for writing", file->path_lock);
 			return -1;

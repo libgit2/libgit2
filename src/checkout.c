@@ -31,7 +31,7 @@ typedef struct tree_walk_data
 	git_checkout_opts *opts;
 	git_repository *repo;
 	git_odb *odb;
-	bool do_symlinks;
+	bool no_symlinks;
 } tree_walk_data;
 
 
@@ -48,9 +48,9 @@ static int blob_contents_to_link(tree_walk_data *data, git_buf *fnbuf,
 			/* Create the link */
 			const char *new = git_buf_cstr(&linktarget),
 						  *old = git_buf_cstr(fnbuf);
-			retcode = data->do_symlinks
-				? p_symlink(new, old)
-				: git_futils_fake_symlink(new, old);
+			retcode = data->no_symlinks
+				? git_futils_fake_symlink(new, old)
+				: p_symlink(new, old);
 		}
 		git_buf_free(&linktarget);
 		git_blob_free(blob);
@@ -176,13 +176,14 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_indexer
 		return GIT_ERROR;
 	}
 
+	memset(&payload, 0, sizeof(payload));
+
 	/* Determine if symlinks should be handled */
-	if (!git_repository_config(&cfg, repo)) {
+	if (!git_repository_config__weakptr(&cfg, repo)) {
 		int temp = true;
 		if (!git_config_get_bool(&temp, cfg, "core.symlinks")) {
-			payload.do_symlinks = !!temp;
+			payload.no_symlinks = !temp;
 		}
-		git_config_free(cfg);
 	}
 
 	stats->total = stats->processed = 0;
