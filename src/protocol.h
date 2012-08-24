@@ -14,4 +14,8 @@
 int git_protocol_store_refs(git_transport *t, int flushes);
 int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps);
 
+#define GIT_SIDE_BAND_DATA     1
+#define GIT_SIDE_BAND_PROGRESS 2
+#define GIT_SIDE_BAND_ERROR    3
+
 #endif
