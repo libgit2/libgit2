@@ -1,86 +1,115 @@
 /*
- * fileops.h - OS agnostic disk io operations
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * This header describes the strictly internal part of the api
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #ifndef INCLUDE_fileops_h__
 #define INCLUDE_fileops_h__
 
 #include "common.h"
 #include "map.h"
-#include "dir.h"
-#include <fcntl.h>
-#include <time.h>
+#include "posix.h"
+#include "path.h"
 
-#ifdef GIT_WIN32
-GIT_INLINE(int) link(const char *GIT_UNUSED(old), const char *GIT_UNUSED(new))
-{
-	GIT_UNUSED_ARG(old)
-	GIT_UNUSED_ARG(new)
-	errno = ENOSYS;
-	return -1;
-}
+/**
+ * Filebuffer methods
+ *
+ * Read whole files into an in-memory buffer for processing
+ */
+extern int git_futils_readbuffer(git_buf *obj, const char *path);
+extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t *mtime, int *updated);
 
-GIT_INLINE(int) git__mkdir(const char *path, int GIT_UNUSED(mode))
-{
-	GIT_UNUSED_ARG(mode)
-	return mkdir(path);
-}
+/**
+ * File utils
+ *
+ * These are custom filesystem-related helper methods. They are
+ * rather high level, and wrap the underlying POSIX methods
+ *
+ * All these methods return 0 on success,
+ * or an error code on failure and an error message is set.
+ */
 
-extern int git__unlink(const char *path);
-extern int git__mkstemp(char *template);
-extern int git__fsync(int fd);
+/**
+ * Create and open a file, while also
+ * creating all the folders in its path
+ */
+extern int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
-# ifndef GIT__WIN32_NO_HIDE_FILEOPS
-#  define unlink(p) git__unlink(p)
-#  define mkstemp(t) git__mkstemp(t)
-#  define mkdir(p,m) git__mkdir(p, m)
-#  define fsync(fd) git__fsync(fd)
-# endif
-#endif  /* GIT_WIN32 */
+/**
+ * Create an open a process-locked file
+ */
+extern int git_futils_creat_locked(const char *path, const mode_t mode);
 
+/**
+ * Create an open a process-locked file, while
+ * also creating all the folders in its path
+ */
+extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
-#if !defined(O_BINARY)
-#define O_BINARY 0
-#endif
+/**
+ * Create a path recursively
+ */
+extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode);
 
-#define GITFO_BUF_INIT {NULL, 0}
+/**
+ * Create all the folders required to contain
+ * the full path of a file
+ */
+extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 
-typedef int git_file;
-typedef struct gitfo_cache gitfo_cache;
+typedef enum {
+	GIT_DIRREMOVAL_EMPTY_HIERARCHY = 0,
+	GIT_DIRREMOVAL_FILES_AND_DIRS = 1,
+	GIT_DIRREMOVAL_ONLY_EMPTY_DIRS = 2,
+} git_directory_removal_type;
 
-typedef struct {  /* file io buffer  */
-	void *data;  /* data bytes   */
-	size_t len;  /* data length  */
-} gitfo_buf;
+/**
+ * Remove path and any files and directories beneath it.
+ *
+ * @param path Path to to top level directory to process.
+ *
+ * @param removal_type GIT_DIRREMOVAL_EMPTY_HIERARCHY to remove a hierarchy
+ * of empty directories (will fail if any file is found), GIT_DIRREMOVAL_FILES_AND_DIRS
+ * to remove a hierarchy of files and folders, GIT_DIRREMOVAL_ONLY_EMPTY_DIRS to only remove
+ * empty directories (no failure on file encounter).
+ *
+ * @return 0 on success; -1 on error.
+ */
+extern int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type);
 
-extern int gitfo_exists(const char *path);
-extern int gitfo_open(const char *path, int flags);
-extern int gitfo_creat(const char *path, int mode);
-extern int gitfo_isdir(const char *path);
-extern int gitfo_mkdir_recurs(const char *path, int mode);
-#define gitfo_close(fd) close(fd)
+/**
+ * Create and open a temporary file with a `_git2_` suffix.
+ * Writes the filename into path_out.
+ * @return On success, an open file descriptor, else an error code < 0.
+ */
+extern int git_futils_mktmp(git_buf *path_out, const char *filename);
 
-extern int gitfo_read(git_file fd, void *buf, size_t cnt);
-extern int gitfo_write(git_file fd, void *buf, size_t cnt);
-#define gitfo_lseek(f,n,w) lseek(f, n, w)
-extern git_off_t gitfo_size(git_file fd);
+/**
+ * Move a file on the filesystem, create the
+ * destination path if it doesn't exist
+ */
+extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
 
-extern int gitfo_read_file(gitfo_buf *obj, const char *path);
-extern void gitfo_free_buf(gitfo_buf *obj);
-extern int gitfo_move_file(char *from, char *to);
+/**
+ * Open a file readonly and set error if needed.
+ */
+extern int git_futils_open_ro(const char *path);
 
-#define gitfo_stat(p,b) stat(p, b)
-#define gitfo_fstat(f,b) fstat(f, b)
+/**
+ * Get the filesize in bytes of a file
+ */
+extern git_off_t git_futils_filesize(git_file fd);
 
-#define gitfo_unlink(p) unlink(p)
-#define gitfo_rmdir(p) rmdir(p)
-#define gitfo_chdir(p) chdir(p)
-#define gitfo_mkdir(p,m) mkdir(p, m)
+#define GIT_MODE_PERMS_MASK			0777
+#define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
+#define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
 
-#define gitfo_mkstemp(t) mkstemp(t)
-#define gitfo_fsync(fd) fsync(fd)
-#define gitfo_chmod(p,m) chmod(p, m)
+/**
+ * Convert a mode_t from the OS to a legal git mode_t value.
+ */
+extern mode_t git_futils_canonical_mode(mode_t raw_mode);
+
 
 /**
  * Read-only map all or part of a file into memory.
@@ -94,87 +123,57 @@ extern int gitfo_move_file(char *from, char *to);
  * @param begin first byte to map, this should be page aligned.
  * @param end number of bytes to map.
  * @return
- * - GIT_SUCCESS on success;
- * - GIT_EOSERR on an unspecified OS related error.
+ * - 0 on success;
+ * - -1 on error.
  */
-extern int gitfo_map_ro(
+extern int git_futils_mmap_ro(
 	git_map *out,
 	git_file fd,
 	git_off_t begin,
 	size_t len);
 
 /**
+ * Read-only map an entire file.
+ *
+ * @param out buffer to populate with the mapping information.
+ * @param path path to file to be opened.
+ * @return
+ * - 0 on success;
+ * - GIT_ENOTFOUND if not found;
+ * - -1 on an unspecified OS related error.
+ */
+extern int git_futils_mmap_ro_file(
+	git_map *out,
+	const char *path);
+
+/**
  * Release the memory associated with a previous memory mapping.
  * @param map the mapping description previously configured.
  */
-extern void gitfo_free_map(git_map *map);
+extern void git_futils_mmap_free(git_map *map);
 
 /**
- * Walk each directory entry, except '.' and '..', calling fn(state).
+ * Find a "global" file (i.e. one in a user's home directory).
  *
- * @param pathbuf buffer the function reads the initial directory
- * 		path from, and updates with each successive entry's name.
- * @param pathmax maximum allocation of pathbuf.
- * @param fn function to invoke with each entry.  The first arg is
- *		the input state and the second arg is pathbuf.  The function
- *		may modify the pathbuf, but only by appending new text.
- * @param state to pass to fn as the first arg.
- */
-extern int gitfo_dirent(
-	char *pathbuf,
-	size_t pathmax,
-	int (*fn)(void *, char *),
-	void *state);
-
-extern gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size);
-extern int gitfo_write_cached(gitfo_cache *ioc, void *buf, size_t len);
-extern int gitfo_flush_cached(gitfo_cache *ioc);
-extern int gitfo_close_cached(gitfo_cache *ioc);
-
-/**
- * Clean up a provided absolute or relative directory path.
- * 
- * This prettification relies on basic operations such as coalescing 
- * multiple forward slashes into a single slash, removing '.' and 
- * './' current directory segments, and removing parent directory 
- * whenever '..' is encountered.
- *
- * If not empty, the returned path ends with a forward slash.
- *
- * For instance, this will turn "d1/s1///s2/..//../s3" into "d1/s3/".
- *
- * This only performs a string based analysis of the path.
- * No checks are done to make sure the path actually makes sense from 
- * the file system perspective.
- *
- * @param buffer_out buffer to populate with the normalized path.
- * @param path directory path to clean up.
+ * @param pathbuf buffer to write the full path into
+ * @param filename name of file to find in the home directory
  * @return
- * - GIT_SUCCESS on success;
- * - GIT_ERROR when the input path is invalid or escapes the current directory.
+ * - 0 if found;
+ * - GIT_ENOTFOUND if not found;
+ * - -1 on an unspecified OS related error.
  */
-GIT_EXTERN(int) gitfo_prettify_dir_path(char *buffer_out, const char *path);
+extern int git_futils_find_global_file(git_buf *path, const char *filename);
 
 /**
- * Clean up a provided absolute or relative file path.
- * 
- * This prettification relies on basic operations such as coalescing 
- * multiple forward slashes into a single slash, removing '.' and 
- * './' current directory segments, and removing parent directory 
- * whenever '..' is encountered.
+ * Find a "system" file (i.e. one shared for all users of the system).
  *
- * For instance, this will turn "d1/s1///s2/..//../s3" into "d1/s3".
- *
- * This only performs a string based analysis of the path.
- * No checks are done to make sure the path actually makes sense from 
- * the file system perspective.
- *
- * @param buffer_out buffer to populate with the normalized path.
- * @param path file path to clean up.
+ * @param pathbuf buffer to write the full path into
+ * @param filename name of file to find in the home directory
  * @return
- * - GIT_SUCCESS on success;
- * - GIT_ERROR when the input path is invalid or escapes the current directory.
+ * - 0 if found;
+ * - GIT_ENOTFOUND if not found;
+ * - -1 on an unspecified OS related error.
  */
-GIT_EXTERN(int) gitfo_prettify_file_path(char *buffer_out, const char *path);
+extern int git_futils_find_system_file(git_buf *path, const char *filename);
 
 #endif /* INCLUDE_fileops_h__ */

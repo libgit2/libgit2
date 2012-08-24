@@ -1,19 +1,179 @@
-#define GIT__NO_HIDE_MALLOC
+/*
+ * Copyright (C) 2009-2012 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+#include <git2.h>
 #include "common.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <ctype.h>
+#include "posix.h"
 
-int git__fmt(char *buf, size_t buf_sz, const char *fmt, ...)
+#ifdef _MSC_VER
+# include <Shlwapi.h>
+#endif
+
+void git_libgit2_version(int *major, int *minor, int *rev)
 {
-	va_list va;
-	int r;
+	*major = LIBGIT2_VER_MAJOR;
+	*minor = LIBGIT2_VER_MINOR;
+	*rev = LIBGIT2_VER_REVISION;
+}
 
-	va_start(va, fmt);
-	r = vsnprintf(buf, buf_sz, fmt, va);
-	va_end(va);
-	if (r < 0 || ((size_t) r) >= buf_sz)
-		return GIT_ERROR;
-	return r;
+void git_strarray_free(git_strarray *array)
+{
+	size_t i;
+	for (i = 0; i < array->count; ++i)
+		git__free(array->strings[i]);
+
+	git__free(array->strings);
+}
+
+int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
+{
+	size_t i;
+
+	assert(tgt && src);
+
+	memset(tgt, 0, sizeof(*tgt));
+
+	if (!src->count)
+		return 0;
+
+	tgt->strings = git__calloc(src->count, sizeof(char *));
+	GITERR_CHECK_ALLOC(tgt->strings);
+
+	for (i = 0; i < src->count; ++i) {
+		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
+
+		if (!tgt->strings[tgt->count]) {
+			git_strarray_free(tgt);
+			memset(tgt, 0, sizeof(*tgt));
+			return -1;
+		}
+
+		tgt->count++;
+	}
+
+	return 0;
+}
+
+int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int base)
+{
+	const char *p;
+	int64_t n, nn;
+	int c, ovfl, v, neg, ndig;
+
+	p = nptr;
+	neg = 0;
+	n = 0;
+	ndig = 0;
+	ovfl = 0;
+
+	/*
+	 * White space
+	 */
+	while (git__isspace(*p))
+		p++;
+
+	/*
+	 * Sign
+	 */
+	if (*p == '-' || *p == '+')
+		if (*p++ == '-')
+			neg = 1;
+
+	/*
+	 * Base
+	 */
+	if (base == 0) {
+		if (*p != '0')
+			base = 10;
+		else {
+			base = 8;
+			if (p[1] == 'x' || p[1] == 'X') {
+				p += 2;
+				base = 16;
+			}
+		}
+	} else if (base == 16 && *p == '0') {
+		if (p[1] == 'x' || p[1] == 'X')
+			p += 2;
+	} else if (base < 0 || 36 < base)
+		goto Return;
+
+	/*
+	 * Non-empty sequence of digits
+	 */
+	for (;; p++,ndig++) {
+		c = *p;
+		v = base;
+		if ('0'<=c && c<='9')
+			v = c - '0';
+		else if ('a'<=c && c<='z')
+			v = c - 'a' + 10;
+		else if ('A'<=c && c<='Z')
+			v = c - 'A' + 10;
+		if (v >= base)
+			break;
+		nn = n*base + v;
+		if (nn < n)
+			ovfl = 1;
+		n = nn;
+	}
+
+Return:
+	if (ndig == 0) {
+		giterr_set(GITERR_INVALID, "Failed to convert string to long. Not a number");
+		return -1;
+	}
+
+	if (endptr)
+		*endptr = p;
+
+	if (ovfl) {
+		giterr_set(GITERR_INVALID, "Failed to convert string to long. Overflow error");
+		return -1;
+	}
+
+	*result = neg ? -n : n;
+	return 0;
+}
+
+int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int base)
+{
+	int error;
+	int32_t tmp_int;
+	int64_t tmp_long;
+
+	if ((error = git__strtol64(&tmp_long, nptr, endptr, base)) < 0)
+		return error;
+
+	tmp_int = tmp_long & 0xFFFFFFFF;
+	if (tmp_int != tmp_long) {
+		giterr_set(GITERR_INVALID, "Failed to convert. '%s' is too large", nptr);
+		return -1;
+	}
+
+	*result = tmp_int;
+
+	return error;
+}
+
+void git__strntolower(char *str, size_t len)
+{
+	size_t i;
+
+	for (i = 0; i < len; ++i) {
+		str[i] = (char) tolower(str[i]);
+	}
+}
+
+void git__strtolower(char *str)
+{
+	git__strntolower(str, strlen(str));
 }
 
 int git__prefixcmp(const char *str, const char *prefix)
@@ -36,217 +196,29 @@ int git__suffixcmp(const char *str, const char *suffix)
 	return strcmp(str + (a - b), suffix);
 }
 
-/*
- * Based on the Android implementation, BSD licensed.
- * Check http://android.git.kernel.org/
- */
-int git__basename_r(char *buffer, size_t bufflen, const char *path)
+char *git__strtok(char **end, const char *sep)
 {
-	const char *endp, *startp;
-	int len, result;
+	char *ptr = *end;
 
-	/* Empty or NULL string gets treated as "." */
-	if (path == NULL || *path == '\0') {
-		startp  = ".";
-		len     = 1;
-		goto Exit;
+	while (*ptr && strchr(sep, *ptr))
+		++ptr;
+
+	if (*ptr) {
+		char *start = ptr;
+		*end = start + 1;
+
+		while (**end && !strchr(sep, **end))
+			++*end;
+
+		if (**end) {
+			**end = '\0';
+			++*end;
+		}
+
+		return start;
 	}
 
-	/* Strip trailing slashes */
-	endp = path + strlen(path) - 1;
-	while (endp > path && *endp == '/')
-		endp--;
-
-	/* All slashes becomes "/" */
-	if (endp == path && *endp == '/') {
-		startp = "/";
-		len    = 1;
-		goto Exit;
-	}
-
-	/* Find the start of the base */
-	startp = endp;
-	while (startp > path && *(startp - 1) != '/')
-		startp--;
-
-	len = endp - startp +1;
-
-Exit:
-	result = len;
-	if (buffer == NULL) {
-		return result;
-	}
-	if (len > (int)bufflen-1) {
-		len    = (int)bufflen-1;
-		result = GIT_ENOMEM;
-	}
-
-	if (len >= 0) {
-		memcpy(buffer, startp, len);
-		buffer[len] = 0;
-	}
-	return result;
-}
-
-/*
- * Based on the Android implementation, BSD licensed.
- * Check http://android.git.kernel.org/
- */
-int git__dirname_r(char *buffer, size_t bufflen, const char *path)
-{
-    const char *endp;
-    int result, len;
-
-    /* Empty or NULL string gets treated as "." */
-    if (path == NULL || *path == '\0') {
-        path = ".";
-        len  = 1;
-        goto Exit;
-    }
-
-    /* Strip trailing slashes */
-    endp = path + strlen(path) - 1;
-    while (endp > path && *endp == '/')
-        endp--;
-
-    /* Find the start of the dir */
-    while (endp > path && *endp != '/')
-        endp--;
-
-    /* Either the dir is "/" or there are no slashes */
-    if (endp == path) {
-        path = (*endp == '/') ? "/" : ".";
-        len  = 1;
-        goto Exit;
-    }
-
-    do {
-        endp--;
-    } while (endp > path && *endp == '/');
-
-    len = endp - path +1;
-
-Exit:
-    result = len;
-    if (len+1 > GIT_PATH_MAX) {
-        return GIT_ENOMEM;
-    }
-    if (buffer == NULL)
-        return result;
-
-    if (len > (int)bufflen-1) {
-        len    = (int)bufflen-1;
-        result = GIT_ENOMEM;
-    }
-
-    if (len >= 0) {
-        memcpy(buffer, path, len);
-        buffer[len] = 0;
-    }
-    return result;
-}
-
-
-char *git__dirname(const char *path)
-{
-    char *dname = NULL;
-    int len;
-
-	len = (path ? strlen(path) : 0) + 2;
-	dname = (char *)git__malloc(len);
-	if (dname == NULL)
-		return NULL;
-
-    if (git__dirname_r(dname, len, path) < GIT_SUCCESS) {
-		free(dname);
-		return NULL;
-	}
-
-    return dname;
-}
-
-char *git__basename(const char *path)
-{
-    char *bname = NULL;
-    int len;
-
-	len = (path ? strlen(path) : 0) + 2;
-	bname = (char *)git__malloc(len);
-	if (bname == NULL)
-		return NULL;
-
-    if (git__basename_r(bname, len, path) < GIT_SUCCESS) {
-		free(bname);
-		return NULL;
-	}
-
-    return bname;
-}
-
-
-const char *git__topdir(const char *path)
-{
-	size_t len;
-	int i;
-
-	assert(path);
-	len = strlen(path);
-
-	if (!len || path[len - 1] != '/')
-		return NULL;
-
-	for (i = len - 2; i >= 0; --i)
-		if (path[i] == '/')
-			break;
-
-	return &path[i + 1];
-}
-
-char *git__joinpath(const char *path_a, const char *path_b)
-{
-	int len_a, len_b;
-	char *path_new;
-
-	len_a = strlen(path_a);
-	len_b = strlen(path_b);
-
-	path_new = git__malloc(len_a + len_b + 2);
-	if (path_new == NULL)
-		return NULL;
-
-	strcpy(path_new, path_a);
-
-	if (path_new[len_a - 1] != '/')
-		path_new[len_a++] = '/';
-
-	if (path_b[0] == '/')
-		path_b++;
-
-	strcpy(path_new + len_a, path_b);
-	return path_new;
-}
-
-static char *strtok_raw(char *output, char *src, char *delimit, int keep)
-{
-	while (*src && strchr(delimit, *src) == NULL)
-		*output++ = *src++;
-
-	*output = 0;
-
-	if (keep)
-		return src;
-	else
-		return *src ? src+1 : src;
-}
-
-char *git__strtok(char *output, char *src, char *delimit)
-{
-	return strtok_raw(output, src, delimit, 0);
-}
-
-char *git__strtok_keep(char *output, char *src, char *delimit)
-{
-	return strtok_raw(output, src, delimit, 1);
+	return NULL;
 }
 
 void git__hexdump(const char *buffer, size_t len)
@@ -280,7 +252,7 @@ void git__hexdump(const char *buffer, size_t len)
 			printf("%02X ", (unsigned char)*line & 0xFF);
 
 		for (j = 0; j < (LINE_WIDTH - last_line); ++j)
-			printf("   ");
+			printf("	");
 
 		printf("| ");
 
@@ -306,22 +278,22 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 	while(len >= 4) {
 		uint32_t k = *(uint32_t *)data;
 
-		k *= m; 
-		k ^= k >> r; 
-		k *= m; 
-		
-		h *= m; 
+		k *= m;
+		k ^= k >> r;
+		k *= m;
+
+		h *= m;
 		h ^= k;
 
 		data += 4;
 		len -= 4;
 	}
-	
+
 	switch(len) {
 	case 3: h ^= data[2] << 16;
 	case 2: h ^= data[1] << 8;
 	case 1: h ^= data[0];
-	        h *= m;
+			h *= m;
 	};
 
 	h ^= h >> 13;
@@ -329,7 +301,7 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 	h ^= h >> 15;
 
 	return h;
-} 
+}
 #else
 /*
 	Cross-platform version of Murmurhash3
@@ -342,13 +314,13 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 {
 
 #define MURMUR_BLOCK() {\
-    k1 *= c1; \
-    k1  = git__rotl(k1,11);\
-    k1 *= c2;\
-    h1 ^= k1;\
-    h1 = h1*3 + 0x52dce729;\
-    c1 = c1*5 + 0x7b7d159c;\
-    c2 = c2*5 + 0x6bce6396;\
+	k1 *= c1; \
+	k1 = git__rotl(k1,11);\
+	k1 *= c2;\
+	h1 ^= k1;\
+	h1 = h1*3 + 0x52dce729;\
+	c1 = c1*5 + 0x7b7d159c;\
+	c2 = c2*5 + 0x6bce6396;\
 }
 
 	const uint8_t *data = (const uint8_t*)key;
@@ -387,5 +359,79 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 	h1 ^= h1 >> 16;
 
 	return h1;
-} 
+}
 #endif
+
+/**
+ * A modified `bsearch` from the BSD glibc.
+ *
+ * Copyright (c) 1990 Regents of the University of California.
+ * All rights reserved.
+ */
+int git__bsearch(
+	void **array,
+	size_t array_len,
+	const void *key,
+	int (*compare)(const void *, const void *),
+	size_t *position)
+{
+	unsigned int lim;
+	int cmp = -1;
+	void **part, **base = array;
+
+	for (lim = (unsigned int)array_len; lim != 0; lim >>= 1) {
+		part = base + (lim >> 1);
+		cmp = (*compare)(key, *part);
+		if (cmp == 0) {
+			base = part;
+			break;
+		}
+		if (cmp > 0) { /* key > p; take right partition */
+			base = part + 1;
+			lim--;
+		} /* else take left partition */
+	}
+
+	if (position)
+		*position = (base - array);
+
+	return (cmp == 0) ? 0 : -1;
+}
+
+/**
+ * A strcmp wrapper
+ * 
+ * We don't want direct pointers to the CRT on Windows, we may
+ * get stdcall conflicts.
+ */
+int git__strcmp_cb(const void *a, const void *b)
+{
+	const char *stra = (const char *)a;
+	const char *strb = (const char *)b;
+
+	return strcmp(stra, strb);
+}
+
+int git__parse_bool(int *out, const char *value)
+{
+	/* A missing value means true */
+	if (value == NULL) {
+		*out = 1;
+		return 0;
+	}
+
+	if (!strcasecmp(value, "true") ||
+		!strcasecmp(value, "yes") ||
+		!strcasecmp(value, "on")) {
+		*out = 1;
+		return 0;
+	}
+	if (!strcasecmp(value, "false") ||
+		!strcasecmp(value, "no") ||
+		!strcasecmp(value, "off")) {
+		*out = 0;
+		return 0;
+	}
+
+	return -1;
+}

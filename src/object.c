@@ -1,26 +1,8 @@
 /*
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License, version 2,
- * as published by the Free Software Foundation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * In addition to the permissions in the GNU General Public License,
- * the authors give you unlimited permission to link the compiled
- * version of this file into combinations with other programs,
- * and to distribute those combinations without any restriction
- * coming from the use of this file.  (The General Public License
- * restrictions do apply in other respects; for example, they cover
- * modification of the file, and distribution when not linked into
- * a combined executable.)
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; see the file COPYING.  If not, write to
- * the Free Software Foundation, 51 Franklin Street, Fifth Floor,
- * Boston, MA 02110-1301, USA.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #include <stdarg.h>
 
@@ -37,8 +19,8 @@
 static const int OBJECT_BASE_SIZE = 4096;
 
 static struct {
-	const char	*str;   /* type name string */
-	int			loose;  /* valid loose object type flag */
+	const char	*str;	/* type name string */
+	int			loose; /* valid loose object type flag */
 	size_t		size;	/* size in bytes of the object structure */
 } git_objects_table[] = {
 	/* 0 = GIT_OBJ__EXT1 */
@@ -66,201 +48,164 @@ static struct {
 	{ "REF_DELTA", 0, 0	}
 };
 
-/*
- * Object source methods
- *
- * Abstract buffer methods that allow the writeback system
- * to prepare the contents of any git file in-memory before
- * writing them to disk.
- */
-static int source_resize(git_odb_source *src)
+static int create_object(git_object **object_out, git_otype type)
 {
-	size_t write_offset, new_size;
-	void *new_data;
+	git_object *object = NULL;
 
-	write_offset = (size_t)((char *)src->write_ptr - (char *)src->raw.data);
+	assert(object_out);
 
-	new_size = src->raw.len * 2;
-	if ((new_data = git__malloc(new_size)) == NULL)
-		return GIT_ENOMEM;
+	*object_out = NULL;
 
-	memcpy(new_data, src->raw.data, src->written_bytes);
-	free(src->raw.data);
-
-	src->raw.data = new_data;
-	src->raw.len = new_size;
-	src->write_ptr = (char *)new_data + write_offset;
-
-	return GIT_SUCCESS;
-}
-
-int git__source_printf(git_odb_source *source, const char *format, ...)
-{
-	va_list arglist;
-	int len;
-
-	assert(source->open && source->write_ptr);
-
-	va_start(arglist, format);
-
-	len = vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
-
-	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < GIT_SUCCESS)
-			return GIT_ENOMEM;
-
-		len = vsnprintf(source->write_ptr, source->raw.len - source->written_bytes, format, arglist);
-	}
-
-	source->write_ptr = (char *)source->write_ptr + len;
-	source->written_bytes += len;
-
-	return GIT_SUCCESS;
-}
-
-int git__source_write(git_odb_source *source, const void *bytes, size_t len)
-{
-	assert(source);
-
-	assert(source->open && source->write_ptr);
-
-	while (source->written_bytes + len >= source->raw.len) {
-		if (source_resize(source) < GIT_SUCCESS)
-			return GIT_ENOMEM;
-	}
-
-	memcpy(source->write_ptr, bytes, len);
-	source->write_ptr = (char *)source->write_ptr + len;
-	source->written_bytes += len;
-
-	return GIT_SUCCESS;
-}
-
-static void prepare_write(git_object *object)
-{
-	if (object->source.write_ptr != NULL || object->source.open)
-		git_object__source_close(object);
-
-	/* TODO: proper size calculation */
-	object->source.raw.data = git__malloc(OBJECT_BASE_SIZE);
-	object->source.raw.len = OBJECT_BASE_SIZE;
-
-	object->source.write_ptr = object->source.raw.data;
-	object->source.written_bytes = 0;
-
-	object->source.open = 1;
-}
-
-static int write_back(git_object *object)
-{
-	int error;
-	git_oid new_id;
-
-	assert(object);
-
-	assert(object->source.open);
-	assert(object->modified);
-
-	object->source.raw.len = object->source.written_bytes;
-
-	if ((error = git_odb_write(&new_id, object->repo->db, &object->source.raw)) < GIT_SUCCESS)
-		return error;
-
-	if (!object->in_memory)
-		git_hashtable_remove(object->repo->objects, &object->id);
-
-	git_oid_cpy(&object->id, &new_id);
-	git_hashtable_insert(object->repo->objects, &object->id, object);
-
-	object->source.write_ptr = NULL;
-	object->source.written_bytes = 0;
-
-	object->modified = 0;
-	object->in_memory = 0;
-
-	git_object__source_close(object);
-	return GIT_SUCCESS;
-}
-
-int git_object__source_open(git_object *object)
-{
-	int error;
-
-	assert(object && !object->in_memory);
-
-	if (object->source.open)
-		git_object__source_close(object);
-
-	error = git_odb_read(&object->source.raw, object->repo->db, &object->id);
-	if (error < GIT_SUCCESS)
-		return error;
-
-	object->source.open = 1;
-	return GIT_SUCCESS;
-}
-
-void git_object__source_close(git_object *object)
-{
-	assert(object);
-
-	if (object->source.open) {
-		git_rawobj_close(&object->source.raw);
-		object->source.open = 0;
-	}
-}
-
-int git_object_write(git_object *object)
-{
-	int error;
-	git_odb_source *source;
-
-	assert(object);
-
-	if (object->modified == 0)
-		return GIT_SUCCESS;
-
-	prepare_write(object);
-	source = &object->source;
-
-	switch (source->raw.type) {
+	switch (type) {
 	case GIT_OBJ_COMMIT:
-		error = git_commit__writeback((git_commit *)object, source);
-		break;
-
-	case GIT_OBJ_TREE:
-		error = git_tree__writeback((git_tree *)object, source);
-		break;
-
 	case GIT_OBJ_TAG:
-		error = git_tag__writeback((git_tag *)object, source);
-		break;
-
 	case GIT_OBJ_BLOB:
-		error = git_blob__writeback((git_blob *)object, source);
+	case GIT_OBJ_TREE:
+		object = git__malloc(git_object__size(type));
+		GITERR_CHECK_ALLOC(object);
+		memset(object, 0x0, git_object__size(type));
 		break;
 
 	default:
-		error = GIT_ERROR;
+		giterr_set(GITERR_INVALID, "The given type is invalid");
+		return -1;
+	}
+
+	object->type = type;
+
+	*object_out = object;
+	return 0;
+}
+
+int git_object_lookup_prefix(
+	git_object **object_out,
+	git_repository *repo,
+	const git_oid *id,
+	unsigned int len,
+	git_otype type)
+{
+	git_object *object = NULL;
+	git_odb *odb = NULL;
+	git_odb_object *odb_obj;
+	int error = 0;
+
+	assert(repo && object_out && id);
+
+	if (len < GIT_OID_MINPREFIXLEN)
+		return GIT_EAMBIGUOUS;
+
+	error = git_repository_odb__weakptr(&odb, repo);
+	if (error < 0)
+		return error;
+
+	if (len > GIT_OID_HEXSZ)
+		len = GIT_OID_HEXSZ;
+
+	if (len == GIT_OID_HEXSZ) {
+		/* We want to match the full id : we can first look up in the cache,
+		 * since there is no need to check for non ambiguousity
+		 */
+		object = git_cache_get(&repo->objects, id);
+		if (object != NULL) {
+			if (type != GIT_OBJ_ANY && type != object->type) {
+				git_object_free(object);
+				giterr_set(GITERR_ODB, "The given type does not match the type in ODB");
+				return GIT_ENOTFOUND;
+			}
+
+			*object_out = object;
+			return 0;
+		}
+
+		/* Object was not found in the cache, let's explore the backends.
+		 * We could just use git_odb_read_unique_short_oid,
+		 * it is the same cost for packed and loose object backends,
+		 * but it may be much more costly for sqlite and hiredis.
+		 */
+		error = git_odb_read(&odb_obj, odb, id);
+	} else {
+		git_oid short_oid;
+
+		/* We copy the first len*4 bits from id and fill the remaining with 0s */
+		memcpy(short_oid.id, id->id, (len + 1) / 2);
+		if (len % 2)
+			short_oid.id[len / 2] &= 0xF0;
+		memset(short_oid.id + (len + 1) / 2, 0, (GIT_OID_HEXSZ - len) / 2);
+
+		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
+		 * 2 options :
+		 * - We always search in the cache first. If we find that short oid is
+		 *	ambiguous, we can stop. But in all the other cases, we must then
+		 *	explore all the backends (to find an object if there was match,
+		 *	or to check that oid is not ambiguous if we have found 1 match in
+		 *	the cache)
+		 * - We never explore the cache, go right to exploring the backends
+		 * We chose the latter : we explore directly the backends.
+		 */
+		error = git_odb_read_prefix(&odb_obj, odb, &short_oid, len);
+	}
+
+	if (error < 0)
+		return error;
+
+	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
+		git_odb_object_free(odb_obj);
+		giterr_set(GITERR_ODB, "The given type does not match the type on the ODB");
+		return GIT_ENOTFOUND;
+	}
+
+	type = odb_obj->raw.type;
+
+	if (create_object(&object, type) < 0)
+		return -1;
+
+	/* Initialize parent object */
+	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
+	object->repo = repo;
+
+	switch (type) {
+	case GIT_OBJ_COMMIT:
+		error = git_commit__parse((git_commit *)object, odb_obj);
+		break;
+
+	case GIT_OBJ_TREE:
+		error = git_tree__parse((git_tree *)object, odb_obj);
+		break;
+
+	case GIT_OBJ_TAG:
+		error = git_tag__parse((git_tag *)object, odb_obj);
+		break;
+
+	case GIT_OBJ_BLOB:
+		error = git_blob__parse((git_blob *)object, odb_obj);
+		break;
+
+	default:
 		break;
 	}
 
-	if (error < GIT_SUCCESS) {
-		git_object__source_close(object);
-		return error;
+	git_odb_object_free(odb_obj);
+
+	if (error < 0) {
+		git_object__free(object);
+		return -1;
 	}
 
-	return write_back(object);
+	*object_out = git_cache_try_store(&repo->objects, object);
+	return 0;
 }
 
-void git_object_free(git_object *object)
+int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_otype type) {
+	return git_object_lookup_prefix(object_out, repo, id, GIT_OID_HEXSZ, type);
+}
+
+void git_object__free(void *_obj)
 {
-	if (object == NULL)
-		return;
+	git_object *object = (git_object *)_obj;
 
-	git_object__source_close(object);
-	git_hashtable_remove(object->repo->objects, &object->id);
+	assert(object);
 
-	switch (object->source.raw.type) {
+	switch (object->type) {
 	case GIT_OBJ_COMMIT:
 		git_commit__free((git_commit *)object);
 		break;
@@ -278,28 +223,32 @@ void git_object_free(git_object *object)
 		break;
 
 	default:
-		free(object);
+		git__free(object);
 		break;
 	}
 }
 
-const git_oid *git_object_id(git_object *obj)
+void git_object_free(git_object *object)
 {
-	assert(obj);
+	if (object == NULL)
+		return;
 
-	if (obj->in_memory)
-		return NULL;
-
-	return &obj->id;
+	git_cached_obj_decref((git_cached_obj *)object, git_object__free);
 }
 
-git_otype git_object_type(git_object *obj)
+const git_oid *git_object_id(const git_object *obj)
 {
 	assert(obj);
-	return obj->source.raw.type;
+	return &obj->cached.oid;
 }
 
-git_repository *git_object_owner(git_object *obj)
+git_otype git_object_type(const git_object *obj)
+{
+	assert(obj);
+	return obj->type;
+}
+
+git_repository *git_object_owner(const git_object *obj)
 {
 	assert(obj);
 	return obj->repo;
@@ -343,3 +292,42 @@ size_t git_object__size(git_otype type)
 	return git_objects_table[type].size;
 }
 
+int git_object__resolve_to_type(git_object **obj, git_otype type)
+{
+	int error = 0;
+	git_object *scan, *next;
+
+	if (type == GIT_OBJ_ANY)
+		return 0;
+
+	scan = *obj;
+
+	while (!error && scan && git_object_type(scan) != type) {
+
+		switch (git_object_type(scan)) {
+		case GIT_OBJ_COMMIT:
+		{
+			git_tree *tree = NULL;
+			error = git_commit_tree(&tree, (git_commit *)scan);
+			next = (git_object *)tree;
+			break;
+		}
+
+		case GIT_OBJ_TAG:
+			error = git_tag_target(&next, (git_tag *)scan);
+			break;
+
+		default:
+			giterr_set(GITERR_REFERENCE, "Object does not resolve to type");
+			error = -1;
+			next = NULL;
+			break;
+		}
+
+		git_object_free(scan);
+		scan = next;
+	}
+
+	*obj = scan;
+	return error;
+}

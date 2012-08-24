@@ -1,86 +1,105 @@
+/*
+ * Copyright (C) 2009-2012 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 #ifndef INCLUDE_thread_utils_h__
 #define INCLUDE_thread_utils_h__
 
-#if defined(GIT_HAS_PTHREAD)
-typedef pthread_mutex_t git_lck;
-# define GITLCK_INIT      PTHREAD_MUTEX_INITIALIZER
-# define gitlck_init(a)   pthread_mutex_init(a, NULL)
-# define gitlck_lock(a)   pthread_mutex_lock(a)
-# define gitlck_unlock(a) pthread_mutex_unlock(a)
-# define gitlck_free(a)   pthread_mutex_destroy(a)
+#include "common.h"
 
-# if defined(GIT_HAS_ASM_ATOMIC)
-#  include <asm/atomic.h>
-typedef atomic_t git_refcnt;
-#  define gitrc_init(a)   atomic_set(a, 0)
-#  define gitrc_inc(a)    atomic_inc_return(a)
-#  define gitrc_dec(a)    atomic_dec_and_test(a)
-#  define gitrc_free(a)   (void)0
+/* Common operations even if threading has been disabled */
+typedef struct {
+#if defined(GIT_WIN32)
+	volatile long val;
+#else
+	volatile int val;
+#endif
+} git_atomic;
 
-# else
-typedef struct { git_lck lock; int counter; } git_refcnt;
-
-/** Initialize to 0.  No memory barrier is issued. */
-GIT_INLINE(void) gitrc_init(git_refcnt *p)
+GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {
-	gitlck_init(&p->lock);
-	p->counter = 0;
+	a->val = val;
 }
 
-/**
- * Increment.
- *
- * Atomically increments @p by 1.  A memory barrier is also
- * issued before and after the operation.
- *
- * @param p pointer of type git_refcnt
- */
-GIT_INLINE(void) gitrc_inc(git_refcnt *p)
+#ifdef GIT_THREADS
+
+#define git_thread pthread_t
+#define git_thread_create(thread, attr, start_routine, arg) pthread_create(thread, attr, start_routine, arg)
+#define git_thread_kill(thread) pthread_cancel(thread)
+#define git_thread_exit(status)	pthread_exit(status)
+#define git_thread_join(id, status) pthread_join(id, status)
+
+/* Pthreads Mutex */
+#define git_mutex pthread_mutex_t
+#define git_mutex_init(a)	pthread_mutex_init(a, NULL)
+#define git_mutex_lock(a)	pthread_mutex_lock(a)
+#define git_mutex_unlock(a) pthread_mutex_unlock(a)
+#define git_mutex_free(a)	pthread_mutex_destroy(a)
+
+/* Pthreads condition vars -- disabled by now */
+#define git_cond unsigned int //pthread_cond_t
+#define git_cond_init(c, a)	(void)0		//pthread_cond_init(c, a)
+#define git_cond_free(c) (void)0		//pthread_cond_destroy(c)
+#define git_cond_wait(c, l)	(void)0		//pthread_cond_wait(c, l)
+#define git_cond_signal(c)	(void)0		//pthread_cond_signal(c)
+#define git_cond_broadcast(c) (void)0	//pthread_cond_broadcast(c)
+
+GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
-	gitlck_lock(&p->lock);
-	p->counter++;
-	gitlck_unlock(&p->lock);
+#if defined(GIT_WIN32)
+	return InterlockedIncrement(&a->val);
+#elif defined(__GNUC__)
+	return __sync_add_and_fetch(&a->val, 1);
+#else
+#	error "Unsupported architecture for atomic operations"
+#endif
 }
 
-/**
- * Decrement and test.
- *
- * Atomically decrements @p by 1 and returns true if the
- * result is 0, or false for all other cases.  A memory
- * barrier is also issued before and after the operation.
- *
- * @param p pointer of type git_refcnt
- */
-GIT_INLINE(int) gitrc_dec(git_refcnt *p)
+GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 {
-	int c;
-	gitlck_lock(&p->lock);
-	c = --p->counter;
-	gitlck_unlock(&p->lock);
-	return !c;
+#if defined(GIT_WIN32)
+	return InterlockedDecrement(&a->val);
+#elif defined(__GNUC__)
+	return __sync_sub_and_fetch(&a->val, 1);
+#else
+#	error "Unsupported architecture for atomic operations"
+#endif
 }
-
-/** Free any resources associated with the counter. */
-#  define gitrc_free(p) gitlck_free(&(p)->lock)
-
-# endif
-
-#elif defined(GIT_THREADS)
-# error GIT_THREADS but no git_lck implementation
 
 #else
-typedef struct { int dummy; } git_lck;
-# define GIT_MUTEX_INIT   {}
-# define gitlck_init(a)   (void)0
-# define gitlck_lock(a)   (void)0
-# define gitlck_unlock(a) (void)0
-# define gitlck_free(a)   (void)0
 
-typedef struct { int counter; } git_refcnt;
-# define gitrc_init(a)   ((a)->counter = 0)
-# define gitrc_inc(a)    ((a)->counter++)
-# define gitrc_dec(a)    (--(a)->counter == 0)
-# define gitrc_free(a)   (void)0
+#define git_thread unsigned int
+#define git_thread_create(thread, attr, start_routine, arg) (void)0
+#define git_thread_kill(thread) (void)0
+#define git_thread_exit(status) (void)0
+#define git_thread_join(id, status) (void)0
+
+/* Pthreads Mutex */
+#define git_mutex unsigned int
+#define git_mutex_init(a) (void)0
+#define git_mutex_lock(a) (void)0
+#define git_mutex_unlock(a) (void)0
+#define git_mutex_free(a) (void)0
+
+/* Pthreads condition vars */
+#define git_cond unsigned int
+#define git_cond_init(c, a)	(void)0
+#define git_cond_free(c) (void)0
+#define git_cond_wait(c, l)	(void)0
+#define git_cond_signal(c) (void)0
+#define git_cond_broadcast(c) (void)0
+
+GIT_INLINE(int) git_atomic_inc(git_atomic *a)
+{
+	return ++a->val;
+}
+
+GIT_INLINE(int) git_atomic_dec(git_atomic *a)
+{
+	return --a->val;
+}
 
 #endif
 

@@ -1,357 +1,275 @@
+/*
+ * Copyright (C) 2009-2012 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 #include "common.h"
 #include "fileops.h"
 #include <ctype.h>
 
-int gitfo_open(const char *path, int flags)
+int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
-	int fd = open(path, flags | O_BINARY);
-	return fd >= 0 ? fd : GIT_EOSERR;
-}
+	int result = 0;
+	git_buf target_folder = GIT_BUF_INIT;
 
-int gitfo_creat(const char *path, int mode)
-{
-	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
-	return fd >= 0 ? fd : GIT_EOSERR;
-}
+	if (git_path_dirname_r(&target_folder, file_path) < 0)
+		return -1;
 
-int gitfo_read(git_file fd, void *buf, size_t cnt)
-{
-	char *b = buf;
-	while (cnt) {
-		ssize_t r = read(fd, b, cnt);
-		if (r < 0) {
-			if (errno == EINTR || errno == EAGAIN)
-				continue;
-			return GIT_EOSERR;
-		}
-		if (!r) {
-			errno = EPIPE;
-			return GIT_EOSERR;
-		}
-		cnt -= r;
-		b += r;
-	}
-	return GIT_SUCCESS;
-}
+	/* Does the containing folder exist? */
+	if (git_path_isdir(target_folder.ptr) == false)
+		/* Let's create the tree structure */
+		result = git_futils_mkdir_r(target_folder.ptr, NULL, mode);
 
-int gitfo_write(git_file fd, void *buf, size_t cnt)
-{
-	char *b = buf;
-	while (cnt) {
-		ssize_t r = write(fd, b, cnt);
-		if (r < 0) {
-			if (errno == EINTR || errno == EAGAIN)
-				continue;
-			return GIT_EOSERR;
-		}
-		if (!r) {
-			errno = EPIPE;
-			return GIT_EOSERR;
-		}
-		cnt -= r;
-		b += r;
-	}
-	return GIT_SUCCESS;
-}
-
-int gitfo_isdir(const char *path)
-{
-	struct stat st;
-	int len, stat_error;
-
-	if (!path)
-		return GIT_ENOTFOUND;
-
-	len = strlen(path);
-
-	/* win32: stat path for folders cannot end in a slash */
-	if (path[len - 1] == '/') {
-		char *path_fixed = NULL;
-		path_fixed = git__strdup(path);
-		path_fixed[len - 1] = 0;
-		stat_error = gitfo_stat(path_fixed, &st);
-		free(path_fixed);
-	} else {
-		stat_error = gitfo_stat(path, &st);
-	}
-
-	if (stat_error < GIT_SUCCESS)
-		return GIT_ENOTFOUND;
-
-	if (!S_ISDIR(st.st_mode))
-		return GIT_ENOTFOUND;
-
-	return GIT_SUCCESS;
-}
-
-int gitfo_exists(const char *path)
-{
-	return access(path, F_OK);
-}
-
-git_off_t gitfo_size(git_file fd)
-{
-	struct stat sb;
-	if (gitfo_fstat(fd, &sb))
-		return GIT_EOSERR;
-	return sb.st_size;
-}
-
-int gitfo_read_file(gitfo_buf *obj, const char *path)
-{
-	git_file fd;
-	size_t len;
-	git_off_t size;
-	unsigned char *buff;
-
-	assert(obj && path && *path);
-
-	if ((fd = gitfo_open(path, O_RDONLY)) < 0)
-		return GIT_ERROR;
-
-	if (((size = gitfo_size(fd)) < 0) || !git__is_sizet(size+1)) {
-		gitfo_close(fd);
-		return GIT_ERROR;
-	}
-	len = (size_t) size;
-
-	if ((buff = git__malloc(len + 1)) == NULL) {
-		gitfo_close(fd);
-		return GIT_ERROR;
-	}
-
-	if (gitfo_read(fd, buff, len) < 0) {
-		gitfo_close(fd);
-		free(buff);
-		return GIT_ERROR;
-	}
-	buff[len] = '\0';
-
-	gitfo_close(fd);
-
-	obj->data = buff;
-	obj->len  = len;
-
-	return GIT_SUCCESS;
-}
-
-void gitfo_free_buf(gitfo_buf *obj)
-{
-	assert(obj);
-	free(obj->data);
-	obj->data = NULL;
-}
-
-int gitfo_move_file(char *from, char *to)
-{
-	if (!link(from, to)) {
-		gitfo_unlink(from);
-		return GIT_SUCCESS;
-	}
-
-	if (!rename(from, to))
-		return GIT_SUCCESS;
-
-	return GIT_EOSERR;
-}
-
-int gitfo_map_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
-{
-	if (git__mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin) < GIT_SUCCESS)
-		return GIT_EOSERR;
-	return GIT_SUCCESS;
-}
-
-void gitfo_free_map(git_map *out)
-{
-	git__munmap(out);
-}
-
-/* cached diskio */
-struct gitfo_cache {
-	git_file fd;
-	size_t cache_size, pos;
-	unsigned char *cache;
-};
-
-gitfo_cache *gitfo_enable_caching(git_file fd, size_t cache_size)
-{
-	gitfo_cache *ioc;
-
-	ioc = git__malloc(sizeof(*ioc));
-	if (!ioc)
-		return NULL;
-
-	ioc->fd = fd;
-	ioc->pos = 0;
-	ioc->cache_size = cache_size;
-	ioc->cache = git__malloc(cache_size);
-	if (!ioc->cache) {
-		free(ioc);
-		return NULL;
-	}
-
-	return ioc;
-}
-
-GIT_INLINE(void) gitfo_add_to_cache(gitfo_cache *ioc, void *buf, size_t len)
-{
-	memcpy(ioc->cache + ioc->pos, buf, len);
-	ioc->pos += len;
-}
-
-int gitfo_flush_cached(gitfo_cache *ioc)
-{
-	int result = GIT_SUCCESS;
-
-	if (ioc->pos) {
-		result = gitfo_write(ioc->fd, ioc->cache, ioc->pos);
-		ioc->pos = 0;
-	}
-
+	git_buf_free(&target_folder);
 	return result;
 }
 
-int gitfo_write_cached(gitfo_cache *ioc, void *buff, size_t len)
+int git_futils_mktmp(git_buf *path_out, const char *filename)
 {
-	unsigned char *buf = buff;
+	int fd;
 
-	for (;;) {
-		size_t space_left = ioc->cache_size - ioc->pos;
-		/* cache if it's small */
-		if (space_left > len) {
-			gitfo_add_to_cache(ioc, buf, len);
-			return GIT_SUCCESS;
-		}
+	git_buf_sets(path_out, filename);
+	git_buf_puts(path_out, "_git2_XXXXXX");
 
-		/* flush the cache if it doesn't fit */
-		if (ioc->pos) {
-			int rc;
-			gitfo_add_to_cache(ioc, buf, space_left);
-			rc = gitfo_flush_cached(ioc);
-			if (rc < 0)
-				return rc;
+	if (git_buf_oom(path_out))
+		return -1;
 
-			len -= space_left;
-			buf += space_left;
-		}
-
-		/* write too-large chunks immediately */
-		if (len > ioc->cache_size)
-			return gitfo_write(ioc->fd, buf, len);
+	if ((fd = p_mkstemp(path_out->ptr)) < 0) {
+		giterr_set(GITERR_OS,
+			"Failed to create temporary file '%s'", path_out->ptr);
+		return -1;
 	}
+
+	return fd;
 }
 
-int gitfo_close_cached(gitfo_cache *ioc)
+int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode)
+{
+	int fd;
+
+	if (git_futils_mkpath2file(path, dirmode) < 0)
+		return -1;
+
+	fd = p_creat(path, mode);
+	if (fd < 0) {
+		giterr_set(GITERR_OS, "Failed to create file '%s'", path);
+		return -1;
+	}
+
+	return fd;
+}
+
+int git_futils_creat_locked(const char *path, const mode_t mode)
+{
+	int fd;
+
+#ifdef GIT_WIN32
+	wchar_t* buf;
+
+	buf = gitwin_to_utf16(path);
+	fd = _wopen(buf, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
+	git__free(buf);
+#else
+	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
+#endif
+
+	if (fd < 0) {
+		giterr_set(GITERR_OS, "Failed to create locked file '%s'", path);
+		return -1;
+	}
+
+	return fd;
+}
+
+int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode)
+{
+	if (git_futils_mkpath2file(path, dirmode) < 0)
+		return -1;
+
+	return git_futils_creat_locked(path, mode);
+}
+
+int git_futils_open_ro(const char *path)
+{
+	int fd = p_open(path, O_RDONLY);
+	if (fd < 0) {
+		if (errno == ENOENT)
+			fd = GIT_ENOTFOUND;
+		giterr_set(GITERR_OS, "Failed to open '%s'", path);
+	}
+	return fd;
+}
+
+git_off_t git_futils_filesize(git_file fd)
+{
+	struct stat sb;
+
+	if (p_fstat(fd, &sb)) {
+		giterr_set(GITERR_OS, "Failed to stat file descriptor");
+		return -1;
+	}
+
+	return sb.st_size;
+}
+
+mode_t git_futils_canonical_mode(mode_t raw_mode)
+{
+	if (S_ISREG(raw_mode))
+		return S_IFREG | GIT_CANONICAL_PERMS(raw_mode);
+	else if (S_ISLNK(raw_mode))
+		return S_IFLNK;
+	else if (S_ISGITLINK(raw_mode))
+		return S_IFGITLINK;
+	else if (S_ISDIR(raw_mode))
+		return S_IFDIR;
+	else
+		return 0;
+}
+
+int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime, int *updated)
 {
 	git_file fd;
+	size_t len;
+	struct stat st;
 
-	if (gitfo_flush_cached(ioc) < GIT_SUCCESS)
-		return GIT_ERROR;
+	assert(buf && path && *path);
 
-	fd = ioc->fd;
-	free(ioc->cache);
-	free(ioc);
+	if (updated != NULL)
+		*updated = 0;
 
-	return gitfo_close(fd);
-}
+	if ((fd = git_futils_open_ro(path)) < 0)
+		return fd;
 
-int gitfo_dirent(
-	char *path,
-	size_t path_sz,
-	int (*fn)(void *, char *),
-	void *arg)
-{
-	size_t wd_len = strlen(path);
-	DIR *dir;
-	struct dirent *de;
-
-	if (!wd_len || path_sz < wd_len + 2)
-		return GIT_ERROR;
-
-	while (path[wd_len - 1] == '/')
-		wd_len--;
-	path[wd_len++] = '/';
-	path[wd_len] = '\0';
-
-	dir = opendir(path);
-	if (!dir)
-		return GIT_EOSERR;
-
-	while ((de = readdir(dir)) != NULL) {
-		size_t de_len;
-		int result;
-
-		/* always skip '.' and '..' */
-		if (de->d_name[0] == '.') {
-			if (de->d_name[1] == '\0')
-				continue;
-			if (de->d_name[1] == '.' && de->d_name[2] == '\0')
-				continue;
-		}
-
-		de_len = strlen(de->d_name);
-		if (path_sz < wd_len + de_len + 1) {
-			closedir(dir);
-			return GIT_ERROR;
-		}
-
-		strcpy(path + wd_len, de->d_name);
-		result = fn(arg, path);
-		if (result < GIT_SUCCESS) {
-			closedir(dir);
-			return result;
-		}
-		if (result > 0) {
-			closedir(dir);
-			return result;
-		}
+	if (p_fstat(fd, &st) < 0 || S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
+		p_close(fd);
+		giterr_set(GITERR_OS, "Invalid regular file stat for '%s'", path);
+		return -1;
 	}
 
-	closedir(dir);
-	return GIT_SUCCESS;
+	/*
+	 * If we were given a time, we only want to read the file if it
+	 * has been modified.
+	 */
+	if (mtime != NULL && *mtime >= st.st_mtime) {
+		p_close(fd);
+		return 0;
+	}
+
+	if (mtime != NULL)
+		*mtime = st.st_mtime;
+
+	len = (size_t) st.st_size;
+
+	git_buf_clear(buf);
+
+	if (git_buf_grow(buf, len + 1) < 0) {
+		p_close(fd);
+		return -1;
+	}
+
+	buf->ptr[len] = '\0';
+
+	while (len > 0) {
+		ssize_t read_size = p_read(fd, buf->ptr, len);
+
+		if (read_size < 0) {
+			p_close(fd);
+			giterr_set(GITERR_OS, "Failed to read descriptor for '%s'", path);
+			return -1;
+		}
+
+		len -= read_size;
+		buf->size += read_size;
+	}
+
+	p_close(fd);
+
+	if (updated != NULL)
+		*updated = 1;
+
+	return 0;
 }
 
-#ifdef GIT_WIN32
-
-static int is_windows_rooted_path(const char *path)
+int git_futils_readbuffer(git_buf *buf, const char *path)
 {
-	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(path[0]) && (path[1] == ':'))
-		return GIT_SUCCESS;
-
-	return GIT_ERROR;
+	return git_futils_readbuffer_updated(buf, path, NULL, NULL);
 }
 
-#endif
-
-int gitfo_mkdir_recurs(const char *path, int mode)
+int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode)
 {
-	int error;
+	if (git_futils_mkpath2file(to, dirmode) < 0)
+		return -1;
+
+	if (p_rename(from, to) < 0) {
+		giterr_set(GITERR_OS, "Failed to rename '%s' to '%s'", from, to);
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
+{
+	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin);
+}
+
+int git_futils_mmap_ro_file(git_map *out, const char *path)
+{
+	git_file fd = git_futils_open_ro(path);
+	git_off_t len;
+	int result;
+
+	if (fd < 0)
+		return fd;
+
+	len = git_futils_filesize(fd);
+	if (!git__is_sizet(len)) {
+		giterr_set(GITERR_OS, "File `%s` too large to mmap", path);
+		return -1;
+	}
+
+	result = git_futils_mmap_ro(out, fd, 0, (size_t)len);
+	p_close(fd);
+	return result;
+}
+
+void git_futils_mmap_free(git_map *out)
+{
+	p_munmap(out);
+}
+
+int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
+{
+	int root_path_offset;
+	git_buf make_path = GIT_BUF_INIT;
+	size_t start;
 	char *pp, *sp;
-    char *path_copy = git__strdup(path);
+	bool failed = false;
 
-	if (path_copy == NULL)
-		return GIT_ENOMEM;
+	if (base != NULL) {
+		start = strlen(base);
+		if (git_buf_joinpath(&make_path, base, path) < 0)
+			return -1;
+	} else {
+		start = 0;
+		if (git_buf_puts(&make_path, path) < 0)
+			return -1;
+	}
 
-	error = GIT_SUCCESS;
-	pp = path_copy;
+	pp = make_path.ptr + start;
 
-#ifdef GIT_WIN32
+	root_path_offset = git_path_root(make_path.ptr);
+	if (root_path_offset > 0)
+		pp += root_path_offset; /* On Windows, will skip the drive name (eg. C: or D:) */
 
-	if (!is_windows_rooted_path(pp))
-		pp += 2; /* Skip the drive name (eg. C: or D:) */
-
-#endif
-
-    while (error == GIT_SUCCESS && (sp = strchr(pp, '/')) != 0) {
-		if (sp != pp && gitfo_isdir(path_copy) < GIT_SUCCESS) {
+	while (!failed && (sp = strchr(pp, '/')) != NULL) {
+		if (sp != pp && git_path_isdir(make_path.ptr) == false) {
 			*sp = 0;
-			error = gitfo_mkdir(path_copy, mode);
 
 			/* Do not choke while trying to recreate an existing directory */
-			if (errno == EEXIST)
-				error = GIT_SUCCESS;
+			if (p_mkdir(make_path.ptr, mode) < 0 && errno != EEXIST)
+				failed = true;
 
 			*sp = '/';
 		}
@@ -359,127 +277,199 @@ int gitfo_mkdir_recurs(const char *path, int mode)
 		pp = sp + 1;
 	}
 
-	if (*(pp - 1) != '/' && error == GIT_SUCCESS)
-		error = gitfo_mkdir(path, mode);
+	if (*pp != '\0' && !failed) {
+		if (p_mkdir(make_path.ptr, mode) < 0 && errno != EEXIST)
+			failed = true;
+	}
 
-	free(path_copy);
+	git_buf_free(&make_path);
+
+	if (failed) {
+		giterr_set(GITERR_OS,
+			"Failed to create directory structure at '%s'", path);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
+{
+	git_directory_removal_type removal_type = *(git_directory_removal_type *)opaque;
+
+	assert(removal_type == GIT_DIRREMOVAL_EMPTY_HIERARCHY
+		|| removal_type == GIT_DIRREMOVAL_FILES_AND_DIRS
+		|| removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS);
+
+	if (git_path_isdir(path->ptr) == true) {
+		if (git_path_direach(path, _rmdir_recurs_foreach, opaque) < 0)
+			return -1;
+
+		if (p_rmdir(path->ptr) < 0) {
+			if (removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS && (errno == ENOTEMPTY || errno == EEXIST))
+				return 0;
+
+			giterr_set(GITERR_OS, "Could not remove directory '%s'", path->ptr);
+			return -1;
+		}
+
+		return 0;
+	}
+
+	if (removal_type == GIT_DIRREMOVAL_FILES_AND_DIRS) {
+		if (p_unlink(path->ptr) < 0) {
+			giterr_set(GITERR_OS, "Could not remove directory.  File '%s' cannot be removed", path->ptr);
+			return -1;
+		}
+
+		return 0;
+	}
+
+	if (removal_type == GIT_DIRREMOVAL_EMPTY_HIERARCHY) {
+		giterr_set(GITERR_OS, "Could not remove directory. File '%s' still present", path->ptr);
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type)
+{
+	int error;
+	git_buf p = GIT_BUF_INIT;
+
+	error = git_buf_sets(&p, path);
+	if (!error)
+		error = _rmdir_recurs_foreach(&removal_type, &p);
+	git_buf_free(&p);
 	return error;
 }
 
-static int retrieve_previous_path_component_start(const char *path)
+int git_futils_find_global_file(git_buf *path, const char *filename)
 {
-	int offset, len, start = 0;
-	
-	len = strlen(path);
-	offset = len - 1;
+	const char *home = getenv("HOME");
 
-	/* Skip leading slash */
-	if (path[start] == '/')
-		start++;
+#ifdef GIT_WIN32
+	if (home == NULL)
+		home = getenv("USERPROFILE");
+#endif
 
-	/* Skip trailing slash */
-	if (path[offset] == '/')
-		offset--;
-
-	if (offset < 0)
-		return GIT_ERROR;
-
-	while (offset > start && path[offset-1] != '/') {
-		offset--;
+	if (home == NULL) {
+		giterr_set(GITERR_OS, "Global file lookup failed. "
+			"Cannot locate the user's home directory");
+		return -1;
 	}
 
-	return offset;
+	if (git_buf_joinpath(path, home, filename) < 0)
+		return -1;
+
+	if (git_path_exists(path->ptr) == false) {
+		git_buf_clear(path);
+		return GIT_ENOTFOUND;
+	}
+
+	return 0;
 }
 
-int gitfo_prettify_dir_path(char *buffer_out, const char *path)
+#ifdef GIT_WIN32
+typedef struct {
+	wchar_t *path;
+	DWORD len;
+} win32_path;
+
+static const win32_path *win32_system_root(void)
 {
-	int len = 0, segment_len, only_dots;
-	char *current;
-	const char *buffer_out_start, *buffer_end;
+	static win32_path s_root = { 0, 0 };
 
-	buffer_out_start = buffer_out;
-	current = (char *)path;
-	buffer_end = path + strlen(path);
+	if (s_root.path == NULL) {
+		const wchar_t *root_tmpl = L"%PROGRAMFILES%\\Git\\etc\\";
 
-	while (current < buffer_end) {
-		/* Prevent multiple slashes from being added to the output */
-		if (*current == '/' && len > 0 && buffer_out_start[len - 1] == '/') {
-			current++;
-			continue;
-		}
-		
-		only_dots = 1;
-		segment_len = 0;
-
-		/* Copy path segment to the output */
-		while (current < buffer_end && *current !='/')
-		{
-			only_dots &= (*current == '.');
-			*buffer_out++ = *current++;
-			segment_len++;
-			len++;
+		s_root.len = ExpandEnvironmentStringsW(root_tmpl, NULL, 0);
+		if (s_root.len <= 0) {
+			giterr_set(GITERR_OS, "Failed to expand environment strings");
+			return NULL;
 		}
 
-		/* Skip current directory */
-		if (only_dots && segment_len == 1)
-		{
-			current++;
-			buffer_out -= segment_len;
-			len -= segment_len;
-			continue;
+		s_root.path = git__calloc(s_root.len, sizeof(wchar_t));
+		if (s_root.path == NULL)
+			return NULL;
+
+		if (ExpandEnvironmentStringsW(root_tmpl, s_root.path, s_root.len) != s_root.len) {
+			giterr_set(GITERR_OS, "Failed to expand environment strings");
+			git__free(s_root.path);
+			s_root.path = NULL;
+			return NULL;
 		}
-
-		/* Handle the double-dot upward directory navigation */
-		if (only_dots && segment_len == 2)
-		{
-			current++;
-			buffer_out -= segment_len;
-
-			*buffer_out ='\0';
-			len = retrieve_previous_path_component_start(buffer_out_start);
-			if (len < GIT_SUCCESS)
-				return GIT_EINVALIDPATH;
-
-			buffer_out = (char *)buffer_out_start + len;
-			continue;
-		}
-
-		/* Guard against potential multiple dot path traversal (cf http://cwe.mitre.org/data/definitions/33.html) */
-		if (only_dots &&segment_len > 0)
-			return GIT_EINVALIDPATH;
-
-		*buffer_out++ = '/';
-		len++;
 	}
 
-	*buffer_out = '\0';
-
-	return GIT_SUCCESS;
+	return &s_root;
 }
 
-int gitfo_prettify_file_path(char *buffer_out, const char *path)
+static int win32_find_system_file(git_buf *path, const char *filename)
 {
-	int error, path_len, i;
-	const char* pattern = "/..";
+	int error = 0;
+	const win32_path *root = win32_system_root();
+	size_t len;
+	wchar_t *file_utf16 = NULL, *scan;
+	char *file_utf8 = NULL;
 
-	path_len = strlen(path);
+	if (!root || !filename || (len = strlen(filename)) == 0)
+		return GIT_ENOTFOUND;
 
-	/* Let's make sure the filename doesn't end with "/", "/." or "/.." */
-	for (i = 1; path_len > i && i < 4; i++) {
-		if (!strncmp(path + path_len - i, pattern, i))
-			return GIT_EINVALIDPATH;
+	/* allocate space for wchar_t path to file */
+	file_utf16 = git__calloc(root->len + len + 2, sizeof(wchar_t));
+	GITERR_CHECK_ALLOC(file_utf16);
+
+	/* append root + '\\' + filename as wchar_t */
+	memcpy(file_utf16, root->path, root->len * sizeof(wchar_t));
+
+	if (*filename == '/' || *filename == '\\')
+		filename++;
+
+	if (gitwin_append_utf16(file_utf16 + root->len - 1, filename, len + 1) !=
+		(int)len + 1) {
+		error = -1;
+		goto cleanup;
 	}
 
-	error =  gitfo_prettify_dir_path(buffer_out, path);
-	if (error < GIT_SUCCESS)
-		return error;
+	for (scan = file_utf16; *scan; scan++)
+		if (*scan == L'/')
+			*scan = L'\\';
 
-	path_len = strlen(buffer_out);
-	if (path_len < 2)
-		return GIT_EINVALIDPATH;
+	/* check access */
+	if (_waccess(file_utf16, F_OK) < 0) {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
 
-	/* Remove the trailing slash */
-	buffer_out[path_len - 1] = '\0';
+	/* convert to utf8 */
+	if ((file_utf8 = gitwin_from_utf16(file_utf16)) == NULL)
+		error = -1;
+	else {
+		git_path_mkposix(file_utf8);
+		git_buf_attach(path, file_utf8, 0);
+	}
 
-	return GIT_SUCCESS;
+cleanup:
+	git__free(file_utf16);
+
+	return error;
+}
+#endif
+
+int git_futils_find_system_file(git_buf *path, const char *filename)
+{
+	if (git_buf_joinpath(path, "/etc", filename) < 0)
+		return -1;
+
+	if (git_path_exists(path->ptr) == true)
+		return 0;
+
+	git_buf_clear(path);
+
+#ifdef GIT_WIN32
+	return win32_find_system_file(path, filename);
+#else
+	return GIT_ENOTFOUND;
+#endif
 }

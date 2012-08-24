@@ -1,17 +1,15 @@
 /*
- * SHA-1 implementation.
+ * Copyright (C) 2009-2012 the libgit2 contributors
  *
- * Copyright (C) 2005 Paul Mackerras <paulus@samba.org>
- *
- * This version assumes we are running on a big-endian machine.
- * It calls an external sha1_core() to process blocks of 64 bytes.
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
  */
 #include <stdio.h>
 #include <string.h>
 #include "sha1.h"
 
 extern void ppc_sha1_core(uint32_t *hash, const unsigned char *p,
-			  unsigned int nblocks);
+			 unsigned int nblocks);
 
 int ppc_SHA1_Init(ppc_SHA_CTX *c)
 {

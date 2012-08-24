@@ -1,4 +1,5 @@
-
+/tests-clar/clar.h
+/tests-clar/clar_main.c
 /apidocs
 /trash-*.exe
 /libgit2.pc
@@ -15,7 +16,13 @@ build/
 tests/tmp/
 msvc/Debug/
 msvc/Release/
+*.sln
 *.suo
-*.user
+*.vc*proj*
 *.sdf
 *.opensdf
+*.aps
+CMake*
+*.cmake
+.DS_Store
+*~

@@ -1,0 +1,3 @@
+# A variable name on its own is valid
+[some.section]
+		variable

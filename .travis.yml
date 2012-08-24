@@ -1,0 +1,38 @@
+# Travis-CI Build for libgit2
+# see travis-ci.org for details
+
+# As CMake is not officially supported we use erlang VMs
+language: erlang
+
+# Settings to try
+env:
+  - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
+  - OPTIONS="-DBUILD_CLAR=ON"
+      
+# Make sure CMake is installed
+install:
+ - sudo apt-get install cmake
+
+# Run the Build script
+script:
+ - mkdir _build
+ - cd _build
+ - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
+ - cmake --build . --target install
+
+# Run Tests
+after_script:
+ - ctest -V .
+
+# Only watch the development branch
+branches:
+ only:
+   - development
+   
+# Notify development list when needed
+notifications:
+ recipients:
+   - vicent@github.com 
+ email:
+   on_success: change
+   on_failure: always
