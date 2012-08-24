@@ -13,6 +13,7 @@
 #include "repository.h"
 
 #define GIT_CONFIG_FILENAME ".gitconfig"
+#define GIT_CONFIG_FILENAME_ALT ".config/git/config"
 #define GIT_CONFIG_FILENAME_INREPO "config"
 #define GIT_CONFIG_FILENAME_SYSTEM "gitconfig"
 #define GIT_CONFIG_FILE_MODE 0666

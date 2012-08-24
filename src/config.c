@@ -449,7 +449,12 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 
 int git_config_find_global_r(git_buf *path)
 {
-	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
+	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
+
+	if (error == GIT_ENOTFOUND)
+		error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
+
+	return error;
 }
 
 int git_config_find_global(char *global_config_path, size_t length)
