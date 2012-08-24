@@ -220,14 +220,12 @@ static void normalize_options(git_checkout_opts *normalized, git_checkout_opts *
 		normalized->file_open_flags = O_CREAT | O_TRUNC | O_WRONLY;
 }
 
-int git_checkout_tree(
+int git_checkout_index(
 	git_repository *repo,
-	git_object *treeish,
 	git_checkout_opts *opts,
 	git_indexer_stats *stats)
 {
 	git_index *index = NULL;
-	git_tree *tree = NULL;
 	git_diff_list *diff = NULL;
 	git_indexer_stats dummy_stats;
 
@@ -239,24 +237,10 @@ int git_checkout_tree(
 
 	int error;
 
-	assert(repo && treeish);
+	assert(repo);
 
 	if ((git_repository__ensure_not_bare(repo, "checkout")) < 0)
 		return GIT_EBAREREPO;
-
-	if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
-		giterr_set(GITERR_INVALID, "Provided treeish cannot be peeled into a tree.");
-		return GIT_ERROR;
-	}
-
-	if ((error = git_repository_index(&index, repo)) < 0)
-		goto cleanup;
-
-	if ((error = git_index_read_tree(index, tree, NULL)) < 0)
-		goto cleanup;
-
-	if ((error = git_index_write(index)) < 0)
-		goto cleanup;
 
 	diff_opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
 
@@ -277,6 +261,10 @@ int git_checkout_tree(
 		stats = &dummy_stats;
 
 	stats->processed = 0;
+
+	if ((git_repository_index(&index, repo)) < 0)
+		goto cleanup;
+
 	stats->total = git_index_entrycount(index);
 
 	memset(&data, 0, sizeof(data));
@@ -293,10 +281,44 @@ int git_checkout_tree(
 	error = git_diff_foreach(diff, &data, checkout_diff_fn, NULL, NULL);
 
 cleanup:
+	git_index_free(index);
 	git_diff_list_free(diff);
+	git_buf_free(&workdir);
+	return error;
+}
+
+int git_checkout_tree(
+	git_repository *repo,
+	git_object *treeish,
+	git_checkout_opts *opts,
+	git_indexer_stats *stats)
+{
+	git_index *index = NULL;
+	git_tree *tree = NULL;
+
+	int error;
+
+	assert(repo && treeish);
+
+	if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
+		giterr_set(GITERR_INVALID, "Provided treeish cannot be peeled into a tree.");
+		return GIT_ERROR;
+	}
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto cleanup;
+
+	if ((error = git_index_read_tree(index, tree, NULL)) < 0)
+		goto cleanup;
+
+	if ((error = git_index_write(index)) < 0)
+		goto cleanup;
+
+	error = git_checkout_index(repo, opts, stats);
+
+cleanup:
 	git_index_free(index);
 	git_tree_free(tree);
-	git_buf_free(&workdir);
 	return error;
 }
 
