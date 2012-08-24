@@ -19,6 +19,8 @@ GIT_BEGIN_DECL
 typedef struct git_indexer_stats {
 	unsigned int total;
 	unsigned int processed;
+	unsigned int received;
+	unsigned int data_received;
 } git_indexer_stats;
 
 

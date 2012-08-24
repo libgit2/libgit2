@@ -287,7 +287,7 @@ typedef enum git_remote_completion_type {
  * Set the calbacks to be called by the remote.
  */
 struct git_remote_callbacks {
-	int (*progress)(const char *str, void *data);
+	void (*progress)(const char *str, int len, void *data);
 	int (*completion)(git_remote_completion_type type, void *data);
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
 	void *data;

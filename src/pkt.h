@@ -24,6 +24,8 @@ enum git_pkt_type {
 	GIT_PKT_PACK,
 	GIT_PKT_COMMENT,
 	GIT_PKT_ERR,
+	GIT_PKT_DATA,
+	GIT_PKT_PROGRESS,
 };
 
 /* Used for multi-ack */
@@ -64,6 +66,14 @@ typedef struct {
 	enum git_pkt_type type;
 	char comment[GIT_FLEX_ARRAY];
 } git_pkt_comment;
+
+typedef struct {
+	enum git_pkt_type type;
+	int len;
+	char data[GIT_FLEX_ARRAY];
+} git_pkt_data;
+
+typedef git_pkt_data git_pkt_progress;
 
 typedef struct {
 	enum git_pkt_type type;

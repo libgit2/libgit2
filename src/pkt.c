@@ -17,6 +17,7 @@
 #include "netops.h"
 #include "posix.h"
 #include "buffer.h"
+#include "protocol.h"
 
 #include <ctype.h>
 
@@ -124,6 +125,42 @@ static int err_pkt(git_pkt **out, const char *line, size_t len)
 	pkt->type = GIT_PKT_ERR;
 	memcpy(pkt->error, line, len);
 	pkt->error[len] = '\0';
+
+	*out = (git_pkt *) pkt;
+
+	return 0;
+}
+
+static int data_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_data *pkt;
+
+	line++;
+	len--;
+	pkt = git__malloc(sizeof(git_pkt_data) + len);
+	GITERR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_DATA;
+	pkt->len = (int) len;
+	memcpy(pkt->data, line, len);
+
+	*out = (git_pkt *) pkt;
+
+	return 0;
+}
+
+static int progress_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_progress *pkt;
+
+	line++;
+	len--;
+	pkt = git__malloc(sizeof(git_pkt_progress) + len);
+	GITERR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_PROGRESS;
+	pkt->len = (int) len;
+	memcpy(pkt->data, line, len);
 
 	*out = (git_pkt *) pkt;
 
@@ -263,8 +300,11 @@ int git_pkt_parse_line(
 
 	len -= PKT_LEN_SIZE; /* the encoded length includes its own size */
 
-	/* Assming the minimal size is actually 4 */
-	if (!git__prefixcmp(line, "ACK"))
+	if (*line == GIT_SIDE_BAND_DATA)
+		ret = data_pkt(head, line, len);
+	else if (*line == GIT_SIDE_BAND_PROGRESS)
+		ret = progress_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "ACK"))
 		ret = ack_pkt(head, line, len);
 	else if (!git__prefixcmp(line, "NAK"))
 		ret = nak_pkt(head);
@@ -301,6 +341,13 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
 	char oid[GIT_OID_HEXSZ +1] = {0};
 	unsigned int len;
 
+	/* Prefer side-band-64k if the server supports both */
+	if (caps->side_band) {
+		if (caps->side_band_64k)
+			git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND_64K);
+		else
+			git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND);
+	}
 	if (caps->ofs_delta)
 		git_buf_puts(&str, GIT_CAP_OFS_DELTA " ");
 

@@ -24,7 +24,7 @@
 
 typedef struct {
 	git_transport parent;
-	char buff[1024];
+	char buff[65536];
 #ifdef GIT_WIN32
 	WSADATA wsd;
 #endif

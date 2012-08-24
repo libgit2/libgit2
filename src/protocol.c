@@ -80,6 +80,20 @@ int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps)
 			continue;
 		}
 
+		/* Keep side-band check after side-band-64k */
+		if(!git__prefixcmp(ptr, GIT_CAP_SIDE_BAND_64K)) {
+			caps->common = caps->side_band_64k = 1;
+			ptr += strlen(GIT_CAP_SIDE_BAND_64K);
+			continue;
+		}
+
+		if(!git__prefixcmp(ptr, GIT_CAP_SIDE_BAND)) {
+			caps->common = caps->side_band = 1;
+			ptr += strlen(GIT_CAP_SIDE_BAND);
+			continue;
+		}
+
+
 		/* We don't know this capability, so skip it */
 		ptr = strchr(ptr, ' ');
 	}

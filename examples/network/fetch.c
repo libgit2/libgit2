@@ -14,6 +14,13 @@ struct dl_data {
 	int finished;
 };
 
+static void progress_cb(const char *str, int len, void *data)
+{
+	data = data;
+	printf("remote: %.*s", len, str);
+	fflush(stdout); /* We don't have the \n to force the flush */
+}
+
 static void *download(void *ptr)
 {
 	struct dl_data *data = (struct dl_data *)ptr;
@@ -43,6 +50,7 @@ exit:
 static int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
 	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
+	data = data;
 
 	git_oid_fmt(b_str, b);
 	b_str[GIT_OID_HEXSZ] = '\0';
@@ -78,6 +86,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// Set up the callbacks (only update_tips for now)
 	memset(&callbacks, 0, sizeof(callbacks));
 	callbacks.update_tips = &update_cb;
+	callbacks.progress = &progress_cb;
 	git_remote_set_callbacks(remote, &callbacks);
 
 	// Set up the information for the background worker thread
@@ -96,7 +105,10 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// the download rate.
 	do {
 		usleep(10000);
-		printf("\rReceived %d/%d objects in %zu bytes", stats.processed, stats.total, bytes);
+
+		if (stats.total > 0)
+			printf("Received %d/%d objects (%d) in %d bytes\r",
+			       stats.received, stats.total, stats.processed, bytes);
 	} while (!data.finished);
 
 	if (data.ret < 0)

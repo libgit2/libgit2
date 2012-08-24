@@ -386,6 +386,9 @@ int git_remote_connect(git_remote *remote, int direction)
 	if (git_transport_new(&t, url) < 0)
 		return -1;
 
+	t->progress_cb = remote->callbacks.progress;
+	t->cb_data = remote->callbacks.data;
+
 	t->check_cert = remote->check_cert;
 	if (t->connect(t, direction) < 0) {
 		goto on_error;
@@ -646,4 +649,9 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 	assert(remote && callbacks);
 
 	memcpy(&remote->callbacks, callbacks, sizeof(git_remote_callbacks));
+
+	if (remote->transport) {
+		remote->transport->progress_cb = remote->callbacks.progress;
+		remote->transport->cb_data = remote->callbacks.data;
+	}
 }
