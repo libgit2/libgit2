@@ -51,6 +51,14 @@
 
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
 
+GIT_INLINE(int) giterr__no_message(int error) 
+{
+	giterr_clear();
+	return error;
+}
+
+#define GITERR_OK giterr__no_message(0)
+
 void giterr_set_oom(void);
 void giterr_set(int error_class, const char *string, ...);
 void giterr_clear(void);

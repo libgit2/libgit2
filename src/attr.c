@@ -188,7 +188,7 @@ int git_attr_foreach(
 
 				error = callback(assign->name, assign->value, payload);
 				if (error) {
-					error = GIT_EUSER;
+					error = giterr__no_message(GIT_EUSER);
 					goto cleanup;
 				}
 			}
@@ -267,14 +267,16 @@ static int load_attr_file(
 	git_buf content = GIT_BUF_INIT;
 	struct stat st;
 
-	if (p_stat(filename, &st) < 0)
+	if (p_stat(filename, &st) < 0) {
+		giterr_set(GITERR_OS, "Failed to stat file '%s'", filename);
 		return GIT_ENOTFOUND;
+	}
 
 	if (sig != NULL &&
 		(git_time_t)st.st_mtime == sig->seconds &&
 		(git_off_t)st.st_size == sig->size &&
 		(unsigned int)st.st_ino == sig->ino)
-		return GIT_ENOTFOUND;
+		return giterr__no_message(GIT_ENOTFOUND);
 
 	error = git_futils_readbuffer_updated(&content, filename, NULL, NULL);
 	if (error < 0)
@@ -288,7 +290,7 @@ static int load_attr_file(
 
 	*data = git_buf_detach(&content);
 
-	return 0;
+	return GITERR_OK;
 }
 
 static int load_attr_blob_from_index(
@@ -309,13 +311,13 @@ static int load_attr_blob_from_index(
 	entry = git_index_get(index, error);
 
 	if (old_oid && git_oid_cmp(old_oid, &entry->oid) == 0)
-		return GIT_ENOTFOUND;
+		return giterr__no_message(GIT_ENOTFOUND);
 
 	if ((error = git_blob_lookup(blob, repo, &entry->oid)) < 0)
 		return error;
 
 	*content = git_blob_rawcontent(*blob);
-	return 0;
+	return GITERR_OK;
 }
 
 static int load_attr_from_cache(
@@ -330,7 +332,7 @@ static int load_attr_from_cache(
 	*file = NULL;
 
 	if (!cache || !cache->files)
-		return 0;
+		return GITERR_OK;
 
 	if (git_buf_printf(&cache_key, "%d#%s", (int)source, relative_path) < 0)
 		return -1;
@@ -342,7 +344,7 @@ static int load_attr_from_cache(
 	if (git_strmap_valid_index(cache->files, cache_pos))
 		*file = git_strmap_value_at(cache->files, cache_pos);
 
-	return 0;
+	return GITERR_OK;
 }
 
 int git_attr_cache__internal_file(
@@ -350,13 +352,13 @@ int git_attr_cache__internal_file(
 	const char *filename,
 	git_attr_file **file)
 {
-	int error = 0;
+	int error = GITERR_OK;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	khiter_t cache_pos = git_strmap_lookup_index(cache->files, filename);
 
 	if (git_strmap_valid_index(cache->files, cache_pos)) {
 		*file = git_strmap_value_at(cache->files, cache_pos);
-		return 0;
+		return GITERR_OK;
 	}
 
 	if (git_attr_file__new(file, 0, filename, &cache->pool) < 0)
@@ -364,7 +366,7 @@ int git_attr_cache__internal_file(
 
 	git_strmap_insert(cache->files, (*file)->key + 2, *file, error);
 	if (error > 0)
-		error = 0;
+		error = GITERR_OK;
 
 	return error;
 }
@@ -377,7 +379,7 @@ int git_attr_cache__push_file(
 	git_attr_file_parser parse,
 	git_vector *stack)
 {
-	int error = 0;
+	int error = GITERR_OK;
 	git_buf path = GIT_BUF_INIT;
 	const char *workdir = git_repository_workdir(repo);
 	const char *relfile, *content = NULL;
@@ -419,10 +421,9 @@ int git_attr_cache__push_file(
 
 	if (error) {
 		/* not finding a file is not an error for this function */
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = 0;
-		}
+		if (error == GIT_ENOTFOUND)
+			error = GITERR_OK;
+
 		goto finish;
 	}
 
@@ -440,7 +441,7 @@ int git_attr_cache__push_file(
 
 	git_strmap_insert(cache->files, file->key, file, error); //-V595
 	if (error > 0)
-		error = 0;
+		error = GITERR_OK;
 
 	/* remember "cache buster" file signature */
 	if (blob)
@@ -506,7 +507,7 @@ int git_attr_cache__decide_sources(
 
 static int push_one_attr(void *ref, git_buf *path)
 {
-	int error = 0, n_src, i;
+	int error = GITERR_OK, n_src, i;
 	attr_walk_up_info *info = (attr_walk_up_info *)ref;
 	git_attr_file_source src[2];
 
@@ -578,10 +579,8 @@ static int collect_attr_files(
 		error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
 		if (!error)
 			error = push_attr_file(repo, files, NULL, dir.ptr);
-		else if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = 0;
-		}
+		else if (error == GIT_ENOTFOUND)
+			error = GITERR_OK;
 	}
 
  cleanup:
@@ -600,7 +599,7 @@ int git_attr_cache__init(git_repository *repo)
 	git_config *cfg;
 
 	if (cache->initialized)
-		return 0;
+		return GITERR_OK;
 
 	/* cache config settings for attributes and ignores */
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
@@ -690,10 +689,10 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 
 	/* TODO: generate warning log if (macro->assigns.length == 0) */
 	if (macro->assigns.length == 0)
-		return 0;
+		return GITERR_OK;
 
 	git_strmap_insert(macros, macro->match.pattern, macro, error);
-	return (error < 0) ? -1 : 0;
+	return (error < 0) ? -1 : GITERR_OK;
 }
 
 git_attr_rule *git_attr_cache__lookup_macro(
