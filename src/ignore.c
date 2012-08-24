@@ -205,6 +205,16 @@ cleanup:
 	return 0;
 }
 
+static int get_internal_ignores(git_attr_file **ign, git_repository *repo)
+{
+	int error;
+
+	if (!(error = git_attr_cache__init(repo)))
+		error = git_attr_cache__internal_file(repo, GIT_IGNORE_INTERNAL, ign);
+
+	return error;
+}
+
 int git_ignore_add_rule(
 	git_repository *repo,
 	const char *rules)
@@ -212,10 +222,7 @@ int git_ignore_add_rule(
 	int error;
 	git_attr_file *ign_internal;
 
-	error = git_attr_cache__internal_file(
-		repo, GIT_IGNORE_INTERNAL, &ign_internal);
-
-	if (!error && ign_internal != NULL)
+	if (!(error = get_internal_ignores(&ign_internal, repo)))
 		error = parse_ignore_file(repo, rules, ign_internal);
 
 	return error;
@@ -227,10 +234,7 @@ int git_ignore_clear_internal_rules(
 	int error;
 	git_attr_file *ign_internal;
 
-	error = git_attr_cache__internal_file(
-		repo, GIT_IGNORE_INTERNAL, &ign_internal);
-
-	if (!error && ign_internal != NULL)
+	if (!(error = get_internal_ignores(&ign_internal, repo)))
 		git_attr_file__clear_rules(ign_internal);
 
 	return error;

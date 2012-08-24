@@ -199,3 +199,18 @@ void test_status_ignore__adding_internal_ignores(void)
 	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
 	cl_assert(ignored);
 }
+
+void test_status_ignore__add_internal_as_first_thing(void)
+{
+	int ignored;
+	const char *add_me = "\n#################\n## Eclipse\n#################\n\n*.pydevproject\n.project\n.metadata\nbin/\ntmp/\n*.tmp\n\n";
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(git_ignore_add_rule(g_repo, add_me));
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.tmp"));
+	cl_assert(ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(!ignored);
+}
