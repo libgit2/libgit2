@@ -306,10 +306,7 @@ static int no_sideband(git_indexer_stream *idx, gitno_buffer *buf, git_off_t *by
 			return -1;
 
 		*bytes += recvd;
-	} while(recvd > 0 && stats->data_received);
-
-	if (!stats->data_received)
-		giterr_set(GITERR_NET, "Early EOF while downloading packfile");
+	} while(recvd > 0);
 
 	if (git_indexer_stream_finalize(idx, stats))
 		return -1;
@@ -374,13 +371,10 @@ int git_fetch__download_pack(
 			git__free(pkt);
 			break;
 		}
-	} while (!stats->data_received);
+	} while (1);
 
-	if (!stats->data_received)
-		giterr_set(GITERR_NET, "Early EOF while downloading packfile");
-
-	if (git_indexer_stream_finalize(idx, stats))
-		return -1;
+	if (git_indexer_stream_finalize(idx, stats) < 0)
+		goto on_error;
 
 	git_indexer_stream_free(idx);
 	return 0;

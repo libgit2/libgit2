@@ -383,14 +383,6 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		stats->received++;
 	}
 
-	/*
-	 * If we've received all of the objects and our packfile is
-	 * one hash beyond the end of the last object, all of the
-	 * packfile is here.
-	 */
-	if (stats->received == idx->nr_objects && idx->pack->mwf.size >= idx->off + 20)
-		stats->data_received = 1;
-
 	return 0;
 
 on_error:
