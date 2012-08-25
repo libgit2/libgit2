@@ -43,7 +43,7 @@ typedef struct {
 	char *host;
 	char *port;
 	char *service;
-	char buffer[4096];
+	char buffer[65536];
 #ifdef GIT_WIN32
 	WSADATA wsd;
 #endif
