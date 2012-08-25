@@ -587,9 +587,11 @@ void git_indexer_stream_free(git_indexer_stream *idx)
 	git_vector_foreach(&idx->objects, i, e)
 		git__free(e);
 	git_vector_free(&idx->objects);
-	git_vector_foreach(&idx->pack->cache, i, pe)
-		git__free(pe);
-	git_vector_free(&idx->pack->cache);
+	if (idx->pack) {
+		git_vector_foreach(&idx->pack->cache, i, pe)
+			git__free(pe);
+		git_vector_free(&idx->pack->cache);
+	}
 	git_vector_foreach(&idx->deltas, i, delta)
 		git__free(delta);
 	git_vector_free(&idx->deltas);
