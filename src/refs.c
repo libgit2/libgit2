@@ -68,11 +68,6 @@ static int reference_path_available(git_repository *repo,
 static int reference_delete(git_reference *ref);
 static int reference_lookup(git_reference *ref);
 
-/* name normalization */
-static int normalize_name(char *buffer_out, size_t out_size,
-	const char *name, int is_oid_ref);
-
-
 void git_reference_free(git_reference *reference)
 {
 	if (reference == NULL)
@@ -1099,9 +1094,12 @@ int git_reference_lookup_resolved(
 	scan->name = git__calloc(GIT_REFNAME_MAX + 1, sizeof(char));
 	GITERR_CHECK_ALLOC(scan->name);
 
-	if ((result = normalize_name(scan->name, GIT_REFNAME_MAX, name, 0)) < 0) {
-		git_reference_free(scan);
-		return result;
+	if ((result = git_reference__normalize_name(
+		scan->name,
+		GIT_REFNAME_MAX,
+		name)) < 0) {
+			git_reference_free(scan);
+			return result;
 	}
 
 	scan->target.symbolic = git__strdup(scan->name);
@@ -1198,8 +1196,11 @@ int git_reference_create_symbolic(
 	char normalized[GIT_REFNAME_MAX];
 	git_reference *ref = NULL;
 
-	if (normalize_name(normalized, sizeof(normalized), name, 0) < 0)
-		return -1;
+	if (git_reference__normalize_name(
+		normalized,
+		sizeof(normalized),
+		name) < 0)
+			return -1;
 
 	if (reference_can_write(repo, normalized, NULL, force) < 0)
 		return -1;
@@ -1234,8 +1235,11 @@ int git_reference_create_oid(
 	git_reference *ref = NULL;
 	char normalized[GIT_REFNAME_MAX];
 
-	if (normalize_name(normalized, sizeof(normalized), name, 1) < 0)
-		return -1;
+	if (git_reference__normalize_name_oid(
+		normalized,
+		sizeof(normalized),
+		name) < 0)
+			return -1;
 
 	if (reference_can_write(repo, normalized, NULL, force) < 0)
 		return -1;
@@ -1314,8 +1318,11 @@ int git_reference_set_target(git_reference *ref, const char *target)
 		return -1;
 	}
 
-	if (normalize_name(normalized, sizeof(normalized), target, 0))
-		return -1;
+	if (git_reference__normalize_name(
+		normalized,
+		sizeof(normalized),
+		target))
+			return -1;
 
 	git__free(ref->target.symbolic);
 	ref->target.symbolic = git__strdup(normalized);
@@ -1327,15 +1334,23 @@ int git_reference_set_target(git_reference *ref, const char *target)
 int git_reference_rename(git_reference *ref, const char *new_name, int force)
 {
 	int result;
+	unsigned int normalization_flags;
 	git_buf aux_path = GIT_BUF_INIT;
 	char normalized[GIT_REFNAME_MAX];
 
 	const char *head_target = NULL;
 	git_reference *head = NULL;
 
-	if (normalize_name(normalized, sizeof(normalized),
-		new_name, ref->flags & GIT_REF_OID) < 0)
-		return -1;
+	normalization_flags = ref->flags & GIT_REF_SYMBOLIC ?
+		GIT_REF_FORMAT_ALLOW_ONELEVEL
+		: GIT_REF_FORMAT_NORMAL;
+
+	if (git_reference_normalize_name(
+		normalized,
+		sizeof(normalized),
+		new_name,
+		normalization_flags) < 0)
+			return -1;
 
 	if (reference_can_write(ref->owner, normalized, ref->name, force) < 0)
 		return -1;
@@ -1565,11 +1580,11 @@ static int is_valid_ref_char(char ch)
 	}
 }
 
-static int normalize_name(
+int git_reference_normalize_name(
 	char *buffer_out,
-	size_t out_size,
+	size_t buffer_size,
 	const char *name,
-	int is_oid_ref)
+	unsigned int flags)
 {
 	const char *name_end, *buffer_out_start;
 	const char *current;
@@ -1577,12 +1592,17 @@ static int normalize_name(
 
 	assert(name && buffer_out);
 
+	if (flags & GIT_REF_FORMAT_REFSPEC_PATTERN) {
+		giterr_set(GITERR_INVALID, "Unimplemented");
+		return -1;
+	}
+
 	buffer_out_start = buffer_out;
 	current = name;
 	name_end = name + strlen(name);
 
 	/* Terminating null byte */
-	out_size--;
+	buffer_size--;
 
 	/* A refname can not be empty */
 	if (name_end == name)
@@ -1592,7 +1612,7 @@ static int normalize_name(
 	if (*(name_end - 1) == '.' || *(name_end - 1) == '/')
 		goto invalid_name;
 
-	while (current < name_end && out_size) {
+	while (current < name_end && buffer_size > 0) {
 		if (!is_valid_ref_char(*current))
 			goto invalid_name;
 
@@ -1615,19 +1635,29 @@ static int normalize_name(
 		}
 
 		if (*current == '/')
-			contains_a_slash = 1;
+			if (buffer_out > buffer_out_start)
+				contains_a_slash = 1;
+			else {
+				current++;
+				continue;
+			}
+
 
 		*buffer_out++ = *current++;
-		out_size--;
+		buffer_size--;
 	}
 
-	if (!out_size)
-		goto invalid_name;
+	if (current < name_end) {
+		giterr_set(
+		GITERR_REFERENCE,
+		"The provided buffer is too short to hold the normalization of '%s'", name);
+		return GIT_EBUFS;
+	}
 
 	/* Object id refname have to contain at least one slash, except
 	 * for HEAD in a detached state or MERGE_HEAD if we're in the
 	 * middle of a merge */
-	if (is_oid_ref &&
+	if (!(flags & GIT_REF_FORMAT_ALLOW_ONELEVEL) &&
 		!contains_a_slash &&
 		strcmp(name, GIT_HEAD_FILE) != 0 &&
 		strcmp(name, GIT_MERGE_HEAD_FILE) != 0 &&
@@ -1640,18 +1670,12 @@ static int normalize_name(
 
 	*buffer_out = '\0';
 
-	/*
-	 * For object id references, name has to start with refs/. Again,
-	 * we need to allow HEAD to be in a detached state.
-	 */
-	if (is_oid_ref && !(git__prefixcmp(buffer_out_start, GIT_REFS_DIR) ||
-		strcmp(buffer_out_start, GIT_HEAD_FILE)))
-		goto invalid_name;
-
 	return 0;
 
 invalid_name:
-	giterr_set(GITERR_REFERENCE, "The given reference name is not valid");
+	giterr_set(
+		GITERR_REFERENCE,
+		"The given reference name '%s' is not valid", name);
 	return -1;
 }
 
@@ -1660,7 +1684,11 @@ int git_reference__normalize_name(
 	size_t out_size,
 	const char *name)
 {
-	return normalize_name(buffer_out, out_size, name, 0);
+	return git_reference_normalize_name(
+		buffer_out,
+		out_size,
+		name,
+		GIT_REF_FORMAT_ALLOW_ONELEVEL);
 }
 
 int git_reference__normalize_name_oid(
@@ -1668,7 +1696,11 @@ int git_reference__normalize_name_oid(
 	size_t out_size,
 	const char *name)
 {
-	return normalize_name(buffer_out, out_size, name, 1);
+	return git_reference_normalize_name(
+		buffer_out,
+		out_size,
+		name,
+		GIT_REF_FORMAT_NORMAL);
 }
 
 #define GIT_REF_TYPEMASK (GIT_REF_OID | GIT_REF_SYMBOLIC)
