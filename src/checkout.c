@@ -27,7 +27,7 @@ GIT_BEGIN_DECL
 
 typedef struct tree_walk_data
 {
-	git_progress *progress;
+	git_rational *progress;
 	git_checkout_opts *opts;
 	git_repository *repo;
 	git_odb *odb;
@@ -145,15 +145,15 @@ static int checkout_walker(const char *path, const git_tree_entry *entry, void *
 	}
 
 	git_buf_free(&fnbuf);
-	data->progress->current++;
+	data->progress->numerator++;
 	return retcode;
 }
 
 
-int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_progress *progress)
+int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_rational *progress)
 {
 	int retcode = GIT_ERROR;
-	git_progress dummy_progress;
+	git_rational dummy_progress;
 	git_checkout_opts default_opts = {0};
 	git_tree *tree;
 	tree_walk_data payload;
@@ -186,7 +186,7 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_progres
 		}
 	}
 
-	progress->total = progress->current = 0;
+	progress->numerator = progress->denominator = 0;
 	payload.progress = progress;
 	payload.opts = opts;
 	payload.repo = repo;
@@ -195,7 +195,7 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_progres
 	if (!git_repository_head_tree(&tree, repo)) {
 		git_index *idx;
 		if (!(retcode = git_repository_index(&idx, repo))) {
-			if (!(retcode = git_index_read_tree(idx, tree, progress))) {
+			if (!(retcode = git_index_read_tree(idx, tree, &progress->denominator))) {
 				git_index_write(idx);
 				retcode = git_tree_walk(tree, checkout_walker, GIT_TREEWALK_POST, &payload);
 			}
@@ -211,7 +211,7 @@ int git_checkout_head(git_repository *repo, git_checkout_opts *opts, git_progres
 
 int git_checkout_reference(git_reference *ref,
 									git_checkout_opts *opts,
-									git_progress *progress)
+									git_rational *progress)
 {
 	git_repository *repo= git_reference_owner(ref);
 	git_reference *head = NULL;

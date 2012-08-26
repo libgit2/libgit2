@@ -44,7 +44,7 @@ typedef struct git_checkout_opts {
  */
 GIT_EXTERN(int) git_checkout_head(git_repository *repo,
 											 git_checkout_opts *opts,
-											 git_progress *progress);
+											 git_rational *progress);
 
 
 
@@ -58,7 +58,7 @@ GIT_EXTERN(int) git_checkout_head(git_repository *repo,
  */
 GIT_EXTERN(int) git_checkout_reference(git_reference *ref,
 													git_checkout_opts *opts,
-													git_progress *progress);
+													git_rational *progress);
 
 
 /** @} */
