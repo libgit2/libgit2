@@ -29,7 +29,12 @@ ENDIF()
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include deps/http-parser)
 
-FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+IF (WIN32 AND NOT MINGW)
+	ADD_DEFINITIONS(-DGIT_WINHTTP)
+ELSE ()
+	FIND_PACKAGE(OpenSSL)
+	FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+ENDIF()
 
 # Specify sha1 implementation
 IF (SHA1_TYPE STREQUAL "ppc")
@@ -75,7 +80,7 @@ OPTION (PROFILE "Generate profiling information" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
-	# Not using __stdcall with the CRT causes problems
+	# Default to stdcall, as that's what the CLR expects and how the Windows API is built
 	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
 
 	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
@@ -106,7 +111,6 @@ IF (NOT CMAKE_BUILD_TYPE)
 	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 ENDIF ()
 
-FIND_PACKAGE(OpenSSL)
 IF (OPENSSL_FOUND)
   ADD_DEFINITIONS(-DGIT_SSL)
   INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})

@@ -28,7 +28,7 @@ int git_libgit2_capabilities()
 #ifdef GIT_THREADS
 		| GIT_CAP_THREADS
 #endif
-#ifdef GIT_SSL
+#if defined(GIT_SSL) || defined(GIT_WINHTTP)
 		| GIT_CAP_HTTPS
 #endif
 	;
