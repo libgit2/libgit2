@@ -280,8 +280,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 	struct git_pack_header hdr;
 	size_t processed;
 	git_mwindow_file *mwf = &idx->pack->mwf;
-	git_rational *transfer_progress, *index_progress;
-	git_rational dummy_progress1 = {0}, dummy_progress2 = {0};
+	git_progress *transfer_progress, *index_progress;
+	git_progress dummy_progress1 = {0}, dummy_progress2 = {0};
 
 	assert(idx && data && stats);
 
@@ -333,8 +333,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 			return -1;
 
 		stats->processed = stats->received = stats->total = 0;
-		transfer_progress->numerator = index_progress->numerator = 0;
-		transfer_progress->denominator = index_progress->denominator = stats->total =
+		transfer_progress->current = index_progress->current = 0;
+		transfer_progress->total = index_progress->total = stats->total =
 			(unsigned int)idx->nr_objects;
 	}
 
@@ -372,7 +372,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 				return error;
 
 			stats->received++;
-			transfer_progress->numerator++;
+			transfer_progress->current++;
 			continue;
 		}
 
@@ -392,8 +392,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		stats->processed = (unsigned int)++processed;
 		stats->received++;
-		index_progress->numerator = processed;
-		transfer_progress->numerator = stats->received;
+		index_progress->current = processed;
+		transfer_progress->current = stats->received;
 	}
 
 	return 0;
@@ -442,7 +442,7 @@ static int resolve_deltas(git_indexer_stream *idx, git_indexer_stats *stats)
 
 		git__free(obj.data);
 		stats->processed++;
-		if (stats->index_progress) stats->index_progress->numerator++;
+		if (stats->index_progress) stats->index_progress->current++;
 	}
 
 	return 0;
@@ -808,8 +808,8 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 	int error;
 	struct entry *entry;
 	unsigned int left, processed;
-	git_rational *progress;
-	git_rational dummy_rational;
+	git_progress *progress;
+	git_progress dummy_rational;
 
 	assert(idx && stats);
 
@@ -822,8 +822,8 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		return error;
 
 	stats->total = (unsigned int)idx->nr_objects;
-	progress->numerator = stats->processed = processed = 0;
-	progress->denominator = stats->total;
+	progress->current = stats->processed = processed = 0;
+	progress->total = stats->total;
 
 	while (processed < idx->nr_objects) {
 		git_rawobj obj;
@@ -893,7 +893,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 
 		git__free(obj.data);
 
-		progress->numerator = stats->processed = ++processed;
+		progress->current = stats->processed = ++processed;
 	}
 
 cleanup:

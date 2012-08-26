@@ -37,18 +37,18 @@ void print_progress(git_progress_multistage *msp)
 
 	printf("Progress: ");
 	for (i=0; i < msp->count; i++) {
-		git_rational r = msp->stages[i];
+		git_progress r = msp->stages[i];
 		size_t percentage;
 
 		if (i != 0) printf(" / ");
 
-		percentage = r.denominator == 0
+		percentage = r.total == 0
 			? 0
-			: 100 * r.numerator / r.denominator;
+			: 100 * r.current / r.total;
 		composite_percentage += percentage;
 
-		/*printf(" %zu/%zu", r.numerator, r.denominator);*/
-		if (r.denominator == 0)
+		/*printf(" %zu/%zu", r.current, r.total);*/
+		if (r.total == 0)
 			printf("---%%");
 		else
 			printf("%3zu%%", percentage);

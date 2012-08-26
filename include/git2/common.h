@@ -90,25 +90,20 @@ typedef struct {
 	size_t count;
 } git_strarray;
 
-typedef struct git_rational {
-	size_t numerator;
-	size_t denominator;
-} git_rational;
-
 #define GIT_PROGRESS_STAGE_TRANSFER 0
 #define GIT_PROGRESS_STAGE_INDEX 1
 #define GIT_PROGRESS_STAGE_CHECKOUT 2
 
+typedef struct git_progress {
+	size_t current;
+	size_t total;
+} git_progress;
+
 typedef struct git_progress_multistage {
 	size_t count;
-	git_rational stages[8];
+	git_progress stages[8];
 	int stage_types[8];
 } git_progress_multistage;
-
-typedef struct git_progress {
-	size_t total;
-	size_t current;
-} git_progress;
 
 GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
