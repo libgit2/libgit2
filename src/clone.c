@@ -146,20 +146,26 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 
 static int setup_remotes_and_fetch(git_repository *repo,
 											  const char *origin_url,
-											  git_indexer_stats *fetch_stats)
+											  git_progress_multistage *progress)
 {
 	int retcode = GIT_ERROR;
 	git_remote *origin = NULL;
 	git_off_t bytes = 0;
-	git_indexer_stats dummy_stats;
+	git_indexer_stats dummy_stats = {0};
+	git_progress_multistage dummy_progress = {0};
 
-	if (!fetch_stats) fetch_stats = &dummy_stats;
+	if (!progress) progress = &dummy_progress;
+
+	/* Set up indexer stats to update multistage progress directly */
+	dummy_stats.transfer_progress = &progress->stages[0];
+	dummy_stats.index_progress = &progress->stages[1];
 
 	/* Create the "origin" remote */
 	if (!git_remote_add(&origin, repo, "origin", origin_url)) {
+
 		/* Connect and download everything */
 		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
-			if (!git_remote_download(origin, &bytes, fetch_stats)) {
+			if (!git_remote_download(origin, &bytes, &dummy_stats)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {
 					/* Point HEAD to the same ref as the remote's head */
@@ -193,21 +199,26 @@ static bool path_is_okay(const char *path)
 static int clone_internal(git_repository **out,
 								  const char *origin_url,
 								  const char *path,
-								  git_indexer_stats *fetch_stats,
+								  git_progress_multistage *progress,
 								  int is_bare)
 {
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
-	git_indexer_stats dummy_stats;
+	git_progress_multistage dummy_progress = {0};
 
-	if (!fetch_stats) fetch_stats = &dummy_stats;
+	if (!progress) progress = &dummy_progress;
 
 	if (!path_is_okay(path)) {
 		return GIT_ERROR;
 	}
 
+	progress->count = 3;
+	progress->stage_types[0] = GIT_PROGRESS_STAGE_TRANSFER;
+	progress->stage_types[1] = GIT_PROGRESS_STAGE_INDEX;
+	progress->stage_types[2] = GIT_PROGRESS_STAGE_CHECKOUT;
+
 	if (!(retcode = git_repository_init(&repo, path, is_bare))) {
-		if ((retcode = setup_remotes_and_fetch(repo, origin_url, fetch_stats)) < 0) {
+		if ((retcode = setup_remotes_and_fetch(repo, origin_url, progress)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
 			git_futils_rmdir_r(path, GIT_DIRREMOVAL_FILES_AND_DIRS);
@@ -223,26 +234,25 @@ static int clone_internal(git_repository **out,
 int git_clone_bare(git_repository **out,
 						 const char *origin_url,
 						 const char *dest_path,
-						 git_indexer_stats *fetch_stats)
+						 git_progress_multistage *progress)
 {
 	assert(out && origin_url && dest_path);
-	return clone_internal(out, origin_url, dest_path, fetch_stats, 1);
+	return clone_internal(out, origin_url, dest_path, progress, 1);
 }
 
 
 int git_clone(git_repository **out,
 				  const char *origin_url,
 				  const char *workdir_path,
-				  git_indexer_stats *fetch_stats,
-				  git_indexer_stats *checkout_stats,
+				  git_progress_multistage *progress,
 				  git_checkout_opts *checkout_opts)
 {
 	int retcode = GIT_ERROR;
 
 	assert(out && origin_url && workdir_path);
 
-	if (!(retcode = clone_internal(out, origin_url, workdir_path, fetch_stats, 0))) {
-		retcode = git_checkout_head(*out, checkout_opts, checkout_stats);
+	if (!(retcode = clone_internal(out, origin_url, workdir_path, progress, 0))) {
+		retcode = git_checkout_head(*out, checkout_opts, &progress->stages[2]);
 	}
 
 	return retcode;

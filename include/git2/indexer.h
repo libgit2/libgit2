@@ -20,6 +20,8 @@ typedef struct git_indexer_stats {
 	unsigned int total;
 	unsigned int processed;
 	unsigned int received;
+	git_progress *transfer_progress;
+	git_progress *index_progress;
 } git_indexer_stats;
 
 

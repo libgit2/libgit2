@@ -90,6 +90,21 @@ typedef struct {
 	size_t count;
 } git_strarray;
 
+#define GIT_PROGRESS_STAGE_TRANSFER 0
+#define GIT_PROGRESS_STAGE_INDEX 1
+#define GIT_PROGRESS_STAGE_CHECKOUT 2
+
+typedef struct git_progress {
+	size_t current;
+	size_t total;
+} git_progress;
+
+typedef struct git_progress_multistage {
+	size_t count;
+	git_progress stages[8];
+	int stage_types[8];
+} git_progress_multistage;
+
 GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
 

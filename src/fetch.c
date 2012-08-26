@@ -332,7 +332,12 @@ int git_fetch__download_pack(
 		goto on_error;
 
 	git_buf_free(&path);
-	memset(stats, 0, sizeof(git_indexer_stats));
+   stats->processed = stats->received = stats->total = 0;
+	if (stats->transfer_progress)
+		stats->transfer_progress->current = stats->transfer_progress->total = 0;
+	if (stats->index_progress)
+		stats->index_progress->current = stats->index_progress->total = 0;
+
 	*bytes = 0;
 
 	/*

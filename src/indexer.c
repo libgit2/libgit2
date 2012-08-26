@@ -10,6 +10,7 @@
 #include "git2/indexer.h"
 #include "git2/object.h"
 #include "git2/oid.h"
+#include "git2/common.h"
 
 #include "common.h"
 #include "pack.h"
@@ -277,10 +278,17 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 {
 	int error;
 	struct git_pack_header hdr;
-	size_t processed; 
+	size_t processed;
 	git_mwindow_file *mwf = &idx->pack->mwf;
+	git_progress *transfer_progress, *index_progress;
+	git_progress dummy_progress1 = {0}, dummy_progress2 = {0};
 
 	assert(idx && data && stats);
+
+	transfer_progress = stats->transfer_progress;
+	index_progress = stats->index_progress;
+	if (!transfer_progress) transfer_progress = &dummy_progress1;
+	if (!index_progress) index_progress = &dummy_progress2;
 
 	processed = stats->processed;
 
@@ -324,8 +332,10 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (git_vector_init(&idx->deltas, (unsigned int)(idx->nr_objects / 2), NULL) < 0)
 			return -1;
 
-		memset(stats, 0, sizeof(git_indexer_stats));
-		stats->total = (unsigned int)idx->nr_objects;
+		stats->processed = stats->received = stats->total = 0;
+		transfer_progress->current = index_progress->current = 0;
+		transfer_progress->total = index_progress->total = stats->total =
+			(unsigned int)idx->nr_objects;
 	}
 
 	/* Now that we have data in the pack, let's try to parse it */
@@ -362,6 +372,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 				return error;
 
 			stats->received++;
+			transfer_progress->current++;
 			continue;
 		}
 
@@ -381,6 +392,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		stats->processed = (unsigned int)++processed;
 		stats->received++;
+		index_progress->current = processed;
+		transfer_progress->current = stats->received;
 	}
 
 	return 0;
@@ -429,6 +442,7 @@ static int resolve_deltas(git_indexer_stream *idx, git_indexer_stats *stats)
 
 		git__free(obj.data);
 		stats->processed++;
+		if (stats->index_progress) stats->index_progress->current++;
 	}
 
 	return 0;
@@ -794,8 +808,13 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 	int error;
 	struct entry *entry;
 	unsigned int left, processed;
+	git_progress *progress;
+	git_progress dummy_rational;
 
 	assert(idx && stats);
+
+	progress = stats->index_progress;
+	if (!progress) progress = &dummy_rational;
 
 	mwf = &idx->pack->mwf;
 	error = git_mwindow_file_register(mwf);
@@ -803,7 +822,8 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 		return error;
 
 	stats->total = (unsigned int)idx->nr_objects;
-	stats->processed = processed = 0;
+	progress->current = stats->processed = processed = 0;
+	progress->total = stats->total;
 
 	while (processed < idx->nr_objects) {
 		git_rawobj obj;
@@ -873,7 +893,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 
 		git__free(obj.data);
 
-		stats->processed = ++processed;
+		progress->current = stats->processed = ++processed;
 	}
 
 cleanup:

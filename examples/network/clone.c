@@ -8,9 +8,9 @@
 #include <unistd.h>
 
 struct dl_data {
-	git_indexer_stats fetch_stats;
-	git_indexer_stats checkout_stats;
+	git_progress_multistage progress;
 	git_checkout_opts opts;
+
 	int ret;
 	int finished;
 	const char *url;
@@ -23,13 +23,39 @@ static void *clone_thread(void *ptr)
 	git_repository *repo = NULL;
 
 	// Kick off the clone
-	data->ret = git_clone(&repo, data->url, data->path,
-								 &data->fetch_stats, &data->checkout_stats, 
-								 &data->opts);
+	data->ret = git_clone(&repo, data->url, data->path, &data->progress, &data->opts);
 	if (repo) git_repository_free(repo);
 	data->finished = 1;
 
 	pthread_exit(&data->ret);
+}
+
+void print_progress(git_progress_multistage *msp)
+{
+	size_t composite_percentage = 0;
+	int i;
+
+	printf("Progress: ");
+	for (i=0; i < msp->count; i++) {
+		git_progress r = msp->stages[i];
+		size_t percentage;
+
+		if (i != 0) printf(" / ");
+
+		percentage = r.total == 0
+			? 0
+			: 100 * r.current / r.total;
+		composite_percentage += percentage;
+
+		/*printf(" %zu/%zu", r.current, r.total);*/
+		if (r.total == 0)
+			printf("---%%");
+		else
+			printf("%3zu%%", percentage);
+	}
+	printf("  ==> ");
+	/*printf("%zu/%zu ", t_num, t_den);*/
+	printf("(%3zu%%)\n", msp->count == 0 ? 0 : composite_percentage / msp->count);
 }
 
 int do_clone(git_repository *repo, int argc, char **argv)
@@ -55,13 +81,9 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	// Watch for progress information
 	do {
 		usleep(10000);
-		printf("Fetch %d/%d  –  Checkout %d/%d\n",
-				 data.fetch_stats.processed, data.fetch_stats.total,
-				 data.checkout_stats.processed, data.checkout_stats.total);
+		print_progress(&data.progress);
 	} while (!data.finished);
-	printf("Fetch %d/%d  –  Checkout %d/%d\n",
-			 data.fetch_stats.processed, data.fetch_stats.total,
-			 data.checkout_stats.processed, data.checkout_stats.total);
+	print_progress(&data.progress);
 
 	return data.ret;
 }
