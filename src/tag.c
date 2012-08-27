@@ -445,20 +445,5 @@ int git_tag_list(git_strarray *tag_names, git_repository *repo)
 
 int git_tag_peel(git_object **tag_target, git_tag *tag)
 {
-	int error;
-	git_object *target;
-
-	assert(tag_target && tag);
-
-	if (git_tag_target(&target, tag) < 0)
-		return -1;
-
-	if (git_object_type(target) == GIT_OBJ_TAG) {
-		error = git_tag_peel(tag_target, (git_tag *)target);
-		git_object_free(target);
-		return error;
-	}
-
-	*tag_target = target;
-	return 0;
+	return git_object_peel(tag_target, (git_object *)tag, GIT_OBJ_ANY);
 }

@@ -168,11 +168,14 @@ GIT_EXTERN(int) git_object_typeisloose(git_otype type);
 GIT_EXTERN(size_t) git_object__size(git_otype type);
 
 /**
- * Recursively peel an object until an object of the specified
- * type is met
+ * Recursively peel an object until an object of the specified type is met.
  *
- * The retrieved `peeled` object is owned by the repository
- * and should be closed with the `git_object_free` method.
+ * The retrieved `peeled` object is owned by the repository and should be
+ * closed with the `git_object_free` method.
+ *
+ * If you pass `GIT_OBJ_ANY` as the target type, then the object will be
+ * peeled until the type changes (e.g. a tag will be chased until the
+ * referenced object is no longer a tag).
  *
  * @param peeled Pointer to the peeled git_object
  * @param object The object to be processed

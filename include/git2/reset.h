@@ -37,7 +37,7 @@ GIT_BEGIN_DECL
  *
  * @return GIT_SUCCESS or an error code
  */
-GIT_EXTERN(int) git_reset(git_repository *repo, const git_object *target, git_reset_type reset_type);
+GIT_EXTERN(int) git_reset(git_repository *repo, git_object *target, git_reset_type reset_type);
 
 /** @} */
 GIT_END_DECL
