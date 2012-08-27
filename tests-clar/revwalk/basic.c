@@ -179,3 +179,11 @@ void test_revwalk_basic__push_head_hide_ref_nobase(void)
 	/* git log HEAD --oneline --not refs/heads/packed | wc -l => 7 */
 	cl_assert(i == 7);
 }
+
+void test_revwalk_basic__disallow_non_commit(void)
+{
+	git_oid oid;
+
+	cl_git_pass(git_oid_fromstr(&oid, "521d87c1ec3aef9824daf6d96cc0ae3710766d91"));
+	cl_git_fail(git_revwalk_push(_walk, &oid));
+}

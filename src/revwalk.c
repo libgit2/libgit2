@@ -264,12 +264,7 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 
 	if ((error = git_odb_read(&obj, walk->odb, &commit->oid)) < 0)
 		return error;
-
-	if (obj->raw.type != GIT_OBJ_COMMIT) {
-		git_odb_object_free(obj);
-		giterr_set(GITERR_INVALID, "Failed to parse commit. Object is no commit object");
-		return -1;
-	}
+	assert(obj->raw.type == GIT_OBJ_COMMIT);
 
 	error = commit_quick_parse(walk, commit, &obj->raw);
 	git_odb_object_free(obj);
@@ -515,7 +510,20 @@ static int process_commit_parents(git_revwalk *walk, commit_object *commit)
 
 static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 {
+	git_object *obj;
+	git_otype type;
 	commit_object *commit;
+
+	if (git_object_lookup(&obj, walk->repo, oid, GIT_OBJ_ANY) < 0)
+		return -1;
+
+	type = git_object_type(obj);
+	git_object_free(obj);
+
+	if (type != GIT_OBJ_COMMIT) {
+		giterr_set(GITERR_INVALID, "Object is no commit object");
+		return -1;
+	}
 
 	commit = commit_lookup(walk, oid);
 	if (commit == NULL)
