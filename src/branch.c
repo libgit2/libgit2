@@ -57,7 +57,6 @@ int git_branch_create(
 		const git_object *target,
 		int force)
 {
-	git_otype target_type = GIT_OBJ_BAD;
 	git_object *commit = NULL;
 	git_reference *branch = NULL;
 	git_buf canonical_branch_name = GIT_BUF_INIT;
@@ -66,27 +65,8 @@ int git_branch_create(
 	assert(branch_name && target && ref_out);
 	assert(git_object_owner(target) == repository);
 
-	target_type = git_object_type(target);
-
-	switch (target_type)
-	{
-	case GIT_OBJ_TAG:
-		if (git_tag_peel(&commit, (git_tag *)target) < 0)
-			goto cleanup;
-
-		if (git_object_type(commit) != GIT_OBJ_COMMIT) {
-			create_error_invalid("The given target does not resolve to a commit");
-			goto cleanup;
-		}
-		break;
-
-	case GIT_OBJ_COMMIT:
-		commit = (git_object *)target;
-		break;
-
-	default:
-		return create_error_invalid("Only git_tag and git_commit objects are valid targets.");
-	}
+	if (git_object_peel(&commit, (git_object *)target, GIT_OBJ_COMMIT) < 0)
+		return create_error_invalid("The given target does not resolve to a commit");
 
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
@@ -99,9 +79,7 @@ int git_branch_create(
 	error = 0;
 
 cleanup:
-	if (target_type == GIT_OBJ_TAG)
-		git_object_free(commit);
-
+	git_object_free(commit);
 	git_buf_free(&canonical_branch_name);
 	return error;
 }
