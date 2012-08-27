@@ -55,21 +55,13 @@ GIT_EXTERN(int) git_branch_create(
 /**
  * Delete an existing branch reference.
  *
- * @param repo Repository where lives the branch.
+ * If the branch is successfully deleted, the passed reference
+ * object will be freed and invalidated.
  *
- * @param branch_name Name of the branch to be deleted;
- * this name is validated for consistency.
- *
- * @param branch_type Type of the considered branch. This should
- * be valued with either GIT_BRANCH_LOCAL or GIT_BRANCH_REMOTE.
- *
- * @return 0 on success, GIT_ENOTFOUND if the branch
- * doesn't exist or an error code.
+ * @param branch A valid reference representing a branch
+ * @return 0 on success, or an error code.
  */
-GIT_EXTERN(int) git_branch_delete(
-		git_repository *repo,
-		const char *branch_name,
-		git_branch_t branch_type);
+GIT_EXTERN(int) git_branch_delete(git_reference *branch);
 
 /**
  * Loop over all the branches and issue a callback for each one.

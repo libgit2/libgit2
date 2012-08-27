@@ -1836,6 +1836,11 @@ int git_reference_has_log(
 int git_reference_is_branch(git_reference *ref)
 {
 	assert(ref);
-
 	return git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) == 0;
+}
+
+int git_reference_is_remote(git_reference *ref)
+{
+	assert(ref);
+	return git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) == 0;
 }
