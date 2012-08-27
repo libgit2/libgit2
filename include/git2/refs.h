@@ -376,6 +376,54 @@ GIT_EXTERN(int) git_reference_has_log(git_reference *ref);
  */
 GIT_EXTERN(int) git_reference_is_branch(git_reference *ref);
 
+enum {
+	GIT_REF_FORMAT_NORMAL = 0,
+
+	/**
+	 * Control whether one-level refnames are accepted
+	 * (i.e., refnames that do not contain multiple /-separated
+	 * components)
+	 */
+	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1 << 0),
+
+	/**
+	 * Interpret the provided name as a reference pattern for a
+	 * refspec (as used with remote repositories). If this option
+	 * is enabled, the name is allowed to contain a single * (<star>)
+	 * in place of a one full pathname component
+	 * (e.g., foo/<star>/bar but not foo/bar<star>).
+	 */
+	GIT_REF_FORMAT_REFSPEC_PATTERN = (1 << 1),
+};
+
+/**
+ * Normalize the reference name by removing any leading
+ * slash (/) characters and collapsing runs of adjacent slashes
+ * between name components into a single slash.
+ *
+ * Once normalized, if the reference name is valid, it will be
+ * returned in the user allocated buffer.
+ *
+ * TODO: Implement handling of GIT_REF_FORMAT_REFSPEC_PATTERN
+ *
+ * @param buffer_out The user allocated buffer where the
+ * normalized name will be stored.
+ *
+ * @param buffer_size buffer_out size
+ *
+ * @param name name to be checked.
+ *
+ * @param flags Flags to determine the options to be applied while
+ * checking the validatity of the name.
+ *
+ * @return 0 or an error code.
+ */
+GIT_EXTERN(int) git_reference_normalize_name(
+	char *buffer_out,
+	size_t buffer_size,
+	const char *name,
+	unsigned int flags);
+
 /** @} */
 GIT_END_DECL
 #endif
