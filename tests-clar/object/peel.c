@@ -65,7 +65,7 @@ void test_object_peel__can_peel_a_commit(void)
 
 void test_object_peel__cannot_peel_a_tree(void)
 {
-	assert_peel_error(GIT_EAMBIGUOUS, "53fc32d17276939fc79ed05badaef2db09990016", GIT_OBJ_BLOB);
+	assert_peel_error(GIT_ERROR, "53fc32d17276939fc79ed05badaef2db09990016", GIT_OBJ_BLOB);
 }
 
 void test_object_peel__cannot_peel_a_blob(void)
@@ -73,7 +73,17 @@ void test_object_peel__cannot_peel_a_blob(void)
 	assert_peel_error(GIT_ERROR, "0266163a49e280c4f5ed1e08facd36a2bd716bcf", GIT_OBJ_COMMIT);
 }
 
-void test_object_peel__cannot_target_any_object(void)
+void test_object_peel__target_any_object_for_type_change(void)
 {
-	assert_peel_error(GIT_EAMBIGUOUS, "e90810b8df3e80c413d903f631643c716887138d", GIT_OBJ_ANY);
+	/* tag to commit */
+	assert_peel("e90810b8df3e80c413d903f631643c716887138d", "7b4384978d2493e851f9cca7858815fac9b10980", GIT_OBJ_ANY);
+
+	/* commit to tree */
+	assert_peel("53fc32d17276939fc79ed05badaef2db09990016", "e90810b8df3e80c413d903f631643c716887138d", GIT_OBJ_ANY);
+
+	/* fail to peel tree */
+	assert_peel_error(GIT_ERROR, "53fc32d17276939fc79ed05badaef2db09990016", GIT_OBJ_ANY);
+
+	/* fail to peel blob */
+	assert_peel_error(GIT_ERROR, "0266163a49e280c4f5ed1e08facd36a2bd716bcf", GIT_OBJ_ANY);
 }

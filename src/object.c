@@ -334,6 +334,12 @@ int git_object__resolve_to_type(git_object **obj, git_otype type)
 	return error;
 }
 
+static int peel_error(int error, const char* msg)
+{
+	giterr_set(GITERR_INVALID, "The given object cannot be peeled - %s", msg);
+	return error;
+}
+
 static int dereference_object(git_object **dereferenced, git_object *obj)
 {
 	git_otype type = git_object_type(obj);
@@ -341,48 +347,36 @@ static int dereference_object(git_object **dereferenced, git_object *obj)
 	switch (type) {
 	case GIT_OBJ_COMMIT:
 		return git_commit_tree((git_tree **)dereferenced, (git_commit*)obj);
-		break;
 
 	case GIT_OBJ_TAG:
 		return git_tag_target(dereferenced, (git_tag*)obj);
-		break;
+
+	case GIT_OBJ_BLOB:
+		return peel_error(GIT_ERROR, "cannot dereference blob");
+
+	case GIT_OBJ_TREE:
+		return peel_error(GIT_ERROR, "cannot dereference tree");
 
 	default:
-		return GIT_ENOTFOUND;
-		break;
+		return peel_error(GIT_ENOTFOUND, "unexpected object type encountered");
 	}
 }
 
-static int peel_error(int error, const char* msg)
-{
-	giterr_set(GITERR_INVALID, "The given object cannot be peeled - %s", msg);
-	return error;
-}
-
 int git_object_peel(
-		git_object **peeled,
-		git_object *object,
-		git_otype target_type)
+	git_object **peeled,
+	git_object *object,
+	git_otype target_type)
 {
 	git_object *source, *deref = NULL;
 
-	assert(object);
+	assert(object && peeled);
 
 	if (git_object_type(object) == target_type)
 		return git_object__dup(peeled, object);
 
-	if (target_type == GIT_OBJ_BLOB
-		|| target_type == GIT_OBJ_ANY)
-		return peel_error(GIT_EAMBIGUOUS, "Ambiguous target type");
-
-	if (git_object_type(object) == GIT_OBJ_BLOB)
-		return peel_error(GIT_ERROR, "A blob cannot be dereferenced");
-
 	source = object;
 
-	while (true) {
-		if (dereference_object(&deref, source) < 0)
-			goto cleanup;
+	while (!dereference_object(&deref, source)) {
 
 		if (source != object)
 			git_object_free(source);
@@ -392,13 +386,20 @@ int git_object_peel(
 			return 0;
 		}
 
+		if (target_type == GIT_OBJ_ANY &&
+			git_object_type(deref) != git_object_type(object))
+		{
+			*peeled = deref;
+			return 0;
+		}
+
 		source = deref;
 		deref = NULL;
 	}
 
-cleanup:
 	if (source != object)
 		git_object_free(source);
+
 	git_object_free(deref);
 	return -1;
 }

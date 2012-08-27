@@ -20,10 +20,9 @@ static int reset_error_invalid(const char *msg)
 
 int git_reset(
 	git_repository *repo,
-	const git_object *target,
+	git_object *target,
 	git_reset_type reset_type)
 {
-	git_otype target_type = GIT_OBJ_BAD;
 	git_object *commit = NULL;
 	git_index *index = NULL;
 	git_tree *tree = NULL;
@@ -38,26 +37,9 @@ int git_reset(
 	if (reset_type == GIT_RESET_MIXED && git_repository_is_bare(repo))
 		return reset_error_invalid("Mixed reset is not allowed in a bare repository.");
 
-	target_type = git_object_type(target);
-
-	switch (target_type)
-	{
-	case GIT_OBJ_TAG:
-		if (git_tag_peel(&commit, (git_tag *)target) < 0)
-			goto cleanup;
-
-		if (git_object_type(commit) != GIT_OBJ_COMMIT) {
-			reset_error_invalid("The given target does not resolve to a commit.");
-			goto cleanup;
-		}
-		break;
-
-	case GIT_OBJ_COMMIT:
-		commit = (git_object *)target;
-		break;
-
-	default:
-		return reset_error_invalid("Only git_tag and git_commit objects are valid targets.");
+	if (git_object_peel(&commit, target, GIT_OBJ_COMMIT) < 0) {
+		reset_error_invalid("The given target does not resolve to a commit");
+		goto cleanup;
 	}
 
 	//TODO: Check for unmerged entries
@@ -93,9 +75,7 @@ int git_reset(
 	error = 0;
 
 cleanup:
-	if (target_type == GIT_OBJ_TAG)
-		git_object_free(commit);
-
+	git_object_free(commit);
 	git_index_free(index);
 	git_tree_free(tree);
 
