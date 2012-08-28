@@ -1634,13 +1634,14 @@ int git_reference_normalize_name(
 			}
 		}
 
-		if (*current == '/')
+		if (*current == '/') {
 			if (buffer_out > buffer_out_start)
 				contains_a_slash = 1;
 			else {
 				current++;
 				continue;
 			}
+		}
 
 
 		*buffer_out++ = *current++;
