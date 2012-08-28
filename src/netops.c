@@ -238,6 +238,10 @@ static int verify_server_cert(git_transport *t, const char *host)
 	void *addr;
 	int i = -1,j;
 
+	if (SSL_get_verify_result(t->ssl.ssl) != X509_V_OK) {
+		giterr_set(GITERR_SSL, "The SSL certificate is invalid");
+		return -1;
+	}
 
 	/* Try to parse the host as an IP address to see if it is */
 	if (inet_pton(AF_INET, host, &addr4)) {
@@ -286,7 +290,7 @@ static int verify_server_cert(git_transport *t, const char *host)
 	GENERAL_NAMES_free(alts);
 
 	if (matched == 0)
-		goto on_error;
+		goto cert_fail;
 
 	if (matched == 1)
 		return 0;
@@ -354,7 +358,7 @@ static int ssl_setup(git_transport *t, const char *host)
 		return ssl_set_error(&t->ssl, 0);
 
 	SSL_CTX_set_mode(t->ssl.ctx, SSL_MODE_AUTO_RETRY);
-	SSL_CTX_set_verify(t->ssl.ctx, SSL_VERIFY_PEER, NULL);
+	SSL_CTX_set_verify(t->ssl.ctx, SSL_VERIFY_NONE, NULL);
 	if (!SSL_CTX_set_default_verify_paths(t->ssl.ctx))
 		return ssl_set_error(&t->ssl, 0);
 
