@@ -56,7 +56,7 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 #ifdef GIT_WIN32
 	wchar_t buf[GIT_WIN_PATH];
 
-	git__utf8_to_16(buf, path);
+	git__utf8_to_16(buf, GIT_WIN_PATH, path);
 	fd = _wopen(buf, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
 #else
 	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_EXCL, mode);
@@ -381,7 +381,7 @@ static int win32_expand_path(struct win32_path *s_root, const wchar_t *templ)
 
 static int win32_find_file(git_buf *path, const struct win32_path *root, const char *filename)
 {
-	size_t len;
+	size_t len, alloc_len;
 	wchar_t *file_utf16 = NULL;
 	char file_utf8[GIT_PATH_MAX];
 
@@ -389,7 +389,8 @@ static int win32_find_file(git_buf *path, const struct win32_path *root, const c
 		return GIT_ENOTFOUND;
 
 	/* allocate space for wchar_t path to file */
-	file_utf16 = git__calloc(root->len + len + 2, sizeof(wchar_t));
+	alloc_len = root->len + len + 2;
+	file_utf16 = git__calloc(alloc_len, sizeof(wchar_t));
 	GITERR_CHECK_ALLOC(file_utf16);
 
 	/* append root + '\\' + filename as wchar_t */
@@ -398,7 +399,7 @@ static int win32_find_file(git_buf *path, const struct win32_path *root, const c
 	if (*filename == '/' || *filename == '\\')
 		filename++;
 
-	git__utf8_to_16(file_utf16 + root->len - 1, filename);
+	git__utf8_to_16(file_utf16 + root->len - 1, alloc_len, filename);
 
 	/* check access */
 	if (_waccess(file_utf16, F_OK) < 0) {

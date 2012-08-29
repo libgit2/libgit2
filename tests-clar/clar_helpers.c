@@ -60,7 +60,7 @@ char *cl_getenv(const char *name)
 	wchar_t *value_utf16;
 	char *value_utf8;
 
-	git__utf8_to_16(name_utf16, name);
+	git__utf8_to_16(name_utf16, GIT_WIN_PATH, name);
 	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
 	if (alloc_len <= 0)
 		return NULL;
@@ -83,10 +83,10 @@ int cl_setenv(const char *name, const char *value)
 	wchar_t name_utf16[GIT_WIN_PATH];
 	wchar_t value_utf16[GIT_WIN_PATH];
 
-	git__utf8_to_16(name_utf16, name);
+	git__utf8_to_16(name_utf16, GIT_WIN_PATH, name);
 
 	if (value != NULL)
-		git__utf8_to_16(value_utf16, value);
+		git__utf8_to_16(value_utf16, GIT_WIN_PATH, value);
 
 	cl_assert(SetEnvironmentVariableW(name_utf16, value ? value_utf16 : NULL));
 	return 0;

@@ -23,7 +23,7 @@ GIT_INLINE(int) p_mkdir(const char *path, mode_t mode)
 {
 	wchar_t buf[GIT_WIN_PATH];
 	GIT_UNUSED(mode);
-	git__utf8_to_16(buf, path);
+	git__utf8_to_16(buf, GIT_WIN_PATH, path);
 	return _wmkdir(buf);
 }
 
