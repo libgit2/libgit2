@@ -777,8 +777,8 @@ static int repo_init_config(
 			SET_REPO_CONFIG(string, "core.worktree", work_dir);
 		}
 		else if ((opts->flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0) {
-			if ((error = git_config_delete(config, "core.worktree")) < 0)
-				goto cleanup;
+			if (git_config_delete(config, "core.worktree") < 0)
+				giterr_clear();
 		}
 	} else {
 		if (!are_symlinks_supported(repo_dir))
