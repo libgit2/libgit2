@@ -1023,7 +1023,6 @@ struct git_diff_iterator {
 	diffiter_hunk *hunk_curr;
 	char hunk_header[128];
 	git_pool lines;
-	size_t   line_count;
 	diffiter_line *line_curr;
 };
 
@@ -1096,7 +1095,6 @@ static int diffiter_line_cb(
 	line->len = content_len;
 
 	info->last_hunk->line_count++;
-	iter->line_count++;
 
 	if (info->last_hunk->line_head == NULL)
 		info->last_hunk->line_head = line;
@@ -1136,7 +1134,6 @@ static void diffiter_do_unload_file(git_diff_iterator *iter)
 	iter->ctxt.delta = NULL;
 	iter->hunk_head = NULL;
 	iter->hunk_count = 0;
-	iter->line_count = 0;
 }
 
 int git_diff_iterator_new(
@@ -1202,7 +1199,9 @@ int git_diff_iterator_num_hunks_in_file(git_diff_iterator *iter)
 int git_diff_iterator_num_lines_in_hunk(git_diff_iterator *iter)
 {
 	int error = diffiter_do_diff_file(iter);
-	return (error != 0) ? error : (int)iter->line_count;
+	if (!error && iter->hunk_curr)
+		error = iter->hunk_curr->line_count;
+	return error;
 }
 
 int git_diff_iterator_next_file(
