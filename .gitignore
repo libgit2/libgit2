@@ -27,3 +27,4 @@ CMake*
 *.cmake
 .DS_Store
 *~
+tags
