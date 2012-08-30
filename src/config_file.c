@@ -221,6 +221,7 @@ static int file_foreach(
 
 			/* abort iterator on non-zero return value */
 			if (fn(key, var->value, data)) {
+				giterr_clear();
 				result = GIT_EUSER;
 				goto cleanup;
 			}

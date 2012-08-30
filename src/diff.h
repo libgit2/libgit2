@@ -26,6 +26,7 @@ enum {
 };
 
 struct git_diff_list {
+	git_refcount     rc;
 	git_repository   *repo;
 	git_diff_options opts;
 	git_vector       pathspec;

@@ -169,7 +169,7 @@ enum {
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
-	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< DEPRECATED */
+	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< DEPRECATED - will not be returned */
 	GIT_DIFF_LINE_DEL_EOFNL = '\0', /**< LF was removed at end of file */
 
 	/* The following values will only be sent to a `git_diff_data_fn` when
@@ -196,6 +196,11 @@ typedef int (*git_diff_data_fn)(
 	char line_origin, /**< GIT_DIFF_LINE_... value from above */
 	const char *content,
 	size_t content_len);
+
+/**
+ * The diff iterator object is used to scan a diff list.
+ */
+typedef struct git_diff_iterator git_diff_iterator;
 
 /** @name Diff List Generator Functions
  *
@@ -320,6 +325,60 @@ GIT_EXTERN(int) git_diff_merge(
  * or read it in some way.
  */
 /**@{*/
+
+/**
+ * Create a diff iterator object that can be used to traverse a diff.
+ */
+GIT_EXTERN(int) git_diff_iterator_new(
+	git_diff_iterator **iterator,
+	git_diff_list *diff);
+
+GIT_EXTERN(void) git_diff_iterator_free(git_diff_iterator *iter);
+
+/**
+ * Return the number of files in the diff.
+ */
+GIT_EXTERN(int) git_diff_iterator_num_files(git_diff_iterator *iterator);
+
+GIT_EXTERN(int) git_diff_iterator_num_hunks_in_file(git_diff_iterator *iterator);
+
+GIT_EXTERN(int) git_diff_iterator_num_lines_in_hunk(git_diff_iterator *iterator);
+
+/**
+ * Return the delta information for the next file in the diff.
+ *
+ * This will return a pointer to the next git_diff_delta` to be processed or
+ * NULL if the iterator is at the end of the diff, then advance.
+ */
+GIT_EXTERN(int) git_diff_iterator_next_file(
+	git_diff_delta **delta,
+	git_diff_iterator *iterator);
+
+/**
+ * Return the hunk information for the next hunk in the current file.
+ *
+ * It is recommended that you not call this if the file is a binary
+ * file, but it is allowed to do so.
+ *
+ * Warning! Call this function for the first time on a file is when the
+ * actual text diff will be computed (it cannot be computed incrementally)
+ * so the first call for a new file is expensive (at least in relative
+ * terms - in reality, it is still pretty darn fast).
+ */
+GIT_EXTERN(int) git_diff_iterator_next_hunk(
+	git_diff_range **range,
+	const char **header,
+	size_t *header_len,
+	git_diff_iterator *iterator);
+
+/**
+ * Return the next line of the current hunk of diffs.
+ */
+GIT_EXTERN(int) git_diff_iterator_next_line(
+	char *line_origin, /**< GIT_DIFF_LINE_... value from above */
+	const char **content,
+	size_t *content_len,
+	git_diff_iterator *iterator);
 
 /**
  * Iterate over a diff list issuing callbacks.

@@ -449,6 +449,7 @@ int git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *tw
 
 	if (!result) {
 		git_revwalk_free(walk);
+		giterr_clear();
 		return GIT_ENOTFOUND;
 	}
 
@@ -682,7 +683,8 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_REVWALKOVER;
+	giterr_clear();
+	return GIT_ITEROVER;
 }
 
 static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
@@ -700,7 +702,8 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 		}
 	}
 
-	return GIT_REVWALKOVER;
+	giterr_clear();
+	return GIT_ITEROVER;
 }
 
 static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
@@ -710,8 +713,10 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 
 	for (;;) {
 		next = commit_list_pop(&walk->iterator_topo);
-		if (next == NULL)
-			return GIT_REVWALKOVER;
+		if (next == NULL) {
+			giterr_clear();
+			return GIT_ITEROVER;
+		}
 
 		if (next->in_degree > 0) {
 			next->topo_delay = 1;
@@ -736,7 +741,7 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 static int revwalk_next_reverse(commit_object **object_out, git_revwalk *walk)
 {
 	*object_out = commit_list_pop(&walk->iterator_reverse);
-	return *object_out ? 0 : GIT_REVWALKOVER;
+	return *object_out ? 0 : GIT_ITEROVER;
 }
 
 
@@ -751,8 +756,10 @@ static int prepare_walk(git_revwalk *walk)
 	 * If walk->one is NULL, there were no positive references,
 	 * so we know that the walk is already over.
 	 */
-	if (walk->one == NULL)
-		return GIT_REVWALKOVER;
+	if (walk->one == NULL) {
+		giterr_clear();
+		return GIT_ITEROVER;
+	}
 
 	/* first figure out what the merge bases are */
 	if (merge_bases_many(&bases, walk, walk->one, &walk->twos) < 0)
@@ -780,7 +787,7 @@ static int prepare_walk(git_revwalk *walk)
 				return -1;
 		}
 
-		if (error != GIT_REVWALKOVER)
+		if (error != GIT_ITEROVER)
 			return error;
 
 		walk->get_next = &revwalk_next_toposort;
@@ -792,7 +799,7 @@ static int prepare_walk(git_revwalk *walk)
 			if (commit_list_insert(next, &walk->iterator_reverse) == NULL)
 				return -1;
 
-		if (error != GIT_REVWALKOVER)
+		if (error != GIT_ITEROVER)
 			return error;
 
 		walk->get_next = &revwalk_next_reverse;
@@ -891,9 +898,10 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 
 	error = walk->get_next(&next, walk);
 
-	if (error == GIT_REVWALKOVER) {
+	if (error == GIT_ITEROVER) {
 		git_revwalk_reset(walk);
-		return GIT_REVWALKOVER;
+		giterr_clear();
+		return GIT_ITEROVER;
 	}
 
 	if (!error)

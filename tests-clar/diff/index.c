@@ -44,17 +44,17 @@ void test_diff_index__0(void)
 	 * - git diff -U1 --cached 26a125ee1bf
 	 * - mv .git .gitted
 	 */
-	cl_assert(exp.files == 8);
-	cl_assert(exp.file_adds == 3);
-	cl_assert(exp.file_dels == 2);
-	cl_assert(exp.file_mods == 3);
+	cl_assert_equal_i(8, exp.files);
+	cl_assert_equal_i(3, exp.file_adds);
+	cl_assert_equal_i(2, exp.file_dels);
+	cl_assert_equal_i(3, exp.file_mods);
 
-	cl_assert(exp.hunks == 8);
+	cl_assert_equal_i(8, exp.hunks);
 
-	cl_assert(exp.lines == 11);
-	cl_assert(exp.line_ctxt == 3);
-	cl_assert(exp.line_adds == 6);
-	cl_assert(exp.line_dels == 2);
+	cl_assert_equal_i(11, exp.lines);
+	cl_assert_equal_i(3, exp.line_ctxt);
+	cl_assert_equal_i(6, exp.line_adds);
+	cl_assert_equal_i(2, exp.line_dels);
 
 	git_diff_list_free(diff);
 	diff = NULL;
@@ -72,17 +72,17 @@ void test_diff_index__0(void)
 	 * - git diff -U1 --cached 0017bd4ab1ec3
 	 * - mv .git .gitted
 	 */
-	cl_assert(exp.files == 12);
-	cl_assert(exp.file_adds == 7);
-	cl_assert(exp.file_dels == 2);
-	cl_assert(exp.file_mods == 3);
+	cl_assert_equal_i(12, exp.files);
+	cl_assert_equal_i(7, exp.file_adds);
+	cl_assert_equal_i(2, exp.file_dels);
+	cl_assert_equal_i(3, exp.file_mods);
 
-	cl_assert(exp.hunks == 12);
+	cl_assert_equal_i(12, exp.hunks);
 
-	cl_assert(exp.lines == 16);
-	cl_assert(exp.line_ctxt == 3);
-	cl_assert(exp.line_adds == 11);
-	cl_assert(exp.line_dels == 2);
+	cl_assert_equal_i(16, exp.lines);
+	cl_assert_equal_i(3, exp.line_ctxt);
+	cl_assert_equal_i(11, exp.line_adds);
+	cl_assert_equal_i(2, exp.line_dels);
 
 	git_diff_list_free(diff);
 	diff = NULL;
@@ -132,7 +132,7 @@ void test_diff_index__1(void)
 		git_diff_foreach(diff, &exp, diff_stop_after_2_files, NULL, NULL)
 	);
 
-	cl_assert(exp.files == 2);
+	cl_assert_equal_i(2, exp.files);
 
 	git_diff_list_free(diff);
 	diff = NULL;

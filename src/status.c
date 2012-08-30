@@ -151,6 +151,9 @@ cleanup:
 	git_diff_list_free(idx2head);
 	git_diff_list_free(wd2idx);
 
+	if (err == GIT_EUSER)
+		giterr_clear();
+
 	return err;
 }
 
