@@ -442,7 +442,7 @@ static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
 
 	while (off < len) {
 		ret = SSL_write(ssl->ssl, msg + off, len - off);
-		if (ret <= 0)
+		if (ret <= 0 && ret != SSL_ERROR_WANT_WRITE)
 			return ssl_set_error(ssl, ret);
 
 		off += ret;
