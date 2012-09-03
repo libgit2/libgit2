@@ -95,6 +95,14 @@ GIT_EXTERN(const git_oid *) git_object_id(const git_object *obj);
 GIT_EXTERN(git_otype) git_object_type(const git_object *obj);
 
 /**
+ * Get the object type of an object id
+ *
+ * @param obj the repository object
+ * @return the object's type
+ */
+GIT_EXTERN(int) git_object_oid2type(git_otype *type, git_repository *repo, const git_oid *oid);
+
+/**
  * Get the repository that owns this object
  *
  * Freeing or calling `git_repository_close` on the

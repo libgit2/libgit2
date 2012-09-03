@@ -61,3 +61,15 @@ void test_object_lookup__lookup_wrong_type_eventually_returns_enotfound(void)
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
 }
+
+void test_object_lookup__lookup_object_type_by_oid(void)
+{
+	const char *commit = "e90810b8df3e80c413d903f631643c716887138d";
+	git_oid oid;
+	git_otype type;
+
+	cl_git_pass(git_oid_fromstr(&oid, commit));
+
+	cl_git_pass(git_object_oid2type(&type, g_repo, &oid));
+	cl_assert(type == GIT_OBJ_COMMIT);
+}

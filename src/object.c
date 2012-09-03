@@ -413,3 +413,16 @@ int git_object_peel(
 	git_object_free(deref);
 	return -1;
 }
+
+int git_object_oid2type(git_otype *type, git_repository *repo, const git_oid *oid)
+{
+	git_object *obj;
+
+	if (git_object_lookup(&obj, repo, oid, GIT_OBJ_ANY) < 0)
+		return -1;
+
+	*type = git_object_type(obj);
+
+	git_object_free(obj);
+	return 0;
+}
