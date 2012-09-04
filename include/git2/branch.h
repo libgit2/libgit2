@@ -8,6 +8,7 @@
 #define INCLUDE_git_branch_h__
 
 #include "common.h"
+#include "oid.h"
 #include "types.h"
 
 /**
