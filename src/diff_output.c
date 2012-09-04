@@ -727,7 +727,7 @@ int git_diff_entrycount(git_diff_list *diff, int delta_t)
 	assert(diff);
 
 	if (delta_t < 0)
-		return diff->deltas.length;
+		return (int)diff->deltas.length;
 
 	git_vector_foreach(&diff->deltas, i, delta) {
 		if (delta->status == (git_delta_t)delta_t)
