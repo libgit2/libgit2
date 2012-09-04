@@ -142,7 +142,7 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 	time(&now);
 	utc_tm = p_gmtime_r(&now, &_utc);
 	utc_tm->tm_isdst = -1;
-	offset = difftime(now, mktime(utc_tm));
+	offset = (time_t)difftime(now, mktime(utc_tm));
 	offset /= 60;
 
 	if (git_signature_new(&sig, name, email, now, (int)offset) < 0)
