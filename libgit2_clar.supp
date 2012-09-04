@@ -1,0 +1,12 @@
+{
+        ignore-zlib-errors-cond
+        Memcheck:Cond
+        obj:*libz.so*
+}
+
+{
+        ignore-giterr-set-leak
+        Memcheck:Leak
+        ...
+        fun:giterr_set
+}
