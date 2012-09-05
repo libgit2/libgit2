@@ -19,6 +19,7 @@
  */
 extern int git_futils_readbuffer(git_buf *obj, const char *path);
 extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t *mtime, int *updated);
+extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
 /**
  * File utils

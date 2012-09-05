@@ -11,6 +11,7 @@
 #include "fileops.h"
 #include "config.h"
 #include "attr_file.h"
+#include "filter.h"
 
 static char *diff_prefix_from_pathspec(const git_strarray *pathspec)
 {
@@ -63,8 +64,8 @@ static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
 
 	git_vector_foreach(&diff->pathspec, i, match) {
 		int result = strcmp(match->pattern, path) ? FNM_NOMATCH : 0;
-		
-		if (((diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) == 0) && 
+
+		if (((diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) == 0) &&
 			result == FNM_NOMATCH)
 			result = p_fnmatch(match->pattern, path, 0);
 
@@ -262,12 +263,14 @@ static int diff_delta__from_two(
 	delta = diff_delta__alloc(diff, status, old_entry->path);
 	GITERR_CHECK_ALLOC(delta);
 
-	delta->old_file.mode = old_mode;
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
+	delta->old_file.size = old_entry->file_size;
+	delta->old_file.mode = old_mode;
 	delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
-	delta->new_file.mode = new_mode;
 	git_oid_cpy(&delta->new_file.oid, new_oid ? new_oid : &new_entry->oid);
+	delta->new_file.size = new_entry->file_size;
+	delta->new_file.mode = new_mode;
 	if (new_oid || !git_oid_iszero(&new_entry->oid))
 		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
@@ -440,14 +443,22 @@ static int oid_for_workdir_item(
 		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
 		result = -1;
 	} else {
-		int fd = git_futils_open_ro(full_path.ptr);
-		if (fd < 0)
-			result = fd;
-		else {
-			result = git_odb__hashfd(
-				oid, fd, (size_t)item->file_size, GIT_OBJ_BLOB);
-			p_close(fd);
+		git_vector filters = GIT_VECTOR_INIT;
+
+		result = git_filters_load(
+			&filters, repo, item->path, GIT_FILTER_TO_ODB);
+		if (result >= 0) {
+			int fd = git_futils_open_ro(full_path.ptr);
+			if (fd < 0)
+				result = fd;
+			else {
+				result = git_odb__hashfd_filtered(
+					oid, fd, (size_t)item->file_size, GIT_OBJ_BLOB, &filters);
+				p_close(fd);
+			}
 		}
+
+		git_filters_free(&filters);
 	}
 
 	git_buf_free(&full_path);

@@ -115,10 +115,47 @@ mode_t git_futils_canonical_mode(mode_t raw_mode)
 		return 0;
 }
 
-int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime, int *updated)
+#define MAX_READ_STALLS 10
+
+int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
+{
+	int stalls = MAX_READ_STALLS;
+
+	git_buf_clear(buf);
+
+	if (git_buf_grow(buf, len + 1) < 0)
+		return -1;
+
+	buf->ptr[len] = '\0';
+
+	while (len > 0) {
+		ssize_t read_size = p_read(fd, buf->ptr + buf->size, len);
+
+		if (read_size < 0) {
+			giterr_set(GITERR_OS, "Failed to read descriptor");
+			return -1;
+		}
+
+		if (read_size == 0) {
+			stalls--;
+
+			if (!stalls) {
+				giterr_set(GITERR_OS, "Too many stalls reading descriptor");
+				return -1;
+			}
+		}
+
+		len -= read_size;
+		buf->size += read_size;
+	}
+
+	return 0;
+}
+
+int git_futils_readbuffer_updated(
+	git_buf *buf, const char *path, time_t *mtime, int *updated)
 {
 	git_file fd;
-	size_t len;
 	struct stat st;
 
 	assert(buf && path && *path);
@@ -147,28 +184,9 @@ int git_futils_readbuffer_updated(git_buf *buf, const char *path, time_t *mtime,
 	if (mtime != NULL)
 		*mtime = st.st_mtime;
 
-	len = (size_t) st.st_size;
-
-	git_buf_clear(buf);
-
-	if (git_buf_grow(buf, len + 1) < 0) {
+	if (git_futils_readbuffer_fd(buf, fd, (size_t)st.st_size) < 0) {
 		p_close(fd);
 		return -1;
-	}
-
-	buf->ptr[len] = '\0';
-
-	while (len > 0) {
-		ssize_t read_size = p_read(fd, buf->ptr, len);
-
-		if (read_size < 0) {
-			p_close(fd);
-			giterr_set(GITERR_OS, "Failed to read descriptor for '%s'", path);
-			return -1;
-		}
-
-		len -= read_size;
-		buf->size += read_size;
 	}
 
 	p_close(fd);

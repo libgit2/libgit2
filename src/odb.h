@@ -58,12 +58,19 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj);
 int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type);
 
 /*
- * Hash a `path`, assuming it could be a POSIX symlink: if the path is a symlink,
- * then the raw contents of the symlink will be hashed. Otherwise, this will
- * fallback to `git_odb__hashfd`.
+ * Hash an open file descriptor applying an array of filters
+ * Acts just like git_odb__hashfd with the addition of filters...
+ */
+int git_odb__hashfd_filtered(
+	git_oid *out, git_file fd, size_t len, git_otype type, git_vector *filters);
+
+/*
+ * Hash a `path`, assuming it could be a POSIX symlink: if the path is a
+ * symlink, then the raw contents of the symlink will be hashed. Otherwise,
+ * this will fallback to `git_odb__hashfd`.
  *
- * The hash type for this call is always `GIT_OBJ_BLOB` because symlinks may only
- * point to blobs.
+ * The hash type for this call is always `GIT_OBJ_BLOB` because symlinks may
+ * only point to blobs.
  */
 int git_odb__hashlink(git_oid *out, const char *path);
 

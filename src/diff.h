@@ -25,6 +25,8 @@ enum {
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
 };
 
+#define MAX_DIFF_FILESIZE 0x20000000
+
 struct git_diff_list {
 	git_refcount     rc;
 	git_repository   *repo;

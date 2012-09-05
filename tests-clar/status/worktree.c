@@ -839,9 +839,5 @@ void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf(void
 
 	cl_git_pass(git_status_file(&status, repo, "current_file"));
 
-#ifdef GIT_WIN32
 	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
-#else
-	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
-#endif
 }
