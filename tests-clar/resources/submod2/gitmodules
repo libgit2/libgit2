@@ -19,3 +19,6 @@
 [submodule "sm_added_and_uncommited"]
 	path = sm_added_and_uncommited
 	url = ../submod2_target
+[submodule "sm_gitmodules_only"]
+	path = sm_gitmodules_only
+	url = ../submod2_target

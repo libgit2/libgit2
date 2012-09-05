@@ -34,6 +34,10 @@ void test_submodule_lookup__simple_lookup(void)
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_added_and_uncommited"));
 	cl_assert(sm);
 
+	/* lookup pending change in .gitmodules that is neither in HEAD nor index */
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_gitmodules_only"));
+	cl_assert(sm);
+
 	/* lookup git repo subdir that is not added as submodule */
 	cl_assert(git_submodule_lookup(&sm, g_repo, "not_submodule") == GIT_EEXISTS);
 
@@ -106,5 +110,5 @@ void test_submodule_lookup__foreach(void)
 	sm_lookup_data data;
 	memset(&data, 0, sizeof(data));
 	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
-	cl_assert_equal_i(7, data.count);
+	cl_assert_equal_i(8, data.count);
 }
