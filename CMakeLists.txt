@@ -75,8 +75,11 @@ OPTION (PROFILE "Generate profiling information" OFF)
 
 # Platform specific compilation flags
 IF (MSVC)
-	# Not using __stdcall with the CRT causes problems
-	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
+	## Not using __stdcall with the CRT causes problems
+	#OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
+
+	# Using __stdcall with the CRT causes problems (link.exe refuses to import functions from openssl dlls)
+	OPTION (STDCALL "Build libgit2 with the __stdcall convention" OFF)
 
 	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
@@ -155,6 +158,8 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_
 
 IF (MSVC)
    # Precompiled headers
+   # Comment this out if you use CMake to produce makefiles for nmake (cmake -G "NMake Makefiles" ..)
+   # since this is broken right now
    SET_TARGET_PROPERTIES(git2 PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
    SET_SOURCE_FILES_PROPERTIES(src/win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()

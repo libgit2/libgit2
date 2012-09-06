@@ -12,6 +12,7 @@
 #	include <netdb.h>
 #       include <arpa/inet.h>
 #else
+#	include <winsock2.h>
 #	include <ws2tcpip.h>
 #	ifdef _MSC_VER
 #		pragma comment(lib, "ws2_32.lib")
@@ -280,6 +281,43 @@ static int verify_server_cert(git_transport *t, const char *host)
 	}
 
 	/* Try to parse the host as an IP address to see if it is */
+#ifdef _WIN32
+
+	int salength;
+	struct sockaddr sa;
+
+	wchar_t *whost = gitwin_to_utf16(host);
+	if (whost == NULL)
+	{	// can return safely since no resources (incl. OpenSSL) are allocated
+		return -1;
+	}
+
+	salength = sizeof(sa);
+	sa.sa_family = AF_INET;
+	if (WSAStringToAddressW(whost, AF_INET, NULL, &sa, &salength) == 0)
+	{
+		addr4 = ((struct sockaddr_in *)&sa)->sin_addr;
+
+		type = GEN_IPADD;
+		addr = &addr4;
+	}
+	else
+	{
+		salength = sizeof(addr6);
+		sa.sa_family = AF_INET6;
+
+		if (WSAStringToAddressW(whost, AF_INET6, NULL, &sa, &salength) == 0)
+		{
+			addr6 = ((struct sockaddr_in6 *)&sa)->sin6_addr;
+
+			type = GEN_IPADD;
+			addr = &addr6;
+		}
+	}
+
+	git__free(whost);
+
+#else
 	if (inet_pton(AF_INET, host, &addr4)) {
 		type = GEN_IPADD;
 		addr = &addr4;
@@ -289,7 +327,7 @@ static int verify_server_cert(git_transport *t, const char *host)
 			addr = &addr6;
 		}
 	}
-
+#endif // _WIN32
 
 	cert = SSL_get_peer_certificate(t->ssl.ssl);
 
