@@ -55,8 +55,44 @@ static void net_set_error(const char *str)
 static int ssl_set_error(gitno_ssl *ssl, int error)
 {
 	int err;
+	unsigned long e;
+
 	err = SSL_get_error(ssl->ssl, error);
-	giterr_set(GITERR_NET, "SSL error: %s", ERR_error_string(err, NULL));
+
+	assert(err != SSL_ERROR_WANT_READ);
+	assert(err != SSL_ERROR_WANT_WRITE);
+
+	switch (err) {
+	case SSL_ERROR_WANT_CONNECT:
+	case SSL_ERROR_WANT_ACCEPT:
+		giterr_set(GITERR_NET, "SSL error: connection failure\n");
+		break;
+	case SSL_ERROR_WANT_X509_LOOKUP:
+		giterr_set(GITERR_NET, "SSL error: x509 error\n");
+		break;
+	case SSL_ERROR_SYSCALL:
+		e = ERR_get_error();
+		if (e > 0) {
+			giterr_set(GITERR_NET, "SSL error: %s",
+					ERR_error_string(e, NULL));
+			break;
+		} else if (error < 0) {
+			giterr_set(GITERR_OS, "SSL error: syscall failure");
+			break;
+		}
+		giterr_set(GITERR_NET, "SSL error: received early EOF");
+		break;
+	case SSL_ERROR_SSL:
+		e = ERR_get_error();
+		giterr_set(GITERR_NET, "SSL error: %s",
+				ERR_error_string(e, NULL));
+		break;
+	case SSL_ERROR_NONE:
+	case SSL_ERROR_ZERO_RETURN:
+	default:
+		giterr_set(GITERR_NET, "SSL error: unknown error");
+		break;
+	}
 	return -1;
 }
 #endif
@@ -442,7 +478,7 @@ static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
 
 	while (off < len) {
 		ret = SSL_write(ssl->ssl, msg + off, len - off);
-		if (ret <= 0)
+		if (ret <= 0 && ret != SSL_ERROR_WANT_WRITE)
 			return ssl_set_error(ssl, ret);
 
 		off += ret;
