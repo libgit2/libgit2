@@ -28,6 +28,7 @@ int git_reset(
 	git_index *index = NULL;
 	git_tree *tree = NULL;
 	int error = -1;
+	git_checkout_opts opts;
 
 	assert(repo && target);
 	assert(reset_type == GIT_RESET_SOFT
@@ -81,7 +82,13 @@ int git_reset(
 		goto cleanup;
 	}
 
-	if (git_checkout_index(repo, NULL, NULL, NULL) < 0) {
+	memset(&opts, 0, sizeof(opts));
+	opts.checkout_strategy =
+		GIT_CHECKOUT_CREATE_MISSING
+		| GIT_CHECKOUT_OVERWRITE_MODIFIED
+		| GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	if (git_checkout_index(repo, &opts, NULL) < 0) {
 		giterr_set(GITERR_INDEX, "%s - Failed to checkout the index.", ERROR_MSG);
 		goto cleanup;
 	}

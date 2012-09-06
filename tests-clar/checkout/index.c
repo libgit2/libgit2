@@ -26,6 +26,7 @@ void test_checkout_index__initialize(void)
 	git_tree *tree;
 
 	memset(&g_opts, 0, sizeof(g_opts));
+	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
 
 	g_repo = cl_git_sandbox_init("testrepo");
 
@@ -71,17 +72,32 @@ void test_checkout_index__cannot_checkout_a_bare_repository(void)
 	cl_git_fail(git_checkout_index(g_repo, NULL, NULL));
 }
 
-void test_checkout_index__update_the_content_of_workdir_with_missing_files(void)
+void test_checkout_index__can_create_missing_files(void)
 {
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
 
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 	test_file_contents("./testrepo/README", "hey there\n");
 	test_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
 	test_file_contents("./testrepo/new.txt", "my new file\n");
+}
+
+void test_checkout_index__can_remove_untracked_files(void)
+{
+	git_futils_mkdir("./testrepo/dir/subdir/subsubdir", NULL, 0755, GIT_MKDIR_PATH);
+	cl_git_mkfile("./testrepo/dir/one", "one\n");
+	cl_git_mkfile("./testrepo/dir/subdir/two", "two\n");
+
+	cl_assert_equal_i(true, git_path_isdir("./testrepo/dir/subdir/subsubdir"));
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_REMOVE_UNTRACKED;
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+
+	cl_assert_equal_i(false, git_path_isdir("./testrepo/dir"));
 }
 
 void test_checkout_index__honor_the_specified_pathspecs(void)
@@ -128,7 +144,7 @@ void test_checkout_index__honor_the_gitattributes_directives(void)
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
 	set_core_autocrlf_to(false);
 
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 	test_file_contents("./testrepo/README", "hey there\n");
 	test_file_contents("./testrepo/new.txt", "my new file\n");
@@ -143,7 +159,7 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
 	set_core_autocrlf_to(true);
 
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 	test_file_contents("./testrepo/README", expected_readme_text);
 #endif
@@ -158,7 +174,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 {
 	set_repo_symlink_handling_cap_to(true);
 
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 #ifdef GIT_WIN32
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
@@ -180,26 +196,26 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_false(void)
 {
 	set_repo_symlink_handling_cap_to(false);
 
-	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
 }
 
-void test_checkout_index__options_skip_existing_file(void)
+void test_checkout_index__donot_overwrite_modified_file_by_default(void)
 {
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
-	g_opts.existing_file_action = GIT_CHECKOUT_SKIP_EXISTING;
 
+	g_opts.checkout_strategy = 0;
 	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 	test_file_contents("./testrepo/new.txt", "This isn't what's stored!");
 }
 
-void test_checkout_index__options_overwrite_existing_file(void)
+void test_checkout_index__can_overwrite_modified_file(void)
 {
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
-	g_opts.existing_file_action = GIT_CHECKOUT_OVERWRITE_EXISTING;
 
+	g_opts.checkout_strategy = GIT_CHECKOUT_OVERWRITE_MODIFIED;
 	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 	test_file_contents("./testrepo/new.txt", "my new file\n");
@@ -267,6 +283,8 @@ void test_checkout_index__options_open_flags(void)
 	cl_git_mkfile("./testrepo/new.txt", "hi\n");
 
 	g_opts.file_open_flags = O_CREAT | O_RDWR | O_APPEND;
+
+	g_opts.checkout_strategy |= GIT_CHECKOUT_OVERWRITE_MODIFIED;
 	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
 
 	test_file_contents("./testrepo/new.txt", "hi\nmy new file\n");

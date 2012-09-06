@@ -21,13 +21,16 @@
  */
 GIT_BEGIN_DECL
 
-
-#define GIT_CHECKOUT_OVERWRITE_EXISTING 0 /* default */
-#define GIT_CHECKOUT_SKIP_EXISTING 1
+enum {
+	GIT_CHECKOUT_DEFAULT			= (1 << 0),
+	GIT_CHECKOUT_OVERWRITE_MODIFIED	= (1 << 1),
+	GIT_CHECKOUT_CREATE_MISSING		= (1 << 2),
+	GIT_CHECKOUT_REMOVE_UNTRACKED	= (1 << 3),
+};
 
 /* Use zeros to indicate default settings */
 typedef struct git_checkout_opts {
-	int existing_file_action; /* default: GIT_CHECKOUT_OVERWRITE_EXISTING */
+	unsigned int checkout_strategy; /* default: GIT_CHECKOUT_DEFAULT */
 	int disable_filters;
 	int dir_mode; /* default is 0755 */
 	int file_mode; /* default is 0644 */

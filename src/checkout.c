@@ -143,6 +143,9 @@ static int checkout_diff_fn(
 
 	switch (delta->status) {
 	case GIT_DELTA_UNTRACKED:
+		if (!(data->checkout_opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED))
+			return 0;
+
 		if (!git__suffixcmp(delta->new_file.path, "/"))
 			error = git_futils_rmdir_r(git_buf_cstr(data->path), GIT_DIRREMOVAL_FILES_AND_DIRS);
 		else
@@ -150,11 +153,24 @@ static int checkout_diff_fn(
 		break;
 
 	case GIT_DELTA_MODIFIED:
-		/* Deal with pre-existing files */
-		if (data->checkout_opts->existing_file_action == GIT_CHECKOUT_SKIP_EXISTING)
+		if (!(data->checkout_opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED))
 			return 0;
 
+		if (checkout_blob(
+				data->owner,
+				&delta->old_file.oid,
+				git_buf_cstr(data->path),
+				delta->old_file.mode,
+				data->can_symlink,
+				data->checkout_opts) < 0)
+			goto cleanup;
+
+		break;
+
 	case GIT_DELTA_DELETED:
+		if (!(data->checkout_opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING))
+			return 0;
+
 		if (checkout_blob(
 				data->owner,
 				&delta->old_file.oid,
@@ -209,8 +225,8 @@ static void normalize_options(git_checkout_opts *normalized, git_checkout_opts *
 		memmove(normalized, proposed, sizeof(git_checkout_opts));
 
 	/* Default options */
-	if (!normalized->existing_file_action)
-		normalized->existing_file_action = GIT_CHECKOUT_OVERWRITE_EXISTING;
+	if (!normalized->checkout_strategy)
+		normalized->checkout_strategy = GIT_CHECKOUT_DEFAULT;
 
 	/* opts->disable_filters is false by default */
 	if (!normalized->dir_mode)
