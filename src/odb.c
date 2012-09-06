@@ -710,6 +710,7 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 
 void * git_odb_backend_malloc(git_odb_backend *backend, size_t len)
 {
+	GIT_UNUSED(backend);
 	return git__malloc(len);
 }
 
