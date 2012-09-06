@@ -708,6 +708,11 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 	return error;
 }
 
+void * git_odb_backend_malloc(git_odb_backend *backend, size_t len)
+{
+	return git__malloc(len);
+}
+
 int git_odb__error_notfound(const char *message, const git_oid *oid)
 {
 	if (oid != NULL) {

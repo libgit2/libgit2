@@ -26,6 +26,10 @@ struct git_odb_stream;
 struct git_odb_backend {
 	git_odb *odb;
 
+	/* read and read_prefix each return to libgit2 a buffer which
+	 * will be freed later. The buffer should be allocated using
+	 * the function git_odb_backend_malloc to ensure that it can
+	 * be safely freed later. */
 	int (* read)(
 			void **, size_t *, git_otype *,
 			struct git_odb_backend *,
@@ -101,6 +105,8 @@ struct git_odb_stream {
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
 GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir, int compression_level, int do_fsync);
 GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **backend_out, const char *index_file);
+
+GIT_EXTERN(void *) git_odb_backend_malloc(git_odb_backend *backend, size_t len);
 
 GIT_END_DECL
 
