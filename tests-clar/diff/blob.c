@@ -58,59 +58,59 @@ void test_diff_blob__can_compare_text_blobs(void)
 	cl_git_pass(git_diff_blobs(
 		a, b, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_mods == 1);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_mods);
 	cl_assert(expected.at_least_one_of_them_is_binary == false);
 
-	cl_assert(expected.hunks == 1);
-	cl_assert(expected.lines == 6);
-	cl_assert(expected.line_ctxt == 1);
-	cl_assert(expected.line_adds == 5);
-	cl_assert(expected.line_dels == 0);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(6, expected.lines);
+	cl_assert_equal_i(1, expected.line_ctxt);
+	cl_assert_equal_i(5, expected.line_adds);
+	cl_assert_equal_i(0, expected.line_dels);
 
 	/* diff on tests/resources/attr/root_test2 */
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
 		b, c, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_mods == 1);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_mods);
 	cl_assert(expected.at_least_one_of_them_is_binary == false);
 
-	cl_assert(expected.hunks == 1);
-	cl_assert(expected.lines == 15);
-	cl_assert(expected.line_ctxt == 3);
-	cl_assert(expected.line_adds == 9);
-	cl_assert(expected.line_dels == 3);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(15, expected.lines);
+	cl_assert_equal_i(3, expected.line_ctxt);
+	cl_assert_equal_i(9, expected.line_adds);
+	cl_assert_equal_i(3, expected.line_dels);
 
 	/* diff on tests/resources/attr/root_test3 */
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
 		a, c, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_mods == 1);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_mods);
 	cl_assert(expected.at_least_one_of_them_is_binary == false);
 
-	cl_assert(expected.hunks == 1);
-	cl_assert(expected.lines == 13);
-	cl_assert(expected.line_ctxt == 0);
-	cl_assert(expected.line_adds == 12);
-	cl_assert(expected.line_dels == 1);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(13, expected.lines);
+	cl_assert_equal_i(0, expected.line_ctxt);
+	cl_assert_equal_i(12, expected.line_adds);
+	cl_assert_equal_i(1, expected.line_dels);
 
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
 		c, d, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_mods == 1);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_mods);
 	cl_assert(expected.at_least_one_of_them_is_binary == false);
 
-	cl_assert(expected.hunks == 2);
-	cl_assert(expected.lines == 14);
-	cl_assert(expected.line_ctxt == 4);
-	cl_assert(expected.line_adds == 6);
-	cl_assert(expected.line_dels == 4);
+	cl_assert_equal_i(2, expected.hunks);
+	cl_assert_equal_i(14, expected.lines);
+	cl_assert_equal_i(4, expected.line_ctxt);
+	cl_assert_equal_i(6, expected.line_adds);
+	cl_assert_equal_i(4, expected.line_dels);
 
 	git_blob_free(a);
 	git_blob_free(b);
@@ -124,14 +124,14 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	cl_git_pass(git_diff_blobs(
 		d, e, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_dels == 1);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_dels);
 	cl_assert(expected.at_least_one_of_them_is_binary == false);
 
-	cl_assert(expected.hunks == 1);
-	cl_assert(expected.hunk_old_lines == 14);
-	cl_assert(expected.lines == 14);
-	cl_assert(expected.line_dels == 14);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(14, expected.hunk_old_lines);
+	cl_assert_equal_i(14, expected.lines);
+	cl_assert_equal_i(14, expected.line_dels);
 
 	opts.flags |= GIT_DIFF_REVERSE;
 	memset(&expected, 0, sizeof(expected));
@@ -139,14 +139,14 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	cl_git_pass(git_diff_blobs(
 		d, e, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_adds == 1);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_adds);
 	cl_assert(expected.at_least_one_of_them_is_binary == false);
 
-	cl_assert(expected.hunks == 1);
-	cl_assert(expected.hunk_new_lines == 14);
-	cl_assert(expected.lines == 14);
-	cl_assert(expected.line_adds == 14);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(14, expected.hunk_new_lines);
+	cl_assert_equal_i(14, expected.lines);
+	cl_assert_equal_i(14, expected.line_adds);
 
 	opts.flags ^= GIT_DIFF_REVERSE;
 	memset(&expected, 0, sizeof(expected));
@@ -156,10 +156,10 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 
 	cl_assert(expected.at_least_one_of_them_is_binary == true);
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_dels == 1);
-	cl_assert(expected.hunks == 0);
-	cl_assert(expected.lines == 0);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_dels);
+	cl_assert_equal_i(0, expected.hunks);
+	cl_assert_equal_i(0, expected.lines);
 
 	memset(&expected, 0, sizeof(expected));
 
@@ -168,18 +168,18 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 
 	cl_assert(expected.at_least_one_of_them_is_binary == true);
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_adds == 1);
-	cl_assert(expected.hunks == 0);
-	cl_assert(expected.lines == 0);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_adds);
+	cl_assert_equal_i(0, expected.hunks);
+	cl_assert_equal_i(0, expected.lines);
 }
 
 static void assert_identical_blobs_comparison(diff_expects expected)
 {
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_unmodified == 1);
-	cl_assert(expected.hunks == 0);
-	cl_assert(expected.lines == 0);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_unmodified);
+	cl_assert_equal_i(0, expected.hunks);
+	cl_assert_equal_i(0, expected.lines);
 }
 
 void test_diff_blob__can_compare_identical_blobs(void)
@@ -209,10 +209,10 @@ static void assert_binary_blobs_comparison(diff_expects expected)
 {
 	cl_assert(expected.at_least_one_of_them_is_binary == true);
 
-	cl_assert(expected.files == 1);
-	cl_assert(expected.file_mods == 1);
-	cl_assert(expected.hunks == 0);
-	cl_assert(expected.lines == 0);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_mods);
+	cl_assert_equal_i(0, expected.hunks);
+	cl_assert_equal_i(0, expected.lines);
 }
 
 void test_diff_blob__can_compare_two_binary_blobs(void)
@@ -292,7 +292,7 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 	cl_git_pass(git_diff_blobs(
 		old_d, d, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.hunks == 2);
+	cl_assert_equal_i(2, expected.hunks);
 
 	/* Test with inter-hunk-context explicitly set to 0 */
 	opts.interhunk_lines = 0;
@@ -300,7 +300,7 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 	cl_git_pass(git_diff_blobs(
 		old_d, d, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.hunks == 2);
+	cl_assert_equal_i(2, expected.hunks);
 
 	/* Test with inter-hunk-context explicitly set to 1 */
 	opts.interhunk_lines = 1;
@@ -308,7 +308,7 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 	cl_git_pass(git_diff_blobs(
 		old_d, d, &opts, &expected, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
-	cl_assert(expected.hunks == 1);
+	cl_assert_equal_i(1, expected.hunks);
 
 	git_blob_free(old_d);
 }

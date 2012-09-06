@@ -316,6 +316,7 @@ static git_diff_list *git_diff_list_alloc(
 	if (diff == NULL)
 		return NULL;
 
+	GIT_REFCOUNT_INC(diff);
 	diff->repo = repo;
 
 	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0 ||
@@ -391,14 +392,11 @@ fail:
 	return NULL;
 }
 
-void git_diff_list_free(git_diff_list *diff)
+static void diff_list_free(git_diff_list *diff)
 {
 	git_diff_delta *delta;
 	git_attr_fnmatch *match;
 	unsigned int i;
-
-	if (!diff)
-		return;
 
 	git_vector_foreach(&diff->deltas, i, delta) {
 		git__free(delta);
@@ -414,6 +412,14 @@ void git_diff_list_free(git_diff_list *diff)
 
 	git_pool_clear(&diff->pool);
 	git__free(diff);
+}
+
+void git_diff_list_free(git_diff_list *diff)
+{
+	if (!diff)
+		return;
+
+	GIT_REFCOUNT_DEC(diff, diff_list_free);
 }
 
 static int oid_for_workdir_item(

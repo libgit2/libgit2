@@ -493,7 +493,7 @@ static int walk_and_search(git_object **out, git_revwalk *walk, regex_t *regex)
 		git_object_free(obj);
 	}
 
-	if (error < 0 && error == GIT_REVWALKOVER)
+	if (error < 0 && error == GIT_ITEROVER)
 		error = GIT_ENOTFOUND;
 
 	return error;

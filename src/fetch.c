@@ -221,7 +221,7 @@ int git_fetch_negotiate(git_remote *remote)
 		}
 	}
 
-	if (error < 0 && error != GIT_REVWALKOVER)
+	if (error < 0 && error != GIT_ITEROVER)
 		goto on_error;
 
 	/* Tell the other end that we're done negotiating */

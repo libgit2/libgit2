@@ -103,3 +103,74 @@ int diff_line_fn(
 	}
 	return 0;
 }
+
+int diff_foreach_via_iterator(
+	git_diff_list *diff,
+	void *data,
+	git_diff_file_fn file_cb,
+	git_diff_hunk_fn hunk_cb,
+	git_diff_data_fn line_cb)
+{
+	int error, curr, total;
+	git_diff_iterator *iter;
+	git_diff_delta *delta;
+
+	if ((error = git_diff_iterator_new(&iter, diff)) < 0)
+		return error;
+
+	curr  = 0;
+	total = git_diff_iterator_num_files(iter);
+
+	while (!(error = git_diff_iterator_next_file(&delta, iter))) {
+		git_diff_range *range;
+		const char *hdr;
+		size_t hdr_len;
+
+		/* call file_cb for this file */
+		if (file_cb != NULL && file_cb(data, delta, (float)curr / total) != 0)
+			goto abort;
+
+		if (!hunk_cb && !line_cb)
+			continue;
+
+		while (!(error = git_diff_iterator_next_hunk(
+				&range, &hdr, &hdr_len, iter))) {
+			char origin;
+			const char *line;
+			size_t line_len;
+
+			if (hunk_cb && hunk_cb(data, delta, range, hdr, hdr_len) != 0)
+				goto abort;
+
+			if (!line_cb)
+				continue;
+
+			while (!(error = git_diff_iterator_next_line(
+				&origin, &line, &line_len, iter))) {
+
+				if (line_cb(data, delta, range, origin, line, line_len) != 0)
+					goto abort;
+			}
+
+			if (error && error != GIT_ITEROVER)
+				goto done;
+		}
+
+		if (error && error != GIT_ITEROVER)
+			goto done;
+	}
+
+done:
+	git_diff_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return error;
+
+abort:
+	git_diff_iterator_free(iter);
+	giterr_clear();
+
+	return GIT_EUSER;
+}

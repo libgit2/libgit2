@@ -169,7 +169,7 @@ enum {
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
-	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< DEPRECATED */
+	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< DEPRECATED - will not be returned */
 	GIT_DIFF_LINE_DEL_EOFNL = '\0', /**< LF was removed at end of file */
 
 	/* The following values will only be sent to a `git_diff_data_fn` when
@@ -196,6 +196,11 @@ typedef int (*git_diff_data_fn)(
 	char line_origin, /**< GIT_DIFF_LINE_... value from above */
 	const char *content,
 	size_t content_len);
+
+/**
+ * The diff iterator object is used to scan a diff list.
+ */
+typedef struct git_diff_iterator git_diff_iterator;
 
 /** @name Diff List Generator Functions
  *
@@ -352,6 +357,126 @@ GIT_EXTERN(int) git_diff_foreach(
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
 	git_diff_data_fn line_cb);
+
+/**
+ * Create a diff iterator object that can be used to traverse a diff.
+ *
+ * This iterator can be used instead of `git_diff_foreach` in situations
+ * where callback functions are awkward to use.  Because of the way that
+ * diffs are calculated internally, using an iterator will use somewhat
+ * more memory than `git_diff_foreach` would.
+ *
+ * @param iterator Output parameter of newly created iterator.
+ * @param diff Diff over which you wish to iterate.
+ * @return 0 on success, < 0 on error
+ */
+GIT_EXTERN(int) git_diff_iterator_new(
+	git_diff_iterator **iterator,
+	git_diff_list *diff);
+
+/**
+ * Release the iterator object.
+ *
+ * Call this when you are done using the iterator.
+ *
+ * @param iterator The diff iterator to be freed.
+ */
+GIT_EXTERN(void) git_diff_iterator_free(git_diff_iterator *iterator);
+
+/**
+ * Return the number of files in the diff.
+ *
+ * Note that there is an uncommon scenario where this number might be too
+ * high -- if a file in the working directory has been "touched" on disk but
+ * the contents were then reverted, it might have been added to the
+ * `git_diff_list` as a MODIFIED file along with a note that the status
+ * needs to be confirmed when the file contents are loaded into memory.  In
+ * that case, when the file is loaded, we will check the contents and might
+ * switch it back to UNMODIFIED.  The loading of the file is deferred until
+ * as late as possible.  As a result, this might return a value what was too
+ * high in those circumstances.
+ *
+ * This is true of `git_diff_foreach` as well, but the only implication
+ * there is that the `progress` value would not advance evenly.
+ *
+ * @param iterator The iterator object
+ * @return The maximum number of files to be iterated over
+ */
+GIT_EXTERN(int) git_diff_iterator_num_files(git_diff_iterator *iterator);
+
+/**
+ * Return the number of hunks in the current file
+ *
+ * This will return the number of diff hunks in the current file.  If the
+ * diff has not been performed yet, this may result in loading the file and
+ * performing the diff.
+ *
+ * @param iterator The iterator object
+ * @return The number of hunks in the current file or <0 on loading failure
+ */
+GIT_EXTERN(int) git_diff_iterator_num_hunks_in_file(git_diff_iterator *iterator);
+
+/**
+ * Return the number of lines in the hunk currently being examined.
+ *
+ * This will return the number of lines in the current hunk.  If the diff
+ * has not been performed yet, this may result in loading the file and
+ * performing the diff.
+ *
+ * @param iterator The iterator object
+ * @return The number of lines in the current hunk (context, added, and
+ *         removed all added together) or <0 on loading failure
+ */
+GIT_EXTERN(int) git_diff_iterator_num_lines_in_hunk(git_diff_iterator *iterator);
+
+/**
+ * Return the delta information for the next file in the diff.
+ *
+ * This will return a pointer to the next git_diff_delta` to be processed or
+ * NULL if the iterator is at the end of the diff, then advance.  This
+ * returns the value `GIT_ITEROVER` after processing the last file.
+ *
+ * @param delta Output parameter for the next delta object
+ * @param iterator The iterator object
+ * @return 0 on success, GIT_ITEROVER when done, other value < 0 on error
+ */
+GIT_EXTERN(int) git_diff_iterator_next_file(
+	git_diff_delta **delta,
+	git_diff_iterator *iterator);
+
+/**
+ * Return the hunk information for the next hunk in the current file.
+ *
+ * It is recommended that you not call this if the file is a binary
+ * file, but it is allowed to do so.
+ *
+ * Warning! Call this function for the first time on a file is when the
+ * actual text diff will be computed (it cannot be computed incrementally)
+ * so the first call for a new file is expensive (at least in relative
+ * terms - in reality, it is still pretty darn fast).
+ *
+ * @param iterator The iterator object
+ * @return 0 on success, GIT_ITEROVER when done with current file, other
+ *         value < 0 on error
+ */
+GIT_EXTERN(int) git_diff_iterator_next_hunk(
+	git_diff_range **range,
+	const char **header,
+	size_t *header_len,
+	git_diff_iterator *iterator);
+
+/**
+ * Return the next line of the current hunk of diffs.
+ *
+ * @param iterator The iterator object
+ * @return 0 on success, GIT_ITEROVER when done with current hunk, other
+ *         value < 0 on error
+ */
+GIT_EXTERN(int) git_diff_iterator_next_line(
+	char *line_origin, /**< GIT_DIFF_LINE_... value from above */
+	const char **content,
+	size_t *content_len,
+	git_diff_iterator *iterator);
 
 /**
  * Iterate over a diff generating text output like "git diff --name-status".

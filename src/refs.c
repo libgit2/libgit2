@@ -1643,7 +1643,6 @@ int git_reference_normalize_name(
 			}
 		}
 
-
 		*buffer_out++ = *current++;
 		buffer_size--;
 	}

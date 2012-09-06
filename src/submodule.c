@@ -163,6 +163,7 @@ int git_submodule_foreach(
 		}
 
 		if (callback(sm, sm->name, payload)) {
+			giterr_clear();
 			error = GIT_EUSER;
 			break;
 		}
