@@ -151,7 +151,8 @@ static int update_file_is_binary_by_attr(
 {
 	const char *value;
 
-	if (!repo)
+	/* because of blob diffs, cannot assume path is set */
+	if (!file->path || !strlen(file->path))
 		return 0;
 
 	if (git_attr_get(&value, repo, 0, file->path, "diff") < 0)
@@ -1028,6 +1029,7 @@ int git_diff_blobs(
 	diff_delta_context ctxt;
 	git_diff_delta delta;
 	git_blob *new, *old;
+	git_repository *repo;
 
 	new = new_blob;
 	old = old_blob;
@@ -1038,8 +1040,15 @@ int git_diff_blobs(
 		new = swap;
 	}
 
+	if (new)
+		repo = git_object_owner((git_object *)new);
+	else if (old)
+		repo = git_object_owner((git_object *)old);
+	else
+		repo = NULL;
+
 	diff_delta_init_context(
-		&ctxt, NULL, options, GIT_ITERATOR_TREE, GIT_ITERATOR_TREE);
+		&ctxt, repo, options, GIT_ITERATOR_TREE, GIT_ITERATOR_TREE);
 
 	/* populate a "fake" delta record */
 
