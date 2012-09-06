@@ -89,21 +89,21 @@ static int format_hunk_header(char *header, size_t len, git_diff_range *range)
 {
 	if (range->old_lines != 1) {
 		if (range->new_lines != 1)
-			return snprintf(
+			return p_snprintf(
 				header, len, "@@ -%d,%d +%d,%d @@",
 				range->old_start, range->old_lines,
 				range->new_start, range->new_lines);
 		else
-			return snprintf(
+			return p_snprintf(
 				header, len, "@@ -%d,%d +%d @@",
 				range->old_start, range->old_lines, range->new_start);
 	} else {
 		if (range->new_lines != 1)
-			return snprintf(
+			return p_snprintf(
 				header, len, "@@ -%d +%d,%d @@",
 				range->old_start, range->new_start, range->new_lines);
 		else
-			return snprintf(
+			return p_snprintf(
 				header, len, "@@ -%d +%d @@",
 				range->old_start, range->new_start);
 	}

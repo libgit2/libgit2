@@ -455,6 +455,11 @@ GIT_EXTERN(int) git_diff_iterator_next_file(
  * so the first call for a new file is expensive (at least in relative
  * terms - in reality, it is still pretty darn fast).
  *
+ * @param range Pointer where to store the range for the hunk 
+ * @param header Pointer where to store the header for the chunk;
+ *	this string is owned by the library and should not be freed by
+ *	the user
+ * @param header_len Pointer where to store the length of the returned header
  * @param iterator The iterator object
  * @return 0 on success, GIT_ITEROVER when done with current file, other
  *         value < 0 on error
@@ -468,8 +473,14 @@ GIT_EXTERN(int) git_diff_iterator_next_hunk(
 /**
  * Return the next line of the current hunk of diffs.
  *
+ * @param line_origin Pointer where to store a GIT_DIFF_LINE_ value;
+ *	this value is a single character, not a buffer
+ * @param content Pointer where to store the content of the line;
+ *	this string is owned by the library and should not be freed by
+ *	the user
+ * @param Pointer where to store the length of the returned content
  * @param iterator The iterator object
- * @return 0 on success, GIT_ITEROVER when done with current hunk, other
+ * @return 0 on success, GIT_ITEROVER when done with current line, other
  *         value < 0 on error
  */
 GIT_EXTERN(int) git_diff_iterator_next_line(
