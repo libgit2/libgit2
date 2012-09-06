@@ -201,7 +201,7 @@ GIT_EXTERN(int) git_revwalk_hide_ref(git_revwalk *walk, const char *refname);
  * @param oid Pointer where to store the oid of the next commit
  * @param walk the walker to pop the commit from.
  * @return 0 if the next commit was found;
- *	GIT_REVWALKOVER if there are no commits left to iterate
+ *	GIT_ITEROVER if there are no commits left to iterate
  */
 GIT_EXTERN(int) git_revwalk_next(git_oid *oid, git_revwalk *walk);
 

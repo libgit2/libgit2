@@ -45,3 +45,9 @@ extern int diff_line_fn(
 	const char *content,
 	size_t content_len);
 
+extern int diff_foreach_via_iterator(
+	git_diff_list *diff,
+	void *data,
+	git_diff_file_fn file_cb,
+	git_diff_hunk_fn hunk_cb,
+	git_diff_data_fn line_cb);
