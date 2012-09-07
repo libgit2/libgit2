@@ -89,6 +89,50 @@ cleanup:
 	return error;
 }
 
+static int delete_config_entries_cb(
+	const char *var_name,
+	const char *value,
+	void *payload)
+{
+	git_config *config;
+
+	GIT_UNUSED(value);
+
+	config = (git_config *)payload;
+
+	return git_config_delete(config, var_name);
+}
+
+static int delete_branch_config_entries(
+	git_repository *repo,
+	const char *branch_name)
+{
+	git_config *config;
+	git_buf pattern = GIT_BUF_INIT;
+	int error = -1;
+
+	git_buf_sets(&pattern, "branch\\.");
+	git_buf_puts_escape_regex(&pattern,  branch_name);
+	git_buf_puts(&pattern, "\\..+");
+	if (git_buf_oom(&pattern))
+		goto cleanup;
+
+	if (git_repository_config__weakptr(&config, repo) < 0)
+		goto cleanup;
+
+	if ((error = git_config_foreach_match(
+			config,
+			git_buf_cstr(&pattern),
+			delete_config_entries_cb, config)) < 0)
+		goto cleanup;
+
+	error = 0;
+
+cleanup:
+	git_buf_free(&pattern);
+	return error;
+}
+
 int git_branch_delete(git_reference *branch)
 {
 	int is_head;
@@ -109,6 +153,11 @@ int git_branch_delete(git_reference *branch)
 				"Cannot delete branch '%s' as it is the current HEAD of the repository.", git_reference_name(branch));
 		return -1;
 	}
+
+	if (delete_branch_config_entries(
+		git_reference_owner(branch), 
+		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+			goto on_error;
 
 	return git_reference_delete(branch);
 }
