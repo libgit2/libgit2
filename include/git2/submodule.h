@@ -396,6 +396,35 @@ GIT_EXTERN(git_submodule_update_t) git_submodule_set_update(
 	git_submodule_update_t update);
 
 /**
+ * Read the fetchRecurseSubmodules rule for a submodule.
+ *
+ * This accesses the submodule.<name>.fetchRecurseSubmodules value for
+ * the submodule that controls fetching behavior for the submodule.
+ *
+ * Note that at this time, libgit2 does not honor this setting and the
+ * fetch functionality current ignores submodules.
+ *
+ * @return 0 if fetchRecurseSubmodules is false, 1 if true
+ */
+GIT_EXTERN(int) git_submodule_fetch_recurse_submodules(
+	git_submodule *submodule);
+
+/**
+ * Set the fetchRecurseSubmodules rule for a submodule.
+ *
+ * This sets the submodule.<name>.fetchRecurseSubmodules value for
+ * the submodule.  You should call `git_submodule_save()` if you want
+ * to persist the new value.
+ *
+ * @param submodule The submodule to modify
+ * @param fetch_recurse_submodules Boolean value
+ * @return old value for fetchRecurseSubmodules
+ */
+GIT_EXTERN(int) git_submodule_set_fetch_recurse_submodules(
+	git_submodule *submodule,
+	int fetch_recurse_submodules);
+
+/**
  * Copy submodule info into ".git/config" file.
  *
  * Just like "git submodule init", this copies information about the

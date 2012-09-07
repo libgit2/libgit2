@@ -595,6 +595,26 @@ git_submodule_update_t git_submodule_set_update(
 	return old;
 }
 
+int git_submodule_fetch_recurse_submodules(
+	git_submodule *submodule)
+{
+	assert(submodule);
+	return submodule->fetch_recurse;
+}
+
+int git_submodule_set_fetch_recurse_submodules(
+	git_submodule *submodule,
+	int fetch_recurse_submodules)
+{
+	int old;
+
+	assert(submodule);
+
+	old = submodule->fetch_recurse;
+	submodule->fetch_recurse = (fetch_recurse_submodules != 0);
+	return old;
+}
+
 int git_submodule_init(git_submodule *submodule, int overwrite)
 {
 	int error;
