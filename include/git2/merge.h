@@ -28,7 +28,7 @@ GIT_BEGIN_DECL
  * @param one one of the commits
  * @param two the other commit
  */
-GIT_EXTERN(int) git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *two);
+GIT_EXTERN(int) git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const git_oid *two);
 
 /**
  * Find a merge base given a list of commits
