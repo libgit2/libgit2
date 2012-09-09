@@ -336,6 +336,24 @@ GIT_EXTERN(int) git_remote_autotag(git_remote *remote);
  */
 GIT_EXTERN(void) git_remote_set_autotag(git_remote *remote, int value);
 
+/**
+ * Give the remote a new name
+ *
+ * All remote-tracking branches and configuration settings
+ * for the remote are updated.
+ *
+ * @param remote the remote to rename
+ * @param new_name the new name the remote should bear
+ * @param callback Optional callback to notify the consumer of fetch refspecs
+ * that haven't been automatically updated and need potential manual tweaking.
+ * @param payload Additional data to pass to the callback
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_rename(
+	git_remote *remote,
+	const char *new_name,
+	int (*callback)(const char *problematic_refspec, void *payload),
+	void *payload);
 
 /** @} */
 GIT_END_DECL
