@@ -514,18 +514,35 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
 {
+	int error;
+	git_odb_object *object;
+
+	error = git_odb__read_header_or_object(&object, len_p, type_p, db, id);
+
+	if (object)
+		git_odb_object_free(object);
+
+	return error;
+}
+
+int git_odb__read_header_or_object(
+	git_odb_object **out, size_t *len_p, git_otype *type_p,
+	git_odb *db, const git_oid *id)
+{
 	unsigned int i;
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
-	assert(db && id);
+	assert(db && id && out && len_p && type_p);
 
 	if ((object = git_cache_get(&db->cache, id)) != NULL) {
 		*len_p = object->raw.len;
 		*type_p = object->raw.type;
-		git_odb_object_free(object);
+		*out = object;
 		return 0;
 	}
+
+	*out = NULL;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -547,7 +564,8 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 
 	*len_p = object->raw.len;
 	*type_p = object->raw.type;
-	git_odb_object_free(object);
+	*out = object;
+
 	return 0;
 }
 

@@ -84,4 +84,12 @@ int git_odb__error_notfound(const char *message, const git_oid *oid);
  */
 int git_odb__error_ambiguous(const char *message);
 
+/*
+ * Attempt to read object header or just return whole object if it could
+ * not be read.
+ */
+int git_odb__read_header_or_object(
+	git_odb_object **out, size_t *len_p, git_otype *type_p,
+	git_odb *db, const git_oid *id);
+
 #endif

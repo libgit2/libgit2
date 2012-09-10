@@ -292,6 +292,7 @@ static int get_blob_content(
 	git_blob **blob)
 {
 	int error;
+	git_odb_object *odb_obj = NULL;
 
 	if (git_oid_iszero(&file->oid))
 		return 0;
@@ -303,7 +304,8 @@ static int get_blob_content(
 
 		/* peek at object header to avoid loading if too large */
 		if ((error = git_repository_odb__weakptr(&odb, ctxt->repo)) < 0 ||
-			(error = git_odb_read_header(&len, &type, odb, &file->oid)) < 0)
+			(error = git_odb__read_header_or_object(
+				&odb_obj, &len, &type, odb, &file->oid)) < 0)
 			return error;
 
 		assert(type == GIT_OBJ_BLOB);
@@ -317,7 +319,14 @@ static int get_blob_content(
 	if (ctxt->delta->binary == 1)
 		return 0;
 
-	if ((error = git_blob_lookup(blob, ctxt->repo, &file->oid)) < 0)
+	if (odb_obj != NULL) {
+		error = git_object__from_odb_object(
+			(git_object **)blob, ctxt->repo, odb_obj, GIT_OBJ_BLOB);
+		git_odb_object_free(odb_obj);
+	} else
+		error = git_blob_lookup(blob, ctxt->repo, &file->oid);
+
+	if (error)
 		return error;
 
 	map->data = (void *)git_blob_rawcontent(*blob);
