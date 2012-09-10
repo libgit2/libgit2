@@ -56,7 +56,13 @@ enum {
  * values.  Similarly, passing NULL for the options structure will
  * give the defaults.  The default values are marked below.
  *
- * @todo Most of the parameters here are not actually supported at this time.
+ * - flags: a combination of the GIT_DIFF_... values above
+ * - context_lines: number of lines of context to show around diffs
+ * - interhunk_lines: min lines between diff hunks to merge them
+ * - old_prefix: "directory" to prefix to old file names (default "a")
+ * - new_prefix: "directory" to prefix to new file names (default "b")
+ * - pathspec: array of paths / patterns to constrain diff
+ * - max_size: maximum blob size to diff, above this treated as binary
  */
 typedef struct {
 	uint32_t flags;				/**< defaults to GIT_DIFF_NORMAL */
@@ -65,6 +71,7 @@ typedef struct {
 	char *old_prefix;			/**< defaults to "a" */
 	char *new_prefix;			/**< defaults to "b" */
 	git_strarray pathspec;		/**< defaults to show all paths */
+	git_off_t max_size;			/**< defaults to 512Mb */
 } git_diff_options;
 
 /**

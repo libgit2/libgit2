@@ -172,7 +172,7 @@ static void update_delta_is_binary(git_diff_delta *delta)
 	if ((delta->old_file.flags & GIT_DIFF_FILE_BINARY) != 0 ||
 		(delta->new_file.flags & GIT_DIFF_FILE_BINARY) != 0)
 		delta->binary = 1;
-	else if ((delta->old_file.flags & GIT_DIFF_FILE_NOT_BINARY) != 0 ||
+	else if ((delta->old_file.flags & GIT_DIFF_FILE_NOT_BINARY) != 0 &&
 			 (delta->new_file.flags & GIT_DIFF_FILE_NOT_BINARY) != 0)
 		delta->binary = 0;
 	/* otherwise leave delta->binary value untouched */
@@ -219,34 +219,46 @@ static int diff_delta_is_binary_by_attr(diff_delta_context *ctxt)
 	return error;
 }
 
-static int diff_delta_is_binary_by_content(diff_delta_context *ctxt)
+static int diff_delta_is_binary_by_content(
+	diff_delta_context *ctxt, git_diff_file *file, git_map *map)
 {
-	git_diff_delta *delta = ctxt->delta;
 	git_buf search;
 
-	if ((delta->old_file.flags & BINARY_DIFF_FLAGS) == 0) {
-		search.ptr  = ctxt->old_data.data;
-		search.size = min(ctxt->old_data.len, 4000);
+	if ((file->flags & BINARY_DIFF_FLAGS) == 0) {
+		search.ptr  = map->data;
+		search.size = min(map->len, 4000);
 
 		if (git_buf_is_binary(&search))
-			delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
+			file->flags |= GIT_DIFF_FILE_BINARY;
 		else
-			delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
+			file->flags |= GIT_DIFF_FILE_NOT_BINARY;
 	}
 
-	if ((delta->new_file.flags & BINARY_DIFF_FLAGS) == 0) {
-		search.ptr  = ctxt->new_data.data;
-		search.size = min(ctxt->new_data.len, 4000);
+	update_delta_is_binary(ctxt->delta);
 
-		if (git_buf_is_binary(&search))
-			delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
-		else
-			delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
+	return 0;
+}
+
+static int diff_delta_is_binary_by_size(
+	diff_delta_context *ctxt, git_diff_file *file)
+{
+	git_off_t threshold = MAX_DIFF_FILESIZE;
+
+	if ((file->flags & BINARY_DIFF_FLAGS) != 0)
+		return 0;
+
+	if (ctxt && ctxt->opts) {
+		if (ctxt->opts->max_size < 0)
+			return 0;
+
+		if (ctxt->opts->max_size > 0)
+			threshold = ctxt->opts->max_size;
 	}
 
-	update_delta_is_binary(delta);
+	if (file->size > threshold)
+		file->flags |= GIT_DIFF_FILE_BINARY;
 
-	/* TODO: if value != NULL, implement diff drivers */
+	update_delta_is_binary(ctxt->delta);
 
 	return 0;
 }
@@ -274,53 +286,56 @@ static void setup_xdiff_options(
 }
 
 static int get_blob_content(
-	git_repository *repo,
+	diff_delta_context *ctxt,
 	git_diff_file *file,
 	git_map *map,
 	git_blob **blob)
 {
 	int error;
-	git_odb *odb;
-	size_t len;
-	git_otype type;
 
 	if (git_oid_iszero(&file->oid))
 		return 0;
 
-	/* peek at object header to avoid loading if too large */
-	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		(error = git_odb_read_header(&len, &type, odb, &file->oid)) < 0)
-		return error;
+	if (!file->size) {
+		git_odb *odb;
+		size_t len;
+		git_otype type;
 
-	assert(type == GIT_OBJ_BLOB);
+		/* peek at object header to avoid loading if too large */
+		if ((error = git_repository_odb__weakptr(&odb, ctxt->repo)) < 0 ||
+			(error = git_odb_read_header(&len, &type, odb, &file->oid)) < 0)
+			return error;
 
-	/* if blob is too large to diff, mark as binary */
-	if (len > MAX_DIFF_FILESIZE) {
-		file->flags |= GIT_DIFF_FILE_BINARY;
-		return 0;
+		assert(type == GIT_OBJ_BLOB);
+
+		file->size = len;
 	}
 
-	if (!file->size)
-		file->size = len;
+	/* if blob is too large to diff, mark as binary */
+	if ((error = diff_delta_is_binary_by_size(ctxt, file)) < 0)
+		return error;
+	if (ctxt->delta->binary == 1)
+		return 0;
 
-	if ((error = git_blob_lookup(blob, repo, &file->oid)) < 0)
+	if ((error = git_blob_lookup(blob, ctxt->repo, &file->oid)) < 0)
 		return error;
 
 	map->data = (void *)git_blob_rawcontent(*blob);
 	map->len  = git_blob_rawsize(*blob);
 
-	return 0;
+	return diff_delta_is_binary_by_content(ctxt, file, map);
 }
 
 static int get_workdir_content(
-	git_repository *repo,
+	diff_delta_context *ctxt,
 	git_diff_file *file,
 	git_map *map)
 {
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
+	const char *wd = git_repository_workdir(ctxt->repo);
 
-	if (git_buf_joinpath(&path, git_repository_workdir(repo), file->path) < 0)
+	if (git_buf_joinpath(&path, wd, file->path) < 0)
 		return -1;
 
 	if (S_ISLNK(file->mode)) {
@@ -358,13 +373,12 @@ static int get_workdir_content(
 		if (!file->size)
 			file->size = git_futils_filesize(fd);
 
-		/* if file is too large to diff, mark as binary */
-		if (file->size > MAX_DIFF_FILESIZE) {
-			file->flags |= GIT_DIFF_FILE_BINARY;
+		if ((error = diff_delta_is_binary_by_size(ctxt, file)) < 0 ||
+			ctxt->delta->binary == 1)
 			goto close_and_cleanup;
-		}
 
-		error = git_filters_load(&filters, repo, file->path, GIT_FILTER_TO_ODB);
+		error = git_filters_load(
+			&filters, ctxt->repo, file->path, GIT_FILTER_TO_ODB);
 		if (error < 0)
 			goto close_and_cleanup;
 
@@ -399,6 +413,9 @@ close_and_cleanup:
 		if (!error)
 			file->flags |= GIT_DIFF_FILE_VALID_OID;
 	}
+
+	if (!error)
+		error = diff_delta_is_binary_by_content(ctxt, file, map);
 
 cleanup:
 	git_buf_free(&path);
@@ -480,7 +497,6 @@ static int diff_delta_prep(diff_delta_context *ctxt)
 static int diff_delta_load(diff_delta_context *ctxt)
 {
 	int error = 0;
-	git_repository *repo  = ctxt->repo;
 	git_diff_delta *delta = ctxt->delta;
 	bool load_old = false, load_new = false, check_if_unmodified = false;
 
@@ -519,31 +535,35 @@ static int diff_delta_load(diff_delta_context *ctxt)
 
 	if (load_old && ctxt->old_src == GIT_ITERATOR_WORKDIR) {
 		if ((error = get_workdir_content(
-				repo, &delta->old_file, &ctxt->old_data)) < 0)
+				ctxt, &delta->old_file, &ctxt->old_data)) < 0)
 			goto cleanup;
-
-		if ((delta->old_file.flags & GIT_DIFF_FILE_BINARY) != 0)
+		if (delta->binary == 1)
 			goto cleanup;
 	}
 
 	if (load_new && ctxt->new_src == GIT_ITERATOR_WORKDIR) {
 		if ((error = get_workdir_content(
-				repo, &delta->new_file, &ctxt->new_data)) < 0)
+				ctxt, &delta->new_file, &ctxt->new_data)) < 0)
 			goto cleanup;
-
-		if ((delta->new_file.flags & GIT_DIFF_FILE_BINARY) != 0)
+		if (delta->binary == 1)
 			goto cleanup;
 	}
 
-	if (load_old && ctxt->old_src != GIT_ITERATOR_WORKDIR &&
-		(error = get_blob_content(
-			repo, &delta->old_file, &ctxt->old_data, &ctxt->old_blob)) < 0)
-		goto cleanup;
+	if (load_old && ctxt->old_src != GIT_ITERATOR_WORKDIR) {
+		if ((error = get_blob_content(
+				ctxt, &delta->old_file, &ctxt->old_data, &ctxt->old_blob)) < 0)
+			goto cleanup;
+		if (delta->binary == 1)
+			goto cleanup;
+	}
 
-	if (load_new && ctxt->new_src != GIT_ITERATOR_WORKDIR &&
-		(error = get_blob_content(
-			repo, &delta->new_file, &ctxt->new_data, &ctxt->new_blob)) < 0)
-		goto cleanup;
+	if (load_new && ctxt->new_src != GIT_ITERATOR_WORKDIR) {
+		if ((error = get_blob_content(
+				ctxt, &delta->new_file, &ctxt->new_data, &ctxt->new_blob)) < 0)
+			goto cleanup;
+		if (delta->binary == 1)
+			goto cleanup;
+	}
 
 	/* if we did not previously have the definitive oid, we may have
 	 * incorrect status and need to switch this to UNMODIFIED.
@@ -559,12 +579,6 @@ static int diff_delta_load(diff_delta_context *ctxt)
 	}
 
 cleanup:
-	/* if we have not already decided whether file is binary,
-	 * check the first 4K for nul bytes to decide...
-	 */
-	if (!error && delta->binary == -1)
-		error = diff_delta_is_binary_by_content(ctxt);
-
 	ctxt->loaded = !error;
 
 	/* flag if we would want to diff the contents of these files */
@@ -1069,9 +1083,13 @@ int git_diff_blobs(
 	if ((error = diff_delta_prep(&ctxt)) < 0)
 		goto cleanup;
 
-	if (delta.binary == -1 &&
-		(error = diff_delta_is_binary_by_content(&ctxt)) < 0)
-		goto cleanup;
+	if (delta.binary == -1) {
+		if ((error = diff_delta_is_binary_by_content(
+				&ctxt, &delta.old_file, &ctxt.old_data)) < 0 ||
+			(error = diff_delta_is_binary_by_content(
+				&ctxt, &delta.new_file, &ctxt.new_data)) < 0)
+			goto cleanup;
+	}
 
 	ctxt.loaded = 1;
 	ctxt.diffable = (delta.binary != 1 && delta.status != GIT_DELTA_UNMODIFIED);
