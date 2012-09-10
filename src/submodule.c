@@ -72,7 +72,7 @@ static int submodule_get(git_submodule **, git_repository *, const char *, const
 static void submodule_release(git_submodule *sm, int decr);
 static int submodule_load_from_index(git_repository *, const git_index_entry *);
 static int submodule_load_from_head(git_repository*, const char*, const git_oid*);
-static int submodule_load_from_config(const char *, const char *, void *);
+static int submodule_load_from_config(const git_config_entry *, void *);
 static int submodule_load_from_wd_lite(git_submodule *, const char *, void *);
 static int submodule_update_config(git_submodule *, const char *, const char *, bool, bool);
 static void submodule_mode_mismatch(git_repository *, const char *, unsigned int);
@@ -974,11 +974,12 @@ static int submodule_config_error(const char *property, const char *value)
 }
 
 static int submodule_load_from_config(
-	const char *key, const char *value, void *data)
+	const git_config_entry *entry, void *data)
 {
 	git_repository *repo = data;
 	git_strmap *smcfg = repo->submodules;
 	const char *namestart, *property, *alternate = NULL;
+	const char *key = entry->name, *value = entry->value;
 	git_buf name = GIT_BUF_INIT;
 	git_submodule *sm;
 	bool is_path;
@@ -1055,7 +1056,7 @@ static int submodule_load_from_config(
 	else if (strcasecmp(property, "update") == 0) {
 		int val;
 		if (git_config_lookup_map_value(
-			_sm_update_map, ARRAY_SIZE(_sm_update_map), value, &val) < 0)
+			&val, _sm_update_map, ARRAY_SIZE(_sm_update_map), value) < 0)
 			return submodule_config_error("update", value);
 		sm->update_default = sm->update = (git_submodule_update_t)val;
 	}
@@ -1066,7 +1067,7 @@ static int submodule_load_from_config(
 	else if (strcasecmp(property, "ignore") == 0) {
 		int val;
 		if (git_config_lookup_map_value(
-			_sm_ignore_map, ARRAY_SIZE(_sm_ignore_map), value, &val) < 0)
+			&val, _sm_ignore_map, ARRAY_SIZE(_sm_ignore_map), value) < 0)
 			return submodule_config_error("ignore", value);
 		sm->ignore_default = sm->ignore = (git_submodule_ignore_t)val;
 	}
@@ -1204,7 +1205,7 @@ static git_config_file *open_gitmodules(
 			if (git_config_file__ondisk(&mods, path.ptr) < 0)
 				mods = NULL;
 			/* open should only fail here if the file is malformed */
-			else if (git_config_file_open(mods) < 0) {
+			else if (git_config_file_open(mods, GIT_CONFIG_LEVEL_LOCAL) < 0) {
 				git_config_file_free(mods);
 				mods = NULL;
 			}

@@ -9,9 +9,9 @@
 
 #include "git2/config.h"
 
-GIT_INLINE(int) git_config_file_open(git_config_file *cfg)
+GIT_INLINE(int) git_config_file_open(git_config_file *cfg, unsigned int level)
 {
-	return cfg->open(cfg);
+	return cfg->open(cfg, level);
 }
 
 GIT_INLINE(void) git_config_file_free(git_config_file *cfg)
@@ -20,7 +20,7 @@ GIT_INLINE(void) git_config_file_free(git_config_file *cfg)
 }
 
 GIT_INLINE(int) git_config_file_get_string(
-	const char **out, git_config_file *cfg, const char *name)
+	const git_config_entry **out, git_config_file *cfg, const char *name)
 {
 	return cfg->get(cfg, name, out);
 }
@@ -39,7 +39,7 @@ GIT_INLINE(int) git_config_file_delete(
 
 GIT_INLINE(int) git_config_file_foreach(
 	git_config_file *cfg,
-	int (*fn)(const char *key, const char *value, void *data),
+	int (*fn)(const git_config_entry *entry, void *data),
 	void *data)
 {
 	return cfg->foreach(cfg, NULL, fn, data);
@@ -48,7 +48,7 @@ GIT_INLINE(int) git_config_file_foreach(
 GIT_INLINE(int) git_config_file_foreach_match(
 	git_config_file *cfg,
 	const char *regexp,
-	int (*fn)(const char *key, const char *value, void *data),
+	int (*fn)(const git_config_entry *entry, void *data),
 	void *data)
 {
 	return cfg->foreach(cfg, regexp, fn, data);
