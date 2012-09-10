@@ -1115,7 +1115,6 @@ struct git_diff_iterator {
 	diff_delta_context ctxt;
 	size_t file_index;
 	size_t next_index;
-	size_t file_count;
 	git_pool hunks;
 	size_t   hunk_count;
 	diffiter_hunk *hunk_head;
@@ -1239,8 +1238,6 @@ int git_diff_iterator_new(
 	git_diff_iterator **iterator_ptr,
 	git_diff_list *diff)
 {
-	size_t i;
-	git_diff_delta *delta;
 	git_diff_iterator *iter;
 
 	assert(diff && iterator_ptr);
@@ -1261,12 +1258,6 @@ int git_diff_iterator_new(
 		git_pool_init(&iter->lines, sizeof(diffiter_line), 0) < 0)
 		goto fail;
 
-	git_vector_foreach(&diff->deltas, i, delta) {
-		if (diff_delta_should_skip(iter->ctxt.opts, delta))
-			continue;
-		iter->file_count++;
-	}
-
 	*iterator_ptr = iter;
 
 	return 0;
@@ -1284,9 +1275,14 @@ void git_diff_iterator_free(git_diff_iterator *iter)
 	git__free(iter);
 }
 
-int git_diff_iterator_num_files(git_diff_iterator *iter)
+float git_diff_iterator_progress(git_diff_iterator *iter)
 {
-	return (int)iter->file_count;
+	return (float)iter->next_index / (float)iter->diff->deltas.length;
+}
+
+int git_diff_iterator__max_files(git_diff_iterator *iter)
+{
+	return (int)iter->diff->deltas.length;
 }
 
 int git_diff_iterator_num_hunks_in_file(git_diff_iterator *iter)

@@ -384,26 +384,16 @@ GIT_EXTERN(int) git_diff_iterator_new(
 GIT_EXTERN(void) git_diff_iterator_free(git_diff_iterator *iterator);
 
 /**
- * Return the number of files in the diff.
+ * Return progress value for traversing the diff.
  *
- * NOTE: This number has to be treated as an upper bound on the number of
- * files that have changed if the diff is with the working directory.
+ * This returns a value between 0.0 and 1.0 that represents the progress
+ * through the diff iterator.  The value is monotonically increasing and
+ * will advance gradually as you progress through the iteration.
  *
- * Why?! For efficiency, we defer loading the file contents as long as
- * possible, so if a file has been "touched" in the working directory and
- * then reverted to the original content, it may get stored in the diff list
- * as MODIFIED along with a flag that the status should be reconfirmed when
- * it is actually loaded into memory.  When that load happens, it could get
- * flipped to UNMODIFIED. If unmodified files are being skipped, then the
- * iterator will skip that file and this number may be too high.
- *
- * This behavior is true of `git_diff_foreach` as well, but the only
- * implication there is that the `progress` value would not advance evenly.
- *
- * @param iterator The iterator object
- * @return The maximum number of files to be iterated over
+ * @param iterator The diff iterator
+ * @return Value between 0.0 and 1.0
  */
-GIT_EXTERN(int) git_diff_iterator_num_files(git_diff_iterator *iterator);
+GIT_EXTERN(float) git_diff_iterator_progress(git_diff_iterator *iterator);
 
 /**
  * Return the number of hunks in the current file

@@ -111,23 +111,21 @@ int diff_foreach_via_iterator(
 	git_diff_hunk_fn hunk_cb,
 	git_diff_data_fn line_cb)
 {
-	int error, curr, total;
+	int error;
 	git_diff_iterator *iter;
 	git_diff_delta *delta;
 
 	if ((error = git_diff_iterator_new(&iter, diff)) < 0)
 		return error;
 
-	curr  = 0;
-	total = git_diff_iterator_num_files(iter);
-
 	while (!(error = git_diff_iterator_next_file(&delta, iter))) {
 		git_diff_range *range;
 		const char *hdr;
 		size_t hdr_len;
+		float progress = git_diff_iterator_progress(iter);
 
 		/* call file_cb for this file */
-		if (file_cb != NULL && file_cb(data, delta, (float)curr / total) != 0)
+		if (file_cb != NULL && file_cb(data, delta, progress) != 0)
 			goto abort;
 
 		if (!hunk_cb && !line_cb)

@@ -42,5 +42,27 @@ struct git_diff_list {
 extern void git_diff__cleanup_modes(
 	uint32_t diffcaps, uint32_t *omode, uint32_t *nmode);
 
+/**
+ * Return the maximum possible number of files in the diff.
+ *
+ * NOTE: This number has to be treated as an upper bound on the number of
+ * files that have changed if the diff is with the working directory.
+ *
+ * Why?! For efficiency, we defer loading the file contents as long as
+ * possible, so if a file has been "touched" in the working directory and
+ * then reverted to the original content, it may get stored in the diff list
+ * as MODIFIED along with a flag that the status should be reconfirmed when
+ * it is actually loaded into memory.  When that load happens, it could get
+ * flipped to UNMODIFIED. If unmodified files are being skipped, then the
+ * iterator will skip that file and this number may be too high.
+ *
+ * This behavior is true of `git_diff_foreach` as well, but the only
+ * implication there is that the `progress` value would not advance evenly.
+ *
+ * @param iterator The iterator object
+ * @return The maximum number of files to be iterated over
+ */
+int git_diff_iterator__max_files(git_diff_iterator *iterator);
+
 #endif
 
