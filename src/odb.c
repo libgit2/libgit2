@@ -115,6 +115,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	int hdr_len;
 	char hdr[64], buffer[2048];
 	git_hash_ctx *ctx;
+	ssize_t read_len;
 
 	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
 
@@ -123,17 +124,18 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 
 	git_hash_update(ctx, hdr, hdr_len);
 
-	while (size > 0) {
-		ssize_t read_len = p_read(fd, buffer, sizeof(buffer));
-
-		if (read_len < 0) {
-			git_hash_free_ctx(ctx);
-			giterr_set(GITERR_OS, "Error reading file");
-			return -1;
-		}
-
+	while (size > 0 && (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
 		git_hash_update(ctx, buffer, read_len);
 		size -= read_len;
+	}
+
+	/* If p_read returned an error code, the read obviously failed.
+	 * If size is not zero, the file was truncated after we originally
+	 * stat'd it, so we consider this a read failure too */
+	if (read_len < 0 || size > 0) {
+		git_hash_free_ctx(ctx);
+		giterr_set(GITERR_OS, "Error reading file for hashing");
+		return -1;
 	}
 
 	git_hash_final(out, ctx);

@@ -127,7 +127,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 	/* p_read loops internally to read len bytes */
 	read_size = p_read(fd, buf->ptr, len);
 
-	if (read_size < 0) {
+	if (read_size != (ssize_t)len) {
 		giterr_set(GITERR_OS, "Failed to read descriptor");
 		return -1;
 	}

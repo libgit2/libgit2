@@ -68,6 +68,7 @@ static int write_file_stream(
 	int fd, error;
 	char buffer[4096];
 	git_odb_stream *stream = NULL;
+	ssize_t read_len, written = 0;
 
 	if ((error = git_odb_open_wstream(
 			&stream, odb, (size_t)file_size, GIT_OBJ_BLOB)) < 0)
@@ -78,19 +79,17 @@ static int write_file_stream(
 		return -1;
 	}
 
-	while (!error && file_size > 0) {
-		ssize_t read_len = p_read(fd, buffer, sizeof(buffer));
-
-		if (read_len < 0) {
-			giterr_set(
-				GITERR_OS, "Failed to create blob. Can't read whole file");
-			error = -1;
-		}
-		else if (!(error = stream->write(stream, buffer, read_len)))
-			file_size -= read_len;
+	while (!error && (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
+		error = stream->write(stream, buffer, read_len);
+		written += read_len;
 	}
 
 	p_close(fd);
+
+	if (written != file_size || read_len < 0) {
+		giterr_set(GITERR_OS, "Failed to read file into stream");
+		error = -1;
+	}
 
 	if (!error)
 		error = stream->finalize_write(oid, stream);
