@@ -24,18 +24,15 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		return -1;
 	}
 
-	if((out->data = malloc(len))) {
-		p_lseek(fd, offset, SEEK_SET);
-		p_read(fd, out->data, len);
-	}
+	out->data = malloc(len);
+	GITERR_CHECK_ALLOC(out->data);
 
-	if (!out->data || (out->data == MAP_FAILED)) {
-		giterr_set(GITERR_OS, "Failed to mmap. Could not write data");
+	if (p_lseek(fd, offset, SEEK_SET) < 0 || p_read(fd, out->data, len) != len)
+		giterr_set(GITERR_OS, "mmap emulation failed");
 		return -1;
 	}
 
 	out->len = len;
-
 	return 0;
 }
 

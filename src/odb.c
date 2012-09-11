@@ -12,6 +12,7 @@
 #include "hash.h"
 #include "odb.h"
 #include "delta-apply.h"
+#include "filter.h"
 
 #include "git2/odb_backend.h"
 #include "git2/oid.h"
@@ -114,30 +115,60 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	int hdr_len;
 	char hdr[64], buffer[2048];
 	git_hash_ctx *ctx;
+	ssize_t read_len;
 
 	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
 
 	ctx = git_hash_new_ctx();
+	GITERR_CHECK_ALLOC(ctx);
 
 	git_hash_update(ctx, hdr, hdr_len);
 
-	while (size > 0) {
-		ssize_t read_len = read(fd, buffer, sizeof(buffer));
-
-		if (read_len < 0) {
-			git_hash_free_ctx(ctx);
-			giterr_set(GITERR_OS, "Error reading file");
-			return -1;
-		}
-
+	while (size > 0 && (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
 		git_hash_update(ctx, buffer, read_len);
 		size -= read_len;
+	}
+
+	/* If p_read returned an error code, the read obviously failed.
+	 * If size is not zero, the file was truncated after we originally
+	 * stat'd it, so we consider this a read failure too */
+	if (read_len < 0 || size > 0) {
+		git_hash_free_ctx(ctx);
+		giterr_set(GITERR_OS, "Error reading file for hashing");
+		return -1;
 	}
 
 	git_hash_final(out, ctx);
 	git_hash_free_ctx(ctx);
 
 	return 0;
+}
+
+int git_odb__hashfd_filtered(
+	git_oid *out, git_file fd, size_t size, git_otype type, git_vector *filters)
+{
+	int error;
+	git_buf raw = GIT_BUF_INIT;
+	git_buf filtered = GIT_BUF_INIT;
+
+	if (!filters || !filters->length)
+		return git_odb__hashfd(out, fd, size, type);
+
+	/* size of data is used in header, so we have to read the whole file
+	 * into memory to apply filters before beginning to calculate the hash
+	 */
+
+	if (!(error = git_futils_readbuffer_fd(&raw, fd, size)))
+		error = git_filters_apply(&filtered, &raw, filters);
+
+	git_buf_free(&raw);
+
+	if (!error)
+		error = git_odb_hash(out, filtered.ptr, filtered.size, type);
+
+	git_buf_free(&filtered);
+
+	return error;
 }
 
 int git_odb__hashlink(git_oid *out, const char *path)
@@ -171,7 +202,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 
 		result = git_odb_hash(out, link_data, (size_t)size, GIT_OBJ_BLOB);
 		git__free(link_data);
-	} else { 
+	} else {
 		int fd = git_futils_open_ro(path);
 		if (fd < 0)
 			return -1;
@@ -485,18 +516,35 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
 {
+	int error;
+	git_odb_object *object;
+
+	error = git_odb__read_header_or_object(&object, len_p, type_p, db, id);
+
+	if (object)
+		git_odb_object_free(object);
+
+	return error;
+}
+
+int git_odb__read_header_or_object(
+	git_odb_object **out, size_t *len_p, git_otype *type_p,
+	git_odb *db, const git_oid *id)
+{
 	unsigned int i;
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
-	assert(db && id);
+	assert(db && id && out && len_p && type_p);
 
 	if ((object = git_cache_get(&db->cache, id)) != NULL) {
 		*len_p = object->raw.len;
 		*type_p = object->raw.type;
-		git_odb_object_free(object);
+		*out = object;
 		return 0;
 	}
+
+	*out = NULL;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -518,7 +566,8 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 
 	*len_p = object->raw.len;
 	*type_p = object->raw.type;
-	git_odb_object_free(object);
+	*out = object;
+
 	return 0;
 }
 

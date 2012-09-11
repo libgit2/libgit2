@@ -73,7 +73,7 @@ static int lock_file(git_filebuf *file, int flags)
 	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == true) {
 		git_file source;
 		char buffer[2048];
-		size_t read_bytes;
+		ssize_t read_bytes;
 
 		source = p_open(file->path_original, O_RDONLY);
 		if (source < 0) {
@@ -83,13 +83,18 @@ static int lock_file(git_filebuf *file, int flags)
 			return -1;
 		}
 
-		while ((read_bytes = p_read(source, buffer, 2048)) > 0) {
+		while ((read_bytes = p_read(source, buffer, sizeof(buffer))) > 0) {
 			p_write(file->fd, buffer, read_bytes);
 			if (file->digest)
 				git_hash_update(file->digest, buffer, read_bytes);
 		}
 
 		p_close(source);
+
+		if (read_bytes < 0) {
+			giterr_set(GITERR_OS, "Failed to read file '%s'", file->path_original);
+			return -1;
+		}
 	}
 
 	return 0;
