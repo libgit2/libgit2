@@ -137,6 +137,9 @@ typedef struct git_reflog git_reflog;
 /** Representation of a git note */
 typedef struct git_note git_note;
 
+/** Representation of a git packbuilder */
+typedef struct git_packbuilder git_packbuilder;
+
 /** Time in a signature */
 typedef struct git_time {
 	git_time_t time; /** time in seconds from epoch */
@@ -187,6 +190,7 @@ typedef enum {
 
 typedef struct git_refspec git_refspec;
 typedef struct git_remote git_remote;
+typedef struct git_push git_push;
 
 typedef struct git_remote_head git_remote_head;
 typedef struct git_remote_callbacks git_remote_callbacks;

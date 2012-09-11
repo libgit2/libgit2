@@ -106,7 +106,8 @@ static int do_connect(transport_git *t, const char *url)
 	if (gitno_connect((git_transport *)t, host, port) < 0)
 		goto on_error;
 
-	if (send_request((git_transport *)t, NULL, url) < 0)
+	if (send_request((git_transport *)t,
+			 t->parent.direction ? "git-receive-pack" : NULL, url) < 0)
 		goto on_error;
 
 	git__free(host);
@@ -128,11 +129,6 @@ on_error:
 static int git_connect(git_transport *transport, int direction)
 {
 	transport_git *t = (transport_git *) transport;
-
-	if (direction == GIT_DIR_PUSH) {
-		giterr_set(GITERR_NET, "Pushing over git:// is not supported");
-		return -1;
-	}
 
 	t->parent.direction = direction;
 

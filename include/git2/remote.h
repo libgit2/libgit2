@@ -188,6 +188,12 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
 GIT_EXTERN(int) git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats);
 
 /**
+ *
+ *
+ */
+GIT_EXTERN(int) git_remote_push(git_remote *remote);
+
+/**
  * Check whether the remote is connected
  *
  * Check whether the remote's underlying transport is connected to the
@@ -282,6 +288,14 @@ typedef enum git_remote_completion_type {
 } git_remote_completion_type;
 
 /**
+ * Auth data for HTTP authentication.
+ */
+typedef struct http_auth_data {
+	char *username;
+	char *password;
+} http_auth_data;
+
+/**
  * The callback settings structure
  *
  * Set the calbacks to be called by the remote.
@@ -290,6 +304,7 @@ struct git_remote_callbacks {
 	void (*progress)(const char *str, int len, void *data);
 	int (*completion)(git_remote_completion_type type, void *data);
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+	int (*http_auth)(http_auth_data *auth_data, void *data);
 	void *data;
 };
 

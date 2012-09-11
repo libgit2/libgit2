@@ -279,8 +279,8 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 		struct git_pack_file *p;
 
 		p = git_vector_get(&backend->packs, i);
-		if (p == backend->last_found)
-			continue;
+		/* if (p == backend->last_found) */
+		/* 	continue; */
 
 		if (git_pack_entry_find(e, p, oid, GIT_OID_HEXSZ) == 0) {
 			backend->last_found = p;
