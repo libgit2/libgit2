@@ -419,7 +419,7 @@ cleanup:
 	return error;
 }
 
-int git_merge_base(git_oid *out, git_repository *repo, git_oid *one, git_oid *two)
+int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const git_oid *two)
 {
 	git_revwalk *walk;
 	git_vector list;
