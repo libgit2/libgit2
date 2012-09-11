@@ -247,7 +247,7 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 		if (git_config_get_bool(&val, cfg, "core.filemode") == 0)
 			index->distrust_filemode = (val == 0);
 		if (git_config_get_bool(&val, cfg, "core.symlinks") == 0)
-			index->no_symlinks = (val != 0);
+			index->no_symlinks = (val == 0);
 	}
 	else {
 		index->ignore_case = ((caps & GIT_INDEXCAP_IGNORE_CASE) != 0);
