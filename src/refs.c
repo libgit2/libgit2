@@ -1844,3 +1844,50 @@ int git_reference_is_remote(git_reference *ref)
 	assert(ref);
 	return git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) == 0;
 }
+
+static int peel_error(int error, git_reference *ref, const char* msg)
+{
+	giterr_set(
+		GITERR_INVALID,
+		"The reference '%s' cannot be peeled - %s", git_reference_name(ref), msg);
+	return error;
+}
+
+static int reference_target(git_object **object, git_reference *ref)
+{
+	const git_oid *oid;
+
+	oid = git_reference_oid(ref);
+
+	return git_object_lookup(object, git_reference_owner(ref), oid, GIT_OBJ_ANY);
+}
+
+int git_reference_peel(
+		git_object **peeled,
+		git_reference *ref,
+		git_otype target_type)
+{
+	git_reference *resolved = NULL;
+	git_object *target = NULL;
+	int error;
+
+	assert(ref);
+
+	if ((error = git_reference_resolve(&resolved, ref)) < 0)
+		return peel_error(error, ref, "Cannot resolve reference");
+
+	if ((error = reference_target(&target, resolved)) < 0) {
+		peel_error(error, ref, "Cannot retrieve reference target");
+		goto cleanup;
+	}
+	
+	if (target_type == GIT_OBJ_ANY && git_object_type(target) != GIT_OBJ_TAG)
+		error = git_object__dup(peeled, target);
+	else 
+		error = git_object_peel(peeled, target, target_type);
+
+cleanup:
+	git_object_free(target);
+	git_reference_free(resolved);
+	return error;
+}

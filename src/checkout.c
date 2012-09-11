@@ -22,9 +22,6 @@
 #include "filter.h"
 #include "blob.h"
 
-GIT_BEGIN_DECL
-
-
 typedef struct tree_walk_data
 {
 	git_indexer_stats *stats;
@@ -226,6 +223,3 @@ int git_checkout_reference(git_reference *ref,
 	git_reference_free(head);
 	return retcode;
 }
-
-
-GIT_END_DECL
