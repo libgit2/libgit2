@@ -276,7 +276,7 @@ static int find_and_add_filter(git_vector *filters, git_repository *repo, const 
 
 	/*
 	 * Use the core Git logic to see if we should perform CRLF for this file
-	 * based on its attributes & the value of `core.auto_crlf`
+	 * based on its attributes & the value of `core.autocrlf`
 	 */
 	ca.crlf_action = crlf_input_action(&ca);
 

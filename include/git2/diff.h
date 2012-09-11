@@ -56,7 +56,13 @@ enum {
  * values.  Similarly, passing NULL for the options structure will
  * give the defaults.  The default values are marked below.
  *
- * @todo Most of the parameters here are not actually supported at this time.
+ * - flags: a combination of the GIT_DIFF_... values above
+ * - context_lines: number of lines of context to show around diffs
+ * - interhunk_lines: min lines between diff hunks to merge them
+ * - old_prefix: "directory" to prefix to old file names (default "a")
+ * - new_prefix: "directory" to prefix to new file names (default "b")
+ * - pathspec: array of paths / patterns to constrain diff
+ * - max_size: maximum blob size to diff, above this treated as binary
  */
 typedef struct {
 	uint32_t flags;				/**< defaults to GIT_DIFF_NORMAL */
@@ -65,6 +71,7 @@ typedef struct {
 	char *old_prefix;			/**< defaults to "a" */
 	char *new_prefix;			/**< defaults to "b" */
 	git_strarray pathspec;		/**< defaults to show all paths */
+	git_off_t max_size;			/**< defaults to 512Mb */
 } git_diff_options;
 
 /**
@@ -72,13 +79,28 @@ typedef struct {
  */
 typedef struct git_diff_list git_diff_list;
 
+/**
+ * Flags that can be set for the file on side of a diff.
+ *
+ * Most of the flags are just for internal consumption by libgit2,
+ * but some of them may be interesting to external users.  They are:
+ *
+ * - VALID_OID  - the `oid` value is computed and correct
+ * - FREE_PATH  - the `path` string is separated allocated memory
+ * - BINARY     - this file should be considered binary data
+ * - NOT_BINARY - this file should be considered text data
+ * - FREE_DATA  - the internal file data is kept in allocated memory
+ * - UNMAP_DATA - the internal file data is kept in mmap'ed memory
+ * - NO_DATA    - this side of the diff should not be loaded
+ */
 enum {
 	GIT_DIFF_FILE_VALID_OID  = (1 << 0),
 	GIT_DIFF_FILE_FREE_PATH  = (1 << 1),
 	GIT_DIFF_FILE_BINARY     = (1 << 2),
 	GIT_DIFF_FILE_NOT_BINARY = (1 << 3),
 	GIT_DIFF_FILE_FREE_DATA  = (1 << 4),
-	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5)
+	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5),
+	GIT_DIFF_FILE_NO_DATA    = (1 << 6),
 };
 
 /**
@@ -169,7 +191,7 @@ enum {
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
-	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< DEPRECATED - will not be returned */
+	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< Removed line w/o LF & added one with */
 	GIT_DIFF_LINE_DEL_EOFNL = '\0', /**< LF was removed at end of file */
 
 	/* The following values will only be sent to a `git_diff_data_fn` when
@@ -384,25 +406,16 @@ GIT_EXTERN(int) git_diff_iterator_new(
 GIT_EXTERN(void) git_diff_iterator_free(git_diff_iterator *iterator);
 
 /**
- * Return the number of files in the diff.
+ * Return progress value for traversing the diff.
  *
- * Note that there is an uncommon scenario where this number might be too
- * high -- if a file in the working directory has been "touched" on disk but
- * the contents were then reverted, it might have been added to the
- * `git_diff_list` as a MODIFIED file along with a note that the status
- * needs to be confirmed when the file contents are loaded into memory.  In
- * that case, when the file is loaded, we will check the contents and might
- * switch it back to UNMODIFIED.  The loading of the file is deferred until
- * as late as possible.  As a result, this might return a value what was too
- * high in those circumstances.
+ * This returns a value between 0.0 and 1.0 that represents the progress
+ * through the diff iterator.  The value is monotonically increasing and
+ * will advance gradually as you progress through the iteration.
  *
- * This is true of `git_diff_foreach` as well, but the only implication
- * there is that the `progress` value would not advance evenly.
- *
- * @param iterator The iterator object
- * @return The maximum number of files to be iterated over
+ * @param iterator The diff iterator
+ * @return Value between 0.0 and 1.0
  */
-GIT_EXTERN(int) git_diff_iterator_num_files(git_diff_iterator *iterator);
+GIT_EXTERN(float) git_diff_iterator_progress(git_diff_iterator *iterator);
 
 /**
  * Return the number of hunks in the current file
@@ -450,16 +463,19 @@ GIT_EXTERN(int) git_diff_iterator_next_file(
  * It is recommended that you not call this if the file is a binary
  * file, but it is allowed to do so.
  *
- * Warning! Call this function for the first time on a file is when the
+ * The `header` text output will contain the standard hunk header that
+ * would appear in diff output.  The header string will be NUL terminated.
+ *
+ * WARNING! Call this function for the first time on a file is when the
  * actual text diff will be computed (it cannot be computed incrementally)
  * so the first call for a new file is expensive (at least in relative
  * terms - in reality, it is still pretty darn fast).
  *
- * @param range Pointer where to store the range for the hunk 
- * @param header Pointer where to store the header for the chunk;
- *	this string is owned by the library and should not be freed by
- *	the user
- * @param header_len Pointer where to store the length of the returned header
+ * @param range Output pointer to range of lines covered by the hunk;
+ *        This range object is owned by the library and should not be freed.
+ * @param header Output pointer to the text of the hunk header
+ *        This string is owned by the library and should not be freed.
+ * @param header_len Output pointer to store the length of the header text
  * @param iterator The iterator object
  * @return 0 on success, GIT_ITEROVER when done with current file, other
  *         value < 0 on error
@@ -473,12 +489,18 @@ GIT_EXTERN(int) git_diff_iterator_next_hunk(
 /**
  * Return the next line of the current hunk of diffs.
  *
- * @param line_origin Pointer where to store a GIT_DIFF_LINE_ value;
- *	this value is a single character, not a buffer
- * @param content Pointer where to store the content of the line;
- *	this string is owned by the library and should not be freed by
- *	the user
- * @param Pointer where to store the length of the returned content
+ * The `line_origin` output will tell you what type of line this is
+ * (e.g. was it added or removed or is it just context for the diff).
+ *
+ * The `content` will be a pointer to the file data that goes in the
+ * line. IT WILL NOT BE NUL TERMINATED. You have to use the `content_len`
+ * value and only process that many bytes of data from the content string.
+ *
+ * @param line_origin Output pointer to store a GIT_DIFF_LINE value for this
+ *        next chunk of data. The value is a single character, not a buffer.
+ * @param content Output pointer to store the content of the diff; this
+ *        string is owned by the library and should not be freed.
+ * @param content_len Output pointer to store the length of the content.
  * @param iterator The iterator object
  * @return 0 on success, GIT_ITEROVER when done with current line, other
  *         value < 0 on error
