@@ -720,3 +720,81 @@ fail_parse:
 	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value);
 	return -1;
 }
+
+struct rename_data
+{
+	git_config *config;
+	const char *old_name;
+	const char *new_name;
+};
+
+static int rename_config_entries_cb(
+	const git_config_entry *entry,
+	void *payload)
+{
+	struct rename_data *data = (struct rename_data *)payload;
+
+	if (data->new_name != NULL) {
+		git_buf name = GIT_BUF_INIT;
+		int error;
+
+		if (git_buf_printf(
+			&name,
+			"%s.%s",
+			data->new_name,
+			entry->name + strlen(data->old_name) + 1) < 0)
+				return -1;
+
+		error = git_config_set_string(
+			data->config,
+			git_buf_cstr(&name),
+			entry->value);
+
+		git_buf_free(&name);
+
+		if (error)
+			return error;
+	}
+
+	return git_config_delete(data->config, entry->name);
+}
+
+int git_config_rename_section(
+	git_repository *repo,
+	const char *old_section_name,
+	const char *new_section_name)
+{
+	git_config *config;
+	git_buf pattern = GIT_BUF_INIT;
+	int error = -1;
+	struct rename_data data;
+
+	git_buf_puts_escape_regex(&pattern,  old_section_name);
+	git_buf_puts(&pattern, "\\..+");
+	if (git_buf_oom(&pattern))
+		goto cleanup;
+
+	if (git_repository_config__weakptr(&config, repo) < 0)
+		goto cleanup;
+
+	data.config = config;
+	data.old_name = old_section_name;
+	data.new_name = new_section_name;
+
+	if ((error = git_config_foreach_match(
+			config,
+			git_buf_cstr(&pattern),
+			rename_config_entries_cb, &data)) < 0) {
+				giterr_set(GITERR_CONFIG,
+					"Cannot rename config section '%s' to '%s'",
+					old_section_name,
+					new_section_name);
+				goto cleanup;
+	}
+
+	error = 0;
+
+cleanup:
+	git_buf_free(&pattern);
+	return error;
+}

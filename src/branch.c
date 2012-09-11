@@ -89,86 +89,11 @@ cleanup:
 	return error;
 }
 
-typedef struct rename_data
-{
-	git_config *config;
-	const char *old_name;
-	const char *new_name;
-} rename_data;
-
-static int rename_config_entries_cb(
-	const char *var_name,
-	const char *value,
-	void *payload)
-{
-	rename_data *data = (rename_data *)payload;
-
-	GIT_UNUSED(value);
-
-	if (data->new_name != NULL) {
-		git_buf name = GIT_BUF_INIT;
-		int error;
-
-		if (git_buf_printf(
-			&name,
-			"branch.%s.%s",
-			data->new_name,
-			var_name + strlen("branch") + strlen(data->old_name) + 2) < 0)
-				return -1;
-
-		error = git_config_set_string(
-			data->config,
-			git_buf_cstr(&name),
-			value);
-
-		git_buf_free(&name);
-
-		if (error)
-			return error;
-	}
-
-	return git_config_delete(data->config, var_name);
-}
-
-static int rename_branch_config_entries(
-	git_repository *repo,
-	const char *old_branch_name,
-	const char *new_branch_name)
-{
-	git_config *config;
-	git_buf pattern = GIT_BUF_INIT;
-	int error = -1;
-	rename_data data;
-
-	git_buf_sets(&pattern, "branch\\.");
-	git_buf_puts_escape_regex(&pattern,  old_branch_name);
-	git_buf_puts(&pattern, "\\..+");
-	if (git_buf_oom(&pattern))
-		goto cleanup;
-
-	if (git_repository_config__weakptr(&config, repo) < 0)
-		goto cleanup;
-
-	data.config = config;
-	data.old_name = old_branch_name;
-	data.new_name = new_branch_name;
-
-	if ((error = git_config_foreach_match(
-			config,
-			git_buf_cstr(&pattern),
-			rename_config_entries_cb, &data)) < 0)
-		goto cleanup;
-
-	error = 0;
-
-cleanup:
-	git_buf_free(&pattern);
-	return error;
-}
-
 int git_branch_delete(git_reference *branch)
 {
 	int is_head;
+	git_buf config_section = GIT_BUF_INIT;
+	int error = -1;
 
 	assert(branch);
 
@@ -187,13 +112,23 @@ int git_branch_delete(git_reference *branch)
 		return -1;
 	}
 
-	if (rename_branch_config_entries(
+	if (git_buf_printf(&config_section, "branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+		goto on_error;
+
+	if (git_config_rename_section(
 		git_reference_owner(branch), 
-		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR),
+		git_buf_cstr(&config_section),
 		NULL) < 0)
 			goto on_error;
 
-	return git_reference_delete(branch);
+	if (git_reference_delete(branch) < 0)
+		goto on_error;
+
+	error = 0;
+
+on_error:
+	git_buf_free(&config_section);
+	return error;
 }
 
 typedef struct {
@@ -245,7 +180,8 @@ int git_branch_move(
 	int force)
 {
 	git_buf new_reference_name = GIT_BUF_INIT,
-		old_branch_name = GIT_BUF_INIT;
+		old_config_section = GIT_BUF_INIT,
+		new_config_section = GIT_BUF_INIT;
 	int error;
 
 	assert(branch && new_branch_name);
@@ -256,21 +192,28 @@ int git_branch_move(
 	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
 		goto cleanup;
 
-	if ((error = git_buf_puts(&old_branch_name, git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR))) < 0)
-		goto cleanup;
+	if (git_buf_printf(
+		&old_config_section,
+		"branch.%s",
+		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+			goto cleanup;
 
 	if ((error = git_reference_rename(branch, git_buf_cstr(&new_reference_name), force)) < 0)
 		goto cleanup;
 
-	if ((error = rename_branch_config_entries(
+	if (git_buf_printf(&new_config_section, "branch.%s", new_branch_name) < 0)
+		goto cleanup;
+
+	if ((error = git_config_rename_section(
 		git_reference_owner(branch), 
-		git_buf_cstr(&old_branch_name),
-		new_branch_name)) < 0)
+		git_buf_cstr(&old_config_section),
+		git_buf_cstr(&new_config_section))) < 0)
 			goto cleanup;
 
 cleanup:
 	git_buf_free(&new_reference_name);
-	git_buf_free(&old_branch_name);
+	git_buf_free(&old_config_section);
+	git_buf_free(&new_config_section);
 
 	return error;
 }
