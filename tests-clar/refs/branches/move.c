@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
+#include "config/config_helpers.h"
 
 static git_repository *repo;
 static git_reference *ref;
@@ -61,4 +62,25 @@ void test_refs_branches_move__can_not_move_a_non_branch(void)
 void test_refs_branches_move__can_force_move_over_an_existing_branch(void)
 {
 	cl_git_pass(git_branch_move(ref, "master", 1));
+}
+
+void test_refs_branches_move__moving_a_branch_moves_related_configuration_data(void)
+{
+	git_reference *branch;
+
+	cl_git_pass(git_branch_lookup(&branch, repo, "track-local", GIT_BRANCH_LOCAL));
+
+	assert_config_entry_existence(repo, "branch.track-local.remote", true);
+	assert_config_entry_existence(repo, "branch.track-local.merge", true);
+	assert_config_entry_existence(repo, "branch.moved.remote", false);
+	assert_config_entry_existence(repo, "branch.moved.merge", false);
+
+	cl_git_pass(git_branch_move(branch, "moved", 0));
+
+	assert_config_entry_existence(repo, "branch.track-local.remote", false);
+	assert_config_entry_existence(repo, "branch.track-local.merge", false);
+	assert_config_entry_existence(repo, "branch.moved.remote", true);
+	assert_config_entry_existence(repo, "branch.moved.merge", true);
+
+	git_reference_free(branch);
 }
