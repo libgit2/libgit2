@@ -89,12 +89,13 @@ void *git_cache_try_store(git_cache *cache, void *_entry)
 			git_cached_obj_decref(node, cache->free_obj);
 			cache->nodes[hash & cache->size_mask] = entry;
 		}
+
+		/* increase the refcount again, because we are
+		 * returning it to the user */
+		git_cached_obj_incref(entry);
+
 	}
 	git_mutex_unlock(&cache->lock);
-
-	/* increase the refcount again, because we are
-	 * returning it to the user */
-	git_cached_obj_incref(entry);
 
 	return entry;
 }
