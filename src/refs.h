@@ -55,6 +55,7 @@ void git_repository__refcache_free(git_refcache *refs);
 
 int git_reference__normalize_name_lax(char *buffer_out, size_t out_size, const char *name);
 int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
+int git_reference__is_valid_name(const char *refname, unsigned int flags);
 int git_reference__update(git_repository *repo, const git_oid *oid, const char *ref_name);
 
 /**

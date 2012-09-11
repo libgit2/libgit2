@@ -20,6 +20,10 @@ struct git_refspec {
 };
 
 int git_refspec_parse(struct git_refspec *refspec, const char *str);
+int git_refspec__parse(
+	struct git_refspec *refspec,
+	const char *str,
+	bool is_fetch);
 
 /**
  * Transform a reference to its target following the refspec's rules,

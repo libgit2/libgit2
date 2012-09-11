@@ -1952,11 +1952,18 @@ cleanup:
 	return error;
 }
 
+int git_reference__is_valid_name(
+	const char *refname,
+	unsigned int flags)
+{
+	giterr_clear();
+	return git_reference__normalize_name(NULL, refname, flags) == 0;
+}
+
 int git_reference_is_valid_name(
 	const char *refname)
 {
-	return git_reference__normalize_name(
-		NULL,
+	return git_reference__is_valid_name(
 		refname,
-		GIT_REF_FORMAT_ALLOW_ONELEVEL) == 0;
+		GIT_REF_FORMAT_ALLOW_ONELEVEL);
 }
