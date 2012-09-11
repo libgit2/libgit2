@@ -1098,7 +1098,7 @@ int git_reference_lookup_resolved(
 	scan->name = git__calloc(GIT_REFNAME_MAX + 1, sizeof(char));
 	GITERR_CHECK_ALLOC(scan->name);
 
-	if ((result = git_reference__normalize_name(
+	if ((result = git_reference__normalize_name_lax(
 		scan->name,
 		GIT_REFNAME_MAX,
 		name)) < 0) {
@@ -1200,7 +1200,7 @@ int git_reference_create_symbolic(
 	char normalized[GIT_REFNAME_MAX];
 	git_reference *ref = NULL;
 
-	if (git_reference__normalize_name(
+	if (git_reference__normalize_name_lax(
 		normalized,
 		sizeof(normalized),
 		name) < 0)
@@ -1322,7 +1322,7 @@ int git_reference_set_target(git_reference *ref, const char *target)
 		return -1;
 	}
 
-	if (git_reference__normalize_name(
+	if (git_reference__normalize_name_lax(
 		normalized,
 		sizeof(normalized),
 		target))
@@ -1584,106 +1584,148 @@ static int is_valid_ref_char(char ch)
 	}
 }
 
+static int ensure_segment_validity(const char *name)
+{
+	const char *current = name;
+	char prev = '\0';
+
+	if (*current == '.')
+		return -1; /* Refname starts with "." */
+
+	for (current = name; ; current++) {
+		if (*current == '\0' || *current == '/')
+			break;
+
+		if (!is_valid_ref_char(*current))
+			return -1; /* Illegal character in refname */
+
+		if (prev == '.' && *current == '.')
+			return -1; /* Refname contains ".." */
+
+		if (prev == '@' && *current == '{')
+			return -1; /* Refname contains "@{" */
+
+		prev = *current;
+	}
+
+	return current - name;
+}
+
+int git_reference__normalize_name(
+	git_buf *buf,
+	const char *name,
+	unsigned int flags)
+{
+	// Inspired from https://github.com/git/git/blob/f06d47e7e0d9db709ee204ed13a8a7486149f494/refs.c#L36-100
+
+	char *current;
+	int segment_len, segments_count = 0, error = -1;
+	
+	assert(name && buf);
+
+	current = (char *)name;
+
+	git_buf_clear(buf);
+
+	while (true) {
+		segment_len = ensure_segment_validity(current);
+		if (segment_len < 0) {
+			if ((flags & GIT_REF_FORMAT_REFSPEC_PATTERN) &&
+					current[0] == '*' &&
+					(current[1] == '\0' || current[1] == '/')) {
+				/* Accept one wildcard as a full refname component. */
+				flags &= ~GIT_REF_FORMAT_REFSPEC_PATTERN;
+				segment_len = 1;
+			} else
+				goto cleanup;
+		}
+
+		if (segment_len > 0) {
+			int cur_len = git_buf_len(buf);
+
+			git_buf_joinpath(buf, git_buf_cstr(buf), current);
+			git_buf_truncate(buf, 
+				cur_len + segment_len + (segments_count ? 1 : 0));
+
+			segments_count++;
+
+			if (git_buf_oom(buf))
+				goto cleanup;
+		}
+
+		if (current[segment_len] == '\0')
+			break;
+
+		current += segment_len + 1;
+	}
+
+	/* A refname can not be empty */
+	if (git_buf_len(buf) == 0)
+		goto cleanup;
+
+	/* A refname can not end with "." */
+	if (current[segment_len - 1] == '.')
+		goto cleanup;
+
+	/* A refname can not end with "/" */
+	if (current[segment_len - 1] == '/')
+		goto cleanup;
+
+	/* A refname can not end with ".lock" */
+	if (!git__suffixcmp(name, GIT_FILELOCK_EXTENSION))
+		goto cleanup;
+
+	/* Object id refname have to contain at least one slash, except
+	 * for HEAD in a detached state or MERGE_HEAD if we're in the
+	 * middle of a merge */
+	if (!(flags & GIT_REF_FORMAT_ALLOW_ONELEVEL) && 
+		segments_count < 2 &&
+		strcmp(name, GIT_HEAD_FILE) != 0 &&
+		strcmp(name, GIT_MERGE_HEAD_FILE) != 0 &&
+		strcmp(name, GIT_FETCH_HEAD_FILE) != 0)
+		return -1;
+
+	error = 0;
+
+cleanup:
+	if (error)
+		giterr_set(
+			GITERR_REFERENCE,
+			"The given reference name '%s' is not valid", name);
+
+	return error;
+}
+
 int git_reference_normalize_name(
 	char *buffer_out,
 	size_t buffer_size,
 	const char *name,
 	unsigned int flags)
 {
-	const char *name_end, *buffer_out_start;
-	const char *current;
-	int contains_a_slash = 0;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
 
-	assert(name && buffer_out);
+	if ((error = git_reference__normalize_name(&buf, name, flags)) < 0)
+		goto cleanup;
 
-	if (flags & GIT_REF_FORMAT_REFSPEC_PATTERN) {
-		giterr_set(GITERR_INVALID, "Unimplemented");
-		return -1;
-	}
-
-	buffer_out_start = buffer_out;
-	current = name;
-	name_end = name + strlen(name);
-
-	/* Terminating null byte */
-	buffer_size--;
-
-	/* A refname can not be empty */
-	if (name_end == name)
-		goto invalid_name;
-
-	/* A refname can not end with a dot or a slash */
-	if (*(name_end - 1) == '.' || *(name_end - 1) == '/')
-		goto invalid_name;
-
-	while (current < name_end && buffer_size > 0) {
-		if (!is_valid_ref_char(*current))
-			goto invalid_name;
-
-		if (buffer_out > buffer_out_start) {
-			char prev = *(buffer_out - 1);
-
-			/* A refname can not start with a dot nor contain a double dot */
-			if (*current == '.' && ((prev == '.') || (prev == '/')))
-				goto invalid_name;
-
-			/* '@{' is forbidden within a refname */
-			if (*current == '{' && prev == '@')
-				goto invalid_name;
-
-			/* Prevent multiple slashes from being added to the output */
-			if (*current == '/' && prev == '/') {
-				current++;
-				continue;
-			}
-		}
-
-		if (*current == '/') {
-			if (buffer_out > buffer_out_start)
-				contains_a_slash = 1;
-			else {
-				current++;
-				continue;
-			}
-		}
-
-		*buffer_out++ = *current++;
-		buffer_size--;
-	}
-
-	if (current < name_end) {
+	if (git_buf_len(&buf) > buffer_size - 1) {
 		giterr_set(
 		GITERR_REFERENCE,
 		"The provided buffer is too short to hold the normalization of '%s'", name);
-		return GIT_EBUFS;
+		error = GIT_EBUFS;
+		goto cleanup;
 	}
 
-	/* Object id refname have to contain at least one slash, except
-	 * for HEAD in a detached state or MERGE_HEAD if we're in the
-	 * middle of a merge */
-	if (!(flags & GIT_REF_FORMAT_ALLOW_ONELEVEL) &&
-		!contains_a_slash &&
-		strcmp(name, GIT_HEAD_FILE) != 0 &&
-		strcmp(name, GIT_MERGE_HEAD_FILE) != 0 &&
-		strcmp(name, GIT_FETCH_HEAD_FILE) != 0)
-		goto invalid_name;
+	git_buf_copy_cstr(buffer_out, buffer_size, &buf);
 
-	/* A refname can not end with ".lock" */
-	if (!git__suffixcmp(name, GIT_FILELOCK_EXTENSION))
-		goto invalid_name;
+	error = 0;
 
-	*buffer_out = '\0';
-
-	return 0;
-
-invalid_name:
-	giterr_set(
-		GITERR_REFERENCE,
-		"The given reference name '%s' is not valid", name);
-	return -1;
+cleanup:
+	git_buf_free(&buf);
+	return error;
 }
 
-int git_reference__normalize_name(
+int git_reference__normalize_name_lax(
 	char *buffer_out,
 	size_t out_size,
 	const char *name)

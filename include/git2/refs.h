@@ -414,8 +414,6 @@ enum {
  * Once normalized, if the reference name is valid, it will be
  * returned in the user allocated buffer.
  *
- * TODO: Implement handling of GIT_REF_FORMAT_REFSPEC_PATTERN
- *
  * @param buffer_out The user allocated buffer where the
  * normalized name will be stored.
  *

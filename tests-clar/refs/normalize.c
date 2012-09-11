@@ -5,9 +5,10 @@
 #include "reflog.h"
 
 // Helpers
-static void ensure_refname_normalized(unsigned int flags,
-                                      const char *input_refname,
-                                      const char *expected_refname)
+static void ensure_refname_normalized(
+	unsigned int flags,
+	const char *input_refname,
+	const char *expected_refname)
 {
 	char buffer_out[GIT_REFNAME_MAX];
 
@@ -115,7 +116,7 @@ void test_refs_normalize__symbolic(void)
  * See https://github.com/spearce/JGit/commit/e4bf8f6957bbb29362575d641d1e77a02d906739 */
 void test_refs_normalize__jgit_suite(void)
 {
-   // tests borrowed from JGit
+	// tests borrowed from JGit
 
 /* EmptyString */
 	ensure_refname_invalid(
@@ -313,4 +314,58 @@ void test_refs_normalize__buffer_has_to_be_big_enough_to_hold_the_normalized_ver
 		buffer_out, 21, "//refs//heads/long///name", GIT_REF_FORMAT_NORMAL));
 	cl_git_fail(git_reference_normalize_name(
 		buffer_out, 20, "//refs//heads/long///name", GIT_REF_FORMAT_NORMAL));
+}
+
+#define ONE_LEVEL_AND_REFSPEC \
+	GIT_REF_FORMAT_ALLOW_ONELEVEL \
+	| GIT_REF_FORMAT_REFSPEC_PATTERN
+
+void test_refs_normalize__refspec_pattern(void)
+{
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "heads/*foo/bar");
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "heads/foo*/bar");
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "heads/f*o/bar");
+
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "foo");
+	ensure_refname_normalized(
+		ONE_LEVEL_AND_REFSPEC, "foo", "foo");
+
+	ensure_refname_normalized(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "foo/bar", "foo/bar");
+	ensure_refname_normalized(
+		ONE_LEVEL_AND_REFSPEC, "foo/bar", "foo/bar");
+
+	ensure_refname_normalized(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "*/foo", "*/foo");
+	ensure_refname_normalized(
+		ONE_LEVEL_AND_REFSPEC, "*/foo", "*/foo");
+
+	ensure_refname_normalized(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "foo/*/bar", "foo/*/bar");
+	ensure_refname_normalized(
+		ONE_LEVEL_AND_REFSPEC, "foo/*/bar", "foo/*/bar");
+
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "*");
+	ensure_refname_normalized(
+		ONE_LEVEL_AND_REFSPEC, "*", "*");
+
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "foo/*/*");
+	ensure_refname_invalid(
+		ONE_LEVEL_AND_REFSPEC, "foo/*/*");
+
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "*/foo/*");
+	ensure_refname_invalid(
+		ONE_LEVEL_AND_REFSPEC, "*/foo/*");
+
+	ensure_refname_invalid(
+		GIT_REF_FORMAT_REFSPEC_PATTERN, "*/*/foo");
+	ensure_refname_invalid(
+		ONE_LEVEL_AND_REFSPEC, "*/*/foo");
 }
