@@ -128,6 +128,8 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 			git_hash_free_ctx(ctx);
 			giterr_set(GITERR_OS, "Error reading file");
 			return -1;
+		} else if (read_len == 0) {
+			break;
 		}
 
 		git_hash_update(ctx, buffer, read_len);
