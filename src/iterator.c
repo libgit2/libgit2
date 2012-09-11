@@ -659,11 +659,8 @@ int git_iterator_for_workdir_range(
 
 	assert(iter && repo);
 
-	if (git_repository_is_bare(repo)) {
-		giterr_set(GITERR_INVALID,
-			"Cannot scan working directory for bare repo");
-		return -1;
-	}
+	if ((error = git_repository__ensure_not_bare(repo, "scan working directory")) < 0)
+		return error;
 
 	ITERATOR_BASE_INIT(wi, workdir, WORKDIR);
 

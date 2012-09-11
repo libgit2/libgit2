@@ -434,6 +434,26 @@ GIT_EXTERN(int) git_reference_normalize_name(
 	const char *name,
 	unsigned int flags);
 
+/**
+ * Recursively peel an reference until an object of the
+ * specified type is met.
+ *
+ * The retrieved `peeled` object is owned by the repository
+ * and should be closed with the `git_object_free` method.
+ *
+ * If you pass `GIT_OBJ_ANY` as the target type, then the object
+ * will be peeled until a non-tag object is met.
+ *
+ * @param peeled Pointer to the peeled git_object
+ * @param ref The reference to be processed
+ * @param target_type The type of the requested object
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_peel(
+	git_object **out,
+	git_reference *ref,
+	git_otype type);
+
 /** @} */
 GIT_END_DECL
 #endif

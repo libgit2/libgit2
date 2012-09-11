@@ -212,8 +212,10 @@ int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *pat
 	const char *workdir;
 	int error;
 
+	if ((error = git_repository__ensure_not_bare(repo, "create blob from file")) < 0)
+		return error;
+
 	workdir = git_repository_workdir(repo);
-	assert(workdir); /* error to call this on bare repo */
 
 	if (git_buf_joinpath(&full_path, workdir, path) < 0) {
 		git_buf_free(&full_path);

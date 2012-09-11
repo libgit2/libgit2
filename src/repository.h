@@ -149,4 +149,19 @@ void git_repository__cvar_cache_clear(git_repository *repo);
  */
 extern void git_submodule_config_free(git_repository *repo);
 
+GIT_INLINE(int) git_repository__ensure_not_bare(
+	git_repository *repo,
+	const char *operation_name)
+{
+	if (!git_repository_is_bare(repo))
+		return 0;
+
+	giterr_set(
+		GITERR_REPOSITORY,
+		"Cannot %s. This operation is not allowed against bare repositories.",
+		operation_name);
+
+	return GIT_EBAREREPO;
+}
+
 #endif
