@@ -115,39 +115,25 @@ mode_t git_futils_canonical_mode(mode_t raw_mode)
 		return 0;
 }
 
-#define MAX_READ_STALLS 10
-
 int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 {
-	int stalls = MAX_READ_STALLS;
+	ssize_t read_size;
 
 	git_buf_clear(buf);
 
 	if (git_buf_grow(buf, len + 1) < 0)
 		return -1;
 
-	buf->ptr[len] = '\0';
+	/* p_read loops internally to read len bytes */
+	read_size = p_read(fd, buf->ptr, len);
 
-	while (len > 0) {
-		ssize_t read_size = p_read(fd, buf->ptr + buf->size, len);
-
-		if (read_size < 0) {
-			giterr_set(GITERR_OS, "Failed to read descriptor");
-			return -1;
-		}
-
-		if (read_size == 0) {
-			stalls--;
-
-			if (!stalls) {
-				giterr_set(GITERR_OS, "Too many stalls reading descriptor");
-				return -1;
-			}
-		}
-
-		len -= read_size;
-		buf->size += read_size;
+	if (read_size < 0) {
+		giterr_set(GITERR_OS, "Failed to read descriptor");
+		return -1;
 	}
+
+	buf->ptr[read_size] = '\0';
+	buf->size = read_size;
 
 	return 0;
 }

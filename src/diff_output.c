@@ -172,9 +172,13 @@ static void update_delta_is_binary(git_diff_delta *delta)
 	if ((delta->old_file.flags & GIT_DIFF_FILE_BINARY) != 0 ||
 		(delta->new_file.flags & GIT_DIFF_FILE_BINARY) != 0)
 		delta->binary = 1;
-	else if ((delta->old_file.flags & GIT_DIFF_FILE_NOT_BINARY) != 0 &&
-			 (delta->new_file.flags & GIT_DIFF_FILE_NOT_BINARY) != 0)
+
+#define NOT_BINARY_FLAGS (GIT_DIFF_FILE_NOT_BINARY|GIT_DIFF_FILE_NO_DATA)
+
+	else if ((delta->old_file.flags & NOT_BINARY_FLAGS) != 0 &&
+			 (delta->new_file.flags & NOT_BINARY_FLAGS) != 0)
 		delta->binary = 0;
+
 	/* otherwise leave delta->binary value untouched */
 }
 
@@ -507,7 +511,7 @@ static int diff_delta_load(diff_delta_context *ctxt)
 {
 	int error = 0;
 	git_diff_delta *delta = ctxt->delta;
-	bool load_old = false, load_new = false, check_if_unmodified = false;
+	bool check_if_unmodified = false;
 
 	if (ctxt->loaded || !ctxt->delta)
 		return 0;
@@ -527,22 +531,33 @@ static int diff_delta_load(diff_delta_context *ctxt)
 		goto cleanup;
 
 	switch (delta->status) {
-	case GIT_DELTA_ADDED:    load_new = true; break;
-	case GIT_DELTA_DELETED:  load_old = true; break;
-	case GIT_DELTA_MODIFIED: load_new = load_old = true; break;
-	default: break;
+	case GIT_DELTA_ADDED:
+		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		break;
+	case GIT_DELTA_DELETED:
+		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		break;
+	case GIT_DELTA_MODIFIED:
+		break;
+	default:
+		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		break;
 	}
 
+#define CHECK_UNMODIFIED (GIT_DIFF_FILE_NO_DATA | GIT_DIFF_FILE_VALID_OID)
+
 	check_if_unmodified =
-		(load_old && (delta->old_file.flags & GIT_DIFF_FILE_VALID_OID) == 0) ||
-		(load_new && (delta->new_file.flags & GIT_DIFF_FILE_VALID_OID) == 0);
+		(delta->old_file.flags & CHECK_UNMODIFIED) == 0 &&
+		(delta->new_file.flags & CHECK_UNMODIFIED) == 0;
 
 	/* Always try to load workdir content first, since it may need to be
 	 * filtered (and hence use 2x memory) and we want to minimize the max
 	 * memory footprint during diff.
 	 */
 
-	if (load_old && ctxt->old_src == GIT_ITERATOR_WORKDIR) {
+	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+		ctxt->old_src == GIT_ITERATOR_WORKDIR) {
 		if ((error = get_workdir_content(
 				ctxt, &delta->old_file, &ctxt->old_data)) < 0)
 			goto cleanup;
@@ -550,7 +565,8 @@ static int diff_delta_load(diff_delta_context *ctxt)
 			goto cleanup;
 	}
 
-	if (load_new && ctxt->new_src == GIT_ITERATOR_WORKDIR) {
+	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+		ctxt->new_src == GIT_ITERATOR_WORKDIR) {
 		if ((error = get_workdir_content(
 				ctxt, &delta->new_file, &ctxt->new_data)) < 0)
 			goto cleanup;
@@ -558,7 +574,8 @@ static int diff_delta_load(diff_delta_context *ctxt)
 			goto cleanup;
 	}
 
-	if (load_old && ctxt->old_src != GIT_ITERATOR_WORKDIR) {
+	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+		ctxt->old_src != GIT_ITERATOR_WORKDIR) {
 		if ((error = get_blob_content(
 				ctxt, &delta->old_file, &ctxt->old_data, &ctxt->old_blob)) < 0)
 			goto cleanup;
@@ -566,7 +583,8 @@ static int diff_delta_load(diff_delta_context *ctxt)
 			goto cleanup;
 	}
 
-	if (load_new && ctxt->new_src != GIT_ITERATOR_WORKDIR) {
+	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+		ctxt->new_src != GIT_ITERATOR_WORKDIR) {
 		if ((error = get_blob_content(
 				ctxt, &delta->new_file, &ctxt->new_data, &ctxt->new_blob)) < 0)
 			goto cleanup;
@@ -588,6 +606,10 @@ static int diff_delta_load(diff_delta_context *ctxt)
 	}
 
 cleanup:
+	/* last change to update binary flag */
+	if (delta->binary == -1)
+		update_delta_is_binary(delta);
+
 	ctxt->loaded = !error;
 
 	/* flag if we would want to diff the contents of these files */
@@ -629,9 +651,10 @@ static int diff_delta_cb(void *priv, mmbuffer_t *bufs, int len)
 	}
 
 	if (len == 3 && !ctxt->cb_error) {
-		/* This should only happen if we are adding a line that does not
-		 * have a newline at the end and the old code did.  In that case,
-		 * we have a ADD with a DEL_EOFNL as a pair.
+		/* If we have a '+' and a third buf, then we have added a line
+		 * without a newline and the old code had one, so DEL_EOFNL.
+		 * If we have a '-' and a third buf, then we have removed a line
+		 * with out a newline but added a blank line, so ADD_EOFNL.
 		 */
 		char origin =
 			(*bufs[0].ptr == '+') ? GIT_DIFF_LINE_DEL_EOFNL :
@@ -1036,6 +1059,7 @@ static void set_data_from_blob(
 	} else {
 		map->data = "";
 		file->size = map->len = 0;
+		file->flags |= GIT_DIFF_FILE_NO_DATA;
 	}
 }
 

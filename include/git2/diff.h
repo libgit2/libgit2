@@ -79,13 +79,28 @@ typedef struct {
  */
 typedef struct git_diff_list git_diff_list;
 
+/**
+ * Flags that can be set for the file on side of a diff.
+ *
+ * Most of the flags are just for internal consumption by libgit2,
+ * but some of them may be interesting to external users.  They are:
+ *
+ * - VALID_OID  - the `oid` value is computed and correct
+ * - FREE_PATH  - the `path` string is separated allocated memory
+ * - BINARY     - this file should be considered binary data
+ * - NOT_BINARY - this file should be considered text data
+ * - FREE_DATA  - the internal file data is kept in allocated memory
+ * - UNMAP_DATA - the internal file data is kept in mmap'ed memory
+ * - NO_DATA    - this side of the diff should not be loaded
+ */
 enum {
 	GIT_DIFF_FILE_VALID_OID  = (1 << 0),
 	GIT_DIFF_FILE_FREE_PATH  = (1 << 1),
 	GIT_DIFF_FILE_BINARY     = (1 << 2),
 	GIT_DIFF_FILE_NOT_BINARY = (1 << 3),
 	GIT_DIFF_FILE_FREE_DATA  = (1 << 4),
-	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5)
+	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5),
+	GIT_DIFF_FILE_NO_DATA    = (1 << 6),
 };
 
 /**
@@ -176,7 +191,7 @@ enum {
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
-	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< DEPRECATED - will not be returned */
+	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< Removed line w/o LF & added one with */
 	GIT_DIFF_LINE_DEL_EOFNL = '\0', /**< LF was removed at end of file */
 
 	/* The following values will only be sent to a `git_diff_data_fn` when

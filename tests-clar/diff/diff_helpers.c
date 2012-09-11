@@ -89,7 +89,8 @@ int diff_line_fn(
 		e->line_adds++;
 		break;
 	case GIT_DIFF_LINE_ADD_EOFNL:
-		assert(0);
+		/* technically not a line add, but we'll count it as such */
+		e->line_adds++;
 		break;
 	case GIT_DIFF_LINE_DELETION:
 		e->line_dels++;
