@@ -1388,7 +1388,12 @@ int git_repository_hashfile(
 	git_off_t len;
 	git_buf full_path = GIT_BUF_INIT;
 
-	assert(out && path); /* repo and as_path can be NULL */
+	assert(out && path && repo); /* as_path can be NULL */
+
+	/* At some point, it would be nice if repo could be NULL to just
+	 * apply filter rules defined in system and global files, but for
+	 * now that is not possible because git_filters_load() needs it.
+	 */
 
 	error = git_path_join_unrooted(
 		&full_path, path, repo ? git_repository_workdir(repo) : NULL, NULL);

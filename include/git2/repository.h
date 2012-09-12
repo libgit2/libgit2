@@ -490,8 +490,7 @@ GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
  * crlf filters) before generating the SHA, then use this function.
  *
  * @param out Output value of calculated SHA
- * @param repo Repository pointer.  NULL is allowed to just use global and
- *             system attributes for choosing filters.
+ * @param repo Repository pointer
  * @param path Path to file on disk whose contents should be hashed. If the
  *             repository is not NULL, this can be a relative path.
  * @param type The object type to hash as (e.g. GIT_OBJ_BLOB)
