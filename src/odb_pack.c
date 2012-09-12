@@ -268,12 +268,12 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 	int error;
 	unsigned int i;
 
-	if ((error = packfile_refresh_all(backend)) < 0)
-		return error;
-
 	if (backend->last_found &&
 		git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
+
+	if ((error = packfile_refresh_all(backend)) < 0)
+		return error;
 
 	for (i = 0; i < backend->packs.length; ++i) {
 		struct git_pack_file *p;
