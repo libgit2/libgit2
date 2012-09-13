@@ -186,13 +186,13 @@ void test_network_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 2);
+	cl_assert(list.count == 3);
 	git_strarray_free(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 3);
+	cl_assert(list.count == 4);
 	git_strarray_free(&list);
 
 	git_config_free(cfg);
