@@ -248,9 +248,11 @@ int git_branch_tracking(
 			goto cleanup;
 
 		refspec = git_remote_fetchspec(remote);
-		if (refspec == NULL) {
-			error = GIT_ENOTFOUND;
-			goto cleanup;
+		if (refspec == NULL
+			|| refspec->src == NULL
+			|| refspec->dst == NULL) {
+				error = GIT_ENOTFOUND;
+				goto cleanup;
 		}
 
 		if (git_refspec_transform_r(&buf, refspec, merge_name) < 0)
