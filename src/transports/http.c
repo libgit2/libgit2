@@ -114,7 +114,8 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 
 	return 0;
 #else
-	wchar_t *url, *verb, *ct;
+	wchar_t *verb;
+	wchar_t url[GIT_WIN_PATH], ct[GIT_WIN_PATH];
 	git_buf buf = GIT_BUF_INIT;
 	BOOL ret;
 	DWORD flags;
@@ -136,12 +137,9 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 	if (git_buf_oom(&buf))
 		return -1;
 
-	url = gitwin_to_utf16(git_buf_cstr(&buf));
-	if (!url)
-		goto on_error;
+	git__utf8_to_16(url, GIT_WIN_PATH, git_buf_cstr(&buf));
 
 	t->request = WinHttpOpenRequest(t->connection, verb, url, NULL, WINHTTP_NO_REFERER, types, flags);
-	git__free(url);
 	if (t->request == NULL) {
 		git_buf_free(&buf);
 		giterr_set(GITERR_OS, "Failed to open request");
@@ -151,9 +149,8 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 	git_buf_clear(&buf);
 	if (git_buf_printf(&buf, "Content-Type: application/x-git-%s-request", service) < 0)
 		goto on_error;
-	ct = gitwin_to_utf16(git_buf_cstr(&buf));
-	if (!ct)
-		goto on_error;
+
+	git__utf8_to_16(ct, GIT_WIN_PATH, git_buf_cstr(&buf));
 
 	if (WinHttpAddRequestHeaders(t->request, ct, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD) == FALSE) {
 		giterr_set(GITERR_OS, "Failed to add a header to the request");
@@ -205,7 +202,7 @@ static int do_connect(transport_http *t)
 	return 0;
 #else
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
-	wchar_t *host;
+	wchar_t host[GIT_WIN_PATH];
 	int32_t port;
 
 	t->session = WinHttpOpen(ua, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
@@ -216,15 +213,12 @@ static int do_connect(transport_http *t)
 		goto on_error;
 	}
 
-	host = gitwin_to_utf16(t->host);
-	if (host == NULL)
-		goto on_error;
+	git__utf8_to_16(host, GIT_WIN_PATH, t->host);
 
 	if (git__strtol32(&port, t->port, NULL, 10) < 0)
 		goto on_error;
 
 	t->connection = WinHttpConnect(t->session, host, port, 0);
-	git__free(host);
 	if (t->connection == NULL) {
 		giterr_set(GITERR_OS, "Failed to connect to host");
 		goto on_error;
