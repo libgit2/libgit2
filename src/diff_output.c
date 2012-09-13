@@ -1285,8 +1285,9 @@ static void diffiter_do_unload_file(git_diff_iterator *iter)
 	}
 
 	iter->ctxt.delta = NULL;
-	iter->hunk_head = NULL;
+	iter->hunk_curr = iter->hunk_head = NULL;
 	iter->hunk_count = 0;
+	iter->line_curr = NULL;
 }
 
 int git_diff_iterator_new(
