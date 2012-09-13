@@ -430,7 +430,7 @@ int git_repository_discover(
 
 	if (size < (size_t)(path.size + 1)) {
 		giterr_set(GITERR_REPOSITORY,
-			"The given buffer is too long to store the discovered path");
+			"The given buffer is too small to store the discovered path");
 		git_buf_free(&path);
 		return -1;
 	}
