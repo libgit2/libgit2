@@ -6,6 +6,8 @@
 [remote "test"]
 	url = git://github.com/libgit2/libgit2
 	fetch = +refs/heads/*:refs/remotes/test/*
+[remote "joshaber"]
+	url = git://github.com/libgit2/libgit2
 
 [remote "test_with_pushurl"]
 	url = git://github.com/libgit2/fetchlibgit2
@@ -18,3 +20,6 @@
 [branch "track-local"]
    remote = .
    merge = refs/heads/master
+[branch "cannot-fetch"]
+   remote = joshaber
+   merge = refs/heads/cannot-fetch
