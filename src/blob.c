@@ -68,7 +68,7 @@ static int write_file_stream(
 	int fd, error;
 	char buffer[4096];
 	git_odb_stream *stream = NULL;
-	ssize_t read_len, written = 0;
+	ssize_t read_len = -1, written = 0;
 
 	if ((error = git_odb_open_wstream(
 			&stream, odb, (size_t)file_size, GIT_OBJ_BLOB)) < 0)
