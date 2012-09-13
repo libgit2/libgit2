@@ -1204,13 +1204,17 @@ static int diffiter_hunk_cb(
 	if (info->last_hunk)
 		info->last_hunk->next = hunk;
 	info->last_hunk = hunk;
+	info->last_line = NULL;
 
 	memcpy(&hunk->range, range, sizeof(hunk->range));
 
 	iter->hunk_count++;
 
-	if (iter->hunk_head == NULL)
-		iter->hunk_curr = iter->hunk_head = hunk;
+	/* adding first hunk to list */
+	if (iter->hunk_head == NULL) {
+		iter->hunk_head = hunk;
+		iter->hunk_curr = NULL;
+	}
 
 	return 0;
 }
@@ -1345,9 +1349,14 @@ int git_diff_iterator_num_hunks_in_file(git_diff_iterator *iter)
 int git_diff_iterator_num_lines_in_hunk(git_diff_iterator *iter)
 {
 	int error = diffiter_do_diff_file(iter);
-	if (!error && iter->hunk_curr)
-		error = iter->hunk_curr->line_count;
-	return error;
+	if (error)
+		return error;
+
+	if (iter->hunk_curr)
+		return iter->hunk_curr->line_count;
+	if (iter->hunk_head)
+		return iter->hunk_head->line_count;
+	return 0;
 }
 
 int git_diff_iterator_next_file(
@@ -1386,7 +1395,7 @@ int git_diff_iterator_next_file(
 	}
 
 	if (iter->ctxt.delta == NULL) {
-		iter->hunk_curr = NULL;
+		iter->hunk_curr = iter->hunk_head = NULL;
 		iter->line_curr = NULL;
 	}
 
@@ -1409,11 +1418,13 @@ int git_diff_iterator_next_hunk(
 		return error;
 
 	if (iter->hunk_curr == NULL) {
-		if (range_ptr) *range_ptr = NULL;
-		if (header) *header = NULL;
-		if (header_len) *header_len = 0;
-		iter->line_curr = NULL;
-		return GIT_ITEROVER;
+		if (iter->hunk_head == NULL)
+			goto no_more_hunks;
+		iter->hunk_curr = iter->hunk_head;
+	} else {
+		if (iter->hunk_curr->next == NULL)
+			goto no_more_hunks;
+		iter->hunk_curr = iter->hunk_curr->next;
 	}
 
 	range = &iter->hunk_curr->range;
@@ -1436,9 +1447,16 @@ int git_diff_iterator_next_hunk(
 	}
 
 	iter->line_curr = iter->hunk_curr->line_head;
-	iter->hunk_curr = iter->hunk_curr->next;
 
 	return error;
+
+no_more_hunks:
+	if (range_ptr) *range_ptr = NULL;
+	if (header) *header = NULL;
+	if (header_len) *header_len = 0;
+	iter->line_curr = NULL;
+
+	return GIT_ITEROVER;
 }
 
 int git_diff_iterator_next_line(
@@ -1453,7 +1471,7 @@ int git_diff_iterator_next_line(
 		return error;
 
 	/* if the user has not called next_hunk yet, call it implicitly (OK?) */
-	if (iter->hunk_curr == iter->hunk_head) {
+	if (iter->hunk_curr == NULL) {
 		error = git_diff_iterator_next_hunk(NULL, NULL, NULL, iter);
 		if (error)
 			return error;
