@@ -481,6 +481,30 @@ GIT_EXTERN(int) git_repository_message(char *buffer, size_t len, git_repository 
  */
 GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
 
+/**
+ * Calculate hash of file using repository filtering rules.
+ *
+ * If you simply want to calculate the hash of a file on disk with no filters,
+ * you can just use the `git_odb_hashfile()` API.  However, if you want to
+ * hash a file in the repository and you want to apply filtering rules (e.g.
+ * crlf filters) before generating the SHA, then use this function.
+ *
+ * @param out Output value of calculated SHA
+ * @param repo Repository pointer
+ * @param path Path to file on disk whose contents should be hashed. If the
+ *             repository is not NULL, this can be a relative path.
+ * @param type The object type to hash as (e.g. GIT_OBJ_BLOB)
+ * @param as_path The path to use to look up filtering rules. If this is
+ *             NULL, then the `path` parameter will be used instead. If
+ *             this is passed as the empty string, then no filters will be
+ *             applied when calculating the hash.
+ */
+GIT_EXTERN(int) git_repository_hashfile(
+    git_oid *out,
+    git_repository *repo,
+    const char *path,
+    git_otype type,
+    const char *as_path);
 
 /** @} */
 GIT_END_DECL

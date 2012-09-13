@@ -17,6 +17,8 @@
 #include "fileops.h"
 #include "config.h"
 #include "refs.h"
+#include "filter.h"
+#include "odb.h"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -1372,3 +1374,71 @@ int git_repository_message_remove(git_repository *repo)
 
 	return error;
 }
+
+int git_repository_hashfile(
+    git_oid *out,
+    git_repository *repo,
+    const char *path,
+    git_otype type,
+    const char *as_path)
+{
+	int error;
+	git_vector filters = GIT_VECTOR_INIT;
+	git_file fd;
+	git_off_t len;
+	git_buf full_path = GIT_BUF_INIT;
+
+	assert(out && path && repo); /* as_path can be NULL */
+
+	/* At some point, it would be nice if repo could be NULL to just
+	 * apply filter rules defined in system and global files, but for
+	 * now that is not possible because git_filters_load() needs it.
+	 */
+
+	error = git_path_join_unrooted(
+		&full_path, path, repo ? git_repository_workdir(repo) : NULL, NULL);
+	if (error < 0)
+		return error;
+
+	if (!as_path)
+		as_path = path;
+
+	/* passing empty string for "as_path" indicated --no-filters */
+	if (strlen(as_path) > 0) {
+		error = git_filters_load(&filters, repo, as_path, GIT_FILTER_TO_ODB);
+		if (error < 0)
+			return error;
+	} else {
+		error = 0;
+	}
+
+	/* at this point, error is a count of the number of loaded filters */
+
+	fd = git_futils_open_ro(full_path.ptr);
+	if (fd < 0) {
+		error = fd;
+		goto cleanup;
+	}
+
+	len = git_futils_filesize(fd);
+	if (len < 0) {
+		error = len;
+		goto cleanup;
+	}
+
+	if (!git__is_sizet(len)) {
+		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
+		error = -1;
+		goto cleanup;
+	}
+
+	error = git_odb__hashfd_filtered(out, fd, len, type, &filters);
+
+cleanup:
+	p_close(fd);
+	git_filters_free(&filters);
+	git_buf_free(&full_path);
+
+	return error;
+}
+
