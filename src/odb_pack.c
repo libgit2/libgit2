@@ -233,10 +233,11 @@ static int packfile_load__cb(void *_data, git_buf *path)
 	return git_vector_insert(&backend->packs, pack);
 }
 
-static int packfile_refresh_all(struct pack_backend *backend)
+static int packfile_refresh_all_maybe(struct pack_backend *backend, bool force)
 {
 	int error;
 	struct stat st;
+	git_buf path = GIT_BUF_INIT;
 
 	if (backend->pack_folder == NULL)
 		return 0;
@@ -244,8 +245,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 	if (p_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
 		return git_odb__error_notfound("failed to refresh packfiles", NULL);
 
-	if (st.st_mtime != backend->pack_folder_mtime) {
-		git_buf path = GIT_BUF_INIT;
+	if (force || st.st_mtime != backend->pack_folder_mtime) {
 		git_buf_sets(&path, backend->pack_folder);
 
 		/* reload all packs */
@@ -263,18 +263,20 @@ static int packfile_refresh_all(struct pack_backend *backend)
 	return 0;
 }
 
-static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backend, const git_oid *oid)
+static int packfile_refresh_all(struct pack_backend *backend) {
+	return packfile_refresh_all_maybe(backend, false);
+}
+
+static int pack_entry_find_inner(struct git_pack_entry *e,
+											struct pack_backend *backend,
+											const git_oid *oid)
 {
-	int error;
 	unsigned int i;
 	struct git_pack_file *last_found = backend->last_found;
 
 	if (last_found &&
 		git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
-
-	if ((error = packfile_refresh_all(backend)) < 0)
-		return error;
 
 	for (i = 0; i < backend->packs.length; ++i) {
 		struct git_pack_file *p;
@@ -288,6 +290,24 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 			return 0;
 		}
 	}
+
+	return -1;
+}
+
+static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backend, const git_oid *oid)
+{
+	int error;
+
+	if (backend->last_found &&
+		git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
+		return 0;
+
+	if (!pack_entry_find_inner(e, backend, oid))
+		return 0;
+	if ((error = packfile_refresh_all_maybe(backend, true)) < 0)
+		return error;
+	if (!pack_entry_find_inner(e, backend, oid))
+		return 0;
 
 	return git_odb__error_notfound("failed to find pack entry", oid);
 }
