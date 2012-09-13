@@ -670,3 +670,94 @@ void test_diff_workdir__eof_newline_changes(void)
  *
  * Expect 13 files, 0 ADD, 4 DEL, 4 MOD, 1 IGN, 4 UNTR
  */
+
+
+void test_diff_workdir__larger_hunks(void)
+{
+	const char *a_commit = "d70d245ed97ed2aa596dd1af6536e4bfdb047b69";
+	const char *b_commit = "7a9e0b02e63179929fed24f0a3e0f19168114d10";
+	git_tree *a, *b;
+	git_diff_options opts = {0};
+	int i, error;
+
+	g_repo = cl_git_sandbox_init("diff");
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
+
+	opts.context_lines = 1;
+	opts.interhunk_lines = 0;
+
+	for (i = 0; i <= 2; ++i) {
+		git_diff_list *diff = NULL;
+		git_diff_iterator *iter = NULL;
+		git_diff_delta *delta;
+		int num_files = 0;
+
+		/* okay, this is a bit silly, but oh well */
+		switch (i) {
+		case 0:
+			cl_git_pass(git_diff_workdir_to_index(g_repo, &opts, &diff));
+			break;
+		case 1:
+			cl_git_pass(git_diff_workdir_to_tree(g_repo, &opts, a, &diff));
+			break;
+		case 2:
+			cl_git_pass(git_diff_workdir_to_tree(g_repo, &opts, b, &diff));
+			break;
+		}
+
+		cl_git_pass(git_diff_iterator_new(&iter, diff));
+
+		cl_assert(git_diff_iterator_progress(iter) == 0.0f);
+
+		while (!(error = git_diff_iterator_next_file(&delta, iter))) {
+			git_diff_range *range;
+			const char *header;
+			size_t header_len;
+			int actual_hunks = 0, num_hunks;
+			float expected_progress;
+
+			num_files++;
+
+			expected_progress = (float)num_files / 2.0f;
+			cl_assert(expected_progress == git_diff_iterator_progress(iter));
+
+			num_hunks = git_diff_iterator_num_hunks_in_file(iter);
+
+			while (!(error = git_diff_iterator_next_hunk(
+						 &range, &header, &header_len, iter)))
+			{
+				int actual_lines = 0;
+				int num_lines = git_diff_iterator_num_lines_in_hunk(iter);
+				char origin;
+				const char *line;
+				size_t line_len;
+
+				while (!(error = git_diff_iterator_next_line(
+							 &origin, &line, &line_len, iter)))
+				{
+					actual_lines++;
+				}
+
+				cl_assert_equal_i(GIT_ITEROVER, error);
+				cl_assert_equal_i(actual_lines, num_lines);
+
+				actual_hunks++;
+			}
+
+			cl_assert_equal_i(GIT_ITEROVER, error);
+			cl_assert_equal_i(actual_hunks, num_hunks);
+		}
+
+		cl_assert_equal_i(GIT_ITEROVER, error);
+		cl_assert_equal_i(2, num_files);
+		cl_assert(git_diff_iterator_progress(iter) == 1.0f);
+
+		git_diff_iterator_free(iter);
+		git_diff_list_free(diff);
+	}
+
+	git_tree_free(a);
+	git_tree_free(b);
+}
