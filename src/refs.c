@@ -494,6 +494,10 @@ static int _dirent_loose_listall(void *_data, git_buf *full_path)
 			return 0; /* we are filtering out this reference */
 	}
 
+	/* Locked references aren't returned */
+	if (!git__suffixcmp(file_path, GIT_FILELOCK_EXTENSION))
+		return 0;
+
 	if (data->callback(file_path, data->callback_payload))
 		data->callback_error = GIT_EUSER;
 

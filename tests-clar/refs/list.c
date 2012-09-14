@@ -51,3 +51,18 @@ void test_refs_list__symbolic_only(void)
 
 	git_strarray_free(&ref_list);
 }
+
+void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_extension(void)
+{
+	git_strarray ref_list;
+
+	/* Create a fake locked reference */
+	cl_git_mkfile(
+		"./testrepo/.git/refs/heads/hanwen.lock",
+		"144344043ba4d4a405da03de3844aa829ae8be0e\n");
+
+	cl_git_pass(git_reference_list(&ref_list, g_repo, GIT_REF_LISTALL));
+	cl_assert_equal_i((int)ref_list.count, 10);
+
+	git_strarray_free(&ref_list);
+}
