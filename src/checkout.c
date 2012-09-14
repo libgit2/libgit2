@@ -358,23 +358,3 @@ int git_checkout_head(
 	return error;
 }
 
-int git_checkout_reference(
-	git_reference *ref,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats)
-{
-	git_repository *repo= git_reference_owner(ref);
-	git_reference *head = NULL;
-	int error;
-
-	if ((error = git_reference_create_symbolic(
-		&head, repo, GIT_HEAD_FILE, git_reference_name(ref), true)) < 0)
-			return error;
-
-	error = git_checkout_head(git_reference_owner(ref), opts, stats);
-
-	git_reference_free(head);
-	return error;
-}
-
-
