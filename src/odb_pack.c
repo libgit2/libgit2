@@ -267,9 +267,10 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 {
 	int error;
 	unsigned int i;
+	struct git_pack_file *last_found = backend->last_found;
 
-	if (backend->last_found &&
-		git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
+	if (last_found &&
+		git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
 
 	if ((error = packfile_refresh_all(backend)) < 0)
@@ -279,7 +280,7 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 		struct git_pack_file *p;
 
 		p = git_vector_get(&backend->packs, i);
-		if (p == backend->last_found)
+		if (p == last_found)
 			continue;
 
 		if (git_pack_entry_find(e, p, oid, GIT_OID_HEXSZ) == 0) {
@@ -300,12 +301,13 @@ static int pack_entry_find_prefix(
 	int error;
 	unsigned int i;
 	unsigned found = 0;
+	struct git_pack_file *last_found = backend->last_found;
 
 	if ((error = packfile_refresh_all(backend)) < 0)
 		return error;
 
-	if (backend->last_found) {
-		error = git_pack_entry_find(e, backend->last_found, short_oid, len);
+	if (last_found) {
+		error = git_pack_entry_find(e, last_found, short_oid, len);
 		if (error == GIT_EAMBIGUOUS)
 			return error;
 		if (!error)
@@ -316,7 +318,7 @@ static int pack_entry_find_prefix(
 		struct git_pack_file *p;
 
 		p = git_vector_get(&backend->packs, i);
-		if (p == backend->last_found)
+		if (p == last_found)
 			continue;
 
 		error = git_pack_entry_find(e, p, short_oid, len);
