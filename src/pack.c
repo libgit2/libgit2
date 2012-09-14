@@ -54,6 +54,10 @@ static int packfile_error(const char *message)
 
 static void pack_index_free(struct git_pack_file *p)
 {
+	if (p->oids) {
+		git__free(p->oids);
+		p->oids = NULL;
+	}
 	if (p->index_map.data) {
 		git_futils_mmap_free(&p->index_map);
 		p->index_map.data = NULL;
@@ -686,13 +690,16 @@ static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_
 	}
 }
 
+static int git__memcmp4(const void *a, const void *b) {
+	return memcmp(a, b, 4);
+}
+
 int git_pack_foreach_entry(
 	struct git_pack_file *p,
 	int (*cb)(git_oid *oid, void *data),
 	void *data)
 {
 	const unsigned char *index = p->index_map.data, *current;
-	unsigned stride;
 	uint32_t i;
 
 	if (index == NULL) {
@@ -712,20 +719,37 @@ int git_pack_foreach_entry(
 
 	index += 4 * 256;
 
-	if (p->index_version > 1) {
-		stride = 20;
-	} else {
-		stride = 24;
-		index += 4;
+	if (p->oids == NULL) {
+		git_vector offsets, oids;
+		int error;
+
+		if ((error = git_vector_init(&oids, p->num_objects, NULL)))
+			return error;
+
+		if ((error = git_vector_init(&offsets, p->num_objects, git__memcmp4)))
+			return error;
+
+		if (p->index_version > 1) {
+			const unsigned char *off = index + 24 * p->num_objects;
+			for (i = 0; i < p->num_objects; i++)
+				git_vector_insert(&offsets, (void*)&off[4 * i]);
+			git_vector_sort(&offsets);
+			git_vector_foreach(&offsets, i, current)
+				git_vector_insert(&oids, (void*)&index[5 * (current - off)]);
+		} else {
+			for (i = 0; i < p->num_objects; i++)
+				git_vector_insert(&offsets, (void*)&index[24 * i]);
+			git_vector_sort(&offsets);
+			git_vector_foreach(&offsets, i, current)
+				git_vector_insert(&oids, (void*)&current[4]);
+		}
+		git_vector_free(&offsets);
+		p->oids = (git_oid **)oids.contents;
 	}
 
-	current = index;
-	for (i = 0; i < p->num_objects; i++) {
-		if (cb((git_oid *)current, data))
+	for (i = 0; i < p->num_objects; i++)
+		if (cb(p->oids[i], data))
 			return GIT_EUSER;
-
-		current += stride;
-	}
 
 	return 0;
 }
