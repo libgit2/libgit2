@@ -1422,7 +1422,7 @@ int git_repository_hashfile(
 
 	len = git_futils_filesize(fd);
 	if (len < 0) {
-		error = len;
+		error = (int)len;
 		goto cleanup;
 	}
 
@@ -1432,7 +1432,7 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, len, type, &filters);
+	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, &filters);
 
 cleanup:
 	p_close(fd);
