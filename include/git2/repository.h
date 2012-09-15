@@ -507,6 +507,28 @@ GIT_EXTERN(int) git_repository_hashfile(
     const char *as_path);
 
 /**
+ * Make the repository HEAD point to the specified reference.
+ *
+ * If the provided reference points to a Tree or a Blob, the HEAD is
+ * unaltered and -1 is returned.
+ *
+ * If the provided reference points to a branch, the HEAD will point
+ * to that branch, staying attached, or become attached if it isn't yet.
+ * If the branch doesn't exist yet, no error will be return. The HEAD
+ * will then be attached to an unborn branch.
+ *
+ * Otherwise, the HEAD will be detached and will directly point to
+ * the Commit.
+ *
+ * @param repo Repository pointer
+ * @param refname Canonical name of the reference the HEAD should point at
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_repository_set_head(
+	git_repository* repo,
+	const char* refname);
+
+/**
  * Make the repository HEAD directly point to the Commit.
  *
  * If the provided committish cannot be found in the repository, the HEAD

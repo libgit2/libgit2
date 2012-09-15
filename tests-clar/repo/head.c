@@ -51,6 +51,41 @@ void test_repo_head__head_orphan(void)
 	git_reference_free(ref);
 }
 
+void test_repo_head__set_head_Attaches_HEAD_to_un_unborn_branch_when_the_branch_doesnt_exist(void)
+{
+	git_reference *head;
+
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/doesnt/exist/yet"));
+
+	cl_assert_equal_i(false, git_repository_head_detached(repo));
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_head(&head, repo));
+}
+
+void test_repo_head__set_head_Returns_ENOTFOUND_when_the_reference_doesnt_exist(void)
+{
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_set_head(repo, "refs/tags/doesnt/exist/yet"));
+}
+
+void test_repo_head__set_head_Fails_when_the_reference_points_to_a_non_commitish(void)
+{
+	cl_git_fail(git_repository_set_head(repo, "refs/tags/point_to_blob"));
+}
+
+void test_repo_head__set_head_Attaches_HEAD_when_the_reference_points_to_a_branch(void)
+{
+	git_reference *head;
+
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/br2"));
+
+	cl_assert_equal_i(false, git_repository_head_detached(repo));
+
+	cl_git_pass(git_repository_head(&head, repo));
+	cl_assert_equal_s("refs/heads/br2", git_reference_name(head));
+
+	git_reference_free(head);
+}
+
 static void assert_head_is_correctly_detached(void)
 {
 	git_reference *head;
@@ -64,6 +99,15 @@ static void assert_head_is_correctly_detached(void)
 
 	git_object_free(commit);
 	git_reference_free(head);
+}
+
+void test_repo_head__set_head_Detaches_HEAD_when_the_reference_doesnt_point_to_a_branch(void)
+{
+	cl_git_pass(git_repository_set_head(repo, "refs/tags/test"));
+
+	cl_assert_equal_i(true, git_repository_head_detached(repo));
+
+	assert_head_is_correctly_detached();
 }
 
 void test_repo_head__set_head_detached_Return_ENOTFOUND_when_the_object_doesnt_exist(void)

@@ -1442,6 +1442,38 @@ cleanup:
 	return error;
 }
 
+static bool looks_like_a_branch(const char *refname)
+{
+	return git__prefixcmp(refname, GIT_REFS_HEADS_DIR) == 0;
+}
+
+int git_repository_set_head(
+	git_repository* repo,
+	const char* refname)
+{
+	git_reference *ref,
+		*new_head = NULL;
+	int error;
+
+	assert(repo && refname);
+
+	error = git_reference_lookup(&ref, repo, refname);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	if (!error) {
+		if (git_reference_is_branch(ref))
+			error = git_reference_create_symbolic(&new_head, repo, GIT_HEAD_FILE, git_reference_name(ref), 1);
+		else
+			error = git_repository_set_head_detached(repo, git_reference_oid(ref));
+	} else if (looks_like_a_branch(refname))
+		error = git_reference_create_symbolic(&new_head, repo, GIT_HEAD_FILE, refname, 1);
+
+	git_reference_free(ref);
+	git_reference_free(new_head);
+	return error;
+}
+
 int git_repository_set_head_detached(
 	git_repository* repo,
 	const git_oid* commitish)
