@@ -456,7 +456,7 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
 GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index);
 
 /**
- * Retrive git's prepared message
+ * Retrieve git's prepared message
  *
  * Operations such as git revert/cherry-pick/merge with the -n option
  * stop just short of creating a commit with the changes and save
