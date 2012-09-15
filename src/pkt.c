@@ -354,6 +354,9 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
 	if (caps->multi_ack)
 		git_buf_puts(&str, GIT_CAP_MULTI_ACK " ");
 
+	if (caps->include_tag)
+		git_buf_puts(&str, GIT_CAP_INCLUDE_TAG " ");
+
 	if (git_buf_oom(&str))
 		return -1;
 

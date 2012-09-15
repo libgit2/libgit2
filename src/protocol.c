@@ -80,6 +80,12 @@ int git_protocol_detect_caps(git_pkt_ref *pkt, git_transport_caps *caps)
 			continue;
 		}
 
+		if(!git__prefixcmp(ptr, GIT_CAP_INCLUDE_TAG)) {
+			caps->common = caps->include_tag = 1;
+			ptr += strlen(GIT_CAP_INCLUDE_TAG);
+			continue;
+		}
+
 		/* Keep side-band check after side-band-64k */
 		if(!git__prefixcmp(ptr, GIT_CAP_SIDE_BAND_64K)) {
 			caps->common = caps->side_band_64k = 1;

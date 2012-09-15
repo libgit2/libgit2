@@ -304,6 +304,12 @@ struct git_remote_callbacks {
  */
 GIT_EXTERN(void) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
 
+enum {
+	GIT_REMOTE_DOWNLOAD_TAGS_UNSET,
+	GIT_REMOTE_DOWNLOAD_TAGS_NONE,
+	GIT_REMOTE_DOWNLOAD_TAGS_AUTO
+};
+
 /** @} */
 GIT_END_DECL
 #endif

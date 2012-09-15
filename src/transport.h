@@ -23,13 +23,15 @@
 #define GIT_CAP_MULTI_ACK "multi_ack"
 #define GIT_CAP_SIDE_BAND "side-band"
 #define GIT_CAP_SIDE_BAND_64K "side-band-64k"
+#define GIT_CAP_INCLUDE_TAG "include-tag"
 
 typedef struct git_transport_caps {
 	int common:1,
 		ofs_delta:1,
 		multi_ack: 1,
 		side_band:1,
-		side_band_64k:1;
+		side_band_64k:1,
+		include_tag:1;
 } git_transport_caps;
 
 #ifdef GIT_SSL

@@ -55,6 +55,31 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	return refspec_parse(refspec, val);
 }
 
+static int download_tags_value(git_remote *remote, git_config *cfg)
+{
+	const char *val;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_UNSET)
+		return 0;
+
+	/* This is the default, let's see if we need to change it */
+	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+	if (git_buf_printf(&buf, "remote.%s.tagopt", remote->name) < 0)
+		return -1;
+
+	error = git_config_get_string(&val, cfg, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+	if (!error && !strcmp(val, "--no-tags"))
+		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+
+	if (error == GIT_ENOTFOUND)
+		error = 0;
+
+	return error;
+}
+
 int git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
@@ -180,6 +205,9 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		error = -1;
 		goto cleanup;
 	}
+
+	if (download_tags_value(remote, config) < 0)
+		goto cleanup;
 
 	*out = remote;
 
