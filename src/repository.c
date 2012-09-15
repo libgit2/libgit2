@@ -1442,3 +1442,27 @@ cleanup:
 	return error;
 }
 
+int git_repository_detach_head(
+	git_repository* repo)
+{
+	git_reference *old_head = NULL,
+		*new_head = NULL;
+	git_object *object = NULL;
+	int error = -1;
+
+	assert(repo);
+
+	if (git_repository_head(&old_head, repo) < 0)
+		return -1;
+
+	if (git_object_lookup(&object, repo, git_reference_oid(old_head), GIT_OBJ_COMMIT) < 0)
+		goto cleanup;
+
+	error = git_reference_create_oid(&new_head, repo, GIT_HEAD_FILE, git_reference_oid(old_head), 1);
+
+cleanup:
+	git_object_free(object);
+	git_reference_free(old_head);
+	git_reference_free(new_head);
+	return error;
+}
