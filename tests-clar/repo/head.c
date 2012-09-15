@@ -66,6 +66,40 @@ static void assert_head_is_correctly_detached(void)
 	git_reference_free(head);
 }
 
+void test_repo_head__set_head_detached_Return_ENOTFOUND_when_the_object_doesnt_exist(void)
+{
+	git_oid oid;
+
+	cl_git_pass(git_oid_fromstr(&oid, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_set_head_detached(repo, &oid));
+}
+
+void test_repo_head__set_head_detached_Fails_when_the_object_isnt_a_commitish(void)
+{
+	git_object *blob;
+
+	cl_git_pass(git_revparse_single(&blob, repo, "point_to_blob"));
+
+	cl_git_fail(git_repository_set_head_detached(repo, git_object_id(blob)));
+
+	git_object_free(blob);
+}
+
+void test_repo_head__set_head_detached_Detaches_HEAD_and_make_it_point_to_the_peeled_commit(void)
+{
+	git_object *tag;
+
+	cl_git_pass(git_revparse_single(&tag, repo, "tags/test"));
+	cl_assert_equal_i(GIT_OBJ_TAG, git_object_type(tag));
+
+	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag)));
+
+	assert_head_is_correctly_detached();
+
+	git_object_free(tag);
+}
+
 void test_repo_head__detach_head_Detaches_HEAD_and_make_it_point_to_the_peeled_commit(void)
 {
 	cl_assert_equal_i(false, git_repository_head_detached(repo));

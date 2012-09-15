@@ -1442,6 +1442,32 @@ cleanup:
 	return error;
 }
 
+int git_repository_set_head_detached(
+	git_repository* repo,
+	const git_oid* commitish)
+{
+	int error;
+	git_object *object,
+		*peeled = NULL;
+	git_reference *new_head = NULL;
+
+	assert(repo && commitish);
+
+	if ((error = git_object_lookup(&object, repo, commitish, GIT_OBJ_ANY)) < 0)
+		return error;
+
+	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
+		goto cleanup;
+
+	error = git_reference_create_oid(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), 1);
+
+cleanup:
+	git_object_free(object);
+	git_object_free(peeled);
+	git_reference_free(new_head);
+	return error;
+}
+
 int git_repository_detach_head(
 	git_repository* repo)
 {

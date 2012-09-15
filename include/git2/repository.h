@@ -507,6 +507,26 @@ GIT_EXTERN(int) git_repository_hashfile(
     const char *as_path);
 
 /**
+ * Make the repository HEAD directly point to the Commit.
+ *
+ * If the provided committish cannot be found in the repository, the HEAD
+ * is unaltered and GIT_ENOTFOUND is returned.
+ *
+ * If the provided commitish cannot be peeled into a commit, the HEAD
+ * is unaltered and -1 is returned.
+ *
+ * Otherwise, the HEAD will eventually be detached and will directly point to
+ * the peeled Commit.
+ *
+ * @param repo Repository pointer
+ * @param commitish Object id of the Commit the HEAD should point to
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_repository_set_head_detached(
+	git_repository* repo,
+	const git_oid* commitish);
+
+/**
  * Detach the HEAD.
  *
  * If the HEAD is already detached and points to a Commit, 0 is returned.
