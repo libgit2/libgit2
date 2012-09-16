@@ -473,25 +473,36 @@ int git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats 
 
 int git_remote_update_tips(git_remote *remote)
 {
-	int error = 0;
+	int error = 0, autotag;
 	unsigned int i = 0;
 	git_buf refname = GIT_BUF_INIT;
 	git_oid old;
+	git_pkt *pkt;
+	git_odb *odb;
 	git_vector *refs;
 	git_remote_head *head;
 	git_reference *ref;
 	struct git_refspec *spec;
+	char *tagstr = "refs/tags/*:refs/tags/*";
+	git_refspec tagspec;
 
 	assert(remote);
 
-	refs = &remote->refs;
+	refs = &remote->transport->refs;
 	spec = &remote->fetch;
 
 	if (refs->length == 0)
 		return 0;
 
+	if (git_repository_odb(&odb, remote->repo) < 0)
+		return -1;
+
+	if (git_refspec__parse(&tagspec, tagstr, true) < 0)
+		return -1;
+
 	/* HEAD is only allowed to be the first in the list */
-	head = refs->contents[0];
+	pkt = refs->contents[0];
+	head = &((git_pkt_ref *)pkt)->head;
 	if (!strcmp(head->name, GIT_HEAD_FILE)) {
 		if (git_reference_create_oid(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1) < 0)
 			return -1;
@@ -501,10 +512,36 @@ int git_remote_update_tips(git_remote *remote)
 	}
 
 	for (; i < refs->length; ++i) {
-		head = refs->contents[i];
+		autotag = 0;
+		git_pkt *pkt = refs->contents[i];
 
-		if (git_refspec_transform_r(&refname, spec, head->name) < 0)
-			goto on_error;
+		if (pkt->type == GIT_PKT_REF)
+			head = &((git_pkt_ref *)pkt)->head;
+		else
+			continue;
+
+		/* Ignore malformed ref names (which also saves us from tag^{} */
+		if (!git_reference_is_valid_name(head->name))
+			continue;
+
+		if (git_refspec_src_matches(spec, head->name)) {
+			if (git_refspec_transform_r(&refname, spec, head->name) < 0)
+				goto on_error;
+		} else if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
+			autotag = 1;
+
+			if (!git_refspec_src_matches(&tagspec, head->name))
+				continue;
+
+			git_buf_clear(&refname);
+			if (git_buf_puts(&refname, head->name) < 0)
+				goto on_error;
+		} else {
+			continue;
+		}
+
+		if (autotag && !git_odb_exists(odb, &head->oid))
+			continue;
 
 		error = git_reference_name_to_oid(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
@@ -516,7 +553,9 @@ int git_remote_update_tips(git_remote *remote)
 		if (!git_oid_cmp(&old, &head->oid))
 			continue;
 
-		if (git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, 1) < 0)
+		/* In autotag mode, don't overwrite any locally-existing tags */
+		error = git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, !autotag);
+		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
 
 		git_reference_free(ref);
@@ -527,10 +566,12 @@ int git_remote_update_tips(git_remote *remote)
 		}
 	}
 
+	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return 0;
 
 on_error:
+	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return -1;
 
