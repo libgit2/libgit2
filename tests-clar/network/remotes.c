@@ -10,9 +10,8 @@ static const git_refspec *_refspec;
 
 void test_network_remotes__initialize(void)
 {
-	cl_fixture_sandbox("testrepo.git");
+	_repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_pass(git_repository_open(&_repo, "testrepo.git"));
 	cl_git_pass(git_remote_load(&_remote, _repo, "test"));
 
 	_refspec = git_remote_fetchspec(_remote);
@@ -22,8 +21,7 @@ void test_network_remotes__initialize(void)
 void test_network_remotes__cleanup(void)
 {
 	git_remote_free(_remote);
-	git_repository_free(_repo);
-	cl_fixture_cleanup("testrepo.git");
+	cl_git_sandbox_cleanup();
 }
 
 void test_network_remotes__parsing(void)
@@ -73,7 +71,7 @@ void test_network_remotes__parsing_local_path_fails_if_path_not_found(void)
 
 void test_network_remotes__supported_transport_methods_are_supported(void)
 {
-  cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
+	cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
 }
 
 void test_network_remotes__unsupported_transport_methods_are_unsupported(void)
@@ -224,6 +222,29 @@ void test_network_remotes__add(void)
 	cl_assert(git_refspec_force(_refspec) == 1);
 	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/addtest/*"));
 	cl_assert_equal_s(git_remote_url(_remote), "http://github.com/libgit2/libgit2");
+}
+
+void test_network_remotes__cannot_add_a_nameless_remote(void)
+{
+	git_remote *remote;
+
+	cl_git_fail(git_remote_add(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
+	cl_git_fail(git_remote_add(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
+}
+
+void test_network_remotes__cannot_save_a_nameless_remote(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_new(&remote, _repo, NULL, "git://github.com/libgit2/libgit2", NULL));
+
+	cl_git_fail(git_remote_save(remote));
+	git_remote_free(remote);
+
+	cl_git_pass(git_remote_new(&remote, _repo, "", "git://github.com/libgit2/libgit2", NULL));
+
+	cl_git_fail(git_remote_save(remote));
+	git_remote_free(remote);
 }
 
 void test_network_remotes__tagopt(void)

@@ -201,12 +201,41 @@ cleanup:
 	return error;
 }
 
+static int ensure_remote_name_is_valid(const char *name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_refspec refspec;
+	int error = -1;
+
+	if (!name || *name == '\0')
+		goto cleanup;
+
+	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", name);
+	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
+
+	git_buf_free(&buf);
+	git_refspec__free(&refspec);
+
+cleanup:
+	if (error)
+		giterr_set(
+			GITERR_CONFIG,
+			"'%s' is not a valid remote name.", name);
+
+	return error;
+}
+
 int git_remote_save(const git_remote *remote)
 {
 	int error;
 	git_config *config;
 	const char *tagopt = NULL;
 	git_buf buf = GIT_BUF_INIT, value = GIT_BUF_INIT;
+
+	assert(remote);
+
+	if (ensure_remote_name_is_valid(remote->name) < 0)
+		return -1;
 
 	if (git_repository_config__weakptr(&config, remote->repo) < 0)
 		return -1;
