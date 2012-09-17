@@ -59,28 +59,50 @@ static int blob_content_to_file(
 	unsigned int entry_filemode,
 	git_checkout_opts *opts)
 {
-	int retcode;
-	git_buf content = GIT_BUF_INIT;
-	int file_mode = opts->file_mode;
+	int error, nb_filters = 0, file_mode = opts->file_mode;
+	bool dont_free_filtered = false;
+	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
+	git_vector filters = GIT_VECTOR_INIT;
 
-	/* Allow disabling of filters */
-	if (opts->disable_filters)
-		retcode = git_blob__getbuf(&content, blob);
-	else
-		retcode = git_filter_blob_content(&content, blob, path);
+	if (opts->disable_filters ||
+		(nb_filters = git_filters_load(
+			&filters,
+			git_object_owner((git_object *)blob),
+			path,
+			GIT_FILTER_TO_WORKTREE)) == 0) {
 
-	if (retcode < 0)
-		goto cleanup;
+		/* Create a fake git_buf from the blob raw data... */
+		filtered.ptr = blob->odb_object->raw.data;
+		filtered.size = blob->odb_object->raw.len;
+
+		/* ... and make sure it doesn't get unexpectedly freed */
+		dont_free_filtered = true;
+	}
+
+	if (nb_filters < 0)
+		return nb_filters;
+
+	if (nb_filters > 0)	 {
+		if (git_blob__getbuf(&unfiltered, blob) < 0)
+			goto cleanup;
+
+		if ((error = git_filters_apply(&filtered, &unfiltered, &filters)) < 0)
+			goto cleanup;
+	}
 
 	/* Allow overriding of file mode */
 	if (!file_mode)
 		file_mode = entry_filemode;
 
-	retcode = buffer_to_file(&content, path, opts->dir_mode, opts->file_open_flags, file_mode);
+	error = buffer_to_file(&filtered, path, opts->dir_mode, opts->file_open_flags, file_mode);
 
 cleanup:
-	git_buf_free(&content);
-	return retcode;
+	git_filters_free(&filters);
+	git_buf_free(&unfiltered);
+	if (!dont_free_filtered)
+		git_buf_free(&filtered);
+
+	return error;
 }
 
 static int blob_content_to_link(git_blob *blob, const char *path, bool can_symlink)

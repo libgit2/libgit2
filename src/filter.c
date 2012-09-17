@@ -164,22 +164,3 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 
 	return 0;
 }
-
-int git_filter_blob_content(git_buf *out, git_blob *blob, const char *hintpath)
-{
-	git_buf unfiltered = GIT_BUF_INIT;
-	git_vector filters = GIT_VECTOR_INIT;
-	int retcode;
-
-	retcode = git_blob__getbuf(&unfiltered, blob);
-
-	git_buf_clear(out);
-
-	if (git_filters_load(&filters, git_object_owner((git_object *)blob), hintpath, GIT_FILTER_TO_WORKTREE) >= 0)
-			retcode = git_filters_apply(out, &unfiltered, &filters);
-
-	git_filters_free(&filters);
-	git_buf_free(&unfiltered);
-
-	return retcode;
-}
