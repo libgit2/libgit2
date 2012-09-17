@@ -574,6 +574,22 @@ static int maybe_modified(
 		diff, status, oitem, omode, nitem, nmode, use_noid);
 }
 
+static int git_index_entry_cmp_case(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcmp(entry_a->path, entry_b->path);
+}
+
+static int git_index_entry_cmp_icase(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcasecmp(entry_a->path, entry_b->path);
+}
+
 static int diff_from_iterators(
 	git_repository *repo,
 	const git_diff_options *opts, /**< can be NULL for defaults */
@@ -584,11 +600,35 @@ static int diff_from_iterators(
 	const git_index_entry *oitem, *nitem;
 	git_buf ignore_prefix = GIT_BUF_INIT;
 	git_diff_list *diff = git_diff_list_alloc(repo, opts);
+	git_vector_cmp entry_compare;
+
 	if (!diff)
 		goto fail;
 
 	diff->old_src = old_iter->type;
 	diff->new_src = new_iter->type;
+
+	/* Use case-insensitive compare if either iterator has
+	 * the ignore_case bit set */
+	if (!old_iter->ignore_case && !new_iter->ignore_case) {
+		entry_compare = git_index_entry_cmp_case;
+		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
+	} else {
+		entry_compare = git_index_entry_cmp_icase;
+		diff->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
+
+		/* If one of the iterators doesn't have ignore_case set,
+		 * then that's unfortunate because we'll have to spool
+		 * its data, sort it icase, and then use that for our
+		 * merge join to the other iterator that is icase sorted */
+		if (!old_iter->ignore_case) {
+			if (git_iterator_spoolandsort(&old_iter, old_iter, git_index_entry_cmp_icase, true) < 0)
+				goto fail;
+		} else if (!new_iter->ignore_case) {
+			if (git_iterator_spoolandsort(&new_iter, new_iter, git_index_entry_cmp_icase, true) < 0)
+				goto fail;
+		}
+	}
 
 	if (git_iterator_current(old_iter, &oitem) < 0 ||
 		git_iterator_current(new_iter, &nitem) < 0)
@@ -598,7 +638,7 @@ static int diff_from_iterators(
 	while (oitem || nitem) {
 
 		/* create DELETED records for old items not matched in new */
-		if (oitem && (!nitem || strcmp(oitem->path, nitem->path) < 0)) {
+		if (oitem && (!nitem || entry_compare(oitem, nitem) < 0)) {
 			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
 				git_iterator_advance(old_iter, &oitem) < 0)
 				goto fail;
@@ -607,12 +647,12 @@ static int diff_from_iterators(
 		/* create ADDED, TRACKED, or IGNORED records for new items not
 		 * matched in old (and/or descend into directories as needed)
 		 */
-		else if (nitem && (!oitem || strcmp(oitem->path, nitem->path) > 0)) {
+		else if (nitem && (!oitem || entry_compare(oitem, nitem) > 0)) {
 			git_delta_t delta_type = GIT_DELTA_UNTRACKED;
 
 			/* check if contained in ignored parent directory */
 			if (git_buf_len(&ignore_prefix) &&
-				git__prefixcmp(nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
+				ITERATOR_PREFIXCMP(*old_iter, nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
 				delta_type = GIT_DELTA_IGNORED;
 
 			if (S_ISDIR(nitem->mode)) {
@@ -620,7 +660,7 @@ static int diff_from_iterators(
 				 * it or if the user requested the contents of untracked
 				 * directories and it is not under an ignored directory.
 				 */
-				if ((oitem && git__prefixcmp(oitem->path, nitem->path) == 0) ||
+				if ((oitem && ITERATOR_PREFIXCMP(*old_iter, oitem->path, nitem->path) == 0) ||
 					(delta_type == GIT_DELTA_UNTRACKED &&
 					 (diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) != 0))
 				{
@@ -674,7 +714,7 @@ static int diff_from_iterators(
 		 * (or ADDED and DELETED pair if type changed)
 		 */
 		else {
-			assert(oitem && nitem && strcmp(oitem->path, nitem->path) == 0);
+			assert(oitem && nitem && entry_compare(oitem->path, nitem->path) == 0);
 
 			if (maybe_modified(old_iter, oitem, new_iter, nitem, diff) < 0 ||
 				git_iterator_advance(old_iter, &oitem) < 0 ||
@@ -805,6 +845,7 @@ int git_diff_merge(
 	git_pool onto_pool;
 	git_vector onto_new;
 	git_diff_delta *delta;
+	bool ignore_case = false;
 	unsigned int i, j;
 
 	assert(onto && from);
@@ -816,10 +857,21 @@ int git_diff_merge(
 		git_pool_init(&onto_pool, 1, 0) < 0)
 		return -1;
 
+	if ((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 ||
+		(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0)
+	{
+		ignore_case = true;
+
+		/* This function currently only supports merging diff lists that
+		 * are sorted identically. */
+		assert((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 &&
+				(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0);
+	}
+
 	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
 		git_diff_delta *o = GIT_VECTOR_GET(&onto->deltas, i);
 		const git_diff_delta *f = GIT_VECTOR_GET(&from->deltas, j);
-		int cmp = !f ? -1 : !o ? 1 : strcmp(o->old_file.path, f->old_file.path);
+		int cmp = !f ? -1 : !o ? 1 : STRCMP_CASESELECT(ignore_case, o->old_file.path, f->old_file.path);
 
 		if (cmp < 0) {
 			delta = diff_delta__dup(o, &onto_pool);

@@ -376,6 +376,7 @@ int git_attr_cache__push_file(
 	const char *filename,
 	git_attr_file_source source,
 	git_attr_file_parser parse,
+	void* parsedata,
 	git_vector *stack)
 {
 	int error = 0;
@@ -436,7 +437,7 @@ int git_attr_cache__push_file(
 			goto finish;
 	}
 
-	if (parse && (error = parse(repo, content, file)) < 0)
+	if (parse && (error = parse(repo, parsedata, content, file)) < 0)
 		goto finish;
 
 	git_strmap_insert(cache->files, file->key, file, error); //-V595
@@ -468,7 +469,7 @@ finish:
 }
 
 #define push_attr_file(R,S,B,F) \
-	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,git_attr_file__parse_buffer,(S))
+	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,git_attr_file__parse_buffer,NULL,(S))
 
 typedef struct {
 	git_repository *repo;
@@ -517,7 +518,7 @@ static int push_one_attr(void *ref, git_buf *path)
 	for (i = 0; !error && i < n_src; ++i)
 		error = git_attr_cache__push_file(
 			info->repo, path->ptr, GIT_ATTR_FILE, src[i],
-			git_attr_file__parse_buffer, info->files);
+			git_attr_file__parse_buffer, NULL, info->files);
 
 	return error;
 }

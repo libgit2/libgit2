@@ -99,12 +99,27 @@ static int index_srch(const void *key, const void *array_member)
 	return strcmp(key, entry->path);
 }
 
+static int index_isrch(const void *key, const void *array_member)
+{
+	const git_index_entry *entry = array_member;
+
+	return strcasecmp(key, entry->path);
+}
+
 static int index_cmp(const void *a, const void *b)
 {
 	const git_index_entry *entry_a = a;
 	const git_index_entry *entry_b = b;
 
 	return strcmp(entry_a->path, entry_b->path);
+}
+
+static int index_icmp(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcasecmp(entry_a->path, entry_b->path);
 }
 
 static int unmerged_srch(const void *key, const void *array_member)
@@ -147,6 +162,14 @@ static unsigned int index_merge_mode(
 	return index_create_mode(mode);
 }
 
+static void index_set_ignore_case(git_index *index, bool ignore_case)
+{
+	index->entries._cmp = ignore_case ? index_icmp : index_cmp;
+	index->entries_search = ignore_case ? index_isrch : index_srch;
+	index->entries.sorted = 0;
+	git_vector_sort(&index->entries);
+}
+
 int git_index_open(git_index **index_out, const char *index_path)
 {
 	git_index *index;
@@ -161,6 +184,8 @@ int git_index_open(git_index **index_out, const char *index_path)
 
 	if (git_vector_init(&index->entries, 32, index_cmp) < 0)
 		return -1;
+
+	index->entries_search = index_srch;
 
 	/* Check if index file is stored on disk already */
 	if (git_path_exists(index->index_file_path) == true)
@@ -228,7 +253,11 @@ void git_index_clear(git_index *index)
 
 int git_index_set_caps(git_index *index, unsigned int caps)
 {
+	int old_ignore_case;
+
 	assert(index);
+
+	old_ignore_case = index->ignore_case;
 
 	if (caps == GIT_INDEXCAP_FROM_OWNER) {
 		git_config *cfg;
@@ -253,6 +282,11 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 		index->ignore_case = ((caps & GIT_INDEXCAP_IGNORE_CASE) != 0);
 		index->distrust_filemode = ((caps & GIT_INDEXCAP_NO_FILEMODE) != 0);
 		index->no_symlinks = ((caps & GIT_INDEXCAP_NO_SYMLINKS) != 0);
+	}
+
+	if (old_ignore_case != index->ignore_case)
+	{
+		index_set_ignore_case(index, index->ignore_case);
 	}
 
 	return 0;
@@ -552,14 +586,14 @@ int git_index_remove(git_index *index, int position)
 
 int git_index_find(git_index *index, const char *path)
 {
-	return git_vector_bsearch2(&index->entries, index_srch, path);
+	return git_vector_bsearch2(&index->entries, index->entries_search, path);
 }
 
 unsigned int git_index__prefix_position(git_index *index, const char *path)
 {
 	unsigned int pos;
 
-	git_vector_bsearch3(&pos, &index->entries, index_srch, path);
+	git_vector_bsearch3(&pos, &index->entries, index->entries_search, path);
 
 	return pos;
 }
@@ -938,16 +972,28 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 
 static int write_entries(git_index *index, git_filebuf *file)
 {
+	int error = 0;
 	unsigned int i;
+	git_vector case_sorted;
+	git_index_entry *entry;
+	git_vector *out = &index->entries;
 
-	for (i = 0; i < index->entries.length; ++i) {
-		git_index_entry *entry;
-		entry = git_vector_get(&index->entries, i);
-		if (write_disk_entry(file, entry) < 0)
-			return -1;
+	/* If index->entries is sorted case-insensitively, then we need
+	 * to re-sort it case-sensitively before writing */
+	if (index->ignore_case) {
+		git_vector_dup(&case_sorted, &index->entries, index_cmp);
+		git_vector_sort(&case_sorted);
+		out = &case_sorted;
 	}
 
-	return 0;
+	git_vector_foreach(out, i, entry)
+		if ((error = write_disk_entry(file, entry)) < 0)
+			break;
+
+	if (index->ignore_case)
+		git_vector_free(&case_sorted);
+
+	return error;
 }
 
 static int write_index(git_index *index, git_filebuf *file)

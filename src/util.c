@@ -199,6 +199,11 @@ int git__prefixcmp(const char *str, const char *prefix)
 	}
 }
 
+int git__prefixcmp_icase(const char *str, const char *prefix)
+{
+	return strncasecmp(str, prefix, strlen(prefix));
+}
+
 int git__suffixcmp(const char *str, const char *suffix)
 {
 	size_t a = strlen(str);
