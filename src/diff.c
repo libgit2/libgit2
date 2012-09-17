@@ -714,7 +714,7 @@ static int diff_from_iterators(
 		 * (or ADDED and DELETED pair if type changed)
 		 */
 		else {
-			assert(oitem && nitem && entry_compare(oitem->path, nitem->path) == 0);
+			assert(oitem && nitem && entry_compare(oitem, nitem) == 0);
 
 			if (maybe_modified(old_iter, oitem, new_iter, nitem, diff) < 0 ||
 				git_iterator_advance(old_iter, &oitem) < 0 ||

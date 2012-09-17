@@ -11,7 +11,7 @@
 #include "git2/index.h"
 #include "vector.h"
 
-#define ITERATOR_PREFIXCMP(ITER, STR, PREFIX)	(((ITER) ## .ignore_case) ? \
+#define ITERATOR_PREFIXCMP(ITER, STR, PREFIX)	(((ITER).ignore_case) ? \
 	git__prefixcmp_icase((STR), (PREFIX)) : \
 	git__prefixcmp((STR), (PREFIX)))
 

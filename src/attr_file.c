@@ -60,6 +60,8 @@ int git_attr_file__parse_buffer(
 	char *context = NULL;
 	git_attr_rule *rule = NULL;
 
+	GIT_UNUSED(parsedata);
+
 	assert(buffer && attrs);
 
 	scan = buffer;
