@@ -1239,7 +1239,7 @@ int git_reference_create_oid(
 	git_reference *ref = NULL;
 	char normalized[GIT_REFNAME_MAX];
 
-	if (git_reference__normalize_name_oid(
+	if (git_reference__normalize_name_lax(
 		normalized,
 		sizeof(normalized),
 		name) < 0)
@@ -1611,6 +1611,26 @@ static int ensure_segment_validity(const char *name)
 	return current - name;
 }
 
+static bool is_all_caps_and_underscore(const char *name, int len)
+{
+	int i;
+	char c;
+
+	assert(name && len > 0);
+
+	for (i = 0; i < len; i++)
+	{
+		c = name[i];
+		if ((c < 'A' || c > 'Z') && c != '_')
+			return false;
+	}
+
+	if (*name == '_' || name[len - 1] == '_')
+		return false;
+
+	return true;
+}
+
 int git_reference__normalize_name(
 	git_buf *buf,
 	const char *name,
@@ -1620,37 +1640,42 @@ int git_reference__normalize_name(
 
 	char *current;
 	int segment_len, segments_count = 0, error = -1;
-	
-	assert(name && buf);
+	unsigned int process_flags;
+	bool normalize = (buf != NULL);
+	assert(name);
 
+	process_flags = flags;
 	current = (char *)name;
 
-	git_buf_clear(buf);
+	if (normalize)
+		git_buf_clear(buf);
 
 	while (true) {
 		segment_len = ensure_segment_validity(current);
 		if (segment_len < 0) {
-			if ((flags & GIT_REF_FORMAT_REFSPEC_PATTERN) &&
+			if ((process_flags & GIT_REF_FORMAT_REFSPEC_PATTERN) &&
 					current[0] == '*' &&
 					(current[1] == '\0' || current[1] == '/')) {
 				/* Accept one wildcard as a full refname component. */
-				flags &= ~GIT_REF_FORMAT_REFSPEC_PATTERN;
+				process_flags &= ~GIT_REF_FORMAT_REFSPEC_PATTERN;
 				segment_len = 1;
 			} else
 				goto cleanup;
 		}
 
 		if (segment_len > 0) {
-			int cur_len = git_buf_len(buf);
+			if (normalize) {
+				int cur_len = git_buf_len(buf);
 
-			git_buf_joinpath(buf, git_buf_cstr(buf), current);
-			git_buf_truncate(buf, 
-				cur_len + segment_len + (segments_count ? 1 : 0));
+				git_buf_joinpath(buf, git_buf_cstr(buf), current);
+				git_buf_truncate(buf, 
+					cur_len + segment_len + (segments_count ? 1 : 0));
+
+				if (git_buf_oom(buf))
+					goto cleanup;
+			}
 
 			segments_count++;
-
-			if (git_buf_oom(buf))
-				goto cleanup;
 		}
 
 		if (current[segment_len] == '\0')
@@ -1660,7 +1685,7 @@ int git_reference__normalize_name(
 	}
 
 	/* A refname can not be empty */
-	if (git_buf_len(buf) == 0)
+	if (segment_len == 0 && segments_count == 0)
 		goto cleanup;
 
 	/* A refname can not end with "." */
@@ -1675,15 +1700,17 @@ int git_reference__normalize_name(
 	if (!git__suffixcmp(name, GIT_FILELOCK_EXTENSION))
 		goto cleanup;
 
-	/* Object id refname have to contain at least one slash, except
-	 * for HEAD in a detached state or MERGE_HEAD if we're in the
-	 * middle of a merge */
-	if (!(flags & GIT_REF_FORMAT_ALLOW_ONELEVEL) && 
-		segments_count < 2 &&
-		strcmp(name, GIT_HEAD_FILE) != 0 &&
-		strcmp(name, GIT_MERGE_HEAD_FILE) != 0 &&
-		strcmp(name, GIT_FETCH_HEAD_FILE) != 0)
-		return -1;
+	if ((segments_count == 1 ) && !(flags & GIT_REF_FORMAT_ALLOW_ONELEVEL))
+		goto cleanup;
+
+	if ((segments_count == 1 ) &&
+		!(is_all_caps_and_underscore(name, segment_len) ||
+			((flags & GIT_REF_FORMAT_REFSPEC_PATTERN) && !strcmp("*", name))))
+			goto cleanup;
+
+	if ((segments_count > 1)
+		&& (is_all_caps_and_underscore(name, strchr(name, '/') - name)))
+			goto cleanup;
 
 	error = 0;
 
@@ -1736,19 +1763,6 @@ int git_reference__normalize_name_lax(
 		name,
 		GIT_REF_FORMAT_ALLOW_ONELEVEL);
 }
-
-int git_reference__normalize_name_oid(
-	char *buffer_out,
-	size_t out_size,
-	const char *name)
-{
-	return git_reference_normalize_name(
-		buffer_out,
-		out_size,
-		name,
-		GIT_REF_FORMAT_NORMAL);
-}
-
 #define GIT_REF_TYPEMASK (GIT_REF_OID | GIT_REF_SYMBOLIC)
 
 int git_reference_cmp(git_reference *ref1, git_reference *ref2)
@@ -1936,4 +1950,13 @@ cleanup:
 	git_object_free(target);
 	git_reference_free(resolved);
 	return error;
+}
+
+int git_reference_is_valid_name(
+	const char *refname)
+{
+	return git_reference__normalize_name(
+		NULL,
+		refname,
+		GIT_REF_FORMAT_ALLOW_ONELEVEL) == 0;
 }

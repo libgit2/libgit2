@@ -392,7 +392,8 @@ enum {
 	/**
 	 * Control whether one-level refnames are accepted
 	 * (i.e., refnames that do not contain multiple /-separated
-	 * components)
+	 * components). Those are expected to be written only using
+	 * uppercase letters and underscore (FETCH_HEAD, ...)
 	 */
 	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1 << 0),
 
@@ -451,6 +452,16 @@ GIT_EXTERN(int) git_reference_peel(
 	git_object **out,
 	git_reference *ref,
 	git_otype type);
+
+/**
+ * Ensure the reference name is well-formed.
+ *
+ * @param refname name to be checked.
+ *
+ * @return 1 if the reference name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_reference_is_valid_name(
+	const char *refname);
 
 /** @} */
 GIT_END_DECL
