@@ -1442,3 +1442,85 @@ cleanup:
 	return error;
 }
 
+static bool looks_like_a_branch(const char *refname)
+{
+	return git__prefixcmp(refname, GIT_REFS_HEADS_DIR) == 0;
+}
+
+int git_repository_set_head(
+	git_repository* repo,
+	const char* refname)
+{
+	git_reference *ref,
+		*new_head = NULL;
+	int error;
+
+	assert(repo && refname);
+
+	error = git_reference_lookup(&ref, repo, refname);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	if (!error) {
+		if (git_reference_is_branch(ref))
+			error = git_reference_create_symbolic(&new_head, repo, GIT_HEAD_FILE, git_reference_name(ref), 1);
+		else
+			error = git_repository_set_head_detached(repo, git_reference_oid(ref));
+	} else if (looks_like_a_branch(refname))
+		error = git_reference_create_symbolic(&new_head, repo, GIT_HEAD_FILE, refname, 1);
+
+	git_reference_free(ref);
+	git_reference_free(new_head);
+	return error;
+}
+
+int git_repository_set_head_detached(
+	git_repository* repo,
+	const git_oid* commitish)
+{
+	int error;
+	git_object *object,
+		*peeled = NULL;
+	git_reference *new_head = NULL;
+
+	assert(repo && commitish);
+
+	if ((error = git_object_lookup(&object, repo, commitish, GIT_OBJ_ANY)) < 0)
+		return error;
+
+	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
+		goto cleanup;
+
+	error = git_reference_create_oid(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), 1);
+
+cleanup:
+	git_object_free(object);
+	git_object_free(peeled);
+	git_reference_free(new_head);
+	return error;
+}
+
+int git_repository_detach_head(
+	git_repository* repo)
+{
+	git_reference *old_head = NULL,
+		*new_head = NULL;
+	git_object *object = NULL;
+	int error = -1;
+
+	assert(repo);
+
+	if (git_repository_head(&old_head, repo) < 0)
+		return -1;
+
+	if (git_object_lookup(&object, repo, git_reference_oid(old_head), GIT_OBJ_COMMIT) < 0)
+		goto cleanup;
+
+	error = git_reference_create_oid(&new_head, repo, GIT_HEAD_FILE, git_reference_oid(old_head), 1);
+
+cleanup:
+	git_object_free(object);
+	git_reference_free(old_head);
+	git_reference_free(new_head);
+	return error;
+}
