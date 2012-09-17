@@ -119,16 +119,4 @@ extern void git_text_gather_stats(git_text_stats *stats, const git_buf *text);
  */
 extern int git_text_is_binary(git_text_stats *stats);
 
-
-/**
- * Get the content of a blob after all filters have been run.
- *
- * @param out buffer to receive the contents
- * @param repo repository containing the blob
- * @param oid object id for the blob
- * @param path path to the blob's output file, relative to the workdir root
- * @return 0 on success, an error code otherwise
- */
-extern int git_filter_blob_contents(git_buf *out, git_repository *repo, const git_oid *oid, const char *path);
-
 #endif
