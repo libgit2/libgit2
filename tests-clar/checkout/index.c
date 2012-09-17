@@ -102,12 +102,10 @@ void test_checkout_index__can_remove_untracked_files(void)
 
 void test_checkout_index__honor_the_specified_pathspecs(void)
 {
-	git_strarray paths;
 	char *entries[] = { "*.txt" };
 
-	paths.strings = entries;
-	paths.count = 1;
-	g_opts.paths = &paths;
+	g_opts.paths.strings = entries;
+	g_opts.paths.count = 1;
 
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));

@@ -39,7 +39,7 @@ typedef struct git_checkout_opts {
 	/* when not NULL, arrays of fnmatch pattern specifying 
 	 * which paths should be taken into account
 	 */
-	git_strarray *paths; 
+	git_strarray paths; 
 } git_checkout_opts;
 
 /**

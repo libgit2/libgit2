@@ -282,10 +282,8 @@ int git_checkout_index(
 
 	diff_opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
 
-	if (opts && opts->paths) {
-		diff_opts.pathspec.strings = opts->paths->strings;
-		diff_opts.pathspec.count = opts->paths->count;
-	}
+	if (opts && opts->paths.count > 0)
+		diff_opts.pathspec = opts->paths;
 
 	if ((error = git_diff_workdir_to_index(repo, &diff_opts, &diff)) < 0)
 		goto cleanup;

@@ -32,12 +32,10 @@ void test_checkout_tree__cannot_checkout_a_non_treeish(void)
 
 void test_checkout_tree__can_checkout_a_subdirectory_from_a_commit(void)
 {
-	git_strarray paths;
 	char *entries[] = { "ab/de/" };
 
-	paths.strings = entries;
-	paths.count = 1;
-	g_opts.paths = &paths;
+	g_opts.paths.strings = entries;
+	g_opts.paths.count = 1;
 
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "subtrees"));
 
@@ -51,12 +49,10 @@ void test_checkout_tree__can_checkout_a_subdirectory_from_a_commit(void)
 
 void test_checkout_tree__can_checkout_a_subdirectory_from_a_subtree(void)
 {
-	git_strarray paths;
 	char *entries[] = { "de/" };
 
-	paths.strings = entries;
-	paths.count = 1;
-	g_opts.paths = &paths;
+	g_opts.paths.strings = entries;
+	g_opts.paths.count = 1;
 
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "subtrees:ab"));
 
