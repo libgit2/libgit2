@@ -225,12 +225,49 @@ cleanup:
 	return error;
 }
 
+static int update_config_refspec(
+	git_config *config,
+	const char *remote_name,
+	const git_refspec *refspec,
+	int git_direction)
+{
+	git_buf name = GIT_BUF_INIT, value = GIT_BUF_INIT;
+	int error = -1;
+
+	if (refspec->src == NULL || refspec->dst == NULL)
+		return 0;
+
+	git_buf_printf(
+		&name,
+		"remote.%s.%s",
+		remote_name,
+		git_direction == GIT_DIR_FETCH ? "fetch" : "push");
+
+	if (refspec->force)
+		git_buf_putc(&value, '+');
+	git_buf_printf(&value, "%s:%s", refspec->src, refspec->dst);
+	
+	if (git_buf_oom(&name) || git_buf_oom(&value))
+		goto cleanup;
+
+	error = git_config_set_string(
+		config,
+		git_buf_cstr(&name),
+		git_buf_cstr(&value));
+
+cleanup:
+	git_buf_free(&name);
+	git_buf_free(&value);
+
+	return error;
+}
+
 int git_remote_save(const git_remote *remote)
 {
 	int error;
 	git_config *config;
 	const char *tagopt = NULL;
-	git_buf buf = GIT_BUF_INIT, value = GIT_BUF_INIT;
+	git_buf buf = GIT_BUF_INIT;
 
 	assert(remote);
 
@@ -268,33 +305,19 @@ int git_remote_save(const git_remote *remote)
 		}
 	}
 
-	if (remote->fetch.src != NULL && remote->fetch.dst != NULL) {
-		git_buf_clear(&buf);
-		git_buf_clear(&value);
-		git_buf_printf(&buf, "remote.%s.fetch", remote->name);
-		if (remote->fetch.force)
-			git_buf_putc(&value, '+');
-		git_buf_printf(&value, "%s:%s", remote->fetch.src, remote->fetch.dst);
-		if (git_buf_oom(&buf) || git_buf_oom(&value))
-			return -1;
-
-		if (git_config_set_string(config, git_buf_cstr(&buf), git_buf_cstr(&value)) < 0)
+	if (update_config_refspec(
+		config,
+		remote->name,
+		&remote->fetch,
+		GIT_DIR_FETCH) < 0)
 			goto on_error;
-	}
 
-	if (remote->push.src != NULL && remote->push.dst != NULL) {
-		git_buf_clear(&buf);
-		git_buf_clear(&value);
-		git_buf_printf(&buf, "remote.%s.push", remote->name);
-		if (remote->push.force)
-			git_buf_putc(&value, '+');
-		git_buf_printf(&value, "%s:%s", remote->push.src, remote->push.dst);
-		if (git_buf_oom(&buf) || git_buf_oom(&value))
-			return -1;
-
-		if (git_config_set_string(config, git_buf_cstr(&buf), git_buf_cstr(&value)) < 0)
+	if (update_config_refspec(
+		config,
+		remote->name,
+		&remote->push,
+		GIT_DIR_PUSH) < 0)
 			goto on_error;
-	}
 
 	/*
 	 * What action to take depends on the old and new values. This
@@ -329,13 +352,11 @@ int git_remote_save(const git_remote *remote)
 	}
 
 	git_buf_free(&buf);
-	git_buf_free(&value);
 
 	return 0;
 
 on_error:
 	git_buf_free(&buf);
-	git_buf_free(&value);
 	return -1;
 }
 
