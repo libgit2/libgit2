@@ -212,6 +212,22 @@ static int get_blob_content(
 	if (git_oid_iszero(&file->oid))
 		return 0;
 
+	if (file->mode == GIT_FILEMODE_COMMIT)
+	{
+		char oidstr[GIT_OID_HEXSZ+1];
+		git_buf content = GIT_BUF_INIT;
+
+		git_oid_fmt(oidstr, &file->oid);
+		oidstr[GIT_OID_HEXSZ] = 0;
+		git_buf_printf(&content, "Subproject commit %s\n", oidstr );
+
+		map->data = git_buf_detach(&content);
+		map->len = strlen(map->data);
+
+		file->flags |= GIT_DIFF_FILE_FREE_DATA;
+		return 0;
+	}
+
 	if (!file->size) {
 		git_odb *odb;
 		size_t len;
