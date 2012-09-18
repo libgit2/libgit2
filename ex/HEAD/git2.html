@@ -19,6 +19,7 @@
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../general.html">general.c</a>
+          <a class="source" href="clone.html">clone.c</a>
           <a class="source" href="fetch.html">fetch.c</a>
           <a class="source" href="git2.html">git2.c</a>
           <a class="source" href="index-pack.html">index-pack.c</a>
@@ -65,6 +66,7 @@ as a starting point for a git-like tool</p>
 <span class="p">}</span> <span class="n">commands</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
   <span class="p">{</span><span class="s">&quot;ls-remote&quot;</span><span class="p">,</span> <span class="n">ls_remote</span><span class="p">},</span>
   <span class="p">{</span><span class="s">&quot;fetch&quot;</span><span class="p">,</span> <span class="n">fetch</span><span class="p">},</span>
+  <span class="p">{</span><span class="s">&quot;clone&quot;</span><span class="p">,</span> <span class="n">do_clone</span><span class="p">},</span>
   <span class="p">{</span><span class="s">&quot;index-pack&quot;</span><span class="p">,</span> <span class="n">index_pack</span><span class="p">},</span>
   <span class="p">{</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">}</span>
 <span class="p">};</span>
