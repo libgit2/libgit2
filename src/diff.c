@@ -561,8 +561,11 @@ static int maybe_modified(
 			else if (git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
 				status = GIT_DELTA_UNMODIFIED;
 			else {
-				/* TODO: support other GIT_SUBMODULE_IGNORE values */
-				status = GIT_DELTA_UNMODIFIED;
+				unsigned int sm_status = 0;
+				if (git_submodule_status(&sm_status, sub) < 0)
+					return -1;
+				status = GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)
+						 ? GIT_DELTA_UNMODIFIED : GIT_DELTA_MODIFIED;
 			}
 		}
 	}

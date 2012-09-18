@@ -7,6 +7,7 @@
 #include "common.h"
 #include "git2/attr.h"
 #include "git2/oid.h"
+#include "git2/submodule.h"
 #include "diff_output.h"
 #include <ctype.h>
 #include "fileops.h"
@@ -275,6 +276,43 @@ static int get_workdir_content(
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
 	const char *wd = git_repository_workdir(ctxt->repo);
+
+	if (file->mode == GIT_FILEMODE_COMMIT)
+	{
+		git_buf content = GIT_BUF_INIT;
+		git_submodule* sm = NULL;
+		const git_oid* sm_head = NULL;
+		unsigned int sm_status = 0;
+		const char* sm_status_text = "";
+		char oidstr[GIT_OID_HEXSZ+1];
+
+		if ((error = git_submodule_lookup(&sm, ctxt->repo, file->path)) < 0) {
+			return error;
+		}
+
+		if ((sm_head = git_submodule_head_oid(sm)) == NULL) {
+			giterr_set(GITERR_SUBMODULE, "Cannot find head of submodule '%s'", file->path);
+			return -1;
+		}
+
+		if ((error = git_submodule_status(&sm_status, sm)) < 0) {
+			return -1;
+		}
+		if (!GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)) {
+			sm_status_text = "-dirty";
+		}
+
+		git_oid_fmt(oidstr, sm_head);
+		oidstr[GIT_OID_HEXSZ] = 0;
+		git_buf_printf(&content, "Subproject commit %s%s\n", oidstr, sm_status_text );
+
+		map->data = git_buf_detach(&content);
+		map->len = strlen(map->data);
+
+		file->flags |= GIT_DIFF_FILE_FREE_DATA;
+
+		return 0;
+	}
 
 	if (git_buf_joinpath(&path, wd, file->path) < 0)
 		return -1;
