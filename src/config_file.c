@@ -1182,6 +1182,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 				goto rewrite_fail;
 			}
 
+			/* If we are here, there is at least a section line */
+			if (*(cfg->reader.buffer.ptr + cfg->reader.buffer.size - 1) != '\n')
+				git_filebuf_write(&file, "\n", 1);
+
 			git_filebuf_printf(&file, "\t%s = %s\n", name, value);
 		}
 	}

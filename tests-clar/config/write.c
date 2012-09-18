@@ -3,11 +3,13 @@
 void test_config_write__initialize(void)
 {
 	cl_fixture_sandbox("config/config9");
+	cl_fixture_sandbox("config/config17");
 }
 
 void test_config_write__cleanup(void)
 {
 	cl_fixture_cleanup("config9");
+	cl_fixture_cleanup("config17");
 }
 
 void test_config_write__replace_value(void)
@@ -134,5 +136,21 @@ void test_config_write__escape_value(void)
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
 	cl_assert_equal_s(str, "this \"has\" quotes and \t");
+	git_config_free(cfg);
+}
+
+void test_config_write__add_value_in_file_with_no_clrf_at_the_end(void)
+{
+	git_config *cfg;
+	int i;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config17"));
+	cl_git_pass(git_config_set_int32(cfg, "core.newline", 7));
+	git_config_free(cfg);
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config17"));
+	cl_git_pass(git_config_get_int32(&i, cfg, "core.newline"));
+	cl_assert_equal_i(7, i);
+
 	git_config_free(cfg);
 }
