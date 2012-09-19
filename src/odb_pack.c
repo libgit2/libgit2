@@ -259,12 +259,13 @@ static int packfile_refresh_all(struct pack_backend *backend)
 	return 0;
 }
 
-static int pack_entry_find_inner(struct git_pack_entry *e,
-											struct pack_backend *backend,
-											const git_oid *oid)
+static int pack_entry_find_inner(
+	struct git_pack_entry *e,
+	struct pack_backend *backend,
+	const git_oid *oid,
+	struct git_pack_file *last_found)
 {
 	unsigned int i;
-	struct git_pack_file *last_found = backend->last_found;
 
 	if (last_found &&
 		git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
@@ -289,33 +290,32 @@ static int pack_entry_find_inner(struct git_pack_entry *e,
 static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backend, const git_oid *oid)
 {
 	int error;
+	struct git_pack_file *last_found = backend->last_found;
 
 	if (backend->last_found &&
 		git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
 
-	if (!pack_entry_find_inner(e, backend, oid))
+	if (!pack_entry_find_inner(e, backend, oid, last_found))
 		return 0;
 	if ((error = packfile_refresh_all(backend)) < 0)
 		return error;
-	if (!pack_entry_find_inner(e, backend, oid))
+	if (!pack_entry_find_inner(e, backend, oid, last_found))
 		return 0;
 
 	return git_odb__error_notfound("failed to find pack entry", oid);
 }
 
-static unsigned pack_entry_find_prefix_inner(struct git_pack_entry *e,
-															struct pack_backend *backend,
-															const git_oid *short_oid,
-															size_t len)
+static unsigned pack_entry_find_prefix_inner(
+		struct git_pack_entry *e,
+		struct pack_backend *backend,
+		const git_oid *short_oid,
+		size_t len,
+		struct git_pack_file *last_found)
 {
 	int error;
 	unsigned int i;
 	unsigned found = 0;
-	struct git_pack_file *last_found = backend->last_found;
-
-	if ((error = packfile_refresh_all(backend)) < 0)
-		return error;
 
 	if (last_found) {
 		error = git_pack_entry_find(e, last_found, short_oid, len);
@@ -353,12 +353,13 @@ static int pack_entry_find_prefix(
 {
 	unsigned found = 0;
 	int error;
+	struct git_pack_file *last_found = backend->last_found;
 
-	if ((found = pack_entry_find_prefix_inner(e, backend, short_oid, len)) > 0)
+	if ((found = pack_entry_find_prefix_inner(e, backend, short_oid, len, last_found)) > 0)
 		goto cleanup;
 	if ((error = packfile_refresh_all(backend)) < 0)
 		return error;
-	found = pack_entry_find_prefix_inner(e, backend, short_oid, len);
+	found = pack_entry_find_prefix_inner(e, backend, short_oid, len, last_found);
 
 cleanup:
 	if (!found)
