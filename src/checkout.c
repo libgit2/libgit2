@@ -155,6 +155,7 @@ static int checkout_diff_fn(
 {
 	struct checkout_diff_data *data;
 	int error = -1;
+	git_checkout_opts *opts;
 
 	data = (struct checkout_diff_data *)cb_data;
 
@@ -164,9 +165,11 @@ static int checkout_diff_fn(
 	if (git_buf_joinpath(data->path, git_buf_cstr(data->path), delta->new_file.path) < 0)
 		return -1;
 
+	opts = data->checkout_opts;
+
 	switch (delta->status) {
 	case GIT_DELTA_UNTRACKED:
-		if (!(data->checkout_opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED))
+		if (!(opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED))
 			return 0;
 
 		if (!git__suffixcmp(delta->new_file.path, "/"))
@@ -176,8 +179,20 @@ static int checkout_diff_fn(
 		break;
 
 	case GIT_DELTA_MODIFIED:
-		if (!(data->checkout_opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED))
+		if (!(opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED)) {
+
+			if ((opts->skipped_notify_cb != NULL)
+				&& (opts->skipped_notify_cb(
+					delta->new_file.path,
+					&delta->old_file.oid,
+					delta->old_file.mode,
+					opts->notify_payload))) {
+						giterr_clear();
+						return GIT_EUSER;
+			}
+
 			return 0;
+		}
 
 		if (checkout_blob(
 				data->owner,
@@ -185,13 +200,13 @@ static int checkout_diff_fn(
 				git_buf_cstr(data->path),
 				delta->old_file.mode,
 				data->can_symlink,
-				data->checkout_opts) < 0)
+				opts) < 0)
 			goto cleanup;
 
 		break;
 
 	case GIT_DELTA_DELETED:
-		if (!(data->checkout_opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING))
+		if (!(opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING))
 			return 0;
 
 		if (checkout_blob(
@@ -200,7 +215,7 @@ static int checkout_diff_fn(
 				git_buf_cstr(data->path),
 				delta->old_file.mode,
 				data->can_symlink,
-				data->checkout_opts) < 0)
+				opts) < 0)
 			goto cleanup;
 
 		break;
@@ -378,4 +393,3 @@ int git_checkout_head(
 
 	return error;
 }
-
