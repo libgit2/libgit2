@@ -4,25 +4,55 @@
 
 static git_repository *g_repo;
 
+#define MAX_USED_TAGS 3
+
+struct pattern_match_t
+{
+   const char* pattern;
+   const size_t expected_matches;
+   const char* expected_results[MAX_USED_TAGS];
+};
+
 // Helpers
 static void ensure_tag_pattern_match(git_repository *repo,
-                                     const char *pattern,
-                                     const size_t expected_matches)
+                                     const struct pattern_match_t* data)
 {
+   int already_found[MAX_USED_TAGS] = { 0 };
    git_strarray tag_list;
    int error = 0;
+   size_t sucessfully_found = 0;
+   size_t i, j;
 
-   if ((error = git_tag_list_match(&tag_list, pattern, repo)) < 0)
+   cl_assert(data->expected_matches <= MAX_USED_TAGS);
+
+   if ((error = git_tag_list_match(&tag_list, data->pattern, repo)) < 0)
       goto exit;
 
-   if (tag_list.count != expected_matches)
+   if (tag_list.count != data->expected_matches)
+   {
       error = GIT_ERROR;
+      goto exit;
+   }
+
+   // we have to be prepared that tags come in any order.
+   for (i = 0; i < tag_list.count; i++)
+   {
+      for (j = 0; j < data->expected_matches; j++)
+      {
+         if (!already_found[j] && !strcmp(data->expected_results[j], tag_list.strings[i]))
+         {
+            already_found[j] = 1;
+            sucessfully_found++;
+            break;
+         }
+      }
+   }
+   cl_assert(sucessfully_found == data->expected_matches);
 
 exit:
    git_strarray_free(&tag_list);
    cl_git_pass(error);
 }
-
 
 // Fixture setup and teardown
 void test_object_tag_list__initialize(void)
@@ -47,14 +77,20 @@ void test_object_tag_list__list_all(void)
    git_strarray_free(&tag_list);
 }
 
+static const struct pattern_match_t matches[] = {
+   { "", 3, { "e90810b", "point_to_blob", "test" } },
+   { "t*", 1, { "test" } },
+   { "*b", 2, { "e90810b", "point_to_blob" } },
+   { "e", 0 },
+   { "e90810b", 1, { "e90810b" } },
+   { "e90810[ab]", 1, { "e90810b" } },
+   { NULL }
+};
+
 void test_object_tag_list__list_by_pattern(void)
 {
    // list all tag names from the repository matching a specified pattern
-   ensure_tag_pattern_match(g_repo, "", 3);
-   ensure_tag_pattern_match(g_repo, "*", 3);
-   ensure_tag_pattern_match(g_repo, "t*", 1);
-   ensure_tag_pattern_match(g_repo, "*b", 2);
-   ensure_tag_pattern_match(g_repo, "e", 0);
-   ensure_tag_pattern_match(g_repo, "e90810b", 1);
-   ensure_tag_pattern_match(g_repo, "e90810[ab]", 1);
+   size_t i = 0;
+   while (matches[i].pattern)
+      ensure_tag_pattern_match(g_repo, &matches[i++]);
 }
