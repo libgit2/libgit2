@@ -35,7 +35,7 @@ struct checkout_diff_data
 static int buffer_to_file(
 	git_buf *buffer,
 	const char *path,
-	int dir_mode,
+	mode_t dir_mode,
 	int file_open_flags,
 	mode_t file_mode)
 {
@@ -56,10 +56,11 @@ static int buffer_to_file(
 static int blob_content_to_file(
 	git_blob *blob,
 	const char *path,
-	unsigned int entry_filemode,
+	mode_t entry_filemode,
 	git_checkout_opts *opts)
 {
-	int error, nb_filters = 0, file_mode = opts->file_mode;
+	int error, nb_filters = 0;
+	mode_t file_mode = opts->file_mode;
 	bool dont_free_filtered = false;
 	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
 	git_vector filters = GIT_VECTOR_INIT;
@@ -127,7 +128,7 @@ static int checkout_blob(
 	git_repository *repo,
 	git_oid *blob_oid,
 	const char *path,
-	unsigned int filemode,
+	mode_t filemode,
 	bool can_symlink,
 	git_checkout_opts *opts)
 {
