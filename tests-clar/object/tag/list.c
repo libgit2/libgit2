@@ -78,12 +78,26 @@ void test_object_tag_list__list_all(void)
 }
 
 static const struct pattern_match_t matches[] = {
+   // All tags, including a packed one and two namespaced ones.
    { "", 6, { "e90810b", "point_to_blob", "test", "packed-tag", "foo/bar", "foo/foo/bar" } },
+
+   // beginning with
    { "t*", 1, { "test" } },
+
+   // ending with
    { "*b", 2, { "e90810b", "point_to_blob" } },
+
+   // exact match
    { "e", 0 },
    { "e90810b", 1, { "e90810b" } },
+
+   // either or
    { "e90810[ab]", 1, { "e90810b" } },
+
+   // glob in the middle
+   { "foo/*/bar", 1, { "foo/foo/bar" } },
+
+   // End of list
    { NULL }
 };
 
