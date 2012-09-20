@@ -4,7 +4,7 @@
 
 static git_repository *g_repo;
 
-#define MAX_USED_TAGS 3
+#define MAX_USED_TAGS 6
 
 struct pattern_match_t
 {
@@ -47,7 +47,7 @@ static void ensure_tag_pattern_match(git_repository *repo,
          }
       }
    }
-   cl_assert(sucessfully_found == data->expected_matches);
+   cl_assert_equal_i((int)sucessfully_found, (int)data->expected_matches);
 
 exit:
    git_strarray_free(&tag_list);
@@ -72,13 +72,13 @@ void test_object_tag_list__list_all(void)
 
    cl_git_pass(git_tag_list(&tag_list, g_repo));
 
-   cl_assert(tag_list.count == 3);
+   cl_assert_equal_i((int)tag_list.count, 6);
 
    git_strarray_free(&tag_list);
 }
 
 static const struct pattern_match_t matches[] = {
-   { "", 3, { "e90810b", "point_to_blob", "test" } },
+   { "", 6, { "e90810b", "point_to_blob", "test", "packed-tag", "foo/bar", "foo/foo/bar" } },
    { "t*", 1, { "test" } },
    { "*b", 2, { "e90810b", "point_to_blob" } },
    { "e", 0 },
