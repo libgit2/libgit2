@@ -166,7 +166,7 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 	}
 
 	if (WinHttpSendRequest(t->request, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-		data, content_length, content_length, 0) == FALSE) {
+		data, (DWORD)content_length, (DWORD)content_length, 0) == FALSE) {
 		giterr_set(GITERR_OS, "Failed to send request");
 		goto on_error;
 	}

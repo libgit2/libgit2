@@ -25,7 +25,7 @@
 struct checkout_diff_data
 {
 	git_buf *path;
-	int workdir_len;
+	size_t workdir_len;
 	git_checkout_opts *checkout_opts;
 	git_indexer_stats *stats;
 	git_repository *owner;
