@@ -279,8 +279,10 @@ GIT_EXTERN(int) git_odb_hash(git_oid *id, const void *data, size_t len, git_otyp
 /**
  * Read a file from disk and fill a git_oid with the object id
  * that the file would have if it were written to the Object
- * Database as an object of the given type. Similar functionality
- * to git.git's `git hash-object` without the `-w` flag.
+ * Database as an object of the given type (w/o applying filters).
+ * Similar functionality to git.git's `git hash-object` without
+ * the `-w` flag, however, with the --no-filters flag.
+ * If you need filters, see git_repository_hashfile.
  *
  * @param out oid structure the result is written into.
  * @param path file to read and determine object id for
