@@ -1315,7 +1315,7 @@ static int lookup_head_remote(git_buf *url, git_repository *repo)
 	/* remote should refer to something like refs/remotes/ORIGIN/BRANCH */
 
 	if (git_reference_type(remote) != GIT_REF_SYMBOLIC ||
-		git__prefixcmp(git_reference_target(remote), "refs/remotes/") != 0)
+		git__prefixcmp(git_reference_target(remote), GIT_REFS_REMOTES_DIR) != 0)
 	{
 		giterr_set(GITERR_SUBMODULE,
 			"Cannot resolve relative URL when HEAD is not symbolic");
@@ -1323,7 +1323,7 @@ static int lookup_head_remote(git_buf *url, git_repository *repo)
 		goto cleanup;
 	}
 
-	scan = tgt = git_reference_target(remote) + strlen("refs/remotes/");
+	scan = tgt = git_reference_target(remote) + strlen(GIT_REFS_REMOTES_DIR);
 	while (*scan && (*scan != '/' || (scan > tgt && scan[-1] != '\\')))
 		scan++; /* find non-escaped slash to end ORIGIN name */
 

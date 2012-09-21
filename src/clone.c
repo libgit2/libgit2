@@ -50,7 +50,7 @@ static int create_tracking_branch(git_repository *repo, const git_oid *target, c
 			git_buf merge_target = GIT_BUF_INIT;
 			if (!git_buf_printf(&remote, "branch.%s.remote", name) &&
 				 !git_buf_printf(&merge, "branch.%s.merge", name) &&
-				 !git_buf_printf(&merge_target, "refs/heads/%s", name) &&
+				 !git_buf_printf(&merge_target, GIT_REFS_HEADS_DIR "%s", name) &&
 				 !git_config_set_string(cfg, git_buf_cstr(&remote), "origin") &&
 				 !git_config_set_string(cfg, git_buf_cstr(&merge), git_buf_cstr(&merge_target))) {
 				retcode = 0;
@@ -77,7 +77,7 @@ static int reference_matches_remote_head(const char *head_name, void *payload)
 	if (!git_reference_name_to_oid(&oid, head_info->repo, head_name) &&
 		 !git_oid_cmp(&head_info->remote_head_oid, &oid)) {
 		git_buf_puts(&head_info->branchname,
-						 head_name+strlen("refs/remotes/origin/"));
+						 head_name+strlen(GIT_REFS_REMOTES_DIR "origin/"));
 	}
 	return 0;
 }
@@ -90,7 +90,7 @@ static int update_head_to_new_branch(git_repository *repo, const git_oid *target
 		git_reference *head;
 		if (!git_reference_lookup(&head, repo, GIT_HEAD_FILE)) {
 			git_buf targetbuf = GIT_BUF_INIT;
-			if (!git_buf_printf(&targetbuf, "refs/heads/%s", name)) {
+			if (!git_buf_printf(&targetbuf, GIT_REFS_HEADS_DIR "%s", name)) {
 				retcode = git_reference_set_target(head, git_buf_cstr(&targetbuf));
 			}
 			git_buf_free(&targetbuf);
@@ -115,7 +115,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	head_info.repo = repo;
 
 	/* Check to see if "master" matches the remote head */
-	if (!git_reference_name_to_oid(&oid, repo, "refs/remotes/origin/master") &&
+	if (!git_reference_name_to_oid(&oid, repo, GIT_REFS_REMOTES_DIR "origin/master") &&
 		 !git_oid_cmp(&remote_head->oid, &oid)) {
 		retcode = update_head_to_new_branch(repo, &oid, "master");
 	}
