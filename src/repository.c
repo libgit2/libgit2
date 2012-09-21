@@ -1384,7 +1384,7 @@ int git_repository_hashfile(
 {
 	int error;
 	git_vector filters = GIT_VECTOR_INIT;
-	git_file fd;
+	git_file fd = -1;
 	git_off_t len;
 	git_buf full_path = GIT_BUF_INIT;
 
@@ -1435,7 +1435,8 @@ int git_repository_hashfile(
 	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, &filters);
 
 cleanup:
-	p_close(fd);
+	if (fd >= 0)
+		p_close(fd);
 	git_filters_free(&filters);
 	git_buf_free(&full_path);
 
