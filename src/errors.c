@@ -94,7 +94,11 @@ void giterr_set(int error_class, const char *string, ...)
 
 void giterr_set_str(int error_class, const char *string)
 {
-	char *message = git__strdup(string);
+	char *message;
+
+	assert(string);
+
+	message = git__strdup(string);
 
 	if (message)
 		set_error(error_class, message);
