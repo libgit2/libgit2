@@ -72,7 +72,7 @@ void git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
 
 void git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
 {
-	MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, length);
+	MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, (int)length);
 }
 
 void git__utf16_to_8(char *out, const wchar_t *input)
