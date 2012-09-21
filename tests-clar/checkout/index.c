@@ -287,3 +287,76 @@ void test_checkout_index__options_open_flags(void)
 
 	test_file_contents("./testrepo/new.txt", "hi\nmy new file\n");
 }
+
+struct notify_data {
+	const char *file;
+	const char *sha;
+};
+
+static int notify_cb(
+	const char *skipped_file,
+	const git_oid *blob_oid,
+	int file_mode,
+	void *payload)
+{
+	struct notify_data *expectations = (struct notify_data *)payload;
+
+	GIT_UNUSED(file_mode);
+
+	cl_assert_equal_s(expectations->file, skipped_file);
+	cl_assert_equal_i(0, git_oid_streq(blob_oid, expectations->sha));
+
+	return 0;
+}
+
+void test_checkout_index__can_notify_of_skipped_files(void)
+{
+	struct notify_data data;
+
+	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
+
+	/*
+	 * $ git ls-tree HEAD
+	 * 100644 blob a8233120f6ad708f843d861ce2b7228ec4e3dec6    README
+	 * 100644 blob 3697d64be941a53d4ae8f6a271e4e3fa56b022cc    branch_file.txt
+	 * 100644 blob a71586c1dfe8a71c6cbf6c129f404c5642ff31bd    new.txt
+	 */
+	data.file = "new.txt";
+	data.sha = "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd";
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	g_opts.skipped_notify_cb = notify_cb;
+	g_opts.notify_payload = &data;
+
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+}
+
+static int dont_notify_cb(
+	const char *skipped_file,
+	const git_oid *blob_oid,
+	int file_mode,
+	void *payload)
+{
+	GIT_UNUSED(skipped_file);
+	GIT_UNUSED(blob_oid);
+	GIT_UNUSED(file_mode);
+	GIT_UNUSED(payload);
+
+	cl_assert(false);
+
+	return 0;
+}
+
+void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
+{
+	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
+	set_core_autocrlf_to(true);
+	
+	cl_git_mkfile("./testrepo/new.txt", "my new file\r\n");
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	g_opts.skipped_notify_cb = dont_notify_cb;
+	g_opts.notify_payload = NULL;
+
+	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+}

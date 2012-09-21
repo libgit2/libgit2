@@ -36,6 +36,21 @@ typedef struct git_checkout_opts {
 	int file_mode; /* default is 0644 */
 	int file_open_flags; /* default is O_CREAT | O_TRUNC | O_WRONLY */
 
+	/* Optional callback to notify the consumer of files that
+	 * haven't be checked out because a modified version of them
+	 * exist in the working directory.
+	 *
+	 * When provided, this callback will be invoked when the flag
+	 * GIT_CHECKOUT_OVERWRITE_MODIFIED isn't part of the checkout strategy.
+	 */
+	int (* skipped_notify_cb)(
+		const char *skipped_file,
+		const git_oid *blob_oid,
+		int file_mode,
+		void *payload);
+
+	void *notify_payload;
+
 	/* when not NULL, arrays of fnmatch pattern specifying 
 	 * which paths should be taken into account
 	 */

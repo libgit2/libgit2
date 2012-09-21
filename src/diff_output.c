@@ -1354,9 +1354,9 @@ int git_diff_iterator_num_lines_in_hunk(git_diff_iterator *iter)
 		return error;
 
 	if (iter->hunk_curr)
-		return iter->hunk_curr->line_count;
+		return (int)iter->hunk_curr->line_count;
 	if (iter->hunk_head)
-		return iter->hunk_head->line_count;
+		return (int)iter->hunk_head->line_count;
 	return 0;
 }
 
