@@ -28,7 +28,11 @@ struct HeadInfo {
 	git_buf branchname;
 };
 
-static int create_tracking_branch(git_repository *repo, const git_oid *target, const char *name)
+static int create_tracking_branch(
+	git_reference **branch,
+	git_repository *repo,
+	const git_oid *target,
+	const char *name)
 {
 	git_object *head_obj = NULL;
 	git_reference *branch_ref;
@@ -42,7 +46,6 @@ static int create_tracking_branch(git_repository *repo, const git_oid *target, c
 	if (!git_branch_create(&branch_ref, repo, name, head_obj, 0)) {
 		git_config *cfg;
 
-		git_reference_free(branch_ref);
 		/* Set up tracking */
 		if (!git_repository_config(&cfg, repo)) {
 			git_buf remote = GIT_BUF_INIT;
@@ -63,6 +66,12 @@ static int create_tracking_branch(git_repository *repo, const git_oid *target, c
 	}
 
 	git_object_free(head_obj);
+
+	if (!retcode)
+		*branch = branch_ref;
+	else
+		git_reference_free(branch_ref);
+
 	return retcode;
 }
 
@@ -84,21 +93,17 @@ static int reference_matches_remote_head(const char *head_name, void *payload)
 
 static int update_head_to_new_branch(git_repository *repo, const git_oid *target, const char *name)
 {
-	int retcode = GIT_ERROR;
+	git_reference *tracking_branch;
+	int error;
 
-	if (!create_tracking_branch(repo, target, name)) {
-		git_reference *head;
-		if (!git_reference_lookup(&head, repo, GIT_HEAD_FILE)) {
-			git_buf targetbuf = GIT_BUF_INIT;
-			if (!git_buf_printf(&targetbuf, GIT_REFS_HEADS_DIR "%s", name)) {
-				retcode = git_reference_set_target(head, git_buf_cstr(&targetbuf));
-			}
-			git_buf_free(&targetbuf);
-			git_reference_free(head);
-		}
-	}
+	if (create_tracking_branch(&tracking_branch, repo, target, name) < 0)
+		return -1;
 
-	return retcode;
+	error = git_repository_set_head(repo, git_reference_name(tracking_branch));
+
+	git_reference_free(tracking_branch);
+
+	return error;
 }
 
 static int update_head_to_remote(git_repository *repo, git_remote *remote)
