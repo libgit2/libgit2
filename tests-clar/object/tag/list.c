@@ -97,6 +97,11 @@ static const struct pattern_match_t matches[] = {
 	// glob in the middle
 	{ "foo/*/bar", 1, { "foo/foo/bar" } },
 
+	// The matching of '*' is based on plain string matching analog to the regular expression ".*"
+	// => a '/' in the tag name has no special meaning.
+	// Compare to `git tag -l "*bar"`
+	{ "*bar", 2, { "foo/bar", "foo/foo/bar" } },
+
 	// End of list
 	{ NULL }
 };
