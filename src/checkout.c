@@ -59,7 +59,7 @@ static int blob_content_to_file(
 	mode_t entry_filemode,
 	git_checkout_opts *opts)
 {
-	int error, nb_filters = 0;
+	int error = -1, nb_filters = 0;
 	mode_t file_mode = opts->file_mode;
 	bool dont_free_filtered = false;
 	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
