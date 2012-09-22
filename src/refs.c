@@ -1343,6 +1343,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	unsigned int normalization_flags;
 	git_buf aux_path = GIT_BUF_INIT;
 	char normalized[GIT_REFNAME_MAX];
+	bool should_head_be_updated = false;
 
 	const char *head_target = NULL;
 	git_reference *head = NULL;
@@ -1365,6 +1366,15 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	 * we actually start removing things. */
 	if (git_buf_joinpath(&aux_path, ref->owner->path_repository, new_name) < 0)
 		return -1;
+
+	/*
+	 * Check if we have to update HEAD.
+	 */
+	if (git_repository_head(&head, ref->owner) < 0)
+		goto cleanup;
+
+	should_head_be_updated = !strcmp(git_reference_name(head), ref->name);
+	git_reference_free(head);
 
 	/*
 	 * Now delete the old ref and remove an possibly existing directory
@@ -1390,25 +1400,13 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		goto rollback;
 
 	/*
-	 * Check if we have to update HEAD.
+	 * Update HEAD it was poiting to the reference being renamed.
 	 */
-	if (git_reference_lookup(&head, ref->owner, GIT_HEAD_FILE) < 0) {
-		giterr_set(GITERR_REFERENCE,
-			"Failed to update HEAD after renaming reference");
-		goto cleanup;
-	}
-
-	head_target = git_reference_target(head);
-
-	if (head_target && !strcmp(head_target, ref->name)) {
-		git_reference_free(head);
-		head = NULL;
-
-		if (git_reference_create_symbolic(&head, ref->owner, GIT_HEAD_FILE, new_name, 1) < 0) {
+	if (should_head_be_updated && 
+		git_repository_set_head(ref->owner, new_name) < 0) {
 			giterr_set(GITERR_REFERENCE,
 				"Failed to update HEAD after renaming reference");
 			goto cleanup;
-		}
 	}
 
 	/*
@@ -1426,12 +1424,10 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	/* The reference is no longer packed */
 	ref->flags &= ~GIT_REF_PACKED;
 
-	git_reference_free(head);
 	git_buf_free(&aux_path);
 	return 0;
 
 cleanup:
-	git_reference_free(head);
 	git_buf_free(&aux_path);
 	return -1;
 
