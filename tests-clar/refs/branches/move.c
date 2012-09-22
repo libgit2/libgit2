@@ -62,3 +62,16 @@ void test_refs_branches_move__can_force_move_over_an_existing_branch(void)
 {
 	cl_git_pass(git_branch_move(ref, "master", 1));
 }
+
+void test_refs_branches_move__moving_the_branch_pointed_at_by_HEAD_updates_HEAD(void)
+{
+	git_reference *branch;
+
+	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
+	cl_git_pass(git_branch_move(branch, "master2", 0));
+	git_reference_free(branch);
+
+	cl_git_pass(git_repository_head(&branch, repo));
+	cl_assert_equal_s("refs/heads/master2", git_reference_name(branch));
+	git_reference_free(branch);
+}
