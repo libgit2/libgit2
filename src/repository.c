@@ -471,7 +471,7 @@ static int load_config(
 	}
 
 	if (xdr_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, xdr_config_path, 3) < 0)
+		if (git_config_add_file_ondisk(cfg, xdr_config_path, 2) < 0)
 			goto on_error;
 	}
 
