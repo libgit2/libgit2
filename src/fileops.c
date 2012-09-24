@@ -493,11 +493,20 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 		}
 	}
 
-	if (win32_expand_path(&root, L"%HOMEDRIVE%\\%HOMEPATH%\\") < 0 ||
-		root.path[0] == L'%') /* i.e. no expansion happened */
-	{
-		giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
-		return -1;
+	if (getenv("HOMEPATH") != NULL) {
+		if (win32_expand_path(&root, L"%HOMEDRIVE%%HOMEPATH%\\") < 0 ||
+			root.path[0] == L'%') /* i.e. no expansion happened */
+		{
+			giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
+			return -1;
+		}
+	} else {
+		if (win32_expand_path(&root, L"%USERPROFILE%\\") < 0 ||
+			root.path[0] == L'%') /* i.e. no expansion happened */
+		{
+			giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
+			return -1;
+		}
 	}
 
 	if (win32_find_file(path, &root, filename) < 0) {
