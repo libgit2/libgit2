@@ -541,6 +541,9 @@ int git_config_open_default(git_config **out)
 	error = git_config_new(&cfg);
 
 	if (!error && !git_config_find_global_r(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr, 3);
+
+	if (!error && !git_config_find_xdr_r(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr, 2);
 
 	if (!error && !git_config_find_system_r(&buf))
