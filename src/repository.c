@@ -445,6 +445,7 @@ static int load_config(
 	git_config **out,
 	git_repository *repo,
 	const char *global_config_path,
+	const char *xdr_config_path,
 	const char *system_config_path)
 {
 	git_buf config_path = GIT_BUF_INIT;
@@ -459,13 +460,18 @@ static int load_config(
 		&config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO) < 0)
 		goto on_error;
 
-	if (git_config_add_file_ondisk(cfg, config_path.ptr, 3) < 0)
+	if (git_config_add_file_ondisk(cfg, config_path.ptr, 4) < 0)
 		goto on_error;
 
 	git_buf_free(&config_path);
 
 	if (global_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, global_config_path, 2) < 0)
+		if (git_config_add_file_ondisk(cfg, global_config_path, 3) < 0)
+			goto on_error;
+	}
+
+	if (xdr_config_path != NULL) {
+		if (git_config_add_file_ondisk(cfg, xdr_config_path, 3) < 0)
 			goto on_error;
 	}
 
@@ -487,19 +493,23 @@ on_error:
 int git_repository_config__weakptr(git_config **out, git_repository *repo)
 {
 	if (repo->_config == NULL) {
-		git_buf global_buf = GIT_BUF_INIT, system_buf = GIT_BUF_INIT;
+		git_buf global_buf = GIT_BUF_INIT, xdr_buf = GIT_BUF_INIT, system_buf = GIT_BUF_INIT;
 		int res;
 
 		const char *global_config_path = NULL;
+		const char *xdr_config_path = NULL;
 		const char *system_config_path = NULL;
 
 		if (git_config_find_global_r(&global_buf) == 0)
 			global_config_path = global_buf.ptr;
 
+		if (git_config_find_xdr_r(&xdr_buf) == 0)
+			xdr_config_path = xdr_buf.ptr;
+
 		if (git_config_find_system_r(&system_buf) == 0)
 			system_config_path = system_buf.ptr;
 
-		res = load_config(&repo->_config, repo, global_config_path, system_config_path);
+		res = load_config(&repo->_config, repo, global_config_path, xdr_config_path, system_config_path);
 
 		git_buf_free(&global_buf);
 		git_buf_free(&system_buf);

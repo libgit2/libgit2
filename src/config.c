@@ -451,8 +451,12 @@ int git_config_find_global_r(git_buf *path)
 {
 	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
 
-	if (error == GIT_ENOTFOUND)
-		error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
+	return error;
+}
+
+int git_config_find_xdr_r(git_buf *path)
+{
+	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
 
 	return error;
 }
