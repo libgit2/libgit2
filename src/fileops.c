@@ -455,8 +455,19 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 
 int git_futils_find_global_file(git_buf *path, const char *filename)
 {
+	const char *home = getenv("HOME");
+
 #ifdef GIT_WIN32
 	struct win32_path root;
+
+	if (home != NULL) {
+		if (git_buf_joinpath(path, home, filename) < 0)
+			return -1;
+
+		if (git_path_exists(path->ptr)) {
+			return 0;
+		}
+	}
 
 	if (win32_expand_path(&root, L"%USERPROFILE%\\") < 0 ||
 		root.path[0] == L'%') /* i.e. no expansion happened */
@@ -473,8 +484,6 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 
 	return 0;
 #else
-	const char *home = getenv("HOME");
-
 	if (home == NULL) {
 		giterr_set(GITERR_OS, "Global file lookup failed. "
 			"Cannot locate the user's home directory");
