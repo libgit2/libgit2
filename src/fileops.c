@@ -423,12 +423,36 @@ static int win32_find_file(git_buf *path, const struct win32_path *root, const c
 int git_futils_find_system_file(git_buf *path, const char *filename)
 {
 #ifdef GIT_WIN32
+#ifndef _WIN64
+#define REG_MSYSGIT_INSTALL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
+#else
+#define REG_MSYSGIT_INSTALL L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
+#endif
+
 	struct win32_path root;
 
-	if (win32_expand_path(&root, L"%PROGRAMFILES%\\Git\\etc\\") < 0 ||
-		root.path[0] == L'%') /* i.e. no expansion happened */
+	HKEY hKey;
+	DWORD dwType = REG_SZ;
+	DWORD dwSize = MAX_PATH;
+
+	root.len = 0;
+	if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
 	{
-		giterr_set(GITERR_OS, "Cannot locate the system's Program Files directory");
+		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType,(LPBYTE)&root.path, &dwSize) == ERROR_SUCCESS)
+		{
+			// InstallLocation points to the root of the msysgit directory
+			if (wcscat_s(root.path, MAX_PATH, L"etc\\"))
+			{
+				giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory - path too long");
+				return -1;
+			}
+			root.len = (DWORD)wcslen(root.path) + 1;
+		}
+	}
+	RegCloseKey(hKey);
+
+	if (!root.len) {
+		giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory");
 		return -1;
 	}
 
