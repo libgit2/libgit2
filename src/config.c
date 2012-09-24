@@ -483,6 +483,28 @@ int git_config_find_global(char *global_config_path, size_t length)
 	return 0;
 }
 
+int git_config_find_xdr(char *xdr_config_path, size_t length)
+{
+	git_buf path  = GIT_BUF_INIT;
+	int ret = git_config_find_xdr_r(&path);
+
+	if (ret < 0) {
+		git_buf_free(&path);
+		return ret;
+	}
+
+	if (path.size >= length) {
+		git_buf_free(&path);
+		giterr_set(GITERR_NOMEMORY,
+			"Path is to long to fit on the given buffer");
+		return -1;
+	}
+
+	git_buf_copy_cstr(xdr_config_path, length, &path);
+	git_buf_free(&path);
+	return 0;
+}
+
 int git_config_find_system_r(git_buf *path)
 {
 	return git_futils_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
