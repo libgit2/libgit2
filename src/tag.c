@@ -408,7 +408,7 @@ static int tag_list_cb(const char *tag_name, void *payload)
 
 	filter = (tag_filter_data *)payload;
 	if (!*filter->pattern || p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
-		return git_vector_insert(filter->taglist, git__strdup(tag_name));
+		return git_vector_insert(filter->taglist, git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN));
 
 	return 0;
 }
