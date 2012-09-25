@@ -51,7 +51,7 @@ extern void git_diff__cleanup_modes(
 extern void git_diff_list_addref(git_diff_list *diff);
 
 extern bool git_diff_delta__should_skip(
-	git_diff_options *opts, git_diff_delta *delta);
+	const git_diff_options *opts, const git_diff_delta *delta);
 
 #endif
 

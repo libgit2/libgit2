@@ -26,7 +26,7 @@ enum {
 typedef struct {
 	git_repository   *repo;
 	git_diff_list    *diff;
-	git_diff_options *opts;
+	const git_diff_options *opts;
 	git_diff_file_fn  file_cb;
 	git_diff_hunk_fn  hunk_cb;
 	git_diff_data_fn  data_cb;

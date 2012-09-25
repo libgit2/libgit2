@@ -122,7 +122,7 @@ typedef enum {
  */
 typedef struct {
 	git_oid oid;
-	char *path;
+	const char *path;
 	git_off_t size;
 	unsigned int flags;
 	uint16_t mode;
@@ -154,7 +154,7 @@ typedef struct {
  */
 typedef int (*git_diff_file_fn)(
 	void *cb_data,
-	git_diff_delta *delta,
+	const git_diff_delta *delta,
 	float progress);
 
 /**
@@ -172,8 +172,8 @@ typedef struct {
  */
 typedef int (*git_diff_hunk_fn)(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	const char *header,
 	size_t header_len);
 
@@ -213,8 +213,8 @@ enum {
  */
 typedef int (*git_diff_data_fn)(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin, /**< GIT_DIFF_LINE_... value from above */
 	const char *content,
 	size_t content_len);
@@ -486,7 +486,7 @@ GIT_EXTERN(size_t) git_diff_num_deltas_of_type(
  */
 GIT_EXTERN(int) git_diff_get_patch(
 	git_diff_patch **patch,
-	git_diff_delta **delta,
+	const git_diff_delta **delta,
 	git_diff_list *diff,
 	size_t idx);
 
@@ -525,7 +525,7 @@ GIT_EXTERN(size_t) git_diff_patch_num_hunks(
  * @return 0 on success, GIT_ENOTFOUND if hunk_idx out of range, <0 on error
  */
 GIT_EXTERN(int) git_diff_patch_get_hunk(
-	git_diff_range **range,
+	const git_diff_range **range,
 	const char **header,
 	size_t *header_len,
 	size_t *lines_in_hunk,
@@ -595,7 +595,7 @@ GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
 GIT_EXTERN(int) git_diff_blobs(
 	git_blob *old_blob,
 	git_blob *new_blob,
-	git_diff_options *options,
+	const git_diff_options *options,
 	void *cb_data,
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,

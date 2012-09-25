@@ -177,7 +177,7 @@ static int diff_delta_is_binary_by_size(
 }
 
 static void setup_xdiff_options(
-	git_diff_options *opts, xdemitconf_t *cfg, xpparam_t *param)
+	const git_diff_options *opts, xdemitconf_t *cfg, xpparam_t *param)
 {
 	memset(cfg, 0, sizeof(xdemitconf_t));
 	memset(param, 0, sizeof(xpparam_t));
@@ -371,7 +371,7 @@ static void diff_context_init(
 	diff_context *ctxt,
 	git_diff_list *diff,
 	git_repository *repo,
-	git_diff_options *opts,
+	const git_diff_options *opts,
 	void *data,
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
@@ -696,8 +696,8 @@ static void diff_patch_free(git_diff_patch *patch)
 
 static int diff_patch_hunk_cb(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	const char *header,
 	size_t header_len)
 {
@@ -743,8 +743,8 @@ static int diff_patch_hunk_cb(
 
 static int diff_patch_line_cb(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin,
 	const char *content,
 	size_t content_len)
@@ -905,7 +905,8 @@ char git_diff_status_char(git_delta_t status)
 	return code;
 }
 
-static int print_compact(void *data, git_diff_delta *delta, float progress)
+static int print_compact(
+	void *data, const git_diff_delta *delta, float progress)
 {
 	diff_print_info *pi = data;
 	char old_suffix, new_suffix, code = git_diff_status_char(delta->status);
@@ -967,7 +968,7 @@ int git_diff_print_compact(
 	return error;
 }
 
-static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
+static int print_oid_range(diff_print_info *pi, const git_diff_delta *delta)
 {
 	char start_oid[8], end_oid[8];
 
@@ -997,7 +998,8 @@ static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 	return 0;
 }
 
-static int print_patch_file(void *data, git_diff_delta *delta, float progress)
+static int print_patch_file(
+	void *data, const git_diff_delta *delta, float progress)
 {
 	diff_print_info *pi = data;
 	const char *oldpfx = pi->diff->opts.old_prefix;
@@ -1064,8 +1066,8 @@ static int print_patch_file(void *data, git_diff_delta *delta, float progress)
 
 static int print_patch_hunk(
 	void *data,
-	git_diff_delta *d,
-	git_diff_range *r,
+	const git_diff_delta *d,
+	const git_diff_range *r,
 	const char *header,
 	size_t header_len)
 {
@@ -1087,8 +1089,8 @@ static int print_patch_hunk(
 
 static int print_patch_line(
 	void *data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin, /* GIT_DIFF_LINE value from above */
 	const char *content,
 	size_t content_len)
@@ -1158,7 +1160,7 @@ static void set_data_from_blob(
 int git_diff_blobs(
 	git_blob *old_blob,
 	git_blob *new_blob,
-	git_diff_options *options,
+	const git_diff_options *options,
 	void *cb_data,
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
@@ -1253,7 +1255,7 @@ size_t git_diff_num_deltas_of_type(git_diff_list *diff, git_delta_t type)
 
 int git_diff_get_patch(
 	git_diff_patch **patch_ptr,
-	git_diff_delta **delta_ptr,
+	const git_diff_delta **delta_ptr,
 	git_diff_list *diff,
 	size_t idx)
 {
@@ -1326,7 +1328,7 @@ size_t git_diff_patch_num_hunks(git_diff_patch *patch)
 }
 
 int git_diff_patch_get_hunk(
-	git_diff_range **range,
+	const git_diff_range **range,
 	const char **header,
 	size_t *header_len,
 	size_t *lines_in_hunk,

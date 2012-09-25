@@ -265,9 +265,9 @@ void test_diff_tree__larger_hunks(void)
 	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
 	size_t d, num_d, h, num_h, l, num_l, header_len, line_len;
-	git_diff_delta *delta;
+	const git_diff_delta *delta;
 	git_diff_patch *patch;
-	git_diff_range *range;
+	const git_diff_range *range;
 	const char *header, *line;
 	char origin;
 

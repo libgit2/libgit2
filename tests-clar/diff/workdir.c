@@ -691,7 +691,7 @@ void test_diff_workdir__larger_hunks(void)
 	for (i = 0; i <= 2; ++i) {
 		git_diff_list *diff = NULL;
 		git_diff_patch *patch;
-		git_diff_range *range;
+		const git_diff_range *range;
 		const char *header, *line;
 		char origin;
 

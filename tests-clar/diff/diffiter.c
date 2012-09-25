@@ -20,7 +20,7 @@ void test_diff_diffiter__create(void)
 
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 		cl_git_pass(git_diff_get_patch(NULL, &delta, diff, d));
 	}
 
@@ -40,7 +40,7 @@ void test_diff_diffiter__iterate_files(void)
 	cl_assert_equal_i(6, num_d);
 
 	for (d = 0; d < num_d; ++d) {
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 		cl_git_pass(git_diff_get_patch(NULL, &delta, diff, d));
 		cl_assert(delta != NULL);
 		count++;
@@ -63,7 +63,7 @@ void test_diff_diffiter__iterate_files_2(void)
 	cl_assert_equal_i(8, num_d);
 
 	for (d = 0; d < num_d; ++d) {
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 		cl_git_pass(git_diff_get_patch(NULL, &delta, diff, d));
 		cl_assert(delta != NULL);
 		count++;
@@ -91,7 +91,7 @@ void test_diff_diffiter__iterate_files_and_hunks(void)
 
 	for (d = 0; d < num_d; ++d) {
 		git_diff_patch *patch;
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 		size_t h, num_h;
 
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
@@ -104,7 +104,7 @@ void test_diff_diffiter__iterate_files_and_hunks(void)
 		num_h = git_diff_patch_num_hunks(patch);
 
 		for (h = 0; h < num_h; h++) {
-			git_diff_range *range;
+			const git_diff_range *range;
 			const char *header;
 			size_t header_len, num_l;
 
@@ -143,7 +143,7 @@ void test_diff_diffiter__max_size_threshold(void)
 
 	for (d = 0; d < num_d; ++d) {
 		git_diff_patch *patch;
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
 		cl_assert(delta);
@@ -178,7 +178,7 @@ void test_diff_diffiter__max_size_threshold(void)
 
 	for (d = 0; d < num_d; ++d) {
 		git_diff_patch *patch;
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
 
@@ -221,7 +221,7 @@ void test_diff_diffiter__iterate_all(void)
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
 		git_diff_patch *patch;
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 		size_t h, num_h;
 
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
@@ -230,7 +230,7 @@ void test_diff_diffiter__iterate_all(void)
 
 		num_h = git_diff_patch_num_hunks(patch);
 		for (h = 0; h < num_h; h++) {
-			git_diff_range *range;
+			const git_diff_range *range;
 			const char *header;
 			size_t header_len, l, num_l;
 

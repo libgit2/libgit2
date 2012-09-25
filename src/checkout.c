@@ -126,7 +126,7 @@ static int blob_content_to_link(git_blob *blob, const char *path, bool can_symli
 
 static int checkout_blob(
 	git_repository *repo,
-	git_oid *blob_oid,
+	const git_oid *blob_oid,
 	const char *path,
 	mode_t filemode,
 	bool can_symlink,
@@ -150,7 +150,7 @@ static int checkout_blob(
 
 static int checkout_diff_fn(
 	void *cb_data,
-	git_diff_delta *delta,
+	const git_diff_delta *delta,
 	float progress)
 {
 	struct checkout_diff_data *data;

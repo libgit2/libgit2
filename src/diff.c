@@ -809,7 +809,7 @@ on_error:
 
 
 bool git_diff_delta__should_skip(
-	git_diff_options *opts, git_diff_delta *delta)
+	const git_diff_options *opts, const git_diff_delta *delta)
 {
 	uint32_t flags = opts ? opts->flags : 0;
 

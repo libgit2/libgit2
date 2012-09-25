@@ -23,7 +23,7 @@ git_tree *resolve_commit_oid_to_tree(
 
 int diff_file_fn(
 	void *cb_data,
-	git_diff_delta *delta,
+	const git_diff_delta *delta,
 	float progress)
 {
 	diff_expects *e = cb_data;
@@ -48,8 +48,8 @@ int diff_file_fn(
 
 int diff_hunk_fn(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	const char *header,
 	size_t header_len)
 {
@@ -67,8 +67,8 @@ int diff_hunk_fn(
 
 int diff_line_fn(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin,
 	const char *content,
 	size_t content_len)
@@ -116,7 +116,7 @@ int diff_foreach_via_iterator(
 
 	for (d = 0; d < num_d; ++d) {
 		git_diff_patch *patch;
-		git_diff_delta *delta;
+		const git_diff_delta *delta;
 		size_t h, num_h;
 
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
@@ -142,7 +142,7 @@ int diff_foreach_via_iterator(
 		num_h = git_diff_patch_num_hunks(patch);
 
 		for (h = 0; h < num_h; h++) {
-			git_diff_range *range;
+			const git_diff_range *range;
 			const char *hdr;
 			size_t hdr_len, l, num_l;
 
