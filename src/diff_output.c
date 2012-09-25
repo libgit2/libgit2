@@ -51,26 +51,6 @@ static int parse_hunk_header(git_diff_range *range, const char *header)
 	return 0;
 }
 
-static bool diff_delta_should_skip(
-	diff_context *ctxt, git_diff_delta *delta)
-{
-	uint32_t flags = ctxt->opts ? ctxt->opts->flags : 0;
-
-	if (delta->status == GIT_DELTA_UNMODIFIED &&
-		(flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
-		return true;
-
-	if (delta->status == GIT_DELTA_IGNORED &&
-		(flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
-		return true;
-
-	if (delta->status == GIT_DELTA_UNTRACKED &&
-		(flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
-		return true;
-
-	return false;
-}
-
 #define KNOWN_BINARY_FLAGS (GIT_DIFF_FILE_BINARY|GIT_DIFF_FILE_NOT_BINARY)
 #define NOT_BINARY_FLAGS   (GIT_DIFF_FILE_NOT_BINARY|GIT_DIFF_FILE_NO_DATA)
 
@@ -411,7 +391,7 @@ static void diff_context_init(
 	setup_xdiff_options(ctxt->opts, &ctxt->xdiff_config, &ctxt->xdiff_params);
 }
 
-static bool diff_delta_file_callback(
+static int diff_delta_file_callback(
 	diff_context *ctxt, git_diff_delta *delta, size_t idx)
 {
 	float progress;
@@ -419,18 +399,18 @@ static bool diff_delta_file_callback(
 	if (!ctxt->file_cb)
 		return 0;
 
-	progress = (float)idx / ctxt->diff->deltas.length;
+	progress = ctxt->diff ? ((float)idx / ctxt->diff->deltas.length) : 1.0f;
 
 	if (ctxt->file_cb(ctxt->cb_data, delta, progress) != 0)
-		return GIT_EUSER;
+		ctxt->cb_error = GIT_EUSER;
 
-	return 0;
+	return ctxt->cb_error;
 }
 
 static void diff_patch_init(
 	diff_context *ctxt, git_diff_patch *patch)
 {
-	memset(patch, 0, sizeof(*patch));
+	memset(patch, 0, sizeof(git_diff_patch));
 
 	patch->diff = ctxt->diff;
 	patch->ctxt = ctxt;
@@ -454,7 +434,7 @@ static git_diff_patch *diff_patch_alloc(
 
 	git_diff_list_addref(patch->diff);
 
-	GIT_REFCOUNT_INC(&patch);
+	GIT_REFCOUNT_INC(patch);
 
 	patch->delta = delta;
 	patch->flags = GIT_DIFF_PATCH_ALLOCATED;
@@ -836,6 +816,8 @@ static int diff_patch_line_cb(
 		}
 	}
 
+	hunk->line_count++;
+
 	return 0;
 }
 
@@ -847,7 +829,7 @@ int git_diff_foreach(
 	git_diff_hunk_fn hunk_cb,
 	git_diff_data_fn data_cb)
 {
-	int error;
+	int error = 0;
 	diff_context ctxt;
 	size_t idx;
 	git_diff_patch patch;
@@ -861,14 +843,20 @@ int git_diff_foreach(
 	git_vector_foreach(&diff->deltas, idx, patch.delta) {
 
 		/* check flags against patch status */
-		if (diff_delta_should_skip(&ctxt, patch.delta))
+		if (git_diff_delta__should_skip(ctxt.opts, patch.delta))
 			continue;
 
-		if (!(error = diff_patch_load(&ctxt, &patch)) &&
-			!(error = diff_delta_file_callback(&ctxt, patch.delta, idx)))
-			error = diff_patch_generate(&ctxt, &patch);
+		if (!(error = diff_patch_load(&ctxt, &patch))) {
 
-		diff_patch_unload(&patch);
+			/* invoke file callback */
+			error = diff_delta_file_callback(&ctxt, patch.delta, idx);
+
+			/* generate diffs and invoke hunk and line callbacks */
+			if (!error)
+				error = diff_patch_generate(&ctxt, &patch);
+
+			diff_patch_unload(&patch);
+		}
 
 		if (error < 0)
 			break;
@@ -899,25 +887,32 @@ static char pick_suffix(int mode)
 		return ' ';
 }
 
+char git_diff_status_char(git_delta_t status)
+{
+	char code;
+
+	switch (status) {
+	case GIT_DELTA_ADDED:     code = 'A'; break;
+	case GIT_DELTA_DELETED:   code = 'D'; break;
+	case GIT_DELTA_MODIFIED:  code = 'M'; break;
+	case GIT_DELTA_RENAMED:   code = 'R'; break;
+	case GIT_DELTA_COPIED:    code = 'C'; break;
+	case GIT_DELTA_IGNORED:   code = 'I'; break;
+	case GIT_DELTA_UNTRACKED: code = '?'; break;
+	default:                  code = ' '; break;
+	}
+
+	return code;
+}
+
 static int print_compact(void *data, git_diff_delta *delta, float progress)
 {
 	diff_print_info *pi = data;
-	char code, old_suffix, new_suffix;
+	char old_suffix, new_suffix, code = git_diff_status_char(delta->status);
 
 	GIT_UNUSED(progress);
 
-	switch (delta->status) {
-	case GIT_DELTA_ADDED: code = 'A'; break;
-	case GIT_DELTA_DELETED: code = 'D'; break;
-	case GIT_DELTA_MODIFIED: code = 'M'; break;
-	case GIT_DELTA_RENAMED: code = 'R'; break;
-	case GIT_DELTA_COPIED: code = 'C'; break;
-	case GIT_DELTA_IGNORED: code = 'I'; break;
-	case GIT_DELTA_UNTRACKED: code = '?'; break;
-	default: code = 0;
-	}
-
-	if (!code)
+	if (code == ' ')
 		return 0;
 
 	old_suffix = pick_suffix(delta->old_file.mode);
@@ -1288,7 +1283,7 @@ int git_diff_get_patch(
 		&ctxt, diff, diff->repo, &diff->opts,
 		NULL, NULL, diff_patch_hunk_cb, diff_patch_line_cb);
 
-	if (diff_delta_should_skip(&ctxt, delta))
+	if (git_diff_delta__should_skip(ctxt.opts, delta))
 		return 0;
 
 	patch = diff_patch_alloc(&ctxt, delta);

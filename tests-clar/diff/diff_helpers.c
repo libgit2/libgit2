@@ -120,12 +120,18 @@ int diff_foreach_via_iterator(
 		size_t h, num_h;
 
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
-		cl_assert(delta && patch);
+		cl_assert(delta);
 
 		/* call file_cb for this file */
 		if (file_cb != NULL && file_cb(data, delta, (float)d / num_d) != 0) {
 			git_diff_patch_free(patch);
 			goto abort;
+		}
+
+		/* if there are no changes, then the patch will be NULL */
+		if (!patch) {
+			cl_assert(delta->status == GIT_DELTA_UNMODIFIED || delta->binary == 1);
+			continue;
 		}
 
 		if (!hunk_cb && !line_cb) {

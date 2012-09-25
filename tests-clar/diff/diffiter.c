@@ -256,21 +256,23 @@ void test_diff_diffiter__iterate_all(void)
 
 	cl_assert_equal_i(13, exp.files);
 	cl_assert_equal_i(8, exp.hunks);
-	cl_assert_equal_i(13, exp.lines);
+	cl_assert_equal_i(14, exp.lines);
 
 	git_diff_list_free(diff);
 }
 
 static void iterate_over_patch(git_diff_patch *patch, diff_expects *exp)
 {
-	size_t h, num_h = git_diff_patch_num_hunks(patch);
+	size_t h, num_h = git_diff_patch_num_hunks(patch), num_l;
 
 	exp->files++;
 	exp->hunks += num_h;
 
 	/* let's iterate in reverse, just because we can! */
-	for (h = 1; h <= num_h; ++h)
-		exp->lines += git_diff_patch_num_lines_in_hunk(patch, num_h - h);
+	for (h = 1, num_l = 0; h <= num_h; ++h)
+		num_l += git_diff_patch_num_lines_in_hunk(patch, num_h - h);
+
+	exp->lines += num_l;
 }
 
 #define PATCH_CACHE 5
@@ -338,5 +340,5 @@ void test_diff_diffiter__iterate_randomly_while_saving_state(void)
 	/* hopefully it all still added up right */
 	cl_assert_equal_i(13, exp.files);
 	cl_assert_equal_i(8, exp.hunks);
-	cl_assert_equal_i(13, exp.lines);
+	cl_assert_equal_i(14, exp.lines);
 }

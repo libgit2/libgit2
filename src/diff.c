@@ -807,6 +807,28 @@ on_error:
 	return -1;
 }
 
+
+bool git_diff_delta__should_skip(
+	git_diff_options *opts, git_diff_delta *delta)
+{
+	uint32_t flags = opts ? opts->flags : 0;
+
+	if (delta->status == GIT_DELTA_UNMODIFIED &&
+		(flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
+		return true;
+
+	if (delta->status == GIT_DELTA_IGNORED &&
+		(flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
+		return true;
+
+	if (delta->status == GIT_DELTA_UNTRACKED &&
+		(flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
+		return true;
+
+	return false;
+}
+
+
 int git_diff_merge(
 	git_diff_list *onto,
 	const git_diff_list *from)
@@ -841,6 +863,14 @@ int git_diff_merge(
 			delta = diff_delta__merge_like_cgit(o, f, &onto_pool);
 			i++;
 			j++;
+		}
+
+		/* the ignore rules for the target may not match the source
+		 * or the result of a merged delta could be skippable...
+		 */
+		if (git_diff_delta__should_skip(&onto->opts, delta)) {
+			git__free(delta);
+			continue;
 		}
 
 		if ((error = !delta ? -1 : git_vector_insert(&onto_new, delta)) < 0)

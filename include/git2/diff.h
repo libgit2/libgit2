@@ -401,6 +401,20 @@ GIT_EXTERN(int) git_diff_print_compact(
 	git_diff_data_fn print_cb);
 
 /**
+ * Look up the single character abbreviation for a delta status code.
+ *
+ * When you call `git_diff_print_compact` it prints single letter codes into
+ * the output such as 'A' for added, 'D' for deleted, 'M' for modified, etc.
+ * It is sometimes convenient to convert a git_delta_t value into these
+ * letters for your own purposes.  This function does just that.  By the
+ * way, unmodified will return a space (i.e. ' ').
+ *
+ * @param delta_t The git_delta_t value to look up
+ * @return The single character label for that code
+ */
+GIT_EXTERN(char) git_diff_status_char(git_delta_t status);
+
+/**
  * Iterate over a diff generating text output like "git diff".
  *
  * This is a super easy way to generate a patch from a diff.
@@ -453,9 +467,9 @@ GIT_EXTERN(size_t) git_diff_num_deltas_of_type(
  * done with it.  You can use the patch object to loop over all the hunks
  * and lines in the diff of the one delta.
  *
- * For a binary file, no `git_diff_patch` will be created, the output will
- * be set to NULL, and the `binary` flag will be set true in the
- * `git_diff_delta` structure.
+ * For an unchanged file or a binary file, no `git_diff_patch` will be
+ * created, the output will be set to NULL, and the `binary` flag will be
+ * set true in the `git_diff_delta` structure.
  *
  * The `git_diff_delta` pointer points to internal data and you do not have
  * to release it when you are done with it.  It will go away when the
