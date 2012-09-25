@@ -50,6 +50,11 @@ static int disambiguate_refname(git_reference **out, git_repository *repo, const
 		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0)
 			goto cleanup;
 
+		if (!git_reference_is_valid_name(git_buf_cstr(&refnamebuf))) {
+			error = GIT_ENOTFOUND;
+			continue;
+		}
+
 		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1);
 
 		if (!error) {

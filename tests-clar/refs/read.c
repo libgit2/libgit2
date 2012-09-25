@@ -6,7 +6,7 @@
 
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
 static const char *non_existing_tag_ref_name = "refs/tags/i-do-not-exist";
-static const char *head_tracker_sym_ref_name = "head-tracker";
+static const char *head_tracker_sym_ref_name = "HEAD_TRACKER";
 static const char *current_head_target = "refs/heads/master";
 static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
 static const char *packed_head_name = "refs/heads/packed";
@@ -221,7 +221,7 @@ void test_refs_read__unfound_return_ENOTFOUND(void)
 {
 	git_reference *reference;
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "TEST_MASTER"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/test/master"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/master"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/farther/master"));
