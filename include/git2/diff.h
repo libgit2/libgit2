@@ -122,7 +122,7 @@ typedef enum {
  */
 typedef struct {
 	git_oid oid;
-	char *path;
+	const char *path;
 	git_off_t size;
 	unsigned int flags;
 	uint16_t mode;
@@ -154,7 +154,7 @@ typedef struct {
  */
 typedef int (*git_diff_file_fn)(
 	void *cb_data,
-	git_diff_delta *delta,
+	const git_diff_delta *delta,
 	float progress);
 
 /**
@@ -172,8 +172,8 @@ typedef struct {
  */
 typedef int (*git_diff_hunk_fn)(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	const char *header,
 	size_t header_len);
 
@@ -213,16 +213,20 @@ enum {
  */
 typedef int (*git_diff_data_fn)(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin, /**< GIT_DIFF_LINE_... value from above */
 	const char *content,
 	size_t content_len);
 
 /**
- * The diff iterator object is used to scan a diff list.
+ * The diff patch is used to store all the text diffs for a delta.
+ *
+ * You can easily loop over the content of patches and get information about
+ * them.
  */
-typedef struct git_diff_iterator git_diff_iterator;
+typedef struct git_diff_patch git_diff_patch;
+
 
 /** @name Diff List Generator Functions
  *
@@ -349,7 +353,7 @@ GIT_EXTERN(int) git_diff_merge(
 /**@{*/
 
 /**
- * Iterate over a diff list issuing callbacks.
+ * Loop over all deltas in a diff list issuing callbacks.
  *
  * This will iterate through all of the files described in a diff.  You
  * should provide a file callback to learn about each file.
@@ -381,137 +385,6 @@ GIT_EXTERN(int) git_diff_foreach(
 	git_diff_data_fn line_cb);
 
 /**
- * Create a diff iterator object that can be used to traverse a diff.
- *
- * This iterator can be used instead of `git_diff_foreach` in situations
- * where callback functions are awkward to use.  Because of the way that
- * diffs are calculated internally, using an iterator will use somewhat
- * more memory than `git_diff_foreach` would.
- *
- * @param iterator Output parameter of newly created iterator.
- * @param diff Diff over which you wish to iterate.
- * @return 0 on success, < 0 on error
- */
-GIT_EXTERN(int) git_diff_iterator_new(
-	git_diff_iterator **iterator,
-	git_diff_list *diff);
-
-/**
- * Release the iterator object.
- *
- * Call this when you are done using the iterator.
- *
- * @param iterator The diff iterator to be freed.
- */
-GIT_EXTERN(void) git_diff_iterator_free(git_diff_iterator *iterator);
-
-/**
- * Return progress value for traversing the diff.
- *
- * This returns a value between 0.0 and 1.0 that represents the progress
- * through the diff iterator.  The value is monotonically increasing and
- * will advance gradually as you progress through the iteration.
- *
- * @param iterator The diff iterator
- * @return Value between 0.0 and 1.0
- */
-GIT_EXTERN(float) git_diff_iterator_progress(git_diff_iterator *iterator);
-
-/**
- * Return the number of hunks in the current file
- *
- * This will return the number of diff hunks in the current file.  If the
- * diff has not been performed yet, this may result in loading the file and
- * performing the diff.
- *
- * @param iterator The iterator object
- * @return The number of hunks in the current file or <0 on loading failure
- */
-GIT_EXTERN(int) git_diff_iterator_num_hunks_in_file(git_diff_iterator *iterator);
-
-/**
- * Return the number of lines in the hunk currently being examined.
- *
- * This will return the number of lines in the current hunk.  If the diff
- * has not been performed yet, this may result in loading the file and
- * performing the diff.
- *
- * @param iterator The iterator object
- * @return The number of lines in the current hunk (context, added, and
- *         removed all added together) or <0 on loading failure
- */
-GIT_EXTERN(int) git_diff_iterator_num_lines_in_hunk(git_diff_iterator *iterator);
-
-/**
- * Return the delta information for the next file in the diff.
- *
- * This will return a pointer to the next git_diff_delta` to be processed or
- * NULL if the iterator is at the end of the diff, then advance.  This
- * returns the value `GIT_ITEROVER` after processing the last file.
- *
- * @param delta Output parameter for the next delta object
- * @param iterator The iterator object
- * @return 0 on success, GIT_ITEROVER when done, other value < 0 on error
- */
-GIT_EXTERN(int) git_diff_iterator_next_file(
-	git_diff_delta **delta,
-	git_diff_iterator *iterator);
-
-/**
- * Return the hunk information for the next hunk in the current file.
- *
- * It is recommended that you not call this if the file is a binary
- * file, but it is allowed to do so.
- *
- * The `header` text output will contain the standard hunk header that
- * would appear in diff output.  The header string will be NUL terminated.
- *
- * WARNING! Call this function for the first time on a file is when the
- * actual text diff will be computed (it cannot be computed incrementally)
- * so the first call for a new file is expensive (at least in relative
- * terms - in reality, it is still pretty darn fast).
- *
- * @param range Output pointer to range of lines covered by the hunk;
- *        This range object is owned by the library and should not be freed.
- * @param header Output pointer to the text of the hunk header
- *        This string is owned by the library and should not be freed.
- * @param header_len Output pointer to store the length of the header text
- * @param iterator The iterator object
- * @return 0 on success, GIT_ITEROVER when done with current file, other
- *         value < 0 on error
- */
-GIT_EXTERN(int) git_diff_iterator_next_hunk(
-	git_diff_range **range,
-	const char **header,
-	size_t *header_len,
-	git_diff_iterator *iterator);
-
-/**
- * Return the next line of the current hunk of diffs.
- *
- * The `line_origin` output will tell you what type of line this is
- * (e.g. was it added or removed or is it just context for the diff).
- *
- * The `content` will be a pointer to the file data that goes in the
- * line. IT WILL NOT BE NUL TERMINATED. You have to use the `content_len`
- * value and only process that many bytes of data from the content string.
- *
- * @param line_origin Output pointer to store a GIT_DIFF_LINE value for this
- *        next chunk of data. The value is a single character, not a buffer.
- * @param content Output pointer to store the content of the diff; this
- *        string is owned by the library and should not be freed.
- * @param content_len Output pointer to store the length of the content.
- * @param iterator The iterator object
- * @return 0 on success, GIT_ITEROVER when done with current line, other
- *         value < 0 on error
- */
-GIT_EXTERN(int) git_diff_iterator_next_line(
-	char *line_origin, /**< GIT_DIFF_LINE_... value from above */
-	const char **content,
-	size_t *content_len,
-	git_diff_iterator *iterator);
-
-/**
  * Iterate over a diff generating text output like "git diff --name-status".
  *
  * Returning a non-zero value from the callbacks will terminate the
@@ -526,6 +399,20 @@ GIT_EXTERN(int) git_diff_print_compact(
 	git_diff_list *diff,
 	void *cb_data,
 	git_diff_data_fn print_cb);
+
+/**
+ * Look up the single character abbreviation for a delta status code.
+ *
+ * When you call `git_diff_print_compact` it prints single letter codes into
+ * the output such as 'A' for added, 'D' for deleted, 'M' for modified, etc.
+ * It is sometimes convenient to convert a git_delta_t value into these
+ * letters for your own purposes.  This function does just that.  By the
+ * way, unmodified will return a space (i.e. ' ').
+ *
+ * @param delta_t The git_delta_t value to look up
+ * @return The single character label for that code
+ */
+GIT_EXTERN(char) git_diff_status_char(git_delta_t status);
 
 /**
  * Iterate over a diff generating text output like "git diff".
@@ -552,17 +439,137 @@ GIT_EXTERN(int) git_diff_print_patch(
 /**
  * Query how many diff records are there in a diff list.
  *
- * You can optionally pass in a `git_delta_t` value if you want a count
- * of just entries that match that delta type, or pass -1 for all delta
- * records.
+ * @param diff A git_diff_list generated by one of the above functions
+ * @return Count of number of deltas in the list
+ */
+GIT_EXTERN(size_t) git_diff_num_deltas(git_diff_list *diff);
+
+/**
+ * Query how many diff deltas are there in a diff list filtered by type.
+ *
+ * This works just like `git_diff_entrycount()` with an extra parameter
+ * that is a `git_delta_t` and returns just the count of how many deltas
+ * match that particular type.
  *
  * @param diff A git_diff_list generated by one of the above functions
- * @param delta_t A git_delta_t value to filter the count, or -1 for all records
+ * @param type A git_delta_t value to filter the count
  * @return Count of number of deltas matching delta_t type
  */
-GIT_EXTERN(int) git_diff_entrycount(
+GIT_EXTERN(size_t) git_diff_num_deltas_of_type(
 	git_diff_list *diff,
-	int delta_t);
+	git_delta_t type);
+
+/**
+ * Return the diff delta and patch for an entry in the diff list.
+ *
+ * The `git_diff_patch` is a newly created object contains the text diffs
+ * for the delta.  You have to call `git_diff_patch_free()` when you are
+ * done with it.  You can use the patch object to loop over all the hunks
+ * and lines in the diff of the one delta.
+ *
+ * For an unchanged file or a binary file, no `git_diff_patch` will be
+ * created, the output will be set to NULL, and the `binary` flag will be
+ * set true in the `git_diff_delta` structure.
+ *
+ * The `git_diff_delta` pointer points to internal data and you do not have
+ * to release it when you are done with it.  It will go away when the
+ * `git_diff_list` and `git_diff_patch` go away.
+ *
+ * It is okay to pass NULL for either of the output parameters; if you pass
+ * NULL for the `git_diff_patch`, then the text diff will not be calculated.
+ *
+ * @param patch Output parameter for the delta patch object
+ * @param delta Output parameter for the delta object
+ * @param diff Diff list object
+ * @param idx Index into diff list
+ * @return 0 on success, other value < 0 on error
+ */
+GIT_EXTERN(int) git_diff_get_patch(
+	git_diff_patch **patch,
+	const git_diff_delta **delta,
+	git_diff_list *diff,
+	size_t idx);
+
+/**
+ * Free a git_diff_patch object.
+ */
+GIT_EXTERN(void) git_diff_patch_free(
+	git_diff_patch *patch);
+
+/**
+ * Get the delta associated with a patch
+ */
+GIT_EXTERN(const git_diff_delta *) git_diff_patch_delta(
+	git_diff_patch *patch);
+
+/**
+ * Get the number of hunks in a patch
+ */
+GIT_EXTERN(size_t) git_diff_patch_num_hunks(
+	git_diff_patch *patch);
+
+/**
+ * Get the information about a hunk in a patch
+ *
+ * Given a patch and a hunk index into the patch, this returns detailed
+ * information about that hunk.  Any of the output pointers can be passed
+ * as NULL if you don't care about that particular piece of information.
+ *
+ * @param range Output pointer to git_diff_range of hunk
+ * @param header Output pointer to header string for hunk.  Unlike the
+ *               content pointer for each line, this will be NUL-terminated
+ * @param header_len Output value of characters in header string
+ * @param lines_in_hunk Output count of total lines in this hunk
+ * @param patch Input pointer to patch object
+ * @param hunk_idx Input index of hunk to get information about
+ * @return 0 on success, GIT_ENOTFOUND if hunk_idx out of range, <0 on error
+ */
+GIT_EXTERN(int) git_diff_patch_get_hunk(
+	const git_diff_range **range,
+	const char **header,
+	size_t *header_len,
+	size_t *lines_in_hunk,
+	git_diff_patch *patch,
+	size_t hunk_idx);
+
+/**
+ * Get the number of lines in a hunk.
+ *
+ * @param patch The git_diff_patch object
+ * @param hunk_idx Index of the hunk
+ * @return Number of lines in hunk or -1 if invalid hunk index
+ */
+GIT_EXTERN(int) git_diff_patch_num_lines_in_hunk(
+	git_diff_patch *patch,
+	size_t hunk_idx);
+
+/**
+ * Get data about a line in a hunk of a patch.
+ *
+ * Given a patch, a hunk index, and a line index in the hunk, this
+ * will return a lot of details about that line.  If you pass a hunk
+ * index larger than the number of hunks or a line index larger than
+ * the number of lines in the hunk, this will return -1.
+ *
+ * @param line_origin A GIT_DIFF_LINE constant from above
+ * @param content Pointer to content of diff line, not NUL-terminated
+ * @param content_len Number of characters in content
+ * @param old_lineno Line number in old file or -1 if line is added
+ * @param new_lineno Line number in new file or -1 if line is deleted
+ * @param patch The patch to look in
+ * @param hunk_idx The index of the hunk
+ * @param line_of_index The index of the line in the hunk
+ * @return 0 on success, <0 on failure
+ */
+GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
+	char *line_origin,
+	const char **content,
+	size_t *content_len,
+	int *old_lineno,
+	int *new_lineno,
+	git_diff_patch *patch,
+	size_t hunk_idx,
+	size_t line_of_hunk);
 
 /**@}*/
 
@@ -588,7 +595,7 @@ GIT_EXTERN(int) git_diff_entrycount(
 GIT_EXTERN(int) git_diff_blobs(
 	git_blob *old_blob,
 	git_blob *new_blob,
-	git_diff_options *options,
+	const git_diff_options *options,
 	void *cb_data,
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,

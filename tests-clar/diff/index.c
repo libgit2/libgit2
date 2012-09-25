@@ -93,7 +93,7 @@ void test_diff_index__0(void)
 
 static int diff_stop_after_2_files(
 	void *cb_data,
-	git_diff_delta *delta,
+	const git_diff_delta *delta,
 	float progress)
 {
 	diff_expects *e = cb_data;

@@ -23,7 +23,7 @@ git_tree *resolve_commit_oid_to_tree(
 
 int diff_file_fn(
 	void *cb_data,
-	git_diff_delta *delta,
+	const git_diff_delta *delta,
 	float progress)
 {
 	diff_expects *e = cb_data;
@@ -48,8 +48,8 @@ int diff_file_fn(
 
 int diff_hunk_fn(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	const char *header,
 	size_t header_len)
 {
@@ -67,8 +67,8 @@ int diff_hunk_fn(
 
 int diff_line_fn(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin,
 	const char *content,
 	size_t content_len)
@@ -112,64 +112,71 @@ int diff_foreach_via_iterator(
 	git_diff_hunk_fn hunk_cb,
 	git_diff_data_fn line_cb)
 {
-	int error;
-	git_diff_iterator *iter;
-	git_diff_delta *delta;
+	size_t d, num_d = git_diff_num_deltas(diff);
 
-	if ((error = git_diff_iterator_new(&iter, diff)) < 0)
-		return error;
+	for (d = 0; d < num_d; ++d) {
+		git_diff_patch *patch;
+		const git_diff_delta *delta;
+		size_t h, num_h;
 
-	while (!(error = git_diff_iterator_next_file(&delta, iter))) {
-		git_diff_range *range;
-		const char *hdr;
-		size_t hdr_len;
-		float progress = git_diff_iterator_progress(iter);
+		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
+		cl_assert(delta);
 
 		/* call file_cb for this file */
-		if (file_cb != NULL && file_cb(data, delta, progress) != 0)
+		if (file_cb != NULL && file_cb(data, delta, (float)d / num_d) != 0) {
+			git_diff_patch_free(patch);
 			goto abort;
-
-		if (!hunk_cb && !line_cb)
-			continue;
-
-		while (!(error = git_diff_iterator_next_hunk(
-				&range, &hdr, &hdr_len, iter))) {
-			char origin;
-			const char *line;
-			size_t line_len;
-
-			if (hunk_cb && hunk_cb(data, delta, range, hdr, hdr_len) != 0)
-				goto abort;
-
-			if (!line_cb)
-				continue;
-
-			while (!(error = git_diff_iterator_next_line(
-				&origin, &line, &line_len, iter))) {
-
-				if (line_cb(data, delta, range, origin, line, line_len) != 0)
-					goto abort;
-			}
-
-			if (error && error != GIT_ITEROVER)
-				goto done;
 		}
 
-		if (error && error != GIT_ITEROVER)
-			goto done;
+		/* if there are no changes, then the patch will be NULL */
+		if (!patch) {
+			cl_assert(delta->status == GIT_DELTA_UNMODIFIED || delta->binary == 1);
+			continue;
+		}
+
+		if (!hunk_cb && !line_cb) {
+			git_diff_patch_free(patch);
+			continue;
+		}
+
+		num_h = git_diff_patch_num_hunks(patch);
+
+		for (h = 0; h < num_h; h++) {
+			const git_diff_range *range;
+			const char *hdr;
+			size_t hdr_len, l, num_l;
+
+			cl_git_pass(git_diff_patch_get_hunk(
+				&range, &hdr, &hdr_len, &num_l, patch, h));
+
+			if (hunk_cb && hunk_cb(data, delta, range, hdr, hdr_len) != 0) {
+				git_diff_patch_free(patch);
+				goto abort;
+			}
+
+			for (l = 0; l < num_l; ++l) {
+				char origin;
+				const char *line;
+				size_t line_len;
+				int old_lineno, new_lineno;
+
+				cl_git_pass(git_diff_patch_get_line_in_hunk(
+					&origin, &line, &line_len, &old_lineno, &new_lineno,
+					patch, h, l));
+
+				if (line_cb(data, delta, range, origin, line, line_len) != 0) {
+					git_diff_patch_free(patch);
+					goto abort;
+				}
+			}
+		}
+
+		git_diff_patch_free(patch);
 	}
 
-done:
-	git_diff_iterator_free(iter);
-
-	if (error == GIT_ITEROVER)
-		error = 0;
-
-	return error;
+	return 0;
 
 abort:
-	git_diff_iterator_free(iter);
 	giterr_clear();
-
 	return GIT_EUSER;
 }

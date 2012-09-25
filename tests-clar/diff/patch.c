@@ -23,8 +23,8 @@ void test_diff_patch__cleanup(void)
 
 static int check_removal_cb(
 	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin,
 	const char *formatted_output,
 	size_t output_len)
