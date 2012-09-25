@@ -264,10 +264,12 @@ void test_diff_tree__larger_hunks(void)
 	git_tree *a, *b;
 	git_diff_options opts = {0};
 	git_diff_list *diff = NULL;
-	git_diff_iterator *iter = NULL;
+	size_t d, num_d, h, num_h, l, num_l, header_len, line_len;
 	git_diff_delta *delta;
-	diff_expects exp;
-	int error, num_files = 0;
+	git_diff_patch *patch;
+	git_diff_range *range;
+	const char *header, *line;
+	char origin;
 
 	g_repo = cl_git_sandbox_init("diff");
 
@@ -277,61 +279,38 @@ void test_diff_tree__larger_hunks(void)
 	opts.context_lines = 1;
 	opts.interhunk_lines = 0;
 
-	memset(&exp, 0, sizeof(exp));
-
 	cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, a, b, &diff));
-	cl_git_pass(git_diff_iterator_new(&iter, diff));
 
-	/* this should be exact */
-	cl_assert(git_diff_iterator_progress(iter) == 0.0f);
+	num_d = git_diff_num_deltas(diff);
+	for (d = 0; d < num_d; ++d) {
+		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
+		cl_assert(patch && delta);
 
-	/* You wouldn't actually structure an iterator loop this way, but
-	 * I have here for testing purposes of the return value
-	 */
-	while (!(error = git_diff_iterator_next_file(&delta, iter))) {
-		git_diff_range *range;
-		const char *header;
-		size_t header_len;
-		int actual_hunks = 0, num_hunks;
-		float expected_progress;
+		num_h = git_diff_patch_num_hunks(patch);
+		for (h = 0; h < num_h; h++) {
+			cl_git_pass(git_diff_patch_get_hunk(
+				&range, &header, &header_len, &num_l, patch, h));
 
-		num_files++;
-
-		expected_progress = (float)num_files / 2.0f;
-		cl_assert(expected_progress == git_diff_iterator_progress(iter));
-
-		num_hunks = git_diff_iterator_num_hunks_in_file(iter);
-
-		while (!(error = git_diff_iterator_next_hunk(
-					&range, &header, &header_len, iter)))
-		{
-			int actual_lines = 0;
-			int num_lines = git_diff_iterator_num_lines_in_hunk(iter);
-			char origin;
-			const char *line;
-			size_t line_len;
-
-			while (!(error = git_diff_iterator_next_line(
-						&origin, &line, &line_len, iter)))
-			{
-				actual_lines++;
+			for (l = 0; l < num_l; ++l) {
+				cl_git_pass(git_diff_patch_get_line_in_hunk(
+					&origin, &line, &line_len, NULL, NULL, patch, h, l));
+				cl_assert(line);
 			}
 
-			cl_assert_equal_i(GIT_ITEROVER, error);
-			cl_assert_equal_i(actual_lines, num_lines);
-
-			actual_hunks++;
+			cl_git_fail(git_diff_patch_get_line_in_hunk(
+				&origin, &line, &line_len, NULL, NULL, patch, h, num_l));
 		}
 
-		cl_assert_equal_i(GIT_ITEROVER, error);
-		cl_assert_equal_i(actual_hunks, num_hunks);
+		cl_git_fail(git_diff_patch_get_hunk(
+			&range, &header, &header_len, &num_l, patch, num_h));
+
+		git_diff_patch_free(patch);
 	}
 
-	cl_assert_equal_i(GIT_ITEROVER, error);
-	cl_assert_equal_i(2, num_files);
-	cl_assert(git_diff_iterator_progress(iter) == 1.0f);
+	cl_git_fail(git_diff_get_patch(&patch, &delta, diff, num_d));
 
-	git_diff_iterator_free(iter);
+	cl_assert_equal_i(2, num_d);
+
 	git_diff_list_free(diff);
 	diff = NULL;
 

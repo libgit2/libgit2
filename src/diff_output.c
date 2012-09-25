@@ -5,57 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
-#include "git2/diff.h"
 #include "git2/attr.h"
-#include "git2/blob.h"
 #include "git2/oid.h"
-#include "xdiff/xdiff.h"
+#include "diff_output.h"
 #include <ctype.h>
-#include "diff.h"
-#include "map.h"
 #include "fileops.h"
 #include "filter.h"
-
-/*
- * A diff_delta_context represents all of the information that goes into
- * processing the diff of an observed file change.  In the case of the
- * git_diff_foreach() call it is an emphemeral structure that is filled
- * in to execute each diff.  In the case of a git_diff_iterator, it holds
- * most of the information for the diff in progress.
- *
- * As each delta is processed, it goes through 3 phases: prep, load, exec.
- *
- * - In the prep phase, we just set the delta and quickly check the file
- *   attributes to see if it should be treated as binary.
- * - In the load phase, we actually load the file content into memory.
- *   At this point, if we had deferred calculating OIDs, we might have to
- *   correct the delta to be UNMODIFIED.
- * - In the exec phase, we actually run the diff and execute the callbacks.
- *   For foreach, this is just a pass-through to the user's callbacks.  For
- *   iterators, we record the hunks and data spans into memory.
-  */
-typedef struct {
-	git_repository   *repo;
-	git_diff_options *opts;
-	xdemitconf_t xdiff_config;
-	xpparam_t    xdiff_params;
-	git_diff_delta *delta;
-	uint32_t prepped  : 1;
-	uint32_t loaded   : 1;
-	uint32_t diffable : 1;
-	uint32_t diffed   : 1;
-	git_iterator_type_t old_src;
-	git_iterator_type_t new_src;
-	git_blob *old_blob;
-	git_blob *new_blob;
-	git_map   old_data;
-	git_map   new_data;
-	void *cb_data;
-	git_diff_hunk_fn per_hunk;
-	git_diff_data_fn per_line;
-	int cb_error;
-	git_diff_range range;
-} diff_delta_context;
 
 static int read_next_int(const char **str, int *value)
 {
@@ -96,55 +51,28 @@ static int parse_hunk_header(git_diff_range *range, const char *header)
 	return 0;
 }
 
-static int format_hunk_header(char *header, size_t len, git_diff_range *range)
+static bool diff_delta_should_skip(
+	diff_context *ctxt, git_diff_delta *delta)
 {
-	if (range->old_lines != 1) {
-		if (range->new_lines != 1)
-			return p_snprintf(
-				header, len, "@@ -%d,%d +%d,%d @@",
-				range->old_start, range->old_lines,
-				range->new_start, range->new_lines);
-		else
-			return p_snprintf(
-				header, len, "@@ -%d,%d +%d @@",
-				range->old_start, range->old_lines, range->new_start);
-	} else {
-		if (range->new_lines != 1)
-			return p_snprintf(
-				header, len, "@@ -%d +%d,%d @@",
-				range->old_start, range->new_start, range->new_lines);
-		else
-			return p_snprintf(
-				header, len, "@@ -%d +%d @@",
-				range->old_start, range->new_start);
-	}
-}
+	uint32_t flags = ctxt->opts ? ctxt->opts->flags : 0;
 
-static bool diff_delta_is_ambiguous(git_diff_delta *delta)
-{
-	return (git_oid_iszero(&delta->new_file.oid) &&
-			(delta->new_file.flags & GIT_DIFF_FILE_VALID_OID) == 0 &&
-			delta->status == GIT_DELTA_MODIFIED);
-}
-
-static bool diff_delta_should_skip(git_diff_options *opts, git_diff_delta *delta)
-{
 	if (delta->status == GIT_DELTA_UNMODIFIED &&
-		(opts->flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
+		(flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
 		return true;
 
 	if (delta->status == GIT_DELTA_IGNORED &&
-		(opts->flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
+		(flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
 		return true;
 
 	if (delta->status == GIT_DELTA_UNTRACKED &&
-		(opts->flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
+		(flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
 		return true;
 
 	return false;
 }
 
-#define BINARY_DIFF_FLAGS (GIT_DIFF_FILE_BINARY|GIT_DIFF_FILE_NOT_BINARY)
+#define KNOWN_BINARY_FLAGS (GIT_DIFF_FILE_BINARY|GIT_DIFF_FILE_NOT_BINARY)
+#define NOT_BINARY_FLAGS   (GIT_DIFF_FILE_NOT_BINARY|GIT_DIFF_FILE_NO_DATA)
 
 static int update_file_is_binary_by_attr(
 	git_repository *repo, git_diff_file *file)
@@ -173,8 +101,6 @@ static void update_delta_is_binary(git_diff_delta *delta)
 		(delta->new_file.flags & GIT_DIFF_FILE_BINARY) != 0)
 		delta->binary = 1;
 
-#define NOT_BINARY_FLAGS (GIT_DIFF_FILE_NOT_BINARY|GIT_DIFF_FILE_NO_DATA)
-
 	else if ((delta->old_file.flags & NOT_BINARY_FLAGS) != 0 &&
 			 (delta->new_file.flags & NOT_BINARY_FLAGS) != 0)
 		delta->binary = 0;
@@ -182,10 +108,11 @@ static void update_delta_is_binary(git_diff_delta *delta)
 	/* otherwise leave delta->binary value untouched */
 }
 
-static int diff_delta_is_binary_by_attr(diff_delta_context *ctxt)
+static int diff_delta_is_binary_by_attr(
+	diff_context *ctxt, git_diff_patch *patch)
 {
 	int error = 0, mirror_new;
-	git_diff_delta *delta = ctxt->delta;
+	git_diff_delta *delta = patch->delta;
 
 	delta->binary = -1;
 
@@ -200,7 +127,7 @@ static int diff_delta_is_binary_by_attr(diff_delta_context *ctxt)
 	}
 
 	/* check if user is forcing us to text diff these files */
-	if (ctxt->opts->flags & GIT_DIFF_FORCE_TEXT) {
+	if (ctxt->opts && (ctxt->opts->flags & GIT_DIFF_FORCE_TEXT) != 0) {
 		delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 		delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 		delta->binary = 0;
@@ -214,7 +141,7 @@ static int diff_delta_is_binary_by_attr(diff_delta_context *ctxt)
 	mirror_new = (delta->new_file.path == delta->old_file.path ||
 				  strcmp(delta->new_file.path, delta->old_file.path) == 0);
 	if (mirror_new)
-		delta->new_file.flags |= (delta->old_file.flags & BINARY_DIFF_FLAGS);
+		delta->new_file.flags |= (delta->old_file.flags & KNOWN_BINARY_FLAGS);
 	else
 		error = update_file_is_binary_by_attr(ctxt->repo, &delta->new_file);
 
@@ -224,11 +151,13 @@ static int diff_delta_is_binary_by_attr(diff_delta_context *ctxt)
 }
 
 static int diff_delta_is_binary_by_content(
-	diff_delta_context *ctxt, git_diff_file *file, git_map *map)
+	diff_context *ctxt, git_diff_delta *delta, git_diff_file *file, git_map *map)
 {
 	git_buf search;
 
-	if ((file->flags & BINARY_DIFF_FLAGS) == 0) {
+	GIT_UNUSED(ctxt);
+
+	if ((file->flags & KNOWN_BINARY_FLAGS) == 0) {
 		search.ptr  = map->data;
 		search.size = min(map->len, 4000);
 
@@ -238,17 +167,17 @@ static int diff_delta_is_binary_by_content(
 			file->flags |= GIT_DIFF_FILE_NOT_BINARY;
 	}
 
-	update_delta_is_binary(ctxt->delta);
+	update_delta_is_binary(delta);
 
 	return 0;
 }
 
 static int diff_delta_is_binary_by_size(
-	diff_delta_context *ctxt, git_diff_file *file)
+	diff_context *ctxt, git_diff_delta *delta, git_diff_file *file)
 {
 	git_off_t threshold = MAX_DIFF_FILESIZE;
 
-	if ((file->flags & BINARY_DIFF_FLAGS) != 0)
+	if ((file->flags & KNOWN_BINARY_FLAGS) != 0)
 		return 0;
 
 	if (ctxt && ctxt->opts) {
@@ -262,7 +191,7 @@ static int diff_delta_is_binary_by_size(
 	if (file->size > threshold)
 		file->flags |= GIT_DIFF_FILE_BINARY;
 
-	update_delta_is_binary(ctxt->delta);
+	update_delta_is_binary(delta);
 
 	return 0;
 }
@@ -289,8 +218,10 @@ static void setup_xdiff_options(
 		param->flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
 }
 
+
 static int get_blob_content(
-	diff_delta_context *ctxt,
+	diff_context *ctxt,
+	git_diff_delta *delta,
 	git_diff_file *file,
 	git_map *map,
 	git_blob **blob)
@@ -318,9 +249,9 @@ static int get_blob_content(
 	}
 
 	/* if blob is too large to diff, mark as binary */
-	if ((error = diff_delta_is_binary_by_size(ctxt, file)) < 0)
+	if ((error = diff_delta_is_binary_by_size(ctxt, delta, file)) < 0)
 		return error;
-	if (ctxt->delta->binary == 1)
+	if (delta->binary == 1)
 		return 0;
 
 	if (odb_obj != NULL) {
@@ -336,11 +267,12 @@ static int get_blob_content(
 	map->data = (void *)git_blob_rawcontent(*blob);
 	map->len  = git_blob_rawsize(*blob);
 
-	return diff_delta_is_binary_by_content(ctxt, file, map);
+	return diff_delta_is_binary_by_content(ctxt, delta, file, map);
 }
 
 static int get_workdir_content(
-	diff_delta_context *ctxt,
+	diff_context *ctxt,
+	git_diff_delta *delta,
 	git_diff_file *file,
 	git_map *map)
 {
@@ -386,8 +318,8 @@ static int get_workdir_content(
 		if (!file->size)
 			file->size = git_futils_filesize(fd);
 
-		if ((error = diff_delta_is_binary_by_size(ctxt, file)) < 0 ||
-			ctxt->delta->binary == 1)
+		if ((error = diff_delta_is_binary_by_size(ctxt, delta, file)) < 0 ||
+			delta->binary == 1)
 			goto close_and_cleanup;
 
 		error = git_filters_load(
@@ -428,7 +360,7 @@ close_and_cleanup:
 	}
 
 	if (!error)
-		error = diff_delta_is_binary_by_content(ctxt, file, map);
+		error = diff_delta_is_binary_by_content(ctxt, delta, file, map);
 
 cleanup:
 	git_buf_free(&path);
@@ -454,78 +386,101 @@ static void release_content(git_diff_file *file, git_map *map, git_blob *blob)
 	}
 }
 
-static void diff_delta_init_context(
-	diff_delta_context *ctxt,
-	git_repository   *repo,
+
+static void diff_context_init(
+	diff_context *ctxt,
+	git_diff_list *diff,
+	git_repository *repo,
 	git_diff_options *opts,
-	git_iterator_type_t old_src,
-	git_iterator_type_t new_src)
+	void *data,
+	git_diff_file_fn file_cb,
+	git_diff_hunk_fn hunk_cb,
+	git_diff_data_fn data_cb)
 {
-	memset(ctxt, 0, sizeof(diff_delta_context));
+	memset(ctxt, 0, sizeof(diff_context));
 
 	ctxt->repo = repo;
+	ctxt->diff = diff;
 	ctxt->opts = opts;
-	ctxt->old_src = old_src;
-	ctxt->new_src = new_src;
+	ctxt->file_cb = file_cb;
+	ctxt->hunk_cb = hunk_cb;
+	ctxt->data_cb = data_cb;
+	ctxt->cb_data = data;
+	ctxt->cb_error = 0;
 
-	setup_xdiff_options(opts, &ctxt->xdiff_config, &ctxt->xdiff_params);
+	setup_xdiff_options(ctxt->opts, &ctxt->xdiff_config, &ctxt->xdiff_params);
 }
 
-static void diff_delta_init_context_from_diff_list(
-	diff_delta_context *ctxt,
-	git_diff_list *diff)
+static bool diff_delta_file_callback(
+	diff_context *ctxt, git_diff_delta *delta, size_t idx)
 {
-	diff_delta_init_context(
-		ctxt, diff->repo, &diff->opts, diff->old_src, diff->new_src);
-}
+	float progress;
 
-static void diff_delta_unload(diff_delta_context *ctxt)
-{
-	ctxt->diffed = 0;
-
-	if (ctxt->loaded) {
-		release_content(&ctxt->delta->old_file, &ctxt->old_data, ctxt->old_blob);
-		release_content(&ctxt->delta->new_file, &ctxt->new_data, ctxt->new_blob);
-		ctxt->loaded = 0;
-	}
-
-	ctxt->delta = NULL;
-	ctxt->prepped = 0;
-}
-
-static int diff_delta_prep(diff_delta_context *ctxt)
-{
-	int error;
-
-	if (ctxt->prepped || !ctxt->delta)
+	if (!ctxt->file_cb)
 		return 0;
 
-	error = diff_delta_is_binary_by_attr(ctxt);
+	progress = (float)idx / ctxt->diff->deltas.length;
 
-	ctxt->prepped = !error;
+	if (ctxt->file_cb(ctxt->cb_data, delta, progress) != 0)
+		return GIT_EUSER;
 
-	return error;
+	return 0;
 }
 
-static int diff_delta_load(diff_delta_context *ctxt)
+static void diff_patch_init(
+	diff_context *ctxt, git_diff_patch *patch)
+{
+	memset(patch, 0, sizeof(*patch));
+
+	patch->diff = ctxt->diff;
+	patch->ctxt = ctxt;
+
+	if (patch->diff) {
+		patch->old_src = patch->diff->old_src;
+		patch->new_src = patch->diff->new_src;
+	} else {
+		patch->old_src = patch->new_src = GIT_ITERATOR_TREE;
+	}
+}
+
+static git_diff_patch *diff_patch_alloc(
+	diff_context *ctxt, git_diff_delta *delta)
+{
+	git_diff_patch *patch = git__malloc(sizeof(git_diff_patch));
+	if (!patch)
+		return NULL;
+
+	diff_patch_init(ctxt, patch);
+
+	git_diff_list_addref(patch->diff);
+
+	GIT_REFCOUNT_INC(&patch);
+
+	patch->delta = delta;
+	patch->flags = GIT_DIFF_PATCH_ALLOCATED;
+
+	return patch;
+}
+
+static int diff_patch_load(
+	diff_context *ctxt, git_diff_patch *patch)
 {
 	int error = 0;
-	git_diff_delta *delta = ctxt->delta;
+	git_diff_delta *delta = patch->delta;
 	bool check_if_unmodified = false;
 
-	if (ctxt->loaded || !ctxt->delta)
+	if ((patch->flags & GIT_DIFF_PATCH_LOADED) != 0)
 		return 0;
 
-	if (!ctxt->prepped && (error = diff_delta_prep(ctxt)) < 0)
-		goto cleanup;
+	error = diff_delta_is_binary_by_attr(ctxt, patch);
 
-	ctxt->old_data.data = "";
-	ctxt->old_data.len  = 0;
-	ctxt->old_blob      = NULL;
+	patch->old_data.data = "";
+	patch->old_data.len  = 0;
+	patch->old_blob      = NULL;
 
-	ctxt->new_data.data = "";
-	ctxt->new_data.len  = 0;
-	ctxt->new_blob      = NULL;
+	patch->new_data.data = "";
+	patch->new_data.len  = 0;
+	patch->new_blob      = NULL;
 
 	if (delta->binary == 1)
 		goto cleanup;
@@ -557,36 +512,38 @@ static int diff_delta_load(diff_delta_context *ctxt)
 	 */
 
 	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		ctxt->old_src == GIT_ITERATOR_WORKDIR) {
+		patch->old_src == GIT_ITERATOR_WORKDIR) {
 		if ((error = get_workdir_content(
-				ctxt, &delta->old_file, &ctxt->old_data)) < 0)
+				ctxt, delta, &delta->old_file, &patch->old_data)) < 0)
 			goto cleanup;
 		if (delta->binary == 1)
 			goto cleanup;
 	}
 
 	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		ctxt->new_src == GIT_ITERATOR_WORKDIR) {
+		patch->new_src == GIT_ITERATOR_WORKDIR) {
 		if ((error = get_workdir_content(
-				ctxt, &delta->new_file, &ctxt->new_data)) < 0)
+				ctxt, delta, &delta->new_file, &patch->new_data)) < 0)
 			goto cleanup;
 		if (delta->binary == 1)
 			goto cleanup;
 	}
 
 	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		ctxt->old_src != GIT_ITERATOR_WORKDIR) {
+		patch->old_src != GIT_ITERATOR_WORKDIR) {
 		if ((error = get_blob_content(
-				ctxt, &delta->old_file, &ctxt->old_data, &ctxt->old_blob)) < 0)
+				ctxt, delta, &delta->old_file,
+				&patch->old_data, &patch->old_blob)) < 0)
 			goto cleanup;
 		if (delta->binary == 1)
 			goto cleanup;
 	}
 
 	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		ctxt->new_src != GIT_ITERATOR_WORKDIR) {
+		patch->new_src != GIT_ITERATOR_WORKDIR) {
 		if ((error = get_blob_content(
-				ctxt, &delta->new_file, &ctxt->new_data, &ctxt->new_blob)) < 0)
+				ctxt, delta, &delta->new_file,
+				&patch->new_data, &patch->new_blob)) < 0)
 			goto cleanup;
 		if (delta->binary == 1)
 			goto cleanup;
@@ -606,33 +563,34 @@ static int diff_delta_load(diff_delta_context *ctxt)
 	}
 
 cleanup:
-	/* last change to update binary flag */
 	if (delta->binary == -1)
 		update_delta_is_binary(delta);
 
-	ctxt->loaded = !error;
+	if (!error) {
+		patch->flags |= GIT_DIFF_PATCH_LOADED;
 
-	/* flag if we would want to diff the contents of these files */
-	if (ctxt->loaded)
-		ctxt->diffable =
-			(delta->binary != 1 &&
-			 delta->status != GIT_DELTA_UNMODIFIED &&
-			 (ctxt->old_data.len || ctxt->new_data.len) &&
-			 git_oid_cmp(&delta->old_file.oid, &delta->new_file.oid));
+		if (delta->binary != 1 &&
+			delta->status != GIT_DELTA_UNMODIFIED &&
+			(patch->old_data.len || patch->new_data.len) &&
+			!git_oid_equal(&delta->old_file.oid, &delta->new_file.oid))
+			patch->flags |= GIT_DIFF_PATCH_DIFFABLE;
+	}
 
 	return error;
 }
 
-static int diff_delta_cb(void *priv, mmbuffer_t *bufs, int len)
+static int diff_patch_cb(void *priv, mmbuffer_t *bufs, int len)
 {
-	diff_delta_context *ctxt = priv;
+	git_diff_patch *patch = priv;
+	diff_context   *ctxt  = patch->ctxt;
 
 	if (len == 1) {
-		if ((ctxt->cb_error = parse_hunk_header(&ctxt->range, bufs[0].ptr)) < 0)
+		ctxt->cb_error = parse_hunk_header(&ctxt->cb_range, bufs[0].ptr);
+		if (ctxt->cb_error < 0)
 			return ctxt->cb_error;
 
-		if (ctxt->per_hunk != NULL &&
-			ctxt->per_hunk(ctxt->cb_data, ctxt->delta, &ctxt->range,
+		if (ctxt->hunk_cb != NULL &&
+			ctxt->hunk_cb(ctxt->cb_data, patch->delta, &ctxt->cb_range,
 				bufs[0].ptr, bufs[0].size))
 			ctxt->cb_error = GIT_EUSER;
 	}
@@ -644,9 +602,9 @@ static int diff_delta_cb(void *priv, mmbuffer_t *bufs, int len)
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_DELETION :
 			GIT_DIFF_LINE_CONTEXT;
 
-		if (ctxt->per_line != NULL &&
-			ctxt->per_line(ctxt->cb_data, ctxt->delta, &ctxt->range, origin,
-				bufs[1].ptr, bufs[1].size))
+		if (ctxt->data_cb != NULL &&
+			ctxt->data_cb(ctxt->cb_data, patch->delta, &ctxt->cb_range,
+				origin, bufs[1].ptr, bufs[1].size))
 			ctxt->cb_error = GIT_EUSER;
 	}
 
@@ -661,104 +619,267 @@ static int diff_delta_cb(void *priv, mmbuffer_t *bufs, int len)
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_ADD_EOFNL :
 			GIT_DIFF_LINE_CONTEXT;
 
-		if (ctxt->per_line != NULL &&
-			ctxt->per_line(ctxt->cb_data, ctxt->delta, &ctxt->range, origin,
-				bufs[2].ptr, bufs[2].size))
+		if (ctxt->data_cb != NULL &&
+			ctxt->data_cb(ctxt->cb_data, patch->delta, &ctxt->cb_range,
+				origin, bufs[2].ptr, bufs[2].size))
 			ctxt->cb_error = GIT_EUSER;
 	}
 
 	return ctxt->cb_error;
 }
 
-static int diff_delta_exec(
-	diff_delta_context *ctxt,
-	void *cb_data,
-	git_diff_hunk_fn per_hunk,
-	git_diff_data_fn per_line)
+static int diff_patch_generate(
+	diff_context *ctxt, git_diff_patch *patch)
 {
 	int error = 0;
 	xdemitcb_t xdiff_callback;
 	mmfile_t old_xdiff_data, new_xdiff_data;
 
-	if (ctxt->diffed || !ctxt->delta)
+	if ((patch->flags & GIT_DIFF_PATCH_DIFFED) != 0)
 		return 0;
 
-	if (!ctxt->loaded && (error = diff_delta_load(ctxt)) < 0)
-		goto cleanup;
+	if ((patch->flags & GIT_DIFF_PATCH_LOADED) == 0)
+		if ((error = diff_patch_load(ctxt, patch)) < 0)
+			return error;
 
-	if (!ctxt->diffable)
+	if ((patch->flags & GIT_DIFF_PATCH_DIFFABLE) == 0)
 		return 0;
 
-	ctxt->cb_data  = cb_data;
-	ctxt->per_hunk = per_hunk;
-	ctxt->per_line = per_line;
-	ctxt->cb_error = 0;
+	if (ctxt)
+		patch->ctxt = ctxt;
 
 	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
-	xdiff_callback.outf = diff_delta_cb;
-	xdiff_callback.priv = ctxt;
+	xdiff_callback.outf = diff_patch_cb;
+	xdiff_callback.priv = patch;
 
-	old_xdiff_data.ptr  = ctxt->old_data.data;
-	old_xdiff_data.size = ctxt->old_data.len;
-	new_xdiff_data.ptr  = ctxt->new_data.data;
-	new_xdiff_data.size = ctxt->new_data.len;
+	old_xdiff_data.ptr  = patch->old_data.data;
+	old_xdiff_data.size = patch->old_data.len;
+	new_xdiff_data.ptr  = patch->new_data.data;
+	new_xdiff_data.size = patch->new_data.len;
 
 	xdl_diff(&old_xdiff_data, &new_xdiff_data,
 		&ctxt->xdiff_params, &ctxt->xdiff_config, &xdiff_callback);
 
 	error = ctxt->cb_error;
 
-cleanup:
-	ctxt->diffed = !error;
+	if (!error)
+		patch->flags |= GIT_DIFF_PATCH_DIFFED;
 
 	return error;
 }
 
+static void diff_patch_unload(git_diff_patch *patch)
+{
+	if ((patch->flags & GIT_DIFF_PATCH_DIFFED) != 0) {
+		patch->flags = (patch->flags & ~GIT_DIFF_PATCH_DIFFED);
+
+		patch->hunks_size = 0;
+		patch->lines_size = 0;
+	}
+
+	if ((patch->flags & GIT_DIFF_PATCH_LOADED) != 0) {
+		patch->flags = (patch->flags & ~GIT_DIFF_PATCH_LOADED);
+
+		release_content(
+			&patch->delta->old_file, &patch->old_data, patch->old_blob);
+		release_content(
+			&patch->delta->new_file, &patch->new_data, patch->new_blob);
+	}
+}
+
+static void diff_patch_free(git_diff_patch *patch)
+{
+	diff_patch_unload(patch);
+
+	git__free(patch->lines);
+	patch->lines = NULL;
+	patch->lines_asize = 0;
+
+	git__free(patch->hunks);
+	patch->hunks = NULL;
+	patch->hunks_asize = 0;
+
+	if (!(patch->flags & GIT_DIFF_PATCH_ALLOCATED))
+		return;
+
+	patch->flags = 0;
+
+	git_diff_list_free(patch->diff); /* decrements refcount */
+
+	git__free(patch);
+}
+
+#define MAX_HUNK_STEP 128
+#define MIN_HUNK_STEP 8
+#define MAX_LINE_STEP 256
+#define MIN_LINE_STEP 8
+
+static int diff_patch_hunk_cb(
+	void *cb_data,
+	git_diff_delta *delta,
+	git_diff_range *range,
+	const char *header,
+	size_t header_len)
+{
+	git_diff_patch *patch = cb_data;
+	diff_patch_hunk *hunk;
+
+	GIT_UNUSED(delta);
+
+	if (patch->hunks_size >= patch->hunks_asize) {
+		size_t new_size;
+		diff_patch_hunk *new_hunks;
+
+		if (patch->hunks_asize > MAX_HUNK_STEP)
+			new_size = patch->hunks_asize + MAX_HUNK_STEP;
+		else
+			new_size = patch->hunks_asize * 2;
+		if (new_size < MIN_HUNK_STEP)
+			new_size = MIN_HUNK_STEP;
+
+		new_hunks = git__realloc(
+			patch->hunks, new_size * sizeof(diff_patch_hunk));
+		if (!new_hunks)
+			return -1;
+
+		patch->hunks = new_hunks;
+		patch->hunks_asize = new_size;
+	}
+
+	hunk = &patch->hunks[patch->hunks_size++];
+
+	memcpy(&hunk->range, range, sizeof(hunk->range));
+
+	assert(header_len + 1 < sizeof(hunk->header));
+	memcpy(&hunk->header, header, header_len);
+	hunk->header[header_len] = '\0';
+	hunk->header_len = header_len;
+
+	hunk->line_start = patch->lines_size;
+	hunk->line_count = 0;
+
+	return 0;
+}
+
+static int diff_patch_line_cb(
+	void *cb_data,
+	git_diff_delta *delta,
+	git_diff_range *range,
+	char line_origin,
+	const char *content,
+	size_t content_len)
+{
+	git_diff_patch *patch = cb_data;
+	diff_patch_hunk *hunk;
+	diff_patch_line *last, *line;
+
+	GIT_UNUSED(delta);
+	GIT_UNUSED(range);
+
+	assert(patch->hunks_size > 0);
+	assert(patch->hunks != NULL);
+
+	hunk = &patch->hunks[patch->hunks_size - 1];
+
+	if (patch->lines_size >= patch->lines_asize) {
+		size_t new_size;
+		diff_patch_line *new_lines;
+
+		if (patch->lines_asize > MAX_LINE_STEP)
+			new_size = patch->lines_asize + MAX_LINE_STEP;
+		else
+			new_size = patch->lines_asize * 2;
+		if (new_size < MIN_LINE_STEP)
+			new_size = MIN_LINE_STEP;
+
+		new_lines = git__realloc(
+			patch->lines, new_size * sizeof(diff_patch_line));
+		if (!new_lines)
+			return -1;
+
+		patch->lines = new_lines;
+		patch->lines_asize = new_size;
+	}
+
+	last = (patch->lines_size > 0) ?
+		&patch->lines[patch->lines_size - 1] : NULL;
+	line = &patch->lines[patch->lines_size++];
+
+	line->ptr = content;
+	line->len = content_len;
+	line->origin = line_origin;
+
+	/* do some bookkeeping so we can provide old/new line numbers */
+
+	for (line->lines = 0; content_len > 0; --content_len) {
+		if (*content++ == '\n')
+			++line->lines;
+	}
+
+	if (!last) {
+		line->oldno = hunk->range.old_start;
+		line->newno = hunk->range.new_start;
+	} else {
+		switch (last->origin) {
+		case GIT_DIFF_LINE_ADDITION:
+			line->oldno = last->oldno;
+			line->newno = last->newno + last->lines;
+			break;
+		case GIT_DIFF_LINE_DELETION:
+			line->oldno = last->oldno + last->lines;
+			line->newno = last->newno;
+			break;
+		default:
+			line->oldno = last->oldno + last->lines;
+			line->newno = last->newno + last->lines;
+			break;
+		}
+	}
+
+	return 0;
+}
+
+
 int git_diff_foreach(
 	git_diff_list *diff,
-	void *data,
+	void *cb_data,
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn line_cb)
+	git_diff_data_fn data_cb)
 {
-	int error = 0;
-	diff_delta_context ctxt;
+	int error;
+	diff_context ctxt;
 	size_t idx;
+	git_diff_patch patch;
 
-	diff_delta_init_context_from_diff_list(&ctxt, diff);
+	diff_context_init(
+		&ctxt, diff, diff->repo, &diff->opts,
+		cb_data, file_cb, hunk_cb, data_cb);
 
-	git_vector_foreach(&diff->deltas, idx, ctxt.delta) {
-		if (diff_delta_is_ambiguous(ctxt.delta))
-			if ((error = diff_delta_load(&ctxt)) < 0)
-				goto cleanup;
+	diff_patch_init(&ctxt, &patch);
 
-		if (diff_delta_should_skip(ctxt.opts, ctxt.delta))
+	git_vector_foreach(&diff->deltas, idx, patch.delta) {
+
+		/* check flags against patch status */
+		if (diff_delta_should_skip(&ctxt, patch.delta))
 			continue;
 
-		if ((error = diff_delta_load(&ctxt)) < 0)
-			goto cleanup;
+		if (!(error = diff_patch_load(&ctxt, &patch)) &&
+			!(error = diff_delta_file_callback(&ctxt, patch.delta, idx)))
+			error = diff_patch_generate(&ctxt, &patch);
 
-		if (file_cb != NULL &&
-			file_cb(data, ctxt.delta, (float)idx / diff->deltas.length) != 0)
-		{
-			error = GIT_EUSER;
-			goto cleanup;
-		}
-
-		error = diff_delta_exec(&ctxt, data, hunk_cb, line_cb);
-
-cleanup:
-		diff_delta_unload(&ctxt);
+		diff_patch_unload(&patch);
 
 		if (error < 0)
 			break;
 	}
 
 	if (error == GIT_EUSER)
-		giterr_clear();
+		giterr_clear(); /* don't let error message leak */
 
 	return error;
 }
+
 
 typedef struct {
 	git_diff_list *diff;
@@ -850,7 +971,6 @@ int git_diff_print_compact(
 
 	return error;
 }
-
 
 static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 {
@@ -1024,30 +1144,6 @@ int git_diff_print_patch(
 	return error;
 }
 
-int git_diff_entrycount(git_diff_list *diff, int delta_t)
-{
-	int count = 0;
-	unsigned int i;
-	git_diff_delta *delta;
-
-	assert(diff);
-
-	git_vector_foreach(&diff->deltas, i, delta) {
-		if (diff_delta_should_skip(&diff->opts, delta))
-			continue;
-
-		if (delta_t < 0 || delta->status == (git_delta_t)delta_t)
-			count++;
-	}
-
-	/* It is possible that this has overcounted the number of diffs because
-	 * there may be entries that are marked as MODIFIED due to differences
-	 * in stat() output that will turn out to be the same once we calculate
-	 * the actual SHA of the data on disk.
-	 */
-
-	return count;
-}
 
 static void set_data_from_blob(
 	git_blob *blob, git_map *map, git_diff_file *file)
@@ -1056,6 +1152,7 @@ static void set_data_from_blob(
 		map->data = (char *)git_blob_rawcontent(blob);
 		file->size = map->len = git_blob_rawsize(blob);
 		git_oid_cpy(&file->oid, git_object_id((const git_object *)blob));
+		file->mode = 0644;
 	} else {
 		map->data = "";
 		file->size = map->len = 0;
@@ -1070,429 +1167,250 @@ int git_diff_blobs(
 	void *cb_data,
 	git_diff_file_fn file_cb,
 	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn line_cb)
+	git_diff_data_fn data_cb)
 {
 	int error;
-	diff_delta_context ctxt;
-	git_diff_delta delta;
-	git_blob *new, *old;
 	git_repository *repo;
-
-	new = new_blob;
-	old = old_blob;
+	diff_context ctxt;
+	git_diff_delta delta;
+	git_diff_patch patch;
 
 	if (options && (options->flags & GIT_DIFF_REVERSE)) {
-		git_blob *swap = old;
-		old = new;
-		new = swap;
+		git_blob *swap = old_blob;
+		old_blob = new_blob;
+		new_blob = swap;
 	}
 
-	if (new)
-		repo = git_object_owner((git_object *)new);
-	else if (old)
-		repo = git_object_owner((git_object *)old);
+	if (new_blob)
+		repo = git_object_owner((git_object *)new_blob);
+	else if (old_blob)
+		repo = git_object_owner((git_object *)old_blob);
 	else
 		repo = NULL;
 
-	diff_delta_init_context(
-		&ctxt, repo, options, GIT_ITERATOR_TREE, GIT_ITERATOR_TREE);
+	diff_context_init(
+		&ctxt, NULL, repo, options,
+		cb_data, file_cb, hunk_cb, data_cb);
 
-	/* populate a "fake" delta record */
+	diff_patch_init(&ctxt, &patch);
+
+	/* create a fake delta record and simulate diff_patch_load */
 
 	memset(&delta, 0, sizeof(delta));
+	delta.binary = -1;
 
-	set_data_from_blob(old, &ctxt.old_data, &delta.old_file);
-	set_data_from_blob(new, &ctxt.new_data, &delta.new_file);
+	set_data_from_blob(old_blob, &patch.old_data, &delta.old_file);
+	set_data_from_blob(new_blob, &patch.new_data, &delta.new_file);
 
-	delta.status = new ?
-		(old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
-		(old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
+	delta.status = new_blob ?
+		(old_blob ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
+		(old_blob ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
 	if (git_oid_cmp(&delta.new_file.oid, &delta.old_file.oid) == 0)
 		delta.status = GIT_DELTA_UNMODIFIED;
 
-	ctxt.delta = &delta;
+	patch.delta = &delta;
 
-	if ((error = diff_delta_prep(&ctxt)) < 0)
+	if ((error = diff_delta_is_binary_by_content(
+			 &ctxt, &delta, &delta.old_file, &patch.old_data)) < 0 ||
+		(error = diff_delta_is_binary_by_content(
+			&ctxt, &delta, &delta.new_file, &patch.new_data)) < 0)
 		goto cleanup;
 
-	if (delta.binary == -1) {
-		if ((error = diff_delta_is_binary_by_content(
-				&ctxt, &delta.old_file, &ctxt.old_data)) < 0 ||
-			(error = diff_delta_is_binary_by_content(
-				&ctxt, &delta.new_file, &ctxt.new_data)) < 0)
-			goto cleanup;
-	}
-
-	ctxt.loaded = 1;
-	ctxt.diffable = (delta.binary != 1 && delta.status != GIT_DELTA_UNMODIFIED);
+	patch.flags |= GIT_DIFF_PATCH_LOADED;
+	if (delta.binary != 1 && delta.status != GIT_DELTA_UNMODIFIED)
+		patch.flags |= GIT_DIFF_PATCH_DIFFABLE;
 
 	/* do diffs */
 
-	if (file_cb != NULL && file_cb(cb_data, &delta, 1)) {
-		error = GIT_EUSER;
-		goto cleanup;
-	}
-
-	error = diff_delta_exec(&ctxt, cb_data, hunk_cb, line_cb);
+	if (!(error = diff_delta_file_callback(&ctxt, patch.delta, 1)))
+		error = diff_patch_generate(&ctxt, &patch);
 
 cleanup:
+	diff_patch_unload(&patch);
+
 	if (error == GIT_EUSER)
 		giterr_clear();
 
-	diff_delta_unload(&ctxt);
-
 	return error;
 }
 
-typedef struct diffiter_line diffiter_line;
-struct diffiter_line {
-	diffiter_line *next;
-	char origin;
-	const char *ptr;
-	size_t len;
-};
 
-typedef struct diffiter_hunk diffiter_hunk;
-struct diffiter_hunk {
-	diffiter_hunk *next;
-	git_diff_range range;
-	diffiter_line *line_head;
-	size_t line_count;
-};
-
-struct git_diff_iterator {
-	git_diff_list *diff;
-	diff_delta_context ctxt;
-	size_t file_index;
-	size_t next_index;
-	git_pool hunks;
-	size_t   hunk_count;
-	diffiter_hunk *hunk_head;
-	diffiter_hunk *hunk_curr;
-	char hunk_header[128];
-	git_pool lines;
-	diffiter_line *line_curr;
-};
-
-typedef struct {
-	git_diff_iterator *iter;
-	diffiter_hunk *last_hunk;
-	diffiter_line *last_line;
-} diffiter_cb_info;
-
-static int diffiter_hunk_cb(
-	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
-	const char *header,
-	size_t header_len)
+size_t git_diff_num_deltas(git_diff_list *diff)
 {
-	diffiter_cb_info *info = cb_data;
-	git_diff_iterator *iter = info->iter;
-	diffiter_hunk *hunk;
-
-	GIT_UNUSED(delta);
-	GIT_UNUSED(header);
-	GIT_UNUSED(header_len);
-
-	if ((hunk = git_pool_mallocz(&iter->hunks, 1)) == NULL) {
-		iter->ctxt.cb_error = -1;
-		return -1;
-	}
-
-	if (info->last_hunk)
-		info->last_hunk->next = hunk;
-	info->last_hunk = hunk;
-	info->last_line = NULL;
-
-	memcpy(&hunk->range, range, sizeof(hunk->range));
-
-	iter->hunk_count++;
-
-	/* adding first hunk to list */
-	if (iter->hunk_head == NULL) {
-		iter->hunk_head = hunk;
-		iter->hunk_curr = NULL;
-	}
-
-	return 0;
+	assert(diff);
+	return (size_t)diff->deltas.length;
 }
 
-static int diffiter_line_cb(
-	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
-	char line_origin,
-	const char *content,
-	size_t content_len)
+size_t git_diff_num_deltas_of_type(git_diff_list *diff, git_delta_t type)
 {
-	diffiter_cb_info *info = cb_data;
-	git_diff_iterator *iter = info->iter;
-	diffiter_line *line;
+	size_t i, count = 0;
+	git_diff_delta *delta;
 
-	GIT_UNUSED(delta);
-	GIT_UNUSED(range);
+	assert(diff);
 
-	if ((line = git_pool_mallocz(&iter->lines, 1)) == NULL) {
-		iter->ctxt.cb_error = -1;
-		return -1;
+	git_vector_foreach(&diff->deltas, i, delta) {
+		count += (delta->status == type);
 	}
 
-	if (info->last_line)
-		info->last_line->next = line;
-	info->last_line = line;
-
-	line->origin = line_origin;
-	line->ptr = content;
-	line->len = content_len;
-
-	info->last_hunk->line_count++;
-
-	if (info->last_hunk->line_head == NULL)
-		info->last_hunk->line_head = line;
-
-	return 0;
+	return count;
 }
 
-static int diffiter_do_diff_file(git_diff_iterator *iter)
+int git_diff_get_patch(
+	git_diff_patch **patch_ptr,
+	git_diff_delta **delta_ptr,
+	git_diff_list *diff,
+	size_t idx)
 {
 	int error;
-	diffiter_cb_info info;
+	diff_context ctxt;
+	git_diff_delta *delta;
+	git_diff_patch *patch;
 
-	if (iter->ctxt.diffed || !iter->ctxt.delta)
+	if (patch_ptr)
+		*patch_ptr = NULL;
+
+	delta = git_vector_get(&diff->deltas, idx);
+	if (!delta) {
+		if (delta_ptr)
+			*delta_ptr = NULL;
+		giterr_set(GITERR_INVALID, "Index out of range for delta in diff");
+		return GIT_ENOTFOUND;
+	}
+
+	if (delta_ptr)
+		*delta_ptr = delta;
+
+	if (!patch_ptr && delta->binary != -1)
 		return 0;
 
-	memset(&info, 0, sizeof(info));
-	info.iter = iter;
+	diff_context_init(
+		&ctxt, diff, diff->repo, &diff->opts,
+		NULL, NULL, diff_patch_hunk_cb, diff_patch_line_cb);
 
-	error = diff_delta_exec(
-		&iter->ctxt, &info, diffiter_hunk_cb, diffiter_line_cb);
+	if (diff_delta_should_skip(&ctxt, delta))
+		return 0;
 
-	if (error == GIT_EUSER)
-		error = iter->ctxt.cb_error;
+	patch = diff_patch_alloc(&ctxt, delta);
+	if (!patch)
+		return -1;
 
-	return error;
-}
+	if (!(error = diff_patch_load(&ctxt, patch))) {
+		ctxt.cb_data = patch;
 
-static void diffiter_do_unload_file(git_diff_iterator *iter)
-{
-	if (iter->ctxt.loaded) {
-		diff_delta_unload(&iter->ctxt);
+		error = diff_patch_generate(&ctxt, patch);
 
-		git_pool_clear(&iter->lines);
-		git_pool_clear(&iter->hunks);
+		if (error == GIT_EUSER)
+			error = ctxt.cb_error;
 	}
 
-	iter->ctxt.delta = NULL;
-	iter->hunk_curr = iter->hunk_head = NULL;
-	iter->hunk_count = 0;
-	iter->line_curr = NULL;
-}
-
-int git_diff_iterator_new(
-	git_diff_iterator **iterator_ptr,
-	git_diff_list *diff)
-{
-	git_diff_iterator *iter;
-
-	assert(diff && iterator_ptr);
-
-	*iterator_ptr = NULL;
-
-	iter = git__malloc(sizeof(git_diff_iterator));
-	GITERR_CHECK_ALLOC(iter);
-
-	memset(iter, 0, sizeof(*iter));
-
-	iter->diff = diff;
-	GIT_REFCOUNT_INC(iter->diff);
-
-	diff_delta_init_context_from_diff_list(&iter->ctxt, diff);
-
-	if (git_pool_init(&iter->hunks, sizeof(diffiter_hunk), 0) < 0 ||
-		git_pool_init(&iter->lines, sizeof(diffiter_line), 0) < 0)
-		goto fail;
-
-	*iterator_ptr = iter;
-
-	return 0;
-
-fail:
-	git_diff_iterator_free(iter);
-
-	return -1;
-}
-
-void git_diff_iterator_free(git_diff_iterator *iter)
-{
-	diffiter_do_unload_file(iter);
-	git_diff_list_free(iter->diff); /* decrement ref count */
-	git__free(iter);
-}
-
-float git_diff_iterator_progress(git_diff_iterator *iter)
-{
-	return (float)iter->next_index / (float)iter->diff->deltas.length;
-}
-
-int git_diff_iterator__max_files(git_diff_iterator *iter)
-{
-	return (int)iter->diff->deltas.length;
-}
-
-int git_diff_iterator_num_hunks_in_file(git_diff_iterator *iter)
-{
-	int error = diffiter_do_diff_file(iter);
-	return (error != 0) ? error : (int)iter->hunk_count;
-}
-
-int git_diff_iterator_num_lines_in_hunk(git_diff_iterator *iter)
-{
-	int error = diffiter_do_diff_file(iter);
 	if (error)
-		return error;
-
-	if (iter->hunk_curr)
-		return (int)iter->hunk_curr->line_count;
-	if (iter->hunk_head)
-		return (int)iter->hunk_head->line_count;
-	return 0;
-}
-
-int git_diff_iterator_next_file(
-	git_diff_delta **delta_ptr,
-	git_diff_iterator *iter)
-{
-	int error = 0;
-
-	assert(iter);
-
-	iter->file_index = iter->next_index;
-
-	diffiter_do_unload_file(iter);
-
-	while (!error) {
-		iter->ctxt.delta = git_vector_get(&iter->diff->deltas, iter->file_index);
-		if (!iter->ctxt.delta) {
-			error = GIT_ITEROVER;
-			break;
-		}
-
-		if (diff_delta_is_ambiguous(iter->ctxt.delta) &&
-			(error = diff_delta_load(&iter->ctxt)) < 0)
-			break;
-
-		if (!diff_delta_should_skip(iter->ctxt.opts, iter->ctxt.delta))
-			break;
-
-		iter->file_index++;
-	}
-
-	if (!error) {
-		iter->next_index = iter->file_index + 1;
-
-		error = diff_delta_prep(&iter->ctxt);
-	}
-
-	if (iter->ctxt.delta == NULL) {
-		iter->hunk_curr = iter->hunk_head = NULL;
-		iter->line_curr = NULL;
-	}
-
-	if (delta_ptr != NULL)
-		*delta_ptr = !error ? iter->ctxt.delta : NULL;
+		git_diff_patch_free(patch);
+	else if (patch_ptr)
+		*patch_ptr = patch;
 
 	return error;
 }
 
-int git_diff_iterator_next_hunk(
-	git_diff_range **range_ptr,
+void git_diff_patch_free(git_diff_patch *patch)
+{
+	if (patch)
+		GIT_REFCOUNT_DEC(patch, diff_patch_free);
+}
+
+const git_diff_delta *git_diff_patch_delta(git_diff_patch *patch)
+{
+	assert(patch);
+	return patch->delta;
+}
+
+size_t git_diff_patch_num_hunks(git_diff_patch *patch)
+{
+	assert(patch);
+	return patch->hunks_size;
+}
+
+int git_diff_patch_get_hunk(
+	git_diff_range **range,
 	const char **header,
 	size_t *header_len,
-	git_diff_iterator *iter)
+	size_t *lines_in_hunk,
+	git_diff_patch *patch,
+	size_t hunk_idx)
 {
-	int error = diffiter_do_diff_file(iter);
-	git_diff_range *range;
+	diff_patch_hunk *hunk;
 
-	if (error)
-		return error;
+	assert(patch);
 
-	if (iter->hunk_curr == NULL) {
-		if (iter->hunk_head == NULL)
-			goto no_more_hunks;
-		iter->hunk_curr = iter->hunk_head;
-	} else {
-		if (iter->hunk_curr->next == NULL)
-			goto no_more_hunks;
-		iter->hunk_curr = iter->hunk_curr->next;
+	if (hunk_idx >= patch->hunks_size) {
+		if (range) *range = NULL;
+		if (header) *header = NULL;
+		if (header_len) *header_len = 0;
+		if (lines_in_hunk) *lines_in_hunk = 0;
+		return GIT_ENOTFOUND;
 	}
 
-	range = &iter->hunk_curr->range;
+	hunk = &patch->hunks[hunk_idx];
 
-	if (range_ptr)
-		*range_ptr = range;
+	if (range) *range = &hunk->range;
+	if (header) *header = hunk->header;
+	if (header_len) *header_len = hunk->header_len;
+	if (lines_in_hunk) *lines_in_hunk = hunk->line_count;
 
-	if (header) {
-		int out = format_hunk_header(
-			iter->hunk_header, sizeof(iter->hunk_header), range);
-
-		/* TODO: append function name to header */
-
-		*(iter->hunk_header + out++) = '\n';
-
-		*header = iter->hunk_header;
-
-		if (header_len)
-			*header_len = (size_t)out;
-	}
-
-	iter->line_curr = iter->hunk_curr->line_head;
-
-	return error;
-
-no_more_hunks:
-	if (range_ptr) *range_ptr = NULL;
-	if (header) *header = NULL;
-	if (header_len) *header_len = 0;
-	iter->line_curr = NULL;
-
-	return GIT_ITEROVER;
+	return 0;
 }
 
-int git_diff_iterator_next_line(
-	char *line_origin, /**< GIT_DIFF_LINE_... value from above */
-	const char **content_ptr,
+int git_diff_patch_num_lines_in_hunk(
+	git_diff_patch *patch,
+	size_t hunk_idx)
+{
+	assert(patch);
+
+	if (hunk_idx >= patch->hunks_size)
+		return GIT_ENOTFOUND;
+	else
+		return patch->hunks[hunk_idx].line_count;
+}
+
+int git_diff_patch_get_line_in_hunk(
+	char *line_origin,
+	const char **content,
 	size_t *content_len,
-	git_diff_iterator *iter)
+	int *old_lineno,
+	int *new_lineno,
+	git_diff_patch *patch,
+	size_t hunk_idx,
+	size_t line_of_hunk)
 {
-	int error = diffiter_do_diff_file(iter);
+	diff_patch_hunk *hunk;
+	diff_patch_line *line;
 
-	if (error)
-		return error;
+	assert(patch);
 
-	/* if the user has not called next_hunk yet, call it implicitly (OK?) */
-	if (iter->hunk_curr == NULL) {
-		error = git_diff_iterator_next_hunk(NULL, NULL, NULL, iter);
-		if (error)
-			return error;
-	}
+	if (hunk_idx >= patch->hunks_size)
+		goto notfound;
+	hunk = &patch->hunks[hunk_idx];
 
-	if (iter->line_curr == NULL) {
-		if (line_origin) *line_origin = GIT_DIFF_LINE_CONTEXT;
-		if (content_ptr) *content_ptr = NULL;
-		if (content_len) *content_len = 0;
-		return GIT_ITEROVER;
-	}
+	if (line_of_hunk >= hunk->line_count)
+		goto notfound;
 
-	if (line_origin)
-		*line_origin = iter->line_curr->origin;
-	if (content_ptr)
-		*content_ptr = iter->line_curr->ptr;
-	if (content_len)
-		*content_len = iter->line_curr->len;
+	line = &patch->lines[hunk->line_start + line_of_hunk];
 
-	iter->line_curr = iter->line_curr->next;
+	if (line_origin) *line_origin = line->origin;
+	if (content) *content = line->ptr;
+	if (content_len) *content_len = line->len;
+	if (old_lineno) *old_lineno = line->oldno;
+	if (new_lineno) *new_lineno = line->newno;
 
-	return error;
+	return 0;
+
+notfound:
+	if (line_origin) *line_origin = GIT_DIFF_LINE_CONTEXT;
+	if (content) *content = NULL;
+	if (content_len) *content_len = 0;
+	if (old_lineno) *old_lineno = -1;
+	if (new_lineno) *new_lineno = -1;
+
+	return GIT_ENOTFOUND;
 }
+

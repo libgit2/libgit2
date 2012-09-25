@@ -1457,7 +1457,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 		error = git_diff_index_to_tree(sm_repo, &opt, sm_head, &diff);
 
 		if (!error) {
-			if (git_diff_entrycount(diff, -1) > 0)
+			if (git_diff_num_deltas(diff) > 0)
 				*status |= GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED;
 
 			git_diff_list_free(diff);
@@ -1474,12 +1474,13 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 		error = git_diff_workdir_to_index(sm_repo, &opt, &diff);
 
 		if (!error) {
-			int untracked = git_diff_entrycount(diff, GIT_DELTA_UNTRACKED);
+			int untracked =
+				git_diff_num_deltas_of_type(diff, GIT_DELTA_UNTRACKED);
 
 			if (untracked > 0)
 				*status |= GIT_SUBMODULE_STATUS_WD_UNTRACKED;
 
-			if (git_diff_entrycount(diff, -1) - untracked > 0)
+			if ((git_diff_num_deltas(diff) - untracked) > 0)
 				*status |= GIT_SUBMODULE_STATUS_WD_WD_MODIFIED;
 
 			git_diff_list_free(diff);
