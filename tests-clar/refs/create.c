@@ -27,7 +27,7 @@ void test_refs_create__symbolic(void)
 	git_oid id;
 	git_buf ref_path = GIT_BUF_INIT;
 
-	const char *new_head_tracker = "another-head-tracker";
+	const char *new_head_tracker = "ANOTHER_HEAD_TRACKER";
 
 	git_oid_fromstr(&id, current_master_tip);
 
