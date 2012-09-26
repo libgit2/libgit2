@@ -73,21 +73,47 @@ struct head_info {
 	git_repository *repo;
 	git_oid remote_head_oid;
 	git_buf branchname;
+	const git_refspec *refspec;
 };
 
-static int reference_matches_remote_head(const char *head_name, void *payload)
+static int reference_matches_remote_head(
+	const char *reference_name,
+	void *payload)
 {
 	struct head_info *head_info = (struct head_info *)payload;
 	git_oid oid;
 
-	/* Stop looking if we've already found a match */
-	if (git_buf_len(&head_info->branchname) > 0) return 0;
+	/* TODO: Should we guard against references
+	 * which name doesn't start with refs/heads/ ?
+	 */
 
-	if (!git_reference_name_to_oid(&oid, head_info->repo, head_name) &&
-		 !git_oid_cmp(&head_info->remote_head_oid, &oid)) {
-		git_buf_puts(&head_info->branchname,
-						 head_name+strlen(GIT_REFS_REMOTES_DIR "origin/"));
+	/* Stop looking if we've already found a match */
+	if (git_buf_len(&head_info->branchname) > 0)
+		return 0;
+
+	if (git_reference_name_to_oid(
+		&oid,
+		head_info->repo,
+		reference_name) < 0) {
+			/* TODO: How to handle not found references?
+			 */
+			return -1;
 	}
+
+	if (git_oid_cmp(&head_info->remote_head_oid, &oid) == 0) {
+		/* Determine the local reference name from the remote tracking one */
+		if (git_refspec_transform_l(
+			&head_info->branchname, 
+			head_info->refspec,
+			reference_name) < 0)
+				return -1;
+		
+		if (git_buf_sets(
+			&head_info->branchname,
+			git_buf_cstr(&head_info->branchname) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+				return -1;
+	}
+
 	return 0;
 }
 
@@ -108,31 +134,60 @@ static int update_head_to_new_branch(git_repository *repo, const git_oid *target
 
 static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
-	int retcode = GIT_ERROR;
+	int retcode = -1;
 	git_remote_head *remote_head;
-	git_oid oid;
 	struct head_info head_info;
+	git_buf remote_master_name = GIT_BUF_INIT;
 
 	/* Get the remote's HEAD. This is always the first ref in remote->refs. */
 	remote_head = remote->refs.contents[0];
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
 	git_buf_init(&head_info.branchname, 16);
 	head_info.repo = repo;
+	head_info.refspec = git_remote_fetchspec(remote);
+	
+	/* Determine the remote tracking reference name from the local master */
+	if (git_refspec_transform_r(
+		&remote_master_name,
+		head_info.refspec,
+		GIT_REFS_HEADS_MASTER_FILE) < 0)
+			return -1;
 
-	/* Check to see if "master" matches the remote head */
-	if (!git_reference_name_to_oid(&oid, repo, GIT_REFS_REMOTES_DIR "origin/master") &&
-		 !git_oid_cmp(&remote_head->oid, &oid)) {
-		retcode = update_head_to_new_branch(repo, &oid, "master");
+	/* Check to see if the remote HEAD points to the remote master */
+	if (reference_matches_remote_head(git_buf_cstr(&remote_master_name), &head_info) < 0)
+		goto cleanup;
+
+	if (git_buf_len(&head_info.branchname) > 0) {
+		retcode = update_head_to_new_branch(
+			repo,
+			&head_info.remote_head_oid,
+			git_buf_cstr(&head_info.branchname));
+
+		goto cleanup;
 	}
+
 	/* Not master. Check all the other refs. */
-	else if (!git_reference_foreach(repo, GIT_REF_LISTALL,
-												 reference_matches_remote_head,
-												 &head_info) &&
-				git_buf_len(&head_info.branchname) > 0) {
-		retcode = update_head_to_new_branch(repo, &head_info.remote_head_oid,
-														git_buf_cstr(&head_info.branchname));
+	if (git_reference_foreach(
+		repo,
+		GIT_REF_LISTALL,
+		reference_matches_remote_head,
+		&head_info) < 0)
+			goto cleanup;
+
+	if (git_buf_len(&head_info.branchname) > 0) {
+		retcode = update_head_to_new_branch(
+			repo,
+			&head_info.remote_head_oid,
+			git_buf_cstr(&head_info.branchname));
+
+		goto cleanup;
+	} else {
+		/* TODO: What should we do if nothing has been found?
+		 */
 	}
 
+cleanup:
+	git_buf_free(&remote_master_name);
 	git_buf_free(&head_info.branchname);
 	return retcode;
 }
