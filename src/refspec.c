@@ -156,6 +156,17 @@ int git_refspec_parse(git_refspec *refspec, const char *str)
 	return 0;
 }
 
+void git_refspec_clear(git_refspec *refspec)
+{
+	if (refspec) {
+		git__free(refspec->src);
+		refspec->src = NULL;
+
+		git__free(refspec->dst);
+		refspec->dst = NULL;
+	}
+}
+
 const char *git_refspec_src(const git_refspec *refspec)
 {
 	return refspec == NULL ? NULL : refspec->src;
