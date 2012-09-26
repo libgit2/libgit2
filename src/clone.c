@@ -22,12 +22,6 @@
 #include "refs.h"
 #include "path.h"
 
-struct HeadInfo {
-	git_repository *repo;
-	git_oid remote_head_oid;
-	git_buf branchname;
-};
-
 static int create_tracking_branch(
 	git_reference **branch,
 	git_repository *repo,
@@ -75,9 +69,15 @@ static int create_tracking_branch(
 	return retcode;
 }
 
+struct head_info {
+	git_repository *repo;
+	git_oid remote_head_oid;
+	git_buf branchname;
+};
+
 static int reference_matches_remote_head(const char *head_name, void *payload)
 {
-	struct HeadInfo *head_info = (struct HeadInfo *)payload;
+	struct head_info *head_info = (struct head_info *)payload;
 	git_oid oid;
 
 	/* Stop looking if we've already found a match */
@@ -111,7 +111,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	int retcode = GIT_ERROR;
 	git_remote_head *remote_head;
 	git_oid oid;
-	struct HeadInfo head_info;
+	struct head_info head_info;
 
 	/* Get the remote's HEAD. This is always the first ref in remote->refs. */
 	remote_head = remote->refs.contents[0];
