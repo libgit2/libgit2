@@ -536,10 +536,8 @@ void git_remote_free(git_remote *remote)
 
 	git_vector_free(&remote->refs);
 
-	git__free(remote->fetch.src);
-	git__free(remote->fetch.dst);
-	git__free(remote->push.src);
-	git__free(remote->push.dst);
+	git_refspec__free(&remote->fetch);
+	git_refspec__free(&remote->push);
 	git__free(remote->url);
 	git__free(remote->pushurl);
 	git__free(remote->name);

@@ -25,6 +25,8 @@ int git_refspec__parse(
 	const char *str,
 	bool is_fetch);
 
+void git_refspec__free(git_refspec *refspec);
+
 /**
  * Transform a reference to its target following the refspec's rules,
  * and writes the results into a git_buf.
