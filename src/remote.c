@@ -722,3 +722,13 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 		remote->transport->cb_data = remote->callbacks.data;
 	}
 }
+
+int git_remote_autotag(git_remote *remote)
+{
+	return remote->download_tags;
+}
+
+void git_remote_set_autotag(git_remote *remote, int value)
+{
+	remote->download_tags = value;
+}

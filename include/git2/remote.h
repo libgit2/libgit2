@@ -310,6 +310,23 @@ enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_AUTO
 };
 
+/**
+ * Retrieve the tag auto-follow setting
+ *
+ * @param remote the remote to query
+ * @return the auto-follow setting
+ */
+GIT_EXTERN(int) git_remote_autotag(git_remote *remote);
+
+/**
+ * Set the tag auto-follow setting
+ *
+ * @param remote the remote to configure
+ * @param value a GIT_REMOTE_DOWNLOAD_TAGS value
+ */
+GIT_EXTERN(void) git_remote_set_autotag(git_remote *remote, int value);
+
+
 /** @} */
 GIT_END_DECL
 #endif
