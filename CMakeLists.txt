@@ -86,7 +86,9 @@ OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
 OPTION (BUILD_EXAMPLES "Build library usage example apps" OFF)
 OPTION (TAGS "Generate tags" OFF)
 OPTION (PROFILE "Generate profiling information" OFF)
-OPTION (MODE32 "Build 32bit library" OFF)
+IF (NOT WIN32 OR MINGW)
+	OPTION (MODE32 "Build 32bit library (UNIX/MINGW only, for MSVC use 'setenv /x86' before building)" OFF)
+ENDIF()
 
 # Platform specific compilation flags
 IF (MSVC)

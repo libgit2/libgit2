@@ -72,6 +72,7 @@ The following CMake variables are declared:
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
 - `BUILD_CLAR`: Build [Clar](https://github.com/tanoku/clar)-based test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to OFF)
+- `MODE32`: Build 32bit libgit2 library even if building on 64bit system - UNIX only (defaults to OFF)
 
 Language Bindings
 ==================================
