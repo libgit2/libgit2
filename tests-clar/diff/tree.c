@@ -309,7 +309,7 @@ void test_diff_tree__larger_hunks(void)
 
 	cl_git_fail(git_diff_get_patch(&patch, &delta, diff, num_d));
 
-	cl_assert_equal_i(2, num_d);
+	cl_assert_equal_i(2, (int)num_d);
 
 	git_diff_list_free(diff);
 	diff = NULL;

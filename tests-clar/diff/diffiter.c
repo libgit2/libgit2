@@ -37,7 +37,7 @@ void test_diff_diffiter__iterate_files(void)
 	cl_git_pass(git_diff_workdir_to_index(repo, NULL, &diff));
 
 	num_d = git_diff_num_deltas(diff);
-	cl_assert_equal_i(6, num_d);
+	cl_assert_equal_i(6, (int)num_d);
 
 	for (d = 0; d < num_d; ++d) {
 		const git_diff_delta *delta;
@@ -60,7 +60,7 @@ void test_diff_diffiter__iterate_files_2(void)
 	cl_git_pass(git_diff_workdir_to_index(repo, NULL, &diff));
 
 	num_d = git_diff_num_deltas(diff);
-	cl_assert_equal_i(8, num_d);
+	cl_assert_equal_i(8, (int)num_d);
 
 	for (d = 0; d < num_d; ++d) {
 		const git_diff_delta *delta;
@@ -150,7 +150,7 @@ void test_diff_diffiter__max_size_threshold(void)
 		cl_assert(patch);
 
 		file_count++;
-		hunk_count += git_diff_patch_num_hunks(patch);
+		hunk_count += (int)git_diff_patch_num_hunks(patch);
 
 		assert(delta->binary == 0 || delta->binary == 1);
 		binary_count += delta->binary;
@@ -183,7 +183,7 @@ void test_diff_diffiter__max_size_threshold(void)
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
 
 		file_count++;
-		hunk_count += git_diff_patch_num_hunks(patch);
+		hunk_count += (int)git_diff_patch_num_hunks(patch);
 
 		assert(delta->binary == 0 || delta->binary == 1);
 		binary_count += delta->binary;
@@ -266,13 +266,13 @@ static void iterate_over_patch(git_diff_patch *patch, diff_expects *exp)
 	size_t h, num_h = git_diff_patch_num_hunks(patch), num_l;
 
 	exp->files++;
-	exp->hunks += num_h;
+	exp->hunks += (int)num_h;
 
 	/* let's iterate in reverse, just because we can! */
 	for (h = 1, num_l = 0; h <= num_h; ++h)
 		num_l += git_diff_patch_num_lines_in_hunk(patch, num_h - h);
 
-	exp->lines += num_l;
+	exp->lines += (int)num_l;
 }
 
 #define PATCH_CACHE 5
