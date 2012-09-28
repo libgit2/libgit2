@@ -30,6 +30,7 @@ struct checkout_diff_data
 	git_indexer_stats *stats;
 	git_repository *owner;
 	bool can_symlink;
+	int error;
 };
 
 static int buffer_to_file(
@@ -84,7 +85,7 @@ static int blob_content_to_file(
 		return nb_filters;
 
 	if (nb_filters > 0)	 {
-		if (git_blob__getbuf(&unfiltered, blob) < 0)
+		if ((error = git_blob__getbuf(&unfiltered, blob)) < 0)
 			goto cleanup;
 
 		if ((error = git_filters_apply(&filtered, &unfiltered, &filters)) < 0)
@@ -111,8 +112,8 @@ static int blob_content_to_link(git_blob *blob, const char *path, bool can_symli
 	git_buf linktarget = GIT_BUF_INIT;
 	int error;
 
-	if (git_blob__getbuf(&linktarget, blob) < 0)
-		return -1;
+	if ((error = git_blob__getbuf(&linktarget, blob)) < 0)
+		return error;
 
 	if (can_symlink)
 		error = p_symlink(git_buf_cstr(&linktarget), path);
@@ -135,8 +136,8 @@ static int checkout_blob(
 	git_blob *blob;
 	int error;
 
-	if (git_blob_lookup(&blob, repo, blob_oid) < 0)
-		return -1; /* Add an error message */
+	if ((error = git_blob_lookup(&blob, repo, blob_oid)) < 0)
+		return error; /* Add an error message */
 
 	if (S_ISLNK(filemode))
 		error = blob_content_to_link(blob, path, can_symlink);
@@ -153,11 +154,9 @@ static int checkout_diff_fn(
 	const git_diff_delta *delta,
 	float progress)
 {
-	struct checkout_diff_data *data;
-	int error = -1;
+	struct checkout_diff_data *data = cb_data;
+	int error = 0;
 	git_checkout_opts *opts;
-
-	data = (struct checkout_diff_data *)cb_data;
 
 	data->stats->processed = (unsigned int)(data->stats->total * progress);
 
@@ -188,20 +187,17 @@ static int checkout_diff_fn(
 					delta->old_file.mode,
 					opts->notify_payload))) {
 						giterr_clear();
-						return GIT_EUSER;
+						error = GIT_EUSER;
 			}
-
-			return 0;
 		}
-
-		if (checkout_blob(
+		else
+			error = checkout_blob(
 				data->owner,
 				&delta->old_file.oid,
 				git_buf_cstr(data->path),
 				delta->old_file.mode,
 				data->can_symlink,
-				opts) < 0)
-			goto cleanup;
+				opts);
 
 		break;
 
@@ -209,25 +205,24 @@ static int checkout_diff_fn(
 		if (!(opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING))
 			return 0;
 
-		if (checkout_blob(
+		error = checkout_blob(
 				data->owner,
 				&delta->old_file.oid,
 				git_buf_cstr(data->path),
 				delta->old_file.mode,
 				data->can_symlink,
-				opts) < 0)
-			goto cleanup;
-
+				opts);
 		break;
 
 	default:
-		giterr_set(GITERR_INVALID, "Unexpected status (%d) for path '%s'.", delta->status, delta->new_file.path);
-		goto cleanup;
+		giterr_set(GITERR_INVALID, "Unexpected status (%d) for path '%s'.",
+			delta->status, delta->new_file.path);
+		error = -1;
 	}
 
-	error = 0;
+	if (error)
+		data->error = error; /* preserve real error */
 
-cleanup:
 	return error;
 }
 
@@ -331,6 +326,9 @@ int git_checkout_index(
 		goto cleanup;
 
 	error = git_diff_foreach(diff, &data, checkout_diff_fn, NULL, NULL);
+
+	if (error == GIT_EUSER)
+		error = (data.error != 0) ? data.error : -1;
 
 cleanup:
 	git_index_free(index);
