@@ -5,8 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
-#include "git2/diff.h"
-#include "git2/oid.h"
 #include "diff.h"
 #include "fileops.h"
 #include "config.h"
@@ -268,9 +266,17 @@ static int diff_delta__from_two(
 	delta->old_file.mode = old_mode;
 	delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
-	git_oid_cpy(&delta->new_file.oid, new_oid ? new_oid : &new_entry->oid);
+	git_oid_cpy(&delta->new_file.oid, &new_entry->oid);
 	delta->new_file.size = new_entry->file_size;
 	delta->new_file.mode = new_mode;
+
+	if (new_oid) {
+		if ((diff->opts.flags & GIT_DIFF_REVERSE) != 0)
+			git_oid_cpy(&delta->old_file.oid, new_oid);
+		else
+			git_oid_cpy(&delta->new_file.oid, new_oid);
+	}
+
 	if (new_oid || !git_oid_iszero(&new_entry->oid))
 		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
@@ -425,6 +431,11 @@ void git_diff_list_free(git_diff_list *diff)
 	GIT_REFCOUNT_DEC(diff, diff_list_free);
 }
 
+void git_diff_list_addref(git_diff_list *diff)
+{
+	GIT_REFCOUNT_INC(diff);
+}
+
 static int oid_for_workdir_item(
 	git_repository *repo,
 	const git_index_entry *item,
@@ -519,17 +530,17 @@ static int maybe_modified(
 			 omode == nmode)
 		status = GIT_DELTA_UNMODIFIED;
 
-	/* if modes match and we have an unknown OID and a workdir iterator,
-	 * then check deeper for matching
+	/* if we have an unknown OID and a workdir iterator, then check some
+	 * circumstances that can accelerate things or need special handling
 	 */
-	else if (omode == nmode &&
-		git_oid_iszero(&nitem->oid) &&
-		new_iter->type == GIT_ITERATOR_WORKDIR)
+	else if (git_oid_iszero(&nitem->oid) &&
+			 new_iter->type == GIT_ITERATOR_WORKDIR)
 	{
 		/* TODO: add check against index file st_mtime to avoid racy-git */
 
-		/* if they files look exactly alike, then we'll assume the same */
-		if (oitem->file_size == nitem->file_size &&
+		/* if the stat data looks exactly alike, then assume the same */
+		if (omode == nmode &&
+			oitem->file_size == nitem->file_size &&
 			(!(diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) ||
 			 (oitem->ctime.seconds == nitem->ctime.seconds)) &&
 			oitem->mtime.seconds == nitem->mtime.seconds &&
@@ -554,16 +565,15 @@ static int maybe_modified(
 				status = GIT_DELTA_UNMODIFIED;
 			}
 		}
+	}
 
-		/* TODO: check git attributes so we will not have to read the file
-		 * in if it is marked binary.
-		 */
-
-		else if (oid_for_workdir_item(diff->repo, nitem, &noid) < 0)
+	/* if we got here and decided that the files are modified, but we
+	 * haven't calculated the OID of the new item, then calculate it now
+	 */
+	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->oid)) {
+		if (oid_for_workdir_item(diff->repo, nitem, &noid) < 0)
 			return -1;
-
-		else if (git_oid_cmp(&oitem->oid, &noid) == 0 &&
-				 omode == nmode)
+		else if (omode == nmode && git_oid_equal(&oitem->oid, &noid))
 			status = GIT_DELTA_UNMODIFIED;
 
 		/* store calculated oid so we don't have to recalc later */
@@ -797,6 +807,28 @@ on_error:
 	return -1;
 }
 
+
+bool git_diff_delta__should_skip(
+	const git_diff_options *opts, const git_diff_delta *delta)
+{
+	uint32_t flags = opts ? opts->flags : 0;
+
+	if (delta->status == GIT_DELTA_UNMODIFIED &&
+		(flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
+		return true;
+
+	if (delta->status == GIT_DELTA_IGNORED &&
+		(flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
+		return true;
+
+	if (delta->status == GIT_DELTA_UNTRACKED &&
+		(flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
+		return true;
+
+	return false;
+}
+
+
 int git_diff_merge(
 	git_diff_list *onto,
 	const git_diff_list *from)
@@ -831,6 +863,14 @@ int git_diff_merge(
 			delta = diff_delta__merge_like_cgit(o, f, &onto_pool);
 			i++;
 			j++;
+		}
+
+		/* the ignore rules for the target may not match the source
+		 * or the result of a merged delta could be skippable...
+		 */
+		if (git_diff_delta__should_skip(&onto->opts, delta)) {
+			git__free(delta);
+			continue;
 		}
 
 		if ((error = !delta ? -1 : git_vector_insert(&onto_new, delta)) < 0)
