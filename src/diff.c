@@ -508,6 +508,7 @@ static int maybe_modified(
 	git_delta_t status = GIT_DELTA_MODIFIED;
 	unsigned int omode = oitem->mode;
 	unsigned int nmode = nitem->mode;
+	bool new_is_workdir = (new_iter->type == GIT_ITERATOR_WORKDIR);
 
 	GIT_UNUSED(old_iter);
 
@@ -515,15 +516,14 @@ static int maybe_modified(
 		return 0;
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
-	if (S_ISLNK(omode) && S_ISREG(nmode) &&
-		!(diff->diffcaps & GIT_DIFFCAPS_HAS_SYMLINKS) &&
-		new_iter->type == GIT_ITERATOR_WORKDIR)
+	if (S_ISLNK(omode) && S_ISREG(nmode) && new_is_workdir &&
+		!(diff->diffcaps & GIT_DIFFCAPS_HAS_SYMLINKS))
 		nmode = omode;
 
 	/* on platforms with no execmode, just preserve old mode */
 	if (!(diff->diffcaps & GIT_DIFFCAPS_TRUST_MODE_BITS) &&
 		(nmode & MODE_BITS_MASK) != (omode & MODE_BITS_MASK) &&
-		new_iter->type == GIT_ITERATOR_WORKDIR)
+		new_is_workdir)
 		nmode = (nmode & ~MODE_BITS_MASK) | (omode & MODE_BITS_MASK);
 
 	/* support "assume unchanged" (poorly, b/c we still stat everything) */
@@ -537,10 +537,14 @@ static int maybe_modified(
 
 	/* if basic type of file changed, then split into delete and add */
 	else if (GIT_MODE_TYPE(omode) != GIT_MODE_TYPE(nmode)) {
-		if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
-			diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem) < 0)
-			return -1;
-		return 0;
+		if ((diff->opts.flags & GIT_DIFF_DONT_SPLIT_TYPECHANGE) != 0)
+			status = GIT_DELTA_TYPECHANGE;
+		else {
+			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
+				diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem) < 0)
+				return -1;
+			return 0;
+		}
 	}
 
 	/* if oids and modes match, then file is unmodified */
@@ -551,9 +555,7 @@ static int maybe_modified(
 	/* if we have an unknown OID and a workdir iterator, then check some
 	 * circumstances that can accelerate things or need special handling
 	 */
-	else if (git_oid_iszero(&nitem->oid) &&
-			 new_iter->type == GIT_ITERATOR_WORKDIR)
-	{
+	else if (git_oid_iszero(&nitem->oid) && new_is_workdir) {
 		/* TODO: add check against index file st_mtime to avoid racy-git */
 
 		/* if the stat data looks exactly alike, then assume the same */
@@ -600,7 +602,7 @@ static int maybe_modified(
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
-	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->oid)) {
+	if (status != GIT_DELTA_UNMODIFIED && git_oid_iszero(&nitem->oid)) {
 		if (oid_for_workdir_item(diff->repo, nitem, &noid) < 0)
 			return -1;
 		else if (omode == nmode && git_oid_equal(&oitem->oid, &noid))

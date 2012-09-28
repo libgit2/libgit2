@@ -19,19 +19,22 @@
  */
 GIT_BEGIN_DECL
 
-enum {
-	GIT_STATUS_CURRENT	= 0,
+typedef enum {
+	GIT_STATUS_CURRENT = 0,
 
-	GIT_STATUS_INDEX_NEW = (1 << 0),
-	GIT_STATUS_INDEX_MODIFIED = (1 << 1),
-	GIT_STATUS_INDEX_DELETED = (1 << 2),
+	GIT_STATUS_INDEX_NEW        = (1u << 0),
+	GIT_STATUS_INDEX_MODIFIED   = (1u << 1),
+	GIT_STATUS_INDEX_DELETED    = (1u << 2),
+	GIT_STATUS_INDEX_RENAMED    = (1u << 3),
+	GIT_STATUS_INDEX_TYPECHANGE = (1u << 4),
 
-	GIT_STATUS_WT_NEW = (1 << 3),
-	GIT_STATUS_WT_MODIFIED = (1 << 4),
-	GIT_STATUS_WT_DELETED = (1 << 5),
+	GIT_STATUS_WT_NEW           = (1u << 7),
+	GIT_STATUS_WT_MODIFIED      = (1u << 8),
+	GIT_STATUS_WT_DELETED       = (1u << 9),
+	GIT_STATUS_WT_TYPECHANGE    = (1u << 10),
 
-	GIT_STATUS_IGNORED = (1 << 6),
-};
+	GIT_STATUS_IGNORED          = (1u << 14),
+} git_status_t;
 
 /**
  * Gather file statuses and run a callback for each one.
