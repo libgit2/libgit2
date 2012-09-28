@@ -178,6 +178,7 @@ static int checkout_diff_fn(
 		break;
 
 	case GIT_DELTA_MODIFIED:
+	case GIT_DELTA_TYPECHANGE:
 		if (!(opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED)) {
 
 			if ((opts->skipped_notify_cb != NULL)
@@ -291,7 +292,8 @@ int git_checkout_index(
 	if ((git_repository__ensure_not_bare(repo, "checkout")) < 0)
 		return GIT_EBAREREPO;
 
-	diff_opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
+	diff_opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
+		GIT_DIFF_DONT_SPLIT_TYPECHANGE;
 
 	if (opts && opts->paths.count > 0)
 		diff_opts.pathspec = opts->paths;
