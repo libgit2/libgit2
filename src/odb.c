@@ -115,7 +115,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	int hdr_len;
 	char hdr[64], buffer[2048];
 	git_hash_ctx *ctx;
-	ssize_t read_len = -1;
+	ssize_t read_len = 0;
 
 	if (!git_object_typeisloose(type)) {
 		giterr_set(GITERR_INVALID, "Invalid object type for hash");
