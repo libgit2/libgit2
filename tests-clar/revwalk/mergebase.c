@@ -67,6 +67,15 @@ void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, error);
 }
 
+void test_revwalk_mergebase__no_off_by_one_missing(void)
+{
+	git_oid result, one, two;
+
+	cl_git_pass(git_oid_fromstr(&one, "1a443023183e3f2bfbef8ac923cd81c1018a18fd"));
+	cl_git_pass(git_oid_fromstr(&two, "9f13f7d0a9402c681f91dc590cf7b5470e6a77d2"));
+	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
+}
+
 static void assert_mergebase_many(const char *expected_sha, int count, ...)
 {
 	va_list ap;

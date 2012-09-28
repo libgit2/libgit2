@@ -274,7 +274,8 @@ static int commit_parse(git_revwalk *walk, commit_object *commit)
 static int interesting(git_pqueue *list)
 {
 	unsigned int i;
-	for (i = 1; i < git_pqueue_size(list); i++) {
+	/* element 0 isn't used - we need to start at 1 */
+	for (i = 1; i < list->size; i++) {
 		commit_object *commit = list->d[i];
 		if ((commit->flags & STALE) == 0)
 			return 1;

@@ -42,7 +42,7 @@ void test_odb_foreach__foreach(void)
 	git_repository_odb(&_odb, _repo);
 
 	cl_git_pass(git_odb_foreach(_odb, foreach_cb, NULL));
-	cl_assert_equal_i(43 + 1640, nobj); /* count + in-pack */
+	cl_assert_equal_i(46 + 1640, nobj); /* count + in-pack */
 }
 
 void test_odb_foreach__one_pack(void)
