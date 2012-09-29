@@ -419,7 +419,7 @@ static int win32_find_file(git_buf *path, const struct win32_path *root, const c
 	return 0;
 }
 
-static wchar_t * nextpath(wchar_t * src, wchar_t * dst, size_t maxlen)
+static wchar_t * win32_nextpath(wchar_t * src, wchar_t * dst, size_t maxlen)
 {
 	wchar_t * orgsrc;
 
@@ -469,7 +469,7 @@ nullterm:
 	return (orgsrc != src) ? (wchar_t *)src : NULL;
 }
 
-int find_system_file_using_path(git_buf *path, const char *filename)
+int win32_find_system_file_using_path(git_buf *path, const char *filename)
 {
 	wchar_t * env = NULL;
 	struct win32_path root;
@@ -479,7 +479,7 @@ int find_system_file_using_path(git_buf *path, const char *filename)
 		return -1;
 
 	// search in all paths defined in PATH
-	while ((env = nextpath(env, root.path, MAX_PATH - 1)) != NULL && *root.path)
+	while ((env = win32_nextpath(env, root.path, MAX_PATH - 1)) != NULL && *root.path)
 	{
 		wchar_t * pfin = root.path + wcslen(root.path) - 1; // last char of the current path entry
 
@@ -502,7 +502,7 @@ int find_system_file_using_path(git_buf *path, const char *filename)
 	return GIT_ENOTFOUND;
 }
 
-int find_system_file_using_registry(git_buf *path, const char *filename)
+int win32_find_system_file_using_registry(git_buf *path, const char *filename)
 {
 #ifndef _WIN64
 #define REG_MSYSGIT_INSTALL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
@@ -552,11 +552,11 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 {
 #ifdef GIT_WIN32
 	// try to find git.exe/git.cmd on path
-	if (!find_system_file_using_path(path, filename))
+	if (!win32_find_system_file_using_path(path, filename))
 		return 0;
 
 	// try to find msysgit installation path using registry
-	if (!find_system_file_using_registry(path, filename))
+	if (!win32_find_system_file_using_registry(path, filename))
 		return 0;
 #else
 	if (git_buf_joinpath(path, "/etc", filename) < 0)
