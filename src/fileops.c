@@ -471,20 +471,12 @@ nullterm:
 
 int find_system_file_using_path(git_buf *path, const char *filename)
 {
-	size_t size = 0;
-	wchar_t * env = NULL, * envOrig = NULL;
+	wchar_t * env = NULL;
 	struct win32_path root;
 
-	_wgetenv_s(&size, NULL, 0, L"PATH");
-
-	if (!size)
+	env = _wgetenv(L"PATH");
+	if (!env)
 		return -1;
-
-	// make a copy of the content of the environment variable so that we can modify it
-	envOrig = git__calloc(size, sizeof(wchar_t));
-	GITERR_CHECK_ALLOC(envOrig);
-	_wgetenv_s(&size, envOrig, size, L"PATH");
-	env = envOrig;
 
 	// search in all paths defined in PATH
 	while ((env = nextpath(env, root.path, MAX_PATH - 1)) != NULL && *root.path)
@@ -493,25 +485,20 @@ int find_system_file_using_path(git_buf *path, const char *filename)
 
 		// ensure trailing slash
 		if (*pfin != L'/' && *pfin != L'\\')
-			wcscpy_s(++pfin, 2, L"\\"); // we have enough space left, MAX_PATH - 1 is used in nextpath above
+			wcscpy(++pfin, L"\\"); // we have enough space left, MAX_PATH - 1 is used in nextpath above
 
 		root.len = (DWORD)wcslen(root.path) + 1;
 
 		if (win32_find_file(path, &root, "git.cmd") == 0 || win32_find_file(path, &root, "git.exe") == 0) {
 			// we found the cmd or bin directory of a git installaton
 			if (root.len > 5) {
-				wcscpy_s(root.path + wcslen(root.path) - 4, 5, L"etc\\");
+				wcscpy(root.path + wcslen(root.path) - 4, L"etc\\");
 				if (win32_find_file(path, &root, filename) == 0)
-				{
-					git__free(envOrig);
 					return 0;
-				}
 			}
 		}
 	}
 	
-	git__free(envOrig);
-
 	return GIT_ENOTFOUND;
 }
 
@@ -535,11 +522,12 @@ int find_system_file_using_registry(git_buf *path, const char *filename)
 		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType,(LPBYTE)&root.path, &dwSize) == ERROR_SUCCESS)
 		{
 			// InstallLocation points to the root of the msysgit directory
-			if (wcscat_s(root.path, MAX_PATH, L"etc\\"))
+			if (dwSize + 4 > MAX_PATH) // 4 = wcslen(L"etc\\")
 			{
 				giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory - path too long");
 				return -1;
 			}
+			wcscat(root.path, L"etc\\");
 			root.len = (DWORD)wcslen(root.path) + 1;
 		}
 	}
