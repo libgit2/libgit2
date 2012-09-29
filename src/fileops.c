@@ -514,11 +514,9 @@ int find_system_file_using_path(git_buf *path, const char *filename)
 
 	return GIT_ENOTFOUND;
 }
-#endif
 
-int git_futils_find_system_file(git_buf *path, const char *filename)
+int find_system_file_using_registry(git_buf *path, const char *filename)
 {
-#ifdef GIT_WIN32
 #ifndef _WIN64
 #define REG_MSYSGIT_INSTALL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 #else
@@ -530,10 +528,6 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 	HKEY hKey;
 	DWORD dwType = REG_SZ;
 	DWORD dwSize = MAX_PATH;
-
-	// try to find git.exe/git.cmd on path
-	if (!find_system_file_using_path(path, filename))
-		return 0;
 
 	root.len = 0;
 	if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
@@ -563,18 +557,30 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 	}
 
 	return 0;
+}
+#endif
 
+int git_futils_find_system_file(git_buf *path, const char *filename)
+{
+#ifdef GIT_WIN32
+	// try to find git.exe/git.cmd on path
+	if (!find_system_file_using_path(path, filename))
+		return 0;
+
+	// try to find msysgit installation path using registry
+	if (!find_system_file_using_registry(path, filename))
+		return 0;
 #else
 	if (git_buf_joinpath(path, "/etc", filename) < 0)
 		return -1;
 
 	if (git_path_exists(path->ptr) == true)
 		return 0;
+#endif
 
 	git_buf_clear(path);
 	giterr_set(GITERR_OS, "The system file '%s' doesn't exist", filename);
 	return GIT_ENOTFOUND;
-#endif
 }
 
 int git_futils_find_global_file(git_buf *path, const char *filename)
