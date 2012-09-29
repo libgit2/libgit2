@@ -469,7 +469,7 @@ nullterm:
 	return (orgsrc != src) ? (wchar_t *)src : NULL;
 }
 
-int win32_find_system_file_using_path(git_buf *path, const char *filename)
+static int win32_find_system_file_using_path(git_buf *path, const char *filename)
 {
 	wchar_t * env = NULL;
 	struct win32_path root;
@@ -502,7 +502,7 @@ int win32_find_system_file_using_path(git_buf *path, const char *filename)
 	return GIT_ENOTFOUND;
 }
 
-int win32_find_system_file_using_registry(git_buf *path, const char *filename)
+static int win32_find_system_file_using_registry(git_buf *path, const char *filename)
 {
 #ifndef _WIN64
 #define REG_MSYSGIT_INSTALL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
