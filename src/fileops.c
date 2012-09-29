@@ -418,6 +418,102 @@ static int win32_find_file(git_buf *path, const struct win32_path *root, const c
 	git__free(file_utf16);
 	return 0;
 }
+
+static wchar_t * nextpath(wchar_t * src, wchar_t * dst, size_t maxlen)
+{
+	wchar_t * orgsrc;
+
+	while (*src == L';')
+		src++;
+
+	orgsrc = src;
+
+	if (!--maxlen)
+		goto nullterm;
+
+	while (*src && *src != L';')
+	{
+		if (*src != L'"')
+		{
+			*dst++ = *src++;
+			if (!--maxlen)
+			{
+				orgsrc = src;
+				goto nullterm;
+			}
+		}
+		else
+		{
+			src++;
+			while (*src && *src != L'"')
+			{
+				*dst++ = *src++;
+				if (!--maxlen)
+				{
+					orgsrc = src;
+					goto nullterm;
+				}
+			}
+
+			if (*src)
+				src++;
+		}
+	}
+
+	while (*src == L';')
+		src++;
+
+nullterm:
+	*dst = 0;
+
+	return (orgsrc != src) ? (wchar_t *)src : NULL;
+}
+
+int find_system_file_using_path(git_buf *path, const char *filename)
+{
+	size_t size = 0;
+	wchar_t * env = NULL, * envOrig = NULL;
+	struct win32_path root;
+
+	_wgetenv_s(&size, NULL, 0, L"PATH");
+
+	if (!size)
+		return -1;
+
+	// make a copy of the content of the environment variable so that we can modify it
+	envOrig = git__calloc(size, sizeof(wchar_t));
+	GITERR_CHECK_ALLOC(envOrig);
+	_wgetenv_s(&size, envOrig, size, L"PATH");
+	env = envOrig;
+
+	// search in all paths defined in PATH
+	while ((env = nextpath(env, root.path, MAX_PATH - 1)) != NULL && *root.path)
+	{
+		wchar_t * pfin = root.path + wcslen(root.path) - 1; // last char of the current path entry
+
+		// ensure trailing slash
+		if (*pfin != L'/' && *pfin != L'\\')
+			wcscpy_s(++pfin, 2, L"\\"); // we have enough space left, MAX_PATH - 1 is used in nextpath above
+
+		root.len = (DWORD)wcslen(root.path) + 1;
+
+		if (win32_find_file(path, &root, "git.cmd") == 0 || win32_find_file(path, &root, "git.exe") == 0) {
+			// we found the cmd or bin directory of a git installaton
+			if (root.len > 5) {
+				wcscpy_s(root.path + wcslen(root.path) - 4, 5, L"etc\\");
+				if (win32_find_file(path, &root, filename) == 0)
+				{
+					git__free(envOrig);
+					return 0;
+				}
+			}
+		}
+	}
+	
+	git__free(envOrig);
+
+	return GIT_ENOTFOUND;
+}
 #endif
 
 int git_futils_find_system_file(git_buf *path, const char *filename)
@@ -434,6 +530,10 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 	HKEY hKey;
 	DWORD dwType = REG_SZ;
 	DWORD dwSize = MAX_PATH;
+
+	// try to find git.exe/git.cmd on path
+	if (!find_system_file_using_path(path, filename))
+		return 0;
 
 	root.len = 0;
 	if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
