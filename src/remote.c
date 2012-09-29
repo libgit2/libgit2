@@ -18,33 +18,7 @@
 
 #include <regex.h>
 
-static int refspec_parse(git_refspec *refspec, const char *str)
-{
-	char *delim;
-
-	memset(refspec, 0x0, sizeof(git_refspec));
-
-	if (*str == '+') {
-		refspec->force = 1;
-		str++;
-	}
-
-	delim = strchr(str, ':');
-	if (delim == NULL) {
-		giterr_set(GITERR_NET, "Invalid refspec, missing ':'");
-		return -1;
-	}
-
-	refspec->src = git__strndup(str, delim - str);
-	GITERR_CHECK_ALLOC(refspec->src);
-
-	refspec->dst = git__strdup(delim + 1);
-	GITERR_CHECK_ALLOC(refspec->dst);
-
-	return 0;
-}
-
-static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const char *var)
+static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const char *var, bool is_fetch)
 {
 	int error;
 	const char *val;
@@ -52,7 +26,7 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	if ((error = git_config_get_string(&val, cfg, var)) < 0)
 		return error;
 
-	return refspec_parse(refspec, val);
+	return git_refspec__parse(refspec, val, is_fetch);
 }
 
 static int download_tags_value(git_remote *remote, git_config *cfg)
@@ -106,7 +80,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	}
 
 	if (fetch != NULL) {
-		if (refspec_parse(&remote->fetch, fetch) < 0)
+		if (git_refspec__parse(&remote->fetch, fetch, true) < 0)
 			goto on_error;
 	}
 
@@ -182,7 +156,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(config, &remote->fetch, git_buf_cstr(&buf));
+	error = parse_remote_refspec(config, &remote->fetch, git_buf_cstr(&buf), true);
 	if (error == GIT_ENOTFOUND)
 		error = 0;
 
@@ -197,7 +171,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(config, &remote->push, git_buf_cstr(&buf));
+	error = parse_remote_refspec(config, &remote->push, git_buf_cstr(&buf), false);
 	if (error == GIT_ENOTFOUND)
 		error = 0;
 
@@ -345,11 +319,10 @@ int git_remote_set_fetchspec(git_remote *remote, const char *spec)
 
 	assert(remote && spec);
 
-	if (refspec_parse(&refspec, spec) < 0)
+	if (git_refspec__parse(&refspec, spec, true) < 0)
 		return -1;
 
-	git__free(remote->fetch.src);
-	git__free(remote->fetch.dst);
+	git_refspec__free(&remote->fetch);
 	remote->fetch.src = refspec.src;
 	remote->fetch.dst = refspec.dst;
 
@@ -368,11 +341,10 @@ int git_remote_set_pushspec(git_remote *remote, const char *spec)
 
 	assert(remote && spec);
 
-	if (refspec_parse(&refspec, spec) < 0)
+	if (git_refspec__parse(&refspec, spec, false) < 0)
 		return -1;
 
-	git__free(remote->push.src);
-	git__free(remote->push.dst);
+	git_refspec__free(&remote->push);
 	remote->push.src = refspec.src;
 	remote->push.dst = refspec.dst;
 
