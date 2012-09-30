@@ -47,6 +47,8 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 	git_buf_free(&buf);
 	if (!error && !strcmp(val, "--no-tags"))
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+	else if (!error && !strcmp(val, "--tags"))
+		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 
 	if (error == GIT_ENOTFOUND)
 		error = 0;
@@ -455,7 +457,6 @@ int git_remote_update_tips(git_remote *remote)
 	git_remote_head *head;
 	git_reference *ref;
 	struct git_refspec *spec;
-	char *tagstr = "refs/tags/*:refs/tags/*";
 	git_refspec tagspec;
 
 	assert(remote);
@@ -469,7 +470,7 @@ int git_remote_update_tips(git_remote *remote)
 	if (git_repository_odb(&odb, remote->repo) < 0)
 		return -1;
 
-	if (git_refspec__parse(&tagspec, tagstr, true) < 0)
+	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
 		return -1;
 
 	/* HEAD is only allowed to be the first in the list */
@@ -500,7 +501,9 @@ int git_remote_update_tips(git_remote *remote)
 			if (git_refspec_transform_r(&refname, spec, head->name) < 0)
 				goto on_error;
 		} else if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
-			autotag = 1;
+
+			if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_ALL)
+				autotag = 1;
 
 			if (!git_refspec_src_matches(&tagspec, head->name))
 				continue;

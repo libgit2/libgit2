@@ -21,7 +21,7 @@
 
 struct filter_payload {
 	git_remote *remote;
-	const git_refspec *spec;
+	const git_refspec *spec, *tagspec;
 	git_odb *odb;
 	int found_head;
 };
@@ -29,18 +29,21 @@ struct filter_payload {
 static int filter_ref__cb(git_remote_head *head, void *payload)
 {
 	struct filter_payload *p = payload;
+	int match = 0;
 
-	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0) {
+	if (!git_reference_is_valid_name(head->name))
+		return 0;
+
+	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0)
 		p->found_head = 1;
-	} else {
-		/* If it doesn't match the refpec, we don't want it */
-		if (!git_refspec_src_matches(p->spec, head->name))
-			return 0;
+	else if (git_refspec_src_matches(p->spec, head->name))
+			match = 1;
+	else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL &&
+		 git_refspec_src_matches(p->tagspec, head->name))
+			match = 1;
 
-		/* Don't even try to ask for the annotation target */
-		if (!git__suffixcmp(head->name, "^{}"))
-			return 0;
-	}
+	if (!match)
+		return 0;
 
 	/* If we have the object, mark it so we don't ask for it */
 	if (git_odb_exists(p->odb, &head->oid))
@@ -54,8 +57,11 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 static int filter_wants(git_remote *remote)
 {
 	struct filter_payload p;
+	git_refspec tagspec;
 
 	git_vector_clear(&remote->refs);
+	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
+		return -1;
 
 	/*
 	 * The fetch refspec can be NULL, and what this means is that the
@@ -64,6 +70,7 @@ static int filter_wants(git_remote *remote)
 	 * HEAD, which will be stored in FETCH_HEAD after the fetch.
 	 */
 	p.spec = git_remote_fetchspec(remote);
+	p.tagspec = &tagspec;
 	p.found_head = 0;
 	p.remote = remote;
 

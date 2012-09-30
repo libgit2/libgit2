@@ -24,7 +24,7 @@ struct git_remote {
 	git_repository *repo;
 	git_remote_callbacks callbacks;
 	unsigned int need_pack:1,
-		download_tags:2, /* There are three possible values */
+		download_tags:2, /* There are four possible values */
 		check_cert:1;
 };
 
