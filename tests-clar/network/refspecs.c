@@ -8,6 +8,7 @@ static void assert_refspec(unsigned int direction, const char *input, bool is_ex
 	int error;
 
 	error = git_refspec__parse(&refspec, input, direction == GIT_DIR_FETCH);
+	git_refspec__free(&refspec);
 
 	if (is_expected_to_be_valid)
 		cl_assert_equal_i(0, error);

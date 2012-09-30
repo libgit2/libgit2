@@ -18,33 +18,7 @@
 
 #include <regex.h>
 
-static int refspec_parse(git_refspec *refspec, const char *str)
-{
-	char *delim;
-
-	memset(refspec, 0x0, sizeof(git_refspec));
-
-	if (*str == '+') {
-		refspec->force = 1;
-		str++;
-	}
-
-	delim = strchr(str, ':');
-	if (delim == NULL) {
-		giterr_set(GITERR_NET, "Invalid refspec, missing ':'");
-		return -1;
-	}
-
-	refspec->src = git__strndup(str, delim - str);
-	GITERR_CHECK_ALLOC(refspec->src);
-
-	refspec->dst = git__strdup(delim + 1);
-	GITERR_CHECK_ALLOC(refspec->dst);
-
-	return 0;
-}
-
-static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const char *var)
+static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const char *var, bool is_fetch)
 {
 	int error;
 	const char *val;
@@ -52,7 +26,34 @@ static int parse_remote_refspec(git_config *cfg, git_refspec *refspec, const cha
 	if ((error = git_config_get_string(&val, cfg, var)) < 0)
 		return error;
 
-	return refspec_parse(refspec, val);
+	return git_refspec__parse(refspec, val, is_fetch);
+}
+
+static int download_tags_value(git_remote *remote, git_config *cfg)
+{
+	const char *val;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_UNSET)
+		return 0;
+
+	/* This is the default, let's see if we need to change it */
+	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+	if (git_buf_printf(&buf, "remote.%s.tagopt", remote->name) < 0)
+		return -1;
+
+	error = git_config_get_string(&val, cfg, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+	if (!error && !strcmp(val, "--no-tags"))
+		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+	else if (!error && !strcmp(val, "--tags"))
+		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+
+	if (error == GIT_ENOTFOUND)
+		error = 0;
+
+	return error;
 }
 
 int git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
@@ -81,7 +82,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	}
 
 	if (fetch != NULL) {
-		if (refspec_parse(&remote->fetch, fetch) < 0)
+		if (git_refspec__parse(&remote->fetch, fetch, true) < 0)
 			goto on_error;
 	}
 
@@ -157,7 +158,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(config, &remote->fetch, git_buf_cstr(&buf));
+	error = parse_remote_refspec(config, &remote->fetch, git_buf_cstr(&buf), true);
 	if (error == GIT_ENOTFOUND)
 		error = 0;
 
@@ -172,7 +173,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	error = parse_remote_refspec(config, &remote->push, git_buf_cstr(&buf));
+	error = parse_remote_refspec(config, &remote->push, git_buf_cstr(&buf), false);
 	if (error == GIT_ENOTFOUND)
 		error = 0;
 
@@ -180,6 +181,9 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		error = -1;
 		goto cleanup;
 	}
+
+	if (download_tags_value(remote, config) < 0)
+		goto cleanup;
 
 	*out = remote;
 
@@ -317,11 +321,10 @@ int git_remote_set_fetchspec(git_remote *remote, const char *spec)
 
 	assert(remote && spec);
 
-	if (refspec_parse(&refspec, spec) < 0)
+	if (git_refspec__parse(&refspec, spec, true) < 0)
 		return -1;
 
-	git__free(remote->fetch.src);
-	git__free(remote->fetch.dst);
+	git_refspec__free(&remote->fetch);
 	remote->fetch.src = refspec.src;
 	remote->fetch.dst = refspec.dst;
 
@@ -340,11 +343,10 @@ int git_remote_set_pushspec(git_remote *remote, const char *spec)
 
 	assert(remote && spec);
 
-	if (refspec_parse(&refspec, spec) < 0)
+	if (git_refspec__parse(&refspec, spec, false) < 0)
 		return -1;
 
-	git__free(remote->push.src);
-	git__free(remote->push.dst);
+	git_refspec__free(&remote->push);
 	remote->push.src = refspec.src;
 	remote->push.dst = refspec.dst;
 
@@ -445,25 +447,35 @@ int git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats 
 
 int git_remote_update_tips(git_remote *remote)
 {
-	int error = 0;
+	int error = 0, autotag;
 	unsigned int i = 0;
 	git_buf refname = GIT_BUF_INIT;
 	git_oid old;
+	git_pkt *pkt;
+	git_odb *odb;
 	git_vector *refs;
 	git_remote_head *head;
 	git_reference *ref;
 	struct git_refspec *spec;
+	git_refspec tagspec;
 
 	assert(remote);
 
-	refs = &remote->refs;
+	refs = &remote->transport->refs;
 	spec = &remote->fetch;
 
 	if (refs->length == 0)
 		return 0;
 
+	if (git_repository_odb(&odb, remote->repo) < 0)
+		return -1;
+
+	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
+		return -1;
+
 	/* HEAD is only allowed to be the first in the list */
-	head = refs->contents[0];
+	pkt = refs->contents[0];
+	head = &((git_pkt_ref *)pkt)->head;
 	if (!strcmp(head->name, GIT_HEAD_FILE)) {
 		if (git_reference_create_oid(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1) < 0)
 			return -1;
@@ -473,10 +485,38 @@ int git_remote_update_tips(git_remote *remote)
 	}
 
 	for (; i < refs->length; ++i) {
-		head = refs->contents[i];
+		autotag = 0;
+		git_pkt *pkt = refs->contents[i];
 
-		if (git_refspec_transform_r(&refname, spec, head->name) < 0)
-			goto on_error;
+		if (pkt->type == GIT_PKT_REF)
+			head = &((git_pkt_ref *)pkt)->head;
+		else
+			continue;
+
+		/* Ignore malformed ref names (which also saves us from tag^{} */
+		if (!git_reference_is_valid_name(head->name))
+			continue;
+
+		if (git_refspec_src_matches(spec, head->name)) {
+			if (git_refspec_transform_r(&refname, spec, head->name) < 0)
+				goto on_error;
+		} else if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
+
+			if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_ALL)
+				autotag = 1;
+
+			if (!git_refspec_src_matches(&tagspec, head->name))
+				continue;
+
+			git_buf_clear(&refname);
+			if (git_buf_puts(&refname, head->name) < 0)
+				goto on_error;
+		} else {
+			continue;
+		}
+
+		if (autotag && !git_odb_exists(odb, &head->oid))
+			continue;
 
 		error = git_reference_name_to_oid(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
@@ -488,7 +528,9 @@ int git_remote_update_tips(git_remote *remote)
 		if (!git_oid_cmp(&old, &head->oid))
 			continue;
 
-		if (git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, 1) < 0)
+		/* In autotag mode, don't overwrite any locally-existing tags */
+		error = git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, !autotag);
+		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
 
 		git_reference_free(ref);
@@ -499,10 +541,12 @@ int git_remote_update_tips(git_remote *remote)
 		}
 	}
 
+	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return 0;
 
 on_error:
+	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return -1;
 
@@ -536,10 +580,8 @@ void git_remote_free(git_remote *remote)
 
 	git_vector_free(&remote->refs);
 
-	git__free(remote->fetch.src);
-	git__free(remote->fetch.dst);
-	git__free(remote->push.src);
-	git__free(remote->push.dst);
+	git_refspec__free(&remote->fetch);
+	git_refspec__free(&remote->push);
 	git__free(remote->url);
 	git__free(remote->pushurl);
 	git__free(remote->name);
@@ -654,4 +696,14 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 		remote->transport->progress_cb = remote->callbacks.progress;
 		remote->transport->cb_data = remote->callbacks.data;
 	}
+}
+
+int git_remote_autotag(git_remote *remote)
+{
+	return remote->download_tags;
+}
+
+void git_remote_set_autotag(git_remote *remote, int value)
+{
+	remote->download_tags = value;
 }

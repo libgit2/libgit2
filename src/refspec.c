@@ -125,35 +125,10 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	return -1;
 }
 
-int git_refspec_parse(git_refspec *refspec, const char *str)
+void git_refspec__free(git_refspec *refspec)
 {
-	char *delim;
-
-	memset(refspec, 0x0, sizeof(git_refspec));
-
-	if (*str == '+') {
-		refspec->force = 1;
-		str++;
-	}
-
-	delim = strchr(str, ':');
-	if (delim == NULL) {
-		refspec->src = git__strdup(str);
-		GITERR_CHECK_ALLOC(refspec->src);
-		return 0;
-	}
-
-	refspec->src = git__strndup(str, delim - str);
-	GITERR_CHECK_ALLOC(refspec->src);
-
-	refspec->dst = git__strdup(delim + 1);
-	if (refspec->dst == NULL) {
-		git__free(refspec->src);
-		refspec->src = NULL;
-		return -1;
-	}
-
-	return 0;
+	git__free(refspec->src);
+	git__free(refspec->dst);
 }
 
 const char *git_refspec_src(const git_refspec *refspec)
