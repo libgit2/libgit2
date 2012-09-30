@@ -147,3 +147,18 @@ void test_refs_create__oid_unknown(void)
 	/* Ensure the reference can't be looked-up... */
 	cl_git_fail(git_reference_lookup(&looked_up_ref, g_repo, new_head));
 }
+
+void test_refs_create__propagate_eexists(void)
+{
+	int error;
+	git_oid oid;
+	git_reference *ref;
+
+	/* Make sure it works for oid and for symbolic both */
+	git_oid_fromstr(&oid, current_master_tip);
+	error = git_reference_create_oid(&ref, g_repo, current_head_target, &oid, false);
+	cl_assert(error == GIT_EEXISTS);
+
+	error = git_reference_create_symbolic(&ref, g_repo, "HEAD", current_head_target, false);
+	cl_assert(error == GIT_EEXISTS);
+}
