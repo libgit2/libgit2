@@ -13,6 +13,8 @@ static void assert_refspec(unsigned int direction, const char *input, bool is_ex
 		cl_assert_equal_i(0, error);
 	else
 		cl_assert_equal_i(GIT_ERROR, error);
+
+	git_refspec_clear(&refspec);
 }
 
 void test_network_refspecs__parsing(void)

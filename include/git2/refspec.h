@@ -28,6 +28,13 @@ GIT_BEGIN_DECL
 GIT_EXTERN(int) git_refspec_parse(git_refspec *refspec, const char *str);
 
 /**
+ * Release memory associated with a refspec object
+ *
+ * @param refspec pointer to the refspec that was filled with parse
+ */
+GIT_EXTERN(void) git_refspec_clear(git_refspec *refspec);
+
+/**
  * Get the source specifier
  *
  * @param refspec the refspec
