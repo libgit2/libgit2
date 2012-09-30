@@ -885,10 +885,10 @@ any of the accessible config file locations (system, global, local).</p>
       <td class=code>
         <div class='highlight'><pre>  <span class="n"><a name="git_config_open_ondisk-3" class="fnlink" href="../../#HEAD/group/config/git_config_open_ondisk">git_config_open_ondisk</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;~/.gitconfig&quot;</span><span class="p">);</span>
 
-  <span class="n"><a name="git_config_get_int32-4" class="fnlink" href="../../#HEAD/group/config/git_config_get_int32">git_config_get_int32</a></span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;help.autocorrect&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">j</span><span class="p">);</span>
+  <span class="n"><a name="git_config_get_int32-4" class="fnlink" href="../../#HEAD/group/config/git_config_get_int32">git_config_get_int32</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">j</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;help.autocorrect&quot;</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Autocorrect: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">j</span><span class="p">);</span>
 
-  <span class="n"><a name="git_config_get_string-5" class="fnlink" href="../../#HEAD/group/config/git_config_get_string">git_config_get_string</a></span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;user.email&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">email</span><span class="p">);</span>
+  <span class="n"><a name="git_config_get_string-5" class="fnlink" href="../../#HEAD/group/config/git_config_get_string">git_config_get_string</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">email</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;user.email&quot;</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Email: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">email</span><span class="p">);</span></pre></div>
       </td>
     </tr>
