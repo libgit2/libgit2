@@ -437,10 +437,10 @@ int main (int argc, char** argv)
   // Open a config object so we can read global values from it.
   git_config_open_ondisk(&cfg, "~/.gitconfig");
 
-  git_config_get_int32(cfg, "help.autocorrect", &j);
+  git_config_get_int32(&j, cfg, "help.autocorrect");
   printf("Autocorrect: %d\n", j);
 
-  git_config_get_string(cfg, "user.email", &email);
+  git_config_get_string(&email, cfg, "user.email");
   printf("Email: %s\n", email);
 
   // Finally, when you're done with the repository, you can free it as well.
