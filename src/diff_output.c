@@ -1366,7 +1366,7 @@ int git_diff_patch_num_lines_in_hunk(
 	if (hunk_idx >= patch->hunks_size)
 		return GIT_ENOTFOUND;
 	else
-		return patch->hunks[hunk_idx].line_count;
+		return (int)patch->hunks[hunk_idx].line_count;
 }
 
 int git_diff_patch_get_line_in_hunk(
