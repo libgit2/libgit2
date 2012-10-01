@@ -485,8 +485,8 @@ int git_remote_update_tips(git_remote *remote)
 	}
 
 	for (; i < refs->length; ++i) {
-		autotag = 0;
 		git_pkt *pkt = refs->contents[i];
+		autotag = 0;
 
 		if (pkt->type == GIT_PKT_REF)
 			head = &((git_pkt_ref *)pkt)->head;
