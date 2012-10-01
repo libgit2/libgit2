@@ -1199,6 +1199,7 @@ int git_reference_create_symbolic(
 {
 	char normalized[GIT_REFNAME_MAX];
 	git_reference *ref = NULL;
+	int error;
 
 	if (git_reference__normalize_name_lax(
 		normalized,
@@ -1206,8 +1207,8 @@ int git_reference_create_symbolic(
 		name) < 0)
 			return -1;
 
-	if (reference_can_write(repo, normalized, NULL, force) < 0)
-		return -1;
+	if ((error = reference_can_write(repo, normalized, NULL, force)) < 0)
+		return error;
 
 	if (reference_alloc(&ref, repo, normalized) < 0)
 		return -1;
@@ -1236,6 +1237,7 @@ int git_reference_create_oid(
 	const git_oid *id,
 	int force)
 {
+	int error;
 	git_reference *ref = NULL;
 	char normalized[GIT_REFNAME_MAX];
 
@@ -1245,8 +1247,8 @@ int git_reference_create_oid(
 		name) < 0)
 			return -1;
 
-	if (reference_can_write(repo, normalized, NULL, force) < 0)
-		return -1;
+	if ((error = reference_can_write(repo, normalized, NULL, force)) < 0)
+		return error;
 
 	if (reference_alloc(&ref, repo, name) < 0)
 		return -1;

@@ -19,11 +19,15 @@ struct git_refspec {
 		matching :1;
 };
 
+#define GIT_REFSPEC_TAGS "refs/tags/*:refs/tags/*"
+
 int git_refspec_parse(struct git_refspec *refspec, const char *str);
 int git_refspec__parse(
 	struct git_refspec *refspec,
 	const char *str,
 	bool is_fetch);
+
+void git_refspec__free(git_refspec *refspec);
 
 /**
  * Transform a reference to its target following the refspec's rules,
