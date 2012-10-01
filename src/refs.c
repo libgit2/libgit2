@@ -1610,12 +1610,12 @@ static int ensure_segment_validity(const char *name)
 		prev = *current;
 	}
 
-	return current - name;
+	return (int)(current - name);
 }
 
-static bool is_all_caps_and_underscore(const char *name, int len)
+static bool is_all_caps_and_underscore(const char *name, size_t len)
 {
-	int i;
+	size_t i;
 	char c;
 
 	assert(name && len > 0);
@@ -1667,10 +1667,10 @@ int git_reference__normalize_name(
 
 		if (segment_len > 0) {
 			if (normalize) {
-				int cur_len = git_buf_len(buf);
+				size_t cur_len = git_buf_len(buf);
 
 				git_buf_joinpath(buf, git_buf_cstr(buf), current);
-				git_buf_truncate(buf, 
+				git_buf_truncate(buf,
 					cur_len + segment_len + (segments_count ? 1 : 0));
 
 				if (git_buf_oom(buf))
@@ -1706,7 +1706,7 @@ int git_reference__normalize_name(
 		goto cleanup;
 
 	if ((segments_count == 1 ) &&
-		!(is_all_caps_and_underscore(name, segment_len) ||
+		!(is_all_caps_and_underscore(name, (size_t)segment_len) ||
 			((flags & GIT_REF_FORMAT_REFSPEC_PATTERN) && !strcmp("*", name))))
 			goto cleanup;
 

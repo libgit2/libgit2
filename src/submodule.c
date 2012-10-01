@@ -1474,7 +1474,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 		error = git_diff_workdir_to_index(sm_repo, &opt, &diff);
 
 		if (!error) {
-			int untracked =
+			size_t untracked =
 				git_diff_num_deltas_of_type(diff, GIT_DELTA_UNTRACKED);
 
 			if (untracked > 0)
