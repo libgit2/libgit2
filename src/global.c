@@ -64,6 +64,8 @@ git_global_st *git__global_state(void)
 {
 	void *ptr;
 
+	assert(_tls_init);
+
 	if ((ptr = TlsGetValue(_tls_index)) != NULL)
 		return ptr;
 
@@ -104,6 +106,8 @@ void git_threads_shutdown(void)
 git_global_st *git__global_state(void)
 {
 	void *ptr;
+
+	assert(_tls_init);
 
 	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
 		return ptr;
