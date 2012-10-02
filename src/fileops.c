@@ -418,55 +418,23 @@ static int win32_find_file(git_buf *path, const struct win32_path *root, const c
 	git__free(file_utf16);
 	return 0;
 }
-
-static wchar_t * win32_nextpath(wchar_t * src, wchar_t * dst, size_t maxlen)
+static wchar_t* win32_nextpath(wchar_t *path, wchar_t *buf, size_t buflen)
 {
-	wchar_t * orgsrc;
+	wchar_t term, *base = path;
 
-	while (*src == L';')
-		src++;
+	assert(path && buf && buflen);
 
-	orgsrc = src;
+	term = (*path == L'"') ? *path++ : L';';
 
-	if (!--maxlen)
-		goto nullterm;
+	for (buflen--; *path && *path != term && buflen; buflen--)
+		*buf++ = *path++;
 
-	while (*src && *src != L';')
-	{
-		if (*src != L'"')
-		{
-			*dst++ = *src++;
-			if (!--maxlen)
-			{
-				orgsrc = src;
-				goto nullterm;
-			}
-		}
-		else
-		{
-			src++;
-			while (*src && *src != L'"')
-			{
-				*dst++ = *src++;
-				if (!--maxlen)
-				{
-					orgsrc = src;
-					goto nullterm;
-				}
-			}
+	*buf = L'\0'; /* reserved a byte via initial subtract */
 
-			if (*src)
-				src++;
-		}
-	}
+	while (*path == term || *path == L';')
+		path++;
 
-	while (*src == L';')
-		src++;
-
-nullterm:
-	*dst = 0;
-
-	return (orgsrc != src) ? (wchar_t *)src : NULL;
+	return (path != base) ? path : NULL;
 }
 
 static int win32_find_system_file_using_path(git_buf *path, const char *filename)
