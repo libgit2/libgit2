@@ -198,7 +198,9 @@ cleanup:
 
 int git_remote_save(const git_remote *remote)
 {
+	int error;
 	git_config *config;
+	const char *tagopt = NULL;
 	git_buf buf = GIT_BUF_INIT, value = GIT_BUF_INIT;
 
 	if (git_repository_config__weakptr(&config, remote->repo) < 0)
@@ -257,6 +259,38 @@ int git_remote_save(const git_remote *remote)
 			return -1;
 
 		if (git_config_set_string(config, git_buf_cstr(&buf), git_buf_cstr(&value)) < 0)
+			goto on_error;
+	}
+
+	/*
+	 * What action to take depends on the old and new values. This
+	 * is describes by the table below. tagopt means whether the
+	 * is already a value set in the config
+	 *
+	 *            AUTO     ALL or NONE
+	 *         +-----------------------+
+	 *  tagopt | remove  |     set     |
+	 *         +---------+-------------|
+	 * !tagopt | nothing |     set     |
+	 *         +---------+-------------+
+	 */
+
+	git_buf_clear(&buf);
+	if (git_buf_printf(&buf, "remote.%s.tagopt", remote->name) < 0)
+		goto on_error;
+
+	error = git_config_get_string(&tagopt, config, git_buf_cstr(&buf));
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto on_error;
+
+	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+		if (git_config_set_string(config, git_buf_cstr(&buf), "--tags") < 0)
+			goto on_error;
+	} else if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
+		if (git_config_set_string(config, git_buf_cstr(&buf), "--no-tags") < 0)
+			goto on_error;
+	} else if (tagopt) {
+		if (git_config_delete(config, git_buf_cstr(&buf)) < 0)
 			goto on_error;
 	}
 
