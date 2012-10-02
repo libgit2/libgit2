@@ -32,6 +32,30 @@ GIT_BEGIN_DECL
 /**
  * Flags for diff options.  A combination of these flags can be passed
  * in via the `flags` value in the `git_diff_options`.
+ *
+ * The flags are:
+ *
+ * - GIT_DIFF_NORMAL: normal diff, the default.
+ * - GIT_DIFF_REVERSE: reverse the sides of the diff.
+ * - GIT_DIFF_FORCE_TEXT: treat all as text, no binary attributes / detection.
+ * - GIT_DIFF_IGNORE_WHITESPACE: ignore all whitespace.
+ * - GIT_DIFF_IGNORE_WHITESPACE_CHANGE: ignore changes in amount of whitespace.
+ * - GIT_DIFF_IGNORE_WHITESPACE_EOL: ignore whitespace only at end-of-line.
+ * - GIT_DIFF_IGNORE_SUBMODULES: exclude submodules from diff completely.
+ * - GIT_DIFF_PATIENCE: use "patience diff" algorithm
+ * - GIT_DIFF_INCLUDE_IGNORED: include ignored files in the diff list
+ * - GIT_DIFF_INCLUDE_UNTRACKED: include untracked files in the diff list
+ * - GIT_DIFF_INCLUDE_UNMODIFIED: include unmodified files in the diff list
+ * - GIT_DIFF_RECURSE_UNTRACKED_DIRS: even with the INCLUDE_UNTRACKED flag,
+ *   when am untracked directory is found, only a single entry for the directory
+ *   will be included in the diff list; with this flag, all files under the
+ *   directory will be included, too.
+ * - GIT_DIFF_DISABLE_PATHSPEC_MATCH: if the pathspec is set in the diff
+ *   options, this flags means to interpret it exactly instead of fnmatch.
+ * - GIT_DIFF_DELTAS_ARE_ICASE: use case insensitive filename comparisons
+ * - GIT_DIFF_DONT_SPLIT_TYPECHANGE: normally, a type change between files
+ *   will be converted into a DELETED record for the old file and an ADDED
+ *   record for the new one; this option enabled TYPECHANGE records.
  */
 enum {
 	GIT_DIFF_NORMAL = 0,

@@ -156,71 +156,74 @@ static int checkout_diff_fn(
 {
 	struct checkout_diff_data *data = cb_data;
 	int error = 0;
-	git_checkout_opts *opts;
+	git_checkout_opts *opts = data->checkout_opts;
+	bool do_delete = false, do_checkout_blob = false;
 
 	data->stats->processed = (unsigned int)(data->stats->total * progress);
 
-	git_buf_truncate(data->path, data->workdir_len);
-	if (git_buf_joinpath(data->path, git_buf_cstr(data->path), delta->new_file.path) < 0)
-		return -1;
-
-	opts = data->checkout_opts;
-
 	switch (delta->status) {
 	case GIT_DELTA_UNTRACKED:
-		if (!(opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED))
-			return 0;
-
-		if (!git__suffixcmp(delta->new_file.path, "/"))
-			error = git_futils_rmdir_r(git_buf_cstr(data->path), GIT_DIRREMOVAL_FILES_AND_DIRS);
-		else
-			error = p_unlink(git_buf_cstr(data->path));
+		if ((opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0)
+			do_delete = true;
 		break;
 
 	case GIT_DELTA_MODIFIED:
 	case GIT_DELTA_TYPECHANGE:
 		if (!(opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED)) {
 
-			if ((opts->skipped_notify_cb != NULL)
-				&& (opts->skipped_notify_cb(
+			if (opts->skipped_notify_cb != NULL &&
+				opts->skipped_notify_cb(
 					delta->new_file.path,
 					&delta->old_file.oid,
 					delta->old_file.mode,
-					opts->notify_payload))) {
-						giterr_clear();
-						error = GIT_EUSER;
+					opts->notify_payload) != 0)
+			{
+				giterr_clear();
+				error = GIT_EUSER;
 			}
-		}
-		else
-			error = checkout_blob(
-				data->owner,
-				&delta->old_file.oid,
-				git_buf_cstr(data->path),
-				delta->old_file.mode,
-				data->can_symlink,
-				opts);
 
+			goto cleanup;
+		}
+
+		do_checkout_blob = true;
+
+		if (delta->status == GIT_DELTA_TYPECHANGE)
+			do_delete = true;
 		break;
 
 	case GIT_DELTA_DELETED:
-		if (!(opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING))
-			return 0;
-
-		error = checkout_blob(
-				data->owner,
-				&delta->old_file.oid,
-				git_buf_cstr(data->path),
-				delta->old_file.mode,
-				data->can_symlink,
-				opts);
+		if ((opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING) != 0)
+			do_checkout_blob = true;
 		break;
 
 	default:
 		giterr_set(GITERR_INVALID, "Unexpected status (%d) for path '%s'.",
 			delta->status, delta->new_file.path);
 		error = -1;
+		goto cleanup;
 	}
 
+	git_buf_truncate(data->path, data->workdir_len);
+
+	if ((error = git_buf_joinpath(
+			data->path, git_buf_cstr(data->path), delta->new_file.path)) < 0)
+		goto cleanup;
+
+	if (do_delete &&
+		(error = git_futils_rmdir_r(
+			git_buf_cstr(data->path), GIT_DIRREMOVAL_FILES_AND_DIRS)) < 0)
+		goto cleanup;
+
+	if (do_checkout_blob)
+		error = checkout_blob(
+			data->owner,
+			&delta->old_file.oid,
+			git_buf_cstr(data->path),
+			delta->old_file.mode,
+			data->can_symlink,
+			opts);
+
+cleanup:
 	if (error)
 		data->error = error; /* preserve real error */
 
