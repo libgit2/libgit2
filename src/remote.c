@@ -237,17 +237,14 @@ static int update_config_refspec(
 	if (refspec->src == NULL || refspec->dst == NULL)
 		return 0;
 
-	git_buf_printf(
+	if (git_buf_printf(
 		&name,
 		"remote.%s.%s",
 		remote_name,
-		git_direction == GIT_DIR_FETCH ? "fetch" : "push");
+		git_direction == GIT_DIR_FETCH ? "fetch" : "push") < 0)
+			goto cleanup;
 
-	if (refspec->force)
-		git_buf_putc(&value, '+');
-	git_buf_printf(&value, "%s:%s", refspec->src, refspec->dst);
-	
-	if (git_buf_oom(&name) || git_buf_oom(&value))
+	if (git_refspec__serialize(&value, refspec) < 0)
 		goto cleanup;
 
 	error = git_config_set_string(
