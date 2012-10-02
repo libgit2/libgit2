@@ -24,6 +24,22 @@ static int resize_vector(git_vector *v)
 	return 0;
 }
 
+int git_vector_dup(git_vector *v, git_vector *src, git_vector_cmp cmp)
+{
+	assert(v && src);
+
+	v->_alloc_size = src->length;
+	v->_cmp = cmp;
+	v->length = src->length;
+	v->sorted = src->sorted && cmp == src->_cmp;
+	v->contents = git__malloc(src->length * sizeof(void *));
+	GITERR_CHECK_ALLOC(v->contents);
+
+	memcpy(v->contents, src->contents, src->length * sizeof(void *));
+
+	return 0;
+}
+
 void git_vector_free(git_vector *v)
 {
 	assert(v);
