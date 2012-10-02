@@ -61,7 +61,7 @@ typedef struct {
  * may be used on any `git_config` call to load the
  * global configuration file.
  *
- * This method will not guess the path to the xdr compatible
+ * This method will not guess the path to the xdg compatible
  * config file (.config/git/config).
  *
  * @param global_config_path Buffer of GIT_PATH_MAX length to store the path
@@ -71,21 +71,21 @@ typedef struct {
 GIT_EXTERN(int) git_config_find_global(char *global_config_path, size_t length);
 
 /**
- * Locate the path to the global xdr compatible configuration file
+ * Locate the path to the global xdg compatible configuration file
  *
- * The xdr compatible configuration file is usually
+ * The xdg compatible configuration file is usually
  * located in `$HOME/.config/git/config`.
  *
  * This method will try to guess the full path to that
  * file, if the file exists. The returned path
  * may be used on any `git_config` call to load the
- * global configuration file.
+ * xdg compatible configuration file.
  *
- * @param global_config_path Buffer of GIT_PATH_MAX length to store the path
- * @return 0 if a global configuration file has been
+ * @param xdg_config_path Buffer of GIT_PATH_MAX length to store the path
+ * @return 0 if a xdg compatible configuration file has been
  *	found. Its path will be stored in `buffer`.
  */
-GIT_EXTERN(int) git_config_find_xdr(char *global_config_path, size_t length);
+GIT_EXTERN(int) git_config_find_xdg(char *xdg_config_path, size_t length);
 
 /**
  * Locate the path to the system configuration file

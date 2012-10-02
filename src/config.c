@@ -454,7 +454,7 @@ int git_config_find_global_r(git_buf *path)
 	return error;
 }
 
-int git_config_find_xdr_r(git_buf *path)
+int git_config_find_xdg_r(git_buf *path)
 {
 	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
 
@@ -483,10 +483,10 @@ int git_config_find_global(char *global_config_path, size_t length)
 	return 0;
 }
 
-int git_config_find_xdr(char *xdr_config_path, size_t length)
+int git_config_find_xdg(char *xdg_config_path, size_t length)
 {
 	git_buf path  = GIT_BUF_INIT;
-	int ret = git_config_find_xdr_r(&path);
+	int ret = git_config_find_xdg_r(&path);
 
 	if (ret < 0) {
 		git_buf_free(&path);
@@ -500,7 +500,7 @@ int git_config_find_xdr(char *xdr_config_path, size_t length)
 		return -1;
 	}
 
-	git_buf_copy_cstr(xdr_config_path, length, &path);
+	git_buf_copy_cstr(xdg_config_path, length, &path);
 	git_buf_free(&path);
 	return 0;
 }
@@ -543,7 +543,7 @@ int git_config_open_default(git_config **out)
 	if (!error && !git_config_find_global_r(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr, 3);
 
-	if (!error && !git_config_find_xdr_r(&buf))
+	if (!error && !git_config_find_xdg_r(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr, 2);
 
 	if (!error && !git_config_find_system_r(&buf))
