@@ -53,12 +53,14 @@ fail:
 }
 
 int git_attr_file__parse_buffer(
-	git_repository *repo, const char *buffer, git_attr_file *attrs)
+	git_repository *repo, void *parsedata, const char *buffer, git_attr_file *attrs)
 {
 	int error = 0;
 	const char *scan = NULL;
 	char *context = NULL;
 	git_attr_rule *rule = NULL;
+
+	GIT_UNUSED(parsedata);
 
 	assert(buffer && attrs);
 
@@ -123,7 +125,7 @@ int git_attr_file__new_and_load(
 
 	if (!(error = git_futils_readbuffer(&content, path)))
 		error = git_attr_file__parse_buffer(
-			NULL, git_buf_cstr(&content), *attrs_ptr);
+			NULL, NULL, git_buf_cstr(&content), *attrs_ptr);
 
 	git_buf_free(&content);
 
@@ -207,16 +209,17 @@ bool git_attr_fnmatch__match(
 	const git_attr_path *path)
 {
 	int fnm;
+	int icase_flags = (match->flags & GIT_ATTR_FNMATCH_ICASE) ? FNM_CASEFOLD : 0;
 
 	if (match->flags & GIT_ATTR_FNMATCH_DIRECTORY && !path->is_dir)
 		return false;
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH)
-		fnm = p_fnmatch(match->pattern, path->path, FNM_PATHNAME);
+		fnm = p_fnmatch(match->pattern, path->path, FNM_PATHNAME | icase_flags);
 	else if (path->is_dir)
-		fnm = p_fnmatch(match->pattern, path->basename, FNM_LEADING_DIR);
+		fnm = p_fnmatch(match->pattern, path->basename, FNM_LEADING_DIR | icase_flags);
 	else
-		fnm = p_fnmatch(match->pattern, path->basename, 0);
+		fnm = p_fnmatch(match->pattern, path->basename, icase_flags);
 
 	return (fnm == FNM_NOMATCH) ? false : true;
 }

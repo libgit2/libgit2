@@ -34,6 +34,8 @@ struct git_index {
 	git_tree_cache *tree;
 
 	git_vector unmerged;
+
+	git_vector_cmp entries_search;
 };
 
 extern void git_index__init_entry_from_stat(struct stat *st, git_index_entry *entry);

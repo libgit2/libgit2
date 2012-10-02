@@ -9,6 +9,11 @@
 
 #include "common.h"
 #include "git2/index.h"
+#include "vector.h"
+
+#define ITERATOR_PREFIXCMP(ITER, STR, PREFIX)	(((ITER).ignore_case) ? \
+	git__prefixcmp_icase((STR), (PREFIX)) : \
+	git__prefixcmp((STR), (PREFIX)))
 
 typedef struct git_iterator git_iterator;
 
@@ -16,7 +21,8 @@ typedef enum {
 	GIT_ITERATOR_EMPTY = 0,
 	GIT_ITERATOR_TREE = 1,
 	GIT_ITERATOR_INDEX = 2,
-	GIT_ITERATOR_WORKDIR = 3
+	GIT_ITERATOR_WORKDIR = 3,
+	GIT_ITERATOR_SPOOLANDSORT = 4
 } git_iterator_type_t;
 
 struct git_iterator {
@@ -29,6 +35,7 @@ struct git_iterator {
 	int (*seek)(git_iterator *, const char *prefix);
 	int (*reset)(git_iterator *);
 	void (*free)(git_iterator *);
+	unsigned int ignore_case:1;
 };
 
 extern int git_iterator_for_nothing(git_iterator **iter);
@@ -63,6 +70,17 @@ GIT_INLINE(int) git_iterator_for_workdir(
 	return git_iterator_for_workdir_range(iter, repo, NULL, NULL);
 }
 
+extern int git_iterator_spoolandsort_range(
+	git_iterator **iter, git_iterator *towrap,
+	git_vector_cmp comparer, bool ignore_case,
+	const char *start, const char *end);
+
+GIT_INLINE(int) git_iterator_spoolandsort(
+	git_iterator **iter, git_iterator *towrap,
+	git_vector_cmp comparer, bool ignore_case)
+{
+	return git_iterator_spoolandsort_range(iter, towrap, comparer, ignore_case, NULL, NULL);
+}
 
 /* Entry is not guaranteed to be fully populated.  For a tree iterator,
  * we will only populate the mode, oid and path, for example.  For a workdir

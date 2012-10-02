@@ -24,6 +24,7 @@ typedef struct git_vector {
 int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
 void git_vector_clear(git_vector *v);
+int git_vector_dup(git_vector *v, git_vector *src, git_vector_cmp cmp);
 void git_vector_swap(git_vector *a, git_vector *b);
 
 void git_vector_sort(git_vector *v);

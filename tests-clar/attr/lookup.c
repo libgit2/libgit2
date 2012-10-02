@@ -252,7 +252,7 @@ void test_attr_lookup__from_buffer(void)
 
 	cl_git_pass(git_attr_file__new(&file, 0, NULL, NULL));
 
-	cl_git_pass(git_attr_file__parse_buffer(NULL, "a* foo\nabc bar\n* baz", file));
+	cl_git_pass(git_attr_file__parse_buffer(NULL, NULL, "a* foo\nabc bar\n* baz", file));
 
 	cl_assert(file->rules.length == 3);
 

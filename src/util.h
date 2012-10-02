@@ -70,7 +70,14 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 
 #define git__free(ptr) free(ptr)
 
+#define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \
+	((IGNORE_CASE) ? strcasecmp((STR1), (STR2)) : strcmp((STR1), (STR2)))
+
+#define CASESELECT(IGNORE_CASE, ICASE, CASE) \
+	((IGNORE_CASE) ? (ICASE) : (CASE))
+
 extern int git__prefixcmp(const char *str, const char *prefix);
+extern int git__prefixcmp_icase(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
 extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
