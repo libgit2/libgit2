@@ -86,6 +86,11 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 			goto on_error;
 	}
 
+	/* A remote without a name doesn't download tags */
+	if (!name) {
+		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+	}
+
 	*out = remote;
 	return 0;
 
