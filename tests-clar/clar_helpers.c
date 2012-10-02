@@ -8,8 +8,8 @@ void clar_on_init(void)
 
 void clar_on_shutdown(void)
 {
-	git_threads_shutdown();
 	giterr_clear();
+	git_threads_shutdown();
 }
 
 void cl_git_mkfile(const char *filename, const char *content)
