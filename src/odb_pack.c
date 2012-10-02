@@ -24,7 +24,6 @@ struct pack_backend {
 	git_vector packs;
 	struct git_pack_file *last_found;
 	char *pack_folder;
-	time_t pack_folder_mtime;
 };
 
 /**
@@ -237,6 +236,7 @@ static int packfile_refresh_all(struct pack_backend *backend)
 {
 	int error;
 	struct stat st;
+	git_buf path = GIT_BUF_INIT;
 
 	if (backend->pack_folder == NULL)
 		return 0;
@@ -244,37 +244,32 @@ static int packfile_refresh_all(struct pack_backend *backend)
 	if (p_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
 		return git_odb__error_notfound("failed to refresh packfiles", NULL);
 
-	if (st.st_mtime != backend->pack_folder_mtime) {
-		git_buf path = GIT_BUF_INIT;
-		git_buf_sets(&path, backend->pack_folder);
+	git_buf_sets(&path, backend->pack_folder);
 
-		/* reload all packs */
-		error = git_path_direach(&path, packfile_load__cb, (void *)backend);
+	/* reload all packs */
+	error = git_path_direach(&path, packfile_load__cb, (void *)backend);
 
-		git_buf_free(&path);
+	git_buf_free(&path);
 
-		if (error < 0)
-			return error;
+	if (error < 0)
+		return error;
 
-		git_vector_sort(&backend->packs);
-		backend->pack_folder_mtime = st.st_mtime;
-	}
+	git_vector_sort(&backend->packs);
 
 	return 0;
 }
 
-static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backend, const git_oid *oid)
+static int pack_entry_find_inner(
+	struct git_pack_entry *e,
+	struct pack_backend *backend,
+	const git_oid *oid,
+	struct git_pack_file *last_found)
 {
-	int error;
 	unsigned int i;
-	struct git_pack_file *last_found = backend->last_found;
 
 	if (last_found &&
 		git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
-
-	if ((error = packfile_refresh_all(backend)) < 0)
-		return error;
 
 	for (i = 0; i < backend->packs.length; ++i) {
 		struct git_pack_file *p;
@@ -289,22 +284,38 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 		}
 	}
 
+	return -1;
+}
+
+static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backend, const git_oid *oid)
+{
+	int error;
+	struct git_pack_file *last_found = backend->last_found;
+
+	if (backend->last_found &&
+		git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
+		return 0;
+
+	if (!pack_entry_find_inner(e, backend, oid, last_found))
+		return 0;
+	if ((error = packfile_refresh_all(backend)) < 0)
+		return error;
+	if (!pack_entry_find_inner(e, backend, oid, last_found))
+		return 0;
+
 	return git_odb__error_notfound("failed to find pack entry", oid);
 }
 
-static int pack_entry_find_prefix(
-	struct git_pack_entry *e,
-	struct pack_backend *backend,
-	const git_oid *short_oid,
-	size_t len)
+static unsigned pack_entry_find_prefix_inner(
+		struct git_pack_entry *e,
+		struct pack_backend *backend,
+		const git_oid *short_oid,
+		size_t len,
+		struct git_pack_file *last_found)
 {
 	int error;
 	unsigned int i;
 	unsigned found = 0;
-	struct git_pack_file *last_found = backend->last_found;
-
-	if ((error = packfile_refresh_all(backend)) < 0)
-		return error;
 
 	if (last_found) {
 		error = git_pack_entry_find(e, last_found, short_oid, len);
@@ -331,6 +342,26 @@ static int pack_entry_find_prefix(
 		}
 	}
 
+	return found;
+}
+
+static int pack_entry_find_prefix(
+	struct git_pack_entry *e,
+	struct pack_backend *backend,
+	const git_oid *short_oid,
+	size_t len)
+{
+	unsigned found = 0;
+	int error;
+	struct git_pack_file *last_found = backend->last_found;
+
+	if ((found = pack_entry_find_prefix_inner(e, backend, short_oid, len, last_found)) > 0)
+		goto cleanup;
+	if ((error = packfile_refresh_all(backend)) < 0)
+		return error;
+	found = pack_entry_find_prefix_inner(e, backend, short_oid, len, last_found);
+
+cleanup:
 	if (!found)
 		return git_odb__error_notfound("no matching pack entry for prefix", short_oid);
 	else if (found > 1)
@@ -515,7 +546,6 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 
 	if (git_path_isdir(git_buf_cstr(&path)) == true) {
 		backend->pack_folder = git_buf_detach(&path);
-		backend->pack_folder_mtime = 0;
 	}
 
 	backend->parent.read = &pack_backend__read;
