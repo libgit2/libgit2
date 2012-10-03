@@ -347,6 +347,14 @@ GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
  */
 GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
 
+/**
+ * Get the repository this index relates to
+ *
+ * @param index The index
+ * @return A pointer to the repository
+ */
+GIT_EXTERN(git_repository *) git_index_owner(const git_index *index);
+
 /** @} */
 GIT_END_DECL
 #endif
