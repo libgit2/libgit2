@@ -188,7 +188,10 @@ static int retrieve_reflog_path(git_buf *path, git_reference *ref)
 
 static int create_new_reflog_file(const char *filepath)
 {
-	int fd;
+	int fd, error;
+
+	if ((error = git_futils_mkpath2file(filepath, GIT_REFLOG_DIR_MODE)) < 0)
+		return error;
 
 	if ((fd = p_open(filepath,
 			O_WRONLY | O_CREAT | O_TRUNC,
