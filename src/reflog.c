@@ -166,6 +166,9 @@ void git_reflog_free(git_reflog *reflog)
 	unsigned int i;
 	git_reflog_entry *entry;
 
+	if (reflog == NULL)
+		return;
+
 	for (i=0; i < reflog->entries.length; i++) {
 		entry = git_vector_get(&reflog->entries, i);
 
