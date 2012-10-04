@@ -62,6 +62,46 @@ GIT_EXTERN(int) git_stash_save(
 	const char *message,
 	uint32_t flags);
 
+/**
+ * When iterating over all the stashed states, callback that will be
+ * issued per entry.
+ *
+ * @param index The position within the stash list. 0 points to the
+ * most recent stashed state.
+ *
+ * @param message The stash message.
+ *
+ * @param stash_oid The commit oid of the stashed state.
+ *
+ * @param payload Extra parameter to callback function.
+ *
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+typedef int (*stash_cb)(
+	size_t index,
+	const char* message,
+	const git_oid *stash_oid,
+	void *payload);
+
+/**
+ * Loop over all the stashed states and issue a callback for each one.
+ *
+ * If the callback returns a non-zero value, this will stop looping.
+ *
+ * @param repo Repository where to find the stash.
+ *
+ * @param callabck Callback to invoke per found stashed state. The most recent
+ * stash state will be enumerated first.
+ *
+ * @param payload Extra parameter to callback function.
+ *
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_stash_foreach(
+	git_repository *repo,
+	stash_cb callback,
+	void *payload);
+
 /** @} */
 GIT_END_DECL
 #endif
