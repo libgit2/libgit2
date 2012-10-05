@@ -267,6 +267,47 @@ static int get_blob_content(
 	return diff_delta_is_binary_by_content(ctxt, delta, file, map);
 }
 
+static int get_workdir_sm_content(
+	diff_context *ctxt,
+	git_diff_file *file,
+	git_map *map)
+{
+	int error = 0;
+	git_buf content = GIT_BUF_INIT;
+	git_submodule* sm = NULL;
+	const git_oid* sm_head = NULL;
+	unsigned int sm_status = 0;
+	const char* sm_status_text = "";
+	char oidstr[GIT_OID_HEXSZ+1];
+
+	if ((error = git_submodule_lookup(&sm, ctxt->repo, file->path)) < 0) {
+		return error;
+	}
+
+	if ((sm_head = git_submodule_head_oid(sm)) == NULL) {
+		giterr_set(GITERR_SUBMODULE, "Cannot find head of submodule '%s'", file->path);
+		return -1;
+	}
+
+	if ((error = git_submodule_status(&sm_status, sm)) < 0) {
+		return -1;
+	}
+	if (!GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)) {
+		sm_status_text = "-dirty";
+	}
+
+	git_oid_fmt(oidstr, sm_head);
+	oidstr[GIT_OID_HEXSZ] = 0;
+	git_buf_printf(&content, "Subproject commit %s%s\n", oidstr, sm_status_text );
+
+	map->data = git_buf_detach(&content);
+	map->len = strlen(map->data);
+
+	file->flags |= GIT_DIFF_FILE_FREE_DATA;
+
+	return 0;
+}
+
 static int get_workdir_content(
 	diff_context *ctxt,
 	git_diff_delta *delta,
@@ -278,41 +319,7 @@ static int get_workdir_content(
 	const char *wd = git_repository_workdir(ctxt->repo);
 
 	if (file->mode == GIT_FILEMODE_COMMIT)
-	{
-		git_buf content = GIT_BUF_INIT;
-		git_submodule* sm = NULL;
-		const git_oid* sm_head = NULL;
-		unsigned int sm_status = 0;
-		const char* sm_status_text = "";
-		char oidstr[GIT_OID_HEXSZ+1];
-
-		if ((error = git_submodule_lookup(&sm, ctxt->repo, file->path)) < 0) {
-			return error;
-		}
-
-		if ((sm_head = git_submodule_head_oid(sm)) == NULL) {
-			giterr_set(GITERR_SUBMODULE, "Cannot find head of submodule '%s'", file->path);
-			return -1;
-		}
-
-		if ((error = git_submodule_status(&sm_status, sm)) < 0) {
-			return -1;
-		}
-		if (!GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)) {
-			sm_status_text = "-dirty";
-		}
-
-		git_oid_fmt(oidstr, sm_head);
-		oidstr[GIT_OID_HEXSZ] = 0;
-		git_buf_printf(&content, "Subproject commit %s%s\n", oidstr, sm_status_text );
-
-		map->data = git_buf_detach(&content);
-		map->len = strlen(map->data);
-
-		file->flags |= GIT_DIFF_FILE_FREE_DATA;
-
-		return 0;
-	}
+		return get_workdir_sm_content(ctxt, file, map);
 
 	if (git_buf_joinpath(&path, wd, file->path) < 0)
 		return -1;
