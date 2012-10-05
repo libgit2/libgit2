@@ -1038,14 +1038,14 @@ static int print_patch_file(
 	if (git_buf_oom(pi->buf))
 		return -1;
 
-    if (pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf)))
+	if (pi->print_cb(pi->cb_data, delta, NULL, GIT_DIFF_LINE_FILE_HDR, git_buf_cstr(pi->buf), git_buf_len(pi->buf)))
 	{
 		giterr_clear();
 		return GIT_EUSER;
 	}
 
-    if (delta->binary != 1)
-        return 0;
+	if (delta->binary != 1)
+		return 0;
 
 	git_buf_clear(pi->buf);
 	git_buf_printf(
