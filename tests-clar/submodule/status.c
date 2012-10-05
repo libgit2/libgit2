@@ -50,7 +50,7 @@ void test_submodule_status__ignore_none(void)
 	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 
 	cl_git_fail(git_submodule_lookup(&sm, g_repo, "not_submodule"));
 
@@ -135,7 +135,7 @@ void test_submodule_status__ignore_untracked(void)
 	git_submodule_ignore_t ign = GIT_SUBMODULE_IGNORE_UNTRACKED;
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
@@ -195,7 +195,7 @@ void test_submodule_status__ignore_dirty(void)
 	git_submodule_ignore_t ign = GIT_SUBMODULE_IGNORE_DIRTY;
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
@@ -255,7 +255,7 @@ void test_submodule_status__ignore_all(void)
 	git_submodule_ignore_t ign = GIT_SUBMODULE_IGNORE_ALL;
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 

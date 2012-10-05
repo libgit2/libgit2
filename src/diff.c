@@ -291,6 +291,36 @@ static int diff_delta__from_two(
 	return 0;
 }
 
+static git_diff_delta *diff_delta__last_for_item(
+	git_diff_list *diff,
+	const git_index_entry *item)
+{
+	git_diff_delta *delta = git_vector_last(&diff->deltas);
+	if (!delta)
+		return NULL;
+
+	switch (delta->status) {
+	case GIT_DELTA_UNMODIFIED:
+	case GIT_DELTA_DELETED:
+		if (git_oid_cmp(&delta->old_file.oid, &item->oid) == 0)
+			return delta;
+		break;
+	case GIT_DELTA_ADDED:
+		if (git_oid_cmp(&delta->new_file.oid, &item->oid) == 0)
+			return delta;
+		break;
+	case GIT_DELTA_MODIFIED:
+		if (git_oid_cmp(&delta->old_file.oid, &item->oid) == 0 ||
+			git_oid_cmp(&delta->new_file.oid, &item->oid) == 0)
+			return delta;
+		break;
+	default:
+		break;
+	}
+
+	return NULL;
+}
+
 static char *diff_strdup_prefix(git_pool *pool, const char *prefix)
 {
 	size_t len = strlen(prefix);
@@ -367,6 +397,10 @@ static git_diff_list *git_diff_list_alloc(
 		diff->opts.old_prefix = diff->opts.new_prefix;
 		diff->opts.new_prefix = swap;
 	}
+
+	/* INCLUDE_TYPECHANGE_TREES implies INCLUDE_TYPECHANGE */
+	if (diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE_TREES)
+		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
 
 	/* only copy pathspec if it is "interesting" so we can test
 	 * diff->pathspec.length > 0 to know if it is worth calling
@@ -537,7 +571,7 @@ static int maybe_modified(
 
 	/* if basic type of file changed, then split into delete and add */
 	else if (GIT_MODE_TYPE(omode) != GIT_MODE_TYPE(nmode)) {
-		if ((diff->opts.flags & GIT_DIFF_DONT_SPLIT_TYPECHANGE) != 0)
+		if ((diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE) != 0)
 			status = GIT_DELTA_TYPECHANGE;
 		else {
 			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
@@ -590,7 +624,7 @@ static int maybe_modified(
 				/* grab OID while we are here */
 				if (git_oid_iszero(&nitem->oid)) {
 					const git_oid *sm_oid = git_submodule_wd_oid(sub);
-					if (sub != NULL) {
+					if (sm_oid != NULL) {
 						git_oid_cpy(&noid, sm_oid);
 						use_noid = &noid;
 					}
@@ -630,6 +664,24 @@ static int git_index_entry_cmp_icase(const void *a, const void *b)
 	const git_index_entry *entry_b = b;
 
 	return strcasecmp(entry_a->path, entry_b->path);
+}
+
+static bool entry_is_prefixed(
+	const git_index_entry *item,
+	git_iterator *prefix_iterator,
+	const git_index_entry *prefix_item)
+{
+	size_t pathlen;
+
+	if (!prefix_item ||
+		ITERATOR_PREFIXCMP(*prefix_iterator, prefix_item->path, item->path))
+		return false;
+
+	pathlen = strlen(item->path);
+
+	return (item->path[pathlen - 1] == '/' ||
+			prefix_item->path[pathlen] == '\0' ||
+			prefix_item->path[pathlen] == '/');
 }
 
 static int diff_from_iterators(
@@ -681,8 +733,24 @@ static int diff_from_iterators(
 
 		/* create DELETED records for old items not matched in new */
 		if (oitem && (!nitem || entry_compare(oitem, nitem) < 0)) {
-			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
-				git_iterator_advance(old_iter, &oitem) < 0)
+			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0)
+				goto fail;
+
+			/* if we are generating TYPECHANGE records then check for that
+			 * instead of just generating a DELETE record
+			 */
+			if ((diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE_TREES) != 0 &&
+				entry_is_prefixed(oitem, new_iter, nitem))
+			{
+				/* this entry has become a tree! convert to TYPECHANGE */
+				git_diff_delta *last = diff_delta__last_for_item(diff, oitem);
+				if (last) {
+					last->status = GIT_DELTA_TYPECHANGE;
+					last->new_file.mode = GIT_FILEMODE_TREE;
+				}
+			}
+
+			if (git_iterator_advance(old_iter, &oitem) < 0)
 				goto fail;
 		}
 
@@ -704,8 +772,7 @@ static int diff_from_iterators(
 				 * directories and it is not under an ignored directory.
 				 */
 				bool contains_tracked =
-					(oitem &&
-					 !ITERATOR_PREFIXCMP(*old_iter, oitem->path, nitem->path));
+					entry_is_prefixed(nitem, old_iter, oitem);
 				bool recurse_untracked =
 					(delta_type == GIT_DELTA_UNTRACKED &&
 					 (diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) != 0);
@@ -761,8 +828,25 @@ static int diff_from_iterators(
 			else if (new_iter->type != GIT_ITERATOR_WORKDIR)
 				delta_type = GIT_DELTA_ADDED;
 
-			if (diff_delta__from_one(diff, delta_type, nitem) < 0 ||
-				git_iterator_advance(new_iter, &nitem) < 0)
+			if (diff_delta__from_one(diff, delta_type, nitem) < 0)
+				goto fail;
+
+			/* if we are generating TYPECHANGE records then check for that
+			 * instead of just generating an ADD/UNTRACKED record
+			 */
+			if (delta_type != GIT_DELTA_IGNORED &&
+				(diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE_TREES) != 0 &&
+				entry_is_prefixed(nitem, old_iter, oitem))
+			{
+				/* this entry was a tree! convert to TYPECHANGE */
+				git_diff_delta *last = diff_delta__last_for_item(diff, oitem);
+				if (last) {
+					last->status = GIT_DELTA_TYPECHANGE;
+					last->old_file.mode = GIT_FILEMODE_TREE;
+				}
+			}
+
+			if (git_iterator_advance(new_iter, &nitem) < 0)
 				goto fail;
 		}
 

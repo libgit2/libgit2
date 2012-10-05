@@ -21,12 +21,27 @@
  */
 GIT_BEGIN_DECL
 
-enum {
+/**
+ * Checkout behavior flags
+ *
+ * These flags control what checkout does with files.  Pass in a
+ * combination of these values OR'ed together.
+ *
+ * - GIT_CHECKOUT_DEFAULT: With this value, checkout does not update
+ *   any files in the working directory.
+ * - GIT_CHECKOUT_OVERWRITE_MODIFIED: When a file exists and is modified,
+ *   replace the modifications with the new version.
+ * - GIT_CHECKOUT_CREATE_MISSING: When a file does not exist in the
+ *   working directory, create it.
+ * - GIT_CHECKOUT_REMOVE_UNTRACKED: If an untracked file in encountered
+ *   in the working directory, delete it.
+ */
+typedef enum {
 	GIT_CHECKOUT_DEFAULT			= (1 << 0),
 	GIT_CHECKOUT_OVERWRITE_MODIFIED	= (1 << 1),
 	GIT_CHECKOUT_CREATE_MISSING		= (1 << 2),
 	GIT_CHECKOUT_REMOVE_UNTRACKED	= (1 << 3),
-};
+} git_checkout_strategy_t;
 
 /* Use zeros to indicate default settings */
 typedef struct git_checkout_opts {

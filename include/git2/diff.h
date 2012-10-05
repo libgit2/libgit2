@@ -56,6 +56,9 @@ GIT_BEGIN_DECL
  * - GIT_DIFF_DONT_SPLIT_TYPECHANGE: normally, a type change between files
  *   will be converted into a DELETED record for the old file and an ADDED
  *   record for the new one; this option enabled TYPECHANGE records.
+ * - GIT_DIFF_SKIP_BINARY_CHECK: the binary flag in the delta record will
+ *   not be updated.  This is useful if iterating over a diff without hunk
+ *   and line callbacks and you want to avoid loading files completely.
  */
 enum {
 	GIT_DIFF_NORMAL = 0,
@@ -73,7 +76,9 @@ enum {
 	GIT_DIFF_DISABLE_PATHSPEC_MATCH = (1 << 11),
 	GIT_DIFF_DELTAS_ARE_ICASE = (1 << 12),
 	GIT_DIFF_INCLUDE_UNTRACKED_CONTENT = (1 << 13),
-	GIT_DIFF_DONT_SPLIT_TYPECHANGE = (1 << 14),
+	GIT_DIFF_SKIP_BINARY_CHECK = (1 << 14),
+	GIT_DIFF_INCLUDE_TYPECHANGE = (1 << 15),
+	GIT_DIFF_INCLUDE_TYPECHANGE_TREES = (1 << 16),
 };
 
 /**

@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
 #include "iterator.h"
+#include "tree.h"
 
 void test_diff_iterator__initialize(void)
 {
@@ -235,6 +236,103 @@ void test_diff_iterator__tree_range_empty_2(void)
 	tree_iterator_test(
 		"attr", "24fa9a9fc4e202313e24b648087495441dab432b",
 		NULL, ".aaa_empty_before", 0, NULL);
+}
+
+static void check_tree_entry(
+	git_iterator *i,
+	const char *oid,
+	const char *oid_p,
+	const char *oid_pp,
+	const char *oid_ppp)
+{
+	const git_index_entry *ie;
+	const git_tree_entry *te;
+	const git_tree *tree;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_iterator_current_tree_entry(i, &te));
+	cl_assert(te);
+	cl_assert(git_oid_streq(&te->oid, oid) == 0);
+
+	cl_git_pass(git_iterator_current(i, &ie));
+	cl_git_pass(git_buf_sets(&path, ie->path));
+
+	if (oid_p) {
+		git_buf_rtruncate_at_char(&path, '/');
+		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_assert(tree);
+		cl_assert(git_oid_streq(git_tree_id(tree), oid_p) == 0);
+	}
+
+	if (oid_pp) {
+		git_buf_rtruncate_at_char(&path, '/');
+		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_assert(tree);
+		cl_assert(git_oid_streq(git_tree_id(tree), oid_pp) == 0);
+	}
+
+	if (oid_ppp) {
+		git_buf_rtruncate_at_char(&path, '/');
+		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_assert(tree);
+		cl_assert(git_oid_streq(git_tree_id(tree), oid_ppp) == 0);
+	}
+
+	git_buf_free(&path);
+}
+
+void test_diff_iterator__tree_special_functions(void)
+{
+	git_tree *t;
+	git_iterator *i;
+	const git_index_entry *entry;
+	git_repository *repo = cl_git_sandbox_init("attr");
+	int cases = 0;
+	const char *rootoid = "ce39a97a7fb1fa90bcf5e711249c1e507476ae0e";
+
+	t = resolve_commit_oid_to_tree(
+		repo, "24fa9a9fc4e202313e24b648087495441dab432b");
+	cl_assert(t != NULL);
+
+	cl_git_pass(git_iterator_for_tree_range(&i, repo, t, NULL, NULL));
+	cl_git_pass(git_iterator_current(i, &entry));
+
+	while (entry != NULL) {
+		if (strcmp(entry->path, "sub/file") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
+				"ecb97df2a174987475ac816e3847fc8e9f6c596b",
+				rootoid, NULL);
+		}
+		else if (strcmp(entry->path, "sub/sub/subsub.txt") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "9e5bdc47d6a80f2be0ea3049ad74231b94609242",
+				"4e49ba8c5b6c32ff28cd9dcb60be34df50fcc485",
+				"ecb97df2a174987475ac816e3847fc8e9f6c596b", rootoid);
+		}
+		else if (strcmp(entry->path, "subdir/.gitattributes") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "99eae476896f4907224978b88e5ecaa6c5bb67a9",
+				"9fb40b6675dde60b5697afceae91b66d908c02d9",
+				rootoid, NULL);
+		}
+		else if (strcmp(entry->path, "subdir2/subdir2_test1") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "dccada462d3df8ac6de596fb8c896aba9344f941",
+				"2929de282ce999e95183aedac6451d3384559c4b",
+				rootoid, NULL);
+		}
+
+		cl_git_pass(git_iterator_advance(i, &entry));
+	}
+
+	cl_assert_equal_i(4, cases);
+	git_iterator_free(i);
+	git_tree_free(t);
 }
 
 /* -- INDEX ITERATOR TESTS -- */

@@ -323,10 +323,6 @@ static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
 {
 	git_directory_removal_type removal_type = *(git_directory_removal_type *)opaque;
 
-	assert(removal_type == GIT_DIRREMOVAL_EMPTY_HIERARCHY
-		|| removal_type == GIT_DIRREMOVAL_FILES_AND_DIRS
-		|| removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS);
-
 	if (git_path_isdir(path->ptr) == true) {
 		if (git_path_direach(path, _rmdir_recurs_foreach, opaque) < 0)
 			return -1;
@@ -359,15 +355,24 @@ static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
 	return 0;
 }
 
-int git_futils_rmdir_r(const char *path, git_directory_removal_type removal_type)
+int git_futils_rmdir_r(
+	const char *path, const char *base, git_directory_removal_type removal_type)
 {
 	int error;
-	git_buf p = GIT_BUF_INIT;
+	git_buf fullpath = GIT_BUF_INIT;
 
-	error = git_buf_sets(&p, path);
-	if (!error)
-		error = _rmdir_recurs_foreach(&removal_type, &p);
-	git_buf_free(&p);
+	assert(removal_type == GIT_DIRREMOVAL_EMPTY_HIERARCHY
+		|| removal_type == GIT_DIRREMOVAL_FILES_AND_DIRS
+		|| removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS);
+
+	/* build path and find "root" where we should start calling mkdir */
+	if (git_path_join_unrooted(&fullpath, path, base, NULL) < 0)
+		return -1;
+
+	error = _rmdir_recurs_foreach(&removal_type, &fullpath);
+
+	git_buf_free(&fullpath);
+
 	return error;
 }
 

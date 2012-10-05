@@ -41,7 +41,7 @@ void test_core_copy__file_in_dir(void)
 	cl_assert(S_ISREG(st.st_mode));
 	cl_assert(strlen(content) == (size_t)st.st_size);
 
-	cl_git_pass(git_futils_rmdir_r("an_dir", GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r("an_dir", NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 	cl_assert(!git_path_isdir("an_dir"));
 }
 
@@ -95,7 +95,7 @@ void test_core_copy__tree(void)
 	cl_assert(S_ISLNK(st.st_mode));
 #endif
 
-	cl_git_pass(git_futils_rmdir_r("t1", GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r("t1", NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 	cl_assert(!git_path_isdir("t1"));
 
 	/* copy with empty dirs, no links, yes dotfiles, no overwrite */
@@ -119,8 +119,8 @@ void test_core_copy__tree(void)
 	cl_git_fail(git_path_lstat("t2/c/d/l1", &st));
 #endif
 
-	cl_git_pass(git_futils_rmdir_r("t2", GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r("t2", NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 	cl_assert(!git_path_isdir("t2"));
 
-	cl_git_pass(git_futils_rmdir_r("src", GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r("src", NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
 }

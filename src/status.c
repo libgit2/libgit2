@@ -100,7 +100,7 @@ int git_status_foreach_ext(
 	memset(&diffopt, 0, sizeof(diffopt));
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
 
-	diffopt.flags = GIT_DIFF_DONT_SPLIT_TYPECHANGE;
+	diffopt.flags = GIT_DIFF_INCLUDE_TYPECHANGE;
 
 	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_UNTRACKED) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNTRACKED;
