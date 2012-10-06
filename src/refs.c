@@ -15,6 +15,7 @@
 #include <git2/tag.h>
 #include <git2/object.h>
 #include <git2/oid.h>
+#include <git2/branch.h>
 
 GIT__USE_STRMAP;
 
@@ -1345,9 +1346,6 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	char normalized[GIT_REFNAME_MAX];
 	bool should_head_be_updated = false;
 
-	const char *head_target = NULL;
-	git_reference *head = NULL;
-
 	normalization_flags = ref->flags & GIT_REF_SYMBOLIC ?
 		GIT_REF_FORMAT_ALLOW_ONELEVEL
 		: GIT_REF_FORMAT_NORMAL;
@@ -1370,11 +1368,8 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	/*
 	 * Check if we have to update HEAD.
 	 */
-	if (git_repository_head(&head, ref->owner) < 0)
+	if ((should_head_be_updated = git_branch_is_head(ref)) < 0)
 		goto cleanup;
-
-	should_head_be_updated = !strcmp(git_reference_name(head), ref->name);
-	git_reference_free(head);
 
 	/*
 	 * Now delete the old ref and remove an possibly existing directory
