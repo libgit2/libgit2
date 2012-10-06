@@ -271,3 +271,26 @@ cleanup:
 	git_buf_free(&buf);
 	return error;
 }
+
+int git_branch_is_head(
+		git_reference *branch)
+{
+	git_reference *head;
+	bool is_same = false;
+
+	assert(branch);
+
+	if (!git_reference_is_branch(branch))
+		return false;
+
+	if (git_repository_head(&head, git_reference_owner(branch)) < 0)
+		return -1;
+
+	is_same = strcmp(
+		git_reference_name(branch),
+		git_reference_name(head)) == 0;
+
+	git_reference_free(head);
+
+	return is_same;
+}

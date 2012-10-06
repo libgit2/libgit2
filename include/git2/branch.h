@@ -148,6 +148,17 @@ GIT_EXTERN(int) git_branch_tracking(
 		git_reference **tracking_out,
 		git_reference *branch);
 
+/**
+ * Determine if the current local branch is pointed at by HEAD.
+ *
+ * @param branch Current underlying reference of the branch.
+ *
+ * @return 1 if HEAD points at the branch, 0 if it isn't,
+ * error code otherwise.
+ */
+GIT_EXTERN(int) git_branch_is_head(
+		git_reference *branch);
+
 /** @} */
 GIT_END_DECL
 #endif
