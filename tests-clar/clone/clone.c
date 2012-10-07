@@ -6,6 +6,7 @@
 #define DO_LOCAL_TEST 0
 #define DO_LIVE_NETWORK_TESTS 0
 #define LIVE_REPO_URL "git://github.com/nulltoken/TestGitRepository"
+#define LIVE_EMPTYREPO_URL "git://github.com/nulltoken/TestEmptyRepository"
 
 
 static git_repository *g_repo;
@@ -151,4 +152,24 @@ void test_clone_clone__fail_with_already_existing_but_non_empty_directory(void)
 	p_mkdir("./foo", GIT_DIR_MODE);
 	cl_git_mkfile("./foo/bar", "Baz!");
 	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", NULL, NULL, NULL));
+}
+
+void test_clone_clone__empty_repository(void)
+{
+#if DO_LIVE_NETWORK_TESTS
+	git_reference *head;
+
+	cl_set_cleanup(&cleanup_repository, "./empty");
+
+	cl_git_pass(git_clone(&g_repo, LIVE_EMPTYREPO_URL, "./empty", NULL, NULL, NULL));
+
+	cl_assert_equal_i(true, git_repository_is_empty(g_repo));
+	cl_assert_equal_i(true, git_repository_head_orphan(g_repo));
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_target(head));
+
+	git_reference_free(head);
+#endif
 }
