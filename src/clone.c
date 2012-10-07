@@ -51,7 +51,7 @@ static int create_tracking_branch(git_repository *repo, const git_oid *target, c
 			if (!git_buf_printf(&remote, "branch.%s.remote", name) &&
 				 !git_buf_printf(&merge, "branch.%s.merge", name) &&
 				 !git_buf_printf(&merge_target, GIT_REFS_HEADS_DIR "%s", name) &&
-				 !git_config_set_string(cfg, git_buf_cstr(&remote), "origin") &&
+				 !git_config_set_string(cfg, git_buf_cstr(&remote), GIT_REMOTE_ORIGIN) &&
 				 !git_config_set_string(cfg, git_buf_cstr(&merge), git_buf_cstr(&merge_target))) {
 				retcode = 0;
 			}
@@ -150,7 +150,7 @@ static int setup_remotes_and_fetch(git_repository *repo,
 	if (!fetch_stats) fetch_stats = &dummy_stats;
 
 	/* Create the "origin" remote */
-	if (!git_remote_add(&origin, repo, "origin", origin_url)) {
+	if (!git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, origin_url)) {
 		/* Connect and download everything */
 		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
 			if (!git_remote_download(origin, &bytes, fetch_stats)) {

@@ -13,6 +13,8 @@
 #include "transport.h"
 #include "repository.h"
 
+#define GIT_REMOTE_ORIGIN "origin"
+
 struct git_remote {
 	char *name;
 	char *url;

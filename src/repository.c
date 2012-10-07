@@ -19,6 +19,7 @@
 #include "refs.h"
 #include "filter.h"
 #include "odb.h"
+#include "remote.h"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -1095,7 +1096,7 @@ static int repo_init_create_origin(git_repository *repo, const char *url)
 	int error;
 	git_remote *remote;
 
-	if (!(error = git_remote_add(&remote, repo, "origin", url))) {
+	if (!(error = git_remote_add(&remote, repo, GIT_REMOTE_ORIGIN, url))) {
 		error = git_remote_save(remote);
 		git_remote_free(remote);
 	}
