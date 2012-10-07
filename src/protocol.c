@@ -45,11 +45,13 @@ int git_protocol_store_refs(git_transport *t, int flushes)
 			return -1;
 		}
 
-		if (git_vector_insert(refs, pkt) < 0)
+		if (pkt->type != GIT_PKT_FLUSH && git_vector_insert(refs, pkt) < 0)
 			return -1;
 
-		if (pkt->type == GIT_PKT_FLUSH)
+		if (pkt->type == GIT_PKT_FLUSH) {
 			flush++;
+			git_pkt_free(pkt);
+		}
 	} while (flush < flushes);
 
 	return flush;
