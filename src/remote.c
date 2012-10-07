@@ -467,7 +467,7 @@ int git_remote_update_tips(git_remote *remote)
 	if (refs->length == 0)
 		return 0;
 
-	if (git_repository_odb(&odb, remote->repo) < 0)
+	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
 		return -1;
 
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
