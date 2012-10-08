@@ -669,7 +669,8 @@ static int diff_from_iterators(
 
 			/* check if contained in ignored parent directory */
 			if (git_buf_len(&ignore_prefix) &&
-				ITERATOR_PREFIXCMP(*old_iter, nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
+				ITERATOR_PREFIXCMP(*old_iter, nitem->path,
+					git_buf_cstr(&ignore_prefix)) == 0)
 				delta_type = GIT_DELTA_IGNORED;
 
 			if (S_ISDIR(nitem->mode)) {
@@ -677,10 +678,23 @@ static int diff_from_iterators(
 				 * it or if the user requested the contents of untracked
 				 * directories and it is not under an ignored directory.
 				 */
-				if ((oitem && ITERATOR_PREFIXCMP(*old_iter, oitem->path, nitem->path) == 0) ||
+				bool contains_tracked =
+					(oitem &&
+					 !ITERATOR_PREFIXCMP(*old_iter, oitem->path, nitem->path));
+				bool recurse_untracked =
 					(delta_type == GIT_DELTA_UNTRACKED &&
-					 (diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) != 0))
-				{
+					 (diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) != 0);
+
+				/* do not advance into directories that contain a .git file */
+				if (!contains_tracked && recurse_untracked) {
+					git_buf *full = NULL;
+					if (git_iterator_current_workdir_path(new_iter, &full) < 0)
+						goto fail;
+					if (git_path_contains_dir(full, DOT_GIT))
+						recurse_untracked = false;
+				}
+
+				if (contains_tracked || recurse_untracked) {
 					/* if this directory is ignored, remember it as the
 					 * "ignore_prefix" for processing contained items
 					 */

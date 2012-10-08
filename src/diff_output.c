@@ -321,6 +321,9 @@ static int get_workdir_content(
 	if (file->mode == GIT_FILEMODE_COMMIT)
 		return get_workdir_sm_content(ctxt, file, map);
 
+	if (S_ISDIR(file->mode))
+		return 0;
+
 	if (git_buf_joinpath(&path, wd, file->path) < 0)
 		return -1;
 
@@ -534,6 +537,11 @@ static int diff_patch_load(
 		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
 		break;
 	case GIT_DELTA_MODIFIED:
+		break;
+	case GIT_DELTA_UNTRACKED:
+		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		if ((ctxt->opts->flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0)
+			delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
 		break;
 	default:
 		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
@@ -1070,6 +1078,9 @@ static int print_patch_file(
 
 	GIT_UNUSED(progress);
 
+	if (S_ISDIR(delta->new_file.mode))
+		return 0;
+
 	if (!oldpfx)
 		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
 
@@ -1134,6 +1145,9 @@ static int print_patch_hunk(
 {
 	diff_print_info *pi = data;
 
+	if (S_ISDIR(d->new_file.mode))
+		return 0;
+
 	git_buf_clear(pi->buf);
 	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) < 0)
 		return -1;
@@ -1157,6 +1171,9 @@ static int print_patch_line(
 	size_t content_len)
 {
 	diff_print_info *pi = data;
+
+	if (S_ISDIR(delta->new_file.mode))
+		return 0;
 
 	git_buf_clear(pi->buf);
 
