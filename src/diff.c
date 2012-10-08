@@ -224,7 +224,10 @@ static int diff_delta__from_one(
 	}
 
 	delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
-	delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
+
+	if (delta->status == GIT_DELTA_DELETED ||
+		!git_oid_iszero(&delta->new_file.oid))
+		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
 	if (git_vector_insert(&diff->deltas, delta) < 0) {
 		git__free(delta);
@@ -441,17 +444,28 @@ static int oid_for_workdir_item(
 	const git_index_entry *item,
 	git_oid *oid)
 {
-	int result;
+	int result = 0;
 	git_buf full_path = GIT_BUF_INIT;
 
-	if (git_buf_joinpath(&full_path, git_repository_workdir(repo), item->path) < 0)
+	if (git_buf_joinpath(
+		&full_path, git_repository_workdir(repo), item->path) < 0)
 		return -1;
 
-	/* calculate OID for file if possible*/
+	/* calculate OID for file if possible */
 	if (S_ISGITLINK(item->mode)) {
-		/* Don't bother to figure out an oid for a submodule. We won't use it anyway. */
-		memset(oid, 0, sizeof(*oid));
-		result = 0;
+		git_submodule *sm;
+		const git_oid *sm_oid;
+
+		if (!git_submodule_lookup(&sm, repo, item->path) &&
+			(sm_oid = git_submodule_wd_oid(sm)) != NULL)
+			git_oid_cpy(oid, sm_oid);
+		else {
+			/* if submodule lookup failed probably just in an intermediate
+			 * state where some init hasn't happened, so ignore the error
+			 */
+			giterr_clear();
+			memset(oid, 0, sizeof(*oid));
+		}
 	} else if (S_ISLNK(item->mode))
 		result = git_odb__hashlink(oid, full_path.ptr);
 	else if (!git__is_sizet(item->file_size)) {
@@ -570,6 +584,15 @@ static int maybe_modified(
 					return -1;
 				status = GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)
 						 ? GIT_DELTA_UNMODIFIED : GIT_DELTA_MODIFIED;
+
+				/* grab OID while we are here */
+				if (git_oid_iszero(&nitem->oid)) {
+					const git_oid *sm_oid = git_submodule_wd_oid(sub);
+					if (sub != NULL) {
+						git_oid_cpy(&noid, sm_oid);
+						use_noid = &noid;
+					}
+				}
 			}
 		}
 	}
