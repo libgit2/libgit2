@@ -617,3 +617,43 @@ cleanup:
 	git_reflog_free(reflog);
 	return error;
 }
+
+int git_stash_drop(
+	git_repository *repo,
+	size_t index)
+{
+	git_reference *stash;
+	git_reflog *reflog = NULL;
+	size_t max;
+	int error;
+
+	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
+		return error;
+
+	if ((error = git_reflog_read(&reflog, stash)) < 0)
+		goto cleanup;
+
+	max = git_reflog_entrycount(reflog);
+
+	if (index > max - 1) {
+		error = GIT_ENOTFOUND;
+		giterr_set(GITERR_STASH, "No stashed state at position %" PRIuZ, index);
+		goto cleanup;
+	}
+
+	if ((error = git_reflog_drop(reflog, max - index - 1, true)) < 0)
+		goto cleanup;
+
+	if ((error = git_reflog_write(reflog)) < 0)
+		goto cleanup;
+
+	if (max == 1) {
+		error = git_reference_delete(stash);
+		stash = NULL;
+	}
+
+cleanup:
+	git_reference_free(stash);
+	git_reflog_free(reflog);
+	return error;
+}

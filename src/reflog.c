@@ -481,7 +481,7 @@ int git_reflog_drop(
 
 	/* If the oldest entry has just been removed... */
 	if (idx == 0) {
-		/* ...clear the oid_old member of the "new" last entry */
+		/* ...clear the oid_old member of the "new" oldest entry */
 		if (git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO) < 0)
 			return -1;
 		

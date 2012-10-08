@@ -102,6 +102,21 @@ GIT_EXTERN(int) git_stash_foreach(
 	stash_cb callback,
 	void *payload);
 
+/**
+ * Remove a single stashed state from the stash list.
+ *
+ * @param repo The owning repository.
+ *
+ * @param index The position within the stash list. 0 points to the
+ * most recent stashed state.
+ *
+ * @return 0 on success, or error code
+ */
+
+GIT_EXTERN(int) git_stash_drop(
+	git_repository *repo,
+	size_t index);
+
 /** @} */
 GIT_END_DECL
 #endif
