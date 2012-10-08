@@ -156,7 +156,6 @@ void test_status_ignore__ignore_pattern_contains_space(void)
 void test_status_ignore__ignore_pattern_ignorecase(void)
 {
 	unsigned int flags;
-	const mode_t mode = 0777;
 	bool ignore_case;
 	git_index *index;
 

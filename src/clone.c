@@ -153,7 +153,7 @@ static int update_head_to_new_branch(
 	const git_oid *target,
 	const char *name)
 {
-	git_reference *tracking_branch;
+	git_reference *tracking_branch = NULL;
 	int error;
 
 	if ((error = create_tracking_branch(
