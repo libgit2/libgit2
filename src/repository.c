@@ -19,6 +19,7 @@
 #include "refs.h"
 #include "filter.h"
 #include "odb.h"
+#include "remote.h"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -654,10 +655,10 @@ static int repo_init_create_head(const char *git_dir, const char *ref_name)
 	if (!ref_name)
 		ref_name = GIT_BRANCH_MASTER;
 
-	if (git__prefixcmp(ref_name, "refs/") == 0)
+	if (git__prefixcmp(ref_name, GIT_REFS_DIR) == 0)
 		fmt = "ref: %s\n";
 	else
-		fmt = "ref: refs/heads/%s\n";
+		fmt = "ref: " GIT_REFS_HEADS_DIR "%s\n";
 
 	if (git_filebuf_printf(&ref, fmt, ref_name) < 0 ||
 		git_filebuf_commit(&ref, GIT_REFS_FILE_MODE) < 0)
@@ -1095,7 +1096,7 @@ static int repo_init_create_origin(git_repository *repo, const char *url)
 	int error;
 	git_remote *remote;
 
-	if (!(error = git_remote_add(&remote, repo, "origin", url))) {
+	if (!(error = git_remote_add(&remote, repo, GIT_REMOTE_ORIGIN, url))) {
 		error = git_remote_save(remote);
 		git_remote_free(remote);
 	}
@@ -1219,7 +1220,7 @@ int git_repository_is_empty(git_repository *repo)
 	git_reference *head = NULL, *branch = NULL;
 	int error;
 
-	if (git_reference_lookup(&head, repo, "HEAD") < 0)
+	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
 	if (git_reference_type(head) != GIT_REF_SYMBOLIC) {
@@ -1227,7 +1228,7 @@ int git_repository_is_empty(git_repository *repo)
 		return 0;
 	}
 
-	if (strcmp(git_reference_target(head), "refs/heads/master") != 0) {
+	if (strcmp(git_reference_target(head), GIT_REFS_HEADS_DIR "master") != 0) {
 		git_reference_free(head);
 		return 0;
 	}
