@@ -30,10 +30,13 @@ int diff_file_fn(
 
 	GIT_UNUSED(progress);
 
-	if (delta->binary)
-		e->at_least_one_of_them_is_binary = true;
-
 	e->files++;
+
+	if (delta->binary) {
+		e->at_least_one_of_them_is_binary = true;
+		e->files_binary++;
+	}
+
 	switch (delta->status) {
 	case GIT_DELTA_ADDED: e->file_adds++; break;
 	case GIT_DELTA_DELETED: e->file_dels++; break;
@@ -179,4 +182,26 @@ int diff_foreach_via_iterator(
 abort:
 	giterr_clear();
 	return GIT_EUSER;
+}
+
+static int diff_print_cb(
+	void *cb_data,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
+	char line_origin, /**< GIT_DIFF_LINE_... value from above */
+	const char *content,
+	size_t content_len)
+{
+	GIT_UNUSED(cb_data);
+	GIT_UNUSED(delta);
+	GIT_UNUSED(range);
+	GIT_UNUSED(line_origin);
+	GIT_UNUSED(content_len);
+	fputs(content, (FILE *)cb_data);
+	return 0;
+}
+
+void diff_print(FILE *fp, git_diff_list *diff)
+{
+	cl_git_pass(git_diff_print_patch(diff, fp ? fp : stderr, diff_print_cb));
 }
