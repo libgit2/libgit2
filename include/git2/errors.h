@@ -59,6 +59,7 @@ typedef enum {
 	GITERR_SSL,
 	GITERR_SUBMODULE,
 	GITERR_THREAD,
+	GITERR_STASH,
 } git_error_t;
 
 /**
