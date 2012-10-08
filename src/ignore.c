@@ -48,13 +48,14 @@ static int parse_ignore_file(
 
 		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
 
-		if (ignore_case)
-			match->flags |= GIT_ATTR_FNMATCH_ICASE;
-
 		if (!(error = git_attr_fnmatch__parse(
 			match, ignores->pool, context, &scan)))
 		{
-			match->flags = match->flags | GIT_ATTR_FNMATCH_IGNORE;
+			match->flags |= GIT_ATTR_FNMATCH_IGNORE;
+
+			if (ignore_case)
+				match->flags |= GIT_ATTR_FNMATCH_ICASE;
+
 			scan = git__next_line(scan);
 			error = git_vector_insert(&ignores->rules, match);
 		}
