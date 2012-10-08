@@ -28,11 +28,11 @@ static int disambiguate_refname(git_reference **out, git_repository *repo, const
 
 	static const char* formatters[] = {
 		"%s",
-		"refs/%s",
-		"refs/tags/%s",
-		"refs/heads/%s",
-		"refs/remotes/%s",
-		"refs/remotes/%s/HEAD",
+		GIT_REFS_DIR "%s",
+		GIT_REFS_TAGS_DIR "%s",
+		GIT_REFS_HEADS_DIR "%s",
+		GIT_REFS_REMOTES_DIR "%s",
+		GIT_REFS_REMOTES_DIR "%s/" GIT_HEAD_FILE,
 		NULL
 	};
 
@@ -520,7 +520,7 @@ static int handle_grep_syntax(git_object **out, git_repository *repo, const git_
 
 	if (spec_oid == NULL) {
 		// TODO: @carlosmn: The glob should be refs/* but this makes git_revwalk_next() fails
-		if (git_revwalk_push_glob(walk, "refs/heads/*") < 0)
+		if (git_revwalk_push_glob(walk, GIT_REFS_HEADS_DIR "*") < 0)
 			goto cleanup;
 	} else if (git_revwalk_push(walk, spec_oid) < 0)
 			goto cleanup;

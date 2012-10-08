@@ -194,24 +194,34 @@ int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, con
 	return 0;
 }
 
-int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)
+static int refspec_transform(git_buf *out, const char *from, const char *to, const char *name)
 {
-	if (git_buf_sets(out, spec->dst) < 0)
+	if (git_buf_sets(out, to) < 0)
 		return -1;
 
 	/*
-	 * No '*' at the end means that it's mapped to one specific local
+	 * No '*' at the end means that it's mapped to one specific
 	 * branch, so no actual transformation is needed.
 	 */
 	if (git_buf_len(out) > 0 && out->ptr[git_buf_len(out) - 1] != '*')
 		return 0;
 
 	git_buf_truncate(out, git_buf_len(out) - 1); /* remove trailing '*' */
-	git_buf_puts(out, name + strlen(spec->src) - 1);
+	git_buf_puts(out, name + strlen(from) - 1);
 
 	if (git_buf_oom(out))
 		return -1;
 
 	return 0;
+}
+
+int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)
+{
+	return refspec_transform(out, spec->src, spec->dst, name);
+}
+
+int git_refspec_transform_l(git_buf *out, const git_refspec *spec, const char *name)
+{
+	return refspec_transform(out, spec->dst, spec->src, name);
 }
 
