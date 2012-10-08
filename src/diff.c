@@ -448,7 +448,11 @@ static int oid_for_workdir_item(
 		return -1;
 
 	/* calculate OID for file if possible*/
-	if (S_ISLNK(item->mode))
+	if (S_ISGITLINK(item->mode)) {
+		/* Don't bother to figure out an oid for a submodule. We won't use it anyway. */
+		memset(oid, 0, sizeof(*oid));
+		result = 0;
+	} else if (S_ISLNK(item->mode))
 		result = git_odb__hashlink(oid, full_path.ptr);
 	else if (!git__is_sizet(item->file_size)) {
 		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
@@ -561,8 +565,11 @@ static int maybe_modified(
 			else if (git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
 				status = GIT_DELTA_UNMODIFIED;
 			else {
-				/* TODO: support other GIT_SUBMODULE_IGNORE values */
-				status = GIT_DELTA_UNMODIFIED;
+				unsigned int sm_status = 0;
+				if (git_submodule_status(&sm_status, sub) < 0)
+					return -1;
+				status = GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)
+						 ? GIT_DELTA_UNMODIFIED : GIT_DELTA_MODIFIED;
 			}
 		}
 	}
