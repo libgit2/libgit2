@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
 #include "git2/attr.h"
+#include "ignore.h"
 #include "attr.h"
 #include "status_helpers.h"
 
@@ -150,6 +151,26 @@ void test_status_ignore__ignore_pattern_contains_space(void)
 
 	cl_git_pass(git_status_file(&flags, g_repo, "foo/look-ma.txt"));
 	cl_assert(flags == GIT_STATUS_WT_NEW);
+}
+
+void test_status_ignore__ignore_pattern_ignorecase(void)
+{
+	unsigned int flags;
+	const mode_t mode = 0777;
+	bool ignore_case;
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "a.txt\n");
+
+	cl_git_mkfile("empty_standard_repo/A.txt", "Differs in case");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	ignore_case = index->ignore_case;
+	git_index_free(index);
+
+	cl_git_pass(git_status_file(&flags, g_repo, "A.txt"));
+	cl_assert(flags == ignore_case ? GIT_STATUS_IGNORED : GIT_STATUS_WT_NEW);
 }
 
 void test_status_ignore__adding_internal_ignores(void)
