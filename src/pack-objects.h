@@ -12,6 +12,7 @@
 
 #include "buffer.h"
 #include "hash.h"
+#include "oidmap.h"
 
 #include "git2/oid.h"
 
@@ -60,9 +61,7 @@ struct git_packbuilder {
 
 	git_pobject *object_list;
 
-	int *object_ix;
-	int object_ix_hashsz;
-
+	git_oidmap *object_ix;
 
 	git_oid pack_oid; /* hash of written pack */
 

@@ -21,59 +21,14 @@
 #include "git2/indexer.h"
 #include "git2/config.h"
 
+GIT__USE_OIDMAP;
+
 struct unpacked {
 	git_pobject *object;
 	void *data;
 	struct git_delta_index *index;
 	unsigned int depth;
 };
-
-static int locate_object_entry_hash(git_packbuilder *pb, const git_oid *oid)
-{
-	int i;
-	unsigned int ui;
-	memcpy(&ui, oid->id, sizeof(unsigned int));
-	i = ui % pb->object_ix_hashsz;
-	while (0 < pb->object_ix[i]) {
-		if (!git_oid_cmp(oid, &pb->object_list[pb->object_ix[i]-1].id))
-			return i;
-		if (++i == pb->object_ix_hashsz)
-			i = 0;
-	}
-	return -1 - i;
-}
-
-static git_pobject *locate_object_entry(git_packbuilder *pb, const git_oid *oid)
-{
-	int i;
-
-	if (!pb->object_ix_hashsz)
-		return NULL;
-
-	i = locate_object_entry_hash(pb, oid);
-	if (0 <= i)
-		return &pb->object_list[pb->object_ix[i]-1];
-	return NULL;
-}
-
-static void rehash_objects(git_packbuilder *pb)
-{
-	git_pobject *po;
-	uint32_t i;
-
-	pb->object_ix_hashsz = pb->nr_objects * 3;
-	if (pb->object_ix_hashsz < 1024)
-		pb->object_ix_hashsz = 1024;
-	pb->object_ix = git__realloc(pb->object_ix, sizeof(int) * pb->object_ix_hashsz);
-	memset(pb->object_ix, 0, sizeof(int) * pb->object_ix_hashsz);
-	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
-		int ix = locate_object_entry_hash(pb, &po->id);
-		if (0 <= ix)
-			continue;
-		ix = -1 - ix;
-		pb->object_ix[ix] = i + 1;
-	}
-}
 
 static unsigned name_hash(const char *name)
 {
@@ -134,6 +89,9 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 
 	memset(pb, 0x0, sizeof(*pb));
 
+	pb->object_ix = git_oidmap_alloc();
+	GITERR_CHECK_ALLOC(pb->object_ix);
+
 	pb->repo = repo;
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 	pb->ctx = git_hash_new_ctx();
@@ -158,17 +116,32 @@ void git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
 	pb->nr_threads = n;
 }
 
+static void rehash(git_packbuilder *pb)
+{
+	git_pobject *po;
+	khiter_t pos;
+	unsigned int i;
+	int ret;
+
+	kh_clear(oid, pb->object_ix);
+	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
+		pos = kh_put(oid, pb->object_ix, &po->id, &ret);
+		kh_value(pb->object_ix, pos) = po;
+	}
+}
+
 int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 			   const char *name)
 {
 	git_pobject *po;
 	git_odb_object *obj;
-	int ix;
+	khiter_t pos;
+	int ret;
 
 	assert(pb && oid);
 
-	ix = pb->nr_objects ? locate_object_entry_hash(pb, oid) : -1;
-	if (ix >=0)
+	pos = kh_get(oid, pb->object_ix, oid);
+	if (pos != kh_end(pb->object_ix))
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
@@ -176,6 +149,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		pb->object_list = git__realloc(pb->object_list,
 					       pb->nr_alloc * sizeof(*po));
 		GITERR_CHECK_ALLOC(pb->object_list);
+		rehash(pb);
 	}
 
 	if (git_odb_read(&obj, pb->odb, oid) < 0)
@@ -187,14 +161,12 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	git_oid_cpy(&po->id, oid);
 	po->type = git_odb_object_type(obj);
 	po->size = git_odb_object_size(obj);
+	git_odb_object_free(obj);
 	po->hash = name_hash(name);
 
-	git_odb_object_free(obj);
-
-	if ((uint32_t)pb->object_ix_hashsz * 3 <= pb->nr_objects * 4)
-		rehash_objects(pb);
-	else
-		pb->object_ix[-1 - ix] = pb->nr_objects;
+	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
+	assert(ret != 0);
+	kh_value(pb->object_ix, pos) = po;
 
 	pb->done = false;
 	return 0;
@@ -442,13 +414,20 @@ static void add_family_to_write_order(git_pobject **wo, unsigned int *endp,
 static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 {
 	git_packbuilder *pb = data;
-	git_pobject *po = locate_object_entry(pb, oid);
+	git_pobject *po;
+	khiter_t pos;
 
 	GIT_UNUSED(name);
 
-	if (po)
-		po->tagged = 1;
+	pos = kh_get(oid, pb->object_ix, oid);
+	if (pos == kh_end(pb->object_ix))
+		return 0;
+
+	po = kh_value(pb->object_ix, pos);
+	po->tagged = 1;
+
 	/* TODO: peel objects */
+
 	return 0;
 }
 
@@ -1333,7 +1312,7 @@ void git_packbuilder_free(git_packbuilder *pb)
 
 	git_odb_free(pb->odb);
 	git_hash_free_ctx(pb->ctx);
-	git__free(pb->object_ix);
+	git_oidmap_free(pb->object_ix);
 	git__free(pb->object_list);
 	git__free(pb);
 }
