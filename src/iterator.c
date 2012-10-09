@@ -905,3 +905,15 @@ int git_iterator_cmp(
 	return ITERATOR_PREFIXCMP(*iter, entry->path, path_prefix);
 }
 
+int git_iterator_current_workdir_path(git_iterator *iter, git_buf **path)
+{
+	workdir_iterator *wi = (workdir_iterator *)iter;
+
+	if (iter->type != GIT_ITERATOR_WORKDIR || !wi->entry.path)
+		*path = NULL;
+	else
+		*path = &wi->path;
+
+	return 0;
+}
+

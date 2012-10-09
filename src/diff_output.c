@@ -275,30 +275,34 @@ static int get_workdir_sm_content(
 	int error = 0;
 	git_buf content = GIT_BUF_INIT;
 	git_submodule* sm = NULL;
-	const git_oid* sm_head = NULL;
 	unsigned int sm_status = 0;
 	const char* sm_status_text = "";
 	char oidstr[GIT_OID_HEXSZ+1];
 
-	if ((error = git_submodule_lookup(&sm, ctxt->repo, file->path)) < 0) {
+	if ((error = git_submodule_lookup(&sm, ctxt->repo, file->path)) < 0 ||
+		(error = git_submodule_status(&sm_status, sm)) < 0)
 		return error;
+
+	/* update OID if we didn't have it previously */
+	if ((file->flags & GIT_DIFF_FILE_VALID_OID) == 0) {
+		const git_oid* sm_head;
+
+		if ((sm_head = git_submodule_wd_oid(sm)) != NULL ||
+			(sm_head = git_submodule_head_oid(sm)) != NULL)
+		{
+			git_oid_cpy(&file->oid, sm_head);
+			file->flags |= GIT_DIFF_FILE_VALID_OID;
+		}
 	}
 
-	if ((sm_head = git_submodule_head_oid(sm)) == NULL) {
-		giterr_set(GITERR_SUBMODULE, "Cannot find head of submodule '%s'", file->path);
-		return -1;
-	}
+	git_oid_fmt(oidstr, &file->oid);
+	oidstr[GIT_OID_HEXSZ] = '\0';
 
-	if ((error = git_submodule_status(&sm_status, sm)) < 0) {
-		return -1;
-	}
-	if (!GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)) {
+	if (GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
 		sm_status_text = "-dirty";
-	}
 
-	git_oid_fmt(oidstr, sm_head);
-	oidstr[GIT_OID_HEXSZ] = 0;
-	git_buf_printf(&content, "Subproject commit %s%s\n", oidstr, sm_status_text );
+	git_buf_printf(&content, "Subproject commit %s%s\n",
+				   oidstr, sm_status_text);
 
 	map->data = git_buf_detach(&content);
 	map->len = strlen(map->data);
@@ -318,8 +322,11 @@ static int get_workdir_content(
 	git_buf path = GIT_BUF_INIT;
 	const char *wd = git_repository_workdir(ctxt->repo);
 
-	if (file->mode == GIT_FILEMODE_COMMIT)
+	if (S_ISGITLINK(file->mode))
 		return get_workdir_sm_content(ctxt, file, map);
+
+	if (S_ISDIR(file->mode))
+		return 0;
 
 	if (git_buf_joinpath(&path, wd, file->path) < 0)
 		return -1;
@@ -534,6 +541,11 @@ static int diff_patch_load(
 		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
 		break;
 	case GIT_DELTA_MODIFIED:
+		break;
+	case GIT_DELTA_UNTRACKED:
+		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		if ((ctxt->opts->flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0)
+			delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
 		break;
 	default:
 		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
@@ -1070,6 +1082,9 @@ static int print_patch_file(
 
 	GIT_UNUSED(progress);
 
+	if (S_ISDIR(delta->new_file.mode))
+		return 0;
+
 	if (!oldpfx)
 		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
 
@@ -1134,6 +1149,9 @@ static int print_patch_hunk(
 {
 	diff_print_info *pi = data;
 
+	if (S_ISDIR(d->new_file.mode))
+		return 0;
+
 	git_buf_clear(pi->buf);
 	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) < 0)
 		return -1;
@@ -1157,6 +1175,9 @@ static int print_patch_line(
 	size_t content_len)
 {
 	diff_print_info *pi = data;
+
+	if (S_ISDIR(delta->new_file.mode))
+		return 0;
 
 	git_buf_clear(pi->buf);
 
