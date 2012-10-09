@@ -43,57 +43,48 @@ void test_refs_reflog_drop__can_drop_an_entry(void)
 
 void test_refs_reflog_drop__can_drop_an_entry_and_rewrite_the_log_history(void)
 {
-	const git_reflog_entry *before_previous, *before_next;
-	const git_reflog_entry *after_next;
-	git_oid before_next_old_oid;
+	const git_reflog_entry *before_current;
+	const git_reflog_entry *after_current;
+	git_oid before_current_old_oid, before_current_cur_oid;
 
 	cl_assert(entrycount > 4);
 
-	before_previous = git_reflog_entry_byindex(g_reflog, 3);
-	before_next = git_reflog_entry_byindex(g_reflog, 1);
-	git_oid_cpy(&before_next_old_oid, &before_next->oid_old);
+	before_current = git_reflog_entry_byindex(g_reflog, 2);
+	git_oid_cpy(&before_current_old_oid, &before_current->oid_old);
+	git_oid_cpy(&before_current_cur_oid, &before_current->oid_cur);
 
 	cl_git_pass(git_reflog_drop(g_reflog, 2, 1));
 	cl_assert_equal_i(entrycount - 1, git_reflog_entrycount(g_reflog));
 
-	after_next = git_reflog_entry_byindex(g_reflog, 1);
+	after_current = git_reflog_entry_byindex(g_reflog, 2);
 
-	cl_assert_equal_i(0, git_oid_cmp(&before_next->oid_cur, &after_next->oid_cur));
-	cl_assert(git_oid_cmp(&before_next_old_oid, &after_next->oid_old) != 0);
-	cl_assert_equal_i(0, git_oid_cmp(&before_previous->oid_cur, &after_next->oid_old));
+	cl_assert_equal_i(0, git_oid_cmp(&before_current_old_oid, &after_current->oid_old));
+	cl_assert(0 != git_oid_cmp(&before_current_cur_oid, &after_current->oid_cur));
 }
 
-void test_refs_reflog_drop__can_drop_the_first_entry(void)
+void test_refs_reflog_drop__can_drop_the_oldest_entry(void)
 {
+	const git_reflog_entry *entry;
+
 	cl_assert(entrycount > 2);
 
 	cl_git_pass(git_reflog_drop(g_reflog, 0, 0));
 	cl_assert_equal_i(entrycount - 1, git_reflog_entrycount(g_reflog));
-}
 
-void test_refs_reflog_drop__can_drop_the_last_entry(void)
-{
-	const git_reflog_entry *entry;
-
-	cl_assert(entrycount > 2);
-
-	cl_git_pass(git_reflog_drop(g_reflog, entrycount - 1, 0));
-	cl_assert_equal_i(entrycount - 1, git_reflog_entrycount(g_reflog));
-
-	entry = git_reflog_entry_byindex(g_reflog, entrycount - 2);
+	entry = git_reflog_entry_byindex(g_reflog, 0);
 	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) != 0);
 }
 
-void test_refs_reflog_drop__can_drop_the_last_entry_and_rewrite_the_log_history(void)
+void test_refs_reflog_drop__can_drop_the_oldest_entry_and_rewrite_the_log_history(void)
 {
 	const git_reflog_entry *entry;
 
 	cl_assert(entrycount > 2);
 
-	cl_git_pass(git_reflog_drop(g_reflog, entrycount - 1, 1));
+	cl_git_pass(git_reflog_drop(g_reflog, 0, 1));
 	cl_assert_equal_i(entrycount - 1, git_reflog_entrycount(g_reflog));
 
-	entry = git_reflog_entry_byindex(g_reflog, entrycount - 2);
+	entry = git_reflog_entry_byindex(g_reflog, 0);
 	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
 }
 

@@ -469,18 +469,18 @@ int git_reflog_drop(
 	if (!rewrite_previous_entry)
 		return 0;
 
-	/* No need to rewrite anything when removing the first entry */
-	if (idx == 0)
+	/* No need to rewrite anything when removing the most recent entry */
+	if (idx == entrycount - 1)
 		return 0;
 
 	/* There are no more entries in the log */
 	if (entrycount == 1)
 		return 0;
 
-	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx - 1);
+	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
 
-	/* If the last entry has just been removed... */
-	if (idx == entrycount - 1) {
+	/* If the oldest entry has just been removed... */
+	if (idx == 0) {
 		/* ...clear the oid_old member of the "new" last entry */
 		if (git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO) < 0)
 			return -1;
@@ -488,7 +488,7 @@ int git_reflog_drop(
 		return 0;
 	}
 
-	previous = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
+	previous = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx - 1);
 	git_oid_cpy(&entry->oid_old, &previous->oid_cur);
 
 	return 0;
