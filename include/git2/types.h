@@ -137,6 +137,9 @@ typedef struct git_reflog git_reflog;
 /** Representation of a git note */
 typedef struct git_note git_note;
 
+/** Representation of a git packbuilder */
+typedef struct git_packbuilder git_packbuilder;
+
 /** Time in a signature */
 typedef struct git_time {
 	git_time_t time; /** time in seconds from epoch */
