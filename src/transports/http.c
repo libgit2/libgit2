@@ -473,10 +473,7 @@ static int http_connect(git_transport *transport, int direction)
 		giterr_set(GITERR_NET, "Invalid HTTP response");
 		return t->error = -1;
 	} else {
-		/* Remove the comment and flush pkts */
-		git_vector_remove(&transport->refs, 0);
-		git__free(pkt);
-		pkt = git_vector_get(&transport->refs, 0);
+		/* Remove the comment pkt from the list */
 		git_vector_remove(&transport->refs, 0);
 		git__free(pkt);
 	}
