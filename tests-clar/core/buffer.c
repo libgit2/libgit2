@@ -678,3 +678,28 @@ void test_core_buffer__unescape(void)
 	assert_unescape("\\", "\\\\");
 	assert_unescape("", "");
 }
+
+void test_core_buffer__base64(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	/*     t  h  i  s
+	 * 0x 74 68 69 73
+     * 0b 01110100 01101000 01101001 01110011
+	 * 0b 011101 000110 100001 101001 011100 110000
+	 * 0x 1d 06 21 29 1c 30
+	 *     d  G  h  p  c  w
+	 */
+	cl_git_pass(git_buf_put_base64(&buf, "this", 4));
+	cl_assert_equal_s("dGhpcw==", buf.ptr);
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_buf_put_base64(&buf, "this!", 5));
+	cl_assert_equal_s("dGhpcyE=", buf.ptr);
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_buf_put_base64(&buf, "this!\n", 6));
+	cl_assert_equal_s("dGhpcyEK", buf.ptr);
+
+	git_buf_free(&buf);
+}
