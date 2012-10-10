@@ -32,7 +32,7 @@ script:
 # Run Tests
 after_script:
  - ctest -V .
- - if [ -f ./libgit2_clar ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar; else echo "Skipping valgrind"; fi
+ - if [ -f ./libgit2_clar ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar -iall; else echo "Skipping valgrind"; fi
 
 # Only watch the development branch
 branches:

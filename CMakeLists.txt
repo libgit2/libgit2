@@ -213,7 +213,7 @@ IF (BUILD_CLAR)
 	ENDIF ()
 
 	ENABLE_TESTING()
-	ADD_TEST(libgit2_clar libgit2_clar)
+	ADD_TEST(libgit2_clar libgit2_clar -iall)
 ENDIF ()
 
 IF (TAGS)
