@@ -4,7 +4,7 @@
 #include "repository.h"
 
 #define DO_LOCAL_TEST 0
-#define LIVE_REPO_URL "git://github.com/nulltoken/TestGitRepository"
+#define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 
 static git_repository *g_repo;
 

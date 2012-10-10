@@ -5,8 +5,8 @@
 
 CL_IN_CATEGORY("network")
 
-#define LIVE_REPO_URL "git://github.com/nulltoken/TestGitRepository"
-#define LIVE_EMPTYREPO_URL "git://github.com/nulltoken/TestEmptyRepository"
+#define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
+#define LIVE_EMPTYREPO_URL "git://github.com/libgit2/TestEmptyRepository"
 
 static git_repository *g_repo;
 
