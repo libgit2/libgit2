@@ -50,7 +50,7 @@ void test_refs_branches_create__can_not_create_a_branch_if_its_name_collide_with
 {
 	retrieve_known_commit(&target, repo);
 
-	cl_git_fail(git_branch_create(&branch, repo, "br2", target, 0));
+	cl_assert_equal_i(GIT_EEXISTS, git_branch_create(&branch, repo, "br2", target, 0));
 }
 
 void test_refs_branches_create__can_force_create_over_an_existing_branch(void)

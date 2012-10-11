@@ -77,12 +77,11 @@ int git_branch_create(
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
-	if (git_reference_create_oid(&branch, repository,
-		git_buf_cstr(&canonical_branch_name), git_object_id(commit), force) < 0)
-		goto cleanup;
+	error = git_reference_create_oid(&branch, repository,
+		git_buf_cstr(&canonical_branch_name), git_object_id(commit), force);
 
-	*ref_out = branch;
-	error = 0;
+	if (!error)
+		*ref_out = branch;
 
 cleanup:
 	git_object_free(commit);

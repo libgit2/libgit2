@@ -77,7 +77,7 @@ void test_object_tag_write__overwrite(void)
 	/* create signature */
 	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
 
-	cl_git_fail(git_tag_create(
+	cl_assert_equal_i(GIT_EEXISTS, git_tag_create(
                               &tag_id, /* out id */
                               g_repo,
                               "e90810b",
@@ -166,7 +166,7 @@ void test_object_tag_write__lightweight_over_existing(void)
 	git_oid_fromstr(&target_id, tagged_commit);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
 
-	cl_git_fail(git_tag_create_lightweight(
+	cl_assert_equal_i(GIT_EEXISTS, git_tag_create_lightweight(
                                           &object_id,
                                           g_repo,
                                           "e90810b",

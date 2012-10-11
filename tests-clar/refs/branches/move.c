@@ -45,7 +45,7 @@ void test_refs_branches_move__can_move_a_local_branch_to_a_partially_colliding_n
 
 void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_collide_with_an_existing_one(void)
 {
-	cl_git_fail(git_branch_move(ref, "master", 0));
+	cl_assert_equal_i(GIT_EEXISTS, git_branch_move(ref, "master", 0));
 }
 
 void test_refs_branches_move__can_not_move_a_non_branch(void)
