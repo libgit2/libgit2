@@ -337,3 +337,14 @@ void test_refs_rename__move_up(void)
     git_reference_free(ref);
     git_reference_free(looked_up_ref);
 }
+
+void test_refs_rename__propagate_eexists(void)
+{
+	git_reference *ref;
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, packed_head_name));
+
+	cl_assert_equal_i(GIT_EEXISTS, git_reference_rename(ref, packed_test_head_name, 0));
+
+	git_reference_free(ref);
+}

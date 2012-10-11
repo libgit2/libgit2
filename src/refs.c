@@ -1357,8 +1357,8 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		normalization_flags) < 0)
 			return -1;
 
-	if (reference_can_write(ref->owner, normalized, ref->name, force) < 0)
-		return -1;
+	if ((result = reference_can_write(ref->owner, normalized, ref->name, force)) < 0)
+		return result;
 
 	/* Initialize path now so we won't get an allocation failure once
 	 * we actually start removing things. */
