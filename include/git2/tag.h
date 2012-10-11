@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "object.h"
+#include "strarray.h"
 
 /**
  * @file git2/tag.h

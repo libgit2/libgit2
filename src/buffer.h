@@ -8,6 +8,7 @@
 #define INCLUDE_buffer_h__
 
 #include "common.h"
+#include "git2/strarray.h"
 #include <stdarg.h>
 
 typedef struct {
