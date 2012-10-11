@@ -10,6 +10,7 @@
 #include "common.h"
 #include <fcntl.h>
 #include <time.h>
+#include "fnmatch.h"
 
 #ifndef S_IFGITLINK
 #define S_IFGITLINK 0160000
