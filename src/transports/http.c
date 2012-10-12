@@ -708,8 +708,10 @@ static void http_free(git_transport *transport)
 void git_transport_http_set_authcb(git_transport *transport,
 				   int (*auth_cb)(http_auth_data *auth_data, void *data))
 {
+	transport_http *t;
 	assert(transport);
-	transport_http *t = (transport_http *) transport;
+
+	t = (transport_http *) transport;
 	t->auth_cb = auth_cb;
 }
 
