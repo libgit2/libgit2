@@ -195,7 +195,7 @@ int git_buf_put_base64(git_buf *buf, const char *data, size_t len)
 	uint8_t *write, a, b, c;
 	const uint8_t *read = (const uint8_t *)data;
 
-	ENSURE_SIZE(buf, buf->size + ((len * 4 + 3) / 3) + 1);
+	ENSURE_SIZE(buf, buf->size + 4 * ((len / 3) + !!extra) + 1);
 	write = (uint8_t *)&buf->ptr[buf->size];
 
 	/* convert each run of 3 bytes into 4 output bytes */
