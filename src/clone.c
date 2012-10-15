@@ -18,6 +18,7 @@
 
 #include "common.h"
 #include "remote.h"
+#include "pkt.h"
 #include "fileops.h"
 #include "refs.h"
 #include "path.h"
@@ -174,6 +175,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
 	int retcode = -1;
 	git_remote_head *remote_head;
+	git_pkt_ref *pkt;
 	struct head_info head_info;
 	git_buf remote_master_name = GIT_BUF_INIT;
 
@@ -187,7 +189,8 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	}
 
 	/* Get the remote's HEAD. This is always the first ref in remote->refs. */
-	remote_head = remote->refs.contents[0];
+	pkt = remote->transport->refs.contents[0];
+	remote_head = &pkt->head;
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
 	git_buf_init(&head_info.branchname, 16);
 	head_info.repo = repo;
@@ -290,6 +293,19 @@ static bool path_is_okay(const char *path)
 	return true;
 }
 
+static bool should_checkout(
+	git_repository *repo,
+	bool is_bare,
+	git_checkout_opts *opts)
+{
+	if (is_bare)
+		return false;
+
+	if (!opts)
+		return false;
+
+	return !git_repository_head_orphan(repo);
+}
 
 static int clone_internal(
 	git_repository **out,
@@ -298,7 +314,7 @@ static int clone_internal(
 	git_indexer_stats *fetch_stats,
 	git_indexer_stats *checkout_stats,
 	git_checkout_opts *checkout_opts,
-	int is_bare)
+	bool is_bare)
 {
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
@@ -321,7 +337,7 @@ static int clone_internal(
 		}
 	}
 
-	if (!retcode && !is_bare && !git_repository_head_orphan(repo))
+	if (!retcode && should_checkout(repo, is_bare, checkout_opts))
 		retcode = git_checkout_head(*out, checkout_opts, checkout_stats);
 
 	return retcode;
