@@ -18,6 +18,7 @@
 
 #include "common.h"
 #include "remote.h"
+#include "pkt.h"
 #include "fileops.h"
 #include "refs.h"
 #include "path.h"
@@ -174,6 +175,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
 	int retcode = -1;
 	git_remote_head *remote_head;
+	git_pkt_ref *pkt;
 	struct head_info head_info;
 	git_buf remote_master_name = GIT_BUF_INIT;
 
@@ -187,7 +189,8 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	}
 
 	/* Get the remote's HEAD. This is always the first ref in remote->refs. */
-	remote_head = remote->refs.contents[0];
+	pkt = remote->transport->refs.contents[0];
+	remote_head = &pkt->head;
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
 	git_buf_init(&head_info.branchname, 16);
 	head_info.repo = repo;
