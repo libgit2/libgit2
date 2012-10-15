@@ -72,3 +72,31 @@ void test_clone_network__empty_repository(void)
 
 	git_reference_free(head);
 }
+
+void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	cl_set_cleanup(&cleanup_repository, "./no-checkout");
+
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./no-checkout", NULL, NULL, NULL));
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
+	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&path)));
+}
+
+void test_clone_network__can_checkout_a_cloned_repo(void)
+{
+	git_checkout_opts opts;
+	git_buf path = GIT_BUF_INIT;
+
+	memset(&opts, 0, sizeof(opts));
+	opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+
+	cl_set_cleanup(&cleanup_repository, "./default-checkout");
+
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./default-checkout", NULL, NULL, &opts));
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
+}

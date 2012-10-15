@@ -29,9 +29,12 @@ GIT_BEGIN_DECL
  * @param out pointer that will receive the resulting repository object
  * @param origin_url repository to clone from
  * @param workdir_path local directory to clone to
- * @param fetch_stats pointer to structure that receives fetch progress information (may be NULL)
- * @param checkout_opts options for the checkout step (may be NULL)
- * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information about the error)
+ * @param fetch_stats pointer to structure that receives fetch progress
+ * information (may be NULL)
+ * @param checkout_opts options for the checkout step. If NULL, no checkout
+ * is performed
+ * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
+ * about the error)
  */
 GIT_EXTERN(int) git_clone(git_repository **out,
 								  const char *origin_url,

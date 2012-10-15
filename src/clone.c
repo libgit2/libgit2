@@ -290,6 +290,19 @@ static bool path_is_okay(const char *path)
 	return true;
 }
 
+static bool should_checkout(
+	git_repository *repo,
+	bool is_bare,
+	git_checkout_opts *opts)
+{
+	if (is_bare)
+		return false;
+
+	if (!opts)
+		return false;
+
+	return !git_repository_head_orphan(repo);
+}
 
 static int clone_internal(
 	git_repository **out,
@@ -298,7 +311,7 @@ static int clone_internal(
 	git_indexer_stats *fetch_stats,
 	git_indexer_stats *checkout_stats,
 	git_checkout_opts *checkout_opts,
-	int is_bare)
+	bool is_bare)
 {
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
@@ -321,7 +334,7 @@ static int clone_internal(
 		}
 	}
 
-	if (!retcode && !is_bare && !git_repository_head_orphan(repo))
+	if (!retcode && should_checkout(repo, is_bare, checkout_opts))
 		retcode = git_checkout_head(*out, checkout_opts, checkout_stats);
 
 	return retcode;
