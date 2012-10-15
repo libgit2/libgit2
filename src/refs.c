@@ -155,11 +155,26 @@ static int loose_parse_symbolic(git_reference *ref, git_buf *file_content)
 
 static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 {
-	/* File format: 40 chars (OID) */
-	if (git_buf_len(file_content) == GIT_OID_HEXSZ &&
-		git_oid_fromstr(oid, git_buf_cstr(file_content)) == 0)
+	size_t len;
+	const char *str;
+
+	len = git_buf_len(file_content);
+	if (len < GIT_OID_HEXSZ)
+		goto corrupted;
+
+	/* str is guranteed to be zero-terminated */
+	str = git_buf_cstr(file_content);
+
+	/* If the file is longer than 40 chars, the 41st must be a space */
+	if (git_oid_fromstr(oid, git_buf_cstr(file_content)) < 0)
+		goto corrupted;
+
+	/* If the file is longer than 40 chars, the 41st must be a space */
+	str += GIT_OID_HEXSZ;
+	if (*str == '\0' || git__isspace(*str))
 		return 0;
 
+corrupted:
 	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
 	return -1;
 }

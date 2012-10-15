@@ -212,6 +212,7 @@ void test_refs_read__trailing(void)
 	cl_git_pass(git_reference_lookup(&test, g_repo, "refs/heads/test"));
 	cl_git_pass(git_reference_lookup(&trailing, g_repo, "refs/heads/trailing"));
 	cl_git_pass(git_oid_cmp(git_reference_oid(test), git_reference_oid(trailing)));
+	cl_git_pass(git_reference_lookup(&trailing, g_repo, "FETCH_HEAD"));
 
 	git_reference_free(test);
 	git_reference_free(trailing);
