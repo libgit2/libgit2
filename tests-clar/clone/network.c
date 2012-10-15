@@ -32,6 +32,8 @@ void test_clone_network__network_full(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./test2", NULL, NULL, NULL));
 	cl_assert(!git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+
+	git_remote_free(origin);
 }
 
 
@@ -44,6 +46,8 @@ void test_clone_network__network_bare(void)
 	cl_git_pass(git_clone_bare(&g_repo, LIVE_REPO_URL, "./test", NULL));
 	cl_assert(git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+
+	git_remote_free(origin);
 }
 
 void test_clone_network__cope_with_already_existing_directory(void)
@@ -83,6 +87,8 @@ void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&path)));
+
+	git_buf_free(&path);
 }
 
 void test_clone_network__can_checkout_a_cloned_repo(void)
@@ -104,4 +110,7 @@ void test_clone_network__can_checkout_a_cloned_repo(void)
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_target(head));
+
+	git_reference_free(head);
+	git_buf_free(&path);
 }
