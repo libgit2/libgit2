@@ -54,9 +54,12 @@ GIT_EXTERN(int) git_ignore_clear_internal_rules(
 /**
  * Test if the ignore rules apply to a given path.
  *
- * This function simply checks the ignore rules to see if they would apply
- * to the given file.  This indicates if the file would be ignored regardless
- * of whether the file is already in the index or commited to the repository.
+ * This function checks the ignore rules to see if they would apply to the
+ * given file.  This indicates if the file would be ignored regardless of
+ * whether the file is already in the index or commited to the repository.
+ *
+ * One way to think of this is if you were to do "git add ." on the
+ * directory containing the file, would it be added or not?
  *
  * @param ignored boolean returning 0 if the file is not ignored, 1 if it is
  * @param repo a repository object
