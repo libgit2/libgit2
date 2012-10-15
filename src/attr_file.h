@@ -71,10 +71,10 @@ typedef struct {
 } git_attr_file;
 
 typedef struct {
-	git_buf     full;
-	const char *path;
-	const char *basename;
-	int         is_dir;
+	git_buf  full;
+	char    *path;
+	char    *basename;
+	int      is_dir;
 } git_attr_path;
 
 typedef enum {

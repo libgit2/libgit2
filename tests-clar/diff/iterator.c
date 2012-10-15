@@ -451,13 +451,13 @@ static void workdir_iterator_test(
 
 	git_iterator_free(i);
 
-	cl_assert(count == expected_count);
-	cl_assert(count_all == expected_count + expected_ignores);
+	cl_assert_equal_i(expected_count,count);
+	cl_assert_equal_i(expected_count + expected_ignores, count_all);
 }
 
 void test_diff_iterator__workdir_0(void)
 {
-	workdir_iterator_test("attr", NULL, NULL, 25, 2, NULL, "ign");
+	workdir_iterator_test("attr", NULL, NULL, 27, 1, NULL, "ign");
 }
 
 static const char *status_paths[] = {

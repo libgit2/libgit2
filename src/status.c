@@ -86,6 +86,10 @@ int git_status_foreach_ext(
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
+	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
+		(err = git_repository__ensure_not_bare(repo, "status")) < 0)
+		return err;
+
 	if ((err = git_repository_head_tree(&head, repo)) < 0)
 		return err;
 
@@ -245,9 +249,22 @@ int git_status_file(
 		error = GIT_EAMBIGUOUS;
 
 	if (!error && !sfi.count) {
-		giterr_set(GITERR_INVALID,
-			"Attempt to get status of nonexistent file '%s'", path);
-		error = GIT_ENOTFOUND;
+		git_buf full = GIT_BUF_INIT;
+
+		/* if the file actually exists and we still did not get a callback
+		 * for it, then it must be contained inside an ignored directory, so
+		 * mark it as such instead of generating an error.
+		 */
+		if (!git_buf_joinpath(&full, git_repository_workdir(repo), path) &&
+			git_path_exists(full.ptr))
+			sfi.status = GIT_STATUS_IGNORED;
+		else {
+			giterr_set(GITERR_INVALID,
+				"Attempt to get status of nonexistent file '%s'", path);
+			error = GIT_ENOTFOUND;
+		}
+
+		git_buf_free(&full);
 	}
 
 	*status_flags = sfi.status;

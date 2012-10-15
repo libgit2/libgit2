@@ -24,12 +24,15 @@
 
 static int rangematch(const char *, char, int, char **);
 
-int
-p_fnmatch(const char *pattern, const char *string, int flags)
+static int
+p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 {
 		const char *stringstart;
 		char *newp;
 		char c, test;
+
+		if (recurs-- == 0)
+				return FNM_NORES;
 
 		for (stringstart = string;;)
 				switch (c = *pattern++) {
@@ -75,8 +78,11 @@ p_fnmatch(const char *pattern, const char *string, int flags)
 
 						/* General case, use recursion. */
 						while ((test = *string) != EOS) {
-								if (!p_fnmatch(pattern, string, flags & ~FNM_PERIOD))
-										return (0);
+								int e;
+
+								e = p_fnmatchx(pattern, string, flags & ~FNM_PERIOD, recurs);
+								if (e != FNM_NOMATCH)
+										return e;
 								if (test == '/' && (flags & FNM_PATHNAME))
 										break;
 								++string;
@@ -176,5 +182,11 @@ rangematch(const char *pattern, char test, int flags, char **newp)
 
 		*newp = (char *)pattern;
 		return (ok == negate ? RANGE_NOMATCH : RANGE_MATCH);
+}
+
+int
+p_fnmatch(const char *pattern, const char *string, int flags)
+{
+		return p_fnmatchx(pattern, string, flags, 64);
 }
 
