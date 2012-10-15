@@ -58,10 +58,11 @@ static int filter_wants(git_remote *remote)
 {
 	struct filter_payload p;
 	git_refspec tagspec;
+	int error = -1;
 
 	git_vector_clear(&remote->refs);
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
-		return -1;
+		return error;
 
 	/*
 	 * The fetch refspec can be NULL, and what this means is that the
@@ -75,9 +76,14 @@ static int filter_wants(git_remote *remote)
 	p.remote = remote;
 
 	if (git_repository_odb__weakptr(&p.odb, remote->repo) < 0)
-		return -1;
+		goto cleanup;
 
-	return git_remote_ls(remote, filter_ref__cb, &p);
+	error = git_remote_ls(remote, filter_ref__cb, &p);
+
+cleanup:
+	git_refspec__free(&tagspec);
+
+	return error;
 }
 
 /* Wait until we get an ack from the */
