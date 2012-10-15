@@ -211,8 +211,6 @@ static int loose_lookup(git_reference *ref)
 	if (!updated)
 		return 0;
 
-	git_buf_rtrim(&ref_file);
-
 	if (ref->flags & GIT_REF_SYMBOLIC) {
 		git__free(ref->target.symbolic);
 		ref->target.symbolic = NULL;
@@ -222,6 +220,7 @@ static int loose_lookup(git_reference *ref)
 
 	if (git__prefixcmp((const char *)(ref_file.ptr), GIT_SYMREF) == 0) {
 		ref->flags |= GIT_REF_SYMBOLIC;
+		git_buf_rtrim(&ref_file);
 		result = loose_parse_symbolic(ref, &ref_file);
 	} else {
 		ref->flags |= GIT_REF_OID;
