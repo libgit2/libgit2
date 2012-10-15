@@ -39,9 +39,11 @@ int git_reset(
 	if (git_object_owner(target) != repo)
 		return reset_error_invalid("The given target does not belong to this repository.");
 
-	if (reset_type == GIT_RESET_MIXED
-		&& git_repository__ensure_not_bare(repo, "reset mixed") < 0)
-		return GIT_EBAREREPO;
+	if (reset_type != GIT_RESET_SOFT
+		&& git_repository__ensure_not_bare(
+			repo,
+			reset_type == GIT_RESET_MIXED ? "reset mixed" : "reset hard") < 0)
+				return GIT_EBAREREPO;
 
 	if (git_object_peel(&commit, target, GIT_OBJ_COMMIT) < 0) {
 		reset_error_invalid("The given target does not resolve to a commit");

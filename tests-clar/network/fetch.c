@@ -47,6 +47,8 @@ static void do_fetch(const char *url, int flag, int n)
 	git_remote_disconnect(remote);
 	cl_git_pass(git_remote_update_tips(remote));
 	cl_assert_equal_i(counter, n);
+
+	git_remote_free(remote);
 }
 
 void test_network_fetch__default_git(void)
