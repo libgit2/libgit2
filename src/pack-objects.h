@@ -43,7 +43,6 @@ typedef struct git_pobject {
 
 	int written:1,
 	    recursing:1,
-	    no_try_delta:1,
 	    tagged:1,
 	    filled:1;
 } git_pobject;
@@ -65,6 +64,11 @@ struct git_packbuilder {
 
 	git_oid pack_oid; /* hash of written pack */
 
+	/* synchronization objects */
+	git_mutex cache_mutex;
+	git_mutex progress_mutex;
+	git_cond progress_cond;
+
 	/* configs */
 	unsigned long delta_cache_size;
 	unsigned long max_delta_cache_size;
@@ -77,8 +81,7 @@ struct git_packbuilder {
 	bool done;
 };
 
-
 int git_packbuilder_send(git_packbuilder *pb, git_transport *t);
 int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
 
-#endif
+#endif /* INCLUDE_pack_objects_h__ */
