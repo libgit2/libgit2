@@ -513,6 +513,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		res = load_config(&repo->_config, repo, global_config_path, xdg_config_path, system_config_path);
 
 		git_buf_free(&global_buf);
+		git_buf_free(&xdg_buf);
 		git_buf_free(&system_buf);
 
 		if (res < 0)
