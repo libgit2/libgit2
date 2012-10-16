@@ -7,13 +7,6 @@
 #ifndef INCLUDE_posix__w32_h__
 #define INCLUDE_posix__w32_h__
 
-#if !defined(__sun) && !defined(__amigaos4__)
-#	include <fnmatch.h>
-#	define p_fnmatch(p, s, f) fnmatch(p, s, f)
-#else
-#	include "compat/fnmatch.h"
-#endif
-
 #include <stdio.h>
 
 #define p_lstat(p,b) lstat(p,b)

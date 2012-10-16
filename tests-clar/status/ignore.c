@@ -22,21 +22,25 @@ void test_status_ignore__0(void)
 		const char *path;
 		int expected;
 	} test_cases[] = {
-		/* patterns "sub" and "ign" from .gitignore */
+		/* pattern "ign" from .gitignore */
 		{ "file", 0 },
 		{ "ign", 1 },
-		{ "sub", 1 },
+		{ "sub", 0 },
 		{ "sub/file", 0 },
 		{ "sub/ign", 1 },
-		{ "sub/sub", 1 },
+		{ "sub/ign/file", 1 },
+		{ "sub/ign/sub", 1 },
+		{ "sub/ign/sub/file", 1 },
+		{ "sub/sub", 0 },
 		{ "sub/sub/file", 0 },
 		{ "sub/sub/ign", 1 },
-		{ "sub/sub/sub", 1 },
+		{ "sub/sub/sub", 0 },
 		/* pattern "dir/" from .gitignore */
 		{ "dir", 1 },
 		{ "dir/", 1 },
 		{ "sub/dir", 1 },
 		{ "sub/dir/", 1 },
+		{ "sub/dir/file", 1 }, /* contained in ignored parent */
 		{ "sub/sub/dir", 0 }, /* dir is not actually a dir, but a file */
 		{ NULL, 0 }
 	}, *one_test;
@@ -172,6 +176,61 @@ void test_status_ignore__ignore_pattern_ignorecase(void)
 	cl_assert(flags == ignore_case ? GIT_STATUS_IGNORED : GIT_STATUS_WT_NEW);
 }
 
+void test_status_ignore__subdirectories(void)
+{
+	status_entry_single st;
+	int ignored;
+	git_status_options opts;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_mkfile(
+		"empty_standard_repo/ignore_me", "I'm going to be ignored!");
+
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "ignore_me\n");
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
+	cl_assert_equal_i(2, st.count);
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(git_status_file(&st.status, g_repo, "ignore_me"));
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "ignore_me"));
+	cl_assert(ignored);
+
+
+	/* So, interestingly, as per the comment in diff_from_iterators() the
+	 * following file is ignored, but in a way so that it does not show up
+	 * in status even if INCLUDE_IGNORED is used.  This actually matches
+	 * core git's behavior - if you follow these steps and try running "git
+	 * status -uall --ignored" then the following file and directory will
+	 * not show up in the output at all.
+	 */
+
+	cl_git_pass(
+		git_futils_mkdir_r("empty_standard_repo/test/ignore_me", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/test/ignore_me/file", "I'm going to be ignored!");
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
+		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
+	cl_assert_equal_i(2, st.count);
+
+	cl_git_pass(git_status_file(&st.status, g_repo, "test/ignore_me/file"));
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(
+		git_status_should_ignore(&ignored, g_repo, "test/ignore_me/file"));
+	cl_assert(ignored);
+}
+
 void test_status_ignore__adding_internal_ignores(void)
 {
 	int ignored;
@@ -232,5 +291,51 @@ void test_status_ignore__add_internal_as_first_thing(void)
 	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.tmp"));
 	cl_assert(ignored);
 	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
+	cl_assert(!ignored);
+}
+
+void test_status_ignore__internal_ignores_inside_deep_paths(void)
+{
+	int ignored;
+	const char *add_me = "Debug\nthis/is/deep\npatterned*/dir\n";
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(git_ignore_add_rule(g_repo, add_me));
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "Debug"));
+	cl_assert(ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "and/Debug"));
+	cl_assert(ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "really/Debug/this/file"));
+	cl_assert(ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "Debug/what/I/say"));
+	cl_assert(ignored);
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "and/NoDebug"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "NoDebug/this"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "please/NoDebug/this"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/deep"));
+	cl_assert(ignored);
+	/* pattern containing slash gets FNM_PATHNAME so all slashes must match */
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "and/this/is/deep"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/deep/too"));
+	cl_assert(ignored);
+	/* pattern containing slash gets FNM_PATHNAME so all slashes must match */
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "but/this/is/deep/and/ignored"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/not/deep"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "is/this/not/as/deep"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/deepish"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "xthis/is/deep"));
 	cl_assert(!ignored);
 }

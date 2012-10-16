@@ -277,15 +277,76 @@ int git_ignore_clear_internal_rules(
 int git_ignore_path_is_ignored(
 	int *ignored,
 	git_repository *repo,
-	const char *path)
+	const char *pathname)
 {
 	int error;
+	const char *workdir;
+	git_attr_path path;
+	char *tail, *end;
+	bool full_is_dir;
 	git_ignores ignores;
+	unsigned int i;
+	git_attr_file *file;
 
-	if (git_ignore__for_path(repo, path, &ignores) < 0)
-		return -1;
+	assert(ignored && pathname);
 
-	error = git_ignore__lookup(&ignores, path, ignored);
+	workdir = repo ? git_repository_workdir(repo) : NULL;
+
+	if ((error = git_attr_path__init(&path, pathname, workdir)) < 0)
+		return error;
+
+	tail = path.path;
+	end  = &path.full.ptr[path.full.size];
+	full_is_dir = path.is_dir;
+
+	while (1) {
+		/* advance to next component of path */
+		path.basename = tail;
+
+		while (tail < end && *tail != '/') tail++;
+		*tail = '\0';
+
+		path.full.size = (tail - path.full.ptr);
+		path.is_dir = (tail == end) ? full_is_dir : true;
+
+		/* update ignores for new path fragment */
+		if (path.basename == path.path)
+			error = git_ignore__for_path(repo, path.path, &ignores);
+		else
+			error = git_ignore__push_dir(&ignores, path.basename);
+		if (error < 0)
+			break;
+
+		/* first process builtins - success means path was found */
+		if (ignore_lookup_in_rules(
+				&ignores.ign_internal->rules, &path, ignored))
+			goto cleanup;
+
+		/* next process files in the path */
+		git_vector_foreach(&ignores.ign_path, i, file) {
+			if (ignore_lookup_in_rules(&file->rules, &path, ignored))
+				goto cleanup;
+		}
+
+		/* last process global ignores */
+		git_vector_foreach(&ignores.ign_global, i, file) {
+			if (ignore_lookup_in_rules(&file->rules, &path, ignored))
+				goto cleanup;
+		}
+
+		/* if we found no rules before reaching the end, we're done */
+		if (tail == end)
+			break;
+
+		/* reinstate divider in path */
+		*tail = '/';
+		while (*tail == '/') tail++;
+	}
+
+	*ignored = 0;
+
+cleanup:
+	git_attr_path__free(&path);
 	git_ignore__free(&ignores);
 	return error;
 }
