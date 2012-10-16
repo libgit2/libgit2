@@ -418,14 +418,14 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 			root.path[0] == L'%') /* i.e. no expansion happened */
 		{
 			giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
-			return -1;
+			return GIT_ENOTFOUND;
 		}
 	} else {
 		if (win32_expand_path(&root, L"%USERPROFILE%\\") < 0 ||
 			root.path[0] == L'%') /* i.e. no expansion happened */
 		{
 			giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
-			return -1;
+			return GIT_ENOTFOUND;
 		}
 	}
 
@@ -440,7 +440,7 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 	if (home == NULL) {
 		giterr_set(GITERR_OS, "Global file lookup failed. "
 			"Cannot locate the user's home directory");
-		return -1;
+		return GIT_ENOTFOUND;
 	}
 
 	if (git_buf_joinpath(path, home, filename) < 0)
