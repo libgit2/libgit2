@@ -182,6 +182,8 @@ void test_status_ignore__subdirectories(void)
 	int ignored;
 	git_status_options opts;
 
+	GIT_UNUSED(opts);
+
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
 	cl_git_mkfile(
