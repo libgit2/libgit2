@@ -32,7 +32,6 @@ static void do_fetch(const char *url, int flag, int n)
 {
 	git_remote *remote;
 	git_off_t bytes;
-	git_indexer_stats stats;
 	git_remote_callbacks callbacks;
 
 	memset(&callbacks, 0, sizeof(git_remote_callbacks));
@@ -43,7 +42,7 @@ static void do_fetch(const char *url, int flag, int n)
 	git_remote_set_callbacks(remote, &callbacks);
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
-	cl_git_pass(git_remote_download(remote, &bytes, &stats));
+	cl_git_pass(git_remote_download(remote, &bytes));
 	git_remote_disconnect(remote);
 	cl_git_pass(git_remote_update_tips(remote));
 	cl_assert_equal_i(counter, n);

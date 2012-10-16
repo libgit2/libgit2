@@ -302,7 +302,7 @@ on_error:
 	return error;
 }
 
-int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
+int git_fetch_download_pack(git_remote *remote, git_off_t *bytes)
 {
 	git_transport *t = remote->transport;
 
@@ -310,9 +310,9 @@ int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_st
 		return 0;
 
 	if (t->own_logic)
-		return t->download_pack(t, remote->repo, bytes, stats);
+		return t->download_pack(t, remote->repo, bytes, &remote->stats);
 
-	return git_fetch__download_pack(t, remote->repo, bytes, stats);
+	return git_fetch__download_pack(t, remote->repo, bytes, &remote->stats);
 
 }
 

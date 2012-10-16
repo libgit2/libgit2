@@ -263,7 +263,7 @@ static int setup_remotes_and_fetch(git_repository *repo,
 	if (!git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, origin_url)) {
 		/* Connect and download everything */
 		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
-			if (!git_remote_download(origin, &bytes, fetch_stats)) {
+			if (!git_remote_download(origin, &bytes)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {
 					/* Point HEAD to the same ref as the remote's head */

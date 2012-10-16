@@ -186,7 +186,7 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  * @param filename where to store the temporary filename
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats);
+GIT_EXTERN(int) git_remote_download(git_remote *remote, git_off_t *bytes);
 
 /**
  * Check whether the remote is connected
