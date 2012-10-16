@@ -451,8 +451,12 @@ int git_config_find_global_r(git_buf *path)
 {
 	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
 
-	if (error == GIT_ENOTFOUND)
-		error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
+	return error;
+}
+
+int git_config_find_xdg_r(git_buf *path)
+{
+	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
 
 	return error;
 }
@@ -475,6 +479,28 @@ int git_config_find_global(char *global_config_path, size_t length)
 	}
 
 	git_buf_copy_cstr(global_config_path, length, &path);
+	git_buf_free(&path);
+	return 0;
+}
+
+int git_config_find_xdg(char *xdg_config_path, size_t length)
+{
+	git_buf path  = GIT_BUF_INIT;
+	int ret = git_config_find_xdg_r(&path);
+
+	if (ret < 0) {
+		git_buf_free(&path);
+		return ret;
+	}
+
+	if (path.size >= length) {
+		git_buf_free(&path);
+		giterr_set(GITERR_NOMEMORY,
+			"Path is to long to fit on the given buffer");
+		return -1;
+	}
+
+	git_buf_copy_cstr(xdg_config_path, length, &path);
 	git_buf_free(&path);
 	return 0;
 }
@@ -515,6 +541,9 @@ int git_config_open_default(git_config **out)
 	error = git_config_new(&cfg);
 
 	if (!error && !git_config_find_global_r(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr, 3);
+
+	if (!error && !git_config_find_xdg_r(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr, 2);
 
 	if (!error && !git_config_find_system_r(&buf))
