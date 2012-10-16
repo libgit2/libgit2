@@ -313,6 +313,11 @@ struct git_remote_callbacks {
  */
 GIT_EXTERN(void) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
 
+/**
+ * Get the statistics structure that is filled in by the fetch operation.
+ */
+GIT_EXTERN(const git_indexer_stats *) git_remote_stats(git_remote *remote);
+
 enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSET,
 	GIT_REMOTE_DOWNLOAD_TAGS_NONE,

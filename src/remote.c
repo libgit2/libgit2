@@ -703,6 +703,12 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 	}
 }
 
+inline const git_indexer_stats* git_remote_stats(git_remote *remote)
+{
+	assert(remote);
+	return &remote->stats;
+}
+
 int git_remote_autotag(git_remote *remote)
 {
 	return remote->download_tags;
