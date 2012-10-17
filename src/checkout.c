@@ -30,6 +30,7 @@ struct checkout_diff_data
 	git_indexer_stats *stats;
 	git_repository *owner;
 	bool can_symlink;
+	bool found_submodules;
 	bool create_submodules;
 	int error;
 };
@@ -242,6 +243,8 @@ static int checkout_create_the_new(
 	if (do_checkout) {
 		bool is_submodule = S_ISGITLINK(delta->old_file.mode);
 
+		data->found_submodules = true;
+
 		if (!is_submodule && !data->create_submodules)
 			error = checkout_blob(data, &delta->old_file);
 
@@ -339,7 +342,8 @@ int git_checkout_index(
 		stats = &dummy_stats;
 
 	stats->processed = 0;
-	stats->total = (unsigned int)git_diff_num_deltas(diff) * 3 /* # passes */;
+	/* total based on 3 passes, but it might be 2 if no submodules */
+	stats->total = (unsigned int)git_diff_num_deltas(diff) * 3;
 
 	memset(&data, 0, sizeof(data));
 
@@ -365,7 +369,8 @@ int git_checkout_index(
 	if (!(error = git_diff_foreach(
 			diff, &data, checkout_remove_the_old, NULL, NULL)) &&
 		!(error = git_diff_foreach(
-			diff, &data, checkout_create_the_new, NULL, NULL)))
+			diff, &data, checkout_create_the_new, NULL, NULL)) &&
+		data.found_submodules)
 	{
 		data.create_submodules = true;
 		error = git_diff_foreach(
