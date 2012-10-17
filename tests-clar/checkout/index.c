@@ -69,7 +69,7 @@ void test_checkout_index__cannot_checkout_a_bare_repository(void)
 	memset(&g_opts, 0, sizeof(g_opts));
 	g_repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_fail(git_checkout_index(g_repo, NULL, NULL));
+	cl_git_fail(git_checkout_index(g_repo, NULL));
 }
 
 void test_checkout_index__can_create_missing_files(void)
@@ -79,7 +79,7 @@ void test_checkout_index__can_create_missing_files(void)
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
 
 	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/README", "hey there\n");
 	test_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
@@ -95,7 +95,7 @@ void test_checkout_index__can_remove_untracked_files(void)
 	cl_assert_equal_i(true, git_path_isdir("./testrepo/dir/subdir/subsubdir"));
 
 	g_opts.checkout_strategy = GIT_CHECKOUT_REMOVE_UNTRACKED;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/dir"));
 }
@@ -111,7 +111,7 @@ void test_checkout_index__honor_the_specified_pathspecs(void)
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
 	test_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
@@ -142,7 +142,7 @@ void test_checkout_index__honor_the_gitattributes_directives(void)
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
 	set_core_autocrlf_to(false);
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/README", "hey there\n");
 	test_file_contents("./testrepo/new.txt", "my new file\n");
@@ -157,7 +157,7 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
 	set_core_autocrlf_to(true);
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/README", expected_readme_text);
 #endif
@@ -172,7 +172,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 {
 	set_repo_symlink_handling_cap_to(true);
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 #ifdef GIT_WIN32
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
@@ -194,7 +194,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_false(void)
 {
 	set_repo_symlink_handling_cap_to(false);
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/link_to_new.txt", "new.txt");
 }
@@ -204,7 +204,7 @@ void test_checkout_index__donot_overwrite_modified_file_by_default(void)
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 
 	g_opts.checkout_strategy = 0;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "This isn't what's stored!");
 }
@@ -214,7 +214,7 @@ void test_checkout_index__can_overwrite_modified_file(void)
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 
 	g_opts.checkout_strategy = GIT_CHECKOUT_OVERWRITE_MODIFIED;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "my new file\n");
 }
@@ -224,14 +224,14 @@ void test_checkout_index__options_disable_filters(void)
 	cl_git_mkfile("./testrepo/.gitattributes", "*.txt text eol=crlf\n");
 
 	g_opts.disable_filters = false;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "my new file\r\n");
 
 	p_unlink("./testrepo/new.txt");
 
 	g_opts.disable_filters = true;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "my new file\n");
 }
@@ -249,7 +249,7 @@ void test_checkout_index__options_dir_modes(void)
 	reset_index_to_treeish((git_object *)commit);
 
 	g_opts.dir_mode = 0701;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	cl_git_pass(p_stat("./testrepo/a", &st));
 	cl_assert_equal_i(st.st_mode & 0777, 0701);
@@ -269,7 +269,7 @@ void test_checkout_index__options_override_file_modes(void)
 
 	g_opts.file_mode = 0700;
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	cl_git_pass(p_stat("./testrepo/new.txt", &st));
 	cl_assert_equal_i(st.st_mode & 0777, 0700);
@@ -283,7 +283,7 @@ void test_checkout_index__options_open_flags(void)
 	g_opts.file_open_flags = O_CREAT | O_RDWR | O_APPEND;
 
 	g_opts.checkout_strategy |= GIT_CHECKOUT_OVERWRITE_MODIFIED;
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "hi\nmy new file\n");
 }
@@ -328,7 +328,7 @@ void test_checkout_index__can_notify_of_skipped_files(void)
 	g_opts.skipped_notify_cb = notify_cb;
 	g_opts.notify_payload = &data;
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 }
 
 static int dont_notify_cb(
@@ -358,5 +358,22 @@ void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
 	g_opts.skipped_notify_cb = dont_notify_cb;
 	g_opts.notify_payload = NULL;
 
-	cl_git_pass(git_checkout_index(g_repo, &g_opts, NULL));
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
+}
+
+static void progress(const char *path, float progress, void *payload)
+{
+	GIT_UNUSED(path); GIT_UNUSED(progress);
+	int *count = (int*)payload;
+	(*count)++;
+}
+
+void test_checkout_index__calls_progress_callback(void)
+{
+	int count = 0;
+	g_opts.progress_cb = progress;
+	g_opts.progress_payload = &count;
+
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
+	cl_assert_equal_i(count, 5);
 }

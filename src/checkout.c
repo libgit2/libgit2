@@ -27,7 +27,7 @@ struct checkout_diff_data
 	git_buf *path;
 	size_t workdir_len;
 	git_checkout_opts *checkout_opts;
-	git_indexer_stats *stats;
+	/*git_indexer_stats *stats;*/
 	git_repository *owner;
 	bool can_symlink;
 	bool found_submodules;
@@ -204,6 +204,12 @@ static int checkout_remove_the_old(
 			GIT_DIRREMOVAL_FILES_AND_DIRS);
 	}
 
+	if (data->checkout_opts->progress_cb)
+		data->checkout_opts->progress_cb(
+				delta->new_file.path,
+				progress,
+				data->checkout_opts->progress_payload);
+
 	return data->error;
 }
 
@@ -304,11 +310,9 @@ static void normalize_options(git_checkout_opts *normalized, git_checkout_opts *
 
 int git_checkout_index(
 	git_repository *repo,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats)
+	git_checkout_opts *opts)
 {
 	git_diff_list *diff = NULL;
-	git_indexer_stats dummy_stats;
 
 	git_diff_options diff_opts = {0};
 	git_checkout_opts checkout_opts;
@@ -339,19 +343,11 @@ int git_checkout_index(
 
 	normalize_options(&checkout_opts, opts);
 
-	if (!stats)
-		stats = &dummy_stats;
-
-	stats->processed = 0;
-	/* total based on 3 passes, but it might be 2 if no submodules */
-	stats->total = (unsigned int)git_diff_num_deltas(diff) * 3;
-
 	memset(&data, 0, sizeof(data));
 
 	data.path = &workdir;
 	data.workdir_len = git_buf_len(&workdir);
 	data.checkout_opts = &checkout_opts;
-	data.stats = stats;
 	data.owner = repo;
 
 	if ((error = retrieve_symlink_capabilities(repo, &data.can_symlink)) < 0)
@@ -377,8 +373,6 @@ int git_checkout_index(
 		error = git_diff_foreach(
 			diff, &data, checkout_create_the_new, NULL, NULL);
 	}
-
-	stats->processed = stats->total;
 
 cleanup:
 	if (error == GIT_EUSER)
@@ -417,7 +411,7 @@ int git_checkout_tree(
 	if ((error = git_index_write(index)) < 0)
 		goto cleanup;
 
-	error = git_checkout_index(repo, opts, stats);
+	error = git_checkout_index(repo, opts);
 
 cleanup:
 	git_index_free(index);

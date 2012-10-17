@@ -65,8 +65,14 @@ typedef struct git_checkout_opts {
 		const git_oid *blob_oid,
 		int file_mode,
 		void *payload);
-
 	void *notify_payload;
+
+	/* Optional callback to notify the consumer of checkout progress. */
+	void (* progress_cb)(
+			const char *path,
+			float progress,
+			void *payload);
+	void *progress_payload;
 
 	/** When not NULL, array of fnmatch patterns specifying
 	 * which paths should be taken into account
@@ -101,8 +107,7 @@ GIT_EXTERN(int) git_checkout_head(
  */
 GIT_EXTERN(int) git_checkout_index(
 	git_repository *repo,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats);
+	git_checkout_opts *opts);
 
 /**
  * Updates files in the index and working tree to match the content of the

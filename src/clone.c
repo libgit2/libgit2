@@ -248,16 +248,11 @@ cleanup:
 
 
 
-static int setup_remotes_and_fetch(git_repository *repo,
-											  const char *origin_url,
-											  git_indexer_stats *fetch_stats)
+static int setup_remotes_and_fetch(git_repository *repo, const char *origin_url)
 {
 	int retcode = GIT_ERROR;
 	git_remote *origin = NULL;
 	git_off_t bytes = 0;
-	git_indexer_stats dummy_stats;
-
-	if (!fetch_stats) fetch_stats = &dummy_stats;
 
 	/* Create the "origin" remote */
 	if (!git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, origin_url)) {
@@ -327,7 +322,7 @@ static int clone_internal(
 	}
 
 	if (!(retcode = git_repository_init(&repo, path, is_bare))) {
-		if ((retcode = setup_remotes_and_fetch(repo, origin_url, fetch_stats)) < 0) {
+		if ((retcode = setup_remotes_and_fetch(repo, origin_url)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
 			git_futils_rmdir_r(path, NULL, GIT_DIRREMOVAL_FILES_AND_DIRS);
