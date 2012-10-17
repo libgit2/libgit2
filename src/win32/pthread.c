@@ -78,6 +78,7 @@ int pthread_cond_destroy(pthread_cond_t *cond)
 
 	closed = CloseHandle(*cond);
 	assert(closed);
+	GIT_UNUSED(closed);
 
 	*cond = NULL;
 	return 0;
@@ -99,6 +100,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 
 	wait_result = WaitForSingleObject(*cond, INFINITE);
 	assert(WAIT_OBJECT_0 == wait_result);
+	GIT_UNUSED(wait_result);
 
 	return pthread_mutex_lock(mutex);
 }
@@ -112,6 +114,7 @@ int pthread_cond_signal(pthread_cond_t *cond)
 
 	signaled = SetEvent(*cond);
 	assert(signaled);
+	GIT_UNUSED(signaled);
 
 	return 0;
 }
