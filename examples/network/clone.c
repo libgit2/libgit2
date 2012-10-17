@@ -24,8 +24,7 @@ static void *clone_thread(void *ptr)
 
 	// Kick off the clone
 	data->ret = git_clone(&repo, data->url, data->path,
-								 &data->fetch_stats, &data->checkout_stats, 
-								 &data->opts);
+								 &data->fetch_stats, &data->opts);
 	if (repo) git_repository_free(repo);
 	data->finished = 1;
 
@@ -46,7 +45,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	// Data for background thread
 	data.url = argv[1];
 	data.path = argv[2];
-	data.opts.disable_filters = 1;
+	data.opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
 	printf("Cloning '%s' to '%s'\n", data.url, data.path);
 
 	// Create the worker thread
