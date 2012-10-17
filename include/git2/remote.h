@@ -12,6 +12,7 @@
 #include "refspec.h"
 #include "net.h"
 #include "indexer.h"
+#include "strarray.h"
 
 /**
  * @file git2/remote.h
