@@ -387,8 +387,7 @@ cleanup:
 int git_checkout_tree(
 	git_repository *repo,
 	git_object *treeish,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats)
+	git_checkout_opts *opts)
 {
 	git_index *index = NULL;
 	git_tree *tree = NULL;
@@ -421,8 +420,7 @@ cleanup:
 
 int git_checkout_head(
 	git_repository *repo,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats)
+	git_checkout_opts *opts)
 {
 	git_reference *head;
 	int error;
@@ -436,7 +434,7 @@ int git_checkout_head(
 	if ((error = git_reference_peel(&tree, head, GIT_OBJ_TREE)) < 0)
 		goto cleanup;
 
-	error = git_checkout_tree(repo, tree, opts, stats);
+	error = git_checkout_tree(repo, tree, opts);
 
 cleanup:
 	git_reference_free(head);

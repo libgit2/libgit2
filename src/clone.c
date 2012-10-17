@@ -333,7 +333,7 @@ static int clone_internal(
 	}
 
 	if (!retcode && should_checkout(repo, is_bare, checkout_opts))
-		retcode = git_checkout_head(*out, checkout_opts, checkout_stats);
+		retcode = git_checkout_head(*out, checkout_opts);
 
 	return retcode;
 }
