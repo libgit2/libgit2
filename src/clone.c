@@ -330,7 +330,7 @@ static int clone_internal(
 		if ((retcode = setup_remotes_and_fetch(repo, origin_url, fetch_stats)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
-			git_futils_rmdir_r(path, GIT_DIRREMOVAL_FILES_AND_DIRS);
+			git_futils_rmdir_r(path, NULL, GIT_DIRREMOVAL_FILES_AND_DIRS);
 		} else {
 			*out = repo;
 			retcode = 0;

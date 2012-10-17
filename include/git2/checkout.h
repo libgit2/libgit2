@@ -21,22 +21,39 @@
  */
 GIT_BEGIN_DECL
 
-enum {
-	GIT_CHECKOUT_DEFAULT			= (1 << 0),
-	GIT_CHECKOUT_OVERWRITE_MODIFIED	= (1 << 1),
-	GIT_CHECKOUT_CREATE_MISSING		= (1 << 2),
-	GIT_CHECKOUT_REMOVE_UNTRACKED	= (1 << 3),
-};
+/**
+ * Checkout behavior flags
+ *
+ * These flags control what checkout does with files.  Pass in a
+ * combination of these values OR'ed together.
+ */
+typedef enum {
+	/** Checkout does not update any files in the working directory. */
+	GIT_CHECKOUT_DEFAULT            = (1 << 0),
 
-/* Use zeros to indicate default settings */
+	/** When a file exists and is modified, replace it with new version. */
+	GIT_CHECKOUT_OVERWRITE_MODIFIED = (1 << 1),
+
+	/** When a file does not exist in the working directory, create it. */
+	GIT_CHECKOUT_CREATE_MISSING     = (1 << 2),
+
+	/** If an untracked file in found in the working dir, delete it. */
+	GIT_CHECKOUT_REMOVE_UNTRACKED   = (1 << 3),
+} git_checkout_strategy_t;
+
+/**
+ * Checkout options structure
+ *
+ * Use zeros to indicate default settings.
+ */
 typedef struct git_checkout_opts {
-	unsigned int checkout_strategy; /* default: GIT_CHECKOUT_DEFAULT */
-	int disable_filters;
-	int dir_mode; /* default is 0755 */
-	int file_mode; /* default is 0644 */
-	int file_open_flags; /* default is O_CREAT | O_TRUNC | O_WRONLY */
+	unsigned int checkout_strategy; /** default: GIT_CHECKOUT_DEFAULT */
+	int disable_filters; /** don't apply filters like CRLF conversion */
+	int dir_mode;		 /** default is 0755 */
+	int file_mode;		 /** default is 0644 or 0755 as dictated by blob */
+	int file_open_flags; /** default is O_CREAT | O_TRUNC | O_WRONLY */
 
-	/* Optional callback to notify the consumer of files that
+	/** Optional callback to notify the consumer of files that
 	 * haven't be checked out because a modified version of them
 	 * exist in the working directory.
 	 *
@@ -51,7 +68,7 @@ typedef struct git_checkout_opts {
 
 	void *notify_payload;
 
-	/* when not NULL, arrays of fnmatch pattern specifying 
+	/** When not NULL, array of fnmatch patterns specifying
 	 * which paths should be taken into account
 	 */
 	git_strarray paths; 

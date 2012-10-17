@@ -6,11 +6,11 @@
 static void cleanup_basic_dirs(void *ref)
 {
 	GIT_UNUSED(ref);
-	git_futils_rmdir_r("d0", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
-	git_futils_rmdir_r("d1", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
-	git_futils_rmdir_r("d2", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
-	git_futils_rmdir_r("d3", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
-	git_futils_rmdir_r("d4", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
+	git_futils_rmdir_r("d0", NULL, GIT_DIRREMOVAL_EMPTY_HIERARCHY);
+	git_futils_rmdir_r("d1", NULL, GIT_DIRREMOVAL_EMPTY_HIERARCHY);
+	git_futils_rmdir_r("d2", NULL, GIT_DIRREMOVAL_EMPTY_HIERARCHY);
+	git_futils_rmdir_r("d3", NULL, GIT_DIRREMOVAL_EMPTY_HIERARCHY);
+	git_futils_rmdir_r("d4", NULL, GIT_DIRREMOVAL_EMPTY_HIERARCHY);
 }
 
 void test_core_mkdir__basic(void)
@@ -56,7 +56,7 @@ void test_core_mkdir__basic(void)
 static void cleanup_basedir(void *ref)
 {
 	GIT_UNUSED(ref);
-	git_futils_rmdir_r("base", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
+	git_futils_rmdir_r("base", NULL, GIT_DIRREMOVAL_EMPTY_HIERARCHY);
 }
 
 void test_core_mkdir__with_base(void)
@@ -108,7 +108,7 @@ static void cleanup_chmod_root(void *ref)
 		git__free(mode);
 	}
 
-	git_futils_rmdir_r("r", GIT_DIRREMOVAL_EMPTY_HIERARCHY);
+	git_futils_rmdir_r("r", NULL, GIT_DIRREMOVAL_EMPTY_HIERARCHY);
 }
 
 static void check_mode(mode_t expected, mode_t actual)

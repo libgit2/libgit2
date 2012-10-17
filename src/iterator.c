@@ -82,7 +82,7 @@ int git_iterator_for_nothing(git_iterator **iter)
 
 typedef struct tree_iterator_frame tree_iterator_frame;
 struct tree_iterator_frame {
-	tree_iterator_frame *next;
+	tree_iterator_frame *next, *prev;
 	git_tree *tree;
 	char *start;
 	unsigned int index;
@@ -91,7 +91,7 @@ struct tree_iterator_frame {
 typedef struct {
 	git_iterator base;
 	git_repository *repo;
-	tree_iterator_frame *stack;
+	tree_iterator_frame *stack, *tail;
 	git_index_entry entry;
 	git_buf path;
 	bool path_has_filename;
@@ -119,8 +119,10 @@ static void tree_iterator__pop_frame(tree_iterator *ti)
 {
 	tree_iterator_frame *tf = ti->stack;
 	ti->stack = tf->next;
-	if (ti->stack != NULL) /* don't free the initial tree */
-		git_tree_free(tf->tree);
+	if (ti->stack != NULL) {
+		git_tree_free(tf->tree); /* don't free the initial tree */
+		ti->stack->prev = NULL;  /* disconnect prev */
+	}
 	git__free(tf);
 }
 
@@ -221,6 +223,7 @@ static int tree_iterator__expand_tree(tree_iterator *ti)
 
 		tf->next  = ti->stack;
 		ti->stack = tf;
+		tf->next->prev = tf;
 
 		te = tree_iterator__tree_entry(ti);
 	}
@@ -312,7 +315,7 @@ int git_iterator_for_tree_range(
 	ITERATOR_BASE_INIT(ti, tree, TREE);
 
 	ti->repo  = repo;
-	ti->stack = tree_iterator__alloc_frame(tree, ti->base.start);
+	ti->stack = ti->tail = tree_iterator__alloc_frame(tree, ti->base.start);
 
 	if ((error = tree_iterator__expand_tree(ti)) < 0)
 		git_iterator_free((git_iterator *)ti);
@@ -861,6 +864,45 @@ int git_iterator_current_tree_entry(
 {
 	*tree_entry = (iter->type != GIT_ITERATOR_TREE) ? NULL :
 		tree_iterator__tree_entry((tree_iterator *)iter);
+	return 0;
+}
+
+int git_iterator_current_parent_tree(
+	git_iterator *iter,
+	const char *parent_path,
+	const git_tree **tree_ptr)
+{
+	tree_iterator *ti = (tree_iterator *)iter;
+	tree_iterator_frame *tf;
+	const char *scan = parent_path;
+
+	if (iter->type != GIT_ITERATOR_TREE || ti->stack == NULL)
+		goto notfound;
+
+	for (tf = ti->tail; tf != NULL; tf = tf->prev) {
+		const git_tree_entry *te;
+
+		if (!*scan) {
+			*tree_ptr = tf->tree;
+			return 0;
+		}
+
+		te = git_tree_entry_byindex(tf->tree, tf->index);
+
+		if (strncmp(scan, te->filename, te->filename_len) != 0)
+			goto notfound;
+
+		scan += te->filename_len;
+
+		if (*scan) {
+			if (*scan != '/')
+				goto notfound;
+			scan++;
+		}
+	}
+
+notfound:
+	*tree_ptr = NULL;
 	return 0;
 }
 

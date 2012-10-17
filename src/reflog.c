@@ -372,7 +372,7 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 		goto cleanup;
 
 	if (git_path_isdir(git_buf_cstr(&new_path)) && 
-		(git_futils_rmdir_r(git_buf_cstr(&new_path), GIT_DIRREMOVAL_ONLY_EMPTY_DIRS) < 0))
+		(git_futils_rmdir_r(git_buf_cstr(&new_path), NULL, GIT_DIRREMOVAL_ONLY_EMPTY_DIRS) < 0))
 		goto cleanup;
 
 	if (git_futils_mkpath2file(git_buf_cstr(&new_path), GIT_REFLOG_DIR_MODE) < 0)

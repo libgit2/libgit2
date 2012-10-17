@@ -100,7 +100,7 @@ GIT_EXTERN(git_tree_entry *) git_tree_entry_dup(const git_tree_entry *entry);
  * @param tree a previously loaded tree.
  * @return object identity for the tree.
  */
-GIT_EXTERN(const git_oid *) git_tree_id(git_tree *tree);
+GIT_EXTERN(const git_oid *) git_tree_id(const git_tree *tree);
 
 /**
  * Get the number of entries listed in a tree
@@ -108,7 +108,7 @@ GIT_EXTERN(const git_oid *) git_tree_id(git_tree *tree);
  * @param tree a previously loaded tree.
  * @return the number of entries in the tree
  */
-GIT_EXTERN(unsigned int) git_tree_entrycount(git_tree *tree);
+GIT_EXTERN(unsigned int) git_tree_entrycount(const git_tree *tree);
 
 /**
  * Lookup a tree entry by its filename

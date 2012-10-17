@@ -34,21 +34,58 @@ GIT_BEGIN_DECL
  * in via the `flags` value in the `git_diff_options`.
  */
 enum {
+	/** Normal diff, the default */
 	GIT_DIFF_NORMAL = 0,
+	/** Reverse the sides of the diff */
 	GIT_DIFF_REVERSE = (1 << 0),
+	/** Treat all files as text, disabling binary attributes & detection */
 	GIT_DIFF_FORCE_TEXT = (1 << 1),
+	/** Ignore all whitespace */
 	GIT_DIFF_IGNORE_WHITESPACE = (1 << 2),
+	/** Ignore changes in amount of whitespace */
 	GIT_DIFF_IGNORE_WHITESPACE_CHANGE = (1 << 3),
+	/** Ignore whitespace at end of line */
 	GIT_DIFF_IGNORE_WHITESPACE_EOL = (1 << 4),
+	/** Exclude submodules from the diff completely */
 	GIT_DIFF_IGNORE_SUBMODULES = (1 << 5),
+	/** Use the "patience diff" algorithm (currently unimplemented) */
 	GIT_DIFF_PATIENCE = (1 << 6),
+	/** Include ignored files in the diff list */
 	GIT_DIFF_INCLUDE_IGNORED = (1 << 7),
+	/** Include untracked files in the diff list */
 	GIT_DIFF_INCLUDE_UNTRACKED = (1 << 8),
+	/** Include unmodified files in the diff list */
 	GIT_DIFF_INCLUDE_UNMODIFIED = (1 << 9),
+	/** Even with the GIT_DIFF_INCLUDE_UNTRACKED flag, when an untracked
+	 *  directory is found, only a single entry for the directory is added
+	 *  to the diff list; with this flag, all files under the directory will
+	 *  be included, too.
+	 */
 	GIT_DIFF_RECURSE_UNTRACKED_DIRS = (1 << 10),
+	/** If the pathspec is set in the diff options, this flags means to
+	 *  apply it as an exact match instead of as an fnmatch pattern.
+	 */
 	GIT_DIFF_DISABLE_PATHSPEC_MATCH = (1 << 11),
+	/** Use case insensitive filename comparisons */
 	GIT_DIFF_DELTAS_ARE_ICASE = (1 << 12),
+	/** When generating patch text, include the content of untracked files */
 	GIT_DIFF_INCLUDE_UNTRACKED_CONTENT = (1 << 13),
+	/** Disable updating of the `binary` flag in delta records.  This is
+	 *  useful when iterating over a diff if you don't need hunk and data
+	 *  callbacks and want to avoid having to load file completely.
+	 */
+	GIT_DIFF_SKIP_BINARY_CHECK = (1 << 14),
+	/** Normally, a type change between files will be converted into a
+	 *  DELETED record for the old and an ADDED record for the new; this
+	 *  options enabled the generation of TYPECHANGE delta records.
+	 */
+	GIT_DIFF_INCLUDE_TYPECHANGE = (1 << 15),
+	/** Even with GIT_DIFF_INCLUDE_TYPECHANGE, blob->tree changes still
+	 *  generally show as a DELETED blob.  This flag tries to correctly
+	 *  label blob->tree transitions as TYPECHANGE records with new_file's
+	 *  mode set to tree.  Note: the tree SHA will not be available.
+	 */
+	GIT_DIFF_INCLUDE_TYPECHANGE_TREES  = (1 << 16),
 };
 
 /**
@@ -85,24 +122,16 @@ typedef struct git_diff_list git_diff_list;
  * Flags that can be set for the file on side of a diff.
  *
  * Most of the flags are just for internal consumption by libgit2,
- * but some of them may be interesting to external users.  They are:
- *
- * - VALID_OID  - the `oid` value is computed and correct
- * - FREE_PATH  - the `path` string is separated allocated memory
- * - BINARY     - this file should be considered binary data
- * - NOT_BINARY - this file should be considered text data
- * - FREE_DATA  - the internal file data is kept in allocated memory
- * - UNMAP_DATA - the internal file data is kept in mmap'ed memory
- * - NO_DATA    - this side of the diff should not be loaded
+ * but some of them may be interesting to external users.
  */
 enum {
-	GIT_DIFF_FILE_VALID_OID  = (1 << 0),
-	GIT_DIFF_FILE_FREE_PATH  = (1 << 1),
-	GIT_DIFF_FILE_BINARY     = (1 << 2),
-	GIT_DIFF_FILE_NOT_BINARY = (1 << 3),
-	GIT_DIFF_FILE_FREE_DATA  = (1 << 4),
-	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5),
-	GIT_DIFF_FILE_NO_DATA    = (1 << 6),
+	GIT_DIFF_FILE_VALID_OID  = (1 << 0), /** `oid` value is known correct */
+	GIT_DIFF_FILE_FREE_PATH  = (1 << 1), /** `path` is allocated memory */
+	GIT_DIFF_FILE_BINARY     = (1 << 2), /** should be considered binary data */
+	GIT_DIFF_FILE_NOT_BINARY = (1 << 3), /** should be considered text data */
+	GIT_DIFF_FILE_FREE_DATA  = (1 << 4), /** internal file data is allocated */
+	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5), /** internal file data is mmap'ed */
+	GIT_DIFF_FILE_NO_DATA    = (1 << 6), /** file data should not be loaded */
 };
 
 /**
@@ -116,7 +145,8 @@ typedef enum {
 	GIT_DELTA_RENAMED = 4,
 	GIT_DELTA_COPIED = 5,
 	GIT_DELTA_IGNORED = 6,
-	GIT_DELTA_UNTRACKED = 7
+	GIT_DELTA_UNTRACKED = 7,
+	GIT_DELTA_TYPECHANGE = 8,
 } git_delta_t;
 
 /**
