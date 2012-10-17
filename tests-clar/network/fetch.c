@@ -28,11 +28,19 @@ static int update_tips(const char *refname, const git_oid *a, const git_oid *b, 
 	return 0;
 }
 
+static void progress(const git_indexer_stats *stats, void *payload)
+{
+	GIT_UNUSED(stats);
+	bool *was_called = (bool*)payload;
+	*was_called = true;
+}
+
 static void do_fetch(const char *url, int flag, int n)
 {
 	git_remote *remote;
 	git_off_t bytes;
 	git_remote_callbacks callbacks;
+	bool progress_was_called = false;
 
 	memset(&callbacks, 0, sizeof(git_remote_callbacks));
 	callbacks.update_tips = update_tips;
@@ -42,10 +50,11 @@ static void do_fetch(const char *url, int flag, int n)
 	git_remote_set_callbacks(remote, &callbacks);
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
-	cl_git_pass(git_remote_download(remote, &bytes));
+	cl_git_pass(git_remote_download(remote, &bytes, progress, &progress_was_called));
 	git_remote_disconnect(remote);
 	cl_git_pass(git_remote_update_tips(remote));
 	cl_assert_equal_i(counter, n);
+	cl_assert_equal_i(progress_was_called, true);
 
 	git_remote_free(remote);
 }

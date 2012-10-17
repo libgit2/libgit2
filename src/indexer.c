@@ -49,6 +49,8 @@ struct git_indexer_stream {
 	git_vector deltas;
 	unsigned int fanout[256];
 	git_oid hash;
+	git_indexer_progress_callback progress_cb;
+	void *progress_payload;
 };
 
 struct delta_info {
@@ -138,7 +140,11 @@ static int cache_cmp(const void *a, const void *b)
 	return git_oid_cmp(&ea->sha1, &eb->sha1);
 }
 
-int git_indexer_stream_new(git_indexer_stream **out, const char *prefix)
+int git_indexer_stream_new(
+		git_indexer_stream **out,
+		const char *prefix,
+		git_indexer_progress_callback progress_cb,
+		void *progress_payload)
 {
 	git_indexer_stream *idx;
 	git_buf path = GIT_BUF_INIT;
@@ -147,6 +153,8 @@ int git_indexer_stream_new(git_indexer_stream **out, const char *prefix)
 
 	idx = git__calloc(1, sizeof(git_indexer_stream));
 	GITERR_CHECK_ALLOC(idx);
+	idx->progress_cb = progress_cb;
+	idx->progress_payload = progress_payload;
 
 	error = git_buf_joinpath(&path, prefix, suff);
 	if (error < 0)
@@ -273,6 +281,12 @@ on_error:
 	return -1;
 }
 
+static void do_progress_callback(git_indexer_stream *idx, git_indexer_stats *stats)
+{
+	if (!idx->progress_cb) return;
+	idx->progress_cb(stats, idx->progress_payload);
+}
+
 int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_indexer_stats *stats)
 {
 	int error;
@@ -326,6 +340,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		memset(stats, 0, sizeof(git_indexer_stats));
 		stats->total = (unsigned int)idx->nr_objects;
+		do_progress_callback(idx, stats);
 	}
 
 	/* Now that we have data in the pack, let's try to parse it */
@@ -362,6 +377,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 				return error;
 
 			stats->received++;
+			do_progress_callback(idx, stats);
 			continue;
 		}
 
@@ -381,6 +397,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		stats->processed = (unsigned int)++processed;
 		stats->received++;
+		do_progress_callback(idx, stats);
 	}
 
 	return 0;

@@ -23,6 +23,11 @@ typedef struct git_indexer_stats {
 } git_indexer_stats;
 
 
+/**
+ * Type for progress callbacks during indexing
+ */
+typedef void (*git_indexer_progress_callback)(const git_indexer_stats *stats, void *payload);
+
 typedef struct git_indexer git_indexer;
 typedef struct git_indexer_stream git_indexer_stream;
 
@@ -31,8 +36,14 @@ typedef struct git_indexer_stream git_indexer_stream;
  *
  * @param out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
+ * @param progress_cb function to call with progress information
+ * @param progress_payload payload for the progress callback
  */
-GIT_EXTERN(int) git_indexer_stream_new(git_indexer_stream **out, const char *path);
+GIT_EXTERN(int) git_indexer_stream_new(
+		git_indexer_stream **out,
+		const char *path,
+		git_indexer_progress_callback progress_cb,
+		void *progress_callback_payload);
 
 /**
  * Add data to the indexer

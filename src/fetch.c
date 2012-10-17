@@ -302,7 +302,11 @@ on_error:
 	return error;
 }
 
-int git_fetch_download_pack(git_remote *remote, git_off_t *bytes)
+int git_fetch_download_pack(
+		git_remote *remote,
+		git_off_t *bytes,
+		git_indexer_progress_callback progress_cb,
+		void *progress_payload)
 {
 	git_transport *t = remote->transport;
 
@@ -312,7 +316,8 @@ int git_fetch_download_pack(git_remote *remote, git_off_t *bytes)
 	if (t->own_logic)
 		return t->download_pack(t, remote->repo, bytes, &remote->stats);
 
-	return git_fetch__download_pack(t, remote->repo, bytes, &remote->stats);
+	return git_fetch__download_pack(t, remote->repo, bytes, &remote->stats,
+			progress_cb, progress_payload);
 
 }
 
@@ -348,7 +353,9 @@ int git_fetch__download_pack(
 	git_transport *t,
 	git_repository *repo,
 	git_off_t *bytes,
-	git_indexer_stats *stats)
+	git_indexer_stats *stats,
+	git_indexer_progress_callback progress_cb,
+	void *progress_payload)
 {
 	git_buf path = GIT_BUF_INIT;
 	gitno_buffer *buf = &t->buffer;
@@ -358,7 +365,7 @@ int git_fetch__download_pack(
 	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
 		return -1;
 
-	if (git_indexer_stream_new(&idx, git_buf_cstr(&path)) < 0)
+	if (git_indexer_stream_new(&idx, git_buf_cstr(&path), progress_cb, progress_payload) < 0)
 		goto on_error;
 
 	git_buf_free(&path);
