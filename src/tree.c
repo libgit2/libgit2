@@ -180,9 +180,9 @@ void git_tree__free(git_tree *tree)
 	git__free(tree);
 }
 
-const git_oid *git_tree_id(git_tree *c)
+const git_oid *git_tree_id(const git_tree *c)
 {
-	return git_object_id((git_object *)c);
+	return git_object_id((const git_object *)c);
 }
 
 git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)
@@ -286,7 +286,7 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 	return at_pos;
 }
 
-unsigned int git_tree_entrycount(git_tree *tree)
+unsigned int git_tree_entrycount(const git_tree *tree)
 {
 	assert(tree);
 	return (unsigned int)tree->entries.length;

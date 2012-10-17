@@ -533,6 +533,11 @@ static int diff_patch_load(
 	if (delta->binary == 1)
 		goto cleanup;
 
+	if (!ctxt->hunk_cb &&
+		!ctxt->data_cb &&
+		(ctxt->opts->flags & GIT_DIFF_SKIP_BINARY_CHECK) != 0)
+		goto cleanup;
+
 	switch (delta->status) {
 	case GIT_DELTA_ADDED:
 		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
@@ -698,8 +703,10 @@ static int diff_patch_generate(
 	if ((patch->flags & GIT_DIFF_PATCH_DIFFABLE) == 0)
 		return 0;
 
-	if (ctxt)
-		patch->ctxt = ctxt;
+	if (!ctxt->file_cb && !ctxt->hunk_cb)
+		return 0;
+
+	patch->ctxt = ctxt;
 
 	memset(&xdiff_callback, 0, sizeof(xdiff_callback));
 	xdiff_callback.outf = diff_patch_cb;
@@ -1360,7 +1367,9 @@ int git_diff_get_patch(
 	if (delta_ptr)
 		*delta_ptr = delta;
 
-	if (!patch_ptr && delta->binary != -1)
+	if (!patch_ptr &&
+		(delta->binary != -1 ||
+		 (diff->opts.flags & GIT_DIFF_SKIP_BINARY_CHECK) != 0))
 		return 0;
 
 	diff_context_init(

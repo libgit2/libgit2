@@ -142,6 +142,9 @@ GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *iter)
 extern int git_iterator_current_tree_entry(
 	git_iterator *iter, const git_tree_entry **tree_entry);
 
+extern int git_iterator_current_parent_tree(
+	git_iterator *iter, const char *parent_path, const git_tree **tree_ptr);
+
 extern int git_iterator_current_is_ignored(git_iterator *iter);
 
 /**
