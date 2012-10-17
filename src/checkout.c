@@ -243,7 +243,8 @@ static int checkout_create_the_new(
 	if (do_checkout) {
 		bool is_submodule = S_ISGITLINK(delta->old_file.mode);
 
-		data->found_submodules = true;
+		if (is_submodule)
+			data->found_submodules = true;
 
 		if (!is_submodule && !data->create_submodules)
 			error = checkout_blob(data, &delta->old_file);
@@ -376,6 +377,8 @@ int git_checkout_index(
 		error = git_diff_foreach(
 			diff, &data, checkout_create_the_new, NULL, NULL);
 	}
+
+	stats->processed = stats->total;
 
 cleanup:
 	if (error == GIT_EUSER)
