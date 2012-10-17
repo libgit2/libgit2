@@ -85,14 +85,6 @@ GIT_BEGIN_DECL
  */
 #define GIT_PATH_MAX 4096
 
-typedef struct {
-	char **strings;
-	size_t count;
-} git_strarray;
-
-GIT_EXTERN(void) git_strarray_free(git_strarray *array);
-GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
-
 /**
  * Return the version of the libgit2 library
  * being currently used.
@@ -128,4 +120,5 @@ GIT_EXTERN(int) git_libgit2_capabilities(void);
 
 /** @} */
 GIT_END_DECL
+
 #endif

@@ -10,7 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "indexer.h"
-
+#include "strarray.h"
 
 /**
  * @file git2/checkout.h

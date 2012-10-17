@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "strarray.h"
 
 /**
  * @file git2/refs.h
