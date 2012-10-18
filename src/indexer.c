@@ -446,6 +446,7 @@ static int resolve_deltas(git_indexer_stream *idx, git_indexer_stats *stats)
 
 		git__free(obj.data);
 		stats->processed++;
+		do_progress_callback(idx, stats);
 	}
 
 	return 0;
