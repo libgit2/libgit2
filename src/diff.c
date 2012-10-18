@@ -933,12 +933,14 @@ int git_diff_workdir_to_index(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	int error;
+
 	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && diff);
 
-	if (git_iterator_for_index_range(&a, repo, prefix, prefix) < 0 ||
-	    git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
+	if ((error = git_iterator_for_index_range(&a, repo, prefix, prefix)) < 0 ||
+	    (error = git_iterator_for_workdir_range(&b, repo, prefix, prefix)) < 0)
 		goto on_error;
 
 	git__free(prefix);
@@ -948,7 +950,7 @@ int git_diff_workdir_to_index(
 on_error:
 	git__free(prefix);
 	git_iterator_free(a);
-	return -1;
+	return error;
 }
 
 
@@ -959,12 +961,14 @@ int git_diff_workdir_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
+	int error;
+
 	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
 
 	assert(repo && old_tree && diff);
 
-	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
-	    git_iterator_for_workdir_range(&b, repo, prefix, prefix) < 0)
+	if ((error = git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix)) < 0 ||
+	    (error = git_iterator_for_workdir_range(&b, repo, prefix, prefix)) < 0)
 		goto on_error;
 
 	git__free(prefix);
@@ -974,7 +978,7 @@ int git_diff_workdir_to_tree(
 on_error:
 	git__free(prefix);
 	git_iterator_free(a);
-	return -1;
+	return error;
 }
 
 
