@@ -364,16 +364,16 @@ void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
 static void progress(const char *path, float progress, void *payload)
 {
 	GIT_UNUSED(path); GIT_UNUSED(progress);
-	int *count = (int*)payload;
-	(*count)++;
+	bool *was_called = (bool*)payload;
+	*was_called = true;
 }
 
 void test_checkout_index__calls_progress_callback(void)
 {
-	int count = 0;
+	bool was_called = 0;
 	g_opts.progress_cb = progress;
-	g_opts.progress_payload = &count;
+	g_opts.progress_payload = &was_called;
 
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
-	cl_assert_equal_i(count, 5);
+	cl_assert_equal_i(was_called, true);
 }

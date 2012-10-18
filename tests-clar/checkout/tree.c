@@ -67,17 +67,17 @@ void test_checkout_tree__can_checkout_a_subdirectory_from_a_subtree(void)
 static void progress(const char *path, float progress, void *payload)
 {
 	GIT_UNUSED(path); GIT_UNUSED(progress);
-	int *count = (int*)payload;
-	(*count)++;
+	bool *was_called = (bool*)payload;
+	*was_called = true;
 }
 
 void test_checkout_tree__calls_progress_callback(void)
 {
-	int count = 0;
+	bool was_called = 0;
 	g_opts.progress_cb = progress;
-	g_opts.progress_payload = &count;
+	g_opts.progress_payload = &was_called;
 
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "master"));
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
-	cl_assert_equal_i(count, 4);
+	cl_assert_equal_i(was_called, true);
 }
