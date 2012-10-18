@@ -152,7 +152,7 @@ int git_fetch_negotiate(git_remote *remote)
 	gitno_buffer *buf = &t->buffer;
 	git_buf data = GIT_BUF_INIT;
 	git_revwalk *walk = NULL;
-	int error, pkt_type;
+	int error = -1, pkt_type;
 	unsigned int i;
 	git_oid oid;
 
@@ -190,6 +190,12 @@ int git_fetch_negotiate(git_remote *remote)
 		git_pkt_buffer_have(&oid, &data);
 		i++;
 		if (i % 20 == 0) {
+			if (t->cancel.val) {
+				giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+					error = GIT_EUSER;
+					goto on_error;
+			}
+
 			git_pkt_buffer_flush(&data);
 			if (git_buf_oom(&data))
 				goto on_error;
@@ -254,6 +260,11 @@ int git_fetch_negotiate(git_remote *remote)
 	}
 
 	git_pkt_buffer_done(&data);
+	if (t->cancel.val) {
+		giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+		error = GIT_EUSER;
+		goto on_error;
+	}
 	if (t->negotiation_step(t, data.ptr, data.size) < 0)
 		goto on_error;
 
@@ -288,7 +299,7 @@ int git_fetch_negotiate(git_remote *remote)
 on_error:
 	git_revwalk_free(walk);
 	git_buf_free(&data);
-	return -1;
+	return error;
 }
 
 int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
@@ -305,11 +316,16 @@ int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_st
 
 }
 
-static int no_sideband(git_indexer_stream *idx, gitno_buffer *buf, git_off_t *bytes, git_indexer_stats *stats)
+static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *buf, git_off_t *bytes, git_indexer_stats *stats)
 {
 	int recvd;
 
 	do {
+		if (t->cancel.val) {
+			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			return GIT_EUSER;
+		}
+
 		if (git_indexer_stream_add(idx, buf->data, buf->offset, stats) < 0)
 			return -1;
 
@@ -337,6 +353,7 @@ int git_fetch__download_pack(
 	git_buf path = GIT_BUF_INIT;
 	gitno_buffer *buf = &t->buffer;
 	git_indexer_stream *idx = NULL;
+	int error = -1;
 
 	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
 		return -1;
@@ -354,7 +371,7 @@ int git_fetch__download_pack(
 	 * check which one belongs there.
 	 */
 	if (!t->caps.side_band && !t->caps.side_band_64k) {
-		if (no_sideband(idx, buf, bytes, stats) < 0)
+		if (no_sideband(t, idx, buf, bytes, stats) < 0)
 			goto on_error;
 
 		git_indexer_stream_free(idx);
@@ -362,6 +379,12 @@ int git_fetch__download_pack(
 	}
 
 	do {
+		if (t->cancel.val) {
+			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			error = GIT_EUSER;
+			goto on_error;
+		}
+
 		git_pkt *pkt;
 		if (recv_pkt(&pkt, buf) < 0)
 			goto on_error;
@@ -395,7 +418,7 @@ int git_fetch__download_pack(
 on_error:
 	git_buf_free(&path);
 	git_indexer_stream_free(idx);
-	return -1;
+	return error;
 }
 
 int git_fetch_setup_walk(git_revwalk **out, git_repository *repo)
