@@ -419,10 +419,7 @@ void test_status_worktree__cannot_retrieve_the_status_of_a_bare_repository(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
-	error = git_status_file(&status, repo, "dummy");
-
-	cl_git_fail(error);
-	cl_assert(error != GIT_ENOTFOUND);
+	cl_assert_equal_i(GIT_EBAREREPO, git_status_file(&status, repo, "dummy"));
 
 	git_repository_free(repo);
 }
