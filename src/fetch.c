@@ -379,13 +379,14 @@ int git_fetch__download_pack(
 	}
 
 	do {
+		git_pkt *pkt;
+
 		if (t->cancel.val) {
 			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
 			error = GIT_EUSER;
 			goto on_error;
 		}
 
-		git_pkt *pkt;
 		if (recv_pkt(&pkt, buf) < 0)
 			goto on_error;
 
