@@ -92,6 +92,37 @@ int cl_setenv(const char *name, const char *value)
 	cl_assert(SetEnvironmentVariableW(name_utf16, value ? value_utf16 : NULL));
 	return 0;
 }
+
+/* This function performs retries on calls to MoveFile in order
+ * to provide enhanced reliability in the face of antivirus
+ * agents that may be scanning the source (or in the case that
+ * the source is a directory, a child of the source). */
+int cl_rename(const char *source, const char *dest)
+{
+	wchar_t source_utf16[GIT_WIN_PATH];
+	wchar_t dest_utf16[GIT_WIN_PATH];
+	unsigned retries = 1;
+
+	git__utf8_to_16(source_utf16, GIT_WIN_PATH, source);
+	git__utf8_to_16(dest_utf16, GIT_WIN_PATH, dest);
+
+	while (!MoveFileW(source_utf16, dest_utf16)) {
+		/* Only retry if the error is ERROR_ACCESS_DENIED;
+		 * this may indicate that an antivirus agent is
+		 * preventing the rename from source to target */
+		if (retries > 5 ||
+			ERROR_ACCESS_DENIED != GetLastError())
+			return -1;
+
+		/* With 5 retries and a coefficient of 10ms, the maximum
+		 * delay here is 550 ms */
+		Sleep(10 * retries * retries);
+		retries++;
+	}
+
+	return 0;
+}
+
 #else
 
 #include <stdlib.h>
@@ -104,6 +135,12 @@ int cl_setenv(const char *name, const char *value)
 {
 	return (value == NULL) ? unsetenv(name) : setenv(name, value, 1);
 }
+
+int cl_rename(const char *source, const char *dest)
+{
+	return p_rename(source, dest);
+}
+
 #endif
 
 static const char *_cl_sandbox = NULL;
@@ -124,18 +161,18 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	 * named `.git` inside the fixtures folder of our libgit2 repo.
 	 */
 	if (p_access(".gitted", F_OK) == 0)
-		cl_git_pass(p_rename(".gitted", ".git"));
+		cl_git_pass(cl_rename(".gitted", ".git"));
 
 	/* If we have `gitattributes`, rename to `.gitattributes`.  This may
 	 * be necessary if we don't want the attributes to be applied in the
 	 * libgit2 repo, but just during testing.
 	 */
 	if (p_access("gitattributes", F_OK) == 0)
-		cl_git_pass(p_rename("gitattributes", ".gitattributes"));
+		cl_git_pass(cl_rename("gitattributes", ".gitattributes"));
 
 	/* As with `gitattributes`, we may need `gitignore` just for testing. */
 	if (p_access("gitignore", F_OK) == 0)
-		cl_git_pass(p_rename("gitignore", ".gitignore"));
+		cl_git_pass(cl_rename("gitignore", ".gitignore"));
 
 	cl_git_pass(p_chdir(".."));
 
