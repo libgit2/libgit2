@@ -795,20 +795,24 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 
 		case '@':
 		{
-			git_object *temp_object = NULL;
+			if (spec[pos+1] == '{') {
+				git_object *temp_object = NULL;
 
-			if ((error = extract_curly_braces_content(&buf, spec, &pos)) < 0)
-				goto cleanup;
+				if ((error = extract_curly_braces_content(&buf, spec, &pos)) < 0)
+					goto cleanup;
 
-			if ((error = ensure_base_rev_is_not_known_yet(base_rev, spec)) < 0)
-				goto cleanup;
+				if ((error = ensure_base_rev_is_not_known_yet(base_rev, spec)) < 0)
+					goto cleanup;
 
-			if ((error = handle_at_syntax(&temp_object, &reference, spec, identifier_len, repo, git_buf_cstr(&buf))) < 0)
-				goto cleanup;
+				if ((error = handle_at_syntax(&temp_object, &reference, spec, identifier_len, repo, git_buf_cstr(&buf))) < 0)
+					goto cleanup;
 
-			if (temp_object != NULL)
-				base_rev = temp_object;
-			break;
+				if (temp_object != NULL)
+					base_rev = temp_object;
+				break;
+			} else {
+				/* Fall through */
+			}
 		}
 
 		default:

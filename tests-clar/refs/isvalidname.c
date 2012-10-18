@@ -20,4 +20,5 @@ void test_refs_isvalidname__wont_hopefully_choke_on_valid_formats(void)
 	cl_assert_equal_i(true, git_reference_is_valid_name("HEAD"));
 	cl_assert_equal_i(true, git_reference_is_valid_name("ONE_LEVEL"));
 	cl_assert_equal_i(true, git_reference_is_valid_name("refs/stash"));
+	cl_assert_equal_i(true, git_reference_is_valid_name("refs/remotes/origin/bim_with_3d@11296"));
 }
