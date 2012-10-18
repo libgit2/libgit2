@@ -15,17 +15,17 @@ typedef struct progress_data {
 
 static void print_progress(const progress_data *pd)
 {
-	/*
 	int network_percent = (100*pd->fetch_progress.received) / pd->fetch_progress.total;
 	int index_percent = (100*pd->fetch_progress.processed) / pd->fetch_progress.total;
 	int checkout_percent = (int)(100.f * pd->checkout_progress);
-	printf("net %3d%%  /  idx %3d%%  /  chk %3d%%  %20s\r",
+	printf("net %3d%%  /  idx %3d%%  /  chk %3d%%  %50s\r",
 			network_percent, index_percent, checkout_percent, pd->path);
-			*/
+	/*
 	printf("net %5d /%5d  –  idx %5d /%5d  –  chk %.04f   %20s\r",
 			pd->fetch_progress.received, pd->fetch_progress.total,
 			pd->fetch_progress.processed, pd->fetch_progress.total,
 			pd->checkout_progress, pd->path);
+			*/
 }
 
 static void fetch_progress(const git_indexer_stats *stats, void *payload)
