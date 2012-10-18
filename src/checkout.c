@@ -190,7 +190,6 @@ static int checkout_remove_the_old(
 	git_checkout_opts *opts = data->checkout_opts;
 
 	GIT_UNUSED(progress);
-	data->stats->processed++;
 
 	if ((delta->status == GIT_DELTA_UNTRACKED &&
 		 (opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0) ||
@@ -221,7 +220,6 @@ static int checkout_create_the_new(
 	bool do_checkout = false, do_notify = false;
 
 	GIT_UNUSED(progress);
-	data->stats->processed++;
 
 	if (delta->status == GIT_DELTA_MODIFIED ||
 		delta->status == GIT_DELTA_TYPECHANGE)
