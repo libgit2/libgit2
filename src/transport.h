@@ -91,6 +91,8 @@ struct git_transport {
 	GIT_SOCKET socket;
 	git_transport_caps caps;
 	void *cb_data;
+	git_atomic cancel;
+
 	/**
 	 * Connect and store the remote heads
 	 */

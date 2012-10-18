@@ -199,6 +199,14 @@ GIT_EXTERN(int) git_remote_download(git_remote *remote, git_off_t *bytes, git_in
 GIT_EXTERN(int) git_remote_connected(git_remote *remote);
 
 /**
+ * Cancel the operation
+ *
+ * At certain points in its operation, the network code checks whether
+ * the operation has been cancelled and if so stops the operation.
+ */
+GIT_EXTERN(void) git_remote_stop(git_remote *remote);
+
+/**
  * Disconnect from the remote
  *
  * Close the connection to the remote and free the underlying

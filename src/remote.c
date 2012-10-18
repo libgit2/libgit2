@@ -558,6 +558,11 @@ int git_remote_connected(git_remote *remote)
 	return remote->transport == NULL ? 0 : remote->transport->connected;
 }
 
+void git_remote_stop(git_remote *remote)
+{
+	git_atomic_set(&remote->transport->cancel, 1);
+}
+
 void git_remote_disconnect(git_remote *remote)
 {
 	assert(remote);
