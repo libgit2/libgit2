@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
+#include "repository.h"
 
 static git_repository *g_repo = NULL;
 
@@ -817,4 +818,20 @@ void test_diff_workdir__submodules(void)
 
 	git_diff_list_free(diff);
 	git_tree_free(a);
+}
+
+void test_diff_workdir__cannot_diff_against_a_bare_repository(void)
+{
+	git_diff_options opts = {0};
+	git_diff_list *diff = NULL;
+	git_tree *tree;
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_assert_equal_i(GIT_EBAREREPO, git_diff_workdir_to_index(g_repo, &opts, &diff));
+
+	cl_git_pass(git_repository_head_tree(&tree, g_repo));
+	cl_assert_equal_i(GIT_EBAREREPO, git_diff_workdir_to_tree(g_repo, &opts, tree, &diff));
+
+	git_tree_free(tree);
 }
