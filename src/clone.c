@@ -248,7 +248,11 @@ cleanup:
 
 
 
-static int setup_remotes_and_fetch(git_repository *repo, const char *origin_url)
+static int setup_remotes_and_fetch(
+		git_repository *repo,
+		const char *origin_url,
+		git_indexer_progress_callback progress_cb,
+		void *progress_payload)
 {
 	int retcode = GIT_ERROR;
 	git_remote *origin = NULL;
@@ -258,7 +262,7 @@ static int setup_remotes_and_fetch(git_repository *repo, const char *origin_url)
 	if (!git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, origin_url)) {
 		/* Connect and download everything */
 		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
-			if (!git_remote_download(origin, &bytes, NULL, NULL)) {
+			if (!git_remote_download(origin, &bytes, progress_cb, progress_payload)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {
 					/* Point HEAD to the same ref as the remote's head */
@@ -306,22 +310,21 @@ static int clone_internal(
 	git_repository **out,
 	const char *origin_url,
 	const char *path,
-	git_indexer_stats *fetch_stats,
+	git_indexer_progress_callback fetch_progress_cb,
+	void *fetch_progress_payload,
 	git_checkout_opts *checkout_opts,
 	bool is_bare)
 {
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
-	git_indexer_stats dummy_stats;
-
-	if (!fetch_stats) fetch_stats = &dummy_stats;
 
 	if (!path_is_okay(path)) {
 		return GIT_ERROR;
 	}
 
 	if (!(retcode = git_repository_init(&repo, path, is_bare))) {
-		if ((retcode = setup_remotes_and_fetch(repo, origin_url)) < 0) {
+		if ((retcode = setup_remotes_and_fetch(repo, origin_url,
+						fetch_progress_cb, fetch_progress_payload)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
 			git_futils_rmdir_r(path, NULL, GIT_DIRREMOVAL_FILES_AND_DIRS);
@@ -341,7 +344,8 @@ int git_clone_bare(
 		git_repository **out,
 		const char *origin_url,
 		const char *dest_path,
-		git_indexer_stats *fetch_stats)
+		git_indexer_progress_callback fetch_progress_cb,
+		void *fetch_progress_payload)
 {
 	assert(out && origin_url && dest_path);
 
@@ -349,7 +353,8 @@ int git_clone_bare(
 		out,
 		origin_url,
 		dest_path,
-		fetch_stats,
+		fetch_progress_cb,
+		fetch_progress_payload,
 		NULL,
 		1);
 }
@@ -359,7 +364,8 @@ int git_clone(
 		git_repository **out,
 		const char *origin_url,
 		const char *workdir_path,
-		git_indexer_stats *fetch_stats,
+		git_indexer_progress_callback fetch_progress_cb,
+		void *fetch_progress_payload,
 		git_checkout_opts *checkout_opts)
 {
 	assert(out && origin_url && workdir_path);
@@ -368,7 +374,8 @@ int git_clone(
 		out,
 		origin_url,
 		workdir_path,
-		fetch_stats,
+		fetch_progress_cb,
+		fetch_progress_payload,
 		checkout_opts,
 		0);
 }

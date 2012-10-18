@@ -7,61 +7,69 @@
 #include <pthread.h>
 #include <unistd.h>
 
-struct dl_data {
-	git_indexer_stats fetch_stats;
-	git_indexer_stats checkout_stats;
-	git_checkout_opts opts;
-	int ret;
-	int finished;
-	const char *url;
+typedef struct progress_data {
+	git_indexer_stats fetch_progress;
+	float checkout_progress;
 	const char *path;
-};
+} progress_data;
 
-static void *clone_thread(void *ptr)
+static void print_progress(const progress_data *pd)
 {
-	struct dl_data *data = (struct dl_data *)ptr;
-	git_repository *repo = NULL;
+	/*
+	int network_percent = (100*pd->fetch_progress.received) / pd->fetch_progress.total;
+	int index_percent = (100*pd->fetch_progress.processed) / pd->fetch_progress.total;
+	int checkout_percent = (int)(100.f * pd->checkout_progress);
+	printf("net %3d%%  /  idx %3d%%  /  chk %3d%%  %20s\r",
+			network_percent, index_percent, checkout_percent, pd->path);
+			*/
+	printf("net %5d /%5d  –  idx %5d /%5d  –  chk %.04f   %20s\r",
+			pd->fetch_progress.received, pd->fetch_progress.total,
+			pd->fetch_progress.processed, pd->fetch_progress.total,
+			pd->checkout_progress, pd->path);
+}
 
-	// Kick off the clone
-	data->ret = git_clone(&repo, data->url, data->path,
-								 &data->fetch_stats, &data->opts);
-	if (repo) git_repository_free(repo);
-	data->finished = 1;
-
-	pthread_exit(&data->ret);
+static void fetch_progress(const git_indexer_stats *stats, void *payload)
+{
+	progress_data *pd = (progress_data*)payload;
+	pd->fetch_progress = *stats;
+	print_progress(pd);
+}
+static void checkout_progress(const char *path, float progress, void *payload)
+{
+	progress_data *pd = (progress_data*)payload;
+	pd->checkout_progress = progress;
+	pd->path = path;
+	print_progress(pd);
 }
 
 int do_clone(git_repository *repo, int argc, char **argv)
 {
-	struct dl_data data = {0};
-	pthread_t worker;
+	progress_data pd = {0};
+	git_repository *cloned_repo = NULL;
+	git_checkout_opts checkout_opts = {0};
+	const char *url = argv[1];
+	const char *path = argv[2];
+	int error;
 
 	// Validate args
 	if (argc < 3) {
-		printf("USAGE: %s <url> <path>\n", argv[0]);
+		printf ("USAGE: %s <url> <path>\n", argv[0]);
 		return -1;
 	}
 
-	// Data for background thread
-	data.url = argv[1];
-	data.path = argv[2];
-	data.opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
-	printf("Cloning '%s' to '%s'\n", data.url, data.path);
+	// Set up options
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	checkout_opts.progress_cb = checkout_progress;
+	checkout_opts.progress_payload = &pd;
 
-	// Create the worker thread
-	pthread_create(&worker, NULL, clone_thread, &data);
-
-	// Watch for progress information
-	do {
-		usleep(10000);
-		printf("Fetch %d/%d  –  Checkout %d/%d\n",
-				 data.fetch_stats.processed, data.fetch_stats.total,
-				 data.checkout_stats.processed, data.checkout_stats.total);
-	} while (!data.finished);
-	printf("Fetch %d/%d  –  Checkout %d/%d\n",
-			 data.fetch_stats.processed, data.fetch_stats.total,
-			 data.checkout_stats.processed, data.checkout_stats.total);
-
-	return data.ret;
+	// Do the clone
+	error = git_clone(&cloned_repo, url, path, &fetch_progress, &pd, &checkout_opts);
+	printf("\n");
+	if (error != 0) {
+		const git_error *err = giterr_last();
+		if (err) printf("ERROR %d: %s\n", err->klass, err->message);
+		else printf("ERROR %d: no detailed info\n", error);
+	}
+	else if (cloned_repo) git_repository_free(cloned_repo);
+	return error;
 }
-
