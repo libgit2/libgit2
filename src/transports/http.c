@@ -147,10 +147,10 @@ static int http_authenticate(git_transport *transport)
 	return 0;
 }
 
-static int send_request(transport_http *t, const char *service, void *data, ssize_t content_length, int ls)
+static int send_request(transport_http *t, const char *service, void *data, size_t data_len, void *more_data, size_t more_data_len, int ls)
 {
-#ifndef GIT_WINHTTP
 	git_transport *transport = (git_transport *)t;
+#ifndef GIT_WINHTTP
 	git_buf request = GIT_BUF_INIT;
 	const char *verb;
 	int do_auth;
@@ -167,7 +167,7 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 		do_auth = 0;
 
 		if (gen_request(&request, t->path, t->host, verb, service,
-				content_length, ls, t->user, t->pass) < 0) {
+				data_len + more_data_len, ls, t->user, t->pass) < 0) {
 			giterr_set(GITERR_NET, "Failed to generate request");
 			return -1;
 		}
@@ -178,8 +178,13 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 		}
 		git_buf_free(&request);
 
-		if (content_length) {
-			if (gitno_send(transport, data, content_length, 0) < 0)
+		if (data_len) {
+			if (gitno_send(transport, data, data_len, 0) < 0)
+				return -1;
+		}
+
+		if (more_data_len) {
+			if (gitno_send(transport, more_data, more_data_len, 0) < 0)
 				return -1;
 		}
 
@@ -203,16 +208,6 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 
 	} while (do_auth);
 
-	if (gitno_send((git_transport *) t, request.ptr, request.size, 0) < 0) {
-		git_buf_free(&request);
-		return -1;
-	}
-
-	if (content_length) {
-		if (gitno_send((git_transport *) t, data, content_length, 0) < 0)
-			return -1;
-	}
-
 	return 0;
 #else
 	wchar_t *verb;
@@ -225,10 +220,13 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 		L"*/*",
 		NULL,
 	};
+	DWORD bytes_written;
 
 	verb = ls ? L"GET" : L"POST";
 	buffer = data ? data : WINHTTP_NO_REQUEST_DATA;
 	flags = t->parent.use_ssl ? WINHTTP_FLAG_SECURE : 0;
+
+	setup_gitno_buffer(transport);
 
 	if (ls)
 		git_buf_printf(&buf, "%s/info/refs?service=git-%s", t->path, service);
@@ -267,7 +265,14 @@ static int send_request(transport_http *t, const char *service, void *data, ssiz
 	}
 
 	if (WinHttpSendRequest(t->request, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-		data, (DWORD)content_length, (DWORD)content_length, 0) == FALSE) {
+		data, (DWORD)data_len, (DWORD)(data_len + more_data_len), 0) == FALSE) {
+		giterr_set(GITERR_OS, "Failed to send request");
+		goto on_error;
+	}
+
+
+	if (more_data_len &&
+		WinHttpWriteData(t->request, more_data, more_data_len, &bytes_written) == FALSE) {
 		giterr_set(GITERR_OS, "Failed to send request");
 		goto on_error;
 	}
@@ -566,7 +571,7 @@ static int http_connect(git_transport *transport, int direction)
 	if ((ret = do_connect(t)) < 0)
 		goto cleanup;
 
-	if ((ret = send_request(t, t->service, NULL, 0, 1)) < 0)
+	if ((ret = send_request(t, t->service, NULL, 0, NULL, 0, 1)) < 0)
 		goto cleanup;
 
 	if ((ret = git_protocol_store_refs(transport, 2)) < 0)
@@ -596,33 +601,12 @@ cleanup:
 static int http_push(struct git_transport *transport, git_buf *pktline, git_buf *pack)
 {
 	transport_http *t = (transport_http *) transport;
-	gitno_buffer *buf = &transport->buffer;
-	git_buf request = GIT_BUF_INIT;
 	int ret;
 
-	if ((ret = do_connect(t)) < 0)
-		return -1;
+	if ((ret = send_request(t, "receive-pack", pktline->ptr, pktline->size, pack->ptr, pack->size, 0)) < 0)
+		return ret;
 
-	if ((ret = gen_request(&request, t->path, t->host, "POST", "receive-pack",
-			       pktline->size + pack->size, 0, t->user, t->pass)) < 0)
-		goto cleanup;
-
-	if ((ret = gitno_send(transport, request.ptr, request.size, 0)) < 0)
-		goto cleanup;
-
-	if ((ret = gitno_send(transport, pktline->ptr, pktline->size, 0)) < 0)
-		goto cleanup;
-
-	if ((ret = gitno_send(transport, pack->ptr, pack->size, 0)) < 0)
-		goto cleanup;
-
-	setup_gitno_buffer(transport);
-
-	ret = gitno_recv(buf);
-
-cleanup:
-	git_buf_free(&request);
-	return ret;
+	return gitno_recv(&transport->buffer);
 }
 
 static int http_negotiation_step(struct git_transport *transport, void *data, size_t len)
@@ -634,7 +618,7 @@ static int http_negotiation_step(struct git_transport *transport, void *data, si
 	if ((ret = do_connect(t)) < 0)
 		return -1;
 
-	if (send_request(t, "upload-pack", data, len, 0) < 0)
+	if (send_request(t, "upload-pack", data, len, NULL, 0, 0) < 0)
 		return -1;
 
 	/* Then we need to set up the buffer to grab data from the HTTP response */
@@ -708,8 +692,10 @@ static void http_free(git_transport *transport)
 void git_transport_http_set_authcb(git_transport *transport,
 				   int (*auth_cb)(http_auth_data *auth_data, void *data))
 {
+	transport_http *t;
 	assert(transport);
-	transport_http *t = (transport_http *) transport;
+
+	t = (transport_http *) transport;
 	t->auth_cb = auth_cb;
 }
 

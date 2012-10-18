@@ -9,6 +9,10 @@
 #include "posix.h"
 #include "buffer.h"
 #include <stdarg.h>
+#if GIT_WINHTTP
+# include <winhttp.h>
+# pragma comment(lib, "winhttp.lib")
+#endif
 
 /********************************************
  * New error handling
@@ -62,31 +66,42 @@ void giterr_set(int error_class, const char *string, ...)
 	va_end(arglist);
 
 	/* automatically suffix strerror(errno) for GITERR_OS errors */
-	if (error_class == GITERR_OS) {
-
-		if (unix_error_code != 0) {
-			git_buf_PUTS(&buf, ": ");
-			git_buf_puts(&buf, strerror(unix_error_code));
-		}
+	if (unix_error_code != 0) {
+		git_buf_PUTS(&buf, ": ");
+		git_buf_puts(&buf, strerror(unix_error_code));
+	}
 
 #ifdef GIT_WIN32
-		else if (win32_error_code != 0) {
-			LPVOID lpMsgBuf = NULL;
+	else if (win32_error_code != 0) {
+		LPTSTR lpMsgBuf = NULL;
 
+#ifdef GIT_WINHTTP
+		/* WinHttp error codes exist in winhttp.dll rather than the system message table */
+		if (win32_error_code >= WINHTTP_ERROR_BASE && win32_error_code <= WINHTTP_ERROR_LAST) {
+			FormatMessage(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER |
+				FORMAT_MESSAGE_FROM_HMODULE |
+				FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS,
+				GetModuleHandle(TEXT("winhttp.dll")), win32_error_code, 0, (LPTSTR)&lpMsgBuf, 0, NULL);
+		} else {
+#endif
 			FormatMessage(
 				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
 				FORMAT_MESSAGE_FROM_SYSTEM |
 				FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL, win32_error_code, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
-
-			if (lpMsgBuf) {
-				git_buf_PUTS(&buf, ": ");
-				git_buf_puts(&buf, lpMsgBuf);
-				LocalFree(lpMsgBuf);
-			}
+				NULL, win32_error_code, 0, (LPTSTR)&lpMsgBuf, 0, NULL);
+#ifdef GIT_WINHTTP
 		}
 #endif
+
+		if (lpMsgBuf) {
+			git_buf_PUTS(&buf, ": ");
+			git_buf_puts(&buf, lpMsgBuf);
+			LocalFree(lpMsgBuf);
+		}
 	}
+#endif
 
 	if (!git_buf_oom(&buf))
 		set_error(error_class, git_buf_detach(&buf));
