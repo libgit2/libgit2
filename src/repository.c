@@ -1206,7 +1206,11 @@ int git_repository_head_detached(git_repository *repo)
 
 int git_repository_head(git_reference **head_out, git_repository *repo)
 {
-	return git_reference_lookup_resolved(head_out, repo, GIT_HEAD_FILE, -1);
+	int error;
+
+	error = git_reference_lookup_resolved(head_out, repo, GIT_HEAD_FILE, -1);
+
+	return error == GIT_ENOTFOUND ? GIT_EORPHANEDHEAD : error;
 }
 
 int git_repository_head_orphan(git_repository *repo)
@@ -1217,7 +1221,7 @@ int git_repository_head_orphan(git_repository *repo)
 	error = git_repository_head(&ref, repo);
 	git_reference_free(ref);
 
-	if (error == GIT_ENOTFOUND)
+	if (error == GIT_EORPHANEDHEAD)
 		return 1;
 
 	if (error < 0)
@@ -1519,14 +1523,14 @@ int git_repository_detach_head(
 	git_reference *old_head = NULL,
 		*new_head = NULL;
 	git_object *object = NULL;
-	int error = -1;
+	int error;
 
 	assert(repo);
 
-	if (git_repository_head(&old_head, repo) < 0)
-		return -1;
+	if ((error = git_repository_head(&old_head, repo)) < 0)
+		return error;
 
-	if (git_object_lookup(&object, repo, git_reference_oid(old_head), GIT_OBJ_COMMIT) < 0)
+	if ((error = git_object_lookup(&object, repo, git_reference_oid(old_head), GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
 	error = git_reference_create_oid(&new_head, repo, GIT_HEAD_FILE, git_reference_oid(old_head), 1);
