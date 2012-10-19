@@ -564,7 +564,7 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  *
  * @param repo Repository pointer
  * @return 0 on success, GIT_EORPHANEDHEAD when HEAD points to a non existing
- * branchor an error code
+ * branch or an error code
  */
 GIT_EXTERN(int) git_repository_detach_head(
 	git_repository* repo);
