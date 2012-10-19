@@ -430,17 +430,23 @@ int git_checkout_head(
 	git_checkout_opts *opts,
 	git_indexer_stats *stats)
 {
+	git_reference *head;
 	int error;
-	git_tree *tree = NULL;
+	git_object *tree = NULL;
 
 	assert(repo);
 
-	if (git_repository_head_tree(&tree, repo) < 0)
-		return -1;
+	if ((error = git_repository_head(&head, repo)) < 0)
+		return error;
+	
+	if ((error = git_reference_peel(&tree, head, GIT_OBJ_TREE)) < 0)
+		goto cleanup;
 
-	error = git_checkout_tree(repo, (git_object *)tree, opts, stats);
+	error = git_checkout_tree(repo, tree, opts, stats);
 
-	git_tree_free(tree);
+cleanup:
+	git_reference_free(head);
+	git_object_free(tree);
 
 	return error;
 }

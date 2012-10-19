@@ -33,18 +33,26 @@ void test_repo_head__head_detached(void)
 	git_reference_free(ref);
 }
 
+static void make_head_orphaned(void)
+{
+	git_reference *head;
+
+	cl_git_pass(git_reference_create_symbolic(&head, repo, GIT_HEAD_FILE, "refs/heads/hide/and/seek", 1));
+	git_reference_free(head);
+}
+
 void test_repo_head__head_orphan(void)
 {
 	git_reference *ref;
 
 	cl_assert(git_repository_head_orphan(repo) == 0);
 
-	/* orphan HEAD */
-	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/orphan", 1));
-	cl_assert(git_repository_head_orphan(repo) == 1);
-	git_reference_free(ref);
+	make_head_orphaned();
 
-	/* take the reop back to it's original state */
+	cl_assert(git_repository_head_orphan(repo) == 1);
+
+
+	/* take the repo back to it's original state */
 	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
 	cl_assert(git_repository_head_orphan(repo) == 0);
 
@@ -59,7 +67,7 @@ void test_repo_head__set_head_Attaches_HEAD_to_un_unborn_branch_when_the_branch_
 
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_head(&head, repo));
+	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_head(&head, repo));
 }
 
 void test_repo_head__set_head_Returns_ENOTFOUND_when_the_reference_doesnt_exist(void)
@@ -162,4 +170,20 @@ void test_repo_head__detach_head_Fails_if_HEAD_and_point_to_a_non_commitish(void
 	cl_git_fail(git_repository_detach_head(repo));
 
 	git_reference_free(head);
+}
+
+void test_repo_head__detaching_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
+{
+	make_head_orphaned();
+
+	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_detach_head(repo));
+}
+
+void test_repo_head__retrieving_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
+{
+	git_reference *head;
+
+	make_head_orphaned();
+
+	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_head(&head, repo));
 }
