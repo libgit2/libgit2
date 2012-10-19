@@ -58,7 +58,16 @@ ENDIF()
 
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
-	LINK_LIBRARIES(${ZLIB_LIBRARIES})
+	IF (MODE32)
+	  # Hack, stupid ubuntu has no /usr/lib32/libz.so. only libz.so.1. arghhhh
+	  IF(EXISTS "/usr/lib32/libz.so.1")
+	  	LINK_LIBRARIES("/usr/lib32/libz.so.1")
+	  ELSE()
+	    LINK_LIBRARIES(${ZLIB_LIBRARIES})
+	  ENDIF()
+	ELSE()
+	  LINK_LIBRARIES(${ZLIB_LIBRARIES})
+	ENDIF()
 ELSE (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
@@ -77,6 +86,9 @@ OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
 OPTION (BUILD_EXAMPLES "Build library usage example apps" OFF)
 OPTION (TAGS "Generate tags" OFF)
 OPTION (PROFILE "Generate profiling information" OFF)
+IF (NOT WIN32 OR MINGW)
+	OPTION (MODE32 "Build 32bit library (UNIX/MINGW only, for MSVC use 'setenv /x86' before building)" OFF)
+ENDIF()
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -94,6 +106,10 @@ IF (MSVC)
    # Precompiled headers
 ELSE ()
 	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
+	IF (MODE32)
+	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+	ENDIF()
+
 	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
@@ -150,6 +166,14 @@ IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	TARGET_LINK_LIBRARIES(git2 socket nsl)
+ENDIF ()
+
+IF (MODE32)
+  IF(MSVC)
+  ELSE()
+  	# Let the linker to find correct libssl.so and libcrypto.so
+  	SET(SSL_LIBRARIES "-lssl -lcrypto")
+  ENDIF()
 ENDIF ()
 
 TARGET_LINK_LIBRARIES(git2 ${CMAKE_THREAD_LIBS_INIT} ${SSL_LIBRARIES})
