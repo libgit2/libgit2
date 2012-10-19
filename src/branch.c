@@ -265,13 +265,19 @@ int git_branch_is_head(
 {
 	git_reference *head;
 	bool is_same = false;
+	int error;
 
 	assert(branch);
 
 	if (!git_reference_is_branch(branch))
 		return false;
 
-	if (git_repository_head(&head, git_reference_owner(branch)) < 0)
+	error = git_repository_head(&head, git_reference_owner(branch));
+
+	if (error == GIT_EORPHANEDHEAD)
+		return false;
+
+	if (error < 0)
 		return -1;
 
 	is_same = strcmp(
