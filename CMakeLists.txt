@@ -163,11 +163,6 @@ IF (MSVC)
    SET_SOURCE_FILES_PROPERTIES(src/win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()
 
-# Backward compatibility with INSTALL_LIB variable
-if (INSTALL_LIB)
-	set(LIB_INSTALL_DIR "${INSTALL_LIB}")
-ENDIF()
-
 # Install
 INSTALL(TARGETS git2
 	RUNTIME DESTINATION ${BIN_INSTALL_DIR}
