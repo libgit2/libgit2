@@ -3,31 +3,43 @@
 #include "path.h"
 
 #ifdef GIT_WIN32
-static char *env_userprofile = NULL;
-static char *env_programfiles = NULL;
+#define NUM_VARS 5
+static const char *env_vars[NUM_VARS] = {
+	"HOME", "HOMEDRIVE", "HOMEPATH", "USERPROFILE", "PROGRAMFILES"
+};
 #else
-static char *env_home = NULL;
+#define NUM_VARS 1
+static const char *env_vars[NUM_VARS] = { "HOME" };
 #endif
+
+static char *env_save[NUM_VARS];
 
 void test_core_env__initialize(void)
 {
-#ifdef GIT_WIN32
-	env_userprofile = cl_getenv("USERPROFILE");
-	env_programfiles = cl_getenv("PROGRAMFILES");
-#else
-	env_home = cl_getenv("HOME");
-#endif
+	int i;
+	for (i = 0; i < NUM_VARS; ++i)
+		env_save[i] = cl_getenv(env_vars[i]);
 }
 
 void test_core_env__cleanup(void)
 {
+	int i;
+	for (i = 0; i < NUM_VARS; ++i) {
+		cl_setenv(env_vars[i], env_save[i]);
 #ifdef GIT_WIN32
-	cl_setenv("USERPROFILE", env_userprofile);
-	git__free(env_userprofile);
-	cl_setenv("PROGRAMFILES", env_programfiles);
-	git__free(env_programfiles);
-#else
-	cl_setenv("HOME", env_home);
+		git__free(env_save[i]);
+#endif
+	}
+}
+
+static void setenv_and_check(const char *name, const char *value)
+{
+	char *check;
+	cl_git_pass(cl_setenv(name, value));
+	check = cl_getenv(name);
+	cl_assert_equal_s(value, check);
+#ifdef GIT_WIN32
+	git__free(check);
 #endif
 }
 
@@ -45,38 +57,67 @@ void test_core_env__0(void)
 		NULL
 	};
 	git_buf path = GIT_BUF_INIT, found = GIT_BUF_INIT;
+	char testfile[16], tidx = '0';
 	char **val;
-	char *check;
+
+	memset(testfile, 0, sizeof(testfile));
+	memcpy(testfile, "testfile", 8);
+	cl_assert_equal_s("testfile", testfile);
 
 	for (val = home_values; *val != NULL; val++) {
 
-		if (p_mkdir(*val, 0777) == 0) {
-			/* if we can't make the directory, let's just assume
-			 * we are on a filesystem that doesn't support the
-			 * characters in question and skip this test...
-			 */
-			cl_git_pass(git_path_prettify(&path, *val, NULL));
+		/* if we can't make the directory, let's just assume
+		 * we are on a filesystem that doesn't support the
+		 * characters in question and skip this test...
+		 */
+		if (p_mkdir(*val, 0777) != 0)
+			continue;
+
+		cl_git_pass(git_path_prettify(&path, *val, NULL));
+
+		/* vary testfile name in each directory so accidentally leaving
+		 * an environment variable set from a previous iteration won't
+		 * accidentally make this test pass...
+		 */
+		testfile[8] = tidx++;
+		cl_git_pass(git_buf_joinpath(&path, path.ptr, testfile));
+		cl_git_mkfile(path.ptr, "find me");
+		git_buf_rtruncate_at_char(&path, '/');
+
+		cl_git_fail(git_futils_find_global_file(&found, testfile));
+
+		setenv_and_check("HOME", path.ptr);
+		cl_git_pass(git_futils_find_global_file(&found, testfile));
+
+		cl_setenv("HOME", env_save[0]);
+		cl_git_fail(git_futils_find_global_file(&found, testfile));
 
 #ifdef GIT_WIN32
-			cl_git_pass(cl_setenv("USERPROFILE", path.ptr));
+		setenv_and_check("HOMEDRIVE", NULL);
+		setenv_and_check("HOMEPATH", NULL);
+		setenv_and_check("USERPROFILE", path.ptr);
 
-			/* do a quick check that it was set correctly */
-			check = cl_getenv("USERPROFILE");
-			cl_assert_equal_s(path.ptr, check);
-			git__free(check);
-#else
-			cl_git_pass(cl_setenv("HOME", path.ptr));
+		cl_git_pass(git_futils_find_global_file(&found, testfile));
 
-			/* do a quick check that it was set correctly */
-			check = cl_getenv("HOME");
-			cl_assert_equal_s(path.ptr, check);
-#endif
+		{
+			int root = git_path_root(path.ptr);
+			char old;
 
-			cl_git_pass(git_buf_puts(&path, "/testfile"));
-			cl_git_mkfile(path.ptr, "find me");
+			if (root >= 0) {
+				setenv_and_check("USERPROFILE", NULL);
 
-			cl_git_pass(git_futils_find_global_file(&found, "testfile"));
+				cl_git_fail(git_futils_find_global_file(&found, testfile));
+
+				old = path.ptr[root];
+				path.ptr[root] = '\0';
+				setenv_and_check("HOMEDRIVE", path.ptr);
+				path.ptr[root] = old;
+				setenv_and_check("HOMEPATH", &path.ptr[root]);
+
+				cl_git_pass(git_futils_find_global_file(&found, testfile));
+			}
 		}
+#endif
 	}
 
 	git_buf_free(&path);
@@ -89,21 +130,22 @@ void test_core_env__1(void)
 
 	cl_must_fail(git_futils_find_global_file(&path, "nonexistentfile"));
 
-#ifdef GIT_WIN32
-	cl_git_pass(cl_setenv("USERPROFILE", "doesnotexist"));
-#else
 	cl_git_pass(cl_setenv("HOME", "doesnotexist"));
-#endif
-
-	cl_must_fail(git_futils_find_global_file(&path, "nonexistentfile"));
-
 #ifdef GIT_WIN32
-	cl_git_pass(cl_setenv("USERPROFILE", NULL));
-#else
-	cl_git_pass(cl_setenv("HOME", NULL));
+	cl_git_pass(cl_setenv("HOMEPATH", "doesnotexist"));
+	cl_git_pass(cl_setenv("USERPROFILE", "doesnotexist"));
 #endif
 
 	cl_must_fail(git_futils_find_global_file(&path, "nonexistentfile"));
+
+	cl_git_pass(cl_setenv("HOME", NULL));
+#ifdef GIT_WIN32
+	cl_git_pass(cl_setenv("HOMEPATH", NULL));
+	cl_git_pass(cl_setenv("USERPROFILE", NULL));
+#endif
+
+	cl_must_fail(git_futils_find_global_file(&path, "nonexistentfile"));
+
 	cl_must_fail(git_futils_find_system_file(&path, "nonexistentfile"));
 
 #ifdef GIT_WIN32

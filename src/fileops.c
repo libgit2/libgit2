@@ -404,44 +404,39 @@ int git_futils_find_system_file(git_buf *path, const char *filename)
 
 int git_futils_find_global_file(git_buf *path, const char *filename)
 {
-	const char *home = getenv("HOME");
-
 #ifdef GIT_WIN32
 	struct win32_path root;
+	static const wchar_t *tmpls[4] = {
+		L"%HOME%\\",
+		L"%HOMEDRIVE%%HOMEPATH%\\",
+		L"%USERPROFILE%\\",
+		NULL,
+	};
+	const wchar_t **tmpl;
 
-	if (home != NULL) {
-		if (git_buf_joinpath(path, home, filename) < 0)
-			return -1;
+	for (tmpl = tmpls; *tmpl != NULL; tmpl++) {
+		/* try to expand environment variable, skipping if not set */
+		if (win32_expand_path(&root, *tmpl) != 0 || root.path[0] == L'%')
+			continue;
 
-		if (git_path_exists(path->ptr)) {
+		/* try to look up file under path */
+		if (!win32_find_file(path, &root, filename))
 			return 0;
-		}
+
+		/* No error if file not found under %HOME%, b/c we don't trust it,
+		 * but do error if another var is set and yet file is not found.
+		 */
+		if (tmpl != tmpls)
+			break;
 	}
 
-	if (getenv("HOMEPATH") != NULL) {
-		if (win32_expand_path(&root, L"%HOMEDRIVE%%HOMEPATH%\\") < 0 ||
-			root.path[0] == L'%') /* i.e. no expansion happened */
-		{
-			giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
-			return GIT_ENOTFOUND;
-		}
-	} else {
-		if (win32_expand_path(&root, L"%USERPROFILE%\\") < 0 ||
-			root.path[0] == L'%') /* i.e. no expansion happened */
-		{
-			giterr_set(GITERR_OS, "Cannot locate the user's profile directory");
-			return GIT_ENOTFOUND;
-		}
-	}
+	giterr_set(GITERR_OS, "The global file '%s' doesn't exist", filename);
+	git_buf_clear(path);
 
-	if (win32_find_file(path, &root, filename) < 0) {
-		giterr_set(GITERR_OS, "The global file '%s' doesn't exist", filename);
-		git_buf_clear(path);
-		return GIT_ENOTFOUND;
-	}
-
-	return 0;
+	return GIT_ENOTFOUND;
 #else
+	const char *home = getenv("HOME");
+
 	if (home == NULL) {
 		giterr_set(GITERR_OS, "Global file lookup failed. "
 			"Cannot locate the user's home directory");
