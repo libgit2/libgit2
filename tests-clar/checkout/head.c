@@ -20,5 +20,5 @@ void test_checkout_head__checking_out_an_orphaned_head_returns_GIT_EORPHANEDHEAD
 	cl_git_pass(git_reference_create_symbolic(&head, g_repo, GIT_HEAD_FILE, "refs/heads/hide/and/seek", 1));
 	git_reference_free(head);
 
-	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_checkout_head(g_repo, NULL, NULL));
+	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_checkout_head(g_repo, NULL));
 }
