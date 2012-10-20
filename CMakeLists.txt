@@ -13,6 +13,7 @@
 
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 
 FILE(STRINGS "include/git2/version.h" GIT2_HEADER REGEX "^#define LIBGIT2_VERSION \"[^\"]*\"$")
 
@@ -27,13 +28,24 @@ IF (AMIGA)
 ENDIF()
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(src include deps/http-parser)
+INCLUDE_DIRECTORIES(src include)
 
 IF (WIN32 AND NOT MINGW)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 ELSE ()
 	FIND_PACKAGE(OpenSSL)
-	FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+ENDIF()
+
+# http-parser on non-Windows platforms and MinGW
+IF (NOT WIN32 OR MINGW)
+	FIND_PACKAGE(HTTP_Parser)
+	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
+		INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
+		LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
+	ELSE()
+		INCLUDE_DIRECTORIES(deps/http-parser)
+		FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+	ENDIF()
 ENDIF()
 
 # Specify sha1 implementation
