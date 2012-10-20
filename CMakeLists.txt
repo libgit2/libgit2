@@ -66,9 +66,9 @@ ELSE (ZLIB_FOUND)
 ENDIF()
 
 # Installation paths
-SET(INSTALL_BIN bin CACHE PATH "Where to install binaries to.")
+SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
 SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
-SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
+SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
 
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
@@ -93,8 +93,8 @@ IF (MSVC)
 
    # Precompiled headers
 ELSE ()
+	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g ${CMAKE_C_FLAGS}")
 	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
-	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
 	ELSE ()
@@ -163,20 +163,15 @@ IF (MSVC)
    SET_SOURCE_FILES_PROPERTIES(src/win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()
 
-# Backward compatibility with INSTALL_LIB variable
-if (INSTALL_LIB)
-	set(LIB_INSTALL_DIR "${INSTALL_LIB}")
-ENDIF()
-
 # Install
 INSTALL(TARGETS git2
-	RUNTIME DESTINATION ${INSTALL_BIN}
+	RUNTIME DESTINATION ${BIN_INSTALL_DIR}
 	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
 	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 )
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig )
-INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
-INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
+INSTALL(DIRECTORY include/git2 DESTINATION ${INCLUDE_INSTALL_DIR} )
+INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 
 # Tests
 IF (BUILD_CLAR)
