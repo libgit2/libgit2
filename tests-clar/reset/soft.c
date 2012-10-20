@@ -39,20 +39,9 @@ void test_reset_soft__can_reset_the_non_detached_Head_to_the_specified_commit(vo
 	assert_reset_soft(false);
 }
 
-static void detach_head(void)
-{
-	git_reference *head;
-	git_oid oid;
-
-	cl_git_pass(git_reference_name_to_oid(&oid, repo, "HEAD"));
-
-	cl_git_pass(git_reference_create_oid(&head, repo, "HEAD", &oid, true));
-	git_reference_free(head);
-}
-
 void test_reset_soft__can_reset_the_detached_Head_to_the_specified_commit(void)
 {
-	detach_head();
+	git_repository_detach_head(repo);
 
 	assert_reset_soft(true);
 }

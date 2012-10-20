@@ -16,21 +16,18 @@ void test_repo_head__cleanup(void)
 void test_repo_head__head_detached(void)
 {
 	git_reference *ref;
-	git_oid oid;
 
 	cl_assert(git_repository_head_detached(repo) == 0);
 
-	/* detach the HEAD */
-	git_oid_fromstr(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd");
-	cl_git_pass(git_reference_create_oid(&ref, repo, "HEAD", &oid, 1));
-	cl_assert(git_repository_head_detached(repo) == 1);
-	git_reference_free(ref);
+	git_repository_detach_head(repo);
+
+	cl_assert_equal_i(true, git_repository_head_detached(repo));
 
 	/* take the reop back to it's original state */
 	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
-	cl_assert(git_repository_head_detached(repo) == 0);
-
 	git_reference_free(ref);
+
+	cl_assert_equal_i(false, git_repository_head_detached(repo));
 }
 
 static void make_head_orphaned(void)

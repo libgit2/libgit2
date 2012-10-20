@@ -64,13 +64,15 @@ void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_orphaned(void)
 
 void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(void)
 {
-	git_reference *master, *head, *branch;
+	git_reference *head, *branch;
+
+	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_target(head));
+	git_reference_free(head);
 
 	/* Detach HEAD and make it target the commit that "master" points to */
-	cl_git_pass(git_reference_lookup(&master, repo, "refs/heads/master"));
-	cl_git_pass(git_reference_create_oid(&head, repo, "HEAD", git_reference_oid(master), 1));
-	git_reference_free(head);
-	git_reference_free(master);
+	git_repository_detach_head(repo);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
