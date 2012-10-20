@@ -192,7 +192,6 @@ static int checkout_blob(
 		error = blob_content_to_file(
 			blob, git_buf_cstr(data->path), file->mode, data->checkout_opts);
 
-	report_progress(data, file->path);
 	git_blob_free(blob);
 
 	return error;
@@ -265,11 +264,13 @@ static int checkout_create_the_new(
 		if (!is_submodule && !data->create_submodules) {
 			error = checkout_blob(data, &delta->old_file);
 			data->completed_steps++;
+			report_progress(data, delta->old_file.path);
 		}
 
 		else if (is_submodule && data->create_submodules) {
 			error = checkout_submodule(data, &delta->old_file);
 			data->completed_steps++;
+			report_progress(data, delta->old_file.path);
 		}
 
 	}
