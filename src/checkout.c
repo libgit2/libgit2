@@ -31,7 +31,6 @@ struct checkout_diff_data
 	bool can_symlink;
 	bool found_submodules;
 	bool create_submodules;
-	int num_stages;
 	int error;
 };
 
@@ -164,7 +163,7 @@ static void report_progress(
 		struct checkout_diff_data *data,
 		const char *path)
 {
-	float per_stage_progress = 1.f/data->num_stages;
+	float per_stage_progress = 0.5;
 	float overall_progress = (stage-1)*per_stage_progress +
 		stage_progress*per_stage_progress;
 
@@ -177,7 +176,8 @@ static void report_progress(
 
 static int checkout_blob(
 	struct checkout_diff_data *data,
-	const git_diff_file *file)
+	const git_diff_file *file,
+	float progress)
 {
 	git_blob *blob;
 	int error;
@@ -196,6 +196,7 @@ static int checkout_blob(
 		error = blob_content_to_file(
 			blob, git_buf_cstr(data->path), file->mode, data->checkout_opts);
 
+	report_progress(2, progress, data, file->path);
 	git_blob_free(blob);
 
 	return error;
@@ -218,9 +219,9 @@ static int checkout_remove_the_old(
 			delta->new_file.path,
 			git_repository_workdir(data->owner),
 			GIT_DIRREMOVAL_FILES_AND_DIRS);
-	}
 
-	report_progress(1, progress, data, delta->new_file.path);
+		report_progress(1, progress, data, delta->new_file.path);
+	}
 
 	return data->error;
 }
@@ -262,18 +263,14 @@ static int checkout_create_the_new(
 
 		if (is_submodule) {
 			data->found_submodules = true;
-			data->num_stages = 3;
 		}
 
 		if (!is_submodule && !data->create_submodules) {
-			error = checkout_blob(data, &delta->old_file);
-			report_progress(2, progress, data, delta->old_file.path);
-
+			error = checkout_blob(data, &delta->old_file, progress);
 		}
 
 		else if (is_submodule && data->create_submodules) {
 			error = checkout_submodule(data, &delta->old_file);
-			report_progress(3, progress, data, delta->old_file.path);
 		}
 
 	}
@@ -368,7 +365,6 @@ int git_checkout_index(
 	data.workdir_len = git_buf_len(&workdir);
 	data.checkout_opts = &checkout_opts;
 	data.owner = repo;
-	data.num_stages = 2;
 
 	if ((error = retrieve_symlink_capabilities(repo, &data.can_symlink)) < 0)
 		goto cleanup;
@@ -396,7 +392,7 @@ int git_checkout_index(
 			diff, &data, checkout_create_the_new, NULL, NULL);
 	}
 
-	report_progress(data.num_stages, 1.f, &data, NULL);
+	report_progress(2, 1.f, &data, NULL);
 
 cleanup:
 	if (error == GIT_EUSER)
