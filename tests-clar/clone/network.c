@@ -91,9 +91,9 @@ void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
 	git_buf_free(&path);
 }
 
-static void checkout_progress(const char *path, float progress, void *payload)
+static void checkout_progress(const char *path, size_t cur, size_t tot, void *payload)
 {
-	GIT_UNUSED(path); GIT_UNUSED(progress);
+	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	bool *was_called = (bool*)payload;
 	(*was_called) = true;
 }

@@ -70,7 +70,8 @@ typedef struct git_checkout_opts {
 	/* Optional callback to notify the consumer of checkout progress. */
 	void (* progress_cb)(
 			const char *path,
-			float progress,
+			size_t completed_steps,
+			size_t total_steps,
 			void *payload);
 	void *progress_payload;
 

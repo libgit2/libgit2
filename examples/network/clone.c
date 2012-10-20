@@ -9,7 +9,8 @@
 
 typedef struct progress_data {
 	git_indexer_stats fetch_progress;
-	float checkout_progress;
+	size_t completed_steps;
+	size_t total_steps;
 	const char *path;
 } progress_data;
 
@@ -17,7 +18,9 @@ static void print_progress(const progress_data *pd)
 {
 	int network_percent = (100*pd->fetch_progress.received) / pd->fetch_progress.total;
 	int index_percent = (100*pd->fetch_progress.processed) / pd->fetch_progress.total;
-	int checkout_percent = (int)(100.f * pd->checkout_progress);
+	int checkout_percent = pd->total_steps > 0
+		? (100.f * pd->completed_steps) / pd->total_steps
+		: 0.f;
 	int kbytes = pd->fetch_progress.bytes / 1024;
 	printf("net %3d%% (%6d kb)  /  idx %3d%%  /  chk %3d%%  %50s\n",
 			network_percent, kbytes, index_percent, checkout_percent, pd->path);
@@ -35,10 +38,11 @@ static void fetch_progress(const git_indexer_stats *stats, void *payload)
 	pd->fetch_progress = *stats;
 	print_progress(pd);
 }
-static void checkout_progress(const char *path, float progress, void *payload)
+static void checkout_progress(const char *path, size_t cur, size_t tot, void *payload)
 {
 	progress_data *pd = (progress_data*)payload;
-	pd->checkout_progress = progress;
+	pd->completed_steps = cur;
+	pd->total_steps = tot;
 	pd->path = path;
 	print_progress(pd);
 }

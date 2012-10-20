@@ -64,9 +64,9 @@ void test_checkout_tree__can_checkout_a_subdirectory_from_a_subtree(void)
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/de/fgh/1.txt"));
 }
 
-static void progress(const char *path, float progress, void *payload)
+static void progress(const char *path, size_t cur, size_t tot, void *payload)
 {
-	GIT_UNUSED(path); GIT_UNUSED(progress);
+	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	bool *was_called = (bool*)payload;
 	*was_called = true;
 }
