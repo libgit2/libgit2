@@ -19,6 +19,8 @@
 #include "netops.h"
 #include "pkt.h"
 
+#define NETWORK_XFER_THRESHOLD (100*1024)
+
 struct filter_payload {
 	git_remote *remote;
 	const git_refspec *spec, *tagspec;
@@ -348,6 +350,28 @@ static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *
 	return 0;
 }
 
+struct network_packetsize_payload
+{
+	git_indexer_progress_callback callback;
+	void *payload;
+	git_indexer_stats *stats;
+	git_off_t last_fired_bytes;
+};
+
+static void network_packetsize(int received, void *payload)
+{
+	struct network_packetsize_payload *npp = (struct network_packetsize_payload*)payload;
+
+	/* Accumulate bytes */
+	npp->stats->bytes += received;
+
+	/* Fire notification if the threshold is reached */
+	if ((npp->stats->bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
+		npp->last_fired_bytes = npp->stats->bytes;
+		npp->callback(npp->stats, npp->payload);
+	}
+}
+
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
 int git_fetch__download_pack(
 	git_transport *t,
@@ -361,6 +385,15 @@ int git_fetch__download_pack(
 	gitno_buffer *buf = &t->buffer;
 	git_indexer_stream *idx = NULL;
 	int error = -1;
+	struct network_packetsize_payload npp = {0};
+
+	if (progress_cb) {
+		npp.callback = progress_cb;
+		npp.payload = progress_payload;
+		npp.stats = stats;
+		buf->packetsize_cb = &network_packetsize;
+		buf->packetsize_payload = &npp;
+	}
 
 	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
 		return -1;

@@ -20,6 +20,7 @@ typedef struct git_indexer_stats {
 	unsigned int total;
 	unsigned int processed;
 	unsigned int received;
+	size_t bytes;
 } git_indexer_stats;
 
 
