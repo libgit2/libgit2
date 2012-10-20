@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
+#include "repo_helpers.h"
 
 git_repository *repo;
 
@@ -30,21 +31,13 @@ void test_repo_head__head_detached(void)
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
 }
 
-static void make_head_orphaned(void)
-{
-	git_reference *head;
-
-	cl_git_pass(git_reference_create_symbolic(&head, repo, GIT_HEAD_FILE, "refs/heads/hide/and/seek", 1));
-	git_reference_free(head);
-}
-
 void test_repo_head__head_orphan(void)
 {
 	git_reference *ref;
 
 	cl_assert(git_repository_head_orphan(repo) == 0);
 
-	make_head_orphaned();
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert(git_repository_head_orphan(repo) == 1);
 
@@ -171,7 +164,7 @@ void test_repo_head__detach_head_Fails_if_HEAD_and_point_to_a_non_commitish(void
 
 void test_repo_head__detaching_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 {
-	make_head_orphaned();
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_detach_head(repo));
 }
@@ -180,7 +173,7 @@ void test_repo_head__retrieving_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 {
 	git_reference *head;
 
-	make_head_orphaned();
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_head(&head, repo));
 }

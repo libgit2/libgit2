@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
+#include "repo/repo_helpers.h"
 
 static git_repository *repo;
 static git_reference *fake_remote;
@@ -52,11 +53,9 @@ void test_refs_branches_delete__can_delete_a_branch_even_if_HEAD_is_missing(void
 
 void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_orphaned(void)
 {
-	git_reference *head;
 	git_reference *branch;
 
-	cl_git_pass(git_reference_create_symbolic(&head, repo, GIT_HEAD_FILE, "refs/heads/hide/and/seek", 1));
-	git_reference_free(head);
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
@@ -91,4 +90,3 @@ void test_refs_branches_delete__can_delete_a_remote_branch(void)
 	cl_git_pass(git_branch_lookup(&branch, repo, "nulltoken/master", GIT_BRANCH_REMOTE));
 	cl_git_pass(git_branch_delete(branch));
 }
-

@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
+#include "repo/repo_helpers.h"
 
 static git_repository *g_repo;
 
@@ -15,10 +16,7 @@ void test_checkout_head__cleanup(void)
 
 void test_checkout_head__checking_out_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 {
-	git_reference *head;
-
-	cl_git_pass(git_reference_create_symbolic(&head, g_repo, GIT_HEAD_FILE, "refs/heads/hide/and/seek", 1));
-	git_reference_free(head);
+	make_head_orphaned(g_repo, NON_EXISTING_HEAD);
 
 	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_checkout_head(g_repo, NULL, NULL));
 }
