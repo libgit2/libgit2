@@ -15,6 +15,7 @@
 #include "fetch.h"
 #include "refs.h"
 #include "pkt.h"
+#include "fetchhead.h"
 
 #include <regex.h>
 
@@ -445,6 +446,49 @@ int git_remote_download(git_remote *remote, git_off_t *bytes, git_indexer_stats 
 	return git_fetch_download_pack(remote, bytes, stats);
 }
 
+git_remote_head *git_remote_get_head(git_remote *remote)
+{
+	unsigned int i;
+	git_vector *refs;
+	git_pkt *pkt;
+	git_remote_head *remote_ref, *head_oid, *head_candidate = NULL;
+
+	refs = &remote->transport->refs;
+
+	/*
+	 * HEAD is only allowed to be the first in the list, but it only returns
+	 * the sha1 of HEAD, not the symbolic reference.
+	 */
+	pkt = refs->contents[0];
+	head_oid = &((git_pkt_ref *)pkt)->head;
+
+	for (i = 1; i < refs->length; ++i) {
+		git_pkt *pkt = refs->contents[i];
+
+		if (pkt->type == GIT_PKT_REF)
+			remote_ref = &((git_pkt_ref *)pkt)->head;
+		else
+			continue;
+
+		/* See if this branch is HEAD */
+		if (git_oid_cmp(&head_oid->oid, &remote_ref->oid) == 0) {
+			/* Always prefer a remote branch named "master" */
+			if(strcmp(remote_ref->name, "refs/heads/master") == 0) {
+				head_candidate = remote_ref;
+				break;
+			}
+			else if(head_candidate == NULL)
+				head_candidate = remote_ref;
+		}
+	}
+
+	/* No branches match HEAD's oid, this is detached. */
+	if (head_candidate == NULL)
+		head_candidate = head_oid;
+
+	return head_candidate;
+}
+
 int git_remote_update_tips(git_remote *remote)
 {
 	int error = 0, autotag;
@@ -453,9 +497,10 @@ int git_remote_update_tips(git_remote *remote)
 	git_oid old;
 	git_pkt *pkt;
 	git_odb *odb;
-	git_vector *refs;
-	git_remote_head *head;
+	git_vector *refs, update_heads, fetchhead_refs;
+	git_remote_head *remote_ref, *remote_head;
 	git_reference *ref;
+	git_fetchhead_ref *fetchhead_ref;
 	struct git_refspec *spec;
 	git_refspec tagspec;
 
@@ -473,50 +518,52 @@ int git_remote_update_tips(git_remote *remote)
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
 		return -1;
 
-	/* HEAD is only allowed to be the first in the list */
-	pkt = refs->contents[0];
-	head = &((git_pkt_ref *)pkt)->head;
-	if (!strcmp(head->name, GIT_HEAD_FILE)) {
-		if (git_reference_create_oid(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1) < 0)
-			return -1;
+	if (git_vector_init(&update_heads, refs->length, NULL) < 0)
+		return -1;
 
-		i = 1;
-		git_reference_free(ref);
-	}
+	if (git_vector_init(&fetchhead_refs, refs->length, NULL) < 0)
+		return -1;
 
-	for (; i < refs->length; ++i) {
-		git_pkt *pkt = refs->contents[i];
+	/*
+	 * HEAD is the first item in the list, but we need to resolve
+	 * it later, so we'll skip over it.
+	 */
+	for (i = 1; i < refs->length; ++i) {
+		pkt = refs->contents[i];
 		autotag = 0;
 
 		if (pkt->type == GIT_PKT_REF)
-			head = &((git_pkt_ref *)pkt)->head;
+			remote_ref = &((git_pkt_ref *)pkt)->head;
 		else
 			continue;
 
 		/* Ignore malformed ref names (which also saves us from tag^{} */
-		if (!git_reference_is_valid_name(head->name))
+		if (!git_reference_is_valid_name(remote_ref->name))
 			continue;
 
-		if (git_refspec_src_matches(spec, head->name)) {
-			if (git_refspec_transform_r(&refname, spec, head->name) < 0)
+		if (git_refspec_src_matches(spec, remote_ref->name)) {
+			if (git_refspec_transform_r(&refname, spec, remote_ref->name) < 0)
 				goto on_error;
 		} else if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
 
 			if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_ALL)
 				autotag = 1;
 
-			if (!git_refspec_src_matches(&tagspec, head->name))
+			if (!git_refspec_src_matches(&tagspec, remote_ref->name))
 				continue;
 
 			git_buf_clear(&refname);
-			if (git_buf_puts(&refname, head->name) < 0)
+			if (git_buf_puts(&refname, remote_ref->name) < 0)
 				goto on_error;
 		} else {
 			continue;
 		}
 
-		if (autotag && !git_odb_exists(odb, &head->oid))
+		if (autotag && !git_odb_exists(odb, &remote_ref->oid))
 			continue;
+
+		if (git_vector_insert(&update_heads, remote_ref) < 0)
+			goto on_error;
 
 		error = git_reference_name_to_oid(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
@@ -525,31 +572,61 @@ int git_remote_update_tips(git_remote *remote)
 		if (error == GIT_ENOTFOUND)
 			memset(&old, 0, GIT_OID_RAWSZ);
 
-		if (!git_oid_cmp(&old, &head->oid))
+		if (!git_oid_cmp(&old, &remote_ref->oid))
 			continue;
 
 		/* In autotag mode, don't overwrite any locally-existing tags */
-		error = git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, !autotag);
+		error = git_reference_create_oid(&ref, remote->repo,
+			refname.ptr, &remote_ref->oid, !autotag);
+
 		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
 
 		git_reference_free(ref);
 
 		if (remote->callbacks.update_tips != NULL) {
-			if (remote->callbacks.update_tips(refname.ptr, &old, &head->oid, remote->callbacks.data) < 0)
+			if (remote->callbacks.update_tips(refname.ptr, &old,
+				&remote_ref->oid, remote->callbacks.data) < 0)
 				goto on_error;
 		}
 	}
 
+	/* Create the FETCH_HEAD file */
+	remote_head = git_remote_get_head(remote);
+
+	for (i = 0; i < update_heads.length; ++i) {
+		remote_ref = update_heads.contents[i];
+
+		if (git_fetchhead_ref_create(&fetchhead_ref, &remote_ref->oid,
+			(remote_ref == remote_head), remote_ref->name,
+			git_remote_url(remote)) < 0)
+			goto on_error;
+
+		if (git_vector_insert(&fetchhead_refs, fetchhead_ref) < 0)
+			goto on_error;
+	}
+
+	git_fetchhead_write(remote->repo, &fetchhead_refs);
+
+	for (i = 0; i < fetchhead_refs.length; ++i)
+		git_fetchhead_ref_free(fetchhead_refs.contents[i]);
+
+	git_vector_free(&fetchhead_refs);
+	git_vector_free(&update_heads);
 	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return 0;
 
 on_error:
+	for (i = 0; i < fetchhead_refs.length; ++i) {
+		git_fetchhead_ref_free(fetchhead_refs.contents[i]);
+	}
+
+	git_vector_free(&fetchhead_refs);
+	git_vector_free(&update_heads);
 	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return -1;
-
 }
 
 int git_remote_connected(git_remote *remote)
