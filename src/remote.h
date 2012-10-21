@@ -32,4 +32,6 @@ struct git_remote {
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
 
+git_remote_head *git_remote_get_head(git_remote *remote);
+
 #endif

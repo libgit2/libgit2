@@ -156,6 +156,9 @@ typedef struct git_signature {
 /** In-memory representation of a reference. */
 typedef struct git_reference git_reference;
 
+/** In-memory representation of a FETCH_HEAD reference. */
+typedef struct git_fetchhead_ref git_fetchhead_ref;
+
 /** Basic type of any Git reference. */
 typedef enum {
 	GIT_REF_INVALID = 0, /** Invalid reference */
