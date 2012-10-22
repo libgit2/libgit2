@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
+#include "repo_helpers.h"
 
 git_repository *repo;
 
@@ -16,29 +17,18 @@ void test_repo_head__cleanup(void)
 void test_repo_head__head_detached(void)
 {
 	git_reference *ref;
-	git_oid oid;
 
 	cl_assert(git_repository_head_detached(repo) == 0);
 
-	/* detach the HEAD */
-	git_oid_fromstr(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd");
-	cl_git_pass(git_reference_create_oid(&ref, repo, "HEAD", &oid, 1));
-	cl_assert(git_repository_head_detached(repo) == 1);
-	git_reference_free(ref);
+	git_repository_detach_head(repo);
+
+	cl_assert_equal_i(true, git_repository_head_detached(repo));
 
 	/* take the reop back to it's original state */
 	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
-	cl_assert(git_repository_head_detached(repo) == 0);
-
 	git_reference_free(ref);
-}
 
-static void make_head_orphaned(void)
-{
-	git_reference *head;
-
-	cl_git_pass(git_reference_create_symbolic(&head, repo, GIT_HEAD_FILE, "refs/heads/hide/and/seek", 1));
-	git_reference_free(head);
+	cl_assert_equal_i(false, git_repository_head_detached(repo));
 }
 
 void test_repo_head__head_orphan(void)
@@ -47,7 +37,7 @@ void test_repo_head__head_orphan(void)
 
 	cl_assert(git_repository_head_orphan(repo) == 0);
 
-	make_head_orphaned();
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert(git_repository_head_orphan(repo) == 1);
 
@@ -174,7 +164,7 @@ void test_repo_head__detach_head_Fails_if_HEAD_and_point_to_a_non_commitish(void
 
 void test_repo_head__detaching_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 {
-	make_head_orphaned();
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_detach_head(repo));
 }
@@ -183,7 +173,16 @@ void test_repo_head__retrieving_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 {
 	git_reference *head;
 
-	make_head_orphaned();
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_head(&head, repo));
+}
+
+void test_repo_head__can_tell_if_an_orphaned_head_is_detached(void)
+{
+	git_reference *head;
+
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
+
+	cl_assert_equal_i(false, git_repository_head_detached(repo));
 }

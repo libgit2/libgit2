@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
+#include "repo/repo_helpers.h"
 
 static git_repository *repo;
 static git_reference *branch;
@@ -22,21 +23,13 @@ void test_refs_branches_ishead__can_tell_if_a_branch_is_pointed_at_by_HEAD(void)
 	cl_assert_equal_i(true, git_branch_is_head(branch));
 }
 
-static void make_head_orphaned(void)
-{
-	git_reference *head;
-
-	cl_git_pass(git_reference_create_symbolic(&head, repo, GIT_HEAD_FILE, "refs/heads/hide/and/seek", 1));
-	git_reference_free(head);
-}
-
 void test_refs_branches_ishead__can_properly_handle_orphaned_HEAD(void)
 {
 	git_repository_free(repo);
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
-	make_head_orphaned();
+	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
 
