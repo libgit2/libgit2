@@ -255,11 +255,19 @@ int git_blob_create_fromchunks(
 	int error = -1, read_bytes;
 	char *content = NULL;
 	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf path = GIT_BUF_INIT;
+
+	if (git_buf_join_n(
+		&path, '/', 3, 
+		git_repository_path(repo),
+		GIT_OBJECTS_DIR, 
+		"streamed") < 0)
+			goto cleanup;
 
 	content = git__malloc(BUFFER_SIZE);
 	GITERR_CHECK_ALLOC(content);
 
-	if (git_filebuf_open(&file, hintpath == NULL ? "streamed" : hintpath, GIT_FILEBUF_TEMPORARY) < 0)
+	if (git_filebuf_open(&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY) < 0)
 		goto cleanup;
 
 	while (1) {
@@ -283,6 +291,7 @@ int git_blob_create_fromchunks(
 	error = blob_create_internal(oid, repo, file.path_lock, hintpath, hintpath != NULL);
 
 cleanup:
+	git_buf_free(&path);
 	git_filebuf_cleanup(&file);
 	git__free(content);
 	return error;
