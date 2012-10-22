@@ -225,3 +225,27 @@ void test_network_remotes__add(void)
 	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/addtest/*"));
 	cl_assert_equal_s(git_remote_url(_remote), "http://github.com/libgit2/libgit2");
 }
+
+void test_network_remotes__tagopt(void)
+{
+	const char *opt;
+	git_config *cfg;
+
+	cl_git_pass(git_repository_config(&cfg, _repo));
+
+	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
+	cl_git_pass(git_remote_save(_remote));
+	cl_git_pass(git_config_get_string(&opt, cfg, "remote.test.tagopt"));
+	cl_assert(!strcmp(opt, "--tags"));
+
+	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_NONE);
+	cl_git_pass(git_remote_save(_remote));
+	cl_git_pass(git_config_get_string(&opt, cfg, "remote.test.tagopt"));
+	cl_assert(!strcmp(opt, "--no-tags"));
+
+	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
+	cl_git_pass(git_remote_save(_remote));
+	cl_assert(git_config_get_string(&opt, cfg, "remote.test.tagopt") == GIT_ENOTFOUND);
+
+	git_config_free(cfg);
+}
