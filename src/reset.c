@@ -53,7 +53,7 @@ int git_reset(
 		goto cleanup;
 	}
 
-	if ((error = git_merge_inprogress(&merge_inprogress, repo)) < 0)
+	if ((merge_inprogress = git_merge_inprogress(repo)) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_SOFT && merge_inprogress) {

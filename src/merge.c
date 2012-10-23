@@ -12,18 +12,20 @@
 #include "git2/merge.h"
 #include "git2/reset.h"
 
-int git_merge_inprogress(int *out, git_repository *repo)
+int git_merge_inprogress(git_repository *repo)
 {
-	int error = 0;
-	git_buf merge_head_path = GIT_BUF_INIT;
+	git_buf repo_path = GIT_BUF_INIT;
+	int exists;
 
 	assert(repo);
 
-	if ((error = git_buf_joinpath(&merge_head_path, repo->path_repository, MERGE_HEAD_FILE)) == 0)
-		*out = git_path_exists(merge_head_path.ptr);
+	if (git_buf_sets(&repo_path, repo->path_repository) < 0)
+		return -1;
 
-	git_buf_free(&merge_head_path);
-	return error;
+	exists = git_path_contains_file(&repo_path, MERGE_HEAD_FILE);
+
+	git_buf_free(&repo_path);
+	return exists;
 }
 
 int git_merge__cleanup(git_repository *repo)
@@ -35,14 +37,10 @@ int git_merge__cleanup(git_repository *repo)
 
 	assert(repo);
 
-	if ((error = git_buf_joinpath(&merge_head_path, repo->path_repository, MERGE_HEAD_FILE)) < 0)
-		goto cleanup;
-
-	if ((error = git_buf_joinpath(&merge_mode_path, repo->path_repository, MERGE_MODE_FILE)) < 0)
-		goto cleanup;
-
-	if ((error = git_buf_joinpath(&merge_msg_path, repo->path_repository, MERGE_MSG_FILE)) < 0)
-		goto cleanup;
+	if (git_buf_joinpath(&merge_head_path, repo->path_repository, MERGE_HEAD_FILE) < 0 ||
+		git_buf_joinpath(&merge_mode_path, repo->path_repository, MERGE_MODE_FILE) < 0 ||
+		git_buf_joinpath(&merge_mode_path, repo->path_repository, MERGE_MODE_FILE) < 0)
+		return -1;
 
 	if (git_path_exists(merge_head_path.ptr))
 	{
