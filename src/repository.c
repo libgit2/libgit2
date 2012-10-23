@@ -461,23 +461,23 @@ static int load_config(
 		&config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO) < 0)
 		goto on_error;
 
-	if (git_config_add_file_ondisk(cfg, config_path.ptr, 4) < 0)
+	if (git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0) < 0)
 		goto on_error;
 
 	git_buf_free(&config_path);
 
 	if (global_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, global_config_path, 3) < 0)
+		if (git_config_add_file_ondisk(cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, 0) < 0)
 			goto on_error;
 	}
 
 	if (xdg_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, xdg_config_path, 2) < 0)
+		if (git_config_add_file_ondisk(cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, 0) < 0)
 			goto on_error;
 	}
 
 	if (system_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, system_config_path, 1) < 0)
+		if (git_config_add_file_ondisk(cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, 0) < 0)
 			goto on_error;
 	}
 

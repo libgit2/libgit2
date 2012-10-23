@@ -637,12 +637,12 @@ struct cb_data {
 	regex_t *preg;
 };
 
-static int remote_list_cb(const char *name, const char *value, void *data_)
+static int remote_list_cb(const git_config_entry *entry, void *data_)
 {
 	struct cb_data *data = (struct cb_data *)data_;
 	size_t nmatch = 2;
 	regmatch_t pmatch[2];
-	GIT_UNUSED(value);
+	const char *name = entry->name;
 
 	if (!regexec(data->preg, name, nmatch, pmatch, 0)) {
 		char *remote_name = git__strndup(&name[pmatch[1].rm_so], pmatch[1].rm_eo - pmatch[1].rm_so);

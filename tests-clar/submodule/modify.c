@@ -73,12 +73,10 @@ void test_submodule_modify__add(void)
 	git_config_free(cfg);
 }
 
-static int delete_one_config(
-	const char *var_name, const char *value, void *payload)
+static int delete_one_config(const git_config_entry *entry, void *payload)
 {
 	git_config *cfg = payload;
-	GIT_UNUSED(value);
-	return git_config_delete(cfg, var_name);
+	return git_config_delete(cfg, entry->name);
 }
 
 static int init_one_submodule(
