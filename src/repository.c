@@ -20,6 +20,7 @@
 #include "filter.h"
 #include "odb.h"
 #include "remote.h"
+#include "merge.h"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -1348,15 +1349,13 @@ int git_repository_head_tree(git_tree **tree, git_repository *repo)
 	return 0;
 }
 
-#define MERGE_MSG_FILE "MERGE_MSG"
-
 int git_repository_message(char *buffer, size_t len, git_repository *repo)
 {
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	struct stat st;
 	int error;
 
-	if (git_buf_joinpath(&path, repo->path_repository, MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	if ((error = p_stat(git_buf_cstr(&path), &st)) < 0) {
@@ -1382,7 +1381,7 @@ int git_repository_message_remove(git_repository *repo)
 	git_buf path = GIT_BUF_INIT;
 	int error;
 
-	if (git_buf_joinpath(&path, repo->path_repository, MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	error = p_unlink(git_buf_cstr(&path));
@@ -1540,4 +1539,25 @@ cleanup:
 	git_reference_free(old_head);
 	git_reference_free(new_head);
 	return error;
+}
+
+int git_repository_state(git_repository *repo)
+{
+	git_buf repo_path = GIT_BUF_INIT;
+	int state = GIT_REPOSITORY_STATE_NONE;
+
+	assert(repo);
+
+	if (git_buf_puts(&repo_path, repo->path_repository) < 0)
+		return -1;
+
+	if (git_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
+		state = GIT_REPOSITORY_STATE_MERGE;
+	else if(git_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE))
+		state = GIT_REPOSITORY_STATE_REVERT;
+	else if(git_path_contains_file(&repo_path, GIT_CHERRY_PICK_HEAD_FILE))
+		state = GIT_REPOSITORY_STATE_CHERRY_PICK;
+
+	git_buf_free(&repo_path);
+	return state;
 }

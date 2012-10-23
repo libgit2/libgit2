@@ -1,5 +1,7 @@
 #include "clar_libgit2.h"
+#include "posix.h"
 #include "reset_helpers.h"
+#include "path.h"
 #include "repo/repo_helpers.h"
 
 static git_repository *repo;
@@ -109,4 +111,15 @@ void test_reset_soft__resetting_against_an_orphaned_head_repo_makes_the_head_no_
 	cl_assert_equal_i(0, git_oid_streq(git_reference_oid(head), KNOWN_COMMIT_IN_BARE_REPO));
 
 	git_reference_free(head);
+}
+
+void test_reset_soft__fails_when_merging(void)
+{
+	git_buf merge_head_path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
+	cl_git_mkfile(git_buf_cstr(&merge_head_path), "beefbeefbeefbeefbeefbeefbeefbeefbeefbeef\n");
+
+	cl_git_fail(git_reset(repo, target, GIT_RESET_SOFT));
+	cl_git_pass(p_unlink(git_buf_cstr(&merge_head_path)));
 }

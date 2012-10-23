@@ -58,3 +58,38 @@ void test_reset_hard__cannot_reset_in_a_bare_repository(void)
 
 	git_repository_free(bare);
 }
+
+void test_reset_hard__cleans_up_merge(void)
+{
+	git_buf merge_head_path = GIT_BUF_INIT,
+		merge_msg_path = GIT_BUF_INIT,
+		merge_mode_path = GIT_BUF_INIT,
+		orig_head_path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
+	cl_git_mkfile(git_buf_cstr(&merge_head_path), "beefbeefbeefbeefbeefbeefbeefbeefbeefbeef\n");
+
+	cl_git_pass(git_buf_joinpath(&merge_msg_path, git_repository_path(repo), "MERGE_MSG"));
+	cl_git_mkfile(git_buf_cstr(&merge_head_path), "Merge commit 0017bd4ab1ec30440b17bae1680cff124ab5f1f6\n");
+
+	cl_git_pass(git_buf_joinpath(&merge_msg_path, git_repository_path(repo), "MERGE_MODE"));
+	cl_git_mkfile(git_buf_cstr(&merge_head_path), "");
+
+	cl_git_pass(git_buf_joinpath(&orig_head_path, git_repository_path(repo), "ORIG_HEAD"));
+	cl_git_mkfile(git_buf_cstr(&orig_head_path), "0017bd4ab1ec30440b17bae1680cff124ab5f1f6");
+
+	retrieve_target_from_oid(&target, repo, "0017bd4ab1ec30440b17bae1680cff124ab5f1f6");
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
+
+	cl_assert(!git_path_exists(git_buf_cstr(&merge_head_path)));
+	cl_assert(!git_path_exists(git_buf_cstr(&merge_msg_path)));
+	cl_assert(!git_path_exists(git_buf_cstr(&merge_mode_path)));
+
+	cl_assert(git_path_exists(git_buf_cstr(&orig_head_path)));
+	cl_git_pass(p_unlink(git_buf_cstr(&orig_head_path)));
+
+	git_buf_free(&merge_head_path);
+	git_buf_free(&merge_msg_path);
+	git_buf_free(&merge_mode_path);
+	git_buf_free(&orig_head_path);
+}
