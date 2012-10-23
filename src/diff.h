@@ -28,6 +28,9 @@ enum {
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
 };
 
+#define GIT_DELTA__TO_DELETE 10
+#define GIT_DELTA__TO_SPLIT  11
+
 struct git_diff_list {
 	git_refcount     rc;
 	git_repository   *repo;

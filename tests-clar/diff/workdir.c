@@ -46,11 +46,11 @@ void test_diff_workdir__to_index(void)
 		 * - mv .git .gitted
 		 */
 		cl_assert_equal_i(13, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(4, exp.file_dels);
-		cl_assert_equal_i(4, exp.file_mods);
-		cl_assert_equal_i(1, exp.file_ignored);
-		cl_assert_equal_i(4, exp.file_untracked);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 		cl_assert_equal_i(8, exp.hunks);
 
@@ -107,11 +107,11 @@ void test_diff_workdir__to_tree(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(14, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(4, exp.file_dels);
-		cl_assert_equal_i(4, exp.file_mods);
-		cl_assert_equal_i(1, exp.file_ignored);
-		cl_assert_equal_i(5, exp.file_untracked);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(5, exp.file_status[GIT_DELTA_UNTRACKED]);
 	}
 
 	/* Since there is no git diff equivalent, let's just assume that the
@@ -143,11 +143,11 @@ void test_diff_workdir__to_tree(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(15, exp.files);
-		cl_assert_equal_i(2, exp.file_adds);
-		cl_assert_equal_i(5, exp.file_dels);
-		cl_assert_equal_i(4, exp.file_mods);
-		cl_assert_equal_i(1, exp.file_ignored);
-		cl_assert_equal_i(3, exp.file_untracked);
+		cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(5, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 		cl_assert_equal_i(11, exp.hunks);
 
@@ -180,11 +180,11 @@ void test_diff_workdir__to_tree(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(16, exp.files);
-		cl_assert_equal_i(5, exp.file_adds);
-		cl_assert_equal_i(4, exp.file_dels);
-		cl_assert_equal_i(3, exp.file_mods);
-		cl_assert_equal_i(1, exp.file_ignored);
-		cl_assert_equal_i(3, exp.file_untracked);
+		cl_assert_equal_i(5, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(3, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 		cl_assert_equal_i(12, exp.hunks);
 
@@ -228,11 +228,11 @@ void test_diff_workdir__to_index_with_pathspec(void)
 			cl_git_pass(git_diff_foreach(diff, &exp, diff_file_fn, NULL, NULL));
 
 		cl_assert_equal_i(13, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(4, exp.file_dels);
-		cl_assert_equal_i(4, exp.file_mods);
-		cl_assert_equal_i(1, exp.file_ignored);
-		cl_assert_equal_i(4, exp.file_untracked);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNTRACKED]);
 	}
 
 	git_diff_list_free(diff);
@@ -251,11 +251,11 @@ void test_diff_workdir__to_index_with_pathspec(void)
 			cl_git_pass(git_diff_foreach(diff, &exp, diff_file_fn, NULL, NULL));
 
 		cl_assert_equal_i(1, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(0, exp.file_dels);
-		cl_assert_equal_i(1, exp.file_mods);
-		cl_assert_equal_i(0, exp.file_ignored);
-		cl_assert_equal_i(0, exp.file_untracked);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_UNTRACKED]);
 	}
 
 	git_diff_list_free(diff);
@@ -274,11 +274,11 @@ void test_diff_workdir__to_index_with_pathspec(void)
 			cl_git_pass(git_diff_foreach(diff, &exp, diff_file_fn, NULL, NULL));
 
 		cl_assert_equal_i(3, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(1, exp.file_dels);
-		cl_assert_equal_i(1, exp.file_mods);
-		cl_assert_equal_i(0, exp.file_ignored);
-		cl_assert_equal_i(1, exp.file_untracked);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
 	}
 
 	git_diff_list_free(diff);
@@ -297,11 +297,11 @@ void test_diff_workdir__to_index_with_pathspec(void)
 			cl_git_pass(git_diff_foreach(diff, &exp, diff_file_fn, NULL, NULL));
 
 		cl_assert_equal_i(2, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(2, exp.file_dels);
-		cl_assert_equal_i(0, exp.file_mods);
-		cl_assert_equal_i(0, exp.file_ignored);
-		cl_assert_equal_i(0, exp.file_untracked);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_UNTRACKED]);
 	}
 
 	git_diff_list_free(diff);
@@ -337,7 +337,7 @@ void test_diff_workdir__filemode_changes(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(0, exp.files);
-		cl_assert_equal_i(0, exp.file_mods);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(0, exp.hunks);
 	}
 
@@ -360,7 +360,7 @@ void test_diff_workdir__filemode_changes(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(1, exp.files);
-		cl_assert_equal_i(1, exp.file_mods);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(0, exp.hunks);
 	}
 
@@ -393,7 +393,7 @@ void test_diff_workdir__filemode_changes_with_filemode_false(void)
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 	cl_assert_equal_i(0, exp.files);
-	cl_assert_equal_i(0, exp.file_mods);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(0, exp.hunks);
 
 	git_diff_list_free(diff);
@@ -409,7 +409,7 @@ void test_diff_workdir__filemode_changes_with_filemode_false(void)
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 	cl_assert_equal_i(0, exp.files);
-	cl_assert_equal_i(0, exp.file_mods);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(0, exp.hunks);
 
 	git_diff_list_free(diff);
@@ -456,9 +456,9 @@ void test_diff_workdir__head_index_and_workdir_all_differ(void)
 				diff_i2t, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(1, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(0, exp.file_dels);
-		cl_assert_equal_i(1, exp.file_mods);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(1, exp.hunks);
 		cl_assert_equal_i(2, exp.lines);
 		cl_assert_equal_i(1, exp.line_ctxt);
@@ -477,9 +477,9 @@ void test_diff_workdir__head_index_and_workdir_all_differ(void)
 				diff_w2i, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(1, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(0, exp.file_dels);
-		cl_assert_equal_i(1, exp.file_mods);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(1, exp.hunks);
 		cl_assert_equal_i(3, exp.lines);
 		cl_assert_equal_i(2, exp.line_ctxt);
@@ -500,9 +500,9 @@ void test_diff_workdir__head_index_and_workdir_all_differ(void)
 				diff_i2t, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(1, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(0, exp.file_dels);
-		cl_assert_equal_i(1, exp.file_mods);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(1, exp.hunks);
 		cl_assert_equal_i(3, exp.lines);
 		cl_assert_equal_i(1, exp.line_ctxt);
@@ -542,9 +542,9 @@ void test_diff_workdir__eof_newline_changes(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(0, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(0, exp.file_dels);
-		cl_assert_equal_i(0, exp.file_mods);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(0, exp.hunks);
 		cl_assert_equal_i(0, exp.lines);
 		cl_assert_equal_i(0, exp.line_ctxt);
@@ -569,9 +569,9 @@ void test_diff_workdir__eof_newline_changes(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(1, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(0, exp.file_dels);
-		cl_assert_equal_i(1, exp.file_mods);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(1, exp.hunks);
 		cl_assert_equal_i(2, exp.lines);
 		cl_assert_equal_i(1, exp.line_ctxt);
@@ -596,9 +596,9 @@ void test_diff_workdir__eof_newline_changes(void)
 				diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
 
 		cl_assert_equal_i(1, exp.files);
-		cl_assert_equal_i(0, exp.file_adds);
-		cl_assert_equal_i(0, exp.file_dels);
-		cl_assert_equal_i(1, exp.file_mods);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 		cl_assert_equal_i(1, exp.hunks);
 		cl_assert_equal_i(3, exp.lines);
 		cl_assert_equal_i(0, exp.line_ctxt);
@@ -801,11 +801,11 @@ void test_diff_workdir__submodules(void)
 
 	cl_assert_equal_i(10, exp.files);
 
-	cl_assert_equal_i(0, exp.file_adds);
-	cl_assert_equal_i(0, exp.file_dels);
-	cl_assert_equal_i(1, exp.file_mods);
-	cl_assert_equal_i(0, exp.file_ignored);
-	cl_assert_equal_i(9, exp.file_untracked);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(9, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	/* the following numbers match "git diff 873585" exactly */
 

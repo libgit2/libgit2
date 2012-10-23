@@ -180,8 +180,6 @@ void test_repo_head__retrieving_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 
 void test_repo_head__can_tell_if_an_orphaned_head_is_detached(void)
 {
-	git_reference *head;
-
 	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert_equal_i(false, git_repository_head_detached(repo));

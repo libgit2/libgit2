@@ -33,7 +33,7 @@ GIT_BEGIN_DECL
  * Flags for diff options.  A combination of these flags can be passed
  * in via the `flags` value in the `git_diff_options`.
  */
-enum {
+typedef enum {
 	/** Normal diff, the default */
 	GIT_DIFF_NORMAL = 0,
 	/** Reverse the sides of the diff */
@@ -86,7 +86,7 @@ enum {
 	 *  mode set to tree.  Note: the tree SHA will not be available.
 	 */
 	GIT_DIFF_INCLUDE_TYPECHANGE_TREES  = (1 << 16),
-};
+} git_diff_option_t;
 
 /**
  * Structure describing options about how the diff should be executed.
@@ -95,7 +95,7 @@ enum {
  * values.  Similarly, passing NULL for the options structure will
  * give the defaults.  The default values are marked below.
  *
- * - flags: a combination of the GIT_DIFF_... values above
+ * - flags: a combination of the git_diff_option_t values above
  * - context_lines: number of lines of context to show around diffs
  * - interhunk_lines: min lines between diff hunks to merge them
  * - old_prefix: "directory" to prefix to old file names (default "a")
@@ -124,7 +124,7 @@ typedef struct git_diff_list git_diff_list;
  * Most of the flags are just for internal consumption by libgit2,
  * but some of them may be interesting to external users.
  */
-enum {
+typedef enum {
 	GIT_DIFF_FILE_VALID_OID  = (1 << 0), /** `oid` value is known correct */
 	GIT_DIFF_FILE_FREE_PATH  = (1 << 1), /** `path` is allocated memory */
 	GIT_DIFF_FILE_BINARY     = (1 << 2), /** should be considered binary data */
@@ -132,7 +132,7 @@ enum {
 	GIT_DIFF_FILE_FREE_DATA  = (1 << 4), /** internal file data is allocated */
 	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5), /** internal file data is mmap'ed */
 	GIT_DIFF_FILE_NO_DATA    = (1 << 6), /** file data should not be loaded */
-};
+} git_diff_file_flag_t;
 
 /**
  * What type of change is described by a git_diff_delta?
@@ -218,7 +218,7 @@ typedef int (*git_diff_hunk_fn)(
  * output callbacks to demarcate lines that are actually part of
  * the file or hunk headers.
  */
-enum {
+typedef enum {
 	/* These values will be sent to `git_diff_data_fn` along with the line */
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
@@ -233,7 +233,7 @@ enum {
 	GIT_DIFF_LINE_FILE_HDR  = 'F',
 	GIT_DIFF_LINE_HUNK_HDR  = 'H',
 	GIT_DIFF_LINE_BINARY    = 'B'
-};
+} git_diff_line_t;
 
 /**
  * When iterating over a diff, callback that will be made per text diff
@@ -258,6 +258,36 @@ typedef int (*git_diff_data_fn)(
  * them.
  */
 typedef struct git_diff_patch git_diff_patch;
+
+/**
+ * Flags to control the behavior of diff rename/copy detection.
+ */
+typedef enum {
+	/** should we look for renames */
+	GIT_DIFF_DETECT_RENAMES = (1 << 0),
+	/** should we look for copies */
+	GIT_DIFF_DETECT_COPIES   = (1 << 1),
+	/** should we consider unmodified files as possible copy sources */
+	GIT_DIFF_DETECT_COPIES_FROM_UNMODIFIED = (1 << 2),
+	/** should we split large rewrites into delete / add pairs */
+	GIT_DIFF_DETECT_BREAK_REWRITES = (1 << 3),
+} git_diff_detect_t;
+
+/**
+ * Control behavior of rename and copy detection
+ */
+typedef struct {
+	/** Combination of git_diff_detect_t values */
+	unsigned int flags;
+	/** Threshold on similarity index to consider a file renamed. */
+	unsigned int rename_threshold;
+	/** Threshold on similarity index to consider a file a copy. */
+	unsigned int copy_threshold;
+	/** Threshold on change % to split modify into delete/add pair. */
+	unsigned int break_rewrite_threshold;
+	/** Maximum rename/copy targets to check (diff.renameLimit) */
+	unsigned int target_limit;
+} git_diff_detect_options;
 
 
 /** @name Diff List Generator Functions
@@ -373,6 +403,20 @@ GIT_EXTERN(int) git_diff_workdir_to_tree(
 GIT_EXTERN(int) git_diff_merge(
 	git_diff_list *onto,
 	const git_diff_list *from);
+
+/**
+ * Update a diff list with file renames, copies, etc.
+ *
+ * This modifies a diff list in place, replacing old entries that look
+ * like renames or copies with new entries reflecting those changes.
+ *
+ * @param diff Diff list to run detection algorithms on
+ * @param options Control how detection should be run, NULL for defaults
+ * @return 0 on success, -1 on failure
+ */
+GIT_EXTERN(int) git_diff_detect(
+	git_diff_list *diff,
+	git_diff_detect_options *options);
 
 /**@}*/
 

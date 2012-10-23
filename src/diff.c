@@ -378,11 +378,22 @@ static git_diff_list *git_diff_list_alloc(
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_CTIME;
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
 
+	/* TODO: there are certain config settings where even if we were
+	 * not given an options structure, we need the diff list to have one
+	 * so that we can store the altered default values.
+	 *
+	 * - diff.ignoreSubmodules
+	 * - diff.mnemonicprefix
+	 * - diff.noprefix
+	 */
+
 	if (opts == NULL)
 		return diff;
 
 	memcpy(&diff->opts, opts, sizeof(git_diff_options));
 	memset(&diff->opts.pathspec, 0, sizeof(diff->opts.pathspec));
+
+	/* TODO: handle config diff.mnemonicprefix, diff.noprefix */
 
 	diff->opts.old_prefix = diff_strdup_prefix(&diff->pool,
 		opts->old_prefix ? opts->old_prefix : DIFF_OLD_PREFIX_DEFAULT);
@@ -1082,3 +1093,139 @@ int git_diff_merge(
 
 	return error;
 }
+
+#define DEFAULT_THRESHOLD 50
+#define DEFAULT_TARGET_LIMIT 200
+
+int git_diff_detect(
+	git_diff_list *diff,
+	git_diff_detect_options *opts)
+{
+	int error = 0;
+	unsigned int i, j;
+	git_diff_delta *from, *to;
+	bool check_unmodified = opts &&
+		(opts->flags & GIT_DIFF_DETECT_COPIES_FROM_UNMODIFIED) != 0;
+	int max_targets = (opts && opts->target_limit > 0) ?
+		opts->target_limit : DEFAULT_TARGET_LIMIT;
+	unsigned int rename_threshold = (opts && opts->rename_threshold > 0) ?
+		opts->rename_threshold : DEFAULT_THRESHOLD;
+	unsigned int copy_threshold = (opts && opts->copy_threshold > 0) ?
+		opts->copy_threshold : DEFAULT_THRESHOLD;
+	int num_deletes = 0, num_splits = 0;
+
+	/* TODO: update opts from config diff.renameLimit / diff.renames */
+
+	git_vector_foreach(&diff->deltas, i, from) {
+		int tried_targets = 0;
+
+		git_vector_foreach(&diff->deltas, j, to) {
+			unsigned int similarity = 0;
+
+			if (i == j)
+				continue;
+
+			switch (to->status) {
+			case GIT_DELTA_ADDED:
+			case GIT_DELTA_UNTRACKED:
+			case GIT_DELTA_RENAMED:
+			case GIT_DELTA_COPIED:
+				break;
+			default:
+				/* only those status values should be checked */
+				continue;
+			}
+
+			/* don't check UNMODIFIED files as source unless given option */
+			if (from->status == GIT_DELTA_UNMODIFIED && !check_unmodified)
+				continue;
+
+			/* cap on maximum files we'll examine */
+			if (++tried_targets > max_targets)
+				break;
+
+			/* calculate similarity and see if this pair beats the
+			 * similarity score of the current best pair.
+			 */
+			if (git_oid_cmp(&from->old_file.oid, &to->new_file.oid) == 0)
+				similarity = 100;
+			/* TODO: insert actual similarity algo here */
+
+			if (similarity <= to->similarity)
+				continue;
+
+			if (from->status == GIT_DELTA_DELETED) {
+				if (similarity < rename_threshold)
+					continue;
+
+				/* merge "from" & "to" to a RENAMED record */
+				to->status = GIT_DELTA_RENAMED;
+				memcpy(&to->old_file, &from->old_file, sizeof(to->old_file));
+
+				from->status = GIT_DELTA__TO_DELETE;
+				num_deletes++;
+			} else {
+				if (similarity < copy_threshold)
+					continue;
+
+				/* convert "to" to a COPIED record */
+				to->status = GIT_DELTA_COPIED;
+				memcpy(&to->old_file, &from->old_file, sizeof(to->old_file));
+			}
+		}
+
+		if (from->status == GIT_DELTA_MODIFIED &&
+			opts && (opts->flags & GIT_DIFF_DETECT_BREAK_REWRITES) != 0)
+		{
+			/* TODO: calculate similarity and maybe mark for split */
+
+			/* from->status = GIT_DELTA__TO_SPLIT; */
+			/* num_splits++; */
+		}
+	}
+
+	if (num_deletes > 0 || num_splits > 0) {
+		git_vector onto = GIT_VECTOR_INIT;
+		size_t new_size = diff->deltas.length + num_splits - num_deletes;
+
+		if (git_vector_init(&onto, new_size, diff_delta__cmp) < 0)
+			return -1;
+
+		/* build new delta list without TO_DELETE and splitting TO_SPLIT */
+		git_vector_foreach(&diff->deltas, i, from) {
+			if (from->status == GIT_DELTA__TO_DELETE) {
+				git__free(from);
+				continue;
+			}
+
+			if (from->status == GIT_DELTA__TO_SPLIT) {
+				git_diff_delta *deleted = diff_delta__dup(from, &diff->pool);
+				if (!deleted)
+					return -1;
+
+				deleted->status = GIT_DELTA_DELETED;
+				memset(&deleted->new_file, 0, sizeof(deleted->new_file));
+				deleted->new_file.path = deleted->old_file.path;
+				deleted->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
+
+				git_vector_insert(&onto, deleted);
+
+				from->status = GIT_DELTA_ADDED;
+				memset(&from->old_file, 0, sizeof(from->old_file));
+				from->old_file.path = from->new_file.path;
+				from->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
+			}
+
+			git_vector_insert(&onto, from);
+		}
+
+		/* swap new delta list into place */
+
+		git_vector_sort(&onto);
+		git_vector_swap(&diff->deltas, &onto);
+		git_vector_free(&onto);
+	}
+
+	return error;
+}
+
