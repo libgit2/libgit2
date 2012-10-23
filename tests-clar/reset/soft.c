@@ -120,6 +120,8 @@ void test_reset_soft__fails_when_merging(void)
 	cl_git_pass(git_buf_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
 	cl_git_mkfile(git_buf_cstr(&merge_head_path), "beefbeefbeefbeefbeefbeefbeefbeefbeefbeef\n");
 
-	cl_git_fail(git_reset(repo, target, GIT_RESET_SOFT));
+	retrieve_target_from_oid(&target, repo, KNOWN_COMMIT_IN_BARE_REPO);
+
+	cl_assert_equal_i(GIT_EUNMERGED, git_reset(repo, target, GIT_RESET_SOFT));
 	cl_git_pass(p_unlink(git_buf_cstr(&merge_head_path)));
 }

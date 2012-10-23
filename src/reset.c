@@ -92,6 +92,7 @@ int git_reset(
 
 	if (reset_type == GIT_RESET_SOFT && (git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE)) {
 		giterr_set(GITERR_OBJECT, "%s (soft) while in the middle of a merge.", ERROR_MSG);
+		error = GIT_EUNMERGED;
 		goto cleanup;
 	}
 
