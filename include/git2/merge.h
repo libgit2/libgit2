@@ -21,6 +21,14 @@
 GIT_BEGIN_DECL
 
 /**
+ * Determines if a merge is in progress.
+ *
+ * @param out true if there is a merge in progress
+ * @param repo the repository where the merge may be in progress
+ */
+GIT_EXTERN(int) git_merge_inprogress(int *out, git_repository *repo);
+
+/**
  * Find a merge base between two commits
  *
  * @param out the OID of a merge base between 'one' and 'two'
