@@ -29,8 +29,10 @@ GIT_BEGIN_DECL
  * @param out pointer that will receive the resulting repository object
  * @param origin_url repository to clone from
  * @param workdir_path local directory to clone to
- * @param fetch_stats pointer to structure that receives fetch progress
- * information (may be NULL)
+ * @param fetch_progress_cb optional callback for fetch progress. Be aware that
+ * this is called inline with network and indexing operations, so performance
+ * may be affected.
+ * @param fetch_progress_payload payload for fetch_progress_cb
  * @param checkout_opts options for the checkout step. If NULL, no checkout
  * is performed
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
@@ -50,7 +52,10 @@ GIT_EXTERN(int) git_clone(
  * @param out pointer that will receive the resulting repository object
  * @param origin_url repository to clone from
  * @param dest_path local directory to clone to
- * @param fetch_stats pointer to structure that receives fetch progress information (may be NULL)
+ * @param fetch_progress_cb optional callback for fetch progress. Be aware that
+ * this is called inline with network and indexing operations, so performance
+ * may be affected.
+ * @param fetch_progress_payload payload for fetch_progress_cb
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information about the error)
  */
 GIT_EXTERN(int) git_clone_bare(

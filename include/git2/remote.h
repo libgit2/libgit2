@@ -184,7 +184,9 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  *
  * @param remote the remote to download from
  * @param filename where to store the temporary filename
- * @param progress_cb function to call with progress information
+ * @param progress_cb function to call with progress information.  Be aware that
+ * this is called inline with network and indexing operations, so performance
+ * may be affected.
  * @param progress_payload payload for the progress callback
  * @return 0 or an error code
  */
