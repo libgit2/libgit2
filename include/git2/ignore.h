@@ -24,7 +24,7 @@ GIT_BEGIN_DECL
  *
  * Example usage:
  *
- *     error = git_ignore_add(myrepo, "*.c\ndir/\nFile with space\n");
+ *     error = git_ignore_add_rule(myrepo, "*.c\ndir/\nFile with space\n");
  *
  * This would add three rules to the ignores.
  *
