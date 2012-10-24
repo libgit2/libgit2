@@ -183,8 +183,6 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  * filename will be NULL and the function will return success.
  *
  * @param remote the remote to download from
- * @param bytes buffer that receives the number of bytes transferred (updated
- * while transfer is in progress)
  * @param progress_cb function to call with progress information.  Be aware that
  * this is called inline with network and indexing operations, so performance
  * may be affected.
@@ -193,7 +191,6 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  */
 GIT_EXTERN(int) git_remote_download(
 		git_remote *remote,
-		git_off_t *bytes,
 		git_transfer_progress_callback progress_cb,
 		void *progress_payload);
 

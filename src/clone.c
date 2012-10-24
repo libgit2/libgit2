@@ -256,13 +256,12 @@ static int setup_remotes_and_fetch(
 {
 	int retcode = GIT_ERROR;
 	git_remote *origin = NULL;
-	git_off_t bytes = 0;
 
 	/* Create the "origin" remote */
 	if (!git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, origin_url)) {
 		/* Connect and download everything */
 		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
-			if (!git_remote_download(origin, &bytes, progress_cb, progress_payload)) {
+			if (!git_remote_download(origin, progress_cb, progress_payload)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {
 					/* Point HEAD to the same ref as the remote's head */

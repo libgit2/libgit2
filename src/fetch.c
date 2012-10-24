@@ -306,7 +306,6 @@ on_error:
 
 int git_fetch_download_pack(
 		git_remote *remote,
-		git_off_t *bytes,
 		git_transfer_progress_callback progress_cb,
 		void *progress_payload)
 {
@@ -316,14 +315,14 @@ int git_fetch_download_pack(
 		return 0;
 
 	if (t->own_logic)
-		return t->download_pack(t, remote->repo, bytes, &remote->stats);
+		return t->download_pack(t, remote->repo, &remote->stats);
 
-	return git_fetch__download_pack(t, remote->repo, bytes, &remote->stats,
+	return git_fetch__download_pack(t, remote->repo, &remote->stats,
 			progress_cb, progress_payload);
 
 }
 
-static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *buf, git_off_t *bytes, git_transfer_progress *stats)
+static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *buf, git_transfer_progress *stats)
 {
 	int recvd;
 
@@ -340,8 +339,6 @@ static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *
 
 		if ((recvd = gitno_recv(buf)) < 0)
 			return -1;
-
-		*bytes += recvd;
 	} while(recvd > 0);
 
 	if (git_indexer_stream_finalize(idx, stats))
@@ -376,7 +373,6 @@ static void network_packetsize(int received, void *payload)
 int git_fetch__download_pack(
 	git_transport *t,
 	git_repository *repo,
-	git_off_t *bytes,
 	git_transfer_progress *stats,
 	git_transfer_progress_callback progress_cb,
 	void *progress_payload)
@@ -403,7 +399,6 @@ int git_fetch__download_pack(
 
 	git_buf_free(&path);
 	memset(stats, 0, sizeof(git_transfer_progress));
-	*bytes = 0;
 
 	/*
 	 * If the remote doesn't support the side-band, we can feed
@@ -411,7 +406,7 @@ int git_fetch__download_pack(
 	 * check which one belongs there.
 	 */
 	if (!t->caps.side_band && !t->caps.side_band_64k) {
-		if (no_sideband(t, idx, buf, bytes, stats) < 0)
+		if (no_sideband(t, idx, buf, stats) < 0)
 			goto on_error;
 
 		git_indexer_stream_free(idx);
@@ -438,7 +433,6 @@ int git_fetch__download_pack(
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
 			git_pkt_data *p = (git_pkt_data *) pkt;
-			*bytes += p->len;
 			if (git_indexer_stream_add(idx, p->data, p->len, stats) < 0)
 				goto on_error;
 

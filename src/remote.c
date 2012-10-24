@@ -435,18 +435,17 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 
 int git_remote_download(
 		git_remote *remote,
-		git_off_t *bytes,
 		git_transfer_progress_callback progress_cb,
 		void *progress_payload)
 {
 	int error;
 
-	assert(remote && bytes);
+	assert(remote);
 
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return error;
 
-	return git_fetch_download_pack(remote, bytes, progress_cb, progress_payload);
+	return git_fetch_download_pack(remote, progress_cb, progress_payload);
 }
 
 int git_remote_update_tips(git_remote *remote)
