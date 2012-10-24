@@ -69,7 +69,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 {
 	git_remote *remote = NULL;
 	git_off_t bytes = 0;
-	const git_indexer_stats *stats;
+	const git_transfer_progress *stats;
 	pthread_t worker;
 	struct dl_data data;
 	git_remote_callbacks callbacks;

@@ -42,7 +42,7 @@ GIT_EXTERN(int) git_clone(
 		git_repository **out,
 		const char *origin_url,
 		const char *workdir_path,
-		git_indexer_progress_callback fetch_progress_cb,
+		git_transfer_progress_callback fetch_progress_cb,
 		void *fetch_progress_payload,
 		git_checkout_opts *checkout_opts);
 
@@ -62,7 +62,7 @@ GIT_EXTERN(int) git_clone_bare(
 		git_repository **out,
 		const char *origin_url,
 		const char *dest_path,
-		git_indexer_progress_callback fetch_progress_cb,
+		git_transfer_progress_callback fetch_progress_cb,
 		void *fetch_progress_payload);
 
 /** @} */

@@ -1034,7 +1034,7 @@ int git_index_entry_stage(const git_index_entry *entry)
 
 typedef struct read_tree_data {
 	git_index *index;
-	git_indexer_stats *stats;
+	git_transfer_progress *stats;
 } read_tree_data;
 
 static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *data)

@@ -98,7 +98,7 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 	(*was_called) = true;
 }
 
-static void fetch_progress(const git_indexer_stats *stats, void *payload)
+static void fetch_progress(const git_transfer_progress *stats, void *payload)
 {
 	GIT_UNUSED(stats);
 	bool *was_called = (bool*)payload;

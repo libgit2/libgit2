@@ -194,7 +194,7 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
 GIT_EXTERN(int) git_remote_download(
 		git_remote *remote,
 		git_off_t *bytes,
-		git_indexer_progress_callback progress_cb,
+		git_transfer_progress_callback progress_cb,
 		void *progress_payload);
 
 /**
@@ -325,7 +325,7 @@ GIT_EXTERN(void) git_remote_set_callbacks(git_remote *remote, git_remote_callbac
 /**
  * Get the statistics structure that is filled in by the fetch operation.
  */
-GIT_EXTERN(const git_indexer_stats *) git_remote_stats(git_remote *remote);
+GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
 
 enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSET,

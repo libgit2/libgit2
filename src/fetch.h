@@ -14,15 +14,15 @@ int git_fetch_negotiate(git_remote *remote);
 int git_fetch_download_pack(
 		git_remote *remote,
 		git_off_t *bytes,
-		git_indexer_progress_callback progress_cb,
+		git_transfer_progress_callback progress_cb,
 		void *progress_payload);
 
 int git_fetch__download_pack(
 		git_transport *t,
 		git_repository *repo,
 		git_off_t *bytes,
-		git_indexer_stats *stats,
-		git_indexer_progress_callback progress_cb,
+		git_transfer_progress *stats,
+		git_transfer_progress_callback progress_cb,
 		void *progress_payload);
 
 int git_fetch_setup_walk(git_revwalk **out, git_repository *repo);

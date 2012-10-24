@@ -436,7 +436,7 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 int git_remote_download(
 		git_remote *remote,
 		git_off_t *bytes,
-		git_indexer_progress_callback progress_cb,
+		git_transfer_progress_callback progress_cb,
 		void *progress_payload)
 {
 	int error;
@@ -707,7 +707,7 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 	}
 }
 
-inline const git_indexer_stats* git_remote_stats(git_remote *remote)
+inline const git_transfer_progress* git_remote_stats(git_remote *remote)
 {
 	assert(remote);
 	return &remote->stats;

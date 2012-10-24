@@ -25,7 +25,7 @@ struct git_remote {
 	git_transport *transport;
 	git_repository *repo;
 	git_remote_callbacks callbacks;
-	git_indexer_stats stats;
+	git_transfer_progress stats;
 	unsigned int need_pack:1,
 		download_tags:2, /* There are four possible values */
 		check_cert:1;

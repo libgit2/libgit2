@@ -307,7 +307,7 @@ on_error:
 int git_fetch_download_pack(
 		git_remote *remote,
 		git_off_t *bytes,
-		git_indexer_progress_callback progress_cb,
+		git_transfer_progress_callback progress_cb,
 		void *progress_payload)
 {
 	git_transport *t = remote->transport;
@@ -323,7 +323,7 @@ int git_fetch_download_pack(
 
 }
 
-static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *buf, git_off_t *bytes, git_indexer_stats *stats)
+static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *buf, git_off_t *bytes, git_transfer_progress *stats)
 {
 	int recvd;
 
@@ -352,9 +352,9 @@ static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *
 
 struct network_packetsize_payload
 {
-	git_indexer_progress_callback callback;
+	git_transfer_progress_callback callback;
 	void *payload;
-	git_indexer_stats *stats;
+	git_transfer_progress *stats;
 	git_off_t last_fired_bytes;
 };
 
@@ -363,11 +363,11 @@ static void network_packetsize(int received, void *payload)
 	struct network_packetsize_payload *npp = (struct network_packetsize_payload*)payload;
 
 	/* Accumulate bytes */
-	npp->stats->bytes += received;
+	npp->stats->received_bytes += received;
 
 	/* Fire notification if the threshold is reached */
-	if ((npp->stats->bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
-		npp->last_fired_bytes = npp->stats->bytes;
+	if ((npp->stats->received_bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
+		npp->last_fired_bytes = npp->stats->received_bytes;
 		npp->callback(npp->stats, npp->payload);
 	}
 }
@@ -377,8 +377,8 @@ int git_fetch__download_pack(
 	git_transport *t,
 	git_repository *repo,
 	git_off_t *bytes,
-	git_indexer_stats *stats,
-	git_indexer_progress_callback progress_cb,
+	git_transfer_progress *stats,
+	git_transfer_progress_callback progress_cb,
 	void *progress_payload)
 {
 	git_buf path = GIT_BUF_INIT;
@@ -402,7 +402,7 @@ int git_fetch__download_pack(
 		goto on_error;
 
 	git_buf_free(&path);
-	memset(stats, 0, sizeof(git_indexer_stats));
+	memset(stats, 0, sizeof(git_transfer_progress));
 	*bytes = 0;
 
 	/*
