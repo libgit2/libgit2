@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 typedef struct progress_data {
-	git_indexer_stats fetch_progress;
+	git_transfer_progress fetch_progress;
 	size_t completed_steps;
 	size_t total_steps;
 	const char *path;
@@ -16,20 +16,21 @@ typedef struct progress_data {
 
 static void print_progress(const progress_data *pd)
 {
-	int network_percent = (100*pd->fetch_progress.received) / pd->fetch_progress.total;
-	int index_percent = (100*pd->fetch_progress.processed) / pd->fetch_progress.total;
+	int network_percent = (100*pd->fetch_progress.received_objects) / pd->fetch_progress.total_objects;
+	int index_percent = (100*pd->fetch_progress.indexed_objects) / pd->fetch_progress.total_objects;
 	int checkout_percent = pd->total_steps > 0
 		? (100 * pd->completed_steps) / pd->total_steps
 		: 0.f;
-	int kbytes = pd->fetch_progress.bytes / 1024;
+	int kbytes = pd->fetch_progress.received_bytes / 1024;
 	printf("net %3d%% (%4d kb, %5d/%5d)  /  idx %3d%% (%5d/%5d)  /  chk %3d%% (%4lu/%4lu) %s\n",
-			network_percent, kbytes, pd->fetch_progress.received, pd->fetch_progress.total,
-			index_percent, pd->fetch_progress.processed, pd->fetch_progress.total,
+			network_percent, kbytes,
+			pd->fetch_progress.received_objects, pd->fetch_progress.total_objects,
+			index_percent, pd->fetch_progress.indexed_objects, pd->fetch_progress.total_objects,
 			checkout_percent, pd->completed_steps, pd->total_steps,
 			pd->path);
 }
 
-static void fetch_progress(const git_indexer_stats *stats, void *payload)
+static void fetch_progress(const git_transfer_progress *stats, void *payload)
 {
 	progress_data *pd = (progress_data*)payload;
 	pd->fetch_progress = *stats;

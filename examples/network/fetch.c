@@ -105,16 +105,18 @@ int fetch(git_repository *repo, int argc, char **argv)
 	do {
 		usleep(10000);
 
-		if (stats->total > 0)
+		if (stats->total_objects > 0)
 			printf("Received %d/%d objects (%d) in %d bytes\r",
-			       stats->received, stats->total, stats->processed, bytes);
+			       stats->received_objects, stats->total_objects,
+					 stats->indexed_objects, bytes);
 	} while (!data.finished);
 
 	if (data.ret < 0)
 		goto on_error;
 
 	pthread_join(worker, NULL);
-	printf("\rReceived %d/%d objects in %zu bytes\n", stats->processed, stats->total, bytes);
+	printf("\rReceived %d/%d objects in %zu bytes\n",
+			stats->indexed_objects, stats->total_objects, bytes);
 
 	// Disconnect the underlying connection to prevent from idling.
 	git_remote_disconnect(remote);
