@@ -85,6 +85,8 @@ IF (MSVC)
 	# Default to stdcall, as that's what the CLR expects and how the Windows API is built
 	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
 
+    STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
 	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
@@ -94,6 +96,7 @@ IF (MSVC)
 	SET(WIN_RC "src/win32/git2.rc")
 
    # Precompiled headers
+
 ELSE ()
 	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g ${CMAKE_C_FLAGS}")
 	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
