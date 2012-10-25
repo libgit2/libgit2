@@ -201,12 +201,75 @@ cleanup:
 	return error;
 }
 
+static int ensure_remote_name_is_valid(const char *name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_refspec refspec;
+	int error = -1;
+
+	if (!name || *name == '\0')
+		goto cleanup;
+
+	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", name);
+	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
+
+	git_buf_free(&buf);
+	git_refspec__free(&refspec);
+
+cleanup:
+	if (error)
+		giterr_set(
+			GITERR_CONFIG,
+			"'%s' is not a valid remote name.", name);
+
+	return error;
+}
+
+static int update_config_refspec(
+	git_config *config,
+	const char *remote_name,
+	const git_refspec *refspec,
+	int git_direction)
+{
+	git_buf name = GIT_BUF_INIT, value = GIT_BUF_INIT;
+	int error = -1;
+
+	if (refspec->src == NULL || refspec->dst == NULL)
+		return 0;
+
+	if (git_buf_printf(
+		&name,
+		"remote.%s.%s",
+		remote_name,
+		git_direction == GIT_DIR_FETCH ? "fetch" : "push") < 0)
+			goto cleanup;
+
+	if (git_refspec__serialize(&value, refspec) < 0)
+		goto cleanup;
+
+	error = git_config_set_string(
+		config,
+		git_buf_cstr(&name),
+		git_buf_cstr(&value));
+
+cleanup:
+	git_buf_free(&name);
+	git_buf_free(&value);
+
+	return error;
+}
+
 int git_remote_save(const git_remote *remote)
 {
 	int error;
 	git_config *config;
 	const char *tagopt = NULL;
-	git_buf buf = GIT_BUF_INIT, value = GIT_BUF_INIT;
+	git_buf buf = GIT_BUF_INIT;
+
+	assert(remote);
+
+	if (ensure_remote_name_is_valid(remote->name) < 0)
+		return -1;
 
 	if (git_repository_config__weakptr(&config, remote->repo) < 0)
 		return -1;
@@ -239,33 +302,19 @@ int git_remote_save(const git_remote *remote)
 		}
 	}
 
-	if (remote->fetch.src != NULL && remote->fetch.dst != NULL) {
-		git_buf_clear(&buf);
-		git_buf_clear(&value);
-		git_buf_printf(&buf, "remote.%s.fetch", remote->name);
-		if (remote->fetch.force)
-			git_buf_putc(&value, '+');
-		git_buf_printf(&value, "%s:%s", remote->fetch.src, remote->fetch.dst);
-		if (git_buf_oom(&buf) || git_buf_oom(&value))
-			return -1;
-
-		if (git_config_set_string(config, git_buf_cstr(&buf), git_buf_cstr(&value)) < 0)
+	if (update_config_refspec(
+		config,
+		remote->name,
+		&remote->fetch,
+		GIT_DIR_FETCH) < 0)
 			goto on_error;
-	}
 
-	if (remote->push.src != NULL && remote->push.dst != NULL) {
-		git_buf_clear(&buf);
-		git_buf_clear(&value);
-		git_buf_printf(&buf, "remote.%s.push", remote->name);
-		if (remote->push.force)
-			git_buf_putc(&value, '+');
-		git_buf_printf(&value, "%s:%s", remote->push.src, remote->push.dst);
-		if (git_buf_oom(&buf) || git_buf_oom(&value))
-			return -1;
-
-		if (git_config_set_string(config, git_buf_cstr(&buf), git_buf_cstr(&value)) < 0)
+	if (update_config_refspec(
+		config,
+		remote->name,
+		&remote->push,
+		GIT_DIR_PUSH) < 0)
 			goto on_error;
-	}
 
 	/*
 	 * What action to take depends on the old and new values. This
@@ -300,13 +349,11 @@ int git_remote_save(const git_remote *remote)
 	}
 
 	git_buf_free(&buf);
-	git_buf_free(&value);
 
 	return 0;
 
 on_error:
 	git_buf_free(&buf);
-	git_buf_free(&value);
 	return -1;
 }
 
@@ -759,4 +806,289 @@ int git_remote_autotag(git_remote *remote)
 void git_remote_set_autotag(git_remote *remote, int value)
 {
 	remote->download_tags = value;
+}
+
+static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
+{
+	int error;
+	git_remote *remote;
+
+	error = git_remote_load(&remote, repo, name);
+
+	if (error == GIT_ENOTFOUND)
+		return 0;
+
+	if (error < 0)
+		return error;
+
+	git_remote_free(remote);
+
+	giterr_set(
+		GITERR_CONFIG,
+		"Remote '%s' already exists.", name);
+
+	return GIT_EEXISTS;
+}
+
+static int rename_remote_config_section(
+	git_repository *repo,
+	const char *old_name,
+	const char *new_name)
+{
+	git_buf old_section_name = GIT_BUF_INIT,
+		new_section_name = GIT_BUF_INIT;
+	int error = -1;
+
+	if (git_buf_printf(&old_section_name, "remote.%s", old_name) < 0)
+		goto cleanup;
+
+	if (git_buf_printf(&new_section_name, "remote.%s", new_name) < 0)
+		goto cleanup;
+
+	error = git_config_rename_section(
+		repo,
+		git_buf_cstr(&old_section_name),
+		git_buf_cstr(&new_section_name));
+
+cleanup:
+	git_buf_free(&old_section_name);
+	git_buf_free(&new_section_name);
+
+	return error;
+}
+
+struct update_data
+{
+	git_config *config;
+	const char *old_remote_name;
+	const char *new_remote_name;
+};
+
+static int update_config_entries_cb(
+	const git_config_entry *entry,
+	void *payload)
+{
+	struct update_data *data = (struct update_data *)payload;
+
+	if (strcmp(entry->value, data->old_remote_name))
+		return 0;
+
+	return git_config_set_string(
+		data->config,
+		entry->name,
+		data->new_remote_name);
+}
+
+static int update_branch_remote_config_entry(
+	git_repository *repo,
+	const char *old_name,
+	const char *new_name)
+{
+	git_config *config;
+	struct update_data data;
+
+	if (git_repository_config__weakptr(&config, repo) < 0)
+		return -1;
+
+	data.config = config;
+	data.old_remote_name = old_name;
+	data.new_remote_name = new_name;
+
+	return git_config_foreach_match(
+		config,
+		"branch\\..+\\.remote",
+		update_config_entries_cb, &data);
+}
+
+static int rename_cb(const char *ref, void *data)
+{
+	if (git__prefixcmp(ref, GIT_REFS_REMOTES_DIR))
+		return 0;
+	
+	return git_vector_insert((git_vector *)data, git__strdup(ref));
+}
+
+static int rename_one_remote_reference(
+	git_repository *repo,
+	const char *reference_name,
+	const char *old_remote_name,
+	const char *new_remote_name)
+{
+	int error;
+	git_buf new_name = GIT_BUF_INIT;
+	git_reference *reference = NULL;
+
+	if (git_buf_printf(
+		&new_name,
+		GIT_REFS_REMOTES_DIR "%s%s",
+		new_remote_name,
+		reference_name + strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name)) < 0)
+			return -1;
+
+	if (git_reference_lookup(&reference, repo, reference_name) < 0)
+		goto cleanup;
+
+	error = git_reference_rename(reference, git_buf_cstr(&new_name), 0);
+
+cleanup:
+	git_reference_free(reference);
+	git_buf_free(&new_name);
+	return error;
+}
+
+static int rename_remote_references(
+	git_repository *repo,
+	const char *old_name,
+	const char *new_name)
+{
+	git_vector refnames;
+	int error = -1;
+	unsigned int i;
+	char *name;
+
+	if (git_vector_init(&refnames, 8, NULL) < 0)
+		goto cleanup;
+
+	if (git_reference_foreach(
+		repo,
+		GIT_REF_LISTALL,
+		rename_cb,
+		&refnames) < 0)
+			goto cleanup;
+
+	git_vector_foreach(&refnames, i, name) {
+		if ((error = rename_one_remote_reference(repo, name, old_name, new_name)) < 0)
+			goto cleanup;
+	}
+
+	error = 0;
+cleanup:
+	git_vector_foreach(&refnames, i, name) {
+		git__free(name);
+	}
+
+	git_vector_free(&refnames);
+	return error;
+}
+
+static int rename_fetch_refspecs(
+	git_remote *remote,
+	const char *new_name,
+	int (*callback)(const char *problematic_refspec, void *payload),
+	void *payload)
+{
+	git_config *config;
+	const git_refspec *fetch_refspec;
+	git_buf dst_prefix = GIT_BUF_INIT, serialized = GIT_BUF_INIT;
+	const char* pos;
+	int error = -1;
+
+	fetch_refspec = git_remote_fetchspec(remote);
+
+	/* Is there a refspec to deal with? */
+	if (fetch_refspec->src == NULL &&
+		fetch_refspec->dst == NULL)
+		return 0;
+
+	if (git_refspec__serialize(&serialized, fetch_refspec) < 0)
+		goto cleanup;
+
+	/* Is it an in-memory remote? */
+	if (remote->name == '\0') {
+		error = (callback(git_buf_cstr(&serialized), payload) < 0) ? GIT_EUSER : 0;
+		goto cleanup;
+	}
+
+	if (git_buf_printf(&dst_prefix, ":refs/remotes/%s/", remote->name) < 0)
+		goto cleanup;
+
+	pos = strstr(git_buf_cstr(&serialized), git_buf_cstr(&dst_prefix));
+
+	/* Does the dst part of the refspec follow the extected standard format? */
+	if (!pos) {
+		error = (callback(git_buf_cstr(&serialized), payload) < 0) ? GIT_EUSER : 0;
+		goto cleanup;
+	}
+
+	if (git_buf_splice(
+		&serialized,
+		pos - git_buf_cstr(&serialized) + strlen(":refs/remotes/"),
+		strlen(remote->name), new_name,
+		strlen(new_name)) < 0)
+			goto cleanup;
+
+	git_refspec__free(&remote->fetch);
+
+	if (git_refspec__parse(&remote->fetch, git_buf_cstr(&serialized), true) < 0)
+		goto cleanup;
+
+	if (git_repository_config__weakptr(&config, remote->repo) < 0)
+		goto cleanup;
+
+	error = update_config_refspec(config, new_name, &remote->fetch, GIT_DIR_FETCH);
+
+cleanup:
+	git_buf_free(&serialized);
+	git_buf_free(&dst_prefix);
+	return error;
+}
+
+int git_remote_rename(
+	git_remote *remote,
+	const char *new_name,
+	int (*callback)(const char *problematic_refspec, void *payload),
+	void *payload)
+{
+	int error;
+
+	assert(remote && new_name);
+
+	if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
+		return error;
+
+	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
+		return error;
+
+	if (!remote->name) {
+		if ((error = rename_fetch_refspecs(
+			remote,
+			new_name,
+			callback,
+			payload)) < 0)
+			return error;
+
+		remote->name = git__strdup(new_name);
+
+		return git_remote_save(remote);
+	}
+
+	if ((error = rename_remote_config_section(
+		remote->repo,
+		remote->name,
+		new_name)) < 0)
+			return error;
+
+	if ((error = update_branch_remote_config_entry(
+		remote->repo,
+		remote->name,
+		new_name)) < 0)
+			return error;
+
+	if ((error = rename_remote_references(
+		remote->repo,
+		remote->name,
+		new_name)) < 0)
+			return error;
+
+	if ((error = rename_fetch_refspecs(
+		remote,
+		new_name,
+		callback,
+		payload)) < 0)
+		return error;
+
+	git__free(remote->name);
+	remote->name = git__strdup(new_name);
+
+	return 0;
 }

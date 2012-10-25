@@ -225,3 +225,14 @@ int git_refspec_transform_l(git_buf *out, const git_refspec *spec, const char *n
 	return refspec_transform(out, spec->dst, spec->src, name);
 }
 
+int git_refspec__serialize(git_buf *out, const git_refspec *refspec)
+{
+	if (refspec->force)
+		git_buf_putc(out, '+');
+
+	git_buf_printf(out, "%s:%s",
+		refspec->src != NULL ? refspec->src : "",
+		refspec->dst != NULL ? refspec->dst : "");
+
+	return git_buf_oom(out) == false;
+}

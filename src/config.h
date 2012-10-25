@@ -27,4 +27,9 @@ extern int git_config_find_global_r(git_buf *global_config_path);
 extern int git_config_find_xdg_r(git_buf *system_config_path);
 extern int git_config_find_system_r(git_buf *system_config_path);
 
+extern int git_config_rename_section(
+	git_repository *repo,
+	const char *old_section_name,	/* eg "branch.dummy" */
+	const char *new_section_name);	/* NULL to drop the old section */
+
 #endif
