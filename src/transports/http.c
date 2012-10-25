@@ -379,6 +379,8 @@ static int http_recv_cb(gitno_buffer *buf)
 
 #ifndef GIT_WINHTTP
 	gitno_buffer_setup(transport, &inner, buffer, sizeof(buffer));
+	inner.packetsize_cb = buf->packetsize_cb;
+	inner.packetsize_payload = buf->packetsize_payload;
 
 	if ((error = gitno_recv(&inner)) < 0)
 		return -1;

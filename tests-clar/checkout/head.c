@@ -18,5 +18,5 @@ void test_checkout_head__checking_out_an_orphaned_head_returns_GIT_EORPHANEDHEAD
 {
 	make_head_orphaned(g_repo, NON_EXISTING_HEAD);
 
-	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_checkout_head(g_repo, NULL, NULL));
+	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_checkout_head(g_repo, NULL));
 }

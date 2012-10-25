@@ -20,6 +20,8 @@ struct gitno_buffer {
 #endif
 	int (*recv)(gitno_buffer *buffer);
 	void *cb_data;
+	void (*packetsize_cb)(int received, void *payload);
+	void *packetsize_payload;
 };
 
 void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, size_t len);

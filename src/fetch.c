@@ -19,6 +19,8 @@
 #include "netops.h"
 #include "pkt.h"
 
+#define NETWORK_XFER_THRESHOLD (100*1024)
+
 struct filter_payload {
 	git_remote *remote;
 	const git_refspec *spec, *tagspec;
@@ -302,7 +304,10 @@ on_error:
 	return error;
 }
 
-int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_stats *stats)
+int git_fetch_download_pack(
+		git_remote *remote,
+		git_transfer_progress_callback progress_cb,
+		void *progress_payload)
 {
 	git_transport *t = remote->transport;
 
@@ -310,13 +315,14 @@ int git_fetch_download_pack(git_remote *remote, git_off_t *bytes, git_indexer_st
 		return 0;
 
 	if (t->own_logic)
-		return t->download_pack(t, remote->repo, bytes, stats);
+		return t->download_pack(t, remote->repo, &remote->stats);
 
-	return git_fetch__download_pack(t, remote->repo, bytes, stats);
+	return git_fetch__download_pack(t, remote->repo, &remote->stats,
+			progress_cb, progress_payload);
 
 }
 
-static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *buf, git_off_t *bytes, git_indexer_stats *stats)
+static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *buf, git_transfer_progress *stats)
 {
 	int recvd;
 
@@ -333,8 +339,6 @@ static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *
 
 		if ((recvd = gitno_recv(buf)) < 0)
 			return -1;
-
-		*bytes += recvd;
 	} while(recvd > 0);
 
 	if (git_indexer_stream_finalize(idx, stats))
@@ -343,27 +347,58 @@ static int no_sideband(git_transport *t, git_indexer_stream *idx, gitno_buffer *
 	return 0;
 }
 
+struct network_packetsize_payload
+{
+	git_transfer_progress_callback callback;
+	void *payload;
+	git_transfer_progress *stats;
+	git_off_t last_fired_bytes;
+};
+
+static void network_packetsize(int received, void *payload)
+{
+	struct network_packetsize_payload *npp = (struct network_packetsize_payload*)payload;
+
+	/* Accumulate bytes */
+	npp->stats->received_bytes += received;
+
+	/* Fire notification if the threshold is reached */
+	if ((npp->stats->received_bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
+		npp->last_fired_bytes = npp->stats->received_bytes;
+		npp->callback(npp->stats, npp->payload);
+	}
+}
+
 /* Receiving data from a socket and storing it is pretty much the same for git and HTTP */
 int git_fetch__download_pack(
 	git_transport *t,
 	git_repository *repo,
-	git_off_t *bytes,
-	git_indexer_stats *stats)
+	git_transfer_progress *stats,
+	git_transfer_progress_callback progress_cb,
+	void *progress_payload)
 {
 	git_buf path = GIT_BUF_INIT;
 	gitno_buffer *buf = &t->buffer;
 	git_indexer_stream *idx = NULL;
 	int error = -1;
+	struct network_packetsize_payload npp = {0};
+
+	if (progress_cb) {
+		npp.callback = progress_cb;
+		npp.payload = progress_payload;
+		npp.stats = stats;
+		buf->packetsize_cb = &network_packetsize;
+		buf->packetsize_payload = &npp;
+	}
 
 	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
 		return -1;
 
-	if (git_indexer_stream_new(&idx, git_buf_cstr(&path)) < 0)
+	if (git_indexer_stream_new(&idx, git_buf_cstr(&path), progress_cb, progress_payload) < 0)
 		goto on_error;
 
 	git_buf_free(&path);
-	memset(stats, 0, sizeof(git_indexer_stats));
-	*bytes = 0;
+	memset(stats, 0, sizeof(git_transfer_progress));
 
 	/*
 	 * If the remote doesn't support the side-band, we can feed
@@ -371,7 +406,7 @@ int git_fetch__download_pack(
 	 * check which one belongs there.
 	 */
 	if (!t->caps.side_band && !t->caps.side_band_64k) {
-		if (no_sideband(t, idx, buf, bytes, stats) < 0)
+		if (no_sideband(t, idx, buf, stats) < 0)
 			goto on_error;
 
 		git_indexer_stream_free(idx);
@@ -398,7 +433,6 @@ int git_fetch__download_pack(
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
 			git_pkt_data *p = (git_pkt_data *) pkt;
-			*bytes += p->len;
 			if (git_indexer_stream_add(idx, p->data, p->len, stats) < 0)
 				goto on_error;
 
