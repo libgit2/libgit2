@@ -14,7 +14,8 @@
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
 	return git_futils_mkdir(
-		file_path, NULL, mode, GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST);
+		file_path, NULL, mode,
+		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
 }
 
 int git_futils_mktmp(git_buf *path_out, const char *filename)
@@ -250,6 +251,7 @@ int git_futils_mkdir(
 	mode_t mode,
 	uint32_t flags)
 {
+	int error = -1;
 	git_buf make_path = GIT_BUF_INIT;
 	ssize_t root = 0;
 	char lastch, *tail;
@@ -297,12 +299,28 @@ int git_futils_mkdir(
 		*tail = '\0';
 
 		/* make directory */
-		if (p_mkdir(make_path.ptr, mode) < 0 &&
-			(errno != EEXIST || (flags & GIT_MKDIR_EXCL) != 0))
-		{
-			giterr_set(GITERR_OS, "Failed to make directory '%s'",
-				make_path.ptr);
-			goto fail;
+		if (p_mkdir(make_path.ptr, mode) < 0) {
+			if (errno == EEXIST) {
+				if (!lastch && (flags & GIT_MKDIR_VERIFY_DIR) != 0) {
+					if (!git_path_isdir(make_path.ptr)) {
+						giterr_set(
+							GITERR_OS, "Existing path is not a directory '%s'",
+							make_path.ptr);
+						error = GIT_ENOTFOUND;
+						goto fail;
+					}
+				}
+				if ((flags & GIT_MKDIR_EXCL) != 0) {
+					giterr_set(GITERR_OS, "Directory already exists '%s'",
+						make_path.ptr);
+					error = GIT_EEXISTS;
+					goto fail;
+				}
+			} else {
+				giterr_set(GITERR_OS, "Failed to make directory '%s'",
+					make_path.ptr);
+				goto fail;
+			}
 		}
 
 		/* chmod if requested */
@@ -324,7 +342,7 @@ int git_futils_mkdir(
 
 fail:
 	git_buf_free(&make_path);
-	return -1;
+	return error;
 }
 
 int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
@@ -332,57 +350,103 @@ int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 	return git_futils_mkdir(path, base, mode, GIT_MKDIR_PATH);
 }
 
-static int _rmdir_recurs_foreach(void *opaque, git_buf *path)
+typedef struct {
+	uint32_t flags;
+	int error;
+} futils__rmdir_data;
+
+static int futils__error_cannot_rmdir(const char *path, const char *filemsg)
 {
-	git_directory_removal_type removal_type = *(git_directory_removal_type *)opaque;
+	if (filemsg)
+		giterr_set(GITERR_OS, "Could not remove directory. File '%s' %s",
+				   path, filemsg);
+	else
+		giterr_set(GITERR_OS, "Could not remove directory '%s'", path);
+
+	return -1;
+}
+
+static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
+{
+	futils__rmdir_data *data = opaque;
 
 	if (git_path_isdir(path->ptr) == true) {
-		if (git_path_direach(path, _rmdir_recurs_foreach, opaque) < 0)
-			return -1;
+		int error = git_path_direach(path, futils__rmdir_recurs_foreach, data);
+		if (error < 0)
+			return (error == GIT_EUSER) ? data->error : error;
 
-		if (p_rmdir(path->ptr) < 0) {
-			if (removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS && (errno == ENOTEMPTY || errno == EEXIST))
-				return 0;
+		data->error = p_rmdir(path->ptr);
 
-			giterr_set(GITERR_OS, "Could not remove directory '%s'", path->ptr);
-			return -1;
+		if (data->error < 0) {
+			if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) != 0 &&
+				(errno == ENOTEMPTY || errno == EEXIST))
+				data->error = 0;
+			else
+				futils__error_cannot_rmdir(path->ptr, NULL);
 		}
-
-		return 0;
 	}
 
-	if (removal_type == GIT_DIRREMOVAL_FILES_AND_DIRS) {
-		if (p_unlink(path->ptr) < 0) {
-			giterr_set(GITERR_OS, "Could not remove directory.  File '%s' cannot be removed", path->ptr);
-			return -1;
+	else if ((data->flags & GIT_RMDIR_REMOVE_FILES) != 0) {
+		data->error = p_unlink(path->ptr);
+
+		if (data->error < 0)
+			futils__error_cannot_rmdir(path->ptr, "cannot be removed");
+	}
+
+	else if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) == 0) {
+		data->error = futils__error_cannot_rmdir(path->ptr, "still present");
+	}
+
+	return data->error;
+}
+
+static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
+{
+	int error = p_rmdir(path->ptr);
+
+	GIT_UNUSED(opaque);
+
+	if (error) {
+		int en = errno;
+
+		if (en == ENOENT || en == ENOTDIR) {
+			giterr_clear();
+			error = 0;
+		} else if (en == ENOTEMPTY || en == EEXIST) {
+			giterr_clear();
+			error = GIT_ITEROVER;
+		} else {
+			futils__error_cannot_rmdir(path->ptr, NULL);
 		}
-
-		return 0;
 	}
 
-	if (removal_type == GIT_DIRREMOVAL_EMPTY_HIERARCHY) {
-		giterr_set(GITERR_OS, "Could not remove directory. File '%s' still present", path->ptr);
-		return -1;
-	}
-
-	return 0;
+	return error;
 }
 
 int git_futils_rmdir_r(
-	const char *path, const char *base, git_directory_removal_type removal_type)
+	const char *path, const char *base, uint32_t flags)
 {
 	int error;
 	git_buf fullpath = GIT_BUF_INIT;
-
-	assert(removal_type == GIT_DIRREMOVAL_EMPTY_HIERARCHY
-		|| removal_type == GIT_DIRREMOVAL_FILES_AND_DIRS
-		|| removal_type == GIT_DIRREMOVAL_ONLY_EMPTY_DIRS);
+	futils__rmdir_data data;
 
 	/* build path and find "root" where we should start calling mkdir */
 	if (git_path_join_unrooted(&fullpath, path, base, NULL) < 0)
 		return -1;
 
-	error = _rmdir_recurs_foreach(&removal_type, &fullpath);
+	data.flags = flags;
+	data.error = 0;
+
+	error = futils__rmdir_recurs_foreach(&data, &fullpath);
+
+	/* remove now-empty parents if requested */
+	if (!error && (flags & GIT_RMDIR_EMPTY_PARENTS) != 0) {
+		error = git_path_walk_up(
+			&fullpath, base, futils__rmdir_empty_parent, &data);
+
+		if (error == GIT_ITEROVER)
+			error = 0;
+	}
 
 	git_buf_free(&fullpath);
 

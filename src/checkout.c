@@ -213,7 +213,7 @@ static int checkout_remove_the_old(
 		data->error = git_futils_rmdir_r(
 			delta->new_file.path,
 			git_repository_workdir(data->owner),
-			GIT_DIRREMOVAL_FILES_AND_DIRS);
+			GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_EMPTY_PARENTS);
 
 		data->completed_steps++;
 		report_progress(data, delta->new_file.path);

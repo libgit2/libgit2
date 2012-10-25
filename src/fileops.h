@@ -65,6 +65,7 @@ extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t m
  * * GIT_MKDIR_CHMOD says to chmod the final directory entry after creation
  * * GIT_MKDIR_CHMOD_PATH says to chmod each directory component in the path
  * * GIT_MKDIR_SKIP_LAST says to leave off the last element of the path
+ * * GIT_MKDIR_VERIFY_DIR says confirm final item is a dir, not just EEXIST
  *
  * Note that the chmod options will be executed even if the directory already
  * exists, unless GIT_MKDIR_EXCL is given.
@@ -74,7 +75,8 @@ typedef enum {
 	GIT_MKDIR_PATH = 2,
 	GIT_MKDIR_CHMOD = 4,
 	GIT_MKDIR_CHMOD_PATH = 8,
-	GIT_MKDIR_SKIP_LAST = 16
+	GIT_MKDIR_SKIP_LAST = 16,
+	GIT_MKDIR_VERIFY_DIR = 32,
 } git_futils_mkdir_flags;
 
 /**
@@ -98,27 +100,38 @@ extern int git_futils_mkdir(const char *path, const char *base, mode_t mode, uin
  */
 extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 
+/**
+ * Flags to pass to `git_futils_rmdir_r`.
+ *
+ * * GIT_RMDIR_EMPTY_HIERARCHY - the default; remove hierarchy of empty
+ *       dirs and generate error if any files are found.
+ * * GIT_RMDIR_REMOVE_FILES    - attempt to remove files in the hierarchy.
+ * * GIT_RMDIR_SKIP_NONEMPTY   - skip non-empty directories with no error.
+ * * GIT_RMDIR_EMPTY_PARENTS   - remove containing directories up to base
+ *       if removing this item leaves them empty
+ *
+ * The old values translate into the new as follows:
+ *
+ * * GIT_DIRREMOVAL_EMPTY_HIERARCHY == GIT_RMDIR_EMPTY_HIERARCHY
+ * * GIT_DIRREMOVAL_FILES_AND_DIRS  ~= GIT_RMDIR_REMOVE_FILES
+ * * GIT_DIRREMOVAL_ONLY_EMPTY_DIRS == GIT_RMDIR_SKIP_NONEMPTY
+ */
 typedef enum {
-	GIT_DIRREMOVAL_EMPTY_HIERARCHY = 0,
-	GIT_DIRREMOVAL_FILES_AND_DIRS = 1,
-	GIT_DIRREMOVAL_ONLY_EMPTY_DIRS = 2,
-} git_directory_removal_type;
+	GIT_RMDIR_EMPTY_HIERARCHY = 0,
+	GIT_RMDIR_REMOVE_FILES    = (1 << 0),
+	GIT_RMDIR_SKIP_NONEMPTY   = (1 << 1),
+	GIT_RMDIR_EMPTY_PARENTS   = (1 << 2),
+} git_futils_rmdir_flags;
 
 /**
  * Remove path and any files and directories beneath it.
  *
  * @param path Path to to top level directory to process.
  * @param base Root for relative path.
- * @param removal_type GIT_DIRREMOVAL_EMPTY_HIERARCHY to remove a hierarchy
- *                     of empty directories (will fail if any file is found),
- *                     GIT_DIRREMOVAL_FILES_AND_DIRS to remove a hierarchy of
- *                     files and folders,
- *                     GIT_DIRREMOVAL_ONLY_EMPTY_DIRS to only remove empty
- *                     directories (no failure on file encounter).
- *
+ * @param flags Combination of git_futils_rmdir_flags values
  * @return 0 on success; -1 on error.
  */
-extern int git_futils_rmdir_r(const char *path, const char *base, git_directory_removal_type removal_type);
+extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.

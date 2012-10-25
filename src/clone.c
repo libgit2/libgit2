@@ -338,7 +338,7 @@ static int clone_internal(
 						fetch_progress_cb, fetch_progress_payload)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
-			git_futils_rmdir_r(path, NULL, GIT_DIRREMOVAL_FILES_AND_DIRS);
+			git_futils_rmdir_r(path, NULL, GIT_RMDIR_REMOVE_FILES);
 		} else {
 			*out = repo;
 			retcode = 0;
