@@ -21,6 +21,7 @@
 #include "repository.h"
 #include "filter.h"
 #include "blob.h"
+#include "diff.h"
 
 struct checkout_diff_data
 {
@@ -43,20 +44,23 @@ static int buffer_to_file(
 	int file_open_flags,
 	mode_t file_mode)
 {
-	int fd, error, error_close;
+	int fd, error;
 
 	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
 		return error;
 
-	if ((fd = p_open(path, file_open_flags, file_mode)) < 0)
+	if ((fd = p_open(path, file_open_flags, file_mode)) < 0) {
+		giterr_set(GITERR_OS, "Could not open '%s' for writing", path);
 		return fd;
+	}
 
-	error = p_write(fd, git_buf_cstr(buffer), git_buf_len(buffer));
-
-	error_close = p_close(fd);
-
-	if (!error)
-		error = error_close;
+	if ((error = p_write(fd, git_buf_cstr(buffer), git_buf_len(buffer))) < 0) {
+		giterr_set(GITERR_OS, "Could not write to '%s'", path);
+		(void)p_close(fd);
+	} else {
+		if ((error = p_close(fd)) < 0)
+			giterr_set(GITERR_OS, "Error while closing '%s'", path);
+	}
 
 	if (!error &&
 		(file_mode & 0100) != 0 &&
@@ -160,8 +164,8 @@ static int checkout_submodule(
 }
 
 static void report_progress(
-		struct checkout_diff_data *data,
-		const char *path)
+	struct checkout_diff_data *data,
+	const char *path)
 {
 	if (data->checkout_opts->progress_cb)
 		data->checkout_opts->progress_cb(
@@ -176,11 +180,18 @@ static int checkout_blob(
 	const git_diff_file *file)
 {
 	git_blob *blob;
-	int error;
+	int error = 0;
 
 	git_buf_truncate(data->path, data->workdir_len);
 	if (git_buf_joinpath(data->path, git_buf_cstr(data->path), file->path) < 0)
 		return -1;
+
+	/* If there is a directory where this blob should go, then there is an
+	 * existing tree that conflicts with this file, but REMOVE_UNTRACKED must
+	 * not have been passed in.  Signal to caller with GIT_ENOTFOUND.
+	 */
+	if (git_path_isdir(git_buf_cstr(data->path)))
+		return GIT_ENOTFOUND;
 
 	if ((error = git_blob_lookup(&blob, data->owner, &file->oid)) < 0)
 		return error;
@@ -193,90 +204,6 @@ static int checkout_blob(
 			blob, git_buf_cstr(data->path), file->mode, data->checkout_opts);
 
 	git_blob_free(blob);
-
-	return error;
-}
-
-static int checkout_remove_the_old(
-	void *cb_data, const git_diff_delta *delta, float progress)
-{
-	struct checkout_diff_data *data = cb_data;
-	git_checkout_opts *opts = data->checkout_opts;
-
-	GIT_UNUSED(progress);
-
-	if ((delta->status == GIT_DELTA_UNTRACKED &&
-		 (opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0) ||
-		(delta->status == GIT_DELTA_TYPECHANGE &&
-		 (opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED) != 0))
-	{
-		data->error = git_futils_rmdir_r(
-			delta->new_file.path,
-			git_repository_workdir(data->owner),
-			GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_EMPTY_PARENTS);
-
-		data->completed_steps++;
-		report_progress(data, delta->new_file.path);
-	}
-
-	return data->error;
-}
-
-static int checkout_create_the_new(
-	void *cb_data, const git_diff_delta *delta, float progress)
-{
-	int error = 0;
-	struct checkout_diff_data *data = cb_data;
-	git_checkout_opts *opts = data->checkout_opts;
-	bool do_checkout = false, do_notify = false;
-
-	GIT_UNUSED(progress);
-
-	if (delta->status == GIT_DELTA_MODIFIED ||
-		delta->status == GIT_DELTA_TYPECHANGE)
-	{
-		if ((opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED) != 0)
-			do_checkout = true;
-		else if (opts->skipped_notify_cb != NULL)
-			do_notify = !data->create_submodules;
-	}
-	else if (delta->status == GIT_DELTA_DELETED &&
-			 (opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING) != 0)
-		do_checkout = true;
-
-	if (do_notify) {
-		if (opts->skipped_notify_cb(
-			delta->old_file.path, &delta->old_file.oid,
-			delta->old_file.mode, opts->notify_payload))
-		{
-			giterr_clear();
-			error = GIT_EUSER;
-		}
-	}
-
-	if (do_checkout) {
-		bool is_submodule = S_ISGITLINK(delta->old_file.mode);
-
-		if (is_submodule) {
-			data->found_submodules = true;
-		}
-
-		if (!is_submodule && !data->create_submodules) {
-			error = checkout_blob(data, &delta->old_file);
-			data->completed_steps++;
-			report_progress(data, delta->old_file.path);
-		}
-
-		else if (is_submodule && data->create_submodules) {
-			error = checkout_submodule(data, &delta->old_file);
-			data->completed_steps++;
-			report_progress(data, delta->old_file.path);
-		}
-
-	}
-
-	if (error)
-		data->error = error;
 
 	return error;
 }
@@ -324,6 +251,177 @@ static void normalize_options(git_checkout_opts *normalized, git_checkout_opts *
 		normalized->file_open_flags = O_CREAT | O_TRUNC | O_WRONLY;
 }
 
+enum {
+	CHECKOUT_ACTION__NONE = 0,
+	CHECKOUT_ACTION__REMOVE = 1,
+	CHECKOUT_ACTION__CREATE_BLOB = 2,
+	CHECKOUT_ACTION__CREATE_SUBMODULE = 4,
+	CHECKOUT_ACTION__NOTIFY = 8
+};
+
+static uint32_t checkout_action_for_delta(
+	git_checkout_opts *opts,
+	const git_diff_delta *delta)
+{
+	uint32_t action = CHECKOUT_ACTION__NONE;
+
+	switch (delta->status) {
+	case GIT_DELTA_UNTRACKED:
+		if ((opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0)
+			action |= CHECKOUT_ACTION__REMOVE;
+		break;
+
+	case GIT_DELTA_TYPECHANGE:
+		if ((opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED) != 0)
+			action |= CHECKOUT_ACTION__REMOVE | CHECKOUT_ACTION__CREATE_BLOB;
+		else if (opts->skipped_notify_cb != NULL)
+			action = CHECKOUT_ACTION__NOTIFY;
+		break;
+
+	case GIT_DELTA_DELETED:
+		if ((opts->checkout_strategy & GIT_CHECKOUT_CREATE_MISSING) != 0)
+			action |= CHECKOUT_ACTION__CREATE_BLOB;
+		break;
+
+	case GIT_DELTA_MODIFIED:
+		if ((opts->checkout_strategy & GIT_CHECKOUT_OVERWRITE_MODIFIED) != 0)
+			action |= CHECKOUT_ACTION__CREATE_BLOB;
+		else if (opts->skipped_notify_cb != NULL)
+			action = CHECKOUT_ACTION__NOTIFY;
+		break;
+
+	default:
+		break;
+	}
+
+	if ((action & CHECKOUT_ACTION__CREATE_BLOB) != 0 &&
+		S_ISGITLINK(delta->old_file.mode))
+		action = (action & ~CHECKOUT_ACTION__CREATE_BLOB) |
+			CHECKOUT_ACTION__CREATE_SUBMODULE;
+
+	return action;
+}
+
+static int checkout_get_actions(
+	uint32_t **actions_ptr,
+	size_t **counts_ptr,
+	git_diff_list *diff,
+	git_checkout_opts *opts)
+{
+	git_diff_delta *delta;
+	size_t i, *counts;
+	uint32_t *actions;
+
+	*counts_ptr = counts =
+		git__calloc(CHECKOUT_ACTION__NOTIFY, sizeof(size_t));
+	GITERR_CHECK_ALLOC(counts);
+
+	*actions_ptr = actions =
+		git__calloc(diff->deltas.length, sizeof(uint32_t));
+	GITERR_CHECK_ALLOC(actions);
+
+	git_vector_foreach(&diff->deltas, i, delta) {
+		actions[i] = checkout_action_for_delta(opts, delta);
+
+		if (actions[i] & CHECKOUT_ACTION__REMOVE)
+			counts[CHECKOUT_ACTION__REMOVE]++;
+
+		if (actions[i] & CHECKOUT_ACTION__CREATE_BLOB)
+			counts[CHECKOUT_ACTION__CREATE_BLOB]++;
+
+		if (actions[i] & CHECKOUT_ACTION__CREATE_SUBMODULE)
+			counts[CHECKOUT_ACTION__CREATE_SUBMODULE]++;
+
+		if (actions[i] & CHECKOUT_ACTION__NOTIFY)
+			counts[CHECKOUT_ACTION__NOTIFY]++;
+	}
+
+	return 0;
+}
+
+static int checkout_remove_the_old(
+	git_diff_list *diff,
+	unsigned int *actions,
+	struct checkout_diff_data *data)
+{
+	git_diff_delta *delta;
+	size_t i;
+
+	git_vector_foreach(&diff->deltas, i, delta) {
+		if (actions[i] & CHECKOUT_ACTION__REMOVE) {
+			int error = git_futils_rmdir_r(
+				delta->new_file.path, git_buf_cstr(data->path),
+				GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_EMPTY_PARENTS);
+			if (error < 0)
+				return error;
+
+			data->completed_steps++;
+			report_progress(data, delta->new_file.path);
+		}
+	}
+
+	return 0;
+}
+
+static int checkout_create_the_new(
+	git_diff_list *diff,
+	unsigned int *actions,
+	struct checkout_diff_data *data)
+{
+	git_diff_delta *delta;
+	size_t i;
+
+	git_vector_foreach(&diff->deltas, i, delta) {
+		if (actions[i] & CHECKOUT_ACTION__CREATE_BLOB) {
+			int error = checkout_blob(data, &delta->old_file);
+
+			/* ENOTFOUND means unable to create the file because of
+			 * an existing parent dir.  Probably flags were given
+			 * asking to create new blobs without allowing removal
+			 * of a conflicting tree (or vice versa).
+			 */
+			if (error == GIT_ENOTFOUND)
+				giterr_clear();
+			else if (error < 0)
+				return error;
+
+			data->completed_steps++;
+			report_progress(data, delta->old_file.path);
+		}
+
+		if (actions[i] & CHECKOUT_ACTION__NOTIFY) {
+			if (data->checkout_opts->skipped_notify_cb(
+					delta->old_file.path, &delta->old_file.oid,
+					delta->old_file.mode, data->checkout_opts->notify_payload))
+				return GIT_EUSER;
+		}
+	}
+
+	return 0;
+}
+
+static int checkout_create_submodules(
+	git_diff_list *diff,
+	unsigned int *actions,
+	struct checkout_diff_data *data)
+{
+	git_diff_delta *delta;
+	size_t i;
+
+	git_vector_foreach(&diff->deltas, i, delta) {
+		if (actions[i] & CHECKOUT_ACTION__CREATE_SUBMODULE) {
+			int error = checkout_submodule(data, &delta->old_file);
+			if (error < 0)
+				return error;
+
+			data->completed_steps++;
+			report_progress(data, delta->old_file.path);
+		}
+	}
+
+	return 0;
+}
+
 int git_checkout_index(
 	git_repository *repo,
 	git_checkout_opts *opts)
@@ -335,6 +433,9 @@ int git_checkout_index(
 
 	struct checkout_diff_data data;
 	git_buf workdir = GIT_BUF_INIT;
+
+	uint32_t *actions = NULL;
+	size_t *counts = NULL;
 
 	int error;
 
@@ -359,44 +460,54 @@ int git_checkout_index(
 
 	normalize_options(&checkout_opts, opts);
 
-	memset(&data, 0, sizeof(data));
-
-	data.path = &workdir;
-	data.workdir_len = git_buf_len(&workdir);
-	data.checkout_opts = &checkout_opts;
-	data.owner = repo;
-	data.total_steps = (size_t)git_diff_num_deltas(diff);
-
-	if ((error = retrieve_symlink_capabilities(repo, &data.can_symlink)) < 0)
-		goto cleanup;
-
-	/* Checkout is best performed with three passes through the diff.
+	/* Checkout is best performed with up to four passes through the diff.
 	 *
-	 * 1. First do removes, because we iterate in alphabetical order, thus
+	 * 0. Figure out what actions should be taken and record for later.
+	 * 1. Next do removes, because we iterate in alphabetical order, thus
 	 *    a new untracked directory will end up sorted *after* a blob that
 	 *    should be checked out with the same name.
 	 * 2. Then checkout all blobs.
 	 * 3. Then checkout all submodules in case a new .gitmodules blob was
 	 *    checked out during pass #2.
 	 */
+	if ((error = checkout_get_actions(&actions, &counts, diff, &checkout_opts)) < 0)
+		goto cleanup;
+
+	memset(&data, 0, sizeof(data));
+	data.path = &workdir;
+	data.workdir_len = git_buf_len(&workdir);
+	data.checkout_opts = &checkout_opts;
+	data.owner = repo;
+	data.total_steps = counts[CHECKOUT_ACTION__REMOVE] +
+		counts[CHECKOUT_ACTION__CREATE_BLOB] +
+		counts[CHECKOUT_ACTION__CREATE_SUBMODULE];
+
+	if ((error = retrieve_symlink_capabilities(repo, &data.can_symlink)) < 0)
+		goto cleanup;
 
 	report_progress(&data, NULL);
 
-	if (!(error = git_diff_foreach(
-			diff, &data, checkout_remove_the_old, NULL, NULL)) &&
-		!(error = git_diff_foreach(
-			diff, &data, checkout_create_the_new, NULL, NULL)) &&
-		data.found_submodules)
-	{
-		data.create_submodules = true;
-		error = git_diff_foreach(
-			diff, &data, checkout_create_the_new, NULL, NULL);
-	}
+	if (counts[CHECKOUT_ACTION__REMOVE] > 0 &&
+		(error = checkout_remove_the_old(diff, actions, &data)) < 0)
+		goto cleanup;
+
+	if ((counts[CHECKOUT_ACTION__CREATE_BLOB] +
+		 counts[CHECKOUT_ACTION__NOTIFY]) > 0 &&
+		(error = checkout_create_the_new(diff, actions, &data)) < 0)
+		goto cleanup;
+
+	if (counts[CHECKOUT_ACTION__CREATE_SUBMODULE] > 0 &&
+		(error = checkout_create_submodules(diff, actions, &data)) < 0)
+		goto cleanup;
+
+	assert(data.completed_steps == data.total_steps);
 
 cleanup:
 	if (error == GIT_EUSER)
-		error = (data.error != 0) ? data.error : -1;
+		giterr_clear();
 
+	git__free(actions);
+	git__free(counts);
 	git_diff_list_free(diff);
 	git_buf_free(&workdir);
 
@@ -449,7 +560,7 @@ int git_checkout_head(
 
 	if ((error = git_repository_head(&head, repo)) < 0)
 		return error;
-	
+
 	if ((error = git_reference_peel(&tree, head, GIT_OBJ_TREE)) < 0)
 		goto cleanup;
 

@@ -351,7 +351,7 @@ void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
 {
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
 	set_core_autocrlf_to(true);
-	
+
 	cl_git_mkfile("./testrepo/new.txt", "my new file\r\n");
 
 	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
@@ -376,4 +376,35 @@ void test_checkout_index__calls_progress_callback(void)
 
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 	cl_assert_equal_i(was_called, true);
+}
+
+void test_checkout_index__can_overcome_name_clashes(void)
+{
+	git_index *index;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	git_index_clear(index);
+
+	cl_git_mkfile("./testrepo/path0", "content\r\n");
+	cl_git_pass(p_mkdir("./testrepo/path1", 0777));
+	cl_git_mkfile("./testrepo/path1/file1", "content\r\n");
+
+	cl_git_pass(git_index_add(index, "path0", 0));
+	cl_git_pass(git_index_add(index, "path1/file1", 0));
+
+	cl_git_pass(p_unlink("./testrepo/path0"));
+	cl_git_pass(git_futils_rmdir_r(
+		"./testrepo/path1", NULL, GIT_RMDIR_REMOVE_FILES));
+
+	cl_git_mkfile("./testrepo/path1", "content\r\n");
+	cl_git_pass(p_mkdir("./testrepo/path0", 0777));
+	cl_git_mkfile("./testrepo/path0/file0", "content\r\n");
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
+
+	cl_assert(git_path_isfile("./testrepo/path1"));
+	cl_assert(git_path_isfile("./testrepo/path0/file0"));
+
+	git_index_free(index);
 }
