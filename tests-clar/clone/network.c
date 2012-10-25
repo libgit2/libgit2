@@ -43,7 +43,7 @@ void test_clone_network__network_bare(void)
 
 	cl_set_cleanup(&cleanup_repository, "./test");
 
-	cl_git_pass(git_clone_bare(&g_repo, LIVE_REPO_URL, "./test", NULL));
+	cl_git_pass(git_clone_bare(&g_repo, LIVE_REPO_URL, "./test", NULL, NULL));
 	cl_assert(git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
 
@@ -91,18 +91,36 @@ void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
 	git_buf_free(&path);
 }
 
+static void checkout_progress(const char *path, size_t cur, size_t tot, void *payload)
+{
+	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
+	bool *was_called = (bool*)payload;
+	(*was_called) = true;
+}
+
+static void fetch_progress(const git_transfer_progress *stats, void *payload)
+{
+	GIT_UNUSED(stats);
+	bool *was_called = (bool*)payload;
+	(*was_called) = true;
+}
+
 void test_clone_network__can_checkout_a_cloned_repo(void)
 {
-	git_checkout_opts opts;
+	git_checkout_opts opts = {0};
 	git_buf path = GIT_BUF_INIT;
 	git_reference *head;
+	bool checkout_progress_cb_was_called = false,
+		  fetch_progress_cb_was_called = false;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	opts.progress_cb = &checkout_progress;
+	opts.progress_payload = &checkout_progress_cb_was_called;
 
 	cl_set_cleanup(&cleanup_repository, "./default-checkout");
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./default-checkout", NULL, NULL, &opts));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./default-checkout", 
+				&fetch_progress, &fetch_progress_cb_was_called, &opts));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
@@ -110,6 +128,9 @@ void test_clone_network__can_checkout_a_cloned_repo(void)
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_target(head));
+
+	cl_assert_equal_i(true, checkout_progress_cb_was_called);
+	cl_assert_equal_i(true, fetch_progress_cb_was_called);
 
 	git_reference_free(head);
 	git_buf_free(&path);

@@ -49,7 +49,7 @@ void test_checkout_typechange__checkout_typechanges(void)
 		cl_git_pass(git_revparse_single(&obj, g_repo, g_typechange_oids[i]));
 		/* fprintf(stderr, "checking out '%s'\n", g_typechange_oids[i]); */
 
-		cl_git_pass(git_checkout_tree(g_repo, obj, &opts, NULL));
+		cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
 		git_object_free(obj);
 

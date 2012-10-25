@@ -49,6 +49,8 @@ struct git_indexer_stream {
 	git_vector deltas;
 	unsigned int fanout[256];
 	git_oid hash;
+	git_transfer_progress_callback progress_cb;
+	void *progress_payload;
 };
 
 struct delta_info {
@@ -138,7 +140,11 @@ static int cache_cmp(const void *a, const void *b)
 	return git_oid_cmp(&ea->sha1, &eb->sha1);
 }
 
-int git_indexer_stream_new(git_indexer_stream **out, const char *prefix)
+int git_indexer_stream_new(
+		git_indexer_stream **out,
+		const char *prefix,
+		git_transfer_progress_callback progress_cb,
+		void *progress_payload)
 {
 	git_indexer_stream *idx;
 	git_buf path = GIT_BUF_INIT;
@@ -147,6 +153,8 @@ int git_indexer_stream_new(git_indexer_stream **out, const char *prefix)
 
 	idx = git__calloc(1, sizeof(git_indexer_stream));
 	GITERR_CHECK_ALLOC(idx);
+	idx->progress_cb = progress_cb;
+	idx->progress_payload = progress_payload;
 
 	error = git_buf_joinpath(&path, prefix, suff);
 	if (error < 0)
@@ -273,7 +281,13 @@ on_error:
 	return -1;
 }
 
-int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_indexer_stats *stats)
+static void do_progress_callback(git_indexer_stream *idx, git_transfer_progress *stats)
+{
+	if (!idx->progress_cb) return;
+	idx->progress_cb(stats, idx->progress_payload);
+}
+
+int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_transfer_progress *stats)
 {
 	int error;
 	struct git_pack_header hdr;
@@ -282,7 +296,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 	assert(idx && data && stats);
 
-	processed = stats->processed;
+	processed = stats->indexed_objects;
 
 	if (git_filebuf_write(&idx->pack_file, data, size) < 0)
 		return -1;
@@ -324,8 +338,9 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (git_vector_init(&idx->deltas, (unsigned int)(idx->nr_objects / 2), NULL) < 0)
 			return -1;
 
-		memset(stats, 0, sizeof(git_indexer_stats));
-		stats->total = (unsigned int)idx->nr_objects;
+		memset(stats, 0, sizeof(git_transfer_progress));
+		stats->total_objects = (unsigned int)idx->nr_objects;
+		do_progress_callback(idx, stats);
 	}
 
 	/* Now that we have data in the pack, let's try to parse it */
@@ -361,7 +376,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 			if (error < 0)
 				return error;
 
-			stats->received++;
+			stats->received_objects++;
+			do_progress_callback(idx, stats);
 			continue;
 		}
 
@@ -379,8 +395,9 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		git__free(obj.data);
 
-		stats->processed = (unsigned int)++processed;
-		stats->received++;
+		stats->indexed_objects = (unsigned int)++processed;
+		stats->received_objects++;
+		do_progress_callback(idx, stats);
 	}
 
 	return 0;
@@ -412,7 +429,7 @@ static int index_path_stream(git_buf *path, git_indexer_stream *idx, const char 
 	return git_buf_oom(path) ? -1 : 0;
 }
 
-static int resolve_deltas(git_indexer_stream *idx, git_indexer_stats *stats)
+static int resolve_deltas(git_indexer_stream *idx, git_transfer_progress *stats)
 {
 	unsigned int i;
 	struct delta_info *delta;
@@ -428,13 +445,14 @@ static int resolve_deltas(git_indexer_stream *idx, git_indexer_stats *stats)
 			return -1;
 
 		git__free(obj.data);
-		stats->processed++;
+		stats->indexed_objects++;
+		do_progress_callback(idx, stats);
 	}
 
 	return 0;
 }
 
-int git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stats)
+int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *stats)
 {
 	git_mwindow *w = NULL;
 	unsigned int i, long_offsets = 0, left;
@@ -455,7 +473,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_indexer_stats *stat
 		if (resolve_deltas(idx, stats) < 0)
 			return -1;
 
-	if (stats->processed != stats->total) {
+	if (stats->indexed_objects != stats->total_objects) {
 		giterr_set(GITERR_INDEXER, "Indexing error: early EOF");
 		return -1;
 	}
@@ -782,7 +800,7 @@ cleanup:
 	return error;
 }
 
-int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
+int git_indexer_run(git_indexer *idx, git_transfer_progress *stats)
 {
 	git_mwindow_file *mwf;
 	git_off_t off = sizeof(struct git_pack_header);
@@ -797,8 +815,8 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 	if (error < 0)
 		return error;
 
-	stats->total = (unsigned int)idx->nr_objects;
-	stats->processed = processed = 0;
+	stats->total_objects = (unsigned int)idx->nr_objects;
+	stats->indexed_objects = processed = 0;
 
 	while (processed < idx->nr_objects) {
 		git_rawobj obj;
@@ -868,7 +886,7 @@ int git_indexer_run(git_indexer *idx, git_indexer_stats *stats)
 
 		git__free(obj.data);
 
-		stats->processed = ++processed;
+		stats->indexed_objects = ++processed;
 	}
 
 cleanup:

@@ -33,7 +33,7 @@ void test_pack_packbuilder__cleanup(void)
 
 void test_pack_packbuilder__create_pack(void)
 {
-	git_indexer_stats stats;
+	git_transfer_progress stats;
 	git_oid oid, *o;
 	unsigned int i;
 

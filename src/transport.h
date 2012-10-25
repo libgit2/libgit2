@@ -113,7 +113,7 @@ struct git_transport {
 	/**
 	 * Download the packfile
 	 */
-	int (*download_pack)(struct git_transport *transport, git_repository *repo, git_off_t *bytes, git_indexer_stats *stats);
+	int (*download_pack)(struct git_transport *transport, git_repository *repo, git_transfer_progress *stats);
 	/**
 	 * Close the connection
 	 */

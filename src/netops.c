@@ -117,6 +117,7 @@ static int gitno__recv_ssl(gitno_buffer *buf)
 	}
 
 	buf->offset += ret;
+	if (buf->packetsize_cb) buf->packetsize_cb(ret, buf->packetsize_payload);
 	return ret;
 }
 #endif
@@ -132,6 +133,7 @@ int gitno__recv(gitno_buffer *buf)
 	}
 
 	buf->offset += ret;
+	if (buf->packetsize_cb) buf->packetsize_cb(ret, buf->packetsize_payload);
 	return ret;
 }
 
@@ -142,7 +144,6 @@ void gitno_buffer_setup_callback(
 	size_t len,
 	int (*recv)(gitno_buffer *buf), void *cb_data)
 {
-	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
 	buf->data = data;
 	buf->len = len;

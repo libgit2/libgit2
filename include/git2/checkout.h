@@ -65,8 +65,15 @@ typedef struct git_checkout_opts {
 		const git_oid *blob_oid,
 		int file_mode,
 		void *payload);
-
 	void *notify_payload;
+
+	/* Optional callback to notify the consumer of checkout progress. */
+	void (* progress_cb)(
+			const char *path,
+			size_t completed_steps,
+			size_t total_steps,
+			void *payload);
+	void *progress_payload;
 
 	/** When not NULL, array of fnmatch patterns specifying
 	 * which paths should be taken into account
@@ -80,29 +87,25 @@ typedef struct git_checkout_opts {
  *
  * @param repo repository to check out (must be non-bare)
  * @param opts specifies checkout options (may be NULL)
- * @param stats structure through which progress information is reported
  * @return 0 on success, GIT_EORPHANEDHEAD when HEAD points to a non existing
  * branch, GIT_ERROR otherwise (use giterr_last for information
  * about the error)
  */
 GIT_EXTERN(int) git_checkout_head(
 	git_repository *repo,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats);
+	git_checkout_opts *opts);
 
 /**
  * Updates files in the working tree to match the content of the index.
  *
  * @param repo repository to check out (must be non-bare)
  * @param opts specifies checkout options (may be NULL)
- * @param stats structure through which progress information is reported
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
  * about the error)
  */
 GIT_EXTERN(int) git_checkout_index(
 	git_repository *repo,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats);
+	git_checkout_opts *opts);
 
 /**
  * Updates files in the index and working tree to match the content of the
@@ -112,15 +115,13 @@ GIT_EXTERN(int) git_checkout_index(
  * @param treeish a commit, tag or tree which content will be used to update
  * the working directory
  * @param opts specifies checkout options (may be NULL)
- * @param stats structure through which progress information is reported
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
  * about the error)
  */
 GIT_EXTERN(int) git_checkout_tree(
 	git_repository *repo,
 	git_object *treeish,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats);
+	git_checkout_opts *opts);
 
 /** @} */
 GIT_END_DECL

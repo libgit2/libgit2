@@ -116,7 +116,7 @@ int git_reset(
 		goto cleanup;
 	}
 
-	if (git_index_read_tree(index, tree, NULL) < 0) {
+	if (git_index_read_tree(index, tree) < 0) {
 		giterr_set(GITERR_INDEX, "%s - Failed to update the index.", ERROR_MSG);
 		goto cleanup;
 	}
@@ -142,7 +142,7 @@ int git_reset(
 		| GIT_CHECKOUT_OVERWRITE_MODIFIED
 		| GIT_CHECKOUT_REMOVE_UNTRACKED;
 
-	if (git_checkout_index(repo, &opts, NULL) < 0) {
+	if (git_checkout_index(repo, &opts) < 0) {
 		giterr_set(GITERR_INDEX, "%s - Failed to checkout the index.", ERROR_MSG);
 		goto cleanup;
 	}

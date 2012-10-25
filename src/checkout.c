@@ -27,12 +27,13 @@ struct checkout_diff_data
 	git_buf *path;
 	size_t workdir_len;
 	git_checkout_opts *checkout_opts;
-	git_indexer_stats *stats;
 	git_repository *owner;
 	bool can_symlink;
 	bool found_submodules;
 	bool create_submodules;
 	int error;
+	size_t total_steps;
+	size_t completed_steps;
 };
 
 static int buffer_to_file(
@@ -158,6 +159,18 @@ static int checkout_submodule(
 	return 0;
 }
 
+static void report_progress(
+		struct checkout_diff_data *data,
+		const char *path)
+{
+	if (data->checkout_opts->progress_cb)
+		data->checkout_opts->progress_cb(
+				path,
+				data->completed_steps,
+				data->total_steps,
+				data->checkout_opts->progress_payload);
+}
+
 static int checkout_blob(
 	struct checkout_diff_data *data,
 	const git_diff_file *file)
@@ -191,7 +204,6 @@ static int checkout_remove_the_old(
 	git_checkout_opts *opts = data->checkout_opts;
 
 	GIT_UNUSED(progress);
-	data->stats->processed++;
 
 	if ((delta->status == GIT_DELTA_UNTRACKED &&
 		 (opts->checkout_strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0) ||
@@ -202,6 +214,9 @@ static int checkout_remove_the_old(
 			delta->new_file.path,
 			git_repository_workdir(data->owner),
 			GIT_DIRREMOVAL_FILES_AND_DIRS);
+
+		data->completed_steps++;
+		report_progress(data, delta->new_file.path);
 	}
 
 	return data->error;
@@ -216,7 +231,6 @@ static int checkout_create_the_new(
 	bool do_checkout = false, do_notify = false;
 
 	GIT_UNUSED(progress);
-	data->stats->processed++;
 
 	if (delta->status == GIT_DELTA_MODIFIED ||
 		delta->status == GIT_DELTA_TYPECHANGE)
@@ -243,14 +257,22 @@ static int checkout_create_the_new(
 	if (do_checkout) {
 		bool is_submodule = S_ISGITLINK(delta->old_file.mode);
 
-		if (is_submodule)
+		if (is_submodule) {
 			data->found_submodules = true;
+		}
 
-		if (!is_submodule && !data->create_submodules)
+		if (!is_submodule && !data->create_submodules) {
 			error = checkout_blob(data, &delta->old_file);
+			data->completed_steps++;
+			report_progress(data, delta->old_file.path);
+		}
 
-		else if (is_submodule && data->create_submodules)
+		else if (is_submodule && data->create_submodules) {
 			error = checkout_submodule(data, &delta->old_file);
+			data->completed_steps++;
+			report_progress(data, delta->old_file.path);
+		}
+
 	}
 
 	if (error)
@@ -304,11 +326,9 @@ static void normalize_options(git_checkout_opts *normalized, git_checkout_opts *
 
 int git_checkout_index(
 	git_repository *repo,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats)
+	git_checkout_opts *opts)
 {
 	git_diff_list *diff = NULL;
-	git_indexer_stats dummy_stats;
 
 	git_diff_options diff_opts = {0};
 	git_checkout_opts checkout_opts;
@@ -339,20 +359,13 @@ int git_checkout_index(
 
 	normalize_options(&checkout_opts, opts);
 
-	if (!stats)
-		stats = &dummy_stats;
-
-	stats->processed = 0;
-	/* total based on 3 passes, but it might be 2 if no submodules */
-	stats->total = (unsigned int)git_diff_num_deltas(diff) * 3;
-
 	memset(&data, 0, sizeof(data));
 
 	data.path = &workdir;
 	data.workdir_len = git_buf_len(&workdir);
 	data.checkout_opts = &checkout_opts;
-	data.stats = stats;
 	data.owner = repo;
+	data.total_steps = (size_t)git_diff_num_deltas(diff);
 
 	if ((error = retrieve_symlink_capabilities(repo, &data.can_symlink)) < 0)
 		goto cleanup;
@@ -367,6 +380,8 @@ int git_checkout_index(
 	 *    checked out during pass #2.
 	 */
 
+	report_progress(&data, NULL);
+
 	if (!(error = git_diff_foreach(
 			diff, &data, checkout_remove_the_old, NULL, NULL)) &&
 		!(error = git_diff_foreach(
@@ -378,7 +393,7 @@ int git_checkout_index(
 			diff, &data, checkout_create_the_new, NULL, NULL);
 	}
 
-	stats->processed = stats->total;
+	report_progress(&data, NULL);
 
 cleanup:
 	if (error == GIT_EUSER)
@@ -393,8 +408,7 @@ cleanup:
 int git_checkout_tree(
 	git_repository *repo,
 	git_object *treeish,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats)
+	git_checkout_opts *opts)
 {
 	git_index *index = NULL;
 	git_tree *tree = NULL;
@@ -411,13 +425,13 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		goto cleanup;
 
-	if ((error = git_index_read_tree(index, tree, NULL)) < 0)
+	if ((error = git_index_read_tree(index, tree)) < 0)
 		goto cleanup;
 
 	if ((error = git_index_write(index)) < 0)
 		goto cleanup;
 
-	error = git_checkout_index(repo, opts, stats);
+	error = git_checkout_index(repo, opts);
 
 cleanup:
 	git_index_free(index);
@@ -427,8 +441,7 @@ cleanup:
 
 int git_checkout_head(
 	git_repository *repo,
-	git_checkout_opts *opts,
-	git_indexer_stats *stats)
+	git_checkout_opts *opts)
 {
 	git_reference *head;
 	int error;
@@ -442,7 +455,7 @@ int git_checkout_head(
 	if ((error = git_reference_peel(&tree, head, GIT_OBJ_TREE)) < 0)
 		goto cleanup;
 
-	error = git_checkout_tree(repo, tree, opts, stats);
+	error = git_checkout_tree(repo, tree, opts);
 
 cleanup:
 	git_reference_free(head);

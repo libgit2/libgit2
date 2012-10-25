@@ -65,7 +65,7 @@ void test_clone_nonetwork__bad_url(void)
 	/* Clone should clean up the mess if the URL isn't a git repository */
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", NULL, NULL, NULL));
 	cl_assert(!git_path_exists("./foo"));
-	cl_git_fail(git_clone_bare(&g_repo, "not_a_repo", "./foo.git", NULL));
+	cl_git_fail(git_clone_bare(&g_repo, "not_a_repo", "./foo.git", NULL, NULL));
 	cl_assert(!git_path_exists("./foo.git"));
 }
 
@@ -91,7 +91,7 @@ void test_clone_nonetwork__local_bare(void)
 #if DO_LOCAL_TEST
 	cl_set_cleanup(&cleanup_repository, "./local.git");
 
-	cl_git_pass(git_clone_bare(&g_repo, git_buf_cstr(&src), "./local.git", NULL));
+	cl_git_pass(git_clone_bare(&g_repo, git_buf_cstr(&src), "./local.git", NULL, NULL));
 #endif
 
 	git_buf_free(&src);
