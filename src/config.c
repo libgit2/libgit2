@@ -400,7 +400,7 @@ static int get_string_at_file(const char **out, git_config_file *file, const cha
 	*out = NULL;
 
 	res = file->get(file, name, &entry);
-	if (res != GIT_ENOTFOUND)
+	if (entry && res != GIT_ENOTFOUND)
 		*out = entry->value;
 
 	return res;
