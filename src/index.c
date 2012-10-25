@@ -129,12 +129,27 @@ static int unmerged_srch(const void *key, const void *array_member)
 	return strcmp(key, entry->path);
 }
 
+static int unmerged_isrch(const void *key, const void *array_member)
+{
+	const git_index_entry_unmerged *unmerged = array_member;
+
+	return strcasecmp(key, unmerged->path);
+}
+
 static int unmerged_cmp(const void *a, const void *b)
 {
 	const git_index_entry_unmerged *info_a = a;
 	const git_index_entry_unmerged *info_b = b;
 
 	return strcmp(info_a->path, info_b->path);
+}
+
+static int unmerged_icmp(const void *a, const void *b)
+{
+	const git_index_entry_unmerged *info_a = a;
+	const git_index_entry_unmerged *info_b = b;
+
+	return strcasecmp(info_a->path, info_b->path);
 }
 
 static unsigned int index_create_mode(unsigned int mode)
@@ -168,6 +183,11 @@ static void index_set_ignore_case(git_index *index, bool ignore_case)
 	index->entries_search = ignore_case ? index_isrch : index_srch;
 	index->entries.sorted = 0;
 	git_vector_sort(&index->entries);
+
+	index->unmerged._cmp = ignore_case ? unmerged_icmp : unmerged_cmp;
+	index->unmerged_search = ignore_case ? unmerged_isrch : unmerged_srch;
+	index->unmerged.sorted = 0;
+	git_vector_sort(&index->unmerged);
 }
 
 int git_index_open(git_index **index_out, const char *index_path)
@@ -186,6 +206,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 		return -1;
 
 	index->entries_search = index_srch;
+	index->unmerged_search = unmerged_srch;
 
 	/* Check if index file is stored on disk already */
 	if (git_path_exists(index->index_file_path) == true)
@@ -340,6 +361,7 @@ int git_index_write(git_index *index)
 	int error;
 
 	git_vector_sort(&index->entries);
+	git_vector_sort(&index->unmerged);
 
 	if ((error = git_filebuf_open(
 			 &file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < 0)
@@ -442,6 +464,47 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 
 	*entry_out = entry;
 	return 0;
+}
+
+static int index_entry_unmerged_init(git_index_entry_unmerged **unmerged_out, const char *path,
+	int ancestor_mode, git_oid *ancestor_oid,
+	int our_mode, git_oid *our_oid, int their_mode, git_oid *their_oid)
+{
+	git_index_entry_unmerged *unmerged = NULL;
+
+	assert(unmerged_out && path);
+
+	*unmerged_out = NULL;
+
+	unmerged = git__calloc(1, sizeof(git_index_entry_unmerged));
+	GITERR_CHECK_ALLOC(unmerged);
+
+	unmerged->path = git__strdup(path);
+	if (unmerged->path == NULL) {
+		free (unmerged);
+		return -1;
+	}
+
+	unmerged->mode[0] = ancestor_mode;
+	git_oid_cpy(&unmerged->oid[0], ancestor_oid);
+
+	unmerged->mode[1] = our_mode;
+	git_oid_cpy(&unmerged->oid[1], our_oid);
+
+	unmerged->mode[2] = their_mode;
+	git_oid_cpy(&unmerged->oid[2], their_oid);
+
+	*unmerged_out = unmerged;
+	return 0;
+}
+
+static void index_entry_free_unmerged(git_index_entry_unmerged *unmerged)
+{
+	if (!unmerged)
+		return;
+
+	git__free(unmerged->path);
+	git__free(unmerged);
 }
 
 static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
@@ -603,6 +666,52 @@ void git_index_uniq(git_index *index)
 	git_vector_uniq(&index->entries);
 }
 
+static int index_insert_unmerged(git_index *index, git_index_entry_unmerged *unmerged, int replace)
+{
+	git_index_entry_unmerged **existing = NULL;
+	int position;
+
+	assert(index && unmerged && unmerged->path != NULL);
+
+	if ((position = git_index_unmerged_find(index, unmerged->path)) >= 0)
+		existing = (git_index_entry_unmerged **)&index->unmerged.contents[position];
+
+	if (!replace || !existing)
+		return git_vector_insert(&index->unmerged, unmerged);
+
+        /* exists, replace it */
+        git__free((*existing)->path);
+        git__free(*existing);
+        *existing = unmerged;
+
+	return 0;
+}
+
+int git_index_add_unmerged(git_index *index, const char *path,
+	int ancestor_mode, git_oid *ancestor_oid,
+	int our_mode, git_oid *our_oid,
+	int their_mode, git_oid *their_oid)
+{
+	git_index_entry_unmerged *unmerged = NULL;
+	int error = 0;
+
+	assert(index && path);
+
+	if ((error = index_entry_unmerged_init(&unmerged, path, ancestor_mode, ancestor_oid, our_mode, our_oid, their_mode, their_oid)) < 0 ||
+		(error = index_insert_unmerged(index, unmerged, 1)) < 0)
+	{
+		index_entry_free_unmerged(unmerged);
+		return error;
+	}
+
+	return error;
+} 
+
+int git_index_unmerged_find(git_index *index, const char *path)
+{
+	return git_vector_bsearch2(&index->unmerged, index->unmerged_search, path);
+}
+
 const git_index_entry_unmerged *git_index_get_unmerged_bypath(
 	git_index *index, const char *path)
 {
@@ -612,7 +721,9 @@ const git_index_entry_unmerged *git_index_get_unmerged_bypath(
 	if (!index->unmerged.length)
 		return NULL;
 
-	if ((pos = git_vector_bsearch2(&index->unmerged, unmerged_srch, path)) < 0)
+	git_vector_sort(&index->unmerged);
+
+	if ((pos = git_index_unmerged_find(index, path)) < 0)
 		return NULL;
 
 	return git_vector_get(&index->unmerged, pos);
@@ -622,7 +733,25 @@ const git_index_entry_unmerged *git_index_get_unmerged_byindex(
 	git_index *index, size_t n)
 {
 	assert(index);
+
+	git_vector_sort(&index->unmerged);
 	return git_vector_get(&index->unmerged, n);
+}
+
+int git_index_remove_unmerged(git_index *index, int position)
+{
+	int error;
+	git_index_entry_unmerged *unmerged;
+
+	git_vector_sort(&index->unmerged);
+
+	unmerged = git_vector_get(&index->unmerged, position);
+	error = git_vector_remove(&index->unmerged, (unsigned int)position);
+
+	if (!error)
+		index_entry_free_unmerged(unmerged);
+
+	return error;
 }
 
 static int index_error_invalid(const char *message)
@@ -691,6 +820,9 @@ static int read_unmerged(git_index *index, const char *buffer, size_t size)
 			buffer += 20;
 		}
 	}
+
+	/* entries are guaranteed to be sorted on-disk */
+	index->unmerged.sorted = 1;
 
 	return 0;
 }
@@ -996,6 +1128,69 @@ static int write_entries(git_index *index, git_filebuf *file)
 	return error;
 }
 
+static int write_extension(git_filebuf *file, struct index_extension *header, git_buf *data)
+{
+	struct index_extension ondisk;
+	int error = 0;
+
+	memset(&ondisk, 0x0, sizeof(struct index_extension));
+	memcpy(&ondisk, header, 4);
+	ondisk.extension_size = htonl(header->extension_size);
+
+	if ((error = git_filebuf_write(file, &ondisk, sizeof(struct index_extension))) == 0)
+		error = git_filebuf_write(file, data->ptr, data->size);
+
+	return error;
+}
+
+static int create_unmerged_extension_data(git_buf *unmerged_buf, git_index_entry_unmerged *unmerged)
+{
+	int i;
+	int error = 0;
+
+	if ((error = git_buf_put(unmerged_buf, unmerged->path, strlen(unmerged->path) + 1)) < 0)
+		return error;
+
+	for (i = 0; i < 3; i++) {
+		if ((error = git_buf_printf(unmerged_buf, "%o", unmerged->mode[i])) < 0 ||
+			(error = git_buf_put(unmerged_buf, "\0", 1)) < 0)
+			return error;
+	}
+
+	for (i = 0; i < 3; i++) {
+		if (unmerged->mode[i] && (error = git_buf_put(unmerged_buf, (char *)&unmerged->oid[i].id, GIT_OID_RAWSZ)) < 0)
+			return error;
+	}
+
+	return 0;
+}
+
+static int write_unmerged_extension(git_index *index, git_filebuf *file)
+{
+	git_buf unmerged_buf = GIT_BUF_INIT;
+	git_vector *out = &index->unmerged;
+	git_index_entry_unmerged *unmerged;
+	struct index_extension extension;
+	unsigned int i;
+	int error = 0;
+
+	git_vector_foreach(out, i, unmerged) {
+		if ((error = create_unmerged_extension_data(&unmerged_buf, unmerged)) < 0)
+			goto done;
+	}
+
+	memset(&extension, 0x0, sizeof(struct index_extension));
+	memcpy(&extension.signature, INDEX_EXT_UNMERGED_SIG, 4);
+	extension.extension_size = unmerged_buf.size;
+
+	error = write_extension(file, &extension, &unmerged_buf);
+
+	git_buf_free(&unmerged_buf);
+
+done:
+	return error;
+}
+
 static int write_index(git_index *index, git_filebuf *file)
 {
 	git_oid hash_final;
@@ -1018,7 +1213,11 @@ static int write_index(git_index *index, git_filebuf *file)
 	if (write_entries(index, file) < 0)
 		return -1;
 
-	/* TODO: write extensions (tree cache) */
+	/* TODO: write tree cache extension */
+
+	/* write the unmerged extension */
+	if (index->unmerged.length > 0 && write_unmerged_extension(index, file) < 0)
+		return -1;
 
 	/* get out the hash for all the contents we've appended to the file */
 	git_filebuf_hash(&hash_final, file);

@@ -299,6 +299,16 @@ GIT_EXTERN(unsigned int) git_index_entrycount(git_index *index);
 GIT_EXTERN(unsigned int) git_index_entrycount_unmerged(git_index *index);
 
 /**
+ * Find the first index of any unmerged entries which point to given
+ * path in the Git index.
+ *
+ * @param index an existing index object
+ * @param path path to search
+ * @return an index >= 0 if found, -1 otherwise
+ */
+GIT_EXTERN(int) git_index_unmerged_find(git_index *index, const char *path);
+
+/**
  * Get an unmerged entry from the index.
  *
  * The returned entry is read-only and should not be modified
@@ -346,6 +356,40 @@ GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
+
+/**
+ * Add an unmerged entry for a file based on the given parameters.
+ *
+ * An unmerged entry must not already exist for the given path.
+ *
+ * The file `path` must be relative to the repository's
+ * working folder and must be readable.
+ *
+ * This method will fail in bare index instances.
+ *
+ * @param index an existing index object
+ * @param path filename to add
+ * @param ancestor_mode mode of the ancestor file
+ * @param ancestor_oid oid of the ancestor file
+ * @param our_mode mode of our file
+ * @param our_oid oid of our file
+ * @param their_mode mode of their file
+ * @param their_oid oid of their file
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_add_unmerged(git_index *index, const char *path,
+	int ancestor_mode, git_oid *ancestor_oid,
+	int our_mode, git_oid *our_oid,
+	int their_mode, git_oid *their_oid);
+
+/**
+ * Remove an unmerged entry from the index
+ *
+ * @param index an existing index object
+ * @param position position of the unmerged entry to remove
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_remove_unmerged(git_index *index, int position);
 
 /** @} */
 GIT_END_DECL
