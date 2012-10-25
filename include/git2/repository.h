@@ -569,6 +569,22 @@ GIT_EXTERN(int) git_repository_set_head_detached(
 GIT_EXTERN(int) git_repository_detach_head(
 	git_repository* repo);
 
+typedef enum {
+	GIT_REPOSITORY_STATE_NONE,
+	GIT_REPOSITORY_STATE_MERGE,
+	GIT_REPOSITORY_STATE_REVERT,
+	GIT_REPOSITORY_STATE_CHERRY_PICK,
+} git_repository_state_t;
+
+/**
+ * Determines the status of a git repository - ie, whether an operation
+ * (merge, cherry-pick, etc) is in progress.
+ *
+ * @param repo Repository pointer
+ * @return The state of the repository
+ */
+GIT_EXTERN(int) git_repository_state(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif
