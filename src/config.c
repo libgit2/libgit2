@@ -471,11 +471,17 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 {
 	git_config_file *file;
 	file_internal *internal;
+	unsigned int i;
 
-	internal = git_vector_get(&cfg->files, 0);
-	file = internal->file;
+	assert(cfg->files.length);
 
-	return file->set_multivar(file, name, regexp, value);
+	git_vector_foreach(&cfg->files, i, internal) {
+		file = internal->file;
+		int res = file->set_multivar(file, name, regexp, value);
+		if (res >= 0)
+			return res;
+	}
+	return GIT_ENOTFOUND;
 }
 
 int git_config_find_global_r(git_buf *path)
