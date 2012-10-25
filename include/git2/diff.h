@@ -603,6 +603,17 @@ GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
 	size_t hunk_idx,
 	size_t line_of_hunk);
 
+/**
+ * Get the content of a patch as a single diff text.
+ *
+ * @param string Allocated string; caller must free.
+ * @param patch The patch to generate a string from.
+ * @return 0 on success, <0 on failure.
+ */
+GIT_EXTERN(int) git_diff_patch_to_str(
+	char **string,
+	git_diff_patch *patch);
+
 /**@}*/
 
 

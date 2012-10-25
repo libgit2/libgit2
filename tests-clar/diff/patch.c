@@ -97,3 +97,33 @@ void test_diff_patch__can_properly_display_the_removal_of_a_file(void)
 	git_tree_free(another);
 	git_tree_free(one);
 }
+
+void test_diff_patch__to_string(void)
+{
+	const char *one_sha = "26a125e";
+	const char *another_sha = "735b6a2";
+	git_tree *one, *another;
+	git_diff_list *diff;
+	git_diff_patch *patch;
+	char *text;
+	const char *expected = "diff --git a/subdir.txt b/subdir.txt\ndeleted file mode 100644\nindex e8ee89e..0000000\n--- a/subdir.txt\n+++ /dev/null\n@@ -1,2 +0,0 @@\n-Is it a bird?\n-Is it a plane?\n";
+
+	one = resolve_commit_oid_to_tree(g_repo, one_sha);
+	another = resolve_commit_oid_to_tree(g_repo, another_sha);
+
+	cl_git_pass(git_diff_tree_to_tree(g_repo, NULL, one, another, &diff));
+
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+
+	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
+
+	cl_git_pass(git_diff_patch_to_str(&text, patch));
+
+	cl_assert_equal_s(expected, text);
+
+	git__free(text);
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+	git_tree_free(another);
+	git_tree_free(one);
+}
