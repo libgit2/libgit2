@@ -549,3 +549,31 @@ void git_buf_unescape(git_buf *buf)
 {
 	buf->size = git__unescape(buf->ptr);
 }
+
+int git_buf_splice(
+	git_buf *buf,
+	size_t where,
+	size_t nb_to_remove,
+	const char *data,
+	size_t nb_to_insert)
+{
+	assert(buf &&
+		where <= git_buf_len(buf) &&
+		where + nb_to_remove <= git_buf_len(buf));
+
+	/* Ported from git.git
+	 * https://github.com/git/git/blob/16eed7c/strbuf.c#L159-176
+	 */
+	if (git_buf_grow(buf, git_buf_len(buf) + nb_to_insert - nb_to_remove) < 0)
+		return -1;
+
+	memmove(buf->ptr + where + nb_to_insert,
+			buf->ptr + where + nb_to_remove,
+			buf->size - where - nb_to_remove);
+
+	memcpy(buf->ptr + where, data, nb_to_insert);
+
+	buf->size = buf->size + nb_to_insert - nb_to_remove;
+	buf->ptr[buf->size] = '\0';
+	return 0;
+}

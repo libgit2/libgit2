@@ -51,4 +51,6 @@ int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *n
  */
 int git_refspec_transform_l(git_buf *out, const git_refspec *spec, const char *name);
 
+int git_refspec__serialize(git_buf *out, const git_refspec *refspec);
+
 #endif

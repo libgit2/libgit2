@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "refs.h"
 #include "repo/repo_helpers.h"
+#include "config/config_helpers.h"
 
 static git_repository *repo;
 static git_reference *fake_remote;
@@ -89,4 +90,18 @@ void test_refs_branches_delete__can_delete_a_remote_branch(void)
 	git_reference *branch;
 	cl_git_pass(git_branch_lookup(&branch, repo, "nulltoken/master", GIT_BRANCH_REMOTE));
 	cl_git_pass(git_branch_delete(branch));
+}
+
+void test_refs_branches_delete__deleting_a_branch_removes_related_configuration_data(void)
+{
+	git_reference *branch;
+
+	assert_config_entry_existence(repo, "branch.track-local.remote", true);
+	assert_config_entry_existence(repo, "branch.track-local.merge", true);
+
+	cl_git_pass(git_branch_lookup(&branch, repo, "track-local", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_branch_delete(branch));
+
+	assert_config_entry_existence(repo, "branch.track-local.remote", false);
+	assert_config_entry_existence(repo, "branch.track-local.merge", false);
 }
