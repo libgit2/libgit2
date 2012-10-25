@@ -1514,8 +1514,7 @@ static int print_to_buffer_cb(
 	GIT_UNUSED(delta);
 	GIT_UNUSED(range);
 	GIT_UNUSED(line_origin);
-	git_buf_put(output, content, content_len);
-	return 0;
+	return git_buf_put(output, content, content_len);
 }
 
 int git_diff_patch_to_str(
@@ -1527,6 +1526,8 @@ int git_diff_patch_to_str(
 	diff_print_info pi;
 	size_t h, l;
 
+	assert(string && patch);
+
 	pi.diff     = patch->diff;
 	pi.print_cb = print_to_buffer_cb;
 	pi.cb_data  = &output;
@@ -1534,13 +1535,13 @@ int git_diff_patch_to_str(
 
 	error = print_patch_file(&pi, patch->delta, 0);
 
-	for (h = 0; h < patch->hunks_size; ++h) {
+	for (h = 0; h < patch->hunks_size && !error; ++h) {
 		diff_patch_hunk *hunk = &patch->hunks[h];
 
 		error = print_patch_hunk(&pi, patch->delta,
 			&hunk->range, hunk->header, hunk->header_len);
 
-		for (l = 0; l < hunk->line_count; ++l) {
+		for (l = 0; l < hunk->line_count && !error; ++l) {
 			diff_patch_line *line = &patch->lines[hunk->line_start + l];
 
 			error = print_patch_line(
@@ -1548,6 +1549,12 @@ int git_diff_patch_to_str(
 				line->origin, line->ptr, line->len);
 		}
 	}
+
+	/* GIT_EUSER means git_buf_put in print_to_buffer_cb returned -1,
+	 * meaning a memory allocation failure, so just map to -1...
+	 */
+	if (error == GIT_EUSER)
+		error = -1;
 
 	git_buf_free(&temp);
 
