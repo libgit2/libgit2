@@ -66,8 +66,8 @@ void test_checkout_tree__can_checkout_a_subdirectory_from_a_subtree(void)
 
 static void progress(const char *path, size_t cur, size_t tot, void *payload)
 {
-	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	bool *was_called = (bool*)payload;
+	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	*was_called = true;
 }
 

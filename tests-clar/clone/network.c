@@ -93,15 +93,15 @@ void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
 
 static void checkout_progress(const char *path, size_t cur, size_t tot, void *payload)
 {
-	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	bool *was_called = (bool*)payload;
+	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	(*was_called) = true;
 }
 
 static void fetch_progress(const git_transfer_progress *stats, void *payload)
 {
-	GIT_UNUSED(stats);
 	bool *was_called = (bool*)payload;
+	GIT_UNUSED(stats);
 	(*was_called) = true;
 }
 

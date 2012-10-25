@@ -745,7 +745,7 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 	}
 }
 
-inline const git_transfer_progress* git_remote_stats(git_remote *remote)
+GIT_INLINE(const git_transfer_progress*) git_remote_stats(git_remote *remote)
 {
 	assert(remote);
 	return &remote->stats;

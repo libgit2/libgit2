@@ -30,8 +30,8 @@ static int update_tips(const char *refname, const git_oid *a, const git_oid *b, 
 
 static void progress(const git_transfer_progress *stats, void *payload)
 {
-	GIT_UNUSED(stats);
 	bool *was_called = (bool*)payload;
+	GIT_UNUSED(stats);
 	*was_called = true;
 }
 

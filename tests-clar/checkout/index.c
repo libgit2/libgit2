@@ -363,8 +363,8 @@ void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
 
 static void progress(const char *path, size_t cur, size_t tot, void *payload)
 {
-	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	bool *was_called = (bool*)payload;
+	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
 	*was_called = true;
 }
 
