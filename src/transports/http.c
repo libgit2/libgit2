@@ -403,6 +403,7 @@ static int http_recv_cb(gitno_buffer *buf)
 
 	memcpy(buf->data + buf->offset, buffer, recvd);
 	buf->offset += recvd;
+	if (buf->packetsize_cb) buf->packetsize_cb(recvd, buf->packetsize_payload);
 #endif
 
 	return (int)(buf->offset - old_len);
