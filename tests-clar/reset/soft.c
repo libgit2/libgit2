@@ -124,4 +124,6 @@ void test_reset_soft__fails_when_merging(void)
 
 	cl_assert_equal_i(GIT_EUNMERGED, git_reset(repo, target, GIT_RESET_SOFT));
 	cl_git_pass(p_unlink(git_buf_cstr(&merge_head_path)));
+
+	git_buf_free(&merge_head_path);
 }
