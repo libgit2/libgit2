@@ -97,9 +97,9 @@ GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog
 /**
  * Remove an entry from the reflog by its index
  *
- * To ensure there's no gap in the log history, set the `rewrite_previosu_entry` to 1.
- * When deleting entry `n`, member old_oid of entry `n-1` (if any) will be updated with
- * the value of memeber new_oid of entry `n+1`.
+ * To ensure there's no gap in the log history, set `rewrite_previous_entry`
+ * param value to 1. When deleting entry `n`, member old_oid of entry `n-1`
+ * (if any) will be updated with the value of member new_oid of entry `n+1`.
  *
  * @param reflog a previously loaded reflog.
  *
