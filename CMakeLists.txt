@@ -110,10 +110,15 @@ ELSE ()
 	ENDIF ()
 ENDIF()
 
-# Build Debug by default
-IF (NOT CMAKE_BUILD_TYPE)
-	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
-ENDIF ()
+IF( NOT CMAKE_CONFIGURATION_TYPES )
+	# Build Debug by default
+	IF (NOT CMAKE_BUILD_TYPE)
+		SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+	ENDIF ()
+ELSE()
+	# Using a multi-configuration generator eg MSVC or Xcode
+	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
+ENDIF()
 
 IF (OPENSSL_FOUND)
   ADD_DEFINITIONS(-DGIT_SSL)
