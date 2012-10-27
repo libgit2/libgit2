@@ -117,6 +117,7 @@ void test_reset_soft__fails_when_merging(void)
 {
 	git_buf merge_head_path = GIT_BUF_INIT;
 
+	cl_git_pass(git_repository_detach_head(repo));
 	cl_git_pass(git_buf_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
 	cl_git_mkfile(git_buf_cstr(&merge_head_path), "beefbeefbeefbeefbeefbeefbeefbeefbeefbeef\n");
 
