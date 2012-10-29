@@ -12,12 +12,11 @@
 #include "git2/refs.h"
 #include "git2/revwalk.h"
 
-#include "pkt.h"
+#include "smart.h"
 #include "util.h"
 #include "netops.h"
 #include "posix.h"
 #include "buffer.h"
-#include "protocol.h"
 
 #include <ctype.h>
 
@@ -335,7 +334,7 @@ int git_pkt_buffer_flush(git_buf *buf)
 	return git_buf_put(buf, pkt_flush_str, strlen(pkt_flush_str));
 }
 
-static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps, git_buf *buf)
+static int buffer_want_with_caps(const git_remote_head *head, transport_smart_caps *caps, git_buf *buf)
 {
 	git_buf str = GIT_BUF_INIT;
 	char oid[GIT_OID_HEXSZ +1] = {0};
@@ -376,28 +375,32 @@ static int buffer_want_with_caps(git_remote_head *head, git_transport_caps *caps
  * is overwrite the OID each time.
  */
 
-int git_pkt_buffer_wants(const git_vector *refs, git_transport_caps *caps, git_buf *buf)
+int git_pkt_buffer_wants(
+	const git_remote_head * const *refs,
+	size_t count,
+	transport_smart_caps *caps,
+	git_buf *buf)
 {
-	unsigned int i = 0;
-	git_remote_head *head;
+	size_t i = 0;
+	const git_remote_head *head;
 
 	if (caps->common) {
-		for (; i < refs->length; ++i) {
-			head = refs->contents[i];
+		for (; i < count; ++i) {
+			head = refs[i];
 			if (!head->local)
 				break;
 		}
 
-		if (buffer_want_with_caps(refs->contents[i], caps, buf) < 0)
+		if (buffer_want_with_caps(refs[i], caps, buf) < 0)
 			return -1;
 
 		i++;
 	}
 
-	for (; i < refs->length; ++i) {
+	for (; i < count; ++i) {
 		char oid[GIT_OID_HEXSZ];
 
-		head = refs->contents[i];
+		head = refs[i];
 		if (head->local)
 			continue;
 

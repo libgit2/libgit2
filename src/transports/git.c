@@ -5,40 +5,37 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2/net.h"
-#include "git2/common.h"
-#include "git2/types.h"
-#include "git2/errors.h"
-#include "git2/net.h"
-#include "git2/revwalk.h"
-
-#include "vector.h"
-#include "transport.h"
-#include "pkt.h"
-#include "common.h"
+#include "git2.h"
+#include "buffer.h"
 #include "netops.h"
-#include "filebuf.h"
-#include "repository.h"
-#include "fetch.h"
-#include "protocol.h"
+
+#define OWNING_SUBTRANSPORT(s) ((git_subtransport *)(s)->parent.subtransport)
+
+static const char prefix_git[] = "git://";
+static const char cmd_uploadpack[] = "git-upload-pack";
 
 typedef struct {
-	git_transport parent;
-	char buff[65536];
-#ifdef GIT_WIN32
-	WSADATA wsd;
-#endif
-} transport_git;
+	git_smart_subtransport_stream parent;
+	gitno_socket socket;
+	const char *cmd;
+	char *url;
+	unsigned sent_command : 1;
+} git_stream;
+
+typedef struct {
+	git_smart_subtransport parent;
+	git_transport *owner;
+	git_stream *current_stream;
+} git_subtransport;
 
 /*
- * Create a git procol request.
+ * Create a git protocol request.
  *
  * For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
  */
 static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
 	char *delim, *repo;
-	char default_command[] = "git-upload-pack";
 	char host[] = "host=";
 	size_t len;
 
@@ -54,9 +51,6 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	if (delim == NULL)
 		delim = strchr(url, '/');
 
-	if (cmd == NULL)
-		cmd = default_command;
-
 	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1;
 
 	git_buf_grow(request, len);
@@ -71,175 +65,211 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	return 0;
 }
 
-static int send_request(git_transport *t, const char *cmd, const char *url)
+static int send_command(git_stream *s)
 {
 	int error;
 	git_buf request = GIT_BUF_INIT;
 
-	error = gen_proto(&request, cmd, url);
+	error = gen_proto(&request, s->cmd, s->url);
 	if (error < 0)
 		goto cleanup;
 
-	error = gitno_send(t, request.ptr, request.size, 0);
+	/* It looks like negative values are errors here, and positive values
+	 * are the number of bytes sent. */
+	error = gitno_send(&s->socket, request.ptr, request.size, 0);
+
+	if (error >= 0)
+		s->sent_command = 1;
 
 cleanup:
 	git_buf_free(&request);
 	return error;
 }
 
-/*
- * Parse the URL and connect to a server, storing the socket in
- * out. For convenience this also takes care of asking for the remote
- * refs
- */
-static int do_connect(transport_git *t, const char *url)
+static int git_stream_read(
+	git_smart_subtransport_stream *stream,
+	char *buffer,
+	size_t buf_size,
+	size_t *bytes_read)
+{
+	git_stream *s = (git_stream *)stream;
+	gitno_buffer buf;
+
+	*bytes_read = 0;
+
+	if (!s->sent_command && send_command(s) < 0)
+		return -1;
+
+	gitno_buffer_setup(&s->socket, &buf, buffer, buf_size);
+
+	if (gitno_recv(&buf) < 0)
+		return -1;
+
+	*bytes_read = buf.offset;
+
+	return 0;
+}
+
+static int git_stream_write(
+	git_smart_subtransport_stream *stream,
+	const char *buffer,
+	size_t len)
+{
+	git_stream *s = (git_stream *)stream;
+
+	if (!s->sent_command && send_command(s) < 0)
+		return -1;
+
+	return gitno_send(&s->socket, buffer, len, 0);
+}
+
+static void git_stream_free(git_smart_subtransport_stream *stream)
+{
+	git_stream *s = (git_stream *)stream;
+	git_subtransport *t = OWNING_SUBTRANSPORT(s);
+	int ret;
+
+	GIT_UNUSED(ret);
+
+	t->current_stream = NULL;
+
+	if (s->socket.socket) {
+		ret = gitno_close(&s->socket);
+		assert(!ret);
+	}
+
+	git__free(s->url);
+	git__free(s);	
+}
+
+static int git_stream_alloc(
+	git_subtransport *t,
+	const char *url,
+	const char *cmd,
+	git_smart_subtransport_stream **stream)
+{
+	git_stream *s;
+
+	if (!stream)
+		return -1;
+
+	s = (git_stream *)git__calloc(sizeof(git_stream), 1);
+	GITERR_CHECK_ALLOC(s);
+
+	s->parent.subtransport = &t->parent;
+	s->parent.read = git_stream_read;
+	s->parent.write = git_stream_write;
+	s->parent.free = git_stream_free;
+
+	s->cmd = cmd;
+	s->url = git__strdup(url);
+
+	if (!s->url) {
+		git__free(s);
+		return -1;
+	}
+
+	*stream = &s->parent;
+	return 0;
+}
+
+static int git_git_uploadpack_ls(
+	git_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
 {
 	char *host, *port;
-	const char prefix[] = "git://";
+	git_stream *s;
 
-	if (!git__prefixcmp(url, prefix))
-		url += strlen(prefix);
+	*stream = NULL;
+
+	if (!git__prefixcmp(url, prefix_git))
+		url += strlen(prefix_git);
+
+	if (git_stream_alloc(t, url, cmd_uploadpack, stream) < 0)
+		return -1;
+
+	s = (git_stream *)*stream;
 
 	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
-		return -1;
-
-	if (gitno_connect((git_transport *)t, host, port) < 0)
 		goto on_error;
 
-	if (send_request((git_transport *)t, NULL, url) < 0)
+	if (gitno_connect(&s->socket, host, port, 0) < 0)
 		goto on_error;
 
+	t->current_stream = s;
 	git__free(host);
 	git__free(port);
-
 	return 0;
 
 on_error:
+	if (*stream)
+		git_stream_free(*stream);
+
 	git__free(host);
 	git__free(port);
-	gitno_close(t->parent.socket);
 	return -1;
 }
 
-/*
- * Since this is a network connection, we need to parse and store the
- * pkt-lines at this stage and keep them there.
- */
-static int git_connect(git_transport *transport, int direction)
+static int git_git_uploadpack(
+	git_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
 {
-	transport_git *t = (transport_git *) transport;
+	GIT_UNUSED(url);
 
-	if (direction == GIT_DIR_PUSH) {
-		giterr_set(GITERR_NET, "Pushing over git:// is not supported");
-		return -1;
+	if (t->current_stream) {
+		*stream = &t->current_stream->parent;
+		return 0;
 	}
 
-	t->parent.direction = direction;
-
-	/* Connect and ask for the refs */
-	if (do_connect(t, transport->url) < 0)
-		return -1;
-
-	gitno_buffer_setup(transport, &transport->buffer, t->buff, sizeof(t->buff));
-
-	t->parent.connected = 1;
-	if (git_protocol_store_refs(transport, 1) < 0)
-		return -1;
-
-	if (git_protocol_detect_caps(git_vector_get(&transport->refs, 0), &transport->caps) < 0)
-		return -1;
-
-	return 0;
+	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
+	return -1;
 }
 
-static int git_negotiation_step(struct git_transport *transport, void *data, size_t len)
+static int _git_action(
+	git_smart_subtransport_stream **stream,
+	git_smart_subtransport *smart_transport,
+	const char *url,
+	git_smart_service_t action)
 {
-	return gitno_send(transport, data, len, 0);
+	git_subtransport *t = (git_subtransport *) smart_transport;
+
+	switch (action) {
+		case GIT_SERVICE_UPLOADPACK_LS:
+			return git_git_uploadpack_ls(t, url, stream);
+
+		case GIT_SERVICE_UPLOADPACK:
+			return git_git_uploadpack(t, url, stream);
+	}
+
+	*stream = NULL;
+	return -1;
 }
 
-static int git_close(git_transport *t)
+static void _git_free(git_smart_subtransport *smart_transport)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_subtransport *t = (git_subtransport *) smart_transport;
 
-	if (git_pkt_buffer_flush(&buf) < 0)
-		return -1;
-	/* Can't do anything if there's an error, so don't bother checking  */
-	gitno_send(t, buf.ptr, buf.size, 0);
-	git_buf_free(&buf);
+	assert(!t->current_stream);
 
-	if (gitno_close(t->socket) < 0) {
-		giterr_set(GITERR_NET, "Failed to close socket");
-		return -1;
-	}
-
-	t->connected = 0;
-
-#ifdef GIT_WIN32
-	WSACleanup();
-#endif
-
-	return 0;
-}
-
-static void git_free(git_transport *transport)
-{
-	transport_git *t = (transport_git *) transport;
-	git_vector *refs = &transport->refs;
-	unsigned int i;
-
-	for (i = 0; i < refs->length; ++i) {
-		git_pkt *p = git_vector_get(refs, i);
-		git_pkt_free(p);
-	}
-	git_vector_free(refs);
-
-	refs = &transport->common;
-	for (i = 0; i < refs->length; ++i) {
-		git_pkt *p = git_vector_get(refs, i);
-		git_pkt_free(p);
-	}
-	git_vector_free(refs);
-
-	git__free(t->parent.url);
 	git__free(t);
 }
 
-int git_transport_git(git_transport **out)
+int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owner)
 {
-	transport_git *t;
-#ifdef GIT_WIN32
-	int ret;
-#endif
+	git_subtransport *t;
 
-	t = git__malloc(sizeof(transport_git));
+	if (!out)
+		return -1;
+
+	t = (git_subtransport *)git__calloc(sizeof(git_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
 
-	memset(t, 0x0, sizeof(transport_git));
-	if (git_vector_init(&t->parent.common, 8, NULL))
-		goto on_error;
+	t->owner = owner;
+	t->parent.action = _git_action;
+	t->parent.free = _git_free;
 
-	if (git_vector_init(&t->parent.refs, 16, NULL) < 0)
-		goto on_error;
-
-	t->parent.connect = git_connect;
-	t->parent.negotiation_step = git_negotiation_step;
-	t->parent.close = git_close;
-	t->parent.free = git_free;
-
-	*out = (git_transport *) t;
-
-#ifdef GIT_WIN32
-	ret = WSAStartup(MAKEWORD(2,2), &t->wsd);
-	if (ret != 0) {
-		git_free(*out);
-		giterr_set(GITERR_NET, "Winsock init failed");
-		return -1;
-	}
-#endif
-
+	*out = (git_smart_subtransport *) t;
 	return 0;
-
-on_error:
-	git__free(t);
-	return -1;
 }

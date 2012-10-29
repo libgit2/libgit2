@@ -13,6 +13,7 @@
 #include "net.h"
 #include "indexer.h"
 #include "strarray.h"
+#include "transport.h"
 
 /**
  * @file git2/remote.h
@@ -283,8 +284,20 @@ GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const cha
  * @param remote the remote to configure
  * @param check whether to check the server's certificate (defaults to yes)
  */
-
 GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
+
+/**
+ * Sets a custom transport for the remote. The caller can use this function
+ * to bypass the automatic discovery of a transport by URL scheme (i.e.
+ * http://, https://, git://) and supply their own transport to be used
+ * instead. After providing the transport to a remote using this function,
+ * the transport object belongs exclusively to that remote, and the remote will
+ * free it when it is freed with git_remote_free.
+ *
+ * @param remote the remote to configure
+ * @param transport the transport object for the remote to use
+ */
+GIT_EXTERN(int) git_remote_set_transport(git_remote *remote, git_transport *transport);
 
 /**
  * Argument to the completion callback which tells it which operation
