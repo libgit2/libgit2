@@ -338,7 +338,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (git_vector_init(&idx->deltas, (unsigned int)(idx->nr_objects / 2), NULL) < 0)
 			return -1;
 
-		memset(stats, 0, sizeof(git_transfer_progress));
+		stats->received_objects = 0;
+		stats->indexed_objects = 0;
 		stats->total_objects = (unsigned int)idx->nr_objects;
 		do_progress_callback(idx, stats);
 	}
