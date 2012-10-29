@@ -98,8 +98,7 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g ${CMAKE_C_FLAGS}")
-	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
 	ELSE ()
@@ -111,10 +110,15 @@ ELSE ()
 	ENDIF ()
 ENDIF()
 
-# Build Debug by default
-IF (NOT CMAKE_BUILD_TYPE)
-	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
-ENDIF ()
+IF( NOT CMAKE_CONFIGURATION_TYPES )
+	# Build Debug by default
+	IF (NOT CMAKE_BUILD_TYPE)
+		SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+	ENDIF ()
+ELSE()
+	# Using a multi-configuration generator eg MSVC or Xcode
+	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
+ENDIF()
 
 IF (OPENSSL_FOUND)
   ADD_DEFINITIONS(-DGIT_SSL)
