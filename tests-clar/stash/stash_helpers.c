@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include "stash_helpers.h"
 
 void commit_staged_files(
 	git_oid *commit_oid,

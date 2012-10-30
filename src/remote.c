@@ -914,7 +914,7 @@ static int rename_one_remote_reference(
 	const char *old_remote_name,
 	const char *new_remote_name)
 {
-	int error;
+	int error = -1;
 	git_buf new_name = GIT_BUF_INIT;
 	git_reference *reference = NULL;
 

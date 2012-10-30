@@ -39,9 +39,10 @@ static int callback_cb(
 		const git_oid *stash_oid,
 		void *payload)
 {
-	int i = 0;
-	bool found = false;
 	struct callback_data *data = (struct callback_data *)payload;
+
+	GIT_UNUSED(index);
+	GIT_UNUSED(message);
 
 	cl_assert_equal_i(0, git_oid_streq(stash_oid, data->oids[data->invokes++]));
 	
