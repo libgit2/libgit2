@@ -57,7 +57,10 @@ GIT_EXTERN(int) git_reference_name_to_oid(
  *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
- * @param name The name of the reference
+ * @param name The name of the reference.  Reference names must be
+ *      ALL_CAPS_WITH_UNDERSCORES at the toplevel, but may be lowercase inside
+ *      refs/.  https://github.com/libgit2/libgit2/pull/938 has more complete
+ *      documentation.
  * @param target The target of the reference
  * @param force Overwrite existing references
  * @return GIT_OK or an error code
@@ -77,7 +80,10 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
- * @param name The name of the reference
+ * @param name The name of the reference.  Reference names must be
+ *      ALL_CAPS_WITH_UNDERSCORES at the toplevel, but may be lowercase inside
+ *      refs/.  https://github.com/libgit2/libgit2/pull/938 has more complete
+ *      documentation.
  * @param id The object id pointed to by the reference.
  * @param force Overwrite existing references
  * @return GIT_OK or an error code
