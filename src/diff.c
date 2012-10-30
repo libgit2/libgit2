@@ -110,85 +110,6 @@ static git_diff_delta *diff_delta__alloc(
 	return delta;
 }
 
-static git_diff_delta *diff_delta__dup(
-	const git_diff_delta *d, git_pool *pool)
-{
-	git_diff_delta *delta = git__malloc(sizeof(git_diff_delta));
-	if (!delta)
-		return NULL;
-
-	memcpy(delta, d, sizeof(git_diff_delta));
-
-	delta->old_file.path = git_pool_strdup(pool, d->old_file.path);
-	if (delta->old_file.path == NULL)
-		goto fail;
-
-	if (d->new_file.path != d->old_file.path) {
-		delta->new_file.path = git_pool_strdup(pool, d->new_file.path);
-		if (delta->new_file.path == NULL)
-			goto fail;
-	} else {
-		delta->new_file.path = delta->old_file.path;
-	}
-
-	return delta;
-
-fail:
-	git__free(delta);
-	return NULL;
-}
-
-static git_diff_delta *diff_delta__merge_like_cgit(
-	const git_diff_delta *a, const git_diff_delta *b, git_pool *pool)
-{
-	git_diff_delta *dup;
-
-	/* Emulate C git for merging two diffs (a la 'git diff <sha>').
-	 *
-	 * When C git does a diff between the work dir and a tree, it actually
-	 * diffs with the index but uses the workdir contents.  This emulates
-	 * those choices so we can emulate the type of diff.
-	 *
-	 * We have three file descriptions here, let's call them:
-	 *  f1 = a->old_file
-	 *  f2 = a->new_file AND b->old_file
-	 *  f3 = b->new_file
-	 */
-
-	/* if f2 == f3 or f2 is deleted, then just dup the 'a' diff */
-	if (b->status == GIT_DELTA_UNMODIFIED || a->status == GIT_DELTA_DELETED)
-		return diff_delta__dup(a, pool);
-
-	/* otherwise, base this diff on the 'b' diff */
-	if ((dup = diff_delta__dup(b, pool)) == NULL)
-		return NULL;
-
-	/* If 'a' status is uninteresting, then we're done */
-	if (a->status == GIT_DELTA_UNMODIFIED)
-		return dup;
-
-	assert(a->status != GIT_DELTA_UNMODIFIED);
-	assert(b->status != GIT_DELTA_UNMODIFIED);
-
-	/* A cgit exception is that the diff of a file that is only in the
-	 * index (i.e. not in HEAD nor workdir) is given as empty.
-	 */
-	if (dup->status == GIT_DELTA_DELETED) {
-		if (a->status == GIT_DELTA_ADDED)
-			dup->status = GIT_DELTA_UNMODIFIED;
-		/* else don't overwrite DELETE status */
-	} else {
-		dup->status = a->status;
-	}
-
-	git_oid_cpy(&dup->old_file.oid, &a->old_file.oid);
-	dup->old_file.mode  = a->old_file.mode;
-	dup->old_file.size  = a->old_file.size;
-	dup->old_file.flags = a->old_file.flags;
-
-	return dup;
-}
-
 static int diff_delta__from_one(
 	git_diff_list *diff,
 	git_delta_t   status,
@@ -332,12 +253,33 @@ static char *diff_strdup_prefix(git_pool *pool, const char *prefix)
 		return git_pool_strndup(pool, prefix, len + 1);
 }
 
-static int diff_delta__cmp(const void *a, const void *b)
+int git_diff_delta__cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
 	int val = strcmp(da->old_file.path, db->old_file.path);
 	return val ? val : ((int)da->status - (int)db->status);
 }
+
+bool git_diff_delta__should_skip(
+	const git_diff_options *opts, const git_diff_delta *delta)
+{
+	uint32_t flags = opts ? opts->flags : 0;
+
+	if (delta->status == GIT_DELTA_UNMODIFIED &&
+		(flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
+		return true;
+
+	if (delta->status == GIT_DELTA_IGNORED &&
+		(flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
+		return true;
+
+	if (delta->status == GIT_DELTA_UNTRACKED &&
+		(flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
+		return true;
+
+	return false;
+}
+
 
 static int config_bool(git_config *cfg, const char *name, int defvalue)
 {
@@ -361,7 +303,7 @@ static git_diff_list *git_diff_list_alloc(
 	GIT_REFCOUNT_INC(diff);
 	diff->repo = repo;
 
-	if (git_vector_init(&diff->deltas, 0, diff_delta__cmp) < 0 ||
+	if (git_vector_init(&diff->deltas, 0, git_diff_delta__cmp) < 0 ||
 		git_pool_init(&diff->pool, 1, 0) < 0)
 		goto fail;
 
@@ -991,241 +933,3 @@ on_error:
 	git_iterator_free(a);
 	return error;
 }
-
-
-bool git_diff_delta__should_skip(
-	const git_diff_options *opts, const git_diff_delta *delta)
-{
-	uint32_t flags = opts ? opts->flags : 0;
-
-	if (delta->status == GIT_DELTA_UNMODIFIED &&
-		(flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
-		return true;
-
-	if (delta->status == GIT_DELTA_IGNORED &&
-		(flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
-		return true;
-
-	if (delta->status == GIT_DELTA_UNTRACKED &&
-		(flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
-		return true;
-
-	return false;
-}
-
-
-int git_diff_merge(
-	git_diff_list *onto,
-	const git_diff_list *from)
-{
-	int error = 0;
-	git_pool onto_pool;
-	git_vector onto_new;
-	git_diff_delta *delta;
-	bool ignore_case = false;
-	unsigned int i, j;
-
-	assert(onto && from);
-
-	if (!from->deltas.length)
-		return 0;
-
-	if (git_vector_init(&onto_new, onto->deltas.length, diff_delta__cmp) < 0 ||
-		git_pool_init(&onto_pool, 1, 0) < 0)
-		return -1;
-
-	if ((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 ||
-		(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0)
-	{
-		ignore_case = true;
-
-		/* This function currently only supports merging diff lists that
-		 * are sorted identically. */
-		assert((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 &&
-				(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0);
-	}
-
-	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
-		git_diff_delta *o = GIT_VECTOR_GET(&onto->deltas, i);
-		const git_diff_delta *f = GIT_VECTOR_GET(&from->deltas, j);
-		int cmp = !f ? -1 : !o ? 1 : STRCMP_CASESELECT(ignore_case, o->old_file.path, f->old_file.path);
-
-		if (cmp < 0) {
-			delta = diff_delta__dup(o, &onto_pool);
-			i++;
-		} else if (cmp > 0) {
-			delta = diff_delta__dup(f, &onto_pool);
-			j++;
-		} else {
-			delta = diff_delta__merge_like_cgit(o, f, &onto_pool);
-			i++;
-			j++;
-		}
-
-		/* the ignore rules for the target may not match the source
-		 * or the result of a merged delta could be skippable...
-		 */
-		if (git_diff_delta__should_skip(&onto->opts, delta)) {
-			git__free(delta);
-			continue;
-		}
-
-		if ((error = !delta ? -1 : git_vector_insert(&onto_new, delta)) < 0)
-			break;
-	}
-
-	if (!error) {
-		git_vector_swap(&onto->deltas, &onto_new);
-		git_pool_swap(&onto->pool, &onto_pool);
-		onto->new_src = from->new_src;
-
-		/* prefix strings also come from old pool, so recreate those.*/
-		onto->opts.old_prefix =
-			git_pool_strdup_safe(&onto->pool, onto->opts.old_prefix);
-		onto->opts.new_prefix =
-			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
-	}
-
-	git_vector_foreach(&onto_new, i, delta)
-		git__free(delta);
-	git_vector_free(&onto_new);
-	git_pool_clear(&onto_pool);
-
-	return error;
-}
-
-#define DEFAULT_THRESHOLD 50
-#define DEFAULT_TARGET_LIMIT 200
-
-int git_diff_detect(
-	git_diff_list *diff,
-	git_diff_detect_options *opts)
-{
-	int error = 0;
-	unsigned int i, j;
-	git_diff_delta *from, *to;
-	bool check_unmodified = opts &&
-		(opts->flags & GIT_DIFF_DETECT_COPIES_FROM_UNMODIFIED) != 0;
-	int max_targets = (opts && opts->target_limit > 0) ?
-		opts->target_limit : DEFAULT_TARGET_LIMIT;
-	unsigned int rename_threshold = (opts && opts->rename_threshold > 0) ?
-		opts->rename_threshold : DEFAULT_THRESHOLD;
-	unsigned int copy_threshold = (opts && opts->copy_threshold > 0) ?
-		opts->copy_threshold : DEFAULT_THRESHOLD;
-	int num_deletes = 0, num_splits = 0;
-
-	/* TODO: update opts from config diff.renameLimit / diff.renames */
-
-	git_vector_foreach(&diff->deltas, i, from) {
-		int tried_targets = 0;
-
-		git_vector_foreach(&diff->deltas, j, to) {
-			unsigned int similarity = 0;
-
-			if (i == j)
-				continue;
-
-			switch (to->status) {
-			case GIT_DELTA_ADDED:
-			case GIT_DELTA_UNTRACKED:
-			case GIT_DELTA_RENAMED:
-			case GIT_DELTA_COPIED:
-				break;
-			default:
-				/* only those status values should be checked */
-				continue;
-			}
-
-			/* don't check UNMODIFIED files as source unless given option */
-			if (from->status == GIT_DELTA_UNMODIFIED && !check_unmodified)
-				continue;
-
-			/* cap on maximum files we'll examine */
-			if (++tried_targets > max_targets)
-				break;
-
-			/* calculate similarity and see if this pair beats the
-			 * similarity score of the current best pair.
-			 */
-			if (git_oid_cmp(&from->old_file.oid, &to->new_file.oid) == 0)
-				similarity = 100;
-			/* TODO: insert actual similarity algo here */
-
-			if (similarity <= to->similarity)
-				continue;
-
-			if (from->status == GIT_DELTA_DELETED) {
-				if (similarity < rename_threshold)
-					continue;
-
-				/* merge "from" & "to" to a RENAMED record */
-				to->status = GIT_DELTA_RENAMED;
-				memcpy(&to->old_file, &from->old_file, sizeof(to->old_file));
-
-				from->status = GIT_DELTA__TO_DELETE;
-				num_deletes++;
-			} else {
-				if (similarity < copy_threshold)
-					continue;
-
-				/* convert "to" to a COPIED record */
-				to->status = GIT_DELTA_COPIED;
-				memcpy(&to->old_file, &from->old_file, sizeof(to->old_file));
-			}
-		}
-
-		if (from->status == GIT_DELTA_MODIFIED &&
-			opts && (opts->flags & GIT_DIFF_DETECT_BREAK_REWRITES) != 0)
-		{
-			/* TODO: calculate similarity and maybe mark for split */
-
-			/* from->status = GIT_DELTA__TO_SPLIT; */
-			/* num_splits++; */
-		}
-	}
-
-	if (num_deletes > 0 || num_splits > 0) {
-		git_vector onto = GIT_VECTOR_INIT;
-		size_t new_size = diff->deltas.length + num_splits - num_deletes;
-
-		if (git_vector_init(&onto, new_size, diff_delta__cmp) < 0)
-			return -1;
-
-		/* build new delta list without TO_DELETE and splitting TO_SPLIT */
-		git_vector_foreach(&diff->deltas, i, from) {
-			if (from->status == GIT_DELTA__TO_DELETE) {
-				git__free(from);
-				continue;
-			}
-
-			if (from->status == GIT_DELTA__TO_SPLIT) {
-				git_diff_delta *deleted = diff_delta__dup(from, &diff->pool);
-				if (!deleted)
-					return -1;
-
-				deleted->status = GIT_DELTA_DELETED;
-				memset(&deleted->new_file, 0, sizeof(deleted->new_file));
-				deleted->new_file.path = deleted->old_file.path;
-				deleted->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
-
-				git_vector_insert(&onto, deleted);
-
-				from->status = GIT_DELTA_ADDED;
-				memset(&from->old_file, 0, sizeof(from->old_file));
-				from->old_file.path = from->new_file.path;
-				from->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
-			}
-
-			git_vector_insert(&onto, from);
-		}
-
-		/* swap new delta list into place */
-
-		git_vector_sort(&onto);
-		git_vector_swap(&diff->deltas, &onto);
-		git_vector_free(&onto);
-	}
-
-	return error;
-}
-

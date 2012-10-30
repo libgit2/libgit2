@@ -76,4 +76,7 @@ int git_vector_remove(git_vector *v, unsigned int idx);
 void git_vector_pop(git_vector *v);
 void git_vector_uniq(git_vector *v);
 
+int git_vector_resize_to(git_vector *v, size_t new_length);
+int git_vector_set(void **old, git_vector *v, size_t position, void *value);
+
 #endif

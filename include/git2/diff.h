@@ -263,31 +263,41 @@ typedef struct git_diff_patch git_diff_patch;
  * Flags to control the behavior of diff rename/copy detection.
  */
 typedef enum {
-	/** should we look for renames */
-	GIT_DIFF_DETECT_RENAMES = (1 << 0),
-	/** should we look for copies */
-	GIT_DIFF_DETECT_COPIES   = (1 << 1),
-	/** should we consider unmodified files as possible copy sources */
-	GIT_DIFF_DETECT_COPIES_FROM_UNMODIFIED = (1 << 2),
-	/** should we split large rewrites into delete / add pairs */
-	GIT_DIFF_DETECT_BREAK_REWRITES = (1 << 3),
-} git_diff_detect_t;
+	/** look for renames? (`--find-renames`) */
+	GIT_DIFF_FIND_RENAMES = (1 << 0),
+	/** consider old size of modified for renames? (`--break-rewrites=N`) */
+	GIT_DIFF_FIND_RENAMES_FROM_REWRITES = (1 << 1),
+
+	/** look for copies? (a la `--find-copies`) */
+	GIT_DIFF_FIND_COPIES = (1 << 2),
+	/** consider unmodified as copy sources? (`--find-copies-harder`) */
+	GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED = (1 << 3),
+
+	/** split large rewrites into delete/add pairs (`--break-rewrites=/M`) */
+	GIT_DIFF_FIND_AND_BREAK_REWRITES = (1 << 4),
+} git_diff_find_t;
 
 /**
  * Control behavior of rename and copy detection
  */
 typedef struct {
-	/** Combination of git_diff_detect_t values */
+	/** Combination of git_diff_find_t values (default FIND_RENAMES) */
 	unsigned int flags;
-	/** Threshold on similarity index to consider a file renamed. */
+
+	/** Similarity to consider a file renamed (default 50) */
 	unsigned int rename_threshold;
-	/** Threshold on similarity index to consider a file a copy. */
+	/** Similarity of modified to be eligible rename source (default 50) */
+	unsigned int rename_from_rewrite_threshold;
+	/** Similarity to consider a file a copy (default 50) */
 	unsigned int copy_threshold;
-	/** Threshold on change % to split modify into delete/add pair. */
+	/** Similarity to split modify into delete/add pair (default 60) */
 	unsigned int break_rewrite_threshold;
-	/** Maximum rename/copy targets to check (diff.renameLimit) */
+
+	/** Maximum similarity sources to examine (a la diff's `-l` option or
+	 *  the `diff.renameLimit` config) (default 200)
+	 */
 	unsigned int target_limit;
-} git_diff_detect_options;
+} git_diff_find_options;
 
 
 /** @name Diff List Generator Functions
@@ -405,18 +415,20 @@ GIT_EXTERN(int) git_diff_merge(
 	const git_diff_list *from);
 
 /**
- * Update a diff list with file renames, copies, etc.
+ * Transform a diff list marking file renames, copies, etc.
  *
  * This modifies a diff list in place, replacing old entries that look
  * like renames or copies with new entries reflecting those changes.
+ * This also will, if requested, break modified files into add/remove
+ * pairs if the amount of change is above a threshold.
  *
  * @param diff Diff list to run detection algorithms on
  * @param options Control how detection should be run, NULL for defaults
  * @return 0 on success, -1 on failure
  */
-GIT_EXTERN(int) git_diff_detect(
+GIT_EXTERN(int) git_diff_find_similar(
 	git_diff_list *diff,
-	git_diff_detect_options *options);
+	git_diff_find_options *options);
 
 /**@}*/
 
