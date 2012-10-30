@@ -1541,6 +1541,10 @@ cleanup:
 	return error;
 }
 
+/**
+ * Loosely ported from git.git
+ * https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh#L198-289
+ */
 int git_repository_state(git_repository *repo)
 {
 	git_buf repo_path = GIT_BUF_INIT;
@@ -1548,15 +1552,30 @@ int git_repository_state(git_repository *repo)
 
 	assert(repo);
 
+	if (!git_repository_head_detached(repo))
+		return state;
+
 	if (git_buf_puts(&repo_path, repo->path_repository) < 0)
 		return -1;
 
-	if (git_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
+	if (git_path_contains_file(&repo_path, GIT_REBASE_MERGE_INTERACTIVE_FILE))
+		state = GIT_REPOSITORY_STATE_REBASE_INTERACTIVE;
+	else if (git_path_contains_dir(&repo_path, GIT_REBASE_MERGE_DIR))
+		state = GIT_REPOSITORY_STATE_REBASE_MERGE;
+	else if (git_path_contains_file(&repo_path, GIT_REBASE_APPLY_REBASING_FILE))
+		state = GIT_REPOSITORY_STATE_REBASE;
+	else if (git_path_contains_file(&repo_path, GIT_REBASE_APPLY_APPLYING_FILE))
+		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX;
+	else if (git_path_contains_dir(&repo_path, GIT_REBASE_APPLY_DIR))
+		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE;
+	else if (git_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
 		state = GIT_REPOSITORY_STATE_MERGE;
 	else if(git_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE))
 		state = GIT_REPOSITORY_STATE_REVERT;
 	else if(git_path_contains_file(&repo_path, GIT_CHERRY_PICK_HEAD_FILE))
 		state = GIT_REPOSITORY_STATE_CHERRY_PICK;
+	else if(git_path_contains_file(&repo_path, GIT_BISECT_LOG_FILE))
+		state = GIT_REPOSITORY_STATE_BISECT;
 
 	git_buf_free(&repo_path);
 	return state;
