@@ -307,7 +307,7 @@ static int load_attr_blob_from_index(
 		(error = git_index_find(index, relfile)) < 0)
 		return error;
 
-	entry = git_index_get(index, error);
+	entry = git_index_get_byindex(index, error);
 
 	if (old_oid && git_oid_cmp(old_oid, &entry->oid) == 0)
 		return GIT_ENOTFOUND;

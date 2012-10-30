@@ -231,13 +231,17 @@ void test_index_tests__add(void)
    cl_git_pass(git_oid_fromstr(&id1, "a8233120f6ad708f843d861ce2b7228ec4e3dec6"));
 
    /* Add the new file to the index */
-   cl_git_pass(git_index_add(index, "test.txt", 0));
+   cl_git_pass(git_index_add_from_workdir(index, "test.txt"));
 
    /* Wow... it worked! */
    cl_assert(git_index_entrycount(index) == 1);
-   entry = git_index_get(index, 0);
+   entry = git_index_get_byindex(index, 0);
 
    /* And the built-in hashing mechanism worked as expected */
+   cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
+
+   /* Test access by path instead of index */
+   cl_assert((entry = git_index_get_bypath(index, "test.txt", 0)) != NULL);
    cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
 
    git_index_free(index);
