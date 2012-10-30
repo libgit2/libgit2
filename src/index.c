@@ -405,7 +405,7 @@ int git_index_read(git_index *index)
 	/* We don't want to update the mtime if we fail to parse the index */
 	mtime = index->last_modified;
 	error = git_futils_readbuffer_updated(
-		&buffer, index->index_file_path, &mtime, &updated);
+		&buffer, index->index_file_path, &mtime, NULL, &updated);
 	if (error < 0)
 		return error;
 

@@ -18,7 +18,8 @@
  * Read whole files into an in-memory buffer for processing
  */
 extern int git_futils_readbuffer(git_buf *obj, const char *path);
-extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t *mtime, int *updated);
+extern int git_futils_readbuffer_updated(
+	git_buf *obj, const char *path, time_t *mtime, size_t *size, int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
 /**
@@ -265,5 +266,27 @@ extern int git_futils_find_system_file(git_buf *path, const char *filename);
  * @return 0 on success, -1 on error
  */
 extern int git_futils_fake_symlink(const char *new, const char *old);
+
+
+typedef struct {
+	git_time_t seconds;
+	git_off_t  size;
+	unsigned int ino;
+} git_futils_stat_sig;
+
+/**
+ * Compare stat information for file with reference info.
+ *
+ * Use this as a way to track if a file has changed on disk.  This will
+ * return GIT_ENOTFOUND if the file doesn't exist, 0 if the file is up-to-date
+ * with regards to the signature, and 1 if the file needs to reloaded.  When
+ * a 1 is returned, the signature will also be updated with the latest data.
+ *
+ * @param sig stat signature structure
+ * @param path path to be statted
+ * @return 0 if up-to-date, 1 if out-of-date, <0 on error
+ */
+extern int git_futils_stat_sig_needs_reload(
+	git_futils_stat_sig *sig, const char *path);
 
 #endif /* INCLUDE_fileops_h__ */

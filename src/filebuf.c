@@ -466,3 +466,26 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 	return res;
 }
 
+int git_filebuf_stats(time_t *mtime, size_t *size, git_filebuf *file)
+{
+	int res;
+	struct stat st;
+
+	if (file->fd_is_open)
+		res = p_fstat(file->fd, &st);
+	else
+		res = p_stat(file->path_original, &st);
+
+	if (res < 0) {
+		giterr_set(GITERR_OS, "Could not get stat info for '%s'",
+			file->path_original);
+		return res;
+	}
+
+	if (mtime)
+		*mtime = st.st_mtime;
+	if (size)
+		*size = (size_t)st.st_size;
+
+	return 0;
+}

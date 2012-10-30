@@ -142,10 +142,11 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 }
 
 int git_futils_readbuffer_updated(
-	git_buf *buf, const char *path, time_t *mtime, int *updated)
+	git_buf *buf, const char *path, time_t *mtime, size_t *size, int *updated)
 {
 	git_file fd;
 	struct stat st;
+	bool changed = false;
 
 	assert(buf && path && *path);
 
@@ -162,16 +163,25 @@ int git_futils_readbuffer_updated(
 	}
 
 	/*
-	 * If we were given a time, we only want to read the file if it
-	 * has been modified.
+	 * If we were given a time and/or a size, we only want to read the file
+	 * if it has been modified.
 	 */
-	if (mtime != NULL && *mtime >= st.st_mtime) {
+	if (size && *size != (size_t)st.st_size)
+		changed = true;
+	if (mtime && *mtime != st.st_mtime)
+		changed = true;
+	if (!size && !mtime)
+		changed = true;
+
+	if (!changed) {
 		p_close(fd);
 		return 0;
 	}
 
 	if (mtime != NULL)
 		*mtime = st.st_mtime;
+	if (size != NULL)
+		*size = (size_t)st.st_size;
 
 	if (git_futils_readbuffer_fd(buf, fd, (size_t)st.st_size) < 0) {
 		p_close(fd);
@@ -188,7 +198,7 @@ int git_futils_readbuffer_updated(
 
 int git_futils_readbuffer(git_buf *buf, const char *path)
 {
-	return git_futils_readbuffer_updated(buf, path, NULL, NULL);
+	return git_futils_readbuffer_updated(buf, path, NULL, NULL, NULL);
 }
 
 int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode)
@@ -660,3 +670,28 @@ int git_futils_cp_r(
 
 	return error;
 }
+
+int git_futils_stat_sig_needs_reload(
+	git_futils_stat_sig *sig, const char *path)
+{
+	struct stat st;
+
+	/* if the sig is NULL, then alway reload */
+	if (sig == NULL)
+		return 1;
+
+	if (p_stat(path, &st) < 0)
+		return GIT_ENOTFOUND;
+
+	if ((git_time_t)st.st_mtime == sig->seconds &&
+		(git_off_t)st.st_size == sig->size &&
+		(unsigned int)st.st_ino == sig->ino)
+		return 0;
+
+	sig->seconds = (git_time_t)st.st_mtime;
+	sig->size    = (git_off_t)st.st_size;
+	sig->ino     = (unsigned int)st.st_ino;
+
+	return 1;
+}
+

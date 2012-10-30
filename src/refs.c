@@ -123,7 +123,8 @@ static int reference_read(
 	if (git_buf_joinpath(&path, repo_path, ref_name) < 0)
 		return -1;
 
-	result = git_futils_readbuffer_updated(file_content, path.ptr, mtime, updated);
+	result = git_futils_readbuffer_updated(
+		file_content, path.ptr, mtime, NULL, updated);
 	git_buf_free(&path);
 
 	return result;
