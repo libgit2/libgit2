@@ -19,12 +19,13 @@ int main (int argc, char** argv)
 
   ecount = git_index_entrycount(index);
   for (i = 0; i < ecount; ++i) {
-    git_index_entry *e = git_index_get(index, i);
+    git_index_entry *e = git_index_get_byindex(index, i);
 
     oid = e->oid;
     git_oid_fmt(out, &oid);
 
     printf("File Path: %s\n", e->path);
+	printf("    Stage: %d\n", git_index_entry_stage(e));
     printf(" Blob SHA: %s\n", out);
     printf("File Size: %d\n", (int)e->file_size);
     printf("   Device: %d\n", (int)e->dev);

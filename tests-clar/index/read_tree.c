@@ -24,9 +24,9 @@ void test_index_read_tree__read_write_involution(void)
 	cl_git_mkfile("./read_tree/abc/d", NULL);
 	cl_git_mkfile("./read_tree/abc_d", NULL);
 
-	cl_git_pass(git_index_add(index, "abc-d", 0));
-	cl_git_pass(git_index_add(index, "abc_d", 0));
-	cl_git_pass(git_index_add(index, "abc/d", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "abc-d"));
+	cl_git_pass(git_index_add_from_workdir(index, "abc_d"));
+	cl_git_pass(git_index_add_from_workdir(index, "abc/d"));
 
 	/* write-tree */
 	cl_git_pass(git_tree_create_fromindex(&expected, index));

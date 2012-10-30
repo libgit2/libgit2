@@ -183,13 +183,13 @@ static int update_index_cb(
 		if (!data->include_ignored)
 			break;
 
-		return git_index_add(data->index, delta->new_file.path, 0);
+		return git_index_add_from_workdir(data->index, delta->new_file.path);
 
 	case GIT_DELTA_UNTRACKED:
 		if (!data->include_untracked)
 			break;
 
-		return git_index_add(data->index, delta->new_file.path, 0);
+		return git_index_add_from_workdir(data->index, delta->new_file.path);
 
 	case GIT_DELTA_ADDED:
 		/* Fall through */
@@ -197,7 +197,7 @@ static int update_index_cb(
 		if (!data->include_changed)
 			break;
 
-		return git_index_add(data->index, delta->new_file.path, 0);
+		return git_index_add_from_workdir(data->index, delta->new_file.path);
 
 	case GIT_DELTA_DELETED:
 		if (!data->include_changed)
@@ -206,7 +206,7 @@ static int update_index_cb(
 		if ((pos = git_index_find(data->index, delta->new_file.path)) < 0)
 			return -1;
 
-		if (git_index_remove(data->index, pos) < 0)
+		if (git_index_remove(data->index, delta->new_file.path, 0) < 0)
 			return -1;
 
 	default:

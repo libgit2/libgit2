@@ -438,7 +438,7 @@ void test_status_worktree__first_commit_in_progress(void)
 	cl_assert(result.status == GIT_STATUS_WT_NEW);
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, "testfile.txt", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "testfile.txt"));
 	cl_git_pass(git_index_write(index));
 
 	memset(&result, 0, sizeof(result));
@@ -570,7 +570,7 @@ void test_status_worktree__bracket_in_filename(void)
 	/* add the file to the index */
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, FILE_WITH_BRACKET, 0));
+	cl_git_pass(git_index_add_from_workdir(index, FILE_WITH_BRACKET));
 	cl_git_pass(git_index_write(index));
 
 	memset(&result, 0, sizeof(result));
@@ -648,7 +648,7 @@ void test_status_worktree__space_in_filename(void)
 	/* add the file to the index */
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, FILE_WITH_SPACE, 0));
+	cl_git_pass(git_index_add_from_workdir(index, FILE_WITH_SPACE));
 	cl_git_pass(git_index_write(index));
 
 	memset(&result, 0, sizeof(result));
@@ -816,7 +816,7 @@ void test_status_worktree__new_staged_file_must_handle_crlf(void)
 	cl_git_mkfile("getting_started/testfile.txt", "content\r\n");	// Content with CRLF
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, "testfile.txt", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "testfile.txt"));
 	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_status_file(&status, repo, "testfile.txt"));

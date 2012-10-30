@@ -353,7 +353,7 @@ static unsigned int find_next_dir(const char *dirname, git_index *index, unsigne
 
 	dirlen = strlen(dirname);
 	for (i = start; i < entries; ++i) {
-		git_index_entry *entry = git_index_get(index, i);
+		git_index_entry *entry = git_index_get_byindex(index, i);
 		if (strlen(entry->path) < dirlen ||
 		    memcmp(entry->path, dirname, dirlen) ||
 			(dirlen > 0 && entry->path[dirlen] != '/')) {
@@ -415,7 +415,7 @@ static int write_tree(
 	 * need to keep track of the current position.
 	 */
 	for (i = start; i < entries; ++i) {
-		git_index_entry *entry = git_index_get(index, i);
+		git_index_entry *entry = git_index_get_byindex(index, i);
 		char *filename, *next_slash;
 
 	/*

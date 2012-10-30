@@ -332,7 +332,7 @@ int git_submodule_add_finalize(git_submodule *sm)
 	assert(sm);
 
 	if ((error = git_repository_index__weakptr(&index, sm->owner)) < 0 ||
-		(error = git_index_add(index, GIT_MODULES_FILE, 0)) < 0)
+		(error = git_index_add_from_workdir(index, GIT_MODULES_FILE)) < 0)
 		return error;
 
 	return git_submodule_add_to_index(sm, true);
@@ -393,7 +393,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	git_commit_free(head);
 
 	/* add it */
-	error = git_index_add2(index, &entry);
+	error = git_index_add(index, &entry);
 
 	/* write it, if requested */
 	if (!error && write_index) {
@@ -733,7 +733,7 @@ int git_submodule_reload(git_submodule *submodule)
 
 	pos = git_index_find(index, submodule->path);
 	if (pos >= 0) {
-		git_index_entry *entry = git_index_get(index, pos);
+		git_index_entry *entry = git_index_get_byindex(index, pos);
 
 		if (S_ISGITLINK(entry->mode)) {
 			if ((error = submodule_load_from_index(repo, entry)) < 0)

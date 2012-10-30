@@ -71,9 +71,9 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	 */
 	cl_git_mkfile("treebuilder/test.txt", "test\n");
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, "test.txt", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "test.txt"));
 
-	entry = git_index_get(index, 0);
+	entry = git_index_get_byindex(index, 0);
 
 	cl_assert(git_oid_cmp(&expected_blob_oid, &entry->oid) == 0);
 

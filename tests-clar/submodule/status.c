@@ -105,7 +105,7 @@ void test_submodule_status__ignore_none(void)
 		cl_git_pass(git_repository_index(&index, g_repo));
 		pos = git_index_find(index, "sm_changed_head");
 		cl_assert(pos >= 0);
-		cl_git_pass(git_index_remove(index, pos));
+		cl_git_pass(git_index_remove(index, "sm_changed_head", 0));
 		cl_git_pass(git_index_write(index));
 
 		git_index_free(index);
