@@ -1502,3 +1502,74 @@ notfound:
 	return GIT_ENOTFOUND;
 }
 
+static int print_to_buffer_cb(
+    void *cb_data,
+    const git_diff_delta *delta,
+    const git_diff_range *range,
+    char line_origin,
+    const char *content,
+    size_t content_len)
+{
+	git_buf *output = cb_data;
+	GIT_UNUSED(delta); GIT_UNUSED(range); GIT_UNUSED(line_origin);
+	return git_buf_put(output, content, content_len);
+}
+
+int git_diff_patch_print(
+	git_diff_patch *patch,
+	void *cb_data,
+	git_diff_data_fn print_cb)
+{
+	int error;
+	git_buf temp = GIT_BUF_INIT;
+	diff_print_info pi;
+	size_t h, l;
+
+	assert(patch && print_cb);
+
+	pi.diff     = patch->diff;
+	pi.print_cb = print_cb;
+	pi.cb_data  = cb_data;
+	pi.buf      = &temp;
+
+	error = print_patch_file(&pi, patch->delta, 0);
+
+	for (h = 0; h < patch->hunks_size && !error; ++h) {
+		diff_patch_hunk *hunk = &patch->hunks[h];
+
+		error = print_patch_hunk(&pi, patch->delta,
+			&hunk->range, hunk->header, hunk->header_len);
+
+		for (l = 0; l < hunk->line_count && !error; ++l) {
+			diff_patch_line *line = &patch->lines[hunk->line_start + l];
+
+			error = print_patch_line(
+				&pi, patch->delta, &hunk->range,
+				line->origin, line->ptr, line->len);
+		}
+	}
+
+	git_buf_free(&temp);
+
+	return error;
+}
+
+int git_diff_patch_to_str(
+	char **string,
+	git_diff_patch *patch)
+{
+	int error;
+	git_buf output = GIT_BUF_INIT;
+
+	error = git_diff_patch_print(patch, &output, print_to_buffer_cb);
+
+	/* GIT_EUSER means git_buf_put in print_to_buffer_cb returned -1,
+	 * meaning a memory allocation failure, so just map to -1...
+	 */
+	if (error == GIT_EUSER)
+		error = -1;
+
+	*string = git_buf_detach(&output);
+
+	return error;
+}

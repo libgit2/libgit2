@@ -603,6 +603,34 @@ GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
 	size_t hunk_idx,
 	size_t line_of_hunk);
 
+/**
+ * Serialize the patch to text via callback.
+ *
+ * Returning a non-zero value from the callback will terminate the iteration
+ * and cause this return `GIT_EUSER`.
+ *
+ * @param patch A git_diff_patch representing changes to one file
+ * @param cb_data Reference pointer that will be passed to your callbacks.
+ * @param print_cb Callback function to output lines of the patch.  Will be
+ *                 called for file headers, hunk headers, and diff lines.
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_diff_patch_print(
+	git_diff_patch *patch,
+	void *cb_data,
+	git_diff_data_fn print_cb);
+
+/**
+ * Get the content of a patch as a single diff text.
+ *
+ * @param string Allocated string; caller must free.
+ * @param patch A git_diff_patch representing changes to one file
+ * @return 0 on success, <0 on failure.
+ */
+GIT_EXTERN(int) git_diff_patch_to_str(
+	char **string,
+	git_diff_patch *patch);
+
 /**@}*/
 
 
