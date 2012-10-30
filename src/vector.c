@@ -223,6 +223,20 @@ void git_vector_uniq(git_vector *v)
 	v->length -= j - i - 1;
 }
 
+void git_vector_remove_matching(git_vector *v, int (*match)(git_vector *v, size_t idx))
+{
+	unsigned int i, j;
+
+	for (i = 0, j = 0; j < v->length; ++j) {
+		v->contents[i] = v->contents[j];
+
+		if (!match(v, i))
+			i++;
+	}
+
+	v->length = i;
+}
+
 void git_vector_clear(git_vector *v)
 {
 	assert(v);
