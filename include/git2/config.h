@@ -56,6 +56,7 @@ struct git_config_file {
 	int (*set_multivar)(git_config_file *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_file *, const char *key);
 	int (*foreach)(struct git_config_file *, const char *, int (*fn)(const git_config_entry *, void *), void *data);
+	int (*refresh)(struct git_config_file *);
 	void (*free)(struct git_config_file *);
 };
 
@@ -241,6 +242,19 @@ GIT_EXTERN(int) git_config_open_level(
     git_config **cfg_out,
     git_config *cfg_parent,
     unsigned int level);
+
+/**
+ * Reload changed config files
+ *
+ * A config file may be changed on disk out from under the in-memory
+ * config object.  This function causes us to look for files that have
+ * been modified since we last loaded them and refresh the config with
+ * the latest information.
+ *
+ * @param cfg The configuration to refresh
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_config_refresh(git_config *cfg);
 
 /**
  * Free the configuration and its associated memory and files

@@ -261,31 +261,25 @@ bool git_attr_cache__is_cached(
 
 static int load_attr_file(
 	const char **data,
-	git_attr_file_stat_sig *sig,
+	git_futils_filestamp *stamp,
 	const char *filename)
 {
 	int error;
 	git_buf content = GIT_BUF_INIT;
-	struct stat st;
 
-	if (p_stat(filename, &st) < 0)
-		return GIT_ENOTFOUND;
-
-	if (sig != NULL &&
-		(git_time_t)st.st_mtime == sig->seconds &&
-		(git_off_t)st.st_size == sig->size &&
-		(unsigned int)st.st_ino == sig->ino)
-		return GIT_ENOTFOUND;
-
-	error = git_futils_readbuffer_updated(&content, filename, NULL, NULL);
+	error = git_futils_filestamp_check(stamp, filename);
 	if (error < 0)
 		return error;
 
-	if (sig != NULL) {
-		sig->seconds = (git_time_t)st.st_mtime;
-		sig->size    = (git_off_t)st.st_size;
-		sig->ino     = (unsigned int)st.st_ino;
-	}
+	/* if error == 0, then file is up to date. By returning GIT_ENOTFOUND,
+	 * we tell the caller not to reparse this file...
+	 */
+	if (!error)
+		return GIT_ENOTFOUND;
+
+	error = git_futils_readbuffer(&content, filename);
+	if (error < 0)
+		return error;
 
 	*data = git_buf_detach(&content);
 
@@ -386,7 +380,7 @@ int git_attr_cache__push_file(
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file *file = NULL;
 	git_blob *blob = NULL;
-	git_attr_file_stat_sig st;
+	git_futils_filestamp stamp;
 
 	assert(filename && stack);
 
@@ -408,12 +402,10 @@ int git_attr_cache__push_file(
 	/* if not in cache, load data, parse, and cache */
 
 	if (source == GIT_ATTR_FILE_FROM_FILE) {
-		if (file)
-			memcpy(&st, &file->cache_data.st, sizeof(st));
-		else
-			memset(&st, 0, sizeof(st));
+		git_futils_filestamp_set(
+			&stamp, file ? &file->cache_data.stamp : NULL);
 
-		error = load_attr_file(&content, &st, filename);
+		error = load_attr_file(&content, &stamp, filename);
 	} else {
 		error = load_attr_blob_from_index(&content, &blob,
 			repo, file ? &file->cache_data.oid : NULL, relfile);
@@ -448,7 +440,7 @@ int git_attr_cache__push_file(
 	if (blob)
 		git_oid_cpy(&file->cache_data.oid, git_object_id((git_object *)blob));
 	else
-		memcpy(&file->cache_data.st, &st, sizeof(st));
+		git_futils_filestamp_set(&file->cache_data.stamp, &stamp);
 
 finish:
 	/* push file onto vector if we found one*/

@@ -18,7 +18,8 @@
  * Read whole files into an in-memory buffer for processing
  */
 extern int git_futils_readbuffer(git_buf *obj, const char *path);
-extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t *mtime, int *updated);
+extern int git_futils_readbuffer_updated(
+	git_buf *obj, const char *path, time_t *mtime, size_t *size, int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
 /**
@@ -265,5 +266,45 @@ extern int git_futils_find_system_file(git_buf *path, const char *filename);
  * @return 0 on success, -1 on error
  */
 extern int git_futils_fake_symlink(const char *new, const char *old);
+
+/**
+ * A file stamp represents a snapshot of information about a file that can
+ * be used to test if the file changes.  This portable implementation is
+ * based on stat data about that file, but it is possible that OS specific
+ * versions could be implemented in the future.
+ */
+typedef struct {
+	git_time_t mtime;
+	git_off_t  size;
+	unsigned int ino;
+} git_futils_filestamp;
+
+/**
+ * Compare stat information for file with reference info.
+ *
+ * This function updates the file stamp to current data for the given path
+ * and returns 0 if the file is up-to-date relative to the prior setting or
+ * 1 if the file has been changed.  (This also may return GIT_ENOTFOUND if
+ * the file doesn't exist.)
+ *
+ * @param stamp File stamp to be checked
+ * @param path Path to stat and check if changed
+ * @return 0 if up-to-date, 1 if out-of-date, <0 on error
+ */
+extern int git_futils_filestamp_check(
+	git_futils_filestamp *stamp, const char *path);
+
+/**
+ * Set or reset file stamp data
+ *
+ * This writes the target file stamp.  If the source is NULL, this will set
+ * the target stamp to values that will definitely be out of date.  If the
+ * source is not NULL, this copies the source values to the target.
+ *
+ * @param tgt File stamp to write to
+ * @param src File stamp to copy from or NULL to clear the target
+ */
+extern void git_futils_filestamp_set(
+	git_futils_filestamp *tgt, const git_futils_filestamp *src);
 
 #endif /* INCLUDE_fileops_h__ */
