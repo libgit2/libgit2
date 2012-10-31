@@ -295,6 +295,7 @@ int git_remote_save(const git_remote *remote)
 		int error = git_config_delete(config, git_buf_cstr(&buf));
 		if (error == GIT_ENOTFOUND) {
 			error = 0;
+			giterr_clear();
 		}
 		if (error < 0) {
 			git_buf_free(&buf);
