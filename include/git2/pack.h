@@ -88,6 +88,20 @@ GIT_EXTERN(int) git_packbuilder_write(git_packbuilder *pb, const char *file);
 GIT_EXTERN(int) git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t size, void *data), void *data);
 
 /**
+ * Get the total number of objects the packbuilder will write out
+ *
+ * @param pb the packbuilder
+ */
+GIT_EXTERN(uint32_t) git_packbuilder_object_count(git_packbuilder *pb);
+
+/**
+ * Get the number of objects the packbuilder has already written out
+ *
+ * @param pb the packbuilder
+ */
+GIT_EXTERN(uint32_t) git_packbuilder_written(git_packbuilder *pb);
+
+/**
  * Free the packbuilder and all associated data
  *
  * @param pb The packbuilder

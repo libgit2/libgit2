@@ -1292,6 +1292,16 @@ int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 	return 0;
 }
 
+uint32_t git_packbuilder_object_count(git_packbuilder *pb)
+{
+	return pb->nr_objects;
+}
+
+uint32_t git_packbuilder_written(git_packbuilder *pb)
+{
+	return pb->nr_written;
+}
+
 void git_packbuilder_free(git_packbuilder *pb)
 {
 	if (pb == NULL)
