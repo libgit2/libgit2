@@ -671,8 +671,8 @@ int git_futils_cp_r(
 	return error;
 }
 
-int git_futils_file_stamp_has_changed(
-	git_futils_file_stamp *stamp, const char *path)
+int git_futils_filestamp_check(
+	git_futils_filestamp *stamp, const char *path)
 {
 	struct stat st;
 
@@ -695,8 +695,8 @@ int git_futils_file_stamp_has_changed(
 	return 1;
 }
 
-void git_futils_file_stamp_set(
-	git_futils_file_stamp *target, const git_futils_file_stamp *source)
+void git_futils_filestamp_set(
+	git_futils_filestamp *target, const git_futils_filestamp *source)
 {
 	assert(target);
 

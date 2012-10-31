@@ -261,13 +261,13 @@ bool git_attr_cache__is_cached(
 
 static int load_attr_file(
 	const char **data,
-	git_futils_file_stamp *stamp,
+	git_futils_filestamp *stamp,
 	const char *filename)
 {
 	int error;
 	git_buf content = GIT_BUF_INIT;
 
-	error = git_futils_file_stamp_has_changed(stamp, filename);
+	error = git_futils_filestamp_check(stamp, filename);
 	if (error < 0)
 		return error;
 
@@ -380,7 +380,7 @@ int git_attr_cache__push_file(
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file *file = NULL;
 	git_blob *blob = NULL;
-	git_futils_file_stamp stamp;
+	git_futils_filestamp stamp;
 
 	assert(filename && stack);
 
@@ -402,7 +402,7 @@ int git_attr_cache__push_file(
 	/* if not in cache, load data, parse, and cache */
 
 	if (source == GIT_ATTR_FILE_FROM_FILE) {
-		git_futils_file_stamp_set(
+		git_futils_filestamp_set(
 			&stamp, file ? &file->cache_data.stamp : NULL);
 
 		error = load_attr_file(&content, &stamp, filename);
@@ -440,7 +440,7 @@ int git_attr_cache__push_file(
 	if (blob)
 		git_oid_cpy(&file->cache_data.oid, git_object_id((git_object *)blob));
 	else
-		git_futils_file_stamp_set(&file->cache_data.stamp, &stamp);
+		git_futils_filestamp_set(&file->cache_data.stamp, &stamp);
 
 finish:
 	/* push file onto vector if we found one*/

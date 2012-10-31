@@ -277,7 +277,7 @@ typedef struct {
 	git_time_t mtime;
 	git_off_t  size;
 	unsigned int ino;
-} git_futils_file_stamp;
+} git_futils_filestamp;
 
 /**
  * Compare stat information for file with reference info.
@@ -291,8 +291,8 @@ typedef struct {
  * @param path Path to stat and check if changed
  * @return 0 if up-to-date, 1 if out-of-date, <0 on error
  */
-extern int git_futils_file_stamp_has_changed(
-	git_futils_file_stamp *stamp, const char *path);
+extern int git_futils_filestamp_check(
+	git_futils_filestamp *stamp, const char *path);
 
 /**
  * Set or reset file stamp data
@@ -304,7 +304,7 @@ extern int git_futils_file_stamp_has_changed(
  * @param tgt File stamp to write to
  * @param src File stamp to copy from or NULL to clear the target
  */
-extern void git_futils_file_stamp_set(
-	git_futils_file_stamp *tgt, const git_futils_file_stamp *src);
+extern void git_futils_filestamp_set(
+	git_futils_filestamp *tgt, const git_futils_filestamp *src);
 
 #endif /* INCLUDE_fileops_h__ */
