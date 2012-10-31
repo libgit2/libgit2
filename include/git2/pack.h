@@ -78,6 +78,16 @@ GIT_EXTERN(int) git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *
 GIT_EXTERN(int) git_packbuilder_write(git_packbuilder *pb, const char *file);
 
 /**
+ * Create the new pack and pass each object to the callback
+ *
+ * @param pb the packbuilder
+ * @param cb the callback to call with each packed object's buffer
+ * @param data the callback's data
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t size, void *data), void *data);
+
+/**
  * Free the packbuilder and all associated data
  *
  * @param pb The packbuilder
