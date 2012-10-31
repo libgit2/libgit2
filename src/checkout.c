@@ -393,8 +393,6 @@ int git_checkout_index(
 			diff, &data, checkout_create_the_new, NULL, NULL);
 	}
 
-	report_progress(&data, NULL);
-
 cleanup:
 	if (error == GIT_EUSER)
 		error = (data.error != 0) ? data.error : -1;
