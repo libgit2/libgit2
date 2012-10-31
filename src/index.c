@@ -334,7 +334,7 @@ void git_index_clear(git_index *index)
 
 	git_vector_clear(&index->entries);
 	git_vector_clear(&index->reuc);
-	index->last_modified = 0;
+	git_futils_filestamp_set(&index->stamp, NULL);
 
 	git_tree_cache_free(index->tree);
 	index->tree = NULL;
@@ -390,9 +390,9 @@ unsigned int git_index_caps(const git_index *index)
 
 int git_index_read(git_index *index)
 {
-	int error, updated;
+	int error = 0, updated;
 	git_buf buffer = GIT_BUF_INIT;
-	time_t mtime;
+	git_futils_filestamp stamp;
 
 	assert(index->index_file_path);
 
@@ -402,23 +402,21 @@ int git_index_read(git_index *index)
 		return 0;
 	}
 
-	/* We don't want to update the mtime if we fail to parse the index */
-	mtime = index->last_modified;
-	error = git_futils_readbuffer_updated(
-		&buffer, index->index_file_path, &mtime, NULL, &updated);
+	updated = git_futils_filestamp_check(&stamp, index->index_file_path);
+	if (updated <= 0)
+		return updated;
+
+	error = git_futils_readbuffer(&buffer, index->index_file_path);
 	if (error < 0)
 		return error;
 
-	if (updated) {
-		git_index_clear(index);
-		error = parse_index(index, buffer.ptr, buffer.size);
+	git_index_clear(index);
+	error = parse_index(index, buffer.ptr, buffer.size);
 
-		if (!error)
-			index->last_modified = mtime;
+	if (!error)
+		git_futils_filestamp_set(&index->stamp, &stamp);
 
-		git_buf_free(&buffer);
-	}
-
+	git_buf_free(&buffer);
 	return error;
 }
 
@@ -443,11 +441,11 @@ int git_index_write(git_index *index)
 	if ((error = git_filebuf_commit(&file, GIT_INDEX_FILE_MODE)) < 0)
 		return error;
 
-	if (p_stat(index->index_file_path, &indexst) == 0) {
-		index->last_modified = indexst.st_mtime;
-		index->on_disk = 1;
-	}
+	error = git_futils_filestamp_check(&index->stamp, index->index_file_path);
+	if (error < 0)
+		return error;
 
+	index->on_disk = 1;
 	return 0;
 }
 
