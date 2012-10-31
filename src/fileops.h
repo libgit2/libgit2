@@ -267,26 +267,44 @@ extern int git_futils_find_system_file(git_buf *path, const char *filename);
  */
 extern int git_futils_fake_symlink(const char *new, const char *old);
 
-
+/**
+ * A file stamp represents a snapshot of information about a file that can
+ * be used to test if the file changes.  This portable implementation is
+ * based on stat data about that file, but it is possible that OS specific
+ * versions could be implemented in the future.
+ */
 typedef struct {
-	git_time_t seconds;
+	git_time_t mtime;
 	git_off_t  size;
 	unsigned int ino;
-} git_futils_stat_sig;
+} git_futils_file_stamp;
 
 /**
  * Compare stat information for file with reference info.
  *
- * Use this as a way to track if a file has changed on disk.  This will
- * return GIT_ENOTFOUND if the file doesn't exist, 0 if the file is up-to-date
- * with regards to the signature, and 1 if the file needs to reloaded.  When
- * a 1 is returned, the signature will also be updated with the latest data.
+ * This function updates the file stamp to current data for the given path
+ * and returns 0 if the file is up-to-date relative to the prior setting or
+ * 1 if the file has been changed.  (This also may return GIT_ENOTFOUND if
+ * the file doesn't exist.)
  *
- * @param sig stat signature structure
- * @param path path to be statted
+ * @param stamp File stamp to be checked
+ * @param path Path to stat and check if changed
  * @return 0 if up-to-date, 1 if out-of-date, <0 on error
  */
-extern int git_futils_stat_sig_needs_reload(
-	git_futils_stat_sig *sig, const char *path);
+extern int git_futils_file_stamp_has_changed(
+	git_futils_file_stamp *stamp, const char *path);
+
+/**
+ * Set or reset file stamp data
+ *
+ * This writes the target file stamp.  If the source is NULL, this will set
+ * the target stamp to values that will definitely be out of date.  If the
+ * source is not NULL, this copies the source values to the target.
+ *
+ * @param tgt File stamp to write to
+ * @param src File stamp to copy from or NULL to clear the target
+ */
+extern void git_futils_file_stamp_set(
+	git_futils_file_stamp *tgt, const git_futils_file_stamp *src);
 
 #endif /* INCLUDE_fileops_h__ */

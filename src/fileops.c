@@ -671,27 +671,37 @@ int git_futils_cp_r(
 	return error;
 }
 
-int git_futils_stat_sig_needs_reload(
-	git_futils_stat_sig *sig, const char *path)
+int git_futils_file_stamp_has_changed(
+	git_futils_file_stamp *stamp, const char *path)
 {
 	struct stat st;
 
-	/* if the sig is NULL, then alway reload */
-	if (sig == NULL)
+	/* if the stamp is NULL, then always reload */
+	if (stamp == NULL)
 		return 1;
 
 	if (p_stat(path, &st) < 0)
 		return GIT_ENOTFOUND;
 
-	if ((git_time_t)st.st_mtime == sig->seconds &&
-		(git_off_t)st.st_size == sig->size &&
-		(unsigned int)st.st_ino == sig->ino)
+	if (stamp->mtime == (git_time_t)st.st_mtime &&
+		stamp->size  == (git_off_t)st.st_size   &&
+		stamp->ino   == (unsigned int)st.st_ino)
 		return 0;
 
-	sig->seconds = (git_time_t)st.st_mtime;
-	sig->size    = (git_off_t)st.st_size;
-	sig->ino     = (unsigned int)st.st_ino;
+	stamp->mtime = (git_time_t)st.st_mtime;
+	stamp->size  = (git_off_t)st.st_size;
+	stamp->ino   = (unsigned int)st.st_ino;
 
 	return 1;
 }
 
+void git_futils_file_stamp_set(
+	git_futils_file_stamp *target, const git_futils_file_stamp *source)
+{
+	assert(target);
+
+	if (source)
+		memcpy(target, source, sizeof(*target));
+	else
+		memset(target, 0, sizeof(*target));
+}

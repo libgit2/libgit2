@@ -61,7 +61,7 @@ typedef struct {
 	bool pool_is_allocated;
 	union {
 		git_oid oid;
-		git_futils_stat_sig sig;
+		git_futils_file_stamp stamp;
 	} cache_data;
 } git_attr_file;
 
