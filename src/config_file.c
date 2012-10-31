@@ -75,7 +75,11 @@ typedef struct {
 		int eof;
 	} reader;
 
-	char *file_path;
+	char  *file_path;
+	time_t file_mtime;
+	size_t file_size;
+
+	unsigned int level;
 } diskfile_backend;
 
 static int config_parse(diskfile_backend *cfg_file, unsigned int level);
@@ -150,25 +154,53 @@ static int config_open(git_config_file *cfg, unsigned int level)
 	int res;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
+	b->level = level;
+
 	b->values = git_strmap_alloc();
 	GITERR_CHECK_ALLOC(b->values);
 
 	git_buf_init(&b->reader.buffer, 0);
-	res = git_futils_readbuffer(&b->reader.buffer, b->file_path);
+	res = git_futils_readbuffer_updated(
+		&b->reader.buffer, b->file_path, &b->file_mtime, &b->file_size, NULL);
 
 	/* It's fine if the file doesn't exist */
 	if (res == GIT_ENOTFOUND)
 		return 0;
 
-	if (res < 0 || config_parse(b, level) <  0) {
+	if (res < 0 || (res = config_parse(b, level)) < 0) {
 		free_vars(b->values);
 		b->values = NULL;
-		git_buf_free(&b->reader.buffer);
-		return -1;
 	}
 
 	git_buf_free(&b->reader.buffer);
-	return 0;
+	return res;
+}
+
+static int config_refresh(git_config_file *cfg)
+{
+	int res, updated = 0;
+	diskfile_backend *b = (diskfile_backend *)cfg;
+	git_strmap *old_values;
+
+	res = git_futils_readbuffer_updated(
+		&b->reader.buffer, b->file_path, &b->file_mtime, &b->file_size, &updated);
+	if (res < 0 || !updated)
+		return (res == GIT_ENOTFOUND) ? 0 : res;
+
+	/* need to reload - store old values and prep for reload */
+	old_values = b->values;
+	b->values = git_strmap_alloc();
+	GITERR_CHECK_ALLOC(b->values);
+
+	if ((res = config_parse(b, b->level)) < 0) {
+		free_vars(b->values);
+		b->values = old_values;
+	} else {
+		free_vars(old_values);
+	}
+
+	git_buf_free(&b->reader.buffer);
+	return res;
 }
 
 static void backend_free(git_config_file *_backend)
@@ -527,6 +559,7 @@ int git_config_file__ondisk(git_config_file **out, const char *path)
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;
 	backend->parent.foreach = file_foreach;
+	backend->parent.refresh = config_refresh;
 	backend->parent.free = backend_free;
 
 	*out = (git_config_file *)backend;
@@ -1197,8 +1230,12 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	git__free(section);
 	git__free(current_section);
 
+	/* refresh stats - if this errors, then commit will error too */
+	(void)git_filebuf_stats(&cfg->file_mtime, &cfg->file_size, &file);
+
 	result = git_filebuf_commit(&file, GIT_CONFIG_FILE_MODE);
 	git_buf_free(&cfg->reader.buffer);
+
 	return result;
 
 rewrite_fail:

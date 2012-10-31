@@ -267,6 +267,20 @@ int git_config_add_file(
 	return 0;
 }
 
+int git_config_refresh(git_config *cfg)
+{
+	int error = 0;
+	unsigned int i;
+
+	for (i = 0; i < cfg->files.length && !error; ++i) {
+		file_internal *internal = git_vector_get(&cfg->files, i);
+		git_config_file *file = internal->file;
+		error = file->refresh(file);
+	}
+
+	return error;
+}
+
 /*
  * Loop over all the variables
  */
