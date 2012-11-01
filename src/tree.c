@@ -491,16 +491,11 @@ on_error:
 	return -1;
 }
 
-int git_tree_create_fromindex(git_oid *oid, git_index *index)
+int git_tree__write_index(git_oid *oid, git_index *index, git_repository *repo)
 {
 	int ret;
-	git_repository *repo;
 
-	repo = (git_repository *)GIT_REFCOUNT_OWNER(index);
-
-	if (repo == NULL)
-		return tree_error("Failed to create tree. "
-		  "The index file is not backed up by an existing repository");
+	assert(oid && index && repo);
 
 	if (index->tree != NULL && index->tree->entries >= 0) {
 		git_oid_cpy(oid, &index->tree->oid);

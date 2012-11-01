@@ -99,7 +99,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	/*
 	 * Build the tree from the index
 	 */
-	cl_git_pass(git_tree_create_fromindex(&tree_oid, index));
+	cl_git_pass(git_index_write_tree(&tree_oid, index));
 
 	cl_assert(git_oid_cmp(&expected_tree_oid, &tree_oid) == 0);
 

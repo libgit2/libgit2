@@ -22,7 +22,7 @@ struct git_index {
 
 	char *index_file_path;
 
-	time_t last_modified;
+	git_futils_filestamp stamp;
 	git_vector entries;
 
 	unsigned int on_disk:1;
