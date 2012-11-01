@@ -271,6 +271,12 @@ static int setup_remotes_and_fetch(
 
 	/* Create the "origin" remote */
 	if (!git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, origin_url)) {
+		/*
+		 * Don't write FETCH_HEAD, we'll check out the remote tracking
+		 * branch ourselves based on the server's default.
+		 */
+		git_remote_set_update_fetchhead(origin, 0);
+
 		/* Connect and download everything */
 		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
 			if (!git_remote_download(origin, progress_cb, progress_payload)) {

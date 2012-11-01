@@ -14,6 +14,8 @@
 #include "remote.h"
 #include "fetch.h"
 #include "refs.h"
+#include "refspec.h"
+#include "fetchhead.h"
 
 #include <regex.h>
 
@@ -68,6 +70,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->repo = repo;
 	remote->check_cert = 1;
+	remote->update_fetchhead = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
 		return -1;
@@ -116,6 +119,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 	memset(remote, 0x0, sizeof(git_remote));
 	remote->check_cert = 1;
+	remote->update_fetchhead = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
 
@@ -539,6 +543,120 @@ static int update_tips_callback(git_remote_head *head, void *payload)
         return 0;
 }
 
+static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)
+{
+	unsigned int i;
+	git_remote_head *remote_ref;
+
+	assert(update_heads && fetchspec_src);
+
+	*out = NULL;
+    
+    git_vector_foreach(update_heads, i, remote_ref) {
+        if (strcmp(remote_ref->name, fetchspec_src) == 0) {
+            *out = remote_ref;
+            break;
+		}
+	}
+
+	return 0;
+}
+
+static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_vector *update_heads, git_reference *ref)
+{
+	git_reference *resolved_ref = NULL;
+	git_reference *tracking_ref = NULL;
+	git_buf remote_name = GIT_BUF_INIT;
+	int error = 0;
+
+	assert(out && remote && ref);
+
+	*out = NULL;
+
+	if ((error = git_reference_resolve(&resolved_ref, ref)) < 0 ||
+		(!git_reference_is_branch(resolved_ref)) ||
+		(error = git_branch_tracking(&tracking_ref, resolved_ref)) < 0 ||
+		(error = git_refspec_transform_l(&remote_name, &remote->fetch, git_reference_name(tracking_ref))) < 0) {
+		/* Not an error if HEAD is orphaned or no tracking branch */
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+
+		goto cleanup;
+	}
+
+	error = remote_head_for_fetchspec_src(out, update_heads, git_buf_cstr(&remote_name));
+
+cleanup:
+	git_reference_free(tracking_ref);
+	git_reference_free(resolved_ref);
+	git_buf_free(&remote_name);
+	return error;
+}
+
+static int git_remote_write_fetchhead(git_remote *remote, git_vector *update_heads)
+{
+	struct git_refspec *spec;
+	git_reference *head_ref = NULL;
+	git_fetchhead_ref *fetchhead_ref;
+	git_remote_head *remote_ref, *merge_remote_ref;
+	git_vector fetchhead_refs;
+	bool include_all_fetchheads;
+	unsigned int i = 0;
+	int error = 0;
+
+	assert(remote);
+
+	spec = &remote->fetch;
+
+	if (git_vector_init(&fetchhead_refs, update_heads->length, git_fetchhead_ref_cmp) < 0)
+		return -1;
+
+	/* Iff refspec is * (but not subdir slash star), include tags */
+	include_all_fetchheads = (strcmp(GIT_REFS_HEADS_DIR "*", git_refspec_src(spec)) == 0);
+
+	/* Determine what to merge: if refspec was a wildcard, just use HEAD */
+	if (git_refspec_is_wildcard(spec)) {
+		if ((error = git_reference_lookup(&head_ref, remote->repo, GIT_HEAD_FILE)) < 0 ||
+			(error = remote_head_for_ref(&merge_remote_ref, remote, update_heads, head_ref)) < 0)
+				goto cleanup;
+	} else {
+		/* If we're fetching a single refspec, that's the only thing that should be in FETCH_HEAD. */
+		if ((error = remote_head_for_fetchspec_src(&merge_remote_ref, update_heads, git_refspec_src(spec))) < 0)
+			goto cleanup;
+	}
+
+	/* Create the FETCH_HEAD file */
+    git_vector_foreach(update_heads, i, remote_ref) {
+		int merge_this_fetchhead = (merge_remote_ref == remote_ref);
+
+		if (!include_all_fetchheads &&
+			!git_refspec_src_matches(spec, remote_ref->name) &&
+			!merge_this_fetchhead)
+			continue;
+
+		if (git_fetchhead_ref_create(&fetchhead_ref,
+			&remote_ref->oid,
+			merge_this_fetchhead,
+			remote_ref->name,
+			git_remote_url(remote)) < 0)
+			goto cleanup;
+
+		if (git_vector_insert(&fetchhead_refs, fetchhead_ref) < 0)
+			goto cleanup;
+	}
+
+	git_fetchhead_write(remote->repo, &fetchhead_refs);
+
+cleanup:
+	for (i = 0; i < fetchhead_refs.length; ++i)
+		git_fetchhead_ref_free(fetchhead_refs.contents[i]);
+
+	git_vector_free(&fetchhead_refs);
+	git_reference_free(head_ref);
+
+	return error;
+}
+
 int git_remote_update_tips(git_remote *remote)
 {
 	int error = 0, autotag;
@@ -550,7 +668,7 @@ int git_remote_update_tips(git_remote *remote)
 	git_reference *ref;
 	struct git_refspec *spec;
 	git_refspec tagspec;
-	git_vector refs;
+	git_vector refs, update_heads;
 
 	assert(remote);
 
@@ -563,7 +681,8 @@ int git_remote_update_tips(git_remote *remote)
 		return -1;
 
 	/* Make a copy of the transport's refs */
-	if (git_vector_init(&refs, 16, NULL) < 0)
+	if (git_vector_init(&refs, 16, NULL) < 0 ||
+        git_vector_init(&update_heads, 16, NULL) < 0)
 		return -1;
 
 	if (remote->transport->ls(remote->transport, update_tips_callback, &refs) < 0)
@@ -611,6 +730,9 @@ int git_remote_update_tips(git_remote *remote)
 		if (autotag && !git_odb_exists(odb, &head->oid))
 			continue;
 
+		if (git_vector_insert(&update_heads, head) < 0)
+			goto on_error;
+
 		error = git_reference_name_to_oid(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto on_error;
@@ -634,13 +756,19 @@ int git_remote_update_tips(git_remote *remote)
 		}
 	}
 
+	if (git_remote_update_fetchhead(remote) &&
+		(error = git_remote_write_fetchhead(remote, &update_heads)) < 0)
+		goto on_error;
+
 	git_vector_free(&refs);
+	git_vector_free(&update_heads);
 	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return 0;
 
 on_error:
 	git_vector_free(&refs);
+	git_vector_free(&update_heads);
 	git_refspec__free(&tagspec);
 	git_buf_free(&refname);
 	return -1;
@@ -1130,4 +1258,14 @@ int git_remote_rename(
 	remote->name = git__strdup(new_name);
 
 	return 0;
+}
+
+int git_remote_update_fetchhead(git_remote *remote)
+{
+	return remote->update_fetchhead;
+}
+
+void git_remote_set_update_fetchhead(git_remote *remote, int value)
+{
+	remote->update_fetchhead = value;
 }

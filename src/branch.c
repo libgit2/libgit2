@@ -268,6 +268,11 @@ int git_branch_tracking(
 
 	if ((error = retrieve_tracking_configuration(&merge_name, branch, "branch.%s.merge")) < 0)
 		goto cleanup;
+    
+    if (remote_name == NULL || merge_name == NULL) {
+        error = GIT_ENOTFOUND;
+        goto cleanup;
+    }
 
 	if (strcmp(".", remote_name) != 0) {
 		if ((error = git_remote_load(&remote, git_reference_owner(branch), remote_name)) < 0)

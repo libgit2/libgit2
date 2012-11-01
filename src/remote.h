@@ -29,7 +29,8 @@ struct git_remote {
 	git_transfer_progress stats;
 	unsigned int need_pack:1,
 		download_tags:2, /* There are four possible values */
-		check_cert:1;
+		check_cert:1,
+		update_fetchhead:1;
 };
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
