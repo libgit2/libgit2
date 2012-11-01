@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "refspec.h"
-#include "transport.h"
 #include "remote.h"
 
 static git_remote *_remote;

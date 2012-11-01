@@ -89,7 +89,11 @@ int cl_setenv(const char *name, const char *value)
 	if (value != NULL)
 		git__utf8_to_16(value_utf16, GIT_WIN_PATH, value);
 
-	cl_assert(SetEnvironmentVariableW(name_utf16, value ? value_utf16 : NULL));
+	/* Windows XP returns 0 (failed) when passing NULL for lpValue when lpName
+	 * does not exist in the environment block. This behavior seems to have changed
+	 * in later versions. Don't fail when SetEnvironmentVariable fails, if we passed
+	 * NULL for lpValue. */
+	cl_assert(SetEnvironmentVariableW(name_utf16, value ? value_utf16 : NULL) || !value);
 	return 0;
 }
 
