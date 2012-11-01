@@ -126,6 +126,19 @@ enum {
 GIT_EXTERN(int) git_index_open(git_index **index, const char *index_path);
 
 /**
+ * Create an in-memory index object.
+ *
+ * This index object cannot be read/written to the filesystem,
+ * but may be used to perform in-memory index operations.
+ *
+ * The index must be freed once it's no longer in use.
+ *
+ * @param index the pointer for the new index
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_new(git_index **index);
+
+/**
  * Free an existing index object.
  *
  * @param index an existing index object

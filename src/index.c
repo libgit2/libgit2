@@ -287,6 +287,11 @@ int git_index_open(git_index **index_out, const char *index_path)
 	return (index_path != NULL) ? git_index_read(index) : 0;
 }
 
+int git_index_new(git_index **out)
+{
+	return git_index_open(out, NULL);
+}
+
 static void index_free(git_index *index)
 {
 	git_index_entry *e;
