@@ -21,6 +21,7 @@
 #define WIDEN(s) WIDEN2(s)
 
 #define MAX_CONTENT_TYPE_LEN	100
+#define WINHTTP_OPTION_PEERDIST_EXTENSION_STATE	109
 
 static const char *prefix_http = "http://";
 static const char *prefix_https = "https://";
@@ -29,6 +30,7 @@ static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-p
 static const char *upload_pack_service_url = "/git-upload-pack";
 static const wchar_t *get_verb = L"GET";
 static const wchar_t *post_verb = L"POST";
+static const wchar_t *pragma_nocache = L"Pragma: no-cache";
 static const int no_check_cert_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
 	SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
 	SECURITY_FLAG_IGNORE_UNKNOWN_CA;
@@ -63,6 +65,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	git_buf buf = GIT_BUF_INIT;
 	wchar_t url[GIT_WIN_PATH], ct[MAX_CONTENT_TYPE_LEN];
 	wchar_t *types[] = { L"*/*", NULL };
+	BOOL peerdist = FALSE;
 
 	/* Prepare URL */
 	git_buf_printf(&buf, "%s%s", t->path, s->service_url);
@@ -87,6 +90,20 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		goto on_error;
 	}
 
+	/* Strip unwanted headers (X-P2P-PeerDist, X-P2P-PeerDistEx) that WinHTTP
+	 * adds itself. This option may not be supported by the underlying
+	 * platform, so we do not error-check it */
+	WinHttpSetOption(s->request,
+		WINHTTP_OPTION_PEERDIST_EXTENSION_STATE,
+		&peerdist,
+		sizeof(peerdist));
+
+	/* Send Pragma: no-cache header */
+	if (!WinHttpAddRequestHeaders(s->request, pragma_nocache, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
+		giterr_set(GITERR_OS, "Failed to add a header to the request");
+		goto on_error;
+	}
+
 	/* Send Content-Type header -- only necessary on a POST */
 	if (post_verb == s->verb) {
 		git_buf_clear(&buf);
@@ -95,7 +112,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf));
 
-		if (WinHttpAddRequestHeaders(s->request, ct, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD) == FALSE) {
+		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
 			giterr_set(GITERR_OS, "Failed to add a header to the request");
 			goto on_error;
 		}
