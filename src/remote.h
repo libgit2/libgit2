@@ -8,9 +8,9 @@
 #define INCLUDE_remote_h__
 
 #include "git2/remote.h"
+#include "git2/transport.h"
 
 #include "refspec.h"
-#include "transport.h"
 #include "repository.h"
 
 #define GIT_REMOTE_ORIGIN "origin"

@@ -1,5 +1,4 @@
 #include "clar_libgit2.h"
-#include "transport.h"
 #include "buffer.h"
 #include "path.h"
 #include "posix.h"

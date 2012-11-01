@@ -18,7 +18,6 @@
 
 #include "common.h"
 #include "remote.h"
-#include "pkt.h"
 #include "fileops.h"
 #include "refs.h"
 #include "path.h"
@@ -171,11 +170,19 @@ static int update_head_to_new_branch(
 	return error;
 }
 
+static int get_head_callback(git_remote_head *head, void *payload)
+{
+	git_remote_head **destination = (git_remote_head **)payload;
+
+	/* Save the first entry, and terminate the enumeration */
+	*destination = head;
+	return 1;
+}
+
 static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
 	int retcode = -1;
 	git_remote_head *remote_head;
-	git_pkt_ref *pkt;
 	struct head_info head_info;
 	git_buf remote_master_name = GIT_BUF_INIT;
 
@@ -189,8 +196,13 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	}
 
 	/* Get the remote's HEAD. This is always the first ref in remote->refs. */
-	pkt = remote->transport->refs.contents[0];
-	remote_head = &pkt->head;
+	remote_head = NULL;
+	
+	if (!remote->transport->ls(remote->transport, get_head_callback, &remote_head))
+		return -1;
+
+	assert(remote_head);
+
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
 	git_buf_init(&head_info.branchname, 16);
 	head_info.repo = repo;
