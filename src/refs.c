@@ -1949,10 +1949,10 @@ int git_reference_peel(
 		peel_error(error, ref, "Cannot retrieve reference target");
 		goto cleanup;
 	}
-	
+
 	if (target_type == GIT_OBJ_ANY && git_object_type(target) != GIT_OBJ_TAG)
 		error = git_object__dup(peeled, target);
-	else 
+	else
 		error = git_object_peel(peeled, target, target_type);
 
 cleanup:

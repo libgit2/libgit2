@@ -1,7 +1,7 @@
 .PHONY: all
 
 CC = gcc
-CFLAGS = -g -I../include -I../src
+CFLAGS = -g -I../include -I../src -Wall -Wextra -Wmissing-prototypes
 LFLAGS = -L../build -lgit2 -lz
 APPS = general showindex diff
 

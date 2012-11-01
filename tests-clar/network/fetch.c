@@ -18,10 +18,7 @@ void test_network_fetch__cleanup(void)
 
 static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
-	refname = refname;
-	a = a;
-	b = b;
-	data = data;
+	GIT_UNUSED(refname); GIT_UNUSED(a); GIT_UNUSED(b); GIT_UNUSED(data);
 
 	++counter;
 

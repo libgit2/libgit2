@@ -217,7 +217,7 @@ static int get_one_status(const char *path, unsigned int status, void *data)
 	sfi->count++;
 	sfi->status = status;
 
-	if (sfi->count > 1 || 
+	if (sfi->count > 1 ||
 		(strcmp(sfi->expected, path) != 0 &&
 		p_fnmatch(sfi->expected, path, 0) != 0)) {
 		giterr_set(GITERR_INVALID,
