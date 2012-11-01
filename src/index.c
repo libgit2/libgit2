@@ -264,8 +264,14 @@ int git_index_open(git_index **index_out, const char *index_path)
 	index = git__calloc(1, sizeof(git_index));
 	GITERR_CHECK_ALLOC(index);
 
-	index->index_file_path = git__strdup(index_path);
-	GITERR_CHECK_ALLOC(index->index_file_path);
+	if (index_path != NULL) {
+		index->index_file_path = git__strdup(index_path);
+		GITERR_CHECK_ALLOC(index->index_file_path);
+
+		/* Check if index file is stored on disk already */
+		if (git_path_exists(index->index_file_path) == true)
+			index->on_disk = 1;
+	}
 
 	if (git_vector_init(&index->entries, 32, index_cmp) < 0)
 		return -1;
@@ -275,13 +281,10 @@ int git_index_open(git_index **index_out, const char *index_path)
 	index->entries_search_path = index_srch_path;
 	index->reuc_search = reuc_srch;
 
-	/* Check if index file is stored on disk already */
-	if (git_path_exists(index->index_file_path) == true)
-		index->on_disk = 1;
-
 	*index_out = index;
 	GIT_REFCOUNT_INC(index);
-	return git_index_read(index);
+
+	return (index_path != NULL) ? git_index_read(index) : 0;
 }
 
 static void index_free(git_index *index)
@@ -394,7 +397,11 @@ int git_index_read(git_index *index)
 	git_buf buffer = GIT_BUF_INIT;
 	git_futils_filestamp stamp;
 
-	assert(index->index_file_path);
+	if (!index->index_file_path) {
+		giterr_set(GITERR_INDEX,
+			"Failed to read index: The index is in-memory only");
+		return -1;
+	}
 
 	if (!index->on_disk || git_path_exists(index->index_file_path) == false) {
 		git_index_clear(index);
@@ -426,6 +433,12 @@ int git_index_write(git_index *index)
 	struct stat indexst;
 	int error;
 
+	if (!index->index_file_path) {
+		giterr_set(GITERR_INDEX,
+			"Failed to write index: The index is in-memory only");
+		return -1;
+	}
+
 	git_vector_sort(&index->entries);
 	git_vector_sort(&index->reuc);
 
@@ -447,6 +460,29 @@ int git_index_write(git_index *index)
 
 	index->on_disk = 1;
 	return 0;
+}
+
+int git_index_write_tree(git_oid *oid, git_index *index)
+{
+	git_repository *repo;
+
+	assert(oid && index);
+
+	repo = (git_repository *)GIT_REFCOUNT_OWNER(index);
+
+	if (repo == NULL) {
+		giterr_set(GITERR_INDEX, "Failed to write tree. "
+		  "The index file is not backed up by an existing repository");
+		return -1
+	}
+
+	return git_tree__write_index(oid, index, repo);
+}
+
+int git_index_write_tree_to(git_oid *oid, git_index *index, git_repository *repo)
+{
+	assert(oid && index && repo);
+	return git_tree__write_index(oid, index, repo);
 }
 
 unsigned int git_index_entrycount(git_index *index)

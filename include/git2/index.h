@@ -190,6 +190,38 @@ GIT_EXTERN(int) git_index_write(git_index *index);
  */
 GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
 
+/**
+ * Write the index as a tree
+ *
+ * This method will scan the index and write a representation
+ * of its current state back to disk; it recursively creates
+ * tree objects for each of the subtrees stored in the index,
+ * but only returns the OID of the root tree. This is the OID
+ * that can be used e.g. to create a commit.
+ *
+ * The index instance cannot be bare, and needs to be associated
+ * to an existing repository.
+ *
+ * @param oid Pointer where to store the OID of the written tree
+ * @param index Index to write
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_write_tree(git_oid *oid, git_index *index);
+
+/**
+ * Write the index as a tree to the given repository
+ *
+ * This method will do the same as `git_index_write_tree`, but
+ * letting the user choose the repository where the tree will
+ * be written.
+ *
+ * @param oid Pointer where to store OID of the the written tree
+ * @param index Index to write
+ * @param repo Repository where to write the tree
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_write_tree_to(git_oid *oid, git_index *index, git_repository *repo);
+
 /**@}*/
 
 /** @name Raw Index Entry Functions
