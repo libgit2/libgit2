@@ -494,7 +494,6 @@ on_error:
 int git_tree__write_index(git_oid *oid, git_index *index, git_repository *repo)
 {
 	int ret;
-	git_repository *repo;
 
 	assert(oid && index && repo);
 

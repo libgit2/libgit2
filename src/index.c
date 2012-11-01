@@ -430,7 +430,6 @@ int git_index_read(git_index *index)
 int git_index_write(git_index *index)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
-	struct stat indexst;
 	int error;
 
 	if (!index->index_file_path) {
@@ -473,7 +472,7 @@ int git_index_write_tree(git_oid *oid, git_index *index)
 	if (repo == NULL) {
 		giterr_set(GITERR_INDEX, "Failed to write tree. "
 		  "The index file is not backed up by an existing repository");
-		return -1
+		return -1;
 	}
 
 	return git_tree__write_index(oid, index, repo);
