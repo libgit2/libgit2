@@ -29,7 +29,7 @@ GIT_BEGIN_DECL
  * @param reference_out pointer to the looked-up reference
  * @param repo the repository to look up the reference
  * @param name the long name for the reference (e.g. HEAD, ref/heads/master, refs/tags/v0.1.0, ...)
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_repository *repo, const char *name);
 
@@ -39,7 +39,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **reference_out, git_reposito
  * @param oid Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference
  * @param name The long name for the reference
- * @return 0 on success, -1 if name could not be resolved
+ * @return GIT_OK on success or GIT_ENOTFOUND if name could not be resolved
  */
 GIT_EXTERN(int) git_reference_name_to_oid(
 	git_oid *out, git_repository *repo, const char *name);
@@ -57,10 +57,13 @@ GIT_EXTERN(int) git_reference_name_to_oid(
  *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
- * @param name The name of the reference
+ * @param name The name of the reference.  Reference names must be
+ *      ALL_CAPS_WITH_UNDERSCORES at the toplevel, but may be lowercase inside
+ *      refs/.  https://github.com/libgit2/libgit2/pull/938 has more complete
+ *      documentation.
  * @param target The target of the reference
  * @param force Overwrite existing references
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repository *repo, const char *name, const char *target, int force);
 
@@ -77,10 +80,13 @@ GIT_EXTERN(int) git_reference_create_symbolic(git_reference **ref_out, git_repos
  *
  * @param ref_out Pointer to the newly created reference
  * @param repo Repository where that reference will live
- * @param name The name of the reference
+ * @param name The name of the reference.  Reference names must be
+ *      ALL_CAPS_WITH_UNDERSCORES at the toplevel, but may be lowercase inside
+ *      refs/.  https://github.com/libgit2/libgit2/pull/938 has more complete
+ *      documentation.
  * @param id The object id pointed to by the reference.
  * @param force Overwrite existing references
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_create_oid(git_reference **ref_out, git_repository *repo, const char *name, const git_oid *id, int force);
 
@@ -138,7 +144,7 @@ GIT_EXTERN(const char *) git_reference_name(git_reference *ref);
  *
  * @param resolved_ref Pointer to the peeled reference
  * @param ref The reference
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_resolve(git_reference **resolved_ref, git_reference *ref);
 
@@ -161,7 +167,7 @@ GIT_EXTERN(git_repository *) git_reference_owner(git_reference *ref);
  *
  * @param ref The reference
  * @param target The new target for the reference
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const char *target);
 
@@ -176,7 +182,7 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const char *target)
  *
  * @param ref The reference
  * @param id The new target OID for the reference
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
 
@@ -203,7 +209,7 @@ GIT_EXTERN(int) git_reference_set_oid(git_reference *ref, const git_oid *id);
  * @param ref The reference to rename
  * @param new_name The new name for the reference
  * @param force Overwrite an existing reference
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  *
  */
 GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name, int force);
@@ -217,7 +223,7 @@ GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *new_name, i
  * memory. The given reference pointer will no longer be valid.
  *
  * @param ref The reference to remove
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 
@@ -232,7 +238,7 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * the loose references will be removed from disk.
  *
  * @param repo Repository where the loose refs will be packed
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_packall(git_repository *repo);
 
@@ -255,7 +261,7 @@ GIT_EXTERN(int) git_reference_packall(git_repository *repo);
  * @param repo Repository where to find the refs
  * @param list_flags Filtering flags for the reference
  *		listing.
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, unsigned int list_flags);
 
@@ -277,7 +283,7 @@ GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, un
  *		listing.
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return GIT_OK on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_reference_foreach(git_repository *repo, unsigned int list_flags, int (*callback)(const char *, void *), void *payload);
 
@@ -305,7 +311,7 @@ GIT_EXTERN(int) git_reference_is_packed(git_reference *ref);
  * returned and the reference pointer will be invalidated.
  *
  * @param ref The reference to reload
- * @return 0 on success, or an error code
+ * @return GIT_OK on success, or an error code
  */
 GIT_EXTERN(int) git_reference_reload(git_reference *ref);
 
@@ -345,7 +351,7 @@ GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
  *
  * @param payload Extra parameter to callback function.
  *
- * @return 0 or an error code.
+ * @return GIT_OK or an error code.
  */
 GIT_EXTERN(int) git_reference_foreach_glob(
 		git_repository *repo,
@@ -426,7 +432,7 @@ enum {
  * @param flags Flags to determine the options to be applied while
  * checking the validatity of the name.
  *
- * @return 0 or an error code.
+ * @return GIT_OK or an error code.
  */
 GIT_EXTERN(int) git_reference_normalize_name(
 	char *buffer_out,
@@ -447,7 +453,7 @@ GIT_EXTERN(int) git_reference_normalize_name(
  * @param peeled Pointer to the peeled git_object
  * @param ref The reference to be processed
  * @param target_type The type of the requested object
- * @return 0 or an error code
+ * @return GIT_OK or an error code
  */
 GIT_EXTERN(int) git_reference_peel(
 	git_object **out,
