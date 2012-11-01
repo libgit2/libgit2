@@ -343,6 +343,13 @@ GIT_EXTERN(size_t) git_odb_object_size(git_odb_object *object);
  */
 GIT_EXTERN(git_otype) git_odb_object_type(git_odb_object *object);
 
+/**
+ * Set the default cache size when creating Object DB.
+ *
+ * @param size Cache size
+ */
+GIT_EXTERN(void) git_odb_set_default_cache_size(size_t size);
+
 /** @} */
 GIT_END_DECL
 #endif

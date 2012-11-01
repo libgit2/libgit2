@@ -23,6 +23,8 @@
 #define GIT_LOOSE_PRIORITY 2
 #define GIT_PACKED_PRIORITY 1
 
+static size_t default_cache_size = GIT_DEFAULT_CACHE_SIZE;
+
 typedef struct
 {
 	git_odb_backend *backend;
@@ -340,7 +342,7 @@ int git_odb_new(git_odb **out)
 	git_odb *db = git__calloc(1, sizeof(*db));
 	GITERR_CHECK_ALLOC(db);
 
-	if (git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object) < 0 ||
+	if (git_cache_init(&db->cache, default_cache_size, &free_odb_object) < 0 ||
 		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0)
 	{
 		git__free(db);
@@ -790,3 +792,7 @@ int git_odb__error_ambiguous(const char *message)
 	return GIT_EAMBIGUOUS;
 }
 
+void git_odb_set_default_cache_size(size_t size)
+{
+	default_cache_size = size;
+}

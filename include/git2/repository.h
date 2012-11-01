@@ -567,6 +567,13 @@ GIT_EXTERN(int) git_repository_set_head_detached(
 GIT_EXTERN(int) git_repository_detach_head(
 	git_repository* repo);
 
+/**
+ * Set the default cache size when creating Repository.
+ *
+ * @param size Cache size
+ */
+GIT_EXTERN(void) git_repository_set_default_cache_size(size_t size);
+
 /** @} */
 GIT_END_DECL
 #endif

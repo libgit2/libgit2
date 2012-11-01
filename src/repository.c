@@ -29,6 +29,8 @@
 
 #define GIT_TEMPLATE_DIR "/usr/share/git-core/templates"
 
+static size_t default_cache_size = GIT_DEFAULT_CACHE_SIZE;
+
 static void drop_odb(git_repository *repo)
 {
 	if (repo->_odb != NULL) {
@@ -107,7 +109,7 @@ static git_repository *repository_alloc(void)
 
 	memset(repo, 0x0, sizeof(git_repository));
 
-	if (git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free) < 0) {
+	if (git_cache_init(&repo->objects, default_cache_size, &git_object__free) < 0) {
 		git__free(repo);
 		return NULL;
 	}
@@ -1536,4 +1538,9 @@ cleanup:
 	git_reference_free(old_head);
 	git_reference_free(new_head);
 	return error;
+}
+
+void git_repository_set_default_cache_size(size_t size)
+{
+	default_cache_size = size;
 }
