@@ -84,7 +84,7 @@ the indexing to finish in a worker thread</p>
         <p>Create a new indexer</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_new-1" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">indexer</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_new-2" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">indexer</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
       </td>
@@ -98,7 +98,7 @@ the indexing to finish in a worker thread</p>
 should be run in a worker thread.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_run-2" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_run">git_indexer_run</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_run-3" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_run">git_indexer_run</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">error</span><span class="p">;</span></pre></div>
       </td>
@@ -111,7 +111,7 @@ should be run in a worker thread.</p>
         <p>Write the information out to an index file</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_write-3" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_write">git_indexer_write</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_write-4" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_write">git_indexer_write</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-6'>
@@ -123,10 +123,10 @@ should be run in a worker thread.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fmt-6" class="fnlink" href="../../#v0.16.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">hash</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-4" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">));</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fmt-1" class="fnlink" href="../../#v0.16.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">hash</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-5" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">));</span>
   <span class="n">puts</span><span class="p">(</span><span class="n">hash</span><span class="p">);</span>
 
-  <span class="n"><a name="git_indexer_free-5" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">);</span>
+  <span class="n"><a name="git_indexer_free-6" class="fnlink" href="../../#v0.16.0/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">indexer</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">GIT_SUCCESS</span><span class="p">;</span>
 <span class="p">}</span></pre></div>

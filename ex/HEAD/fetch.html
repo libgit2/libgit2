@@ -54,8 +54,6 @@
 
 <span class="k">struct</span> <span class="n">dl_data</span> <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span><span class="p">;</span>
-  <span class="n">git_off_t</span> <span class="o">*</span><span class="n">bytes</span><span class="p">;</span>
-  <span class="n">git_indexer_stats</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">finished</span><span class="p">;</span>
 <span class="p">};</span>
@@ -97,7 +95,7 @@ amount of received data and the indexer stats which lets you
 inform the user about progress.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_download-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">,</span> <span class="n">data</span><span class="o">-&gt;</span><span class="n">bytes</span><span class="p">,</span> <span class="n">data</span><span class="o">-&gt;</span><span class="n">stats</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_download-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="k">goto</span> <span class="n">exit</span><span class="p">;</span>
   <span class="p">}</span>
@@ -114,13 +112,13 @@ inform the user about progress.</p>
   <span class="kt">char</span> <span class="n">a_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">b_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
   <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">;</span>
 
-  <span class="n"><a name="git_oid_fmt-10" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">b_str</span><span class="p">,</span> <span class="n">b</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fmt-11" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">b_str</span><span class="p">,</span> <span class="n">b</span><span class="p">);</span>
   <span class="n">b_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-12" class="fnlink" href="../../#HEAD/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="n">a</span><span class="p">))</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-13" class="fnlink" href="../../#HEAD/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="n">a</span><span class="p">))</span> <span class="p">{</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[new]     %.20s %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">b_str</span><span class="p">,</span> <span class="n">refname</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n"><a name="git_oid_fmt-11" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">a_str</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+    <span class="n"><a name="git_oid_fmt-12" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">a_str</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
     <span class="n">a_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[updated] %.10s..%.10s %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">a_str</span><span class="p">,</span> <span class="n">b_str</span><span class="p">,</span> <span class="n">refname</span><span class="p">);</span>
   <span class="p">}</span>
@@ -131,8 +129,7 @@ inform the user about progress.</p>
 <span class="kt">int</span> <span class="nf">fetch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="n">git_off_t</span> <span class="n">bytes</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-  <span class="n">git_indexer_stats</span> <span class="n">stats</span><span class="p">;</span>
+  <span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="n">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">dl_data</span> <span class="n">data</span><span class="p">;</span>
   <span class="n">git_remote_callbacks</span> <span class="n">callbacks</span><span class="p">;</span>
@@ -148,7 +145,7 @@ inform the user about progress.</p>
         <p>Figure out whether it&rsquo;s a named remote or a URL</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetching %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+        <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetching %s for repo %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">repo</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_load-2" class="fnlink" href="../../#HEAD/group/remote/git_remote_load">git_remote_load</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_new-1" class="fnlink" href="../../#HEAD/group/remote/git_remote_new">git_remote_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
@@ -178,11 +175,10 @@ inform the user about progress.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">data</span><span class="p">.</span><span class="n">remote</span> <span class="o">=</span> <span class="n">remote</span><span class="p">;</span>
-  <span class="n">data</span><span class="p">.</span><span class="n">bytes</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">bytes</span><span class="p">;</span>
-  <span class="n">data</span><span class="p">.</span><span class="n">stats</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">;</span>
   <span class="n">data</span><span class="p">.</span><span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="n">data</span><span class="p">.</span><span class="n">finished</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-  <span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">stats</span><span class="p">));</span>
+
+  <span class="n">stats</span> <span class="o">=</span> <span class="n"><a name="git_remote_stats-10" class="fnlink" href="../../#HEAD/group/remote/git_remote_stats">git_remote_stats</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
 
   <span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">worker</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">download</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">data</span><span class="p">);</span></pre></div>
       </td>
@@ -201,16 +197,18 @@ the download rate.</p>
         <div class='highlight'><pre>  <span class="k">do</span> <span class="p">{</span>
     <span class="n">usleep</span><span class="p">(</span><span class="mi">10000</span><span class="p">);</span>
 
-    <span class="k">if</span> <span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="n">total</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Received %d/%d objects (%d) in %d bytes</span><span class="se">\r</span><span class="s">&quot;</span><span class="p">,</span>
-             <span class="n">stats</span><span class="p">.</span><span class="n">received</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">total</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">processed</span><span class="p">,</span> <span class="n">bytes</span><span class="p">);</span>
+             <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">,</span>
+           <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_bytes</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">data</span><span class="p">.</span><span class="n">finished</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="p">.</span><span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">on_error</span><span class="p">;</span>
 
   <span class="n">pthread_join</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Received %d/%d objects in %zu bytes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">processed</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">total</span><span class="p">,</span> <span class="n">bytes</span><span class="p">);</span></pre></div>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Received %d/%d objects in %zu bytes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+      <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_bytes</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-8'>

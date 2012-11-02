@@ -53,20 +53,52 @@
 <span class="cp">#include &lt;pthread.h&gt;</span>
 <span class="cp">#include &lt;unistd.h&gt;</span>
 
-<span class="k">struct</span> <span class="n">dl_data</span> <span class="p">{</span>
-  <span class="n">git_indexer_stats</span> <span class="n">fetch_stats</span><span class="p">;</span>
-  <span class="n">git_indexer_stats</span> <span class="n">checkout_stats</span><span class="p">;</span>
-  <span class="n">git_checkout_opts</span> <span class="n">opts</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">finished</span><span class="p">;</span>
-  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">url</span><span class="p">;</span>
+<span class="k">typedef</span> <span class="k">struct</span> <span class="n">progress_data</span> <span class="p">{</span>
+  <span class="n">git_transfer_progress</span> <span class="n">fetch_progress</span><span class="p">;</span>
+  <span class="kt">size_t</span> <span class="n">completed_steps</span><span class="p">;</span>
+  <span class="kt">size_t</span> <span class="n">total_steps</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">;</span>
-<span class="p">};</span>
+<span class="p">}</span> <span class="n">progress_data</span><span class="p">;</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">clone_thread</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_progress</span><span class="p">(</span><span class="k">const</span> <span class="n">progress_data</span> <span class="o">*</span><span class="n">pd</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="k">struct</span> <span class="n">dl_data</span> <span class="o">*</span><span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">dl_data</span> <span class="o">*</span><span class="p">)</span><span class="n">ptr</span><span class="p">;</span>
-  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span></pre></div>
+  <span class="kt">int</span> <span class="n">network_percent</span> <span class="o">=</span> <span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_objects</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">index_percent</span> <span class="o">=</span> <span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">checkout_percent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="o">?</span> <span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">completed_steps</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span>
+    <span class="o">:</span> <span class="mf">0.f</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">kbytes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_bytes</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">;</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;net %3d%% (%4d kb, %5d/%5d)  /  idx %3d%% (%5d/%5d)  /  chk %3d%% (%4lu/%4lu) %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+      <span class="n">network_percent</span><span class="p">,</span> <span class="n">kbytes</span><span class="p">,</span>
+      <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_objects</span><span class="p">,</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span><span class="p">,</span>
+      <span class="n">index_percent</span><span class="p">,</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span><span class="p">,</span>
+      <span class="n">checkout_percent</span><span class="p">,</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">completed_steps</span><span class="p">,</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span><span class="p">,</span>
+      <span class="n">pd</span><span class="o">-&gt;</span><span class="n">path</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">fetch_progress</span><span class="p">(</span><span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">progress_data</span> <span class="o">*</span><span class="n">pd</span> <span class="o">=</span> <span class="p">(</span><span class="n">progress_data</span><span class="o">*</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
+  <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span> <span class="o">=</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
+  <span class="n">print_progress</span><span class="p">(</span><span class="n">pd</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">checkout_progress</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">cur</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">tot</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">progress_data</span> <span class="o">*</span><span class="n">pd</span> <span class="o">=</span> <span class="p">(</span><span class="n">progress_data</span><span class="o">*</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
+  <span class="n">pd</span><span class="o">-&gt;</span><span class="n">completed_steps</span> <span class="o">=</span> <span class="n">cur</span><span class="p">;</span>
+  <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span> <span class="o">=</span> <span class="n">tot</span><span class="p">;</span>
+  <span class="n">pd</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="p">;</span>
+  <span class="n">print_progress</span><span class="p">(</span><span class="n">pd</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">do_clone</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">progress_data</span> <span class="n">pd</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">cloned_repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_checkout_opts</span> <span class="n">checkout_opts</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">url</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -74,22 +106,13 @@
         <div class="pilwrap">
           <a class="pilcrow" href="#section-2">&#182;</a>
         </div>
-        <p>Kick off the clone</p>
+        <p>Validate args</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span> <span class="o">=</span> <span class="n"><a name="git_clone-1" class="fnlink" href="../../#HEAD/group/clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">data</span><span class="o">-&gt;</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">-&gt;</span><span class="n">path</span><span class="p">,</span>
-                 <span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">fetch_stats</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">checkout_stats</span><span class="p">,</span> 
-                 <span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">opts</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">repo</span><span class="p">)</span> <span class="n"><a name="git_repository_free-2" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
-  <span class="n">data</span><span class="o">-&gt;</span><span class="n">finished</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-
-  <span class="n">pthread_exit</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="kt">int</span> <span class="nf">do_clone</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
-<span class="p">{</span>
-  <span class="k">struct</span> <span class="n">dl_data</span> <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-  <span class="n">pthread_t</span> <span class="n">worker</span><span class="p">;</span></pre></div>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span> <span class="p">(</span><span class="s">&quot;USAGE: %s &lt;url&gt; &lt;path&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>
       </td>
     </tr>
     <tr id='section-3'>
@@ -97,13 +120,12 @@
         <div class="pilwrap">
           <a class="pilcrow" href="#section-3">&#182;</a>
         </div>
-        <p>Validate args</p>
+        <p>Set up options</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;USAGE: %s &lt;url&gt; &lt;path&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
-    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-  <span class="p">}</span></pre></div>
+        <div class='highlight'><pre>  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">checkout_strategy</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_CREATE_MISSING</span><span class="p">;</span>
+  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_cb</span> <span class="o">=</span> <span class="n">checkout_progress</span><span class="p">;</span>
+  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-4'>
@@ -111,46 +133,19 @@
         <div class="pilwrap">
           <a class="pilcrow" href="#section-4">&#182;</a>
         </div>
-        <p>Data for background thread</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">data</span><span class="p">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
-  <span class="n">data</span><span class="p">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
-  <span class="n">data</span><span class="p">.</span><span class="n">opts</span><span class="p">.</span><span class="n">disable_filters</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Cloning &#39;%s&#39; to &#39;%s&#39;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">.</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="p">.</span><span class="n">path</span><span class="p">);</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-5'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-5">&#182;</a>
-        </div>
-        <p>Create the worker thread</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">worker</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">clone_thread</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">data</span><span class="p">);</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-6'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-6">&#182;</a>
-        </div>
-        <p>Watch for progress information</p>
+        <p>Do the clone</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">do</span> <span class="p">{</span>
-    <span class="n">usleep</span><span class="p">(</span><span class="mi">10000</span><span class="p">);</span>
-    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetch %d/%d  –  Checkout %d/%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
-         <span class="n">data</span><span class="p">.</span><span class="n">fetch_stats</span><span class="p">.</span><span class="n">processed</span><span class="p">,</span> <span class="n">data</span><span class="p">.</span><span class="n">fetch_stats</span><span class="p">.</span><span class="n">total</span><span class="p">,</span>
-         <span class="n">data</span><span class="p">.</span><span class="n">checkout_stats</span><span class="p">.</span><span class="n">processed</span><span class="p">,</span> <span class="n">data</span><span class="p">.</span><span class="n">checkout_stats</span><span class="p">.</span><span class="n">total</span><span class="p">);</span>
-  <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">data</span><span class="p">.</span><span class="n">finished</span><span class="p">);</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetch %d/%d  –  Checkout %d/%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
-       <span class="n">data</span><span class="p">.</span><span class="n">fetch_stats</span><span class="p">.</span><span class="n">processed</span><span class="p">,</span> <span class="n">data</span><span class="p">.</span><span class="n">fetch_stats</span><span class="p">.</span><span class="n">total</span><span class="p">,</span>
-       <span class="n">data</span><span class="p">.</span><span class="n">checkout_stats</span><span class="p">.</span><span class="n">processed</span><span class="p">,</span> <span class="n">data</span><span class="p">.</span><span class="n">checkout_stats</span><span class="p">.</span><span class="n">total</span><span class="p">);</span>
-
-  <span class="k">return</span> <span class="n">data</span><span class="p">.</span><span class="n">ret</span><span class="p">;</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_clone-3" class="fnlink" href="../../#HEAD/group/clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cloned_repo</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fetch_progress</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="giterr_last-2" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">klass</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="k">else</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: no detailed info</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">cloned_repo</span><span class="p">)</span> <span class="n"><a name="git_repository_free-1" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">cloned_repo</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>
     </tr>
