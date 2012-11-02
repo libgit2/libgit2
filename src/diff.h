@@ -28,6 +28,9 @@ enum {
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
 };
 
+#define GIT_DELTA__TO_DELETE 10
+#define GIT_DELTA__TO_SPLIT  11
+
 struct git_diff_list {
 	git_refcount     rc;
 	git_repository   *repo;
@@ -44,6 +47,8 @@ extern void git_diff__cleanup_modes(
 	uint32_t diffcaps, uint32_t *omode, uint32_t *nmode);
 
 extern void git_diff_list_addref(git_diff_list *diff);
+
+extern int git_diff_delta__cmp(const void *a, const void *b);
 
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
