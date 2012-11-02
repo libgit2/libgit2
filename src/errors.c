@@ -40,17 +40,17 @@ void giterr_set(int error_class, const char *string, ...)
 {
 	git_buf buf = GIT_BUF_INIT;
 	va_list arglist;
+#ifdef GIT_WIN32
+	DWORD win32_error_code = (error_class == GITERR_OS) ? GetLastError() : 0;
+#endif
+	int error_code = (error_class == GITERR_OS) ? errno : 0;
 
 	va_start(arglist, string);
 	git_buf_vprintf(&buf, string, arglist);
 	va_end(arglist);
 
 	if (error_class == GITERR_OS) {
-		int error_code = errno;
-
 #ifdef GIT_WIN32
-		DWORD win32_error_code = GetLastError();
-
 		if (win32_error_code) {
 			char *lpMsgBuf;
 
