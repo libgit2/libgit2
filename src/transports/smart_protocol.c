@@ -371,7 +371,7 @@ struct network_packetsize_payload
 	git_transfer_progress_callback callback;
 	void *payload;
 	git_transfer_progress *stats;
-	git_off_t last_fired_bytes;
+	size_t last_fired_bytes;
 };
 
 static void network_packetsize(int received, void *payload)
@@ -402,12 +402,18 @@ int git_smart__download_pack(
 	int error = -1;
 	struct network_packetsize_payload npp = {0};
 
+	memset(stats, 0, sizeof(git_transfer_progress));
+
 	if (progress_cb) {
 		npp.callback = progress_cb;
 		npp.payload = progress_payload;
 		npp.stats = stats;
 		t->packetsize_cb = &network_packetsize;
 		t->packetsize_payload = &npp;
+
+		/* We might have something in the buffer already from negotiate_fetch */
+		if (t->buffer.offset > 0)
+			t->packetsize_cb(t->buffer.offset, t->packetsize_payload);
 	}
 
 	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
@@ -415,9 +421,6 @@ int git_smart__download_pack(
 
 	if (git_indexer_stream_new(&idx, git_buf_cstr(&path), progress_cb, progress_payload) < 0)
 		goto on_error;
-
-	git_buf_free(&path);
-	memset(stats, 0, sizeof(git_transfer_progress));
 
 	/*
 	 * If the remote doesn't support the side-band, we can feed
@@ -428,8 +431,7 @@ int git_smart__download_pack(
 		if (no_sideband(t, idx, buf, stats) < 0)
 			goto on_error;
 
-		git_indexer_stream_free(idx);
-		return 0;
+		goto on_success;
 	}
 
 	do {
@@ -466,11 +468,16 @@ int git_smart__download_pack(
 	if (git_indexer_stream_finalize(idx, stats) < 0)
 		goto on_error;
 
-	git_indexer_stream_free(idx);
-	return 0;
+on_success:
+	error = 0;
 
 on_error:
 	git_buf_free(&path);
 	git_indexer_stream_free(idx);
+
+	/* Trailing execution of progress_cb, if necessary */
+	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes)
+		npp.callback(npp.stats, npp.payload);
+
 	return error;
 }
