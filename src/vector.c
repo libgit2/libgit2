@@ -255,3 +255,33 @@ void git_vector_swap(git_vector *a, git_vector *b)
 	memcpy(a, b, sizeof(t));
 	memcpy(b, &t, sizeof(t));
 }
+
+int git_vector_resize_to(git_vector *v, size_t new_length)
+{
+	if (new_length <= v->length)
+		return 0;
+
+	while (new_length >= v->_alloc_size)
+		if (resize_vector(v) < 0)
+			return -1;
+
+	memset(&v->contents[v->length], 0,
+		sizeof(void *) * (new_length - v->length));
+
+	v->length = new_length;
+
+	return 0;
+}
+
+int git_vector_set(void **old, git_vector *v, size_t position, void *value)
+{
+	if (git_vector_resize_to(v, position + 1) < 0)
+		return -1;
+
+	if (old != NULL)
+		*old = v->contents[position];
+
+	v->contents[position] = value;
+
+	return 0;
+}
