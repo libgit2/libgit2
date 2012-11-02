@@ -914,6 +914,7 @@ int git_index_conflict_remove(git_index *index, const char *path)
 {
 	int pos;
 	git_index_entry *conflict_entry;
+	int error = 0;
 
 	assert(index && path);
 
@@ -931,18 +932,23 @@ int git_index_conflict_remove(git_index *index, const char *path)
 			continue;
 		}
 
-		git_vector_remove(&index->entries, (unsigned int)pos);
+		error = git_vector_remove(&index->entries, (unsigned int)pos);
+
+		if (error >= 0)
+			index_entry_free(conflict_entry);
 	}
 
-	return 0;
+	return error;
 }
 
 static int index_conflicts_match(git_vector *v, size_t idx)
 {
 	git_index_entry *entry = git_vector_get(v, idx);
 
-	if (index_entry_stage(entry) > 0)
+	if (index_entry_stage(entry) > 0) {
+		index_entry_free(entry);
 		return 1;
+	}
 
 	return 0;
 }
