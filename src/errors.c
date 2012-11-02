@@ -41,51 +41,40 @@ void giterr_set(int error_class, const char *string, ...)
 	git_buf buf = GIT_BUF_INIT;
 	va_list arglist;
 
-	int unix_error_code = 0;
-
-#ifdef GIT_WIN32
-	DWORD win32_error_code = 0;
-#endif
-
-	if (error_class == GITERR_OS) {
-		unix_error_code = errno;
-		errno = 0;
-
-#ifdef GIT_WIN32
-		win32_error_code = GetLastError();
-		SetLastError(0);
-#endif
-	}
-
 	va_start(arglist, string);
 	git_buf_vprintf(&buf, string, arglist);
 	va_end(arglist);
 
-	/* automatically suffix strerror(errno) for GITERR_OS errors */
 	if (error_class == GITERR_OS) {
-
-		if (unix_error_code != 0) {
-			git_buf_PUTS(&buf, ": ");
-			git_buf_puts(&buf, strerror(unix_error_code));
-		}
+		int error_code = errno;
 
 #ifdef GIT_WIN32
-		else if (win32_error_code != 0) {
-			LPVOID lpMsgBuf = NULL;
+		DWORD win32_error_code = GetLastError();
 
-			FormatMessage(
-				FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-				FORMAT_MESSAGE_FROM_SYSTEM |
-				FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL, win32_error_code, 0, (LPTSTR) &lpMsgBuf, 0, NULL);
+		if (win32_error_code) {
+			char *lpMsgBuf;
 
-			if (lpMsgBuf) {
+			if (FormatMessageA(
+					FORMAT_MESSAGE_ALLOCATE_BUFFER |
+					FORMAT_MESSAGE_FROM_SYSTEM |
+					FORMAT_MESSAGE_IGNORE_INSERTS,
+					NULL, win32_error_code, 0, (LPSTR)&lpMsgBuf, 0, NULL)) {
 				git_buf_PUTS(&buf, ": ");
 				git_buf_puts(&buf, lpMsgBuf);
 				LocalFree(lpMsgBuf);
 			}
+
+			SetLastError(0);
 		}
+		else
 #endif
+		if (error_code) {
+			git_buf_PUTS(&buf, ": ");
+			git_buf_puts(&buf, strerror(error_code));
+		}
+
+		if (error_code)
+			errno = 0;
 	}
 
 	if (!git_buf_oom(&buf))
