@@ -23,8 +23,6 @@ static void setup_simple_state(const char *filename)
 	cl_git_pass(git_buf_joinpath(&_path, git_repository_path(_repo), filename));
 	git_futils_mkpath2file(git_buf_cstr(&_path), 0777);
 	cl_git_mkfile(git_buf_cstr(&_path), "dummy");
-
-	cl_git_pass(git_repository_detach_head(_repo));
 }
 
 static void assert_repo_state(git_repository_state_t state)

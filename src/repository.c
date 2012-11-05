@@ -1552,9 +1552,6 @@ int git_repository_state(git_repository *repo)
 
 	assert(repo);
 
-	if (!git_repository_head_detached(repo))
-		return state;
-
 	if (git_buf_puts(&repo_path, repo->path_repository) < 0)
 		return -1;
 
