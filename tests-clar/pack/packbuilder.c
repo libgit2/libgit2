@@ -28,12 +28,12 @@ void test_pack_packbuilder__cleanup(void)
 	git_packbuilder_free(_packbuilder);
 	git_revwalk_free(_revwalker);
 	git_indexer_free(_indexer);
+	_indexer = NULL;
 	git_repository_free(_repo);
 }
 
-void test_pack_packbuilder__create_pack(void)
+static void seed_packbuilder(void)
 {
-	git_transfer_progress stats;
 	git_oid oid, *o;
 	unsigned int i;
 
@@ -58,10 +58,37 @@ void test_pack_packbuilder__create_pack(void)
 					git_commit_tree_oid((git_commit *)obj)));
 		git_object_free(obj);
 	}
+}
 
+void test_pack_packbuilder__create_pack(void)
+{
+	git_transfer_progress stats;
+
+	seed_packbuilder();
 	cl_git_pass(git_packbuilder_write(_packbuilder, "testpack.pack"));
 
 	cl_git_pass(git_indexer_new(&_indexer, "testpack.pack"));
 	cl_git_pass(git_indexer_run(_indexer, &stats));
 	cl_git_pass(git_indexer_write(_indexer));
+}
+
+static git_transfer_progress stats;
+static int foreach_cb(void *buf, size_t len, void *payload)
+{
+	git_indexer_stream *idx = (git_indexer_stream *) payload;
+
+	cl_git_pass(git_indexer_stream_add(idx, buf, len, &stats));
+
+	return 0;
+}
+
+void test_pack_packbuilder__foreach(void)
+{
+	git_indexer_stream *idx;
+
+	seed_packbuilder();
+	cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL));
+	cl_git_pass(git_packbuilder_foreach(_packbuilder, foreach_cb, idx));
+	cl_git_pass(git_indexer_stream_finalize(idx, &stats));
+	git_indexer_stream_free(idx);
 }
