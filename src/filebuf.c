@@ -109,7 +109,7 @@ void git_filebuf_cleanup(git_filebuf *file)
 		p_unlink(file->path_lock);
 
 	if (file->digest)
-		git_hash_free_ctx(file->digest);
+		git_hash_ctx_free(file->digest);
 
 	if (file->buffer)
 		git__free(file->buffer);
@@ -221,7 +221,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 	/* If we are hashing on-write, allocate a new hash context */
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
-		file->digest = git_hash_new_ctx();
+		file->digest = git_hash_ctx_new();
 		GITERR_CHECK_ALLOC(file->digest);
 	}
 
@@ -299,7 +299,7 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 		return -1;
 
 	git_hash_final(oid, file->digest);
-	git_hash_free_ctx(file->digest);
+	git_hash_ctx_free(file->digest);
 	file->digest = NULL;
 
 	return 0;

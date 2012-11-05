@@ -17,7 +17,6 @@
 #include "posix.h"
 #include "pack.h"
 #include "filebuf.h"
-#include "sha1.h"
 
 #define UINT31_MAX (0x7FFFFFFF)
 
@@ -462,7 +461,10 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	struct entry *entry;
 	void *packfile_hash;
 	git_oid file_hash;
-	SHA_CTX ctx;
+	git_hash_ctx *ctx;
+
+	ctx = git_hash_ctx_new();
+	GITERR_CHECK_ALLOC(ctx);
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
 	if (idx->off < idx->pack->mwf.size - GIT_OID_RAWSZ) {
@@ -502,12 +504,11 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	}
 
 	/* Write out the object names (SHA-1 hashes) */
-	SHA1_Init(&ctx);
 	git_vector_foreach(&idx->objects, i, entry) {
 		git_filebuf_write(&idx->index_file, &entry->oid, sizeof(git_oid));
-		SHA1_Update(&ctx, &entry->oid, GIT_OID_RAWSZ);
+		git_hash_update(ctx, &entry->oid, GIT_OID_RAWSZ);
 	}
-	SHA1_Final(idx->hash.id, &ctx);
+	git_hash_final(&idx->hash, ctx);
 
 	/* Write out the CRC32 values */
 	git_vector_foreach(&idx->objects, i, entry) {
@@ -582,6 +583,7 @@ on_error:
 	p_close(idx->pack->mwf.fd);
 	git_filebuf_cleanup(&idx->index_file);
 	git_buf_free(&filename);
+	git_hash_ctx_free(ctx);
 	return -1;
 }
 
@@ -682,7 +684,10 @@ int git_indexer_write(git_indexer *idx)
 	struct entry *entry;
 	void *packfile_hash;
 	git_oid file_hash;
-	SHA_CTX ctx;
+	git_hash_ctx *ctx;
+
+	ctx = git_hash_ctx_new();
+	GITERR_CHECK_ALLOC(ctx);
 
 	git_vector_sort(&idx->objects);
 
@@ -712,14 +717,14 @@ int git_indexer_write(git_indexer *idx)
 	}
 
 	/* Write out the object names (SHA-1 hashes) */
-	SHA1_Init(&ctx);
 	git_vector_foreach(&idx->objects, i, entry) {
-		error = git_filebuf_write(&idx->file, &entry->oid, sizeof(git_oid));
-		SHA1_Update(&ctx, &entry->oid, GIT_OID_RAWSZ);
-		if (error < 0)
+		if ((error = git_filebuf_write(&idx->file, &entry->oid, sizeof(git_oid))) < 0 ||
+			(error = git_hash_update(ctx, &entry->oid, GIT_OID_RAWSZ)) < 0)
 			goto cleanup;
 	}
-	SHA1_Final(idx->hash.id, &ctx);
+
+	if ((error = git_hash_final(&idx->hash, ctx)) < 0)
+		goto cleanup;
 
 	/* Write out the CRC32 values */
 	git_vector_foreach(&idx->objects, i, entry) {
@@ -797,6 +802,7 @@ cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&idx->file);
 	git_buf_free(&filename);
+	git_hash_ctx_free(ctx);
 
 	return error;
 }

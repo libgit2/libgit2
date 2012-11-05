@@ -26,22 +26,22 @@ void test_object_raw_hash__hash_by_blocks(void)
     git_hash_ctx *ctx;
     git_oid id1, id2;
 
-    cl_assert((ctx = git_hash_new_ctx()) != NULL);
+    cl_assert((ctx = git_hash_ctx_new()) != NULL);
 
 	/* should already be init'd */
-    git_hash_update(ctx, hello_text, strlen(hello_text));
-    git_hash_final(&id2, ctx);
+    cl_git_pass(git_hash_update(ctx, hello_text, strlen(hello_text)));
+    cl_git_pass(git_hash_final(&id2, ctx));
     cl_git_pass(git_oid_fromstr(&id1, hello_id));
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 
 	/* reinit should permit reuse */
-    git_hash_init(ctx);
-    git_hash_update(ctx, bye_text, strlen(bye_text));
-    git_hash_final(&id2, ctx);
+    cl_git_pass(git_hash_init(ctx));
+    cl_git_pass(git_hash_update(ctx, bye_text, strlen(bye_text)));
+    cl_git_pass(git_hash_final(&id2, ctx));
     cl_git_pass(git_oid_fromstr(&id1, bye_id));
     cl_assert(git_oid_cmp(&id1, &id2) == 0);
 
-    git_hash_free_ctx(ctx);
+    git_hash_ctx_free(ctx);
 }
 
 void test_object_raw_hash__hash_buffer_in_single_call(void)

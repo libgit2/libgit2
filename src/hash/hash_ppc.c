@@ -4,14 +4,29 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
 #include <stdio.h>
 #include <string.h>
-#include "sha1.h"
 
-extern void ppc_sha1_core(uint32_t *hash, const unsigned char *p,
+#include "common.h"
+#include "hash.h"
+
+extern void hash_ppc_core(uint32_t *hash, const unsigned char *p,
 			 unsigned int nblocks);
 
-int ppc_SHA1_Init(ppc_SHA_CTX *c)
+git_hash_ctx *git_hash_ctx_new(void)
+{
+    git_hash_ctx *ctx = git__malloc(sizeof(git_hash_ctx));
+
+    if (!ctx)
+        return NULL;
+
+    git_hash_init(ctx);
+
+    return ctx;
+}
+
+int git_hash_init(git_hash_ctx *c)
 {
 	c->hash[0] = 0x67452301;
 	c->hash[1] = 0xEFCDAB89;
@@ -23,7 +38,7 @@ int ppc_SHA1_Init(ppc_SHA_CTX *c)
 	return 0;
 }
 
-int ppc_SHA1_Update(ppc_SHA_CTX *c, const void *ptr, unsigned long n)
+int git_hash_update(git_hash_ctx *c, const void *ptr, size_t n)
 {
 	unsigned long nb;
 	const unsigned char *p = ptr;
@@ -36,12 +51,12 @@ int ppc_SHA1_Update(ppc_SHA_CTX *c, const void *ptr, unsigned long n)
 				nb = n;
 			memcpy(&c->buf.b[c->cnt], p, nb);
 			if ((c->cnt += nb) == 64) {
-				ppc_sha1_core(c->hash, c->buf.b, 1);
+				hash_ppc_core(c->hash, c->buf.b, 1);
 				c->cnt = 0;
 			}
 		} else {
 			nb = n >> 6;
-			ppc_sha1_core(c->hash, p, nb);
+			hash_ppc_core(c->hash, p, nb);
 			nb <<= 6;
 		}
 		n -= nb;
@@ -50,7 +65,7 @@ int ppc_SHA1_Update(ppc_SHA_CTX *c, const void *ptr, unsigned long n)
 	return 0;
 }
 
-int ppc_SHA1_Final(unsigned char *hash, ppc_SHA_CTX *c)
+int git_hash_final(git_oid *oid, git_hash_ctx *c)
 {
 	unsigned int cnt = c->cnt;
 
@@ -58,13 +73,19 @@ int ppc_SHA1_Final(unsigned char *hash, ppc_SHA_CTX *c)
 	if (cnt > 56) {
 		if (cnt < 64)
 			memset(&c->buf.b[cnt], 0, 64 - cnt);
-		ppc_sha1_core(c->hash, c->buf.b, 1);
+		hash_ppc_core(c->hash, c->buf.b, 1);
 		cnt = 0;
 	}
 	if (cnt < 56)
 		memset(&c->buf.b[cnt], 0, 56 - cnt);
 	c->buf.l[7] = c->len;
-	ppc_sha1_core(c->hash, c->buf.b, 1);
-	memcpy(hash, c->hash, 20);
+	hash_ppc_core(c->hash, c->buf.b, 1);
+	memcpy(oid->id, c->hash, 20);
 	return 0;
+}
+
+void git_hash_ctx_free(git_hash_ctx *ctx)
+{
+    if (ctx)
+        git__free(ctx);
 }

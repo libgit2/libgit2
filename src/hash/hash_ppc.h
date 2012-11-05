@@ -4,9 +4,13 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#ifndef INCLUDE_hash_ppc_h__
+#define INCLUDE_hash_ppc_h__
+
 #include <stdint.h>
 
-typedef struct {
+struct git_hash_ctx {
 	uint32_t hash[5];
 	uint32_t cnt;
 	uint64_t len;
@@ -14,13 +18,6 @@ typedef struct {
 		unsigned char b[64];
 		uint64_t l[8];
 	} buf;
-} ppc_SHA_CTX;
+};
 
-int ppc_SHA1_Init(ppc_SHA_CTX *c);
-int ppc_SHA1_Update(ppc_SHA_CTX *c, const void *p, unsigned long n);
-int ppc_SHA1_Final(unsigned char *hash, ppc_SHA_CTX *c);
-
-#define SHA_CTX		ppc_SHA_CTX
-#define SHA1_Init	ppc_SHA1_Init
-#define SHA1_Update	ppc_SHA1_Update
-#define SHA1_Final	ppc_SHA1_Final
+#endif /* INCLUDE_hash_generic_h__ */

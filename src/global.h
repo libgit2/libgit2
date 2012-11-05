@@ -8,10 +8,16 @@
 #define INCLUDE_global_h__
 
 #include "mwindow.h"
+#include "hash.h"
 
 typedef struct {
 	git_error *last_error;
 	git_error error_t;
+
+#ifdef WIN32_SHA1
+	git_hash_prov hash_prov;
+#endif
+
 } git_global_st;
 
 git_global_st *git__global_state(void);

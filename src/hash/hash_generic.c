@@ -6,7 +6,8 @@
  */
 
 #include "common.h"
-#include "sha1.h"
+#include "hash.h"
+#include "hash/hash_generic.h"
 
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
@@ -112,7 +113,7 @@
 #define T_40_59(t, A, B, C, D, E) SHA_ROUND(t, SHA_MIX, ((B&C)+(D&(B^C))) , 0x8f1bbcdc, A, B, C, D, E )
 #define T_60_79(t, A, B, C, D, E) SHA_ROUND(t, SHA_MIX, (B^C^D) , 0xca62c1d6, A, B, C, D, E )
 
-static void blk_SHA1_Block(blk_SHA_CTX *ctx, const unsigned int *data)
+static void hash__block(git_hash_ctx *ctx, const unsigned int *data)
 {
 	unsigned int A,B,C,D,E;
 	unsigned int array[16];
@@ -220,7 +221,19 @@ static void blk_SHA1_Block(blk_SHA_CTX *ctx, const unsigned int *data)
 	ctx->H[4] += E;
 }
 
-void git__blk_SHA1_Init(blk_SHA_CTX *ctx)
+git_hash_ctx *git_hash_ctx_new(void)
+{
+	git_hash_ctx *ctx = git__malloc(sizeof(git_hash_ctx));
+
+	if (!ctx)
+		return NULL;
+
+	git_hash_init(ctx);
+
+	return ctx;
+}
+
+int git_hash_init(git_hash_ctx *ctx)
 {
 	ctx->size = 0;
 
@@ -230,9 +243,11 @@ void git__blk_SHA1_Init(blk_SHA_CTX *ctx)
 	ctx->H[2] = 0x98badcfe;
 	ctx->H[3] = 0x10325476;
 	ctx->H[4] = 0xc3d2e1f0;
+
+    return 0;
 }
 
-void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, size_t len)
+int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
 	unsigned int lenW = ctx->size & 63;
 
@@ -248,19 +263,21 @@ void git__blk_SHA1_Update(blk_SHA_CTX *ctx, const void *data, size_t len)
 		len -= left;
 		data = ((const char *)data + left);
 		if (lenW)
-			return;
-		blk_SHA1_Block(ctx, ctx->W);
+			return 0;
+		hash__block(ctx, ctx->W);
 	}
 	while (len >= 64) {
-		blk_SHA1_Block(ctx, data);
+		hash__block(ctx, data);
 		data = ((const char *)data + 64);
 		len -= 64;
 	}
 	if (len)
 		memcpy(ctx->W, data, len);
+
+	return 0;
 }
 
-void git__blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx)
+int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 {
 	static const unsigned char pad[64] = { 0x80 };
 	unsigned int padlen[2];
@@ -271,10 +288,18 @@ void git__blk_SHA1_Final(unsigned char hashout[20], blk_SHA_CTX *ctx)
 	padlen[1] = htonl((uint32_t)(ctx->size << 3));
 
 	i = ctx->size & 63;
-	git__blk_SHA1_Update(ctx, pad, 1+ (63 & (55 - i)));
-	git__blk_SHA1_Update(ctx, padlen, 8);
+	git_hash_update(ctx, pad, 1+ (63 & (55 - i)));
+	git_hash_update(ctx, padlen, 8);
 
 	/* Output hash */
 	for (i = 0; i < 5; i++)
-		put_be32(hashout + i*4, ctx->H[i]);
+		put_be32(out->id + i*4, ctx->H[i]);
+
+	return 0;
+}
+
+void git_hash_ctx_free(git_hash_ctx *ctx)
+{
+	if (ctx)
+		git__free(ctx);
 }
