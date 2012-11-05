@@ -183,13 +183,13 @@ void test_network_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 3);
+	cl_assert(list.count == 4);
 	git_strarray_free(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 4);
+	cl_assert(list.count == 5);
 	git_strarray_free(&list);
 
 	git_config_free(cfg);
@@ -268,4 +268,12 @@ void test_network_remotes__tagopt(void)
 	cl_assert(git_config_get_string(&opt, cfg, "remote.test.tagopt") == GIT_ENOTFOUND);
 
 	git_config_free(cfg);
+}
+
+void test_network_remotes__cannot_load_with_an_empty_url(void)
+{
+	git_remote *remote;
+
+	cl_git_fail(git_remote_load(&remote, _repo, "empty-remote-url"));
+	cl_assert(giterr_last()->klass == GITERR_INVALID);
 }

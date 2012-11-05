@@ -131,6 +131,12 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 	if ((error = git_config_get_string(&val, config, git_buf_cstr(&buf))) < 0)
 		goto cleanup;
+	
+	if (!val) {
+		giterr_set(GITERR_INVALID, "Malformed remote '%s' - missing URL", name);
+		error = -1;
+		goto cleanup;
+	}
 
 	remote->repo = repo;
 	remote->url = git__strdup(val);
