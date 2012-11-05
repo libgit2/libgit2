@@ -275,4 +275,5 @@ void test_network_remotes__cannot_load_with_an_empty_url(void)
 	git_remote *remote;
 
 	cl_git_fail(git_remote_load(&remote, _repo, "empty-remote-url"));
+	cl_assert(giterr_last()->klass == GITERR_INVALID);
 }
