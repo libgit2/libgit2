@@ -606,6 +606,9 @@ static void http_free(git_smart_subtransport *smart_transport)
 
 	clear_parser_state(t);
 
+	if (t->socket.socket)
+		gitno_close(&t->socket);
+
 	if (t->cred) {
 		t->cred->free(t->cred);
 		t->cred = NULL;
