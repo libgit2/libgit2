@@ -6,6 +6,7 @@
  */
 #include "smart.h"
 #include "refs.h"
+#include "repository.h"
 
 #define NETWORK_XFER_THRESHOLD (100*1024)
 
@@ -341,7 +342,7 @@ on_error:
 	return error;
 }
 
-static int no_sideband(transport_smart *t, git_indexer_stream *idx, gitno_buffer *buf, git_transfer_progress *stats)
+static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, gitno_buffer *buf, git_transfer_progress *stats)
 {
 	int recvd;
 
@@ -351,7 +352,7 @@ static int no_sideband(transport_smart *t, git_indexer_stream *idx, gitno_buffer
 			return GIT_EUSER;
 		}
 
-		if (git_indexer_stream_add(idx, buf->data, buf->offset, stats) < 0)
+		if (writepack->add(writepack, buf->data, buf->offset, stats) < 0)
 			return -1;
 
 		gitno_consume_n(buf, buf->offset);
@@ -360,7 +361,7 @@ static int no_sideband(transport_smart *t, git_indexer_stream *idx, gitno_buffer
 			return -1;
 	} while(recvd > 0);
 
-	if (git_indexer_stream_finalize(idx, stats))
+	if (writepack->commit(writepack, stats))
 		return -1;
 
 	return 0;
@@ -396,9 +397,9 @@ int git_smart__download_pack(
 	void *progress_payload)
 {
 	transport_smart *t = (transport_smart *)transport;
-	git_buf path = GIT_BUF_INIT;
 	gitno_buffer *buf = &t->buffer;
-	git_indexer_stream *idx = NULL;
+	git_odb *odb;
+	struct git_odb_writepack *writepack = NULL;
 	int error = -1;
 	struct network_packetsize_payload npp = {0};
 
@@ -416,19 +417,17 @@ int git_smart__download_pack(
 			t->packetsize_cb(t->buffer.offset, t->packetsize_payload);
 	}
 
-	if (git_buf_joinpath(&path, git_repository_path(repo), "objects/pack") < 0)
-		return -1;
-
-	if (git_indexer_stream_new(&idx, git_buf_cstr(&path), progress_cb, progress_payload) < 0)
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
+		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0))
 		goto on_error;
 
 	/*
 	 * If the remote doesn't support the side-band, we can feed
-	 * the data directly to the indexer. Otherwise, we need to
+	 * the data directly to the pack writer. Otherwise, we need to
 	 * check which one belongs there.
 	 */
 	if (!t->caps.side_band && !t->caps.side_band_64k) {
-		if (no_sideband(t, idx, buf, stats) < 0)
+		if (no_sideband(t, writepack, buf, stats) < 0)
 			goto on_error;
 
 		goto on_success;
@@ -454,7 +453,7 @@ int git_smart__download_pack(
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
 			git_pkt_data *p = (git_pkt_data *) pkt;
-			if (git_indexer_stream_add(idx, p->data, p->len, stats) < 0)
+			if (writepack->add(writepack, p->data, p->len, stats) < 0)
 				goto on_error;
 
 			git__free(pkt);
@@ -465,15 +464,14 @@ int git_smart__download_pack(
 		}
 	} while (1);
 
-	if (git_indexer_stream_finalize(idx, stats) < 0)
+	if (writepack->commit(writepack, stats) < 0)
 		goto on_error;
 
 on_success:
 	error = 0;
 
 on_error:
-	git_buf_free(&path);
-	git_indexer_stream_free(idx);
+	writepack->free(writepack);
 
 	/* Trailing execution of progress_cb, if necessary */
 	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes)

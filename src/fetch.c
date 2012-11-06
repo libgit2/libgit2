@@ -8,7 +8,6 @@
 #include "git2/oid.h"
 #include "git2/refs.h"
 #include "git2/revwalk.h"
-#include "git2/indexer.h"
 #include "git2/transport.h"
 
 #include "common.h"

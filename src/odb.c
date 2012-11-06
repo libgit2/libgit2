@@ -766,6 +766,31 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 	return error;
 }
 
+int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer_progress_callback progress_cb, void *progress_payload)
+{
+	unsigned int i;
+	int error = GIT_ERROR;
+
+	assert(out && db);
+
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		/* we don't write in alternates! */
+		if (internal->is_alternate)
+			continue;
+
+		if (b->writepack != NULL)
+			error = b->writepack(out, b, progress_cb, progress_payload);
+	}
+
+	if (error == GIT_PASSTHROUGH)
+		error = 0;
+
+	return error;
+}
+
 void * git_odb_backend_malloc(git_odb_backend *backend, size_t len)
 {
 	GIT_UNUSED(backend);

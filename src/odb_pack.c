@@ -26,6 +26,11 @@ struct pack_backend {
 	char *pack_folder;
 };
 
+struct pack_writepack {
+	struct git_odb_writepack parent;
+	git_indexer_stream *indexer_stream;
+};
+
 /**
  * The wonderful tale of a Packed Object lookup query
  * ===================================================
@@ -475,6 +480,67 @@ static int pack_backend__foreach(git_odb_backend *_backend, int (*cb)(git_oid *o
 	return 0;
 }
 
+static int pack_backend__writepack_add(struct git_odb_writepack *_writepack, const void *data, size_t size, git_transfer_progress *stats)
+{
+	struct pack_writepack *writepack = (struct pack_writepack *)_writepack;
+
+	assert(writepack);
+
+	return git_indexer_stream_add(writepack->indexer_stream, data, size, stats);
+}
+
+static int pack_backend__writepack_commit(struct git_odb_writepack *_writepack, git_transfer_progress *stats)
+{
+	struct pack_writepack *writepack = (struct pack_writepack *)_writepack;
+
+	assert(writepack);
+
+	return git_indexer_stream_finalize(writepack->indexer_stream, stats);
+}
+
+static void pack_backend__writepack_free(struct git_odb_writepack *_writepack)
+{
+	struct pack_writepack *writepack = (struct pack_writepack *)_writepack;
+
+	assert(writepack);
+
+	git_indexer_stream_free(writepack->indexer_stream);
+	git__free(writepack);
+}
+
+static int pack_backend__writepack(struct git_odb_writepack **out,
+	git_odb_backend *_backend,
+	git_transfer_progress_callback progress_cb,
+	void *progress_payload)
+{
+	struct pack_backend *backend;
+	struct pack_writepack *writepack;
+
+	assert(out && _backend);
+
+	*out = NULL;
+
+	backend = (struct pack_backend *)_backend;
+
+	writepack = git__calloc(1, sizeof(struct pack_writepack));
+	GITERR_CHECK_ALLOC(writepack);
+
+	if (git_indexer_stream_new(&writepack->indexer_stream,
+		backend->pack_folder, progress_cb, progress_payload) < 0) {
+		git__free(writepack);
+		return -1;
+	}
+
+	writepack->parent.backend = _backend;
+	writepack->parent.add = pack_backend__writepack_add;
+	writepack->parent.commit = pack_backend__writepack_commit;
+	writepack->parent.free = pack_backend__writepack_free;
+
+	*out = (git_odb_writepack *)writepack;
+
+	return 0;
+}
+
 static void pack_backend__free(git_odb_backend *_backend)
 {
 	struct pack_backend *backend;
@@ -553,6 +619,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->parent.read_header = NULL;
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.foreach = &pack_backend__foreach;
+	backend->parent.writepack = &pack_backend__writepack;
 	backend->parent.free = &pack_backend__free;
 
 	*backend_out = (git_odb_backend *)backend;
