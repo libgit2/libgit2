@@ -54,8 +54,7 @@ typedef struct {
 	git_cred *cred;
 	http_authmechanism_t auth_mechanism;
 	unsigned connected : 1,
-		use_ssl : 1,
-		no_check_cert : 1;
+		use_ssl : 1;
 
 	/* Parser structures */
 	http_parser parser;
@@ -572,9 +571,14 @@ static int http_action(
 
 	if (!t->connected || !http_should_keep_alive(&t->parser)) {
 		if (t->use_ssl) {
+			int transport_flags;
+
+			if (t->owner->parent.read_flags(&t->owner->parent, &transport_flags) < 0)
+				return -1;
+
 			flags |= GITNO_CONNECT_SSL;
 
-			if (t->no_check_cert)
+			if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & transport_flags)
 				flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
 		}
 
@@ -634,14 +638,6 @@ int git_smart_subtransport_http(git_smart_subtransport **out,
 	t->owner = (transport_smart *)owner;
 	t->parent.action = http_action;
 	t->parent.free = http_free;
-
-	/* Read the flags from the owning transport */
-	if (owner->read_flags && owner->read_flags(owner, &flags) < 0) {
-		git__free(t);
-		return -1;
-	}
-
-	t->no_check_cert = flags & GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
 	t->settings.on_header_field = on_header_field;
 	t->settings.on_header_value = on_header_value;

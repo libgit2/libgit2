@@ -62,8 +62,7 @@ typedef struct {
 	int auth_mechanism;
 	HINTERNET session;
 	HINTERNET connection;
-	unsigned use_ssl : 1,
-		no_check_cert : 1;
+	unsigned use_ssl : 1;
 } winhttp_subtransport;
 
 static int apply_basic_credential(HINTERNET request, git_cred *cred)
@@ -183,8 +182,14 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	/* If requested, disable certificate validation */
-	if (t->use_ssl && t->no_check_cert) {
-		if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS,
+	if (t->use_ssl) {
+		int flags;
+
+		if (t->owner->parent.read_flags(&t->owner->parent, &flags) < 0)
+			goto on_error;
+
+		if ((GIT_TRANSPORTFLAGS_NO_CHECK_CERT & flags) &&
+			!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS,
 			(LPVOID)&no_check_cert_flags, sizeof(no_check_cert_flags))) {
 			giterr_set(GITERR_OS, "Failed to set options to ignore cert errors");
 			goto on_error;
@@ -608,7 +613,6 @@ static void winhttp_free(git_smart_subtransport *smart_transport)
 int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner)
 {
 	winhttp_subtransport *t;
-	int flags;
 
 	if (!out)
 		return -1;
@@ -619,14 +623,6 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	t->owner = (transport_smart *)owner;
 	t->parent.action = winhttp_action;
 	t->parent.free = winhttp_free;
-
-	/* Read the flags from the owning transport */
-	if (owner->read_flags && owner->read_flags(owner, &flags) < 0) {
-		git__free(t);
-		return -1;
-	}
-
-	t->no_check_cert = flags & GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
 	*out = (git_smart_subtransport *) t;
 	return 0;
