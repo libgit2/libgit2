@@ -18,6 +18,8 @@
 #define GIT_CAP_SIDE_BAND "side-band"
 #define GIT_CAP_SIDE_BAND_64K "side-band-64k"
 #define GIT_CAP_INCLUDE_TAG "include-tag"
+#define GIT_CAP_DELETE_REFS "delete-refs"
+#define GIT_CAP_REPORT_STATUS "report-status"
 
 enum git_pkt_type {
 	GIT_PKT_CMD,
@@ -31,6 +33,9 @@ enum git_pkt_type {
 	GIT_PKT_ERR,
 	GIT_PKT_DATA,
 	GIT_PKT_PROGRESS,
+	GIT_PKT_OK,
+	GIT_PKT_NG,
+	GIT_PKT_UNPACK,
 };
 
 /* Used for multi-ack */
@@ -85,13 +90,31 @@ typedef struct {
 	char error[GIT_FLEX_ARRAY];
 } git_pkt_err;
 
+typedef struct {
+	enum git_pkt_type type;
+	char *ref;
+} git_pkt_ok;
+
+typedef struct {
+	enum git_pkt_type type;
+	char *ref;
+	char *msg;
+} git_pkt_ng;
+
+typedef struct {
+	enum git_pkt_type type;
+	int unpack_ok;
+} git_pkt_unpack;
+
 typedef struct transport_smart_caps {
 	int common:1,
 		ofs_delta:1,
 		multi_ack: 1,
 		side_band:1,
 		side_band_64k:1,
-		include_tag:1;
+		include_tag:1,
+		delete_refs:1,
+		report_status:1;
 } transport_smart_caps;
 
 typedef void (*packetsize_cb)(int received, void *payload);
