@@ -3,7 +3,6 @@
 #include "git2/clone.h"
 #include "repository.h"
 
-#define DO_LOCAL_TEST 0
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 
 static git_repository *g_repo;
@@ -73,12 +72,9 @@ void test_clone_nonetwork__local(void)
 {
 	git_buf src = GIT_BUF_INIT;
 	build_local_file_url(&src, cl_fixture("testrepo.git"));
-
-#if DO_LOCAL_TEST
 	cl_set_cleanup(&cleanup_repository, "./local");
 
 	cl_git_pass(git_clone(&g_repo, git_buf_cstr(&src), "./local", NULL, NULL, NULL));
-#endif
 
 	git_buf_free(&src);
 }
@@ -87,12 +83,9 @@ void test_clone_nonetwork__local_bare(void)
 {
 	git_buf src = GIT_BUF_INIT;
 	build_local_file_url(&src, cl_fixture("testrepo.git"));
-
-#if DO_LOCAL_TEST
 	cl_set_cleanup(&cleanup_repository, "./local.git");
 
 	cl_git_pass(git_clone_bare(&g_repo, git_buf_cstr(&src), "./local.git", NULL, NULL));
-#endif
 
 	git_buf_free(&src);
 }

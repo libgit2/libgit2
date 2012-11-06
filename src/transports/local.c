@@ -10,11 +10,19 @@
 #include "git2/repository.h"
 #include "git2/object.h"
 #include "git2/tag.h"
-#include "refs.h"
 #include "git2/transport.h"
+#include "git2/revwalk.h"
+#include "git2/odb_backend.h"
+#include "git2/pack.h"
+#include "git2/commit.h"
+#include "git2/revparse.h"
+#include "pack-objects.h"
+#include "refs.h"
 #include "posix.h"
 #include "path.h"
 #include "buffer.h"
+#include "repository.h"
+#include "odb.h"
 
 typedef struct {
 	git_transport parent;
@@ -34,7 +42,7 @@ static int add_ref(transport_local *t, const char *name)
 	git_object *obj = NULL, *target = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	head = (git_remote_head *)git__malloc(sizeof(git_remote_head));
+	head = (git_remote_head *)git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
 
 	head->name = git__strdup(name);
@@ -200,15 +208,137 @@ static int local_ls(git_transport *transport, git_headlist_cb list_cb, void *pay
 static int local_negotiate_fetch(
 	git_transport *transport,
 	git_repository *repo,
-	const git_remote_head * const *refs, size_t count)
+	const git_remote_head * const *refs,
+	size_t count)
 {
-	GIT_UNUSED(transport);
-	GIT_UNUSED(repo);
+	transport_local *t = (transport_local*)transport;
+	git_remote_head *rhead;
+	unsigned int i;
+
 	GIT_UNUSED(refs);
 	GIT_UNUSED(count);
 
-	giterr_set(GITERR_NET, "Fetch via local transport isn't implemented. Sorry");
-	return -1;
+	/* Fill in the loids */
+	git_vector_foreach(&t->refs, i, rhead) {
+		git_object *obj;
+
+		int error = git_revparse_single(&obj, repo, rhead->name);
+		if (!error)
+			git_oid_cpy(&rhead->loid, git_object_id(obj));
+		else if (error != GIT_ENOTFOUND)
+			return error;
+		giterr_clear();
+	}
+
+	return 0;
+}
+
+typedef struct foreach_data {
+	git_transfer_progress *stats;
+	git_transfer_progress_callback progress_cb;
+	void *progress_payload;
+	git_odb_writepack *writepack;
+} foreach_data;
+
+static int foreach_cb(void *buf, size_t len, void *payload)
+{
+	foreach_data *data = (foreach_data*)payload;
+
+	data->stats->received_bytes += len;
+	return data->writepack->add(data->writepack, buf, len, data->stats);
+}
+
+static int local_download_pack(
+		git_transport *transport,
+		git_repository *repo,
+		git_transfer_progress *stats,
+		git_transfer_progress_callback progress_cb,
+		void *progress_payload)
+{
+	transport_local *t = (transport_local*)transport;
+	git_revwalk *walk = NULL;
+	git_remote_head *rhead;
+	unsigned int i;
+	int error = -1;
+	git_oid oid;
+	git_packbuilder *pack = NULL;
+	git_odb_writepack *writepack = NULL;
+
+	if ((error = git_revwalk_new(&walk, t->repo)) < 0)
+		goto cleanup;
+	git_revwalk_sorting(walk, GIT_SORT_TIME);
+
+	if ((error = git_packbuilder_new(&pack, t->repo)) < 0)
+		goto cleanup;
+
+	stats->total_objects = 0;
+	stats->indexed_objects = 0;
+	stats->received_objects = 0;
+	stats->received_bytes = 0;
+
+	git_vector_foreach(&t->refs, i, rhead) {
+		git_object *obj;
+		if ((error = git_object_lookup(&obj, t->repo, &rhead->oid, GIT_OBJ_ANY)) < 0)
+			goto cleanup;
+
+		if (git_object_type(obj) == GIT_OBJ_COMMIT) {
+			/* Revwalker includes only wanted commits */
+			error = git_revwalk_push(walk, &rhead->oid);
+			if (!git_oid_iszero(&rhead->loid))
+				error = git_revwalk_hide(walk, &rhead->loid);
+		} else {
+			/* Tag or some other wanted object. Add it on its own */
+			stats->total_objects++;
+			error = git_packbuilder_insert(pack, &rhead->oid, rhead->name);
+		}
+      git_object_free(obj);
+	}
+
+	/* Walk the objects, building a packfile */
+
+	while ((error = git_revwalk_next(&oid, walk)) == 0) {
+		git_commit *commit;
+
+		stats->total_objects++;
+
+		if (!git_object_lookup((git_object**)&commit, t->repo, &oid, GIT_OBJ_COMMIT)) {
+			const git_oid *tree_oid = git_commit_tree_oid(commit);
+			git_commit_free(commit);
+
+			/* Add the commit and its tree */
+			if ((error = git_packbuilder_insert(pack, &oid, NULL)) < 0 ||
+				 (error = git_packbuilder_insert_tree(pack, tree_oid)))
+				goto cleanup;
+		}
+	}
+
+	if (progress_cb) progress_cb(stats, progress_payload);
+
+	{
+		git_odb *odb;
+		if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
+				(error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0)
+			goto cleanup;
+	}
+
+	/* Write the data to the ODB */
+	{
+		foreach_data data = {0};
+		data.stats = stats;
+		data.progress_cb = progress_cb;
+		data.progress_payload = progress_payload;
+		data.writepack = writepack;
+
+		if ((error = git_packbuilder_foreach(pack, foreach_cb, &data)) < 0)
+			goto cleanup;
+	}
+	error = writepack->commit(writepack, stats);
+
+cleanup:
+	if (writepack) writepack->free(writepack);
+	git_packbuilder_free(pack);
+	git_revwalk_free(walk);
+	return error;
 }
 
 static int local_is_connected(git_transport *transport, int *connected)
@@ -283,6 +413,7 @@ int git_transport_local(git_transport **out, void *param)
 		
 	t->parent.connect = local_connect;
 	t->parent.negotiate_fetch = local_negotiate_fetch;
+	t->parent.download_pack = local_download_pack;
 	t->parent.close = local_close;
 	t->parent.free = local_free;
 	t->parent.ls = local_ls;
