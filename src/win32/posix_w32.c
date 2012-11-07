@@ -11,7 +11,7 @@
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
-
+#include <ws2tcpip.h>
 
 int p_unlink(const char *path)
 {
@@ -503,4 +503,46 @@ int p_gettimeofday(struct timeval *tv, struct timezone *tz)
       }
  
    return 0;
+}
+
+int p_inet_pton(int af, const char* src, void* dst)
+{
+	union {
+		struct sockaddr_in6 sin6;
+		struct sockaddr_in sin;
+	} sa;
+	size_t srcsize;
+
+	switch(af)
+	{
+		case AF_INET:
+			sa.sin.sin_family = AF_INET;
+			srcsize = sizeof (sa.sin);
+		break;
+		case AF_INET6:
+			sa.sin6.sin6_family = AF_INET6;
+			srcsize = sizeof (sa.sin6);
+		break;
+		default:
+			errno = WSAEPFNOSUPPORT;
+			return -1;
+	}
+
+	if (WSAStringToAddress(src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
+	{
+		errno = WSAGetLastError();
+		return -1;
+	}
+
+	switch(af)
+	{
+		case AF_INET:
+			memcpy(dst, &sa.sin.sin_addr, sizeof(sa.sin.sin_addr));
+		break;
+		case AF_INET6:
+			memcpy(dst, &sa.sin6.sin6_addr, sizeof(sa.sin6.sin6_addr));
+		break;
+	}
+
+	return 1;
 }
