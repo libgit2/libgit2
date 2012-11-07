@@ -274,11 +274,11 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 	}
 
 	/* Try to parse the host as an IP address to see if it is */
-	if (inet_pton(AF_INET, host, &addr4)) {
+	if (p_inet_pton(AF_INET, host, &addr4)) {
 		type = GEN_IPADD;
 		addr = &addr4;
 	} else {
-		if(inet_pton(AF_INET6, host, &addr6)) {
+		if(p_inet_pton(AF_INET6, host, &addr6)) {
 			type = GEN_IPADD;
 			addr = &addr6;
 		}
