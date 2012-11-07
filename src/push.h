@@ -1,0 +1,41 @@
+/*
+ * Copyright (C) 2009-2012 the libgit2 contributors
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+#ifndef INCLUDE_push_h__
+#define INCLUDE_push_h__
+
+#include "git2.h"
+
+typedef struct push_spec {
+	char *lref;
+	char *rref;
+
+	git_oid loid;
+	git_oid roid;
+
+	bool force;
+} push_spec;
+
+typedef struct push_status {
+	bool ok;
+
+	char *ref;
+	char *msg;
+} push_status;
+
+struct git_push {
+	git_repository *repo;
+	git_packbuilder *pb;
+	git_remote *remote;
+	git_vector specs;
+	bool report_status;
+
+	/* report-status */
+	bool unpack_ok;
+	git_vector status;
+};
+
+#endif

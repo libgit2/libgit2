@@ -602,12 +602,6 @@ on_error:
 	return -1;
 }
 
-static int send_pack_file(void *buf, size_t size, void *data)
-{
-	gitno_socket *s = (gitno_socket *)data;
-	return gitno_send(s, buf, size, 0);
-}
-
 static int write_pack_buf(void *buf, size_t size, void *data)
 {
 	git_buf *b = (git_buf *)data;
@@ -1230,12 +1224,6 @@ static int prepare_pack(git_packbuilder *pb)
 }
 
 #define PREPARE_PACK if (prepare_pack(pb) < 0) { return -1; }
-
-int git_packbuilder_send(git_packbuilder *pb, gitno_socket *s)
-{
-	PREPARE_PACK;
-	return write_pack(pb, &send_pack_file, s);
-}
 
 int git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t size, void *payload), void *payload)
 {

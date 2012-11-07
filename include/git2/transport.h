@@ -102,8 +102,8 @@ typedef struct git_transport {
 		git_headlist_cb list_cb,
 		void *payload);
 
-	/* Reserved until push is implemented. */
-	int (*push)(struct git_transport *transport);
+	/* Executes the push whose context is in the git_push object. */
+	int (*push)(struct git_transport *transport, git_push *push);
 
 	/* This function may be called after a successful call to connect(), when
 	 * the direction is FETCH. The function performs a negotiation to calculate
@@ -221,6 +221,8 @@ GIT_EXTERN(int) git_transport_smart(
 typedef enum {
 	GIT_SERVICE_UPLOADPACK_LS = 1,
 	GIT_SERVICE_UPLOADPACK = 2,
+	GIT_SERVICE_RECEIVEPACK_LS = 3,
+	GIT_SERVICE_RECEIVEPACK = 4,
 } git_smart_service_t;
 
 struct git_smart_subtransport;

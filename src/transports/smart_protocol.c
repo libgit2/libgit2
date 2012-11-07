@@ -4,8 +4,13 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+#include "git2.h"
+
 #include "smart.h"
 #include "refs.h"
+#include "push.h"
+#include "pack-objects.h"
+#include "remote.h"
 
 #define NETWORK_XFER_THRESHOLD (100*1024)
 
@@ -484,6 +489,199 @@ on_error:
 	/* Trailing execution of progress_cb, if necessary */
 	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes)
 		npp.callback(npp.stats, npp.payload);
+
+	return error;
+}
+
+static int gen_pktline(git_buf *buf, git_push *push)
+{
+	git_remote_head *head;
+	push_spec *spec;
+	unsigned int i, j, len;
+	char hex[41]; hex[40] = '\0';
+
+	git_vector_foreach(&push->specs, i, spec) {
+		len = 2*GIT_OID_HEXSZ + 7;
+
+		if (i == 0) {
+			len +=1; /* '\0' */
+			if (push->report_status)
+				len += strlen(GIT_CAP_REPORT_STATUS);
+		}
+
+		if (spec->lref) {
+			len += spec->rref ? strlen(spec->rref) : strlen(spec->lref);
+
+			if (git_oid_iszero(&spec->roid)) {
+
+				/*
+				 * Create remote reference
+				 */
+				git_oid_fmt(hex, &spec->loid);
+				git_buf_printf(buf, "%04x%s %s %s", len,
+					GIT_OID_HEX_ZERO, hex,
+					spec->rref ? spec->rref : spec->lref);
+
+			} else {
+
+				/*
+				 * Update remote reference
+				 */
+				git_oid_fmt(hex, &spec->roid);
+				git_buf_printf(buf, "%04x%s ", len, hex);
+
+				git_oid_fmt(hex, &spec->loid);
+				git_buf_printf(buf, "%s %s", hex,
+					spec->rref ? spec->rref : spec->lref);
+			}
+		} else {
+			/*
+			 * Delete remote reference
+			 */
+			git_vector_foreach(&push->remote->refs, j, head) {
+				if (!strcmp(spec->rref, head->name)) {
+					len += strlen(spec->rref);
+
+					git_oid_fmt(hex, &head->oid);
+					git_buf_printf(buf, "%04x%s %s %s", len,
+						       hex, GIT_OID_HEX_ZERO, head->name);
+
+					break;
+				}
+			}
+		}
+
+		if (i == 0) {
+			git_buf_putc(buf, '\0');
+			if (push->report_status)
+				git_buf_printf(buf, GIT_CAP_REPORT_STATUS);
+		}
+
+		git_buf_putc(buf, '\n');
+	}
+	git_buf_puts(buf, "0000");
+	return git_buf_oom(buf) ? -1 : 0;
+}
+
+static int parse_report(gitno_buffer *buf, git_push *push)
+{
+	git_pkt *pkt;
+	const char *line_end;
+	int error, recvd;
+
+	for (;;) {
+		if (buf->offset > 0)
+			error = git_pkt_parse_line(&pkt, buf->data,
+						   &line_end, buf->offset);
+		else
+			error = GIT_EBUFS;
+
+		if (error < 0 && error != GIT_EBUFS)
+			return -1;
+
+		if (error == GIT_EBUFS) {
+			if ((recvd = gitno_recv(buf)) < 0)
+				return -1;
+
+			if (recvd == 0) {
+				giterr_set(GITERR_NET, "Early EOF");
+				return -1;
+			}
+			continue;
+		}
+
+		gitno_consume(buf, line_end);
+
+		if (pkt->type == GIT_PKT_OK) {
+			push_status *status = (push_status *) git__malloc(sizeof(push_status));
+			GITERR_CHECK_ALLOC(status);
+			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
+			status->msg = NULL;
+			git_pkt_free(pkt);
+			if (git_vector_insert(&push->status, status) < 0) {
+				git__free(status);
+				return -1;
+			}
+			continue;
+		}
+
+		if (pkt->type == GIT_PKT_NG) {
+			push_status *status = (push_status *) git__malloc(sizeof(push_status));
+			GITERR_CHECK_ALLOC(status);
+			status->ref = git__strdup(((git_pkt_ng *)pkt)->ref);
+			status->msg = git__strdup(((git_pkt_ng *)pkt)->msg);
+			git_pkt_free(pkt);
+			if (git_vector_insert(&push->status, status) < 0) {
+				git__free(status);
+				return -1;
+			}
+			continue;
+		}
+
+		if (pkt->type == GIT_PKT_UNPACK) {
+			push->unpack_ok = ((git_pkt_unpack *)pkt)->unpack_ok;
+			git_pkt_free(pkt);
+			continue;
+		}
+
+		if (pkt->type == GIT_PKT_FLUSH) {
+			git_pkt_free(pkt);
+			return 0;
+		}
+
+		git_pkt_free(pkt);
+		giterr_set(GITERR_NET, "report-status: protocol error");
+		return -1;
+	}
+}
+
+static int stream_thunk(void *buf, size_t size, void *data)
+{
+	git_smart_subtransport_stream *s = (git_smart_subtransport_stream *)data;
+
+	return s->write(s, (const char *)buf, size);
+}
+
+int git_smart__push(git_transport *transport, git_push *push)
+{
+	transport_smart *t = (transport_smart *)transport;
+	git_smart_subtransport_stream *s;
+	git_buf pktline = GIT_BUF_INIT;
+	int error = -1;
+
+#ifdef PUSH_DEBUG
+{
+	git_remote_head *head;
+	push_spec *spec;
+	unsigned int i;
+	char hex[41]; hex[40] = '\0';
+
+	git_vector_foreach(&push->remote->refs, i, head) {
+		git_oid_fmt(hex, &head->oid);
+		fprintf(stderr, "%s (%s)\n", hex, head->name);
+	}
+
+	git_vector_foreach(&push->specs, i, spec) {
+		git_oid_fmt(hex, &spec->roid);
+		fprintf(stderr, "%s (%s) -> ", hex, spec->lref);
+		git_oid_fmt(hex, &spec->loid);
+		fprintf(stderr, "%s (%s)\n", hex, spec->rref ?
+			spec->rref : spec->lref);
+	}
+}
+#endif
+
+	if (git_smart__get_push_stream(t, &s) < 0 ||
+		gen_pktline(&pktline, push) < 0 ||
+		s->write(s, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0 ||
+		git_packbuilder_foreach(push->pb, &stream_thunk, s) < 0 ||
+		(push->report_status && parse_report(&t->buffer, push) < 0))
+		goto on_error;
+
+	error = 0;
+
+on_error:
+	git_buf_free(&pktline);
 
 	return error;
 }
