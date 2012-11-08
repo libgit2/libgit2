@@ -497,6 +497,12 @@ int git_tree__write_index(git_oid *oid, git_index *index, git_repository *repo)
 
 	assert(oid && index && repo);
 
+	if (git_index_has_conflicts(index)) {
+		giterr_set(GITERR_INDEX,
+			"Cannot create a tree from a not fully merged index.");
+		return GIT_EUNMERGED;
+	}
+
 	if (index->tree != NULL && index->tree->entries >= 0) {
 		git_oid_cpy(oid, &index->tree->oid);
 		return 0;

@@ -115,3 +115,43 @@ void test_object_tree_duplicateentries__cannot_create_a_duplicate_entry_through_
 	tree_creator(&tid, one_blob_and_one_tree);
 	tree_checker(&tid, "4e0883eeeeebc1fb1735161cea82f7cb5fab7e63", GIT_FILEMODE_TREE);
 }
+
+void add_fake_conflicts(git_index *index)
+{
+	git_index_entry ancestor_entry, our_entry, their_entry;
+
+	memset(&ancestor_entry, 0x0, sizeof(git_index_entry));
+	memset(&our_entry, 0x0, sizeof(git_index_entry));
+	memset(&their_entry, 0x0, sizeof(git_index_entry));
+
+	ancestor_entry.path = "duplicate";
+	ancestor_entry.mode = GIT_FILEMODE_BLOB;
+	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
+	git_oid_fromstr(&ancestor_entry.oid, "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
+
+	our_entry.path = "duplicate";
+	our_entry.mode = GIT_FILEMODE_BLOB;
+	ancestor_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
+	git_oid_fromstr(&our_entry.oid, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
+
+	their_entry.path = "duplicate";
+	their_entry.mode = GIT_FILEMODE_BLOB;
+	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
+	git_oid_fromstr(&their_entry.oid, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
+
+	cl_git_pass(git_index_conflict_add(index, &ancestor_entry, &our_entry, &their_entry));
+}
+
+void test_object_tree_duplicateentries__cannot_create_a_duplicate_entry_building_a_tree_from_a_index_with_conflicts(void)
+{
+	git_index *index;
+	git_oid tid;
+
+	cl_git_pass(git_repository_index(&index, _repo));
+
+	add_fake_conflicts(index); 
+
+	cl_assert_equal_i(GIT_EUNMERGED, git_index_write_tree(&tid, index));
+
+	git_index_free(index);
+}
