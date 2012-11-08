@@ -52,7 +52,12 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
-static int git_smart__connect(git_transport *transport, const char *url, int direction, int flags)
+static int git_smart__connect(
+	git_transport *transport,
+	const char *url,
+	git_cred_acquire_cb cred_acquire_cb,
+	int direction,
+	int flags)
 {
 	transport_smart *t = (transport_smart *)transport;
 	git_smart_subtransport_stream *stream;
@@ -66,6 +71,7 @@ static int git_smart__connect(git_transport *transport, const char *url, int dir
 
 	t->direction = direction;
 	t->flags = flags;
+	t->cred_acquire_cb = cred_acquire_cb;
 
 	if (GIT_DIR_FETCH == direction)
 	{

@@ -20,6 +20,54 @@
 GIT_BEGIN_DECL
 
 /*
+ *** Begin interface for credentials acquisition ***
+ */
+
+typedef enum {
+	/* git_cred_userpass_plaintext */
+	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
+} git_credtype_t;
+
+/* The base structure for all credential types */
+typedef struct git_cred {
+	git_credtype_t credtype;
+	void (*free)(
+		struct git_cred *cred);
+} git_cred;
+
+/* A plaintext username and password */
+typedef struct git_cred_userpass_plaintext {
+	git_cred parent;
+	char *username;
+	char *password;
+} git_cred_userpass_plaintext;
+
+/**
+ * Creates a new plain-text username and password credential object.
+ *
+ * @param cred The newly created credential object.
+ * @param username The username of the credential.
+ * @param password The password of the credential.
+ */
+GIT_EXTERN(int) git_cred_userpass_plaintext_new(
+	git_cred **cred,
+	const char *username,
+	const char *password);
+
+/**
+ * Signature of a function which acquires a credential object.
+ *
+ * @param cred The newly created credential object.
+ * @param url The resource for which we are demanding a credential.
+ * @param allowed_types A bitmask stating which cred types are OK to return.
+ */
+typedef int (*git_cred_acquire_cb)(
+	git_cred **cred,
+	const char *url,
+	int allowed_types);
+
+/*
+ *** End interface for credentials acquisition ***
  *** Begin base transport interface ***
  */
 
@@ -43,6 +91,7 @@ typedef struct git_transport {
 	 * direction. */
 	int (*connect)(struct git_transport *transport,
 		const char *url,
+		git_cred_acquire_cb cred_acquire_cb,
 		int direction,
 		int flags);
 
