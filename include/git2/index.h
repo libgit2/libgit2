@@ -431,6 +431,13 @@ GIT_EXTERN(int) git_index_conflict_remove(git_index *index, const char *path);
  */
 GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
 
+/**
+ * Determine if the index contains entries representing file conflicts.
+ *
+ * @return 1 if at least one conflict is found, 0 otherwise.
+ */
+GIT_EXTERN(int) git_index_has_conflicts(git_index *index);
+
 /**@}*/
 
 /** @name Resolve Undo (REUC) index entry manipulation.
