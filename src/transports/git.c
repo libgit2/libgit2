@@ -13,6 +13,7 @@
 
 static const char prefix_git[] = "git://";
 static const char cmd_uploadpack[] = "git-upload-pack";
+static const char cmd_receivepack[] = "git-receive-pack";
 
 typedef struct {
 	git_smart_subtransport_stream parent;
@@ -173,7 +174,7 @@ static int git_stream_alloc(
 	return 0;
 }
 
-static int git_git_uploadpack_ls(
+static int _git_uploadpack_ls(
 	git_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -211,7 +212,7 @@ on_error:
 	return -1;
 }
 
-static int git_git_uploadpack(
+static int _git_uploadpack(
 	git_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -227,6 +228,60 @@ static int git_git_uploadpack(
 	return -1;
 }
 
+static int _git_receivepack_ls(
+	git_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
+{
+	char *host, *port;
+	git_stream *s;
+
+	*stream = NULL;
+
+	if (!git__prefixcmp(url, prefix_git))
+		url += strlen(prefix_git);
+
+	if (git_stream_alloc(t, url, cmd_receivepack, stream) < 0)
+		return -1;
+
+	s = (git_stream *)*stream;
+
+	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
+		goto on_error;
+
+	if (gitno_connect(&s->socket, host, port, 0) < 0)
+		goto on_error;
+
+	t->current_stream = s;
+	git__free(host);
+	git__free(port);
+	return 0;
+
+on_error:
+	if (*stream)
+		git_stream_free(*stream);
+
+	git__free(host);
+	git__free(port);
+	return -1;
+}
+
+static int _git_receivepack(
+	git_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
+{
+	GIT_UNUSED(url);
+
+	if (t->current_stream) {
+		*stream = &t->current_stream->parent;
+		return 0;
+	}
+
+	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
+	return -1;
+}
+
 static int _git_action(
 	git_smart_subtransport_stream **stream,
 	git_smart_subtransport *smart_transport,
@@ -237,10 +292,16 @@ static int _git_action(
 
 	switch (action) {
 		case GIT_SERVICE_UPLOADPACK_LS:
-			return git_git_uploadpack_ls(t, url, stream);
+			return _git_uploadpack_ls(t, url, stream);
 
 		case GIT_SERVICE_UPLOADPACK:
-			return git_git_uploadpack(t, url, stream);
+			return _git_uploadpack(t, url, stream);
+
+		case GIT_SERVICE_RECEIVEPACK_LS:
+			return _git_uploadpack_ls(t, url, stream);
+
+		case GIT_SERVICE_RECEIVEPACK:
+			return _git_uploadpack(t, url, stream);
 	}
 
 	*stream = NULL;
