@@ -17,6 +17,9 @@ static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
 static const char *upload_pack_service_url = "/git-upload-pack";
+static const char *receive_pack_service = "receive-pack";
+static const char *receive_pack_ls_service_url = "/info/refs?service=git-receive-pack";
+static const char *receive_pack_service_url = "/git-receive-pack";
 static const char *get_verb = "GET";
 static const char *post_verb = "POST";
 static const char *basic_authtype = "Basic";
@@ -25,6 +28,9 @@ static const char *basic_authtype = "Basic";
 
 #define PARSE_ERROR_GENERIC	-1
 #define PARSE_ERROR_REPLAY	-2
+
+#define CHUNK_SIZE	4096
+#define MIN(a, b)	(((a) < (b)) ? (a) : (b))
 
 enum last_cb {
 	NONE,
@@ -41,7 +47,11 @@ typedef struct {
 	const char *service;
 	const char *service_url;
 	const char *verb;
-	unsigned sent_request : 1;
+	char *chunk_buffer;
+	unsigned chunk_buffer_len;
+	unsigned sent_request : 1,
+		received_response : 1,
+		chunked : 1;
 } http_stream;
 
 typedef struct {
@@ -106,33 +116,33 @@ on_error:
 
 static int gen_request(
 	git_buf *buf,
-	const char *path,
-	const char *host,
-	git_cred *cred,
-	http_authmechanism_t auth_mechanism,
-	const char *op,
-	const char *service,
-	const char *service_url,
-	ssize_t content_length)
+	http_stream *s,
+	size_t content_length)
 {
-	if (!path)
-		path = "/";
+	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 
-	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", op, path, service_url);
+	if (!t->path)
+		t->path = "/";
+
+	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, t->path, s->service_url);
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
-	git_buf_printf(buf, "Host: %s\r\n", host);
-	if (content_length > 0) {
-		git_buf_printf(buf, "Accept: application/x-git-%s-result\r\n", service);
-		git_buf_printf(buf, "Content-Type: application/x-git-%s-request\r\n", service);
-		git_buf_printf(buf, "Content-Length: %"PRIuZ "\r\n", content_length);
-	} else {
+	git_buf_printf(buf, "Host: %s\r\n", t->host);
+
+	if (s->chunked || content_length > 0) {
+		git_buf_printf(buf, "Accept: application/x-git-%s-result\r\n", s->service);
+		git_buf_printf(buf, "Content-Type: application/x-git-%s-request\r\n", s->service);
+
+		if (s->chunked)
+			git_buf_puts(buf, "Transfer-Encoding: chunked\r\n");
+		else
+			git_buf_printf(buf, "Content-Length: %"PRIuZ "\r\n", content_length);
+	} else
 		git_buf_puts(buf, "Accept: */*\r\n");
-	}
 
 	/* Apply credentials to the request */
-	if (cred && cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT &&
-		auth_mechanism == GIT_HTTP_AUTH_BASIC &&
-		apply_basic_credential(buf, cred) < 0)
+	if (t->cred && t->cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT &&
+		t->auth_mechanism == GIT_HTTP_AUTH_BASIC &&
+		apply_basic_credential(buf, t->cred) < 0)
 		return -1;
 
 	git_buf_puts(buf, "\r\n");
@@ -355,6 +365,34 @@ static void clear_parser_state(http_subtransport *t)
 	git_vector_free(&t->www_authenticate);
 }
 
+static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	/* Chunk header */
+	git_buf_printf(&buf, "%X\r\n", (unsigned)len);
+
+	if (git_buf_oom(&buf))
+		return -1;
+
+	if (gitno_send(socket, buf.ptr, buf.size, 0) < 0) {
+		git_buf_free(&buf);
+		return -1;
+	}
+
+	git_buf_free(&buf);
+
+	/* Chunk body */
+	if (len > 0 && gitno_send(socket, buffer, len, 0) < 0)
+		return -1;
+
+	/* Chunk footer */
+	if (gitno_send(socket, "\r\n", 2, 0) < 0)
+		return -1;
+
+	return 0;
+}
+
 static int http_stream_read(
 	git_smart_subtransport_stream *stream,
 	char *buffer,
@@ -363,7 +401,6 @@ static int http_stream_read(
 {
 	http_stream *s = (http_stream *)stream;
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
-	git_buf request = GIT_BUF_INIT;
 	parser_context ctx;
 
 replay:
@@ -372,11 +409,11 @@ replay:
 	assert(t->connected);
 
 	if (!s->sent_request) {
+		git_buf request = GIT_BUF_INIT;
+
 		clear_parser_state(t);
 
-		if (gen_request(&request, t->path, t->host,
-				t->cred, t->auth_mechanism, s->verb,
-				s->service, s->service_url, 0) < 0) {
+		if (gen_request(&request, s, 0) < 0) {
 			giterr_set(GITERR_NET, "Failed to generate request");
 			return -1;
 		}
@@ -387,7 +424,27 @@ replay:
 		}
 
 		git_buf_free(&request);
+
 		s->sent_request = 1;
+	}
+
+	if (!s->received_response) {
+		if (s->chunked) {
+			assert(s->verb == post_verb);
+
+			/* Flush, if necessary */
+			if (s->chunk_buffer_len > 0 &&
+				write_chunk(&t->socket, s->chunk_buffer, s->chunk_buffer_len) < 0)
+				return -1;
+
+			s->chunk_buffer_len = 0;
+
+			/* Write the final chunk. */
+			if (gitno_send(&t->socket, "0\r\n\r\n", 5, 0) < 0)
+				return -1;
+		}
+
+		s->received_response = 1;
 	}
 
 	t->parse_buffer.offset = 0;
@@ -432,7 +489,80 @@ replay:
 	return 0;
 }
 
-static int http_stream_write(
+static int http_stream_write_chunked(
+	git_smart_subtransport_stream *stream,
+	const char *buffer,
+	size_t len)
+{
+	http_stream *s = (http_stream *)stream;
+	http_subtransport *t = OWNING_SUBTRANSPORT(s);
+
+	assert(t->connected);
+
+	/* Send the request, if necessary */
+	if (!s->sent_request) {
+		git_buf request = GIT_BUF_INIT;
+
+		clear_parser_state(t);
+
+		if (gen_request(&request, s, 0) < 0) {
+			giterr_set(GITERR_NET, "Failed to generate request");
+			return -1;
+		}
+
+		if (gitno_send(&t->socket, request.ptr, request.size, 0) < 0) {
+			git_buf_free(&request);
+			return -1;
+		}
+
+		git_buf_free(&request);
+
+		s->sent_request = 1;
+	}
+
+	if (len > CHUNK_SIZE) {
+		/* Flush, if necessary */
+		if (s->chunk_buffer_len > 0) {
+			if (write_chunk(&t->socket, s->chunk_buffer, s->chunk_buffer_len) < 0)
+				return -1;
+
+			s->chunk_buffer_len = 0;
+		}
+
+		/* Write chunk directly */
+		if (write_chunk(&t->socket, buffer, len) < 0)
+			return -1;
+	}
+	else {
+		/* Append as much to the buffer as we can */
+		int count = MIN(CHUNK_SIZE - s->chunk_buffer_len, len);
+
+		if (!s->chunk_buffer)
+			s->chunk_buffer = (char *)git__malloc(CHUNK_SIZE);
+
+		memcpy(s->chunk_buffer + s->chunk_buffer_len, buffer, count);
+		s->chunk_buffer_len += count;
+		buffer += count;
+		len -= count;
+
+		/* Is the buffer full? If so, then flush */
+		if (CHUNK_SIZE == s->chunk_buffer_len) {
+			if (write_chunk(&t->socket, s->chunk_buffer, s->chunk_buffer_len) < 0)
+				return -1;
+
+			s->chunk_buffer_len = 0;
+
+			if (len > 0) {
+				memcpy(s->chunk_buffer, buffer, len);
+				s->chunk_buffer_len = len;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int http_stream_write_single(
 	git_smart_subtransport_stream *stream,
 	const char *buffer,
 	size_t len)
@@ -443,29 +573,26 @@ static int http_stream_write(
 
 	assert(t->connected);
 
-	/* Since we have to write the Content-Length header up front, we're
-	 * basically limited to a single call to write() per request. */
-	assert(!s->sent_request);
-
-	if (!s->sent_request) {
-		clear_parser_state(t);
-
-		if (gen_request(&request, t->path, t->host,
-				t->cred, t->auth_mechanism, s->verb,
-				s->service, s->service_url, len) < 0) {
-			giterr_set(GITERR_NET, "Failed to generate request");
-			return -1;
-		}
-
-		if (gitno_send(&t->socket, request.ptr, request.size, 0) < 0)
-			goto on_error;
-
-		if (len && gitno_send(&t->socket, buffer, len, 0) < 0)
-			goto on_error;
-
-		git_buf_free(&request);
-		s->sent_request = 1;
+	if (s->sent_request) {
+		giterr_set(GITERR_NET, "Subtransport configured for only one write");
+		return -1;
 	}
+
+	clear_parser_state(t);
+
+	if (gen_request(&request, s, len) < 0) {
+		giterr_set(GITERR_NET, "Failed to generate request");
+		return -1;
+	}
+
+	if (gitno_send(&t->socket, request.ptr, request.size, 0) < 0)
+		goto on_error;
+
+	if (len && gitno_send(&t->socket, buffer, len, 0) < 0)
+		goto on_error;
+
+	git_buf_free(&request);
+	s->sent_request = 1;
 
 	return 0;
 
@@ -477,6 +604,9 @@ on_error:
 static void http_stream_free(git_smart_subtransport_stream *stream)
 {
 	http_stream *s = (http_stream *)stream;
+
+	if (s->chunk_buffer)
+		git__free(s->chunk_buffer);
 
 	git__free(s);
 }
@@ -494,7 +624,7 @@ static int http_stream_alloc(http_subtransport *t,
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = http_stream_read;
-	s->parent.write = http_stream_write;
+	s->parent.write = http_stream_write_single;
 	s->parent.free = http_stream_free;
 
 	*stream = (git_smart_subtransport_stream *)s;
@@ -532,6 +662,46 @@ static int http_uploadpack(
 
 	s->service = upload_pack_service;
 	s->service_url = upload_pack_service_url;
+	s->verb = post_verb;
+
+	return 0;
+}
+
+static int http_receivepack_ls(
+	http_subtransport *t,
+	git_smart_subtransport_stream **stream)
+{
+	http_stream *s;
+
+	if (http_stream_alloc(t, stream) < 0)
+		return -1;
+
+	s = (http_stream *)*stream;
+
+	s->service = receive_pack_service;
+	s->service_url = receive_pack_ls_service_url;
+	s->verb = get_verb;
+
+	return 0;
+}
+
+static int http_receivepack(
+	http_subtransport *t,
+	git_smart_subtransport_stream **stream)
+{
+	http_stream *s;
+
+	if (http_stream_alloc(t, stream) < 0)
+		return -1;
+
+	s = (http_stream *)*stream;
+
+	/* Use Transfer-Encoding: chunked for this request */
+	s->chunked = 1;
+	s->parent.write = http_stream_write_chunked;
+
+	s->service = receive_pack_service;
+	s->service_url = receive_pack_service_url;
 	s->verb = post_verb;
 
 	return 0;
@@ -598,6 +768,12 @@ static int http_action(
 
 		case GIT_SERVICE_UPLOADPACK:
 			return http_uploadpack(t, stream);
+
+		case GIT_SERVICE_RECEIVEPACK_LS:
+			return http_receivepack_ls(t, stream);
+
+		case GIT_SERVICE_RECEIVEPACK:
+			return http_receivepack(t, stream);
 	}
 
 	*stream = NULL;
