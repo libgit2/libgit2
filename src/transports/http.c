@@ -10,6 +10,7 @@
 #include "http_parser.h"
 #include "buffer.h"
 #include "netops.h"
+#include "smart.h"
 
 static const char *prefix_http = "http://";
 static const char *prefix_https = "https://";
@@ -18,14 +19,22 @@ static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-p
 static const char *upload_pack_service_url = "/git-upload-pack";
 static const char *get_verb = "GET";
 static const char *post_verb = "POST";
+static const char *basic_authtype = "Basic";
 
 #define OWNING_SUBTRANSPORT(s) ((http_subtransport *)(s)->parent.subtransport)
+
+#define PARSE_ERROR_GENERIC	-1
+#define PARSE_ERROR_REPLAY	-2
 
 enum last_cb {
 	NONE,
 	FIELD,
 	VALUE
 };
+
+typedef enum {
+	GIT_HTTP_AUTH_BASIC = 1,
+} http_authmechanism_t;
 
 typedef struct {
 	git_smart_subtransport_stream parent;
@@ -37,27 +46,28 @@ typedef struct {
 
 typedef struct {
 	git_smart_subtransport parent;
-	git_transport *owner;
+	transport_smart *owner;
 	gitno_socket socket;
 	const char *path;
 	char *host;
-	char *port;	
+	char *port;
+	git_cred *cred;
+	http_authmechanism_t auth_mechanism;
 	unsigned connected : 1,
-		use_ssl : 1,
-		no_check_cert : 1;
+		use_ssl : 1;
 
 	/* Parser structures */
 	http_parser parser;
 	http_parser_settings settings;
 	gitno_buffer parse_buffer;
-	git_buf parse_temp;
+	git_buf parse_header_name;
+	git_buf parse_header_value;
 	char parse_buffer_data[2048];
 	char *content_type;
+	git_vector www_authenticate;
 	enum last_cb last_cb;
-	int parse_error;	
-	unsigned parse_finished : 1,
-		ct_found : 1,
-		ct_finished : 1;
+	int parse_error;
+	unsigned parse_finished : 1;
 } http_subtransport;
 
 typedef struct {
@@ -70,10 +80,42 @@ typedef struct {
 	size_t *bytes_read;
 } parser_context;
 
-static int gen_request(git_buf *buf, const char *path, const char *host, const char *op,
-                       const char *service, const char *service_url, ssize_t content_length)
+static int apply_basic_credential(git_buf *buf, git_cred *cred)
 {
-	if (path == NULL) /* Is 'git fetch http://host.com/' valid? */
+	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
+	git_buf raw = GIT_BUF_INIT;
+	int error = -1;
+
+	git_buf_printf(&raw, "%s:%s", c->username, c->password);
+
+	if (git_buf_oom(&raw) ||
+		git_buf_puts(buf, "Authorization: Basic ") < 0 ||
+		git_buf_put_base64(buf, git_buf_cstr(&raw), raw.size) < 0 ||
+		git_buf_puts(buf, "\r\n") < 0)
+		goto on_error;
+
+	error = 0;
+
+on_error:
+	if (raw.size)
+		memset(raw.ptr, 0x0, raw.size);
+
+	git_buf_free(&raw);
+	return error;
+}
+
+static int gen_request(
+	git_buf *buf,
+	const char *path,
+	const char *host,
+	git_cred *cred,
+	http_authmechanism_t auth_mechanism,
+	const char *op,
+	const char *service,
+	const char *service_url,
+	ssize_t content_length)
+{
+	if (!path)
 		path = "/";
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", op, path, service_url);
@@ -86,6 +128,13 @@ static int gen_request(git_buf *buf, const char *path, const char *host, const c
 	} else {
 		git_buf_puts(buf, "Accept: */*\r\n");
 	}
+
+	/* Apply credentials to the request */
+	if (cred && cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT &&
+		auth_mechanism == GIT_HTTP_AUTH_BASIC &&
+		apply_basic_credential(buf, cred) < 0)
+		return -1;
+
 	git_buf_puts(buf, "\r\n");
 
 	if (git_buf_oom(buf))
@@ -94,88 +143,157 @@ static int gen_request(git_buf *buf, const char *path, const char *host, const c
 	return 0;
 }
 
+static int parse_unauthorized_response(
+	git_vector *www_authenticate,
+	int *allowed_types,
+	http_authmechanism_t *auth_mechanism)
+{
+	unsigned i;
+	char *entry;
+
+	git_vector_foreach(www_authenticate, i, entry) {
+		if (!strncmp(entry, basic_authtype, 5) &&
+			(entry[5] == '\0' || entry[5] == ' ')) {
+			*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+			*auth_mechanism = GIT_HTTP_AUTH_BASIC;
+		}
+	}
+
+	return 0;
+}
+
+static int on_header_ready(http_subtransport *t)
+{
+	git_buf *name = &t->parse_header_name;
+	git_buf *value = &t->parse_header_value;
+	char *dup;
+
+	if (!t->content_type && !strcmp("Content-Type", git_buf_cstr(name))) {
+		t->content_type = git__strdup(git_buf_cstr(value));
+		GITERR_CHECK_ALLOC(t->content_type);
+	}
+	else if (!strcmp("WWW-Authenticate", git_buf_cstr(name))) {
+		dup = git__strdup(git_buf_cstr(value));
+		GITERR_CHECK_ALLOC(dup);
+		git_vector_insert(&t->www_authenticate, dup);
+	}
+
+	return 0;
+}
+
 static int on_header_field(http_parser *parser, const char *str, size_t len)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
-	git_buf *buf = &t->parse_temp;
 
-	if (t->last_cb == VALUE && t->ct_found) {
-		t->ct_finished = 1;
-		t->ct_found = 0;
-		t->content_type = git__strdup(git_buf_cstr(buf));
-		GITERR_CHECK_ALLOC(t->content_type);
-		git_buf_clear(buf);
-	}
+	/* Both parse_header_name and parse_header_value are populated
+	 * and ready for consumption */
+	if (VALUE == t->last_cb)
+		if (on_header_ready(t) < 0)
+			return t->parse_error = PARSE_ERROR_GENERIC;
 
-	if (t->ct_found) {
-		t->last_cb = FIELD;
-		return 0;
-	}
+	if (NONE == t->last_cb || VALUE == t->last_cb)
+		git_buf_clear(&t->parse_header_name);
 
-	if (t->last_cb != FIELD)
-		git_buf_clear(buf);
+	if (git_buf_put(&t->parse_header_name, str, len) < 0)
+		return t->parse_error = PARSE_ERROR_GENERIC;
 
-	git_buf_put(buf, str, len);
 	t->last_cb = FIELD;
-
-	return git_buf_oom(buf);
+	return 0;
 }
 
 static int on_header_value(http_parser *parser, const char *str, size_t len)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
-	git_buf *buf = &t->parse_temp;
 
-	if (t->ct_finished) {
-		t->last_cb = VALUE;
-		return 0;
-	}
+	assert(NONE != t->last_cb);
 
-	if (t->last_cb == VALUE)
-		git_buf_put(buf, str, len);
+	if (FIELD == t->last_cb)
+		git_buf_clear(&t->parse_header_value);
 
-	if (t->last_cb == FIELD && !strcmp(git_buf_cstr(buf), "Content-Type")) {
-		t->ct_found = 1;
-		git_buf_clear(buf);
-		git_buf_put(buf, str, len);
-	}
+	if (git_buf_put(&t->parse_header_value, str, len) < 0)
+		return t->parse_error = PARSE_ERROR_GENERIC;
 
 	t->last_cb = VALUE;
-
-	return git_buf_oom(buf);
+	return 0;
 }
 
 static int on_headers_complete(http_parser *parser)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
-	git_buf *buf = &t->parse_temp;
+	http_stream *s = ctx->s;
+	git_buf buf = GIT_BUF_INIT;
 
-	/* The content-type is text/plain for 404, so don't validate */
-	if (parser->status_code == 404) {
-		git_buf_clear(buf);
-		return 0;
+	/* Both parse_header_name and parse_header_value are populated
+	 * and ready for consumption. */
+	if (VALUE == t->last_cb)
+		if (on_header_ready(t) < 0)
+			return t->parse_error = PARSE_ERROR_GENERIC;
+
+	/* Check for an authentication failure. */
+	if (parser->status_code == 401 &&
+		get_verb == s->verb &&
+		t->owner->cred_acquire_cb) {
+		int allowed_types = 0;
+
+		if (parse_unauthorized_response(&t->www_authenticate,
+			&allowed_types, &t->auth_mechanism) < 0)
+			return t->parse_error = PARSE_ERROR_GENERIC;
+
+		if (allowed_types &&
+			(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
+
+			if (t->owner->cred_acquire_cb(&t->cred,
+					t->owner->url,
+					allowed_types) < 0)
+				return PARSE_ERROR_GENERIC;
+
+			assert(t->cred);
+
+			/* Successfully acquired a credential. */
+			return t->parse_error = PARSE_ERROR_REPLAY;
+		}
 	}
 
-	if (t->content_type == NULL) {
-		t->content_type = git__strdup(git_buf_cstr(buf));
-		if (t->content_type == NULL)
-			return t->parse_error = -1;
+	/* Check for a 200 HTTP status code. */
+	if (parser->status_code != 200) {
+		giterr_set(GITERR_NET,
+			"Unexpected HTTP status code: %d",
+			parser->status_code);
+		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
-	git_buf_clear(buf);
-	git_buf_printf(buf, "application/x-git-%s-advertisement", ctx->s->service);
-	if (git_buf_oom(buf))
-		return t->parse_error = -1;
-
-	if (strcmp(t->content_type, git_buf_cstr(buf))) {
-		giterr_set(GITERR_NET, "Invalid content-type: %s", t->content_type);
-		return t->parse_error = -1;
+	/* The response must contain a Content-Type header. */
+	if (!t->content_type) {
+		giterr_set(GITERR_NET, "No Content-Type header in response");
+		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
-	git_buf_clear(buf);
+	/* The Content-Type header must match our expectation. */
+	if (get_verb == s->verb)
+		git_buf_printf(&buf,
+			"application/x-git-%s-advertisement",
+			ctx->s->service);
+	else
+		git_buf_printf(&buf,
+			"application/x-git-%s-result",
+			ctx->s->service);
+
+	if (git_buf_oom(&buf))
+		return t->parse_error = PARSE_ERROR_GENERIC;
+
+	if (strcmp(t->content_type, git_buf_cstr(&buf))) {
+		git_buf_free(&buf);
+		giterr_set(GITERR_NET,
+			"Invalid Content-Type: %s",
+			t->content_type);
+		return t->parse_error = PARSE_ERROR_GENERIC;
+	}
+
+	git_buf_free(&buf);
+
 	return 0;
 }
 
@@ -185,11 +303,6 @@ static int on_message_complete(http_parser *parser)
 	http_subtransport *t = ctx->t;
 
 	t->parse_finished = 1;
-
-	if (parser->status_code == 404) {
-		giterr_set(GITERR_NET, "Remote error: %s", git_buf_cstr(&t->parse_temp));
-		t->parse_error = -1;
-	}
 
 	return 0;
 }
@@ -201,7 +314,7 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 
 	if (ctx->buf_size < len) {
 		giterr_set(GITERR_NET, "Can't fit data in the buffer");
-		return t->parse_error = -1;
+		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
 	memcpy(ctx->buffer, str, len);
@@ -212,6 +325,36 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
+static void clear_parser_state(http_subtransport *t)
+{
+	unsigned i;
+	char *entry;
+
+	http_parser_init(&t->parser, HTTP_RESPONSE);
+	gitno_buffer_setup(&t->socket,
+		&t->parse_buffer,
+		t->parse_buffer_data,
+		sizeof(t->parse_buffer_data));
+
+	t->last_cb = NONE;
+	t->parse_error = 0;
+	t->parse_finished = 0;
+
+	git_buf_free(&t->parse_header_name);
+	git_buf_init(&t->parse_header_name, 0);
+
+	git_buf_free(&t->parse_header_value);
+	git_buf_init(&t->parse_header_value, 0);
+
+	git__free(t->content_type);
+	t->content_type = NULL;
+
+	git_vector_foreach(&t->www_authenticate, i, entry)
+		git__free(entry);
+
+	git_vector_free(&t->www_authenticate);
+}
+
 static int http_stream_read(
 	git_smart_subtransport_stream *stream,
 	char *buffer,
@@ -219,17 +362,22 @@ static int http_stream_read(
 	size_t *bytes_read)
 {
 	http_stream *s = (http_stream *)stream;
-	http_subtransport *t = OWNING_SUBTRANSPORT(s);	
+	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	git_buf request = GIT_BUF_INIT;
 	parser_context ctx;
 
+replay:
 	*bytes_read = 0;
 
 	assert(t->connected);
 
 	if (!s->sent_request) {
-		if (gen_request(&request, t->path, t->host, s->verb, s->service, s->service_url, 0) < 0) {
-			giterr_set(GITERR_NET, "Failed to generate request");			
+		clear_parser_state(t);
+
+		if (gen_request(&request, t->path, t->host,
+				t->cred, t->auth_mechanism, s->verb,
+				s->service, s->service_url, 0) < 0) {
+			giterr_set(GITERR_NET, "Failed to generate request");
 			return -1;
 		}
 
@@ -239,7 +387,7 @@ static int http_stream_read(
 		}
 
 		git_buf_free(&request);
-		s->sent_request = 1;		
+		s->sent_request = 1;
 	}
 
 	t->parse_buffer.offset = 0;
@@ -250,10 +398,11 @@ static int http_stream_read(
 	if (gitno_recv(&t->parse_buffer) < 0)
 		return -1;
 
-	/* This call to http_parser_execute will result in invocations of the on_* family of
-		* callbacks. The most interesting of these is on_body_fill_buffer, which is called
-		* when data is ready to be copied into the target buffer. We need to marshal the
-		* buffer, buf_size, and bytes_read parameters to this callback. */
+	/* This call to http_parser_execute will result in invocations of the on_*
+	 * family of callbacks. The most interesting of these is
+	 * on_body_fill_buffer, which is called when data is ready to be copied
+	 * into the target buffer. We need to marshal the buffer, buf_size, and
+	 * bytes_read parameters to this callback. */
 	ctx.t = t;
 	ctx.s = s;
 	ctx.buffer = buffer;
@@ -262,11 +411,23 @@ static int http_stream_read(
 
 	/* Set the context, call the parser, then unset the context. */
 	t->parser.data = &ctx;
-	http_parser_execute(&t->parser, &t->settings, t->parse_buffer.data, t->parse_buffer.offset);
+
+	http_parser_execute(&t->parser,
+		&t->settings,
+		t->parse_buffer.data,
+		t->parse_buffer.offset);
+
 	t->parser.data = NULL;
 
+	/* If there was a handled authentication failure, then parse_error
+	 * will have signaled us that we should replay the request. */
+	if (PARSE_ERROR_REPLAY == t->parse_error) {
+		s->sent_request = 0;
+		goto replay;
+	}
+
 	if (t->parse_error < 0)
-		return t->parse_error;
+		return -1;
 
 	return 0;
 }
@@ -277,7 +438,7 @@ static int http_stream_write(
 	size_t len)
 {
 	http_stream *s = (http_stream *)stream;
-	http_subtransport *t = OWNING_SUBTRANSPORT(s);	
+	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	git_buf request = GIT_BUF_INIT;
 
 	assert(t->connected);
@@ -287,7 +448,11 @@ static int http_stream_write(
 	assert(!s->sent_request);
 
 	if (!s->sent_request) {
-		if (gen_request(&request, t->path, t->host, s->verb, s->service, s->service_url, len) < 0) {
+		clear_parser_state(t);
+
+		if (gen_request(&request, t->path, t->host,
+				t->cred, t->auth_mechanism, s->verb,
+				s->service, s->service_url, len) < 0) {
 			giterr_set(GITERR_NET, "Failed to generate request");
 			return -1;
 		}
@@ -316,9 +481,10 @@ static void http_stream_free(git_smart_subtransport_stream *stream)
 	git__free(s);
 }
 
-static int http_stream_alloc(http_subtransport *t, git_smart_subtransport_stream **stream)
+static int http_stream_alloc(http_subtransport *t,
+	git_smart_subtransport_stream **stream)
 {
-	http_stream *s;	
+	http_stream *s;
 
 	if (!stream)
 		return -1;
@@ -396,7 +562,8 @@ static int http_action(
 			t->use_ssl = 1;
 		}
 
-		if ((ret = gitno_extract_host_and_port(&t->host, &t->port, url, default_port)) < 0)
+		if ((ret = gitno_extract_host_and_port(&t->host, &t->port,
+				url, default_port)) < 0)
 			return ret;
 
 		t->path = strchr(url, '/');
@@ -404,23 +571,23 @@ static int http_action(
 
 	if (!t->connected || !http_should_keep_alive(&t->parser)) {
 		if (t->use_ssl) {
+			int transport_flags;
+
+			if (t->owner->parent.read_flags(&t->owner->parent, &transport_flags) < 0)
+				return -1;
+
 			flags |= GITNO_CONNECT_SSL;
 
-			if (t->no_check_cert)
+			if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & transport_flags)
 				flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
 		}
 
 		if (gitno_connect(&t->socket, t->host, t->port, flags) < 0)
 			return -1;
-	
-		t->parser.data = t;
-
-		http_parser_init(&t->parser, HTTP_RESPONSE);
-		gitno_buffer_setup(&t->socket, &t->parse_buffer, t->parse_buffer_data, sizeof(t->parse_buffer_data));
 
 		t->connected = 1;
 	}
-	
+
 	t->parse_finished = 0;
 	t->parse_error = 0;
 
@@ -432,7 +599,7 @@ static int http_action(
 		case GIT_SERVICE_UPLOADPACK:
 			return http_uploadpack(t, stream);
 	}
-	
+
 	*stream = NULL;
 	return -1;
 }
@@ -441,14 +608,23 @@ static void http_free(git_smart_subtransport *smart_transport)
 {
 	http_subtransport *t = (http_subtransport *) smart_transport;
 
-	git_buf_free(&t->parse_temp);
-	git__free(t->content_type);
+	clear_parser_state(t);
+
+	if (t->socket.socket)
+		gitno_close(&t->socket);
+
+	if (t->cred) {
+		t->cred->free(t->cred);
+		t->cred = NULL;
+	}
+
 	git__free(t->host);
 	git__free(t->port);
 	git__free(t);
 }
 
-int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner)
+int git_smart_subtransport_http(git_smart_subtransport **out,
+	git_transport *owner)
 {
 	http_subtransport *t;
 	int flags;
@@ -459,17 +635,9 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	t = (http_subtransport *)git__calloc(sizeof(http_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
 
-	t->owner = owner;
+	t->owner = (transport_smart *)owner;
 	t->parent.action = http_action;
 	t->parent.free = http_free;
-
-	/* Read the flags from the owning transport */
-	if (owner->read_flags && owner->read_flags(owner, &flags) < 0) {
-		git__free(t);
-		return -1;
-	}
-
-	t->no_check_cert = flags & GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
 	t->settings.on_header_field = on_header_field;
 	t->settings.on_header_value = on_header_value;

@@ -492,7 +492,7 @@ int git_remote_connect(git_remote *remote, int direction)
 	if (!remote->check_cert)
 		flags |= GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
-	if (t->connect(t, url, direction, flags) < 0)
+	if (t->connect(t, url, remote->cred_acquire_cb, direction, flags) < 0)
 		goto on_error;
 
 	remote->transport = t;
@@ -807,6 +807,15 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 			remote->callbacks.progress,
 			NULL,
 			remote->callbacks.data);
+}
+
+void git_remote_set_cred_acquire_cb(
+	git_remote *remote,
+	git_cred_acquire_cb cred_acquire_cb)
+{
+	assert(remote);
+
+	remote->cred_acquire_cb = cred_acquire_cb;
 }
 
 int git_remote_set_transport(git_remote *remote, git_transport *transport)

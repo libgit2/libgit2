@@ -99,6 +99,7 @@ typedef void (*packetsize_cb)(int received, void *payload);
 typedef struct {
 	git_transport parent;
 	char *url;
+	git_cred_acquire_cb cred_acquire_cb;
 	int direction;
 	int flags;
 	git_transport_message_cb progress_cb;

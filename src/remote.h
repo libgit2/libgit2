@@ -22,6 +22,7 @@ struct git_remote {
 	git_vector refs;
 	struct git_refspec fetch;
 	struct git_refspec push;
+	git_cred_acquire_cb cred_acquire_cb;
 	git_transport *transport;
 	git_repository *repo;
 	git_remote_callbacks callbacks;

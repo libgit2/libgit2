@@ -193,16 +193,19 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 static int gitno_ssl_teardown(gitno_ssl *ssl)
 {
 	int ret;
-	
+
 	do {
 		ret = SSL_shutdown(ssl->ssl);
 	} while (ret == 0);
+
 	if (ret < 0)
-		return ssl_set_error(ssl, ret);
+		ret = ssl_set_error(ssl, ret);
+	else
+		ret = 0;
 
 	SSL_free(ssl->ssl);
 	SSL_CTX_free(ssl->ctx);
-	return 0;
+	return ret;
 }
 
 /* Match host names according to RFC 2818 rules */

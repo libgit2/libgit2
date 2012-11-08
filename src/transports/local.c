@@ -130,13 +130,19 @@ on_error:
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calulating the heads ourselves.
  */
-static int local_connect(git_transport *transport, const char *url, int direction, int flags)
+static int local_connect(
+	git_transport *transport,
+	const char *url,
+	git_cred_acquire_cb cred_acquire_cb,
+	int direction, int flags)
 {
 	git_repository *repo;
 	int error;
 	transport_local *t = (transport_local *) transport;
 	const char *path;
 	git_buf buf = GIT_BUF_INIT;
+
+	GIT_UNUSED(cred_acquire_cb);
 
 	t->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(t->url);
