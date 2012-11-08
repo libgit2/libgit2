@@ -7,6 +7,8 @@ static const char *tag2_id = "7b4384978d2493e851f9cca7858815fac9b10980";
 static const char *tagged_commit = "e90810b8df3e80c413d903f631643c716887138d";
 static const char *bad_tag_id = "eda9f45a2a98d4c17a09d681d88569fa4ea91755";
 static const char *badly_tagged_commit = "e90810b8df3e80c413d903f631643c716887138d";
+static const char *short_tag_id = "5da7760512a953e3c7c4e47e4392c7a4338fb729";
+static const char *short_tagged_commit = "4a5ed60bafcf4638b7c8356bd4ce1916bfede93c";
 
 static git_repository *g_repo;
 
@@ -82,4 +84,35 @@ void test_object_tag_read__parse_without_tagger(void)
    git_tag_free(bad_tag);
    git_commit_free(commit);
    git_repository_free(bad_tag_repo);
+}
+
+void test_object_tag_read__parse_without_message(void)
+{
+   // read and parse a tag without a message field
+   git_repository *short_tag_repo;
+   git_tag *short_tag;
+   git_commit *commit;
+   git_oid id, id_commit;
+
+   // TODO: This is a little messy
+   cl_git_pass(git_repository_open(&short_tag_repo, cl_fixture("short_tag.git")));
+
+   git_oid_fromstr(&id, short_tag_id);
+   git_oid_fromstr(&id_commit, short_tagged_commit);
+
+   cl_git_pass(git_tag_lookup(&short_tag, short_tag_repo, &id));
+   cl_assert(short_tag != NULL);
+
+   cl_assert_equal_s(git_tag_name(short_tag), "no_description");
+   cl_assert(git_oid_cmp(&id, git_tag_id(short_tag)) == 0);
+   cl_assert(short_tag->message == NULL);
+
+   cl_git_pass(git_tag_target((git_object **)&commit, short_tag));
+   cl_assert(commit != NULL);
+
+   cl_assert(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
+
+   git_tag_free(short_tag);
+   git_commit_free(commit);
+   git_repository_free(short_tag_repo);
 }
