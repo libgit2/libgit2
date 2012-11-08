@@ -53,9 +53,9 @@ On most systems you can build the library using the following commands
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
-To install the library you can specify the install prefix by setting:
+To install the library you can specify the install prefix (set to /usr, /usr/local, /opt, ...):
 
-	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
+	$ cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/install/libgit2/to
 	$ cmake --build . --target install
 
 If you want to build a universal binary for Mac OS X, CMake sets it
