@@ -432,8 +432,8 @@ static int checkout_get_actions(
 	int error;
 	git_diff_list *diff = data->diff;
 	git_diff_delta *delta;
-	size_t i, *counts;
-	uint32_t *actions;
+	size_t i, *counts = NULL;
+	uint32_t *actions = NULL;
 	git_tree *head = NULL;
 	git_iterator *hiter = NULL;
 	char *pfx = git_pathspec_prefix(&data->opts->paths);
@@ -456,6 +456,7 @@ static int checkout_get_actions(
 		goto fail;
 
 	git__free(pfx);
+	pfx = NULL;
 
 	*counts_ptr = counts = git__calloc(CHECKOUT_ACTION__MAX+1, sizeof(size_t));
 	*actions_ptr = actions = git__calloc(diff->deltas.length, sizeof(uint32_t));
@@ -509,6 +510,8 @@ static int checkout_get_actions(
 	}
 
 	git_iterator_free(hiter);
+	git_tree_free(head);
+
 	return 0;
 
 fail:
@@ -518,6 +521,7 @@ fail:
 	git__free(actions);
 
 	git_iterator_free(hiter);
+	git_tree_free(head);
 	git__free(pfx);
 
 	return -1;

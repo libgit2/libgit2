@@ -113,7 +113,7 @@ void test_clone_network__can_checkout_a_cloned_repo(void)
 	bool checkout_progress_cb_was_called = false,
 		  fetch_progress_cb_was_called = false;
 
-	opts.checkout_strategy = GIT_CHECKOUT_UPDATE_UNMODIFIED;
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	opts.progress_cb = &checkout_progress;
 	opts.progress_payload = &checkout_progress_cb_was_called;
 

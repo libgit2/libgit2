@@ -16,6 +16,7 @@ void commit_staged_files(
 	cl_git_pass(git_index_write_tree(&tree_oid, index));
 
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
+
 	cl_git_pass(git_commit_create_v(
 		commit_oid,
 		repo,

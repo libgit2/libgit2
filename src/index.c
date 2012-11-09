@@ -402,7 +402,7 @@ int git_index_read(git_index *index)
 {
 	int error = 0, updated;
 	git_buf buffer = GIT_BUF_INIT;
-	git_futils_filestamp stamp;
+	git_futils_filestamp stamp = {0};
 
 	if (!index->index_file_path) {
 		giterr_set(GITERR_INDEX,
