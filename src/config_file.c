@@ -924,7 +924,7 @@ static int strip_comments(char *line, int in_quotes)
 	}
 
 	/* skip any space at the end */
-	if (git__isspace(ptr[-1])) {
+	if (ptr > line && git__isspace(ptr[-1])) {
 		ptr--;
 	}
 	ptr[0] = '\0';
@@ -1398,7 +1398,7 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 		value_start = var_end + 1;
 
 	do var_end--;
-	while (git__isspace(*var_end));
+	while (var_end>line && git__isspace(*var_end));
 
 	*var_name = git__strndup(line, var_end - line + 1);
 	GITERR_CHECK_ALLOC(*var_name);
