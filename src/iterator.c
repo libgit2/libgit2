@@ -641,13 +641,12 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 
 	wi->entry.path = ps->path;
 
-	/* skip over .git entry */
+	/* skip over .git entries */
 	if (STRCMP_CASESELECT(wi->base.ignore_case, ps->path, DOT_GIT "/") == 0 ||
 		STRCMP_CASESELECT(wi->base.ignore_case, ps->path, DOT_GIT) == 0)
 		return workdir_iterator__advance((git_iterator *)wi, NULL);
 
-	/* if there is an error processing the entry, treat as ignored */
-	wi->is_ignored = 1;
+	wi->is_ignored = -1;
 
 	git_index__init_entry_from_stat(&ps->st, &wi->entry);
 
@@ -655,12 +654,10 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 	wi->entry.mode = git_futils_canonical_mode(ps->st.st_mode);
 
 	/* if this is a file type we don't handle, treat as ignored */
-	if (wi->entry.mode == 0)
+	if (wi->entry.mode == 0) {
+		wi->is_ignored = 1;
 		return 0;
-
-	/* okay, we are far enough along to look up real ignore rule */
-	if (git_ignore__lookup(&wi->ignores, wi->entry.path, &wi->is_ignored) < 0)
-		return 0; /* if error, ignore it and ignore file */
+	}
 
 	/* detect submodules */
 	if (S_ISDIR(wi->entry.mode)) {
@@ -908,8 +905,18 @@ notfound:
 
 int git_iterator_current_is_ignored(git_iterator *iter)
 {
-	return (iter->type != GIT_ITERATOR_WORKDIR) ? 0 :
-		((workdir_iterator *)iter)->is_ignored;
+	workdir_iterator *wi = (workdir_iterator *)iter;
+
+	if (iter->type != GIT_ITERATOR_WORKDIR)
+		return 0;
+
+	if (wi->is_ignored != -1)
+		return wi->is_ignored;
+
+	if (git_ignore__lookup(&wi->ignores, wi->entry.path, &wi->is_ignored) < 0)
+		wi->is_ignored = 1;
+
+	return wi->is_ignored;
 }
 
 int git_iterator_advance_into_directory(
