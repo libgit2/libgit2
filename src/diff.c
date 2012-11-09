@@ -10,76 +10,7 @@
 #include "config.h"
 #include "attr_file.h"
 #include "filter.h"
-
-static char *diff_prefix_from_pathspec(const git_strarray *pathspec)
-{
-	git_buf prefix = GIT_BUF_INIT;
-	const char *scan;
-
-	if (git_buf_common_prefix(&prefix, pathspec) < 0)
-		return NULL;
-
-	/* diff prefix will only be leading non-wildcards */
-	for (scan = prefix.ptr; *scan; ++scan) {
-		if (git__iswildcard(*scan) &&
-			(scan == prefix.ptr || (*(scan - 1) != '\\')))
-			break;
-	}
-	git_buf_truncate(&prefix, scan - prefix.ptr);
-
-	if (prefix.size <= 0) {
-		git_buf_free(&prefix);
-		return NULL;
-	}
-
-	git_buf_unescape(&prefix);
-
-	return git_buf_detach(&prefix);
-}
-
-static bool diff_pathspec_is_interesting(const git_strarray *pathspec)
-{
-	const char *str;
-
-	if (pathspec == NULL || pathspec->count == 0)
-		return false;
-	if (pathspec->count > 1)
-		return true;
-
-	str = pathspec->strings[0];
-	if (!str || !str[0] || (!str[1] && (str[0] == '*' || str[0] == '.')))
-		return false;
-	return true;
-}
-
-static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
-{
-	unsigned int i;
-	git_attr_fnmatch *match;
-
-	if (!diff->pathspec.length)
-		return true;
-
-	git_vector_foreach(&diff->pathspec, i, match) {
-		int result = strcmp(match->pattern, path) ? FNM_NOMATCH : 0;
-
-		if (((diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) == 0) &&
-			result == FNM_NOMATCH)
-			result = p_fnmatch(match->pattern, path, 0);
-
-		/* if we didn't match, look for exact dirname prefix match */
-		if (result == FNM_NOMATCH &&
-			(match->flags & GIT_ATTR_FNMATCH_HASWILD) == 0 &&
-			strncmp(path, match->pattern, match->length) == 0 &&
-			path[match->length] == '/')
-			result = 0;
-
-		if (result == 0)
-			return (match->flags & GIT_ATTR_FNMATCH_NEGATIVE) ? false : true;
-	}
-
-	return false;
-}
+#include "pathspec.h"
 
 static git_diff_delta *diff_delta__alloc(
 	git_diff_list *diff,
@@ -125,7 +56,10 @@ static int diff_delta__from_one(
 		(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
 		return 0;
 
-	if (!diff_path_matches_pathspec(diff, entry->path))
+	if (!git_pathspec_match_path(
+			&diff->pathspec, entry->path,
+			(diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) != 0,
+			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0))
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
@@ -295,7 +229,6 @@ static git_diff_list *git_diff_list_alloc(
 	git_repository *repo, const git_diff_options *opts)
 {
 	git_config *cfg;
-	size_t i;
 	git_diff_list *diff = git__calloc(1, sizeof(git_diff_list));
 	if (diff == NULL)
 		return NULL;
@@ -333,7 +266,10 @@ static git_diff_list *git_diff_list_alloc(
 		return diff;
 
 	memcpy(&diff->opts, opts, sizeof(git_diff_options));
-	memset(&diff->opts.pathspec, 0, sizeof(diff->opts.pathspec));
+
+	/* pathspec init will do nothing for empty pathspec */
+	if (git_pathspec_init(&diff->pathspec, &opts->pathspec, &diff->pool) < 0)
+		goto fail;
 
 	/* TODO: handle config diff.mnemonicprefix, diff.noprefix */
 
@@ -355,35 +291,6 @@ static git_diff_list *git_diff_list_alloc(
 	if (diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE_TREES)
 		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
 
-	/* only copy pathspec if it is "interesting" so we can test
-	 * diff->pathspec.length > 0 to know if it is worth calling
-	 * fnmatch as we iterate.
-	 */
-	if (!diff_pathspec_is_interesting(&opts->pathspec))
-		return diff;
-
-	if (git_vector_init(
-		&diff->pathspec, (unsigned int)opts->pathspec.count, NULL) < 0)
-		goto fail;
-
-	for (i = 0; i < opts->pathspec.count; ++i) {
-		int ret;
-		const char *pattern = opts->pathspec.strings[i];
-		git_attr_fnmatch *match = git__calloc(1, sizeof(git_attr_fnmatch));
-		if (!match)
-			goto fail;
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
-		ret = git_attr_fnmatch__parse(match, &diff->pool, NULL, &pattern);
-		if (ret == GIT_ENOTFOUND) {
-			git__free(match);
-			continue;
-		} else if (ret < 0)
-			goto fail;
-
-		if (git_vector_insert(&diff->pathspec, match) < 0)
-			goto fail;
-	}
-
 	return diff;
 
 fail:
@@ -394,7 +301,6 @@ fail:
 static void diff_list_free(git_diff_list *diff)
 {
 	git_diff_delta *delta;
-	git_attr_fnmatch *match;
 	unsigned int i;
 
 	git_vector_foreach(&diff->deltas, i, delta) {
@@ -403,12 +309,7 @@ static void diff_list_free(git_diff_list *diff)
 	}
 	git_vector_free(&diff->deltas);
 
-	git_vector_foreach(&diff->pathspec, i, match) {
-		git__free(match);
-		diff->pathspec.contents[i] = NULL;
-	}
-	git_vector_free(&diff->pathspec);
-
+	git_pathspec_free(&diff->pathspec);
 	git_pool_clear(&diff->pool);
 	git__free(diff);
 }
@@ -499,7 +400,10 @@ static int maybe_modified(
 
 	GIT_UNUSED(old_iter);
 
-	if (!diff_path_matches_pathspec(diff, oitem->path))
+	if (!git_pathspec_match_path(
+			&diff->pathspec, oitem->path,
+			(diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) != 0,
+			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0))
 		return 0;
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
@@ -842,15 +746,15 @@ int git_diff_tree_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
-	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
+	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
 
 	assert(repo && old_tree && new_tree && diff);
 
-	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
-		git_iterator_for_tree_range(&b, repo, new_tree, prefix, prefix) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx) < 0 ||
+		git_iterator_for_tree_range(&b, repo, new_tree, pfx, pfx) < 0)
 		return -1;
 
-	git__free(prefix);
+	git__free(pfx);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 }
@@ -862,20 +766,20 @@ int git_diff_index_to_tree(
 	git_diff_list **diff)
 {
 	git_iterator *a = NULL, *b = NULL;
-	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
+	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
 
 	assert(repo && diff);
 
-	if (git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix) < 0 ||
-	    git_iterator_for_index_range(&b, repo, prefix, prefix) < 0)
+	if (git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx) < 0 ||
+	    git_iterator_for_index_range(&b, repo, pfx, pfx) < 0)
 		goto on_error;
 
-	git__free(prefix);
+	git__free(pfx);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 
 on_error:
-	git__free(prefix);
+	git__free(pfx);
 	git_iterator_free(a);
 	return -1;
 }
@@ -885,23 +789,22 @@ int git_diff_workdir_to_index(
 	const git_diff_options *opts,
 	git_diff_list **diff)
 {
-	git_iterator *a = NULL, *b = NULL;
 	int error;
-
-	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
+	git_iterator *a = NULL, *b = NULL;
+	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
 
 	assert(repo && diff);
 
-	if ((error = git_iterator_for_index_range(&a, repo, prefix, prefix)) < 0 ||
-	    (error = git_iterator_for_workdir_range(&b, repo, prefix, prefix)) < 0)
+	if ((error = git_iterator_for_index_range(&a, repo, pfx, pfx)) < 0 ||
+	    (error = git_iterator_for_workdir_range(&b, repo, pfx, pfx)) < 0)
 		goto on_error;
 
-	git__free(prefix);
+	git__free(pfx);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 
 on_error:
-	git__free(prefix);
+	git__free(pfx);
 	git_iterator_free(a);
 	return error;
 }
@@ -910,26 +813,25 @@ on_error:
 int git_diff_workdir_to_tree(
 	git_repository *repo,
 	const git_diff_options *opts,
-	git_tree *old_tree,
+	git_tree *tree,
 	git_diff_list **diff)
 {
-	git_iterator *a = NULL, *b = NULL;
 	int error;
+	git_iterator *a = NULL, *b = NULL;
+	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
 
-	char *prefix = opts ? diff_prefix_from_pathspec(&opts->pathspec) : NULL;
+	assert(repo && tree && diff);
 
-	assert(repo && old_tree && diff);
-
-	if ((error = git_iterator_for_tree_range(&a, repo, old_tree, prefix, prefix)) < 0 ||
-	    (error = git_iterator_for_workdir_range(&b, repo, prefix, prefix)) < 0)
+	if ((error = git_iterator_for_tree_range(&a, repo, tree, pfx, pfx)) < 0 ||
+	    (error = git_iterator_for_workdir_range(&b, repo, pfx, pfx)) < 0)
 		goto on_error;
 
-	git__free(prefix);
+	git__free(pfx);
 
 	return diff_from_iterators(repo, opts, a, b, diff);
 
 on_error:
-	git__free(prefix);
+	git__free(pfx);
 	git_iterator_free(a);
 	return error;
 }
