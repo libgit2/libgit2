@@ -127,8 +127,6 @@ static int find_internal_file_by_level(
 	file_internal *internal;
 	unsigned int i;
 
-	assert(cfg->files.length);
-
 	/* when passing GIT_CONFIG_HIGHEST_LEVEL, the idea is to get the config file
 	 * which has the highest level. As config files are stored in a vector
 	 * sorted by decreasing order of level, getting the file at position 0
