@@ -120,7 +120,7 @@ static int diff_delta_is_binary_by_attr(
 		return -1;
 
 	mirror_new = (delta->new_file.path == delta->old_file.path ||
-				  strcmp(delta->new_file.path, delta->old_file.path) == 0);
+		ctxt->diff->strcomp(delta->new_file.path, delta->old_file.path) == 0);
 	if (mirror_new)
 		delta->new_file.flags |= (delta->old_file.flags & KNOWN_BINARY_FLAGS);
 	else
@@ -1002,7 +1002,7 @@ static int print_compact(
 	git_buf_clear(pi->buf);
 
 	if (delta->old_file.path != delta->new_file.path &&
-		strcmp(delta->old_file.path,delta->new_file.path) != 0)
+		pi->diff->strcomp(delta->old_file.path,delta->new_file.path) != 0)
 		git_buf_printf(pi->buf, "%c\t%s%c -> %s%c\n", code,
 			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
 	else if (delta->old_file.mode != delta->new_file.mode &&

@@ -42,10 +42,10 @@ struct git_diff_list {
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
 
-	int (*strcmp)(const char *, const char *);
-	int (*strncmp)(const char *, const char *, size_t);
-	int (*prefixcmp)(const char *str, const char *pfx);
-	int (*entrycmp)(const void *a, const void *b);
+	int (*strcomp)(const char *, const char *);
+	int (*strncomp)(const char *, const char *, size_t);
+	int (*pfxcomp)(const char *str, const char *pfx);
+	int (*entrycomp)(const void *a, const void *b);
 };
 
 extern void git_diff__cleanup_modes(

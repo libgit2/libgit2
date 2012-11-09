@@ -124,16 +124,20 @@ typedef enum {
 	/** Only update existing files, don't create new ones */
 	GIT_CHECKOUT_UPDATE_ONLY = (1u << 6),
 
-	/** Allow checkout to skip unmerged files */
+	/**
+	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
+	 */
+
+	/** Allow checkout to skip unmerged files (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_SKIP_UNMERGED = (1u << 10),
-	/** For unmerged files, checkout stage 2 from index */
+	/** For unmerged files, checkout stage 2 from index (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_USE_OURS = (1u << 11),
-	/** For unmerged files, checkout stage 3 from index */
+	/** For unmerged files, checkout stage 3 from index (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_USE_THEIRS = (1u << 12),
 
-	/** Recursively checkout submodule with same options */
+	/** Recursively checkout submodules with same options (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_UPDATE_SUBMODULES = (1u << 16),
-	/** Recursively checkout submodules only if HEAD moved in super repo */
+	/** Recursively checkout submodules if HEAD moved in super repo (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED = (1u << 17),
 
 } git_checkout_strategy_t;

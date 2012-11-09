@@ -528,7 +528,7 @@ static bool entry_is_prefixed(
 {
 	size_t pathlen;
 
-	if (!prefix_item || diff->prefixcmp(prefix_item->path, item->path))
+	if (!prefix_item || diff->pfxcomp(prefix_item->path, item->path))
 		return false;
 
 	pathlen = strlen(item->path);
@@ -551,17 +551,17 @@ static int diff_list_init_from_iterators(
 	if (!old_iter->ignore_case && !new_iter->ignore_case) {
 		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
 
-		diff->strcmp    = strcmp;
-		diff->strncmp   = strncmp;
-		diff->prefixcmp = git__prefixcmp;
-		diff->entrycmp  = git_index_entry__cmp;
+		diff->strcomp    = strcmp;
+		diff->strncomp   = strncmp;
+		diff->pfxcomp    = git__prefixcmp;
+		diff->entrycomp  = git_index_entry__cmp;
 	} else {
 		diff->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
 
-		diff->strcmp    = strcasecmp;
-		diff->strncmp   = strncasecmp;
-		diff->prefixcmp = git__prefixcmp_icase;
-		diff->entrycmp  = git_index_entry__cmp_icase;
+		diff->strcomp    = strcasecmp;
+		diff->strncomp   = strncasecmp;
+		diff->pfxcomp    = git__prefixcmp_icase;
+		diff->entrycomp  = git_index_entry__cmp_icase;
 	}
 
 	return 0;
@@ -592,12 +592,12 @@ static int diff_from_iterators(
 		 * merge join to the other iterator that is icase sorted */
 		if (!old_iter->ignore_case &&
 			git_iterator_spoolandsort(
-				&old_iter, old_iter, diff->entrycmp, true) < 0)
+				&old_iter, old_iter, diff->entrycomp, true) < 0)
 			goto fail;
 
 		if (!new_iter->ignore_case &&
 			git_iterator_spoolandsort(
-				&new_iter, new_iter, diff->entrycmp, true) < 0)
+				&new_iter, new_iter, diff->entrycomp, true) < 0)
 			goto fail;
 	}
 
@@ -609,7 +609,7 @@ static int diff_from_iterators(
 	while (oitem || nitem) {
 
 		/* create DELETED records for old items not matched in new */
-		if (oitem && (!nitem || diff->entrycmp(oitem, nitem) < 0)) {
+		if (oitem && (!nitem || diff->entrycomp(oitem, nitem) < 0)) {
 			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0)
 				goto fail;
 
@@ -634,12 +634,12 @@ static int diff_from_iterators(
 		/* create ADDED, TRACKED, or IGNORED records for new items not
 		 * matched in old (and/or descend into directories as needed)
 		 */
-		else if (nitem && (!oitem || diff->entrycmp(oitem, nitem) > 0)) {
+		else if (nitem && (!oitem || diff->entrycomp(oitem, nitem) > 0)) {
 			git_delta_t delta_type = GIT_DELTA_UNTRACKED;
 
 			/* check if contained in ignored parent directory */
 			if (git_buf_len(&ignore_prefix) &&
-				diff->prefixcmp(nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
+				diff->pfxcomp(nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
 				delta_type = GIT_DELTA_IGNORED;
 
 			if (S_ISDIR(nitem->mode)) {
@@ -730,7 +730,7 @@ static int diff_from_iterators(
 		 * (or ADDED and DELETED pair if type changed)
 		 */
 		else {
-			assert(oitem && nitem && diff->entrycmp(oitem, nitem) == 0);
+			assert(oitem && nitem && diff->entrycomp(oitem, nitem) == 0);
 
 			if (maybe_modified(old_iter, oitem, new_iter, nitem, diff) < 0 ||
 				git_iterator_advance(old_iter, &oitem) < 0 ||

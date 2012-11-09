@@ -449,7 +449,7 @@ static int checkout_get_actions(
 	if ((diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 &&
 		!hiter->ignore_case &&
 		(error = git_iterator_spoolandsort(
-			&hiter, hiter, diff->entrycmp, true)) < 0)
+			&hiter, hiter, diff->entrycomp, true)) < 0)
 		goto fail;
 
 	if ((error = git_iterator_current(hiter, &he)) < 0)
@@ -470,8 +470,8 @@ static int checkout_get_actions(
 		/* try to track HEAD entries parallel to deltas */
 		while (he) {
 			cmp = S_ISDIR(delta->new_file.mode) ?
-				diff->prefixcmp(he->path, delta->new_file.path) :
-				diff->strcmp(he->path, delta->old_file.path);
+				diff->pfxcomp(he->path, delta->new_file.path) :
+				diff->strcomp(he->path, delta->old_file.path);
 			if (cmp >= 0)
 				break;
 			if (git_iterator_advance(hiter, &he) < 0)
