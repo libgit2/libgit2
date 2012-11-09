@@ -12,7 +12,7 @@ void test_checkout_tree__initialize(void)
 	g_repo = cl_git_sandbox_init("testrepo");
 
 	memset(&g_opts, 0, sizeof(g_opts));
-	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 }
 
 void test_checkout_tree__cleanup(void)
@@ -74,10 +74,13 @@ static void progress(const char *path, size_t cur, size_t tot, void *payload)
 void test_checkout_tree__calls_progress_callback(void)
 {
 	bool was_called = 0;
+
 	g_opts.progress_cb = progress;
 	g_opts.progress_payload = &was_called;
 
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "master"));
+
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+
 	cl_assert_equal_i(was_called, true);
 }

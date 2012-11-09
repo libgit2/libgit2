@@ -48,4 +48,7 @@ extern unsigned int git_index__prefix_position(git_index *index, const char *pat
 extern int git_index_entry__cmp(const void *a, const void *b);
 extern int git_index_entry__cmp_icase(const void *a, const void *b);
 
+extern int git_index_read_tree_match(
+	git_index *index, git_tree *tree, git_strarray *strspec);
+
 #endif

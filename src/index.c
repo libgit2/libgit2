@@ -13,6 +13,8 @@
 #include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"
+#include "iterator.h"
+#include "pathspec.h"
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/blob.h"
@@ -1589,4 +1591,55 @@ int git_index_read_tree(git_index *index, git_tree *tree)
 git_repository *git_index_owner(const git_index *index)
 {
 	return INDEX_OWNER(index);
+}
+
+int git_index_read_tree_match(
+	git_index *index, git_tree *tree, git_strarray *strspec)
+{
+#if 0
+	git_iterator *iter = NULL;
+	const git_index_entry *entry;
+	char *pfx = NULL;
+	git_vector pathspec = GIT_VECTOR_INIT;
+	git_pool pathpool = GIT_POOL_INIT_STRINGPOOL;
+#endif
+
+	if (!git_pathspec_is_interesting(strspec))
+		return git_index_read_tree(index, tree);
+
+	return git_index_read_tree(index, tree);
+
+#if 0
+	/* The following loads the matches into the index, but doesn't
+	 * erase obsoleted entries (e.g. you load a blob at "a/b" which
+	 * should obsolete a blob at "a/b/c/d" since b is no longer a tree)
+	 */
+
+	if (git_pathspec_init(&pathspec, strspec, &pathpool) < 0)
+		return -1;
+
+	pfx = git_pathspec_prefix(strspec);
+
+	if ((error = git_iterator_for_tree_range(
+			 &iter, INDEX_OWNER(index), tree, pfx, pfx)) < 0 ||
+		(error = git_iterator_current(iter, &entry)) < 0)
+		goto cleanup;
+
+	while (entry != NULL) {
+		if (git_pathspec_match_path(&pathspec, entry->path, false, false) &&
+			(error = git_index_add(index, entry)) < 0)
+			goto cleanup;
+
+		if ((error = git_iterator_advance(iter, &entry)) < 0)
+			goto cleanup;
+	}
+
+cleanup:
+	git_iterator_free(iter);
+	git_pathspec_free(&pathspec);
+	git_pool_clear(&pathpool);
+	git__free(pfx);
+
+	return error;
+#endif
 }

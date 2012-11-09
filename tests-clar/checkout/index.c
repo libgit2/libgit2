@@ -26,7 +26,7 @@ void test_checkout_index__initialize(void)
 	git_tree *tree;
 
 	memset(&g_opts, 0, sizeof(g_opts));
-	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	g_repo = cl_git_sandbox_init("testrepo");
 
@@ -78,7 +78,6 @@ void test_checkout_index__can_create_missing_files(void)
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/README", "hey there\n");
@@ -94,7 +93,7 @@ void test_checkout_index__can_remove_untracked_files(void)
 
 	cl_assert_equal_i(true, git_path_isdir("./testrepo/dir/subdir/subsubdir"));
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_REMOVE_UNTRACKED;
+	g_opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/dir"));
@@ -203,7 +202,11 @@ void test_checkout_index__donot_overwrite_modified_file_by_default(void)
 {
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 
-	g_opts.checkout_strategy = 0;
+	/* set this up to not return an error code on conflicts, but it
+	 * still will not have permission to overwrite anything...
+	 */
+	g_opts.checkout_strategy = GIT_CHECKOUT_ALLOW_CONFLICTS;
+
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "This isn't what's stored!");
@@ -213,7 +216,8 @@ void test_checkout_index__can_overwrite_modified_file(void)
 {
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_OVERWRITE_MODIFIED;
+	g_opts.checkout_strategy |= GIT_CHECKOUT_UPDATE_MODIFIED;
+
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "my new file\n");
@@ -282,28 +286,30 @@ void test_checkout_index__options_open_flags(void)
 
 	g_opts.file_open_flags = O_CREAT | O_RDWR | O_APPEND;
 
-	g_opts.checkout_strategy |= GIT_CHECKOUT_OVERWRITE_MODIFIED;
+	g_opts.checkout_strategy |= GIT_CHECKOUT_UPDATE_MODIFIED;
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	test_file_contents("./testrepo/new.txt", "hi\nmy new file\n");
 }
 
-struct notify_data {
+struct conflict_data {
 	const char *file;
 	const char *sha;
 };
 
-static int notify_cb(
-	const char *skipped_file,
+static int conflict_cb(
+	const char *conflict_file,
 	const git_oid *blob_oid,
-	int file_mode,
+	unsigned int index_mode,
+	unsigned int wd_mode,
 	void *payload)
 {
-	struct notify_data *expectations = (struct notify_data *)payload;
+	struct conflict_data *expectations = (struct conflict_data *)payload;
 
-	GIT_UNUSED(file_mode);
+	GIT_UNUSED(index_mode);
+	GIT_UNUSED(wd_mode);
 
-	cl_assert_equal_s(expectations->file, skipped_file);
+	cl_assert_equal_s(expectations->file, conflict_file);
 	cl_assert_equal_i(0, git_oid_streq(blob_oid, expectations->sha));
 
 	return 0;
@@ -311,7 +317,7 @@ static int notify_cb(
 
 void test_checkout_index__can_notify_of_skipped_files(void)
 {
-	struct notify_data data;
+	struct conflict_data data;
 
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 
@@ -324,22 +330,24 @@ void test_checkout_index__can_notify_of_skipped_files(void)
 	data.file = "new.txt";
 	data.sha = "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd";
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
-	g_opts.skipped_notify_cb = notify_cb;
-	g_opts.notify_payload = &data;
+	g_opts.checkout_strategy |= GIT_CHECKOUT_ALLOW_CONFLICTS;
+	g_opts.conflict_cb = conflict_cb;
+	g_opts.conflict_payload = &data;
 
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 }
 
-static int dont_notify_cb(
-	const char *skipped_file,
+static int dont_conflict_cb(
+	const char *conflict_file,
 	const git_oid *blob_oid,
-	int file_mode,
+	unsigned int index_mode,
+	unsigned int wd_mode,
 	void *payload)
 {
-	GIT_UNUSED(skipped_file);
+	GIT_UNUSED(conflict_file);
 	GIT_UNUSED(blob_oid);
-	GIT_UNUSED(file_mode);
+	GIT_UNUSED(index_mode);
+	GIT_UNUSED(wd_mode);
 	GIT_UNUSED(payload);
 
 	cl_assert(false);
@@ -354,9 +362,9 @@ void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
 
 	cl_git_mkfile("./testrepo/new.txt", "my new file\r\n");
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
-	g_opts.skipped_notify_cb = dont_notify_cb;
-	g_opts.notify_payload = NULL;
+	g_opts.checkout_strategy |= GIT_CHECKOUT_ALLOW_CONFLICTS;
+	g_opts.conflict_cb = dont_conflict_cb;
+	g_opts.conflict_payload = NULL;
 
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 }
@@ -389,8 +397,9 @@ void test_checkout_index__can_overcome_name_clashes(void)
 	cl_git_pass(p_mkdir("./testrepo/path1", 0777));
 	cl_git_mkfile("./testrepo/path1/file1", "content\r\n");
 
-	cl_git_pass(git_index_add(index, "path0", 0));
-	cl_git_pass(git_index_add(index, "path1/file1", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "path0"));
+	cl_git_pass(git_index_add_from_workdir(index, "path1/file1"));
+
 
 	cl_git_pass(p_unlink("./testrepo/path0"));
 	cl_git_pass(git_futils_rmdir_r(
@@ -400,11 +409,20 @@ void test_checkout_index__can_overcome_name_clashes(void)
 	cl_git_pass(p_mkdir("./testrepo/path0", 0777));
 	cl_git_mkfile("./testrepo/path0/file0", "content\r\n");
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	cl_assert(git_path_isfile("./testrepo/path1"));
+	cl_assert(git_path_isfile("./testrepo/path0/file0"));
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_ALLOW_CONFLICTS;
 	cl_git_pass(git_checkout_index(g_repo, &g_opts));
 
 	cl_assert(git_path_isfile("./testrepo/path1"));
 	cl_assert(git_path_isfile("./testrepo/path0/file0"));
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_index(g_repo, &g_opts));
+
+	cl_assert(git_path_isfile("./testrepo/path0"));
+	cl_assert(git_path_isfile("./testrepo/path1/file1"));
 
 	git_index_free(index);
 }

@@ -109,6 +109,7 @@ extern int git_futils_mkpath2file(const char *path, const mode_t mode);
  * * GIT_RMDIR_SKIP_NONEMPTY   - skip non-empty directories with no error.
  * * GIT_RMDIR_EMPTY_PARENTS   - remove containing directories up to base
  *       if removing this item leaves them empty
+ * * GIT_RMDIR_REMOVE_BLOCKERS - remove blocking file that causes ENOTDIR
  *
  * The old values translate into the new as follows:
  *
@@ -121,6 +122,7 @@ typedef enum {
 	GIT_RMDIR_REMOVE_FILES    = (1 << 0),
 	GIT_RMDIR_SKIP_NONEMPTY   = (1 << 1),
 	GIT_RMDIR_EMPTY_PARENTS   = (1 << 2),
+	GIT_RMDIR_REMOVE_BLOCKERS = (1 << 3),
 } git_futils_rmdir_flags;
 
 /**

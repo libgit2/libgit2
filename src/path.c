@@ -382,9 +382,10 @@ int git_path_walk_up(
 	iter.asize = path->asize;
 
 	while (scan >= stop) {
-		if ((error = cb(data, &iter)) < 0)
-			break;
+		error = cb(data, &iter);
 		iter.ptr[scan] = oldc;
+		if (error < 0)
+			break;
 		scan = git_buf_rfind_next(&iter, '/');
 		if (scan >= 0) {
 			scan++;

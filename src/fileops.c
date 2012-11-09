@@ -351,6 +351,7 @@ int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 }
 
 typedef struct {
+	const char *base;
 	uint32_t flags;
 	int error;
 } futils__rmdir_data;
@@ -366,11 +367,52 @@ static int futils__error_cannot_rmdir(const char *path, const char *filemsg)
 	return -1;
 }
 
+static int futils__rm_first_parent(git_buf *path, const char *ceiling)
+{
+	int error = GIT_ENOTFOUND;
+	struct stat st;
+
+	while (error == GIT_ENOTFOUND) {
+		git_buf_rtruncate_at_char(path, '/');
+
+		if (!path->size || git__prefixcmp(path->ptr, ceiling) != 0)
+			error = 0;
+		else if (p_lstat(path->ptr, &st) == 0) {
+			if (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode))
+				error = p_unlink(path->ptr);
+			else if (!S_ISDIR(st.st_mode))
+				error = -1; /* fail to remove non-regular file */
+		} else if (errno != ENOTDIR)
+			error = -1;
+	}
+
+	if (error)
+		futils__error_cannot_rmdir(path->ptr, "cannot remove parent");
+
+	return error;
+}
+
 static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 {
+	struct stat st;
 	futils__rmdir_data *data = opaque;
 
-	if (git_path_isdir(path->ptr) == true) {
+	if ((data->error = p_lstat(path->ptr, &st)) < 0) {
+		if (errno == ENOENT)
+			data->error = 0;
+		else if (errno == ENOTDIR) {
+			/* asked to remove a/b/c/d/e and a/b is a normal file */
+			if ((data->flags & GIT_RMDIR_REMOVE_BLOCKERS) != 0)
+				data->error = futils__rm_first_parent(path, data->base);
+			else
+				futils__error_cannot_rmdir(
+					path->ptr, "parent is not directory");
+		}
+		else
+			futils__error_cannot_rmdir(path->ptr, "cannot access");
+	}
+
+	else if (S_ISDIR(st.st_mode)) {
 		int error = git_path_direach(path, futils__rmdir_recurs_foreach, data);
 		if (error < 0)
 			return (error == GIT_EUSER) ? data->error : error;
@@ -393,9 +435,8 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 			futils__error_cannot_rmdir(path->ptr, "cannot be removed");
 	}
 
-	else if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) == 0) {
+	else if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) == 0)
 		data->error = futils__error_cannot_rmdir(path->ptr, "still present");
-	}
 
 	return data->error;
 }
@@ -434,6 +475,7 @@ int git_futils_rmdir_r(
 	if (git_path_join_unrooted(&fullpath, path, base, NULL) < 0)
 		return -1;
 
+	data.base  = base ? base : "";
 	data.flags = flags;
 	data.error = 0;
 
