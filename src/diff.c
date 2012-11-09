@@ -506,16 +506,15 @@ static int maybe_modified(
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
-	if (status != GIT_DELTA_UNMODIFIED &&
-		git_oid_iszero(&nitem->oid) && !use_noid)
-	{
-		if (git_diff__oid_for_file(diff->repo,
-				nitem->path, nitem->mode, nitem->file_size, &noid) < 0)
-			return -1;
-		if (omode == nmode && git_oid_equal(&oitem->oid, &noid))
+	if (status != GIT_DELTA_UNMODIFIED && git_oid_iszero(&nitem->oid)) {
+		if (!use_noid) {
+			if (git_diff__oid_for_file(diff->repo,
+					nitem->path, nitem->mode, nitem->file_size, &noid) < 0)
+				return -1;
+			use_noid = &noid;
+		}
+		if (omode == nmode && git_oid_equal(&oitem->oid, use_noid))
 			status = GIT_DELTA_UNMODIFIED;
-		/* store calculated oid so we don't have to recalc later */
-		use_noid = &noid;
 	}
 
 	return diff_delta__from_two(
