@@ -648,7 +648,7 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 
 	wi->is_ignored = -1;
 
-	git_index__init_entry_from_stat(&ps->st, &wi->entry);
+	git_index_entry__init_from_stat(&wi->entry, &ps->st);
 
 	/* need different mode here to keep directories during iteration */
 	wi->entry.mode = git_futils_canonical_mode(ps->st.st_mode);

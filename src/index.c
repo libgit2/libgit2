@@ -516,7 +516,7 @@ git_index_entry *git_index_get_bypath(git_index *index, const char *path, int st
 	return git_index_get_byindex(index, pos);
 }
 
-void git_index__init_entry_from_stat(struct stat *st, git_index_entry *entry)
+void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st)
 {
 	entry->ctime.seconds = (git_time_t)st->st_ctime;
 	entry->mtime.seconds = (git_time_t)st->st_mtime;
@@ -528,6 +528,22 @@ void git_index__init_entry_from_stat(struct stat *st, git_index_entry *entry)
 	entry->uid  = st->st_uid;
 	entry->gid  = st->st_gid;
 	entry->file_size = st->st_size;
+}
+
+int git_index_entry__cmp(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcmp(entry_a->path, entry_b->path);
+}
+
+int git_index_entry__cmp_icase(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcasecmp(entry_a->path, entry_b->path);
 }
 
 static int index_entry_init(git_index_entry **entry_out, git_index *index, const char *rel_path)
@@ -568,7 +584,7 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	entry = git__calloc(1, sizeof(git_index_entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	git_index__init_entry_from_stat(&st, entry);
+	git_index_entry__init_from_stat(entry, &st);
 
 	entry->oid = oid;
 	entry->path = git__strdup(rel_path);

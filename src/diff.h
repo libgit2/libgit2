@@ -41,6 +41,11 @@ struct git_diff_list {
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
+
+	int (*strcmp)(const char *, const char *);
+	int (*strncmp)(const char *, const char *, size_t);
+	int (*prefixcmp)(const char *str, const char *pfx);
+	int (*entrycmp)(const void *a, const void *b);
 };
 
 extern void git_diff__cleanup_modes(
@@ -52,6 +57,9 @@ extern int git_diff_delta__cmp(const void *a, const void *b);
 
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
+
+extern int git_diff__oid_for_file(
+	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
 #endif
 

@@ -83,4 +83,10 @@ typedef struct {
 	uint32_t diffed   : 1;
 } diff_delta_context;
 
+extern int git_diff__paired_foreach(
+	git_diff_list *idx2head,
+	git_diff_list *wd2idx,
+	int (*cb)(void *cbref, git_diff_delta *i2h, git_diff_delta *w2i),
+	void *cbref);
+
 #endif

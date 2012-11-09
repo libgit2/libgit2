@@ -1573,3 +1573,58 @@ int git_diff_patch_to_str(
 
 	return error;
 }
+
+int git_diff__paired_foreach(
+	git_diff_list *idx2head,
+	git_diff_list *wd2idx,
+	int (*cb)(void *cbref, git_diff_delta *i2h, git_diff_delta *w2i),
+	void *cbref)
+{
+	int cmp;
+	git_diff_delta *i2h, *w2i;
+	size_t i, j, i_max, j_max;
+	bool icase = false;
+
+	i_max = idx2head ? idx2head->deltas.length : 0;
+	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
+
+	if (idx2head && wd2idx &&
+		(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) ||
+		 0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)))
+	{
+		/* Then use the ignore-case sorter... */
+		icase = true;
+
+		/* and assert that both are ignore-case sorted. If this function
+		 * ever needs to support merge joining result sets that are not sorted
+		 * by the same function, then it will need to be extended to do a spool
+		 * and sort on one of the results before merge joining */
+		assert(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) &&
+			0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE));
+	}
+
+	for (i = 0, j = 0; i < i_max || j < j_max; ) {
+		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
+		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
+
+		cmp = !w2i ? -1 : !i2h ? 1 :
+			STRCMP_CASESELECT(icase, i2h->old_file.path, w2i->old_file.path);
+
+		if (cmp < 0) {
+			if (cb(cbref, i2h, NULL))
+				return GIT_EUSER;
+			i++;
+		} else if (cmp > 0) {
+			if (cb(cbref, NULL, w2i))
+				return GIT_EUSER;
+			j++;
+		} else {
+			if (cb(cbref, i2h, w2i))
+				return GIT_EUSER;
+			i++; j++;
+		}
+	}
+
+	return 0;
+}
+

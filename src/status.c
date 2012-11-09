@@ -17,6 +17,7 @@
 
 #include "git2/diff.h"
 #include "diff.h"
+#include "diff_output.h"
 
 static unsigned int index_delta2status(git_delta_t index_status)
 {
@@ -76,21 +77,43 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 	return st;
 }
 
+typedef struct {
+	int (*cb)(const char *, unsigned int, void *);
+	void *cbdata;
+} status_user_callback;
+
+static int status_invoke_cb(
+	void *cbref, git_diff_delta *i2h, git_diff_delta *w2i)
+{
+	status_user_callback *usercb = cbref;
+	const char *path = NULL;
+	unsigned int status = 0;
+
+	if (w2i) {
+		path = w2i->old_file.path;
+		status |= workdir_delta2status(w2i->status);
+	}
+	if (i2h) {
+		path = i2h->old_file.path;
+		status |= index_delta2status(i2h->status);
+	}
+
+	return usercb->cb(path, status, usercb->cbdata);
+}
+
 int git_status_foreach_ext(
 	git_repository *repo,
 	const git_status_options *opts,
 	int (*cb)(const char *, unsigned int, void *),
 	void *cbdata)
 {
-	int err = 0, cmp;
+	int err = 0;
 	git_diff_options diffopt;
 	git_diff_list *idx2head = NULL, *wd2idx = NULL;
 	git_tree *head = NULL;
 	git_status_show_t show =
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-	git_diff_delta *i2h, *w2i;
-	size_t i, j, i_max, j_max;
-	bool ignore_case = false;
+	status_user_callback usercb;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
@@ -126,55 +149,19 @@ int git_status_foreach_ext(
 		(err = git_diff_workdir_to_index(repo, &diffopt, &wd2idx)) < 0)
 		goto cleanup;
 
+	usercb.cb = cb;
+	usercb.cbdata = cbdata;
+
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
-		for (i = 0; !err && i < idx2head->deltas.length; i++) {
-			i2h = GIT_VECTOR_GET(&idx2head->deltas, i);
-			if (cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata))
-				err = GIT_EUSER;
-		}
+		if ((err = git_diff__paired_foreach(
+				 idx2head, NULL, status_invoke_cb, &usercb)) < 0)
+			goto cleanup;
+
 		git_diff_list_free(idx2head);
 		idx2head = NULL;
 	}
 
-	i_max = idx2head ? idx2head->deltas.length : 0;
-	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
-
-	if (idx2head && wd2idx &&
-		(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) ||
-		 0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)))
-	{
-		/* Then use the ignore-case sorter... */
-		ignore_case = true;
-
-		/* and assert that both are ignore-case sorted. If this function
-		 * ever needs to support merge joining result sets that are not sorted
-		 * by the same function, then it will need to be extended to do a spool
-		 * and sort on one of the results before merge joining */
-		assert(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) &&
-			0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE));
-	}
-
-	for (i = 0, j = 0; !err && (i < i_max || j < j_max); ) {
-		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
-		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
-
-		cmp = !w2i ? -1 : !i2h ? 1 : STRCMP_CASESELECT(ignore_case, i2h->old_file.path, w2i->old_file.path);
-
-		if (cmp < 0) {
-			if (cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata))
-				err = GIT_EUSER;
-			i++;
-		} else if (cmp > 0) {
-			if (cb(w2i->old_file.path, workdir_delta2status(w2i->status), cbdata))
-				err = GIT_EUSER;
-			j++;
-		} else {
-			if (cb(i2h->old_file.path, index_delta2status(i2h->status) |
-				   workdir_delta2status(w2i->status), cbdata))
-				err = GIT_EUSER;
-			i++; j++;
-		}
-	}
+	err = git_diff__paired_foreach(idx2head, wd2idx, status_invoke_cb, &usercb);
 
 cleanup:
 	git_tree_free(head);
