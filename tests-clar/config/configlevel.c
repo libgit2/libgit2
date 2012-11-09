@@ -57,3 +57,16 @@ void test_config_configlevel__can_read_from_a_single_level_focused_file_after_pa
 
 	git_config_free(single_level_cfg);
 }
+
+void test_config_configlevel__fetching_a_level_from_an_empty_compound_config_returns_ENOTFOUND(void)
+{
+	git_config *cfg;
+	git_config *local_cfg;
+	const char *s;
+
+	cl_git_pass(git_config_new(&cfg));
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_config_open_level(&local_cfg, cfg, GIT_CONFIG_LEVEL_LOCAL));
+
+	git_config_free(cfg);
+}
