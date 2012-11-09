@@ -263,6 +263,7 @@ static int local_download_pack(
 	git_oid oid;
 	git_packbuilder *pack = NULL;
 	git_odb_writepack *writepack = NULL;
+	git_odb *odb = NULL;
 
 	if ((error = git_revwalk_new(&walk, t->repo)) < 0)
 		goto cleanup;
@@ -295,9 +296,14 @@ static int local_download_pack(
 	}
 
 	/* Walk the objects, building a packfile */
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
+		goto cleanup;
 
 	while ((error = git_revwalk_next(&oid, walk)) == 0) {
 		git_commit *commit;
+
+		/* Skip commits we already have */
+		if (git_odb_exists(odb, &oid)) continue;
 
 		stats->total_objects++;
 
@@ -313,13 +319,8 @@ static int local_download_pack(
 	}
 
 	if (progress_cb) progress_cb(stats, progress_payload);
-
-	{
-		git_odb *odb;
-		if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-				(error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0)
-			goto cleanup;
-	}
+	if ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0)
+		goto cleanup;
 
 	/* Write the data to the ODB */
 	{
