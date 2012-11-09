@@ -42,12 +42,11 @@ GIT_INLINE(char *) git__strdup(const char *str)
 
 GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 {
-	size_t length;
+	size_t length = 0;
 	char *ptr;
 
-	length = strlen(str);
-	if (n < length)
-		length = n;
+	while (length < n && str[length])
+		++length;
 
 	ptr = (char*)malloc(length + 1);
 	if (!ptr) {
@@ -55,7 +54,9 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 		return NULL;
 	}
 
-	memcpy(ptr, str, length);
+	if (length)
+		memcpy(ptr, str, length);
+
 	ptr[length] = '\0';
 
 	return ptr;

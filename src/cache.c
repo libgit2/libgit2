@@ -41,6 +41,7 @@ void git_cache_free(git_cache *cache)
 			git_cached_obj_decref(cache->nodes[i], cache->free_obj);
 	}
 
+	git_mutex_free(&cache->lock);
 	git__free(cache->nodes);
 }
 

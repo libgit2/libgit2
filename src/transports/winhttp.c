@@ -278,6 +278,7 @@ static int winhttp_stream_read(
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	DWORD dw_bytes_read;
 
 replay:
 	/* Connect if necessary */
@@ -376,11 +377,13 @@ replay:
 	if (!WinHttpReadData(s->request,
 		(LPVOID)buffer,
 		buf_size,
-		(LPDWORD)bytes_read))
+		&dw_bytes_read))
 	{
 		giterr_set(GITERR_OS, "Failed to read data");
 		return -1;
 	}
+
+	*bytes_read = dw_bytes_read;
 
 	return 0;
 }
