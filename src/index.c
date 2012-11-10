@@ -259,7 +259,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 {
 	git_index *index;
 
-	assert(index_out && index_path);
+	assert(index_out);
 
 	index = git__calloc(1, sizeof(git_index));
 	GITERR_CHECK_ALLOC(index);
