@@ -246,8 +246,8 @@ void test_stash_save__cannot_stash_when_there_are_no_local_change(void)
 	 * 'what' and 'who' are being committed.
 	 * 'when' remain untracked.
 	 */
-	git_index_add_from_workdir(index, "what");
-	git_index_add_from_workdir(index, "who");
+	cl_git_pass(git_index_add_from_workdir(index, "what"));
+	cl_git_pass(git_index_add_from_workdir(index, "who"));
 	cl_git_pass(git_index_write(index));
 	commit_staged_files(&commit_oid, index, signature);
 	git_index_free(index);
@@ -356,7 +356,7 @@ void test_stash_save__can_stage_normal_then_stage_untracked(void)
 
 void test_stash_save__including_untracked_without_any_untracked_file_creates_an_empty_tree(void)
 {
-	p_unlink("stash/when");
+	cl_git_pass(p_unlink("stash/when"));
 
 	assert_status("what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
 	assert_status("how", GIT_STATUS_INDEX_MODIFIED);

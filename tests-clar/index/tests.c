@@ -248,3 +248,16 @@ void test_index_tests__add(void)
    git_repository_free(repo);
 }
 
+void test_index_tests__add_from_workdir_to_a_bare_repository_returns_EBAREPO(void)
+{
+	git_repository *bare_repo;
+	git_index *index;
+
+	cl_git_pass(git_repository_open(&bare_repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_index(&index, bare_repo));
+
+	cl_assert_equal_i(GIT_EBAREREPO, git_index_add_from_workdir(index, "test.txt"));
+
+	git_index_free(index);
+	git_repository_free(bare_repo);
+}
