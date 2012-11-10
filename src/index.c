@@ -471,7 +471,7 @@ int git_index_write_tree(git_oid *oid, git_index *index)
 
 	assert(oid && index);
 
-	repo = (git_repository *)GIT_REFCOUNT_OWNER(index);
+	repo = INDEX_OWNER(index);
 
 	if (repo == NULL)
 		return create_index_error(-1, "Failed to write tree. "
