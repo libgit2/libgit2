@@ -19,46 +19,6 @@ static void cleanup_repository(void *path)
 	cl_fixture_cleanup((const char *)path);
 }
 
-// TODO: This is copy/pasted from network/remotelocal.c.
-static void build_local_file_url(git_buf *out, const char *fixture)
-{
-	const char *in_buf;
-
-	git_buf path_buf = GIT_BUF_INIT;
-
-	cl_git_pass(git_path_prettify_dir(&path_buf, fixture, NULL));
-	cl_git_pass(git_buf_puts(out, "file://"));
-
-#ifdef GIT_WIN32
-	/*
-	 * A FILE uri matches the following format: file://[host]/path
-	 * where "host" can be empty and "path" is an absolute path to the resource.
-	 *
-	 * In this test, no hostname is used, but we have to ensure the leading triple slashes:
-	 *
-	 * *nix: file:///usr/home/...
-	 * Windows: file:///C:/Users/...
-	 */
-	cl_git_pass(git_buf_putc(out, '/'));
-#endif
-
-	in_buf = git_buf_cstr(&path_buf);
-
-	/*
-	 * A very hacky Url encoding that only takes care of escaping the spaces
-	 */
-	while (*in_buf) {
-		if (*in_buf == ' ')
-			cl_git_pass(git_buf_puts(out, "%20"));
-		else
-			cl_git_pass(git_buf_putc(out, *in_buf));
-
-		in_buf++;
-	}
-
-	git_buf_free(&path_buf);
-}
-
 void test_clone_nonetwork__bad_url(void)
 {
 	/* Clone should clean up the mess if the URL isn't a git repository */
@@ -70,24 +30,18 @@ void test_clone_nonetwork__bad_url(void)
 
 void test_clone_nonetwork__local(void)
 {
-	git_buf src = GIT_BUF_INIT;
-	build_local_file_url(&src, cl_fixture("testrepo.git"));
+	const char *src = cl_git_fixture_url("testrepo.git");
 	cl_set_cleanup(&cleanup_repository, "./local");
 
-	cl_git_pass(git_clone(&g_repo, git_buf_cstr(&src), "./local", NULL, NULL, NULL));
-
-	git_buf_free(&src);
+	cl_git_pass(git_clone(&g_repo, src, "./local", NULL, NULL, NULL));
 }
 
 void test_clone_nonetwork__local_bare(void)
 {
-	git_buf src = GIT_BUF_INIT;
-	build_local_file_url(&src, cl_fixture("testrepo.git"));
+	const char *src = cl_git_fixture_url("testrepo.git");
 	cl_set_cleanup(&cleanup_repository, "./local.git");
 
-	cl_git_pass(git_clone_bare(&g_repo, git_buf_cstr(&src), "./local.git", NULL, NULL));
-
-	git_buf_free(&src);
+	cl_git_pass(git_clone_bare(&g_repo, src, "./local.git", NULL, NULL));
 }
 
 void test_clone_nonetwork__fail_when_the_target_is_a_file(void)

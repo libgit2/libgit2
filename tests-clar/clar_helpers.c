@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
+#include "path.h"
 
 void clar_on_init(void)
 {
@@ -222,3 +223,51 @@ bool cl_is_chmod_supported(void)
 	return _is_supported;
 }
 
+const char* cl_git_fixture_url(const char *fixturename)
+{
+	return cl_git_path_url(cl_fixture(fixturename));
+}
+
+const char* cl_git_path_url(const char *path)
+{
+	static char url[4096];
+
+	const char *in_buf;
+	git_buf path_buf = GIT_BUF_INIT;
+	git_buf url_buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_path_prettify_dir(&path_buf, path, NULL));
+	cl_git_pass(git_buf_puts(&url_buf, "file://"));
+
+#ifdef _MSC_VER
+	/*
+	 * A FILE uri matches the following format: file://[host]/path
+	 * where "host" can be empty and "path" is an absolute path to the resource.
+	 *
+	 * In this test, no hostname is used, but we have to ensure the leading triple slashes:
+	 *
+	 * *nix: file:///usr/home/...
+	 * Windows: file:///C:/Users/...
+	 */
+	cl_git_pass(git_buf_putc(url_buf, '/'));
+#endif
+
+	in_buf = git_buf_cstr(&path_buf);
+
+	/*
+	 * A very hacky Url encoding that only takes care of escaping the spaces
+	 */
+	while (*in_buf) {
+		if (*in_buf == ' ')
+			cl_git_pass(git_buf_puts(&url_buf, "%20"));
+		else
+			cl_git_pass(git_buf_putc(&url_buf, *in_buf));
+
+		in_buf++;
+	}
+
+	strncpy(url, git_buf_cstr(&url_buf), 4096);
+	git_buf_free(&url_buf);
+	git_buf_free(&path_buf);
+	return url;
+}
