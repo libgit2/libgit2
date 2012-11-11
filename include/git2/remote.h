@@ -401,6 +401,23 @@ GIT_EXTERN(int) git_remote_rename(
 	int (*callback)(const char *problematic_refspec, void *payload),
 	void *payload);
 
+/**
+ * Retrieve the update FETCH_HEAD setting.
+ *
+ * @param remote the remote to query
+ * @return the update FETCH_HEAD setting
+ */
+GIT_EXTERN(int) git_remote_update_fetchhead(git_remote *remote);
+
+/**
+ * Sets the update FETCH_HEAD setting.  By default, FETCH_HEAD will be
+ * updated on every fetch.  Set to 0 to disable.
+ *
+ * @param remote the remote to configure
+ * @param value 0 to disable updating FETCH_HEAD
+ */
+GIT_EXTERN(void) git_remote_set_update_fetchhead(git_remote *remote, int value);
+
 /** @} */
 GIT_END_DECL
 #endif

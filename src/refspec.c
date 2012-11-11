@@ -236,3 +236,10 @@ int git_refspec__serialize(git_buf *out, const git_refspec *refspec)
 
 	return git_buf_oom(out) == false;
 }
+
+int git_refspec_is_wildcard(const git_refspec *spec)
+{
+	assert(spec && spec->src);
+
+	return (spec->src[strlen(spec->src) - 1] == '*');
+}

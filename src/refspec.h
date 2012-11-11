@@ -53,4 +53,12 @@ int git_refspec_transform_l(git_buf *out, const git_refspec *spec, const char *n
 
 int git_refspec__serialize(git_buf *out, const git_refspec *refspec);
 
+/**
+ * Determines if a refspec is a wildcard refspec.
+ *
+ * @param spec the refspec
+ * @return 1 if the refspec is a wildcard, 0 otherwise
+ */
+int git_refspec_is_wildcard(const git_refspec *spec);
+
 #endif
