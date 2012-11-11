@@ -116,7 +116,7 @@ void test_object_tree_duplicateentries__cannot_create_a_duplicate_entry_through_
 	tree_checker(&tid, "4e0883eeeeebc1fb1735161cea82f7cb5fab7e63", GIT_FILEMODE_TREE);
 }
 
-void add_fake_conflicts(git_index *index)
+static void add_fake_conflicts(git_index *index)
 {
 	git_index_entry ancestor_entry, our_entry, their_entry;
 
