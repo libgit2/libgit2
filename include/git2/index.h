@@ -215,9 +215,12 @@ GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
  * The index instance cannot be bare, and needs to be associated
  * to an existing repository.
  *
+ * The index must not contain any file in conflict.
+ *
  * @param oid Pointer where to store the OID of the written tree
  * @param index Index to write
- * @return 0 or an error code
+ * @return 0 on success, GIT_EUNMERGED when the index is not clean
+ * or an error code
  */
 GIT_EXTERN(int) git_index_write_tree(git_oid *oid, git_index *index);
 
@@ -228,10 +231,13 @@ GIT_EXTERN(int) git_index_write_tree(git_oid *oid, git_index *index);
  * letting the user choose the repository where the tree will
  * be written.
  *
+ * The index must not contain any file in conflict.
+ *
  * @param oid Pointer where to store OID of the the written tree
  * @param index Index to write
  * @param repo Repository where to write the tree
- * @return 0 or an error code
+ * @return 0 on success, GIT_EUNMERGED when the index is not clean
+ * or an error code
  */
 GIT_EXTERN(int) git_index_write_tree_to(git_oid *oid, git_index *index, git_repository *repo);
 
@@ -430,6 +436,13 @@ GIT_EXTERN(int) git_index_conflict_remove(git_index *index, const char *path);
  * @param index an existing index object
  */
 GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
+
+/**
+ * Determine if the index contains entries representing file conflicts.
+ *
+ * @return 1 if at least one conflict is found, 0 otherwise.
+ */
+GIT_EXTERN(int) git_index_has_conflicts(git_index *index);
 
 /**@}*/
 
