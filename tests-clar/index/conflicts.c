@@ -180,7 +180,11 @@ void test_index_conflicts__remove_all_conflicts(void)
 
 	cl_assert(git_index_entrycount(repo_index) == 8);
 
+	cl_assert_equal_i(true, git_index_has_conflicts(repo_index));
+
 	git_index_conflict_cleanup(repo_index);
+
+	cl_assert_equal_i(false, git_index_has_conflicts(repo_index));
 
 	cl_assert(git_index_entrycount(repo_index) == 2);
 

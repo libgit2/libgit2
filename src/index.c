@@ -959,6 +959,21 @@ void git_index_conflict_cleanup(git_index *index)
 	git_vector_remove_matching(&index->entries, index_conflicts_match);
 }
 
+int git_index_has_conflicts(git_index *index)
+{
+	unsigned int i;
+	git_index_entry *entry;
+
+	assert(index);
+
+	git_vector_foreach(&index->entries, i, entry) {
+		if (index_entry_stage(entry) > 0)
+			return 1;
+	}
+
+	return 0;
+}
+
 unsigned int git_index_reuc_entrycount(git_index *index)
 {
 	assert(index);
