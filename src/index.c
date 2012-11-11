@@ -259,7 +259,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 {
 	git_index *index;
 
-	assert(index_out && index_path);
+	assert(index_out);
 
 	index = git__calloc(1, sizeof(git_index));
 	GITERR_CHECK_ALLOC(index);
@@ -348,6 +348,12 @@ void git_index_clear(git_index *index)
 	index->tree = NULL;
 }
 
+static int create_index_error(int error, const char *msg)
+{
+	giterr_set(GITERR_INDEX, msg);
+	return error;
+}
+
 int git_index_set_caps(git_index *index, unsigned int caps)
 {
 	int old_ignore_case;
@@ -362,11 +368,8 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 
 		if (INDEX_OWNER(index) == NULL ||
 			git_repository_config__weakptr(&cfg, INDEX_OWNER(index)) < 0)
-		{
-			giterr_set(GITERR_INDEX,
-				"Cannot get repository config to set index caps");
-			return -1;
-		}
+				return create_index_error(-1,
+					"Cannot get repository config to set index caps");
 
 		if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
 			index->ignore_case = (val != 0);
@@ -402,11 +405,9 @@ int git_index_read(git_index *index)
 	git_buf buffer = GIT_BUF_INIT;
 	git_futils_filestamp stamp;
 
-	if (!index->index_file_path) {
-		giterr_set(GITERR_INDEX,
+	if (!index->index_file_path)
+		return create_index_error(-1,
 			"Failed to read index: The index is in-memory only");
-		return -1;
-	}
 
 	if (!index->on_disk || git_path_exists(index->index_file_path) == false) {
 		git_index_clear(index);
@@ -437,11 +438,9 @@ int git_index_write(git_index *index)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 
-	if (!index->index_file_path) {
-		giterr_set(GITERR_INDEX,
-			"Failed to write index: The index is in-memory only");
-		return -1;
-	}
+	if (!index->index_file_path)
+		return create_index_error(-1,
+			"Failed to read index: The index is in-memory only");
 
 	git_vector_sort(&index->entries);
 	git_vector_sort(&index->reuc);
@@ -472,13 +471,11 @@ int git_index_write_tree(git_oid *oid, git_index *index)
 
 	assert(oid && index);
 
-	repo = (git_repository *)GIT_REFCOUNT_OWNER(index);
+	repo = INDEX_OWNER(index);
 
-	if (repo == NULL) {
-		giterr_set(GITERR_INDEX, "Failed to write tree. "
+	if (repo == NULL)
+		return create_index_error(-1, "Failed to write tree. "
 		  "The index file is not backed up by an existing repository");
-		return -1;
-	}
 
 	return git_tree__write_index(oid, index, repo);
 }
@@ -539,13 +536,16 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	git_buf full_path = GIT_BUF_INIT;
 	int error;
 
-	if (INDEX_OWNER(index) == NULL ||
-		(workdir = git_repository_workdir(INDEX_OWNER(index))) == NULL)
-	{
-		giterr_set(GITERR_INDEX,
+	if (INDEX_OWNER(index) == NULL)
+		return create_index_error(-1,
+			"Could not initialize index entry. "
+			"Index is not backed up by an existing repository.");
+
+	workdir = git_repository_workdir(INDEX_OWNER(index));
+
+	if (!workdir)
+		return create_index_error(GIT_EBAREREPO,
 			"Could not initialize index entry. Repository is bare");
-		return -1;
-	}
 
 	if ((error = git_buf_joinpath(&full_path, workdir, rel_path)) < 0)
 		return error;
