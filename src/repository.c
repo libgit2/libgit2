@@ -1207,9 +1207,19 @@ int git_repository_head_detached(git_repository *repo)
 
 int git_repository_head(git_reference **head_out, git_repository *repo)
 {
+	git_reference *head;
 	int error;
 
-	error = git_reference_lookup_resolved(head_out, repo, GIT_HEAD_FILE, -1);
+	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+		return error;
+
+	if (git_reference_type(head) == GIT_REF_OID) {
+		*head_out = head;
+		return 0;
+	}
+
+	error = git_reference_lookup_resolved(head_out, repo, git_reference_target(head), -1);
+	git_reference_free(head);
 
 	return error == GIT_ENOTFOUND ? GIT_EORPHANEDHEAD : error;
 }

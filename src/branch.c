@@ -317,7 +317,7 @@ int git_branch_is_head(
 
 	error = git_repository_head(&head, git_reference_owner(branch));
 
-	if (error == GIT_EORPHANEDHEAD)
+	if (error == GIT_EORPHANEDHEAD || error == GIT_ENOTFOUND)
 		return false;
 
 	if (error < 0)
