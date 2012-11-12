@@ -73,3 +73,50 @@ void test_network_fetch__no_tags_http(void)
 {
 	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
 }
+
+/* test_network_fetch__custom_transport support logic */
+
+typedef int (*subtransport_action)(
+	git_smart_subtransport_stream **out,
+	git_smart_subtransport *transport,
+	const char *url,
+	git_smart_service_t action);
+
+static subtransport_action real_action;
+
+static int custom_action(
+	git_smart_subtransport_stream **out,
+	git_smart_subtransport *transport,
+	const char *url,
+	git_smart_service_t action)
+{
+	GIT_UNUSED(url);
+
+	/* Patch in the real URL */
+	return real_action(out, transport,
+		"http://github.com/libgit2/TestGitRepository.git", action);
+}
+
+static int subtransport_custom(
+	git_smart_subtransport **out,
+	git_transport *owner)
+{
+	if (git_smart_subtransport_http(out, owner) < 0)
+		return -1;
+
+	real_action = (*out)->action;
+	(*out)->action = custom_action;
+
+	return 0;
+}
+
+void test_network_fetch__custom_transport(void)
+{
+	git_smart_subtransport_definition d;
+	d.callback = subtransport_custom;
+	d.rpc = 1;
+
+	cl_git_pass(git_transport_register("custom://", 1, git_transport_smart, &d));
+	do_fetch("custom://example.com", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
+	cl_git_pass(git_transport_unregister("custom://", 1));
+}
