@@ -7,45 +7,6 @@ static git_repository *repo;
 static git_buf file_path_buf = GIT_BUF_INIT;
 static git_remote *remote;
 
-static void build_local_file_url(git_buf *out, const char *fixture)
-{
-	const char *in_buf;
-
-	git_buf path_buf = GIT_BUF_INIT;
-
-	cl_git_pass(git_path_prettify_dir(&path_buf, fixture, NULL));
-	cl_git_pass(git_buf_puts(out, "file://"));
-
-#ifdef _MSC_VER
-	/*
-	 * A FILE uri matches the following format: file://[host]/path
-	 * where "host" can be empty and "path" is an absolute path to the resource.
-	 * 
-	 * In this test, no hostname is used, but we have to ensure the leading triple slashes:
-	 * 
-	 * *nix: file:///usr/home/...
-	 * Windows: file:///C:/Users/...
-	 */
-	cl_git_pass(git_buf_putc(out, '/'));
-#endif
-
-	in_buf = git_buf_cstr(&path_buf);
-
-	/*
-	 * A very hacky Url encoding that only takes care of escaping the spaces
-	 */
-	while (*in_buf) {
-		if (*in_buf == ' ')
-			cl_git_pass(git_buf_puts(out, "%20"));
-		else
-			cl_git_pass(git_buf_putc(out, *in_buf));
-
-		in_buf++;
-	}
-
-	git_buf_free(&path_buf);
-}
-
 void test_network_remotelocal__initialize(void)
 {
 	cl_git_pass(git_repository_init(&repo, "remotelocal/", 0));
@@ -82,7 +43,7 @@ static int ensure_peeled__cb(git_remote_head *head, void *payload)
 
 static void connect_to_local_repository(const char *local_repository)
 {
-	build_local_file_url(&file_path_buf, local_repository);
+	git_buf_sets(&file_path_buf, cl_git_path_url(local_repository));
 
 	cl_git_pass(git_remote_new(&remote, repo, NULL, git_buf_cstr(&file_path_buf), NULL));
 	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
