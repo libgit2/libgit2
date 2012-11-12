@@ -57,6 +57,32 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 	return error;
 }
 
+static int ensure_remote_name_is_valid(const char *name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_refspec refspec;
+	int error = -1;
+
+	if (!name || *name == '\0')
+		goto cleanup;
+
+	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", name);
+	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
+
+	git_buf_free(&buf);
+	git_refspec__free(&refspec);
+
+cleanup:
+	if (error) {
+		giterr_set(
+			GITERR_CONFIG,
+			"'%s' is not a valid remote name.", name);
+		error = GIT_EINVALIDSPEC;
+	}
+
+	return error;
+}
+
 int git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
@@ -79,6 +105,12 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	GITERR_CHECK_ALLOC(remote->url);
 
 	if (name != NULL) {
+		int error;
+		if ((error = ensure_remote_name_is_valid(name)) < 0) {
+			git_remote_free(remote);
+			return error;
+		}
+
 		remote->name = git__strdup(name);
 		GITERR_CHECK_ALLOC(remote->name);
 	}
@@ -110,6 +142,9 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	git_config *config;
 
 	assert(out && repo && name);
+
+	if ((error = ensure_remote_name_is_valid(name)) < 0)
+		return error;
 
 	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
@@ -212,30 +247,6 @@ cleanup:
 	return error;
 }
 
-static int ensure_remote_name_is_valid(const char *name)
-{
-	git_buf buf = GIT_BUF_INIT;
-	git_refspec refspec;
-	int error = -1;
-
-	if (!name || *name == '\0')
-		goto cleanup;
-
-	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", name);
-	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
-
-	git_buf_free(&buf);
-	git_refspec__free(&refspec);
-
-cleanup:
-	if (error)
-		giterr_set(
-			GITERR_CONFIG,
-			"'%s' is not a valid remote name.", name);
-
-	return error;
-}
-
 static int update_config_refspec(
 	git_config *config,
 	const char *remote_name,
@@ -279,8 +290,8 @@ int git_remote_save(const git_remote *remote)
 
 	assert(remote);
 
-	if (ensure_remote_name_is_valid(remote->name) < 0)
-		return -1;
+	if ((error = ensure_remote_name_is_valid(remote->name)) < 0)
+		return error;
 
 	if (git_repository_config__weakptr(&config, remote->repo) < 0)
 		return -1;
@@ -958,6 +969,10 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 int git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url)
 {
 	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if ((error = ensure_remote_name_is_valid(name)) < 0)
+		return error;
 
 	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
 		return -1;

@@ -202,6 +202,11 @@ void test_network_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_remote_load(&_remote, _repo, "just-left-few-minutes-ago"));
 }
 
+void test_network_remotes__loading_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_remote_load(&_remote, _repo, "Inv@{id"));
+}
+
 /*
  * $ git remote add addtest http://github.com/libgit2/libgit2
  *
@@ -229,8 +234,9 @@ void test_network_remotes__cannot_add_a_nameless_remote(void)
 {
 	git_remote *remote;
 
-	cl_git_fail(git_remote_add(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
-	cl_git_fail(git_remote_add(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_remote_add(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
 }
 
 void test_network_remotes__cannot_save_a_nameless_remote(void)
@@ -239,13 +245,34 @@ void test_network_remotes__cannot_save_a_nameless_remote(void)
 
 	cl_git_pass(git_remote_new(&remote, _repo, NULL, "git://github.com/libgit2/libgit2", NULL));
 
-	cl_git_fail(git_remote_save(remote));
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_remote_save(remote));
 	git_remote_free(remote);
+}
 
-	cl_git_pass(git_remote_new(&remote, _repo, "", "git://github.com/libgit2/libgit2", NULL));
+void test_network_remotes__cannot_add_a_remote_with_an_invalid_name(void)
+{
+	git_remote *remote;
 
-	cl_git_fail(git_remote_save(remote));
-	git_remote_free(remote);
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_remote_add(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2"));
+
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_remote_add(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
+}
+
+void test_network_remotes__cannot_initialize_a_remote_with_an_invalid_name(void)
+{
+	git_remote *remote;
+
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_remote_new(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2", NULL));
+
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_remote_new(&remote, _repo, "", "git://github.com/libgit2/libgit2", NULL));
 }
 
 void test_network_remotes__tagopt(void)

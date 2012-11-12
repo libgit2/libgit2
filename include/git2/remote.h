@@ -39,30 +39,39 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  * Create a remote with the default refspecs in memory. You can use
  * this when you have a URL instead of a remote's name.
  *
+ * The name, when provided, will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
+ *
  * @param out pointer to the new remote object
  * @param repo the associated repository
- * @param name the remote's name
+ * @param name the optional remote's name
  * @param url the remote repository's URL
  * @param fetch the fetch refspec to use for this remote
- * @return 0 or an error code
+ * @return 0, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch);
 
 /**
  * Get the information for a particular remote
  *
+ * The name will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
+ *
  * @param out pointer to the new remote object
  * @param repo the associated repository
  * @param name the remote's name
- * @return 0 or an error code
+ * @return 0, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const char *name);
 
 /**
  * Save a remote to its repository's configuration
  *
+ * One can't save a nameless inmemory remote. Doing so will
+ * result in a GIT_EINVALIDSPEC being returned.
+ *
  * @param remote the remote to save to config
- * @return 0 or an error code
+ * @return 0, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_save(const git_remote *remote);
 
@@ -391,12 +400,15 @@ GIT_EXTERN(void) git_remote_set_autotag(
  * All remote-tracking branches and configuration settings
  * for the remote are updated.
  *
+ * The new name will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
+ *
  * @param remote the remote to rename
  * @param new_name the new name the remote should bear
  * @param callback Optional callback to notify the consumer of fetch refspecs
  * that haven't been automatically updated and need potential manual tweaking.
  * @param payload Additional data to pass to the callback
- * @return 0 or an error code
+ * @return 0, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_rename(
 	git_remote *remote,
