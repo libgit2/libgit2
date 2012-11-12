@@ -289,7 +289,6 @@ static int local_download_pack(
 				error = git_revwalk_hide(walk, &rhead->loid);
 		} else {
 			/* Tag or some other wanted object. Add it on its own */
-			stats->total_objects++;
 			error = git_packbuilder_insert(pack, &rhead->oid, rhead->name);
 		}
       git_object_free(obj);
@@ -305,8 +304,6 @@ static int local_download_pack(
 		/* Skip commits we already have */
 		if (git_odb_exists(odb, &oid)) continue;
 
-		stats->total_objects++;
-
 		if (!git_object_lookup((git_object**)&commit, t->repo, &oid, GIT_OBJ_COMMIT)) {
 			const git_oid *tree_oid = git_commit_tree_oid(commit);
 			git_commit_free(commit);
@@ -318,7 +315,6 @@ static int local_download_pack(
 		}
 	}
 
-	if (progress_cb) progress_cb(stats, progress_payload);
 	if ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0)
 		goto cleanup;
 
