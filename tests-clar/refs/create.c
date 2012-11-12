@@ -149,3 +149,19 @@ void test_refs_create__propagate_eexists(void)
 	error = git_reference_symbolic_create(&ref, g_repo, "HEAD", current_head_target, false);
 	cl_assert(error == GIT_EEXISTS);
 }
+
+void test_refs_create__creating_a_reference_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	git_reference *new_reference;
+	git_oid id;
+
+	const char *name = "refs/heads/inv@{id";
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_create(
+		&new_reference, g_repo, name, &id, 0));
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_symbolic_create(
+		&new_reference, g_repo, name, current_head_target, 0));
+}
