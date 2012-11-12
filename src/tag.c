@@ -251,7 +251,7 @@ static int git_tag_create__internal(
 
 	error = retrieve_tag_reference_oid(oid, &ref_name, repo, tag_name);
 	if (error < 0 && error != GIT_ENOTFOUND)
-		return -1;
+		goto cleanup;
 
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explictly been requested **/
@@ -269,6 +269,7 @@ static int git_tag_create__internal(
 
 	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
 
+cleanup:
 	git_reference_free(new_ref);
 	git_buf_free(&ref_name);
 	return error;
@@ -384,7 +385,7 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 	git_buf_free(&ref_name);
 
 	if (error < 0)
-		return -1;
+		return error;
 
 	return git_reference_delete(tag_ref);
 }
