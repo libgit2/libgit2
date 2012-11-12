@@ -65,3 +65,12 @@ void test_refs_branches_create__can_force_create_over_an_existing_branch(void)
 	cl_git_pass(git_oid_cmp(git_reference_target(branch), git_commit_id(target)));
 	cl_assert_equal_s("refs/heads/br2", git_reference_name(branch));
 }
+
+
+void test_refs_branches_create__creating_a_branch_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	retrieve_known_commit(&target, repo);
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_branch_create(&branch, repo, "inv@{id", target, 0));
+}

@@ -29,6 +29,9 @@ GIT_BEGIN_DECL
  *
  * The returned reference must be freed by the user.
  *
+ * The branch name will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
+ *
  * @param out Pointer where to store the underlying reference.
  *
  * @param branch_name Name for the branch; this name is
@@ -42,7 +45,7 @@ GIT_BEGIN_DECL
  *
  * @param force Overwrite existing branch.
  *
- * @return 0 or an error code.
+ * @return 0, GIT_EINVALIDSPEC or an error code.
  * A proper reference is written in the refs/heads namespace
  * pointing to the provided target commit.
  */
@@ -94,6 +97,9 @@ GIT_EXTERN(int) git_branch_foreach(
 /**
  * Move/rename an existing local branch reference.
  *
+ * The new branch name will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
+ *
  * @param branch Current underlying reference of the branch.
  *
  * @param new_branch_name Target name of the branch once the move
@@ -101,7 +107,7 @@ GIT_EXTERN(int) git_branch_foreach(
  *
  * @param force Overwrite existing branch.
  *
- * @return 0 on success, or an error code.
+ * @return 0 on success, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_branch_move(
 		git_reference *branch,
@@ -112,6 +118,9 @@ GIT_EXTERN(int) git_branch_move(
  * Lookup a branch by its name in a repository.
  *
  * The generated reference must be freed by the user.
+ *
+ * The branch name will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
  *
  * @param out pointer to the looked-up branch reference
  *
@@ -124,7 +133,7 @@ GIT_EXTERN(int) git_branch_move(
  * be valued with either GIT_BRANCH_LOCAL or GIT_BRANCH_REMOTE.
  *
  * @return 0 on success; GIT_ENOTFOUND when no matching branch
- * exists, otherwise an error code.
+ * exists, GIT_EINVALIDSPEC, otherwise an error code.
  */
 GIT_EXTERN(int) git_branch_lookup(
 		git_reference **out,
