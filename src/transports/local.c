@@ -313,7 +313,7 @@ static int local_download_pack(
 
 			/* Add the commit and its tree */
 			if ((error = git_packbuilder_insert(pack, &oid, NULL)) < 0 ||
-				 (error = git_packbuilder_insert_tree(pack, tree_oid)))
+				 (error = git_packbuilder_insert_tree(pack, tree_oid)) < 0)
 				goto cleanup;
 		}
 	}
