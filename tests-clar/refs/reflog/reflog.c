@@ -170,3 +170,15 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 	git_buf_free(&moved_log_path);
 	git_buf_free(&master_log_path);
 }
+
+void test_refs_reflog_reflog__renaming_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	git_reference *master;
+
+	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_reflog_rename(master, "refs/heads/Inv@{id"));
+
+	git_reference_free(master);
+}
