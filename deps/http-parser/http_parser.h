@@ -24,16 +24,25 @@
 extern "C" {
 #endif
 
-#define HTTP_PARSER_VERSION_MAJOR 1
+#define HTTP_PARSER_VERSION_MAJOR 2
 #define HTTP_PARSER_VERSION_MINOR 0
 
-#ifdef _MSC_VER
-	/* disable silly warnings */
-#	pragma warning(disable: 4127 4214)
-#endif
-
 #include <sys/types.h>
-#include "git2/common.h"
+#if defined(_WIN32) && !defined(__MINGW32__) && (!defined(_MSC_VER) || _MSC_VER<1600)
+#include <BaseTsd.h>
+typedef __int8 int8_t;
+typedef unsigned __int8 uint8_t;
+typedef __int16 int16_t;
+typedef unsigned __int16 uint16_t;
+typedef __int32 int32_t;
+typedef unsigned __int32 uint32_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+typedef SIZE_T size_t;
+typedef SSIZE_T ssize_t;
+#else
+#include <stdint.h>
+#endif
 
 /* Compile with -DHTTP_PARSER_STRICT=0 to make less checks, but run
  * faster
@@ -42,21 +51,12 @@ extern "C" {
 # define HTTP_PARSER_STRICT 1
 #endif
 
-/* Compile with -DHTTP_PARSER_DEBUG=1 to add extra debugging information to
- * the error reporting facility.
- */
-#ifndef HTTP_PARSER_DEBUG
-# define HTTP_PARSER_DEBUG 0
-#endif
-
-
 /* Maximium header size allowed */
 #define HTTP_MAX_HEADER_SIZE (80*1024)
 
 
 typedef struct http_parser http_parser;
 typedef struct http_parser_settings http_parser_settings;
-typedef struct http_parser_result http_parser_result;
 
 
 /* Callbacks should return non-zero to indicate an error. The parser will
@@ -69,7 +69,7 @@ typedef struct http_parser_result http_parser_result;
  * chunked' headers that indicate the presence of a body.
  *
  * http_data_cb does not return data chunks. It will be call arbitrarally
- * many times for each string. E.G. you might get 10 callbacks for "on_path"
+ * many times for each string. E.G. you might get 10 callbacks for "on_url"
  * each providing just a few characters more data.
  */
 typedef int (*http_data_cb) (http_parser*, const char *at, size_t length);
@@ -77,36 +77,44 @@ typedef int (*http_cb) (http_parser*);
 
 
 /* Request Methods */
+#define HTTP_METHOD_MAP(XX)         \
+  XX(0,  DELETE,      DELETE)       \
+  XX(1,  GET,         GET)          \
+  XX(2,  HEAD,        HEAD)         \
+  XX(3,  POST,        POST)         \
+  XX(4,  PUT,         PUT)          \
+  /* pathological */                \
+  XX(5,  CONNECT,     CONNECT)      \
+  XX(6,  OPTIONS,     OPTIONS)      \
+  XX(7,  TRACE,       TRACE)        \
+  /* webdav */                      \
+  XX(8,  COPY,        COPY)         \
+  XX(9,  LOCK,        LOCK)         \
+  XX(10, MKCOL,       MKCOL)        \
+  XX(11, MOVE,        MOVE)         \
+  XX(12, PROPFIND,    PROPFIND)     \
+  XX(13, PROPPATCH,   PROPPATCH)    \
+  XX(14, SEARCH,      SEARCH)       \
+  XX(15, UNLOCK,      UNLOCK)       \
+  /* subversion */                  \
+  XX(16, REPORT,      REPORT)       \
+  XX(17, MKACTIVITY,  MKACTIVITY)   \
+  XX(18, CHECKOUT,    CHECKOUT)     \
+  XX(19, MERGE,       MERGE)        \
+  /* upnp */                        \
+  XX(20, MSEARCH,     M-SEARCH)     \
+  XX(21, NOTIFY,      NOTIFY)       \
+  XX(22, SUBSCRIBE,   SUBSCRIBE)    \
+  XX(23, UNSUBSCRIBE, UNSUBSCRIBE)  \
+  /* RFC-5789 */                    \
+  XX(24, PATCH,       PATCH)        \
+  XX(25, PURGE,       PURGE)        \
+
 enum http_method
-  { HTTP_DELETE    = 0
-  , HTTP_GET
-  , HTTP_HEAD
-  , HTTP_POST
-  , HTTP_PUT
-  /* pathological */
-  , HTTP_CONNECT
-  , HTTP_OPTIONS
-  , HTTP_TRACE
-  /* webdav */
-  , HTTP_COPY
-  , HTTP_LOCK
-  , HTTP_MKCOL
-  , HTTP_MOVE
-  , HTTP_PROPFIND
-  , HTTP_PROPPATCH
-  , HTTP_UNLOCK
-  /* subversion */
-  , HTTP_REPORT
-  , HTTP_MKACTIVITY
-  , HTTP_CHECKOUT
-  , HTTP_MERGE
-  /* upnp */
-  , HTTP_MSEARCH
-  , HTTP_NOTIFY
-  , HTTP_SUBSCRIBE
-  , HTTP_UNSUBSCRIBE
-  /* RFC-5789 */
-  , HTTP_PATCH
+  {
+#define XX(num, name, string) HTTP_##name = num,
+  HTTP_METHOD_MAP(XX)
+#undef XX
   };
 
 
@@ -134,10 +142,7 @@ enum flags
                                                                      \
   /* Callback-related errors */                                      \
   XX(CB_message_begin, "the on_message_begin callback failed")       \
-  XX(CB_path, "the on_path callback failed")                         \
-  XX(CB_query_string, "the on_query_string callback failed")         \
   XX(CB_url, "the on_url callback failed")                           \
-  XX(CB_fragment, "the on_fragment callback failed")                 \
   XX(CB_header_field, "the on_header_field callback failed")         \
   XX(CB_header_value, "the on_header_value callback failed")         \
   XX(CB_headers_complete, "the on_headers_complete callback failed") \
@@ -168,6 +173,7 @@ enum flags
   XX(INVALID_CONSTANT, "invalid constant string")                    \
   XX(INVALID_INTERNAL_STATE, "encountered unexpected internal state")\
   XX(STRICT, "strict mode assertion failed")                         \
+  XX(PAUSED, "parser is paused")                                     \
   XX(UNKNOWN, "an unknown error occurred")
 
 
@@ -182,30 +188,23 @@ enum http_errno {
 /* Get an http_errno value from an http_parser */
 #define HTTP_PARSER_ERRNO(p)            ((enum http_errno) (p)->http_errno)
 
-/* Get the line number that generated the current error */
-#if HTTP_PARSER_DEBUG
-#define HTTP_PARSER_ERRNO_LINE(p)       ((p)->error_lineno)
-#else
-#define HTTP_PARSER_ERRNO_LINE(p)       0
-#endif
-
 
 struct http_parser {
   /** PRIVATE **/
-  unsigned char type : 2;
-  unsigned char flags : 6; /* F_* values from 'flags' enum; semi-public */
-  unsigned char state;
-  unsigned char header_state;
-  unsigned char index;
+  unsigned char type : 2;     /* enum http_parser_type */
+  unsigned char flags : 6;    /* F_* values from 'flags' enum; semi-public */
+  unsigned char state;        /* enum state from http_parser.c */
+  unsigned char header_state; /* enum header_state from http_parser.c */
+  unsigned char index;        /* index into current matcher */
 
-  size_t nread;
-  int64_t content_length;
+  uint32_t nread;          /* # bytes read in various scenarios */
+  uint64_t content_length; /* # bytes in body (0 if no Content-Length header) */
 
   /** READ-ONLY **/
   unsigned short http_major;
   unsigned short http_minor;
   unsigned short status_code; /* responses only */
-  unsigned char method;    /* requests only */
+  unsigned char method;       /* requests only */
   unsigned char http_errno : 7;
 
   /* 1 = Upgrade header was present and the parser has exited because of that.
@@ -214,10 +213,6 @@ struct http_parser {
    * error checking.
    */
   unsigned char upgrade : 1;
-
-#if HTTP_PARSER_DEBUG
-  uint32_t error_lineno;
-#endif
 
   /** PUBLIC **/
   void *data; /* A pointer to get hook to the "connection" or "socket" object */
@@ -235,6 +230,36 @@ struct http_parser_settings {
 };
 
 
+enum http_parser_url_fields
+  { UF_SCHEMA           = 0
+  , UF_HOST             = 1
+  , UF_PORT             = 2
+  , UF_PATH             = 3
+  , UF_QUERY            = 4
+  , UF_FRAGMENT         = 5
+  , UF_USERINFO         = 6
+  , UF_MAX              = 7
+  };
+
+
+/* Result structure for http_parser_parse_url().
+ *
+ * Callers should index into field_data[] with UF_* values iff field_set
+ * has the relevant (1 << UF_*) bit set. As a courtesy to clients (and
+ * because we probably have padding left over), we convert any port to
+ * a uint16_t.
+ */
+struct http_parser_url {
+  uint16_t field_set;           /* Bitmask of (1 << UF_*) values */
+  uint16_t port;                /* Converted UF_PORT string */
+
+  struct {
+    uint16_t off;               /* Offset into buffer in which field starts */
+    uint16_t len;               /* Length of run in buffer */
+  } field_data[UF_MAX];
+};
+
+
 void http_parser_init(http_parser *parser, enum http_parser_type type);
 
 
@@ -245,12 +270,12 @@ size_t http_parser_execute(http_parser *parser,
 
 
 /* If http_should_keep_alive() in the on_headers_complete or
- * on_message_complete callback returns true, then this will be should be
+ * on_message_complete callback returns 0, then this should be
  * the last message on the connection.
  * If you are the server, respond with the "Connection: close" header.
  * If you are the client, close the connection.
  */
-int http_should_keep_alive(http_parser *parser);
+int http_should_keep_alive(const http_parser *parser);
 
 /* Returns a string version of the HTTP method. */
 const char *http_method_str(enum http_method m);
@@ -260,6 +285,17 @@ const char *http_errno_name(enum http_errno err);
 
 /* Return a string description of the given error */
 const char *http_errno_description(enum http_errno err);
+
+/* Parse a URL; return nonzero on failure */
+int http_parser_parse_url(const char *buf, size_t buflen,
+                          int is_connect,
+                          struct http_parser_url *u);
+
+/* Pause or un-pause the parser; a nonzero value pauses */
+void http_parser_pause(http_parser *parser, int paused);
+
+/* Checks if this is the final chunk of the body. */
+int http_body_is_final(const http_parser *parser);
 
 #ifdef __cplusplus
 }
