@@ -1962,8 +1962,12 @@ int git_reference__is_valid_name(
 	const char *refname,
 	unsigned int flags)
 {
+	int error;
+
+	error = git_reference__normalize_name(NULL, refname, flags) == 0;
 	giterr_clear();
-	return git_reference__normalize_name(NULL, refname, flags) == 0;
+
+	return error;
 }
 
 int git_reference_is_valid_name(
