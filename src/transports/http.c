@@ -627,7 +627,6 @@ int git_smart_subtransport_http(git_smart_subtransport **out,
 	git_transport *owner)
 {
 	http_subtransport *t;
-	int flags;
 
 	if (!out)
 		return -1;

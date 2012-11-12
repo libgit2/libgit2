@@ -20,6 +20,86 @@
 GIT_BEGIN_DECL
 
 /*
+ *** Begin interface for transport registration ***
+ */
+
+struct git_transport;
+
+/* Signature of a function which creates a transport */
+typedef int (*git_transport_cb)(struct git_transport **transport, void *param);
+
+/**
+ * Add a custom transport definition, to be used in addition to the built-in
+ * set of transports that come with libgit2.
+ *
+ * The caller is responsible for synchronizing calls to git_transport_register
+ * and git_transport_unregister with other calls to the library that
+ * instantiate transports.
+ *
+ * @param prefix The scheme (ending in "://") to match, i.e. "git://"
+ * @param priority The priority of this transport relative to others with
+ *		the same prefix. Built-in transports have a priority of 1.
+ * @param cb The callback used to create an instance of the transport
+ * @param param A fixed parameter to pass to cb at creation time
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_register(
+	const char *prefix,
+	unsigned priority,
+	git_transport_cb cb,
+	void *param);
+
+/**
+ *
+ * Unregister a custom transport definition which was previously registered
+ * with git_transport_register.
+ *
+ * @param prefix From the previous call to git_transport_register
+ * @param priority From the previous call to git_transport_register
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_unregister(
+	const char *prefix,
+	unsigned priority);
+
+/* Transports which come with libgit2 (match git_transport_cb). The expected
+ * value for "param" is listed in-line below. */
+
+/**
+ * Create an instance of the dummy transport.
+ *
+ * @param transport The newly created transport (out)
+ * @param param You must pass NULL for this parameter.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_dummy(
+	struct git_transport **transport,
+	/* NULL */ void *param);
+
+/**
+ * Create an instance of the local transport.
+ *
+ * @param transport The newly created transport (out)
+ * @param param You must pass NULL for this parameter.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_local(
+	struct git_transport **transport,
+	/* NULL */ void *param);
+
+/**
+ * Create an instance of the smart transport.
+ *
+ * @param transport The newly created transport (out)
+ * @param param A pointer to a git_smart_subtransport_definition
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_smart(
+	struct git_transport **transport,
+	/* (git_smart_subtransport_definition *) */ void *param);
+
+/*
+ *** End interface for transport registration ***
  *** Begin interface for credentials acquisition ***
  */
 
@@ -159,45 +239,6 @@ GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
  * @return Zero if the URL is not valid; nonzero otherwise
  */
 GIT_EXTERN(int) git_transport_valid_url(const char *url);
-
-/* Signature of a function which creates a transport */
-typedef int (*git_transport_cb)(git_transport **transport, void *param);
-
-/* Transports which come with libgit2 (match git_transport_cb). The expected
- * value for "param" is listed in-line below. */
-
-/**
- * Create an instance of the dummy transport.
- *
- * @param transport The newly created transport (out)
- * @param param You must pass NULL for this parameter.
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_transport_dummy(
-	git_transport **transport,
-	/* NULL */ void *param);
-
-/**
- * Create an instance of the local transport.
- *
- * @param transport The newly created transport (out)
- * @param param You must pass NULL for this parameter.
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_transport_local(
-	git_transport **transport,
-	/* NULL */ void *param);
-
-/**
- * Create an instance of the smart transport.
- *
- * @param transport The newly created transport (out)
- * @param param A pointer to a git_smart_subtransport_definition
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_transport_smart(
-	git_transport **transport,
-	/* (git_smart_subtransport_definition *) */ void *param);
 
 /*
  *** End of base transport interface ***
