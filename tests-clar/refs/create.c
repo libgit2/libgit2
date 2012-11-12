@@ -25,15 +25,10 @@ void test_refs_create__symbolic(void)
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_repository *repo2;
 	git_oid id;
-	git_buf ref_path = GIT_BUF_INIT;
 
 	const char *new_head_tracker = "ANOTHER_HEAD_TRACKER";
 
 	git_oid_fromstr(&id, current_master_tip);
-
-	/* Retrieve the physical path to the symbolic ref for further cleaning */
-	cl_git_pass(git_buf_joinpath(&ref_path, g_repo->path_repository, new_head_tracker));
-	git_buf_free(&ref_path);
 
 	/* Create and write the new symbolic reference */
 	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, current_head_target, 0));
@@ -72,13 +67,11 @@ void test_refs_create__deep_symbolic(void)
    // create a deep symbolic reference
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_oid id;
-	git_buf ref_path = GIT_BUF_INIT;
 
 	const char *new_head_tracker = "deep/rooted/tracker";
 
 	git_oid_fromstr(&id, current_master_tip);
 
-	cl_git_pass(git_buf_joinpath(&ref_path, g_repo->path_repository, new_head_tracker));
 	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, current_head_target, 0));
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
 	cl_git_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
@@ -87,7 +80,6 @@ void test_refs_create__deep_symbolic(void)
 	git_reference_free(new_reference);
 	git_reference_free(looked_up_ref);
 	git_reference_free(resolved_ref);
-	git_buf_free(&ref_path);
 }
 
 void test_refs_create__oid(void)
@@ -96,14 +88,10 @@ void test_refs_create__oid(void)
 	git_reference *new_reference, *looked_up_ref;
 	git_repository *repo2;
 	git_oid id;
-	git_buf ref_path = GIT_BUF_INIT;
 
 	const char *new_head = "refs/heads/new-head";
 
 	git_oid_fromstr(&id, current_master_tip);
-
-	/* Retrieve the physical path to the symbolic ref for further cleaning */
-	cl_git_pass(git_buf_joinpath(&ref_path, g_repo->path_repository, new_head));
 
 	/* Create and write the new object id reference */
 	cl_git_pass(git_reference_create(&new_reference, g_repo, new_head, &id, 0));
@@ -128,7 +116,6 @@ void test_refs_create__oid(void)
 
 	git_reference_free(new_reference);
 	git_reference_free(looked_up_ref);
-	git_buf_free(&ref_path);
 }
 
 void test_refs_create__oid_unknown(void)
