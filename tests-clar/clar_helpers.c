@@ -249,7 +249,7 @@ const char* cl_git_path_url(const char *path)
 	 * *nix: file:///usr/home/...
 	 * Windows: file:///C:/Users/...
 	 */
-	cl_git_pass(git_buf_putc(url_buf, '/'));
+	cl_git_pass(git_buf_putc(&url_buf, '/'));
 #endif
 
 	in_buf = git_buf_cstr(&path_buf);
