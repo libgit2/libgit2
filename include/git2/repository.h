@@ -273,7 +273,7 @@ GIT_EXTERN(int) git_repository_init_ext(
  * @param repo a repository object
  *
  * @return 0 on success, GIT_EORPHANEDHEAD when HEAD points to a non existing
- * branch, an error code otherwise
+ * branch, GIT_ENOTFOUND when HEAD is missing; an error code otherwise
  */
 GIT_EXTERN(int) git_repository_head(git_reference **head_out, git_repository *repo);
 
