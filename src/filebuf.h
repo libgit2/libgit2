@@ -31,7 +31,8 @@ struct git_filebuf {
 
 	int (*write)(struct git_filebuf *file, void *source, size_t len);
 
-	git_hash_ctx *digest;
+	bool compute_digest;
+	git_hash_ctx digest;
 
 	unsigned char *buffer;
 	unsigned char *z_buf;

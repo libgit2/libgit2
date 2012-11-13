@@ -103,7 +103,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 
 	*out = NULL;
 
-	pb = git__calloc(sizeof(*pb), 1);
+	pb = git__calloc(1, sizeof(*pb));
 	GITERR_CHECK_ALLOC(pb);
 
 	pb->object_ix = git_oidmap_alloc();
@@ -113,9 +113,8 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 
 	pb->repo = repo;
 	pb->nr_threads = 1; /* do not spawn any thread by default */
-	pb->ctx = git_hash_new_ctx();
 
-	if (!pb->ctx ||
+	if (git_hash_ctx_init(&pb->ctx) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)
 		goto on_error;
@@ -297,14 +296,13 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 	if (git_buf_put(buf, (char *)hdr, hdr_len) < 0)
 		goto on_error;
 
-	git_hash_update(pb->ctx, hdr, hdr_len);
+	if (git_hash_update(&pb->ctx, hdr, hdr_len) < 0)
+		goto on_error;
 
 	if (type == GIT_OBJ_REF_DELTA) {
-		if (git_buf_put(buf, (char *)po->delta->id.id,
-				GIT_OID_RAWSZ) < 0)
+		if (git_buf_put(buf, (char *)po->delta->id.id, GIT_OID_RAWSZ) < 0 ||
+			git_hash_update(&pb->ctx, po->delta->id.id, GIT_OID_RAWSZ) < 0)
 			goto on_error;
-
-		git_hash_update(pb->ctx, po->delta->id.id, GIT_OID_RAWSZ);
 	}
 
 	/* Write data */
@@ -319,10 +317,9 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 		size = zbuf.size;
 	}
 
-	if (git_buf_put(buf, data, size) < 0)
+	if (git_buf_put(buf, data, size) < 0 ||
+		git_hash_update(&pb->ctx, data, size) < 0)
 		goto on_error;
-
-	git_hash_update(pb->ctx, data, size);
 
 	if (po->delta_data)
 		git__free(po->delta_data);
@@ -573,7 +570,8 @@ static int write_pack(git_packbuilder *pb,
 	if (cb(&ph, sizeof(ph), data) < 0)
 		goto on_error;
 
-	git_hash_update(pb->ctx, &ph, sizeof(ph));
+	if (git_hash_update(&pb->ctx, &ph, sizeof(ph)) < 0)
+		goto on_error;
 
 	pb->nr_remaining = pb->nr_objects;
 	do {
@@ -592,7 +590,9 @@ static int write_pack(git_packbuilder *pb,
 
 	git__free(write_order);
 	git_buf_free(&buf);
-	git_hash_final(&pb->pack_oid, pb->ctx);
+
+	if (git_hash_final(&pb->pack_oid, &pb->ctx) < 0)
+		goto on_error;
 
 	return cb(pb->pack_oid.id, GIT_OID_RAWSZ, data);
 
@@ -1318,14 +1318,13 @@ void git_packbuilder_free(git_packbuilder *pb)
 	if (pb->odb)
 		git_odb_free(pb->odb);
 
-	if (pb->ctx)
-		git_hash_free_ctx(pb->ctx);
-
 	if (pb->object_ix)
 		git_oidmap_free(pb->object_ix);
 
 	if (pb->object_list)
 		git__free(pb->object_list);
+
+	git_hash_ctx_cleanup(&pb->ctx);
 
 	git__free(pb);
 }
