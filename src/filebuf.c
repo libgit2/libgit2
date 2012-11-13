@@ -85,8 +85,8 @@ static int lock_file(git_filebuf *file, int flags)
 
 		while ((read_bytes = p_read(source, buffer, sizeof(buffer))) > 0) {
 			p_write(file->fd, buffer, read_bytes);
-			if (file->digest)
-				git_hash_update(file->digest, buffer, read_bytes);
+			if (file->compute_digest)
+				git_hash_update(&file->digest, buffer, read_bytes);
 		}
 
 		p_close(source);
@@ -108,9 +108,9 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->fd_is_open && file->path_lock && git_path_exists(file->path_lock))
 		p_unlink(file->path_lock);
 
-	if (file->digest) {
-		git_hash_ctx_cleanup(file->digest);
-		git__free(file->digest);
+	if (file->compute_digest) {
+		git_hash_ctx_cleanup(&file->digest);
+		file->compute_digest = 0;
 	}
 
 	if (file->buffer)
@@ -151,8 +151,8 @@ static int write_normal(git_filebuf *file, void *source, size_t len)
 			return -1;
 		}
 
-		if (file->digest)
-			git_hash_update(file->digest, source, len);
+		if (file->compute_digest)
+			git_hash_update(&file->digest, source, len);
 	}
 
 	return 0;
@@ -188,8 +188,8 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 		assert(zs->avail_in == 0);
 
-		if (file->digest)
-			git_hash_update(file->digest, source, len);
+		if (file->compute_digest)
+			git_hash_update(&file->digest, source, len);
 	}
 
 	return 0;
@@ -223,10 +223,9 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 	/* If we are hashing on-write, allocate a new hash context */
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
-		file->digest = git__calloc(1, sizeof(git_hash_ctx));
-		GITERR_CHECK_ALLOC(file->digest);
+		file->compute_digest = 1;
 
-		if (git_hash_ctx_init(file->digest) < 0)
+		if (git_hash_ctx_init(&file->digest) < 0)
 			goto cleanup;
 	}
 
@@ -296,17 +295,16 @@ cleanup:
 
 int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 {
-	assert(oid && file && file->digest);
+	assert(oid && file && file->compute_digest);
 
 	flush_buffer(file);
 
 	if (verify_last_error(file) < 0)
 		return -1;
 
-	git_hash_final(oid, file->digest);
-	git_hash_ctx_cleanup(file->digest);
-	git__free(file->digest);
-	file->digest = NULL;
+	git_hash_final(oid, &file->digest);
+	git_hash_ctx_cleanup(&file->digest);
+	file->compute_digest = 0;
 
 	return 0;
 }
