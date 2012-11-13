@@ -1432,8 +1432,10 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 		else if (value_start[0] != '\0') {
 			*var_value = fixup_line(value_start, 0);
 			GITERR_CHECK_ALLOC(*var_value);
+		} else { /* equals sign but missing rhs */
+			*var_value = git__strdup("");
+			GITERR_CHECK_ALLOC(*var_value);
 		}
-
 	}
 
 	git__free(line);

@@ -393,23 +393,10 @@ int git_config_get_int32(int32_t *out, git_config *cfg, const char *name)
 	return git_config_parse_int32(out, value);
 }
 
-int git_config_get_bool(int *out, git_config *cfg, const char *name)
-{
-	const char *value;
-	int ret;
-
-	if ((ret = git_config_get_string(&value, cfg, name)) < 0)
-		return ret;
-
-	return git_config_parse_bool(out, value);
-}
-
 static int get_string_at_file(const char **out, git_config_file *file, const char *name)
 {
 	const git_config_entry *entry;
 	int res;
-
-	*out = NULL;
 
 	res = file->get(file, name, &entry);
 	if (!res)
@@ -418,7 +405,7 @@ static int get_string_at_file(const char **out, git_config_file *file, const cha
 	return res;
 }
 
-int git_config_get_string(const char **out, git_config *cfg, const char *name)
+static int get_string(const char **out, git_config *cfg, const char *name)
 {
 	file_internal *internal;
 	unsigned int i;
@@ -433,6 +420,29 @@ int git_config_get_string(const char **out, git_config *cfg, const char *name)
 	}
 
 	return GIT_ENOTFOUND;
+}
+
+int git_config_get_bool(int *out, git_config *cfg, const char *name)
+{
+	const char *value;
+	int ret;
+
+	if ((ret = get_string(&value, cfg, name)) < 0)
+		return ret;
+
+	return git_config_parse_bool(out, value);
+}
+
+int git_config_get_string(const char **out, git_config *cfg, const char *name)
+{
+	int ret;
+	const char *str;
+
+	if ((ret = get_string(&str, cfg, name)) < 0)
+		return ret;
+
+	*out = str == NULL ? "" : str;
+	return 0;
 }
 
 int git_config_get_entry(const git_config_entry **out, git_config *cfg, const char *name)
