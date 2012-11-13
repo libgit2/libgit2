@@ -501,8 +501,8 @@ static int reset_index_and_workdir(
 
 	memset(&opts, 0, sizeof(git_checkout_opts));
 
-	opts.checkout_strategy = 
-		GIT_CHECKOUT_CREATE_MISSING | GIT_CHECKOUT_OVERWRITE_MODIFIED;
+	opts.checkout_strategy =
+		GIT_CHECKOUT_UPDATE_MODIFIED | GIT_CHECKOUT_UPDATE_UNTRACKED;
 
 	if (remove_untracked)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;
