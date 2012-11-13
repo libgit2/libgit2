@@ -274,7 +274,7 @@ GIT_EXTERN(void) git_config_free(git_config *cfg);
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_config_entry(const git_config_entry **out, git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_entry(const git_config_entry **out, git_config *cfg, const char *name);
 
 /**
  * Get the value of an integer config variable.

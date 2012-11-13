@@ -435,7 +435,7 @@ int git_config_get_string(const char **out, git_config *cfg, const char *name)
 	return GIT_ENOTFOUND;
 }
 
-int git_config_get_config_entry(const git_config_entry **out, git_config *cfg, const char *name)
+int git_config_get_entry(const git_config_entry **out, git_config *cfg, const char *name)
 {
 	file_internal *internal;
 	unsigned int i;

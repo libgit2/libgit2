@@ -305,7 +305,7 @@ void test_config_read__read_git_config_entry(void)
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
 		GIT_CONFIG_LEVEL_SYSTEM, 0));
 
-	cl_git_pass(git_config_get_config_entry(&entry, cfg, "core.dummy2"));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "core.dummy2"));
 	cl_assert_equal_s("core.dummy2", entry->name);
 	cl_assert_equal_s("42", entry->value);
 	cl_assert_equal_i(GIT_CONFIG_LEVEL_SYSTEM, entry->level);
