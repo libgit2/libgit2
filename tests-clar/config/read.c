@@ -93,6 +93,12 @@ void test_config_read__lone_variable(void)
 	cl_git_pass(git_config_get_bool(&i, cfg, "some.section.variable"));
 	cl_assert(i == 1);
 
+	cl_git_pass(git_config_get_string(&str, cfg, "some.section.variableeq"));
+	cl_assert_equal_s(str, "");
+
+	cl_git_pass(git_config_get_bool(&i, cfg, "some.section.variableeq"));
+	cl_assert(i == 0);
+
 	git_config_free(cfg);
 }
 
