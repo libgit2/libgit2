@@ -26,6 +26,8 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 	char dll_path[MAX_PATH];
 	DWORD dll_path_len, size_len;
 
+	return -1;
+
 	/* Only use CNG on Windows 2008 / Vista SP1  or better (Windows 6.0 SP1) */
 	version_test.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 	version_test.dwMajorVersion = 6;
@@ -79,6 +81,14 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 	return 0;
 }
 
+GIT_INLINE(void) hash_cng_prov_shutdown(void)
+{
+	hash_prov.prov.cng.close_algorithm_provider(hash_prov.prov.cng.handle, 0);
+	FreeLibrary(hash_prov.prov.cng.dll);
+
+	hash_prov.type = INVALID;
+}
+
 /* Initialize CryptoAPI */
 GIT_INLINE(int) hash_cryptoapi_prov_init()
 {
@@ -87,6 +97,13 @@ GIT_INLINE(int) hash_cryptoapi_prov_init()
 
 	hash_prov.type = CRYPTOAPI;
 	return 0;
+}
+
+GIT_INLINE(void) hash_cryptoapi_prov_shutdown(void)
+{
+	CryptReleaseContext(hash_prov.prov.cryptoapi.handle, 0);
+
+	hash_prov.type = INVALID;
 }
 
 int git_hash_global_init()
@@ -100,6 +117,14 @@ int git_hash_global_init()
 		error = hash_cryptoapi_prov_init();
 
 	return error;	
+}
+
+void git_hash_global_shutdown()
+{
+	if (hash_prov.type == CNG)
+		hash_cng_prov_shutdown();
+	else if(hash_prov.type == CRYPTOAPI)
+		hash_cryptoapi_prov_shutdown();
 }
 
 /* CryptoAPI: available in Windows XP and newer */

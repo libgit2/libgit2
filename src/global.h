@@ -14,6 +14,8 @@
 # define GIT_MEMORY_BARRIER MemoryBarrier()
 #elif defined(GIT_THREADS)
 # define GIT_MEMORY_BARRIER __sync_synchronize()
+#else
+# define GIT_MEMORY_BARRIER /* noop */
 #endif
 
 typedef struct {

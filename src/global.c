@@ -79,6 +79,9 @@ void git_threads_shutdown(void)
 	TlsFree(_tls_index);
 	_tls_init = 0;
 	git_mutex_free(&git__mwindow_mutex);
+
+	/* Shut down any subsystems that have global state */
+	git_hash_global_shutdown();
 }
 
 git_global_st *git__global_state(void)
@@ -131,6 +134,9 @@ void git_threads_shutdown(void)
 {
 	pthread_key_delete(_tls_key);
 	_tls_init = 0;
+
+	/* Shut down any subsystems that have global state */
+	git_hash_global_shutdown();
 }
 
 git_global_st *git__global_state(void)
