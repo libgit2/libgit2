@@ -52,6 +52,8 @@ void test_network_fetchlocal__partial(void)
 	cl_git_pass(git_remote_download(origin, transfer_cb, &callcount));
 	cl_git_pass(git_remote_update_tips(origin));
 
+	git_strarray_free(&refnames);
+
 	cl_git_pass(git_reference_list(&refnames, repo, GIT_REF_LISTALL));
 	cl_assert_equal_i(19, refnames.count); /* 18 remote + 1 local */
 	cl_assert(callcount > 0);
