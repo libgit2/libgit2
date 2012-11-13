@@ -62,7 +62,6 @@ void test_config_configlevel__fetching_a_level_from_an_empty_compound_config_ret
 {
 	git_config *cfg;
 	git_config *local_cfg;
-	const char *s;
 
 	cl_git_pass(git_config_new(&cfg));
 
