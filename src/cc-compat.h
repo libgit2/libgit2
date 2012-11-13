@@ -66,4 +66,10 @@
 #	endif
 #endif
 
+#if defined (_MSC_VER)
+#	define GIT_CDECL __cdecl
+#else
+#	define GIT_CDECL
+#endif
+
 #endif /* INCLUDE_compat_h__ */

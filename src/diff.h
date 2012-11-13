@@ -42,8 +42,8 @@ struct git_diff_list {
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
 
-	int (*strcomp)(const char *, const char *);
-	int (*strncomp)(const char *, const char *, size_t);
+	git__strcmp_fn  strcomp;
+	git__strncmp_fn strncomp;
 	int (*pfxcomp)(const char *str, const char *pfx);
 	int (*entrycomp)(const void *a, const void *b);
 };
