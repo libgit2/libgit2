@@ -71,6 +71,7 @@ typedef enum {
 	GITERR_MERGE,
 	GITERR_SSH,
 	GITERR_FILTER,
+	GITERR_DESCRIBE,
 } git_error_t;
 
 /**
