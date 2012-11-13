@@ -29,17 +29,26 @@ void git_vector_swap(git_vector *a, git_vector *b);
 
 void git_vector_sort(git_vector *v);
 
+/** Linear search for matching entry using internal comparison function */
 int git_vector_search(git_vector *v, const void *entry);
+
+/** Linear search for matching entry using explicit comparison function */
 int git_vector_search2(git_vector *v, git_vector_cmp cmp, const void *key);
 
+/**
+ * Binary search for matching entry using explicit comparison function that
+ * returns position where item would go if not found.
+ */
 int git_vector_bsearch3(
 	unsigned int *at_pos, git_vector *v, git_vector_cmp cmp, const void *key);
 
+/** Binary search for matching entry using internal comparison function */
 GIT_INLINE(int) git_vector_bsearch(git_vector *v, const void *key)
 {
 	return git_vector_bsearch3(NULL, v, v->_cmp, key);
 }
 
+/** Binary search for matching entry using explicit comparison function */
 GIT_INLINE(int) git_vector_bsearch2(
 	git_vector *v, git_vector_cmp cmp, const void *key)
 {

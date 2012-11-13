@@ -350,7 +350,7 @@ static void index_iterator_test(
 	int count = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_index_range(&i, repo, start, end));
+	cl_git_pass(git_iterator_for_repo_index_range(&i, repo, start, end));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {

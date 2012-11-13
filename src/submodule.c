@@ -1118,7 +1118,7 @@ static int load_submodule_config_from_index(
 	git_iterator *i;
 	const git_index_entry *entry;
 
-	if ((error = git_iterator_for_index(&i, repo)) < 0)
+	if ((error = git_iterator_for_repo_index(&i, repo)) < 0)
 		return error;
 
 	error = git_iterator_current(i, &entry);

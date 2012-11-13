@@ -777,6 +777,19 @@ int git_diff_tree_to_tree(
 	);
 }
 
+int git_diff__tree_to_index(
+	git_diff_list **diff,
+	git_tree *tree,
+	git_index *index,
+	const git_diff_options *opts)
+{
+	DIFF_FROM_ITERATORS(
+		git_repository *repo = git_index_owner(index),
+	    git_iterator_for_index_range(&a, index, pfx, pfx),
+		git_iterator_for_tree_range(&b, repo, tree, pfx, pfx)
+	);
+}
+
 int git_diff_index_to_tree(
 	git_diff_list **diff,
 	git_repository *repo,
@@ -786,7 +799,7 @@ int git_diff_index_to_tree(
 	DIFF_FROM_ITERATORS(
 		assert(repo && diff),
 		git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx),
-	    git_iterator_for_index_range(&b, repo, pfx, pfx)
+	    git_iterator_for_repo_index_range(&b, repo, pfx, pfx)
 	);
 }
 
@@ -797,7 +810,7 @@ int git_diff_workdir_to_index(
 {
 	DIFF_FROM_ITERATORS(
 		assert(repo && diff),
-		git_iterator_for_index_range(&a, repo, pfx, pfx),
+		git_iterator_for_repo_index_range(&a, repo, pfx, pfx),
 	    git_iterator_for_workdir_range(&b, repo, pfx, pfx)
 	);
 }
