@@ -87,8 +87,10 @@ void test_config_read__lone_variable(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config4")));
 
+	cl_git_fail(git_config_get_int32(&i, cfg, "some.section.variable"));
+
 	cl_git_pass(git_config_get_string(&str, cfg, "some.section.variable"));
-	cl_assert(str == NULL);
+	cl_assert_equal_s(str, "");
 
 	cl_git_pass(git_config_get_bool(&i, cfg, "some.section.variable"));
 	cl_assert(i == 1);
