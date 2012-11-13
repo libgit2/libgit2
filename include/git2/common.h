@@ -83,6 +83,8 @@ GIT_BEGIN_DECL
  */
 #define GIT_OID_HEX_ZERO "0000000000000000000000000000000000000000"
 
+#define FLAG_BITS 27
+
 /**
  * Return the version of the libgit2 library
  * being currently used.

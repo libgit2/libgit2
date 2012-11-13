@@ -45,4 +45,7 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 	} } while (0)
 
 #define git_oidmap_foreach_value kh_foreach_value
+
+#define git_oidmap_size(h) kh_size(h)
+
 #endif
