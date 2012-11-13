@@ -108,8 +108,10 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->fd_is_open && file->path_lock && git_path_exists(file->path_lock))
 		p_unlink(file->path_lock);
 
-	if (file->digest)
-		git_hash_ctx_free(file->digest);
+	if (file->digest) {
+		git_hash_ctx_cleanup(file->digest);
+		git__free(file->digest);
+	}
 
 	if (file->buffer)
 		git__free(file->buffer);
@@ -221,8 +223,11 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 	/* If we are hashing on-write, allocate a new hash context */
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
-		file->digest = git_hash_ctx_new();
+		file->digest = git__calloc(1, sizeof(git_hash_ctx));
 		GITERR_CHECK_ALLOC(file->digest);
+
+		if (git_hash_ctx_init(file->digest) < 0)
+			goto cleanup;
 	}
 
 	compression = flags >> GIT_FILEBUF_DEFLATE_SHIFT;
@@ -299,7 +304,8 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 		return -1;
 
 	git_hash_final(oid, file->digest);
-	git_hash_ctx_free(file->digest);
+	git_hash_ctx_cleanup(file->digest);
+	git__free(file->digest);
 	file->digest = NULL;
 
 	return 0;

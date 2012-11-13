@@ -16,23 +16,8 @@ struct git_hash_ctx {
 	SHA_CTX c;
 };
 
-GIT_INLINE(git_hash_ctx *) git_hash_ctx_new(void)
-{
-	git_hash_ctx *ctx = git__malloc(sizeof(git_hash_ctx));
-
-	if (!ctx)
-		return NULL;
-
-	SHA1_Init(&ctx->c);
-
-	return ctx;
-}
-
-GIT_INLINE(void) git_hash_ctx_free(git_hash_ctx *ctx)
-{
-	if (ctx)
-		git__free(ctx);
-}
+#define git_hash_ctx_init(ctx) git_hash_init(ctx)
+#define git_hash_ctx_cleanup(ctx)
 
 GIT_INLINE(int) git_hash_init(git_hash_ctx *ctx)
 {

@@ -100,22 +100,12 @@ static int hash_win32_prov_init(git_hash_prov *prov)
 
 /* CryptoAPI: available in Windows XP and newer */
 
-GIT_INLINE(git_hash_ctx *) hash_ctx_cryptoapi_new(git_hash_prov *prov)
+GIT_INLINE(int) hash_ctx_cryptoapi_init(git_hash_ctx *ctx, git_hash_prov *prov)
 {
-	git_hash_ctx *ctx;
-
-	if ((ctx = git__calloc(1, sizeof(git_hash_ctx))) == NULL)
-		return NULL;
-
 	ctx->type = CRYPTOAPI;
 	ctx->prov = prov;
 
-	if (git_hash_init(ctx) < 0) {
-		git__free(ctx);
-		return NULL;
-	}
-
-	return ctx;
+	return git_hash_init(ctx);
 }
 
 GIT_INLINE(int) hash_cryptoapi_init(git_hash_ctx *ctx)
@@ -158,7 +148,7 @@ GIT_INLINE(int) hash_cryptoapi_final(git_oid *out, git_hash_ctx *ctx)
 	return error;
 }
 
-GIT_INLINE(void) hash_cryptoapi_free(git_hash_ctx *ctx)
+GIT_INLINE(void) hash_ctx_cryptoapi_cleanup(git_hash_ctx *ctx)
 {
 	if (ctx->ctx.cryptoapi.valid)
 		CryptDestroyHash(ctx->ctx.cryptoapi.hash_handle);
@@ -166,24 +156,20 @@ GIT_INLINE(void) hash_cryptoapi_free(git_hash_ctx *ctx)
 
 /* CNG: Available in Windows Server 2008 and newer */
 
-GIT_INLINE(git_hash_ctx *) hash_ctx_cng_new(git_hash_prov *prov)
+GIT_INLINE(int) hash_ctx_cng_init(git_hash_ctx *ctx, git_hash_prov *prov)
 {
-	git_hash_ctx *ctx;
-
-	if ((ctx = git__calloc(1, sizeof(git_hash_ctx))) == NULL ||
-		(ctx->ctx.cng.hash_object = git__malloc(prov->prov.cng.hash_object_size)) == NULL)
-		return NULL;
+	if ((ctx->ctx.cng.hash_object = git__malloc(prov->prov.cng.hash_object_size)) == NULL)
+		return -1;
 
 	if (prov->prov.cng.create_hash(prov->prov.cng.handle, &ctx->ctx.cng.hash_handle, ctx->ctx.cng.hash_object, prov->prov.cng.hash_object_size, NULL, 0, 0) < 0) {
 		git__free(ctx->ctx.cng.hash_object);
-		git__free(ctx);
-		return NULL;
+		return -1;
 	}
 
 	ctx->type = CNG;
 	ctx->prov = prov;
 
-	return ctx;
+	return 0;
 }
 
 GIT_INLINE(int) hash_cng_init(git_hash_ctx *ctx)
@@ -220,7 +206,7 @@ GIT_INLINE(int) hash_cng_final(git_oid *out, git_hash_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(void) hash_cng_free(git_hash_ctx *ctx)
+GIT_INLINE(void) hash_ctx_cng_cleanup(git_hash_ctx *ctx)
 {
 	ctx->prov->prov.cng.destroy_hash(ctx->ctx.cng.hash_handle);
 	git__free(ctx->ctx.cng.hash_object);
@@ -228,20 +214,24 @@ GIT_INLINE(void) hash_cng_free(git_hash_ctx *ctx)
 
 /* Indirection between CryptoAPI and CNG */
 
-git_hash_ctx *git_hash_ctx_new()
+int git_hash_ctx_init(git_hash_ctx *ctx)
 {
 	git_global_st *global_state;
 	git_hash_prov *hash_prov;
+	
+	assert(ctx);
+
+	memset(ctx, 0x0, sizeof(git_hash_ctx));
 
 	if ((global_state = git__global_state()) == NULL)
-		return NULL;
+		return -1;
 
 	hash_prov = &global_state->hash_prov;
 
 	if (hash_prov->type == INVALID && hash_win32_prov_init(hash_prov) < 0)
-		return NULL;
+		return -1;
 
-	return (hash_prov->type == CNG) ? hash_ctx_cng_new(hash_prov) : hash_ctx_cryptoapi_new(hash_prov);
+	return (hash_prov->type == CNG) ? hash_ctx_cng_init(ctx, hash_prov) : hash_ctx_cryptoapi_init(ctx, hash_prov);
 }
 
 int git_hash_init(git_hash_ctx *ctx)
@@ -262,15 +252,12 @@ int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 	return (ctx->type == CNG) ? hash_cng_final(out, ctx) : hash_cryptoapi_final(out, ctx);
 }
 
-void git_hash_ctx_free(git_hash_ctx *ctx)
+void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 {
-	if (ctx == NULL)
-		return;
+	assert(ctx);
 
 	if (ctx->type == CNG)
-		hash_cng_free(ctx);
-	else
-		hash_cryptoapi_free(ctx);
-
-	git__free(ctx);
+		hash_ctx_cng_cleanup(ctx);
+	else if(ctx->type == CRYPTOAPI)
+		hash_ctx_cryptoapi_cleanup(ctx);
 }

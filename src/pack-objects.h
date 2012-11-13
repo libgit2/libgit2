@@ -52,7 +52,7 @@ struct git_packbuilder {
 	git_repository *repo; /* associated repository */
 	git_odb *odb; /* associated object database */
 
-	git_hash_ctx *ctx;
+	git_hash_ctx ctx;
 
 	uint32_t nr_objects,
 		 nr_alloc,

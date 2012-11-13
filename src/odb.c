@@ -117,7 +117,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 {
 	int hdr_len;
 	char hdr[64], buffer[2048];
-	git_hash_ctx *ctx;
+	git_hash_ctx ctx;
 	ssize_t read_len = 0;
 	int error = 0;
 
@@ -126,16 +126,16 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 		return -1;
 	}
 
-	ctx = git_hash_ctx_new();
-	GITERR_CHECK_ALLOC(ctx);
+	if ((error = git_hash_ctx_init(&ctx)) < 0)
+		return -1;
 
 	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
 
-	if ((error = git_hash_update(ctx, hdr, hdr_len)) < 0)
+	if ((error = git_hash_update(&ctx, hdr, hdr_len)) < 0)
 		goto done;
 
 	while (size > 0 && (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
-		if ((error = git_hash_update(ctx, buffer, read_len)) < 0)
+		if ((error = git_hash_update(&ctx, buffer, read_len)) < 0)
 			goto done;
 
 		size -= read_len;
@@ -152,10 +152,10 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 		return -1;
 	}
 
-	error = git_hash_final(out, ctx);
+	error = git_hash_final(out, &ctx);
 
 done:
-	git_hash_ctx_free(ctx);
+	git_hash_ctx_cleanup(&ctx);
 	return error;
 }
 

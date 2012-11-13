@@ -14,18 +14,6 @@
 extern void hash_ppc_core(uint32_t *hash, const unsigned char *p,
 			 unsigned int nblocks);
 
-git_hash_ctx *git_hash_ctx_new(void)
-{
-    git_hash_ctx *ctx = git__malloc(sizeof(git_hash_ctx));
-
-    if (!ctx)
-        return NULL;
-
-    git_hash_init(ctx);
-
-    return ctx;
-}
-
 int git_hash_init(git_hash_ctx *c)
 {
 	c->hash[0] = 0x67452301;
@@ -84,8 +72,3 @@ int git_hash_final(git_oid *oid, git_hash_ctx *c)
 	return 0;
 }
 
-void git_hash_ctx_free(git_hash_ctx *ctx)
-{
-    if (ctx)
-        git__free(ctx);
-}
