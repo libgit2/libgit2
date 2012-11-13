@@ -6,6 +6,7 @@
  */
 #include "common.h"
 #include "global.h"
+#include "hash.h"
 #include "git2/threads.h" 
 #include "thread-utils.h"
 
@@ -38,19 +39,39 @@ git_mutex git__mwindow_mutex;
  * functions are not available in that case.
  */
 
+/*
+ * `git_threads_init()` allows subsystems to perform global setup,
+ * which may take place in the global scope.  An explicit memory
+ * fence exists at the exit of `git_threads_init()`.  Without this,
+ * CPU cores are free to reorder cache invalidation of `_tls_init`
+ * before cache invalidation of the subsystems' newly written global
+ * state.
+ */
 #if defined(GIT_THREADS) && defined(GIT_WIN32)
 
 static DWORD _tls_index;
 static int _tls_init = 0;
 
-void git_threads_init(void)
+int git_threads_init(void)
 {
+	int error;
+
 	if (_tls_init)
-		return;
+		return 0;
 
 	_tls_index = TlsAlloc();
-	_tls_init = 1;
 	git_mutex_init(&git__mwindow_mutex);
+
+	/* Initialize any other subsystems that have global state */
+	if ((error = git_hash_global_init()) >= 0)
+		_tls_init = 1;
+
+	if (error == 0)
+		_tls_init = 1;
+
+	GIT_MEMORY_BARRIER;
+
+	return error;
 }
 
 void git_threads_shutdown(void)
@@ -88,13 +109,22 @@ static void cb__free_status(void *st)
 	git__free(st);
 }
 
-void git_threads_init(void)
+int git_threads_init(void)
 {
+	int error = 0;
+
 	if (_tls_init)
-		return;
+		return 0;
 
 	pthread_key_create(&_tls_key, &cb__free_status);
-	_tls_init = 1;
+
+	/* Initialize any other subsystems that have global state */
+	if ((error = git_hash_global_init()) >= 0)
+		_tls_init = 1;
+
+	GIT_MEMORY_BARRIER;
+
+	return error;
 }
 
 void git_threads_shutdown(void)
@@ -125,9 +155,10 @@ git_global_st *git__global_state(void)
 
 static git_global_st __state;
 
-void git_threads_init(void)
+int git_threads_init(void)
 {
 	/* noop */ 
+	return 0;
 }
 
 void git_threads_shutdown(void)

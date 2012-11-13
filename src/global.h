@@ -10,14 +10,15 @@
 #include "mwindow.h"
 #include "hash.h"
 
+#if defined(GIT_THREADS) && defined(_MSC_VER)
+# define GIT_MEMORY_BARRIER MemoryBarrier()
+#elif defined(GIT_THREADS)
+# define GIT_MEMORY_BARRIER __sync_synchronize()
+#endif
+
 typedef struct {
 	git_error *last_error;
 	git_error error_t;
-
-#ifdef WIN32_SHA1
-	git_hash_prov hash_prov;
-#endif
-
 } git_global_st;
 
 git_global_st *git__global_state(void);

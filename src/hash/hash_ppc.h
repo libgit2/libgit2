@@ -20,6 +20,7 @@ struct git_hash_ctx {
 	} buf;
 };
 
+#define git_hash_global_init() 0
 #define git_hash_ctx_init(ctx) git_hash_init(ctx)
 #define git_hash_ctx_cleanup(ctx)
 
