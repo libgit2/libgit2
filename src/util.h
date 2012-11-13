@@ -81,6 +81,11 @@ extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__prefixcmp_icase(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
+GIT_INLINE(int) git__signum(int val)
+{
+	return ((val > 0) - (val < 0));
+}
+
 extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
 extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
 

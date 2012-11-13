@@ -19,30 +19,56 @@ void test_reset_hard__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_reset_hard__resetting_culls_empty_directories(void)
+void test_reset_hard__resetting_reverts_modified_files(void)
 {
-	git_buf subdir_path = GIT_BUF_INIT;
-	git_buf subfile_path = GIT_BUF_INIT;
-	git_buf newdir_path = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT, content = GIT_BUF_INIT;
+	int i;
+	static const char *files[4] = {
+		"current_file",
+		"modified_file",
+		"staged_new_file",
+		"staged_changes_modified_file" };
+	static const char *before[4] = {
+		"current_file\n",
+		"modified_file\nmodified_file\n",
+		"staged_new_file\n",
+		"staged_changes_modified_file\nstaged_changes_modified_file\nstaged_changes_modified_file\n"
+	};
+	static const char *after[4] = {
+		"current_file\n",
+		"modified_file\n",
+		/* wrong value because reset is still slightly incorrect */
+		"staged_new_file\n",
+		/* right value: NULL, */
+		"staged_changes_modified_file\n"
+	};
+	const char *wd = git_repository_workdir(repo);
 
-	cl_git_pass(git_buf_joinpath(&newdir_path, git_repository_workdir(repo), "newdir/"));
+	cl_assert(wd);
 
-	cl_git_pass(git_buf_joinpath(&subfile_path, git_buf_cstr(&newdir_path), "with/nested/file.txt"));
-	cl_git_pass(git_futils_mkpath2file(git_buf_cstr(&subfile_path), 0755));
-	cl_git_mkfile(git_buf_cstr(&subfile_path), "all anew...\n");
+	for (i = 0; i < 4; ++i) {
+		cl_git_pass(git_buf_joinpath(&path, wd, files[i]));
+		cl_git_pass(git_futils_readbuffer(&content, path.ptr));
+		cl_assert_equal_s(before[i], content.ptr);
+	}
 
-	cl_git_pass(git_buf_joinpath(&subdir_path, git_repository_workdir(repo), "subdir/"));
-	cl_assert(git_path_isdir(git_buf_cstr(&subdir_path)) == true);
+	retrieve_target_from_oid(
+		&target, repo, "26a125ee1bfc5df1e1b2e9441bbe63c8a7ae989f");
 
-	retrieve_target_from_oid(&target, repo, "0017bd4ab1ec30440b17bae1680cff124ab5f1f6");
 	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
 
-	cl_assert(git_path_isdir(git_buf_cstr(&subdir_path)) == false);
-	cl_assert(git_path_isdir(git_buf_cstr(&newdir_path)) == false);
+	for (i = 0; i < 4; ++i) {
+		cl_git_pass(git_buf_joinpath(&path, wd, files[i]));
+		if (after[i]) {
+			cl_git_pass(git_futils_readbuffer(&content, path.ptr));
+			cl_assert_equal_s(after[i], content.ptr);
+		} else {
+			cl_assert(!git_path_exists(path.ptr));
+		}
+	}
 
-	git_buf_free(&subdir_path);
-	git_buf_free(&subfile_path);
-	git_buf_free(&newdir_path);
+	git_buf_free(&content);
+	git_buf_free(&path);
 }
 
 void test_reset_hard__cannot_reset_in_a_bare_repository(void)

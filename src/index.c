@@ -13,6 +13,8 @@
 #include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"
+#include "iterator.h"
+#include "pathspec.h"
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/blob.h"
@@ -403,7 +405,7 @@ int git_index_read(git_index *index)
 {
 	int error = 0, updated;
 	git_buf buffer = GIT_BUF_INIT;
-	git_futils_filestamp stamp;
+	git_futils_filestamp stamp = {0};
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
@@ -513,7 +515,7 @@ git_index_entry *git_index_get_bypath(git_index *index, const char *path, int st
 	return git_index_get_byindex(index, pos);
 }
 
-void git_index__init_entry_from_stat(struct stat *st, git_index_entry *entry)
+void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st)
 {
 	entry->ctime.seconds = (git_time_t)st->st_ctime;
 	entry->mtime.seconds = (git_time_t)st->st_mtime;
@@ -525,6 +527,22 @@ void git_index__init_entry_from_stat(struct stat *st, git_index_entry *entry)
 	entry->uid  = st->st_uid;
 	entry->gid  = st->st_gid;
 	entry->file_size = st->st_size;
+}
+
+int git_index_entry__cmp(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcmp(entry_a->path, entry_b->path);
+}
+
+int git_index_entry__cmp_icase(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcasecmp(entry_a->path, entry_b->path);
 }
 
 static int index_entry_init(git_index_entry **entry_out, git_index *index, const char *rel_path)
@@ -568,7 +586,7 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	entry = git__calloc(1, sizeof(git_index_entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	git_index__init_entry_from_stat(&st, entry);
+	git_index_entry__init_from_stat(entry, &st);
 
 	entry->oid = oid;
 	entry->path = git__strdup(rel_path);
@@ -1588,4 +1606,55 @@ int git_index_read_tree(git_index *index, git_tree *tree)
 git_repository *git_index_owner(const git_index *index)
 {
 	return INDEX_OWNER(index);
+}
+
+int git_index_read_tree_match(
+	git_index *index, git_tree *tree, git_strarray *strspec)
+{
+#if 0
+	git_iterator *iter = NULL;
+	const git_index_entry *entry;
+	char *pfx = NULL;
+	git_vector pathspec = GIT_VECTOR_INIT;
+	git_pool pathpool = GIT_POOL_INIT_STRINGPOOL;
+#endif
+
+	if (!git_pathspec_is_interesting(strspec))
+		return git_index_read_tree(index, tree);
+
+	return git_index_read_tree(index, tree);
+
+#if 0
+	/* The following loads the matches into the index, but doesn't
+	 * erase obsoleted entries (e.g. you load a blob at "a/b" which
+	 * should obsolete a blob at "a/b/c/d" since b is no longer a tree)
+	 */
+
+	if (git_pathspec_init(&pathspec, strspec, &pathpool) < 0)
+		return -1;
+
+	pfx = git_pathspec_prefix(strspec);
+
+	if ((error = git_iterator_for_tree_range(
+			 &iter, INDEX_OWNER(index), tree, pfx, pfx)) < 0 ||
+		(error = git_iterator_current(iter, &entry)) < 0)
+		goto cleanup;
+
+	while (entry != NULL) {
+		if (git_pathspec_match_path(&pathspec, entry->path, false, false) &&
+			(error = git_index_add(index, entry)) < 0)
+			goto cleanup;
+
+		if ((error = git_iterator_advance(iter, &entry)) < 0)
+			goto cleanup;
+	}
+
+cleanup:
+	git_iterator_free(iter);
+	git_pathspec_free(&pathspec);
+	git_pool_clear(&pathpool);
+	git__free(pfx);
+
+	return error;
+#endif
 }

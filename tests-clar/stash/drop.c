@@ -15,7 +15,7 @@ void test_stash_drop__cleanup(void)
 {
 	git_signature_free(signature);
 	git_repository_free(repo);
-	cl_git_pass(git_futils_rmdir_r("stash", NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r("stash", NULL, GIT_RMDIR_REMOVE_FILES));
 }
 
 void test_stash_drop__cannot_drop_from_an_empty_stash(void)

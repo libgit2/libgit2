@@ -22,12 +22,14 @@ static void print_progress(const progress_data *pd)
 		? (100 * pd->completed_steps) / pd->total_steps
 		: 0.f;
 	int kbytes = pd->fetch_progress.received_bytes / 1024;
-	printf("net %3d%% (%4d kb, %5d/%5d)  /  idx %3d%% (%5d/%5d)  /  chk %3d%% (%4lu/%4lu) %s\n",
-			network_percent, kbytes,
-			pd->fetch_progress.received_objects, pd->fetch_progress.total_objects,
-			index_percent, pd->fetch_progress.indexed_objects, pd->fetch_progress.total_objects,
-			checkout_percent, pd->completed_steps, pd->total_steps,
-			pd->path);
+
+	printf("net %3d%% (%4d kb, %5d/%5d)  /  idx %3d%% (%5d/%5d)  /  chk %3d%% (%4" PRIuZ "/%4" PRIuZ ") %s\n",
+		   network_percent, kbytes,
+		   pd->fetch_progress.received_objects, pd->fetch_progress.total_objects,
+		   index_percent, pd->fetch_progress.indexed_objects, pd->fetch_progress.total_objects,
+		   checkout_percent,
+		   pd->completed_steps, pd->total_steps,
+		   pd->path);
 }
 
 static void fetch_progress(const git_transfer_progress *stats, void *payload)
@@ -47,12 +49,14 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 
 int do_clone(git_repository *repo, int argc, char **argv)
 {
-	progress_data pd = {0};
+	progress_data pd;
 	git_repository *cloned_repo = NULL;
-	git_checkout_opts checkout_opts = {0};
+	git_checkout_opts checkout_opts;
 	const char *url = argv[1];
 	const char *path = argv[2];
 	int error;
+
+	(void)repo; // unused
 
 	// Validate args
 	if (argc < 3) {
@@ -61,8 +65,10 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	}
 
 	// Set up options
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	memset(&checkout_opts, 0, sizeof(checkout_opts));
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	checkout_opts.progress_cb = checkout_progress;
+	memset(&pd, 0, sizeof(pd));
 	checkout_opts.progress_payload = &pd;
 
 	// Do the clone
