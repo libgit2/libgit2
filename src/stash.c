@@ -250,7 +250,7 @@ static int build_untracked_tree(
 	if (git_commit_tree(&i_tree, i_commit) < 0)
 		goto cleanup;
 
-	if (git_diff_workdir_to_tree(git_index_owner(index), &opts, i_tree, &diff) < 0)
+	if (git_diff_workdir_to_tree(&diff, git_index_owner(index), i_tree, &opts) < 0)
 		goto cleanup;
 
 	if (git_diff_foreach(diff, &data, update_index_cb, NULL, NULL) < 0)
@@ -312,6 +312,7 @@ static int build_workdir_tree(
 	git_index *index,
 	git_commit *b_commit)
 {
+	git_repository *repo = git_index_owner(index);
 	git_tree *b_tree = NULL;
 	git_diff_list *diff = NULL, *diff2 = NULL;
 	git_diff_options opts = {0};
@@ -321,10 +322,10 @@ static int build_workdir_tree(
 	if (git_commit_tree(&b_tree, b_commit) < 0)
 		goto cleanup;
 
-	if (git_diff_index_to_tree(git_index_owner(index), &opts, b_tree, &diff) < 0)
+	if (git_diff_index_to_tree(&diff, repo, b_tree, &opts) < 0)
 		goto cleanup;
 
-	if (git_diff_workdir_to_index(git_index_owner(index), &opts, &diff2) < 0)
+	if (git_diff_workdir_to_index(&diff2, repo, &opts) < 0)
 		goto cleanup;
 
 	if (git_diff_merge(diff, diff2) < 0)

@@ -317,52 +317,52 @@ GIT_EXTERN(void) git_diff_list_free(git_diff_list *diff);
  *
  * This is equivalent to `git diff <treeish> <treeish>`
  *
+ * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository containing the trees.
- * @param opts Structure with options to influence diff or NULL for defaults.
  * @param old_tree A git_tree object to diff from.
  * @param new_tree A git_tree object to diff to.
- * @param diff A pointer to a git_diff_list pointer that will be allocated.
+ * @param opts Structure with options to influence diff or NULL for defaults.
  */
 GIT_EXTERN(int) git_diff_tree_to_tree(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_tree *old_tree,
 	git_tree *new_tree,
-	git_diff_list **diff);
+	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
- * Compute a difference between a tree and the index.
+ * Compute a difference between a tree and the repository index.
  *
  * This is equivalent to `git diff --cached <treeish>` or if you pass
  * the HEAD tree, then like `git diff --cached`.
  *
+ * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository containing the tree and index.
- * @param opts Structure with options to influence diff or NULL for defaults.
  * @param old_tree A git_tree object to diff from.
- * @param diff A pointer to a git_diff_list pointer that will be allocated.
+ * @param opts Structure with options to influence diff or NULL for defaults.
  */
 GIT_EXTERN(int) git_diff_index_to_tree(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_tree *old_tree,
-	git_diff_list **diff);
+	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
- * Compute a difference between the working directory and the index.
+ * Compute a difference between the working directory and the repository index.
  *
  * This matches the `git diff` command.  See the note below on
  * `git_diff_workdir_to_tree` for a discussion of the difference between
  * `git diff` and `git diff HEAD` and how to emulate a `git diff <treeish>`
  * using libgit2.
  *
+ * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository.
  * @param opts Structure with options to influence diff or NULL for defaults.
- * @param diff A pointer to a git_diff_list pointer that will be allocated.
  */
 GIT_EXTERN(int) git_diff_workdir_to_index(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts, /**< can be NULL for defaults */
-	git_diff_list **diff);
+	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
  * Compute a difference between the working directory and a tree.
@@ -386,16 +386,16 @@ GIT_EXTERN(int) git_diff_workdir_to_index(
  * The tree-to-workdir diff for that file is 'modified', but core git would
  * show status 'deleted' since there is a pending deletion in the index.
  *
- * @param repo The repository containing the tree.
- * @param opts Structure with options to influence diff or NULL for defaults.
- * @param old_tree A git_tree object to diff from.
  * @param diff A pointer to a git_diff_list pointer that will be allocated.
+ * @param repo The repository containing the tree.
+ * @param old_tree A git_tree object to diff from.
+ * @param opts Structure with options to influence diff or NULL for defaults.
  */
 GIT_EXTERN(int) git_diff_workdir_to_tree(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_tree *old_tree,
-	git_diff_list **diff);
+	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
  * Merge one diff list into another.

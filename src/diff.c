@@ -568,11 +568,11 @@ static int diff_list_init_from_iterators(
 }
 
 static int diff_from_iterators(
+	git_diff_list **diff_ptr,
 	git_repository *repo,
-	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_iterator *old_iter,
 	git_iterator *new_iter,
-	git_diff_list **diff_ptr)
+	const git_diff_options *opts)
 {
 	int error = 0;
 	const git_index_entry *oitem, *nitem;
@@ -747,108 +747,71 @@ fail:
 		error = -1;
 	}
 
-	git_iterator_free(old_iter);
-	git_iterator_free(new_iter);
 	git_buf_free(&ignore_prefix);
 
 	return error;
 }
 
 
+#define DIFF_FROM_ITERATORS(SETUP, MAKE_FIRST, MAKE_SECOND) \
+	int error; \
+	git_iterator *a = NULL, *b = NULL; \
+	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
+	SETUP; \
+    if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+		error = diff_from_iterators(diff, repo, a, b, opts); \
+	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
+    return error
+
 int git_diff_tree_to_tree(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts, /**< can be NULL for defaults */
 	git_tree *old_tree,
 	git_tree *new_tree,
-	git_diff_list **diff)
+	const git_diff_options *opts)
 {
-	git_iterator *a = NULL, *b = NULL;
-	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
-
-	assert(repo && old_tree && new_tree && diff);
-
-	if (git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx) < 0 ||
-		git_iterator_for_tree_range(&b, repo, new_tree, pfx, pfx) < 0)
-		return -1;
-
-	git__free(pfx);
-
-	return diff_from_iterators(repo, opts, a, b, diff);
+	DIFF_FROM_ITERATORS(
+		assert(repo && old_tree && new_tree && diff),
+		git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx),
+		git_iterator_for_tree_range(&b, repo, new_tree, pfx, pfx)
+	);
 }
 
 int git_diff_index_to_tree(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts,
 	git_tree *old_tree,
-	git_diff_list **diff)
+	const git_diff_options *opts)
 {
-	git_iterator *a = NULL, *b = NULL;
-	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
-
-	assert(repo && diff);
-
-	if (git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx) < 0 ||
-	    git_iterator_for_index_range(&b, repo, pfx, pfx) < 0)
-		goto on_error;
-
-	git__free(pfx);
-
-	return diff_from_iterators(repo, opts, a, b, diff);
-
-on_error:
-	git__free(pfx);
-	git_iterator_free(a);
-	return -1;
+	DIFF_FROM_ITERATORS(
+		assert(repo && diff),
+		git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx),
+	    git_iterator_for_index_range(&b, repo, pfx, pfx)
+	);
 }
 
 int git_diff_workdir_to_index(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts,
-	git_diff_list **diff)
+	const git_diff_options *opts)
 {
-	int error;
-	git_iterator *a = NULL, *b = NULL;
-	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
-
-	assert(repo && diff);
-
-	if ((error = git_iterator_for_index_range(&a, repo, pfx, pfx)) < 0 ||
-	    (error = git_iterator_for_workdir_range(&b, repo, pfx, pfx)) < 0)
-		goto on_error;
-
-	git__free(pfx);
-
-	return diff_from_iterators(repo, opts, a, b, diff);
-
-on_error:
-	git__free(pfx);
-	git_iterator_free(a);
-	return error;
+	DIFF_FROM_ITERATORS(
+		assert(repo && diff),
+		git_iterator_for_index_range(&a, repo, pfx, pfx),
+	    git_iterator_for_workdir_range(&b, repo, pfx, pfx)
+	);
 }
 
 
 int git_diff_workdir_to_tree(
+	git_diff_list **diff,
 	git_repository *repo,
-	const git_diff_options *opts,
-	git_tree *tree,
-	git_diff_list **diff)
+	git_tree *old_tree,
+	const git_diff_options *opts)
 {
-	int error;
-	git_iterator *a = NULL, *b = NULL;
-	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL;
-
-	assert(repo && tree && diff);
-
-	if ((error = git_iterator_for_tree_range(&a, repo, tree, pfx, pfx)) < 0 ||
-	    (error = git_iterator_for_workdir_range(&b, repo, pfx, pfx)) < 0)
-		goto on_error;
-
-	git__free(pfx);
-
-	return diff_from_iterators(repo, opts, a, b, diff);
-
-on_error:
-	git__free(pfx);
-	git_iterator_free(a);
-	return error;
+	DIFF_FROM_ITERATORS(
+		assert(repo && diff),
+		git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx),
+	    git_iterator_for_workdir_range(&b, repo, pfx, pfx)
+	);
 }

@@ -1455,7 +1455,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 		if (sm->ignore == GIT_SUBMODULE_IGNORE_NONE)
 			opt.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
-		error = git_diff_index_to_tree(sm_repo, &opt, sm_head, &diff);
+		error = git_diff_index_to_tree(&diff, sm_repo, sm_head, &opt);
 
 		if (!error) {
 			if (git_diff_num_deltas(diff) > 0)
@@ -1472,7 +1472,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 
 		/* perform index-to-workdir diff on submodule */
 
-		error = git_diff_workdir_to_index(sm_repo, &opt, &diff);
+		error = git_diff_workdir_to_index(&diff, sm_repo, &opt);
 
 		if (!error) {
 			size_t untracked =

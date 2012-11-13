@@ -88,7 +88,7 @@ void test_diff_patch__can_properly_display_the_removal_of_a_file(void)
 	one = resolve_commit_oid_to_tree(g_repo, one_sha);
 	another = resolve_commit_oid_to_tree(g_repo, another_sha);
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, NULL, one, another, &diff));
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, one, another, NULL));
 
 	cl_git_pass(git_diff_print_patch(diff, NULL, check_removal_cb));
 
@@ -111,7 +111,7 @@ void test_diff_patch__to_string(void)
 	one = resolve_commit_oid_to_tree(g_repo, one_sha);
 	another = resolve_commit_oid_to_tree(g_repo, another_sha);
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, NULL, one, another, &diff));
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, one, another, NULL));
 
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
 
