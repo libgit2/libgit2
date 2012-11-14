@@ -77,7 +77,7 @@ static int add_ref(transport_local *t, const char *name)
 	}
 
 	/* And if it's a tag, peel it, and add it to the list */
-	head = (git_remote_head *)git__malloc(sizeof(git_remote_head));
+	head = (git_remote_head *)git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
 	if (git_buf_join(&buf, 0, name, peeled) < 0)
 		return -1;
@@ -227,8 +227,6 @@ static int local_negotiate_fetch(
 			git_oid_cpy(&rhead->loid, git_object_id(obj));
 		else if (error != GIT_ENOTFOUND)
 			return error;
-		else
-			memset(&rhead->loid, 0, sizeof(git_oid));
 		git_object_free(obj);
 		giterr_clear();
 	}
