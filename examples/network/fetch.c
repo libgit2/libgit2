@@ -103,9 +103,10 @@ int fetch(git_repository *repo, int argc, char **argv)
 		usleep(10000);
 
 		if (stats->total_objects > 0)
-			printf("Received %d/%d objects (%d) in %" PRIuZ " bytes\r",
+			printf("Received %d/%d objects (%d) in %" PRIuZ " bytes, current object (%d/%d) bytes         \r",
 			       stats->received_objects, stats->total_objects,
-				   stats->indexed_objects, stats->received_bytes);
+				   stats->indexed_objects, stats->received_bytes,
+				   stats->current_object_avail_bytes, stats->current_object_size);
 	} while (!data.finished);
 
 	if (data.ret < 0)

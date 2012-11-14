@@ -383,7 +383,7 @@ static void network_packetsize(int received, void *payload)
 	npp->stats->received_bytes += received;
 
 	/* Fire notification if the threshold is reached */
-	if ((npp->stats->received_bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
+	if (npp->callback && (npp->stats->received_bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
 		npp->last_fired_bytes = npp->stats->received_bytes;	
 		npp->callback(npp->stats, npp->payload);	
 	}
@@ -405,17 +405,15 @@ int git_smart__download_pack(
 
 	memset(stats, 0, sizeof(git_transfer_progress));
 
-	if (progress_cb) {
-		npp.callback = progress_cb;
-		npp.payload = progress_payload;
-		npp.stats = stats;
-		t->packetsize_cb = &network_packetsize;
-		t->packetsize_payload = &npp;
+	npp.callback = progress_cb;
+	npp.payload = progress_payload;
+	npp.stats = stats;
+	t->packetsize_cb = &network_packetsize;
+	t->packetsize_payload = &npp;
 
-		/* We might have something in the buffer already from negotiate_fetch */
-		if (t->buffer.offset > 0)
-			t->packetsize_cb(t->buffer.offset, t->packetsize_payload);
-	}
+	/* We might have something in the buffer already from negotiate_fetch */
+	if (t->buffer.offset > 0)
+		t->packetsize_cb(t->buffer.offset, t->packetsize_payload);
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
 		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0))
