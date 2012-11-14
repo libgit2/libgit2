@@ -23,12 +23,16 @@
 #define GIT_LOOSE_PRIORITY 2
 #define GIT_PACKED_PRIORITY 1
 
+#define GIT_ALTERNATES_MAX_DEPTH 5
+
 typedef struct
 {
 	git_odb_backend *backend;
 	int priority;
 	int is_alternate;
 } backend_internal;
+
+static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
 
 static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
 {
@@ -395,7 +399,7 @@ int git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority)
 	return add_backend_internal(odb, backend, priority, 1);
 }
 
-static int add_default_backends(git_odb *db, const char *objects_dir, int as_alternates)
+static int add_default_backends(git_odb *db, const char *objects_dir, int as_alternates, int alternate_depth)
 {
 	git_odb_backend *loose, *packed;
 
@@ -409,16 +413,21 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates) < 0)
 		return -1;
 
-	return 0;
+	return load_alternates(db, objects_dir, alternate_depth);
 }
 
-static int load_alternates(git_odb *odb, const char *objects_dir)
+static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth)
 {
 	git_buf alternates_path = GIT_BUF_INIT;
 	git_buf alternates_buf = GIT_BUF_INIT;
 	char *buffer;
 	const char *alternate;
 	int result = 0;
+
+	/* Git reports an error, we just ignore anything deeper */
+	if (alternate_depth > GIT_ALTERNATES_MAX_DEPTH) {
+		return 0;
+	}
 
 	if (git_buf_joinpath(&alternates_path, objects_dir, GIT_ALTERNATES_FILE) < 0)
 		return -1;
@@ -440,14 +449,18 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 		if (*alternate == '\0' || *alternate == '#')
 			continue;
 
-		/* relative path: build based on the current `objects` folder */
-		if (*alternate == '.') {
+		/*
+		 * Relative path: build based on the current `objects`
+		 * folder. However, relative paths are only allowed in
+		 * the current repository.
+		 */
+		if (*alternate == '.' && !alternate_depth) {
 			if ((result = git_buf_joinpath(&alternates_path, objects_dir, alternate)) < 0)
 				break;
 			alternate = git_buf_cstr(&alternates_path);
 		}
 
-		if ((result = add_default_backends(odb, alternate, 1)) < 0)
+		if ((result = add_default_backends(odb, alternate, 1, alternate_depth + 1)) < 0)
 			break;
 	}
 
@@ -468,8 +481,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	if (git_odb_new(&db) < 0)
 		return -1;
 
-	if (add_default_backends(db, objects_dir, 0) < 0 ||
-		load_alternates(db, objects_dir) < 0)
+	if (add_default_backends(db, objects_dir, 0, 0) < 0)
 	{
 		git_odb_free(db);
 		return -1;
