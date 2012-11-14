@@ -58,10 +58,6 @@ To install the library you can specify the install prefix by setting:
 	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
 	$ cmake --build . --target install
 
-If you want to build a universal binary for Mac OS X, CMake sets it
-all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
-when configuring.
-
 For more advanced use or questions about CMake please read <http://www.cmake.org/Wiki/CMake_FAQ>.
 
 The following CMake variables are declared:
@@ -72,6 +68,37 @@ The following CMake variables are declared:
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
 - `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to OFF)
+- `STDCALL`: Build libgit2 as `stdcall`. Turn off for `cdecl` (Windows; defaults to ON)
+
+Compiler and linker options
+---------------------------
+
+CMake lets you specify a few variables to control the behavior of the
+compiler and linker. These flags are rarely used but can be useful for
+64-bit to 32-bit cross-compilation.
+
+- `CMAKE_C_FLAGS`: Set your own compiler flags
+- `CMAKE_FIND_ROOT_PATH`: Override the search path for libraries
+- `ZLIB_LIBRARY`, `OPENSSL_SSL_LIBRARY` AND `OPENSSL_CRYPTO_LIBRARY`:
+Tell CMake where to find those specific libraries
+
+MacOS X
+-------
+
+If you want to build a universal binary for Mac OS X, CMake sets it
+all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
+when configuring.
+
+Windows
+-------
+
+You need to run the CMake commands from the Visual Studio command
+prompt, not the regular or Windows SDK one. Select the right generator
+for your version with the `-G "Visual Studio X" option.
+
+See [the wiki]
+(https://github.com/libgit2/libgit2/wiki/Building-libgit2-on-Windows)
+for more detailed instructions.
 
 Language Bindings
 ==================================
