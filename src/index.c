@@ -1098,7 +1098,8 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 	size_t len;
 	int i;
 
-	if (git_vector_init(&index->reuc, 16, reuc_cmp) < 0)
+	/* This gets called multiple times, the vector might already be initialized */
+	if (index->reuc._alloc_size == 0 && git_vector_init(&index->reuc, 16, reuc_cmp) < 0)
 		return -1;
 
 	while (size) {

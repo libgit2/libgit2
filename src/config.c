@@ -436,7 +436,7 @@ int git_config_get_bool(int *out, git_config *cfg, const char *name)
 int git_config_get_string(const char **out, git_config *cfg, const char *name)
 {
 	int ret;
-	const char *str;
+	const char *str = NULL;
 
 	if ((ret = get_string(&str, cfg, name)) < 0)
 		return ret;
