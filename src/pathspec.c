@@ -110,8 +110,8 @@ bool git_pathspec_match_path(
 	unsigned int i;
 	git_attr_fnmatch *match;
 	int fnmatch_flags = 0;
-	int (*use_strcmp)(const char *, const char *);
-	int (*use_strncmp)(const char *, const char *, size_t);
+	git__strcmp_fn  use_strcmp;
+	git__strncmp_fn use_strncmp;
 
 	if (!vspec || !vspec->length)
 		return true;

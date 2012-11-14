@@ -134,6 +134,9 @@ extern int git__bsearch(
 
 extern int git__strcmp_cb(const void *a, const void *b);
 
+typedef int (GIT_CDECL *git__strcmp_fn)(const char *, const char *);
+typedef int (GIT_CDECL *git__strncmp_fn)(const char *, const char *, size_t);
+
 typedef struct {
 	short refcount;
 	void *owner;
