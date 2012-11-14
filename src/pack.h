@@ -15,6 +15,8 @@
 #include "mwindow.h"
 #include "odb.h"
 
+#include <zlib.h>
+
 #define GIT_PACK_FILE_MODE 0444
 
 #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
@@ -65,6 +67,9 @@ struct git_pack_file {
 	git_oid sha1;
 	git_vector cache;
 	git_oid **oids;
+    z_stream *stream;
+    unsigned char *stream_out;
+    size_t stream_pos;
 
 	/* something like ".git/objects/pack/xxxxx.pack" */
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
@@ -84,6 +89,8 @@ int git_packfile_unpack_header(
 		git_off_t *curpos);
 
 int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, git_off_t *obj_offset);
+int packfile_setup_stream(struct git_pack_file *p, size_t size);
+void packfile_finish_stream(struct git_pack_file *p);
 int packfile_unpack_compressed(
 	git_rawobj *obj,
 	struct git_pack_file *p,

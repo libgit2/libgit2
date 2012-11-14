@@ -196,6 +196,11 @@ static int store_delta(git_indexer_stream *idx, git_off_t entry_start, size_t en
 			return (int)base_off;
 	}
 
+	if(!idx->pack->stream) {
+		error = packfile_setup_stream(idx->pack, entry_size);
+		if (error < 0)
+			return error;
+	}
 	error = packfile_unpack_compressed(&obj, idx->pack, &w, &idx->off, entry_size, type);
 	if (error == GIT_EBUFS) {
 		idx->off = entry_start;
