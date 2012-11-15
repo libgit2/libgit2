@@ -267,6 +267,9 @@ static git_diff_list *git_diff_list_alloc(
 
 	memcpy(&diff->opts, opts, sizeof(git_diff_options));
 
+	if(opts->flags & GIT_DIFF_IGNORE_FILEMODE)
+		diff->diffcaps = diff->diffcaps & ~GIT_DIFFCAPS_TRUST_MODE_BITS;
+
 	/* pathspec init will do nothing for empty pathspec */
 	if (git_pathspec_init(&diff->pathspec, &opts->pathspec, &diff->pool) < 0)
 		goto fail;
