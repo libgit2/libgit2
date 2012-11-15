@@ -199,13 +199,15 @@ GIT_EXTERN(int) git_checkout_head(
 /**
  * Updates files in the working tree to match the content of the index.
  *
- * @param repo repository to check out (must be non-bare)
+ * @param repo repository into which to check out (must be non-bare)
+ * @param index index to be checked out (or NULL to use repository index)
  * @param opts specifies checkout options (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
  * about the error)
  */
 GIT_EXTERN(int) git_checkout_index(
 	git_repository *repo,
+	git_index *index,
 	git_checkout_opts *opts);
 
 /**

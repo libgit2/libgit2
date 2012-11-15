@@ -601,12 +601,12 @@ static int checkout_create_submodules(
 
 int git_checkout_index(
 	git_repository *repo,
+	git_index *index,
 	git_checkout_opts *opts)
 {
 	git_diff_list *diff = NULL;
 	git_diff_options diff_opts = {0};
 	git_checkout_opts checkout_opts;
-
 	checkout_diff_data data;
 	git_buf workdir = GIT_BUF_INIT;
 	uint32_t *actions = NULL;
@@ -625,7 +625,7 @@ int git_checkout_index(
 	if (opts && opts->paths.count > 0)
 		diff_opts.pathspec = opts->paths;
 
-	if ((error = git_diff_workdir_to_index(repo, &diff_opts, &diff)) < 0)
+	if ((error = git_diff_workdir_to_index(&diff, repo, index, &diff_opts)) < 0)
 		goto cleanup;
 
 	if ((error = git_buf_puts(&workdir, git_repository_workdir(repo))) < 0)
@@ -706,12 +706,14 @@ int git_checkout_tree(
 		return -1;
 	}
 
+	/* TODO: create a temp index, load tree there and check it out */
+
 	/* load paths in tree that match pathspec into index */
 	if (!(error = git_repository_index(&index, repo)) &&
 		!(error = git_index_read_tree_match(
 			index, tree, opts ? &opts->paths : NULL)) &&
 		!(error = git_index_write(index)))
-		error = git_checkout_index(repo, opts);
+		error = git_checkout_index(repo, NULL, opts);
 
 	git_index_free(index);
 	git_tree_free(tree);
