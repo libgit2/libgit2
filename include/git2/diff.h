@@ -86,6 +86,8 @@ typedef enum {
 	 *  mode set to tree.  Note: the tree SHA will not be available.
 	 */
 	GIT_DIFF_INCLUDE_TYPECHANGE_TREES  = (1 << 16),
+	/** Ignore file mode changes */
+	GIT_DIFF_IGNORE_FILEMODE = (1 << 17),
 } git_diff_option_t;
 
 /**
