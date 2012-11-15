@@ -47,7 +47,7 @@ void test_diff_rename__match_oid(void)
 	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 
 	cl_git_pass(git_diff_tree_to_tree(
-		g_repo, &diffopts, old_tree, new_tree, &diff));
+		&diff, g_repo, old_tree, new_tree, &diffopts));
 
 	/* git diff --no-renames \
 	 *          31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \
@@ -79,7 +79,7 @@ void test_diff_rename__match_oid(void)
 	git_diff_list_free(diff);
 
 	cl_git_pass(git_diff_tree_to_tree(
-		g_repo, &diffopts, old_tree, new_tree, &diff));
+		&diff, g_repo, old_tree, new_tree, &diffopts));
 
 	/* git diff --find-copies-harder \
 	 *          31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \

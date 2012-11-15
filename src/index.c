@@ -835,7 +835,9 @@ unsigned int git_index__prefix_position(git_index *index, const char *path)
 	srch_key.path = path;
 	srch_key.stage = 0;
 
-	git_vector_bsearch3(&pos, &index->entries, index->entries_search, &srch_key);
+	git_vector_sort(&index->entries);
+	git_vector_bsearch3(
+		&pos, &index->entries, index->entries_search, &srch_key);
 
 	return pos;
 }

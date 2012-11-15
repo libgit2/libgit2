@@ -330,6 +330,7 @@ typedef struct {
 	git_iterator base;
 	git_index *index;
 	unsigned int current;
+	bool free_index;
 } index_iterator;
 
 static int index_iterator__current(
@@ -387,32 +388,47 @@ static int index_iterator__reset(git_iterator *self)
 static void index_iterator__free(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index_free(ii->index);
+	if (ii->free_index)
+		git_index_free(ii->index);
 	ii->index = NULL;
 }
 
 int git_iterator_for_index_range(
+	git_iterator **iter,
+	git_index  *index,
+	const char *start,
+	const char *end)
+{
+	index_iterator *ii;
+
+	ITERATOR_BASE_INIT(ii, index, INDEX);
+
+	ii->index = index;
+	ii->base.ignore_case = ii->index->ignore_case;
+	ii->current = start ? git_index__prefix_position(ii->index, start) : 0;
+
+	*iter = (git_iterator *)ii;
+
+	return 0;
+}
+
+int git_iterator_for_repo_index_range(
 	git_iterator **iter,
 	git_repository *repo,
 	const char *start,
 	const char *end)
 {
 	int error;
-	index_iterator *ii;
+	git_index *index;
 
-	ITERATOR_BASE_INIT(ii, index, INDEX);
+	if ((error = git_repository_index(&index, repo)) < 0)
+		return error;
 
-	if ((error = git_repository_index(&ii->index, repo)) < 0)
-		git__free(ii);
-	else {
-		ii->base.ignore_case = ii->index->ignore_case;
-		ii->current = start ? git_index__prefix_position(ii->index, start) : 0;
-		*iter = (git_iterator *)ii;
-	}
+	if (!(error = git_iterator_for_index_range(iter, index, start, end)))
+		((index_iterator *)(*iter))->free_index = true;
 
 	return error;
 }
-
 
 typedef struct workdir_iterator_frame workdir_iterator_frame;
 struct workdir_iterator_frame {
@@ -690,23 +706,20 @@ int git_iterator_for_workdir_range(
 
 	assert(iter && repo);
 
-	if ((error = git_repository__ensure_not_bare(repo, "scan working directory")) < 0)
+	if ((error = git_repository__ensure_not_bare(
+			repo, "scan working directory")) < 0)
 		return error;
 
 	ITERATOR_BASE_INIT(wi, workdir, WORKDIR);
-
 	wi->repo = repo;
 
-	if ((error = git_repository_index(&index, repo)) < 0) {
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0) {
 		git__free(wi);
 		return error;
 	}
 
-	/* Set the ignore_case flag for the workdir iterator to match
-	 * that of the index. */
+	/* Match ignore_case flag for iterator to that of the index */
 	wi->base.ignore_case = index->ignore_case;
-
-	git_index_free(index);
 
 	if (git_buf_sets(&wi->path, git_repository_workdir(repo)) < 0 ||
 		git_path_to_dir(&wi->path) < 0 ||

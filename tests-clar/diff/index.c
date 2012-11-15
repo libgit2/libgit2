@@ -32,7 +32,7 @@ void test_diff_index__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_index_to_tree(g_repo, &opts, a, &diff));
+	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
 
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -60,7 +60,7 @@ void test_diff_index__0(void)
 	diff = NULL;
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_index_to_tree(g_repo, &opts, b, &diff));
+	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, b, NULL, &opts));
 
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -125,7 +125,7 @@ void test_diff_index__1(void)
 
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_index_to_tree(g_repo, &opts, a, &diff));
+	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
 
 	cl_assert_equal_i(
 		GIT_EUSER,

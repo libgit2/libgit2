@@ -34,7 +34,7 @@ void test_diff_tree__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, a, b, &diff));
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -56,7 +56,7 @@ void test_diff_tree__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, c, b, &diff));
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -141,9 +141,9 @@ void test_diff_tree__options(void)
 		opts = test_options[i];
 
 		if (test_ab_or_cd[i] == 0)
-			cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, a, b, &diff));
+			cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 		else
-			cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, c, d, &diff));
+			cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, d, &opts));
 
 		cl_git_pass(git_diff_foreach(
 			diff, &actual, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -187,7 +187,7 @@ void test_diff_tree__bare(void)
 
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, a, b, &diff));
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
 		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
@@ -225,9 +225,9 @@ void test_diff_tree__merge(void)
 	cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
 	cl_assert((c = resolve_commit_oid_to_tree(g_repo, c_commit)) != NULL);
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, NULL, a, b, &diff1));
+	cl_git_pass(git_diff_tree_to_tree(&diff1, g_repo, a, b, NULL));
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, NULL, c, b, &diff2));
+	cl_git_pass(git_diff_tree_to_tree(&diff2, g_repo, c, b, NULL));
 
 	git_tree_free(a);
 	git_tree_free(b);
@@ -279,7 +279,7 @@ void test_diff_tree__larger_hunks(void)
 	opts.context_lines = 1;
 	opts.interhunk_lines = 0;
 
-	cl_git_pass(git_diff_tree_to_tree(g_repo, &opts, a, b, &diff));
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {

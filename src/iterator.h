@@ -52,13 +52,23 @@ GIT_INLINE(int) git_iterator_for_tree(
 }
 
 extern int git_iterator_for_index_range(
-	git_iterator **iter, git_repository *repo,
+	git_iterator **iter, git_index *index,
 	const char *start, const char *end);
 
 GIT_INLINE(int) git_iterator_for_index(
+	git_iterator **iter, git_index *index)
+{
+	return git_iterator_for_index_range(iter, index, NULL, NULL);
+}
+
+extern int git_iterator_for_repo_index_range(
+	git_iterator **iter, git_repository *repo,
+	const char *start, const char *end);
+
+GIT_INLINE(int) git_iterator_for_repo_index(
 	git_iterator **iter, git_repository *repo)
 {
-	return git_iterator_for_index_range(iter, repo, NULL, NULL);
+	return git_iterator_for_repo_index_range(iter, repo, NULL, NULL);
 }
 
 extern int git_iterator_for_workdir_range(
