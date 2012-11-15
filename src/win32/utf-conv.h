@@ -12,8 +12,8 @@
 
 #define GIT_WIN_PATH (260 + 1)
 
-void git__utf8_to_16(wchar_t *dest, size_t length, const char *src);
-void git__utf16_to_8(char *dest, const wchar_t *src);
+int git__utf8_to_16(wchar_t *dest, size_t length, const char *src);
+int git__utf16_to_8(char *dest, const wchar_t *src);
 
 #endif
 

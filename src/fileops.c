@@ -377,7 +377,7 @@ static int futils__rm_first_parent(git_buf *path, const char *ceiling)
 
 		if (!path->size || git__prefixcmp(path->ptr, ceiling) != 0)
 			error = 0;
-		else if (p_lstat(path->ptr, &st) == 0) {
+		else if (p_lstat_posixly(path->ptr, &st) == 0) {
 			if (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode))
 				error = p_unlink(path->ptr);
 			else if (!S_ISDIR(st.st_mode))
@@ -397,7 +397,7 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 	struct stat st;
 	futils__rmdir_data *data = opaque;
 
-	if ((data->error = p_lstat(path->ptr, &st)) < 0) {
+	if ((data->error = p_lstat_posixly(path->ptr, &st)) < 0) {
 		if (errno == ENOENT)
 			data->error = 0;
 		else if (errno == ENOTDIR) {

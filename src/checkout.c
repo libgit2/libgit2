@@ -282,7 +282,7 @@ static int checkout_confirm_update_blob(
 	if (git_buf_puts(data->path, delta->new_file.path) < 0)
 		return -1;
 
-	if ((error = p_stat(git_buf_cstr(data->path), &st)) < 0) {
+	if ((error = p_lstat_posixly(git_buf_cstr(data->path), &st)) < 0) {
 		if (errno == ENOENT) {
 			if (update_only)
 				action = CHECKOUT_ACTION__NONE;

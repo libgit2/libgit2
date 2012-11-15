@@ -23,4 +23,7 @@
 #define p_setenv(n,v,o) setenv(n,v,o)
 #define p_inet_pton(a, b, c) inet_pton(a, b, c)
 
+/* see win32/posix.h for explanation about why this exists */
+#define p_lstat_posixly(p,b) lstat(p,b)
+
 #endif
