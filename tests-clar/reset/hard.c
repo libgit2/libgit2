@@ -19,6 +19,21 @@ void test_reset_hard__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+static int strequal_ignore_eol(const char *exp, const char *str)
+{
+	while (*exp && *str) {
+		if (*exp != *str) {
+			while (*exp == '\r' || *exp == '\n') ++exp;
+			while (*str == '\r' || *str == '\n') ++str;
+			if (*exp != *str)
+				return false;
+		} else {
+			exp++; str++;
+		}
+	}
+	return (!*exp && !*str);
+}
+
 void test_reset_hard__resetting_reverts_modified_files(void)
 {
 	git_buf path = GIT_BUF_INIT, content = GIT_BUF_INIT;
@@ -61,7 +76,7 @@ void test_reset_hard__resetting_reverts_modified_files(void)
 		cl_git_pass(git_buf_joinpath(&path, wd, files[i]));
 		if (after[i]) {
 			cl_git_pass(git_futils_readbuffer(&content, path.ptr));
-			cl_assert_equal_s(after[i], content.ptr);
+			cl_assert(strequal_ignore_eol(after[i], content.ptr));
 		} else {
 			cl_assert(!git_path_exists(path.ptr));
 		}
