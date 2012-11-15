@@ -551,15 +551,15 @@ static int diff_list_init_from_iterators(
 	if (!old_iter->ignore_case && !new_iter->ignore_case) {
 		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
 
-		diff->strcomp    = strcmp;
-		diff->strncomp   = strncmp;
+		diff->strcomp    = git__strcmp;
+		diff->strncomp   = git__strncmp;
 		diff->pfxcomp    = git__prefixcmp;
 		diff->entrycomp  = git_index_entry__cmp;
 	} else {
 		diff->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
 
-		diff->strcomp    = strcasecmp;
-		diff->strncomp   = strncasecmp;
+		diff->strcomp    = git__strcasecmp;
+		diff->strncomp   = git__strncasecmp;
 		diff->pfxcomp    = git__prefixcmp_icase;
 		diff->entrycomp  = git_index_entry__cmp_icase;
 	}

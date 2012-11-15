@@ -122,11 +122,11 @@ bool git_pathspec_match_path(
 		fnmatch_flags = FNM_CASEFOLD;
 
 	if (casefold) {
-		use_strcmp  = strcasecmp;
-		use_strncmp = strncasecmp;
+		use_strcmp  = git__strcasecmp;
+		use_strncmp = git__strncasecmp;
 	} else {
-		use_strcmp  = strcmp;
-		use_strncmp = strncmp;
+		use_strcmp  = git__strcmp;
+		use_strncmp = git__strncmp;
 	}
 
 	git_vector_foreach(vspec, i, match) {
