@@ -339,12 +339,14 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
  * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository containing the tree and index.
  * @param old_tree A git_tree object to diff from.
+ * @param index The index to diff with; repo index used if NULL.
  * @param opts Structure with options to influence diff or NULL for defaults.
  */
 GIT_EXTERN(int) git_diff_index_to_tree(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,
+	git_index *index,
 	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
@@ -357,11 +359,13 @@ GIT_EXTERN(int) git_diff_index_to_tree(
  *
  * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository.
+ * @param index The index to diff from; repo index used if NULL.
  * @param opts Structure with options to influence diff or NULL for defaults.
  */
 GIT_EXTERN(int) git_diff_workdir_to_index(
 	git_diff_list **diff,
 	git_repository *repo,
+	git_index *index,
 	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**

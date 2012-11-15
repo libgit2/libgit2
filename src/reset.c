@@ -139,7 +139,7 @@ int git_reset(
 	memset(&opts, 0, sizeof(opts));
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	if (git_checkout_index(repo, &opts) < 0) {
+	if (git_checkout_index(repo, NULL, &opts) < 0) {
 		giterr_set(GITERR_INDEX, "%s - Failed to checkout the index.", ERROR_MSG);
 		goto cleanup;
 	}

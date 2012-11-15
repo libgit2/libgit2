@@ -61,11 +61,5 @@ extern bool git_diff_delta__should_skip(
 extern int git_diff__oid_for_file(
 	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
-extern int git_diff__tree_to_index(
-	git_diff_list **diff,
-	git_tree *tree,
-	git_index *index,
-	const git_diff_options *opts);
-
 #endif
 

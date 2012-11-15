@@ -204,22 +204,22 @@ int main(int argc, char *argv[])
 	/* nothing */
 
 	if (t1 && t2)
-		check(git_diff_tree_to_tree(repo, &opts, t1, t2, &diff), "Diff");
+		check(git_diff_tree_to_tree(&diff, repo, t1, t2, &opts), "Diff");
 	else if (t1 && cached)
-		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
+		check(git_diff_index_to_tree(&diff, repo, t1, NULL, &opts), "Diff");
 	else if (t1) {
 		git_diff_list *diff2;
-		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
-		check(git_diff_workdir_to_index(repo, &opts, &diff2), "Diff");
+		check(git_diff_index_to_tree(&diff, repo, t1, NULL, &opts), "Diff");
+		check(git_diff_workdir_to_index(&diff2, repo, NULL, &opts), "Diff");
 		check(git_diff_merge(diff, diff2), "Merge diffs");
 		git_diff_list_free(diff2);
 	}
 	else if (cached) {
 		check(resolve_to_tree(repo, "HEAD", &t1), "looking up HEAD");
-		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
+		check(git_diff_index_to_tree(&diff, repo, t1, NULL, &opts), "Diff");
 	}
 	else
-		check(git_diff_workdir_to_index(repo, &opts, &diff), "Diff");
+		check(git_diff_workdir_to_index(&diff, repo, NULL, &opts), "Diff");
 
 	if (color >= 0)
 		fputs(colors[0], stdout);

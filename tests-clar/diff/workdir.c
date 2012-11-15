@@ -26,7 +26,7 @@ void test_diff_workdir__to_index(void)
 	opts.interhunk_lines = 1;
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -127,8 +127,8 @@ void test_diff_workdir__to_tree(void)
 	 * a workdir to tree diff (even though it is not really).  This is what
 	 * you would get from "git diff --name-status 26a125ee1bf"
 	 */
-	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, a, &opts));
-	cl_git_pass(git_diff_workdir_to_index(&diff2, g_repo, &opts));
+	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff2, g_repo, NULL, &opts));
 	cl_git_pass(git_diff_merge(diff, diff2));
 	git_diff_list_free(diff2);
 
@@ -164,8 +164,8 @@ void test_diff_workdir__to_tree(void)
 	/* Again, emulating "git diff <sha>" for testing purposes using
 	 * "git diff --name-status 0017bd4ab1ec3" instead.
 	 */
-	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, b, &opts));
-	cl_git_pass(git_diff_workdir_to_index(&diff2, g_repo, &opts));
+	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, b, NULL, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff2, g_repo, NULL, &opts));
 	cl_git_pass(git_diff_merge(diff, diff2));
 	git_diff_list_free(diff2);
 
@@ -216,7 +216,7 @@ void test_diff_workdir__to_index_with_pathspec(void)
 	opts.pathspec.strings = &pathspec;
 	opts.pathspec.count   = 1;
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -239,7 +239,7 @@ void test_diff_workdir__to_index_with_pathspec(void)
 
 	pathspec = "modified_file";
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -262,7 +262,7 @@ void test_diff_workdir__to_index_with_pathspec(void)
 
 	pathspec = "subdir";
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -285,7 +285,7 @@ void test_diff_workdir__to_index_with_pathspec(void)
 
 	pathspec = "*_deleted";
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -324,7 +324,7 @@ void test_diff_workdir__filemode_changes(void)
 
 	/* test once with no mods */
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, NULL));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -347,7 +347,7 @@ void test_diff_workdir__filemode_changes(void)
 
 	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, NULL));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -386,7 +386,7 @@ void test_diff_workdir__filemode_changes_with_filemode_false(void)
 
 	/* test once with no mods */
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, NULL));
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
@@ -402,7 +402,7 @@ void test_diff_workdir__filemode_changes_with_filemode_false(void)
 
 	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, NULL));
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
@@ -442,8 +442,8 @@ void test_diff_workdir__head_index_and_workdir_all_differ(void)
 	opts.pathspec.strings = &pathspec;
 	opts.pathspec.count   = 1;
 
-	cl_git_pass(git_diff_index_to_tree(&diff_i2t, g_repo, tree, &opts));
-	cl_git_pass(git_diff_workdir_to_index(&diff_w2i, g_repo, &opts));
+	cl_git_pass(git_diff_index_to_tree(&diff_i2t, g_repo, tree, NULL, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff_w2i, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -529,7 +529,7 @@ void test_diff_workdir__eof_newline_changes(void)
 	opts.pathspec.strings = &pathspec;
 	opts.pathspec.count   = 1;
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -556,7 +556,7 @@ void test_diff_workdir__eof_newline_changes(void)
 
 	cl_git_append2file("status/current_file", "\n");
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -583,7 +583,7 @@ void test_diff_workdir__eof_newline_changes(void)
 
 	cl_git_rewritefile("status/current_file", "current_file");
 
-	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+	cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -699,7 +699,7 @@ void test_diff_workdir__larger_hunks(void)
 		/* okay, this is a bit silly, but oh well */
 		switch (i) {
 		case 0:
-			cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, &opts));
+			cl_git_pass(git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 			break;
 		case 1:
 			cl_git_pass(git_diff_workdir_to_tree(&diff, g_repo, a, &opts));
@@ -829,7 +829,7 @@ void test_diff_workdir__cannot_diff_against_a_bare_repository(void)
 	g_repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_assert_equal_i(
-		GIT_EBAREREPO, git_diff_workdir_to_index(&diff, g_repo, &opts));
+		GIT_EBAREREPO, git_diff_workdir_to_index(&diff, g_repo, NULL, &opts));
 
 	cl_git_pass(git_repository_head_tree(&tree, g_repo));
 

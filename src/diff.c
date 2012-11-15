@@ -753,15 +753,13 @@ fail:
 }
 
 
-#define DIFF_FROM_ITERATORS(SETUP, MAKE_FIRST, MAKE_SECOND) \
-	int error; \
+#define DIFF_FROM_ITERATORS(MAKE_FIRST, MAKE_SECOND) do { \
 	git_iterator *a = NULL, *b = NULL; \
 	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
-	SETUP; \
     if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
 		error = diff_from_iterators(diff, repo, a, b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
-    return error
+    } while (0)
 
 int git_diff_tree_to_tree(
 	git_diff_list **diff,
@@ -770,49 +768,59 @@ int git_diff_tree_to_tree(
 	git_tree *new_tree,
 	const git_diff_options *opts)
 {
+	int error = 0;
+
+	assert(diff && repo);
+
 	DIFF_FROM_ITERATORS(
-		assert(repo && old_tree && new_tree && diff),
 		git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx),
 		git_iterator_for_tree_range(&b, repo, new_tree, pfx, pfx)
 	);
-}
 
-int git_diff__tree_to_index(
-	git_diff_list **diff,
-	git_tree *tree,
-	git_index *index,
-	const git_diff_options *opts)
-{
-	DIFF_FROM_ITERATORS(
-		git_repository *repo = git_index_owner(index),
-	    git_iterator_for_index_range(&a, index, pfx, pfx),
-		git_iterator_for_tree_range(&b, repo, tree, pfx, pfx)
-	);
+	return error;
 }
 
 int git_diff_index_to_tree(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,
+	git_index *index,
 	const git_diff_options *opts)
 {
+	int error = 0;
+
+	assert(diff && repo);
+
+	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
+		return error;
+
 	DIFF_FROM_ITERATORS(
-		assert(repo && diff),
 		git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx),
-	    git_iterator_for_repo_index_range(&b, repo, pfx, pfx)
+	    git_iterator_for_index_range(&b, index, pfx, pfx)
 	);
+
+	return error;
 }
 
 int git_diff_workdir_to_index(
 	git_diff_list **diff,
 	git_repository *repo,
+	git_index *index,
 	const git_diff_options *opts)
 {
+	int error = 0;
+
+	assert(diff && repo);
+
+	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
+		return error;
+
 	DIFF_FROM_ITERATORS(
-		assert(repo && diff),
-		git_iterator_for_repo_index_range(&a, repo, pfx, pfx),
+		git_iterator_for_index_range(&a, index, pfx, pfx),
 	    git_iterator_for_workdir_range(&b, repo, pfx, pfx)
 	);
+
+	return error;
 }
 
 
@@ -822,9 +830,14 @@ int git_diff_workdir_to_tree(
 	git_tree *old_tree,
 	const git_diff_options *opts)
 {
+	int error = 0;
+
+	assert(diff && repo);
+
 	DIFF_FROM_ITERATORS(
-		assert(repo && diff),
 		git_iterator_for_tree_range(&a, repo, old_tree, pfx, pfx),
 	    git_iterator_for_workdir_range(&b, repo, pfx, pfx)
 	);
+
+	return error;
 }

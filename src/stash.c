@@ -322,10 +322,10 @@ static int build_workdir_tree(
 	if (git_commit_tree(&b_tree, b_commit) < 0)
 		goto cleanup;
 
-	if (git_diff_index_to_tree(&diff, repo, b_tree, &opts) < 0)
+	if (git_diff_index_to_tree(&diff, repo, b_tree, NULL, &opts) < 0)
 		goto cleanup;
 
-	if (git_diff_workdir_to_index(&diff2, repo, &opts) < 0)
+	if (git_diff_workdir_to_index(&diff2, repo, NULL, &opts) < 0)
 		goto cleanup;
 
 	if (git_diff_merge(diff, diff2) < 0)
