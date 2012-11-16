@@ -2,6 +2,8 @@
 #include "commit.h"
 #include "oidmap.h"
 
+GIT__USE_OIDMAP;
+
 struct git_graph {
 	git_oidmap *commits;
 	git_pool commit_pool;
@@ -22,19 +24,23 @@ struct git_graph_node {
 	struct git_graph_node **parents;
 };
 
+#define PARENTS_PER_COMMIT	2
+#define COMMIT_ALLOC \
+	(sizeof(git_graph_node) + PARENTS_PER_COMMIT * sizeof(git_graph_node *))
+
 
 int git_graph_new(git_graph **graph_out)
 {
 	git_graph *graph;
 
-	graph = git__calloc(1, sizeof(git_revwalk));
+	graph = git__calloc(1, sizeof(git_graph));
 	GITERR_CHECK_ALLOC(graph);
 
 	graph->commits = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(graph->commits);
 
 	git_pool_init(&graph->commit_pool, 1,
-		git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0)
+		git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC);
 
 
 	*graph_out = graph;
@@ -65,7 +71,7 @@ int git_graph_lookup(git_graph_node **commit, git_graph *graph, const git_oid *o
 }
 
 int git_graph_push_node(git_graph_node **new_node, git_graph *graph,
-	const git_oid *oid, size_t num_parents, const git_oid **parents);
+	const git_oid *oid, size_t num_parents, const git_oid **parents)
 {
 	return 0;
 }
