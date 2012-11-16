@@ -174,6 +174,36 @@ int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int ba
 	return error;
 }
 
+int git__strcmp(const char *a, const char *b)
+{
+	while (*a && *b && *a == *b)
+		++a, ++b;
+	return (int)(*(const unsigned char *)a) - (int)(*(const unsigned char *)b);
+}
+
+int git__strcasecmp(const char *a, const char *b)
+{
+	while (*a && *b && tolower(*a) == tolower(*b))
+		++a, ++b;
+	return (tolower(*a) - tolower(*b));
+}
+
+int git__strncmp(const char *a, const char *b, size_t sz)
+{
+	while (sz && *a && *b && *a == *b)
+		--sz, ++a, ++b;
+	if (!sz)
+		return 0;
+	return (int)(*(const unsigned char *)a) - (int)(*(const unsigned char *)b);
+}
+
+int git__strncasecmp(const char *a, const char *b, size_t sz)
+{
+	while (sz && *a && *b && tolower(*a) == tolower(*b))
+		--sz, ++a, ++b;
+	return !sz ? 0 : (tolower(*a) - tolower(*b));
+}
+
 void git__strntolower(char *str, size_t len)
 {
 	size_t i;
