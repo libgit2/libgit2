@@ -7,7 +7,7 @@ struct git_graph {
 	git_pool commit_pool;
 };
 
-struct git_commit_object {
+struct git_graph_node {
 	git_oid oid;
 	uint32_t time;
 	unsigned int seen:1,
@@ -19,7 +19,7 @@ struct git_commit_object {
 	unsigned short in_degree;
 	unsigned short out_degree;
 
-	struct commit_object **parents;
+	struct git_graph_node **parents;
 };
 
 
@@ -52,26 +52,40 @@ void git_graph_free(git_graph *graph)
 	git__free(graph);
 }
 
-int git_graph_commit_get(git_graph *graph, git_oid *oid, git_commit_object **commit)
+size_t git_graph_node_num_parents(const git_graph_node *commit)
 {
-	//return commit from hash table if already found, otherwise return a new commit
+	return commit->out_degree;
+}
+
+int git_graph_lookup(git_graph_node **commit, git_graph *graph, const git_oid *oid)
+{
+	//return commit from hash table if already found, otherwise return NULL
 
 	return 0;
 }
 
-int git_graph_commit_alloc_parents(git_commit_object *commit, unsigned short num_parents)
+int git_graph_push_node(git_graph_node **new_node, git_graph *graph,
+	const git_oid *oid, size_t num_parents, const git_oid **parents);
 {
-	//allocate parents array in commit object
 	return 0;
 }
 
-int git_graph_commit_add_parent(git_commit_object *commit, git_commit_object *parent)
+int git_graph_node_parent(git_graph_node **parent, git_graph_node *commit, size_t index)
+{
+	*parent = commit->parents[index];
+	return 0;
+}
+
+
+int git_graph_merge_base_many(git_graph_node **out, git_graph *graph, size_t num_heads, git_graph_node **heads)
+{
+	//find merge base for some commit objects
+	return 0;
+}
+
+
+int git_graph_node_add_parent(git_graph_node *child, git_graph_node *parent)
 {
 	//put parent into next slot in commit object
 	return 0;
-}
-
-int git_graph_merge_base_many(git_commit_object *out, const git_commit_object input_array[], size_t length)
-{
-	//find merge base for some commit objects
 }
