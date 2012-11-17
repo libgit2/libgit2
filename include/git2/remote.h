@@ -326,7 +326,7 @@ GIT_EXTERN(int) git_remote_set_transport(
  * finished.
  */
 typedef enum git_remote_completion_type {
-	GIT_REMOTE_COMPLETION_DOWNLOAD,
+	GIT_REMOTE_COMPLETION_NEGOTIATION,
 	GIT_REMOTE_COMPLETION_INDEXING,
 	GIT_REMOTE_COMPLETION_ERROR,
 } git_remote_completion_type;
@@ -337,10 +337,10 @@ typedef enum git_remote_completion_type {
  * Set the calbacks to be called by the remote.
  */
 struct git_remote_callbacks {
-	void (*progress)(const char *str, int len, void *data);
-	int (*completion)(git_remote_completion_type type, void *data);
-	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
-	void *data;
+	void (*progress)(const char *str, int len, void *payload);
+	int (*completion)(git_remote_completion_type type, void *payload);
+	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *payload);
+	void *payload;
 };
 
 /**
