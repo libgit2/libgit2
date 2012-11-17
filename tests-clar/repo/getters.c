@@ -1,16 +1,26 @@
 #include "clar_libgit2.h"
 
-void test_repo_getters__empty(void)
+void test_repo_getters__is_empty_correctly_deals_with_pristine_looking_repos(void)
 {
-	git_repository *repo_empty, *repo_normal;
+	git_repository *repo;
 
-	cl_git_pass(git_repository_open(&repo_normal, cl_fixture("testrepo.git")));
-	cl_assert(git_repository_is_empty(repo_normal) == 0);
-	git_repository_free(repo_normal);
+	repo = cl_git_sandbox_init("empty_bare.git");
+	cl_git_remove_placeholders(git_repository_path(repo), "dummy-marker.txt");
 
-	cl_git_pass(git_repository_open(&repo_empty, cl_fixture("empty_bare.git")));
-	cl_assert(git_repository_is_empty(repo_empty) == 1);
-	git_repository_free(repo_empty);
+	cl_assert_equal_i(true, git_repository_is_empty(repo));
+
+	cl_git_sandbox_cleanup();
+}
+
+void test_repo_getters__is_empty_can_detect_used_repositories(void)
+{
+	git_repository *repo;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+
+	cl_assert_equal_i(false, git_repository_is_empty(repo));
+
+	git_repository_free(repo);
 }
 
 void test_repo_getters__retrieving_the_odb_honors_the_refcount(void)

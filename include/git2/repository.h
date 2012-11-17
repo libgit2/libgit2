@@ -305,7 +305,7 @@ GIT_EXTERN(int) git_repository_head_orphan(git_repository *repo);
  * Check if a repository is empty
  *
  * An empty repository has just been initialized and contains
- * no commits.
+ * no references.
  *
  * @param repo Repo to test
  * @return 1 if the repository is empty, 0 if it isn't, error code

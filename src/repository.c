@@ -1241,36 +1241,47 @@ int git_repository_head_orphan(git_repository *repo)
 	return 0;
 }
 
+int at_least_one_cb(const char *refname, void *payload)
+{
+	GIT_UNUSED(refname);
+	GIT_UNUSED(payload);
+
+	return GIT_EUSER;
+}
+
+static int repo_contains_no_reference(git_repository *repo)
+{
+	int error;
+	
+	error = git_reference_foreach(repo, GIT_REF_LISTALL, at_least_one_cb, NULL);
+
+	if (error == GIT_EUSER)
+		return 0;
+
+	return error == 0 ? 1 : error;
+}
+
 int git_repository_is_empty(git_repository *repo)
 {
-	git_reference *head = NULL, *branch = NULL;
-	int error;
+	git_reference *head = NULL;
+	int error, ref_count = 0;
 
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
-	if (git_reference_type(head) != GIT_REF_SYMBOLIC) {
-		git_reference_free(head);
-		return 0;
-	}
+	if (!(error = git_reference_type(head) == GIT_REF_SYMBOLIC))
+		goto cleanup;
 
-	if (strcmp(git_reference_target(head), GIT_REFS_HEADS_DIR "master") != 0) {
-		git_reference_free(head);
-		return 0;
-	}
+	if (!(error = strcmp(
+		git_reference_target(head),
+		GIT_REFS_HEADS_DIR "master") == 0))
+			goto cleanup;
 
-	error = git_reference_resolve(&branch, head);
+	error = repo_contains_no_reference(repo);
 
+cleanup:
 	git_reference_free(head);
-	git_reference_free(branch);
-
-	if (error == GIT_ENOTFOUND)
-		return 1;
-
-	if (error < 0)
-		return -1;
-
-	return 0;
+	return error < 0 ? -1 : error;
 }
 
 const char *git_repository_path(git_repository *repo)
