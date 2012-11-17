@@ -239,7 +239,7 @@ int main (int argc, char** argv)
   // the tagger (a git_signature - name, email, timestamp), and the tag message.
   git_tag_target((git_object **)&commit, tag);
   tname = git_tag_name(tag);    // "test"
-  ttype = git_tag_type(tag);    // GIT_OBJ_COMMIT (otype enum)
+  ttype = git_tag_target_type(tag);    // GIT_OBJ_COMMIT (otype enum)
   tmessage = git_tag_message(tag); // "tag message\n"
   printf("Tag Message: %s\n", tmessage);
 
