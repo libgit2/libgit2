@@ -750,6 +750,23 @@ static bool are_symlinks_supported(const char *wd_path)
 	return _symlinks_supported;
 }
 
+static int create_empty_file(const char *path, mode_t mode)
+{
+	int fd;
+
+	if ((fd = p_creat(path, mode)) < 0) {
+		giterr_set(GITERR_OS, "Error while creating '%s'", path);
+		return -1;
+	}
+
+	if (p_close(fd) < 0) {
+		giterr_set(GITERR_OS, "Error while closing '%s'", path);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int repo_init_config(
 	const char *repo_dir,
 	const char *work_dir,
@@ -765,6 +782,12 @@ static int repo_init_config(
 
 	if (git_buf_joinpath(&cfg_path, repo_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
 		return -1;
+
+	if (!git_path_isfile(git_buf_cstr(&cfg_path)) &&
+		create_empty_file(git_buf_cstr(&cfg_path), GIT_CONFIG_FILE_MODE) < 0) {
+			git_buf_free(&cfg_path);
+			return -1;
+	}
 
 	if (git_config_open_ondisk(&config, git_buf_cstr(&cfg_path)) < 0) {
 		git_buf_free(&cfg_path);

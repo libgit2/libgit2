@@ -189,14 +189,14 @@ GIT_EXTERN(int) git_config_add_file(
  * @param force if a config file already exists for the given
  *  priority level, replace it
  * @return 0 on success, GIT_EEXISTS when adding more than one file
- *  for a given priority level (and force_replace set to 0), or error code
+ *  for a given priority level (and force_replace set to 0),
+ *  GIT_ENOTFOUND when the file doesn't exist or error code
  */
 GIT_EXTERN(int) git_config_add_file_ondisk(
 	git_config *cfg,
 	const char *path,
 	unsigned int level,
 	int force);
-
 
 /**
  * Create a new config instance containing a single on-disk file
@@ -206,11 +206,12 @@ GIT_EXTERN(int) git_config_add_file_ondisk(
  *	- git_config_new
  *	- git_config_add_file_ondisk
  *
- * @param cfg The configuration instance to create
+ * @param out The configuration instance to create
  * @param path Path to the on-disk file to open
- * @return 0 or an error code
+ * @return 0 on success, GIT_ENOTFOUND when the file doesn't exist
+ * or an error code
  */
-GIT_EXTERN(int) git_config_open_ondisk(git_config **cfg, const char *path);
+GIT_EXTERN(int) git_config_open_ondisk(git_config **out, const char *path);
 
 /**
  * Build a single-level focused config object from a multi-level one.
