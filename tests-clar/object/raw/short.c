@@ -43,7 +43,7 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 	for (i = 0; i < MAX_OIDS; ++i) {
 		char *oid_text;
 
-		sprintf(number_buffer, "%u", (unsigned int)i);
+		p_snprintf(number_buffer, 16, "%u", (unsigned int)i);
 		git_hash_buf(&oid, number_buffer, strlen(number_buffer));
 
 		oid_text = git__malloc(GIT_OID_HEXSZ + 1);
