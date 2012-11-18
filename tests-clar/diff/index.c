@@ -35,7 +35,7 @@ void test_diff_index__0(void)
 	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
 
 	/* to generate these values:
 	 * - cd to tests/resources/status,
@@ -63,7 +63,7 @@ void test_diff_index__0(void)
 	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, b, NULL, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
 
 	/* to generate these values:
 	 * - cd to tests/resources/status,

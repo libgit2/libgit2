@@ -44,12 +44,6 @@ cleanup:
 	return error;
 }
 
-static int create_error_invalid(const char *msg)
-{
-	giterr_set(GITERR_INVALID, "Cannot create branch - %s", msg);
-	return -1;
-}
-
 static int not_a_local_branch(git_reference *ref)
 {
 	giterr_set(GITERR_INVALID, "Reference '%s' is not a local branch.", git_reference_name(ref));
@@ -60,31 +54,26 @@ int git_branch_create(
 		git_reference **ref_out,
 		git_repository *repository,
 		const char *branch_name,
-		const git_object *target,
+		const git_commit *commit,
 		int force)
 {
-	git_object *commit = NULL;
 	git_reference *branch = NULL;
 	git_buf canonical_branch_name = GIT_BUF_INIT;
 	int error = -1;
 
-	assert(branch_name && target && ref_out);
-	assert(git_object_owner(target) == repository);
-
-	if (git_object_peel(&commit, (git_object *)target, GIT_OBJ_COMMIT) < 0)
-		return create_error_invalid("The given target does not resolve to a commit");
+	assert(branch_name && commit && ref_out);
+	assert(git_object_owner((const git_object *)commit) == repository);
 
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
 	error = git_reference_create(&branch, repository,
-		git_buf_cstr(&canonical_branch_name), git_object_id(commit), force);
+		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force);
 
 	if (!error)
 		*ref_out = branch;
 
 cleanup:
-	git_object_free(commit);
 	git_buf_free(&canonical_branch_name);
 	return error;
 }

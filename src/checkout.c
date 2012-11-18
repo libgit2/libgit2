@@ -693,7 +693,7 @@ cleanup:
 
 int git_checkout_tree(
 	git_repository *repo,
-	git_object *treeish,
+	const git_object *treeish,
 	git_checkout_opts *opts)
 {
 	int error = 0;

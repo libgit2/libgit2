@@ -306,7 +306,7 @@ static int local_download_pack(
 		if (git_odb_exists(odb, &oid)) continue;
 
 		if (!git_object_lookup((git_object**)&commit, t->repo, &oid, GIT_OBJ_COMMIT)) {
-			const git_oid *tree_oid = git_commit_tree_oid(commit);
+			const git_oid *tree_oid = git_commit_tree_id(commit);
 			git_commit_free(commit);
 
 			/* Add the commit and its tree */

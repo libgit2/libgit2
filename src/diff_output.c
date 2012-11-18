@@ -441,9 +441,9 @@ static void diff_context_init(
 	git_repository *repo,
 	const git_diff_options *opts,
 	void *data,
-	git_diff_file_fn file_cb,
-	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn data_cb)
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb data_cb)
 {
 	memset(ctxt, 0, sizeof(diff_context));
 
@@ -905,9 +905,9 @@ static int diff_patch_line_cb(
 int git_diff_foreach(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_file_fn file_cb,
-	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn data_cb)
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb data_cb)
 {
 	int error = 0;
 	diff_context ctxt;
@@ -951,7 +951,7 @@ int git_diff_foreach(
 
 typedef struct {
 	git_diff_list *diff;
-	git_diff_data_fn print_cb;
+	git_diff_data_cb print_cb;
 	void *cb_data;
 	git_buf *buf;
 } diff_print_info;
@@ -1030,7 +1030,7 @@ static int print_compact(
 int git_diff_print_compact(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_data_fn print_cb)
+	git_diff_data_cb print_cb)
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
@@ -1211,7 +1211,7 @@ static int print_patch_line(
 int git_diff_print_patch(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_data_fn print_cb)
+	git_diff_data_cb print_cb)
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
@@ -1251,9 +1251,9 @@ int git_diff_blobs(
 	git_blob *new_blob,
 	const git_diff_options *options,
 	void *cb_data,
-	git_diff_file_fn file_cb,
-	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn data_cb)
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb data_cb)
 {
 	int error;
 	git_repository *repo;
@@ -1518,7 +1518,7 @@ static int print_to_buffer_cb(
 int git_diff_patch_print(
 	git_diff_patch *patch,
 	void *cb_data,
-	git_diff_data_fn print_cb)
+	git_diff_data_cb print_cb)
 {
 	int error;
 	git_buf temp = GIT_BUF_INIT;
