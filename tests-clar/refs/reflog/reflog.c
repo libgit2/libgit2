@@ -68,13 +68,13 @@ void test_refs_reflog_reflog__append_then_read(void)
 	cl_git_pass(git_reflog_read(&reflog, lookedup_ref));
 	cl_assert_equal_i(2, git_reflog_entrycount(reflog));
 
-	entry = git_reflog_entry_byindex(reflog, 0);
+	entry = git_reflog_entry_byindex(reflog, 1);
 	assert_signature(committer, entry->committer);
 	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
 	cl_assert(git_oid_cmp(&oid, &entry->oid_cur) == 0);
 	cl_assert(entry->msg == NULL);
 
-	entry = git_reflog_entry_byindex(reflog, 1);
+	entry = git_reflog_entry_byindex(reflog, 0);
 	assert_signature(committer, entry->committer);
 	cl_assert(git_oid_cmp(&oid, &entry->oid_old) == 0);
 	cl_assert(git_oid_cmp(&oid, &entry->oid_cur) == 0);
