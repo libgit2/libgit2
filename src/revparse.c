@@ -268,7 +268,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, unsigned i
 		goto cleanup;
 
 	} else {
-		int i;
+		unsigned int i;
 		git_time commit_time;
 
 		for (i = 0; i < numentries; i++) {

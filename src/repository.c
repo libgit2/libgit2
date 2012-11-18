@@ -1264,7 +1264,7 @@ int git_repository_head_orphan(git_repository *repo)
 	return 0;
 }
 
-int at_least_one_cb(const char *refname, void *payload)
+static int at_least_one_cb(const char *refname, void *payload)
 {
 	GIT_UNUSED(refname);
 	GIT_UNUSED(payload);
@@ -1287,7 +1287,7 @@ static int repo_contains_no_reference(git_repository *repo)
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head = NULL;
-	int error, ref_count = 0;
+	int error;
 
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;

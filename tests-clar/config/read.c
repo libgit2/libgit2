@@ -446,7 +446,6 @@ void test_config_read__can_load_and_parse_an_empty_config_file(void)
 void test_config_read__cannot_load_a_non_existing_config_file(void)
 {
 	git_config *cfg;
-	int i;
 
 	cl_assert_equal_i(GIT_ENOTFOUND, git_config_open_ondisk(&cfg, "./no.config"));
 }
