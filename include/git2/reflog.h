@@ -107,7 +107,8 @@ GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog
  *
  * @param rewrite_previous_entry 1 to rewrite the history; 0 otherwise.
  *
- * @return 0 on success or an error code.
+ * @return 0 on success, GIT_ENOTFOUND if the entry doesn't exist
+ * or an error code.
  */
 GIT_EXTERN(int) git_reflog_drop(
 	git_reflog *reflog,
