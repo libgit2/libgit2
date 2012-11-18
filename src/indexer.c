@@ -249,8 +249,10 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 
 	git_oid_cpy(&pentry->sha1, &oid);
 	pentry->offset = entry_start;
-	if (git_vector_insert(&idx->pack->cache, pentry) < 0)
+	if (git_vector_insert(&idx->pack->cache, pentry) < 0) {
+		git__free(pentry);
 		goto on_error;
+	}
 
 	git_oid_cpy(&entry->oid, &oid);
 	entry->crc = crc32(0L, Z_NULL, 0);
@@ -275,7 +277,6 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 
 on_error:
 	git__free(entry);
-	git__free(pentry);
 	git__free(obj->data);
 	return -1;
 }
