@@ -27,9 +27,9 @@ typedef struct {
 	git_repository   *repo;
 	git_diff_list    *diff;
 	const git_diff_options *opts;
-	git_diff_file_fn  file_cb;
-	git_diff_hunk_fn  hunk_cb;
-	git_diff_data_fn  data_cb;
+	git_diff_file_cb  file_cb;
+	git_diff_hunk_cb  hunk_cb;
+	git_diff_data_cb  data_cb;
 	void *cb_data;
 	int   cb_error;
 	git_diff_range cb_range;

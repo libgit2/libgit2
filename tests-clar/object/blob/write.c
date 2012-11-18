@@ -33,7 +33,7 @@ void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_file_lo
 {
 	repo = cl_git_sandbox_init(WORKDIR);
 
-	assert_blob_creation(WORKDIR "/test.txt", "test.txt", &git_blob_create_fromfile);
+	assert_blob_creation(WORKDIR "/test.txt", "test.txt", &git_blob_create_fromworkdir);
 }
 
 void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_absolute_filepath_pointing_outside_of_the_working_directory(void)

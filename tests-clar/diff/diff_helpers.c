@@ -21,7 +21,7 @@ git_tree *resolve_commit_oid_to_tree(
 	return tree;
 }
 
-int diff_file_fn(
+int diff_file_cb(
 	void *cb_data,
 	const git_diff_delta *delta,
 	float progress)
@@ -42,7 +42,7 @@ int diff_file_fn(
 	return 0;
 }
 
-int diff_hunk_fn(
+int diff_hunk_cb(
 	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
@@ -61,7 +61,7 @@ int diff_hunk_fn(
 	return 0;
 }
 
-int diff_line_fn(
+int diff_line_cb(
 	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
@@ -104,9 +104,9 @@ int diff_line_fn(
 int diff_foreach_via_iterator(
 	git_diff_list *diff,
 	void *data,
-	git_diff_file_fn file_cb,
-	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn line_cb)
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb line_cb)
 {
 	size_t d, num_d = git_diff_num_deltas(diff);
 

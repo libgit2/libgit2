@@ -106,6 +106,7 @@ typedef enum {
  * - max_size: maximum blob size to diff, above this treated as binary
  */
 typedef struct {
+	unsigned int version;		/**< version for the struct */
 	uint32_t flags;				/**< defaults to GIT_DIFF_NORMAL */
 	uint16_t context_lines;		/**< defaults to 3 */
 	uint16_t interhunk_lines;	/**< defaults to 0 */
@@ -186,7 +187,7 @@ typedef struct {
 /**
  * When iterating over a diff, callback that will be made per file.
  */
-typedef int (*git_diff_file_fn)(
+typedef int (*git_diff_file_cb)(
 	void *cb_data,
 	const git_diff_delta *delta,
 	float progress);
@@ -204,7 +205,7 @@ typedef struct {
 /**
  * When iterating over a diff, callback that will be made per hunk.
  */
-typedef int (*git_diff_hunk_fn)(
+typedef int (*git_diff_hunk_cb)(
 	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
@@ -215,20 +216,20 @@ typedef int (*git_diff_hunk_fn)(
  * Line origin constants.
  *
  * These values describe where a line came from and will be passed to
- * the git_diff_data_fn when iterating over a diff.  There are some
+ * the git_diff_data_cb when iterating over a diff.  There are some
  * special origin constants at the end that are used for the text
  * output callbacks to demarcate lines that are actually part of
  * the file or hunk headers.
  */
 typedef enum {
-	/* These values will be sent to `git_diff_data_fn` along with the line */
+	/* These values will be sent to `git_diff_data_cb` along with the line */
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
 	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< Removed line w/o LF & added one with */
 	GIT_DIFF_LINE_DEL_EOFNL = '\0', /**< LF was removed at end of file */
 
-	/* The following values will only be sent to a `git_diff_data_fn` when
+	/* The following values will only be sent to a `git_diff_data_cb` when
 	 * the content of a diff is being formatted (eg. through
 	 * git_diff_print_patch() or git_diff_print_compact(), for instance).
 	 */
@@ -245,7 +246,7 @@ typedef enum {
  * of text.  This uses some extra GIT_DIFF_LINE_... constants for output
  * of lines of file and hunk headers.
  */
-typedef int (*git_diff_data_fn)(
+typedef int (*git_diff_data_cb)(
 	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
@@ -474,9 +475,9 @@ GIT_EXTERN(int) git_diff_find_similar(
 GIT_EXTERN(int) git_diff_foreach(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_file_fn file_cb,
-	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn line_cb);
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb line_cb);
 
 /**
  * Iterate over a diff generating text output like "git diff --name-status".
@@ -492,7 +493,7 @@ GIT_EXTERN(int) git_diff_foreach(
 GIT_EXTERN(int) git_diff_print_compact(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_data_fn print_cb);
+	git_diff_data_cb print_cb);
 
 /**
  * Look up the single character abbreviation for a delta status code.
@@ -528,7 +529,7 @@ GIT_EXTERN(char) git_diff_status_char(git_delta_t status);
 GIT_EXTERN(int) git_diff_print_patch(
 	git_diff_list *diff,
 	void *cb_data,
-	git_diff_data_fn print_cb);
+	git_diff_data_cb print_cb);
 
 /**
  * Query how many diff records are there in a diff list.
@@ -680,7 +681,7 @@ GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
 GIT_EXTERN(int) git_diff_patch_print(
 	git_diff_patch *patch,
 	void *cb_data,
-	git_diff_data_fn print_cb);
+	git_diff_data_cb print_cb);
 
 /**
  * Get the content of a patch as a single diff text.
@@ -719,9 +720,9 @@ GIT_EXTERN(int) git_diff_blobs(
 	git_blob *new_blob,
 	const git_diff_options *options,
 	void *cb_data,
-	git_diff_file_fn file_cb,
-	git_diff_hunk_fn hunk_cb,
-	git_diff_data_fn line_cb);
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb line_cb);
 
 GIT_END_DECL
 
