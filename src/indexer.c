@@ -196,6 +196,11 @@ static int store_delta(git_indexer_stream *idx, git_off_t entry_start, size_t en
 			return (int)base_off;
 	}
 
+	if(!idx->pack->stream) {
+		error = packfile_setup_stream(idx->pack, entry_size);
+		if (error < 0)
+			return error;
+	}
 	error = packfile_unpack_compressed(&obj, idx->pack, &w, &idx->off, entry_size, type);
 	if (error == GIT_EBUFS) {
 		idx->off = entry_start;
@@ -370,6 +375,11 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
 			error = store_delta(idx, entry_start, entry_size, type);
 			if (error == GIT_EBUFS) {
+				if(idx->pack->stream) {
+					stats->current_object_size = entry_size;
+					stats->current_object_avail_bytes = entry_size - idx->pack->stream->avail_out;
+					do_progress_callback(idx, stats);
+				}
 				idx->off = entry_start;
 				return 0;
 			}
@@ -377,6 +387,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 				return error;
 
 			stats->received_objects++;
+			stats->current_object_avail_bytes = entry_size;
+			stats->current_object_size = entry_size;
 			do_progress_callback(idx, stats);
 			continue;
 		}
@@ -384,6 +396,9 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		idx->off = entry_start;
 		error = git_packfile_unpack(&obj, idx->pack, &idx->off);
 		if (error == GIT_EBUFS) {
+			stats->current_object_size = entry_size;
+			stats->current_object_avail_bytes = entry_size - idx->pack->stream->avail_out;
+			do_progress_callback(idx, stats);
 			idx->off = entry_start;
 			return 0;
 		}
@@ -395,6 +410,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		git__free(obj.data);
 
+		stats->current_object_avail_bytes = entry_size;
+		stats->current_object_size = entry_size;
 		stats->indexed_objects = (unsigned int)++processed;
 		stats->received_objects++;
 		do_progress_callback(idx, stats);

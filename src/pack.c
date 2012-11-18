@@ -308,6 +308,12 @@ static int packfile_unpack_delta(
 	if (error < 0)
 		return error;
 
+	if(!p->stream) {
+		error = packfile_setup_stream(p, delta_size);
+		if (error < 0)
+			return error;
+	}
+
 	error = packfile_unpack_compressed(&delta, p, w_curs, curpos, delta_size, delta_type);
 	git_mwindow_close(w_curs);
 	if (error < 0) {
@@ -365,6 +371,11 @@ int git_packfile_unpack(
 	case GIT_OBJ_TREE:
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TAG:
+		if(!p->stream) {
+			error = packfile_setup_stream(p, size);
+			if(error < 0)
+				break;
+		}
 		error = packfile_unpack_compressed(
 				obj, p, &w_curs, &curpos,
 				size, type);
@@ -391,6 +402,55 @@ static void use_git_free(void *opaq, void *ptr)
 	git__free(ptr);
 }
 
+int packfile_setup_stream(struct git_pack_file *p, size_t size)
+{
+	int st;
+
+	if(p->stream)
+		packfile_finish_stream(p);
+
+	p->stream_out = git__calloc(1, size + 1);
+	GITERR_CHECK_ALLOC(p->stream_out);
+
+	p->stream = (z_stream*)git__calloc(1, sizeof(z_stream));
+	GITERR_CHECK_ALLOC(p->stream);
+
+	memset(p->stream, 0, sizeof(z_stream));
+	p->stream->next_out = p->stream_out;
+	p->stream->avail_out = (uInt)size + 1;
+	p->stream->zalloc = use_git_alloc;
+	p->stream->zfree = use_git_free;
+	p->stream_pos = 0;
+
+	st = inflateInit(p->stream);
+	if (st != Z_OK) {
+		git__free(p->stream_out);
+		git__free(p->stream);
+		p->stream = NULL;
+		p->stream_out = NULL;
+		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		return -1;
+	}
+
+	return 0;
+}
+
+void packfile_finish_stream(struct git_pack_file* p)
+{
+	if(!p->stream)
+		return;
+
+	inflateEnd(p->stream);
+
+	if (p->stream_out) {
+		git__free(p->stream_out);
+		p->stream_out = NULL;
+	}
+
+	git__free(p->stream);
+	p->stream = NULL;
+}
+
 int packfile_unpack_compressed(
 	git_rawobj *obj,
 	struct git_pack_file *p,
@@ -400,55 +460,37 @@ int packfile_unpack_compressed(
 	git_otype type)
 {
 	int st;
-	z_stream stream;
-	unsigned char *buffer, *in;
+	unsigned char *in;
 
-	buffer = git__calloc(1, size + 1);
-	GITERR_CHECK_ALLOC(buffer);
-
-	memset(&stream, 0, sizeof(stream));
-	stream.next_out = buffer;
-	stream.avail_out = (uInt)size + 1;
-	stream.zalloc = use_git_alloc;
-	stream.zfree = use_git_free;
-
-	st = inflateInit(&stream);
-	if (st != Z_OK) {
-		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
-
-		return -1;
-	}
+	*curpos += p->stream_pos;
 
 	do {
-		in = pack_window_open(p, w_curs, *curpos, &stream.avail_in);
-		stream.next_in = in;
-		st = inflate(&stream, Z_FINISH);
+		in = pack_window_open(p, w_curs, *curpos, &p->stream->avail_in);
+		p->stream->next_in = in;
+		st = inflate(p->stream, Z_FINISH);
 		git_mwindow_close(w_curs);
 
-		if (!stream.avail_out)
+		if (!p->stream->avail_out)
 			break; /* the payload is larger than it should be */
 
-		if (st == Z_BUF_ERROR && in == NULL) {
-			inflateEnd(&stream);
-			git__free(buffer);
+		if (st == Z_BUF_ERROR && in == NULL)
 			return GIT_EBUFS;
-		}
 
-		*curpos += stream.next_in - in;
+		p->stream_pos += p->stream->next_in - in;
+		*curpos += p->stream->next_in - in;
 	} while (st == Z_OK || st == Z_BUF_ERROR);
 
-	inflateEnd(&stream);
-
-	if ((st != Z_STREAM_END) || stream.total_out != size) {
-		git__free(buffer);
+	if ((st != Z_STREAM_END) || p->stream->total_out != size) {
+		packfile_finish_stream(p);
 		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
 		return -1;
 	}
 
 	obj->type = type;
 	obj->len = size;
-	obj->data = buffer;
+	obj->data = p->stream_out;
+	p->stream_out = NULL;
+	packfile_finish_stream(p);
 	return 0;
 }
 
@@ -537,6 +579,9 @@ void packfile_free(struct git_pack_file *p)
 {
 	assert(p);
 
+	if(p->stream)
+		packfile_finish_stream(p);
+
 	/* clear_delta_base_cache(); */
 	git_mwindow_free_all(&p->mwf);
 	git_mwindow_file_deregister(&p->mwf);
@@ -558,6 +603,7 @@ static int packfile_open(struct git_pack_file *p)
 	unsigned char *idx_sha1;
 
 	assert(p->index_map.data);
+	p->stream = NULL;
 
 	if (!p->index_map.data && pack_index_open(p) < 0)
 		return git_odb__error_notfound("failed to open packfile", NULL);
