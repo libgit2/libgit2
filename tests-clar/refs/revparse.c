@@ -7,9 +7,6 @@
 
 static git_repository *g_repo;
 static git_object *g_obj;
-static char g_orig_tz[16] = {0};
-
-
 
 /* Helpers */
 static void test_object_inrepo(const char *spec, const char *expected_oid, git_repository *repo)
@@ -37,19 +34,12 @@ static void test_object(const char *spec, const char *expected_oid)
 
 void test_refs_revparse__initialize(void)
 {
-	char *tz = cl_getenv("TZ");
-	if (tz)
-		strcpy(g_orig_tz, tz);
-	cl_setenv("TZ", "UTC");
-
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 }
 
 void test_refs_revparse__cleanup(void)
 {
 	git_repository_free(g_repo);
-	g_obj = NULL;
-	cl_setenv("TZ", g_orig_tz);
 }
 
 void test_refs_revparse__nonexistant_object(void)
