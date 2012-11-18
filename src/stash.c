@@ -600,7 +600,7 @@ int git_stash_foreach(
 
 	max = git_reflog_entrycount(reflog);
 	for (i = 0; i < max; i++) {
-		entry = git_reflog_entry_byindex(reflog, max - i - 1);
+		entry = git_reflog_entry_byindex(reflog, i);
 		
 		if (callback(i,
 			git_reflog_entry_msg(entry),
@@ -642,7 +642,7 @@ int git_stash_drop(
 		goto cleanup;
 	}
 
-	if ((error = git_reflog_drop(reflog, max - index - 1, true)) < 0)
+	if ((error = git_reflog_drop(reflog, index, true)) < 0)
 		goto cleanup;
 
 	if ((error = git_reflog_write(reflog)) < 0)

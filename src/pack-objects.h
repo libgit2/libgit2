@@ -71,11 +71,11 @@ struct git_packbuilder {
 	git_cond progress_cond;
 
 	/* configs */
-	unsigned long delta_cache_size;
-	unsigned long max_delta_cache_size;
-	unsigned long cache_max_small_delta_size;
-	unsigned long big_file_threshold;
-	unsigned long window_memory_limit;
+	uint64_t delta_cache_size;
+	uint64_t max_delta_cache_size;
+	uint64_t cache_max_small_delta_size;
+	uint64_t big_file_threshold;
+	uint64_t window_memory_limit;
 
 	int nr_threads; /* nr of threads to use */
 

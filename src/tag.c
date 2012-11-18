@@ -39,7 +39,7 @@ const git_oid *git_tag_target_oid(git_tag *t)
 	return &t->target;
 }
 
-git_otype git_tag_type(git_tag *t)
+git_otype git_tag_target_type(git_tag *t)
 {
 	assert(t);
 	return t->type;

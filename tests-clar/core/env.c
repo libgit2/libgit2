@@ -84,13 +84,15 @@ void test_core_env__0(void)
 		cl_git_mkfile(path.ptr, "find me");
 		git_buf_rtruncate_at_char(&path, '/');
 
-		cl_git_fail(git_futils_find_global_file(&found, testfile));
+		cl_assert_equal_i(
+			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
 
 		setenv_and_check("HOME", path.ptr);
 		cl_git_pass(git_futils_find_global_file(&found, testfile));
 
 		cl_setenv("HOME", env_save[0]);
-		cl_git_fail(git_futils_find_global_file(&found, testfile));
+		cl_assert_equal_i(
+			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
 
 #ifdef GIT_WIN32
 		setenv_and_check("HOMEDRIVE", NULL);
@@ -106,7 +108,8 @@ void test_core_env__0(void)
 			if (root >= 0) {
 				setenv_and_check("USERPROFILE", NULL);
 
-				cl_git_fail(git_futils_find_global_file(&found, testfile));
+				cl_assert_equal_i(
+					GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
 
 				old = path.ptr[root];
 				path.ptr[root] = '\0';
@@ -128,7 +131,8 @@ void test_core_env__1(void)
 {
 	git_buf path = GIT_BUF_INIT;
 
-	cl_must_fail(git_futils_find_global_file(&path, "nonexistentfile"));
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_futils_find_global_file(&path, "nonexistentfile"));
 
 	cl_git_pass(cl_setenv("HOME", "doesnotexist"));
 #ifdef GIT_WIN32
@@ -136,7 +140,8 @@ void test_core_env__1(void)
 	cl_git_pass(cl_setenv("USERPROFILE", "doesnotexist"));
 #endif
 
-	cl_must_fail(git_futils_find_global_file(&path, "nonexistentfile"));
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_futils_find_global_file(&path, "nonexistentfile"));
 
 	cl_git_pass(cl_setenv("HOME", NULL));
 #ifdef GIT_WIN32
@@ -144,13 +149,16 @@ void test_core_env__1(void)
 	cl_git_pass(cl_setenv("USERPROFILE", NULL));
 #endif
 
-	cl_must_fail(git_futils_find_global_file(&path, "nonexistentfile"));
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_futils_find_global_file(&path, "nonexistentfile"));
 
-	cl_must_fail(git_futils_find_system_file(&path, "nonexistentfile"));
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_futils_find_system_file(&path, "nonexistentfile"));
 
 #ifdef GIT_WIN32
 	cl_git_pass(cl_setenv("PROGRAMFILES", NULL));
-	cl_must_fail(git_futils_find_system_file(&path, "nonexistentfile"));
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_futils_find_system_file(&path, "nonexistentfile"));
 #endif
 
 	git_buf_free(&path);
