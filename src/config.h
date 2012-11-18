@@ -32,4 +32,17 @@ extern int git_config_rename_section(
 	const char *old_section_name,	/* eg "branch.dummy" */
 	const char *new_section_name);	/* NULL to drop the old section */
 
+/**
+ * Create a configuration file backend for ondisk files
+ *
+ * These are the normal `.gitconfig` files that Core Git
+ * processes. Note that you first have to add this file to a
+ * configuration object before you can query it for configuration
+ * variables.
+ *
+ * @param out the new backend
+ * @param path where the config file is located
+ */
+extern int git_config_file__ondisk(struct git_config_file **out, const char *path);
+
 #endif

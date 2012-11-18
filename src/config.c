@@ -90,6 +90,13 @@ int git_config_add_file_ondisk(
 	git_config_file *file = NULL;
 	int res;
 
+	assert(cfg && path);
+
+	if (!git_path_isfile(path)) {
+		giterr_set(GITERR_CONFIG, "File '%s' doesn't exists.", path);
+		return GIT_ENOTFOUND;
+	}
+
 	if (git_config_file__ondisk(&file, path) < 0)
 		return -1;
 
@@ -105,17 +112,22 @@ int git_config_add_file_ondisk(
 	return 0;
 }
 
-int git_config_open_ondisk(git_config **cfg, const char *path)
+int git_config_open_ondisk(git_config **out, const char *path)
 {
-	if (git_config_new(cfg) < 0)
+	int error;
+	git_config *config;
+
+	*out = NULL;
+
+	if (git_config_new(&config) < 0)
 		return -1;
 
-	if (git_config_add_file_ondisk(*cfg, path, GIT_CONFIG_LEVEL_LOCAL, 0) < 0) {
-		git_config_free(*cfg);
-		return -1;
-	}
+	if ((error = git_config_add_file_ondisk(config, path, GIT_CONFIG_LEVEL_LOCAL, 0)) < 0)
+		git_config_free(config);
+	else
+		*out = config;
 
-	return 0;
+	return error;
 }
 
 static int find_internal_file_by_level(

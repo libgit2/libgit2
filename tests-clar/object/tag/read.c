@@ -38,7 +38,7 @@ void test_object_tag_read__parse(void)
    cl_git_pass(git_tag_lookup(&tag1, g_repo, &id1));
 
    cl_assert_equal_s(git_tag_name(tag1), "test");
-   cl_assert(git_tag_type(tag1) == GIT_OBJ_TAG);
+   cl_assert(git_tag_target_type(tag1) == GIT_OBJ_TAG);
 
    cl_git_pass(git_tag_target((git_object **)&tag2, tag1));
    cl_assert(tag2 != NULL);

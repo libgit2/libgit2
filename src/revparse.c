@@ -201,7 +201,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 
 	numentries  = git_reflog_entrycount(reflog);
 
-	for (i = numentries - 1; i >= 0; i--) {
+	for (i = 0; i < numentries; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
 		msg = git_reflog_entry_msg(entry);
 		
@@ -263,7 +263,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, unsigned i
 		}
 
 		entry = git_reflog_entry_byindex(reflog, identifier);
-		git_oid_cpy(oid, git_reflog_entry_oidold(entry));
+		git_oid_cpy(oid, git_reflog_entry_oidnew(entry));
 		error = 0;
 		goto cleanup;
 
@@ -271,7 +271,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, unsigned i
 		int i;
 		git_time commit_time;
 
-		for (i = numentries - 1; i >= 0; i--) {
+		for (i = 0; i < numentries; i++) {
 			entry = git_reflog_entry_byindex(reflog, i);
 			commit_time = git_reflog_entry_committer(entry)->when;
 					
