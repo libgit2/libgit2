@@ -580,7 +580,7 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 	 */
 
 	/* write the blob to disk and get the oid */
-	if ((error = git_blob_create_fromfile(&oid, INDEX_OWNER(index), rel_path)) < 0)
+	if ((error = git_blob_create_fromworkdir(&oid, INDEX_OWNER(index), rel_path)) < 0)
 		return error;
 
 	entry = git__calloc(1, sizeof(git_index_entry));

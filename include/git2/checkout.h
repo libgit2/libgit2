@@ -146,8 +146,12 @@ typedef enum {
  * Checkout options structure
  *
  * Use zeros to indicate default settings.
+ * This needs to be initialized with the `GIT_CHECKOUT_OPTS_INIT` macro:
+ *
+ *		git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
  */
 typedef struct git_checkout_opts {
+	unsigned int version;
 	unsigned int checkout_strategy; /** default will be a dry run */
 
 	int disable_filters; /** don't apply filters like CRLF conversion */
@@ -181,6 +185,8 @@ typedef struct git_checkout_opts {
 	 */
 	git_strarray paths;
 } git_checkout_opts;
+
+#define GIT_CHECKOUT_OPTS_INIT {1, 0}
 
 /**
  * Updates files in the index and the working tree to match the content of the
@@ -223,7 +229,7 @@ GIT_EXTERN(int) git_checkout_index(
  */
 GIT_EXTERN(int) git_checkout_tree(
 	git_repository *repo,
-	git_object *treeish,
+	const git_object *treeish,
 	git_checkout_opts *opts);
 
 /** @} */

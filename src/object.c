@@ -374,7 +374,7 @@ static int dereference_object(git_object **dereferenced, git_object *obj)
 
 int git_object_peel(
 	git_object **peeled,
-	git_object *object,
+	const git_object *object,
 	git_otype target_type)
 {
 	git_object *source, *deref = NULL;
@@ -382,9 +382,9 @@ int git_object_peel(
 	assert(object && peeled);
 
 	if (git_object_type(object) == target_type)
-		return git_object__dup(peeled, object);
+		return git_object__dup(peeled, (git_object *)object);
 
-	source = object;
+	source = (git_object *)object;
 
 	while (!dereference_object(&deref, source)) {
 

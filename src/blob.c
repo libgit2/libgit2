@@ -19,10 +19,10 @@ const void *git_blob_rawcontent(git_blob *blob)
 	return blob->odb_object->raw.data;
 }
 
-size_t git_blob_rawsize(git_blob *blob)
+git_off_t git_blob_rawsize(git_blob *blob)
 {
 	assert(blob);
-	return blob->odb_object->raw.len;
+	return (git_off_t)blob->odb_object->raw.len;
 }
 
 int git_blob__getbuf(git_buf *buffer, git_blob *blob)
@@ -205,7 +205,7 @@ static int blob_create_internal(git_oid *oid, git_repository *repo, const char *
 	return error;
 }
 
-int git_blob_create_fromfile(git_oid *oid, git_repository *repo, const char *path)
+int git_blob_create_fromworkdir(git_oid *oid, git_repository *repo, const char *path)
 {
 	git_buf full_path = GIT_BUF_INIT;
 	const char *workdir;

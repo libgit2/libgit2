@@ -37,7 +37,7 @@ void test_diff_tree__0(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
@@ -59,7 +59,7 @@ void test_diff_tree__0(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
 
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
@@ -94,17 +94,18 @@ void test_diff_tree__options(void)
 	int test_ab_or_cd[] = { 0, 0, 0, 0, 1, 1, 1, 1, 1 };
 	git_diff_options test_options[] = {
 		/* a vs b tests */
-		{ GIT_DIFF_NORMAL, 1, 1, NULL, NULL, {0} },
-		{ GIT_DIFF_NORMAL, 3, 1, NULL, NULL, {0} },
-		{ GIT_DIFF_REVERSE, 2, 1, NULL, NULL, {0} },
-		{ GIT_DIFF_FORCE_TEXT, 2, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_NORMAL, 1, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_NORMAL, 3, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_REVERSE, 2, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_FORCE_TEXT, 2, 1, NULL, NULL, {0} },
 		/* c vs d tests */
-		{ GIT_DIFF_NORMAL, 3, 1, NULL, NULL, {0} },
-		{ GIT_DIFF_IGNORE_WHITESPACE, 3, 1, NULL, NULL, {0} },
-		{ GIT_DIFF_IGNORE_WHITESPACE_CHANGE, 3, 1, NULL, NULL, {0} },
-		{ GIT_DIFF_IGNORE_WHITESPACE_EOL, 3, 1, NULL, NULL, {0} },
-		{ GIT_DIFF_IGNORE_WHITESPACE | GIT_DIFF_REVERSE, 1, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_NORMAL, 3, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_IGNORE_WHITESPACE, 3, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_IGNORE_WHITESPACE_CHANGE, 3, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_IGNORE_WHITESPACE_EOL, 3, 1, NULL, NULL, {0} },
+		{ 1, GIT_DIFF_IGNORE_WHITESPACE | GIT_DIFF_REVERSE, 1, 1, NULL, NULL, {0} },
 	};
+
 	/* to generate these values:
 	 * - cd to tests/resources/attr,
 	 * - mv .gitted .git
@@ -112,6 +113,7 @@ void test_diff_tree__options(void)
 	 * - mv .git .gitted
 	 */
 #define EXPECT_STATUS_ADM(ADDS,DELS,MODS) { 0, ADDS, DELS, MODS, 0, 0, 0, 0, 0 }
+
 	diff_expects test_expects[] = {
 		/* a vs b tests */
 		{ 5, 0, EXPECT_STATUS_ADM(3, 0, 2), 4, 0, 0, 51, 2, 46, 3 },
@@ -146,7 +148,7 @@ void test_diff_tree__options(void)
 			cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, d, &opts));
 
 		cl_git_pass(git_diff_foreach(
-			diff, &actual, diff_file_fn, diff_hunk_fn, diff_line_fn));
+			diff, &actual, diff_file_cb, diff_hunk_cb, diff_line_cb));
 
 		expected = &test_expects[i];
 		cl_assert_equal_i(actual.files,     expected->files);
@@ -190,7 +192,7 @@ void test_diff_tree__bare(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
 
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
@@ -240,7 +242,7 @@ void test_diff_tree__merge(void)
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_foreach(
-		diff1, &exp, diff_file_fn, diff_hunk_fn, diff_line_fn));
+		diff1, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
 
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
