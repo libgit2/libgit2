@@ -39,6 +39,12 @@ void test_object_tree_write__from_memory(void)
 		&bid, GIT_FILEMODE_BLOB));
 	cl_git_fail(git_treebuilder_insert(NULL, builder, "/",
 		&bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, ".git",
+		&bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, "..",
+		&bid, GIT_FILEMODE_BLOB));
+	cl_git_fail(git_treebuilder_insert(NULL, builder, ".",
+		&bid, GIT_FILEMODE_BLOB));
 	cl_git_fail(git_treebuilder_insert(NULL, builder, "folder/new.txt",
 		&bid, GIT_FILEMODE_BLOB));
 
