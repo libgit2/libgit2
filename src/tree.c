@@ -374,6 +374,9 @@ static int append_entry(
 {
 	git_tree_entry *entry;
 
+	if (!valid_entry_name(filename))
+		return tree_error("Failed to insert entry. Invalid name for a tree entry");
+
 	entry = alloc_entry(filename);
 	GITERR_CHECK_ALLOC(entry);
 
