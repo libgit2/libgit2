@@ -482,7 +482,7 @@ static void fill_index_wth_head_entries(git_repository *repo, git_index *index)
 	git_commit *commit;
 	git_tree *tree;
 
-	cl_git_pass(git_reference_name_to_oid(&oid, repo, "HEAD"));
+	cl_git_pass(git_reference_name_to_id(&oid, repo, "HEAD"));
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_commit_tree(&tree, commit));
 

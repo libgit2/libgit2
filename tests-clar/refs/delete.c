@@ -62,7 +62,7 @@ void test_refs_delete__packed_only(void)
 	git_oid_fromstr(&id, current_master_tip);
 
 	/* Create and write the new object id reference */
-	cl_git_pass(git_reference_create_oid(&ref, g_repo, new_ref, &id, 0));
+	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &id, 0));
 	git_reference_free(ref);
 
 	/* Lookup the reference */

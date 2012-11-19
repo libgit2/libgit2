@@ -1074,7 +1074,7 @@ int git_reference_lookup(git_reference **ref_out,
 	return git_reference_lookup_resolved(ref_out, repo, name, 0);
 }
 
-int git_reference_name_to_oid(
+int git_reference_name_to_id(
 	git_oid *out, git_repository *repo, const char *name)
 {
 	int error;
@@ -1083,7 +1083,7 @@ int git_reference_name_to_oid(
 	if ((error = git_reference_lookup_resolved(&ref, repo, name, -1)) < 0)
 		return error;
 
-	git_oid_cpy(out, git_reference_oid(ref));
+	git_oid_cpy(out, git_reference_target(ref));
 	git_reference_free(ref);
 	return 0;
 }
@@ -1153,7 +1153,7 @@ int git_reference_lookup_resolved(
 /**
  * Getters
  */
-git_ref_t git_reference_type(git_reference *ref)
+git_ref_t git_reference_type(const git_reference *ref)
 {
 	assert(ref);
 
@@ -1172,19 +1172,19 @@ int git_reference_is_packed(git_reference *ref)
 	return !!(ref->flags & GIT_REF_PACKED);
 }
 
-const char *git_reference_name(git_reference *ref)
+const char *git_reference_name(const git_reference *ref)
 {
 	assert(ref);
 	return ref->name;
 }
 
-git_repository *git_reference_owner(git_reference *ref)
+git_repository *git_reference_owner(const git_reference *ref)
 {
 	assert(ref);
 	return ref->owner;
 }
 
-const git_oid *git_reference_oid(git_reference *ref)
+const git_oid *git_reference_target(const git_reference *ref)
 {
 	assert(ref);
 
@@ -1194,7 +1194,7 @@ const git_oid *git_reference_oid(git_reference *ref)
 	return &ref->target.oid;
 }
 
-const char *git_reference_target(git_reference *ref)
+const char *git_reference_symbolic_target(const git_reference *ref)
 {
 	assert(ref);
 
@@ -1204,7 +1204,7 @@ const char *git_reference_target(git_reference *ref)
 	return ref->target.symbolic;
 }
 
-int git_reference_create_symbolic(
+int git_reference_symbolic_create(
 	git_reference **ref_out,
 	git_repository *repo,
 	const char *name,
@@ -1231,7 +1231,7 @@ int git_reference_create_symbolic(
 
 	/* set the target; this will normalize the name automatically
 	 * and write the reference on disk */
-	if (git_reference_set_target(ref, target) < 0) {
+	if (git_reference_symbolic_set_target(ref, target) < 0) {
 		git_reference_free(ref);
 		return -1;
 	}
@@ -1244,7 +1244,7 @@ int git_reference_create_symbolic(
 	return 0;
 }
 
-int git_reference_create_oid(
+int git_reference_create(
 	git_reference **ref_out,
 	git_repository *repo,
 	const char *name,
@@ -1270,7 +1270,7 @@ int git_reference_create_oid(
 	ref->flags |= GIT_REF_OID;
 
 	/* set the oid; this will write the reference on disk */
-	if (git_reference_set_oid(ref, id) < 0) {
+	if (git_reference_set_target(ref, id) < 0) {
 		git_reference_free(ref);
 		return -1;
 	}
@@ -1292,7 +1292,7 @@ int git_reference_create_oid(
  * We do not repack packed references because of performance
  * reasons.
  */
-int git_reference_set_oid(git_reference *ref, const git_oid *id)
+int git_reference_set_target(git_reference *ref, const git_oid *id)
 {
 	git_odb *odb = NULL;
 
@@ -1328,7 +1328,7 @@ int git_reference_set_oid(git_reference *ref, const git_oid *id)
  * a pack. We just change the target in memory
  * and overwrite the file on disk.
  */
-int git_reference_set_target(git_reference *ref, const char *target)
+int git_reference_symbolic_set_target(git_reference *ref, const char *target)
 {
 	char normalized[GIT_REFNAME_MAX];
 
@@ -1397,10 +1397,10 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	 * Finally we can create the new reference.
 	 */
 	if (ref->flags & GIT_REF_SYMBOLIC) {
-		result = git_reference_create_symbolic(
+		result = git_reference_symbolic_create(
 			NULL, ref->owner, new_name, ref->target.symbolic, force);
 	} else {
-		result = git_reference_create_oid(
+		result = git_reference_create(
 			NULL, ref->owner, new_name, &ref->target.oid, force);
 	}
 
@@ -1444,10 +1444,10 @@ rollback:
 	 * Try to create the old reference again, ignore failures
 	 */
 	if (ref->flags & GIT_REF_SYMBOLIC)
-		git_reference_create_symbolic(
+		git_reference_symbolic_create(
 			NULL, ref->owner, ref->name, ref->target.symbolic, 0);
 	else
-		git_reference_create_oid(
+		git_reference_create(
 			NULL, ref->owner, ref->name, &ref->target.oid, 0);
 
 	/* The reference is no longer packed */
@@ -1457,7 +1457,7 @@ rollback:
 	return -1;
 }
 
-int git_reference_resolve(git_reference **ref_out, git_reference *ref)
+int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
 {
 	if (ref->flags & GIT_REF_OID)
 		return git_reference_lookup(ref_out, ref->owner, ref->name);
@@ -1797,7 +1797,7 @@ int git_reference__update(git_repository *repo, const git_oid *oid, const char *
 	 * a new reference and that's it */
 	if (res == GIT_ENOTFOUND) {
 		giterr_clear();
-		return git_reference_create_oid(NULL, repo, ref_name, oid, 1);
+		return git_reference_create(NULL, repo, ref_name, oid, 1);
 	}
 
 	if (res < 0)
@@ -1810,7 +1810,7 @@ int git_reference__update(git_repository *repo, const git_oid *oid, const char *
 		const char *sym_target;
 
 		/* The target pointed at by this reference */
-		sym_target = git_reference_target(ref);
+		sym_target = git_reference_symbolic_target(ref);
 
 		/* resolve the reference to the target it points to */
 		res = git_reference_resolve(&aux, ref);
@@ -1822,7 +1822,7 @@ int git_reference__update(git_repository *repo, const git_oid *oid, const char *
 		 */
 		if (res == GIT_ENOTFOUND) {
 			giterr_clear();
-			res = git_reference_create_oid(NULL, repo, sym_target, oid, 1);
+			res = git_reference_create(NULL, repo, sym_target, oid, 1);
 			git_reference_free(ref);
 			return res;
 		}
@@ -1840,7 +1840,7 @@ int git_reference__update(git_repository *repo, const git_oid *oid, const char *
 
 	/* ref is made to point to `oid`: ref is either the original reference,
 	 * or the target of the symbolic reference we've looked up */
-	res = git_reference_set_oid(ref, oid);
+	res = git_reference_set_target(ref, oid);
 	git_reference_free(ref);
 	return res;
 }
@@ -1923,7 +1923,7 @@ static int reference_target(git_object **object, git_reference *ref)
 {
 	const git_oid *oid;
 
-	oid = git_reference_oid(ref);
+	oid = git_reference_target(ref);
 
 	return git_object_lookup(object, git_reference_owner(ref), oid, GIT_OBJ_ANY);
 }

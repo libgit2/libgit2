@@ -98,7 +98,7 @@ static int retrieve_base_commit_and_message(
 			"%s: ",
 			git_reference_name(head) + strlen(GIT_REFS_HEADS_DIR));
 
-	if (git_commit_lookup(b_commit, repo, git_reference_oid(head)) < 0)
+	if (git_commit_lookup(b_commit, repo, git_reference_target(head)) < 0)
 		goto cleanup;
 
 	if (append_commit_description(stash_message, *b_commit) < 0)
@@ -436,7 +436,7 @@ static int update_reflog(
 	git_reflog *reflog = NULL;
 	int error;
 
-	if ((error = git_reference_create_oid(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1)) < 0)
+	if ((error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1)) < 0)
 		goto cleanup;
 
 	if ((error = git_reflog_read(&reflog, stash)) < 0)
@@ -603,8 +603,8 @@ int git_stash_foreach(
 		entry = git_reflog_entry_byindex(reflog, i);
 		
 		if (callback(i,
-			git_reflog_entry_msg(entry),
-			git_reflog_entry_oidnew(entry),
+			git_reflog_entry_message(entry),
+			git_reflog_entry_id_new(entry),
 			payload)) {
 				error = GIT_EUSER;
 				goto cleanup;

@@ -46,7 +46,7 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 	/* Create a new branch pointing at the HEAD */
 	git_oid_fromstr(&oid, current_master_tip);
-	cl_git_pass(git_reference_create_oid(&ref, g_repo, new_ref, &oid, 0));
+	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &oid, 0));
 
 	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
 

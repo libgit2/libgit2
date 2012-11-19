@@ -188,7 +188,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 
 		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
 			continue;
-		if (git_revwalk_push(walk, git_reference_oid(ref)) < 0)
+		if (git_revwalk_push(walk, git_reference_target(ref)) < 0)
 			goto on_error;
 
 		git_reference_free(ref);

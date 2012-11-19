@@ -201,7 +201,7 @@ void test_refs_rename__force_loose_packed(void)
 
 	/* An existing reference... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_head_name));
-	git_oid_cpy(&oid, git_reference_oid(looked_up_ref));
+	git_oid_cpy(&oid, git_reference_target(looked_up_ref));
 
 	/* Can be force-renamed to the name of another existing reference. */
 	cl_git_pass(git_reference_rename(looked_up_ref, packed_test_head_name, 1));
@@ -210,7 +210,7 @@ void test_refs_rename__force_loose_packed(void)
 	/* Check we actually renamed it */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_test_head_name));
 	cl_assert_equal_s(looked_up_ref->name, packed_test_head_name);
-	cl_assert(!git_oid_cmp(&oid, git_reference_oid(looked_up_ref)));
+	cl_assert(!git_oid_cmp(&oid, git_reference_target(looked_up_ref)));
 	git_reference_free(looked_up_ref);
 
 	/* And that the previous one doesn't exist any longer */
@@ -225,7 +225,7 @@ void test_refs_rename__force_loose(void)
 
 	/* An existing reference... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, "refs/heads/br2"));
-	git_oid_cpy(&oid, git_reference_oid(looked_up_ref));
+	git_oid_cpy(&oid, git_reference_target(looked_up_ref));
 
 	/* Can be force-renamed to the name of another existing reference. */
    cl_git_pass(git_reference_rename(looked_up_ref, "refs/heads/test", 1));
@@ -234,7 +234,7 @@ void test_refs_rename__force_loose(void)
 	/* Check we actually renamed it */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, "refs/heads/test"));
 	cl_assert_equal_s(looked_up_ref->name,  "refs/heads/test");
-	cl_assert(!git_oid_cmp(&oid, git_reference_oid(looked_up_ref)));
+	cl_assert(!git_oid_cmp(&oid, git_reference_target(looked_up_ref)));
 	git_reference_free(looked_up_ref);
 
 	/* And that the previous one doesn't exist any longer */
@@ -253,17 +253,17 @@ void test_refs_rename__overwrite(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
 	cl_assert(git_reference_type(ref) & GIT_REF_OID);
 
-	git_oid_cpy(&id, git_reference_oid(ref));
+	git_oid_cpy(&id, git_reference_target(ref));
 
 	/* Create loose references */
-	cl_git_pass(git_reference_create_oid(&ref_one, g_repo, ref_one_name, &id, 0));
-	cl_git_pass(git_reference_create_oid(&ref_two, g_repo, ref_two_name, &id, 0));
+	cl_git_pass(git_reference_create(&ref_one, g_repo, ref_one_name, &id, 0));
+	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name, &id, 0));
 
 	/* Pack everything */
 	cl_git_pass(git_reference_packall(g_repo));
 
 	/* Attempt to create illegal reference */
-	cl_git_fail(git_reference_create_oid(&ref_one_new, g_repo, ref_one_name_new, &id, 0));
+	cl_git_fail(git_reference_create(&ref_one_new, g_repo, ref_one_name_new, &id, 0));
 
 	/* Illegal reference couldn't be created so this is supposed to fail */
 	cl_git_fail(git_reference_lookup(&ref_one_new, g_repo, ref_one_name_new));
@@ -284,10 +284,10 @@ void test_refs_rename__prefix(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
 	cl_assert(git_reference_type(ref) & GIT_REF_OID);
 
-	git_oid_cpy(&id, git_reference_oid(ref));
+	git_oid_cpy(&id, git_reference_target(ref));
 
 	/* Create loose references */
-	cl_git_pass(git_reference_create_oid(&ref_two, g_repo, ref_two_name, &id, 0));
+	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name, &id, 0));
 
 	/* An existing reference... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name));
@@ -316,10 +316,10 @@ void test_refs_rename__move_up(void)
     cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
     cl_assert(git_reference_type(ref) & GIT_REF_OID);
 
-    git_oid_cpy(&id, git_reference_oid(ref));
+    git_oid_cpy(&id, git_reference_target(ref));
 
     /* Create loose references */
-    cl_git_pass(git_reference_create_oid(&ref_two, g_repo, ref_two_name_new, &id, 0));
+    cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name_new, &id, 0));
     git_reference_free(ref_two);
 
     /* An existing reference... */

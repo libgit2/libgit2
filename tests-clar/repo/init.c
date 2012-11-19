@@ -353,7 +353,7 @@ void test_repo_init__extended_1(void)
 
 	cl_git_pass(git_reference_lookup(&ref, _repo, "HEAD"));
 	cl_assert(git_reference_type(ref) == GIT_REF_SYMBOLIC);
-	cl_assert_equal_s("refs/heads/development", git_reference_target(ref));
+	cl_assert_equal_s("refs/heads/development", git_reference_symbolic_target(ref));
 	git_reference_free(ref);
 
 	cl_git_pass(git_remote_load(&remote, _repo, "origin"));

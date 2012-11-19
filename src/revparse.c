@@ -140,7 +140,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 
 	error = disambiguate_refname(&ref, repo, spec);
 	if (!error) {
-		error = git_object_lookup(out, repo, git_reference_oid(ref), GIT_OBJ_ANY);
+		error = git_object_lookup(out, repo, git_reference_target(ref), GIT_OBJ_ANY);
 		git_reference_free(ref);
 		return error;
 	}
@@ -203,7 +203,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 
 	for (i = 0; i < numentries; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
-		msg = git_reflog_entry_msg(entry);
+		msg = git_reflog_entry_message(entry);
 		
 		if (regexec(&preg, msg, 2, regexmatches, 0))
 			continue;
@@ -263,7 +263,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, unsigned i
 		}
 
 		entry = git_reflog_entry_byindex(reflog, identifier);
-		git_oid_cpy(oid, git_reflog_entry_oidnew(entry));
+		git_oid_cpy(oid, git_reflog_entry_id_new(entry));
 		error = 0;
 		goto cleanup;
 
@@ -278,7 +278,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, unsigned i
 			if (commit_time.time - identifier > 0)
 				continue;
 
-			git_oid_cpy(oid, git_reflog_entry_oidnew(entry));
+			git_oid_cpy(oid, git_reflog_entry_id_new(entry));
 			error = 0;
 			goto cleanup;
 		}
@@ -306,7 +306,7 @@ static int retrieve_revobject_from_reflog(git_object **out, git_reference **base
 	}
 
 	if (position == 0) {
-		error = git_object_lookup(out, repo, git_reference_oid(ref), GIT_OBJ_ANY);
+		error = git_object_lookup(out, repo, git_reference_target(ref), GIT_OBJ_ANY);
 		goto cleanup;
 	}
 
@@ -632,7 +632,7 @@ static int object_from_reference(git_object **object, git_reference *reference)
 	if (git_reference_resolve(&resolved, reference) < 0)
 		return -1;
 
-	error = git_object_lookup(object, reference->owner, git_reference_oid(resolved), GIT_OBJ_ANY);
+	error = git_object_lookup(object, reference->owner, git_reference_target(resolved), GIT_OBJ_ANY);
 	git_reference_free(resolved);
 
 	return error;

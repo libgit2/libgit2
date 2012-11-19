@@ -12,7 +12,7 @@ void test_refs_branches_foreach__initialize(void)
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_reference_create_oid(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
 }
 
 void test_refs_branches_foreach__cleanup(void)
@@ -119,7 +119,7 @@ void test_refs_branches_foreach__retrieve_remote_symbolic_HEAD_when_present(void
 	};
 
 	git_reference_free(fake_remote);
-	cl_git_pass(git_reference_create_symbolic(&fake_remote, repo, "refs/remotes/nulltoken/HEAD", "refs/remotes/nulltoken/master", 0));
+	cl_git_pass(git_reference_symbolic_create(&fake_remote, repo, "refs/remotes/nulltoken/HEAD", "refs/remotes/nulltoken/master", 0));
 
 	assert_retrieval(GIT_BRANCH_REMOTE, 3);
 

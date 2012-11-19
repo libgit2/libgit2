@@ -122,7 +122,7 @@ static int reference_matches_remote_head(
 	if (git_buf_len(&head_info->branchname) > 0)
 		return 0;
 
-	if (git_reference_name_to_oid(
+	if (git_reference_name_to_id(
 		&oid,
 		head_info->repo,
 		reference_name) < 0) {

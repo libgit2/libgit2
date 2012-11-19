@@ -559,7 +559,7 @@ static int push_ref(git_revwalk *walk, const char *refname, int hide)
 {
 	git_oid oid;
 
-	if (git_reference_name_to_oid(&oid, walk->repo, refname) < 0)
+	if (git_reference_name_to_id(&oid, walk->repo, refname) < 0)
 		return -1;
 
 	return push_commit(walk, &oid, hide);

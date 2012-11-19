@@ -695,7 +695,7 @@ int git_submodule_open(
 
 	/* if we have opened the submodule successfully, let's grab the HEAD OID */
 	if (!error && !(submodule->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID)) {
-		if (!git_reference_name_to_oid(
+		if (!git_reference_name_to_id(
 				&submodule->wd_oid, *subrepo, GIT_HEAD_FILE))
 			submodule->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
 		else
@@ -1316,7 +1316,7 @@ static int lookup_head_remote(git_buf *url, git_repository *repo)
 	/* remote should refer to something like refs/remotes/ORIGIN/BRANCH */
 
 	if (git_reference_type(remote) != GIT_REF_SYMBOLIC ||
-		git__prefixcmp(git_reference_target(remote), GIT_REFS_REMOTES_DIR) != 0)
+		git__prefixcmp(git_reference_symbolic_target(remote), GIT_REFS_REMOTES_DIR) != 0)
 	{
 		giterr_set(GITERR_SUBMODULE,
 			"Cannot resolve relative URL when HEAD is not symbolic");
@@ -1324,7 +1324,7 @@ static int lookup_head_remote(git_buf *url, git_repository *repo)
 		goto cleanup;
 	}
 
-	scan = tgt = git_reference_target(remote) + strlen(GIT_REFS_REMOTES_DIR);
+	scan = tgt = git_reference_symbolic_target(remote) + strlen(GIT_REFS_REMOTES_DIR);
 	while (*scan && (*scan != '/' || (scan > tgt && scan[-1] != '\\')))
 		scan++; /* find non-escaped slash to end ORIGIN name */
 

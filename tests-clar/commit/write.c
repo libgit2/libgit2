@@ -112,10 +112,10 @@ void test_commit_write__root(void)
 	/* First we need to update HEAD so it points to our non-existant branch */
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert(git_reference_type(head) == GIT_REF_SYMBOLIC);
-	head_old = git__strdup(git_reference_target(head));
+	head_old = git__strdup(git_reference_symbolic_target(head));
 	cl_assert(head_old != NULL);
 
-	cl_git_pass(git_reference_set_target(head, branch_name));
+	cl_git_pass(git_reference_symbolic_set_target(head, branch_name));
 
 	cl_git_pass(git_commit_create_v(
 		&commit_id, /* out id */
@@ -140,7 +140,7 @@ void test_commit_write__root(void)
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
 	cl_assert(git_commit_parentcount(commit) == 0);
 	cl_git_pass(git_reference_lookup(&branch, g_repo, branch_name));
-	branch_oid = git_reference_oid(branch);
+	branch_oid = git_reference_target(branch);
 	cl_git_pass(git_oid_cmp(branch_oid, &commit_id));
 	cl_assert(!strcmp(git_commit_message(commit), root_commit_message));
 }

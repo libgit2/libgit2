@@ -47,7 +47,7 @@ void test_refs_branches_create__can_create_a_local_branch(void)
 	retrieve_known_commit(&target, repo);
 
 	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, 0));
-	cl_git_pass(git_oid_cmp(git_reference_oid(branch), git_object_id(target)));
+	cl_git_pass(git_oid_cmp(git_reference_target(branch), git_object_id(target)));
 }
 
 void test_refs_branches_create__can_not_create_a_branch_if_its_name_collide_with_an_existing_one(void)
@@ -62,7 +62,7 @@ void test_refs_branches_create__can_force_create_over_an_existing_branch(void)
 	retrieve_known_commit(&target, repo);
 
 	cl_git_pass(git_branch_create(&branch, repo, "br2", target, 1));
-	cl_git_pass(git_oid_cmp(git_reference_oid(branch), git_object_id(target)));
+	cl_git_pass(git_oid_cmp(git_reference_target(branch), git_object_id(target)));
 	cl_assert_equal_s("refs/heads/br2", git_reference_name(branch));
 }
 
@@ -72,7 +72,7 @@ void test_refs_branches_create__creating_a_branch_targeting_a_tag_dereferences_i
 	retrieve_target_from_oid(&target, repo, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1");
 
 	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, 0));
-	cl_git_pass(git_oid_streq(git_reference_oid(branch), "e90810b8df3e80c413d903f631643c716887138d"));
+	cl_git_pass(git_oid_streq(git_reference_target(branch), "e90810b8df3e80c413d903f631643c716887138d"));
 }
 
 void test_refs_branches_create__can_not_create_a_branch_pointing_to_a_non_commit_object(void)

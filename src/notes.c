@@ -406,7 +406,7 @@ static int retrieve_note_tree_and_commit(
 	if ((error = normalize_namespace(notes_ref, repo)) < 0)
 		return error;
 
-	if ((error = git_reference_name_to_oid(&oid, repo, *notes_ref)) < 0)
+	if ((error = git_reference_name_to_id(&oid, repo, *notes_ref)) < 0)
 		return error;
 
 	if (git_commit_lookup(commit_out, repo, &oid) < 0)

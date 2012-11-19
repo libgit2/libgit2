@@ -41,14 +41,14 @@ static int update_head(git_repository *repo, git_object *commit)
 		if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
 			goto cleanup;
 
-		if ((error = git_reference_create_oid(
+		if ((error = git_reference_create(
 			&target,
 			repo,
-			git_reference_target(head),
+			git_reference_symbolic_target(head),
 			git_object_id(commit), 0)) < 0)
 				goto cleanup;
 	} else {
-		if ((error = git_reference_set_oid(head, git_object_id(commit))) < 0)
+		if ((error = git_reference_set_target(head, git_object_id(commit))) < 0)
 			goto cleanup;
 	}
 

@@ -58,7 +58,7 @@ void test_object_tag_write__basic(void)
 	cl_assert_equal_s(git_tag_message(tag), tagger_message);
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/the-tag"));
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &tag_id) == 0);
 	cl_git_pass(git_reference_delete(ref_tag));
 
 	git_tag_free(tag);
@@ -103,7 +103,7 @@ void test_object_tag_write__replace(void)
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/e90810b"));
-	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));
+	git_oid_cpy(&old_tag_id, git_reference_target(ref_tag));
 	git_reference_free(ref_tag);
 
 	/* create signature */
@@ -122,8 +122,8 @@ void test_object_tag_write__replace(void)
 	git_signature_free(tagger);
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/e90810b"));
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &old_tag_id) != 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &tag_id) == 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &old_tag_id) != 0);
 
 	git_reference_free(ref_tag);
 }
@@ -150,7 +150,7 @@ void test_object_tag_write__lightweight(void)
 	cl_assert(git_oid_cmp(&object_id, &target_id) == 0);
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/light-tag"));
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &target_id) == 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &target_id) == 0);
 
 	cl_git_pass(git_tag_delete(g_repo, "light-tag"));
 

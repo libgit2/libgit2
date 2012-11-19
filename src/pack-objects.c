@@ -136,10 +136,11 @@ on_error:
 	return -1;
 }
 
-void git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
+unsigned int git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
 {
 	assert(pb);
 	pb->nr_threads = n;
+	return pb->nr_threads;
 }
 
 static void rehash(git_packbuilder *pb)

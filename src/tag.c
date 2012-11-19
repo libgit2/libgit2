@@ -188,7 +188,7 @@ static int retrieve_tag_reference_oid(
 	if (git_buf_joinpath(ref_name_out, GIT_REFS_TAGS_DIR, tag_name) < 0)
 		return -1;
 
-	return git_reference_name_to_oid(oid, repo, ref_name_out->ptr);
+	return git_reference_name_to_id(oid, repo, ref_name_out->ptr);
 }
 
 static int write_tag_annotation(
@@ -267,7 +267,7 @@ static int git_tag_create__internal(
 	} else
 		git_oid_cpy(oid, git_object_id(target));
 
-	error = git_reference_create_oid(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
+	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
 
 	git_reference_free(new_ref);
 	git_buf_free(&ref_name);
@@ -358,7 +358,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		return -1;
 	}
 
-	error = git_reference_create_oid(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
+	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
 
 	git_reference_free(new_ref);
 	git_buf_free(&ref_name);
@@ -409,7 +409,7 @@ static int tags_cb(const char *ref, void *data)
 	if (git__prefixcmp(ref, GIT_REFS_TAGS_DIR) != 0)
 		return 0; /* no tag */
 
-	if (git_reference_name_to_oid(&oid, d->repo, ref) < 0)
+	if (git_reference_name_to_id(&oid, d->repo, ref) < 0)
 		return -1;
 
 	return d->cb(ref, &oid, d->cb_data);

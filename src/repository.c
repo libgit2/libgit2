@@ -1231,7 +1231,7 @@ int git_repository_head_detached(git_repository *repo)
 		return 0;
 	}
 
-	exists = git_odb_exists(odb, git_reference_oid(ref));
+	exists = git_odb_exists(odb, git_reference_target(ref));
 
 	git_reference_free(ref);
 	return exists;
@@ -1250,7 +1250,7 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 		return 0;
 	}
 
-	error = git_reference_lookup_resolved(head_out, repo, git_reference_target(head), -1);
+	error = git_reference_lookup_resolved(head_out, repo, git_reference_symbolic_target(head), -1);
 	git_reference_free(head);
 
 	return error == GIT_ENOTFOUND ? GIT_EORPHANEDHEAD : error;
@@ -1305,7 +1305,7 @@ int git_repository_is_empty(git_repository *repo)
 		goto cleanup;
 
 	if (!(error = strcmp(
-		git_reference_target(head),
+		git_reference_symbolic_target(head),
 		GIT_REFS_HEADS_DIR "master") == 0))
 			goto cleanup;
 
@@ -1531,11 +1531,11 @@ int git_repository_set_head(
 
 	if (!error) {
 		if (git_reference_is_branch(ref))
-			error = git_reference_create_symbolic(&new_head, repo, GIT_HEAD_FILE, git_reference_name(ref), 1);
+			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, git_reference_name(ref), 1);
 		else
-			error = git_repository_set_head_detached(repo, git_reference_oid(ref));
+			error = git_repository_set_head_detached(repo, git_reference_target(ref));
 	} else if (looks_like_a_branch(refname))
-		error = git_reference_create_symbolic(&new_head, repo, GIT_HEAD_FILE, refname, 1);
+		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname, 1);
 
 	git_reference_free(ref);
 	git_reference_free(new_head);
@@ -1559,7 +1559,7 @@ int git_repository_set_head_detached(
 	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	error = git_reference_create_oid(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), 1);
+	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), 1);
 
 cleanup:
 	git_object_free(object);
@@ -1581,10 +1581,10 @@ int git_repository_detach_head(
 	if ((error = git_repository_head(&old_head, repo)) < 0)
 		return error;
 
-	if ((error = git_object_lookup(&object, repo, git_reference_oid(old_head), GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_object_lookup(&object, repo, git_reference_target(old_head), GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	error = git_reference_create_oid(&new_head, repo, GIT_HEAD_FILE, git_reference_oid(old_head), 1);
+	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head), 1);
 
 cleanup:
 	git_object_free(object);

@@ -695,7 +695,7 @@ int git_remote_update_tips(git_remote *remote)
 		head = (git_remote_head *)refs.contents[0];
 
 		if (!strcmp(head->name, GIT_HEAD_FILE))	{
-			if (git_reference_create_oid(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1) < 0)
+			if (git_reference_create(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1) < 0)
 				goto on_error;
 
 			i = 1;
@@ -735,7 +735,7 @@ int git_remote_update_tips(git_remote *remote)
 		if (git_vector_insert(&update_heads, head) < 0)
 			goto on_error;
 
-		error = git_reference_name_to_oid(&old, remote->repo, refname.ptr);
+		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto on_error;
 
@@ -746,7 +746,7 @@ int git_remote_update_tips(git_remote *remote)
 			continue;
 
 		/* In autotag mode, don't overwrite any locally-existing tags */
-		error = git_reference_create_oid(&ref, remote->repo, refname.ptr, &head->oid, !autotag);
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag);
 		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
 
