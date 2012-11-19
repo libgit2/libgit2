@@ -34,7 +34,7 @@ typedef struct
 
 static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
 
-static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
+int git_odb__format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
 {
 	const char *type_str = git_object_type2string(obj_type);
 	int len = p_snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
@@ -55,7 +55,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 	if (!obj->data && obj->len != 0)
 		return -1;
 
-	hdrlen = format_object_header(header, sizeof(header), obj->len, obj->type);
+	hdrlen = git_odb__format_object_header(header, sizeof(header), obj->len, obj->type);
 
 	vec[0].data = header;
 	vec[0].len = hdrlen;
@@ -133,7 +133,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	if ((error = git_hash_ctx_init(&ctx)) < 0)
 		return -1;
 
-	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
+	hdr_len = git_odb__format_object_header(hdr, sizeof(hdr), size, type);
 
 	if ((error = git_hash_update(&ctx, hdr, hdr_len)) < 0)
 		goto done;
