@@ -405,12 +405,12 @@ int main (int argc, char** argv)
 
     switch (git_reference_type(ref)) {
     case GIT_REF_OID:
-      git_oid_fmt(out, git_reference_oid(ref));
+      git_oid_fmt(out, git_reference_target(ref));
       printf("%s [%s]\n", refname, out);
       break;
 
     case GIT_REF_SYMBOLIC:
-      printf("%s => %s\n", refname, git_reference_target(ref));
+      printf("%s => %s\n", refname, git_reference_symbolic_target(ref));
       break;
     default:
       fprintf(stderr, "Unexpected reference type\n");

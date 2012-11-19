@@ -30,7 +30,7 @@ static int resolve_to_tree(
 			git_reference_resolve(&resolved, ref);
 			git_reference_free(ref);
 			if (resolved) {
-				git_object_lookup(&obj, repo, git_reference_oid(resolved), GIT_OBJ_ANY);
+				git_object_lookup(&obj, repo, git_reference_target(resolved), GIT_OBJ_ANY);
 				git_reference_free(resolved);
 			}
 		}
