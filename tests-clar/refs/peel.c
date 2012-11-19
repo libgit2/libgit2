@@ -78,7 +78,7 @@ void test_refs_peel__can_peel_a_symbolic_reference(void)
 
 void test_refs_peel__cannot_peel_into_a_non_existing_target(void)
 {
-	assert_peel_error(GIT_ERROR, "refs/tags/point_to_blob", GIT_OBJ_TAG);
+	assert_peel_error(GIT_ENOTFOUND, "refs/tags/point_to_blob", GIT_OBJ_TAG);
 }
 
 void test_refs_peel__can_peel_into_any_non_tag_object(void)

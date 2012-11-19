@@ -479,8 +479,9 @@ GIT_EXTERN(int) git_reference_normalize_name(
  *
  * @param peeled Pointer to the peeled git_object
  * @param ref The reference to be processed
- * @param target_type The type of the requested object
- * @return 0 or an error code
+ * @param target_type The type of the requested object (GIT_OBJ_COMMIT,
+ * GIT_OBJ_TAG, GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_ANY).
+ * @return 0 on success, GIT_EAMBIGUOUS, GIT_ENOTFOUND or an error code
  */
 GIT_EXTERN(int) git_reference_peel(
 	git_object **out,
