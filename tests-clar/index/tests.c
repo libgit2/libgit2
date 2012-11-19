@@ -261,3 +261,30 @@ void test_index_tests__add_from_workdir_to_a_bare_repository_returns_EBAREPO(voi
 	git_index_free(index);
 	git_repository_free(bare_repo);
 }
+
+/* Test that writing an invalid filename fails */
+void test_index_tests__write_invalid_filename(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_oid expected;
+
+	p_mkdir("read_tree", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./read_tree", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_assert(git_index_entrycount(index) == 0);
+
+	cl_git_mkfile("./read_tree/.git/hello", NULL);
+
+	cl_git_pass(git_index_add_from_workdir(index, ".git/hello"));
+
+	/* write-tree */
+	cl_git_fail(git_index_write_tree(&expected, index));
+
+	git_index_free(index);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("read_tree");
+}
