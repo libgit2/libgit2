@@ -8,6 +8,8 @@
 #ifndef INCLUDE_pack_h__
 #define INCLUDE_pack_h__
 
+#include <zlib.h>
+
 #include "git2/oid.h"
 
 #include "common.h"
@@ -76,6 +78,14 @@ struct git_pack_entry {
 	struct git_pack_file *p;
 };
 
+typedef struct git_packfile_stream {
+	git_off_t curpos;
+	int done;
+	z_stream zstream;
+	struct git_pack_file *p;
+	git_mwindow *mw;
+} git_packfile_stream;
+
 int git_packfile_unpack_header(
 		size_t *size_p,
 		git_otype *type_p,
@@ -91,6 +101,10 @@ int packfile_unpack_compressed(
 	git_off_t *curpos,
 	size_t size,
 	git_otype type);
+
+int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, git_off_t curpos);
+ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t len);
+void git_packfile_stream_free(git_packfile_stream *obj);
 
 git_off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
 		git_off_t *curpos, git_otype type,
