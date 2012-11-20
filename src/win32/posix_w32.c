@@ -121,10 +121,9 @@ static int do_lstat(
 			fbuf[flen] = L'\0';
 
 			if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
-				if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+				if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 					errno = ENOTDIR;
-					break;
-				}
+				break;
 			}
 		}
 	}
