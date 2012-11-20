@@ -63,7 +63,7 @@ cleanup:
 int git_reset(
 	git_repository *repo,
 	git_object *target,
-	git_reset_type reset_type)
+	git_reset_t reset_type)
 {
 	git_object *commit = NULL;
 	git_index *index = NULL;

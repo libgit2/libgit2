@@ -175,13 +175,6 @@ typedef enum {
 	GIT_BRANCH_REMOTE = 2,
 } git_branch_t;
 
-/** Kinds of reset operation. */
-typedef enum {
-	GIT_RESET_SOFT = 1,
-	GIT_RESET_MIXED = 2,
-	GIT_RESET_HARD = 3,
-} git_reset_type;
-
 /** Valid modes for index and tree entries. */
 typedef enum {
 	GIT_FILEMODE_NEW					= 0000000,
