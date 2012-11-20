@@ -489,6 +489,8 @@ static int load_config(
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
+	giterr_clear(); /* clear any lingering ENOTFOUND errors */
+
 	*out = cfg;
 	return 0;
 
