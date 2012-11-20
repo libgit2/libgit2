@@ -450,37 +450,44 @@ static int load_config(
 	const char *xdg_config_path,
 	const char *system_config_path)
 {
+	int error;
 	git_buf config_path = GIT_BUF_INIT;
 	git_config *cfg = NULL;
 
 	assert(repo && out);
 
-	if (git_config_new(&cfg) < 0)
-		return -1;
+	if ((error = git_config_new(&cfg)) < 0)
+		return error;
 
-	if (git_buf_joinpath(
-		&config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO) < 0)
+	error = git_buf_joinpath(
+		&config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
+	if (error < 0)
 		goto on_error;
 
-	if (git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0) < 0)
+	if ((error = git_config_add_file_ondisk(
+			cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
 		goto on_error;
 
 	git_buf_free(&config_path);
 
-	if (global_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, 0) < 0)
-			goto on_error;
-	}
+	if (global_config_path != NULL &&
+		(error = git_config_add_file_ondisk(
+			cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
+		goto on_error;
 
-	if (xdg_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, 0) < 0)
-			goto on_error;
-	}
+	if (xdg_config_path != NULL &&
+		(error = git_config_add_file_ondisk(
+			cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
+		goto on_error;
 
-	if (system_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, 0) < 0)
-			goto on_error;
-	}
+	if (system_config_path != NULL &&
+		(error = git_config_add_file_ondisk(
+			cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
+		goto on_error;
 
 	*out = cfg;
 	return 0;
@@ -489,7 +496,7 @@ on_error:
 	git_buf_free(&config_path);
 	git_config_free(cfg);
 	*out = NULL;
-	return -1;
+	return error;
 }
 
 int git_repository_config__weakptr(git_config **out, git_repository *repo)
