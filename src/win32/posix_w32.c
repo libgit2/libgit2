@@ -106,12 +106,9 @@ static int do_lstat(
 
 	errno = ENOENT;
 
-	/* ERROR_PATH_NOT_FOUND can mean either that a parent directory is
-	 * missing or that an expected directory is a regular file.  If we need
-	 * POSIX behavior, then ENOTDIR must only be set for the second case
-	 * (i.e. entry that is not a dir), and the first case should be ENOENT.
+	/* We need POSIX behavior, then ENOTDIR must set when any of the folders in the
+	 * file path is a regular file,otherwise ENOENT must be set.
 	 */
-
 	if (posix_enotdir) {
 		/* scan up path until we find an existing item */
 		while (1) {
