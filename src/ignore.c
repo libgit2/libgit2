@@ -7,6 +7,8 @@
 #define GIT_IGNORE_FILE_INREPO	"info/exclude"
 #define GIT_IGNORE_FILE			".gitignore"
 
+#define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
+
 static int parse_ignore_file(
 	git_repository *repo, void *parsedata, const char *buffer, git_attr_file *ignores)
 {
@@ -88,6 +90,19 @@ static int push_one_ignore(void *ref, git_buf *path)
 	return push_ignore_file(ign->repo, ign, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
 }
 
+static int get_internal_ignores(git_attr_file **ign, git_repository *repo)
+{
+	int error;
+
+	if (!(error = git_attr_cache__init(repo)))
+		error = git_attr_cache__internal_file(repo, GIT_IGNORE_INTERNAL, ign);
+
+	if (!error && !(*ign)->rules.length)
+		error = parse_ignore_file(repo, NULL, GIT_IGNORE_DEFAULT_RULES, *ign);
+
+	return error;
+}
+
 int git_ignore__for_path(
 	git_repository *repo,
 	const char *path,
@@ -129,8 +144,7 @@ int git_ignore__for_path(
 		goto cleanup;
 
 	/* set up internals */
-	error = git_attr_cache__internal_file(
-		repo, GIT_IGNORE_INTERNAL, &ignores->ign_internal);
+	error = get_internal_ignores(&ignores->ign_internal, repo);
 	if (error < 0)
 		goto cleanup;
 
@@ -239,16 +253,6 @@ cleanup:
 	return 0;
 }
 
-static int get_internal_ignores(git_attr_file **ign, git_repository *repo)
-{
-	int error;
-
-	if (!(error = git_attr_cache__init(repo)))
-		error = git_attr_cache__internal_file(repo, GIT_IGNORE_INTERNAL, ign);
-
-	return error;
-}
-
 int git_ignore_add_rule(
 	git_repository *repo,
 	const char *rules)
@@ -268,8 +272,12 @@ int git_ignore_clear_internal_rules(
 	int error;
 	git_attr_file *ign_internal;
 
-	if (!(error = get_internal_ignores(&ign_internal, repo)))
+	if (!(error = get_internal_ignores(&ign_internal, repo))) {
 		git_attr_file__clear_rules(ign_internal);
+
+		return parse_ignore_file(
+			repo, NULL, GIT_IGNORE_DEFAULT_RULES, ign_internal);
+	}
 
 	return error;
 }
