@@ -93,7 +93,7 @@ int git_config_add_file_ondisk(
 	assert(cfg && path);
 
 	if (!git_path_isfile(path)) {
-		giterr_set(GITERR_CONFIG, "File '%s' doesn't exists.", path);
+		giterr_set(GITERR_CONFIG, "Cannot find config file '%s'", path);
 		return GIT_ENOTFOUND;
 	}
 
