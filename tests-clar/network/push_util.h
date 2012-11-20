@@ -1,7 +1,7 @@
 #ifndef INCLUDE_cl_push_util_h__
 #define INCLUDE_cl_push_util_h__
 
-#include <git2\oid.h>
+#include "git2/oid.h"
 
 /* Constant for zero oid */
 extern const git_oid OID_ZERO;
