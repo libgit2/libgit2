@@ -104,45 +104,29 @@ static int do_lstat(
 		return 0;
 	}
 
-	last_error = GetLastError();
+	errno = ENOENT;
 
-	/* ERROR_PATH_NOT_FOUND can mean either that a parent directory is
-	 * missing or that an expected directory is a regular file.  If we need
-	 * POSIX behavior, then ENOTDIR must only be set for the second case
-	 * (i.e. entry that is not a dir), and the first case should be ENOENT.
+	/* We need POSIX behavior, then ENOTDIR must set when any of the folders in the
+	 * file path is a regular file,otherwise ENOENT must be set.
 	 */
-
-	if (last_error == ERROR_PATH_NOT_FOUND && posix_enotdir) {
+	if (posix_enotdir) {
 		/* scan up path until we find an existing item */
 		while (1) {
 			/* remove last directory component */
 			for (--flen; flen > 0 && !WIN32_IS_WSEP(fbuf[flen]); --flen);
 
-			if (flen <= 0) {
-				last_error = ERROR_FILE_NOT_FOUND;
+			if (flen <= 0)
 				break;
-			}
 
 			fbuf[flen] = L'\0';
 
 			if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
-				if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-					last_error = ERROR_FILE_NOT_FOUND;
-				else
-					last_error = ERROR_PATH_NOT_FOUND;
+				if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+					errno = ENOTDIR;
 				break;
 			}
-
-			last_error = GetLastError();
-			if (last_error == ERROR_FILE_NOT_FOUND)
-				break;
 		}
 	}
-
-	if (last_error == ERROR_FILE_NOT_FOUND)
-		errno = ENOENT;
-	else if (last_error == ERROR_PATH_NOT_FOUND)
-		errno = ENOTDIR;
 
 	return -1;
 }
