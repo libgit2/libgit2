@@ -1250,6 +1250,10 @@ static int cb_tree_walk(const char *root, const git_tree_entry *entry, void *pay
 	git_packbuilder *pb = payload;
 	git_buf buf = GIT_BUF_INIT;
 
+	/* A commit inside a tree represents a submodule commit and should be skipped. */
+	if(git_tree_entry_type(entry) == GIT_OBJ_COMMIT)
+		return 0;
+
 	git_buf_puts(&buf, root);
 	git_buf_puts(&buf, git_tree_entry_name(entry));
 

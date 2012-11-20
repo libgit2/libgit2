@@ -23,6 +23,11 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	const char *line_end;
 	git_pkt *pkt;
 
+	/* Clear existing refs in case git_remote_connect() is called again
+	 * after git_remote_disconnect().
+	 */
+	git_vector_clear(refs);
+
 	do {
 		if (buf->offset > 0)
 			error = git_pkt_parse_line(&pkt, buf->data, &line_end, buf->offset);
