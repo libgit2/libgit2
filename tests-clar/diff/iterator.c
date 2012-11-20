@@ -668,3 +668,59 @@ void test_diff_iterator__workdir_1_ranged_empty_2(void)
 		"status", NULL, "aaaa_empty_before",
 		0, 0, NULL, NULL);
 }
+
+void test_diff_iterator__workdir_builtin_ignores(void)
+{
+	git_repository *repo = cl_git_sandbox_init("attr");
+	git_iterator *i;
+	const git_index_entry *entry;
+	int idx;
+	static struct {
+		const char *path;
+		bool ignored;
+	} expected[] = {
+		{ "dir/", true },
+		{ "file", false },
+		{ "ign", true },
+		{ "macro_bad", false },
+		{ "macro_test", false },
+		{ "root_test1", false },
+		{ "root_test2", false },
+		{ "root_test3", false },
+		{ "root_test4.txt", false },
+		{ "sub/", false },
+		{ "sub/.gitattributes", false },
+		{ "sub/abc", false },
+		{ "sub/dir/", true },
+		{ "sub/file", false },
+		{ "sub/ign/", true },
+		{ "sub/sub/", false },
+		{ "sub/sub/.gitattributes", false },
+		{ "sub/sub/dir", false }, /* file is not actually a dir */
+		{ "sub/sub/file", false },
+		{ NULL, false }
+	};
+
+	cl_git_pass(p_mkdir("attr/sub/sub/.git", 0777));
+	cl_git_mkfile("attr/sub/.git", "whatever");
+
+	cl_git_pass(
+		git_iterator_for_workdir_range(&i, repo, "dir", "sub/sub/file"));
+	cl_git_pass(git_iterator_current(i, &entry));
+
+	for (idx = 0; entry != NULL; ++idx) {
+		int ignored = git_iterator_current_is_ignored(i);
+
+		cl_assert_equal_s(expected[idx].path, entry->path);
+		cl_assert_(ignored == expected[idx].ignored, expected[idx].path);
+
+		if (!ignored && S_ISDIR(entry->mode))
+			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+		else
+			cl_git_pass(git_iterator_advance(i, &entry));
+	}
+
+	cl_assert(expected[idx].path == NULL);
+
+	git_iterator_free(i);
+}
