@@ -492,7 +492,7 @@ int git_remote_connect(git_remote *remote, int direction)
 		return -1;
 
 	if (t->set_callbacks &&
-		t->set_callbacks(t, remote->callbacks.progress, NULL, remote->callbacks.data) < 0)
+		t->set_callbacks(t, remote->callbacks.progress, NULL, remote->callbacks.payload) < 0)
 		goto on_error;
 	
 	if (!remote->check_cert)
@@ -534,7 +534,22 @@ int git_remote_download(
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return error;
 
-	return git_fetch_download_pack(remote, progress_cb, progress_payload);
+	if (remote->callbacks.completion(GIT_REMOTE_COMPLETION_NEGOTIATION,
+					  remote->callbacks.payload) < 0) {
+		giterr_clear();
+		return GIT_EUSER;
+	}
+
+	if ((error = git_fetch_download_pack(remote, progress_cb, progress_payload)) < 0)
+		return error;
+
+	if (remote->callbacks.completion(GIT_REMOTE_COMPLETION_INDEXING,
+					  remote->callbacks.payload) < 0) {
+		giterr_clear();
+		return GIT_EUSER;
+	}
+
+	return error;
 }
 
 static int update_tips_callback(git_remote_head *head, void *payload)
@@ -753,7 +768,7 @@ int git_remote_update_tips(git_remote *remote)
 		git_reference_free(ref);
 
 		if (remote->callbacks.update_tips != NULL) {
-			if (remote->callbacks.update_tips(refname.ptr, &old, &head->oid, remote->callbacks.data) < 0)
+			if (remote->callbacks.update_tips(refname.ptr, &old, &head->oid, remote->callbacks.payload) < 0)
 				goto on_error;
 		}
 	}
@@ -936,7 +951,7 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 		remote->transport->set_callbacks(remote->transport,
 			remote->callbacks.progress,
 			NULL,
-			remote->callbacks.data);
+			remote->callbacks.payload);
 }
 
 void git_remote_set_cred_acquire_cb(
