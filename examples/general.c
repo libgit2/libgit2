@@ -261,8 +261,8 @@ int main (int argc, char** argv)
   git_tree_lookup(&tree, repo, &oid);
 
   // Getting the count of entries in the tree so you can iterate over them if you want to.
-  int cnt = git_tree_entrycount(tree); // 3
-  printf("tree entries: %d\n", cnt);
+  size_t cnt = git_tree_entrycount(tree); // 3
+  printf("tree entries: %d\n", (int)cnt);
 
   entry = git_tree_entry_byindex(tree, 0);
   printf("Entry name: %s\n", git_tree_entry_name(entry)); // "hello.c"

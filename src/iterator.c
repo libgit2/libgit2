@@ -85,7 +85,7 @@ struct tree_iterator_frame {
 	tree_iterator_frame *next, *prev;
 	git_tree *tree;
 	char *start;
-	unsigned int index;
+	size_t index;
 };
 
 typedef struct {

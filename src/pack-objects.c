@@ -1284,7 +1284,7 @@ int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 	    git_packbuilder_insert(pb, oid, NULL) < 0)
 		return -1;
 
-	if (git_tree_walk(tree, cb_tree_walk, GIT_TREEWALK_PRE, pb) < 0) {
+	if (git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, pb) < 0) {
 		git_tree_free(tree);
 		return -1;
 	}

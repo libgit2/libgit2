@@ -1603,7 +1603,7 @@ int git_index_read_tree(git_index *index, git_tree *tree)
 {
 	git_index_clear(index);
 
-	return git_tree_walk(tree, read_tree_cb, GIT_TREEWALK_POST, index);
+	return git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, index);
 }
 
 git_repository *git_index_owner(const git_index *index)

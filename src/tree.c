@@ -166,6 +166,7 @@ git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
 		return NULL;
 
 	memcpy(copy, entry, total_size);
+
 	return copy;
 }
 
@@ -288,10 +289,10 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 	return at_pos;
 }
 
-unsigned int git_tree_entrycount(const git_tree *tree)
+size_t git_tree_entrycount(const git_tree *tree)
 {
 	assert(tree);
-	return (unsigned int)tree->entries.length;
+	return tree->entries.length;
 }
 
 static int tree_error(const char *str)
@@ -694,7 +695,10 @@ on_error:
 	return -1;
 }
 
-void git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_entry *, void *), void *payload)
+void git_treebuilder_filter(
+	git_treebuilder *bld,
+	git_treebuilder_filter_cb filter,
+	void *payload)
 {
 	unsigned int i;
 
@@ -855,23 +859,27 @@ static int tree_walk(
 	return error;
 }
 
-int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)
+int git_tree_walk(
+	git_tree *tree,
+	git_treewalk_mode mode,
+	git_treewalk_cb callback,
+	void *payload)
 {
 	int error = 0;
 	git_buf root_path = GIT_BUF_INIT;
 
 	switch (mode) {
-		case GIT_TREEWALK_POST:
-			error = tree_walk(tree, callback, &root_path, payload, false);
-			break;
+	case GIT_TREEWALK_POST:
+		error = tree_walk(tree, callback, &root_path, payload, false);
+		break;
 
-		case GIT_TREEWALK_PRE:
-			error = tree_walk(tree, callback, &root_path, payload, true);
-			break;
+	case GIT_TREEWALK_PRE:
+		error = tree_walk(tree, callback, &root_path, payload, true);
+		break;
 
-		default:
-			giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");
-			return -1;
+	default:
+		giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");
+		return -1;
 	}
 
 	git_buf_free(&root_path);

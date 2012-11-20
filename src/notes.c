@@ -19,11 +19,11 @@ static int find_subtree_in_current_level(
 	const char *annotated_object_sha,
 	int fanout)
 {
-	unsigned int i;
+	size_t i;
 	const git_tree_entry *entry;
 
 	*out = NULL;
-	
+
 	if (parent == NULL)
 		return GIT_ENOTFOUND;
 
@@ -34,12 +34,12 @@ static int find_subtree_in_current_level(
 			continue;
 
 		if (S_ISDIR(git_tree_entry_filemode(entry))
-			&& strlen(git_tree_entry_name(entry)) == 2 
+			&& strlen(git_tree_entry_name(entry)) == 2
 			&& !strncmp(git_tree_entry_name(entry), annotated_object_sha + fanout, 2))
 			return git_tree_lookup(out, repo, git_tree_entry_id(entry));
 
 		/* Not a DIR, so do we have an already existing blob? */
-		if (!strcmp(git_tree_entry_name(entry), annotated_object_sha + fanout))				
+		if (!strcmp(git_tree_entry_name(entry), annotated_object_sha + fanout))
 			return GIT_EEXISTS;
 	}
 
@@ -71,7 +71,7 @@ static int find_subtree_r(git_tree **out, git_tree *root,
 
 static int find_blob(git_oid *blob, git_tree *tree, const char *target)
 {
-	unsigned int i;
+	size_t i;
 	const git_tree_entry *entry;
 
 	for (i=0; i<git_tree_entrycount(tree); i++) {
