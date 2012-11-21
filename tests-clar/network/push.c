@@ -378,30 +378,6 @@ void test_network_push__implicit_tgt(void)
 		exp_refs2, ARRAY_SIZE(exp_refs2), 0);
 }
 
-void test_network_push__implicit_all(void)
-{
-	const char *specs[] = { ":" };
-	push_status exp_stats[] = {
-		{ "refs/heads/b1", NULL },
-		{ "refs/heads/b2", NULL },
-		{ "refs/heads/b3", NULL },
-		{ "refs/heads/b4", NULL },
-		{ "refs/heads/b5", NULL },
-		{ "refs/heads/master", NULL }
-	};
-	expected_ref exp_refs[] = {
-		{ "refs/heads/b1", &_oid_b1 },
-		{ "refs/heads/b2", &_oid_b2 },
-		{ "refs/heads/b3", &_oid_b3 },
-		{ "refs/heads/b4", &_oid_b4 },
-		{ "refs/heads/b5", &_oid_b5 },
-		{ "refs/heads/master", &_oid_master }
-	};
-	do_push(specs, ARRAY_SIZE(specs),
-		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0);
-}
-
 void test_network_push__fast_fwd(void)
 {
 	/* Fast forward b1 in tgt from _oid_b1 to _oid_master. */
