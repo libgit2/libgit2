@@ -824,7 +824,7 @@ static int repo_init_config(
 			SET_REPO_CONFIG(string, "core.worktree", work_dir);
 		}
 		else if ((opts->flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0) {
-			if (git_config_delete(config, "core.worktree") < 0)
+			if (git_config_delete_entry(config, "core.worktree") < 0)
 				giterr_clear();
 		}
 	} else {
@@ -1356,7 +1356,7 @@ int git_repository_set_workdir(
 
 		/* passthrough error means gitlink is unnecessary */
 		if (error == GIT_PASSTHROUGH)
-			error = git_config_delete(config, "core.worktree");
+			error = git_config_delete_entry(config, "core.worktree");
 		else if (!error)
 			error = git_config_set_string(config, "core.worktree", path.ptr);
 

@@ -64,7 +64,7 @@ typedef struct cvar_t {
 		 (iter) = (tmp))
 
 typedef struct {
-	git_config_file parent;
+	git_config_backend parent;
 
 	git_strmap *values;
 
@@ -149,7 +149,7 @@ static void free_vars(git_strmap *values)
 	git_strmap_free(values);
 }
 
-static int config_open(git_config_file *cfg, unsigned int level)
+static int config_open(git_config_backend *cfg, unsigned int level)
 {
 	int res;
 	diskfile_backend *b = (diskfile_backend *)cfg;
@@ -176,7 +176,7 @@ static int config_open(git_config_file *cfg, unsigned int level)
 	return res;
 }
 
-static int config_refresh(git_config_file *cfg)
+static int config_refresh(git_config_backend *cfg)
 {
 	int res, updated = 0;
 	diskfile_backend *b = (diskfile_backend *)cfg;
@@ -203,7 +203,7 @@ static int config_refresh(git_config_file *cfg)
 	return res;
 }
 
-static void backend_free(git_config_file *_backend)
+static void backend_free(git_config_backend *_backend)
 {
 	diskfile_backend *backend = (diskfile_backend *)_backend;
 
@@ -216,7 +216,7 @@ static void backend_free(git_config_file *_backend)
 }
 
 static int file_foreach(
-	git_config_file *backend,
+	git_config_backend *backend,
 	const char *regexp,
 	int (*fn)(const git_config_entry *, void *),
 	void *data)
@@ -262,7 +262,7 @@ cleanup:
 	return result;
 }
 
-static int config_set(git_config_file *cfg, const char *name, const char *value)
+static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
 	cvar_t *var = NULL, *old_var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
@@ -346,7 +346,7 @@ static int config_set(git_config_file *cfg, const char *name, const char *value)
 /*
  * Internal function that actually gets the value in string form
  */
-static int config_get(git_config_file *cfg, const char *name, const git_config_entry **out)
+static int config_get(const git_config_backend *cfg, const char *name, const git_config_entry **out)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key;
@@ -368,7 +368,7 @@ static int config_get(git_config_file *cfg, const char *name, const git_config_e
 }
 
 static int config_get_multivar(
-	git_config_file *cfg,
+	git_config_backend *cfg,
 	const char *name,
 	const char *regex_str,
 	int (*fn)(const git_config_entry *, void *),
@@ -431,7 +431,7 @@ static int config_get_multivar(
 }
 
 static int config_set_multivar(
-	git_config_file *cfg, const char *name, const char *regexp, const char *value)
+	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
 	int replaced = 0;
 	cvar_t *var, *newvar;
@@ -506,7 +506,7 @@ static int config_set_multivar(
 	return result;
 }
 
-static int config_delete(git_config_file *cfg, const char *name)
+static int config_delete(git_config_backend *cfg, const char *name)
 {
 	cvar_t *var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
@@ -540,7 +540,7 @@ static int config_delete(git_config_file *cfg, const char *name)
 	return result;
 }
 
-int git_config_file__ondisk(git_config_file **out, const char *path)
+int git_config_file__ondisk(git_config_backend **out, const char *path)
 {
 	diskfile_backend *backend;
 
@@ -562,7 +562,7 @@ int git_config_file__ondisk(git_config_file **out, const char *path)
 	backend->parent.refresh = config_refresh;
 	backend->parent.free = backend_free;
 
-	*out = (git_config_file *)backend;
+	*out = (git_config_backend *)backend;
 
 	return 0;
 }

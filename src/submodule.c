@@ -66,7 +66,7 @@ __KHASH_IMPL(
 	str_hash_no_trailing_slash, str_equal_no_trailing_slash);
 
 static int load_submodule_config(git_repository *repo, bool force);
-static git_config_file *open_gitmodules(git_repository *, bool, const git_oid *);
+static git_config_backend *open_gitmodules(git_repository *, bool, const git_oid *);
 static int lookup_head_remote(git_buf *url, git_repository *repo);
 static int submodule_get(git_submodule **, git_repository *, const char *, const char *);
 static void submodule_release(git_submodule *sm, int decr);
@@ -201,7 +201,7 @@ int git_submodule_add_setup(
 	int use_gitlink)
 {
 	int error = 0;
-	git_config_file *mods = NULL;
+	git_config_backend *mods = NULL;
 	git_submodule *sm;
 	git_buf name = GIT_BUF_INIT, real_url = GIT_BUF_INIT;
 	git_repository_init_options initopt;
@@ -412,7 +412,7 @@ cleanup:
 int git_submodule_save(git_submodule *submodule)
 {
 	int error = 0;
-	git_config_file *mods;
+	git_config_backend *mods;
 	git_buf key = GIT_BUF_INIT;
 
 	assert(submodule);
@@ -717,7 +717,7 @@ int git_submodule_reload(git_submodule *submodule)
 	git_index *index;
 	int pos, error;
 	git_tree *head;
-	git_config_file *mods;
+	git_config_backend *mods;
 
 	assert(submodule);
 
@@ -1187,14 +1187,14 @@ static int load_submodule_config_from_head(
 	return error;
 }
 
-static git_config_file *open_gitmodules(
+static git_config_backend *open_gitmodules(
 	git_repository *repo,
 	bool okay_to_create,
 	const git_oid *gitmodules_oid)
 {
 	const char *workdir = git_repository_workdir(repo);
 	git_buf path = GIT_BUF_INIT;
-	git_config_file *mods = NULL;
+	git_config_backend *mods = NULL;
 
 	if (workdir != NULL) {
 		if (git_buf_joinpath(&path, workdir, GIT_MODULES_FILE) != 0)
@@ -1230,7 +1230,7 @@ static int load_submodule_config(git_repository *repo, bool force)
 	int error;
 	git_oid gitmodules_oid;
 	git_buf path = GIT_BUF_INIT;
-	git_config_file *mods = NULL;
+	git_config_backend *mods = NULL;
 
 	if (repo->submodules && !force)
 		return 0;
@@ -1378,7 +1378,7 @@ static int submodule_update_config(
 		goto cleanup;
 
 	if (!value)
-		error = git_config_delete(config, key.ptr);
+		error = git_config_delete_entry(config, key.ptr);
 	else
 		error = git_config_set_string(config, key.ptr, value);
 

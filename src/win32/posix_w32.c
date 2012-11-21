@@ -537,7 +537,7 @@ int p_inet_pton(int af, const char* src, void* dst)
 			return -1;
 	}
 
-	if (WSAStringToAddress(src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
+	if (WSAStringToAddress((LPSTR)src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
 	{
 		errno = WSAGetLastError();
 		return -1;

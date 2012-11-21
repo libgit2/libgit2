@@ -55,7 +55,7 @@ GIT_INLINE(int) git_vector_bsearch2(
 	return git_vector_bsearch3(NULL, v, cmp, key);
 }
 
-GIT_INLINE(void *) git_vector_get(git_vector *v, size_t position)
+GIT_INLINE(void *) git_vector_get(const git_vector *v, size_t position)
 {
 	return (position < v->length) ? v->contents[position] : NULL;
 }

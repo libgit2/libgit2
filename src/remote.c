@@ -303,7 +303,7 @@ int git_remote_save(const git_remote *remote)
 			return -1;
 		}
 	} else {
-		int error = git_config_delete(config, git_buf_cstr(&buf));
+		int error = git_config_delete_entry(config, git_buf_cstr(&buf));
 		if (error == GIT_ENOTFOUND) {
 			error = 0;
 			giterr_clear();
@@ -356,7 +356,7 @@ int git_remote_save(const git_remote *remote)
 		if (git_config_set_string(config, git_buf_cstr(&buf), "--no-tags") < 0)
 			goto on_error;
 	} else if (tagopt) {
-		if (git_config_delete(config, git_buf_cstr(&buf)) < 0)
+		if (git_config_delete_entry(config, git_buf_cstr(&buf)) < 0)
 			goto on_error;
 	}
 

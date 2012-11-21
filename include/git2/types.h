@@ -129,7 +129,7 @@ typedef struct git_index git_index;
 typedef struct git_config git_config;
 
 /** Interface to access a configuration file */
-typedef struct git_config_file git_config_file;
+typedef struct git_config_backend git_config_backend;
 
 /** Representation of a reference log entry */
 typedef struct git_reflog_entry git_reflog_entry;
