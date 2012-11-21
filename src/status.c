@@ -78,7 +78,7 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 }
 
 typedef struct {
-	int (*cb)(const char *, unsigned int, void *);
+	git_status_cb cb;
 	void *payload;
 } status_user_callback;
 
@@ -104,7 +104,7 @@ static int status_invoke_cb(
 int git_status_foreach_ext(
 	git_repository *repo,
 	const git_status_options *opts,
-	int (*cb)(const char *, unsigned int, void *),
+	git_status_cb cb,
 	void *payload)
 {
 	int err = 0;
@@ -178,7 +178,7 @@ cleanup:
 
 int git_status_foreach(
 	git_repository *repo,
-	int (*callback)(const char *, unsigned int, void *),
+	git_status_cb callback,
 	void *payload)
 {
 	git_status_options opts;
