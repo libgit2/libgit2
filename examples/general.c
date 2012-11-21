@@ -298,7 +298,7 @@ int main (int argc, char** argv)
   // Note that this buffer may not be contain ASCII data for certain blobs (e.g. binary files):
   // do not consider the buffer a NULL-terminated string, and use the `git_blob_rawsize` attribute to
   // find out its exact size in bytes
-  printf("Blob Size: %ld\n", git_blob_rawsize(blob)); // 8
+  printf("Blob Size: %ld\n", (long)git_blob_rawsize(blob)); // 8
   git_blob_rawcontent(blob); // "content"
 
   // ### Revwalking

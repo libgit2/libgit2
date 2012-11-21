@@ -22,11 +22,11 @@ git_tree *resolve_commit_oid_to_tree(
 }
 
 int diff_file_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
-	float progress)
+	float progress,
+	void *payload)
 {
-	diff_expects *e = cb_data;
+	diff_expects *e = payload;
 
 	GIT_UNUSED(progress);
 
@@ -43,13 +43,13 @@ int diff_file_cb(
 }
 
 int diff_hunk_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
 	const char *header,
-	size_t header_len)
+	size_t header_len,
+	void *payload)
 {
-	diff_expects *e = cb_data;
+	diff_expects *e = payload;
 
 	GIT_UNUSED(delta);
 	GIT_UNUSED(header);
@@ -62,14 +62,14 @@ int diff_hunk_cb(
 }
 
 int diff_line_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
 	char line_origin,
 	const char *content,
-	size_t content_len)
+	size_t content_len,
+	void *payload)
 {
-	diff_expects *e = cb_data;
+	diff_expects *e = payload;
 
 	GIT_UNUSED(delta);
 	GIT_UNUSED(range);
@@ -103,10 +103,10 @@ int diff_line_cb(
 
 int diff_foreach_via_iterator(
 	git_diff_list *diff,
-	void *data,
 	git_diff_file_cb file_cb,
 	git_diff_hunk_cb hunk_cb,
-	git_diff_data_cb line_cb)
+	git_diff_data_cb line_cb,
+	void *data)
 {
 	size_t d, num_d = git_diff_num_deltas(diff);
 
@@ -119,7 +119,7 @@ int diff_foreach_via_iterator(
 		cl_assert(delta);
 
 		/* call file_cb for this file */
-		if (file_cb != NULL && file_cb(data, delta, (float)d / num_d) != 0) {
+		if (file_cb != NULL && file_cb(delta, (float)d / num_d, data) != 0) {
 			git_diff_patch_free(patch);
 			goto abort;
 		}
@@ -145,7 +145,7 @@ int diff_foreach_via_iterator(
 			cl_git_pass(git_diff_patch_get_hunk(
 				&range, &hdr, &hdr_len, &num_l, patch, h));
 
-			if (hunk_cb && hunk_cb(data, delta, range, hdr, hdr_len) != 0) {
+			if (hunk_cb && hunk_cb(delta, range, hdr, hdr_len, data) != 0) {
 				git_diff_patch_free(patch);
 				goto abort;
 			}
@@ -160,7 +160,8 @@ int diff_foreach_via_iterator(
 					&origin, &line, &line_len, &old_lineno, &new_lineno,
 					patch, h, l));
 
-				if (line_cb(data, delta, range, origin, line, line_len) != 0) {
+				if (line_cb &&
+					line_cb(delta, range, origin, line, line_len, data) != 0) {
 					git_diff_patch_free(patch);
 					goto abort;
 				}
@@ -178,23 +179,23 @@ abort:
 }
 
 static int diff_print_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
 	char line_origin, /**< GIT_DIFF_LINE_... value from above */
 	const char *content,
-	size_t content_len)
+	size_t content_len,
+	void *payload)
 {
-	GIT_UNUSED(cb_data);
+	GIT_UNUSED(payload);
 	GIT_UNUSED(delta);
 	GIT_UNUSED(range);
 	GIT_UNUSED(line_origin);
 	GIT_UNUSED(content_len);
-	fputs(content, (FILE *)cb_data);
+	fputs(content, (FILE *)payload);
 	return 0;
 }
 
 void diff_print(FILE *fp, git_diff_list *diff)
 {
-	cl_git_pass(git_diff_print_patch(diff, fp ? fp : stderr, diff_print_cb));
+	cl_git_pass(git_diff_print_patch(diff, diff_print_cb, fp ? fp : stderr));
 }

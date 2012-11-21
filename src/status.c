@@ -79,13 +79,13 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 
 typedef struct {
 	int (*cb)(const char *, unsigned int, void *);
-	void *cbdata;
+	void *payload;
 } status_user_callback;
 
 static int status_invoke_cb(
-	void *cbref, git_diff_delta *i2h, git_diff_delta *w2i)
+	git_diff_delta *i2h, git_diff_delta *w2i, void *payload)
 {
-	status_user_callback *usercb = cbref;
+	status_user_callback *usercb = payload;
 	const char *path = NULL;
 	unsigned int status = 0;
 
@@ -98,14 +98,14 @@ static int status_invoke_cb(
 		status |= index_delta2status(i2h->status);
 	}
 
-	return usercb->cb(path, status, usercb->cbdata);
+	return usercb->cb(path, status, usercb->payload);
 }
 
 int git_status_foreach_ext(
 	git_repository *repo,
 	const git_status_options *opts,
 	int (*cb)(const char *, unsigned int, void *),
-	void *cbdata)
+	void *payload)
 {
 	int err = 0;
 	git_diff_options diffopt;
@@ -152,7 +152,7 @@ int git_status_foreach_ext(
 		goto cleanup;
 
 	usercb.cb = cb;
-	usercb.cbdata = cbdata;
+	usercb.payload = payload;
 
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
 		if ((err = git_diff__paired_foreach(

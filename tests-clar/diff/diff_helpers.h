@@ -21,30 +21,30 @@ typedef struct {
 } diff_expects;
 
 extern int diff_file_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
-	float progress);
+	float progress,
+	void *cb_data);
 
 extern int diff_hunk_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
 	const char *header,
-	size_t header_len);
+	size_t header_len,
+	void *cb_data);
 
 extern int diff_line_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
 	char line_origin,
 	const char *content,
-	size_t content_len);
+	size_t content_len,
+	void *cb_data);
 
 extern int diff_foreach_via_iterator(
 	git_diff_list *diff,
-	void *data,
 	git_diff_file_cb file_cb,
 	git_diff_hunk_cb hunk_cb,
-	git_diff_data_cb line_cb);
+	git_diff_data_cb line_cb,
+	void *data);
 
 extern void diff_print(FILE *fp, git_diff_list *diff);

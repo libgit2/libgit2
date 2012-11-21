@@ -22,14 +22,14 @@ void test_diff_patch__cleanup(void)
 #define EXPECTED_HUNK "@@ -1,2 +0,0 @@\n"
 
 static int check_removal_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
 	char line_origin,
 	const char *formatted_output,
-	size_t output_len)
+	size_t output_len,
+	void *payload)
 {
-	GIT_UNUSED(cb_data);
+	GIT_UNUSED(payload);
 	GIT_UNUSED(output_len);
 
 	switch (line_origin) {
@@ -90,7 +90,7 @@ void test_diff_patch__can_properly_display_the_removal_of_a_file(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, one, another, NULL));
 
-	cl_git_pass(git_diff_print_patch(diff, NULL, check_removal_cb));
+	cl_git_pass(git_diff_print_patch(diff, check_removal_cb, NULL));
 
 	git_diff_list_free(diff);
 

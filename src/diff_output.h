@@ -30,9 +30,9 @@ typedef struct {
 	git_diff_file_cb  file_cb;
 	git_diff_hunk_cb  hunk_cb;
 	git_diff_data_cb  data_cb;
-	void *cb_data;
-	int   cb_error;
-	git_diff_range cb_range;
+	void *payload;
+	int   error;
+	git_diff_range range;
 	xdemitconf_t xdiff_config;
 	xpparam_t    xdiff_params;
 } diff_context;
@@ -86,7 +86,7 @@ typedef struct {
 extern int git_diff__paired_foreach(
 	git_diff_list *idx2head,
 	git_diff_list *wd2idx,
-	int (*cb)(void *cbref, git_diff_delta *i2h, git_diff_delta *w2i),
-	void *cbref);
+	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
+	void *payload);
 
 #endif

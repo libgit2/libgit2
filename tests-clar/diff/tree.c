@@ -37,7 +37,7 @@ void test_diff_tree__0(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
@@ -59,7 +59,7 @@ void test_diff_tree__0(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
@@ -148,7 +148,7 @@ void test_diff_tree__options(void)
 			cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, d, &opts));
 
 		cl_git_pass(git_diff_foreach(
-			diff, &actual, diff_file_cb, diff_hunk_cb, diff_line_cb));
+			diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &actual));
 
 		expected = &test_expects[i];
 		cl_assert_equal_i(actual.files,     expected->files);
@@ -192,7 +192,7 @@ void test_diff_tree__bare(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
@@ -242,7 +242,7 @@ void test_diff_tree__merge(void)
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_foreach(
-		diff1, &exp, diff_file_cb, diff_hunk_cb, diff_line_cb));
+		diff1, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);

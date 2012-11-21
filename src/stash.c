@@ -169,12 +169,12 @@ struct cb_data {
 };
 
 static int update_index_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
-	float progress)
+	float progress,
+	void *payload)
 {
 	int pos;
-	struct cb_data *data = (struct cb_data *)cb_data;
+	struct cb_data *data = (struct cb_data *)payload;
 
 	GIT_UNUSED(progress);
 
@@ -253,7 +253,7 @@ static int build_untracked_tree(
 	if (git_diff_workdir_to_tree(&diff, git_index_owner(index), i_tree, &opts) < 0)
 		goto cleanup;
 
-	if (git_diff_foreach(diff, &data, update_index_cb, NULL, NULL) < 0)
+	if (git_diff_foreach(diff, update_index_cb, NULL, NULL, &data) < 0)
 		goto cleanup;
 
 	if (build_tree_from_index(tree_out, index) < 0)
@@ -334,7 +334,7 @@ static int build_workdir_tree(
 	data.index = index;
 	data.include_changed = true;
 
-	if (git_diff_foreach(diff, &data, update_index_cb, NULL, NULL) < 0)
+	if (git_diff_foreach(diff, update_index_cb, NULL, NULL, &data) < 0)
 		goto cleanup;
 
 	if (build_tree_from_index(tree_out, index) < 0)
