@@ -22,7 +22,7 @@ void record_callbacks_data_clear(record_callbacks_data *data)
 	git_vector_foreach(&data->updated_tips, i, tip)
 		updated_tip_free(tip);
 
-	git_vector_clear(&data->updated_tips);
+	git_vector_free(&data->updated_tips);
 }
 
 int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)

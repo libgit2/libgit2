@@ -64,46 +64,47 @@ static int record_push_status_cb(const char *ref, const char *msg, void *data)
 static void do_verify_push_status(git_push *push, const push_status expected[], const size_t expected_len)
 {
 	git_vector actual = GIT_VECTOR_INIT;
+	push_status *iter;
+	bool failed = false;
 	size_t i;
-
-	git_buf msg = GIT_BUF_INIT;
-	push_status *actual_s;
 
 	git_push_status_foreach(push, record_push_status_cb, &actual);
 
 	if (expected_len != actual.length)
-		goto failed;
+		failed = true;
+	else
+		git_vector_foreach(&actual, i, iter)
+			if (strcmp(expected[i].ref, iter->ref) ||
+				(expected[i].msg && strcmp(expected[i].msg, iter->msg))) {
+				failed = true;
+				break;
+			}
 
-	for(i = 0; i < expected_len; i++) {
-		push_status *curr_actual = git_vector_get(&actual, i);
+	if (failed) {
+		git_buf msg = GIT_BUF_INIT;
 
-		if (strcmp(expected[i].ref, curr_actual->ref))
-			goto failed;
-		if (expected[i].msg != curr_actual->msg)
-			if(expected[i].msg == NULL ||
-				curr_actual->msg == NULL ||
-				strcmp(expected[i].msg, curr_actual->msg)
-			)
-			goto failed;
+		git_buf_puts(&msg, "Expected and actual push statuses differ:\nEXPECTED:\n");
+
+		for(i = 0; i < expected_len; i++) {
+			git_buf_printf(&msg, "%s: %s\n",
+				expected[i].ref,
+				expected[i].msg ? expected[i].msg : "<NULL>");
+		}
+
+		git_buf_puts(&msg, "\nACTUAL:\n");
+
+		git_vector_foreach(&actual, i, iter)
+			git_buf_printf(&msg, "%s: %s\n", iter->ref, iter->msg);
+
+		cl_fail(git_buf_cstr(&msg));
+
+		git_buf_free(&msg);
 	}
 
-	return;
+	git_vector_foreach(&actual, i, iter)
+		git__free(iter);
 
-failed:
-	git_buf_puts(&msg, "Expected and actual push statuses differ:\nEXPECTED:\n");
-
-	for(i = 0; i < expected_len; i++) {
-		cl_git_pass(git_buf_printf(&msg, "%s: %s\n", expected[i].ref, expected[i].msg ? expected[i].msg : "<NULL>"));
-	}
-
-	git_buf_puts(&msg, "\nACTUAL:\n");
-	git_vector_foreach(&actual, i, actual_s) {
-		cl_git_pass(git_buf_printf(&msg, "%s: %s\n", actual_s->ref, actual_s->msg));
-	}
-
-	cl_fail(git_buf_cstr(&msg));
-
-	git_buf_free(&msg);
+	git_vector_free(&actual);
 }
 
 /**
@@ -169,48 +170,54 @@ void test_network_push__initialize(void)
 
 	/* Remote URL environment variable must be set.  User and password are optional.  */
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
-	cl_assert(_remote_url);
 	_remote_user = cl_getenv("GITTEST_REMOTE_USER");
 	_remote_pass = cl_getenv("GITTEST_REMOTE_PASS");
+	_remote = NULL;
 
-	cl_git_pass(git_remote_add(&_remote, _repo, "test", _remote_url));
+	if (_remote_url) {
+		cl_git_pass(git_remote_add(&_remote, _repo, "test", _remote_url));
 
-	git_remote_set_cred_acquire_cb(_remote, cred_acquire_cb); 
-	record_callbacks_data_clear(&_record_cbs_data);
-	git_remote_set_callbacks(_remote, &_record_cbs);
+		git_remote_set_cred_acquire_cb(_remote, cred_acquire_cb);
+		record_callbacks_data_clear(&_record_cbs_data);
+		git_remote_set_callbacks(_remote, &_record_cbs);
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIR_PUSH));
+		cl_git_pass(git_remote_connect(_remote, GIT_DIR_PUSH));
 
-	/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
-	 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
-	 * 'git config receive.denyDeleteCurrent ignore' in the remote repo in
-	 * order to delete the remote branch pointed to by HEAD (usually master).
-	 * See: https://raw.github.com/git/git/master/Documentation/RelNotes/1.7.0.txt
-	 */
-	cl_git_pass(git_remote_ls(_remote, delete_ref_cb, &delete_specs));
-	if (delete_specs.length == 0) {
-		git_remote_disconnect(_remote);
-	} else {
-		git_push *push;
+		/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
+		 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
+		 * 'git config receive.denyDeleteCurrent ignore' in the remote repo in
+		 * order to delete the remote branch pointed to by HEAD (usually master).
+		 * See: https://raw.github.com/git/git/master/Documentation/RelNotes/1.7.0.txt
+		 */
+		cl_git_pass(git_remote_ls(_remote, delete_ref_cb, &delete_specs));
+		if (delete_specs.length == 0) {
+			git_remote_disconnect(_remote);
+		} else {
+			git_push *push;
 
-		cl_git_pass(git_push_new(&push, _remote));
+			cl_git_pass(git_push_new(&push, _remote));
 
-		git_vector_foreach(&delete_specs, i, curr_del_spec) {
-			git_push_add_refspec(push, curr_del_spec);
-			git__free(curr_del_spec);
+			git_vector_foreach(&delete_specs, i, curr_del_spec) {
+				git_push_add_refspec(push, curr_del_spec);
+				git__free(curr_del_spec);
+			}
+
+			cl_git_pass(git_push_finish(push));
+			git_push_free(push);
+			verify_refs_and_disconnect(_remote, NULL, 0);
 		}
 
-		cl_git_pass(git_push_finish(push));
-		git_push_free(push);
-		verify_refs_and_disconnect(_remote, NULL, 0);
-	}
-
-	git_vector_free(&delete_specs);
+		git_vector_free(&delete_specs);
+	} else
+		printf("GITTEST_REMOTE_URL unset; skipping push test\n");
 }
 
 void test_network_push__cleanup(void)
 {
-	git_remote_free(_remote);
+	if (_remote)
+		git_remote_free(_remote);
+
+	record_callbacks_data_clear(&_record_cbs_data);
 
 	cl_fixture_cleanup("testrepo.git");
 	cl_git_sandbox_cleanup();
@@ -233,31 +240,33 @@ static void do_push(const char *refspecs[], size_t refspecs_len,
 	size_t i;
 	int ret;
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIR_PUSH));
+	if (_remote) {
+		cl_git_pass(git_remote_connect(_remote, GIT_DIR_PUSH));
 
-	cl_git_pass(git_push_new(&push, _remote));
+		cl_git_pass(git_push_new(&push, _remote));
 
-	for (i = 0; i < refspecs_len; i++)
-		cl_git_pass(git_push_add_refspec(push, refspecs[i]));
+		for (i = 0; i < refspecs_len; i++)
+			cl_git_pass(git_push_add_refspec(push, refspecs[i]));
 
-	if (expected_ret < 0) {
-		cl_git_fail(ret = git_push_finish(push));
-		cl_assert_equal_i(0, git_push_unpack_ok(push));
+		if (expected_ret < 0) {
+			cl_git_fail(ret = git_push_finish(push));
+			cl_assert_equal_i(0, git_push_unpack_ok(push));
+		}
+		else {
+			cl_git_pass(ret = git_push_finish(push));
+			cl_assert_equal_i(1, git_push_unpack_ok(push));
+		}
+
+		do_verify_push_status(push, expected_statuses, expected_statuses_len);
+
+		cl_assert_equal_i(expected_ret, ret);
+
+		git_push_free(push);
+
+		verify_refs_and_disconnect(_remote, expected_refs, expected_refs_len);
+
+		cl_git_pass(git_remote_update_tips(_remote));
 	}
-	else {
-		cl_git_pass(ret = git_push_finish(push));
-		cl_assert_equal_i(1, git_push_unpack_ok(push));
-	}
-
-	do_verify_push_status(push, expected_statuses, expected_statuses_len);
-
-	cl_assert_equal_i(expected_ret, ret);
-
-	git_push_free(push);
-
-	verify_refs_and_disconnect(_remote, expected_refs, expected_refs_len);
-
-	cl_git_pass(git_remote_update_tips(_remote));
 }
 
 /* Call push_finish() without ever calling git_push_add_refspec() */
@@ -271,6 +280,7 @@ void test_network_push__master(void)
 	const char *specs[] = { "refs/heads/master:refs/heads/master" };
 	push_status exp_stats[] = { { "refs/heads/master", NULL } };
 	expected_ref exp_refs[] = { { "refs/heads/master", &_oid_master } };
+
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
@@ -498,13 +508,15 @@ void test_network_push__bad_refspecs(void)
 	 */
 	git_push *push;
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIR_PUSH));
-	cl_git_pass(git_push_new(&push, _remote));
+	if (_remote) {
+		cl_git_pass(git_remote_connect(_remote, GIT_DIR_PUSH));
+		cl_git_pass(git_push_new(&push, _remote));
 
-	/* Unexpanded branch names not supported */
-	cl_git_fail(git_push_add_refspec(push, "master:master"));
+		/* Unexpanded branch names not supported */
+		cl_git_fail(git_push_add_refspec(push, "master:master"));
 
-	git_push_free(push);
+		git_push_free(push);
+	}
 }
 
 void test_network_push__expressions(void)
