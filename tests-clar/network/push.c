@@ -14,7 +14,7 @@ static char *_remote_user;
 static char *_remote_pass;
 
 static git_remote *_remote;
-static record_callbacks_data _record_cbs_data = { 0 };
+static record_callbacks_data _record_cbs_data = {{ 0 }};
 static git_remote_callbacks _record_cbs = RECORD_CALLBACKS_INIT(&_record_cbs_data);
 
 static git_oid _oid_master;
@@ -28,12 +28,14 @@ static git_oid _oid_b1;
 #define CREATE_BLOB(oid, repo, blob) git_blob_create_frombuffer(oid, repo, blob, sizeof(blob) - 1)
 
 static int cred_acquire_cb(git_cred **cred, const char *url, int allowed_types) 
-{ 
-	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
-		git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass) < 0) 
-		return -1; 
+{
+	GIT_UNUSED(url);
 
-	return 0; 
+	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
+		git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass) < 0)
+		return -1;
+
+	return 0;
 }
 
 typedef struct {
@@ -209,10 +211,6 @@ void test_network_push__initialize(void)
 void test_network_push__cleanup(void)
 {
 	git_remote_free(_remote);
-
-	git__free(_remote_url);
-	git__free(_remote_user);
-	git__free(_remote_pass);
 
 	cl_fixture_cleanup("testrepo.git");
 	cl_git_sandbox_cleanup();

@@ -178,7 +178,7 @@ static int on_header_ready(http_subtransport *t)
 	git_buf *value = &t->parse_header_value;
 	char *dup;
 
-	if (!t->content_type && !strcmp("Content-Type", git_buf_cstr(name))) {
+	if (!t->content_type && !strcasecmp("Content-Type", git_buf_cstr(name))) {
 		t->content_type = git__strdup(git_buf_cstr(value));
 		GITERR_CHECK_ALLOC(t->content_type);
 	}
@@ -402,6 +402,7 @@ static int http_stream_read(
 	http_stream *s = (http_stream *)stream;
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	parser_context ctx;
+	size_t bytes_parsed;
 
 replay:
 	*bytes_read = 0;
@@ -447,44 +448,50 @@ replay:
 		s->received_response = 1;
 	}
 
-	t->parse_buffer.offset = 0;
+	while (!*bytes_read && !t->parse_finished) {
+		t->parse_buffer.offset = 0;
 
-	if (t->parse_finished)
-		return 0;
+		if (gitno_recv(&t->parse_buffer) < 0)
+			return -1;
 
-	if (gitno_recv(&t->parse_buffer) < 0)
-		return -1;
+		/* This call to http_parser_execute will result in invocations of the
+		 * on_* family of callbacks. The most interesting of these is
+		 * on_body_fill_buffer, which is called when data is ready to be copied
+		 * into the target buffer. We need to marshal the buffer, buf_size, and
+		 * bytes_read parameters to this callback. */
+		ctx.t = t;
+		ctx.s = s;
+		ctx.buffer = buffer;
+		ctx.buf_size = buf_size;
+		ctx.bytes_read = bytes_read;
 
-	/* This call to http_parser_execute will result in invocations of the on_*
-	 * family of callbacks. The most interesting of these is
-	 * on_body_fill_buffer, which is called when data is ready to be copied
-	 * into the target buffer. We need to marshal the buffer, buf_size, and
-	 * bytes_read parameters to this callback. */
-	ctx.t = t;
-	ctx.s = s;
-	ctx.buffer = buffer;
-	ctx.buf_size = buf_size;
-	ctx.bytes_read = bytes_read;
+		/* Set the context, call the parser, then unset the context. */
+		t->parser.data = &ctx;
 
-	/* Set the context, call the parser, then unset the context. */
-	t->parser.data = &ctx;
+		bytes_parsed = http_parser_execute(&t->parser,
+			&t->settings,
+			t->parse_buffer.data,
+			t->parse_buffer.offset);
 
-	http_parser_execute(&t->parser,
-		&t->settings,
-		t->parse_buffer.data,
-		t->parse_buffer.offset);
+		t->parser.data = NULL;
 
-	t->parser.data = NULL;
+		/* If there was a handled authentication failure, then parse_error
+		 * will have signaled us that we should replay the request. */
+		if (PARSE_ERROR_REPLAY == t->parse_error) {
+			s->sent_request = 0;
+			goto replay;
+		}
 
-	/* If there was a handled authentication failure, then parse_error
-	 * will have signaled us that we should replay the request. */
-	if (PARSE_ERROR_REPLAY == t->parse_error) {
-		s->sent_request = 0;
-		goto replay;
+		if (t->parse_error < 0)
+			return -1;
+
+		if (bytes_parsed != t->parse_buffer.offset) {
+			giterr_set(GITERR_NET,
+				"HTTP parser error: %s",
+				http_errno_description((enum http_errno)t->parser.http_errno));
+			return -1;
+		}
 	}
-
-	if (t->parse_error < 0)
-		return -1;
 
 	return 0;
 }
@@ -714,7 +721,7 @@ static int http_action(
 	git_smart_service_t action)
 {
 	http_subtransport *t = (http_subtransport *)smart_transport;
-	const char *default_port;
+	const char *default_port = NULL;
 	int flags = 0, ret;
 
 	if (!stream)
@@ -732,6 +739,9 @@ static int http_action(
 			t->use_ssl = 1;
 		}
 
+		if (!default_port)
+			return -1;
+
 		if ((ret = gitno_extract_host_and_port(&t->host, &t->port,
 				url, default_port)) < 0)
 			return ret;
@@ -739,7 +749,13 @@ static int http_action(
 		t->path = strchr(url, '/');
 	}
 
-	if (!t->connected || !http_should_keep_alive(&t->parser)) {
+	if (!t->connected ||
+		!http_should_keep_alive(&t->parser) ||
+		!http_body_is_final(&t->parser)) {
+
+		if (t->socket.socket)
+			gitno_close(&t->socket);
+
 		if (t->use_ssl) {
 			int transport_flags;
 
@@ -757,9 +773,6 @@ static int http_action(
 
 		t->connected = 1;
 	}
-
-	t->parse_finished = 0;
-	t->parse_error = 0;
 
 	switch (action)
 	{

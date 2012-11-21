@@ -4,7 +4,7 @@
 #include "vector.h"
 #include "push_util.h"
 
-const git_oid OID_ZERO = { 0 };
+const git_oid OID_ZERO = {{ 0 }};
 
 void updated_tip_free(updated_tip *t)
 {
@@ -21,7 +21,7 @@ void record_callbacks_data_clear(record_callbacks_data *data)
 
 	git_vector_foreach(&data->updated_tips, i, tip)
 		updated_tip_free(tip);
-	
+
 	git_vector_clear(&data->updated_tips);
 }
 

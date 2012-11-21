@@ -116,6 +116,9 @@ static int parse_refspec(push_spec **spec, const char *str)
 			s->rref = NULL;
 	}
 
+	if (!s->lref && !s->rref)
+		goto on_error;
+
 #undef check
 
 	*spec = s;

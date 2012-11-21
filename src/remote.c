@@ -488,7 +488,7 @@ int git_remote_connect(git_remote *remote, int direction)
 	if (t->set_callbacks &&
 		t->set_callbacks(t, remote->callbacks.progress, NULL, remote->callbacks.data) < 0)
 		goto on_error;
-	
+
 	if (!remote->check_cert)
 		flags |= GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
@@ -501,6 +501,10 @@ int git_remote_connect(git_remote *remote, int direction)
 
 on_error:
 	t->free(t);
+
+	if (t == remote->transport)
+		remote->transport = NULL;
+
 	return -1;
 }
 
