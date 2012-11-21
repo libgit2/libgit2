@@ -45,7 +45,7 @@ void test_object_tag_write__basic(void)
 	git_signature_free(tagger);
 
 	cl_git_pass(git_tag_lookup(&tag, g_repo, &tag_id));
-	cl_assert(git_oid_cmp(git_tag_target_oid(tag), &target_id) == 0);
+	cl_assert(git_oid_cmp(git_tag_target_id(tag), &target_id) == 0);
 
 	/* Check attributes were set correctly */
 	tagger1 = git_tag_tagger(tag);

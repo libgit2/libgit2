@@ -22,41 +22,41 @@ void git_tag__free(git_tag *tag)
 	git__free(tag);
 }
 
-const git_oid *git_tag_id(git_tag *c)
+const git_oid *git_tag_id(const git_tag *c)
 {
-	return git_object_id((git_object *)c);
+	return git_object_id((const git_object *)c);
 }
 
-int git_tag_target(git_object **target, git_tag *t)
+int git_tag_target(git_object **target, const git_tag *t)
 {
 	assert(t);
 	return git_object_lookup(target, t->object.repo, &t->target, t->type);
 }
 
-const git_oid *git_tag_target_oid(git_tag *t)
+const git_oid *git_tag_target_id(const git_tag *t)
 {
 	assert(t);
 	return &t->target;
 }
 
-git_otype git_tag_target_type(git_tag *t)
+git_otype git_tag_target_type(const git_tag *t)
 {
 	assert(t);
 	return t->type;
 }
 
-const char *git_tag_name(git_tag *t)
+const char *git_tag_name(const git_tag *t)
 {
 	assert(t);
 	return t->tag_name;
 }
 
-const git_signature *git_tag_tagger(git_tag *t)
+const git_signature *git_tag_tagger(const git_tag *t)
 {
 	return t->tagger;
 }
 
-const char *git_tag_message(git_tag *t)
+const char *git_tag_message(const git_tag *t)
 {
 	assert(t);
 	return t->message;
@@ -425,8 +425,8 @@ int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
 	data.cb_data = cb_data;
 	data.repo = repo;
 
-	return git_reference_foreach(repo, GIT_REF_OID | GIT_REF_PACKED,
-				     &tags_cb, &data);
+	return git_reference_foreach(
+		repo, GIT_REF_OID | GIT_REF_PACKED, &tags_cb, &data);
 }
 
 typedef struct {
@@ -477,7 +477,7 @@ int git_tag_list(git_strarray *tag_names, git_repository *repo)
 	return git_tag_list_match(tag_names, "", repo);
 }
 
-int git_tag_peel(git_object **tag_target, git_tag *tag)
+int git_tag_peel(git_object **tag_target, const git_tag *tag)
 {
-	return git_object_peel(tag_target, (git_object *)tag, GIT_OBJ_ANY);
+	return git_object_peel(tag_target, (const git_object *)tag, GIT_OBJ_ANY);
 }

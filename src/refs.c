@@ -647,7 +647,7 @@ static int packed_find_peel(git_repository *repo, struct packref *ref)
 		/*
 		 * Find the object pointed at by this tag
 		 */
-		git_oid_cpy(&ref->peel, git_tag_target_oid(tag));
+		git_oid_cpy(&ref->peel, git_tag_target_id(tag));
 		ref->flags |= GIT_PACKREF_HAS_PEEL;
 
 		/*

@@ -183,9 +183,9 @@ GIT_EXTERN(size_t) git_object__size(git_otype type);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_peel(
-		git_object **peeled,
-		const git_object *object,
-		git_otype target_type);
+	git_object **peeled,
+	const git_object *object,
+	git_otype target_type);
 
 /** @} */
 GIT_END_DECL
