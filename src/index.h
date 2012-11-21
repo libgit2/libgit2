@@ -43,7 +43,7 @@ struct git_index {
 
 extern void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st);
 
-extern unsigned int git_index__prefix_position(git_index *index, const char *path);
+extern size_t git_index__prefix_position(git_index *index, const char *path);
 
 extern int git_index_entry__cmp(const void *a, const void *b);
 extern int git_index_entry__cmp_icase(const void *a, const void *b);

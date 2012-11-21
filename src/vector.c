@@ -9,14 +9,14 @@
 #include "repository.h"
 #include "vector.h"
 
-static const double resize_factor = 1.75;
-static const unsigned int minimum_size = 8;
+static const double git_vector_resize_factor = 1.75;
+static const size_t git_vector_minimum_size = 8;
 
 static int resize_vector(git_vector *v)
 {
-	v->_alloc_size = ((unsigned int)(v->_alloc_size * resize_factor)) + 1;
-	if (v->_alloc_size < minimum_size)
-		v->_alloc_size = minimum_size;
+	v->_alloc_size = (size_t)(v->_alloc_size * git_vector_resize_factor) + 1;
+	if (v->_alloc_size < git_vector_minimum_size)
+		v->_alloc_size = git_vector_minimum_size;
 
 	v->contents = git__realloc(v->contents, v->_alloc_size * sizeof(void *));
 	GITERR_CHECK_ALLOC(v->contents);
@@ -24,7 +24,7 @@ static int resize_vector(git_vector *v)
 	return 0;
 }
 
-int git_vector_dup(git_vector *v, git_vector *src, git_vector_cmp cmp)
+int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 {
 	assert(v && src);
 
@@ -58,7 +58,7 @@ int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 	memset(v, 0x0, sizeof(git_vector));
 
 	if (initial_size == 0)
-		initial_size = minimum_size;
+		initial_size = git_vector_minimum_size;
 
 	v->_alloc_size = initial_size;
 	v->_cmp = cmp;
@@ -133,7 +133,7 @@ void git_vector_sort(git_vector *v)
 }
 
 int git_vector_bsearch3(
-	unsigned int *at_pos,
+	size_t *at_pos,
 	git_vector *v,
 	git_vector_cmp key_lookup,
 	const void *key)
@@ -151,15 +151,15 @@ int git_vector_bsearch3(
 	rval = git__bsearch(v->contents, v->length, key, key_lookup, &pos);
 
 	if (at_pos != NULL)
-		*at_pos = (unsigned int)pos;
+		*at_pos = pos;
 
 	return (rval >= 0) ? (int)pos : GIT_ENOTFOUND;
 }
 
 int git_vector_search2(
-	git_vector *v, git_vector_cmp key_lookup, const void *key)
+	const git_vector *v, git_vector_cmp key_lookup, const void *key)
 {
-	unsigned int i;
+	size_t i;
 
 	assert(v && key && key_lookup);
 
@@ -176,14 +176,14 @@ static int strict_comparison(const void *a, const void *b)
 	return (a == b) ? 0 : -1;
 }
 
-int git_vector_search(git_vector *v, const void *entry)
+int git_vector_search(const git_vector *v, const void *entry)
 {
 	return git_vector_search2(v, v->_cmp ? v->_cmp : strict_comparison, entry);
 }
 
-int git_vector_remove(git_vector *v, unsigned int idx)
+int git_vector_remove(git_vector *v, size_t idx)
 {
-	unsigned int i;
+	size_t i;
 
 	assert(v);
 
@@ -206,7 +206,7 @@ void git_vector_pop(git_vector *v)
 void git_vector_uniq(git_vector *v)
 {
 	git_vector_cmp cmp;
-	unsigned int i, j;
+	size_t i, j;
 
 	if (v->length <= 1)
 		return;
@@ -223,9 +223,10 @@ void git_vector_uniq(git_vector *v)
 	v->length -= j - i - 1;
 }
 
-void git_vector_remove_matching(git_vector *v, int (*match)(git_vector *v, size_t idx))
+void git_vector_remove_matching(
+	git_vector *v, int (*match)(const git_vector *v, size_t idx))
 {
-	unsigned int i, j;
+	size_t i, j;
 
 	for (i = 0, j = 0; j < v->length; ++j) {
 		v->contents[i] = v->contents[j];

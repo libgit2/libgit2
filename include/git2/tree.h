@@ -127,7 +127,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(
  * @return the tree entry; NULL if not found
  */
 GIT_EXTERN(const git_tree_entry *) git_tree_entry_byoid(
-	git_tree *tree, const git_oid *oid);
+	const git_tree *tree, const git_oid *oid);
 
 /**
  * Retrieve a tree entry contained in a tree or in any of its subtrees,
@@ -351,18 +351,15 @@ typedef enum {
 } git_treewalk_mode;
 
 /**
- * Traverse the entries in a tree and its subtrees in
- * post or pre order
+ * Traverse the entries in a tree and its subtrees in post or pre order.
  *
- * The entries will be traversed in the specified order,
- * children subtrees will be automatically loaded as required,
- * and the `callback` will be called once per entry with
- * the current (relative) root for the entry and the entry
- * data itself.
+ * The entries will be traversed in the specified order, children subtrees
+ * will be automatically loaded as required, and the `callback` will be
+ * called once per entry with the current (relative) root for the entry and
+ * the entry data itself.
  *
  * If the callback returns a positive value, the passed entry will be
- * skipped on the traversal (in pre mode). A negative value stops the
- * walk.
+ * skipped on the traversal (in pre mode). A negative value stops the walk.
  *
  * @param tree The tree to walk
  * @param mode Traversal mode (pre or post-order)

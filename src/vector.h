@@ -24,23 +24,23 @@ typedef struct git_vector {
 int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
 void git_vector_clear(git_vector *v);
-int git_vector_dup(git_vector *v, git_vector *src, git_vector_cmp cmp);
+int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp);
 void git_vector_swap(git_vector *a, git_vector *b);
 
 void git_vector_sort(git_vector *v);
 
 /** Linear search for matching entry using internal comparison function */
-int git_vector_search(git_vector *v, const void *entry);
+int git_vector_search(const git_vector *v, const void *entry);
 
 /** Linear search for matching entry using explicit comparison function */
-int git_vector_search2(git_vector *v, git_vector_cmp cmp, const void *key);
+int git_vector_search2(const git_vector *v, git_vector_cmp cmp, const void *key);
 
 /**
  * Binary search for matching entry using explicit comparison function that
  * returns position where item would go if not found.
  */
 int git_vector_bsearch3(
-	unsigned int *at_pos, git_vector *v, git_vector_cmp cmp, const void *key);
+	size_t *at_pos, git_vector *v, git_vector_cmp cmp, const void *key);
 
 /** Binary search for matching entry using internal comparison function */
 GIT_INLINE(int) git_vector_bsearch(git_vector *v, const void *key)
@@ -60,14 +60,9 @@ GIT_INLINE(void *) git_vector_get(const git_vector *v, size_t position)
 	return (position < v->length) ? v->contents[position] : NULL;
 }
 
-GIT_INLINE(const void *) git_vector_get_const(const git_vector *v, size_t position)
-{
-	return (position < v->length) ? v->contents[position] : NULL;
-}
-
 #define GIT_VECTOR_GET(V,I) ((I) < (V)->length ? (V)->contents[(I)] : NULL)
 
-GIT_INLINE(void *) git_vector_last(git_vector *v)
+GIT_INLINE(void *) git_vector_last(const git_vector *v)
 {
 	return (v->length > 0) ? git_vector_get(v, v->length - 1) : NULL;
 }
@@ -81,10 +76,11 @@ GIT_INLINE(void *) git_vector_last(git_vector *v)
 int git_vector_insert(git_vector *v, void *element);
 int git_vector_insert_sorted(git_vector *v, void *element,
 	int (*on_dup)(void **old, void *new));
-int git_vector_remove(git_vector *v, unsigned int idx);
+int git_vector_remove(git_vector *v, size_t idx);
 void git_vector_pop(git_vector *v);
 void git_vector_uniq(git_vector *v);
-void git_vector_remove_matching(git_vector *v, int (*match)(git_vector *v, size_t idx));
+void git_vector_remove_matching(
+	git_vector *v, int (*match)(const git_vector *v, size_t idx));
 
 int git_vector_resize_to(git_vector *v, size_t new_length);
 int git_vector_set(void **old, git_vector *v, size_t position, void *value);

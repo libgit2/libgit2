@@ -190,7 +190,7 @@ void test_core_vector__5(void)
 	git_vector_free(&x);
 }
 
-static int remove_ones(git_vector *v, size_t idx)
+static int remove_ones(const git_vector *v, size_t idx)
 {
 	return (git_vector_get(v, idx) == (void *)0x001);
 }

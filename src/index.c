@@ -298,7 +298,7 @@ static void index_free(git_index *index)
 {
 	git_index_entry *e;
 	git_index_reuc_entry *reuc;
-	unsigned int i;
+	size_t i;
 
 	git_index_clear(index);
 	git_vector_foreach(&index->entries, i, e) {
@@ -488,20 +488,22 @@ int git_index_write_tree_to(git_oid *oid, git_index *index, git_repository *repo
 	return git_tree__write_index(oid, index, repo);
 }
 
-unsigned int git_index_entrycount(git_index *index)
+unsigned int git_index_entrycount(const git_index *index)
 {
 	assert(index);
 	return (unsigned int)index->entries.length;
 }
 
-const git_index_entry *git_index_get_byindex(git_index *index, size_t n)
+const git_index_entry *git_index_get_byindex(
+	git_index *index, size_t n)
 {
 	assert(index);
 	git_vector_sort(&index->entries);
 	return git_vector_get(&index->entries, n);
 }
 
-const git_index_entry *git_index_get_bypath(git_index *index, const char *path, int stage)
+const git_index_entry *git_index_get_bypath(
+	git_index *index, const char *path, int stage)
 {
 	int pos;
 
@@ -810,13 +812,15 @@ int git_index_find(git_index *index, const char *path)
 
 	assert(index && path);
 
-	if ((pos = git_vector_bsearch2(&index->entries, index->entries_search_path, path)) < 0)
+	if ((pos = git_vector_bsearch2(
+			&index->entries, index->entries_search_path, path)) < 0)
 		return pos;
 
 	/* Since our binary search only looked at path, we may be in the
-	 * middle of a list of stages. */
+	 * middle of a list of stages.
+	 */
 	while (pos > 0) {
-		git_index_entry *prev = git_vector_get(&index->entries, pos-1);
+		const git_index_entry *prev = git_vector_get(&index->entries, pos-1);
 
 		if (index->entries_cmp_path(prev->path, path) != 0)
 			break;
@@ -827,10 +831,10 @@ int git_index_find(git_index *index, const char *path)
 	return pos;
 }
 
-unsigned int git_index__prefix_position(git_index *index, const char *path)
+size_t git_index__prefix_position(git_index *index, const char *path)
 {
 	struct entry_srch_key srch_key;
-	unsigned int pos;
+	size_t pos;
 
 	srch_key.path = path;
 	srch_key.stage = 0;
@@ -961,7 +965,7 @@ int git_index_conflict_remove(git_index *index, const char *path)
 	return error;
 }
 
-static int index_conflicts_match(git_vector *v, size_t idx)
+static int index_conflicts_match(const git_vector *v, size_t idx)
 {
 	git_index_entry *entry = git_vector_get(v, idx);
 
@@ -979,9 +983,9 @@ void git_index_conflict_cleanup(git_index *index)
 	git_vector_remove_matching(&index->entries, index_conflicts_match);
 }
 
-int git_index_has_conflicts(git_index *index)
+int git_index_has_conflicts(const git_index *index)
 {
-	unsigned int i;
+	size_t i;
 	git_index_entry *entry;
 
 	assert(index);
@@ -1361,7 +1365,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 static int is_index_extended(git_index *index)
 {
-	unsigned int i, extended;
+	size_t i, extended;
 	git_index_entry *entry;
 
 	extended = 0;
@@ -1374,7 +1378,7 @@ static int is_index_extended(git_index *index)
 		}
 	}
 
-	return extended;
+	return (int)extended;
 }
 
 static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
@@ -1440,7 +1444,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 static int write_entries(git_index *index, git_filebuf *file)
 {
 	int error = 0;
-	unsigned int i;
+	size_t i;
 	git_vector case_sorted;
 	git_index_entry *entry;
 	git_vector *out = &index->entries;
@@ -1506,7 +1510,7 @@ static int write_reuc_extension(git_index *index, git_filebuf *file)
 	git_vector *out = &index->reuc;
 	git_index_reuc_entry *reuc;
 	struct index_extension extension;
-	unsigned int i;
+	size_t i;
 	int error = 0;
 
 	git_vector_foreach(out, i, reuc) {
@@ -1529,9 +1533,7 @@ done:
 static int write_index(git_index *index, git_filebuf *file)
 {
 	git_oid hash_final;
-
 	struct index_header header;
-
 	int is_extended;
 
 	assert(index && file);

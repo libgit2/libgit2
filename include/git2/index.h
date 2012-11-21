@@ -258,7 +258,7 @@ GIT_EXTERN(int) git_index_write_tree_to(git_oid *out, git_index *index, git_repo
  * @param index an existing index object
  * @return integer of count of current entries
  */
-GIT_EXTERN(unsigned int) git_index_entrycount(git_index *index);
+GIT_EXTERN(unsigned int) git_index_entrycount(const git_index *index);
 
 /**
  * Clear the contents (all the entries) of an index object.
@@ -282,7 +282,8 @@ GIT_EXTERN(void) git_index_clear(git_index *index);
  * @param n the position of the entry
  * @return a pointer to the entry; NULL if out of bounds
  */
-GIT_EXTERN(const git_index_entry *) git_index_get_byindex(git_index *index, size_t n);
+GIT_EXTERN(const git_index_entry *) git_index_get_byindex(
+	git_index *index, size_t n);
 
 /**
  * Get a pointer to one of the entries in the index
@@ -298,7 +299,8 @@ GIT_EXTERN(const git_index_entry *) git_index_get_byindex(git_index *index, size
  * @param stage stage to search
  * @return a pointer to the entry; NULL if it was not found
  */
-GIT_EXTERN(const git_index_entry *) git_index_get_bypath(git_index *index, const char *path, int stage);
+GIT_EXTERN(const git_index_entry *) git_index_get_bypath(
+	git_index *index, const char *path, int stage);
 
 /**
  * Remove an entry from the index
@@ -443,7 +445,7 @@ GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
  *
  * @return 1 if at least one conflict is found, 0 otherwise.
  */
-GIT_EXTERN(int) git_index_has_conflicts(git_index *index);
+GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
 
 /**@}*/
 

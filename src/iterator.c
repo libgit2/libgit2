@@ -434,7 +434,7 @@ typedef struct workdir_iterator_frame workdir_iterator_frame;
 struct workdir_iterator_frame {
 	workdir_iterator_frame *next;
 	git_vector entries;
-	unsigned int index;
+	size_t index;
 	char *start;
 };
 
@@ -761,7 +761,8 @@ static int spoolandsort_iterator__current(
 	spoolandsort_iterator *si = (spoolandsort_iterator *)self;
 
 	if (si->position < si->entries.length)
-		*entry = (const git_index_entry *)git_vector_get_const(&si->entries, si->position);
+		*entry = (const git_index_entry *)git_vector_get(
+			&si->entries, si->position);
 	else
 		*entry = NULL;
 
@@ -781,7 +782,8 @@ static int spoolandsort_iterator__advance(
 	spoolandsort_iterator *si = (spoolandsort_iterator *)self;
 
 	if (si->position < si->entries.length)
-		*entry = (const git_index_entry *)git_vector_get_const(&si->entries, ++si->position);
+		*entry = (const git_index_entry *)git_vector_get(
+			&si->entries, ++si->position);
 	else
 		*entry = NULL;
 
