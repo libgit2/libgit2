@@ -367,7 +367,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 	return 0;
 }
 
-struct network_packetsize_payload	
+struct network_packetsize_payload
 {
 	git_transfer_progress_callback callback;
 	void *payload;
@@ -375,7 +375,7 @@ struct network_packetsize_payload
 	size_t last_fired_bytes;
 };
 
-static void network_packetsize(int received, void *payload)
+static void network_packetsize(size_t received, void *payload)
 {
 	struct network_packetsize_payload *npp = (struct network_packetsize_payload*)payload;
 
@@ -384,8 +384,8 @@ static void network_packetsize(int received, void *payload)
 
 	/* Fire notification if the threshold is reached */
 	if ((npp->stats->received_bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
-		npp->last_fired_bytes = npp->stats->received_bytes;	
-		npp->callback(npp->stats, npp->payload);	
+		npp->last_fired_bytes = npp->stats->received_bytes;
+		npp->callback(npp->stats, npp->payload);
 	}
 }
 
@@ -414,7 +414,7 @@ int git_smart__download_pack(
 
 		/* We might have something in the buffer already from negotiate_fetch */
 		if (t->buffer.offset > 0)
-			t->packetsize_cb(t->buffer.offset, t->packetsize_payload);
+			t->packetsize_cb((int)t->buffer.offset, t->packetsize_payload);
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||

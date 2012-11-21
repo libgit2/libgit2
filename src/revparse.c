@@ -161,7 +161,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 
 static int try_parse_numeric(int *n, const char *curly_braces_content)
 {
-	int content;
+	int32_t content;
 	const char *end_ptr;
 
 	if (git__strtol32(&content, curly_braces_content, &end_ptr, 10) < 0)
@@ -170,16 +170,17 @@ static int try_parse_numeric(int *n, const char *curly_braces_content)
 	if (*end_ptr != '\0')
 		return -1;
 
-	*n = content;
+	*n = (int)content;
 	return 0;
 }
 
-static int retrieve_previously_checked_out_branch_or_revision(git_object **out, git_reference **base_ref, git_repository *repo, const char *spec, const char *identifier, unsigned int position)
+static int retrieve_previously_checked_out_branch_or_revision(git_object **out, git_reference **base_ref, git_repository *repo, const char *spec, const char *identifier, size_t position)
 {
 	git_reference *ref = NULL;
 	git_reflog *reflog = NULL;
 	regex_t preg;
-	int numentries, i, cur, error = -1;
+	int error = -1;
+	size_t i, numentries, cur;
 	const git_reflog_entry *entry;
 	const char *msg;
 	regmatch_t regexmatches[2];
@@ -204,7 +205,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	for (i = 0; i < numentries; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
 		msg = git_reflog_entry_message(entry);
-		
+
 		if (regexec(&preg, msg, 2, regexmatches, 0))
 			continue;
 
@@ -212,7 +213,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 
 		if (cur > 0)
 			continue;
-		
+
 		git_buf_put(&buf, msg+regexmatches[1].rm_so, regexmatches[1].rm_eo - regexmatches[1].rm_so);
 
 		if ((error = disambiguate_refname(base_ref, repo, git_buf_cstr(&buf))) == 0)
@@ -225,7 +226,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 
 		goto cleanup;
 	}
-	
+
 	error = GIT_ENOTFOUND;
 
 cleanup:
@@ -236,27 +237,25 @@ cleanup:
 	return error;
 }
 
-static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, unsigned int identifier)
+static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t identifier)
 {
 	git_reflog *reflog;
 	int error = -1;
-	unsigned int numentries;
+	size_t numentries;
 	const git_reflog_entry *entry;
 	bool search_by_pos = (identifier <= 100000000);
 
 	if (git_reflog_read(&reflog, ref) < 0)
 		return -1;
 
-	numentries  = git_reflog_entrycount(reflog);
+	numentries = git_reflog_entrycount(reflog);
 
 	if (search_by_pos) {
 		if (numentries < identifier + 1) {
 			giterr_set(
 				GITERR_REFERENCE,
-				"Reflog for '%s' has only %d entries, asked for %d",
-				git_reference_name(ref),
-				numentries,
-				identifier);
+				"Reflog for '%s' has only "PRIuZ" entries, asked for "PRIuZ,
+				git_reference_name(ref), numentries, identifier);
 
 			error = GIT_ENOTFOUND;
 			goto cleanup;
@@ -268,14 +267,14 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, unsigned i
 		goto cleanup;
 
 	} else {
-		unsigned int i;
+		size_t i;
 		git_time commit_time;
 
 		for (i = 0; i < numentries; i++) {
 			entry = git_reflog_entry_byindex(reflog, i);
 			commit_time = git_reflog_entry_committer(entry)->when;
-					
-			if (commit_time.time - identifier > 0)
+
+			if (commit_time.time > (git_time_t)identifier)
 				continue;
 
 			git_oid_cpy(oid, git_reflog_entry_id_new(entry));
@@ -291,7 +290,7 @@ cleanup:
 	return error;
 }
 
-static int retrieve_revobject_from_reflog(git_object **out, git_reference **base_ref, git_repository *repo, const char *identifier, unsigned int position)
+static int retrieve_revobject_from_reflog(git_object **out, git_reference **base_ref, git_repository *repo, const char *identifier, size_t position)
 {
 	git_reference *ref;
 	git_oid oid;
@@ -380,7 +379,7 @@ static int handle_at_syntax(git_object **out, git_reference **ref, const char *s
 	if (git__date_parse(&timestamp, curly_braces_content) < 0)
 		goto cleanup;
 
-	error = retrieve_revobject_from_reflog(out, ref, repo, git_buf_cstr(&identifier), (unsigned int)timestamp);
+	error = retrieve_revobject_from_reflog(out, ref, repo, git_buf_cstr(&identifier), (size_t)timestamp);
 
 cleanup:
 	git_buf_free(&identifier);
@@ -394,7 +393,7 @@ static git_otype parse_obj_type(const char *str)
 
 	if (!strcmp(str, "tree"))
 		return GIT_OBJ_TREE;
-	
+
 	if (!strcmp(str, "blob"))
 		return GIT_OBJ_BLOB;
 

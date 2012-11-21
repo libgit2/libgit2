@@ -56,7 +56,7 @@ static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 static int append_commit_description(git_buf *out, git_commit* commit)
 {
 	const char *message;
-	int pos = 0, len;
+	size_t pos = 0, len;
 
 	if (append_abbreviated_oid(out, git_commit_id(commit)) < 0)
 		return -1;

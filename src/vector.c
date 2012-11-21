@@ -165,7 +165,7 @@ int git_vector_search2(
 
 	for (i = 0; i < v->length; ++i) {
 		if (key_lookup(key, v->contents[i]) == 0)
-			return i;
+			return (int)i;
 	}
 
 	return GIT_ENOTFOUND;

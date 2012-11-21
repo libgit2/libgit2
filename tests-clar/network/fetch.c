@@ -29,7 +29,7 @@ static int update_tips(const char *refname, const git_oid *a, const git_oid *b, 
 
 static void progress(const git_transfer_progress *stats, void *payload)
 {
-	int *bytes_received = (int*)payload;
+	size_t *bytes_received = (size_t *)payload;
 	*bytes_received = stats->received_bytes;
 }
 
@@ -37,7 +37,7 @@ static void do_fetch(const char *url, int flag, int n)
 {
 	git_remote *remote;
 	git_remote_callbacks callbacks;
-	int bytes_received = 0;
+	size_t bytes_received = 0;
 
 	memset(&callbacks, 0, sizeof(git_remote_callbacks));
 	callbacks.update_tips = update_tips;

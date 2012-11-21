@@ -113,7 +113,7 @@ void test_diff_patch__to_string(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, one, another, NULL));
 
-	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
 	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
 

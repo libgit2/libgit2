@@ -229,7 +229,7 @@ static int gen_pack_object_header(
 	}
 	*hdr++ = c;
 
-	return hdr - hdr_base;
+	return (int)(hdr - hdr_base);
 }
 
 static int get_delta(void **out, git_odb *odb, git_pobject *po)
@@ -244,9 +244,10 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 	    git_odb_read(&trg, odb, &po->id) < 0)
 		goto on_error;
 
-	delta_buf = git_delta(git_odb_object_data(src), git_odb_object_size(src),
-			      git_odb_object_data(trg), git_odb_object_size(trg),
-			      &delta_size, 0);
+	delta_buf = git_delta(
+		git_odb_object_data(src), (unsigned long)git_odb_object_size(src),
+		git_odb_object_data(trg), (unsigned long)git_odb_object_size(trg),
+		&delta_size, 0);
 
 	if (!delta_buf || delta_size != po->delta_size) {
 		giterr_set(GITERR_INVALID, "Delta size changed");
@@ -287,7 +288,7 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 			goto on_error;
 
 		data = (void *)git_odb_object_data(obj);
-		size = git_odb_object_size(obj);
+		size = (unsigned long)git_odb_object_size(obj);
 		type = git_odb_object_type(obj);
 	}
 
@@ -315,7 +316,7 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 		if (po->delta)
 			git__free(data);
 		data = zbuf.ptr;
-		size = zbuf.size;
+		size = (unsigned long)zbuf.size;
 	}
 
 	if (git_buf_put(buf, data, size) < 0 ||
@@ -707,7 +708,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		return 0;
 
 	/* Now some size filtering heuristics. */
-	trg_size = trg_object->size;
+	trg_size = (unsigned long)trg_object->size;
 	if (!trg_object->delta) {
 		max_size = trg_size/2 - 20;
 		ref_depth = 1;
@@ -721,7 +722,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 	if (max_size == 0)
 		return 0;
 
-	src_size = src_object->size;
+	src_size = (unsigned long)src_object->size;
 	sizediff = src_size < trg_size ? trg_size - src_size : 0;
 	if (sizediff >= max_size)
 		return 0;
@@ -733,7 +734,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		if (git_odb_read(&obj, pb->odb, &trg_object->id) < 0)
 			return -1;
 
-		sz = git_odb_object_size(obj);
+		sz = (unsigned long)git_odb_object_size(obj);
 		trg->data = git__malloc(sz);
 		GITERR_CHECK_ALLOC(trg->data);
 		memcpy(trg->data, git_odb_object_data(obj), sz);
@@ -752,7 +753,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		if (git_odb_read(&obj, pb->odb, &src_object->id) < 0)
 			return -1;
 
-		sz = git_odb_object_size(obj);
+		sz = (unsigned long)git_odb_object_size(obj);
 		src->data = git__malloc(sz);
 		GITERR_CHECK_ALLOC(src->data);
 		memcpy(src->data, git_odb_object_data(obj), sz);
@@ -835,7 +836,7 @@ static unsigned long free_unpacked(struct unpacked *n)
 	git_delta_free_index(n->index);
 	n->index = NULL;
 	if (n->data) {
-		freed_mem += n->object->size;
+		freed_mem += (unsigned long)n->object->size;
 		git__free(n->data);
 		n->data = NULL;
 	}
@@ -941,7 +942,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 			GITERR_CHECK_ALLOC(po->delta_data);
 
 			memcpy(po->delta_data, zbuf.ptr, zbuf.size);
-			po->z_delta_size = zbuf.size;
+			po->z_delta_size = (unsigned long)zbuf.size;
 			git_buf_clear(&zbuf);
 
 			git_packbuilder__cache_lock(pb);

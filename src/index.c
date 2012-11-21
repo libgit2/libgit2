@@ -488,10 +488,10 @@ int git_index_write_tree_to(git_oid *oid, git_index *index, git_repository *repo
 	return git_tree__write_index(oid, index, repo);
 }
 
-unsigned int git_index_entrycount(const git_index *index)
+size_t git_index_entrycount(const git_index *index)
 {
 	assert(index);
-	return (unsigned int)index->entries.length;
+	return index->entries.length;
 }
 
 const git_index_entry *git_index_get_byindex(
@@ -852,7 +852,7 @@ int git_index_conflict_add(git_index *index,
 	const git_index_entry *their_entry)
 {
 	git_index_entry *entries[3] = { 0 };
-	size_t i;
+	unsigned short i;
 	int ret = 0;
 
 	assert (index);
@@ -890,7 +890,7 @@ int git_index_conflict_get(git_index_entry **ancestor_out,
 	git_index_entry **their_out,
 	git_index *index, const char *path)
 {
-	int pos, stage;
+	int pos, posmax, stage;
 	git_index_entry *conflict_entry;
 	int error = GIT_ENOTFOUND;
 
@@ -903,7 +903,8 @@ int git_index_conflict_get(git_index_entry **ancestor_out,
 	if ((pos = git_index_find(index, path)) < 0)
 		return pos;
 
-	while ((unsigned int)pos < git_index_entrycount(index)) {
+	for (posmax = (int)git_index_entrycount(index); pos < posmax; ++pos) {
+
 		conflict_entry = git_vector_get(&index->entries, pos);
 
 		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
@@ -927,8 +928,6 @@ int git_index_conflict_get(git_index_entry **ancestor_out,
 		default:
 			break;
 		};
-
-		++pos;
 	}
 
 	return error;
@@ -936,7 +935,7 @@ int git_index_conflict_get(git_index_entry **ancestor_out,
 
 int git_index_conflict_remove(git_index *index, const char *path)
 {
-	int pos;
+	int pos, posmax;
 	git_index_entry *conflict_entry;
 	int error = 0;
 
@@ -945,7 +944,9 @@ int git_index_conflict_remove(git_index *index, const char *path)
 	if ((pos = git_index_find(index, path)) < 0)
 		return pos;
 
-	while ((unsigned int)pos < git_index_entrycount(index)) {
+	posmax = (int)git_index_entrycount(index);
+
+	while (pos < posmax) {
 		conflict_entry = git_vector_get(&index->entries, pos);
 
 		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
@@ -1520,7 +1521,7 @@ static int write_reuc_extension(git_index *index, git_filebuf *file)
 
 	memset(&extension, 0x0, sizeof(struct index_extension));
 	memcpy(&extension.signature, INDEX_EXT_UNMERGED_SIG, 4);
-	extension.extension_size = reuc_buf.size;
+	extension.extension_size = (uint32_t)reuc_buf.size;
 
 	error = write_extension(file, &extension, &reuc_buf);
 

@@ -464,7 +464,7 @@ void test_status_worktree__status_file_without_index_or_workdir(void)
 	cl_git_pass(git_repository_set_workdir(repo, "wd", false));
 
 	cl_git_pass(git_index_open(&index, "empty-index"));
-	cl_assert_equal_i(0, git_index_entrycount(index));
+	cl_assert_equal_i(0, (int)git_index_entrycount(index));
 	git_repository_set_index(repo, index);
 
 	cl_git_pass(git_status_file(&status, repo, "branch_file.txt"));

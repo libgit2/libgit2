@@ -258,7 +258,7 @@ GIT_EXTERN(int) git_index_write_tree_to(git_oid *out, git_index *index, git_repo
  * @param index an existing index object
  * @return integer of count of current entries
  */
-GIT_EXTERN(unsigned int) git_index_entrycount(const git_index *index);
+GIT_EXTERN(size_t) git_index_entrycount(const git_index *index);
 
 /**
  * Clear the contents (all the entries) of an index object.

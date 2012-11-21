@@ -262,7 +262,7 @@ static int get_blob_content(
 		return error;
 
 	map->data = (void *)git_blob_rawcontent(*blob);
-	map->len  = git_blob_rawsize(*blob);
+	map->len  = (size_t)git_blob_rawsize(*blob);
 
 	return diff_delta_is_binary_by_content(ctxt, delta, file, map);
 }
@@ -1236,14 +1236,18 @@ static void set_data_from_blob(
 	git_blob *blob, git_map *map, git_diff_file *file)
 {
 	if (blob) {
-		map->data = (char *)git_blob_rawcontent(blob);
-		file->size = map->len = git_blob_rawsize(blob);
+		file->size = git_blob_rawsize(blob);
 		git_oid_cpy(&file->oid, git_object_id((const git_object *)blob));
 		file->mode = 0644;
+
+		map->len   = (size_t)file->size;
+		map->data  = (char *)git_blob_rawcontent(blob);
 	} else {
-		map->data = "";
-		file->size = map->len = 0;
+		file->size = 0;
 		file->flags |= GIT_DIFF_FILE_NO_DATA;
+
+		map->len   = 0;
+		map->data  = "";
 	}
 }
 

@@ -66,7 +66,7 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 	/* Read and parse the reflog for this branch */
 	cl_git_pass(git_reflog_read(&reflog, lookedup_ref));
-	cl_assert_equal_i(2, git_reflog_entrycount(reflog));
+	cl_assert_equal_i(2, (int)git_reflog_entrycount(reflog));
 
 	entry = git_reflog_entry_byindex(reflog, 1);
 	assert_signature(committer, entry->committer);
@@ -143,7 +143,7 @@ void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_re
 
 	cl_git_pass(git_reflog_read(&reflog, subtrees));
 
-	cl_assert_equal_i(0, git_reflog_entrycount(reflog));
+	cl_assert_equal_i(0, (int)git_reflog_entrycount(reflog));
 
 	git_reflog_free(reflog);
 	git_reference_free(subtrees);
@@ -160,7 +160,7 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 	cl_git_pass(git_reflog_read(&reflog, master));
 
 	cl_git_pass(git_reflog_write(reflog));
-	
+
 	cl_git_pass(git_reference_rename(master, "refs/moved", 0));
 
 	cl_git_fail(git_reflog_write(reflog));

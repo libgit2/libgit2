@@ -1,8 +1,8 @@
 #include "clar_libgit2.h"
 #include "index.h"
 
-static const int index_entry_count = 109;
-static const int index_entry_count_2 = 1437;
+static const size_t index_entry_count = 109;
+static const size_t index_entry_count_2 = 1437;
 #define TEST_INDEX_PATH cl_fixture("testrepo.git/index")
 #define TEST_INDEX2_PATH cl_fixture("gitgit.index")
 #define TEST_INDEXBIG_PATH cl_fixture("big.index")
@@ -99,7 +99,7 @@ void test_index_tests__default_test_index(void)
    cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
    cl_assert(index->on_disk);
 
-   cl_assert(git_index_entrycount(index) == (unsigned int)index_entry_count);
+   cl_assert(git_index_entrycount(index) == index_entry_count);
    cl_assert(index->entries.sorted);
 
    entries = (git_index_entry **)index->entries.contents;
@@ -122,7 +122,7 @@ void test_index_tests__gitgit_index(void)
    cl_git_pass(git_index_open(&index, TEST_INDEX2_PATH));
    cl_assert(index->on_disk);
 
-   cl_assert(git_index_entrycount(index) == (unsigned int)index_entry_count_2);
+   cl_assert(git_index_entrycount(index) == index_entry_count_2);
    cl_assert(index->entries.sorted);
    cl_assert(index->tree != NULL);
 

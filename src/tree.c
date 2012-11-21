@@ -353,10 +353,9 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj)
 	return tree_parse_buffer(tree, (char *)obj->raw.data, (char *)obj->raw.data + obj->raw.len);
 }
 
-static unsigned int find_next_dir(const char *dirname, git_index *index, unsigned int start)
+static size_t find_next_dir(const char *dirname, git_index *index, size_t start)
 {
-	unsigned int i, entries = git_index_entrycount(index);
-	size_t dirlen;
+	size_t dirlen, i, entries = git_index_entrycount(index);
 
 	dirlen = strlen(dirname);
 	for (i = start; i < entries; ++i) {
@@ -399,11 +398,10 @@ static int write_tree(
 	git_repository *repo,
 	git_index *index,
 	const char *dirname,
-	unsigned int start)
+	size_t start)
 {
 	git_treebuilder *bld = NULL;
-
-	unsigned int i, entries = git_index_entrycount(index);
+	size_t i, entries = git_index_entrycount(index);
 	int error;
 	size_t dirname_len = strlen(dirname);
 	const git_tree_cache *cache;
@@ -411,13 +409,11 @@ static int write_tree(
 	cache = git_tree_cache_get(index->tree, dirname);
 	if (cache != NULL && cache->entries >= 0){
 		git_oid_cpy(oid, &cache->oid);
-		return find_next_dir(dirname, index, start);
+		return (int)find_next_dir(dirname, index, start);
 	}
 
-	error = git_treebuilder_create(&bld, NULL);
-	if (bld == NULL) {
+	if ((error = git_treebuilder_create(&bld, NULL)) < 0 || bld == NULL)
 		return -1;
-	}
 
 	/*
 	 * This loop is unfortunate, but necessary. The index doesn't have
@@ -494,7 +490,7 @@ static int write_tree(
 		goto on_error;
 
 	git_treebuilder_free(bld);
-	return i;
+	return (int)i;
 
 on_error:
 	git_treebuilder_free(bld);

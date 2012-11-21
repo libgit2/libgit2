@@ -155,7 +155,7 @@ GIT_INLINE(int) hash_cryptoapi_update(git_hash_ctx *ctx, const void *data, size_
 {
 	assert(ctx->ctx.cryptoapi.valid);
 
-	if (!CryptHashData(ctx->ctx.cryptoapi.hash_handle, (const BYTE *)data, len, 0))
+	if (!CryptHashData(ctx->ctx.cryptoapi.hash_handle, (const BYTE *)data, (DWORD)len, 0))
 		return -1;
 
 	return 0;
@@ -219,7 +219,7 @@ GIT_INLINE(int) hash_cng_init(git_hash_ctx *ctx)
 
 GIT_INLINE(int) hash_cng_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
-	if (ctx->prov->prov.cng.hash_data(ctx->ctx.cng.hash_handle, (PBYTE)data, len, 0) < 0)
+	if (ctx->prov->prov.cng.hash_data(ctx->ctx.cng.hash_handle, (PBYTE)data, (ULONG)len, 0) < 0)
 		return -1;
 
 	return 0;

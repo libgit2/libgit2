@@ -42,7 +42,7 @@ static void tree_checker(
 	git_oid oid;
 
 	cl_git_pass(git_tree_lookup(&tree, _repo, tid));
-	cl_assert_equal_i(1, git_tree_entrycount(tree));
+	cl_assert_equal_i(1, (int)git_tree_entrycount(tree));
 	entry = git_tree_entry_byindex(tree, 0);
 
 	cl_git_pass(git_oid_fromstr(&oid, expected_sha));

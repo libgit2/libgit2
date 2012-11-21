@@ -22,7 +22,7 @@ void test_index_filemodes__read(void)
 	static bool expected[6] = { 0, 1, 0, 1, 0, 1 };
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_assert_equal_i(6, git_index_entrycount(index));
+	cl_assert_equal_i(6, (int)git_index_entrycount(index));
 
 	for (i = 0; i < 6; ++i) {
 		const git_index_entry *entry = git_index_get_byindex(index, i);

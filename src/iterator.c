@@ -329,7 +329,7 @@ int git_iterator_for_tree_range(
 typedef struct {
 	git_iterator base;
 	git_index *index;
-	unsigned int current;
+	size_t current;
 	bool free_index;
 } index_iterator;
 
