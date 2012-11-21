@@ -223,12 +223,12 @@ static int queue_objects(git_push *push)
 	git_vector commits;
 	git_oid *o;
 	unsigned int i;
-	int error = -1;
+	int error;
 
 	if (git_vector_init(&commits, 0, NULL) < 0)
 		return -1;
 
-	if (revwalk(&commits, push) < 0)
+	if ((error = revwalk(&commits, push)) < 0)
 		goto on_error;
 
 	if (!commits.length) {
@@ -237,21 +237,21 @@ static int queue_objects(git_push *push)
 	}
 
 	git_vector_foreach(&commits, i, o) {
-		if (git_packbuilder_insert(push->pb, o, NULL) < 0)
+		if ((error = git_packbuilder_insert(push->pb, o, NULL)) < 0)
 			goto on_error;
 	}
 
 	git_vector_foreach(&commits, i, o) {
 		git_object *obj;
 
-		if (git_object_lookup(&obj, push->repo, o, GIT_OBJ_ANY) < 0)
+		if ((error = git_object_lookup(&obj, push->repo, o, GIT_OBJ_ANY)) < 0)
 			goto on_error;
 
 		switch (git_object_type(obj)) {
 		case GIT_OBJ_TAG: /* TODO: expect tags */
 		case GIT_OBJ_COMMIT:
-			if (git_packbuilder_insert_tree(push->pb,
-					git_commit_tree_oid((git_commit *)obj)) < 0) {
+			if ((error = git_packbuilder_insert_tree(push->pb,
+					git_commit_tree_oid((git_commit *)obj))) < 0) {
 				git_object_free(obj);
 				goto on_error;
 			}
@@ -261,6 +261,7 @@ static int queue_objects(git_push *push)
 		default:
 			git_object_free(obj);
 			giterr_set(GITERR_INVALID, "Given object type invalid");
+			error = -1;
 			goto on_error;
 		}
 		git_object_free(obj);
@@ -329,7 +330,8 @@ static int calculate_work(git_push *push)
 
 static int do_push(git_push *push)
 {
-	int error = -1;
+	int error;
+	git_transport *transport = push->remote->transport;
 
 	/*
 	 * A pack-file MUST be sent if either create or update command
@@ -337,17 +339,16 @@ static int do_push(git_push *push)
 	 * objects.  In this case the client MUST send an empty pack-file.
 	 */
 
-	if (git_packbuilder_new(&push->pb, push->repo) < 0 ||
-		calculate_work(push) < 0 ||
-		queue_objects(push) < 0 ||
-		push->remote->transport->push(push->remote->transport, push) < 0)
+	if ((error = git_packbuilder_new(&push->pb, push->repo)) < 0 ||
+		(error = calculate_work(push)) < 0 ||
+		(error = queue_objects(push)) < 0 ||
+		(error = transport->push(transport, push)) < 0)
 		goto on_error;
 
 	error = 0;
 
 on_error:
 	git_packbuilder_free(push->pb);
-
 	return error;
 }
 
@@ -365,17 +366,21 @@ static int filter_refs(git_remote *remote)
 
 int git_push_finish(git_push *push)
 {
+	int error;
+
 	if (!git_remote_connected(push->remote) &&
-		git_remote_connect(push->remote, GIT_DIR_PUSH) < 0)
-			return -1;
+		(error = git_remote_connect(push->remote, GIT_DIR_PUSH)) < 0)
+		return error;
 
-	if (filter_refs(push->remote) < 0 || do_push(push) < 0) {
-		git_remote_disconnect(push->remote);
-		return -1;
-	}
+	if ((error = filter_refs(push->remote)) < 0 ||
+		(error = do_push(push)) < 0)
+		goto on_error;
 
+	error = 0;
+
+on_error:
 	git_remote_disconnect(push->remote);
-	return 0;
+	return error;
 }
 
 int git_push_unpack_ok(git_push *push)

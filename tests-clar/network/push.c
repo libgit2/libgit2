@@ -427,10 +427,11 @@ void test_network_push__force(void)
 	do_push(specs1, ARRAY_SIZE(specs1),
 		exp_stats1, ARRAY_SIZE(exp_stats1),
 		exp_refs1, ARRAY_SIZE(exp_refs1), 0);
-	/* TODO: Non-fast-forward update detection is broken right now */
+
 	do_push(specs2, ARRAY_SIZE(specs2),
 		NULL, 0,
-		exp_refs1, ARRAY_SIZE(exp_refs1), -1);
+		exp_refs1, ARRAY_SIZE(exp_refs1), GIT_ENONFASTFORWARD);
+
 	/* Non-fast-forward update with force should pass. */
 	do_push(specs2_force, ARRAY_SIZE(specs2_force),
 		exp_stats2_force, ARRAY_SIZE(exp_stats2_force),
