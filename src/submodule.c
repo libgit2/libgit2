@@ -733,7 +733,7 @@ int git_submodule_reload(git_submodule *submodule)
 
 	pos = git_index_find(index, submodule->path);
 	if (pos >= 0) {
-		git_index_entry *entry = git_index_get_byindex(index, pos);
+		const git_index_entry *entry = git_index_get_byindex(index, pos);
 
 		if (S_ISGITLINK(entry->mode)) {
 			if ((error = submodule_load_from_index(repo, entry)) < 0)

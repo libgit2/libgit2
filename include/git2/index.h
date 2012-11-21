@@ -21,10 +21,10 @@
  */
 GIT_BEGIN_DECL
 
-#define GIT_IDXENTRY_NAMEMASK (0x0fff)
+#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
 #define GIT_IDXENTRY_STAGEMASK (0x3000)
-#define GIT_IDXENTRY_EXTENDED (0x4000)
-#define GIT_IDXENTRY_VALID		(0x8000)
+#define GIT_IDXENTRY_EXTENDED  (0x4000)
+#define GIT_IDXENTRY_VALID     (0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
 
 /*
@@ -34,26 +34,26 @@ GIT_BEGIN_DECL
  *
  * In-memory only flags:
  */
-#define GIT_IDXENTRY_UPDATE			(1 << 0)
-#define GIT_IDXENTRY_REMOVE			(1 << 1)
-#define GIT_IDXENTRY_UPTODATE			(1 << 2)
-#define GIT_IDXENTRY_ADDED				(1 << 3)
+#define GIT_IDXENTRY_UPDATE            (1 << 0)
+#define GIT_IDXENTRY_REMOVE            (1 << 1)
+#define GIT_IDXENTRY_UPTODATE          (1 << 2)
+#define GIT_IDXENTRY_ADDED             (1 << 3)
 
-#define GIT_IDXENTRY_HASHED			(1 << 4)
-#define GIT_IDXENTRY_UNHASHED			(1 << 5)
-#define GIT_IDXENTRY_WT_REMOVE			(1 << 6) /* remove in work directory */
-#define GIT_IDXENTRY_CONFLICTED		(1 << 7)
+#define GIT_IDXENTRY_HASHED            (1 << 4)
+#define GIT_IDXENTRY_UNHASHED          (1 << 5)
+#define GIT_IDXENTRY_WT_REMOVE         (1 << 6) /* remove in work directory */
+#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
 
-#define GIT_IDXENTRY_UNPACKED			(1 << 8)
+#define GIT_IDXENTRY_UNPACKED          (1 << 8)
 #define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
 
 /*
  * Extended on-disk flags:
  */
-#define GIT_IDXENTRY_INTENT_TO_ADD		(1 << 13)
-#define GIT_IDXENTRY_SKIP_WORKTREE		(1 << 14)
+#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
+#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
 /* GIT_IDXENTRY_EXTENDED2 is for future extension */
-#define GIT_IDXENTRY_EXTENDED2			(1 << 15)
+#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
 
 #define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
 
@@ -119,11 +119,11 @@ enum {
  *
  * The index must be freed once it's no longer in use.
  *
- * @param index the pointer for the new index
+ * @param out the pointer for the new index
  * @param index_path the path to the index file in disk
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_open(git_index **index, const char *index_path);
+GIT_EXTERN(int) git_index_open(git_index **out, const char *index_path);
 
 /**
  * Create an in-memory index object.
@@ -133,10 +133,10 @@ GIT_EXTERN(int) git_index_open(git_index **index, const char *index_path);
  *
  * The index must be freed once it's no longer in use.
  *
- * @param index the pointer for the new index
+ * @param out the pointer for the new index
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_new(git_index **index);
+GIT_EXTERN(int) git_index_new(git_index **out);
 
 /**
  * Free an existing index object.
@@ -201,7 +201,7 @@ GIT_EXTERN(int) git_index_write(git_index *index);
  * @param tree tree to read
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
+GIT_EXTERN(int) git_index_read_tree(git_index *index, const git_tree *tree);
 
 /**
  * Write the index as a tree
@@ -217,12 +217,12 @@ GIT_EXTERN(int) git_index_read_tree(git_index *index, git_tree *tree);
  *
  * The index must not contain any file in conflict.
  *
- * @param oid Pointer where to store the OID of the written tree
+ * @param out Pointer where to store the OID of the written tree
  * @param index Index to write
  * @return 0 on success, GIT_EUNMERGED when the index is not clean
  * or an error code
  */
-GIT_EXTERN(int) git_index_write_tree(git_oid *oid, git_index *index);
+GIT_EXTERN(int) git_index_write_tree(git_oid *out, git_index *index);
 
 /**
  * Write the index as a tree to the given repository
@@ -233,13 +233,13 @@ GIT_EXTERN(int) git_index_write_tree(git_oid *oid, git_index *index);
  *
  * The index must not contain any file in conflict.
  *
- * @param oid Pointer where to store OID of the the written tree
+ * @param out Pointer where to store OID of the the written tree
  * @param index Index to write
  * @param repo Repository where to write the tree
  * @return 0 on success, GIT_EUNMERGED when the index is not clean
  * or an error code
  */
-GIT_EXTERN(int) git_index_write_tree_to(git_oid *oid, git_index *index, git_repository *repo);
+GIT_EXTERN(int) git_index_write_tree_to(git_oid *out, git_index *index, git_repository *repo);
 
 /**@}*/
 
@@ -282,7 +282,7 @@ GIT_EXTERN(void) git_index_clear(git_index *index);
  * @param n the position of the entry
  * @return a pointer to the entry; NULL if out of bounds
  */
-GIT_EXTERN(git_index_entry *) git_index_get_byindex(git_index *index, size_t n);
+GIT_EXTERN(const git_index_entry *) git_index_get_byindex(git_index *index, size_t n);
 
 /**
  * Get a pointer to one of the entries in the index
@@ -298,7 +298,7 @@ GIT_EXTERN(git_index_entry *) git_index_get_byindex(git_index *index, size_t n);
  * @param stage stage to search
  * @return a pointer to the entry; NULL if it was not found
  */
-GIT_EXTERN(git_index_entry *) git_index_get_bypath(git_index *index, const char *path, int stage);
+GIT_EXTERN(const git_index_entry *) git_index_get_bypath(git_index *index, const char *path, int stage);
 
 /**
  * Remove an entry from the index
@@ -402,7 +402,8 @@ GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
  * @param their_entry the entry data for their side of the merge conflict
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_conflict_add(git_index *index,
+GIT_EXTERN(int) git_index_conflict_add(
+   git_index *index,
 	const git_index_entry *ancestor_entry,
 	const git_index_entry *our_entry,
 	const git_index_entry *their_entry);
@@ -475,7 +476,7 @@ GIT_EXTERN(int) git_index_reuc_find(git_index *index, const char *path);
  * Get a resolve undo entry from the index.
  *
  * The returned entry is read-only and should not be modified
- * of freed by the caller.
+ * or freed by the caller.
  *
  * @param index an existing index object
  * @param path path to search
@@ -487,7 +488,7 @@ GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_bypath(git_index *in
  * Get a resolve undo entry from the index.
  *
  * The returned entry is read-only and should not be modified
- * of freed by the caller.
+ * or freed by the caller.
  *
  * @param index an existing index object
  * @param n the position of the entry
@@ -496,7 +497,7 @@ GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_bypath(git_index *in
 GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_byindex(git_index *index, size_t n);
 
 /**
- * Adds an resolve undo entry for a file based on the given parameters.
+ * Adds a resolve undo entry for a file based on the given parameters.
  *
  * The resolve undo entry contains the OIDs of files that were involved
  * in a merge conflict after the conflict has been resolved.  This allows
@@ -510,26 +511,26 @@ GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_byindex(git_index *i
  * @param index an existing index object
  * @param path filename to add
  * @param ancestor_mode mode of the ancestor file
- * @param ancestor_oid oid of the ancestor file
+ * @param ancestor_id oid of the ancestor file
  * @param our_mode mode of our file
- * @param our_oid oid of our file
+ * @param our_id oid of our file
  * @param their_mode mode of their file
- * @param their_oid oid of their file
+ * @param their_id oid of their file
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_reuc_add(git_index *index, const char *path,
-	int ancestor_mode, git_oid *ancestor_oid,
-	int our_mode, git_oid *our_oid,
-	int their_mode, git_oid *their_oid);
+	int ancestor_mode, git_oid *ancestor_id,
+	int our_mode, git_oid *our_id,
+	int their_mode, git_oid *their_id);
 
 /**
  * Remove an resolve undo entry from the index
  *
  * @param index an existing index object
- * @param position position of the resolve undo entry to remove
+ * @param n position of the resolve undo entry to remove
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_reuc_remove(git_index *index, int position);
+GIT_EXTERN(int) git_index_reuc_remove(git_index *index, size_t n);
 
 /**@}*/
 

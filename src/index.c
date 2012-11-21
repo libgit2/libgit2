@@ -494,14 +494,14 @@ unsigned int git_index_entrycount(git_index *index)
 	return (unsigned int)index->entries.length;
 }
 
-git_index_entry *git_index_get_byindex(git_index *index, size_t n)
+const git_index_entry *git_index_get_byindex(git_index *index, size_t n)
 {
 	assert(index);
 	git_vector_sort(&index->entries);
 	return git_vector_get(&index->entries, n);
 }
 
-git_index_entry *git_index_get_bypath(git_index *index, const char *path, int stage)
+const git_index_entry *git_index_get_bypath(git_index *index, const char *path, int stage)
 {
 	int pos;
 
@@ -1072,7 +1072,7 @@ const git_index_reuc_entry *git_index_reuc_get_byindex(
 	return git_vector_get(&index->reuc, n);
 }
 
-int git_index_reuc_remove(git_index *index, int position)
+int git_index_reuc_remove(git_index *index, size_t position)
 {
 	int error;
 	git_index_reuc_entry *reuc;
@@ -1599,7 +1599,7 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	return 0;
 }
 
-int git_index_read_tree(git_index *index, git_tree *tree)
+int git_index_read_tree(git_index *index, const git_tree *tree)
 {
 	git_index_clear(index);
 

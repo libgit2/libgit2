@@ -337,7 +337,7 @@ static int index_iterator__current(
 	git_iterator *self, const git_index_entry **entry)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
+	const git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
 
 	if (ie != NULL &&
 		ii->base.end != NULL &&

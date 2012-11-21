@@ -208,7 +208,7 @@ void test_index_tests__add(void)
    git_index *index;
    git_filebuf file = GIT_FILEBUF_INIT;
    git_repository *repo;
-   git_index_entry *entry;
+   const git_index_entry *entry;
    git_oid id1;
 
    /* Intialize a new repository */

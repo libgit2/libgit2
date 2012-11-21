@@ -25,7 +25,7 @@ void test_index_filemodes__read(void)
 	cl_assert_equal_i(6, git_index_entrycount(index));
 
 	for (i = 0; i < 6; ++i) {
-		git_index_entry *entry = git_index_get_byindex(index, i);
+		const git_index_entry *entry = git_index_get_byindex(index, i);
 		cl_assert(entry != NULL);
 		cl_assert(((entry->mode & 0100) ? 1 : 0) == expected[i]);
 	}
@@ -54,7 +54,7 @@ static void add_and_check_mode(
 	git_index *index, const char *filename, unsigned int expect_mode)
 {
 	int pos;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
 	cl_git_pass(git_index_add_from_workdir(index, filename));
 

@@ -267,7 +267,7 @@ static void add_to_workdir(const char *filename, const char *content)
 static void assert_proper_normalization(git_index *index, const char *filename, const char *expected_sha)
 {
 	int index_pos;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
 	add_to_workdir(filename, CONTENT);
 	cl_git_pass(git_index_add_from_workdir(index, filename));

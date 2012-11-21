@@ -371,7 +371,7 @@ int main (int argc, char** argv)
   // All these properties are exported publicly in the `git_index_entry` struct
   ecount = git_index_entrycount(index);
   for (i = 0; i < ecount; ++i) {
-    git_index_entry *e = git_index_get_byindex(index, i);
+    const git_index_entry *e = git_index_get_byindex(index, i);
 
     printf("path: %s\n", e->path);
     printf("mtime: %d\n", (int)e->mtime.seconds);

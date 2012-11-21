@@ -132,7 +132,7 @@ void test_index_conflicts__get(void)
 
 void test_index_conflicts__remove(void)
 {
-	git_index_entry *entry;
+	const git_index_entry *entry;
 	size_t i;
 	
 	cl_assert(git_index_entrycount(repo_index) == 8);
@@ -156,7 +156,7 @@ void test_index_conflicts__remove(void)
 
 void test_index_conflicts__moved_to_reuc(void)
 {
-	git_index_entry *entry;
+	const git_index_entry *entry;
 	size_t i;
 
 	cl_assert(git_index_entrycount(repo_index) == 8);
@@ -178,7 +178,7 @@ void test_index_conflicts__moved_to_reuc(void)
 void test_index_conflicts__remove_all_conflicts(void)
 {
 	size_t i;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
 	cl_assert(git_index_entrycount(repo_index) == 8);
 

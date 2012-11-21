@@ -371,7 +371,7 @@ typedef enum {
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tree_walk(
-	git_tree *tree,
+	const git_tree *tree,
 	git_treewalk_mode mode,
 	git_treewalk_cb callback,
 	void *payload);

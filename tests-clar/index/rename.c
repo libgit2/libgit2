@@ -7,7 +7,7 @@ void test_index_rename__single_file(void)
 	git_index *index;
 	int position;
 	git_oid expected;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
 	p_mkdir("rename", 0700);
 
