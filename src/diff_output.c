@@ -287,8 +287,8 @@ static int get_workdir_sm_content(
 	if ((file->flags & GIT_DIFF_FILE_VALID_OID) == 0) {
 		const git_oid* sm_head;
 
-		if ((sm_head = git_submodule_wd_oid(sm)) != NULL ||
-			(sm_head = git_submodule_head_oid(sm)) != NULL)
+		if ((sm_head = git_submodule_wd_id(sm)) != NULL ||
+			(sm_head = git_submodule_head_id(sm)) != NULL)
 		{
 			git_oid_cpy(&file->oid, sm_head);
 			file->flags |= GIT_DIFF_FILE_VALID_OID;

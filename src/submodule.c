@@ -513,7 +513,7 @@ int git_submodule_set_url(git_submodule *submodule, const char *url)
 	return 0;
 }
 
-const git_oid *git_submodule_index_oid(git_submodule *submodule)
+const git_oid *git_submodule_index_id(git_submodule *submodule)
 {
 	assert(submodule);
 
@@ -523,7 +523,7 @@ const git_oid *git_submodule_index_oid(git_submodule *submodule)
 		return NULL;
 }
 
-const git_oid *git_submodule_head_oid(git_submodule *submodule)
+const git_oid *git_submodule_head_id(git_submodule *submodule)
 {
 	assert(submodule);
 
@@ -533,7 +533,7 @@ const git_oid *git_submodule_head_oid(git_submodule *submodule)
 		return NULL;
 }
 
-const git_oid *git_submodule_wd_oid(git_submodule *submodule)
+const git_oid *git_submodule_wd_id(git_submodule *submodule)
 {
 	assert(submodule);
 
@@ -1389,8 +1389,8 @@ cleanup:
 
 static int submodule_index_status(unsigned int *status, git_submodule *sm)
 {
-	const git_oid *head_oid  = git_submodule_head_oid(sm);
-	const git_oid *index_oid = git_submodule_index_oid(sm);
+	const git_oid *head_oid  = git_submodule_head_id(sm);
+	const git_oid *index_oid = git_submodule_index_id(sm);
 
 	if (!head_oid) {
 		if (index_oid)
@@ -1410,7 +1410,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 	const git_oid *wd_oid, *index_oid;
 	git_repository *sm_repo = NULL;
 
-	/* open repo now if we need it (so wd_oid() call won't reopen) */
+	/* open repo now if we need it (so wd_id() call won't reopen) */
 	if ((sm->ignore == GIT_SUBMODULE_IGNORE_NONE ||
 		 sm->ignore == GIT_SUBMODULE_IGNORE_UNTRACKED) &&
 		(sm->flags & GIT_SUBMODULE_STATUS_IN_WD) != 0)
@@ -1419,8 +1419,8 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 			return error;
 	}
 
-	index_oid = git_submodule_index_oid(sm);
-	wd_oid    = git_submodule_wd_oid(sm);
+	index_oid = git_submodule_index_id(sm);
+	wd_oid    = git_submodule_wd_id(sm);
 
 	if (!index_oid) {
 		if (wd_oid)
