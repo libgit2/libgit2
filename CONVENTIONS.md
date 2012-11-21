@@ -14,9 +14,9 @@ Type Definitions
 
 Most types should be opaque, e.g.:
 
-----
+```C
 	typedef struct git_odb git_odb;
-----
+```
 
 with allocation functions returning an "instance" created within
 the library, and not within the application.  This allows the type
@@ -28,9 +28,9 @@ Public Exported Function Definitions
 
 All exported functions must be declared as:
 
-----
+```C
 	GIT_EXTERN(result_type) git_modulename_functionname(arg_list);
-----
+```
 
 
 Semi-Private Exported Functions
@@ -52,10 +52,10 @@ few arguments if multiple outputs are supplied).
 int status codes are 0 for GIT_OK and < 0 for an error.
 This permits common POSIX result testing:
 
-----
+```C
 	if (git_odb_open(&odb, path))
 		abort("odb open failed");
-----
+```
 
 Functions returning a pointer may return NULL instead of an int
 if there is only one type of failure (GIT_ENOMEM).
@@ -84,7 +84,7 @@ All public headers defining types, functions or macros must use
 the following form, where ${filename} is the name of the file,
 after replacing non-identifier characters with '_'.
 
-----
+```C
 	#ifndef INCLUDE_git_${filename}_h__
 	#define INCLUDE_git_${filename}_h__
 
@@ -104,4 +104,4 @@ after replacing non-identifier characters with '_'.
 	/** @} */
 	GIT_END_DECL
 	#endif
-----
+```

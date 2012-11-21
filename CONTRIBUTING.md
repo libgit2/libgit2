@@ -43,5 +43,5 @@ porting code *from* to see what you need to do.
 
 We like to keep the source code consistent and easy to read.  Maintaining this
 takes some discipline, but it's been more than worth it.  Take a look at the
-[conventions file](https://github.com/libgit2/libgit2/blob/development/CONVENTIONS).
+[conventions file](https://github.com/libgit2/libgit2/blob/development/CONVENTIONS.md).
 
