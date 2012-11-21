@@ -94,7 +94,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 static int read_header(struct index_header *dest, const void *buffer);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
-static int is_index_extended(git_index *index);
+static bool is_index_extended(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
 static int index_find(git_index *index, const char *path, int stage);
@@ -1363,7 +1363,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	return 0;
 }
 
-static int is_index_extended(git_index *index)
+static bool is_index_extended(git_index *index)
 {
 	size_t i, extended;
 	git_index_entry *entry;
@@ -1378,7 +1378,7 @@ static int is_index_extended(git_index *index)
 		}
 	}
 
-	return (int)extended;
+	return (extended > 0);
 }
 
 static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
@@ -1534,7 +1534,7 @@ static int write_index(git_index *index, git_filebuf *file)
 {
 	git_oid hash_final;
 	struct index_header header;
-	int is_extended;
+	bool is_extended;
 
 	assert(index && file);
 
