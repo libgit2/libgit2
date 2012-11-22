@@ -314,6 +314,8 @@ static int _git_close(git_smart_subtransport *subtransport)
 
 	assert(!t->current_stream);
 
+	GIT_UNUSED(t);
+
 	return 0;
 }
 
