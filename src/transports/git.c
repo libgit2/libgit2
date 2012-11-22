@@ -284,11 +284,11 @@ static int _git_receivepack(
 
 static int _git_action(
 	git_smart_subtransport_stream **stream,
-	git_smart_subtransport *smart_transport,
+	git_smart_subtransport *subtransport,
 	const char *url,
 	git_smart_service_t action)
 {
-	git_subtransport *t = (git_subtransport *) smart_transport;
+	git_subtransport *t = (git_subtransport *) subtransport;
 
 	switch (action) {
 		case GIT_SERVICE_UPLOADPACK_LS:
@@ -298,19 +298,28 @@ static int _git_action(
 			return _git_uploadpack(t, url, stream);
 
 		case GIT_SERVICE_RECEIVEPACK_LS:
-			return _git_uploadpack_ls(t, url, stream);
+			return _git_receivepack_ls(t, url, stream);
 
 		case GIT_SERVICE_RECEIVEPACK:
-			return _git_uploadpack(t, url, stream);
+			return _git_receivepack(t, url, stream);
 	}
 
 	*stream = NULL;
 	return -1;
 }
 
-static void _git_free(git_smart_subtransport *smart_transport)
+static int _git_close(git_smart_subtransport *subtransport)
 {
-	git_subtransport *t = (git_subtransport *) smart_transport;
+	git_subtransport *t = (git_subtransport *) subtransport;
+
+	assert(!t->current_stream);
+
+	return 0;
+}
+
+static void _git_free(git_smart_subtransport *subtransport)
+{
+	git_subtransport *t = (git_subtransport *) subtransport;
 
 	assert(!t->current_stream);
 
@@ -329,6 +338,7 @@ int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owne
 
 	t->owner = owner;
 	t->parent.action = _git_action;
+	t->parent.close = _git_close;
 	t->parent.free = _git_free;
 
 	*out = (git_smart_subtransport *) t;

@@ -512,7 +512,7 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 {
 	assert(remote);
 
-	if (!remote->transport) {
+	if (!git_remote_connected(remote)) {
 		giterr_set(GITERR_NET, "The remote is not connected");
 		return -1;
 	}
@@ -570,7 +570,7 @@ int git_remote_update_tips(git_remote *remote)
 	if (git_vector_init(&refs, 16, NULL) < 0)
 		return -1;
 
-	if (remote->transport->ls(remote->transport, update_tips_callback, &refs) < 0)
+	if (git_remote_ls(remote, update_tips_callback, &refs) < 0)
 		goto on_error;
 
 	/* Let's go find HEAD, if it exists. Check only the first ref in the vector. */
@@ -653,22 +653,20 @@ on_error:
 
 int git_remote_connected(git_remote *remote)
 {
-	int connected;
-
 	assert(remote);
 
 	if (!remote->transport || !remote->transport->is_connected)
 		return 0;
 
 	/* Ask the transport if it's connected. */
-	remote->transport->is_connected(remote->transport, &connected);
-
-	return connected;
+	return remote->transport->is_connected(remote->transport);
 }
 
 void git_remote_stop(git_remote *remote)
 {
-	if (remote->transport->cancel)
+	assert(remote);
+
+	if (remote->transport && remote->transport->cancel)
 		remote->transport->cancel(remote->transport);
 }
 

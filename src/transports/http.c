@@ -716,11 +716,11 @@ static int http_receivepack(
 
 static int http_action(
 	git_smart_subtransport_stream **stream,
-	git_smart_subtransport *smart_transport,
+	git_smart_subtransport *subtransport,
 	const char *url,
 	git_smart_service_t action)
 {
-	http_subtransport *t = (http_subtransport *)smart_transport;
+	http_subtransport *t = (http_subtransport *)subtransport;
 	const char *default_port = NULL;
 	int flags = 0, ret;
 
@@ -793,22 +793,41 @@ static int http_action(
 	return -1;
 }
 
-static void http_free(git_smart_subtransport *smart_transport)
+static int http_close(git_smart_subtransport *subtransport)
 {
-	http_subtransport *t = (http_subtransport *) smart_transport;
+	http_subtransport *t = (http_subtransport *) subtransport;
 
 	clear_parser_state(t);
 
-	if (t->socket.socket)
+	if (t->socket.socket) {
 		gitno_close(&t->socket);
+		memset(&t->socket, 0x0, sizeof(gitno_socket));
+	}
 
 	if (t->cred) {
 		t->cred->free(t->cred);
 		t->cred = NULL;
 	}
 
-	git__free(t->host);
-	git__free(t->port);
+	if (t->host) {
+		git__free(t->host);
+		t->host = NULL;
+	}
+
+	if (t->port) {
+		git__free(t->port);
+		t->port = NULL;
+	}
+
+	return 0;
+}
+
+static void http_free(git_smart_subtransport *subtransport)
+{
+	http_subtransport *t = (http_subtransport *) subtransport;
+
+	http_close(subtransport);
+
 	git__free(t);
 }
 
@@ -825,6 +844,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out,
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = http_action;
+	t->parent.close = http_close;
 	t->parent.free = http_free;
 
 	t->settings.on_header_field = on_header_field;

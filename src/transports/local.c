@@ -211,13 +211,11 @@ static int local_negotiate_fetch(
 	return -1;
 }
 
-static int local_is_connected(git_transport *transport, int *connected)
+static int local_is_connected(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
 
-	*connected = t->connected;
-
-	return 0;
+	return t->connected;
 }
 
 static int local_read_flags(git_transport *transport, int *flags)

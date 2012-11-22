@@ -115,7 +115,7 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
  * @param expected_refs expected remote refs after push
  * @param expected_refs_len length of expected_refs
  */
-static void verify_refs_and_disconnect(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
+static void verify_refs(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
 {
 	git_vector actual_refs = GIT_VECTOR_INIT;
 
@@ -134,7 +134,6 @@ static void verify_refs_and_disconnect(git_remote *remote, expected_ref expected
 	verify_remote_refs(&actual_refs, expected_refs, expected_refs_len);
 
 	git_vector_free(&actual_refs);
-	git_remote_disconnect(remote);
 }
 
 void test_network_push__initialize(void)
@@ -190,9 +189,7 @@ void test_network_push__initialize(void)
 		 * See: https://raw.github.com/git/git/master/Documentation/RelNotes/1.7.0.txt
 		 */
 		cl_git_pass(git_remote_ls(_remote, delete_ref_cb, &delete_specs));
-		if (delete_specs.length == 0) {
-			git_remote_disconnect(_remote);
-		} else {
+		if (delete_specs.length) {
 			git_push *push;
 
 			cl_git_pass(git_push_new(&push, _remote));
@@ -204,9 +201,10 @@ void test_network_push__initialize(void)
 
 			cl_git_pass(git_push_finish(push));
 			git_push_free(push);
-			verify_refs_and_disconnect(_remote, NULL, 0);
+			verify_refs(_remote, NULL, 0);
 		}
 
+		git_remote_disconnect(_remote);
 		git_vector_free(&delete_specs);
 	} else
 		printf("GITTEST_REMOTE_URL unset; skipping push test\n");
@@ -263,9 +261,11 @@ static void do_push(const char *refspecs[], size_t refspecs_len,
 
 		git_push_free(push);
 
-		verify_refs_and_disconnect(_remote, expected_refs, expected_refs_len);
+		verify_refs(_remote, expected_refs, expected_refs_len);
 
 		cl_git_pass(git_remote_update_tips(_remote));
+
+		git_remote_disconnect(_remote);
 	}
 }
 

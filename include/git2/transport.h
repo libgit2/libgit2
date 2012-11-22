@@ -123,7 +123,7 @@ typedef struct git_transport {
 		void *progress_payload);
 
 	/* Checks to see if the transport is connected */
-	int (*is_connected)(struct git_transport *transport, int *connected);
+	int (*is_connected)(struct git_transport *transport);
 
 	/* Reads the flags value previously passed into connect() */
 	int (*read_flags)(struct git_transport *transport, int *flags);
@@ -256,6 +256,15 @@ typedef struct git_smart_subtransport {
 			struct git_smart_subtransport *transport,
 			const char *url,
 			git_smart_service_t action);
+
+	/* Subtransports are guaranteed a call to close() between
+	 * calls to action(), except for the following two "natural" progressions
+	 * of actions against a constant URL. For RPC subtransports, a call to
+	 * close() is guaranteed even along these "natural" progressions.
+	 *
+	 * 1. UPLOADPACK_LS -> UPLOADPACK
+	 * 2. RECEIVEPACK_LS -> RECEIVEPACK */
+	int (* close)(struct git_smart_subtransport *transport);
 
 	void (* free)(struct git_smart_subtransport *transport);
 } git_smart_subtransport;

@@ -29,12 +29,17 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 	return (int)(buf->offset - old_len);
 }
 
-GIT_INLINE(void) git_smart__reset_stream(transport_smart *t)
+GIT_INLINE(int) git_smart__reset_stream(transport_smart *t)
 {
 	if (t->current_stream) {
 		t->current_stream->free(t->current_stream);
 		t->current_stream = NULL;
 	}
+
+	if (t->wrapped->close(t->wrapped) < 0)
+		return -1;
+
+	return 0;
 }
 
 static int git_smart__set_callbacks(
@@ -65,7 +70,8 @@ static int git_smart__connect(
 	git_pkt *pkt;
 	git_smart_service_t service;
 
-	git_smart__reset_stream(t);
+	if (git_smart__reset_stream(t) < 0)
+		return -1;
 
 	t->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(t->url);
@@ -115,8 +121,8 @@ static int git_smart__connect(
 	if (git_smart__detect_caps((git_pkt_ref *)git_vector_get(&t->refs, 0), &t->caps) < 0)
 		return -1;
 
-	if (t->rpc)
-		git_smart__reset_stream(t);
+	if (t->rpc && git_smart__reset_stream(t) < 0)
+		return -1;
 
 	/* We're now logically connected. */
 	t->connected = 1;
@@ -156,8 +162,8 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 	git_smart_subtransport_stream *stream;
 	int error;
 
-	if (t->rpc)
-		git_smart__reset_stream(t);
+	if (t->rpc && git_smart__reset_stream(t) < 0)
+		return -1;
 
 	if (GIT_DIR_FETCH != t->direction) {
 		giterr_set(GITERR_NET, "This operation is only valid for fetch");
@@ -185,8 +191,8 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 {
 	int error;
 
-	if (t->rpc)
-		git_smart__reset_stream(t);
+	if (t->rpc && git_smart__reset_stream(t) < 0)
+		return -1;
 
 	if (GIT_DIR_PUSH != t->direction) {
 		giterr_set(GITERR_NET, "This operation is only valid for push");
@@ -214,13 +220,11 @@ static void git_smart__cancel(git_transport *transport)
 	git_atomic_set(&t->cancelled, 1);
 }
 
-static int git_smart__is_connected(git_transport *transport, int *connected)
+static int git_smart__is_connected(git_transport *transport)
 {
 	transport_smart *t = (transport_smart *)transport;
 
-	*connected = t->connected;
-
-	return 0;
+	return t->connected;
 }
 
 static int git_smart__read_flags(git_transport *transport, int *flags)
@@ -235,21 +239,37 @@ static int git_smart__read_flags(git_transport *transport, int *flags)
 static int git_smart__close(git_transport *transport)
 {
 	transport_smart *t = (transport_smart *)transport;
-	
-	git_smart__reset_stream(t);
+	git_vector *refs = &t->refs;
+	git_vector *common = &t->common;
+	unsigned int i;
+	git_pkt *p;
+	int ret;
+
+	ret = git_smart__reset_stream(t);
+
+	git_vector_foreach(refs, i, p)
+		git_pkt_free(p);
+
+	git_vector_free(refs);
+
+	git_vector_foreach(common, i, p)
+		git_pkt_free(p);
+
+	git_vector_free(common);
+
+	if (t->url) {
+		git__free(t->url);
+		t->url = NULL;
+	}
 
 	t->connected = 0;
 
-	return 0;
+	return ret;
 }
 
 static void git_smart__free(git_transport *transport)
 {
 	transport_smart *t = (transport_smart *)transport;
-	git_vector *refs = &t->refs;
-	git_vector *common = &t->common;
-	unsigned int i;
-	git_pkt *p;
 
 	/* Make sure that the current stream is closed, if we have one. */
 	git_smart__close(transport);
@@ -257,17 +277,6 @@ static void git_smart__free(git_transport *transport)
 	/* Free the subtransport */
 	t->wrapped->free(t->wrapped);
 
-	git_vector_foreach(refs, i, p) {
-		git_pkt_free(p);
-	}
-	git_vector_free(refs);
-
-	git_vector_foreach(common, i, p) {
-		git_pkt_free(p);
-	}
-	git_vector_free(common);
-
-	git__free(t->url);
 	git__free(t);
 }
 

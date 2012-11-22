@@ -747,7 +747,7 @@ static void winhttp_stream_free(git_smart_subtransport_stream *stream)
 	git__free(s);
 }
 
-static int winhttp_stream_alloc(winhttp_subtransport *t, git_smart_subtransport_stream **stream)
+static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream)
 {
 	winhttp_stream *s;
 
@@ -762,7 +762,8 @@ static int winhttp_stream_alloc(winhttp_subtransport *t, git_smart_subtransport_
 	s->parent.write = winhttp_stream_write_single;
 	s->parent.free = winhttp_stream_free;
 
-	*stream = (git_smart_subtransport_stream *)s;
+	*stream = s;
+
 	return 0;
 }
 
@@ -829,20 +830,8 @@ static int winhttp_connect(
 
 static int winhttp_uploadpack_ls(
 	winhttp_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	winhttp_stream *s)
 {
-	winhttp_stream *s;
-
-	if (!t->connection &&
-		winhttp_connect(t, url) < 0)
-		return -1;
-
-	if (winhttp_stream_alloc(t, stream) < 0)
-		return -1;
-
-	s = (winhttp_stream *)*stream;
-
 	s->service = upload_pack_service;
 	s->service_url = upload_pack_ls_service_url;
 	s->verb = get_verb;
@@ -852,20 +841,8 @@ static int winhttp_uploadpack_ls(
 
 static int winhttp_uploadpack(
 	winhttp_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	winhttp_stream *s)
 {
-	winhttp_stream *s;
-
-	if (!t->connection &&
-		winhttp_connect(t, url) < 0)
-		return -1;
-
-	if (winhttp_stream_alloc(t, stream) < 0)
-		return -1;
-
-	s = (winhttp_stream *)*stream;
-
 	s->service = upload_pack_service;
 	s->service_url = upload_pack_service_url;
 	s->verb = post_verb;
@@ -875,20 +852,8 @@ static int winhttp_uploadpack(
 
 static int winhttp_receivepack_ls(
 	winhttp_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	winhttp_stream *s)
 {
-	winhttp_stream *s;
-
-	if (!t->connection &&
-		winhttp_connect(t, url) < 0)
-		return -1;
-
-	if (winhttp_stream_alloc(t, stream) < 0)
-		return -1;
-
-	s = (winhttp_stream *)*stream;
-
 	s->service = receive_pack_service;
 	s->service_url = receive_pack_ls_service_url;
 	s->verb = get_verb;
@@ -898,20 +863,8 @@ static int winhttp_receivepack_ls(
 
 static int winhttp_receivepack(
 	winhttp_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	winhttp_stream *s)
 {
-	winhttp_stream *s;
-
-	if (!t->connection &&
-		winhttp_connect(t, url) < 0)
-		return -1;
-
-	if (winhttp_stream_alloc(t, stream) < 0)
-		return -1;
-
-	s = (winhttp_stream *)*stream;
-
 	/* WinHTTP only supports Transfer-Encoding: chunked
 	 * on Windows Vista (NT 6.0) and higher. */
 	s->chunked = LOBYTE(LOWORD(GetVersion())) >= 6;
@@ -930,11 +883,20 @@ static int winhttp_receivepack(
 
 static int winhttp_action(
 	git_smart_subtransport_stream **stream,
-	git_smart_subtransport *smart_transport,
+	git_smart_subtransport *subtransport,
 	const char *url,
 	git_smart_service_t action)
 {
-	winhttp_subtransport *t = (winhttp_subtransport *)smart_transport;
+	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
+	winhttp_stream *s;
+	int ret = -1;
+
+	if (!t->connection &&
+		winhttp_connect(t, url) < 0)
+		return -1;
+
+	if (winhttp_stream_alloc(t, &s) < 0)
+		return -1;
 
 	if (!stream)
 		return -1;
@@ -942,28 +904,45 @@ static int winhttp_action(
 	switch (action)
 	{
 		case GIT_SERVICE_UPLOADPACK_LS:
-			return winhttp_uploadpack_ls(t, url, stream);
+			ret = winhttp_uploadpack_ls(t, s);
+			break;
 
 		case GIT_SERVICE_UPLOADPACK:
-			return winhttp_uploadpack(t, url, stream);
+			ret = winhttp_uploadpack(t, s);
+			break;
 
 		case GIT_SERVICE_RECEIVEPACK_LS:
-			return winhttp_receivepack_ls(t, url, stream);
+			ret = winhttp_receivepack_ls(t, s);
+			break;
 
 		case GIT_SERVICE_RECEIVEPACK:
-			return winhttp_receivepack(t, url, stream);
+			ret = winhttp_receivepack(t, s);
+			break;
+
+		default:
+			assert(0);
 	}
 
-	*stream = NULL;
-	return -1;
+	if (!ret)
+		*stream = &s->parent;
+
+	return ret;
 }
 
-static void winhttp_free(git_smart_subtransport *smart_transport)
+static int winhttp_close(git_smart_subtransport *subtransport)
 {
-	winhttp_subtransport *t = (winhttp_subtransport *) smart_transport;
-	
-	git__free(t->host);
-	git__free(t->port);
+	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
+	int ret = 0;
+
+	if (t->host) {
+		git__free(t->host);
+		t->host = NULL;
+	}
+
+	if (t->port) {
+		git__free(t->port);
+		t->port = NULL;
+	}
 
 	if (t->cred) {
 		t->cred->free(t->cred);
@@ -971,14 +950,31 @@ static void winhttp_free(git_smart_subtransport *smart_transport)
 	}
 
 	if (t->connection) {
-		WinHttpCloseHandle(t->connection);
+		if (!WinHttpCloseHandle(t->connection)) {
+			giterr_set(GITERR_OS, "Unable to close connection");
+			ret = -1;
+		}
+
 		t->connection = NULL;
 	}
 
 	if (t->session) {
-		WinHttpCloseHandle(t->session);
+		if (!WinHttpCloseHandle(t->session)) {
+			giterr_set(GITERR_OS, "Unable to close session");
+			ret = -1;
+		}
+
 		t->session = NULL;
 	}
+
+	return ret;
+}
+
+static void winhttp_free(git_smart_subtransport *subtransport)
+{
+	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
+
+	winhttp_close(subtransport);
 
 	git__free(t);
 }
@@ -995,6 +991,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = winhttp_action;
+	t->parent.close = winhttp_close;
 	t->parent.free = winhttp_free;
 
 	*out = (git_smart_subtransport *) t;
