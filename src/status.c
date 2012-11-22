@@ -121,8 +121,10 @@ int git_status_foreach_ext(
 		(err = git_repository__ensure_not_bare(repo, "status")) < 0)
 		return err;
 
-	if ((err = git_repository_head_tree(&head, repo)) < 0)
-		return err;
+	/* if there is no HEAD, that's okay - we'll make an empty iterator */
+	if (((err = git_repository_head_tree(&head, repo)) < 0) &&
+		!(err == GIT_ENOTFOUND || err == GIT_EORPHANEDHEAD))
+			return err;
 
 	memset(&diffopt, 0, sizeof(diffopt));
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));

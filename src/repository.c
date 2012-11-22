@@ -1384,22 +1384,21 @@ int git_repository_is_bare(git_repository *repo)
 
 int git_repository_head_tree(git_tree **tree, git_repository *repo)
 {
-	git_oid head_oid;
-	git_object *obj = NULL;
+	git_reference *head;
+	git_object *obj;
+	int error;
 
-	if (git_reference_name_to_oid(&head_oid, repo, GIT_HEAD_FILE) < 0) {
-		/* cannot resolve HEAD - probably brand new repo */
-		giterr_clear();
-		*tree = NULL;
-		return 0;
-	}
+	if ((error = git_repository_head(&head, repo)) < 0)
+		return error;
 
-	if (git_object_lookup(&obj, repo, &head_oid, GIT_OBJ_ANY) < 0 ||
-		git_object__resolve_to_type(&obj, GIT_OBJ_TREE) < 0)
-		return -1;
+	if ((error = git_reference_peel(&obj, head, GIT_OBJ_TREE)) < 0)
+		goto cleanup;
 
 	*tree = (git_tree *)obj;
-	return 0;
+
+cleanup:
+	git_reference_free(head);
+	return error;
 }
 
 int git_repository_message(char *buffer, size_t len, git_repository *repo)

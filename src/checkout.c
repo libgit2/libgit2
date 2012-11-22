@@ -440,7 +440,9 @@ static int checkout_get_actions(
 	const git_index_entry *he;
 
 	/* if there is no HEAD, that's okay - we'll make an empty iterator */
-	(void)git_repository_head_tree(&head, data->repo);
+	if (((error = git_repository_head_tree(&head, data->repo)) < 0) &&
+		!(error == GIT_ENOTFOUND || error == GIT_EORPHANEDHEAD))
+			return -1;
 
 	if ((error = git_iterator_for_tree_range(
 			 &hiter, data->repo, head, pfx, pfx)) < 0)
