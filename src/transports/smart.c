@@ -29,14 +29,15 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 	return (int)(buf->offset - old_len);
 }
 
-GIT_INLINE(int) git_smart__reset_stream(transport_smart *t)
+GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransport)
 {
 	if (t->current_stream) {
 		t->current_stream->free(t->current_stream);
 		t->current_stream = NULL;
 	}
 
-	if (t->wrapped->close(t->wrapped) < 0)
+	if (close_subtransport &&
+		t->wrapped->close(t->wrapped) < 0)
 		return -1;
 
 	return 0;
@@ -70,7 +71,7 @@ static int git_smart__connect(
 	git_pkt *pkt;
 	git_smart_service_t service;
 
-	if (git_smart__reset_stream(t) < 0)
+	if (git_smart__reset_stream(t, true) < 0)
 		return -1;
 
 	t->url = git__strdup(url);
@@ -121,7 +122,7 @@ static int git_smart__connect(
 	if (git_smart__detect_caps((git_pkt_ref *)git_vector_get(&t->refs, 0), &t->caps) < 0)
 		return -1;
 
-	if (t->rpc && git_smart__reset_stream(t) < 0)
+	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;
 
 	/* We're now logically connected. */
@@ -162,7 +163,7 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 	git_smart_subtransport_stream *stream;
 	int error;
 
-	if (t->rpc && git_smart__reset_stream(t) < 0)
+	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;
 
 	if (GIT_DIR_FETCH != t->direction) {
@@ -191,7 +192,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 {
 	int error;
 
-	if (t->rpc && git_smart__reset_stream(t) < 0)
+	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;
 
 	if (GIT_DIR_PUSH != t->direction) {
@@ -245,7 +246,7 @@ static int git_smart__close(git_transport *transport)
 	git_pkt *p;
 	int ret;
 
-	ret = git_smart__reset_stream(t);
+	ret = git_smart__reset_stream(t, true);
 
 	git_vector_foreach(refs, i, p)
 		git_pkt_free(p);

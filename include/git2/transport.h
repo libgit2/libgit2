@@ -259,8 +259,7 @@ typedef struct git_smart_subtransport {
 
 	/* Subtransports are guaranteed a call to close() between
 	 * calls to action(), except for the following two "natural" progressions
-	 * of actions against a constant URL. For RPC subtransports, a call to
-	 * close() is guaranteed even along these "natural" progressions.
+	 * of actions against a constant URL.
 	 *
 	 * 1. UPLOADPACK_LS -> UPLOADPACK
 	 * 2. RECEIVEPACK_LS -> RECEIVEPACK */
