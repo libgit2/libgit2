@@ -3,7 +3,7 @@
 #include "repo_helpers.h"
 #include "posix.h"
 
-git_repository *repo;
+static git_repository *repo;
 
 void test_repo_head__initialize(void)
 {
@@ -19,9 +19,9 @@ void test_repo_head__head_detached(void)
 {
 	git_reference *ref;
 
-	cl_assert(git_repository_head_detached(repo) == 0);
+	cl_git_pass(git_repository_head_detached(repo));
 
-	git_repository_detach_head(repo);
+	cl_git_pass(git_repository_detach_head(repo));
 
 	cl_assert_equal_i(true, git_repository_head_detached(repo));
 
@@ -36,7 +36,7 @@ void test_repo_head__head_orphan(void)
 {
 	git_reference *ref;
 
-	cl_assert(git_repository_head_orphan(repo) == 0);
+	cl_git_pass(git_repository_head_detached(repo));
 
 	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
