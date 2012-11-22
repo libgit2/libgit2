@@ -44,6 +44,7 @@ ok	Boyd Lynn Gerber <gerberb@zenez.com>
 ok	Brian Gernhardt <benji@silverinsanity.com>
 ok	Christian Couder <chriscool@tuxfamily.org>
 ok	Daniel Barkalow <barkalow@iabervon.org>
+ok	Holger Weiss <holger@zedat.fu-berlin.de>
 ok	Jeff King <peff@peff.net>
 ok	Johannes Schindelin <Johannes.Schindelin@gmx.de>
 ok	Johannes Sixt <j6t@kdbg.org>
@@ -53,7 +54,7 @@ ok	Linus Torvalds <torvalds@linux-foundation.org>
 ok	Lukas Sandström <lukass@etek.chalmers.se>
 ok	Matthieu Moy <Matthieu.Moy@imag.fr>
 ign	Mike McCormack <mike@codeweavers.com> (imap-send)
-ok	Nicolas Pitre <nico@cam.org>
+ok	Nicolas Pitre <nico@fluxnic.net> <nico@cam.org>
 ok	Paolo Bonzini <bonzini@gnu.org>
 ok	Paul Kocher <paul@cryptography.com>
 ok	Peter Hagervall <hager@cs.umu.se>
