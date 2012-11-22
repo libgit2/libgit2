@@ -123,7 +123,8 @@ static int reference_read(
 	if (git_buf_joinpath(&path, repo_path, ref_name) < 0)
 		return -1;
 
-	result = git_futils_readbuffer_updated(file_content, path.ptr, mtime, updated);
+	result = git_futils_readbuffer_updated(
+		file_content, path.ptr, mtime, NULL, updated);
 	git_buf_free(&path);
 
 	return result;
@@ -273,18 +274,15 @@ static int loose_write(git_reference *ref)
 	git_buf ref_path = GIT_BUF_INIT;
 	struct stat st;
 
-	if (git_buf_joinpath(&ref_path, ref->owner->path_repository, ref->name) < 0)
-		return -1;
-
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
 	 */
-	if (git_path_isdir(git_buf_cstr(&ref_path)) &&
-		git_futils_rmdir_r(git_buf_cstr(&ref_path), NULL,
-			GIT_DIRREMOVAL_ONLY_EMPTY_DIRS) < 0) {
-		git_buf_free(&ref_path);
+	if (git_futils_rmdir_r(ref->name, ref->owner->path_repository,
+		GIT_RMDIR_SKIP_NONEMPTY) < 0)
 		return -1;
-	}
+
+	if (git_buf_joinpath(&ref_path, ref->owner->path_repository, ref->name) < 0)
+		return -1;
 
 	if (git_filebuf_open(&file, ref_path.ptr, GIT_FILEBUF_FORCE) < 0) {
 		git_buf_free(&ref_path);
@@ -1948,10 +1946,10 @@ int git_reference_peel(
 		peel_error(error, ref, "Cannot retrieve reference target");
 		goto cleanup;
 	}
-	
+
 	if (target_type == GIT_OBJ_ANY && git_object_type(target) != GIT_OBJ_TAG)
 		error = git_object__dup(peeled, target);
-	else 
+	else
 		error = git_object_peel(peeled, target, target_type);
 
 cleanup:

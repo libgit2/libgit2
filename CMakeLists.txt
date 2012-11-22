@@ -39,11 +39,14 @@ ENDIF()
 # Specify sha1 implementation
 IF (SHA1_TYPE STREQUAL "ppc")
 	ADD_DEFINITIONS(-DPPC_SHA1)
-	FILE(GLOB SRC_SHA1 src/ppc/*.c src/ppc/*.S)
-ELSEIF (OPENSSL_FOUND) # libcrypto's implementation is faster than ours
-	ADD_DEFINITIONS(-DOPENSSL_SHA)
-ELSE ()
-	FILE(GLOB SRC_SHA1 src/sha1/*.c)
+	FILE(GLOB SRC_SHA1 src/hash/hash_ppc.c src/hash/hash_ppc_core.S)
+ELSEIF (WIN32 AND NOT MINGW AND NOT SHA1_TYPE STREQUAL "builtin")
+    ADD_DEFINITIONS(-DWIN32_SHA1)
+    FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
+ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
+	ADD_DEFINITIONS(-DOPENSSL_SHA1)
+ELSE()
+	FILE(GLOB SRC_SHA1 src/hash/hash_generic.c)
 ENDIF()
 
 IF (NOT WIN32)
@@ -85,7 +88,9 @@ IF (MSVC)
 	# Default to stdcall, as that's what the CLR expects and how the Windows API is built
 	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
 
-	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
+    STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
+	SET(CMAKE_C_FLAGS "/MP /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
@@ -94,13 +99,16 @@ IF (MSVC)
 	SET(WIN_RC "src/win32/git2.rc")
 
    # Precompiled headers
+
 ELSE ()
-	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g ${CMAKE_C_FLAGS}")
-	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
 	ELSE ()
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
+	ENDIF ()
+	IF (APPLE) # Apple deprecated OpenSSL
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
 	ENDIF ()
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
@@ -108,10 +116,15 @@ ELSE ()
 	ENDIF ()
 ENDIF()
 
-# Build Debug by default
-IF (NOT CMAKE_BUILD_TYPE)
-	SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
-ENDIF ()
+IF( NOT CMAKE_CONFIGURATION_TYPES )
+	# Build Debug by default
+	IF (NOT CMAKE_BUILD_TYPE)
+		SET(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+	ENDIF ()
+ELSE()
+	# Using a multi-configuration generator eg MSVC or Xcode
+	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
+ENDIF()
 
 IF (OPENSSL_FOUND)
   ADD_DEFINITIONS(-DGIT_SSL)
@@ -159,7 +172,7 @@ SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
 
-IF (MSVC)
+IF (MSVC_IDE)
    # Precompiled headers
    SET_TARGET_PROPERTIES(git2 PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
    SET_SOURCE_FILES_PROPERTIES(src/win32/precompiled.c COMPILE_FLAGS "/Ycprecompiled.h")
@@ -198,7 +211,7 @@ IF (BUILD_CLAR)
 	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${CMAKE_THREAD_LIBS_INIT} ${SSL_LIBRARIES})
 
-        IF (MSVC)
+        IF (MSVC_IDE)
            # Precompiled headers
            SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
         ENDIF ()

@@ -23,12 +23,16 @@
 #define GIT_LOOSE_PRIORITY 2
 #define GIT_PACKED_PRIORITY 1
 
+#define GIT_ALTERNATES_MAX_DEPTH 5
+
 typedef struct
 {
 	git_odb_backend *backend;
 	int priority;
 	int is_alternate;
 } backend_internal;
+
+static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
 
 static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
 {
@@ -117,23 +121,27 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 {
 	int hdr_len;
 	char hdr[64], buffer[2048];
-	git_hash_ctx *ctx;
+	git_hash_ctx ctx;
 	ssize_t read_len = 0;
+	int error = 0;
 
 	if (!git_object_typeisloose(type)) {
 		giterr_set(GITERR_INVALID, "Invalid object type for hash");
 		return -1;
 	}
 
+	if ((error = git_hash_ctx_init(&ctx)) < 0)
+		return -1;
+
 	hdr_len = format_object_header(hdr, sizeof(hdr), size, type);
 
-	ctx = git_hash_new_ctx();
-	GITERR_CHECK_ALLOC(ctx);
-
-	git_hash_update(ctx, hdr, hdr_len);
+	if ((error = git_hash_update(&ctx, hdr, hdr_len)) < 0)
+		goto done;
 
 	while (size > 0 && (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
-		git_hash_update(ctx, buffer, read_len);
+		if ((error = git_hash_update(&ctx, buffer, read_len)) < 0)
+			goto done;
+
 		size -= read_len;
 	}
 
@@ -141,15 +149,18 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	 * If size is not zero, the file was truncated after we originally
 	 * stat'd it, so we consider this a read failure too */
 	if (read_len < 0 || size > 0) {
-		git_hash_free_ctx(ctx);
 		giterr_set(GITERR_OS, "Error reading file for hashing");
+		error = -1;
+
+		goto done;
 		return -1;
 	}
 
-	git_hash_final(out, ctx);
-	git_hash_free_ctx(ctx);
+	error = git_hash_final(out, &ctx);
 
-	return 0;
+done:
+	git_hash_ctx_cleanup(&ctx);
+	return error;
 }
 
 int git_odb__hashfd_filtered(
@@ -388,7 +399,7 @@ int git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority)
 	return add_backend_internal(odb, backend, priority, 1);
 }
 
-static int add_default_backends(git_odb *db, const char *objects_dir, int as_alternates)
+static int add_default_backends(git_odb *db, const char *objects_dir, int as_alternates, int alternate_depth)
 {
 	git_odb_backend *loose, *packed;
 
@@ -402,16 +413,21 @@ static int add_default_backends(git_odb *db, const char *objects_dir, int as_alt
 		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates) < 0)
 		return -1;
 
-	return 0;
+	return load_alternates(db, objects_dir, alternate_depth);
 }
 
-static int load_alternates(git_odb *odb, const char *objects_dir)
+static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth)
 {
 	git_buf alternates_path = GIT_BUF_INIT;
 	git_buf alternates_buf = GIT_BUF_INIT;
 	char *buffer;
 	const char *alternate;
 	int result = 0;
+
+	/* Git reports an error, we just ignore anything deeper */
+	if (alternate_depth > GIT_ALTERNATES_MAX_DEPTH) {
+		return 0;
+	}
 
 	if (git_buf_joinpath(&alternates_path, objects_dir, GIT_ALTERNATES_FILE) < 0)
 		return -1;
@@ -433,14 +449,18 @@ static int load_alternates(git_odb *odb, const char *objects_dir)
 		if (*alternate == '\0' || *alternate == '#')
 			continue;
 
-		/* relative path: build based on the current `objects` folder */
-		if (*alternate == '.') {
+		/*
+		 * Relative path: build based on the current `objects`
+		 * folder. However, relative paths are only allowed in
+		 * the current repository.
+		 */
+		if (*alternate == '.' && !alternate_depth) {
 			if ((result = git_buf_joinpath(&alternates_path, objects_dir, alternate)) < 0)
 				break;
 			alternate = git_buf_cstr(&alternates_path);
 		}
 
-		if ((result = add_default_backends(odb, alternate, 1)) < 0)
+		if ((result = add_default_backends(odb, alternate, 1, alternate_depth + 1)) < 0)
 			break;
 	}
 
@@ -461,8 +481,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	if (git_odb_new(&db) < 0)
 		return -1;
 
-	if (add_default_backends(db, objects_dir, 0) < 0 ||
-		load_alternates(db, objects_dir) < 0)
+	if (add_default_backends(db, objects_dir, 0, 0) < 0)
 	{
 		git_odb_free(db);
 		return -1;
@@ -758,6 +777,31 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 
 		if (b->readstream != NULL)
 			error = b->readstream(stream, b, oid);
+	}
+
+	if (error == GIT_PASSTHROUGH)
+		error = 0;
+
+	return error;
+}
+
+int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer_progress_callback progress_cb, void *progress_payload)
+{
+	unsigned int i;
+	int error = GIT_ERROR;
+
+	assert(out && db);
+
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		/* we don't write in alternates! */
+		if (internal->is_alternate)
+			continue;
+
+		if (b->writepack != NULL)
+			error = b->writepack(out, b, progress_cb, progress_payload);
 	}
 
 	if (error == GIT_PASSTHROUGH)

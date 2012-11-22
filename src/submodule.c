@@ -332,7 +332,7 @@ int git_submodule_add_finalize(git_submodule *sm)
 	assert(sm);
 
 	if ((error = git_repository_index__weakptr(&index, sm->owner)) < 0 ||
-		(error = git_index_add(index, GIT_MODULES_FILE, 0)) < 0)
+		(error = git_index_add_from_workdir(index, GIT_MODULES_FILE)) < 0)
 		return error;
 
 	return git_submodule_add_to_index(sm, true);
@@ -371,7 +371,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 
 	memset(&entry, 0, sizeof(entry));
 	entry.path = sm->path;
-	git_index__init_entry_from_stat(&st, &entry);
+	git_index_entry__init_from_stat(&entry, &st);
 
 	/* calling git_submodule_open will have set sm->wd_oid if possible */
 	if ((sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) == 0) {
@@ -393,7 +393,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	git_commit_free(head);
 
 	/* add it */
-	error = git_index_add2(index, &entry);
+	error = git_index_add(index, &entry);
 
 	/* write it, if requested */
 	if (!error && write_index) {
@@ -733,7 +733,7 @@ int git_submodule_reload(git_submodule *submodule)
 
 	pos = git_index_find(index, submodule->path);
 	if (pos >= 0) {
-		git_index_entry *entry = git_index_get(index, pos);
+		git_index_entry *entry = git_index_get_byindex(index, pos);
 
 		if (S_ISGITLINK(entry->mode)) {
 			if ((error = submodule_load_from_index(repo, entry)) < 0)
@@ -1118,7 +1118,7 @@ static int load_submodule_config_from_index(
 	git_iterator *i;
 	const git_index_entry *entry;
 
-	if ((error = git_iterator_for_index(&i, repo)) < 0)
+	if ((error = git_iterator_for_repo_index(&i, repo)) < 0)
 		return error;
 
 	error = git_iterator_current(i, &entry);
@@ -1455,7 +1455,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 		if (sm->ignore == GIT_SUBMODULE_IGNORE_NONE)
 			opt.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
-		error = git_diff_index_to_tree(sm_repo, &opt, sm_head, &diff);
+		error = git_diff_index_to_tree(&diff, sm_repo, sm_head, NULL, &opt);
 
 		if (!error) {
 			if (git_diff_num_deltas(diff) > 0)
@@ -1472,7 +1472,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 
 		/* perform index-to-workdir diff on submodule */
 
-		error = git_diff_workdir_to_index(sm_repo, &opt, &diff);
+		error = git_diff_workdir_to_index(&diff, sm_repo, NULL, &opt);
 
 		if (!error) {
 			size_t untracked =

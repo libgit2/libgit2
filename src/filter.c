@@ -33,10 +33,6 @@ void git_text_gather_stats(git_text_stats *stats, const git_buf *text)
 		else if (c == '\n')
 			stats->lf++;
 
-		else if (c == 0x85)
-			/* Unicode CR+LF */
-			stats->crlf++;
-
 		else if (c == 127)
 			/* DEL */
 			stats->nonprintable++;

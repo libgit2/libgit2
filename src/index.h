@@ -22,7 +22,7 @@ struct git_index {
 
 	char *index_file_path;
 
-	time_t last_modified;
+	git_futils_filestamp stamp;
 	git_vector entries;
 
 	unsigned int on_disk:1;
@@ -33,13 +33,22 @@ struct git_index {
 
 	git_tree_cache *tree;
 
-	git_vector unmerged;
+	git_vector reuc;
 
+	git_vector_cmp entries_cmp_path;
 	git_vector_cmp entries_search;
+	git_vector_cmp entries_search_path;
+	git_vector_cmp reuc_search;
 };
 
-extern void git_index__init_entry_from_stat(struct stat *st, git_index_entry *entry);
+extern void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st);
 
 extern unsigned int git_index__prefix_position(git_index *index, const char *path);
+
+extern int git_index_entry__cmp(const void *a, const void *b);
+extern int git_index_entry__cmp_icase(const void *a, const void *b);
+
+extern int git_index_read_tree_match(
+	git_index *index, git_tree *tree, git_strarray *strspec);
 
 #endif

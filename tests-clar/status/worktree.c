@@ -71,7 +71,7 @@ static int remove_file_cb(void *data, git_buf *file)
 		return 0;
 
 	if (git_path_isdir(filename))
-		cl_git_pass(git_futils_rmdir_r(filename, NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
+		cl_git_pass(git_futils_rmdir_r(filename, NULL, GIT_RMDIR_REMOVE_FILES));
 	else
 		cl_git_pass(p_unlink(git_buf_cstr(file)));
 
@@ -314,7 +314,7 @@ void test_status_worktree__issue_592_3(void)
 	repo = cl_git_sandbox_init("issue_592");
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
@@ -344,7 +344,7 @@ void test_status_worktree__issue_592_5(void)
 	repo = cl_git_sandbox_init("issue_592");
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "t"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
 	cl_git_pass(p_mkdir(git_buf_cstr(&path), 0777));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, NULL));
@@ -438,7 +438,7 @@ void test_status_worktree__first_commit_in_progress(void)
 	cl_assert(result.status == GIT_STATUS_WT_NEW);
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, "testfile.txt", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "testfile.txt"));
 	cl_git_pass(git_index_write(index));
 
 	memset(&result, 0, sizeof(result));
@@ -486,7 +486,7 @@ static void fill_index_wth_head_entries(git_repository *repo, git_index *index)
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 	cl_git_pass(git_commit_tree(&tree, commit));
 
-	cl_git_pass(git_index_read_tree(index, tree, NULL));
+	cl_git_pass(git_index_read_tree(index, tree));
 	cl_git_pass(git_index_write(index));
 
 	git_tree_free(tree);
@@ -570,7 +570,7 @@ void test_status_worktree__bracket_in_filename(void)
 	/* add the file to the index */
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, FILE_WITH_BRACKET, 0));
+	cl_git_pass(git_index_add_from_workdir(index, FILE_WITH_BRACKET));
 	cl_git_pass(git_index_write(index));
 
 	memset(&result, 0, sizeof(result));
@@ -648,7 +648,7 @@ void test_status_worktree__space_in_filename(void)
 	/* add the file to the index */
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, FILE_WITH_SPACE, 0));
+	cl_git_pass(git_index_add_from_workdir(index, FILE_WITH_SPACE));
 	cl_git_pass(git_index_write(index));
 
 	memset(&result, 0, sizeof(result));
@@ -816,7 +816,7 @@ void test_status_worktree__new_staged_file_must_handle_crlf(void)
 	cl_git_mkfile("getting_started/testfile.txt", "content\r\n");	// Content with CRLF
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, "testfile.txt", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "testfile.txt"));
 	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_status_file(&status, repo, "testfile.txt"));

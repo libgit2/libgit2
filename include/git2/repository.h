@@ -273,7 +273,7 @@ GIT_EXTERN(int) git_repository_init_ext(
  * @param repo a repository object
  *
  * @return 0 on success, GIT_EORPHANEDHEAD when HEAD points to a non existing
- * branch, an error code otherwise
+ * branch, GIT_ENOTFOUND when HEAD is missing; an error code otherwise
  */
 GIT_EXTERN(int) git_repository_head(git_reference **head_out, git_repository *repo);
 
@@ -305,7 +305,7 @@ GIT_EXTERN(int) git_repository_head_orphan(git_repository *repo);
  * Check if a repository is empty
  *
  * An empty repository has just been initialized and contains
- * no commits.
+ * no references.
  *
  * @param repo Repo to test
  * @return 1 if the repository is empty, 0 if it isn't, error code
@@ -568,6 +568,28 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  */
 GIT_EXTERN(int) git_repository_detach_head(
 	git_repository* repo);
+
+typedef enum {
+	GIT_REPOSITORY_STATE_NONE,
+	GIT_REPOSITORY_STATE_MERGE,
+	GIT_REPOSITORY_STATE_REVERT,
+	GIT_REPOSITORY_STATE_CHERRY_PICK,
+	GIT_REPOSITORY_STATE_BISECT,
+	GIT_REPOSITORY_STATE_REBASE,
+	GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
+	GIT_REPOSITORY_STATE_REBASE_MERGE,
+	GIT_REPOSITORY_STATE_APPLY_MAILBOX,
+	GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE,
+} git_repository_state_t;
+
+/**
+ * Determines the status of a git repository - ie, whether an operation
+ * (merge, cherry-pick, etc) is in progress.
+ *
+ * @param repo Repository pointer
+ * @return The state of the repository
+ */
+GIT_EXTERN(int) git_repository_state(git_repository *repo);
 
 /** @} */
 GIT_END_DECL

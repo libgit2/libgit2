@@ -14,12 +14,13 @@
 #else
 #	include <ws2tcpip.h>
 #	ifdef _MSC_VER
-#		pragma comment(lib, "ws2_32.lib")
+#		pragma comment(lib, "ws2_32")
 #	endif
 #endif
 
 #ifdef GIT_SSL
 # include <openssl/ssl.h>
+# include <openssl/err.h>
 # include <openssl/x509v3.h>
 #endif
 
@@ -30,7 +31,6 @@
 #include "netops.h"
 #include "posix.h"
 #include "buffer.h"
-#include "transport.h"
 
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
@@ -40,6 +40,8 @@ static void net_set_error(const char *str)
 
 	size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
 			     0, error, 0, (LPSTR)&err_str, 0, 0);
+
+	GIT_UNUSED(size);
 
 	giterr_set(GITERR_NET, "%s: %s", str, err_str);
 	LocalFree(err_str);
@@ -108,8 +110,8 @@ static int gitno__recv_ssl(gitno_buffer *buf)
 	int ret;
 
 	do {
-		ret = SSL_read(buf->ssl->ssl, buf->data + buf->offset, buf->len - buf->offset);
-	} while (SSL_get_error(buf->ssl->ssl, ret) == SSL_ERROR_WANT_READ);
+		ret = SSL_read(buf->socket->ssl.ssl, buf->data + buf->offset, buf->len - buf->offset);
+	} while (SSL_get_error(buf->socket->ssl.ssl, ret) == SSL_ERROR_WANT_READ);
 
 	if (ret < 0) {
 		net_set_error("Error receiving socket data");
@@ -121,11 +123,11 @@ static int gitno__recv_ssl(gitno_buffer *buf)
 }
 #endif
 
-int gitno__recv(gitno_buffer *buf)
+static int gitno__recv(gitno_buffer *buf)
 {
 	int ret;
 
-	ret = p_recv(buf->fd, buf->data + buf->offset, buf->len - buf->offset, 0);
+	ret = p_recv(buf->socket->socket, buf->data + buf->offset, buf->len - buf->offset, 0);
 	if (ret < 0) {
 		net_set_error("Error receiving socket data");
 		return -1;
@@ -136,31 +138,31 @@ int gitno__recv(gitno_buffer *buf)
 }
 
 void gitno_buffer_setup_callback(
-	git_transport *t,
+	gitno_socket *socket,
 	gitno_buffer *buf,
 	char *data,
 	size_t len,
 	int (*recv)(gitno_buffer *buf), void *cb_data)
 {
-	memset(buf, 0x0, sizeof(gitno_buffer));
 	memset(data, 0x0, len);
 	buf->data = data;
 	buf->len = len;
 	buf->offset = 0;
-	buf->fd = t->socket;
+	buf->socket = socket;
 	buf->recv = recv;
 	buf->cb_data = cb_data;
 }
 
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, size_t len)
+void gitno_buffer_setup(gitno_socket *socket, gitno_buffer *buf, char *data, size_t len)
 {
 #ifdef GIT_SSL
-	if (t->use_ssl) {
-		gitno_buffer_setup_callback(t, buf, data, len, gitno__recv_ssl, NULL);
-		buf->ssl = &t->ssl;
-	} else
+	if (socket->ssl.ctx) {
+		gitno_buffer_setup_callback(socket, buf, data, len, gitno__recv_ssl, NULL);
+		return;
+	}
 #endif
-		gitno_buffer_setup_callback(t, buf, data, len, gitno__recv, NULL);
+
+	gitno_buffer_setup_callback(socket, buf, data, len, gitno__recv, NULL);
 }
 
 /* Consume up to ptr and move the rest of the buffer to the beginning */
@@ -186,31 +188,26 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 	buf->offset -= cons;
 }
 
-int gitno_ssl_teardown(git_transport *t)
+#ifdef GIT_SSL
+
+static int gitno_ssl_teardown(gitno_ssl *ssl)
 {
-#ifdef GIT_SSL
 	int ret;
-#endif
-
-	if (!t->use_ssl)
-		return 0;
-
-#ifdef GIT_SSL
 
 	do {
-		ret = SSL_shutdown(t->ssl.ssl);
+		ret = SSL_shutdown(ssl->ssl);
 	} while (ret == 0);
-	if (ret < 0)
-		return ssl_set_error(&t->ssl, ret);
 
-	SSL_free(t->ssl.ssl);
-	SSL_CTX_free(t->ssl.ctx);
-#endif
-	return 0;
+	if (ret < 0)
+		ret = ssl_set_error(ssl, ret);
+	else
+		ret = 0;
+
+	SSL_free(ssl->ssl);
+	SSL_CTX_free(ssl->ctx);
+	return ret;
 }
 
-
-#ifdef GIT_SSL
 /* Match host names according to RFC 2818 rules */
 static int match_host(const char *pattern, const char *host)
 {
@@ -261,7 +258,7 @@ static int check_host_name(const char *name, const char *host)
 	return 0;
 }
 
-static int verify_server_cert(git_transport *t, const char *host)
+static int verify_server_cert(gitno_ssl *ssl, const char *host)
 {
 	X509 *cert;
 	X509_NAME *peer_name;
@@ -274,24 +271,24 @@ static int verify_server_cert(git_transport *t, const char *host)
 	void *addr;
 	int i = -1,j;
 
-	if (SSL_get_verify_result(t->ssl.ssl) != X509_V_OK) {
+	if (SSL_get_verify_result(ssl->ssl) != X509_V_OK) {
 		giterr_set(GITERR_SSL, "The SSL certificate is invalid");
 		return -1;
 	}
 
 	/* Try to parse the host as an IP address to see if it is */
-	if (inet_pton(AF_INET, host, &addr4)) {
+	if (p_inet_pton(AF_INET, host, &addr4)) {
 		type = GEN_IPADD;
 		addr = &addr4;
 	} else {
-		if(inet_pton(AF_INET6, host, &addr6)) {
+		if(p_inet_pton(AF_INET6, host, &addr6)) {
 			type = GEN_IPADD;
 			addr = &addr6;
 		}
 	}
 
 
-	cert = SSL_get_peer_certificate(t->ssl.ssl);
+	cert = SSL_get_peer_certificate(ssl->ssl);
 
 	/* Check the alternative names */
 	alts = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
@@ -375,7 +372,7 @@ static int verify_server_cert(git_transport *t, const char *host)
 
 on_error:
 	OPENSSL_free(peer_cn);
-	return ssl_set_error(&t->ssl, 0);
+	return ssl_set_error(ssl, 0);
 
 cert_fail:
 	OPENSSL_free(peer_cn);
@@ -383,51 +380,81 @@ cert_fail:
 	return -1;
 }
 
-static int ssl_setup(git_transport *t, const char *host)
+static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 {
 	int ret;
 
 	SSL_library_init();
 	SSL_load_error_strings();
-	t->ssl.ctx = SSL_CTX_new(SSLv23_method());
-	if (t->ssl.ctx == NULL)
-		return ssl_set_error(&t->ssl, 0);
+	socket->ssl.ctx = SSL_CTX_new(SSLv23_method());
+	if (socket->ssl.ctx == NULL)
+		return ssl_set_error(&socket->ssl, 0);
 
-	SSL_CTX_set_mode(t->ssl.ctx, SSL_MODE_AUTO_RETRY);
-	SSL_CTX_set_verify(t->ssl.ctx, SSL_VERIFY_NONE, NULL);
-	if (!SSL_CTX_set_default_verify_paths(t->ssl.ctx))
-		return ssl_set_error(&t->ssl, 0);
+	SSL_CTX_set_mode(socket->ssl.ctx, SSL_MODE_AUTO_RETRY);
+	SSL_CTX_set_verify(socket->ssl.ctx, SSL_VERIFY_NONE, NULL);
+	if (!SSL_CTX_set_default_verify_paths(socket->ssl.ctx))
+		return ssl_set_error(&socket->ssl, 0);
 
-	t->ssl.ssl = SSL_new(t->ssl.ctx);
-	if (t->ssl.ssl == NULL)
-		return ssl_set_error(&t->ssl, 0);
+	socket->ssl.ssl = SSL_new(socket->ssl.ctx);
+	if (socket->ssl.ssl == NULL)
+		return ssl_set_error(&socket->ssl, 0);
 
-	if((ret = SSL_set_fd(t->ssl.ssl, t->socket)) == 0)
-		return ssl_set_error(&t->ssl, ret);
+	if((ret = SSL_set_fd(socket->ssl.ssl, socket->socket)) == 0)
+		return ssl_set_error(&socket->ssl, ret);
 
-	if ((ret = SSL_connect(t->ssl.ssl)) <= 0)
-		return ssl_set_error(&t->ssl, ret);
+	if ((ret = SSL_connect(socket->ssl.ssl)) <= 0)
+		return ssl_set_error(&socket->ssl, ret);
 
-	if (t->check_cert && verify_server_cert(t, host) < 0)
+	if ((GITNO_CONNECT_SSL_NO_CHECK_CERT & flags) || verify_server_cert(&socket->ssl, host) < 0)
 		return -1;
 
 	return 0;
 }
-#else
-static int ssl_setup(git_transport *t, const char *host)
-{
-	GIT_UNUSED(t);
-	GIT_UNUSED(host);
-	return 0;
-}
 #endif
 
-int gitno_connect(git_transport *t, const char *host, const char *port)
+static int gitno__close(GIT_SOCKET s)
+{
+#ifdef GIT_WIN32
+	if (SOCKET_ERROR == closesocket(s))
+		return -1;
+
+	if (0 != WSACleanup()) {
+		giterr_set(GITERR_OS, "Winsock cleanup failed");
+		return -1;
+	}
+
+	return 0;
+#else
+	return close(s);
+#endif
+}
+
+int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int flags)
 {
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
-	int ret;
 	GIT_SOCKET s = INVALID_SOCKET;
+	int ret;
+
+#ifdef GIT_WIN32
+	/* on win32, the WSA context needs to be initialized
+	 * before any socket calls can be performed */
+	WSADATA wsd;
+
+	if (WSAStartup(MAKEWORD(2,2), &wsd) != 0) {
+		giterr_set(GITERR_OS, "Winsock init failed");
+		return -1;
+	}
+
+	if (LOBYTE(wsd.wVersion) != 2 || HIBYTE(wsd.wVersion) != 2) {
+		WSACleanup();
+		giterr_set(GITERR_OS, "Winsock init failed");
+		return -1;
+	}
+#endif
+
+	/* Zero the socket structure provided */
+	memset(s_out, 0x0, sizeof(gitno_socket));
 
 	memset(&hints, 0x0, sizeof(struct addrinfo));
 	hints.ai_socktype = SOCK_STREAM;
@@ -451,7 +478,7 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 			break;
 
 		/* If we can't connect, try the next one */
-		gitno_close(s);
+		gitno__close(s);
 		s = INVALID_SOCKET;
 	}
 
@@ -461,20 +488,30 @@ int gitno_connect(git_transport *t, const char *host, const char *port)
 		return -1;
 	}
 
-	t->socket = s;
+	s_out->socket = s;
 	p_freeaddrinfo(info);
 
-	if (t->use_ssl && ssl_setup(t, host) < 0)
+#ifdef GIT_SSL
+	if ((flags & GITNO_CONNECT_SSL) && ssl_setup(s_out, host, flags) < 0)
 		return -1;
+#else
+	/* SSL is not supported */
+	if (flags & GITNO_CONNECT_SSL) {
+		giterr_set(GITERR_OS, "SSL is not supported by this copy of libgit2.");
+		return -1;
+	}
+#endif
 
 	return 0;
 }
 
 #ifdef GIT_SSL
-static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
+static int gitno_send_ssl(gitno_ssl *ssl, const char *msg, size_t len, int flags)
 {
 	int ret;
 	size_t off = 0;
+
+	GIT_UNUSED(flags);
 
 	while (off < len) {
 		ret = SSL_write(ssl->ssl, msg + off, len - off);
@@ -482,25 +519,25 @@ static int send_ssl(gitno_ssl *ssl, const char *msg, size_t len)
 			return ssl_set_error(ssl, ret);
 
 		off += ret;
-	}
+	}	
 
 	return off;
 }
 #endif
 
-int gitno_send(git_transport *t, const char *msg, size_t len, int flags)
+int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 {
 	int ret;
 	size_t off = 0;
 
 #ifdef GIT_SSL
-	if (t->use_ssl)
-		return send_ssl(&t->ssl, msg, len);
+	if (socket->ssl.ctx)
+		return gitno_send_ssl(&socket->ssl, msg, len, flags);
 #endif
 
 	while (off < len) {
 		errno = 0;
-		ret = p_send(t->socket, msg + off, len - off, flags);
+		ret = p_send(socket->socket, msg + off, len - off, flags);
 		if (ret < 0) {
 			net_set_error("Error sending data");
 			return -1;
@@ -512,18 +549,16 @@ int gitno_send(git_transport *t, const char *msg, size_t len, int flags)
 	return (int)off;
 }
 
-
-#ifdef GIT_WIN32
-int gitno_close(GIT_SOCKET s)
+int gitno_close(gitno_socket *s)
 {
-	return closesocket(s) == SOCKET_ERROR ? -1 : 0;
-}
-#else
-int gitno_close(GIT_SOCKET s)
-{
-	return close(s);
-}
+#ifdef GIT_SSL
+	if (s->ssl.ctx &&
+		gitno_ssl_teardown(&s->ssl) < 0)
+		return -1;
 #endif
+
+	return gitno__close(s->socket);
+}
 
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 {
@@ -534,10 +569,10 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	tv.tv_usec = usec;
 
 	FD_ZERO(&fds);
-	FD_SET(buf->fd, &fds);
+	FD_SET(buf->socket->socket, &fds);
 
 	/* The select(2) interface is silly */
-	return select((int)buf->fd + 1, &fds, NULL, NULL, &tv);
+	return select((int)buf->socket->socket + 1, &fds, NULL, NULL, &tv);
 }
 
 int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)

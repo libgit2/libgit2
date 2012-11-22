@@ -223,6 +223,20 @@ void git_vector_uniq(git_vector *v)
 	v->length -= j - i - 1;
 }
 
+void git_vector_remove_matching(git_vector *v, int (*match)(git_vector *v, size_t idx))
+{
+	unsigned int i, j;
+
+	for (i = 0, j = 0; j < v->length; ++j) {
+		v->contents[i] = v->contents[j];
+
+		if (!match(v, i))
+			i++;
+	}
+
+	v->length = i;
+}
+
 void git_vector_clear(git_vector *v)
 {
 	assert(v);
@@ -240,4 +254,34 @@ void git_vector_swap(git_vector *a, git_vector *b)
 	memcpy(&t, a, sizeof(t));
 	memcpy(a, b, sizeof(t));
 	memcpy(b, &t, sizeof(t));
+}
+
+int git_vector_resize_to(git_vector *v, size_t new_length)
+{
+	if (new_length <= v->length)
+		return 0;
+
+	while (new_length >= v->_alloc_size)
+		if (resize_vector(v) < 0)
+			return -1;
+
+	memset(&v->contents[v->length], 0,
+		sizeof(void *) * (new_length - v->length));
+
+	v->length = new_length;
+
+	return 0;
+}
+
+int git_vector_set(void **old, git_vector *v, size_t position, void *value)
+{
+	if (git_vector_resize_to(v, position + 1) < 0)
+		return -1;
+
+	if (old != NULL)
+		*old = v->contents[position];
+
+	v->contents[position] = value;
+
+	return 0;
 }

@@ -11,7 +11,7 @@
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
-
+#include <ws2tcpip.h>
 
 int p_unlink(const char *path)
 {
@@ -52,16 +52,32 @@ GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 	return (time_t)winTime;
 }
 
-static int do_lstat(const char *file_name, struct stat *buf)
+#define WIN32_IS_WSEP(CH) ((CH) == L'/' || (CH) == L'\\')
+
+static int do_lstat(
+	const char *file_name, struct stat *buf, int posix_enotdir)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
-	wchar_t fbuf[GIT_WIN_PATH];
+	wchar_t fbuf[GIT_WIN_PATH], lastch;
 	DWORD last_error;
+	int flen;
 
-	git__utf8_to_16(fbuf, GIT_WIN_PATH, file_name);
+	flen = git__utf8_to_16(fbuf, GIT_WIN_PATH, file_name);
+
+	/* truncate trailing slashes */
+	for (; flen > 0; --flen) {
+		lastch = fbuf[flen - 1];
+		if (WIN32_IS_WSEP(lastch))
+			fbuf[flen - 1] = L'\0';
+		else if (lastch != L'\0')
+			break;
+	}
 
 	if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
 		int fMode = S_IREAD;
+
+		if (!buf)
+			return 0;
 
 		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			fMode |= S_IFDIR;
@@ -84,48 +100,45 @@ static int do_lstat(const char *file_name, struct stat *buf)
 		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
 		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
+
 		return 0;
 	}
 
-	last_error = GetLastError();
-	if (last_error == ERROR_FILE_NOT_FOUND)
-		errno = ENOENT;
-	else if (last_error == ERROR_PATH_NOT_FOUND)
-		errno = ENOTDIR;
+	errno = ENOENT;
+
+	/* We need POSIX behavior, then ENOTDIR must set when any of the folders in the
+	 * file path is a regular file,otherwise ENOENT must be set.
+	 */
+	if (posix_enotdir) {
+		/* scan up path until we find an existing item */
+		while (1) {
+			/* remove last directory component */
+			for (--flen; flen > 0 && !WIN32_IS_WSEP(fbuf[flen]); --flen);
+
+			if (flen <= 0)
+				break;
+
+			fbuf[flen] = L'\0';
+
+			if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
+				if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+					errno = ENOTDIR;
+				break;
+			}
+		}
+	}
 
 	return -1;
 }
 
-int p_lstat(const char *file_name, struct stat *buf)
+int p_lstat(const char *filename, struct stat *buf)
 {
-	int error;
-	size_t namelen;
-	char *alt_name;
+	return do_lstat(filename, buf, 0);
+}
 
-	if (do_lstat(file_name, buf) == 0)
-		return 0;
-
-	/* if file_name ended in a '/', Windows returned ENOENT;
-	 * try again without trailing slashes
-	 */
-	namelen = strlen(file_name);
-	if (namelen && file_name[namelen-1] != '/')
-		return -1;
-
-	while (namelen && file_name[namelen-1] == '/')
-		--namelen;
-
-	if (!namelen)
-		return -1;
-
-	alt_name = git__strndup(file_name, namelen);
-	if (!alt_name)
-		return -1;
-
-	error = do_lstat(alt_name, buf);
-
-	git__free(alt_name);
-	return error;
+int p_lstat_posixly(const char *filename, struct stat *buf)
+{
+	return do_lstat(filename, buf, 1);
 }
 
 int p_readlink(const char *link, char *target, size_t target_len)
@@ -268,7 +281,7 @@ int p_getcwd(char *buffer_out, size_t size)
 
 int p_stat(const char* path, struct stat* buf)
 {
-	return do_lstat(path, buf);
+	return do_lstat(path, buf, 0);
 }
 
 int p_chdir(const char* path)
@@ -301,46 +314,42 @@ int p_hide_directory__w32(const char *path)
 
 char *p_realpath(const char *orig_path, char *buffer)
 {
-	int ret, buffer_sz = 0;
+	int ret;
 	wchar_t orig_path_w[GIT_WIN_PATH];
 	wchar_t buffer_w[GIT_WIN_PATH];
 
 	git__utf8_to_16(orig_path_w, GIT_WIN_PATH, orig_path);
+
+	/* Implicitly use GetCurrentDirectory which can be a threading issue */
 	ret = GetFullPathNameW(orig_path_w, GIT_WIN_PATH, buffer_w, NULL);
 
 	/* According to MSDN, a return value equals to zero means a failure. */
-	if (ret == 0 || ret > GIT_WIN_PATH) {
+	if (ret == 0 || ret > GIT_WIN_PATH)
 		buffer = NULL;
-		goto done;
-	}
 
-	if (buffer == NULL) {
-		buffer_sz = WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, NULL, 0, NULL, NULL);
-
-		if (!buffer_sz ||
-			!(buffer = (char *)git__malloc(buffer_sz)) ||
-			!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, buffer_sz, NULL, NULL))
-		{
-			git__free(buffer);
-			buffer = NULL;
-			goto done;
-		}
-	} else {
-		if (!WideCharToMultiByte(CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL)) {
-			buffer = NULL;
-			goto done;
-		}
-	}
-
-	if (!git_path_exists(buffer)) {
-		if (buffer_sz > 0)
-			git__free(buffer);
-
+	else if (GetFileAttributesW(buffer_w) == INVALID_FILE_ATTRIBUTES) {
 		buffer = NULL;
 		errno = ENOENT;
 	}
 
-done:
+	else if (buffer == NULL) {
+		int buffer_sz = WideCharToMultiByte(
+			CP_UTF8, 0, buffer_w, -1, NULL, 0, NULL, NULL);
+
+		if (!buffer_sz ||
+			!(buffer = (char *)git__malloc(buffer_sz)) ||
+			!WideCharToMultiByte(
+				CP_UTF8, 0, buffer_w, -1, buffer, buffer_sz, NULL, NULL))
+		{
+			git__free(buffer);
+			buffer = NULL;
+		}
+	}
+
+	else if (!WideCharToMultiByte(
+		CP_UTF8, 0, buffer_w, -1, buffer, GIT_PATH_MAX, NULL, NULL))
+		buffer = NULL;
+
 	if (buffer)
 		git_path_mkposix(buffer);
 
@@ -503,4 +512,46 @@ int p_gettimeofday(struct timeval *tv, struct timezone *tz)
       }
  
    return 0;
+}
+
+int p_inet_pton(int af, const char* src, void* dst)
+{
+	union {
+		struct sockaddr_in6 sin6;
+		struct sockaddr_in sin;
+	} sa;
+	size_t srcsize;
+
+	switch(af)
+	{
+		case AF_INET:
+			sa.sin.sin_family = AF_INET;
+			srcsize = sizeof (sa.sin);
+		break;
+		case AF_INET6:
+			sa.sin6.sin6_family = AF_INET6;
+			srcsize = sizeof (sa.sin6);
+		break;
+		default:
+			errno = WSAEPFNOSUPPORT;
+			return -1;
+	}
+
+	if (WSAStringToAddress(src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
+	{
+		errno = WSAGetLastError();
+		return -1;
+	}
+
+	switch(af)
+	{
+		case AF_INET:
+			memcpy(dst, &sa.sin.sin_addr, sizeof(sa.sin.sin_addr));
+		break;
+		case AF_INET6:
+			memcpy(dst, &sa.sin6.sin6_addr, sizeof(sa.sin6.sin6_addr));
+		break;
+	}
+
+	return 1;
 }

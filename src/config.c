@@ -90,6 +90,13 @@ int git_config_add_file_ondisk(
 	git_config_file *file = NULL;
 	int res;
 
+	assert(cfg && path);
+
+	if (!git_path_isfile(path)) {
+		giterr_set(GITERR_CONFIG, "Cannot find config file '%s'", path);
+		return GIT_ENOTFOUND;
+	}
+
 	if (git_config_file__ondisk(&file, path) < 0)
 		return -1;
 
@@ -105,17 +112,22 @@ int git_config_add_file_ondisk(
 	return 0;
 }
 
-int git_config_open_ondisk(git_config **cfg, const char *path)
+int git_config_open_ondisk(git_config **out, const char *path)
 {
-	if (git_config_new(cfg) < 0)
+	int error;
+	git_config *config;
+
+	*out = NULL;
+
+	if (git_config_new(&config) < 0)
 		return -1;
 
-	if (git_config_add_file_ondisk(*cfg, path, GIT_CONFIG_LEVEL_LOCAL, 0) < 0) {
-		git_config_free(*cfg);
-		return -1;
-	}
+	if ((error = git_config_add_file_ondisk(config, path, GIT_CONFIG_LEVEL_LOCAL, 0)) < 0)
+		git_config_free(config);
+	else
+		*out = config;
 
-	return 0;
+	return error;
 }
 
 static int find_internal_file_by_level(
@@ -126,8 +138,6 @@ static int find_internal_file_by_level(
 	int pos = -1;
 	file_internal *internal;
 	unsigned int i;
-
-	assert(cfg->files.length);
 
 	/* when passing GIT_CONFIG_HIGHEST_LEVEL, the idea is to get the config file
 	 * which has the highest level. As config files are stored in a vector
@@ -267,6 +277,20 @@ int git_config_add_file(
 	return 0;
 }
 
+int git_config_refresh(git_config *cfg)
+{
+	int error = 0;
+	unsigned int i;
+
+	for (i = 0; i < cfg->files.length && !error; ++i) {
+		file_internal *internal = git_vector_get(&cfg->files, i);
+		git_config_file *file = internal->file;
+		error = file->refresh(file);
+	}
+
+	return error;
+}
+
 /*
  * Loop over all the variables
  */
@@ -381,32 +405,19 @@ int git_config_get_int32(int32_t *out, git_config *cfg, const char *name)
 	return git_config_parse_int32(out, value);
 }
 
-int git_config_get_bool(int *out, git_config *cfg, const char *name)
-{
-	const char *value;
-	int ret;
-
-	if ((ret = git_config_get_string(&value, cfg, name)) < 0)
-		return ret;
-
-	return git_config_parse_bool(out, value);
-}
-
 static int get_string_at_file(const char **out, git_config_file *file, const char *name)
 {
 	const git_config_entry *entry;
 	int res;
 
-	*out = NULL;
-
 	res = file->get(file, name, &entry);
-	if (res != GIT_ENOTFOUND)
+	if (!res)
 		*out = entry->value;
 
 	return res;
 }
 
-int git_config_get_string(const char **out, git_config *cfg, const char *name)
+static int get_string(const char **out, git_config *cfg, const char *name)
 {
 	file_internal *internal;
 	unsigned int i;
@@ -423,7 +434,30 @@ int git_config_get_string(const char **out, git_config *cfg, const char *name)
 	return GIT_ENOTFOUND;
 }
 
-int git_config_get_config_entry(const git_config_entry **out, git_config *cfg, const char *name)
+int git_config_get_bool(int *out, git_config *cfg, const char *name)
+{
+	const char *value = NULL;
+	int ret;
+
+	if ((ret = get_string(&value, cfg, name)) < 0)
+		return ret;
+
+	return git_config_parse_bool(out, value);
+}
+
+int git_config_get_string(const char **out, git_config *cfg, const char *name)
+{
+	int ret;
+	const char *str = NULL;
+
+	if ((ret = get_string(&str, cfg, name)) < 0)
+		return ret;
+
+	*out = str == NULL ? "" : str;
+	return 0;
+}
+
+int git_config_get_entry(const git_config_entry **out, git_config *cfg, const char *name)
 {
 	file_internal *internal;
 	unsigned int i;
@@ -719,4 +753,82 @@ int git_config_parse_int32(int32_t *out, const char *value)
 fail_parse:
 	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value);
 	return -1;
+}
+
+struct rename_data
+{
+	git_config *config;
+	const char *old_name;
+	const char *new_name;
+};
+
+static int rename_config_entries_cb(
+	const git_config_entry *entry,
+	void *payload)
+{
+	struct rename_data *data = (struct rename_data *)payload;
+
+	if (data->new_name != NULL) {
+		git_buf name = GIT_BUF_INIT;
+		int error;
+
+		if (git_buf_printf(
+			&name,
+			"%s.%s",
+			data->new_name,
+			entry->name + strlen(data->old_name) + 1) < 0)
+				return -1;
+
+		error = git_config_set_string(
+			data->config,
+			git_buf_cstr(&name),
+			entry->value);
+
+		git_buf_free(&name);
+
+		if (error)
+			return error;
+	}
+
+	return git_config_delete(data->config, entry->name);
+}
+
+int git_config_rename_section(
+	git_repository *repo,
+	const char *old_section_name,
+	const char *new_section_name)
+{
+	git_config *config;
+	git_buf pattern = GIT_BUF_INIT;
+	int error = -1;
+	struct rename_data data;
+
+	git_buf_puts_escape_regex(&pattern,  old_section_name);
+	git_buf_puts(&pattern, "\\..+");
+	if (git_buf_oom(&pattern))
+		goto cleanup;
+
+	if (git_repository_config__weakptr(&config, repo) < 0)
+		goto cleanup;
+
+	data.config = config;
+	data.old_name = old_section_name;
+	data.new_name = new_section_name;
+
+	if ((error = git_config_foreach_match(
+			config,
+			git_buf_cstr(&pattern),
+			rename_config_entries_cb, &data)) < 0) {
+				giterr_set(GITERR_CONFIG,
+					"Cannot rename config section '%s' to '%s'",
+					old_section_name,
+					new_section_name);
+				goto cleanup;
+	}
+
+	error = 0;
+
+cleanup:
+	git_buf_free(&pattern);
+	return error;
 }

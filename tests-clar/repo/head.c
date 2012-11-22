@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "refs.h"
 #include "repo_helpers.h"
+#include "posix.h"
 
 git_repository *repo;
 
@@ -176,6 +177,15 @@ void test_repo_head__retrieving_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 	make_head_orphaned(repo, NON_EXISTING_HEAD);
 
 	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_head(&head, repo));
+}
+
+void test_repo_head__retrieving_a_missing_head_returns_GIT_ENOTFOUND(void)
+{
+	git_reference *head;
+
+	delete_head(repo);
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_head(&head, repo));
 }
 
 void test_repo_head__can_tell_if_an_orphaned_head_is_detached(void)

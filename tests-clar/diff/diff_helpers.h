@@ -8,12 +8,7 @@ typedef struct {
 	int files;
 	int files_binary;
 
-	int file_adds;
-	int file_dels;
-	int file_mods;
-	int file_ignored;
-	int file_untracked;
-	int file_unmodified;
+	int file_status[10]; /* indexed by git_delta_t value */
 
 	int hunks;
 	int hunk_new_lines;
@@ -23,8 +18,6 @@ typedef struct {
 	int line_ctxt;
 	int line_adds;
 	int line_dels;
-
-	bool at_least_one_of_them_is_binary;
 } diff_expects;
 
 extern int diff_file_fn(

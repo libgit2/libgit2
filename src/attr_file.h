@@ -7,10 +7,12 @@
 #ifndef INCLUDE_attr_file_h__
 #define INCLUDE_attr_file_h__
 
+#include "git2/oid.h"
 #include "git2/attr.h"
 #include "vector.h"
 #include "pool.h"
 #include "buffer.h"
+#include "fileops.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
@@ -54,19 +56,13 @@ typedef struct {
 } git_attr_assignment;
 
 typedef struct {
-	git_time_t seconds;
-	git_off_t  size;
-	unsigned int ino;
-} git_attr_file_stat_sig;
-
-typedef struct {
 	char *key;				/* cache "source#path" this was loaded from */
 	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
 	git_pool *pool;
 	bool pool_is_allocated;
 	union {
 		git_oid oid;
-		git_attr_file_stat_sig st;
+		git_futils_filestamp stamp;
 	} cache_data;
 } git_attr_file;
 

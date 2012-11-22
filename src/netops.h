@@ -10,31 +10,60 @@
 #include "posix.h"
 #include "common.h"
 
+#ifdef GIT_SSL
+# include <openssl/ssl.h>
+#endif
+
+struct gitno_ssl {
+#ifdef GIT_SSL
+	SSL_CTX *ctx;
+	SSL *ssl;
+#else
+	size_t dummy;
+#endif
+};
+
+typedef struct gitno_ssl gitno_ssl;
+
+/* Represents a socket that may or may not be using SSL */
+struct gitno_socket {
+	GIT_SOCKET socket;
+	gitno_ssl ssl;
+};
+
+typedef struct gitno_socket gitno_socket;
+
 struct gitno_buffer {
 	char *data;
 	size_t len;
 	size_t offset;
-	GIT_SOCKET fd;
-#ifdef GIT_SSL
-	struct gitno_ssl *ssl;
-#endif
-	int (*recv)(gitno_buffer *buffer);
+	gitno_socket *socket;
+	int (*recv)(struct gitno_buffer *buffer);
 	void *cb_data;
 };
 
-void gitno_buffer_setup(git_transport *t, gitno_buffer *buf, char *data, size_t len);
-void gitno_buffer_setup_callback(git_transport *t, gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
+typedef struct gitno_buffer gitno_buffer;
+
+/* Flags to gitno_connect */
+enum {
+	/* Attempt to create an SSL connection. */
+	GITNO_CONNECT_SSL = 1,
+
+	/* Valid only when GITNO_CONNECT_SSL is also specified.
+	 * Indicates that the server certificate should not be validated. */
+	GITNO_CONNECT_SSL_NO_CHECK_CERT = 2,
+};
+
+void gitno_buffer_setup(gitno_socket *t, gitno_buffer *buf, char *data, size_t len);
+void gitno_buffer_setup_callback(gitno_socket *t, gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
 int gitno_recv(gitno_buffer *buf);
-int gitno__recv(gitno_buffer *buf);
 
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
 
-int gitno_connect(git_transport *t, const char *host, const char *port);
-int gitno_send(git_transport *t, const char *msg, size_t len, int flags);
-int gitno_close(GIT_SOCKET s);
-int gitno_ssl_teardown(git_transport *t);
-int gitno_send_chunk_size(int s, size_t len);
+int gitno_connect(gitno_socket *socket, const char *host, const char *port, int flags);
+int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags);
+int gitno_close(gitno_socket *s);
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec);
 
 int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port);

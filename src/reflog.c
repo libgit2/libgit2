@@ -166,6 +166,9 @@ void git_reflog_free(git_reflog *reflog)
 	unsigned int i;
 	git_reflog_entry *entry;
 
+	if (reflog == NULL)
+		return;
+
 	for (i=0; i < reflog->entries.length; i++) {
 		entry = git_vector_get(&reflog->entries, i);
 
@@ -185,7 +188,10 @@ static int retrieve_reflog_path(git_buf *path, git_reference *ref)
 
 static int create_new_reflog_file(const char *filepath)
 {
-	int fd;
+	int fd, error;
+
+	if ((error = git_futils_mkpath2file(filepath, GIT_REFLOG_DIR_MODE)) < 0)
+		return error;
 
 	if ((fd = p_open(filepath,
 			O_WRONLY | O_CREAT | O_TRUNC,
@@ -285,8 +291,8 @@ success:
 int git_reflog_append(git_reflog *reflog, const git_oid *new_oid,
 				const git_signature *committer, const char *msg)
 {
-	int count;
 	git_reflog_entry *entry;
+	const git_reflog_entry *previous;
 	const char *newline;
 
 	assert(reflog && new_oid && committer);
@@ -313,16 +319,12 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid,
 		}
 	}
 
-	count = git_reflog_entrycount(reflog);
+	previous = git_reflog_entry_byindex(reflog, 0);
 
-	if (count == 0)
+	if (previous == NULL)
 		git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO);
-	else {
-		const git_reflog_entry *previous;
-
-		previous = git_reflog_entry_byindex(reflog, count -1);
+	else
 		git_oid_cpy(&entry->oid_old, &previous->oid_cur);
-	}
 
 	git_oid_cpy(&entry->oid_cur, new_oid);
 
@@ -372,7 +374,7 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 		goto cleanup;
 
 	if (git_path_isdir(git_buf_cstr(&new_path)) && 
-		(git_futils_rmdir_r(git_buf_cstr(&new_path), NULL, GIT_DIRREMOVAL_ONLY_EMPTY_DIRS) < 0))
+		(git_futils_rmdir_r(git_buf_cstr(&new_path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0))
 		goto cleanup;
 
 	if (git_futils_mkpath2file(git_buf_cstr(&new_path), GIT_REFLOG_DIR_MODE) < 0)
@@ -411,8 +413,16 @@ unsigned int git_reflog_entrycount(git_reflog *reflog)
 
 const git_reflog_entry * git_reflog_entry_byindex(git_reflog *reflog, size_t idx)
 {
+	int pos;
+
 	assert(reflog);
-	return git_vector_get(&reflog->entries, idx);
+
+	pos = git_reflog_entrycount(reflog) - (idx + 1);
+
+	if (pos < 0)
+		return NULL;
+
+	return git_vector_get(&reflog->entries, pos);
 }
 
 const git_oid * git_reflog_entry_oidold(const git_reflog_entry *entry)
@@ -441,7 +451,7 @@ char * git_reflog_entry_msg(const git_reflog_entry *entry)
 
 int git_reflog_drop(
 	git_reflog *reflog,
-	unsigned int idx,
+	size_t idx,
 	int rewrite_previous_entry)
 {
 	unsigned int entrycount;
@@ -451,31 +461,32 @@ int git_reflog_drop(
 
 	entrycount = git_reflog_entrycount(reflog);
 
-	if (idx >= entrycount)
+	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
+
+	if (entry == NULL)
 		return GIT_ENOTFOUND;
 
-	entry = git_vector_get(&reflog->entries, idx);
 	reflog_entry_free(entry);
 
-	if (git_vector_remove(&reflog->entries, idx) < 0)
+	if (git_vector_remove(&reflog->entries, entrycount - (idx + 1)) < 0)
 		return -1;
 
 	if (!rewrite_previous_entry)
 		return 0;
 
-	/* No need to rewrite anything when removing the first entry */
+	/* No need to rewrite anything when removing the most recent entry */
 	if (idx == 0)
 		return 0;
 
-	/* There are no more entries in the log */
+	/* Have the latest entry just been dropped? */
 	if (entrycount == 1)
 		return 0;
 
 	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx - 1);
 
-	/* If the last entry has just been removed... */
+	/* If the oldest entry has just been removed... */
 	if (idx == entrycount - 1) {
-		/* ...clear the oid_old member of the "new" last entry */
+		/* ...clear the oid_old member of the "new" oldest entry */
 		if (git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO) < 0)
 			return -1;
 		

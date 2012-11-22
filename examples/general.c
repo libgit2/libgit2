@@ -239,7 +239,7 @@ int main (int argc, char** argv)
   // the tagger (a git_signature - name, email, timestamp), and the tag message.
   git_tag_target((git_object **)&commit, tag);
   tname = git_tag_name(tag);    // "test"
-  ttype = git_tag_type(tag);    // GIT_OBJ_COMMIT (otype enum)
+  ttype = git_tag_target_type(tag);    // GIT_OBJ_COMMIT (otype enum)
   tmessage = git_tag_message(tag); // "tag message\n"
   printf("Tag Message: %s\n", tmessage);
 
@@ -371,7 +371,7 @@ int main (int argc, char** argv)
   // All these properties are exported publicly in the `git_index_entry` struct
   ecount = git_index_entrycount(index);
   for (i = 0; i < ecount; ++i) {
-    git_index_entry *e = git_index_get(index, i);
+    git_index_entry *e = git_index_get_byindex(index, i);
 
     printf("path: %s\n", e->path);
     printf("mtime: %d\n", (int)e->mtime.seconds);

@@ -88,8 +88,12 @@ GIT_EXTERN(unsigned int) git_reflog_entrycount(git_reflog *reflog);
 /**
  * Lookup an entry by its index
  *
+ * Requesting the reflog entry with an index of 0 (zero) will
+ * return the most recently created entry.
+ *
  * @param reflog a previously loaded reflog
- * @param idx the position to lookup
+ * @param idx the position of the entry to lookup. Should be greater than or
+ * equal to 0 (zero) and less than `git_reflog_entrycount()`.
  * @return the entry; NULL if not found
  */
 GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog, size_t idx);
@@ -97,21 +101,23 @@ GIT_EXTERN(const git_reflog_entry *) git_reflog_entry_byindex(git_reflog *reflog
 /**
  * Remove an entry from the reflog by its index
  *
- * To ensure there's no gap in the log history, set the `rewrite_previosu_entry` to 1.
- * When deleting entry `n`, member old_oid of entry `n-1` (if any) will be updated with
- * the value of memeber new_oid of entry `n+1`.
+ * To ensure there's no gap in the log history, set `rewrite_previous_entry`
+ * param value to 1. When deleting entry `n`, member old_oid of entry `n-1`
+ * (if any) will be updated with the value of member new_oid of entry `n+1`.
  *
  * @param reflog a previously loaded reflog.
  *
- * @param idx the position of the entry to remove.
+ * @param idx the position of the entry to remove. Should be greater than or
+ * equal to 0 (zero) and less than `git_reflog_entrycount()`.
  *
  * @param rewrite_previous_entry 1 to rewrite the history; 0 otherwise.
  *
- * @return 0 on success or an error code.
+ * @return 0 on success, GIT_ENOTFOUND if the entry doesn't exist
+ * or an error code.
  */
 GIT_EXTERN(int) git_reflog_drop(
 	git_reflog *reflog,
-	unsigned int idx,
+	size_t idx,
 	int rewrite_previous_entry);
 
 /**

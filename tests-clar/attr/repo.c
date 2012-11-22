@@ -270,12 +270,12 @@ static void assert_proper_normalization(git_index *index, const char *filename, 
 	git_index_entry *entry;
 
 	add_to_workdir(filename, CONTENT);
-	cl_git_pass(git_index_add(index, filename, 0));
+	cl_git_pass(git_index_add_from_workdir(index, filename));
 
 	index_pos = git_index_find(index, filename);
 	cl_assert(index_pos >= 0);
 
-	entry = git_index_get(index, index_pos);
+	entry = git_index_get_byindex(index, index_pos);
 	cl_assert_equal_i(0, git_oid_streq(&entry->oid, expected_sha));
 }
 

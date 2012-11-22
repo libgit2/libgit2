@@ -57,4 +57,11 @@ int cl_rename(const char *source, const char *dest);
 git_repository *cl_git_sandbox_init(const char *sandbox);
 void cl_git_sandbox_cleanup(void);
 
+/* Local-repo url helpers */
+const char* cl_git_fixture_url(const char *fixturename);
+const char* cl_git_path_url(const char *path);
+
+/* Test repository cleaner */
+int cl_git_remove_placeholders(const char *directory_path, const char *filename);
+
 #endif

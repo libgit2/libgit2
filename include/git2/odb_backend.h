@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "indexer.h"
 
 /**
  * @file git2/backend.h
@@ -21,6 +22,7 @@
 GIT_BEGIN_DECL
 
 struct git_odb_stream;
+struct git_odb_writepack;
 
 /** An instance for a custom backend */
 struct git_odb_backend {
@@ -75,11 +77,16 @@ struct git_odb_backend {
 			struct git_odb_backend *,
 			const git_oid *);
 
-	int (*foreach)(
-		       struct git_odb_backend *,
-		       int (*cb)(git_oid *oid, void *data),
-		       void *data
-		       );
+	int (* foreach)(
+			struct git_odb_backend *,
+			int (*cb)(git_oid *oid, void *data),
+			void *data);
+
+	int (* writepack)(
+			struct git_odb_writepack **,
+			struct git_odb_backend *,
+			git_transfer_progress_callback progress_cb,
+			void *progress_payload);
 
 	void (* free)(struct git_odb_backend *);
 };
@@ -100,6 +107,15 @@ struct git_odb_stream {
 	int (*write)(struct git_odb_stream *stream, const char *buffer, size_t len);
 	int (*finalize_write)(git_oid *oid_p, struct git_odb_stream *stream);
 	void (*free)(struct git_odb_stream *stream);
+};
+
+/** A stream to write a pack file to the ODB */
+struct git_odb_writepack {
+	struct git_odb_backend *backend;
+
+	int (*add)(struct git_odb_writepack *writepack, const void *data, size_t size, git_transfer_progress *stats);
+	int (*commit)(struct git_odb_writepack *writepack, git_transfer_progress *stats);
+	void (*free)(struct git_odb_writepack *writepack);
 };
 
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);

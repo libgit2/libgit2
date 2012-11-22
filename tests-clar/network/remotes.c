@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "refspec.h"
-#include "transport.h"
 #include "remote.h"
 
 static git_remote *_remote;
@@ -10,9 +9,8 @@ static const git_refspec *_refspec;
 
 void test_network_remotes__initialize(void)
 {
-	cl_fixture_sandbox("testrepo.git");
+	_repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_pass(git_repository_open(&_repo, "testrepo.git"));
 	cl_git_pass(git_remote_load(&_remote, _repo, "test"));
 
 	_refspec = git_remote_fetchspec(_remote);
@@ -22,8 +20,7 @@ void test_network_remotes__initialize(void)
 void test_network_remotes__cleanup(void)
 {
 	git_remote_free(_remote);
-	git_repository_free(_repo);
-	cl_fixture_cleanup("testrepo.git");
+	cl_git_sandbox_cleanup();
 }
 
 void test_network_remotes__parsing(void)
@@ -73,7 +70,7 @@ void test_network_remotes__parsing_local_path_fails_if_path_not_found(void)
 
 void test_network_remotes__supported_transport_methods_are_supported(void)
 {
-  cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
+	cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
 }
 
 void test_network_remotes__unsupported_transport_methods_are_unsupported(void)
@@ -186,13 +183,13 @@ void test_network_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 3);
+	cl_assert(list.count == 4);
 	git_strarray_free(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 4);
+	cl_assert(list.count == 5);
 	git_strarray_free(&list);
 
 	git_config_free(cfg);
@@ -226,6 +223,29 @@ void test_network_remotes__add(void)
 	cl_assert_equal_s(git_remote_url(_remote), "http://github.com/libgit2/libgit2");
 }
 
+void test_network_remotes__cannot_add_a_nameless_remote(void)
+{
+	git_remote *remote;
+
+	cl_git_fail(git_remote_add(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
+	cl_git_fail(git_remote_add(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
+}
+
+void test_network_remotes__cannot_save_a_nameless_remote(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_new(&remote, _repo, NULL, "git://github.com/libgit2/libgit2", NULL));
+
+	cl_git_fail(git_remote_save(remote));
+	git_remote_free(remote);
+
+	cl_git_pass(git_remote_new(&remote, _repo, "", "git://github.com/libgit2/libgit2", NULL));
+
+	cl_git_fail(git_remote_save(remote));
+	git_remote_free(remote);
+}
+
 void test_network_remotes__tagopt(void)
 {
 	const char *opt;
@@ -248,4 +268,12 @@ void test_network_remotes__tagopt(void)
 	cl_assert(git_config_get_string(&opt, cfg, "remote.test.tagopt") == GIT_ENOTFOUND);
 
 	git_config_free(cfg);
+}
+
+void test_network_remotes__cannot_load_with_an_empty_url(void)
+{
+	git_remote *remote;
+
+	cl_git_fail(git_remote_load(&remote, _repo, "empty-remote-url"));
+	cl_assert(giterr_last()->klass == GITERR_INVALID);
 }

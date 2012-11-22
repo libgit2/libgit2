@@ -12,7 +12,7 @@ void test_checkout_tree__initialize(void)
 	g_repo = cl_git_sandbox_init("testrepo");
 
 	memset(&g_opts, 0, sizeof(g_opts));
-	g_opts.checkout_strategy = GIT_CHECKOUT_CREATE_MISSING;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 }
 
 void test_checkout_tree__cleanup(void)
@@ -27,7 +27,7 @@ void test_checkout_tree__cannot_checkout_a_non_treeish(void)
 	/* blob */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd"));
 
-	cl_git_fail(git_checkout_tree(g_repo, g_object, NULL, NULL));
+	cl_git_fail(git_checkout_tree(g_repo, g_object, NULL));
 }
 
 void test_checkout_tree__can_checkout_a_subdirectory_from_a_commit(void)
@@ -41,7 +41,7 @@ void test_checkout_tree__can_checkout_a_subdirectory_from_a_commit(void)
 
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/ab/"));
 
-	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts, NULL));
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/2.txt"));
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/fgh/1.txt"));
@@ -58,8 +58,29 @@ void test_checkout_tree__can_checkout_a_subdirectory_from_a_subtree(void)
 
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/de/"));
 
-	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts, NULL));
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/de/2.txt"));
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/de/fgh/1.txt"));
+}
+
+static void progress(const char *path, size_t cur, size_t tot, void *payload)
+{
+	bool *was_called = (bool*)payload;
+	GIT_UNUSED(path); GIT_UNUSED(cur); GIT_UNUSED(tot);
+	*was_called = true;
+}
+
+void test_checkout_tree__calls_progress_callback(void)
+{
+	bool was_called = 0;
+
+	g_opts.progress_cb = progress;
+	g_opts.progress_payload = &was_called;
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "master"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+
+	cl_assert_equal_i(was_called, true);
 }

@@ -32,20 +32,13 @@ int diff_file_fn(
 
 	e->files++;
 
-	if (delta->binary) {
-		e->at_least_one_of_them_is_binary = true;
+	if (delta->binary)
 		e->files_binary++;
-	}
 
-	switch (delta->status) {
-	case GIT_DELTA_ADDED: e->file_adds++; break;
-	case GIT_DELTA_DELETED: e->file_dels++; break;
-	case GIT_DELTA_MODIFIED: e->file_mods++; break;
-	case GIT_DELTA_IGNORED: e->file_ignored++; break;
-	case GIT_DELTA_UNTRACKED: e->file_untracked++; break;
-	case GIT_DELTA_UNMODIFIED: e->file_unmodified++; break;
-	default: break;
-	}
+	cl_assert(delta->status <= GIT_DELTA_TYPECHANGE);
+
+	e->file_status[delta->status] += 1;
+
 	return 0;
 }
 

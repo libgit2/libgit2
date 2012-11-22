@@ -28,6 +28,9 @@ enum {
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
 };
 
+#define GIT_DELTA__TO_DELETE 10
+#define GIT_DELTA__TO_SPLIT  11
+
 struct git_diff_list {
 	git_refcount     rc;
 	git_repository   *repo;
@@ -38,6 +41,11 @@ struct git_diff_list {
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
+
+	int (*strcomp)(const char *, const char *);
+	int (*strncomp)(const char *, const char *, size_t);
+	int (*pfxcomp)(const char *str, const char *pfx);
+	int (*entrycomp)(const void *a, const void *b);
 };
 
 extern void git_diff__cleanup_modes(
@@ -45,8 +53,13 @@ extern void git_diff__cleanup_modes(
 
 extern void git_diff_list_addref(git_diff_list *diff);
 
+extern int git_diff_delta__cmp(const void *a, const void *b);
+
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
+
+extern int git_diff__oid_for_file(
+	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
 #endif
 

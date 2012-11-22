@@ -29,17 +29,26 @@ void git_vector_swap(git_vector *a, git_vector *b);
 
 void git_vector_sort(git_vector *v);
 
+/** Linear search for matching entry using internal comparison function */
 int git_vector_search(git_vector *v, const void *entry);
+
+/** Linear search for matching entry using explicit comparison function */
 int git_vector_search2(git_vector *v, git_vector_cmp cmp, const void *key);
 
+/**
+ * Binary search for matching entry using explicit comparison function that
+ * returns position where item would go if not found.
+ */
 int git_vector_bsearch3(
 	unsigned int *at_pos, git_vector *v, git_vector_cmp cmp, const void *key);
 
+/** Binary search for matching entry using internal comparison function */
 GIT_INLINE(int) git_vector_bsearch(git_vector *v, const void *key)
 {
 	return git_vector_bsearch3(NULL, v, v->_cmp, key);
 }
 
+/** Binary search for matching entry using explicit comparison function */
 GIT_INLINE(int) git_vector_bsearch2(
 	git_vector *v, git_vector_cmp cmp, const void *key)
 {
@@ -75,5 +84,9 @@ int git_vector_insert_sorted(git_vector *v, void *element,
 int git_vector_remove(git_vector *v, unsigned int idx);
 void git_vector_pop(git_vector *v);
 void git_vector_uniq(git_vector *v);
+void git_vector_remove_matching(git_vector *v, int (*match)(git_vector *v, size_t idx));
+
+int git_vector_resize_to(git_vector *v, size_t new_length);
+int git_vector_set(void **old, git_vector *v, size_t position, void *value);
 
 #endif

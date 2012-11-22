@@ -42,12 +42,11 @@ GIT_INLINE(char *) git__strdup(const char *str)
 
 GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 {
-	size_t length;
+	size_t length = 0;
 	char *ptr;
 
-	length = strlen(str);
-	if (n < length)
-		length = n;
+	while (length < n && str[length])
+		++length;
 
 	ptr = (char*)malloc(length + 1);
 	if (!ptr) {
@@ -55,7 +54,9 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 		return NULL;
 	}
 
-	memcpy(ptr, str, length);
+	if (length)
+		memcpy(ptr, str, length);
+
 	ptr[length] = '\0';
 
 	return ptr;
@@ -79,6 +80,11 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__prefixcmp_icase(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
+
+GIT_INLINE(int) git__signum(int val)
+{
+	return ((val > 0) - (val < 0));
+}
 
 extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
 extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
@@ -127,6 +133,11 @@ extern int git__bsearch(
 	size_t *position);
 
 extern int git__strcmp_cb(const void *a, const void *b);
+
+extern int git__strcmp(const char *a, const char *b);
+extern int git__strcasecmp(const char *a, const char *b);
+extern int git__strncmp(const char *a, const char *b, size_t sz);
+extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
 typedef struct {
 	short refcount;

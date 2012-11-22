@@ -20,6 +20,7 @@
 #include "filter.h"
 #include "odb.h"
 #include "remote.h"
+#include "merge.h"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -449,37 +450,46 @@ static int load_config(
 	const char *xdg_config_path,
 	const char *system_config_path)
 {
+	int error;
 	git_buf config_path = GIT_BUF_INIT;
 	git_config *cfg = NULL;
 
 	assert(repo && out);
 
-	if (git_config_new(&cfg) < 0)
-		return -1;
+	if ((error = git_config_new(&cfg)) < 0)
+		return error;
 
-	if (git_buf_joinpath(
-		&config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO) < 0)
+	error = git_buf_joinpath(
+		&config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
+	if (error < 0)
 		goto on_error;
 
-	if (git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0) < 0)
+	if ((error = git_config_add_file_ondisk(
+			cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
 		goto on_error;
 
 	git_buf_free(&config_path);
 
-	if (global_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, 0) < 0)
-			goto on_error;
-	}
+	if (global_config_path != NULL &&
+		(error = git_config_add_file_ondisk(
+			cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
+		goto on_error;
 
-	if (xdg_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, 0) < 0)
-			goto on_error;
-	}
+	if (xdg_config_path != NULL &&
+		(error = git_config_add_file_ondisk(
+			cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
+		goto on_error;
 
-	if (system_config_path != NULL) {
-		if (git_config_add_file_ondisk(cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, 0) < 0)
-			goto on_error;
-	}
+	if (system_config_path != NULL &&
+		(error = git_config_add_file_ondisk(
+			cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
+		goto on_error;
+
+	giterr_clear(); /* clear any lingering ENOTFOUND errors */
 
 	*out = cfg;
 	return 0;
@@ -488,7 +498,7 @@ on_error:
 	git_buf_free(&config_path);
 	git_config_free(cfg);
 	*out = NULL;
-	return -1;
+	return error;
 }
 
 int git_repository_config__weakptr(git_config **out, git_repository *repo)
@@ -749,6 +759,23 @@ static bool are_symlinks_supported(const char *wd_path)
 	return _symlinks_supported;
 }
 
+static int create_empty_file(const char *path, mode_t mode)
+{
+	int fd;
+
+	if ((fd = p_creat(path, mode)) < 0) {
+		giterr_set(GITERR_OS, "Error while creating '%s'", path);
+		return -1;
+	}
+
+	if (p_close(fd) < 0) {
+		giterr_set(GITERR_OS, "Error while closing '%s'", path);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int repo_init_config(
 	const char *repo_dir,
 	const char *work_dir,
@@ -764,6 +791,12 @@ static int repo_init_config(
 
 	if (git_buf_joinpath(&cfg_path, repo_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
 		return -1;
+
+	if (!git_path_isfile(git_buf_cstr(&cfg_path)) &&
+		create_empty_file(git_buf_cstr(&cfg_path), GIT_CONFIG_FILE_MODE) < 0) {
+			git_buf_free(&cfg_path);
+			return -1;
+	}
 
 	if (git_config_open_ondisk(&config, git_buf_cstr(&cfg_path)) < 0) {
 		git_buf_free(&cfg_path);
@@ -1206,9 +1239,19 @@ int git_repository_head_detached(git_repository *repo)
 
 int git_repository_head(git_reference **head_out, git_repository *repo)
 {
+	git_reference *head;
 	int error;
 
-	error = git_reference_lookup_resolved(head_out, repo, GIT_HEAD_FILE, -1);
+	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+		return error;
+
+	if (git_reference_type(head) == GIT_REF_OID) {
+		*head_out = head;
+		return 0;
+	}
+
+	error = git_reference_lookup_resolved(head_out, repo, git_reference_target(head), -1);
+	git_reference_free(head);
 
 	return error == GIT_ENOTFOUND ? GIT_EORPHANEDHEAD : error;
 }
@@ -1230,36 +1273,47 @@ int git_repository_head_orphan(git_repository *repo)
 	return 0;
 }
 
+static int at_least_one_cb(const char *refname, void *payload)
+{
+	GIT_UNUSED(refname);
+	GIT_UNUSED(payload);
+
+	return GIT_EUSER;
+}
+
+static int repo_contains_no_reference(git_repository *repo)
+{
+	int error;
+	
+	error = git_reference_foreach(repo, GIT_REF_LISTALL, at_least_one_cb, NULL);
+
+	if (error == GIT_EUSER)
+		return 0;
+
+	return error == 0 ? 1 : error;
+}
+
 int git_repository_is_empty(git_repository *repo)
 {
-	git_reference *head = NULL, *branch = NULL;
+	git_reference *head = NULL;
 	int error;
 
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
-	if (git_reference_type(head) != GIT_REF_SYMBOLIC) {
-		git_reference_free(head);
-		return 0;
-	}
+	if (!(error = git_reference_type(head) == GIT_REF_SYMBOLIC))
+		goto cleanup;
 
-	if (strcmp(git_reference_target(head), GIT_REFS_HEADS_DIR "master") != 0) {
-		git_reference_free(head);
-		return 0;
-	}
+	if (!(error = strcmp(
+		git_reference_target(head),
+		GIT_REFS_HEADS_DIR "master") == 0))
+			goto cleanup;
 
-	error = git_reference_resolve(&branch, head);
+	error = repo_contains_no_reference(repo);
 
+cleanup:
 	git_reference_free(head);
-	git_reference_free(branch);
-
-	if (error == GIT_ENOTFOUND)
-		return 1;
-
-	if (error < 0)
-		return -1;
-
-	return 0;
+	return error < 0 ? -1 : error;
 }
 
 const char *git_repository_path(git_repository *repo)
@@ -1348,15 +1402,13 @@ int git_repository_head_tree(git_tree **tree, git_repository *repo)
 	return 0;
 }
 
-#define MERGE_MSG_FILE "MERGE_MSG"
-
 int git_repository_message(char *buffer, size_t len, git_repository *repo)
 {
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	struct stat st;
 	int error;
 
-	if (git_buf_joinpath(&path, repo->path_repository, MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	if ((error = p_stat(git_buf_cstr(&path), &st)) < 0) {
@@ -1382,7 +1434,7 @@ int git_repository_message_remove(git_repository *repo)
 	git_buf path = GIT_BUF_INIT;
 	int error;
 
-	if (git_buf_joinpath(&path, repo->path_repository, MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	error = p_unlink(git_buf_cstr(&path));
@@ -1540,4 +1592,41 @@ cleanup:
 	git_reference_free(old_head);
 	git_reference_free(new_head);
 	return error;
+}
+
+/**
+ * Loosely ported from git.git
+ * https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh#L198-289
+ */
+int git_repository_state(git_repository *repo)
+{
+	git_buf repo_path = GIT_BUF_INIT;
+	int state = GIT_REPOSITORY_STATE_NONE;
+
+	assert(repo);
+
+	if (git_buf_puts(&repo_path, repo->path_repository) < 0)
+		return -1;
+
+	if (git_path_contains_file(&repo_path, GIT_REBASE_MERGE_INTERACTIVE_FILE))
+		state = GIT_REPOSITORY_STATE_REBASE_INTERACTIVE;
+	else if (git_path_contains_dir(&repo_path, GIT_REBASE_MERGE_DIR))
+		state = GIT_REPOSITORY_STATE_REBASE_MERGE;
+	else if (git_path_contains_file(&repo_path, GIT_REBASE_APPLY_REBASING_FILE))
+		state = GIT_REPOSITORY_STATE_REBASE;
+	else if (git_path_contains_file(&repo_path, GIT_REBASE_APPLY_APPLYING_FILE))
+		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX;
+	else if (git_path_contains_dir(&repo_path, GIT_REBASE_APPLY_DIR))
+		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE;
+	else if (git_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
+		state = GIT_REPOSITORY_STATE_MERGE;
+	else if(git_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE))
+		state = GIT_REPOSITORY_STATE_REVERT;
+	else if(git_path_contains_file(&repo_path, GIT_CHERRY_PICK_HEAD_FILE))
+		state = GIT_REPOSITORY_STATE_CHERRY_PICK;
+	else if(git_path_contains_file(&repo_path, GIT_BISECT_LOG_FILE))
+		state = GIT_REPOSITORY_STATE_BISECT;
+
+	git_buf_free(&repo_path);
+	return state;
 }

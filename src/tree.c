@@ -26,7 +26,9 @@ static bool valid_filemode(const int filemode)
 
 static int valid_entry_name(const char *filename)
 {
-	return *filename != '\0' && strchr(filename, '/') == NULL;
+	return *filename != '\0' && strchr(filename, '/') == NULL &&
+		strcmp(filename, "..") != 0 && strcmp(filename, ".") != 0 &&
+		strcmp(filename, ".git") != 0;
 }
 
 static int entry_sort_cmp(const void *a, const void *b)
@@ -353,7 +355,7 @@ static unsigned int find_next_dir(const char *dirname, git_index *index, unsigne
 
 	dirlen = strlen(dirname);
 	for (i = start; i < entries; ++i) {
-		git_index_entry *entry = git_index_get(index, i);
+		git_index_entry *entry = git_index_get_byindex(index, i);
 		if (strlen(entry->path) < dirlen ||
 		    memcmp(entry->path, dirname, dirlen) ||
 			(dirlen > 0 && entry->path[dirlen] != '/')) {
@@ -371,6 +373,9 @@ static int append_entry(
 	git_filemode_t filemode)
 {
 	git_tree_entry *entry;
+
+	if (!valid_entry_name(filename))
+		return tree_error("Failed to insert entry. Invalid name for a tree entry");
 
 	entry = alloc_entry(filename);
 	GITERR_CHECK_ALLOC(entry);
@@ -415,7 +420,7 @@ static int write_tree(
 	 * need to keep track of the current position.
 	 */
 	for (i = start; i < entries; ++i) {
-		git_index_entry *entry = git_index_get(index, i);
+		git_index_entry *entry = git_index_get_byindex(index, i);
 		char *filename, *next_slash;
 
 	/*
@@ -491,16 +496,17 @@ on_error:
 	return -1;
 }
 
-int git_tree_create_fromindex(git_oid *oid, git_index *index)
+int git_tree__write_index(git_oid *oid, git_index *index, git_repository *repo)
 {
 	int ret;
-	git_repository *repo;
 
-	repo = (git_repository *)GIT_REFCOUNT_OWNER(index);
+	assert(oid && index && repo);
 
-	if (repo == NULL)
-		return tree_error("Failed to create tree. "
-		  "The index file is not backed up by an existing repository");
+	if (git_index_has_conflicts(index)) {
+		giterr_set(GITERR_INDEX,
+			"Cannot create a tree from a not fully merged index.");
+		return GIT_EUNMERGED;
+	}
 
 	if (index->tree != NULL && index->tree->entries >= 0) {
 		git_oid_cpy(oid, &index->tree->oid);

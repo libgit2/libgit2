@@ -231,16 +231,60 @@ void test_index_tests__add(void)
    cl_git_pass(git_oid_fromstr(&id1, "a8233120f6ad708f843d861ce2b7228ec4e3dec6"));
 
    /* Add the new file to the index */
-   cl_git_pass(git_index_add(index, "test.txt", 0));
+   cl_git_pass(git_index_add_from_workdir(index, "test.txt"));
 
    /* Wow... it worked! */
    cl_assert(git_index_entrycount(index) == 1);
-   entry = git_index_get(index, 0);
+   entry = git_index_get_byindex(index, 0);
 
    /* And the built-in hashing mechanism worked as expected */
+   cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
+
+   /* Test access by path instead of index */
+   cl_assert((entry = git_index_get_bypath(index, "test.txt", 0)) != NULL);
    cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
 
    git_index_free(index);
    git_repository_free(repo);
 }
 
+void test_index_tests__add_from_workdir_to_a_bare_repository_returns_EBAREPO(void)
+{
+	git_repository *bare_repo;
+	git_index *index;
+
+	cl_git_pass(git_repository_open(&bare_repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_index(&index, bare_repo));
+
+	cl_assert_equal_i(GIT_EBAREREPO, git_index_add_from_workdir(index, "test.txt"));
+
+	git_index_free(index);
+	git_repository_free(bare_repo);
+}
+
+/* Test that writing an invalid filename fails */
+void test_index_tests__write_invalid_filename(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_oid expected;
+
+	p_mkdir("read_tree", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./read_tree", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_assert(git_index_entrycount(index) == 0);
+
+	cl_git_mkfile("./read_tree/.git/hello", NULL);
+
+	cl_git_pass(git_index_add_from_workdir(index, ".git/hello"));
+
+	/* write-tree */
+	cl_git_fail(git_index_write_tree(&expected, index));
+
+	git_index_free(index);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("read_tree");
+}

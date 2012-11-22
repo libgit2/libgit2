@@ -13,6 +13,7 @@
 #include "buffer.h"
 #include "hash.h"
 #include "oidmap.h"
+#include "netops.h"
 
 #include "git2/oid.h"
 
@@ -51,7 +52,7 @@ struct git_packbuilder {
 	git_repository *repo; /* associated repository */
 	git_odb *odb; /* associated object database */
 
-	git_hash_ctx *ctx;
+	git_hash_ctx ctx;
 
 	uint32_t nr_objects,
 		 nr_alloc,
@@ -70,18 +71,18 @@ struct git_packbuilder {
 	git_cond progress_cond;
 
 	/* configs */
-	unsigned long delta_cache_size;
-	unsigned long max_delta_cache_size;
-	unsigned long cache_max_small_delta_size;
-	unsigned long big_file_threshold;
-	unsigned long window_memory_limit;
+	uint64_t delta_cache_size;
+	uint64_t max_delta_cache_size;
+	uint64_t cache_max_small_delta_size;
+	uint64_t big_file_threshold;
+	uint64_t window_memory_limit;
 
 	int nr_threads; /* nr of threads to use */
 
 	bool done;
 };
 
-int git_packbuilder_send(git_packbuilder *pb, git_transport *t);
+int git_packbuilder_send(git_packbuilder *pb, gitno_socket *s);
 int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
 
 #endif /* INCLUDE_pack_objects_h__ */

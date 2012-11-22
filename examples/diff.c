@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void check(int error, const char *message)
+static void check(int error, const char *message)
 {
 	if (error) {
 		fprintf(stderr, "%s (%d)\n", message, error);
@@ -11,7 +11,8 @@ void check(int error, const char *message)
 	}
 }
 
-int resolve_to_tree(git_repository *repo, const char *identifier, git_tree **tree)
+static int resolve_to_tree(
+	git_repository *repo, const char *identifier, git_tree **tree)
 {
 	int err = 0;
 	size_t len = strlen(identifier);
@@ -61,15 +62,17 @@ char *colors[] = {
 	"\033[36m" /* cyan */
 };
 
-int printer(
+static int printer(
 	void *data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char usage,
 	const char *line,
 	size_t line_len)
 {
 	int *last_color = data, color = 0;
+
+	(void)delta; (void)range; (void)line_len;
 
 	if (*last_color >= 0) {
 		switch (usage) {
@@ -93,7 +96,7 @@ int printer(
 	return 0;
 }
 
-int check_uint16_param(const char *arg, const char *pattern, uint16_t *val)
+static int check_uint16_param(const char *arg, const char *pattern, uint16_t *val)
 {
 	size_t len = strlen(pattern);
 	uint16_t strval;
@@ -107,7 +110,7 @@ int check_uint16_param(const char *arg, const char *pattern, uint16_t *val)
 	return 1;
 }
 
-int check_str_param(const char *arg, const char *pattern, char **val)
+static int check_str_param(const char *arg, const char *pattern, char **val)
 {
 	size_t len = strlen(pattern);
 	if (strncmp(arg, pattern, len))
@@ -116,7 +119,7 @@ int check_str_param(const char *arg, const char *pattern, char **val)
 	return 1;
 }
 
-void usage(const char *message, const char *arg)
+static void usage(const char *message, const char *arg)
 {
 	if (message && arg)
 		fprintf(stderr, "%s: %s\n", message, arg);
@@ -128,13 +131,14 @@ void usage(const char *message, const char *arg)
 
 int main(int argc, char *argv[])
 {
-	char path[GIT_PATH_MAX];
 	git_repository *repo = NULL;
 	git_tree *t1 = NULL, *t2 = NULL;
-	git_diff_options opts = {0};
+	git_diff_options opts;
 	git_diff_list *diff;
 	int i, color = -1, compact = 0, cached = 0;
 	char *a, *dir = ".", *treeish1 = NULL, *treeish2 = NULL;
+
+	memset(&opts, 0, sizeof(opts));
 
 	/* parse arguments as copied from git-diff */
 
@@ -200,22 +204,22 @@ int main(int argc, char *argv[])
 	/* nothing */
 
 	if (t1 && t2)
-		check(git_diff_tree_to_tree(repo, &opts, t1, t2, &diff), "Diff");
+		check(git_diff_tree_to_tree(&diff, repo, t1, t2, &opts), "Diff");
 	else if (t1 && cached)
-		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
+		check(git_diff_index_to_tree(&diff, repo, t1, NULL, &opts), "Diff");
 	else if (t1) {
 		git_diff_list *diff2;
-		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
-		check(git_diff_workdir_to_index(repo, &opts, &diff2), "Diff");
+		check(git_diff_index_to_tree(&diff, repo, t1, NULL, &opts), "Diff");
+		check(git_diff_workdir_to_index(&diff2, repo, NULL, &opts), "Diff");
 		check(git_diff_merge(diff, diff2), "Merge diffs");
 		git_diff_list_free(diff2);
 	}
 	else if (cached) {
 		check(resolve_to_tree(repo, "HEAD", &t1), "looking up HEAD");
-		check(git_diff_index_to_tree(repo, &opts, t1, &diff), "Diff");
+		check(git_diff_index_to_tree(&diff, repo, t1, NULL, &opts), "Diff");
 	}
 	else
-		check(git_diff_workdir_to_index(repo, &opts, &diff), "Diff");
+		check(git_diff_workdir_to_index(&diff, repo, NULL, &opts), "Diff");
 
 	if (color >= 0)
 		fputs(colors[0], stdout);

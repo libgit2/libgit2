@@ -71,9 +71,9 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	 */
 	cl_git_mkfile("treebuilder/test.txt", "test\n");
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, "test.txt", 0));
+	cl_git_pass(git_index_add_from_workdir(index, "test.txt"));
 
-	entry = git_index_get(index, 0);
+	entry = git_index_get_byindex(index, 0);
 
 	cl_assert(git_oid_cmp(&expected_blob_oid, &entry->oid) == 0);
 
@@ -99,7 +99,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	/*
 	 * Build the tree from the index
 	 */
-	cl_git_pass(git_tree_create_fromindex(&tree_oid, index));
+	cl_git_pass(git_index_write_tree(&tree_oid, index));
 
 	cl_assert(git_oid_cmp(&expected_tree_oid, &tree_oid) == 0);
 
@@ -127,69 +127,4 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	git_signature_free(signature);
 	git_tree_free(tree);
 	git_index_free(index);
-}
-
-void test_object_commit_commitstagedfile__message_prettify(void)
-{
-	char buffer[100];
-
-	cl_assert(git_message_prettify(buffer, sizeof(buffer), "", 0) == 1);
-	cl_assert_equal_s(buffer, "");
-	cl_assert(git_message_prettify(buffer, sizeof(buffer), "", 1) == 1);
-	cl_assert_equal_s(buffer, "");
-
-	cl_assert_equal_i(7, git_message_prettify(buffer, sizeof(buffer), "Short", 0));
-	cl_assert_equal_s("Short\n", buffer);
-	cl_assert_equal_i(7, git_message_prettify(buffer, sizeof(buffer), "Short", 1));
-	cl_assert_equal_s("Short\n", buffer);
-
-	cl_assert(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 0) > 0);
-	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n# with some comments still in\n");
-
-	cl_assert(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 1) > 0);
-	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n");
-
-	/* try out overflow */
-	cl_assert(git_message_prettify(buffer, sizeof(buffer),
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "12345678",
-		0) > 0);
-	cl_assert_equal_s(buffer,
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
-
-	cl_assert(git_message_prettify(buffer, sizeof(buffer),
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n",
-		0) > 0);
-	cl_assert_equal_s(buffer,
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
-
-	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "123456789",
-		0));
-	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "123456789\n",
-		0));
-	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890",
-		0));
-	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890""x",
-		0));
-
-	cl_assert(git_message_prettify(buffer, sizeof(buffer),
-		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
-		"# 1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
-		"1234567890",
-		1) > 0);
-
-	cl_assert(git_message_prettify(NULL, 0, "", 0) == 1);
-	cl_assert(git_message_prettify(NULL, 0, "Short test", 0) == 12);
-	cl_assert(git_message_prettify(NULL, 0, "Test\n# with\nComments", 1) == 15);
 }

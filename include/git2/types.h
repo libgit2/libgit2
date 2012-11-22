@@ -89,6 +89,9 @@ typedef struct git_odb_object git_odb_object;
 /** A stream to read/write from the ODB */
 typedef struct git_odb_stream git_odb_stream;
 
+/** A stream to write a packfile to the ODB */
+typedef struct git_odb_writepack git_odb_writepack;
+
 /**
  * Representation of an existing git repository,
  * including all its object contents

@@ -18,7 +18,8 @@
  * Read whole files into an in-memory buffer for processing
  */
 extern int git_futils_readbuffer(git_buf *obj, const char *path);
-extern int git_futils_readbuffer_updated(git_buf *obj, const char *path, time_t *mtime, int *updated);
+extern int git_futils_readbuffer_updated(
+	git_buf *obj, const char *path, time_t *mtime, size_t *size, int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
 /**
@@ -64,6 +65,7 @@ extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t m
  * * GIT_MKDIR_CHMOD says to chmod the final directory entry after creation
  * * GIT_MKDIR_CHMOD_PATH says to chmod each directory component in the path
  * * GIT_MKDIR_SKIP_LAST says to leave off the last element of the path
+ * * GIT_MKDIR_VERIFY_DIR says confirm final item is a dir, not just EEXIST
  *
  * Note that the chmod options will be executed even if the directory already
  * exists, unless GIT_MKDIR_EXCL is given.
@@ -73,7 +75,8 @@ typedef enum {
 	GIT_MKDIR_PATH = 2,
 	GIT_MKDIR_CHMOD = 4,
 	GIT_MKDIR_CHMOD_PATH = 8,
-	GIT_MKDIR_SKIP_LAST = 16
+	GIT_MKDIR_SKIP_LAST = 16,
+	GIT_MKDIR_VERIFY_DIR = 32,
 } git_futils_mkdir_flags;
 
 /**
@@ -97,27 +100,40 @@ extern int git_futils_mkdir(const char *path, const char *base, mode_t mode, uin
  */
 extern int git_futils_mkpath2file(const char *path, const mode_t mode);
 
+/**
+ * Flags to pass to `git_futils_rmdir_r`.
+ *
+ * * GIT_RMDIR_EMPTY_HIERARCHY - the default; remove hierarchy of empty
+ *       dirs and generate error if any files are found.
+ * * GIT_RMDIR_REMOVE_FILES    - attempt to remove files in the hierarchy.
+ * * GIT_RMDIR_SKIP_NONEMPTY   - skip non-empty directories with no error.
+ * * GIT_RMDIR_EMPTY_PARENTS   - remove containing directories up to base
+ *       if removing this item leaves them empty
+ * * GIT_RMDIR_REMOVE_BLOCKERS - remove blocking file that causes ENOTDIR
+ *
+ * The old values translate into the new as follows:
+ *
+ * * GIT_DIRREMOVAL_EMPTY_HIERARCHY == GIT_RMDIR_EMPTY_HIERARCHY
+ * * GIT_DIRREMOVAL_FILES_AND_DIRS  ~= GIT_RMDIR_REMOVE_FILES
+ * * GIT_DIRREMOVAL_ONLY_EMPTY_DIRS == GIT_RMDIR_SKIP_NONEMPTY
+ */
 typedef enum {
-	GIT_DIRREMOVAL_EMPTY_HIERARCHY = 0,
-	GIT_DIRREMOVAL_FILES_AND_DIRS = 1,
-	GIT_DIRREMOVAL_ONLY_EMPTY_DIRS = 2,
-} git_directory_removal_type;
+	GIT_RMDIR_EMPTY_HIERARCHY = 0,
+	GIT_RMDIR_REMOVE_FILES    = (1 << 0),
+	GIT_RMDIR_SKIP_NONEMPTY   = (1 << 1),
+	GIT_RMDIR_EMPTY_PARENTS   = (1 << 2),
+	GIT_RMDIR_REMOVE_BLOCKERS = (1 << 3),
+} git_futils_rmdir_flags;
 
 /**
  * Remove path and any files and directories beneath it.
  *
  * @param path Path to to top level directory to process.
  * @param base Root for relative path.
- * @param removal_type GIT_DIRREMOVAL_EMPTY_HIERARCHY to remove a hierarchy
- *                     of empty directories (will fail if any file is found),
- *                     GIT_DIRREMOVAL_FILES_AND_DIRS to remove a hierarchy of
- *                     files and folders,
- *                     GIT_DIRREMOVAL_ONLY_EMPTY_DIRS to only remove empty
- *                     directories (no failure on file encounter).
- *
+ * @param flags Combination of git_futils_rmdir_flags values
  * @return 0 on success; -1 on error.
  */
-extern int git_futils_rmdir_r(const char *path, const char *base, git_directory_removal_type removal_type);
+extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.
@@ -265,5 +281,45 @@ extern int git_futils_find_system_file(git_buf *path, const char *filename);
  * @return 0 on success, -1 on error
  */
 extern int git_futils_fake_symlink(const char *new, const char *old);
+
+/**
+ * A file stamp represents a snapshot of information about a file that can
+ * be used to test if the file changes.  This portable implementation is
+ * based on stat data about that file, but it is possible that OS specific
+ * versions could be implemented in the future.
+ */
+typedef struct {
+	git_time_t mtime;
+	git_off_t  size;
+	unsigned int ino;
+} git_futils_filestamp;
+
+/**
+ * Compare stat information for file with reference info.
+ *
+ * This function updates the file stamp to current data for the given path
+ * and returns 0 if the file is up-to-date relative to the prior setting or
+ * 1 if the file has been changed.  (This also may return GIT_ENOTFOUND if
+ * the file doesn't exist.)
+ *
+ * @param stamp File stamp to be checked
+ * @param path Path to stat and check if changed
+ * @return 0 if up-to-date, 1 if out-of-date, <0 on error
+ */
+extern int git_futils_filestamp_check(
+	git_futils_filestamp *stamp, const char *path);
+
+/**
+ * Set or reset file stamp data
+ *
+ * This writes the target file stamp.  If the source is NULL, this will set
+ * the target stamp to values that will definitely be out of date.  If the
+ * source is not NULL, this copies the source values to the target.
+ *
+ * @param tgt File stamp to write to
+ * @param src File stamp to copy from or NULL to clear the target
+ */
+extern void git_futils_filestamp_set(
+	git_futils_filestamp *tgt, const git_futils_filestamp *src);
 
 #endif /* INCLUDE_fileops_h__ */

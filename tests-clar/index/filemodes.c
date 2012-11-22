@@ -25,7 +25,7 @@ void test_index_filemodes__read(void)
 	cl_assert_equal_i(6, git_index_entrycount(index));
 
 	for (i = 0; i < 6; ++i) {
-		git_index_entry *entry = git_index_get(index, i);
+		git_index_entry *entry = git_index_get_byindex(index, i);
 		cl_assert(entry != NULL);
 		cl_assert(((entry->mode & 0100) ? 1 : 0) == expected[i]);
 	}
@@ -56,33 +56,13 @@ static void add_and_check_mode(
 	int pos;
 	git_index_entry *entry;
 
-	cl_git_pass(git_index_add(index, filename, 0));
+	cl_git_pass(git_index_add_from_workdir(index, filename));
 
 	pos = git_index_find(index, filename);
 	cl_assert(pos >= 0);
 
-	entry = git_index_get(index, pos);
+	entry = git_index_get_byindex(index, pos);
 	cl_assert(entry->mode == expect_mode);
-}
-
-static void append_and_check_mode(
-	git_index *index, const char *filename, unsigned int expect_mode)
-{
-	unsigned int before, after;
-	git_index_entry *entry;
-
-	before = git_index_entrycount(index);
-
-	cl_git_pass(git_index_append(index, filename, 0));
-
-	after = git_index_entrycount(index);
-	cl_assert_equal_i(before + 1, after);
-
-	/* bypass git_index_get since that resorts the index */
-	entry = (git_index_entry *)git_vector_get(&index->entries, after - 1);
-
-	cl_assert_equal_s(entry->path, filename);
-	cl_assert(expect_mode == entry->mode);
 }
 
 void test_index_filemodes__untrusted(void)
@@ -114,23 +94,7 @@ void test_index_filemodes__untrusted(void)
 	replace_file_with_mode("exec_on", "filemodes/exec_on.1", 0755);
 	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
-	/* 5 - append 0644 over existing 0644 -> expect 0644 */
-	replace_file_with_mode("exec_off", "filemodes/exec_off.2", 0644);
-	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
-
-	/* 6 - append 0644 over existing 0755 -> expect 0755 */
-	replace_file_with_mode("exec_on", "filemodes/exec_on.2", 0644);
-	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
-
-	/* 7 - append 0755 over existing 0644 -> expect 0644 */
-	replace_file_with_mode("exec_off", "filemodes/exec_off.3", 0755);
-	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
-
-	/* 8 - append 0755 over existing 0755 -> expect 0755 */
-	replace_file_with_mode("exec_on", "filemodes/exec_on.3", 0755);
-	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
-
-	/*  9 - add new 0644 -> expect 0644 */
+	/*  5 - add new 0644 -> expect 0644 */
 	cl_git_write2file("filemodes/new_off", "blah",
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
@@ -139,7 +103,7 @@ void test_index_filemodes__untrusted(void)
 	 * that doesn't support filemodes correctly, so skip it.
 	 */
 	if (can_filemode) {
-		/* 10 - add 0755 -> expect 0755 */
+		/* 6 - add 0755 -> expect 0755 */
 		cl_git_write2file("filemodes/new_on", "blah",
 			O_WRONLY | O_CREAT | O_TRUNC, 0755);
 		add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);
@@ -182,28 +146,12 @@ void test_index_filemodes__trusted(void)
 	replace_file_with_mode("exec_on", "filemodes/exec_on.1", 0755);
 	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
-	/* 5 - append 0644 over existing 0644 -> expect 0644 */
-	replace_file_with_mode("exec_off", "filemodes/exec_off.2", 0644);
-	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB);
-
-	/* 6 - append 0644 over existing 0755 -> expect 0644 */
-	replace_file_with_mode("exec_on", "filemodes/exec_on.2", 0644);
-	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB);
-
-	/* 7 - append 0755 over existing 0644 -> expect 0755 */
-	replace_file_with_mode("exec_off", "filemodes/exec_off.3", 0755);
-	append_and_check_mode(index, "exec_off", GIT_FILEMODE_BLOB_EXECUTABLE);
-
-	/* 8 - append 0755 over existing 0755 -> expect 0755 */
-	replace_file_with_mode("exec_on", "filemodes/exec_on.3", 0755);
-	append_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
-
-	/*  9 - add new 0644 -> expect 0644 */
+	/*  5 - add new 0644 -> expect 0644 */
 	cl_git_write2file("filemodes/new_off", "blah",
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
 
-	/* 10 - add 0755 -> expect 0755 */
+	/* 6 - add 0755 -> expect 0755 */
 	cl_git_write2file("filemodes/new_on", "blah",
 		O_WRONLY | O_CREAT | O_TRUNC, 0755);
 	add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);

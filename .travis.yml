@@ -46,8 +46,3 @@ notifications:
     - irc.freenode.net#libgit2
   on_success: change
   on_failure: always
- recipients:
-   - vicent@github.com 
- email:
-   on_success: change
-   on_failure: always

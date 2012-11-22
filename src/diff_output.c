@@ -120,7 +120,7 @@ static int diff_delta_is_binary_by_attr(
 		return -1;
 
 	mirror_new = (delta->new_file.path == delta->old_file.path ||
-				  strcmp(delta->new_file.path, delta->old_file.path) == 0);
+		ctxt->diff->strcomp(delta->new_file.path, delta->old_file.path) == 0);
 	if (mirror_new)
 		delta->new_file.flags |= (delta->old_file.flags & KNOWN_BINARY_FLAGS);
 	else
@@ -1002,7 +1002,7 @@ static int print_compact(
 	git_buf_clear(pi->buf);
 
 	if (delta->old_file.path != delta->new_file.path &&
-		strcmp(delta->old_file.path,delta->new_file.path) != 0)
+		pi->diff->strcomp(delta->old_file.path,delta->new_file.path) != 0)
 		git_buf_printf(pi->buf, "%c\t%s%c -> %s%c\n", code,
 			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
 	else if (delta->old_file.mode != delta->new_file.mode &&
@@ -1500,5 +1500,131 @@ notfound:
 	if (new_lineno) *new_lineno = -1;
 
 	return GIT_ENOTFOUND;
+}
+
+static int print_to_buffer_cb(
+    void *cb_data,
+    const git_diff_delta *delta,
+    const git_diff_range *range,
+    char line_origin,
+    const char *content,
+    size_t content_len)
+{
+	git_buf *output = cb_data;
+	GIT_UNUSED(delta); GIT_UNUSED(range); GIT_UNUSED(line_origin);
+	return git_buf_put(output, content, content_len);
+}
+
+int git_diff_patch_print(
+	git_diff_patch *patch,
+	void *cb_data,
+	git_diff_data_fn print_cb)
+{
+	int error;
+	git_buf temp = GIT_BUF_INIT;
+	diff_print_info pi;
+	size_t h, l;
+
+	assert(patch && print_cb);
+
+	pi.diff     = patch->diff;
+	pi.print_cb = print_cb;
+	pi.cb_data  = cb_data;
+	pi.buf      = &temp;
+
+	error = print_patch_file(&pi, patch->delta, 0);
+
+	for (h = 0; h < patch->hunks_size && !error; ++h) {
+		diff_patch_hunk *hunk = &patch->hunks[h];
+
+		error = print_patch_hunk(&pi, patch->delta,
+			&hunk->range, hunk->header, hunk->header_len);
+
+		for (l = 0; l < hunk->line_count && !error; ++l) {
+			diff_patch_line *line = &patch->lines[hunk->line_start + l];
+
+			error = print_patch_line(
+				&pi, patch->delta, &hunk->range,
+				line->origin, line->ptr, line->len);
+		}
+	}
+
+	git_buf_free(&temp);
+
+	return error;
+}
+
+int git_diff_patch_to_str(
+	char **string,
+	git_diff_patch *patch)
+{
+	int error;
+	git_buf output = GIT_BUF_INIT;
+
+	error = git_diff_patch_print(patch, &output, print_to_buffer_cb);
+
+	/* GIT_EUSER means git_buf_put in print_to_buffer_cb returned -1,
+	 * meaning a memory allocation failure, so just map to -1...
+	 */
+	if (error == GIT_EUSER)
+		error = -1;
+
+	*string = git_buf_detach(&output);
+
+	return error;
+}
+
+int git_diff__paired_foreach(
+	git_diff_list *idx2head,
+	git_diff_list *wd2idx,
+	int (*cb)(void *cbref, git_diff_delta *i2h, git_diff_delta *w2i),
+	void *cbref)
+{
+	int cmp;
+	git_diff_delta *i2h, *w2i;
+	size_t i, j, i_max, j_max;
+	bool icase = false;
+
+	i_max = idx2head ? idx2head->deltas.length : 0;
+	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
+
+	if (idx2head && wd2idx &&
+		(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) ||
+		 0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)))
+	{
+		/* Then use the ignore-case sorter... */
+		icase = true;
+
+		/* and assert that both are ignore-case sorted. If this function
+		 * ever needs to support merge joining result sets that are not sorted
+		 * by the same function, then it will need to be extended to do a spool
+		 * and sort on one of the results before merge joining */
+		assert(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) &&
+			0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE));
+	}
+
+	for (i = 0, j = 0; i < i_max || j < j_max; ) {
+		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
+		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
+
+		cmp = !w2i ? -1 : !i2h ? 1 :
+			STRCMP_CASESELECT(icase, i2h->old_file.path, w2i->old_file.path);
+
+		if (cmp < 0) {
+			if (cb(cbref, i2h, NULL))
+				return GIT_EUSER;
+			i++;
+		} else if (cmp > 0) {
+			if (cb(cbref, NULL, w2i))
+				return GIT_EUSER;
+			j++;
+		} else {
+			if (cb(cbref, i2h, w2i))
+				return GIT_EUSER;
+			i++; j++;
+		}
+	}
+
+	return 0;
 }
 

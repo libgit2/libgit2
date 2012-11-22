@@ -87,11 +87,19 @@ void test_config_read__lone_variable(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config4")));
 
+	cl_git_fail(git_config_get_int32(&i, cfg, "some.section.variable"));
+
 	cl_git_pass(git_config_get_string(&str, cfg, "some.section.variable"));
-	cl_assert(str == NULL);
+	cl_assert_equal_s(str, "");
 
 	cl_git_pass(git_config_get_bool(&i, cfg, "some.section.variable"));
 	cl_assert(i == 1);
+
+	cl_git_pass(git_config_get_string(&str, cfg, "some.section.variableeq"));
+	cl_assert_equal_s(str, "");
+
+	cl_git_pass(git_config_get_bool(&i, cfg, "some.section.variableeq"));
+	cl_assert(i == 0);
 
 	git_config_free(cfg);
 }
@@ -305,7 +313,7 @@ void test_config_read__read_git_config_entry(void)
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
 		GIT_CONFIG_LEVEL_SYSTEM, 0));
 
-	cl_git_pass(git_config_get_config_entry(&entry, cfg, "core.dummy2"));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "core.dummy2"));
 	cl_assert_equal_s("core.dummy2", entry->name);
 	cl_assert_equal_s("42", entry->value);
 	cl_assert_equal_i(GIT_CONFIG_LEVEL_SYSTEM, entry->level);
@@ -421,4 +429,23 @@ void test_config_read__simple_read_from_specific_level(void)
 
 	git_config_free(cfg_specific);
 	git_config_free(cfg);
+}
+
+void test_config_read__can_load_and_parse_an_empty_config_file(void)
+{
+	git_config *cfg;
+	int i;
+
+	cl_git_mkfile("./empty", "");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./empty"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_config_get_int32(&i, cfg, "nope.neither"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__cannot_load_a_non_existing_config_file(void)
+{
+	git_config *cfg;
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_config_open_ondisk(&cfg, "./no.config"));
 }

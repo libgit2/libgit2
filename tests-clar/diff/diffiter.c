@@ -16,7 +16,7 @@ void test_diff_diffiter__create(void)
 	git_diff_list *diff;
 	size_t d, num_d;
 
-	cl_git_pass(git_diff_workdir_to_index(repo, NULL, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, NULL));
 
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
@@ -34,7 +34,7 @@ void test_diff_diffiter__iterate_files(void)
 	size_t d, num_d;
 	int count = 0;
 
-	cl_git_pass(git_diff_workdir_to_index(repo, NULL, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, NULL));
 
 	num_d = git_diff_num_deltas(diff);
 	cl_assert_equal_i(6, (int)num_d);
@@ -57,7 +57,7 @@ void test_diff_diffiter__iterate_files_2(void)
 	size_t d, num_d;
 	int count = 0;
 
-	cl_git_pass(git_diff_workdir_to_index(repo, NULL, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, NULL));
 
 	num_d = git_diff_num_deltas(diff);
 	cl_assert_equal_i(8, (int)num_d);
@@ -85,7 +85,7 @@ void test_diff_diffiter__iterate_files_and_hunks(void)
 	opts.interhunk_lines = 1;
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
 
-	cl_git_pass(git_diff_workdir_to_index(repo, &opts, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, &opts));
 
 	num_d = git_diff_num_deltas(diff);
 
@@ -138,7 +138,7 @@ void test_diff_diffiter__max_size_threshold(void)
 	opts.interhunk_lines = 1;
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
 
-	cl_git_pass(git_diff_workdir_to_index(repo, &opts, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, &opts));
 	num_d = git_diff_num_deltas(diff);
 
 	for (d = 0; d < num_d; ++d) {
@@ -173,7 +173,7 @@ void test_diff_diffiter__max_size_threshold(void)
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
 	opts.max_size = 50; /* treat anything over 50 bytes as binary! */
 
-	cl_git_pass(git_diff_workdir_to_index(repo, &opts, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, &opts));
 	num_d = git_diff_num_deltas(diff);
 
 	for (d = 0; d < num_d; ++d) {
@@ -216,7 +216,7 @@ void test_diff_diffiter__iterate_all(void)
 	opts.interhunk_lines = 1;
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
 
-	cl_git_pass(git_diff_workdir_to_index(repo, &opts, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, &opts));
 
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
@@ -292,7 +292,7 @@ void test_diff_diffiter__iterate_randomly_while_saving_state(void)
 	opts.interhunk_lines = 1;
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
 
-	cl_git_pass(git_diff_workdir_to_index(repo, &opts, &diff));
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, &opts));
 
 	num_d = git_diff_num_deltas(diff);
 
@@ -341,4 +341,103 @@ void test_diff_diffiter__iterate_randomly_while_saving_state(void)
 	cl_assert_equal_i(13, exp.files);
 	cl_assert_equal_i(8, exp.hunks);
 	cl_assert_equal_i(14, exp.lines);
+}
+
+/* This output is taken directly from `git diff` on the status test data */
+static const char *expected_patch_text[8] = {
+	/* 0 */
+	"diff --git a/file_deleted b/file_deleted\n"
+	"deleted file mode 100644\n"
+	"index 5452d32..0000000\n"
+	"--- a/file_deleted\n"
+	"+++ /dev/null\n"
+	"@@ -1 +0,0 @@\n"
+	"-file_deleted\n",
+	/* 1 */
+	"diff --git a/modified_file b/modified_file\n"
+	"index 452e424..0a53963 100644\n"
+	"--- a/modified_file\n"
+	"+++ b/modified_file\n"
+	"@@ -1 +1,2 @@\n"
+	" modified_file\n"
+	"+modified_file\n",
+	/* 2 */
+	"diff --git a/staged_changes_file_deleted b/staged_changes_file_deleted\n"
+	"deleted file mode 100644\n"
+	"index a6be623..0000000\n"
+	"--- a/staged_changes_file_deleted\n"
+	"+++ /dev/null\n"
+	"@@ -1,2 +0,0 @@\n"
+	"-staged_changes_file_deleted\n"
+	"-staged_changes_file_deleted\n",
+	/* 3 */
+	"diff --git a/staged_changes_modified_file b/staged_changes_modified_file\n"
+	"index 906ee77..011c344 100644\n"
+	"--- a/staged_changes_modified_file\n"
+	"+++ b/staged_changes_modified_file\n"
+	"@@ -1,2 +1,3 @@\n"
+	" staged_changes_modified_file\n"
+	" staged_changes_modified_file\n"
+	"+staged_changes_modified_file\n",
+	/* 4 */
+	"diff --git a/staged_new_file_deleted_file b/staged_new_file_deleted_file\n"
+	"deleted file mode 100644\n"
+	"index 90b8c29..0000000\n"
+	"--- a/staged_new_file_deleted_file\n"
+	"+++ /dev/null\n"
+	"@@ -1 +0,0 @@\n"
+	"-staged_new_file_deleted_file\n",
+	/* 5 */
+	"diff --git a/staged_new_file_modified_file b/staged_new_file_modified_file\n"
+	"index ed06290..8b090c0 100644\n"
+	"--- a/staged_new_file_modified_file\n"
+	"+++ b/staged_new_file_modified_file\n"
+	"@@ -1 +1,2 @@\n"
+	" staged_new_file_modified_file\n"
+	"+staged_new_file_modified_file\n",
+	/* 6 */
+	"diff --git a/subdir/deleted_file b/subdir/deleted_file\n"
+	"deleted file mode 100644\n"
+	"index 1888c80..0000000\n"
+	"--- a/subdir/deleted_file\n"
+	"+++ /dev/null\n"
+	"@@ -1 +0,0 @@\n"
+	"-subdir/deleted_file\n",
+	/* 7 */
+	"diff --git a/subdir/modified_file b/subdir/modified_file\n"
+	"index a619198..57274b7 100644\n"
+	"--- a/subdir/modified_file\n"
+	"+++ b/subdir/modified_file\n"
+	"@@ -1 +1,2 @@\n"
+	" subdir/modified_file\n"
+	"+subdir/modified_file\n"
+};
+
+void test_diff_diffiter__iterate_and_generate_patch_text(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_diff_list *diff;
+	size_t d, num_d;
+
+	cl_git_pass(git_diff_workdir_to_index(&diff, repo, NULL, NULL));
+
+	num_d = git_diff_num_deltas(diff);
+	cl_assert_equal_i(8, (int)num_d);
+
+	for (d = 0; d < num_d; ++d) {
+		git_diff_patch *patch;
+		char *text;
+
+		cl_git_pass(git_diff_get_patch(&patch, NULL, diff, d));
+		cl_assert(patch != NULL);
+
+		cl_git_pass(git_diff_patch_to_str(&text, patch));
+
+		cl_assert_equal_s(expected_patch_text[d], text);
+
+		git__free(text);
+		git_diff_patch_free(patch);
+	}
+
+	git_diff_list_free(diff);
 }

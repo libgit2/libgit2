@@ -70,12 +70,12 @@ void git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
 }
 #endif
 
-void git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
+int git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
 {
-	MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, (int)length);
+	return MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, (int)length);
 }
 
-void git__utf16_to_8(char *out, const wchar_t *input)
+int git__utf16_to_8(char *out, const wchar_t *input)
 {
-	WideCharToMultiByte(CP_UTF8, 0, input, -1, out, GIT_WIN_PATH, NULL, NULL);
+	return WideCharToMultiByte(CP_UTF8, 0, input, -1, out, GIT_WIN_PATH, NULL, NULL);
 }

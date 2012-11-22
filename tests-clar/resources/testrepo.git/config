@@ -8,6 +8,8 @@
 	fetch = +refs/heads/*:refs/remotes/test/*
 [remote "joshaber"]
 	url = git://github.com/libgit2/libgit2
+[remote "empty-remote-url"]
+	url = 
 
 [remote "test_with_pushurl"]
 	url = git://github.com/libgit2/fetchlibgit2

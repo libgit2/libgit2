@@ -104,7 +104,7 @@ GIT_EXTERN(const git_oid *) git_tag_target_oid(git_tag *tag);
  * @param tag a previously loaded tag.
  * @return type of the tagged object
  */
-GIT_EXTERN(git_otype) git_tag_type(git_tag *tag);
+GIT_EXTERN(git_otype) git_tag_target_type(git_tag *tag);
 
 /**
  * Get the name of a tag

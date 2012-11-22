@@ -47,6 +47,12 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj);
  */
 int git_tree__prefix_position(git_tree *tree, const char *prefix);
 
+
+/**
+ * Write a tree to the given repository
+ */
+int git_tree__write_index(git_oid *oid, git_index *index, git_repository *repo);
+
 /**
  * Obsolete mode kept for compatibility reasons
  */

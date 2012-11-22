@@ -39,7 +39,7 @@ const git_oid *git_tag_target_oid(git_tag *t)
 	return &t->target;
 }
 
-git_otype git_tag_type(git_tag *t)
+git_otype git_tag_target_type(git_tag *t)
 {
 	assert(t);
 	return t->type;
@@ -139,16 +139,19 @@ int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 			return -1;
 	}
 
-	if( *buffer != '\n' )
-		return tag_error("No new line before message");
+	tag->message = NULL;
+	if (buffer < buffer_end) {
+		if( *buffer != '\n' )
+			return tag_error("No new line before message");
 
-	text_len = buffer_end - ++buffer;
+		text_len = buffer_end - ++buffer;
 
-	tag->message = git__malloc(text_len + 1);
-	GITERR_CHECK_ALLOC(tag->message);
+		tag->message = git__malloc(text_len + 1);
+		GITERR_CHECK_ALLOC(tag->message);
 
-	memcpy(tag->message, buffer, text_len);
-	tag->message[text_len] = '\0';
+		memcpy(tag->message, buffer, text_len);
+		tag->message[text_len] = '\0';
+	}
 
 	return 0;
 }

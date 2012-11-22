@@ -330,13 +330,14 @@ typedef struct {
 	git_iterator base;
 	git_index *index;
 	unsigned int current;
+	bool free_index;
 } index_iterator;
 
 static int index_iterator__current(
 	git_iterator *self, const git_index_entry **entry)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index_entry *ie = git_index_get(ii->index, ii->current);
+	git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
 
 	if (ie != NULL &&
 		ii->base.end != NULL &&
@@ -387,32 +388,47 @@ static int index_iterator__reset(git_iterator *self)
 static void index_iterator__free(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index_free(ii->index);
+	if (ii->free_index)
+		git_index_free(ii->index);
 	ii->index = NULL;
 }
 
 int git_iterator_for_index_range(
+	git_iterator **iter,
+	git_index  *index,
+	const char *start,
+	const char *end)
+{
+	index_iterator *ii;
+
+	ITERATOR_BASE_INIT(ii, index, INDEX);
+
+	ii->index = index;
+	ii->base.ignore_case = ii->index->ignore_case;
+	ii->current = start ? git_index__prefix_position(ii->index, start) : 0;
+
+	*iter = (git_iterator *)ii;
+
+	return 0;
+}
+
+int git_iterator_for_repo_index_range(
 	git_iterator **iter,
 	git_repository *repo,
 	const char *start,
 	const char *end)
 {
 	int error;
-	index_iterator *ii;
+	git_index *index;
 
-	ITERATOR_BASE_INIT(ii, index, INDEX);
+	if ((error = git_repository_index(&index, repo)) < 0)
+		return error;
 
-	if ((error = git_repository_index(&ii->index, repo)) < 0)
-		git__free(ii);
-	else {
-		ii->base.ignore_case = ii->index->ignore_case;
-		ii->current = start ? git_index__prefix_position(ii->index, start) : 0;
-		*iter = (git_iterator *)ii;
-	}
+	if (!(error = git_iterator_for_index_range(iter, index, start, end)))
+		((index_iterator *)(*iter))->free_index = true;
 
 	return error;
 }
-
 
 typedef struct workdir_iterator_frame workdir_iterator_frame;
 struct workdir_iterator_frame {
@@ -641,26 +657,23 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 
 	wi->entry.path = ps->path;
 
-	/* skip over .git entry */
+	/* skip over .git entries */
 	if (STRCMP_CASESELECT(wi->base.ignore_case, ps->path, DOT_GIT "/") == 0 ||
 		STRCMP_CASESELECT(wi->base.ignore_case, ps->path, DOT_GIT) == 0)
 		return workdir_iterator__advance((git_iterator *)wi, NULL);
 
-	/* if there is an error processing the entry, treat as ignored */
-	wi->is_ignored = 1;
+	wi->is_ignored = -1;
 
-	git_index__init_entry_from_stat(&ps->st, &wi->entry);
+	git_index_entry__init_from_stat(&wi->entry, &ps->st);
 
 	/* need different mode here to keep directories during iteration */
 	wi->entry.mode = git_futils_canonical_mode(ps->st.st_mode);
 
 	/* if this is a file type we don't handle, treat as ignored */
-	if (wi->entry.mode == 0)
+	if (wi->entry.mode == 0) {
+		wi->is_ignored = 1;
 		return 0;
-
-	/* okay, we are far enough along to look up real ignore rule */
-	if (git_ignore__lookup(&wi->ignores, wi->entry.path, &wi->is_ignored) < 0)
-		return 0; /* if error, ignore it and ignore file */
+	}
 
 	/* detect submodules */
 	if (S_ISDIR(wi->entry.mode)) {
@@ -693,23 +706,20 @@ int git_iterator_for_workdir_range(
 
 	assert(iter && repo);
 
-	if ((error = git_repository__ensure_not_bare(repo, "scan working directory")) < 0)
+	if ((error = git_repository__ensure_not_bare(
+			repo, "scan working directory")) < 0)
 		return error;
 
 	ITERATOR_BASE_INIT(wi, workdir, WORKDIR);
-
 	wi->repo = repo;
 
-	if ((error = git_repository_index(&index, repo)) < 0) {
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0) {
 		git__free(wi);
 		return error;
 	}
 
-	/* Set the ignore_case flag for the workdir iterator to match
-	 * that of the index. */
+	/* Match ignore_case flag for iterator to that of the index */
 	wi->base.ignore_case = index->ignore_case;
-
-	git_index_free(index);
 
 	if (git_buf_sets(&wi->path, git_repository_workdir(repo)) < 0 ||
 		git_path_to_dir(&wi->path) < 0 ||
@@ -908,8 +918,18 @@ notfound:
 
 int git_iterator_current_is_ignored(git_iterator *iter)
 {
-	return (iter->type != GIT_ITERATOR_WORKDIR) ? 0 :
-		((workdir_iterator *)iter)->is_ignored;
+	workdir_iterator *wi = (workdir_iterator *)iter;
+
+	if (iter->type != GIT_ITERATOR_WORKDIR)
+		return 0;
+
+	if (wi->is_ignored != -1)
+		return wi->is_ignored;
+
+	if (git_ignore__lookup(&wi->ignores, wi->entry.path, &wi->is_ignored) < 0)
+		wi->is_ignored = 1;
+
+	return wi->is_ignored;
 }
 
 int git_iterator_advance_into_directory(

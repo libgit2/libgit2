@@ -11,6 +11,7 @@ void test_config_new__write_new_config(void)
 	const char *out;
 	git_config *config;
 
+	cl_git_mkfile(TEST_CONFIG, "");
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 
 	cl_git_pass(git_config_set_string(config, "color.ui", "auto"));

@@ -48,5 +48,14 @@ extern int p_getcwd(char *buffer_out, size_t size);
 extern int p_rename(const char *from, const char *to);
 extern int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags);
 extern int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags);
+extern int p_inet_pton(int af, const char* src, void* dst);
+
+/* p_lstat is almost but not quite POSIX correct.  Specifically, the use of
+ * ENOTDIR is wrong, in that it does not mean precisely that a non-directory
+ * entry was encountered.  Making it correct is potentially expensive,
+ * however, so this is a separate version of p_lstat to use when correct
+ * POSIX ENOTDIR semantics is required.
+ */
+extern int p_lstat_posixly(const char *filename, struct stat *buf);
 
 #endif
