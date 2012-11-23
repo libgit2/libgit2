@@ -45,9 +45,8 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
-	git_remote_disconnect(remote);
-
 	cl_git_pass(git_remote_update_tips(remote));
+	git_remote_disconnect(remote);
 	git_remote_free(remote);
 
 	cl_git_pass(git_futils_readbuffer(&fetchhead_buf,
