@@ -7,6 +7,7 @@ static git_revwalk *_revwalker;
 static git_packbuilder *_packbuilder;
 static git_indexer *_indexer;
 static git_vector _commits;
+static int _commits_is_initialized;
 
 void test_pack_packbuilder__initialize(void)
 {
@@ -14,6 +15,7 @@ void test_pack_packbuilder__initialize(void)
 	cl_git_pass(git_revwalk_new(&_revwalker, _repo));
 	cl_git_pass(git_packbuilder_new(&_packbuilder, _repo));
 	cl_git_pass(git_vector_init(&_commits, 0, NULL));
+	_commits_is_initialized = 1;
 }
 
 void test_pack_packbuilder__cleanup(void)
@@ -21,15 +23,25 @@ void test_pack_packbuilder__cleanup(void)
 	git_oid *o;
 	unsigned int i;
 
-	git_vector_foreach(&_commits, i, o) {
-		git__free(o);
+	if (_commits_is_initialized) {
+		_commits_is_initialized = 0;
+		git_vector_foreach(&_commits, i, o) {
+			git__free(o);
+		}
+		git_vector_free(&_commits);
 	}
-	git_vector_free(&_commits);
+
 	git_packbuilder_free(_packbuilder);
+	_packbuilder = NULL;
+
 	git_revwalk_free(_revwalker);
+	_revwalker = NULL;
+
 	git_indexer_free(_indexer);
 	_indexer = NULL;
+
 	git_repository_free(_repo);
+	_repo = NULL;
 }
 
 static void seed_packbuilder(void)

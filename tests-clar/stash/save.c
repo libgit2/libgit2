@@ -26,7 +26,11 @@ void test_stash_save__initialize(void)
 void test_stash_save__cleanup(void)
 {
 	git_signature_free(signature);
+	signature = NULL;
+
 	git_repository_free(repo);
+	repo = NULL;
+
 	cl_git_pass(git_futils_rmdir_r("stash", NULL, GIT_RMDIR_REMOVE_FILES));
 }
 

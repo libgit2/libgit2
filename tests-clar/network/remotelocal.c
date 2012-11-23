@@ -15,9 +15,14 @@ void test_network_remotelocal__initialize(void)
 
 void test_network_remotelocal__cleanup(void)
 {
-	git_remote_free(remote);
 	git_buf_free(&file_path_buf);
+
+	git_remote_free(remote);
+	remote = NULL;
+
 	git_repository_free(repo);
+	repo = NULL;
+
 	cl_fixture_cleanup("remotelocal");
 }
 

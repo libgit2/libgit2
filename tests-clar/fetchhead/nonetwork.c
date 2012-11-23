@@ -15,8 +15,11 @@ void test_fetchhead_nonetwork__initialize(void)
 
 static void cleanup_repository(void *path)
 {
-	if (g_repo)
+	if (g_repo) {
 		git_repository_free(g_repo);
+		g_repo = NULL;
+	}
+
 	cl_fixture_cleanup((const char *)path);
 }
 

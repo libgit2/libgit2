@@ -12,6 +12,8 @@ void test_refs_unicode__initialize(void)
 void test_refs_unicode__cleanup(void)
 {
 	git_repository_free(repo);
+	repo = NULL;
+
 	cl_fixture_cleanup("testrepo.git");
 }
 

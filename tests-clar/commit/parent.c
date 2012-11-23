@@ -16,7 +16,10 @@ void test_commit_parent__initialize(void)
 void test_commit_parent__cleanup(void)
 {
 	git_commit_free(commit);
+	commit = NULL;
+
 	git_repository_free(_repo);
+	_repo = NULL;
 }
 
 static void assert_nth_gen_parent(unsigned int gen, const char *expected_oid)

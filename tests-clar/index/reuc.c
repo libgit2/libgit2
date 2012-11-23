@@ -26,6 +26,8 @@ void test_index_reuc__initialize(void)
 void test_index_reuc__cleanup(void)
 {
 	git_index_free(repo_index);
+	repo_index = NULL;
+
 	cl_git_sandbox_cleanup();
 }
 

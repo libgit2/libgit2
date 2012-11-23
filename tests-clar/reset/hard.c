@@ -16,6 +16,8 @@ void test_reset_hard__initialize(void)
 void test_reset_hard__cleanup(void)
 {
 	git_object_free(target);
+	target = NULL;
+
 	cl_git_sandbox_cleanup();
 }
 

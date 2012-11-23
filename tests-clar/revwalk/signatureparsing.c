@@ -12,7 +12,10 @@ void test_revwalk_signatureparsing__initialize(void)
 void test_revwalk_signatureparsing__cleanup(void)
 {
 	git_revwalk_free(_walk);
+	_walk = NULL;
+
 	git_repository_free(_repo);
+	_repo = NULL;
 }
 
 void test_revwalk_signatureparsing__do_not_choke_when_name_contains_angle_brackets(void)

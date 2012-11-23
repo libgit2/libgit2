@@ -18,6 +18,7 @@ void test_checkout_tree__initialize(void)
 void test_checkout_tree__cleanup(void)
 {
 	git_object_free(g_object);
+	g_object = NULL;
 
 	cl_git_sandbox_cleanup();
 }

@@ -11,6 +11,8 @@ void test_commit_commit__initialize(void)
 void test_commit_commit__cleanup(void)
 {
 	git_repository_free(_repo);
+	_repo = NULL;
+
 	cl_fixture_cleanup("testrepo.git");
 }
 

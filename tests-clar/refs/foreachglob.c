@@ -18,7 +18,10 @@ void test_refs_foreachglob__initialize(void)
 void test_refs_foreachglob__cleanup(void)
 {
 	git_reference_free(fake_remote);
+	fake_remote = NULL;
+
 	git_repository_free(repo);
+	repo = NULL;
 
 	cl_fixture_cleanup("testrepo.git");
 }

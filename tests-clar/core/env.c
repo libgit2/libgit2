@@ -29,6 +29,7 @@ void test_core_env__cleanup(void)
 #ifdef GIT_WIN32
 		git__free(env_save[i]);
 #endif
+		env_save[i] = NULL;
 	}
 }
 
