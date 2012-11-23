@@ -70,22 +70,10 @@ int record_ref_cb(git_remote_head *head, void *payload)
 
 void verify_remote_refs(git_vector *actual_refs, const expected_ref expected_refs[], size_t expected_refs_len)
 {
-	/* If there are no refs on the remote, git returns capabilities in a dummy
-	 * ref pkt-line.
-	 */
-	static const expected_ref no_refs_result[] = { { "capabilities^{}", &OID_ZERO } };
-
 	size_t i;
-
 	git_buf msg = GIT_BUF_INIT;
 	git_remote_head *actual;
 	char *oid_str;
-
-	if (expected_refs_len == 0) {
-		/* Special case when no refs exist on remote. */
-		expected_refs = no_refs_result;
-		expected_refs_len = ARRAY_SIZE(no_refs_result);
-	}
 
 	if (expected_refs_len != actual_refs->length)
 		goto failed;

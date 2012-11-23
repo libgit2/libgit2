@@ -69,6 +69,7 @@ static int git_smart__connect(
 	git_smart_subtransport_stream *stream;
 	int error;
 	git_pkt *pkt;
+	git_pkt_ref *first;
 	git_smart_service_t service;
 
 	if (git_smart__reset_stream(t, true) < 0)
@@ -119,8 +120,16 @@ static int git_smart__connect(
 	/* We now have loaded the refs. */
 	t->have_refs = 1;
 
-	if (git_smart__detect_caps((git_pkt_ref *)git_vector_get(&t->refs, 0), &t->caps) < 0)
+	first = (git_pkt_ref *)git_vector_get(&t->refs, 0);
+
+	/* Detect capabilities */
+	if (git_smart__detect_caps(first, &t->caps) < 0)
 		return -1;
+
+	/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
+	if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
+		git_oid_iszero(&first->head.oid))
+		git_vector_clear(&t->refs);
 
 	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;

@@ -121,13 +121,8 @@ static void verify_refs(git_remote *remote, expected_ref expected_refs[], size_t
 
 	/* git_push_finish() disconnects the remote. */
 	cl_assert(!git_remote_connected(remote));
-	/* Verify cached refs are correct immediately after git_push_finish()*/
-	/*TODO: they are not correct because git_push_finish doesn't update them! What to do?
-	git_remote_ls(remote, record_ref_cb, &actual_refs);
-	do_verify_remote_refs(&actual_refs, expected_refs, expected_refs_len);
-	git_vector_clear(&actual_refs);
-*/
-	/* Reconnect to the remote to verify that cached refs were same as current refs*/
+
+	/* Reconnect to the remote to verify the refs */
 	cl_git_pass(git_remote_connect(remote, GIT_DIR_PUSH));
 
 	git_remote_ls(remote, record_ref_cb, &actual_refs);
