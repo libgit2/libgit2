@@ -122,6 +122,7 @@ typedef void (*packetsize_cb)(int received, void *payload);
 
 typedef struct {
 	git_transport parent;
+	git_remote *owner;
 	char *url;
 	git_cred_acquire_cb cred_acquire_cb;
 	int direction;

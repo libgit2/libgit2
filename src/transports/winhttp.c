@@ -13,6 +13,8 @@
 #include "posix.h"
 #include "netops.h"
 #include "smart.h"
+#include "remote.h"
+#include "repository.h"
 
 #include <winhttp.h>
 #pragma comment(lib, "winhttp")
@@ -40,7 +42,6 @@ static const char *receive_pack_ls_service_url = "/info/refs?service=git-receive
 static const char *receive_pack_service_url = "/git-receive-pack";
 static const wchar_t *get_verb = L"GET";
 static const wchar_t *post_verb = L"POST";
-static const wchar_t *basic_authtype = L"Basic";
 static const wchar_t *pragma_nocache = L"Pragma: no-cache";
 static const wchar_t *transfer_encoding = L"Transfer-Encoding: chunked";
 static const int no_check_cert_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
@@ -142,9 +143,11 @@ static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	git_buf buf = GIT_BUF_INIT;
+	char *proxy_url = NULL;
 	wchar_t url[GIT_WIN_PATH], ct[MAX_CONTENT_TYPE_LEN];
 	wchar_t *types[] = { L"*/*", NULL };
 	BOOL peerdist = FALSE;
+	int error = -1;
 
 	/* Prepare URL */
 	git_buf_printf(&buf, "%s%s", t->path, s->service_url);
@@ -167,6 +170,36 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	if (!s->request) {
 		giterr_set(GITERR_OS, "Failed to open request");
 		goto on_error;
+	}
+
+	/* Set proxy if necessary */
+	if (git_remote__get_http_proxy(t->owner->owner, t->use_ssl, &proxy_url) < 0)
+		goto on_error;
+
+	if (proxy_url) {
+		WINHTTP_PROXY_INFO proxy_info;
+		size_t wide_len;
+
+		git__utf8_to_16(url, GIT_WIN_PATH, proxy_url);
+
+		wide_len = wcslen(url);
+
+		/* Strip any trailing forward slash on the proxy URL;
+		 * WinHTTP doesn't like it if one is present */
+		if (L'/' == url[wide_len - 1])
+			url[wide_len - 1] = L'\0';
+
+		proxy_info.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
+		proxy_info.lpszProxy = url;
+		proxy_info.lpszProxyBypass = NULL;
+
+		if (!WinHttpSetOption(s->request,
+			WINHTTP_OPTION_PROXY,
+			&proxy_info,
+			sizeof(WINHTTP_PROXY_INFO))) {
+			giterr_set(GITERR_OS, "Failed to set proxy");
+			goto on_error;
+		}
 	}
 
 	/* Strip unwanted headers (X-P2P-PeerDist, X-P2P-PeerDistEx) that WinHTTP
@@ -221,11 +254,12 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	/* We've done everything up to calling WinHttpSendRequest. */
 
-	return 0;
+	error = 0;
 
 on_error:
+	git__free(proxy_url);
 	git_buf_free(&buf);
-	return -1;
+	return error;
 }
 
 static int parse_unauthorized_response(

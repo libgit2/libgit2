@@ -18,6 +18,7 @@
 
 typedef struct {
 	git_transport parent;
+	git_remote *owner;
 	char *url;
 	int direction;
 	int flags;
@@ -268,7 +269,7 @@ static void local_free(git_transport *transport)
  * Public API *
  **************/
 
-int git_transport_local(git_transport **out, void *param)
+int git_transport_local(git_transport **out, git_remote *owner, void *param)
 {
 	transport_local *t;
 
@@ -287,6 +288,8 @@ int git_transport_local(git_transport **out, void *param)
 	t->parent.is_connected = local_is_connected;
 	t->parent.read_flags = local_read_flags;
 	t->parent.cancel = local_cancel;
+
+	t->owner = owner;
 
 	*out = (git_transport *) t;
 

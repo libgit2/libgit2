@@ -482,7 +482,7 @@ int git_remote_connect(git_remote *remote, int direction)
 
 	/* A transport could have been supplied in advance with
 	 * git_remote_set_transport */
-	if (!t && git_transport_new(&t, url) < 0)
+	if (!t && git_transport_new(&t, remote, url) < 0)
 		return -1;
 
 	if (t->set_callbacks &&
@@ -518,6 +518,63 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 	}
 
 	return remote->transport->ls(remote->transport, list_cb, payload);
+}
+
+int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url)
+{
+	git_config *cfg;
+	const char *val;
+
+	assert(remote);
+
+	if (!proxy_url)
+		return -1;
+
+	*proxy_url = NULL;
+
+	if (git_repository_config__weakptr(&cfg, remote->repo) < 0)
+		return -1;
+
+	/* Go through the possible sources for proxy configuration, from most specific
+	 * to least specific. */
+
+	/* remote.<name>.proxy config setting */
+	if (remote->name && 0 != *(remote->name)) {
+		git_buf buf = GIT_BUF_INIT;
+
+		if (git_buf_printf(&buf, "remote.%s.proxy", remote->name) < 0)
+			return -1;
+
+		if (!git_config_get_string(&val, cfg, git_buf_cstr(&buf)) &&
+			val && ('\0' != *val)) {
+			git_buf_free(&buf);
+
+			*proxy_url = git__strdup(val);
+			GITERR_CHECK_ALLOC(*proxy_url);
+			return 0;
+		}
+
+		git_buf_free(&buf);
+	}
+
+	/* http.proxy config setting */
+	if (!git_config_get_string(&val, cfg, "http.proxy") &&
+		val && ('\0' != *val)) {
+		*proxy_url = git__strdup(val);
+		GITERR_CHECK_ALLOC(*proxy_url);
+		return 0;
+	}
+
+	/* HTTP_PROXY / HTTPS_PROXY environment variables */
+	val = use_ssl ? getenv("HTTPS_PROXY") : getenv("HTTP_PROXY");
+
+	if (val && ('\0' != *val)) {
+		*proxy_url = git__strdup(val);
+		GITERR_CHECK_ALLOC(*proxy_url);
+		return 0;
+	}
+
+	return 0;
 }
 
 int git_remote_download(

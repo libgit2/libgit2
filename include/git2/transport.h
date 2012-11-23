@@ -9,6 +9,7 @@
 
 #include "indexer.h"
 #include "net.h"
+#include "types.h"
 
 /**
  * @file git2/transport.h
@@ -145,10 +146,11 @@ typedef struct git_transport {
  * git:// or http://) and a transport object is returned to the caller.
  *
  * @param transport The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param url The URL to connect to
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
+GIT_EXTERN(int) git_transport_new(git_transport **transport, git_remote *owner, const char *url);
 
 /**
  * Function which checks to see if a transport could be created for the
@@ -161,7 +163,7 @@ GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
 GIT_EXTERN(int) git_transport_valid_url(const char *url);
 
 /* Signature of a function which creates a transport */
-typedef int (*git_transport_cb)(git_transport **transport, void *param);
+typedef int (*git_transport_cb)(git_transport **transport, git_remote *owner, void *param);
 
 /* Transports which come with libgit2 (match git_transport_cb). The expected
  * value for "param" is listed in-line below. */
@@ -170,33 +172,39 @@ typedef int (*git_transport_cb)(git_transport **transport, void *param);
  * Create an instance of the dummy transport.
  *
  * @param transport The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param param You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_dummy(
 	git_transport **transport,
+	git_remote *owner,
 	/* NULL */ void *param);
 
 /**
  * Create an instance of the local transport.
  *
  * @param transport The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param param You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_local(
 	git_transport **transport,
+	git_remote *owner,
 	/* NULL */ void *param);
 
 /**
  * Create an instance of the smart transport.
  *
  * @param transport The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param param A pointer to a git_smart_subtransport_definition
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_smart(
 	git_transport **transport,
+	git_remote *owner,
 	/* (git_smart_subtransport_definition *) */ void *param);
 
 /*

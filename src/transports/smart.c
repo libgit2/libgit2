@@ -281,7 +281,7 @@ static void git_smart__free(git_transport *transport)
 	git__free(t);
 }
 
-int git_transport_smart(git_transport **out, void *param)
+int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 {
 	transport_smart *t;
 	git_smart_subtransport_definition *definition = (git_smart_subtransport_definition *)param;
@@ -304,6 +304,7 @@ int git_transport_smart(git_transport **out, void *param)
 	t->parent.read_flags = git_smart__read_flags;
 	t->parent.cancel = git_smart__cancel;
 	
+	t->owner = owner;
 	t->rpc = definition->rpc;
 
 	if (git_vector_init(&t->refs, 16, NULL) < 0) {
