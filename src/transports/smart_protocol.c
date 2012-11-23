@@ -651,6 +651,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 	transport_smart *t = (transport_smart *)transport;
 	git_smart_subtransport_stream *s;
 	git_buf pktline = GIT_BUF_INIT;
+	char *url = NULL;
 	int error = -1;
 
 #ifdef PUSH_DEBUG
@@ -691,13 +692,21 @@ int git_smart__push(git_transport *transport, git_push *push)
 	/* If we updated at least one ref, then we need to re-acquire the list of 
 	 * refs so the caller can call git_remote_update_tips afterward. TODO: Use
 	 * the data from the push report to do this without another network call */
-	if (push->specs.length &&
-		t->parent.connect(&t->parent, t->url, t->cred_acquire_cb, GIT_DIR_PUSH, t->flags) < 0)
-		goto on_error;
+	if (push->specs.length) {
+		git_cred_acquire_cb cred_cb = t->cred_acquire_cb;
+		int flags = t->flags;
+
+		url = git__strdup(t->url);
+
+		if (!url || t->parent.close(&t->parent) < 0 ||
+			t->parent.connect(&t->parent, url, cred_cb, GIT_DIR_PUSH, flags))
+			goto on_error;
+	}
 
 	error = 0;
 
 on_error:
+	git__free(url);
 	git_buf_free(&pktline);
 
 	return error;

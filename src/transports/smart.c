@@ -128,8 +128,10 @@ static int git_smart__connect(
 
 	/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
 	if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
-		git_oid_iszero(&first->head.oid))
+		git_oid_iszero(&first->head.oid)) {
 		git_vector_clear(&t->refs);
+		git_pkt_free((git_pkt *)first);
+	}
 
 	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;
