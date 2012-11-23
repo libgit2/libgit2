@@ -106,15 +106,15 @@ static const struct {
 	{ "MESZ",  +1, 1, },	/* Middle European Summer */
 	{ "FWT",   +1, 0, },	/* French Winter */
 	{ "FST",   +1, 1, },	/* French Summer */
-	{ "EET",   +2, 0, },	/* Eastern Europe, USSR Zone 1 */
+	{ "EET",   +2, 0, },	/* Eastern Europe */
 	{ "EEST",  +2, 1, },	/* Eastern European Daylight */
 	{ "WAST",  +7, 0, },	/* West Australian Standard */
 	{ "WADT",  +7, 1, },	/* West Australian Daylight */
-	{ "CCT",   +8, 0, },	/* China Coast, USSR Zone 7 */
-	{ "JST",   +9, 0, },	/* Japan Standard, USSR Zone 8 */
+	{ "CCT",   +8, 0, },	/* China Coast */
+	{ "JST",   +9, 0, },	/* Japan Standard */
 	{ "EAST", +10, 0, },	/* Eastern Australian Standard */
 	{ "EADT", +10, 1, },	/* Eastern Australian Daylight */
-	{ "GST",  +10, 0, },	/* Guam Standard, USSR Zone 9 */
+	{ "GST",  +10, 0, },	/* Guam Standard */
 	{ "NZT",  +12, 0, },	/* New Zealand */
 	{ "NZST", +12, 0, },	/* New Zealand Standard */
 	{ "NZDT", +12, 1, },	/* New Zealand Daylight */
@@ -195,7 +195,7 @@ static size_t match_alpha(const char *date, struct tm *tm, int *offset)
 		return 2;
 	}
 
-	/* BAD CRAP */
+	/* BAD */
 	return skip_alpha(date);
 }
 
@@ -425,16 +425,16 @@ static size_t match_tz(const char *date, int *offp)
 		min = hour % 100;
 		hour = hour / 100;
 	} else if (n != 2) {
-		min = 99; /* random crap */
+		min = 99; /* random stuff */
 	} else if (*end == ':') {
 		/* hh:mm? */
 		min = strtoul(end + 1, &end, 10);
 		if (end - (date + 1) != 5)
-			min = 99; /* random crap */
+			min = 99; /* random stuff */
 	} /* otherwise we parsed "hh" */
 
 	/*
-	 * Don't accept any random crap. Even though some places have
+	 * Don't accept any random stuff. Even though some places have
 	 * offset larger than 12 hours (e.g. Pacific/Kiritimati is at
 	 * UTC+14), there is something wrong if hour part is much
 	 * larger than that. We might also want to check that the
@@ -521,7 +521,7 @@ static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset
 			match = match_tz(date, offset);
 
 		if (!match) {
-			/* BAD CRAP */
+			/* BAD */
 			match = 1;
 		}
 
@@ -817,7 +817,7 @@ static void pending_number(struct tm *tm, int *num)
 				tm->tm_year = number;
 			else if (number < 38)
 				tm->tm_year = 100 + number;
-			/* We screw up for number = 00 ? */
+			/* We mess up for number = 00 ? */
 		}
 	}
 }

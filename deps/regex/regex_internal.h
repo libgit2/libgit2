@@ -63,7 +63,7 @@
 #endif
 #else /* GAWK */
 /*
- * This is a freaking mess. On glibc systems you have to define
+ * This is a mess. On glibc systems you have to define
  * a magic constant to get isblank() out of <ctype.h>, since it's
  * a C99 function.  To heck with all that and borrow a page from
  * dfa.c's book.
