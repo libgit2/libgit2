@@ -321,7 +321,7 @@ static int packfile_unpack_delta(
 	git__free(base.data);
 	git__free(delta.data);
 
-	/* TODO: we might want to cache this shit. eventually */
+	/* TODO: we might want to cache this. eventually */
 	//add_delta_base_cache(p, base_offset, base, base_size, *type);
 
 	return error; /* error set by git__delta_apply */
