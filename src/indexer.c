@@ -469,7 +469,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
 	if (idx->off < idx->pack->mwf.size - GIT_OID_RAWSZ) {
-		giterr_set(GITERR_INDEXER, "Indexing error: junk at the end of the pack");
+		giterr_set(GITERR_INDEXER, "Indexing error: unexpected data at the end of the pack");
 		return -1;
 	}
 
