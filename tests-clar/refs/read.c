@@ -22,6 +22,7 @@ void test_refs_read__initialize(void)
 void test_refs_read__cleanup(void)
 {
 	git_repository_free(g_repo);
+	g_repo = NULL;
 }
 
 void test_refs_read__loose_tag(void)

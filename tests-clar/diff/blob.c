@@ -30,7 +30,10 @@ void test_diff_blob__initialize(void)
 void test_diff_blob__cleanup(void)
 {
 	git_blob_free(d);
+	d = NULL;
+
 	git_blob_free(alien);
+	alien = NULL;
 
 	cl_git_sandbox_cleanup();
 }

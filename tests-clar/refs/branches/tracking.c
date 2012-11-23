@@ -14,8 +14,10 @@ void test_refs_branches_tracking__initialize(void)
 void test_refs_branches_tracking__cleanup(void)
 {
 	git_reference_free(branch);
+	branch = NULL;
 
 	git_repository_free(repo);
+	repo = NULL;
 }
 
 void test_refs_branches_tracking__can_retrieve_the_remote_tracking_reference_of_a_local_branch(void)

@@ -12,6 +12,7 @@ void test_revwalk_mergebase__initialize(void)
 void test_revwalk_mergebase__cleanup(void)
 {
 	git_repository_free(_repo);
+	_repo = NULL;
 }
 
 void test_revwalk_mergebase__single1(void)

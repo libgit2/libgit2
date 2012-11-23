@@ -22,7 +22,11 @@ void test_network_createremotethenload__initialize(void)
 void test_network_createremotethenload__cleanup(void)
 {
 	git_remote_free(_remote);
+	_remote = NULL;
+
 	git_repository_free(_repo);
+	_repo = NULL;
+
 	cl_fixture_cleanup("testrepo.git");
 }
 

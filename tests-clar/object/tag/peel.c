@@ -14,8 +14,13 @@ void test_object_tag_peel__initialize(void)
 void test_object_tag_peel__cleanup(void)
 {
 	git_tag_free(tag);
+	tag = NULL;
+
 	git_object_free(target);
+	target = NULL;
+
 	git_repository_free(repo);
+	repo = NULL;
 
 	cl_fixture_cleanup("testrepo.git");
 }

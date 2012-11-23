@@ -11,6 +11,7 @@ void test_odb_mixed__initialize(void)
 void test_odb_mixed__cleanup(void)
 {
 	git_odb_free(_odb);
+	_odb = NULL;
 }
 
 void test_odb_mixed__dup_oid(void) {

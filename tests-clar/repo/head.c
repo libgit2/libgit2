@@ -3,7 +3,7 @@
 #include "repo_helpers.h"
 #include "posix.h"
 
-git_repository *repo;
+static git_repository *repo;
 
 void test_repo_head__initialize(void)
 {

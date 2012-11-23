@@ -19,6 +19,8 @@ void test_repo_init__initialize(void)
 static void cleanup_repository(void *path)
 {
 	git_repository_free(_repo);
+	_repo = NULL;
+
 	cl_fixture_cleanup((const char *)path);
 }
 

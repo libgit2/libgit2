@@ -12,6 +12,7 @@ void test_odb_packed__initialize(void)
 void test_odb_packed__cleanup(void)
 {
 	git_odb_free(_odb);
+	_odb = NULL;
 }
 
 void test_odb_packed__mass_read(void)

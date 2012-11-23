@@ -16,10 +16,17 @@ void test_notes_notesref__initialize(void)
 void test_notes_notesref__cleanup(void)
 {
 	git_note_free(_note);
+	_note = NULL;
+
 	git_signature_free(_sig);
+	_sig = NULL;
+
 	git_config_free(_cfg);
+	_cfg = NULL;
 
 	git_repository_free(_repo);
+	_repo = NULL;
+
 	cl_fixture_cleanup("testrepo.git");
 }
 

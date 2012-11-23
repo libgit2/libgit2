@@ -12,6 +12,8 @@ void test_notes_notes__initialize(void)
 void test_notes_notes__cleanup(void)
 {
 	git_signature_free(_sig);
+	_sig = NULL;
+
 	cl_git_sandbox_cleanup();
 }
 

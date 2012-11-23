@@ -19,7 +19,10 @@ void test_object_tree_frompath__initialize(void)
 void test_object_tree_frompath__cleanup(void)
 {
 	git_tree_free(tree);
+	tree = NULL;
+
 	git_repository_free(repo);
+	repo = NULL;
 }
 
 static void assert_tree_from_path(

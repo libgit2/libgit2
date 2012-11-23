@@ -22,6 +22,7 @@ void test_refs_reflog_drop__initialize(void)
 void test_refs_reflog_drop__cleanup(void)
 {
 	git_reflog_free(g_reflog);
+	g_reflog = NULL;
 
 	cl_git_sandbox_cleanup();
 }
