@@ -54,10 +54,11 @@ int delete_ref_cb(git_remote_head *head, void *payload)
 		return 0;
 
 	/* Create a refspec that deletes a branch in the remote */
-	cl_git_pass(git_buf_putc(&del_spec, ':'));
-	cl_git_pass(git_buf_puts(&del_spec, head->name));
-
-	cl_git_pass(git_vector_insert(delete_specs, git_buf_detach(&del_spec)));
+	if (strcmp(head->name, "refs/heads/master")) {
+		cl_git_pass(git_buf_putc(&del_spec, ':'));
+		cl_git_pass(git_buf_puts(&del_spec, head->name));
+		cl_git_pass(git_vector_insert(delete_specs, git_buf_detach(&del_spec)));
+	}
 
 	return 0;
 }
@@ -70,22 +71,32 @@ int record_ref_cb(git_remote_head *head, void *payload)
 
 void verify_remote_refs(git_vector *actual_refs, const expected_ref expected_refs[], size_t expected_refs_len)
 {
-	size_t i;
+	size_t i, j = 0;
 	git_buf msg = GIT_BUF_INIT;
 	git_remote_head *actual;
 	char *oid_str;
+	bool master_present = false;
 
-	if (expected_refs_len != actual_refs->length)
+	/* We don't care whether "master" is present on the other end or not */
+	git_vector_foreach(actual_refs, i, actual) {
+		if (!strcmp(actual->name, "refs/heads/master")) {
+			master_present = true;
+			break;
+		}
+	}
+
+	if (expected_refs_len + (master_present ? 1 : 0) != actual_refs->length)
 		goto failed;
 
-	for(i = 0; i < expected_refs_len; i++) {
-		git_remote_head *curr_actual = git_vector_get(actual_refs, i);
+	git_vector_foreach(actual_refs, i, actual) {
+		if (master_present && !strcmp(actual->name, "refs/heads/master"))
+			continue;
 
-		if (
-			strcmp(expected_refs[i].name, curr_actual->name)
-			|| git_oid_cmp(expected_refs[i].oid, &curr_actual->oid)
-		)
+		if (strcmp(expected_refs[j].name, actual->name) ||
+			git_oid_cmp(expected_refs[j].oid, &actual->oid))
 			goto failed;
+
+		j++;
 	}
 
 	return;
@@ -101,6 +112,9 @@ failed:
 
 	git_buf_puts(&msg, "\nACTUAL:\n");
 	git_vector_foreach(actual_refs, i, actual) {
+		if (master_present && !strcmp(actual->name, "refs/heads/master"))
+			continue;
+
 		cl_assert(oid_str = git_oid_allocfmt(&actual->oid));
 		cl_git_pass(git_buf_printf(&msg, "%s = %s\n", actual->name, oid_str));
 		git__free(oid_str);

@@ -487,7 +487,8 @@ on_success:
 	error = 0;
 
 on_error:
-	writepack->free(writepack);
+	if (writepack)
+		writepack->free(writepack);
 
 	/* Trailing execution of progress_cb, if necessary */
 	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes)
@@ -685,6 +686,13 @@ int git_smart__push(git_transport *transport, git_push *push)
 	if (!push->specs.length || !push->report_status)
 		push->unpack_ok = 1;
 	else if (parse_report(&t->buffer, push) < 0)
+		goto on_error;
+
+	/* If we updated at least one ref, then we need to re-acquire the list of 
+	 * refs so the caller can call git_remote_update_tips afterward. TODO: Use
+	 * the data from the push report to do this without another network call */
+	if (push->specs.length &&
+		t->parent.connect(&t->parent, t->url, t->cred_acquire_cb, GIT_DIR_PUSH, t->flags) < 0)
 		goto on_error;
 
 	error = 0;

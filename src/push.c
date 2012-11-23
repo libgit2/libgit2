@@ -374,13 +374,9 @@ int git_push_finish(git_push *push)
 
 	if ((error = filter_refs(push->remote)) < 0 ||
 		(error = do_push(push)) < 0)
-		goto on_error;
+		return error;
 
-	error = 0;
-
-on_error:
-	git_remote_disconnect(push->remote);
-	return error;
+	return 0;
 }
 
 int git_push_unpack_ok(git_push *push)

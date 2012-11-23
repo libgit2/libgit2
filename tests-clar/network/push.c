@@ -17,7 +17,7 @@ static git_remote *_remote;
 static record_callbacks_data _record_cbs_data = {{ 0 }};
 static git_remote_callbacks _record_cbs = RECORD_CALLBACKS_INIT(&_record_cbs_data);
 
-static git_oid _oid_master;
+static git_oid _oid_b6;
 static git_oid _oid_b5;
 static git_oid _oid_b4;
 static git_oid _oid_b3;
@@ -109,7 +109,7 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
 
 /**
  * Verifies that after git_push_finish(), refs on a remote have the expected
- * names, oids, and order, then disconnects.
+ * names, oids, and order.
  * 
  * @param remote remote to verify
  * @param expected_refs expected remote refs after push
@@ -118,12 +118,6 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
 static void verify_refs(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
 {
 	git_vector actual_refs = GIT_VECTOR_INIT;
-
-	/* git_push_finish() disconnects the remote. */
-	cl_assert(!git_remote_connected(remote));
-
-	/* Reconnect to the remote to verify the refs */
-	cl_git_pass(git_remote_connect(remote, GIT_DIR_PUSH));
 
 	git_remote_ls(remote, record_ref_cb, &actual_refs);
 	verify_remote_refs(&actual_refs, expected_refs, expected_refs_len);
@@ -145,7 +139,7 @@ void test_network_push__initialize(void)
 	rewrite_gitmodules(git_repository_workdir(_repo));
 
 	/* git log --format=oneline --decorate --graph
-	 * *-.   951bbbb90e2259a4c8950db78946784fb53fcbce (HEAD, master) merge b3, b4, and b5 to master
+	 * *-.   951bbbb90e2259a4c8950db78946784fb53fcbce (HEAD, b6) merge b3, b4, and b5 to b6
 	 * |\ \
 	 * | | * fa38b91f199934685819bea316186d8b008c52a2 (b5) added submodule named 'submodule' pointing to '../testrepo.git'
 	 * | * | 27b7ce66243eb1403862d05f958c002312df173d (b4) edited fold\b.txt
@@ -155,7 +149,7 @@ void test_network_push__initialize(void)
 	 * * a78705c3b2725f931d3ee05348d83cc26700f247 (b2, b1) added fold and fold/b.txt
 	 * * 5c0bb3d1b9449d1cc69d7519fd05166f01840915 added a.txt
 	 */
-	git_oid_fromstr(&_oid_master, "951bbbb90e2259a4c8950db78946784fb53fcbce");
+	git_oid_fromstr(&_oid_b6, "951bbbb90e2259a4c8950db78946784fb53fcbce");
 	git_oid_fromstr(&_oid_b5, "fa38b91f199934685819bea316186d8b008c52a2");
 	git_oid_fromstr(&_oid_b4, "27b7ce66243eb1403862d05f958c002312df173d");
 	git_oid_fromstr(&_oid_b3, "d9b63a88223d8367516f50bd131a5f7349b7f3e4");
@@ -196,11 +190,16 @@ void test_network_push__initialize(void)
 
 			cl_git_pass(git_push_finish(push));
 			git_push_free(push);
-			verify_refs(_remote, NULL, 0);
 		}
 
 		git_remote_disconnect(_remote);
 		git_vector_free(&delete_specs);
+
+		/* Now that we've deleted everything, fetch from the remote */
+		cl_git_pass(git_remote_connect(_remote, GIT_DIR_FETCH));
+		cl_git_pass(git_remote_download(_remote, NULL, NULL));
+		cl_git_pass(git_remote_update_tips(_remote));
+		git_remote_disconnect(_remote);
 	} else
 		printf("GITTEST_REMOTE_URL unset; skipping push test\n");
 }
@@ -270,17 +269,6 @@ void test_network_push__noop(void)
 	do_push(NULL, 0, NULL, 0, NULL, 0, 0);
 }
 
-void test_network_push__master(void)
-{
-	const char *specs[] = { "refs/heads/master:refs/heads/master" };
-	push_status exp_stats[] = { { "refs/heads/master", NULL } };
-	expected_ref exp_refs[] = { { "refs/heads/master", &_oid_master } };
-
-	do_push(specs, ARRAY_SIZE(specs),
-		exp_stats, ARRAY_SIZE(exp_stats),
-		exp_refs, ARRAY_SIZE(exp_refs), 0);
-}
-
 void test_network_push__b1(void)
 {
 	const char *specs[] = { "refs/heads/b1:refs/heads/b1" };
@@ -338,24 +326,21 @@ void test_network_push__multi(void)
 		"refs/heads/b2:refs/heads/b2",
 		"refs/heads/b3:refs/heads/b3",
 		"refs/heads/b4:refs/heads/b4",
-		"refs/heads/b5:refs/heads/b5",
-		"refs/heads/master:refs/heads/master"
+		"refs/heads/b5:refs/heads/b5"
 	};
 	push_status exp_stats[] = {
 		{ "refs/heads/b1", NULL },
 		{ "refs/heads/b2", NULL },
 		{ "refs/heads/b3", NULL },
 		{ "refs/heads/b4", NULL },
-		{ "refs/heads/b5", NULL },
-		{ "refs/heads/master", NULL }
+		{ "refs/heads/b5", NULL }
 	};
 	expected_ref exp_refs[] = {
 		{ "refs/heads/b1", &_oid_b1 },
 		{ "refs/heads/b2", &_oid_b2 },
 		{ "refs/heads/b3", &_oid_b3 },
 		{ "refs/heads/b4", &_oid_b4 },
-		{ "refs/heads/b5", &_oid_b5 },
-		{ "refs/heads/master", &_oid_master }
+		{ "refs/heads/b5", &_oid_b5 }
 	};
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -385,20 +370,20 @@ void test_network_push__implicit_tgt(void)
 
 void test_network_push__fast_fwd(void)
 {
-	/* Fast forward b1 in tgt from _oid_b1 to _oid_master. */
+	/* Fast forward b1 in tgt from _oid_b1 to _oid_b6. */
 
 	const char *specs_init[] = { "refs/heads/b1:refs/heads/b1" };
 	push_status exp_stats_init[] = { { "refs/heads/b1", NULL } };
 	expected_ref exp_refs_init[] = { { "refs/heads/b1", &_oid_b1 } };
 
-	const char *specs_ff[] = { "refs/heads/master:refs/heads/b1" };
+	const char *specs_ff[] = { "refs/heads/b6:refs/heads/b1" };
 	push_status exp_stats_ff[] = { { "refs/heads/b1", NULL } };
-	expected_ref exp_refs_ff[] = { { "refs/heads/b1", &_oid_master } };
+	expected_ref exp_refs_ff[] = { { "refs/heads/b1", &_oid_b6 } };
 
 	/* Do a force push to reset b1 in target back to _oid_b1 */
 	const char *specs_reset[] = { "+refs/heads/b1:refs/heads/b1" };
 	/* Force should have no effect on a fast forward push */
-	const char *specs_ff_force[] = { "+refs/heads/master:refs/heads/b1" };
+	const char *specs_ff_force[] = { "+refs/heads/b6:refs/heads/b1" };
 
 	do_push(specs_init, ARRAY_SIZE(specs_init),
 		exp_stats_init, ARRAY_SIZE(exp_stats_init),
@@ -508,7 +493,7 @@ void test_network_push__bad_refspecs(void)
 		cl_git_pass(git_push_new(&push, _remote));
 
 		/* Unexpanded branch names not supported */
-		cl_git_fail(git_push_add_refspec(push, "master:master"));
+		cl_git_fail(git_push_add_refspec(push, "b6:b6"));
 
 		git_push_free(push);
 	}
@@ -530,32 +515,4 @@ void test_network_push__expressions(void)
 	do_push(specs_right_expr, ARRAY_SIZE(specs_right_expr),
 		exp_stats_right_expr, ARRAY_SIZE(exp_stats_right_expr),
 		NULL, 0, 0);
-}
-
-void test_network_push__wildcards(void)
-{
-	/* Wildcards are not rejected by git_push_add_refspec(), but aren't resolved
-	 * either
-	 */
-	const char *specs_wild1[] = { "refs/heads/*:refs/heads/*" };
-	const char *specs_wild2[] = { "refs/heads/*:refs/heads/master" };
-	const char *specs_wild3[] = { "refs/heads/master:refs/heads/*" };
-	push_status exp_stats_wild3[] = { { "refs/heads/*", "funny refname" } };
-	const char *specs_wild4[] = { "refs/heads/*:refs/heads/master/*" };
-	const char *specs_wild5[] = { "refs/heads/m*ster:refs/heads/master" };
-	const char *specs_wild6[] = { "refs/heads/master:refs/heads/m*ster" };
-	push_status exp_stats_wild6[] = { { "refs/heads/m*ster", "funny refname" } };
-	const char *specs_wild7[] = { "refs/heads/m*ster:refs/heads/m*ster" };
-
-	do_push(specs_wild1, ARRAY_SIZE(specs_wild1), NULL, 0, NULL, 0, -1);
-	do_push(specs_wild2, ARRAY_SIZE(specs_wild2), NULL, 0, NULL, 0, -1);
-	do_push(specs_wild3, ARRAY_SIZE(specs_wild3),
-		exp_stats_wild3, ARRAY_SIZE(exp_stats_wild3),
-		NULL, 0, 0);
-	do_push(specs_wild4, ARRAY_SIZE(specs_wild4), NULL, 0, NULL, 0, -1);
-	do_push(specs_wild5, ARRAY_SIZE(specs_wild5), NULL, 0, NULL, 0, -1);
-	do_push(specs_wild6, ARRAY_SIZE(specs_wild6),
-		exp_stats_wild6, ARRAY_SIZE(exp_stats_wild6),
-		NULL, 0, 0);
-	do_push(specs_wild7, ARRAY_SIZE(specs_wild7), NULL, 0, NULL, 0, -1);
 }
