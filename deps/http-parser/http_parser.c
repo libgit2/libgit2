@@ -1744,7 +1744,7 @@ size_t http_parser_execute (http_parser *parser,
       case s_chunk_parameters:
       {
         assert(parser->flags & F_CHUNKED);
-        /* just ignore this shit. TODO check for overflow */
+        /* just ignore this. TODO check for overflow */
         if (ch == CR) {
           parser->state = s_chunk_size_almost_done;
           break;

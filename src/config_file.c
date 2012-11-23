@@ -863,7 +863,7 @@ static int skip_bom(diskfile_backend *cfg)
 		cfg->reader.read_ptr += sizeof(utf8_bom);
 
 	/* TODO: the reference implementation does pretty stupid
-		shit with the BoM
+		stuff with the BoM
 	*/
 
 	return 0;
