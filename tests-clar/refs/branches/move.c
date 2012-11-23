@@ -15,6 +15,8 @@ void test_refs_branches_move__initialize(void)
 void test_refs_branches_move__cleanup(void)
 {
 	git_reference_free(ref);
+	ref = NULL;
+
 	cl_git_sandbox_cleanup();
 }
 

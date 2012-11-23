@@ -11,7 +11,8 @@ void test_object_lookup__initialize(void)
 
 void test_object_lookup__cleanup(void)
 {
-   git_repository_free(g_repo);
+	git_repository_free(g_repo);
+	g_repo = NULL;
 }
 
 void test_object_lookup__lookup_wrong_type_returns_enotfound(void)

@@ -17,16 +17,22 @@ void test_commit_write__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
+
 void test_commit_write__cleanup(void)
 {
-   git_reference_free(head);
-   git_reference_free(branch);
+	git_reference_free(head);
+	head = NULL;
 
-   git_commit_free(commit);
+	git_reference_free(branch);
+	branch = NULL;
 
-   git__free(head_old);
+	git_commit_free(commit);
+	commit = NULL;
 
-   cl_git_sandbox_cleanup();
+	git__free(head_old);
+	head_old = NULL;
+
+	cl_git_sandbox_cleanup();
 }
 
 

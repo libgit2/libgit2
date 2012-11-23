@@ -20,6 +20,8 @@ void test_network_remotes__initialize(void)
 void test_network_remotes__cleanup(void)
 {
 	git_remote_free(_remote);
+	_remote = NULL;
+
 	cl_git_sandbox_cleanup();
 }
 

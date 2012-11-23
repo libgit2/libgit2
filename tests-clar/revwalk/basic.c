@@ -103,7 +103,9 @@ void test_revwalk_basic__initialize(void)
 void test_revwalk_basic__cleanup(void)
 {
 	git_revwalk_free(_walk);
+	_walk = NULL;
 	git_repository_free(_repo);
+	_repo = NULL;
 }
 
 void test_revwalk_basic__sorting_modes(void)

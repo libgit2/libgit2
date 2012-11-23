@@ -16,9 +16,13 @@ void test_refs_branches_create__initialize(void)
 void test_refs_branches_create__cleanup(void)
 {
 	git_reference_free(branch);
+	branch = NULL;
 
 	git_object_free(target);
+	target = NULL;
+
 	git_repository_free(repo);
+	repo = NULL;
 
 	cl_fixture_cleanup("testrepo.git");
 }

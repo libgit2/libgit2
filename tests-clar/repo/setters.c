@@ -17,6 +17,8 @@ void test_repo_setters__initialize(void)
 void test_repo_setters__cleanup(void)
 {
 	git_repository_free(repo);
+	repo = NULL;
+
 	cl_fixture_cleanup("testrepo.git");
 	cl_fixture_cleanup("new_workdir");
 }

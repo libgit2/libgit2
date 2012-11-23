@@ -14,8 +14,10 @@ void test_refs_branches_lookup__initialize(void)
 void test_refs_branches_lookup__cleanup(void)
 {
 	git_reference_free(branch);
+	branch = NULL;
 
 	git_repository_free(repo);
+	repo = NULL;
 }
 
 void test_refs_branches_lookup__can_retrieve_a_local_branch(void)

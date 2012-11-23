@@ -13,6 +13,8 @@ void test_network_fetch__initialize(void)
 void test_network_fetch__cleanup(void)
 {
 	git_repository_free(_repo);
+	_repo = NULL;
+
 	cl_fixture_cleanup("./fetch");
 }
 

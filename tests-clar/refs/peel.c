@@ -10,6 +10,7 @@ void test_refs_peel__initialize(void)
 void test_refs_peel__cleanup(void)
 {
 	git_repository_free(g_repo);
+	g_repo = NULL;
 }
 
 static void assert_peel(

@@ -13,7 +13,10 @@ void test_refs_branches_ishead__initialize(void)
 void test_refs_branches_ishead__cleanup(void)
 {
 	git_reference_free(branch);
+	branch = NULL;
+
 	git_repository_free(repo);
+	repo = NULL;
 }
 
 void test_refs_branches_ishead__can_tell_if_a_branch_is_pointed_at_by_HEAD(void)
