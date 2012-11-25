@@ -23,14 +23,14 @@ static transport_definition dummy_transport_definition = { NULL, 1, git_transpor
 
 static git_smart_subtransport_definition http_subtransport_definition = { git_smart_subtransport_http, 1 };
 static git_smart_subtransport_definition git_subtransport_definition = { git_smart_subtransport_git, 0 };
+static git_smart_subtransport_definition ssh_subtransport_definition = { git_smart_subtransport_ssh, 0 };
 
 static transport_definition transports[] = {
 	{"git://", 1, git_transport_smart, &git_subtransport_definition},
 	{"http://", 1, git_transport_smart, &http_subtransport_definition},
 	{"https://", 1, git_transport_smart, &http_subtransport_definition},
+	{"ssh://", 1, git_transport_smart, &ssh_subtransport_definition},
 	{"file://", 1, git_transport_local, NULL},
-	{"git+ssh://", 1, git_transport_dummy, NULL},
-	{"ssh+git://", 1, git_transport_dummy, NULL},
 	{NULL, 0, 0}
 };
 

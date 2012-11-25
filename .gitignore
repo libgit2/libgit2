@@ -23,8 +23,6 @@ msvc/Release/
 *.sdf
 *.opensdf
 *.aps
-CMake*
-*.cmake
 .DS_Store
 *~
 tags
