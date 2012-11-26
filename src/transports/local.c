@@ -26,6 +26,7 @@
 
 typedef struct {
 	git_transport parent;
+	git_remote *owner;
 	char *url;
 	int direction;
 	int flags;
@@ -339,13 +340,11 @@ cleanup:
 	return error;
 }
 
-static int local_is_connected(git_transport *transport, int *connected)
+static int local_is_connected(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
 
-	*connected = t->connected;
-
-	return 0;
+	return t->connected;
 }
 
 static int local_read_flags(git_transport *transport, int *flags)
@@ -398,7 +397,7 @@ static void local_free(git_transport *transport)
  * Public API *
  **************/
 
-int git_transport_local(git_transport **out, void *param)
+int git_transport_local(git_transport **out, git_remote *owner, void *param)
 {
 	transport_local *t;
 
@@ -418,6 +417,8 @@ int git_transport_local(git_transport **out, void *param)
 	t->parent.is_connected = local_is_connected;
 	t->parent.read_flags = local_read_flags;
 	t->parent.cancel = local_cancel;
+
+	t->owner = owner;
 
 	*out = (git_transport *) t;
 
