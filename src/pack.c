@@ -564,8 +564,10 @@ static int packfile_open(struct git_pack_file *p)
 
 	/* TODO: open with noatime */
 	p->mwf.fd = git_futils_open_ro(p->pack_name);
-	if (p->mwf.fd < 0)
-		return p->mwf.fd;
+	if (p->mwf.fd < 0) {
+		p->mwf.fd = -1;
+		return -1;
+	}
 
 	if (p_fstat(p->mwf.fd, &st) < 0 ||
 		git_mwindow_file_register(&p->mwf) < 0)
