@@ -18,6 +18,10 @@
 #	endif
 #endif
 
+#ifdef __FreeBSD__
+#	include <netinet/in.h>
+#endif
+
 #ifdef GIT_SSL
 # include <openssl/ssl.h>
 # include <openssl/err.h>
