@@ -26,6 +26,7 @@ GIT_BEGIN_DECL
 typedef enum {
 	/* git_cred_userpass_plaintext */
 	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
+	GIT_CREDTYPE_SSH_PASSWORD = 2,
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -42,6 +43,12 @@ typedef struct git_cred_userpass_plaintext {
 	char *password;
 } git_cred_userpass_plaintext;
 
+typedef struct git_cred_ssh_password {
+	git_cred parent;
+	char *username;
+	char *password;
+} git_cred_ssh_password;
+
 /**
  * Creates a new plain-text username and password credential object.
  *
@@ -51,6 +58,12 @@ typedef struct git_cred_userpass_plaintext {
  */
 GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 	git_cred **cred,
+	const char *username,
+	const char *password);
+
+GIT_EXTERN(int) git_cred_ssh_password_new(
+	git_cred **cred,
+	/* TODO: known_hosts */
 	const char *username,
 	const char *password);
 
@@ -294,6 +307,17 @@ GIT_EXTERN(int) git_smart_subtransport_http(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_smart_subtransport_git(
+	git_smart_subtransport **out,
+	git_transport* owner);
+
+/**
+ * Create an instance of the ssh subtransport.
+ *
+ * @param out The newly created subtransport
+ * @param owner The smart transport to own this subtransport
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_smart_subtransport_ssh(
 	git_smart_subtransport **out,
 	git_transport* owner);
 

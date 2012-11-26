@@ -55,3 +55,51 @@ int git_cred_userpass_plaintext_new(
 	*cred = &c->parent;
 	return 0;
 }
+
+static void ssh_password_free(git_cred *cred)
+{
+	git_cred_ssh_password *c = (git_cred_ssh_password *)cred;
+	int pass_len = strlen(c->password);
+
+	git__free(c->username);
+
+	/* Zero the memory which previously held the password */
+	memset(c->password, 0x0, pass_len);
+	git__free(c->password);
+
+	git__free(c);
+}
+
+int git_cred_ssh_password_new(
+	git_cred **cred,
+	const char *username,
+	const char *password)
+{
+	git_cred_ssh_password *c;
+
+	if (!cred)
+		return -1;
+
+	c = (git_cred_ssh_password *)git__malloc(sizeof(git_cred_ssh_password));
+	GITERR_CHECK_ALLOC(c);
+
+	c->parent.credtype = GIT_CREDTYPE_SSH_PASSWORD;
+	c->parent.free = ssh_password_free;
+	c->username = git__strdup(username);
+
+	if (!c->username) {
+		git__free(c);
+		return -1;
+	}
+
+	c->password = git__strdup(password);
+
+	if (!c->password) {
+		git__free(c->username);
+		git__free(c);
+		return -1;
+	}
+
+	*cred = &c->parent;
+	return 0;
+}
