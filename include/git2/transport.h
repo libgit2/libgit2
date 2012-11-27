@@ -45,12 +45,12 @@ typedef struct git_cred_userpass_plaintext {
 /**
  * Creates a new plain-text username and password credential object.
  *
- * @param cred The newly created credential object.
+ * @param out The newly created credential object.
  * @param username The username of the credential.
  * @param password The password of the credential.
  */
 GIT_EXTERN(int) git_cred_userpass_plaintext_new(
-	git_cred **cred,
+	git_cred **out,
 	const char *username,
 	const char *password);
 
@@ -64,7 +64,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 typedef int (*git_cred_acquire_cb)(
 	git_cred **cred,
 	const char *url,
-	int allowed_types);
+	unsigned int allowed_types);
 
 /*
  *** End interface for credentials acquisition ***
@@ -144,11 +144,11 @@ typedef struct git_transport {
  * is scanned to find a transport that implements the scheme of the URI (i.e.
  * git:// or http://) and a transport object is returned to the caller.
  *
- * @param transport The newly created transport (out)
+ * @param out The newly created transport (out)
  * @param url The URL to connect to
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
+GIT_EXTERN(int) git_transport_new(git_transport **out, const char *url);
 
 /**
  * Function which checks to see if a transport could be created for the
@@ -161,7 +161,7 @@ GIT_EXTERN(int) git_transport_new(git_transport **transport, const char *url);
 GIT_EXTERN(int) git_transport_valid_url(const char *url);
 
 /* Signature of a function which creates a transport */
-typedef int (*git_transport_cb)(git_transport **transport, void *param);
+typedef int (*git_transport_cb)(git_transport **out, void *payload);
 
 /* Transports which come with libgit2 (match git_transport_cb). The expected
  * value for "param" is listed in-line below. */
@@ -170,34 +170,34 @@ typedef int (*git_transport_cb)(git_transport **transport, void *param);
  * Create an instance of the dummy transport.
  *
  * @param transport The newly created transport (out)
- * @param param You must pass NULL for this parameter.
+ * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_dummy(
 	git_transport **transport,
-	/* NULL */ void *param);
+	/* NULL */ void *payload);
 
 /**
  * Create an instance of the local transport.
  *
  * @param transport The newly created transport (out)
- * @param param You must pass NULL for this parameter.
+ * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_local(
 	git_transport **transport,
-	/* NULL */ void *param);
+	/* NULL */ void *payload);
 
 /**
  * Create an instance of the smart transport.
  *
  * @param transport The newly created transport (out)
- * @param param A pointer to a git_smart_subtransport_definition
+ * @param payload A pointer to a git_smart_subtransport_definition
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_smart(
 	git_transport **transport,
-	/* (git_smart_subtransport_definition *) */ void *param);
+	/* (git_smart_subtransport_definition *) */ void *payload);
 
 /*
  *** End of base transport interface ***
