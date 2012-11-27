@@ -98,7 +98,7 @@ GIT_EXTERN(int) git_repository_discover(
 typedef enum {
 	GIT_REPOSITORY_OPEN_NO_SEARCH = (1 << 0),
 	GIT_REPOSITORY_OPEN_CROSS_FS  = (1 << 1),
-} git_repository_open_flags;
+} git_repository_open_flag_t;
 
 /**
  * Find and open a repository with extended controls.
@@ -182,14 +182,14 @@ GIT_EXTERN(int) git_repository_init(
  *        `init.templatedir` global config if not, or falling back on
  *        "/usr/share/git-core/templates" if it exists.
  */
-enum {
+typedef enum {
 	GIT_REPOSITORY_INIT_BARE              = (1u << 0),
 	GIT_REPOSITORY_INIT_NO_REINIT         = (1u << 1),
 	GIT_REPOSITORY_INIT_NO_DOTGIT_DIR     = (1u << 2),
 	GIT_REPOSITORY_INIT_MKDIR             = (1u << 3),
 	GIT_REPOSITORY_INIT_MKPATH            = (1u << 4),
 	GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE = (1u << 5),
-};
+} git_repository_init_flag_t;
 
 /**
  * Mode options for `git_repository_init_ext`.
@@ -204,11 +204,11 @@ enum {
  * * SHARED_ALL - Use "--shared=all" behavior, adding world readability.
  * * Anything else - Set to custom value.
  */
-enum {
+typedef enum {
 	GIT_REPOSITORY_INIT_SHARED_UMASK = 0,
 	GIT_REPOSITORY_INIT_SHARED_GROUP = 0002775,
 	GIT_REPOSITORY_INIT_SHARED_ALL   = 0002777,
-};
+} git_repository_init_mode_t;
 
 /**
  * Extended options structure for `git_repository_init_ext`.

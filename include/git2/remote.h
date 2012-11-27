@@ -360,12 +360,12 @@ GIT_EXTERN(void) git_remote_set_callbacks(git_remote *remote, git_remote_callbac
  */
 GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
 
-enum {
+typedef enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSET,
 	GIT_REMOTE_DOWNLOAD_TAGS_NONE,
 	GIT_REMOTE_DOWNLOAD_TAGS_AUTO,
 	GIT_REMOTE_DOWNLOAD_TAGS_ALL
-};
+} git_remote_autotag_option_t;
 
 /**
  * Retrieve the tag auto-follow setting
@@ -373,7 +373,7 @@ enum {
  * @param remote the remote to query
  * @return the auto-follow setting
  */
-GIT_EXTERN(int) git_remote_autotag(git_remote *remote);
+GIT_EXTERN(git_remote_autotag_option_t) git_remote_autotag(git_remote *remote);
 
 /**
  * Set the tag auto-follow setting
@@ -381,7 +381,9 @@ GIT_EXTERN(int) git_remote_autotag(git_remote *remote);
  * @param remote the remote to configure
  * @param value a GIT_REMOTE_DOWNLOAD_TAGS value
  */
-GIT_EXTERN(void) git_remote_set_autotag(git_remote *remote, int value);
+GIT_EXTERN(void) git_remote_set_autotag(
+	git_remote *remote,
+	git_remote_autotag_option_t value);
 
 /**
  * Give the remote a new name

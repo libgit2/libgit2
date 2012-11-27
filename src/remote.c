@@ -967,12 +967,12 @@ const git_transfer_progress* git_remote_stats(git_remote *remote)
 	return &remote->stats;
 }
 
-int git_remote_autotag(git_remote *remote)
+git_remote_autotag_option_t git_remote_autotag(git_remote *remote)
 {
 	return remote->download_tags;
 }
 
-void git_remote_set_autotag(git_remote *remote, int value)
+void git_remote_set_autotag(git_remote *remote, git_remote_autotag_option_t value)
 {
 	remote->download_tags = value;
 }
