@@ -19,20 +19,15 @@
 GIT_BEGIN_DECL
 
 /**
- * Basic components of a note
- *
- *  - Oid of the blob containing the message
- *  - Oid of the git object being annotated
- */
-typedef struct {
-	git_oid blob_oid;
-	git_oid annotated_object_oid;
-} git_note_data;
-
-/**
  * Callback for git_note_foreach.
+ *
+ * Receives:
+ * - blob_id: Oid of the blob containing the message
+ * - annotated_object_id: Oid of the git object being annotated
+ * - payload: Payload data passed to `git_note_foreach`
  */
-typedef int (*git_note_foreach_cb)(git_note_data *note_data, void *payload);
+typedef int (*git_note_foreach_cb)(
+	const git_oid *blob_id, const git_oid *annotated_object_id, void *payload);
 
 /**
  * Read the note for an object
@@ -150,8 +145,7 @@ GIT_EXTERN(int) git_note_foreach(
 	git_repository *repo,
 	const char *notes_ref,
 	git_note_foreach_cb note_cb,
-	void *payload
-);
+	void *payload);
 
 /** @} */
 GIT_END_DECL

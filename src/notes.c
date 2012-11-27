@@ -534,7 +534,7 @@ static int process_entry_path(
 	int error = -1;
 	size_t i = 0, j = 0, len;
 	git_buf buf = GIT_BUF_INIT;
-	git_note_data note_data;
+	git_oid annotated_object_id;
 
 	if ((error = git_buf_puts(&buf, entry_path)) < 0)
 		goto cleanup;
@@ -567,13 +567,10 @@ static int process_entry_path(
 		goto cleanup;
 	}
 
-	if ((error = git_oid_fromstr(
-			&note_data.annotated_object_oid, buf.ptr)) < 0)
+	if ((error = git_oid_fromstr(&annotated_object_id, buf.ptr)) < 0)
 		goto cleanup;
 
-	git_oid_cpy(&note_data.blob_oid, note_oid);
-
-	if (note_cb(&note_data, payload))
+	if (note_cb(note_oid, &annotated_object_id, payload))
 		error = GIT_EUSER;
 
 cleanup:
