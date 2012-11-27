@@ -18,7 +18,7 @@ void test_refs_branches_create__cleanup(void)
 	git_reference_free(branch);
 	branch = NULL;
 
-	git_object_free(target);
+	git_commit_free(target);
 	target = NULL;
 
 	git_repository_free(repo);
