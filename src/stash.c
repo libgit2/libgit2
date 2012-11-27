@@ -579,7 +579,7 @@ cleanup:
 
 int git_stash_foreach(
 	git_repository *repo,
-	stash_cb callback,
+	git_stash_cb callback,
 	void *payload)
 {
 	git_reference *stash;
