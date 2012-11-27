@@ -263,8 +263,8 @@ static int insert_note_in_tree_enotfound_cb(git_tree **out,
 
 static int note_write(git_oid *out,
 	git_repository *repo,
-	git_signature *author,
-	git_signature *committer,
+	const git_signature *author,
+	const git_signature *committer,
 	const char *notes_ref,
 	const char *note,
 	git_tree *commit_tree,
@@ -343,9 +343,9 @@ cleanup:
 }
 
 static int note_remove(git_repository *repo,
-		       git_signature *author, git_signature *committer,
-		       const char *notes_ref, git_tree *tree,
-		       const char *target, git_commit **parents)
+		const git_signature *author, const git_signature *committer,
+		const char *notes_ref, git_tree *tree,
+		const char *target, git_commit **parents)
 {
 	int error;
 	git_tree *tree_after_removal = NULL;
@@ -442,9 +442,12 @@ cleanup:
 }
 
 int git_note_create(
-	git_oid *out, git_repository *repo,
-	git_signature *author, git_signature *committer,
-	const char *notes_ref, const git_oid *oid,
+	git_oid *out,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *notes_ref,
+	const git_oid *oid,
 	const char *note)
 {
 	int error;
@@ -461,7 +464,7 @@ int git_note_create(
 		goto cleanup;
 
 	error = note_write(out, repo, author, committer, notes_ref,
-			   note, tree, target, &commit);
+			note, tree, target, &commit);
 
 cleanup:
 	git__free(target);
@@ -471,8 +474,8 @@ cleanup:
 }
 
 int git_note_remove(git_repository *repo, const char *notes_ref,
-		    git_signature *author, git_signature *committer,
-		    const git_oid *oid)
+		const git_signature *author, const git_signature *committer,
+		const git_oid *oid)
 {
 	int error;
 	char *target = NULL;
@@ -501,13 +504,13 @@ int git_note_default_ref(const char **out, git_repository *repo)
 	return note_get_default_ref(out, repo);
 }
 
-const char * git_note_message(git_note *note)
+const char * git_note_message(const git_note *note)
 {
 	assert(note);
 	return note->message;
 }
 
-const git_oid * git_note_oid(git_note *note)
+const git_oid * git_note_oid(const git_note *note)
 {
 	assert(note);
 	return &note->oid;
@@ -525,7 +528,7 @@ void git_note_free(git_note *note)
 static int process_entry_path(
 	const char* entry_path,
 	const git_oid *note_oid,
-	int (*note_cb)(git_note_data *note_data, void *payload),
+	git_note_foreach_cb note_cb,
 	void *payload)
 {
 	int error = -1;
@@ -581,7 +584,7 @@ cleanup:
 int git_note_foreach(
 	git_repository *repo,
 	const char *notes_ref,
-	int (*note_cb)(git_note_data *note_data, void *payload),
+	git_note_foreach_cb note_cb,
 	void *payload)
 {
 	int error;
