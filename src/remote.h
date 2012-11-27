@@ -27,10 +27,10 @@ struct git_remote {
 	git_repository *repo;
 	git_remote_callbacks callbacks;
 	git_transfer_progress stats;
-	unsigned int need_pack:1,
-		download_tags:2, /* There are four possible values */
-		check_cert:1,
-		update_fetchhead:1;
+	unsigned int need_pack;
+	git_remote_autotag_option_t download_tags;
+	unsigned int check_cert;
+	unsigned int update_fetchhead;
 };
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);

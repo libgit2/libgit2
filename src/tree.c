@@ -98,11 +98,11 @@ static int homing_search_cmp(const void *key, const void *array_member)
  * ambiguous because of folder vs file sorting, we look linearly
  * around the area for our target file.
  */
-static int tree_key_search(git_vector *entries, const char *filename, size_t filename_len)
+static int tree_key_search(
+	git_vector *entries, const char *filename, size_t filename_len)
 {
 	struct tree_key_search ksearch;
 	const git_tree_entry *entry;
-
 	int homing, i;
 
 	ksearch.filename = filename;
@@ -166,6 +166,7 @@ git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
 		return NULL;
 
 	memcpy(copy, entry, total_size);
+
 	return copy;
 }
 
@@ -225,7 +226,8 @@ int git_tree_entry_to_object(
 	return git_object_lookup(object_out, repo, &entry->oid, GIT_OBJ_ANY);
 }
 
-static git_tree_entry *entry_fromname(git_tree *tree, const char *name, size_t name_len)
+static const git_tree_entry *entry_fromname(
+	git_tree *tree, const char *name, size_t name_len)
 {
 	int idx = tree_key_search(&tree->entries, name, name_len);
 	if (idx < 0)
@@ -234,22 +236,25 @@ static git_tree_entry *entry_fromname(git_tree *tree, const char *name, size_t n
 	return git_vector_get(&tree->entries, idx);
 }
 
-const git_tree_entry *git_tree_entry_byname(git_tree *tree, const char *filename)
+const git_tree_entry *git_tree_entry_byname(
+	git_tree *tree, const char *filename)
 {
 	assert(tree && filename);
 	return entry_fromname(tree, filename, strlen(filename));
 }
 
-const git_tree_entry *git_tree_entry_byindex(git_tree *tree, size_t idx)
+const git_tree_entry *git_tree_entry_byindex(
+	git_tree *tree, size_t idx)
 {
 	assert(tree);
 	return git_vector_get(&tree->entries, idx);
 }
 
-const git_tree_entry *git_tree_entry_byoid(git_tree *tree, const git_oid *oid)
+const git_tree_entry *git_tree_entry_byoid(
+	const git_tree *tree, const git_oid *oid)
 {
-	unsigned int i;
-	git_tree_entry *e;
+	size_t i;
+	const git_tree_entry *e;
 
 	assert(tree);
 
@@ -265,7 +270,7 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 {
 	git_vector *entries = &tree->entries;
 	struct tree_key_search ksearch;
-	unsigned int at_pos;
+	size_t at_pos;
 
 	ksearch.filename = path;
 	ksearch.filename_len = strlen(path);
@@ -285,13 +290,13 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 			break;
 	}
 
-	return at_pos;
+	return (int)at_pos;
 }
 
-unsigned int git_tree_entrycount(const git_tree *tree)
+size_t git_tree_entrycount(const git_tree *tree)
 {
 	assert(tree);
-	return (unsigned int)tree->entries.length;
+	return tree->entries.length;
 }
 
 static int tree_error(const char *str)
@@ -348,14 +353,13 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj)
 	return tree_parse_buffer(tree, (char *)obj->raw.data, (char *)obj->raw.data + obj->raw.len);
 }
 
-static unsigned int find_next_dir(const char *dirname, git_index *index, unsigned int start)
+static size_t find_next_dir(const char *dirname, git_index *index, size_t start)
 {
-	unsigned int i, entries = git_index_entrycount(index);
-	size_t dirlen;
+	size_t dirlen, i, entries = git_index_entrycount(index);
 
 	dirlen = strlen(dirname);
 	for (i = start; i < entries; ++i) {
-		git_index_entry *entry = git_index_get_byindex(index, i);
+		const git_index_entry *entry = git_index_get_byindex(index, i);
 		if (strlen(entry->path) < dirlen ||
 		    memcmp(entry->path, dirname, dirlen) ||
 			(dirlen > 0 && entry->path[dirlen] != '/')) {
@@ -394,11 +398,10 @@ static int write_tree(
 	git_repository *repo,
 	git_index *index,
 	const char *dirname,
-	unsigned int start)
+	size_t start)
 {
 	git_treebuilder *bld = NULL;
-
-	unsigned int i, entries = git_index_entrycount(index);
+	size_t i, entries = git_index_entrycount(index);
 	int error;
 	size_t dirname_len = strlen(dirname);
 	const git_tree_cache *cache;
@@ -406,13 +409,11 @@ static int write_tree(
 	cache = git_tree_cache_get(index->tree, dirname);
 	if (cache != NULL && cache->entries >= 0){
 		git_oid_cpy(oid, &cache->oid);
-		return find_next_dir(dirname, index, start);
+		return (int)find_next_dir(dirname, index, start);
 	}
 
-	error = git_treebuilder_create(&bld, NULL);
-	if (bld == NULL) {
+	if ((error = git_treebuilder_create(&bld, NULL)) < 0 || bld == NULL)
 		return -1;
-	}
 
 	/*
 	 * This loop is unfortunate, but necessary. The index doesn't have
@@ -420,8 +421,8 @@ static int write_tree(
 	 * need to keep track of the current position.
 	 */
 	for (i = start; i < entries; ++i) {
-		git_index_entry *entry = git_index_get_byindex(index, i);
-		char *filename, *next_slash;
+		const git_index_entry *entry = git_index_get_byindex(index, i);
+		const char *filename, *next_slash;
 
 	/*
 	 * If we've left our (sub)tree, exit the loop and return. The
@@ -489,14 +490,15 @@ static int write_tree(
 		goto on_error;
 
 	git_treebuilder_free(bld);
-	return i;
+	return (int)i;
 
 on_error:
 	git_treebuilder_free(bld);
 	return -1;
 }
 
-int git_tree__write_index(git_oid *oid, git_index *index, git_repository *repo)
+int git_tree__write_index(
+	git_oid *oid, git_index *index, git_repository *repo)
 {
 	int ret;
 
@@ -694,7 +696,10 @@ on_error:
 	return -1;
 }
 
-void git_treebuilder_filter(git_treebuilder *bld, int (*filter)(const git_tree_entry *, void *), void *payload)
+void git_treebuilder_filter(
+	git_treebuilder *bld,
+	git_treebuilder_filter_cb filter,
+	void *payload)
 {
 	unsigned int i;
 
@@ -803,17 +808,17 @@ int git_tree_entry_bypath(
 }
 
 static int tree_walk(
-	git_tree *tree,
+	const git_tree *tree,
 	git_treewalk_cb callback,
 	git_buf *path,
 	void *payload,
 	bool preorder)
 {
 	int error = 0;
-	unsigned int i;
+	size_t i;
 
 	for (i = 0; i < tree->entries.length; ++i) {
-		git_tree_entry *entry = tree->entries.contents[i];
+		const git_tree_entry *entry = tree->entries.contents[i];
 
 		if (preorder) {
 			error = callback(path->ptr, entry, payload);
@@ -855,23 +860,27 @@ static int tree_walk(
 	return error;
 }
 
-int git_tree_walk(git_tree *tree, git_treewalk_cb callback, int mode, void *payload)
+int git_tree_walk(
+	const git_tree *tree,
+	git_treewalk_mode mode,
+	git_treewalk_cb callback,
+	void *payload)
 {
 	int error = 0;
 	git_buf root_path = GIT_BUF_INIT;
 
 	switch (mode) {
-		case GIT_TREEWALK_POST:
-			error = tree_walk(tree, callback, &root_path, payload, false);
-			break;
+	case GIT_TREEWALK_POST:
+		error = tree_walk(tree, callback, &root_path, payload, false);
+		break;
 
-		case GIT_TREEWALK_PRE:
-			error = tree_walk(tree, callback, &root_path, payload, true);
-			break;
+	case GIT_TREEWALK_PRE:
+		error = tree_walk(tree, callback, &root_path, payload, true);
+		break;
 
-		default:
-			giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");
-			return -1;
+	default:
+		giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");
+		return -1;
 	}
 
 	git_buf_free(&root_path);

@@ -21,7 +21,7 @@ void test_object_commit_commitstagedfile__cleanup(void)
 void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 {
 	git_index *index;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 	git_oid expected_blob_oid, tree_oid, expected_tree_oid, commit_oid, expected_commit_oid;
 	git_signature *signature;
 	git_tree *tree;

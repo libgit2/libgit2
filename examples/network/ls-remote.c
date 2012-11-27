@@ -27,7 +27,7 @@ static int use_unnamed(git_repository *repo, const char *url)
 
 	// When connecting, the underlying code needs to know wether we
 	// want to push or fetch
-	error = git_remote_connect(remote, GIT_DIR_FETCH);
+	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
 	if (error < 0)
 		goto cleanup;
 
@@ -49,7 +49,7 @@ static int use_remote(git_repository *repo, char *name)
 	if (error < 0)
 		goto cleanup;
 
-	error = git_remote_connect(remote, GIT_DIR_FETCH);
+	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
 	if (error < 0)
 		goto cleanup;
 

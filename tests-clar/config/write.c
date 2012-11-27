@@ -62,7 +62,7 @@ void test_config_write__delete_value(void)
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_delete(cfg, "core.dummy"));
+	cl_git_pass(git_config_delete_entry(cfg, "core.dummy"));
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
@@ -94,7 +94,7 @@ void test_config_write__delete_value_at_specific_level(void)
 
 	cl_git_pass(git_config_open_level(&cfg_specific, cfg, GIT_CONFIG_LEVEL_GLOBAL));
 
-	cl_git_pass(git_config_delete(cfg_specific, "core.dummy2"));
+	cl_git_pass(git_config_delete_entry(cfg_specific, "core.dummy2"));
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config15"));
@@ -125,7 +125,7 @@ void test_config_write__delete_inexistent(void)
 	git_config *cfg;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_assert(git_config_delete(cfg, "core.imaginary") == GIT_ENOTFOUND);
+	cl_assert(git_config_delete_entry(cfg, "core.imaginary") == GIT_ENOTFOUND);
 	git_config_free(cfg);
 }
 

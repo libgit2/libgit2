@@ -27,7 +27,7 @@ void test_index_stage__cleanup(void)
 void test_index_stage__add_always_adds_stage_0(void)
 {
 	int entry_idx;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
     cl_git_mkfile("./mergedrepo/new-file.txt", "new-file\n");
 
@@ -41,7 +41,7 @@ void test_index_stage__add_always_adds_stage_0(void)
 void test_index_stage__find_gets_first_stage(void)
 {
 	int entry_idx;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
 	cl_assert((entry_idx = git_index_find(repo_index, "one.txt")) >= 0);
 	cl_assert((entry = git_index_get_byindex(repo_index, entry_idx)) != NULL);

@@ -30,7 +30,7 @@ static int resolve_to_tree(
 			git_reference_resolve(&resolved, ref);
 			git_reference_free(ref);
 			if (resolved) {
-				git_object_lookup(&obj, repo, git_reference_oid(resolved), GIT_OBJ_ANY);
+				git_object_lookup(&obj, repo, git_reference_target(resolved), GIT_OBJ_ANY);
 				git_reference_free(resolved);
 			}
 		}
@@ -63,12 +63,12 @@ char *colors[] = {
 };
 
 static int printer(
-	void *data,
 	const git_diff_delta *delta,
 	const git_diff_range *range,
 	char usage,
 	const char *line,
-	size_t line_len)
+	size_t line_len,
+	void *data)
 {
 	int *last_color = data, color = 0;
 
@@ -225,9 +225,9 @@ int main(int argc, char *argv[])
 		fputs(colors[0], stdout);
 
 	if (compact)
-		check(git_diff_print_compact(diff, &color, printer), "Displaying diff");
+		check(git_diff_print_compact(diff, printer, &color), "Displaying diff");
 	else
-		check(git_diff_print_patch(diff, &color, printer), "Displaying diff");
+		check(git_diff_print_patch(diff, printer, &color), "Displaying diff");
 
 	if (color >= 0)
 		fputs(colors[0], stdout);

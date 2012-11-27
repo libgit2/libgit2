@@ -295,7 +295,7 @@ static int load_attr_blob_from_index(
 {
 	int error;
 	git_index *index;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0 ||
 		(error = git_index_find(index, relfile)) < 0)

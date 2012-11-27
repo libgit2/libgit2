@@ -24,7 +24,7 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 	buf->offset += bytes_read;
 
 	if (t->packetsize_cb)
-		t->packetsize_cb(bytes_read, t->packetsize_payload);
+		t->packetsize_cb((int)bytes_read, t->packetsize_payload);
 
 	return (int)(buf->offset - old_len);
 }
@@ -73,7 +73,7 @@ static int git_smart__connect(
 	t->flags = flags;
 	t->cred_acquire_cb = cred_acquire_cb;
 
-	if (GIT_DIR_FETCH == direction)
+	if (GIT_DIRECTION_FETCH == direction)
 	{
 		if ((error = t->wrapped->action(&stream, t->wrapped, t->url, GIT_SERVICE_UPLOADPACK_LS)) < 0)
 			return error;
@@ -159,7 +159,7 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 	if (t->rpc)
 		git_smart__reset_stream(t);
 
-	if (GIT_DIR_FETCH == t->direction) {
+	if (GIT_DIRECTION_FETCH == t->direction) {
 		if ((error = t->wrapped->action(&stream, t->wrapped, t->url, GIT_SERVICE_UPLOADPACK)) < 0)
 			return error;
 

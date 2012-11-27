@@ -37,7 +37,7 @@ void test_refs_read__loose_tag(void)
 	cl_assert(git_reference_is_packed(reference) == 0);
 	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_oid(reference), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(reference), GIT_OBJ_ANY));
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJ_TAG);
 
@@ -77,7 +77,7 @@ void test_refs_read__symbolic(void)
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_oid(resolved_ref), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(resolved_ref), GIT_OBJ_ANY));
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJ_COMMIT);
 
@@ -105,7 +105,7 @@ void test_refs_read__nested_symbolic(void)
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_oid(resolved_ref), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(resolved_ref), GIT_OBJ_ANY));
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJ_COMMIT);
 
@@ -129,13 +129,13 @@ void test_refs_read__head_then_master(void)
 
 	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_FILE));
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
-	cl_git_pass(git_oid_cmp(git_reference_oid(comp_base_ref), git_reference_oid(resolved_ref)));
+	cl_git_pass(git_oid_cmp(git_reference_target(comp_base_ref), git_reference_target(resolved_ref)));
 	git_reference_free(reference);
 	git_reference_free(resolved_ref);
 
 	cl_git_pass(git_reference_lookup(&reference, g_repo, current_head_target));
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
-	cl_git_pass(git_oid_cmp(git_reference_oid(comp_base_ref), git_reference_oid(resolved_ref)));
+	cl_git_pass(git_oid_cmp(git_reference_target(comp_base_ref), git_reference_target(resolved_ref)));
 	git_reference_free(reference);
 	git_reference_free(resolved_ref);
 
@@ -151,7 +151,7 @@ void test_refs_read__master_then_head(void)
 	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_FILE));
 
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
-	cl_git_pass(git_oid_cmp(git_reference_oid(master_ref), git_reference_oid(resolved_ref)));
+	cl_git_pass(git_oid_cmp(git_reference_target(master_ref), git_reference_target(resolved_ref)));
 
 	git_reference_free(reference);
 	git_reference_free(resolved_ref);
@@ -170,7 +170,7 @@ void test_refs_read__packed(void)
 	cl_assert(git_reference_is_packed(reference));
 	cl_assert_equal_s(reference->name, packed_head_name);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_oid(reference), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(reference), GIT_OBJ_ANY));
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJ_COMMIT);
 
@@ -200,7 +200,7 @@ void test_refs_read__chomped(void)
 
 	cl_git_pass(git_reference_lookup(&test, g_repo, "refs/heads/test"));
 	cl_git_pass(git_reference_lookup(&chomped, g_repo, "refs/heads/chomped"));
-	cl_git_pass(git_oid_cmp(git_reference_oid(test), git_reference_oid(chomped)));
+	cl_git_pass(git_oid_cmp(git_reference_target(test), git_reference_target(chomped)));
 
 	git_reference_free(test);
 	git_reference_free(chomped);
@@ -212,7 +212,7 @@ void test_refs_read__trailing(void)
 
 	cl_git_pass(git_reference_lookup(&test, g_repo, "refs/heads/test"));
 	cl_git_pass(git_reference_lookup(&trailing, g_repo, "refs/heads/trailing"));
-	cl_git_pass(git_oid_cmp(git_reference_oid(test), git_reference_oid(trailing)));
+	cl_git_pass(git_oid_cmp(git_reference_target(test), git_reference_target(trailing)));
 	git_reference_free(trailing);
 	cl_git_pass(git_reference_lookup(&trailing, g_repo, "FETCH_HEAD"));
 

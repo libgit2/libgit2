@@ -678,7 +678,7 @@ static int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 
 struct foreach_state {
 	size_t dir_len;
-	int (*cb)(git_oid *oid, void *data);
+	git_odb_foreach_cb cb;
 	void *data;
 	int cb_error;
 };
@@ -734,7 +734,7 @@ static int foreach_cb(void *_state, git_buf *path)
 	return git_path_direach(path, foreach_object_dir_cb, state);
 }
 
-static int loose_backend__foreach(git_odb_backend *_backend, int (*cb)(git_oid *oid, void *data), void *data)
+static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb cb, void *data)
 {
 	char *objects_dir;
 	int error;

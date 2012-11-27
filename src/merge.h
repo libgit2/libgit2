@@ -8,6 +8,8 @@
 #define INCLUDE_merge_h__
 
 #include "git2/types.h"
+#include "git2/merge.h"
+#include "commit_list.h"
 
 #define GIT_MERGE_MSG_FILE		"MERGE_MSG"
 #define GIT_MERGE_MODE_FILE		"MERGE_MODE"
@@ -15,5 +17,6 @@
 #define MERGE_CONFIG_FILE_MODE	0666
 
 int git_merge__cleanup(git_repository *repo);
+int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_list_node *one, git_vector *twos);
 
 #endif

@@ -363,7 +363,7 @@ int git_diff__oid_for_file(
 		const git_oid *sm_oid;
 
 		if (!git_submodule_lookup(&sm, repo, path) &&
-			(sm_oid = git_submodule_wd_oid(sm)) != NULL)
+			(sm_oid = git_submodule_wd_id(sm)) != NULL)
 			git_oid_cpy(oid, sm_oid);
 		else {
 			/* if submodule lookup failed probably just in an intermediate
@@ -496,7 +496,7 @@ static int maybe_modified(
 
 				/* grab OID while we are here */
 				if (git_oid_iszero(&nitem->oid)) {
-					const git_oid *sm_oid = git_submodule_wd_oid(sub);
+					const git_oid *sm_oid = git_submodule_wd_id(sub);
 					if (sm_oid != NULL) {
 						git_oid_cpy(&noid, sm_oid);
 						use_noid = &noid;

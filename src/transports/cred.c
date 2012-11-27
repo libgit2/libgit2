@@ -11,13 +11,15 @@
 static void plaintext_free(struct git_cred *cred)
 {
 	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
-	int pass_len = strlen(c->password);
+	size_t pass_len = strlen(c->password);
 
 	git__free(c->username);
 
 	/* Zero the memory which previously held the password */
 	memset(c->password, 0x0, pass_len);
 	git__free(c->password);
+
+	memset(c, 0, sizeof(*c));
 
 	git__free(c);
 }

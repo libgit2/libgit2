@@ -74,7 +74,7 @@ void test_clone_network__empty_repository(void)
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
-	cl_assert_equal_s("refs/heads/master", git_reference_target(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
 	git_reference_free(head);
 }
@@ -109,7 +109,7 @@ static void fetch_progress(const git_transfer_progress *stats, void *payload)
 
 void test_clone_network__can_checkout_a_cloned_repo(void)
 {
-	git_checkout_opts opts = {0};
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	git_buf path = GIT_BUF_INIT;
 	git_reference *head;
 	bool checkout_progress_cb_was_called = false,
@@ -121,15 +121,15 @@ void test_clone_network__can_checkout_a_cloned_repo(void)
 
 	cl_set_cleanup(&cleanup_repository, "./default-checkout");
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./default-checkout", 
-				&fetch_progress, &fetch_progress_cb_was_called, &opts));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./default-checkout", &opts,
+				&fetch_progress, &fetch_progress_cb_was_called));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
-	cl_assert_equal_s("refs/heads/master", git_reference_target(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
 	cl_assert_equal_i(true, checkout_progress_cb_was_called);
 	cl_assert_equal_i(true, fetch_progress_cb_was_called);

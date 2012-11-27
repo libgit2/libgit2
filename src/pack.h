@@ -105,7 +105,7 @@ int git_pack_entry_find(
 		size_t len);
 int git_pack_foreach_entry(
 		struct git_pack_file *p,
-		int (*cb)(git_oid *oid, void *data),
+		git_odb_foreach_cb cb,
 		void *data);
 
 #endif

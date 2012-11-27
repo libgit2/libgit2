@@ -129,7 +129,7 @@ typedef struct git_index git_index;
 typedef struct git_config git_config;
 
 /** Interface to access a configuration file */
-typedef struct git_config_file git_config_file;
+typedef struct git_config_backend git_config_backend;
 
 /** Representation of a reference log entry */
 typedef struct git_reflog_entry git_reflog_entry;
@@ -174,13 +174,6 @@ typedef enum {
 	GIT_BRANCH_LOCAL = 1,
 	GIT_BRANCH_REMOTE = 2,
 } git_branch_t;
-
-/** Kinds of reset operation. */
-typedef enum {
-	GIT_RESET_SOFT = 1,
-	GIT_RESET_MIXED = 2,
-	GIT_RESET_HARD = 3,
-} git_reset_type;
 
 /** Valid modes for index and tree entries. */
 typedef enum {

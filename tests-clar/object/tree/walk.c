@@ -38,11 +38,11 @@ void test_object_tree_walk__0(void)
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 
 	ct = 0;
-	cl_git_pass(git_tree_walk(tree, treewalk_count_cb, GIT_TREEWALK_PRE, &ct));
+	cl_git_pass(git_tree_walk(tree, GIT_TREEWALK_PRE, treewalk_count_cb, &ct));
 	cl_assert_equal_i(3, ct);
 
 	ct = 0;
-	cl_git_pass(git_tree_walk(tree, treewalk_count_cb, GIT_TREEWALK_POST, &ct));
+	cl_git_pass(git_tree_walk(tree, GIT_TREEWALK_POST, treewalk_count_cb, &ct));
 	cl_assert_equal_i(3, ct);
 
 	git_tree_free(tree);
@@ -83,21 +83,21 @@ void test_object_tree_walk__1(void)
 
 	ct = 0;
 	cl_assert_equal_i(
-		GIT_EUSER, git_tree_walk(tree, treewalk_stop_cb, GIT_TREEWALK_PRE, &ct));
+		GIT_EUSER, git_tree_walk(tree, GIT_TREEWALK_PRE, treewalk_stop_cb, &ct));
 	cl_assert_equal_i(2, ct);
 
 	ct = 0;
 	cl_assert_equal_i(
-		GIT_EUSER, git_tree_walk(tree, treewalk_stop_cb, GIT_TREEWALK_POST, &ct));
+		GIT_EUSER, git_tree_walk(tree, GIT_TREEWALK_POST, treewalk_stop_cb, &ct));
 	cl_assert_equal_i(2, ct);
 
 	cl_assert_equal_i(
 		GIT_EUSER, git_tree_walk(
-			tree, treewalk_stop_immediately_cb, GIT_TREEWALK_PRE, NULL));
+			tree, GIT_TREEWALK_PRE, treewalk_stop_immediately_cb, NULL));
 
 	cl_assert_equal_i(
 		GIT_EUSER, git_tree_walk(
-			tree, treewalk_stop_immediately_cb, GIT_TREEWALK_POST, NULL));
+			tree, GIT_TREEWALK_POST, treewalk_stop_immediately_cb, NULL));
 
 	git_tree_free(tree);
 }

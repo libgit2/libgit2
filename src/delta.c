@@ -148,7 +148,7 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 	/* Determine index hash size.  Note that indexing skips the
 	   first byte to allow for optimizing the Rabin's polynomial
 	   initialization in create_delta(). */
-	entries = (bufsize - 1) / RABIN_WINDOW;
+	entries = (unsigned int)(bufsize - 1) / RABIN_WINDOW;
 	if (bufsize >= 0xffffffffUL) {
 		/*
 		 * Current delta format can't encode offsets into
@@ -317,9 +317,12 @@ unsigned long git_delta_sizeof_index(struct git_delta_index *index)
 #define MAX_OP_SIZE	(5 + 5 + 1 + RABIN_WINDOW + 7)
 
 void *
-git_delta_create(const struct git_delta_index *index,
-		 const void *trg_buf, unsigned long trg_size,
-		 unsigned long *delta_size, unsigned long max_size)
+git_delta_create(
+	const struct git_delta_index *index,
+	const void *trg_buf,
+	unsigned long trg_size,
+	unsigned long *delta_size,
+	unsigned long max_size)
 {
 	unsigned int i, outpos, outsize, moff, msize, val;
 	int inscnt;
@@ -332,7 +335,7 @@ git_delta_create(const struct git_delta_index *index,
 	outpos = 0;
 	outsize = 8192;
 	if (max_size && outsize >= max_size)
-		outsize = max_size + MAX_OP_SIZE + 1;
+		outsize = (unsigned int)(max_size + MAX_OP_SIZE + 1);
 	out = git__malloc(outsize);
 	if (!out)
 		return NULL;
@@ -377,19 +380,19 @@ git_delta_create(const struct git_delta_index *index,
 			for (entry = index->hash[i]; entry < index->hash[i+1]; entry++) {
 				const unsigned char *ref = entry->ptr;
 				const unsigned char *src = data;
-				unsigned int ref_size = ref_top - ref;
+				unsigned int ref_size = (unsigned int)(ref_top - ref);
 				if (entry->val != val)
 					continue;
 				if (ref_size > (unsigned int)(top - src))
-					ref_size = top - src;
+					ref_size = (unsigned int)(top - src);
 				if (ref_size <= msize)
 					break;
 				while (ref_size-- && *src++ == *ref)
 					ref++;
 				if (msize < (unsigned int)(ref - entry->ptr)) {
 					/* this is our best match so far */
-					msize = ref - entry->ptr;
-					moff = entry->ptr - ref_data;
+					msize = (unsigned int)(ref - entry->ptr);
+					moff = (unsigned int)(entry->ptr - ref_data);
 					if (msize >= 4096) /* good enough */
 						break;
 				}

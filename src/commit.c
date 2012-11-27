@@ -22,18 +22,18 @@ static void clear_parents(git_commit *commit)
 {
 	unsigned int i;
 
-	for (i = 0; i < commit->parent_oids.length; ++i) {
-		git_oid *parent = git_vector_get(&commit->parent_oids, i);
+	for (i = 0; i < commit->parent_ids.length; ++i) {
+		git_oid *parent = git_vector_get(&commit->parent_ids, i);
 		git__free(parent);
 	}
 
-	git_vector_clear(&commit->parent_oids);
+	git_vector_clear(&commit->parent_ids);
 }
 
 void git_commit__free(git_commit *commit)
 {
 	clear_parents(commit);
-	git_vector_free(&commit->parent_oids);
+	git_vector_free(&commit->parent_ids);
 
 	git_signature_free(commit->author);
 	git_signature_free(commit->committer);
@@ -41,11 +41,6 @@ void git_commit__free(git_commit *commit)
 	git__free(commit->message);
 	git__free(commit->message_encoding);
 	git__free(commit);
-}
-
-const git_oid *git_commit_id(git_commit *c)
-{
-	return git_object_id((git_object *)c);
 }
 
 int git_commit_create_v(
@@ -141,26 +136,26 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 	const char *buffer = data;
 	const char *buffer_end = (const char *)data + len;
 
-	git_oid parent_oid;
+	git_oid parent_id;
 
-	git_vector_init(&commit->parent_oids, 4, NULL);
+	git_vector_init(&commit->parent_ids, 4, NULL);
 
-	if (git_oid__parse(&commit->tree_oid, &buffer, buffer_end, "tree ") < 0)
+	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
 		goto bad_buffer;
 
 	/*
 	 * TODO: commit grafts!
 	 */
 
-	while (git_oid__parse(&parent_oid, &buffer, buffer_end, "parent ") == 0) {
-		git_oid *new_oid;
+	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
+		git_oid *new_id;
 
-		new_oid = git__malloc(sizeof(git_oid));
-		GITERR_CHECK_ALLOC(new_oid);
+		new_id = git__malloc(sizeof(git_oid));
+		GITERR_CHECK_ALLOC(new_id);
 
-		git_oid_cpy(new_oid, &parent_oid);
+		git_oid_cpy(new_id, &parent_id);
 
-		if (git_vector_insert(&commit->parent_oids, new_oid) < 0)
+		if (git_vector_insert(&commit->parent_ids, new_id) < 0)
 			return -1;
 	}
 
@@ -214,7 +209,7 @@ int git_commit__parse(git_commit *commit, git_odb_object *obj)
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \
-	_rvalue git_commit_##_name(git_commit *commit) \
+	_rvalue git_commit_##_name(const git_commit *commit) \
 	{\
 		assert(commit); \
 		return _return; \
@@ -226,34 +221,34 @@ GIT_COMMIT_GETTER(const char *, message, commit->message)
 GIT_COMMIT_GETTER(const char *, message_encoding, commit->message_encoding)
 GIT_COMMIT_GETTER(git_time_t, time, commit->committer->when.time)
 GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
-GIT_COMMIT_GETTER(unsigned int, parentcount, (unsigned int)commit->parent_oids.length)
-GIT_COMMIT_GETTER(const git_oid *, tree_oid, &commit->tree_oid);
+GIT_COMMIT_GETTER(unsigned int, parentcount, (unsigned int)commit->parent_ids.length)
+GIT_COMMIT_GETTER(const git_oid *, tree_id, &commit->tree_id);
 
-int git_commit_tree(git_tree **tree_out, git_commit *commit)
+int git_commit_tree(git_tree **tree_out, const git_commit *commit)
 {
 	assert(commit);
-	return git_tree_lookup(tree_out, commit->object.repo, &commit->tree_oid);
+	return git_tree_lookup(tree_out, commit->object.repo, &commit->tree_id);
 }
 
-const git_oid *git_commit_parent_oid(git_commit *commit, unsigned int n)
+const git_oid *git_commit_parent_id(git_commit *commit, unsigned int n)
 {
 	assert(commit);
 
-	return git_vector_get(&commit->parent_oids, n);
+	return git_vector_get(&commit->parent_ids, n);
 }
 
 int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
 {
-	const git_oid *parent_oid;
+	const git_oid *parent_id;
 	assert(commit);
 
-	parent_oid = git_commit_parent_oid(commit, n);
-	if (parent_oid == NULL) {
+	parent_id = git_commit_parent_id(commit, n);
+	if (parent_id == NULL) {
 		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
 		return GIT_ENOTFOUND;
 	}
 
-	return git_commit_lookup(parent, commit->object.repo, parent_oid);
+	return git_commit_lookup(parent, commit->object.repo, parent_id);
 }
 
 int git_commit_nth_gen_ancestor(

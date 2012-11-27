@@ -468,11 +468,11 @@ void test_refs_revparse__issue_994(void)
 
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_create_oid(
+	cl_git_pass(git_reference_create(
 		&with_at,
 		repo,
 		"refs/remotes/origin/bim_with_3d@11296",
-		git_reference_oid(head),
+		git_reference_target(head),
 		0));
 
 	cl_git_pass(git_revparse_single(&target, repo, "origin/bim_with_3d@11296"));

@@ -458,7 +458,7 @@ static int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	return pack_entry_find(&e, (struct pack_backend *)backend, oid) == 0;
 }
 
-static int pack_backend__foreach(git_odb_backend *_backend, int (*cb)(git_oid *oid, void *data), void *data)
+static int pack_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb cb, void *data)
 {
 	int error;
 	struct git_pack_file *p;

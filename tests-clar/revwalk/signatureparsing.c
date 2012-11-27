@@ -31,10 +31,10 @@ void test_revwalk_signatureparsing__do_not_choke_when_name_contains_angle_bracke
 	 */
 	cl_git_pass(git_reference_lookup(&ref, _repo, "refs/heads/haacked"));
 
-	git_revwalk_push(_walk, git_reference_oid(ref));
+	git_revwalk_push(_walk, git_reference_target(ref));
 	cl_git_pass(git_revwalk_next(&commit_oid, _walk));
 
-	cl_git_pass(git_commit_lookup(&commit, _repo, git_reference_oid(ref)));
+	cl_git_pass(git_commit_lookup(&commit, _repo, git_reference_target(ref)));
 
 	signature = git_commit_committer(commit);
 	cl_assert_equal_s("Yu V. Bin Haacked", signature->email);

@@ -17,8 +17,8 @@
 struct git_commit {
 	git_object object;
 
-	git_vector parent_oids;
-	git_oid tree_oid;
+	git_vector parent_ids;
+	git_oid tree_id;
 
 	git_signature *author;
 	git_signature *committer;

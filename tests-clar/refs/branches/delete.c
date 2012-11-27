@@ -14,7 +14,7 @@ void test_refs_branches_delete__initialize(void)
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_reference_create_oid(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
 }
 
 void test_refs_branches_delete__cleanup(void)
@@ -35,7 +35,7 @@ void test_refs_branches_delete__can_not_delete_a_branch_pointed_at_by_HEAD(void)
 
 	/* Ensure HEAD targets the local master branch */
 	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
-	cl_assert(strcmp("refs/heads/master", git_reference_target(head)) == 0);
+	cl_assert(strcmp("refs/heads/master", git_reference_symbolic_target(head)) == 0);
 	git_reference_free(head);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
@@ -71,7 +71,7 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 
 	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
-	cl_assert_equal_s("refs/heads/master", git_reference_target(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 	git_reference_free(head);
 
 	/* Detach HEAD and make it target the commit that "master" points to */

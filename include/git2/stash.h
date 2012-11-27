@@ -18,7 +18,7 @@
  */
 GIT_BEGIN_DECL
 
-enum {
+typedef enum {
 	GIT_STASH_DEFAULT = 0,
 
 	/* All changes already added to the index
@@ -35,7 +35,7 @@ enum {
 	 * cleaned up from the working directory
 	 */
 	GIT_STASH_INCLUDE_IGNORED = (1 << 2),
-};
+} git_stash_flags;
 
 /**
  * Save the local modifications to a new stash.
@@ -49,18 +49,17 @@ enum {
  *
  * @param message Optional description along with the stashed state.
  *
- * @param flags Flags to control the stashing process.
+ * @param flags Flags to control the stashing process. (see GIT_STASH_* above)
  *
  * @return 0 on success, GIT_ENOTFOUND where there's nothing to stash,
  * or error code.
  */
-
 GIT_EXTERN(int) git_stash_save(
 	git_oid *out,
 	git_repository *repo,
 	git_signature *stasher,
 	const char *message,
-	uint32_t flags);
+	unsigned int flags);
 
 /**
  * When iterating over all the stashed states, callback that will be
@@ -71,16 +70,16 @@ GIT_EXTERN(int) git_stash_save(
  *
  * @param message The stash message.
  *
- * @param stash_oid The commit oid of the stashed state.
+ * @param stash_id The commit oid of the stashed state.
  *
  * @param payload Extra parameter to callback function.
  *
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
-typedef int (*stash_cb)(
+typedef int (*git_stash_cb)(
 	size_t index,
 	const char* message,
-	const git_oid *stash_oid,
+	const git_oid *stash_id,
 	void *payload);
 
 /**
@@ -99,7 +98,7 @@ typedef int (*stash_cb)(
  */
 GIT_EXTERN(int) git_stash_foreach(
 	git_repository *repo,
-	stash_cb callback,
+	git_stash_cb callback,
 	void *payload);
 
 /**
