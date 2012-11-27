@@ -361,7 +361,7 @@ static int find_repo(
 int git_repository_open_ext(
 	git_repository **repo_ptr,
 	const char *start_path,
-	uint32_t flags,
+	unsigned int flags,
 	const char *ceiling_dirs)
 {
 	int error;
@@ -1162,14 +1162,14 @@ int git_repository_init(
 }
 
 int git_repository_init_ext(
-	git_repository **repo_out,
+	git_repository **out,
 	const char *given_repo,
 	git_repository_init_options *opts)
 {
 	int error;
 	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT;
 
-	assert(repo_out && given_repo && opts);
+	assert(out && given_repo && opts);
 
 	error = repo_init_directories(&repo_path, &wd_path, given_repo, opts);
 	if (error < 0)
@@ -1202,10 +1202,10 @@ int git_repository_init_ext(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_repository_open(repo_out, git_buf_cstr(&repo_path));
+	error = git_repository_open(out, git_buf_cstr(&repo_path));
 
 	if (!error && opts->origin_url)
-		error = repo_init_create_origin(*repo_out, opts->origin_url);
+		error = repo_init_create_origin(*out, opts->origin_url);
 
 cleanup:
 	git_buf_free(&repo_path);
