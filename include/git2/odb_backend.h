@@ -24,7 +24,14 @@ GIT_BEGIN_DECL
 struct git_odb_stream;
 struct git_odb_writepack;
 
-/** An instance for a custom backend */
+/**
+ * Function type for callbacks from git_odb_foreach.
+ */
+typedef int (*git_odb_foreach_cb)(const git_oid *id, void *payload);
+
+/**
+ * An instance for a custom backend
+ */
 struct git_odb_backend {
 	git_odb *odb;
 
@@ -79,7 +86,7 @@ struct git_odb_backend {
 
 	int (* foreach)(
 			struct git_odb_backend *,
-			int (*cb)(git_oid *oid, void *payload),
+			git_odb_foreach_cb cb,
 			void *payload);
 
 	int (* writepack)(

@@ -16,7 +16,7 @@ void test_odb_foreach__cleanup(void)
 	_repo = NULL;
 }
 
-static int foreach_cb(git_oid *oid, void *data)
+static int foreach_cb(const git_oid *oid, void *data)
 {
 	GIT_UNUSED(data);
 	GIT_UNUSED(oid);
@@ -59,7 +59,7 @@ void test_odb_foreach__one_pack(void)
 	cl_assert(nobj == 1628);
 }
 
-static int foreach_stop_cb(git_oid *oid, void *data)
+static int foreach_stop_cb(const git_oid *oid, void *data)
 {
 	GIT_UNUSED(data);
 	GIT_UNUSED(oid);

@@ -23,11 +23,6 @@
 GIT_BEGIN_DECL
 
 /**
- * Function type for callbacks from git_odb_foreach.
- */
-typedef int (*git_odb_foreach_cb)(git_oid *id, void *payload);
-
-/**
  * Create a new object database with no backends.
  *
  * Before the ODB can be used for read/writing, a custom database
