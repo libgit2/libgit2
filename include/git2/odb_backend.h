@@ -79,8 +79,8 @@ struct git_odb_backend {
 
 	int (* foreach)(
 			struct git_odb_backend *,
-			int (*cb)(git_oid *oid, void *data),
-			void *data);
+			int (*cb)(git_oid *oid, void *payload),
+			void *payload);
 
 	int (* writepack)(
 			struct git_odb_writepack **,
@@ -101,7 +101,7 @@ enum {
 /** A stream to read/write from a backend */
 struct git_odb_stream {
 	struct git_odb_backend *backend;
-	int mode;
+	unsigned int mode;
 
 	int (*read)(struct git_odb_stream *stream, char *buffer, size_t len);
 	int (*write)(struct git_odb_stream *stream, const char *buffer, size_t len);
@@ -118,11 +118,14 @@ struct git_odb_writepack {
 	void (*free)(struct git_odb_writepack *writepack);
 };
 
-GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir);
-GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **backend_out, const char *objects_dir, int compression_level, int do_fsync);
-GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **backend_out, const char *index_file);
-
 GIT_EXTERN(void *) git_odb_backend_malloc(git_odb_backend *backend, size_t len);
+
+/**
+ * Constructors for in-box ODB backends.
+ */
+GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **out, const char *objects_dir);
+GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **out, const char *objects_dir, int compression_level, int do_fsync);
+GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **out, const char *index_file);
 
 GIT_END_DECL
 
