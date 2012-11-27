@@ -26,31 +26,32 @@ GIT_BEGIN_DECL
  * Note: angle brackets ('<' and '>') characters are not allowed
  * to be used in either the `name` or the `email` parameter.
  *
- * @param sig_out new signature, in case of error NULL
+ * @param out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
  * @param time time when the action happened
  * @param offset timezone offset in minutes for the time
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset);
+GIT_EXTERN(int) git_signature_new(git_signature **out, const char *name, const char *email, git_time_t time, int offset);
 
 /**
  * Create a new action signature with a timestamp of 'now'. The
  * signature must be freed manually or using git_signature_free
  *
- * @param sig_out new signature, in case of error NULL
+ * @param out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_signature_now(git_signature **sig_out, const char *name, const char *email);
+GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const char *email);
 
 
 /**
- * Create a copy of an existing signature.
+ * Create a copy of an existing signature.  All internal strings are also duplicated.
+ * The caller is responsible for freeing this structure with
+ * git_signature_free.
  *
- * All internal strings are also duplicated.
  * @param sig signature to duplicated
  * @return a copy of sig, NULL on out of memory
  */
