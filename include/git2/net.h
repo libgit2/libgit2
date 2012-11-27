@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_net_h__
-#define INCLUDE_net_h__
+#ifndef INCLUDE_git_net_h__
+#define INCLUDE_git_net_h__
 
 #include "common.h"
 #include "oid.h"
@@ -44,7 +44,7 @@ struct git_remote_head {
 /**
  * Callback for listing the remote heads
  */
-typedef int (*git_headlist_cb)(git_remote_head *, void *);
+typedef int (*git_headlist_cb)(git_remote_head *rhead, void *payload);
 
 /** @} */
 GIT_END_DECL
