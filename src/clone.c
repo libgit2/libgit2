@@ -278,7 +278,7 @@ static int setup_remotes_and_fetch(
 		git_remote_set_update_fetchhead(origin, 0);
 
 		/* Connect and download everything */
-		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
+		if (!git_remote_connect(origin, GIT_DIRECTION_FETCH)) {
 			if (!git_remote_download(origin, progress_cb, progress_payload)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {

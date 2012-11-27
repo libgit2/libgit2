@@ -27,8 +27,10 @@ GIT_BEGIN_DECL
  * gets called.
  */
 
-#define GIT_DIR_FETCH 0
-#define GIT_DIR_PUSH 1
+typedef enum {
+	GIT_DIRECTION_FETCH = 0,
+	GIT_DIRECTION_PUSH  = 1
+} git_direction;
 
 
 /**

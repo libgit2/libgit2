@@ -252,7 +252,7 @@ static int update_config_refspec(
 		&name,
 		"remote.%s.%s",
 		remote_name,
-		git_direction == GIT_DIR_FETCH ? "fetch" : "push") < 0)
+		git_direction == GIT_DIRECTION_FETCH ? "fetch" : "push") < 0)
 			goto cleanup;
 
 	if (git_refspec__serialize(&value, refspec) < 0)
@@ -318,14 +318,14 @@ int git_remote_save(const git_remote *remote)
 		config,
 		remote->name,
 		&remote->fetch,
-		GIT_DIR_FETCH) < 0)
+		GIT_DIRECTION_FETCH) < 0)
 			goto on_error;
 
 	if (update_config_refspec(
 		config,
 		remote->name,
 		&remote->push,
-		GIT_DIR_PUSH) < 0)
+		GIT_DIRECTION_PUSH) < 0)
 			goto on_error;
 
 	/*
@@ -369,13 +369,13 @@ on_error:
 	return -1;
 }
 
-const char *git_remote_name(git_remote *remote)
+const char *git_remote_name(const git_remote *remote)
 {
 	assert(remote);
 	return remote->name;
 }
 
-const char *git_remote_url(git_remote *remote)
+const char *git_remote_url(const git_remote *remote)
 {
 	assert(remote);
 	return remote->url;
@@ -393,7 +393,7 @@ int git_remote_set_url(git_remote *remote, const char* url)
 	return 0;
 }
 
-const char *git_remote_pushurl(git_remote *remote)
+const char *git_remote_pushurl(const git_remote *remote)
 {
 	assert(remote);
 	return remote->pushurl;
@@ -429,7 +429,7 @@ int git_remote_set_fetchspec(git_remote *remote, const char *spec)
 	return 0;
 }
 
-const git_refspec *git_remote_fetchspec(git_remote *remote)
+const git_refspec *git_remote_fetchspec(const git_remote *remote)
 {
 	assert(remote);
 	return &remote->fetch;
@@ -451,7 +451,7 @@ int git_remote_set_pushspec(git_remote *remote, const char *spec)
 	return 0;
 }
 
-const git_refspec *git_remote_pushspec(git_remote *remote)
+const git_refspec *git_remote_pushspec(const git_remote *remote)
 {
 	assert(remote);
 	return &remote->push;
@@ -461,18 +461,18 @@ const char* git_remote__urlfordirection(git_remote *remote, int direction)
 {
 	assert(remote);
 
-	if (direction == GIT_DIR_FETCH) {
+	if (direction == GIT_DIRECTION_FETCH) {
 		return remote->url;
 	}
 
-	if (direction == GIT_DIR_PUSH) {
+	if (direction == GIT_DIRECTION_PUSH) {
 		return remote->pushurl ? remote->pushurl : remote->url;
 	}
 
 	return NULL;
 }
 
-int git_remote_connect(git_remote *remote, int direction)
+int git_remote_connect(git_remote *remote, git_direction direction)
 {
 	git_transport *t;
 	const char *url;
@@ -492,7 +492,7 @@ int git_remote_connect(git_remote *remote, int direction)
 		return -1;
 
 	if (t->set_callbacks &&
-		t->set_callbacks(t, remote->callbacks.progress, NULL, remote->callbacks.data) < 0)
+		t->set_callbacks(t, remote->callbacks.progress, NULL, remote->callbacks.payload) < 0)
 		goto on_error;
 	
 	if (!remote->check_cert)
@@ -753,7 +753,7 @@ int git_remote_update_tips(git_remote *remote)
 		git_reference_free(ref);
 
 		if (remote->callbacks.update_tips != NULL) {
-			if (remote->callbacks.update_tips(refname.ptr, &old, &head->oid, remote->callbacks.data) < 0)
+			if (remote->callbacks.update_tips(refname.ptr, &old, &head->oid, remote->callbacks.payload) < 0)
 				goto on_error;
 		}
 	}
@@ -936,7 +936,7 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 		remote->transport->set_callbacks(remote->transport,
 			remote->callbacks.progress,
 			NULL,
-			remote->callbacks.data);
+			remote->callbacks.payload);
 }
 
 void git_remote_set_cred_acquire_cb(
@@ -1194,7 +1194,7 @@ static int rename_fetch_refspecs(
 	if (git_repository_config__weakptr(&config, remote->repo) < 0)
 		goto cleanup;
 
-	error = update_config_refspec(config, new_name, &remote->fetch, GIT_DIR_FETCH);
+	error = update_config_refspec(config, new_name, &remote->fetch, GIT_DIRECTION_FETCH);
 
 cleanup:
 	git_buf_free(&serialized);
@@ -1205,7 +1205,7 @@ cleanup:
 int git_remote_rename(
 	git_remote *remote,
 	const char *new_name,
-	int (*callback)(const char *problematic_refspec, void *payload),
+	git_remote_rename_problem_cb callback,
 	void *payload)
 {
 	int error;
