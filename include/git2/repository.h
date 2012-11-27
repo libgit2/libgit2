@@ -238,7 +238,7 @@ typedef enum {
  *        repository initialization is completed, an "origin" remote
  *        will be added pointing to this URL.
  */
-typedef struct git_repository_init_options {
+typedef struct {
 	uint32_t    flags;
 	uint32_t    mode;
 	const char *workdir_path;
@@ -268,6 +268,10 @@ GIT_EXTERN(int) git_repository_init_ext(
 
 /**
  * Retrieve and resolve the reference pointed at by HEAD.
+ *
+ * The returned `git_reference` will be owned by caller and
+ * `git_reference_free()` must be called when done with it to release the
+ * allocated memory and prevent a leak.
  *
  * @param out pointer to the reference which will be retrieved
  * @param repo a repository object
