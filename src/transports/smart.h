@@ -8,6 +8,7 @@
 #include "vector.h"
 #include "netops.h"
 #include "buffer.h"
+#include "push.h"
 
 #define GIT_SIDE_BAND_DATA     1
 #define GIT_SIDE_BAND_PROGRESS 2
@@ -18,6 +19,8 @@
 #define GIT_CAP_SIDE_BAND "side-band"
 #define GIT_CAP_SIDE_BAND_64K "side-band-64k"
 #define GIT_CAP_INCLUDE_TAG "include-tag"
+#define GIT_CAP_DELETE_REFS "delete-refs"
+#define GIT_CAP_REPORT_STATUS "report-status"
 
 enum git_pkt_type {
 	GIT_PKT_CMD,
@@ -31,6 +34,9 @@ enum git_pkt_type {
 	GIT_PKT_ERR,
 	GIT_PKT_DATA,
 	GIT_PKT_PROGRESS,
+	GIT_PKT_OK,
+	GIT_PKT_NG,
+	GIT_PKT_UNPACK,
 };
 
 /* Used for multi-ack */
@@ -85,19 +91,38 @@ typedef struct {
 	char error[GIT_FLEX_ARRAY];
 } git_pkt_err;
 
+typedef struct {
+	enum git_pkt_type type;
+	char *ref;
+} git_pkt_ok;
+
+typedef struct {
+	enum git_pkt_type type;
+	char *ref;
+	char *msg;
+} git_pkt_ng;
+
+typedef struct {
+	enum git_pkt_type type;
+	int unpack_ok;
+} git_pkt_unpack;
+
 typedef struct transport_smart_caps {
 	int common:1,
 		ofs_delta:1,
 		multi_ack: 1,
 		side_band:1,
 		side_band_64k:1,
-		include_tag:1;
+		include_tag:1,
+		delete_refs:1,
+		report_status:1;
 } transport_smart_caps;
 
 typedef void (*packetsize_cb)(size_t received, void *payload);
 
 typedef struct {
 	git_transport parent;
+	git_remote *owner;
 	char *url;
 	git_cred_acquire_cb cred_acquire_cb;
 	int direction;
@@ -123,6 +148,7 @@ typedef struct {
 /* smart_protocol.c */
 int git_smart__store_refs(transport_smart *t, int flushes);
 int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps);
+int git_smart__push(git_transport *transport, git_push *push);
 
 int git_smart__negotiate_fetch(
 	git_transport *transport,
@@ -139,6 +165,7 @@ int git_smart__download_pack(
 
 /* smart.c */
 int git_smart__negotiation_step(git_transport *transport, void *data, size_t len);
+int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream **out);
 
 /* smart_pkt.c */
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);

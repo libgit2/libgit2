@@ -76,15 +76,16 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
  * Public API *
  **************/
 
-int git_transport_dummy(git_transport **transport, void *param)
+int git_transport_dummy(git_transport **transport, git_remote *owner, void *param)
 {
 	GIT_UNUSED(transport);
+	GIT_UNUSED(owner);
 	GIT_UNUSED(param);
 	giterr_set(GITERR_NET, "This transport isn't implemented. Sorry");
 	return -1;
 }
 
-int git_transport_new(git_transport **out, const char *url)
+int git_transport_new(git_transport **out, git_remote *owner, const char *url)
 {
 	git_transport_cb fn;
 	git_transport *transport;
@@ -96,7 +97,7 @@ int git_transport_new(git_transport **out, const char *url)
 		return -1;
 	}
 
-	error = fn(&transport, param);
+	error = fn(&transport, owner, param);
 	if (error < 0)
 		return error;
 
