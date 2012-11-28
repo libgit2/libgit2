@@ -470,6 +470,11 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 	return result;
 }
 
+int git_odb_add_disk_alternate(git_odb *odb, const char *path)
+{
+	return add_default_backends(odb, path, 1, 0);
+}
+
 int git_odb_open(git_odb **out, const char *objects_dir)
 {
 	git_odb *db;
@@ -481,8 +486,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	if (git_odb_new(&db) < 0)
 		return -1;
 
-	if (add_default_backends(db, objects_dir, 0, 0) < 0)
-	{
+	if (add_default_backends(db, objects_dir, 0, 0) < 0) {
 		git_odb_free(db);
 		return -1;
 	}

@@ -89,6 +89,23 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
 GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
 
 /**
+ * Add an on-disk alternate to an existing Object DB.
+ *
+ * Note that the added path must point to an `objects`, not
+ * to a full repository, to use it as an alternate store.
+ *
+ * Alternate backends are always checked for objects *after*
+ * all the main backends have been exhausted.
+ *
+ * Writing is disabled on alternate backends.
+ *
+ * @param odb database to add the backend to
+ * @param path path to the objects folder for the alternate
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_add_disk_alternate(git_odb *odb, const char *path);
+
+/**
  * Close an open object database.
  *
  * @param db database pointer to close. If NULL no action is taken.
