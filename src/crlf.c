@@ -148,8 +148,11 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 	if (filter->attrs.crlf_action == GIT_CRLF_AUTO ||
 		filter->attrs.crlf_action == GIT_CRLF_GUESS) {
 
-		git_text_stats stats;
-		git_text_gather_stats(&stats, source);
+		git_buf_text_stats stats;
+
+		/* Check heuristics for binary vs text... */
+		if (git_buf_text_gather_stats(&stats, source, false))
+			return -1;
 
 		/*
 		 * We're currently not going to even try to convert stuff
@@ -157,12 +160,6 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 		 * stuff?
 		 */
 		if (stats.cr != stats.crlf)
-			return -1;
-
-		/*
-		 * And add some heuristics for binary vs text, of course...
-		 */
-		if (git_text_is_binary(&stats))
 			return -1;
 
 #if 0

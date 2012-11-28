@@ -6,6 +6,7 @@
  */
 
 #include "pathspec.h"
+#include "buf_text.h"
 #include "attr_file.h"
 
 /* what is the common non-wildcard prefix for all items in the pathspec */
@@ -15,7 +16,7 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 	const char *scan;
 
 	if (!pathspec || !pathspec->count ||
-		git_buf_common_prefix(&prefix, pathspec) < 0)
+		git_buf_text_common_prefix(&prefix, pathspec) < 0)
 		return NULL;
 
 	/* diff prefix will only be leading non-wildcards */
@@ -31,7 +32,7 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 		return NULL;
 	}
 
-	git_buf_unescape(&prefix);
+	git_buf_text_unescape(&prefix);
 
 	return git_buf_detach(&prefix);
 }

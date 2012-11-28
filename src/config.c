@@ -10,6 +10,7 @@
 #include "config.h"
 #include "git2/config.h"
 #include "vector.h"
+#include "buf_text.h"
 #if GIT_WIN32
 # include <windows.h>
 #endif
@@ -803,7 +804,7 @@ int git_config_rename_section(
 	int error = -1;
 	struct rename_data data;
 
-	git_buf_puts_escape_regex(&pattern,  old_section_name);
+	git_buf_text_puts_escape_regex(&pattern,  old_section_name);
 	git_buf_puts(&pattern, "\\..+");
 	if (git_buf_oom(&pattern))
 		goto cleanup;

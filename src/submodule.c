@@ -12,6 +12,7 @@
 #include "git2/index.h"
 #include "git2/submodule.h"
 #include "buffer.h"
+#include "buf_text.h"
 #include "vector.h"
 #include "posix.h"
 #include "config_file.h"
@@ -782,7 +783,7 @@ int git_submodule_reload(git_submodule *submodule)
 		git_buf path = GIT_BUF_INIT;
 
 		git_buf_sets(&path, "submodule\\.");
-		git_buf_puts_escape_regex(&path, submodule->name);
+		git_buf_text_puts_escape_regex(&path, submodule->name);
 		git_buf_puts(&path, ".*");
 
 		if (git_buf_oom(&path))

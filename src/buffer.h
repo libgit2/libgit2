@@ -27,30 +27,35 @@ extern char git_buf__oom[];
  * For the cases where GIT_BUF_INIT cannot be used to do static
  * initialization.
  */
-void git_buf_init(git_buf *buf, size_t initial_size);
-
-/**
- * Grow the buffer to hold at least `target_size` bytes.
- *
- * If the allocation fails, this will return an error and the buffer
- * will be marked as invalid for future operations.  The existing
- * contents of the buffer will be preserved however.
- * @return 0 on success or -1 on failure
- */
-int git_buf_grow(git_buf *buf, size_t target_size);
+extern void git_buf_init(git_buf *buf, size_t initial_size);
 
 /**
  * Attempt to grow the buffer to hold at least `target_size` bytes.
  *
- * This is just like `git_buf_grow` except that even if the allocation
- * fails, the git_buf will still be left in a valid state.
+ * If the allocation fails, this will return an error.  If mark_oom is true,
+ * this will mark the buffer as invalid for future operations; if false,
+ * existing buffer content will be preserved, but calling code must handle
+ * that buffer was not expanded.
  */
-int git_buf_try_grow(git_buf *buf, size_t target_size);
+extern int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom);
 
-void git_buf_free(git_buf *buf);
-void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
-char *git_buf_detach(git_buf *buf);
-void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
+/**
+ * Grow the buffer to hold at least `target_size` bytes.
+ *
+ * If the allocation fails, this will return an error and the buffer will be
+ * marked as invalid for future operations, invaliding contents.
+ *
+ * @return 0 on success or -1 on failure
+ */
+GIT_INLINE(int) git_buf_grow(git_buf *buf, size_t target_size)
+{
+	return git_buf_try_grow(buf, target_size, true);
+}
+
+extern void git_buf_free(git_buf *buf);
+extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
+extern char *git_buf_detach(git_buf *buf);
+extern void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
 
 /**
  * Test if there have been any reallocation failures with this git_buf.
@@ -90,18 +95,6 @@ void git_buf_rtruncate_at_char(git_buf *path, char separator);
 
 int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...);
 int git_buf_join(git_buf *buf, char separator, const char *str_a, const char *str_b);
-
-/**
- * Copy string into buf prefixing every character that is contained in the
- * esc_chars string with the esc_with string.
- */
-int git_buf_puts_escaped(
-	git_buf *buf, const char *string, const char *esc_chars, const char *esc_with);
-
-GIT_INLINE(int) git_buf_puts_escape_regex(git_buf *buf, const char *string)
-{
-	return git_buf_puts_escaped(buf, string, "^.[]$()|*+?{}\\", "\\");
-}
 
 /**
  * Join two strings as paths, inserting a slash between as needed.
@@ -145,15 +138,6 @@ GIT_INLINE(ssize_t) git_buf_rfind(git_buf *buf, char ch)
 void git_buf_rtrim(git_buf *buf);
 
 int git_buf_cmp(const git_buf *a, const git_buf *b);
-
-/* Fill buf with the common prefix of a array of strings */
-int git_buf_common_prefix(git_buf *buf, const git_strarray *strings);
-
-/* Check if buffer looks like it contains binary data */
-bool git_buf_is_binary(const git_buf *buf);
-
-/* Unescape all characters in a buffer */
-void git_buf_unescape(git_buf *buf);
 
 /* Write data as base64 encoded in buffer */
 int git_buf_put_base64(git_buf *buf, const char *data, size_t len);
