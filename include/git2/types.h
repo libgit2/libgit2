@@ -101,6 +101,12 @@ typedef struct git_repository git_repository;
 /** Representation of a generic object in a repository */
 typedef struct git_object git_object;
 
+/** Representation of a commit */
+typedef struct git_graph_node git_graph_node;
+
+/** Representation of a DAG of commits */
+typedef struct git_graph git_graph;
+
 /** Representation of an in-progress walk through the commits in a repo */
 typedef struct git_revwalk git_revwalk;
 
