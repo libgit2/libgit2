@@ -3,10 +3,12 @@
 #include <stdarg.h>
 
 static git_repository *_repo;
+static git_repository *_repo2;
 
 void test_revwalk_mergebase__initialize(void)
 {
 	cl_git_pass(git_repository_open(&_repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_open(&_repo2, cl_fixture("twowaymerge.git")));
 }
 
 void test_revwalk_mergebase__cleanup(void)
@@ -79,6 +81,19 @@ void test_revwalk_mergebase__merged_branch(void)
 	cl_git_pass(git_count_ahead_behind(&ahead, &behind, _repo, &two, &one));
 	cl_assert(ahead == 3);
 	cl_assert(behind == 0);
+}
+
+void test_revwalk_meregebase__two_way_merge(void)
+{
+	git_oid one, two;
+	int ahead, behind;
+
+	cl_git_pass(git_oid_fromstr(&one, "9b219343610c88a1187c996d0dc58330b55cee28"));
+	cl_git_pass(git_oid_fromstr(&two, "a953a018c5b10b20c86e69fef55ebc8ad4c5a417"));
+	cl_git_pass(git_count_ahead_behind(&ahead, &behind, _repo2, &one, &two));
+
+	cl_assert(ahead == 8);
+	cl_assert(behind == 2);
 }
 
 void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
@@ -176,7 +191,7 @@ void test_revwalk_mergebase__many_merge_branch(void)
 }
 
 /*
- * $ git log --graph --all
+ * testrepo.git $ git log --graph --all
  * * commit 763d71aadf09a7951596c9746c024e7eece7c7af
  * | Author: nulltoken <emeric.fermas@gmail.com>
  * | Date:   Sun Oct 9 12:54:47 2011 +0200
@@ -254,4 +269,105 @@ void test_revwalk_mergebase__many_merge_branch(void)
  *   Date:   Tue May 11 13:40:23 2010 -0700
  * 
  *       packed commit one
+ */
+
+/*
+ * twowaymerge.git $ git log --graph --all
+ * *   commit 9b219343610c88a1187c996d0dc58330b55cee28
+ * |\  Merge: c37a783 2224e19
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:31:04 2012 -0800
+ * | | 
+ * | |     Merge branch 'first-branch' into second-branch
+ * | |   
+ * | * commit 2224e191514cb4bd8c566d80dac22dfcb1e9bb83
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:28:51 2012 -0800
+ * | | 
+ * | |     j
+ * | |   
+ * | * commit a41a49f8f5cd9b6cb14a076bf8394881ed0b4d19
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:28:39 2012 -0800
+ * | | 
+ * | |     i
+ * | |   
+ * | * commit 82bf9a1a10a4b25c1f14c9607b60970705e92545
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:28:28 2012 -0800
+ * | | 
+ * | |     h
+ * | |   
+ * * | commit c37a783c20d92ac92362a78a32860f7eebf938ef
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:30:57 2012 -0800
+ * | | 
+ * | |     n
+ * | |   
+ * * | commit 8b82fb1794cb1c8c7f172ec730a4c2db0ae3e650
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:30:43 2012 -0800
+ * | | 
+ * | |     m
+ * | |   
+ * * | commit 6ab5d28acbf3c3bdff276f7ccfdf29c1520e542f
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:30:38 2012 -0800
+ * | | 
+ * | |     l
+ * | |   
+ * * | commit 7b8c336c45fc6895c1c60827260fe5d798e5d247
+ * | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | Date:   Tue Nov 27 20:30:24 2012 -0800
+ * | | 
+ * | |     k
+ * | |     
+ * | | * commit 1c30b88f5f3ee66d78df6520a7de9e89b890818b
+ * | | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | | Date:   Tue Nov 27 20:28:10 2012 -0800
+ * | | | 
+ * | | |     e
+ * | | |    
+ * | | * commit 42b7311aa626e712891940c1ec5d5cba201946a4
+ * | | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | | Date:   Tue Nov 27 20:28:06 2012 -0800
+ * | | | 
+ * | | |     d
+ * | | |      
+ * | | *   commit a953a018c5b10b20c86e69fef55ebc8ad4c5a417
+ * | | |\  Merge: bd1732c cdf97fd
+ * | | |/  Author: Scott J. Goldman <scottjg@github.com>
+ * | |/|   Date:   Tue Nov 27 20:26:43 2012 -0800
+ * | | |   
+ * | | |       Merge branch 'first-branch'
+ * | | |    
+ * | * | commit cdf97fd3bb48eb3827638bb33d208f5fd32d0aa6
+ * | | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | | Date:   Tue Nov 27 20:24:46 2012 -0800
+ * | | | 
+ * | | |     g
+ * | | |    
+ * | * | commit ef0488f0b722f0be8bcb90a7730ac7efafd1d694
+ * | | | Author: Scott J. Goldman <scottjg@github.com>
+ * | | | Date:   Tue Nov 27 20:24:39 2012 -0800
+ * | | | 
+ * | | |     f
+ * | | |    
+ * | | * commit bd1732c43c68d712ad09e1d872b9be6d4b9efdc4
+ * | |/  Author: Scott J. Goldman <scottjg@github.com>
+ * | |   Date:   Tue Nov 27 17:43:58 2012 -0800
+ * | |   
+ * | |       c
+ * | |   
+ * | * commit 0c8a3f1f3d5f421cf83048c7c73ee3b55a5e0f29
+ * |/  Author: Scott J. Goldman <scottjg@github.com>
+ * |   Date:   Tue Nov 27 17:43:48 2012 -0800
+ * |   
+ * |       b
+ * |  
+ * * commit 1f4c0311a24b63f6fc209a59a1e404942d4a5006
+ *   Author: Scott J. Goldman <scottjg@github.com>
+ *   Date:   Tue Nov 27 17:43:41 2012 -0800
+ *
+ *       a
  */
