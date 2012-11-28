@@ -33,7 +33,7 @@ static void progress(const git_transfer_progress *stats, void *payload)
 	*bytes_received = stats->received_bytes;
 }
 
-static void do_fetch(const char *url, int flag, int n)
+static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 {
 	git_remote *remote;
 	git_remote_callbacks callbacks;
