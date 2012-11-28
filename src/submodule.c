@@ -341,7 +341,7 @@ int git_submodule_add_finalize(git_submodule *sm)
 int git_submodule_add_to_index(git_submodule *sm, int write_index)
 {
 	int error;
-	git_repository *repo, *sm_repo;
+	git_repository *repo, *sm_repo = NULL;
 	git_index *index;
 	git_buf path = GIT_BUF_INIT;
 	git_commit *head;
